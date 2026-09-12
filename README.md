@@ -40,7 +40,7 @@ Real board examples are in `tests/pcb-layout`; run `npm run test:pcb-layout -- -
 
 `npm run check:release` deliberately fails in a checkout containing only its host binary. It verifies all four binaries, dependency independence, declarations and the release tag/version. `npm pack` is available for local single-platform development archives, but those are not universal releases.
 
-The initial version is `0.1.0`; it has not been published as part of the extraction. GitHub repository: https://github.com/biosshot/eda-copilot-backend. Before a future release, configure npm publishing access for this repository and workflow `publish.yml`. No tag or publish command is needed for local development. Linux/macOS support is conditional on successful CI, not inferred from a Windows test. Windows ARM64, Linux ARM64 and Alpine/musl are not currently part of the supported complete Copilot stack.
+Version `0.1.0` is published on [npm](https://www.npmjs.com/package/eda-copilot-backend). npm Trusted Publishing (OIDC) is configured for `biosshot/eda-copilot-backend`, workflow `publish.yml`. The first version was published manually; the first tag-driven OIDC publication remains to be verified. Do not push a `v0.1.0` tag to publish again: npm versions are immutable. Bump the package and lockfile versions before the next release. No tag or publish command is needed for local development. Linux/macOS support is conditional on successful CI, not inferred from a Windows test. Windows ARM64, Linux ARM64 and Alpine/musl are not currently part of the supported complete Copilot stack.
 
 ## EasyEDA Copilot integration
 
