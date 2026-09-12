@@ -1,0 +1,39 @@
+name: Backend portability
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-15-intel, macos-15]
+        node: [20, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: rustup default stable
+      - run: npm run native:build
+      - run: npm run check
+      - run: npm run test:package
+      - uses: actions/upload-artifact@v7
+        if: matrix.node == 24
+        with:
+          name: native-${{ matrix.os }}
+          path: native/pcb-board-packer/*.node
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package-${{ matrix.os }}-node-${{ matrix.node }}
+          path: .artifacts/*.tgz
+          if-no-files-found: error

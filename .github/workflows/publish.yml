@@ -1,0 +1,32 @@
+name: Publish backend
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  portability:
+    uses: ./.github/workflows/ci.yml
+  publish:
+    needs: portability
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: native-*
+          merge-multiple: true
+          path: native/pcb-board-packer
+      - run: npm run build
+      - run: npm run check:release
+      - run: npm run test:package
+      - run: npm publish .artifacts/eda-copilot-backend-$(node -p "require('./package.json').version").tgz --access public --provenance

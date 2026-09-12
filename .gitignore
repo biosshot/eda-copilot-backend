@@ -1,0 +1,8 @@
+/node_modules/
+/dist/
+/.artifacts/
+/.test-output/
+/native/pcb-board-packer/target/
+/native/pcb-board-packer/*.node
+.env
+.env.*
