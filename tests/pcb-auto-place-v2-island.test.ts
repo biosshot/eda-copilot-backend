@@ -10,6 +10,37 @@ import type { PlacementPrimitive } from '../src/pcb-layout/pcb-auto-place-v2/pri
 import type { PcbComponent, Placement, PlacementInput } from '../src/types/pcb/layout-model.ts';
 
 test.describe('pcb-auto-place-v2 island solver', () => {
+    test('adds local ground near hints around the anchor of a small block', () => {
+        const crystal = crystalComponent();
+        const c4 = crystalCap('C4', 'XTAL_N', '1', '2');
+        const c6 = crystalCap('C6', 'XTAL_P', '2', '1');
+        const input = baseInput([crystal, c4, c6]);
+        input.blocks = [block('crystal', ['C4', 'X1', 'C6'])];
+        for (const component of input.components) component.block_name = 'crystal';
+
+        const relations = buildPlacementGraph(input).relations.filter((relation) => relation.data?.inferredLocalGround === true);
+        assert.deepEqual(relations.map((relation) => [relation.from, relation.to, relation.relation, relation.priority]), [
+            ['pad:C4.2', 'pad:X1.4', 'near', 'critical'],
+            ['pad:C6.1', 'pad:X1.2', 'near', 'critical'],
+        ]);
+        assert.ok(relations.every((relation) => relation.scope === 'tree:block:crystal'));
+        assert.ok(relations.every((relation) => relation.hard === false && relation.data?.maxDistance === 8));
+    });
+
+    test('does not infer local ground hints outside conservative small-block limits', () => {
+        const scenarios = [
+            [crystalComponent(), crystalCap('C1', 'XTAL_N', '1', '2'), crystalCap('C2', 'XTAL_P', '2', '1'), cap('C3'), cap('C4')],
+            [manyPinAnchor(), crystalCap('C1', 'XTAL_N', '1', '2')],
+            [farGroundAnchor(), crystalCap('C1', 'XTAL_N', '1', '2')],
+        ];
+        for (const components of scenarios) {
+            const input = baseInput(components);
+            input.blocks = [block('guarded', components.map((component) => component.designator))];
+            for (const component of components) component.block_name = 'guarded';
+            assert.equal(buildPlacementGraph(input).relations.some((relation) => relation.data?.inferredLocalGround === true), false);
+        }
+    });
+
     test('recursively dissolves a mechanical block inside a module without merging edge intents', () => {
         const input = edgeSatelliteInput(false);
         input.components = input.components.filter((component) => component.designator.startsWith('SW'));
@@ -811,6 +842,66 @@ function cap(designator: string): PcbComponent {
             { pin_number: '2', name: '2', x: 0.5, y: 0, width: 0.5, height: 0.8 },
         ],
     });
+}
+
+function crystalComponent(): PcbComponent {
+    const value = component('X1', [
+        { pin_number: '1', name: 'OSC1', signal_name: 'XTAL_N' },
+        { pin_number: '2', name: 'GND', signal_name: 'GND' },
+        { pin_number: '3', name: 'OSC2', signal_name: 'XTAL_P' },
+        { pin_number: '4', name: 'GND', signal_name: 'GND' },
+    ], {
+        name: 'X3225',
+        width: 3.2,
+        height: 2.5,
+        pads: [
+            { pin_number: '1', x: 1, y: -0.8, width: 0.8, height: 0.7 },
+            { pin_number: '2', x: -1, y: -0.8, width: 0.8, height: 0.7 },
+            { pin_number: '3', x: -1, y: 0.8, width: 0.8, height: 0.7 },
+            { pin_number: '4', x: 1, y: 0.8, width: 0.8, height: 0.7 },
+        ],
+    });
+    value.pcb.role = 'crystal';
+    return value;
+}
+
+function crystalCap(designator: string, signal: string, signalPin: string, groundPin: string): PcbComponent {
+    const value = component(designator, [
+        { pin_number: signalPin, name: signalPin, signal_name: signal },
+        { pin_number: groundPin, name: groundPin, signal_name: 'GND' },
+    ], {
+        name: 'C0402',
+        width: 1,
+        height: 0.5,
+        pads: [
+            { pin_number: '1', x: -0.35, y: 0, width: 0.3, height: 0.4 },
+            { pin_number: '2', x: 0.35, y: 0, width: 0.3, height: 0.4 },
+        ],
+    });
+    value.pcb.role = 'passive';
+    return value;
+}
+
+function manyPinAnchor(): PcbComponent {
+    const value = crystalComponent();
+    value.designator = 'U1';
+    value.pcb.role = 'main_ic';
+    value.pins.push(
+        { pin_number: '5', name: 'IO5', signal_name: 'IO5' },
+        { pin_number: '6', name: 'IO6', signal_name: 'IO6' },
+        { pin_number: '7', name: 'IO7', signal_name: 'IO7' },
+    );
+    return value;
+}
+
+function farGroundAnchor(): PcbComponent {
+    const value = crystalComponent();
+    value.designator = 'U1';
+    value.pcb.role = 'main_ic';
+    value.pins = value.pins.filter((pin) => String(pin.pin_number) === '1' || String(pin.pin_number) === '2');
+    value.footprint.pads = value.footprint.pads.filter((pad) => String(pad.pin_number) === '1' || String(pad.pin_number) === '2');
+    value.footprint.pads.find((pad) => String(pad.pin_number) === '2')!.x = -8;
+    return value;
 }
 
 function passive(designator: string, pin1Net: string, pin2Net: string): PcbComponent {

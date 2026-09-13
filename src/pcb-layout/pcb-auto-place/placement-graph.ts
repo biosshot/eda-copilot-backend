@@ -13,8 +13,14 @@ import type {
     PlacementInput,
     TargetRef,
 } from '#types/pcb/layout-model.ts';
+import { isGroundSignalName } from '#utils/signals.ts';
 import { priorityWeight } from './hints.ts';
 import { isFixedComponent } from './utils.ts';
+
+const SMALL_BLOCK_GROUND_MAX_COMPONENTS = 4;
+const SMALL_BLOCK_GROUND_MAX_PINS = 6;
+const SMALL_BLOCK_GROUND_MAX_LOCAL_REACH = 6;
+const PASSIVE_SUPPORT_ROLES = new Set(['passive', 'decoupling_cap']);
 
 type GraphBuilderState = {
     nodes: InternalGraphNode[];
@@ -103,11 +109,110 @@ export function buildPlacementGraph(input: PlacementInput): PlacementGraph {
     addBlockNodes(state, input, componentsByDesignator);
     addModuleNodes(state, input);
     addHintEdgesAndIslands(state, input, componentsByDesignator);
+    addSmallBlockGroundHints(state, input, componentsByDesignator);
 
     const { root, hierarchyDiagnostics, orphanComponents, unparentedBlocks, relationScopeContext } = buildPlacementTree(input, state);
     const relations = buildPlacementRelations(state, relationScopeContext);
     const report = createGraphReport(state, root, relations, hierarchyDiagnostics, orphanComponents, unparentedBlocks);
     return { root, relations, paths: input.paths ?? [], report };
+}
+
+function addSmallBlockGroundHints(
+    state: GraphBuilderState,
+    input: PlacementInput,
+    componentsByDesignator: Map<string, PcbComponent>,
+) {
+    for (const block of input.blocks) {
+        const components = block.component_designators
+            .map((designator) => componentsByDesignator.get(designator))
+            .filter((component): component is PcbComponent => Boolean(component));
+        if (components.length < 2 || components.length > SMALL_BLOCK_GROUND_MAX_COMPONENTS) continue;
+        if (components.some((component) => component.pins.length > SMALL_BLOCK_GROUND_MAX_PINS)) continue;
+
+        const anchor = [...components].sort(compareGroundHintAnchors)[0];
+        if (!anchor) continue;
+        for (const component of components) {
+            if (component === anchor || !PASSIVE_SUPPORT_ROLES.has(component.pcb.role)) continue;
+            const pair = nearestLocalGroundPair(anchor, component);
+            if (!pair || pair.localReach > SMALL_BLOCK_GROUND_MAX_LOCAL_REACH) continue;
+            const from = padNodeId(component.designator, pair.componentGround.pin_number);
+            const to = padNodeId(anchor.designator, pair.anchorGround.pin_number);
+            if (hasPlacementHintBetween(state, from, to)) continue;
+            addEdge(state, 'hint', from, to, {
+                relation: 'near',
+                priority: 'critical',
+                hard: false,
+                weight: priorityWeight('critical'),
+                data: {
+                    maxDistance: 8,
+                    inferredLocalGround: true,
+                    block: block.name,
+                },
+            });
+        }
+    }
+}
+
+function compareGroundHintAnchors(a: PcbComponent, b: PcbComponent) {
+    const roleDifference = groundHintAnchorRoleRank(b) - groundHintAnchorRoleRank(a);
+    if (roleDifference !== 0) return roleDifference;
+    const pinDifference = b.pins.length - a.pins.length;
+    if (pinDifference !== 0) return pinDifference;
+    return a.designator.localeCompare(b.designator);
+}
+
+function groundHintAnchorRoleRank(component: PcbComponent) {
+    if (component.pcb.role === 'main_ic') return 3;
+    if (component.pcb.role === 'crystal' || component.pcb.role === 'connector') return 2;
+    return PASSIVE_SUPPORT_ROLES.has(component.pcb.role) ? 0 : 1;
+}
+
+function nearestLocalGroundPair(anchor: PcbComponent, component: PcbComponent) {
+    const anchorGround = anchor.pins.filter((pin) => isGroundSignalName(pin.signal_name));
+    const componentGround = component.pins.filter((pin) => isGroundSignalName(pin.signal_name));
+    if (anchorGround.length === 0 || componentGround.length === 0) return null;
+
+    const sharedSignals = new Set(anchor.pins
+        .map((pin) => normalizedSignal(pin.signal_name))
+        .filter((signal) => signal && !isGroundSignalName(signal)));
+    const anchorSignal = anchor.pins.filter((pin) => sharedSignals.has(normalizedSignal(pin.signal_name)));
+    const componentSignal = component.pins.filter((pin) => sharedSignals.has(normalizedSignal(pin.signal_name)));
+    if (anchorSignal.length === 0 || componentSignal.length === 0) return null;
+
+    let best: { anchorGround: PcbComponent['pins'][number]; componentGround: PcbComponent['pins'][number]; localReach: number } | null = null;
+    for (const anchorGroundPin of anchorGround) {
+        for (const componentGroundPin of componentGround) {
+            for (const anchorSignalPin of anchorSignal) {
+                for (const componentSignalPin of componentSignal) {
+                    if (normalizedSignal(anchorSignalPin.signal_name) !== normalizedSignal(componentSignalPin.signal_name)) continue;
+                    const anchorReach = localPadDistance(anchor, anchorGroundPin.pin_number, anchorSignalPin.pin_number);
+                    const componentReach = localPadDistance(component, componentGroundPin.pin_number, componentSignalPin.pin_number);
+                    if (anchorReach === null || componentReach === null) continue;
+                    const localReach = anchorReach + componentReach;
+                    if (!best || localReach < best.localReach) {
+                        best = { anchorGround: anchorGroundPin, componentGround: componentGroundPin, localReach };
+                    }
+                }
+            }
+        }
+    }
+    return best;
+}
+
+function localPadDistance(component: PcbComponent, firstPin: string | number, secondPin: string | number) {
+    const first = component.footprint.pads.find((pad) => String(pad.pin_number) === String(firstPin));
+    const second = component.footprint.pads.find((pad) => String(pad.pin_number) === String(secondPin));
+    if (!first || !second) return null;
+    return Math.hypot(first.x - second.x, first.y - second.y);
+}
+
+function normalizedSignal(signal: string) {
+    return signal.trim().toUpperCase();
+}
+
+function hasPlacementHintBetween(state: GraphBuilderState, from: string, to: string) {
+    return state.edges.some((edge) => edge.kind === 'hint'
+        && ((edge.from === from && edge.to === to) || (edge.from === to && edge.to === from)));
 }
 
 export function formatPlacementGraphDiagnostics(report: PlacementGraphReport) {
