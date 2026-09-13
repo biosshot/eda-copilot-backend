@@ -10,6 +10,57 @@ import type { PlacementPrimitive } from '../src/pcb-layout/pcb-auto-place-v2/pri
 import type { PcbComponent, Placement, PlacementInput } from '../src/types/pcb/layout-model.ts';
 
 test.describe('pcb-auto-place-v2 island solver', () => {
+    test('warns when a free passive block has no external placement intent', () => {
+        const straps = [
+            passive('R5', 'BOOT0', 'GND'),
+            passive('R6', 'BOOT1', 'GND'),
+            passive('R7', 'BOOT2', 'GND'),
+            passive('R8', 'BOOT3', 'GND'),
+        ];
+        const u1 = controllerWithPinNet('U1', '1', 'BOOT0');
+        u1.pcb.role = 'main_ic';
+        const input = baseInput([u1, ...straps]);
+        input.blocks = [block('mcu', ['U1']), block('boot_straps', straps.map((component) => component.designator))];
+        u1.block_name = 'mcu';
+        straps.forEach((component) => component.block_name = 'boot_straps');
+
+        const warning = () => buildPlacementGraph(input).report.diagnostics
+            .find((diagnostic) => diagnostic.code === 'unattached_passive_block');
+        assert.match(warning()?.message ?? '', /satellite.*attachTo.*anchor.*near\(\).*veryNear\(\).*criticalPair\(\)/);
+
+        input.hints = [{
+            relation: 'near',
+            source: { type: 'component', designator: 'R5' },
+            target: { type: 'pin', designator: 'U1', pin_number: '1' },
+            priority: 'high',
+        }];
+        assert.equal(warning(), undefined);
+
+        input.hints = [];
+        const strapsBlock = input.blocks.find((candidate) => candidate.name === 'boot_straps')!;
+        strapsBlock.placement = 'satellite';
+        strapsBlock.attachTo = 'mcu';
+        strapsBlock.anchor = { type: 'pin', designator: 'U1', pin_number: '1' };
+        assert.equal(warning(), undefined);
+    });
+
+    test('does not treat an internal passive relation as board-level placement intent', () => {
+        const r5 = passive('R5', 'BOOT0', 'GND');
+        const r6 = passive('R6', 'BOOT1', 'GND');
+        const input = baseInput([r5, r6]);
+        input.blocks = [block('boot_straps', ['R5', 'R6'])];
+        input.components.forEach((component) => component.block_name = 'boot_straps');
+        input.hints = [{
+            relation: 'near',
+            source: { type: 'component', designator: 'R5' },
+            target: { type: 'component', designator: 'R6' },
+            priority: 'high',
+        }];
+
+        assert.ok(buildPlacementGraph(input).report.diagnostics
+            .some((diagnostic) => diagnostic.code === 'unattached_passive_block'));
+    });
+
     test('adds local ground near hints around the anchor of a small block', () => {
         const crystal = crystalComponent();
         const c4 = crystalCap('C4', 'XTAL_N', '1', '2');

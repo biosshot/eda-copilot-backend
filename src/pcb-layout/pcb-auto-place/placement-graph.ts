@@ -21,6 +21,7 @@ const SMALL_BLOCK_GROUND_MAX_COMPONENTS = 4;
 const SMALL_BLOCK_GROUND_MAX_PINS = 6;
 const SMALL_BLOCK_GROUND_MAX_LOCAL_REACH = 6;
 const PASSIVE_SUPPORT_ROLES = new Set(['passive', 'decoupling_cap']);
+const PASSIVE_BLOCK_ROLES = new Set(['passive', 'decoupling_cap', 'indicator']);
 
 type GraphBuilderState = {
     nodes: InternalGraphNode[];
@@ -113,8 +114,52 @@ export function buildPlacementGraph(input: PlacementInput): PlacementGraph {
 
     const { root, hierarchyDiagnostics, orphanComponents, unparentedBlocks, relationScopeContext } = buildPlacementTree(input, state);
     const relations = buildPlacementRelations(state, relationScopeContext);
+    addUnattachedPassiveBlockDiagnostics(state, input, componentsByDesignator, relations);
     const report = createGraphReport(state, root, relations, hierarchyDiagnostics, orphanComponents, unparentedBlocks);
     return { root, relations, paths: input.paths ?? [], report };
+}
+
+function addUnattachedPassiveBlockDiagnostics(
+    state: GraphBuilderState,
+    input: PlacementInput,
+    componentsByDesignator: Map<string, PcbComponent>,
+    relations: PlacementRelation[],
+) {
+    const moduleBlocks = new Set((input.modules ?? []).flatMap((module) => module.block_names));
+    for (const block of input.blocks) {
+        if (block.attachTo || (block.placement ?? 'main') === 'satellite' || moduleBlocks.has(block.name)) continue;
+        const components = block.component_designators
+            .map((designator) => componentsByDesignator.get(designator))
+            .filter((component): component is PcbComponent => Boolean(component));
+        if (components.length === 0 || !components.every((component) => PASSIVE_BLOCK_ROLES.has(component.pcb.role))) continue;
+        if (components.some((component) => isFixedComponent(component) || component.pcb.edgeMount || component.pcb.edgePlace)) continue;
+        if (relations.some((relation) => relationConnectsBlockExternally(relation, block.name, block.component_designators))) continue;
+
+        addDiagnostic(
+            state,
+            'warning',
+            'unattached_passive_block',
+            `Passive block ${block.name} has no parent or external placement relation, so board packing may place it in any free area. Make it a satellite with placement: "satellite", attachTo, and preferably anchor: pin(...), or add an external near(), veryNear(), or criticalPair() using comp()/pin() targets.`,
+            blockNodeId(block.name),
+        );
+    }
+}
+
+function relationConnectsBlockExternally(relation: PlacementRelation, blockName: string, designators: string[]) {
+    if (relation.kind === 'net') return false;
+    const fromInside = endpointBelongsToBlock(relation.from, blockName, designators);
+    const toInside = endpointBelongsToBlock(relation.to, blockName, designators);
+    if (fromInside === toInside) return false;
+    const externalEndpoint = fromInside ? relation.to : relation.from;
+    return !externalEndpoint.startsWith('net:');
+}
+
+function endpointBelongsToBlock(endpoint: string, blockName: string, designators: string[]) {
+    if (endpoint === blockNodeId(blockName)) return true;
+    return designators.some((designator) => (
+        endpoint === componentNodeId(designator)
+        || endpoint.startsWith(`${padNodeId(designator, '')}`)
+    ));
 }
 
 function addSmallBlockGroundHints(
