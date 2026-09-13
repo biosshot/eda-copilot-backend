@@ -30,6 +30,7 @@ export interface BoardSolveParams {
 
 export function solveBoardPrimitives(params: BoardSolveParams) {
     const boardPrimitives = boardPlacementPrimitives(params);
+    validateDissolvedGroupReferences(params.graph.relations, boardPrimitives.dissolvedScopes);
     return solveBoardPackedPrimitives({
         node: params.node,
         primitives: boardPrimitives.primitives.map(boardPackingPrimitive),
@@ -54,6 +55,24 @@ export function solveBoardPrimitives(params: BoardSolveParams) {
             searchWidth: 32,
         },
     });
+}
+
+function validateDissolvedGroupReferences(relations: PlacementRelation[], dissolvedScopes: Set<string>) {
+    const errors = new Set<string>();
+    for (const relation of relations) {
+        for (const endpoint of [relation.from, relation.to]) {
+            if (!endpoint.startsWith('block:') && !endpoint.startsWith('module:')) continue;
+            if (!dissolvedScopes.has(`tree:${endpoint}`)) continue;
+            errors.add(`- ${relation.relation ?? relation.kind} (${relation.id}) references dissolved ${endpoint}.`);
+        }
+    }
+    if (errors.size === 0) return;
+    throw new Error([
+        'Invalid PCB placement DSL:',
+        'Placement constraints cannot reference blocks or modules dissolved for board placement.',
+        ...errors,
+        'Use comp("designator") or pin("designator", "pin_number") to target a specific component or pad instead of the dissolved group.',
+    ].join('\n'));
 }
 
 function dissolvedSatelliteRelations(params: BoardSolveParams, dissolvedScopes: Set<string>): PlacementRelation[] {
@@ -92,7 +111,7 @@ function boardPlacementPrimitives(params: BoardSolveParams) {
 
     for (const primitive of params.childPrimitives) {
         if (shouldDissolveEdgePlacePrimitive(params, primitive)) {
-            primitives.push(...primitive.children);
+            primitives.push(...expandDissolvedChildren(params, primitive.children, dissolvedScopes));
             dissolvedScopes.add(primitive.sourceNodeId);
             params.diagnostics.push({
                 severity: 'warning',

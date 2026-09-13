@@ -10,6 +10,56 @@ import type { PlacementPrimitive } from '../src/pcb-layout/pcb-auto-place-v2/pri
 import type { PcbComponent, Placement, PlacementInput } from '../src/types/pcb/layout-model.ts';
 
 test.describe('pcb-auto-place-v2 island solver', () => {
+    test('recursively dissolves a mechanical block inside a module without merging edge intents', () => {
+        const input = edgeSatelliteInput(false);
+        input.components = input.components.filter((component) => component.designator.startsWith('SW'));
+        input.blocks = [{ ...block('controls', input.components.map((component) => component.designator)), role: 'connector' }];
+        input.components.forEach((component, index) => {
+            component.block_name = 'controls';
+            component.pcb.edgePlace = { edges: [(['top', 'bottom', 'right'] as const)[index]], inset: 2, face: 'any' };
+        });
+        input.modules = [{ name: 'panel', block_names: ['controls'] }];
+        const result = solvePlacementTreeBottomUp(input, buildPlacementGraph(input));
+        const placement = (ref: string) => result.root.placements.find((item) => item.designator === ref)!;
+        assert.equal(placement('SW1').y, -25);
+        assert.equal(placement('SW2').y, 25);
+        assert.equal(placement('SW3').x, 38);
+        const report = createPlacementReport(input, result.root.placements);
+        assert.deepEqual(report.overlaps, []);
+        assert.deepEqual(report.outsideBoard, []);
+    });
+
+    for (const endpoint of ['block', 'module', 'component', 'pin'] as const) {
+        test(`${endpoint === 'block' || endpoint === 'module' ? 'rejects dissolved' : 'preserves concrete'} ${endpoint} constraint targets`, () => {
+            const input = edgeSatelliteInput(true);
+            input.blocks.forEach((item) => { delete item.attachTo; item.placement = 'main'; });
+            if (endpoint === 'module') input.modules = [{ name: 'panel', block_names: ['ENC1'] }];
+            input.hints = [{
+                relation: 'near', source: { type: 'component', designator: 'R1' },
+                target: endpoint === 'block' ? { type: 'block', block_name: 'ENC1' }
+                    : endpoint === 'pin' ? { type: 'pin', designator: 'SW1', pin_number: '1' }
+                    : { type: 'component', designator: 'SW1' },
+                priority: 'high',
+            }];
+            const graph = buildPlacementGraph(input);
+            if (endpoint === 'module') graph.relations.push({
+                id: 'module-proximity', kind: 'hint', relation: 'near',
+                from: 'component:R1', to: 'module:panel', scope: 'board', effect: 'move_from', priority: 'high',
+            });
+            const solve = () => solvePlacementTreeBottomUp(input, graph);
+            if (endpoint === 'block' || endpoint === 'module') {
+                assert.throws(solve, (error: Error) => {
+                    assert.match(error.message, new RegExp(`dissolved ${endpoint}:`));
+                    assert.match(error.message, /Use comp\(.*or pin\(/);
+                    return true;
+                });
+            } else {
+                const result = solve();
+                assert.ok(distance(result.root.placements.find((p) => p.designator === 'R1')!, result.root.placements.find((p) => p.designator === 'SW1')!) <= 8);
+            }
+        });
+    }
+
     test('places multiple edgePlace components from one mechanical block at their own edge positions', () => {
         const input = edgeSatelliteInput(true);
         input.components = input.components.filter((component) => component.designator.startsWith('SW'));

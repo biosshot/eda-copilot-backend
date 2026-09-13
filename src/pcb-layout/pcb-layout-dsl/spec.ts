@@ -101,6 +101,7 @@ Placement guidance:
 - Do not write routing rules in this DSL. Routing, DRC classes, copper polygons, and via stitching are handled by the EasyEDA v3 client after server-side placement.
 
 Blocks containing edgePlace() components must contain only edgePlace() components. Multiple edgePlace() components may share a board-level block. Put support components in separate blocks and connect them with near(), veryNear(), or criticalPair().
+When a group is dissolved for board placement (including edgePlace groups), constraints cannot target that group. Use comp("designator") or pin("designator", "pin_number") instead of block("name"). Mechanical groups nested in modules are dissolved recursively; each edgePlace component keeps its own edge requirements.
 
 Tool output:
 - make_pcb_layout returns collected image_url with label "PCB". It is the placement SVG.
