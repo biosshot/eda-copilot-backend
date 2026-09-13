@@ -23,6 +23,43 @@ const circuit: ExplainCircuit = {
     ],
 };
 
+for (const assignment of ['list', 'component']) {
+    test(`rejects mixed edgePlace blocks using ${assignment} ownership with actionable guidance`, () => {
+        const rules = runPcbLayoutDsl(`
+            board.rect(30, 20);
+            block("mixed", ${assignment === 'list' ? '["U1", "C1"]' : '["U1"]'}, "generic");
+            component("U1").edgePlace("top", { inset: 1 });
+            ${assignment === 'component' ? 'component("C1").block("mixed");' : ''}
+        `);
+        assert.throws(() => validatePlacementRulesForCircuit(circuit, rules), (error: Error) => {
+            assert.match(error.message, /block\("mixed"\) mixes edgePlace\(\) components \(U1\).*\(C1\)/);
+            assert.match(error.message, /near\(\), veryNear\(\), or criticalPair\(\)/);
+            return true;
+        });
+    });
+}
+
+test('allows multiple edgePlace components in a board-level block', () => {
+    const rules = runPcbLayoutDsl(`
+        board.rect(30, 20);
+        block("controls", ["U1", "C1"], "connector");
+        component("U1").edgePlace("top", { inset: 1 });
+        component("C1").edgePlace("bottom", { inset: 1 });
+    `);
+    assert.doesNotThrow(() => validatePlacementRulesForCircuit(circuit, rules));
+});
+
+test('allows edgePlace and ordinary components in separate blocks linked by near', () => {
+    const rules = runPcbLayoutDsl(`
+        board.rect(30, 20);
+        block("control", ["U1"], "connector");
+        block("support", ["C1"], "generic");
+        component("U1").edgePlace("top", { inset: 1 });
+        near(comp("C1"), comp("U1"), "high");
+    `);
+    assert.doesNotThrow(() => validatePlacementRulesForCircuit(circuit, rules));
+});
+
 test('rejects blocks with components declared on different layers', () => {
     const rules = runPcbLayoutDsl(`
         board.rect(10, 10, { layers: ["top", "bottom"] });

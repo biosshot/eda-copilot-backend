@@ -359,6 +359,16 @@ function validateMechanicalBlockOwnership(rules: PlacementRules) {
 
 function collectMechanicalBlockOwnershipErrors(rules: PlacementRules) {
     const componentRules = new Map(rules.component_rules.map((rule) => [rule.designator, rule]));
+    const errors: string[] = [];
+    for (const block of canonicalBlockDesignators(rules.blocks, rules.component_rules)) {
+        const edgeComponents = block.designators.filter((designator) => componentRules.get(designator)?.edgePlace);
+        const otherComponents = block.designators.filter((designator) => !componentRules.get(designator)?.edgePlace);
+        if (edgeComponents.length === 0 || otherComponents.length === 0) continue;
+        errors.push(
+            `- block("${block.name}") mixes edgePlace() components (${edgeComponents.join(", ")}) with components without edgePlace() (${otherComponents.join(", ")}).`,
+            'Move components without edgePlace() into separate blocks and connect them with near(), veryNear(), or criticalPair(). Blocks containing edgePlace() may contain only edgePlace() components; multiple such components are allowed.',
+        );
+    }
     const invalidBlocks = canonicalBlockDesignators(rules.blocks, rules.component_rules)
         .map((block) => {
             const ruleBlock = rules.blocks.find((item) => item.name === block.name);
@@ -374,9 +384,10 @@ function collectMechanicalBlockOwnershipErrors(rules: PlacementRules) {
         })
         .filter((block) => block.attachTo && block.mechanicalComponents.length > 0);
 
-    if (invalidBlocks.length === 0) return [];
+    if (invalidBlocks.length === 0) return errors;
 
     return [
+        ...errors,
         "Mechanical blocks with fixed(), edgeMount(), or edgePlace() components cannot be satellites.",
         "Make them board-level blocks and connect them electrically with near(), veryNear(), or criticalPair() instead of attachTo.",
         ...invalidBlocks.map((block) => `- block("${block.name}") attaches to "${block.attachTo}" but contains mechanical components: ${block.mechanicalComponents.join(", ")}.`),

@@ -22,7 +22,8 @@ boardHole.corners({
 block("rf_input_connector", ["J1"], "connector", "Input SMA edge connector");
 block("rf_core", ["C1", "U1", "C2"], "rf", "DC blocks and MMIC pass-through stage");
 block("rf_output_connector", ["J2"], "connector", "Output SMA edge connector");
-block("power_entry", ["J3", "C3"], "power", "Bias input and local bypass");
+block("power_entry", ["J3"], "power", "Bias input");
+block("power_bypass", ["C3"], "power", "Local bypass");
 block("bias_feed", ["R1"], "power", null, {
   placement: "satellite",
   attachTo: "rf_core",
@@ -52,7 +53,7 @@ component("J3")
 component("C1").block("rf_core").role("passive").top();
 component("U1").block("rf_core").role("main_ic").top();
 component("C2").block("rf_core").role("passive").top();
-component("C3").block("power_entry").role("decoupling_cap").top();
+component("C3").block("power_bypass").role("decoupling_cap").top();
 component("R1").block("bias_feed").role("passive").top();
 
 signalPath("rf_main", [

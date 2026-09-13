@@ -10,6 +10,22 @@ import type { PlacementPrimitive } from '../src/pcb-layout/pcb-auto-place-v2/pri
 import type { PcbComponent, Placement, PlacementInput } from '../src/types/pcb/layout-model.ts';
 
 test.describe('pcb-auto-place-v2 island solver', () => {
+    test('places multiple edgePlace components from one mechanical block at their own edge positions', () => {
+        const input = edgeSatelliteInput(true);
+        input.components = input.components.filter((component) => component.designator.startsWith('SW'));
+        input.blocks = [{ ...block('controls', input.components.map((component) => component.designator)), role: 'connector' }];
+        input.components.forEach((component) => component.block_name = 'controls');
+        const result = solvePlacementTreeBottomUp(input, buildPlacementGraph(input));
+        for (let index = 1; index <= 3; index += 1) {
+            const placement = result.root.placements.find((item) => item.designator === `SW${index}`)!;
+            assert.equal(placement.x, (index - 2) * 27);
+            assert.equal(placement.y, 25);
+        }
+        const report = createPlacementReport(input, result.root.placements);
+        assert.deepEqual(report.overlaps, []);
+        assert.deepEqual(report.outsideBoard, []);
+        assert.deepEqual(report.unplaced, []);
+    });
     for (const exactPlacement of [false, true]) {
         test(`keeps satellites near their own edge connectors (${exactPlacement ? 'fixed' : 'movable'})`, () => {
             const input = edgeSatelliteInput(exactPlacement);

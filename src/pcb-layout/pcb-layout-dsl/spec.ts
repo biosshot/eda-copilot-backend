@@ -100,6 +100,8 @@ Placement guidance:
 - board.auto({ density }) controls target component density from footprint area. Default is 0.4; lower values make a larger board with more routing room for EasyEDA, higher values make a tighter board.
 - Do not write routing rules in this DSL. Routing, DRC classes, copper polygons, and via stitching are handled by the EasyEDA v3 client after server-side placement.
 
+Blocks containing edgePlace() components must contain only edgePlace() components. Multiple edgePlace() components may share a board-level block. Put support components in separate blocks and connect them with near(), veryNear(), or criticalPair().
+
 Tool output:
 - make_pcb_layout returns collected image_url with label "PCB". It is the placement SVG.
 - make_pcb_layout also returns pcb_tool_report with categorized dsl, placement, quality, and solver diagnostics.

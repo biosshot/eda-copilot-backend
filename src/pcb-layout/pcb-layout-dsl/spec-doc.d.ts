@@ -347,7 +347,7 @@ interface ComponentBuilder {
   faceTo(direction: MechanicalFaceDirection): ComponentBuilder;
   /** Mount a mechanical component on a board edge. Computes fixed center, face direction, and board overflow from the real footprint bbox after rotation. Prefer this for USB/ports/buttons on edges instead of fixed()+offset+boardOverflow. */
   edgeMount(edge: BoardEdge, options?: EdgeMountOptions): ComponentBuilder;
-  /** Place a mechanical component near one or more board edges while keeping it inside the board. Use for buttons/LEDs/side controls. Runtime normally detects the mechanical face; use faceAt0(...) only to correct a verified wrong inference. */
+  /** Place a mechanical component near one or more board edges while keeping it inside the board. Every component in its block must also use edgePlace; put ordinary support components in separate blocks linked with near(), veryNear(), or criticalPair(). Use for buttons/LEDs/side controls. Runtime normally detects the mechanical face; use faceAt0(...) only to correct a verified wrong inference. */
   edgePlace(edgeOrEdges: BoardEdge | BoardEdge[], options?: EdgePlaceOptions): ComponentBuilder;
   /** Lock this component to an exact board position. Allowed only for role("connector") mechanical parts; normal components must be placed by blocks/hints. */
   fixed(options: FixedPlacementOptions): ComponentBuilder;

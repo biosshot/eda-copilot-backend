@@ -141,7 +141,8 @@ test.describe('ordered signal-path placement', () => {
             block("rf_input_connector", ["J1"], "connector");
             block("rf_core", ["C1", "U1", "C2"], "rf");
             block("rf_output_connector", ["J2"], "connector");
-            block("power_entry", ["J3", "C3"], "power");
+            block("power_entry", ["J3"], "power");
+            block("power_bypass", ["C3"], "power");
             block("bias_feed", ["R1"], "power", null, { placement: "satellite", attachTo: "rf_core", anchor: pin("U1", "3") });
             component("J1").block("rf_input_connector").role("connector").top().edgeMount("left", { overhang: 6.5, align: "center", face: "outward", layer: "top" });
             component("J2").block("rf_output_connector").role("connector").top().edgeMount("right", { overhang: 6.5, align: "center", face: "outward", layer: "top" });
@@ -149,7 +150,7 @@ test.describe('ordered signal-path placement', () => {
             component("C1").block("rf_core").role("passive").top();
             component("U1").block("rf_core").role("main_ic").top();
             component("C2").block("rf_core").role("passive").top();
-            component("C3").block("power_entry").role("decoupling_cap").top();
+            component("C3").block("power_bypass").role("decoupling_cap").top();
             component("R1").block("bias_feed").role("passive").top();
             signalPath("rf_main", [
                 [pin("J1", "5"), pin("C1", "1"), { maxDistance: 19 }],
