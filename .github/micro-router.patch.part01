@@ -1,8 +1,78 @@
+                 current[index] = best;
+                 current_hard = best_hard;
+-                current_score = best_score;
++                current_score = best_base_score;
+                 changed = true;
+             }
+         }
+@@ -434,6 +443,83 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
+     current
+ }
+ 
++fn ranked_block_candidates(
++    primitive: &WorkingPrimitive,
++    placed: &[WorkingPrimitive],
++    previous: &IncrementalEvaluation,
++    parent_route_penalty: f64,
++    context: &Context,
++) -> Vec<RankedCandidate> {
++    let mut ranked = Vec::new();
++    for (candidate_ordinal, candidate) in block_candidates(primitive, placed, context)
++        .into_iter()
++        .enumerate()
++    {
++        let mut variant = placed.to_vec();
++        variant.push(candidate.clone());
++        let incremental = append_incremental_evaluation(placed, &variant, previous, context);
++        let evaluation = incremental.evaluation;
++        ranked.push(RankedCandidate {
++            hard_violations: evaluation.hard_violations,
++            score: evaluation.score,
++            route_penalty: parent_route_penalty,
++            primitive: candidate,
++            incremental,
++            ordinal: candidate_ordinal,
++        });
++    }
++    ranked.sort_by(compare_candidates);
++    ranked.truncate(16);
++    let baseline_hard = previous.evaluation.hard_violations;
++    for candidate in &mut ranked {
++        if candidate.hard_violations != baseline_hard { continue; }
++        let correction = block_micro_route_penalty(&candidate.primitive, placed, context);
++        candidate.route_penalty = parent_route_penalty + correction;
++        candidate.score += candidate.route_penalty;
++    }
++    ranked.sort_by(compare_candidates);
++    ranked
++}
++
++fn block_micro_route_penalty(
++    candidate: &WorkingPrimitive,
++    placed: &[WorkingPrimitive],
++    context: &Context,
++) -> f64 {
++    let config = MicroRouteConfig::block();
++    let bounds = micro_route_bounds(candidate, placed, context, &config);
++    let placed_primitives: Vec<_> = placed.iter().map(|item| &item.primitive).collect();
++    micro_router::candidate_penalty(
++        &candidate.primitive,
++        &placed_primitives,
++        &context.problem.relations,
++        bounds,
++        &[],
++        &context.problem.obstacles,
++        &config,
++    )
++}
++
++fn micro_route_bounds(
++    candidate: &WorkingPrimitive,
++    placed: &[WorkingPrimitive],
++    context: &Context,
 +    config: &MicroRouteConfig,
 +) -> Box2 {
-+    if let Some(bounds) = context.problem.bounds {
-+        return bounds;
-+    }
++    if let Some(bounds) = context.problem.bounds { return bounds; }
 +    let mut boxes: Vec<_> = placed.iter().map(|item| item.primitive.bbox).collect();
 +    boxes.push(candidate.primitive.bbox);
 +    boxes.extend(context.problem.obstacles.iter().copied());
@@ -19,7 +89,7 @@
  fn best_candidate(
      placed: &[WorkingPrimitive],
      candidates: Vec<WorkingPrimitive>,
-@@ -2590,53 +2668,7 @@ fn anchor_point(anchor: &str, bounds: Option<&Box2>) -> Option<Point> {
+@@ -2590,53 +2676,6 @@ fn anchor_point(anchor: &str, bounds: Option<&Box2>) -> Option<Point> {
      })
  }
  
@@ -70,7 +140,6 @@
 -                || value.starts_with(&format!("{prefix}-"))
 -        })
 -}
-+
  fn signal_net_weight(net: &str) -> f64 {
      let value = net.to_ascii_uppercase();
      if [
@@ -89,19 +158,19 @@ index 882ab4d..6165303 100644
  mod post_place;
 diff --git a/native/pcb-board-packer/src/micro_router.rs b/native/pcb-board-packer/src/micro_router.rs
 new file mode 100644
-index 0000000..2cd3cdf
+index 0000000..ee49d72
 --- /dev/null
 +++ b/native/pcb-board-packer/src/micro_router.rs
-@@ -0,0 +1,1099 @@
+@@ -0,0 +1,834 @@
 +use crate::geometry::{point_in_polygon, point_to_polygon_distance, Box2, Point};
 +use crate::model::{Primitive, Relation};
 +use crate::net_class::{is_ground, is_power, is_switching_power};
 +use crate::ordinary_net::MARKER_PREFIX;
 +use std::cmp::Ordering;
-+use std::collections::{BinaryHeap, HashMap, HashSet};
++use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 +use std::sync::Arc;
 +
-+const EPSILON: f64 = 1e-9;
++const EPS: f64 = 1e-9;
 +
 +#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 +pub enum PreferredDirection {
@@ -109,92 +178,3 @@ index 0000000..2cd3cdf
 +    Vertical,
 +    Any,
 +}
-+
-+#[derive(Clone, Debug)]
-+pub struct RouteLayer {
-+    pub name: Arc<str>,
-+    pub preferred_direction: PreferredDirection,
-+}
-+
-+#[derive(Clone, Debug)]
-+pub struct ViaTransition {
-+    pub from: usize,
-+    pub to: usize,
-+}
-+
-+#[derive(Clone, Debug)]
-+pub struct MicroRouteConfig {
-+    pub layers: Vec<RouteLayer>,
-+    pub via_transitions: Vec<ViaTransition>,
-+    pub grid: f64,
-+    pub trace_width: f64,
-+    pub clearance: f64,
-+    pub via_cost: f64,
-+    pub max_expanded: usize,
-+    pub max_total_jobs: usize,
-+    pub max_ordinary_jobs: usize,
-+    pub max_ordinary_jobs_per_net: usize,
-+    pub route_scale: f64,
-+    pub unroutable_penalty_mm: f64,
-+}
-+
-+impl MicroRouteConfig {
-+    pub fn board() -> Self {
-+        Self::two_layer(16)
-+    }
-+
-+    pub fn block() -> Self {
-+        Self::two_layer(8)
-+    }
-+
-+    fn two_layer(max_ordinary_jobs: usize) -> Self {
-+        Self {
-+            layers: vec![
-+                RouteLayer {
-+                    name: Arc::from("top"),
-+                    preferred_direction: PreferredDirection::Horizontal,
-+                },
-+                RouteLayer {
-+                    name: Arc::from("bottom"),
-+                    preferred_direction: PreferredDirection::Vertical,
-+                },
-+            ],
-+            via_transitions: vec![
-+                ViaTransition { from: 0, to: 1 },
-+                ViaTransition { from: 1, to: 0 },
-+            ],
-+            grid: 0.25,
-+            trace_width: 0.127,
-+            clearance: 0.254,
-+            via_cost: 15.0,
-+            max_expanded: 1_500,
-+            max_total_jobs: 32,
-+            max_ordinary_jobs,
-+            max_ordinary_jobs_per_net: 2,
-+            route_scale: 1.0,
-+            unroutable_penalty_mm: 30.0,
-+        }
-+    }
-+}
-+
-+#[derive(Clone, Debug)]
-+struct RouteEndpoint {
-+    point: Point,
-+    layer: usize,
-+    primitive_id: Arc<str>,
-+    reference: Arc<str>,
-+    net: Arc<str>,
-+}
-+
-+#[derive(Clone, Debug)]
-+struct RouteJob {
-+    net: Arc<str>,
-+    source: RouteEndpoint,
-+    target: RouteEndpoint,
-+    priority: u8,
-+    weight: f64,
-+    ordinary: bool,
-+}
-+
-+#[derive(Clone, Debug)]
-+struct StaticObstacle {
