@@ -1,6 +1,8 @@
 mod block_solver;
 mod geometry;
 mod model;
+mod micro_router;
+mod net_class;
 mod ordinary_net;
 mod passive_island_solver;
 mod post_place;
