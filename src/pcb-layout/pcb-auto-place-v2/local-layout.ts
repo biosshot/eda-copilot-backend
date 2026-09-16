@@ -294,6 +294,21 @@ function separationCorrection(
     }
     if (!overlaps) return null;
 
+    // localLayout expresses topology as well as approximate coordinates. When
+    // the requested seed positions clearly establish a horizontal or vertical
+    // ordering, preserve that axis even if separating along the perpendicular
+    // axis would require a smaller displacement. Only fall back to the minimal
+    // correction axis for coincident/ambiguous seed positions.
+    const seedDx = Math.abs(seedB.x - seedA.x);
+    const seedDy = Math.abs(seedB.y - seedA.y);
+    if (seedDx > seedDy + EPSILON) {
+        const sign = orderedSign(seedA.x, seedB.x, a.id, b.id);
+        return { x: requiredX * sign, y: 0 };
+    }
+    if (seedDy > seedDx + EPSILON) {
+        const sign = orderedSign(seedA.y, seedB.y, a.id, b.id);
+        return { x: 0, y: requiredY * sign };
+    }
     if (requiredX <= requiredY) {
         const sign = orderedSign(seedA.x, seedB.x, a.id, b.id);
         return { x: requiredX * sign, y: 0 };
