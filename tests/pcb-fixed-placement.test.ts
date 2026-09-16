@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildPlacementInput, validatePlacementRulesForCircuit } from '../src/pcb-layout/placement-input.ts';
+import { buildPlacementInput } from '../src/pcb-layout/placement-input.ts';
+import { validatePlacementRulesForCircuit } from '../src/pcb-layout/placement-validation.ts';
 import { runPcbLayoutDsl } from '../src/pcb-layout/pcb-layout-dsl/spec.ts';
 import type { ExplainCircuit } from '../src/types/circuit.ts';
 import type { FootprintSpec } from '../src/types/pcb/layout-model.ts';
