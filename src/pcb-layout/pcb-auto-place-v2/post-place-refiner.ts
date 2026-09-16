@@ -36,7 +36,8 @@ import {
 import { NATIVE_POST_PLACE_SCORE_CONTRACT_VERSION } from './native/contract.ts';
 import { encodeNativePostPlaceScoreProblem } from './native/encode-post-place-score.ts';
 import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
-import { createPostPlaceRouteScoreContext, postPlaceRoutePenalty } from './post-place-route-score.ts';
+import { createPostPlaceRouteScoreContext, preparePostPlaceRouteComparison, comparePostPlaceRouteCandidate } from './post-place-route-score.ts';
+import type { NativeRouteBaseline, NativeRouteComparison } from './native/contract.ts';
 
 export interface PostPlaceMove {
     kind: 'rotate_180' | 'swap';
@@ -47,6 +48,11 @@ export interface PostPlaceMove {
     routePenaltyBefore: number;
     routePenaltyAfter: number;
     effectiveImprovement: number;
+    routeJobCount: number;
+    routeUnresolvedBefore: number;
+    routeUnresolvedAfter: number;
+    routeBudgetExhaustedBefore: number;
+    routeBudgetExhaustedAfter: number;
 }
 
 export interface PostPlaceRefineResult {
@@ -86,19 +92,25 @@ export function refinePostPlacement(input: PlacementInput, placements: Placement
         let bestRouteBefore = 0;
         let bestRouteAfter = 0;
         let bestEffectiveImprovement = 0;
-        const routeBaselineByChanged = new Map<string, number>();
+        let bestRouteComparison: NativeRouteComparison | null = null;
+        const routeBaselineByChanged = new Map<string, NativeRouteBaseline>();
         for (const candidate of placementCandidates(input, current)) {
             if (!candidateIntroducesNoNewHardViolations(input, current, candidate.placements, candidate.changed)) continue;
             const baseScore = globalPostPlaceScore(input, candidate.placements);
             const changedKey = [...candidate.changed].sort().join('|');
-            let routeBefore = routeBaselineByChanged.get(changedKey);
-            if (routeBefore === undefined) {
-                routeBefore = postPlaceRoutePenalty(input, current, candidate.changed, routeContext);
-                routeBaselineByChanged.set(changedKey, routeBefore);
+            let routeBaseline = routeBaselineByChanged.get(changedKey);
+            if (!routeBaseline) {
+                routeBaseline = preparePostPlaceRouteComparison(input, current, candidate.changed, routeContext);
+                routeBaselineByChanged.set(changedKey, routeBaseline);
             }
-            const routeAfter = postPlaceRoutePenalty(input, candidate.placements, candidate.changed, routeContext);
+            const routeComparison = comparePostPlaceRouteCandidate(input, candidate.placements, routeBaseline, routeContext);
+            // Do not buy a lower partial-route cost by losing resolved higher-priority jobs.
+            if (routeComparison.feasibilityOrder > 0) continue;
+            const routeBefore = routeComparison.beforePenalty;
+            const routeAfter = routeComparison.afterPenalty;
             const effectiveImprovement = (currentScore + routeBefore) - (baseScore + routeAfter);
             if (effectiveImprovement <= minDelta) continue;
+            if (best && effectiveImprovement < bestEffectiveImprovement - GEOMETRY_EPSILON) continue;
             if (best
                 && Math.abs(effectiveImprovement - bestEffectiveImprovement) <= GEOMETRY_EPSILON
                 && candidate.key.localeCompare(best.key) >= 0
@@ -108,6 +120,7 @@ export function refinePostPlacement(input: PlacementInput, placements: Placement
             bestRouteBefore = routeBefore;
             bestRouteAfter = routeAfter;
             bestEffectiveImprovement = effectiveImprovement;
+            bestRouteComparison = routeComparison;
         }
         if (!best) break;
         moves.push({
@@ -119,6 +132,11 @@ export function refinePostPlacement(input: PlacementInput, placements: Placement
             routePenaltyBefore: roundScore(bestRouteBefore),
             routePenaltyAfter: roundScore(bestRouteAfter),
             effectiveImprovement: roundScore(bestEffectiveImprovement),
+            routeJobCount: bestRouteComparison!.jobs.length,
+            routeUnresolvedBefore: bestRouteComparison!.unresolvedBefore,
+            routeUnresolvedAfter: bestRouteComparison!.unresolvedAfter,
+            routeBudgetExhaustedBefore: bestRouteComparison!.budgetExhaustedBefore,
+            routeBudgetExhaustedAfter: bestRouteComparison!.budgetExhaustedAfter,
         });
         current = best.placements;
         currentScore = bestBaseScore;

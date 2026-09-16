@@ -6,6 +6,10 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
+mod temporary;
+pub mod comparison;
+use temporary::TemporaryRoutes;
+
 const EPS: f64 = 1e-9;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -43,6 +47,8 @@ pub struct MicroRouteConfig {
     pub include_local_power: bool,
     pub max_power_fanout: usize,
     pub max_expanded: usize,
+    /// Extra, bounded feasibility search after a cost-optimal search times out.
+    pub retry_expanded: usize,
     pub max_total_jobs: usize,
     pub max_ordinary_jobs: usize,
     pub max_ordinary_jobs_per_net: usize,
@@ -60,7 +66,9 @@ impl MicroRouteConfig {
     }
 
     pub fn post_place() -> Self {
-        Self::two_layer(16, true)
+        let mut config = Self::two_layer(16, true);
+        config.retry_expanded = 3_000;
+        config
     }
 
     fn two_layer(max_ordinary_jobs: usize, include_local_power: bool) -> Self {
@@ -90,6 +98,7 @@ impl MicroRouteConfig {
             include_local_power,
             max_power_fanout: 4,
             max_expanded: 1_500,
+            retry_expanded: 0,
             max_total_jobs: 32,
             max_ordinary_jobs,
             max_ordinary_jobs_per_net: 2,
@@ -186,6 +195,15 @@ impl PartialOrd for OpenNode {
 struct RouteResult {
     cost: PathCost,
     cells: Vec<Cell>,
+    expanded: usize,
+    used_fallback: bool,
+}
+
+#[derive(Clone, Debug)]
+enum RouteOutcome {
+    Found(RouteResult),
+    BudgetExhausted { expanded: usize },
+    NoPath { expanded: usize },
 }
 
 /// Bounded route-aware correction for a single placement candidate. The
@@ -263,7 +281,7 @@ fn route_jobs_penalty(
         return 0.0;
     }
     let obstacles = collect_obstacles(primitives, global_obstacles, routing_obstacles, config);
-    let mut temporary: HashMap<Cell, Arc<str>> = HashMap::new();
+    let mut temporary = TemporaryRoutes::default();
     let mut penalty = 0.0;
     for job in jobs {
         let baseline = baseline_cost(&job, config);
@@ -276,15 +294,15 @@ fn route_jobs_penalty(
             config,
         );
         match result {
-            Some(result) => {
+            RouteOutcome::Found(result) => {
                 let detour = (result.cost.physical - baseline).max(0.0);
                 penalty += detour * job.weight * config.route_scale;
-                for cell in result.cells {
-                    temporary.entry(cell).or_insert_with(|| job.net.clone());
-                }
+                temporary.reserve(&result.cells, &job.net);
             }
-            None => {
-                penalty += config.unroutable_penalty_mm * job.weight * config.route_scale;
+            RouteOutcome::BudgetExhausted { .. } | RouteOutcome::NoPath { .. } => {
+                // Compatibility scalar score. Paired refinement additionally
+                // prices an unresolved job above its known before/after route.
+                penalty += unresolved_detour(&job, 0.0, config) * job.weight * config.route_scale;
             }
         }
     }
@@ -572,16 +590,61 @@ fn collect_obstacles(
     result
 }
 
+fn unresolved_detour(job: &RouteJob, known_detour: f64, config: &MicroRouteConfig) -> f64 {
+    // A missing route must not be cheaper than either compared successful
+    // route, or than a normal top-bottom-top escape at this job's via price.
+    known_detour.max(2.0 * job.via_cost) + config.unroutable_penalty_mm
+}
+
 fn route_job(
     job: &RouteJob,
     bounds: Box2,
     board_outline: &[Point],
     obstacles: &[StaticObstacle],
-    temporary: &HashMap<Cell, Arc<str>>,
+    temporary: &TemporaryRoutes,
     config: &MicroRouteConfig,
-) -> Option<RouteResult> {
+) -> RouteOutcome {
+    let first = route_job_search(job, bounds, board_outline, obstacles, temporary, config,
+        job.via_cost, config.max_expanded);
+    let RouteOutcome::BudgetExhausted { expanded } = first else { return first };
+    if config.retry_expanded == 0 { return first; }
+    // The retry searches for a *feasible* route without first exhausting the
+    // entire top plane. Search price is relaxed, reported physical cost is not.
+    let search_via_cost = job.via_cost.min(config.grid * 4.0);
+    match route_job_search(job, bounds, board_outline, obstacles, temporary, config,
+        search_via_cost, config.retry_expanded) {
+        RouteOutcome::Found(mut result) => {
+            result.cost.physical += result.cost.vias as f64 * (job.via_cost - search_via_cost);
+            result.expanded += expanded;
+            result.used_fallback = true;
+            RouteOutcome::Found(result)
+        }
+        RouteOutcome::NoPath { expanded: retry } => RouteOutcome::NoPath { expanded: expanded + retry },
+        RouteOutcome::BudgetExhausted { expanded: retry } => RouteOutcome::BudgetExhausted { expanded: expanded + retry },
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn route_job_search(
+    job: &RouteJob,
+    bounds: Box2,
+    board_outline: &[Point],
+    obstacles: &[StaticObstacle],
+    temporary: &TemporaryRoutes,
+    config: &MicroRouteConfig,
+    search_via_cost: f64,
+    max_expanded: usize,
+) -> RouteOutcome {
     let start_cell = point_to_cell(job.source.point, job.source.layer, bounds, config.grid);
     let goal_cell = point_to_cell(job.target.point, job.target.layer, bounds, config.grid);
+    // A forbidden landing cannot be reached even by going to another layer.
+    for cell in [start_cell, goal_cell] {
+        if blocked(cell, cell, start_cell, goal_cell, &job.source.primitive_id, &job.target.primitive_id,
+            &job.source.reference, &job.target.reference, &job.net, bounds, board_outline,
+            obstacles, temporary, config) {
+            return RouteOutcome::NoPath { expanded: 0 };
+        }
+    }
     let start = State { cell: start_cell, direction: 4 };
     let mut open = BinaryHeap::new();
     let mut best: HashMap<State, PathCost> = HashMap::new();
@@ -591,24 +654,25 @@ fn route_job(
     open.push(OpenNode {
         state: start,
         g: PathCost::zero(),
-        estimate: heuristic(start_cell, goal_cell, config, job.via_cost),
+        estimate: heuristic(start_cell, goal_cell, config, search_via_cost),
         serial,
     });
     let mut expanded = 0usize;
 
     while let Some(node) = open.pop() {
-        if expanded >= config.max_expanded { break; }
         let Some(known) = best.get(&node.state).copied() else { continue; };
         if compare_cost(node.g, known) == Ordering::Greater { continue; }
+        if expanded >= max_expanded { return RouteOutcome::BudgetExhausted { expanded }; }
         expanded += 1;
         if node.state.cell.x == goal_cell.x && node.state.cell.y == goal_cell.y && node.state.cell.layer == goal_cell.layer {
             let cells = reconstruct(node.state, start, &previous);
-            return Some(RouteResult { cost: node.g, cells });
+            return RouteOutcome::Found(RouteResult { cost: node.g, cells, expanded, used_fallback: false });
         }
 
-        for (next, step_cost) in neighbors(node.state, config, job.via_cost) {
+        for (next, step_cost) in neighbors(node.state, config, search_via_cost) {
             if blocked(
                 next.cell,
+                node.state.cell,
                 start_cell,
                 goal_cell,
                 &job.source.primitive_id,
@@ -632,12 +696,12 @@ fn route_job(
             open.push(OpenNode {
                 state: next,
                 g: next_cost,
-                estimate: next_cost.physical + heuristic(next.cell, goal_cell, config, job.via_cost),
+                estimate: next_cost.physical + heuristic(next.cell, goal_cell, config, search_via_cost),
                 serial,
             });
         }
     }
-    None
+    RouteOutcome::NoPath { expanded }
 }
 
 fn neighbors(state: State, config: &MicroRouteConfig, via_cost: f64) -> Vec<(State, PathCost)> {
@@ -680,6 +744,7 @@ fn neighbors(state: State, config: &MicroRouteConfig, via_cost: f64) -> Vec<(Sta
 #[allow(clippy::too_many_arguments)]
 fn blocked(
     cell: Cell,
+    previous: Cell,
     start: Cell,
     goal: Cell,
     source_id: &Arc<str>,
@@ -690,7 +755,7 @@ fn blocked(
     bounds: Box2,
     board_outline: &[Point],
     obstacles: &[StaticObstacle],
-    temporary: &HashMap<Cell, Arc<str>>,
+    temporary: &TemporaryRoutes,
     config: &MicroRouteConfig,
 ) -> bool {
     let endpoint_carve = cell.layer == start.layer && chebyshev(cell, start) <= 1
@@ -725,16 +790,7 @@ fn blocked(
         }
     }
 
-    let radius = ((config.trace_width + config.clearance) / config.grid).ceil() as i32;
-    for dx in -radius..=radius {
-        for dy in -radius..=radius {
-            let nearby = Cell { x: cell.x + dx, y: cell.y + dy, layer: cell.layer };
-            if temporary.get(&nearby).is_some_and(|occupied_net| occupied_net != net) {
-                return true;
-            }
-        }
-    }
-    false
+    temporary.conflicts(previous, cell, net, config.grid, config.trace_width + config.clearance)
 }
 
 fn baseline_cost(job: &RouteJob, config: &MicroRouteConfig) -> f64 {
@@ -918,7 +974,7 @@ mod tests {
     use super::*;
     use crate::model::{ConnectionPoint, Placement};
 
-    fn primitive(id: &str, x: f64, y: f64, net: &str) -> Primitive {
+    pub(super) fn primitive(id: &str, x: f64, y: f64, net: &str) -> Primitive {
         Primitive {
             id: Arc::from(id), kind: Arc::from("component"), label: Arc::from(id),
             source_node_id: Arc::from(format!("component:{id}")), source_node_ids: Arc::new(vec![]),
@@ -932,7 +988,7 @@ mod tests {
         }
     }
 
-    fn bounds() -> Box2 { Box2 { left: -10.0, right: 10.0, top: -10.0, bottom: 10.0 } }
+    pub(super) fn bounds() -> Box2 { Box2 { left: -10.0, right: 10.0, top: -10.0, bottom: 10.0 } }
 
     #[test]
     fn free_manhattan_route_has_no_detour_penalty() {
@@ -984,13 +1040,13 @@ mod tests {
     fn temporary_route_blocks_different_net_but_not_same_net() {
         let config = MicroRouteConfig::board();
         let cell = Cell { x: 5, y: 5, layer: 0 };
-        let mut temporary = HashMap::new();
-        temporary.insert(cell, Arc::from("A"));
+        let mut temporary = TemporaryRoutes::default();
+        temporary.reserve(&[cell], &Arc::from("A"));
         let source = Arc::from("S");
         let target = Arc::from("T");
         let source_ref = Arc::from("S.1");
         let target_ref = Arc::from("T.1");
-        assert!(blocked(cell, cell, Cell { x: 8, y: 8, layer: 0 }, &source, &target, &source_ref, &target_ref, &Arc::from("B"), bounds(), &[], &[], &temporary, &config));
-        assert!(!blocked(cell, cell, Cell { x: 8, y: 8, layer: 0 }, &source, &target, &source_ref, &target_ref, &Arc::from("A"), bounds(), &[], &[], &temporary, &config));
+        assert!(blocked(cell, cell, cell, Cell { x: 8, y: 8, layer: 0 }, &source, &target, &source_ref, &target_ref, &Arc::from("B"), bounds(), &[], &[], &temporary, &config));
+        assert!(!blocked(cell, cell, cell, Cell { x: 8, y: 8, layer: 0 }, &source, &target, &source_ref, &target_ref, &Arc::from("A"), bounds(), &[], &[], &temporary, &config));
     }
 }

@@ -80,6 +80,26 @@ pub fn score_route_layout_with_obstacles(
     ))
 }
 
+/// Freeze and evaluate one bounded job plan on the current layout.
+#[napi]
+pub fn prepare_route_layout_comparison(problem: Value, changed_primitive_ids: Vec<String>, routing_obstacles: Value) -> Result<Value> {
+    let problem: BoardPackProblem = serde_json::from_value(problem).map_err(invalid_problem)?;
+    problem.validate(CONTRACT_VERSION).map_err(invalid_problem)?;
+    let obstacles: Vec<RouteObstacle> = serde_json::from_value(routing_obstacles).map_err(invalid_problem)?;
+    serde_json::to_value(micro_router::comparison::prepare(&problem, &obstacles, &changed_primitive_ids)).map_err(invalid_problem)
+}
+
+/// Evaluate a variant against exactly the baseline's terminal pairs and order.
+#[napi]
+pub fn compare_route_layout_candidate(problem: Value, routing_obstacles: Value, baseline: Value) -> Result<Value> {
+    let problem: BoardPackProblem = serde_json::from_value(problem).map_err(invalid_problem)?;
+    problem.validate(CONTRACT_VERSION).map_err(invalid_problem)?;
+    let obstacles: Vec<RouteObstacle> = serde_json::from_value(routing_obstacles).map_err(invalid_problem)?;
+    let baseline: micro_router::comparison::RouteBaseline = serde_json::from_value(baseline).map_err(invalid_problem)?;
+    let result = micro_router::comparison::compare(&problem, &obstacles, &baseline).map_err(invalid_problem)?;
+    serde_json::to_value(result).map_err(invalid_problem)
+}
+
 #[napi]
 pub fn block_contract_version() -> u32 {
     BLOCK_CONTRACT_VERSION
