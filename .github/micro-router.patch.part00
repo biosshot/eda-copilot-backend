@@ -136,4 +136,65 @@ index 4995ff3..6f8a514 100644
              }
          }
 @@ -434,6 +435,83 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
-     
+     current
+ }
+ 
++fn ranked_block_candidates(
++    primitive: &WorkingPrimitive,
++    placed: &[WorkingPrimitive],
++    previous: &IncrementalEvaluation,
++    context: &Context,
++) -> Vec<RankedCandidate> {
++    let mut ranked = Vec::new();
++    for (candidate_ordinal, candidate) in block_candidates(primitive, placed, context)
++        .into_iter()
++        .enumerate()
++    {
++        let mut variant = placed.to_vec();
++        variant.push(candidate.clone());
++        let incremental = append_incremental_evaluation(placed, &variant, previous, context);
++        let evaluation = incremental.evaluation;
++        ranked.push(RankedCandidate {
++            hard_violations: evaluation.hard_violations,
++            score: evaluation.score,
++            primitive: candidate,
++            incremental,
++            ordinal: candidate_ordinal,
++        });
++    }
++    ranked.sort_by(compare_candidates);
++    ranked.truncate(16);
++    let baseline_hard = previous.evaluation.hard_violations;
++    for candidate in &mut ranked {
++        if candidate.hard_violations != baseline_hard {
++            continue;
++        }
++        candidate.score += block_micro_route_penalty(&candidate.primitive, placed, context);
++    }
++    ranked.sort_by(compare_candidates);
++    ranked
++}
++
++fn block_micro_route_penalty(
++    candidate: &WorkingPrimitive,
++    placed: &[WorkingPrimitive],
++    context: &Context,
++) -> f64 {
++    let config = MicroRouteConfig::block();
++    let bounds = micro_route_bounds(candidate, placed, context, &config);
++    let placed_primitives: Vec<_> = placed.iter().map(|item| &item.primitive).collect();
++    micro_router::candidate_penalty(
++        &candidate.primitive,
++        &placed_primitives,
++        &context.problem.relations,
++        bounds,
++        &[],
++        &context.problem.obstacles,
++        &config,
++    )
++}
++
++fn micro_route_bounds(
++    candidate: &WorkingPrimitive,
++    placed: &[WorkingPrimitive],
++    context: &Context,
