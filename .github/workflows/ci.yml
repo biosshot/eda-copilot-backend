@@ -6,32 +6,9 @@ on:
   workflow_dispatch:
   workflow_call:
 permissions:
-  contents: write
+  contents: read
 jobs:
-  bootstrap-micro-router-fix:
-    if: github.event_name == 'pull_request' && github.head_ref == 'feat/pcb-micro-router'
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.head_ref }}
-      - name: Apply Micro-A* compile fix
-        shell: bash
-        run: |
-          if grep -q 'let prefix = prefix.clone();' native/pcb-board-packer/src/micro_router.rs; then
-            echo "Compile fix already applied."
-            exit 0
-          fi
-          git apply --check .github/micro-router-fix.patch
-          git apply .github/micro-router-fix.patch
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add native/pcb-board-packer/src/micro_router.rs
-          git commit -m "fix(pcb): preserve endpoint prefix in micro-router"
-          git push origin HEAD:${GITHUB_HEAD_REF}
   test:
-    needs: bootstrap-micro-router-fix
-    if: always() && (needs.bootstrap-micro-router-fix.result == 'success' || needs.bootstrap-micro-router-fix.result == 'skipped')
     strategy:
       fail-fast: false
       matrix:
