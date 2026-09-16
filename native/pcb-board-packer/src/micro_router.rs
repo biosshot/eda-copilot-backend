@@ -1,5 +1,5 @@
 use crate::geometry::{point_in_polygon, point_to_polygon_distance, Box2, Point};
-use crate::model::{Primitive, Relation};
+use crate::model::{Primitive, Relation, RouteObstacle};
 use crate::net_class::{is_ground, is_power, is_switching_power};
 use crate::ordinary_net::MARKER_PREFIX;
 use std::cmp::Ordering;
@@ -124,6 +124,8 @@ struct StaticObstacle {
     box_: Box2,
     layer: Option<usize>,
     primitive_id: Option<Arc<str>>,
+    reference: Option<Arc<str>>,
+    net: Option<Arc<str>>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -209,7 +211,7 @@ pub fn candidate_penalty(
     if jobs.is_empty() {
         return 0.0;
     }
-    route_jobs_penalty(jobs, &primitives, bounds, board_outline, global_obstacles, config)
+    route_jobs_penalty(jobs, &primitives, bounds, board_outline, global_obstacles, &[], config)
 }
 
 /// Re-score only routes affected by component-level post-place changes.
@@ -221,6 +223,7 @@ pub fn changed_layout_penalty(
     bounds: Box2,
     board_outline: &[Point],
     global_obstacles: &[Box2],
+    routing_obstacles: &[RouteObstacle],
     changed_primitive_ids: &[String],
     config: &MicroRouteConfig,
 ) -> f64 {
@@ -244,7 +247,7 @@ pub fn changed_layout_penalty(
     let mut jobs = dedupe_jobs(jobs);
     jobs.sort_by(job_order);
     jobs.truncate(config.max_total_jobs);
-    route_jobs_penalty(jobs, &all, bounds, board_outline, global_obstacles, config)
+    route_jobs_penalty(jobs, &all, bounds, board_outline, global_obstacles, routing_obstacles, config)
 }
 
 fn route_jobs_penalty(
@@ -253,12 +256,13 @@ fn route_jobs_penalty(
     bounds: Box2,
     board_outline: &[Point],
     global_obstacles: &[Box2],
+    routing_obstacles: &[RouteObstacle],
     config: &MicroRouteConfig,
 ) -> f64 {
     if jobs.is_empty() {
         return 0.0;
     }
-    let obstacles = collect_obstacles(primitives, global_obstacles, config);
+    let obstacles = collect_obstacles(primitives, global_obstacles, routing_obstacles, config);
     let mut temporary: HashMap<Cell, Arc<str>> = HashMap::new();
     let mut penalty = 0.0;
     for job in jobs {
@@ -523,6 +527,7 @@ fn primitive_layer(primitive: &Primitive, config: &MicroRouteConfig) -> usize {
 fn collect_obstacles(
     primitives: &[&Primitive],
     global_obstacles: &[Box2],
+    routing_obstacles: &[RouteObstacle],
     config: &MicroRouteConfig,
 ) -> Vec<StaticObstacle> {
     let mut result = Vec::new();
@@ -538,14 +543,30 @@ fn collect_obstacles(
                 box_: inflate_box(box_, config.clearance + config.trace_width / 2.0),
                 layer,
                 primitive_id: Some(primitive.id.clone()),
+                reference: None,
+                net: None,
             });
         }
+    }
+    for obstacle in routing_obstacles {
+        let layer = obstacle.layer.as_ref().and_then(|name| {
+            config.layers.iter().position(|layer| layer.name.as_ref() == name.as_ref())
+        });
+        result.push(StaticObstacle {
+            box_: inflate_box(obstacle.box_, config.clearance + config.trace_width / 2.0),
+            layer,
+            primitive_id: obstacle.primitive_id.clone(),
+            reference: obstacle.reference.clone(),
+            net: obstacle.net.clone(),
+        });
     }
     for box_ in global_obstacles {
         result.push(StaticObstacle {
             box_: inflate_box(*box_, config.clearance + config.trace_width / 2.0),
             layer: None,
             primitive_id: None,
+            reference: None,
+            net: None,
         });
     }
     result
@@ -592,6 +613,8 @@ fn route_job(
                 goal_cell,
                 &job.source.primitive_id,
                 &job.target.primitive_id,
+                &job.source.reference,
+                &job.target.reference,
                 &job.net,
                 bounds,
                 board_outline,
@@ -661,6 +684,8 @@ fn blocked(
     goal: Cell,
     source_id: &Arc<str>,
     target_id: &Arc<str>,
+    source_ref: &Arc<str>,
+    target_ref: &Arc<str>,
     net: &Arc<str>,
     bounds: Box2,
     board_outline: &[Point],
@@ -685,8 +710,18 @@ fn blocked(
     if !endpoint_carve {
         for obstacle in obstacles {
             if obstacle.layer.is_some_and(|layer| layer != cell.layer) { continue; }
+            if !point_in_box(point, obstacle.box_) { continue; }
+            if let Some(reference) = obstacle.reference.as_ref() {
+                // Only the concrete endpoint pad (or already-same-net copper) is traversable.
+                // Other pads on the same source/target component remain physical obstacles.
+                if reference == source_ref || reference == target_ref { continue; }
+                if obstacle.net.as_ref().is_some_and(|obstacle_net| obstacle_net == net) { continue; }
+                return true;
+            }
+            // Legacy body/collision geometry still needs whole-primitive transparency so
+            // an endpoint can escape its package. Pad obstacles above remain opaque.
             if obstacle.primitive_id.as_ref().is_some_and(|id| id == source_id || id == target_id) { continue; }
-            if point_in_box(point, obstacle.box_) { return true; }
+            return true;
         }
     }
 
@@ -917,6 +952,23 @@ mod tests {
     }
 
     #[test]
+    fn foreign_pad_on_target_component_is_not_transparent() {
+        let a = primitive("A", -4.0, 0.0, "SIG");
+        let b = primitive("B", 4.0, 0.0, "SIG");
+        let pad = RouteObstacle {
+            box_: Box2 { left: -0.8, right: 0.8, top: -2.0, bottom: 2.0 },
+            layer: Some(Arc::from("top")),
+            reference: Some(Arc::from("B.33")),
+            net: Some(Arc::from("GND")),
+            primitive_id: Some(Arc::from("B")),
+        };
+        let penalty = changed_layout_penalty(
+            &[a, b], &[], bounds(), &[], &[], &[pad], &["A".to_string()], &MicroRouteConfig::post_place(),
+        );
+        assert!(penalty > 0.1, "foreign target pad must force a detour, penalty={penalty}");
+    }
+
+    #[test]
     fn config_is_multilayer_ready() {
         let mut config = MicroRouteConfig::board();
         config.layers.push(RouteLayer { name: Arc::from("inner1"), preferred_direction: PreferredDirection::Horizontal });
@@ -936,7 +988,9 @@ mod tests {
         temporary.insert(cell, Arc::from("A"));
         let source = Arc::from("S");
         let target = Arc::from("T");
-        assert!(blocked(cell, cell, Cell { x: 8, y: 8, layer: 0 }, &source, &target, &Arc::from("B"), bounds(), &[], &[], &temporary, &config));
-        assert!(!blocked(cell, cell, Cell { x: 8, y: 8, layer: 0 }, &source, &target, &Arc::from("A"), bounds(), &[], &[], &temporary, &config));
+        let source_ref = Arc::from("S.1");
+        let target_ref = Arc::from("T.1");
+        assert!(blocked(cell, cell, Cell { x: 8, y: 8, layer: 0 }, &source, &target, &source_ref, &target_ref, &Arc::from("B"), bounds(), &[], &[], &temporary, &config));
+        assert!(!blocked(cell, cell, Cell { x: 8, y: 8, layer: 0 }, &source, &target, &source_ref, &target_ref, &Arc::from("A"), bounds(), &[], &[], &temporary, &config));
     }
 }

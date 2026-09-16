@@ -20,6 +20,14 @@ export interface NativeConnectionPoint extends Point {
     net?: string;
 }
 
+export interface NativeRoutingObstacle {
+    box: Box;
+    layer?: Layer;
+    ref?: string;
+    net?: string;
+    primitiveId?: string;
+}
+
 export interface NativePathPort extends Point {
     pathId: string;
     order: number;
@@ -143,6 +151,12 @@ export interface NativeBoardPackerAddon {
     solveBoardPacked(problem: NativeBoardPackProblemV3): NativeBoardPackSolutionV3;
     /** Bounded Micro-A* score for routes affected by the listed component-level primitives. */
     scoreRouteLayout(problem: NativeBoardPackProblemV3, changedPrimitiveIds: string[]): number;
+    /** Same score with enriched pad/copper obstacles used by post-place refinement. */
+    scoreRouteLayoutWithObstacles(
+        problem: NativeBoardPackProblemV3,
+        changedPrimitiveIds: string[],
+        routingObstacles: NativeRoutingObstacle[],
+    ): number;
     blockContractVersion(): number;
     solveBlockPrimitives(problem: NativeBlockSolveProblemV2): NativeBlockSolveSolutionV2;
     passiveIslandContractVersion(): number;

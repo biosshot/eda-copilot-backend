@@ -67,6 +67,18 @@ pub struct ConnectionPoint {
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RouteObstacle {
+    #[serde(rename = "box")]
+    pub box_: Box2,
+    pub layer: Option<Arc<str>>,
+    #[serde(rename = "ref")]
+    pub reference: Option<Arc<str>>,
+    pub net: Option<Arc<str>>,
+    pub primitive_id: Option<Arc<str>>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PathPort {
     pub x: f64,
     pub y: f64,
