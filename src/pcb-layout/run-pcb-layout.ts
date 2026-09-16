@@ -6,11 +6,19 @@ import { LayoutRulesSchema } from "#types/pcb/layout-rules.ts";
 import { writeFile } from "node:fs/promises";
 import { createPlacementDebugArtifacts, writePlacementArtifacts } from "./artifacts.ts";
 import { createBoardAssemble } from "./board-assemble.ts";
-import { applyPlacementPreviewFilter, buildPlacementInput, validatePlacementRulesForCircuit } from "./placement-input.ts";
+import { applyPlacementPreviewFilter, buildPlacementInput } from "./placement-input.ts";
+import { validatePlacementRulesForCircuit } from "./placement-validation.ts";
 import { buildPlacementGraph } from "./pcb-auto-place/placement-graph.ts";
 import { createPcbLayoutDigest, createPcbToolReport } from "./report.ts";
 import path from "node:path";
 import { terminatePcbSubtreeWorkerPool } from "./pcb-auto-place-v2/tree-subtree-pool.ts";
+import {
+    attachLocalLayoutSeeds,
+    extractLocalLayouts,
+    instrumentLocalLayoutDsl,
+    stripLocalLayoutCarriers,
+    validateLocalLayouts,
+} from "./pcb-auto-place-v2/local-layout.ts";
 import {
     emitPcbLayoutProgress,
     pcbLayoutProgress,
@@ -39,10 +47,12 @@ export async function runPcbLayout(options: RunPcbLayoutOptions) {
 
     try {
         emitProgress('parse_dsl', PCB_LAYOUT_PROGRESS.parseDsl, 'Parsing PCB layout DSL.');
+        const rawRules = runPcbLayoutDsl(instrumentLocalLayoutDsl(options.code));
+        const localLayouts = extractLocalLayouts(rawRules);
         const parsedRules = ensurePreservedComponentBlocks(
             options.circuit,
             applyExistingBoard(
-                LayoutRulesSchema().parse(runPcbLayoutDsl(options.code)),
+                LayoutRulesSchema().parse(stripLocalLayoutCarriers(rawRules)),
                 options.existingPlacement,
             ),
             options.existingPlacement,
@@ -51,12 +61,16 @@ export async function runPcbLayout(options: RunPcbLayoutOptions) {
 
         emitProgress('validate_dsl', PCB_LAYOUT_PROGRESS.validateDsl, 'Validating PCB layout DSL against the circuit.');
         validatePlacementRulesForCircuit(circuit, rules);
+        validateLocalLayouts(circuit, rules, localLayouts);
 
         emitProgress('resolve_footprints', PCB_LAYOUT_PROGRESS.resolveFootprints, 'Resolving PCB footprints and component geometry.');
-        const placementInput = applyExistingComponentPlacements(
-            await buildPlacementInput(circuit, rules, options.footprints),
-            rules.preserve,
-            options.existingPlacement,
+        const placementInput = attachLocalLayoutSeeds(
+            applyExistingComponentPlacements(
+                await buildPlacementInput(circuit, rules, options.footprints),
+                rules.preserve,
+                options.existingPlacement,
+            ),
+            localLayouts,
         );
 
         emitProgress('build_graph', PCB_LAYOUT_PROGRESS.buildGraph, 'Building placement ownership graph.');
