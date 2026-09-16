@@ -1,0 +1,127 @@
+     placed: Vec<WorkingPrimitive>,
+     remaining: Vec<WorkingPrimitive>,
+     rank: Rank,
++    route_penalty: f64,
+     ordinal: usize,
+ }
+ 
+@@ -75,6 +77,7 @@ struct SearchState {
+ struct RankedCandidate {
+     primitive: WorkingPrimitive,
+     rank: Rank,
++    route_penalty: f64,
+     ordinal: usize,
+ }
+ 
+@@ -208,6 +211,7 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
+         placed: locked,
+         remaining,
+         rank: initial_rank,
++        route_penalty: 0.0,
+         ordinal,
+     }];
+     let search_width = context.problem.search_width.max(32);
+@@ -221,7 +225,7 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
+             }
+             let next_index = choose_next(&state, &context);
+             let next = state.remaining[next_index].clone();
+-            let candidates = ranked_candidates(&next, &state.placed, &context);
++            let candidates = ranked_candidates(&next, &state.placed, state.route_penalty, &context);
+             let legal: Vec<_> = candidates
+                 .iter()
+                 .filter(|candidate| candidate.rank.hard_count == state.rank.hard_count)
+@@ -239,6 +243,7 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
+                     placed,
+                     remaining,
+                     rank: candidate.rank,
++                    route_penalty: candidate.route_penalty,
+                     ordinal,
+                 });
+             }
+@@ -314,6 +319,7 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
+ fn ranked_candidates(
+     primitive: &WorkingPrimitive,
+     placed: &[WorkingPrimitive],
++    parent_route_penalty: f64,
+     context: &Context,
+ ) -> Vec<RankedCandidate> {
+     let mut candidates = Vec::new();
+@@ -326,12 +332,22 @@ fn ranked_candidates(
+             candidates.push(RankedCandidate {
+                 primitive: candidate,
+                 rank: state_rank(&all, context),
++                route_penalty: parent_route_penalty,
+                 ordinal,
+             });
+         }
+     }
+     dedupe_candidates(&mut candidates);
+     candidates.sort_by(compare_candidates);
++    candidates.truncate(32);
++    let baseline_hard = hard_count(placed, context);
++    for candidate in &mut candidates {
++        if candidate.rank.hard_count != baseline_hard { continue; }
++        let correction = board_micro_route_penalty(&candidate.primitive, placed, context);
++        candidate.route_penalty = parent_route_penalty + correction;
++        candidate.rank.score += candidate.route_penalty;
++    }
++    candidates.sort_by(compare_candidates);
+     if std::env::var("PCB_BOARD_PACKER_TRACE_DESIGNATOR")
+         .ok()
+         .as_deref()
+@@ -369,6 +385,24 @@ fn ranked_candidates(
+     candidates
+ }
+ 
++fn board_micro_route_penalty(
++    candidate: &WorkingPrimitive,
++    placed: &[WorkingPrimitive],
++    context: &Context,
++) -> f64 {
++    let config = MicroRouteConfig::board();
++    let placed_primitives: Vec<_> = placed.iter().map(|item| &item.primitive).collect();
++    micro_router::candidate_penalty(
++        &candidate.primitive,
++        &placed_primitives,
++        &context.problem.relations,
++        context.problem.bounds,
++        &context.problem.board_outline,
++        &context.problem.obstacles,
++        &config,
++    )
++}
++
+ fn position_candidates(
+     primitive: &WorkingPrimitive,
+     placed: &[WorkingPrimitive],
+@@ -555,17 +589,15 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
+                 .filter(|(item_index, _)| *item_index != index)
+                 .map(|(_, item)| item.clone())
+                 .collect();
+-            let candidates = ranked_candidates(&current[index], &fixed, context);
++            let candidates = ranked_candidates(&current[index], &fixed, 0.0, context);
+             let mut best = current[index].clone();
+             let mut best_rank = Rank {
+                 hard_count: current_rank.hard_count,
+                 hard_severity: current_rank.hard_severity,
+-                score: current_rank.score,
++                score: current_rank.score + board_micro_route_penalty(&current[index], &fixed, context),
+             };
+-            for candidate in candidates.into_iter().take(80) {
+-                let mut variant = current.clone();
+-                variant[index] = candidate.primitive.clone();
+-                let rank = state_rank(&variant, context);
++            for candidate in candidates {
++                let rank = candidate.rank;
+                 let better = rank.hard_count < best_rank.hard_count
+                     || (rank.hard_count == best_rank.hard_count
+                         && rank.hard_severity + 0.001 < best_rank.hard_severity)
+@@ -579,7 +611,7 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
+             }
+             if primitive_key(&best) != primitive_key(&current[index]) {
+                 current[index] = best;
+-                current_rank = best_rank;
++                current_rank = state_rank(&current, context);
+                 changed = true;
+             }
+         }
