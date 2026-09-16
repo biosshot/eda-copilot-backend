@@ -28,6 +28,46 @@ export interface NativeRoutingObstacle {
     primitiveId?: string;
 }
 
+/** A fixed terminal-pair obligation, independent of candidate coordinates. */
+export interface NativePlannedRouteJob {
+    net: string;
+    sourcePrimitive: string;
+    sourceRef: string;
+    targetPrimitive: string;
+    targetRef: string;
+    priority: number;
+    weight: number;
+    viaCost: number;
+    ordinary: boolean;
+}
+
+export interface NativeRouteSample {
+    job: NativePlannedRouteJob;
+    status: 'found' | 'budget_exhausted' | 'no_path';
+    detour: number | null;
+    physicalCost: number | null;
+    planarLength: number | null;
+    vias: number;
+    expanded: number;
+    usedFallback: boolean;
+}
+
+export interface NativeRouteBaseline {
+    version: 1;
+    jobs: NativeRouteSample[];
+}
+
+export interface NativeRouteComparison {
+    beforePenalty: number;
+    afterPenalty: number;
+    unresolvedBefore: number;
+    unresolvedAfter: number;
+    budgetExhaustedBefore: number;
+    budgetExhaustedAfter: number;
+    feasibilityOrder: -1 | 0 | 1;
+    jobs: NativeRouteSample[];
+}
+
 export interface NativePathPort extends Point {
     pathId: string;
     order: number;
@@ -157,6 +197,16 @@ export interface NativeBoardPackerAddon {
         changedPrimitiveIds: string[],
         routingObstacles: NativeRoutingObstacle[],
     ): number;
+    prepareRouteLayoutComparison(
+        problem: NativeBoardPackProblemV3,
+        changedPrimitiveIds: string[],
+        routingObstacles: NativeRoutingObstacle[],
+    ): NativeRouteBaseline;
+    compareRouteLayoutCandidate(
+        problem: NativeBoardPackProblemV3,
+        routingObstacles: NativeRoutingObstacle[],
+        baseline: NativeRouteBaseline,
+    ): NativeRouteComparison;
     blockContractVersion(): number;
     solveBlockPrimitives(problem: NativeBlockSolveProblemV2): NativeBlockSolveSolutionV2;
     passiveIslandContractVersion(): number;

@@ -18,6 +18,7 @@ import { buildPlacementGraph } from '../pcb-auto-place/placement-graph.ts';
 import type { PlacementPrimitive } from './primitives.ts';
 import { encodeNativeBoardPackProblem } from './native/encode-board-problem.ts';
 import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
+import type { NativeRouteBaseline } from './native/contract.ts';
 
 export type PostPlaceRouteScoreContext = {
     relations: PlacementRelation[];
@@ -46,12 +47,33 @@ export function postPlaceRoutePenalty(
     context: PostPlaceRouteScoreContext,
 ) {
     if (changedDesignators.size === 0) return 0;
+    const { problem, routingObstacles } = routeLayoutProblem(input, placements, context);
+    const changedPrimitiveIds = [...changedDesignators].sort().map((designator) => `post:${designator}`);
+    return loadNativeBoardPacker().scoreRouteLayoutWithObstacles(problem, changedPrimitiveIds, routingObstacles);
+}
+
+/** Cache only for the current refinement iteration, once per changed set. */
+export function preparePostPlaceRouteComparison(
+    input: PlacementInput, placements: Placement[], changedDesignators: Set<string>, context: PostPlaceRouteScoreContext,
+): NativeRouteBaseline {
+    const { problem, routingObstacles } = routeLayoutProblem(input, placements, context);
+    return loadNativeBoardPacker().prepareRouteLayoutComparison(problem,
+        [...changedDesignators].sort().map((designator) => `post:${designator}`), routingObstacles);
+}
+
+export function comparePostPlaceRouteCandidate(
+    input: PlacementInput, placements: Placement[], baseline: NativeRouteBaseline, context: PostPlaceRouteScoreContext,
+) {
+    const { problem, routingObstacles } = routeLayoutProblem(input, placements, context);
+    return loadNativeBoardPacker().compareRouteLayoutCandidate(problem, routingObstacles, baseline);
+}
+
+function routeLayoutProblem(input: PlacementInput, placements: Placement[], context: PostPlaceRouteScoreContext) {
     const placementByDesignator = new Map(placements.map((placement) => [placement.designator, placement]));
     const primitives = input.components.flatMap((component) => {
         const placement = placementByDesignator.get(component.designator);
         return placement ? [componentPrimitive(component, placement)] : [];
     });
-    if (primitives.length < 2) return 0;
 
     const node: PlacementTreeNode = {
         id: 'tree:board:post-place-route-score',
@@ -78,7 +100,6 @@ export function postPlaceRoutePenalty(
             searchWidth: 32,
         },
     });
-    const changedPrimitiveIds = [...changedDesignators].map((designator) => `post:${designator}`);
     const routingObstacles = input.components.flatMap((component) => {
         const placement = placementByDesignator.get(component.designator);
         if (!placement) return [];
@@ -94,7 +115,7 @@ export function postPlaceRoutePenalty(
             };
         });
     });
-    return loadNativeBoardPacker().scoreRouteLayoutWithObstacles(problem, changedPrimitiveIds, routingObstacles);
+    return { problem, routingObstacles };
 }
 
 function componentPrimitive(component: PcbComponent, placement: Placement): PlacementPrimitive {
