@@ -36,6 +36,7 @@ import {
 import { NATIVE_POST_PLACE_SCORE_CONTRACT_VERSION } from './native/contract.ts';
 import { encodeNativePostPlaceScoreProblem } from './native/encode-post-place-score.ts';
 import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
+import { createPostPlaceRouteScoreContext, postPlaceRoutePenalty } from './post-place-route-score.ts';
 
 export interface PostPlaceMove {
     kind: 'rotate_180' | 'swap';
@@ -43,6 +44,9 @@ export interface PostPlaceMove {
     description: string;
     scoreBefore: number;
     scoreAfter: number;
+    routePenaltyBefore: number;
+    routePenaltyAfter: number;
+    effectiveImprovement: number;
 }
 
 export interface PostPlaceRefineResult {
@@ -71,20 +75,39 @@ export function refinePostPlacement(input: PlacementInput, placements: Placement
     const iterations = Math.max(0, Math.floor(input.solverOptions.localImproveIterations));
     const minDelta = Math.max(0, input.solverOptions.localImproveMinDelta);
     const initialScore = globalPostPlaceScore(input, placements);
+    const routeContext = createPostPlaceRouteScoreContext(input);
     let current = placements.map((placement) => ({ ...placement }));
     let currentScore = initialScore;
     const moves: PostPlaceMove[] = [];
 
     for (let iteration = 0; iteration < iterations; iteration += 1) {
         let best: Candidate | null = null;
-        let bestScore = currentScore;
+        let bestBaseScore = currentScore;
+        let bestRouteBefore = 0;
+        let bestRouteAfter = 0;
+        let bestEffectiveImprovement = 0;
+        const routeBaselineByChanged = new Map<string, number>();
         for (const candidate of placementCandidates(input, current)) {
             if (!candidateIntroducesNoNewHardViolations(input, current, candidate.placements, candidate.changed)) continue;
-            const score = globalPostPlaceScore(input, candidate.placements);
-            if (score + minDelta >= bestScore) continue;
-            if (best && Math.abs(score - bestScore) <= GEOMETRY_EPSILON && candidate.key.localeCompare(best.key) >= 0) continue;
+            const baseScore = globalPostPlaceScore(input, candidate.placements);
+            const changedKey = [...candidate.changed].sort().join('|');
+            let routeBefore = routeBaselineByChanged.get(changedKey);
+            if (routeBefore === undefined) {
+                routeBefore = postPlaceRoutePenalty(input, current, candidate.changed, routeContext);
+                routeBaselineByChanged.set(changedKey, routeBefore);
+            }
+            const routeAfter = postPlaceRoutePenalty(input, candidate.placements, candidate.changed, routeContext);
+            const effectiveImprovement = (currentScore + routeBefore) - (baseScore + routeAfter);
+            if (effectiveImprovement <= minDelta) continue;
+            if (best
+                && Math.abs(effectiveImprovement - bestEffectiveImprovement) <= GEOMETRY_EPSILON
+                && candidate.key.localeCompare(best.key) >= 0
+            ) continue;
             best = candidate;
-            bestScore = score;
+            bestBaseScore = baseScore;
+            bestRouteBefore = routeBefore;
+            bestRouteAfter = routeAfter;
+            bestEffectiveImprovement = effectiveImprovement;
         }
         if (!best) break;
         moves.push({
@@ -92,10 +115,13 @@ export function refinePostPlacement(input: PlacementInput, placements: Placement
             designators: [...best.changed].sort(),
             description: best.description,
             scoreBefore: roundScore(currentScore),
-            scoreAfter: roundScore(bestScore),
+            scoreAfter: roundScore(bestBaseScore),
+            routePenaltyBefore: roundScore(bestRouteBefore),
+            routePenaltyAfter: roundScore(bestRouteAfter),
+            effectiveImprovement: roundScore(bestEffectiveImprovement),
         });
         current = best.placements;
-        currentScore = bestScore;
+        currentScore = bestBaseScore;
     }
 
     const diagnostics = fixedPlacementOpportunities(input, current, currentScore, minDelta);

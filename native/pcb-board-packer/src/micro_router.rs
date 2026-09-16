@@ -34,7 +34,14 @@ pub struct MicroRouteConfig {
     pub grid: f64,
     pub trace_width: f64,
     pub clearance: f64,
+    /** Normal explicit-route via cost in mm-equivalent. */
     pub via_cost: f64,
+    pub ordinary_via_cost: f64,
+    pub high_via_cost: f64,
+    pub critical_via_cost: f64,
+    pub power_via_cost: f64,
+    pub include_local_power: bool,
+    pub max_power_fanout: usize,
     pub max_expanded: usize,
     pub max_total_jobs: usize,
     pub max_ordinary_jobs: usize,
@@ -45,14 +52,18 @@ pub struct MicroRouteConfig {
 
 impl MicroRouteConfig {
     pub fn board() -> Self {
-        Self::two_layer(16)
+        Self::two_layer(16, false)
     }
 
     pub fn block() -> Self {
-        Self::two_layer(8)
+        Self::two_layer(8, true)
     }
 
-    fn two_layer(max_ordinary_jobs: usize) -> Self {
+    pub fn post_place() -> Self {
+        Self::two_layer(16, true)
+    }
+
+    fn two_layer(max_ordinary_jobs: usize, include_local_power: bool) -> Self {
         Self {
             layers: vec![
                 RouteLayer {
@@ -72,6 +83,12 @@ impl MicroRouteConfig {
             trace_width: 0.127,
             clearance: 0.254,
             via_cost: 15.0,
+            ordinary_via_cost: 10.0,
+            high_via_cost: 30.0,
+            critical_via_cost: 45.0,
+            power_via_cost: 20.0,
+            include_local_power,
+            max_power_fanout: 4,
             max_expanded: 1_500,
             max_total_jobs: 32,
             max_ordinary_jobs,
@@ -98,6 +115,7 @@ struct RouteJob {
     target: RouteEndpoint,
     priority: u8,
     weight: f64,
+    via_cost: f64,
     ordinary: bool,
 }
 
@@ -191,10 +209,58 @@ pub fn candidate_penalty(
     if jobs.is_empty() {
         return 0.0;
     }
-    let obstacles = collect_obstacles(&primitives, global_obstacles, config);
+    route_jobs_penalty(jobs, &primitives, bounds, board_outline, global_obstacles, config)
+}
+
+/// Re-score only routes affected by component-level post-place changes.
+/// The caller supplies one primitive per component, so endpoint carving cannot
+/// make unrelated siblings in a block or module transparent.
+pub fn changed_layout_penalty(
+    primitives: &[Primitive],
+    relations: &[Relation],
+    bounds: Box2,
+    board_outline: &[Point],
+    global_obstacles: &[Box2],
+    changed_primitive_ids: &[String],
+    config: &MicroRouteConfig,
+) -> f64 {
+    if config.layers.is_empty() || config.grid <= 0.0 || config.max_total_jobs == 0 {
+        return 0.0;
+    }
+    let changed: HashSet<&str> = changed_primitive_ids.iter().map(String::as_str).collect();
+    if changed.is_empty() {
+        return 0.0;
+    }
+    let all: Vec<&Primitive> = primitives.iter().collect();
+    let mut jobs = Vec::new();
+    for candidate in primitives.iter().filter(|primitive| changed.contains(primitive.id.as_ref())) {
+        let placed: Vec<&Primitive> = all
+            .iter()
+            .copied()
+            .filter(|primitive| primitive.id != candidate.id)
+            .collect();
+        jobs.extend(schedule_jobs(candidate, &placed, relations, config));
+    }
+    let mut jobs = dedupe_jobs(jobs);
+    jobs.sort_by(job_order);
+    jobs.truncate(config.max_total_jobs);
+    route_jobs_penalty(jobs, &all, bounds, board_outline, global_obstacles, config)
+}
+
+fn route_jobs_penalty(
+    jobs: Vec<RouteJob>,
+    primitives: &[&Primitive],
+    bounds: Box2,
+    board_outline: &[Point],
+    global_obstacles: &[Box2],
+    config: &MicroRouteConfig,
+) -> f64 {
+    if jobs.is_empty() {
+        return 0.0;
+    }
+    let obstacles = collect_obstacles(primitives, global_obstacles, config);
     let mut temporary: HashMap<Cell, Arc<str>> = HashMap::new();
     let mut penalty = 0.0;
-
     for job in jobs {
         let baseline = baseline_cost(&job, config);
         let result = route_job(
@@ -244,6 +310,7 @@ fn schedule_jobs(
         .collect::<Vec<_>>();
     ordinary = cap_per_net(ordinary, config.max_ordinary_jobs_per_net);
     ordinary = farthest_point_sample(ordinary, ordinary_limit);
+    ordinary.sort_by(job_order);
     explicit.extend(ordinary);
     explicit
 }
@@ -278,12 +345,14 @@ fn explicit_jobs(
         let priority = priority_rank(relation.priority.as_deref());
         let configured = relation.weight.unwrap_or(70.0);
         let weight = priority_weight(priority) * (configured / 70.0).clamp(0.25, 4.0);
+        let via_cost = route_via_cost(priority, source.net.as_ref(), false, config);
         jobs.push(RouteJob {
             net: source.net.clone(),
             source,
             target,
             priority,
             weight,
+            via_cost,
             ordinary: false,
         });
     }
@@ -307,26 +376,46 @@ fn ordinary_jobs(
     for target_primitive in placed {
         let target_by_net = points_by_net(target_primitive, config);
         for (net, source_points) in &candidate_by_net {
-            if is_ground(net) || is_power(net) || is_switching_power(net) {
+            if is_ground(net) {
                 continue;
+            }
+            let power = is_power(net) || is_switching_power(net);
+            if power {
+                let fanout = net_primitive_fanout(candidate, placed, net.as_ref());
+                if !config.include_local_power || fanout > config.max_power_fanout {
+                    continue;
+                }
             }
             if marker_mode && !marker_nets.contains(net.as_ref()) {
                 continue;
             }
             let Some(target_points) = target_by_net.get(net) else { continue };
             if let Some((source, target)) = closest_pair(source_points, target_points) {
+                let priority = if is_switching_power(net) { 3 } else if is_power(net) { 2 } else { 0 };
+                let weight = if is_switching_power(net) { 2.5 } else if is_power(net) { 1.5 } else { 1.0 };
+                let via_cost = route_via_cost(priority, net.as_ref(), true, config);
                 jobs.push(RouteJob {
                     net: net.clone(),
                     source,
                     target,
-                    priority: 0,
-                    weight: 1.0,
+                    priority,
+                    weight,
+                    via_cost,
                     ordinary: true,
                 });
             }
         }
     }
     dedupe_jobs(jobs)
+}
+
+fn net_primitive_fanout(candidate: &Primitive, placed: &[&Primitive], net: &str) -> usize {
+    usize::from(primitive_has_net(candidate, net))
+        + placed.iter().filter(|primitive| primitive_has_net(primitive, net)).count()
+}
+
+fn primitive_has_net(primitive: &Primitive, net: &str) -> bool {
+    primitive.connection_points.iter().any(|point| point.net.as_deref() == Some(net))
 }
 
 fn points_by_net(primitive: &Primitive, config: &MicroRouteConfig) -> HashMap<Arc<str>, Vec<RouteEndpoint>> {
@@ -481,7 +570,7 @@ fn route_job(
     open.push(OpenNode {
         state: start,
         g: PathCost::zero(),
-        estimate: heuristic(start_cell, goal_cell, config),
+        estimate: heuristic(start_cell, goal_cell, config, job.via_cost),
         serial,
     });
     let mut expanded = 0usize;
@@ -496,7 +585,7 @@ fn route_job(
             return Some(RouteResult { cost: node.g, cells });
         }
 
-        for (next, step_cost) in neighbors(node.state, config) {
+        for (next, step_cost) in neighbors(node.state, config, job.via_cost) {
             if blocked(
                 next.cell,
                 start_cell,
@@ -520,7 +609,7 @@ fn route_job(
             open.push(OpenNode {
                 state: next,
                 g: next_cost,
-                estimate: next_cost.physical + heuristic(next.cell, goal_cell, config),
+                estimate: next_cost.physical + heuristic(next.cell, goal_cell, config, job.via_cost),
                 serial,
             });
         }
@@ -528,7 +617,7 @@ fn route_job(
     None
 }
 
-fn neighbors(state: State, config: &MicroRouteConfig) -> Vec<(State, PathCost)> {
+fn neighbors(state: State, config: &MicroRouteConfig, via_cost: f64) -> Vec<(State, PathCost)> {
     let mut result = Vec::with_capacity(6);
     let moves = [(1, 0, 0u8), (-1, 0, 1u8), (0, 1, 2u8), (0, -1, 3u8)];
     for (dx, dy, direction) in moves {
@@ -559,7 +648,7 @@ fn neighbors(state: State, config: &MicroRouteConfig) -> Vec<(State, PathCost)> 
                 cell: Cell { layer: transition.to, ..state.cell },
                 direction: 4,
             },
-            PathCost { physical: config.via_cost, vias: 1, bends: 0, preference: 0 },
+            PathCost { physical: via_cost, vias: 1, bends: 0, preference: 0 },
         ));
     }
     result
@@ -617,13 +706,13 @@ fn baseline_cost(job: &RouteJob, config: &MicroRouteConfig) -> f64 {
     let planar = (job.source.point.x - job.target.point.x).abs()
         + (job.source.point.y - job.target.point.y).abs();
     let vias = minimum_vias(job.source.layer, job.target.layer, config).unwrap_or(0);
-    planar + vias as f64 * config.via_cost
+    planar + vias as f64 * job.via_cost
 }
 
-fn heuristic(cell: Cell, goal: Cell, config: &MicroRouteConfig) -> f64 {
+fn heuristic(cell: Cell, goal: Cell, config: &MicroRouteConfig, via_cost: f64) -> f64 {
     let planar = ((cell.x - goal.x).abs() + (cell.y - goal.y).abs()) as f64 * config.grid;
     let vias = minimum_vias(cell.layer, goal.layer, config).unwrap_or(0);
-    planar + vias as f64 * config.via_cost
+    planar + vias as f64 * via_cost
 }
 
 fn minimum_vias(from: usize, to: usize, config: &MicroRouteConfig) -> Option<usize> {
@@ -735,6 +824,24 @@ fn priority_rank(value: Option<&str>) -> u8 {
 }
 fn priority_weight(priority: u8) -> f64 {
     match priority { 4 => 4.0, 3 => 2.5, 2 => 1.5, _ => 1.0 }
+}
+
+fn route_via_cost(priority: u8, net: &str, ordinary: bool, config: &MicroRouteConfig) -> f64 {
+    if ordinary {
+        if is_switching_power(net) {
+            return config.high_via_cost.max(config.power_via_cost);
+        }
+        if is_power(net) {
+            return config.power_via_cost;
+        }
+        return config.ordinary_via_cost;
+    }
+    match priority {
+        4 => config.critical_via_cost,
+        3 => config.high_via_cost,
+        2 => config.via_cost,
+        _ => config.ordinary_via_cost,
+    }
 }
 
 fn add_cost(a: PathCost, b: PathCost) -> PathCost {

@@ -84,6 +84,11 @@ nativeTest('native passive island solver is deterministic and streams compact pl
     assert.equal(first.legal, true);
     assert.ok(first.evaluatedVariants > 0);
     assert.ok(Number.isFinite(first.score));
+    const [a, b] = first.placements;
+    assert.ok(
+        Math.abs(a.y - b.y) + 1e-6 >= Math.abs(a.x - b.x),
+        'two horizontal passive bodies should sit side-by-side across their minor axis',
+    );
 });
 
 nativeTest('native passive island solver rejects malformed matrices', () => {
@@ -171,6 +176,66 @@ nativeTest('native post-place score owns ratsnest scoring', () => {
     assert.equal(addon.postPlaceScoreContractVersion(), 1);
     assert.equal(score, 33.15);
 });
+
+nativeTest('native route scorer sees obstacle detours and bounded local power nets', () => {
+    const addon = loadNativeBoardPacker();
+    const free = routeScoreProblem(false, 'SIG');
+    const blocked = routeScoreProblem(true, 'SIG');
+    const blockedPower = routeScoreProblem(true, 'VBUS');
+    assert.equal(addon.scoreRouteLayout(free, ['route:A']), 0);
+    assert.ok(addon.scoreRouteLayout(blocked, ['route:A']) > 0);
+    assert.ok(addon.scoreRouteLayout(blockedPower, ['route:A']) > 0);
+});
+
+function routeScoreProblem(blocked: boolean, net: string): NativeBoardPackProblemV3 {
+    const makePrimitive = (id: string, x: number): NativeBoardPackProblemV3['primitives'][number] => ({
+        id: `route:${id}`,
+        kind: 'component',
+        label: id,
+        sourceNodeId: `tree:component:${id}`,
+        sourceNodeIds: [`tree:component:${id}`],
+        locked: true,
+        canRotate: false,
+        allowedOrientations: [0],
+        bbox: { left: x - 0.5, right: x + 0.5, top: -0.5, bottom: 0.5 },
+        collisionBoxes: [{ left: x - 0.5, right: x + 0.5, top: -0.5, bottom: 0.5 }],
+        width: 1,
+        height: 1,
+        placements: [{ designator: id, x, y: 0, rotate: 0, layer: 'top', score: 0 }],
+        connectionPoints: [{ ref: `${id}.1`, net, x, y: 0 }],
+        pathPorts: [],
+        edgePlace: null,
+    });
+    const a = makePrimitive('A', -4);
+    const b = makePrimitive('B', 4);
+    return {
+        version: 3,
+        grid: 0.25,
+        clearance: 0.25,
+        searchWidth: 32,
+        compactness: 'normal',
+        bounds: { left: -5, right: 5, top: -5, bottom: 5 },
+        fullBoardBounds: { left: -5, right: 5, top: -5, bottom: 5 },
+        boardOutline: [{ x: -5, y: -5 }, { x: 5, y: -5 }, { x: 5, y: 5 }, { x: -5, y: 5 }],
+        edgeClearance: 0.2,
+        primitives: [a, b],
+        relations: [],
+        obstacles: blocked ? [{ left: -1, right: 1, top: -2, bottom: 2 }] : [],
+        constraintRegions: [],
+        components: [a, b].map((primitive) => ({
+            designator: primitive.label,
+            primitiveId: primitive.id,
+            blockName: 'route',
+            layer: 'top' as const,
+            bodyBox: primitive.bbox,
+            throughHoleBoxes: [],
+            boardOverflow: { left: 0, right: 0, top: 0, bottom: 0 },
+            edgeClearance: 0.2,
+        })),
+        componentPairClearance: [0, 0.25, 0.25, 0],
+        componentConflict: [0, 1, 1, 0],
+    };
+}
 
 function minimalProblem(): NativeBoardPackProblemV3 {
     const primitive = minimalPrimitive();

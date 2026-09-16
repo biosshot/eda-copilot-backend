@@ -30,6 +30,7 @@ struct BestCandidate {
 
 pub fn solve(problem: PassiveIslandProblem) -> Result<PassiveIslandSolution, String> {
     let orders = candidate_orders(&problem);
+    let mut best_preferred_legal: Option<BestCandidate> = None;
     let mut best_legal: Option<BestCandidate> = None;
     let mut best_fallback: Option<BestCandidate> = None;
     let mut evaluated_variants = 0usize;
@@ -49,6 +50,15 @@ pub fn solve(problem: PassiveIslandProblem) -> Result<PassiveIslandSolution, Str
                             legal,
                         });
                     }
+                    if legal && problem.components.len() == 2 && two_component_preferred(&problem, &placements)
+                        && is_better(&best_preferred_legal, score)
+                    {
+                        best_preferred_legal = Some(BestCandidate {
+                            placements: placements.clone(),
+                            score,
+                            legal,
+                        });
+                    }
                     if legal && is_better(&best_legal, score) {
                         best_legal = Some(BestCandidate {
                             placements,
@@ -61,7 +71,8 @@ pub fn solve(problem: PassiveIslandProblem) -> Result<PassiveIslandSolution, Str
         }
     }
 
-    let best = best_legal
+    let best = best_preferred_legal
+        .or(best_legal)
         .or(best_fallback)
         .ok_or_else(|| "passive island generated no candidates".to_string())?;
     let bbox = placements_box(&problem, &best.placements);
@@ -334,6 +345,34 @@ fn place_grid(
         cross_cursor += cross_size + problem.clearance;
     }
     placements
+}
+
+fn two_component_preferred(problem: &PassiveIslandProblem, placements: &[CandidatePlacement]) -> bool {
+    if placements.len() != 2 {
+        return false;
+    }
+    let a = &placements[0];
+    let b = &placements[1];
+    let a_orientation = orientation(problem, a);
+    let b_orientation = orientation(problem, b);
+    let dx = (a.x - b.x).abs();
+    let dy = (a.y - b.y).abs();
+    match (major_axis(a_orientation), major_axis(b_orientation)) {
+        (Some(Axis::X), Some(Axis::X)) => dy + PLACEMENT_EPSILON >= dx,
+        (Some(Axis::Y), Some(Axis::Y)) => dx + PLACEMENT_EPSILON >= dy,
+        (None, _) | (_, None) => true,
+        _ => false,
+    }
+}
+
+fn major_axis(orientation: &crate::model::PassiveIslandOrientation) -> Option<Axis> {
+    if orientation.width > orientation.height + PLACEMENT_EPSILON {
+        Some(Axis::X)
+    } else if orientation.height > orientation.width + PLACEMENT_EPSILON {
+        Some(Axis::Y)
+    } else {
+        None
+    }
 }
 
 fn score_variant(

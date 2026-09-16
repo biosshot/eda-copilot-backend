@@ -41,6 +41,23 @@ pub fn solve_board_packed(problem: Value) -> Result<Value> {
 }
 
 #[napi]
+pub fn score_route_layout(problem: Value, changed_primitive_ids: Vec<String>) -> Result<f64> {
+    let problem: BoardPackProblem = serde_json::from_value(problem).map_err(invalid_problem)?;
+    problem
+        .validate(CONTRACT_VERSION)
+        .map_err(invalid_problem)?;
+    Ok(micro_router::changed_layout_penalty(
+        &problem.primitives,
+        &problem.relations,
+        problem.bounds,
+        &problem.board_outline,
+        &problem.obstacles,
+        &changed_primitive_ids,
+        &micro_router::MicroRouteConfig::post_place(),
+    ))
+}
+
+#[napi]
 pub fn block_contract_version() -> u32 {
     BLOCK_CONTRACT_VERSION
 }
