@@ -43,14 +43,31 @@ block("rf_match", ["L1", "C1", "C2"], "rf", null, {
   placement: "satellite",
   attachTo: "mcu",
   anchor: pin("U1", "1"),
-  loca
+  localLayout: {
+    "L1": {
+      x: 0,
+      y: -2,
+      rotate: 0
+    },
+    "C1": {
+      x: -2,
+      y: 0,
+      rotate: 90
+    },
+    "C2": {
+      x: 2,
+      y: 0,
+      rotate: -90
+    }
+  }
 });
-block("strap_pullups", ["R12", "R13", "R19", "R20"], "mcu", null, {
+block("strap_pullups", ["R12", "R13"], "mcu", null, {
   placement: "satellite",
   attachTo: "mcu",
   anchor: pin("U1", "8"),
   allowDisconnected: true,
 });
+
 block("reset_support", ["R1", "C5"], "mcu", null, {
   placement: "satellite",
   attachTo: "mcu",
@@ -73,7 +90,14 @@ block("usb_data", ["R7", "R8"], "generic", null, {
 block("charger", ["U7", "R10", "R11", "LED1"], "power");
 block("battery_gate", ["Q1", "C11"], "power");
 block("battery_adc", ["Q2", "C13", "R15", "R16", "R17"], "analog");
+
 block("current_monitor", ["U13", "R21"], "analog");
+block("current_monito_pull", ["R19", "R20"], "pull", null, {
+  placement: "satellite",
+  attachTo: "current_monitor",
+  anchor: pin("U13", "4"),
+  allowDisconnected: true,
+});
 
 component("SCREW1").block("mounting_left").role("connector").top().fixed({ x: -21.5, y: -13.5, rotate: 0, layer: "top" });
 component("SCREW2").block("mounting_right").role("connector").top().fixed({ x: 21.5, y: -13.5, rotate: 0, layer: "top" });
@@ -101,7 +125,8 @@ component("C3").block("flash_decoupling").role("decoupling_cap").top();
 component("X1").block("crystal").role("crystal").top();
 for (const d of ["C4", "C6"]) component(d).block("crystal").role("passive").top();
 for (const d of ["L1", "C1", "C2"]) component(d).block("rf_match").role("passive").top();
-for (const d of ["R12", "R13", "R19", "R20"]) component(d).block("strap_pullups").role("passive").top();
+for (const d of ["R12", "R13"]) component(d).block("strap_pullups").role("passive").top();
+for (const d of ["R19", "R20"]) component(d).block("current_monito_pull").role("passive").top();
 component("R1").block("reset_support").role("passive").top();
 component("C5").block("reset_support").role("decoupling_cap").top();
 component("R2").block("boot_support").role("passive").top();
