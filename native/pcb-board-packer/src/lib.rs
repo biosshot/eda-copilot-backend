@@ -10,7 +10,7 @@ mod signal_path;
 mod solver;
 
 use model::{
-    BlockSolveProblem, BoardPackProblem, PassiveIslandProblem, PostPlaceScoreProblem,
+    BlockSolveProblem, BoardPackProblem, PassiveIslandProblem, PostPlaceScoreProblem, RouteObstacle,
     SignalPathBridgeProblem, SignalPathEvaluationProblem,
 };
 use napi::{Error, Result, Status};
@@ -52,6 +52,29 @@ pub fn score_route_layout(problem: Value, changed_primitive_ids: Vec<String>) ->
         problem.bounds,
         &problem.board_outline,
         &problem.obstacles,
+        &[],
+        &changed_primitive_ids,
+        &micro_router::MicroRouteConfig::post_place(),
+    ))
+}
+
+#[napi]
+pub fn score_route_layout_with_obstacles(
+    problem: Value,
+    changed_primitive_ids: Vec<String>,
+    routing_obstacles: Value,
+) -> Result<f64> {
+    let problem: BoardPackProblem = serde_json::from_value(problem).map_err(invalid_problem)?;
+    problem.validate(CONTRACT_VERSION).map_err(invalid_problem)?;
+    let routing_obstacles: Vec<RouteObstacle> =
+        serde_json::from_value(routing_obstacles).map_err(invalid_problem)?;
+    Ok(micro_router::changed_layout_penalty(
+        &problem.primitives,
+        &problem.relations,
+        problem.bounds,
+        &problem.board_outline,
+        &problem.obstacles,
+        &routing_obstacles,
         &changed_primitive_ids,
         &micro_router::MicroRouteConfig::post_place(),
     ))

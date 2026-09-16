@@ -9,7 +9,9 @@ import { isConnectedSignalName } from '#utils/signals.ts';
 import {
     boardBox,
     componentBox,
+    componentPadBox,
     getPadWorld,
+    isThroughHolePad,
 } from '../pcb-auto-place/geometry.ts';
 import { createClearanceResolver, type ClearanceResolver } from '../pcb-auto-place/clearance-resolver.ts';
 import { buildPlacementGraph } from '../pcb-auto-place/placement-graph.ts';
@@ -77,7 +79,22 @@ export function postPlaceRoutePenalty(
         },
     });
     const changedPrimitiveIds = [...changedDesignators].map((designator) => `post:${designator}`);
-    return loadNativeBoardPacker().scoreRouteLayout(problem, changedPrimitiveIds);
+    const routingObstacles = input.components.flatMap((component) => {
+        const placement = placementByDesignator.get(component.designator);
+        if (!placement) return [];
+        return component.footprint.pads.map((pad) => {
+            const pin = component.pins.find((candidate) => String(candidate.pin_number) === String(pad.pin_number));
+            const net = pin && isConnectedSignalName(pin.signal_name) ? pin.signal_name : undefined;
+            return {
+                box: componentPadBox(placement, pad),
+                layer: isThroughHolePad(pad) ? undefined : placement.layer,
+                ref: `${component.designator}.${String(pad.pin_number)}`,
+                net,
+                primitiveId: `post:${component.designator}`,
+            };
+        });
+    });
+    return loadNativeBoardPacker().scoreRouteLayoutWithObstacles(problem, changedPrimitiveIds, routingObstacles);
 }
 
 function componentPrimitive(component: PcbComponent, placement: Placement): PlacementPrimitive {
