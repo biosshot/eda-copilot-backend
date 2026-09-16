@@ -6,33 +6,9 @@ on:
   workflow_dispatch:
   workflow_call:
 permissions:
-  contents: write
+  contents: read
 jobs:
-  bootstrap-micro-router:
-    if: github.event_name == 'pull_request' && github.head_ref == 'feat/pcb-micro-router'
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.head_ref }}
-      - name: Apply Micro-A* implementation
-        shell: bash
-        run: |
-          if [ -f native/pcb-board-packer/src/micro_router.rs ]; then
-            echo "Micro-router implementation already applied."
-            exit 0
-          fi
-          cat .github/micro-router.patch.part* > /tmp/micro-router.patch
-          git apply --check /tmp/micro-router.patch
-          git apply /tmp/micro-router.patch
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add native/pcb-board-packer/src
-          git commit -m "feat(pcb): add bounded micro-A* routability reranking"
-          git push origin HEAD:${GITHUB_HEAD_REF}
   test:
-    needs: bootstrap-micro-router
-    if: always() && (needs.bootstrap-micro-router.result == 'success' || needs.bootstrap-micro-router.result == 'skipped')
     strategy:
       fail-fast: false
       matrix:
