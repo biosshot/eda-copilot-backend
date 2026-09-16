@@ -1,5 +1,5 @@
 diff --git a/native/pcb-board-packer/src/block_solver.rs b/native/pcb-board-packer/src/block_solver.rs
-index 4995ff3..6f8a514 100644
+index 4995ff3..dee170a 100644
 --- a/native/pcb-board-packer/src/block_solver.rs
 +++ b/native/pcb-board-packer/src/block_solver.rs
 @@ -2,6 +2,8 @@ use crate::geometry::{
@@ -11,9 +11,34 @@ index 4995ff3..6f8a514 100644
  use crate::model::{
      BlockComponentGeometry, BlockSolveProblem, BoardPackSolution, Placement, Primitive,
      PrimitiveState, Rank, Relation,
-@@ -262,22 +264,17 @@ fn solve_greedy(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Wor
+@@ -32,6 +34,7 @@ struct SearchState {
+     incremental: IncrementalEvaluation,
+     hard_violations: usize,
+     score: f64,
++    route_penalty: f64,
+     ordinal: usize,
+ }
+ 
+@@ -41,6 +44,7 @@ struct RankedCandidate {
+     incremental: IncrementalEvaluation,
+     hard_violations: usize,
+     score: f64,
++    route_penalty: f64,
+     ordinal: usize,
+ }
+ 
+@@ -255,29 +259,27 @@ fn solve_greedy(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Wor
+         placed.push(candidate);
+     }
+     let mut incremental = incremental_evaluation(&placed, context);
++    let mut route_penalty = 0.0;
+     while !remaining.is_empty() {
+         let mut best_index = 0usize;
+         let mut best: Option<WorkingPrimitive> = None;
+         let mut best_hard = usize::MAX;
          let mut best_score = f64::INFINITY;
          let mut best_incremental = None;
++        let mut best_route_penalty = route_penalty;
          for (index, primitive) in remaining.iter().enumerate() {
 -            for candidate in block_candidates(primitive, &placed, context) {
 -                let mut variant = placed.clone();
@@ -23,7 +48,7 @@ index 4995ff3..6f8a514 100644
 -                let evaluation = candidate_incremental.evaluation;
 -                let hard = evaluation.hard_violations;
 -                let score = evaluation.score;
-+            for candidate in ranked_block_candidates(primitive, &placed, &incremental, context) {
++            for candidate in ranked_block_candidates(primitive, &placed, &incremental, route_penalty, context) {
 +                let hard = candidate.hard_violations;
 +                let score = candidate.score;
                  if hard < best_hard
@@ -35,11 +60,28 @@ index 4995ff3..6f8a514 100644
                      best_hard = hard;
                      best_score = score;
 -                    best_incremental = Some(candidate_incremental);
++                    best_route_penalty = candidate.route_penalty;
 +                    best_incremental = Some(candidate.incremental);
                  }
              }
          }
-@@ -326,31 +323,9 @@ fn solve_beam(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Worki
+@@ -285,6 +287,7 @@ fn solve_greedy(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Wor
+         if let Some(best) = best {
+             placed.push(best);
+             incremental = best_incremental.expect("best candidate must have an evaluation");
++            route_penalty = best_route_penalty;
+         } else {
+             placed.push(center_primitive(next, context.problem.grid));
+             incremental = incremental_evaluation(&placed, context);
+@@ -311,6 +314,7 @@ fn solve_beam(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Worki
+     let mut states = vec![SearchState {
+         hard_violations: initial_evaluation.hard_violations,
+         score: initial_evaluation.score,
++        route_penalty: 0.0,
+         placed: locked,
+         remaining,
+         incremental: initial_incremental,
+@@ -326,31 +330,14 @@ fn solve_beam(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Worki
              let per_primitive_limit = 8usize.max(div_ceil(search_width, state.remaining.len()));
              for index in 0..state.remaining.len() {
                  let primitive = &state.remaining[index];
@@ -68,13 +110,26 @@ index 4995ff3..6f8a514 100644
 -                }
 -                ranked.sort_by(compare_candidates);
 -                ranked.truncate(per_primitive_limit);
-+                let mut ranked =
-+                    ranked_block_candidates(primitive, &state.placed, &state.incremental, context);
++                let mut ranked = ranked_block_candidates(
++                    primitive,
++                    &state.placed,
++                    &state.incremental,
++                    state.route_penalty,
++                    context,
++                );
 +                ranked.truncate(per_primitive_limit.min(16));
                  for candidate in ranked {
                      ordinal += 1;
                      let mut placed = state.placed.clone();
-@@ -407,23 +382,49 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
+@@ -363,6 +350,7 @@ fn solve_beam(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Worki
+                         incremental: candidate.incremental,
+                         hard_violations: candidate.hard_violations,
+                         score: candidate.score,
++                        route_penalty: candidate.route_penalty,
+                         ordinal,
+                     });
+                 }
+@@ -407,23 +395,44 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
                  .collect();
              let mut best = current[index].clone();
              let mut best_hard = current_hard;
@@ -89,15 +144,13 @@ index 4995ff3..6f8a514 100644
 +            let mut best_base_score = current_score;
 +            let mut best_effective_score = current_score
 +                + block_micro_route_penalty(&current[index], &fixed, context);
-+
 +            let mut ranked: Vec<_> = block_candidates(&current[index], &fixed, context)
 +                .into_iter()
 +                .enumerate()
 +                .map(|(ordinal, candidate)| {
 +                    let mut variant = current.clone();
 +                    variant[index] = candidate.clone();
-+                    let evaluation = evaluate(&variant, context);
-+                    (candidate, evaluation, ordinal)
++                    (candidate, evaluate(&variant, context), ordinal)
 +                })
 +                .collect();
 +            ranked.sort_by(|a, b| {
@@ -107,14 +160,11 @@ index 4995ff3..6f8a514 100644
 +                    .then_with(|| a.2.cmp(&b.2))
 +            });
 +            ranked.truncate(16);
-+
 +            for (candidate, evaluation, _) in ranked {
 +                let effective_score = evaluation.score
 +                    + if evaluation.hard_violations == current_hard {
 +                        block_micro_route_penalty(&candidate, &fixed, context)
-+                    } else {
-+                        0.0
-+                    };
++                    } else { 0.0 };
 +                if evaluation.hard_violations < best_hard
 +                    || (evaluation.hard_violations == best_hard
 +                        && effective_score + 0.001 < best_effective_score)
@@ -128,73 +178,3 @@ index 4995ff3..6f8a514 100644
                  }
              }
              if primitive_pose_key(&best) != primitive_pose_key(&current[index]) {
-                 current[index] = best;
-                 current_hard = best_hard;
--                current_score = best_score;
-+                current_score = best_base_score;
-                 changed = true;
-             }
-         }
-@@ -434,6 +435,83 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
-     current
- }
- 
-+fn ranked_block_candidates(
-+    primitive: &WorkingPrimitive,
-+    placed: &[WorkingPrimitive],
-+    previous: &IncrementalEvaluation,
-+    context: &Context,
-+) -> Vec<RankedCandidate> {
-+    let mut ranked = Vec::new();
-+    for (candidate_ordinal, candidate) in block_candidates(primitive, placed, context)
-+        .into_iter()
-+        .enumerate()
-+    {
-+        let mut variant = placed.to_vec();
-+        variant.push(candidate.clone());
-+        let incremental = append_incremental_evaluation(placed, &variant, previous, context);
-+        let evaluation = incremental.evaluation;
-+        ranked.push(RankedCandidate {
-+            hard_violations: evaluation.hard_violations,
-+            score: evaluation.score,
-+            primitive: candidate,
-+            incremental,
-+            ordinal: candidate_ordinal,
-+        });
-+    }
-+    ranked.sort_by(compare_candidates);
-+    ranked.truncate(16);
-+    let baseline_hard = previous.evaluation.hard_violations;
-+    for candidate in &mut ranked {
-+        if candidate.hard_violations != baseline_hard {
-+            continue;
-+        }
-+        candidate.score += block_micro_route_penalty(&candidate.primitive, placed, context);
-+    }
-+    ranked.sort_by(compare_candidates);
-+    ranked
-+}
-+
-+fn block_micro_route_penalty(
-+    candidate: &WorkingPrimitive,
-+    placed: &[WorkingPrimitive],
-+    context: &Context,
-+) -> f64 {
-+    let config = MicroRouteConfig::block();
-+    let bounds = micro_route_bounds(candidate, placed, context, &config);
-+    let placed_primitives: Vec<_> = placed.iter().map(|item| &item.primitive).collect();
-+    micro_router::candidate_penalty(
-+        &candidate.primitive,
-+        &placed_primitives,
-+        &context.problem.relations,
-+        bounds,
-+        &[],
-+        &context.problem.obstacles,
-+        &config,
-+    )
-+}
-+
-+fn micro_route_bounds(
-+    candidate: &WorkingPrimitive,
-+    placed: &[WorkingPrimitive],
-+    context: &Context,
