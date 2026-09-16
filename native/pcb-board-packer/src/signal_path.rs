@@ -1,5 +1,6 @@
 use crate::geometry::{round_placement, Point};
 use crate::model::{PathPort, Primitive, Relation};
+use crate::ordinary_net;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
@@ -39,13 +40,14 @@ pub fn topology_penalty(primitives: &[&Primitive], relations: &[Relation]) -> f6
                 .push(port);
         }
     }
-    ports_by_path
+    let path_penalty: f64 = ports_by_path
         .into_iter()
         .filter_map(|(path_id, ports)| {
             evaluate_path_ports(path_id, &ports, metadata.get(path_id).copied())
         })
         .map(|evaluation| evaluation.penalty)
-        .sum()
+        .sum();
+    path_penalty + ordinary_net::penalty(primitives, relations)
 }
 
 pub fn topology_penalty_for_ports(

@@ -8,11 +8,15 @@ import type {
     PlacementRelation,
     PlacementTreeNode,
 } from '#types/pcb/layout-model.ts';
+import { isGroundSignal } from '#circuit-layout/ground.ts';
+import { isPowerSignal } from '#circuit-layout/power.ts';
 import { componentBox } from '../pcb-auto-place/geometry.ts';
 import { priorityWeight } from '../pcb-auto-place/hints.ts';
 import type { ClearanceResolver } from '../pcb-auto-place/clearance-resolver.ts';
 import { solveBoardPackedPrimitives } from './board-packer-engine.ts';
 import type { PlacementPrimitive, PrimitiveSolveDiagnostic } from './primitives.ts';
+
+const ORDINARY_NET_RELATION_PREFIX = '__ordinary_net__:';
 
 export interface BoardSolveParams {
     input: PlacementInput;
@@ -31,15 +35,17 @@ export interface BoardSolveParams {
 export function solveBoardPrimitives(params: BoardSolveParams) {
     const boardPrimitives = boardPlacementPrimitives(params);
     validateDissolvedGroupReferences(params.graph.relations, boardPrimitives.dissolvedScopes);
+    const primitives = boardPrimitives.primitives.map(boardPackingPrimitive);
     return solveBoardPackedPrimitives({
         node: params.node,
-        primitives: boardPrimitives.primitives.map(boardPackingPrimitive),
+        primitives,
         relations: [
             ...params.graph.relations.filter((relation) => (
                 relation.scope === params.node.id
                 || boardPrimitives.dissolvedScopes.has(relation.scope)
             )),
             ...dissolvedSatelliteRelations(params, boardPrimitives.dissolvedScopes),
+            ...ordinaryNetRelations(params, primitives),
         ],
         options: {
             grid: params.grid,
@@ -55,6 +61,40 @@ export function solveBoardPrimitives(params: BoardSolveParams) {
             searchWidth: 32,
         },
     });
+}
+
+/**
+ * Ordinary electrical connectivity is intentionally represented as zero-endpoint
+ * marker relations. The native board scorer consumes these markers separately;
+ * the normal strong relation scorer cannot resolve their endpoints and therefore
+ * never turns ordinary nets into hard/strong placement constraints.
+ */
+function ordinaryNetRelations(params: BoardSolveParams, primitives: PlacementPrimitive[]): PlacementRelation[] {
+    const ignored = new Set((params.input.solverOptions.ignoredRatsnestSignals ?? []).map((net) => net.toUpperCase()));
+    const primitiveIdsByNet = new Map<string, Set<string>>();
+
+    for (const primitive of primitives) {
+        for (const point of primitive.connectionPoints) {
+            const net = point.net?.trim();
+            if (!net || ignored.has(net.toUpperCase()) || isGroundSignal(net)) continue;
+            const ids = primitiveIdsByNet.get(net) ?? new Set<string>();
+            ids.add(primitive.id);
+            primitiveIdsByNet.set(net, ids);
+        }
+    }
+
+    return [...primitiveIdsByNet.entries()]
+        .filter(([, primitiveIds]) => primitiveIds.size >= 2 && primitiveIds.size <= 8)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([net]): PlacementRelation => ({
+            id: `${ORDINARY_NET_RELATION_PREFIX}${net}`,
+            kind: 'net',
+            from: `${ORDINARY_NET_RELATION_PREFIX}${net}`,
+            to: `${ORDINARY_NET_RELATION_PREFIX}${net}`,
+            weight: isPowerSignal(net) ? 0.1 : 1,
+            scope: params.node.id,
+            effect: 'score_only',
+        }));
 }
 
 function validateDissolvedGroupReferences(relations: PlacementRelation[], dissolvedScopes: Set<string>) {
