@@ -1,5 +1,5 @@
 import { autoPlacePcbWithReportAsync, renderPlacementSvg } from "#pcb-layout/pcb-auto-place/auto-place.ts";
-import { PCB_LAYOUT_DSL_SPEC, runPcbLayoutDsl } from "#pcb-layout/pcb-layout-dsl/spec.ts";
+import { runPcbLayoutDsl } from "#pcb-layout/pcb-layout-dsl/spec.ts";
 import type { ExplainCircuit } from "#types/circuit.ts";
 import type { ExistingPlacement, FootprintSpec } from "#types/pcb/layout-model.ts";
 import { LayoutRulesSchema } from "#types/pcb/layout-rules.ts";
@@ -26,8 +26,6 @@ import {
     type PcbLayoutProgressReporter,
 } from "./progress.ts";
 import { applyExistingBoard, applyExistingComponentPlacements, ensurePreservedComponentBlocks, resolvePreservedComponentDesignators } from "./existing-placement.ts";
-
-export { PCB_LAYOUT_DSL_SPEC };
 
 export type RunPcbLayoutOptions = {
     code: string;

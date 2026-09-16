@@ -43,6 +43,7 @@ block("rf_match", ["L1", "C1", "C2"], "rf", null, {
   placement: "satellite",
   attachTo: "mcu",
   anchor: pin("U1", "1"),
+  loca
 });
 block("strap_pullups", ["R12", "R13", "R19", "R20"], "mcu", null, {
   placement: "satellite",
