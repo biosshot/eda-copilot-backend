@@ -1,0 +1,180 @@
++                        layer,
++                        primitive_id: primitive.id.clone(),
++                        reference: point.reference.clone(),
++                        net: net.clone(),
++                    })
++                })
++            })
++            .collect();
++    }
++    for (prefix, tree_prefix) in [("block:", "tree:block:"), ("module:", "tree:module:")] {
++        if let Some(name) = endpoint.strip_prefix(prefix) {
++            let target = format!("{tree_prefix}{name}");
++            if let Some(primitive) = primitives.iter().find(|primitive| {
++                primitive.source_node_ids.iter().any(|id| id.as_ref() == target)
++                    || primitive.source_node_id.as_ref() == target
++            }) {
++                return points_by_net(primitive, config).into_values().flatten().collect();
++            }
++        }
++    }
++    Vec::new()
++}
++
++fn closest_shared_net_pair(a: &[RouteEndpoint], b: &[RouteEndpoint]) -> Option<(RouteEndpoint, RouteEndpoint)> {
++    let mut best: Option<(RouteEndpoint, RouteEndpoint, f64)> = None;
++    for left in a {
++        for right in b {
++            if left.net != right.net { continue; }
++            let d = distance(left.point, right.point);
++            if best.as_ref().is_none_or(|(_, _, best_d)| d < *best_d - EPS) {
++                best = Some((left.clone(), right.clone(), d));
++            }
++        }
++    }
++    best.map(|(a, b, _)| (a, b))
++}
++
++fn closest_pair(a: &[RouteEndpoint], b: &[RouteEndpoint]) -> Option<(RouteEndpoint, RouteEndpoint)> {
++    let mut best: Option<(RouteEndpoint, RouteEndpoint, f64)> = None;
++    for left in a {
++        for right in b {
++            let d = distance(left.point, right.point);
++            if best.as_ref().is_none_or(|(_, _, best_d)| d < *best_d - EPS) {
++                best = Some((left.clone(), right.clone(), d));
++            }
++        }
++    }
++    best.map(|(a, b, _)| (a, b))
++}
++
++fn primitive_layer(primitive: &Primitive, config: &MicroRouteConfig) -> usize {
++    primitive.placements.first()
++        .and_then(|placement| config.layers.iter().position(|layer| layer.name.as_ref() == placement.layer.as_ref()))
++        .unwrap_or(0)
++}
++
++fn collect_obstacles(
++    primitives: &[&Primitive],
++    global_obstacles: &[Box2],
++    config: &MicroRouteConfig,
++) -> Vec<StaticObstacle> {
++    let mut result = Vec::new();
++    for primitive in primitives {
++        let layer = Some(primitive_layer(primitive, config));
++        let boxes: Vec<Box2> = if primitive.collision_boxes.is_empty() {
++            vec![primitive.bbox]
++        } else {
++            primitive.collision_boxes.as_ref().clone()
++        };
++        for box_ in boxes {
++            result.push(StaticObstacle {
++                box_: inflate_box(box_, config.clearance + config.trace_width / 2.0),
++                layer,
++                primitive_id: Some(primitive.id.clone()),
++            });
++        }
++    }
++    for box_ in global_obstacles {
++        result.push(StaticObstacle {
++            box_: inflate_box(*box_, config.clearance + config.trace_width / 2.0),
++            layer: None,
++            primitive_id: None,
++        });
++    }
++    result
++}
++
++fn route_job(
++    job: &RouteJob,
++    bounds: Box2,
++    board_outline: &[Point],
++    obstacles: &[StaticObstacle],
++    temporary: &HashMap<Cell, Arc<str>>,
++    config: &MicroRouteConfig,
++) -> Option<RouteResult> {
++    let start_cell = point_to_cell(job.source.point, job.source.layer, bounds, config.grid);
++    let goal_cell = point_to_cell(job.target.point, job.target.layer, bounds, config.grid);
++    let start = State { cell: start_cell, direction: 4 };
++    let mut open = BinaryHeap::new();
++    let mut best: HashMap<State, PathCost> = HashMap::new();
++    let mut previous: HashMap<State, State> = HashMap::new();
++    let mut serial = 0usize;
++    best.insert(start, PathCost::zero());
++    open.push(OpenNode {
++        state: start,
++        g: PathCost::zero(),
++        estimate: heuristic(start_cell, goal_cell, config),
++        serial,
++    });
++    let mut expanded = 0usize;
++
++    while let Some(node) = open.pop() {
++        if expanded >= config.max_expanded { break; }
++        let Some(known) = best.get(&node.state).copied() else { continue; };
++        if compare_cost(node.g, known) == Ordering::Greater { continue; }
++        expanded += 1;
++        if node.state.cell.x == goal_cell.x && node.state.cell.y == goal_cell.y && node.state.cell.layer == goal_cell.layer {
++            let cells = reconstruct(node.state, start, &previous);
++            return Some(RouteResult { cost: node.g, cells });
++        }
++
++        for (next, step_cost) in neighbors(node.state, config) {
++            if blocked(
++                next.cell,
++                start_cell,
++                goal_cell,
++                &job.source.primitive_id,
++                &job.target.primitive_id,
++                &job.net,
++                bounds,
++                board_outline,
++                obstacles,
++                temporary,
++                config,
++            ) { continue; }
++            let next_cost = add_cost(node.g, step_cost);
++            if best.get(&next).is_some_and(|old| compare_cost(next_cost, *old) != Ordering::Less) {
++                continue;
++            }
++            best.insert(next, next_cost);
++            previous.insert(next, node.state);
++            serial += 1;
++            open.push(OpenNode {
++                state: next,
++                g: next_cost,
++                estimate: next_cost.physical + heuristic(next.cell, goal_cell, config),
++                serial,
++            });
++        }
++    }
++    None
++}
++
++fn neighbors(state: State, config: &MicroRouteConfig) -> Vec<(State, PathCost)> {
++    let mut result = Vec::with_capacity(6);
++    let moves = [(1, 0, 0u8), (-1, 0, 1u8), (0, 1, 2u8), (0, -1, 3u8)];
++    for (dx, dy, direction) in moves {
++        let layer = &config.layers[state.cell.layer];
++        let horizontal = dx != 0;
++        let preference = match layer.preferred_direction {
++            PreferredDirection::Any => 0,
++            PreferredDirection::Horizontal => usize::from(!horizontal),
++            PreferredDirection::Vertical => usize::from(horizontal),
++        };
++        result.push((
++            State {
++                cell: Cell { x: state.cell.x + dx, y: state.cell.y + dy, layer: state.cell.layer },
++                direction,
++            },
++            PathCost {
++                physical: config.grid,
++                vias: 0,
++                bends: usize::from(state.direction < 4 && state.direction != direction),
++                preference,
++            },
++        ));
++    }
++    for transition in &config.via_transitions {
++        if transition.from != state.cell.layer || transition.to >= config.layers.len() { continue; }
++        result.push((
