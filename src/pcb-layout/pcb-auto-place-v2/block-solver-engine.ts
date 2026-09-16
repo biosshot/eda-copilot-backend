@@ -5,6 +5,7 @@ import { NATIVE_BLOCK_SOLVE_CONTRACT_VERSION } from './native/contract.ts';
 import { encodeNativeBlockSolveProblem } from './native/encode-block-problem.ts';
 import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
 import type { PlacementPrimitive } from './primitives.ts';
+import { prepareLocalLayoutPrimitives } from './local-layout.ts';
 
 const blockSolverCapture = new AsyncLocalStorage<(params: BlockSolveParams) => void>();
 
@@ -18,11 +19,19 @@ export function solveBlockPrimitives(params: BlockSolveParams): PlacementPrimiti
 }
 
 export function solveBlockPrimitivesRust(params: BlockSolveParams) {
+    const primitives = prepareLocalLayoutPrimitives(
+        params.node.label,
+        params.primitives,
+        params.options.componentByDesignator,
+        params.options.clearance,
+        params.options.clearanceResolver,
+    );
+    const prepared = primitives === params.primitives ? params : { ...params, primitives };
     const addon = loadNativeBoardPacker();
     const nativeVersion = addon.blockContractVersion();
     if (nativeVersion !== NATIVE_BLOCK_SOLVE_CONTRACT_VERSION) {
         throw new Error(`Rust PCB block solver contract ${nativeVersion} does not match TypeScript contract ${NATIVE_BLOCK_SOLVE_CONTRACT_VERSION}`);
     }
-    const solution = addon.solveBlockPrimitives(encodeNativeBlockSolveProblem(params));
-    return { result: applyNativeBoardPackSolution(params.primitives, solution, NATIVE_BLOCK_SOLVE_CONTRACT_VERSION), rank: solution.rank };
+    const solution = addon.solveBlockPrimitives(encodeNativeBlockSolveProblem(prepared));
+    return { result: applyNativeBoardPackSolution(primitives, solution, NATIVE_BLOCK_SOLVE_CONTRACT_VERSION), rank: solution.rank };
 }
