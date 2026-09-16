@@ -1,0 +1,180 @@
++}
++
++fn add_cost(a: PathCost, b: PathCost) -> PathCost {
++    PathCost {
++        physical: a.physical + b.physical,
++        vias: a.vias + b.vias,
++        bends: a.bends + b.bends,
++        preference: a.preference + b.preference,
++    }
++}
++fn compare_cost(a: PathCost, b: PathCost) -> Ordering {
++    compare_f64(a.physical, b.physical)
++        .then_with(|| a.vias.cmp(&b.vias))
++        .then_with(|| a.bends.cmp(&b.bends))
++        .then_with(|| a.preference.cmp(&b.preference))
++}
++fn compare_f64(a: f64, b: f64) -> Ordering { a.partial_cmp(&b).unwrap_or(Ordering::Equal) }
++fn point_to_cell(point: Point, layer: usize, bounds: Box2, grid: f64) -> Cell {
++    Cell {
++        x: ((point.x - bounds.left) / grid).round() as i32,
++        y: ((point.y - bounds.top) / grid).round() as i32,
++        layer,
++    }
++}
++fn cell_to_point(cell: Cell, bounds: Box2, grid: f64) -> Point {
++    Point { x: bounds.left + cell.x as f64 * grid, y: bounds.top + cell.y as f64 * grid }
++}
++fn chebyshev(a: Cell, b: Cell) -> i32 { (a.x - b.x).abs().max((a.y - b.y).abs()) }
++fn point_in_box(point: Point, box_: Box2) -> bool {
++    point.x + EPS >= box_.left && point.x - EPS <= box_.right && point.y + EPS >= box_.top && point.y - EPS <= box_.bottom
++}
++fn inflate_box(box_: Box2, value: f64) -> Box2 {
++    Box2 { left: box_.left - value, right: box_.right + value, top: box_.top - value, bottom: box_.bottom + value }
++}
++fn distance(a: Point, b: Point) -> f64 { (a.x - b.x).hypot(a.y - b.y) }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use crate::model::{ConnectionPoint, Placement};
++
++    fn primitive(id: &str, x: f64, y: f64, net: &str) -> Primitive {
++        Primitive {
++            id: Arc::from(id), kind: Arc::from("component"), label: Arc::from(id),
++            source_node_id: Arc::from(format!("component:{id}")), source_node_ids: Arc::new(vec![]),
++            locked: false, can_rotate: false, allowed_orientations: Arc::new(vec![0]),
++            bbox: Box2 { left: x - 0.5, right: x + 0.5, top: y - 0.5, bottom: y + 0.5 },
++            collision_boxes: Arc::new(vec![Box2 { left: x - 0.5, right: x + 0.5, top: y - 0.5, bottom: y + 0.5 }]),
++            width: 1.0, height: 1.0,
++            placements: Arc::new(vec![Placement { designator: Arc::from(id), x, y, rotate: 0, layer: Arc::from("top"), score: 0.0 }]),
++            connection_points: Arc::new(vec![ConnectionPoint { x, y, reference: Arc::from(format!("{id}.1")), net: Some(Arc::from(net)) }]),
++            path_ports: Arc::new(vec![]), edge_place: None,
++        }
++    }
++
++    fn bounds() -> Box2 { Box2 { left: -10.0, right: 10.0, top: -10.0, bottom: 10.0 } }
++
++    #[test]
++    fn free_manhattan_route_has_no_detour_penalty() {
++        let a = primitive("A", -4.0, 0.0, "SIG");
++        let b = primitive("B", 4.0, 0.0, "SIG");
++        let penalty = candidate_penalty(&a, &[&b], &[], bounds(), &[], &[], &MicroRouteConfig::board());
++        assert!(penalty.abs() < 1e-6, "penalty={penalty}");
++    }
++
++    #[test]
++    fn obstacle_creates_positive_detour_penalty() {
++        let a = primitive("A", -4.0, 0.0, "SIG");
++        let b = primitive("B", 4.0, 0.0, "SIG");
++        let obstacle = Box2 { left: -1.0, right: 1.0, top: -2.0, bottom: 2.0 };
++        let penalty = candidate_penalty(&a, &[&b], &[], bounds(), &[], &[obstacle], &MicroRouteConfig::board());
++        assert!(penalty > 0.1, "penalty={penalty}");
++    }
++
++    #[test]
++    fn config_is_multilayer_ready() {
++        let mut config = MicroRouteConfig::board();
++        config.layers.push(RouteLayer { name: Arc::from("inner1"), preferred_direction: PreferredDirection::Horizontal });
++        config.layers.push(RouteLayer { name: Arc::from("inner2"), preferred_direction: PreferredDirection::Vertical });
++        config.via_transitions.extend([
++            ViaTransition { from: 1, to: 2 }, ViaTransition { from: 2, to: 1 },
++            ViaTransition { from: 2, to: 3 }, ViaTransition { from: 3, to: 2 },
++        ]);
++        assert_eq!(minimum_vias(0, 3, &config), Some(3));
++    }
++
++    #[test]
++    fn temporary_route_blocks_different_net_but_not_same_net() {
++        let config = MicroRouteConfig::board();
++        let cell = Cell { x: 5, y: 5, layer: 0 };
++        let mut temporary = HashMap::new();
++        temporary.insert(cell, Arc::from("A"));
++        let source = Arc::from("S");
++        let target = Arc::from("T");
++        assert!(blocked(cell, cell, Cell { x: 8, y: 8, layer: 0 }, &source, &target, &Arc::from("B"), bounds(), &[], &[], &temporary, &config));
++        assert!(!blocked(cell, cell, Cell { x: 8, y: 8, layer: 0 }, &source, &target, &Arc::from("A"), bounds(), &[], &[], &temporary, &config));
++    }
++}
++diff --git a/native/pcb-board-packer/src/net_class.rs b/native/pcb-board-packer/src/net_class.rs
++new file mode 100644
++index 0000000..1e33067
++--- /dev/null
+++++ b/native/pcb-board-packer/src/net_class.rs
++@@ -0,0 +1,63 @@
+++pub fn is_ground(net: &str) -> bool {
+++    let upper = net.trim().to_ascii_uppercase();
+++    upper == "GND"
+++        || upper.starts_with("GND_")
+++        || upper.starts_with("GND-")
+++        || upper.ends_with("_GND")
+++        || upper.ends_with("-GND")
+++}
+++
+++pub fn is_power(net: &str) -> bool {
+++    let value = net.trim().to_ascii_uppercase();
+++    if is_ground(&value) {
+++        return false;
+++    }
+++    matches!(
+++        value.as_str(),
+++        "VBUS"
+++            | "VCC"
+++            | "VDD"
+++            | "VIN"
+++            | "VOUT"
+++            | "VSYS"
+++            | "VBAT"
+++            | "BAT"
+++            | "BAT+"
+++            | "BATT"
+++            | "BATT+"
+++            | "AVDD"
+++            | "DVDD"
+++            | "IOVDD"
+++            | "ADC_AVDD"
+++            | "VREF"
+++    ) || value.starts_with('+') && value.contains('V')
+++        || value.chars().next().is_some_and(|c| c.is_ascii_digit()) && value.contains('V')
+++        || ["VCC_", "VDD_", "VIN_", "VOUT_", "VBAT_", "VSYS_"]
+++            .iter()
+++            .any(|prefix| value.starts_with(prefix))
+++}
+++
+++pub fn is_switching_power(net: &str) -> bool {
+++    let value = net.trim().to_ascii_uppercase();
+++    ["SW", "LX", "PH", "BOOT", "BST", "SWNODE", "VREG_LX"]
+++        .iter()
+++        .any(|prefix| {
+++            value == *prefix
+++                || value.starts_with(&format!("{prefix}_"))
+++                || value.starts_with(&format!("{prefix}-"))
+++        })
+++}
+++
+++#[cfg(test)]
+++mod tests {
+++    use super::*;
+++
+++    #[test]
+++    fn classifies_existing_power_names() {
+++        assert!(is_ground("GND_A"));
+++        assert!(is_power("3V3"));
+++        assert!(is_power("VDD_IO"));
+++        assert!(is_switching_power("SW_NODE"));
+++        assert!(!is_power("GPIO3"));
+++    }
+++}
++diff --git a/native/pcb-board-packer/src/solver.rs b/native/pcb-board-packer/src/solver.rs
++index 9b6f936..de88c0c 100644
++--- a/native/pcb-board-packer/src/solver.rs
+++++ b/native/pcb-board-packer/src/solver.rs
++@@ -4,6 +4,7 @@ use crate::geometry::{
++     point_to_polygon_distance, rotate_box, rotate_point, round_placement, translate_box,
++     union_boxes, Box2, Point,
++ };
+++use crate::micro_router::{self, MicroRouteConfig};
++ use crate::model::{
++     BoardPackProblem, BoardPackSolution, ComponentGeometry, Primitive, PrimitiveState, Rank,
++     Relation,
++@@ -68,6 +69,7 @@ struct SearchState {
