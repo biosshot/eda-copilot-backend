@@ -1,0 +1,180 @@
++
++    for job in jobs {
++        let baseline = baseline_cost(&job, config);
++        let result = route_job(
++            &job,
++            bounds,
++            board_outline,
++            &obstacles,
++            &temporary,
++            config,
++        );
++        match result {
++            Some(result) => {
++                let detour = (result.cost.physical - baseline).max(0.0);
++                penalty += detour * job.weight * config.route_scale;
++                for cell in result.cells {
++                    temporary.entry(cell).or_insert_with(|| job.net.clone());
++                }
++            }
++            None => {
++                penalty += config.unroutable_penalty_mm * job.weight * config.route_scale;
++            }
++        }
++    }
++    penalty
++}
++
++fn schedule_jobs(
++    candidate: &Primitive,
++    placed: &[&Primitive],
++    relations: &[Relation],
++    config: &MicroRouteConfig,
++) -> Vec<RouteJob> {
++    let mut explicit = explicit_jobs(candidate, placed, relations, config);
++    explicit.sort_by(job_order);
++    explicit = cap_priority_jobs(explicit, config.max_total_jobs);
++
++    let explicit_pairs: HashSet<_> = explicit.iter().map(job_pair_key).collect();
++    let remaining = config.max_total_jobs.saturating_sub(explicit.len());
++    if remaining == 0 {
++        return explicit;
++    }
++
++    let ordinary_limit = remaining.min(config.max_ordinary_jobs);
++    let mut ordinary = ordinary_jobs(candidate, placed, relations, config)
++        .into_iter()
++        .filter(|job| !explicit_pairs.contains(&job_pair_key(job)))
++        .collect::<Vec<_>>();
++    ordinary = cap_per_net(ordinary, config.max_ordinary_jobs_per_net);
++    ordinary = farthest_point_sample(ordinary, ordinary_limit);
++    explicit.extend(ordinary);
++    explicit
++}
++
++fn explicit_jobs(
++    candidate: &Primitive,
++    placed: &[&Primitive],
++    relations: &[Relation],
++    config: &MicroRouteConfig,
++) -> Vec<RouteJob> {
++    let mut all = Vec::with_capacity(placed.len() + 1);
++    all.push(candidate);
++    all.extend_from_slice(placed);
++    let candidate_id = candidate.id.as_ref();
++    let mut jobs = Vec::new();
++
++    for relation in relations {
++        let route_relevant = relation.relation.as_deref() == Some("critical_pair")
++            || relation.path_id.is_some();
++        if !route_relevant || relation.effect.as_ref() == "lock" {
++            continue;
++        }
++        let left = resolve_endpoint(&relation.from, &all, config);
++        let right = resolve_endpoint(&relation.to, &all, config);
++        let Some((a, b)) = closest_shared_net_pair(&left, &right) else { continue };
++        let touches_candidate = a.primitive_id.as_ref() == candidate_id
++            || b.primitive_id.as_ref() == candidate_id;
++        if !touches_candidate || a.primitive_id == b.primitive_id {
++            continue;
++        }
++        let (source, target) = if a.primitive_id.as_ref() == candidate_id { (a, b) } else { (b, a) };
++        let priority = priority_rank(relation.priority.as_deref());
++        let configured = relation.weight.unwrap_or(70.0);
++        let weight = priority_weight(priority) * (configured / 70.0).clamp(0.25, 4.0);
++        jobs.push(RouteJob {
++            net: source.net.clone(),
++            source,
++            target,
++            priority,
++            weight,
++            ordinary: false,
++        });
++    }
++    dedupe_jobs(jobs)
++}
++
++fn ordinary_jobs(
++    candidate: &Primitive,
++    placed: &[&Primitive],
++    relations: &[Relation],
++    config: &MicroRouteConfig,
++) -> Vec<RouteJob> {
++    let marker_nets: HashSet<&str> = relations
++        .iter()
++        .filter_map(|relation| relation.from.strip_prefix(MARKER_PREFIX))
++        .collect();
++    let marker_mode = !marker_nets.is_empty();
++    let candidate_by_net = points_by_net(candidate, config);
++    let mut jobs = Vec::new();
++
++    for target_primitive in placed {
++        let target_by_net = points_by_net(target_primitive, config);
++        for (net, source_points) in &candidate_by_net {
++            if is_ground(net) || is_power(net) || is_switching_power(net) {
++                continue;
++            }
++            if marker_mode && !marker_nets.contains(net.as_ref()) {
++                continue;
++            }
++            let Some(target_points) = target_by_net.get(net) else { continue };
++            if let Some((source, target)) = closest_pair(source_points, target_points) {
++                jobs.push(RouteJob {
++                    net: net.clone(),
++                    source,
++                    target,
++                    priority: 0,
++                    weight: 1.0,
++                    ordinary: true,
++                });
++            }
++        }
++    }
++    dedupe_jobs(jobs)
++}
++
++fn points_by_net(primitive: &Primitive, config: &MicroRouteConfig) -> HashMap<Arc<str>, Vec<RouteEndpoint>> {
++    let layer = primitive_layer(primitive, config);
++    let mut result: HashMap<Arc<str>, Vec<RouteEndpoint>> = HashMap::new();
++    for point in primitive.connection_points.iter() {
++        let Some(net) = point.net.as_ref() else { continue };
++        result.entry(net.clone()).or_default().push(RouteEndpoint {
++            point: Point { x: point.x, y: point.y },
++            layer,
++            primitive_id: primitive.id.clone(),
++            reference: point.reference.clone(),
++            net: net.clone(),
++        });
++    }
++    result
++}
++
++fn resolve_endpoint(endpoint: &str, primitives: &[&Primitive], config: &MicroRouteConfig) -> Vec<RouteEndpoint> {
++    if let Some(reference) = endpoint.strip_prefix("pad:") {
++        for primitive in primitives {
++            let layer = primitive_layer(primitive, config);
++            if let Some(point) = primitive.connection_points.iter().find(|point| point.reference.as_ref() == reference) {
++                if let Some(net) = point.net.as_ref() {
++                    return vec![RouteEndpoint {
++                        point: Point { x: point.x, y: point.y },
++                        layer,
++                        primitive_id: primitive.id.clone(),
++                        reference: point.reference.clone(),
++                        net: net.clone(),
++                    }];
++                }
++            }
++        }
++        return Vec::new();
++    }
++    if let Some(designator) = endpoint.strip_prefix("component:") {
++        let prefix = format!("{designator}.");
++        return primitives
++            .iter()
++            .filter(|primitive| primitive.placements.iter().any(|p| p.designator.as_ref() == designator))
++            .flat_map(|primitive| {
++                let layer = primitive_layer(primitive, config);
++                primitive.connection_points.iter().filter_map(move |point| {
++                    let net = point.net.as_ref()?;
++                    point.reference.starts_with(&prefix).then(|| RouteEndpoint {
++                        point: Point { x: point.x, y: point.y },
