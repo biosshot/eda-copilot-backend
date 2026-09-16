@@ -370,6 +370,7 @@ fn resolve_endpoint(endpoint: &str, primitives: &[&Primitive], config: &MicroRou
             .filter(|primitive| primitive.placements.iter().any(|p| p.designator.as_ref() == designator))
             .flat_map(|primitive| {
                 let layer = primitive_layer(primitive, config);
+                let prefix = prefix.clone();
                 primitive.connection_points.iter().filter_map(move |point| {
                     let net = point.net.as_ref()?;
                     point.reference.starts_with(&prefix).then(|| RouteEndpoint {
