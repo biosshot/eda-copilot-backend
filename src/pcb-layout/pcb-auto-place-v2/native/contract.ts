@@ -141,6 +141,8 @@ export interface NativeBlockSolveSolutionV2 extends NativePrimitivePackSolution 
 export interface NativeBoardPackerAddon {
     contractVersion(): number;
     solveBoardPacked(problem: NativeBoardPackProblemV3): NativeBoardPackSolutionV3;
+    /** Bounded Micro-A* score for routes affected by the listed component-level primitives. */
+    scoreRouteLayout(problem: NativeBoardPackProblemV3, changedPrimitiveIds: string[]): number;
     blockContractVersion(): number;
     solveBlockPrimitives(problem: NativeBlockSolveProblemV2): NativeBlockSolveSolutionV2;
     passiveIslandContractVersion(): number;

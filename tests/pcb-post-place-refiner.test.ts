@@ -29,13 +29,18 @@ test.describe('post-place refinement', () => {
         const result = refinePostPlacement(input, before);
         const a = placement(result.placements, 'A');
         const b = placement(result.placements, 'B');
+        const move = result.moves[0];
 
         assert.equal(a.x, 5);
         assert.equal(b.x, -5);
-        assert.ok(result.moves[0]?.description.includes('A<->B'));
-        assert.ok(result.moves[0]?.description.includes('+=180'), result.moves[0]?.description);
+        assert.ok(move?.description.includes('A<->B'));
+        assert.ok(move?.description.includes('+=180'), move?.description);
         assert.ok(result.scoreAfter < result.scoreBefore);
-        assert.ok(result.moves.every((move) => move.scoreAfter < move.scoreBefore));
+        assert.ok(result.moves.every((candidate) => candidate.scoreAfter < candidate.scoreBefore));
+        assert.ok(move);
+        assert.ok(Number.isFinite(move.routePenaltyBefore));
+        assert.ok(Number.isFinite(move.routePenaltyAfter));
+        assert.ok(move.effectiveImprovement > 0);
     });
 
     test('does not mutate fixed poses without permission and reports the opportunity', () => {
