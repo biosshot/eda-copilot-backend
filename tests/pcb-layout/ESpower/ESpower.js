@@ -12,7 +12,7 @@ board.roundedRect(48, 32, {
 // Board-level mechanics.
 block("mounting_left", ["SCREW1"], "connector", null, { allowDisconnected: true });
 block("mounting_right", ["SCREW2"], "connector", null, { allowDisconnected: true });
-block("usb_port", ["U12", "R5", "R6", "D1", "R14", "U6", "C7", "C8", "C12"], "connector");
+block("usb_port", ["U12", "R5", "R6", "D1", "R14", "U6", "C7", "C8", "C12", "C16"], "connector");
 block("antenna", ["U11"], "rf", null, { allowDisconnected: true });
 block("reset_button", ["U4"], "connector");
 block("boot_button", ["U5"], "connector");
@@ -23,7 +23,7 @@ block("ground_connector", ["U14"], "connector", null, { allowDisconnected: true 
 
 // ESP32-C3 core and local satellites.
 block("mcu", ["U1"], "mcu");
-block("mcu_decoupling", ["C9", "C10", "C14", "C15", "C16"], "mcu", null, {
+block("mcu_decoupling", ["C9", "C10", "C15"], "mcu", null, {
   placement: "satellite",
   attachTo: "mcu",
   anchor: pin("U1", "31"),
@@ -46,7 +46,7 @@ block("rf_match", ["L1", "C1", "C2"], "rf", null, {
   localLayout: {
     "L1": {
       x: 0,
-      y: -2,
+      y: -0.8,
       rotate: 0
     },
     "C1": {
@@ -91,13 +91,19 @@ block("charger", ["U7", "R10", "R11", "LED1"], "power");
 block("battery_gate", ["Q1", "C11"], "power");
 block("battery_adc", ["Q2", "C13", "R15", "R16", "R17"], "analog");
 
-block("current_monitor", ["U13", "R21"], "analog");
+block("current_monitor", ["U13", "R21", "C14"], "analog");
 block("current_monito_pull", ["R19", "R20"], "pull", null, {
   placement: "satellite",
   attachTo: "current_monitor",
   anchor: pin("U13", "4"),
   allowDisconnected: true,
 });
+
+bypass(["C14"], pin("U13", "5"));
+component("C14").block("current_monitor").role("decoupling_cap").top();
+
+component("C16").block("usb_port").role("decoupling_cap").top();
+bypass(["C16"], pin("U6", "5"));
 
 component("SCREW1").block("mounting_left").role("connector").top().fixed({ x: -21.5, y: -13.5, rotate: 0, layer: "top" });
 component("SCREW2").block("mounting_right").role("connector").top().fixed({ x: 21.5, y: -13.5, rotate: 0, layer: "top" });
@@ -120,7 +126,7 @@ component("U8").block("sense_connector").role("connector").top().edgePlace("righ
 component("U14").block("ground_connector").role("connector").top().edgePlace("left", { inset: 0.4, face: "outward", y: -7 });
 
 component("U1").block("mcu").role("main_ic").top();
-for (const d of ["C9", "C10", "C14", "C15", "C16"]) component(d).block("mcu_decoupling").role("decoupling_cap").top();
+for (const d of ["C9", "C10", "C15"]) component(d).block("mcu_decoupling").role("decoupling_cap").top();
 component("C3").block("flash_decoupling").role("decoupling_cap").top();
 component("X1").block("crystal").role("crystal").top();
 for (const d of ["C4", "C6"]) component(d).block("crystal").role("passive").top();
@@ -167,15 +173,9 @@ veryNear(pin("C1", "2"), pin("U1", "1"), "critical");
 veryNear(pin("C2", "2"), pin("L1", "2"), "critical");
 criticalPair(pin("C3", "2"), pin("U1", "18"), { maxDistance: 4.5, preferFacingPads: true });
 
-capCluster(["C9", "C10", "C14", "C15", "C16"], {
-  powerNet: "3V3",
-  returnNet: "GND",
-  target: pin("U1", "31"),
-  maxRows: 2,
-  maxPerRow: 3,
-  gap: 0.3,
-  priority: "critical",
-});
+bypass(["C9", "C10"], pin("U1", "31"));
+bypass(["C15"], pin("U1", "11"));
+
 veryNear(pin("R1", "1"), pin("U1", "7"), "high");
 veryNear(pin("C5", "2"), pin("U1", "7"), "high");
 veryNear(pin("R2", "1"), pin("U1", "15"), "high");
@@ -210,5 +210,5 @@ silkscreen.designators({ enabled: true, height: 0.9, rotations: [0, 90], margin:
 solver({
   grid: 0.25,
   ignoredSignals: ["GND"],
-  compactness: "high",
+  // compactness: "high",
 });
