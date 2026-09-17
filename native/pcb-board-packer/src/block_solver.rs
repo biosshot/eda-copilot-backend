@@ -1459,7 +1459,7 @@ fn score_block_with_overlap_matrix(
     ) = if high {
         (4.2, 5.4, 14.4, 12.0, 1.4, 0.45, 0.65, 1.2)
     } else {
-        (1.7, 2.5, 1.5, 1.5, 1.0, 1.0, 1.0, 1.0)
+        (3.2, 2.5, 10.0, 1.5, 1.0, 1.0, 1.0, 1.0)
     };
     let boxes: Vec<_> = primitives
         .iter()

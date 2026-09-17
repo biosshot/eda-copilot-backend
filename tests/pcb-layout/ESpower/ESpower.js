@@ -12,7 +12,7 @@ board.roundedRect(48, 32, {
 // Board-level mechanics.
 block("mounting_left", ["SCREW1"], "connector", null, { allowDisconnected: true });
 block("mounting_right", ["SCREW2"], "connector", null, { allowDisconnected: true });
-block("usb_port", ["U12", "R5", "R6", "D1", "R14", "U6", "C7", "C8", "C12", "C16"], "connector");
+block("usb_port", ["U12", "R5", "R6", "D1", "U6", "C7", "C8", "C16"], "connector");
 block("antenna", ["U11"], "rf", null, { allowDisconnected: true });
 block("reset_button", ["U4"], "connector");
 block("boot_button", ["U5"], "connector");
@@ -23,12 +23,17 @@ block("ground_connector", ["U14"], "connector", null, { allowDisconnected: true 
 
 // ESP32-C3 core and local satellites.
 block("mcu", ["U1"], "mcu");
-block("mcu_decoupling", ["C9", "C10", "C15"], "mcu", null, {
+block("mcu_decoupling", ["C9", "C10"], "mcu", null, {
   placement: "satellite",
   attachTo: "mcu",
   anchor: pin("U1", "31"),
-  allowDisconnected: true,
 });
+block("mcu_decoupling_1", ["C15"], "mcu", null, {
+  placement: "satellite",
+  attachTo: "mcu",
+  anchor: pin("U1", "11"),
+});
+
 block("flash_decoupling", ["C3"], "mcu", null, {
   placement: "satellite",
   attachTo: "mcu",
@@ -70,13 +75,13 @@ block("strap_pullups", ["R12", "R13"], "mcu", null, {
 
 block("reset_support", ["R1", "C5"], "mcu", null, {
   placement: "satellite",
-  attachTo: "mcu",
-  anchor: pin("U1", "7"),
+  attachTo: "reset_button",
+  anchor: pin("U4", "2"),
 });
-block("boot_support", ["R2"], "mcu", null, {
+block("boot_support", ["R2"], "boot_button", null, {
   placement: "satellite",
-  attachTo: "mcu",
-  anchor: pin("U1", "15"),
+  attachTo: "boot_button",
+  anchor: pin("U5", "2"),
 });
 
 // USB data, CC and input power.
@@ -87,9 +92,12 @@ block("usb_data", ["R7", "R8"], "generic", null, {
   allowDisconnected: true,
 });
 // Power, charger, battery switching and measurement.
-block("charger", ["U7", "R10", "R11", "LED1"], "power");
-block("battery_gate", ["Q1", "C11"], "power");
+block("charger", ["U7", "R10", "R11", "LED1", "C12", "R14"], "power");
 block("battery_adc", ["Q2", "C13", "R15", "R16", "R17"], "analog");
+component("C12").block("charger").role("decoupling_cap").top();
+bypass(["C12"], pin("U7", "4"));
+component("C11").block("charger").role("decoupling_cap").top();
+component("Q1").block("charger").top();
 
 block("current_monitor", ["U13", "R21", "C14"], "analog");
 block("current_monito_pull", ["R19", "R20"], "pull", null, {
@@ -101,9 +109,10 @@ block("current_monito_pull", ["R19", "R20"], "pull", null, {
 
 bypass(["C14"], pin("U13", "5"));
 component("C14").block("current_monitor").role("decoupling_cap").top();
+component("C15").block("mcu_decoupling_1").role("decoupling_cap").top();
 
 component("C16").block("usb_port").role("decoupling_cap").top();
-bypass(["C16"], pin("U6", "5"));
+bypass(["C16", "C8"], pin("U6", "5"));
 
 component("SCREW1").block("mounting_left").role("connector").top().fixed({ x: -21.5, y: -13.5, rotate: 0, layer: "top" });
 component("SCREW2").block("mounting_right").role("connector").top().fixed({ x: 21.5, y: -13.5, rotate: 0, layer: "top" });
@@ -126,7 +135,7 @@ component("U8").block("sense_connector").role("connector").top().edgePlace("righ
 component("U14").block("ground_connector").role("connector").top().edgePlace("left", { inset: 0.4, face: "outward", y: -7 });
 
 component("U1").block("mcu").role("main_ic").top();
-for (const d of ["C9", "C10", "C15"]) component(d).block("mcu_decoupling").role("decoupling_cap").top();
+for (const d of ["C9", "C10"]) component(d).block("mcu_decoupling").role("decoupling_cap").top();
 component("C3").block("flash_decoupling").role("decoupling_cap").top();
 component("X1").block("crystal").role("crystal").top();
 for (const d of ["C4", "C6"]) component(d).block("crystal").role("passive").top();
@@ -137,14 +146,12 @@ component("R1").block("reset_support").role("passive").top();
 component("C5").block("reset_support").role("decoupling_cap").top();
 component("R2").block("boot_support").role("passive").top();
 for (const d of ["R7", "R8"]) component(d).block("usb_data").role("passive").top();
-for (const d of ["R5", "R6", "D1", "R14"]) component(d).block("usb_port").role("passive").top();
+for (const d of ["R5", "R6", "D1"]) component(d).block("usb_port").role("passive").top();
 component("U6").block("usb_port").role("main_ic").top();
-for (const d of ["C7", "C8", "C12"]) component(d).block("usb_port").role("decoupling_cap").top();
+for (const d of ["C7", "C8"]) component(d).block("usb_port").role("decoupling_cap").top();
 component("U7").block("charger").role("main_ic").top();
 for (const d of ["R10", "R11"]) component(d).block("charger").role("passive").top();
 component("LED1").block("charger").role("indicator").top();
-component("Q1").block("battery_gate").role("main_ic").top();
-component("C11").block("battery_gate").role("decoupling_cap").top();
 component("Q2").block("battery_adc").role("main_ic").top();
 component("C13").block("battery_adc").role("decoupling_cap").top();
 for (const d of ["R15", "R16", "R17"]) component(d).block("battery_adc").role("passive").top();
@@ -176,15 +183,10 @@ criticalPair(pin("C3", "2"), pin("U1", "18"), { maxDistance: 4.5, preferFacingPa
 bypass(["C9", "C10"], pin("U1", "31"));
 bypass(["C15"], pin("U1", "11"));
 
-veryNear(pin("R1", "1"), pin("U1", "7"), "high");
-veryNear(pin("C5", "2"), pin("U1", "7"), "high");
-veryNear(pin("R2", "1"), pin("U1", "15"), "high");
 veryNear(pin("R5", "1"), pin("U12", "A5"), "high");
 veryNear(pin("R6", "2"), pin("U12", "B5"), "high");
 veryNear(pin("D1", "2"), pin("U12", "A9"), "high");
 veryNear(pin("C7", "2"), pin("U6", "1"), "critical");
-veryNear(pin("C8", "2"), pin("U6", "5"), "critical");
-veryNear(pin("C12", "1"), pin("U6", "1"), "high");
 
 near(comp("U7"), comp("U9"), "high");
 near(comp("Q1"), comp("SW2"), "high");

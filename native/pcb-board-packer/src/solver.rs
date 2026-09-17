@@ -342,7 +342,9 @@ fn ranked_candidates(
     candidates.truncate(32);
     let baseline_hard = hard_count(placed, context);
     for candidate in &mut candidates {
-        if candidate.rank.hard_count != baseline_hard { continue; }
+        if candidate.rank.hard_count != baseline_hard {
+            continue;
+        }
         let correction = board_micro_route_penalty(&candidate.primitive, placed, context);
         candidate.route_penalty = parent_route_penalty + correction;
         candidate.rank.score += candidate.route_penalty;
@@ -594,7 +596,8 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
             let mut best_rank = Rank {
                 hard_count: current_rank.hard_count,
                 hard_severity: current_rank.hard_severity,
-                score: current_rank.score + board_micro_route_penalty(&current[index], &fixed, context),
+                score: current_rank.score
+                    + board_micro_route_penalty(&current[index], &fixed, context),
             };
             for candidate in candidates {
                 let rank = candidate.rank;
@@ -805,7 +808,7 @@ fn board_score(
     let height = bbox.bottom - bbox.top;
     let high = context.problem.compactness.as_ref() == "high";
     let relation_weight = if high { 0.35 } else { 1.0 };
-    let area_weight = if high { 1.2 } else { 0.12 };
+    let area_weight = if high { 1.2 } else { 0.8 };
     let perimeter_weight = if high { 8.0 } else { 1.5 };
     let overlap_weight = if high { 1.2 } else { 1.0 };
     let edge_weight = if high { 0.4 } else { 1.0 };
