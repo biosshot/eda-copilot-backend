@@ -211,6 +211,7 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
+ "rustc-hash",
  "serde",
  "serde_json",
  "smallvec",

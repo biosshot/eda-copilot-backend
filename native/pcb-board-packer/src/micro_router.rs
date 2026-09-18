@@ -3,8 +3,9 @@ use crate::model::{Primitive, Relation, RouteObstacle};
 use crate::net_class::{is_ground, is_power, is_switching_power};
 use crate::ordinary_net::MARKER_PREFIX;
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
+use std::collections::{BinaryHeap, HashSet, VecDeque};
 use std::sync::Arc;
+use rustc_hash::FxHashMap; 
 
 mod temporary;
 pub mod comparison;
@@ -440,9 +441,12 @@ fn primitive_has_net(primitive: &Primitive, net: &str) -> bool {
     primitive.connection_points.iter().any(|point| point.net.as_deref() == Some(net))
 }
 
-fn points_by_net(primitive: &Primitive, config: &MicroRouteConfig) -> HashMap<Arc<str>, Vec<RouteEndpoint>> {
+fn points_by_net(primitive: &Primitive, config: &MicroRouteConfig) -> FxHashMap<Arc<str>, Vec<RouteEndpoint>> {
     let layer = primitive_layer(primitive, config);
-    let mut result: HashMap<Arc<str>, Vec<RouteEndpoint>> = HashMap::new();
+    let mut result: FxHashMap<Arc<str>, Vec<RouteEndpoint>> = FxHashMap::with_capacity_and_hasher(
+        primitive.connection_points.len().min(256),
+        Default::default(),
+    );
     for point in primitive.connection_points.iter() {
         let Some(net) = point.net.as_ref() else { continue };
         result.entry(net.clone()).or_default().push(RouteEndpoint {
@@ -647,8 +651,8 @@ fn route_job_search(
     }
     let start = State { cell: start_cell, direction: 4 };
     let mut open = BinaryHeap::new();
-    let mut best: HashMap<State, PathCost> = HashMap::new();
-    let mut previous: HashMap<State, State> = HashMap::new();
+    let mut best: FxHashMap<State, PathCost> = FxHashMap::default();
+    let mut previous: FxHashMap<State, State> = FxHashMap::default();
     let mut serial = 0usize;
     best.insert(start, PathCost::zero());
     open.push(OpenNode {
@@ -820,7 +824,7 @@ fn minimum_vias(from: usize, to: usize, config: &MicroRouteConfig) -> Option<usi
     None
 }
 
-fn reconstruct(mut state: State, start: State, previous: &HashMap<State, State>) -> Vec<Cell> {
+fn reconstruct(mut state: State, start: State, previous: &FxHashMap<State, State>) -> Vec<Cell> {
     let mut cells = vec![state.cell];
     while state != start {
         let Some(parent) = previous.get(&state).copied() else { break };
@@ -845,7 +849,10 @@ fn cap_priority_jobs(jobs: Vec<RouteJob>, limit: usize) -> Vec<RouteJob> {
 
 fn cap_per_net(jobs: Vec<RouteJob>, limit: usize) -> Vec<RouteJob> {
     if limit == 0 { return Vec::new(); }
-    let mut by_net: HashMap<Arc<str>, Vec<RouteJob>> = HashMap::new();
+    let mut by_net: FxHashMap<Arc<str>, Vec<RouteJob>> = FxHashMap::with_capacity_and_hasher(
+        jobs.len().min(64),
+        Default::default(),
+    );
     for job in jobs { by_net.entry(job.net.clone()).or_default().push(job); }
     let mut nets: Vec<_> = by_net.into_iter().collect();
     nets.sort_by(|a, b| a.0.cmp(&b.0));

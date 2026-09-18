@@ -1,11 +1,11 @@
 //! Sparse, per-batch virtual copper. Cell ranges are lookup bounds, not keepouts.
 use super::{Cell, EPS};
-use std::collections::HashMap;
 use std::sync::Arc;
+use rustc_hash::FxHashMap; 
 
 #[derive(Default)]
 pub(super) struct TemporaryRoutes {
-    cells: HashMap<Cell, Occupancy>,
+    cells: FxHashMap<Cell, Occupancy>,
 }
 
 struct Occupancy {
