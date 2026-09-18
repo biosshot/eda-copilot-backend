@@ -1,3 +1,4 @@
+use crate::geometry::PolygonDistanceCache;
 use crate::geometry::{
     box_center, box_corners, box_inside_polygon_board, box_outside_bounds_severity,
     boxes_overlap_depth, normalize_rotation, overlap_depth, point_in_polygon,
@@ -114,6 +115,7 @@ struct CompiledRelation {
 struct Context {
     problem: BoardPackProblem,
     relations: Vec<CompiledRelation>,
+    polygon_distance_cache: PolygonDistanceCache,
     hard_overlap_cache: RefCell<HashMap<PosePairKey, f64>>,
     outside_cache: RefCell<HashMap<PoseKey, bool>>,
     outside_severity_cache: RefCell<HashMap<PoseKey, f64>>,
@@ -133,9 +135,13 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
             .map(|placement| placement.designator.clone())
     }));
     let relations = compile_relations(&problem, &primitive_ids, &designator_ids);
+    // One immutable outline and one bounded cache for the entire board solve.
+    let polygon_distance_cache =
+        PolygonDistanceCache::new(&problem.board_outline, GEOMETRY_CACHE_LIMIT);
     let context = Context {
         problem,
         relations,
+        polygon_distance_cache,
         hard_overlap_cache: RefCell::new(HashMap::new()),
         outside_cache: RefCell::new(HashMap::new()),
         outside_severity_cache: RefCell::new(HashMap::new()),
@@ -394,12 +400,12 @@ fn board_micro_route_penalty(
 ) -> f64 {
     let config = MicroRouteConfig::board();
     let placed_primitives: Vec<_> = placed.iter().map(|item| &item.primitive).collect();
-    micro_router::candidate_penalty(
+    micro_router::candidate_penalty_cached(
         &candidate.primitive,
         &placed_primitives,
         &context.problem.relations,
         context.problem.bounds,
-        &context.problem.board_outline,
+        &context.polygon_distance_cache,
         &context.problem.obstacles,
         &config,
     )

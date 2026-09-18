@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+use rustc_hash::FxHashMap;
+use std::cell::RefCell;
 
 const GEOMETRY_EPSILON: f64 = 1e-6;
 
@@ -14,6 +16,67 @@ pub struct Box2 {
     pub right: f64,
     pub top: f64,
     pub bottom: f64,
+}
+
+/// Exact distance memoization for one immutable outline, owned by a solve context.
+/// No coordinate rounding, global state, or per-query polygon hashing.
+pub(crate) struct PolygonDistanceCache {
+    polygon: Box<[Point]>,
+    max_entries: usize,
+    finite_polygon: bool,
+    data: RefCell<PolygonDistanceCacheData>,
+}
+
+#[derive(Default)]
+struct PolygonDistanceCacheData {
+    values: FxHashMap<(u64, u64), f64>,
+    #[cfg(test)]
+    hits: u64,
+    #[cfg(test)]
+    misses: u64,
+}
+
+impl PolygonDistanceCache {
+    pub(crate) fn new(polygon: &[Point], max_entries: usize) -> Self {
+        Self {
+            polygon: polygon.to_vec().into_boxed_slice(),
+            max_entries,
+            finite_polygon: polygon.iter().all(is_finite_point),
+            data: RefCell::new(PolygonDistanceCacheData::default()),
+        }
+    }
+
+    pub(crate) fn polygon(&self) -> &[Point] {
+        &self.polygon
+    }
+
+    pub(crate) fn distance(&self, point: &Point) -> f64 {
+        let cacheable = self.finite_polygon && is_finite_point(point);
+        let key = (point.x.to_bits(), point.y.to_bits());
+        let mut data = self.data.borrow_mut();
+        if cacheable {
+            if let Some(value) = data.values.get(&key).copied() {
+                #[cfg(test)]
+                { data.hits += 1; }
+                return value;
+            }
+        }
+        #[cfg(test)]
+        { data.misses += 1; }
+
+        // Keep the existing numerical and degenerate-edge behavior unchanged.
+        let value = point_to_polygon_distance(point, &self.polygon);
+        if cacheable && value.is_finite() && data.values.len() < self.max_entries {
+            data.values.insert(key, value);
+        }
+        value
+    }
+
+    #[cfg(test)]
+    pub(crate) fn stats(&self) -> (u64, u64, usize) {
+        let data = self.data.borrow();
+        (data.hits, data.misses, data.values.len())
+    }
 }
 
 pub fn js_round(value: f64) -> f64 {
@@ -342,5 +405,100 @@ mod tests {
             bottom: 2.0,
         };
         assert!(!box_inside_polygon_board(&box_, &bounds, &polygon, 0.0));
+    }
+}
+
+#[cfg(test)]
+mod polygon_distance_cache_tests {
+    use super::*;
+
+    fn square(size: f64) -> Vec<Point> {
+        vec![Point { x: 0.0, y: 0.0 }, Point { x: size, y: 0.0 },
+             Point { x: size, y: size }, Point { x: 0.0, y: size }]
+    }
+
+    fn assert_same(cache: &PolygonDistanceCache, point: Point) {
+        let expected = point_to_polygon_distance(&point, cache.polygon());
+        let actual = cache.distance(&point);
+        if expected.is_nan() { assert!(actual.is_nan()); }
+        else { assert_eq!(actual.to_bits(), expected.to_bits()); }
+    }
+
+    #[test]
+    fn reuses_exact_points_without_rounding() {
+        let cache = PolygonDistanceCache::new(&square(10.0), 100);
+        let point = Point { x: 2.0, y: 3.0 };
+        assert_same(&cache, point);
+        assert_same(&cache, point);
+        assert_eq!(cache.stats(), (1, 1, 1));
+        assert_same(&cache, Point { x: f64::from_bits(point.x.to_bits() + 1), y: point.y });
+        assert_same(&cache, Point { x: 0.0, y: 3.0 });
+        assert_same(&cache, Point { x: -0.0, y: 3.0 });
+        assert_eq!(cache.stats(), (1, 4, 4));
+    }
+
+    #[test]
+    fn capacity_and_zero_capacity_keep_exact_results() {
+        for limit in [0, 1] {
+            let cache = PolygonDistanceCache::new(&square(10.0), limit);
+            for point in [Point { x: 2.0, y: 3.0 }, Point { x: 4.0, y: 4.0 }, Point { x: 2.0, y: 3.0 }] {
+                assert_same(&cache, point);
+            }
+            assert_eq!(cache.stats(), if limit == 0 { (0, 3, 0) } else { (1, 2, 1) });
+        }
+    }
+
+    #[test]
+    fn snapshots_and_distinct_outlines_do_not_share_answers() {
+        let mut polygon = square(10.0);
+        let original = polygon.clone();
+        let first = PolygonDistanceCache::new(&polygon, 100);
+        let point = Point { x: 4.0, y: 4.0 };
+        assert_eq!(first.distance(&point), 4.0);
+        polygon = square(5.0);
+        let second = PolygonDistanceCache::new(&polygon, 100);
+        assert_eq!(second.distance(&point), 1.0);
+        assert_eq!(first.distance(&point), 4.0);
+        assert_eq!(first.polygon(), original.as_slice());
+    }
+
+    #[test]
+    fn matches_raw_distance_for_concave_and_degenerate_outlines() {
+        let outlines = [square(10.0), vec![
+            Point { x: 0.0, y: 0.0 }, Point { x: 10.0, y: 0.0 },
+            Point { x: 10.0, y: 10.0 }, Point { x: 5.0, y: 10.0 },
+            Point { x: 5.0, y: 5.0 }, Point { x: 0.0, y: 5.0 },
+        ], vec![Point { x: 1.0, y: 1.0 }], vec![
+            Point { x: 1.0, y: 1.0 }, Point { x: 1.000_01, y: 1.0 },
+        ], vec![]];
+        for outline in &outlines {
+            let cache = PolygonDistanceCache::new(outline, 10_000);
+            for _ in 0..2 {
+                for x in -4..=44 {
+                    for y in -4..=44 {
+                        assert_same(&cache, Point { x: x as f64 * 0.25, y: y as f64 * 0.25 });
+                    }
+                }
+                for delta in [-1e-9, 0.0, 1e-9, -1e-6, 1e-6] {
+                    assert_same(&cache, Point { x: 5.0 + delta, y: 5.0 });
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn nonfinite_inputs_and_results_are_not_memoized() {
+        let cache = PolygonDistanceCache::new(&square(10.0), 100);
+        for point in [Point { x: f64::NAN, y: 0.0 }, Point { x: f64::INFINITY, y: 0.0 }] {
+            assert_same(&cache, point);
+            assert_same(&cache, point);
+        }
+        assert_eq!(cache.stats(), (0, 4, 0));
+        let empty = PolygonDistanceCache::new(&[], 100);
+        assert_same(&empty, Point { x: 0.0, y: 0.0 });
+        assert_eq!(empty.stats(), (0, 1, 0));
+        let invalid = PolygonDistanceCache::new(&[Point { x: f64::NAN, y: 0.0 }], 100);
+        assert_same(&invalid, Point { x: 0.0, y: 0.0 });
+        assert_eq!(invalid.stats(), (0, 1, 0));
     }
 }
