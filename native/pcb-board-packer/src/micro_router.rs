@@ -1,19 +1,48 @@
-use crate::geometry::PolygonDistanceCache;
 use crate::geometry::{point_in_polygon, point_to_polygon_distance, Box2, Point};
 use crate::model::{Primitive, Relation, RouteObstacle};
 use crate::net_class::{is_ground, is_power, is_switching_power};
 use crate::ordinary_net::MARKER_PREFIX;
 use std::cmp::Ordering;
+use std::cell::RefCell;
 use std::collections::{BinaryHeap, VecDeque};
 use std::sync::Arc;
 use rustc_hash::FxHashMap; 
 use rustc_hash::{FxHashSet}; 
 
+mod grid;
 mod temporary;
+#[cfg(test)]
+mod grid_tests;
 pub mod comparison;
 use temporary::TemporaryRoutes;
 
 const EPS: f64 = 1e-9;
+
+/// Solve-owned contour mask and reusable temporary-copper storage. No global
+/// state: parallel solves own separate workspaces and immutable outline snapshots.
+pub(crate) struct BoardRouteCache {
+    outline: grid::OutlineMask,
+    temporary: RefCell<TemporaryRoutes>,
+    layers: usize,
+}
+
+impl BoardRouteCache {
+    pub(crate) fn new(polygon: &[Point], bounds: Box2, config: &MicroRouteConfig, fallback_limit: usize) -> Self {
+        Self {
+            outline: grid::OutlineMask::new(polygon, bounds, config, fallback_limit),
+            temporary: RefCell::new(TemporaryRoutes::new(bounds, config.grid, config.layers.len())),
+            layers: config.layers.len(),
+        }
+    }
+
+    fn polygon(&self) -> &[Point] { self.outline.polygon() }
+    fn matches(&self, bounds: Box2, config: &MicroRouteConfig) -> bool {
+        self.layers == config.layers.len() && self.outline.matches(bounds, config)
+    }
+    #[cfg(test)]
+    fn stats(&self) -> (u64, u64, usize) { self.outline.stats() }
+}
+
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PreferredDirection {
@@ -232,12 +261,12 @@ pub(crate) fn candidate_penalty_cached(
     placed: &[&Primitive],
     relations: &[Relation],
     bounds: Box2,
-    distance_cache: &PolygonDistanceCache,
+    route_cache: &BoardRouteCache,
     global_obstacles: &[Box2],
     config: &MicroRouteConfig,
 ) -> f64 {
-    candidate_penalty_impl(candidate, placed, relations, bounds, distance_cache.polygon(),
-        global_obstacles, config, Some(distance_cache))
+    candidate_penalty_impl(candidate, placed, relations, bounds, route_cache.polygon(),
+        global_obstacles, config, Some(route_cache))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -249,7 +278,7 @@ fn candidate_penalty_impl(
     board_outline: &[Point],
     global_obstacles: &[Box2],
     config: &MicroRouteConfig,
-    distance_cache: Option<&PolygonDistanceCache>,
+    route_cache: Option<&BoardRouteCache>,
 ) -> f64 {
     if config.layers.is_empty() || config.grid <= 0.0 || config.max_total_jobs == 0 {
         return 0.0;
@@ -262,7 +291,7 @@ fn candidate_penalty_impl(
     if jobs.is_empty() {
         return 0.0;
     }
-    route_jobs_penalty(jobs, &primitives, bounds, board_outline, global_obstacles, &[], config, distance_cache)
+    route_jobs_penalty(jobs, &primitives, bounds, board_outline, global_obstacles, &[], config, route_cache)
 }
 
 /// Re-score only routes affected by component-level post-place changes.
@@ -309,13 +338,22 @@ fn route_jobs_penalty(
     global_obstacles: &[Box2],
     routing_obstacles: &[RouteObstacle],
     config: &MicroRouteConfig,
-    distance_cache: Option<&PolygonDistanceCache>,
+    route_cache: Option<&BoardRouteCache>,
 ) -> f64 {
     if jobs.is_empty() {
         return 0.0;
     }
     let obstacles = collect_obstacles(primitives, global_obstacles, routing_obstacles, config);
-    let mut temporary = TemporaryRoutes::default();
+    let route_cache = route_cache.filter(|cache| cache.matches(bounds, config));
+    let mut local_temporary = TemporaryRoutes::default();
+    let mut borrowed_temporary = route_cache.map(|cache| cache.temporary.borrow_mut());
+    let temporary = match borrowed_temporary.as_deref_mut() {
+        Some(temporary) => {
+            temporary.clear();
+            temporary
+        }
+        None => &mut local_temporary,
+    };
     let mut penalty = 0.0;
     for job in jobs {
         let baseline = baseline_cost(&job, config);
@@ -324,9 +362,9 @@ fn route_jobs_penalty(
             bounds,
             board_outline,
             &obstacles,
-            &temporary,
+            temporary,
             config,
-            distance_cache,
+            route_cache,
         );
         match result {
             RouteOutcome::Found(result) => {
@@ -652,17 +690,18 @@ fn route_job_impl(
     obstacles: &[StaticObstacle],
     temporary: &TemporaryRoutes,
     config: &MicroRouteConfig,
-    distance_cache: Option<&PolygonDistanceCache>,
+    route_cache: Option<&BoardRouteCache>,
 ) -> RouteOutcome {
+    let route_cache = route_cache.filter(|cache| cache.matches(bounds, config));
     let first = route_job_search(job, bounds, board_outline, obstacles, temporary, config,
-        job.via_cost, config.max_expanded, distance_cache);
+        job.via_cost, config.max_expanded, route_cache);
     let RouteOutcome::BudgetExhausted { expanded } = first else { return first };
     if config.retry_expanded == 0 { return first; }
     // The retry searches for a *feasible* route without first exhausting the
     // entire top plane. Search price is relaxed, reported physical cost is not.
     let search_via_cost = job.via_cost.min(config.grid * 4.0);
     match route_job_search(job, bounds, board_outline, obstacles, temporary, config,
-        search_via_cost, config.retry_expanded, distance_cache) {
+        search_via_cost, config.retry_expanded, route_cache) {
         RouteOutcome::Found(mut result) => {
             result.cost.physical += result.cost.vias as f64 * (job.via_cost - search_via_cost);
             result.expanded += expanded;
@@ -684,7 +723,7 @@ fn route_job_search(
     config: &MicroRouteConfig,
     search_via_cost: f64,
     max_expanded: usize,
-    distance_cache: Option<&PolygonDistanceCache>,
+    route_cache: Option<&BoardRouteCache>,
 ) -> RouteOutcome {
     let start_cell = point_to_cell(job.source.point, job.source.layer, bounds, config.grid);
     let goal_cell = point_to_cell(job.target.point, job.target.layer, bounds, config.grid);
@@ -692,7 +731,7 @@ fn route_job_search(
     for cell in [start_cell, goal_cell] {
         if blocked(cell, cell, start_cell, goal_cell, &job.source.primitive_id, &job.target.primitive_id,
             &job.source.reference, &job.target.reference, &job.net, bounds, board_outline,
-            obstacles, temporary, config, distance_cache) {
+            obstacles, temporary, config, route_cache) {
             return RouteOutcome::NoPath { expanded: 0 };
         }
     }
@@ -721,6 +760,12 @@ fn route_job_search(
         }
 
         for (next, step_cost) in neighbors(node.state, config, search_via_cost) {
+            // A non-improving state cannot be accepted even if the edge is free.
+            // Preserve the complete cost ordering and update best only after blocked().
+            let next_cost = add_cost(node.g, step_cost);
+            if best.get(&next).is_some_and(|old| compare_cost(next_cost, *old) != Ordering::Less) {
+                continue;
+            }
             if blocked(
                 next.cell,
                 node.state.cell,
@@ -736,12 +781,8 @@ fn route_job_search(
                 obstacles,
                 temporary,
                 config,
-                distance_cache,
+                route_cache,
             ) { continue; }
-            let next_cost = add_cost(node.g, step_cost);
-            if best.get(&next).is_some_and(|old| compare_cost(next_cost, *old) != Ordering::Less) {
-                continue;
-            }
             best.insert(next, next_cost);
             previous.insert(next, node.state);
             serial += 1;
@@ -809,7 +850,7 @@ fn blocked(
     obstacles: &[StaticObstacle],
     temporary: &TemporaryRoutes,
     config: &MicroRouteConfig,
-    distance_cache: Option<&PolygonDistanceCache>,
+    route_cache: Option<&BoardRouteCache>,
 ) -> bool {
     let endpoint_carve = cell.layer == start.layer && chebyshev(cell, start) <= 1
         || cell.layer == goal.layer && chebyshev(cell, goal) <= 1;
@@ -819,16 +860,12 @@ fn blocked(
     }
     let edge_clearance = config.clearance + config.trace_width / 2.0;
     if !endpoint_carve && !board_outline.is_empty() {
-        if !point_in_polygon(&point, board_outline) {
-            return true;
-        }
-        let edge_distance = match distance_cache {
-            Some(cache) => cache.distance(&point),
-            None => point_to_polygon_distance(&point, board_outline),
+        let contour_blocked = match route_cache {
+            Some(cache) => cache.outline.blocked(cell),
+            None => !point_in_polygon(&point, board_outline)
+                || point_to_polygon_distance(&point, board_outline) + EPS < edge_clearance,
         };
-        if edge_distance + EPS < edge_clearance {
-            return true;
-        }
+        if contour_blocked { return true; }
     }
     if !endpoint_carve {
         for obstacle in obstacles {
@@ -1131,7 +1168,7 @@ mod polygon_cache_tests {
         concave[3] = Point { x: 0.0, y: 10.0 };
         concave.extend([Point { x: 0.0, y: 2.0 }, Point { x: -10.0, y: 2.0 }]);
         for polygon in [outline(), concave, vec![]] {
-            let cache = PolygonDistanceCache::new(&polygon, 100_000);
+            let cache = BoardRouteCache::new(&polygon, bounds(), &MicroRouteConfig::board(), 100_000);
             for blocked_case in [false, true] {
                 let config = MicroRouteConfig::post_place();
                 let obstacles = collect_obstacles(&[&a, &b],
@@ -1158,7 +1195,7 @@ mod polygon_cache_tests {
     fn candidate_batches_reuse_distances_without_changing_scores() {
         let a = primitive("A", -4.0, 0.0, "SIG");
         let b = primitive("B", 4.0, 0.0, "SIG");
-        let cache = PolygonDistanceCache::new(&outline(), 100_000);
+        let cache = BoardRouteCache::new(&outline(), bounds(), &MicroRouteConfig::board(), 100_000);
         let config = MicroRouteConfig::board();
         let obstacles = [Box2 { left: -1.0, right: 1.0, top: -2.0, bottom: 2.0 }];
         let expected = candidate_penalty(&a, &[&b], &[], bounds(), cache.polygon(), &obstacles, &config);
@@ -1181,7 +1218,7 @@ mod polygon_cache_tests {
     #[test]
     fn cached_distance_does_not_cache_endpoint_or_net_exceptions() {
         let config = MicroRouteConfig::board();
-        let cache = PolygonDistanceCache::new(&outline(), 100);
+        let cache = BoardRouteCache::new(&outline(), bounds(), &config, 100);
         let cell = point_to_cell(Point { x: -9.75, y: 0.0 }, 0, bounds(), config.grid);
         let far = point_to_cell(Point { x: 4.0, y: 0.0 }, 0, bounds(), config.grid);
         let source = Arc::from("S"); let target = Arc::from("T");
