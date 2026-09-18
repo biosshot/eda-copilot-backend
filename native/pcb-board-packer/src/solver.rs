@@ -1,4 +1,3 @@
-use crate::geometry::PolygonDistanceCache;
 use crate::geometry::{
     box_center, box_corners, box_inside_polygon_board, box_outside_bounds_severity,
     boxes_overlap_depth, normalize_rotation, overlap_depth, point_in_polygon,
@@ -116,7 +115,7 @@ struct CompiledRelation {
 struct Context {
     problem: BoardPackProblem,
     relations: Vec<CompiledRelation>,
-    polygon_distance_cache: PolygonDistanceCache,
+    route_cache: micro_router::BoardRouteCache,
     hard_overlap_cache: RefCell<FxHashMap<PosePairKey, f64>>,
     outside_cache: RefCell<FxHashMap<PoseKey, bool>>,
     outside_severity_cache: RefCell<FxHashMap<PoseKey, f64>>,
@@ -137,12 +136,13 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
     }));
     let relations = compile_relations(&problem, &primitive_ids, &designator_ids);
     // One immutable outline and one bounded cache for the entire board solve.
-    let polygon_distance_cache =
-        PolygonDistanceCache::new(&problem.board_outline, GEOMETRY_CACHE_LIMIT);
+    let route_cache =
+        micro_router::BoardRouteCache::new(
+            &problem.board_outline, problem.bounds, &MicroRouteConfig::board(), GEOMETRY_CACHE_LIMIT);
     let context = Context {
         problem,
         relations,
-        polygon_distance_cache,
+        route_cache,
         hard_overlap_cache: RefCell::new(FxHashMap::default()),
         outside_cache: RefCell::new(FxHashMap::default()),
         outside_severity_cache: RefCell::new(FxHashMap::default()),
@@ -406,7 +406,7 @@ fn board_micro_route_penalty(
         &placed_primitives,
         &context.problem.relations,
         context.problem.bounds,
-        &context.polygon_distance_cache,
+        &context.route_cache,
         &context.problem.obstacles,
         &config,
     )
