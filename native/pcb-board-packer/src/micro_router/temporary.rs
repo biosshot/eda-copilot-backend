@@ -120,8 +120,8 @@ impl TemporaryRoutes {
         }
         let radius = (spacing / grid).ceil() as i32 + 1;
         let limit_squared = (spacing / grid).powi(2);
-        for x in a.x.min(b.x) - radius..=a.x.max(b.x) + radius {
-            for y in a.y.min(b.y) - radius..=a.y.max(b.y) + radius {
+        for y in a.y.min(b.y) - radius..=a.y.max(b.y) + radius {
+            for x in a.x.min(b.x) - radius..=a.x.max(b.x) + radius {
                 let cell = Cell { x, y, layer: a.layer };
                 let Some(occupied) = self.get(cell) else { continue };
                 if &occupied.net == net { continue; }
@@ -221,8 +221,8 @@ impl LegacyTemporaryRoutes {
         }
         let radius = (spacing / grid).ceil() as i32 + 1;
         let limit_squared = (spacing / grid).powi(2);
-        for x in a.x.min(b.x) - radius..=a.x.max(b.x) + radius {
-            for y in a.y.min(b.y) - radius..=a.y.max(b.y) + radius {
+        for y in a.y.min(b.y) - radius..=a.y.max(b.y) + radius {
+            for x in a.x.min(b.x) - radius..=a.x.max(b.x) + radius {
                 let cell = Cell { x, y, layer: a.layer };
                 let Some(occupied) = self.cells.get(&cell) else { continue };
                 if &occupied.net == net { continue; }
