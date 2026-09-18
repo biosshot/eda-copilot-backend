@@ -34,7 +34,7 @@ impl GridShape {
         (len <= max_cells).then_some(Self { width, height, len })
     }
 
-    #[inline]
+    #[inline(always)]
     pub(super) fn index(&self, x: i32, y: i32) -> Option<usize> {
         let x = usize::try_from(x).ok()?;
         let y = usize::try_from(y).ok()?;

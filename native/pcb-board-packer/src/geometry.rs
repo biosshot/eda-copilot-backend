@@ -79,18 +79,22 @@ impl PolygonDistanceCache {
     }
 }
 
+#[inline(always)]
 pub fn js_round(value: f64) -> f64 {
     (value + 0.5).floor()
 }
 
+#[inline(always)]
 pub fn round_placement(value: f64) -> f64 {
     js_round(value * 1000.0) / 1000.0
 }
 
+#[inline(always)]
 pub fn normalize_rotation(value: i32) -> i32 {
     ((value % 360) + 360) % 360
 }
 
+#[inline(always)]
 pub fn box_center(box_: &Box2) -> Point {
     Point {
         x: round_placement((box_.left + box_.right) / 2.0),
@@ -98,6 +102,7 @@ pub fn box_center(box_: &Box2) -> Point {
     }
 }
 
+#[inline(always)]
 pub fn translate_box(box_: &Box2, dx: f64, dy: f64) -> Box2 {
     Box2 {
         left: round_placement(box_.left + dx),
@@ -107,6 +112,7 @@ pub fn translate_box(box_: &Box2, dx: f64, dy: f64) -> Box2 {
     }
 }
 
+#[inline(always)]
 pub fn rotate_point(point: &Point, origin: &Point, angle: i32) -> Point {
     let radians = f64::from(angle).to_radians();
     let (sin, cos) = radians.sin_cos();
@@ -118,6 +124,7 @@ pub fn rotate_point(point: &Point, origin: &Point, angle: i32) -> Point {
     }
 }
 
+#[inline(always)]
 pub fn rotate_box(box_: &Box2, origin: &Point, angle: i32) -> Box2 {
     let corners = box_corners(box_);
     let first = rotate_point(&corners[0], origin, angle);
@@ -137,6 +144,7 @@ pub fn rotate_box(box_: &Box2, origin: &Point, angle: i32) -> Box2 {
     result
 }
 
+#[inline(always)]
 pub fn union_boxes(boxes: &[Box2]) -> Box2 {
     let Some(first) = boxes.first() else {
         return Box2 {
@@ -156,6 +164,7 @@ pub fn union_boxes(boxes: &[Box2]) -> Box2 {
     result
 }
 
+#[inline(always)]
 pub fn overlap_depth(a: &Box2, b: &Box2, clearance: f64) -> f64 {
     let x1 = a.right + clearance - b.left;
     let x2 = b.right + clearance - a.left;
@@ -170,6 +179,7 @@ pub fn overlap_depth(a: &Box2, b: &Box2, clearance: f64) -> f64 {
     x1.min(x2).min(y1.min(y2))
 }
 
+#[inline(always)]
 pub fn boxes_overlap_depth(a_boxes: &[Box2], b_boxes: &[Box2], clearance: f64) -> f64 {
     let mut max_overlap: f64 = 0.0;
     for a in a_boxes {
@@ -180,6 +190,7 @@ pub fn boxes_overlap_depth(a_boxes: &[Box2], b_boxes: &[Box2], clearance: f64) -
     max_overlap
 }
 
+#[inline(always)]
 pub fn box_outside_bounds_severity(box_: &Box2, bounds: &Box2) -> f64 {
     (bounds.left - box_.left).max(0.0)
         + (box_.right - bounds.right).max(0.0)
@@ -187,6 +198,7 @@ pub fn box_outside_bounds_severity(box_: &Box2, bounds: &Box2) -> f64 {
         + (box_.bottom - bounds.bottom).max(0.0)
 }
 
+#[inline(always)]
 pub fn point_in_polygon(point: &Point, polygon: &[Point]) -> bool {
     if polygon.len() < 3 {
         return false;
@@ -209,6 +221,7 @@ pub fn point_in_polygon(point: &Point, polygon: &[Point]) -> bool {
     inside
 }
 
+#[inline(always)]
 pub fn point_to_polygon_distance(point: &Point, polygon: &[Point]) -> f64 {
     if polygon.is_empty() {
         return f64::INFINITY;
@@ -224,6 +237,7 @@ pub fn point_to_polygon_distance(point: &Point, polygon: &[Point]) -> f64 {
     min
 }
 
+#[inline(always)]
 pub fn box_inside_polygon_board(
     box_: &Box2,
     bounds: &Box2,
@@ -262,10 +276,12 @@ pub fn box_inside_polygon_board(
     true
 }
 
+#[inline(always)]
 pub fn is_finite_point(point: &Point) -> bool {
     point.x.is_finite() && point.y.is_finite()
 }
 
+#[inline(always)]
 pub fn is_finite_box(box_: &Box2) -> bool {
     box_.left.is_finite()
         && box_.right.is_finite()
@@ -273,6 +289,7 @@ pub fn is_finite_box(box_: &Box2) -> bool {
         && box_.bottom.is_finite()
 }
 
+#[inline(always)]
 pub fn box_corners(box_: &Box2) -> [Point; 4] {
     [
         Point {
@@ -294,6 +311,7 @@ pub fn box_corners(box_: &Box2) -> [Point; 4] {
     ]
 }
 
+#[inline(always)]
 fn point_on_segment(point: &Point, a: &Point, b: &Point) -> bool {
     ((b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x)).abs() < GEOMETRY_EPSILON
         && point.x <= a.x.max(b.x) + GEOMETRY_EPSILON
@@ -302,6 +320,7 @@ fn point_on_segment(point: &Point, a: &Point, b: &Point) -> bool {
         && point.y >= a.y.min(b.y) - GEOMETRY_EPSILON
 }
 
+#[inline(always)]
 fn point_to_segment_distance(point: &Point, a: &Point, b: &Point) -> f64 {
     let dx = b.x - a.x;
     let dy = b.y - a.y;
@@ -315,6 +334,7 @@ fn point_to_segment_distance(point: &Point, a: &Point, b: &Point) -> f64 {
     ((point.x - projection_x).powi(2) + (point.y - projection_y).powi(2)).sqrt()
 }
 
+#[inline(always)]
 fn segment_intersection(a: &Point, b: &Point, c: &Point, d: &Point) -> Option<Point> {
     let denominator = (a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x);
     if denominator.abs() < GEOMETRY_EPSILON {

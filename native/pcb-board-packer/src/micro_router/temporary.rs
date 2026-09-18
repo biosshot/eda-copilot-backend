@@ -7,7 +7,7 @@ use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
 // u32 indices use at most 8 MiB. Occupancy data exists only for reserved cells.
-const MAX_DENSE_CELLS: usize = 2 * 1024 * 1024;
+const MAX_DENSE_CELLS: usize = 64 * 1024 * 1024;
 
 #[derive(Default)]
 pub(super) struct TemporaryRoutes {
@@ -25,7 +25,7 @@ struct DenseIndex {
 }
 
 impl DenseIndex {
-    #[inline]
+    #[inline(always)]
     fn index(&self, cell: Cell) -> Option<usize> {
         if cell.layer >= self.layers { return None; }
         Some(cell.layer * self.shape.len + self.shape.index(cell.x, cell.y)?)
@@ -66,7 +66,7 @@ impl TemporaryRoutes {
         self.occupied.clear();
     }
 
-    #[inline]
+    #[inline(always)]
     fn get(&self, cell: Cell) -> Option<&Occupancy> {
         if let Some(dense) = &self.dense {
             if let Some(index) = dense.index(cell) {

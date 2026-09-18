@@ -141,9 +141,16 @@ fn component_pair_key(job: &RouteJob) -> (Arc<str>, Arc<str>, Arc<str>) {
 }
 
 fn evaluate(problem: &BoardPackProblem, routing_obstacles: &[RouteObstacle], jobs: Vec<RouteJob>, config: &MicroRouteConfig) -> Vec<RouteSample> {
+    if jobs.is_empty() {
+        return Vec::new();
+    }
     let all: Vec<_> = problem.primitives.iter().collect();
     let obstacles = collect_obstacles(&all, &problem.obstacles, routing_obstacles, config);
-    let mut temporary = TemporaryRoutes::default();
+    let mut temporary = TemporaryRoutes::new(
+        problem.bounds,
+        config.grid,
+        config.layers.len(),
+    );
     jobs.into_iter().map(|job| {
         let mut sample = RouteSample { job: (&job).into(), status: RouteStatus::BudgetExhausted,
             detour: None, physical_cost: None, planar_length: None, vias: 0, expanded: 0, used_fallback: false };

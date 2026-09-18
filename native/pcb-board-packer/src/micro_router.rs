@@ -345,15 +345,28 @@ fn route_jobs_penalty(
     }
     let obstacles = collect_obstacles(primitives, global_obstacles, routing_obstacles, config);
     let route_cache = route_cache.filter(|cache| cache.matches(bounds, config));
-    let mut local_temporary = TemporaryRoutes::default();
-    let mut borrowed_temporary = route_cache.map(|cache| cache.temporary.borrow_mut());
+
+    // Создадим локальное хранилище только в ветке без готового кеша.
+    let mut local_temporary: TemporaryRoutes;
+
+    let mut borrowed_temporary =
+        route_cache.map(|cache| cache.temporary.borrow_mut());
+
     let temporary = match borrowed_temporary.as_deref_mut() {
         Some(temporary) => {
             temporary.clear();
             temporary
         }
-        None => &mut local_temporary,
+        None => {
+            local_temporary = TemporaryRoutes::new(
+                bounds,
+                config.grid,
+                config.layers.len(),
+            );
+            &mut local_temporary
+        }
     };
+    
     let mut penalty = 0.0;
     for job in jobs {
         let baseline = baseline_cost(&job, config);
