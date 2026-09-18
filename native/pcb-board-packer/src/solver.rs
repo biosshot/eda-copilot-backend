@@ -13,8 +13,9 @@ use crate::model::{
 use crate::signal_path;
 use std::cell::RefCell;
 use std::cmp::Ordering;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet};
 use std::sync::Arc;
+use rustc_hash::{FxHashMap,FxHashSet}; 
 
 #[derive(Clone)]
 struct WorkingPrimitive {
@@ -63,7 +64,7 @@ struct PoseKey {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 struct PosePairKey(PoseKey, PoseKey);
 
-const GEOMETRY_CACHE_LIMIT: usize = 250_000;
+const GEOMETRY_CACHE_LIMIT: usize = 1_000_000;
 
 #[derive(Clone)]
 struct SearchState {
@@ -116,9 +117,9 @@ struct Context {
     problem: BoardPackProblem,
     relations: Vec<CompiledRelation>,
     polygon_distance_cache: PolygonDistanceCache,
-    hard_overlap_cache: RefCell<HashMap<PosePairKey, f64>>,
-    outside_cache: RefCell<HashMap<PoseKey, bool>>,
-    outside_severity_cache: RefCell<HashMap<PoseKey, f64>>,
+    hard_overlap_cache: RefCell<FxHashMap<PosePairKey, f64>>,
+    outside_cache: RefCell<FxHashMap<PoseKey, bool>>,
+    outside_severity_cache: RefCell<FxHashMap<PoseKey, f64>>,
 }
 
 pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
@@ -142,12 +143,12 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
         problem,
         relations,
         polygon_distance_cache,
-        hard_overlap_cache: RefCell::new(HashMap::new()),
-        outside_cache: RefCell::new(HashMap::new()),
-        outside_severity_cache: RefCell::new(HashMap::new()),
+        hard_overlap_cache: RefCell::new(FxHashMap::default()),
+        outside_cache: RefCell::new(FxHashMap::default()),
+        outside_severity_cache: RefCell::new(FxHashMap::default()),
     };
-    let mut components_by_primitive: HashMap<Arc<str>, Vec<(usize, ComponentGeometry)>> =
-        HashMap::new();
+    let mut components_by_primitive: FxHashMap<Arc<str>, Vec<(usize, ComponentGeometry)>> =
+        FxHashMap::default();
     for (index, component) in context.problem.components.iter().cloned().enumerate() {
         components_by_primitive
             .entry(component.primitive_id.clone())
@@ -1450,7 +1451,7 @@ fn intersect_box(a: &Box2, b: &Box2) -> Option<Box2> {
 
 fn prune_free_rects(rects: Vec<Box2>, limit: usize) -> Vec<Box2> {
     let mut unique = Vec::new();
-    let mut seen = HashSet::new();
+    let mut seen = FxHashSet::default();
     for box_ in rects {
         let rounded = Box2 {
             left: round_placement(box_.left),
@@ -1648,7 +1649,7 @@ fn edge_cross_coordinates(
     for index in 1..8 {
         values.push(min + (max - min) * index as f64 / 8.0 + offset);
     }
-    let mut seen = HashSet::new();
+    let mut seen = FxHashSet::default();
     values.retain(|value| value.is_finite() && seen.insert(value.clamp(min, max).to_bits()));
     for value in &mut values {
         *value = value.clamp(min, max);
@@ -1841,8 +1842,8 @@ fn endpoint_point(
 
 fn compile_relations(
     problem: &BoardPackProblem,
-    primitive_ids: &HashMap<Arc<str>, u32>,
-    designator_ids: &HashMap<Arc<str>, u32>,
+    primitive_ids: &FxHashMap<Arc<str>, u32>,
+    designator_ids: &FxHashMap<Arc<str>, u32>,
 ) -> Vec<CompiledRelation> {
     problem
         .relations
@@ -1865,8 +1866,8 @@ fn compile_relations(
 fn compile_endpoint(
     endpoint: &str,
     problem: &BoardPackProblem,
-    primitive_ids: &HashMap<Arc<str>, u32>,
-    designator_ids: &HashMap<Arc<str>, u32>,
+    primitive_ids: &FxHashMap<Arc<str>, u32>,
+    designator_ids: &FxHashMap<Arc<str>, u32>,
 ) -> CompiledEndpoint {
     if let Some(anchor) = endpoint.strip_prefix("anchor:") {
         return anchor_point(anchor, &problem.bounds)
@@ -2189,7 +2190,7 @@ fn slot_positions(min: f64, max: f64, values: &[f64]) -> Vec<f64> {
     let center = (min + max) / 2.0;
     let mut result = vec![min, max, center];
     result.extend(values.iter().copied());
-    let mut seen = HashSet::new();
+    let mut seen = FxHashSet::default();
     result.retain(|value| {
         value.is_finite() && seen.insert(round_placement(value.clamp(min, max)).to_bits())
     });
@@ -2242,15 +2243,15 @@ fn snap_point(point: Point, grid: f64) -> Point {
 }
 
 fn dedupe_points(points: &mut Vec<Point>) {
-    let mut seen = HashSet::new();
+    let mut seen = FxHashSet::default();
     points.retain(|point| seen.insert((number_key(point.x), number_key(point.y))));
 }
 fn dedupe_candidates(candidates: &mut Vec<RankedCandidate>) {
-    let mut seen = HashSet::new();
+    let mut seen = FxHashSet::default();
     candidates.retain(|candidate| seen.insert(primitive_key(&candidate.primitive)));
 }
 fn dedupe_states(states: Vec<SearchState>) -> Vec<SearchState> {
-    let mut seen = HashSet::new();
+    let mut seen = FxHashSet::default();
     states
         .into_iter()
         .filter(|state| {
@@ -2294,7 +2295,7 @@ fn primitive_key(primitive: &WorkingPrimitive) -> PrimitiveKey {
     }
 }
 
-fn lexical_ids(values: impl IntoIterator<Item = Arc<str>>) -> HashMap<Arc<str>, u32> {
+fn lexical_ids(values: impl IntoIterator<Item = Arc<str>>) -> FxHashMap<Arc<str>, u32> {
     let values: BTreeSet<_> = values.into_iter().collect();
     values
         .into_iter()
@@ -2330,7 +2331,7 @@ fn pose_pair_key(a: &WorkingPrimitive, b: &WorkingPrimitive) -> PosePairKey {
     }
 }
 
-fn cache_insert<K, V>(cache: &RefCell<HashMap<K, V>>, key: K, value: V)
+fn cache_insert<K, V>(cache: &RefCell<FxHashMap<K, V>>, key: K, value: V)
 where
     K: Eq + std::hash::Hash,
 {

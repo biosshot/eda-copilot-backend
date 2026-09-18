@@ -3,6 +3,7 @@
 use super::*;
 use crate::model::BoardPackProblem;
 use serde::{Deserialize, Serialize};
+use rustc_hash::{FxHashSet}; 
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -110,7 +111,7 @@ fn resolve_planned_endpoint(primitives: &[Primitive], id: &str, reference: &str,
 }
 
 fn plan_jobs(primitives: &[Primitive], relations: &[Relation], changed: &[String], config: &MicroRouteConfig) -> Vec<RouteJob> {
-    let changed: HashSet<&str> = changed.iter().map(String::as_str).collect();
+    let changed: FxHashSet<&str> = changed.iter().map(String::as_str).collect();
     let mut jobs = Vec::new();
     for candidate in primitives.iter().filter(|p| changed.contains(p.id.as_ref())) {
         let placed: Vec<_> = primitives.iter().filter(|p| p.id != candidate.id).collect();
@@ -125,7 +126,7 @@ fn plan_jobs(primitives: &[Primitive], relations: &[Relation], changed: &[String
     // A bounded estimator needs one representative primitive-to-primitive
     // obligation per net. USB-C A/B duplicate pads must not introduce a second
     // obligation only when a swap makes B geometrically closer than explicit A.
-    let covered: HashSet<_> = explicit.iter().map(component_pair_key).collect();
+    let covered: FxHashSet<_> = explicit.iter().map(component_pair_key).collect();
     let ordinary: Vec<_> = jobs.into_iter().filter(|job| job.ordinary && !covered.contains(&component_pair_key(job))).collect();
     let mut result = cap_priority_jobs(explicit, config.max_total_jobs);
     let capacity = config.max_ordinary_jobs.min(config.max_total_jobs.saturating_sub(result.len()));

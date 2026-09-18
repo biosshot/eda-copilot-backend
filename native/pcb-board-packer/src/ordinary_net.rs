@@ -1,6 +1,7 @@
 use crate::geometry::Point;
 use crate::model::{Primitive, Relation};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap};
+use rustc_hash::{FxHashMap}; 
 
 pub const MARKER_PREFIX: &str = "__ordinary_net__:";
 pub const ORDINARY_NET_SCALE: f64 = 0.5;
@@ -35,7 +36,7 @@ pub fn penalty(primitives: &[&Primitive], relations: &[Relation]) -> f64 {
         return 0.0;
     }
 
-    let mut pairs: HashMap<(usize, usize), PairScore> = HashMap::new();
+    let mut pairs: FxHashMap<(usize, usize), PairScore> = FxHashMap::default();
     for (net, net_weight) in markers {
         let mut by_primitive: Vec<(usize, Vec<Point>)> = Vec::new();
         for (primitive_index, primitive) in primitives.iter().enumerate() {

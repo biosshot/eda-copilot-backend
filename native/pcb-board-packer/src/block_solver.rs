@@ -11,8 +11,8 @@ use crate::model::{
 use crate::signal_path;
 use std::cell::RefCell;
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use rustc_hash::{FxHashMap,FxHashSet}; 
 
 #[derive(Clone)]
 struct WorkingPrimitive {
@@ -22,7 +22,7 @@ struct WorkingPrimitive {
     components: Arc<Vec<(usize, BlockComponentGeometry)>>,
     source_components: Arc<Vec<(usize, BlockComponentGeometry)>>,
     source_placements: Arc<Vec<Placement>>,
-    source_node_ids: Arc<HashSet<Arc<str>>>,
+    source_node_ids: Arc<FxHashSet<Arc<str>>>,
     point_net_ids: Arc<Vec<Option<u32>>>,
     rotation: i32,
 }
@@ -81,7 +81,7 @@ struct Context {
     problem: BlockSolveProblem,
     relations: Vec<CompiledRelation>,
     net_ground: Vec<bool>,
-    evaluation_cache: RefCell<HashMap<Vec<PrimitivePoseKey>, Evaluation>>,
+    evaluation_cache: RefCell<FxHashMap<Vec<PrimitivePoseKey>, Evaluation>>,
     net_scoring_scratch: RefCell<NetScoringScratch>,
     validate_incremental_scoring: bool,
 }
@@ -156,15 +156,15 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<BoardPackSolution, Stri
             .iter()
             .map(|primitive| primitive.id.clone()),
     );
-    let mut components_by_primitive: HashMap<Arc<str>, Vec<(usize, BlockComponentGeometry)>> =
-        HashMap::new();
+    let mut components_by_primitive: FxHashMap<Arc<str>, Vec<(usize, BlockComponentGeometry)>> =
+        FxHashMap::default();
     for (index, component) in problem.components.iter().cloned().enumerate() {
         components_by_primitive
             .entry(component.primitive_id.clone())
             .or_default()
             .push((index, component));
     }
-    let mut net_ids = HashMap::<Arc<str>, u32>::new();
+    let mut net_ids = FxHashMap::<Arc<str>, u32>::default();
     let mut net_ground = Vec::new();
     for primitive in &problem.primitives {
         for point in primitive.connection_points.iter() {
@@ -214,7 +214,7 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<BoardPackSolution, Stri
         problem,
         relations,
         net_ground,
-        evaluation_cache: RefCell::new(HashMap::new()),
+        evaluation_cache: RefCell::new(FxHashMap::default()),
         net_scoring_scratch: RefCell::new(NetScoringScratch {
             accumulators: vec![NetAccumulator::default(); net_ids.len()],
             signal_order: Vec::with_capacity(net_ids.len()),
@@ -1118,7 +1118,7 @@ fn primitive_collision_boxes<'a>(primitive: &'a WorkingPrimitive, context: &Cont
 }
 
 fn dedupe_primitives(primitives: Vec<WorkingPrimitive>) -> Vec<WorkingPrimitive> {
-    let mut seen = HashSet::new();
+    let mut seen = FxHashSet::default();
     primitives
         .into_iter()
         .filter(|primitive| seen.insert(primitive_pose_key(primitive)))
@@ -2369,7 +2369,7 @@ fn power_yield_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f6
     if power.is_empty() {
         return 0.0;
     }
-    let mut by_net: HashMap<Arc<str>, Vec<(u32, Point)>> = HashMap::new();
+    let mut by_net: FxHashMap<Arc<str>, Vec<(u32, Point)>> = FxHashMap::default();
     for primitive in primitives {
         if affinity(primitive) >= 0.75 {
             continue;
@@ -2522,7 +2522,7 @@ fn primitive_touches_endpoint(primitive: &WorkingPrimitive, endpoint: &str) -> b
 }
 
 fn dedupe_states(states: Vec<SearchState>) -> Vec<SearchState> {
-    let mut seen = HashSet::new();
+    let mut seen = FxHashSet::default();
     states
         .into_iter()
         .filter(|state| {
@@ -2561,7 +2561,7 @@ fn compare_states(a: &SearchState, b: &SearchState) -> Ordering {
         .then_with(|| a.ordinal.cmp(&b.ordinal))
 }
 
-fn lexical_ids(values: impl IntoIterator<Item = Arc<str>>) -> HashMap<Arc<str>, u32> {
+fn lexical_ids(values: impl IntoIterator<Item = Arc<str>>) -> FxHashMap<Arc<str>, u32> {
     let mut values: Vec<_> = values.into_iter().collect();
     values.sort();
     values.dedup();
@@ -2625,7 +2625,7 @@ fn point_box(point: Point) -> Box2 {
     }
 }
 fn dedupe_numbers(values: Vec<f64>) -> Vec<f64> {
-    let mut seen = HashSet::new();
+    let mut seen = FxHashSet::default();
     values
         .into_iter()
         .filter(|value| value.is_finite() && seen.insert(round_placement(*value).to_bits()))

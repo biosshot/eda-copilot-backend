@@ -2,7 +2,7 @@ use crate::geometry::{round_placement, Box2, Point};
 use crate::model::{PassiveIslandPlacement, PassiveIslandProblem, PassiveIslandSolution};
 use smallvec::SmallVec;
 use std::cmp::Ordering;
-use std::collections::HashSet;
+use rustc_hash::{FxHashSet}; 
 
 const PLACEMENT_EPSILON: f64 = 0.005;
 const ROTATION_LIMIT: usize = 4096;
@@ -207,7 +207,7 @@ fn interleave_ends(items: &[usize]) -> Vec<usize> {
 }
 
 fn unique_orders(orders: Vec<Vec<usize>>) -> Vec<Vec<usize>> {
-    let mut seen = HashSet::new();
+    let mut seen = FxHashSet::default();
     orders
         .into_iter()
         .filter(|order| seen.insert(order.clone()))

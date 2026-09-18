@@ -4,9 +4,10 @@ use crate::model::{Primitive, Relation, RouteObstacle};
 use crate::net_class::{is_ground, is_power, is_switching_power};
 use crate::ordinary_net::MARKER_PREFIX;
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashSet, VecDeque};
+use std::collections::{BinaryHeap, VecDeque};
 use std::sync::Arc;
 use rustc_hash::FxHashMap; 
+use rustc_hash::{FxHashSet}; 
 
 mod temporary;
 pub mod comparison;
@@ -280,7 +281,7 @@ pub fn changed_layout_penalty(
     if config.layers.is_empty() || config.grid <= 0.0 || config.max_total_jobs == 0 {
         return 0.0;
     }
-    let changed: HashSet<&str> = changed_primitive_ids.iter().map(String::as_str).collect();
+    let changed: FxHashSet<&str> = changed_primitive_ids.iter().map(String::as_str).collect();
     if changed.is_empty() {
         return 0.0;
     }
@@ -353,7 +354,7 @@ fn schedule_jobs(
     explicit.sort_by(job_order);
     explicit = cap_priority_jobs(explicit, config.max_total_jobs);
 
-    let explicit_pairs: HashSet<_> = explicit.iter().map(job_pair_key).collect();
+    let explicit_pairs: FxHashSet<_> = explicit.iter().map(job_pair_key).collect();
     let remaining = config.max_total_jobs.saturating_sub(explicit.len());
     if remaining == 0 {
         return explicit;
@@ -421,7 +422,7 @@ fn ordinary_jobs(
     relations: &[Relation],
     config: &MicroRouteConfig,
 ) -> Vec<RouteJob> {
-    let marker_nets: HashSet<&str> = relations
+    let marker_nets: FxHashSet<&str> = relations
         .iter()
         .filter_map(|relation| relation.from.strip_prefix(MARKER_PREFIX))
         .collect();
@@ -866,7 +867,8 @@ fn heuristic(cell: Cell, goal: Cell, config: &MicroRouteConfig, via_cost: f64) -
 fn minimum_vias(from: usize, to: usize, config: &MicroRouteConfig) -> Option<usize> {
     if from == to { return Some(0); }
     let mut queue = VecDeque::from([(from, 0usize)]);
-    let mut seen = HashSet::from([from]);
+    let mut seen = FxHashSet::default();
+    seen.insert(from);
     while let Some((layer, distance)) = queue.pop_front() {
         for transition in &config.via_transitions {
             if transition.from != layer || !seen.insert(transition.to) { continue; }
@@ -951,7 +953,7 @@ fn feature_distance_to_centroid(job: &RouteJob, c: (f64, f64, f64, f64)) -> f64 
 }
 
 fn dedupe_jobs(jobs: Vec<RouteJob>) -> Vec<RouteJob> {
-    let mut seen = HashSet::new();
+    let mut seen = FxHashSet::default();
     jobs.into_iter().filter(|job| seen.insert(job_pair_key(job))).collect()
 }
 fn job_pair_key(job: &RouteJob) -> (Arc<str>, Arc<str>, Arc<str>) {
