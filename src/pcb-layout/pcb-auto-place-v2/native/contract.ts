@@ -53,8 +53,10 @@ export interface NativeRouteSample {
 }
 
 export interface NativeRouteBaseline {
-    version: 1;
+    version: 1 | 2;
     jobs: NativeRouteSample[];
+    /** Complete ordinary nets: terminal identities are fixed, tree edges may change. */
+    topologyNets?: string[];
     /** Conservative route-score improvement ceiling; absent on older addons. */
     maximumImprovement?: number;
 }

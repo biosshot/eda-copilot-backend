@@ -70,6 +70,54 @@ test('frozen route plans survive changed nearest pads without adding obligations
     assert.throws(() => addon.compareRouteLayoutCandidate(moved, [], baseline), /route plan endpoint.*missing/);
 });
 
+test('ordinary three-terminal net changes tree while retaining every terminal', () => {
+    const p = problem([primitive('J', -4, 0, 'SIG'), primitive('U5', 0, 0, 'SIG'), primitive('D5', 4, 0, 'SIG')]);
+    const baseline = addon.prepareRouteLayoutComparison(p, ['J'], []);
+    assert.deepEqual(baseline.topologyNets, ['SIG']);
+    const pairs = (jobs: typeof baseline.jobs) => jobs.map(({ job }) =>
+        [job.sourceRef, job.targetRef].sort().join('-')).sort();
+    assert.deepEqual(pairs(baseline.jobs), ['D5.1-U5.1', 'J.1-U5.1']);
+    const moved = problem([primitive('J', 6, 0, 'SIG'), primitive('U5', 0, 0, 'SIG'), primitive('D5', 4, 0, 'SIG')]);
+    const after = addon.compareRouteLayoutCandidate(moved, [], baseline);
+    assert.deepEqual(pairs(after.jobs), ['D5.1-J.1', 'D5.1-U5.1']);
+    assert.equal(after.unresolvedAfter, 0);
+    assert.equal(after.feasibilityOrder, 0);
+    assert.ok(after.beforePenalty - after.afterPenalty <= baseline.maximumImprovement! + 1e-9);
+    const same = addon.compareRouteLayoutCandidate(p, [], baseline);
+    assert.equal(same.beforePenalty, same.afterPenalty);
+    const legacy = { ...baseline, version: 1 as const, topologyNets: undefined };
+    assert.deepEqual(addon.compareRouteLayoutCandidate(moved, [], legacy).jobs.map(j => j.job),
+        baseline.jobs.map(j => j.job), 'legacy baselines keep frozen pairs');
+    moved.primitives[1].connectionPoints = [];
+    assert.throws(() => addon.compareRouteLayoutCandidate(moved, [], baseline), /endpoint.*missing/);
+});
+
+test('ordinary tree includes all terminals rather than the old two-job sample', () => {
+    const p = problem(Array.from({ length: 5 }, (_, i) => primitive(`P${i}`, -8 + i * 3, 0, 'SIG')));
+    const baseline = addon.prepareRouteLayoutComparison(p, ['P0'], []);
+    assert.deepEqual(baseline.topologyNets, ['SIG']);
+    assert.equal(baseline.jobs.length, 4);
+    const terminals = new Set(baseline.jobs.flatMap(({ job }) => [job.sourceRef, job.targetRef]));
+    assert.equal(terminals.size, 5);
+    assert.equal(addon.compareRouteLayoutCandidate(p, [], baseline).unresolvedAfter, 0);
+    const blocked = addon.compareRouteLayoutCandidate(p, [{ box: { left: -1.5, right: -0.5, top: -11, bottom: 11 } }], baseline);
+    assert.equal(blocked.feasibilityOrder, 1);
+    assert.ok(blocked.afterPenalty > blocked.beforePenalty);
+});
+
+test('complete net plans respect the shared budget without truncating admitted trees', () => {
+    const primitives = ['A', 'B', 'C'].flatMap((net, row) => Array.from({ length: 8 }, (_, i) =>
+        primitive(`${net}${i}`, -8 + i * 2, row * 2, net)));
+    const baseline = addon.prepareRouteLayoutComparison(problem(primitives), ['A0', 'B0', 'C0'], []);
+    assert.equal(baseline.topologyNets?.length, 2);
+    assert.ok(baseline.jobs.length <= 16);
+    for (const net of baseline.topologyNets!) {
+        const jobs = baseline.jobs.filter(j => j.job.net === net);
+        assert.equal(jobs.length, 7);
+        assert.equal(new Set(jobs.flatMap(j => [j.job.sourceRef, j.job.targetRef])).size, 8);
+    }
+});
+
 test('ESPower frozen USB snapshot: swap lowers cost on the same four obligations', () => {
     const { current, obstacles } = espowerSnapshot();
     const changed = ['post:R7', 'post:R8'];

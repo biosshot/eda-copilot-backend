@@ -14,13 +14,28 @@ For every changed-designator set in one refinement iteration:
 1. `preparePostPlaceRouteComparison()` resolves endpoints, priorities and weights
    from the current layout, selects a bounded job list, and evaluates that list.
 2. The resulting serializable baseline is cached for that iteration only.
-3. `comparePostPlaceRouteCandidate()` resolves the **same references** in each
-   candidate pose. It does not reselect nearest pads or add new ordinary jobs.
+3. `comparePostPlaceRouteCandidate()` resolves the **same terminal references**
+   in each candidate pose. Explicit pairs retain their endpoints. For complete
+   ordinary nets recorded in `topologyNets`, the geometric minimum spanning tree
+   is rebuilt at the candidate coordinates, allowing a different intermediate pad.
 4. Each evaluation routes jobs sequentially in priority order, retaining virtual
    copper within that evaluation. Candidate evaluations never share occupancy.
 
-The native plan has one total cap (32 jobs), an ordinary cap (16), and the
-existing per-net sampling cap. Ordinary jobs do not duplicate an explicit
+The native plan has one total cap (32 jobs) and an ordinary cap (16). Selected
+ordinary nets with 3–8 terminals and no explicit jobs on that net are upgraded
+atomically to a complete tree (N-1 jobs), bypassing the two-job sampling cap
+only when the whole tree fits both budgets. Every pad reference is retained,
+including pads on unchanged components. Other nets keep the existing sampled
+pair estimator. Version 2 baselines identify complete nets in `topologyNets`;
+legacy version 1 baselines continue to use fixed pairs.
+
+The tree is chosen by geometric distance; Micro-A* then evaluates its edges
+with obstacles and temporary same-net copper. This does not yet search alternative
+trees around obstacles or compute a Steiner tree. Tree-edge samples are compared
+in deterministic slots within each net, with the same priority, weight and via
+price; unresolved counts still prevent dropping connectivity for a cheaper score.
+
+Ordinary jobs do not duplicate an explicit
 component-pair/net obligation just because another pad of that component becomes
 closer. This is a representative estimate, not proof that all duplicate physical
 pads of a net have been connected.
@@ -86,7 +101,8 @@ budget-exhausted counts. The native baseline/candidate APIs additionally return
 per-job status, expanded states, via count and `usedFallback`.
 
 `tests/pcb-route-cost-comparison.test.ts` covers adjacent 0.5 mm endpoints,
-via fallback with restored real cost, fixed plans despite changed nearest pads,
+via fallback with restored real cost, fixed explicit plans despite changed nearest pads,
+ordinary-net topology changes with preserved terminals, complete five-pad trees,
 and a captured ESPower USB placement. The fixture keeps all 53 component body
 boxes and 174 pad obstacles but limits explicit routing obligations to the four
 USB segments. A separate refiner test keeps the surrounding geometry fixed and

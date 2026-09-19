@@ -1,5 +1,5 @@
-//! Paired post-place evaluation: freeze the routing obligations before trying
-//! swap/rotate variants, and never reward an unfinished search as a cheap path.
+//! Paired post-place evaluation: freeze explicit pairs and ordinary-net terminal
+//! sets, and never reward an unfinished search as a cheap path.
 use super::*;
 use crate::model::BoardPackProblem;
 use serde::{Deserialize, Serialize};
@@ -54,6 +54,10 @@ pub struct RouteSample {
 pub struct RouteBaseline {
     pub version: u32,
     pub jobs: Vec<RouteSample>,
+    /// Complete ordinary nets whose spanning tree may change. Other jobs keep
+    /// their explicit/frozen endpoints. Missing on legacy baselines.
+    #[serde(default)]
+    pub topology_nets: Vec<Arc<str>>,
     /// Upper bound on before_penalty - after_penalty, even for unresolved jobs.
     /// Optional for compatibility with previously saved baselines.
     #[serde(default)]
@@ -78,9 +82,10 @@ pub struct RouteComparison {
 pub fn prepare(problem: &BoardPackProblem, obstacles: &[RouteObstacle], changed: &[String]) -> RouteBaseline {
     let config = MicroRouteConfig::post_place();
     let jobs = plan_jobs(&problem.primitives, &problem.relations, changed, &config);
+    let (jobs, topology_nets) = complete_net_plans(&problem.primitives, jobs, &config);
     let jobs = evaluate(problem, obstacles, jobs, &config);
     let maximum_improvement = Some(maximum_improvement(&jobs, &config));
-    RouteBaseline { version: 1, jobs, maximum_improvement }
+    RouteBaseline { version: 2, jobs, topology_nets, maximum_improvement }
 }
 
 fn maximum_improvement(jobs: &[RouteSample], config: &MicroRouteConfig) -> f64 {
@@ -94,7 +99,8 @@ fn maximum_improvement(jobs: &[RouteSample], config: &MicroRouteConfig) -> f64 {
 
 pub fn compare(problem: &BoardPackProblem, obstacles: &[RouteObstacle], baseline: &RouteBaseline) -> Result<RouteComparison, String> {
     let config = MicroRouteConfig::post_place();
-    if baseline.version != 1 || baseline.jobs.len() > config.max_total_jobs {
+    if ![1, 2].contains(&baseline.version) || baseline.jobs.len() > config.max_total_jobs
+        || (baseline.version == 1 && !baseline.topology_nets.is_empty()) {
         return Err("invalid route baseline version or job count".into());
     }
     let mut jobs = Vec::new();
@@ -109,6 +115,23 @@ pub fn compare(problem: &BoardPackProblem, obstacles: &[RouteObstacle], baseline
         let target = resolve_planned_endpoint(&problem.primitives, &spec.target_primitive, &spec.target_ref, &spec.net, &config)?;
         jobs.push(RouteJob { source, target, net: spec.net.clone(), priority: spec.priority,
             weight: spec.weight, via_cost: spec.via_cost, ordinary: spec.ordinary });
+    }
+    // Resolve EVERY frozen terminal first; a missing terminal must never make
+    // the candidate cheaper. Only then rebuild complete ordinary-net trees.
+    for net in &baseline.topology_nets {
+        let indices: Vec<_> = jobs.iter().enumerate()
+            .filter(|(_, job)| &job.net == net).map(|(index, _)| index).collect();
+        if indices.is_empty() || indices.iter().any(|&index| !jobs[index].ordinary) {
+            return Err("invalid ordinary net topology plan".into());
+        }
+        let terminals = unique_terminals(indices.iter().flat_map(|&index| {
+            [jobs[index].source.clone(), jobs[index].target.clone()]
+        }).collect());
+        if terminals.len() != indices.len() + 1 {
+            return Err("incomplete ordinary net topology plan".into());
+        }
+        let tree = spanning_jobs(&terminals, &jobs[indices[0]]);
+        for (index, job) in indices.into_iter().zip(tree) { jobs[index] = job; }
     }
     let after = evaluate(problem, obstacles, jobs, &config);
     Ok(compare_samples(&baseline.jobs, after, &config))
@@ -275,4 +298,69 @@ mod tests {
             }
         }
     }
+}
+
+fn unique_terminals(mut terminals: Vec<RouteEndpoint>) -> Vec<RouteEndpoint> {
+    terminals.sort_by(|a, b| (&a.primitive_id, &a.reference).cmp(&(&b.primitive_id, &b.reference)));
+    terminals.dedup_by(|a, b| a.primitive_id == b.primitive_id && a.reference == b.reference);
+    terminals
+}
+
+/// Admit whole nets atomically: never claim to evaluate connectivity of a
+/// sampled subset. Large nets retain the previous bounded pair estimator.
+fn complete_net_plans(primitives: &[Primitive], mut jobs: Vec<RouteJob>, config: &MicroRouteConfig)
+    -> (Vec<RouteJob>, Vec<Arc<str>>) {
+    let mut nets: Vec<_> = jobs.iter().filter(|job| job.ordinary).map(|job| job.net.clone()).collect();
+    nets.sort();
+    nets.dedup();
+    let mut topology_nets = Vec::new();
+    for net in nets {
+        // Preserve authored pair/path obligations and their existing dedup policy.
+        if jobs.iter().any(|job| job.net == net && !job.ordinary) { continue; }
+        let terminals = unique_terminals(primitives.iter().flat_map(|primitive| {
+            points_by_net(primitive, config).remove(&net).unwrap_or_default()
+        }).collect());
+        if !(3..=8).contains(&terminals.len()) { continue; }
+        let old_count = jobs.iter().filter(|job| job.net == net).count();
+        let new_count = terminals.len() - 1;
+        let ordinary_count = jobs.iter().filter(|job| job.ordinary).count();
+        if jobs.len() - old_count + new_count > config.max_total_jobs
+            || ordinary_count - old_count + new_count > config.max_ordinary_jobs { continue; }
+        let template = jobs.iter().find(|job| job.net == net).unwrap().clone();
+        jobs.retain(|job| job.net != net);
+        jobs.extend(spanning_jobs(&terminals, &template));
+        topology_nets.push(net);
+    }
+    jobs.sort_by(job_order);
+    (jobs, topology_nets)
+}
+
+/// Deterministic geometric MST over the same terminal identities on each side
+/// of the comparison. Routing then prices obstacles/vias for these edges.
+fn spanning_jobs(terminals: &[RouteEndpoint], template: &RouteJob) -> Vec<RouteJob> {
+    if terminals.is_empty() { return Vec::new(); }
+    let mut connected = vec![false; terminals.len()];
+    connected[0] = true;
+    let mut jobs = Vec::new();
+    for _ in 1..terminals.len() {
+        let mut best: Option<(usize, usize, f64)> = None;
+        for a in 0..terminals.len() {
+            if !connected[a] { continue; }
+            for b in 0..terminals.len() {
+                if connected[b] { continue; }
+                let cost = distance(terminals[a].point, terminals[b].point);
+                if best.as_ref().is_none_or(|&(_, _, previous)| cost < previous - EPS) {
+                    best = Some((a, b, cost));
+                }
+            }
+        }
+        let (a, b, _) = best.unwrap();
+        connected[b] = true;
+        let mut job = template.clone();
+        job.source = terminals[a].clone();
+        job.target = terminals[b].clone();
+        jobs.push(job);
+    }
+    jobs.sort_by(job_order);
+    jobs
 }
