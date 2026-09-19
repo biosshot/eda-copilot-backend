@@ -1,0 +1,21 @@
+# Changelog
+
+## 0.2.0 - 2026-09-19
+
+- Allow fixed placement for every component role and add legalized local block
+  layouts while preserving seed topology during refinement.
+- Add bounded micro-A* routability scoring and route-aware post-placement
+  refinement for swaps, rotations and local placement alternatives.
+- Compare route candidates on identical routing obligations, preserve endpoint
+  sibling-pad obstacles and report route-aware placement evidence.
+- Improve ordinary-net affinity, passive-block handling, edge-group validation
+  and local ground proximity for compact board placement.
+- Cache board-outline distances and exact native solves, prune redundant route
+  probes and accelerate grid conflict and A* searches.
+- Expand placement reports and the published placement DSL for the new routing
+  and local-layout behavior.
+
+## 0.1.0 - 2026-09-12
+
+- Initial standalone backend release with component resolution, schematic
+  extraction, PCB placement, workers and native binaries for supported hosts.
