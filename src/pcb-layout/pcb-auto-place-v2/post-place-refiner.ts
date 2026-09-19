@@ -319,7 +319,7 @@ function fixedPlacementOpportunities(input: PlacementInput, placements: Placemen
                 severity: 'warning',
                 code: 'post_place_opportunity',
                 nodeId: `post-place:${a.designator}:${b.designator}`,
-                message: `${a.designator}/${b.designator}: potential post-place improvement ${best.candidate.description}; global score ${roundScore(currentScore)} -> ${roundScore(best.score)}. Operation is blocked by fixed placement. Add refineGroup("post_${a.designator}_${b.designator}", ["${a.designator}", "${b.designator}"], ${options});`,
+                message: `${a.designator}/${b.designator}: safe post-place improvement ${best.candidate.description}; global score ${roundScore(currentScore)} -> ${roundScore(best.score)}. It was not applied because fixed placement must be preserved. Add refineGroup("post_${a.designator}_${b.designator}", ["${a.designator}", "${b.designator}"], ${options}) if these fixed components may swap or rotate.`,
             });
         }
     }
@@ -342,7 +342,7 @@ function fixedPlacementOpportunities(input: PlacementInput, placements: Placemen
             severity: 'warning',
             code: 'post_place_opportunity',
             nodeId: `post-place:${component.designator}`,
-            message: `${component.designator}: potential post-place improvement ${candidate.description}; global score ${roundScore(currentScore)} -> ${roundScore(score)}. Operation is blocked by fixed placement. Add refineGroup("post_${component.designator}", ["${component.designator}"], { rotateBy: [180] });`,
+            message: `${component.designator}: safe post-place improvement ${candidate.description}; global score ${roundScore(currentScore)} -> ${roundScore(score)}. It was not applied because fixed placement must be preserved. Add refineGroup("post_${component.designator}", ["${component.designator}"], { rotateBy: [180] }) if this fixed component may rotate.`,
         });
     }
     return diagnostics;

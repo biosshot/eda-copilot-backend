@@ -132,6 +132,9 @@ export function createPcbToolReport(input: {
     layout?: PcbLayout | null;
     preview?: PlacementPreviewMetadata | null;
 }): PcbToolReport {
+    const fixedPassiveWarnings = input.placementInput
+        ? createFixedPassiveWarnings(input.placementInput)
+        : [];
     const blockViolations = [
         ...formatBlockViolations(input.placementReport),
     ];
@@ -167,9 +170,11 @@ export function createPcbToolReport(input: {
             && criticalPairViolations.length === 0
             && signalPathViolations.length === 0
             && graphDiagnostics.every((item) => !item.startsWith("error "))
-            && input.placementReport.hintViolations.length === 0,
+            && input.placementReport.hintViolations.length === 0
+            && fixedPassiveWarnings.length === 0,
         warnings: [
             ...(input.layout ? proceduralGeometryDiagnostics(input.layout) : []),
+            ...fixedPassiveWarnings,
             ...input.placementReport.hintViolations.slice(0, 16).map(formatHintViolationSummary),
             ...signalPathViolations,
             ...createQualityWarnings(input.placementReport),
@@ -204,6 +209,16 @@ export function createPcbToolReport(input: {
         quality,
         solver,
     });
+}
+
+function createFixedPassiveWarnings(input: PlacementInput) {
+    const hasFixedPassive = input.components.some((component) => (
+        component.pcb.fixedPlacement
+        && ["passive", "decoupling_cap", "crystal"].includes(component.pcb.role)
+    ));
+    return hasFixedPassive
+        ? ["fixed() is generally not recommended for passive R/C/L components or local support parts because it blocks electrical placement optimization. Use it only for a real mechanical requirement."]
+        : [];
 }
 
 function proceduralGeometryDiagnostics(layout: PcbLayout) {

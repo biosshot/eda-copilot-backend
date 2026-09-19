@@ -51,7 +51,8 @@ test.describe('post-place refinement', () => {
         assert.deepEqual(result.placements, before);
         assert.equal(result.moves.length, 0);
         assert.equal(result.diagnostics.length, 1);
-        assert.match(result.diagnostics[0].message, /blocked by fixed placement/);
+        assert.match(result.diagnostics[0].message, /safe post-place improvement/);
+        assert.match(result.diagnostics[0].message, /fixed placement must be preserved/);
         assert.match(result.diagnostics[0].message, /refineGroup\("post_A_B"/);
     });
 

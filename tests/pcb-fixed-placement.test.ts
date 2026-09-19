@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { autoPlacePcbWithReport } from '../src/pcb-layout/pcb-auto-place/auto-place.ts';
 import { buildPlacementInput } from '../src/pcb-layout/placement-input.ts';
 import { validatePlacementRulesForCircuit } from '../src/pcb-layout/placement-validation.ts';
 import { runPcbLayoutDsl } from '../src/pcb-layout/pcb-layout-dsl/spec.ts';
+import { createPcbToolReport } from '../src/pcb-layout/report.ts';
 import type { ExplainCircuit } from '../src/types/circuit.ts';
 import type { FootprintSpec } from '../src/types/pcb/layout-model.ts';
 
@@ -53,6 +55,32 @@ test('allows main_ic components to use fixed()', () => {
 test('keeps connector fixed() behavior accepted', () => {
     const circuit = singleComponentCircuit('J1', 'USB-C');
     assert.doesNotThrow(() => validatePlacementRulesForCircuit(circuit, fixedRules('J1', 'connector')));
+});
+
+test('reports one aggregate warning when fixed() is used for passive components', async () => {
+    const circuit: ExplainCircuit = {
+        components: [
+            ...singleComponentCircuit('R1', '10k').components,
+            ...singleComponentCircuit('C1', '100nF').components,
+        ],
+    };
+    const rules = runPcbLayoutDsl(`
+        board.rect(20, 12);
+        block("passives", ["R1", "C1"], "generic");
+        component("R1").role("passive").fixed({ x: -2, y: 0, rotate: 0, layer: "top" });
+        component("C1").role("decoupling_cap").fixed({ x: 2, y: 0, rotate: 0, layer: "top" });
+    `);
+    const input = await buildPlacementInput(circuit, rules, { [PART_UUID]: FOOTPRINT });
+    const placed = autoPlacePcbWithReport(input);
+    const report = createPcbToolReport({
+        placementInput: input,
+        placementReport: placed.report,
+        layout: placed.layout,
+    });
+    const warnings = report.quality.warnings.filter((warning) => warning.includes('not recommended for passive R/C/L'));
+
+    assert.equal(warnings.length, 1);
+    assert.doesNotMatch(warnings[0], /R1|C1/);
 });
 
 test('keeps the exact fixed pose in normalized placement input', async () => {
