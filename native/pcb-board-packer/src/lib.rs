@@ -1,5 +1,6 @@
 mod block_solver;
 mod geometry;
+mod lazy_rank;
 mod model;
 mod micro_router;
 mod net_class;

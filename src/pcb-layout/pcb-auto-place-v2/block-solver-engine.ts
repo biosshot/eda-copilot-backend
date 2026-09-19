@@ -4,6 +4,7 @@ import { applyNativeBoardPackSolution } from './native/apply-board-solution.ts';
 import { NATIVE_BLOCK_SOLVE_CONTRACT_VERSION } from './native/contract.ts';
 import { encodeNativeBlockSolveProblem } from './native/encode-block-problem.ts';
 import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
+import { cachedNativeSolve } from './native/solve-cache.ts';
 import type { PlacementPrimitive } from './primitives.ts';
 import { prepareLocalLayoutPrimitives } from './local-layout.ts';
 
@@ -32,6 +33,7 @@ export function solveBlockPrimitivesRust(params: BlockSolveParams) {
     if (nativeVersion !== NATIVE_BLOCK_SOLVE_CONTRACT_VERSION) {
         throw new Error(`Rust PCB block solver contract ${nativeVersion} does not match TypeScript contract ${NATIVE_BLOCK_SOLVE_CONTRACT_VERSION}`);
     }
-    const solution = addon.solveBlockPrimitives(encodeNativeBlockSolveProblem(prepared));
+    const problem = encodeNativeBlockSolveProblem(prepared);
+    const solution = cachedNativeSolve(addon, 'block', problem, () => addon.solveBlockPrimitives(problem));
     return { result: applyNativeBoardPackSolution(primitives, solution, NATIVE_BLOCK_SOLVE_CONTRACT_VERSION), rank: solution.rank };
 }

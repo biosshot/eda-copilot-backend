@@ -96,6 +96,113 @@ geometric score.
 These are estimator regressions, not a claim that a production router will
 produce identical copper. The USB connector side can still require vias.
 
+## Search performance
+
+The micro-router preserves the search order, expansion budgets and physical
+costs while avoiding repeated work:
+
+- Static cell checks are memoized within each search. Endpoint, net and layout
+  exceptions cannot leak to the next job or candidate.
+- Temporary-copper checks are memoized by directed edge, separately from static
+  cells, because clearance depends on both ends of the move.
+- Via distances to the goal layer are computed once per search. Neighbor lists
+  use inline storage (with a heap fallback for more than six neighbors).
+- Costs and reconstruction parents share one state table.
+- Unit grid edges use an exact endpoint-distance shortcut for copper clearance.
+  Longer/diagonal edges and mixed-net endpoint occupancy retain the general
+  segment predicate. No square keepout approximation is introduced.
+
+To measure the native API on the saved ESPower geometry:
+
+```sh
+npm run native:build
+node scripts/benchmark-micro-router.mjs /absolute/path/to/baseline.node
+cargo test --release --manifest-path native/pcb-board-packer/Cargo.toml benchmark_route_search -- --ignored --nocapture
+```
+
+Build and save the baseline addon from the revision being compared before
+building the current addon. Omit the baseline argument to time only the current
+version. The script checks exact equality of all returned route samples, warms
+both versions, then alternates their timing order for six batches of 20 calls.
+Both ESPower cases route the same four USB obligations; the second additionally
+schedules jobs with every component marked changed. This measures route
+evaluation including native API conversion and scheduling, not full placement.
+
+Measured on Windows x64, release build, 2026-09-19 (median milliseconds per call):
+
+| ESPower affected set | Before | After | Time reduction |
+| --- | ---: | ---: | ---: |
+| R7/R8 USB | 6.848 | 5.656 | 17.4% |
+| All components | 8.184 | 7.008 | 14.4% |
+
+Both comparisons returned exactly equal route samples. Timings vary by machine
+and board. If route evaluation accounts for 40% of total placement time, a
+17.4% reduction in that portion would reduce total time by about 7%; this is an
+estimate, not a measured full-placement result.
+
+The Rust regressions compare complete paths, costs, expansion counts and
+outcomes against the reference loop, including directed multilayer transitions,
+foreign/same-net copper, pad exceptions and clearance boundaries.
+
+## Avoiding unnecessary solves
+
+Further acceleration keeps the existing routing budgets and candidate sets:
+
+- Block greedy/beam selection and board beam selection evaluate routing lazily.
+  The geometric rank plus inherited route penalty is a lower bound, since the
+  candidate's route correction is nonnegative. Once the selected top-k ranks
+  are exact, the remaining candidates cannot enter that top-k.
+- Local improvement skips candidates whose lower-bound rank cannot win. Board
+  candidates are streamed in final rank order, preserving the existing severity
+  epsilon, score epsilon and ordinal tie handling.
+- Post-place baselines expose optional `maximumImprovement`. For a resolved
+  route the ceiling is its existing detour cost. For an unresolved route it is
+  `(2 * viaCost + unroutablePenalty) * weight * routeScale`, including the case
+  where the candidate's known detour exceeds the normal unresolved penalty.
+  Candidate routing is skipped only when this ceiling cannot meet the minimum
+  improvement or beat the incumbent, with a conservative numerical margin.
+  Older addons/baselines without the field keep eager candidate evaluation.
+- Route problem encoding omits placement-only component collision matrices.
+  The router still receives every primitive body and pad obstacle it used before.
+- Exact block/board solutions are reused across attempts in the same process.
+  A bounded LRU is scoped to the loaded addon and keyed by the full encoded
+  input, including geometry, nets, constraints, options and signed zeros.
+  Results are cloned to prevent mutation of cached values. It retains at most
+  64 entries and an estimated 16 MiB of keys/serialized results per addon;
+  oversized requests bypass it. Workers have independent caches. Set
+  `PCB_NATIVE_SOLVE_CACHE=0` for cache-disabled measurements.
+
+End-to-end ESPower measurements on Windows x64 (single sequential samples,
+2026-09-19), compared with the addon after the first micro-router optimization
+and with its solve cache disabled:
+
+| Attempt | Reference | Updated | Reduction |
+| --- | ---: | ---: | ---: |
+| Original 48 x 32 mm board, first solve | 28.00 s | 20.97 s | 25.1% |
+| Next attempt: change width to 49 mm | 26.52 s | 16.58 s | 37.5% |
+| Repeat that 49 mm variant | not measured | 3.56 s | — |
+
+All runs reported valid placements of 53 components. Full placement/report/layout
+checksums matched the reference for both widths. Post-place candidate routing
+calls fell from 562 to 38; baseline route evaluations remained at 307. Changing
+width reused unchanged subproblems but still ran the board solver (and nine
+block solves); the exact repeat avoided all block/board solves. Timing gains
+depend on the board and how much of the next attempt is unchanged. These samples
+are not a general throughput guarantee or a distribution of benchmark runs.
+
+Reproduce full-pipeline measurements with:
+
+```sh
+node --import tsx scripts/benchmark-pcb-placement.ts ESpower 3 report.json
+node --import tsx scripts/benchmark-pcb-placement.ts ESpower 3 report.json variant.js
+```
+
+The optional variant DSL is used after the first attempt. Set
+`PCB_BOARD_PACKER_NATIVE_PATH` to an older release addon for reference runs.
+Reports include checksums and native call counts/timings; compare checksums for
+the same DSL before drawing performance conclusions. No files are exported by
+the placement pipeline during these measurements.
+
 ## Native rebuild
 
 The change adds `prepareRouteLayoutComparison` and

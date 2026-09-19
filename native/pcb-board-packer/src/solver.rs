@@ -232,14 +232,14 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
             }
             let next_index = choose_next(&state, &context);
             let next = state.remaining[next_index].clone();
-            let candidates = ranked_candidates(&next, &state.placed, state.route_penalty, &context);
+            let limit = candidate_limit(search_width, state.remaining.len());
+            let candidates = ranked_candidates(&next, &state.placed, state.route_penalty, Some(limit), &context);
             let legal: Vec<_> = candidates
                 .iter()
                 .filter(|candidate| candidate.rank.hard_count == state.rank.hard_count)
                 .cloned()
                 .collect();
             let source = if legal.is_empty() { candidates } else { legal };
-            let limit = candidate_limit(search_width, state.remaining.len());
             for candidate in source.into_iter().take(limit) {
                 ordinal += 1;
                 let mut placed = state.placed.clone();
@@ -327,6 +327,17 @@ fn ranked_candidates(
     primitive: &WorkingPrimitive,
     placed: &[WorkingPrimitive],
     parent_route_penalty: f64,
+    limit: Option<usize>,
+    context: &Context,
+) -> Vec<RankedCandidate> {
+    let candidates = cheap_candidates(primitive, placed, parent_route_penalty, context);
+    rerank_candidates(candidates, primitive, placed, parent_route_penalty, limit, context)
+}
+
+fn cheap_candidates(
+    primitive: &WorkingPrimitive,
+    placed: &[WorkingPrimitive],
+    parent_route_penalty: f64,
     context: &Context,
 ) -> Vec<RankedCandidate> {
     let mut candidates = Vec::new();
@@ -347,16 +358,37 @@ fn ranked_candidates(
     dedupe_candidates(&mut candidates);
     candidates.sort_by(compare_candidates);
     candidates.truncate(32);
+    candidates
+}
+
+fn rerank_candidates(
+    mut candidates: Vec<RankedCandidate>,
+    primitive: &WorkingPrimitive,
+    placed: &[WorkingPrimitive],
+    parent_route_penalty: f64,
+    limit: Option<usize>,
+    context: &Context,
+) -> Vec<RankedCandidate> {
     let baseline_hard = hard_count(placed, context);
-    for candidate in &mut candidates {
-        if candidate.rank.hard_count != baseline_hard {
-            continue;
-        }
-        let correction = board_micro_route_penalty(&candidate.primitive, placed, context);
-        candidate.route_penalty = parent_route_penalty + correction;
-        candidate.rank.score += candidate.route_penalty;
+    // Beam expansion consumes only legal candidates when any exist. Apply the
+    // same filter before lazy ranking, otherwise illegal bounds could hide them.
+    if limit.is_some() && candidates.iter().any(|candidate| candidate.rank.hard_count == baseline_hard) {
+        candidates.retain(|candidate| candidate.rank.hard_count == baseline_hard);
     }
-    candidates.sort_by(compare_candidates);
+    let candidates = crate::lazy_rank::top_k(candidates, limit.unwrap_or(32), |a, a_exact, b, b_exact| {
+        let lower_score = |candidate: &RankedCandidate, exact: bool| candidate.rank.score
+            + if !exact && candidate.rank.hard_count == baseline_hard { parent_route_penalty } else { 0.0 };
+        a.rank.hard_count.cmp(&b.rank.hard_count)
+            .then_with(|| compare_f64(a.rank.hard_severity, b.rank.hard_severity))
+            .then_with(|| compare_f64(lower_score(a, a_exact), lower_score(b, b_exact)))
+            .then_with(|| a.ordinal.cmp(&b.ordinal))
+    }, |candidate| {
+        if candidate.rank.hard_count == baseline_hard {
+            let correction = board_micro_route_penalty(&candidate.primitive, placed, context);
+            candidate.route_penalty = parent_route_penalty + correction;
+            candidate.rank.score += candidate.route_penalty;
+        }
+    });
     if std::env::var("PCB_BOARD_PACKER_TRACE_DESIGNATOR")
         .ok()
         .as_deref()
@@ -598,26 +630,25 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
                 .filter(|(item_index, _)| *item_index != index)
                 .map(|(_, item)| item.clone())
                 .collect();
-            let candidates = ranked_candidates(&current[index], &fixed, 0.0, context);
             let mut best = current[index].clone();
-            let mut best_rank = Rank {
+            let best_rank = Rank {
                 hard_count: current_rank.hard_count,
                 hard_severity: current_rank.hard_severity,
                 score: current_rank.score
                     + board_micro_route_penalty(&current[index], &fixed, context),
             };
-            for candidate in candidates {
-                let rank = candidate.rank;
-                let better = rank.hard_count < best_rank.hard_count
-                    || (rank.hard_count == best_rank.hard_count
-                        && rank.hard_severity + 0.001 < best_rank.hard_severity)
-                    || (rank.hard_count == best_rank.hard_count
-                        && (rank.hard_severity - best_rank.hard_severity).abs() <= 0.001
-                        && rank.score + 0.001 < best_rank.score);
-                if better {
-                    best = candidate.primitive;
-                    best_rank = rank;
-                }
+            let baseline_hard = hard_count(&fixed, context);
+            if let Some(candidate) = crate::lazy_rank::improve(
+                cheap_candidates(&current[index], &fixed, 0.0, context), best_rank,
+                compare_candidates, |candidate, best_rank| rank_improves(&candidate.rank, best_rank),
+                |candidate| candidate.rank.clone(), |candidate| {
+                    if candidate.rank.hard_count == baseline_hard {
+                        candidate.route_penalty = board_micro_route_penalty(&candidate.primitive, &fixed, context);
+                        candidate.rank.score += candidate.route_penalty;
+                    }
+                },
+            ) {
+                best = candidate.primitive;
             }
             if primitive_key(&best) != primitive_key(&current[index]) {
                 current[index] = best;
@@ -2360,6 +2391,12 @@ fn compare_rank(a: &Rank, b: &Rank) -> Ordering {
         .cmp(&b.hard_count)
         .then_with(|| compare_f64(a.hard_severity, b.hard_severity))
         .then_with(|| compare_f64(a.score, b.score))
+}
+pub(crate) fn rank_improves(rank: &Rank, best: &Rank) -> bool {
+    rank.hard_count < best.hard_count
+        || (rank.hard_count == best.hard_count && rank.hard_severity + 0.001 < best.hard_severity)
+        || (rank.hard_count == best.hard_count && (rank.hard_severity - best.hard_severity).abs() <= 0.001
+            && rank.score + 0.001 < best.score)
 }
 fn compare_states(a: &SearchState, b: &SearchState) -> Ordering {
     compare_rank(&a.rank, &b.rank).then(a.ordinal.cmp(&b.ordinal))

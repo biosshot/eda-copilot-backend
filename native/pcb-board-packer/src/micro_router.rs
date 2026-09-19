@@ -8,11 +8,14 @@ use std::collections::{BinaryHeap, VecDeque};
 use std::sync::Arc;
 use rustc_hash::FxHashMap; 
 use rustc_hash::{FxHashSet}; 
+use smallvec::SmallVec;
 
 mod grid;
 mod temporary;
 #[cfg(test)]
 mod grid_tests;
+#[cfg(test)]
+mod performance_tests;
 pub mod comparison;
 use temporary::TemporaryRoutes;
 
@@ -194,6 +197,12 @@ impl PathCost {
     fn zero() -> Self {
         Self { physical: 0.0, vias: 0, bends: 0, preference: 0 }
     }
+}
+
+#[derive(Clone, Copy)]
+struct SearchRecord {
+    cost: PathCost,
+    parent: State,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -740,6 +749,18 @@ fn route_job_search(
 ) -> RouteOutcome {
     let start_cell = point_to_cell(job.source.point, job.source.layer, bounds, config.grid);
     let goal_cell = point_to_cell(job.target.point, job.target.layer, bounds, config.grid);
+    // Geometry is immutable during this search. Cache cells separately from
+    // directed copper edges: incoming direction affects neither static geometry
+    // nor an edge's clearance, but A* can visit it from several direction states.
+    let mut static_checks = FxHashMap::default();
+    let mut copper_checks = FxHashMap::default();
+    let via_distances: Vec<_> = (0..config.layers.len())
+        .map(|layer| minimum_vias(layer, goal_cell.layer, config).unwrap_or(0))
+        .collect();
+    let estimate = |cell: Cell| {
+        let planar = ((cell.x - goal_cell.x).abs() + (cell.y - goal_cell.y).abs()) as f64 * config.grid;
+        planar + via_distances[cell.layer] as f64 * search_via_cost
+    };
     // A forbidden landing cannot be reached even by going to another layer.
     for cell in [start_cell, goal_cell] {
         if blocked(cell, cell, start_cell, goal_cell, &job.source.primitive_id, &job.target.primitive_id,
@@ -750,25 +771,31 @@ fn route_job_search(
     }
     let start = State { cell: start_cell, direction: 4 };
     let mut open = BinaryHeap::new();
-    let mut best: FxHashMap<State, PathCost> = FxHashMap::default();
-    let mut previous: FxHashMap<State, State> = FxHashMap::default();
+    // One table avoids hashing and allocating the same keys again for parents.
+    let mut best: FxHashMap<State, SearchRecord> = FxHashMap::default();
     let mut serial = 0usize;
-    best.insert(start, PathCost::zero());
+    best.insert(start, SearchRecord { cost: PathCost::zero(), parent: start });
     open.push(OpenNode {
         state: start,
         g: PathCost::zero(),
-        estimate: heuristic(start_cell, goal_cell, config, search_via_cost),
+        estimate: estimate(start_cell),
         serial,
     });
     let mut expanded = 0usize;
 
     while let Some(node) = open.pop() {
         let Some(known) = best.get(&node.state).copied() else { continue; };
-        if compare_cost(node.g, known) == Ordering::Greater { continue; }
+        if compare_cost(node.g, known.cost) == Ordering::Greater { continue; }
         if expanded >= max_expanded { return RouteOutcome::BudgetExhausted { expanded }; }
         expanded += 1;
         if node.state.cell.x == goal_cell.x && node.state.cell.y == goal_cell.y && node.state.cell.layer == goal_cell.layer {
-            let cells = reconstruct(node.state, start, &previous);
+            let mut state = node.state;
+            let mut cells = vec![state.cell];
+            while state != start {
+                state = best[&state].parent;
+                if cells.last().copied() != Some(state.cell) { cells.push(state.cell); }
+            }
+            cells.reverse();
             return RouteOutcome::Found(RouteResult { cost: node.g, cells, expanded, used_fallback: false });
         }
 
@@ -776,12 +803,11 @@ fn route_job_search(
             // A non-improving state cannot be accepted even if the edge is free.
             // Preserve the complete cost ordering and update best only after blocked().
             let next_cost = add_cost(node.g, step_cost);
-            if best.get(&next).is_some_and(|old| compare_cost(next_cost, *old) != Ordering::Less) {
+            if best.get(&next).is_some_and(|old| compare_cost(next_cost, old.cost) != Ordering::Less) {
                 continue;
             }
-            if blocked(
+            let static_blocked = *static_checks.entry(next.cell).or_insert_with(|| blocked_static(
                 next.cell,
-                node.state.cell,
                 start_cell,
                 goal_cell,
                 &job.source.primitive_id,
@@ -792,17 +818,19 @@ fn route_job_search(
                 bounds,
                 board_outline,
                 obstacles,
-                temporary,
                 config,
                 route_cache,
+            ));
+            if static_blocked { continue; }
+            if !temporary.is_empty() && *copper_checks.entry((node.state.cell, next.cell)).or_insert_with(||
+                temporary.conflicts(node.state.cell, next.cell, &job.net, config.grid, config.trace_width + config.clearance)
             ) { continue; }
-            best.insert(next, next_cost);
-            previous.insert(next, node.state);
+            best.insert(next, SearchRecord { cost: next_cost, parent: node.state });
             serial += 1;
             open.push(OpenNode {
                 state: next,
                 g: next_cost,
-                estimate: next_cost.physical + heuristic(next.cell, goal_cell, config, search_via_cost),
+                estimate: next_cost.physical + estimate(next.cell),
                 serial,
             });
         }
@@ -810,8 +838,8 @@ fn route_job_search(
     RouteOutcome::NoPath { expanded }
 }
 
-fn neighbors(state: State, config: &MicroRouteConfig, via_cost: f64) -> Vec<(State, PathCost)> {
-    let mut result = Vec::with_capacity(6);
+fn neighbors(state: State, config: &MicroRouteConfig, via_cost: f64) -> SmallVec<[(State, PathCost); 6]> {
+    let mut result = SmallVec::new();
     let moves = [(1, 0, 0u8), (-1, 0, 1u8), (0, 1, 2u8), (0, -1, 3u8)];
     for (dx, dy, direction) in moves {
         let layer = &config.layers[state.cell.layer];
@@ -865,6 +893,27 @@ fn blocked(
     config: &MicroRouteConfig,
     route_cache: Option<&BoardRouteCache>,
 ) -> bool {
+    blocked_static(cell, start, goal, source_id, target_id, source_ref, target_ref,
+        net, bounds, board_outline, obstacles, config, route_cache)
+        || temporary.conflicts(previous, cell, net, config.grid, config.trace_width + config.clearance)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn blocked_static(
+    cell: Cell,
+    start: Cell,
+    goal: Cell,
+    source_id: &Arc<str>,
+    target_id: &Arc<str>,
+    source_ref: &Arc<str>,
+    target_ref: &Arc<str>,
+    net: &Arc<str>,
+    bounds: Box2,
+    board_outline: &[Point],
+    obstacles: &[StaticObstacle],
+    config: &MicroRouteConfig,
+    route_cache: Option<&BoardRouteCache>,
+) -> bool {
     let endpoint_carve = cell.layer == start.layer && chebyshev(cell, start) <= 1
         || cell.layer == goal.layer && chebyshev(cell, goal) <= 1;
     let point = cell_to_point(cell, bounds, config.grid);
@@ -898,7 +947,7 @@ fn blocked(
         }
     }
 
-    temporary.conflicts(previous, cell, net, config.grid, config.trace_width + config.clearance)
+    false
 }
 
 fn baseline_cost(job: &RouteJob, config: &MicroRouteConfig) -> f64 {
@@ -908,6 +957,7 @@ fn baseline_cost(job: &RouteJob, config: &MicroRouteConfig) -> f64 {
     planar + vias as f64 * job.via_cost
 }
 
+#[cfg(test)]
 fn heuristic(cell: Cell, goal: Cell, config: &MicroRouteConfig, via_cost: f64) -> f64 {
     let planar = ((cell.x - goal.x).abs() + (cell.y - goal.y).abs()) as f64 * config.grid;
     let vias = minimum_vias(cell.layer, goal.layer, config).unwrap_or(0);
@@ -929,6 +979,7 @@ fn minimum_vias(from: usize, to: usize, config: &MicroRouteConfig) -> Option<usi
     None
 }
 
+#[cfg(test)]
 fn reconstruct(mut state: State, start: State, previous: &FxHashMap<State, State>) -> Vec<Cell> {
     let mut cells = vec![state.cell];
     while state != start {

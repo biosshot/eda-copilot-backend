@@ -268,7 +268,7 @@ fn solve_greedy(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Wor
         let mut best_incremental = None;
         let mut best_route_penalty = route_penalty;
         for (index, primitive) in remaining.iter().enumerate() {
-            for candidate in ranked_block_candidates(primitive, &placed, &incremental, route_penalty, context) {
+            for candidate in ranked_block_candidates(primitive, &placed, &incremental, route_penalty, 1, context) {
                 let hard = candidate.hard_violations;
                 let score = candidate.score;
                 if hard < best_hard
@@ -335,6 +335,7 @@ fn solve_beam(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Worki
                     &state.placed,
                     &state.incremental,
                     state.route_penalty,
+                    per_primitive_limit.min(16),
                     context,
                 );
                 ranked.truncate(per_primitive_limit.min(16));
@@ -415,6 +416,13 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
             });
             ranked.truncate(16);
             for (candidate, evaluation, _) in ranked {
+                // Route corrections are nonnegative. This candidate cannot win
+                // even with a free route; do not run A* merely to reject it.
+                if evaluation.hard_violations > best_hard
+                    || (evaluation.hard_violations == best_hard
+                        && evaluation.score + 0.001 >= best_effective_score) {
+                    continue;
+                }
                 let effective_score = evaluation.score
                     + if evaluation.hard_violations == current_hard {
                         block_micro_route_penalty(&candidate, &fixed, context)
@@ -448,6 +456,7 @@ fn ranked_block_candidates(
     placed: &[WorkingPrimitive],
     previous: &IncrementalEvaluation,
     parent_route_penalty: f64,
+    limit: usize,
     context: &Context,
 ) -> Vec<RankedCandidate> {
     let mut ranked = Vec::new();
@@ -471,14 +480,19 @@ fn ranked_block_candidates(
     ranked.sort_by(compare_candidates);
     ranked.truncate(16);
     let baseline_hard = previous.evaluation.hard_violations;
-    for candidate in &mut ranked {
-        if candidate.hard_violations != baseline_hard { continue; }
-        let correction = block_micro_route_penalty(&candidate.primitive, placed, context);
-        candidate.route_penalty = parent_route_penalty + correction;
-        candidate.score += candidate.route_penalty;
-    }
-    ranked.sort_by(compare_candidates);
-    ranked
+    crate::lazy_rank::top_k(ranked, limit, |a, a_exact, b, b_exact| {
+        let lower_score = |candidate: &RankedCandidate, exact: bool| candidate.score
+            + if !exact && candidate.hard_violations == baseline_hard { parent_route_penalty } else { 0.0 };
+        a.hard_violations.cmp(&b.hard_violations)
+            .then_with(|| compare_f64(lower_score(a, a_exact), lower_score(b, b_exact)))
+            .then_with(|| a.ordinal.cmp(&b.ordinal))
+    }, |candidate| {
+        if candidate.hard_violations == baseline_hard {
+            let correction = block_micro_route_penalty(&candidate.primitive, placed, context);
+            candidate.route_penalty = parent_route_penalty + correction;
+            candidate.score += candidate.route_penalty;
+        }
+    })
 }
 
 fn block_micro_route_penalty(

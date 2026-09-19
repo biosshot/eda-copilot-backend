@@ -103,6 +103,16 @@ export function refinePostPlacement(input: PlacementInput, placements: Placement
                 routeBaseline = preparePostPlaceRouteComparison(input, current, candidate.changed, routeContext);
                 routeBaselineByChanged.set(changedKey, routeBaseline);
             }
+            const ceiling = routeBaseline.maximumImprovement;
+            if (ceiling !== undefined && Number.isFinite(ceiling)) {
+                const upperImprovement = currentScore + ceiling - baseScore;
+                // Keep a conservative margin at score/tie boundaries. Older
+                // addons without this bound retain the full evaluation path.
+                const margin = GEOMETRY_EPSILON + 32 * Number.EPSILON
+                    * (Math.abs(currentScore) + Math.abs(baseScore) + Math.abs(ceiling));
+                if (upperImprovement + margin < minDelta
+                    || (best && upperImprovement + margin < bestEffectiveImprovement - GEOMETRY_EPSILON)) continue;
+            }
             const routeComparison = comparePostPlaceRouteCandidate(input, candidate.placements, routeBaseline, routeContext);
             // Do not buy a lower partial-route cost by losing resolved higher-priority jobs.
             if (routeComparison.feasibilityOrder > 0) continue;

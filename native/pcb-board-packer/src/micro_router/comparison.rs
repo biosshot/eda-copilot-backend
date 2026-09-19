@@ -54,6 +54,10 @@ pub struct RouteSample {
 pub struct RouteBaseline {
     pub version: u32,
     pub jobs: Vec<RouteSample>,
+    /// Upper bound on before_penalty - after_penalty, even for unresolved jobs.
+    /// Optional for compatibility with previously saved baselines.
+    #[serde(default)]
+    pub maximum_improvement: Option<f64>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -74,7 +78,18 @@ pub struct RouteComparison {
 pub fn prepare(problem: &BoardPackProblem, obstacles: &[RouteObstacle], changed: &[String]) -> RouteBaseline {
     let config = MicroRouteConfig::post_place();
     let jobs = plan_jobs(&problem.primitives, &problem.relations, changed, &config);
-    RouteBaseline { version: 1, jobs: evaluate(problem, obstacles, jobs, &config) }
+    let jobs = evaluate(problem, obstacles, jobs, &config);
+    let maximum_improvement = Some(maximum_improvement(&jobs, &config));
+    RouteBaseline { version: 1, jobs, maximum_improvement }
+}
+
+fn maximum_improvement(jobs: &[RouteSample], config: &MicroRouteConfig) -> f64 {
+    jobs.iter().map(|sample| {
+        // For missing -> found with detour d, the improvement is
+        // max(d, 2*via_cost) + penalty - d <= 2*via_cost + penalty.
+        sample.detour.unwrap_or(2.0 * sample.job.via_cost + config.unroutable_penalty_mm)
+            * sample.job.weight * config.route_scale
+    }).sum()
 }
 
 pub fn compare(problem: &BoardPackProblem, obstacles: &[RouteObstacle], baseline: &RouteBaseline) -> Result<RouteComparison, String> {
@@ -238,6 +253,26 @@ mod tests {
             let comparison = compare_samples(&[found.clone()], vec![failed], &MicroRouteConfig::post_place());
             assert!(comparison.after_penalty > comparison.before_penalty);
             assert_eq!(comparison.feasibility_order, 1);
+        }
+    }
+
+    #[test]
+    fn improvement_ceiling_covers_resolved_missing_and_expensive_candidate_routes() {
+        let config = MicroRouteConfig::post_place();
+        let spec = PlannedJob { net: Arc::from("SIG"), source_ref: Arc::from("A.1"), target_ref: Arc::from("B.1"),
+            source_primitive: Arc::from("A"), target_primitive: Arc::from("B"), priority: 4, weight: 16.0,
+            via_cost: 45.0, ordinary: false };
+        for before_detour in [None, Some(0.0), Some(10.0), Some(250.0)] {
+            for after_detour in [None, Some(0.0), Some(10.0), Some(250.0), Some(10_000.0)] {
+                let sample = |detour: Option<f64>| RouteSample { job: spec.clone(),
+                    status: if detour.is_some() { RouteStatus::Found } else { RouteStatus::BudgetExhausted },
+                    detour, physical_cost: detour, planar_length: detour,
+                    vias: 0, expanded: 0, used_fallback: false };
+                let before = vec![sample(before_detour)];
+                let ceiling = maximum_improvement(&before, &config);
+                let result = compare_samples(&before, vec![sample(after_detour)], &config);
+                assert!(result.before_penalty - result.after_penalty <= ceiling);
+            }
         }
     }
 }

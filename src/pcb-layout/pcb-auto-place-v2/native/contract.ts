@@ -55,6 +55,8 @@ export interface NativeRouteSample {
 export interface NativeRouteBaseline {
     version: 1;
     jobs: NativeRouteSample[];
+    /** Conservative route-score improvement ceiling; absent on older addons. */
+    maximumImprovement?: number;
 }
 
 export interface NativeRouteComparison {

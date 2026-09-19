@@ -159,6 +159,30 @@ test('ESPower post-processor accepts the R7/R8 swap despite a worse geometric sc
     }
 });
 
+test('route improvement bounds preserve the eager refiner result', () => {
+    const prepare = addon.prepareRouteLayoutComparison;
+    const compare = addon.compareRouteLayoutCandidate;
+    let calls = 0;
+    addon.compareRouteLayoutCandidate = (...args) => { calls++; return compare(...args); };
+    try {
+        const { input, placements } = espowerRefinementInput();
+        const bounded = refinePostPlacement(input, placements);
+        const boundedCalls = calls;
+        calls = 0;
+        addon.prepareRouteLayoutComparison = (...args) => {
+            const baseline = prepare(...args);
+            delete baseline.maximumImprovement;
+            return baseline;
+        };
+        const eager = refinePostPlacement(input, placements);
+        assert.deepEqual(bounded, eager);
+        assert.ok(boundedCalls <= calls);
+    } finally {
+        addon.prepareRouteLayoutComparison = prepare;
+        addon.compareRouteLayoutCandidate = compare;
+    }
+});
+
 function espowerRefinementInput(): { input: PlacementInput; placements: Placement[] } {
     const { current, obstacles } = espowerSnapshot();
     // Rebase the captured world-space boxes to zero-rotation footprints. This

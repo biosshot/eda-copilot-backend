@@ -15,6 +15,7 @@ pub(super) struct TemporaryRoutes {
     // Also stores out-of-range cells when a dense index is active.
     sparse: FxHashMap<Cell, u32>,
     occupied: Vec<Occupancy>,
+    needs_segment_checks: bool,
 }
 
 struct DenseIndex {
@@ -39,6 +40,8 @@ struct Occupancy {
 }
 
 impl TemporaryRoutes {
+    pub(super) fn is_empty(&self) -> bool { self.occupied.is_empty() }
+
     pub(super) fn new(bounds: Box2, grid: f64, layers: usize) -> Self {
         Self::with_cell_limit(bounds, grid, layers, MAX_DENSE_CELLS)
     }
@@ -64,6 +67,7 @@ impl TemporaryRoutes {
         }
         self.sparse.clear();
         self.occupied.clear();
+        self.needs_segment_checks = false;
     }
 
     #[inline(always)]
@@ -105,6 +109,8 @@ impl TemporaryRoutes {
             if pair[0].layer == pair[1].layer {
                 let a = self.ensure_cell(pair[0], net);
                 let b = self.ensure_cell(pair[1], net);
+                self.needs_segment_checks |= !unit_step(pair[0], pair[1])
+                    || self.occupied[a].net != self.occupied[b].net;
                 self.occupied[a].edges.push(pair[1]);
                 self.occupied[b].edges.push(pair[0]);
             }
@@ -118,7 +124,13 @@ impl TemporaryRoutes {
             return self.conflicts(a, a, net, grid, spacing)
                 || self.conflicts(b, b, net, grid, spacing);
         }
-        let radius = (spacing / grid).ceil() as i32 + 1;
+        // Two axis-aligned unit edges on an integer grid cannot cross in their
+        // interiors. Their minimum separation is attained at an endpoint of
+        // the reserved edge; both endpoints are in occupied. For router paths
+        // it is therefore sufficient to test points, without scanning edges or
+        // the extra ring needed by the general segment predicate.
+        let unit_edges = !self.needs_segment_checks && unit_step(a, b);
+        let radius = (spacing / grid).ceil() as i32 + i32::from(!unit_edges);
         let limit_squared = (spacing / grid).powi(2);
         for y in a.y.min(b.y) - radius..=a.y.max(b.y) + radius {
             for x in a.x.min(b.x) - radius..=a.x.max(b.x) + radius {
@@ -126,6 +138,7 @@ impl TemporaryRoutes {
                 let Some(occupied) = self.get(cell) else { continue };
                 if &occupied.net == net { continue; }
                 if point_segment_squared(cell, a, b) + EPS < limit_squared { return true; }
+                if unit_edges { continue; }
                 for &end in &occupied.edges {
                     if segments_squared(a, b, cell, end) + EPS < limit_squared { return true; }
                 }
@@ -133,6 +146,10 @@ impl TemporaryRoutes {
         }
         false
     }
+}
+
+fn unit_step(a: Cell, b: Cell) -> bool {
+    (i64::from(a.x) - i64::from(b.x)).abs() + (i64::from(a.y) - i64::from(b.y)).abs() <= 1
 }
 
 fn point_segment_squared(p: Cell, a: Cell, b: Cell) -> f64 {
@@ -295,6 +312,47 @@ impl LegacyTemporaryRoutes {
         assert!(!routes.conflicts(c(0,0,0),c(1,0,0),&Arc::from("OTHER"),1.0,0.1));
         assert!(!routes.conflicts(c(-1,0,0),c(-1,0,0),&Arc::from("OTHER"),1.0,0.1));
         assert!(routes.conflicts(c(4,4,0),c(4,4,0),&Arc::from("OTHER"),1.0,0.1));
+    }
+
+    #[test]
+    fn unit_edge_fast_path_matches_segments_at_clearance_boundaries() {
+        for path in [vec![c(0,0,0),c(1,0,0)], vec![c(0,0,0),c(0,1,0)],
+            vec![c(0,0,0),c(1,0,0),c(1,1,0),c(1,1,1)]] {
+            let mut routes = TemporaryRoutes::new(bounds(), 0.25, 2);
+            let mut legacy = LegacyTemporaryRoutes::default();
+            routes.reserve(&path, &Arc::from("A"));
+            legacy.reserve(&path, &Arc::from("A"));
+            assert!(!routes.needs_segment_checks);
+            for x in -4..=4 { for y in -4..=4 { for layer in 0..2 {
+                let a = c(x,y,layer);
+                for b in [a,c(x+1,y,layer),c(x-1,y,layer),c(x,y+1,layer),c(x,y-1,layer),c(x,y,1-layer),c(x+3,y+2,layer)] {
+                    for spacing in [0.0,0.1,0.25-1e-10,0.25,0.25+1e-10,0.381,0.5,0.75] {
+                        for net in [Arc::from("A"),Arc::from("B")] {
+                            assert_eq!(routes.conflicts(a,b,&net,0.25,spacing), legacy.conflicts(a,b,&net,0.25,spacing),
+                                "a={a:?}, b={b:?}, spacing={spacing}");
+                        }
+                    }
+                }
+            } } }
+        }
+    }
+
+    #[test]
+    fn overlapping_nets_and_long_segments_keep_general_predicate() {
+        let mut routes = TemporaryRoutes::default();
+        let mut legacy = LegacyTemporaryRoutes::default();
+        for (path, net) in [(vec![c(1,0,0)], "B"), (vec![c(0,0,0),c(1,0,0)], "A")] {
+            routes.reserve(&path, &Arc::from(net));
+            legacy.reserve(&path, &Arc::from(net));
+        }
+        assert!(routes.needs_segment_checks);
+        assert_eq!(routes.conflicts(c(1,0,0),c(1,1,0),&Arc::from("B"),0.25,0.1),
+            legacy.conflicts(c(1,0,0),c(1,1,0),&Arc::from("B"),0.25,0.1));
+        routes.clear();
+        assert!(!routes.needs_segment_checks);
+        routes.reserve(&[c(-2,0,0),c(2,0,0)], &Arc::from("A"));
+        assert!(routes.needs_segment_checks);
+        assert!(routes.conflicts(c(0,-1,0),c(0,1,0),&Arc::from("B"),1.0,0.1));
     }
 
     #[test]

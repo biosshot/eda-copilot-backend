@@ -88,8 +88,9 @@ function routeLayoutProblem(input: PlacementInput, placements: Placement[], cont
         options: {
             grid: input.solverOptions.placementGridStep ?? 0.5,
             clearance: input.board.clearances.component,
-            componentByDesignator: context.componentByDesignator,
-            clearanceResolver: context.clearanceResolver,
+            // Routing uses primitives and pad obstacles below. Placement-only
+            // component collision matrices are unused by this native API; avoid
+            // rebuilding their O(n²) entries for every trial move.
             board: input.board,
             edgeClearance: input.board.clearances.edge,
             bounds: boardBox(input.board),

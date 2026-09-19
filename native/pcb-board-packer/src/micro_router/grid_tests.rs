@@ -125,6 +125,42 @@ fn early_best_and_dense_copper_preserve_reference_routes_and_expansion_counts() 
     }
 }
 
+#[test]
+fn memoized_checks_preserve_multilayer_routes_with_copper_and_pad_exceptions() {
+    let a = primitive("A", -4.0, 0.0, "SIG");
+    let b = primitive("B", 4.0, 1.0, "SIG");
+    let mut config = MicroRouteConfig::post_place();
+    // More than six neighbors exercises SmallVec's spill path, and directed
+    // transitions exercise the per-goal via distances (including unreachable layers).
+    for i in 2..7 {
+        config.layers.push(RouteLayer { name: Arc::from(format!("inner{i}")), preferred_direction: PreferredDirection::Any });
+        config.via_transitions.push(ViaTransition { from: 0, to: i });
+        if i % 2 == 0 { config.via_transitions.push(ViaTransition { from: i, to: 1 }); }
+    }
+    let mut job = schedule_jobs(&a, &[&b], &[], &config).remove(0);
+    let pads = [RouteObstacle { box_: Box2 { left: -0.5, right: 0.5, top: -2.0, bottom: 2.0 },
+        layer: Some(Arc::from("top")), reference: Some(Arc::from("B.33")),
+        net: Some(Arc::from("OTHER")), primitive_id: Some(Arc::from("B")) }];
+    let obstacles = collect_obstacles(&[&a, &b], &[], &pads, &config);
+    for target_layer in [0, 1, 3] {
+        job.target.layer = target_layer;
+        for net in ["SIG", "FOREIGN"] {
+            let mut temporary = TemporaryRoutes::new(bounds(), config.grid, config.layers.len());
+            for layer in 0..config.layers.len() {
+                let path: Vec<_> = (28..52).map(|y| Cell { x: 44, y, layer }).collect();
+                temporary.reserve(&path, &Arc::from(net));
+            }
+            for budget in [0, 8, 1_500] {
+                for via in [job.via_cost, config.grid * 4.0] {
+                    let expected = reference_search(&job, bounds(), &[], &obstacles, &temporary, &config, via, budget, None);
+                    let actual = route_job_search(&job, bounds(), &[], &obstacles, &temporary, &config, via, budget, None);
+                    assert_eq!(format!("{actual:?}"), format!("{expected:?}"), "layer={target_layer}, net={net}, budget={budget}");
+                }
+            }
+        }
+    }
+}
+
 // Frozen pre-optimization loop: deliberately checks blocked() before best.
 // The reference uses uncached contour tests and sparse temporary storage.
 #[allow(clippy::too_many_arguments)]
