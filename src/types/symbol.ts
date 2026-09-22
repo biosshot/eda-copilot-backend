@@ -8,6 +8,7 @@ export interface SymbolPin {
     x: number;   // X координата относительно центра компонета
     y: number;   // Y координата
     signal_name: string,
+    port_style?: 'in' | 'out' | 'bi',
     part: string
 }
 

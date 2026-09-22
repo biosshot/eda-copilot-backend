@@ -65,7 +65,11 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
     }
     const newSymbols: CircuitComponent[] = [];
     for (let pass = 0; pass < limit.passes; pass++) {
-        const labeled = labelLongLinks(nodes, edges, nets, blocks, originalIds, Math.max(0, LONG_LINK_POLICY.maximumLinks - stats.longLinksLabeled), patternByMember);
+        const portStyles = new Map(components.flatMap(component => component.pins
+            .filter(pin => pin.port_style)
+            .map(pin => [`${component.designator}_pin_${pin.pin_number}`, pin.port_style!] as const)));
+        const labeled = labelLongLinks(nodes, edges, nets, blocks, originalIds,
+            Math.max(0, LONG_LINK_POLICY.maximumLinks - stats.longLinksLabeled), patternByMember, portStyles);
         nodes = labeled.nodes; edges = labeled.edges; added = [...added, ...labeled.added]; stats.longLinksLabeled += labeled.links;
         newSymbols.push(...labeled.added);
         const flagKinds = new Map(added.map(c => [c.designator, c]));

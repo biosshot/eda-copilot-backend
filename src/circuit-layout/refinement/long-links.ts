@@ -13,7 +13,8 @@ export const LONG_LINK_POLICY = Object.freeze({ fraction: 0.2, minimumLength: 48
  * terminal-to-terminal route. Shared portions therefore keep all their taps.
  * Local IC attachments are kept wired so a port cannot hide poor placement. */
 export function labelLongLinks(nodes: Placed[], edges: ElkExtendedEdge[], nets: Map<string, string>, blocks: Map<string, string>, originalIds: ReadonlySet<string>, maximumLinks: number = LONG_LINK_POLICY.maximumLinks,
-    patternByMember: ReadonlyMap<string, string> = new Map()) {
+    patternByMember: ReadonlyMap<string, string> = new Map(),
+    portStyles: ReadonlyMap<string, NonNullable<CircuitComponent['pins'][number]['port_style']>> = new Map()) {
     const added: CircuitComponent[] = [];
     const byNet = new Map<string, ElkExtendedEdge[]>();
     for (const e of edges) { const list = byNet.get(nets.get(e.sources[0])!) ?? []; list.push(e); byNet.set(nets.get(e.sources[0])!, list); }
@@ -100,6 +101,10 @@ export function labelLongLinks(nodes: Placed[], edges: ElkExtendedEdge[], nets: 
                 if (!best || value < best.length - EPS) best = { node, edge: route, length: value };
             }
             if (!best) break;
+            if (kind === shortSymbolsMap.NETPORT) {
+                const style = portStyles.get(best.edge.sources[0]);
+                if (style) created.component.pins[0].port_style = style;
+            }
             pendingNodes.push(best.node); pendingComponents.push(created.component); pendingEdges.push(best.edge); labeledEnds++;
         }
         if (labeledEnds !== 2) continue;

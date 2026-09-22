@@ -11,11 +11,37 @@ function geometry(c: CircuitComponent): SymbolWithMeta {
     const chip = /^U/.test(c.designator);
     return { designator: c.designator, block_name: c.block_name, symbol: {
         width: 100, height: 100, center: { x: 50, y: 50 },
-        pins: c.pins.map((p, i) => ({ num: p.pin_number, name: p.name, signal_name: p.signal_name, part: '',
+        pins: c.pins.map((p, i) => ({ num: p.pin_number, name: p.name, signal_name: p.signal_name, port_style: p.port_style, part: '',
             x: chip ? (i % 2) * 100 : 50, y: chip ? 20 + Math.floor(i / 2) * 20 : i * 100 })),
     } };
 }
 const leaves = (n: ElkNode): ElkNode[] => n.children ? n.children.flatMap(leaves) : [n];
+
+test('explicit styles create separate ports for one net in one block', async () => {
+    const cs = [component('U1', [[1, 'A', 'DATA'], [2, 'B', 'DATA']], 'A'),
+        component('U2', [[1, 'A', 'DATA']], 'B')];
+    cs[0].pins[0].port_style = 'in';
+    cs[0].pins[1].port_style = 'out';
+    const circuit = createPatternFixtureCircuit('styled-port', 'styled-port', cs);
+    circuit.blocks = ['A', 'B'].map(name => ({ name, description: name, next_block_names: [] }));
+    const result = await autoPlaceCircuitWithHierarchy(circuit, cs.map(geometry), undefined,
+        { layoutRefinement: false, layoutPatterns: false });
+    const styled = result.addedSymbol.filter(c => c.block_name === 'block_A'
+        && c.pins[0].signal_name === 'DATA');
+    assert.deepEqual(styled.map(c => c.pins[0].port_style).sort(), ['in', 'out']);
+    assert(styled.every(c => c.part_uuid === '7523d33c197549a39030c4ac7fddee68'));
+});
+
+test('power and ground symbols take priority over a port style hint', async () => {
+    const cs = [component('U1', [[1, 'VDD', 'VCC'], [2, 'GND', 'GND']], 'A')];
+    cs[0].pins[0].port_style = 'in';
+    cs[0].pins[1].port_style = 'out';
+    const circuit = createPatternFixtureCircuit('supply-style', 'supply-style', cs);
+    circuit.blocks = [{ name: 'A', description: 'A', next_block_names: [] }];
+    const result = await autoPlaceCircuitWithHierarchy(circuit, cs.map(geometry), undefined,
+        { layoutRefinement: false, layoutPatterns: false });
+    assert(result.addedSymbol.every(c => c.pins[0].port_style === undefined));
+});
 
 test('NC never creates external aliases, pattern connections or ports; physical pins remain', async () => {
     const cs = [component('U1', [[1, 'NC', 'NC'], [2, 'IO', ' nc '], [3, 'IO', 'NC_VALID']], 'A'),

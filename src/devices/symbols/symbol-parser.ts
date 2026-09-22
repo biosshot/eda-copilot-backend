@@ -279,9 +279,10 @@ export const circuitToSymbols = async (sch: { components: CircuitWithoutBlocks['
         for (const pin of sym.pins) {
             const pin_ = component.pins.find(p => p.pin_number == pin.num);
 
-            if (pin_)
+            if (pin_) {
                 pin.signal_name = pin_.signal_name;
-            else {
+                pin.port_style = pin_.port_style;
+            } else {
                 pin.signal_name = crypto.randomUUID().slice(0, 8);
                 logger.debug({ component, "pin.num": pin.num }, "Pin not matched");
             }

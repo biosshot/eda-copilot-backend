@@ -102,7 +102,7 @@ function buildBlockHierarchy(circuit: Circuit, nodes: SymbolWithMeta[]): BlockHi
 }
 
 export function createComponentElkNode(component: SymbolWithMeta, signalMap: Record<string, { nodeId: string; portId: string, blockName: string }[] | undefined>, blockName: string,
-    createShortSymbol: (signalName: string, blockName: string, region?: string) => string | null,
+    createShortSymbol: (signalName: string, blockName: string, region?: string, portStyle?: 'in' | 'out' | 'bi') => string | null,
     preservedSignalNames: ReadonlySet<string> = new Set()) {
 
     const faces = new Map(component.symbol.pins.map(pin => [pin.num,
@@ -121,7 +121,8 @@ export function createComponentElkNode(component: SymbolWithMeta, signalMap: Rec
             : createShortSymbol(pin.signal_name, blockName,
                 // Split a fan-out, not a simple two-pin strap: another marker
                 // on a small enable/supply connection can add unnecessary layers.
-                netPinCounts.get(pin.signal_name)! > 2 && netFaces.get(pin.signal_name)!.size > 1 ? faces.get(pin.num) : undefined) ?? pin.signal_name;
+                netPinCounts.get(pin.signal_name)! > 2 && netFaces.get(pin.signal_name)!.size > 1 ? faces.get(pin.num) : undefined,
+                pin.port_style) ?? pin.signal_name;
 
         if (signalName) {
             if (!signalMap[signalName]) signalMap[signalName] = [];
@@ -199,20 +200,22 @@ function createBlockNode(
 
     const localShorts = new Map<string, ShortSymbol>();
     let currentOwner = '';
-    const createShortSymbol = (signalName: string, blockName: string, region?: string) => {
+    const createShortSymbol = (signalName: string, blockName: string, region?: string, portStyle?: 'in' | 'out' | 'bi') => {
         const name = Object.keys(shortSymbolsMap).find(t => shortSymbolsMap[t as keyof typeof shortSymbolsMap].is(signalName))
             ?? (labeledNets.has(signalName) ? 'NETPORT' : undefined);
         if (!name) return null;
+        const effectiveStyle = name === 'NETPORT' ? portStyle : undefined;
 
         if (localSupplies && !shared.has(signalName)) {
             // Different faces of a large symbol need independent local flags;
             // one shared flag must not drag a ground loop around the body.
             const scope = `${currentOwner}${region ? `/${region}` : ''}`;
-            const key = `${scope}\u0000${signalName}`;
+            const key = `${scope}\u0000${signalName}${effectiveStyle ? `\u0000${effectiveStyle}` : ''}`;
             let local = localShorts.get(key);
             if (!local) {
                 local = shortSymbolsMap[name as keyof typeof shortSymbolsMap].create(signalName, blockName,
-                    stableShortSymbolId(name, signalName, `${blockName}/${scope}`));
+                    stableShortSymbolId(name, signalName, `${blockName}/${scope}${effectiveStyle ? `/${effectiveStyle}` : ''}`));
+                if (effectiveStyle) local.component.pins[0].port_style = effectiveStyle;
                 localShorts.set(key, local);
                 (shortSymbols[name] ??= []).push(local);
                 signalMap[local.node.id] = [{ nodeId: local.node.id, portId: local.node.ports![0].id, blockName }];
@@ -223,11 +226,11 @@ function createBlockNode(
         let symbol: ShortSymbol | undefined;
         const shortSymbol = shortSymbols[name];
 
-        if (shortSymbol && shortSymbol.filter(s => s.component.pins[0].signal_name === signalName).length >= (shared.has(signalName) ? 1 : maxShortSymbol[name] ?? 0)) {
+        if (shortSymbol && shortSymbol.filter(s => s.component.pins[0].signal_name === signalName && s.component.pins[0].port_style === effectiveStyle).length >= (shared.has(signalName) ? 1 : maxShortSymbol[name] ?? 0)) {
             let min = Infinity;
 
             for (const s of shortSymbol) {
-                if (s.component.pins[0].signal_name !== signalName) continue;
+                if (s.component.pins[0].signal_name !== signalName || s.component.pins[0].port_style !== effectiveStyle) continue;
                 const count = usedCoutners[s.component.designator] || 0;
                 if (count < min) {
                     min = count;
@@ -237,14 +240,15 @@ function createBlockNode(
         }
 
         if (!symbol) {
-            const counterKey = `${name}\u0000${signalName}`;
+            const counterKey = `${name}\u0000${signalName}${effectiveStyle ? `\u0000${effectiveStyle}` : ''}`;
             const ordinal = createdCounters[counterKey] ?? 0;
             createdCounters[counterKey] = ordinal + 1;
             symbol = shortSymbolsMap[name as keyof typeof shortSymbolsMap].create(
                 signalName,
                 blockName,
-                stableShortSymbolId(name, signalName, blockName, ordinal),
+                stableShortSymbolId(name, signalName, `${blockName}${effectiveStyle ? `/${effectiveStyle}` : ''}`, ordinal),
             );
+            if (effectiveStyle) symbol.component.pins[0].port_style = effectiveStyle;
             if (shortSymbol) shortSymbol.push(symbol);
             else shortSymbols[name] = [symbol];
         }
@@ -349,6 +353,18 @@ function applyImprovements(elkNodes: BlockNode[], improvements: LayoutImprovemen
 }
 
 type SignalEndpoint = { nodeId: string; portId: string; blockName: string };
+type PortStyle = NonNullable<CircuitComponent['pins'][number]['port_style']>;
+
+function groupEndpointsByStyle(endpoints: SignalEndpoint[], styles: ReadonlyMap<string, PortStyle>) {
+    const groups = new Map<PortStyle | undefined, SignalEndpoint[]>();
+    for (const endpoint of endpoints) {
+        const style = styles.get(endpoint.portId);
+        const group = groups.get(style) ?? [];
+        group.push(endpoint);
+        groups.set(style, group);
+    }
+    return [...groups.entries()] as [PortStyle | undefined, SignalEndpoint[]][];
+}
 
 type ExternalPortSide = 'NORTH' | 'SOUTH' | 'EAST' | 'WEST';
 type ElkLayoutDirection = 'LEFT' | 'RIGHT' | 'UP' | 'DOWN';
@@ -480,6 +496,7 @@ function searchExternalSignals(
     signalMap: Record<string, SignalEndpoint[]>,
     sideAwareSignals: ReadonlySet<string> = new Set(),
     clientManagedLabels: Array<{ pinId: string; signalName: string }> = [],
+    portStyles: Map<string, PortStyle> = new Map(),
 ) {
 
     if (elkNode.id.startsWith('block_')) {
@@ -491,7 +508,7 @@ function searchExternalSignals(
             .filter(([signalName, ends]) => ends.find(e => e.blockName !== elkNode.id)));
 
         for (const node of elkNode.children ?? []) {
-            const r = searchExternalSignals(node, signalMap, sideAwareSignals, clientManagedLabels);
+            const r = searchExternalSignals(node, signalMap, sideAwareSignals, clientManagedLabels, portStyles);
 
             for (const [name, endPoints] of Object.entries(r.external)) {
                 if (!childExternal[name]) childExternal[name] = endPoints
@@ -513,8 +530,13 @@ function searchExternalSignals(
 
         // elkNode.ports =
         externalEntries.forEach(([externalSName, externalEndPoints]) => {
-
-            if (clientManagedSignals.has(externalSName) && !sideAwareSignals.has(externalSName)) {
+            const localEndpoints = externalEndPoints.filter(point => point.blockName === elkNode.id);
+            const passthroughEndpoints = (childExternal[externalSName] ?? []).map(ext => ({
+                blockName: ext.blockName, nodeId: '__virt__', portId: ext.portId,
+            }));
+            const groupedEndpoints = groupEndpointsByStyle([...localEndpoints, ...passthroughEndpoints], portStyles);
+            const hasExplicitStyle = groupedEndpoints.some(([style]) => style !== undefined);
+            if (clientManagedSignals.has(externalSName) && !sideAwareSignals.has(externalSName) && !hasExplicitStyle) {
                 for (const point of externalEndPoints) {
                     if (point.blockName === elkNode.id) {
                         pathToDel.push([externalSName, point.portId]);
@@ -524,44 +546,27 @@ function searchExternalSignals(
                 return;
             }
 
-            const nePort = shortSymbolsMap['NETPORT'].create(
-                externalSName,
-                elkNode.id,
-                stableShortSymbolId('NETPORT_EXTERNAL', externalSName, elkNode.id),
-            );
-
-            elkNode.children?.push?.(nePort.node);
-            if (!elkNode.shortSymbols) elkNode.shortSymbols = {}
-            if (!elkNode.shortSymbols?.['NETPORT']) elkNode.shortSymbols['NETPORT'] = [];
-            elkNode.shortSymbols['NETPORT'].push(nePort);
-
-            const pName = nePort.node?.ports?.[0]?.id;
-            const extName = `ext_${elkNode.id}_${externalSName}`;
-
-            if (!signalMap[extName]) signalMap[extName] = [];
-            const netPortEndpoint = {
-                blockName: elkNode.id,
-                nodeId: '__virt__',
-                portId: pName ?? '',
-            };
-
-            const chilExt = childExternal[externalSName];
-            const passthroughEndpoints = (chilExt ?? []).map(ext => ({
-                blockName: ext.blockName,
-                nodeId: '__virt__',
-                portId: ext.portId,
-            }));
-
-            const localEndpoints = externalEndPoints.filter(point => point.blockName === elkNode.id);
             for (const point of localEndpoints) pathToDel.push([externalSName, point.portId]);
-            appendExternalSignalEndpoints(
-                signalMap[extName],
-                elkNode,
-                netPortEndpoint,
-                localEndpoints,
-                sideAwareSignals.has(externalSName),
-                passthroughEndpoints,
-            );
+            for (const [groupIndex, [style, group]] of groupedEndpoints.entries()) {
+                const nePort = shortSymbolsMap.NETPORT.create(
+                    externalSName, elkNode.id,
+                    stableShortSymbolId('NETPORT_EXTERNAL', externalSName,
+                        `${elkNode.id}${style ? `/${style}` : ''}`),
+                );
+                if (style) nePort.component.pins[0].port_style = style;
+                const portId = nePort.node.ports?.[0]?.id ?? '';
+                if (style) portStyles.set(portId, style);
+                elkNode.children?.push(nePort.node);
+                (elkNode.shortSymbols ??= {}).NETPORT ??= [];
+                elkNode.shortSymbols.NETPORT.push(nePort);
+                const extName = `ext_${elkNode.id}_${externalSName}${groupIndex ? `__${style ?? 'default'}` : ''}`;
+                signalMap[extName] ??= [];
+                appendExternalSignalEndpoints(signalMap[extName], elkNode, {
+                    blockName: elkNode.id, nodeId: '__virt__', portId,
+                }, group.filter(point => point.blockName === elkNode.id),
+                    sideAwareSignals.has(externalSName),
+                    group.filter(point => point.blockName !== elkNode.id));
+            }
         });
 
         if (!elkNode.layoutOptions) elkNode.layoutOptions = {};
@@ -580,6 +585,7 @@ function addForcedExternalSignals(
     signalMap: Record<string, SignalEndpoint[]>,
     externalSignals: string[],
     sideAwareSignals: ReadonlySet<string> = new Set(),
+    portStyles: Map<string, PortStyle> = new Map(),
 ) {
     // Collect all block nodes
     const blockNodes: BlockNode[] = [];
@@ -618,25 +624,27 @@ function addForcedExternalSignals(
 
         for (const blockNode of blockNodes) {
             if (!sigBlockNames.includes(blockNode.id)) continue;
-            if (clientManagedByBlock.get(blockNode.id)?.has(sig) && !sideAwareSignals.has(sig)) continue;
-
-            const nePort = shortSymbolsMap['NETPORT'].create(
-                sig,
-                blockNode.id,
-                stableShortSymbolId('NETPORT_FORCED', sig, blockNode.id),
-            );
-            blockNode.children?.push(nePort.node);
-            if (!blockNode.shortSymbols) blockNode.shortSymbols = {};
-            if (!blockNode.shortSymbols['NETPORT']) blockNode.shortSymbols['NETPORT'] = [];
-            blockNode.shortSymbols['NETPORT'].push(nePort);
-
-            const pName = nePort.node?.ports?.[0]?.id ?? '';
             const localEndpoints = endpoints.filter(endpoint => endpoint.blockName === blockNode.id);
-            appendExternalSignalEndpoints(signalMap[extName], blockNode, {
-                blockName: blockNode.id,
-                nodeId: '__virt__',
-                portId: pName,
-            }, localEndpoints, sideAwareSignals.has(sig));
+            const groups = groupEndpointsByStyle(localEndpoints, portStyles);
+            const hasExplicitStyle = groups.some(([style]) => style !== undefined);
+            if (clientManagedByBlock.get(blockNode.id)?.has(sig) && !sideAwareSignals.has(sig) && !hasExplicitStyle) continue;
+            for (const [groupIndex, [style, group]] of groups.entries()) {
+                const nePort = shortSymbolsMap.NETPORT.create(
+                    sig, blockNode.id,
+                    stableShortSymbolId('NETPORT_FORCED', sig,
+                        `${blockNode.id}${style ? `/${style}` : ''}`),
+                );
+                if (style) nePort.component.pins[0].port_style = style;
+                const portId = nePort.node.ports?.[0]?.id ?? '';
+                blockNode.children?.push(nePort.node);
+                (blockNode.shortSymbols ??= {}).NETPORT ??= [];
+                blockNode.shortSymbols.NETPORT.push(nePort);
+                const groupName = groupIndex ? `${extName}__${blockNode.id}__${style ?? 'default'}` : extName;
+                signalMap[groupName] ??= [];
+                appendExternalSignalEndpoints(signalMap[groupName], blockNode, {
+                    blockName: blockNode.id, nodeId: '__virt__', portId,
+                }, group, sideAwareSignals.has(sig));
+            }
         }
 
         if (signalMap[extName].length === 0) delete signalMap[extName];
@@ -781,10 +789,41 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
         labeledNets,
         sharedSupplies,
     );
+    const portStyles = new Map<string, PortStyle>();
+    for (const component of nodes) {
+        for (const pin of component.symbol.pins) {
+            if (pin.port_style && !shortSymbolsMap.GND.is(pin.signal_name) && !shortSymbolsMap.VCC.is(pin.signal_name)) {
+                portStyles.set(`${component.designator}_pin_${pin.num}`, pin.port_style);
+            }
+        }
+    }
+    for (const macro of patternMacros) {
+        for (const port of macro.ports) {
+            const style = portStyles.get(port.primaryPinId);
+            if (style) portStyles.set(port.elkPortId, style);
+        }
+        for (const placement of macro.placements) {
+            const generated = placement.generatedComponent;
+            if (generated?.part_uuid !== shortSymbolsMap.NETPORT.partUuid) continue;
+            const styles = new Set(macro.ports
+                .filter(port => port.signalName === generated.pins[0].signal_name)
+                .map(port => portStyles.get(port.elkPortId))
+                .filter((style): style is PortStyle => style !== undefined));
+            if (styles.size === 1) generated.pins[0].port_style = [...styles][0];
+        }
+    }
+    const recordGeneratedStyles = (block: BlockNode) => {
+        for (const symbol of Object.values(block.shortSymbols ?? {}).flat()) {
+            const style = symbol?.component.pins[0]?.port_style;
+            if (style) portStyles.set(symbol.node.ports?.[0]?.id ?? '', style);
+        }
+        for (const child of block.children ?? []) recordGeneratedStyles(child);
+    };
+    recordGeneratedStyles(elkNodes);
     // writeFile('.test-output/signalMap_f.json', JSON.stringify(signalMap, null, 2));
 
     const clientManagedLabels: Array<{ pinId: string; signalName: string }> = [];
-    const { pathToDel } = searchExternalSignals(elkNodes, signalMap, patternBoundarySignals, clientManagedLabels);
+    const { pathToDel } = searchExternalSignals(elkNodes, signalMap, patternBoundarySignals, clientManagedLabels, portStyles);
 
     for (const p of pathToDel) {
         signalMap[p[0]] = signalMap[p[0]].filter(s => s.portId !== p[1])
@@ -801,7 +840,7 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
     ];
     if (forcedExternalSignals.length) {
         addForcedExternalSignals(elkNodes, signalMap, forcedExternalSignals,
-            new Set([...patternBoundarySignals, ...singletonSignals]));
+            new Set([...patternBoundarySignals, ...singletonSignals]), portStyles);
     }
     if (options?.layoutRefinement) labelLocalizedPatternBoundaries(elkNodes, signalMap, patternMacros, [...labeledNets,
         ...patternMacros.filter(m => m.layoutChildBlock && localSupplyBanks.has(m.layoutChildBlock.name)).flatMap(m => m.ports.map(p => p.signalName))]);
