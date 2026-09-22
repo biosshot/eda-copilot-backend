@@ -8,6 +8,8 @@ import { rotatePointClockwise } from './utils/math.ts';
 import { recalculateRootBlock } from './utils/circuit-merge.ts';
 import type { SymbolPin } from './types/symbol.ts';
 import masterLogger from './logger.ts';
+import { getPartUuid, isMissingPartUuid } from './types/lcsc.ts';
+import { canonicalEasyEdaPartUuid, getEasyEdaDevice } from './devices/easy-eda.ts';
 
 const logger = masterLogger.child({ TAG: 'extract-circuit' });
 const inputSchema = z.object({ circuit: CircuitModStruct(), inputCircuit: ExplainCircuitStruct().optional() });
@@ -29,8 +31,13 @@ export async function extractCircuit(input: ExtractCircuitInput): Promise<{ circ
     throw new Error('Reusable blocks are not supported. Do not use add_reused_blocks; add individual components instead.');
   }
   const data = inputSchema.parse(input);
-  const missing = data.circuit.add_components.filter(c => !c.part_uuid || /^0+$/.test(c.part_uuid));
+  const missing = data.circuit.add_components.filter(c => isMissingPartUuid(c.part_uuid));
   if (missing.length) throw new Error('All add_components must have part_uuid: ' + missing.map(c => c.designator).join(', '));
+  data.circuit.add_components = await Promise.all(data.circuit.add_components.map(async component => {
+    if (!component.part_uuid || typeof component.part_uuid === 'string' || component.part_uuid.libraryUuid !== 'user') return component;
+    const device = await getEasyEdaDevice(component.part_uuid);
+    return { ...component, part_uuid: canonicalEasyEdaPartUuid(device, component.part_uuid) };
+  }));
   const state: CircuitState = {
     circuit: data.circuit,
     inputCircuit: data.inputCircuit ?? { components: [] },
@@ -283,7 +290,7 @@ export async function extractCircuit(input: ExtractCircuitInput): Promise<{ circ
 
         const shortSymbolsUuid = Object.values(shortSymbolsMap).map(s => s.partUuid)
         for (const component of result.components) {
-            if (!shortSymbolsUuid.includes(component.part_uuid ?? '')) continue;
+            if (!component.part_uuid || !shortSymbolsUuid.includes(getPartUuid(component.part_uuid))) continue;
             const signalName = component.pins[0].signal_name;
             let pin;
             let pinOwner;

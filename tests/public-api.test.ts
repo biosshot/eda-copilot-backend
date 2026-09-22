@@ -1,8 +1,22 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRequire } from 'node:module';
-import { componentSearch, searchReusedBlock, extractCircuit, makePcbLayout, getPcbComponentSizes, disposeBackend } from '../dist/index.js';
-import { installEasyEdaFixture, PART_UUID, pcbInput, schematicInput } from './fixtures/api-fixtures.mjs';
+import { componentSearch, libraryList, searchReusedBlock, extractCircuit, makePcbLayout, getPcbComponentSizes, disposeBackend } from '../dist/index.js';
+import { installEasyEdaFixture, PART_UUID, PUBLIC_LIBRARY_UUID, PUBLIC_PART_UUID, pcbInput, schematicInput } from './fixtures/api-fixtures.mjs';
+
+test('library-qualified footprint overrides take precedence over legacy UUID entries', async () => {
+  const base = pcbInput.footprints[PART_UUID];
+  const result = await getPcbComponentSizes({
+    circuit: { components: [{ ...pcbInput.circuit.components[0],
+      part_uuid: { uuid: PART_UUID, libraryUuid: PUBLIC_LIBRARY_UUID } }] },
+    includeAll: true,
+    footprints: {
+      [PART_UUID]: { ...base, name: 'legacy' },
+      [`${PUBLIC_LIBRARY_UUID}:${PART_UUID}`]: { ...base, name: 'public-specific' },
+    },
+  });
+  assert.equal(result.report?.components[0].footprint, 'public-specific');
+});
 
 test('public component and schematic APIs work with provider fixtures and no private server', async () => {
   const transport = installEasyEdaFixture();
@@ -15,6 +29,30 @@ test('public component and schematic APIs work with provider fixtures and no pri
     assert.equal(byMpn.components?.[0].pins.length, 2);
     const byId = await componentSearch({ part_uuid: PART_UUID });
     assert.equal(byId.bestComponent?.name, 'TEST-1K');
+
+    assert.deepEqual(libraryList().libraries.map(library => library.libraryUuid), ['lcsc', 'user']);
+    assert.equal(libraryList().acceptsExplicitLibraryUuid, true);
+    const publicSearch = await componentSearch({ MPN: 'PUBLIC-1K', library_uuid: PUBLIC_LIBRARY_UUID });
+    assert.deepEqual(publicSearch.components?.[0].part_uuid, {
+      uuid: PUBLIC_PART_UUID,
+      libraryUuid: PUBLIC_LIBRARY_UUID,
+    });
+    assert.equal(publicSearch.components?.[0].pins.length, 2);
+    const publicAliasSearch = await componentSearch({ MPN: 'PUBLIC-1K', library_uuid: 'user' });
+    assert.deepEqual(publicAliasSearch.components?.[0].part_uuid, {
+      uuid: PUBLIC_PART_UUID,
+      libraryUuid: PUBLIC_LIBRARY_UUID,
+    });
+    const publicById = await componentSearch({
+      part_uuid: { uuid: PUBLIC_PART_UUID, libraryUuid: PUBLIC_LIBRARY_UUID },
+    });
+    assert.equal(publicById.bestComponent?.name, 'PUBLIC-1K');
+    const publicSchematic = structuredClone(schematicInput);
+    for (const component of publicSchematic.circuit.add_components) {
+      component.part_uuid = { uuid: PUBLIC_PART_UUID, libraryUuid: PUBLIC_LIBRARY_UUID } as never;
+    }
+    const publicAssembly = (await extractCircuit(publicSchematic)).circuit;
+    assert.ok(publicAssembly.components.some(component => component.designator === 'R1'));
 
     const input = structuredClone(schematicInput);
     const assembly = (await extractCircuit(input)).circuit;

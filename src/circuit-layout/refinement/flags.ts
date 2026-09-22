@@ -3,6 +3,7 @@ import type { CircuitComponent } from '#types/circuit.ts';
 import { coalesceNetRoutes, connectedNetEdges } from './net-routes.ts';
 import { type Placed, pinPositions, edgeSegments, EPS } from './geometry.ts';
 import { SCHEMATIC_CLEARANCE as gap } from './policy.ts';
+import { getPartUuid, samePartUuid } from '#types/lcsc.ts';
 
 /** Collapse identical generated flags on one physical bus at any distance,
  * or on nearby stems that can safely share a tree. Original parts survive. */
@@ -13,13 +14,13 @@ export function mergeLocalFlags(nodes: Placed[], edges: ElkExtendedEdge[], added
     const flags = [...added].sort((a, b) => {
         const ap = positions.get(`${a.designator}_pin_1`), bp = positions.get(`${b.designator}_pin_1`);
         // Retain the lower ground marker when two markers share a bus.
-        return (a.part_uuid === 'GND' && b.part_uuid === 'GND' ? (bp?.y ?? 0) - (ap?.y ?? 0) : 0)
+        return (a.part_uuid && b.part_uuid && getPartUuid(a.part_uuid) === 'GND' && getPartUuid(b.part_uuid) === 'GND' ? (bp?.y ?? 0) - (ap?.y ?? 0) : 0)
             || a.designator.localeCompare(b.designator);
     });
     let attempts = 0;
     for (let i = 0; i < flags.length; i++) for (const b of flags.slice(i + 1)) {
         const a = flags[i];
-        if (removed.has(a.designator) || removed.has(b.designator) || a.part_uuid !== b.part_uuid
+        if (removed.has(a.designator) || removed.has(b.designator) || !samePartUuid(a.part_uuid, b.part_uuid)
             || a.pins.length !== 1 || b.pins.length !== 1 || a.pins[0].signal_name !== b.pins[0].signal_name
             || blocks.get(a.designator) !== blocks.get(b.designator)) continue;
         const aId = `${a.designator}_pin_${a.pins[0].pin_number}`, bId = `${b.designator}_pin_${b.pins[0].pin_number}`;

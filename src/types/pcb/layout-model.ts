@@ -1,6 +1,7 @@
 import type { SolverOptions } from "./layout-rules.ts";
 import type { PcbRoutingRules } from "./routing-model.ts";
 import { z } from "zod";
+import type { PartUuid } from "../lcsc.ts";
 
 export type Layer = 'top' | 'bottom';
 export type BoardPadLayer = Layer | 'multi';
@@ -183,7 +184,7 @@ export interface PcbComponent {
     pins: PcbPin[];
     block_name: string;
     search_query: string;
-    part_uuid: string | null;
+    part_uuid: PartUuid | null;
     footprint_uuid?: string | null;
     footprint: FootprintSpec;
     pcb: {

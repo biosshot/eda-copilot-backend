@@ -1,9 +1,10 @@
 import type { CircuitComponent } from '#types/circuit.ts';
 import type { ElkExtendedEdge } from 'elkjs';
 import { type Placed, normal, path, routeLength, pinPositions } from './geometry.ts';
+import { getPartUuid } from '#types/lcsc.ts';
 
 export const FLAG_ROTATION_POLICY = Object.freeze({ minimumFraction: 0.3 });
-const preferredNormal = (flag: CircuitComponent) => flag.part_uuid === 'GND' ? -1 : 1;
+const preferredNormal = (flag: CircuitComponent) => flag.part_uuid && getPartUuid(flag.part_uuid) === 'GND' ? -1 : 1;
 
 /** Judge a flag's OWN lead, never savings elsewhere in a turned macro. Shared
  * buses retain their conventional flag direction. Returning upright is free. */

@@ -8,6 +8,7 @@ import { SCHEMATIC_CLEARANCE as gap } from './policy.ts';
 import { turnNode } from './groups.ts';
 import { routeLength } from './geometry.ts';
 import { acceptsFlagOrientation } from './flag-policy.ts';
+import { getPartUuid } from '#types/lcsc.ts';
 
 /** Packing can free space that was occupied when the group was optimized.
  * Finish private pin-to-flag leads with one straight segment. Shared buses
@@ -63,13 +64,13 @@ export function centerBankFlags(nodes: Placed[], edges: ElkExtendedEdge[], added
         const members = new Set(macro.absorbedDesignators), memberPins = pinPositions(nodes.filter(n => members.has(n.id)));
         for (const c of added) {
             const flag = nodes.find(n => n.id === c.designator); if (!flag || flag.ports?.length !== 1) continue;
-            if (normal(flag, flag.ports[0].id).y !== (c.part_uuid === 'GND' ? -1 : 1)) continue;
+            if (normal(flag, flag.ports[0].id).y !== (c.part_uuid && getPartUuid(c.part_uuid) === 'GND' ? -1 : 1)) continue;
             const id = flag.ports[0].id, net = nets.get(id), incident = edges.filter(e => [...e.sources, ...e.targets].includes(id));
             if (!incident.length || incident.some(e => [...e.sources, ...e.targets].some(p => p !== id && !memberPins.has(p)))) continue;
             const terminals = [...memberPins].filter(([p]) => nets.get(p) === net).map(([, p]) => p);
             if (terminals.length < 2) continue;
             const x = (Math.min(...terminals.map(p => p.x)) + Math.max(...terminals.map(p => p.x))) / 2;
-            const ground = c.part_uuid === 'GND', targetY = ground ? Math.max(...terminals.map(p => p.y)) : Math.min(...terminals.map(p => p.y));
+            const ground = Boolean(c.part_uuid && getPartUuid(c.part_uuid) === 'GND'), targetY = ground ? Math.max(...terminals.map(p => p.y)) : Math.min(...terminals.map(p => p.y));
             const rails = straightRuns(edges.filter(e => nets.get(e.sources[0]) === net
                 && [...e.sources, ...e.targets].every(p => memberPins.has(p) || p === id)).flatMap(edgeSegments))
                 .filter(s => Math.abs(s.a.y - s.b.y) < EPS && s.a.x <= x && s.b.x >= x
@@ -98,7 +99,7 @@ export function centerBankFlags(nodes: Placed[], edges: ElkExtendedEdge[], added
  * every unrelated route stay byte-for-byte unchanged. */
 export function lowerGroundFlags(nodes: Placed[], edges: ElkExtendedEdge[], added: readonly CircuitComponent[], nets: ReadonlyMap<string, string>) {
     let lowered = 0;
-    for (const c of added.filter(c => c.part_uuid === 'GND')) {
+    for (const c of added.filter(c => c.part_uuid && getPartUuid(c.part_uuid) === 'GND')) {
         const flag = nodes.find(n => n.id === c.designator); if (!flag || flag.ports?.length !== 1) continue;
         if (normal(flag, flag.ports[0].id).y !== -1) continue;
         const id = flag.ports[0].id, p = pinPositions([flag]).get(id)!, net = nets.get(id)!;

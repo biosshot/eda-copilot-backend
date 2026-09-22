@@ -9,6 +9,7 @@ import type { EasyEdaProduct } from "#types/easy-eda-api.ts";
 import { getEasyEdaDevice, getEasyEdaSymbolInfo } from "../easy-eda.ts";
 import { countDiffChars } from "#utils/math.ts";
 import { getPartIdFromDesignator } from "#utils/component.ts";
+import { getPartLibraryUuid, getPartUuidKey, type PartUuid } from "#types/lcsc.ts";
 
 const logger = masterLogger.child({ TAG: "symbol-parser" });
 
@@ -160,10 +161,10 @@ export const extractPinsFromComponent = (product: EasyEdaProduct) => {
     return extractPins(parsedData);
 };
 
-export const getSymbol = memoize(async function getSymbol(uuid: string, partId?: number) {
+export const getSymbol = memoize(async function getSymbol(partUuid: PartUuid, partId?: number) {
     try {
-        const device = await getEasyEdaDevice(uuid);
-        const symbol = await getEasyEdaSymbolInfo(device.symbol.uuid);
+        const device = await getEasyEdaDevice(partUuid);
+        const symbol = await getEasyEdaSymbolInfo(device.symbol.uuid, getPartLibraryUuid(partUuid));
 
         const dataStr = symbol.dataStr as string;
         const parsed = parseSymbolData(dataStr);
@@ -171,7 +172,7 @@ export const getSymbol = memoize(async function getSymbol(uuid: string, partId?:
         // Извлечение rect
         const part = parsed.parts[partId ?? 0];
         if (!part || !part.bbox) {
-            logger.warn({ uuid, partIdN: partId, partId: typeof partId, part: part ?? 'None', parts: parsed.parts }, 'rect not found');
+            logger.warn({ part_uuid: getPartUuidKey(partUuid), partIdN: partId, partId: typeof partId, part: part ?? 'None', parts: parsed.parts }, 'rect not found');
             return null;
         }
 
@@ -212,7 +213,7 @@ export const getSymbol = memoize(async function getSymbol(uuid: string, partId?:
         };
 
     } catch (error) {
-        logger.error({ error, uuid });
+        logger.error({ error, part_uuid: getPartUuidKey(partUuid) });
         return null;
     }
 });

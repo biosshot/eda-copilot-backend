@@ -3,6 +3,7 @@ import { getEasyEdaDevice } from "#devices/easy-eda.ts";
 import type { FootprintGraphic, FootprintGraphicLayer, FootprintPad, FootprintSpec, Point } from "#types/pcb/layout-model.ts";
 import { fetchWithRetry } from "#utils/fetch-with-retry.ts";
 import { memoize } from "#utils/memoize.ts";
+import { getPartLibraryUuid, type PartUuid } from "#types/lcsc.ts";
 
 const MIL_PER_MM = 39.37007874015748;
 const PAD_ONLY_FOOTPRINT_MARGIN_MM = 0.254;
@@ -24,8 +25,8 @@ type Box = {
     bottom: number;
 };
 
-export const getEasyEdaFootprintDocument = memoize(async (footprintUuid: string): Promise<EasyEdaFootprintDocument> => {
-    const response = await fetchWithRetry(`https://pro.easyeda.com/api/v2/components/${footprintUuid}?uuid=${footprintUuid}`);
+export const getEasyEdaFootprintDocument = memoize(async (footprintUuid: string, libraryUuid: string = 'lcsc'): Promise<EasyEdaFootprintDocument> => {
+    const response = await fetchWithRetry(`https://pro.easyeda.com/api/v2/components/${encodeURIComponent(footprintUuid)}?uuid=${encodeURIComponent(footprintUuid)}&path=${encodeURIComponent(libraryUuid)}`);
     if (!response.ok) {
         throw new Error(`Failed to fetch EasyEDA footprint ${footprintUuid}: ${response.status}`);
     }
@@ -38,8 +39,8 @@ export const getEasyEdaFootprintDocument = memoize(async (footprintUuid: string)
     return json.result;
 });
 
-export const resolveEasyEdaFootprintByUuid = memoize(async (footprintUuid: string): Promise<FootprintSpec> => {
-    const document = await getEasyEdaFootprintDocument(footprintUuid);
+export const resolveEasyEdaFootprintByUuid = memoize(async (footprintUuid: string, libraryUuid: string = 'lcsc'): Promise<FootprintSpec> => {
+    const document = await getEasyEdaFootprintDocument(footprintUuid, libraryUuid);
     const dataStr = await getEasyEdaDataStr(document);
     if (!dataStr) {
         throw new Error(`EasyEDA footprint ${footprintUuid} has no dataStr`);
@@ -48,12 +49,12 @@ export const resolveEasyEdaFootprintByUuid = memoize(async (footprintUuid: strin
     return parseEasyEdaFootprintDataStr(dataStr, document.display_title ?? document.title ?? footprintUuid);
 });
 
-export const resolveEasyEdaFootprintByPartUuid = memoize(async (partUuid: string): Promise<FootprintSpec | null> => {
+export const resolveEasyEdaFootprintByPartUuid = memoize(async (partUuid: PartUuid): Promise<FootprintSpec | null> => {
     const device = await getEasyEdaDevice(partUuid);
     const footprintUuid = device.footprint?.uuid;
     if (!footprintUuid) return null;
 
-    return resolveEasyEdaFootprintByUuid(footprintUuid);
+    return resolveEasyEdaFootprintByUuid(footprintUuid, getPartLibraryUuid(partUuid));
 });
 
 export function parseEasyEdaFootprintDataStr(dataStr: string, fallbackName = "EASYEDA_FOOTPRINT"): FootprintSpec {

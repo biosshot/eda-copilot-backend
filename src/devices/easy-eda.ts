@@ -4,9 +4,10 @@ import { fetchWithRetry } from "#utils/fetch-with-retry.ts";
 import type { EasyEdaProductApiResponce, EasyEdaProduct, EasyEdaDeviceInfo, EasyEdaDeviceApiResult, EasyEdaApiResponce, SymbolInfo } from "#types/easy-eda-api.ts";
 import { memoize } from "#utils/memoize.ts";
 import { normalizeEasyEdaSymbolInfo } from "./easy-eda-datastr.ts";
+import { getPartLibraryUuid, getPartUuid, type PartUuid } from "#types/lcsc.ts";
 
-export const getEasyEdaSymbolInfo = memoize(async (symUuid: string) => {
-    const res = await fetchWithRetry(`https://pro.easyeda.com/api/v2/components/${symUuid}?uuid=${symUuid}&path=lcsc`);
+export const getEasyEdaSymbolInfo = memoize(async (symUuid: string, libraryUuid: string = 'lcsc') => {
+    const res = await fetchWithRetry(`https://pro.easyeda.com/api/v2/components/${encodeURIComponent(symUuid)}?uuid=${encodeURIComponent(symUuid)}&path=${encodeURIComponent(libraryUuid)}`);
     if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
     }
@@ -17,8 +18,10 @@ export const getEasyEdaSymbolInfo = memoize(async (symUuid: string) => {
     return normalizeEasyEdaSymbolInfo(json.result);
 });
 
-export const getEasyEdaDevice = memoize(async (uuid: string) => {
-    const res = await fetchWithRetry(`https://pro.easyeda.com/api/devices/${uuid}?uuid=${uuid}&path=lcsc`);
+export const getEasyEdaDevice = memoize(async (partUuid: PartUuid) => {
+    const uuid = getPartUuid(partUuid);
+    const libraryUuid = getPartLibraryUuid(partUuid);
+    const res = await fetchWithRetry(`https://pro.easyeda.com/api/devices/${encodeURIComponent(uuid)}?uuid=${encodeURIComponent(uuid)}&path=${encodeURIComponent(libraryUuid)}`);
     if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
     }
@@ -53,7 +56,77 @@ export async function normalizeEasyEdaProductSymbolInfo(product: EasyEdaProduct)
 }
 
 export async function easyEdaDeviceToComponent(device: EasyEdaDeviceInfo | EasyEdaDeviceApiResult): Promise<Component | undefined> {
-    return easyEdaSearch(device.product_code).then(r => r[0]);
+    if (!('symbol' in device)) return easyEdaSearch(device.product_code).then(r => r[0]);
+    const libraryUuid = device.owner?.uuid === '0819f05c4eef4c71ace90d822a990e87' ? 'lcsc' : device.owner?.uuid;
+    const partUuid: PartUuid = libraryUuid && libraryUuid !== 'lcsc'
+        ? { uuid: device.uuid, libraryUuid }
+        : device.uuid;
+    return easyEdaDeviceToComponentInLibrary(device, partUuid);
+}
+
+export async function easyEdaDeviceToComponentInLibrary(
+    device: EasyEdaDeviceApiResult,
+    partUuid: PartUuid,
+): Promise<Component | undefined> {
+    if (!device.symbol?.uuid || !device.footprint?.uuid) return undefined;
+    const symbolInfo = await getEasyEdaSymbolInfo(device.symbol.uuid, getPartLibraryUuid(partUuid));
+    const pins = extractPinsFromComponent({ device_info: { symbol_info: symbolInfo } } as EasyEdaProduct);
+    return {
+        pins: pins ?? [],
+        price: 0,
+        name: device.attributes?.["Manufacturer Part"] || device.display_title || device.title || 'Unknown',
+        manufacturer: device.attributes?.Manufacturer || device.owner?.nickname || 'Unknown',
+        description: device.description || '',
+        part_uuid: partUuid,
+        datasheet: device.attributes?.Datasheet || null,
+        designatorPattern: device.attributes?.Designator ?? null,
+        footprintName: device.footprint?.display_title ?? device.footprint?.title ?? null,
+    };
+}
+
+export function canonicalEasyEdaPartUuid(device: EasyEdaDeviceApiResult, partUuid: PartUuid): PartUuid {
+    if (typeof partUuid === 'string') return partUuid;
+    if (partUuid.libraryUuid === 'lcsc') return partUuid.uuid;
+    if (partUuid.libraryUuid === 'user' && device.owner?.uuid) {
+        return { uuid: partUuid.uuid, libraryUuid: device.owner.uuid };
+    }
+    return partUuid;
+}
+
+type DeviceSearchResponse = EasyEdaApiResponce<{
+    lists: Record<string, EasyEdaDeviceApiResult[]>;
+    page: number | string;
+    pageSize: number | string;
+    totalPage: number;
+    count: number;
+}>;
+
+export async function easyEdaDeviceSearch(query: string, libraryUuid: string, page = 1, limit = 10) {
+    const body = new URLSearchParams({
+        uid: libraryUuid,
+        path: libraryUuid,
+        wd: query,
+        page: String(page),
+        pageSize: String(limit),
+        withSymbolPackage: 'true',
+    });
+    const response = await fetchWithRetry('https://pro.easyeda.com/api/devices/search', { method: 'POST', body }) as unknown as Response;
+    if (!response.ok) throw new Error(`EasyEDA device search failed: ${response.status}`);
+    const json = await response.json() as DeviceSearchResponse;
+    if (!json.success || !json.result) throw new Error(`EasyEDA device search failed: ${json.msg ?? 'unknown error'}`);
+    const devices = json.result.lists[libraryUuid] ?? [];
+    const components = (await Promise.all(devices.map(async device => {
+        const requestedPartUuid: PartUuid = libraryUuid === 'lcsc' ? device.uuid : { uuid: device.uuid, libraryUuid };
+        const partUuid = canonicalEasyEdaPartUuid(device, requestedPartUuid);
+        return easyEdaDeviceToComponentInLibrary(device, partUuid).catch(() => undefined);
+    }))).filter((component): component is Component => Boolean(component));
+    return {
+        components,
+        page: Number(json.result.page),
+        pageSize: Number(json.result.pageSize),
+        totalPage: json.result.totalPage,
+        count: json.result.count,
+    };
 }
 
 export async function easyEdaSearch(

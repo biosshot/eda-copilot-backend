@@ -3,11 +3,11 @@ class MemorizeReject extends Error { };
 
 // Не эффективеное копирование при двух вызовах из cache
 // Реализация
-export function memoize<T extends (...args: Parameters<T>) => ReturnType<T>>(
-  fn: T,
+export function memoize<Args extends unknown[], Result>(
+  fn: (...args: Args) => Result,
   ttlMs: number = 10 * 60 * 1000
-): T {
-  const cache = new Map<string, { value: ReturnType<T> | Promise<ReturnType<T>>; expiry: number; }>();
+): (...args: Args) => Result {
+  const cache = new Map<string, { value: Result | Promise<Result>; expiry: number; }>();
 
   // Очистка кэша
   setInterval(() => {
@@ -20,7 +20,7 @@ export function memoize<T extends (...args: Parameters<T>) => ReturnType<T>>(
   }, Math.min(ttlMs / 2, 5000)).unref();
 
   // Создаём мемоизированную функцию с той же сигнатурой, что и fn
-  const memoizedFn = ((...args: Parameters<T>): ReturnType<T> => {
+  const memoizedFn = ((...args: Args): Result => {
     const key = JSON.stringify(args);
     const now = Date.now();
 
@@ -29,7 +29,7 @@ export function memoize<T extends (...args: Parameters<T>) => ReturnType<T>>(
       if (cached.value instanceof Promise) {
         const promise = cached.value;
         // @ts-ignore
-        return new Promise<ReturnType<T>>((resolve, reject) => {
+        return new Promise<Result>((resolve) => {
           promise
             .then(result => result instanceof MemorizeReject ? resolve(memoizedFn(...args)) : resolve(structuredClone(result)))
             .catch(err => { resolve(memoizedFn(...args)) });
@@ -61,7 +61,7 @@ export function memoize<T extends (...args: Parameters<T>) => ReturnType<T>>(
     }
 
     return result;
-  }) as T; // Утверждаем тип, так как сигнатура совпадает
+  }) as (...args: Args) => Result; // Утверждаем тип, так как сигнатура совпадает
 
   return memoizedFn;
 }

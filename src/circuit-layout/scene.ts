@@ -5,6 +5,7 @@ import type { SymbolWithMeta } from '#types/symbol.ts';
 import type { MacroInstance } from './patterns/types.ts';
 import { rotateSymbolGeometry } from './patterns/helpers.ts';
 import { shortSymbolsMap } from './short-symbol.ts';
+import { getPartUuid } from '#types/lcsc.ts';
 
 /** Final leaf geometry, including expanded macros and generated net symbols. */
 export function createSchematicScene(positioned: readonly PositionedSchNode[], edges: ElkExtendedEdge[],
@@ -17,7 +18,7 @@ export function createSchematicScene(positioned: readonly PositionedSchNode[], e
         let ports: ElkNode['ports'];
         if (original) ports = rotateSymbolGeometry(original, p.rotate ?? 0).pins.map(pin => ({ id: `${p.designator}_pin_${pin.num}`, x: pin.x, y: pin.y, width: 0, height: 0 }));
         else if (flag) {
-            const kind = Object.values(shortSymbolsMap).find(s => s.partUuid === flag.part_uuid);
+            const kind = Object.values(shortSymbolsMap).find(s => flag.part_uuid && s.partUuid === getPartUuid(flag.part_uuid));
             const base = kind?.create(flag.pins[0].signal_name, flag.block_name, flag.designator).node;
             if (base) ports = rotateSymbolGeometry({ width: base.width!, height: base.height!, center: { x: base.width! / 2, y: base.height! / 2 },
                 pins: base.ports!.map(pin => ({ num: 1, name: '1', signal_name: flag.pins[0].signal_name, part: '', x: pin.x!, y: pin.y! })) }, p.rotate ?? 0)

@@ -3,6 +3,7 @@ import { resolveEasyEdaFootprintByPartUuid, resolveEasyEdaFootprintByUuid } from
 import type { ExplainCircuit } from "#types/circuit.ts";
 import type { ComponentRole, FootprintSpec } from "#types/pcb/layout-model.ts";
 import type { BoardOverflowAllowance, FixedPlacement, Footprint } from "#types/pcb/layout-rules.ts";
+import { getPartUuid, getPartUuidKey, type PartUuid } from "#types/lcsc.ts";
 
 const logger = masterLogger.child({ TAG: "pcb-layout-footprints" });
 const EASYEDA_UUID_RE = /^[a-f0-9]{32}$/i;
@@ -16,7 +17,7 @@ export async function resolveComponentFootprint(
     if (provided) return provided;
 
     const footprintUuid = validEasyEdaUuid(component.footprint_uuid) ? component.footprint_uuid : null;
-    const partUuid = validEasyEdaUuid(component.part_uuid) ? component.part_uuid : null;
+    const partUuid = validPartUuid(component.part_uuid) ? component.part_uuid : null;
 
     if (footprintUuid) {
         const cacheKey = `footprint:${footprintUuid}`;
@@ -44,7 +45,7 @@ export async function requireResolvedComponentFootprint(
     if (footprint) return footprint;
 
     const hasFootprintUuid = validEasyEdaUuid(component.footprint_uuid);
-    const hasPartUuid = validEasyEdaUuid(component.part_uuid);
+    const hasPartUuid = validPartUuid(component.part_uuid);
     if (!hasFootprintUuid && !hasPartUuid) {
         throw new Error(`Missing real footprint for ${component.designator}: component has no valid footprint_uuid or part_uuid. PCB layout no longer uses inferred/offline generic footprints.`);
     }
@@ -57,7 +58,9 @@ function providedComponentFootprint(
     footprints?: Readonly<Record<string, FootprintSpec>>,
 ) {
     if (!footprints) return null;
-    for (const key of [component.footprint_uuid, component.part_uuid]) {
+    const partUuid = component.part_uuid ? getPartUuid(component.part_uuid) : null;
+    const partUuidKey = component.part_uuid ? getPartUuidKey(component.part_uuid) : null;
+    for (const key of [component.footprint_uuid, partUuidKey, partUuid]) {
         if (key && Object.hasOwn(footprints, key)) return footprints[key] ?? null;
     }
     return null;
@@ -65,10 +68,10 @@ function providedComponentFootprint(
 
 function resolveFootprintByPartUuid(
     component: ExplainCircuit["components"][number],
-    partUuid: string,
+    partUuid: PartUuid,
     cache: Map<string, Promise<FootprintSpec | null>>,
 ) {
-    const cacheKey = `part:${partUuid}`;
+    const cacheKey = `part:${getPartUuidKey(partUuid)}`;
     const cached = cache.get(cacheKey);
     if (cached) return cached;
 
@@ -83,6 +86,10 @@ function resolveFootprintByPartUuid(
 
 function validEasyEdaUuid(value: string | null | undefined): value is string {
     return Boolean(value && EASYEDA_UUID_RE.test(value) && !/^0+$/.test(value));
+}
+
+function validPartUuid(value: PartUuid | null | undefined): value is PartUuid {
+    return Boolean(value && validEasyEdaUuid(getPartUuid(value)));
 }
 
 export function normalizeFootprintSpec(footprint: Footprint | null | undefined): FootprintSpec | null {

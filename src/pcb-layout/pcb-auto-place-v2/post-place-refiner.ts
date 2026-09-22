@@ -7,6 +7,7 @@ import type {
     Point,
 } from '#types/pcb/layout-model.ts';
 import { normalizeRotation } from '#utils/math.ts';
+import { samePartUuid } from '#types/lcsc.ts';
 import {
     boardHoleKeepoutRadius,
     boardBox,
@@ -504,7 +505,7 @@ function boxExceedsLimit(box: Box, limit: { maxWidth: number | null; maxHeight: 
 }
 
 function componentsArePoseCompatible(a: PcbComponent, b: PcbComponent) {
-    return Boolean(a.part_uuid && b.part_uuid && a.part_uuid === b.part_uuid)
+    return samePartUuid(a.part_uuid, b.part_uuid)
         || Boolean(a.footprint_uuid && b.footprint_uuid && a.footprint_uuid === b.footprint_uuid)
         || compatibleGeometryRotationOffset(a, b) !== null;
 }
