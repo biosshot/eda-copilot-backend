@@ -209,7 +209,8 @@ export const getSymbol = memoize(async function getSymbol(partUuid: PartUuid, pa
         return {
             dataStr: dataStr,
             pins,
-            rect
+            rect,
+            partIds: parsed.parts.map(part => part.id),
         };
 
     } catch (error) {
@@ -218,26 +219,12 @@ export const getSymbol = memoize(async function getSymbol(partUuid: PartUuid, pa
     }
 });
 
-// @need-test
-function checkPinNames(componentPins: CircuitWithoutBlocks['components'][0]['pins'], symbolPins: SymbolPin[]) {
+function checkPinNumbers(designator: string, componentPins: CircuitWithoutBlocks['components'][0]['pins'], symbolPins: SymbolPin[]) {
+    const availableNumbers = new Set(symbolPins.map(pin => String(pin.num)));
     for (const componentPin of componentPins) {
-        const symbolPin = symbolPins.find(sp => sp.num == componentPin.pin_number);
-        if (!symbolPin) {
-            const availableNums = symbolPins.map(p => p.num).join(', ');
+        if (!availableNumbers.has(String(componentPin.pin_number))) {
             throw new Error(
-                `Pin number "${componentPin.pin_number}" not found in symbol. ` +
-                `Available symbol pins: [${availableNums}]`
-            );
-        }
-
-        const compName = componentPin.name.trim().toLowerCase();
-        const symName = symbolPin.name.trim().toLowerCase();
-
-        if (!compName.startsWith(symName)) {
-            throw new Error(
-                `Pin name mismatch for pin ${JSON.stringify(componentPin)}. ` +
-                `Component has "${componentPin.name}", but this symbol expects "${symbolPin.name}". ` +
-                `Symbol pin ${JSON.stringify(symbolPin)}`
+                `${designator}: pin number "${componentPin.pin_number}" not found in selected symbol section`
             );
         }
     }
@@ -262,7 +249,7 @@ export const circuitToSymbols = async (sch: { components: CircuitWithoutBlocks['
             continue;
         }
 
-        // checkPinNames(component.pins, sym.pins);
+        checkPinNumbers(component.designator, component.pins, sym.pins);
 
         let [left, top, right, bottom] = sym.rect;
         const PIN_LEN = 10;

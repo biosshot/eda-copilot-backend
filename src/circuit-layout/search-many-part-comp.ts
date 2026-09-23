@@ -7,7 +7,7 @@ import { countDiffChars } from "#utils/math.ts";
 
 const logger = masterLogger.child({ TAG: 'searchManyPartComponentAndSplit' });
 
-export async function splitMultiPartComponent(circuit: Circuit) {
+export async function splitMultiPartComponent(circuit: Circuit, loadSymbol = getSymbol) {
     // Iterate over a copy because we'll mutate circuit.components
     const components = [...circuit.components];
 
@@ -16,7 +16,7 @@ export async function splitMultiPartComponent(circuit: Circuit) {
 
         let symbol;
         try {
-            symbol = await getSymbol(component.part_uuid);
+            symbol = await loadSymbol(component.part_uuid);
         } catch (err) {
             logger.error({ err, part_uuid: component.part_uuid }, 'getSymbol failed');
             continue;
@@ -25,8 +25,15 @@ export async function splitMultiPartComponent(circuit: Circuit) {
         if (!symbol || symbol.pins.length === 0) continue;
         // console.log(symbol.pins)
 
-        const parts = [...new Set<string>(symbol.pins.map(p => p.part))];
+        const parts = symbol.partIds;
         if (parts.length <= 1) continue;
+
+        const availableNumbers = new Set(symbol.pins.map(pin => String(pin.num)));
+        for (const pin of component.pins) {
+            if (!availableNumbers.has(String(pin.pin_number))) {
+                throw new Error(`${component.designator}: pin number "${pin.pin_number}" not found in library symbol`);
+            }
+        }
 
         const partToPins: Record<string, SymbolPin[] | undefined> = {};
         for (const p of symbol.pins) {
@@ -68,8 +75,7 @@ export async function splitMultiPartComponent(circuit: Circuit) {
         }
 
         const newComponents: CircuitComponent[] = [];
-        let idx = 1;
-        for (const part of parts) {
+        for (const [partIndex, part] of parts.entries()) {
             const partPins = partToPins[part];
             if (!partPins) continue;
             const mappedPin = mapOtherPinToFirstChanPin[part];
@@ -96,7 +102,7 @@ export async function splitMultiPartComponent(circuit: Circuit) {
             //     newPins.push(sharedInNew)
             // }
 
-            let ndesignator = `${component.designator}.${idx}`;
+            let ndesignator = `${component.designator}.${partIndex + 1}`;
 
             if (component.designator.indexOf('.') !== -1) ndesignator = component.designator;
 
@@ -106,7 +112,6 @@ export async function splitMultiPartComponent(circuit: Circuit) {
                 pins: newPins
             })
 
-            idx++;
         }
 
         const origIndex = circuit.components.findIndex(c => c.designator === component.designator);
