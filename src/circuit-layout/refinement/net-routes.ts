@@ -119,6 +119,65 @@ export function measureRouteShape(edges: readonly ElkExtendedEdge[]) {
     return { elbows: elbows.size, shortJogs: jogs.size };
 }
 
+function straightenRailStep(group: NetEdge[], foreign: Segment[], boxes: readonly Box[], pins: readonly Point[], maxDistance: number) {
+    const originals = straightRuns(group.flatMap(e => segments(e.points)));
+    if (originals.length > 250) return null;
+    const originalShape = measureRouteShape(group.map(e => e.edge));
+    const originalLength = originals.reduce((n, s) => n + length(s), 0);
+    const uncovered = (s: Segment) => {
+        const v = vertical(s), coordinate = (p: Point) => v ? p.y : p.x;
+        const stops = [s.a, s.b, ...originals.flatMap(old => [old.a, old.b]).filter(p => on(p, s))]
+            .sort((a, b) => coordinate(a) - coordinate(b));
+        return stops.slice(1).map((b, i) => ({ a: stops[i], b })).filter(piece => length(piece) > EPS
+            && !originals.some(old => on(piece.a, old) && on(piece.b, old)));
+    };
+    const candidates = [];
+    for (const rail of originals) for (const target of originals) {
+        const v = vertical(rail);
+        if (v !== vertical(target) || length(rail) < gap.pinEscape * 2 || length(target) < gap.pinEscape * 2) continue;
+        const delta = v ? target.a.x - rail.a.x : target.a.y - rail.a.y;
+        if (Math.abs(delta) < EPS || Math.abs(delta) > maxDistance) continue;
+        // Only remove an existing short step joining these two rails.
+        if (!originals.some(s => vertical(s) !== v && intersection(s, rail) && intersection(s, target))) continue;
+        const move = (p: Point) => on(p, rail) ? { x: p.x + (v ? delta : 0), y: p.y + (v ? 0 : delta) } : p;
+        if (group.some(e => [e.points[0], e.points.at(-1)!].some(p => on(p, rail)))) continue;
+        const replacements: ElkExtendedEdge[] = [];
+        let valid = true;
+        for (const item of group) {
+            const path = simplify(item.points.map(move));
+            if (path.length < 2) { valid = false; break; }
+            for (const [old, next] of [[item.points, path], [item.points.toReversed(), path.toReversed()]]) {
+                if (length({ a: old[0], b: old[1] }) >= gap.pinEscape
+                    && (length({ a: next[0], b: next[1] }) < gap.pinEscape
+                    || (old[1].x - old[0].x) * (next[1].x - next[0].x) + (old[1].y - old[0].y) * (next[1].y - next[0].y) <= 0)) valid = false;
+            }
+            if (path.some(p => !item.points.some(old => key(old) === key(p)) && foreign.some(s => on(p, s)))) valid = false;
+            for (const s of segments(path)) {
+                if (!equal(s.a.x, s.b.x) && !equal(s.a.y, s.b.y)) valid = false;
+                for (const piece of uncovered(s)) if (boxes.some(b => throughBox(piece, b))
+                    || foreign.some(f => tooClose(piece, f)) || pins.some(p => on(p, piece) && key(p) !== key(path[0]) && key(p) !== key(path.at(-1)!))) valid = false;
+            }
+            replacements.push({ ...item.edge, junctionPoints: undefined, sections: [{ ...item.edge.sections![0],
+                startPoint: path[0], endPoint: path.at(-1)!, bendPoints: path.slice(1, -1) }] });
+        }
+        if (!valid) continue;
+        const shape = measureRouteShape(replacements);
+        // Aligned opposite taps near a bus end may register as a short jog.
+        // Require fewer physical runs and no increase in overall bend cost.
+        const runs = straightRuns(replacements.flatMap(e => segments([e.sections![0].startPoint,
+            ...e.sections![0].bendPoints ?? [], e.sections![0].endPoint])));
+        if (runs.length >= originals.length || shape.shortJogs + shape.elbows > originalShape.shortJogs + originalShape.elbows || shape.elbows > originalShape.elbows
+            || (shape.shortJogs === originalShape.shortJogs && shape.elbows === originalShape.elbows)) continue;
+        const nets = new Map(replacements.flatMap(e => [...e.sources, ...e.targets].map(id => [id, 'net'] as const)));
+        if (connectedNetEdges(replacements, nets).length !== 1) continue;
+        const newLength = runs.reduce((n, s) => n + length(s), 0);
+        if (newLength > originalLength + maxDistance * 2) continue;
+        candidates.push({ replacements, savedLength: originalLength - newLength, shape });
+    }
+    candidates.sort((a, b) => a.shape.shortJogs - b.shape.shortJogs || a.shape.elbows - b.shape.elbows || b.savedLength - a.savedLength);
+    return candidates[0] ?? null;
+}
+
 function coalesceGroup(group: NetEdge[], foreign: Segment[], boxes: readonly Box[], pins: readonly Point[], options: CoalesceRouteOptions) {
     const maxDistance = options.maxBridgeDistance ?? 15;
     const aliases = options.terminalAliases;
@@ -332,7 +391,7 @@ function coalesceGroup(group: NetEdge[], foreign: Segment[], boxes: readonly Box
     };
     const results = candidates.map(build).filter(r => r !== null);
     results.sort((a, b) => a.shape.shortJogs - b.shape.shortJogs || a.shape.elbows - b.shape.elbows || b.savedLength - a.savedLength);
-    return results[0] ?? null;
+    return results[0] ?? (options.terminalAliases?.size ? null : straightenRailStep(group, foreign, boxes, pins, maxDistance));
 }
 
 /** Connected drawing islands, including routes with different endpoint IDs
