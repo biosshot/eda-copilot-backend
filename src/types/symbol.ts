@@ -13,6 +13,8 @@ export interface SymbolPin {
 }
 
 export interface SymbolData {
+    /** Reserved lead length already included by the library symbol parser. */
+    padding?: number;
     width: number;
     height: number;
     pins: SymbolPin[];

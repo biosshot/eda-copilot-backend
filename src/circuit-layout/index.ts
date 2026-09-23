@@ -25,6 +25,7 @@ import { setSingleLocalBlockDirection, type LayoutDirection } from './local-tran
 import { createSchematicScene } from './scene.ts';
 import { refineSchematicScene } from './refinement/index.ts';
 import { singletonPortSignals } from './singleton-ports.ts';
+import { reserveWireLabelSpace } from './wire-label-space.ts';
 import { hasConnection, isNoConnect } from './signals.ts';
 import { circuitLayoutPatterns, refinedCircuitLayoutPatterns } from './patterns/registry.ts';
 import { normalizeRotation, rotateSymbolGeometry } from './patterns/helpers.ts';
@@ -844,6 +845,7 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
     }
     if (options?.layoutRefinement) labelLocalizedPatternBoundaries(elkNodes, signalMap, patternMacros, [...labeledNets,
         ...patternMacros.filter(m => m.layoutChildBlock && localSupplyBanks.has(m.layoutChildBlock.name)).flatMap(m => m.ports.map(p => p.signalName))]);
+    reserveWireLabelSpace(elkNodes, nodes, signalMap, clientManagedLabels);
     orientInternalPatternSignals(elkNodes, signalMap, patternMacros);
     const series = options?.layoutRefinement ? seriesOrientations(sch.components, nodes, absorbedDesignators) : [];
     applyImprovements([elkNodes], { improvements: series });

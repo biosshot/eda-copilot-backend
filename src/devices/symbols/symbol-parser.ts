@@ -302,6 +302,7 @@ export const circuitToSymbols = async (sch: { components: CircuitWithoutBlocks['
         symbols.push({
             designator: component.designator,
             symbol: {
+                padding: PADDING,
                 center: {
                     x: Math.abs(left),
                     y: Math.abs(bottom)

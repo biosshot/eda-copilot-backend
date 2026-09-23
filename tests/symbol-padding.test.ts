@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { circuitToSymbols, getSymbol } from '../src/devices/symbols/symbol-parser.ts';
 import { rotateSymbolGeometry } from '../src/circuit-layout/patterns/helpers.ts';
 import { autoPlaceCircuitWithHierarchy } from '../src/circuit-layout/index.ts';
+import { edgeSegments, segmentThroughBox } from '../src/circuit-layout/refinement/geometry.ts';
 import { assertExpandedLayout, createPatternFixtureCircuit } from './patterns/helpers.ts';
 
 function fixture(counts: number[]) {
@@ -63,5 +64,25 @@ for (const count of [2, 32, 96]) for (const layoutRefinement of [false, true]) {
         assert.ok(result.positioned.every(p => [p.x, p.y, p.width, p.height].every(Number.isFinite)));
     });
 }
+
+test('client wire labels enlarge a section while preserving its routed connections', async () => {
+    const { circuit, loadSymbol } = fixture([32, 32, 2, 2]);
+    for (const c of circuit.components.slice(2)) for (const p of c.pins) p.signal_name = `UNRELATED_${p.pin_number}`;
+    for (const c of circuit.components.slice(0, 2)) for (const p of c.pins.slice(0, 6)) {
+        p.signal_name = `LONG_EXTERNAL_SIGNAL_${c.designator}_${p.pin_number}`;
+    }
+    const { nodes: symbols } = await circuitToSymbols(circuit, loadSymbol);
+    const originalWidth = symbols[0].symbol.width;
+    const result = await autoPlaceCircuitWithHierarchy(circuit, symbols, {}, { layoutMode: 'legacy', layoutPatterns: true, layoutRefinement: true });
+    assertExpandedLayout({ circuit, symbols }, result);
+    for (const node of result.positioned.filter(p => ['U1.1', 'U1.2'].includes(p.designator))) {
+        assert.ok(node.width > originalWidth, 'Label reserve must survive layout and refinement');
+        const unrelated = result.edges.filter(e => [...e.sources, ...e.targets].every(id => !id.startsWith(`${node.designator}_pin_`)));
+        assert.ok(unrelated.length > 0);
+        for (const edge of unrelated) for (const segment of edgeSegments(edge)) {
+            assert.ok(!segmentThroughBox(segment, node), 'Unrelated routing must avoid the reserved label strip');
+        }
+    }
+});
 
 
