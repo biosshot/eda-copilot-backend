@@ -4,12 +4,14 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { autoPlaceCircuitWithHierarchy } from '../../src/circuit-layout/index.ts';
 import { shortSymbolsMap } from '../../src/circuit-layout/short-symbol.ts';
+import { renderElkGraphToCanvas } from './render-elk.ts';
 import type { CircuitLayoutPattern, MacroInstance } from '../../src/circuit-layout/patterns/index.ts';
 import type { Circuit, CircuitAssembly, CircuitComponent } from '../../src/types/circuit.ts';
 import type { SymbolWithMeta } from '../../src/types/symbol.ts';
 
 const OPAMP_PART_UUID = 'bde388b03d05419ba1102540cf0c29dc';
 const RESISTOR_PART_UUID = '0cc9cee0c09e4a1c8b41e9d1feefa5b2';
+const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
 export const PATTERN_FIXTURE_BLOCK_NAME = '__v_root__';
 
 export type PatternFixture = {
@@ -349,6 +351,26 @@ function findAbsoluteLayoutNode(
     return null;
 }
 
+async function renderResult(result: LayoutResult, outputPath: string, id: string) {
+    await renderElkGraphToCanvas({
+        id,
+        width: result.width,
+        height: result.height,
+        children: result.positioned.map(node => ({
+            id: node.designator,
+            x: node.x,
+            y: node.y,
+            width: node.width,
+            height: node.height,
+        })),
+        edges: result.edges,
+    }, outputPath, 30);
+    const png = await readFile(outputPath);
+    assert.deepStrictEqual([...png.subarray(0, 8)], PNG_SIGNATURE);
+    assert.ok(png.byteLength > 1_000);
+    return png;
+}
+
 export async function writePatternArtifacts(
     folderName: string,
     fixture: PatternFixture,
@@ -369,7 +391,17 @@ export async function writePatternArtifacts(
         layoutPatterns: true,
         layoutPatternCatalog: options?.patternCatalog,
     });
-    // Server PNG rendering is outside the backend; retain assembly and geometry assertions below.
+    const withoutPng = await renderResult(
+        withoutPattern,
+        `${outputDirectory}/without-pattern.png`,
+        `${folderName}-without-pattern`,
+    );
+    const withPng = await renderResult(
+        withPattern,
+        `${outputDirectory}/with-pattern.png`,
+        `${folderName}-with-pattern`,
+    );
+    assert.notDeepStrictEqual(withPng, withoutPng);
 
     const blockRects = fixture.circuit.blocks.map(block => {
         const rect = findAbsoluteLayoutNode(withPattern.layoutedGraph, `block_${block.name}`);

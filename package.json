@@ -69,6 +69,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "canvas": "^3.2.3",
     "tsup": "^8.5.1",
     "tsx": "^4.23.13",
     "typescript": "^5.9.3"
@@ -77,5 +78,8 @@
   "publishConfig": {
     "access": "public",
     "provenance": true
+  },
+  "allowScripts": {
+    "canvas@3.2.3": true
   }
 }

@@ -9,6 +9,7 @@ import { voltageDividerPattern } from './catalog/voltage-divider.ts';
 import { ledResistorPattern } from './catalog/led-resistor.ts';
 import { tappedChainPattern } from './catalog/tapped-chain.ts';
 import { instantiateTappedChain } from './tapped-chain.ts';
+import { resistorPullBankPattern } from './catalog/resistor-pull-bank.ts';
 
 export const circuitLayoutPatterns: CircuitLayoutPattern[] = [
     opAmpVoltageFollowerPattern,
@@ -18,6 +19,7 @@ export const circuitLayoutPatterns: CircuitLayoutPattern[] = [
     powerPiFilterPattern,
     voltageDividerPattern,
     parallelTwoPinPattern,
+    resistorPullBankPattern,
 ];
 
 /** Keep the main catalog as a reproducible baseline while the refinement is opt-in. */

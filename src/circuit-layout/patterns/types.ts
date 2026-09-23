@@ -83,6 +83,8 @@ export interface MacroInstance {
     preferredBlockDirection?: 'LEFT' | 'RIGHT' | 'UP' | 'DOWN';
     /** Opt-in rigid turns of an expanded passive group during refinement. */
     refinementRotations?: readonly (90 | 180 | 270)[];
+    /** False leaves boundary connections to the ordinary wire/label policy. */
+    forceBoundaryPorts?: boolean;
     layoutChildBlock?: {
         name: string;
         description: string;

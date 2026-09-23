@@ -23,6 +23,7 @@ export function localGroups(nodes: Placed[], edges: ElkExtendedEdge[], component
         // Preserve its orientation and all internal geometry; never absorb an IC.
         for (const c of components) {
             if (used.has(c.designator) || !/^(?:J|CN)\d/i.test(c.designator) || c.pins.length > 4 || c.block_name !== macro.blockName) continue;
+            if (c.pins.filter(p => macro.ports.some(port => port.signalName === p.signal_name)).length > 1) continue;
             if (!c.pins.some(p => {
                 if (!p.signal_name || /^NC$/i.test(p.signal_name) || isGroundSignal(p.signal_name)) return false;
                 const endpoints = components.flatMap(other => other.pins.filter(q => q.signal_name && q.signal_name === p.signal_name).map(() => other.designator));

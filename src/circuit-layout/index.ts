@@ -776,15 +776,18 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
         applyPatternMacrosToHierarchy(topLevelBlocks, patternMacros);
     }
 
+    // An inline bank preserves its nets through collapse without requiring
+    // boundary flags at either end of those nets.
     const patternBoundarySignals = new Set(
-        patternMacros.flatMap(macro => macro.ports.map(port => port.signalName)),
+        patternMacros.filter(macro => macro.forceBoundaryPorts !== false).flatMap(macro => macro.ports.map(port => port.signalName)),
     );
+    const preservedPatternSignals = new Set(patternMacros.flatMap(macro => macro.ports.map(port => port.signalName)));
     const signalMap: Record<string, { nodeId: string; portId: string, blockName: string }[]> = {};
     const labeledNets = new Set(options?.layoutRefinement ? namedSupplyNets(sch.components, nodes) : []);
     const elkNodes = createBlockNode(
         topLevelBlocks,
         signalMap,
-        patternBoundarySignals,
+        preservedPatternSignals,
         options?.layoutRefinement,
         labeledNets,
         sharedSupplies,
@@ -1097,7 +1100,10 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
             layoutedGraph,
             renderGraph,
             refinement: refinement?.stats,
-            clientManagedLabels,
+            clientManagedLabels: clientManagedLabels.map(label => ({ ...label,
+                pinId: patternMacros.flatMap(macro => macro.ports)
+                    .find(port => port.elkPortId === label.pinId)?.primaryPinId ?? label.pinId,
+            })),
         };
     } catch (err) {
         logger.error(err, 'ELK layout failed');
