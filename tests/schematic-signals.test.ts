@@ -57,17 +57,17 @@ for (const mode of ['cross-block', 'external'] as const) for (const count of [4,
     });
 }
 
-test('required other-page signals get ports even in a dense block, without duplicating automatic ports', async () => {
+test('required other-page signal on a dense component remains for a named wire', async () => {
     const owner = component('U3', Array.from({ length: 5 }, (_, i) =>
         [i + 1, `IO${i}`, `DATA_${i}`] as [number, string, string]), 'FPGA');
     const circuit = createPatternFixtureCircuit('other-page', 'other-page', [owner]);
     circuit.blocks = [{ name: 'FPGA', description: '', next_block_names: [] }];
     const result = await autoPlaceCircuitWithHierarchy(circuit, [geometry(owner)], undefined, {
         layoutRefinement: true, layoutPatterns: false,
-        externalSignals: owner.pins.map(pin => pin.signal_name), requiredExternalSignals: ['DATA_0'],
+        externalSignals: ['DATA_0'], requiredExternalSignals: ['DATA_0'],
     });
-    const ports = result.addedSymbol.filter(c => c.block_name === 'block_FPGA');
-    assert.deepEqual(ports.map(c => c.pins[0].signal_name), ['DATA_0']);
+    assert.equal(result.addedSymbol.filter(c => c.pins[0].signal_name === 'DATA_0').length, 0);
+    assert.equal(result.edges.filter(edge => [...edge.sources, ...edge.targets].includes('U3_pin_1')).length, 0);
 });
 
 test('required other-page signal already connected between blocks keeps its automatic ports', async () => {
@@ -83,7 +83,7 @@ test('required other-page signal already connected between blocks keeps its auto
     assert.equal(ports.length, 2);
 });
 
-test('required signal gets a port in a dense block even when another block already has one', async () => {
+test('required cross-block signal in two dense components uses named wires', async () => {
     const dense = component('U3', Array.from({ length: 5 }, (_, i) =>
         [i + 1, `IO${i}`, `DATA_${i}`] as [number, string, string]), 'FPGA');
     const other = component('U2', dense.pins.map((pin, i) =>
@@ -94,8 +94,9 @@ test('required signal gets a port in a dense block even when another block alrea
         layoutRefinement: true, layoutPatterns: false,
         externalSignals: ['DATA_0'], requiredExternalSignals: ['DATA_0'],
     });
-    assert.deepEqual(result.addedSymbol.filter(c => c.pins[0].signal_name === 'DATA_0')
-        .map(c => c.block_name).sort(), ['block_FPGA', 'block_IO']);
+    assert.equal(result.addedSymbol.filter(c => c.pins[0].signal_name === 'DATA_0').length, 0);
+    assert.deepEqual(result.clientManagedLabels?.filter(label => label.signalName === 'DATA_0')
+        .map(label => label.pinId).sort(), ['U2_pin_1', 'U3_pin_1']);
 });
 
 test('similar signal names do not suppress each other’s forced ports', async () => {

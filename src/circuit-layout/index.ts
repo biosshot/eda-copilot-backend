@@ -24,7 +24,7 @@ import { BASELINE_LAYOUT_PROFILE, LOCAL_LAYOUT_PROFILES, WRAPPED_LAYOUT_PROFILE 
 import { setSingleLocalBlockDirection, type LayoutDirection } from './local-transforms.ts';
 import { createSchematicScene } from './scene.ts';
 import { refineSchematicScene } from './refinement/index.ts';
-import { singletonPortSignals } from './singleton-ports.ts';
+import { denseSinglePinSignals, singletonPortSignals } from './singleton-ports.ts';
 import { reserveWireLabelSpace } from './wire-label-space.ts';
 import { hasConnection, isNoConnect } from './signals.ts';
 import { circuitLayoutPatterns, refinedCircuitLayoutPatterns } from './patterns/registry.ts';
@@ -498,7 +498,6 @@ function searchExternalSignals(
     sideAwareSignals: ReadonlySet<string> = new Set(),
     clientManagedLabels: Array<{ pinId: string; signalName: string }> = [],
     portStyles: Map<string, PortStyle> = new Map(),
-    requiredExternalSignals: ReadonlySet<string> = new Set(),
 ) {
 
     if (elkNode.id.startsWith('block_')) {
@@ -510,8 +509,7 @@ function searchExternalSignals(
             .filter(([signalName, ends]) => ends.find(e => e.blockName !== elkNode.id)));
 
         for (const node of elkNode.children ?? []) {
-            const r = searchExternalSignals(node, signalMap, sideAwareSignals, clientManagedLabels,
-                portStyles, requiredExternalSignals);
+            const r = searchExternalSignals(node, signalMap, sideAwareSignals, clientManagedLabels, portStyles);
 
             for (const [name, endPoints] of Object.entries(r.external)) {
                 if (!childExternal[name]) childExternal[name] = endPoints
@@ -539,8 +537,7 @@ function searchExternalSignals(
             }));
             const groupedEndpoints = groupEndpointsByStyle([...localEndpoints, ...passthroughEndpoints], portStyles);
             // Style only affects ports that survive the density policy.
-            if (clientManagedSignals.has(externalSName) && !sideAwareSignals.has(externalSName)
-                && !requiredExternalSignals.has(externalSName)) {
+            if (clientManagedSignals.has(externalSName) && !sideAwareSignals.has(externalSName)) {
                 for (const point of externalEndPoints) {
                     if (point.blockName === elkNode.id) {
                         pathToDel.push([externalSName, point.portId]);
@@ -590,7 +587,7 @@ function addForcedExternalSignals(
     externalSignals: string[],
     sideAwareSignals: ReadonlySet<string> = new Set(),
     portStyles: Map<string, PortStyle> = new Map(),
-    requiredExternalSignals: ReadonlySet<string> = new Set(),
+    wirePreferredSignals: ReadonlySet<string> = new Set(),
 ) {
     // Collect all block nodes
     const blockNodes: BlockNode[] = [];
@@ -633,8 +630,8 @@ function addForcedExternalSignals(
             if (!sigBlockNames.includes(blockNode.id)) continue;
             const localEndpoints = endpoints.filter(endpoint => endpoint.blockName === blockNode.id);
             const groups = groupEndpointsByStyle(localEndpoints, portStyles);
-            if (clientManagedByBlock.get(blockNode.id)?.has(sig) && !sideAwareSignals.has(sig)
-                && !requiredExternalSignals.has(sig)) continue;
+            if (wirePreferredSignals.has(sig)
+                || (clientManagedByBlock.get(blockNode.id)?.has(sig) && !sideAwareSignals.has(sig))) continue;
             for (const [groupIndex, [style, group]] of groups.entries()) {
                 const nePort = shortSymbolsMap.NETPORT.create(
                     sig, blockNode.id,
@@ -836,7 +833,7 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
     const clientManagedLabels: Array<{ pinId: string; signalName: string }> = [];
     const requiredExternalSignals = new Set(options?.requiredExternalSignals ?? []);
     const { pathToDel } = searchExternalSignals(elkNodes, signalMap, patternBoundarySignals,
-        clientManagedLabels, portStyles, requiredExternalSignals);
+        clientManagedLabels, portStyles);
 
     for (const p of pathToDel) {
         signalMap[p[0]] = signalMap[p[0]].filter(s => s.portId !== p[1])
@@ -846,6 +843,8 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
     const danglingPatternBoundarySignals = [...patternBoundarySignals]
         .filter(signalName => signalMap[signalName]?.length === 1);
     const singletonSignals = options?.layoutRefinement ? singletonPortSignals(sch.components, signalMap) : [];
+    const wirePreferredSignals = new Set(options?.layoutRefinement
+        ? denseSinglePinSignals(sch.components, signalMap).filter(signal => requiredExternalSignals.has(signal)) : []);
     const forcedExternalSignals = [
         ...danglingPatternBoundarySignals,
         ...singletonSignals,
@@ -854,7 +853,7 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
     if (forcedExternalSignals.length) {
         addForcedExternalSignals(elkNodes, signalMap, forcedExternalSignals,
             new Set([...patternBoundarySignals, ...singletonSignals]), portStyles,
-            requiredExternalSignals);
+            wirePreferredSignals);
     }
     if (options?.layoutRefinement) labelLocalizedPatternBoundaries(elkNodes, signalMap, patternMacros, [...labeledNets,
         ...patternMacros.filter(m => m.layoutChildBlock && localSupplyBanks.has(m.layoutChildBlock.name)).flatMap(m => m.ports.map(p => p.signalName))]);

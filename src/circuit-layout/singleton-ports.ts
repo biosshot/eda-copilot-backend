@@ -4,7 +4,7 @@ import type { CircuitComponent } from '#types/circuit.ts';
  * five *unwired named pins per component*, not fewer than five physical pins.
  * Existing local supplies and cross-block ports already have routed endpoints.
  * Five or more missing attachments are left to the client's wire/net labels. */
-export function singletonPortSignals(components: readonly CircuitComponent[],
+function singlePinSignalsByOwner(components: readonly CircuitComponent[],
     signalMap: Readonly<Record<string, { nodeId: string; portId: string }[] | undefined>>) {
     const byOwner = new Map<string, string[]>();
     const originalPins = new Map<string, string>(components.flatMap(c => c.pins.map(p =>
@@ -16,5 +16,15 @@ export function singletonPortSignals(components: readonly CircuitComponent[],
         const signals = byOwner.get(endpoint.nodeId) ?? [];
         signals.push(signal); byOwner.set(endpoint.nodeId, signals);
     }
-    return [...byOwner.values()].filter(signals => signals.length < 5).flat();
+    return [...byOwner.values()];
+}
+
+export function singletonPortSignals(components: readonly CircuitComponent[],
+    signalMap: Readonly<Record<string, { nodeId: string; portId: string }[] | undefined>>) {
+    return singlePinSignalsByOwner(components, signalMap).filter(signals => signals.length < 5).flat();
+}
+
+export function denseSinglePinSignals(components: readonly CircuitComponent[],
+    signalMap: Readonly<Record<string, { nodeId: string; portId: string }[] | undefined>>) {
+    return singlePinSignalsByOwner(components, signalMap).filter(signals => signals.length >= 5).flat();
 }
