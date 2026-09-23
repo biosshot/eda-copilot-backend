@@ -230,7 +230,7 @@ function checkPinNumbers(designator: string, componentPins: CircuitWithoutBlocks
     }
 }
 
-export const circuitToSymbols = async (sch: { components: CircuitWithoutBlocks['components'] }) => {
+export const circuitToSymbols = async (sch: { components: CircuitWithoutBlocks['components'] }, loadSymbol = getSymbol) => {
     const symbols: SymbolWithMeta[] = [];
     const subParts: { [k: string]: string | undefined } = {};
 
@@ -242,7 +242,7 @@ export const circuitToSymbols = async (sch: { components: CircuitWithoutBlocks['
 
         const partId = getPartIdFromDesignator(component.designator);
 
-        const sym = await getSymbol(component.part_uuid, partId);
+        const sym = await loadSymbol(component.part_uuid, partId);
 
         if (!sym) {
             logger.error(component, "Fail get symbol partUuid");
@@ -252,8 +252,13 @@ export const circuitToSymbols = async (sch: { components: CircuitWithoutBlocks['
         checkPinNumbers(component.designator, component.pins, sym.pins);
 
         let [left, top, right, bottom] = sym.rect;
-        const PIN_LEN = 10;
-        const PADDING = 10;
+        // Reserve fan-out space per symbol section, capped for very large ICs.
+        const pinCount = sym.pins.length;
+        const extraPadding = pinCount > 24 ? Math.min(60, 20 + 10 * Math.floor((pinCount - 25) / 16)) : 0;
+        const PADDING = 10 + extraPadding;
+        // ELK terminals must stay on the reserved box boundary. Assembly snaps
+        // these virtual lead endpoints back to the actual library pins.
+        const PIN_LEN = PADDING;
 
         left -= PADDING;
         right += PADDING;
