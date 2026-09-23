@@ -17,6 +17,46 @@ function geometry(c: CircuitComponent): SymbolWithMeta {
 }
 const leaves = (n: ElkNode): ElkNode[] => n.children ? n.children.flatMap(leaves) : [n];
 
+for (const mode of ['cross-block', 'external'] as const) for (const count of [4, 5, 24]) {
+    test(`port styles respect the dense-pin threshold on a multipart unit: ${mode}, ${count} pins`, async () => {
+        const owner = component('U3.5', Array.from({ length: count }, (_, i) =>
+            [i + 1, `IO${i}`, `DATA_${i}`] as [number, string, string]), 'FPGA');
+        const styles = ['in', 'out', 'bi'] as const;
+        owner.pins.forEach((pin, i) => { pin.port_style = styles[i % styles.length]; });
+        const components = [owner];
+        if (mode === 'cross-block') components.push(component('U17', owner.pins.map(pin =>
+            [Number(pin.pin_number), pin.name, pin.signal_name]), 'Memory'));
+        const circuit = createPatternFixtureCircuit('styled-dense', 'styled dense connections', components);
+        circuit.blocks = components.map(c => ({ name: c.block_name, description: '', next_block_names: [] }));
+        const symbols = components.map(c => {
+            const symbol = geometry(c);
+            symbol.symbol.height = count * 20 + 40;
+            symbol.symbol.center.y = symbol.symbol.height / 2;
+            symbol.symbol.pins.forEach((pin, i) => { pin.x = 0; pin.y = 20 + i * 20; });
+            return symbol;
+        });
+        const result = await autoPlaceCircuitWithHierarchy(circuit, symbols, undefined, {
+            layoutRefinement: true, layoutPatterns: false,
+            externalSignals: mode === 'external' ? owner.pins.map(pin => pin.signal_name) : undefined,
+        });
+        const ports = result.addedSymbol.filter(c => c.block_name === 'block_FPGA');
+        assert.equal(ports.length, count < 5 ? count : 0);
+        for (const pin of owner.pins) {
+            const pinId = `${owner.designator}_pin_${pin.pin_number}`;
+            const edges = result.edges.filter(edge => [...edge.sources, ...edge.targets].includes(pinId));
+            if (count < 5) {
+                const port = ports.find(c => c.pins[0].signal_name === pin.signal_name);
+                assert.equal(port?.pins[0].port_style, pin.port_style);
+                assert(edges.some(edge => [...edge.sources, ...edge.targets].includes(`${port!.designator}_pin_1`)));
+            } else {
+                assert.equal(edges.length, 0, 'leave the named pin to the client wire label');
+                if (mode === 'cross-block') assert(result.clientManagedLabels?.some(label =>
+                    label.pinId === pinId && label.signalName === pin.signal_name));
+            }
+        }
+    });
+}
+
 test('explicit styles create separate ports for one net in one block', async () => {
     const cs = [component('U1', [[1, 'A', 'DATA'], [2, 'B', 'DATA']], 'A'),
         component('U2', [[1, 'A', 'DATA']], 'B')];

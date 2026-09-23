@@ -536,8 +536,8 @@ function searchExternalSignals(
                 blockName: ext.blockName, nodeId: '__virt__', portId: ext.portId,
             }));
             const groupedEndpoints = groupEndpointsByStyle([...localEndpoints, ...passthroughEndpoints], portStyles);
-            const hasExplicitStyle = groupedEndpoints.some(([style]) => style !== undefined);
-            if (clientManagedSignals.has(externalSName) && !sideAwareSignals.has(externalSName) && !hasExplicitStyle) {
+            // Style only affects ports that survive the density policy.
+            if (clientManagedSignals.has(externalSName) && !sideAwareSignals.has(externalSName)) {
                 for (const point of externalEndPoints) {
                     if (point.blockName === elkNode.id) {
                         pathToDel.push([externalSName, point.portId]);
@@ -627,8 +627,7 @@ function addForcedExternalSignals(
             if (!sigBlockNames.includes(blockNode.id)) continue;
             const localEndpoints = endpoints.filter(endpoint => endpoint.blockName === blockNode.id);
             const groups = groupEndpointsByStyle(localEndpoints, portStyles);
-            const hasExplicitStyle = groups.some(([style]) => style !== undefined);
-            if (clientManagedByBlock.get(blockNode.id)?.has(sig) && !sideAwareSignals.has(sig) && !hasExplicitStyle) continue;
+            if (clientManagedByBlock.get(blockNode.id)?.has(sig) && !sideAwareSignals.has(sig)) continue;
             for (const [groupIndex, [style, group]] of groups.entries()) {
                 const nePort = shortSymbolsMap.NETPORT.create(
                     sig, blockNode.id,
