@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { canonicalEasyEdaPartUuid, easyEdaDeviceSearch, easyEdaDeviceToComponentInLibrary, easyEdaSearch, getEasyEdaDevice } from './devices/easy-eda.ts';
+import { canonicalEasyEdaPartUuid, easyEdaDeviceSearch, easyEdaDeviceToComponentInLibrary, easyEdaSearch, getEasyEdaDevice, getEasyEdaSymbolInfo } from './devices/easy-eda.ts';
 import { getPartLibraryUuid, PartUuidStruct } from './types/lcsc.ts';
 
 export const componentLibraries = [
@@ -18,6 +18,16 @@ const inputSchema = z.object({
 }).refine(input => Boolean(input.MPN || input.part_uuid), 'Fill one: MPN or part_uuid');
 
 export type ComponentSearchInput = z.input<typeof inputSchema>;
+
+/** Raw library symbol for read-only previews. Includes every PART section. */
+export async function componentSymbol(partUuid: z.infer<ReturnType<typeof PartUuidStruct>>) {
+  const device = await getEasyEdaDevice(partUuid);
+  if (!device.symbol?.uuid) throw new Error('Component has no symbol.');
+  const canonicalPartUuid = canonicalEasyEdaPartUuid(device, partUuid);
+  const symbol = await getEasyEdaSymbolInfo(device.symbol.uuid, getPartLibraryUuid(canonicalPartUuid));
+  if (!symbol.dataStr) throw new Error('Component symbol is unavailable.');
+  return { dataStr: symbol.dataStr };
+}
 
 export async function componentSearch(input: ComponentSearchInput) {
   const data = inputSchema.parse(input);
