@@ -498,6 +498,7 @@ function searchExternalSignals(
     sideAwareSignals: ReadonlySet<string> = new Set(),
     clientManagedLabels: Array<{ pinId: string; signalName: string }> = [],
     portStyles: Map<string, PortStyle> = new Map(),
+    requiredExternalSignals: ReadonlySet<string> = new Set(),
 ) {
 
     if (elkNode.id.startsWith('block_')) {
@@ -509,7 +510,8 @@ function searchExternalSignals(
             .filter(([signalName, ends]) => ends.find(e => e.blockName !== elkNode.id)));
 
         for (const node of elkNode.children ?? []) {
-            const r = searchExternalSignals(node, signalMap, sideAwareSignals, clientManagedLabels, portStyles);
+            const r = searchExternalSignals(node, signalMap, sideAwareSignals, clientManagedLabels,
+                portStyles, requiredExternalSignals);
 
             for (const [name, endPoints] of Object.entries(r.external)) {
                 if (!childExternal[name]) childExternal[name] = endPoints
@@ -537,7 +539,8 @@ function searchExternalSignals(
             }));
             const groupedEndpoints = groupEndpointsByStyle([...localEndpoints, ...passthroughEndpoints], portStyles);
             // Style only affects ports that survive the density policy.
-            if (clientManagedSignals.has(externalSName) && !sideAwareSignals.has(externalSName)) {
+            if (clientManagedSignals.has(externalSName) && !sideAwareSignals.has(externalSName)
+                && !requiredExternalSignals.has(externalSName)) {
                 for (const point of externalEndPoints) {
                     if (point.blockName === elkNode.id) {
                         pathToDel.push([externalSName, point.portId]);
@@ -597,11 +600,13 @@ function addForcedExternalSignals(
     };
     collectBlocks(elkNode);
 
+    const hasExistingPort = (signal: string) => blockNodes.some(blockNode =>
+        blockNode.shortSymbols?.NETPORT?.some(port => port.component.pins[0]?.signal_name === signal));
+
     const forcedEntries = [...new Set(externalSignals)]
         .map(signalName => [signalName, signalMap[signalName]] as const)
         .filter((entry): entry is [string, SignalEndpoint[]] => Boolean(entry[1]?.length))
-        .filter(([signalName]) => !Object.keys(signalMap)
-            .some(key => key.startsWith('ext_') && key.endsWith(`_${signalName}`)));
+        .filter(([signalName]) => !hasExistingPort(signalName));
     const clientManagedByBlock = new Map(
         blockNodes.map(blockNode => [
             blockNode.id,
@@ -614,7 +619,7 @@ function addForcedExternalSignals(
         if (!endpoints || endpoints.length === 0) continue;
 
         // Check if already handled by searchExternalSignals (has ext_ entry for this signal)
-        const alreadyExternal = Object.keys(signalMap).some(k => k.startsWith('ext_') && k.endsWith(`_${sig}`));
+        const alreadyExternal = hasExistingPort(sig);
         if (alreadyExternal) continue;
 
         // Find which blocks contain this signal
@@ -829,7 +834,9 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
     // writeFile('.test-output/signalMap_f.json', JSON.stringify(signalMap, null, 2));
 
     const clientManagedLabels: Array<{ pinId: string; signalName: string }> = [];
-    const { pathToDel } = searchExternalSignals(elkNodes, signalMap, patternBoundarySignals, clientManagedLabels, portStyles);
+    const requiredExternalSignals = new Set(options?.requiredExternalSignals ?? []);
+    const { pathToDel } = searchExternalSignals(elkNodes, signalMap, patternBoundarySignals,
+        clientManagedLabels, portStyles, requiredExternalSignals);
 
     for (const p of pathToDel) {
         signalMap[p[0]] = signalMap[p[0]].filter(s => s.portId !== p[1])
@@ -847,7 +854,7 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
     if (forcedExternalSignals.length) {
         addForcedExternalSignals(elkNodes, signalMap, forcedExternalSignals,
             new Set([...patternBoundarySignals, ...singletonSignals]), portStyles,
-            new Set(options?.requiredExternalSignals ?? []));
+            requiredExternalSignals);
     }
     if (options?.layoutRefinement) labelLocalizedPatternBoundaries(elkNodes, signalMap, patternMacros, [...labeledNets,
         ...patternMacros.filter(m => m.layoutChildBlock && localSupplyBanks.has(m.layoutChildBlock.name)).flatMap(m => m.ports.map(p => p.signalName))]);

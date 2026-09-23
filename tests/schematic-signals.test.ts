@@ -83,6 +83,32 @@ test('required other-page signal already connected between blocks keeps its auto
     assert.equal(ports.length, 2);
 });
 
+test('required signal gets a port in a dense block even when another block already has one', async () => {
+    const dense = component('U3', Array.from({ length: 5 }, (_, i) =>
+        [i + 1, `IO${i}`, `DATA_${i}`] as [number, string, string]), 'FPGA');
+    const other = component('U2', dense.pins.map((pin, i) =>
+        [i + 1, pin.name, pin.signal_name] as [number, string, string]), 'IO');
+    const circuit = createPatternFixtureCircuit('cross-page-dense', 'cross-page-dense', [dense, other]);
+    circuit.blocks = ['FPGA', 'IO'].map(name => ({ name, description: '', next_block_names: [] }));
+    const result = await autoPlaceCircuitWithHierarchy(circuit, [geometry(dense), geometry(other)], undefined, {
+        layoutRefinement: true, layoutPatterns: false,
+        externalSignals: ['DATA_0'], requiredExternalSignals: ['DATA_0'],
+    });
+    assert.deepEqual(result.addedSymbol.filter(c => c.pins[0].signal_name === 'DATA_0')
+        .map(c => c.block_name).sort(), ['block_FPGA', 'block_IO']);
+});
+
+test('similar signal names do not suppress each other’s forced ports', async () => {
+    const owner = component('U1', [[1, 'IO', 'X_DATA'], [2, 'IO', 'DATA']], 'IO');
+    const circuit = createPatternFixtureCircuit('similar-names', 'similar-names', [owner]);
+    circuit.blocks = [{ name: 'IO', description: '', next_block_names: [] }];
+    const result = await autoPlaceCircuitWithHierarchy(circuit, [geometry(owner)], undefined, {
+        layoutRefinement: true, layoutPatterns: false,
+        externalSignals: ['X_DATA', 'DATA'], requiredExternalSignals: ['X_DATA', 'DATA'],
+    });
+    assert.deepEqual(result.addedSymbol.map(c => c.pins[0].signal_name).sort(), ['DATA', 'X_DATA']);
+});
+
 test('explicit styles create separate ports for one net in one block', async () => {
     const cs = [component('U1', [[1, 'A', 'DATA'], [2, 'B', 'DATA']], 'A'),
         component('U2', [[1, 'A', 'DATA']], 'B')];
