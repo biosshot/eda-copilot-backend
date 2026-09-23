@@ -144,6 +144,8 @@ test.describe('short-symbol', () => {
     test('shortSymbolsMap - create NETPORT symbol', () => {
         const symbol = shortSymbolsMap.NETPORT.create('NET', 'block1');
         assert.strictEqual(symbol.component.value, 'NET');
+        assert.strictEqual(symbol.component.part_uuid, 'b4dd4008fe1a4942b81a1cc59f3de199');
+        assert.strictEqual(shortSymbolsMap.NETPORT.partUuid, symbol.component.part_uuid);
     });
 
     test('short symbol width is limited by minimum and maximum values', () => {

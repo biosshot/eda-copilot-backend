@@ -116,7 +116,7 @@ const createNetPort = (signalName: string, blockName: string, stableId?: string)
 
     return baseCreate(id, signalName, blockName, {
         component: {
-            part_uuid: '7523d33c197549a39030c4ac7fddee68'
+            part_uuid: 'b4dd4008fe1a4942b81a1cc59f3de199'
         },
         node: {
             ports: [
@@ -151,6 +151,6 @@ export const shortSymbolsMap = {
         name: 'NETPORT',
         create: createNetPort,
         is: (signalName: string) => false,
-        partUuid: '7523d33c197549a39030c4ac7fddee68',
+        partUuid: 'b4dd4008fe1a4942b81a1cc59f3de199',
     }
 };

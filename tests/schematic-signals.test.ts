@@ -29,7 +29,7 @@ test('explicit styles create separate ports for one net in one block', async () 
     const styled = result.addedSymbol.filter(c => c.block_name === 'block_A'
         && c.pins[0].signal_name === 'DATA');
     assert.deepEqual(styled.map(c => c.pins[0].port_style).sort(), ['in', 'out']);
-    assert(styled.every(c => c.part_uuid === '7523d33c197549a39030c4ac7fddee68'));
+    assert(styled.every(c => c.part_uuid === 'b4dd4008fe1a4942b81a1cc59f3de199'));
 });
 
 test('power and ground symbols take priority over a port style hint', async () => {
