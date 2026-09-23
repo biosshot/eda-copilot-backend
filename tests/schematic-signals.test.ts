@@ -57,6 +57,32 @@ for (const mode of ['cross-block', 'external'] as const) for (const count of [4,
     });
 }
 
+test('required other-page signals get ports even in a dense block, without duplicating automatic ports', async () => {
+    const owner = component('U3', Array.from({ length: 5 }, (_, i) =>
+        [i + 1, `IO${i}`, `DATA_${i}`] as [number, string, string]), 'FPGA');
+    const circuit = createPatternFixtureCircuit('other-page', 'other-page', [owner]);
+    circuit.blocks = [{ name: 'FPGA', description: '', next_block_names: [] }];
+    const result = await autoPlaceCircuitWithHierarchy(circuit, [geometry(owner)], undefined, {
+        layoutRefinement: true, layoutPatterns: false,
+        externalSignals: owner.pins.map(pin => pin.signal_name), requiredExternalSignals: ['DATA_0'],
+    });
+    const ports = result.addedSymbol.filter(c => c.block_name === 'block_FPGA');
+    assert.deepEqual(ports.map(c => c.pins[0].signal_name), ['DATA_0']);
+});
+
+test('required other-page signal already connected between blocks keeps its automatic ports', async () => {
+    const components = [component('U1', [[1, 'IO', 'DATA']], 'A'),
+        component('U2', [[1, 'IO', 'DATA']], 'B')];
+    const circuit = createPatternFixtureCircuit('other-page-shared', 'other-page-shared', components);
+    circuit.blocks = ['A', 'B'].map(name => ({ name, description: '', next_block_names: [] }));
+    const result = await autoPlaceCircuitWithHierarchy(circuit, components.map(geometry), undefined, {
+        layoutRefinement: true, layoutPatterns: false,
+        externalSignals: ['DATA'], requiredExternalSignals: ['DATA'],
+    });
+    const ports = result.addedSymbol.filter(c => c.pins[0].signal_name === 'DATA');
+    assert.equal(ports.length, 2);
+});
+
 test('explicit styles create separate ports for one net in one block', async () => {
     const cs = [component('U1', [[1, 'A', 'DATA'], [2, 'B', 'DATA']], 'A'),
         component('U2', [[1, 'A', 'DATA']], 'B')];

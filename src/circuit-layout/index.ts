@@ -587,6 +587,7 @@ function addForcedExternalSignals(
     externalSignals: string[],
     sideAwareSignals: ReadonlySet<string> = new Set(),
     portStyles: Map<string, PortStyle> = new Map(),
+    requiredExternalSignals: ReadonlySet<string> = new Set(),
 ) {
     // Collect all block nodes
     const blockNodes: BlockNode[] = [];
@@ -627,7 +628,8 @@ function addForcedExternalSignals(
             if (!sigBlockNames.includes(blockNode.id)) continue;
             const localEndpoints = endpoints.filter(endpoint => endpoint.blockName === blockNode.id);
             const groups = groupEndpointsByStyle(localEndpoints, portStyles);
-            if (clientManagedByBlock.get(blockNode.id)?.has(sig) && !sideAwareSignals.has(sig)) continue;
+            if (clientManagedByBlock.get(blockNode.id)?.has(sig) && !sideAwareSignals.has(sig)
+                && !requiredExternalSignals.has(sig)) continue;
             for (const [groupIndex, [style, group]] of groups.entries()) {
                 const nePort = shortSymbolsMap.NETPORT.create(
                     sig, blockNode.id,
@@ -702,6 +704,7 @@ export function computeAbsolutePositions(
 
 type AutoPlaceHierarchyOptions = {
     externalSignals?: string[];
+    requiredExternalSignals?: string[];
     layoutMode?: 'legacy' | 'quality';
     layoutPatternCatalog?: CircuitLayoutPattern[];
     layoutPatterns?: boolean;
@@ -843,7 +846,8 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
     ];
     if (forcedExternalSignals.length) {
         addForcedExternalSignals(elkNodes, signalMap, forcedExternalSignals,
-            new Set([...patternBoundarySignals, ...singletonSignals]), portStyles);
+            new Set([...patternBoundarySignals, ...singletonSignals]), portStyles,
+            new Set(options?.requiredExternalSignals ?? []));
     }
     if (options?.layoutRefinement) labelLocalizedPatternBoundaries(elkNodes, signalMap, patternMacros, [...labeledNets,
         ...patternMacros.filter(m => m.layoutChildBlock && localSupplyBanks.has(m.layoutChildBlock.name)).flatMap(m => m.ports.map(p => p.signalName))]);
@@ -1114,6 +1118,7 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
 export async function makeAutoPlacement(circuit: Circuit, previewImg?: string, hooks?: Hooks, options?: {
     splitMultiPartComponent?: boolean;
     externalSignals?: string[];
+    requiredExternalSignals?: string[];
     layoutMode?: 'legacy' | 'quality';
     layoutPatterns?: boolean;
     layoutRefinement?: boolean;
@@ -1134,6 +1139,7 @@ export async function makeAutoPlacement(circuit: Circuit, previewImg?: string, h
 
     const result = await autoPlaceCircuitWithHierarchy(circuit, nodes, hooks, {
         externalSignals: options?.externalSignals,
+        requiredExternalSignals: options?.requiredExternalSignals,
         layoutMode: options?.layoutMode,
         layoutPatterns: options?.layoutPatterns,
         layoutRefinement: options?.layoutRefinement,

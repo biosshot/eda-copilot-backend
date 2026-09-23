@@ -12,7 +12,11 @@ import { getPartUuid, isMissingPartUuid } from './types/lcsc.ts';
 import { canonicalEasyEdaPartUuid, getEasyEdaDevice } from './devices/easy-eda.ts';
 
 const logger = masterLogger.child({ TAG: 'extract-circuit' });
-const inputSchema = z.object({ circuit: CircuitModStruct(), inputCircuit: ExplainCircuitStruct().optional() });
+const inputSchema = z.object({
+  circuit: CircuitModStruct(),
+  inputCircuit: ExplainCircuitStruct().optional(),
+  assemblyOptions: z.object({ otherPageSignals: z.array(z.string()).optional() }).optional(),
+});
 export type ExtractCircuitInput = z.input<typeof inputSchema>;
 type CircuitState = {
   circuit: CircuitMod;
@@ -257,6 +261,10 @@ export async function extractCircuit(input: ExtractCircuitInput): Promise<{ circ
                     .filter((signalName): signalName is string => Boolean(signalName) && inputSignals.has(signalName))
             ])
         ];
+        const addedSignals = new Set(state.components.flatMap(component => component.pins.map(pin => pin.signal_name)));
+        const otherPageSignals = (data.assemblyOptions?.otherPageSignals ?? [])
+            .filter(signal => addedSignals.has(signal) && hasConnection(signal)
+                && !shortSymbolsMap.GND.is(signal) && !shortSymbolsMap.VCC.is(signal));
 
         const blockNames = [...new Set(state.components.map(c => c.block_name))];
 
@@ -281,7 +289,8 @@ export async function extractCircuit(input: ExtractCircuitInput): Promise<{ circ
         const result: CircuitAssembly = await makeAutoPlacement(circuit, undefined, {}, {
             splitMultiPartComponent: true,
             layoutRefinement: true,
-            externalSignals
+            externalSignals: [...new Set([...externalSignals, ...otherPageSignals])],
+            requiredExternalSignals: otherPageSignals,
         });
 
         result.assembly_options = {
