@@ -4,6 +4,7 @@ import type { SymbolWithMeta } from '#types/symbol.ts';
 import type { MacroInstance } from '../patterns/types.ts';
 import { rotateSymbolGeometry } from '../patterns/helpers.ts';
 import { isGroundSignal } from '../ground.ts';
+import { getDesignatorLabel } from '#utils/component.ts';
 import { type Placed, type Point, pinPositions, normal, shift, boundsOf, path, edgeSegments, EPS } from './geometry.ts';
 import { SCHEMATIC_CLEARANCE as gap, componentClearance } from './policy.ts';
 
@@ -38,7 +39,8 @@ export function localGroups(nodes: Placed[], edges: ElkExtendedEdge[], component
         ids.forEach(id => used.add(id)); groups.push({ ids, flags: new Map(), rotations: rotatable ? macro.refinementRotations ?? [90, 180, 270] : undefined });
     }
     for (const c of [...components].sort((a, b) => a.designator.localeCompare(b.designator))) {
-        if (used.has(c.designator) || c.pins.length !== 2 || /^U/i.test(c.designator)) continue;
+        if (used.has(c.designator) || /^U/i.test(c.designator)
+            || (c.pins.length !== 2 && !(getDesignatorLabel(c.designator) === 'Разъемы' && c.pins.length >= 3 && c.pins.length <= 4))) continue;
         const attached = new Map<string, string>();
         for (const flag of flags) {
             if (used.has(flag)) continue;
@@ -117,7 +119,8 @@ export function orientations(group: LocalGroup, current: Placed[], symbols: read
     }
     const symbol = symbols.find(s => s.designator === group.flexible)?.symbol;
     const original = nodes.find(n => n.id === group.flexible);
-    if (!symbol || !original || symbol.pins.length !== 2) return result;
+    if (!symbol || !original || (symbol.pins.length !== 2
+        && !(getDesignatorLabel(original.id) === 'Разъемы' && symbol.pins.length >= 3 && symbol.pins.length <= 4))) return result;
     for (const rotation of [0, 90, 180, 270]) {
         const g = rotateSymbolGeometry(symbol, rotation);
         const n: Placed = { ...original, x: original.x + original.width / 2 - g.width / 2,

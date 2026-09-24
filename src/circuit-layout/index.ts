@@ -30,6 +30,7 @@ import { hasConnection, isNoConnect } from './signals.ts';
 import { circuitLayoutPatterns, refinedCircuitLayoutPatterns } from './patterns/registry.ts';
 import { normalizeRotation, rotateSymbolGeometry } from './patterns/helpers.ts';
 import { resolveSceneBlocks } from './refinement/scope.ts';
+import { inferConnectorRolesFromLayout } from './refinement/connector-policy.ts';
 import { labelLocalizedPatternBoundaries } from './patterns/boundary-labels.ts';
 import { seriesOrientations, terminalTopologySignature, namedSupplyNets, sharedSupplyNets, localCapacitorBankBlocks } from './graph-order.ts';
 import {
@@ -877,11 +878,14 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
         const improvementsHistory: LayoutImprovements[] = [];
         const baselineCandidates: LayoutCandidate[] = [];
         const workingNodes = structuredClone(elkNodes);
+        let firstPassConnectorRoles = new Map<string, 'input' | 'output'>();
 
         for (let index = 0; index < 8; index++) {
             logger.debug({ iteration: index }, 'Auto-placement iteration');
             const inputNodes = structuredClone(workingNodes);
             const layouted = await layout([workingNodes], signalMap, hooks, BASELINE_LAYOUT_PROFILE, options?.layoutRefinement);
+            if (index === 0 && options?.layoutRefinement)
+                firstPassConnectorRoles = inferConnectorRolesFromLayout(layouted.layoutedGraph, sch.components);
             const improvements = searchLayoutImprovements(
                 sch,
                 layouted.layoutedGraph,
@@ -1083,7 +1087,7 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
         let renderGraph = createSchematicScene(expanded.positioned, expanded.edges, nodes, finalAdded,
             patternMacros, layoutedGraph.width, layoutedGraph.height);
         const refinement = options?.layoutRefinement
-            ? refineSchematicScene(renderGraph, sch.components, finalAdded, nodes, patternMacros) : undefined;
+            ? refineSchematicScene(renderGraph, sch.components, finalAdded, nodes, patternMacros, firstPassConnectorRoles) : undefined;
         if (refinement) {
             renderGraph = refinement.scene;
             const geometry = new Map(renderGraph.children!.map(n => [n.id, n]));

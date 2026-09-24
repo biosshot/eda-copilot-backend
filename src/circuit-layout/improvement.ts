@@ -183,6 +183,10 @@ function checkRotateImprovents(node: BlockNode, component: CircuitComponent, sec
 
     const componentLabel = getDesignatorLabel(component.designator);
 
+    // Facing direction is chosen from the placed scene. Turning a short
+    // connector merely to point GND down can put an input below its circuit.
+    if (componentLabel === 'Разъемы' && component.pins.length === 2) return null;
+
     if (block.name.startsWith('parl') || component.pins.length <= 2 || (componentLabel === 'Транзистор' && component.pins.length === 3)) {
         const r = rotateToGnd(component);
         if (r) return [r];

@@ -21,6 +21,8 @@ import { packSchematicRectangles, SCHEMATIC_SHEET, PAGE_SOFT_GRID } from '#utils
 import { effectiveLayoutArea } from '../quality.ts';
 import { removeNetCycles } from './net-cycles.ts';
 import { softlyAlignMajorComponents } from './soft-align.ts';
+import { type ConnectorRole, CONNECTOR_OVERRIDE_RATIO, connectorLeadLength, connectorOrientationSeverity,
+    connectorOverrideWorthwhile, inferConnectorRoles } from './connector-policy.ts';
 
 export function sceneNets(components: readonly CircuitComponent[]) {
     return new Map<string, string>(components.flatMap(c => c.pins.map(p => [`${c.designator}_pin_${p.pin_number}`,
@@ -56,13 +58,14 @@ function cost(nodes: Placed[], edges: ElkExtendedEdge[], nets: ReadonlyMap<strin
 /** Bounded local placement/routing. Complete electrical and export checks live
  * in the bank runner, never in this production candidate loop. */
 export function refineSchematicScene(input: ElkNode, components: readonly CircuitComponent[], added: readonly CircuitComponent[],
-    symbols: readonly SymbolWithMeta[], macros: readonly MacroInstance[] = []): ReturnType<typeof refineLocalScene> {
+    symbols: readonly SymbolWithMeta[], macros: readonly MacroInstance[] = [],
+    connectorRoles: ReadonlyMap<string, ConnectorRole> = new Map()): ReturnType<typeof refineLocalScene> {
     const scopes = resolveSceneBlocks(components, added, input.edges ?? []);
     const names = [...new Set((input.children ?? []).map(n => scopes.get(n.id)))];
     const owners = new Map((input.children ?? []).flatMap(n => (n.ports ?? []).map(p => [p.id, n.id])));
     if (names.length < 2 || names.includes(undefined) || (input.edges ?? []).some(e =>
         new Set([...e.sources, ...e.targets].map(p => scopes.get(owners.get(p)!))).size !== 1)) {
-        return refineLocalScene(input, components, added, symbols, macros);
+        return refineLocalScene(input, components, added, symbols, macros, connectorRoles);
     }
     const started = performance.now();
     const results = names.sort().map(name => {
@@ -74,7 +77,7 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
         const local = { ...input, children: children.map(n => ({ ...n, ...shift(n, d) })),
             edges: edges.map(e => withPath(e, path(e).map(p => shift(p, d)))) };
         return refineLocalScene(local, components.filter(c => ids.has(c.designator)), added.filter(c => ids.has(c.designator)),
-            symbols.filter(s => ids.has(s.designator)), macros.filter(m => m.absorbedDesignators.some(id => ids.has(id))));
+            symbols.filter(s => ids.has(s.designator)), macros.filter(m => m.absorbedDesignators.some(id => ids.has(id))), connectorRoles);
     });
     const first = results[0], stats = { ...first.stats };
     for (const key of ['groupsMoved', 'componentsRotated', 'candidates', 'netsCoalesced', 'flagsRemoved', 'flagsCentered',
@@ -105,11 +108,13 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
 }
 
 function refineLocalScene(input: ElkNode, components: readonly CircuitComponent[], added: readonly CircuitComponent[],
-    symbols: readonly SymbolWithMeta[], macros: readonly MacroInstance[] = []) {
+    symbols: readonly SymbolWithMeta[], macros: readonly MacroInstance[] = [],
+    firstPassConnectorRoles: ReadonlyMap<string, ConnectorRole> = new Map()) {
     const started = performance.now(), scene = structuredClone(input);
     let nodes = (scene.children ?? []) as Placed[], edges = scene.edges ?? [];
     const nets = sceneNets([...components, ...added]), blocks = resolveSceneBlocks(components, added, edges);
     const originalIds = new Set(components.map(c => c.designator));
+    const connectorRoles = new Map([...inferConnectorRoles(nodes, edges, components), ...firstPassConnectorRoles]);
     const patternByMember = new Map(macros.flatMap(m => m.absorbedDesignators.map(id => [id, m.id] as const)));
     const rotations = new Map<string, { rotate: number; center: Point }>();
     const stats = { groupsMoved: 0, componentsRotated: 0, candidates: 0, netsCoalesced: 0, flagsRemoved: 0, flagsCentered: 0, flagsLowered: 0, flagsAligned: 0, chipsAligned: 0, longLinksLabeled: 0,
@@ -156,12 +161,26 @@ function refineLocalScene(input: ElkNode, components: readonly CircuitComponent[
                 const id = n.ports![0].id;
                 if (incident.filter(e => [...e.sources, ...e.targets].includes(id)).length === 1) privatePins.add(id);
             }
-            const initialCost = cost(nodes, [...incident, ...rails], nets, originalIds) + crowding(moving)
-                + flagReadabilityCost(nodes, [...incident, ...rails], flagKinds);
-            const initialLength = physicalLength([...incident, ...rails], nets);
-            let best: { nodes: Placed[]; edges: ElkExtendedEdge[]; value: number } | undefined;
-            let attempted = 0, screened = 0;
             const poses = orientations(group, nodes, symbols).map(pose => ({ pose, shifts: translations(pose, boundary, fixed, rails, nets, env.edges) }));
+            const connector = components.find(c => ids.has(c.designator) && connectorRoles.has(c.designator));
+            const role = connector && connectorRoles.get(connector.designator);
+            const preferredSeverity = connector && role ? Math.min(...poses.map(({ pose }) =>
+                connectorOrientationSeverity(pose.nodes.find(n => n.id === connector.designator)!, connector, role))) : 0;
+            const preference = (items: Placed[], routes: ElkExtendedEdge[]) => {
+                const node = connector && items.find(n => n.id === connector.designator);
+                if (!node || !role) return { preferred: true, length: 0, penalty: 0 };
+                const length = connectorLeadLength(node, routes);
+                const preferred = connectorOrientationSeverity(node, connector, role) <= preferredSeverity + EPS;
+                return { preferred, length, penalty: preferred ? 0 : length * (1 / CONNECTOR_OVERRIDE_RATIO - 1) };
+            };
+            const initialPreference = preference(moving, [...incident, ...rails]);
+            const initialCost = cost(nodes, [...incident, ...rails], nets, originalIds) + crowding(moving)
+                + flagReadabilityCost(nodes, [...incident, ...rails], flagKinds) + initialPreference.penalty;
+            const initialLength = physicalLength([...incident, ...rails], nets);
+            let best: { nodes: Placed[]; edges: ElkExtendedEdge[]; value: number; preferred: boolean; leadLength: number } | undefined;
+            let preferredBest: typeof best = initialPreference.preferred
+                ? { nodes: moving, edges: incident, value: initialCost, preferred: true, leadLength: initialPreference.length } : undefined;
+            let attempted = 0, screened = 0;
             // Round-robin orientations: a busy first pose must not exhaust the
             // candidate budget before the useful 90-degree pose gets a turn.
             candidateSearch: for (let index = 0; index < Math.max(...poses.map(p => p.shifts.length)); index++) {
@@ -225,14 +244,19 @@ function refineLocalScene(input: ElkNode, components: readonly CircuitComponent[
                     // their old pair names; the count must still not grow.
                     if ([...crossings.values()].reduce((n, count) => n + count, 0)
                         > [...priorCrossings.values()].reduce((n, count) => n + count, 0)) continue;
+                    const readable = preference(candidate, [...routed, ...rails]);
                     const value = cost([...fixed, ...candidate], [...routed, ...rails], nets, originalIds)
-                        + flagReadabilityCost([...fixed, ...candidate], [...routed, ...rails], flagKinds);
+                        + flagReadabilityCost([...fixed, ...candidate], [...routed, ...rails], flagKinds) + readable.penalty;
+                    if ([...affectedNets].some(net => measureRouteShape([...routed, ...rails].filter(e => nets.get(e.sources[0]) === net)).shortJogs > oldJogs.get(net)!)) continue;
                     if (value < (best?.value ?? initialCost) - 1) {
-                        if ([...affectedNets].some(net => measureRouteShape([...routed, ...rails].filter(e => nets.get(e.sources[0]) === net)).shortJogs > oldJogs.get(net)!)) continue;
-                        best = { nodes: candidate, edges: routed, value };
+                        best = { nodes: candidate, edges: routed, value, preferred: readable.preferred, leadLength: readable.length };
                     }
+                    if (readable.preferred && value < (preferredBest?.value ?? initialCost) - 1)
+                        preferredBest = { nodes: candidate, edges: routed, value, preferred: true, leadLength: readable.length };
                 }
             }
+            if (best && !best.preferred && preferredBest && !connectorOverrideWorthwhile(best.leadLength, preferredBest.leadLength))
+                best = preferredBest.value >= initialCost - 1 ? undefined : preferredBest;
             if (!best) continue;
             const replacement = new Map(best.nodes.map(n => [n.id, n])), routes = new Map(best.edges.map(e => [e.id, e]));
             nodes = nodes.map(n => replacement.get(n.id) ?? n); edges = edges.map(e => routes.get(e.id) ?? e);
