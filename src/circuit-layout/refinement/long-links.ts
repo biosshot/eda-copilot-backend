@@ -4,10 +4,10 @@ import { shortSymbolsMap, stableShortSymbolId } from '../short-symbol.ts';
 import { type Placed, pinPositions, path, edgeSegments, routeLength, expand, overlaps, segmentThroughBox, EPS } from './geometry.ts';
 import { straightRuns, segmentLength, connectedNetEdges } from './net-routes.ts';
 import { RouteEnvironment, reconnect, localCrossings } from './router.ts';
-import { SCHEMATIC_CLEARANCE as gap, LOCAL_SUPPLY_POLICY } from './policy.ts';
+import { SCHEMATIC_CLEARANCE as gap } from './policy.ts';
 import { translations } from './groups.ts';
 
-export const LONG_LINK_POLICY = Object.freeze({ fraction: 0.2, minimumLength: 480, medianFactor: 3, maximumLinks: 4 });
+export const LONG_LINK_POLICY = Object.freeze({ fraction: 0.2, minimumLength: 480, medianFactor: 3, maximumLinks: 8 });
 
 /** Replace outlier links by explicit labels, retaining every other complete
  * terminal-to-terminal route. Shared portions therefore keep all their taps.
@@ -26,19 +26,25 @@ export function labelLongLinks(nodes: Placed[], edges: ElkExtendedEdge[], nets: 
     for (const edge of initial) {
         if (links >= maximumLinks) break;
         const p = path(edge), length = routeLength(p), net = nets.get(edge.sources[0]);
+        if (p.length < 2) continue;
+        const distance = segmentLength({ a: p[0], b: p.at(-1)! });
+        const detour = length / Math.max(gap.branch, distance);
         if (!net || net.startsWith('unconnected:') || length < LONG_LINK_POLICY.minimumLength
-            || (length < total * LONG_LINK_POLICY.fraction && length < typical * LONG_LINK_POLICY.medianFactor)) continue;
+            || (length < total * LONG_LINK_POLICY.fraction && length < typical * LONG_LINK_POLICY.medianFactor && detour < 2.5)) continue;
         const owners = [edge.sources[0], edge.targets[0]].map(id => nodes.find(n => n.ports?.some(p => p.id === id)));
-        if (owners.some(n => !n || !originalIds.has(n.id)) || blocks.get(owners[0]!.id) !== blocks.get(owners[1]!.id)) continue;
+        if (owners.some(n => !n || (!originalIds.has(n.id) && n.ports?.length !== 1))
+            || owners.every(n => !originalIds.has(n!.id)) || blocks.get(owners[0]!.id) !== blocks.get(owners[1]!.id)) continue;
         // Internal pattern rails remain wired, however wide the bank becomes.
         // Only a connection across a pattern boundary may become a net port.
         const pattern = patternByMember.get(owners[0]!.id);
         if (pattern && pattern === patternByMember.get(owners[1]!.id)) continue;
         const members = nodes.filter(n => originalIds.has(n.id) && blocks.get(n.id) === blocks.get(owners[0]!.id));
-        if (members.length < LOCAL_SUPPLY_POLICY.minimumComponents
-            && members.every(n => (n.ports?.length ?? 0) < LOCAL_SUPPLY_POLICY.minimumPins)) continue;
-        if (segmentLength({ a: p[0], b: p.at(-1)! }) < LONG_LINK_POLICY.minimumLength / 2) continue;
+        if (owners.some(n => n!.ports?.length === 2) && members.filter(n => (n.ports?.length ?? 0) > 2).length < 2) continue;
+        if (distance < LONG_LINK_POLICY.minimumLength / 2 && detour < 2.5) continue;
         const retained = edges.filter(e => e !== edge), sameNet = retained.filter(e => nets.get(e.sources[0]) === net);
+        // A remote shared supply flag may be split into local copies. A lone
+        // flag is instead handled by placement; do not leave flag-to-flag wires.
+        if (owners.some(n => !originalIds.has(n!.id) && !sameNet.some(e => [...e.sources, ...e.targets].includes(n!.ports![0].id)))) continue;
         // A lone IC's feedback/series network needs better placement, not labels.
         // Follow both sides of a series part: a USB resistor between a connector
         // and an MCU is an inter-group bridge, despite having two net names.
@@ -108,6 +114,10 @@ export function labelLongLinks(nodes: Placed[], edges: ElkExtendedEdge[], nets: 
             pendingNodes.push(best.node); pendingComponents.push(created.component); pendingEdges.push(best.edge); labeledEnds++;
         }
         if (labeledEnds !== 2) continue;
+        const ink = (es: ElkExtendedEdge[]) => straightRuns(es.flatMap(edgeSegments)).reduce((sum, s) => sum + segmentLength(s), 0);
+        // Compare the physical drawing, not just one duplicated logical edge.
+        // Labels must actually remove a meaningful amount of routed ink.
+        if (ink([...sameNet, ...pendingEdges]) > ink([...sameNet, edge]) - gap.branch) continue;
         const env = new RouteEnvironment(nodes, retained, trialNets), prior = localCrossings([edge, ...sameNet], env);
         if ([...localCrossings([...pendingEdges, ...sameNet], env)].some(([pair, count]) => count > (prior.get(pair) ?? 0))) continue;
         for (const c of pendingComponents) { nets.set(`${c.designator}_pin_1`, net); blocks.set(c.designator, c.block_name); }

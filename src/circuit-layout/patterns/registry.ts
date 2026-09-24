@@ -10,6 +10,7 @@ import { ledResistorPattern } from './catalog/led-resistor.ts';
 import { tappedChainPattern } from './catalog/tapped-chain.ts';
 import { instantiateTappedChain } from './tapped-chain.ts';
 import { resistorPullBankPattern } from './catalog/resistor-pull-bank.ts';
+import { orientPassiveMacro } from './orientation.ts';
 
 export const circuitLayoutPatterns: CircuitLayoutPattern[] = [
     opAmpVoltageFollowerPattern,
@@ -35,6 +36,6 @@ export const refinedCircuitLayoutPatterns: CircuitLayoutPattern[] = paddedPatter
         if (macro && ['power-pi-filter', 'parallel-two-pin', 'voltage-divider', 'led-resistor', 'tapped-chain'].includes(pattern.id)) {
             macro.refinementRotations = [180];
         }
-        return macro;
+        return macro ? orientPassiveMacro(macro) : null;
     },
 }));

@@ -16,6 +16,10 @@ import { labelLongLinks, LONG_LINK_POLICY } from './long-links.ts';
 import { compactEmptyBands } from './compact.ts';
 import { packDrawingIslands } from './pack-islands.ts';
 import { hasConnection } from '../signals.ts';
+import { placeNearbyFlags } from './nearby-flags.ts';
+import { packSchematicRectangles, SCHEMATIC_SHEET } from '#utils/schematic-packing.ts';
+import { effectiveLayoutArea } from '../quality.ts';
+import { removeNetCycles } from './net-cycles.ts';
 
 export function sceneNets(components: readonly CircuitComponent[]) {
     return new Map<string, string>(components.flatMap(c => c.pins.map(p => [`${c.designator}_pin_${p.pin_number}`,
@@ -28,7 +32,8 @@ function physicalLength(edges: ElkExtendedEdge[], nets: ReadonlyMap<string, stri
     return [...byNet.values()].reduce((sum, list) => sum + straightRuns(list.flatMap(edgeSegments)).reduce((n, s) => n + segmentLength(s), 0), 0);
 }
 function cost(nodes: Placed[], edges: ElkExtendedEdge[], nets: ReadonlyMap<string, string>, originals: ReadonlySet<string>) {
-    let result = physicalLength(edges, nets);
+    const bounds = boundsOf(nodes);
+    let result = physicalLength(edges, nets) + Math.sqrt(effectiveLayoutArea(bounds.width, bounds.height));
     for (const e of edges) {
         const p = path(e);
         result += Math.max(0, p.length - 2) * gap.pinEscape;
@@ -50,6 +55,54 @@ function cost(nodes: Placed[], edges: ElkExtendedEdge[], nets: ReadonlyMap<strin
 /** Bounded local placement/routing. Complete electrical and export checks live
  * in the bank runner, never in this production candidate loop. */
 export function refineSchematicScene(input: ElkNode, components: readonly CircuitComponent[], added: readonly CircuitComponent[],
+    symbols: readonly SymbolWithMeta[], macros: readonly MacroInstance[] = []): ReturnType<typeof refineLocalScene> {
+    const scopes = resolveSceneBlocks(components, added, input.edges ?? []);
+    const names = [...new Set((input.children ?? []).map(n => scopes.get(n.id)))];
+    const owners = new Map((input.children ?? []).flatMap(n => (n.ports ?? []).map(p => [p.id, n.id])));
+    if (names.length < 2 || names.includes(undefined) || (input.edges ?? []).some(e =>
+        new Set([...e.sources, ...e.targets].map(p => scopes.get(owners.get(p)!))).size !== 1)) {
+        return refineLocalScene(input, components, added, symbols, macros);
+    }
+    const started = performance.now();
+    const results = names.sort().map(name => {
+        const children = (input.children ?? []).filter(n => scopes.get(n.id) === name) as Placed[];
+        const ids = new Set(children.map(n => n.id));
+        const edges = (input.edges ?? []).filter(e => ids.has(owners.get(e.sources[0])!));
+        const points = [...children, ...edges.flatMap(path)];
+        const d = { x: gap.component - Math.min(...points.map(p => p.x)), y: gap.component - Math.min(...points.map(p => p.y)) };
+        const local = { ...input, children: children.map(n => ({ ...n, ...shift(n, d) })),
+            edges: edges.map(e => withPath(e, path(e).map(p => shift(p, d)))) };
+        return refineLocalScene(local, components.filter(c => ids.has(c.designator)), added.filter(c => ids.has(c.designator)),
+            symbols.filter(s => ids.has(s.designator)), macros.filter(m => m.absorbedDesignators.some(id => ids.has(id))));
+    });
+    const first = results[0], stats = { ...first.stats };
+    for (const key of ['groupsMoved', 'componentsRotated', 'candidates', 'netsCoalesced', 'flagsRemoved', 'flagsCentered',
+        'flagsLowered', 'flagsAligned', 'longLinksLabeled', 'relayouts', 'islandsPacked', 'emptySpaceRemoved'] as const) {
+        stats[key] = results.reduce((sum, r) => sum + r.stats[key], 0);
+    }
+    const removedSymbolIds = new Set(results.flatMap(r => [...r.removedSymbolIds]));
+    const addedSymbols = results.flatMap(r => r.addedSymbols);
+    const boxes = results.map((r, i) => ({ id: String(i), ...boundsOf([...(r.scene.children ?? []) as Placed[],
+        ...(r.scene.edges ?? []).flatMap(path).map(p => ({ ...p, width: 0, height: 0 }))]) }));
+    const page = packSchematicRectangles(boxes, SCHEMATIC_SHEET.blockPadding * 2 + SCHEMATIC_SHEET.extraBlockGap);
+    const packed = { nodes: [] as Placed[], edges: [] as ElkExtendedEdge[] };
+    results.forEach((r, i) => {
+        const at = page.positions.get(String(i))!, box = boxes[i];
+        const d = { x: at.x - box.x + gap.component, y: at.y - box.y + gap.component };
+        packed.nodes.push(...(r.scene.children ?? []).map(n => ({ ...n, ...shift(n as Placed, d) }) as Placed));
+        packed.edges.push(...(r.scene.edges ?? []).map(e => withPath(e, path(e).map(p => shift(p, d)))));
+    });
+    const bounds = boundsOf([...packed.nodes, ...packed.edges.flatMap(path).map(p => ({ ...p, width: 0, height: 0 }))]);
+    stats.elapsedMs = performance.now() - started;
+    stats.sceneTranslation = { x: 0, y: 0 };
+    stats.localizedNets = results.flatMap(r => r.stats.localizedNets);
+    stats.skipped = results.map(r => r.stats.skipped).filter(Boolean).join('; ');
+    return { scene: { ...input, children: packed.nodes, edges: packed.edges,
+        width: bounds.x + bounds.width + gap.component, height: bounds.y + bounds.height + gap.component },
+        rotations: new Map(results.flatMap(r => [...r.rotations])), addedSymbols, removedSymbolIds, stats };
+}
+
+function refineLocalScene(input: ElkNode, components: readonly CircuitComponent[], added: readonly CircuitComponent[],
     symbols: readonly SymbolWithMeta[], macros: readonly MacroInstance[] = []) {
     const started = performance.now(), scene = structuredClone(input);
     let nodes = (scene.children ?? []) as Placed[], edges = scene.edges ?? [];
@@ -97,18 +150,22 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
                 && componentClearance(n, b) > gap.component && overlaps(n, b, componentClearance(n, b))).length * gap.largeIC * 8, 0);
             const privatePins = new Set(connectedNetEdges([...incident, ...rails], nets).filter(g => g.length === 1)
                 .flatMap(g => [...g[0].sources, ...g[0].targets]));
+            for (const n of moving.filter(n => flagKinds.has(n.id) && n.ports?.length === 1)) {
+                const id = n.ports![0].id;
+                if (incident.filter(e => [...e.sources, ...e.targets].includes(id)).length === 1) privatePins.add(id);
+            }
             const initialCost = cost(nodes, [...incident, ...rails], nets, originalIds) + crowding(moving)
                 + flagReadabilityCost(nodes, [...incident, ...rails], flagKinds);
             const initialLength = physicalLength([...incident, ...rails], nets);
             let best: { nodes: Placed[]; edges: ElkExtendedEdge[]; value: number } | undefined;
             let attempted = 0, screened = 0;
-            const poses = orientations(group, nodes, symbols).map(pose => ({ pose, shifts: translations(pose, boundary, fixed, rails, nets) }));
+            const poses = orientations(group, nodes, symbols).map(pose => ({ pose, shifts: translations(pose, boundary, fixed, rails, nets, env.edges) }));
             // Round-robin orientations: a busy first pose must not exhaust the
             // candidate budget before the useful 90-degree pose gets a turn.
             candidateSearch: for (let index = 0; index < Math.max(...poses.map(p => p.shifts.length)); index++) {
                 for (const { pose, shifts } of poses) {
                     const d = shifts[index]; if (!d) continue;
-                    if (++screened > limit.candidates * 4 || attempted >= limit.candidates) break candidateSearch;
+                    if (++screened > limit.candidates * 40 || attempted >= limit.candidates) break candidateSearch;
                     stats.candidates++;
                     const candidate = pose.nodes.map(n => ({ ...n, x: n.x + d.x, y: n.y + d.y }));
                     if (candidate.some(n => env.bodies.query(expand(n, gap.largeIC)).some(b => overlaps(n, b, originalIds.has(n.id) && originalIds.has(b.id) ? componentClearance(n, b) : gap.port)))) continue;
@@ -132,7 +189,15 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
                             next = withPath(edge, path(edge).map(p => shift(pose.transform?.(p) ?? p, d)));
                             const owners = new Set([...edge.sources, ...edge.targets].map(p => owner.get(p)!));
                             if (!clearPath(path(next), nets.get(edge.sources[0])!, env, candidate, routed, owners, false)) next = null;
-                        } else next = reconnect(edge, candidate, env, routed);
+                        } else {
+                            next = reconnect(edge, candidate, env, routed);
+                            if (!next && !group.loneFlag && routeLength(path(edge)) >= LONG_LINK_POLICY.minimumLength) {
+                                const positions = pinPositions([...fixed, ...candidate]);
+                                const a = positions.get(edge.sources[0])!, b = positions.get(edge.targets[0])!;
+                                if (Math.abs(a.x - b.x) + Math.abs(a.y - b.y) < routeLength(path(edge)) * 0.6)
+                                    next = reconnect(edge, candidate, env, routed, true);
+                            }
+                        }
                         if (!next) { valid = false; break; }
                         // Preserve an established straight IC attachment. An old
                         // passive-to-passive axis must not lock an inductor far from
@@ -186,7 +251,7 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
     const packed = packDrawingIslands(nodes, edges, nets, blocks, originalIds);
     nodes = packed.nodes; edges = packed.edges; stats.islandsPacked = packed.moved;
     const aligned = alignLeafFlags(nodes, edges, added, nets);
-    nodes = aligned.nodes; edges = aligned.edges; stats.flagsAligned = aligned.aligned;
+    nodes = aligned.nodes; edges = aligned.edges; stats.flagsAligned += aligned.aligned;
     for (const n of aligned.rotated) rotations.set(n.id, { rotate: n.rotation!, center: n.center! });
     // Packing and final flag alignment can create new adjacent stems. Finish
     // with the same net-aware cleanup so those moves do not leave twin rails.
@@ -196,6 +261,10 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
     nodes = finalFlags.nodes; edges = finalFlags.edges;
     for (const id of finalFlags.removed) merged.removed.add(id);
     stats.flagsRemoved = merged.removed.size;
+    const nearby = placeNearbyFlags(nodes, edges, added, nets);
+    nodes = nearby.nodes; edges = nearby.edges; stats.flagsAligned += nearby.moved;
+    edges = removeNetCycles(edges, nets).edges;
+    for (const n of nearby.rotated) rotations.set(n.id, { rotate: n.rotation!, center: n.center! });
     stats.componentsRotated = [...rotations.keys()].filter(id => {
         const before = input.children!.find(n => n.id === id), after = nodes.find(n => n.id === id);
         if (!before || !after) return false;

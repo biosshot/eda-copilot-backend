@@ -4,7 +4,7 @@ import type { SymbolWithMeta } from '#types/symbol.ts';
 import type { MacroInstance } from '../patterns/types.ts';
 import { rotateSymbolGeometry } from '../patterns/helpers.ts';
 import { isGroundSignal } from '../ground.ts';
-import { type Placed, type Point, pinPositions, normal, shift, boundsOf, path, EPS } from './geometry.ts';
+import { type Placed, type Point, pinPositions, normal, shift, boundsOf, path, edgeSegments, EPS } from './geometry.ts';
 import { SCHEMATIC_CLEARANCE as gap, componentClearance } from './policy.ts';
 
 export type LocalGroup = { ids: string[]; flexible?: string; flags: Map<string, string>; rotations?: readonly (90 | 180 | 270)[]; loneFlag?: boolean };
@@ -35,7 +35,7 @@ export function localGroups(nodes: Placed[], edges: ElkExtendedEdge[], component
         // allowed only for explicitly opted-in, entirely two-pin passive macros.
         const rotatable = ids.length === macro.placements.length && ids.every(id => flags.has(id)
             || (!/^U/i.test(id) && nodes.find(n => n.id === id)?.ports?.length === 2));
-        ids.forEach(id => used.add(id)); groups.push({ ids, flags: new Map(), rotations: rotatable ? macro.refinementRotations : undefined });
+        ids.forEach(id => used.add(id)); groups.push({ ids, flags: new Map(), rotations: rotatable ? macro.refinementRotations ?? [90, 180, 270] : undefined });
     }
     for (const c of [...components].sort((a, b) => a.designator.localeCompare(b.designator))) {
         if (used.has(c.designator) || c.pins.length !== 2 || /^U/i.test(c.designator)) continue;
@@ -130,7 +130,7 @@ export function orientations(group: LocalGroup, current: Placed[], symbols: read
     return result;
 }
 
-export function translations(pose: GroupPose, boundary: ElkExtendedEdge[], fixed: Placed[], rails: ElkExtendedEdge[], nets: ReadonlyMap<string, string>) {
+export function translations(pose: GroupPose, boundary: ElkExtendedEdge[], fixed: Placed[], rails: ElkExtendedEdge[], nets: ReadonlyMap<string, string>, obstacles = rails) {
     const own = pinPositions(pose.nodes), external = pinPositions(fixed);
     const anchors: Point[][] = [];
     for (const edge of boundary) {
@@ -154,9 +154,36 @@ export function translations(pose: GroupPose, boundary: ElkExtendedEdge[], fixed
                 : { x: bn.x * d - an.x * gap.pinEscape, y: bn.y * d - an.y * gap.pinEscape });
             result.push({ x: target.x - a.x, y: target.y - a.y });
         }
+        // Two-dimensional alternatives are necessary when all pin-aligned
+        // slots are occupied. Sample whole-group positions, not just the pin
+        // axis; cheap body/wire screening precedes bounded routing attempts.
+        if (!loneFlag) {
+            for (const depth of [40, 80, 120, 160, 200, 240]) for (let side = -180; side <= 180; side += 30) {
+                const target = { x: b.x + bn.x * depth + (bn.y ? side : 0),
+                    y: b.y + bn.y * depth + (bn.x ? side : 0) };
+                result.push({ x: target.x - a.x, y: target.y - a.y });
+            }
+        }
         // Search the neighbouring rows/columns too. A crowded flag row must
         // not force a service marker back to the far end of a long ELK lead.
-        const base = result.slice(-distances.length);
+        const base = result.slice(0, distances.length);
+        if (!loneFlag) {
+            // Narrow free slots lie on obstacle boundaries, not necessarily on
+            // the pin grid. Include both body and wire clearances in two axes.
+            const boxes = fixed.filter(n => Math.abs(n.x + n.width / 2 - b.x) < 350 && Math.abs(n.y + n.height / 2 - b.y) < 350);
+            const segments = obstacles.flatMap(edgeSegments).filter(s => Math.min(s.a.x, s.b.x) < b.x + 350
+                && Math.max(s.a.x, s.b.x) > b.x - 350 && Math.min(s.a.y, s.b.y) < b.y + 350 && Math.max(s.a.y, s.b.y) > b.y - 350);
+            const axis = (key: 'x' | 'y', size: 'width' | 'height') => [...new Set([
+                ...base.map(d => bounds[key] + d[key]),
+                ...boxes.flatMap(n => [n[key] - componentClearance(aNode, n) - bounds[size], n[key] + n[size] + componentClearance(aNode, n)]),
+                ...segments.filter(s => Math.abs(s.a[key] - s.b[key]) < EPS).flatMap(s => [s.a[key] - gap.wire - bounds[size], s.a[key] + gap.wire]),
+            ])].sort((x, y) => Math.abs(x + bounds[size] / 2 - b[key]) - Math.abs(y + bounds[size] / 2 - b[key]) || x - y).slice(0, 16);
+            const xs = axis('x', 'width'), ys = axis('y', 'height');
+            const slots = xs.flatMap(x => ys.map(y => ({ x: x - bounds.x, y: y - bounds.y })));
+            slots.sort((x, y) => Math.abs(a.x + x.x - b.x) + Math.abs(a.y + x.y - b.y)
+                - Math.abs(a.x + y.x - b.x) - Math.abs(a.y + y.y - b.y));
+            result.splice(distances.length, 0, ...slots);
+        }
         // A crowded pin-side corridor is not the only place for its load.
         // Try the adjacent faces of the anchor too (e.g. a pull-down below an
         // IC with left-side pins), with room for the required outward stub.

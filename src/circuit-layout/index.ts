@@ -1040,13 +1040,13 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
         const calkOffset = (name: string, root: ElkNode = layoutedGraph): null | { x: number, y: number } => {
             if (Array.isArray(root.children))
                 for (const child of root.children) {
-                    if (child.id === name && child.x && child.y) {
-                        return { x: child.x, y: child.y };
+                    if (child.id === name) {
+                        return { x: child.x ?? 0, y: child.y ?? 0 };
                     }
                     else {
                         const result = calkOffset(name, child);
-                        if (result && child.x && child.y)
-                            return { x: child.x + result.x, y: child.y + result.y }
+                        if (result)
+                            return { x: (child.x ?? 0) + result.x, y: (child.y ?? 0) + result.y }
                     }
                 }
 
