@@ -17,9 +17,10 @@ import { compactEmptyBands } from './compact.ts';
 import { packDrawingIslands } from './pack-islands.ts';
 import { hasConnection } from '../signals.ts';
 import { placeNearbyFlags } from './nearby-flags.ts';
-import { packSchematicRectangles, SCHEMATIC_SHEET } from '#utils/schematic-packing.ts';
+import { packSchematicRectangles, SCHEMATIC_SHEET, PAGE_SOFT_GRID } from '#utils/schematic-packing.ts';
 import { effectiveLayoutArea } from '../quality.ts';
 import { removeNetCycles } from './net-cycles.ts';
+import { softlyAlignMajorComponents } from './soft-align.ts';
 
 export function sceneNets(components: readonly CircuitComponent[]) {
     return new Map<string, string>(components.flatMap(c => c.pins.map(p => [`${c.designator}_pin_${p.pin_number}`,
@@ -77,14 +78,15 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
     });
     const first = results[0], stats = { ...first.stats };
     for (const key of ['groupsMoved', 'componentsRotated', 'candidates', 'netsCoalesced', 'flagsRemoved', 'flagsCentered',
-        'flagsLowered', 'flagsAligned', 'longLinksLabeled', 'relayouts', 'islandsPacked', 'emptySpaceRemoved'] as const) {
+        'flagsLowered', 'flagsAligned', 'chipsAligned', 'longLinksLabeled', 'relayouts', 'islandsPacked', 'emptySpaceRemoved'] as const) {
         stats[key] = results.reduce((sum, r) => sum + r.stats[key], 0);
     }
     const removedSymbolIds = new Set(results.flatMap(r => [...r.removedSymbolIds]));
     const addedSymbols = results.flatMap(r => r.addedSymbols);
     const boxes = results.map((r, i) => ({ id: String(i), ...boundsOf([...(r.scene.children ?? []) as Placed[],
         ...(r.scene.edges ?? []).flatMap(path).map(p => ({ ...p, width: 0, height: 0 }))]) }));
-    const page = packSchematicRectangles(boxes, SCHEMATIC_SHEET.blockPadding * 2 + SCHEMATIC_SHEET.extraBlockGap);
+    const page = packSchematicRectangles(boxes, SCHEMATIC_SHEET.blockPadding * 2 + SCHEMATIC_SHEET.extraBlockGap,
+        [], undefined, PAGE_SOFT_GRID);
     const packed = { nodes: [] as Placed[], edges: [] as ElkExtendedEdge[] };
     results.forEach((r, i) => {
         const at = page.positions.get(String(i))!, box = boxes[i];
@@ -110,7 +112,7 @@ function refineLocalScene(input: ElkNode, components: readonly CircuitComponent[
     const originalIds = new Set(components.map(c => c.designator));
     const patternByMember = new Map(macros.flatMap(m => m.absorbedDesignators.map(id => [id, m.id] as const)));
     const rotations = new Map<string, { rotate: number; center: Point }>();
-    const stats = { groupsMoved: 0, componentsRotated: 0, candidates: 0, netsCoalesced: 0, flagsRemoved: 0, flagsCentered: 0, flagsLowered: 0, flagsAligned: 0, longLinksLabeled: 0,
+    const stats = { groupsMoved: 0, componentsRotated: 0, candidates: 0, netsCoalesced: 0, flagsRemoved: 0, flagsCentered: 0, flagsLowered: 0, flagsAligned: 0, chipsAligned: 0, longLinksLabeled: 0,
         relayouts: 0, localizedNets: [] as string[], islandsPacked: 0, emptySpaceRemoved: 0, sceneTranslation: { x: 0, y: 0 }, elapsedMs: 0, skipped: '' };
     if (edges.some(e => !orthogonal(path(e)) || e.sources.length !== 1 || e.targets.length !== 1)) {
         stats.skipped = 'Unsupported compound or non-orthogonal routes'; stats.elapsedMs = performance.now() - started;
@@ -263,6 +265,8 @@ function refineLocalScene(input: ElkNode, components: readonly CircuitComponent[
     stats.flagsRemoved = merged.removed.size;
     const nearby = placeNearbyFlags(nodes, edges, added, nets);
     nodes = nearby.nodes; edges = nearby.edges; stats.flagsAligned += nearby.moved;
+    const alignedChips = softlyAlignMajorComponents(nodes, edges, nets, originalIds, new Set(patternByMember.keys()), blocks);
+    nodes = alignedChips.nodes; edges = alignedChips.edges; stats.chipsAligned = alignedChips.moved;
     edges = removeNetCycles(edges, nets).edges;
     for (const n of nearby.rotated) rotations.set(n.id, { rotate: n.rotation!, center: n.center! });
     stats.componentsRotated = [...rotations.keys()].filter(id => {

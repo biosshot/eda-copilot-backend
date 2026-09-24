@@ -3,7 +3,7 @@ import type { ElkNode } from 'elkjs';
 import { BASELINE_LAYOUT_PROFILE, LOCAL_LAYOUT_PROFILES } from './profiles.ts';
 import { evaluateLayoutQuality, safelyImprovesLayout, safelyImprovesExtremeAspect } from './quality.ts';
 import { canonicalGraph } from './graph-order.ts';
-import { packSchematicRectangles, SCHEMATIC_SHEET } from '#utils/schematic-packing.ts';
+import { packSchematicRectangles, SCHEMATIC_SHEET, PAGE_SOFT_GRID } from '#utils/schematic-packing.ts';
 import { collapsePortRows } from './port-rows.ts';
 import type { CircuitComponent } from '#types/circuit.ts';
 
@@ -73,7 +73,7 @@ export async function layoutIndependentBlocks(graph: ElkNode, elk: InstanceType<
         solved.push(child);
     }
     const packed = packSchematicRectangles(solved.map(b => ({ id: b.id, width: b.width!, height: b.height! })),
-        SCHEMATIC_SHEET.blockPadding * 2 + SCHEMATIC_SHEET.extraBlockGap);
+        SCHEMATIC_SHEET.blockPadding * 2 + SCHEMATIC_SHEET.extraBlockGap, [], undefined, PAGE_SOFT_GRID);
     for (const block of solved) Object.assign(block, packed.positions.get(block.id));
     if (!separated) return { ...graph, x: 0, y: 0, width: packed.width, height: packed.height, edges, children: solved };
     return { ...graph, x: 0, y: 0, width: packed.width, height: packed.height, edges,
