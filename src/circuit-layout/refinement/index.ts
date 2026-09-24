@@ -20,6 +20,7 @@ import { placeNearbyFlags } from './nearby-flags.ts';
 import { packSchematicRectangles, SCHEMATIC_SHEET, PAGE_SOFT_GRID } from '#utils/schematic-packing.ts';
 import { effectiveLayoutArea } from '../quality.ts';
 import { removeNetCycles } from './net-cycles.ts';
+import { rerouteFixedDetours } from './detour-route.ts';
 import { softlyAlignMajorComponents } from './soft-align.ts';
 import { type ConnectorRole, CONNECTOR_OVERRIDE_RATIO, connectorLeadLength, connectorOrientationSeverity,
     connectorOverrideWorthwhile, inferConnectorRoles } from './connector-policy.ts';
@@ -80,7 +81,7 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
             symbols.filter(s => ids.has(s.designator)), macros.filter(m => m.absorbedDesignators.some(id => ids.has(id))), connectorRoles);
     });
     const first = results[0], stats = { ...first.stats };
-    for (const key of ['groupsMoved', 'componentsRotated', 'candidates', 'netsCoalesced', 'flagsRemoved', 'flagsCentered',
+    for (const key of ['groupsMoved', 'componentsRotated', 'candidates', 'netsCoalesced', 'detoursRerouted', 'flagsRemoved', 'flagsCentered',
         'flagsLowered', 'flagsAligned', 'chipsAligned', 'longLinksLabeled', 'relayouts', 'islandsPacked', 'emptySpaceRemoved'] as const) {
         stats[key] = results.reduce((sum, r) => sum + r.stats[key], 0);
     }
@@ -117,7 +118,7 @@ function refineLocalScene(input: ElkNode, components: readonly CircuitComponent[
     const connectorRoles = new Map([...inferConnectorRoles(nodes, edges, components), ...firstPassConnectorRoles]);
     const patternByMember = new Map(macros.flatMap(m => m.absorbedDesignators.map(id => [id, m.id] as const)));
     const rotations = new Map<string, { rotate: number; center: Point }>();
-    const stats = { groupsMoved: 0, componentsRotated: 0, candidates: 0, netsCoalesced: 0, flagsRemoved: 0, flagsCentered: 0, flagsLowered: 0, flagsAligned: 0, chipsAligned: 0, longLinksLabeled: 0,
+    const stats = { groupsMoved: 0, componentsRotated: 0, candidates: 0, netsCoalesced: 0, detoursRerouted: 0, flagsRemoved: 0, flagsCentered: 0, flagsLowered: 0, flagsAligned: 0, chipsAligned: 0, longLinksLabeled: 0,
         relayouts: 0, localizedNets: [] as string[], islandsPacked: 0, emptySpaceRemoved: 0, sceneTranslation: { x: 0, y: 0 }, elapsedMs: 0, skipped: '' };
     if (edges.some(e => !orthogonal(path(e)) || e.sources.length !== 1 || e.targets.length !== 1)) {
         stats.skipped = 'Unsupported compound or non-orthogonal routes'; stats.elapsedMs = performance.now() - started;
@@ -292,6 +293,8 @@ function refineLocalScene(input: ElkNode, components: readonly CircuitComponent[
     const alignedChips = softlyAlignMajorComponents(nodes, edges, nets, originalIds, new Set(patternByMember.keys()), blocks);
     nodes = alignedChips.nodes; edges = alignedChips.edges; stats.chipsAligned = alignedChips.moved;
     edges = removeNetCycles(edges, nets).edges;
+    const detours = rerouteFixedDetours(nodes, edges, nets);
+    edges = detours.edges; stats.detoursRerouted = detours.changed;
     for (const n of nearby.rotated) rotations.set(n.id, { rotate: n.rotation!, center: n.center! });
     stats.componentsRotated = [...rotations.keys()].filter(id => {
         const before = input.children!.find(n => n.id === id), after = nodes.find(n => n.id === id);
