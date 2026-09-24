@@ -1,0 +1,169 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / AdcClock / clock",
+    "description": "EasyEDA page AdcClock; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "clock",
+      "description": "clock",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "C14",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "CLK_2V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "1uF",
+      "part_uuid": "c03b3241bfd648279f8d3bfda36eff71",
+      "footprint_name": "C0603",
+      "block_name": "clock"
+    },
+    {
+      "designator": "R3",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ADC_CLK_M"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_CLK_P"
+        }
+      ],
+      "value": "100Ω",
+      "part_uuid": "9d7f13c7738c4f39acb83eaea4591d9c",
+      "footprint_name": "R0402",
+      "block_name": "clock"
+    },
+    {
+      "designator": "U2",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "OE",
+          "signal_name": "OSC_OE_2V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "3",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "4",
+          "name": "OUT",
+          "signal_name": "OSC_CLK_P"
+        },
+        {
+          "pin_number": "5",
+          "name": "NC/OUT#",
+          "signal_name": "OSC_CLK_M"
+        },
+        {
+          "pin_number": "6",
+          "name": "VDD",
+          "signal_name": "CLK_2V5"
+        }
+      ],
+      "value": "200MHz",
+      "part_uuid": "0c1f972a3cd54689ab92ff9f97c52e9b",
+      "footprint_name": "OSC-SMD_6P-L2.5-W2.0-BL-A",
+      "block_name": "clock"
+    },
+    {
+      "designator": "C11",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "OSC_CLK_P"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ADC_CLK_P"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "clock"
+    },
+    {
+      "designator": "C12",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "OSC_CLK_M"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ADC_CLK_M"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "clock"
+    },
+    {
+      "designator": "C13",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "CLK_2V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "clock"
+    },
+    {
+      "designator": "R4",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "CLK_2V5"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "OSC_OE_2V5"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "clock"
+    }
+  ],
+  "reused_blocks": []
+}

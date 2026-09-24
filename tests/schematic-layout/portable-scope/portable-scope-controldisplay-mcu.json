@@ -1,0 +1,793 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / ControlDisplay / mcu",
+    "description": "EasyEDA page ControlDisplay; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "mcu",
+      "description": "mcu",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "C34",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "MCU_VCAP1"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "2.2uF",
+      "part_uuid": "37339e2feb62464ab13a15ab018b10d8",
+      "footprint_name": "C0603",
+      "block_name": "mcu"
+    },
+    {
+      "designator": "C35",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "MCU_VCAP2"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "2.2uF",
+      "part_uuid": "37339e2feb62464ab13a15ab018b10d8",
+      "footprint_name": "C0603",
+      "block_name": "mcu"
+    },
+    {
+      "designator": "U5",
+      "pins": [
+        {
+          "pin_number": "100",
+          "name": "VDD",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "99",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "98",
+          "name": "PE1",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "97",
+          "name": "PE0",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "96",
+          "name": "PB9",
+          "signal_name": "TOUCH_SDA"
+        },
+        {
+          "pin_number": "95",
+          "name": "PB8",
+          "signal_name": "TOUCH_SCL"
+        },
+        {
+          "pin_number": "94",
+          "name": "BOOT0",
+          "signal_name": "MCU_BOOT0"
+        },
+        {
+          "pin_number": "93",
+          "name": "PB7",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "92",
+          "name": "PB6",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "91",
+          "name": "PB5",
+          "signal_name": "DISPLAY_MOSI"
+        },
+        {
+          "pin_number": "90",
+          "name": "PB4",
+          "signal_name": "DISPLAY_MISO"
+        },
+        {
+          "pin_number": "89",
+          "name": "PB3",
+          "signal_name": "DISPLAY_SCK"
+        },
+        {
+          "pin_number": "88",
+          "name": "PD7",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "87",
+          "name": "PD6",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "86",
+          "name": "PD5",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "85",
+          "name": "PD4",
+          "signal_name": "TOUCH_RESET_N"
+        },
+        {
+          "pin_number": "84",
+          "name": "PD3",
+          "signal_name": "DISPLAY_BL_PWM"
+        },
+        {
+          "pin_number": "83",
+          "name": "PD2",
+          "signal_name": "DISPLAY_RESET_N"
+        },
+        {
+          "pin_number": "82",
+          "name": "PD1",
+          "signal_name": "DISPLAY_DC"
+        },
+        {
+          "pin_number": "81",
+          "name": "PD0",
+          "signal_name": "DISPLAY_CS_N"
+        },
+        {
+          "pin_number": "80",
+          "name": "PC12",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "79",
+          "name": "PC11",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "78",
+          "name": "PC10",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "77",
+          "name": "PA15",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "76",
+          "name": "PA14",
+          "signal_name": "MCU_SWCLK"
+        },
+        {
+          "pin_number": "75",
+          "name": "VDD",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "74",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "73",
+          "name": "VCAP",
+          "signal_name": "MCU_VCAP2"
+        },
+        {
+          "pin_number": "72",
+          "name": "PA13",
+          "signal_name": "MCU_SWDIO"
+        },
+        {
+          "pin_number": "71",
+          "name": "PA12",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "70",
+          "name": "PA11",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "69",
+          "name": "PA10",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "68",
+          "name": "PA9",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "67",
+          "name": "PA8",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "66",
+          "name": "PC9",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "65",
+          "name": "PC8",
+          "signal_name": "DISPLAY_IRQ_N"
+        },
+        {
+          "pin_number": "64",
+          "name": "PC7",
+          "signal_name": "FPGA_READY"
+        },
+        {
+          "pin_number": "63",
+          "name": "PC6",
+          "signal_name": "FPGA_IRQ"
+        },
+        {
+          "pin_number": "62",
+          "name": "PD15",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "61",
+          "name": "PD14",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "60",
+          "name": "PD13",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "59",
+          "name": "PD12",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "58",
+          "name": "PD11",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "57",
+          "name": "PD10",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "56",
+          "name": "PD9",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "55",
+          "name": "PD8",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "54",
+          "name": "PB15",
+          "signal_name": "MCU_FPGA_MOSI"
+        },
+        {
+          "pin_number": "53",
+          "name": "PB14",
+          "signal_name": "MCU_FPGA_MISO"
+        },
+        {
+          "pin_number": "52",
+          "name": "PB13",
+          "signal_name": "MCU_FPGA_SCK"
+        },
+        {
+          "pin_number": "51",
+          "name": "PB12",
+          "signal_name": "MCU_FPGA_CS_N"
+        },
+        {
+          "pin_number": "50",
+          "name": "VDD",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "49",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "48",
+          "name": "VCAP",
+          "signal_name": "MCU_VCAP1"
+        },
+        {
+          "pin_number": "47",
+          "name": "PB11",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "46",
+          "name": "PB10",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "45",
+          "name": "PE15",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "44",
+          "name": "PE14",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "43",
+          "name": "PE13",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "42",
+          "name": "PE12",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "41",
+          "name": "PE11",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "40",
+          "name": "PE10",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "39",
+          "name": "PE9",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "38",
+          "name": "PE8",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "37",
+          "name": "PE7",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "36",
+          "name": "PB2",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "35",
+          "name": "PB1",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "34",
+          "name": "PB0",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "33",
+          "name": "PC5",
+          "signal_name": "AFE_FAULT_N"
+        },
+        {
+          "pin_number": "32",
+          "name": "PC4",
+          "signal_name": "AFE_AC_SEL"
+        },
+        {
+          "pin_number": "31",
+          "name": "PA7",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "30",
+          "name": "PA6",
+          "signal_name": "DDR_VTT_PG"
+        },
+        {
+          "pin_number": "29",
+          "name": "PA5",
+          "signal_name": "CHARGER_PGOOD_N"
+        },
+        {
+          "pin_number": "28",
+          "name": "PA4",
+          "signal_name": "CHARGER_CHG_N"
+        },
+        {
+          "pin_number": "27",
+          "name": "VDD",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "26",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "25",
+          "name": "PA3",
+          "signal_name": "KEY_BACK_N"
+        },
+        {
+          "pin_number": "24",
+          "name": "PA2",
+          "signal_name": "KEY_MENU_N"
+        },
+        {
+          "pin_number": "23",
+          "name": "PA1",
+          "signal_name": "KEY_AUTO_N"
+        },
+        {
+          "pin_number": "22",
+          "name": "PA0",
+          "signal_name": "KEY_RUN_STOP_N"
+        },
+        {
+          "pin_number": "21",
+          "name": "VDDA",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "20",
+          "name": "VREF+",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "19",
+          "name": "VSSA",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "18",
+          "name": "PC3_C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "17",
+          "name": "PC2_C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "16",
+          "name": "PC1",
+          "signal_name": "AFE_RANGE_A1"
+        },
+        {
+          "pin_number": "15",
+          "name": "PC0",
+          "signal_name": "AFE_RANGE_A0"
+        },
+        {
+          "pin_number": "14",
+          "name": "NRST",
+          "signal_name": "MCU_RESET_N"
+        },
+        {
+          "pin_number": "13",
+          "name": "PH1-OSC_OUT",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "12",
+          "name": "PH0-OSC_IN",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "11",
+          "name": "VDD",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "10",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "9",
+          "name": "PC15-OSC32_OUT",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "PC14-OSC32_IN",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "7",
+          "name": "PC13",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "6",
+          "name": "VBAT",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "5",
+          "name": "PE6",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "4",
+          "name": "PE5",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "3",
+          "name": "PE4",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "2",
+          "name": "PE3",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "1",
+          "name": "PE2",
+          "signal_name": ""
+        }
+      ],
+      "value": "STM32H743VIT6",
+      "part_uuid": "d9f333b75e114ef48848d2eb560b7c84",
+      "footprint_name": "LQFP-100_L14.0-W14.0-P0.50-LS16.0-BL",
+      "block_name": "mcu"
+    },
+    {
+      "designator": "C36",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "mcu"
+    },
+    {
+      "designator": "C37",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "mcu"
+    },
+    {
+      "designator": "C38",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "mcu"
+    },
+    {
+      "designator": "C39",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "mcu"
+    },
+    {
+      "designator": "C40",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "mcu"
+    },
+    {
+      "designator": "C41",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "mcu"
+    },
+    {
+      "designator": "C42",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "1uF",
+      "part_uuid": "c03b3241bfd648279f8d3bfda36eff71",
+      "footprint_name": "C0603",
+      "block_name": "mcu"
+    },
+    {
+      "designator": "R12",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "MCU_BOOT0"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "mcu"
+    },
+    {
+      "designator": "R13",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "MCU_RESET_N"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "mcu"
+    },
+    {
+      "designator": "J2",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "10",
+          "name": "10",
+          "signal_name": "MCU_RESET_N"
+        },
+        {
+          "pin_number": "3",
+          "name": "3",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "8",
+          "name": "8",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "5",
+          "name": "5",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "6",
+          "name": "6",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "7",
+          "name": "7",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "4",
+          "name": "4",
+          "signal_name": "MCU_SWCLK"
+        },
+        {
+          "pin_number": "9",
+          "name": "9",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "MCU_SWDIO"
+        }
+      ],
+      "value": "M20-9980546",
+      "part_uuid": "d7e38fef76ef465e8e97762e37aaeed5",
+      "footprint_name": "HDR-TH_10P-P2.54-V-M-R2-C5-S2.54",
+      "block_name": "mcu"
+    }
+  ],
+  "reused_blocks": []
+}

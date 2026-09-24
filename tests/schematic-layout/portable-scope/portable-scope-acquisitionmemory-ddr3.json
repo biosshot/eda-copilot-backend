@@ -1,0 +1,1284 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / AcquisitionMemory / ddr3",
+    "description": "EasyEDA page AcquisitionMemory; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "ddr3",
+      "description": "ddr3",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "U17",
+      "pins": [
+        {
+          "pin_number": "T9",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "T8",
+          "name": "A8",
+          "signal_name": "DDR_A8"
+        },
+        {
+          "pin_number": "T7",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "T3",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "T2",
+          "name": "RESET#",
+          "signal_name": "DDR_RESET_N"
+        },
+        {
+          "pin_number": "T1",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "R9",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "R8",
+          "name": "A6",
+          "signal_name": "DDR_A6"
+        },
+        {
+          "pin_number": "R7",
+          "name": "A11",
+          "signal_name": "DDR_A11"
+        },
+        {
+          "pin_number": "R3",
+          "name": "A9",
+          "signal_name": "DDR_A9"
+        },
+        {
+          "pin_number": "R2",
+          "name": "A7",
+          "signal_name": "DDR_A7"
+        },
+        {
+          "pin_number": "R1",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "P9",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "P8",
+          "name": "A4",
+          "signal_name": "DDR_A4"
+        },
+        {
+          "pin_number": "P7",
+          "name": "A1",
+          "signal_name": "DDR_A1"
+        },
+        {
+          "pin_number": "P3",
+          "name": "A2",
+          "signal_name": "DDR_A2"
+        },
+        {
+          "pin_number": "P2",
+          "name": "A5",
+          "signal_name": "DDR_A5"
+        },
+        {
+          "pin_number": "P1",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "N9",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "N8",
+          "name": "BA1",
+          "signal_name": "DDR_BA1"
+        },
+        {
+          "pin_number": "N7",
+          "name": "A12/BC#",
+          "signal_name": "DDR_A12"
+        },
+        {
+          "pin_number": "N3",
+          "name": "A0",
+          "signal_name": "DDR_A0"
+        },
+        {
+          "pin_number": "N2",
+          "name": "A3",
+          "signal_name": "DDR_A3"
+        },
+        {
+          "pin_number": "N1",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "M9",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "M8",
+          "name": "VREFCA",
+          "signal_name": "DDR_VREF"
+        },
+        {
+          "pin_number": "M7",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "M3",
+          "name": "BA2",
+          "signal_name": "DDR_BA2"
+        },
+        {
+          "pin_number": "M2",
+          "name": "BA0",
+          "signal_name": "DDR_BA0"
+        },
+        {
+          "pin_number": "M1",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "L9",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "L8",
+          "name": "ZQ",
+          "signal_name": "DDR_ZQ"
+        },
+        {
+          "pin_number": "L7",
+          "name": "A10/AP",
+          "signal_name": "DDR_A10"
+        },
+        {
+          "pin_number": "L3",
+          "name": "WE#",
+          "signal_name": "DDR_WE_N"
+        },
+        {
+          "pin_number": "L2",
+          "name": "CS#",
+          "signal_name": "DDR_CS_N"
+        },
+        {
+          "pin_number": "L1",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "K9",
+          "name": "CKE",
+          "signal_name": "DDR_CKE"
+        },
+        {
+          "pin_number": "K8",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "K7",
+          "name": "CK#",
+          "signal_name": "DDR_CK_M"
+        },
+        {
+          "pin_number": "K3",
+          "name": "CAS#",
+          "signal_name": "DDR_CAS_N"
+        },
+        {
+          "pin_number": "K2",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "K1",
+          "name": "ODT",
+          "signal_name": "DDR_ODT"
+        },
+        {
+          "pin_number": "J9",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "J8",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "J7",
+          "name": "CK",
+          "signal_name": "DDR_CK_P"
+        },
+        {
+          "pin_number": "J3",
+          "name": "RAS#",
+          "signal_name": "DDR_RAS_N"
+        },
+        {
+          "pin_number": "J2",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "J1",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "H9",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "H8",
+          "name": "DQL5",
+          "signal_name": "DDR_DQ5"
+        },
+        {
+          "pin_number": "H7",
+          "name": "DQL7",
+          "signal_name": "DDR_DQ7"
+        },
+        {
+          "pin_number": "H3",
+          "name": "DQL4",
+          "signal_name": "DDR_DQ4"
+        },
+        {
+          "pin_number": "H2",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "H1",
+          "name": "VREFDQ",
+          "signal_name": "DDR_VREF"
+        },
+        {
+          "pin_number": "G9",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G8",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G7",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "G3",
+          "name": "DQSl#",
+          "signal_name": "DDR_DQS0_M"
+        },
+        {
+          "pin_number": "G2",
+          "name": "DQL6",
+          "signal_name": "DDR_DQ6"
+        },
+        {
+          "pin_number": "G1",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "F9",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "F8",
+          "name": "DQL3",
+          "signal_name": "DDR_DQ3"
+        },
+        {
+          "pin_number": "F7",
+          "name": "DQL1",
+          "signal_name": "DDR_DQ1"
+        },
+        {
+          "pin_number": "F3",
+          "name": "DQSL",
+          "signal_name": "DDR_DQS0_P"
+        },
+        {
+          "pin_number": "F2",
+          "name": "DQL2",
+          "signal_name": "DDR_DQ2"
+        },
+        {
+          "pin_number": "F1",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "E9",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "E8",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "E7",
+          "name": "DML",
+          "signal_name": "DDR_DM0"
+        },
+        {
+          "pin_number": "E3",
+          "name": "DQL0",
+          "signal_name": "DDR_DQ0"
+        },
+        {
+          "pin_number": "E2",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "E1",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "D9",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "D8",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "D7",
+          "name": "DQU0",
+          "signal_name": "DDR_DQ8"
+        },
+        {
+          "pin_number": "D3",
+          "name": "DMU",
+          "signal_name": "DDR_DM1"
+        },
+        {
+          "pin_number": "D2",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "D1",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "C9",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "C8",
+          "name": "DQU2",
+          "signal_name": "DDR_DQ10"
+        },
+        {
+          "pin_number": "C7",
+          "name": "DQSU",
+          "signal_name": "DDR_DQS1_P"
+        },
+        {
+          "pin_number": "C3",
+          "name": "DQU1",
+          "signal_name": "DDR_DQ9"
+        },
+        {
+          "pin_number": "C2",
+          "name": "DQU3",
+          "signal_name": "DDR_DQ11"
+        },
+        {
+          "pin_number": "C1",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "B9",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "B8",
+          "name": "DQU6",
+          "signal_name": "DDR_DQ14"
+        },
+        {
+          "pin_number": "B7",
+          "name": "DQSU#",
+          "signal_name": "DDR_DQS1_M"
+        },
+        {
+          "pin_number": "B3",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "B2",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "B1",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "A9",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "A8",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "A7",
+          "name": "DQU4",
+          "signal_name": "DDR_DQ12"
+        },
+        {
+          "pin_number": "A3",
+          "name": "DQU7",
+          "signal_name": "DDR_DQ15"
+        },
+        {
+          "pin_number": "A2",
+          "name": "DQU5",
+          "signal_name": "DDR_DQ13"
+        },
+        {
+          "pin_number": "A1",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        }
+      ],
+      "value": "W631GG6MB-12",
+      "part_uuid": "2493816c564b4899aa567697729a423f",
+      "footprint_name": "TFBGA-96_L13.0-W7.5-R16-C6-P0.80-TL",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R33",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_ZQ"
+        }
+      ],
+      "value": "240Ω",
+      "part_uuid": "328fb45e3d1241a597f439f81e4a522e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C91",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C92",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R36",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A0"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R37",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A1"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R38",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A2"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R39",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A3"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R40",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A4"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R41",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A5"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R42",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A6"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R43",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A7"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R44",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A8"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R45",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A9"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R46",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A10"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R47",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A11"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R48",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A12"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R49",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_BA0"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R50",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_BA1"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R51",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_BA2"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R52",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_CAS_N"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R53",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_RAS_N"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R54",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_WE_N"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R55",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_CS_N"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R56",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_CKE"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R57",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_ODT"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C79",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C80",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C81",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C82",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C83",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C84",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C85",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C86",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C87",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C88",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C89",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C90",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C93",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_VREF"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C94",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_VREF"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R34",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_RESET_N"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R35",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_CKE"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    }
+  ],
+  "reused_blocks": []
+}

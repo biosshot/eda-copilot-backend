@@ -1,0 +1,549 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / BatteryPower / analog_bipolar",
+    "description": "EasyEDA page BatteryPower; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "analog_bipolar",
+      "description": "analog_bipolar",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "R76",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AN_FB_P"
+        }
+      ],
+      "value": "100kΩ",
+      "part_uuid": "0cc9cee0c09e4a1c8b41e9d1feefa5b2",
+      "footprint_name": "R0402",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "R78",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AN_FB_N"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AN_REF"
+        }
+      ],
+      "value": "100kΩ",
+      "part_uuid": "0cc9cee0c09e4a1c8b41e9d1feefa5b2",
+      "footprint_name": "R0402",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "L5",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AN_SW_P"
+        }
+      ],
+      "value": "4.7uH",
+      "part_uuid": "56f21ad1d0f24179a69c51bf7b8b52a6",
+      "footprint_name": "IND-SMD_L6.3-W6.3-B82462G4472M000",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "L6",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AN_SW_N"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uH",
+      "part_uuid": "56f21ad1d0f24179a69c51bf7b8b52a6",
+      "footprint_name": "IND-SMD_L6.3-W6.3-B82462G4472M000",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "U18",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "INP",
+          "signal_name": "AN_SW_P"
+        },
+        {
+          "pin_number": "2",
+          "name": "PGND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "3",
+          "name": "PGND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "4",
+          "name": "VIN",
+          "signal_name": "AN_CTRL_VIN"
+        },
+        {
+          "pin_number": "5",
+          "name": "INN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "6",
+          "name": "INN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "7",
+          "name": "BSW",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "ENP",
+          "signal_name": "SYS_3V3_PG"
+        },
+        {
+          "pin_number": "9",
+          "name": "PSP",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "10",
+          "name": "ENN",
+          "signal_name": "SYS_3V3_PG"
+        },
+        {
+          "pin_number": "11",
+          "name": "PSN",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "12",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "13",
+          "name": "OUTN",
+          "signal_name": "AN_SW_N"
+        },
+        {
+          "pin_number": "14",
+          "name": "OUTN",
+          "signal_name": "AN_SW_N"
+        },
+        {
+          "pin_number": "15",
+          "name": "VNEG",
+          "signal_name": "ANALOG_N5V7"
+        },
+        {
+          "pin_number": "16",
+          "name": "FBN",
+          "signal_name": "AN_FB_N"
+        },
+        {
+          "pin_number": "17",
+          "name": "VREF",
+          "signal_name": "AN_REF"
+        },
+        {
+          "pin_number": "18",
+          "name": "CN",
+          "signal_name": "AN_COMP_N"
+        },
+        {
+          "pin_number": "19",
+          "name": "AGND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "20",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "21",
+          "name": "CP",
+          "signal_name": "AN_COMP_P"
+        },
+        {
+          "pin_number": "22",
+          "name": "FBP",
+          "signal_name": "AN_FB_P"
+        },
+        {
+          "pin_number": "23",
+          "name": "VPOS",
+          "signal_name": "ANALOG_P5V7"
+        },
+        {
+          "pin_number": "24",
+          "name": "INP",
+          "signal_name": "AN_SW_P"
+        },
+        {
+          "pin_number": "25",
+          "name": "EP",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "TPS65131RGER",
+      "part_uuid": "0ed1651b30b440d6a68eda7911dce797",
+      "footprint_name": "QFN-24_L4.0-W4.0-P0.50-TL-EP2.6",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "D2",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "C",
+          "signal_name": "ANALOG_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "A",
+          "signal_name": "AN_SW_P"
+        }
+      ],
+      "value": "MBRM120ET1G",
+      "part_uuid": "2e972d283edb418aa96afd18e619ddd1",
+      "footprint_name": "POWERMITE_L2.0-W1.9-LS3.8-RD",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "D3",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "C",
+          "signal_name": "AN_SW_N"
+        },
+        {
+          "pin_number": "2",
+          "name": "A",
+          "signal_name": "ANALOG_N5V7"
+        }
+      ],
+      "value": "MBRM120ET1G",
+      "part_uuid": "2e972d283edb418aa96afd18e619ddd1",
+      "footprint_name": "POWERMITE_L2.0-W1.9-LS3.8-RD",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "R75",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AN_FB_P"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ANALOG_P5V7"
+        }
+      ],
+      "value": "374kΩ",
+      "part_uuid": "c91bcc4033154644885d7a13c2f4e9ea",
+      "footprint_name": "R0402",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "R77",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ANALOG_N5V7"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AN_FB_N"
+        }
+      ],
+      "value": "470kΩ",
+      "part_uuid": "e8350838168a40588c9e52c83ea1f29e",
+      "footprint_name": "R0402",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "C120",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AN_COMP_P"
+        }
+      ],
+      "value": "10nF",
+      "part_uuid": "9bafdb8462464b3aba6ed90784cedca7",
+      "footprint_name": "C0402",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "C119",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AN_REF"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "220nF",
+      "part_uuid": "18b4eee0dbbe4ac88a4e83fc901fdd05",
+      "footprint_name": "C0402",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "C121",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AN_COMP_N"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7nF",
+      "part_uuid": "009f414d32094dfd94ab7d026ac96eb7",
+      "footprint_name": "C0402",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "C110",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "C111",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "C113",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ANALOG_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "C114",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ANALOG_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "C115",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ANALOG_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "C116",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ANALOG_N5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "C117",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ANALOG_N5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "C118",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ANALOG_N5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "C112",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AN_CTRL_VIN"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "analog_bipolar"
+    },
+    {
+      "designator": "R79",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AN_CTRL_VIN"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "100Ω",
+      "part_uuid": "9d7f13c7738c4f39acb83eaea4591d9c",
+      "footprint_name": "R0402",
+      "block_name": "analog_bipolar"
+    }
+  ],
+  "reused_blocks": []
+}

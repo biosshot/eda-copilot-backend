@@ -1,0 +1,141 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / AcquisitionMemory / config_flash",
+    "description": "EasyEDA page AcquisitionMemory; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "config_flash",
+      "description": "config_flash",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "U4",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "CS#",
+          "signal_name": "FPGA_CFG_CS_N"
+        },
+        {
+          "pin_number": "2",
+          "name": "DO",
+          "signal_name": "FPGA_CFG_MISO"
+        },
+        {
+          "pin_number": "3",
+          "name": "IO2",
+          "signal_name": "FLASH_WP_N"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "DI",
+          "signal_name": "FPGA_CFG_MOSI"
+        },
+        {
+          "pin_number": "6",
+          "name": "CLK",
+          "signal_name": "FPGA_CFG_SCK"
+        },
+        {
+          "pin_number": "7",
+          "name": "IO3",
+          "signal_name": "FLASH_HOLD_N"
+        },
+        {
+          "pin_number": "8",
+          "name": "VCC",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "W25Q64JVSSIQ",
+      "part_uuid": "0a64f2c6946e40f4b95d93456d867d4f",
+      "footprint_name": "SOP-8_L5.3-W5.3-P1.27-LS8.0-BL",
+      "block_name": "config_flash"
+    },
+    {
+      "designator": "C33",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "config_flash"
+    },
+    {
+      "designator": "R9",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FPGA_CFG_CS_N"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "config_flash"
+    },
+    {
+      "designator": "R10",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FLASH_WP_N"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "config_flash"
+    },
+    {
+      "designator": "R11",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FLASH_HOLD_N"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "config_flash"
+    }
+  ],
+  "reused_blocks": []
+}

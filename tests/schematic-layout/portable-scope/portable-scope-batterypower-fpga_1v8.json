@@ -1,0 +1,150 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / BatteryPower / fpga_1v8",
+    "description": "EasyEDA page BatteryPower; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "fpga_1v8",
+      "description": "fpga_1v8",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "R25",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FPGA_1V8_PG"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "100kΩ",
+      "part_uuid": "0cc9cee0c09e4a1c8b41e9d1feefa5b2",
+      "footprint_name": "R0402",
+      "block_name": "fpga_1v8"
+    },
+    {
+      "designator": "L3",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FPGA_1V8"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_1V8_LX"
+        }
+      ],
+      "value": "470nH",
+      "part_uuid": "9dd1d42660104f92ab0775cdb5e21791",
+      "footprint_name": "IND-SMD_L2.5-W2.0_MHCD252012B-2R2M-A8L",
+      "block_name": "fpga_1v8"
+    },
+    {
+      "designator": "U10",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "EN",
+          "signal_name": "SYS_3V3_PG"
+        },
+        {
+          "pin_number": "2",
+          "name": "PG",
+          "signal_name": "FPGA_1V8_PG"
+        },
+        {
+          "pin_number": "3",
+          "name": "FB",
+          "signal_name": "FPGA_1V8"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "SW",
+          "signal_name": "FPGA_1V8_LX"
+        },
+        {
+          "pin_number": "6",
+          "name": "VIN",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "TPS6282618DMQR",
+      "part_uuid": "621c5a512b9540cbaaa5c028356fe797",
+      "footprint_name": "VSON-6_L1.5-W1.5-P0.50-TL",
+      "block_name": "fpga_1v8"
+    },
+    {
+      "designator": "C55",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "fpga_1v8"
+    },
+    {
+      "designator": "C56",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_1V8"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "fpga_1v8"
+    },
+    {
+      "designator": "C57",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_1V8"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "fpga_1v8"
+    }
+  ],
+  "reused_blocks": []
+}

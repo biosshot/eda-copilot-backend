@@ -1,0 +1,335 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / AnalogInput / adc_driver",
+    "description": "EasyEDA page AnalogInput; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "adc_driver",
+      "description": "adc_driver",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "U26",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "PD#",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "FB",
+          "signal_name": "OPA_FB"
+        },
+        {
+          "pin_number": "3",
+          "name": "IN-",
+          "signal_name": "OPA_FB"
+        },
+        {
+          "pin_number": "4",
+          "name": "IN+",
+          "signal_name": "AFE_BUFFER_IN"
+        },
+        {
+          "pin_number": "5",
+          "name": "VS-",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "6",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "7",
+          "name": "OUT",
+          "signal_name": "AFE_BUFFER_OUT"
+        },
+        {
+          "pin_number": "8",
+          "name": "VS+",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "9",
+          "name": "EP",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "OPA817DTKR",
+      "part_uuid": "c6aa654c1e4d4cfb8f6d3b4c736dc493",
+      "footprint_name": "DFN-8_L3.0-W3.0-P0.50-BL-EP1.9",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "U27",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "–FB",
+          "signal_name": "FDA_NEG_FB"
+        },
+        {
+          "pin_number": "2",
+          "name": "+IN",
+          "signal_name": "FDA_POS_IN"
+        },
+        {
+          "pin_number": "3",
+          "name": "–IN",
+          "signal_name": "FDA_NEG_IN"
+        },
+        {
+          "pin_number": "4",
+          "name": "+FB",
+          "signal_name": "FDA_POS_FB"
+        },
+        {
+          "pin_number": "5",
+          "name": "+VS",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "6",
+          "name": "+VS",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "7",
+          "name": "+VS",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "8",
+          "name": "+VS",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "9",
+          "name": "VOCM",
+          "signal_name": "ADC_VCM"
+        },
+        {
+          "pin_number": "10",
+          "name": "+OUT",
+          "signal_name": "FDA_POS_OUT"
+        },
+        {
+          "pin_number": "11",
+          "name": "–OUT",
+          "signal_name": "FDA_NEG_OUT"
+        },
+        {
+          "pin_number": "12",
+          "name": "PD#",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "13",
+          "name": "–VS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "14",
+          "name": "–VS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "15",
+          "name": "–VS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "16",
+          "name": "–VS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "17",
+          "name": "EP",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "ADA4930-1YCPZ-R7",
+      "part_uuid": "0587ac84aef54524869b3b9d6ad768fe",
+      "footprint_name": "LFCSP-16_L3.0-W3.0-P0.50-BL-EP1.3-1",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R67",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FDA_POS_IN"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_BUFFER_OUT"
+        }
+      ],
+      "value": "100Ω",
+      "part_uuid": "a16bd89475d141ea861d56c7137cb978",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R68",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FDA_NEG_IN"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100Ω",
+      "part_uuid": "a16bd89475d141ea861d56c7137cb978",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R69",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FDA_POS_IN"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FDA_NEG_FB"
+        }
+      ],
+      "value": "1kΩ",
+      "part_uuid": "6e87022e97e8434e99a00e613feab0a4",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R70",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FDA_NEG_IN"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FDA_POS_FB"
+        }
+      ],
+      "value": "1kΩ",
+      "part_uuid": "6e87022e97e8434e99a00e613feab0a4",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R71",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FDA_POS_IN"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_3V3"
+        }
+      ],
+      "value": "887Ω",
+      "part_uuid": "987c954296394d8eba5e73e0d204a4b0",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R72",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FDA_NEG_IN"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_3V3"
+        }
+      ],
+      "value": "887Ω",
+      "part_uuid": "987c954296394d8eba5e73e0d204a4b0",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R73",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ADC_DRV_P"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FDA_POS_OUT"
+        }
+      ],
+      "value": "249Ω",
+      "part_uuid": "c3143f10bab648ce8ac806fcbee23a6d",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R74",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ADC_DRV_M"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FDA_NEG_OUT"
+        }
+      ],
+      "value": "249Ω",
+      "part_uuid": "c3143f10bab648ce8ac806fcbee23a6d",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "C100",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_DRV_P"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ADC_DRV_M"
+        }
+      ],
+      "value": "47pF",
+      "part_uuid": "bedff529a972445e904433706b3c1ac9",
+      "footprint_name": "C0402",
+      "block_name": "adc_driver"
+    }
+  ],
+  "reused_blocks": []
+}

@@ -1,0 +1,230 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / ControlDisplay / display_controls",
+    "description": "EasyEDA page ControlDisplay; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "display_controls",
+      "description": "display_controls",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "U6",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "VCC",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "3",
+          "name": "LCD_CS",
+          "signal_name": "DISPLAY_CS_N"
+        },
+        {
+          "pin_number": "4",
+          "name": "LCD_RST",
+          "signal_name": "DISPLAY_RESET_N"
+        },
+        {
+          "pin_number": "5",
+          "name": "LCD_RS",
+          "signal_name": "DISPLAY_DC"
+        },
+        {
+          "pin_number": "6",
+          "name": "SDI(MOSI)",
+          "signal_name": "DISPLAY_MOSI"
+        },
+        {
+          "pin_number": "7",
+          "name": "SCK",
+          "signal_name": "DISPLAY_SCK"
+        },
+        {
+          "pin_number": "8",
+          "name": "LED",
+          "signal_name": "DISPLAY_BL_PWM"
+        },
+        {
+          "pin_number": "9",
+          "name": "SDO(MISO)",
+          "signal_name": "DISPLAY_MISO"
+        },
+        {
+          "pin_number": "10",
+          "name": "CTP_SCL",
+          "signal_name": "TOUCH_SCL"
+        },
+        {
+          "pin_number": "11",
+          "name": "CTP_RST",
+          "signal_name": "TOUCH_RESET_N"
+        },
+        {
+          "pin_number": "12",
+          "name": "CTP_SDA",
+          "signal_name": "TOUCH_SDA"
+        },
+        {
+          "pin_number": "13",
+          "name": "CTP_INT",
+          "signal_name": "DISPLAY_IRQ_N"
+        },
+        {
+          "pin_number": "14",
+          "name": "SD_CS",
+          "signal_name": ""
+        }
+      ],
+      "value": "",
+      "part_uuid": "1230dbdd70064912a5cacb66dc7c269a",
+      "block_name": "display_controls"
+    },
+    {
+      "designator": "SW1",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "KEY_RUN_STOP_N"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "KEY_RUN_STOP_N"
+        },
+        {
+          "pin_number": "3",
+          "name": "3",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "4",
+          "name": "4",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "5",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "KMR221GLFS",
+      "part_uuid": "b5641d10feca406f857b694bce615a01",
+      "footprint_name": "KEY-SMD_KMR2XXGXXX",
+      "block_name": "display_controls"
+    },
+    {
+      "designator": "SW2",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "KEY_AUTO_N"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "KEY_AUTO_N"
+        },
+        {
+          "pin_number": "3",
+          "name": "3",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "4",
+          "name": "4",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "5",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "KMR221GLFS",
+      "part_uuid": "b5641d10feca406f857b694bce615a01",
+      "footprint_name": "KEY-SMD_KMR2XXGXXX",
+      "block_name": "display_controls"
+    },
+    {
+      "designator": "SW3",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "KEY_MENU_N"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "KEY_MENU_N"
+        },
+        {
+          "pin_number": "3",
+          "name": "3",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "4",
+          "name": "4",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "5",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "KMR221GLFS",
+      "part_uuid": "b5641d10feca406f857b694bce615a01",
+      "footprint_name": "KEY-SMD_KMR2XXGXXX",
+      "block_name": "display_controls"
+    },
+    {
+      "designator": "SW4",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "KEY_BACK_N"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "KEY_BACK_N"
+        },
+        {
+          "pin_number": "3",
+          "name": "3",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "4",
+          "name": "4",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "5",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "KMR221GLFS",
+      "part_uuid": "b5641d10feca406f857b694bce615a01",
+      "footprint_name": "KEY-SMD_KMR2XXGXXX",
+      "block_name": "display_controls"
+    }
+  ],
+  "reused_blocks": []
+}

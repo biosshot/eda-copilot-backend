@@ -1,0 +1,188 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / BatteryPower / ddr_1v5",
+    "description": "EasyEDA page BatteryPower; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "ddr_1v5",
+      "description": "ddr_1v5",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "R27",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5_FB"
+        }
+      ],
+      "value": "100kΩ",
+      "part_uuid": "0cc9cee0c09e4a1c8b41e9d1feefa5b2",
+      "footprint_name": "R0402",
+      "block_name": "ddr_1v5"
+    },
+    {
+      "designator": "R28",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_1V5_PG"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "100kΩ",
+      "part_uuid": "0cc9cee0c09e4a1c8b41e9d1feefa5b2",
+      "footprint_name": "R0402",
+      "block_name": "ddr_1v5"
+    },
+    {
+      "designator": "L4",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5_LX"
+        }
+      ],
+      "value": "470nH",
+      "part_uuid": "9dd1d42660104f92ab0775cdb5e21791",
+      "footprint_name": "IND-SMD_L2.5-W2.0_MHCD252012B-2R2M-A8L",
+      "block_name": "ddr_1v5"
+    },
+    {
+      "designator": "U15",
+      "pins": [
+        {
+          "pin_number": "6",
+          "name": "VIN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "5",
+          "name": "SW",
+          "signal_name": "DDR_1V5_LX"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "3",
+          "name": "FB",
+          "signal_name": "DDR_1V5_FB"
+        },
+        {
+          "pin_number": "2",
+          "name": "PG",
+          "signal_name": "DDR_1V5_PG"
+        },
+        {
+          "pin_number": "1",
+          "name": "EN",
+          "signal_name": "SYS_3V3_PG"
+        }
+      ],
+      "value": "TPS62826DMQR",
+      "part_uuid": "bd4441de51664cc1912ca3f35d790b2b",
+      "footprint_name": "VSON-6_L1.5-W1.5-P0.50-TL",
+      "block_name": "ddr_1v5"
+    },
+    {
+      "designator": "R26",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_1V5_FB"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        }
+      ],
+      "value": "150kΩ",
+      "part_uuid": "aed08f7c0c3d47dface195fb3dccb685",
+      "footprint_name": "R0402",
+      "block_name": "ddr_1v5"
+    },
+    {
+      "designator": "C67",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "ddr_1v5"
+    },
+    {
+      "designator": "C68",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "ddr_1v5"
+    },
+    {
+      "designator": "C69",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "ddr_1v5"
+    }
+  ],
+  "reused_blocks": []
+}

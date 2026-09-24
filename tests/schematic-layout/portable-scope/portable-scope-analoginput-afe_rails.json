@@ -1,0 +1,244 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / AnalogInput / afe_rails",
+    "description": "EasyEDA page AnalogInput; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "afe_rails",
+      "description": "afe_rails",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "FB1",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ANALOG_P5V7"
+        }
+      ],
+      "value": "BLM18AG102SN1D",
+      "part_uuid": "5e41f58004bb4b95a5c240bffd2ef977",
+      "footprint_name": "L0603",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "FB2",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ANALOG_N5V7"
+        }
+      ],
+      "value": "BLM18AG102SN1D",
+      "part_uuid": "5e41f58004bb4b95a5c240bffd2ef977",
+      "footprint_name": "L0603",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "FB3",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "BLM18AG102SN1D",
+      "part_uuid": "5e41f58004bb4b95a5c240bffd2ef977",
+      "footprint_name": "L0603",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C101",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C103",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C105",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C107",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C108",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C109",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C102",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C104",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C106",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "afe_rails"
+    }
+  ],
+  "reused_blocks": []
+}

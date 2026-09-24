@@ -1,0 +1,225 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / AnalogInput / attenuator",
+    "description": "EasyEDA page AnalogInput; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "attenuator",
+      "description": "attenuator",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "J6",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "SIG",
+          "signal_name": "SCOPE_IN"
+        }
+      ],
+      "value": "4GHz",
+      "part_uuid": "192cbc71d56c48a483637ebc3cf7a3ef",
+      "footprint_name": "BNC-TH_5227161-9",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "R60",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_TOP"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SCOPE_IN"
+        }
+      ],
+      "value": "910kΩ",
+      "part_uuid": "01c1416b95d7414dad764e10eb90a740",
+      "footprint_name": "R1206",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "R61",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_12"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_TOP"
+        }
+      ],
+      "value": "6.8kΩ",
+      "part_uuid": "09b1266989ee4b4b9c5c7ecdcd098d98",
+      "footprint_name": "R0402",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "R62",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_120"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_12"
+        }
+      ],
+      "value": "75kΩ",
+      "part_uuid": "72c4cc2cd6f7424da5a043b031936e1d",
+      "footprint_name": "R0603",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "R63",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_1200"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_120"
+        }
+      ],
+      "value": "7.5kΩ",
+      "part_uuid": "df9f3434cc844755bd71b1082283e242",
+      "footprint_name": "R0603",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "R64",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_1200"
+        }
+      ],
+      "value": "825Ω",
+      "part_uuid": "38b3fdd65dc14b328dbbc7739281e67f",
+      "footprint_name": "R0603",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "C95",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_12"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SCOPE_IN"
+        }
+      ],
+      "value": "2pF~6pF",
+      "part_uuid": "cdbc9cb9e83843209e67dea4508a910c",
+      "footprint_name": "CAP-SMD_L4.50-W3.20",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "C122",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_120"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_12"
+        }
+      ],
+      "value": "2pF~6pF",
+      "part_uuid": "cdbc9cb9e83843209e67dea4508a910c",
+      "footprint_name": "CAP-SMD_L4.50-W3.20",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "C96",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_12"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_120"
+        }
+      ],
+      "value": "12pF",
+      "part_uuid": "dd634d65922a42a0a9924ef82ab4053a",
+      "footprint_name": "C0402",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "C97",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_120"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_1200"
+        }
+      ],
+      "value": "120pF",
+      "part_uuid": "0dcbc008ef5e425ab7475ebbe00b2b0f",
+      "footprint_name": "C0603",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "C98",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_1200"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "1nF",
+      "part_uuid": "225b08ee202e41a4a97dcd80b0a2b4e5",
+      "footprint_name": "C0603",
+      "block_name": "attenuator"
+    }
+  ],
+  "reused_blocks": []
+}

@@ -1,0 +1,304 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / BatteryPower / auxiliary_ldos",
+    "description": "EasyEDA page BatteryPower; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "auxiliary_ldos",
+      "description": "auxiliary_ldos",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "U12",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "3",
+          "name": "EN",
+          "signal_name": "FPGA_1V8_PG"
+        },
+        {
+          "pin_number": "4",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "5",
+          "name": "OUT",
+          "signal_name": "ADC_1V8_A"
+        }
+      ],
+      "value": "TLV75518PDBVR",
+      "part_uuid": "66abe7340e954576bb6505c706d688e5",
+      "footprint_name": "SOT-23-5_L2.9-W1.6-P0.95-LS2.8-BR",
+      "block_name": "auxiliary_ldos"
+    },
+    {
+      "designator": "U13",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "3",
+          "name": "EN",
+          "signal_name": "FPGA_1V8_PG"
+        },
+        {
+          "pin_number": "4",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "5",
+          "name": "OUT",
+          "signal_name": "ADC_1V8_D"
+        }
+      ],
+      "value": "TLV75518PDBVR",
+      "part_uuid": "66abe7340e954576bb6505c706d688e5",
+      "footprint_name": "SOT-23-5_L2.9-W1.6-P0.95-LS2.8-BR",
+      "block_name": "auxiliary_ldos"
+    },
+    {
+      "designator": "U11",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "3",
+          "name": "EN",
+          "signal_name": "SYS_3V3_PG"
+        },
+        {
+          "pin_number": "4",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "5",
+          "name": "OUT",
+          "signal_name": "FPGA_2V5"
+        }
+      ],
+      "value": "TLV75525PDBVR",
+      "part_uuid": "a3d822667f5341b99c87fff564736062",
+      "footprint_name": "SOT-23-5_L2.9-W1.6-P0.95-LS2.8-BR",
+      "block_name": "auxiliary_ldos"
+    },
+    {
+      "designator": "U14",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "3",
+          "name": "EN",
+          "signal_name": "FPGA_1V8_PG"
+        },
+        {
+          "pin_number": "4",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "5",
+          "name": "OUT",
+          "signal_name": "CLK_2V5"
+        }
+      ],
+      "value": "TLV75525PDBVR",
+      "part_uuid": "a3d822667f5341b99c87fff564736062",
+      "footprint_name": "SOT-23-5_L2.9-W1.6-P0.95-LS2.8-BR",
+      "block_name": "auxiliary_ldos"
+    },
+    {
+      "designator": "C58",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "1uF",
+      "part_uuid": "c03b3241bfd648279f8d3bfda36eff71",
+      "footprint_name": "C0603",
+      "block_name": "auxiliary_ldos"
+    },
+    {
+      "designator": "C60",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "1uF",
+      "part_uuid": "c03b3241bfd648279f8d3bfda36eff71",
+      "footprint_name": "C0603",
+      "block_name": "auxiliary_ldos"
+    },
+    {
+      "designator": "C62",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "1uF",
+      "part_uuid": "c03b3241bfd648279f8d3bfda36eff71",
+      "footprint_name": "C0603",
+      "block_name": "auxiliary_ldos"
+    },
+    {
+      "designator": "C64",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "1uF",
+      "part_uuid": "c03b3241bfd648279f8d3bfda36eff71",
+      "footprint_name": "C0603",
+      "block_name": "auxiliary_ldos"
+    },
+    {
+      "designator": "C59",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_2V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "auxiliary_ldos"
+    },
+    {
+      "designator": "C61",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "auxiliary_ldos"
+    },
+    {
+      "designator": "C63",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_1V8_D"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "auxiliary_ldos"
+    },
+    {
+      "designator": "C65",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "CLK_2V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "auxiliary_ldos"
+    }
+  ],
+  "reused_blocks": []
+}
