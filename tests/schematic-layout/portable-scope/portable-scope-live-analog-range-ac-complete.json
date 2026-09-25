@@ -1,0 +1,432 @@
+{
+  "add_components": [
+    {
+      "designator": "U20",
+      "value": "ADG5401FBCPZ-RL7",
+      "part_uuid": "5fc357b4b8844487970fe63ffa963af4",
+      "search_query": "ADG5401FBCPZ-RL7",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "S",
+          "signal_name": "SCOPE_IN"
+        },
+        {
+          "pin_number": "2",
+          "name": "SFB",
+          "signal_name": "SCOPE_IN"
+        },
+        {
+          "pin_number": "3",
+          "name": "FF",
+          "signal_name": "AFE_FAULT_N",
+          "port_style": "out"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "6",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "7",
+          "name": "POC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "9",
+          "name": "DFB",
+          "signal_name": "PROTECTED_1"
+        },
+        {
+          "pin_number": "10",
+          "name": "D",
+          "signal_name": "PROTECTED_1"
+        }
+      ],
+      "block_name": "Protected range and AC/DC selection"
+    },
+    {
+      "designator": "U21",
+      "value": "ADG5401FBCPZ-RL7",
+      "part_uuid": "5fc357b4b8844487970fe63ffa963af4",
+      "search_query": "ADG5401FBCPZ-RL7",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "S",
+          "signal_name": "ATT_12"
+        },
+        {
+          "pin_number": "2",
+          "name": "SFB",
+          "signal_name": "ATT_12"
+        },
+        {
+          "pin_number": "3",
+          "name": "FF",
+          "signal_name": "AFE_FAULT_N",
+          "port_style": "out"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "6",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "7",
+          "name": "POC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "9",
+          "name": "DFB",
+          "signal_name": "PROTECTED_2"
+        },
+        {
+          "pin_number": "10",
+          "name": "D",
+          "signal_name": "PROTECTED_2"
+        }
+      ],
+      "block_name": "Protected range and AC/DC selection"
+    },
+    {
+      "designator": "U22",
+      "value": "ADG5401FBCPZ-RL7",
+      "part_uuid": "5fc357b4b8844487970fe63ffa963af4",
+      "search_query": "ADG5401FBCPZ-RL7",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "S",
+          "signal_name": "ATT_120"
+        },
+        {
+          "pin_number": "2",
+          "name": "SFB",
+          "signal_name": "ATT_120"
+        },
+        {
+          "pin_number": "3",
+          "name": "FF",
+          "signal_name": "AFE_FAULT_N",
+          "port_style": "out"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "6",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "7",
+          "name": "POC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "9",
+          "name": "DFB",
+          "signal_name": "PROTECTED_3"
+        },
+        {
+          "pin_number": "10",
+          "name": "D",
+          "signal_name": "PROTECTED_3"
+        }
+      ],
+      "block_name": "Protected range and AC/DC selection"
+    },
+    {
+      "designator": "U23",
+      "value": "ADG5401FBCPZ-RL7",
+      "part_uuid": "5fc357b4b8844487970fe63ffa963af4",
+      "search_query": "ADG5401FBCPZ-RL7",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "S",
+          "signal_name": "ATT_1200"
+        },
+        {
+          "pin_number": "2",
+          "name": "SFB",
+          "signal_name": "ATT_1200"
+        },
+        {
+          "pin_number": "3",
+          "name": "FF",
+          "signal_name": "AFE_FAULT_N",
+          "port_style": "out"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "6",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "7",
+          "name": "POC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "9",
+          "name": "DFB",
+          "signal_name": "PROTECTED_4"
+        },
+        {
+          "pin_number": "10",
+          "name": "D",
+          "signal_name": "PROTECTED_4"
+        }
+      ],
+      "block_name": "Protected range and AC/DC selection"
+    },
+    {
+      "designator": "U24",
+      "value": "TMUX6104PWR",
+      "part_uuid": "add49c2ccb51416e82fa3bf10a9b8997",
+      "search_query": "TMUX6104PWR",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "A0",
+          "signal_name": "AFE_RANGE_A0",
+          "port_style": "in"
+        },
+        {
+          "pin_number": "2",
+          "name": "EN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "3",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "4",
+          "name": "S1",
+          "signal_name": "PROTECTED_1"
+        },
+        {
+          "pin_number": "5",
+          "name": "S2",
+          "signal_name": "PROTECTED_2"
+        },
+        {
+          "pin_number": "6",
+          "name": "D",
+          "signal_name": "AFE_RANGE_OUT"
+        },
+        {
+          "pin_number": "7",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "9",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "10",
+          "name": "S4",
+          "signal_name": "PROTECTED_4"
+        },
+        {
+          "pin_number": "11",
+          "name": "S3",
+          "signal_name": "PROTECTED_3"
+        },
+        {
+          "pin_number": "12",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "13",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "14",
+          "name": "A1",
+          "signal_name": "AFE_RANGE_A1",
+          "port_style": "in"
+        }
+      ],
+      "block_name": "Protected range and AC/DC selection"
+    },
+    {
+      "designator": "U25",
+      "value": "TMUX6119DCNR",
+      "part_uuid": "0e8860cb7f594de58a411ca7c1a16205",
+      "search_query": "TMUX6119DCNR",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "EN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "3",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "4",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "5",
+          "name": "SB",
+          "signal_name": "AFE_AC_PATH"
+        },
+        {
+          "pin_number": "6",
+          "name": "D",
+          "signal_name": "AFE_BUFFER_IN"
+        },
+        {
+          "pin_number": "7",
+          "name": "SA",
+          "signal_name": "AFE_RANGE_OUT"
+        },
+        {
+          "pin_number": "8",
+          "name": "SEL",
+          "signal_name": "AFE_AC_SEL",
+          "port_style": "in"
+        }
+      ],
+      "block_name": "Protected range and AC/DC selection"
+    },
+    {
+      "designator": "C99",
+      "value": "100nF 100V",
+      "part_uuid": "021278427a094a3e8aab741a0a343a7e",
+      "search_query": "NM0805B104K101CDDN",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_RANGE_OUT"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_AC_PATH"
+        }
+      ],
+      "block_name": "Protected range and AC/DC selection"
+    },
+    {
+      "designator": "R65",
+      "value": "1M",
+      "part_uuid": "5c856273eb424c9e80b50f13c6184f68",
+      "search_query": "RC0402FR-071ML",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_AC_PATH"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "Protected range and AC/DC selection"
+    },
+    {
+      "designator": "R66",
+      "value": "10k",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "search_query": "RC0402FR-0710KL",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_FAULT_N"
+        }
+      ],
+      "block_name": "Protected range and AC/DC selection"
+    }
+  ]
+}

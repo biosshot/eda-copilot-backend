@@ -1,0 +1,639 @@
+{
+  "add_components": [
+    {
+      "designator": "C10",
+      "value": "1uF",
+      "part_uuid": "c03b3241bfd648279f8d3bfda36eff71",
+      "search_query": "1uF",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "ADC converter and local bypass"
+    },
+    {
+      "designator": "U1",
+      "value": "ADS4149IRGZR",
+      "part_uuid": "cecd8308edf54c398cb6a8352f8f85fb",
+      "search_query": "ADS4149IRGZR",
+      "pins": [
+        {
+          "pin_number": "49",
+          "name": "EP",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "48",
+          "name": "D12_D13_P",
+          "signal_name": "ADC_D1213_P"
+        },
+        {
+          "pin_number": "47",
+          "name": "D12_D13_M",
+          "signal_name": "ADC_D1213_M"
+        },
+        {
+          "pin_number": "46",
+          "name": "D10_D11_P",
+          "signal_name": "ADC_D1011_P"
+        },
+        {
+          "pin_number": "45",
+          "name": "D10_D11_M",
+          "signal_name": "ADC_D1011_M"
+        },
+        {
+          "pin_number": "44",
+          "name": "D8_D9_P",
+          "signal_name": "ADC_D89_P"
+        },
+        {
+          "pin_number": "43",
+          "name": "D8_D9_M",
+          "signal_name": "ADC_D89_M"
+        },
+        {
+          "pin_number": "42",
+          "name": "D6_D7_P",
+          "signal_name": "ADC_D67_P"
+        },
+        {
+          "pin_number": "41",
+          "name": "D6_D7_M",
+          "signal_name": "ADC_D67_M"
+        },
+        {
+          "pin_number": "40",
+          "name": "D4_D5_P",
+          "signal_name": "ADC_D45_P"
+        },
+        {
+          "pin_number": "39",
+          "name": "D4_D5_M",
+          "signal_name": "ADC_D45_M"
+        },
+        {
+          "pin_number": "38",
+          "name": "D2_D3_P",
+          "signal_name": "ADC_D23_P"
+        },
+        {
+          "pin_number": "37",
+          "name": "D2_D3_M",
+          "signal_name": "ADC_D23_M"
+        },
+        {
+          "pin_number": "36",
+          "name": "DRGND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "35",
+          "name": "DRVDD",
+          "signal_name": "ADC_1V8_D"
+        },
+        {
+          "pin_number": "34",
+          "name": "D0_D1_P",
+          "signal_name": "ADC_D01_P"
+        },
+        {
+          "pin_number": "33",
+          "name": "D0_D1_M",
+          "signal_name": "ADC_D01_M"
+        },
+        {
+          "pin_number": "32",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "31",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "30",
+          "name": "RESET",
+          "signal_name": "ADC_RESET"
+        },
+        {
+          "pin_number": "29",
+          "name": "SCLK",
+          "signal_name": "ADC_SCLK"
+        },
+        {
+          "pin_number": "28",
+          "name": "SDATA",
+          "signal_name": "ADC_SDATA"
+        },
+        {
+          "pin_number": "27",
+          "name": "SEN",
+          "signal_name": "ADC_SEN"
+        },
+        {
+          "pin_number": "26",
+          "name": "AVDD",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "25",
+          "name": "AGND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "24",
+          "name": "AVDD",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "23",
+          "name": "RESERVED",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "22",
+          "name": "AVDD",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "21",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "20",
+          "name": "AVDD",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "19",
+          "name": "AGND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "18",
+          "name": "AVDD",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "17",
+          "name": "AGND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "16",
+          "name": "INM",
+          "signal_name": "ADC_INM"
+        },
+        {
+          "pin_number": "15",
+          "name": "INP",
+          "signal_name": "ADC_INP"
+        },
+        {
+          "pin_number": "14",
+          "name": "AGND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "13",
+          "name": "VCM",
+          "signal_name": "ADC_VCM"
+        },
+        {
+          "pin_number": "12",
+          "name": "AGND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "11",
+          "name": "CLKM",
+          "signal_name": "ADC_CLK_M"
+        },
+        {
+          "pin_number": "10",
+          "name": "CLKP",
+          "signal_name": "ADC_CLK_P"
+        },
+        {
+          "pin_number": "9",
+          "name": "AGND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "8",
+          "name": "AVDD",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "7",
+          "name": "OE",
+          "signal_name": "ADC_1V8_D"
+        },
+        {
+          "pin_number": "6",
+          "name": "DFS",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "5",
+          "name": "CLKOUTP",
+          "signal_name": "ADC_DCLK_P"
+        },
+        {
+          "pin_number": "4",
+          "name": "CLKOUTM",
+          "signal_name": "ADC_DCLK_M"
+        },
+        {
+          "pin_number": "3",
+          "name": "OVR_SDOUT",
+          "signal_name": "ADC_OVR"
+        },
+        {
+          "pin_number": "2",
+          "name": "DRVDD",
+          "signal_name": "ADC_1V8_D"
+        },
+        {
+          "pin_number": "1",
+          "name": "DRGND",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "ADC converter and local bypass"
+    },
+    {
+      "designator": "U2",
+      "value": "200MHz",
+      "part_uuid": "0c1f972a3cd54689ab92ff9f97c52e9b",
+      "search_query": "200MHz",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "OE",
+          "signal_name": "OSC_OE_2V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "3",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "4",
+          "name": "OUT",
+          "signal_name": "OSC_CLK_P"
+        },
+        {
+          "pin_number": "5",
+          "name": "NC/OUT#",
+          "signal_name": "OSC_CLK_M"
+        },
+        {
+          "pin_number": "6",
+          "name": "VDD",
+          "signal_name": "CLK_2V5"
+        }
+      ],
+      "block_name": "200 MHz LVDS clock"
+    },
+    {
+      "designator": "R1",
+      "value": "10",
+      "part_uuid": "dd6dddb398404233b6dfe99f091993fa",
+      "search_query": "10Ω",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ADC_INP"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_DRV_P"
+        }
+      ],
+      "block_name": "ADC converter and local bypass"
+    },
+    {
+      "designator": "R3",
+      "value": "100",
+      "part_uuid": "9d7f13c7738c4f39acb83eaea4591d9c",
+      "search_query": "100Ω",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ADC_CLK_M"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_CLK_P"
+        }
+      ],
+      "block_name": "200 MHz LVDS clock"
+    },
+    {
+      "designator": "R2",
+      "value": "10",
+      "part_uuid": "dd6dddb398404233b6dfe99f091993fa",
+      "search_query": "10Ω",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ADC_INM"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_DRV_M"
+        }
+      ],
+      "block_name": "ADC converter and local bypass"
+    },
+    {
+      "designator": "C1",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "100nF",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "ADC converter and local bypass"
+    },
+    {
+      "designator": "C2",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "100nF",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "ADC converter and local bypass"
+    },
+    {
+      "designator": "C3",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "100nF",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "ADC converter and local bypass"
+    },
+    {
+      "designator": "C4",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "100nF",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "ADC converter and local bypass"
+    },
+    {
+      "designator": "C5",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "100nF",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "ADC converter and local bypass"
+    },
+    {
+      "designator": "C6",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "100nF",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_1V8_A"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "ADC converter and local bypass"
+    },
+    {
+      "designator": "C7",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "100nF",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_1V8_D"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "ADC converter and local bypass"
+    },
+    {
+      "designator": "C8",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "100nF",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_1V8_D"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "ADC converter and local bypass"
+    },
+    {
+      "designator": "C9",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "100nF",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_VCM"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "ADC converter and local bypass"
+    },
+    {
+      "designator": "C11",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "100nF",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "OSC_CLK_P"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ADC_CLK_P"
+        }
+      ],
+      "block_name": "200 MHz LVDS clock"
+    },
+    {
+      "designator": "C12",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "100nF",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "OSC_CLK_M"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ADC_CLK_M"
+        }
+      ],
+      "block_name": "200 MHz LVDS clock"
+    },
+    {
+      "designator": "C13",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "100nF",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "CLK_2V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "200 MHz LVDS clock"
+    },
+    {
+      "designator": "C14",
+      "value": "1uF",
+      "part_uuid": "c03b3241bfd648279f8d3bfda36eff71",
+      "search_query": "1uF",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "CLK_2V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "200 MHz LVDS clock"
+    },
+    {
+      "designator": "R4",
+      "value": "10k",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "search_query": "10kΩ",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "CLK_2V5"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "OSC_OE_2V5"
+        }
+      ],
+      "block_name": "200 MHz LVDS clock"
+    }
+  ]
+}

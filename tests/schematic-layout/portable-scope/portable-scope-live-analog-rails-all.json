@@ -1,0 +1,232 @@
+{
+  "add_components": [
+    {
+      "designator": "FB1",
+      "value": "BLM18AG102SN1D",
+      "part_uuid": "5e41f58004bb4b95a5c240bffd2ef977",
+      "search_query": "BLM18AG102SN1D",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ANALOG_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_P5V7"
+        }
+      ],
+      "block_name": "Positive analog rail filtering"
+    },
+    {
+      "designator": "C101",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "GRM155R71C104KA88D",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "Positive analog rail filtering"
+    },
+    {
+      "designator": "C102",
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "search_query": "GRM21BR61A475KA73L",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "Positive analog rail filtering"
+    },
+    {
+      "designator": "C107",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "GRM155R71C104KA88D",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "Positive analog rail filtering"
+    },
+    {
+      "designator": "FB2",
+      "value": "BLM18AG102SN1D",
+      "part_uuid": "5e41f58004bb4b95a5c240bffd2ef977",
+      "search_query": "BLM18AG102SN1D",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ANALOG_N5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_N5V7"
+        }
+      ],
+      "block_name": "Negative analog rail filtering"
+    },
+    {
+      "designator": "C103",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "GRM155R71C104KA88D",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "Negative analog rail filtering"
+    },
+    {
+      "designator": "C104",
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "search_query": "GRM21BR61A475KA73L",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "Negative analog rail filtering"
+    },
+    {
+      "designator": "C108",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "GRM155R71C104KA88D",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "Negative analog rail filtering"
+    },
+    {
+      "designator": "FB3",
+      "value": "BLM18AG102SN1D",
+      "part_uuid": "5e41f58004bb4b95a5c240bffd2ef977",
+      "search_query": "BLM18AG102SN1D",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_3V3"
+        }
+      ],
+      "block_name": "3V3 analog rail filtering"
+    },
+    {
+      "designator": "C105",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "GRM155R71C104KA88D",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "3V3 analog rail filtering"
+    },
+    {
+      "designator": "C106",
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "search_query": "GRM21BR61A475KA73L",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "3V3 analog rail filtering"
+    },
+    {
+      "designator": "C109",
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "search_query": "GRM155R71C104KA88D",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "block_name": "3V3 analog rail filtering"
+    }
+  ]
+}

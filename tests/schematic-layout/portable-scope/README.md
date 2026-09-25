@@ -5,6 +5,14 @@ Snapshots of the open EasyEDA project **PortableScope 200MSPS 1CH**, exported on
 cover all 246 physical components on the five schematic pages. The other 19
 cases isolate functional blocks for layout review.
 
+Seven additional `portable-scope-live-*` cases mirror the assembly inputs in
+`hardware/portable-scope/test-fixtures/` at the workspace root: three
+individual analog rail filters, all three rails together, two protected-range
+and AC selection slices, and the complete ADC clock page. Their names keep
+them separate from the older page snapshots. The companion
+`adc-clock-readback.json` is an unmodified `get_schematic` response rather
+than an assembly input, so it is retained in the source fixtures only.
+
 During gallery runs, each isolated block receives the signals that connect it
 to other blocks on its matching `*-full.json` page as `externalSignals`. It
 also uses that page's frozen symbol geometry to classify named supply nets and
@@ -23,6 +31,12 @@ Run the visual regression bank from `eda-copilot-backend`:
 
 ```sh
 npm run test:schematics -- --workers 4 --timeout 300
+```
+
+To generate a gallery containing only the new assembly inputs:
+
+```sh
+npm run test:schematics -- --filter portable-scope-live- --workers 2 --timeout 300
 ```
 
 The runner writes `before.png`, `after.png`, SVGs, serialized ASM, metrics,
