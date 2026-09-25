@@ -18,10 +18,11 @@ const edge = (id: string, from: string, to: string, points: number[][]): ElkExte
     sections: [{ id: `${id}:s`, startPoint: { x: points[0][0], y: points[0][1] },
         endPoint: { x: points.at(-1)![0], y: points.at(-1)![1] }, bendPoints: points.slice(1, -1).map(([x, y]) => ({ x, y })) }] });
 
-test('area preference has a landscape plateau, mild width cost and bounded height cost', () => {
-    assert.equal(effectiveLayoutArea(200, 100), 20000);
-    assert.equal(effectiveLayoutArea(100, 100), 10000);
-    assert(effectiveLayoutArea(100, 200) > effectiveLayoutArea(200, 100) * 2);
+test('area preference favors the sheet ratio and still charges for blank width', () => {
+    const sheetWidth = 100 * Math.sqrt(Math.SQRT2);
+    assert(effectiveLayoutArea(100, 100) > effectiveLayoutArea(sheetWidth, 10000 / sheetWidth));
+    assert(effectiveLayoutArea(200, 100) < effectiveLayoutArea(Math.sqrt(20000), Math.sqrt(20000)));
+    assert(effectiveLayoutArea(100, 200) > effectiveLayoutArea(200, 100));
     assert(effectiveLayoutArea(400, 100) < effectiveLayoutArea(100, 400));
     assert.equal(effectiveLayoutArea(10, 1000), 100000);
 });
@@ -116,4 +117,43 @@ test('long inter-IC connections are eligible even in a small block', () => {
     assert.equal(result.added.length, 2);
     assert(result.added.every(c => c.pins[0].signal_name === 'CONTROL'));
     assert(!result.edges.some(e => e.id === 'long'));
+});
+
+test('shared long rail is replaced as a group rather than leaving its trunk behind', () => {
+    const node = (id: string, x: number, y: number, pinX: number): Placed => ({ id, x, y, width: 100, height: 100,
+        ports: [0, 1, 2].map(i => ({ id: `${id}_pin_${i}`, x: pinX, y: 50 + i * 15 })) });
+    const nodes = [node('U24', 500, 100, 100), node('U21', 100, 0, 0), node('U25', 100, 700, 0)];
+    const shared = [[600, 150], [650, 150], [650, 850], [50, 850]];
+    const edges = [edge('upper', 'U24_pin_0', 'U21_pin_0', [...shared, [50, 50], [100, 50]]),
+        edge('lower', 'U24_pin_0', 'U25_pin_0', [...shared, [50, 750], [100, 750]])];
+    const nets = new Map(nodes.flatMap(n => n.ports!.map(p => [p.id, 'RAIL'] as const)));
+    const result = labelLongLinks(nodes, edges, nets, new Map(nodes.map(n => [n.id, 'block'])),
+        new Set(nodes.map(n => n.id)), 2);
+    assert.equal(result.links, 2);
+    assert(!result.edges.some(e => e.id === 'upper' || e.id === 'lower'));
+    assert(result.edges.some(e => e.id.includes(':shared:')));
+});
+
+test('duplicate logical edges are cut together as one drawn connection', () => {
+    const nodes: Placed[] = [0, 1].map(i => ({ id: `U${i}`, x: i * 900, y: 100, width: 100, height: 100,
+        ports: [0, 1, 2].map(p => ({ id: `U${i}_pin_${p}`, x: i ? 0 : 100, y: 20 + p * 20 })) }));
+    const route = [[100, 120], [900, 120]];
+    const edges = [edge('ordinary', 'U0_pin_0', 'U1_pin_0', route),
+        edge('forced-boundary', 'U0_pin_0', 'U1_pin_0', route)];
+    const nets = new Map(nodes.flatMap(n => n.ports!.map(p => [p.id, 'REMOTE'] as const)));
+    const result = labelLongLinks(nodes, edges, nets, new Map(nodes.map(n => [n.id, 'block'])),
+        new Set(nodes.map(n => n.id)));
+    assert.equal(result.links, 1);
+    assert.equal(result.added.length, 2);
+    assert(!result.edges.some(e => e.id === 'ordinary' || e.id === 'forced-boundary'));
+});
+
+test('a remote direct connection between two ICs can use local ports below the old absolute threshold', () => {
+    const nodes: Placed[] = [0, 1].map(i => ({ id: `U${i}`, x: i * 500, y: 100, width: 100, height: 100,
+        ports: [0, 1, 2].map(p => ({ id: `U${i}_pin_${p}`, x: i ? 0 : 100, y: 20 + p * 20 })) }));
+    const nets = new Map(nodes.flatMap(n => n.ports!.map(p => [p.id, 'ENABLE'] as const)));
+    const result = labelLongLinks(nodes, [edge('remote', 'U0_pin_0', 'U1_pin_0', [[100, 120], [500, 120]])],
+        nets, new Map(nodes.map(n => [n.id, 'block'])), new Set(nodes.map(n => n.id)));
+    assert.equal(result.links, 1);
+    assert.equal(result.added.length, 2);
 });

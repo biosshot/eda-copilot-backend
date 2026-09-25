@@ -34,7 +34,7 @@ export const refinedCircuitLayoutPatterns: CircuitLayoutPattern[] = paddedPatter
         if (macro?.placements.some(p => (p.designator.startsWith('U') || (context.symbolsByDesignator.get(p.designator)?.symbol.pins.length ?? 0) > 4)
             && ((p.rotate % 360) + 360) % 360 !== 0)) return null;
         if (macro && ['power-pi-filter', 'parallel-two-pin', 'voltage-divider', 'led-resistor', 'tapped-chain'].includes(pattern.id)) {
-            macro.refinementRotations = [180];
+            macro.refinementRotations = pattern.id === 'tapped-chain' && match.roles.pairedAnchor === 'true' ? [] : [180];
         }
         return macro ? orientPassiveMacro(macro) : null;
     },

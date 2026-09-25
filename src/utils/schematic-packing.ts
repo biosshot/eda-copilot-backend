@@ -1,3 +1,5 @@
+import { effectiveLayoutArea } from '../circuit-layout/quality.ts';
+
 /** The sheet goal is landscape. Bounds always describe occupied geometry;
  * this policy never adds blank canvas to manufacture an aspect ratio. */
 export const SCHEMATIC_SHEET = Object.freeze({ aspectRatio: Math.SQRT2, rootPadding: 15, blockPadding: 30, extraBlockGap: 25 });
@@ -40,10 +42,12 @@ export function packingAffinity(nets: readonly PackingNet[], positions: Readonly
     return weights ? sum / weights : 0;
 }
 
-function sheetScore(width: number, height: number, area: number, distance: number, padding: number) {
-    const w = Math.max(EPS, width + padding * 2), h = Math.max(EPS, height + padding * 2), ratio = SCHEMATIC_SHEET.aspectRatio;
-    // Area of the smallest landscape sheet enclosing this candidate. It
-    // penalizes excess height more strongly than the same excess width.
+function sheetScore(width: number, height: number, area: number, distance: number, padding: number, page: boolean) {
+    const w = Math.max(EPS, width + padding * 2), h = Math.max(EPS, height + padding * 2);
+    if (page) return effectiveLayoutArea(w, h) + distance * Math.sqrt(area) * 0.35;
+    // Internal islands retain their existing packing policy. A child block
+    // may be tall or wide; its parent chooses the final sheet arrangement.
+    const ratio = SCHEMATIC_SHEET.aspectRatio;
     const sheetArea = Math.max(w * w / ratio, h * h * ratio);
     return sheetArea + w * h * 0.15 + sheetArea * Math.abs(Math.log(w / h / ratio)) * 0.1
         + distance * Math.sqrt(area) * 0.35;
@@ -132,7 +136,7 @@ export function packSchematicRectangles(items: readonly PackingItem[], gap: numb
                         || site.y + h > r.y + r.height + EPS) continue;
                     positions.set(item.id, site);
                     const score = sheetScore(Math.max(right, site.x + item.width), Math.max(bottom, site.y + item.height), area,
-                        packingAffinity(localNets, positions), padding) + gridCost(positions);
+                        packingAffinity(localNets, positions), padding, Boolean(grid)) + gridCost(positions);
                     if (!choice || score < choice.score - EPS) choice = { ...site, score };
                 }
             }
@@ -151,7 +155,7 @@ export function packSchematicRectangles(items: readonly PackingItem[], gap: numb
                 const p = positions.get(b.id)!;
                 return [b.id, { x: reverseX ? right - p.x - b.width : p.x, y: reverseY ? bottom - p.y - b.height : p.y }];
             }));
-            const affinity = packingAffinity(nets, arranged), score = sheetScore(right, bottom, area, affinity, padding) + gridCost(arranged);
+            const affinity = packingAffinity(nets, arranged), score = sheetScore(right, bottom, area, affinity, padding, Boolean(grid)) + gridCost(arranged);
             const layout = { positions: arranged, width: right, height: bottom, affinity, score };
             const key = `${right.toFixed(5)}:${bottom.toFixed(5)}`;
             if (!layouts.has(key) || score < layouts.get(key)!.score - EPS) layouts.set(key, layout);

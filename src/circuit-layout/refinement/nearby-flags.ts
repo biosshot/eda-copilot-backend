@@ -67,7 +67,7 @@ export function placeNearbyFlags(nodes: Placed[], edges: ElkExtendedEdge[], adde
             const b = boundsOf([...fixed, ...ns, ...complete.flatMap(path).map(p => ({ ...p, width: 0, height: 0 }))]);
             return complete.reduce((sum, e) => sum + routeLength(path(e))
                 + Math.max(0, path(e).length - 2) * gap.pinEscape, 0) + flagReadabilityCost([...fixed, ...ns], complete, flags)
-                + (ns.length === group.length ? Math.sqrt(effectiveLayoutArea(b.width, b.height)) * 2 : 0);
+                + (ns.length === group.length ? Math.sqrt(effectiveLayoutArea(b.width, b.height, 3)) * 2 : 0);
         };
         let best: { nodes: Placed[]; edges: ElkExtendedEdge[]; cost: number } | undefined;
         const ordered = [...group].sort((a, b) => pins.get(a.anchor)!.y - pins.get(b.anchor)!.y

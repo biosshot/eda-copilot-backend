@@ -37,7 +37,7 @@ function physicalLength(edges: ElkExtendedEdge[], nets: ReadonlyMap<string, stri
 }
 function cost(nodes: Placed[], edges: ElkExtendedEdge[], nets: ReadonlyMap<string, string>, originals: ReadonlySet<string>) {
     const bounds = boundsOf(nodes);
-    let result = physicalLength(edges, nets) + Math.sqrt(effectiveLayoutArea(bounds.width, bounds.height));
+    let result = physicalLength(edges, nets) + Math.sqrt(effectiveLayoutArea(bounds.width, bounds.height, 3));
     for (const e of edges) {
         const p = path(e);
         result += Math.max(0, p.length - 2) * gap.pinEscape;

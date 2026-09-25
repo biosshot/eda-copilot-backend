@@ -6,16 +6,19 @@ import { parseArgs } from 'node:util';
 import { availableParallelism } from 'node:os';
 import { parallelJobs, coalescedWriter, runIsolated, writeJsonAtomic } from './testing/bank-runner.ts';
 import { compareSignalAssignments, signalCheck, formatSignalCheck } from './testing/schematic-signals.ts';
+import { pageBoundarySignals } from './testing/schematic-boundaries.ts';
 import type { Circuit, CircuitMod } from '../src/types/circuit.ts';
 import type { BankFixture } from './testing/schematic-layout.ts';
 import type { inspectLayout } from './testing/schematic-layout.ts';
 import type { autoPlaceCircuitWithHierarchy } from '../src/circuit-layout/index.ts';
 
-type Job = { file: string; cached: boolean; source: string; title: string; id: string };
+type Job = { file: string; cached: boolean; source: string; title: string; id: string;
+    externalSignals: string[]; pageFile?: string; pageSource?: string; pageHash?: string };
 type Variant = ReturnType<typeof inspectLayout> & { elapsedMs: number; refinement?: Awaited<ReturnType<typeof autoPlaceCircuitWithHierarchy>>['refinement'];
     exportValid: boolean; exportErrors: string[]; sceneMatches: boolean; pngSkipped?: string;
     assemblyRoot?: { x: number; y: number; width: number; height: number }; rootAspectRatio: number | null };
 type Report = { file: string; title: string; fingerprint?: string; id: string; inputHash?: string; status: string;
+    externalSignals?: string[];
     regressions?: string[]; review?: string[]; variants?: Record<'before' | 'after', Variant>; error?: string };
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -61,25 +64,18 @@ export function circuitInput(raw: Circuit | CircuitMod): Circuit {
     return { metadata: raw.metadata, blocks: raw.blocks, components, reused_blocks: [] };
 }
 
-async function worker(options: ReturnType<typeof parseOptions>) {
-    const job: Job = await json(options.worker!);
-    const folder = resolve(output, job.id), rel = relative(output, folder);
-    if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('Invalid output folder');
-    await mkdir(folder, { recursive: true });
-    const { autoPlaceCircuitWithHierarchy, refinedBlockBounds } = await import('../src/circuit-layout/index.ts');
-    const { circuitToSymbols } = await import('../src/devices/symbols/symbol-parser.ts');
-    const { inspectLayout, renderSvg } = await import('./testing/schematic-layout.ts');
-    const { renderSvgToPng } = await import('./testing/render-schematic-png.ts');
+async function loadFixture(file: string, sourcePath: string, cachedOnly: boolean, offline: boolean) {
     let fixture: BankFixture & { inputHash?: string; subParts?: Record<string, string | undefined> };
-    const cached = await json(join(cache, job.file)).catch(() => null);
-    if (job.cached) fixture = cached;
+    const cached = await json(join(cache, file)).catch(() => null);
+    if (cachedOnly) fixture = cached;
     else {
-        const source = await readFile(job.source, 'utf8'), inputHash = digest(source);
+        const source = await readFile(sourcePath, 'utf8'), inputHash = digest(source);
         const circuit = circuitInput(JSON.parse(source));
         if (cached?.inputHash === inputHash) fixture = cached;
         else if (cached && !cached.inputHash && JSON.stringify(circuit) === JSON.stringify(cached.circuit)) fixture = cached;
         else {
-            if (options.offline) throw new Error('No matching frozen symbol cache; run once without --offline');
+            if (offline) throw new Error('No matching frozen symbol cache; run once without --offline');
+            const { circuitToSymbols } = await import('../src/devices/symbols/symbol-parser.ts');
             const { getPartIdFromDesignator } = await import('../src/utils/component.ts');
             const symbolCache = join(output, 'symbols'); await mkdir(symbolCache, { recursive: true });
             const symbols: BankFixture['symbols'] = [], subParts: Record<string, string | undefined> = {};
@@ -96,8 +92,8 @@ async function worker(options: ReturnType<typeof parseOptions>) {
                 symbols.push({ designator: c.designator, block_name: c.block_name, symbol: structuredClone(geometry.symbol) });
                 subParts[c.designator] = geometry.subPart;
             }
-            fixture = { source: job.file, inputHash, circuit, symbols, subParts };
-            await writeJsonAtomic(join(cache, job.file), fixture);
+            fixture = { source: file, inputHash, circuit, symbols, subParts };
+            await writeJsonAtomic(join(cache, file), fixture);
         }
     }
     if (!fixture?.symbols?.length) throw new Error('Missing frozen geometry');
@@ -107,13 +103,28 @@ async function worker(options: ReturnType<typeof parseOptions>) {
         for (const p of c.pins) if (!s.symbol.pins.some(pin => String(pin.num) === String(p.pin_number))) throw new Error(`Missing library pin ${c.designator}.${p.pin_number}`);
         for (const p of s.symbol.pins) p.signal_name = c.pins.find(pin => String(pin.pin_number) === String(p.num))?.signal_name ?? '';
     }
-    await writeFile(join(folder, 'input.json'), JSON.stringify(fixture, null, 2));
+    return fixture;
+}
+
+async function worker(options: ReturnType<typeof parseOptions>) {
+    const job: Job = await json(options.worker!);
+    const folder = resolve(output, job.id), rel = relative(output, folder);
+    if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('Invalid output folder');
+    await mkdir(folder, { recursive: true });
+    const { autoPlaceCircuitWithHierarchy, refinedBlockBounds } = await import('../src/circuit-layout/index.ts');
+    const { inspectLayout, renderSvg } = await import('./testing/schematic-layout.ts');
+    const { renderSvgToPng } = await import('./testing/render-schematic-png.ts');
+    const fixture = await loadFixture(job.file, job.source, job.cached, !!options.offline);
+    const page = job.pageFile && await loadFixture(job.pageFile, job.pageSource!, false, !!options.offline);
+    await writeFile(join(folder, 'input.json'), JSON.stringify({ ...fixture, externalSignals: job.externalSignals,
+        boundaryContext: page?.source }, null, 2));
     const variants = {} as Record<'before' | 'after', Variant>;
     for (const [name, layoutRefinement] of [['before', false], ['after', true]] as const) {
         const start = performance.now();
         const layoutCircuit = structuredClone(fixture.circuit);
         const result = await autoPlaceCircuitWithHierarchy(layoutCircuit, structuredClone(fixture.symbols), undefined,
-            { layoutRefinement, layoutPatterns: !options['no-patterns'] });
+            { layoutRefinement, layoutPatterns: !options['no-patterns'], externalSignals: job.externalSignals,
+                boundaryContext: page ? { circuit: page.circuit, symbols: page.symbols } : undefined });
         const elapsedMs = performance.now() - start;
         const inspection = inspectLayout(fixture, result);
         // Rebuild the same final geometry from the serialized ASM positions, as
@@ -167,7 +178,8 @@ async function worker(options: ReturnType<typeof parseOptions>) {
         ...(variants.after.physicalWireLength > variants.before.physicalWireLength * 1.15 ? ['wire length grew >15%'] : []),
         ...(variants.after.drawingBounds.area > variants.before.drawingBounds.area * 1.15 ? ['drawing area grew >15%'] : []),
     ] : ['baseline connectivity invalid; shorter baseline wires are not a fair comparison'];
-    const report = { file: job.file, title: fixture.circuit.metadata?.project_name || job.file, fingerprint: options.fingerprint, regressions, review,
+    const report = { file: job.file, title: fixture.circuit.metadata?.project_name || job.file, fingerprint: options.fingerprint,
+        externalSignals: job.externalSignals, regressions, review,
         status: variants.after.valid && variants.after.exportValid && variants.after.sceneMatches && !regressions.length ? 'ok' : 'failed', variants };
     await writeFile(join(folder, 'report.json'), JSON.stringify(report, null, 2));
 }
@@ -186,16 +198,39 @@ async function main(options: ReturnType<typeof parseOptions>) {
     await mkdir(cache, { recursive: true });
     const fingerprint = digest(await sourceFingerprint() + JSON.stringify({ patterns: !options['no-patterns'] }));
     const candidates = options.case ? [{ file: options.case, cached: true }] : (await readdir(options.cached ? cache : options.bank!)).filter(f => f.endsWith('.json')).sort().map(file => ({ file, cached: !!options.cached }));
+    const fullPages = await Promise.all((await readdir(options.bank!).catch(() => []))
+        .filter(file => file.endsWith('-full.json')).map(async file => {
+            const source = await readFile(join(options.bank!, file), 'utf8');
+            return { file, prefix: file.slice(0, -'-full.json'.length), circuit: circuitInput(JSON.parse(source)), hash: digest(source) };
+        }));
     const jobs: Job[] = [];
     for (const c of candidates) {
         const source = c.cached ? join(cache, c.file) : join(options.bank!, c.file);
-        let title = c.file;
-        try { const raw = await json(source); if (options.cached && !raw.circuit) continue; title = (raw.circuit ?? raw).metadata?.project_name ?? title; } catch { /* worker reports malformed inputs */ }
+        let title = c.file, externalSignals: string[] = [], pageFile: string | undefined,
+            pageHash: string | undefined, matchError: string | undefined;
+        try {
+            const raw = await json(source);
+            if (options.cached && !raw.circuit) continue;
+            const circuit = circuitInput(raw.circuit ?? raw);
+            title = circuit.metadata?.project_name ?? title;
+            const page = fullPages.filter(full => c.file.startsWith(`${full.prefix}-`) && c.file !== `${full.prefix}-full.json`)
+                .sort((a, b) => b.prefix.length - a.prefix.length)[0];
+            const signals = page && pageBoundarySignals(circuit, page.circuit);
+            if (signals) { externalSignals = signals; pageFile = page.file; pageHash = page.hash; }
+            else if (page) matchError = `${c.file} does not contain exactly the same block components and pins as ${page.prefix}-full.json`;
+        } catch { /* worker reports malformed inputs */ }
         if (options.filter && !`${c.file} ${title}`.toLowerCase().includes(options.filter.toLowerCase())) continue;
-        jobs.push({ ...c, source, title, id: c.file.slice(0, -5) + (options['no-patterns'] ? '-plain' : '') });
+        if (matchError) throw new Error(matchError);
+        jobs.push({ ...c, source, title, externalSignals, pageFile,
+            pageSource: pageFile ? join(options.bank!, pageFile) : undefined, pageHash,
+            id: c.file.slice(0, -5) + (options['no-patterns'] ? '-plain' : '') });
         if (options.limit && jobs.length >= Number(options.limit)) break;
     }
     if (!jobs.length) throw new Error('No matching circuits');
+    // Prepare each referenced page once, before workers start, so isolated
+    // cases can reuse the same frozen geometry and page-level port policy.
+    await Promise.all([...new Set(jobs.map(job => job.pageFile).filter((file): file is string => !!file))]
+        .map(file => loadFixture(file, join(options.bank!, file), false, !!options.offline)));
     const reports: (Report | undefined)[] = new Array(jobs.length);
     const workerCount = Math.min(Number(options.workers), jobs.length), started = performance.now();
     let completed = 0, resumed = 0;
@@ -233,7 +268,8 @@ async function main(options: ReturnType<typeof parseOptions>) {
     const execute = async (job: Job): Promise<Report> => {
         const folder = join(output, job.id); await mkdir(folder, { recursive: true });
         const old = await json(join(folder, 'report.json')).catch(() => null);
-        const inputHash = digest(await readFile(job.source, 'utf8').catch(() => 'unreadable'));
+        const inputHash = digest(await readFile(job.source, 'utf8').catch(() => 'unreadable')
+            + JSON.stringify({ externalSignals: job.externalSignals, pageHash: job.pageHash }));
         if (options.resume && old?.fingerprint === fingerprint && old?.inputHash === inputHash && old?.status === 'ok') {
             resumed++; return { ...old, id: job.id };
         } else {

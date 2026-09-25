@@ -708,6 +708,8 @@ export function computeAbsolutePositions(
 type AutoPlaceHierarchyOptions = {
     externalSignals?: string[];
     requiredExternalSignals?: string[];
+    /** Original page context when arranging one of its blocks in isolation. */
+    boundaryContext?: { circuit: Circuit; symbols: SymbolWithMeta[] };
     layoutMode?: 'legacy' | 'quality';
     layoutPatternCatalog?: CircuitLayoutPattern[];
     layoutPatterns?: boolean;
@@ -756,7 +758,10 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
         pins: c.pins.map(p => isNoConnect(p.signal_name) ? { ...p, signal_name: '' } : p) })) };
     nodes = nodes.map(n => ({ ...n, symbol: { ...n.symbol,
         pins: n.symbol.pins.map(p => isNoConnect(p.signal_name) ? { ...p, signal_name: '' } : p) } }));
-    const sharedSupplies = options?.layoutRefinement ? sharedSupplyNets(sch.components, nodes) : new Map<string, ReadonlySet<string>>();
+    const contextCircuit = options?.boundaryContext?.circuit ?? sch;
+    const contextSymbols = options?.boundaryContext?.symbols ?? nodes;
+    const sharedSupplies = options?.layoutRefinement
+        ? sharedSupplyNets(contextCircuit.components, contextSymbols) : new Map<string, ReadonlySet<string>>();
     const topLevelBlocks = buildBlockHierarchy(sch, nodes);
     if (options?.layoutRefinement) topLevelBlocks.layoutOptions['org.eclipse.elk.direction'] = 'RIGHT';
     let patternMacros: MacroInstance[] = [];
@@ -784,12 +789,15 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
 
     // An inline bank preserves its nets through collapse without requiring
     // boundary flags at either end of those nets.
-    const patternBoundarySignals = new Set(
-        patternMacros.filter(macro => macro.forceBoundaryPorts !== false).flatMap(macro => macro.ports.map(port => port.signalName)),
-    );
+    const contextPatternMacros = options?.boundaryContext && options?.layoutPatterns !== false
+        ? detectPatternMacros(contextCircuit, contextSymbols, options?.layoutPatternCatalog
+            ?? (options?.layoutRefinement ? refinedCircuitLayoutPatterns : circuitLayoutPatterns)).macros
+        : patternMacros;
+    const patternBoundarySignals = new Set(contextPatternMacros
+        .filter(macro => macro.forceBoundaryPorts !== false).flatMap(macro => macro.ports.map(port => port.signalName)));
     const preservedPatternSignals = new Set(patternMacros.flatMap(macro => macro.ports.map(port => port.signalName)));
     const signalMap: Record<string, { nodeId: string; portId: string, blockName: string }[]> = {};
-    const labeledNets = new Set(options?.layoutRefinement ? namedSupplyNets(sch.components, nodes) : []);
+    const labeledNets = new Set(options?.layoutRefinement ? namedSupplyNets(contextCircuit.components, contextSymbols) : []);
     const elkNodes = createBlockNode(
         topLevelBlocks,
         signalMap,

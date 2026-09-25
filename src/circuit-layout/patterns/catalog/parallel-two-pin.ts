@@ -56,7 +56,7 @@ function shouldNest(match: PatternMatch, context: PatternContext) {
         return (context.signalEndpoints.get(signalName) ?? []).some(endpoint => {
             if (group.has(endpoint.designator)) return false;
             const component = context.componentsByDesignator.get(endpoint.designator);
-            return component !== undefined && component.pins.length >= NESTED_IC_PIN_COUNT
+            return component?.block_name === match.blockName && component.pins.length >= NESTED_IC_PIN_COUNT
                 && getDesignatorLabel(component.designator) === 'Микросхемы';
         });
     });

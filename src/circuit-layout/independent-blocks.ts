@@ -53,8 +53,17 @@ export async function layoutIndependentBlocks(graph: ElkNode, elk: InstanceType<
             const betterComposition = rows && quality && next.valid && next.nodeCount === quality.nodeCount
                 && next.edgeCount === quality.edgeCount && next.routedEdgeCount === quality.routedEdgeCount
                 && next.wireThroughNodeCount <= quality.wireThroughNodeCount
-                && next.collinearOverlapCount <= quality.collinearOverlapCount && next.score < quality.score * 0.95;
-            if (!best || !quality || safelyImprovesLayout(next, quality) || safelyImprovesExtremeAspect(next, quality) || betterComposition) {
+                && next.collinearOverlapCount <= quality.collinearOverlapCount
+                && next.area < quality.area * 0.85
+                && next.wireLength < quality.wireLength * 0.98
+                && next.score < quality.score;
+            // Shape alone cannot justify a much larger block before its local
+            // routing is refined. Keep the landscape preference inside a
+            // bounded area/ink trade-off for each independent block.
+            const bounded = !quality || (next.area <= quality.area * 1.08
+                && next.wireLength <= quality.wireLength * 1.1);
+            if (!best || !quality || (bounded && (safelyImprovesLayout(next, quality)
+                || safelyImprovesExtremeAspect(next, quality) || betterComposition))) {
                 best = result; quality = next;
             }
         }

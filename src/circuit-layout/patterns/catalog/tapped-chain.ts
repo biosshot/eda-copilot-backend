@@ -1,6 +1,7 @@
 import { componentSignals, isGroundSignal, sharedSignals, shortSymbolKindForSignal } from '../helpers.ts';
 import { instantiateTappedChain } from '../tapped-chain.ts';
 import type { CircuitLayoutPattern, PatternMatch } from '../types.ts';
+import { SCHEMATIC_CLEARANCE as gap } from '../../refinement/policy.ts';
 
 /** A visual tapped chain, not a claim that its parts form a voltage divider. */
 export const tappedChainPattern: CircuitLayoutPattern = {
@@ -27,16 +28,28 @@ export const tappedChainPattern: CircuitLayoutPattern = {
                     && p.designator !== top.designator && p.designator !== bottom.designator
                     && (/^U/i.test(p.designator) || (context.symbolsByDesignator.get(p.designator)?.symbol.pins.length ?? 0) > 4));
                 let entrySide = '';
+                let pairedAnchor = false;
                 if (anchors.length === 1 && !shortSymbolKindForSignal(outerSignal)) {
                     const anchor = context.symbolsByDesignator.get(anchors[0].designator)?.symbol;
                     const pin = anchor?.pins.find(p => String(p.num) === String(anchors[0].pinNumber));
                     if (anchor && pin) {
                         if (Math.abs(pin.x) < 1e-5) entrySide = 'EAST';
                         else if (Math.abs(pin.x - anchor.width) < 1e-5) entrySide = 'WEST';
+                        // For a compact RC branch at adjacent pins of a small
+                        // IC, a horizontal arm makes one lead loop around the
+                        // far end. Keep the existing shape at dense ICs.
+                        if (anchor.pins.length < 16 && /^R\d/.test(top.designator) && /^C\d/.test(bottom.designator)
+                            && (context.signalEndpoints.get(shared[0]) ?? []).some(p => {
+                                if (p.designator !== anchors[0].designator || String(p.pinNumber) === String(anchors[0].pinNumber)) return false;
+                                const other = anchor.pins.find(q => String(q.num) === String(p.pinNumber));
+                                return other && Math.abs(other.x - pin.x) < 1e-5
+                                    && Math.abs(other.y - pin.y) <= gap.largeIC;
+                            })) { entrySide = ''; pairedAnchor = true; }
                     }
                 }
                 matches.push({ patternId: this.id, priority: this.priority, blockName, designators: [top.designator, bottom.designator],
-                    roles: { top: top.designator, bottom: bottom.designator, middleSignal: shared[0], entrySide } });
+                    roles: { top: top.designator, bottom: bottom.designator, middleSignal: shared[0], entrySide,
+                        pairedAnchor: String(pairedAnchor) } });
             }
         }
         return matches;

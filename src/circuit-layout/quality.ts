@@ -218,12 +218,13 @@ function wireThroughNodes(segments: Segment[], boxes: Box[]) {
     return count;
 }
 
-/** Bounded area cost: tolerate landscape drawings, penalize excess height.
- * This replaces the symmetric aspect penalty rather than counting it twice. */
-export function effectiveLayoutArea(width: number, height: number) {
+/** Sheet-like landscape drawings are preferred, with extra height more costly
+ * than extra width. Real area remains the base cost, so blank width never wins. */
+export function effectiveLayoutArea(width: number, height: number, verticalWeight = 1.5) {
     if (width <= 0 || height <= 0) return 0;
-    const penalty = 3 * Math.max(0, height / width - 1.2) ** 2
-        + 0.1 * Math.max(0, width / height - 3) ** 2;
+    const target = Math.SQRT2;
+    const penalty = verticalWeight * Math.max(0, target * height / width - 1) ** 2
+        + 0.15 * Math.max(0, width / (target * height) - 1) ** 2;
     return width * height * (1 + Math.min(9, penalty));
 }
 
@@ -244,9 +245,9 @@ export function evaluateLayoutQuality(graph: ElkNode): LayoutQuality {
     const normalizedWire = wireLength / (Math.max(edgeCount, 1) * typicalNodeSize);
     const normalizedBends = bendCount / Math.max(edgeCount, 1);
     const score = normalizedArea
-        + normalizedWire * 0.35
+        + normalizedWire * 1.2
         + normalizedBends * 0.8
-        + crossingCount / Math.max(edgeCount, 1) * 4
+        + crossingCount / Math.max(edgeCount, 1) * 12
         + collinearOverlapCount / Math.max(edgeCount, 1) * 6
         + wireThroughNodeCount / Math.max(edgeCount, 1) * 12;
     const valid = width > 0
