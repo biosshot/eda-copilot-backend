@@ -17,6 +17,40 @@ function geometry(c: CircuitComponent): SymbolWithMeta {
 }
 const leaves = (n: ElkNode): ElkNode[] => n.children ? n.children.flatMap(leaves) : [n];
 
+for (const count of [14, 15]) test(`local wired NETPORT density switches above 14 signals: ${count}`, async () => {
+    const signals = Array.from({ length: count }, (_, i) => `DATA_${i}`);
+    const owner = component('U1', signals.map((signal, i) =>
+        [i + 1, `IO${i}`, signal] as [number, string, string]), 'Memory');
+    const resistors = signals.map((signal, i) => component(`R${i + 1}`,
+        [[1, 'A', signal], [2, 'B', 'GND']], 'Memory'));
+    const components = [owner, ...resistors];
+    const circuit = createPatternFixtureCircuit('wired-density', 'wired density', components);
+    circuit.blocks = [{ name: 'Memory', description: '', next_block_names: [] }];
+    const symbols = components.map(c => {
+        const symbol = geometry(c);
+        if (c === owner) {
+            symbol.symbol.height = count * 20 + 40;
+            symbol.symbol.center.y = symbol.symbol.height / 2;
+            symbol.symbol.pins.forEach((pin, i) => { pin.x = 100; pin.y = 20 + i * 20; });
+        }
+        return symbol;
+    });
+    const result = await autoPlaceCircuitWithHierarchy(circuit, symbols, undefined, {
+        layoutRefinement: true, layoutPatterns: false, denseNetLabels: true,
+        refinementOrderSeeds: [1], externalSignals: signals,
+    });
+    const named = result.namedWireLabels ?? [];
+    const netPorts = result.addedSymbol.filter(c => signals.includes(c.pins[0]?.signal_name));
+    assert.equal(named.length, count > 14 ? count : 0);
+    assert.equal(netPorts.length, count > 14 ? 0 : count);
+    for (const [index, signal] of signals.entries()) {
+        const a = `U1_pin_${index + 1}`, b = `R${index + 1}_pin_1`;
+        assert(result.edges.some(edge => [...edge.sources, ...edge.targets].includes(a)
+            && [...edge.sources, ...edge.targets].includes(b)), `${signal} must keep its local wire`);
+    }
+    assert(result.addedSymbol.some(c => c.pins[0]?.signal_name === 'GND'), 'ground symbols remain');
+});
+
 for (const mode of ['cross-block', 'external'] as const) for (const count of [4, 5, 24]) {
     test(`port styles respect the dense-pin threshold on a multipart unit: ${mode}, ${count} pins`, async () => {
         const owner = component('U3.5', Array.from({ length: count }, (_, i) =>

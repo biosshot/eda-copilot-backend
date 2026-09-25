@@ -22,8 +22,8 @@ type Report = { file: string; title: string; fingerprint?: string; id: string; i
     regressions?: string[]; review?: string[]; variants?: Record<'before' | 'after', Variant>; error?: string };
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const output = join(root, '.test-output', 'new-circuit-layout');
-const cache = join(output, 'cache');
+const output = join(root, '.test-output', process.env.SCHEMATIC_LAYOUT_GALLERY ?? 'new-circuit-layout');
+const cache = join(root, '.test-output', 'new-circuit-layout', 'cache');
 const digest = (s: string) => createHash('sha256').update(s).digest('hex');
 const html = (s: unknown) => String(s ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 const json = async (path: string) => JSON.parse(await readFile(path, 'utf8'));
@@ -34,12 +34,23 @@ export function parseOptions(args: string[]) {
         limit: { type: 'string' }, filter: { type: 'string' }, case: { type: 'string' },
         timeout: { type: 'string', default: '180' }, offline: { type: 'boolean' }, resume: { type: 'boolean' },
         workers: { type: 'string', default: String(Math.min(4, availableParallelism())) },
+        'group-seed': { type: 'string' },
+        'group-seeds': { type: 'string' },
+        'dense-net-labels': { type: 'boolean' },
+        'no-dense-net-labels': { type: 'boolean' },
         'no-patterns': { type: 'boolean' }, all: { type: 'boolean' }, help: { type: 'boolean' },
         worker: { type: 'string' }, fingerprint: { type: 'string' }, cached: { type: 'boolean' },
     } });
     for (const name of ['limit', 'timeout', 'workers'] as const) if (values[name] !== undefined
         && (!/^\d+$/.test(values[name]!) || !Number.isSafeInteger(Number(values[name])) || Number(values[name]) < 1)) throw new Error(`--${name} must be a positive integer`);
     if (Number(values.timeout) * 1000 > 2147483647) throw new Error('--timeout exceeds the timer limit');
+    if (values['group-seed'] && (!/^\d+$/.test(values['group-seed']) || !Number.isSafeInteger(Number(values['group-seed']))
+        || Number(values['group-seed']) < 1)) throw new Error('--group-seed must be a positive integer');
+    if (values['group-seeds'] && (!/^\d+(,\d+)*$/.test(values['group-seeds'])
+        || values['group-seeds'].split(',').some(seed => !Number.isSafeInteger(Number(seed)) || Number(seed) < 1)))
+        throw new Error('--group-seeds must be comma-separated positive integers');
+    if (values['group-seed'] && values['group-seeds']) throw new Error('Choose either --group-seed or --group-seeds');
+    if (values['dense-net-labels'] && values['no-dense-net-labels']) throw new Error('Choose either --dense-net-labels or --no-dense-net-labels');
     if (values.case && (basename(values.case) !== values.case || !values.case.endsWith('.json'))) throw new Error('--case accepts a filename in the ignored cache, not a path');
     return values;
 }
@@ -124,7 +135,10 @@ async function worker(options: ReturnType<typeof parseOptions>) {
         const layoutCircuit = structuredClone(fixture.circuit);
         const result = await autoPlaceCircuitWithHierarchy(layoutCircuit, structuredClone(fixture.symbols), undefined,
             { layoutRefinement, layoutPatterns: !options['no-patterns'], externalSignals: job.externalSignals,
-                boundaryContext: page ? { circuit: page.circuit, symbols: page.symbols } : undefined });
+                denseNetLabels: layoutRefinement && !options['no-dense-net-labels'],
+                boundaryContext: page ? { circuit: page.circuit, symbols: page.symbols } : undefined,
+                refinementOrderSeeds: layoutRefinement && (options['group-seeds'] ?? options['group-seed'])
+                    ? (options['group-seeds'] ?? options['group-seed']!).split(',').map(Number) : undefined });
         const elapsedMs = performance.now() - start;
         const inspection = inspectLayout(fixture, result);
         // Rebuild the same final geometry from the serialized ASM positions, as
@@ -194,7 +208,7 @@ async function sourceFingerprint() {
 }
 
 async function main(options: ReturnType<typeof parseOptions>) {
-    if (options.help) { console.log('npm run test:schematics -- [--limit N] [--filter TEXT] [--case cached.json | --cached] [--offline] [--resume] [--workers N] [--timeout SECONDS] [--no-patterns]\nWorkers: up to 4 by default (limited by available CPUs); --workers 1 runs sequentially.\nOutput: .test-output/new-circuit-layout/index.html; generated inputs and images stay ignored.'); return; }
+    if (options.help) { console.log('npm run test:schematics -- [--limit N] [--filter TEXT] [--case cached.json | --cached] [--offline] [--resume] [--workers N] [--timeout SECONDS] [--no-patterns] [--no-dense-net-labels] [--group-seed N | --group-seeds N,N,...]\nWorkers: up to 4 by default (limited by available CPUs); --workers 1 runs sequentially.\nDefault group seeds: 1,2,4. Output: .test-output/new-circuit-layout/index.html; generated inputs and images stay ignored.'); return; }
     await mkdir(cache, { recursive: true });
     const fingerprint = digest(await sourceFingerprint() + JSON.stringify({ patterns: !options['no-patterns'] }));
     const candidates = options.case ? [{ file: options.case, cached: true }] : (await readdir(options.cached ? cache : options.bank!)).filter(f => f.endsWith('.json')).sort().map(file => ({ file, cached: !!options.cached }));
@@ -277,6 +291,10 @@ async function main(options: ReturnType<typeof parseOptions>) {
             const jobPath = join(folder, 'job.json'); await writeFile(jobPath, JSON.stringify(job));
             const args = ['--import', 'tsx', fileURLToPath(import.meta.url), '--worker', jobPath, '--fingerprint', fingerprint];
             for (const flag of ['offline', 'no-patterns'] as const) if (options[flag]) args.push(`--${flag}`);
+            if (options['group-seed']) args.push('--group-seed', options['group-seed']);
+            if (options['group-seeds']) args.push('--group-seeds', options['group-seeds']);
+            if (options['dense-net-labels']) args.push('--dense-net-labels');
+            if (options['no-dense-net-labels']) args.push('--no-dense-net-labels');
             const run = await runIsolated(args, { cwd: root, timeoutMs: Number(options.timeout) * 1000, signal: cancellation.signal });
             await writeFile(join(folder, 'run.log'), run.log);
             const report = run.code === 0 && !run.timedOut && !run.interrupted ? await json(join(folder, 'report.json')) : { file: job.file, title: job.title,

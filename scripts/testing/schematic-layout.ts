@@ -95,9 +95,11 @@ export function inspectLayout(fixture: BankFixture, result: LayoutResult) {
     // EasyEDA placeNet uses text labels for five or more unwired attachments.
     // Include only the terminals explicitly delegated by the layout, not every
     // disconnected pin with a matching name (which would hide broken routes).
-    for (const { pinId, signalName } of result.clientManagedLabels ?? []) {
+    const wiredPins = new Set(result.edges.flatMap(edge => [...edge.sources, ...edge.targets]));
+    const namedWirePins = new Set(result.namedWireLabels?.map(label => label.pinId) ?? []);
+    for (const { pinId, signalName } of [...(result.clientManagedLabels ?? []), ...(result.namedWireLabels ?? [])]) {
         const point = pins.get(pinId);
-        if (!point || netByPin.get(pinId) !== signalName) {
+        if (!point || netByPin.get(pinId) !== signalName || (namedWirePins.has(pinId) && !wiredPins.has(pinId))) {
             errors.push(`Invalid client label ${pinId}`);
             const p = expected.find(p => p.id === pinId);
             if (p) mismatch(p, `неверная клиентская метка ${JSON.stringify(signalName)}`);
@@ -185,7 +187,8 @@ export function inspectLayout(fixture: BankFixture, result: LayoutResult) {
         quality: evaluateLayoutQuality(graph), drawingBounds: drawingBounds(result), physicalWireLength: Math.round(physicalWireLength),
         differentNetCrossings: crossings.size,
         nearbySameNetParallelLength: Math.round(nearbySameNetParallelLength), redundantFlags,
-        flags: result.addedSymbol.length, clientManagedLabels: result.clientManagedLabels?.length ?? 0 };
+        flags: result.addedSymbol.length, clientManagedLabels: result.clientManagedLabels?.length ?? 0,
+        namedWireLabels: result.namedWireLabels?.length ?? 0 };
 }
 
 const escape = (s: string) => s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
@@ -216,6 +219,20 @@ export function renderSvg(fixture: BankFixture, result: LayoutResult) {
             directions.set(s.net, set);
         }
         for (const [net, set] of directions) if (set.size >= 3) content.push(`<circle cx="${p.x}" cy="${p.y}" r="2.3" fill="${/GND/i.test(net) ? '#2f8b57' : '#286eaa'}"/>`);
+    }
+    // Preview the labels that the EasyEDA assembler puts on retained named wires.
+    // The editor chooses its own text position; this only makes the gallery readable.
+    for (const { pinId, signalName } of result.namedWireLabels ?? []) {
+        const candidates = (graph.edges ?? [])
+            .filter(edge => edge.sources.includes(pinId) || edge.targets.includes(pinId))
+            .flatMap(edge => (edge.sections ?? []).flatMap(section => {
+                const points = [section.startPoint, ...(section.bendPoints ?? []), section.endPoint];
+                return points.slice(1).map((point, index) => ({ a: points[index], b: point }));
+            }))
+            .filter(segment => Math.abs(segment.a.y - segment.b.y) < 1e-4);
+        const segment = candidates.sort((a, b) => Math.abs(b.b.x - b.a.x) - Math.abs(a.b.x - a.a.x))[0];
+        if (!segment) continue;
+        content.push(`<text x="${(segment.a.x + segment.b.x) / 2}" y="${segment.a.y - 3}" text-anchor="middle" font-size="8" fill="#286eaa" stroke="white" stroke-width="2" paint-order="stroke">${escape(signalName)}</text>`);
     }
     for (const n of graph.children ?? []) {
         const c = byId.get(n.id);
