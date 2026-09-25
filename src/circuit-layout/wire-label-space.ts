@@ -23,7 +23,7 @@ export function reserveWireLabelSpace(root: ElkNode, symbols: SymbolWithMeta[],
     for (const owner of symbols) {
         const node = leaves.get(owner.designator), symbol = owner.symbol;
         // Expanded pattern members have their own precomputed geometry.
-        if (!node || symbol.padding === undefined) continue;
+        if (!node || symbol.padding === undefined || symbol.pins.length <= 3) continue;
         const sideOf = (p: { x: number; y: number }): Side =>
             ([['left', p.x], ['right', symbol.width - p.x], ['top', p.y], ['bottom', symbol.height - p.y]] as [Side, number][])
                 .sort((a, b) => a[1] - b[1])[0][0];

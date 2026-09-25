@@ -42,3 +42,13 @@ test('routed signals and generated short-symbol aliases do not reserve label spa
     }, []);
     assert.deepEqual(owner, before);
 });
+
+for (const count of [2, 3]) test(`${count}-pin parts keep their original bounds for long singleton labels`, () => {
+    const { owner, leaf, root } = fixture();
+    owner.symbol.pins = owner.symbol.pins.slice(0, count);
+    leaf.ports = leaf.ports!.slice(0, count);
+    const before = structuredClone({ owner, leaf });
+    reserveWireLabelSpace(root, [owner], { ABCDEFGHIJKL: [{ portId: 'U1.2_pin_0' }] },
+        [{ pinId: 'U1.2_pin_1', signalName: 'ABCDEFGHIJKL' }]);
+    assert.deepEqual({ owner, leaf }, before);
+});
