@@ -147,7 +147,17 @@ export function labelLongLinks(nodes: Placed[], edges: ElkExtendedEdge[], nets: 
         const pattern = patternByMember.get(owners[0]!.id);
         if (pattern && pattern === patternByMember.get(owners[1]!.id)) continue;
         const members = nodes.filter(n => originalIds.has(n.id) && blocks.get(n.id) === blocks.get(owners[0]!.id));
-        if (owners.some(n => n!.ports?.length === 2) && members.filter(n => (n.ports?.length ?? 0) > 2).length < 2) continue;
+        // Named output rails may bridge a local load and a feedback divider
+        // even with only one IC. Keep switching and feedback nets protected.
+        const supplyRail = isPowerSignal(net) || /(?:^|_)\d+V\d+$/i.test(net);
+        // Require a signal-side attachment; supply-to-supply protection parts
+        // and supply-to-ground decoupling must keep their physical chain.
+        const supplyAttachment = supplyRail && owners.some(n => n!.ports?.length === 2 && n!.ports!.some(p => {
+            const other = nets.get(p.id);
+            return other && other !== net && !/^nc$/i.test(other) && !other.startsWith('unconnected:')
+                && !isGroundSignal(other) && !isPowerSignal(other) && !/(?:^|_)\d+V\d+$/i.test(other);
+        }));
+        if (!supplyAttachment && owners.some(n => n!.ports?.length === 2) && members.filter(n => (n.ports?.length ?? 0) > 2).length < 2) continue;
         if (distance < minimum / 2 && detour < 2.5) continue;
         const copies = edges.filter(other => sameDrawing(edge, other));
         if (copies.length > 1 && new Set(copies.map(other => [...other.sources, ...other.targets].sort().join('|'))).size === 1) {
@@ -179,7 +189,7 @@ export function labelLongLinks(nodes: Placed[], edges: ElkExtendedEdge[], nets: 
         // and an MCU is an inter-group bridge, despite having two net names.
         const attachmentNets = new Set([net, ...owners.filter(n => n!.ports?.length === 2)
             .flatMap(n => n!.ports!.map(p => nets.get(p.id)!))].filter(n => n && !shortSymbolsMap.GND.is(n)));
-        if (owners.some(n => n!.ports?.length === 2) && !shortSymbolsMap.GND.is(net) && !shortSymbolsMap.VCC.is(net)
+        if (owners.some(n => n!.ports?.length === 2) && !shortSymbolsMap.GND.is(net) && !supplyAttachment
             && members.filter(n => (n.ports?.length ?? 0) > 2 && n.ports?.some(p => attachmentNets.has(nets.get(p.id)!))).length < 2) continue;
         // Cut only this bridge, preserving the other branches of the named net.
         // A small part must retain a wired attachment to another real component;

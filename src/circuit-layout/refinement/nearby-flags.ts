@@ -142,8 +142,11 @@ export function placeNearbyFlags(nodes: Placed[], edges: ElkExtendedEdge[], adde
                 const pin = pins.get(item.anchor)!, out = normal(owners.get(item.anchor)!, item.anchor);
                 const id = item.flag.ports![0].id;
                 const candidates: Placed[] = [item.flag];
-                for (const pose of [item.flag, turnNode(item.flag, 180)]) {
+                for (const pose of [item.flag, ...[90, 180, 270].map(angle => turnNode(item.flag, angle))]
+                    .filter(pose => normal(pose, id).x === 0)) {
                     const inward = normal(pose, id), port = pose.ports![0];
+                    if (out.x * inward.x + out.y * inward.y < -0.5) candidates.push({ ...pose,
+                        x: pin.x + out.x * gap.port - port.x!, y: pin.y + out.y * gap.port - port.y! });
                     for (let column = 0; column < Math.min(20, Math.max(5, group.length + 1)); column++) for (let row = -2; row <= 2; row++) {
                         const depth = gap.port + column * ((out.x ? pose.width : pose.height) + gap.port);
                         const lateral = row * ((out.x ? pose.height : pose.width) + gap.port);

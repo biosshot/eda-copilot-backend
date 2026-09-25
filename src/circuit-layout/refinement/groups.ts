@@ -70,6 +70,36 @@ export function localGroups(nodes: Placed[], edges: ElkExtendedEdge[], component
         const ids = [c.designator, ...attached.keys()]; ids.forEach(id => used.add(id));
         groups.push({ ids, flexible: c.designator, flags: attached });
     }
+    // A series part and its passive load must also be able to move together.
+    // Build bounded compound moves from complete existing groups, without
+    // splitting a pattern or absorbing the IC that anchors the attachment.
+    const parts = new Map(components.map(c => [c.designator, c]));
+    const units = groups.filter(g => g.ids.every(id => flags.has(id) || parts.get(id)?.pins.length === 2));
+    const unitOf = new Map(units.flatMap((g, i) => g.ids.filter(id => !flags.has(id)).map(id => [id, i])));
+    const parents = units.map((_, i) => i);
+    const root = (i: number): number => parents[i] === i ? i : (parents[i] = root(parents[i]));
+    for (const edge of edges) {
+        const a = unitOf.get(owner.get(edge.sources[0])!), b = unitOf.get(owner.get(edge.targets[0])!);
+        if (a !== undefined && b !== undefined) parents[root(a)] = root(b);
+    }
+    const clusters = new Map<number, LocalGroup[]>();
+    units.forEach((g, i) => { const key = root(i), list = clusters.get(key) ?? []; list.push(g); clusters.set(key, list); });
+    for (const cluster of clusters.values()) {
+        if (cluster.length < 2) continue;
+        const ids = new Set(cluster.flatMap(g => g.ids));
+        const real = [...ids].filter(id => parts.has(id));
+        if (real.length > 8 || new Set(real.map(id => parts.get(id)!.block_name)).size !== 1) continue;
+        const outside = new Set(edges.filter(e => [...e.sources, ...e.targets].some(p => ids.has(owner.get(p)!)))
+            .flatMap(e => [...e.sources, ...e.targets]).map(p => owner.get(p)!)
+            .filter(id => !ids.has(id) && parts.has(id)));
+        if (outside.size !== 1 || parts.get([...outside][0])!.pins.length <= 2) continue;
+        for (const flag of flags) {
+            const neighbours = edges.filter(e => [...e.sources, ...e.targets].some(p => owner.get(p) === flag))
+                .flatMap(e => [...e.sources, ...e.targets]).map(p => owner.get(p)!).filter(id => id !== flag);
+            if (neighbours.length && neighbours.every(id => ids.has(id))) ids.add(flag);
+        }
+        groups.push({ ids: [...ids], flags: new Map() });
+    }
     // A rigid group's joint move may fail because only one flag is obstructed.
     // Each flag also gets a local attempt without moving its component/group.
     for (const id of [...flags].sort()) groups.push({ ids: [id], flags: new Map(), loneFlag: true });

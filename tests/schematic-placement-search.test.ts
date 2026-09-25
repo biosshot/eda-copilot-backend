@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import type { ElkExtendedEdge } from 'elkjs';
 import { effectiveLayoutArea } from '../src/circuit-layout/quality.ts';
 import { acceptsFlagOrientation } from '../src/circuit-layout/refinement/flag-policy.ts';
-import { turnNode } from '../src/circuit-layout/refinement/groups.ts';
+import { localGroups, turnNode } from '../src/circuit-layout/refinement/groups.ts';
 import { shortSymbolsMap } from '../src/circuit-layout/short-symbol.ts';
 import { removeNetCycles } from '../src/circuit-layout/refinement/net-cycles.ts';
 import { connectedNetEdges, straightRuns } from '../src/circuit-layout/refinement/net-routes.ts';
@@ -31,8 +31,47 @@ test('a direct ground may turn with its owner without shortening its own lead', 
     const flag = shortSymbolsMap.GND.create('GND', 'block', 'ground');
     const before = { ...flag.node, x: 0, y: 0 } as Placed, after = turnNode(before, 180);
     const lead = edge('lead', 'C_pin_1', 'ground_pin_1', [[0, 0], [0, 40]]);
-    assert(acceptsFlagOrientation(before, after, flag.component, [lead], [lead], true));
+    assert(acceptsFlagOrientation(before, after, flag.component, [lead], [lead], true, true));
+    assert(!acceptsFlagOrientation(before, after, flag.component, [lead], [lead], true));
+    const shorter = edge('lead', 'C_pin_1', 'ground_pin_1', [[0, 0], [0, 20]]);
+    assert(acceptsFlagOrientation(before, after, flag.component, [lead], [shorter], true));
     assert(!acceptsFlagOrientation(before, after, flag.component, [lead], [lead], false));
+});
+
+test('a passive output branch can travel as a whole toward its sole IC anchor', () => {
+    const components = ['L1', 'C1', 'C2', 'U1'].map(designator => ({ designator, block_name: 'block',
+        value: '', part_uuid: '', pins: Array.from({ length: designator === 'U1' ? 3 : 2 }, (_, i) =>
+            ({ pin_number: i + 1, name: '', signal_name: '' })) }));
+    const nodes: Placed[] = components.map((c, i) => ({ id: c.designator, x: i * 100, y: 0, width: 60, height: 60,
+        ports: c.pins.map(p => ({ id: `${c.designator}_pin_${p.pin_number}`, x: 0, y: 20 * p.pin_number })) }));
+    const edges = [edge('switch', 'U1_pin_1', 'L1_pin_1', [[300, 20], [0, 20]]),
+        edge('load1', 'L1_pin_2', 'C1_pin_1', [[0, 40], [100, 40], [100, 20]]),
+        edge('load2', 'C1_pin_1', 'C2_pin_1', [[100, 20], [200, 20]])];
+    assert(localGroups(nodes, edges, components, [], []).some(g => g.ids.length === 3
+        && ['L1', 'C1', 'C2'].every(id => g.ids.includes(id))));
+    const bridge = [...edges, edge('second-anchor', 'C2_pin_2', 'U2_pin_1', [[200, 40], [500, 40]])];
+    const second = { ...components[3], designator: 'U2' };
+    assert(!localGroups([...nodes, { ...nodes[3], id: 'U2', ports: [{ id: 'U2_pin_1', x: 0, y: 40 }] }],
+        bridge, [...components, second], [], []).some(g => ['L1', 'C1', 'C2'].every(id => g.ids.includes(id))));
+});
+
+test('one-IC blocks may split a named output rail while feedback and switching links stay wired', () => {
+    for (const net of ['DDR_1V5', 'DDR_1V5_FB', 'DDR_1V5_LX']) {
+        const nodes: Placed[] = [{ id: 'R1', x: 0, y: 100, width: 60, height: 60,
+            ports: [{ id: 'R1_pin_1', x: 60, y: 20 }, { id: 'R1_pin_2', x: 60, y: 40 }] },
+        { id: 'L1', x: 900, y: 100, width: 60, height: 60,
+            ports: [{ id: 'L1_pin_1', x: 0, y: 20 }, { id: 'L1_pin_2', x: 0, y: 40 }] },
+        { id: 'U1', x: 450, y: 300, width: 100, height: 100,
+            ports: [1, 2, 3].map(i => ({ id: `U1_pin_${i}`, x: 0, y: i * 20 })) }];
+        const edges = [edge('rail', 'R1_pin_1', 'L1_pin_1', [[60, 120], [900, 120]]),
+            edge('fb', 'R1_pin_2', 'U1_pin_1', [[60, 140], [400, 140], [400, 320], [450, 320]]),
+            edge('sw', 'L1_pin_2', 'U1_pin_2', [[900, 140], [900, 440], [400, 440], [400, 340], [450, 340]])];
+        const nets = new Map([['R1_pin_1', net], ['L1_pin_1', net], ['R1_pin_2', 'FEEDBACK'],
+            ['U1_pin_1', 'FEEDBACK'], ['L1_pin_2', 'SWITCH'], ['U1_pin_2', 'SWITCH']]);
+        const result = labelLongLinks(nodes, edges, nets, new Map(nodes.map(n => [n.id, 'block'])), new Set(nodes.map(n => n.id)));
+        assert.equal(result.edges.some(e => e.id === 'rail'), net !== 'DDR_1V5', net);
+        assert(result.edges.some(e => e.id === 'fb') && result.edges.some(e => e.id === 'sw'));
+    }
 });
 
 test('moving both ends of a component-to-ground lead still produces a route', () => {

@@ -236,7 +236,8 @@ function refineLocalScene(input: ElkNode, components: readonly CircuitComponent[
                     if (!valid) continue;
                     if (candidate.some(n => {
                         const flag = flagKinds.get(n.id), before = moving.find(b => b.id === n.id);
-                        return flag && before && !acceptsFlagOrientation(before, n, flag, incident, routed, privatePins.has(n.ports![0].id));
+                        return flag && before && !acceptsFlagOrientation(before, n, flag, incident, routed,
+                            privatePins.has(n.ports![0].id), group.ids.length > 1);
                     })) continue;
                     if (pose.requiresShorter && physicalLength([...routed, ...rails], nets) >= initialLength - 1) continue;
                     const crossings = localCrossings([...routed, ...rails], env);
