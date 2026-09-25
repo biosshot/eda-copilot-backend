@@ -11,6 +11,8 @@ import { tappedChainPattern } from './catalog/tapped-chain.ts';
 import { instantiateTappedChain } from './tapped-chain.ts';
 import { resistorPullBankPattern } from './catalog/resistor-pull-bank.ts';
 import { orientPassiveMacro } from './orientation.ts';
+import { passiveLadderPattern } from './catalog/passive-ladder.ts';
+import { shortSymbolKindForSignal } from './helpers.ts';
 
 export const circuitLayoutPatterns: CircuitLayoutPattern[] = [
     opAmpVoltageFollowerPattern,
@@ -26,15 +28,20 @@ export const circuitLayoutPatterns: CircuitLayoutPattern[] = [
 /** Keep the main catalog as a reproducible baseline while the refinement is opt-in. */
 const paddedPatterns = [...circuitLayoutPatterns.map(pattern => pattern.id === 'voltage-divider'
     ? { ...pattern, instantiate: (match: Parameters<typeof instantiateTappedChain>[0], context: Parameters<typeof instantiateTappedChain>[1]) => instantiateTappedChain(match, context, true) }
-    : pattern), ledResistorPattern, tappedChainPattern];
+    : pattern), passiveLadderPattern, ledResistorPattern, tappedChainPattern];
 
 export const refinedCircuitLayoutPatterns: CircuitLayoutPattern[] = paddedPatterns.map(pattern => ({ ...pattern,
     instantiate(match, context) {
         const macro = pattern.instantiate(match, context);
         if (macro?.placements.some(p => (p.designator.startsWith('U') || (context.symbolsByDesignator.get(p.designator)?.symbol.pins.length ?? 0) > 4)
             && ((p.rotate % 360) + 360) % 360 !== 0)) return null;
-        if (macro && ['power-pi-filter', 'parallel-two-pin', 'voltage-divider', 'led-resistor', 'tapped-chain'].includes(pattern.id)) {
-            macro.refinementRotations = pattern.id === 'tapped-chain' && match.roles.pairedAnchor === 'true' ? [] : [180];
+        if (macro && ['power-pi-filter', 'parallel-two-pin', 'voltage-divider', 'led-resistor', 'tapped-chain', 'passive-ladder'].includes(pattern.id)) {
+            const parallelFree = pattern.id === 'parallel-two-pin'
+                && ![match.roles.signalA, match.roles.signalB].some(signal => shortSymbolKindForSignal(signal));
+            const ladderFree = pattern.id === 'passive-ladder'
+                && !macro.placements.some(p => p.pins.some(pin => shortSymbolKindForSignal(pin.signal_name)));
+            macro.refinementRotations = pattern.id === 'tapped-chain' && match.roles.pairedAnchor === 'true' ? []
+                : parallelFree || ladderFree ? [90, 180, 270] : [180];
         }
         return macro ? orientPassiveMacro(macro) : null;
     },

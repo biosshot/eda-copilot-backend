@@ -18,6 +18,9 @@ export interface PatternContext {
     componentsByDesignator: Map<string, CircuitComponent>;
     signalEndpoints: Map<string, PatternPinEndpoint[]>;
     symbolsByDesignator: Map<string, SymbolWithMeta>;
+    /** Unfiltered topology: claimed components must not hide a branch. */
+    originalSignalEndpoints?: Map<string, PatternPinEndpoint[]>;
+    externalSignals?: ReadonlySet<string>;
 }
 
 export interface PatternMatch {

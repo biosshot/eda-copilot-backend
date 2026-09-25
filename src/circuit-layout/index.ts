@@ -823,7 +823,8 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
 
     if (options?.layoutPatterns !== false) {
         const detected = detectPatternMacros(sch, nodes, options?.layoutPatternCatalog
-            ?? (options?.layoutRefinement ? refinedCircuitLayoutPatterns : circuitLayoutPatterns));
+            ?? (options?.layoutRefinement ? refinedCircuitLayoutPatterns : circuitLayoutPatterns),
+            { circuit: contextCircuit, externalSignals: [...(options?.externalSignals ?? []), ...(options?.requiredExternalSignals ?? [])] });
         const acceptedMacros = options?.layoutRefinement ? detected.macros.filter(macro => !macro.placements.some(p =>
             (p.designator.startsWith('U') || p.pins.length > 4) && ((p.rotate % 360) + 360) % 360 !== 0)) : detected.macros;
         if (options?.layoutRefinement) {
@@ -844,7 +845,8 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
     // boundary flags at either end of those nets.
     const contextPatternMacros = options?.boundaryContext && options?.layoutPatterns !== false
         ? detectPatternMacros(contextCircuit, contextSymbols, options?.layoutPatternCatalog
-            ?? (options?.layoutRefinement ? refinedCircuitLayoutPatterns : circuitLayoutPatterns)).macros
+            ?? (options?.layoutRefinement ? refinedCircuitLayoutPatterns : circuitLayoutPatterns),
+            { externalSignals: [...(options?.externalSignals ?? []), ...(options?.requiredExternalSignals ?? [])] }).macros
         : patternMacros;
     const patternBoundarySignals = new Set(contextPatternMacros
         .filter(macro => macro.forceBoundaryPorts !== false).flatMap(macro => macro.ports.map(port => port.signalName)));

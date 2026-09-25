@@ -1,3 +1,17 @@
+# Passive ladder
+
+The refined catalog also recognizes passive ladders. A private junction with
+exactly two original terminals can join a series resistor or capacitor chain;
+an externally named or cross-block junction cannot. Parallel arms between the
+same two nets may contain one component or a series chain. Consecutive arms
+with shared taps and a grounded end become one inline ladder, so the divider
+and its parallel capacitors keep aligned tap positions. Ordinary parallel
+groups remain with `parallel-two-pin`.
+
+Parallel groups on ground or supply rails permit a 180-degree refinement turn.
+When neither rail is ground or supply, the refiner may also try 90 and 270
+degrees. Every turn preserves component pin identity and net names.
+
 # Resistor pull bank
 
 `resistor-pull-bank` recognizes at least four two-pin resistors in one functional

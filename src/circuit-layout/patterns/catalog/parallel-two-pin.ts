@@ -24,7 +24,7 @@ const NESTED_COMPONENT_COUNT = 5;
 const NESTED_IC_PIN_COUNT = 7;
 const AXIS_EPSILON = 2;
 
-function hasOpposedAxialPins(symbol: SymbolData) {
+export function hasOpposedAxialPins(symbol: SymbolData) {
     if (symbol.pins.length !== 2) return false;
     const [first, second] = symbol.pins;
     const firstDirection = getPinDirection(symbol, first);
