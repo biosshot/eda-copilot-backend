@@ -1,0 +1,1208 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / AnalogInput / full page",
+    "description": "EasyEDA page AnalogInput; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "attenuator",
+      "description": "attenuator",
+      "next_block_names": []
+    },
+    {
+      "name": "protected_switching",
+      "description": "protected_switching",
+      "next_block_names": []
+    },
+    {
+      "name": "adc_driver",
+      "description": "adc_driver",
+      "next_block_names": []
+    },
+    {
+      "name": "afe_rails",
+      "description": "afe_rails",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "J6",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "SIG",
+          "signal_name": "SCOPE_IN"
+        }
+      ],
+      "value": "4GHz",
+      "part_uuid": "192cbc71d56c48a483637ebc3cf7a3ef",
+      "footprint_name": "BNC-TH_5227161-9",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "R60",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_TOP"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SCOPE_IN"
+        }
+      ],
+      "value": "910kΩ",
+      "part_uuid": "01c1416b95d7414dad764e10eb90a740",
+      "footprint_name": "R1206",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "R61",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_12"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_TOP"
+        }
+      ],
+      "value": "6.8kΩ",
+      "part_uuid": "09b1266989ee4b4b9c5c7ecdcd098d98",
+      "footprint_name": "R0402",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "R62",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_120"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_12"
+        }
+      ],
+      "value": "75kΩ",
+      "part_uuid": "72c4cc2cd6f7424da5a043b031936e1d",
+      "footprint_name": "R0603",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "R63",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_1200"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_120"
+        }
+      ],
+      "value": "7.5kΩ",
+      "part_uuid": "df9f3434cc844755bd71b1082283e242",
+      "footprint_name": "R0603",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "R64",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_1200"
+        }
+      ],
+      "value": "825Ω",
+      "part_uuid": "38b3fdd65dc14b328dbbc7739281e67f",
+      "footprint_name": "R0603",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "C95",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_12"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SCOPE_IN"
+        }
+      ],
+      "value": "2pF~6pF",
+      "part_uuid": "cdbc9cb9e83843209e67dea4508a910c",
+      "footprint_name": "CAP-SMD_L4.50-W3.20",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "C122",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_120"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_12"
+        }
+      ],
+      "value": "2pF~6pF",
+      "part_uuid": "cdbc9cb9e83843209e67dea4508a910c",
+      "footprint_name": "CAP-SMD_L4.50-W3.20",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "C96",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_12"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_120"
+        }
+      ],
+      "value": "12pF",
+      "part_uuid": "dd634d65922a42a0a9924ef82ab4053a",
+      "footprint_name": "C0402",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "C97",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_120"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ATT_1200"
+        }
+      ],
+      "value": "120pF",
+      "part_uuid": "0dcbc008ef5e425ab7475ebbe00b2b0f",
+      "footprint_name": "C0603",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "C98",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ATT_1200"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "1nF",
+      "part_uuid": "225b08ee202e41a4a97dcd80b0a2b4e5",
+      "footprint_name": "C0603",
+      "block_name": "attenuator"
+    },
+    {
+      "designator": "U20",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "S",
+          "signal_name": "SCOPE_IN"
+        },
+        {
+          "pin_number": "2",
+          "name": "SFB",
+          "signal_name": "SCOPE_IN"
+        },
+        {
+          "pin_number": "3",
+          "name": "FF",
+          "signal_name": "AFE_FAULT_N"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "6",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "7",
+          "name": "POC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "9",
+          "name": "DFB",
+          "signal_name": "PROTECTED_1"
+        },
+        {
+          "pin_number": "10",
+          "name": "D",
+          "signal_name": "PROTECTED_1"
+        }
+      ],
+      "value": "ADG5401FBCPZ-RL7",
+      "part_uuid": "5fc357b4b8844487970fe63ffa963af4",
+      "footprint_name": "LFCSP-10_L3.0-W2.0-P0.50-BL",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "U22",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "S",
+          "signal_name": "ATT_120"
+        },
+        {
+          "pin_number": "2",
+          "name": "SFB",
+          "signal_name": "ATT_120"
+        },
+        {
+          "pin_number": "3",
+          "name": "FF",
+          "signal_name": "AFE_FAULT_N"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "6",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "7",
+          "name": "POC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "9",
+          "name": "DFB",
+          "signal_name": "PROTECTED_3"
+        },
+        {
+          "pin_number": "10",
+          "name": "D",
+          "signal_name": "PROTECTED_3"
+        }
+      ],
+      "value": "ADG5401FBCPZ-RL7",
+      "part_uuid": "5fc357b4b8844487970fe63ffa963af4",
+      "footprint_name": "LFCSP-10_L3.0-W2.0-P0.50-BL",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "U21",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "S",
+          "signal_name": "ATT_12"
+        },
+        {
+          "pin_number": "2",
+          "name": "SFB",
+          "signal_name": "ATT_12"
+        },
+        {
+          "pin_number": "3",
+          "name": "FF",
+          "signal_name": "AFE_FAULT_N"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "6",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "7",
+          "name": "POC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "9",
+          "name": "DFB",
+          "signal_name": "PROTECTED_2"
+        },
+        {
+          "pin_number": "10",
+          "name": "D",
+          "signal_name": "PROTECTED_2"
+        }
+      ],
+      "value": "ADG5401FBCPZ-RL7",
+      "part_uuid": "5fc357b4b8844487970fe63ffa963af4",
+      "footprint_name": "LFCSP-10_L3.0-W2.0-P0.50-BL",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "U23",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "S",
+          "signal_name": "ATT_1200"
+        },
+        {
+          "pin_number": "2",
+          "name": "SFB",
+          "signal_name": "ATT_1200"
+        },
+        {
+          "pin_number": "3",
+          "name": "FF",
+          "signal_name": "AFE_FAULT_N"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "6",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "7",
+          "name": "POC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "9",
+          "name": "DFB",
+          "signal_name": "PROTECTED_4"
+        },
+        {
+          "pin_number": "10",
+          "name": "D",
+          "signal_name": "PROTECTED_4"
+        }
+      ],
+      "value": "ADG5401FBCPZ-RL7",
+      "part_uuid": "5fc357b4b8844487970fe63ffa963af4",
+      "footprint_name": "LFCSP-10_L3.0-W2.0-P0.50-BL",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "U24",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "A0",
+          "signal_name": "AFE_RANGE_A0"
+        },
+        {
+          "pin_number": "2",
+          "name": "EN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "3",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "4",
+          "name": "S1",
+          "signal_name": "PROTECTED_1"
+        },
+        {
+          "pin_number": "5",
+          "name": "S2",
+          "signal_name": "PROTECTED_2"
+        },
+        {
+          "pin_number": "6",
+          "name": "D",
+          "signal_name": "AFE_RANGE_OUT"
+        },
+        {
+          "pin_number": "7",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "9",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "10",
+          "name": "S4",
+          "signal_name": "PROTECTED_4"
+        },
+        {
+          "pin_number": "11",
+          "name": "S3",
+          "signal_name": "PROTECTED_3"
+        },
+        {
+          "pin_number": "12",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "13",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "14",
+          "name": "A1",
+          "signal_name": "AFE_RANGE_A1"
+        }
+      ],
+      "value": "TMUX6104PWR",
+      "part_uuid": "add49c2ccb51416e82fa3bf10a9b8997",
+      "footprint_name": "TSSOP-14_L5.0-W4.4-P0.65-LS6.4-BL",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "C99",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_RANGE_OUT"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_AC_PATH"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "021278427a094a3e8aab741a0a343a7e",
+      "footprint_name": "C0805",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "U25",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "EN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "3",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "4",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "5",
+          "name": "SB",
+          "signal_name": "AFE_AC_PATH"
+        },
+        {
+          "pin_number": "6",
+          "name": "D",
+          "signal_name": "AFE_BUFFER_IN"
+        },
+        {
+          "pin_number": "7",
+          "name": "SA",
+          "signal_name": "AFE_RANGE_OUT"
+        },
+        {
+          "pin_number": "8",
+          "name": "SEL",
+          "signal_name": "AFE_AC_SEL"
+        }
+      ],
+      "value": "TMUX6119DCNR",
+      "part_uuid": "0e8860cb7f594de58a411ca7c1a16205",
+      "footprint_name": "TSOT-23-8_L2.9-W1.6-P0.65-LS2.8-BL",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "R65",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_AC_PATH"
+        }
+      ],
+      "value": "1MΩ",
+      "part_uuid": "5c856273eb424c9e80b50f13c6184f68",
+      "footprint_name": "R0402",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "R66",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_FAULT_N"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "U26",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "PD#",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "FB",
+          "signal_name": "OPA_FB"
+        },
+        {
+          "pin_number": "3",
+          "name": "IN-",
+          "signal_name": "OPA_FB"
+        },
+        {
+          "pin_number": "4",
+          "name": "IN+",
+          "signal_name": "AFE_BUFFER_IN"
+        },
+        {
+          "pin_number": "5",
+          "name": "VS-",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "6",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "7",
+          "name": "OUT",
+          "signal_name": "AFE_BUFFER_OUT"
+        },
+        {
+          "pin_number": "8",
+          "name": "VS+",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "9",
+          "name": "EP",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "OPA817DTKR",
+      "part_uuid": "c6aa654c1e4d4cfb8f6d3b4c736dc493",
+      "footprint_name": "DFN-8_L3.0-W3.0-P0.50-BL-EP1.9",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "U27",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "–FB",
+          "signal_name": "FDA_NEG_FB"
+        },
+        {
+          "pin_number": "2",
+          "name": "+IN",
+          "signal_name": "FDA_POS_IN"
+        },
+        {
+          "pin_number": "3",
+          "name": "–IN",
+          "signal_name": "FDA_NEG_IN"
+        },
+        {
+          "pin_number": "4",
+          "name": "+FB",
+          "signal_name": "FDA_POS_FB"
+        },
+        {
+          "pin_number": "5",
+          "name": "+VS",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "6",
+          "name": "+VS",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "7",
+          "name": "+VS",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "8",
+          "name": "+VS",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "9",
+          "name": "VOCM",
+          "signal_name": "ADC_VCM"
+        },
+        {
+          "pin_number": "10",
+          "name": "+OUT",
+          "signal_name": "FDA_POS_OUT"
+        },
+        {
+          "pin_number": "11",
+          "name": "–OUT",
+          "signal_name": "FDA_NEG_OUT"
+        },
+        {
+          "pin_number": "12",
+          "name": "PD#",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "13",
+          "name": "–VS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "14",
+          "name": "–VS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "15",
+          "name": "–VS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "16",
+          "name": "–VS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "17",
+          "name": "EP",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "ADA4930-1YCPZ-R7",
+      "part_uuid": "0587ac84aef54524869b3b9d6ad768fe",
+      "footprint_name": "LFCSP-16_L3.0-W3.0-P0.50-BL-EP1.3-1",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R67",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FDA_POS_IN"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_BUFFER_OUT"
+        }
+      ],
+      "value": "100Ω",
+      "part_uuid": "a16bd89475d141ea861d56c7137cb978",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R68",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FDA_NEG_IN"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100Ω",
+      "part_uuid": "a16bd89475d141ea861d56c7137cb978",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R69",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FDA_POS_IN"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FDA_NEG_FB"
+        }
+      ],
+      "value": "1kΩ",
+      "part_uuid": "6e87022e97e8434e99a00e613feab0a4",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R70",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FDA_NEG_IN"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FDA_POS_FB"
+        }
+      ],
+      "value": "1kΩ",
+      "part_uuid": "6e87022e97e8434e99a00e613feab0a4",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R71",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FDA_POS_IN"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_3V3"
+        }
+      ],
+      "value": "887Ω",
+      "part_uuid": "987c954296394d8eba5e73e0d204a4b0",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R72",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FDA_NEG_IN"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_3V3"
+        }
+      ],
+      "value": "887Ω",
+      "part_uuid": "987c954296394d8eba5e73e0d204a4b0",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R73",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ADC_DRV_P"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FDA_POS_OUT"
+        }
+      ],
+      "value": "249Ω",
+      "part_uuid": "c3143f10bab648ce8ac806fcbee23a6d",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "R74",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ADC_DRV_M"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FDA_NEG_OUT"
+        }
+      ],
+      "value": "249Ω",
+      "part_uuid": "c3143f10bab648ce8ac806fcbee23a6d",
+      "footprint_name": "R0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "C100",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ADC_DRV_P"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "ADC_DRV_M"
+        }
+      ],
+      "value": "47pF",
+      "part_uuid": "bedff529a972445e904433706b3c1ac9",
+      "footprint_name": "C0402",
+      "block_name": "adc_driver"
+    },
+    {
+      "designator": "FB1",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ANALOG_P5V7"
+        }
+      ],
+      "value": "BLM18AG102SN1D",
+      "part_uuid": "5e41f58004bb4b95a5c240bffd2ef977",
+      "footprint_name": "L0603",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "FB2",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "ANALOG_N5V7"
+        }
+      ],
+      "value": "BLM18AG102SN1D",
+      "part_uuid": "5e41f58004bb4b95a5c240bffd2ef977",
+      "footprint_name": "L0603",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "FB3",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "BLM18AG102SN1D",
+      "part_uuid": "5e41f58004bb4b95a5c240bffd2ef977",
+      "footprint_name": "L0603",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C101",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C103",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C105",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C107",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C108",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C109",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C102",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C104",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "afe_rails"
+    },
+    {
+      "designator": "C106",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "afe_rails"
+    }
+  ],
+  "reused_blocks": []
+}

@@ -24,7 +24,7 @@ const NESTED_COMPONENT_COUNT = 5;
 const NESTED_IC_PIN_COUNT = 7;
 const AXIS_EPSILON = 2;
 
-function hasOpposedAxialPins(symbol: SymbolData) {
+export function hasOpposedAxialPins(symbol: SymbolData) {
     if (symbol.pins.length !== 2) return false;
     const [first, second] = symbol.pins;
     const firstDirection = getPinDirection(symbol, first);
@@ -56,7 +56,7 @@ function shouldNest(match: PatternMatch, context: PatternContext) {
         return (context.signalEndpoints.get(signalName) ?? []).some(endpoint => {
             if (group.has(endpoint.designator)) return false;
             const component = context.componentsByDesignator.get(endpoint.designator);
-            return component !== undefined && component.pins.length >= NESTED_IC_PIN_COUNT
+            return component?.block_name === match.blockName && component.pins.length >= NESTED_IC_PIN_COUNT
                 && getDesignatorLabel(component.designator) === 'Микросхемы';
         });
     });

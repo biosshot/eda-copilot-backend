@@ -1,0 +1,437 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / AnalogInput / protected_switching",
+    "description": "EasyEDA page AnalogInput; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "protected_switching",
+      "description": "protected_switching",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "U20",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "S",
+          "signal_name": "SCOPE_IN"
+        },
+        {
+          "pin_number": "2",
+          "name": "SFB",
+          "signal_name": "SCOPE_IN"
+        },
+        {
+          "pin_number": "3",
+          "name": "FF",
+          "signal_name": "AFE_FAULT_N"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "6",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "7",
+          "name": "POC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "9",
+          "name": "DFB",
+          "signal_name": "PROTECTED_1"
+        },
+        {
+          "pin_number": "10",
+          "name": "D",
+          "signal_name": "PROTECTED_1"
+        }
+      ],
+      "value": "ADG5401FBCPZ-RL7",
+      "part_uuid": "5fc357b4b8844487970fe63ffa963af4",
+      "footprint_name": "LFCSP-10_L3.0-W2.0-P0.50-BL",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "U22",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "S",
+          "signal_name": "ATT_120"
+        },
+        {
+          "pin_number": "2",
+          "name": "SFB",
+          "signal_name": "ATT_120"
+        },
+        {
+          "pin_number": "3",
+          "name": "FF",
+          "signal_name": "AFE_FAULT_N"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "6",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "7",
+          "name": "POC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "9",
+          "name": "DFB",
+          "signal_name": "PROTECTED_3"
+        },
+        {
+          "pin_number": "10",
+          "name": "D",
+          "signal_name": "PROTECTED_3"
+        }
+      ],
+      "value": "ADG5401FBCPZ-RL7",
+      "part_uuid": "5fc357b4b8844487970fe63ffa963af4",
+      "footprint_name": "LFCSP-10_L3.0-W2.0-P0.50-BL",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "U21",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "S",
+          "signal_name": "ATT_12"
+        },
+        {
+          "pin_number": "2",
+          "name": "SFB",
+          "signal_name": "ATT_12"
+        },
+        {
+          "pin_number": "3",
+          "name": "FF",
+          "signal_name": "AFE_FAULT_N"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "6",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "7",
+          "name": "POC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "9",
+          "name": "DFB",
+          "signal_name": "PROTECTED_2"
+        },
+        {
+          "pin_number": "10",
+          "name": "D",
+          "signal_name": "PROTECTED_2"
+        }
+      ],
+      "value": "ADG5401FBCPZ-RL7",
+      "part_uuid": "5fc357b4b8844487970fe63ffa963af4",
+      "footprint_name": "LFCSP-10_L3.0-W2.0-P0.50-BL",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "U23",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "S",
+          "signal_name": "ATT_1200"
+        },
+        {
+          "pin_number": "2",
+          "name": "SFB",
+          "signal_name": "ATT_1200"
+        },
+        {
+          "pin_number": "3",
+          "name": "FF",
+          "signal_name": "AFE_FAULT_N"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "6",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "7",
+          "name": "POC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "IN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "9",
+          "name": "DFB",
+          "signal_name": "PROTECTED_4"
+        },
+        {
+          "pin_number": "10",
+          "name": "D",
+          "signal_name": "PROTECTED_4"
+        }
+      ],
+      "value": "ADG5401FBCPZ-RL7",
+      "part_uuid": "5fc357b4b8844487970fe63ffa963af4",
+      "footprint_name": "LFCSP-10_L3.0-W2.0-P0.50-BL",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "U24",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "A0",
+          "signal_name": "AFE_RANGE_A0"
+        },
+        {
+          "pin_number": "2",
+          "name": "EN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "3",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "4",
+          "name": "S1",
+          "signal_name": "PROTECTED_1"
+        },
+        {
+          "pin_number": "5",
+          "name": "S2",
+          "signal_name": "PROTECTED_2"
+        },
+        {
+          "pin_number": "6",
+          "name": "D",
+          "signal_name": "AFE_RANGE_OUT"
+        },
+        {
+          "pin_number": "7",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "8",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "9",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "10",
+          "name": "S4",
+          "signal_name": "PROTECTED_4"
+        },
+        {
+          "pin_number": "11",
+          "name": "S3",
+          "signal_name": "PROTECTED_3"
+        },
+        {
+          "pin_number": "12",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "13",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "14",
+          "name": "A1",
+          "signal_name": "AFE_RANGE_A1"
+        }
+      ],
+      "value": "TMUX6104PWR",
+      "part_uuid": "add49c2ccb51416e82fa3bf10a9b8997",
+      "footprint_name": "TSSOP-14_L5.0-W4.4-P0.65-LS6.4-BL",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "C99",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_RANGE_OUT"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_AC_PATH"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "021278427a094a3e8aab741a0a343a7e",
+      "footprint_name": "C0805",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "U25",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "EN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "VDD",
+          "signal_name": "AFE_P5V7"
+        },
+        {
+          "pin_number": "3",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "4",
+          "name": "VSS",
+          "signal_name": "AFE_N5V7"
+        },
+        {
+          "pin_number": "5",
+          "name": "SB",
+          "signal_name": "AFE_AC_PATH"
+        },
+        {
+          "pin_number": "6",
+          "name": "D",
+          "signal_name": "AFE_BUFFER_IN"
+        },
+        {
+          "pin_number": "7",
+          "name": "SA",
+          "signal_name": "AFE_RANGE_OUT"
+        },
+        {
+          "pin_number": "8",
+          "name": "SEL",
+          "signal_name": "AFE_AC_SEL"
+        }
+      ],
+      "value": "TMUX6119DCNR",
+      "part_uuid": "0e8860cb7f594de58a411ca7c1a16205",
+      "footprint_name": "TSOT-23-8_L2.9-W1.6-P0.65-LS2.8-BL",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "R65",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "AFE_AC_PATH"
+        }
+      ],
+      "value": "1MΩ",
+      "part_uuid": "5c856273eb424c9e80b50f13c6184f68",
+      "footprint_name": "R0402",
+      "block_name": "protected_switching"
+    },
+    {
+      "designator": "R66",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "AFE_FAULT_N"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "protected_switching"
+    }
+  ],
+  "reused_blocks": []
+}

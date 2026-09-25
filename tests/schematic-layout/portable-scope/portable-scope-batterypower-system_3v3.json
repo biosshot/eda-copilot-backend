@@ -1,0 +1,295 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / BatteryPower / system_3v3",
+    "description": "EasyEDA page BatteryPower; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "system_3v3",
+      "description": "system_3v3",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "U8",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "VINA",
+          "signal_name": "BAT_SYS"
+        },
+        {
+          "pin_number": "2",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "3",
+          "name": "FB",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "4",
+          "name": "VOUT",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "5",
+          "name": "VOUT",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "6",
+          "name": "L2",
+          "signal_name": "BOOST_LX2"
+        },
+        {
+          "pin_number": "7",
+          "name": "L2",
+          "signal_name": "BOOST_LX2"
+        },
+        {
+          "pin_number": "8",
+          "name": "L1",
+          "signal_name": "BOOST_LX1"
+        },
+        {
+          "pin_number": "9",
+          "name": "L1",
+          "signal_name": "BOOST_LX1"
+        },
+        {
+          "pin_number": "10",
+          "name": "VIN",
+          "signal_name": "BAT_SYS"
+        },
+        {
+          "pin_number": "11",
+          "name": "VIN",
+          "signal_name": "BAT_SYS"
+        },
+        {
+          "pin_number": "12",
+          "name": "EN",
+          "signal_name": "SCOPE_EN"
+        },
+        {
+          "pin_number": "13",
+          "name": "PS/SYNC",
+          "signal_name": "BAT_SYS"
+        },
+        {
+          "pin_number": "14",
+          "name": "PG",
+          "signal_name": "SYS_3V3_PG"
+        },
+        {
+          "pin_number": "15",
+          "name": "PGND",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "TPS63021DSJR",
+      "part_uuid": "fb934fb8080e4c289b3d5c1dd0d17a4e",
+      "footprint_name": "VSON-14_L4.0-W3.0-P0.50-BL-EP_TI_DSJ",
+      "block_name": "system_3v3"
+    },
+    {
+      "designator": "R21",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "SYS_3V3_PG"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "100kΩ",
+      "part_uuid": "0cc9cee0c09e4a1c8b41e9d1feefa5b2",
+      "footprint_name": "R0402",
+      "block_name": "system_3v3"
+    },
+    {
+      "designator": "SW5",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "BAT_SYS"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "SCOPE_EN"
+        },
+        {
+          "pin_number": "3",
+          "name": "3",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "JS102011SAQN",
+      "part_uuid": "78ca176d709c4c8f83a2a347616a6ffa",
+      "footprint_name": "SW-SMD_JS102011SAQN",
+      "block_name": "system_3v3"
+    },
+    {
+      "designator": "L1",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "BOOST_LX2"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "BOOST_LX1"
+        }
+      ],
+      "value": "1.5uH",
+      "part_uuid": "5a29735e5324487cabc382b95ae4fba6",
+      "footprint_name": "IND-SMD_L4.5-W4.1_SRP4020TA",
+      "block_name": "system_3v3"
+    },
+    {
+      "designator": "C49",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "22uF",
+      "part_uuid": "627d17e699aa417eabf187d29c960b0f",
+      "footprint_name": "C0805",
+      "block_name": "system_3v3"
+    },
+    {
+      "designator": "C50",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "22uF",
+      "part_uuid": "627d17e699aa417eabf187d29c960b0f",
+      "footprint_name": "C0805",
+      "block_name": "system_3v3"
+    },
+    {
+      "designator": "C51",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "22uF",
+      "part_uuid": "627d17e699aa417eabf187d29c960b0f",
+      "footprint_name": "C0805",
+      "block_name": "system_3v3"
+    },
+    {
+      "designator": "R20",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SCOPE_EN"
+        }
+      ],
+      "value": "1MΩ",
+      "part_uuid": "5c856273eb424c9e80b50f13c6184f68",
+      "footprint_name": "R0402",
+      "block_name": "system_3v3"
+    },
+    {
+      "designator": "C46",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "BAT_SYS"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "system_3v3"
+    },
+    {
+      "designator": "C47",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "BAT_SYS"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "system_3v3"
+    },
+    {
+      "designator": "C48",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "BAT_SYS"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "system_3v3"
+    }
+  ],
+  "reused_blocks": []
+}

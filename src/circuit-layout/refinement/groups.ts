@@ -4,7 +4,8 @@ import type { SymbolWithMeta } from '#types/symbol.ts';
 import type { MacroInstance } from '../patterns/types.ts';
 import { rotateSymbolGeometry } from '../patterns/helpers.ts';
 import { isGroundSignal } from '../ground.ts';
-import { type Placed, type Point, pinPositions, normal, shift, boundsOf, path, EPS } from './geometry.ts';
+import { getDesignatorLabel } from '#utils/component.ts';
+import { type Placed, type Point, pinPositions, normal, shift, boundsOf, path, edgeSegments, EPS } from './geometry.ts';
 import { SCHEMATIC_CLEARANCE as gap, componentClearance } from './policy.ts';
 
 export type LocalGroup = { ids: string[]; flexible?: string; flags: Map<string, string>; rotations?: readonly (90 | 180 | 270)[]; loneFlag?: boolean };
@@ -31,14 +32,34 @@ export function localGroups(nodes: Placed[], edges: ElkExtendedEdge[], component
             })) continue;
             ids.push(c.designator);
         }
-        // An absorbed connector remains fixed in orientation. Rotation is
-        // allowed only for explicitly opted-in, entirely two-pin passive macros.
         const rotatable = ids.length === macro.placements.length && ids.every(id => flags.has(id)
             || (!/^U/i.test(id) && nodes.find(n => n.id === id)?.ports?.length === 2));
-        ids.forEach(id => used.add(id)); groups.push({ ids, flags: new Map(), rotations: rotatable ? macro.refinementRotations : undefined });
+        // A private one-pin marker should follow the compact macro it labels.
+        // Otherwise its fixed endpoint can hold the entire macro far away.
+        const memberPins = new Set(nodes.filter(n => ids.includes(n.id))
+            .flatMap(n => (n.ports ?? []).map(p => p.id)));
+        for (const flag of flags) {
+            if (used.has(flag) || ids.includes(flag)) continue;
+            const node = nodes.find(n => n.id === flag);
+            if (node?.ports?.length !== 1) continue;
+            const incident = edges.filter(e => [...e.sources, ...e.targets].includes(node.ports![0].id));
+            if (incident.length !== 1) continue;
+            const other = [...incident[0].sources, ...incident[0].targets].find(p => p !== node.ports![0].id)!;
+            if (!memberPins.has(other)) continue;
+            const members = nodes.filter(n => ids.includes(n.id));
+            const box = boundsOf(members);
+            const center = { x: node.x + node.width / 2, y: node.y + node.height / 2 };
+            if (center.x < box.x - 200 || center.x > box.x + box.width + 200
+                || center.y < box.y - 200 || center.y > box.y + box.height + 200) continue;
+            ids.push(flag);
+        }
+        // An absorbed connector remains fixed in orientation. Rotation is
+        // allowed only for explicitly opted-in, entirely two-pin passive macros.
+        ids.forEach(id => used.add(id)); groups.push({ ids, flags: new Map(), rotations: rotatable ? macro.refinementRotations ?? [90, 180, 270] : undefined });
     }
     for (const c of [...components].sort((a, b) => a.designator.localeCompare(b.designator))) {
-        if (used.has(c.designator) || c.pins.length !== 2 || /^U/i.test(c.designator)) continue;
+        if (used.has(c.designator) || /^U/i.test(c.designator)
+            || (c.pins.length !== 2 && !(getDesignatorLabel(c.designator) === 'Разъемы' && c.pins.length >= 3 && c.pins.length <= 4))) continue;
         const attached = new Map<string, string>();
         for (const flag of flags) {
             if (used.has(flag)) continue;
@@ -48,6 +69,36 @@ export function localGroups(nodes: Placed[], edges: ElkExtendedEdge[], component
         }
         const ids = [c.designator, ...attached.keys()]; ids.forEach(id => used.add(id));
         groups.push({ ids, flexible: c.designator, flags: attached });
+    }
+    // A series part and its passive load must also be able to move together.
+    // Build bounded compound moves from complete existing groups, without
+    // splitting a pattern or absorbing the IC that anchors the attachment.
+    const parts = new Map(components.map(c => [c.designator, c]));
+    const units = groups.filter(g => g.ids.every(id => flags.has(id) || parts.get(id)?.pins.length === 2));
+    const unitOf = new Map(units.flatMap((g, i) => g.ids.filter(id => !flags.has(id)).map(id => [id, i])));
+    const parents = units.map((_, i) => i);
+    const root = (i: number): number => parents[i] === i ? i : (parents[i] = root(parents[i]));
+    for (const edge of edges) {
+        const a = unitOf.get(owner.get(edge.sources[0])!), b = unitOf.get(owner.get(edge.targets[0])!);
+        if (a !== undefined && b !== undefined) parents[root(a)] = root(b);
+    }
+    const clusters = new Map<number, LocalGroup[]>();
+    units.forEach((g, i) => { const key = root(i), list = clusters.get(key) ?? []; list.push(g); clusters.set(key, list); });
+    for (const cluster of clusters.values()) {
+        if (cluster.length < 2) continue;
+        const ids = new Set(cluster.flatMap(g => g.ids));
+        const real = [...ids].filter(id => parts.has(id));
+        if (real.length > 8 || new Set(real.map(id => parts.get(id)!.block_name)).size !== 1) continue;
+        const outside = new Set(edges.filter(e => [...e.sources, ...e.targets].some(p => ids.has(owner.get(p)!)))
+            .flatMap(e => [...e.sources, ...e.targets]).map(p => owner.get(p)!)
+            .filter(id => !ids.has(id) && parts.has(id)));
+        if (outside.size !== 1 || parts.get([...outside][0])!.pins.length <= 2) continue;
+        for (const flag of flags) {
+            const neighbours = edges.filter(e => [...e.sources, ...e.targets].some(p => owner.get(p) === flag))
+                .flatMap(e => [...e.sources, ...e.targets]).map(p => owner.get(p)!).filter(id => id !== flag);
+            if (neighbours.length && neighbours.every(id => ids.has(id))) ids.add(flag);
+        }
+        groups.push({ ids: [...ids], flags: new Map() });
     }
     // A rigid group's joint move may fail because only one flag is obstructed.
     // Each flag also gets a local attempt without moving its component/group.
@@ -117,7 +168,8 @@ export function orientations(group: LocalGroup, current: Placed[], symbols: read
     }
     const symbol = symbols.find(s => s.designator === group.flexible)?.symbol;
     const original = nodes.find(n => n.id === group.flexible);
-    if (!symbol || !original || symbol.pins.length !== 2) return result;
+    if (!symbol || !original || (symbol.pins.length !== 2
+        && !(getDesignatorLabel(original.id) === 'Разъемы' && symbol.pins.length >= 3 && symbol.pins.length <= 4))) return result;
     for (const rotation of [0, 90, 180, 270]) {
         const g = rotateSymbolGeometry(symbol, rotation);
         const n: Placed = { ...original, x: original.x + original.width / 2 - g.width / 2,
@@ -130,7 +182,7 @@ export function orientations(group: LocalGroup, current: Placed[], symbols: read
     return result;
 }
 
-export function translations(pose: GroupPose, boundary: ElkExtendedEdge[], fixed: Placed[], rails: ElkExtendedEdge[], nets: ReadonlyMap<string, string>) {
+export function translations(pose: GroupPose, boundary: ElkExtendedEdge[], fixed: Placed[], rails: ElkExtendedEdge[], nets: ReadonlyMap<string, string>, obstacles = rails) {
     const own = pinPositions(pose.nodes), external = pinPositions(fixed);
     const anchors: Point[][] = [];
     for (const edge of boundary) {
@@ -154,9 +206,36 @@ export function translations(pose: GroupPose, boundary: ElkExtendedEdge[], fixed
                 : { x: bn.x * d - an.x * gap.pinEscape, y: bn.y * d - an.y * gap.pinEscape });
             result.push({ x: target.x - a.x, y: target.y - a.y });
         }
+        // Two-dimensional alternatives are necessary when all pin-aligned
+        // slots are occupied. Sample whole-group positions, not just the pin
+        // axis; cheap body/wire screening precedes bounded routing attempts.
+        if (!loneFlag) {
+            for (const depth of [40, 80, 120, 160, 200, 240]) for (let side = -180; side <= 180; side += 30) {
+                const target = { x: b.x + bn.x * depth + (bn.y ? side : 0),
+                    y: b.y + bn.y * depth + (bn.x ? side : 0) };
+                result.push({ x: target.x - a.x, y: target.y - a.y });
+            }
+        }
         // Search the neighbouring rows/columns too. A crowded flag row must
         // not force a service marker back to the far end of a long ELK lead.
-        const base = result.slice(-distances.length);
+        const base = result.slice(0, distances.length);
+        if (!loneFlag) {
+            // Narrow free slots lie on obstacle boundaries, not necessarily on
+            // the pin grid. Include both body and wire clearances in two axes.
+            const boxes = fixed.filter(n => Math.abs(n.x + n.width / 2 - b.x) < 350 && Math.abs(n.y + n.height / 2 - b.y) < 350);
+            const segments = obstacles.flatMap(edgeSegments).filter(s => Math.min(s.a.x, s.b.x) < b.x + 350
+                && Math.max(s.a.x, s.b.x) > b.x - 350 && Math.min(s.a.y, s.b.y) < b.y + 350 && Math.max(s.a.y, s.b.y) > b.y - 350);
+            const axis = (key: 'x' | 'y', size: 'width' | 'height') => [...new Set([
+                ...base.map(d => bounds[key] + d[key]),
+                ...boxes.flatMap(n => [n[key] - componentClearance(aNode, n) - bounds[size], n[key] + n[size] + componentClearance(aNode, n)]),
+                ...segments.filter(s => Math.abs(s.a[key] - s.b[key]) < EPS).flatMap(s => [s.a[key] - gap.wire - bounds[size], s.a[key] + gap.wire]),
+            ])].sort((x, y) => Math.abs(x + bounds[size] / 2 - b[key]) - Math.abs(y + bounds[size] / 2 - b[key]) || x - y).slice(0, 16);
+            const xs = axis('x', 'width'), ys = axis('y', 'height');
+            const slots = xs.flatMap(x => ys.map(y => ({ x: x - bounds.x, y: y - bounds.y })));
+            slots.sort((x, y) => Math.abs(a.x + x.x - b.x) + Math.abs(a.y + x.y - b.y)
+                - Math.abs(a.x + y.x - b.x) - Math.abs(a.y + y.y - b.y));
+            result.splice(distances.length, 0, ...slots);
+        }
         // A crowded pin-side corridor is not the only place for its load.
         // Try the adjacent faces of the anchor too (e.g. a pull-down below an
         // IC with left-side pins), with room for the required outward stub.
@@ -208,6 +287,19 @@ export function translations(pose: GroupPose, boundary: ElkExtendedEdge[], fixed
     // Fairly sample both ends of a series part. Previously the first net's
     // obstacle channels could exhaust the budget before its IC pin was tried.
     const result: Point[] = [{ x: 0, y: 0 }];
+    if (boundary.length === 1 && pose.nodes.length >= 3) {
+        const edge = boundary[0], ownId = own.has(edge.sources[0]) ? edge.sources[0] : edge.targets[0];
+        const fixedId = ownId === edge.sources[0] ? edge.targets[0] : edge.sources[0];
+        const a = own.get(ownId), b = external.get(fixedId);
+        const anchor = fixed.find(n => n.ports?.some(p => p.id === fixedId));
+        if (a && b && anchor && (/^U/i.test(anchor.id) || (anchor.ports?.length ?? 0) > 4)) {
+            const direction = Math.sign(b.y - a.y) || 1;
+            // Rows toward the IC plus lateral offsets catch free pockets that
+            // neither pin alignment nor obstacle-boundary slots represent.
+            for (const depth of [40, 80, 120, 160, 200]) for (const side of [-60, -30, 0, 30, 60])
+                result.push({ x: side, y: direction * depth });
+        }
+    }
     if (pose.nodes.length && boundary.length === 2) {
         const pairs = boundary.map(e => {
             const aId = own.has(e.sources[0]) ? e.sources[0] : e.targets[0];
@@ -244,9 +336,20 @@ export function translations(pose: GroupPose, boundary: ElkExtendedEdge[], fixed
         if (anchor[i]) result.push(anchor[i]);
     }
     const seen = new Set<string>();
-    return result.filter(d => {
+    const unique = result.filter(d => {
         const key = `${d.x.toFixed(3)},${d.y.toFixed(3)}`;
         if (seen.has(key)) return false;
         seen.add(key); return true;
     });
+    // A passive with one IC attachment has many obstacle-derived slots. Try
+    // the slots nearest its IC terminal before distant poses consume the
+    // shared routing budget; the full cost and legality checks still decide.
+    if (boundary.length !== 1 || !pose.nodes.some(n => n.ports?.length === 2)) return unique;
+    const edge = boundary[0], ownId = own.has(edge.sources[0]) ? edge.sources[0] : edge.targets[0];
+    const fixedId = ownId === edge.sources[0] ? edge.targets[0] : edge.sources[0];
+    const anchor = fixed.find(n => n.ports?.some(p => p.id === fixedId));
+    const a = own.get(ownId), b = external.get(fixedId);
+    if (!anchor || !a || !b || (!/^U/i.test(anchor.id) && (anchor.ports?.length ?? 0) <= 4)) return unique;
+    return unique.map((d, index) => ({ d, index, distance: Math.abs(a.x + d.x - b.x) + Math.abs(a.y + d.y - b.y) }))
+        .sort((a, b) => a.distance - b.distance || a.index - b.index).map(item => item.d);
 }

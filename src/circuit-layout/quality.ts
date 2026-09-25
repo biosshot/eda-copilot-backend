@@ -1,4 +1,5 @@
 import type { ElkNode } from 'elkjs';
+import { straightRuns } from './refinement/net-routes.ts';
 
 type Point = { x: number; y: number };
 type Box = { id: string; left: number; top: number; right: number; bottom: number };
@@ -100,6 +101,12 @@ function leafBoxes(root: ElkNode) {
 
 function edgeSegments(root: ElkNode, offsets: Map<string, Point>) {
     const segments: Segment[] = [];
+    const parent = new Map<string, string>();
+    const netOf = (id: string): string => {
+        const p = parent.get(id);
+        if (!p || p === id) { parent.set(id, id); return id; }
+        const net = netOf(p); parent.set(id, net); return net;
+    };
     let edgeCount = 0;
     let routedEdgeCount = 0;
     let bendCount = 0;
@@ -108,6 +115,7 @@ function edgeSegments(root: ElkNode, offsets: Map<string, Point>) {
     const collect = (node: ElkNode, inheritedOffset: Point) => {
         const nodeOffset = offsets.get(node.id) ?? inheritedOffset;
         for (const edge of node.edges ?? []) {
+            for (const id of [...edge.sources, ...edge.targets]) parent.set(netOf(id), netOf(edge.sources[0]));
             edgeCount++;
             if (edge.sections?.length) routedEdgeCount++;
             const edgeOffset = edge.container
@@ -123,7 +131,7 @@ function edgeSegments(root: ElkNode, offsets: Map<string, Point>) {
                     const a = points[index - 1];
                     const b = points[index];
                     wireLength += Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
-                    if (a.x !== b.x || a.y !== b.y) segments.push({ edgeId: edge.id, a, b });
+                    if (a.x !== b.x || a.y !== b.y) segments.push({ edgeId: edge.sources[0], a, b });
                 }
             }
         }
@@ -132,7 +140,13 @@ function edgeSegments(root: ElkNode, offsets: Map<string, Point>) {
     };
 
     collect(root, { x: 0, y: 0 });
-    return { segments, edgeCount, routedEdgeCount, bendCount, wireLength };
+    // A shared supply trunk is drawn once, even when many logical edges use
+    // it. Counting its copies as crossings unfairly rejects compact port rows.
+    const byNet = new Map<string, Segment[]>();
+    for (const segment of segments) { const net = netOf(segment.edgeId), list = byNet.get(net) ?? []; list.push(segment); byNet.set(net, list); }
+    const physical = [...byNet].flatMap(([edgeId, parts]) => straightRuns(parts).map(s => ({ ...s, edgeId })));
+    wireLength = physical.reduce((sum, s) => sum + Math.abs(s.a.x - s.b.x) + Math.abs(s.a.y - s.b.y), 0);
+    return { segments: physical, edgeCount, routedEdgeCount, bendCount, wireLength };
 }
 
 function strictlyOverlaps(a1: number, a2: number, b1: number, b2: number) {
@@ -204,6 +218,16 @@ function wireThroughNodes(segments: Segment[], boxes: Box[]) {
     return count;
 }
 
+/** Sheet-like landscape drawings are preferred, with extra height more costly
+ * than extra width. Real area remains the base cost, so blank width never wins. */
+export function effectiveLayoutArea(width: number, height: number, verticalWeight = 1.5) {
+    if (width <= 0 || height <= 0) return 0;
+    const target = Math.SQRT2;
+    const penalty = verticalWeight * Math.max(0, target * height / width - 1) ** 2
+        + 0.15 * Math.max(0, width / (target * height) - 1) ** 2;
+    return width * height * (1 + Math.min(9, penalty));
+}
+
 export function evaluateLayoutQuality(graph: ElkNode): LayoutQuality {
     const width = finite(graph.width) ? graph.width : 0;
     const height = finite(graph.height) ? graph.height : 0;
@@ -217,17 +241,15 @@ export function evaluateLayoutQuality(graph: ElkNode): LayoutQuality {
     const wireThroughNodeCount = wireThroughNodes(segments, boxes);
     const nodeCount = boxes.length;
     const typicalNodeSize = Math.sqrt(nodeArea / Math.max(nodeCount, 1)) || 1;
-    const normalizedArea = area / Math.max(nodeArea, 1);
+    const normalizedArea = effectiveLayoutArea(width, height) / Math.max(nodeArea, 1);
     const normalizedWire = wireLength / (Math.max(edgeCount, 1) * typicalNodeSize);
     const normalizedBends = bendCount / Math.max(edgeCount, 1);
-    const aspectPenalty = Math.max(0, aspectRatio - 1.8) ** 2;
     const score = normalizedArea
-        + normalizedWire * 0.35
+        + normalizedWire * 1.2
         + normalizedBends * 0.8
-        + crossingCount / Math.max(edgeCount, 1) * 4
+        + crossingCount / Math.max(edgeCount, 1) * 12
         + collinearOverlapCount / Math.max(edgeCount, 1) * 6
-        + wireThroughNodeCount / Math.max(edgeCount, 1) * 12
-        + aspectPenalty * 2;
+        + wireThroughNodeCount / Math.max(edgeCount, 1) * 12;
     const valid = width > 0
         && height > 0
         && Number.isFinite(score)

@@ -5,6 +5,7 @@ import type { BlockNode, Hooks } from "#types/auto-place.ts";
 import type { DeepReadonly } from '#types/utils.ts';
 import { BASELINE_LAYOUT_PROFILE, type SchematicLayoutProfile } from './profiles.ts';
 import { terminalAwareEdges, canonicalGraph } from './graph-order.ts';
+import { layoutIndependentBlocks } from './independent-blocks.ts';
 
 export function applyProfileToLocalBlocks(graph: ElkNode, profile: SchematicLayoutProfile, includeDirectRoot = false) {
     if (profile.name === BASELINE_LAYOUT_PROFILE.name) return;
@@ -96,7 +97,8 @@ export async function layout(
     // await writeFile(".test-output/elk.json", JSON.stringify(graph, null, 2));
     // const graph = await readFile(".test-output/elk.json", 'utf-8').then(JSON.parse)
 
-    const layoutedGraph = await elk.layout(graph, { layoutOptions: BASELINE_LAYOUT_PROFILE.options });
+    const layoutedGraph = (includeDirectRoot ? await layoutIndependentBlocks(graph, elk, addedSymbol) : undefined)
+        ?? await elk.layout(graph, { layoutOptions: BASELINE_LAYOUT_PROFILE.options });
 
     // await writeFile(".test-output/elk_output.json", JSON.stringify(layoutedGraph, null, 2));
 

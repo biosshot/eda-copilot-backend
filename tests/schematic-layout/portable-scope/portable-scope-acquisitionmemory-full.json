@@ -1,0 +1,3736 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / AcquisitionMemory / full page",
+    "description": "EasyEDA page AcquisitionMemory; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "fpga",
+      "description": "fpga",
+      "next_block_names": []
+    },
+    {
+      "name": "config_flash",
+      "description": "config_flash",
+      "next_block_names": []
+    },
+    {
+      "name": "ddr3",
+      "description": "ddr3",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "U3.1",
+      "pins": [
+        {
+          "pin_number": "E2",
+          "name": "PL32D/PCLKC7_0",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "F3",
+          "name": "PL32B/PCLKC7_1",
+          "signal_name": "ADC_DCLK_M"
+        },
+        {
+          "pin_number": "F2",
+          "name": "PL32C/PCLKT7_0",
+          "signal_name": "OSC_OE_2V5"
+        },
+        {
+          "pin_number": "G3",
+          "name": "PL32A/PCLKT7_1",
+          "signal_name": "ADC_DCLK_P"
+        },
+        {
+          "pin_number": "H3",
+          "name": "PL29D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "G5",
+          "name": "PL29B",
+          "signal_name": "ADC_D01_M"
+        },
+        {
+          "pin_number": "H5",
+          "name": "PL29C/GR_PCLK7_0",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "H4",
+          "name": "PL29A/GR_PCLK7_1",
+          "signal_name": "ADC_D01_P"
+        },
+        {
+          "pin_number": "E1",
+          "name": "PL26D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "D1",
+          "name": "PL26B",
+          "signal_name": "ADC_D23_M"
+        },
+        {
+          "pin_number": "D2",
+          "name": "PL26C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "C1",
+          "name": "PL26A",
+          "signal_name": "ADC_D23_P"
+        },
+        {
+          "pin_number": "C2",
+          "name": "PL23D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "B1",
+          "name": "PL23B",
+          "signal_name": "ADC_D45_M"
+        },
+        {
+          "pin_number": "B2",
+          "name": "PL23C/VREF1_7",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "A2",
+          "name": "PL23A",
+          "signal_name": "ADC_D45_P"
+        },
+        {
+          "pin_number": "F5",
+          "name": "PL20D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "E3",
+          "name": "PL20B",
+          "signal_name": "ADC_D67_M"
+        },
+        {
+          "pin_number": "E5",
+          "name": "PL20C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "F4",
+          "name": "PL20A",
+          "signal_name": "ADC_D67_P"
+        },
+        {
+          "pin_number": "D3",
+          "name": "PL17D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "D5",
+          "name": "PL17B",
+          "signal_name": "ADC_D89_M"
+        },
+        {
+          "pin_number": "C3",
+          "name": "PL17C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "E4",
+          "name": "PL17A",
+          "signal_name": "ADC_D89_P"
+        },
+        {
+          "pin_number": "B3",
+          "name": "PL14D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "B4",
+          "name": "PL14B",
+          "signal_name": "ADC_D1011_M"
+        },
+        {
+          "pin_number": "A3",
+          "name": "PL14C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "C4",
+          "name": "PL14A",
+          "signal_name": "ADC_D1011_P"
+        },
+        {
+          "pin_number": "C5",
+          "name": "PL11D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "B5",
+          "name": "PL11C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "A5",
+          "name": "PL11B/ULC_GPLL0C_IN",
+          "signal_name": "ADC_D1213_M"
+        },
+        {
+          "pin_number": "A4",
+          "name": "PL11A/ULC_GPLL0T_IN",
+          "signal_name": "ADC_D1213_P"
+        }
+      ],
+      "value": "LFE5U-45F-6BG381C",
+      "part_uuid": "e576b0cc08094fcb85d59fc6803c105e",
+      "footprint_name": "BGA-381_L17.0-W17.0-P0.80-TL_LFE5UM-45F-7BG381I",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "U3.2",
+      "pins": [
+        {
+          "pin_number": "P4",
+          "name": "PL68D/LLC_GPLL0C_IN",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "P3",
+          "name": "PL68C/LLC_GPLL0T_IN",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "P2",
+          "name": "PL68B",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "P1",
+          "name": "PL68A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "N1",
+          "name": "PL65D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "M1",
+          "name": "PL65B",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "L1",
+          "name": "PL65C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "N2",
+          "name": "PL65A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "L2",
+          "name": "PL62D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "M3",
+          "name": "PL62B",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "L3",
+          "name": "PL62C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "N3",
+          "name": "PL62A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "P5",
+          "name": "PL59D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "N5",
+          "name": "PL59B",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "N4",
+          "name": "PL59C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "M4",
+          "name": "PL59A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "M5",
+          "name": "PL53A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "L5",
+          "name": "PL44D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "K5",
+          "name": "PL44B/VREF1_6",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "L4",
+          "name": "PL44C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "K4",
+          "name": "PL44A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "K1",
+          "name": "PL41D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "J1",
+          "name": "PL41B",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "H1",
+          "name": "PL41C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "K2",
+          "name": "PL41A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "K3",
+          "name": "PL38D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "J5",
+          "name": "PL38B",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "J3",
+          "name": "PL38C/GR_PCLK6_1",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "J4",
+          "name": "PL38A/GR_PCLK6_0",
+          "signal_name": "ADC_OVR"
+        },
+        {
+          "pin_number": "G1",
+          "name": "PL35D/PCLKC6_0",
+          "signal_name": "ADC_SEN"
+        },
+        {
+          "pin_number": "F1",
+          "name": "PL35B/PCLKC6_1",
+          "signal_name": "ADC_SCLK"
+        },
+        {
+          "pin_number": "H2",
+          "name": "PL35C/PCLKT6_0",
+          "signal_name": "ADC_SDATA"
+        },
+        {
+          "pin_number": "G2",
+          "name": "PL35A/PCLKT6_1",
+          "signal_name": "ADC_RESET"
+        }
+      ],
+      "value": "LFE5U-45F-6BG381C",
+      "part_uuid": "e576b0cc08094fcb85d59fc6803c105e",
+      "footprint_name": "BGA-381_L17.0-W17.0-P0.80-TL_LFE5UM-45F-7BG381I",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "U3.3",
+      "pins": [
+        {
+          "pin_number": "U4",
+          "name": "CFG_0",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "R4",
+          "name": "CFG_2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "T4",
+          "name": "CFG_1",
+          "signal_name": "FPGA_CFG1"
+        },
+        {
+          "pin_number": "Y3",
+          "name": "DONE",
+          "signal_name": "FPGA_DONE"
+        },
+        {
+          "pin_number": "W3",
+          "name": "PROGRAMN",
+          "signal_name": "FPGA_PROG_N"
+        },
+        {
+          "pin_number": "U3",
+          "name": "CCLK/MCLK/SCK",
+          "signal_name": "FPGA_CFG_SCK"
+        },
+        {
+          "pin_number": "V3",
+          "name": "INITN",
+          "signal_name": "FPGA_INIT_N"
+        },
+        {
+          "pin_number": "T3",
+          "name": "PB18A/WRITEN",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "R3",
+          "name": "PB15B/DOUT/CSON",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "U2",
+          "name": "PB13B/CS1N",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "R2",
+          "name": "PB15A/HOLDN/DI/BUSY/CSSPIN/CEN",
+          "signal_name": "FPGA_CFG_CS_N"
+        },
+        {
+          "pin_number": "T2",
+          "name": "PB13A/SN/CSN",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "W2",
+          "name": "PB11B/D0/MOSI/IO0",
+          "signal_name": "FPGA_CFG_MOSI"
+        },
+        {
+          "pin_number": "Y2",
+          "name": "PB9B/D2/IO2",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "V2",
+          "name": "PB11A/D1/MISO/IO1",
+          "signal_name": "FPGA_CFG_MISO"
+        },
+        {
+          "pin_number": "W1",
+          "name": "PB9A/D3/IO3",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "V1",
+          "name": "PB6B/D4/MOSI2/IO4",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "T1",
+          "name": "PB4B/D6/IO6",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "U1",
+          "name": "PB6A/D5/MISO2/IO5",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "R1",
+          "name": "PB4A/D7/IO7",
+          "signal_name": ""
+        }
+      ],
+      "value": "LFE5U-45F-6BG381C",
+      "part_uuid": "e576b0cc08094fcb85d59fc6803c105e",
+      "footprint_name": "BGA-381_L17.0-W17.0-P0.80-TL_LFE5UM-45F-7BG381I",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "U3.4",
+      "pins": [
+        {
+          "pin_number": "U5",
+          "name": "TMS",
+          "signal_name": "FPGA_TMS"
+        },
+        {
+          "pin_number": "R5",
+          "name": "TDI",
+          "signal_name": "FPGA_TDI"
+        },
+        {
+          "pin_number": "T5",
+          "name": "TCK",
+          "signal_name": "FPGA_TCK"
+        },
+        {
+          "pin_number": "V4",
+          "name": "TDO",
+          "signal_name": "FPGA_TDO"
+        }
+      ],
+      "value": "LFE5U-45F-6BG381C",
+      "part_uuid": "e576b0cc08094fcb85d59fc6803c105e",
+      "footprint_name": "BGA-381_L17.0-W17.0-P0.80-TL_LFE5UM-45F-7BG381I",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "U3.5",
+      "pins": [
+        {
+          "pin_number": "L20",
+          "name": "PR35A/PCLKT3_1",
+          "signal_name": "DDR_DQ6"
+        },
+        {
+          "pin_number": "L19",
+          "name": "PR35C/PCLKT3_0",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "M20",
+          "name": "PR35B/PCLKC3_1",
+          "signal_name": "DDR_DQ1"
+        },
+        {
+          "pin_number": "M19",
+          "name": "PR35D/PCLKC3_0",
+          "signal_name": "DDR_DQ3"
+        },
+        {
+          "pin_number": "L16",
+          "name": "PR38A/GR_PCLK3_0",
+          "signal_name": "DDR_DM0"
+        },
+        {
+          "pin_number": "L18",
+          "name": "PR38C/GR_PCLK3_1",
+          "signal_name": "DDR_DQ7"
+        },
+        {
+          "pin_number": "L17",
+          "name": "PR38B",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "M18",
+          "name": "PR38D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "N16",
+          "name": "PR41A",
+          "signal_name": "DDR_DQS0_P"
+        },
+        {
+          "pin_number": "N18",
+          "name": "PR41C",
+          "signal_name": "DDR_DQ5"
+        },
+        {
+          "pin_number": "M17",
+          "name": "PR41B",
+          "signal_name": "DDR_DQS0_M"
+        },
+        {
+          "pin_number": "P17",
+          "name": "PR41D",
+          "signal_name": "DDR_CS_N"
+        },
+        {
+          "pin_number": "N17",
+          "name": "PR44A",
+          "signal_name": "DDR_DQ2"
+        },
+        {
+          "pin_number": "R16",
+          "name": "PR44C",
+          "signal_name": "DDR_DQ4"
+        },
+        {
+          "pin_number": "P16",
+          "name": "PR44B/VREF1_3",
+          "signal_name": "DDR_VREF"
+        },
+        {
+          "pin_number": "R17",
+          "name": "PR44D",
+          "signal_name": "DDR_DQ0"
+        },
+        {
+          "pin_number": "T16",
+          "name": "PR53A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "N19",
+          "name": "PR59A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "P19",
+          "name": "PR59C",
+          "signal_name": "DDR_RESET_N"
+        },
+        {
+          "pin_number": "N20",
+          "name": "PR59B",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "P18",
+          "name": "PR59D",
+          "signal_name": "DDR_BA0"
+        },
+        {
+          "pin_number": "P20",
+          "name": "PR62A",
+          "signal_name": "DDR_BA1"
+        },
+        {
+          "pin_number": "T20",
+          "name": "PR62C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "R20",
+          "name": "PR62B",
+          "signal_name": "DDR_BA2"
+        },
+        {
+          "pin_number": "U20",
+          "name": "PR62D",
+          "signal_name": "DDR_ODT"
+        },
+        {
+          "pin_number": "T19",
+          "name": "PR65A",
+          "signal_name": "DDR_CKE"
+        },
+        {
+          "pin_number": "U19",
+          "name": "PR65C",
+          "signal_name": "DDR_CAS_N"
+        },
+        {
+          "pin_number": "R18",
+          "name": "PR65B",
+          "signal_name": "DDR_WE_N"
+        },
+        {
+          "pin_number": "T18",
+          "name": "PR65D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "U18",
+          "name": "PR68A",
+          "signal_name": "DDR_RAS_N"
+        },
+        {
+          "pin_number": "U17",
+          "name": "PR68B",
+          "signal_name": "DDR_A0"
+        },
+        {
+          "pin_number": "U16",
+          "name": "PR68C/LRC_GPLL0T_IN",
+          "signal_name": "DDR_CK_P"
+        },
+        {
+          "pin_number": "T17",
+          "name": "PR68D/LRC_GPLL0C_IN",
+          "signal_name": "DDR_CK_M"
+        }
+      ],
+      "value": "LFE5U-45F-6BG381C",
+      "part_uuid": "e576b0cc08094fcb85d59fc6803c105e",
+      "footprint_name": "BGA-381_L17.0-W17.0-P0.80-TL_LFE5UM-45F-7BG381I",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "U3.6",
+      "pins": [
+        {
+          "pin_number": "C18",
+          "name": "PR11A/URC_GPLL0T_IN",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "D17",
+          "name": "PR11B/URC_GPLL0C_IN",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "E16",
+          "name": "PR11C",
+          "signal_name": "DDR_A6"
+        },
+        {
+          "pin_number": "F16",
+          "name": "PR11D",
+          "signal_name": "DDR_A8"
+        },
+        {
+          "pin_number": "D18",
+          "name": "PR14A",
+          "signal_name": "DDR_A1"
+        },
+        {
+          "pin_number": "E18",
+          "name": "PR14C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "E17",
+          "name": "PR14B",
+          "signal_name": "DDR_A11"
+        },
+        {
+          "pin_number": "F18",
+          "name": "PR14D",
+          "signal_name": "DDR_A4"
+        },
+        {
+          "pin_number": "F17",
+          "name": "PR17A",
+          "signal_name": "DDR_A7"
+        },
+        {
+          "pin_number": "G16",
+          "name": "PR17C",
+          "signal_name": "DDR_A12"
+        },
+        {
+          "pin_number": "G18",
+          "name": "PR17B",
+          "signal_name": "DDR_A10"
+        },
+        {
+          "pin_number": "H16",
+          "name": "PR17D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "H18",
+          "name": "PR20A",
+          "signal_name": "DDR_A5"
+        },
+        {
+          "pin_number": "J17",
+          "name": "PR20C",
+          "signal_name": "DDR_A2"
+        },
+        {
+          "pin_number": "H17",
+          "name": "PR20B",
+          "signal_name": "DDR_A9"
+        },
+        {
+          "pin_number": "J16",
+          "name": "PR20D",
+          "signal_name": "DDR_A3"
+        },
+        {
+          "pin_number": "C20",
+          "name": "PR23A",
+          "signal_name": "DDR_DQ13"
+        },
+        {
+          "pin_number": "D20",
+          "name": "PR23C/VREF1_2",
+          "signal_name": "DDR_VREF"
+        },
+        {
+          "pin_number": "D19",
+          "name": "PR23B",
+          "signal_name": "DDR_DQ15"
+        },
+        {
+          "pin_number": "E19",
+          "name": "PR23D",
+          "signal_name": "DDR_DQ11"
+        },
+        {
+          "pin_number": "E20",
+          "name": "PR26A",
+          "signal_name": "DDR_DQ9"
+        },
+        {
+          "pin_number": "F20",
+          "name": "PR26C",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "F19",
+          "name": "PR26B",
+          "signal_name": "DDR_DQ8"
+        },
+        {
+          "pin_number": "G20",
+          "name": "PR26D",
+          "signal_name": "DDR_DQ14"
+        },
+        {
+          "pin_number": "G19",
+          "name": "PR29A/GR_PCLK2_1",
+          "signal_name": "DDR_DQS1_P"
+        },
+        {
+          "pin_number": "J18",
+          "name": "PR29C/GR_PCLK2_0",
+          "signal_name": "DDR_DM1"
+        },
+        {
+          "pin_number": "H20",
+          "name": "PR29B",
+          "signal_name": "DDR_DQS1_M"
+        },
+        {
+          "pin_number": "K18",
+          "name": "PR29D",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "J19",
+          "name": "PR32A/PCLKT2_1",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "J20",
+          "name": "PR32C/PCLKT2_0",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "K19",
+          "name": "PR32B/PCLKC2_1",
+          "signal_name": "DDR_DQ12"
+        },
+        {
+          "pin_number": "K20",
+          "name": "PR32D/PCLKC2_0",
+          "signal_name": "DDR_DQ10"
+        }
+      ],
+      "value": "LFE5U-45F-6BG381C",
+      "part_uuid": "e576b0cc08094fcb85d59fc6803c105e",
+      "footprint_name": "BGA-381_L17.0-W17.0-P0.80-TL_LFE5UM-45F-7BG381I",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "U3.8",
+      "pins": [
+        {
+          "pin_number": "A6",
+          "name": "PT4A/ULC_GPLL1T_IN",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "E6",
+          "name": "PT6A",
+          "signal_name": "MCU_FPGA_CS_N"
+        },
+        {
+          "pin_number": "B6",
+          "name": "PT4B/ULC_GPLL1C_IN",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "D6",
+          "name": "PT6B",
+          "signal_name": "MCU_FPGA_SCK"
+        },
+        {
+          "pin_number": "E7",
+          "name": "PT9A",
+          "signal_name": "MCU_FPGA_MOSI"
+        },
+        {
+          "pin_number": "C6",
+          "name": "PT11A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "D7",
+          "name": "PT9B",
+          "signal_name": "MCU_FPGA_MISO"
+        },
+        {
+          "pin_number": "C7",
+          "name": "PT11B",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "E8",
+          "name": "PT13A",
+          "signal_name": "FPGA_IRQ"
+        },
+        {
+          "pin_number": "C8",
+          "name": "PT15A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "D8",
+          "name": "PT13B",
+          "signal_name": "FPGA_READY"
+        },
+        {
+          "pin_number": "B8",
+          "name": "PT15B",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "A7",
+          "name": "PT18A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "D9",
+          "name": "PT20A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "A8",
+          "name": "PT18B",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "E9",
+          "name": "PT20B",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "C9",
+          "name": "PT27A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "D10",
+          "name": "PT29A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "E10",
+          "name": "PT29B",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "B9",
+          "name": "PT31A",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "A9",
+          "name": "PT33A/GR_PCLK0_1",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "C10",
+          "name": "PT31B",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "B10",
+          "name": "PT33B/GR_PCLK0_0",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "A10",
+          "name": "PT36A/PCLKT0_1",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "B11",
+          "name": "PT38A/PCLKT0_0",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "A11",
+          "name": "PT36B/PCLKC0_1",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "C11",
+          "name": "PT38B/PCLKC0_0",
+          "signal_name": ""
+        }
+      ],
+      "value": "LFE5U-45F-6BG381C",
+      "part_uuid": "e576b0cc08094fcb85d59fc6803c105e",
+      "footprint_name": "BGA-381_L17.0-W17.0-P0.80-TL_LFE5UM-45F-7BG381I",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "U3.9",
+      "pins": [
+        {
+          "pin_number": "V17",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V18",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V10",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V11",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "U15",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "T15",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "U6",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "T6",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V5",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "W6",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V6",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "W7",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V7",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "U7",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V8",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "U8",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V9",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "U9",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "U10",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "U11",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "W12",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V12",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "U12",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V13",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "U13",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V14",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "U14",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "W15",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V15",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "W16",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V16",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "W19",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V19",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "V20",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "M2",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "J2",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "D4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "N6",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "K6",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G6",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "P7",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "N7",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "M7",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "K7",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "J7",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G7",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "F7",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "B7",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "P8",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G8",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "F8",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "M9",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "L9",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "K9",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "J9",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G9",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "M10",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "L10",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "K10",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "J10",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G10",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "P11",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "M11",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "L11",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "K11",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "J11",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G11",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "P12",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "M12",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "L12",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "K12",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "J12",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G12",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "P13",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G13",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "F13",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "P14",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "N14",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "M14",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "K14",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "J14",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G14",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "F14",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "B14",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "N15",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "K15",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G15",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "M16",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G17",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "R19",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "H19",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "W20",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "Y19",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "T14",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "Y17",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "T13",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "Y16",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "Y15",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "T12",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "Y14",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "T11",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "Y12",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "Y11",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "T10",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "Y8",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "T9",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "Y7",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "Y6",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "T8",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "Y5",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "T7",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "C19",
+          "name": "GND",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "LFE5U-45F-6BG381C",
+      "part_uuid": "e576b0cc08094fcb85d59fc6803c105e",
+      "footprint_name": "BGA-381_L17.0-W17.0-P0.80-TL_LFE5UM-45F-7BG381I",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "U3.10",
+      "pins": [
+        {
+          "pin_number": "P9",
+          "name": "VCCIO8",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "P10",
+          "name": "VCCIO8",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "J6",
+          "name": "VCCIO7",
+          "signal_name": "FPGA_2V5"
+        },
+        {
+          "pin_number": "H6",
+          "name": "VCCIO7",
+          "signal_name": "FPGA_2V5"
+        },
+        {
+          "pin_number": "H7",
+          "name": "VCCIO7",
+          "signal_name": "FPGA_2V5"
+        },
+        {
+          "pin_number": "M6",
+          "name": "VCCIO6",
+          "signal_name": "FPGA_1V8"
+        },
+        {
+          "pin_number": "L6",
+          "name": "VCCIO6",
+          "signal_name": "FPGA_1V8"
+        },
+        {
+          "pin_number": "L7",
+          "name": "VCCIO6",
+          "signal_name": "FPGA_1V8"
+        },
+        {
+          "pin_number": "L14",
+          "name": "VCCIO3",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "M15",
+          "name": "VCCIO3",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "L15",
+          "name": "VCCIO3",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "H14",
+          "name": "VCCIO2",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "J15",
+          "name": "VCCIO2",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "H15",
+          "name": "VCCIO2",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "F11",
+          "name": "VCCIO1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "F12",
+          "name": "VCCIO1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "F9",
+          "name": "VCCIO0",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "F10",
+          "name": "VCCIO0",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "P6",
+          "name": "VCCAUX",
+          "signal_name": "FPGA_2V5"
+        },
+        {
+          "pin_number": "F6",
+          "name": "VCCAUX",
+          "signal_name": "FPGA_2V5"
+        },
+        {
+          "pin_number": "P15",
+          "name": "VCCAUX",
+          "signal_name": "FPGA_2V5"
+        },
+        {
+          "pin_number": "F15",
+          "name": "VCCAUX",
+          "signal_name": "FPGA_2V5"
+        },
+        {
+          "pin_number": "N8",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "M8",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "L8",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "K8",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "J8",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "H8",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "N9",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "H9",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "N10",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "H10",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "N11",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "H11",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "N12",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "H12",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "N13",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "M13",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "L13",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "K13",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "J13",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "H13",
+          "name": "VCC",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "W18",
+          "name": "RESERVED",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "W17",
+          "name": "RESERVED",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "W14",
+          "name": "RESERVED",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "W13",
+          "name": "RESERVED",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "W11",
+          "name": "RESERVED",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "W10",
+          "name": "RESERVED",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "W9",
+          "name": "RESERVED",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "W8",
+          "name": "RESERVED",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "W5",
+          "name": "RESERVED",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "W4",
+          "name": "RESERVED",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "K17",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "K16",
+          "name": "NC",
+          "signal_name": ""
+        }
+      ],
+      "value": "LFE5U-45F-6BG381C",
+      "part_uuid": "e576b0cc08094fcb85d59fc6803c105e",
+      "footprint_name": "BGA-381_L17.0-W17.0-P0.80-TL_LFE5UM-45F-7BG381I",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "U4",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "CS#",
+          "signal_name": "FPGA_CFG_CS_N"
+        },
+        {
+          "pin_number": "2",
+          "name": "DO",
+          "signal_name": "FPGA_CFG_MISO"
+        },
+        {
+          "pin_number": "3",
+          "name": "IO2",
+          "signal_name": "FLASH_WP_N"
+        },
+        {
+          "pin_number": "4",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "DI",
+          "signal_name": "FPGA_CFG_MOSI"
+        },
+        {
+          "pin_number": "6",
+          "name": "CLK",
+          "signal_name": "FPGA_CFG_SCK"
+        },
+        {
+          "pin_number": "7",
+          "name": "IO3",
+          "signal_name": "FLASH_HOLD_N"
+        },
+        {
+          "pin_number": "8",
+          "name": "VCC",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "W25Q64JVSSIQ",
+      "part_uuid": "0a64f2c6946e40f4b95d93456d867d4f",
+      "footprint_name": "SOP-8_L5.3-W5.3-P1.27-LS8.0-BL",
+      "block_name": "config_flash"
+    },
+    {
+      "designator": "J1",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "10",
+          "name": "10",
+          "signal_name": "FPGA_PROG_N"
+        },
+        {
+          "pin_number": "3",
+          "name": "3",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "8",
+          "name": "8",
+          "signal_name": "FPGA_TDI"
+        },
+        {
+          "pin_number": "5",
+          "name": "5",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "6",
+          "name": "6",
+          "signal_name": "FPGA_TDO"
+        },
+        {
+          "pin_number": "7",
+          "name": "7",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "4",
+          "name": "4",
+          "signal_name": "FPGA_TCK"
+        },
+        {
+          "pin_number": "9",
+          "name": "9",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FPGA_TMS"
+        }
+      ],
+      "value": "M20-9980546",
+      "part_uuid": "d7e38fef76ef465e8e97762e37aaeed5",
+      "footprint_name": "HDR-TH_10P-P2.54-V-M-R2-C5-S2.54",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "U17",
+      "pins": [
+        {
+          "pin_number": "T9",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "T8",
+          "name": "A8",
+          "signal_name": "DDR_A8"
+        },
+        {
+          "pin_number": "T7",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "T3",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "T2",
+          "name": "RESET#",
+          "signal_name": "DDR_RESET_N"
+        },
+        {
+          "pin_number": "T1",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "R9",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "R8",
+          "name": "A6",
+          "signal_name": "DDR_A6"
+        },
+        {
+          "pin_number": "R7",
+          "name": "A11",
+          "signal_name": "DDR_A11"
+        },
+        {
+          "pin_number": "R3",
+          "name": "A9",
+          "signal_name": "DDR_A9"
+        },
+        {
+          "pin_number": "R2",
+          "name": "A7",
+          "signal_name": "DDR_A7"
+        },
+        {
+          "pin_number": "R1",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "P9",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "P8",
+          "name": "A4",
+          "signal_name": "DDR_A4"
+        },
+        {
+          "pin_number": "P7",
+          "name": "A1",
+          "signal_name": "DDR_A1"
+        },
+        {
+          "pin_number": "P3",
+          "name": "A2",
+          "signal_name": "DDR_A2"
+        },
+        {
+          "pin_number": "P2",
+          "name": "A5",
+          "signal_name": "DDR_A5"
+        },
+        {
+          "pin_number": "P1",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "N9",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "N8",
+          "name": "BA1",
+          "signal_name": "DDR_BA1"
+        },
+        {
+          "pin_number": "N7",
+          "name": "A12/BC#",
+          "signal_name": "DDR_A12"
+        },
+        {
+          "pin_number": "N3",
+          "name": "A0",
+          "signal_name": "DDR_A0"
+        },
+        {
+          "pin_number": "N2",
+          "name": "A3",
+          "signal_name": "DDR_A3"
+        },
+        {
+          "pin_number": "N1",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "M9",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "M8",
+          "name": "VREFCA",
+          "signal_name": "DDR_VREF"
+        },
+        {
+          "pin_number": "M7",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "M3",
+          "name": "BA2",
+          "signal_name": "DDR_BA2"
+        },
+        {
+          "pin_number": "M2",
+          "name": "BA0",
+          "signal_name": "DDR_BA0"
+        },
+        {
+          "pin_number": "M1",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "L9",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "L8",
+          "name": "ZQ",
+          "signal_name": "DDR_ZQ"
+        },
+        {
+          "pin_number": "L7",
+          "name": "A10/AP",
+          "signal_name": "DDR_A10"
+        },
+        {
+          "pin_number": "L3",
+          "name": "WE#",
+          "signal_name": "DDR_WE_N"
+        },
+        {
+          "pin_number": "L2",
+          "name": "CS#",
+          "signal_name": "DDR_CS_N"
+        },
+        {
+          "pin_number": "L1",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "K9",
+          "name": "CKE",
+          "signal_name": "DDR_CKE"
+        },
+        {
+          "pin_number": "K8",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "K7",
+          "name": "CK#",
+          "signal_name": "DDR_CK_M"
+        },
+        {
+          "pin_number": "K3",
+          "name": "CAS#",
+          "signal_name": "DDR_CAS_N"
+        },
+        {
+          "pin_number": "K2",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "K1",
+          "name": "ODT",
+          "signal_name": "DDR_ODT"
+        },
+        {
+          "pin_number": "J9",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "J8",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "J7",
+          "name": "CK",
+          "signal_name": "DDR_CK_P"
+        },
+        {
+          "pin_number": "J3",
+          "name": "RAS#",
+          "signal_name": "DDR_RAS_N"
+        },
+        {
+          "pin_number": "J2",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "J1",
+          "name": "NC",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "H9",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "H8",
+          "name": "DQL5",
+          "signal_name": "DDR_DQ5"
+        },
+        {
+          "pin_number": "H7",
+          "name": "DQL7",
+          "signal_name": "DDR_DQ7"
+        },
+        {
+          "pin_number": "H3",
+          "name": "DQL4",
+          "signal_name": "DDR_DQ4"
+        },
+        {
+          "pin_number": "H2",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "H1",
+          "name": "VREFDQ",
+          "signal_name": "DDR_VREF"
+        },
+        {
+          "pin_number": "G9",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G8",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "G7",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "G3",
+          "name": "DQSl#",
+          "signal_name": "DDR_DQS0_M"
+        },
+        {
+          "pin_number": "G2",
+          "name": "DQL6",
+          "signal_name": "DDR_DQ6"
+        },
+        {
+          "pin_number": "G1",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "F9",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "F8",
+          "name": "DQL3",
+          "signal_name": "DDR_DQ3"
+        },
+        {
+          "pin_number": "F7",
+          "name": "DQL1",
+          "signal_name": "DDR_DQ1"
+        },
+        {
+          "pin_number": "F3",
+          "name": "DQSL",
+          "signal_name": "DDR_DQS0_P"
+        },
+        {
+          "pin_number": "F2",
+          "name": "DQL2",
+          "signal_name": "DDR_DQ2"
+        },
+        {
+          "pin_number": "F1",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "E9",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "E8",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "E7",
+          "name": "DML",
+          "signal_name": "DDR_DM0"
+        },
+        {
+          "pin_number": "E3",
+          "name": "DQL0",
+          "signal_name": "DDR_DQ0"
+        },
+        {
+          "pin_number": "E2",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "E1",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "D9",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "D8",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "D7",
+          "name": "DQU0",
+          "signal_name": "DDR_DQ8"
+        },
+        {
+          "pin_number": "D3",
+          "name": "DMU",
+          "signal_name": "DDR_DM1"
+        },
+        {
+          "pin_number": "D2",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "D1",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "C9",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "C8",
+          "name": "DQU2",
+          "signal_name": "DDR_DQ10"
+        },
+        {
+          "pin_number": "C7",
+          "name": "DQSU",
+          "signal_name": "DDR_DQS1_P"
+        },
+        {
+          "pin_number": "C3",
+          "name": "DQU1",
+          "signal_name": "DDR_DQ9"
+        },
+        {
+          "pin_number": "C2",
+          "name": "DQU3",
+          "signal_name": "DDR_DQ11"
+        },
+        {
+          "pin_number": "C1",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "B9",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "B8",
+          "name": "DQU6",
+          "signal_name": "DDR_DQ14"
+        },
+        {
+          "pin_number": "B7",
+          "name": "DQSU#",
+          "signal_name": "DDR_DQS1_M"
+        },
+        {
+          "pin_number": "B3",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "B2",
+          "name": "VDD",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "B1",
+          "name": "VSSQ",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "A9",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "A8",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "A7",
+          "name": "DQU4",
+          "signal_name": "DDR_DQ12"
+        },
+        {
+          "pin_number": "A3",
+          "name": "DQU7",
+          "signal_name": "DDR_DQ15"
+        },
+        {
+          "pin_number": "A2",
+          "name": "DQU5",
+          "signal_name": "DDR_DQ13"
+        },
+        {
+          "pin_number": "A1",
+          "name": "VDDQ",
+          "signal_name": "DDR_1V5"
+        }
+      ],
+      "value": "W631GG6MB-12",
+      "part_uuid": "2493816c564b4899aa567697729a423f",
+      "footprint_name": "TFBGA-96_L13.0-W7.5-R16-C6-P0.80-TL",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R33",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_ZQ"
+        }
+      ],
+      "value": "240Ω",
+      "part_uuid": "328fb45e3d1241a597f439f81e4a522e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C91",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C92",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R36",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A0"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R37",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A1"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R38",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A2"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R39",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A3"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R40",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A4"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R41",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A5"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R42",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A6"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R43",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A7"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R44",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A8"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R45",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A9"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R46",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A10"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R47",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A11"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R48",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_A12"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R49",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_BA0"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R50",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_BA1"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R51",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_BA2"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R52",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_CAS_N"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R53",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_RAS_N"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R54",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_WE_N"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R55",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_CS_N"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R56",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_CKE"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R57",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_ODT"
+        }
+      ],
+      "value": "49.9Ω",
+      "part_uuid": "1b3c518ebd5142f49770cd31b430520e",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C15",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C16",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C17",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C18",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C19",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C20",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_2V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C21",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_2V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C22",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_2V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C23",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_1V8"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C24",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_1V8"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C25",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C26",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C27",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C28",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C33",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "config_flash"
+    },
+    {
+      "designator": "C79",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C80",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C81",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C82",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C83",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C84",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C85",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C86",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C87",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C88",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C89",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C90",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C93",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_VREF"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C94",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_VREF"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "C29",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_1V1"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "1uF",
+      "part_uuid": "c03b3241bfd648279f8d3bfda36eff71",
+      "footprint_name": "C0603",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C30",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_2V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "1uF",
+      "part_uuid": "c03b3241bfd648279f8d3bfda36eff71",
+      "footprint_name": "C0603",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C31",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "FPGA_1V8"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "1uF",
+      "part_uuid": "c03b3241bfd648279f8d3bfda36eff71",
+      "footprint_name": "C0603",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "C32",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "1uF",
+      "part_uuid": "c03b3241bfd648279f8d3bfda36eff71",
+      "footprint_name": "C0603",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "R5",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FPGA_CFG1"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "R6",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FPGA_PROG_N"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "R7",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FPGA_INIT_N"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "R8",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FPGA_DONE"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "fpga"
+    },
+    {
+      "designator": "R9",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FPGA_CFG_CS_N"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "config_flash"
+    },
+    {
+      "designator": "R10",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FLASH_WP_N"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "config_flash"
+    },
+    {
+      "designator": "R11",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "FLASH_HOLD_N"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "config_flash"
+    },
+    {
+      "designator": "R34",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_RESET_N"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R35",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_CKE"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "ddr3"
+    },
+    {
+      "designator": "R32",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_CK_M"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_CK_P"
+        }
+      ],
+      "value": "100Ω",
+      "part_uuid": "9d7f13c7738c4f39acb83eaea4591d9c",
+      "footprint_name": "R0402",
+      "block_name": "fpga"
+    }
+  ],
+  "reused_blocks": []
+}

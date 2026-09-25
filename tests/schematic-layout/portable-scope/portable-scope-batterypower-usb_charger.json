@@ -1,0 +1,433 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / BatteryPower / usb_charger",
+    "description": "EasyEDA page BatteryPower; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "usb_charger",
+      "description": "usb_charger",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "R14",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "USB_CC1"
+        }
+      ],
+      "value": "5.1kΩ",
+      "part_uuid": "10a7836f15ff4f9d926b2ce2878a22a7",
+      "footprint_name": "R0402",
+      "block_name": "usb_charger"
+    },
+    {
+      "designator": "R15",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "USB_CC2"
+        }
+      ],
+      "value": "5.1kΩ",
+      "part_uuid": "10a7836f15ff4f9d926b2ce2878a22a7",
+      "footprint_name": "R0402",
+      "block_name": "usb_charger"
+    },
+    {
+      "designator": "J5",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "BAT_1S"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "BATT_NTC"
+        },
+        {
+          "pin_number": "3",
+          "name": "3",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "B3B-XH-A(LF)(SN)",
+      "part_uuid": "e3145416944046c8ae9e43248edd775d",
+      "footprint_name": "CONN-TH_3P-P2.50_A2501WV2-3P",
+      "block_name": "usb_charger"
+    },
+    {
+      "designator": "U7",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "TS",
+          "signal_name": "BATT_NTC"
+        },
+        {
+          "pin_number": "2",
+          "name": "BAT",
+          "signal_name": "BAT_1S"
+        },
+        {
+          "pin_number": "3",
+          "name": "BAT",
+          "signal_name": "BAT_1S"
+        },
+        {
+          "pin_number": "4",
+          "name": "CE#",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "EN2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "6",
+          "name": "EN1",
+          "signal_name": "USB_5V"
+        },
+        {
+          "pin_number": "7",
+          "name": "PGOOD#",
+          "signal_name": "CHARGER_PGOOD_N"
+        },
+        {
+          "pin_number": "8",
+          "name": "VSS",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "9",
+          "name": "CHG#",
+          "signal_name": "CHARGER_CHG_N"
+        },
+        {
+          "pin_number": "10",
+          "name": "OUT",
+          "signal_name": "BAT_SYS"
+        },
+        {
+          "pin_number": "11",
+          "name": "OUT",
+          "signal_name": "BAT_SYS"
+        },
+        {
+          "pin_number": "12",
+          "name": "ILIM",
+          "signal_name": "CHARGER_ILIM"
+        },
+        {
+          "pin_number": "13",
+          "name": "IN",
+          "signal_name": "USB_5V"
+        },
+        {
+          "pin_number": "14",
+          "name": "TMR",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "15",
+          "name": "ITERM",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "16",
+          "name": "ISET",
+          "signal_name": "CHARGER_ISET"
+        },
+        {
+          "pin_number": "17",
+          "name": "EP",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "BQ24074RGTR",
+      "part_uuid": "a113361897bf47368d2912842c826e38",
+      "footprint_name": "QFN-16_L3.0-W3.0-P0.50-TL-EP1.7",
+      "block_name": "usb_charger"
+    },
+    {
+      "designator": "J4",
+      "pins": [
+        {
+          "pin_number": "B1",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "B4",
+          "name": "VBUS",
+          "signal_name": "USB_5V"
+        },
+        {
+          "pin_number": "B5",
+          "name": "CC2",
+          "signal_name": "USB_CC2"
+        },
+        {
+          "pin_number": "B6",
+          "name": "DP2",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "B7",
+          "name": "DN2",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "B8",
+          "name": "SBU2",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "B9",
+          "name": "VBUS",
+          "signal_name": "USB_5V"
+        },
+        {
+          "pin_number": "B12",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "EH",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "A1",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "A4",
+          "name": "VBUS",
+          "signal_name": "USB_5V"
+        },
+        {
+          "pin_number": "A5",
+          "name": "CC1",
+          "signal_name": "USB_CC1"
+        },
+        {
+          "pin_number": "A6",
+          "name": "DP1",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "A7",
+          "name": "DN1",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "A8",
+          "name": "SBU1",
+          "signal_name": ""
+        },
+        {
+          "pin_number": "A9",
+          "name": "VBUS",
+          "signal_name": "USB_5V"
+        },
+        {
+          "pin_number": "A12",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "4",
+          "name": "EH",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "3",
+          "name": "EH",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "2",
+          "name": "EH",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "USB4105-GF-A",
+      "part_uuid": "ea8fe62438f94521b482dce770be0817",
+      "footprint_name": "TYPE-C-SMD_SBC-160S1A-20-S412",
+      "block_name": "usb_charger"
+    },
+    {
+      "designator": "D1",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "K",
+          "signal_name": "USB_5V"
+        },
+        {
+          "pin_number": "2",
+          "name": "A",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "SMF5.0A",
+      "part_uuid": "e5208732200e4c1aaf46109aa0be0c1d",
+      "footprint_name": "SOD-123FL_L2.8-W1.9-LS3.7-RD",
+      "block_name": "usb_charger"
+    },
+    {
+      "designator": "R17",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "CHARGER_ISET"
+        }
+      ],
+      "value": "2.21kΩ",
+      "part_uuid": "96157089829c48b0a06c22e1b6ac7258",
+      "footprint_name": "R0402",
+      "block_name": "usb_charger"
+    },
+    {
+      "designator": "R16",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "CHARGER_ILIM"
+        }
+      ],
+      "value": "3.24kΩ",
+      "part_uuid": "b950753ea23145ae87bf592ef42aca44",
+      "footprint_name": "R0402",
+      "block_name": "usb_charger"
+    },
+    {
+      "designator": "R18",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "CHARGER_CHG_N"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "100kΩ",
+      "part_uuid": "0cc9cee0c09e4a1c8b41e9d1feefa5b2",
+      "footprint_name": "R0402",
+      "block_name": "usb_charger"
+    },
+    {
+      "designator": "R19",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "CHARGER_PGOOD_N"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "100kΩ",
+      "part_uuid": "0cc9cee0c09e4a1c8b41e9d1feefa5b2",
+      "footprint_name": "R0402",
+      "block_name": "usb_charger"
+    },
+    {
+      "designator": "C43",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "USB_5V"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "1uF",
+      "part_uuid": "c03b3241bfd648279f8d3bfda36eff71",
+      "footprint_name": "C0603",
+      "block_name": "usb_charger"
+    },
+    {
+      "designator": "C44",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "BAT_1S"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "usb_charger"
+    },
+    {
+      "designator": "C45",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "BAT_SYS"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "usb_charger"
+    }
+  ],
+  "reused_blocks": []
+}

@@ -1,0 +1,289 @@
+{
+  "metadata": {
+    "project_name": "PortableScope / BatteryPower / ddr_vtt",
+    "description": "EasyEDA page BatteryPower; snapshot 2026-09-24"
+  },
+  "blocks": [
+    {
+      "name": "ddr_vtt",
+      "description": "ddr_vtt",
+      "next_block_names": []
+    }
+  ],
+  "components": [
+    {
+      "designator": "R31",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VTT_PG"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        }
+      ],
+      "value": "100kΩ",
+      "part_uuid": "0cc9cee0c09e4a1c8b41e9d1feefa5b2",
+      "footprint_name": "R0402",
+      "block_name": "ddr_vtt"
+    },
+    {
+      "designator": "U16",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "REFIN",
+          "signal_name": "DDR_VREF_DIV"
+        },
+        {
+          "pin_number": "2",
+          "name": "VLDOIN",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "3",
+          "name": "VO",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "4",
+          "name": "PGND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "5",
+          "name": "VOSNS",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "6",
+          "name": "REFOUT",
+          "signal_name": "DDR_VREF"
+        },
+        {
+          "pin_number": "7",
+          "name": "EN",
+          "signal_name": "DDR_1V5_PG"
+        },
+        {
+          "pin_number": "8",
+          "name": "GND",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "9",
+          "name": "PGOOD",
+          "signal_name": "DDR_VTT_PG"
+        },
+        {
+          "pin_number": "10",
+          "name": "VIN",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "11",
+          "name": "EPAD",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "TPS51200DRCR",
+      "part_uuid": "cfa4c5960bd24cd4b33b90efbac9a5a7",
+      "footprint_name": "WSON-10_L3.0-W3.0-P0.50-BL-EP",
+      "block_name": "ddr_vtt"
+    },
+    {
+      "designator": "C77",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_VREF_DIV"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "1nF",
+      "part_uuid": "ede376ff08de4ec998629abd341c951f",
+      "footprint_name": "C0402",
+      "block_name": "ddr_vtt"
+    },
+    {
+      "designator": "C70",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "SYS_3V3"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "4.7uF",
+      "part_uuid": "f470e2940a6a449ab68365892ca7b376",
+      "footprint_name": "C0805",
+      "block_name": "ddr_vtt"
+    },
+    {
+      "designator": "C71",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "ddr_vtt"
+    },
+    {
+      "designator": "C72",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "ddr_vtt"
+    },
+    {
+      "designator": "C73",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "ddr_vtt"
+    },
+    {
+      "designator": "C74",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "ddr_vtt"
+    },
+    {
+      "designator": "C75",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_VTT"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "10uF",
+      "part_uuid": "342df181a72b4ff6b6aff804439e5102",
+      "footprint_name": "C0805",
+      "block_name": "ddr_vtt"
+    },
+    {
+      "designator": "C76",
+      "pins": [
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_VREF"
+        },
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        }
+      ],
+      "value": "100nF",
+      "part_uuid": "5ad32f6891c644b1a27268ae1b8659ab",
+      "footprint_name": "C0402",
+      "block_name": "ddr_vtt"
+    },
+    {
+      "designator": "R29",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "DDR_VREF_DIV"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_1V5"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "ddr_vtt"
+    },
+    {
+      "designator": "R30",
+      "pins": [
+        {
+          "pin_number": "2",
+          "name": "2",
+          "signal_name": "GND"
+        },
+        {
+          "pin_number": "1",
+          "name": "1",
+          "signal_name": "DDR_VREF_DIV"
+        }
+      ],
+      "value": "10kΩ",
+      "part_uuid": "6593321c1e554b2f9070c57621ba8753",
+      "footprint_name": "R0402",
+      "block_name": "ddr_vtt"
+    }
+  ],
+  "reused_blocks": []
+}

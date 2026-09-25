@@ -3,7 +3,7 @@ import { type Placed, type Point, type Box, boundsOf, path, shift, withPath } fr
 import { connectedNetEdges } from './net-routes.ts';
 import { SCHEMATIC_CLEARANCE as gap } from './policy.ts';
 import { compactEmptyBands } from './compact.ts';
-import { packSchematicRectangles, SCHEMATIC_SHEET, type PackingNet, type PackingLayout } from '#utils/schematic-packing.ts';
+import { packSchematicRectangles, SCHEMATIC_SHEET, PAGE_SOFT_GRID, type PackingNet, type PackingLayout } from '#utils/schematic-packing.ts';
 import { shortSymbolsMap } from '../short-symbol.ts';
 
 type Item = Box & { id: string; ids: Set<string> };
@@ -95,7 +95,8 @@ export function packDrawingIslands(nodes: Placed[], edges: ElkExtendedEdge[], ne
         // Reserve both blocks' frame padding plus a visible gap between frames;
         // keep islands within a block compact.
         const packed = packSchematicRectangles([...selected].map(([id, layout]) => ({ id, width: layout.width, height: layout.height })),
-            Math.max(gap.largeIC, SCHEMATIC_SHEET.blockPadding * 2) + SCHEMATIC_SHEET.extraBlockGap, blockNets);
+            Math.max(gap.largeIC, SCHEMATIC_SHEET.blockPadding * 2) + SCHEMATIC_SHEET.extraBlockGap,
+            blockNets, undefined, PAGE_SOFT_GRID);
         return { ...packed, score: packed.score + [...selected.values()].reduce((sum, l) => sum + l.affinity * Math.sqrt(l.width * l.height) * 0.1, 0) };
     };
     let packed = arrangeBlocks(), trials = 0;

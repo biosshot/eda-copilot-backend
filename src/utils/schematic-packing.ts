@@ -1,12 +1,16 @@
+import { effectiveLayoutArea } from '../circuit-layout/quality.ts';
+
 /** The sheet goal is landscape. Bounds always describe occupied geometry;
  * this policy never adds blank canvas to manufacture an aspect ratio. */
 export const SCHEMATIC_SHEET = Object.freeze({ aspectRatio: Math.SQRT2, rootPadding: 15, blockPadding: 30, extraBlockGap: 25 });
+export const PAGE_SOFT_GRID = Object.freeze({ step: 40, inset: 5, strength: 1 });
 
 type Point = { x: number; y: number };
 type Rect = Point & { width: number; height: number };
 export type PackingItem = { id: string; width: number; height: number };
 export type PackingNet = { weight: number; terminals: Array<{ id: string; points: Point[]; anchor: boolean }> };
 export type PackingLayout = { positions: Map<string, Point>; width: number; height: number; affinity: number; score: number };
+export type SoftPackingGrid = { step: number; inset: number; strength: number };
 const EPS = 1e-6;
 const compare = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
 const intersects = (a: Rect, b: Rect) => a.x < b.x + b.width - EPS && a.x + a.width > b.x + EPS
@@ -38,10 +42,12 @@ export function packingAffinity(nets: readonly PackingNet[], positions: Readonly
     return weights ? sum / weights : 0;
 }
 
-function sheetScore(width: number, height: number, area: number, distance: number, padding: number) {
-    const w = Math.max(EPS, width + padding * 2), h = Math.max(EPS, height + padding * 2), ratio = SCHEMATIC_SHEET.aspectRatio;
-    // Area of the smallest landscape sheet enclosing this candidate. It
-    // penalizes excess height more strongly than the same excess width.
+function sheetScore(width: number, height: number, area: number, distance: number, padding: number, page: boolean) {
+    const w = Math.max(EPS, width + padding * 2), h = Math.max(EPS, height + padding * 2);
+    if (page) return effectiveLayoutArea(w, h) + distance * Math.sqrt(area) * 0.35;
+    // Internal islands retain their existing packing policy. A child block
+    // may be tall or wide; its parent chooses the final sheet arrangement.
+    const ratio = SCHEMATIC_SHEET.aspectRatio;
     const sheetArea = Math.max(w * w / ratio, h * h * ratio);
     return sheetArea + w * h * 0.15 + sheetArea * Math.abs(Math.log(w / h / ratio)) * 0.1
         + distance * Math.sqrt(area) * 0.35;
@@ -67,9 +73,18 @@ function subtract(free: Rect[], used: Rect): Rect[] {
 /** Bounded deterministic rectangle packing. All symbols, pins and routes stay
  * rigid; only translations are returned. Gaps are reserved inside the bins. */
 export function packSchematicRectangles(items: readonly PackingItem[], gap: number,
-    nets: readonly PackingNet[] = [], padding: number = SCHEMATIC_SHEET.rootPadding + SCHEMATIC_SHEET.blockPadding) {
+    nets: readonly PackingNet[] = [], padding: number = SCHEMATIC_SHEET.rootPadding + SCHEMATIC_SHEET.blockPadding,
+    grid?: SoftPackingGrid) {
     if (!items.length) return { positions: new Map<string, Point>(), width: 0, height: 0, affinity: 0, score: 0, alternatives: [] as PackingLayout[] };
     const area = items.reduce((sum, b) => sum + (b.width + gap) * (b.height + gap), 0);
+    const gridDistance = (value: number) => {
+        if (!grid?.step) return 0;
+        const remainder = ((value % grid.step) + grid.step) % grid.step;
+        return Math.min(remainder, grid.step - remainder);
+    };
+    const gridCost = (positions: ReadonlyMap<string, Point>) => grid && positions.size
+        ? grid.strength * Math.sqrt(area) * [...positions.values()].reduce((sum, at) =>
+            sum + gridDistance(at.x) + gridDistance(at.y), 0) / positions.size : 0;
     const widest = Math.max(...items.map(b => b.width)), tallest = Math.max(...items.map(b => b.height));
     const estimate = Math.sqrt(area * SCHEMATIC_SHEET.aspectRatio);
     const byArea = items.toSorted((a, b) => b.width * b.height - a.width * a.height || compare(a.id, b.id));
@@ -87,6 +102,7 @@ export function packSchematicRectangles(items: readonly PackingItem[], gap: numb
         let free: Rect[] = [{ x: 0, y: 0, width: width + gap, height: items.reduce((h, b) => h + b.height + gap, 0) }];
         const positions = new Map<string, Point>();
         let right = 0, bottom = 0;
+        let failed = false;
         for (const item of order) {
             const w = item.width + gap, h = item.height + gap;
             let choice: { x: number; y: number; score: number } | undefined;
@@ -106,18 +122,32 @@ export function packSchematicRectangles(items: readonly PackingItem[], gap: numb
                         }
                     }
                 }
+                if (grid?.step) {
+                    const original = [...sites];
+                    for (const site of original) {
+                        const snap = (value: number, minimum: number) => minimum < EPS && value < EPS ? 0
+                            : Math.ceil((Math.max(value, minimum) + grid.inset - EPS) / grid.step) * grid.step;
+                        sites.push({ x: snap(site.x, r.x), y: site.y }, { x: site.x, y: snap(site.y, r.y) },
+                            { x: snap(site.x, r.x), y: snap(site.y, r.y) });
+                    }
+                }
                 for (const site of sites) {
+                    if (site.x < r.x - EPS || site.y < r.y - EPS || site.x + w > r.x + r.width + EPS
+                        || site.y + h > r.y + r.height + EPS) continue;
                     positions.set(item.id, site);
                     const score = sheetScore(Math.max(right, site.x + item.width), Math.max(bottom, site.y + item.height), area,
-                        packingAffinity(localNets, positions), padding);
+                        packingAffinity(localNets, positions), padding, Boolean(grid)) + gridCost(positions);
                     if (!choice || score < choice.score - EPS) choice = { ...site, score };
                 }
             }
-            if (!choice) throw new Error(`No packing space for ${item.id}`);
+            // A grid-biased early choice may fragment a narrow trial canvas.
+            // Discard this trial; wider canvases and other orders are still valid.
+            if (!choice) { failed = true; break; }
             positions.set(item.id, { x: choice.x, y: choice.y });
             free = subtract(free, { ...choice, width: w, height: h });
             right = Math.max(right, choice.x + item.width); bottom = Math.max(bottom, choice.y + item.height);
         }
+        if (failed) continue;
         for (const [reverseX, reverseY] of [[false, false], [true, false], [false, true], [true, true]]) {
             // Reverse the order of whole rectangles, not their contents. An
             // IC keeps its left-facing pins when a module moves to its left.
@@ -125,7 +155,7 @@ export function packSchematicRectangles(items: readonly PackingItem[], gap: numb
                 const p = positions.get(b.id)!;
                 return [b.id, { x: reverseX ? right - p.x - b.width : p.x, y: reverseY ? bottom - p.y - b.height : p.y }];
             }));
-            const affinity = packingAffinity(nets, arranged), score = sheetScore(right, bottom, area, affinity, padding);
+            const affinity = packingAffinity(nets, arranged), score = sheetScore(right, bottom, area, affinity, padding, Boolean(grid)) + gridCost(arranged);
             const layout = { positions: arranged, width: right, height: bottom, affinity, score };
             const key = `${right.toFixed(5)}:${bottom.toFixed(5)}`;
             if (!layouts.has(key) || score < layouts.get(key)!.score - EPS) layouts.set(key, layout);
@@ -134,6 +164,7 @@ export function packSchematicRectangles(items: readonly PackingItem[], gap: numb
     }
     // A child block need not have the sheet's aspect ratio. Keep a few compact
     // tall/wide alternatives so the parent can fill the space beside neighbours.
+    if (!best) throw new Error('No packing space for schematic blocks');
     const frontier = [...layouts.values()].filter(a => ![...layouts.values()].some(b => b !== a
         && b.width <= a.width && b.height <= a.height && b.affinity <= a.affinity));
     const sorted = frontier.sort((a, b) => a.width - b.width || a.height - b.height);

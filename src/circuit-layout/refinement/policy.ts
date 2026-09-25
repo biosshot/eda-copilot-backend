@@ -18,7 +18,7 @@ export function componentClearance(a: { id: string; ports?: readonly unknown[] }
 }
 
 export const REFINEMENT_LIMITS = Object.freeze({
-    members: 12, boundaryEdges: 8, candidates: 96, passes: 2,
+    members: 12, boundaryEdges: 8, candidates: 144, passes: 3,
     netSegments: 250, channels: 10,
 });
 

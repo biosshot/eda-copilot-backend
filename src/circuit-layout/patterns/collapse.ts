@@ -16,8 +16,11 @@ export function detectPatternMacros(
     circuit: Circuit,
     symbols: SymbolWithMeta[],
     patterns: CircuitLayoutPattern[] = circuitLayoutPatterns,
+    boundary: { circuit?: Circuit; externalSignals?: readonly string[] } = {},
 ): PatternCollapseResult {
     const fullContext = createPatternContext(circuit, symbols);
+    fullContext.originalSignalEndpoints = createPatternContext(boundary.circuit ?? circuit, symbols).signalEndpoints;
+    fullContext.externalSignals = new Set(boundary.externalSignals ?? []);
     const patternById = new Map(patterns.map(pattern => [pattern.id, pattern]));
     const used = new Set<string>();
     const macros: MacroInstance[] = [];
@@ -31,6 +34,8 @@ export function detectPatternMacros(
             { ...circuit, components: availableComponents },
             symbols.filter(symbol => availableDesignators.has(symbol.designator)),
         );
+        availableContext.originalSignalEndpoints = fullContext.originalSignalEndpoints;
+        availableContext.externalSignals = fullContext.externalSignals;
         const matches = patterns.flatMap(pattern => pattern.findMatches(availableContext)).sort(compareMatches);
         let accepted = false;
 

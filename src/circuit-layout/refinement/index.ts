@@ -16,6 +16,14 @@ import { labelLongLinks, LONG_LINK_POLICY } from './long-links.ts';
 import { compactEmptyBands } from './compact.ts';
 import { packDrawingIslands } from './pack-islands.ts';
 import { hasConnection } from '../signals.ts';
+import { placeNearbyFlags } from './nearby-flags.ts';
+import { packSchematicRectangles, SCHEMATIC_SHEET, PAGE_SOFT_GRID } from '#utils/schematic-packing.ts';
+import { effectiveLayoutArea, evaluateLayoutQuality, safelyImprovesLayout } from '../quality.ts';
+import { removeNetCycles } from './net-cycles.ts';
+import { rerouteFixedDetours } from './detour-route.ts';
+import { softlyAlignMajorComponents } from './soft-align.ts';
+import { type ConnectorRole, CONNECTOR_OVERRIDE_RATIO, connectorLeadLength, connectorOrientationSeverity,
+    connectorOverrideWorthwhile, inferConnectorRoles } from './connector-policy.ts';
 
 export function sceneNets(components: readonly CircuitComponent[]) {
     return new Map<string, string>(components.flatMap(c => c.pins.map(p => [`${c.designator}_pin_${p.pin_number}`,
@@ -28,7 +36,8 @@ function physicalLength(edges: ElkExtendedEdge[], nets: ReadonlyMap<string, stri
     return [...byNet.values()].reduce((sum, list) => sum + straightRuns(list.flatMap(edgeSegments)).reduce((n, s) => n + segmentLength(s), 0), 0);
 }
 function cost(nodes: Placed[], edges: ElkExtendedEdge[], nets: ReadonlyMap<string, string>, originals: ReadonlySet<string>) {
-    let result = physicalLength(edges, nets);
+    const bounds = boundsOf(nodes);
+    let result = physicalLength(edges, nets) + Math.sqrt(effectiveLayoutArea(bounds.width, bounds.height, 3));
     for (const e of edges) {
         const p = path(e);
         result += Math.max(0, p.length - 2) * gap.pinEscape;
@@ -50,14 +59,101 @@ function cost(nodes: Placed[], edges: ElkExtendedEdge[], nets: ReadonlyMap<strin
 /** Bounded local placement/routing. Complete electrical and export checks live
  * in the bank runner, never in this production candidate loop. */
 export function refineSchematicScene(input: ElkNode, components: readonly CircuitComponent[], added: readonly CircuitComponent[],
-    symbols: readonly SymbolWithMeta[], macros: readonly MacroInstance[] = []) {
+    symbols: readonly SymbolWithMeta[], macros: readonly MacroInstance[] = [],
+    connectorRoles: ReadonlyMap<string, ConnectorRole> = new Map(), orderSeeds: readonly number[] = [1, 2, 4]): ReturnType<typeof refineLocalScene> {
+    const scopes = resolveSceneBlocks(components, added, input.edges ?? []);
+    const names = [...new Set((input.children ?? []).map(n => scopes.get(n.id)))];
+    const owners = new Map((input.children ?? []).flatMap(n => (n.ports ?? []).map(p => [p.id, n.id])));
+    if (names.length < 2 || names.includes(undefined) || (input.edges ?? []).some(e =>
+        new Set([...e.sources, ...e.targets].map(p => scopes.get(owners.get(p)!))).size !== 1)) {
+        return refineBestLocalScene(input, components, added, symbols, macros, connectorRoles, orderSeeds);
+    }
+    const started = performance.now();
+    const results = names.sort().map(name => {
+        const children = (input.children ?? []).filter(n => scopes.get(n.id) === name) as Placed[];
+        const ids = new Set(children.map(n => n.id));
+        const edges = (input.edges ?? []).filter(e => ids.has(owners.get(e.sources[0])!));
+        const points = [...children, ...edges.flatMap(path)];
+        const d = { x: gap.component - Math.min(...points.map(p => p.x)), y: gap.component - Math.min(...points.map(p => p.y)) };
+        const local = { ...input, children: children.map(n => ({ ...n, ...shift(n, d) })),
+            edges: edges.map(e => withPath(e, path(e).map(p => shift(p, d)))) };
+        return refineBestLocalScene(local, components.filter(c => ids.has(c.designator)), added.filter(c => ids.has(c.designator)),
+            symbols.filter(s => ids.has(s.designator)), macros.filter(m => m.absorbedDesignators.some(id => ids.has(id))), connectorRoles, orderSeeds);
+    });
+    const first = results[0], stats = { ...first.stats };
+    for (const key of ['groupsMoved', 'componentsRotated', 'candidates', 'netsCoalesced', 'detoursRerouted', 'flagsRemoved', 'flagsCentered',
+        'flagsLowered', 'flagsAligned', 'chipsAligned', 'longLinksLabeled', 'relayouts', 'islandsPacked', 'emptySpaceRemoved'] as const) {
+        stats[key] = results.reduce((sum, r) => sum + r.stats[key], 0);
+    }
+    const removedSymbolIds = new Set(results.flatMap(r => [...r.removedSymbolIds]));
+    const addedSymbols = results.flatMap(r => r.addedSymbols);
+    const boxes = results.map((r, i) => ({ id: String(i), ...boundsOf([...(r.scene.children ?? []) as Placed[],
+        ...(r.scene.edges ?? []).flatMap(path).map(p => ({ ...p, width: 0, height: 0 }))]) }));
+    const page = packSchematicRectangles(boxes, SCHEMATIC_SHEET.blockPadding * 2 + SCHEMATIC_SHEET.extraBlockGap,
+        [], undefined, PAGE_SOFT_GRID);
+    const packed = { nodes: [] as Placed[], edges: [] as ElkExtendedEdge[] };
+    results.forEach((r, i) => {
+        const at = page.positions.get(String(i))!, box = boxes[i];
+        const d = { x: at.x - box.x + gap.component, y: at.y - box.y + gap.component };
+        packed.nodes.push(...(r.scene.children ?? []).map(n => ({ ...n, ...shift(n as Placed, d) }) as Placed));
+        packed.edges.push(...(r.scene.edges ?? []).map(e => withPath(e, path(e).map(p => shift(p, d)))));
+    });
+    const bounds = boundsOf([...packed.nodes, ...packed.edges.flatMap(path).map(p => ({ ...p, width: 0, height: 0 }))]);
+    stats.elapsedMs = performance.now() - started;
+    stats.sceneTranslation = { x: 0, y: 0 };
+    stats.localizedNets = results.flatMap(r => r.stats.localizedNets);
+    stats.skipped = results.map(r => r.stats.skipped).filter(Boolean).join('; ');
+    return { scene: { ...input, children: packed.nodes, edges: packed.edges,
+        width: bounds.x + bounds.width + gap.component, height: bounds.y + bounds.height + gap.component },
+        rotations: new Map(results.flatMap(r => [...r.rotations])), addedSymbols, removedSymbolIds, stats };
+}
+
+function refineBestLocalScene(input: ElkNode, components: readonly CircuitComponent[], added: readonly CircuitComponent[],
+    symbols: readonly SymbolWithMeta[], macros: readonly MacroInstance[], connectorRoles: ReadonlyMap<string, ConnectorRole>,
+    orderSeeds: readonly number[]) {
+    const started = performance.now();
+    const seeds = [...new Set(orderSeeds.length ? orderSeeds : [1])];
+    let best = refineLocalScene(input, components, added, symbols, macros, connectorRoles, seeds[0]);
+    const baselineQuality = evaluateLayoutQuality(best.scene);
+    let bestScore = baselineQuality.score;
+    let candidates = best.stats.candidates;
+    for (const seed of seeds.slice(1)) {
+        const candidate = refineLocalScene(input, components, added, symbols, macros, connectorRoles, seed);
+        candidates += candidate.stats.candidates;
+        const quality = evaluateLayoutQuality(candidate.scene);
+        if (safelyImprovesLayout(quality, baselineQuality) && quality.score < bestScore) {
+            best = candidate;
+            bestScore = quality.score;
+        }
+    }
+    best.stats.candidates = candidates;
+    best.stats.elapsedMs = performance.now() - started;
+    return best;
+}
+
+function seededGroupOrder<T>(groups: T[], seed: number): T[] {
+    if (seed === 1) return groups;
+    const shuffled = [...groups];
+    let state = seed >>> 0;
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        state ^= state << 13; state ^= state >>> 17; state ^= state << 5;
+        const j = (state >>> 0) % (i + 1);
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
+function refineLocalScene(input: ElkNode, components: readonly CircuitComponent[], added: readonly CircuitComponent[],
+    symbols: readonly SymbolWithMeta[], macros: readonly MacroInstance[] = [],
+    firstPassConnectorRoles: ReadonlyMap<string, ConnectorRole> = new Map(), orderSeed = 1) {
     const started = performance.now(), scene = structuredClone(input);
     let nodes = (scene.children ?? []) as Placed[], edges = scene.edges ?? [];
     const nets = sceneNets([...components, ...added]), blocks = resolveSceneBlocks(components, added, edges);
     const originalIds = new Set(components.map(c => c.designator));
+    const connectorRoles = new Map([...inferConnectorRoles(nodes, edges, components), ...firstPassConnectorRoles]);
     const patternByMember = new Map(macros.flatMap(m => m.absorbedDesignators.map(id => [id, m.id] as const)));
     const rotations = new Map<string, { rotate: number; center: Point }>();
-    const stats = { groupsMoved: 0, componentsRotated: 0, candidates: 0, netsCoalesced: 0, flagsRemoved: 0, flagsCentered: 0, flagsLowered: 0, flagsAligned: 0, longLinksLabeled: 0,
+    const stats = { groupsMoved: 0, componentsRotated: 0, candidates: 0, netsCoalesced: 0, detoursRerouted: 0, flagsRemoved: 0, flagsCentered: 0, flagsLowered: 0, flagsAligned: 0, chipsAligned: 0, longLinksLabeled: 0,
         relayouts: 0, localizedNets: [] as string[], islandsPacked: 0, emptySpaceRemoved: 0, sceneTranslation: { x: 0, y: 0 }, elapsedMs: 0, skipped: '' };
     if (edges.some(e => !orthogonal(path(e)) || e.sources.length !== 1 || e.targets.length !== 1)) {
         stats.skipped = 'Unsupported compound or non-orthogonal routes'; stats.elapsedMs = performance.now() - started;
@@ -73,7 +169,7 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
         nodes = labeled.nodes; edges = labeled.edges; added = [...added, ...labeled.added]; stats.longLinksLabeled += labeled.links;
         newSymbols.push(...labeled.added);
         const flagKinds = new Map(added.map(c => [c.designator, c]));
-        const groups = localGroups(nodes, edges, components, added, macros);
+        const groups = seededGroupOrder(localGroups(nodes, edges, components, added, macros), orderSeed === 1 ? 1 : orderSeed + pass);
         for (const group of groups) {
             if (!group.ids.length || group.ids.length > limit.members) continue;
             const ids = new Set(group.ids), moving = nodes.filter(n => ids.has(n.id)), fixed = nodes.filter(n => !ids.has(n.id));
@@ -97,18 +193,36 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
                 && componentClearance(n, b) > gap.component && overlaps(n, b, componentClearance(n, b))).length * gap.largeIC * 8, 0);
             const privatePins = new Set(connectedNetEdges([...incident, ...rails], nets).filter(g => g.length === 1)
                 .flatMap(g => [...g[0].sources, ...g[0].targets]));
+            for (const n of moving.filter(n => flagKinds.has(n.id) && n.ports?.length === 1)) {
+                const id = n.ports![0].id;
+                if (incident.filter(e => [...e.sources, ...e.targets].includes(id)).length === 1) privatePins.add(id);
+            }
+            const poses = orientations(group, nodes, symbols).map(pose => ({ pose, shifts: translations(pose, boundary, fixed, rails, nets, env.edges) }));
+            const connector = components.find(c => ids.has(c.designator) && connectorRoles.has(c.designator));
+            const role = connector && connectorRoles.get(connector.designator);
+            const preferredSeverity = connector && role ? Math.min(...poses.map(({ pose }) =>
+                connectorOrientationSeverity(pose.nodes.find(n => n.id === connector.designator)!, connector, role))) : 0;
+            const preference = (items: Placed[], routes: ElkExtendedEdge[]) => {
+                const node = connector && items.find(n => n.id === connector.designator);
+                if (!node || !role) return { preferred: true, length: 0, penalty: 0 };
+                const length = connectorLeadLength(node, routes);
+                const preferred = connectorOrientationSeverity(node, connector, role) <= preferredSeverity + EPS;
+                return { preferred, length, penalty: preferred ? 0 : length * (1 / CONNECTOR_OVERRIDE_RATIO - 1) };
+            };
+            const initialPreference = preference(moving, [...incident, ...rails]);
             const initialCost = cost(nodes, [...incident, ...rails], nets, originalIds) + crowding(moving)
-                + flagReadabilityCost(nodes, [...incident, ...rails], flagKinds);
+                + flagReadabilityCost(nodes, [...incident, ...rails], flagKinds) + initialPreference.penalty;
             const initialLength = physicalLength([...incident, ...rails], nets);
-            let best: { nodes: Placed[]; edges: ElkExtendedEdge[]; value: number } | undefined;
+            let best: { nodes: Placed[]; edges: ElkExtendedEdge[]; value: number; preferred: boolean; leadLength: number } | undefined;
+            let preferredBest: typeof best = initialPreference.preferred
+                ? { nodes: moving, edges: incident, value: initialCost, preferred: true, leadLength: initialPreference.length } : undefined;
             let attempted = 0, screened = 0;
-            const poses = orientations(group, nodes, symbols).map(pose => ({ pose, shifts: translations(pose, boundary, fixed, rails, nets) }));
             // Round-robin orientations: a busy first pose must not exhaust the
             // candidate budget before the useful 90-degree pose gets a turn.
             candidateSearch: for (let index = 0; index < Math.max(...poses.map(p => p.shifts.length)); index++) {
                 for (const { pose, shifts } of poses) {
                     const d = shifts[index]; if (!d) continue;
-                    if (++screened > limit.candidates * 4 || attempted >= limit.candidates) break candidateSearch;
+                    if (++screened > limit.candidates * 40 || attempted >= limit.candidates) break candidateSearch;
                     stats.candidates++;
                     const candidate = pose.nodes.map(n => ({ ...n, x: n.x + d.x, y: n.y + d.y }));
                     if (candidate.some(n => env.bodies.query(expand(n, gap.largeIC)).some(b => overlaps(n, b, originalIds.has(n.id) && originalIds.has(b.id) ? componentClearance(n, b) : gap.port)))) continue;
@@ -132,7 +246,15 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
                             next = withPath(edge, path(edge).map(p => shift(pose.transform?.(p) ?? p, d)));
                             const owners = new Set([...edge.sources, ...edge.targets].map(p => owner.get(p)!));
                             if (!clearPath(path(next), nets.get(edge.sources[0])!, env, candidate, routed, owners, false)) next = null;
-                        } else next = reconnect(edge, candidate, env, routed);
+                        } else {
+                            next = reconnect(edge, candidate, env, routed);
+                            if (!next && !group.loneFlag && routeLength(path(edge)) >= LONG_LINK_POLICY.minimumLength) {
+                                const positions = pinPositions([...fixed, ...candidate]);
+                                const a = positions.get(edge.sources[0])!, b = positions.get(edge.targets[0])!;
+                                if (Math.abs(a.x - b.x) + Math.abs(a.y - b.y) < routeLength(path(edge)) * 0.6)
+                                    next = reconnect(edge, candidate, env, routed, true);
+                            }
+                        }
                         if (!next) { valid = false; break; }
                         // Preserve an established straight IC attachment. An old
                         // passive-to-passive axis must not lock an inductor far from
@@ -149,7 +271,8 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
                     if (!valid) continue;
                     if (candidate.some(n => {
                         const flag = flagKinds.get(n.id), before = moving.find(b => b.id === n.id);
-                        return flag && before && !acceptsFlagOrientation(before, n, flag, incident, routed, privatePins.has(n.ports![0].id));
+                        return flag && before && !acceptsFlagOrientation(before, n, flag, incident, routed,
+                            privatePins.has(n.ports![0].id), group.ids.length > 1);
                     })) continue;
                     if (pose.requiresShorter && physicalLength([...routed, ...rails], nets) >= initialLength - 1) continue;
                     const crossings = localCrossings([...routed, ...rails], env);
@@ -158,14 +281,19 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
                     // their old pair names; the count must still not grow.
                     if ([...crossings.values()].reduce((n, count) => n + count, 0)
                         > [...priorCrossings.values()].reduce((n, count) => n + count, 0)) continue;
+                    const readable = preference(candidate, [...routed, ...rails]);
                     const value = cost([...fixed, ...candidate], [...routed, ...rails], nets, originalIds)
-                        + flagReadabilityCost([...fixed, ...candidate], [...routed, ...rails], flagKinds);
+                        + flagReadabilityCost([...fixed, ...candidate], [...routed, ...rails], flagKinds) + readable.penalty;
+                    if ([...affectedNets].some(net => measureRouteShape([...routed, ...rails].filter(e => nets.get(e.sources[0]) === net)).shortJogs > oldJogs.get(net)!)) continue;
                     if (value < (best?.value ?? initialCost) - 1) {
-                        if ([...affectedNets].some(net => measureRouteShape([...routed, ...rails].filter(e => nets.get(e.sources[0]) === net)).shortJogs > oldJogs.get(net)!)) continue;
-                        best = { nodes: candidate, edges: routed, value };
+                        best = { nodes: candidate, edges: routed, value, preferred: readable.preferred, leadLength: readable.length };
                     }
+                    if (readable.preferred && value < (preferredBest?.value ?? initialCost) - 1)
+                        preferredBest = { nodes: candidate, edges: routed, value, preferred: true, leadLength: readable.length };
                 }
             }
+            if (best && !best.preferred && preferredBest && !connectorOverrideWorthwhile(best.leadLength, preferredBest.leadLength))
+                best = preferredBest.value >= initialCost - 1 ? undefined : preferredBest;
             if (!best) continue;
             const replacement = new Map(best.nodes.map(n => [n.id, n])), routes = new Map(best.edges.map(e => [e.id, e]));
             nodes = nodes.map(n => replacement.get(n.id) ?? n); edges = edges.map(e => routes.get(e.id) ?? e);
@@ -186,7 +314,7 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
     const packed = packDrawingIslands(nodes, edges, nets, blocks, originalIds);
     nodes = packed.nodes; edges = packed.edges; stats.islandsPacked = packed.moved;
     const aligned = alignLeafFlags(nodes, edges, added, nets);
-    nodes = aligned.nodes; edges = aligned.edges; stats.flagsAligned = aligned.aligned;
+    nodes = aligned.nodes; edges = aligned.edges; stats.flagsAligned += aligned.aligned;
     for (const n of aligned.rotated) rotations.set(n.id, { rotate: n.rotation!, center: n.center! });
     // Packing and final flag alignment can create new adjacent stems. Finish
     // with the same net-aware cleanup so those moves do not leave twin rails.
@@ -196,6 +324,14 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
     nodes = finalFlags.nodes; edges = finalFlags.edges;
     for (const id of finalFlags.removed) merged.removed.add(id);
     stats.flagsRemoved = merged.removed.size;
+    const nearby = placeNearbyFlags(nodes, edges, added, nets);
+    nodes = nearby.nodes; edges = nearby.edges; stats.flagsAligned += nearby.moved;
+    const alignedChips = softlyAlignMajorComponents(nodes, edges, nets, originalIds, new Set(patternByMember.keys()), blocks);
+    nodes = alignedChips.nodes; edges = alignedChips.edges; stats.chipsAligned = alignedChips.moved;
+    edges = removeNetCycles(edges, nets).edges;
+    const detours = rerouteFixedDetours(nodes, edges, nets);
+    edges = detours.edges; stats.detoursRerouted = detours.changed;
+    for (const n of nearby.rotated) rotations.set(n.id, { rotate: n.rotation!, center: n.center! });
     stats.componentsRotated = [...rotations.keys()].filter(id => {
         const before = input.children!.find(n => n.id === id), after = nodes.find(n => n.id === id);
         if (!before || !after) return false;

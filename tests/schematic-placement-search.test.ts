@@ -1,0 +1,227 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import type { ElkExtendedEdge } from 'elkjs';
+import { effectiveLayoutArea } from '../src/circuit-layout/quality.ts';
+import { acceptsFlagOrientation } from '../src/circuit-layout/refinement/flag-policy.ts';
+import { localGroups, turnNode } from '../src/circuit-layout/refinement/groups.ts';
+import { shortSymbolsMap } from '../src/circuit-layout/short-symbol.ts';
+import { removeNetCycles } from '../src/circuit-layout/refinement/net-cycles.ts';
+import { connectedNetEdges, straightRuns } from '../src/circuit-layout/refinement/net-routes.ts';
+import { type Placed, path, edgeSegments, routeLength } from '../src/circuit-layout/refinement/geometry.ts';
+import { labelLongLinks } from '../src/circuit-layout/refinement/long-links.ts';
+import { collapsePortRows } from '../src/circuit-layout/port-rows.ts';
+import ELK, { type ElkNode } from 'elkjs';
+import { pinPositions } from '../src/circuit-layout/refinement/geometry.ts';
+import { RouteEnvironment, reconnect } from '../src/circuit-layout/refinement/router.ts';
+import { findPortSites } from '../src/circuit-layout/refinement/port-sites.ts';
+import { overlaps, segmentThroughBox, expand } from '../src/circuit-layout/refinement/geometry.ts';
+
+const edge = (id: string, from: string, to: string, points: number[][]): ElkExtendedEdge => ({ id, sources: [from], targets: [to],
+    sections: [{ id: `${id}:s`, startPoint: { x: points[0][0], y: points[0][1] },
+        endPoint: { x: points.at(-1)![0], y: points.at(-1)![1] }, bendPoints: points.slice(1, -1).map(([x, y]) => ({ x, y })) }] });
+
+test('area preference favors the sheet ratio and still charges for blank width', () => {
+    const sheetWidth = 100 * Math.sqrt(Math.SQRT2);
+    assert(effectiveLayoutArea(100, 100) > effectiveLayoutArea(sheetWidth, 10000 / sheetWidth));
+    assert(effectiveLayoutArea(200, 100) < effectiveLayoutArea(Math.sqrt(20000), Math.sqrt(20000)));
+    assert(effectiveLayoutArea(100, 200) > effectiveLayoutArea(200, 100));
+    assert(effectiveLayoutArea(400, 100) < effectiveLayoutArea(100, 400));
+    assert.equal(effectiveLayoutArea(10, 1000), 100000);
+});
+
+test('a direct ground may turn with its owner without shortening its own lead', () => {
+    const flag = shortSymbolsMap.GND.create('GND', 'block', 'ground');
+    const before = { ...flag.node, x: 0, y: 0 } as Placed, after = turnNode(before, 180);
+    const lead = edge('lead', 'C_pin_1', 'ground_pin_1', [[0, 0], [0, 40]]);
+    assert(acceptsFlagOrientation(before, after, flag.component, [lead], [lead], true, true));
+    assert(!acceptsFlagOrientation(before, after, flag.component, [lead], [lead], true));
+    const shorter = edge('lead', 'C_pin_1', 'ground_pin_1', [[0, 0], [0, 20]]);
+    assert(acceptsFlagOrientation(before, after, flag.component, [lead], [shorter], true));
+    assert(!acceptsFlagOrientation(before, after, flag.component, [lead], [lead], false));
+});
+
+test('a passive output branch can travel as a whole toward its sole IC anchor', () => {
+    const components = ['L1', 'C1', 'C2', 'U1'].map(designator => ({ designator, block_name: 'block',
+        value: '', part_uuid: '', pins: Array.from({ length: designator === 'U1' ? 3 : 2 }, (_, i) =>
+            ({ pin_number: i + 1, name: '', signal_name: '' })) }));
+    const nodes: Placed[] = components.map((c, i) => ({ id: c.designator, x: i * 100, y: 0, width: 60, height: 60,
+        ports: c.pins.map(p => ({ id: `${c.designator}_pin_${p.pin_number}`, x: 0, y: 20 * p.pin_number })) }));
+    const edges = [edge('switch', 'U1_pin_1', 'L1_pin_1', [[300, 20], [0, 20]]),
+        edge('load1', 'L1_pin_2', 'C1_pin_1', [[0, 40], [100, 40], [100, 20]]),
+        edge('load2', 'C1_pin_1', 'C2_pin_1', [[100, 20], [200, 20]])];
+    assert(localGroups(nodes, edges, components, [], []).some(g => g.ids.length === 3
+        && ['L1', 'C1', 'C2'].every(id => g.ids.includes(id))));
+    const bridge = [...edges, edge('second-anchor', 'C2_pin_2', 'U2_pin_1', [[200, 40], [500, 40]])];
+    const second = { ...components[3], designator: 'U2' };
+    assert(!localGroups([...nodes, { ...nodes[3], id: 'U2', ports: [{ id: 'U2_pin_1', x: 0, y: 40 }] }],
+        bridge, [...components, second], [], []).some(g => ['L1', 'C1', 'C2'].every(id => g.ids.includes(id))));
+});
+
+test('one-IC blocks may split a named output rail while feedback and switching links stay wired', () => {
+    for (const net of ['DDR_1V5', 'DDR_1V5_FB', 'DDR_1V5_LX']) {
+        const nodes: Placed[] = [{ id: 'R1', x: 0, y: 100, width: 60, height: 60,
+            ports: [{ id: 'R1_pin_1', x: 60, y: 20 }, { id: 'R1_pin_2', x: 60, y: 40 }] },
+        { id: 'L1', x: 900, y: 100, width: 60, height: 60,
+            ports: [{ id: 'L1_pin_1', x: 0, y: 20 }, { id: 'L1_pin_2', x: 0, y: 40 }] },
+        { id: 'U1', x: 450, y: 300, width: 100, height: 100,
+            ports: [1, 2, 3].map(i => ({ id: `U1_pin_${i}`, x: 0, y: i * 20 })) }];
+        const edges = [edge('rail', 'R1_pin_1', 'L1_pin_1', [[60, 120], [900, 120]]),
+            edge('fb', 'R1_pin_2', 'U1_pin_1', [[60, 140], [400, 140], [400, 320], [450, 320]]),
+            edge('sw', 'L1_pin_2', 'U1_pin_2', [[900, 140], [900, 440], [400, 440], [400, 340], [450, 340]])];
+        const nets = new Map([['R1_pin_1', net], ['L1_pin_1', net], ['R1_pin_2', 'FEEDBACK'],
+            ['U1_pin_1', 'FEEDBACK'], ['L1_pin_2', 'SWITCH'], ['U1_pin_2', 'SWITCH']]);
+        const result = labelLongLinks(nodes, edges, nets, new Map(nodes.map(n => [n.id, 'block'])), new Set(nodes.map(n => n.id)));
+        assert.equal(result.edges.some(e => e.id === 'rail'), net !== 'DDR_1V5', net);
+        assert(result.edges.some(e => e.id === 'fb') && result.edges.some(e => e.id === 'sw'));
+    }
+});
+
+test('moving both ends of a component-to-ground lead still produces a route', () => {
+    const flag = shortSymbolsMap.GND.create('GND', 'block', 'ground');
+    const nodes: Placed[] = [{ id: 'C', x: 100, y: 100, width: 60, height: 40,
+        ports: [{ id: 'C_pin_1', x: 0, y: 20 }, { id: 'C_pin_2', x: 60, y: 20 }] },
+        { ...flag.node, x: 70 - flag.node.ports![0].x!, y: 135 } as Placed];
+    const lead = edge('lead', 'ground_pin_1', 'C_pin_1', [[70, 135], [70, 120], [100, 120]]);
+    const nets = new Map([['ground_pin_1', 'GND'], ['C_pin_1', 'GND'], ['C_pin_2', 'SIGNAL']]);
+    const route = reconnect(lead, nodes, new RouteEnvironment([], [], nets), []);
+    assert(route);
+    assert.deepEqual(path(route), path(lead));
+});
+
+test('an existing short IC escape permits a nearby ground in a dense pin corridor', () => {
+    const flag = shortSymbolsMap.GND.create('GND', 'block', 'ground');
+    const fixed: Placed[] = [{ id: 'U', x: 0, y: 100, width: 100, height: 100, ports: [{ id: 'U_pin', x: 100, y: 20 }] },
+        { id: 'L', x: 120, y: 100, width: 60, height: 28, ports: [] }];
+    const ground = { ...flag.node, x: 150 - flag.node.ports![0].x!, y: 160 } as Placed;
+    const lead = edge('lead', 'U_pin', 'ground_pin_1', [[100, 120], [110, 120], [110, 145], [150, 145], [150, 300]]);
+    const nets = new Map([['U_pin', 'GND'], ['ground_pin_1', 'GND']]);
+    const route = reconnect(lead, [ground], new RouteEnvironment(fixed, [], nets), []);
+    assert(route);
+    assert(routeLength(path(route)) < routeLength(path(lead)) / 2);
+    assert.deepEqual(path(route).at(-1), { x: 150, y: 160 });
+});
+
+test('the clock supply loop loses redundant ink while preserving all terminal connections', () => {
+    // Narrow cycle from the captured CLK_2V5 fan-out, translated to the origin.
+    const edges = [edge('resistor', 'R', 'U', [[-35, -70], [-25, -70], [-25, -30], [0, -30], [0, 0], [-10, 0]]),
+        edge('flag', 'F', 'U', [[0, -40], [0, -25], [5, -25], [5, 0], [-10, 0]]),
+        edge('cap', 'C', 'U', [[22, 60], [22, 0], [-10, 0]])];
+    const nets = new Map(['R', 'U', 'F', 'C'].map(id => [id, 'CLOCK_SUPPLY']));
+    const result = removeNetCycles(edges, nets);
+    assert.equal(result.removed, 1);
+    assert.equal(connectedNetEdges(result.edges, nets).length, 1);
+    const ink = (es: ElkExtendedEdge[]) => straightRuns(es.flatMap(edgeSegments)).reduce((n, s) => n + routeLength([s.a, s.b]), 0);
+    assert(ink(result.edges) < ink(edges));
+    result.edges.forEach((e, i) => {
+        assert.deepEqual(e.sources, edges[i].sources); assert.deepEqual(e.targets, edges[i].targets);
+        assert.deepEqual(path(e)[0], path(edges[i])[0]); assert.deepEqual(path(e).at(-1), path(edges[i]).at(-1));
+    });
+    assert.equal(removeNetCycles(result.edges, nets).removed, 0);
+    const shifted = edges.map(e => ({ ...e, sections: e.sections!.map(s => ({ ...s,
+        startPoint: { x: s.startPoint.x + 123, y: s.startPoint.y + 456 },
+        endPoint: { x: s.endPoint.x + 123, y: s.endPoint.y + 456 },
+        bendPoints: s.bendPoints!.map(p => ({ x: p.x + 123, y: p.y + 456 })) })) }));
+    const moved = removeNetCycles(shifted, nets);
+    assert.equal(moved.removed, 1);
+    moved.edges.forEach((e, i) => assert.deepEqual(path(e).map(p => ({ x: p.x - 123, y: p.y - 456 })), path(result.edges[i])));
+});
+
+test('port rows survive ELK expansion with original symbol and terminal identities', async () => {
+    const flags = Array.from({ length: 6 }, (_, i) => shortSymbolsMap.NETPORT.create(`IO_${i}`, 'block', `flag${i}`));
+    const ic: ElkNode = { id: 'IC', width: 100, height: 160, ports: flags.map((_, i) => ({ id: `IC_${i}`, x: 100, y: 30 + i * 20 })),
+        layoutOptions: { 'elk.portConstraints': 'FIXED_POS' } };
+    const block: ElkNode = { id: 'block', children: [ic, ...flags.map(f => f.node)], layoutOptions: { 'elk.algorithm': 'layered' } };
+    const edges: ElkExtendedEdge[] = flags.map((f, i) => ({ id: `wire${i}`, sources: [`IC_${i}`], targets: [f.node.ports![0].id] }));
+    const expand = collapsePortRows(block, edges, new Map(flags.map(f => [f.component.designator, f.component])));
+    assert.equal(block.children!.length, 2);
+    const result = await new ELK().layout({ id: 'root', children: [block], edges });
+    expand(result.children![0]);
+    const nodes = result.children![0].children!;
+    assert.equal(nodes.length, 7);
+    const row = nodes.filter(n => n.id !== 'IC');
+    assert.equal(new Set(row.map(n => n.y)).size, 1);
+    assert.equal(new Set(row.map(n => n.x)).size, 6);
+    const positions = pinPositions(nodes as Placed[]);
+    for (const e of result.edges!) {
+        assert.deepEqual(path(e)[0], positions.get(e.sources[0]));
+        assert.deepEqual(path(e).at(-1), positions.get(e.targets[0]));
+    }
+});
+
+test('long inter-IC connections are eligible even in a small block', () => {
+    const nodes: Placed[] = [0, 1].map(i => ({ id: `U${i}`, x: i * 1000, y: 100, width: 100, height: 100,
+        ports: [0, 1, 2].map(p => ({ id: `U${i}_pin_${p}`, x: i ? 0 : 100, y: 20 + p * 20 })) }));
+    const nets = new Map(nodes.flatMap(n => n.ports!.map((p, i) => [p.id, i ? p.id : 'CONTROL'] as const)));
+    const edges = [edge('long', 'U0_pin_0', 'U1_pin_0', [[100, 120], [1000, 120]])];
+    const result = labelLongLinks(nodes, edges, nets, new Map(nodes.map(n => [n.id, 'block'])), new Set(nodes.map(n => n.id)));
+    assert.equal(result.links, 1);
+    assert.equal(result.added.length, 2);
+    assert(result.added.every(c => c.pins[0].signal_name === 'CONTROL'));
+    assert(!result.edges.some(e => e.id === 'long'));
+});
+
+test('shared long rail is replaced as a group rather than leaving its trunk behind', () => {
+    const node = (id: string, x: number, y: number, pinX: number): Placed => ({ id, x, y, width: 100, height: 100,
+        ports: [0, 1, 2].map(i => ({ id: `${id}_pin_${i}`, x: pinX, y: 50 + i * 15 })) });
+    const nodes = [node('U24', 500, 100, 100), node('U21', 100, 0, 0), node('U25', 100, 700, 0)];
+    const shared = [[600, 150], [650, 150], [650, 850], [50, 850]];
+    const edges = [edge('upper', 'U24_pin_0', 'U21_pin_0', [...shared, [50, 50], [100, 50]]),
+        edge('lower', 'U24_pin_0', 'U25_pin_0', [...shared, [50, 750], [100, 750]])];
+    const nets = new Map(nodes.flatMap(n => n.ports!.map(p => [p.id, 'RAIL'] as const)));
+    const result = labelLongLinks(nodes, edges, nets, new Map(nodes.map(n => [n.id, 'block'])),
+        new Set(nodes.map(n => n.id)), 2);
+    assert.equal(result.links, 2);
+    assert(!result.edges.some(e => e.id === 'upper' || e.id === 'lower'));
+    assert(result.edges.some(e => e.id.includes(':shared:')));
+});
+
+test('duplicate logical edges are cut together as one drawn connection', () => {
+    const nodes: Placed[] = [0, 1].map(i => ({ id: `U${i}`, x: i * 900, y: 100, width: 100, height: 100,
+        ports: [0, 1, 2].map(p => ({ id: `U${i}_pin_${p}`, x: i ? 0 : 100, y: 20 + p * 20 })) }));
+    const route = [[100, 120], [900, 120]];
+    const edges = [edge('ordinary', 'U0_pin_0', 'U1_pin_0', route),
+        edge('forced-boundary', 'U0_pin_0', 'U1_pin_0', route)];
+    const nets = new Map(nodes.flatMap(n => n.ports!.map(p => [p.id, 'REMOTE'] as const)));
+    const result = labelLongLinks(nodes, edges, nets, new Map(nodes.map(n => [n.id, 'block'])),
+        new Set(nodes.map(n => n.id)));
+    assert.equal(result.links, 1);
+    assert.equal(result.added.length, 2);
+    assert(!result.edges.some(e => e.id === 'ordinary' || e.id === 'forced-boundary'));
+});
+
+test('a remote direct connection between two ICs can use local ports below the old absolute threshold', () => {
+    const nodes: Placed[] = [0, 1].map(i => ({ id: `U${i}`, x: i * 500, y: 100, width: 100, height: 100,
+        ports: [0, 1, 2].map(p => ({ id: `U${i}_pin_${p}`, x: i ? 0 : 100, y: 20 + p * 20 })) }));
+    const nets = new Map(nodes.flatMap(n => n.ports!.map(p => [p.id, 'ENABLE'] as const)));
+    const result = labelLongLinks(nodes, [edge('remote', 'U0_pin_0', 'U1_pin_0', [[100, 120], [500, 120]])],
+        nets, new Map(nodes.map(n => [n.id, 'block'])), new Set(nodes.map(n => n.id)));
+    assert.equal(result.links, 1);
+    assert.equal(result.added.length, 2);
+});
+
+test('a nearby port can displace an obstructing wire without moving its terminals or components', () => {
+    const flag = shortSymbolsMap.VCC.create('3V3', 'block', 'flag');
+    const nodes: Placed[] = [
+        { id: 'U', x: 0, y: 100, width: 100, height: 100, ports: [{ id: 'U_pin', x: 100, y: 50 }] },
+        { id: 'A', x: 100, y: -50, width: 40, height: 100, ports: [{ id: 'A_pin', x: 20, y: 100 }] },
+        { id: 'B', x: 350, y: -50, width: 40, height: 100, ports: [{ id: 'B_pin', x: 20, y: 100 }] },
+    ];
+    const obstacle = edge('obstacle', 'A_pin', 'B_pin', [[120, 50], [120, 120], [370, 120], [370, 50]]);
+    const lead = edge('lead', 'U_pin', 'flag_pin_1', [[100, 150], [0, 40]]);
+    const nets = new Map([['U_pin', '3V3'], ['flag_pin_1', '3V3'], ['A_pin', 'OTHER'], ['B_pin', 'OTHER']]);
+    const original = structuredClone({ nodes, obstacle });
+    const env = new RouteEnvironment(nodes, [obstacle], nets);
+    const sites = findPortSites({ ...flag.node, x: 0, y: 0 } as Placed, [lead], env, [], [], 16, true);
+    const repaired = sites.find(s => s.rerouted.length);
+    assert(repaired, 'the fallback should offer a site with local wire repair');
+    assert.deepEqual({ nodes, obstacle }, original, 'candidate search must not mutate its input');
+    assert(!nodes.some(n => overlaps(repaired.node, n, 15)));
+    assert.deepEqual(repaired.rerouted[0].sources, obstacle.sources);
+    assert.deepEqual(repaired.rerouted[0].targets, obstacle.targets);
+    assert.deepEqual(path(repaired.rerouted[0])[0], path(obstacle)[0]);
+    assert.deepEqual(path(repaired.rerouted[0]).at(-1), path(obstacle).at(-1));
+    assert(!edgeSegments(repaired.rerouted[0]).some(s => segmentThroughBox(s, expand(repaired.node, 10))));
+    const quick = findPortSites({ ...flag.node, x: 0, y: 0 } as Placed, [lead], env, [], [], 16);
+    assert(quick.every(s => !s.rerouted.length));
+    assert(quick.every(s => !edgeSegments(obstacle).some(e => segmentThroughBox(e, expand(s.node, 10)))));
+});

@@ -38,15 +38,15 @@ test('requires four resistors, excludes capacitors, NC, duplicate branches and o
     }
 });
 
-test('functional divider takes priority and a bypass capacitor stays outside the pull bank', () => {
+test('a private series midpoint joins its bypass while the pull bank stays separate', () => {
     const f = fixture(4, '3V3');
     const extras = [component('R10', [[1, '1', '3V3'], [2, '2', 'FB']]),
         component('R11', [[1, '1', 'FB'], [2, '2', 'GND']]),
         component('C1', [[1, '1', '3V3'], [2, '2', 'GND']])];
     f.circuit.components.push(...extras); f.symbols.push(...extras.map(resistorSymbol));
     const macros = detectPatternMacros(f.circuit, f.symbols, refinedCircuitLayoutPatterns).macros;
-    assert(macros.some(m => m.patternId === 'voltage-divider'
-        && m.absorbedDesignators.includes('R10') && m.absorbedDesignators.includes('R11')));
+    assert(macros.some(m => m.patternId === 'passive-ladder'
+        && ['R10', 'R11', 'C1'].every(id => m.absorbedDesignators.includes(id))));
     assert.deepEqual(macros.find(m => m.patternId === resistorPullBankPattern.id)?.absorbedDesignators, ['R1', 'R2', 'R3', 'R4']);
 });
 
