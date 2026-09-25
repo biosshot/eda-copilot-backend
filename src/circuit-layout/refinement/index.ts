@@ -18,7 +18,7 @@ import { packDrawingIslands } from './pack-islands.ts';
 import { hasConnection } from '../signals.ts';
 import { placeNearbyFlags } from './nearby-flags.ts';
 import { packSchematicRectangles, SCHEMATIC_SHEET, PAGE_SOFT_GRID } from '#utils/schematic-packing.ts';
-import { effectiveLayoutArea } from '../quality.ts';
+import { effectiveLayoutArea, evaluateLayoutQuality, safelyImprovesLayout } from '../quality.ts';
 import { removeNetCycles } from './net-cycles.ts';
 import { rerouteFixedDetours } from './detour-route.ts';
 import { softlyAlignMajorComponents } from './soft-align.ts';
@@ -60,13 +60,13 @@ function cost(nodes: Placed[], edges: ElkExtendedEdge[], nets: ReadonlyMap<strin
  * in the bank runner, never in this production candidate loop. */
 export function refineSchematicScene(input: ElkNode, components: readonly CircuitComponent[], added: readonly CircuitComponent[],
     symbols: readonly SymbolWithMeta[], macros: readonly MacroInstance[] = [],
-    connectorRoles: ReadonlyMap<string, ConnectorRole> = new Map()): ReturnType<typeof refineLocalScene> {
+    connectorRoles: ReadonlyMap<string, ConnectorRole> = new Map(), orderSeeds: readonly number[] = [1, 2, 4]): ReturnType<typeof refineLocalScene> {
     const scopes = resolveSceneBlocks(components, added, input.edges ?? []);
     const names = [...new Set((input.children ?? []).map(n => scopes.get(n.id)))];
     const owners = new Map((input.children ?? []).flatMap(n => (n.ports ?? []).map(p => [p.id, n.id])));
     if (names.length < 2 || names.includes(undefined) || (input.edges ?? []).some(e =>
         new Set([...e.sources, ...e.targets].map(p => scopes.get(owners.get(p)!))).size !== 1)) {
-        return refineLocalScene(input, components, added, symbols, macros, connectorRoles);
+        return refineBestLocalScene(input, components, added, symbols, macros, connectorRoles, orderSeeds);
     }
     const started = performance.now();
     const results = names.sort().map(name => {
@@ -77,8 +77,8 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
         const d = { x: gap.component - Math.min(...points.map(p => p.x)), y: gap.component - Math.min(...points.map(p => p.y)) };
         const local = { ...input, children: children.map(n => ({ ...n, ...shift(n, d) })),
             edges: edges.map(e => withPath(e, path(e).map(p => shift(p, d)))) };
-        return refineLocalScene(local, components.filter(c => ids.has(c.designator)), added.filter(c => ids.has(c.designator)),
-            symbols.filter(s => ids.has(s.designator)), macros.filter(m => m.absorbedDesignators.some(id => ids.has(id))), connectorRoles);
+        return refineBestLocalScene(local, components.filter(c => ids.has(c.designator)), added.filter(c => ids.has(c.designator)),
+            symbols.filter(s => ids.has(s.designator)), macros.filter(m => m.absorbedDesignators.some(id => ids.has(id))), connectorRoles, orderSeeds);
     });
     const first = results[0], stats = { ...first.stats };
     for (const key of ['groupsMoved', 'componentsRotated', 'candidates', 'netsCoalesced', 'detoursRerouted', 'flagsRemoved', 'flagsCentered',
@@ -108,9 +108,44 @@ export function refineSchematicScene(input: ElkNode, components: readonly Circui
         rotations: new Map(results.flatMap(r => [...r.rotations])), addedSymbols, removedSymbolIds, stats };
 }
 
+function refineBestLocalScene(input: ElkNode, components: readonly CircuitComponent[], added: readonly CircuitComponent[],
+    symbols: readonly SymbolWithMeta[], macros: readonly MacroInstance[], connectorRoles: ReadonlyMap<string, ConnectorRole>,
+    orderSeeds: readonly number[]) {
+    const started = performance.now();
+    const seeds = [...new Set(orderSeeds.length ? orderSeeds : [1])];
+    let best = refineLocalScene(input, components, added, symbols, macros, connectorRoles, seeds[0]);
+    const baselineQuality = evaluateLayoutQuality(best.scene);
+    let bestScore = baselineQuality.score;
+    let candidates = best.stats.candidates;
+    for (const seed of seeds.slice(1)) {
+        const candidate = refineLocalScene(input, components, added, symbols, macros, connectorRoles, seed);
+        candidates += candidate.stats.candidates;
+        const quality = evaluateLayoutQuality(candidate.scene);
+        if (safelyImprovesLayout(quality, baselineQuality) && quality.score < bestScore) {
+            best = candidate;
+            bestScore = quality.score;
+        }
+    }
+    best.stats.candidates = candidates;
+    best.stats.elapsedMs = performance.now() - started;
+    return best;
+}
+
+function seededGroupOrder<T>(groups: T[], seed: number): T[] {
+    if (seed === 1) return groups;
+    const shuffled = [...groups];
+    let state = seed >>> 0;
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        state ^= state << 13; state ^= state >>> 17; state ^= state << 5;
+        const j = (state >>> 0) % (i + 1);
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
 function refineLocalScene(input: ElkNode, components: readonly CircuitComponent[], added: readonly CircuitComponent[],
     symbols: readonly SymbolWithMeta[], macros: readonly MacroInstance[] = [],
-    firstPassConnectorRoles: ReadonlyMap<string, ConnectorRole> = new Map()) {
+    firstPassConnectorRoles: ReadonlyMap<string, ConnectorRole> = new Map(), orderSeed = 1) {
     const started = performance.now(), scene = structuredClone(input);
     let nodes = (scene.children ?? []) as Placed[], edges = scene.edges ?? [];
     const nets = sceneNets([...components, ...added]), blocks = resolveSceneBlocks(components, added, edges);
@@ -134,7 +169,7 @@ function refineLocalScene(input: ElkNode, components: readonly CircuitComponent[
         nodes = labeled.nodes; edges = labeled.edges; added = [...added, ...labeled.added]; stats.longLinksLabeled += labeled.links;
         newSymbols.push(...labeled.added);
         const flagKinds = new Map(added.map(c => [c.designator, c]));
-        const groups = localGroups(nodes, edges, components, added, macros);
+        const groups = seededGroupOrder(localGroups(nodes, edges, components, added, macros), orderSeed === 1 ? 1 : orderSeed + pass);
         for (const group of groups) {
             if (!group.ids.length || group.ids.length > limit.members) continue;
             const ids = new Set(group.ids), moving = nodes.filter(n => ids.has(n.id)), fixed = nodes.filter(n => !ids.has(n.id));
