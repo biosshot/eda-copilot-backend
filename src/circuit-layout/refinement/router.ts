@@ -26,13 +26,13 @@ function properCrossing(a: Segment, b: Segment) {
     if (!segmentsTouch(a, b)) return false;
     return ![a.a, a.b, b.a, b.b].some(p => pointOnSegment(p, a) && pointOnSegment(p, b));
 }
-function parallelTooClose(a: Segment, b: Segment) {
-    const av = Math.abs(a.a.x - a.b.x) < EPS, bv = Math.abs(b.a.x - b.b.x) < EPS;
-    if (av !== bv) return false;
-    const separation = Math.abs(av ? a.a.x - b.a.x : a.a.y - b.a.y);
-    const along = (s: Segment) => av ? [Math.min(s.a.y, s.b.y), Math.max(s.a.y, s.b.y)] : [Math.min(s.a.x, s.b.x), Math.max(s.a.x, s.b.x)];
-    const aa = along(a), bb = along(b);
-    return separation < gap.wire - EPS && Math.min(aa[1], bb[1]) - Math.max(aa[0], bb[0]) > EPS;
+function wiresTooClose(a: Segment, b: Segment) {
+    // For orthogonal segments, the interval gaps give their exact distance,
+    // including endpoints approaching a foreign wire without touching it.
+    const aa = segmentBox(a), bb = segmentBox(b);
+    const dx = Math.max(0, aa.x - bb.x - bb.width, bb.x - aa.x - aa.width);
+    const dy = Math.max(0, aa.y - bb.y - bb.height, bb.y - aa.y - aa.height);
+    return Math.hypot(dx, dy) < gap.wire - EPS;
 }
 
 /** Only the changing routes are checked against indexed local obstacles. This
@@ -56,8 +56,11 @@ export function clearPath(points: Point[], net: string, environment: RouteEnviro
             net: environment.nets.get(e.sources[0]) ?? `unknown:${e.id}`, edge: e.id })))];
         for (const wire of obstacles) {
             if (wire.net === net) continue;
-            if (segmentsTouch(s, wire) && !properCrossing(s, wire)) return false;
-            if (newGeometry && parallelTooClose(s, wire)) return false;
+            // Moving a rigid route preserves its shape, not its clearance to
+            // other nets. Only proper schematic crossings bypass the gap.
+            if (segmentsTouch(s, wire)) {
+                if (!properCrossing(s, wire)) return false;
+            } else if (wiresTooClose(s, wire)) return false;
         }
         const pins = [...environment.pins.query(region), ...[...pinPositions(moving)].map(([id, p]) => ({ ...p, id, net: environment.nets.get(id) }))];
         if (pins.some(p => p.net !== net && pointOnSegment(p, s))) return false;
