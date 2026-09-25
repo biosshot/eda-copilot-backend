@@ -3,11 +3,11 @@ import type { CircuitComponent } from '#types/circuit.ts';
 import { shortSymbolsMap, stableShortSymbolId } from '../short-symbol.ts';
 import { isPowerSignal } from '../power.ts';
 import { isGroundSignal } from '../ground.ts';
-import { type Placed, pinPositions, path, edgeSegments, routeLength, expand, overlaps, segmentThroughBox, EPS } from './geometry.ts';
+import { type Placed, pinPositions, path, edgeSegments, routeLength, EPS } from './geometry.ts';
 import { straightRuns, segmentLength, connectedNetEdges } from './net-routes.ts';
-import { RouteEnvironment, reconnect, localCrossings } from './router.ts';
+import { RouteEnvironment, localCrossings } from './router.ts';
 import { SCHEMATIC_CLEARANCE as gap } from './policy.ts';
-import { translations } from './groups.ts';
+import { findPortSites, replaceRoutes } from './port-sites.ts';
 
 export const LONG_LINK_POLICY = Object.freeze({ fraction: 0.2, minimumLength: 480, directPinLength: 360,
     medianFactor: 3, maximumLinks: 16, candidatePairs: 6 });
@@ -66,7 +66,7 @@ export function labelLongLinks(nodes: Placed[], edges: ElkExtendedEdge[], nets: 
 
     // A star of logical edges can draw one long shared rail. Cutting one edge
     // then saves only its final stub, so evaluate the shared rail as a unit.
-    const cutSharedRail = (group: ElkExtendedEdge[], net: string) => {
+    const cutSharedRail = (group: ElkExtendedEdge[], net: string, repair = false): boolean => {
         const removed = new Set(group), retained = edges.filter(e => !removed.has(e));
         const sameNet = retained.filter(e => nets.get(e.sources[0]) === net);
         const terminals = [...new Set(group.flatMap(e => [...e.sources, ...e.targets]))];
@@ -77,6 +77,7 @@ export function labelLongLinks(nodes: Placed[], edges: ElkExtendedEdge[], nets: 
         if (group.some(e => retainedGroups.some(g => [e.sources[0], e.targets[0]].every(id =>
             g.some(route => [...route.sources, ...route.targets].includes(id)))))) return false;
         const pendingNodes: Placed[] = [], pendingComponents: CircuitComponent[] = [], pendingEdges: ElkExtendedEdge[] = [];
+        const pendingRepairs: ElkExtendedEdge[] = [];
         const trialNets = new Map(nets), scope = blocks.get(owner.get(terminals[0])!.id)!;
         const positions = pinPositions(nodes);
         for (const [ordinal, pinId] of terminals.entries()) {
@@ -88,42 +89,36 @@ export function labelLongLinks(nodes: Placed[], edges: ElkExtendedEdge[], nets: 
             if (nodes.some(n => n.id === id)) return false;
             const created = kind.create(net, scope, id), flagId = `${id}_pin_1`;
             trialNets.set(flagId, net);
-            const env = new RouteEnvironment([...nodes, ...pendingNodes], retained, trialNets);
+            const updated = replaceRoutes(retained, pendingRepairs);
+            const env = new RouteEnvironment([...nodes, ...pendingNodes], updated, trialNets);
             const origin = { ...created.node, x: 0, y: 0 } as Placed;
             const targets = [...new Set([pinId, ...(local ?? []).flatMap(e => [...e.sources, ...e.targets])
                 .filter(p => realOwner.has(p))])].slice(0, 4);
-            const sites = targets.map(target => {
+            const leads = targets.map(target => {
                 const lead: ElkExtendedEdge = { id: `${group[0].id}:shared:${ordinal}`, container: group[0].container,
                     sources: [target], targets: [flagId], sections: [{ id: `${group[0].id}:shared:${ordinal}:s`,
                         startPoint: positions.get(target)!, endPoint: pinPositions([origin]).get(flagId)! }] };
-                return { lead, shifts: translations({ nodes: [origin] }, [lead], env.nodes, sameNet, trialNets).slice(1) };
+                return lead;
             });
-            const candidates = Array.from({ length: Math.max(0, ...sites.map(s => s.shifts.length)) }, (_, i) =>
-                sites.filter(s => s.shifts[i]).map(s => ({ lead: s.lead, d: s.shifts[i] }))).flat().slice(0, 96);
-            let best: { node: Placed; edge: ElkExtendedEdge; length: number } | undefined;
-            for (const { lead, d } of candidates) {
-                const node = { ...origin, x: d.x, y: d.y };
-                if (env.nodes.some(n => overlaps(node, n, gap.port))
-                    || [...retained, ...pendingEdges].some(e => edgeSegments(e).some(s => segmentThroughBox(s, expand(node, gap.wire))))) continue;
-                const route = reconnect(lead, [node], env, pendingEdges);
-                if (!route) continue;
-                const value = routeLength(path(route)) + (path(route).length - 2) * gap.pinEscape;
-                if (!best || value < best.length - EPS) best = { node, edge: route, length: value };
-            }
-            if (!best) return false;
+            const best = findPortSites(origin, leads, env, updated.filter(e => nets.get(e.sources[0]) === net), pendingEdges, 1, repair)[0];
+            if (!best) return !repair && cutSharedRail(group, net, true);
             if (kind === shortSymbolsMap.NETPORT) {
                 const style = portStyles.get(best.edge.sources[0]);
                 if (style) created.component.pins[0].port_style = style;
             }
             pendingNodes.push(best.node); pendingComponents.push(created.component); pendingEdges.push(best.edge);
+            pendingRepairs.push(...best.rerouted);
         }
-        if (!pendingEdges.length || !keepsPassiveAttachment([...retained, ...pendingEdges])
-            || ink([...sameNet, ...pendingEdges]) > ink([...sameNet, ...group]) - gap.branch) return false;
-        const env = new RouteEnvironment(nodes, retained, trialNets);
-        if (crossingCount([...pendingEdges, ...sameNet], env)
-            > crossingCount([...group, ...sameNet], env)) return false;
+        const updated = replaceRoutes(retained, pendingRepairs);
+        const affectedNets = new Set([net, ...pendingRepairs.map(e => nets.get(e.sources[0]))]);
+        const before = edges.filter(e => affectedNets.has(nets.get(e.sources[0])));
+        const after = [...updated.filter(e => affectedNets.has(nets.get(e.sources[0]))), ...pendingEdges];
+        if (!pendingEdges.length || !keepsPassiveAttachment([...updated, ...pendingEdges])
+            || ink(after) + pendingNodes.length * gap.port > ink(before) - gap.branch) return false;
+        const env = new RouteEnvironment(nodes, edges.filter(e => !affectedNets.has(nets.get(e.sources[0]))), trialNets);
+        if (crossingCount(after, env) > crossingCount(before, env)) return !repair && cutSharedRail(group, net, true);
         for (const c of pendingComponents) { nets.set(`${c.designator}_pin_1`, net); blocks.set(c.designator, c.block_name); }
-        nodes = [...nodes, ...pendingNodes]; edges = [...retained, ...pendingEdges]; added.push(...pendingComponents);
+        nodes = [...nodes, ...pendingNodes]; edges = [...updated, ...pendingEdges]; added.push(...pendingComponents);
         links += new Set(group.map(e => [...e.sources, ...e.targets].sort().join('|'))).size;
         return true;
     };
@@ -205,8 +200,8 @@ export function labelLongLinks(nodes: Placed[], edges: ElkExtendedEdge[], nets: 
             group.some(e => [...e.sources, ...e.targets].includes(id))))) continue;
         const trialNets = new Map(nets);
         const retainedGroups = connectedNetEdges(sameNet, nets);
-        type LabelSite = { node?: Placed; component?: CircuitComponent; edge?: ElkExtendedEdge; length: number };
-        const sitesFor = (ordinal: number, chosen: LabelSite[], count: number): LabelSite[] => {
+        type LabelSite = { node?: Placed; component?: CircuitComponent; edge?: ElkExtendedEdge; rerouted?: ElkExtendedEdge[]; length: number };
+        const sitesFor = (ordinal: number, chosen: LabelSite[], count: number, repair: boolean): LabelSite[] => {
             const pinId = ordinal ? edge.targets[0] : edge.sources[0];
             const owner = owners[ordinal]!, block = blocks.get(owner.id)!;
             // A retained local port already names this side of the cut. Reuse
@@ -221,70 +216,63 @@ export function labelLongLinks(nodes: Placed[], edges: ElkExtendedEdge[], nets: 
             trialNets.set(flagId, net);
             const chosenNodes = chosen.flatMap(s => s.node ? [s.node] : []);
             const chosenEdges = chosen.flatMap(s => s.edge ? [s.edge] : []);
-            const env = new RouteEnvironment([...nodes, ...chosenNodes], retained, trialNets);
+            const updated = replaceRoutes(retained, chosen.flatMap(s => s.rerouted ?? []));
+            const env = new RouteEnvironment([...nodes, ...chosenNodes], updated, trialNets);
             const origin = { ...created.node, x: 0, y: 0 } as Placed;
             const terminals = [...new Set([pinId, ...(local ?? []).flatMap(e => [...e.sources, ...e.targets])
                 .filter(p => realOwner.has(p))])].slice(0, 4);
             const positions = pinPositions(nodes);
-            const sites = terminals.map(terminal => {
+            const leads = terminals.map(terminal => {
                 const lead: ElkExtendedEdge = { id: `${edge.id}:label:${ordinal}`, container: edge.container, sources: [terminal], targets: [flagId],
                     sections: [{ id: `${edge.id}:label:${ordinal}:s`, startPoint: positions.get(terminal)!, endPoint: pinPositions([origin]).get(flagId)! }] };
-                return { lead, shifts: translations({ nodes: [origin] }, [lead], env.nodes, sameNet, trialNets).slice(1) };
+                return lead;
             });
-            // The local bus may have space near another terminal, even when
-            // the connector pin itself is crowded. Share the same bounded search.
-            const candidates = Array.from({ length: Math.max(...sites.map(s => s.shifts.length)) }, (_, i) =>
-                sites.filter(s => s.shifts[i]).map(s => ({ lead: s.lead, d: s.shifts[i] }))).flat().slice(0, 96);
-            const options: LabelSite[] = [];
-            for (const { lead, d } of candidates) {
-                const node = { ...origin, x: d.x, y: d.y };
-                if (env.nodes.some(n => overlaps(node, n, gap.port))
-                    || [...retained, ...chosenEdges].some(e => edgeSegments(e).some(s => segmentThroughBox(s, expand(node, gap.wire))))) continue;
-                const route = reconnect(lead, [node], env, chosenEdges);
-                if (!route) continue;
-                const value = routeLength(path(route)) + (path(route).length - 2) * gap.pinEscape;
+            return findPortSites(origin, leads, env, updated.filter(e => nets.get(e.sources[0]) === net), chosenEdges, count, repair).map(site => {
                 const component = structuredClone(created.component);
                 if (kind === shortSymbolsMap.NETPORT) {
-                    const style = portStyles.get(route.sources[0]);
+                    const style = portStyles.get(site.edge.sources[0]);
                     if (style) component.pins[0].port_style = style;
                 }
-                options.push({ node, edge: route, component, length: value });
-            }
-            return options.sort((a, b) => a.length - b.length || a.node!.x - b.node!.x || a.node!.y - b.node!.y).slice(0, count);
+                return { ...site, component };
+            });
         };
-        const priorInk = ink([...sameNet, edge]);
-        const crossingEnv = new RouteEnvironment(nodes, retained, trialNets);
-        const priorCrossings = crossingCount([edge, ...sameNet], crossingEnv);
         const validPair = (pair: LabelSite[]) => {
             const leads = pair.flatMap(s => s.edge ? [s.edge] : []);
+            const repairs = pair.flatMap(s => s.rerouted ?? []);
+            const affectedNets = new Set([net, ...repairs.map(e => nets.get(e.sources[0]))]);
+            const before = edges.filter(e => affectedNets.has(nets.get(e.sources[0])));
+            const after = [...replaceRoutes(retained, repairs).filter(e => affectedNets.has(nets.get(e.sources[0]))), ...leads];
+            const crossingEnv = new RouteEnvironment(nodes, edges.filter(e => !affectedNets.has(nets.get(e.sources[0]))), trialNets);
             const symbolCost = pair.filter(s => s.component).length * gap.port;
             // Count shared physical ink once and include the visual cost of the
             // newly added labels. Pair-specific crossings may change, provided
             // the total number of physical crossings does not grow.
-            return ink([...sameNet, ...leads]) + symbolCost <= priorInk - gap.branch
-                && crossingCount([...leads, ...sameNet], crossingEnv) <= priorCrossings;
+            return ink(after) + symbolCost <= ink(before) - gap.branch
+                && crossingCount(after, crossingEnv) <= crossingCount(before, crossingEnv);
         };
         let selected: LabelSite[] | undefined;
-        const first = sitesFor(0, [], LONG_LINK_POLICY.candidatePairs);
-        for (const one of first) {
-            const second = sitesFor(1, [one], LONG_LINK_POLICY.candidatePairs);
-            for (const two of second) {
-                const pair = [one, two];
-                if (!validPair(pair)) continue;
-                if (!selected || pair.reduce((n, s) => n + s.length, 0) < selected.reduce((n, s) => n + s.length, 0) - EPS)
-                    selected = pair;
+        for (const repair of [false, true]) {
+            const first = sitesFor(0, [], LONG_LINK_POLICY.candidatePairs, repair);
+            for (const one of first) {
+                const second = sitesFor(1, [one], LONG_LINK_POLICY.candidatePairs, repair);
+                for (const two of second) {
+                    const pair = [one, two];
+                    if (!validPair(pair)) continue;
+                    if (!selected || pair.reduce((n, s) => n + s.length, 0) < selected.reduce((n, s) => n + s.length, 0) - EPS)
+                        selected = pair;
+                }
+                if (selected && one === first[0]) break;
             }
-            // Most edges already have a valid best pair. Only expand the search
-            // when that pair fails the complete physical drawing check.
-            if (selected && one === first[0]) break;
+            if (selected) break;
         }
         if (!selected) continue;
         const pendingNodes = selected.flatMap(s => s.node ? [s.node] : []);
         const pendingComponents = selected.flatMap(s => s.component ? [s.component] : []);
         const pendingEdges = selected.flatMap(s => s.edge ? [s.edge] : []);
-        if (!keepsPassiveAttachment([...retained, ...pendingEdges])) continue;
+        const updated = replaceRoutes(retained, selected.flatMap(s => s.rerouted ?? []));
+        if (!keepsPassiveAttachment([...updated, ...pendingEdges])) continue;
         for (const c of pendingComponents) { nets.set(`${c.designator}_pin_1`, net); blocks.set(c.designator, c.block_name); }
-        nodes = [...nodes, ...pendingNodes]; edges = [...retained, ...pendingEdges]; added.push(...pendingComponents); links++;
+        nodes = [...nodes, ...pendingNodes]; edges = [...updated, ...pendingEdges]; added.push(...pendingComponents); links++;
     }
     return { nodes, edges, added, links };
 }

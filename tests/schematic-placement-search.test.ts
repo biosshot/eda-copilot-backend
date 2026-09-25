@@ -13,6 +13,8 @@ import { collapsePortRows } from '../src/circuit-layout/port-rows.ts';
 import ELK, { type ElkNode } from 'elkjs';
 import { pinPositions } from '../src/circuit-layout/refinement/geometry.ts';
 import { RouteEnvironment, reconnect } from '../src/circuit-layout/refinement/router.ts';
+import { findPortSites } from '../src/circuit-layout/refinement/port-sites.ts';
+import { overlaps, segmentThroughBox, expand } from '../src/circuit-layout/refinement/geometry.ts';
 
 const edge = (id: string, from: string, to: string, points: number[][]): ElkExtendedEdge => ({ id, sources: [from], targets: [to],
     sections: [{ id: `${id}:s`, startPoint: { x: points[0][0], y: points[0][1] },
@@ -195,4 +197,31 @@ test('a remote direct connection between two ICs can use local ports below the o
         nets, new Map(nodes.map(n => [n.id, 'block'])), new Set(nodes.map(n => n.id)));
     assert.equal(result.links, 1);
     assert.equal(result.added.length, 2);
+});
+
+test('a nearby port can displace an obstructing wire without moving its terminals or components', () => {
+    const flag = shortSymbolsMap.VCC.create('3V3', 'block', 'flag');
+    const nodes: Placed[] = [
+        { id: 'U', x: 0, y: 100, width: 100, height: 100, ports: [{ id: 'U_pin', x: 100, y: 50 }] },
+        { id: 'A', x: 100, y: -50, width: 40, height: 100, ports: [{ id: 'A_pin', x: 20, y: 100 }] },
+        { id: 'B', x: 350, y: -50, width: 40, height: 100, ports: [{ id: 'B_pin', x: 20, y: 100 }] },
+    ];
+    const obstacle = edge('obstacle', 'A_pin', 'B_pin', [[120, 50], [120, 120], [370, 120], [370, 50]]);
+    const lead = edge('lead', 'U_pin', 'flag_pin_1', [[100, 150], [0, 40]]);
+    const nets = new Map([['U_pin', '3V3'], ['flag_pin_1', '3V3'], ['A_pin', 'OTHER'], ['B_pin', 'OTHER']]);
+    const original = structuredClone({ nodes, obstacle });
+    const env = new RouteEnvironment(nodes, [obstacle], nets);
+    const sites = findPortSites({ ...flag.node, x: 0, y: 0 } as Placed, [lead], env, [], [], 16, true);
+    const repaired = sites.find(s => s.rerouted.length);
+    assert(repaired, 'the fallback should offer a site with local wire repair');
+    assert.deepEqual({ nodes, obstacle }, original, 'candidate search must not mutate its input');
+    assert(!nodes.some(n => overlaps(repaired.node, n, 15)));
+    assert.deepEqual(repaired.rerouted[0].sources, obstacle.sources);
+    assert.deepEqual(repaired.rerouted[0].targets, obstacle.targets);
+    assert.deepEqual(path(repaired.rerouted[0])[0], path(obstacle)[0]);
+    assert.deepEqual(path(repaired.rerouted[0]).at(-1), path(obstacle).at(-1));
+    assert(!edgeSegments(repaired.rerouted[0]).some(s => segmentThroughBox(s, expand(repaired.node, 10))));
+    const quick = findPortSites({ ...flag.node, x: 0, y: 0 } as Placed, [lead], env, [], [], 16);
+    assert(quick.every(s => !s.rerouted.length));
+    assert(quick.every(s => !edgeSegments(obstacle).some(e => segmentThroughBox(e, expand(s.node, 10)))));
 });
