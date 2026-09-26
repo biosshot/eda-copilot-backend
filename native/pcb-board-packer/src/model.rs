@@ -174,6 +174,9 @@ pub struct BlockComponentGeometry {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlockSolveProblem {
+    /// Branch-local experiments, explicit in the input so replay/cache keys stay valid.
+    #[serde(default)]
+    pub experiments: BlockExperiments,
     pub version: u32,
     pub grid: f64,
     pub clearance: f64,
@@ -191,6 +194,21 @@ pub struct BlockSolveProblem {
     pub components: Vec<BlockComponentGeometry>,
     pub component_pair_clearance: Vec<f64>,
     pub component_conflict: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(default, rename_all = "camelCase", deny_unknown_fields)]
+pub struct BlockExperiments {
+    pub ignored_nets: Vec<Arc<str>>,
+    pub keep_dense_access: bool,
+    pub net_candidates: bool,
+    pub stable_net_weight: bool,
+    pub reduced_hull: bool,
+    pub smooth_aspect: bool,
+    pub long_nets: bool,
+    pub extra_passes: bool,
+    pub pair_swaps: bool,
+    pub reinsert_pair: bool,
 }
 
 #[derive(Clone, Debug, Deserialize)]

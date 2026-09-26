@@ -229,6 +229,9 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<BoardPackSolution, Stri
         solve_greedy(primitives, &context)
     };
     let improved = local_improve(solved, &context);
+    let improved = if context.problem.experiments.pair_swaps || context.problem.experiments.reinsert_pair {
+        pair_improve(improved, &context)
+    } else { improved };
     let has_global_frame =
         context.problem.bounds.is_some() || !context.problem.obstacles.is_empty();
     let final_primitives =
@@ -377,7 +380,9 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
     let current_evaluation = evaluate(&current, context);
     let mut current_hard = current_evaluation.hard_violations;
     let mut current_score = current_evaluation.score;
-    let max_passes = if current_hard > 0 {
+    let max_passes = if context.problem.experiments.extra_passes {
+        8
+    } else if current_hard > 0 {
         2usize.max(current.len())
     } else {
         2
@@ -713,6 +718,9 @@ fn block_candidates_for_orientation(
         }
     }
     candidates.extend(relation_anchored_candidates(primitive, placed, context));
+    if context.problem.experiments.net_candidates {
+        candidates.extend(net_anchored_candidates(primitive, placed, context));
+    }
     let placed_primitives: Vec<_> = placed.iter().map(|item| &item.primitive).collect();
     for delta in signal_path::bridge_deltas(&primitive.primitive, &placed_primitives) {
         candidates.push(fit_to_bounds(
@@ -729,6 +737,129 @@ fn block_candidates_for_orientation(
         ));
     }
     dedupe_primitives(candidates)
+}
+
+fn net_anchored_candidates(
+    primitive: &WorkingPrimitive, placed: &[WorkingPrimitive], context: &Context,
+) -> Vec<WorkingPrimitive> {
+    let mut candidates = Vec::new();
+    // Fixed ordering and bounded anchors per pad keep high-fanout supply nets cheap.
+    for moving in primitive.primitive.connection_points.iter() {
+        let Some(net) = &moving.net else { continue };
+        if net.is_empty() || is_ground(net) || context.problem.experiments.ignored_nets.iter().any(|n| n.eq_ignore_ascii_case(net)) { continue; }
+        let mut anchors = Vec::new();
+        for item in placed {
+            for target in item.primitive.connection_points.iter() {
+                if target.net.as_ref() == Some(net) {
+                    anchors.push((item, target));
+                }
+            }
+        }
+        anchors.sort_by(|(a, ap), (b, bp)| a.id.cmp(&b.id).then(ap.reference.cmp(&bp.reference)));
+        for (item, target) in anchors.into_iter().take(4) {
+            let center = box_center(&primitive.primitive.bbox);
+            let dx = moving.x - center.x;
+            let dy = moving.y - center.y;
+            let b = item.primitive.bbox;
+            let c = context.problem.clearance;
+            let slide = context.problem.grid.max(0.25);
+            for s in [0.0, -slide, slide] {
+                for p in [
+                    Point { x: b.left - c - primitive.primitive.width / 2.0, y: target.y - dy + s },
+                    Point { x: b.right + c + primitive.primitive.width / 2.0, y: target.y - dy + s },
+                    Point { x: target.x - dx + s, y: b.top - c - primitive.primitive.height / 2.0 },
+                    Point { x: target.x - dx + s, y: b.bottom + c + primitive.primitive.height / 2.0 },
+                ] {
+                    candidates.push(fit_to_bounds(move_primitive_center_exact(primitive.clone(), p), context));
+                }
+            }
+        }
+    }
+    candidates
+}
+
+fn long_local_net_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let mut nets: FxHashMap<Arc<str>, Vec<(u32, Point)>> = FxHashMap::default();
+    // Count endpoints in the complete problem, never reclassify a partial bus as a pair.
+    let mut counts: FxHashMap<Arc<str>, usize> = FxHashMap::default();
+    for p in &context.problem.primitives {
+        for cp in p.connection_points.iter() {
+            if let Some(n) = &cp.net { *counts.entry(n.clone()).or_default() += 1; }
+        }
+    }
+    for p in primitives {
+        for cp in p.primitive.connection_points.iter() {
+            let Some(n) = &cp.net else { continue };
+            if n.is_empty() || is_ground(n) || counts.get(n) != Some(&2)
+                || context.problem.experiments.ignored_nets.iter().any(|ignored| ignored.eq_ignore_ascii_case(n)) { continue; }
+            nets.entry(n.clone()).or_default().push((p.id, Point { x: cp.x, y: cp.y }));
+        }
+    }
+    nets.values().filter(|v| v.len() == 2 && v[0].0 != v[1].0)
+        .map(|v| {
+            let a = primitives.iter().find(|p| p.id == v[0].0).unwrap();
+            let b = primitives.iter().find(|p| p.id == v[1].0).unwrap();
+            let scale = ((a.primitive.width.max(a.primitive.height) + b.primitive.width.max(b.primitive.height)) * 0.5
+                + context.problem.clearance).max(1.0);
+            let excess = (distance(v[0].1, v[1].1) - scale).max(0.0);
+            excess * excess / scale * 12.0
+        }).sum()
+}
+
+fn pair_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<WorkingPrimitive> {
+    // Bounded block-only neighbourhood. Fixed primitives and board postrefine are untouched.
+    if current.len() > 12 { return current; }
+    for i in 0..current.len() {
+        if current[i].primitive.locked { continue; }
+        for j in i + 1..current.len() {
+            if current[j].primitive.locked { continue; }
+            let fixed: Vec<_> = current.iter().enumerate().filter(|(k,_)| *k != i && *k != j)
+                .map(|(_, p)| p.clone()).collect();
+            let mut variants = Vec::new();
+            if context.problem.experiments.pair_swaps {
+                for a in orientation_variants(&current[i]) {
+                    for b in orientation_variants(&current[j]) {
+                        let mut v = current.clone();
+                        v[i] = move_primitive_center_exact(a.clone(), box_center(&current[j].primitive.bbox));
+                        v[j] = move_primitive_center_exact(b, box_center(&current[i].primitive.bbox));
+                        variants.push(v);
+                    }
+                }
+            }
+            if context.problem.experiments.reinsert_pair {
+                let initial = incremental_evaluation(&fixed, context);
+                // Both insertion orders; narrow local beam, capped independently of global beam.
+                for (a, b) in [(i, j), (j, i)] {
+                    for first in ranked_block_candidates(&current[a], &fixed, &initial, 0.0, 2, context) {
+                        let mut partial = fixed.clone(); partial.push(first.primitive.clone());
+                        for second in ranked_block_candidates(&current[b], &partial, &first.incremental, 0.0, 2, context) {
+                            let mut v = current.clone(); v[a] = first.primitive.clone(); v[b] = second.primitive;
+                            variants.push(v);
+                        }
+                    }
+                }
+            }
+            let route_pair = |v: &[WorkingPrimitive]| {
+                [i, j].iter().map(|&k| {
+                    let others: Vec<_> = v.iter().enumerate().filter(|(n,_)| *n != k).map(|(_,p)| p.clone()).collect();
+                    block_micro_route_penalty(&v[k], &others, context)
+                }).sum::<f64>()
+            };
+            let old = evaluate(&current, context);
+            let mut best_score = old.score + route_pair(&current);
+            let mut best_hard = old.hard_violations;
+            let mut ranked: Vec<_> = variants.into_iter().map(|v| { let e = evaluate(&v, context); (v,e) }).collect();
+            ranked.sort_by(|a,b| a.1.hard_violations.cmp(&b.1.hard_violations).then_with(|| compare_f64(a.1.score,b.1.score)));
+            for (v,e) in ranked.into_iter().take(4) {
+                if e.hard_violations > best_hard || (e.hard_violations == best_hard && e.score >= best_score) { continue; }
+                let score = e.score + route_pair(&v);
+                if e.hard_violations < best_hard || (e.hard_violations == best_hard && score + 0.001 < best_score) {
+                    current = v; best_hard = e.hard_violations; best_score = score;
+                }
+            }
+        }
+    }
+    current
 }
 
 fn adjacent_centers(width: f64, height: f64, anchor: &Box2, clearance: f64) -> [Point; 8] {
@@ -1486,9 +1617,13 @@ fn score_block_with_overlap_matrix(
     let (hull_a, hull_p) = convex_hull_metrics(if boxes.is_empty() { vec![bbox] } else { boxes });
     let mut score = width * height * bbox_area
         + (width + height) * bbox_perimeter
-        + hull_a * hull_area
+        + hull_a * hull_area * if context.problem.experiments.reduced_hull { 0.25 } else { 1.0 }
         + hull_p * hull_perimeter;
     score += aspect_ratio_penalty(width, height) * aspect_weight;
+    if context.problem.experiments.smooth_aspect {
+        let ratio = width.max(height) / width.min(height).max(0.1);
+        score += (ratio - 2.0).max(0.0).powi(2) * width.min(height) * 12.0;
+    }
     score += overlap_penalty(primitives, context, primitive_overlap_depths);
     score += bounds_penalty(primitives, context.problem.bounds.as_ref());
     score += dense_ic_access_penalty(primitives, context) * if high { 0.45 } else { 1.0 };
@@ -1500,7 +1635,10 @@ fn score_block_with_overlap_matrix(
         .iter()
         .map(|primitive| primitive.primitive.placements.len())
         .sum();
-    let small = component_count > 0 && component_count < 5;
+    let count_for_weight = if context.problem.experiments.stable_net_weight {
+        context.problem.components.len()
+    } else { component_count };
+    let small = count_for_weight > 0 && count_for_weight < 5;
     let (signal_spread, ground_spread) = same_net_spread_penalties(
         primitives,
         context,
@@ -1510,6 +1648,9 @@ fn score_block_with_overlap_matrix(
     score += signal_spread * if small { 18.0 } else { 4.0 } * net_weight;
     score += ground_spread * if small { 2.5 } else { 0.15 } * net_weight;
     score += target_size_penalty(width, height, context) * target_weight;
+    if context.problem.experiments.long_nets {
+        score += long_local_net_penalty(primitives, context);
+    }
     let path_primitives: Vec<_> = primitives.iter().map(|item| &item.primitive).collect();
     score += signal_path::topology_penalty(&path_primitives, &context.problem.relations)
         * if high { 2.5 } else { 4.0 };
@@ -2290,7 +2431,7 @@ fn spread_penalty(
 }
 
 fn dense_ic_access_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
-    if context.problem.search_width > 1 {
+    if context.problem.search_width > 1 && !context.problem.experiments.keep_dense_access {
         return 0.0;
     }
     let placement_count: usize = primitives
