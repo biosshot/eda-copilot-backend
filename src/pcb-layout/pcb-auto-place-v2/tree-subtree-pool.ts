@@ -1,6 +1,7 @@
 import os from "node:os";
 import { backendResource } from "#runtime/resources.ts";
 import workerpool, { type Pool } from "workerpool";
+import { placementWorkerForkOptions } from "../worker-process-options.ts";
 import env from "#utils/env.ts";
 import type { PlacementGraph, PlacementInput, PlacementTreeNode } from "#types/pcb/layout-model.ts";
 import type { TreeSolveResult, TreeSolverOptions } from "./tree-solver.ts";
@@ -69,6 +70,7 @@ function getPcbSubtreeWorkerPool() {
             // The native PCB packer is not safe to load in multiple worker_threads.
             // Isolate each worker in its own process to avoid heap corruption.
             workerType: "process",
+            forkOpts: placementWorkerForkOptions,
             maxWorkers: config.maxWorkers,
             maxQueueSize: config.maxQueueSize,
             workerTerminateTimeout: config.workerTerminateTimeoutMs,

@@ -1,6 +1,7 @@
 
 import { backendResource } from "#runtime/resources.ts";
 import workerpool, { type Pool } from "workerpool";
+import { placementWorkerForkOptions } from "./worker-process-options.ts";
 import env from "#utils/env.ts";
 import type { PcbLayoutRunResult, RunPcbLayoutOptions } from "#pcb-layout/run-pcb-layout.ts";
 import {
@@ -99,6 +100,7 @@ function getPcbLayoutWorkerPool() {
         const config = getPcbLayoutWorkerPoolConfig();
         pcbLayoutWorkerPool = workerpool.pool(WORKER_SCRIPT, {
             workerType: "process",
+            forkOpts: placementWorkerForkOptions,
             maxWorkers: config.maxWorkers,
             maxQueueSize: config.maxQueueSize,
             workerTerminateTimeout: config.workerTerminateTimeoutMs,
