@@ -1,3 +1,4 @@
+import { performance } from 'node:perf_hooks';
 import type {
     PcbComponent,
     Placement,
@@ -21,6 +22,7 @@ import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
 import type { NativeRouteBaseline } from './native/contract.ts';
 
 export type PostPlaceRouteScoreContext = {
+    timing?: { encodingMs: number; nativeMs: number };
     relations: PlacementRelation[];
     componentByDesignator: Map<string, PcbComponent>;
     clearanceResolver: ClearanceResolver;
@@ -56,16 +58,30 @@ export function postPlaceRoutePenalty(
 export function preparePostPlaceRouteComparison(
     input: PlacementInput, placements: Placement[], changedDesignators: Set<string>, context: PostPlaceRouteScoreContext,
 ): NativeRouteBaseline {
+    const started = performance.now();
     const { problem, routingObstacles } = routeLayoutProblem(input, placements, context);
-    return loadNativeBoardPacker().prepareRouteLayoutComparison(problem,
+    const encoded = performance.now();
+    const result = loadNativeBoardPacker().prepareRouteLayoutComparison(problem,
         [...changedDesignators].sort().map((designator) => `post:${designator}`), routingObstacles);
+    if (context.timing) {
+        context.timing.encodingMs += encoded - started;
+        context.timing.nativeMs += performance.now() - encoded;
+    }
+    return result;
 }
 
 export function comparePostPlaceRouteCandidate(
     input: PlacementInput, placements: Placement[], baseline: NativeRouteBaseline, context: PostPlaceRouteScoreContext,
 ) {
+    const started = performance.now();
     const { problem, routingObstacles } = routeLayoutProblem(input, placements, context);
-    return loadNativeBoardPacker().compareRouteLayoutCandidate(problem, routingObstacles, baseline);
+    const encoded = performance.now();
+    const result = loadNativeBoardPacker().compareRouteLayoutCandidate(problem, routingObstacles, baseline);
+    if (context.timing) {
+        context.timing.encodingMs += encoded - started;
+        context.timing.nativeMs += performance.now() - encoded;
+    }
+    return result;
 }
 
 function routeLayoutProblem(input: PlacementInput, placements: Placement[], context: PostPlaceRouteScoreContext) {

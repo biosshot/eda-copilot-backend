@@ -1,10 +1,11 @@
+import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
 import type { NativeBoardPackProblemV3, NativePrimitive, NativeRelation, NativeRoutingObstacle } from '../src/pcb-layout/pcb-auto-place-v2/native/contract.ts';
 
-import { refinePostPlacement } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
+import { refinePostPlacement, refinePostPlacementAsync } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
 import { defaultSolverOptions } from '../src/pcb-layout/pcb-auto-place/utils.ts';
 import type { PcbComponent, Placement, PlacementInput } from '../src/types/pcb/layout-model.ts';
 
@@ -223,7 +224,10 @@ test('route improvement bounds preserve the eager refiner result', () => {
             return baseline;
         };
         const eager = refinePostPlacement(input, placements);
-        assert.deepEqual(bounded, eager);
+        const { profile: boundedProfile, ...boundedResult } = bounded;
+        const { profile: eagerProfile, ...eagerResult } = eager;
+        assert.deepEqual(boundedResult, eagerResult);
+        assert.ok(boundedProfile.iterations.length === eagerProfile.iterations.length);
         assert.ok(boundedCalls <= calls);
     } finally {
         addon.prepareRouteLayoutComparison = prepare;
@@ -276,3 +280,17 @@ function espowerRefinementInput(): { input: PlacementInput; placements: Placemen
     };
     return { input, placements };
 }
+
+test('parallel refinement preserves ESPower route-priority decisions', async () => {
+    process.env.PCB_LAYOUT_SUBTREE_WORKERS = '4';
+    try {
+        const { input, placements } = espowerRefinementInput();
+        const { profile: ignored, ...serial } = refinePostPlacement(input, placements);
+        const { profile, ...parallel } = await refinePostPlacementAsync(input, placements);
+        assert.deepEqual(parallel, serial);
+        assert.equal(profile.workers, 4);
+    } finally {
+        await terminatePcbSubtreeWorkerPool();
+        delete process.env.PCB_LAYOUT_SUBTREE_WORKERS;
+    }
+});

@@ -1,3 +1,5 @@
+#[cfg(feature = "placement-bench")]
+mod post_place_probe;
 mod block_solver;
 mod geometry;
 mod lazy_rank;

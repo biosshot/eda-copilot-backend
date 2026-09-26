@@ -1,6 +1,7 @@
+import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { refinePostPlacement } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
+import { refinePostPlacementAsync, refinePostPlacement } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
 import { runPcbLayoutDsl } from '../src/pcb-layout/pcb-layout-dsl/spec.ts';
 import { defaultSolverOptions } from '../src/pcb-layout/pcb-auto-place/utils.ts';
 import type { FootprintSpec, PcbComponent, Placement, PlacementInput } from '../src/types/pcb/layout-model.ts';
@@ -228,3 +229,28 @@ function componentByDesignator(input: PlacementInput, designator: string) {
     assert.ok(result, `${designator} must exist`);
     return result;
 }
+
+// Uses the built worker entry, exercising real IPC/native loading rather than a mock.
+test('process pool produces identical post-place moves and scores', async () => {
+    process.env.PCB_LAYOUT_SUBTREE_WORKERS = '3';
+    try {
+        for (const input of [pairInput(), pairInput({ fixed: true }), pairInput({ fixed: true, refineGroup: true })]) {
+            const before = pairPlacements();
+            const { profile: serialProfile, ...serial } = refinePostPlacement(input, before);
+            for (let repeat = 0; repeat < 2; repeat++) {
+                const { profile, ...parallel } = await refinePostPlacementAsync(input, before);
+                assert.deepEqual(parallel, serial);
+                assert.ok(profile.workers > 1);
+                assert.deepEqual(profile.iterations.map(i => i.candidates), serialProfile.iterations.map(i => i.candidates));
+            }
+            input.solverOptions.localImproveIterations = 0;
+            const { profile, ...disabled } = await refinePostPlacementAsync(input, before);
+            const { profile: ignored, ...disabledSerial } = refinePostPlacement(input, before);
+            assert.deepEqual(disabled, disabledSerial);
+            assert.equal(profile.iterations.length, 0);
+        }
+    } finally {
+        await terminatePcbSubtreeWorkerPool();
+        delete process.env.PCB_LAYOUT_SUBTREE_WORKERS;
+    }
+});

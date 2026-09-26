@@ -10,6 +10,58 @@ import type { PlacementPrimitive } from '../src/pcb-layout/pcb-auto-place-v2/pri
 const nativeDirectory = resolve('native', 'pcb-board-packer');
 const nativeTest = test;
 
+nativeTest('parallel board search matches serial poses and rank with obstacles and routed relations', (t) => {
+    const addon = loadNativeBoardPacker();
+    const problem = minimalProblem();
+    const count = 12;
+    const base = problem.primitives[0];
+    problem.primitives = Array.from({ length: count }, (_, i) => {
+        const ref = `U${i + 1}`;
+        return { ...structuredClone(base), id: `primitive:${ref}`, label: ref,
+            locked: i === 0, sourceNodeId: `tree:${ref}`, sourceNodeIds: [`tree:${ref}`],
+            placements: [{ ...base.placements[0], designator: ref }],
+            connectionPoints: [{ ref: `${ref}.1`, net: 'SIG', x: 0.8, y: 0 }],
+        };
+    });
+    problem.components = problem.primitives.map(p => ({ ...structuredClone(problem.components[0]),
+        designator: p.label, primitiveId: p.id }));
+    problem.componentPairClearance = Array.from({ length: count * count }, (_, i) => Math.floor(i / count) === i % count ? 0 : 0.2);
+    problem.componentConflict = problem.componentPairClearance.map(v => v ? 1 : 0);
+    problem.obstacles = [{ left: 2, right: 2.5, top: -2, bottom: 2 }];
+    problem.relations = problem.primitives.slice(1).map((p, i) => ({
+        id: `pair:${i}`, kind: 'critical_pair', from: `pad:U${i + 1}.1`, to: `pad:${p.label}.1`,
+        priority: 'high', hard: false, weight: 1, effect: 'score_only',
+        maxDistance: 3, satelliteAnchor: false, preferFacingPads: false,
+    }));
+    const previous = process.env.PCB_BOARD_PACKER_THREADS;
+    try {
+        let serial: unknown;
+        for (const threads of [1, 2, 4, 12, 4]) {
+            process.env.PCB_BOARD_PACKER_THREADS = String(threads);
+            const start = performance.now();
+            const result = addon.solveBoardPacked(structuredClone(problem));
+            t.diagnostic(`${threads} thread(s): ${(performance.now() - start).toFixed(1)} ms`);
+            if (threads === 1) serial = result;
+            else assert.deepEqual(result, serial);
+            assert.deepEqual(result.states[0].placements, problem.primitives[0].placements);
+        }
+        // Force the repair path as well as legal local improvement. The bodies
+        // cannot all fit with clearance, so a residual hard rank is expected.
+        problem.bounds = problem.fullBoardBounds = { left: -2.5, right: 2.5, top: -2.5, bottom: 2.5 };
+        problem.boardOutline = [{ x: -2.5, y: -2.5 }, { x: 2.5, y: -2.5 }, { x: 2.5, y: 2.5 }, { x: -2.5, y: 2.5 }];
+        for (const threads of [1, 12]) {
+            process.env.PCB_BOARD_PACKER_THREADS = String(threads);
+            const result = addon.solveBoardPacked(structuredClone(problem));
+            assert.ok(result.rank.hardCount > 0);
+            if (threads === 1) serial = result;
+            else assert.deepEqual(result, serial);
+        }
+    } finally {
+        if (previous === undefined) delete process.env.PCB_BOARD_PACKER_THREADS;
+        else process.env.PCB_BOARD_PACKER_THREADS = previous;
+    }
+});
+
 nativeTest('native board packer is deterministic and returns an applicable rigid transform', () => {
     const addon = loadNativeBoardPacker();
     const problem = minimalProblem();

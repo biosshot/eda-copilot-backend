@@ -99,6 +99,7 @@ enum Side {
     Bottom,
 }
 
+#[derive(Clone)]
 struct CompiledRelation {
     from: CompiledEndpoint,
     to: CompiledEndpoint,
@@ -113,8 +114,8 @@ struct CompiledRelation {
 }
 
 struct Context {
-    problem: BoardPackProblem,
-    relations: Vec<CompiledRelation>,
+    problem: Arc<BoardPackProblem>,
+    relations: Arc<Vec<CompiledRelation>>,
     route_cache: micro_router::BoardRouteCache,
     hard_overlap_cache: RefCell<FxHashMap<PosePairKey, f64>>,
     outside_cache: RefCell<FxHashMap<PoseKey, bool>>,
@@ -122,6 +123,16 @@ struct Context {
 }
 
 pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
+    let available = std::thread::available_parallelism().map_or(1, |n| n.get());
+    let threads = std::env::var("PCB_BOARD_PACKER_THREADS")
+        .ok().and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(available).clamp(1, available);
+    solve_with_threads(problem, threads)
+}
+
+fn solve_with_threads(problem: BoardPackProblem, threads: usize) -> Result<BoardPackSolution, String> {
+    let profile = std::env::var_os("PCB_BOARD_PACKER_PROFILE").is_some();
+    let started = std::time::Instant::now();
     let primitive_ids = lexical_ids(
         problem
             .primitives
@@ -140,8 +151,8 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
         micro_router::BoardRouteCache::new(
             &problem.board_outline, problem.bounds, &MicroRouteConfig::board(), GEOMETRY_CACHE_LIMIT);
     let context = Context {
-        problem,
-        relations,
+        problem: Arc::new(problem),
+        relations: Arc::new(relations),
         route_cache,
         hard_overlap_cache: RefCell::new(FxHashMap::default()),
         outside_cache: RefCell::new(FxHashMap::default()),
@@ -222,37 +233,41 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
         ordinal,
     }];
     let search_width = context.problem.search_width.max(32);
+    // Each lane retains its own mutable geometry and routing caches across beam
+    // levels. No N-API calls or JS objects cross these native thread boundaries.
+    let mut lanes: Vec<Context> = (0..threads.min(search_width).min(states[0].remaining.len().max(1)))
+        .map(|_| Context {
+            problem: context.problem.clone(),
+            relations: context.relations.clone(),
+            route_cache: micro_router::BoardRouteCache::new(
+                &context.problem.board_outline, context.problem.bounds,
+                &MicroRouteConfig::board(), GEOMETRY_CACHE_LIMIT),
+            hard_overlap_cache: RefCell::new(FxHashMap::default()),
+            outside_cache: RefCell::new(FxHashMap::default()),
+            outside_severity_cache: RefCell::new(FxHashMap::default()),
+        }).collect();
 
     while states.iter().any(|state| !state.remaining.is_empty()) {
-        let mut expanded = Vec::new();
-        for state in states {
-            if state.remaining.is_empty() {
-                expanded.push(state);
-                continue;
-            }
-            let next_index = choose_next(&state, &context);
-            let next = state.remaining[next_index].clone();
-            let limit = candidate_limit(search_width, state.remaining.len());
-            let candidates = ranked_candidates(&next, &state.placed, state.route_penalty, Some(limit), &context);
-            let legal: Vec<_> = candidates
-                .iter()
-                .filter(|candidate| candidate.rank.hard_count == state.rank.hard_count)
-                .cloned()
-                .collect();
-            let source = if legal.is_empty() { candidates } else { legal };
-            for candidate in source.into_iter().take(limit) {
+        let mut expanded = if lanes.len() == 1 || states.len() == 1 {
+            expand_states(&states, search_width, &lanes[0])
+        } else {
+            let chunk_size = states.len().div_ceil(lanes.len());
+            std::thread::scope(|scope| {
+                let handles: Vec<_> = states.chunks(chunk_size).zip(lanes.iter_mut())
+                    .map(|(chunk, lane)| scope.spawn(move || expand_states(chunk, search_width, lane)))
+                    .collect();
+                let mut expanded = Vec::new();
+                // Joining in input order keeps tie breaks independent of scheduling.
+                for handle in handles {
+                    expanded.extend(handle.join().map_err(|_| "Board search thread panicked".to_string())?);
+                }
+                Ok::<_, String>(expanded)
+            })?
+        };
+        for state in &mut expanded {
+            if state.ordinal == 0 {
                 ordinal += 1;
-                let mut placed = state.placed.clone();
-                placed.push(candidate.primitive);
-                let mut remaining = state.remaining.clone();
-                remaining.remove(next_index);
-                expanded.push(SearchState {
-                    placed,
-                    remaining,
-                    rank: candidate.rank,
-                    route_penalty: candidate.route_penalty,
-                    ordinal,
-                });
+                state.ordinal = ordinal;
             }
         }
         states = dedupe_states(expanded);
@@ -268,8 +283,13 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
         .into_iter()
         .find(|state| state.remaining.is_empty())
         .ok_or_else(|| "Rust board packer did not produce a complete state".to_string())?;
-    let improved = local_improve(best.placed, &context);
-    let repaired = repair_hard_violations(improved, &context);
+    if profile { eprintln!("[pcb-board-packer] beam {:.3}s, threads={}, hard={}", started.elapsed().as_secs_f64(), lanes.len(), best.rank.hard_count); }
+    let phase = std::time::Instant::now();
+    let improved = local_improve(best.placed, &context, &mut lanes);
+    if profile { eprintln!("[pcb-board-packer] local_improve {:.3}s", phase.elapsed().as_secs_f64()); }
+    let phase = std::time::Instant::now();
+    let repaired = repair_hard_violations(improved, &context, &mut lanes);
+    if profile { eprintln!("[pcb-board-packer] repair {:.3}s, total {:.3}s", phase.elapsed().as_secs_f64(), started.elapsed().as_secs_f64()); }
     let final_rank = state_rank(&repaired, &context);
     let states = repaired
         .iter()
@@ -323,6 +343,34 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
     })
 }
 
+fn expand_states(states: &[SearchState], search_width: usize, context: &Context) -> Vec<SearchState> {
+    let mut expanded = Vec::new();
+    for state in states {
+        if state.remaining.is_empty() {
+            expanded.push(state.clone());
+            continue;
+        }
+        let next_index = choose_next(state, context);
+        let next = &state.remaining[next_index];
+        let limit = candidate_limit(search_width, state.remaining.len());
+        let candidates = ranked_candidates(next, &state.placed, state.route_penalty, Some(limit), context);
+        let any_legal = candidates.iter().any(|candidate| candidate.rank.hard_count == state.rank.hard_count);
+        for candidate in candidates.into_iter()
+            .filter(|candidate| !any_legal || candidate.rank.hard_count == state.rank.hard_count)
+            .take(limit) {
+            let mut placed = state.placed.clone();
+            placed.push(candidate.primitive);
+            let mut remaining = state.remaining.clone();
+            remaining.remove(next_index);
+            expanded.push(SearchState {
+                placed, remaining, rank: candidate.rank,
+                route_penalty: candidate.route_penalty, ordinal: 0,
+            });
+        }
+    }
+    expanded
+}
+
 fn ranked_candidates(
     primitive: &WorkingPrimitive,
     placed: &[WorkingPrimitive],
@@ -340,21 +388,55 @@ fn cheap_candidates(
     parent_route_penalty: f64,
     context: &Context,
 ) -> Vec<RankedCandidate> {
+    finish_cheap_candidates(score_positions(orientation_variants(primitive).iter(), placed, parent_route_penalty, context))
+}
+
+// Candidate generation and scoring depend only on the current placement snapshot.
+// Keep movement commits sequential; evaluate independent orientations in parallel.
+fn local_candidates(
+    primitive: &WorkingPrimitive,
+    placed: &[WorkingPrimitive],
+    context: &Context,
+    lanes: &mut [Context],
+) -> Vec<RankedCandidate> {
+    let variants = orientation_variants(primitive);
+    if lanes.len() == 1 || variants.len() <= 1 {
+        return cheap_candidates(primitive, placed, 0.0, context);
+    }
+    let chunk_size = variants.len().div_ceil(lanes.len());
+    let candidates = std::thread::scope(|scope| {
+        let handles: Vec<_> = variants.chunks(chunk_size).zip(lanes.iter_mut())
+            .map(|(chunk, lane)| scope.spawn(move || score_positions(chunk.iter(), placed, 0.0, lane)))
+            .collect();
+        handles.into_iter().flat_map(|handle| handle.join().expect("Local candidate thread panicked")).collect()
+    });
+    finish_cheap_candidates(candidates)
+}
+
+fn score_positions<'a>(
+    variants: impl Iterator<Item = &'a WorkingPrimitive>,
+    placed: &[WorkingPrimitive],
+    parent_route_penalty: f64,
+    context: &Context,
+) -> Vec<RankedCandidate> {
     let mut candidates = Vec::new();
-    let mut ordinal = 0usize;
-    for variant in orientation_variants(primitive) {
-        for candidate in position_candidates(&variant, placed, context) {
-            ordinal += 1;
+    for variant in variants {
+        for candidate in position_candidates(variant, placed, context) {
             let mut all = placed.to_vec();
             all.push(candidate.clone());
             candidates.push(RankedCandidate {
                 primitive: candidate,
                 rank: state_rank(&all, context),
                 route_penalty: parent_route_penalty,
-                ordinal,
+                ordinal: 0,
             });
         }
     }
+    candidates
+}
+
+fn finish_cheap_candidates(mut candidates: Vec<RankedCandidate>) -> Vec<RankedCandidate> {
+    for (index, candidate) in candidates.iter_mut().enumerate() { candidate.ordinal = index + 1; }
     dedupe_candidates(&mut candidates);
     candidates.sort_by(compare_candidates);
     candidates.truncate(32);
@@ -615,7 +697,7 @@ fn state_rank(primitives: &[WorkingPrimitive], context: &Context) -> Rank {
     }
 }
 
-fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<WorkingPrimitive> {
+fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context, lanes: &mut [Context]) -> Vec<WorkingPrimitive> {
     let mut current_rank = state_rank(&current, context);
     let passes = if current_rank.hard_count > 0 { 4 } else { 2 };
     for _ in 0..passes {
@@ -639,7 +721,7 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
             };
             let baseline_hard = hard_count(&fixed, context);
             if let Some(candidate) = crate::lazy_rank::improve(
-                cheap_candidates(&current[index], &fixed, 0.0, context), best_rank,
+                local_candidates(&current[index], &fixed, context, lanes), best_rank,
                 compare_candidates, |candidate, best_rank| rank_improves(&candidate.rank, best_rank),
                 |candidate| candidate.rank.clone(), |candidate| {
                     if candidate.rank.hard_count == baseline_hard {
@@ -666,14 +748,25 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
 fn repair_hard_violations(
     mut current: Vec<WorkingPrimitive>,
     context: &Context,
+    lanes: &mut [Context],
 ) -> Vec<WorkingPrimitive> {
     let mut current_rank = state_rank(&current, context);
     let max_passes = 8.max(current.len() * 6);
     for _ in 0..max_passes {
         let variants = hard_repair_variants(&current, context);
+        let ranks = if variants.len() <= 1 || lanes.len() == 1 {
+            variants.iter().map(|variant| state_rank(variant, context)).collect::<Vec<_>>()
+        } else {
+            let chunk_size = variants.len().div_ceil(lanes.len());
+            std::thread::scope(|scope| {
+                let handles: Vec<_> = variants.chunks(chunk_size).zip(lanes.iter_mut())
+                    .map(|(chunk, lane)| scope.spawn(move || chunk.iter().map(|variant| state_rank(variant, lane)).collect::<Vec<_>>()))
+                    .collect();
+                handles.into_iter().flat_map(|handle| handle.join().expect("Repair scoring thread panicked")).collect()
+            })
+        };
         let mut best: Option<(Vec<WorkingPrimitive>, Rank)> = None;
-        for variant in variants {
-            let rank = state_rank(&variant, context);
+        for (variant, rank) in variants.into_iter().zip(ranks) {
             if compare_rank(
                 &rank,
                 best.as_ref().map(|(_, rank)| rank).unwrap_or(&current_rank),
@@ -688,7 +781,7 @@ fn repair_hard_violations(
         current = variant;
         current_rank = rank;
         if current_rank.hard_count == 0 {
-            current = local_improve(current, context);
+            current = local_improve(current, context, lanes);
             current_rank = state_rank(&current, context);
             if current_rank.hard_count == 0 {
                 break;
@@ -1207,7 +1300,7 @@ fn envelope_overlap_penalty(primitives: &[WorkingPrimitive], context: &Context) 
 
 fn relation_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
     let mut penalty = 0.0;
-    for relation in &context.relations {
+    for relation in context.relations.iter() {
         if relation.skip {
             continue;
         }
@@ -1696,7 +1789,7 @@ fn relation_slot_centers(
 ) -> Vec<Point> {
     let mut result = Vec::new();
     let primitive_center = box_center(&packing_box(primitive));
-    for relation in &context.relations {
+    for relation in context.relations.iter() {
         if relation.skip {
             continue;
         }

@@ -1,3 +1,5 @@
+import { performance } from 'node:perf_hooks';
+import { getPcbSubtreeWorkerPoolConfig, evaluatePostPlaceBatchQueued } from './tree-subtree-pool.ts';
 import type {
     Box,
     PcbComponent,
@@ -62,6 +64,7 @@ export interface PostPlaceRefineResult {
     moves: PostPlaceMove[];
     scoreBefore: number;
     scoreAfter: number;
+    profile: PostPlaceProfile;
 }
 
 type Candidate = {
@@ -78,11 +81,141 @@ const GEOMETRY_EPSILON = 0.001;
  * Final placement polish. It never invents coordinates: components may only
  * rotate 180 degrees in place or exchange poses resolved by the global solver.
  */
+export type PostPlaceBatchTask = {
+    pruneWithIncumbent?: boolean;
+    input: PlacementInput;
+    current: Placement[];
+    currentScore: number;
+    minDelta: number;
+    candidates: Array<{ key: string; changes: Placement[] }>;
+};
+type Evaluation = { key: string; baseScore: number; comparison: NativeRouteComparison };
+export type PostPlaceBatchResult = { evaluations: Evaluation[]; profile: BatchProfile };
+type BatchProfile = {
+    candidates: number; hardRejected: number; boundRejected: number; feasibilityRejected: number;
+    insufficientImprovement: number; baselineEvaluations: number; baselineCacheHits: number; routeEvaluations: number;
+    routeEncodingMs: number; routeNativeMs: number; scoreEncodingMs: number; scoreNativeMs: number;
+    geometryMs: number; globalScoreMs: number; baselineMs: number; routeMs: number;
+};
+export type PostPlaceProfile = {
+    workers: number; initialScoreMs: number; fixedDiagnosticsMs: number; totalMs: number;
+    iterations: Array<BatchProfile & { generationMs: number; evaluationWallMs: number; accepted: boolean }>;
+};
+function emptyBatchProfile(): BatchProfile {
+    return { candidates: 0, hardRejected: 0, boundRejected: 0, feasibilityRejected: 0,
+        insufficientImprovement: 0, baselineEvaluations: 0, baselineCacheHits: 0, routeEvaluations: 0,
+        routeEncodingMs: 0, routeNativeMs: 0, scoreEncodingMs: 0, scoreNativeMs: 0,
+        geometryMs: 0, globalScoreMs: 0, baselineMs: 0, routeMs: 0 };
+}
+
+/** Independent evaluation against one immutable iteration baseline. */
+export function evaluatePostPlaceBatch(task: PostPlaceBatchTask): PostPlaceBatchResult {
+    const { input, current, currentScore, minDelta } = task;
+    const context = createPostPlaceRouteScoreContext(input);
+    context.timing = { encodingMs: 0, nativeMs: 0 };
+    const scoreTiming = { encodingMs: 0, nativeMs: 0 };
+    const baselines = new Map<string, NativeRouteBaseline>();
+    const profile = emptyBatchProfile();
+    const evaluations: Evaluation[] = [];
+    let incumbent: { key: string; improvement: number } | undefined;
+    for (const candidate of task.candidates) {
+        profile.candidates++;
+        const changed = new Set(candidate.changes.map(p => p.designator));
+        const placements = replacePlacements(current, candidate.changes);
+        let started = performance.now();
+        const valid = candidateIntroducesNoNewHardViolations(input, current, placements, changed);
+        profile.geometryMs += performance.now() - started;
+        if (!valid) { profile.hardRejected++; continue; }
+        started = performance.now();
+        const baseScore = globalPostPlaceScore(input, placements, scoreTiming);
+        profile.globalScoreMs += performance.now() - started;
+        const changedKey = [...changed].sort().join('|');
+        let baseline = baselines.get(changedKey);
+        if (!baseline) {
+            started = performance.now();
+            baseline = preparePostPlaceRouteComparison(input, current, changed, context);
+            profile.baselineMs += performance.now() - started;
+            profile.baselineEvaluations++;
+            baselines.set(changedKey, baseline);
+        } else profile.baselineCacheHits++;
+        const ceiling = baseline.maximumImprovement;
+        if (ceiling !== undefined && Number.isFinite(ceiling)) {
+            const margin = GEOMETRY_EPSILON + 32 * Number.EPSILON
+                * (Math.abs(currentScore) + Math.abs(baseScore) + Math.abs(ceiling));
+            // Parallel batches cannot prune against their local incumbent: epsilon
+            // tie reduction is order-sensitive. Only the serial path enables it.
+            if (currentScore + ceiling - baseScore + margin < minDelta
+                || (task.pruneWithIncumbent && incumbent && currentScore + ceiling - baseScore + margin < incumbent.improvement - GEOMETRY_EPSILON)) {
+                profile.boundRejected++; continue;
+            }
+        }
+        started = performance.now();
+        const comparison = comparePostPlaceRouteCandidate(input, placements, baseline, context);
+        profile.routeMs += performance.now() - started;
+        profile.routeEvaluations++;
+        if (comparison.feasibilityOrder > 0) { profile.feasibilityRejected++; continue; }
+        if ((currentScore + comparison.beforePenalty) - (baseScore + comparison.afterPenalty) <= minDelta) {
+            profile.insufficientImprovement++; continue;
+        }
+        const improvement = (currentScore + comparison.beforePenalty) - (baseScore + comparison.afterPenalty);
+        if (!incumbent || (improvement >= incumbent.improvement - GEOMETRY_EPSILON
+            && !(Math.abs(improvement - incumbent.improvement) <= GEOMETRY_EPSILON && candidate.key.localeCompare(incumbent.key) >= 0))) {
+            incumbent = { key: candidate.key, improvement };
+        }
+        evaluations.push({ key: candidate.key, baseScore, comparison });
+    }
+    profile.routeEncodingMs = context.timing.encodingMs;
+    profile.routeNativeMs = context.timing.nativeMs;
+    profile.scoreEncodingMs = scoreTiming.encodingMs;
+    profile.scoreNativeMs = scoreTiming.nativeMs;
+    return { evaluations, profile };
+}
+
 export function refinePostPlacement(input: PlacementInput, placements: Placement[]): PostPlaceRefineResult {
+    const run = refineSteps(input, placements, 1);
+    let step = run.next();
+    while (!step.done) step = run.next([evaluatePostPlaceBatch({ ...step.value, pruneWithIncumbent: true })]);
+    return step.value;
+}
+
+export async function refinePostPlacementAsync(input: PlacementInput, placements: Placement[], onIteration?: (message: string) => void): Promise<PostPlaceRefineResult> {
+    const workers = getPcbSubtreeWorkerPoolConfig().maxWorkers;
+    if (workers <= 1) return refinePostPlacement(input, placements);
+    const run = refineSteps(input, placements, workers);
+    let step = run.next();
+    let iteration = 0;
+    while (!step.done) {
+        const task = step.value;
+        // Keep all variants for a changed set together to reuse the route baseline.
+        const groups = new Map<string, PostPlaceBatchTask['candidates']>();
+        for (const candidate of task.candidates) {
+            const key = candidate.changes.map(p => p.designator).sort().join('|');
+            const group = groups.get(key) ?? [];
+            group.push(candidate);
+            groups.set(key, group);
+        }
+        const batches = Array.from({ length: Math.min(workers, groups.size) }, () => [] as PostPlaceBatchTask['candidates']);
+        for (const group of [...groups.values()].sort((a, b) => b.length - a.length)) {
+            const batch = batches.reduce((a, b) => a.length <= b.length ? a : b);
+            batch.push(...group);
+        }
+        iteration++;
+        onIteration?.(`Post-placement iteration ${iteration}: evaluating ${task.candidates.length} candidates in ${batches.length} processes.`);
+        const results = await Promise.all(batches.map(candidates => evaluatePostPlaceBatchQueued({ ...task, candidates })));
+        step = run.next(results);
+    }
+    return step.value;
+}
+
+function* refineSteps(input: PlacementInput, placements: Placement[], workers: number): Generator<PostPlaceBatchTask, PostPlaceRefineResult, PostPlaceBatchResult[]> {
+
     const iterations = Math.max(0, Math.floor(input.solverOptions.localImproveIterations));
     const minDelta = Math.max(0, input.solverOptions.localImproveMinDelta);
+    const started = performance.now();
+    const scoreStarted = performance.now();
     const initialScore = globalPostPlaceScore(input, placements);
-    const routeContext = createPostPlaceRouteScoreContext(input);
+    const profile: PostPlaceProfile = { workers, initialScoreMs: performance.now() - scoreStarted,
+        fixedDiagnosticsMs: 0, totalMs: 0, iterations: [] };
     let current = placements.map((placement) => ({ ...placement }));
     let currentScore = initialScore;
     const moves: PostPlaceMove[] = [];
@@ -94,27 +227,25 @@ export function refinePostPlacement(input: PlacementInput, placements: Placement
         let bestRouteAfter = 0;
         let bestEffectiveImprovement = 0;
         let bestRouteComparison: NativeRouteComparison | null = null;
-        const routeBaselineByChanged = new Map<string, NativeRouteBaseline>();
-        for (const candidate of placementCandidates(input, current)) {
-            if (!candidateIntroducesNoNewHardViolations(input, current, candidate.placements, candidate.changed)) continue;
-            const baseScore = globalPostPlaceScore(input, candidate.placements);
-            const changedKey = [...candidate.changed].sort().join('|');
-            let routeBaseline = routeBaselineByChanged.get(changedKey);
-            if (!routeBaseline) {
-                routeBaseline = preparePostPlaceRouteComparison(input, current, candidate.changed, routeContext);
-                routeBaselineByChanged.set(changedKey, routeBaseline);
-            }
-            const ceiling = routeBaseline.maximumImprovement;
-            if (ceiling !== undefined && Number.isFinite(ceiling)) {
-                const upperImprovement = currentScore + ceiling - baseScore;
-                // Keep a conservative margin at score/tie boundaries. Older
-                // addons without this bound retain the full evaluation path.
-                const margin = GEOMETRY_EPSILON + 32 * Number.EPSILON
-                    * (Math.abs(currentScore) + Math.abs(baseScore) + Math.abs(ceiling));
-                if (upperImprovement + margin < minDelta
-                    || (best && upperImprovement + margin < bestEffectiveImprovement - GEOMETRY_EPSILON)) continue;
-            }
-            const routeComparison = comparePostPlaceRouteCandidate(input, candidate.placements, routeBaseline, routeContext);
+        const generationStarted = performance.now();
+        const candidates = placementCandidates(input, current);
+        const generationMs = performance.now() - generationStarted;
+        const evaluationStarted = performance.now();
+        const results = yield { input, current, currentScore, minDelta, candidates: candidates.map(candidate => ({
+            key: candidate.key, changes: candidate.placements.filter(p => candidate.changed.has(p.designator)),
+        })) };
+        const iterationProfile = { ...emptyBatchProfile(), generationMs,
+            evaluationWallMs: performance.now() - evaluationStarted, accepted: false };
+        const evaluations = new Map<string, Evaluation>();
+        for (const result of results) {
+            for (const key of Object.keys(result.profile) as Array<keyof BatchProfile>) iterationProfile[key] += result.profile[key];
+            for (const evaluation of result.evaluations) evaluations.set(evaluation.key, evaluation);
+        }
+        profile.iterations.push(iterationProfile);
+        for (const candidate of candidates) {
+            const evaluated = evaluations.get(candidate.key);
+            if (!evaluated) continue;
+            const { baseScore, comparison: routeComparison } = evaluated;
             // Do not buy a lower partial-route cost by losing resolved higher-priority jobs.
             if (routeComparison.feasibilityOrder > 0) continue;
             const routeBefore = routeComparison.beforePenalty;
@@ -133,6 +264,8 @@ export function refinePostPlacement(input: PlacementInput, placements: Placement
             bestEffectiveImprovement = effectiveImprovement;
             bestRouteComparison = routeComparison;
         }
+        iterationProfile.accepted = Boolean(best);
+        if (process.env.PCB_BOARD_PACKER_PROFILE) console.error(`[pcb-post-place] iteration=${iteration + 1} ${JSON.stringify(iterationProfile)}`);
         if (!best) break;
         moves.push({
             kind: best.kind,
@@ -153,23 +286,36 @@ export function refinePostPlacement(input: PlacementInput, placements: Placement
         currentScore = bestBaseScore;
     }
 
+    const diagnosticsStarted = performance.now();
     const diagnostics = fixedPlacementOpportunities(input, current, currentScore, minDelta);
+    profile.fixedDiagnosticsMs = performance.now() - diagnosticsStarted;
+    profile.totalMs = performance.now() - started;
+    if (process.env.PCB_BOARD_PACKER_PROFILE) console.error(`[pcb-post-place] total=${profile.totalMs.toFixed(1)}ms workers=${workers}`);
     return {
         placements: current,
         diagnostics,
         moves,
         scoreBefore: roundScore(initialScore),
         scoreAfter: roundScore(currentScore),
+        profile,
     };
 }
 
-export function globalPostPlaceScore(input: PlacementInput, placements: Placement[]) {
+export function globalPostPlaceScore(input: PlacementInput, placements: Placement[], timing?: { encodingMs: number; nativeMs: number }) {
     const addon = loadNativeBoardPacker();
     const nativeVersion = addon.postPlaceScoreContractVersion();
     if (nativeVersion !== NATIVE_POST_PLACE_SCORE_CONTRACT_VERSION) {
         throw new Error(`Rust post-place score contract ${nativeVersion} does not match TypeScript contract ${NATIVE_POST_PLACE_SCORE_CONTRACT_VERSION}`);
     }
-    return addon.scorePostPlace(encodeNativePostPlaceScoreProblem(input, placements));
+    const started = performance.now();
+    const problem = encodeNativePostPlaceScoreProblem(input, placements);
+    const encoded = performance.now();
+    const score = addon.scorePostPlace(problem);
+    if (timing) {
+        timing.encodingMs += encoded - started;
+        timing.nativeMs += performance.now() - encoded;
+    }
+    return score;
 }
 
 function placementCandidates(input: PlacementInput, placements: Placement[]) {

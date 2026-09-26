@@ -1,31 +1,10 @@
-import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import assert from 'node:assert/strict';
-import test from 'node:test';
-import { refinePostPlacementAsync, refinePostPlacement, globalPostPlaceScore } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
+import { writeFileSync } from 'node:fs';
+import { availableParallelism } from 'node:os';
+import { refinePostPlacement, refinePostPlacementAsync } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
+import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import { defaultSolverOptions } from '../src/pcb-layout/pcb-auto-place/utils.ts';
-import type { FootprintSpec, PcbComponent, Placement, PlacementInput } from '../src/types/pcb/layout-model.ts';
-
-test('post-place swap can be selected purely by Micro-A* routability', () => {
-    const input = routeAwareSwapInput();
-    const before = routeAwareSwapPlacements();
-    const swapped = before.map((placement) => {
-        if (placement.designator === 'A') return { ...placement, x: 2 };
-        if (placement.designator === 'B') return { ...placement, x: -2 };
-        return placement;
-    });
-
-    // Euclidean/global post-place scoring sees the assignments as symmetric.
-    assert.ok(Math.abs(globalPostPlaceScore(input, before) - globalPostPlaceScore(input, swapped)) < 0.001);
-
-    const result = refinePostPlacement(input, before);
-    const move = result.moves.find((candidate) => candidate.kind === 'swap');
-    assert.ok(move, 'route-aware refinement should choose the A/B swap');
-    assert.equal(placement(result.placements, 'A').x, 2);
-    assert.equal(placement(result.placements, 'B').x, -2);
-    assert.ok(move.routePenaltyBefore > move.routePenaltyAfter, JSON.stringify(move));
-    assert.ok(move.effectiveImprovement > 0);
-});
-
+import type { PlacementInput, Placement, PcbComponent, FootprintSpec } from '../src/types/pcb/layout-model.ts';
 function routeAwareSwapInput(): PlacementInput {
     const pairFootprint = footprint('pair', 0.8, 0.8);
     const endpointFootprint = footprint('endpoint', 0.8, 0.8);
@@ -124,27 +103,33 @@ function pose(designator: string, x: number, y: number): Placement {
     return { designator, x, y, rotate: 0, layer: 'top', score: 0 };
 }
 
-function placement(placements: Placement[], designator: string) {
-    const found = placements.find((item) => item.designator === designator);
-    assert.ok(found, `${designator} must be placed`);
-    return found;
-}
-
-// Uses the built worker entry, exercising real IPC/native loading rather than a mock.
-test('process pool produces identical post-place moves and scores', async () => {
-    process.env.PCB_LAYOUT_SUBTREE_WORKERS = '3';
-    try {
-        const input = routeAwareSwapInput();
-        const before = routeAwareSwapPlacements();
-        const { profile: serialProfile, ...serial } = refinePostPlacement(input, before);
-        for (let repeat = 0; repeat < 2; repeat++) {
-            const { profile, ...parallel } = await refinePostPlacementAsync(input, before);
-            assert.deepEqual(parallel, serial);
-            assert.ok(profile.workers > 1);
-            assert.deepEqual(profile.iterations.map(i => i.candidates), serialProfile.iterations.map(i => i.candidates));
-        }
-    } finally {
-        await terminatePcbSubtreeWorkerPool();
-        delete process.env.PCB_LAYOUT_SUBTREE_WORKERS;
+const input = routeAwareSwapInput();
+input.components = []; input.blocks = []; input.boardHoles = [];
+input.board.outline = { type: 'rect', width: 140, height: 110 };
+input.solverOptions.localImproveIterations = 2;
+const placements: Placement[] = [];
+for (let i = 0; i < 64; i++) {
+    const offsetX = ((i % 8) - 3.5) * 16, offsetY = (Math.floor(i / 8) - 3.5) * 12;
+    const tile = routeAwareSwapInput();
+    for (const c of tile.components) {
+        c.designator += `_${i}`; c.block_name += `_${i}`;
+        c.pins.forEach(p => { p.signal_name += `_${i}`; });
+        if (c.pcb.fixedPlacement) c.pcb.edgeMount = { edge: 'left' };
+        input.components.push(c);
     }
-});
+    for (const b of tile.blocks) {
+        b.name += `_${i}`; b.component_designators = b.component_designators.map(d => `${d}_${i}`);
+        input.blocks.push(b);
+    }
+    input.boardHoles!.push(...tile.boardHoles!.map(h => ({ ...h, name: `${h.name}_${i}`, x: h.x + offsetX, y: h.y + offsetY })));
+    placements.push(...routeAwareSwapPlacements().map(p => ({ ...p, designator: `${p.designator}_${i}`, x: p.x + offsetX, y: p.y + offsetY })));
+}
+process.env.PCB_LAYOUT_SUBTREE_WORKERS = String(availableParallelism());
+try {
+    const { profile: serialProfile, ...serial } = refinePostPlacement(input, placements);
+    const { profile: parallelProfile, ...parallel } = await refinePostPlacementAsync(input, placements);
+    assert.deepEqual(parallel, serial);
+    const report = { components: input.components.length, serial: serialProfile, parallel: parallelProfile, identical: true };
+    if (process.argv[2]) writeFileSync(process.argv[2], JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+} finally { await terminatePcbSubtreeWorkerPool(); }

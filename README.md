@@ -47,3 +47,38 @@ Releases are published on [npm](https://www.npmjs.com/package/eda-copilot-backen
 Place this repository beside `easyeda-copilot` and `copilot-router`. In EasyEDA Copilot, `npm run deps:local` selects sibling file dependencies; `npm run deps:release` selects pinned published versions. MCP does not bundle this package or duplicate its runtime dependencies. Read EasyEDA Copilot's `docs/local-development.md` for the full workflow.
 
 `PCB_BOARD_PACKER_NATIVE_PATH` is an optional developer override. Normal assets resolve relative to this package, independently of the current directory. Always call `disposeBackend()` when the host shuts down to close worker pools. `PCB_LAYOUT_WORKERS`, `PCB_LAYOUT_WORKER_QUEUE_SIZE`, `PCB_LAYOUT_WORKER_TIMEOUT_MS` and `EDA_BACKEND_LOG_LEVEL` configure runtime behavior.
+
+`PCB_BOARD_PACKER_THREADS` controls native board-level beam-search parallelism
+(default: all available logical CPUs; `1` selects serial execution). Independent
+beam states use native Rust threads with private geometry and micro-router caches.
+Results are merged in input order to preserve deterministic tie-breaking. Local
+orientation scoring and repair-variant scoring are also parallel; movement commits
+and lazy route refinement remain sequential. Set `PCB_BOARD_PACKER_PROFILE=1` to
+log separate beam, local-improvement and repair elapsed times. More threads require additional cache
+memory; this setting is separate from `PCB_LAYOUT_SUBTREE_WORKERS`, which uses
+isolated Node processes for block/module placement.
+
+The asynchronous post-placement refiner reuses the subtree process pool
+(`PCB_LAYOUT_SUBTREE_WORKERS`; 0/1 selects serial refinement). Each iteration
+scores immutable rotate/swap candidates concurrently, then selects one move in
+original candidate order. Variants affecting the same components share a worker
+batch and a route-baseline cache. IPC sends changed poses, not a complete board
+per candidate. The synchronous API remains serial. Native routing jobs within a
+candidate remain sequential. The pool uses processes because loading the addon
+in multiple Node worker threads caused heap corruption on Windows.
+
+With `PCB_BOARD_PACKER_PROFILE=1`, post-place logs include candidate counts,
+hard/bound/feasibility/improvement rejections, baseline cache hits, and timings
+for geometry, score encoding/native calls, route encoding/native calls, and
+iteration wall time. Worker timings are summed work time, not elapsed wall time;
+native-call timings include the addon boundary and deserialization. These metrics
+are also saved in post-place stage data. Parallel batches only use the fixed
+minimum-improvement bound, so they can route more candidates than an incumbent-
+pruned serial search; speedup must be measured. The default 16 iteration limit
+and early stop remain; there is no separate candidate-count budget. Worker task
+and enclosing placement timeouts still apply.
+
+Run `node --import tsx scripts/benchmark-post-place.ts [output.json]` from this
+repository to compare serial and process-pool refinement on a synthetic 256-part
+route-obstacle fixture. It verifies identical placements, diagnostics and moves;
+its timings do not predict a particular production board.

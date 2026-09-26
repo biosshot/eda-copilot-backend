@@ -10,8 +10,8 @@ import { createPcbLayout } from './layout.ts';
 import { createPlacementReport } from './placement-report.ts';
 import { buildPlacementGraph } from './placement-graph.ts';
 import { solvePlacementTreeBottomUp, solvePlacementTreeBottomUpAsync } from '../pcb-auto-place-v2/tree-solver.ts';
-import { refinePostPlacement } from '../pcb-auto-place-v2/post-place-refiner.ts';
-import type { PcbLayoutProgressReporter } from '../progress.ts';
+import { refinePostPlacement, refinePostPlacementAsync } from '../pcb-auto-place-v2/post-place-refiner.ts';
+import { emitPcbLayoutProgress, type PcbLayoutProgressReporter } from '../progress.ts';
 export { PCB_PLACEMENT_ASSUMPTIONS, PlacementError } from '#types/pcb/layout-model.ts';
 export { createPcbLayout } from './layout.ts';
 export { createPlacementReport } from './placement-report.ts';
@@ -111,7 +111,10 @@ async function autoPlacePcbInternalAsync(
     });
     const legalized = preserveFixedPlacements(input, rawPlacements);
     pushStage('02-v2-legalize', legalized);
-    const refined = refinePostPlacement(input, legalized);
+    const refined = await refinePostPlacementAsync(input, legalized, (content) => {
+        emitPcbLayoutProgress(options.onProgress, { stage: 'solve_board', progress: 90, content });
+        if (options.logProgress) console.error(`[pcb-post-place] ${content}`);
+    });
     solverDiagnostics.push(...refined.diagnostics);
     pushStage('03-v2-post-place', refined.placements, postPlaceStageData(refined));
     const placements = normalizePlacementScores(refined.placements);
@@ -156,6 +159,7 @@ function postPlaceStageData(result: ReturnType<typeof refinePostPlacement>) {
         scoreBefore: result.scoreBefore,
         scoreAfter: result.scoreAfter,
         moves: result.moves,
+        profile: result.profile,
         diagnostics: result.diagnostics,
     };
 }

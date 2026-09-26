@@ -1,3 +1,4 @@
+import type { PostPlaceBatchTask, PostPlaceBatchResult } from './post-place-refiner.ts';
 import os from "node:os";
 import { backendResource } from "#runtime/resources.ts";
 import workerpool, { type Pool } from "workerpool";
@@ -37,12 +38,17 @@ export async function solvePlacementSubtreeQueued(taskInput: PcbSubtreeWorkerTas
     return task.timeout(getPcbSubtreeWorkerPoolConfig().taskTimeoutMs);
 }
 
+export async function evaluatePostPlaceBatchQueued(taskInput: PostPlaceBatchTask): Promise<PostPlaceBatchResult> {
+    const task = getPcbSubtreeWorkerPool().exec('evaluatePostPlaceBatch', [taskInput]) as WorkerPoolPromise<PostPlaceBatchResult>;
+    return task.timeout(getPcbSubtreeWorkerPoolConfig().taskTimeoutMs);
+}
+
 export function getPcbSubtreeWorkerPoolConfig() {
     if (!pcbSubtreeWorkerPoolConfig) {
         const defaultWorkers = 0;
         const maxWorkers = envInt("PCB_LAYOUT_SUBTREE_WORKERS", defaultWorkers, 0);
         pcbSubtreeWorkerPoolConfig = {
-            maxWorkers: Math.min(maxWorkers, Math.max(os.cpus().length - 1, 0)),
+            maxWorkers: Math.min(maxWorkers, os.availableParallelism()),
             maxQueueSize: envInt("PCB_LAYOUT_SUBTREE_WORKER_QUEUE_SIZE", Math.max(maxWorkers * 4, 1), 1),
             taskTimeoutMs: envInt("PCB_LAYOUT_SUBTREE_WORKER_TIMEOUT_MS", DEFAULT_TASK_TIMEOUT_MS, 1_000),
             workerTerminateTimeoutMs: envInt("PCB_LAYOUT_SUBTREE_WORKER_TERMINATE_TIMEOUT_MS", DEFAULT_WORKER_TERMINATE_TIMEOUT_MS, 100),
@@ -66,7 +72,9 @@ function getPcbSubtreeWorkerPool() {
     }
     if (!pcbSubtreeWorkerPool) {
         pcbSubtreeWorkerPool = workerpool.pool(WORKER_SCRIPT, {
-            workerType: "thread",
+            // The native PCB packer is not safe to load in multiple worker_threads.
+            // Isolate each worker in its own process to avoid heap corruption.
+            workerType: "process",
             maxWorkers: config.maxWorkers,
             maxQueueSize: config.maxQueueSize,
             workerTerminateTimeout: config.workerTerminateTimeoutMs,
