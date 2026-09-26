@@ -81,9 +81,31 @@ Per-iteration encoding fields are zero because there is no TypeScript/native
 boundary there. These metrics are also saved in post-place stage data.
 Parallel batches only use the fixed
 minimum-improvement bound, so they can route more candidates than an incumbent-
-pruned serial search; speedup must be measured. The default 16 iteration limit
-and early stop remain; there is no separate candidate-count budget. The enclosing
-placement worker timeout still applies; subtree task timeouts do not limit refine.
+pruned serial search; speedup must be measured. The iteration limit is now
+adaptive, using all components and physical footprint pads (including fixed
+components) as a workload estimate:
+
+| Maximum components | Maximum pads | Pass limit |
+|---:|---:|---:|
+| 50 | 250 | 16 |
+| 100 | 500 | 12 |
+| 150 | 1000 | 8 |
+| 250 | 1500 | 5 |
+| Above either final threshold | | 3 |
+
+Both limits in a row must hold. `localImproveIterations` is an additional upper
+bound; zero still disables search. Early stop on no improvement remains.
+Rust enforces a 30-second wall-time budget shared by all threads, iterations and
+optional fixed-opportunity diagnostics. Workers check the deadline between
+candidates and expensive evaluation stages. In-flight native work is allowed
+to finish, so return may slightly exceed the budget; this is not a process-kill
+timeout. The best completed candidate from a partial pass may be committed,
+and uncommitted scratch poses are rolled back. Deadline-limited results can vary
+with scheduling; fully evaluated searches retain deterministic reduction.
+One-time TypeScript compilation and addon conversion are outside this native
+budget. Profiles report workload counts, requested/adaptive/effective pass limits,
+`timeoutMs`, `timedOut`, `stopReason`, and generated versus attempted candidates.
+The enclosing placement worker timeout still applies.
 
 Run `node --import tsx scripts/benchmark-post-place.ts [output.json]` from this
 repository to compare the frozen TypeScript reference and one/two native threads on a synthetic 256-part

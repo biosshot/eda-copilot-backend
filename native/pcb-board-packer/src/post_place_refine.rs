@@ -20,7 +20,7 @@ use std::{
         Arc,
     },
     thread,
-    time::Instant,
+    time::{Duration, Instant},
 };
 const EPS: f64 = 0.001;
 
@@ -30,6 +30,7 @@ pub struct RefineProblem {
     version: u32,
     threads: usize,
     iterations: usize,
+    timeout_ms: u64,
     min_delta: f64,
     placements: Vec<Placement>,
     components: Vec<Component>,
@@ -241,7 +242,11 @@ fn rounded(x: f64) -> f64 {
 
 impl RefineProblem {
     fn validate(&self) -> Result<(), String> {
-        if self.version != 1 || !self.min_delta.is_finite() || self.min_delta < 0.0 {
+        if self.version != 2
+            || self.timeout_ms > 30_000
+            || !self.min_delta.is_finite()
+            || self.min_delta < 0.0
+        {
             return Err("invalid refine contract/options".into());
         }
         self.route_problem.validate(crate::CONTRACT_VERSION)?;
@@ -969,7 +974,11 @@ fn evaluate(
     cache: &mut FxHashMap<Vec<usize>, Cache>,
     stats: &mut BatchProfile,
     incumbent: Option<f64>,
+    deadline: Instant,
 ) -> Result<Option<Evaluation>, String> {
+    if Instant::now() >= deadline {
+        return Ok(None);
+    }
     let previous: Vec<_> = c
         .changes
         .iter()
@@ -993,11 +1002,17 @@ fn evaluate(
             stats.hard_rejected += 1;
             return Ok(None);
         }
+        if Instant::now() >= deadline {
+            return Ok(None);
+        }
         let started = Instant::now();
         let score = p.score(world)?;
         let time = elapsed(started);
         stats.global_score_ms += time;
         stats.score_native_ms += time;
+        if Instant::now() >= deadline {
+            return Ok(None);
+        }
         if entry.baseline.is_none() {
             let started = Instant::now();
             let ids: Vec<_> = changed
@@ -1015,6 +1030,9 @@ fn evaluate(
             stats.baseline_evaluations += 1;
         } else {
             stats.baseline_cache_hits += 1;
+        }
+        if Instant::now() >= deadline {
+            return Ok(None);
         }
         let baseline = entry.baseline.as_ref().unwrap();
         if let Some(ceiling) = baseline.maximum_improvement.filter(|v| v.is_finite()) {
@@ -1062,6 +1080,7 @@ fn iteration(
     current_score: f64,
     candidates: &[Candidate],
     threads: usize,
+    deadline: Instant,
 ) -> Result<(Vec<Option<Evaluation>>, BatchProfile), String> {
     if threads <= 1 {
         let mut cache = FxHashMap::default();
@@ -1070,6 +1089,9 @@ fn iteration(
         let mut best: Option<f64> = None;
         let mut scratch = current.clone();
         for c in candidates {
+            if Instant::now() >= deadline {
+                break;
+            }
             let value = evaluate(
                 p,
                 current,
@@ -1079,6 +1101,7 @@ fn iteration(
                 &mut cache,
                 &mut stats,
                 best,
+                deadline,
             )?;
             if let Some(v) = &value {
                 if best.is_none_or(|b| v.improvement > b + EPS) {
@@ -1111,12 +1134,18 @@ fn iteration(
                     let mut result = Vec::new();
                     let mut scratch = current.clone();
                     loop {
+                        if Instant::now() >= deadline {
+                            break;
+                        }
                         let g = next.fetch_add(1, Ordering::Relaxed);
                         if g >= groups.len() {
                             break;
                         }
                         let mut cache = FxHashMap::default();
                         for &i in &groups[g] {
+                            if Instant::now() >= deadline {
+                                break;
+                            }
                             result.push((
                                 i,
                                 evaluate(
@@ -1128,6 +1157,7 @@ fn iteration(
                                     &mut cache,
                                     &mut stats,
                                     None,
+                                    deadline,
                                 )?,
                             ));
                         }
@@ -1156,7 +1186,12 @@ fn iteration(
 }
 
 impl RefineProblem {
-    fn diagnostics(&self, current: &World, current_score: f64) -> Result<Vec<Value>, String> {
+    fn diagnostics(
+        &self,
+        current: &World,
+        current_score: f64,
+        deadline: Instant,
+    ) -> Result<Vec<Value>, String> {
         let fixed: Vec<_> = self
             .components
             .iter()
@@ -1168,6 +1203,9 @@ impl RefineProblem {
         let mut diagnostics = Vec::new();
         for a in 0..fixed.len() {
             for b in a + 1..fixed.len() {
+                if Instant::now() >= deadline {
+                    return Ok(diagnostics);
+                }
                 let a = fixed[a];
                 let b = fixed[b];
                 let variants = self.swaps(current, a, b, &[0, 180], "")?;
@@ -1175,6 +1213,9 @@ impl RefineProblem {
                 let before = self.violations(current, &changed);
                 let mut best: Option<(Candidate, f64)> = None;
                 for c in variants {
+                    if Instant::now() >= deadline {
+                        return Ok(diagnostics);
+                    }
                     let mut poses = current.placements.clone();
                     for (i, p) in &c.changes {
                         poses[self.components[*i].pose_index] = p.clone();
@@ -1206,6 +1247,9 @@ impl RefineProblem {
             }
         }
         for i in fixed {
+            if Instant::now() >= deadline {
+                return Ok(diagnostics);
+            }
             if paired.contains(&i) {
                 continue;
             }
@@ -1236,10 +1280,13 @@ impl RefineProblem {
 pub fn solve(p: RefineProblem) -> Result<Value, String> {
     p.validate()?;
     let started = Instant::now();
+    let deadline = started + Duration::from_millis(p.timeout_ms);
     let threads = p.threads.max(1).min(
         (thread::available_parallelism()
             .map(|n| n.get())
-            .unwrap_or(1) / 2).clamp(1, 8),
+            .unwrap_or(1)
+            / 2)
+        .clamp(1, 8),
     );
     let mut current = p.world(&p.placements)?;
     let initial_started = Instant::now();
@@ -1248,12 +1295,22 @@ pub fn solve(p: RefineProblem) -> Result<Value, String> {
     let mut current_score = initial_score;
     let mut moves = Vec::new();
     let mut profiles = Vec::new();
+    let mut stop_reason = if p.iterations == 0 {
+        "disabled"
+    } else {
+        "iteration_limit"
+    };
     for pass in 0..p.iterations {
+        if Instant::now() >= deadline {
+            stop_reason = "timeout";
+            break;
+        }
         let generation = Instant::now();
         let candidates = p.candidates(&current)?;
         let generation_ms = elapsed(generation);
         let evaluation = Instant::now();
-        let (results, stats) = iteration(&p, &current, current_score, &candidates, threads)?;
+        let (results, stats) =
+            iteration(&p, &current, current_score, &candidates, threads, deadline)?;
         let evaluation_ms = elapsed(evaluation);
         let mut best: Option<(usize, Evaluation)> = None;
         for (i, value) in results.into_iter().enumerate() {
@@ -1273,11 +1330,18 @@ pub fn solve(p: RefineProblem) -> Result<Value, String> {
         profile["generationMs"] = json!(generation_ms);
         profile["evaluationWallMs"] = json!(evaluation_ms);
         profile["accepted"] = json!(best.is_some());
+        profile["generatedCandidates"] = json!(candidates.len());
+        profile["timedOut"] = json!(Instant::now() >= deadline);
         if std::env::var_os("PCB_BOARD_PACKER_PROFILE").is_some() {
             eprintln!("[pcb-post-place-native] iteration={} {}", pass + 1, profile);
         }
         profiles.push(profile);
         let Some((i, best)) = best else {
+            stop_reason = if Instant::now() >= deadline {
+                "timeout"
+            } else {
+                "no_improvement"
+            };
             break;
         };
         let c = &candidates[i];
@@ -1289,13 +1353,17 @@ pub fn solve(p: RefineProblem) -> Result<Value, String> {
         current_score = best.score;
     }
     let diag = Instant::now();
-    let diagnostics = p.diagnostics(&current, current_score)?;
+    let diagnostics = p.diagnostics(&current, current_score, deadline)?;
     let diag_ms = elapsed(diag);
+    let timed_out = Instant::now() >= deadline;
+    if timed_out {
+        stop_reason = "timeout";
+    }
     let total = elapsed(started);
     if std::env::var_os("PCB_BOARD_PACKER_PROFILE").is_some() {
-        eprintln!("[pcb-post-place-native] total={total:.1}ms threads={threads}");
+        eprintln!("[pcb-post-place-native] total={total:.1}ms threads={threads} passes={}/{} stop={stop_reason}", profiles.len(), p.iterations);
     }
     Ok(
-        json!({"placements":current.placements,"diagnostics":diagnostics,"moves":moves,"scoreBefore":rounded(initial_score),"scoreAfter":rounded(current_score),"profile":{"workers":threads,"initialScoreMs":initial_ms,"fixedDiagnosticsMs":diag_ms,"totalMs":total,"iterations":profiles}}),
+        json!({"placements":current.placements,"diagnostics":diagnostics,"moves":moves,"scoreBefore":rounded(initial_score),"scoreAfter":rounded(current_score),"profile":{"workers":threads,"initialScoreMs":initial_ms,"fixedDiagnosticsMs":diag_ms,"totalMs":total,"iterations":profiles,"iterationLimit":p.iterations,"timeoutMs":p.timeout_ms,"timedOut":timed_out,"stopReason":stop_reason}}),
     )
 }

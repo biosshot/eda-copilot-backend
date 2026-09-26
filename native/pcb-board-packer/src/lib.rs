@@ -239,7 +239,7 @@ fn invalid_passive_island_problem(error: impl std::fmt::Display) -> Error {
 }
 
 #[napi]
-pub fn post_place_refine_contract_version() -> u32 { 1 }
+pub fn post_place_refine_contract_version() -> u32 { 2 }
 
 #[napi]
 pub fn refine_post_placement(problem: Value) -> Result<Value> {

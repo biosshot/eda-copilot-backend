@@ -6,6 +6,7 @@ import { boardBox, boardAnchorPoint, boardHoleKeepoutRadius, getBox, componentBo
 import { componentPairClearance, familyBlockDesignators, canonicalModuleDesignators, blockBboxLimit, familyBboxLimit, moduleBboxLimit } from '../../pcb-auto-place/report-helpers.ts';
 import { expandHints } from '../../pcb-auto-place/hints.ts';
 import { createPostPlaceRouteScoreContext, routeLayoutProblem } from '../post-place-route-score.ts';
+import { postPlaceBudget } from '../post-place-budget.ts';
 
 export type RefineTarget = { kind: 'missing' | 'component' | 'pin' | 'group' | 'point'; component?: number; pad?: number; members?: number[]; point?: Point };
 
@@ -95,7 +96,7 @@ export function encodeNativePostPlaceRefineProblem(input: PlacementInput, placem
     }
     for (const m of input.modules) if (m.hardBbox) hierarchy.push({ key: `module:${m.name}:bbox`, source: { kind: 'group', members: members(canonicalModuleDesignators(input, m)) }, ...moduleBboxLimit(input, m, componentMap) });
     const route = routeLayoutProblem(input, placements, createPostPlaceRouteScoreContext(input));
-    return { version: 1, threads, iterations: Math.max(0, Math.floor(input.solverOptions.localImproveIterations)), minDelta: Math.max(0, input.solverOptions.localImproveMinDelta),
+    return { version: 2, threads, ...postPlaceBudget(input), minDelta: Math.max(0, input.solverOptions.localImproveMinDelta),
         placements, components, groups, compatibility, nets, hints, hierarchy, routeProblem: route.problem,
         board: boardBox(input.board), polygon: input.board.outline.type === 'polygon' ? input.board.outline.points : [], edgeClearance: input.board.clearances.edge,
         holes: (input.boardHoles ?? []).map(h => ({ x: h.x, y: h.y, radius: boardHoleKeepoutRadius(h) + input.board.clearances.component })),

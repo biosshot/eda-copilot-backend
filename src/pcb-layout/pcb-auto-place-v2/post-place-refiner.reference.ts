@@ -99,8 +99,11 @@ type BatchProfile = {
 };
 export type PostPlaceProfile = {
     encodingMs?: number;
+    componentCount?: number; pinCount?: number; adaptiveIterationLimit?: number; requestedIterations?: number;
+    iterationLimit?: number; timeoutMs?: number; timedOut?: boolean;
+    stopReason?: 'disabled' | 'iteration_limit' | 'no_improvement' | 'timeout';
     workers: number; initialScoreMs: number; fixedDiagnosticsMs: number; totalMs: number;
-    iterations: Array<BatchProfile & { generationMs: number; evaluationWallMs: number; accepted: boolean }>;
+    iterations: Array<BatchProfile & { generationMs: number; evaluationWallMs: number; accepted: boolean; generatedCandidates?: number; timedOut?: boolean }>;
 };
 function emptyBatchProfile(): BatchProfile {
     return { candidates: 0, hardRejected: 0, boundRejected: 0, feasibilityRejected: 0,

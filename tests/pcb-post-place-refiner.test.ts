@@ -7,6 +7,8 @@ import { refinePostPlacementAsync, refinePostPlacement } from '../src/pcb-layout
 import { runPcbLayoutDsl } from '../src/pcb-layout/pcb-layout-dsl/spec.ts';
 import { defaultSolverOptions } from '../src/pcb-layout/pcb-auto-place/utils.ts';
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
+import { encodeNativePostPlaceRefineProblem } from '../src/pcb-layout/pcb-auto-place-v2/native/encode-post-place-refine.ts';
+import { postPlaceBudget } from '../src/pcb-layout/pcb-auto-place-v2/post-place-budget.ts';
 import type { FootprintSpec, PcbComponent, Placement, PlacementInput } from '../src/types/pcb/layout-model.ts';
 
 test.describe('post-place refinement', () => {
@@ -332,5 +334,74 @@ test('refinement caps oversized thread configuration at half CPUs and eight', as
     } finally {
         if (previous === undefined) delete process.env.PCB_POST_PLACE_THREADS;
         else process.env.PCB_POST_PLACE_THREADS = previous;
+    }
+});
+
+test('refine budget decreases with either component or pad complexity and respects smaller requested limits', () => {
+    const input = pairInput();
+    input.solverOptions.localImproveIterations = 16;
+    const seed = input.components[0];
+    for (const [components, pads, expected] of [[50, 250, 16], [51, 250, 12], [50, 251, 12],
+        [100, 500, 12], [101, 500, 8], [100, 501, 8], [150, 1000, 8],
+        [151, 1000, 5], [150, 1001, 5], [245, 1333, 5], [250, 1500, 5],
+        [251, 1500, 3], [250, 1501, 3]]) {
+        input.components = Array.from({ length: components }, (_, i) => ({ ...seed,
+            footprint: { ...seed.footprint, pads: Array.from({ length: Math.floor(pads / components) + (i < pads % components ? 1 : 0) }, () => seed.footprint.pads[0]) } }));
+        const budget = postPlaceBudget(input);
+        assert.equal(budget.iterations, expected, `${components} components / ${pads} pads`);
+        assert.equal(budget.pinCount, pads);
+        assert.equal(budget.timeoutMs, 30_000);
+    }
+    input.solverOptions.localImproveIterations = 2;
+    assert.equal(postPlaceBudget(input).iterations, 2);
+    input.solverOptions.localImproveIterations = 0;
+    assert.equal(postPlaceBudget(input).iterations, 0);
+});
+
+test('expired native budget returns the unchanged placement without evaluating candidates', () => {
+    const input = pairInput({ fixed: true });
+    const poses = pairPlacements();
+    for (const threads of [1, 2]) {
+        const problem = encodeNativePostPlaceRefineProblem(input, poses, threads);
+        problem.timeoutMs = 0;
+        const result = loadNativeBoardPacker().refinePostPlacement(problem);
+        assert.equal(result.profile.stopReason, 'timeout');
+        assert.equal(result.profile.timedOut, true);
+        assert.equal(result.profile.iterations.length, 0);
+        assert.deepEqual(result.placements, poses);
+        assert.deepEqual(result.moves, []);
+        assert.deepEqual(result.diagnostics, []);
+    }
+});
+
+test('native timeout stops serial and parallel search and leaves a reusable valid result', () => {
+    const input = pairInput();
+    input.components = []; input.blocks = [];
+    input.board.outline = { type: 'rect', width: 400, height: 400 };
+    const poses: Placement[] = [];
+    for (let tile = 0; tile < 32; tile++) {
+        const part = pairInput();
+        for (const c of part.components) {
+            c.designator += `_${tile}`; c.block_name += `_${tile}`;
+            c.pins.forEach(pin => { pin.signal_name += `_${tile}`; });
+            if (c.pcb.fixedPlacement) c.pcb.edgeMount = { edge: 'left' };
+            input.components.push(c);
+        }
+        input.blocks.push(...part.blocks.map(b => ({ ...b, name: `${b.name}_${tile}`, component_designators: b.component_designators.map(d => `${d}_${tile}`) })));
+        poses.push(...pairPlacements().map(p => ({ ...p, designator: `${p.designator}_${tile}`, x: p.x + (tile % 8 - 3.5) * 30, y: p.y + (Math.floor(tile / 8) - 1.5) * 30 })));
+    }
+    for (const threads of [1, 2]) {
+        const problem = encodeNativePostPlaceRefineProblem(input, poses, threads);
+        problem.timeoutMs = 20;
+        const result = loadNativeBoardPacker().refinePostPlacement(problem);
+        assert.equal(result.profile.stopReason, 'timeout');
+        assert.ok(result.profile.totalMs < 2000, 'cooperative timeout should not run all passes');
+        assert.equal(result.placements.length, poses.length);
+        assert.ok(result.profile.iterations.length > 0, 'exercise timeout inside the search');
+        for (const c of input.components.filter(c => c.pcb.fixedPlacement)) {
+            assert.deepEqual(result.placements.find(p => p.designator === c.designator), poses.find(p => p.designator === c.designator));
+        }
+        const restart = refinePostPlacement({ ...input, solverOptions: { ...input.solverOptions, localImproveIterations: 0 } }, result.placements);
+        assert.equal(restart.scoreBefore, result.scoreAfter, 'partial search must roll back uncommitted scratch poses');
     }
 });
