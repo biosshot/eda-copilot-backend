@@ -124,9 +124,10 @@ struct Context {
 
 pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
     let available = std::thread::available_parallelism().map_or(1, |n| n.get());
+    let limit = (available / 2).clamp(1, 8);
     let threads = std::env::var("PCB_BOARD_PACKER_THREADS")
         .ok().and_then(|value| value.parse::<usize>().ok())
-        .unwrap_or(available).clamp(1, available);
+        .unwrap_or(limit).clamp(1, limit);
     solve_with_threads(problem, threads)
 }
 

@@ -2,6 +2,7 @@ import { refinePostPlacement as refinePostPlacementReference } from '../src/pcb-
 import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { availableParallelism } from 'node:os';
 import { refinePostPlacementAsync, refinePostPlacement } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
 import { runPcbLayoutDsl } from '../src/pcb-layout/pcb-layout-dsl/spec.ts';
 import { defaultSolverOptions } from '../src/pcb-layout/pcb-auto-place/utils.ts';
@@ -318,4 +319,18 @@ test('whole refinement crosses the native boundary once and preserves caller dat
         assert.equal(calls, 1);
         assert.deepEqual({ input, poses }, snapshot);
     } finally { Object.assign(addon, original); }
+});
+
+test('refinement caps oversized thread configuration at half CPUs and eight', async () => {
+    const previous = process.env.PCB_POST_PLACE_THREADS;
+    process.env.PCB_POST_PLACE_THREADS = '1000';
+    try {
+        const input = pairInput();
+        input.solverOptions.localImproveIterations = 0;
+        const result = await refinePostPlacementAsync(input, pairPlacements());
+        assert.equal(result.profile.workers, Math.max(1, Math.min(8, Math.floor(availableParallelism() / 2))));
+    } finally {
+        if (previous === undefined) delete process.env.PCB_POST_PLACE_THREADS;
+        else process.env.PCB_POST_PLACE_THREADS = previous;
+    }
 });

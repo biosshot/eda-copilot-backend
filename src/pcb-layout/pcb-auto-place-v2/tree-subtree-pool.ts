@@ -42,7 +42,7 @@ export function getPcbSubtreeWorkerPoolConfig() {
         const defaultWorkers = 0;
         const maxWorkers = envInt("PCB_LAYOUT_SUBTREE_WORKERS", defaultWorkers, 0);
         pcbSubtreeWorkerPoolConfig = {
-            maxWorkers: Math.min(maxWorkers, os.availableParallelism()),
+            maxWorkers: Math.min(maxWorkers, Math.max(1, Math.min(8, Math.floor(os.availableParallelism() / 2)))),
             maxQueueSize: envInt("PCB_LAYOUT_SUBTREE_WORKER_QUEUE_SIZE", Math.max(maxWorkers * 4, 1), 1),
             taskTimeoutMs: envInt("PCB_LAYOUT_SUBTREE_WORKER_TIMEOUT_MS", DEFAULT_TASK_TIMEOUT_MS, 1_000),
             workerTerminateTimeoutMs: envInt("PCB_LAYOUT_SUBTREE_WORKER_TERMINATE_TIMEOUT_MS", DEFAULT_WORKER_TERMINATE_TIMEOUT_MS, 100),

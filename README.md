@@ -49,7 +49,7 @@ Place this repository beside `easyeda-copilot` and `copilot-router`. In EasyEDA 
 `PCB_BOARD_PACKER_NATIVE_PATH` is an optional developer override. Normal assets resolve relative to this package, independently of the current directory. Always call `disposeBackend()` when the host shuts down to close worker pools. `PCB_LAYOUT_WORKERS`, `PCB_LAYOUT_WORKER_QUEUE_SIZE`, `PCB_LAYOUT_WORKER_TIMEOUT_MS` and `EDA_BACKEND_LOG_LEVEL` configure runtime behavior.
 
 `PCB_BOARD_PACKER_THREADS` controls native board-level beam-search parallelism
-(default: all available logical CPUs; `1` selects serial execution). Independent
+(default and maximum: half the available logical CPUs, rounded down, capped at eight, minimum one; `1` selects serial execution). Independent
 beam states use native Rust threads with private geometry and micro-router caches.
 Results are merged in input order to preserve deterministic tie-breaking. Local
 orientation scoring and repair-variant scoring are also parallel; movement commits
@@ -66,8 +66,7 @@ Each native worker reuses a private world and updates/rolls back only changed
 components. Candidate groups sharing a baseline stay on one worker. Results are
 merged in original order; accepted moves and iterations remain sequential.
 `PCB_POST_PLACE_THREADS` selects native refinement threads (fallback:
-`PCB_BOARD_PACKER_THREADS`, then `PCB_LAYOUT_SUBTREE_WORKERS`, then available
-logical CPUs). `0`/`1` selects one thread. The synchronous API uses one thread.
+`PCB_BOARD_PACKER_THREADS`, then `PCB_LAYOUT_SUBTREE_WORKERS`, then half the available logical CPUs (rounded down, maximum eight, minimum one)). `0`/`1` selects one thread. The synchronous API uses one thread.
 Routing jobs within each candidate remain sequential. No Node process pool,
 per-candidate addon conversion or TypeScript callback is used in this loop.
 The subtree pool remains process-based because loading the addon in multiple
@@ -97,3 +96,5 @@ named components and two passes, and verifies identical output against the
 TypeScript reference. It does not apply placement or run the global solver.
 The reference implementation exists for parity tests/benchmarks only and is
 not imported at runtime by the production refiner.
+
+Placement concurrency is capped at min(8, floor(available CPUs / 2)), minimum one, including explicit environment overrides. Subtree workers can still be disabled with zero.

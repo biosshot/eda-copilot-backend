@@ -1237,9 +1237,9 @@ pub fn solve(p: RefineProblem) -> Result<Value, String> {
     p.validate()?;
     let started = Instant::now();
     let threads = p.threads.max(1).min(
-        thread::available_parallelism()
+        (thread::available_parallelism()
             .map(|n| n.get())
-            .unwrap_or(1),
+            .unwrap_or(1) / 2).clamp(1, 8),
     );
     let mut current = p.world(&p.placements)?;
     let initial_started = Instant::now();

@@ -25,8 +25,9 @@ export function refinePostPlacement(input: PlacementInput, placements: Placement
 
 export async function refinePostPlacementAsync(input: PlacementInput, placements: Placement[], onIteration?: (message: string) => void): Promise<PostPlaceRefineResult> {
     const raw = process.env.PCB_POST_PLACE_THREADS ?? process.env.PCB_BOARD_PACKER_THREADS ?? process.env.PCB_LAYOUT_SUBTREE_WORKERS;
-    const configured = raw === undefined ? availableParallelism() : Number(raw);
-    const threads = Math.min(availableParallelism(), Number.isFinite(configured) ? Math.max(1, Math.floor(configured)) : availableParallelism());
+    const limit = Math.max(1, Math.min(8, Math.floor(availableParallelism() / 2)));
+    const configured = raw === undefined ? limit : Number(raw);
+    const threads = Math.min(limit, Number.isFinite(configured) ? Math.max(1, Math.floor(configured)) : limit);
     onIteration?.(`Post-placement refinement in Rust: up to ${threads} native threads.`);
     return run(input, placements, threads);
 }
