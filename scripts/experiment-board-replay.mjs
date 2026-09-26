@@ -5,6 +5,9 @@ import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/nativ
 import { createPlacementDebugArtifacts, writePlacementArtifacts } from '../src/pcb-layout/artifacts.ts';
 import { getPadWorld } from '../src/pcb-layout/pcb-auto-place/geometry.ts';
 import { variants } from './experiment-block-replay.mjs';
+import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
+import { resolve } from 'node:path';
 
 process.env.PCB_LAYOUT_SUBTREE_WORKERS = '0';
 process.env.PCB_NATIVE_SOLVE_CACHE = '0';
@@ -40,7 +43,16 @@ const stageMetrics = result.stages.map(stage=>{
  }
  return {stage:stage.name,hpwl,pairSum:Object.values(pairs).reduce((a,b)=>a+b,0),pairMax:Math.max(0,...Object.values(pairs)),pairs};
 });
-const summary={fixture,variant,ms:performance.now()-start,ok:result.report.ok,stageMetrics,report:result.report};
+const require=createRequire(import.meta.url);
+const nativePath=resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH??`native/pcb-board-packer/${require('../native/pcb-board-packer/platform.cjs').nativeFilename()}`);
+const fixedChanges=input.components.filter(c=>c.pcb.fixedPlacement).flatMap(c=>{
+ const p=result.placements.find(p=>p.designator===c.designator), fixed=c.pcb.fixedPlacement;
+ return !p || Math.abs(p.x-fixed.x)>.005 || Math.abs(p.y-fixed.y)>.005 || p.rotate!==fixed.rotate || p.layer!==fixed.layer ? [c.designator]:[];
+});
+const summary={fixture,variant,ms:performance.now()-start,ok:result.report.ok,stageMetrics,report:result.report,fixedChanges,
+ nativeHash:createHash('sha256').update(readFileSync(nativePath)).digest('hex'),
+ inputHash:createHash('sha256').update(JSON.stringify(input)).digest('hex'),node:process.version,
+ settings:variants[variant],scope:'single-block native solves with at most 12 primitives; board and postrefine unchanged'};
 writeFileSync(`${dir}/summary.json`,JSON.stringify(summary,null,2));
 writeFileSync(`${dir}/captures.json`,JSON.stringify(captures));
 console.log(JSON.stringify({...summary,report:undefined,stageMetrics:stageMetrics.map(s=>({...s,pairs:undefined}))}));

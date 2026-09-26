@@ -25,10 +25,28 @@ test('bounded block neighbourhoods preserve hard legality', () => {
 });
 
 test('new candidates, beam and pair moves preserve a locked mechanical primitive', () => {
-    const captured = read('ESPower', 0);
-    const solution = addon.solveBlockPrimitives({ ...captured.problem, searchWidth: 4,
+    const problem = structuredClone(usb.problem);
+    const fixed = problem.primitives.find((p: any) => p.placements.some((c: any) => c.designator === 'U11'));
+    fixed.locked = true;
+    const solution = addon.solveBlockPrimitives({ ...problem, searchWidth: 4,
         experiments: { netCandidates: true, pairSwaps: true, reinsertPair: true, keepDenseAccess: true } });
-    assert.deepEqual(solution.states, captured.solution.states);
+    const state = solution.states.find(s => s.primitiveId === fixed.id)!;
+    assert.equal(state.rotation, 0);
+    assert.equal(state.translationX, 0);
+    assert.equal(state.translationY, 0);
+    assert.equal(solution.rank.hardCount, 0);
+});
+
+test('USB combined experiment shortens local two-terminal connections without overlaps', async () => {
+    // Independent geometry measurements, not the score being optimized.
+    // @ts-expect-error research harness is a plain ES module
+    const { metrics } = await import('../scripts/experiment-block-replay.mjs');
+    const candidate = solve({ netCandidates: true, stableNetWeight: true, reducedHull: true,
+        smoothAspect: true, longNets: true, pairSwaps: true }, 4);
+    const before = metrics(usb.problem, usb.solution), after = metrics(usb.problem, candidate);
+    assert.equal(after.hard, 0);
+    assert.ok(after.pairSum < before.pairSum * 0.75);
+    assert.ok(after.pairMax < 6);
 });
 
 test('unknown experiment flags fail instead of silently running the wrong variant', () => {

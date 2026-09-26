@@ -3,8 +3,9 @@ import { readFileSync, writeFileSync, readdirSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
-const nativePath = resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH ?? 'native/pcb-board-packer/pcb-board-packer.win32-x64-msvc.node');
+const nativePath = resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH ?? `native/pcb-board-packer/${require('../native/pcb-board-packer/platform.cjs').nativeFilename()}`);
 const addon = require(nativePath);
 export const variants = {
  NCL: {netCandidates:true,reducedHull:true,longNets:true},
@@ -24,6 +25,9 @@ export const variants = {
  ALLX: { netCandidates: true, width: 4, stableNetWeight: true, reducedHull: true, smoothAspect: true, longNets: true, pairSwaps: true },
  ALLR: { netCandidates: true, width: 4, stableNetWeight: true, reducedHull: true, smoothAspect: true, longNets: true, reinsertPair: true },
 };
+for (const [label, key] of Object.entries({ noN:'netCandidates', noW:'width', noS:'stableNetWeight', noC1:'reducedHull', noC2:'smoothAspect', noL:'longNets' })) {
+ const variant={...variants.ALL}; delete variant[key]; variants[`ALL_${label}`]=variant;
+}
 export function metrics(problem, solution) {
  const nets = new Map(); const boxes = []; let lockedChanged = 0;
  for (const p of problem.primitives) {
@@ -53,7 +57,7 @@ export function metrics(problem, solution) {
  return { hard: solution.rank.hardCount, lockedChanged, width,height,area:width*height,aspect:Math.max(width/height,height/width), hpwl,
   pairSum:lengths.reduce((a,b)=>a+b,0), pairMax:lengths.at(-1)??0, p95:lengths[Math.max(0,Math.ceil(lengths.length*.95)-1)]??0, pairLengths };
 }
-if (process.argv[1] && resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname.replace(/^\/(\w:)/,'$1'))) {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
  const [variantList = 'B0,N,W4,S,C1,C2,L,P,X', filter = '', root = 'tests/fixtures/block-placement', out = '.test-output/block-replay.json'] = process.argv.slice(2);
  const rows = [];
  for (const fixture of readdirSync(root)) {

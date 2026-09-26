@@ -10,9 +10,10 @@ process.env.PCB_NATIVE_SOLVE_CACHE = '0';
 const [fixture = 'ESpower', output = '.test-output/block-experiments'] = process.argv.slice(2);
 const dir = resolve(output, fixture);
 mkdirSync(dir, { recursive: true });
-const root = fixture === 'Telemetry' ? '../telemetry-design/placement-experiments/2026-09-26' : `tests/pcb-layout/${fixture}`;
-const circuit = JSON.parse(readFileSync(`${root}/${fixture === 'Telemetry' ? 'schematic-current' : fixture}.json`, 'utf8'));
-const code = readFileSync(`${root}/${fixture === 'Telemetry' ? 'intent-current' : fixture}.js`, 'utf8');
+const sourceFixture = fixture.toLowerCase() === 'espower' ? 'ESpower' : fixture;
+const root = fixture === 'Telemetry' ? '../telemetry-design/placement-experiments/2026-09-26' : `tests/pcb-layout/${sourceFixture}`;
+const circuit = JSON.parse(readFileSync(`${root}/${fixture === 'Telemetry' ? 'schematic-current' : sourceFixture}.json`, 'utf8'));
+const code = readFileSync(`${root}/${fixture === 'Telemetry' ? 'intent-current' : sourceFixture}.js`, 'utf8');
 // Only the board is preserved by this DSL. Normalize native y-up coordinates
 // exactly like the extension's getPcbExistingPlacement; component poses come from DSL.
 const pcb = fixture === 'Telemetry' ? JSON.parse(readFileSync(`${root}/pcb-current-overview.json`, 'utf8')) : undefined;

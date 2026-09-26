@@ -233,6 +233,19 @@ export interface NativeBlockComponentGeometry extends NativeComponentGeometry {
 }
 
 export interface NativeBlockSolveProblemV2 {
+    /** Opt-in research controls; deliberately not exposed by the placement DSL. */
+    experiments?: {
+        ignoredNets?: string[];
+        keepDenseAccess?: boolean;
+        netCandidates?: boolean;
+        stableNetWeight?: boolean;
+        reducedHull?: boolean;
+        smoothAspect?: boolean;
+        longNets?: boolean;
+        extraPasses?: boolean;
+        pairSwaps?: boolean;
+        reinsertPair?: boolean;
+    };
     version: typeof NATIVE_BLOCK_SOLVE_CONTRACT_VERSION;
     grid: number;
     clearance: number;
