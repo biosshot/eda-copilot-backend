@@ -33,7 +33,10 @@ const filenames = backendPack.files.map(file => file.path);
 for (const file of ['dist/spec-doc.d.ts', 'dist/run-pcb-layout.worker.js', 'dist/tree-subtree.worker.js', 'native/pcb-board-packer/index.cjs', 'native/pcb-board-packer/platform.cjs']) assert.ok(filenames.includes(file), file);
 const { nativeFilename } = require('../native/pcb-board-packer/platform.cjs');
 assert.ok(filenames.includes('native/pcb-board-packer/' + nativeFilename()), 'Host native solver missing');
-assert.ok(!filenames.some(name => /^(?:src|tests)\/|\/target\/|\.env/.test(name)), 'Unexpected package contents');
+assert.ok(!filenames.some(name => /^(?:src|tests|\.artifacts)\/|\/target\/|\.env/.test(name)), 'Unexpected package contents');
+for (const file of filenames.filter(name => name.startsWith('dist/') && /\.(?:js|ts)$/.test(name))) {
+  assert.ok(!/post-place-refiner\.reference|evaluatePostPlaceBatch/.test(readFileSync(join(backend, file), 'utf8')), `Retired TypeScript refiner leaked into package: ${file}`);
+}
 const consumer = mkdtempSync(join(tmpdir(), 'eda-backend-package-'));
 writeFileSync(join(consumer, 'package.json'), JSON.stringify({ name: 'backend-package-check', private: true, type: 'module' }));
 console.log('Installing standalone backend archive into an isolated consumer...');
@@ -44,8 +47,14 @@ copyFileSync(join(backend, 'tests/fixtures/api-fixtures.mjs'), join(consumer, 'f
 writeFileSync(join(consumer, 'smoke.mjs'), `
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { join } from 'node:path';
 import { componentSearch, searchReusedBlock, extractCircuit, getPcbComponentSizes, makePcbLayout, disposeBackend } from 'eda-copilot-backend';
 import { installEasyEdaFixture, schematicInput, pcbInput } from './fixtures.mjs';
+const nativeRequire = createRequire(import.meta.url);
+const backendRoot = join(process.cwd(), 'node_modules/eda-copilot-backend');
+const native = nativeRequire(join(backendRoot, 'native/pcb-board-packer/index.cjs'));
+assert.equal(native.postPlaceRefineContractVersion(), 2, 'Installed package must contain the budget-aware Rust refiner');
+assert.equal(typeof native.refinePostPlacement, 'function');
 const transport = installEasyEdaFixture();
 try {
   assert.deepEqual(await searchReusedBlock({ query: 'power' }), []);
