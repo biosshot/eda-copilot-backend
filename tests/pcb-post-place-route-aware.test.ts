@@ -1,4 +1,4 @@
-import { refinePostPlacement as refinePostPlacementReference } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.reference.ts';
+import { refinePostPlacement as refinePostPlacementSerial } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
 import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -131,13 +131,13 @@ function placement(placements: Placement[], designator: string) {
     return found;
 }
 
-// Exercises native threads against the frozen TypeScript reference.
-test('Rust threads match TypeScript reference moves and scores', async () => {
+// Compares serial and parallel Rust evaluation.
+test('Rust threads match serial Rust moves and scores', async () => {
     process.env.PCB_POST_PLACE_THREADS = '3';
     try {
         const input = routeAwareSwapInput();
         const before = routeAwareSwapPlacements();
-        const { profile: serialProfile, ...serial } = refinePostPlacementReference(input, before);
+        const { profile: serialProfile, ...serial } = refinePostPlacementSerial(input, before);
         for (let repeat = 0; repeat < 2; repeat++) {
             const { profile, ...parallel } = await refinePostPlacementAsync(input, before);
             assert.deepEqual(parallel, serial);

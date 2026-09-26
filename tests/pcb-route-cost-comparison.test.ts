@@ -1,4 +1,4 @@
-import { refinePostPlacement as refinePostPlacementReference } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.reference.ts';
+import { refinePostPlacement as refinePostPlacementSerial } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
 import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -209,33 +209,6 @@ test('ESPower post-processor accepts the R7/R8 swap despite a worse geometric sc
     }
 });
 
-test('route improvement bounds preserve the eager refiner result', () => {
-    const prepare = addon.prepareRouteLayoutComparison;
-    const compare = addon.compareRouteLayoutCandidate;
-    let calls = 0;
-    addon.compareRouteLayoutCandidate = (...args) => { calls++; return compare(...args); };
-    try {
-        const { input, placements } = espowerRefinementInput();
-        const bounded = refinePostPlacementReference(input, placements);
-        const boundedCalls = calls;
-        calls = 0;
-        addon.prepareRouteLayoutComparison = (...args) => {
-            const baseline = prepare(...args);
-            delete baseline.maximumImprovement;
-            return baseline;
-        };
-        const eager = refinePostPlacementReference(input, placements);
-        const { profile: boundedProfile, ...boundedResult } = bounded;
-        const { profile: eagerProfile, ...eagerResult } = eager;
-        assert.deepEqual(boundedResult, eagerResult);
-        assert.ok(boundedProfile.iterations.length === eagerProfile.iterations.length);
-        assert.ok(boundedCalls <= calls);
-    } finally {
-        addon.prepareRouteLayoutComparison = prepare;
-        addon.compareRouteLayoutCandidate = compare;
-    }
-});
-
 function espowerRefinementInput(): { input: PlacementInput; placements: Placement[] } {
     const { current, obstacles } = espowerSnapshot();
     // Rebase the captured world-space boxes to zero-rotation footprints. This
@@ -282,11 +255,11 @@ function espowerRefinementInput(): { input: PlacementInput; placements: Placemen
     return { input, placements };
 }
 
-test('native threaded refinement preserves TypeScript ESPower route-priority decisions', async () => {
+test('native threaded refinement preserves serial ESPower route-priority decisions', async () => {
     process.env.PCB_POST_PLACE_THREADS = '4';
     try {
         const { input, placements } = espowerRefinementInput();
-        const { profile: ignored, ...serial } = refinePostPlacementReference(input, placements);
+        const { profile: ignored, ...serial } = refinePostPlacementSerial(input, placements);
         const { profile, ...parallel } = await refinePostPlacementAsync(input, placements);
         assert.deepEqual(parallel, serial);
         assert.equal(profile.workers, 4);

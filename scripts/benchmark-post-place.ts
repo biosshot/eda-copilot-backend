@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
-import { refinePostPlacement as reference } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.reference.ts';
 import { refinePostPlacement, refinePostPlacementAsync } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
 import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import { defaultSolverOptions } from '../src/pcb-layout/pcb-auto-place/utils.ts';
@@ -126,12 +125,10 @@ for (let i = 0; i < 64; i++) {
 }
 process.env.PCB_POST_PLACE_THREADS = '2';
 try {
-    const { profile: referenceProfile, ...expected } = reference(input, placements);
     const { profile: serialProfile, ...serial } = refinePostPlacement(input, placements);
     const { profile: parallelProfile, ...parallel } = await refinePostPlacementAsync(input, placements);
     assert.deepEqual(parallel, serial);
-    assert.deepEqual(serial, expected);
-    const report = { components: input.components.length, reference: referenceProfile, serial: serialProfile, parallel: parallelProfile, identical: true };
+    const report = { components: input.components.length, serial: serialProfile, parallel: parallelProfile, identical: true };
     if (process.argv[2]) writeFileSync(process.argv[2], JSON.stringify(report, null, 2));
     console.log(JSON.stringify(report));
 } finally { await terminatePcbSubtreeWorkerPool(); }

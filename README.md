@@ -108,15 +108,14 @@ budget. Profiles report workload counts, requested/adaptive/effective pass limit
 The enclosing placement worker timeout still applies.
 
 Run `node --import tsx scripts/benchmark-post-place.ts [output.json]` from this
-repository to compare the frozen TypeScript reference and one/two native threads on a synthetic 256-part
+repository to compare one/two native threads on a synthetic 256-part
 route-obstacle fixture. It verifies identical placements, diagnostics and moves;
 its timings do not predict a particular production board.
 
 `scripts/benchmark-native-post-place.ts snapshot.json [output.json]` uses a
 saved `{ input, placements }` board snapshot, bounds candidate generation to six
-named components and two passes, and verifies identical output against the
-TypeScript reference. It does not apply placement or run the global solver.
-The reference implementation exists for parity tests/benchmarks only and is
-not imported at runtime by the production refiner.
+named components and two passes, and verifies identical output between serial and parallel Rust. It does not apply placement or run the global solver.
+The retired TypeScript implementation is archived locally under ignored
+`.artifacts/retired-typescript-refiner/`; tracked code has no dependency on it.
 
 Placement concurrency is capped at min(8, floor(available CPUs / 2)), minimum one, including explicit environment overrides. Subtree workers can still be disabled with zero.

@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
-import { refinePostPlacement as reference } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.reference.ts';
 import { refinePostPlacement, refinePostPlacementAsync } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
 import type { PlacementInput, Placement } from '../src/types/pcb/layout-model.ts';
 
@@ -18,7 +17,6 @@ snapshot.input.solverOptions.localImproveIterations = 2;
 const results: Record<string, unknown> = {};
 let expected: unknown;
 for (const [name, run] of [
-    ['typescript', () => reference(snapshot.input, snapshot.placements)],
     ['rust1', () => refinePostPlacement(snapshot.input, snapshot.placements)],
     ['rust2', () => { process.env.PCB_POST_PLACE_THREADS = '2'; return refinePostPlacementAsync(snapshot.input, snapshot.placements); }],
 ] as const) {

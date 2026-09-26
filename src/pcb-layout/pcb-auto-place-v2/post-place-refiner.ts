@@ -6,8 +6,8 @@ import { encodeNativePostPlaceRefineProblem } from './native/encode-post-place-r
 import { encodeNativePostPlaceScoreProblem } from './native/encode-post-place-score.ts';
 import { NATIVE_POST_PLACE_SCORE_CONTRACT_VERSION } from './native/contract.ts';
 import { postPlaceBudget } from './post-place-budget.ts';
-import type { PostPlaceRefineResult } from './post-place-refiner.reference.ts';
-export type { PostPlaceMove, PostPlaceRefineResult, PostPlaceProfile } from './post-place-refiner.reference.ts';
+import type { PostPlaceRefineResult } from './post-place-refiner.types.ts';
+export type { PostPlaceMove, PostPlaceRefineResult, PostPlaceProfile } from './post-place-refiner.types.ts';
 
 function run(input: PlacementInput, placements: Placement[], threads: number): PostPlaceRefineResult {
     const addon = loadNativeBoardPacker();

@@ -1,4 +1,4 @@
-import { refinePostPlacement as refinePostPlacementReference } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.reference.ts';
+import { refinePostPlacement as refinePostPlacementSerial } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
 import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -235,13 +235,13 @@ function componentByDesignator(input: PlacementInput, designator: string) {
     return result;
 }
 
-// Exercises native threads against the frozen TypeScript reference.
-test('Rust threads match TypeScript reference moves and scores', async () => {
+// Compares serial and parallel Rust evaluation.
+test('Rust threads match serial Rust moves and scores', async () => {
     process.env.PCB_POST_PLACE_THREADS = '3';
     try {
         for (const input of [pairInput(), pairInput({ fixed: true }), pairInput({ fixed: true, refineGroup: true })]) {
             const before = pairPlacements();
-            const { profile: serialProfile, ...serial } = refinePostPlacementReference(input, before);
+            const { profile: serialProfile, ...serial } = refinePostPlacementSerial(input, before);
             for (let repeat = 0; repeat < 2; repeat++) {
                 const { profile, ...parallel } = await refinePostPlacementAsync(input, before);
                 assert.deepEqual(parallel, serial);
@@ -260,7 +260,7 @@ test('Rust threads match TypeScript reference moves and scores', async () => {
     }
 });
 
-test('native refinement matches reference across board, side and hard-constraint cases', async () => {
+test('native threads match across board, side and hard-constraint cases', async () => {
     process.env.PCB_POST_PLACE_THREADS = '3';
     try {
         for (let scenario = 0; scenario < 12; scenario++) {
@@ -292,7 +292,7 @@ test('native refinement matches reference across board, side and hard-constraint
                 segments: [{ index: 0, source: { type: 'pin', designator: 'A', pin_number: '1' }, target: { type: 'pin', designator: 'RIGHT', pin_number: '1' }, priority: 'critical' }] }];
             if (scenario === 10) input.modules = [{ name: 'm', description: '', block_names: ['pair'], hardBbox: true, maxWidth: 8, maxHeight: 4 }];
             if (scenario === 11) { input.components.reverse(); before.reverse(); }
-            const { profile: ignored, ...expected } = refinePostPlacementReference(input, before);
+            const { profile: ignored, ...expected } = refinePostPlacementSerial(input, before);
             const { profile: serialProfile, ...serial } = refinePostPlacement(input, before);
             const { profile: parallelProfile, ...parallel } = await refinePostPlacementAsync(input, before);
             assert.deepEqual(serial, expected, `serial scenario ${scenario}`);
@@ -305,7 +305,7 @@ test('whole refinement crosses the native boundary once and preserves caller dat
     const input = pairInput();
     const poses = pairPlacements();
     const snapshot = structuredClone({ input, poses });
-    const { profile: ignored, ...expected } = refinePostPlacementReference(input, poses);
+    const { profile: ignored, ...expected } = refinePostPlacementSerial(input, poses);
     const addon = loadNativeBoardPacker();
     const original = { refinePostPlacement: addon.refinePostPlacement, scorePostPlace: addon.scorePostPlace,
         prepareRouteLayoutComparison: addon.prepareRouteLayoutComparison, compareRouteLayoutCandidate: addon.compareRouteLayoutCandidate };

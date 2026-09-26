@@ -1,5 +1,5 @@
 import type { NativePostPlaceRefineProblem } from './encode-post-place-refine.ts';
-import type { PostPlaceRefineResult } from '../post-place-refiner.reference.ts';
+import type { PostPlaceRefineResult } from '../post-place-refiner.types.ts';
 import type { BoardEdge, Box, Layer, PlacementRelationKind, Point } from '#types/pcb/layout-model.ts';
 
 export const NATIVE_BOARD_PACK_CONTRACT_VERSION = 3 as const;
