@@ -84,7 +84,7 @@ export function comparePostPlaceRouteCandidate(
     return result;
 }
 
-function routeLayoutProblem(input: PlacementInput, placements: Placement[], context: PostPlaceRouteScoreContext) {
+export function routeLayoutProblem(input: PlacementInput, placements: Placement[], context: PostPlaceRouteScoreContext) {
     const placementByDesignator = new Map(placements.map((placement) => [placement.designator, placement]));
     const primitives = input.components.flatMap((component) => {
         const placement = placementByDesignator.get(component.designator);

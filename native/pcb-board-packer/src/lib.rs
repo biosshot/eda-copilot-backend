@@ -1,3 +1,4 @@
+mod post_place_refine;
 #[cfg(feature = "placement-bench")]
 mod post_place_probe;
 mod block_solver;
@@ -235,4 +236,13 @@ fn invalid_passive_island_problem(error: impl std::fmt::Display) -> Error {
         Status::InvalidArg,
         format!("Invalid native passive island problem: {error}"),
     )
+}
+
+#[napi]
+pub fn post_place_refine_contract_version() -> u32 { 1 }
+
+#[napi]
+pub fn refine_post_placement(problem: Value) -> Result<Value> {
+    let problem: post_place_refine::RefineProblem = serde_json::from_value(problem).map_err(invalid_problem)?;
+    post_place_refine::solve(problem).map_err(invalid_problem)
 }

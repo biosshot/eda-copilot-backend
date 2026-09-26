@@ -1,3 +1,4 @@
+import { refinePostPlacement as refinePostPlacementReference } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.reference.ts';
 import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -215,7 +216,7 @@ test('route improvement bounds preserve the eager refiner result', () => {
     addon.compareRouteLayoutCandidate = (...args) => { calls++; return compare(...args); };
     try {
         const { input, placements } = espowerRefinementInput();
-        const bounded = refinePostPlacement(input, placements);
+        const bounded = refinePostPlacementReference(input, placements);
         const boundedCalls = calls;
         calls = 0;
         addon.prepareRouteLayoutComparison = (...args) => {
@@ -223,7 +224,7 @@ test('route improvement bounds preserve the eager refiner result', () => {
             delete baseline.maximumImprovement;
             return baseline;
         };
-        const eager = refinePostPlacement(input, placements);
+        const eager = refinePostPlacementReference(input, placements);
         const { profile: boundedProfile, ...boundedResult } = bounded;
         const { profile: eagerProfile, ...eagerResult } = eager;
         assert.deepEqual(boundedResult, eagerResult);
@@ -281,16 +282,16 @@ function espowerRefinementInput(): { input: PlacementInput; placements: Placemen
     return { input, placements };
 }
 
-test('parallel refinement preserves ESPower route-priority decisions', async () => {
-    process.env.PCB_LAYOUT_SUBTREE_WORKERS = '4';
+test('native threaded refinement preserves TypeScript ESPower route-priority decisions', async () => {
+    process.env.PCB_POST_PLACE_THREADS = '4';
     try {
         const { input, placements } = espowerRefinementInput();
-        const { profile: ignored, ...serial } = refinePostPlacement(input, placements);
+        const { profile: ignored, ...serial } = refinePostPlacementReference(input, placements);
         const { profile, ...parallel } = await refinePostPlacementAsync(input, placements);
         assert.deepEqual(parallel, serial);
         assert.equal(profile.workers, 4);
     } finally {
         await terminatePcbSubtreeWorkerPool();
-        delete process.env.PCB_LAYOUT_SUBTREE_WORKERS;
+        delete process.env.PCB_POST_PLACE_THREADS;
     }
 });

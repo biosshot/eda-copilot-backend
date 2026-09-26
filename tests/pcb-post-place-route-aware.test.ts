@@ -1,3 +1,4 @@
+import { refinePostPlacement as refinePostPlacementReference } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.reference.ts';
 import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -130,21 +131,23 @@ function placement(placements: Placement[], designator: string) {
     return found;
 }
 
-// Uses the built worker entry, exercising real IPC/native loading rather than a mock.
-test('process pool produces identical post-place moves and scores', async () => {
-    process.env.PCB_LAYOUT_SUBTREE_WORKERS = '3';
+// Exercises native threads against the frozen TypeScript reference.
+test('Rust threads match TypeScript reference moves and scores', async () => {
+    process.env.PCB_POST_PLACE_THREADS = '3';
     try {
         const input = routeAwareSwapInput();
         const before = routeAwareSwapPlacements();
-        const { profile: serialProfile, ...serial } = refinePostPlacement(input, before);
+        const { profile: serialProfile, ...serial } = refinePostPlacementReference(input, before);
         for (let repeat = 0; repeat < 2; repeat++) {
             const { profile, ...parallel } = await refinePostPlacementAsync(input, before);
             assert.deepEqual(parallel, serial);
+            const { profile: nativeProfile, ...nativeSerial } = refinePostPlacement(input, before);
+            assert.deepEqual(nativeSerial, serial);
             assert.ok(profile.workers > 1);
             assert.deepEqual(profile.iterations.map(i => i.candidates), serialProfile.iterations.map(i => i.candidates));
         }
     } finally {
         await terminatePcbSubtreeWorkerPool();
-        delete process.env.PCB_LAYOUT_SUBTREE_WORKERS;
+        delete process.env.PCB_POST_PLACE_THREADS;
     }
 });

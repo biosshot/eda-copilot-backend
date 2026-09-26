@@ -1,3 +1,5 @@
+import type { NativePostPlaceRefineProblem } from './encode-post-place-refine.ts';
+import type { PostPlaceRefineResult } from '../post-place-refiner.reference.ts';
 import type { BoardEdge, Box, Layer, PlacementRelationKind, Point } from '#types/pcb/layout-model.ts';
 
 export const NATIVE_BOARD_PACK_CONTRACT_VERSION = 3 as const;
@@ -215,6 +217,8 @@ export interface NativeBoardPackerAddon {
     solveBlockPrimitives(problem: NativeBlockSolveProblemV2): NativeBlockSolveSolutionV2;
     passiveIslandContractVersion(): number;
     solvePassiveNetIsland(problem: NativePassiveIslandProblemV1): NativePassiveIslandSolutionV1;
+    postPlaceRefineContractVersion(): number;
+    refinePostPlacement(problem: NativePostPlaceRefineProblem): PostPlaceRefineResult;
     postPlaceScoreContractVersion(): number;
     scorePostPlace(problem: NativePostPlaceScoreProblemV1): number;
     signalPathContractVersion(): number;

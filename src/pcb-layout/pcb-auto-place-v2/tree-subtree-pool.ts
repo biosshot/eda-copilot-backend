@@ -1,4 +1,3 @@
-import type { PostPlaceBatchTask, PostPlaceBatchResult } from './post-place-refiner.ts';
 import os from "node:os";
 import { backendResource } from "#runtime/resources.ts";
 import workerpool, { type Pool } from "workerpool";
@@ -35,11 +34,6 @@ let pcbSubtreeWorkerPoolConfig: PcbSubtreeWorkerPoolConfig | null = null;
 export async function solvePlacementSubtreeQueued(taskInput: PcbSubtreeWorkerTask): Promise<TreeSolveResult> {
     const pool = getPcbSubtreeWorkerPool();
     const task = pool.exec("solvePlacementSubtreeInWorker", [taskInput]) as WorkerPoolPromise<TreeSolveResult>;
-    return task.timeout(getPcbSubtreeWorkerPoolConfig().taskTimeoutMs);
-}
-
-export async function evaluatePostPlaceBatchQueued(taskInput: PostPlaceBatchTask): Promise<PostPlaceBatchResult> {
-    const task = getPcbSubtreeWorkerPool().exec('evaluatePostPlaceBatch', [taskInput]) as WorkerPoolPromise<PostPlaceBatchResult>;
     return task.timeout(getPcbSubtreeWorkerPoolConfig().taskTimeoutMs);
 }
 

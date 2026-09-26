@@ -1,9 +1,11 @@
+import { refinePostPlacement as refinePostPlacementReference } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.reference.ts';
 import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { refinePostPlacementAsync, refinePostPlacement } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
 import { runPcbLayoutDsl } from '../src/pcb-layout/pcb-layout-dsl/spec.ts';
 import { defaultSolverOptions } from '../src/pcb-layout/pcb-auto-place/utils.ts';
+import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
 import type { FootprintSpec, PcbComponent, Placement, PlacementInput } from '../src/types/pcb/layout-model.ts';
 
 test.describe('post-place refinement', () => {
@@ -230,13 +232,13 @@ function componentByDesignator(input: PlacementInput, designator: string) {
     return result;
 }
 
-// Uses the built worker entry, exercising real IPC/native loading rather than a mock.
-test('process pool produces identical post-place moves and scores', async () => {
-    process.env.PCB_LAYOUT_SUBTREE_WORKERS = '3';
+// Exercises native threads against the frozen TypeScript reference.
+test('Rust threads match TypeScript reference moves and scores', async () => {
+    process.env.PCB_POST_PLACE_THREADS = '3';
     try {
         for (const input of [pairInput(), pairInput({ fixed: true }), pairInput({ fixed: true, refineGroup: true })]) {
             const before = pairPlacements();
-            const { profile: serialProfile, ...serial } = refinePostPlacement(input, before);
+            const { profile: serialProfile, ...serial } = refinePostPlacementReference(input, before);
             for (let repeat = 0; repeat < 2; repeat++) {
                 const { profile, ...parallel } = await refinePostPlacementAsync(input, before);
                 assert.deepEqual(parallel, serial);
@@ -251,6 +253,69 @@ test('process pool produces identical post-place moves and scores', async () => 
         }
     } finally {
         await terminatePcbSubtreeWorkerPool();
-        delete process.env.PCB_LAYOUT_SUBTREE_WORKERS;
+        delete process.env.PCB_POST_PLACE_THREADS;
     }
+});
+
+test('native refinement matches reference across board, side and hard-constraint cases', async () => {
+    process.env.PCB_POST_PLACE_THREADS = '3';
+    try {
+        for (let scenario = 0; scenario < 12; scenario++) {
+            const input = pairInput();
+            const before = pairPlacements();
+            input.solverOptions.localImproveIterations = 3;
+            if (scenario === 1) input.board.outline = { type: 'polygon', width: 40, height: 20,
+                points: [{ x: -20, y: -10 }, { x: 20, y: -10 }, { x: 20, y: 10 }, { x: 2, y: 10 }, { x: 2, y: 2 }, { x: -2, y: 2 }, { x: -2, y: 10 }, { x: -20, y: 10 }] };
+            if (scenario === 2) {
+                input.board.allowedLayers = ['top', 'bottom'];
+                input.components[0].pcb.allowedLayers = ['top', 'bottom'];
+                input.components[1].pcb.allowedLayers = ['top', 'bottom'];
+                before[1].layer = 'bottom';
+                input.components[0].footprint.pads[0].mount = 'through_hole';
+                input.components[0].footprint.pads[0].drillDiameter = 0.3;
+            }
+            if (scenario === 3) input.constraintRegions = [{ name: 'ban', box: { left: 4, right: 6, top: -1, bottom: 1 }, layers: ['top'], allowBlocks: [] }];
+            if (scenario === 4) input.boardHoles = [{ name: 'hole', x: 5, y: 0, drill: 0.6, diameter: 1, keepout: 1 }];
+            if (scenario === 5) Object.assign(input.blocks[0], { hardAnchor: true, anchor: { type: 'component', designator: 'LEFT' }, maxAnchorGap: 2, anchorOffset: { x: 1, y: 1 } });
+            if (scenario === 6) Object.assign(input.blocks[0], { hardBbox: true, maxBboxWidth: 5, maxBboxHeight: 3, familyHard: true, familyMaxWidth: 7 });
+            if (scenario === 7) input.hints = [{ relation: 'critical_pair', source: { type: 'block', block_name: 'pair' }, target: { type: 'board_anchor', anchor: 'board.right' }, hard: true, maxDistance: 3, priority: 'critical' }];
+            if (scenario === 8) input.hints = [
+                { relation: 'clearance', source: { type: 'pin', designator: 'A', pin_number: '1' }, target: 'all', min: 1, priority: 'critical' },
+                { relation: 'edge', source: { type: 'block', block_name: 'pair' }, edge: 'left', priority: 'high' },
+                { relation: 'same_side', source: { type: 'component', designator: 'A' }, target: { type: 'component', designator: 'B' }, priority: 'high' },
+            ];
+            if (scenario === 9) input.paths = [{ id: 'path', priority: 'critical', shape: 'straight', preferFacingPads: true,
+                stages: [], terminals: { first: { type: 'pin', designator: 'A', pin_number: '1' }, last: { type: 'pin', designator: 'RIGHT', pin_number: '1' } },
+                segments: [{ index: 0, source: { type: 'pin', designator: 'A', pin_number: '1' }, target: { type: 'pin', designator: 'RIGHT', pin_number: '1' }, priority: 'critical' }] }];
+            if (scenario === 10) input.modules = [{ name: 'm', description: '', block_names: ['pair'], hardBbox: true, maxWidth: 8, maxHeight: 4 }];
+            if (scenario === 11) { input.components.reverse(); before.reverse(); }
+            const { profile: ignored, ...expected } = refinePostPlacementReference(input, before);
+            const { profile: serialProfile, ...serial } = refinePostPlacement(input, before);
+            const { profile: parallelProfile, ...parallel } = await refinePostPlacementAsync(input, before);
+            assert.deepEqual(serial, expected, `serial scenario ${scenario}`);
+            assert.deepEqual(parallel, expected, `parallel scenario ${scenario}`);
+        }
+    } finally { delete process.env.PCB_POST_PLACE_THREADS; }
+});
+
+test('whole refinement crosses the native boundary once and preserves caller data', () => {
+    const input = pairInput();
+    const poses = pairPlacements();
+    const snapshot = structuredClone({ input, poses });
+    const { profile: ignored, ...expected } = refinePostPlacementReference(input, poses);
+    const addon = loadNativeBoardPacker();
+    const original = { refinePostPlacement: addon.refinePostPlacement, scorePostPlace: addon.scorePostPlace,
+        prepareRouteLayoutComparison: addon.prepareRouteLayoutComparison, compareRouteLayoutCandidate: addon.compareRouteLayoutCandidate };
+    let calls = 0;
+    try {
+        addon.refinePostPlacement = problem => { calls++; return original.refinePostPlacement(problem); };
+        const unexpected = () => { throw new Error('Per-candidate native boundary must not be used'); };
+        addon.scorePostPlace = unexpected;
+        addon.prepareRouteLayoutComparison = unexpected;
+        addon.compareRouteLayoutCandidate = unexpected;
+        const { profile, ...actual } = refinePostPlacement(input, poses);
+        assert.deepEqual(actual, expected);
+        assert.equal(calls, 1);
+        assert.deepEqual({ input, poses }, snapshot);
+    } finally { Object.assign(addon, original); }
 });

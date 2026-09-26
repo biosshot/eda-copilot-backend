@@ -58,27 +58,42 @@ log separate beam, local-improvement and repair elapsed times. More threads requ
 memory; this setting is separate from `PCB_LAYOUT_SUBTREE_WORKERS`, which uses
 isolated Node processes for block/module placement.
 
-The asynchronous post-placement refiner reuses the subtree process pool
-(`PCB_LAYOUT_SUBTREE_WORKERS`; 0/1 selects serial refinement). Each iteration
-scores immutable rotate/swap candidates concurrently, then selects one move in
-original candidate order. Variants affecting the same components share a worker
-batch and a route-baseline cache. IPC sends changed poses, not a complete board
-per candidate. The synchronous API remains serial. Native routing jobs within a
-candidate remain sequential. The pool uses processes because loading the addon
-in multiple Node worker threads caused heap corruption on Windows.
+Post-placement refinement makes one TypeScript-to-Rust call for the entire
+search. TypeScript compiles invariant geometry, constraints and JavaScript
+collation ranks once; Rust generates candidates, checks hard constraints,
+scores/routes them, caches route baselines, selects moves and emits diagnostics.
+Each native worker reuses a private world and updates/rolls back only changed
+components. Candidate groups sharing a baseline stay on one worker. Results are
+merged in original order; accepted moves and iterations remain sequential.
+`PCB_POST_PLACE_THREADS` selects native refinement threads (fallback:
+`PCB_BOARD_PACKER_THREADS`, then `PCB_LAYOUT_SUBTREE_WORKERS`, then available
+logical CPUs). `0`/`1` selects one thread. The synchronous API uses one thread.
+Routing jobs within each candidate remain sequential. No Node process pool,
+per-candidate addon conversion or TypeScript callback is used in this loop.
+The subtree pool remains process-based because loading the addon in multiple
+Node worker threads caused heap corruption on Windows.
 
 With `PCB_BOARD_PACKER_PROFILE=1`, post-place logs include candidate counts,
 hard/bound/feasibility/improvement rejections, baseline cache hits, and timings
-for geometry, score encoding/native calls, route encoding/native calls, and
-iteration wall time. Worker timings are summed work time, not elapsed wall time;
-native-call timings include the addon boundary and deserialization. These metrics
-are also saved in post-place stage data. Parallel batches only use the fixed
+for geometry, scoring, routing and iteration wall time. Worker timings are
+summed work time, not elapsed wall time. Top-level `encodingMs` measures the
+one-time TypeScript compilation; native `totalMs` excludes addon conversion.
+Per-iteration encoding fields are zero because there is no TypeScript/native
+boundary there. These metrics are also saved in post-place stage data.
+Parallel batches only use the fixed
 minimum-improvement bound, so they can route more candidates than an incumbent-
 pruned serial search; speedup must be measured. The default 16 iteration limit
-and early stop remain; there is no separate candidate-count budget. Worker task
-and enclosing placement timeouts still apply.
+and early stop remain; there is no separate candidate-count budget. The enclosing
+placement worker timeout still applies; subtree task timeouts do not limit refine.
 
 Run `node --import tsx scripts/benchmark-post-place.ts [output.json]` from this
-repository to compare serial and process-pool refinement on a synthetic 256-part
+repository to compare the frozen TypeScript reference and one/two native threads on a synthetic 256-part
 route-obstacle fixture. It verifies identical placements, diagnostics and moves;
 its timings do not predict a particular production board.
+
+`scripts/benchmark-native-post-place.ts snapshot.json [output.json]` uses a
+saved `{ input, placements }` board snapshot, bounds candidate generation to six
+named components and two passes, and verifies identical output against the
+TypeScript reference. It does not apply placement or run the global solver.
+The reference implementation exists for parity tests/benchmarks only and is
+not imported at runtime by the production refiner.
