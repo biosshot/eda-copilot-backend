@@ -1,10 +1,11 @@
 # Changelog
 
-## 0.3.2 - 2026-09-26
+## 0.3.3 - 2026-09-26
 
 - Run complete route-aware post-placement refinement in Rust with parallel candidate evaluation and one native call per search.
 - Adapt refinement to component/pad complexity (3–16 passes) and enforce a cooperative 30-second native budget.
 - Cap placement concurrency at half available CPUs, with a maximum of eight workers.
+- Validate CPU-capped wrapper behavior on small CI hosts and test three-thread Rust search directly.
 - Remove the retired TypeScript refiner from tracked sources and retain native correctness, timeout and package regression checks.
 
 ## 0.2.0 - 2026-09-19

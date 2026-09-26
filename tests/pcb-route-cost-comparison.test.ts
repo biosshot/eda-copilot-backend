@@ -1,3 +1,4 @@
+import { availableParallelism } from 'node:os';
 import { refinePostPlacement as refinePostPlacementSerial } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
 import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import assert from 'node:assert/strict';
@@ -262,7 +263,7 @@ test('native threaded refinement preserves serial ESPower route-priority decisio
         const { profile: ignored, ...serial } = refinePostPlacementSerial(input, placements);
         const { profile, ...parallel } = await refinePostPlacementAsync(input, placements);
         assert.deepEqual(parallel, serial);
-        assert.equal(profile.workers, 4);
+        assert.equal(profile.workers, Math.max(1, Math.min(4, Math.floor(availableParallelism() / 2))));
     } finally {
         await terminatePcbSubtreeWorkerPool();
         delete process.env.PCB_POST_PLACE_THREADS;
