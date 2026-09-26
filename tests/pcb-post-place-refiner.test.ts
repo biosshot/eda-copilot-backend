@@ -406,13 +406,13 @@ test('native timeout stops serial and parallel search and leaves a reusable vali
     }
 });
 
- test('direct Rust parallel search matches serial results independently of host wrapper cap', () => {
+ test('direct Rust search respects CPU caps and matches serial results', () => {
     const input = pairInput();
     const poses = pairPlacements();
     const addon = loadNativeBoardPacker();
     const { profile: serialProfile, ...serial } = addon.refinePostPlacement(encodeNativePostPlaceRefineProblem(input, poses, 1));
     const { profile: parallelProfile, ...parallel } = addon.refinePostPlacement(encodeNativePostPlaceRefineProblem(input, poses, 3));
-    assert.equal(parallelProfile.workers, 3);
+    assert.equal(parallelProfile.workers, Math.max(1, Math.min(3, Math.floor(availableParallelism() / 2))));
     assert.ok(parallelProfile.iterations.length > 0);
     assert.deepEqual(parallel, serial);
 });
