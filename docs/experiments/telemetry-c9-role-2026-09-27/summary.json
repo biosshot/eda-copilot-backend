@@ -1,0 +1,711 @@
+[
+  {
+    "id": "base-original",
+    "label": "Прежняя очередь · decoupling_cap",
+    "c9Role": "decoupling_cap",
+    "powerComponent": true,
+    "c9IcClearance": 0.5075,
+    "sourceInputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "9fbd148addc083f442366ab03c51d544523ed30fec05a934f541d713647014a7",
+    "matchesPriorRun": true,
+    "valid": true,
+    "ms": 94283.8802,
+    "metrics": {
+      "pairCount": 1,
+      "pairSum": 3.77,
+      "pairMax": 3.77,
+      "crossings": 1,
+      "foreignPadHits": 1,
+      "wireLength": 41.96,
+      "hpwl": 45.33,
+      "area": 399.82,
+      "aspect": 1.47
+    },
+    "allMetrics": {
+      "pairCount": 1,
+      "pairSum": 3.77,
+      "pairMax": 3.77,
+      "crossings": 5,
+      "foreignPadHits": 3,
+      "wireLength": 80.85,
+      "hpwl": 79.45,
+      "area": 399.82,
+      "aspect": 1.47
+    },
+    "order": "U2 → C13 → C15 → R7 → R6 → R8 → C9 → C12 → C14 → C16 → C10 → C11",
+    "stages": [
+      {
+        "stage": "beam_complete",
+        "distances": [
+          12.183551739127635,
+          12.189580834876972
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.07,
+          "pairMax": 2.07,
+          "crossings": 0,
+          "foreignPadHits": 3,
+          "wireLength": 59.7,
+          "hpwl": 64.59,
+          "area": 431.95,
+          "aspect": 2.14
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.07,
+          "pairMax": 2.07,
+          "crossings": 6,
+          "foreignPadHits": 10,
+          "wireLength": 106.62,
+          "hpwl": 104.08,
+          "area": 431.95,
+          "aspect": 2.14
+        }
+      },
+      {
+        "stage": "local_complete",
+        "distances": [
+          12.183551739127635,
+          12.189580834876972
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 60.54,
+          "hpwl": 65.63,
+          "area": 394.54,
+          "aspect": 1.54
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 5,
+          "foreignPadHits": 4,
+          "wireLength": 99.83,
+          "hpwl": 100.14,
+          "area": 394.54,
+          "aspect": 1.54
+        }
+      },
+      {
+        "stage": "pair_complete",
+        "distances": [
+          5.330279429823543,
+          4.631341547543216
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 1,
+          "foreignPadHits": 1,
+          "wireLength": 41.96,
+          "hpwl": 45.33,
+          "area": 399.82,
+          "aspect": 1.47
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 5,
+          "foreignPadHits": 3,
+          "wireLength": 80.85,
+          "hpwl": 79.45,
+          "area": 399.82,
+          "aspect": 1.47
+        }
+      },
+      {
+        "stage": "postrefine_final",
+        "distances": [
+          5.330279429823543,
+          4.631341547543216
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 1,
+          "foreignPadHits": 1,
+          "wireLength": 41.96,
+          "hpwl": 45.33,
+          "area": 399.82,
+          "aspect": 1.47
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 5,
+          "foreignPadHits": 3,
+          "wireLength": 80.85,
+          "hpwl": 79.45,
+          "area": 399.82,
+          "aspect": 1.47
+        }
+      }
+    ],
+    "postMoves": []
+  },
+  {
+    "id": "base-passive",
+    "label": "Прежняя очередь · passive",
+    "c9Role": "passive",
+    "powerComponent": false,
+    "c9IcClearance": 0.6124999999999999,
+    "sourceInputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "inputHash": "91a97cfbbd5abede492749586b820a165371fdf62c88b57e83c362942e381d68",
+    "nativeHash": "9fbd148addc083f442366ab03c51d544523ed30fec05a934f541d713647014a7",
+    "matchesPriorRun": null,
+    "valid": true,
+    "ms": 96076.5744,
+    "metrics": {
+      "pairCount": 1,
+      "pairSum": 3.33,
+      "pairMax": 3.33,
+      "crossings": 0,
+      "foreignPadHits": 1,
+      "wireLength": 36.86,
+      "hpwl": 41.2,
+      "area": 404.57,
+      "aspect": 1.47
+    },
+    "allMetrics": {
+      "pairCount": 1,
+      "pairSum": 3.33,
+      "pairMax": 3.33,
+      "crossings": 5,
+      "foreignPadHits": 5,
+      "wireLength": 78.1,
+      "hpwl": 76.93,
+      "area": 404.57,
+      "aspect": 1.47
+    },
+    "order": "U2 → C13 → C15 → R7 → R6 → R8 → C9 → C12 → C14 → C16 → C10 → C11",
+    "stages": [
+      {
+        "stage": "beam_complete",
+        "distances": [
+          12.30906287984589,
+          12.31893870956423
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.07,
+          "pairMax": 2.07,
+          "crossings": 0,
+          "foreignPadHits": 3,
+          "wireLength": 59.96,
+          "hpwl": 65.19,
+          "area": 431.95,
+          "aspect": 2.14
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.07,
+          "pairMax": 2.07,
+          "crossings": 6,
+          "foreignPadHits": 10,
+          "wireLength": 106.88,
+          "hpwl": 104.69,
+          "area": 431.95,
+          "aspect": 2.14
+        }
+      },
+      {
+        "stage": "local_complete",
+        "distances": [
+          12.288464142438633,
+          12.294441790093604
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 58.81,
+          "hpwl": 64.54,
+          "area": 385.21,
+          "aspect": 1.58
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 8,
+          "foreignPadHits": 8,
+          "wireLength": 100.17,
+          "hpwl": 99.57,
+          "area": 385.21,
+          "aspect": 1.58
+        }
+      },
+      {
+        "stage": "pair_complete",
+        "distances": [
+          4.737013075768316,
+          2.933344393350361
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.33,
+          "pairMax": 3.33,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 39.25,
+          "hpwl": 44,
+          "area": 404.57,
+          "aspect": 1.47
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.33,
+          "pairMax": 3.33,
+          "crossings": 7,
+          "foreignPadHits": 5,
+          "wireLength": 79.5,
+          "hpwl": 78.33,
+          "area": 404.57,
+          "aspect": 1.47
+        }
+      },
+      {
+        "stage": "postrefine_final",
+        "distances": [
+          4.737013075768315,
+          2.933344393350361
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.33,
+          "pairMax": 3.33,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 36.86,
+          "hpwl": 41.2,
+          "area": 404.57,
+          "aspect": 1.47
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.33,
+          "pairMax": 3.33,
+          "crossings": 5,
+          "foreignPadHits": 5,
+          "wireLength": 78.1,
+          "hpwl": 76.93,
+          "area": 404.57,
+          "aspect": 1.47
+        }
+      }
+    ],
+    "postMoves": [
+      {
+        "description": "C10<->C11; C10+=180, C11+=180",
+        "designators": [
+          "C10",
+          "C11"
+        ],
+        "effectiveImprovement": 25.249,
+        "kind": "swap",
+        "routeBudgetExhaustedAfter": 0,
+        "routeBudgetExhaustedBefore": 0,
+        "routeJobCount": 2,
+        "routePenaltyAfter": 0.278,
+        "routePenaltyBefore": 0,
+        "routeUnresolvedAfter": 0,
+        "routeUnresolvedBefore": 0,
+        "scoreAfter": 10207.117,
+        "scoreBefore": 10232.644
+      },
+      {
+        "description": "C14 rotate += 180",
+        "designators": [
+          "C14"
+        ],
+        "effectiveImprovement": 7.513,
+        "kind": "rotate_180",
+        "routeBudgetExhaustedAfter": 0,
+        "routeBudgetExhaustedBefore": 0,
+        "routeJobCount": 10,
+        "routePenaltyAfter": 8.349,
+        "routePenaltyBefore": 12.994,
+        "routeUnresolvedAfter": 0,
+        "routeUnresolvedBefore": 0,
+        "scoreAfter": 10204.25,
+        "scoreBefore": 10207.117
+      }
+    ]
+  },
+  {
+    "id": "combined-original",
+    "label": "Новая очередь · decoupling_cap",
+    "c9Role": "decoupling_cap",
+    "powerComponent": true,
+    "c9IcClearance": 0.5075,
+    "sourceInputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "9fbd148addc083f442366ab03c51d544523ed30fec05a934f541d713647014a7",
+    "matchesPriorRun": true,
+    "valid": true,
+    "ms": 113332.0413,
+    "metrics": {
+      "pairCount": 1,
+      "pairSum": 2.25,
+      "pairMax": 2.25,
+      "crossings": 1,
+      "foreignPadHits": 3,
+      "wireLength": 43.67,
+      "hpwl": 47.92,
+      "area": 396.66,
+      "aspect": 1.22
+    },
+    "allMetrics": {
+      "pairCount": 1,
+      "pairSum": 2.25,
+      "pairMax": 2.25,
+      "crossings": 6,
+      "foreignPadHits": 7,
+      "wireLength": 79.46,
+      "hpwl": 81.77,
+      "area": 396.66,
+      "aspect": 1.22
+    },
+    "order": "U2 → C13 → C14 → C9 → C15 → C12 → C10 → C11 → C16 → R8 → R7 → R6",
+    "stages": [
+      {
+        "stage": "beam_complete",
+        "distances": [
+          2.6727000168369064,
+          2.6758500200870747
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 6.65,
+          "pairMax": 6.65,
+          "crossings": 0,
+          "foreignPadHits": 2,
+          "wireLength": 39.84,
+          "hpwl": 43.48,
+          "area": 469.5,
+          "aspect": 1.27
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 6.65,
+          "pairMax": 6.65,
+          "crossings": 5,
+          "foreignPadHits": 9,
+          "wireLength": 76.23,
+          "hpwl": 77.96,
+          "area": 469.5,
+          "aspect": 1.27
+        }
+      },
+      {
+        "stage": "local_complete",
+        "distances": [
+          5.19761651913644,
+          3.3873875671378375
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 7.3,
+          "pairMax": 7.3,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 42.73,
+          "hpwl": 46.97,
+          "area": 469.5,
+          "aspect": 1.27
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 7.3,
+          "pairMax": 7.3,
+          "crossings": 4,
+          "foreignPadHits": 7,
+          "wireLength": 79.47,
+          "hpwl": 79.68,
+          "area": 469.5,
+          "aspect": 1.27
+        }
+      },
+      {
+        "stage": "pair_complete",
+        "distances": [
+          6.44573857521386,
+          6.392409133495759
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.25,
+          "pairMax": 2.25,
+          "crossings": 2,
+          "foreignPadHits": 2,
+          "wireLength": 43.49,
+          "hpwl": 46.52,
+          "area": 396.66,
+          "aspect": 1.22
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.25,
+          "pairMax": 2.25,
+          "crossings": 6,
+          "foreignPadHits": 7,
+          "wireLength": 79.7,
+          "hpwl": 80.37,
+          "area": 396.66,
+          "aspect": 1.22
+        }
+      },
+      {
+        "stage": "postrefine_final",
+        "distances": [
+          5.99644789020967,
+          7.071651471191154
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.25,
+          "pairMax": 2.25,
+          "crossings": 1,
+          "foreignPadHits": 3,
+          "wireLength": 43.67,
+          "hpwl": 47.92,
+          "area": 396.66,
+          "aspect": 1.22
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.25,
+          "pairMax": 2.25,
+          "crossings": 6,
+          "foreignPadHits": 7,
+          "wireLength": 79.46,
+          "hpwl": 81.77,
+          "area": 396.66,
+          "aspect": 1.22
+        }
+      }
+    ],
+    "postMoves": [
+      {
+        "description": "C14 rotate += 180",
+        "designators": [
+          "C14"
+        ],
+        "effectiveImprovement": 18.81,
+        "kind": "rotate_180",
+        "routeBudgetExhaustedAfter": 0,
+        "routeBudgetExhaustedBefore": 0,
+        "routeJobCount": 10,
+        "routePenaltyAfter": 7.471,
+        "routePenaltyBefore": 31.834,
+        "routeUnresolvedAfter": 0,
+        "routeUnresolvedBefore": 0,
+        "scoreAfter": 11572.909,
+        "scoreBefore": 11567.356
+      },
+      {
+        "description": "C9 rotate += 180",
+        "designators": [
+          "C9"
+        ],
+        "effectiveImprovement": 1.325,
+        "kind": "rotate_180",
+        "routeBudgetExhaustedAfter": 0,
+        "routeBudgetExhaustedBefore": 0,
+        "routeJobCount": 4,
+        "routePenaltyAfter": 41.681,
+        "routePenaltyBefore": 40.181,
+        "routeUnresolvedAfter": 0,
+        "routeUnresolvedBefore": 0,
+        "scoreAfter": 11570.083,
+        "scoreBefore": 11572.909
+      }
+    ]
+  },
+  {
+    "id": "combined-passive",
+    "label": "Новая очередь · passive",
+    "c9Role": "passive",
+    "powerComponent": false,
+    "c9IcClearance": 0.6124999999999999,
+    "sourceInputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "inputHash": "91a97cfbbd5abede492749586b820a165371fdf62c88b57e83c362942e381d68",
+    "nativeHash": "9fbd148addc083f442366ab03c51d544523ed30fec05a934f541d713647014a7",
+    "matchesPriorRun": null,
+    "valid": true,
+    "ms": 115768.6859,
+    "metrics": {
+      "pairCount": 1,
+      "pairSum": 2.41,
+      "pairMax": 2.41,
+      "crossings": 1,
+      "foreignPadHits": 3,
+      "wireLength": 45.74,
+      "hpwl": 48.46,
+      "area": 456.03,
+      "aspect": 1.11
+    },
+    "allMetrics": {
+      "pairCount": 1,
+      "pairSum": 2.41,
+      "pairMax": 2.41,
+      "crossings": 7,
+      "foreignPadHits": 10,
+      "wireLength": 85.72,
+      "hpwl": 85.07,
+      "area": 456.03,
+      "aspect": 1.11
+    },
+    "order": "U2 → C13 → C14 → C9 → C15 → C12 → C10 → C11 → C16 → R7 → R8 → R6",
+    "stages": [
+      {
+        "stage": "beam_complete",
+        "distances": [
+          2.8021947434109564,
+          2.8223070934963825
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.19,
+          "pairMax": 2.19,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 35.54,
+          "hpwl": 37.23,
+          "area": 468.59,
+          "aspect": 1.16
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.19,
+          "pairMax": 2.19,
+          "crossings": 4,
+          "foreignPadHits": 8,
+          "wireLength": 75.81,
+          "hpwl": 76.25,
+          "area": 468.59,
+          "aspect": 1.16
+        }
+      },
+      {
+        "stage": "local_complete",
+        "distances": [
+          2.8021947434109564,
+          2.8223070934963825
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.19,
+          "pairMax": 2.19,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 36.31,
+          "hpwl": 37.95,
+          "area": 468.59,
+          "aspect": 1.16
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.19,
+          "pairMax": 2.19,
+          "crossings": 4,
+          "foreignPadHits": 5,
+          "wireLength": 76.44,
+          "hpwl": 75.2,
+          "area": 468.59,
+          "aspect": 1.16
+        }
+      },
+      {
+        "stage": "pair_complete",
+        "distances": [
+          8.767428567145558,
+          7.384800033176253
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.41,
+          "pairMax": 2.41,
+          "crossings": 2,
+          "foreignPadHits": 3,
+          "wireLength": 45.99,
+          "hpwl": 48.46,
+          "area": 456.03,
+          "aspect": 1.11
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.41,
+          "pairMax": 2.41,
+          "crossings": 8,
+          "foreignPadHits": 10,
+          "wireLength": 85.97,
+          "hpwl": 85.07,
+          "area": 456.03,
+          "aspect": 1.11
+        }
+      },
+      {
+        "stage": "postrefine_final",
+        "distances": [
+          8.654800020797706,
+          7.51646403104545
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.41,
+          "pairMax": 2.41,
+          "crossings": 1,
+          "foreignPadHits": 3,
+          "wireLength": 45.74,
+          "hpwl": 48.46,
+          "area": 456.03,
+          "aspect": 1.11
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.41,
+          "pairMax": 2.41,
+          "crossings": 7,
+          "foreignPadHits": 10,
+          "wireLength": 85.72,
+          "hpwl": 85.07,
+          "area": 456.03,
+          "aspect": 1.11
+        }
+      }
+    ],
+    "postMoves": [
+      {
+        "description": "C9 rotate += 180",
+        "designators": [
+          "C9"
+        ],
+        "effectiveImprovement": 182.363,
+        "kind": "rotate_180",
+        "routeBudgetExhaustedAfter": 0,
+        "routeBudgetExhaustedBefore": 0,
+        "routeJobCount": 4,
+        "routePenaltyAfter": 19.707,
+        "routePenaltyBefore": 19.857,
+        "routeUnresolvedAfter": 0,
+        "routeUnresolvedBefore": 0,
+        "scoreAfter": 11340.033,
+        "scoreBefore": 11522.245
+      }
+    ]
+  }
+]

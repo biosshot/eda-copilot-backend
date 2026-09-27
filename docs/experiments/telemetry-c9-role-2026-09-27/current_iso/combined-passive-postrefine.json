@@ -1,0 +1,180 @@
+{
+  "diagnostics": [],
+  "moves": [
+    {
+      "description": "C9 rotate += 180",
+      "designators": [
+        "C9"
+      ],
+      "effectiveImprovement": 182.363,
+      "kind": "rotate_180",
+      "routeBudgetExhaustedAfter": 0,
+      "routeBudgetExhaustedBefore": 0,
+      "routeJobCount": 4,
+      "routePenaltyAfter": 19.707,
+      "routePenaltyBefore": 19.857,
+      "routeUnresolvedAfter": 0,
+      "routeUnresolvedBefore": 0,
+      "scoreAfter": 11340.033,
+      "scoreBefore": 11522.245
+    }
+  ],
+  "placements": [
+    {
+      "designator": "U2",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -1.5,
+      "y": 1.403
+    },
+    {
+      "designator": "C13",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 3.25,
+      "y": 8.582
+    },
+    {
+      "designator": "C14",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 6.603,
+      "y": 5.294
+    },
+    {
+      "designator": "C9",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 3.951,
+      "y": -9.211
+    },
+    {
+      "designator": "C15",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 7.103,
+      "y": 1.311
+    },
+    {
+      "designator": "C12",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -8.923,
+      "y": 3.145
+    },
+    {
+      "designator": "C10",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -8.923,
+      "y": 0.014
+    },
+    {
+      "designator": "C11",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -10.694,
+      "y": 0.014
+    },
+    {
+      "designator": "C16",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 7.103,
+      "y": 3.082
+    },
+    {
+      "designator": "R7",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 7.139,
+      "y": -1.056
+    },
+    {
+      "designator": "R8",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 5.863,
+      "y": -6.312
+    },
+    {
+      "designator": "R6",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 9.139,
+      "y": -6.312
+    }
+  ],
+  "profile": {
+    "fixedDiagnosticsMs": 0.0007999999999999999,
+    "initialScoreMs": 0.0229,
+    "iterationLimit": 8,
+    "iterations": [
+      {
+        "accepted": true,
+        "baselineCacheHits": 16,
+        "baselineEvaluations": 17,
+        "baselineMs": 31.915900000000004,
+        "boundRejected": 31,
+        "candidates": 35,
+        "evaluationWallMs": 34.7301,
+        "feasibilityRejected": 0,
+        "generatedCandidates": 35,
+        "generationMs": 0.0424,
+        "geometryMs": 0.07939999999999998,
+        "globalScoreMs": 0.4744000000000001,
+        "hardRejected": 2,
+        "insufficientImprovement": 1,
+        "routeEncodingMs": 0,
+        "routeEvaluations": 2,
+        "routeMs": 2.1452999999999998,
+        "routeNativeMs": 34.0612,
+        "scoreEncodingMs": 0,
+        "scoreNativeMs": 0.4744000000000001,
+        "timedOut": false
+      },
+      {
+        "accepted": false,
+        "baselineCacheHits": 16,
+        "baselineEvaluations": 17,
+        "baselineMs": 30.8968,
+        "boundRejected": 32,
+        "candidates": 35,
+        "evaluationWallMs": 31.655700000000003,
+        "feasibilityRejected": 0,
+        "generatedCandidates": 35,
+        "generationMs": 0.0351,
+        "geometryMs": 0.0725,
+        "globalScoreMs": 0.4936999999999999,
+        "hardRejected": 2,
+        "insufficientImprovement": 1,
+        "routeEncodingMs": 0,
+        "routeEvaluations": 1,
+        "routeMs": 0.0795,
+        "routeNativeMs": 30.976300000000002,
+        "scoreEncodingMs": 0,
+        "scoreNativeMs": 0.4936999999999999,
+        "timedOut": false
+      }
+    ],
+    "stopReason": "no_improvement",
+    "timedOut": false,
+    "timeoutMs": 2000,
+    "totalMs": 66.5431,
+    "workers": 1
+  },
+  "scoreAfter": 11340.033,
+  "scoreBefore": 11522.245
+}

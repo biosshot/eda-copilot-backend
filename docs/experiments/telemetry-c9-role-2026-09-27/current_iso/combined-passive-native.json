@@ -1,0 +1,202 @@
+{
+  "rank": {
+    "hardCount": 0,
+    "hardSeverity": 0,
+    "score": 15677.055985495372
+  },
+  "states": [
+    {
+      "placements": [
+        {
+          "designator": "U2",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -1.5,
+          "y": 1.403
+        }
+      ],
+      "primitiveId": "primitive:tree:component:U2",
+      "rotation": 0,
+      "translationX": -1.5,
+      "translationY": 1.403
+    },
+    {
+      "placements": [
+        {
+          "designator": "C13",
+          "layer": "top",
+          "rotate": 270,
+          "score": 0,
+          "x": 3.25,
+          "y": 8.582
+        }
+      ],
+      "primitiveId": "primitive:tree:component:C13",
+      "rotation": 270,
+      "translationX": 3.25,
+      "translationY": 9.582
+    },
+    {
+      "placements": [
+        {
+          "designator": "C14",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 6.603,
+          "y": 5.294
+        }
+      ],
+      "primitiveId": "primitive:tree:component:C14",
+      "rotation": 180,
+      "translationX": 6.603,
+      "translationY": 4.523
+    },
+    {
+      "placements": [
+        {
+          "designator": "C9",
+          "layer": "top",
+          "rotate": 0,
+          "score": 0,
+          "x": 3.951,
+          "y": -9.211
+        }
+      ],
+      "primitiveId": "primitive:tree:component:C9",
+      "rotation": 0,
+      "translationX": 3.951,
+      "translationY": -9.211
+    },
+    {
+      "placements": [
+        {
+          "designator": "C15",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 7.103,
+          "y": 1.311
+        }
+      ],
+      "primitiveId": "primitive:tree:component:C15",
+      "rotation": 180,
+      "translationX": 7.103,
+      "translationY": 2.311
+    },
+    {
+      "placements": [
+        {
+          "designator": "C12",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -8.923,
+          "y": 3.145
+        }
+      ],
+      "primitiveId": "primitive:tree:component:C12",
+      "rotation": 90,
+      "translationX": -8.923,
+      "translationY": 1.374
+    },
+    {
+      "placements": [
+        {
+          "designator": "C10",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -8.923,
+          "y": 0.014
+        }
+      ],
+      "primitiveId": "primitive:tree:component:C10",
+      "rotation": 90,
+      "translationX": -8.923,
+      "translationY": 0.014
+    },
+    {
+      "placements": [
+        {
+          "designator": "C11",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -10.694,
+          "y": 0.014
+        }
+      ],
+      "primitiveId": "primitive:tree:component:C11",
+      "rotation": 90,
+      "translationX": -10.694,
+      "translationY": 1.785
+    },
+    {
+      "placements": [
+        {
+          "designator": "C16",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 7.103,
+          "y": 3.082
+        }
+      ],
+      "primitiveId": "primitive:tree:component:C16",
+      "rotation": 180,
+      "translationX": 7.103,
+      "translationY": 2.311
+    },
+    {
+      "placements": [
+        {
+          "designator": "R7",
+          "layer": "top",
+          "rotate": 0,
+          "score": 0,
+          "x": 7.139,
+          "y": -1.056
+        }
+      ],
+      "primitiveId": "primitive:tree:component:R7",
+      "rotation": 0,
+      "translationX": 7.139,
+      "translationY": -1.056
+    },
+    {
+      "placements": [
+        {
+          "designator": "R8",
+          "layer": "top",
+          "rotate": 270,
+          "score": 0,
+          "x": 5.863,
+          "y": -6.312
+        }
+      ],
+      "primitiveId": "primitive:tree:component:R8",
+      "rotation": 270,
+      "translationX": 5.863,
+      "translationY": -6.312
+    },
+    {
+      "placements": [
+        {
+          "designator": "R6",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": 9.139,
+          "y": -6.312
+        }
+      ],
+      "primitiveId": "primitive:tree:component:R6",
+      "rotation": 90,
+      "translationX": 9.139,
+      "translationY": -6.312
+    }
+  ],
+  "version": 2
+}

@@ -1,0 +1,7140 @@
+[
+  {
+    "block": "current_iso",
+    "variant": {
+      "id": "base-original",
+      "label": "Прежняя очередь · decoupling_cap",
+      "family": "base",
+      "c9Role": "decoupling_cap",
+      "frontier": true,
+      "owner": true,
+      "access": true,
+      "groups": "all"
+    },
+    "ms": 94283.8802,
+    "sourceInputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "c9Role": "decoupling_cap",
+    "onlyRoleChanged": true,
+    "nativeHash": "9fbd148addc083f442366ab03c51d544523ed30fec05a934f541d713647014a7",
+    "inventory": true,
+    "orientation": true,
+    "validation": {
+      "ok": true,
+      "violations": []
+    },
+    "metrics": {
+      "pairCount": 1,
+      "pairSum": 3.77,
+      "pairMax": 3.77,
+      "crossings": 1,
+      "foreignPadHits": 1,
+      "wireLength": 41.96,
+      "hpwl": 45.33,
+      "area": 399.82,
+      "aspect": 1.47
+    },
+    "allMetrics": {
+      "pairCount": 1,
+      "pairSum": 3.77,
+      "pairMax": 3.77,
+      "crossings": 5,
+      "foreignPadHits": 3,
+      "wireLength": 80.85,
+      "hpwl": 79.45,
+      "area": 399.82,
+      "aspect": 1.47
+    },
+    "pairs": [
+      {
+        "pair": "C9.1.U2.6",
+        "mm": 5.330279429823543
+      },
+      {
+        "pair": "C9.2.U2.7",
+        "mm": 4.631341547543216
+      },
+      {
+        "pair": "C13.1.U2.1",
+        "mm": 2.0881000215506926
+      },
+      {
+        "pair": "C15.1.U2.5",
+        "mm": 2.699349329005047
+      }
+    ],
+    "localHardPairs": [],
+    "hardPairsOk": true,
+    "placements": [
+      {
+        "designator": "U2",
+        "x": -2.5,
+        "y": -0.5,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C13",
+        "x": 2.25,
+        "y": 6.679,
+        "rotate": 270,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C15",
+        "x": 5.603,
+        "y": -0.689,
+        "rotate": 180,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "R7",
+        "x": 6.139,
+        "y": -2.957,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "R6",
+        "x": 10.292,
+        "y": -3.957,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "R8",
+        "x": 6.139,
+        "y": -5.194,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C9",
+        "x": 3.939,
+        "y": -7.697,
+        "rotate": 180,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C12",
+        "x": -10.423,
+        "y": 1.472,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C14",
+        "x": 4.923,
+        "y": 4.091,
+        "rotate": 270,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C16",
+        "x": 6.603,
+        "y": 1.582,
+        "rotate": 180,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C10",
+        "x": -10.603,
+        "y": -1.189,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C11",
+        "x": -10.603,
+        "y": -2.96,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      }
+    ],
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hdc",
+        "message": "Experimental independent placement: passive_net:I_OUT; electrical constraints retained"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hdc",
+        "message": "Block postrefine: 0 moves, 9 ms"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hldo",
+        "message": "Experimental independent placement: passive_net:I_OUT; electrical constraints retained"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hldo",
+        "message": "Block postrefine: 0 moves, 3 ms"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_secondary",
+        "message": "Block postrefine: 0 moves, 4 ms"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_iso",
+        "message": "Experimental independent placement: current_hdc, current_hldo, current_secondary; electrical constraints retained"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_iso",
+        "message": "Block postrefine: 0 moves, 86 ms"
+      }
+    ],
+    "captures": [
+      {
+        "ms": 19.039300000000026,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 147.161086
+        },
+        "members": [
+          {
+            "label": "C13",
+            "members": [
+              "C13"
+            ]
+          },
+          {
+            "label": "C14",
+            "members": [
+              "C14"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "C13"
+          ],
+          [
+            "C14"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "hint:pad:C13.1->pad:U2.1:critical_pair:60",
+            "kind": "critical_pair",
+            "from": "pad:C13.1",
+            "to": "pad:U2.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": false,
+          "orderCoreAffinity": false,
+          "orderBranching": false,
+          "orderScarcity": false,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      },
+      {
+        "ms": 20.904600000000073,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 147.161086
+        },
+        "members": [
+          {
+            "label": "C15",
+            "members": [
+              "C15"
+            ]
+          },
+          {
+            "label": "C16",
+            "members": [
+              "C16"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "C15"
+          ],
+          [
+            "C16"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "hint:pad:C15.1->pad:U2.5:critical_pair:61",
+            "kind": "critical_pair",
+            "from": "pad:C15.1",
+            "to": "pad:U2.5",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": false,
+          "orderCoreAffinity": false,
+          "orderBranching": false,
+          "orderScarcity": false,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      },
+      {
+        "ms": 108.97219999999993,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 362.31785199999996
+        },
+        "members": [
+          {
+            "label": "C10",
+            "members": [
+              "C10"
+            ]
+          },
+          {
+            "label": "C11",
+            "members": [
+              "C11"
+            ]
+          },
+          {
+            "label": "C12",
+            "members": [
+              "C12"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "C10"
+          ],
+          [
+            "C12"
+          ],
+          [
+            "C11"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "hint:pad:C11.2->pad:C10.2:near:",
+            "kind": "hint",
+            "from": "pad:C11.2",
+            "to": "pad:C10.2",
+            "relation": "near",
+            "priority": "critical",
+            "hard": false,
+            "weight": 240,
+            "effect": "move_from",
+            "maxDistance": 8,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": false,
+          "orderCoreAffinity": false,
+          "orderBranching": false,
+          "orderScarcity": false,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      },
+      {
+        "ms": 94014.519,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 15718.784162058702
+        },
+        "members": [
+          {
+            "label": "C13",
+            "members": [
+              "C13"
+            ]
+          },
+          {
+            "label": "C14",
+            "members": [
+              "C14"
+            ]
+          },
+          {
+            "label": "C15",
+            "members": [
+              "C15"
+            ]
+          },
+          {
+            "label": "C16",
+            "members": [
+              "C16"
+            ]
+          },
+          {
+            "label": "C10",
+            "members": [
+              "C10"
+            ]
+          },
+          {
+            "label": "C12",
+            "members": [
+              "C12"
+            ]
+          },
+          {
+            "label": "C11",
+            "members": [
+              "C11"
+            ]
+          },
+          {
+            "label": "U2",
+            "members": [
+              "U2"
+            ]
+          },
+          {
+            "label": "R6",
+            "members": [
+              "R6"
+            ]
+          },
+          {
+            "label": "R7",
+            "members": [
+              "R7"
+            ]
+          },
+          {
+            "label": "R8",
+            "members": [
+              "R8"
+            ]
+          },
+          {
+            "label": "C9",
+            "members": [
+              "C9"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "U2"
+          ],
+          [
+            "C13"
+          ],
+          [
+            "C15"
+          ],
+          [
+            "R7"
+          ],
+          [
+            "R6"
+          ],
+          [
+            "R8"
+          ],
+          [
+            "C9"
+          ],
+          [
+            "C12"
+          ],
+          [
+            "C14"
+          ],
+          [
+            "C16"
+          ],
+          [
+            "C10"
+          ],
+          [
+            "C11"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "connects_net:pad:C14.1->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:C14.1",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C13.1->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:C13.1",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.1->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:U2.1",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.3->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:U2.3",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C16.1->net:U2_HLDO::",
+            "kind": "net",
+            "from": "pad:C16.1",
+            "to": "net:U2_HLDO",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C15.1->net:U2_HLDO::",
+            "kind": "net",
+            "from": "pad:C15.1",
+            "to": "net:U2_HLDO",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.5->net:U2_HLDO::",
+            "kind": "net",
+            "from": "pad:U2.5",
+            "to": "net:U2_HLDO",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C12.1->net:U2_LDC::",
+            "kind": "net",
+            "from": "pad:C12.1",
+            "to": "net:U2_LDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.13->net:U2_LDC::",
+            "kind": "net",
+            "from": "pad:U2.13",
+            "to": "net:U2_LDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.16->net:U2_LDC::",
+            "kind": "net",
+            "from": "pad:U2.16",
+            "to": "net:U2_LDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:R7.2->net:I_FILTER_P::",
+            "kind": "net",
+            "from": "pad:R7.2",
+            "to": "net:I_FILTER_P",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C9.1->net:I_FILTER_P::",
+            "kind": "net",
+            "from": "pad:C9.1",
+            "to": "net:I_FILTER_P",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.6->net:I_FILTER_P::",
+            "kind": "net",
+            "from": "pad:U2.6",
+            "to": "net:I_FILTER_P",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:R8.2->net:I_FILTER_N::",
+            "kind": "net",
+            "from": "pad:R8.2",
+            "to": "net:I_FILTER_N",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C9.2->net:I_FILTER_N::",
+            "kind": "net",
+            "from": "pad:C9.2",
+            "to": "net:I_FILTER_N",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.7->net:I_FILTER_N::",
+            "kind": "net",
+            "from": "pad:U2.7",
+            "to": "net:I_FILTER_N",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hdc->pad:U2.1:near::released:component:C13:pad:U2.1",
+            "kind": "hint",
+            "from": "component:C13",
+            "to": "pad:U2.1",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hdc->pad:U2.1:near::released:component:C14:pad:U2.1",
+            "kind": "hint",
+            "from": "component:C14",
+            "to": "pad:U2.1",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hldo->pad:U2.5:near::released:component:C15:pad:U2.5",
+            "kind": "hint",
+            "from": "component:C15",
+            "to": "pad:U2.5",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hldo->pad:U2.5:near::released:component:C16:pad:U2.5",
+            "kind": "hint",
+            "from": "component:C16",
+            "to": "pad:U2.5",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C10:pad:U2.12",
+            "kind": "hint",
+            "from": "component:C10",
+            "to": "pad:U2.12",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 93.33333333333333,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C12:pad:U2.12",
+            "kind": "hint",
+            "from": "component:C12",
+            "to": "pad:U2.12",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 93.33333333333333,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C11:pad:U2.12",
+            "kind": "hint",
+            "from": "component:C11",
+            "to": "pad:U2.12",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 93.33333333333333,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:component:U2->component:J2:near:37",
+            "kind": "hint",
+            "from": "component:U2",
+            "to": "component:J2",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:component:U4->component:U2:near:41",
+            "kind": "hint",
+            "from": "component:U4",
+            "to": "component:U2",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:J2.1->pad:R6.1:critical_pair:56",
+            "kind": "critical_pair",
+            "from": "pad:J2.1",
+            "to": "pad:R6.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 480,
+            "effect": "move_from",
+            "maxDistance": 12,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:J2.2->pad:R6.2:critical_pair:57",
+            "kind": "critical_pair",
+            "from": "pad:J2.2",
+            "to": "pad:R6.2",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 12,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:C13.1->pad:U2.1:critical_pair:60",
+            "kind": "critical_pair",
+            "from": "pad:C13.1",
+            "to": "pad:U2.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:C15.1->pad:U2.5:critical_pair:61",
+            "kind": "critical_pair",
+            "from": "pad:C15.1",
+            "to": "pad:U2.5",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:R6.1->pad:R7.1:critical_pair:66",
+            "kind": "critical_pair",
+            "from": "pad:R6.1",
+            "to": "pad:R7.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 10,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_P",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:R7.2->pad:U2.6:critical_pair:67",
+            "kind": "critical_pair",
+            "from": "pad:R7.2",
+            "to": "pad:U2.6",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_P",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:R6.2->pad:R8.1:critical_pair:68",
+            "kind": "critical_pair",
+            "from": "pad:R6.2",
+            "to": "pad:R8.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 10,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_N",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:R8.2->pad:U2.7:critical_pair:69",
+            "kind": "critical_pair",
+            "from": "pad:R8.2",
+            "to": "pad:U2.7",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_N",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:U2.11->pad:R14.1:critical_pair:79",
+            "kind": "critical_pair",
+            "from": "pad:U2.11",
+            "to": "pad:R14.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 20,
+            "satelliteAnchor": false,
+            "pathId": "current_P",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:U2.10->pad:R15.1:critical_pair:81",
+            "kind": "critical_pair",
+            "from": "pad:U2.10",
+            "to": "pad:R15.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 20,
+            "satelliteAnchor": false,
+            "pathId": "current_N",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:C11.2->pad:C10.2:near:",
+            "kind": "hint",
+            "from": "pad:C11.2",
+            "to": "pad:C10.2",
+            "relation": "near",
+            "priority": "critical",
+            "hard": false,
+            "weight": 240,
+            "effect": "move_from",
+            "maxDistance": 8,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": false,
+          "orderCoreAffinity": false,
+          "orderBranching": false,
+          "orderScarcity": false,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      }
+    ],
+    "matchesPriorRun": true,
+    "nativeC9": {
+      "designator": "C9",
+      "primitiveId": "primitive:tree:component:C9",
+      "blockName": "current_iso",
+      "layer": "top",
+      "bodyBox": {
+        "left": -1.38995,
+        "right": 1.38995,
+        "top": -0.71005,
+        "bottom": 0.71005
+      },
+      "throughHoleBoxes": [],
+      "pinCount": 2,
+      "role": "decoupling_cap",
+      "powerComponent": true
+    },
+    "c9IcClearance": 0.5075,
+    "stages": [
+      {
+        "stage": "beam_complete",
+        "placements": [
+          {
+            "designator": "U2",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "designator": "C13",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 4.75,
+            "y": 7.179
+          },
+          {
+            "designator": "C15",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": -0.189
+          },
+          {
+            "designator": "R7",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.639,
+            "y": -2.459
+          },
+          {
+            "designator": "R6",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 14.771,
+            "y": -2.459
+          },
+          {
+            "designator": "R8",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.639,
+            "y": -4.694
+          },
+          {
+            "designator": "C9",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": -3.159
+          },
+          {
+            "designator": "C12",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": -0.028
+          },
+          {
+            "designator": "C14",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": 4.391
+          },
+          {
+            "designator": "C16",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 11.234,
+            "y": 2.62
+          },
+          {
+            "designator": "C10",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -9.194,
+            "y": -0.028
+          },
+          {
+            "designator": "C11",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -10.965,
+            "y": -0.028
+          }
+        ],
+        "parts": {
+          "denseAccess": 0,
+          "exposure": 0,
+          "facing": 2065.385198466736,
+          "groundSpread": 0,
+          "longNets": 0,
+          "padCrossings": 540,
+          "powerYield": 611.887447138964,
+          "relations": 9875.075159619957,
+          "signalSpread": 360.992,
+          "total": 17247.391178935304
+        },
+        "distances": [
+          12.183551739127635,
+          12.189580834876972
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.07,
+          "pairMax": 2.07,
+          "crossings": 0,
+          "foreignPadHits": 3,
+          "wireLength": 59.7,
+          "hpwl": 64.59,
+          "area": 431.95,
+          "aspect": 2.14
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.07,
+          "pairMax": 2.07,
+          "crossings": 6,
+          "foreignPadHits": 10,
+          "wireLength": 106.62,
+          "hpwl": 104.08,
+          "area": 431.95,
+          "aspect": 2.14
+        }
+      },
+      {
+        "stage": "local_complete",
+        "placements": [
+          {
+            "designator": "U2",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "designator": "C13",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 4.75,
+            "y": 7.179
+          },
+          {
+            "designator": "C15",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": -0.189
+          },
+          {
+            "designator": "R7",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.639,
+            "y": -2.457
+          },
+          {
+            "designator": "R6",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 12.792,
+            "y": -3.457
+          },
+          {
+            "designator": "R8",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.639,
+            "y": -4.694
+          },
+          {
+            "designator": "C9",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": -3.159
+          },
+          {
+            "designator": "C12",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.923,
+            "y": 1.972
+          },
+          {
+            "designator": "C14",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 7.423,
+            "y": 4.591
+          },
+          {
+            "designator": "C16",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 9.103,
+            "y": 2.082
+          },
+          {
+            "designator": "C10",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": -8.103,
+            "y": -0.689
+          },
+          {
+            "designator": "C11",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": -9.194,
+            "y": -3.159
+          }
+        ],
+        "parts": {
+          "denseAccess": 0,
+          "exposure": 0,
+          "facing": 1548.8117156751016,
+          "groundSpread": 0,
+          "longNets": 0,
+          "padCrossings": 180,
+          "powerYield": 829.5956793343776,
+          "relations": 8477.39020413513,
+          "signalSpread": 352.29600000000005,
+          "total": 15797.512415818663
+        },
+        "distances": [
+          12.183551739127635,
+          12.189580834876972
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 60.54,
+          "hpwl": 65.63,
+          "area": 394.54,
+          "aspect": 1.54
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 5,
+          "foreignPadHits": 4,
+          "wireLength": 99.83,
+          "hpwl": 100.14,
+          "area": 394.54,
+          "aspect": 1.54
+        }
+      },
+      {
+        "stage": "pair_complete",
+        "placements": [
+          {
+            "designator": "U2",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "designator": "C13",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 4.75,
+            "y": 7.179
+          },
+          {
+            "designator": "C15",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": -0.189
+          },
+          {
+            "designator": "R7",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.639,
+            "y": -2.457
+          },
+          {
+            "designator": "R6",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 12.792,
+            "y": -3.457
+          },
+          {
+            "designator": "R8",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.639,
+            "y": -4.694
+          },
+          {
+            "designator": "C9",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 6.439,
+            "y": -7.197
+          },
+          {
+            "designator": "C12",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.923,
+            "y": 1.972
+          },
+          {
+            "designator": "C14",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 7.423,
+            "y": 4.591
+          },
+          {
+            "designator": "C16",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 9.103,
+            "y": 2.082
+          },
+          {
+            "designator": "C10",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": -8.103,
+            "y": -0.689
+          },
+          {
+            "designator": "C11",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": -8.103,
+            "y": -2.46
+          }
+        ],
+        "parts": {
+          "denseAccess": 0,
+          "exposure": 0,
+          "facing": 1548.8117156751016,
+          "groundSpread": 0,
+          "longNets": 0,
+          "padCrossings": 180,
+          "powerYield": 831.6066063176073,
+          "relations": 8442.348804076686,
+          "signalSpread": 271.116,
+          "total": 15718.784162058702
+        },
+        "distances": [
+          5.330279429823543,
+          4.631341547543216
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 1,
+          "foreignPadHits": 1,
+          "wireLength": 41.96,
+          "hpwl": 45.33,
+          "area": 399.82,
+          "aspect": 1.47
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 5,
+          "foreignPadHits": 3,
+          "wireLength": 80.85,
+          "hpwl": 79.45,
+          "area": 399.82,
+          "aspect": 1.47
+        }
+      },
+      {
+        "stage": "postrefine_final",
+        "placements": [
+          {
+            "designator": "U2",
+            "x": -2.5,
+            "y": -0.5,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C13",
+            "x": 2.25,
+            "y": 6.679,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C15",
+            "x": 5.603,
+            "y": -0.689,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R7",
+            "x": 6.139,
+            "y": -2.957,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R6",
+            "x": 10.292,
+            "y": -3.957,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R8",
+            "x": 6.139,
+            "y": -5.194,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C9",
+            "x": 3.939,
+            "y": -7.697,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C12",
+            "x": -10.423,
+            "y": 1.472,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C14",
+            "x": 4.923,
+            "y": 4.091,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C16",
+            "x": 6.603,
+            "y": 1.582,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C10",
+            "x": -10.603,
+            "y": -1.189,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C11",
+            "x": -10.603,
+            "y": -2.96,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "distances": [
+          5.330279429823543,
+          4.631341547543216
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 1,
+          "foreignPadHits": 1,
+          "wireLength": 41.96,
+          "hpwl": 45.33,
+          "area": 399.82,
+          "aspect": 1.47
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 5,
+          "foreignPadHits": 3,
+          "wireLength": 80.85,
+          "hpwl": 79.45,
+          "area": 399.82,
+          "aspect": 1.47
+        }
+      }
+    ],
+    "order": "U2 → C13 → C15 → R7 → R6 → R8 → C9 → C12 → C14 → C16 → C10 → C11",
+    "postrefine": {
+      "diagnostics": [],
+      "moves": [],
+      "placements": [
+        {
+          "designator": "U2",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -2.5,
+          "y": -0.5
+        },
+        {
+          "designator": "C13",
+          "layer": "top",
+          "rotate": 270,
+          "score": 0,
+          "x": 2.25,
+          "y": 6.679
+        },
+        {
+          "designator": "C15",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 5.603,
+          "y": -0.689
+        },
+        {
+          "designator": "R7",
+          "layer": "top",
+          "rotate": 0,
+          "score": 0,
+          "x": 6.139,
+          "y": -2.957
+        },
+        {
+          "designator": "R6",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": 10.292,
+          "y": -3.957
+        },
+        {
+          "designator": "R8",
+          "layer": "top",
+          "rotate": 0,
+          "score": 0,
+          "x": 6.139,
+          "y": -5.194
+        },
+        {
+          "designator": "C9",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 3.939,
+          "y": -7.697
+        },
+        {
+          "designator": "C12",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -10.423,
+          "y": 1.472
+        },
+        {
+          "designator": "C14",
+          "layer": "top",
+          "rotate": 270,
+          "score": 0,
+          "x": 4.923,
+          "y": 4.091
+        },
+        {
+          "designator": "C16",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 6.603,
+          "y": 1.582
+        },
+        {
+          "designator": "C10",
+          "layer": "top",
+          "rotate": 0,
+          "score": 0,
+          "x": -10.603,
+          "y": -1.189
+        },
+        {
+          "designator": "C11",
+          "layer": "top",
+          "rotate": 0,
+          "score": 0,
+          "x": -10.603,
+          "y": -2.96
+        }
+      ],
+      "profile": {
+        "fixedDiagnosticsMs": 0.0007,
+        "initialScoreMs": 0.0339,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": false,
+            "baselineCacheHits": 16,
+            "baselineEvaluations": 17,
+            "baselineMs": 54.969699999999996,
+            "boundRejected": 30,
+            "candidates": 35,
+            "evaluationWallMs": 63.6196,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 35,
+            "generationMs": 0.0659,
+            "geometryMs": 0.12300000000000003,
+            "globalScoreMs": 0.7487,
+            "hardRejected": 2,
+            "insufficientImprovement": 3,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 3,
+            "routeMs": 7.5915,
+            "routeNativeMs": 62.5612,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.7487,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 63.770599999999995,
+        "workers": 1
+      },
+      "scoreAfter": 10555.329,
+      "scoreBefore": 10555.329
+    }
+  },
+  {
+    "block": "current_iso",
+    "variant": {
+      "id": "base-passive",
+      "label": "Прежняя очередь · passive",
+      "family": "base",
+      "c9Role": "passive",
+      "frontier": true,
+      "owner": true,
+      "access": true,
+      "groups": "all"
+    },
+    "ms": 96076.5744,
+    "sourceInputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "inputHash": "91a97cfbbd5abede492749586b820a165371fdf62c88b57e83c362942e381d68",
+    "c9Role": "passive",
+    "onlyRoleChanged": true,
+    "nativeHash": "9fbd148addc083f442366ab03c51d544523ed30fec05a934f541d713647014a7",
+    "inventory": true,
+    "orientation": true,
+    "validation": {
+      "ok": true,
+      "violations": []
+    },
+    "metrics": {
+      "pairCount": 1,
+      "pairSum": 3.33,
+      "pairMax": 3.33,
+      "crossings": 0,
+      "foreignPadHits": 1,
+      "wireLength": 36.86,
+      "hpwl": 41.2,
+      "area": 404.57,
+      "aspect": 1.47
+    },
+    "allMetrics": {
+      "pairCount": 1,
+      "pairSum": 3.33,
+      "pairMax": 3.33,
+      "crossings": 5,
+      "foreignPadHits": 5,
+      "wireLength": 78.1,
+      "hpwl": 76.93,
+      "area": 404.57,
+      "aspect": 1.47
+    },
+    "pairs": [
+      {
+        "pair": "C9.1.U2.6",
+        "mm": 4.737013075768315
+      },
+      {
+        "pair": "C9.2.U2.7",
+        "mm": 2.933344393350361
+      },
+      {
+        "pair": "C13.1.U2.1",
+        "mm": 2.147058848751008
+      },
+      {
+        "pair": "C15.1.U2.5",
+        "mm": 2.740672070861452
+      }
+    ],
+    "localHardPairs": [],
+    "hardPairsOk": true,
+    "placements": [
+      {
+        "designator": "U2",
+        "x": -2.5,
+        "y": -0.378,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C13",
+        "x": 2.75,
+        "y": 6.801,
+        "rotate": 270,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C15",
+        "x": 5.603,
+        "y": -0.378,
+        "rotate": 180,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "R7",
+        "x": 6.139,
+        "y": -2.457,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "R6",
+        "x": 10.292,
+        "y": -4.457,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "R8",
+        "x": 6.139,
+        "y": -6.694,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C9",
+        "x": 5.708,
+        "y": -4.607,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C12",
+        "x": -9.923,
+        "y": 2.942,
+        "rotate": 270,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C14",
+        "x": 4.923,
+        "y": 4.213,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C16",
+        "x": 6.569,
+        "y": 1.566,
+        "rotate": 180,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C10",
+        "x": -9.923,
+        "y": -0.189,
+        "rotate": 270,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C11",
+        "x": -10.694,
+        "y": -2.689,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      }
+    ],
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hdc",
+        "message": "Experimental independent placement: passive_net:I_OUT; electrical constraints retained"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hdc",
+        "message": "Block postrefine: 0 moves, 7 ms"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hldo",
+        "message": "Experimental independent placement: passive_net:I_OUT; electrical constraints retained"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hldo",
+        "message": "Block postrefine: 0 moves, 4 ms"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_secondary",
+        "message": "Block postrefine: 0 moves, 5 ms"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_iso",
+        "message": "Experimental independent placement: current_hdc, current_hldo, current_secondary; electrical constraints retained"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_iso",
+        "message": "Block postrefine: 2 moves, 137 ms"
+      }
+    ],
+    "captures": [
+      {
+        "ms": 24.655899999999974,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 147.161086
+        },
+        "members": [
+          {
+            "label": "C13",
+            "members": [
+              "C13"
+            ]
+          },
+          {
+            "label": "C14",
+            "members": [
+              "C14"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "C13"
+          ],
+          [
+            "C14"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "hint:pad:C13.1->pad:U2.1:critical_pair:60",
+            "kind": "critical_pair",
+            "from": "pad:C13.1",
+            "to": "pad:U2.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": false,
+          "orderCoreAffinity": false,
+          "orderBranching": false,
+          "orderScarcity": false,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      },
+      {
+        "ms": 18.26139999999998,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 147.161086
+        },
+        "members": [
+          {
+            "label": "C15",
+            "members": [
+              "C15"
+            ]
+          },
+          {
+            "label": "C16",
+            "members": [
+              "C16"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "C15"
+          ],
+          [
+            "C16"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "hint:pad:C15.1->pad:U2.5:critical_pair:61",
+            "kind": "critical_pair",
+            "from": "pad:C15.1",
+            "to": "pad:U2.5",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": false,
+          "orderCoreAffinity": false,
+          "orderBranching": false,
+          "orderScarcity": false,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      },
+      {
+        "ms": 102.5172,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 362.31785199999996
+        },
+        "members": [
+          {
+            "label": "C10",
+            "members": [
+              "C10"
+            ]
+          },
+          {
+            "label": "C11",
+            "members": [
+              "C11"
+            ]
+          },
+          {
+            "label": "C12",
+            "members": [
+              "C12"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "C10"
+          ],
+          [
+            "C12"
+          ],
+          [
+            "C11"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "hint:pad:C11.2->pad:C10.2:near:",
+            "kind": "hint",
+            "from": "pad:C11.2",
+            "to": "pad:C10.2",
+            "relation": "near",
+            "priority": "critical",
+            "hard": false,
+            "weight": 240,
+            "effect": "move_from",
+            "maxDistance": 8,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": false,
+          "orderCoreAffinity": false,
+          "orderBranching": false,
+          "orderScarcity": false,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      },
+      {
+        "ms": 95757.96269999999,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 15215.94044586286
+        },
+        "members": [
+          {
+            "label": "C13",
+            "members": [
+              "C13"
+            ]
+          },
+          {
+            "label": "C14",
+            "members": [
+              "C14"
+            ]
+          },
+          {
+            "label": "C15",
+            "members": [
+              "C15"
+            ]
+          },
+          {
+            "label": "C16",
+            "members": [
+              "C16"
+            ]
+          },
+          {
+            "label": "C10",
+            "members": [
+              "C10"
+            ]
+          },
+          {
+            "label": "C12",
+            "members": [
+              "C12"
+            ]
+          },
+          {
+            "label": "C11",
+            "members": [
+              "C11"
+            ]
+          },
+          {
+            "label": "U2",
+            "members": [
+              "U2"
+            ]
+          },
+          {
+            "label": "R6",
+            "members": [
+              "R6"
+            ]
+          },
+          {
+            "label": "R7",
+            "members": [
+              "R7"
+            ]
+          },
+          {
+            "label": "R8",
+            "members": [
+              "R8"
+            ]
+          },
+          {
+            "label": "C9",
+            "members": [
+              "C9"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "U2"
+          ],
+          [
+            "C13"
+          ],
+          [
+            "C15"
+          ],
+          [
+            "R7"
+          ],
+          [
+            "R6"
+          ],
+          [
+            "R8"
+          ],
+          [
+            "C9"
+          ],
+          [
+            "C12"
+          ],
+          [
+            "C14"
+          ],
+          [
+            "C16"
+          ],
+          [
+            "C10"
+          ],
+          [
+            "C11"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "connects_net:pad:C14.1->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:C14.1",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C13.1->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:C13.1",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.1->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:U2.1",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.3->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:U2.3",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C16.1->net:U2_HLDO::",
+            "kind": "net",
+            "from": "pad:C16.1",
+            "to": "net:U2_HLDO",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C15.1->net:U2_HLDO::",
+            "kind": "net",
+            "from": "pad:C15.1",
+            "to": "net:U2_HLDO",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.5->net:U2_HLDO::",
+            "kind": "net",
+            "from": "pad:U2.5",
+            "to": "net:U2_HLDO",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C12.1->net:U2_LDC::",
+            "kind": "net",
+            "from": "pad:C12.1",
+            "to": "net:U2_LDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.13->net:U2_LDC::",
+            "kind": "net",
+            "from": "pad:U2.13",
+            "to": "net:U2_LDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.16->net:U2_LDC::",
+            "kind": "net",
+            "from": "pad:U2.16",
+            "to": "net:U2_LDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:R7.2->net:I_FILTER_P::",
+            "kind": "net",
+            "from": "pad:R7.2",
+            "to": "net:I_FILTER_P",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C9.1->net:I_FILTER_P::",
+            "kind": "net",
+            "from": "pad:C9.1",
+            "to": "net:I_FILTER_P",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.6->net:I_FILTER_P::",
+            "kind": "net",
+            "from": "pad:U2.6",
+            "to": "net:I_FILTER_P",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:R8.2->net:I_FILTER_N::",
+            "kind": "net",
+            "from": "pad:R8.2",
+            "to": "net:I_FILTER_N",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C9.2->net:I_FILTER_N::",
+            "kind": "net",
+            "from": "pad:C9.2",
+            "to": "net:I_FILTER_N",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.7->net:I_FILTER_N::",
+            "kind": "net",
+            "from": "pad:U2.7",
+            "to": "net:I_FILTER_N",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hdc->pad:U2.1:near::released:component:C13:pad:U2.1",
+            "kind": "hint",
+            "from": "component:C13",
+            "to": "pad:U2.1",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hdc->pad:U2.1:near::released:component:C14:pad:U2.1",
+            "kind": "hint",
+            "from": "component:C14",
+            "to": "pad:U2.1",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hldo->pad:U2.5:near::released:component:C15:pad:U2.5",
+            "kind": "hint",
+            "from": "component:C15",
+            "to": "pad:U2.5",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hldo->pad:U2.5:near::released:component:C16:pad:U2.5",
+            "kind": "hint",
+            "from": "component:C16",
+            "to": "pad:U2.5",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C10:pad:U2.12",
+            "kind": "hint",
+            "from": "component:C10",
+            "to": "pad:U2.12",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 93.33333333333333,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C12:pad:U2.12",
+            "kind": "hint",
+            "from": "component:C12",
+            "to": "pad:U2.12",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 93.33333333333333,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C11:pad:U2.12",
+            "kind": "hint",
+            "from": "component:C11",
+            "to": "pad:U2.12",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 93.33333333333333,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:component:U2->component:J2:near:37",
+            "kind": "hint",
+            "from": "component:U2",
+            "to": "component:J2",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:component:U4->component:U2:near:41",
+            "kind": "hint",
+            "from": "component:U4",
+            "to": "component:U2",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:J2.1->pad:R6.1:critical_pair:56",
+            "kind": "critical_pair",
+            "from": "pad:J2.1",
+            "to": "pad:R6.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 480,
+            "effect": "move_from",
+            "maxDistance": 12,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:J2.2->pad:R6.2:critical_pair:57",
+            "kind": "critical_pair",
+            "from": "pad:J2.2",
+            "to": "pad:R6.2",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 12,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:C13.1->pad:U2.1:critical_pair:60",
+            "kind": "critical_pair",
+            "from": "pad:C13.1",
+            "to": "pad:U2.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:C15.1->pad:U2.5:critical_pair:61",
+            "kind": "critical_pair",
+            "from": "pad:C15.1",
+            "to": "pad:U2.5",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:R6.1->pad:R7.1:critical_pair:66",
+            "kind": "critical_pair",
+            "from": "pad:R6.1",
+            "to": "pad:R7.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 10,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_P",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:R7.2->pad:U2.6:critical_pair:67",
+            "kind": "critical_pair",
+            "from": "pad:R7.2",
+            "to": "pad:U2.6",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_P",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:R6.2->pad:R8.1:critical_pair:68",
+            "kind": "critical_pair",
+            "from": "pad:R6.2",
+            "to": "pad:R8.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 10,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_N",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:R8.2->pad:U2.7:critical_pair:69",
+            "kind": "critical_pair",
+            "from": "pad:R8.2",
+            "to": "pad:U2.7",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_N",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:U2.11->pad:R14.1:critical_pair:79",
+            "kind": "critical_pair",
+            "from": "pad:U2.11",
+            "to": "pad:R14.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 20,
+            "satelliteAnchor": false,
+            "pathId": "current_P",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:U2.10->pad:R15.1:critical_pair:81",
+            "kind": "critical_pair",
+            "from": "pad:U2.10",
+            "to": "pad:R15.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 20,
+            "satelliteAnchor": false,
+            "pathId": "current_N",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:C11.2->pad:C10.2:near:",
+            "kind": "hint",
+            "from": "pad:C11.2",
+            "to": "pad:C10.2",
+            "relation": "near",
+            "priority": "critical",
+            "hard": false,
+            "weight": 240,
+            "effect": "move_from",
+            "maxDistance": 8,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": false,
+          "orderCoreAffinity": false,
+          "orderBranching": false,
+          "orderScarcity": false,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      }
+    ],
+    "nativeC9": {
+      "designator": "C9",
+      "primitiveId": "primitive:tree:component:C9",
+      "blockName": "current_iso",
+      "layer": "top",
+      "bodyBox": {
+        "left": -1.38995,
+        "right": 1.38995,
+        "top": -0.71005,
+        "bottom": 0.71005
+      },
+      "throughHoleBoxes": [],
+      "pinCount": 2,
+      "role": "passive",
+      "powerComponent": false
+    },
+    "c9IcClearance": 0.6124999999999999,
+    "stages": [
+      {
+        "stage": "beam_complete",
+        "placements": [
+          {
+            "designator": "U2",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "designator": "C13",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 4.75,
+            "y": 7.179
+          },
+          {
+            "designator": "C15",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": -0.189
+          },
+          {
+            "designator": "R7",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.639,
+            "y": -2.459
+          },
+          {
+            "designator": "R6",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 14.771,
+            "y": -2.459
+          },
+          {
+            "designator": "R8",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.639,
+            "y": -4.694
+          },
+          {
+            "designator": "C9",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.528,
+            "y": -3.529
+          },
+          {
+            "designator": "C12",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": 0
+          },
+          {
+            "designator": "C14",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": 4.391
+          },
+          {
+            "designator": "C16",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 11.234,
+            "y": 2.62
+          },
+          {
+            "designator": "C10",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -9.194,
+            "y": 0
+          },
+          {
+            "designator": "C11",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -10.965,
+            "y": 0
+          }
+        ],
+        "parts": {
+          "denseAccess": 0,
+          "exposure": 0,
+          "facing": 2065.385198466736,
+          "groundSpread": 0,
+          "longNets": 0,
+          "padCrossings": 540,
+          "powerYield": 611.887447138964,
+          "relations": 9875.40564868416,
+          "signalSpread": 363.42400000000004,
+          "total": 17253.539504929933
+        },
+        "distances": [
+          12.30906287984589,
+          12.31893870956423
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.07,
+          "pairMax": 2.07,
+          "crossings": 0,
+          "foreignPadHits": 3,
+          "wireLength": 59.96,
+          "hpwl": 65.19,
+          "area": 431.95,
+          "aspect": 2.14
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.07,
+          "pairMax": 2.07,
+          "crossings": 6,
+          "foreignPadHits": 10,
+          "wireLength": 106.88,
+          "hpwl": 104.69,
+          "area": 431.95,
+          "aspect": 2.14
+        }
+      },
+      {
+        "stage": "local_complete",
+        "placements": [
+          {
+            "designator": "U2",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 0,
+            "y": -0.378
+          },
+          {
+            "designator": "C13",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 5.25,
+            "y": 6.801
+          },
+          {
+            "designator": "C15",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": -0.378
+          },
+          {
+            "designator": "R7",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.639,
+            "y": -2.457
+          },
+          {
+            "designator": "R6",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 12.792,
+            "y": -3.457
+          },
+          {
+            "designator": "R8",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.639,
+            "y": -5.694
+          },
+          {
+            "designator": "C9",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.528,
+            "y": -3.537
+          },
+          {
+            "designator": "C12",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": -7.423,
+            "y": 2.942
+          },
+          {
+            "designator": "C14",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": 4.013
+          },
+          {
+            "designator": "C16",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 9.103,
+            "y": 1.893
+          },
+          {
+            "designator": "C10",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -9.194,
+            "y": -0.189
+          },
+          {
+            "designator": "C11",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": -0.189
+          }
+        ],
+        "parts": {
+          "denseAccess": 0,
+          "exposure": 0,
+          "facing": 1372.7489296933454,
+          "groundSpread": 0,
+          "longNets": 0,
+          "padCrossings": 180,
+          "powerYield": 825.6,
+          "relations": 8492.974581932116,
+          "signalSpread": 346.42,
+          "total": 15432.533113492078
+        },
+        "distances": [
+          12.288464142438633,
+          12.294441790093604
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 58.81,
+          "hpwl": 64.54,
+          "area": 385.21,
+          "aspect": 1.58
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 8,
+          "foreignPadHits": 8,
+          "wireLength": 100.17,
+          "hpwl": 99.57,
+          "area": 385.21,
+          "aspect": 1.58
+        }
+      },
+      {
+        "stage": "pair_complete",
+        "placements": [
+          {
+            "designator": "U2",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 0,
+            "y": -0.378
+          },
+          {
+            "designator": "C13",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 5.25,
+            "y": 6.801
+          },
+          {
+            "designator": "C15",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": -0.378
+          },
+          {
+            "designator": "R7",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.639,
+            "y": -2.457
+          },
+          {
+            "designator": "R6",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 12.792,
+            "y": -4.457
+          },
+          {
+            "designator": "R8",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.639,
+            "y": -6.694
+          },
+          {
+            "designator": "C9",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.208,
+            "y": -4.607
+          },
+          {
+            "designator": "C12",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": -7.423,
+            "y": 2.942
+          },
+          {
+            "designator": "C14",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 7.423,
+            "y": 4.213
+          },
+          {
+            "designator": "C16",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 9.069,
+            "y": 1.566
+          },
+          {
+            "designator": "C10",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": -8.194,
+            "y": -2.689
+          },
+          {
+            "designator": "C11",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": -0.189
+          }
+        ],
+        "parts": {
+          "denseAccess": 0,
+          "exposure": 0,
+          "facing": 1201.3011648594743,
+          "groundSpread": 0,
+          "longNets": 0,
+          "padCrossings": 180,
+          "powerYield": 830.9705629337977,
+          "relations": 8539.264853997282,
+          "signalSpread": 268.27599999999995,
+          "total": 15215.94044586286
+        },
+        "distances": [
+          4.737013075768316,
+          2.933344393350361
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.33,
+          "pairMax": 3.33,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 39.25,
+          "hpwl": 44,
+          "area": 404.57,
+          "aspect": 1.47
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.33,
+          "pairMax": 3.33,
+          "crossings": 7,
+          "foreignPadHits": 5,
+          "wireLength": 79.5,
+          "hpwl": 78.33,
+          "area": 404.57,
+          "aspect": 1.47
+        }
+      },
+      {
+        "stage": "postrefine_final",
+        "placements": [
+          {
+            "designator": "U2",
+            "x": -2.5,
+            "y": -0.378,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C13",
+            "x": 2.75,
+            "y": 6.801,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C15",
+            "x": 5.603,
+            "y": -0.378,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R7",
+            "x": 6.139,
+            "y": -2.457,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R6",
+            "x": 10.292,
+            "y": -4.457,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R8",
+            "x": 6.139,
+            "y": -6.694,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C9",
+            "x": 5.708,
+            "y": -4.607,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C12",
+            "x": -9.923,
+            "y": 2.942,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C14",
+            "x": 4.923,
+            "y": 4.213,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C16",
+            "x": 6.569,
+            "y": 1.566,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C10",
+            "x": -9.923,
+            "y": -0.189,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C11",
+            "x": -10.694,
+            "y": -2.689,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "distances": [
+          4.737013075768315,
+          2.933344393350361
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.33,
+          "pairMax": 3.33,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 36.86,
+          "hpwl": 41.2,
+          "area": 404.57,
+          "aspect": 1.47
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.33,
+          "pairMax": 3.33,
+          "crossings": 5,
+          "foreignPadHits": 5,
+          "wireLength": 78.1,
+          "hpwl": 76.93,
+          "area": 404.57,
+          "aspect": 1.47
+        }
+      }
+    ],
+    "order": "U2 → C13 → C15 → R7 → R6 → R8 → C9 → C12 → C14 → C16 → C10 → C11",
+    "postrefine": {
+      "diagnostics": [],
+      "moves": [
+        {
+          "description": "C10<->C11; C10+=180, C11+=180",
+          "designators": [
+            "C10",
+            "C11"
+          ],
+          "effectiveImprovement": 25.249,
+          "kind": "swap",
+          "routeBudgetExhaustedAfter": 0,
+          "routeBudgetExhaustedBefore": 0,
+          "routeJobCount": 2,
+          "routePenaltyAfter": 0.278,
+          "routePenaltyBefore": 0,
+          "routeUnresolvedAfter": 0,
+          "routeUnresolvedBefore": 0,
+          "scoreAfter": 10207.117,
+          "scoreBefore": 10232.644
+        },
+        {
+          "description": "C14 rotate += 180",
+          "designators": [
+            "C14"
+          ],
+          "effectiveImprovement": 7.513,
+          "kind": "rotate_180",
+          "routeBudgetExhaustedAfter": 0,
+          "routeBudgetExhaustedBefore": 0,
+          "routeJobCount": 10,
+          "routePenaltyAfter": 8.349,
+          "routePenaltyBefore": 12.994,
+          "routeUnresolvedAfter": 0,
+          "routeUnresolvedBefore": 0,
+          "scoreAfter": 10204.25,
+          "scoreBefore": 10207.117
+        }
+      ],
+      "placements": [
+        {
+          "designator": "U2",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -2.5,
+          "y": -0.378
+        },
+        {
+          "designator": "C13",
+          "layer": "top",
+          "rotate": 270,
+          "score": 0,
+          "x": 2.75,
+          "y": 6.801
+        },
+        {
+          "designator": "C15",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 5.603,
+          "y": -0.378
+        },
+        {
+          "designator": "R7",
+          "layer": "top",
+          "rotate": 0,
+          "score": 0,
+          "x": 6.139,
+          "y": -2.457
+        },
+        {
+          "designator": "R6",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": 10.292,
+          "y": -4.457
+        },
+        {
+          "designator": "R8",
+          "layer": "top",
+          "rotate": 0,
+          "score": 0,
+          "x": 6.139,
+          "y": -6.694
+        },
+        {
+          "designator": "C9",
+          "layer": "top",
+          "rotate": 0,
+          "score": 0,
+          "x": 5.708,
+          "y": -4.607
+        },
+        {
+          "designator": "C12",
+          "layer": "top",
+          "rotate": 270,
+          "score": 0,
+          "x": -9.923,
+          "y": 2.942
+        },
+        {
+          "designator": "C14",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": 4.923,
+          "y": 4.213
+        },
+        {
+          "designator": "C16",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 6.569,
+          "y": 1.566
+        },
+        {
+          "designator": "C10",
+          "layer": "top",
+          "rotate": 270,
+          "score": 0,
+          "x": -9.923,
+          "y": -0.189
+        },
+        {
+          "designator": "C11",
+          "layer": "top",
+          "rotate": 0,
+          "score": 0,
+          "x": -10.694,
+          "y": -2.689
+        }
+      ],
+      "profile": {
+        "fixedDiagnosticsMs": 0.0006,
+        "initialScoreMs": 0.0324,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": true,
+            "baselineCacheHits": 16,
+            "baselineEvaluations": 17,
+            "baselineMs": 39.5725,
+            "boundRejected": 30,
+            "candidates": 35,
+            "evaluationWallMs": 43.250099999999996,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 35,
+            "generationMs": 0.07160000000000001,
+            "geometryMs": 0.1403,
+            "globalScoreMs": 0.8211999999999999,
+            "hardRejected": 2,
+            "insufficientImprovement": 1,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 3,
+            "routeMs": 2.2712,
+            "routeNativeMs": 41.84369999999999,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.8211999999999999,
+            "timedOut": false
+          },
+          {
+            "accepted": true,
+            "baselineCacheHits": 16,
+            "baselineEvaluations": 17,
+            "baselineMs": 33.2197,
+            "boundRejected": 30,
+            "candidates": 35,
+            "evaluationWallMs": 38.212500000000006,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 35,
+            "generationMs": 0.0528,
+            "geometryMs": 0.15930000000000002,
+            "globalScoreMs": 0.6623,
+            "hardRejected": 2,
+            "insufficientImprovement": 2,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 3,
+            "routeMs": 4.0236,
+            "routeNativeMs": 37.2433,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.6623,
+            "timedOut": false
+          },
+          {
+            "accepted": false,
+            "baselineCacheHits": 16,
+            "baselineEvaluations": 17,
+            "baselineMs": 29.275,
+            "boundRejected": 30,
+            "candidates": 35,
+            "evaluationWallMs": 34.677800000000005,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 35,
+            "generationMs": 0.0436,
+            "geometryMs": 0.10520000000000003,
+            "globalScoreMs": 0.6707000000000001,
+            "hardRejected": 2,
+            "insufficientImprovement": 3,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 3,
+            "routeMs": 4.478899999999999,
+            "routeNativeMs": 33.7539,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.6707000000000001,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 116.4472,
+        "workers": 1
+      },
+      "scoreAfter": 10204.25,
+      "scoreBefore": 10232.644
+    }
+  },
+  {
+    "block": "current_iso",
+    "variant": {
+      "id": "combined-original",
+      "label": "Новая очередь · decoupling_cap",
+      "family": "combined",
+      "c9Role": "decoupling_cap",
+      "equal": true,
+      "core": true,
+      "branch": true,
+      "scarcity": true,
+      "frontier": true,
+      "owner": true,
+      "access": true,
+      "groups": "all"
+    },
+    "ms": 113332.0413,
+    "sourceInputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "c9Role": "decoupling_cap",
+    "onlyRoleChanged": true,
+    "nativeHash": "9fbd148addc083f442366ab03c51d544523ed30fec05a934f541d713647014a7",
+    "inventory": true,
+    "orientation": true,
+    "validation": {
+      "ok": true,
+      "violations": []
+    },
+    "metrics": {
+      "pairCount": 1,
+      "pairSum": 2.25,
+      "pairMax": 2.25,
+      "crossings": 1,
+      "foreignPadHits": 3,
+      "wireLength": 43.67,
+      "hpwl": 47.92,
+      "area": 396.66,
+      "aspect": 1.22
+    },
+    "allMetrics": {
+      "pairCount": 1,
+      "pairSum": 2.25,
+      "pairMax": 2.25,
+      "crossings": 6,
+      "foreignPadHits": 7,
+      "wireLength": 79.46,
+      "hpwl": 81.77,
+      "area": 396.66,
+      "aspect": 1.22
+    },
+    "pairs": [
+      {
+        "pair": "C9.1.U2.6",
+        "mm": 5.99644789020967
+      },
+      {
+        "pair": "C9.2.U2.7",
+        "mm": 7.071651471191154
+      },
+      {
+        "pair": "C13.1.U2.1",
+        "mm": 2.752066314607989
+      },
+      {
+        "pair": "C15.1.U2.5",
+        "mm": 2.699349329005047
+      }
+    ],
+    "localHardPairs": [],
+    "hardPairsOk": true,
+    "placements": [
+      {
+        "designator": "U2",
+        "x": -1,
+        "y": 3,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C13",
+        "x": 7.103,
+        "y": 8.124,
+        "rotate": 180,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C14",
+        "x": 7.103,
+        "y": 6.353,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C9",
+        "x": 9.605,
+        "y": 3.037,
+        "rotate": 270,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C15",
+        "x": 7.103,
+        "y": 2.811,
+        "rotate": 180,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C12",
+        "x": -8.423,
+        "y": 4.645,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C10",
+        "x": -8.423,
+        "y": 1.514,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C11",
+        "x": -10.194,
+        "y": 1.514,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C16",
+        "x": 7.103,
+        "y": 4.582,
+        "rotate": 180,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "R8",
+        "x": 5.863,
+        "y": -5.214,
+        "rotate": 270,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "R7",
+        "x": 7.639,
+        "y": 0.041,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "R6",
+        "x": 9.139,
+        "y": -5.214,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      }
+    ],
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hdc",
+        "message": "Experimental independent placement: passive_net:I_OUT; electrical constraints retained"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hdc",
+        "message": "Block postrefine: 0 moves, 8 ms"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hldo",
+        "message": "Experimental independent placement: passive_net:I_OUT; electrical constraints retained"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hldo",
+        "message": "Block postrefine: 0 moves, 5 ms"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_secondary",
+        "message": "Block postrefine: 0 moves, 7 ms"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_iso",
+        "message": "Experimental independent placement: current_hdc, current_hldo, current_secondary; electrical constraints retained"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_iso",
+        "message": "Block postrefine: 2 moves, 114 ms"
+      }
+    ],
+    "captures": [
+      {
+        "ms": 26.771699999999896,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 147.161086
+        },
+        "members": [
+          {
+            "label": "C13",
+            "members": [
+              "C13"
+            ]
+          },
+          {
+            "label": "C14",
+            "members": [
+              "C14"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "C13"
+          ],
+          [
+            "C14"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "hint:pad:C13.1->pad:U2.1:critical_pair:60",
+            "kind": "critical_pair",
+            "from": "pad:C13.1",
+            "to": "pad:U2.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": true,
+          "orderCoreAffinity": true,
+          "orderBranching": true,
+          "orderScarcity": true,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      },
+      {
+        "ms": 30.178999999999974,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 147.161086
+        },
+        "members": [
+          {
+            "label": "C15",
+            "members": [
+              "C15"
+            ]
+          },
+          {
+            "label": "C16",
+            "members": [
+              "C16"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "C15"
+          ],
+          [
+            "C16"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "hint:pad:C15.1->pad:U2.5:critical_pair:61",
+            "kind": "critical_pair",
+            "from": "pad:C15.1",
+            "to": "pad:U2.5",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": true,
+          "orderCoreAffinity": true,
+          "orderBranching": true,
+          "orderScarcity": true,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      },
+      {
+        "ms": 178.9441999999999,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 362.31785199999996
+        },
+        "members": [
+          {
+            "label": "C10",
+            "members": [
+              "C10"
+            ]
+          },
+          {
+            "label": "C11",
+            "members": [
+              "C11"
+            ]
+          },
+          {
+            "label": "C12",
+            "members": [
+              "C12"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "C10"
+          ],
+          [
+            "C12"
+          ],
+          [
+            "C11"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "hint:pad:C11.2->pad:C10.2:near:",
+            "kind": "hint",
+            "from": "pad:C11.2",
+            "to": "pad:C10.2",
+            "relation": "near",
+            "priority": "critical",
+            "hard": false,
+            "weight": 240,
+            "effect": "move_from",
+            "maxDistance": 8,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": true,
+          "orderCoreAffinity": true,
+          "orderBranching": true,
+          "orderScarcity": true,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      },
+      {
+        "ms": 112941.60519999999,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 15641.875373685523
+        },
+        "members": [
+          {
+            "label": "C13",
+            "members": [
+              "C13"
+            ]
+          },
+          {
+            "label": "C14",
+            "members": [
+              "C14"
+            ]
+          },
+          {
+            "label": "C15",
+            "members": [
+              "C15"
+            ]
+          },
+          {
+            "label": "C16",
+            "members": [
+              "C16"
+            ]
+          },
+          {
+            "label": "C10",
+            "members": [
+              "C10"
+            ]
+          },
+          {
+            "label": "C12",
+            "members": [
+              "C12"
+            ]
+          },
+          {
+            "label": "C11",
+            "members": [
+              "C11"
+            ]
+          },
+          {
+            "label": "U2",
+            "members": [
+              "U2"
+            ]
+          },
+          {
+            "label": "R6",
+            "members": [
+              "R6"
+            ]
+          },
+          {
+            "label": "R7",
+            "members": [
+              "R7"
+            ]
+          },
+          {
+            "label": "R8",
+            "members": [
+              "R8"
+            ]
+          },
+          {
+            "label": "C9",
+            "members": [
+              "C9"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "U2"
+          ],
+          [
+            "C13"
+          ],
+          [
+            "C14"
+          ],
+          [
+            "C9"
+          ],
+          [
+            "C15"
+          ],
+          [
+            "C12"
+          ],
+          [
+            "C10"
+          ],
+          [
+            "C11"
+          ],
+          [
+            "C16"
+          ],
+          [
+            "R8"
+          ],
+          [
+            "R7"
+          ],
+          [
+            "R6"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "connects_net:pad:C14.1->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:C14.1",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C13.1->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:C13.1",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.1->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:U2.1",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.3->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:U2.3",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C16.1->net:U2_HLDO::",
+            "kind": "net",
+            "from": "pad:C16.1",
+            "to": "net:U2_HLDO",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C15.1->net:U2_HLDO::",
+            "kind": "net",
+            "from": "pad:C15.1",
+            "to": "net:U2_HLDO",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.5->net:U2_HLDO::",
+            "kind": "net",
+            "from": "pad:U2.5",
+            "to": "net:U2_HLDO",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C12.1->net:U2_LDC::",
+            "kind": "net",
+            "from": "pad:C12.1",
+            "to": "net:U2_LDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.13->net:U2_LDC::",
+            "kind": "net",
+            "from": "pad:U2.13",
+            "to": "net:U2_LDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.16->net:U2_LDC::",
+            "kind": "net",
+            "from": "pad:U2.16",
+            "to": "net:U2_LDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:R7.2->net:I_FILTER_P::",
+            "kind": "net",
+            "from": "pad:R7.2",
+            "to": "net:I_FILTER_P",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C9.1->net:I_FILTER_P::",
+            "kind": "net",
+            "from": "pad:C9.1",
+            "to": "net:I_FILTER_P",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.6->net:I_FILTER_P::",
+            "kind": "net",
+            "from": "pad:U2.6",
+            "to": "net:I_FILTER_P",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:R8.2->net:I_FILTER_N::",
+            "kind": "net",
+            "from": "pad:R8.2",
+            "to": "net:I_FILTER_N",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C9.2->net:I_FILTER_N::",
+            "kind": "net",
+            "from": "pad:C9.2",
+            "to": "net:I_FILTER_N",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.7->net:I_FILTER_N::",
+            "kind": "net",
+            "from": "pad:U2.7",
+            "to": "net:I_FILTER_N",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hdc->pad:U2.1:near::released:component:C13:pad:U2.1",
+            "kind": "hint",
+            "from": "component:C13",
+            "to": "pad:U2.1",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hdc->pad:U2.1:near::released:component:C14:pad:U2.1",
+            "kind": "hint",
+            "from": "component:C14",
+            "to": "pad:U2.1",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hldo->pad:U2.5:near::released:component:C15:pad:U2.5",
+            "kind": "hint",
+            "from": "component:C15",
+            "to": "pad:U2.5",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hldo->pad:U2.5:near::released:component:C16:pad:U2.5",
+            "kind": "hint",
+            "from": "component:C16",
+            "to": "pad:U2.5",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C10:pad:U2.12",
+            "kind": "hint",
+            "from": "component:C10",
+            "to": "pad:U2.12",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 93.33333333333333,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C12:pad:U2.12",
+            "kind": "hint",
+            "from": "component:C12",
+            "to": "pad:U2.12",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 93.33333333333333,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C11:pad:U2.12",
+            "kind": "hint",
+            "from": "component:C11",
+            "to": "pad:U2.12",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 93.33333333333333,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:component:U2->component:J2:near:37",
+            "kind": "hint",
+            "from": "component:U2",
+            "to": "component:J2",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:component:U4->component:U2:near:41",
+            "kind": "hint",
+            "from": "component:U4",
+            "to": "component:U2",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:J2.1->pad:R6.1:critical_pair:56",
+            "kind": "critical_pair",
+            "from": "pad:J2.1",
+            "to": "pad:R6.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 480,
+            "effect": "move_from",
+            "maxDistance": 12,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:J2.2->pad:R6.2:critical_pair:57",
+            "kind": "critical_pair",
+            "from": "pad:J2.2",
+            "to": "pad:R6.2",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 12,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:C13.1->pad:U2.1:critical_pair:60",
+            "kind": "critical_pair",
+            "from": "pad:C13.1",
+            "to": "pad:U2.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:C15.1->pad:U2.5:critical_pair:61",
+            "kind": "critical_pair",
+            "from": "pad:C15.1",
+            "to": "pad:U2.5",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:R6.1->pad:R7.1:critical_pair:66",
+            "kind": "critical_pair",
+            "from": "pad:R6.1",
+            "to": "pad:R7.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 10,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_P",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:R7.2->pad:U2.6:critical_pair:67",
+            "kind": "critical_pair",
+            "from": "pad:R7.2",
+            "to": "pad:U2.6",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_P",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:R6.2->pad:R8.1:critical_pair:68",
+            "kind": "critical_pair",
+            "from": "pad:R6.2",
+            "to": "pad:R8.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 10,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_N",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:R8.2->pad:U2.7:critical_pair:69",
+            "kind": "critical_pair",
+            "from": "pad:R8.2",
+            "to": "pad:U2.7",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_N",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:U2.11->pad:R14.1:critical_pair:79",
+            "kind": "critical_pair",
+            "from": "pad:U2.11",
+            "to": "pad:R14.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 20,
+            "satelliteAnchor": false,
+            "pathId": "current_P",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:U2.10->pad:R15.1:critical_pair:81",
+            "kind": "critical_pair",
+            "from": "pad:U2.10",
+            "to": "pad:R15.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 20,
+            "satelliteAnchor": false,
+            "pathId": "current_N",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:C11.2->pad:C10.2:near:",
+            "kind": "hint",
+            "from": "pad:C11.2",
+            "to": "pad:C10.2",
+            "relation": "near",
+            "priority": "critical",
+            "hard": false,
+            "weight": 240,
+            "effect": "move_from",
+            "maxDistance": 8,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": true,
+          "orderCoreAffinity": true,
+          "orderBranching": true,
+          "orderScarcity": true,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      }
+    ],
+    "matchesPriorRun": true,
+    "nativeC9": {
+      "designator": "C9",
+      "primitiveId": "primitive:tree:component:C9",
+      "blockName": "current_iso",
+      "layer": "top",
+      "bodyBox": {
+        "left": -1.38995,
+        "right": 1.38995,
+        "top": -0.71005,
+        "bottom": 0.71005
+      },
+      "throughHoleBoxes": [],
+      "pinCount": 2,
+      "role": "decoupling_cap",
+      "powerComponent": true
+    },
+    "c9IcClearance": 0.5075,
+    "stages": [
+      {
+        "stage": "beam_complete",
+        "placements": [
+          {
+            "designator": "U2",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "designator": "C13",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 4.75,
+            "y": 7.179
+          },
+          {
+            "designator": "C14",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 2.979,
+            "y": 7.179
+          },
+          {
+            "designator": "C9",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 7.423,
+            "y": -2.659
+          },
+          {
+            "designator": "C15",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": -0.189
+          },
+          {
+            "designator": "C12",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": 1.645
+          },
+          {
+            "designator": "C10",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": -1.486
+          },
+          {
+            "designator": "C11",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -9.194,
+            "y": -1.486
+          },
+          {
+            "designator": "C16",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": 1.582
+          },
+          {
+            "designator": "R8",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 5.25,
+            "y": -7.714
+          },
+          {
+            "designator": "R7",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 10.305,
+            "y": -2.459
+          },
+          {
+            "designator": "R6",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 10.505,
+            "y": -8.714
+          }
+        ],
+        "parts": {
+          "denseAccess": 0,
+          "exposure": 0,
+          "facing": 1498.868843526314,
+          "groundSpread": 0,
+          "longNets": 0.5307930251747777,
+          "padCrossings": 360,
+          "powerYield": 671.9149142160184,
+          "relations": 9783.314987622718,
+          "signalSpread": 263.59200000000004,
+          "total": 18574.267169278966
+        },
+        "distances": [
+          2.6727000168369064,
+          2.6758500200870747
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 6.65,
+          "pairMax": 6.65,
+          "crossings": 0,
+          "foreignPadHits": 2,
+          "wireLength": 39.84,
+          "hpwl": 43.48,
+          "area": 469.5,
+          "aspect": 1.27
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 6.65,
+          "pairMax": 6.65,
+          "crossings": 5,
+          "foreignPadHits": 9,
+          "wireLength": 76.23,
+          "hpwl": 77.96,
+          "area": 469.5,
+          "aspect": 1.27
+        }
+      },
+      {
+        "stage": "local_complete",
+        "placements": [
+          {
+            "designator": "U2",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "designator": "C13",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 4.75,
+            "y": 7.179
+          },
+          {
+            "designator": "C14",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 7.423,
+            "y": 4.091
+          },
+          {
+            "designator": "C9",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.605,
+            "y": -4.463
+          },
+          {
+            "designator": "C15",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": -0.189
+          },
+          {
+            "designator": "C12",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": 1.645
+          },
+          {
+            "designator": "C10",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": -1.486
+          },
+          {
+            "designator": "C11",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -9.194,
+            "y": -1.486
+          },
+          {
+            "designator": "C16",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": 1.582
+          },
+          {
+            "designator": "R8",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 5.25,
+            "y": -7.714
+          },
+          {
+            "designator": "R7",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.805,
+            "y": -2.459
+          },
+          {
+            "designator": "R6",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 10.505,
+            "y": -8.714
+          }
+        ],
+        "parts": {
+          "denseAccess": 0,
+          "exposure": 0,
+          "facing": 1672.354770698498,
+          "groundSpread": 0,
+          "longNets": 2.6752841598827457,
+          "padCrossings": 180,
+          "powerYield": 322.0672924784801,
+          "relations": 9420.280915993451,
+          "signalSpread": 270.46000000000004,
+          "total": 17520.310282587194
+        },
+        "distances": [
+          5.19761651913644,
+          3.3873875671378375
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 7.3,
+          "pairMax": 7.3,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 42.73,
+          "hpwl": 46.97,
+          "area": 469.5,
+          "aspect": 1.27
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 7.3,
+          "pairMax": 7.3,
+          "crossings": 4,
+          "foreignPadHits": 7,
+          "wireLength": 79.47,
+          "hpwl": 79.68,
+          "area": 469.5,
+          "aspect": 1.27
+        }
+      },
+      {
+        "stage": "pair_complete",
+        "placements": [
+          {
+            "designator": "U2",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "designator": "C13",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": 5.124
+          },
+          {
+            "designator": "C14",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": 3.353
+          },
+          {
+            "designator": "C9",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 10.605,
+            "y": 0.037
+          },
+          {
+            "designator": "C15",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": -0.189
+          },
+          {
+            "designator": "C12",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": 1.645
+          },
+          {
+            "designator": "C10",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": -1.486
+          },
+          {
+            "designator": "C11",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -9.194,
+            "y": -1.486
+          },
+          {
+            "designator": "C16",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": 1.582
+          },
+          {
+            "designator": "R8",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 6.863,
+            "y": -8.214
+          },
+          {
+            "designator": "R7",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.639,
+            "y": -2.959
+          },
+          {
+            "designator": "R6",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 10.139,
+            "y": -8.214
+          }
+        ],
+        "parts": {
+          "denseAccess": 0,
+          "exposure": 0,
+          "facing": 1259.7560047810912,
+          "groundSpread": 0,
+          "longNets": 0,
+          "padCrossings": 360,
+          "powerYield": 209.12298377629082,
+          "relations": 8756.58255514119,
+          "signalSpread": 273.252,
+          "total": 15641.875373685523
+        },
+        "distances": [
+          6.44573857521386,
+          6.392409133495759
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.25,
+          "pairMax": 2.25,
+          "crossings": 2,
+          "foreignPadHits": 2,
+          "wireLength": 43.49,
+          "hpwl": 46.52,
+          "area": 396.66,
+          "aspect": 1.22
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.25,
+          "pairMax": 2.25,
+          "crossings": 6,
+          "foreignPadHits": 7,
+          "wireLength": 79.7,
+          "hpwl": 80.37,
+          "area": 396.66,
+          "aspect": 1.22
+        }
+      },
+      {
+        "stage": "postrefine_final",
+        "placements": [
+          {
+            "designator": "U2",
+            "x": -1,
+            "y": 3,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C13",
+            "x": 7.103,
+            "y": 8.124,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C14",
+            "x": 7.103,
+            "y": 6.353,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C9",
+            "x": 9.605,
+            "y": 3.037,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C15",
+            "x": 7.103,
+            "y": 2.811,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C12",
+            "x": -8.423,
+            "y": 4.645,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C10",
+            "x": -8.423,
+            "y": 1.514,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C11",
+            "x": -10.194,
+            "y": 1.514,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C16",
+            "x": 7.103,
+            "y": 4.582,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R8",
+            "x": 5.863,
+            "y": -5.214,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R7",
+            "x": 7.639,
+            "y": 0.041,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R6",
+            "x": 9.139,
+            "y": -5.214,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "distances": [
+          5.99644789020967,
+          7.071651471191154
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.25,
+          "pairMax": 2.25,
+          "crossings": 1,
+          "foreignPadHits": 3,
+          "wireLength": 43.67,
+          "hpwl": 47.92,
+          "area": 396.66,
+          "aspect": 1.22
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.25,
+          "pairMax": 2.25,
+          "crossings": 6,
+          "foreignPadHits": 7,
+          "wireLength": 79.46,
+          "hpwl": 81.77,
+          "area": 396.66,
+          "aspect": 1.22
+        }
+      }
+    ],
+    "order": "U2 → C13 → C14 → C9 → C15 → C12 → C10 → C11 → C16 → R8 → R7 → R6",
+    "postrefine": {
+      "diagnostics": [],
+      "moves": [
+        {
+          "description": "C14 rotate += 180",
+          "designators": [
+            "C14"
+          ],
+          "effectiveImprovement": 18.81,
+          "kind": "rotate_180",
+          "routeBudgetExhaustedAfter": 0,
+          "routeBudgetExhaustedBefore": 0,
+          "routeJobCount": 10,
+          "routePenaltyAfter": 7.471,
+          "routePenaltyBefore": 31.834,
+          "routeUnresolvedAfter": 0,
+          "routeUnresolvedBefore": 0,
+          "scoreAfter": 11572.909,
+          "scoreBefore": 11567.356
+        },
+        {
+          "description": "C9 rotate += 180",
+          "designators": [
+            "C9"
+          ],
+          "effectiveImprovement": 1.325,
+          "kind": "rotate_180",
+          "routeBudgetExhaustedAfter": 0,
+          "routeBudgetExhaustedBefore": 0,
+          "routeJobCount": 4,
+          "routePenaltyAfter": 41.681,
+          "routePenaltyBefore": 40.181,
+          "routeUnresolvedAfter": 0,
+          "routeUnresolvedBefore": 0,
+          "scoreAfter": 11570.083,
+          "scoreBefore": 11572.909
+        }
+      ],
+      "placements": [
+        {
+          "designator": "U2",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -1,
+          "y": 3
+        },
+        {
+          "designator": "C13",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 7.103,
+          "y": 8.124
+        },
+        {
+          "designator": "C14",
+          "layer": "top",
+          "rotate": 0,
+          "score": 0,
+          "x": 7.103,
+          "y": 6.353
+        },
+        {
+          "designator": "C9",
+          "layer": "top",
+          "rotate": 270,
+          "score": 0,
+          "x": 9.605,
+          "y": 3.037
+        },
+        {
+          "designator": "C15",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 7.103,
+          "y": 2.811
+        },
+        {
+          "designator": "C12",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -8.423,
+          "y": 4.645
+        },
+        {
+          "designator": "C10",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -8.423,
+          "y": 1.514
+        },
+        {
+          "designator": "C11",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -10.194,
+          "y": 1.514
+        },
+        {
+          "designator": "C16",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 7.103,
+          "y": 4.582
+        },
+        {
+          "designator": "R8",
+          "layer": "top",
+          "rotate": 270,
+          "score": 0,
+          "x": 5.863,
+          "y": -5.214
+        },
+        {
+          "designator": "R7",
+          "layer": "top",
+          "rotate": 0,
+          "score": 0,
+          "x": 7.639,
+          "y": 0.041
+        },
+        {
+          "designator": "R6",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": 9.139,
+          "y": -5.214
+        }
+      ],
+      "profile": {
+        "fixedDiagnosticsMs": 0.0011,
+        "initialScoreMs": 0.0229,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": true,
+            "baselineCacheHits": 18,
+            "baselineEvaluations": 17,
+            "baselineMs": 30.9813,
+            "boundRejected": 33,
+            "candidates": 35,
+            "evaluationWallMs": 34.3073,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 35,
+            "generationMs": 0.0401,
+            "geometryMs": 0.0805,
+            "globalScoreMs": 0.5666,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 2,
+            "routeMs": 2.5361,
+            "routeNativeMs": 33.517399999999995,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.5666,
+            "timedOut": false
+          },
+          {
+            "accepted": true,
+            "baselineCacheHits": 18,
+            "baselineEvaluations": 17,
+            "baselineMs": 25.9759,
+            "boundRejected": 33,
+            "candidates": 35,
+            "evaluationWallMs": 30.1181,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 35,
+            "generationMs": 0.0596,
+            "geometryMs": 0.0892,
+            "globalScoreMs": 0.6877,
+            "hardRejected": 0,
+            "insufficientImprovement": 1,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 2,
+            "routeMs": 3.2185,
+            "routeNativeMs": 29.1944,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.6877,
+            "timedOut": false
+          },
+          {
+            "accepted": false,
+            "baselineCacheHits": 18,
+            "baselineEvaluations": 17,
+            "baselineMs": 24.665399999999998,
+            "boundRejected": 33,
+            "candidates": 35,
+            "evaluationWallMs": 29.764200000000002,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 35,
+            "generationMs": 0.057800000000000004,
+            "geometryMs": 0.09830000000000001,
+            "globalScoreMs": 0.6706000000000001,
+            "hardRejected": 0,
+            "insufficientImprovement": 2,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 2,
+            "routeMs": 4.1615,
+            "routeNativeMs": 28.8269,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.6706000000000001,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 94.4737,
+        "workers": 1
+      },
+      "scoreAfter": 11570.083,
+      "scoreBefore": 11567.356
+    }
+  },
+  {
+    "block": "current_iso",
+    "variant": {
+      "id": "combined-passive",
+      "label": "Новая очередь · passive",
+      "family": "combined",
+      "c9Role": "passive",
+      "equal": true,
+      "core": true,
+      "branch": true,
+      "scarcity": true,
+      "frontier": true,
+      "owner": true,
+      "access": true,
+      "groups": "all"
+    },
+    "ms": 115768.6859,
+    "sourceInputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "inputHash": "91a97cfbbd5abede492749586b820a165371fdf62c88b57e83c362942e381d68",
+    "c9Role": "passive",
+    "onlyRoleChanged": true,
+    "nativeHash": "9fbd148addc083f442366ab03c51d544523ed30fec05a934f541d713647014a7",
+    "inventory": true,
+    "orientation": true,
+    "validation": {
+      "ok": true,
+      "violations": []
+    },
+    "metrics": {
+      "pairCount": 1,
+      "pairSum": 2.41,
+      "pairMax": 2.41,
+      "crossings": 1,
+      "foreignPadHits": 3,
+      "wireLength": 45.74,
+      "hpwl": 48.46,
+      "area": 456.03,
+      "aspect": 1.11
+    },
+    "allMetrics": {
+      "pairCount": 1,
+      "pairSum": 2.41,
+      "pairMax": 2.41,
+      "crossings": 7,
+      "foreignPadHits": 10,
+      "wireLength": 85.72,
+      "hpwl": 85.07,
+      "area": 456.03,
+      "aspect": 1.11
+    },
+    "pairs": [
+      {
+        "pair": "C9.1.U2.6",
+        "mm": 8.654800020797706
+      },
+      {
+        "pair": "C9.2.U2.7",
+        "mm": 7.51646403104545
+      },
+      {
+        "pair": "C13.1.U2.1",
+        "mm": 2.0881000215506935
+      },
+      {
+        "pair": "C15.1.U2.5",
+        "mm": 3.2086655481679607
+      }
+    ],
+    "localHardPairs": [],
+    "hardPairsOk": true,
+    "placements": [
+      {
+        "designator": "U2",
+        "x": -1.5,
+        "y": 1.403,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C13",
+        "x": 3.25,
+        "y": 8.582,
+        "rotate": 270,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C14",
+        "x": 6.603,
+        "y": 5.294,
+        "rotate": 180,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C9",
+        "x": 3.951,
+        "y": -9.211,
+        "rotate": 180,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C15",
+        "x": 7.103,
+        "y": 1.311,
+        "rotate": 180,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C12",
+        "x": -8.923,
+        "y": 3.145,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C10",
+        "x": -8.923,
+        "y": 0.014,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C11",
+        "x": -10.694,
+        "y": 0.014,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "C16",
+        "x": 7.103,
+        "y": 3.082,
+        "rotate": 180,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "R7",
+        "x": 7.139,
+        "y": -1.056,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "R8",
+        "x": 5.863,
+        "y": -6.312,
+        "rotate": 270,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "R6",
+        "x": 9.139,
+        "y": -6.312,
+        "rotate": 90,
+        "layer": "top",
+        "score": 0
+      }
+    ],
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hdc",
+        "message": "Experimental independent placement: passive_net:I_OUT; electrical constraints retained"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hdc",
+        "message": "Block postrefine: 0 moves, 9 ms"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hldo",
+        "message": "Experimental independent placement: passive_net:I_OUT; electrical constraints retained"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_hldo",
+        "message": "Block postrefine: 0 moves, 3 ms"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_secondary",
+        "message": "Block postrefine: 0 moves, 5 ms"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_iso",
+        "message": "Experimental independent placement: current_hdc, current_hldo, current_secondary; electrical constraints retained"
+      },
+      {
+        "severity": "warning",
+        "nodeId": "tree:block:current_iso",
+        "message": "Block postrefine: 1 moves, 83 ms"
+      }
+    ],
+    "captures": [
+      {
+        "ms": 30.81389999999999,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 147.161086
+        },
+        "members": [
+          {
+            "label": "C13",
+            "members": [
+              "C13"
+            ]
+          },
+          {
+            "label": "C14",
+            "members": [
+              "C14"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "C13"
+          ],
+          [
+            "C14"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "hint:pad:C13.1->pad:U2.1:critical_pair:60",
+            "kind": "critical_pair",
+            "from": "pad:C13.1",
+            "to": "pad:U2.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": true,
+          "orderCoreAffinity": true,
+          "orderBranching": true,
+          "orderScarcity": true,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      },
+      {
+        "ms": 27.3839999999999,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 147.161086
+        },
+        "members": [
+          {
+            "label": "C15",
+            "members": [
+              "C15"
+            ]
+          },
+          {
+            "label": "C16",
+            "members": [
+              "C16"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "C15"
+          ],
+          [
+            "C16"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "hint:pad:C15.1->pad:U2.5:critical_pair:61",
+            "kind": "critical_pair",
+            "from": "pad:C15.1",
+            "to": "pad:U2.5",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": true,
+          "orderCoreAffinity": true,
+          "orderBranching": true,
+          "orderScarcity": true,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      },
+      {
+        "ms": 167.00480000000005,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 362.31785199999996
+        },
+        "members": [
+          {
+            "label": "C10",
+            "members": [
+              "C10"
+            ]
+          },
+          {
+            "label": "C11",
+            "members": [
+              "C11"
+            ]
+          },
+          {
+            "label": "C12",
+            "members": [
+              "C12"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "C10"
+          ],
+          [
+            "C12"
+          ],
+          [
+            "C11"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "hint:pad:C11.2->pad:C10.2:near:",
+            "kind": "hint",
+            "from": "pad:C11.2",
+            "to": "pad:C10.2",
+            "relation": "near",
+            "priority": "critical",
+            "hard": false,
+            "weight": 240,
+            "effect": "move_from",
+            "maxDistance": 8,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": true,
+          "orderCoreAffinity": true,
+          "orderBranching": true,
+          "orderScarcity": true,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      },
+      {
+        "ms": 115423.2768,
+        "rank": {
+          "hardCount": 0,
+          "hardSeverity": 0,
+          "score": 15677.055985495372
+        },
+        "members": [
+          {
+            "label": "C13",
+            "members": [
+              "C13"
+            ]
+          },
+          {
+            "label": "C14",
+            "members": [
+              "C14"
+            ]
+          },
+          {
+            "label": "C15",
+            "members": [
+              "C15"
+            ]
+          },
+          {
+            "label": "C16",
+            "members": [
+              "C16"
+            ]
+          },
+          {
+            "label": "C10",
+            "members": [
+              "C10"
+            ]
+          },
+          {
+            "label": "C12",
+            "members": [
+              "C12"
+            ]
+          },
+          {
+            "label": "C11",
+            "members": [
+              "C11"
+            ]
+          },
+          {
+            "label": "U2",
+            "members": [
+              "U2"
+            ]
+          },
+          {
+            "label": "R6",
+            "members": [
+              "R6"
+            ]
+          },
+          {
+            "label": "R7",
+            "members": [
+              "R7"
+            ]
+          },
+          {
+            "label": "R8",
+            "members": [
+              "R8"
+            ]
+          },
+          {
+            "label": "C9",
+            "members": [
+              "C9"
+            ]
+          }
+        ],
+        "order": [
+          [
+            "U2"
+          ],
+          [
+            "C13"
+          ],
+          [
+            "C14"
+          ],
+          [
+            "C9"
+          ],
+          [
+            "C15"
+          ],
+          [
+            "C12"
+          ],
+          [
+            "C10"
+          ],
+          [
+            "C11"
+          ],
+          [
+            "C16"
+          ],
+          [
+            "R7"
+          ],
+          [
+            "R8"
+          ],
+          [
+            "R6"
+          ]
+        ],
+        "relations": [
+          {
+            "id": "connects_net:pad:C14.1->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:C14.1",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C13.1->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:C13.1",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.1->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:U2.1",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.3->net:U2_HDC::",
+            "kind": "net",
+            "from": "pad:U2.3",
+            "to": "net:U2_HDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C16.1->net:U2_HLDO::",
+            "kind": "net",
+            "from": "pad:C16.1",
+            "to": "net:U2_HLDO",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C15.1->net:U2_HLDO::",
+            "kind": "net",
+            "from": "pad:C15.1",
+            "to": "net:U2_HLDO",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.5->net:U2_HLDO::",
+            "kind": "net",
+            "from": "pad:U2.5",
+            "to": "net:U2_HLDO",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C12.1->net:U2_LDC::",
+            "kind": "net",
+            "from": "pad:C12.1",
+            "to": "net:U2_LDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.13->net:U2_LDC::",
+            "kind": "net",
+            "from": "pad:U2.13",
+            "to": "net:U2_LDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.16->net:U2_LDC::",
+            "kind": "net",
+            "from": "pad:U2.16",
+            "to": "net:U2_LDC",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:R7.2->net:I_FILTER_P::",
+            "kind": "net",
+            "from": "pad:R7.2",
+            "to": "net:I_FILTER_P",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C9.1->net:I_FILTER_P::",
+            "kind": "net",
+            "from": "pad:C9.1",
+            "to": "net:I_FILTER_P",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.6->net:I_FILTER_P::",
+            "kind": "net",
+            "from": "pad:U2.6",
+            "to": "net:I_FILTER_P",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:R8.2->net:I_FILTER_N::",
+            "kind": "net",
+            "from": "pad:R8.2",
+            "to": "net:I_FILTER_N",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:C9.2->net:I_FILTER_N::",
+            "kind": "net",
+            "from": "pad:C9.2",
+            "to": "net:I_FILTER_N",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "connects_net:pad:U2.7->net:I_FILTER_N::",
+            "kind": "net",
+            "from": "pad:U2.7",
+            "to": "net:I_FILTER_N",
+            "hard": false,
+            "effect": "score_only",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hdc->pad:U2.1:near::released:component:C13:pad:U2.1",
+            "kind": "hint",
+            "from": "component:C13",
+            "to": "pad:U2.1",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hdc->pad:U2.1:near::released:component:C14:pad:U2.1",
+            "kind": "hint",
+            "from": "component:C14",
+            "to": "pad:U2.1",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hldo->pad:U2.5:near::released:component:C15:pad:U2.5",
+            "kind": "hint",
+            "from": "component:C15",
+            "to": "pad:U2.5",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_hldo->pad:U2.5:near::released:component:C16:pad:U2.5",
+            "kind": "hint",
+            "from": "component:C16",
+            "to": "pad:U2.5",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C10:pad:U2.12",
+            "kind": "hint",
+            "from": "component:C10",
+            "to": "pad:U2.12",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 93.33333333333333,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C12:pad:U2.12",
+            "kind": "hint",
+            "from": "component:C12",
+            "to": "pad:U2.12",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 93.33333333333333,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C11:pad:U2.12",
+            "kind": "hint",
+            "from": "component:C11",
+            "to": "pad:U2.12",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 93.33333333333333,
+            "effect": "move_from",
+            "satelliteAnchor": true,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:component:U2->component:J2:near:37",
+            "kind": "hint",
+            "from": "component:U2",
+            "to": "component:J2",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:component:U4->component:U2:near:41",
+            "kind": "hint",
+            "from": "component:U4",
+            "to": "component:U2",
+            "relation": "near",
+            "priority": "high",
+            "hard": false,
+            "weight": 140,
+            "effect": "move_from",
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:J2.1->pad:R6.1:critical_pair:56",
+            "kind": "critical_pair",
+            "from": "pad:J2.1",
+            "to": "pad:R6.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 480,
+            "effect": "move_from",
+            "maxDistance": 12,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:J2.2->pad:R6.2:critical_pair:57",
+            "kind": "critical_pair",
+            "from": "pad:J2.2",
+            "to": "pad:R6.2",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 12,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:C13.1->pad:U2.1:critical_pair:60",
+            "kind": "critical_pair",
+            "from": "pad:C13.1",
+            "to": "pad:U2.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:C15.1->pad:U2.5:critical_pair:61",
+            "kind": "critical_pair",
+            "from": "pad:C15.1",
+            "to": "pad:U2.5",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": true,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          },
+          {
+            "id": "hint:pad:R6.1->pad:R7.1:critical_pair:66",
+            "kind": "critical_pair",
+            "from": "pad:R6.1",
+            "to": "pad:R7.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 10,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_P",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:R7.2->pad:U2.6:critical_pair:67",
+            "kind": "critical_pair",
+            "from": "pad:R7.2",
+            "to": "pad:U2.6",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_P",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:R6.2->pad:R8.1:critical_pair:68",
+            "kind": "critical_pair",
+            "from": "pad:R6.2",
+            "to": "pad:R8.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 10,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_N",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:R8.2->pad:U2.7:critical_pair:69",
+            "kind": "critical_pair",
+            "from": "pad:R8.2",
+            "to": "pad:U2.7",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 5,
+            "satelliteAnchor": false,
+            "pathId": "kelvin_N",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:U2.11->pad:R14.1:critical_pair:79",
+            "kind": "critical_pair",
+            "from": "pad:U2.11",
+            "to": "pad:R14.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 20,
+            "satelliteAnchor": false,
+            "pathId": "current_P",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:U2.10->pad:R15.1:critical_pair:81",
+            "kind": "critical_pair",
+            "from": "pad:U2.10",
+            "to": "pad:R15.1",
+            "relation": "critical_pair",
+            "priority": "critical",
+            "hard": false,
+            "weight": 432,
+            "effect": "move_from",
+            "maxDistance": 20,
+            "satelliteAnchor": false,
+            "pathId": "current_N",
+            "pathShape": "flexible",
+            "preferFacingPads": true
+          },
+          {
+            "id": "hint:pad:C11.2->pad:C10.2:near:",
+            "kind": "hint",
+            "from": "pad:C11.2",
+            "to": "pad:C10.2",
+            "relation": "near",
+            "priority": "critical",
+            "hard": false,
+            "weight": 240,
+            "effect": "move_from",
+            "maxDistance": 8,
+            "satelliteAnchor": false,
+            "preferFacingPads": false
+          }
+        ],
+        "experiments": {
+          "netCandidates": true,
+          "stableNetWeight": true,
+          "reducedHull": true,
+          "smoothAspect": true,
+          "frontierOrder": true,
+          "padOwnerCandidates": true,
+          "localAccess": true,
+          "orderEqualCritical": true,
+          "orderCoreAffinity": true,
+          "orderBranching": true,
+          "orderScarcity": true,
+          "candidateClearance": true,
+          "candidateRings": true,
+          "padCrossings": true,
+          "longNets": true,
+          "extraPasses": true,
+          "pairSwaps": true,
+          "reinsertPair": true,
+          "keepDenseAccess": true,
+          "ignoredNets": [
+            "GND",
+            "V_MEAS_N",
+            "I_OUT",
+            "HARVEST_P"
+          ],
+          "routingMetric": "micro"
+        }
+      }
+    ],
+    "nativeC9": {
+      "designator": "C9",
+      "primitiveId": "primitive:tree:component:C9",
+      "blockName": "current_iso",
+      "layer": "top",
+      "bodyBox": {
+        "left": -1.38995,
+        "right": 1.38995,
+        "top": -0.71005,
+        "bottom": 0.71005
+      },
+      "throughHoleBoxes": [],
+      "pinCount": 2,
+      "role": "passive",
+      "powerComponent": false
+    },
+    "c9IcClearance": 0.6124999999999999,
+    "stages": [
+      {
+        "stage": "beam_complete",
+        "placements": [
+          {
+            "designator": "U2",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "designator": "C13",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 4.75,
+            "y": 7.179
+          },
+          {
+            "designator": "C14",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 2.979,
+            "y": 7.179
+          },
+          {
+            "designator": "C9",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 7.528,
+            "y": -3.029
+          },
+          {
+            "designator": "C15",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": -0.189
+          },
+          {
+            "designator": "C12",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": 1.645
+          },
+          {
+            "designator": "C10",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": -1.486
+          },
+          {
+            "designator": "C11",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -9.194,
+            "y": -1.486
+          },
+          {
+            "designator": "C16",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": 1.582
+          },
+          {
+            "designator": "R7",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 10.41,
+            "y": -2.329
+          },
+          {
+            "designator": "R8",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 5.75,
+            "y": -7.714
+          },
+          {
+            "designator": "R6",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 11.41,
+            "y": -7.584
+          }
+        ],
+        "parts": {
+          "denseAccess": 0,
+          "exposure": 0,
+          "facing": 1440.953301756051,
+          "groundSpread": 0,
+          "longNets": 0,
+          "padCrossings": 180,
+          "powerYield": 472.85906655201063,
+          "relations": 9590.410821809766,
+          "signalSpread": 256.756,
+          "total": 17778.211493009694
+        },
+        "distances": [
+          2.8021947434109564,
+          2.8223070934963825
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.19,
+          "pairMax": 2.19,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 35.54,
+          "hpwl": 37.23,
+          "area": 468.59,
+          "aspect": 1.16
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.19,
+          "pairMax": 2.19,
+          "crossings": 4,
+          "foreignPadHits": 8,
+          "wireLength": 75.81,
+          "hpwl": 76.25,
+          "area": 468.59,
+          "aspect": 1.16
+        }
+      },
+      {
+        "stage": "local_complete",
+        "placements": [
+          {
+            "designator": "U2",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "designator": "C13",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 4.75,
+            "y": 7.179
+          },
+          {
+            "designator": "C14",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 7.423,
+            "y": 4.091
+          },
+          {
+            "designator": "C9",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 7.528,
+            "y": -3.029
+          },
+          {
+            "designator": "C15",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.603,
+            "y": -0.189
+          },
+          {
+            "designator": "C12",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": 1.645
+          },
+          {
+            "designator": "C10",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": -1.486
+          },
+          {
+            "designator": "C11",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -9.194,
+            "y": -1.486
+          },
+          {
+            "designator": "C16",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.603,
+            "y": 1.582
+          },
+          {
+            "designator": "R7",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 10.41,
+            "y": -2.329
+          },
+          {
+            "designator": "R8",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 8.135,
+            "y": -7.83
+          },
+          {
+            "designator": "R6",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 11.41,
+            "y": -7.584
+          }
+        ],
+        "parts": {
+          "denseAccess": 0,
+          "exposure": 0,
+          "facing": 1340.8188485650676,
+          "groundSpread": 0,
+          "longNets": 0,
+          "padCrossings": 180,
+          "powerYield": 176.81444934317813,
+          "relations": 9427.648409495512,
+          "signalSpread": 252.57200000000003,
+          "total": 16917.297407936934
+        },
+        "distances": [
+          2.8021947434109564,
+          2.8223070934963825
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.19,
+          "pairMax": 2.19,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 36.31,
+          "hpwl": 37.95,
+          "area": 468.59,
+          "aspect": 1.16
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.19,
+          "pairMax": 2.19,
+          "crossings": 4,
+          "foreignPadHits": 5,
+          "wireLength": 76.44,
+          "hpwl": 75.2,
+          "area": 468.59,
+          "aspect": 1.16
+        }
+      },
+      {
+        "stage": "pair_complete",
+        "placements": [
+          {
+            "designator": "U2",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 0,
+            "y": -0.097
+          },
+          {
+            "designator": "C13",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 4.75,
+            "y": 7.082
+          },
+          {
+            "designator": "C14",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.103,
+            "y": 3.794
+          },
+          {
+            "designator": "C9",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 5.451,
+            "y": -10.711
+          },
+          {
+            "designator": "C15",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.603,
+            "y": -0.189
+          },
+          {
+            "designator": "C12",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": 1.645
+          },
+          {
+            "designator": "C10",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -7.423,
+            "y": -1.486
+          },
+          {
+            "designator": "C11",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": -9.194,
+            "y": -1.486
+          },
+          {
+            "designator": "C16",
+            "layer": "top",
+            "rotate": 180,
+            "score": 0,
+            "x": 8.603,
+            "y": 1.582
+          },
+          {
+            "designator": "R7",
+            "layer": "top",
+            "rotate": 0,
+            "score": 0,
+            "x": 8.639,
+            "y": -2.556
+          },
+          {
+            "designator": "R8",
+            "layer": "top",
+            "rotate": 270,
+            "score": 0,
+            "x": 7.363,
+            "y": -7.812
+          },
+          {
+            "designator": "R6",
+            "layer": "top",
+            "rotate": 90,
+            "score": 0,
+            "x": 10.639,
+            "y": -7.812
+          }
+        ],
+        "parts": {
+          "denseAccess": 0,
+          "exposure": 0,
+          "facing": 1231.363994812111,
+          "groundSpread": 0,
+          "longNets": 0,
+          "padCrossings": 540,
+          "powerYield": 83.9956580886315,
+          "relations": 8653.926327928875,
+          "signalSpread": 292.04,
+          "total": 15677.055985495372
+        },
+        "distances": [
+          8.767428567145558,
+          7.384800033176253
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.41,
+          "pairMax": 2.41,
+          "crossings": 2,
+          "foreignPadHits": 3,
+          "wireLength": 45.99,
+          "hpwl": 48.46,
+          "area": 456.03,
+          "aspect": 1.11
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.41,
+          "pairMax": 2.41,
+          "crossings": 8,
+          "foreignPadHits": 10,
+          "wireLength": 85.97,
+          "hpwl": 85.07,
+          "area": 456.03,
+          "aspect": 1.11
+        }
+      },
+      {
+        "stage": "postrefine_final",
+        "placements": [
+          {
+            "designator": "U2",
+            "x": -1.5,
+            "y": 1.403,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C13",
+            "x": 3.25,
+            "y": 8.582,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C14",
+            "x": 6.603,
+            "y": 5.294,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C9",
+            "x": 3.951,
+            "y": -9.211,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C15",
+            "x": 7.103,
+            "y": 1.311,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C12",
+            "x": -8.923,
+            "y": 3.145,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C10",
+            "x": -8.923,
+            "y": 0.014,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C11",
+            "x": -10.694,
+            "y": 0.014,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C16",
+            "x": 7.103,
+            "y": 3.082,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R7",
+            "x": 7.139,
+            "y": -1.056,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R8",
+            "x": 5.863,
+            "y": -6.312,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R6",
+            "x": 9.139,
+            "y": -6.312,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "distances": [
+          8.654800020797706,
+          7.51646403104545
+        ],
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.41,
+          "pairMax": 2.41,
+          "crossings": 1,
+          "foreignPadHits": 3,
+          "wireLength": 45.74,
+          "hpwl": 48.46,
+          "area": 456.03,
+          "aspect": 1.11
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 2.41,
+          "pairMax": 2.41,
+          "crossings": 7,
+          "foreignPadHits": 10,
+          "wireLength": 85.72,
+          "hpwl": 85.07,
+          "area": 456.03,
+          "aspect": 1.11
+        }
+      }
+    ],
+    "order": "U2 → C13 → C14 → C9 → C15 → C12 → C10 → C11 → C16 → R7 → R8 → R6",
+    "postrefine": {
+      "diagnostics": [],
+      "moves": [
+        {
+          "description": "C9 rotate += 180",
+          "designators": [
+            "C9"
+          ],
+          "effectiveImprovement": 182.363,
+          "kind": "rotate_180",
+          "routeBudgetExhaustedAfter": 0,
+          "routeBudgetExhaustedBefore": 0,
+          "routeJobCount": 4,
+          "routePenaltyAfter": 19.707,
+          "routePenaltyBefore": 19.857,
+          "routeUnresolvedAfter": 0,
+          "routeUnresolvedBefore": 0,
+          "scoreAfter": 11340.033,
+          "scoreBefore": 11522.245
+        }
+      ],
+      "placements": [
+        {
+          "designator": "U2",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -1.5,
+          "y": 1.403
+        },
+        {
+          "designator": "C13",
+          "layer": "top",
+          "rotate": 270,
+          "score": 0,
+          "x": 3.25,
+          "y": 8.582
+        },
+        {
+          "designator": "C14",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 6.603,
+          "y": 5.294
+        },
+        {
+          "designator": "C9",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 3.951,
+          "y": -9.211
+        },
+        {
+          "designator": "C15",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 7.103,
+          "y": 1.311
+        },
+        {
+          "designator": "C12",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -8.923,
+          "y": 3.145
+        },
+        {
+          "designator": "C10",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -8.923,
+          "y": 0.014
+        },
+        {
+          "designator": "C11",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": -10.694,
+          "y": 0.014
+        },
+        {
+          "designator": "C16",
+          "layer": "top",
+          "rotate": 180,
+          "score": 0,
+          "x": 7.103,
+          "y": 3.082
+        },
+        {
+          "designator": "R7",
+          "layer": "top",
+          "rotate": 0,
+          "score": 0,
+          "x": 7.139,
+          "y": -1.056
+        },
+        {
+          "designator": "R8",
+          "layer": "top",
+          "rotate": 270,
+          "score": 0,
+          "x": 5.863,
+          "y": -6.312
+        },
+        {
+          "designator": "R6",
+          "layer": "top",
+          "rotate": 90,
+          "score": 0,
+          "x": 9.139,
+          "y": -6.312
+        }
+      ],
+      "profile": {
+        "fixedDiagnosticsMs": 0.0007999999999999999,
+        "initialScoreMs": 0.0229,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": true,
+            "baselineCacheHits": 16,
+            "baselineEvaluations": 17,
+            "baselineMs": 31.915900000000004,
+            "boundRejected": 31,
+            "candidates": 35,
+            "evaluationWallMs": 34.7301,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 35,
+            "generationMs": 0.0424,
+            "geometryMs": 0.07939999999999998,
+            "globalScoreMs": 0.4744000000000001,
+            "hardRejected": 2,
+            "insufficientImprovement": 1,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 2,
+            "routeMs": 2.1452999999999998,
+            "routeNativeMs": 34.0612,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.4744000000000001,
+            "timedOut": false
+          },
+          {
+            "accepted": false,
+            "baselineCacheHits": 16,
+            "baselineEvaluations": 17,
+            "baselineMs": 30.8968,
+            "boundRejected": 32,
+            "candidates": 35,
+            "evaluationWallMs": 31.655700000000003,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 35,
+            "generationMs": 0.0351,
+            "geometryMs": 0.0725,
+            "globalScoreMs": 0.4936999999999999,
+            "hardRejected": 2,
+            "insufficientImprovement": 1,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 1,
+            "routeMs": 0.0795,
+            "routeNativeMs": 30.976300000000002,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.4936999999999999,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 66.5431,
+        "workers": 1
+      },
+      "scoreAfter": 11340.033,
+      "scoreBefore": 11522.245
+    }
+  }
+]

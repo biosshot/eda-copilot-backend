@@ -1,0 +1,221 @@
+{
+  "diagnostics": [],
+  "moves": [
+    {
+      "description": "C10<->C11; C10+=180, C11+=180",
+      "designators": [
+        "C10",
+        "C11"
+      ],
+      "effectiveImprovement": 25.249,
+      "kind": "swap",
+      "routeBudgetExhaustedAfter": 0,
+      "routeBudgetExhaustedBefore": 0,
+      "routeJobCount": 2,
+      "routePenaltyAfter": 0.278,
+      "routePenaltyBefore": 0,
+      "routeUnresolvedAfter": 0,
+      "routeUnresolvedBefore": 0,
+      "scoreAfter": 10207.117,
+      "scoreBefore": 10232.644
+    },
+    {
+      "description": "C14 rotate += 180",
+      "designators": [
+        "C14"
+      ],
+      "effectiveImprovement": 7.513,
+      "kind": "rotate_180",
+      "routeBudgetExhaustedAfter": 0,
+      "routeBudgetExhaustedBefore": 0,
+      "routeJobCount": 10,
+      "routePenaltyAfter": 8.349,
+      "routePenaltyBefore": 12.994,
+      "routeUnresolvedAfter": 0,
+      "routeUnresolvedBefore": 0,
+      "scoreAfter": 10204.25,
+      "scoreBefore": 10207.117
+    }
+  ],
+  "placements": [
+    {
+      "designator": "U2",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -2.5,
+      "y": -0.378
+    },
+    {
+      "designator": "C13",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 2.75,
+      "y": 6.801
+    },
+    {
+      "designator": "C15",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 5.603,
+      "y": -0.378
+    },
+    {
+      "designator": "R7",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 6.139,
+      "y": -2.457
+    },
+    {
+      "designator": "R6",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 10.292,
+      "y": -4.457
+    },
+    {
+      "designator": "R8",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 6.139,
+      "y": -6.694
+    },
+    {
+      "designator": "C9",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 5.708,
+      "y": -4.607
+    },
+    {
+      "designator": "C12",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -9.923,
+      "y": 2.942
+    },
+    {
+      "designator": "C14",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 4.923,
+      "y": 4.213
+    },
+    {
+      "designator": "C16",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 6.569,
+      "y": 1.566
+    },
+    {
+      "designator": "C10",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -9.923,
+      "y": -0.189
+    },
+    {
+      "designator": "C11",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -10.694,
+      "y": -2.689
+    }
+  ],
+  "profile": {
+    "fixedDiagnosticsMs": 0.0006,
+    "initialScoreMs": 0.0324,
+    "iterationLimit": 8,
+    "iterations": [
+      {
+        "accepted": true,
+        "baselineCacheHits": 16,
+        "baselineEvaluations": 17,
+        "baselineMs": 39.5725,
+        "boundRejected": 30,
+        "candidates": 35,
+        "evaluationWallMs": 43.250099999999996,
+        "feasibilityRejected": 0,
+        "generatedCandidates": 35,
+        "generationMs": 0.07160000000000001,
+        "geometryMs": 0.1403,
+        "globalScoreMs": 0.8211999999999999,
+        "hardRejected": 2,
+        "insufficientImprovement": 1,
+        "routeEncodingMs": 0,
+        "routeEvaluations": 3,
+        "routeMs": 2.2712,
+        "routeNativeMs": 41.84369999999999,
+        "scoreEncodingMs": 0,
+        "scoreNativeMs": 0.8211999999999999,
+        "timedOut": false
+      },
+      {
+        "accepted": true,
+        "baselineCacheHits": 16,
+        "baselineEvaluations": 17,
+        "baselineMs": 33.2197,
+        "boundRejected": 30,
+        "candidates": 35,
+        "evaluationWallMs": 38.212500000000006,
+        "feasibilityRejected": 0,
+        "generatedCandidates": 35,
+        "generationMs": 0.0528,
+        "geometryMs": 0.15930000000000002,
+        "globalScoreMs": 0.6623,
+        "hardRejected": 2,
+        "insufficientImprovement": 2,
+        "routeEncodingMs": 0,
+        "routeEvaluations": 3,
+        "routeMs": 4.0236,
+        "routeNativeMs": 37.2433,
+        "scoreEncodingMs": 0,
+        "scoreNativeMs": 0.6623,
+        "timedOut": false
+      },
+      {
+        "accepted": false,
+        "baselineCacheHits": 16,
+        "baselineEvaluations": 17,
+        "baselineMs": 29.275,
+        "boundRejected": 30,
+        "candidates": 35,
+        "evaluationWallMs": 34.677800000000005,
+        "feasibilityRejected": 0,
+        "generatedCandidates": 35,
+        "generationMs": 0.0436,
+        "geometryMs": 0.10520000000000003,
+        "globalScoreMs": 0.6707000000000001,
+        "hardRejected": 2,
+        "insufficientImprovement": 3,
+        "routeEncodingMs": 0,
+        "routeEvaluations": 3,
+        "routeMs": 4.478899999999999,
+        "routeNativeMs": 33.7539,
+        "scoreEncodingMs": 0,
+        "scoreNativeMs": 0.6707000000000001,
+        "timedOut": false
+      }
+    ],
+    "stopReason": "no_improvement",
+    "timedOut": false,
+    "timeoutMs": 2000,
+    "totalMs": 116.4472,
+    "workers": 1
+  },
+  "scoreAfter": 10204.25,
+  "scoreBefore": 10232.644
+}
