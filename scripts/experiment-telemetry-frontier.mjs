@@ -65,7 +65,7 @@ if (process.argv[2] === '--worker') {
         placements,diagnostics:result.diagnostics,captures};
     mkdirSync(`${out}/${block}`,{recursive:true});
     writeFileSync(`${out}/${block}/${tag}.json`,JSON.stringify(data,null,2));
-    for(const all of [false,true])writeFileSync(`${out}/${block}/${tag}${all?'-all':''}.svg`,renderPlacementSubsetSvg(input,placements,{ratsnestTopology:'mst',signalPaths:false,includeIgnoredSignals:all,padding:2}));
+    for(const all of [false,true])writeFileSync(`${out}/${block}/${tag}${all?'-with-ignored':''}.svg`,renderPlacementSubsetSvg(input,placements,{ratsnestTopology:'mst',signalPaths:false,includeIgnoredSignals:all,padding:2}).replace(/[ \t]+$/gm,''));
     console.log(JSON.stringify({block,tag,ms,inventory,orientation,ok:validation.ok,metrics:data.metrics,pairs,released:result.diagnostics.filter(d=>d.message.startsWith('Experimental'))}));
 } else if (process.argv[1]?.endsWith('experiment-telemetry-frontier.mjs')) {
     const requested=process.argv.slice(2), chosen=process.env.PCB_EXPERIMENT_VARIANTS?.split(',');

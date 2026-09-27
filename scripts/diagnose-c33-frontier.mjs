@@ -39,6 +39,6 @@ const result={note:'Grid probe keeps every other component fixed. baseScore excl
 writeFileSync(`${out}/c33-probe.json`,JSON.stringify(result,null,2));
 for(const [name,r] of Object.entries({baseline,nearest,best})){
     const ps=fixed.map((p,i)=>i===index?moved(original,r.pose):p).flatMap(p=>p.placements);
-    writeFileSync(`${out}/c33-${name}.svg`,renderPlacementSubsetSvg(input,ps,{ratsnestTopology:'mst',signalPaths:false,padding:2}));
+    writeFileSync(`${out}/c33-${name}.svg`,renderPlacementSubsetSvg(input,ps,{ratsnestTopology:'mst',signalPaths:false,padding:2}).replace(/[ \t]+$/gm,''));
 }
 console.log(JSON.stringify(result));
