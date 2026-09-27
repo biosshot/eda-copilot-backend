@@ -1,0 +1,52 @@
+{
+  "fixture": "bank-BAND_V3_SIGNAL_PATH",
+  "mode": "full-micro",
+  "tag": "global-refined",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "0",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 918.0799999999999,
+  "blockMs": 204.9031,
+  "blockSolves": 6,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 47.577299999999994,
+      "pairSum": 22.46706457524853,
+      "pairMax": 15.096081113984516,
+      "score": 29188.763288056427
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 47.577299999999994,
+      "pairSum": 22.46706457524853,
+      "pairMax": 15.096081113984516,
+      "score": 29188.763288056427
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 47.5773,
+      "pairSum": 22.46706457524853,
+      "pairMax": 15.096081113984516,
+      "score": 28161.487598438223
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 47.5773,
+      "pairSum": 22.46706457524853,
+      "pairMax": 15.096081113984516,
+      "score": 28161.487598438223
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "4114ae959dcccda1ddd726f05f0792f76de5cc065e747e5264758ffed86edbc5",
+  "diagnostics": [],
+  "node": "v26.5.0"
+}

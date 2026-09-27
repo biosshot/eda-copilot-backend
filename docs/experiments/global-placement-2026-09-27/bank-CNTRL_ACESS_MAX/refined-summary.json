@@ -1,0 +1,185 @@
+{
+  "fixture": "bank-CNTRL_ACESS_MAX",
+  "mode": "full-micro",
+  "tag": "global-refined",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "0",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 43300.7806,
+  "blockMs": 27347.76139999999,
+  "blockSolves": 35,
+  "ok": false,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 1065.1065,
+      "pairSum": 205.02796091991897,
+      "pairMax": 32.727512401647644,
+      "score": 50377666.52318331
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 1065.1065,
+      "pairSum": 205.02796091991897,
+      "pairMax": 32.727512401647644,
+      "score": 50377703.32127918
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 1069.8317000000004,
+      "pairSum": 195.37411919234657,
+      "pairMax": 27.154544239224492,
+      "score": 46519057.68970775
+    },
+    {
+      "stage": "04-v2-invalid-final",
+      "hpwl": 1069.8317000000004,
+      "pairSum": 195.37411919234657,
+      "pairMax": 27.154544239224492,
+      "score": 46519057.68970775
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "67021b5bf5dd7650b2ae59527978f521581b0b8b7824cbcf4a05fd9e9e110975",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 34 ms",
+      "nodeId": "tree:block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 95 ms",
+      "nodeId": "tree:block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 77 ms",
+      "nodeId": "tree:block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 6 ms",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 8 ms",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 8 ms",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 9 ms",
+      "nodeId": "tree:block:rs485_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:rs485_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 7 ms",
+      "nodeId": "tree:block:rs485_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module power_tree before board placement: wide module 69.5mm uses 0.882 of usable board width; tall module 59.777mm uses 1.017 of usable board height; wide sparse bbox 69.5mm, fill 0.462; tall sparse bbox 59.777mm, fill 0.462; module area 4154.502mm2 is large and sparse, fill 0.462; locked module has fixed/edge child plus movable siblings (bottom, right); fixed/edge-mounted children inside multi-family module (bottom, right); fixed/edge-mounted children target multiple board edges (bottom, right); low pad density 0.019 pads/mm2",
+      "nodeId": "tree:module:power_tree"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module esp32_system before board placement: module area 2022.887mm2 is large and sparse, fill 0.69; locked module has fixed/edge child plus movable siblings (left); low pad density 0.054 pads/mm2",
+      "nodeId": "tree:module:esp32_system"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module field_io before board placement: locked module has fixed/edge child plus movable siblings (left); low pad density 0.087 pads/mm2",
+      "nodeId": "tree:module:field_io"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 6 blocks, 111 candidates, 0 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}

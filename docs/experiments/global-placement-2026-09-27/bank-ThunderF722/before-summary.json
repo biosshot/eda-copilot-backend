@@ -1,0 +1,131 @@
+{
+  "fixture": "bank-ThunderF722",
+  "mode": "full-micro",
+  "tag": "global-before",
+  "candidates": "0",
+  "blockPostRefine": "0",
+  "padCrossings": "0",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 30625.383,
+  "blockMs": 12828.236299999999,
+  "blockSolves": 44,
+  "ok": false,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 1559.4497999999999,
+      "pairSum": 354.4460099911531,
+      "pairMax": 37.89235180468481,
+      "score": 40949143.35581614
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 1559.4497000000003,
+      "pairSum": 354.4460099911531,
+      "pairMax": 37.8923518046848,
+      "score": 40949154.5962365
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 1551.9421000000002,
+      "pairSum": 349.1624045337466,
+      "pairMax": 37.8923518046848,
+      "score": 40945227.36042341
+    },
+    {
+      "stage": "04-v2-invalid-final",
+      "hpwl": 1551.9421000000002,
+      "pairSum": 349.1624045337466,
+      "pairMax": 37.8923518046848,
+      "score": 40945227.36042341
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "637e15d101f558d9395e8da86b58d92bf2c86ff79a6192204a6b0452696fb9f1",
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "satellite_attaches_to_satellite",
+      "message": "Satellite block flash_pullups attaches to satellite block flash; flatten it into one satellite block and use islands/clusters for internal structure",
+      "nodeId": "block:flash_pullups"
+    },
+    {
+      "severity": "warning",
+      "code": "unattached_passive_block",
+      "message": "Passive block usb_power_or has no parent or external placement relation, so board packing may place it in any free area. Make it a satellite with placement: \"satellite\", attachTo, and preferably anchor: pin(...), or add an external near(), veryNear(), or criticalPair() using comp()/pin() targets.",
+      "nodeId": "block:usb_power_or"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 2 blocks, 34 candidates, 0 accepted",
+      "nodeId": "block-portfolio"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "RX5/M3: safe post-place improvement RX5<->M3; global score 40945227.36 -> 40945181.612. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_RX5_M3\", [\"RX5\", \"M3\"], { swap: true }) if these fixed components may swap or rotate.",
+      "nodeId": "post-place:RX5:M3",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "RX5/VBAT1: safe post-place improvement RX5<->VBAT1; global score 40945227.36 -> 40944131.15. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_RX5_VBAT1\", [\"RX5\", \"VBAT1\"], { swap: true }) if these fixed components may swap or rotate.",
+      "nodeId": "post-place:RX5:VBAT1",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "RX5/GND5: safe post-place improvement RX5<->GND5; global score 40945227.36 -> 40944487.27. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_RX5_GND5\", [\"RX5\", \"GND5\"], { swap: true }) if these fixed components may swap or rotate.",
+      "nodeId": "post-place:RX5:GND5",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "GND6/9V2: safe post-place improvement GND6<->9V2; global score 40945227.36 -> 40945183.145. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_GND6_9V2\", [\"GND6\", \"9V2\"], { swap: true }) if these fixed components may swap or rotate.",
+      "nodeId": "post-place:GND6:9V2",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "CURR1/VBAT1: safe post-place improvement CURR1<->VBAT1; global score 40945227.36 -> 40944147.029. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_CURR1_VBAT1\", [\"CURR1\", \"VBAT1\"], { swap: true }) if these fixed components may swap or rotate.",
+      "nodeId": "post-place:CURR1:VBAT1",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "CURR1/GND5: safe post-place improvement CURR1<->GND5; global score 40945227.36 -> 40944671.022. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_CURR1_GND5\", [\"CURR1\", \"GND5\"], { swap: true }) if these fixed components may swap or rotate.",
+      "nodeId": "post-place:CURR1:GND5",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "M1/VBAT1: safe post-place improvement M1<->VBAT1; global score 40945227.36 -> 40945227.165. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_M1_VBAT1\", [\"M1\", \"VBAT1\"], { swap: true }) if these fixed components may swap or rotate.",
+      "nodeId": "post-place:M1:VBAT1",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "M1/GND5: safe post-place improvement M1<->GND5; global score 40945227.36 -> 40945024.172. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_M1_GND5\", [\"M1\", \"GND5\"], { swap: true }) if these fixed components may swap or rotate.",
+      "nodeId": "post-place:M1:GND5",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "M3/VBAT1: safe post-place improvement M3<->VBAT1; global score 40945227.36 -> 40945131.521. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_M3_VBAT1\", [\"M3\", \"VBAT1\"], { swap: true }) if these fixed components may swap or rotate.",
+      "nodeId": "post-place:M3:VBAT1",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "VBAT1/GND5: safe post-place improvement VBAT1<->GND5; global score 40945227.36 -> 40945226.542. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_VBAT1_GND5\", [\"VBAT1\", \"GND5\"], { swap: true }) if these fixed components may swap or rotate.",
+      "nodeId": "post-place:VBAT1:GND5",
+      "severity": "warning"
+    }
+  ],
+  "node": "v26.5.0"
+}

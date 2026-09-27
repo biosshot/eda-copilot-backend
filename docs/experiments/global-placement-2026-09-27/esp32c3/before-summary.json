@@ -1,0 +1,71 @@
+{
+  "fixture": "esp32c3",
+  "mode": "full-micro",
+  "tag": "global-before",
+  "candidates": "0",
+  "blockPostRefine": "0",
+  "padCrossings": "0",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 8939.7342,
+  "blockMs": 6164.119499999999,
+  "blockSolves": 15,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 579.6549,
+      "pairSum": 306.0376265546559,
+      "pairMax": 30.926375428103437,
+      "score": 1615944.5623414253
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 579.655,
+      "pairSum": 306.0376265546559,
+      "pairMax": 30.926375428103437,
+      "score": 1615944.564023948
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 579.655,
+      "pairSum": 306.0376265546559,
+      "pairMax": 30.926375428103437,
+      "score": 1615941.4073087098
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 579.655,
+      "pairSum": 306.0376265546559,
+      "pairMax": 30.926375428103437,
+      "score": 1615941.4073087098
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "43d5b455ddbd4f3ba8a5df0e981c282830ddf813c978dda41eb9a0debf8ba505",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected USB_Termination in board context: variant 0, shift -0.5,0mm; score 1619393.48 -> 1617410.96",
+      "nodeId": "tree:block:USB_Termination"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected Power in board context: variant 0, shift 0.25,0mm; score 1617410.96 -> 1615944.56",
+      "nodeId": "tree:block:Power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 2 blocks, 34 candidates, 2 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}

@@ -1,0 +1,269 @@
+{
+  "fixture": "Telemetry",
+  "mode": "full-micro",
+  "tag": "global-pads",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "1",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 151917.954,
+  "blockMs": 68286.26120000002,
+  "blockSolves": 63,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 2958.625400000001,
+      "pairSum": 879.9966056023765,
+      "pairMax": 64.3164068966854,
+      "score": 12171244.22155907
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 2958.624600000001,
+      "pairSum": 879.9966910749943,
+      "pairMax": 64.3164068966854,
+      "score": 12171248.081733331
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 2936.621400000001,
+      "pairSum": 861.6450271499939,
+      "pairMax": 64.3164068966854,
+      "score": 12144167.144076657
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 2936.621400000001,
+      "pairSum": 861.6450271499939,
+      "pairMax": 64.3164068966854,
+      "score": 12144167.144076657
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 19 ms",
+      "nodeId": "tree:block:uart"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 17 ms",
+      "nodeId": "tree:block:uart"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 18 ms",
+      "nodeId": "tree:block:uart"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:sim_support"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:sim_support"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:sim_support"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 65 ms",
+      "nodeId": "tree:block:usb_charge"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 36 ms",
+      "nodeId": "tree:block:usb_charge"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 36 ms",
+      "nodeId": "tree:block:usb_charge"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:logic_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:logic_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:logic_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 8 ms",
+      "nodeId": "tree:block:afe_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 8 ms",
+      "nodeId": "tree:block:afe_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 7 ms",
+      "nodeId": "tree:block:afe_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected adc_supply in board context: variant 1, shift 0,-1mm; score 12214527.05 -> 12212964.99",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected lte_power in board context: variant 0, shift -1,0mm; score 12212964.99 -> 12198563.48",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected uart in board context: variant 0, shift 0,1mm; score 12198563.48 -> 12179604.56",
+      "nodeId": "tree:block:uart"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected afe_power in board context: variant 0, shift 0,0.5mm; score 12179604.56 -> 12178497.20",
+      "nodeId": "tree:block:afe_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected sim_support in board context: variant 0, shift 0.5,0mm; score 12178497.20 -> 12171244.22",
+      "nodeId": "tree:block:sim_support"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 9 blocks, 162 candidates, 5 accepted",
+      "nodeId": "block-portfolio"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "J1: safe post-place improvement J1 rotate += 180; global score 12144167.144 -> 12140929.119. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J1\", [\"J1\"], { rotateBy: [180] }) if this fixed component may rotate.",
+      "nodeId": "post-place:J1",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "J4: safe post-place improvement J4 rotate += 180; global score 12144167.144 -> 12143832.276. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J4\", [\"J4\"], { rotateBy: [180] }) if this fixed component may rotate.",
+      "nodeId": "post-place:J4",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "SW2: safe post-place improvement SW2 rotate += 180; global score 12144167.144 -> 12143691.751. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_SW2\", [\"SW2\"], { rotateBy: [180] }) if this fixed component may rotate.",
+      "nodeId": "post-place:SW2",
+      "severity": "warning"
+    }
+  ],
+  "node": "v26.5.0"
+}

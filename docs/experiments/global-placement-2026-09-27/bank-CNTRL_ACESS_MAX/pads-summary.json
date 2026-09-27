@@ -1,0 +1,209 @@
+{
+  "fixture": "bank-CNTRL_ACESS_MAX",
+  "mode": "full-micro",
+  "tag": "global-pads",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "1",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 43717.8828,
+  "blockMs": 31736.193800000015,
+  "blockSolves": 35,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 881.8723000000002,
+      "pairSum": 186.84153972798035,
+      "pairMax": 29.75338190559184,
+      "score": 50581383.789476424
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 881.8723000000002,
+      "pairSum": 186.84153972798035,
+      "pairMax": 29.75338190559184,
+      "score": 50581421.929321386
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 873.2916000000002,
+      "pairSum": 181.2271732647336,
+      "pairMax": 26.117770801123132,
+      "score": 48342952.90021506
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 873.2916000000002,
+      "pairSum": 181.2271732647336,
+      "pairMax": 26.117770801123132,
+      "score": 48342952.90021506
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "67021b5bf5dd7650b2ae59527978f521581b0b8b7824cbcf4a05fd9e9e110975",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 48 ms",
+      "nodeId": "tree:block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 91 ms",
+      "nodeId": "tree:block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 93 ms",
+      "nodeId": "tree:block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 8 ms",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 9 ms",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 9 ms",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:rs485_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 7 ms",
+      "nodeId": "tree:block:rs485_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:rs485_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module power_tree before board placement: wide module 69.5mm uses 0.882 of usable board width; tall module 59.777mm uses 1.017 of usable board height; wide sparse bbox 69.5mm, fill 0.464; tall sparse bbox 59.777mm, fill 0.464; module area 4154.502mm2 is large and sparse, fill 0.464; locked module has fixed/edge child plus movable siblings (bottom, right); fixed/edge-mounted children inside multi-family module (bottom, right); fixed/edge-mounted children target multiple board edges (bottom, right); low pad density 0.019 pads/mm2",
+      "nodeId": "tree:module:power_tree"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module esp32_system before board placement: module area 2022.887mm2 is large and sparse, fill 0.69; locked module has fixed/edge child plus movable siblings (left); low pad density 0.054 pads/mm2",
+      "nodeId": "tree:module:esp32_system"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module field_io before board placement: locked module has fixed/edge child plus movable siblings (left)",
+      "nodeId": "tree:module:field_io"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected linear_5v in board context: variant 0, shift -1.6,0mm; score 51377031.71 -> 51361921.21",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected manual_latch in board context: variant 1, shift 0,-1.6mm; score 51361921.21 -> 51320613.29",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected mcu_boot_reset in board context: variant 0, shift 0,1.6mm; score 51320613.29 -> 50718307.44",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected load_switch_3v3 in board context: variant 0, shift 1.6,0mm; score 50718307.44 -> 50581383.79",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 6 blocks, 120 candidates, 4 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}

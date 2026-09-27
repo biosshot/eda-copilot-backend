@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="123.39600000000002" height="154.296" viewBox="0 0 123.39600000000002 154.296">
+<rect x="0" y="0" width="123.39600000000002" height="154.296" fill="#f8fafc"/>
+<rect x="0.5" y="0.5" width="122.39600000000002" height="153.296" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+
+<line x1="85.84800000000001" y1="90.348" x2="59.44800000000003" y2="90.348" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+5V</title></line>
+<line x1="59.44800000000003" y1="90.348" x2="33.047999999999995" y2="90.348" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+5V</title></line>
+<line x1="33.047999999999995" y1="37.547999999999995" x2="33.047999999999995" y2="116.74799999999999" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>UART2_TX</title></line>
+
+
+<g>
+  
+  <rect x="76.80000000000003" y="24" width="18.096" height="27.095999999999997" rx="3" fill="rgba(220,38,38,0.12)" stroke="#dc2626" stroke-width="1.5"/>
+  
+  
+  
+  <text x="85.84800000000001" y="38.74799999999999" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">GND10</text>
+  <text x="85.84800000000001" y="24.348" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g>
+  
+  <rect x="76.80000000000003" y="50.39999999999999" width="18.096" height="27.096" rx="3" fill="rgba(220,38,38,0.12)" stroke="#dc2626" stroke-width="1.5"/>
+  
+  
+  
+  <text x="85.84800000000001" y="65.148" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">B-1</text>
+  <text x="85.84800000000001" y="50.74799999999999" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g>
+  
+  <rect x="76.80000000000003" y="76.80000000000001" width="18.096" height="27.096" rx="3" fill="rgba(220,38,38,0.12)" stroke="#dc2626" stroke-width="1.5"/>
+  
+  
+  
+  <text x="85.84800000000001" y="91.548" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">B+1</text>
+  <text x="85.84800000000001" y="77.148" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g>
+  
+  <rect x="72.30000000000003" y="103.19999999999999" width="27.096" height="27.096" rx="3" fill="rgba(220,38,38,0.12)" stroke="#dc2626" stroke-width="1.5"/>
+  
+  
+  
+  <text x="85.84800000000001" y="117.94799999999998" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">GND9</text>
+  <text x="85.84800000000001" y="103.548" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g>
+  
+  <rect x="45.90000000000003" y="24" width="27.096" height="27.095999999999997" rx="3" fill="rgba(220,38,38,0.12)" stroke="#dc2626" stroke-width="1.5"/>
+  
+  
+  
+  <text x="59.44800000000003" y="38.74799999999999" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">RX3</text>
+  <text x="59.44800000000003" y="24.348" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g>
+  
+  <rect x="45.90000000000003" y="50.39999999999999" width="27.096" height="27.096" rx="3" fill="rgba(220,38,38,0.12)" stroke="#dc2626" stroke-width="1.5"/>
+  
+  
+  
+  <text x="59.44800000000003" y="65.148" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">TX3</text>
+  <text x="59.44800000000003" y="50.74799999999999" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g>
+  
+  <rect x="45.90000000000003" y="76.80000000000001" width="27.096" height="27.096" rx="3" fill="rgba(220,38,38,0.12)" stroke="#dc2626" stroke-width="1.5"/>
+  
+  
+  
+  <text x="59.44800000000003" y="91.548" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">5V6</text>
+  <text x="59.44800000000003" y="77.148" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g>
+  
+  <rect x="50.400000000000034" y="103.19999999999999" width="18.096" height="27.096" rx="3" fill="rgba(220,38,38,0.12)" stroke="#dc2626" stroke-width="1.5"/>
+  
+  
+  
+  <text x="59.44800000000003" y="117.94799999999998" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">GND8</text>
+  <text x="59.44800000000003" y="103.548" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g>
+  
+  <rect x="23.999999999999993" y="24" width="18.096" height="27.095999999999997" rx="3" fill="rgba(220,38,38,0.12)" stroke="#dc2626" stroke-width="1.5"/>
+  
+  
+  
+  <text x="33.047999999999995" y="38.74799999999999" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">TX2</text>
+  <text x="33.047999999999995" y="24.348" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g>
+  
+  <rect x="23.999999999999993" y="50.39999999999999" width="18.096" height="27.096" rx="3" fill="rgba(220,38,38,0.12)" stroke="#dc2626" stroke-width="1.5"/>
+  
+  
+  
+  <text x="33.047999999999995" y="65.148" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">VTX1</text>
+  <text x="33.047999999999995" y="50.74799999999999" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g>
+  
+  <rect x="23.999999999999993" y="76.80000000000001" width="18.096" height="27.096" rx="3" fill="rgba(220,38,38,0.12)" stroke="#dc2626" stroke-width="1.5"/>
+  
+  
+  
+  <text x="33.047999999999995" y="91.548" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">5VTX</text>
+  <text x="33.047999999999995" y="77.148" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g>
+  
+  <rect x="23.999999999999993" y="103.19999999999999" width="18.096" height="27.096" rx="3" fill="rgba(220,38,38,0.12)" stroke="#dc2626" stroke-width="1.5"/>
+  
+  
+  
+  <text x="33.047999999999995" y="117.94799999999998" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">TX2A</text>
+  <text x="33.047999999999995" y="103.548" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g><polygon points="79.84800000000001,27.047999999999995 91.84800000000001,27.047999999999995 91.84800000000001,48.047999999999995 79.84800000000001,48.047999999999995" fill="#dc2626" opacity="0.9"/><circle cx="85.84800000000001" cy="37.547999999999995" r="3.5999999999999996" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>GND10.1 top</title></g>
+<g><polygon points="79.84800000000001,53.44799999999999 91.84800000000001,53.44799999999999 91.84800000000001,74.448 79.84800000000001,74.448" fill="#dc2626" opacity="0.9"/><circle cx="85.84800000000001" cy="63.94799999999999" r="3.5999999999999996" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>B-1.1 top</title></g>
+<g><polygon points="79.84800000000001,79.848 91.84800000000001,79.848 91.84800000000001,100.848 79.84800000000001,100.848" fill="#dc2626" opacity="0.9"/><circle cx="85.84800000000001" cy="90.348" r="3.5999999999999996" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>B+1.1 top</title></g>
+<g><polygon points="75.34800000000001,106.24799999999999 96.34800000000001,106.24799999999999 96.34800000000001,127.24799999999999 75.34800000000001,127.24799999999999" fill="#dc2626" opacity="0.9"/><circle cx="85.84800000000001" cy="116.74799999999999" r="3.5999999999999996" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>GND9.1 top</title></g>
+<g><polygon points="48.94800000000003,27.047999999999995 69.94800000000004,27.047999999999995 69.94800000000004,48.047999999999995 48.94800000000003,48.047999999999995" fill="#dc2626" opacity="0.9"/><circle cx="59.44800000000003" cy="37.547999999999995" r="3.5999999999999996" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>RX3.1 top</title></g>
+<g><polygon points="48.94800000000003,53.44799999999999 69.94800000000004,53.44799999999999 69.94800000000004,74.448 48.94800000000003,74.448" fill="#dc2626" opacity="0.9"/><circle cx="59.44800000000003" cy="63.94799999999999" r="3.5999999999999996" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>TX3.1 top</title></g>
+<g><polygon points="48.94800000000003,79.848 69.94800000000004,79.848 69.94800000000004,100.848 48.94800000000003,100.848" fill="#dc2626" opacity="0.9"/><circle cx="59.44800000000003" cy="90.348" r="3.5999999999999996" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>5V6.1 top</title></g>
+<g><polygon points="53.44800000000003,106.24799999999999 65.44800000000004,106.24799999999999 65.44800000000004,127.24799999999999 53.44800000000003,127.24799999999999" fill="#dc2626" opacity="0.9"/><circle cx="59.44800000000003" cy="116.74799999999999" r="3.5999999999999996" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>GND8.1 top</title></g>
+<g><polygon points="27.047999999999995,27.047999999999995 39.047999999999995,27.047999999999995 39.047999999999995,48.047999999999995 27.047999999999995,48.047999999999995" fill="#dc2626" opacity="0.9"/><circle cx="33.047999999999995" cy="37.547999999999995" r="3.5999999999999996" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>TX2.1 top</title></g>
+<g><polygon points="27.047999999999995,53.44799999999999 39.047999999999995,53.44799999999999 39.047999999999995,74.448 27.047999999999995,74.448" fill="#dc2626" opacity="0.9"/><title>VTX1.1 top</title></g>
+<g><polygon points="27.047999999999995,79.848 39.047999999999995,79.848 39.047999999999995,100.848 27.047999999999995,100.848" fill="#dc2626" opacity="0.9"/><circle cx="33.047999999999995" cy="90.348" r="3.5999999999999996" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>5VTX.1 top</title></g>
+<g><polygon points="27.047999999999995,106.24799999999999 39.047999999999995,106.24799999999999 39.047999999999995,127.24799999999999 27.047999999999995,127.24799999999999" fill="#dc2626" opacity="0.9"/><circle cx="33.047999999999995" cy="116.74799999999999" r="3.5999999999999996" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>TX2A.1 top</title></g>
+
+</svg>

@@ -1,0 +1,52 @@
+{
+  "fixture": "bank-CONNECTOR_ROTATIONS_90",
+  "mode": "full-micro",
+  "tag": "global-before",
+  "candidates": "0",
+  "blockPostRefine": "0",
+  "padCrossings": "0",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 76.87180000000001,
+  "blockMs": 4.60149999999976,
+  "blockSolves": 20,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 0,
+      "pairSum": 0,
+      "pairMax": 0,
+      "score": 0
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 0,
+      "pairSum": 0,
+      "pairMax": 0,
+      "score": 0
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 0,
+      "pairSum": 0,
+      "pairMax": 0,
+      "score": 0
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 0,
+      "pairSum": 0,
+      "pairMax": 0,
+      "score": 0
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "ea206f518aa213b7e5ac81e7fed5ebf30b8ee1a36bbd3e54339c23c72bb46a16",
+  "diagnostics": [],
+  "node": "v26.5.0"
+}

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="79.992" height="72.096" viewBox="0 0 79.992 72.096">
+<rect x="0" y="0" width="79.992" height="72.096" fill="#f8fafc"/>
+<rect x="0.5" y="0.5" width="78.992" height="71.096" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+
+<line x1="31.848000000000006" y1="42.048" x2="48.144000000000005" y2="42.048" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>ADC_VBAT</title></line>
+
+
+<g>
+  
+  
+  
+  
+  <polyline points="24.646800000000006,24.648000000000003 39.046800000000005,24.648000000000003" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="24.646800000000006,33.888000000000005 24.646800000000006,24.648000000000003" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="24.646800000000006,47.44800000000001 39.046800000000005,47.44800000000001" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="24.646800000000006,38.208000000000006 24.646800000000006,47.44800000000001" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="39.046800000000005,38.208000000000006 39.046800000000005,47.44800000000001" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="39.046800000000005,33.888000000000005 39.046800000000005,24.648000000000003" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="31.848000000000006" y="37.248000000000005" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">R18</text>
+  <text x="31.848000000000006" y="22.848000000000006" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r90 top</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="55.345200000000006,47.448 40.94520000000001,47.44800000000001" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="55.345200000000006,38.208 55.345200000000006,47.448" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="55.3452,24.648000000000003 40.9452,24.64800000000001" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="55.345200000000006,33.888000000000005 55.3452,24.648000000000003" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="40.94520000000001,33.888000000000005 40.9452,24.64800000000001" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="40.94520000000001,38.208000000000006 40.94520000000001,47.44800000000001" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="48.144000000000005" y="37.248000000000005" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">R15</text>
+  <text x="48.144000000000005" y="22.848000000000006" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r270 top</text>
+</g>
+<g><polygon points="36.648,27.048000000000005 36.648,33.048 27.048000000000005,33.048 27.048000000000005,27.048000000000005" fill="#dc2626" opacity="0.9"/><title>R18.2 top</title></g>
+<g><polygon points="36.648,39.048 36.648,45.048 27.048000000000005,45.048 27.048000000000005,39.048" fill="#dc2626" opacity="0.9"/><title>R18.1 top</title></g>
+<g><polygon points="43.34400000000001,45.048 43.34400000000001,39.048 52.94400000000001,39.048 52.94400000000001,45.048" fill="#dc2626" opacity="0.9"/><title>R15.2 top</title></g>
+<g><polygon points="43.34400000000001,33.048 43.344,27.048000000000005 52.94400000000001,27.048000000000005 52.94400000000001,33.048" fill="#dc2626" opacity="0.9"/><title>R15.1 top</title></g>
+
+</svg>

@@ -1,0 +1,70 @@
+{
+  "fixture": "bank-STEPPER_CONTROLLER",
+  "mode": "full-micro",
+  "tag": "global-before",
+  "candidates": "0",
+  "blockPostRefine": "0",
+  "padCrossings": "0",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 60303.6942,
+  "blockMs": 31617.400999999994,
+  "blockSolves": 20,
+  "ok": false,
+  "fixedChanges": [
+    "SCREW1",
+    "SCREW2",
+    "SCREW3",
+    "SCREW4"
+  ],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 1247.6596,
+      "pairSum": 156.73772862871445,
+      "pairMax": 38.362982460960986,
+      "score": 25415756.603956196
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 1247.66195,
+      "pairSum": 156.73777835717246,
+      "pairMax": 38.362982460960986,
+      "score": 25415760.45916539
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 1246.8536499999998,
+      "pairSum": 154.9166069575452,
+      "pairMax": 37.2399301731354,
+      "score": 25411609.123467006
+    },
+    {
+      "stage": "04-v2-invalid-final",
+      "hpwl": 1246.8536499999998,
+      "pairSum": 154.9166069575452,
+      "pairMax": 37.2399301731354,
+      "score": 25411609.123467006
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "a5e1f92ab24cba93aa93aced1e845b669e96877531b58444fa4c6804ba917629",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "unattached_passive_block",
+      "message": "Passive block status_leds has no parent or external placement relation, so board packing may place it in any free area. Make it a satellite with placement: \"satellite\", attachTo, and preferably anchor: pin(...), or add an external near(), veryNear(), or criticalPair() using comp()/pin() targets.",
+      "nodeId": "block:status_leds"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 2 blocks, 34 candidates, 0 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}

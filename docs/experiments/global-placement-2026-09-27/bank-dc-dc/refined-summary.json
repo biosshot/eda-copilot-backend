@@ -1,0 +1,89 @@
+{
+  "fixture": "bank-dc-dc",
+  "mode": "full-micro",
+  "tag": "global-refined",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "0",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 1379.243,
+  "blockMs": 1241.0378999999996,
+  "blockSolves": 10,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 118.35059999999999,
+      "pairSum": 19.38259501818417,
+      "pairMax": 10.185393279594068,
+      "score": 266580.212150122
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 118.35059999999999,
+      "pairSum": 19.38259501818417,
+      "pairMax": 10.185393279594068,
+      "score": 266580.212150122
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 118.35059999999999,
+      "pairSum": 19.38259501818417,
+      "pairMax": 10.185393279594068,
+      "score": 265510.0779298142
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 118.35059999999999,
+      "pairSum": 19.38259501818417,
+      "pairMax": 10.185393279594068,
+      "score": 265510.0779298142
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "0f2534848b0b388056f1edd12e61941d38aa473153330c6144f38593470afa3f",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator includes satellite input_caps, but parent power_stage already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator includes satellite output_caps, but parent power_stage already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator includes satellite feedback, but parent power_stage already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator includes satellite enable, but parent power_stage already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator includes satellite compensation, but parent power_stage already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator includes satellite rt, but parent power_stage already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator"
+    }
+  ],
+  "node": "v26.5.0"
+}

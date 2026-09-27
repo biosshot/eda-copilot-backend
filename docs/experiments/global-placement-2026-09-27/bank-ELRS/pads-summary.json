@@ -1,0 +1,179 @@
+{
+  "fixture": "bank-ELRS",
+  "mode": "full-micro",
+  "tag": "global-pads",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "1",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 10145.986,
+  "blockMs": 7268.5538,
+  "blockSolves": 28,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 179.062,
+      "pairSum": 55.891968020583946,
+      "pairMax": 11.190194433520805,
+      "score": 1295602.9469747888
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 179.062,
+      "pairSum": 55.891968020583946,
+      "pairMax": 11.190194433520805,
+      "score": 1295602.9469747888
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 179.6305,
+      "pairSum": 55.891968020583946,
+      "pairMax": 11.190194433520805,
+      "score": 1237567.1616911506
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 179.6305,
+      "pairSum": 55.891968020583946,
+      "pairMax": 11.190194433520805,
+      "score": 1237567.1616911506
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "695b24056859ef2d328724294caa37f309b039fd4dad926271951ed5849465a3",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "island_crosses_unrelated_blocks",
+      "message": "Island island:core_pairs:radio_bus spans unrelated blocks: mcu_core, radio_core",
+      "nodeId": "island:core_pairs:radio_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "island_crosses_unrelated_blocks",
+      "message": "Island island:core_pairs:rf_path spans unrelated blocks: radio_core, radio_matching, radio_antenna",
+      "nodeId": "island:core_pairs:rf_path"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Deferred parent-level island core_pairs:radio_bus; it references child primitives outside direct node components",
+      "nodeId": "tree:island:core_pairs:radio_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Deferred parent-level island core_pairs:rf_path; it references child primitives outside direct node components",
+      "nodeId": "tree:island:core_pairs:rf_path"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Deferred parent-level island core_pairs:radio_xtal; it references child primitives outside direct node components",
+      "nodeId": "tree:island:core_pairs:radio_xtal"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Deferred parent-level island core_pairs:mcu_xtal; it references child primitives outside direct node components",
+      "nodeId": "tree:island:core_pairs:mcu_xtal"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:mcu_xtal"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:mcu_xtal"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:mcu_xtal"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_decoup"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_decoup"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_decoup"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:mcu_control"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:mcu_control"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:mcu_control"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:power_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:power_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:power_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module rf_section before board placement: locked module has fixed/edge child plus movable siblings (top)",
+      "nodeId": "tree:module:rf_section"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected mcu_control in board context: variant 1, shift 0,-0.25mm; score 1384622.28 -> 1295602.95",
+      "nodeId": "tree:block:mcu_control"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 3 blocks, 60 candidates, 1 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}

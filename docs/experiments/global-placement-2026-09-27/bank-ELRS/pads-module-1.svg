@@ -1,0 +1,479 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="210.6486" height="239.53319999999997" viewBox="0 0 210.6486 239.53319999999997">
+<rect x="0" y="0" width="210.6486" height="239.53319999999997" fill="#f8fafc"/>
+<rect x="0.5" y="0.5" width="209.6486" height="238.53319999999997" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+
+<line x1="122.01840000000001" y1="209.24519999999995" x2="126.40800000000002" y2="193.49880000000002" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+3.3V</title></line>
+<line x1="126.40800000000002" y1="193.49880000000002" x2="122.844" y2="163.45319999999998" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+3.3V</title></line>
+<line x1="122.844" y1="163.45319999999998" x2="105.94800000000001" y2="163.45319999999998" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+3.3V</title></line>
+<line x1="105.94800000000001" y1="163.45319999999998" x2="89.05199999999999" y2="163.45319999999998" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+3.3V</title></line>
+<line x1="89.05199999999999" y1="163.45319999999998" x2="72.144" y2="145.9572" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+3.3V</title></line>
+<line x1="72.144" y1="145.9572" x2="61.344" y2="163.45319999999998" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+3.3V</title></line>
+<line x1="61.344" y1="163.45319999999998" x2="40.84800000000001" y2="163.45319999999998" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+3.3V</title></line>
+<line x1="40.84800000000001" y1="163.45319999999998" x2="40.84800000000001" y2="145.9572" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+3.3V</title></line>
+<line x1="72.144" y1="145.9572" x2="96.80999999999999" y2="119.78639999999999" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+3.3V</title></line>
+<line x1="122.844" y1="163.45319999999998" x2="135.5412" y2="128.5152" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+3.3V</title></line>
+<line x1="135.5412" y1="128.5152" x2="172.41359999999997" y2="154.39319999999998" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+3.3V</title></line>
+<line x1="135.5412" y1="128.5152" x2="141.5388" y2="69.05519999999999" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+3.3V</title></line>
+<line x1="141.5388" y1="69.05519999999999" x2="147.5412" y2="69.05519999999999" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+3.3V</title></line>
+<line x1="147.5412" y1="69.05519999999999" x2="180.072" y2="49.163999999999994" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+3.3V</title></line>
+<line x1="178.2" y1="184.1292" x2="161.82" y2="201.02519999999998" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>+5V</title></line>
+<line x1="132.4056" y1="209.24519999999995" x2="106.12799999999999" y2="206.60519999999997" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>ENABLE</title></line>
+<line x1="132.4056" y1="209.24519999999995" x2="156.27" y2="113.78399999999999" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>ENABLE</title></line>
+<line x1="156.27" y1="83.78639999999999" x2="156.27" y2="89.78399999999998" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>$1N6581</title></line>
+<line x1="156.27" y1="83.78639999999999" x2="180.072" y2="62.24639999999999" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>$1N6581</title></line>
+<line x1="117.53880000000001" y1="128.5152" x2="162.0264" y2="154.39319999999998" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>LED_RGB</title></line>
+<line x1="162.0264" y1="154.39319999999998" x2="178.2" y2="170.92919999999998" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>LED_RGB</title></line>
+<line x1="111.5412" y1="128.5152" x2="108.53999999999999" y2="180.1092" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>BOOT</title></line>
+<line x1="108.53999999999999" y1="180.1092" x2="108.53999999999999" y2="189.70919999999998" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>BOOT</title></line>
+<line x1="108.53999999999999" y1="180.1092" x2="126.40799999999999" y2="183.1116" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>BOOT</title></line>
+<line x1="96.80999999999999" y1="113.78399999999999" x2="76.872" y2="112.70519999999999" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>$1N7021</title></line>
+<line x1="129.5388" y1="69.05519999999999" x2="137.70239999999998" y2="42.60239999999999" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>XTAL_N</title></line>
+<line x1="137.70239999999998" y1="42.60239999999999" x2="104.05199999999999" y2="41.44919999999999" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>XTAL_N</title></line>
+<line x1="135.5412" y1="69.05519999999999" x2="154.776" y2="41.44919999999999" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>XTAL_P</title></line>
+<line x1="154.776" y1="41.44919999999999" x2="124.5012" y2="33.00359999999999" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>XTAL_P</title></line>
+
+
+<g>
+  
+  
+  
+  
+  <polygon points="133.212,212.24519999999995 133.212,206.24519999999995 121.21199999999999,206.24519999999995 121.21200000000002,212.24519999999995 133.212,212.24519999999995" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="129.9264,215.22839999999997 138.5424,215.22839999999997" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="138.5424,215.22839999999997 138.5424,203.26199999999997" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="138.5424,203.26199999999997 129.9264,203.26199999999997" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="124.4976,215.22839999999997 115.8816,215.22839999999997" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="115.8816,215.22839999999997 115.8816,203.26199999999997" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="115.8816,203.26199999999997 124.4976,203.26199999999997" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="133.2108" cy="212.24399999999997" r="0.7200000000000006" fill="none" stroke="#2563eb" stroke-width="0.7"/>
+  <text x="127.21199999999999" y="210.44519999999994" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">R1</text>
+  <text x="127.21199999999999" y="196.0452" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r180 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="96.7656,201.11879999999996 92.1936,201.11879999999996" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="92.1936,201.11879999999996 90.6696,201.11879999999996" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="90.6696,201.11879999999996 90.6696,210.7188" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="90.6696,210.71999999999997 90.6696,212.24399999999997" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="90.6696,212.24399999999997 96.7656,212.24399999999997" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="104.6904,212.24399999999997 109.2624,212.24399999999997" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="109.2624,212.24399999999997 110.78640000000001,212.24399999999997" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="110.78640000000001,212.24399999999997 110.78640000000001,202.644" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="110.78640000000001,202.49039999999997 110.78640000000001,200.9664" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="110.78640000000001,200.9664 104.6904,200.9664" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="100.72800000000001" y="207.80519999999996" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">C2</text>
+  <text x="100.72800000000001" y="193.4052" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r0 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="31.485600000000012,140.4708 26.91360000000001,140.4708" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="26.91360000000001,140.4708 25.3896,140.4708" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="25.3896,140.4708 25.3896,150.0708" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="25.3896,150.072 25.3896,151.596" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="25.3896,151.596 31.485600000000012,151.596" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="39.4104,151.596 43.982400000000005,151.596" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="43.982400000000005,151.596 45.5064,151.596" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="45.5064,151.596 45.5064,141.99599999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="45.5064,141.8424 45.5064,140.3184" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="45.5064,140.3184 39.4104,140.3184" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="35.44800000000001" y="147.1572" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">C5</text>
+  <text x="35.44800000000001" y="132.75719999999998" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r0 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="31.485600000000012,157.96679999999998 26.91360000000001,157.96679999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="26.91360000000001,157.96679999999998 25.3896,157.96679999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="25.3896,157.96679999999998 25.3896,167.5668" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="25.3896,167.56799999999998 25.3896,169.09199999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="25.3896,169.09199999999998 31.485600000000012,169.09199999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="39.4104,169.09199999999998 43.982400000000005,169.09199999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="43.982400000000005,169.09199999999998 45.5064,169.09199999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="45.5064,169.09199999999998 45.5064,159.49200000000002" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="45.5064,159.33839999999998 45.5064,157.81439999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="45.5064,157.81439999999998 39.4104,157.81439999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="35.44800000000001" y="164.6532" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">C6</text>
+  <text x="35.44800000000001" y="150.2532" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r0 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <circle cx="156.53879999999998" cy="68.78639999999999" r="0.7200000000000006" fill="none" stroke="#2563eb" stroke-width="0.7"/>
+<circle cx="154.14" cy="78.38519999999998" r="1.2011999999999983" fill="none" stroke="#2563eb" stroke-width="2.4000000000000004"/>
+<polygon points="156.54,68.78519999999999 96.53999999999999,68.78519999999999 96.53999999999999,128.78519999999997 156.54,128.78519999999997 156.54,68.78519999999999" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="151.50599999999997,67.87079999999999 157.4544,73.81919999999998" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="101.57399999999998,67.87079999999999 95.62559999999999,67.87079999999999" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="95.62559999999999,67.87079999999999 95.62559999999999,73.8192" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="101.57400000000001,129.69959999999998 95.62559999999999,129.69959999999998" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="95.62559999999999,129.69959999999998 95.62559999999999,123.7512" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="151.50599999999997,67.87079999999999 157.4544,67.87079999999999" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="157.4544,67.87079999999999 157.4544,73.81919999999998" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="151.506,129.69959999999998 157.4544,129.69959999999998" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="157.4544,129.69959999999998 157.4544,123.75119999999998" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="161.3388" cy="71.18519999999998" r="1.2011999999999983" fill="none" stroke="#64748b" stroke-width="2.4000000000000004"/>
+<polygon points="151.74,67.87079999999999 151.74,68.10479999999998 157.4544,73.81919999999998 157.4544,68.78519999999999 151.74,67.87079999999999" fill="none" stroke="#64748b" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="126.53999999999999" y="99.98519999999999" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">U1</text>
+  <text x="126.53999999999999" y="85.58519999999999" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r180 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polygon points="183.072,49.70519999999999 177.072,49.70519999999999 177.072,61.70519999999999 183.072,61.70519999999999 183.072,49.70519999999999" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="186.0552,58.419599999999996 186.0552,67.90079999999999" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="186.0552,67.90079999999999 184.2264,69.72959999999999" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="184.2264,69.72959999999999 175.9176,69.72959999999999" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="175.9176,69.72959999999999 174.0888,67.90079999999999" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="174.0888,67.90079999999999 174.0888,58.419599999999996" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="186.0552,52.990799999999986 186.0552,43.50959999999999" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="186.0552,43.50959999999999 184.2264,41.68079999999999" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="184.2264,41.68079999999999 175.9176,41.68079999999999" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="175.9176,41.68079999999999 174.0888,43.50959999999999" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="174.0888,43.50959999999999 174.0888,52.990799999999986" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="183.072" cy="49.70519999999999" r="0.720000000000006" fill="none" stroke="#2563eb" stroke-width="0.7"/>
+  <text x="180.072" y="56.90519999999999" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">L1</text>
+  <text x="180.072" y="42.505199999999995" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r90 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="94.5384,154.0908 94.5384,149.5188" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="94.5384,149.5188 94.5384,147.9948" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="94.5384,147.9948 84.9384,147.9948" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="84.93719999999999,147.9948 83.4132,147.9948" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="83.4132,147.9948 83.4132,154.0908" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="83.4132,162.01559999999998 83.4132,166.58759999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="83.4132,166.58759999999998 83.4132,168.1116" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="83.4132,168.1116 93.0132,168.1116" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="93.1668,168.1116 94.6908,168.1116" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="94.6908,168.1116 94.6908,162.01559999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="89.05199999999999" y="159.2532" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">C3</text>
+  <text x="89.05199999999999" y="144.8532" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r90 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="70.7064,168.93959999999998 75.2784,168.93959999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="75.2784,168.93959999999998 76.8024,168.93959999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="76.8024,168.93959999999998 76.8024,159.33959999999996" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="76.8024,159.33839999999998 76.8024,157.81439999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="76.8024,157.81439999999998 70.7064,157.81439999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="62.7816,157.81439999999998 58.20960000000001,157.81439999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="58.20960000000001,157.81439999999998 56.68560000000001,157.81439999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="56.68560000000001,157.81439999999998 56.68560000000001,167.4144" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="56.68560000000001,167.56799999999998 56.68560000000001,169.09199999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="56.68560000000001,169.09199999999998 62.78160000000001,169.09199999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="66.744" y="164.6532" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">C4</text>
+  <text x="66.744" y="150.2532" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r180 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="117.35759999999999,162.0156 117.35759999999999,166.58759999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="117.35759999999999,166.58759999999998 117.35759999999999,168.1116" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="117.35759999999999,168.1116 126.95760000000001,168.1116" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="126.9588,168.1116 128.4828,168.1116" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="128.4828,168.1116 128.4828,162.01559999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="128.4828,154.09079999999997 128.4828,149.5188" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="128.4828,149.5188 128.4828,147.9948" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="128.4828,147.9948 118.8828,147.9948" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="118.72919999999999,147.9948 117.20519999999999,147.9948" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="117.20519999999999,147.9948 117.20519999999999,154.0908" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="122.844" y="159.2532" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">C13</text>
+  <text x="122.844" y="144.8532" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r270 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="70.7064,151.4436 75.2784,151.4436" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="75.2784,151.4436 76.8024,151.4436" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="76.8024,151.4436 76.8024,141.84359999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="76.8024,141.8424 76.8024,140.3184" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="76.8024,140.3184 70.7064,140.3184" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="62.7816,140.3184 58.20960000000001,140.3184" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="58.20960000000001,140.3184 56.68560000000001,140.3184" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="56.68560000000001,140.3184 56.68560000000001,149.91839999999996" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="56.68560000000001,150.072 56.68560000000001,151.596" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="56.68560000000001,151.596 62.78160000000001,151.596" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="66.744" y="147.1572" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">C14</text>
+  <text x="66.744" y="132.75719999999998" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r180 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="100.4616,162.0156 100.4616,166.58759999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="100.4616,166.58759999999998 100.4616,168.1116" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="100.4616,168.1116 110.06160000000001,168.1116" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="110.06280000000001,168.1116 111.5868,168.1116" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="111.5868,168.1116 111.5868,162.01559999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="111.5868,154.09079999999997 111.5868,149.5188" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="111.5868,149.5188 111.5868,147.9948" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="111.5868,147.9948 101.98679999999999,147.9948" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="101.8332,147.9948 100.3092,147.9948" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="100.3092,147.9948 100.3092,154.0908" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="105.94800000000001" y="159.2532" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">C9</text>
+  <text x="105.94800000000001" y="144.8532" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r270 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="75.43439999999998,118.1916 80.00639999999999,118.1916" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="80.00639999999999,118.1916 81.5304,118.1916" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="81.5304,118.1916 81.5304,108.59159999999999" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="81.5304,108.59039999999999 81.53039999999999,107.06639999999999" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="81.53039999999999,107.06639999999999 75.43439999999998,107.0664" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="67.5096,107.0664 62.937599999999996,107.0664" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="62.937599999999996,107.0664 61.41359999999999,107.0664" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="61.41359999999999,107.0664 61.4136,116.66639999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="61.4136,116.82 61.4136,118.34399999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="61.4136,118.34399999999998 67.5096,118.34399999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="71.472" y="113.90519999999998" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">C12</text>
+  <text x="71.472" y="99.5052" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r180 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polygon points="129.408,182.3052 123.40799999999999,182.3052 123.40799999999999,194.3052 129.40800000000002,194.3052 129.408,182.3052" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="132.3912,185.59079999999997 132.3912,176.97479999999996" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="132.3912,176.97479999999996 120.42479999999999,176.97479999999996" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="120.42479999999999,176.97479999999996 120.42479999999999,185.59079999999997" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="132.3912,191.01959999999997 132.3912,199.63559999999998" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="132.3912,199.63559999999998 120.42479999999999,199.63559999999998" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="120.42479999999999,199.63559999999998 120.42479999999999,191.01959999999997" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="129.40679999999998" cy="182.3064" r="0.7199999999999953" fill="none" stroke="#2563eb" stroke-width="0.7"/>
+  <text x="126.40799999999999" y="189.50519999999997" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">R2</text>
+  <text x="126.40799999999999" y="175.10519999999997" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r90 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <circle cx="155.22" cy="189.5304" r="0.7200000000000006" fill="none" stroke="#2563eb" stroke-width="0.7"/>
+<polygon points="155.22,189.5304 179.22,189.5304 179.22,165.5304 155.22,165.5304 155.22,189.5304" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="164.22,186.5292 166.02,186.5292" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="166.02,186.5292 166.02,169.7292" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="166.02,169.7292 166.02,169.1292" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="166.02,169.1292 164.22,169.1292" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="164.22,186.5292 164.22,169.1292" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="151.62,191.3292 151.62,191.1864" fill="none" stroke="#64748b" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="179.22,190.7292 155.22,190.7292" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="155.22,164.3292 179.22,164.3292" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="157.38,172.9692 160.26,172.9692 160.26,170.8092 157.74,170.8092 157.74,169.48919999999998 160.26,169.48919999999998 160.26,168.8892 157.38,168.8892 157.26,168.8892 157.26,169.0092 157.26,171.2892 159.89999999999998,171.2892 159.89999999999998,172.48919999999998 157.26,172.48919999999998 157.26,172.9692 157.38,172.9692" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="153.06,169.54919999999998 155.94,169.54919999999998 155.94,168.94920000000002 153.06,168.94920000000002 153.06,169.54919999999998" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="175.07999999999998,182.98919999999998 175.07999999999998,185.8692 175.68,185.8692 175.68,182.98919999999998 175.07999999999998,182.98919999999998" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="173.94,184.7292 176.82,184.7292 176.82,184.1292 173.94,184.1292 173.94,184.7292" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="164.52,188.0892 164.52,166.9692 161.52,166.9692 161.52,188.0892 164.52,188.0892" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="178.62,186.5292 178.62,182.92919999999998 180.42000000000002,182.92919999999998 180.42000000000002,181.7292 181.02,181.7292 181.02,182.92919999999998 182.22,182.92919999999998 182.22,183.5292 181.02,183.5292 181.02,185.3292 180.42000000000002,185.3292 180.42000000000002,183.5292 179.22,183.5292 179.22,186.5292 178.62,186.5292" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="157.62,185.92919999999998 157.02,185.3292 157.02,181.7292 157.02,181.7292 157.62,181.1292 160.02,181.1292 160.62,181.7292 160.62,185.3292 160.62,185.3292 160.02,185.92919999999998 158.82,185.92919999999998 158.82,185.3292 160.02,185.3292 160.02,181.7292 157.62,181.7292 157.62,185.3292 158.22,185.3292 158.22,185.92919999999998 157.62,185.92919999999998" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="153.12,185.92919999999998 153.12,181.1292 154.92000000000002,181.1292 155.52,181.1292 156.12,181.7292 156.12,185.3292 155.52,185.92919999999998 154.32,185.92919999999998 154.32,185.3292 155.52,185.3292 155.52,181.7292 153.72,181.7292 153.72,185.92919999999998 153.12,185.92919999999998" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="173.82,173.3292 173.82,168.52800000000002 175.62,168.52800000000002 176.2212,168.52800000000002 176.82,169.1292 176.82,172.7292 176.2212,173.3292 175.02120000000002,173.3292 175.02120000000002,172.72799999999998 176.2212,172.72799999999998 176.2212,169.1292 174.42000000000002,169.1292 174.42000000000002,173.3292 173.82,173.3292" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="178.32,168.5292 178.32,169.1292 178.92000000000002,169.1292 178.92000000000002,172.7292 178.32,172.7292 178.32,173.3292 180.12,173.3292 180.12,172.7292 179.52,172.7292 179.52,169.1292 180.12,169.1292 180.12,168.5292 178.32,168.5292" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="167.22" y="178.7292" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">LED1</text>
+  <text x="167.22" y="164.3292" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r0 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="171.1824,206.5116 175.7544,206.5116" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="175.7544,206.5116 177.27839999999998,206.5116" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="177.27839999999998,206.5116 177.27839999999998,196.91159999999996" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="177.27839999999998,196.91039999999998 177.27839999999998,195.38639999999995" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="177.27839999999998,195.38639999999995 171.1824,195.38639999999995" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="163.25760000000002,195.38639999999998 158.68560000000002,195.38639999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="158.68560000000002,195.38639999999998 157.1616,195.38639999999998" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="157.1616,195.38639999999998 157.1616,204.9864" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="157.1616,205.14 157.1616,206.66400000000002" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="157.1616,206.66400000000002 163.25760000000002,206.66400000000002" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="167.22" y="202.2252" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">C1</text>
+  <text x="167.22" y="187.8252" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r180 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <circle cx="110.3388" cy="175.3092" r="0.7200000000000006" fill="none" stroke="#2563eb" stroke-width="0.7"/>
+<polygon points="107.94,194.5092 107.94,175.3092 76.74,175.3092 76.74,194.5092 107.94,194.5092" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="102.5436,174.70919999999998 82.1364,174.7092" fill="none" stroke="#64748b" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="102.54480000000001,195.1092 82.1352,195.1092" fill="none" stroke="#64748b" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="92.34" cy="184.9092" r="4.443599999999998" fill="none" stroke="#64748b" stroke-width="3.048"/>
+  <text x="92.34" y="186.1092" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">SW1</text>
+  <text x="92.34" y="171.70919999999998" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r180 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <circle cx="121.5024" cy="30.602399999999992" r="0.7200000000000006" fill="none" stroke="#2563eb" stroke-width="0.7"/>
+<circle cx="123.90119999999999" cy="32.4036" r="1.2011999999999996" fill="none" stroke="#2563eb" stroke-width="2.4000000000000004"/>
+<polygon points="121.5024,30.60359999999999 121.5024,45.00359999999999 140.7024,45.00359999999999 140.7024,30.60359999999999 121.5024,30.60359999999999" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="114.90959999999998,31.803599999999996 114.90959999999998,23.99999999999999" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="114.90959999999998,23.99999999999999 123.2916,23.99999999999999" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="117.9024,48.603599999999986 117.9024,27.60359999999999" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="117.9024,27.60359999999999 117.9024,27.00359999999999" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="117.9024,27.00359999999999 144.3024,27.00359999999999" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="144.3024,27.00359999999999 144.3024,48.603599999999986" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="144.3024,48.603599999999986 117.9024,48.603599999999986" fill="none" stroke="#64748b" stroke-width="1.8239999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="130.02" y="37.82519999999999" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">X1</text>
+  <text x="130.02" y="23.425199999999997" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r0 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="149.2896,40.0116 149.2896,44.58359999999999" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="149.2896,44.58359999999999 149.2896,46.1076" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="149.2896,46.1076 158.8896,46.10759999999999" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="158.8908,46.10759999999999 160.4148,46.10759999999999" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="160.4148,46.10759999999999 160.4148,40.01159999999999" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="160.4148,32.08679999999998 160.4148,27.514799999999994" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="160.4148,27.514799999999994 160.4148,25.990799999999986" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="160.4148,25.990799999999986 150.8148,25.990799999999997" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="150.6612,25.990799999999997 149.1372,25.990799999999997" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="149.1372,25.990799999999997 149.1372,32.0868" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="154.776" y="37.24919999999999" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">C16</text>
+  <text x="154.776" y="22.849199999999996" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r270 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="98.56559999999999,40.0116 98.56559999999999,44.58359999999999" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="98.56559999999999,44.58359999999999 98.56559999999999,46.1076" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="98.56559999999999,46.1076 108.1656,46.10759999999999" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="108.1668,46.10759999999999 109.6908,46.10759999999999" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="109.6908,46.10759999999999 109.6908,40.01159999999999" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="109.6908,32.08679999999998 109.6908,27.514799999999994" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="109.6908,27.514799999999994 109.6908,25.990799999999986" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="109.6908,25.990799999999986 100.0908,25.990799999999997" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="99.93719999999999,25.990799999999997 98.4132,25.990799999999997" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="98.4132,25.990799999999997 98.4132,32.0868" fill="none" stroke="#64748b" stroke-width="1.7999999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="104.05199999999999" y="37.24919999999999" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">C17</text>
+  <text x="104.05199999999999" y="22.849199999999996" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r270 bottom</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polygon points="161.22,151.39319999999998 161.22,157.39319999999998 173.22,157.39319999999998 173.22,151.39319999999998 161.22,151.39319999999998" fill="none" stroke="#2563eb" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="164.50560000000002,148.41 155.8896,148.41" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="155.8896,148.41 155.8896,160.3764" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="155.8896,160.3764 164.50560000000002,160.3764" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="169.9344,148.41 178.55040000000002,148.41" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="178.55040000000002,148.41 178.55040000000002,160.3764" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="178.55040000000002,160.3764 169.9344,160.3764" fill="none" stroke="#64748b" stroke-width="1.8288000000000002" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="161.2212" cy="151.3944" r="0.720000000000006" fill="none" stroke="#2563eb" stroke-width="0.7"/>
+  <text x="167.22" y="155.5932" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">R4</text>
+  <text x="167.22" y="141.1932" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r0 bottom</text>
+</g>
+<g><polygon points="118.6242,212.48519999999996 125.4126,212.48519999999996 125.4126,206.00519999999997 118.6242,206.00519999999997" fill="#2563eb" opacity="0.9"/><title>R1.2 bottom</title></g>
+<g><polygon points="129.01139999999998,212.48519999999996 135.7998,212.48519999999996 135.7998,206.00519999999997 129.01139999999998,206.00519999999997" fill="#2563eb" opacity="0.9"/><title>R1.1 bottom</title></g>
+<g><polygon points="98.32799999999999,203.00519999999997 92.328,203.00519999999997 92.328,210.2052 98.32799999999999,210.2052" fill="#2563eb" opacity="0.9"/><title>C2.1 bottom</title></g>
+<g><polygon points="109.12799999999999,203.00519999999997 103.12799999999999,203.00519999999997 103.12799999999999,210.2052 109.12799999999999,210.2052" fill="#2563eb" opacity="0.9"/><title>C2.2 bottom</title></g>
+<g><polygon points="33.048,142.35719999999998 27.048000000000016,142.35719999999998 27.048000000000016,149.5572 33.048,149.5572" fill="#2563eb" opacity="0.9"/><title>C5.1 bottom</title></g>
+<g><polygon points="43.84800000000001,142.35719999999998 37.84800000000001,142.35719999999998 37.84800000000001,149.5572 43.84800000000001,149.5572" fill="#2563eb" opacity="0.9"/><title>C5.2 bottom</title></g>
+<g><polygon points="33.048,159.8532 27.048000000000016,159.8532 27.048000000000016,167.0532 33.048,167.0532" fill="#2563eb" opacity="0.9"/><title>C6.1 bottom</title></g>
+<g><polygon points="43.84800000000001,159.8532 37.84800000000001,159.8532 37.84800000000001,167.0532 43.84800000000001,167.0532" fill="#2563eb" opacity="0.9"/><title>C6.2 bottom</title></g>
+<g><polygon points="152.37,79.46399999999998 160.17000000000002,79.46399999999997 160.17000000000002,76.10399999999998 152.37,76.10399999999998" fill="#2563eb" opacity="0.9"/><title>U1.1 bottom</title></g>
+<g><polygon points="152.37,85.46639999999998 160.17000000000002,85.46639999999998 160.17000000000002,82.10639999999998 152.37,82.1064" fill="#2563eb" opacity="0.9"/><title>U1.2 bottom</title></g>
+<g><polygon points="152.37,91.46399999999998 160.17000000000002,91.46399999999998 160.17000000000002,88.10399999999998 152.37,88.10399999999998" fill="#2563eb" opacity="0.9"/><title>U1.3 bottom</title></g>
+<g><polygon points="152.37,97.4664 160.17000000000002,97.4664 160.17000000000002,94.10639999999998 152.37,94.1064" fill="#2563eb" opacity="0.9"/><title>U1.4 bottom</title></g>
+<g><polygon points="152.37,103.46399999999997 160.17000000000002,103.46399999999997 160.17000000000002,100.10399999999998 152.37,100.10399999999998" fill="#2563eb" opacity="0.9"/><title>U1.5 bottom</title></g>
+<g><polygon points="152.37,109.4664 160.17000000000002,109.4664 160.17000000000002,106.10639999999998 152.37,106.10639999999998" fill="#2563eb" opacity="0.9"/><title>U1.6 bottom</title></g>
+<g><polygon points="152.37,115.46399999999997 160.17000000000002,115.46399999999997 160.17000000000002,112.10399999999998 152.37,112.10399999999998" fill="#2563eb" opacity="0.9"/><title>U1.7 bottom</title></g>
+<g><polygon points="152.37,121.4664 160.17000000000002,121.4664 160.17000000000002,118.10639999999998 152.37,118.10639999999998" fill="#2563eb" opacity="0.9"/><title>U1.8 bottom</title></g>
+<g><polygon points="145.8612,132.4152 149.2212,132.4152 149.2212,124.61519999999999 145.8612,124.61519999999999" fill="#2563eb" opacity="0.9"/><title>U1.9 bottom</title></g>
+<g><polygon points="139.85880000000003,132.4152 143.21880000000002,132.4152 143.21880000000002,124.61519999999999 139.8588,124.61519999999999" fill="#2563eb" opacity="0.9"/><title>U1.10 bottom</title></g>
+<g><polygon points="133.8612,132.4152 137.2212,132.4152 137.2212,124.61519999999999 133.8612,124.61519999999999" fill="#2563eb" opacity="0.9"/><title>U1.11 bottom</title></g>
+<g><polygon points="127.8588,132.4152 131.21880000000002,132.4152 131.21880000000002,124.61519999999999 127.8588,124.61519999999999" fill="#2563eb" opacity="0.9"/><title>U1.12 bottom</title></g>
+<g><polygon points="121.86120000000001,132.4152 125.22120000000001,132.4152 125.22120000000001,124.61519999999999 121.86120000000001,124.61519999999999" fill="#2563eb" opacity="0.9"/><title>U1.13 bottom</title></g>
+<g><polygon points="115.8588,132.4152 119.21880000000002,132.4152 119.21880000000002,124.61519999999999 115.8588,124.61519999999999" fill="#2563eb" opacity="0.9"/><title>U1.14 bottom</title></g>
+<g><polygon points="109.86120000000001,132.4152 113.22120000000001,132.4152 113.22120000000001,124.61519999999999 109.86120000000001,124.61519999999999" fill="#2563eb" opacity="0.9"/><title>U1.15 bottom</title></g>
+<g><polygon points="103.85880000000002,132.4152 107.21880000000002,132.4152 107.21880000000002,124.61519999999999 103.8588,124.61519999999999" fill="#2563eb" opacity="0.9"/><title>U1.16 bottom</title></g>
+<g><polygon points="92.91,121.4664 100.71000000000001,121.4664 100.71000000000001,118.10640000000001 92.91,118.10640000000001" fill="#2563eb" opacity="0.9"/><title>U1.17 bottom</title></g>
+<g><polygon points="92.91,115.464 100.71000000000001,115.464 100.71000000000001,112.10399999999998 92.91,112.10399999999998" fill="#2563eb" opacity="0.9"/><title>U1.18 bottom</title></g>
+<g><polygon points="92.91,109.4664 100.71000000000001,109.4664 100.71000000000001,106.10640000000001 92.91,106.10640000000001" fill="#2563eb" opacity="0.9"/><title>U1.19 bottom</title></g>
+<g><polygon points="92.91,103.464 100.71000000000001,103.464 100.71000000000001,100.10399999999998 92.91,100.10399999999998" fill="#2563eb" opacity="0.9"/><title>U1.20 bottom</title></g>
+<g><polygon points="92.91,97.4664 100.71000000000001,97.4664 100.71000000000001,94.1064 92.91,94.1064" fill="#2563eb" opacity="0.9"/><title>U1.21 bottom</title></g>
+<g><polygon points="92.91,91.464 100.71000000000001,91.46399999999998 100.71000000000001,88.104 92.91,88.104" fill="#2563eb" opacity="0.9"/><title>U1.22 bottom</title></g>
+<g><polygon points="92.91,85.4664 100.71000000000001,85.4664 100.71000000000001,82.1064 92.91,82.10640000000001" fill="#2563eb" opacity="0.9"/><title>U1.23 bottom</title></g>
+<g><polygon points="92.91,79.464 100.71000000000001,79.46399999999998 100.71000000000001,76.104 92.91,76.104" fill="#2563eb" opacity="0.9"/><title>U1.24 bottom</title></g>
+<g><polygon points="103.8588,72.95519999999999 107.21879999999999,72.95519999999999 107.21879999999999,65.15519999999998 103.8588,65.15519999999998" fill="#2563eb" opacity="0.9"/><title>U1.25 bottom</title></g>
+<g><polygon points="109.8612,72.95519999999999 113.22120000000001,72.95519999999999 113.22119999999998,65.15519999999998 109.8612,65.15519999999998" fill="#2563eb" opacity="0.9"/><title>U1.26 bottom</title></g>
+<g><polygon points="115.8588,72.95519999999999 119.21879999999999,72.95519999999999 119.21879999999999,65.15519999999998 115.8588,65.15519999999998" fill="#2563eb" opacity="0.9"/><title>U1.27 bottom</title></g>
+<g><polygon points="121.8612,72.95519999999999 125.22120000000001,72.95519999999999 125.22120000000001,65.15519999999998 121.8612,65.15519999999998" fill="#2563eb" opacity="0.9"/><title>U1.28 bottom</title></g>
+<g><polygon points="127.8588,72.95519999999999 131.2188,72.95519999999999 131.2188,65.15519999999998 127.8588,65.15519999999998" fill="#2563eb" opacity="0.9"/><title>U1.29 bottom</title></g>
+<g><polygon points="133.8612,72.95519999999999 137.2212,72.95519999999999 137.2212,65.15519999999998 133.8612,65.15519999999998" fill="#2563eb" opacity="0.9"/><title>U1.30 bottom</title></g>
+<g><polygon points="139.8588,72.95519999999999 143.2188,72.95519999999999 143.2188,65.15519999999998 139.8588,65.15519999999998" fill="#2563eb" opacity="0.9"/><title>U1.31 bottom</title></g>
+<g><polygon points="145.8612,72.95519999999999 149.2212,72.95519999999999 149.22119999999998,65.15519999999998 145.8612,65.15519999999998" fill="#2563eb" opacity="0.9"/><title>U1.32 bottom</title></g>
+<g><polygon points="103.74,121.58519999999999 149.34,121.58519999999999 149.34,75.98519999999999 103.74,75.98519999999999" fill="#2563eb" opacity="0.9"/><title>U1.33 bottom</title></g>
+<g><polygon points="183.312,66.987 183.312,57.505799999999994 176.832,57.505799999999994 176.832,66.987" fill="#2563eb" opacity="0.9"/><title>L1.2 bottom</title></g>
+<g><polygon points="183.312,53.90459999999999 183.312,44.42339999999999 176.832,44.42339999999999 176.832,53.90459999999999" fill="#2563eb" opacity="0.9"/><title>L1.1 bottom</title></g>
+<g><polygon points="92.652,155.6532 92.652,149.6532 85.452,149.6532 85.452,155.6532" fill="#2563eb" opacity="0.9"/><title>C3.1 bottom</title></g>
+<g><polygon points="92.652,166.45319999999998 92.652,160.45319999999998 85.452,160.45319999999998 85.452,166.45319999999998" fill="#2563eb" opacity="0.9"/><title>C3.2 bottom</title></g>
+<g><polygon points="69.144,167.0532 75.144,167.0532 75.144,159.8532 69.144,159.8532" fill="#2563eb" opacity="0.9"/><title>C4.1 bottom</title></g>
+<g><polygon points="58.344,167.0532 64.344,167.0532 64.344,159.8532 58.344,159.8532" fill="#2563eb" opacity="0.9"/><title>C4.2 bottom</title></g>
+<g><polygon points="119.244,160.45319999999998 119.24400000000001,166.45319999999998 126.44400000000002,166.45319999999998 126.44400000000002,160.45319999999998" fill="#2563eb" opacity="0.9"/><title>C13.1 bottom</title></g>
+<g><polygon points="119.244,149.6532 119.244,155.6532 126.44400000000002,155.6532 126.44400000000002,149.6532" fill="#2563eb" opacity="0.9"/><title>C13.2 bottom</title></g>
+<g><polygon points="69.144,149.5572 75.144,149.5572 75.144,142.35719999999998 69.144,142.35719999999998" fill="#2563eb" opacity="0.9"/><title>C14.1 bottom</title></g>
+<g><polygon points="58.344,149.5572 64.344,149.5572 64.344,142.35719999999998 58.344,142.35719999999998" fill="#2563eb" opacity="0.9"/><title>C14.2 bottom</title></g>
+<g><polygon points="102.348,160.45319999999998 102.348,166.45319999999998 109.548,166.45319999999998 109.548,160.45319999999998" fill="#2563eb" opacity="0.9"/><title>C9.1 bottom</title></g>
+<g><polygon points="102.348,149.6532 102.348,155.6532 109.548,155.6532 109.548,149.6532" fill="#2563eb" opacity="0.9"/><title>C9.2 bottom</title></g>
+<g><polygon points="73.872,116.3052 79.872,116.3052 79.872,109.10519999999998 73.872,109.10519999999998" fill="#2563eb" opacity="0.9"/><title>C12.1 bottom</title></g>
+<g><polygon points="63.07199999999999,116.3052 69.07199999999999,116.3052 69.07199999999999,109.10519999999998 63.07199999999999,109.10519999999998" fill="#2563eb" opacity="0.9"/><title>C12.2 bottom</title></g>
+<g><polygon points="129.648,196.893 129.648,190.10459999999998 123.16799999999999,190.1046 123.16799999999999,196.893" fill="#2563eb" opacity="0.9"/><title>R2.2 bottom</title></g>
+<g><polygon points="129.648,186.5058 129.648,179.7174 123.16799999999999,179.7174 123.16799999999999,186.5058" fill="#2563eb" opacity="0.9"/><title>R2.1 bottom</title></g>
+<g><polygon points="161.64000000000001,179.92919999999998 150.84,179.92919999999998 150.84,188.3292 161.64000000000001,188.3292" fill="#2563eb" opacity="0.9"/><title>LED1.1 bottom</title></g>
+<g><polygon points="161.64000000000001,166.7292 150.84,166.7292 150.84,175.1292 161.64000000000001,175.1292" fill="#2563eb" opacity="0.9"/><title>LED1.2 bottom</title></g>
+<g><polygon points="183.60000000000002,166.7292 172.8,166.7292 172.8,175.1292 183.60000000000002,175.1292" fill="#2563eb" opacity="0.9"/><title>LED1.3 bottom</title></g>
+<g><polygon points="183.60000000000002,179.92919999999998 172.8,179.92919999999998 172.8,188.3292 183.60000000000002,188.3292" fill="#2563eb" opacity="0.9"/><title>LED1.4 bottom</title></g>
+<g><polygon points="169.62,204.6252 175.62,204.6252 175.62,197.42519999999996 169.62,197.42519999999996" fill="#2563eb" opacity="0.9"/><title>C1.1 bottom</title></g>
+<g><polygon points="158.82,204.6252 164.82,204.6252 164.82,197.42519999999996 158.82,197.42519999999996" fill="#2563eb" opacity="0.9"/><title>C1.2 bottom</title></g>
+<g><polygon points="104.22,183.4092 112.85999999999999,183.4092 112.85999999999999,176.8092 104.22,176.8092" fill="#2563eb" opacity="0.9"/><title>SW1.1 bottom</title></g>
+<g><polygon points="71.82,183.4092 80.46000000000001,183.4092 80.46000000000001,176.8092 71.82,176.8092" fill="#2563eb" opacity="0.9"/><title>SW1.2 bottom</title></g>
+<g><polygon points="104.22,193.0092 112.85999999999999,193.0092 112.85999999999999,186.4092 104.22,186.4092" fill="#2563eb" opacity="0.9"/><title>SW1.3 bottom</title></g>
+<g><polygon points="71.82,193.0092 80.46000000000001,193.0092 80.46000000000001,186.4092 71.82,186.4092" fill="#2563eb" opacity="0.9"/><title>SW1.4 bottom</title></g>
+<g><polygon points="128.8812,39.002399999999994 120.12119999999999,39.002399999999994 120.12119999999999,46.20239999999999 128.8812,46.20239999999999" fill="#2563eb" opacity="0.9"/><title>X1.4 bottom</title></g>
+<g><polygon points="142.0824,39.002399999999994 133.32240000000002,39.002399999999994 133.32240000000002,46.20239999999999 142.0824,46.20239999999999" fill="#2563eb" opacity="0.9"/><title>X1.3 bottom</title></g>
+<g><polygon points="142.0824,29.403599999999994 133.32240000000002,29.403599999999994 133.32240000000002,36.603599999999986 142.0824,36.603599999999986" fill="#2563eb" opacity="0.9"/><title>X1.2 bottom</title></g>
+<g><polygon points="128.8812,29.403599999999994 120.12119999999999,29.403599999999994 120.12119999999999,36.603599999999986 128.8812,36.603599999999986" fill="#2563eb" opacity="0.9"/><title>X1.1 bottom</title></g>
+<g><polygon points="151.17600000000002,38.44919999999999 151.17600000000002,44.44919999999999 158.376,44.44919999999999 158.376,38.44919999999999" fill="#2563eb" opacity="0.9"/><title>C16.1 bottom</title></g>
+<g><polygon points="151.176,27.64919999999999 151.176,33.64919999999999 158.376,33.64919999999999 158.376,27.64919999999999" fill="#2563eb" opacity="0.9"/><title>C16.2 bottom</title></g>
+<g><polygon points="100.452,38.44919999999999 100.452,44.44919999999999 107.652,44.44919999999999 107.652,38.44919999999999" fill="#2563eb" opacity="0.9"/><title>C17.1 bottom</title></g>
+<g><polygon points="100.452,27.64919999999999 100.452,33.64919999999999 107.652,33.64919999999999 107.652,27.64919999999999" fill="#2563eb" opacity="0.9"/><title>C17.2 bottom</title></g>
+<g><polygon points="175.8078,151.1532 169.0194,151.1532 169.0194,157.6332 175.8078,157.6332" fill="#2563eb" opacity="0.9"/><title>R4.2 bottom</title></g>
+<g><polygon points="165.4206,151.1532 158.6322,151.1532 158.6322,157.6332 165.4206,157.6332" fill="#2563eb" opacity="0.9"/><title>R4.1 bottom</title></g>
+
+</svg>

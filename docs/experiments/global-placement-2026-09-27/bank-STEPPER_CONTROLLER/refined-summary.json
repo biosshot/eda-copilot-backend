@@ -1,0 +1,106 @@
+{
+  "fixture": "bank-STEPPER_CONTROLLER",
+  "mode": "full-micro",
+  "tag": "global-refined",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "0",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 62711.804500000006,
+  "blockMs": 36867.400299999994,
+  "blockSolves": 20,
+  "ok": false,
+  "fixedChanges": [
+    "SCREW1",
+    "SCREW2",
+    "SCREW3",
+    "SCREW4"
+  ],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 1184.7476,
+      "pairSum": 197.73311599487525,
+      "pairMax": 36.063312084443936,
+      "score": 23975488.778912596
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 1184.74935,
+      "pairSum": 197.73306814292593,
+      "pairMax": 36.063312084443936,
+      "score": 23975490.60841093
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 1186.7490500000001,
+      "pairSum": 200.80463158455746,
+      "pairMax": 34.46908761919874,
+      "score": 23970680.862687998
+    },
+    {
+      "stage": "04-v2-invalid-final",
+      "hpwl": 1186.7490500000001,
+      "pairSum": 200.80463158455746,
+      "pairMax": 34.46908761919874,
+      "score": 23970680.862687998
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "a5e1f92ab24cba93aa93aced1e845b669e96877531b58444fa4c6804ba917629",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "unattached_passive_block",
+      "message": "Passive block status_leds has no parent or external placement relation, so board packing may place it in any free area. Make it a satellite with placement: \"satellite\", attachTo, and preferably anchor: pin(...), or add an external near(), veryNear(), or criticalPair() using comp()/pin() targets.",
+      "nodeId": "block:status_leds"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 11 ms",
+      "nodeId": "tree:block:ideal_diode_20v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 9 ms",
+      "nodeId": "tree:block:ideal_diode_20v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 7 ms",
+      "nodeId": "tree:block:ideal_diode_20v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 14 ms",
+      "nodeId": "tree:block:driver_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 16 ms",
+      "nodeId": "tree:block:driver_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 14 ms",
+      "nodeId": "tree:block:driver_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 2 blocks, 34 candidates, 0 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}

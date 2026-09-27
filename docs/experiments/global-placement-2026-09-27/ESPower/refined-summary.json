@@ -1,0 +1,161 @@
+{
+  "fixture": "ESPower",
+  "mode": "full-micro",
+  "tag": "global-refined",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "0",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 29903.8759,
+  "blockMs": 21939.308600000004,
+  "blockSolves": 34,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 409.56200000000007,
+      "pairSum": 89.37574392267598,
+      "pairMax": 42.32741428436186,
+      "score": 1720893.593555926
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 409.56200000000007,
+      "pairSum": 89.37574392267598,
+      "pairMax": 42.32741428436186,
+      "score": 1720893.593555926
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 404.39810000000006,
+      "pairSum": 89.58631490848651,
+      "pairMax": 42.32741428436186,
+      "score": 1674442.6483326212
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 404.39810000000006,
+      "pairSum": 89.58631490848651,
+      "pairMax": 42.32741428436186,
+      "score": 1674442.6483326212
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "82f28407129cb28f42f815ab3c14defe7b324c36f523271172caf245cbcc1f86",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 11 ms",
+      "nodeId": "tree:block:crystal"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:crystal"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:crystal"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:rf_match"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:rf_match"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:rf_match"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:usb_data"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:usb_data"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:usb_data"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 16 ms",
+      "nodeId": "tree:block:charger"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 24 ms",
+      "nodeId": "tree:block:charger"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 16 ms",
+      "nodeId": "tree:block:charger"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 10 ms",
+      "nodeId": "tree:block:battery_adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 12 ms",
+      "nodeId": "tree:block:battery_adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 13 ms",
+      "nodeId": "tree:block:battery_adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected charger in board context: variant 0, shift -0.5,0mm; score 1787717.82 -> 1720980.35",
+      "nodeId": "tree:block:charger"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected battery_adc in board context: variant 0, shift 0.5,0mm; score 1720980.35 -> 1720893.59",
+      "nodeId": "tree:block:battery_adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 3 blocks, 69 candidates, 2 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}

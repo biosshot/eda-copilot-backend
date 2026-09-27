@@ -1,0 +1,251 @@
+{
+  "fixture": "bank-rp2040_base",
+  "mode": "full-micro",
+  "tag": "global-pads",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "1",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 17304.6762,
+  "blockMs": 14112.094900000002,
+  "blockSolves": 31,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 267.76759999999996,
+      "pairSum": 65.7547695009918,
+      "pairMax": 4.949537239985169,
+      "score": 572196.9557187434
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 267.76959999999997,
+      "pairSum": 65.75626041025973,
+      "pairMax": 4.949537239985169,
+      "score": 572210.5371133621
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 275.233,
+      "pairSum": 64.31842308421263,
+      "pairMax": 4.949537239985169,
+      "score": 541211.676904749
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 275.233,
+      "pairSum": 64.31842308421263,
+      "pairMax": 4.949537239985169,
+      "score": 541211.676904749
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "45e297b34c808f676b50faf52fe5e9bb8bd050af1df13b8386a2c89cc01a3889",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module buck includes satellite buck_input, but parent buck_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:buck"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module buck includes satellite buck_output, but parent buck_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:buck"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module buck includes satellite buck_feedback, but parent buck_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:buck"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module buck includes satellite buck_aux, but parent buck_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:buck"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module rp2040 includes satellite mcu_clock, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:rp2040"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module rp2040 includes satellite mcu_flash, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:rp2040"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module rp2040 includes satellite mcu_usb_series, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:rp2040"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module rp2040 includes satellite mcu_decoup_left, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:rp2040"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module rp2040 includes satellite mcu_decoup_right, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:rp2040"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module rp2040 includes satellite mcu_vreg, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:rp2040"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module rp2040 includes satellite buttons, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:rp2040"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 15 ms",
+      "nodeId": "tree:block:charger"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:charger"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:charger"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:buck_aux"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:buck_aux"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:buck_aux"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Deferred parent-level island core_pairs:mcu_flash_bus; it references child primitives outside direct node components",
+      "nodeId": "tree:island:core_pairs:mcu_flash_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:mcu_clock"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:mcu_clock"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:mcu_clock"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:mcu_flash"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:mcu_flash"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:mcu_flash"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:mcu_usb_series"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:mcu_usb_series"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:mcu_usb_series"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:buttons"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:buttons"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:buttons"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module input_power before board placement: locked module has fixed/edge child plus movable siblings (bottom, left); fixed/edge-mounted children inside multi-family module (bottom, left); fixed/edge-mounted children target multiple board edges (bottom, left)",
+      "nodeId": "tree:module:input_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected buck_aux in board context: variant 0, shift -0.5,0mm; score 572664.75 -> 572196.96",
+      "nodeId": "tree:block:buck_aux"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 5 blocks, 85 candidates, 1 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}

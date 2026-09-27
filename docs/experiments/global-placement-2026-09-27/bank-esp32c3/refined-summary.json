@@ -1,0 +1,101 @@
+{
+  "fixture": "bank-esp32c3",
+  "mode": "full-micro",
+  "tag": "global-refined",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "0",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 10341.910100000001,
+  "blockMs": 6593.386700000003,
+  "blockSolves": 15,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 563.1079,
+      "pairSum": 307.3112168573689,
+      "pairMax": 30.926375428103437,
+      "score": 660110.9600318903
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 563.108,
+      "pairSum": 307.3112168573689,
+      "pairMax": 30.926375428103437,
+      "score": 660110.961714413
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 563.108,
+      "pairSum": 307.77214186959486,
+      "pairMax": 30.926375428103437,
+      "score": 660925.8953931688
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 563.108,
+      "pairSum": 307.77214186959486,
+      "pairMax": 30.926375428103437,
+      "score": 660925.8953931688
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "43d5b455ddbd4f3ba8a5df0e981c282830ddf813c978dda41eb9a0debf8ba505",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:USB_Termination"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:USB_Termination"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:USB_Termination"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 7 ms",
+      "nodeId": "tree:block:Power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:Power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:Power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected Power in board context: variant 0, shift 0,0.5mm; score 663986.87 -> 660110.96",
+      "nodeId": "tree:block:Power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 1 blocks, 17 candidates, 1 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}

@@ -1,0 +1,2697 @@
+{
+  "inputs": 17,
+  "uniqueBoards": 15,
+  "runs": 51,
+  "blocks": 152,
+  "modules": 14,
+  "skipped": [
+    {
+      "name": "bank-H743",
+      "error": "Fixture ограничен preview; полная плата не подготовлена."
+    },
+    {
+      "name": "Hanboo",
+      "error": "Нет DSL и запускаемого теста в исходном банке."
+    },
+    {
+      "name": "bank-ICM20948",
+      "error": "capCluster(...) requires at least 2 capacitors. For a single capacitor, use veryNear(pin(\"C1\", \"...\"), pin(\"U1\", \"...\")) or bypass([\"C1\"], targetPin)."
+    },
+    {
+      "name": "bank-NanoDDS",
+      "error": "Invalid PCB placement DSL:\nInvalid component/block references:\n- block(\"power_input_regulator\") references unknown component \"SJ1\".\n- block(\"calibration\") references unknown component \"CALP\".\n- block(\"testpoints\") references unknown component \"+12V\".\n- block(\"testpoints\") references unknown component \"-12V\".\n- block(\"testpoints\") references unknown component \"+5V\".\n- block(\"testpoints\") references unknown component \"KT2\".\n- block(\"testpoints\") references unknown component \"KT3\".\n- component(\"SJ1\") does not match any component in the attached circuit.\n- component(\"CALP\") does not match any component in the attached circuit.\n- component(\"+12V\") does not match any component in the attached circuit.\n- component(\"-12V\") does not match any component in the attached circuit.\n- component(\"+5V\") does not match any component in the attached circuit.\n- component(\"KT2\") does not match any component in the attached circuit.\n- component(\"KT3\") does not match any component in the attached circuit.\nBlocks with more than 12 components are too large for stable placement:\n- rail_driver: 15 components (DA5, VT1, VT2, R2, R3, R7, R45, R46, R47, R48, C1, C2, C8, C9, C32)\n- r2r_ladder: 16 components (R12, R17, R20, R23, R28, R31, R34, R40, R14, R19, R22, R25, R29, R32, R35, R41)\n- offset_amp: 15 components (DA7, R36, C26, R37, C27, R33, R30, R38, R39, C13, C14, C18, C19, C30, C31)\n- output_amp: 13 components (DA8, R9, R10, R11, R5, R4, R8, D1, D2, C24, C25, C28, C29)\nSplit large blocks into smaller main/satellite blocks such as decoupling, clock, flash, input, output, feedback, buttons, and connectors."
+    },
+    {
+      "name": "bank-PICO_DUCK",
+      "error": "Invalid PCB placement DSL:\n- block(\"led\") mixes edgePlace() components (LED1) with components without edgePlace() (R6).\nMove components without edgePlace() into separate blocks and connect them with near(), veryNear(), or criticalPair(). Blocks containing edgePlace() may contain only edgePlace() components; multiple such components are allowed."
+    },
+    {
+      "name": "bank-PROCEDURAL_FOOTPRINTS",
+      "error": "Invalid PCB placement DSL:\n- block(\"led\") mixes edgePlace() components (LED1) with components without edgePlace() (R6).\nMove components without edgePlace() into separate blocks and connect them with near(), veryNear(), or criticalPair(). Blocks containing edgePlace() may contain only edgePlace() components; multiple such components are allowed."
+    },
+    {
+      "name": "bank-USB_ISOL",
+      "error": "Invalid PCB placement DSL:\nEach block must be one net-connected physical island. Split unrelated components into separate main/satellite blocks.\n- block(\"host_side\") is disconnected (group 1: R1; group 2: R2; group 3: R3, C2, R7, C1).\n- block(\"device_side\") is disconnected (group 1: R4; group 2: R5; group 3: R6, C4, R8, C3).\n- block(\"dcdc_caps\") is disconnected (group 1: C5, C8, C7, C6; group 2: C9, C12, C11, C10)."
+    }
+  ],
+  "comparisons": {
+    "before": {
+      "board": {
+        "pad": {
+          "improved": 7,
+          "unchanged": 6,
+          "worsened": 2
+        },
+        "line": {
+          "improved": 5,
+          "unchanged": 6,
+          "worsened": 4
+        },
+        "length": {
+          "improved": 5,
+          "unchanged": 6,
+          "worsened": 4
+        },
+        "deltas": [
+          {
+            "fixture": "Telemetry",
+            "entity": "Полная плата",
+            "pad": -49,
+            "line": -36,
+            "length": 30.45
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Полная плата",
+            "pad": -23,
+            "line": -8,
+            "length": -37.88
+          },
+          {
+            "fixture": "esp32c3",
+            "entity": "Полная плата",
+            "pad": 4,
+            "line": -9,
+            "length": -28.32
+          },
+          {
+            "fixture": "bank-BAND_V3_SIGNAL_PATH",
+            "entity": "Полная плата",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Полная плата",
+            "pad": -5,
+            "line": -7,
+            "length": 2.17
+          },
+          {
+            "fixture": "bank-CONNECTOR_OUTWARD",
+            "entity": "Полная плата",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CONNECTOR_ROTATIONS",
+            "entity": "Полная плата",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CONNECTOR_ROTATIONS_90",
+            "entity": "Полная плата",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Полная плата",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Полная плата",
+            "pad": 13,
+            "line": 2,
+            "length": 16.25
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Полная плата",
+            "pad": -24,
+            "line": 22,
+            "length": 51.89
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Полная плата",
+            "pad": -23,
+            "line": 5,
+            "length": -2.39
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Полная плата",
+            "pad": -87,
+            "line": 5,
+            "length": -137.84
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Полная плата",
+            "pad": -8,
+            "line": -1,
+            "length": -8.95
+          },
+          {
+            "fixture": "bank-TPS63060DSCR",
+            "entity": "Полная плата",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          }
+        ]
+      },
+      "block": {
+        "pad": {
+          "improved": 28,
+          "unchanged": 120,
+          "worsened": 4
+        },
+        "line": {
+          "improved": 5,
+          "unchanged": 135,
+          "worsened": 12
+        },
+        "length": {
+          "improved": 28,
+          "unchanged": 93,
+          "worsened": 31
+        },
+        "deltas": [
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: esp_supply",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: esp_enable",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: battery_sense",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: temperature",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: uart",
+            "pad": -4,
+            "line": -1,
+            "length": -1.93
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: lte_key",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: sim_support",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: lte_bulk",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: lte_power",
+            "pad": -1,
+            "line": 0,
+            "length": 1.49
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: usb_charge",
+            "pad": -11,
+            "line": -5,
+            "length": -10.61
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: usb_input",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: logic_power",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: voltage_iso",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: voltage_hdc",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: voltage_hldo",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: voltage_secondary",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: current_iso",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: current_hdc",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: current_hldo",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: current_secondary",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: adc",
+            "pad": -7,
+            "line": 2,
+            "length": 0.2
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: adc_supply",
+            "pad": 0,
+            "line": 0,
+            "length": -0.46
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: afe_power",
+            "pad": 0,
+            "line": 0,
+            "length": -1.28
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: harvest_input",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: hv_pos",
+            "pad": -10,
+            "line": -3,
+            "length": 0.34
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: low_charge_pos",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: temp_pos",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: hv_neg",
+            "pad": -4,
+            "line": 1,
+            "length": 6.26
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: low_charge_neg",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: temp_neg",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: usb_port",
+            "pad": -6,
+            "line": 2,
+            "length": 12.29
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: mcu_decoupling",
+            "pad": 0,
+            "line": 0,
+            "length": 0.51
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: crystal",
+            "pad": 0,
+            "line": 0,
+            "length": 0.03
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: rf_match",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: strap_pullups",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: reset_support",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: usb_data",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: charger",
+            "pad": 2,
+            "line": 0,
+            "length": 4.95
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: battery_adc",
+            "pad": -3,
+            "line": 0,
+            "length": -4.61
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: current_monitor",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: current_monito_pull",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "esp32c3",
+            "entity": "Блок: MCU_Decoupling",
+            "pad": 0,
+            "line": 0,
+            "length": -0.48
+          },
+          {
+            "fixture": "esp32c3",
+            "entity": "Блок: Reset_Support",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "esp32c3",
+            "entity": "Блок: USB_Port",
+            "pad": 0,
+            "line": 1,
+            "length": 0.06
+          },
+          {
+            "fixture": "esp32c3",
+            "entity": "Блок: USB_Termination",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "esp32c3",
+            "entity": "Блок: Power",
+            "pad": 0,
+            "line": 0,
+            "length": 0.29
+          },
+          {
+            "fixture": "bank-BAND_V3_SIGNAL_PATH",
+            "entity": "Блок: rf_core",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: usb_cc",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: usb_power_protect",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: usb_data_esd",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: poe_input",
+            "pad": 0,
+            "line": 0,
+            "length": 0.14
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: buck_12v",
+            "pad": 0,
+            "line": -2,
+            "length": -9.8
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: protected_12v",
+            "pad": 1,
+            "line": 0,
+            "length": -1.16
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: linear_5v",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: ldo_3v3p",
+            "pad": 0,
+            "line": 0,
+            "length": 1.37
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: load_switch_3v3",
+            "pad": -1,
+            "line": 0,
+            "length": -1.28
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: mcu_decoupling",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: mcu_boot_reset",
+            "pad": 0,
+            "line": 0,
+            "length": 3.69
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: mcu_status_led",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: rs485_core",
+            "pad": -2,
+            "line": 1,
+            "length": -27.31
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: rs485_bus",
+            "pad": -2,
+            "line": 0,
+            "length": -3.29
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: manual_latch",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: mag_input",
+            "pad": 0,
+            "line": 0,
+            "length": 2.12
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Блок: power_stage",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Блок: input_caps",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Блок: output_caps",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Блок: feedback",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Блок: enable",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Блок: compensation",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: radio_matching",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: radio_dcc_caps",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: radio_decoup",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: mcu_xtal",
+            "pad": 0,
+            "line": 0,
+            "length": 0.11
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: mcu_decoup",
+            "pad": 0,
+            "line": 0,
+            "length": 0.65
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: mcu_control",
+            "pad": 0,
+            "line": 1,
+            "length": 0.1
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: status_led",
+            "pad": 0,
+            "line": 0,
+            "length": 0.95
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: power_3v3",
+            "pad": -1,
+            "line": 0,
+            "length": 0.04
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: usb_connector",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: usb_series",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: bottom_debug",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: mcu_decoup_3v3",
+            "pad": 0,
+            "line": 0,
+            "length": -0.24
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: mcu_decoup_1v1",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: adc_filter",
+            "pad": -1,
+            "line": 0,
+            "length": -0.86
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: clock",
+            "pad": 0,
+            "line": 0,
+            "length": -1.3
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: boot",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: sensor_decoup",
+            "pad": 0,
+            "line": 0,
+            "length": -0.01
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: level_shift",
+            "pad": -8,
+            "line": 0,
+            "length": 0.56
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: power_3v3",
+            "pad": 0,
+            "line": 0,
+            "length": 0.24
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: power_1v8",
+            "pad": -1,
+            "line": 0,
+            "length": -4.2
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: status_leds",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: usb_connector",
+            "pad": -1,
+            "line": 0,
+            "length": -0.48
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: charger",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: buck_core",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: buck_input",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: buck_output",
+            "pad": 0,
+            "line": 0,
+            "length": -0.74
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: buck_feedback",
+            "pad": 0,
+            "line": 0,
+            "length": 0.52
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: buck_aux",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: mcu_clock",
+            "pad": 0,
+            "line": 0,
+            "length": -0.65
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: mcu_flash",
+            "pad": 0,
+            "line": 0,
+            "length": 1.12
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: mcu_usb_series",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: mcu_decoup_left",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: mcu_decoup_right",
+            "pad": 0,
+            "line": 0,
+            "length": 0.43
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: buttons",
+            "pad": 1,
+            "line": 0,
+            "length": 3.78
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: motor_mount",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: usb_data_port",
+            "pad": -19,
+            "line": 4,
+            "length": -0.5
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: usb_pd_input",
+            "pad": -21,
+            "line": 1,
+            "length": -26.71
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: usb_uart",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: ideal_diode_20v",
+            "pad": -2,
+            "line": 1,
+            "length": -0.37
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: buck_core",
+            "pad": -2,
+            "line": 1,
+            "length": 1.02
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: buck_input",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: buck_feedback",
+            "pad": -1,
+            "line": 0,
+            "length": -1.01
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: buck_output",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: mcu_core",
+            "pad": -2,
+            "line": 0,
+            "length": -1.79
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: mcu_boot_en",
+            "pad": -2,
+            "line": 0,
+            "length": -2.41
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: status_leds",
+            "pad": 0,
+            "line": 0,
+            "length": 0.06
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: encoder_sensor",
+            "pad": -7,
+            "line": 0,
+            "length": -0.51
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: driver_core",
+            "pad": 0,
+            "line": 1,
+            "length": 13.16
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: motor_outputs",
+            "pad": -6,
+            "line": 3,
+            "length": -0.39
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: mount_holes",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: usb_connector",
+            "pad": -5,
+            "line": 0,
+            "length": 0.03
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: usb_esd",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: mcu_boot",
+            "pad": 1,
+            "line": 0,
+            "length": 3.34
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: mcu_status",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: mcu_decoup_a",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: mcu_decoup_b",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: mcu_decoup_c",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: flash_pullups",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: gyro",
+            "pad": -1,
+            "line": -1,
+            "length": -0.37
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: i2c_pullups",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: vbat_sense",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: led_power",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: ldo_3v3",
+            "pad": -1,
+            "line": 0,
+            "length": 0.02
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: buck_5v_core",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: buck_5v_input",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: buck_5v_output",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: buck_5v_switch",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: buck_5v_comp",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: buck_5v_feedback_a",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: boost_9v_core",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: boost_9v_output",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: boost_9v_switch",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: boost_9v_comp",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: boost_9v_feedback_a",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: left_io",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: right_io_a",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: right_io_b",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: edge_connectors",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-TPS63060DSCR",
+            "entity": "Блок: regulator_core",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-TPS63060DSCR",
+            "entity": "Блок: input_caps",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-TPS63060DSCR",
+            "entity": "Блок: output_caps",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-TPS63060DSCR",
+            "entity": "Блок: feedback",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-TPS63060DSCR",
+            "entity": "Блок: auxiliary",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          }
+        ]
+      },
+      "module": {
+        "pad": {
+          "improved": 9,
+          "unchanged": 4,
+          "worsened": 1
+        },
+        "line": {
+          "improved": 3,
+          "unchanged": 7,
+          "worsened": 4
+        },
+        "length": {
+          "improved": 7,
+          "unchanged": 2,
+          "worsened": 5
+        },
+        "deltas": [
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Модуль: power_tree",
+            "pad": 2,
+            "line": 1,
+            "length": -10.81
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Модуль: esp32_system",
+            "pad": -1,
+            "line": 0,
+            "length": 3.8
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Модуль: field_io",
+            "pad": -6,
+            "line": -3,
+            "length": -20.23
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Модуль: regulator",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Модуль: rf_section",
+            "pad": 0,
+            "line": 0,
+            "length": 0.12
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Модуль: mcu_section",
+            "pad": 0,
+            "line": 1,
+            "length": 9.89
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Модуль: power_section",
+            "pad": -1,
+            "line": 0,
+            "length": 0.04
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Модуль: mcu",
+            "pad": -9,
+            "line": 3,
+            "length": -7.41
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Модуль: sensor",
+            "pad": -11,
+            "line": -5,
+            "length": -5.57
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Модуль: power",
+            "pad": -1,
+            "line": 0,
+            "length": -3.08
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Модуль: input_power",
+            "pad": -4,
+            "line": 0,
+            "length": -7.14
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Модуль: buck",
+            "pad": -7,
+            "line": -1,
+            "length": -3.48
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Модуль: rp2040",
+            "pad": -15,
+            "line": 1,
+            "length": 6.33
+          },
+          {
+            "fixture": "bank-TPS63060DSCR",
+            "entity": "Модуль: regulator_family",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          }
+        ]
+      }
+    },
+    "refined": {
+      "board": {
+        "pad": {
+          "improved": 8,
+          "unchanged": 6,
+          "worsened": 1
+        },
+        "line": {
+          "improved": 3,
+          "unchanged": 6,
+          "worsened": 6
+        },
+        "length": {
+          "improved": 5,
+          "unchanged": 6,
+          "worsened": 4
+        },
+        "deltas": [
+          {
+            "fixture": "Telemetry",
+            "entity": "Полная плата",
+            "pad": -30,
+            "line": 28,
+            "length": 75.31
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Полная плата",
+            "pad": -1,
+            "line": -10,
+            "length": -8.24
+          },
+          {
+            "fixture": "esp32c3",
+            "entity": "Полная плата",
+            "pad": -11,
+            "line": 2,
+            "length": -0.89
+          },
+          {
+            "fixture": "bank-BAND_V3_SIGNAL_PATH",
+            "entity": "Полная плата",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Полная плата",
+            "pad": -31,
+            "line": -25,
+            "length": -127.3
+          },
+          {
+            "fixture": "bank-CONNECTOR_OUTWARD",
+            "entity": "Полная плата",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CONNECTOR_ROTATIONS",
+            "entity": "Полная плата",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CONNECTOR_ROTATIONS_90",
+            "entity": "Полная плата",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Полная плата",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Полная плата",
+            "pad": -4,
+            "line": 1,
+            "length": -0.58
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Полная плата",
+            "pad": -17,
+            "line": 13,
+            "length": 6.08
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Полная плата",
+            "pad": -11,
+            "line": 3,
+            "length": 6.41
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Полная плата",
+            "pad": -97,
+            "line": 18,
+            "length": -96.46
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Полная плата",
+            "pad": 3,
+            "line": -5,
+            "length": 2.38
+          },
+          {
+            "fixture": "bank-TPS63060DSCR",
+            "entity": "Полная плата",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          }
+        ]
+      },
+      "block": {
+        "pad": {
+          "improved": 31,
+          "unchanged": 118,
+          "worsened": 3
+        },
+        "line": {
+          "improved": 6,
+          "unchanged": 135,
+          "worsened": 11
+        },
+        "length": {
+          "improved": 29,
+          "unchanged": 99,
+          "worsened": 24
+        },
+        "deltas": [
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: esp_supply",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: esp_enable",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: battery_sense",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: temperature",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: uart",
+            "pad": -2,
+            "line": 0,
+            "length": -1.32
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: lte_key",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: sim_support",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: lte_bulk",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: lte_power",
+            "pad": -1,
+            "line": 0,
+            "length": -0.01
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: usb_charge",
+            "pad": -11,
+            "line": -1,
+            "length": -11.39
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: usb_input",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: logic_power",
+            "pad": 0,
+            "line": 0,
+            "length": 0.08
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: voltage_iso",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: voltage_hdc",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: voltage_hldo",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: voltage_secondary",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: current_iso",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: current_hdc",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: current_hldo",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: current_secondary",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: adc",
+            "pad": -6,
+            "line": 5,
+            "length": 3.93
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: adc_supply",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: afe_power",
+            "pad": -1,
+            "line": 0,
+            "length": -0.54
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: harvest_input",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: hv_pos",
+            "pad": -10,
+            "line": -2,
+            "length": 1.82
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: low_charge_pos",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: temp_pos",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: hv_neg",
+            "pad": -13,
+            "line": 1,
+            "length": 6.19
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: low_charge_neg",
+            "pad": -2,
+            "line": -1,
+            "length": -3.92
+          },
+          {
+            "fixture": "Telemetry",
+            "entity": "Блок: temp_neg",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: usb_port",
+            "pad": -7,
+            "line": 2,
+            "length": 11.93
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: mcu_decoupling",
+            "pad": 0,
+            "line": 0,
+            "length": 0.51
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: crystal",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: rf_match",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: strap_pullups",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: reset_support",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: usb_data",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: charger",
+            "pad": 5,
+            "line": 4,
+            "length": 14.72
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: battery_adc",
+            "pad": -1,
+            "line": 0,
+            "length": -2.43
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: current_monitor",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "ESPower",
+            "entity": "Блок: current_monito_pull",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "esp32c3",
+            "entity": "Блок: MCU_Decoupling",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "esp32c3",
+            "entity": "Блок: Reset_Support",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "esp32c3",
+            "entity": "Блок: USB_Port",
+            "pad": 0,
+            "line": 0,
+            "length": 0.02
+          },
+          {
+            "fixture": "esp32c3",
+            "entity": "Блок: USB_Termination",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "esp32c3",
+            "entity": "Блок: Power",
+            "pad": 0,
+            "line": 0,
+            "length": 0.4
+          },
+          {
+            "fixture": "bank-BAND_V3_SIGNAL_PATH",
+            "entity": "Блок: rf_core",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: usb_cc",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: usb_power_protect",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: usb_data_esd",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: poe_input",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: buck_12v",
+            "pad": -1,
+            "line": 0,
+            "length": -1.6
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: protected_12v",
+            "pad": -1,
+            "line": 0,
+            "length": 1.38
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: linear_5v",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: ldo_3v3p",
+            "pad": 0,
+            "line": 0,
+            "length": 1.37
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: load_switch_3v3",
+            "pad": 0,
+            "line": 0,
+            "length": 0.2
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: mcu_decoupling",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: mcu_boot_reset",
+            "pad": 0,
+            "line": 0,
+            "length": 3.47
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: mcu_status_led",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: rs485_core",
+            "pad": 0,
+            "line": -2,
+            "length": -4.13
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: rs485_bus",
+            "pad": -3,
+            "line": 0,
+            "length": -3.41
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: manual_latch",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Блок: mag_input",
+            "pad": -1,
+            "line": 0,
+            "length": -3.11
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Блок: power_stage",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Блок: input_caps",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Блок: output_caps",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Блок: feedback",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Блок: enable",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Блок: compensation",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: radio_matching",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: radio_dcc_caps",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: radio_decoup",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: mcu_xtal",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: mcu_decoup",
+            "pad": -1,
+            "line": 0,
+            "length": -0.28
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: mcu_control",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: status_led",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Блок: power_3v3",
+            "pad": -1,
+            "line": 0,
+            "length": 0.04
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: usb_connector",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: usb_series",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: bottom_debug",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: mcu_decoup_3v3",
+            "pad": 0,
+            "line": 0,
+            "length": -0.24
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: mcu_decoup_1v1",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: adc_filter",
+            "pad": -1,
+            "line": 0,
+            "length": -0.86
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: clock",
+            "pad": 0,
+            "line": 0,
+            "length": -1.3
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: boot",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: sensor_decoup",
+            "pad": 0,
+            "line": 0,
+            "length": -0.26
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: level_shift",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: power_3v3",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: power_1v8",
+            "pad": -2,
+            "line": 0,
+            "length": -2.56
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Блок: status_leds",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: usb_connector",
+            "pad": -1,
+            "line": 0,
+            "length": -0.43
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: charger",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: buck_core",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: buck_input",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: buck_output",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: buck_feedback",
+            "pad": 0,
+            "line": 0,
+            "length": 0.52
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: buck_aux",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: mcu_clock",
+            "pad": -1,
+            "line": 1,
+            "length": -1.64
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: mcu_flash",
+            "pad": 0,
+            "line": 0,
+            "length": 0.85
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: mcu_usb_series",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: mcu_decoup_left",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: mcu_decoup_right",
+            "pad": 0,
+            "line": 0,
+            "length": 0.43
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Блок: buttons",
+            "pad": 1,
+            "line": 0,
+            "length": 3.65
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: motor_mount",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: usb_data_port",
+            "pad": -25,
+            "line": 3,
+            "length": -12.68
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: usb_pd_input",
+            "pad": -22,
+            "line": 0,
+            "length": -19.81
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: usb_uart",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: ideal_diode_20v",
+            "pad": 0,
+            "line": 0,
+            "length": -0.02
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: buck_core",
+            "pad": -2,
+            "line": 1,
+            "length": 1.02
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: buck_input",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: buck_feedback",
+            "pad": -1,
+            "line": 1,
+            "length": -0.15
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: buck_output",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: mcu_core",
+            "pad": -1,
+            "line": 0,
+            "length": -1.98
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: mcu_boot_en",
+            "pad": 0,
+            "line": 0,
+            "length": 0.32
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: status_leds",
+            "pad": 1,
+            "line": 0,
+            "length": 1.15
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: encoder_sensor",
+            "pad": -7,
+            "line": 2,
+            "length": -1.39
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: driver_core",
+            "pad": -5,
+            "line": 1,
+            "length": 10.46
+          },
+          {
+            "fixture": "bank-STEPPER_CONTROLLER",
+            "entity": "Блок: motor_outputs",
+            "pad": -8,
+            "line": 4,
+            "length": -11.26
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: mount_holes",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: usb_connector",
+            "pad": -8,
+            "line": -1,
+            "length": -0.17
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: usb_esd",
+            "pad": 0,
+            "line": 0,
+            "length": 0.11
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: mcu_boot",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: mcu_status",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: mcu_decoup_a",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: mcu_decoup_b",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: mcu_decoup_c",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: flash_pullups",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: gyro",
+            "pad": -1,
+            "line": -1,
+            "length": -0.35
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: i2c_pullups",
+            "pad": 0,
+            "line": 0,
+            "length": -0.33
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: vbat_sense",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: led_power",
+            "pad": 0,
+            "line": 0,
+            "length": -1.49
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: ldo_3v3",
+            "pad": -1,
+            "line": 0,
+            "length": 0.06
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: buck_5v_core",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: buck_5v_input",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: buck_5v_output",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: buck_5v_switch",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: buck_5v_comp",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: buck_5v_feedback_a",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: boost_9v_core",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: boost_9v_output",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: boost_9v_switch",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: boost_9v_comp",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: boost_9v_feedback_a",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: left_io",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: right_io_a",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: right_io_b",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ThunderF722",
+            "entity": "Блок: edge_connectors",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-TPS63060DSCR",
+            "entity": "Блок: regulator_core",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-TPS63060DSCR",
+            "entity": "Блок: input_caps",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-TPS63060DSCR",
+            "entity": "Блок: output_caps",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-TPS63060DSCR",
+            "entity": "Блок: feedback",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-TPS63060DSCR",
+            "entity": "Блок: auxiliary",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          }
+        ]
+      },
+      "module": {
+        "pad": {
+          "improved": 9,
+          "unchanged": 4,
+          "worsened": 1
+        },
+        "line": {
+          "improved": 3,
+          "unchanged": 6,
+          "worsened": 5
+        },
+        "length": {
+          "improved": 9,
+          "unchanged": 2,
+          "worsened": 3
+        },
+        "deltas": [
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Модуль: power_tree",
+            "pad": -7,
+            "line": 2,
+            "length": -39.26
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Модуль: esp32_system",
+            "pad": -5,
+            "line": -1,
+            "length": -4.32
+          },
+          {
+            "fixture": "bank-CNTRL_ACESS_MAX",
+            "entity": "Модуль: field_io",
+            "pad": -2,
+            "line": -2,
+            "length": -25.08
+          },
+          {
+            "fixture": "bank-dc-dc",
+            "entity": "Модуль: regulator",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Модуль: rf_section",
+            "pad": -1,
+            "line": 1,
+            "length": -0.88
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Модуль: mcu_section",
+            "pad": -1,
+            "line": 0,
+            "length": -0.28
+          },
+          {
+            "fixture": "bank-ELRS",
+            "entity": "Модуль: power_section",
+            "pad": -1,
+            "line": 0,
+            "length": 0.04
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Модуль: mcu",
+            "pad": -9,
+            "line": 3,
+            "length": -7.41
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Модуль: sensor",
+            "pad": 0,
+            "line": 0,
+            "length": -0.14
+          },
+          {
+            "fixture": "bank-ICM20948_v2",
+            "entity": "Модуль: power",
+            "pad": 0,
+            "line": 0,
+            "length": -2.82
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Модуль: input_power",
+            "pad": 1,
+            "line": -1,
+            "length": -1.78
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Модуль: buck",
+            "pad": -2,
+            "line": 1,
+            "length": 0.23
+          },
+          {
+            "fixture": "bank-rp2040_base",
+            "entity": "Модуль: rp2040",
+            "pad": -16,
+            "line": 2,
+            "length": 2.12
+          },
+          {
+            "fixture": "bank-TPS63060DSCR",
+            "entity": "Модуль: regulator_family",
+            "pad": 0,
+            "line": 0,
+            "length": 0
+          }
+        ]
+      }
+    }
+  },
+  "cleanBoards": {
+    "before": 13,
+    "refined": 12,
+    "pads": 13
+  },
+  "inventoryPreserved": true
+}

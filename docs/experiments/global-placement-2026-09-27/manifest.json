@@ -1,0 +1,149 @@
+[
+  {
+    "name": "Telemetry",
+    "source": "captured board",
+    "input": "docs/experiments/global-placement-2026-09-27/Telemetry/input.json"
+  },
+  {
+    "name": "ESPower",
+    "source": "captured board",
+    "input": "docs/experiments/global-placement-2026-09-27/ESPower/input.json"
+  },
+  {
+    "name": "esp32c3",
+    "source": "captured board",
+    "input": "docs/experiments/global-placement-2026-09-27/esp32c3/input.json"
+  },
+  {
+    "name": "bank-BAND_V3_SIGNAL_PATH",
+    "source": "tests/pcb-layout/BAND_V3_SIGNAL_PATH",
+    "input": "docs/experiments/global-placement-2026-09-27/bank-BAND_V3_SIGNAL_PATH/input.json",
+    "components": 8,
+    "blocks": 6
+  },
+  {
+    "name": "bank-CNTRL_ACESS_MAX",
+    "source": "tests/pcb-layout/CNTRL_ACESS_MAX",
+    "input": "docs/experiments/global-placement-2026-09-27/bank-CNTRL_ACESS_MAX/input.json",
+    "components": 69,
+    "blocks": 20
+  },
+  {
+    "name": "bank-CONNECTOR_OUTWARD",
+    "source": "tests/pcb-layout/CONNECTOR_OUTWARD",
+    "input": "docs/experiments/global-placement-2026-09-27/bank-CONNECTOR_OUTWARD/input.json",
+    "components": 20,
+    "blocks": 20
+  },
+  {
+    "name": "bank-CONNECTOR_ROTATIONS",
+    "source": "tests/pcb-layout/CONNECTOR_ROTATIONS",
+    "input": "docs/experiments/global-placement-2026-09-27/bank-CONNECTOR_ROTATIONS/input.json",
+    "components": 20,
+    "blocks": 20
+  },
+  {
+    "name": "bank-CONNECTOR_ROTATIONS_90",
+    "source": "tests/pcb-layout/CONNECTOR_ROTATIONS_90",
+    "input": "docs/experiments/global-placement-2026-09-27/bank-CONNECTOR_ROTATIONS_90/input.json",
+    "components": 20,
+    "blocks": 20
+  },
+  {
+    "name": "bank-dc-dc",
+    "source": "tests/pcb-layout/dc-dc",
+    "input": "docs/experiments/global-placement-2026-09-27/bank-dc-dc/input.json",
+    "components": 17,
+    "blocks": 9
+  },
+  {
+    "name": "bank-ELRS",
+    "source": "tests/pcb-layout/ELRS",
+    "input": "docs/experiments/global-placement-2026-09-27/bank-ELRS/input.json",
+    "components": 36,
+    "blocks": 17
+  },
+  {
+    "name": "bank-esp32c3",
+    "source": "tests/pcb-layout/esp32c3",
+    "input": "docs/experiments/global-placement-2026-09-27/bank-esp32c3/input.json",
+    "components": 20,
+    "blocks": 11
+  },
+  {
+    "name": "bank-ESpower",
+    "source": "tests/pcb-layout/ESpower",
+    "input": "docs/experiments/global-placement-2026-09-27/bank-ESpower/input.json",
+    "components": 53,
+    "blocks": 24
+  },
+  {
+    "name": "bank-H743",
+    "source": "tests/pcb-layout/H743",
+    "error": "Fixture ограничен preview; полная плата не подготовлена."
+  },
+  {
+    "name": "Hanboo",
+    "error": "Нет DSL и запускаемого теста в исходном банке."
+  },
+  {
+    "name": "bank-ICM20948",
+    "source": "tests/pcb-layout/ICM20948",
+    "error": "capCluster(...) requires at least 2 capacitors. For a single capacitor, use veryNear(pin(\"C1\", \"...\"), pin(\"U1\", \"...\")) or bypass([\"C1\"], targetPin)."
+  },
+  {
+    "name": "bank-ICM20948_v2",
+    "source": "tests/pcb-layout/ICM20948_v2",
+    "input": "docs/experiments/global-placement-2026-09-27/bank-ICM20948_v2/input.json",
+    "components": 54,
+    "blocks": 18
+  },
+  {
+    "name": "bank-NanoDDS",
+    "source": "tests/pcb-layout/NanoDDS",
+    "error": "Invalid PCB placement DSL:\nInvalid component/block references:\n- block(\"power_input_regulator\") references unknown component \"SJ1\".\n- block(\"calibration\") references unknown component \"CALP\".\n- block(\"testpoints\") references unknown component \"+12V\".\n- block(\"testpoints\") references unknown component \"-12V\".\n- block(\"testpoints\") references unknown component \"+5V\".\n- block(\"testpoints\") references unknown component \"KT2\".\n- block(\"testpoints\") references unknown component \"KT3\".\n- component(\"SJ1\") does not match any component in the attached circuit.\n- component(\"CALP\") does not match any component in the attached circuit.\n- component(\"+12V\") does not match any component in the attached circuit.\n- component(\"-12V\") does not match any component in the attached circuit.\n- component(\"+5V\") does not match any component in the attached circuit.\n- component(\"KT2\") does not match any component in the attached circuit.\n- component(\"KT3\") does not match any component in the attached circuit.\nBlocks with more than 12 components are too large for stable placement:\n- rail_driver: 15 components (DA5, VT1, VT2, R2, R3, R7, R45, R46, R47, R48, C1, C2, C8, C9, C32)\n- r2r_ladder: 16 components (R12, R17, R20, R23, R28, R31, R34, R40, R14, R19, R22, R25, R29, R32, R35, R41)\n- offset_amp: 15 components (DA7, R36, C26, R37, C27, R33, R30, R38, R39, C13, C14, C18, C19, C30, C31)\n- output_amp: 13 components (DA8, R9, R10, R11, R5, R4, R8, D1, D2, C24, C25, C28, C29)\nSplit large blocks into smaller main/satellite blocks such as decoupling, clock, flash, input, output, feedback, buttons, and connectors."
+  },
+  {
+    "name": "bank-PICO_DUCK",
+    "source": "tests/pcb-layout/PICO_DUCK",
+    "error": "Invalid PCB placement DSL:\n- block(\"led\") mixes edgePlace() components (LED1) with components without edgePlace() (R6).\nMove components without edgePlace() into separate blocks and connect them with near(), veryNear(), or criticalPair(). Blocks containing edgePlace() may contain only edgePlace() components; multiple such components are allowed."
+  },
+  {
+    "name": "bank-PROCEDURAL_FOOTPRINTS",
+    "source": "tests/pcb-layout/PROCEDURAL_FOOTPRINTS",
+    "error": "Invalid PCB placement DSL:\n- block(\"led\") mixes edgePlace() components (LED1) with components without edgePlace() (R6).\nMove components without edgePlace() into separate blocks and connect them with near(), veryNear(), or criticalPair(). Blocks containing edgePlace() may contain only edgePlace() components; multiple such components are allowed."
+  },
+  {
+    "name": "bank-rp2040_base",
+    "source": "tests/pcb-layout/rp2040_base",
+    "input": "docs/experiments/global-placement-2026-09-27/bank-rp2040_base/input.json",
+    "components": 42,
+    "blocks": 16
+  },
+  {
+    "name": "bank-STEPPER_CONTROLLER",
+    "source": "tests/pcb-layout/STEPPER_CONTROLLER",
+    "input": "docs/experiments/global-placement-2026-09-27/bank-STEPPER_CONTROLLER/input.json",
+    "components": 85,
+    "blocks": 16
+  },
+  {
+    "name": "bank-ThunderF722",
+    "source": "tests/pcb-layout/ThunderF722",
+    "input": "docs/experiments/global-placement-2026-09-27/bank-ThunderF722/input.json",
+    "components": 116,
+    "blocks": 38
+  },
+  {
+    "name": "bank-TPS63060DSCR",
+    "source": "tests/pcb-layout/TPS63060DSCR",
+    "input": "docs/experiments/global-placement-2026-09-27/bank-TPS63060DSCR/input.json",
+    "components": 16,
+    "blocks": 7
+  },
+  {
+    "name": "bank-USB_ISOL",
+    "source": "tests/pcb-layout/USB_ISOL",
+    "error": "Invalid PCB placement DSL:\nEach block must be one net-connected physical island. Split unrelated components into separate main/satellite blocks.\n- block(\"host_side\") is disconnected (group 1: R1; group 2: R2; group 3: R3, C2, R7, C1).\n- block(\"device_side\") is disconnected (group 1: R4; group 2: R5; group 3: R6, C4, R8, C3).\n- block(\"dcdc_caps\") is disconnected (group 1: C5, C8, C7, C6; group 2: C9, C12, C11, C10)."
+  }
+]

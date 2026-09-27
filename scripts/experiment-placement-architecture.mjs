@@ -24,7 +24,7 @@ if (!settings) throw Error(`Unknown mode: ${mode}`);
 process.env.PCB_LAYOUT_SUBTREE_WORKERS = '0';
 process.env.PCB_POST_PLACE_THREADS = '1';
 process.env.PCB_NATIVE_SOLVE_CACHE = '0';
-const raw = readFileSync(`tests/fixtures/block-placement/${fixture}/input.json`);
+const raw = readFileSync(process.env.PCB_EXPERIMENT_INPUT ?? `tests/fixtures/block-placement/${fixture}/input.json`);
 const input = JSON.parse(raw);
 const addon = loadNativeBoardPacker();
 const solve = addon.solveBlockPrimitives;
@@ -63,7 +63,9 @@ const stageMetrics = result.stages.map(stage => {
 });
 const fixedChanges = input.components.filter(c => c.pcb.fixedPlacement).flatMap(c => {
     const p = result.placements.find(p => p.designator === c.designator), f = c.pcb.fixedPlacement;
-    return !p || Math.abs(p.x - f.x) > .005 || Math.abs(p.y - f.y) > .005 || p.rotate !== f.rotate || p.layer !== f.layer ? [c.designator] : [];
+    return !p || Math.abs(p.x - f.x) > .005 || Math.abs(p.y - f.y) > .005
+        || (f.rotate != null && Math.abs(((p.rotate - f.rotate + 540) % 360) - 180) > .005)
+        || (f.layer != null && p.layer !== f.layer) ? [c.designator] : [];
 });
 const require = createRequire(import.meta.url);
 const native = readFileSync(`native/pcb-board-packer/${require('../native/pcb-board-packer/platform.cjs').nativeFilename()}`);

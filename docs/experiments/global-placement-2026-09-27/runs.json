@@ -1,0 +1,359 @@
+[
+  {
+    "fixture": "Telemetry",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 110701
+  },
+  {
+    "fixture": "Telemetry",
+    "tag": "refined",
+    "code": 0,
+    "signal": null,
+    "wallMs": 125795
+  },
+  {
+    "fixture": "ESPower",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 24929
+  },
+  {
+    "fixture": "Telemetry",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 153064
+  },
+  {
+    "fixture": "ESPower",
+    "tag": "refined",
+    "code": 0,
+    "signal": null,
+    "wallMs": 30726
+  },
+  {
+    "fixture": "esp32c3",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 9784
+  },
+  {
+    "fixture": "esp32c3",
+    "tag": "refined",
+    "code": 0,
+    "signal": null,
+    "wallMs": 10519
+  },
+  {
+    "fixture": "bank-BAND_V3_SIGNAL_PATH",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 1374
+  },
+  {
+    "fixture": "bank-BAND_V3_SIGNAL_PATH",
+    "tag": "refined",
+    "code": 0,
+    "signal": null,
+    "wallMs": 1721
+  },
+  {
+    "fixture": "bank-BAND_V3_SIGNAL_PATH",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 1920
+  },
+  {
+    "fixture": "esp32c3",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 14000
+  },
+  {
+    "fixture": "ESPower",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 41580
+  },
+  {
+    "fixture": "bank-CNTRL_ACESS_MAX",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 40699
+  },
+  {
+    "fixture": "bank-CONNECTOR_OUTWARD",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 848
+  },
+  {
+    "fixture": "bank-CONNECTOR_OUTWARD",
+    "tag": "refined",
+    "code": 0,
+    "signal": null,
+    "wallMs": 850
+  },
+  {
+    "fixture": "bank-CONNECTOR_OUTWARD",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 833
+  },
+  {
+    "fixture": "bank-CONNECTOR_ROTATIONS",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 858
+  },
+  {
+    "fixture": "bank-CONNECTOR_ROTATIONS",
+    "tag": "refined",
+    "code": 0,
+    "signal": null,
+    "wallMs": 869
+  },
+  {
+    "fixture": "bank-CONNECTOR_ROTATIONS",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 839
+  },
+  {
+    "fixture": "bank-CNTRL_ACESS_MAX",
+    "tag": "refined",
+    "code": 1,
+    "signal": null,
+    "wallMs": 44240
+  },
+  {
+    "fixture": "bank-CNTRL_ACESS_MAX",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 44643
+  },
+  {
+    "fixture": "bank-dc-dc",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 2172
+  },
+  {
+    "fixture": "bank-dc-dc",
+    "tag": "refined",
+    "code": 0,
+    "signal": null,
+    "wallMs": 2164
+  },
+  {
+    "fixture": "bank-dc-dc",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 2166
+  },
+  {
+    "fixture": "bank-ELRS",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 9486
+  },
+  {
+    "fixture": "bank-ELRS",
+    "tag": "refined",
+    "code": 0,
+    "signal": null,
+    "wallMs": 10875
+  },
+  {
+    "fixture": "bank-ELRS",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 10958
+  },
+  {
+    "fixture": "bank-esp32c3",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 9743
+  },
+  {
+    "fixture": "bank-esp32c3",
+    "tag": "refined",
+    "code": 0,
+    "signal": null,
+    "wallMs": 11096
+  },
+  {
+    "fixture": "bank-esp32c3",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 12594
+  },
+  {
+    "fixture": "bank-ESpower",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 25931
+  },
+  {
+    "fixture": "bank-ESpower",
+    "tag": "refined",
+    "code": 0,
+    "signal": null,
+    "wallMs": 34974
+  },
+  {
+    "fixture": "bank-ICM20948_v2",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 22536
+  },
+  {
+    "fixture": "bank-ESpower",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 47316
+  },
+  {
+    "fixture": "bank-ICM20948_v2",
+    "tag": "refined",
+    "code": 0,
+    "signal": null,
+    "wallMs": 19238
+  },
+  {
+    "fixture": "bank-rp2040_base",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 17465
+  },
+  {
+    "fixture": "bank-ICM20948_v2",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 24998
+  },
+  {
+    "fixture": "bank-rp2040_base",
+    "tag": "refined",
+    "code": 0,
+    "signal": null,
+    "wallMs": 18869
+  },
+  {
+    "fixture": "bank-rp2040_base",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 18124
+  },
+  {
+    "fixture": "bank-STEPPER_CONTROLLER",
+    "tag": "before",
+    "code": 1,
+    "signal": null,
+    "wallMs": 61488
+  },
+  {
+    "fixture": "bank-STEPPER_CONTROLLER",
+    "tag": "refined",
+    "code": 1,
+    "signal": null,
+    "wallMs": 63907
+  },
+  {
+    "fixture": "bank-ThunderF722",
+    "tag": "before",
+    "code": 1,
+    "signal": null,
+    "wallMs": 31685
+  },
+  {
+    "fixture": "bank-ThunderF722",
+    "tag": "refined",
+    "code": 1,
+    "signal": null,
+    "wallMs": 32384
+  },
+  {
+    "fixture": "bank-TPS63060DSCR",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 1542
+  },
+  {
+    "fixture": "bank-TPS63060DSCR",
+    "tag": "refined",
+    "code": 0,
+    "signal": null,
+    "wallMs": 1305
+  },
+  {
+    "fixture": "bank-TPS63060DSCR",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 1313
+  },
+  {
+    "fixture": "bank-STEPPER_CONTROLLER",
+    "tag": "pads",
+    "code": 1,
+    "signal": null,
+    "wallMs": 101923
+  },
+  {
+    "fixture": "bank-ThunderF722",
+    "tag": "pads",
+    "code": 1,
+    "signal": null,
+    "wallMs": 27329
+  },
+  {
+    "fixture": "bank-CONNECTOR_ROTATIONS_90",
+    "tag": "refined",
+    "code": 0,
+    "signal": null,
+    "wallMs": 834
+  },
+  {
+    "fixture": "bank-CONNECTOR_ROTATIONS_90",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 846
+  },
+  {
+    "fixture": "bank-CONNECTOR_ROTATIONS_90",
+    "tag": "pads",
+    "code": 0,
+    "signal": null,
+    "wallMs": 841
+  }
+]

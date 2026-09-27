@@ -1,0 +1,89 @@
+{
+  "fixture": "bank-TPS63060DSCR",
+  "mode": "full-micro",
+  "tag": "global-before",
+  "candidates": "0",
+  "blockPostRefine": "0",
+  "padCrossings": "0",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 740.6279,
+  "blockMs": 446.18499999999983,
+  "blockSolves": 12,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 89.3588,
+      "pairSum": 23.854568634378115,
+      "pairMax": 5.830134792609859,
+      "score": 218225.5272186646
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 89.35879999999999,
+      "pairSum": 23.854568634378115,
+      "pairMax": 5.830134792609859,
+      "score": 218225.5272186646
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 89.35869999999998,
+      "pairSum": 23.854568634378115,
+      "pairMax": 5.830134792609859,
+      "score": 111937.27027158208
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 89.35869999999998,
+      "pairSum": 23.854568634378115,
+      "pairMax": 5.830134792609859,
+      "score": 111937.27027158208
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "7f06a5dc57c52eb4c8773fed07234e2e3d1cd285ffc5bd9746b99e7b1a007ff2",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator_family includes satellite input_caps, but parent regulator_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator_family"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator_family includes satellite output_caps, but parent regulator_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator_family"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator_family includes satellite feedback, but parent regulator_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator_family"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator_family includes satellite auxiliary, but parent regulator_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator_family"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected auxiliary in board context: variant 0, shift 0,0.5mm; score 219379.78 -> 218225.53",
+      "nodeId": "tree:block:auxiliary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 1 blocks, 17 candidates, 1 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}

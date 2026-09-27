@@ -1,0 +1,107 @@
+{
+  "fixture": "bank-CNTRL_ACESS_MAX",
+  "mode": "full-micro",
+  "tag": "global-before",
+  "candidates": "0",
+  "blockPostRefine": "0",
+  "padCrossings": "0",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 39501.236000000004,
+  "blockMs": 23301.838900000002,
+  "blockSolves": 35,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 889.1240000000004,
+      "pairSum": 221.6383977390233,
+      "pairMax": 43.942301936630486,
+      "score": 52936255.18030115
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 889.1240000000004,
+      "pairSum": 221.6383977390233,
+      "pairMax": 43.942301936630486,
+      "score": 52936295.00716529
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 856.4944000000003,
+      "pairSum": 202.50283902391436,
+      "pairMax": 33.44289460513249,
+      "score": 49373067.37734164
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 856.4944000000003,
+      "pairSum": 202.50283902391436,
+      "pairMax": 33.44289460513249,
+      "score": 49373067.37734164
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "67021b5bf5dd7650b2ae59527978f521581b0b8b7824cbcf4a05fd9e9e110975",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module power_tree before board placement: wide module 75.575mm uses 0.959 of usable board width; tall module 54.843mm uses 0.933 of usable board height; wide sparse bbox 75.575mm, fill 0.432; tall sparse bbox 54.843mm, fill 0.432; module area 4144.76mm2 is large and sparse, fill 0.432; locked module has fixed/edge child plus movable siblings (bottom, right); fixed/edge-mounted children inside multi-family module (bottom, right); fixed/edge-mounted children target multiple board edges (bottom, right); low pad density 0.019 pads/mm2",
+      "nodeId": "tree:module:power_tree"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module esp32_system before board placement: module area 2022.887mm2 is large and sparse, fill 0.69; locked module has fixed/edge child plus movable siblings (left); low pad density 0.054 pads/mm2",
+      "nodeId": "tree:module:esp32_system"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module field_io before board placement: locked module has fixed/edge child plus movable siblings (left); low pad density 0.088 pads/mm2",
+      "nodeId": "tree:module:field_io"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected buck_12v in board context: variant 0, shift 0,0.8mm; score 54453412.21 -> 53986803.47",
+      "nodeId": "tree:block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected linear_5v in board context: variant 0, shift -1.6,0mm; score 53986803.47 -> 53947362.16",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected manual_latch in board context: variant 1, shift 0,1.6mm; score 53947362.16 -> 53906159.98",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected mcu_boot_reset in board context: variant 0, shift 0,-1.6mm; score 53906159.98 -> 53141500.08",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected load_switch_3v3 in board context: variant 0, shift 0,0.8mm; score 53141500.08 -> 52936255.18",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 6 blocks, 102 candidates, 5 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}

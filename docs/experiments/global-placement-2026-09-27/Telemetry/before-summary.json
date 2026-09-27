@@ -1,0 +1,113 @@
+{
+  "fixture": "Telemetry",
+  "mode": "full-micro",
+  "tag": "global-before",
+  "candidates": "0",
+  "blockPostRefine": "0",
+  "padCrossings": "0",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 109588.8348,
+  "blockMs": 20343.7737,
+  "blockSolves": 63,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 2994.7781999999993,
+      "pairSum": 831.0702114955985,
+      "pairMax": 69.12358289397332,
+      "score": 12754912.575021544
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 2994.777399999999,
+      "pairSum": 831.0702923026128,
+      "pairMax": 69.12358289397332,
+      "score": 12754916.96789011
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 2964.5029999999992,
+      "pairSum": 821.22229722208,
+      "pairMax": 69.12358289397332,
+      "score": 12738606.066243364
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 2964.5029999999992,
+      "pairSum": 821.22229722208,
+      "pairMax": 69.12358289397332,
+      "score": 12738606.066243364
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected adc_supply in board context: variant 0, shift 0,-1mm; score 13049412.69 -> 13048999.87",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected usb_charge in board context: variant 0, shift -1,0mm; score 13048999.87 -> 12950813.82",
+      "nodeId": "tree:block:usb_charge"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected logic_power in board context: variant 0, shift 0,-1mm; score 12950813.82 -> 12844846.20",
+      "nodeId": "tree:block:logic_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected uart in board context: variant 0, shift 1,0mm; score 12844846.20 -> 12778288.89",
+      "nodeId": "tree:block:uart"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected afe_power in board context: variant 0, shift 0,1mm; score 12778288.89 -> 12762525.27",
+      "nodeId": "tree:block:afe_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected sim_support in board context: variant 0, shift 0.5,0mm; score 12762525.27 -> 12754912.58",
+      "nodeId": "tree:block:sim_support"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 9 blocks, 180 candidates, 6 accepted",
+      "nodeId": "block-portfolio"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "J1: safe post-place improvement J1 rotate += 180; global score 12738606.066 -> 12735394.053. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J1\", [\"J1\"], { rotateBy: [180] }) if this fixed component may rotate.",
+      "nodeId": "post-place:J1",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "J4: safe post-place improvement J4 rotate += 180; global score 12738606.066 -> 12738455.077. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J4\", [\"J4\"], { rotateBy: [180] }) if this fixed component may rotate.",
+      "nodeId": "post-place:J4",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "J7: safe post-place improvement J7 rotate += 180; global score 12738606.066 -> 12738605.721. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J7\", [\"J7\"], { rotateBy: [180] }) if this fixed component may rotate.",
+      "nodeId": "post-place:J7",
+      "severity": "warning"
+    }
+  ],
+  "node": "v26.5.0"
+}

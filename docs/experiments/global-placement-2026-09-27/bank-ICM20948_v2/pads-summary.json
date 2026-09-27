@@ -1,0 +1,287 @@
+{
+  "fixture": "bank-ICM20948_v2",
+  "mode": "full-micro",
+  "tag": "global-pads",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "1",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 23823.6402,
+  "blockMs": 9959.305199999999,
+  "blockSolves": 35,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 981.9098000000002,
+      "pairSum": 566.7844622705859,
+      "pairMax": 30.91766330756579,
+      "score": 1468505.527817947
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 981.9115500000001,
+      "pairSum": 566.7851158408383,
+      "pairMax": 30.91766330756579,
+      "score": 1468506.362766782
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 975.56655,
+      "pairSum": 556.1214081685284,
+      "pairMax": 30.91766330756579,
+      "score": 1348121.111427883
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 975.56655,
+      "pairSum": 556.1214081685284,
+      "pairMax": 30.91766330756579,
+      "score": 1348121.111427883
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "b0a06f3f4c9b0cff980f4eca642de962f6d77a527352dea2817cca7401ca6d7c",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module mcu includes satellite mcu_decoup_3v3, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:mcu"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module mcu includes satellite mcu_decoup_1v1, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:mcu"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module mcu includes satellite mcu_vreg, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:mcu"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module mcu includes satellite adc_filter, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:mcu"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module mcu includes satellite flash, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:mcu"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module mcu includes satellite clock, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:mcu"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module sensor includes satellite sensor_decoup, but parent sensor_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:sensor"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module sensor includes satellite level_shift, but parent sensor_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:sensor"
+    },
+    {
+      "severity": "warning",
+      "code": "unattached_passive_block",
+      "message": "Passive block status_leds has no parent or external placement relation, so board packing may place it in any free area. Make it a satellite with placement: \"satellite\", attachTo, and preferably anchor: pin(...), or add an external near(), veryNear(), or criticalPair() using comp()/pin() targets.",
+      "nodeId": "block:status_leds"
+    },
+    {
+      "severity": "warning",
+      "code": "island_crosses_unrelated_blocks",
+      "message": "Island island:core_pairs:level_shift spans unrelated blocks: mcu_core, level_shift",
+      "nodeId": "island:core_pairs:level_shift"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Deferred parent-level island core_pairs:level_shift; it references child primitives outside direct node components",
+      "nodeId": "tree:island:core_pairs:level_shift"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Deferred parent-level island core_pairs:flash; it references child primitives outside direct node components",
+      "nodeId": "tree:island:core_pairs:flash"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 12 ms",
+      "nodeId": "tree:block:clock"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 9 ms",
+      "nodeId": "tree:block:clock"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:clock"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:boot"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:boot"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:boot"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Deferred parent-level island core_pairs:sensor_core; it references child primitives outside direct node components",
+      "nodeId": "tree:island:core_pairs:sensor_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:sensor_decoup"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:sensor_decoup"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:sensor_decoup"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 11 ms",
+      "nodeId": "tree:block:level_shift"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 14 ms",
+      "nodeId": "tree:block:level_shift"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 10 ms",
+      "nodeId": "tree:block:level_shift"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Deferred parent-level island cap_cluster:3; it references child primitives outside direct node components",
+      "nodeId": "tree:island:cap_cluster:3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:power_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:power_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:power_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:power_1v8"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:power_1v8"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:power_1v8"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:usb_series"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:usb_series"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:usb_series"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected clock in board context: variant 0, shift -1,0mm; score 1520225.65 -> 1468589.81",
+      "nodeId": "tree:block:clock"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected power_1v8 in board context: variant 0, shift 0,1mm; score 1468589.81 -> 1468505.53",
+      "nodeId": "tree:block:power_1v8"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 3 blocks, 51 candidates, 2 accepted",
+      "nodeId": "block-portfolio"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "CN1: safe post-place improvement CN1 rotate += 180; global score 1348121.111 -> 1325804.612. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_CN1\", [\"CN1\"], { rotateBy: [180] }) if this fixed component may rotate.",
+      "nodeId": "post-place:CN1",
+      "severity": "warning"
+    }
+  ],
+  "node": "v26.5.0"
+}

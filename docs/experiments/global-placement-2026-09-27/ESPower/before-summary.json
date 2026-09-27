@@ -1,0 +1,71 @@
+{
+  "fixture": "ESPower",
+  "mode": "full-micro",
+  "tag": "global-before",
+  "candidates": "0",
+  "blockPostRefine": "0",
+  "padCrossings": "0",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 23776.323399999997,
+  "blockMs": 15873.131900000004,
+  "blockSolves": 34,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 443.10069999999996,
+      "pairSum": 94.30088784747292,
+      "pairMax": 42.32741428436186,
+      "score": 1675083.090659601
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 443.10069999999996,
+      "pairSum": 94.30088784747292,
+      "pairMax": 42.32741428436186,
+      "score": 1675083.090659601
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 436.7638,
+      "pairSum": 93.5156600683012,
+      "pairMax": 42.32741428436186,
+      "score": 1628062.9990623598
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 436.7638,
+      "pairSum": 93.5156600683012,
+      "pairMax": 42.32741428436186,
+      "score": 1628062.9990623598
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "82f28407129cb28f42f815ab3c14defe7b324c36f523271172caf245cbcc1f86",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected crystal in board context: variant 1, shift 0,0.5mm; score 1682028.70 -> 1681719.01",
+      "nodeId": "tree:block:crystal"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected battery_adc in board context: variant 0, shift 0.5,0mm; score 1681719.01 -> 1675083.09",
+      "nodeId": "tree:block:battery_adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 3 blocks, 69 candidates, 2 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}
