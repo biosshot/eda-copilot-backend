@@ -1,5 +1,7 @@
 # Block scoring and board-context alternatives
 
+**Начать здесь: [объяснение всех режимов по-русски](modes-ru.md).** В обычном запуске режимы не соревнуются между собой: по умолчанию выбран Full Micro. Автоматически выбираются варианты расстановки внутри этого режима. Переключение Micro / Geometry / Off относится к оценке размещения обычного блока, а не к замене полного трассировщика платы.
+
 Research branch: `experiments/block-placement-quality`. These changes are enabled in the repository's ordinary placement path, not only in the replay harness. The separately installed EasyEDA Copilot runtime is not updated by building this repository.
 
 ## Defaults and controls

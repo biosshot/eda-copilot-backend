@@ -1,5 +1,7 @@
 # Whole-board experiments
 
+[Что означают режимы и как они переключаются — объяснение по-русски](modes-ru.md). Each row is a separate manually selected configuration, not an automatic competition between modes.
+
 All modes use the ordinary tree solver. No injected native options. Subtree workers and native solve cache are disabled; postrefine uses one thread. Timings are single samples, not a statistical benchmark. Valid placement does not establish routability.
 
 | Board | Mode | Valid | Pair sum, mm | Worst pair, mm | HPWL, mm | Block time, s | Total time, s | Accepted blocks |
@@ -28,4 +30,3 @@ All modes use the ordinary tree solver. No injected native options. Subtree work
 | esp32c3 | full-geometric-single | true | 307.77 | 30.93 | 581.7 | 4.68 | 6.52 | 0 |
 | esp32c3 | full-geometric | true | 306.07 | 30.93 | 579.7 | 4.79 | 6.55 | 2 |
 | esp32c3 | full-geometric-repack | true | 306.07 | 30.93 | 586.84 | 4.93 | 7.38 | 1 |
-

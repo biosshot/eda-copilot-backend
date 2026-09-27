@@ -16,7 +16,7 @@ for (const row of [...rows].sort((a, b) => fixtures.indexOf(a.fixture) - fixture
     const last = row.stageMetrics.at(-1);
     table += `| ${row.fixture} | ${row.mode} | ${row.ok} | ${r(last.pairSum)} | ${r(last.pairMax)} | ${r(last.hpwl)} | ${r(row.blockMs / 1000)} | ${r(row.ms / 1000)} | ${row.diagnostics.filter(d => d.message.startsWith('Block portfolio selected')).length} |\n`;
 }
-writeFileSync(`${out}/results.md`, `# Whole-board experiments\n\nAll modes use the ordinary tree solver. No injected native options. Subtree workers and native solve cache are disabled; postrefine uses one thread. Timings are single samples, not a statistical benchmark. Valid placement does not establish routability.\n\n${table}\n`);
+writeFileSync(`${out}/results.md`, `# Whole-board experiments\n\n[Что означают режимы и как они переключаются — объяснение по-русски](modes-ru.md). Each row is a separate manually selected configuration, not an automatic competition between modes.\n\nAll modes use the ordinary tree solver. No injected native options. Subtree workers and native solve cache are disabled; postrefine uses one thread. Timings are single samples, not a statistical benchmark. Valid placement does not establish routability.\n\n${table}\n`);
 
 const usbRows = ['legacy', 'full-micro', 'full-off', 'full-geometric'].map(mode => {
     const capture = JSON.parse(readFileSync(`${root}/Telemetry/${mode}/captures.json`))
