@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { blockPolicy } from '../src/pcb-layout/pcb-auto-place-v2/block-policy.ts';
-import { selectBlockPortfolio } from '../src/pcb-layout/pcb-auto-place-v2/block-portfolio.ts';
+import { selectBlockPortfolio, blockPortfolioSeed, choosePackedPortfolio } from '../src/pcb-layout/pcb-auto-place-v2/block-portfolio.ts';
 import { rotatePrimitive, translatePrimitive, unionPrimitive, type PlacementPrimitive } from '../src/pcb-layout/pcb-auto-place-v2/primitives.ts';
 import { defaultSolverOptions } from '../src/pcb-layout/pcb-auto-place/utils.ts';
 import { createPlacementReport } from '../src/pcb-layout/pcb-auto-place/placement-report.ts';
@@ -84,6 +84,21 @@ test('native portfolio validator handles reordered poses and rejects invalid inv
     assert.equal(validate(problem, poses.slice(1)), false);
     assert.equal(validate(problem, [poses[0], poses[0], ...poses.slice(2)]), false);
     assert.equal(validate(problem, poses.map(p => ({ ...p, x: 100 }))), false);
+});
+
+test('board hypotheses retain original ownership and let external connectivity select another shape', () => {
+    const { input, roots } = fixture();
+    const before = structuredClone(roots);
+    const seed = blockPortfolioSeed(roots, 0);
+    assert.equal(seed[0].placements[0].x, 5);
+    assert.equal(seed[0].layoutAlternatives![0].placements[0].x, -5);
+    const result = choosePackedPortfolio(input, [roots, seed], []);
+    assert.equal(result, seed);
+    assert.deepEqual(roots, before);
+    assert.deepEqual(result.slice(1), roots.slice(1));
+    input.hints = [{ relation: 'critical_pair', source: { type: 'pin', designator: 'A', pin_number: '1' },
+        target: { type: 'pin', designator: 'LEFT', pin_number: '1' }, maxDistance: 5, hard: true, priority: 'critical' }];
+    assert.equal(choosePackedPortfolio(input, [roots, seed], []), roots);
 });
 
 function part(designator: string, x: number, y = 0, locked = false): PlacementPrimitive {

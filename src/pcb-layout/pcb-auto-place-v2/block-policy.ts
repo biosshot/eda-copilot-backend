@@ -15,7 +15,10 @@ export function blockPolicy(ignoredNets: string[] = []) {
         netCandidates: true, stableNetWeight: true, reducedHull: true, smoothAspect: true,
         longNets: true, extraPasses: true, pairSwaps: true, reinsertPair: true, keepDenseAccess: true,
     };
+    const portfolio = process.env.PCB_BLOCK_PORTFOLIO ?? '1';
+    if (!['0', '1', '2'].includes(portfolio)) throw new Error(`Unknown PCB_BLOCK_PORTFOLIO: ${portfolio}`);
     return { searchWidth: profile === 'legacy' ? 1 : 4,
         experiments: { ...experiments, ignoredNets, routingMetric: routingMetric as 'micro' | 'off' | 'geometric' },
-        portfolio: profile !== 'legacy' && process.env.PCB_BLOCK_PORTFOLIO !== '0' };
+        portfolio: profile !== 'legacy' && portfolio !== '0',
+        repack: profile !== 'legacy' && portfolio === '2' };
 }

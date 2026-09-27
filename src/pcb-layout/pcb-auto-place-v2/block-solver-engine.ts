@@ -29,6 +29,9 @@ export function solveBlockPrimitivesRust(params: BlockSolveParams) {
     );
     const prepared = primitives === params.primitives ? params : { ...params, primitives };
     const addon = loadNativeBoardPacker();
+    if (params.options.experiments && typeof addon.validatePlacementChange !== 'function') {
+        throw new Error('Block experiments require the research native addon; run npm run native:build before using this branch');
+    }
     const nativeVersion = addon.blockContractVersion();
     if (nativeVersion !== NATIVE_BLOCK_SOLVE_CONTRACT_VERSION) {
         throw new Error(`Rust PCB block solver contract ${nativeVersion} does not match TypeScript contract ${NATIVE_BLOCK_SOLVE_CONTRACT_VERSION}`);

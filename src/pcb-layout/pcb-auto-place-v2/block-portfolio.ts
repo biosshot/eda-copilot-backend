@@ -5,6 +5,42 @@ import { encodeNativePostPlaceRefineProblem } from './native/encode-post-place-r
 import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
 import { translatePrimitive, unionPrimitive, type PlacementPrimitive, type PrimitiveSolveDiagnostic } from './primitives.ts';
 
+/** Two bounded board-wide hypotheses let the packer make room for different
+ * block shapes before neighbourhoods are frozen. This is not a Cartesian search. */
+export function blockPortfolioSeed(roots: PlacementPrimitive[], index: number): PlacementPrimitive[] {
+    return roots.map(p => {
+        const alternative = !p.locked ? p.layoutAlternatives?.[index] : undefined;
+        if (alternative) return { ...alternative,
+            layoutAlternatives: [{ ...p, layoutAlternatives: undefined }, ...(p.layoutAlternatives ?? []).filter(q => q !== alternative)] };
+        if (!p.children.length) return p;
+        const children = blockPortfolioSeed(p.children, index);
+        if (children.every((child, i) => child === p.children[i])) return p;
+        return { ...p, ...unionPrimitive(p.id, p.kind, p.label, p.sourceNodeId, children, p.deferredRelations) };
+    });
+}
+
+export function choosePackedPortfolio(input: PlacementInput, candidates: PlacementPrimitive[][],
+    diagnostics: PrimitiveSolveDiagnostic[]): PlacementPrimitive[] {
+    const poses = (p: PlacementPrimitive[]) => p.flatMap(q => q.placements);
+    let best = candidates[0];
+    let score = globalPostPlaceScore(input, poses(best));
+    const constraints = encodeNativePostPlaceRefineProblem(input, poses(best), 1);
+    const fixed = new Set(input.components.filter(c => c.pcb.fixedPlacement || c.pcb.edgeMount || c.pcb.edgePlace).map(c => c.designator));
+    const baseline = new Map(poses(best).map(p => [p.designator, p]));
+    let selected = 0;
+    for (let index = 1; index < candidates.length; index++) {
+        const candidate = poses(candidates[index]);
+        if (candidate.some(p => fixed.has(p.designator) && ['x', 'y', 'rotate', 'layer'].some(k => p[k as keyof typeof p] !== baseline.get(p.designator)?.[k as keyof typeof p]))) continue;
+        const next = globalPostPlaceScore(input, candidate);
+        if (next >= score - 1e-6 || !createPlacementReport(input, candidate).ok) continue;
+        if (!loadNativeBoardPacker().validatePlacementChange(constraints, candidate)) continue;
+        best = candidates[index]; score = next; selected = index;
+    }
+    diagnostics.push({ severity: 'warning', nodeId: 'block-portfolio-repack',
+        message: `Block portfolio repack: ${candidates.length} board hypotheses, selected ${selected}, score ${score.toFixed(2)}` });
+    return best;
+}
+
 /** Select internal block layouts in their actual board neighbourhood. This is a
  * bounded coordinate descent, not a second postrefine or a global repacking.
  * A candidate retains ownership and may slide by at most two placement steps.
