@@ -1,0 +1,3706 @@
+{
+  "description": "Controlled replacement of four USB components; all other poses are baseline. Not a board-packer result.",
+  "placements": [
+    {
+      "designator": "J1",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 45.64960000000001,
+      "y": 17
+    },
+    {
+      "designator": "J2",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 45.64960000000001,
+      "y": 33.5
+    },
+    {
+      "designator": "R1",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 39.932,
+      "y": 9.495
+    },
+    {
+      "designator": "R2",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 35.941,
+      "y": 9.495
+    },
+    {
+      "designator": "R3",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 31.95,
+      "y": 9.495
+    },
+    {
+      "designator": "R4",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 27.959,
+      "y": 9.495
+    },
+    {
+      "designator": "R5",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 27.959,
+      "y": 7.26
+    },
+    {
+      "designator": "C1",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 28.515,
+      "y": 12.465
+    },
+    {
+      "designator": "C3",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 9.339,
+      "y": 8.704
+    },
+    {
+      "designator": "C6",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 26.744,
+      "y": 15.596
+    },
+    {
+      "designator": "C8",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 29.195,
+      "y": 14.916
+    },
+    {
+      "designator": "C11",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 12.038,
+      "y": 26.209
+    },
+    {
+      "designator": "C14",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 24.211,
+      "y": 36.638
+    },
+    {
+      "designator": "C16",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 29.335,
+      "y": 31.041
+    },
+    {
+      "designator": "U1",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 18.927,
+      "y": 12.072
+    },
+    {
+      "designator": "C2",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 11.11,
+      "y": 8.704
+    },
+    {
+      "designator": "C5",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 24.121,
+      "y": 19.293
+    },
+    {
+      "designator": "C10",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 13.809,
+      "y": 26.209
+    },
+    {
+      "designator": "C13",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 25.982,
+      "y": 36.638
+    },
+    {
+      "designator": "C4",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 11.11,
+      "y": 11.835
+    },
+    {
+      "designator": "C7",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 26.744,
+      "y": 12.465
+    },
+    {
+      "designator": "C12",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 13.809,
+      "y": 29.34
+    },
+    {
+      "designator": "C15",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 29.335,
+      "y": 29.27
+    },
+    {
+      "designator": "R6",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 35.69,
+      "y": 24.934
+    },
+    {
+      "designator": "R7",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 31.537,
+      "y": 27
+    },
+    {
+      "designator": "R8",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 30.655,
+      "y": 24.117
+    },
+    {
+      "designator": "C9",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 28.655,
+      "y": 26.8
+    },
+    {
+      "designator": "U2",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 21.232,
+      "y": 29.459
+    },
+    {
+      "designator": "D1",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 47.76,
+      "y": 7
+    },
+    {
+      "designator": "C48",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -17.771,
+      "y": -12.021
+    },
+    {
+      "designator": "U13",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -15.767,
+      "y": -5.554
+    },
+    {
+      "designator": "L3",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -6.244,
+      "y": -7.658
+    },
+    {
+      "designator": "C49",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -17.691,
+      "y": -0.955
+    },
+    {
+      "designator": "C50",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -19.523,
+      "y": -5.45
+    },
+    {
+      "designator": "C52",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -29.007,
+      "y": 24.95
+    },
+    {
+      "designator": "U14",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -35,
+      "y": 17.5
+    },
+    {
+      "designator": "C51",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -24.72,
+      "y": 22.09
+    },
+    {
+      "designator": "R38",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -27,
+      "y": 18.207
+    },
+    {
+      "designator": "U15",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -29.139,
+      "y": 22.09
+    },
+    {
+      "designator": "C53",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -28.242,
+      "y": 31.788
+    },
+    {
+      "designator": "U16",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -27.742,
+      "y": 29.257
+    },
+    {
+      "designator": "R39",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -30.247,
+      "y": 31.788
+    },
+    {
+      "designator": "R40",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -29.008,
+      "y": 27.173
+    },
+    {
+      "designator": "R43",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -24.824,
+      "y": 25.209
+    },
+    {
+      "designator": "Q2",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -24.808,
+      "y": 28.257
+    },
+    {
+      "designator": "TH2",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -25.717,
+      "y": 32.854
+    },
+    {
+      "designator": "R48",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -25.717,
+      "y": 34.832
+    },
+    {
+      "designator": "C61",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -25.717,
+      "y": 31.108
+    },
+    {
+      "designator": "F2",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 44.192,
+      "y": 7
+    },
+    {
+      "designator": "U10",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 42.176,
+      "y": -22.796
+    },
+    {
+      "designator": "R42",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 41.512,
+      "y": -26.407
+    },
+    {
+      "designator": "R28",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 38.018,
+      "y": -17.926
+    },
+    {
+      "designator": "R29",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 41.512,
+      "y": -29.488
+    },
+    {
+      "designator": "L1",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 46.546,
+      "y": -22.796
+    },
+    {
+      "designator": "R27",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 40.255,
+      "y": -17.927
+    },
+    {
+      "designator": "C33",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 39.093,
+      "y": -21.846
+    },
+    {
+      "designator": "C40",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 37.746,
+      "y": -8.5
+    },
+    {
+      "designator": "C34",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 44.578,
+      "y": -27.407
+    },
+    {
+      "designator": "C35",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 46.786,
+      "y": -27.407
+    },
+    {
+      "designator": "C36",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 42.477,
+      "y": -18.427
+    },
+    {
+      "designator": "C37",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 41.943,
+      "y": -8.5
+    },
+    {
+      "designator": "C38",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 39.735,
+      "y": -8.5
+    },
+    {
+      "designator": "C39",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 4.5,
+      "y": -8.5
+    },
+    {
+      "designator": "U3",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 4.087,
+      "y": 24.073
+    },
+    {
+      "designator": "R9",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 6.884,
+      "y": 23.389
+    },
+    {
+      "designator": "C17",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 4.137,
+      "y": 26.467
+    },
+    {
+      "designator": "U4",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 1.718,
+      "y": 9.91
+    },
+    {
+      "designator": "R10",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 7.739,
+      "y": 13.281
+    },
+    {
+      "designator": "R11",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -3.834,
+      "y": 17.66
+    },
+    {
+      "designator": "R12",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 1.517,
+      "y": 17.16
+    },
+    {
+      "designator": "R13",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -6.071,
+      "y": 17.66
+    },
+    {
+      "designator": "C18",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 1.517,
+      "y": 15.156
+    },
+    {
+      "designator": "C19",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 1.517,
+      "y": 19.164
+    },
+    {
+      "designator": "R14",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 4.701,
+      "y": 16.656
+    },
+    {
+      "designator": "R15",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -1.597,
+      "y": 17.66
+    },
+    {
+      "designator": "C20",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -4.838,
+      "y": 13.081
+    },
+    {
+      "designator": "C22",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -3.067,
+      "y": 9.95
+    },
+    {
+      "designator": "C21",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -3.067,
+      "y": 13.081
+    },
+    {
+      "designator": "C23",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -0.733,
+      "y": 2.984
+    },
+    {
+      "designator": "R16",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 2.817,
+      "y": 4.305
+    },
+    {
+      "designator": "R17",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 3.817,
+      "y": 2.068
+    },
+    {
+      "designator": "U6",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 22.381,
+      "y": -14
+    },
+    {
+      "designator": "U7",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 4.593,
+      "y": -32.502
+    },
+    {
+      "designator": "U8",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 7.704,
+      "y": -32.306
+    },
+    {
+      "designator": "U9",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 4.789,
+      "y": -35.614
+    },
+    {
+      "designator": "C28",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 8.182,
+      "y": -35.965
+    },
+    {
+      "designator": "C29",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 4.593,
+      "y": -28.438
+    },
+    {
+      "designator": "C30",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 7.2,
+      "y": -29.036
+    },
+    {
+      "designator": "C31",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 4.593,
+      "y": -30.209
+    },
+    {
+      "designator": "C32",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 39,
+      "y": -39.352
+    },
+    {
+      "designator": "Q1",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 13.617,
+      "y": -31.383
+    },
+    {
+      "designator": "R22",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 12.5,
+      "y": -34.462
+    },
+    {
+      "designator": "R23",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 10.451,
+      "y": -31.383
+    },
+    {
+      "designator": "J3",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 26,
+      "y": -39.48805
+    },
+    {
+      "designator": "R24",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 39,
+      "y": -37.349
+    },
+    {
+      "designator": "R25",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 39,
+      "y": -32.879
+    },
+    {
+      "designator": "R26",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 39,
+      "y": -35.114
+    },
+    {
+      "designator": "J4",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 45.596149999999994,
+      "y": -14
+    },
+    {
+      "designator": "J5",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -45,
+      "y": -16
+    },
+    {
+      "designator": "R30",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -37.771,
+      "y": -19.85
+    },
+    {
+      "designator": "R31",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -36.791,
+      "y": -12.675
+    },
+    {
+      "designator": "F1",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -36.791,
+      "y": -16.001
+    },
+    {
+      "designator": "C41",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -34.89,
+      "y": -19.85
+    },
+    {
+      "designator": "U11",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -29.5,
+      "y": -3.407
+    },
+    {
+      "designator": "R32",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -25.759,
+      "y": 0.328
+    },
+    {
+      "designator": "R33",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -29.5,
+      "y": 2.595
+    },
+    {
+      "designator": "R34",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -33.235,
+      "y": -1.657
+    },
+    {
+      "designator": "R35",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -29.75,
+      "y": 0.328
+    },
+    {
+      "designator": "R36",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -29.034,
+      "y": -9.379
+    },
+    {
+      "designator": "R37",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -30.034,
+      "y": -7.142
+    },
+    {
+      "designator": "C42",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -34,
+      "y": -4.906
+    },
+    {
+      "designator": "C43",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -25,
+      "y": -1.906
+    },
+    {
+      "designator": "C44",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -29.674,
+      "y": 10.181
+    },
+    {
+      "designator": "C45",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -23.292,
+      "y": 10.996
+    },
+    {
+      "designator": "C46",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -22.292,
+      "y": 6.717
+    },
+    {
+      "designator": "J6",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 14,
+      "y": 45.64960000000001
+    },
+    {
+      "designator": "J7",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -43.5,
+      "y": 36
+    },
+    {
+      "designator": "U12",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -25.966,
+      "y": 10.765
+    },
+    {
+      "designator": "L2",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -25.966,
+      "y": 6.442
+    },
+    {
+      "designator": "C47",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -25.966,
+      "y": 14.322
+    },
+    {
+      "designator": "U5",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -11,
+      "y": -36.8
+    },
+    {
+      "designator": "C24",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -24,
+      "y": -38.115
+    },
+    {
+      "designator": "C25",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -24,
+      "y": -40.104
+    },
+    {
+      "designator": "C27",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -24.005,
+      "y": -28.118
+    },
+    {
+      "designator": "R18",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -30.5,
+      "y": -39.885
+    },
+    {
+      "designator": "R19",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 1.999,
+      "y": -25.5
+    },
+    {
+      "designator": "R41",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 6.414,
+      "y": -39.5
+    },
+    {
+      "designator": "C26",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -30.5,
+      "y": -37.883
+    },
+    {
+      "designator": "SW1",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -26,
+      "y": -33
+    },
+    {
+      "designator": "SW2",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 0.5,
+      "y": -19.7
+    },
+    {
+      "designator": "R20",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -27.995,
+      "y": -27
+    },
+    {
+      "designator": "R21",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -24.005,
+      "y": -26.115
+    },
+    {
+      "designator": "TH1",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 9.995,
+      "y": -40.385
+    },
+    {
+      "designator": "C54",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 9.995,
+      "y": -38.639
+    },
+    {
+      "designator": "D2",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -10.255,
+      "y": 24.763
+    },
+    {
+      "designator": "C55",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -15,
+      "y": 24.278
+    },
+    {
+      "designator": "U17",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -12.396,
+      "y": 17.77
+    },
+    {
+      "designator": "L4",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -14.5,
+      "y": 8.247
+    },
+    {
+      "designator": "C56",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -19.408,
+      "y": 20.194
+    },
+    {
+      "designator": "C57",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -18.408,
+      "y": 16.95
+    },
+    {
+      "designator": "C59",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -4.507,
+      "y": 31.45
+    },
+    {
+      "designator": "U18",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -13,
+      "y": 32.5
+    },
+    {
+      "designator": "C58",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -0.22,
+      "y": 28.59
+    },
+    {
+      "designator": "R44",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -2.5,
+      "y": 24.707
+    },
+    {
+      "designator": "U19",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -4.639,
+      "y": 28.59
+    },
+    {
+      "designator": "C60",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -3.742,
+      "y": 38.288
+    },
+    {
+      "designator": "U20",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -3.242,
+      "y": 35.757
+    },
+    {
+      "designator": "R45",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": -5.747,
+      "y": 38.288
+    },
+    {
+      "designator": "R46",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": -4.508,
+      "y": 33.673
+    },
+    {
+      "designator": "R47",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -0.324,
+      "y": 31.709
+    },
+    {
+      "designator": "Q3",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -0.308,
+      "y": 34.757
+    },
+    {
+      "designator": "TH3",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -1.217,
+      "y": 39.354
+    },
+    {
+      "designator": "R49",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -1.217,
+      "y": 41.332
+    },
+    {
+      "designator": "C62",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": -1.217,
+      "y": 37.608
+    }
+  ],
+  "report": {
+    "ok": true,
+    "placed": 154,
+    "unplaced": [],
+    "blockReports": [
+      {
+        "name": "mechanic_J1",
+        "components": 1,
+        "box": {
+          "left": 41.799200000000006,
+          "right": 49.50000000000001,
+          "top": 11.646,
+          "bottom": 22.354
+        },
+        "width": 7.7,
+        "height": 10.71,
+        "area": 82.46,
+        "estimatedWidth": 16.26,
+        "estimatedHeight": 8.05,
+        "estimatedArea": 130.91,
+        "widthRatio": 0.47,
+        "heightRatio": 1.33,
+        "areaRatio": 0.63,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "mechanic_J2",
+        "components": 1,
+        "box": {
+          "left": 41.799200000000006,
+          "right": 49.50000000000001,
+          "top": 28.146,
+          "bottom": 38.854
+        },
+        "width": 7.7,
+        "height": 10.71,
+        "area": 82.46,
+        "estimatedWidth": 16.26,
+        "estimatedHeight": 8.05,
+        "estimatedArea": 130.91,
+        "widthRatio": 0.47,
+        "heightRatio": 1.33,
+        "areaRatio": 0.63,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "mechanic_J3",
+        "components": 1,
+        "box": {
+          "left": 17.69605,
+          "right": 34.30395,
+          "top": -48,
+          "bottom": -30.9761
+        },
+        "width": 16.61,
+        "height": 17.02,
+        "area": 282.73,
+        "estimatedWidth": 29.58,
+        "estimatedHeight": 17.37,
+        "estimatedArea": 513.94,
+        "widthRatio": 0.56,
+        "heightRatio": 0.98,
+        "areaRatio": 0.55,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "mechanic_J4",
+        "components": 1,
+        "box": {
+          "left": 43.192299999999996,
+          "right": 47.99999999999999,
+          "top": -15.97205,
+          "bottom": -12.02795
+        },
+        "width": 4.81,
+        "height": 3.94,
+        "area": 18.96,
+        "estimatedWidth": 8.11,
+        "estimatedHeight": 4.29,
+        "estimatedArea": 34.83,
+        "widthRatio": 0.59,
+        "heightRatio": 0.92,
+        "areaRatio": 0.54,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "mechanic_J5",
+        "components": 1,
+        "box": {
+          "left": -50.0475,
+          "right": -39.9525,
+          "top": -21.02905,
+          "bottom": -10.970949999999998
+        },
+        "width": 10.09,
+        "height": 10.06,
+        "area": 101.54,
+        "estimatedWidth": 17.97,
+        "estimatedHeight": 10.45,
+        "estimatedArea": 187.68,
+        "widthRatio": 0.56,
+        "heightRatio": 0.96,
+        "areaRatio": 0.54,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "mechanic_J6",
+        "components": 1,
+        "box": {
+          "left": 8.645999999999999,
+          "right": 19.354,
+          "top": 41.799200000000006,
+          "bottom": 49.50000000000001
+        },
+        "width": 10.71,
+        "height": 7.7,
+        "area": 82.46,
+        "estimatedWidth": 16.26,
+        "estimatedHeight": 8.05,
+        "estimatedArea": 130.91,
+        "widthRatio": 0.66,
+        "heightRatio": 0.96,
+        "areaRatio": 0.63,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "mechanic_J7",
+        "components": 1,
+        "box": {
+          "left": -46.5,
+          "right": -40.5,
+          "top": 33.74995,
+          "bottom": 38.25005
+        },
+        "width": 6,
+        "height": 4.5,
+        "area": 27,
+        "estimatedWidth": 9.56,
+        "estimatedHeight": 4.85,
+        "estimatedArea": 46.39,
+        "widthRatio": 0.63,
+        "heightRatio": 0.93,
+        "areaRatio": 0.58,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "mechanic_U5",
+        "components": 1,
+        "box": {
+          "left": -20.903800000000004,
+          "right": -1.0961999999999978,
+          "top": -50.00195,
+          "bottom": -23.598049999999994
+        },
+        "width": 19.81,
+        "height": 26.4,
+        "area": 523,
+        "estimatedWidth": 31.04,
+        "estimatedHeight": 27.91,
+        "estimatedArea": 866.34,
+        "widthRatio": 0.64,
+        "heightRatio": 0.95,
+        "areaRatio": 0.6,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "mechanic_SW1",
+        "components": 1,
+        "box": {
+          "left": -28.550150000000002,
+          "right": -23.449849999999998,
+          "top": -36.754,
+          "bottom": -29.246
+        },
+        "width": 5.1,
+        "height": 7.51,
+        "area": 38.29,
+        "estimatedWidth": 11.28,
+        "estimatedHeight": 5.45,
+        "estimatedArea": 61.47,
+        "widthRatio": 0.45,
+        "heightRatio": 1.38,
+        "areaRatio": 0.62,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "mechanic_SW2",
+        "components": 1,
+        "box": {
+          "left": -3.2540000000000004,
+          "right": 4.2540000000000004,
+          "top": -22.250149999999998,
+          "bottom": -17.14985
+        },
+        "width": 7.51,
+        "height": 5.1,
+        "area": 38.29,
+        "estimatedWidth": 11.28,
+        "estimatedHeight": 5.45,
+        "estimatedArea": 61.47,
+        "widthRatio": 0.67,
+        "heightRatio": 0.94,
+        "areaRatio": 0.62,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "esp_supply",
+        "components": 2,
+        "box": {
+          "left": -25.9636,
+          "right": -22.0364,
+          "top": -40.81405,
+          "bottom": -37.186
+        },
+        "width": 3.93,
+        "height": 3.63,
+        "area": 14.25,
+        "estimatedWidth": 4.93,
+        "estimatedHeight": 4.11,
+        "estimatedArea": 20.23,
+        "widthRatio": 0.8,
+        "heightRatio": 0.88,
+        "areaRatio": 0.7,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "esp_enable",
+        "components": 2,
+        "box": {
+          "left": -32.32025,
+          "right": -28.67975,
+          "top": -40.8275,
+          "bottom": -37.17295
+        },
+        "width": 3.64,
+        "height": 3.65,
+        "area": 13.3,
+        "estimatedWidth": 4.84,
+        "estimatedHeight": 4.03,
+        "estimatedArea": 19.52,
+        "widthRatio": 0.75,
+        "heightRatio": 0.91,
+        "areaRatio": 0.68,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "esp_boot",
+        "components": 1,
+        "box": {
+          "left": 1.0564999999999998,
+          "right": 2.9415000000000004,
+          "top": -27.32025,
+          "bottom": -23.67975
+        },
+        "width": 1.89,
+        "height": 3.64,
+        "area": 6.86,
+        "estimatedWidth": 3.99,
+        "estimatedHeight": 3.17,
+        "estimatedArea": 12.64,
+        "widthRatio": 0.47,
+        "heightRatio": 1.15,
+        "areaRatio": 0.54,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "battery_sense",
+        "components": 3,
+        "box": {
+          "left": -29.815250000000002,
+          "right": -22.184749999999998,
+          "top": -28.828049999999998,
+          "bottom": -25.1725
+        },
+        "width": 7.63,
+        "height": 3.66,
+        "area": 27.89,
+        "estimatedWidth": 7.59,
+        "estimatedHeight": 5.24,
+        "estimatedArea": 39.74,
+        "widthRatio": 1.01,
+        "heightRatio": 0.7,
+        "areaRatio": 0.7,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "temperature",
+        "components": 3,
+        "box": {
+          "left": 4.59375,
+          "right": 11.4056,
+          "top": -41.071,
+          "bottom": -37.92895
+        },
+        "width": 6.81,
+        "height": 3.14,
+        "area": 21.4,
+        "estimatedWidth": 7.01,
+        "estimatedHeight": 4.83,
+        "estimatedArea": 33.86,
+        "widthRatio": 0.97,
+        "heightRatio": 0.65,
+        "areaRatio": 0.63,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "lte",
+        "components": 1,
+        "box": {
+          "left": 9.127049999999999,
+          "right": 35.63495,
+          "top": -27.253950000000003,
+          "bottom": -0.7460499999999985
+        },
+        "width": 26.51,
+        "height": 26.51,
+        "area": 702.67,
+        "estimatedWidth": 39.68,
+        "estimatedHeight": 28.36,
+        "estimatedArea": 1125.12,
+        "widthRatio": 0.67,
+        "heightRatio": 0.93,
+        "areaRatio": 0.62,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "uart",
+        "components": 7,
+        "box": {
+          "left": 3.06405,
+          "right": 8.9357,
+          "top": -37.35495,
+          "bottom": -27.646050000000002
+        },
+        "width": 5.87,
+        "height": 9.71,
+        "area": 57.01,
+        "estimatedWidth": 12.6,
+        "estimatedHeight": 8.69,
+        "estimatedArea": 109.49,
+        "widthRatio": 0.47,
+        "heightRatio": 1.12,
+        "areaRatio": 0.52,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "lte_key",
+        "components": 3,
+        "box": {
+          "left": 9.5085,
+          "right": 15.491100000000001,
+          "top": -35.404500000000006,
+          "bottom": -29.5965
+        },
+        "width": 5.98,
+        "height": 5.81,
+        "area": 34.75,
+        "estimatedWidth": 8.83,
+        "estimatedHeight": 6.09,
+        "estimatedArea": 53.77,
+        "widthRatio": 0.68,
+        "heightRatio": 0.95,
+        "areaRatio": 0.65,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "sim_support",
+        "components": 4,
+        "box": {
+          "left": 37.17975,
+          "right": 40.82025,
+          "top": -40.06205,
+          "bottom": -31.9365
+        },
+        "width": 3.64,
+        "height": 8.13,
+        "area": 29.58,
+        "estimatedWidth": 8.92,
+        "estimatedHeight": 6.15,
+        "estimatedArea": 54.9,
+        "widthRatio": 0.41,
+        "heightRatio": 1.32,
+        "areaRatio": 0.54,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "lte_bulk",
+        "components": 3,
+        "box": {
+          "left": 37.03595,
+          "right": 42.872,
+          "top": -10.4636,
+          "bottom": -6.5363999999999995
+        },
+        "width": 5.84,
+        "height": 3.93,
+        "area": 22.92,
+        "estimatedWidth": 7.76,
+        "estimatedHeight": 5.35,
+        "estimatedArea": 41.53,
+        "widthRatio": 0.75,
+        "heightRatio": 0.73,
+        "areaRatio": 0.55,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "lte_reservoir",
+        "components": 1,
+        "box": {
+          "left": 1.124099999999999,
+          "right": 7.8759000000000015,
+          "top": -13.174050000000001,
+          "bottom": -3.825949999999999
+        },
+        "width": 6.75,
+        "height": 9.35,
+        "area": 63.12,
+        "estimatedWidth": 11.61,
+        "estimatedHeight": 8.01,
+        "estimatedArea": 92.98,
+        "widthRatio": 0.58,
+        "heightRatio": 1.17,
+        "areaRatio": 0.68,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "lte_power",
+        "components": 10,
+        "box": {
+          "left": 37.0755,
+          "right": 48.7,
+          "top": -31.2745,
+          "bottom": -16.106749999999998
+        },
+        "width": 11.62,
+        "height": 15.17,
+        "area": 176.32,
+        "estimatedWidth": 18.64,
+        "estimatedHeight": 12.85,
+        "estimatedArea": 239.56,
+        "widthRatio": 0.62,
+        "heightRatio": 1.18,
+        "areaRatio": 0.74,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "usb_charge",
+        "components": 9,
+        "box": {
+          "left": -35.9636,
+          "right": -23.0364,
+          "top": -10.3215,
+          "bottom": 3.5375000000000005
+        },
+        "width": 12.93,
+        "height": 13.86,
+        "area": 179.16,
+        "estimatedWidth": 17.45,
+        "estimatedHeight": 12.03,
+        "estimatedArea": 210.02,
+        "widthRatio": 0.74,
+        "heightRatio": 1.15,
+        "areaRatio": 0.85,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "usb_input",
+        "components": 4,
+        "box": {
+          "left": -39.6018,
+          "right": -33.980199999999996,
+          "top": -21.23995,
+          "bottom": -11.7325
+        },
+        "width": 5.62,
+        "height": 9.51,
+        "area": 53.45,
+        "estimatedWidth": 11.07,
+        "estimatedHeight": 7.64,
+        "estimatedArea": 84.55,
+        "widthRatio": 0.51,
+        "heightRatio": 1.24,
+        "areaRatio": 0.63,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "logic_power",
+        "components": 6,
+        "box": {
+          "left": -31.6376,
+          "right": -21.363000000000003,
+          "top": 4.288,
+          "bottom": 15.71195
+        },
+        "width": 10.27,
+        "height": 11.42,
+        "area": 117.38,
+        "estimatedWidth": 14.5,
+        "estimatedHeight": 10,
+        "estimatedArea": 144.92,
+        "widthRatio": 0.71,
+        "heightRatio": 1.14,
+        "areaRatio": 0.81,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "voltage_iso",
+        "components": 7,
+        "box": {
+          "left": 12.3287,
+          "right": 41.752250000000004,
+          "top": 6.3175,
+          "bottom": 17.39455
+        },
+        "width": 29.42,
+        "height": 11.08,
+        "area": 325.93,
+        "estimatedWidth": 25.45,
+        "estimatedHeight": 17.55,
+        "estimatedArea": 446.75,
+        "widthRatio": 1.16,
+        "heightRatio": 0.63,
+        "areaRatio": 0.73,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "voltage_hdc",
+        "components": 2,
+        "box": {
+          "left": 23.41095,
+          "right": 27.45405,
+          "top": 14.20605,
+          "bottom": 20.682949999999998
+        },
+        "width": 4.04,
+        "height": 6.48,
+        "area": 26.19,
+        "estimatedWidth": 4.66,
+        "estimatedHeight": 3.21,
+        "estimatedArea": 14.96,
+        "widthRatio": 0.87,
+        "heightRatio": 2.02,
+        "areaRatio": 1.75,
+        "oversized": true,
+        "limitViolations": []
+      },
+      {
+        "name": "voltage_hldo",
+        "components": 2,
+        "box": {
+          "left": 26.03395,
+          "right": 30.58495,
+          "top": 11.07505,
+          "bottom": 15.626050000000001
+        },
+        "width": 4.55,
+        "height": 4.55,
+        "area": 20.71,
+        "estimatedWidth": 4.66,
+        "estimatedHeight": 3.21,
+        "estimatedArea": 14.96,
+        "widthRatio": 0.98,
+        "heightRatio": 1.42,
+        "areaRatio": 1.38,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "voltage_secondary",
+        "components": 3,
+        "box": {
+          "left": 8.62895,
+          "right": 11.82005,
+          "top": 7.314050000000001,
+          "bottom": 13.224950000000002
+        },
+        "width": 3.19,
+        "height": 5.91,
+        "area": 18.86,
+        "estimatedWidth": 6.4,
+        "estimatedHeight": 4.41,
+        "estimatedArea": 28.26,
+        "widthRatio": 0.5,
+        "heightRatio": 1.34,
+        "areaRatio": 0.67,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "current_iso",
+        "components": 5,
+        "box": {
+          "left": 15.027449999999998,
+          "right": 37.672,
+          "top": 20.972450000000002,
+          "bottom": 34.73935
+        },
+        "width": 22.64,
+        "height": 13.77,
+        "area": 311.75,
+        "estimatedWidth": 22.57,
+        "estimatedHeight": 15.57,
+        "estimatedArea": 351.37,
+        "widthRatio": 1,
+        "heightRatio": 0.88,
+        "areaRatio": 0.89,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "current_hdc",
+        "components": 2,
+        "box": {
+          "left": 23.50095,
+          "right": 26.69205,
+          "top": 35.24805,
+          "bottom": 38.02795
+        },
+        "width": 3.19,
+        "height": 2.78,
+        "area": 8.87,
+        "estimatedWidth": 4.66,
+        "estimatedHeight": 3.21,
+        "estimatedArea": 14.96,
+        "widthRatio": 0.68,
+        "heightRatio": 0.87,
+        "areaRatio": 0.59,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "current_hldo",
+        "components": 2,
+        "box": {
+          "left": 27.945050000000002,
+          "right": 30.72495,
+          "top": 28.55995,
+          "bottom": 31.75105
+        },
+        "width": 2.78,
+        "height": 3.19,
+        "area": 8.87,
+        "estimatedWidth": 4.66,
+        "estimatedHeight": 3.21,
+        "estimatedArea": 14.96,
+        "widthRatio": 0.6,
+        "heightRatio": 0.99,
+        "areaRatio": 0.59,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "current_secondary",
+        "components": 3,
+        "box": {
+          "left": 11.32795,
+          "right": 14.51905,
+          "top": 24.81905,
+          "bottom": 30.72995
+        },
+        "width": 3.19,
+        "height": 5.91,
+        "area": 18.86,
+        "estimatedWidth": 6.4,
+        "estimatedHeight": 4.41,
+        "estimatedArea": 28.26,
+        "widthRatio": 0.5,
+        "heightRatio": 1.34,
+        "areaRatio": 0.67,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "adc",
+        "components": 10,
+        "box": {
+          "left": -7.0135,
+          "right": 9.55925,
+          "top": 1.59405,
+          "bottom": 19.87405
+        },
+        "width": 16.57,
+        "height": 18.28,
+        "area": 302.95,
+        "estimatedWidth": 20.8,
+        "estimatedHeight": 14.35,
+        "estimatedArea": 298.49,
+        "widthRatio": 0.8,
+        "heightRatio": 1.27,
+        "areaRatio": 1.01,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "adc_supply",
+        "components": 5,
+        "box": {
+          "left": -5.54805,
+          "right": 5.63725,
+          "top": 1.1255000000000002,
+          "bottom": 14.47095
+        },
+        "width": 11.19,
+        "height": 13.35,
+        "area": 149.27,
+        "estimatedWidth": 9.22,
+        "estimatedHeight": 6.36,
+        "estimatedArea": 58.58,
+        "widthRatio": 1.21,
+        "heightRatio": 2.1,
+        "areaRatio": 2.55,
+        "oversized": true,
+        "limitViolations": []
+      },
+      {
+        "name": "afe_power",
+        "components": 3,
+        "box": {
+          "left": 2.173399999999999,
+          "right": 7.8265,
+          "top": 21.6025,
+          "bottom": 27.396
+        },
+        "width": 5.65,
+        "height": 5.79,
+        "area": 32.75,
+        "estimatedWidth": 8.14,
+        "estimatedHeight": 5.61,
+        "estimatedArea": 45.68,
+        "widthRatio": 0.69,
+        "heightRatio": 1.03,
+        "areaRatio": 0.72,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "harvest_input",
+        "components": 2,
+        "box": {
+          "left": 42.414,
+          "right": 49.1999,
+          "top": 2.936,
+          "bottom": 11.064
+        },
+        "width": 6.79,
+        "height": 8.13,
+        "area": 55.16,
+        "estimatedWidth": 10.75,
+        "estimatedHeight": 7.42,
+        "estimatedArea": 79.74,
+        "widthRatio": 0.63,
+        "heightRatio": 1.1,
+        "areaRatio": 0.69,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "hv_pos",
+        "components": 5,
+        "box": {
+          "left": -21.61015,
+          "right": 0.6100000000000012,
+          "top": -14.975000000000001,
+          "bottom": -0.025999999999999912
+        },
+        "width": 22.22,
+        "height": 14.95,
+        "area": 332.17,
+        "estimatedWidth": 26.61,
+        "estimatedHeight": 18.35,
+        "estimatedArea": 488.34,
+        "widthRatio": 0.84,
+        "heightRatio": 0.81,
+        "areaRatio": 0.68,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "isolated_supply_pos",
+        "components": 1,
+        "box": {
+          "left": -38.127,
+          "right": -31.873,
+          "top": 11.7,
+          "bottom": 23.3
+        },
+        "width": 6.25,
+        "height": 11.6,
+        "area": 72.55,
+        "estimatedWidth": 12.43,
+        "estimatedHeight": 8.57,
+        "estimatedArea": 106.54,
+        "widthRatio": 0.5,
+        "heightRatio": 1.35,
+        "areaRatio": 0.68,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "low_charge_pos",
+        "components": 10,
+        "box": {
+          "left": -31.2431,
+          "right": -22.7564,
+          "top": 16.225,
+          "bottom": 33.60825
+        },
+        "width": 8.49,
+        "height": 17.38,
+        "area": 147.53,
+        "estimatedWidth": 19.2,
+        "estimatedHeight": 13.24,
+        "estimatedArea": 254.26,
+        "widthRatio": 0.44,
+        "heightRatio": 1.31,
+        "areaRatio": 0.58,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "temp_pos",
+        "components": 3,
+        "box": {
+          "left": -27.53725,
+          "right": -23.896749999999997,
+          "top": 30.39795,
+          "bottom": 35.7745
+        },
+        "width": 3.64,
+        "height": 5.38,
+        "area": 19.57,
+        "estimatedWidth": 7.01,
+        "estimatedHeight": 4.83,
+        "estimatedArea": 33.86,
+        "widthRatio": 0.52,
+        "heightRatio": 1.11,
+        "areaRatio": 0.58,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "hv_neg",
+        "components": 6,
+        "box": {
+          "left": -20.75,
+          "right": -8.25,
+          "top": 1.3929999999999998,
+          "bottom": 28.605600000000003
+        },
+        "width": 12.5,
+        "height": 27.21,
+        "area": 340.16,
+        "estimatedWidth": 31.25,
+        "estimatedHeight": 21.55,
+        "estimatedArea": 673.4,
+        "widthRatio": 0.4,
+        "heightRatio": 1.26,
+        "areaRatio": 0.51,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "isolated_supply_neg",
+        "components": 1,
+        "box": {
+          "left": -18.8,
+          "right": -7.2,
+          "top": 29.373,
+          "bottom": 35.627
+        },
+        "width": 11.6,
+        "height": 6.25,
+        "area": 72.55,
+        "estimatedWidth": 12.43,
+        "estimatedHeight": 8.57,
+        "estimatedArea": 106.54,
+        "widthRatio": 0.93,
+        "heightRatio": 0.73,
+        "areaRatio": 0.68,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "low_charge_neg",
+        "components": 10,
+        "box": {
+          "left": -6.7431,
+          "right": 1.7436000000000003,
+          "top": 22.725,
+          "bottom": 40.10825
+        },
+        "width": 8.49,
+        "height": 17.38,
+        "area": 147.53,
+        "estimatedWidth": 19.2,
+        "estimatedHeight": 13.24,
+        "estimatedArea": 254.26,
+        "widthRatio": 0.44,
+        "heightRatio": 1.31,
+        "areaRatio": 0.58,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "temp_neg",
+        "components": 3,
+        "box": {
+          "left": -3.0372500000000002,
+          "right": 0.6032499999999998,
+          "top": 36.897949999999994,
+          "bottom": 42.2745
+        },
+        "width": 3.64,
+        "height": 5.38,
+        "area": 19.57,
+        "estimatedWidth": 7.01,
+        "estimatedHeight": 4.83,
+        "estimatedArea": 33.86,
+        "widthRatio": 0.52,
+        "heightRatio": 1.11,
+        "areaRatio": 0.58,
+        "oversized": false,
+        "limitViolations": []
+      }
+    ],
+    "moduleReports": [],
+    "graphReport": {
+      "ok": true,
+      "treeNodes": 847,
+      "relations": 670,
+      "roots": 34,
+      "maxDepth": 5,
+      "components": 154,
+      "pads": 637,
+      "nets": 103,
+      "blocks": 45,
+      "modules": 0,
+      "islands": 10,
+      "islandKinds": {
+        "bypass": 2,
+        "cap_cluster": 4,
+        "core_pairs": 4
+      },
+      "orphanComponents": [],
+      "unparentedBlocks": [
+        "mechanic_J1",
+        "mechanic_J2",
+        "mechanic_J3",
+        "mechanic_J4",
+        "mechanic_J5",
+        "mechanic_J6",
+        "mechanic_J7",
+        "mechanic_U5",
+        "mechanic_SW1",
+        "mechanic_SW2",
+        "esp_supply",
+        "esp_enable",
+        "esp_boot",
+        "battery_sense",
+        "temperature",
+        "lte",
+        "uart",
+        "lte_key",
+        "sim_support",
+        "lte_reservoir",
+        "lte_power",
+        "usb_charge",
+        "logic_power",
+        "voltage_iso",
+        "current_iso",
+        "adc",
+        "afe_power",
+        "harvest_input",
+        "hv_pos",
+        "isolated_supply_pos",
+        "low_charge_pos",
+        "hv_neg",
+        "isolated_supply_neg",
+        "low_charge_neg"
+      ],
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "code": "net_only_local_placement",
+          "message": "Block uart (7 components) has no explicit internal placement relations. Generic net-based placement remains active; add pin-level rules for any required switching loops, decoupling or sensitive paths that the netlist alone cannot specify.",
+          "nodeId": "block:uart"
+        },
+        {
+          "severity": "warning",
+          "code": "ignored_local_connections",
+          "message": "Block voltage_iso: ignoredRatsnestSignals hides local connections V_MEAS_N [U1.8, U1.7, U1.2, R5.2, C1.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+          "nodeId": "block:voltage_iso"
+        },
+        {
+          "severity": "warning",
+          "code": "ignored_local_connections",
+          "message": "Block voltage_hdc: ignoredRatsnestSignals hides local connections V_MEAS_N [C5.2, C6.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+          "nodeId": "block:voltage_hdc"
+        },
+        {
+          "severity": "warning",
+          "code": "ignored_local_connections",
+          "message": "Block voltage_hldo: ignoredRatsnestSignals hides local connections V_MEAS_N [C7.2, C8.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+          "nodeId": "block:voltage_hldo"
+        },
+        {
+          "severity": "warning",
+          "code": "ignored_local_connections",
+          "message": "Block current_iso: ignoredRatsnestSignals hides local connections I_OUT [U2.2, U2.8, R6.2, R8.1]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+          "nodeId": "block:current_iso"
+        },
+        {
+          "severity": "warning",
+          "code": "ignored_local_connections",
+          "message": "Block current_hdc: ignoredRatsnestSignals hides local connections I_OUT [C13.2, C14.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+          "nodeId": "block:current_hdc"
+        },
+        {
+          "severity": "warning",
+          "code": "ignored_local_connections",
+          "message": "Block current_hldo: ignoredRatsnestSignals hides local connections I_OUT [C15.2, C16.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+          "nodeId": "block:current_hldo"
+        },
+        {
+          "severity": "warning",
+          "code": "ignored_local_connections",
+          "message": "Block harvest_input: ignoredRatsnestSignals hides local connections HARVEST_P [F2.2, D1.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+          "nodeId": "block:harvest_input"
+        },
+        {
+          "severity": "warning",
+          "code": "ignored_local_connections",
+          "message": "Block hv_pos: ignoredRatsnestSignals hides local connections V_MEAS_N [U13.7, U13.8, U13.12, U13.16, U13.17, C48.2, C49.2, C50.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+          "nodeId": "block:hv_pos"
+        },
+        {
+          "severity": "warning",
+          "code": "net_only_local_placement",
+          "message": "Block low_charge_pos (10 components) has no explicit internal placement relations. Generic net-based placement remains active; add pin-level rules for any required switching loops, decoupling or sensitive paths that the netlist alone cannot specify.",
+          "nodeId": "block:low_charge_pos"
+        },
+        {
+          "severity": "warning",
+          "code": "ignored_local_connections",
+          "message": "Block hv_neg: ignoredRatsnestSignals hides local connections HARVEST_P [U17.7, U17.8, U17.12, U17.16, U17.17, C55.2, C56.2, C57.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+          "nodeId": "block:hv_neg"
+        },
+        {
+          "severity": "warning",
+          "code": "net_only_local_placement",
+          "message": "Block low_charge_neg (10 components) has no explicit internal placement relations. Generic net-based placement remains active; add pin-level rules for any required switching loops, decoupling or sensitive paths that the netlist alone cannot specify.",
+          "nodeId": "block:low_charge_neg"
+        }
+      ]
+    },
+    "outsideBoard": [],
+    "overlaps": [],
+    "boardHoleViolations": [],
+    "constraintRegionViolations": [],
+    "layerViolations": [],
+    "hintViolations": [
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "U13"
+          },
+          "target": {
+            "type": "component",
+            "designator": "U14"
+          },
+          "priority": "high"
+        },
+        "actual": 30.02,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "clearance",
+          "source": {
+            "type": "block",
+            "block_name": "hv_pos"
+          },
+          "target": {
+            "type": "block",
+            "block_name": "adc"
+          },
+          "min": 3.2,
+          "priority": "critical"
+        },
+        "actual": 1.62,
+        "expected": ">= 3.2mm clearance"
+      },
+      {
+        "hint": {
+          "relation": "clearance",
+          "source": {
+            "type": "block",
+            "block_name": "hv_pos"
+          },
+          "target": {
+            "type": "block",
+            "block_name": "usb_charge"
+          },
+          "min": 3.2,
+          "priority": "critical"
+        },
+        "actual": 1.43,
+        "expected": ">= 3.2mm clearance"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "U17"
+          },
+          "target": {
+            "type": "component",
+            "designator": "U18"
+          },
+          "priority": "high"
+        },
+        "actual": 14.74,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "U18"
+          },
+          "target": {
+            "type": "component",
+            "designator": "U19"
+          },
+          "priority": "high"
+        },
+        "actual": 9.23,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "clearance",
+          "source": {
+            "type": "block",
+            "block_name": "hv_neg"
+          },
+          "target": {
+            "type": "block",
+            "block_name": "adc"
+          },
+          "min": 3.2,
+          "priority": "critical"
+        },
+        "actual": 1.24,
+        "expected": ">= 3.2mm clearance"
+      },
+      {
+        "hint": {
+          "relation": "clearance",
+          "source": {
+            "type": "block",
+            "block_name": "hv_neg"
+          },
+          "target": {
+            "type": "block",
+            "block_name": "logic_power"
+          },
+          "min": 3.2,
+          "priority": "critical"
+        },
+        "actual": 0.61,
+        "expected": ">= 3.2mm clearance"
+      },
+      {
+        "hint": {
+          "relation": "clearance",
+          "source": {
+            "type": "block",
+            "block_name": "hv_neg"
+          },
+          "target": {
+            "type": "block",
+            "block_name": "usb_charge"
+          },
+          "min": 3.2,
+          "priority": "critical"
+        },
+        "actual": 2.29,
+        "expected": ">= 3.2mm clearance"
+      },
+      {
+        "hint": {
+          "relation": "clearance",
+          "source": {
+            "type": "block",
+            "block_name": "hv_neg"
+          },
+          "target": {
+            "type": "block",
+            "block_name": "low_charge_pos"
+          },
+          "min": 3.2,
+          "priority": "critical"
+        },
+        "actual": 2.01,
+        "expected": ">= 3.2mm clearance"
+      },
+      {
+        "hint": {
+          "relation": "clearance",
+          "source": {
+            "type": "block",
+            "block_name": "hv_neg"
+          },
+          "target": {
+            "type": "block",
+            "block_name": "low_charge_neg"
+          },
+          "min": 3.2,
+          "priority": "critical"
+        },
+        "actual": 1.51,
+        "expected": ">= 3.2mm clearance"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "U6"
+          },
+          "target": {
+            "type": "component",
+            "designator": "J3"
+          },
+          "priority": "high"
+        },
+        "actual": 25.74,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "U10"
+          },
+          "target": {
+            "type": "pin",
+            "designator": "U6",
+            "pin_number": "55"
+          },
+          "priority": "high"
+        },
+        "actual": 15.85,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "U6"
+          },
+          "target": {
+            "type": "component",
+            "designator": "J4"
+          },
+          "priority": "critical"
+        },
+        "actual": 23.22,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "block",
+            "block_name": "uart"
+          },
+          "target": {
+            "type": "pin",
+            "designator": "U6",
+            "pin_number": "9"
+          },
+          "priority": "high"
+        },
+        "actual": 17.62,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "block",
+            "block_name": "lte_key"
+          },
+          "target": {
+            "type": "pin",
+            "designator": "U6",
+            "pin_number": "1"
+          },
+          "priority": "high"
+        },
+        "actual": 19.03,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "block",
+            "block_name": "sim_support"
+          },
+          "target": {
+            "type": "pin",
+            "designator": "J3",
+            "pin_number": "C1"
+          },
+          "priority": "high"
+        },
+        "actual": 15.69,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "block",
+            "block_name": "esp_enable"
+          },
+          "target": {
+            "type": "pin",
+            "designator": "U5",
+            "pin_number": "3"
+          },
+          "priority": "high"
+        },
+        "actual": 10.64,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "block",
+            "block_name": "battery_sense"
+          },
+          "target": {
+            "type": "pin",
+            "designator": "U5",
+            "pin_number": "4"
+          },
+          "priority": "normal"
+        },
+        "actual": 13.2,
+        "expected": "<= 12mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "C39"
+          },
+          "target": {
+            "type": "pin",
+            "designator": "U6",
+            "pin_number": "55"
+          },
+          "priority": "high"
+        },
+        "actual": 29.89,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "U11"
+          },
+          "target": {
+            "type": "component",
+            "designator": "J5"
+          },
+          "priority": "high"
+        },
+        "actual": 19.97,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "U12"
+          },
+          "target": {
+            "type": "pin",
+            "designator": "U5",
+            "pin_number": "2"
+          },
+          "priority": "normal"
+        },
+        "actual": 52.36,
+        "expected": "<= 12mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "U1"
+          },
+          "target": {
+            "type": "component",
+            "designator": "J1"
+          },
+          "priority": "high"
+        },
+        "actual": 27.17,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "U2"
+          },
+          "target": {
+            "type": "component",
+            "designator": "J2"
+          },
+          "priority": "high"
+        },
+        "actual": 24.75,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "F2"
+          },
+          "target": {
+            "type": "component",
+            "designator": "J1"
+          },
+          "priority": "high"
+        },
+        "actual": 10.11,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "U3"
+          },
+          "target": {
+            "type": "component",
+            "designator": "U4"
+          },
+          "priority": "high"
+        },
+        "actual": 14.36,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "U4"
+          },
+          "target": {
+            "type": "component",
+            "designator": "U1"
+          },
+          "priority": "high"
+        },
+        "actual": 17.34,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "U4"
+          },
+          "target": {
+            "type": "component",
+            "designator": "U2"
+          },
+          "priority": "high"
+        },
+        "actual": 27.62,
+        "expected": "<= 8mm"
+      },
+      {
+        "hint": {
+          "relation": "critical_pair",
+          "source": {
+            "type": "pin",
+            "designator": "J2",
+            "pin_number": "1"
+          },
+          "target": {
+            "type": "pin",
+            "designator": "R6",
+            "pin_number": "1"
+          },
+          "priority": "critical",
+          "maxDistance": 12,
+          "weightMultiplier": 2,
+          "hard": true,
+          "core": false
+        },
+        "actual": 13.11,
+        "expected": "<= 12mm"
+      },
+      {
+        "hint": {
+          "relation": "critical_pair",
+          "source": {
+            "type": "pin",
+            "designator": "J2",
+            "pin_number": "2"
+          },
+          "target": {
+            "type": "pin",
+            "designator": "R6",
+            "pin_number": "2"
+          },
+          "priority": "critical",
+          "maxDistance": 12,
+          "core": false
+        },
+        "actual": 13.86,
+        "expected": "<= 12mm"
+      }
+    ],
+    "signalPaths": [
+      {
+        "id": "kelvin_P",
+        "shape": "flexible",
+        "priority": "critical",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 9.721,
+        "pathDistance": 9.89,
+        "detour": 0.169,
+        "backtrack": 0,
+        "turns": 0.053,
+        "facing": 1.395,
+        "segments": [
+          {
+            "index": 0,
+            "source": "R6.1",
+            "target": "R7.1",
+            "resolved": true,
+            "distance": 3.31,
+            "maxDistance": 10,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "R7.2",
+            "target": "U2.6",
+            "resolved": true,
+            "distance": 4.58,
+            "maxDistance": 5,
+            "withinConstraints": true
+          }
+        ]
+      },
+      {
+        "id": "kelvin_N",
+        "shape": "flexible",
+        "priority": "critical",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 10.643,
+        "pathDistance": 10.857,
+        "detour": 0.214,
+        "backtrack": 0,
+        "turns": 0.26,
+        "facing": 1.749,
+        "segments": [
+          {
+            "index": 0,
+            "source": "R6.2",
+            "target": "R8.1",
+            "resolved": true,
+            "distance": 4.62,
+            "maxDistance": 10,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "R8.2",
+            "target": "U2.7",
+            "resolved": true,
+            "distance": 4.24,
+            "maxDistance": 5,
+            "withinConstraints": true
+          }
+        ]
+      },
+      {
+        "id": "voltage_divider",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 23.815,
+        "pathDistance": 28.3,
+        "detour": 4.485,
+        "backtrack": 0,
+        "turns": 0.59,
+        "facing": 2.537,
+        "segments": [
+          {
+            "index": 0,
+            "source": "J1.1",
+            "target": "R1.1",
+            "resolved": true,
+            "distance": 11.45,
+            "maxDistance": 30,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "R1.2",
+            "target": "R2.1",
+            "resolved": true,
+            "distance": 1.99,
+            "maxDistance": 8,
+            "withinConstraints": true
+          },
+          {
+            "index": 2,
+            "source": "R2.2",
+            "target": "R3.1",
+            "resolved": true,
+            "distance": 1.99,
+            "maxDistance": 8,
+            "withinConstraints": true
+          },
+          {
+            "index": 3,
+            "source": "R3.2",
+            "target": "R4.1",
+            "resolved": true,
+            "distance": 1.99,
+            "maxDistance": 8,
+            "withinConstraints": true
+          },
+          {
+            "index": 4,
+            "source": "R4.2",
+            "target": "U1.6",
+            "resolved": true,
+            "distance": 2.88,
+            "maxDistance": 8,
+            "withinConstraints": true
+          }
+        ]
+      },
+      {
+        "id": "voltage_P",
+        "shape": "flexible",
+        "priority": "critical",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 13.751,
+        "pathDistance": 14.469,
+        "detour": 0.718,
+        "backtrack": 0,
+        "turns": 0.168,
+        "facing": 1.977,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U1.11",
+            "target": "R10.1",
+            "resolved": true,
+            "distance": 5.98,
+            "maxDistance": 20,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "R10.2",
+            "target": "U4.3",
+            "resolved": true,
+            "distance": 6.49,
+            "maxDistance": 6.5,
+            "withinConstraints": true
+          }
+        ]
+      },
+      {
+        "id": "voltage_N",
+        "shape": "flexible",
+        "priority": "critical",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 13.442,
+        "pathDistance": 20.431,
+        "detour": 6.989,
+        "backtrack": 1.703,
+        "turns": 1.292,
+        "facing": 1.962,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U1.10",
+            "target": "R12.1",
+            "resolved": true,
+            "distance": 14.03,
+            "maxDistance": 20,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "R12.2",
+            "target": "U4.4",
+            "resolved": true,
+            "distance": 4.4,
+            "maxDistance": 6.5,
+            "withinConstraints": true
+          }
+        ]
+      },
+      {
+        "id": "current_P",
+        "shape": "flexible",
+        "priority": "critical",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 20.497,
+        "pathDistance": 21.151,
+        "detour": 0.655,
+        "backtrack": 0,
+        "turns": 0.602,
+        "facing": 0.791,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U2.11",
+            "target": "R14.1",
+            "resolved": true,
+            "distance": 15.35,
+            "maxDistance": 20,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "R14.2",
+            "target": "U4.6",
+            "resolved": true,
+            "distance": 3.8,
+            "maxDistance": 6.5,
+            "withinConstraints": true
+          }
+        ]
+      },
+      {
+        "id": "current_N",
+        "shape": "flexible",
+        "priority": "critical",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 20.083,
+        "pathDistance": 26.605,
+        "detour": 6.523,
+        "backtrack": 0,
+        "turns": 0.839,
+        "facing": 1.052,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U2.10",
+            "target": "R15.1",
+            "resolved": true,
+            "distance": 19.6,
+            "maxDistance": 20,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "R15.2",
+            "target": "U4.5",
+            "resolved": true,
+            "distance": 5.01,
+            "maxDistance": 6.5,
+            "withinConstraints": true
+          }
+        ]
+      }
+    ],
+    "scoreByComponent": [
+      {
+        "designator": "J1",
+        "score": 0
+      },
+      {
+        "designator": "J2",
+        "score": 0
+      },
+      {
+        "designator": "R1",
+        "score": 0
+      },
+      {
+        "designator": "R2",
+        "score": 0
+      },
+      {
+        "designator": "R3",
+        "score": 0
+      },
+      {
+        "designator": "R4",
+        "score": 0
+      },
+      {
+        "designator": "R5",
+        "score": 0
+      },
+      {
+        "designator": "C1",
+        "score": 0
+      },
+      {
+        "designator": "C3",
+        "score": 0
+      },
+      {
+        "designator": "C6",
+        "score": 0
+      },
+      {
+        "designator": "C8",
+        "score": 0
+      },
+      {
+        "designator": "C11",
+        "score": 0
+      },
+      {
+        "designator": "C14",
+        "score": 0
+      },
+      {
+        "designator": "C16",
+        "score": 0
+      },
+      {
+        "designator": "U1",
+        "score": 0
+      },
+      {
+        "designator": "C2",
+        "score": 0
+      },
+      {
+        "designator": "C5",
+        "score": 0
+      },
+      {
+        "designator": "C10",
+        "score": 0
+      },
+      {
+        "designator": "C13",
+        "score": 0
+      },
+      {
+        "designator": "C4",
+        "score": 0
+      },
+      {
+        "designator": "C7",
+        "score": 0
+      },
+      {
+        "designator": "C12",
+        "score": 0
+      },
+      {
+        "designator": "C15",
+        "score": 0
+      },
+      {
+        "designator": "R6",
+        "score": 0
+      },
+      {
+        "designator": "R7",
+        "score": 0
+      },
+      {
+        "designator": "R8",
+        "score": 0
+      },
+      {
+        "designator": "C9",
+        "score": 0
+      },
+      {
+        "designator": "U2",
+        "score": 0
+      },
+      {
+        "designator": "D1",
+        "score": 0
+      },
+      {
+        "designator": "C48",
+        "score": 0
+      },
+      {
+        "designator": "U13",
+        "score": 0
+      },
+      {
+        "designator": "L3",
+        "score": 0
+      },
+      {
+        "designator": "C49",
+        "score": 0
+      },
+      {
+        "designator": "C50",
+        "score": 0
+      },
+      {
+        "designator": "C52",
+        "score": 0
+      },
+      {
+        "designator": "U14",
+        "score": 0
+      },
+      {
+        "designator": "C51",
+        "score": 0
+      },
+      {
+        "designator": "R38",
+        "score": 0
+      },
+      {
+        "designator": "U15",
+        "score": 0
+      },
+      {
+        "designator": "C53",
+        "score": 0
+      },
+      {
+        "designator": "U16",
+        "score": 0
+      },
+      {
+        "designator": "R39",
+        "score": 0
+      },
+      {
+        "designator": "R40",
+        "score": 0
+      },
+      {
+        "designator": "R43",
+        "score": 0
+      },
+      {
+        "designator": "Q2",
+        "score": 0
+      },
+      {
+        "designator": "TH2",
+        "score": 0
+      },
+      {
+        "designator": "R48",
+        "score": 0
+      },
+      {
+        "designator": "C61",
+        "score": 0
+      },
+      {
+        "designator": "F2",
+        "score": 0
+      },
+      {
+        "designator": "U10",
+        "score": 0
+      },
+      {
+        "designator": "R42",
+        "score": 0
+      },
+      {
+        "designator": "R28",
+        "score": 0
+      },
+      {
+        "designator": "R29",
+        "score": 0
+      },
+      {
+        "designator": "L1",
+        "score": 0
+      },
+      {
+        "designator": "R27",
+        "score": 0
+      },
+      {
+        "designator": "C33",
+        "score": 0
+      },
+      {
+        "designator": "C40",
+        "score": 0
+      },
+      {
+        "designator": "C34",
+        "score": 0
+      },
+      {
+        "designator": "C35",
+        "score": 0
+      },
+      {
+        "designator": "C36",
+        "score": 0
+      },
+      {
+        "designator": "C37",
+        "score": 0
+      },
+      {
+        "designator": "C38",
+        "score": 0
+      },
+      {
+        "designator": "C39",
+        "score": 0
+      },
+      {
+        "designator": "U3",
+        "score": 0
+      },
+      {
+        "designator": "R9",
+        "score": 0
+      },
+      {
+        "designator": "C17",
+        "score": 0
+      },
+      {
+        "designator": "U4",
+        "score": 0
+      },
+      {
+        "designator": "R10",
+        "score": 0
+      },
+      {
+        "designator": "R11",
+        "score": 0
+      },
+      {
+        "designator": "R12",
+        "score": 0
+      },
+      {
+        "designator": "R13",
+        "score": 0
+      },
+      {
+        "designator": "C18",
+        "score": 0
+      },
+      {
+        "designator": "C19",
+        "score": 0
+      },
+      {
+        "designator": "R14",
+        "score": 0
+      },
+      {
+        "designator": "R15",
+        "score": 0
+      },
+      {
+        "designator": "C20",
+        "score": 0
+      },
+      {
+        "designator": "C22",
+        "score": 0
+      },
+      {
+        "designator": "C21",
+        "score": 0
+      },
+      {
+        "designator": "C23",
+        "score": 0
+      },
+      {
+        "designator": "R16",
+        "score": 0
+      },
+      {
+        "designator": "R17",
+        "score": 0
+      },
+      {
+        "designator": "U6",
+        "score": 0
+      },
+      {
+        "designator": "U7",
+        "score": 0
+      },
+      {
+        "designator": "U8",
+        "score": 0
+      },
+      {
+        "designator": "U9",
+        "score": 0
+      },
+      {
+        "designator": "C28",
+        "score": 0
+      },
+      {
+        "designator": "C29",
+        "score": 0
+      },
+      {
+        "designator": "C30",
+        "score": 0
+      },
+      {
+        "designator": "C31",
+        "score": 0
+      },
+      {
+        "designator": "C32",
+        "score": 0
+      },
+      {
+        "designator": "Q1",
+        "score": 0
+      },
+      {
+        "designator": "R22",
+        "score": 0
+      },
+      {
+        "designator": "R23",
+        "score": 0
+      },
+      {
+        "designator": "J3",
+        "score": 0
+      },
+      {
+        "designator": "R24",
+        "score": 0
+      },
+      {
+        "designator": "R25",
+        "score": 0
+      },
+      {
+        "designator": "R26",
+        "score": 0
+      },
+      {
+        "designator": "J4",
+        "score": 0
+      },
+      {
+        "designator": "J5",
+        "score": 0
+      },
+      {
+        "designator": "R30",
+        "score": 0
+      },
+      {
+        "designator": "R31",
+        "score": 0
+      },
+      {
+        "designator": "F1",
+        "score": 0
+      },
+      {
+        "designator": "C41",
+        "score": 0
+      },
+      {
+        "designator": "U11",
+        "score": 0
+      },
+      {
+        "designator": "R32",
+        "score": 0
+      },
+      {
+        "designator": "R33",
+        "score": 0
+      },
+      {
+        "designator": "R34",
+        "score": 0
+      },
+      {
+        "designator": "R35",
+        "score": 0
+      },
+      {
+        "designator": "R36",
+        "score": 0
+      },
+      {
+        "designator": "R37",
+        "score": 0
+      },
+      {
+        "designator": "C42",
+        "score": 0
+      },
+      {
+        "designator": "C43",
+        "score": 0
+      },
+      {
+        "designator": "C44",
+        "score": 0
+      },
+      {
+        "designator": "C45",
+        "score": 0
+      },
+      {
+        "designator": "C46",
+        "score": 0
+      },
+      {
+        "designator": "J6",
+        "score": 0
+      },
+      {
+        "designator": "J7",
+        "score": 0
+      },
+      {
+        "designator": "U12",
+        "score": 0
+      },
+      {
+        "designator": "L2",
+        "score": 0
+      },
+      {
+        "designator": "C47",
+        "score": 0
+      },
+      {
+        "designator": "U5",
+        "score": 0
+      },
+      {
+        "designator": "C24",
+        "score": 0
+      },
+      {
+        "designator": "C25",
+        "score": 0
+      },
+      {
+        "designator": "C27",
+        "score": 0
+      },
+      {
+        "designator": "R18",
+        "score": 0
+      },
+      {
+        "designator": "R19",
+        "score": 0
+      },
+      {
+        "designator": "R41",
+        "score": 0
+      },
+      {
+        "designator": "C26",
+        "score": 0
+      },
+      {
+        "designator": "SW1",
+        "score": 0
+      },
+      {
+        "designator": "SW2",
+        "score": 0
+      },
+      {
+        "designator": "R20",
+        "score": 0
+      },
+      {
+        "designator": "R21",
+        "score": 0
+      },
+      {
+        "designator": "TH1",
+        "score": 0
+      },
+      {
+        "designator": "C54",
+        "score": 0
+      },
+      {
+        "designator": "D2",
+        "score": 0
+      },
+      {
+        "designator": "C55",
+        "score": 0
+      },
+      {
+        "designator": "U17",
+        "score": 0
+      },
+      {
+        "designator": "L4",
+        "score": 0
+      },
+      {
+        "designator": "C56",
+        "score": 0
+      },
+      {
+        "designator": "C57",
+        "score": 0
+      },
+      {
+        "designator": "C59",
+        "score": 0
+      },
+      {
+        "designator": "U18",
+        "score": 0
+      },
+      {
+        "designator": "C58",
+        "score": 0
+      },
+      {
+        "designator": "R44",
+        "score": 0
+      },
+      {
+        "designator": "U19",
+        "score": 0
+      },
+      {
+        "designator": "C60",
+        "score": 0
+      },
+      {
+        "designator": "U20",
+        "score": 0
+      },
+      {
+        "designator": "R45",
+        "score": 0
+      },
+      {
+        "designator": "R46",
+        "score": 0
+      },
+      {
+        "designator": "R47",
+        "score": 0
+      },
+      {
+        "designator": "Q3",
+        "score": 0
+      },
+      {
+        "designator": "TH3",
+        "score": 0
+      },
+      {
+        "designator": "R49",
+        "score": 0
+      },
+      {
+        "designator": "C62",
+        "score": 0
+      }
+    ]
+  },
+  "validChange": true,
+  "metrics": {
+    "pairCount": 48,
+    "pairSum": 701.81,
+    "pairMax": 49.14,
+    "crossings": 253,
+    "foreignPadHits": 235,
+    "internalIcPadHits": 13,
+    "wireLength": 2258.51,
+    "hpwl": 2589.08,
+    "area": 9905.17,
+    "aspect": 1
+  }
+}

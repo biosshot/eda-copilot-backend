@@ -1,0 +1,132 @@
+{
+  "spacing": {
+    "gap": 0.6886712494554799,
+    "compactnessScale": 0.793398625163356,
+    "density": 0.5196550208968607
+  },
+  "results": [
+    {
+      "tag": "before",
+      "ok": true,
+      "count": 154,
+      "fixedChanges": [],
+      "board": {
+        "pairCount": 48,
+        "pairSum": 700.83,
+        "pairMax": 49.14,
+        "crossings": 249,
+        "foreignPadHits": 240,
+        "internalIcPadHits": 13,
+        "wireLength": 2261,
+        "hpwl": 2590.29,
+        "area": 9905.17,
+        "aspect": 1
+      },
+      "usb": {
+        "pairCount": 5,
+        "pairSum": 13.46,
+        "pairMax": 4.63,
+        "crossings": 2,
+        "foreignPadHits": 5,
+        "internalIcPadHits": 0,
+        "wireLength": 27.15,
+        "hpwl": 29.73,
+        "area": 174.09,
+        "aspect": 1.72
+      },
+      "gaps": {
+        "median": 0.41795000000000115,
+        "below1": 34,
+        "blocks": 35
+      },
+      "links": [
+        {
+          "pin": "R30.1",
+          "net": "USB_CC1",
+          "mm": 3.4963615745514645
+        },
+        {
+          "pin": "R31.1",
+          "net": "USB_CC2",
+          "mm": 4.633777882031035
+        },
+        {
+          "pin": "F1.1",
+          "net": "USB_5V_RAW",
+          "mm": 6.741143998610324
+        }
+      ]
+    },
+    {
+      "tag": "after",
+      "ok": true,
+      "count": 154,
+      "fixedChanges": [],
+      "board": {
+        "pairCount": 48,
+        "pairSum": 791.25,
+        "pairMax": 71.58,
+        "crossings": 299,
+        "foreignPadHits": 296,
+        "internalIcPadHits": 13,
+        "wireLength": 2392.86,
+        "hpwl": 2791.7,
+        "area": 9905.17,
+        "aspect": 1
+      },
+      "usb": {
+        "pairCount": 5,
+        "pairSum": 15.45,
+        "pairMax": 5.4,
+        "crossings": 3,
+        "foreignPadHits": 1,
+        "internalIcPadHits": 0,
+        "wireLength": 25.16,
+        "hpwl": 28.28,
+        "area": 165,
+        "aspect": 1.56
+      },
+      "gaps": {
+        "median": 0.5083999999999982,
+        "below1": 27,
+        "blocks": 35
+      },
+      "links": [
+        {
+          "pin": "F1.1",
+          "net": "USB_5V_RAW",
+          "mm": 3.508957624423528
+        },
+        {
+          "pin": "R30.1",
+          "net": "USB_CC1",
+          "mm": 3.7067954165289447
+        },
+        {
+          "pin": "R31.1",
+          "net": "USB_CC2",
+          "mm": 5.398837491534641
+        }
+      ]
+    }
+  ],
+  "usbVariants": 1,
+  "control": {
+    "ok": true,
+    "validChange": true,
+    "metrics": {
+      "pairCount": 48,
+      "pairSum": 701.81,
+      "pairMax": 49.14,
+      "crossings": 253,
+      "foreignPadHits": 235,
+      "internalIcPadHits": 13,
+      "wireLength": 2258.51,
+      "hpwl": 2589.08,
+      "area": 9905.17,
+      "aspect": 1
+    }
+  },
+  "inputSha256": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "nativeSha256": "a616f637f4d0ff80e3c17f65a6b8761870f4b94b55b4fa95b889e28c8b6b6019"
+}
