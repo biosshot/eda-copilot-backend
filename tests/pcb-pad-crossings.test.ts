@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
 import type { NativePostPlaceScoreProblemV1, NativeRoutingObstacle } from '../src/pcb-layout/pcb-auto-place-v2/native/contract.ts';
+import { minimumSpanningEdges } from '../src/pcb-layout/pcb-auto-place/ratsnest.ts';
 
 const addon = loadNativeBoardPacker();
 const pad = (ref: string, x: number, net = 'OTHER', layer: 'top' | 'bottom' | undefined = 'top'): NativeRoutingObstacle => ({
@@ -38,4 +39,17 @@ test('moving a pad out of a straight connection removes its penalty and preserve
     assert.equal(delta([p]), 0);
     const old = problem([pad('U1.2', 2)]); old.padCrossingWeight = 0;
     assert.equal(addon.scorePostPlace(old), addon.scorePostPlace(problem([])));
+});
+
+test('comparison ratsnest uses the same spanning-tree length as the native objective', () => {
+    const p = problem([]);
+    p.nets[0].points = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 0, y: 1 }, { x: 10, y: 1 }];
+    p.nets[0].layers = ['top', 'top', 'top', 'top'];
+    const edges = minimumSpanningEdges(p.nets[0].points);
+    assert.equal(edges.length, 3);
+    const score = edges.reduce((sum, [a, b]) => {
+        const points = p.nets[0].points, d = Math.hypot(points[a].x - points[b].x, points[a].y - points[b].y);
+        return sum + d * 10 + d * d * .35;
+    }, 0);
+    assert.ok(Math.abs(addon.scorePostPlace(p) - score) < .000001);
 });

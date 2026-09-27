@@ -1,6 +1,7 @@
 import { boardBox, boardHoleKeepoutRadius, boardOutlinePolygon, getBox, getLocalPointWorld, getPadWorld, unionBoxes } from './geometry.ts';
 import type { Box, FootprintSpec, PcbComponent, Placement, PlacementInput, Point } from '../../types/pcb/layout-model.ts';
 import { allNets, ignoredSignalSet } from './utils.ts';
+import { minimumSpanningEdges } from './ratsnest.ts';
 
 export interface RenderPlacementSvgOptions {
     bounds?: Box;
@@ -8,6 +9,7 @@ export interface RenderPlacementSvgOptions {
     labels?: boolean;
     viewLayer?: Placement['layer'];
     ratsnest?: boolean;
+    ratsnestTopology?: 'chain' | 'mst';
     signalPaths?: boolean;
 }
 
@@ -92,9 +94,10 @@ export function renderPlacementSvg(input: PlacementInput, placements: Placement[
             .filter((item): item is { point: Point } => item !== null));
 
         if (pads.length < 2) continue;
-        const sorted = pads.slice().sort((a, b) => a.point.x - b.point.x);
-        for (let i = 1; i < sorted.length; i++) {
-            ratItems.push(`<line x1="${px(sorted[i - 1].point.x)}" y1="${py(sorted[i - 1].point.y)}" x2="${px(sorted[i].point.x)}" y2="${py(sorted[i].point.y)}" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>${net}</title></line>`);
+        const sorted = options.ratsnestTopology === 'mst' ? pads : pads.slice().sort((a, b) => a.point.x - b.point.x);
+        const edges = options.ratsnestTopology === 'mst' ? minimumSpanningEdges(sorted.map(p => p.point)) : sorted.slice(1).map((_, i): [number, number] => [i, i + 1]);
+        for (const [a, b] of edges) {
+            ratItems.push(`<line x1="${px(sorted[a].point.x)}" y1="${py(sorted[a].point.y)}" x2="${px(sorted[b].point.x)}" y2="${py(sorted[b].point.y)}" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3"><title>${net}</title></line>`);
         }
     }
 
@@ -124,7 +127,7 @@ ${boardOutlineLayer}
 export function renderPlacementSubsetSvg(
     input: PlacementInput,
     placements: Placement[],
-    options: { title?: string; padding?: number; labels?: boolean; viewLayer?: Placement['layer']; ratsnest?: boolean; signalPaths?: boolean } = {},
+    options: Omit<RenderPlacementSvgOptions, 'bounds'> & { padding?: number } = {},
 ) {
     const componentByDesignator = new Map(input.components.map((component) => [component.designator, component]));
     const boxes = placements.flatMap((placement) => {
@@ -141,6 +144,7 @@ export function renderPlacementSubsetSvg(
         labels: options.labels,
         viewLayer: options.viewLayer,
         ratsnest: options.ratsnest,
+        ratsnestTopology: options.ratsnestTopology,
         signalPaths: options.signalPaths,
     });
 }
