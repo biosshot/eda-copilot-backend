@@ -2552,6 +2552,12 @@ fn soft_alignment_score(primitives: &[WorkingPrimitive], context: &Context) -> f
         let error=((ac.x-bc.x).abs().min((ac.y-bc.y).abs())-s.tolerance).clamp(0.0,3.0);
         let proximity=(1.0-(alignment_gap(&a.primitive.bbox,&b.primitive.bbox)-s.range)/s.fade).clamp(0.0,1.0);
         score-=s.weight*pair.similarity*proximity*(9.0-error*error);
+        if let Some(o) = &pair.orientation {
+            if let (Some(ap),Some(bp))=(a.primitive.placements.iter().find(|p| p.designator==o.a),b.primitive.placements.iter().find(|p| p.designator==o.b)) {
+                let angle=(ap.rotate as f64-bp.rotate as f64-o.offset).to_radians();
+                score-=s.orientation_weight*pair.similarity*proximity*(1.0+angle.cos())/2.0;
+            }
+        }
     }
     score
 }

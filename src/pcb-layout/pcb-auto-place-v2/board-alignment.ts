@@ -91,7 +91,47 @@ function currentRoots(input: PlacementInput, roots: PlacementPrimitive[], placem
     });
 }
 
-export interface AlignmentPair { a: string; b: string; similarity: number; anchorA?: string; anchorB?: string }
+/** Direction belongs to a main IC even when an inductor or resistor is the
+ * largest footprint. Pin count distinguishes a core from small support ICs. */
+export function orientationAnchor(components: PcbComponent[]): PcbComponent | undefined {
+    return [...components].filter(c=>c.pcb.role==='main_ic').sort((a,b)=>b.pins.length-a.pins.length || area(b)-area(a) || a.designator.localeCompare(b.designator))[0]
+        ?? components.find(c=>c.designator===alignmentAnchor(components));
+}
+
+/** Match numbered pad centroids, not footprint names or library zero angles.
+ * Only comparable footprints receive an orientation preference. Offset rotates
+ * A's local pad pattern onto B's, so equal physical direction means rotA=rotB+offset. */
+export function footprintOrientationOffset(a: PcbComponent, b: PcbComponent): number | undefined {
+    if(family(a)!==family(b))return undefined;
+    const pattern=(c:PcbComponent)=>{
+        const groups=new Map<string,Point[]>();
+        for(const p of c.footprint.pads){const key=String(p.pin_number);const ps=groups.get(key)??[];ps.push(p);groups.set(key,ps);}
+        const ps=[...groups].sort(([a],[b])=>a.localeCompare(b)).map(([key,ps])=>({key,x:ps.reduce((s,p)=>s+p.x,0)/ps.length,y:ps.reduce((s,p)=>s+p.y,0)/ps.length}));
+        const cx=ps.reduce((s,p)=>s+p.x,0)/ps.length,cy=ps.reduce((s,p)=>s+p.y,0)/ps.length;
+        return ps.map(p=>({...p,x:p.x-cx,y:p.y-cy}));
+    };
+    const ap=pattern(a),bp=pattern(b);
+    if(ap.length<2 || ap.length!==bp.length || ap.some((p,i)=>p.key!==bp[i].key))return undefined;
+    const span=Math.max(...ap.map(p=>Math.hypot(p.x,p.y)),...bp.map(p=>Math.hypot(p.x,p.y)));
+    if(span<.01)return undefined;
+    const matches=[0,90,180,270].map(angle=>{
+        const t=angle*Math.PI/180,c=Math.cos(t),s=Math.sin(t);
+        const rotated=ap.map(p=>({x:p.x*c-p.y*s,y:p.x*s+p.y*c}));
+        // Libraries may choose different row spacing for the same package. Fit
+        // modest positive axis scales; never permit reflection or pin remapping.
+        const scale=(axis:'x'|'y')=>{
+            const from=Math.max(...rotated.map(p=>Math.abs(p[axis]))),to=Math.max(...bp.map(p=>Math.abs(p[axis])));
+            return from<.01&&to<.01?1:to/Math.max(.0001,from);
+        };
+        const sx=scale('x'),sy=scale('y');
+        return {angle,error:sx<.8||sx>1.25||sy<.8||sy>1.25?Infinity:
+            Math.max(...rotated.map((p,i)=>Math.hypot(p.x*sx-bp[i].x,p.y*sy-bp[i].y)))};
+    }).sort((a,b)=>a.error-b.error||a.angle-b.angle);
+    return matches[0].error<=Math.max(.05,span*.03)?matches[0].angle:undefined;
+}
+
+export interface AlignmentPair { a: string; b: string; similarity: number; anchorA?: string; anchorB?: string;
+    orientation?: {a:string;b:string;offset:number} }
 export function findAlignmentPairs(input: PlacementInput, roots: PlacementPrimitive[], placements: Placement[], local = true): AlignmentPair[] {
     const current = currentRoots(input, roots, placements), pairs: AlignmentPair[] = [];
     const components = (root: PlacementPrimitive) => input.components.filter(c => root.placements.some(p => p.designator === c.designator));
@@ -102,13 +142,17 @@ export function findAlignmentPairs(input: PlacementInput, roots: PlacementPrimit
         if (a.placements.some(p => p.layer !== a.placements[0].layer) || b.placements.some(p => p.layer !== a.placements[0].layer)) continue;
         const ac = components(a), bc = components(b), similarity = blockSimilarity(ac, bc);
         if (similarity < BOARD_ALIGNMENT_POLICY.similarity) continue;
-        pairs.push({ a: a.id, b: b.id, similarity, anchorA: alignmentAnchor(ac), anchorB: alignmentAnchor(bc) });
+        const oa=orientationAnchor(ac),ob=orientationAnchor(bc);
+        const offset=oa&&ob?footprintOrientationOffset(oa,ob):undefined;
+        pairs.push({ a: a.id, b: b.id, similarity, anchorA: alignmentAnchor(ac), anchorB: alignmentAnchor(bc),
+            orientation:oa&&ob&&offset!==undefined?{a:oa.designator,b:ob.designator,
+                offset:a.placements[0].layer==='bottom'?-offset:offset}:undefined });
     }
     return pairs.sort((a,b) => b.similarity-a.similarity || a.a.localeCompare(b.a) || a.b.localeCompare(b.b));
 }
-export interface BoardSoftAlignment { pairs: AlignmentPair[]; weight: number; tolerance: number; range: number; fade: number }
+export interface BoardSoftAlignment { pairs: AlignmentPair[]; weight: number; tolerance: number; range: number; fade: number; orientationWeight?:number }
 export function boardAlignmentPolicy(input: PlacementInput, roots: PlacementPrimitive[]): BoardSoftAlignment {
-    return { pairs: findAlignmentPairs(input,roots,roots.flatMap(p=>p.placements),false), weight:24, tolerance:.15, range:8, fade:8 };
+    return { pairs: findAlignmentPairs(input,roots,roots.flatMap(p=>p.placements),false), weight:24, tolerance:.15, range:8, fade:8, orientationWeight:120 };
 }
 /** Bounded reward, rather than a fading positive penalty: moving apart must not
  * become a way to escape an alignment penalty. Incomplete pairs contribute zero. */
@@ -121,8 +165,17 @@ export function boardAlignmentScore(roots: PlacementPrimitive[], policy: BoardSo
         const error=Math.min(3,Math.max(0,Math.min(Math.abs(ac.x-bc.x),Math.abs(ac.y-bc.y))-policy.tolerance));
         const proximity=Math.max(0,Math.min(1,1-(boxGap(a.bbox,b.bbox)-policy.range)/policy.fade));
         score-=policy.weight*pair.similarity*proximity*(9-error*error);
+        const angle=orientationError(a,b,pair);
+        if(angle!==undefined)score-=(policy.orientationWeight??0)*pair.similarity*proximity*(1+Math.cos(angle*Math.PI/180))/2;
     }
     return score;
+}
+function orientationError(a:PlacementPrimitive,b:PlacementPrimitive,pair:AlignmentPair):number|undefined {
+    const o=pair.orientation;if(!o)return undefined;
+    const ap=a.placements.find(p=>p.designator===o.a),bp=b.placements.find(p=>p.designator===o.b);
+    if(!ap||!bp)return undefined;
+    const angle=((ap.rotate-bp.rotate-o.offset)%360+360)%360;
+    return Math.min(angle,360-angle);
 }
 function center(root: PlacementPrimitive, anchor?: string): Point {
     return root.placements.find(p => p.designator === anchor) ?? boxCenter(root.bbox);
@@ -131,7 +184,8 @@ export function alignmentErrors(roots: PlacementPrimitive[], pairs: AlignmentPai
     return pairs.map(pair => {
         const a = center(roots.find(r => r.id === pair.a)!, pair.anchorA);
         const b = center(roots.find(r => r.id === pair.b)!, pair.anchorB);
-        return { ...pair, error: Math.min(Math.abs(a.x-b.x), Math.abs(a.y-b.y)) };
+        return { ...pair, error: Math.min(Math.abs(a.x-b.x), Math.abs(a.y-b.y)),
+            orientationError:orientationError(roots.find(r=>r.id===pair.a)!,roots.find(r=>r.id===pair.b)!,pair) };
     });
 }
 function penalty(roots: PlacementPrimitive[], pairs: AlignmentPair[]) {

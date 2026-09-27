@@ -22,7 +22,7 @@ use napi::{Error, Result, Status};
 use napi_derive::napi;
 use serde_json::Value;
 
-const CONTRACT_VERSION: u32 = 5;
+const CONTRACT_VERSION: u32 = 6;
 const BLOCK_CONTRACT_VERSION: u32 = 4;
 const PASSIVE_ISLAND_CONTRACT_VERSION: u32 = 1;
 const POST_PLACE_SCORE_CONTRACT_VERSION: u32 = 1;

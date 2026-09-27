@@ -449,6 +449,7 @@ impl BoardPackProblem {
         finite(self.clearance, "clearance")?;
         finite(self.edge_clearance, "edgeClearance")?;
         if let Some(s) = &self.soft_alignment {
+            if !s.orientation_weight.is_finite() || s.orientation_weight < 0.0 { return Err("invalid softAlignment orientation weight".into()); }
             if !s.weight.is_finite() || s.weight < 0.0 || !s.tolerance.is_finite() || s.tolerance < 0.0
                 || !s.range.is_finite() || s.range < 0.0 || !s.fade.is_finite() || s.fade <= 0.0 {
                 return Err("invalid softAlignment parameters".into());
@@ -461,6 +462,14 @@ impl BoardPackProblem {
                     let Some(p) = self.primitives.iter().find(|p| &p.id == id) else { return Err("unknown softAlignment primitive".into()); };
                     if anchor.as_ref().is_some_and(|name| !p.placements.iter().any(|q| &q.designator == name)) {
                         return Err("unknown softAlignment anchor".into());
+                    }
+                }
+                if let Some(o) = &pair.orientation {
+                    if !o.offset.is_finite() { return Err("invalid softAlignment orientation offset".into()); }
+                    for (id, name) in [(&pair.a,&o.a),(&pair.b,&o.b)] {
+                        if !self.primitives.iter().any(|p| &p.id==id && p.placements.iter().any(|q| &q.designator==name)) {
+                            return Err("unknown softAlignment orientation component".into());
+                        }
                     }
                 }
             }
@@ -708,6 +717,8 @@ pub struct SoftSpacing {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SoftAlignment {
+    #[serde(default)]
+    pub orientation_weight: f64,
     pub pairs: Vec<AlignmentPair>,
     pub weight: f64,
     pub tolerance: f64,
@@ -717,9 +728,17 @@ pub struct SoftAlignment {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AlignmentPair {
+    pub orientation: Option<AlignmentOrientation>,
     pub a: Arc<str>,
     pub b: Arc<str>,
     pub anchor_a: Option<Arc<str>>,
     pub anchor_b: Option<Arc<str>>,
     pub similarity: f64,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct AlignmentOrientation {
+    pub a: Arc<str>,
+    pub b: Arc<str>,
+    pub offset: f64,
 }

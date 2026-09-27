@@ -3,7 +3,7 @@ import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { applyNativeBoardPackSolution } from '../src/pcb-layout/pcb-auto-place-v2/native/apply-board-solution.ts';
-import type { NativeBoardPackProblemV5, NativePassiveIslandProblemV1 } from '../src/pcb-layout/pcb-auto-place-v2/native/contract.ts';
+import type { NativeBoardPackProblemV6, NativePassiveIslandProblemV1 } from '../src/pcb-layout/pcb-auto-place-v2/native/contract.ts';
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
 import type { PlacementPrimitive } from '../src/pcb-layout/pcb-auto-place-v2/primitives.ts';
 
@@ -34,7 +34,7 @@ nativeTest('parallel board search matches serial poses and rank with obstacles a
         priority: 'high', hard: false, weight: 1, effect: 'score_only',
         maxDistance: 3, satelliteAnchor: false, preferFacingPads: false,
     }));
-    problem.softAlignment={pairs:[{a:problem.primitives[1].id,b:problem.primitives[2].id,anchorA:'U2',anchorB:'U3',similarity:.95}],weight:24,tolerance:.15,range:8,fade:8};
+    problem.softAlignment={pairs:[{a:problem.primitives[1].id,b:problem.primitives[2].id,anchorA:'U2',anchorB:'U3',similarity:.95,orientation:{a:'U2',b:'U3',offset:0}}],weight:24,tolerance:.15,range:8,fade:8,orientationWeight:120};
     const previous = process.env.PCB_BOARD_PACKER_THREADS;
     try {
         let serial: unknown;
@@ -71,7 +71,7 @@ nativeTest('native board packer is deterministic and returns an applicable rigid
     const second = addon.solveBoardPacked(structuredClone(problem));
 
     assert.deepEqual(second, first);
-    assert.equal(first.version, 5);
+    assert.equal(first.version, 6);
     assert.equal(first.states.length, 1);
     assert.ok(Number.isFinite(first.rank.score));
 
@@ -85,7 +85,7 @@ nativeTest('native board packer is deterministic and returns an applicable rigid
 
 nativeTest('native board packer rejects incompatible and non-finite input', () => {
     const addon = loadNativeBoardPacker();
-    assert.throws(() => addon.solveBoardPacked({ ...minimalProblem(), version: 2 } as unknown as NativeBoardPackProblemV5), /unsupported contract/i);
+    assert.throws(() => addon.solveBoardPacked({ ...minimalProblem(), version: 2 } as unknown as NativeBoardPackProblemV6), /unsupported contract/i);
     assert.throws(() => addon.solveBoardPacked({ ...minimalProblem(), grid: Number.NaN }), /not finite|serde_json::Number/i);
 });
 
@@ -243,8 +243,8 @@ nativeTest('native route scorer sees obstacle detours and bounded local power ne
     assert.ok(addon.scoreRouteLayout(blockedPower, ['route:A']) > 0);
 });
 
-function routeScoreProblem(blocked: boolean, net: string): NativeBoardPackProblemV5 {
-    const makePrimitive = (id: string, x: number): NativeBoardPackProblemV5['primitives'][number] => ({
+function routeScoreProblem(blocked: boolean, net: string): NativeBoardPackProblemV6 {
+    const makePrimitive = (id: string, x: number): NativeBoardPackProblemV6['primitives'][number] => ({
         id: `route:${id}`,
         kind: 'component',
         label: id,
@@ -265,7 +265,7 @@ function routeScoreProblem(blocked: boolean, net: string): NativeBoardPackProble
     const a = makePrimitive('A', -4);
     const b = makePrimitive('B', 4);
     return {
-        version: 5,
+        version: 6,
         grid: 0.25,
         clearance: 0.25,
         searchWidth: 32,
@@ -293,10 +293,10 @@ function routeScoreProblem(blocked: boolean, net: string): NativeBoardPackProble
     };
 }
 
-function minimalProblem(): NativeBoardPackProblemV5 {
+function minimalProblem(): NativeBoardPackProblemV6 {
     const primitive = minimalPrimitive();
     return {
-        version: 5,
+        version: 6,
         grid: 0.5,
         clearance: 0.2,
         searchWidth: 32,

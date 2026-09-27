@@ -7,7 +7,7 @@ import { componentBox } from '../src/pcb-layout/pcb-auto-place/geometry.ts';
 import { createPlacementReport } from '../src/pcb-layout/pcb-auto-place/placement-report.ts';
 import type { PlacementInput, Placement, PlacementReport } from '../src/types/pcb/layout-model.ts';
 import type { PlacementPrimitive } from '../src/pcb-layout/pcb-auto-place-v2/primitives.ts';
-import { boardAlignmentPolicy, boardAlignmentScore } from '../src/pcb-layout/pcb-auto-place-v2/board-alignment.ts';
+import { boardAlignmentPolicy, boardAlignmentScore, footprintOrientationOffset } from '../src/pcb-layout/pcb-auto-place-v2/board-alignment.ts';
 import { buildPlacementGraph } from '../src/pcb-layout/pcb-auto-place/placement-graph.ts';
 import { encodeNativeBoardPackProblem } from '../src/pcb-layout/pcb-auto-place-v2/native/encode-board-problem.ts';
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
@@ -136,4 +136,44 @@ test('native and TS early alignment scores agree, anchors validated, rotated can
     const ps=found.states.flatMap(s=>s.placements??[]);
     assert.equal(ps.length,2);
     assert.ok(Math.min(Math.abs(ps[0].x-ps[1].x),Math.abs(ps[0].y-ps[1].y))<=.15);
+});
+
+test('orientation uses main ICs, independently of larger alignment anchors, and normalizes library angle',()=>{
+    const {input,roots}=telemetry(),policy=boardAlignmentPolicy(input,roots);
+    const charge=policy.pairs.find(p=>p.anchorA==='R38')!;
+    assert.equal(charge.orientation?.a,'U16');assert.equal(charge.orientation?.b,'U20');
+    const hv=policy.pairs.find(p=>p.anchorA==='L4')!;
+    assert.equal(hv.orientation?.a,'U17');assert.equal(hv.orientation?.b,'U13');
+    const u1=input.components.find(c=>c.designator==='U1')!,u2=input.components.find(c=>c.designator==='U2')!;
+    assert.equal(footprintOrientationOffset(u1,u2),270);
+    const bottom=roots.map(r=>({...r,placements:r.placements.map(p=>({...p,layer:'bottom' as const}))}));
+    const bottomPair=boardAlignmentPolicy(input,bottom).pairs.find(p=>p.orientation?.a==='U2')!;
+    assert.equal(bottomPair.orientation!.offset,-90);
+    const copy=structuredClone(u1);
+    copy.footprint.pads=copy.footprint.pads.map(p=>({...p,x:-p.y*1.1+20,y:p.x*.95-3}));
+    assert.equal(footprintOrientationOffset(u1,copy),90);
+    // A reflected pad numbering is not equivalent to a rotation.
+    copy.footprint.pads=copy.footprint.pads.map(p=>({...p,x:-p.x}));
+    assert.equal(footprintOrientationOffset(u1,copy),undefined);
+});
+
+test('orientation bonus is soft, bounded, and matches Rust at 0, 90, 180 and normalized angles',()=>{
+    const {input,roots}=simple(),policy={...boardAlignmentPolicy(input,roots),weight:0,orientationWeight:120};
+    const addon=loadNativeBoardPacker();
+    let parallelScore=0;
+    for(const angle of [0,90,180,270]){
+        const rs=structuredClone(roots);rs[1].placements[0].rotate=angle;
+        const problem=encodeNativeBoardPackProblem({node:buildPlacementGraph(input).root,primitives:rs.map(p=>({...p,locked:true})),relations:[],options:{
+            grid:.5,clearance:.2,bounds:{left:-49,right:49,top:-49,bottom:49},board:input.board,
+            componentByDesignator:new Map(input.components.map(c=>[c.designator,c])),softAlignment:policy}});
+        const delta=addon.solveBoardPacked(problem).rank.score-addon.solveBoardPacked({...problem,softAlignment:undefined}).rank.score;
+        assert.ok(Math.abs(delta-boardAlignmentScore(rs,policy))<1e-6);
+        if(angle===0)parallelScore=delta;
+        if(angle===90)assert.ok(Math.abs(delta-parallelScore/2)<1e-6);
+        if(angle===180)assert.ok(Math.abs(delta)<1e-6);
+        assert.deepEqual(addon.solveBoardPacked(problem).states.map(s=>s.rotation),[0,0]);
+    }
+    policy.pairs[0].orientation!.offset=90;
+    const rs=structuredClone(roots);rs[0].placements[0].rotate=90;
+    assert.ok(Math.abs(boardAlignmentScore(rs,policy)-parallelScore)<1e-6);
 });

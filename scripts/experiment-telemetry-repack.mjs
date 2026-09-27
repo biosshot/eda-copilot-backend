@@ -6,6 +6,7 @@ import {createHash} from 'node:crypto';
 import {buildPlacementGraph} from '../src/pcb-layout/pcb-auto-place/placement-graph.ts';
 import {createClearanceResolver} from '../src/pcb-layout/pcb-auto-place/clearance-resolver.ts';
 import {solveBoardPrimitives} from '../src/pcb-layout/pcb-auto-place-v2/board-solver.ts';
+import {withBoardPackerCapture,solveBoardPackedPrimitivesRust} from '../src/pcb-layout/pcb-auto-place-v2/board-packer-engine.ts';
 import {unionPrimitive} from '../src/pcb-layout/pcb-auto-place-v2/primitives.ts';
 import {refineBoardAlignment} from '../src/pcb-layout/pcb-auto-place-v2/board-alignment.ts';
 import {refinePostPlacementAsync} from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
@@ -29,10 +30,14 @@ const childPrimitives=graph.root.children.filter(n=>n.kind!=='pad').map(n=>{
 const diagnostics=[];
 process.env.PCB_BOARD_PACKER_PROFILE='1';
 const start=performance.now();
-const packed=solveBoardPrimitives({input,graph,node:graph.root,childPrimitives,
+const hypotheses=[];
+const packed=withBoardPackerCapture(p=>{
+    const solved=solveBoardPackedPrimitivesRust(p);
+    hypotheses.push({roots:solved.result,rank:solved.rank,alignment:p.options.softAlignment,spacing:p.options.softSpacing});
+},()=>solveBoardPrimitives({input,graph,node:graph.root,childPrimitives,
     grid:input.solverOptions.placementGridStep??.5,clearance:input.board.clearances.component,
     componentByDesignator:new Map(input.components.map(c=>[c.designator,c])),blockRoleByName:new Map(input.blocks.map(b=>[b.name,b.role])),
-    clearanceResolver:createClearanceResolver(input),compactness:input.solverOptions.compactness??'normal',diagnostics});
+    clearanceResolver:createClearanceResolver(input),compactness:input.solverOptions.compactness??'normal',diagnostics}));
 tree.root=unionPrimitive('board','board','board',graph.root.id,packed);
 const fixed=new Map(input.components.flatMap(c=>{const p=createFixedPlacement(input,c);return p?[[c.designator,p]]:[];}));
 const legalized=tree.root.placements.map(p=>fixed.get(p.designator)??p);
@@ -41,7 +46,7 @@ const aligned=refineBoardAlignment(input,packed,refined.placements);
 const placements=aligned.placements;
 const report=createPlacementReport(input,placements,[...diagnostics,...refined.diagnostics,...aligned.diagnostics].map(d=>({...d,code:'v2_solver'})));
 const layout=createPcbLayout(input,placements);
-const result={placements,layout,report,ms:performance.now()-start,metrics:placementMetrics(input,placements),
+const result={placements,layout,report,hypotheses,ms:performance.now()-start,metrics:placementMetrics(input,placements),
     reusedLocalPortfolios:{source,sha256:createHash('sha256').update(raw).digest('hex')},
     stages:[{name:'01-v2-tree',placements:tree.root.placements,data:tree},{name:'03-v2-post-place',placements:refined.placements,data:refined},{name:'03b-v2-board-alignment',placements,data:aligned}]};
 writeFileSync(`${outputDir}/${tag}.json`,JSON.stringify(result,null,2));
