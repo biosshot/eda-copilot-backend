@@ -1,0 +1,561 @@
+{
+  "block": "lte_power",
+  "variant": {
+    "id": "combined",
+    "label": "Все четыре изменения",
+    "equal": true,
+    "core": true,
+    "branch": true,
+    "scarcity": true,
+    "frontier": true,
+    "owner": true,
+    "access": true,
+    "groups": "all"
+  },
+  "ms": 17629.7541,
+  "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff",
+  "inventory": true,
+  "orientation": true,
+  "validation": {
+    "ok": true,
+    "violations": []
+  },
+  "metrics": {
+    "pairCount": 5,
+    "pairSum": 17.18,
+    "pairMax": 5.31,
+    "crossings": 1,
+    "foreignPadHits": 0,
+    "wireLength": 38.24,
+    "hpwl": 44.26,
+    "area": 160.7,
+    "aspect": 1.36
+  },
+  "allMetrics": {
+    "pairCount": 5,
+    "pairSum": 17.18,
+    "pairMax": 5.31,
+    "crossings": 3,
+    "foreignPadHits": 4,
+    "wireLength": 61.98,
+    "hpwl": 62.51,
+    "area": 160.7,
+    "aspect": 1.36
+  },
+  "pairs": [
+    {
+      "pair": "C33.1.U10.3",
+      "mm": 2.2772461439203266
+    },
+    {
+      "pair": "U10.11.L1.1",
+      "mm": 3.5540371987361072
+    },
+    {
+      "pair": "U10.9.L1.2",
+      "mm": 3.554155355355193
+    }
+  ],
+  "localHardPairs": [
+    {
+      "hint": {
+        "relation": "critical_pair",
+        "source": {
+          "type": "pin",
+          "designator": "U10",
+          "pin_number": "11"
+        },
+        "target": {
+          "type": "pin",
+          "designator": "L1",
+          "pin_number": "1"
+        },
+        "priority": "critical",
+        "maxDistance": 5,
+        "weightMultiplier": 2.8,
+        "hard": true,
+        "crossingPenalty": 2,
+        "preferFacingPads": true,
+        "core": true,
+        "block": "lte_switch"
+      },
+      "mm": 3.5540371987361072
+    },
+    {
+      "hint": {
+        "relation": "critical_pair",
+        "source": {
+          "type": "pin",
+          "designator": "U10",
+          "pin_number": "9"
+        },
+        "target": {
+          "type": "pin",
+          "designator": "L1",
+          "pin_number": "2"
+        },
+        "priority": "critical",
+        "maxDistance": 5,
+        "weightMultiplier": 2.8,
+        "hard": true,
+        "crossingPenalty": 2,
+        "preferFacingPads": true,
+        "core": true,
+        "block": "lte_switch"
+      },
+      "mm": 3.554155355355193
+    }
+  ],
+  "hardPairsOk": true,
+  "placements": [
+    {
+      "designator": "U10",
+      "x": -0.832,
+      "y": 1,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "L1",
+      "x": 3.538,
+      "y": 1,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R42",
+      "x": -4.253,
+      "y": -1.716,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C33",
+      "x": -4.252,
+      "y": 1.811,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R27",
+      "x": 2.693,
+      "y": 5.369,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R28",
+      "x": -2.529,
+      "y": 5.455,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C34",
+      "x": -0.029,
+      "y": -2.492,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C35",
+      "x": -0.529,
+      "y": -4.701,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R29",
+      "x": -4.252,
+      "y": -5.641,
+      "rotate": 90,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C36",
+      "x": -0.03,
+      "y": 5.369,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:lte_power",
+      "message": "Experimental independent placement: cap_cluster:50; electrical constraints retained"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:lte_power",
+      "message": "Block postrefine: 0 moves, 22 ms"
+    }
+  ],
+  "captures": [
+    {
+      "ms": 17485.771800000002,
+      "rank": {
+        "hardCount": 0,
+        "hardSeverity": 0,
+        "score": 2771.784518919214
+      },
+      "members": [
+        {
+          "label": "C34",
+          "members": [
+            "C34"
+          ]
+        },
+        {
+          "label": "C35",
+          "members": [
+            "C35"
+          ]
+        },
+        {
+          "label": "core_pairs:lte_switch",
+          "members": [
+            "U10",
+            "L1"
+          ]
+        },
+        {
+          "label": "C33",
+          "members": [
+            "C33"
+          ]
+        },
+        {
+          "label": "C36",
+          "members": [
+            "C36"
+          ]
+        },
+        {
+          "label": "R27",
+          "members": [
+            "R27"
+          ]
+        },
+        {
+          "label": "R28",
+          "members": [
+            "R28"
+          ]
+        },
+        {
+          "label": "R29",
+          "members": [
+            "R29"
+          ]
+        },
+        {
+          "label": "R42",
+          "members": [
+            "R42"
+          ]
+        }
+      ],
+      "order": [
+        [
+          "U10",
+          "L1"
+        ],
+        [
+          "R42"
+        ],
+        [
+          "C33"
+        ],
+        [
+          "R27"
+        ],
+        [
+          "R28"
+        ],
+        [
+          "C34"
+        ],
+        [
+          "C35"
+        ],
+        [
+          "R29"
+        ],
+        [
+          "C36"
+        ]
+      ],
+      "relations": [
+        {
+          "id": "connects_net:pad:U10.1->net:LTE_PS::",
+          "kind": "net",
+          "from": "pad:U10.1",
+          "to": "net:LTE_PS",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R42.2->net:LTE_PS::",
+          "kind": "net",
+          "from": "pad:R42.2",
+          "to": "net:LTE_PS",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U10.3->net:LTE_AUX::",
+          "kind": "net",
+          "from": "pad:U10.3",
+          "to": "net:LTE_AUX",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:C33.1->net:LTE_AUX::",
+          "kind": "net",
+          "from": "pad:C33.1",
+          "to": "net:LTE_AUX",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U10.5->net:LTE_FB::",
+          "kind": "net",
+          "from": "pad:U10.5",
+          "to": "net:LTE_FB",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R28.1->net:LTE_FB::",
+          "kind": "net",
+          "from": "pad:R28.1",
+          "to": "net:LTE_FB",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R27.2->net:LTE_FB::",
+          "kind": "net",
+          "from": "pad:R27.2",
+          "to": "net:LTE_FB",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U10.9->net:LTE_L2::",
+          "kind": "net",
+          "from": "pad:U10.9",
+          "to": "net:LTE_L2",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:L1.2->net:LTE_L2::",
+          "kind": "net",
+          "from": "pad:L1.2",
+          "to": "net:LTE_L2",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U10.11->net:LTE_L1::",
+          "kind": "net",
+          "from": "pad:U10.11",
+          "to": "net:LTE_L1",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:L1.1->net:LTE_L1::",
+          "kind": "net",
+          "from": "pad:L1.1",
+          "to": "net:LTE_L1",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:U10->pad:U6.55:near:24",
+          "kind": "hint",
+          "from": "component:U10",
+          "to": "pad:U6.55",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 140,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:pad:U10.11->pad:L1.1:critical_pair:42",
+          "kind": "critical_pair",
+          "from": "pad:U10.11",
+          "to": "pad:L1.1",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 672,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:U10.9->pad:L1.2:critical_pair:43",
+          "kind": "critical_pair",
+          "from": "pad:U10.9",
+          "to": "pad:L1.2",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 672,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:C36.1->pad:U10.7:critical_pair:46",
+          "kind": "critical_pair",
+          "from": "pad:C36.1",
+          "to": "pad:U10.7",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 4,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:pad:U10.7->pad:U6.55:critical_pair:49",
+          "kind": "critical_pair",
+          "from": "pad:U10.7",
+          "to": "pad:U6.55",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 480,
+          "effect": "move_from",
+          "maxDistance": 20,
+          "satelliteAnchor": false,
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:component:C34->pad:U10.12:cap_cluster:50",
+          "kind": "hint",
+          "from": "component:C34",
+          "to": "pad:U10.12",
+          "relation": "cap_cluster",
+          "priority": "critical",
+          "hard": true,
+          "weight": 240,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:C35->pad:U10.12:cap_cluster:50",
+          "kind": "hint",
+          "from": "component:C35",
+          "to": "pad:U10.12",
+          "relation": "cap_cluster",
+          "priority": "critical",
+          "hard": true,
+          "weight": 240,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "island_target:island:cap_cluster:50->pad:U10.12:::released:component:C34:pad:U10.12",
+          "kind": "island_target",
+          "from": "component:C34",
+          "to": "pad:U10.12",
+          "priority": "critical",
+          "hard": true,
+          "weight": 35,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "island_target:island:cap_cluster:50->pad:U10.12:::released:component:C35:pad:U10.12",
+          "kind": "island_target",
+          "from": "component:C35",
+          "to": "pad:U10.12",
+          "priority": "critical",
+          "hard": true,
+          "weight": 35,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        }
+      ],
+      "experiments": {
+        "netCandidates": true,
+        "stableNetWeight": true,
+        "reducedHull": true,
+        "smoothAspect": true,
+        "frontierOrder": true,
+        "padOwnerCandidates": true,
+        "localAccess": true,
+        "orderEqualCritical": true,
+        "orderCoreAffinity": true,
+        "orderBranching": true,
+        "orderScarcity": true,
+        "candidateClearance": true,
+        "candidateRings": true,
+        "padCrossings": true,
+        "longNets": true,
+        "extraPasses": true,
+        "pairSwaps": true,
+        "reinsertPair": true,
+        "keepDenseAccess": true,
+        "ignoredNets": [
+          "GND",
+          "V_MEAS_N",
+          "I_OUT",
+          "HARVEST_P"
+        ],
+        "routingMetric": "micro"
+      }
+    }
+  ]
+}

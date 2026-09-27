@@ -1,0 +1,242 @@
+[
+  {
+    "block": "lte_power",
+    "variant": "base",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "lte_power",
+    "variant": "equal",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "lte_power",
+    "variant": "core",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "lte_power",
+    "variant": "branch",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "lte_power",
+    "variant": "scarcity",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "lte_power",
+    "variant": "combined",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "logic_power",
+    "variant": "base",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "logic_power",
+    "variant": "equal",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "logic_power",
+    "variant": "core",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "logic_power",
+    "variant": "branch",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "logic_power",
+    "variant": "scarcity",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "logic_power",
+    "variant": "combined",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "adc",
+    "variant": "base",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "adc",
+    "variant": "equal",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "adc",
+    "variant": "core",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "adc",
+    "variant": "branch",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "adc",
+    "variant": "scarcity",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "adc",
+    "variant": "combined",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "current_iso",
+    "variant": "base",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "current_iso",
+    "variant": "equal",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "current_iso",
+    "variant": "core",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "current_iso",
+    "variant": "branch",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "current_iso",
+    "variant": "scarcity",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "current_iso",
+    "variant": "combined",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "usb_charge",
+    "variant": "base",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "usb_charge",
+    "variant": "equal",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "usb_charge",
+    "variant": "core",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "usb_charge",
+    "variant": "branch",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "usb_charge",
+    "variant": "scarcity",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  },
+  {
+    "block": "usb_charge",
+    "variant": "combined",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  }
+]

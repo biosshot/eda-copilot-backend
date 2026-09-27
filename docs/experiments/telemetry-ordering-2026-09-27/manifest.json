@@ -1,0 +1,20 @@
+{
+  "sourceCommit": "9037bb4",
+  "scope": "Telemetry local subtrees only; no full board",
+  "runs": 30,
+  "inputHashes": [
+    "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459"
+  ],
+  "nativeHashes": [
+    "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff"
+  ],
+  "validation": {
+    "localRunsPassed": 30,
+    "rustPassed": 52,
+    "rustIgnored": 1,
+    "targetedTsPassed": 9,
+    "typecheck": true,
+    "build": true
+  },
+  "defaultsChanged": false
+}

@@ -1,0 +1,376 @@
+{
+  "block": "usb_charge",
+  "variant": {
+    "id": "combined",
+    "label": "Все четыре изменения",
+    "equal": true,
+    "core": true,
+    "branch": true,
+    "scarcity": true,
+    "frontier": true,
+    "owner": true,
+    "access": true,
+    "groups": "all"
+  },
+  "ms": 18197.1263,
+  "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff",
+  "inventory": true,
+  "orientation": true,
+  "validation": {
+    "ok": true,
+    "violations": []
+  },
+  "metrics": {
+    "pairCount": 6,
+    "pairSum": 20.02,
+    "pairMax": 4.67,
+    "crossings": 0,
+    "foreignPadHits": 0,
+    "wireLength": 30.19,
+    "hpwl": 35.46,
+    "area": 180.93,
+    "aspect": 1.06
+  },
+  "allMetrics": {
+    "pairCount": 6,
+    "pairSum": 20.02,
+    "pairMax": 4.67,
+    "crossings": 4,
+    "foreignPadHits": 6,
+    "wireLength": 57.11,
+    "hpwl": 54.1,
+    "area": 180.93,
+    "aspect": 1.06
+  },
+  "pairs": [],
+  "localHardPairs": [],
+  "hardPairsOk": true,
+  "placements": [
+    {
+      "designator": "U11",
+      "x": 0,
+      "y": -0.001,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R37",
+      "x": -0.534,
+      "y": -3.736,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R36",
+      "x": 0.466,
+      "y": -5.973,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R32",
+      "x": 3.734,
+      "y": 3.499,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R34",
+      "x": -3.735,
+      "y": 2.249,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R33",
+      "x": 0,
+      "y": 6.001,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R35",
+      "x": -0.25,
+      "y": 3.735,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C43",
+      "x": 4.493,
+      "y": 0.249,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C42",
+      "x": -4.635,
+      "y": -1.513,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:usb_charge",
+      "message": "Block postrefine: 0 moves, 32 ms"
+    }
+  ],
+  "captures": [
+    {
+      "ms": 18151.48,
+      "rank": {
+        "hardCount": 0,
+        "hardSeverity": 0,
+        "score": 3094.9183613745763
+      },
+      "members": [
+        {
+          "label": "U11",
+          "members": [
+            "U11"
+          ]
+        },
+        {
+          "label": "C42",
+          "members": [
+            "C42"
+          ]
+        },
+        {
+          "label": "C43",
+          "members": [
+            "C43"
+          ]
+        },
+        {
+          "label": "R32",
+          "members": [
+            "R32"
+          ]
+        },
+        {
+          "label": "R33",
+          "members": [
+            "R33"
+          ]
+        },
+        {
+          "label": "R34",
+          "members": [
+            "R34"
+          ]
+        },
+        {
+          "label": "R35",
+          "members": [
+            "R35"
+          ]
+        },
+        {
+          "label": "R36",
+          "members": [
+            "R36"
+          ]
+        },
+        {
+          "label": "R37",
+          "members": [
+            "R37"
+          ]
+        }
+      ],
+      "order": [
+        [
+          "U11"
+        ],
+        [
+          "R37"
+        ],
+        [
+          "R36"
+        ],
+        [
+          "R32"
+        ],
+        [
+          "R34"
+        ],
+        [
+          "R33"
+        ],
+        [
+          "R35"
+        ],
+        [
+          "C43"
+        ],
+        [
+          "C42"
+        ]
+      ],
+      "relations": [
+        {
+          "id": "connects_net:pad:U11.12->net:USB_ILIM::",
+          "kind": "net",
+          "from": "pad:U11.12",
+          "to": "net:USB_ILIM",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R34.1->net:USB_ILIM::",
+          "kind": "net",
+          "from": "pad:R34.1",
+          "to": "net:USB_ILIM",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U11.14->net:USB_TIMER::",
+          "kind": "net",
+          "from": "pad:U11.14",
+          "to": "net:USB_TIMER",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R35.1->net:USB_TIMER::",
+          "kind": "net",
+          "from": "pad:R35.1",
+          "to": "net:USB_TIMER",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U11.15->net:USB_ITERM::",
+          "kind": "net",
+          "from": "pad:U11.15",
+          "to": "net:USB_ITERM",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R33.1->net:USB_ITERM::",
+          "kind": "net",
+          "from": "pad:R33.1",
+          "to": "net:USB_ITERM",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U11.16->net:USB_ISET::",
+          "kind": "net",
+          "from": "pad:U11.16",
+          "to": "net:USB_ISET",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R32.1->net:USB_ISET::",
+          "kind": "net",
+          "from": "pad:R32.1",
+          "to": "net:USB_ISET",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:U11->component:J5:near:34",
+          "kind": "hint",
+          "from": "component:U11",
+          "to": "component:J5",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 140,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:pad:C42.1->pad:U11.10:critical_pair:62",
+          "kind": "critical_pair",
+          "from": "pad:C42.1",
+          "to": "pad:U11.10",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:pad:C43.1->pad:U11.2:critical_pair:63",
+          "kind": "critical_pair",
+          "from": "pad:C43.1",
+          "to": "pad:U11.2",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        }
+      ],
+      "experiments": {
+        "netCandidates": true,
+        "stableNetWeight": true,
+        "reducedHull": true,
+        "smoothAspect": true,
+        "frontierOrder": true,
+        "padOwnerCandidates": true,
+        "localAccess": true,
+        "orderEqualCritical": true,
+        "orderCoreAffinity": true,
+        "orderBranching": true,
+        "orderScarcity": true,
+        "candidateClearance": true,
+        "candidateRings": true,
+        "padCrossings": true,
+        "longNets": true,
+        "extraPasses": true,
+        "pairSwaps": true,
+        "reinsertPair": true,
+        "keepDenseAccess": true,
+        "ignoredNets": [
+          "GND",
+          "V_MEAS_N",
+          "I_OUT",
+          "HARVEST_P"
+        ],
+        "routingMetric": "micro"
+      }
+    }
+  ]
+}

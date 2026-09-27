@@ -1,0 +1,1024 @@
+{
+  "block": "current_iso",
+  "variant": {
+    "id": "branch",
+    "label": "Три варианта следующей детали",
+    "branch": true,
+    "frontier": true,
+    "owner": true,
+    "access": true,
+    "groups": "all"
+  },
+  "ms": 83841.9931,
+  "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "nativeHash": "7ff48d74bd63b32d24a770d3a4c30a9169e1e10ee5e26507b214f76a93cb83ff",
+  "inventory": true,
+  "orientation": true,
+  "validation": {
+    "ok": true,
+    "violations": []
+  },
+  "metrics": {
+    "pairCount": 1,
+    "pairSum": 5.18,
+    "pairMax": 5.18,
+    "crossings": 2,
+    "foreignPadHits": 2,
+    "wireLength": 47.69,
+    "hpwl": 52.9,
+    "area": 394.58,
+    "aspect": 1.44
+  },
+  "allMetrics": {
+    "pairCount": 1,
+    "pairSum": 5.18,
+    "pairMax": 5.18,
+    "crossings": 6,
+    "foreignPadHits": 6,
+    "wireLength": 80.84,
+    "hpwl": 82.85,
+    "area": 394.58,
+    "aspect": 1.44
+  },
+  "pairs": [
+    {
+      "pair": "C9.1.U2.6",
+      "mm": 6.307560208194607
+    },
+    {
+      "pair": "C9.2.U2.7",
+      "mm": 6.257752769964631
+    },
+    {
+      "pair": "C13.1.U2.1",
+      "mm": 2.752066314607989
+    },
+    {
+      "pair": "C15.1.U2.5",
+      "mm": 2.699349329005047
+    }
+  ],
+  "localHardPairs": [],
+  "hardPairsOk": true,
+  "placements": [
+    {
+      "designator": "U2",
+      "x": -2,
+      "y": 2.5,
+      "rotate": 90,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C13",
+      "x": 6.103,
+      "y": 7.624,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C15",
+      "x": 6.103,
+      "y": 2.311,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C12",
+      "x": -9.423,
+      "y": 4.145,
+      "rotate": 90,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R7",
+      "x": 7.103,
+      "y": -1.963,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C9",
+      "x": 8.554,
+      "y": 2.311,
+      "rotate": 90,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C14",
+      "x": 6.103,
+      "y": 5.853,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C16",
+      "x": 6.103,
+      "y": 4.082,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C10",
+      "x": -9.423,
+      "y": 1.014,
+      "rotate": 90,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C11",
+      "x": -11.194,
+      "y": 1.014,
+      "rotate": 90,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R8",
+      "x": 2.75,
+      "y": -5.214,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R6",
+      "x": 8.005,
+      "y": -6.214,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:current_hdc",
+      "message": "Experimental independent placement: passive_net:I_OUT; electrical constraints retained"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:current_hdc",
+      "message": "Block postrefine: 0 moves, 8 ms"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:current_hldo",
+      "message": "Experimental independent placement: passive_net:I_OUT; electrical constraints retained"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:current_hldo",
+      "message": "Block postrefine: 0 moves, 3 ms"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:current_secondary",
+      "message": "Block postrefine: 0 moves, 4 ms"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:current_iso",
+      "message": "Experimental independent placement: current_hdc, current_hldo, current_secondary; electrical constraints retained"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:current_iso",
+      "message": "Block postrefine: 1 moves, 112 ms"
+    }
+  ],
+  "captures": [
+    {
+      "ms": 25.541000000000054,
+      "rank": {
+        "hardCount": 0,
+        "hardSeverity": 0,
+        "score": 147.161086
+      },
+      "members": [
+        {
+          "label": "C13",
+          "members": [
+            "C13"
+          ]
+        },
+        {
+          "label": "C14",
+          "members": [
+            "C14"
+          ]
+        }
+      ],
+      "order": [
+        [
+          "C13"
+        ],
+        [
+          "C14"
+        ]
+      ],
+      "relations": [
+        {
+          "id": "hint:pad:C13.1->pad:U2.1:critical_pair:60",
+          "kind": "critical_pair",
+          "from": "pad:C13.1",
+          "to": "pad:U2.1",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        }
+      ],
+      "experiments": {
+        "netCandidates": true,
+        "stableNetWeight": true,
+        "reducedHull": true,
+        "smoothAspect": true,
+        "frontierOrder": true,
+        "padOwnerCandidates": true,
+        "localAccess": true,
+        "orderEqualCritical": false,
+        "orderCoreAffinity": false,
+        "orderBranching": true,
+        "orderScarcity": false,
+        "candidateClearance": true,
+        "candidateRings": true,
+        "padCrossings": true,
+        "longNets": true,
+        "extraPasses": true,
+        "pairSwaps": true,
+        "reinsertPair": true,
+        "keepDenseAccess": true,
+        "ignoredNets": [
+          "GND",
+          "V_MEAS_N",
+          "I_OUT",
+          "HARVEST_P"
+        ],
+        "routingMetric": "micro"
+      }
+    },
+    {
+      "ms": 26.72300000000007,
+      "rank": {
+        "hardCount": 0,
+        "hardSeverity": 0,
+        "score": 147.161086
+      },
+      "members": [
+        {
+          "label": "C15",
+          "members": [
+            "C15"
+          ]
+        },
+        {
+          "label": "C16",
+          "members": [
+            "C16"
+          ]
+        }
+      ],
+      "order": [
+        [
+          "C15"
+        ],
+        [
+          "C16"
+        ]
+      ],
+      "relations": [
+        {
+          "id": "hint:pad:C15.1->pad:U2.5:critical_pair:61",
+          "kind": "critical_pair",
+          "from": "pad:C15.1",
+          "to": "pad:U2.5",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        }
+      ],
+      "experiments": {
+        "netCandidates": true,
+        "stableNetWeight": true,
+        "reducedHull": true,
+        "smoothAspect": true,
+        "frontierOrder": true,
+        "padOwnerCandidates": true,
+        "localAccess": true,
+        "orderEqualCritical": false,
+        "orderCoreAffinity": false,
+        "orderBranching": true,
+        "orderScarcity": false,
+        "candidateClearance": true,
+        "candidateRings": true,
+        "padCrossings": true,
+        "longNets": true,
+        "extraPasses": true,
+        "pairSwaps": true,
+        "reinsertPair": true,
+        "keepDenseAccess": true,
+        "ignoredNets": [
+          "GND",
+          "V_MEAS_N",
+          "I_OUT",
+          "HARVEST_P"
+        ],
+        "routingMetric": "micro"
+      }
+    },
+    {
+      "ms": 143.76380000000006,
+      "rank": {
+        "hardCount": 0,
+        "hardSeverity": 0,
+        "score": 362.31785199999996
+      },
+      "members": [
+        {
+          "label": "C10",
+          "members": [
+            "C10"
+          ]
+        },
+        {
+          "label": "C11",
+          "members": [
+            "C11"
+          ]
+        },
+        {
+          "label": "C12",
+          "members": [
+            "C12"
+          ]
+        }
+      ],
+      "order": [
+        [
+          "C10"
+        ],
+        [
+          "C12"
+        ],
+        [
+          "C11"
+        ]
+      ],
+      "relations": [
+        {
+          "id": "hint:pad:C11.2->pad:C10.2:near:",
+          "kind": "hint",
+          "from": "pad:C11.2",
+          "to": "pad:C10.2",
+          "relation": "near",
+          "priority": "critical",
+          "hard": false,
+          "weight": 240,
+          "effect": "move_from",
+          "maxDistance": 8,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        }
+      ],
+      "experiments": {
+        "netCandidates": true,
+        "stableNetWeight": true,
+        "reducedHull": true,
+        "smoothAspect": true,
+        "frontierOrder": true,
+        "padOwnerCandidates": true,
+        "localAccess": true,
+        "orderEqualCritical": false,
+        "orderCoreAffinity": false,
+        "orderBranching": true,
+        "orderScarcity": false,
+        "candidateClearance": true,
+        "candidateRings": true,
+        "padCrossings": true,
+        "longNets": true,
+        "extraPasses": true,
+        "pairSwaps": true,
+        "reinsertPair": true,
+        "keepDenseAccess": true,
+        "ignoredNets": [
+          "GND",
+          "V_MEAS_N",
+          "I_OUT",
+          "HARVEST_P"
+        ],
+        "routingMetric": "micro"
+      }
+    },
+    {
+      "ms": 83502.32710000001,
+      "rank": {
+        "hardCount": 0,
+        "hardSeverity": 0,
+        "score": 16976.068349139165
+      },
+      "members": [
+        {
+          "label": "C13",
+          "members": [
+            "C13"
+          ]
+        },
+        {
+          "label": "C14",
+          "members": [
+            "C14"
+          ]
+        },
+        {
+          "label": "C15",
+          "members": [
+            "C15"
+          ]
+        },
+        {
+          "label": "C16",
+          "members": [
+            "C16"
+          ]
+        },
+        {
+          "label": "C10",
+          "members": [
+            "C10"
+          ]
+        },
+        {
+          "label": "C12",
+          "members": [
+            "C12"
+          ]
+        },
+        {
+          "label": "C11",
+          "members": [
+            "C11"
+          ]
+        },
+        {
+          "label": "U2",
+          "members": [
+            "U2"
+          ]
+        },
+        {
+          "label": "R6",
+          "members": [
+            "R6"
+          ]
+        },
+        {
+          "label": "R7",
+          "members": [
+            "R7"
+          ]
+        },
+        {
+          "label": "R8",
+          "members": [
+            "R8"
+          ]
+        },
+        {
+          "label": "C9",
+          "members": [
+            "C9"
+          ]
+        }
+      ],
+      "order": [
+        [
+          "U2"
+        ],
+        [
+          "C13"
+        ],
+        [
+          "C15"
+        ],
+        [
+          "C12"
+        ],
+        [
+          "R7"
+        ],
+        [
+          "C9"
+        ],
+        [
+          "C14"
+        ],
+        [
+          "C16"
+        ],
+        [
+          "C10"
+        ],
+        [
+          "C11"
+        ],
+        [
+          "R8"
+        ],
+        [
+          "R6"
+        ]
+      ],
+      "relations": [
+        {
+          "id": "connects_net:pad:C14.1->net:U2_HDC::",
+          "kind": "net",
+          "from": "pad:C14.1",
+          "to": "net:U2_HDC",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:C13.1->net:U2_HDC::",
+          "kind": "net",
+          "from": "pad:C13.1",
+          "to": "net:U2_HDC",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U2.1->net:U2_HDC::",
+          "kind": "net",
+          "from": "pad:U2.1",
+          "to": "net:U2_HDC",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U2.3->net:U2_HDC::",
+          "kind": "net",
+          "from": "pad:U2.3",
+          "to": "net:U2_HDC",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:C16.1->net:U2_HLDO::",
+          "kind": "net",
+          "from": "pad:C16.1",
+          "to": "net:U2_HLDO",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:C15.1->net:U2_HLDO::",
+          "kind": "net",
+          "from": "pad:C15.1",
+          "to": "net:U2_HLDO",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U2.5->net:U2_HLDO::",
+          "kind": "net",
+          "from": "pad:U2.5",
+          "to": "net:U2_HLDO",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:C12.1->net:U2_LDC::",
+          "kind": "net",
+          "from": "pad:C12.1",
+          "to": "net:U2_LDC",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U2.13->net:U2_LDC::",
+          "kind": "net",
+          "from": "pad:U2.13",
+          "to": "net:U2_LDC",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U2.16->net:U2_LDC::",
+          "kind": "net",
+          "from": "pad:U2.16",
+          "to": "net:U2_LDC",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R7.2->net:I_FILTER_P::",
+          "kind": "net",
+          "from": "pad:R7.2",
+          "to": "net:I_FILTER_P",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:C9.1->net:I_FILTER_P::",
+          "kind": "net",
+          "from": "pad:C9.1",
+          "to": "net:I_FILTER_P",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U2.6->net:I_FILTER_P::",
+          "kind": "net",
+          "from": "pad:U2.6",
+          "to": "net:I_FILTER_P",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R8.2->net:I_FILTER_N::",
+          "kind": "net",
+          "from": "pad:R8.2",
+          "to": "net:I_FILTER_N",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:C9.2->net:I_FILTER_N::",
+          "kind": "net",
+          "from": "pad:C9.2",
+          "to": "net:I_FILTER_N",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U2.7->net:I_FILTER_N::",
+          "kind": "net",
+          "from": "pad:U2.7",
+          "to": "net:I_FILTER_N",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:block:current_hdc->pad:U2.1:near::released:component:C13:pad:U2.1",
+          "kind": "hint",
+          "from": "component:C13",
+          "to": "pad:U2.1",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 140,
+          "effect": "move_from",
+          "satelliteAnchor": true,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:block:current_hdc->pad:U2.1:near::released:component:C14:pad:U2.1",
+          "kind": "hint",
+          "from": "component:C14",
+          "to": "pad:U2.1",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 140,
+          "effect": "move_from",
+          "satelliteAnchor": true,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:block:current_hldo->pad:U2.5:near::released:component:C15:pad:U2.5",
+          "kind": "hint",
+          "from": "component:C15",
+          "to": "pad:U2.5",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 140,
+          "effect": "move_from",
+          "satelliteAnchor": true,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:block:current_hldo->pad:U2.5:near::released:component:C16:pad:U2.5",
+          "kind": "hint",
+          "from": "component:C16",
+          "to": "pad:U2.5",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 140,
+          "effect": "move_from",
+          "satelliteAnchor": true,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C10:pad:U2.12",
+          "kind": "hint",
+          "from": "component:C10",
+          "to": "pad:U2.12",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 93.33333333333333,
+          "effect": "move_from",
+          "satelliteAnchor": true,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C12:pad:U2.12",
+          "kind": "hint",
+          "from": "component:C12",
+          "to": "pad:U2.12",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 93.33333333333333,
+          "effect": "move_from",
+          "satelliteAnchor": true,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:block:current_secondary->pad:U2.12:near::released:component:C11:pad:U2.12",
+          "kind": "hint",
+          "from": "component:C11",
+          "to": "pad:U2.12",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 93.33333333333333,
+          "effect": "move_from",
+          "satelliteAnchor": true,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:U2->component:J2:near:37",
+          "kind": "hint",
+          "from": "component:U2",
+          "to": "component:J2",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 140,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:U4->component:U2:near:41",
+          "kind": "hint",
+          "from": "component:U4",
+          "to": "component:U2",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 140,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:pad:J2.1->pad:R6.1:critical_pair:56",
+          "kind": "critical_pair",
+          "from": "pad:J2.1",
+          "to": "pad:R6.1",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 480,
+          "effect": "move_from",
+          "maxDistance": 12,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:pad:J2.2->pad:R6.2:critical_pair:57",
+          "kind": "critical_pair",
+          "from": "pad:J2.2",
+          "to": "pad:R6.2",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 12,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:pad:C13.1->pad:U2.1:critical_pair:60",
+          "kind": "critical_pair",
+          "from": "pad:C13.1",
+          "to": "pad:U2.1",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:pad:C15.1->pad:U2.5:critical_pair:61",
+          "kind": "critical_pair",
+          "from": "pad:C15.1",
+          "to": "pad:U2.5",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:pad:R6.1->pad:R7.1:critical_pair:66",
+          "kind": "critical_pair",
+          "from": "pad:R6.1",
+          "to": "pad:R7.1",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": false,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 10,
+          "satelliteAnchor": false,
+          "pathId": "kelvin_P",
+          "pathShape": "flexible",
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:R7.2->pad:U2.6:critical_pair:67",
+          "kind": "critical_pair",
+          "from": "pad:R7.2",
+          "to": "pad:U2.6",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": false,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "pathId": "kelvin_P",
+          "pathShape": "flexible",
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:R6.2->pad:R8.1:critical_pair:68",
+          "kind": "critical_pair",
+          "from": "pad:R6.2",
+          "to": "pad:R8.1",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": false,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 10,
+          "satelliteAnchor": false,
+          "pathId": "kelvin_N",
+          "pathShape": "flexible",
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:R8.2->pad:U2.7:critical_pair:69",
+          "kind": "critical_pair",
+          "from": "pad:R8.2",
+          "to": "pad:U2.7",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": false,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "pathId": "kelvin_N",
+          "pathShape": "flexible",
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:U2.11->pad:R14.1:critical_pair:79",
+          "kind": "critical_pair",
+          "from": "pad:U2.11",
+          "to": "pad:R14.1",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": false,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 20,
+          "satelliteAnchor": false,
+          "pathId": "current_P",
+          "pathShape": "flexible",
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:U2.10->pad:R15.1:critical_pair:81",
+          "kind": "critical_pair",
+          "from": "pad:U2.10",
+          "to": "pad:R15.1",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": false,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 20,
+          "satelliteAnchor": false,
+          "pathId": "current_N",
+          "pathShape": "flexible",
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:C11.2->pad:C10.2:near:",
+          "kind": "hint",
+          "from": "pad:C11.2",
+          "to": "pad:C10.2",
+          "relation": "near",
+          "priority": "critical",
+          "hard": false,
+          "weight": 240,
+          "effect": "move_from",
+          "maxDistance": 8,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        }
+      ],
+      "experiments": {
+        "netCandidates": true,
+        "stableNetWeight": true,
+        "reducedHull": true,
+        "smoothAspect": true,
+        "frontierOrder": true,
+        "padOwnerCandidates": true,
+        "localAccess": true,
+        "orderEqualCritical": false,
+        "orderCoreAffinity": false,
+        "orderBranching": true,
+        "orderScarcity": false,
+        "candidateClearance": true,
+        "candidateRings": true,
+        "padCrossings": true,
+        "longNets": true,
+        "extraPasses": true,
+        "pairSwaps": true,
+        "reinsertPair": true,
+        "keepDenseAccess": true,
+        "ignoredNets": [
+          "GND",
+          "V_MEAS_N",
+          "I_OUT",
+          "HARVEST_P"
+        ],
+        "routingMetric": "micro"
+      }
+    }
+  ]
+}
