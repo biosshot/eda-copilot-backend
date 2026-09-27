@@ -1,0 +1,103 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
+import { alignmentAnchor, alignmentHardHintsNoWorse, blockSimilarity, findAlignmentPairs, refineBoardAlignment, BOARD_ALIGNMENT_POLICY } from '../src/pcb-layout/pcb-auto-place-v2/board-alignment.ts';
+import { componentBox } from '../src/pcb-layout/pcb-auto-place/geometry.ts';
+import { createPlacementReport } from '../src/pcb-layout/pcb-auto-place/placement-report.ts';
+import type { PlacementInput, Placement, PlacementReport } from '../src/types/pcb/layout-model.ts';
+import type { PlacementPrimitive } from '../src/pcb-layout/pcb-auto-place-v2/primitives.ts';
+
+function telemetry() {
+    const input = JSON.parse(readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json','utf8')) as PlacementInput;
+    const saved = JSON.parse(gunzipSync(readFileSync('docs/experiments/telemetry-anchored-2026-09-27/after-final.json.gz')).toString());
+    return { input, placements: saved.placements as Placement[], roots: saved.stages[0].data.root.children as PlacementPrimitive[] };
+}
+test('structural similarity tolerates a diode and ignores reference/net names and enumeration order', () => {
+    const { input } = telemetry();
+    const block = (name:string) => input.components.filter(c=>c.block_name===name);
+    const a=block('hv_pos'), b=block('hv_neg');
+    assert.ok(blockSimilarity(a,b) > .9);
+    assert.equal(alignmentAnchor(a),'L3'); assert.equal(alignmentAnchor(b),'L4');
+    const renamed = a.toReversed().map(c=>({...c,designator:c.designator+'99',pins:c.pins.toReversed().map(p=>({...p,signal_name:p.signal_name?'renamed:'+p.signal_name:p.signal_name}))}));
+    assert.ok(Math.abs(blockSimilarity(a,renamed)-1) < 1e-9);
+    assert.ok(blockSimilarity(a,block('usb_charge')) < BOARD_ALIGNMENT_POLICY.similarity);
+    assert.ok(blockSimilarity(block('esp_enable'),block('temperature')) < BOARD_ALIGNMENT_POLICY.similarity);
+});
+test('anchor falls back to a substantial IC or block center when sizes are equal', () => {
+    const { input }=telemetry();
+    const caps=input.components.filter(c=>['C49','C50'].includes(c.designator));
+    assert.equal(alignmentAnchor(caps),undefined);
+    const ic=structuredClone(input.components.find(c=>c.designator==='U13')!);
+    ic.footprint.width=caps[0].footprint.width;ic.footprint.height=caps[0].footprint.height;
+    assert.equal(alignmentAnchor([...caps,ic]),'U13');
+});
+function simple() {
+    const { input }=telemetry();
+    input.components=input.components.filter(c=>['L3','L4'].includes(c.designator));
+    input.components.forEach(c=>c.pins.forEach(p=>p.signal_name=''));
+    input.blocks=input.components.map(c=>({name:c.block_name!,role:'power',description:'',component_designators:[c.designator]}));
+    input.modules=[];input.hints=[];input.paths=[];input.refineGroups=[];input.boardHoles=[];input.constraintRegions=[];
+    input.board.outline={type:'rect',width:100,height:100};
+    const placements:Placement[]=input.components.map((c,i)=>({designator:c.designator,x:i?10:-10,y:i?1:0,rotate:0,layer:'top',score:0}));
+    const roots:PlacementPrimitive[]=placements.map((p,i)=>{
+        const bbox=componentBox(input.components[i],p);
+        return {id:p.designator,label:p.designator,sourceNodeId:p.designator,kind:'block',bbox,width:bbox.right-bbox.left,height:bbox.bottom-bbox.top,
+            placements:[p],children:[],connectionPoints:[]};
+    });
+    return {input,roots,placements};
+}
+test('soft pass aligns a free pair and is deterministic without mutating inputs',()=>{
+    const {input,roots,placements}=simple();
+    const original=JSON.stringify({input,roots,placements});
+    const result=refineBoardAlignment(input,roots,placements);
+    assert.ok(result.moves.length>0);assert.equal(result.after[0].error,0);
+    assert.equal(createPlacementReport(input,result.placements).ok,true);
+    assert.deepEqual(refineBoardAlignment(input,roots,placements).placements,result.placements);
+    assert.equal(JSON.stringify({input,roots,placements}),original);
+});
+test('fixed anchors stay exact and similarity does not attract distant or opposite-side blocks',()=>{
+    const {input,roots,placements}=simple();
+    roots[0].locked=true;
+    input.components[0].pcb.fixedPlacement={...placements[0]};
+    const result=refineBoardAlignment(input,roots,placements);
+    assert.equal(result.after[0].error,0);assert.deepEqual(result.placements[0],placements[0]);
+    assert.equal(findAlignmentPairs(input,roots,placements.map((p,i)=>i?{...p,x:35}:p)).length,0);
+    assert.equal(findAlignmentPairs(input,roots,placements.map((p,i)=>i?{...p,layer:'bottom'}:p)).length,0);
+});
+test('alignment rejects a collision at the desired axis and retains safe geometry',()=>{
+    const {input,roots,placements}=simple();
+    roots[0].locked=true; input.components[0].pcb.fixedPlacement={...placements[0]};
+    // At y=1 the right footprint clears this keepout; at y=0 it collides.
+    input.constraintRegions=[{name:'under-right',layers:['top'],allowBlocks:[],box:{left:0,right:30,top:-20,bottom:-5.8}}];
+    assert.equal(createPlacementReport(input,placements).ok,true);
+    const result=refineBoardAlignment(input,roots,placements);
+    assert.ok(result.after[0].error>0);
+    assert.equal(createPlacementReport(input,result.placements).ok,true);
+});
+test('hard hint guard rejects deepening an existing violation, even if its key stays unchanged',()=>{
+    const {input,placements}=simple();
+    const before=createPlacementReport(input,placements);
+    const hint={relation:'clearance' as const,source:{type:'block' as const,block_name:'a'},target:{type:'block' as const,block_name:'b'},min:3.2,priority:'critical' as const};
+    before.hintViolations=[{hint,actual:1.6,expected:'>= 3.2mm clearance'}];
+    const after:PlacementReport={...before,hintViolations:[{hint,actual:.9,expected:'>= 3.2mm clearance'}]};
+    assert.equal(alignmentHardHintsNoWorse(before,after),false);
+    after.hintViolations[0].actual=2;
+    assert.equal(alignmentHardHintsNoWorse(before,after),true);
+});
+test('Telemetry pass preserves hard hint magnitudes, fixed poses, and rigid block interiors',()=>{
+    const {input,roots,placements}=telemetry();
+    const result=refineBoardAlignment(input,roots,placements);
+    assert.ok(result.pairs.some(p=>p.anchorA==='L4'&&p.anchorB==='L3'));
+    assert.ok(alignmentHardHintsNoWorse(createPlacementReport(input,placements),createPlacementReport(input,result.placements)));
+    for(const root of roots){
+        const diffs=root.placements.map(p=>{
+            const a=placements.find(q=>q.designator===p.designator)!,b=result.placements.find(q=>q.designator===p.designator)!;
+            assert.equal(a.rotate,b.rotate);assert.equal(a.layer,b.layer);
+            assert.ok(Math.hypot(a.x-b.x,a.y-b.y)<=3.001);
+            if(input.components.find(c=>c.designator===p.designator)!.pcb.fixedPlacement)assert.deepEqual(a,b);
+            return [b.x-a.x,b.y-a.y];
+        });
+        assert.ok(diffs.every(d=>Math.abs(d[0]-diffs[0][0])<.002&&Math.abs(d[1]-diffs[0][1])<.002));
+    }
+});

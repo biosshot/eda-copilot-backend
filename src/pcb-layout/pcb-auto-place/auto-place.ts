@@ -11,6 +11,7 @@ import { createPlacementReport } from './placement-report.ts';
 import { buildPlacementGraph } from './placement-graph.ts';
 import { solvePlacementTreeBottomUp, solvePlacementTreeBottomUpAsync } from '../pcb-auto-place-v2/tree-solver.ts';
 import { refinePostPlacement, refinePostPlacementAsync } from '../pcb-auto-place-v2/post-place-refiner.ts';
+import { refineBoardAlignment } from '../pcb-auto-place-v2/board-alignment.ts';
 import { emitPcbLayoutProgress, type PcbLayoutProgressReporter } from '../progress.ts';
 export { PCB_PLACEMENT_ASSUMPTIONS, PlacementError } from '#types/pcb/layout-model.ts';
 export { createPcbLayout } from './layout.ts';
@@ -73,7 +74,10 @@ function autoPlacePcbInternal(
     const refined = refinePostPlacement(input, legalized);
     solverDiagnostics.push(...refined.diagnostics);
     pushStage('03-v2-post-place', refined.placements, postPlaceStageData(refined));
-    const placements = normalizePlacementScores(refined.placements);
+    const aligned = refineBoardAlignment(input, tree.root.children, refined.placements);
+    solverDiagnostics.push(...aligned.diagnostics.map(d => ({ ...d, code: 'v2_solver' })));
+    pushStage('03b-v2-board-alignment', aligned.placements, aligned);
+    const placements = normalizePlacementScores(aligned.placements);
     const report = createPlacementReport(input, placements, solverDiagnostics);
     if (hasHardGeometryViolations(report)) {
         pushStage('04-v2-invalid-final', placements, report);
@@ -117,7 +121,10 @@ async function autoPlacePcbInternalAsync(
     });
     solverDiagnostics.push(...refined.diagnostics);
     pushStage('03-v2-post-place', refined.placements, postPlaceStageData(refined));
-    const placements = normalizePlacementScores(refined.placements);
+    const aligned = refineBoardAlignment(input, tree.root.children, refined.placements);
+    solverDiagnostics.push(...aligned.diagnostics.map(d => ({ ...d, code: 'v2_solver' })));
+    pushStage('03b-v2-board-alignment', aligned.placements, aligned);
+    const placements = normalizePlacementScores(aligned.placements);
     const report = createPlacementReport(input, placements, solverDiagnostics);
     if (hasHardGeometryViolations(report)) {
         pushStage('04-v2-invalid-final', placements, report);
