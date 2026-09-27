@@ -1,0 +1,293 @@
+{
+  "fixture": "bank-CNTRL_ACESS_MAX",
+  "mode": "full-micro",
+  "tag": "local-fixes",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "1",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 244877.6778,
+  "blockMs": 234705.6591,
+  "blockSolves": 41,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 956.3529000000003,
+      "pairSum": 166.3267893701602,
+      "pairMax": 26.51802308336728,
+      "score": 51233257.57357985
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 956.3529000000003,
+      "pairSum": 166.3267893701602,
+      "pairMax": 26.51802308336728,
+      "score": 51233298.91821678
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 941.4611000000001,
+      "pairSum": 154.7655798783994,
+      "pairMax": 23.438336657920075,
+      "score": 50652354.340585105
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 941.4611000000001,
+      "pairSum": 154.7655798783994,
+      "pairMax": 23.438336657920075,
+      "score": 50652354.340585105
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "67021b5bf5dd7650b2ae59527978f521581b0b8b7824cbcf4a05fd9e9e110975",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "connected_pin_without_pad",
+      "message": "USB1: connected pin(s) 1 (GND), 2 (VUSB), 4 ($1N2051), 5 (DN), 6 (DP), 7 (DN), 8 (DP), 10 ($1N2056), 11 (VUSB), 12 (GND) have no footprint pad; geometric connection scoring and ratsnest cannot represent them.",
+      "nodeId": "component:USB1"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block poe_input: ignoredRatsnestSignals hides local connections PGND [RJ1.7, RJ1.8, C18.1]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:poe_input"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block buck_12v: ignoredRatsnestSignals hides local connections PGND [U16.3, U16.5, U16.6, D2.2, C2.2, L2.1, C3.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block protected_12v: ignoredRatsnestSignals hides local connections PGND [P1.2, D4.2, D5.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:protected_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 47 ms",
+      "nodeId": "tree:block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 81 ms",
+      "nodeId": "tree:block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 72 ms",
+      "nodeId": "tree:block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 6 ms",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 8 ms",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 5 ms",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 23 ms",
+      "nodeId": "tree:block:ldo_3v3p"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 26 ms",
+      "nodeId": "tree:block:ldo_3v3p"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 23 ms",
+      "nodeId": "tree:block:ldo_3v3p"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:rs485_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 9 ms",
+      "nodeId": "tree:block:rs485_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 9 ms",
+      "nodeId": "tree:block:rs485_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 32 ms",
+      "nodeId": "tree:block:rs485_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 26 ms",
+      "nodeId": "tree:block:rs485_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 34 ms",
+      "nodeId": "tree:block:rs485_core"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module power_tree before board placement: wide module 69.5mm uses 0.882 of usable board width; tall module 59.777mm uses 1.017 of usable board height; wide sparse bbox 69.5mm, fill 0.467; tall sparse bbox 59.777mm, fill 0.467; module area 4154.502mm2 is large and sparse, fill 0.467; locked module has fixed/edge child plus movable siblings (bottom, right); fixed/edge-mounted children inside multi-family module (bottom, right); fixed/edge-mounted children target multiple board edges (bottom, right); low pad density 0.019 pads/mm2",
+      "nodeId": "tree:module:power_tree"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module esp32_system before board placement: locked module has fixed/edge child plus movable siblings (left); low pad density 0.077 pads/mm2",
+      "nodeId": "tree:module:esp32_system"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module field_io before board placement: locked module has fixed/edge child plus movable siblings (left)",
+      "nodeId": "tree:module:field_io"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected linear_5v in board context: variant 0, shift 0,1.6mm; score 52954317.39 -> 52885962.51",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected mcu_core in board context: variant 1, shift -0.8,0mm; score 52885962.51 -> 51697670.02",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected manual_latch in board context: variant 0, shift 1.6,0mm; score 51697670.02 -> 51673733.35",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected rs485_bus in board context: variant 0, shift 0,0.8mm; score 51673733.35 -> 51673359.04",
+      "nodeId": "tree:block:rs485_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected ldo_3v3p in board context: variant 0, shift 0,-1.6mm; score 51673359.04 -> 51233257.57",
+      "nodeId": "tree:block:ldo_3v3p"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 9 blocks, 180 candidates, 5 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}

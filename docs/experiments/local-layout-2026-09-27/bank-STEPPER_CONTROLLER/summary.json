@@ -1,0 +1,215 @@
+{
+  "fixture": "bank-STEPPER_CONTROLLER",
+  "mode": "full-micro",
+  "tag": "local-fixes",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "1",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 164591.9309,
+  "blockMs": 143321.32660000006,
+  "blockSolves": 30,
+  "ok": false,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 1181.5760999999995,
+      "pairSum": 200.97321745384903,
+      "pairMax": 40.24199705904269,
+      "score": 28542585.920814767
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 1181.5779,
+      "pairSum": 200.97335875890886,
+      "pairMax": 40.24199705904269,
+      "score": 28542587.28828352
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 1191.7648,
+      "pairSum": 210.59810350981334,
+      "pairMax": 40.24199705904269,
+      "score": 28538459.832758047
+    },
+    {
+      "stage": "04-v2-invalid-final",
+      "hpwl": 1191.7648,
+      "pairSum": 210.59810350981334,
+      "pairMax": 40.24199705904269,
+      "score": 28538459.832758047
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "a5e1f92ab24cba93aa93aced1e845b669e96877531b58444fa4c6804ba917629",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "unattached_passive_block",
+      "message": "Passive block status_leds has no parent or external placement relation, so board packing may place it in any free area. Make it a satellite with placement: \"satellite\", attachTo, and preferably anchor: pin(...), or add an external near(), veryNear(), or criticalPair() using comp()/pin() targets.",
+      "nodeId": "block:status_leds"
+    },
+    {
+      "severity": "warning",
+      "code": "net_only_local_placement",
+      "message": "Block usb_pd_input (12 components) has no explicit internal placement relations. Generic net-based placement remains active; add pin-level rules for any required switching loops, decoupling or sensitive paths that the netlist alone cannot specify.",
+      "nodeId": "block:usb_pd_input"
+    },
+    {
+      "severity": "warning",
+      "code": "net_only_local_placement",
+      "message": "Block mcu_core (7 components) has no explicit internal placement relations. Generic net-based placement remains active; add pin-level rules for any required switching loops, decoupling or sensitive paths that the netlist alone cannot specify.",
+      "nodeId": "block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "net_only_local_placement",
+      "message": "Block encoder_sensor (5 components) has no explicit internal placement relations. Generic net-based placement remains active; add pin-level rules for any required switching loops, decoupling or sensitive paths that the netlist alone cannot specify.",
+      "nodeId": "block:encoder_sensor"
+    },
+    {
+      "severity": "warning",
+      "code": "net_only_local_placement",
+      "message": "Block driver_core (5 components) has no explicit internal placement relations. Generic net-based placement remains active; add pin-level rules for any required switching loops, decoupling or sensitive paths that the netlist alone cannot specify.",
+      "nodeId": "block:driver_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 12 ms",
+      "nodeId": "tree:block:ideal_diode_20v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 9 ms",
+      "nodeId": "tree:block:ideal_diode_20v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 7 ms",
+      "nodeId": "tree:block:ideal_diode_20v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 7 ms",
+      "nodeId": "tree:block:buck_feedback"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 7 ms",
+      "nodeId": "tree:block:buck_feedback"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 7 ms",
+      "nodeId": "tree:block:buck_feedback"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 21 ms",
+      "nodeId": "tree:block:buck_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 18 ms",
+      "nodeId": "tree:block:buck_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 19 ms",
+      "nodeId": "tree:block:buck_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 12 ms",
+      "nodeId": "tree:block:mcu_boot_en"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:mcu_boot_en"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 9 ms",
+      "nodeId": "tree:block:mcu_boot_en"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 26 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 18 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 20 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 22 ms",
+      "nodeId": "tree:block:status_leds"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 10 ms",
+      "nodeId": "tree:block:status_leds"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 9 ms",
+      "nodeId": "tree:block:status_leds"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 18 ms",
+      "nodeId": "tree:block:driver_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:driver_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:driver_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 7 blocks, 155 candidates, 0 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}

@@ -1,0 +1,83 @@
+{
+  "fixture": "bank-BAND_V3_SIGNAL_PATH",
+  "mode": "full-micro",
+  "tag": "local-fixes",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "1",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 3208.4813,
+  "blockMs": 2675.3713999999995,
+  "blockSolves": 8,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 42.7776,
+      "pairSum": 22.46679071947814,
+      "pairMax": 15.098500355995625,
+      "score": 20444.019188684688
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 42.7776,
+      "pairSum": 22.46679071947814,
+      "pairMax": 15.098500355995625,
+      "score": 20444.019188684688
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 42.7776,
+      "pairSum": 22.46679071947814,
+      "pairMax": 15.098500355995625,
+      "score": 20444.019188684688
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 42.7776,
+      "pairSum": 22.46679071947814,
+      "pairMax": 15.098500355995625,
+      "score": 20444.019188684688
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "4114ae959dcccda1ddd726f05f0792f76de5cc065e747e5264758ffed86edbc5",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 12 ms",
+      "nodeId": "tree:block:rf_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:rf_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:rf_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected rf_core in board context: variant 0, shift 0,-0.5mm; score 20480.83 -> 20444.02",
+      "nodeId": "tree:block:rf_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 1 blocks, 26 candidates, 1 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ],
+  "node": "v26.5.0"
+}

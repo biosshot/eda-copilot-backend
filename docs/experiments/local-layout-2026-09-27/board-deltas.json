@@ -1,0 +1,122 @@
+[
+  {
+    "name": "Telemetry",
+    "ok": true,
+    "beforeOk": true,
+    "wire": 9.91,
+    "pad": 3,
+    "line": 33
+  },
+  {
+    "name": "ESPower",
+    "ok": true,
+    "beforeOk": true,
+    "wire": 30.17,
+    "pad": -2,
+    "line": 5
+  },
+  {
+    "name": "esp32c3",
+    "ok": true,
+    "beforeOk": true,
+    "wire": -0.13,
+    "pad": -6,
+    "line": -1
+  },
+  {
+    "name": "bank-BAND_V3_SIGNAL_PATH",
+    "ok": true,
+    "beforeOk": true,
+    "wire": -4.97,
+    "pad": -2,
+    "line": 0
+  },
+  {
+    "name": "bank-CNTRL_ACESS_MAX",
+    "ok": true,
+    "beforeOk": true,
+    "wire": 24.61,
+    "pad": 10,
+    "line": 14
+  },
+  {
+    "name": "bank-CONNECTOR_OUTWARD",
+    "ok": true,
+    "beforeOk": true,
+    "wire": 0,
+    "pad": 0,
+    "line": 0
+  },
+  {
+    "name": "bank-CONNECTOR_ROTATIONS",
+    "ok": true,
+    "beforeOk": true,
+    "wire": 0,
+    "pad": 0,
+    "line": 0
+  },
+  {
+    "name": "bank-CONNECTOR_ROTATIONS_90",
+    "ok": true,
+    "beforeOk": true,
+    "wire": 0,
+    "pad": 0,
+    "line": 0
+  },
+  {
+    "name": "bank-dc-dc",
+    "ok": true,
+    "beforeOk": true,
+    "wire": 2.4,
+    "pad": 1,
+    "line": 0
+  },
+  {
+    "name": "bank-ELRS",
+    "ok": true,
+    "beforeOk": true,
+    "wire": -1.86,
+    "pad": -8,
+    "line": -14
+  },
+  {
+    "name": "bank-ICM20948_v2",
+    "ok": true,
+    "beforeOk": true,
+    "wire": -41.18,
+    "pad": 6,
+    "line": -16
+  },
+  {
+    "name": "bank-rp2040_base",
+    "ok": true,
+    "beforeOk": true,
+    "wire": -18.06,
+    "pad": 0,
+    "line": -6
+  },
+  {
+    "name": "bank-STEPPER_CONTROLLER",
+    "ok": false,
+    "beforeOk": false,
+    "wire": 86.77,
+    "pad": 12,
+    "line": -1
+  },
+  {
+    "name": "bank-ThunderF722",
+    "ok": false,
+    "beforeOk": false,
+    "wire": 39.41,
+    "pad": -21,
+    "line": 14
+  },
+  {
+    "name": "bank-TPS63060DSCR",
+    "ok": true,
+    "beforeOk": true,
+    "wire": -3.29,
+    "pad": -5,
+    "line": -2
+  }
+]

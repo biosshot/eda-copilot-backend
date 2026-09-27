@@ -1,0 +1,473 @@
+{
+  "fixture": "Telemetry",
+  "mode": "full-micro",
+  "tag": "local-fixes",
+  "candidates": "2",
+  "blockPostRefine": "1",
+  "padCrossings": "1",
+  "settings": [
+    "full",
+    "micro",
+    "1"
+  ],
+  "ms": 422040.7778,
+  "blockMs": 341306.6077999999,
+  "blockSolves": 81,
+  "ok": true,
+  "fixedChanges": [],
+  "stageMetrics": [
+    {
+      "stage": "01-v2-tree",
+      "hpwl": 2952.2479999999982,
+      "pairSum": 882.8268127196263,
+      "pairMax": 66.88094104182446,
+      "score": 37189815.72169826
+    },
+    {
+      "stage": "02-v2-legalize",
+      "hpwl": 2952.2475499999987,
+      "pairSum": 882.8270269190169,
+      "pairMax": 66.88094104182446,
+      "score": 37189951.90022385
+    },
+    {
+      "stage": "03-v2-post-place",
+      "hpwl": 2938.3952499999987,
+      "pairSum": 876.5971870107728,
+      "pairMax": 66.88094104182446,
+      "score": 37184207.904515445
+    },
+    {
+      "stage": "04-v2-final",
+      "hpwl": 2938.3952499999987,
+      "pairSum": 876.5971870107728,
+      "pairMax": 66.88094104182446,
+      "score": 37184207.904515445
+    }
+  ],
+  "nativeHash": "d307267dc77a31d88b34fbdff7fc56fcf025a16b64593f0d6281af2d74f44255",
+  "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 7 ms",
+      "nodeId": "tree:block:usb_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:usb_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:usb_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:lte"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:lte"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:lte"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 17 ms",
+      "nodeId": "tree:block:uart"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 21 ms",
+      "nodeId": "tree:block:uart"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 20 ms",
+      "nodeId": "tree:block:uart"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:sim_support"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:sim_support"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:sim_support"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 46 ms",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 56 ms",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 30 ms",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 35 ms",
+      "nodeId": "tree:block:usb_charge"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 19 ms",
+      "nodeId": "tree:block:usb_charge"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 24 ms",
+      "nodeId": "tree:block:usb_charge"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 27 ms",
+      "nodeId": "tree:block:logic_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 12 ms",
+      "nodeId": "tree:block:logic_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 10 ms",
+      "nodeId": "tree:block:logic_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:voltage_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:voltage_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:voltage_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 48 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 31 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 37 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:current_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:current_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:current_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 26 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 31 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 31 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 346 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 450 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 245 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 6 ms",
+      "nodeId": "tree:block:afe_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 4 ms",
+      "nodeId": "tree:block:afe_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 4 ms",
+      "nodeId": "tree:block:afe_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 51 ms",
+      "nodeId": "tree:block:low_charge_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 42 ms",
+      "nodeId": "tree:block:low_charge_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 36 ms",
+      "nodeId": "tree:block:low_charge_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 54 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 33 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 31 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 28 ms",
+      "nodeId": "tree:block:low_charge_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 33 ms",
+      "nodeId": "tree:block:low_charge_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 34 ms",
+      "nodeId": "tree:block:low_charge_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected usb_input in board context: variant 0, shift -0.5,0mm; score 37522269.56 -> 37522098.97",
+      "nodeId": "tree:block:usb_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected current_iso in board context: variant 0, shift 0,-1mm; score 37522098.97 -> 37462147.08",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected current_secondary in board context: variant 0, shift -0.5,0mm; score 37462147.08 -> 37462137.93",
+      "nodeId": "tree:block:current_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected adc in board context: variant 0, shift 1,0mm; score 37462137.93 -> 37288610.20",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected adc_supply in board context: variant 0, shift -1,0mm; score 37288610.20 -> 37288428.81",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected voltage_iso in board context: variant 0, shift 0,0.5mm; score 37288428.81 -> 37265194.92",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected voltage_secondary in board context: variant 0, shift 0,1mm; score 37265194.92 -> 37264645.89",
+      "nodeId": "tree:block:voltage_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected lte_power in board context: variant 0, shift 0,1mm; score 37264645.89 -> 37261035.13",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected usb_charge in board context: variant 0, shift 0,-0.5mm; score 37261035.13 -> 37240981.55",
+      "nodeId": "tree:block:usb_charge"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected uart in board context: variant 0, shift 0.5,0mm; score 37240981.55 -> 37208307.80",
+      "nodeId": "tree:block:uart"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected afe_power in board context: variant 0, shift 0,-0.5mm; score 37208307.80 -> 37200418.54",
+      "nodeId": "tree:block:afe_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected sim_support in board context: variant 0, shift 1,0mm; score 37200418.54 -> 37189815.72",
+      "nodeId": "tree:block:sim_support"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 17 blocks, 343 candidates, 12 accepted",
+      "nodeId": "block-portfolio"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "J1: safe post-place improvement J1 rotate += 180; global score 37184207.905 -> 37183168.792. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J1\", [\"J1\"], { rotateBy: [180] }) if this fixed component may rotate.",
+      "nodeId": "post-place:J1",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "J2: safe post-place improvement J2 rotate += 180; global score 37184207.905 -> 37182034.136. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J2\", [\"J2\"], { rotateBy: [180] }) if this fixed component may rotate.",
+      "nodeId": "post-place:J2",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "J4: safe post-place improvement J4 rotate += 180; global score 37184207.905 -> 36878743.171. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J4\", [\"J4\"], { rotateBy: [180] }) if this fixed component may rotate.",
+      "nodeId": "post-place:J4",
+      "severity": "warning"
+    }
+  ],
+  "node": "v26.5.0"
+}

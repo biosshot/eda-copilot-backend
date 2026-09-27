@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600.096" height="600.096" viewBox="0 0 600.096 600.096">
+<rect x="0" y="0" width="600.096" height="600.096" fill="#f8fafc"/>
+<rect x="0.5" y="0.5" width="599.096" height="599.096" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+
+
+
+
+<g>
+  
+  
+  
+  
+  <polyline points="591.7692,546.0492 500.3292,546.0492" fill="none" stroke="#dc2626" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="546.0492,591.7692 546.0492,500.3292" fill="none" stroke="#dc2626" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="546.048" y="547.248" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">H4</text>
+  <text x="546.048" y="532.848" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="99.7692,546.0492 8.329199999999997,546.0492" fill="none" stroke="#dc2626" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="54.04919999999999,591.7692 54.04919999999999,500.3292" fill="none" stroke="#dc2626" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="54.047999999999995" y="547.248" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">H3</text>
+  <text x="54.047999999999995" y="532.848" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="591.7668,54.04919999999999 500.3268,54.04919999999999" fill="none" stroke="#dc2626" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="546.0468,99.7692 546.0468,8.329199999999997" fill="none" stroke="#dc2626" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="546.048" y="55.24799999999999" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">H2</text>
+  <text x="546.048" y="40.84799999999999" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g>
+  
+  
+  
+  
+  <polyline points="99.7692,54.04919999999999 8.329199999999997,54.04919999999999" fill="none" stroke="#dc2626" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="54.04919999999999,99.7692 54.04919999999999,8.329199999999997" fill="none" stroke="#dc2626" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="54.047999999999995" y="55.24799999999999" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">H1</text>
+  <text x="54.047999999999995" y="40.84799999999999" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g><polygon points="519.048,519.048 573.048,519.048 573.048,573.048 519.048,573.048" fill="#dc2626" opacity="0.9"/><circle cx="546.048" cy="546.048" r="24" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>H4.1 top</title></g>
+<g><polygon points="27.047999999999995,519.048 81.048,519.048 81.048,573.048 27.047999999999995,573.048" fill="#dc2626" opacity="0.9"/><circle cx="54.047999999999995" cy="546.048" r="24" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>H3.1 top</title></g>
+<g><polygon points="519.048,27.047999999999995 573.048,27.047999999999995 573.048,81.048 519.048,81.048" fill="#dc2626" opacity="0.9"/><circle cx="546.048" cy="54.047999999999995" r="24" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>H2.1 top</title></g>
+<g><polygon points="27.047999999999995,27.047999999999995 81.048,27.047999999999995 81.048,81.048 27.047999999999995,81.048" fill="#dc2626" opacity="0.9"/><circle cx="54.047999999999995" cy="54.047999999999995" r="24" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>H1.1 top</title></g>
+
+</svg>
