@@ -2,7 +2,7 @@ import type { PlacementInput, PlacementReport } from '#types/pcb/layout-model.ts
 import { createPlacementReport } from '../pcb-auto-place/placement-report.ts';
 import { blockPortfolioInternalScore } from './block-quality.ts';
 import { globalPostPlaceScore } from './post-place-refiner.ts';
-import { boardAlignmentPolicy, boardAlignmentScore, alignmentHardHintsNoWorse } from './board-alignment.ts';
+import { boardAlignmentPolicy, boardAlignmentScore, alignmentHardHintsNoWorse, boardElectricalQuality, boardElectricalRegression } from './board-alignment.ts';
 import { boardSpacingPenalty, boardSpacingPolicy } from './board-spacing.ts';
 import { encodeNativePostPlaceRefineProblem } from './native/encode-post-place-refine.ts';
 import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
@@ -29,6 +29,7 @@ export function choosePackedPortfolio(input: PlacementInput, candidates: Placeme
     let best = candidates[0];
     const alignment = boardAlignmentPolicy(input,best);
     const baselineReport = createPlacementReport(input,poses(best));
+    const baselineElectrical = boardElectricalQuality(input,poses(best));
     let score = globalPostPlaceScore(input, poses(best)) + blockPortfolioInternalScore(input, best) + boardSpacingPenalty(input,best,gap) + boardAlignmentScore(best,alignment);
     const constraints = encodeNativePostPlaceRefineProblem(input, poses(best), 1);
     const fixed = new Set(input.components.filter(c => c.pcb.fixedPlacement || c.pcb.edgeMount || c.pcb.edgePlace).map(c => c.designator));
@@ -39,16 +40,18 @@ export function choosePackedPortfolio(input: PlacementInput, candidates: Placeme
         if (candidate.some(p => fixed.has(p.designator) && ['x', 'y', 'rotate', 'layer'].some(k => p[k as keyof typeof p] !== baseline.get(p.designator)?.[k as keyof typeof p]))) continue;
         const next = globalPostPlaceScore(input, candidate) + blockPortfolioInternalScore(input, candidates[index]) + boardSpacingPenalty(input,candidates[index],gap) + boardAlignmentScore(candidates[index],alignment);
         const report = createPlacementReport(input,candidate);
+        const electricalRegression = boardElectricalRegression(baselineElectrical,boardElectricalQuality(input,candidate));
         const reason = next >= score-1e-6 ? 'score' : !report.ok ? 'geometry'
             : !alignmentHardHintsNoWorse(baselineReport,report) ? 'mandatory hint magnitude'
+            : electricalRegression ? electricalRegression
             : !loadNativeBoardPacker().validatePlacementChange(constraints,candidate) ? 'native constraints' : 'accepted';
         diagnostics.push({severity:'warning',nodeId:'block-portfolio-repack',message:
-            `Block portfolio hypothesis ${index}: ${reason}, score ${next.toFixed(2)}, alignment ${boardAlignmentScore(candidates[index],alignment).toFixed(2)}`});
+            `Board alignment proposal: ${reason}, score ${next.toFixed(2)}, alignment penalty ${boardAlignmentScore(candidates[index],alignment).toFixed(2)}`});
         if(reason !== 'accepted')continue;
         best = candidates[index]; score = next; selected = index;
     }
     diagnostics.push({ severity: 'warning', nodeId: 'block-portfolio-repack',
-        message: `Block portfolio repack: ${candidates.length} board hypotheses, selected ${selected}, score ${score.toFixed(2)}` });
+        message: `Board packaging: ${selected ? 'alignment proposal' : 'ordinary fallback'} selected, score ${score.toFixed(2)}` });
     return best;
 }
 

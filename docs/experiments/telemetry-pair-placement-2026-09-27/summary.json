@@ -1,0 +1,1110 @@
+{
+  "source": "docs/experiments/telemetry-orientation-2026-09-27/after.json.gz",
+  "inputSha256": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "nativeSha256": "e5ee1994fe2794b722abfff6aa82de335e699b8063300aa3eb375bf2c8a8241b",
+  "ms": 113815.0654,
+  "changed": 0,
+  "policy": {
+    "pairs": [
+      {
+        "a": "primitive:tree:block:isolated_supply_pos",
+        "b": "primitive:tree:block:isolated_supply_neg",
+        "similarity": 1,
+        "anchorA": "U14",
+        "anchorB": "U18",
+        "orientation": {
+          "a": "U14",
+          "b": "U18",
+          "offset": 0
+        }
+      },
+      {
+        "a": "primitive:tree:block:low_charge_pos",
+        "b": "primitive:tree:block:low_charge_neg",
+        "similarity": 1,
+        "anchorA": "R38",
+        "anchorB": "R44",
+        "orientation": {
+          "a": "U16",
+          "b": "U20",
+          "offset": 0
+        }
+      },
+      {
+        "a": "primitive:tree:block:hv_neg",
+        "b": "primitive:tree:block:hv_pos",
+        "similarity": 0.9538095238095238,
+        "anchorA": "L4",
+        "anchorB": "L3",
+        "orientation": {
+          "a": "U17",
+          "b": "U13",
+          "offset": 0
+        }
+      },
+      {
+        "a": "primitive:tree:block:current_iso",
+        "b": "primitive:tree:block:voltage_iso",
+        "similarity": 0.9222221874697777,
+        "anchorA": "U2",
+        "anchorB": "U1",
+        "orientation": {
+          "a": "U2",
+          "b": "U1",
+          "offset": 90
+        }
+      }
+    ],
+    "weight": 8,
+    "tolerance": 0.15,
+    "orientationWeight": 24
+  },
+  "checks": {
+    "finalHardHintsNoWorse": true,
+    "finalValidChange": true,
+    "finalElectricalRegression": null,
+    "proposalHardHintsNoWorse": false,
+    "proposalElectricalRegression": "wiring score"
+  },
+  "final": [
+    {
+      "tag": "before",
+      "metrics": {
+        "pairCount": 48,
+        "pairSum": 791.25,
+        "pairMax": 71.58,
+        "crossings": 299,
+        "foreignPadHits": 296,
+        "internalIcPadHits": 13,
+        "wireLength": 2392.86,
+        "hpwl": 2791.7,
+        "area": 9905.17,
+        "aspect": 1
+      },
+      "alignment": [
+        {
+          "a": "primitive:tree:block:isolated_supply_pos",
+          "b": "primitive:tree:block:isolated_supply_neg",
+          "similarity": 1,
+          "anchorA": "U14",
+          "anchorB": "U18",
+          "orientation": {
+            "a": "U14",
+            "b": "U18",
+            "offset": 0
+          },
+          "error": 8,
+          "orientationError": 0
+        },
+        {
+          "a": "primitive:tree:block:low_charge_pos",
+          "b": "primitive:tree:block:low_charge_neg",
+          "similarity": 1,
+          "anchorA": "R38",
+          "anchorB": "R44",
+          "orientation": {
+            "a": "U16",
+            "b": "U20",
+            "offset": 0
+          },
+          "error": 5.707000000000001,
+          "orientationError": 90
+        },
+        {
+          "a": "primitive:tree:block:hv_neg",
+          "b": "primitive:tree:block:hv_pos",
+          "similarity": 0.9538095238095238,
+          "anchorA": "L4",
+          "anchorB": "L3",
+          "orientation": {
+            "a": "U17",
+            "b": "U13",
+            "offset": 0
+          },
+          "error": 1.244,
+          "orientationError": 90
+        },
+        {
+          "a": "primitive:tree:block:current_iso",
+          "b": "primitive:tree:block:voltage_iso",
+          "similarity": 0.9222221874697777,
+          "anchorA": "U2",
+          "anchorB": "U1",
+          "orientation": {
+            "a": "U2",
+            "b": "U1",
+            "offset": 90
+          },
+          "error": 0.49599999999999866,
+          "orientationError": 0
+        }
+      ],
+      "penalty": 127.67583614843767,
+      "geometryOk": true,
+      "absoluteValid": false,
+      "mandatory": [
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "adc"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.21,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "low_charge_pos"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.65,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "low_charge_neg"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.78,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "lte"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 2.88,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "adc"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.57,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "logic_power"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.61,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "usb_charge"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 2.32,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "near",
+            "source": {
+              "type": "component",
+              "designator": "U6"
+            },
+            "target": {
+              "type": "component",
+              "designator": "J4"
+            },
+            "priority": "critical"
+          },
+          "actual": 23.72,
+          "expected": "<= 8mm"
+        }
+      ],
+      "fixedChanges": []
+    },
+    {
+      "tag": "after",
+      "metrics": {
+        "pairCount": 48,
+        "pairSum": 791.25,
+        "pairMax": 71.58,
+        "crossings": 299,
+        "foreignPadHits": 296,
+        "internalIcPadHits": 13,
+        "wireLength": 2392.86,
+        "hpwl": 2791.7,
+        "area": 9905.17,
+        "aspect": 1
+      },
+      "alignment": [
+        {
+          "a": "primitive:tree:block:isolated_supply_pos",
+          "b": "primitive:tree:block:isolated_supply_neg",
+          "similarity": 1,
+          "anchorA": "U14",
+          "anchorB": "U18",
+          "orientation": {
+            "a": "U14",
+            "b": "U18",
+            "offset": 0
+          },
+          "error": 8,
+          "orientationError": 0
+        },
+        {
+          "a": "primitive:tree:block:low_charge_pos",
+          "b": "primitive:tree:block:low_charge_neg",
+          "similarity": 1,
+          "anchorA": "R38",
+          "anchorB": "R44",
+          "orientation": {
+            "a": "U16",
+            "b": "U20",
+            "offset": 0
+          },
+          "error": 5.707000000000001,
+          "orientationError": 90
+        },
+        {
+          "a": "primitive:tree:block:hv_neg",
+          "b": "primitive:tree:block:hv_pos",
+          "similarity": 0.9538095238095238,
+          "anchorA": "L4",
+          "anchorB": "L3",
+          "orientation": {
+            "a": "U17",
+            "b": "U13",
+            "offset": 0
+          },
+          "error": 1.244,
+          "orientationError": 90
+        },
+        {
+          "a": "primitive:tree:block:current_iso",
+          "b": "primitive:tree:block:voltage_iso",
+          "similarity": 0.9222221874697777,
+          "anchorA": "U2",
+          "anchorB": "U1",
+          "orientation": {
+            "a": "U2",
+            "b": "U1",
+            "offset": 90
+          },
+          "error": 0.49599999999999866,
+          "orientationError": 0
+        }
+      ],
+      "penalty": 127.67583614843767,
+      "geometryOk": true,
+      "absoluteValid": false,
+      "mandatory": [
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "adc"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.21,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "low_charge_pos"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.65,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "low_charge_neg"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.78,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "lte"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 2.88,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "adc"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.57,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "logic_power"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.61,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "usb_charge"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 2.32,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "near",
+            "source": {
+              "type": "component",
+              "designator": "U6"
+            },
+            "target": {
+              "type": "component",
+              "designator": "J4"
+            },
+            "priority": "critical"
+          },
+          "actual": 23.72,
+          "expected": "<= 8mm"
+        }
+      ],
+      "fixedChanges": []
+    }
+  ],
+  "packed": [
+    {
+      "tag": "baseline",
+      "metrics": {
+        "pairCount": 48,
+        "pairSum": 802.58,
+        "pairMax": 71.58,
+        "crossings": 304,
+        "foreignPadHits": 299,
+        "internalIcPadHits": 13,
+        "wireLength": 2407.12,
+        "hpwl": 2811.73,
+        "area": 9905.25,
+        "aspect": 1
+      },
+      "alignment": [
+        {
+          "a": "primitive:tree:block:isolated_supply_pos",
+          "b": "primitive:tree:block:isolated_supply_neg",
+          "similarity": 1,
+          "anchorA": "U14",
+          "anchorB": "U18",
+          "orientation": {
+            "a": "U14",
+            "b": "U18",
+            "offset": 0
+          },
+          "error": 8,
+          "orientationError": 0
+        },
+        {
+          "a": "primitive:tree:block:low_charge_pos",
+          "b": "primitive:tree:block:low_charge_neg",
+          "similarity": 1,
+          "anchorA": "R38",
+          "anchorB": "R44",
+          "orientation": {
+            "a": "U16",
+            "b": "U20",
+            "offset": 0
+          },
+          "error": 5.707000000000001,
+          "orientationError": 90
+        },
+        {
+          "a": "primitive:tree:block:hv_neg",
+          "b": "primitive:tree:block:hv_pos",
+          "similarity": 0.9538095238095238,
+          "anchorA": "L4",
+          "anchorB": "L3",
+          "orientation": {
+            "a": "U17",
+            "b": "U13",
+            "offset": 0
+          },
+          "error": 1.366,
+          "orientationError": 90
+        },
+        {
+          "a": "primitive:tree:block:current_iso",
+          "b": "primitive:tree:block:voltage_iso",
+          "similarity": 0.9222221874697777,
+          "anchorA": "U2",
+          "anchorB": "U1",
+          "orientation": {
+            "a": "U2",
+            "b": "U1",
+            "offset": 90
+          },
+          "error": 0.49599999999999866,
+          "orientationError": 0
+        }
+      ],
+      "penalty": 128.60675424367577,
+      "geometryOk": true,
+      "absoluteValid": false,
+      "mandatory": [
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "adc"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.21,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "usb_charge"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.96,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "low_charge_pos"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.65,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "low_charge_neg"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.25,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "lte"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 2.76,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "adc"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.45,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "logic_power"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.49,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "usb_charge"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.2,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "near",
+            "source": {
+              "type": "component",
+              "designator": "U6"
+            },
+            "target": {
+              "type": "component",
+              "designator": "J4"
+            },
+            "priority": "critical"
+          },
+          "actual": 23.71,
+          "expected": "<= 8mm"
+        }
+      ],
+      "fixedChanges": [
+        "J2",
+        "J3",
+        "J4",
+        "J6"
+      ]
+    },
+    {
+      "tag": "proposal",
+      "metrics": {
+        "pairCount": 48,
+        "pairSum": 801.7,
+        "pairMax": 71.58,
+        "crossings": 306,
+        "foreignPadHits": 300,
+        "internalIcPadHits": 13,
+        "wireLength": 2419.84,
+        "hpwl": 2826.31,
+        "area": 9905.25,
+        "aspect": 1
+      },
+      "alignment": [
+        {
+          "a": "primitive:tree:block:isolated_supply_pos",
+          "b": "primitive:tree:block:isolated_supply_neg",
+          "similarity": 1,
+          "anchorA": "U14",
+          "anchorB": "U18",
+          "orientation": {
+            "a": "U14",
+            "b": "U18",
+            "offset": 0
+          },
+          "error": 6.5,
+          "orientationError": 0
+        },
+        {
+          "a": "primitive:tree:block:low_charge_pos",
+          "b": "primitive:tree:block:low_charge_neg",
+          "similarity": 1,
+          "anchorA": "R38",
+          "anchorB": "R44",
+          "orientation": {
+            "a": "U16",
+            "b": "U20",
+            "offset": 0
+          },
+          "error": 4.207000000000001,
+          "orientationError": 90
+        },
+        {
+          "a": "primitive:tree:block:hv_neg",
+          "b": "primitive:tree:block:hv_pos",
+          "similarity": 0.9538095238095238,
+          "anchorA": "L4",
+          "anchorB": "L3",
+          "orientation": {
+            "a": "U17",
+            "b": "U13",
+            "offset": 0
+          },
+          "error": 1.366,
+          "orientationError": 90
+        },
+        {
+          "a": "primitive:tree:block:current_iso",
+          "b": "primitive:tree:block:voltage_iso",
+          "similarity": 0.9222221874697777,
+          "anchorA": "U2",
+          "anchorB": "U1",
+          "orientation": {
+            "a": "U2",
+            "b": "U1",
+            "offset": 90
+          },
+          "error": 0.49599999999999866,
+          "orientationError": 0
+        }
+      ],
+      "penalty": 104.60675424367577,
+      "geometryOk": true,
+      "absoluteValid": false,
+      "mandatory": [
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "adc"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.21,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "usb_charge"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.75,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "low_charge_pos"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.65,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "low_charge_neg"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.25,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "lte"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 2.76,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "adc"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.45,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "logic_power"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.42,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "usb_charge"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.2,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "near",
+            "source": {
+              "type": "component",
+              "designator": "U6"
+            },
+            "target": {
+              "type": "component",
+              "designator": "J4"
+            },
+            "priority": "critical"
+          },
+          "actual": 23.71,
+          "expected": "<= 8mm"
+        }
+      ],
+      "fixedChanges": [
+        "J2",
+        "J3",
+        "J4",
+        "J6"
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "nodeId": "board",
+      "message": "Board soft spacing: 0.69mm extra, density 0.520, compactness scale 0.793",
+      "code": "v2_solver"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "board",
+      "message": "Board search alignment: 4 structural pairs; ordinary candidates and complete fallback retained; same block interiors",
+      "code": "v2_solver"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "block-portfolio-repack",
+      "message": "Board alignment proposal: score, score 16485465.12, alignment penalty 104.61",
+      "code": "v2_solver"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "block-portfolio-repack",
+      "message": "Board packaging: ordinary fallback selected, score 16198523.95",
+      "code": "v2_solver"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:voltage_iso",
+      "message": "Block portfolio selected voltage_iso in board context: variant 0, shift 0,0.5mm; score 16198523.95 -> 16161824.87",
+      "code": "v2_solver"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:esp_supply",
+      "message": "Block portfolio selected esp_supply in board context: variant 0, shift 0.5,0mm; score 16161824.87 -> 16161610.24",
+      "code": "v2_solver"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:lte_power",
+      "message": "Block portfolio selected lte_power in board context: variant 0, shift -1,0mm; score 16161610.24 -> 16137599.32",
+      "code": "v2_solver"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:hv_neg",
+      "message": "Block portfolio selected hv_neg in board context: variant 1, shift 0,1mm; score 16137599.32 -> 15942546.00",
+      "code": "v2_solver"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:hv_pos",
+      "message": "Block portfolio selected hv_pos in board context: variant 1, shift 0,0.5mm; score 15942546.00 -> 15885063.60",
+      "code": "v2_solver"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:usb_charge",
+      "message": "Block portfolio selected usb_charge in board context: variant 0, shift -1,0mm; score 15885063.60 -> 15744818.04",
+      "code": "v2_solver"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:logic_power",
+      "message": "Block portfolio selected logic_power in board context: variant 0, shift -1,0mm; score 15744818.04 -> 15711377.43",
+      "code": "v2_solver"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:low_charge_neg",
+      "message": "Block portfolio selected low_charge_neg in board context: variant 0, shift 1,0mm; score 15711377.43 -> 15710409.61",
+      "code": "v2_solver"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "block-portfolio",
+      "message": "Block portfolio: 12 blocks, 249 candidates, 8 accepted",
+      "code": "v2_solver"
+    },
+    {
+      "code": "v2_solver",
+      "message": "J1: safe post-place improvement J1 rotate += 180; global score 15616903.75 -> 15614415.49. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J1\", [\"J1\"], { rotateBy: [180] }) if this fixed component may rotate.",
+      "nodeId": "post-place:J1",
+      "severity": "warning"
+    },
+    {
+      "code": "v2_solver",
+      "message": "J7: safe post-place improvement J7 rotate += 180; global score 15616903.75 -> 15616854.217. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J7\", [\"J7\"], { rotateBy: [180] }) if this fixed component may rotate.",
+      "nodeId": "post-place:J7",
+      "severity": "warning"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "board-alignment",
+      "message": "Board soft alignment: similarity >= 0.78, 3 nearby pairs, 74 candidates, 0 accepted; fixed components and block interiors preserved",
+      "code": "v2_solver"
+    }
+  ],
+  "worsened": [
+    {
+      "hint": {
+        "relation": "clearance",
+        "source": {
+          "type": "block",
+          "block_name": "hv_pos"
+        },
+        "target": {
+          "type": "block",
+          "block_name": "usb_charge"
+        },
+        "min": 3.2,
+        "priority": "critical"
+      },
+      "before": 1.96,
+      "after": 0.75,
+      "expected": ">= 3.2mm clearance"
+    },
+    {
+      "hint": {
+        "relation": "clearance",
+        "source": {
+          "type": "block",
+          "block_name": "hv_neg"
+        },
+        "target": {
+          "type": "block",
+          "block_name": "logic_power"
+        },
+        "min": 3.2,
+        "priority": "critical"
+      },
+      "before": 0.49,
+      "after": 0.42,
+      "expected": ">= 3.2mm clearance"
+    }
+  ],
+  "ordinaryPackingPreserved": true
+}

@@ -5,7 +5,7 @@ import type { BoardPackParams } from '../board-packer.ts';
 import type { PlacementPrimitive } from '../primitives.ts';
 import {
     NATIVE_BOARD_PACK_CONTRACT_VERSION,
-    type NativeBoardPackProblemV6,
+    type NativeBoardPackProblemV7,
     type NativeEdgePlaceIntent,
     type NativePrimitive,
     type NativeRelation,
@@ -13,7 +13,7 @@ import {
 
 type ComponentEntry = { component: PcbComponent; placement: Placement; primitiveId: string };
 
-export function encodeNativeBoardPackProblem(params: BoardPackParams): NativeBoardPackProblemV6 {
+export function encodeNativeBoardPackProblem(params: BoardPackParams): NativeBoardPackProblemV7 {
     const components = collectComponents(params);
     const count = components.length;
     const componentPairClearance = new Array<number>(count * count);
@@ -212,7 +212,7 @@ function stringOptional(value: unknown) {
     return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
-function assertFiniteProblem(problem: NativeBoardPackProblemV6) {
+function assertFiniteProblem(problem: NativeBoardPackProblemV7) {
     const visit = (value: unknown, path: string): void => {
         if (typeof value === 'number' && !Number.isFinite(value)) throw new Error(`Non-finite native board pack value at ${path}`);
         if (Array.isArray(value)) {

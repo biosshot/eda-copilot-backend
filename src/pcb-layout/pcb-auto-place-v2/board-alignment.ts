@@ -11,7 +11,8 @@ import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
 import type { PlacementPrimitive, PrimitiveSolveDiagnostic } from './primitives.ts';
 
 /** Conservative finishing pass, in mm. Similarity never attracts distant blocks. */
-export const BOARD_ALIGNMENT_POLICY = Object.freeze({ similarity: .78, neighbourGap: 8, maxShift: 3, weight: 24, passes: 2 });
+export const BOARD_ALIGNMENT_POLICY = Object.freeze({ similarity: .78, neighbourGap: 8, maxShift: 3, passes: 2 });
+const ALIGNMENT_SCORE = Object.freeze({weight:8,tolerance:.15,orientationWeight:24});
 
 function family(c: PcbComponent): string {
     if (c.pcb.role === 'main_ic') return `IC${c.pins.length}`;
@@ -150,23 +151,22 @@ export function findAlignmentPairs(input: PlacementInput, roots: PlacementPrimit
     }
     return pairs.sort((a,b) => b.similarity-a.similarity || a.a.localeCompare(b.a) || a.b.localeCompare(b.b));
 }
-export interface BoardSoftAlignment { pairs: AlignmentPair[]; weight: number; tolerance: number; range: number; fade: number; orientationWeight?:number }
+export interface BoardSoftAlignment { pairs: AlignmentPair[]; weight: number; tolerance: number; orientationWeight?:number }
 export function boardAlignmentPolicy(input: PlacementInput, roots: PlacementPrimitive[]): BoardSoftAlignment {
-    return { pairs: findAlignmentPairs(input,roots,roots.flatMap(p=>p.placements),false), weight:24, tolerance:.15, range:8, fade:8, orientationWeight:120 };
+    return { pairs: findAlignmentPairs(input,roots,roots.flatMap(p=>p.placements),false), ...ALIGNMENT_SCORE };
 }
-/** Bounded reward, rather than a fading positive penalty: moving apart must not
- * become a way to escape an alignment penalty. Incomplete pairs contribute zero. */
+/** Zero at alignment, quadratic near the axis and linear beyond 1mm. No distance
+ * attenuation: moving a pair apart cannot erase its misalignment penalty. */
 export function boardAlignmentScore(roots: PlacementPrimitive[], policy: BoardSoftAlignment) {
     let score=0;
     for(const pair of policy.pairs) {
         const a=roots.find(p=>p.id===pair.a), b=roots.find(p=>p.id===pair.b);
         if(!a||!b)continue;
         const ac=center(a,pair.anchorA), bc=center(b,pair.anchorB);
-        const error=Math.min(3,Math.max(0,Math.min(Math.abs(ac.x-bc.x),Math.abs(ac.y-bc.y))-policy.tolerance));
-        const proximity=Math.max(0,Math.min(1,1-(boxGap(a.bbox,b.bbox)-policy.range)/policy.fade));
-        score-=policy.weight*pair.similarity*proximity*(9-error*error);
+        const error=Math.max(0,Math.min(Math.abs(ac.x-bc.x),Math.abs(ac.y-bc.y))-policy.tolerance);
+        score+=policy.weight*pair.similarity*(error<=1?error*error/2:error-.5);
         const angle=orientationError(a,b,pair);
-        if(angle!==undefined)score-=(policy.orientationWeight??0)*pair.similarity*proximity*(1+Math.cos(angle*Math.PI/180))/2;
+        if(angle!==undefined)score+=(policy.orientationWeight??0)*pair.similarity*(1-Math.cos(angle*Math.PI/180))/2;
     }
     return score;
 }
@@ -189,7 +189,7 @@ export function alignmentErrors(roots: PlacementPrimitive[], pairs: AlignmentPai
     });
 }
 function penalty(roots: PlacementPrimitive[], pairs: AlignmentPair[]) {
-    return alignmentErrors(roots, pairs).reduce((s,p) => s + BOARD_ALIGNMENT_POLICY.weight * p.similarity * Math.min(3, p.error) ** 2, 0);
+    return boardAlignmentScore(roots, {pairs,...ALIGNMENT_SCORE});
 }
 
 /** Native relative validation compares violation identities, not their magnitude.
@@ -200,6 +200,22 @@ export function alignmentHardHintsNoWorse(before: PlacementReport, after: Placem
             (typeof b.actual === 'number' && typeof v.actual === 'number'
                 ? v.expected.startsWith('>=') ? v.actual >= b.actual : v.actual <= b.actual
                 : b.actual === v.actual)));
+}
+
+/** Wiring-only guard: clearance/area gains must not pay for longer individual
+ * nets. All nets are checked, including critical ones, against one baseline. */
+export function boardElectricalQuality(input: PlacementInput, placements: Placement[]) {
+    const problem=encodeNativePostPlaceScoreProblem(input,placements);
+    return {
+        score:loadNativeBoardPacker().scorePostPlace({...problem,distances:[],clearances:[],fixedPenalties:[],edges:[],paths:[]}),
+        lengths:problem.nets.map(net=>minimumSpanningEdges(net.points).reduce((s,[a,b])=>
+            s+Math.hypot(net.points[a].x-net.points[b].x,net.points[a].y-net.points[b].y),0)),
+    };
+}
+export function boardElectricalRegression(before: ReturnType<typeof boardElectricalQuality>, after: ReturnType<typeof boardElectricalQuality>) {
+    if(after.score>before.score+Math.min(40,.001*Math.abs(before.score)))return 'wiring score';
+    if(after.lengths.some((n,i)=>n>before.lengths[i]+Math.max(.5,.02*before.lengths[i])))return 'individual net length';
+    return undefined;
 }
 
 export function refineBoardAlignment(input: PlacementInput, roots: PlacementPrimitive[], initial: Placement[]) {
@@ -220,14 +236,7 @@ export function refineBoardAlignment(input: PlacementInput, roots: PlacementPrim
         const c = input.components.find(c => c.designator === p.designator)!;
         return !c.pcb.fixedPlacement && !c.pcb.edgeMount && !c.pcb.edgePlace;
     });
-    const electrical = (ps: Placement[]) => {
-        const problem = encodeNativePostPlaceScoreProblem(input, ps);
-        // Separate actual wiring from large hint penalties: reducing an existing
-        // clearance violation must not buy long wires for a cosmetic adjustment.
-        const lengths = problem.nets.map(net => minimumSpanningEdges(net.points).reduce((s,[a,b]) =>
-            s + Math.hypot(net.points[a].x-net.points[b].x, net.points[a].y-net.points[b].y), 0));
-        return { score: addon.scorePostPlace({ ...problem, distances: [], clearances: [], fixedPenalties: [], edges: [], paths: [] }), lengths };
-    };
+    const electrical = (ps: Placement[]) => boardElectricalQuality(input,ps);
     const baseElectrical = electrical(initial);
     const objective = (ps: Placement[], rs: PlacementPrimitive[]) => globalPostPlaceScore(input, ps)
         + boardSpacingPenalty(input, rs, spacing) + penalty(rs, pairs);

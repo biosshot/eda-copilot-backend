@@ -14,6 +14,7 @@ use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
 use rustc_hash::{FxHashMap,FxHashSet}; 
 
 #[derive(Clone)]
@@ -80,6 +81,7 @@ struct RankedCandidate {
     rank: Rank,
     route_penalty: f64,
     ordinal: usize,
+    alignment: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -120,6 +122,7 @@ struct Context {
     hard_overlap_cache: RefCell<FxHashMap<PosePairKey, f64>>,
     outside_cache: RefCell<FxHashMap<PoseKey, bool>>,
     outside_severity_cache: RefCell<FxHashMap<PoseKey, f64>>,
+    joint_candidates: Arc<AtomicUsize>,
 }
 
 pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
@@ -158,6 +161,7 @@ fn solve_with_threads(problem: BoardPackProblem, threads: usize) -> Result<Board
         hard_overlap_cache: RefCell::new(FxHashMap::default()),
         outside_cache: RefCell::new(FxHashMap::default()),
         outside_severity_cache: RefCell::new(FxHashMap::default()),
+        joint_candidates: Arc::new(AtomicUsize::new(0)),
     };
     let mut components_by_primitive: FxHashMap<Arc<str>, Vec<(usize, ComponentGeometry)>> =
         FxHashMap::default();
@@ -246,9 +250,16 @@ fn solve_with_threads(problem: BoardPackProblem, threads: usize) -> Result<Board
             hard_overlap_cache: RefCell::new(FxHashMap::default()),
             outside_cache: RefCell::new(FxHashMap::default()),
             outside_severity_cache: RefCell::new(FxHashMap::default()),
+            joint_candidates: context.joint_candidates.clone(),
         }).collect();
 
     while states.iter().any(|state| !state.remaining.is_empty()) {
+        // Atomic pairs advance two components. Compare equal-depth states only;
+        // otherwise their extra area/wires would unfairly lose against singles.
+        let depth = states.iter().map(|s| s.remaining.len()).max().unwrap_or(0);
+        let (active, deferred): (Vec<_>, Vec<_>) = states.into_iter()
+            .partition(|s| s.remaining.len() == depth);
+        states = active;
         let mut expanded = if lanes.len() == 1 || states.len() == 1 {
             expand_states(&states, search_width, &lanes[0])
         } else {
@@ -265,6 +276,7 @@ fn solve_with_threads(problem: BoardPackProblem, threads: usize) -> Result<Board
                 Ok::<_, String>(expanded)
             })?
         };
+        expanded.extend(deferred);
         for state in &mut expanded {
             if state.ordinal == 0 {
                 ordinal += 1;
@@ -272,8 +284,9 @@ fn solve_with_threads(problem: BoardPackProblem, threads: usize) -> Result<Board
             }
         }
         states = dedupe_states(expanded);
-        states.sort_by(compare_states);
-        states.truncate(search_width);
+        states.sort_by(|a,b| b.remaining.len().cmp(&a.remaining.len()).then_with(|| compare_states(a,b)));
+        let mut counts = FxHashMap::<usize,usize>::default();
+        states.retain(|s| { let count=counts.entry(s.remaining.len()).or_default(); *count+=1; *count<=search_width });
         if states.is_empty() {
             break;
         }
@@ -284,7 +297,7 @@ fn solve_with_threads(problem: BoardPackProblem, threads: usize) -> Result<Board
         .into_iter()
         .find(|state| state.remaining.is_empty())
         .ok_or_else(|| "Rust board packer did not produce a complete state".to_string())?;
-    if profile { eprintln!("[pcb-board-packer] beam {:.3}s, threads={}, hard={}", started.elapsed().as_secs_f64(), lanes.len(), best.rank.hard_count); }
+    if profile { eprintln!("[pcb-board-packer] beam {:.3}s, threads={}, hard={}, joint candidates={}", started.elapsed().as_secs_f64(), lanes.len(), best.rank.hard_count,context.joint_candidates.load(AtomicOrdering::Relaxed)); }
     let phase = std::time::Instant::now();
     let improved = local_improve(best.placed, &context, &mut lanes);
     if profile { eprintln!("[pcb-board-packer] local_improve {:.3}s", phase.elapsed().as_secs_f64()); }
@@ -355,6 +368,9 @@ fn expand_states(states: &[SearchState], search_width: usize, context: &Context)
         let next = &state.remaining[next_index];
         let limit = candidate_limit(search_width, state.remaining.len());
         let candidates = ranked_candidates(next, &state.placed, state.route_penalty, Some(limit), context);
+        // Additional transitions; the original single-component expansion below
+        // is always generated, even when an aligned pair is possible.
+        expanded.extend(joint_pair_states(state, next_index, context));
         let any_legal = candidates.iter().any(|candidate| candidate.rank.hard_count == state.rank.hard_count);
         for candidate in candidates.into_iter()
             .filter(|candidate| !any_legal || candidate.rank.hard_count == state.rank.hard_count)
@@ -381,6 +397,69 @@ fn ranked_candidates(
 ) -> Vec<RankedCandidate> {
     let candidates = cheap_candidates(primitive, placed, parent_route_penalty, context);
     rerank_candidates(candidates, primitive, placed, parent_route_penalty, limit, context)
+}
+
+// Place a structural peer together with the next block before unrelated blocks
+// occupy the adjoining space. Never merge ownership or relax either geometry.
+fn joint_pair_states(state: &SearchState, next_index: usize, context: &Context) -> Vec<SearchState> {
+    let Some(policy)=&context.problem.soft_alignment else {return Vec::new();};
+    let next=&state.remaining[next_index];
+    let mut peers: Vec<_>=policy.pairs.iter().filter_map(|pair| {
+        if pair.similarity < 0.85 {return None;}
+        let other=if pair.a==next.primitive.id {&pair.b} else if pair.b==next.primitive.id {&pair.a} else {return None;};
+        state.remaining.iter().position(|p| &p.primitive.id==other).map(|index|(pair,index))
+    }).collect();
+    peers.sort_by(|(a,i),(b,j)| compare_f64(b.similarity,a.similarity).then(i.cmp(j)));
+    let Some((pair,peer_index))=peers.first().copied() else {return Vec::new();};
+    let peer=&state.remaining[peer_index];
+    let mut anchors=cheap_candidates(next,&state.placed,state.route_penalty,context);
+    // Keep one location per rotation as well as the best few overall locations.
+    let mut rotations=FxHashSet::default();
+    let mut extra=0;
+    anchors.retain(|c| if rotations.insert(c.primitive.rotation) {true} else {extra+=1;extra<=4});
+    let mut result=Vec::new();
+    for first in anchors {
+        for variant in orientation_variants(peer) {
+            let (a,b)=if pair.a==next.primitive.id {(&pair.anchor_a,&pair.anchor_b)} else {(&pair.anchor_b,&pair.anchor_a)};
+            let ca=alignment_center(&first.primitive,a); let cb=alignment_center(&variant,b);
+            let ab=packing_box(&first.primitive); let bb=packing_box(&variant);
+            let comfort=context.problem.soft_spacing.as_ref().map_or(0.0,|s|s.gap);
+            for gap in [context.problem.clearance,context.problem.clearance+comfort,context.problem.clearance+2.0] {
+                for (dx,dy) in [(ca.x-cb.x,ab.top-gap-bb.bottom),(ca.x-cb.x,ab.bottom+gap-bb.top),
+                    (ab.left-gap-bb.right,ca.y-cb.y),(ab.right+gap-bb.left,ca.y-cb.y)] {
+                    let mut a=first.primitive.clone(); let mut b=variant.clone();
+                    translate_primitive(&mut b,dx,dy);
+                    // Shift the pair together when its first anchor is near an
+                    // edge. Individual clamping would silently destroy alignment.
+                    let bounds=union_boxes(&[a.primitive.bbox,b.primitive.bbox]);
+                    let board=context.problem.bounds;
+                    let dx=(board.left-bounds.left).max(0.0)-(bounds.right-board.right).max(0.0);
+                    let dy=(board.top-bounds.top).max(0.0)-(bounds.bottom-board.bottom).max(0.0);
+                    translate_primitive(&mut a,dx,dy); translate_primitive(&mut b,dx,dy);
+                    if candidate_hard_count(&a,&state.placed,context)>0 {continue;}
+                    let mut placed=state.placed.clone(); placed.push(a);
+                    if candidate_hard_count(&b,&placed,context)>0 {continue;}
+                    placed.push(b);
+                    let mut remaining=state.remaining.clone();
+                    remaining.remove(next_index.max(peer_index)); remaining.remove(next_index.min(peer_index));
+                    result.push(SearchState{rank:state_rank(&placed,context),placed,remaining,route_penalty:state.route_penalty,ordinal:0});
+                }
+            }
+        }
+    }
+    result=dedupe_states(result); result.sort_by(compare_states);
+    // Micro-route corrections are non-negative. Evaluate a bounded shortlist,
+    // then compare exact costs, just as for the ordinary beam transitions.
+    result.truncate(16);
+    for s in &mut result {
+        let n=s.placed.len();
+        s.route_penalty+=board_micro_route_penalty(&s.placed[n-2],&s.placed[..n-2],context)
+            +board_micro_route_penalty(&s.placed[n-1],&s.placed[..n-1],context);
+        s.rank.score+=s.route_penalty;
+    }
+    result.sort_by(compare_states); result.truncate(4);
+    context.joint_candidates.fetch_add(result.len(),AtomicOrdering::Relaxed);
+    result
 }
 
 fn cheap_candidates(
@@ -422,7 +501,8 @@ fn score_positions<'a>(
 ) -> Vec<RankedCandidate> {
     let mut candidates = Vec::new();
     for variant in variants {
-        for candidate in position_candidates(variant, placed, context) {
+        for alignment in [false,true] {
+        for candidate in position_candidates(variant, placed, context, alignment) {
             let mut all = placed.to_vec();
             all.push(candidate.clone());
             candidates.push(RankedCandidate {
@@ -430,7 +510,9 @@ fn score_positions<'a>(
                 rank: state_rank(&all, context),
                 route_penalty: parent_route_penalty,
                 ordinal: 0,
+                alignment,
             });
+        }
         }
     }
     candidates
@@ -440,7 +522,10 @@ fn finish_cheap_candidates(mut candidates: Vec<RankedCandidate>) -> Vec<RankedCa
     for (index, candidate) in candidates.iter_mut().enumerate() { candidate.ordinal = index + 1; }
     dedupe_candidates(&mut candidates);
     candidates.sort_by(compare_candidates);
-    candidates.truncate(32);
+    // Added axis candidates must not consume the ordinary shortlist's budget.
+    let mut ordinary=0; let mut aligned=0;
+    candidates.retain(|c| { let (count,limit)=if c.alignment {(&mut aligned,16)} else {(&mut ordinary,32)};
+        *count+=1; *count<=limit });
     candidates
 }
 
@@ -531,17 +616,20 @@ fn position_candidates(
     primitive: &WorkingPrimitive,
     placed: &[WorkingPrimitive],
     context: &Context,
+    alignment_only: bool,
 ) -> Vec<WorkingPrimitive> {
     let pack_box = packing_box(primitive);
     let width = pack_box.right - pack_box.left;
     let height = pack_box.bottom - pack_box.top;
     let mut centers = Vec::new();
+    if alignment_only {
+        centers.extend(alignment_slot_centers(primitive, placed, context));
+    } else {
     centers.extend(edge_place_centers(primitive, width, height, context));
     centers.extend(board_slot_centers(width, height, &context.problem.bounds));
     centers.extend(free_rect_slot_centers(width, height, placed, context));
     centers.extend(placed_slot_centers(width, height, placed, context));
     centers.extend(relation_slot_centers(primitive, placed, context));
-    centers.extend(alignment_slot_centers(primitive, placed, context));
     let placed_primitives: Vec<_> = placed.iter().map(|item| &item.primitive).collect();
     let current_center = box_center(&pack_box);
     centers.extend(
@@ -558,6 +646,7 @@ fn position_candidates(
         &context.problem.bounds,
         context.problem.grid,
     ));
+    }
     dedupe_points(&mut centers);
 
     let mut candidates = Vec::with_capacity(centers.len());
@@ -2537,11 +2626,6 @@ fn alignment_center(p: &WorkingPrimitive, anchor: &Option<Arc<str>>) -> Point {
         .map_or_else(|| box_center(&p.primitive.bbox), |q| Point { x:q.x, y:q.y })
 }
 
-fn alignment_gap(a: &Box2, b: &Box2) -> f64 {
-    (a.left-b.right).max(b.left-a.right).max(0.0)
-        .hypot((a.top-b.bottom).max(b.top-a.bottom).max(0.0))
-}
-
 fn soft_alignment_score(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
     let Some(s) = &context.problem.soft_alignment else { return 0.0; };
     let mut score=0.0;
@@ -2549,13 +2633,12 @@ fn soft_alignment_score(primitives: &[WorkingPrimitive], context: &Context) -> f
         let Some(a)=primitives.iter().find(|p| p.primitive.id==pair.a) else { continue; };
         let Some(b)=primitives.iter().find(|p| p.primitive.id==pair.b) else { continue; };
         let ac=alignment_center(a,&pair.anchor_a); let bc=alignment_center(b,&pair.anchor_b);
-        let error=((ac.x-bc.x).abs().min((ac.y-bc.y).abs())-s.tolerance).clamp(0.0,3.0);
-        let proximity=(1.0-(alignment_gap(&a.primitive.bbox,&b.primitive.bbox)-s.range)/s.fade).clamp(0.0,1.0);
-        score-=s.weight*pair.similarity*proximity*(9.0-error*error);
+        let error=((ac.x-bc.x).abs().min((ac.y-bc.y).abs())-s.tolerance).max(0.0);
+        score+=s.weight*pair.similarity*if error<=1.0 {error*error/2.0} else {error-0.5};
         if let Some(o) = &pair.orientation {
             if let (Some(ap),Some(bp))=(a.primitive.placements.iter().find(|p| p.designator==o.a),b.primitive.placements.iter().find(|p| p.designator==o.b)) {
                 let angle=(ap.rotate as f64-bp.rotate as f64-o.offset).to_radians();
-                score-=s.orientation_weight*pair.similarity*proximity*(1.0+angle.cos())/2.0;
+                score+=s.orientation_weight*pair.similarity*(1.0-angle.cos())/2.0;
             }
         }
     }
@@ -2589,4 +2672,80 @@ fn alignment_slot_centers(p: &WorkingPrimitive, placed: &[WorkingPrimitive], con
         }
     }
     centers
+}
+
+#[cfg(test)]
+mod alignment_search_tests {
+    use super::*;
+    use serde_json::json;
+
+    fn fixture() -> (Context,SearchState) {
+        let primitives:Vec<_>=(0..3).map(|i| {
+            let name=format!("U{}",i+1);
+            serde_json::from_value::<Primitive>(json!({"id":name,"kind":"block","label":name,"sourceNodeId":name,
+                "sourceNodeIds":[name],"locked":false,"canRotate":true,"allowedOrientations":[0,90,180,270],
+                "bbox":{"left":-2,"right":2,"top":-1,"bottom":1},"collisionBoxes":[{"left":-2,"right":2,"top":-1,"bottom":1}],
+                "width":4,"height":2,"placements":[{"designator":name,"x":0,"y":0,"rotate":0,"layer":"top","score":0}],
+                "connectionPoints":[],"pathPorts":[],"edgePlace":null})).unwrap()
+        }).collect();
+        let problem:BoardPackProblem=serde_json::from_value(json!({"version":7,"grid":0.5,"clearance":0.2,"searchWidth":32,
+            "compactness":"normal","bounds":{"left":-12,"right":12,"top":-12,"bottom":12},
+            "fullBoardBounds":{"left":-12,"right":12,"top":-12,"bottom":12},
+            "boardOutline":[{"x":-12,"y":-12},{"x":12,"y":-12},{"x":12,"y":12},{"x":-12,"y":12}],
+            "edgeClearance":0.2,"primitives":[],"relations":[],"obstacles":[],"constraintRegions":[],"components":[],
+            "componentPairClearance":[],"componentConflict":[],"softAlignment":{"weight":8,"tolerance":0.15,"orientationWeight":24,
+            "pairs":[{"a":"U1","b":"U2","anchorA":"U1","anchorB":"U2","similarity":1,"orientation":{"a":"U1","b":"U2","offset":0}}]}})).unwrap();
+        let context=Context{route_cache:micro_router::BoardRouteCache::new(&problem.board_outline,problem.bounds,&MicroRouteConfig::board(),1000),
+            problem:Arc::new(problem),relations:Arc::new(vec![]),hard_overlap_cache:RefCell::new(FxHashMap::default()),
+            outside_cache:RefCell::new(FxHashMap::default()),outside_severity_cache:RefCell::new(FxHashMap::default()),
+            joint_candidates:Arc::new(AtomicUsize::new(0))};
+        let remaining=primitives.into_iter().enumerate().map(|(i,p)|WorkingPrimitive{id:i as u32,source_index:i,
+            primitive:p,placement_ids:Arc::new(vec![i as u32]),point_component_ids:Arc::new(vec![]),components:Arc::new(vec![]),rotation:0}).collect();
+        let state=SearchState{placed:vec![],remaining,rank:state_rank(&[],&context),route_penalty:0.0,ordinal:0};
+        (context,state)
+    }
+
+    #[test]
+    fn atomic_pair_adds_transitions_without_removing_single_placements() {
+        let (context,state)=fixture();
+        let pairs=joint_pair_states(&state,0,&context);
+        assert!(!pairs.is_empty());
+        for s in &pairs {
+            assert_eq!(s.remaining.len(),1);assert_eq!(s.remaining[0].primitive.id.as_ref(),"U3");
+            assert_eq!(s.rank.hard_count,0);
+            let a=&s.placed[0].primitive.placements[0];let b=&s.placed[1].primitive.placements[0];
+            assert!((a.x-b.x).abs().min((a.y-b.y).abs())<0.001);
+        }
+        let expanded=expand_states(&[state],32,&context);
+        assert!(expanded.iter().any(|s|s.remaining.len()==2));
+        assert!(expanded.iter().any(|s|s.remaining.len()==1));
+    }
+
+    #[test]
+    fn alignment_candidates_do_not_consume_the_ordinary_shortlist() {
+        let (context,mut state)=fixture();
+        let mut placed=state.remaining.remove(1);translate_primitive(&mut placed,4.0,3.0);
+        state.placed.push(placed);
+        let next=&state.remaining[0];
+        let mut ordinary=Vec::new();
+        for variant in orientation_variants(next) {
+            for p in position_candidates(&variant,&state.placed,&context,false) {
+                let mut all=state.placed.clone();all.push(p.clone());
+                ordinary.push(RankedCandidate{primitive:p,rank:state_rank(&all,&context),route_penalty:0.0,ordinal:0,alignment:false});
+            }
+        }
+        let expected=finish_cheap_candidates(ordinary);
+        let actual=cheap_candidates(next,&state.placed,0.0,&context);
+        assert!(!expected.is_empty());
+        assert!(expected.iter().all(|a|actual.iter().any(|b|primitive_key(&a.primitive)==primitive_key(&b.primitive))));
+        assert!(actual.iter().any(|c|c.alignment));
+    }
+
+    #[test]
+    fn atomic_pair_respects_keepouts_and_disappears_without_disabling_singles() {
+        let (mut context,state)=fixture();
+        Arc::make_mut(&mut context.problem).obstacles=vec![Box2{left:-12.0,right:12.0,top:-12.0,bottom:12.0}];
+        assert!(joint_pair_states(&state,0,&context).is_empty());
+        assert!(!position_candidates(&state.remaining[0],&[],&context,false).is_empty());
+    }
 }

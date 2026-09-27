@@ -450,8 +450,7 @@ impl BoardPackProblem {
         finite(self.edge_clearance, "edgeClearance")?;
         if let Some(s) = &self.soft_alignment {
             if !s.orientation_weight.is_finite() || s.orientation_weight < 0.0 { return Err("invalid softAlignment orientation weight".into()); }
-            if !s.weight.is_finite() || s.weight < 0.0 || !s.tolerance.is_finite() || s.tolerance < 0.0
-                || !s.range.is_finite() || s.range < 0.0 || !s.fade.is_finite() || s.fade <= 0.0 {
+            if !s.weight.is_finite() || s.weight < 0.0 || !s.tolerance.is_finite() || s.tolerance < 0.0 {
                 return Err("invalid softAlignment parameters".into());
             }
             for pair in &s.pairs {
@@ -722,8 +721,6 @@ pub struct SoftAlignment {
     pub pairs: Vec<AlignmentPair>,
     pub weight: f64,
     pub tolerance: f64,
-    pub range: f64,
-    pub fade: f64,
 }
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
