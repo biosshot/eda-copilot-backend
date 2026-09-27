@@ -1,0 +1,4891 @@
+{
+  "block": "usb_charge",
+  "variant": {
+    "id": "unified",
+    "label": "Unified checkpoint portfolio"
+  },
+  "ms": 182.96589999999992,
+  "sourceInputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "c9Role": "decoupling_cap",
+  "sourceUnchanged": true,
+  "nativeHash": "2c648d0c85bbfb982374d340ff6d3caf3feecb0f7b20633ba4a10db9f93b290a",
+  "inventory": true,
+  "orientation": true,
+  "validation": {
+    "ok": true,
+    "violations": []
+  },
+  "metrics": {
+    "pairCount": 6,
+    "pairSum": 20.02,
+    "pairMax": 4.67,
+    "crossings": 0,
+    "foreignPadHits": 0,
+    "internalIcPadHits": 0,
+    "wireLength": 30.19,
+    "hpwl": 35.46,
+    "area": 180.93,
+    "aspect": 1.06
+  },
+  "allMetrics": {
+    "pairCount": 6,
+    "pairSum": 20.02,
+    "pairMax": 4.67,
+    "crossings": 4,
+    "foreignPadHits": 4,
+    "internalIcPadHits": 2,
+    "wireLength": 57.11,
+    "hpwl": 54.1,
+    "area": 180.93,
+    "aspect": 1.06
+  },
+  "pairs": [],
+  "localHardPairs": [],
+  "hardPairsOk": true,
+  "placements": [
+    {
+      "designator": "U11",
+      "x": 0,
+      "y": -0.001,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R37",
+      "x": -0.534,
+      "y": -3.736,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R36",
+      "x": 0.466,
+      "y": -5.973,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R32",
+      "x": 3.734,
+      "y": 3.499,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R34",
+      "x": -3.735,
+      "y": 2.249,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R33",
+      "x": 0,
+      "y": 6.001,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R35",
+      "x": -0.25,
+      "y": 3.735,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C43",
+      "x": 4.493,
+      "y": 0.249,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C42",
+      "x": -4.635,
+      "y": -1.513,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:usb_charge",
+      "message": "Block postrefine: 0 moves, 41 ms"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:usb_charge",
+      "message": "Block postrefine: 1 moves, 41 ms"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:usb_charge",
+      "message": "Block postrefine: 0 moves, 18 ms"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:usb_charge",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 2 retained; original/pairs: score=2684.54, electrical=2578.26, wire=24.80, area=180.94; original/singles+postrefine: score=2784.17, electrical=2678.57, wire=24.56, area=179.17"
+    }
+  ],
+  "captures": [
+    {
+      "key": "fb32bcde147bb5c32d84dee16cf057467bf6b9d3ab3d6bf5d2e964cb680177e3",
+      "cached": true,
+      "replayedFrom": "308d82b6b57a0a682eab99e2855997222df36b8b1f06c6840e00d06fcaf1c12e",
+      "ms": 1.5425000000000182,
+      "components": [
+        "U11",
+        "C42",
+        "C43",
+        "R32",
+        "R33",
+        "R34",
+        "R35",
+        "R36",
+        "R37"
+      ]
+    }
+  ],
+  "pools": [
+    {
+      "label": "usb_charge",
+      "candidates": [
+        {
+          "stage": "beam",
+          "hypothesis": "original",
+          "quality": {
+            "score": 3405.279240801308,
+            "electrical": 3295.940260951308,
+            "localStretch": 773.5764415898409,
+            "wire": 27.845620385485443,
+            "maxLocal": 6.656376342275128,
+            "area": 194.40737100000004,
+            "width": 10.893,
+            "height": 17.847,
+            "exposure": 13.4632,
+            "links": {
+              "C43.1->U11": 2.358601288899843,
+              "R36.1->U11": 4.581554448001246,
+              "R37.1->U11": 2.290332980158126,
+              "R36.2->U11": 4.491831631973754,
+              "R37.2->U11": 3.0019691620667923,
+              "C42.1->U11": 2.358601288899843,
+              "R34.1->U11": 2.2350000089485453,
+              "R35.1->U11": 6.656376342275128,
+              "R33.1->U11": 4.50692800475002,
+              "R32.1->U11": 2.2350000022371366
+            },
+            "ports": {
+              "U11.1": {
+                "x": 2.5175,
+                "y": -1.2602999999999995
+              },
+              "U11.2": {
+                "x": 2.5175,
+                "y": -1.7603999999999995
+              },
+              "U11.3": {
+                "x": 2.5175,
+                "y": -2.2602999999999995
+              },
+              "C43.1": {
+                "x": 4.5175,
+                "y": -3.5104999999999995
+              },
+              "U11.6": {
+                "x": 1.2673,
+                "y": -3.5104999999999995
+              },
+              "R36.1": {
+                "x": 2.2677,
+                "y": -7.9815
+              },
+              "R37.1": {
+                "x": 1.7677,
+                "y": -5.7455
+              },
+              "U11.7": {
+                "x": 0.7674000000000001,
+                "y": -3.5104999999999995
+              },
+              "R36.2": {
+                "x": 0.33530000000000015,
+                "y": -7.9815
+              },
+              "U11.9": {
+                "x": -0.48249999999999993,
+                "y": -2.7603999999999997
+              },
+              "R37.2": {
+                "x": -0.16469999999999985,
+                "y": -5.7455
+              },
+              "U11.10": {
+                "x": -0.48249999999999993,
+                "y": -2.2602999999999995
+              },
+              "U11.11": {
+                "x": -0.48249999999999993,
+                "y": -1.7603999999999995
+              },
+              "C42.1": {
+                "x": -2.4825,
+                "y": -3.5104999999999995
+              },
+              "U11.13": {
+                "x": 0.2673000000000001,
+                "y": -0.5104999999999995
+              }
+            }
+          },
+          "primitives": [
+            {
+              "id": "primitive:tree:component:U11",
+              "kind": "component",
+              "label": "U11",
+              "sourceNodeId": "tree:component:U11",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.179,
+                "right": 3.179,
+                "top": -4.179,
+                "bottom": 0.179
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.179,
+                  "right": 3.179,
+                  "top": -4.179,
+                  "bottom": 0.179
+                }
+              ],
+              "width": 4.358,
+              "height": 4.358,
+              "placements": [
+                {
+                  "designator": "U11",
+                  "x": 1,
+                  "y": -2,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "U11.1",
+                  "net": "BAT_NTC",
+                  "x": 2.5,
+                  "y": -1.25
+                },
+                {
+                  "ref": "U11.2",
+                  "net": "BAT",
+                  "x": 2.5,
+                  "y": -1.75
+                },
+                {
+                  "ref": "U11.3",
+                  "net": "BAT",
+                  "x": 2.5,
+                  "y": -2.25
+                },
+                {
+                  "ref": "U11.4",
+                  "net": "GND",
+                  "x": 2.5,
+                  "y": -2.75
+                },
+                {
+                  "ref": "U11.5",
+                  "net": "GND",
+                  "x": 1.75,
+                  "y": -3.5
+                },
+                {
+                  "ref": "U11.6",
+                  "net": "3V3",
+                  "x": 1.25,
+                  "y": -3.5
+                },
+                {
+                  "ref": "U11.7",
+                  "net": "USB_PGOOD_N",
+                  "x": 0.75,
+                  "y": -3.5
+                },
+                {
+                  "ref": "U11.8",
+                  "net": "GND",
+                  "x": 0.25,
+                  "y": -3.5
+                },
+                {
+                  "ref": "U11.9",
+                  "net": "USB_CHG_N",
+                  "x": -0.5,
+                  "y": -2.75
+                },
+                {
+                  "ref": "U11.10",
+                  "net": "SYS",
+                  "x": -0.5,
+                  "y": -2.25
+                },
+                {
+                  "ref": "U11.11",
+                  "net": "SYS",
+                  "x": -0.5,
+                  "y": -1.75
+                },
+                {
+                  "ref": "U11.12",
+                  "net": "USB_ILIM",
+                  "x": -0.5,
+                  "y": -1.25
+                },
+                {
+                  "ref": "U11.13",
+                  "net": "USB_5V",
+                  "x": 0.25,
+                  "y": -0.5
+                },
+                {
+                  "ref": "U11.14",
+                  "net": "USB_TIMER",
+                  "x": 0.75,
+                  "y": -0.5
+                },
+                {
+                  "ref": "U11.15",
+                  "net": "USB_ITERM",
+                  "x": 1.25,
+                  "y": -0.5
+                },
+                {
+                  "ref": "U11.16",
+                  "net": "USB_ISET",
+                  "x": 1.75,
+                  "y": -0.5
+                },
+                {
+                  "ref": "U11.17",
+                  "net": "GND",
+                  "x": 1,
+                  "y": -2
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R37",
+              "kind": "component",
+              "label": "R37",
+              "sourceNodeId": "tree:component:R37",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.002,
+                "right": 2.571,
+                "top": -6.677,
+                "bottom": -4.792
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.002,
+                  "right": 2.571,
+                  "top": -6.677,
+                  "bottom": -4.792
+                }
+              ],
+              "width": 3.573,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R37",
+                  "x": 0.784,
+                  "y": -5.735,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R37.2",
+                  "net": "USB_CHG_N",
+                  "x": -0.182,
+                  "y": -5.735
+                },
+                {
+                  "ref": "R37.1",
+                  "net": "3V3",
+                  "x": 1.75,
+                  "y": -5.735
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R36",
+              "kind": "component",
+              "label": "R36",
+              "sourceNodeId": "tree:component:R36",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -0.502,
+                "right": 3.071,
+                "top": -8.913,
+                "bottom": -7.028
+              },
+              "collisionBoxes": [
+                {
+                  "left": -0.502,
+                  "right": 3.071,
+                  "top": -8.913,
+                  "bottom": -7.028
+                }
+              ],
+              "width": 3.573,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R36",
+                  "x": 1.284,
+                  "y": -7.971,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R36.2",
+                  "net": "USB_PGOOD_N",
+                  "x": 0.318,
+                  "y": -7.971
+                },
+                {
+                  "ref": "R36.1",
+                  "net": "3V3",
+                  "x": 2.25,
+                  "y": -7.971
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R32",
+              "kind": "component",
+              "label": "R32",
+              "sourceNodeId": "tree:component:R32",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.07,
+                "right": 2.57,
+                "top": 0.793,
+                "bottom": 2.678
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.07,
+                  "right": 2.57,
+                  "top": 0.793,
+                  "bottom": 2.678
+                }
+              ],
+              "width": 3.641,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R32",
+                  "x": 0.75,
+                  "y": 1.735,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R32.2",
+                  "net": "GND",
+                  "x": -0.25,
+                  "y": 1.735
+                },
+                {
+                  "ref": "R32.1",
+                  "net": "USB_ISET",
+                  "x": 1.75,
+                  "y": 1.735
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R34",
+              "kind": "component",
+              "label": "R34",
+              "sourceNodeId": "tree:component:R34",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -3.678,
+                "right": -1.792,
+                "top": -2.07,
+                "bottom": 1.57
+              },
+              "collisionBoxes": [
+                {
+                  "left": -3.678,
+                  "right": -1.792,
+                  "top": -2.07,
+                  "bottom": 1.57
+                }
+              ],
+              "width": 1.886,
+              "height": 3.64,
+              "placements": [
+                {
+                  "designator": "R34",
+                  "x": -2.735,
+                  "y": -0.25,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R34.2",
+                  "net": "GND",
+                  "x": -2.735,
+                  "y": 0.75
+                },
+                {
+                  "ref": "R34.1",
+                  "net": "USB_ILIM",
+                  "x": -2.735,
+                  "y": -1.25
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R33",
+              "kind": "component",
+              "label": "R33",
+              "sourceNodeId": "tree:component:R33",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.82,
+                "right": 1.82,
+                "top": 3.058,
+                "bottom": 4.943
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.82,
+                  "right": 1.82,
+                  "top": 3.058,
+                  "bottom": 4.943
+                }
+              ],
+              "width": 3.641,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R33",
+                  "x": 0,
+                  "y": 4,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R33.2",
+                  "net": "GND",
+                  "x": -1,
+                  "y": 4
+                },
+                {
+                  "ref": "R33.1",
+                  "net": "USB_ITERM",
+                  "x": 1,
+                  "y": 4
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R35",
+              "kind": "component",
+              "label": "R35",
+              "sourceNodeId": "tree:component:R35",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -0.943,
+                "right": 0.943,
+                "top": 5.294,
+                "bottom": 8.934
+              },
+              "collisionBoxes": [
+                {
+                  "left": -0.943,
+                  "right": 0.943,
+                  "top": 5.294,
+                  "bottom": 8.934
+                }
+              ],
+              "width": 1.886,
+              "height": 3.64,
+              "placements": [
+                {
+                  "designator": "R35",
+                  "x": 0,
+                  "y": 7.114,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R35.2",
+                  "net": "GND",
+                  "x": 0,
+                  "y": 8.114
+                },
+                {
+                  "ref": "R35.1",
+                  "net": "USB_TIMER",
+                  "x": 0,
+                  "y": 6.114
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C43",
+              "kind": "component",
+              "label": "C43",
+              "sourceNodeId": "tree:component:C43",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 3.571,
+                "right": 5.429,
+                "top": -6.464,
+                "bottom": -2.536
+              },
+              "collisionBoxes": [
+                {
+                  "left": 3.571,
+                  "right": 5.429,
+                  "top": -6.464,
+                  "bottom": -2.536
+                }
+              ],
+              "width": 1.858,
+              "height": 3.928,
+              "placements": [
+                {
+                  "designator": "C43",
+                  "x": 4.5,
+                  "y": -4.5,
+                  "rotate": 90,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C43.2",
+                  "net": "GND",
+                  "x": 4.5,
+                  "y": -5.5
+                },
+                {
+                  "ref": "C43.1",
+                  "net": "BAT",
+                  "x": 4.5,
+                  "y": -3.5
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C42",
+              "kind": "component",
+              "label": "C42",
+              "sourceNodeId": "tree:component:C42",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -5.464,
+                "right": -1.536,
+                "top": -4.429,
+                "bottom": -2.571
+              },
+              "collisionBoxes": [
+                {
+                  "left": -5.464,
+                  "right": -1.536,
+                  "top": -4.429,
+                  "bottom": -2.571
+                }
+              ],
+              "width": 3.927,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C42",
+                  "x": -3.5,
+                  "y": -3.5,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C42.2",
+                  "net": "GND",
+                  "x": -4.5,
+                  "y": -3.5
+                },
+                {
+                  "ref": "C42.1",
+                  "net": "SYS",
+                  "x": -2.5,
+                  "y": -3.5
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            }
+          ],
+          "placements": [
+            {
+              "designator": "U11",
+              "x": 1,
+              "y": -2,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R37",
+              "x": 0.784,
+              "y": -5.735,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R36",
+              "x": 1.284,
+              "y": -7.971,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R32",
+              "x": 0.75,
+              "y": 1.735,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R34",
+              "x": -2.735,
+              "y": -0.25,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R33",
+              "x": 0,
+              "y": 4,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R35",
+              "x": 0,
+              "y": 7.114,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C43",
+              "x": 4.5,
+              "y": -4.5,
+              "rotate": 90,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C42",
+              "x": -3.5,
+              "y": -3.5,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            }
+          ],
+          "selected": false
+        },
+        {
+          "stage": "beam+postrefine",
+          "hypothesis": "original",
+          "quality": {
+            "score": 3405.279240801308,
+            "electrical": 3295.940260951308,
+            "localStretch": 773.5764415898409,
+            "wire": 27.845620385485443,
+            "maxLocal": 6.656376342275128,
+            "area": 194.40737100000004,
+            "width": 10.893,
+            "height": 17.847,
+            "exposure": 13.4632,
+            "links": {
+              "C43.1->U11": 2.358601288899843,
+              "R36.1->U11": 4.581554448001246,
+              "R37.1->U11": 2.290332980158126,
+              "R36.2->U11": 4.491831631973754,
+              "R37.2->U11": 3.0019691620667923,
+              "C42.1->U11": 2.358601288899843,
+              "R34.1->U11": 2.2350000089485453,
+              "R35.1->U11": 6.656376342275128,
+              "R33.1->U11": 4.50692800475002,
+              "R32.1->U11": 2.2350000022371366
+            },
+            "ports": {
+              "U11.1": {
+                "x": 2.5175,
+                "y": -1.2602999999999995
+              },
+              "U11.2": {
+                "x": 2.5175,
+                "y": -1.7603999999999995
+              },
+              "U11.3": {
+                "x": 2.5175,
+                "y": -2.2602999999999995
+              },
+              "C43.1": {
+                "x": 4.5175,
+                "y": -3.5104999999999995
+              },
+              "U11.6": {
+                "x": 1.2673,
+                "y": -3.5104999999999995
+              },
+              "R36.1": {
+                "x": 2.2677,
+                "y": -7.9815
+              },
+              "R37.1": {
+                "x": 1.7677,
+                "y": -5.7455
+              },
+              "U11.7": {
+                "x": 0.7674000000000001,
+                "y": -3.5104999999999995
+              },
+              "R36.2": {
+                "x": 0.33530000000000015,
+                "y": -7.9815
+              },
+              "U11.9": {
+                "x": -0.48249999999999993,
+                "y": -2.7603999999999997
+              },
+              "R37.2": {
+                "x": -0.16469999999999985,
+                "y": -5.7455
+              },
+              "U11.10": {
+                "x": -0.48249999999999993,
+                "y": -2.2602999999999995
+              },
+              "U11.11": {
+                "x": -0.48249999999999993,
+                "y": -1.7603999999999995
+              },
+              "C42.1": {
+                "x": -2.4825,
+                "y": -3.5104999999999995
+              },
+              "U11.13": {
+                "x": 0.2673000000000001,
+                "y": -0.5104999999999995
+              }
+            }
+          },
+          "primitives": [
+            {
+              "id": "primitive:tree:component:U11",
+              "kind": "component",
+              "label": "U11",
+              "sourceNodeId": "tree:component:U11",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.179,
+                "right": 3.179,
+                "top": -4.179,
+                "bottom": 0.179
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.179,
+                  "right": 3.179,
+                  "top": -4.179,
+                  "bottom": 0.179
+                }
+              ],
+              "width": 4.358,
+              "height": 4.358,
+              "placements": [
+                {
+                  "designator": "U11",
+                  "x": 1,
+                  "y": -2,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "U11.1",
+                  "net": "BAT_NTC",
+                  "x": 2.5,
+                  "y": -1.25
+                },
+                {
+                  "ref": "U11.2",
+                  "net": "BAT",
+                  "x": 2.5,
+                  "y": -1.75
+                },
+                {
+                  "ref": "U11.3",
+                  "net": "BAT",
+                  "x": 2.5,
+                  "y": -2.25
+                },
+                {
+                  "ref": "U11.4",
+                  "net": "GND",
+                  "x": 2.5,
+                  "y": -2.75
+                },
+                {
+                  "ref": "U11.5",
+                  "net": "GND",
+                  "x": 1.75,
+                  "y": -3.5
+                },
+                {
+                  "ref": "U11.6",
+                  "net": "3V3",
+                  "x": 1.25,
+                  "y": -3.5
+                },
+                {
+                  "ref": "U11.7",
+                  "net": "USB_PGOOD_N",
+                  "x": 0.75,
+                  "y": -3.5
+                },
+                {
+                  "ref": "U11.8",
+                  "net": "GND",
+                  "x": 0.25,
+                  "y": -3.5
+                },
+                {
+                  "ref": "U11.9",
+                  "net": "USB_CHG_N",
+                  "x": -0.5,
+                  "y": -2.75
+                },
+                {
+                  "ref": "U11.10",
+                  "net": "SYS",
+                  "x": -0.5,
+                  "y": -2.25
+                },
+                {
+                  "ref": "U11.11",
+                  "net": "SYS",
+                  "x": -0.5,
+                  "y": -1.75
+                },
+                {
+                  "ref": "U11.12",
+                  "net": "USB_ILIM",
+                  "x": -0.5,
+                  "y": -1.25
+                },
+                {
+                  "ref": "U11.13",
+                  "net": "USB_5V",
+                  "x": 0.25,
+                  "y": -0.5
+                },
+                {
+                  "ref": "U11.14",
+                  "net": "USB_TIMER",
+                  "x": 0.75,
+                  "y": -0.5
+                },
+                {
+                  "ref": "U11.15",
+                  "net": "USB_ITERM",
+                  "x": 1.25,
+                  "y": -0.5
+                },
+                {
+                  "ref": "U11.16",
+                  "net": "USB_ISET",
+                  "x": 1.75,
+                  "y": -0.5
+                },
+                {
+                  "ref": "U11.17",
+                  "net": "GND",
+                  "x": 1,
+                  "y": -2
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R37",
+              "kind": "component",
+              "label": "R37",
+              "sourceNodeId": "tree:component:R37",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.002,
+                "right": 2.571,
+                "top": -6.677,
+                "bottom": -4.792
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.002,
+                  "right": 2.571,
+                  "top": -6.677,
+                  "bottom": -4.792
+                }
+              ],
+              "width": 3.573,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R37",
+                  "x": 0.784,
+                  "y": -5.735,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R37.2",
+                  "net": "USB_CHG_N",
+                  "x": -0.182,
+                  "y": -5.735
+                },
+                {
+                  "ref": "R37.1",
+                  "net": "3V3",
+                  "x": 1.75,
+                  "y": -5.735
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R36",
+              "kind": "component",
+              "label": "R36",
+              "sourceNodeId": "tree:component:R36",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -0.502,
+                "right": 3.071,
+                "top": -8.913,
+                "bottom": -7.028
+              },
+              "collisionBoxes": [
+                {
+                  "left": -0.502,
+                  "right": 3.071,
+                  "top": -8.913,
+                  "bottom": -7.028
+                }
+              ],
+              "width": 3.573,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R36",
+                  "x": 1.284,
+                  "y": -7.971,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R36.2",
+                  "net": "USB_PGOOD_N",
+                  "x": 0.318,
+                  "y": -7.971
+                },
+                {
+                  "ref": "R36.1",
+                  "net": "3V3",
+                  "x": 2.25,
+                  "y": -7.971
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R32",
+              "kind": "component",
+              "label": "R32",
+              "sourceNodeId": "tree:component:R32",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.07,
+                "right": 2.57,
+                "top": 0.793,
+                "bottom": 2.678
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.07,
+                  "right": 2.57,
+                  "top": 0.793,
+                  "bottom": 2.678
+                }
+              ],
+              "width": 3.641,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R32",
+                  "x": 0.75,
+                  "y": 1.735,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R32.2",
+                  "net": "GND",
+                  "x": -0.25,
+                  "y": 1.735
+                },
+                {
+                  "ref": "R32.1",
+                  "net": "USB_ISET",
+                  "x": 1.75,
+                  "y": 1.735
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R34",
+              "kind": "component",
+              "label": "R34",
+              "sourceNodeId": "tree:component:R34",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -3.678,
+                "right": -1.792,
+                "top": -2.07,
+                "bottom": 1.57
+              },
+              "collisionBoxes": [
+                {
+                  "left": -3.678,
+                  "right": -1.792,
+                  "top": -2.07,
+                  "bottom": 1.57
+                }
+              ],
+              "width": 1.886,
+              "height": 3.64,
+              "placements": [
+                {
+                  "designator": "R34",
+                  "x": -2.735,
+                  "y": -0.25,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R34.2",
+                  "net": "GND",
+                  "x": -2.735,
+                  "y": 0.75
+                },
+                {
+                  "ref": "R34.1",
+                  "net": "USB_ILIM",
+                  "x": -2.735,
+                  "y": -1.25
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R33",
+              "kind": "component",
+              "label": "R33",
+              "sourceNodeId": "tree:component:R33",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.82,
+                "right": 1.82,
+                "top": 3.058,
+                "bottom": 4.943
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.82,
+                  "right": 1.82,
+                  "top": 3.058,
+                  "bottom": 4.943
+                }
+              ],
+              "width": 3.641,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R33",
+                  "x": 0,
+                  "y": 4,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R33.2",
+                  "net": "GND",
+                  "x": -1,
+                  "y": 4
+                },
+                {
+                  "ref": "R33.1",
+                  "net": "USB_ITERM",
+                  "x": 1,
+                  "y": 4
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R35",
+              "kind": "component",
+              "label": "R35",
+              "sourceNodeId": "tree:component:R35",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -0.943,
+                "right": 0.943,
+                "top": 5.294,
+                "bottom": 8.934
+              },
+              "collisionBoxes": [
+                {
+                  "left": -0.943,
+                  "right": 0.943,
+                  "top": 5.294,
+                  "bottom": 8.934
+                }
+              ],
+              "width": 1.886,
+              "height": 3.64,
+              "placements": [
+                {
+                  "designator": "R35",
+                  "x": 0,
+                  "y": 7.114,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R35.2",
+                  "net": "GND",
+                  "x": 0,
+                  "y": 8.114
+                },
+                {
+                  "ref": "R35.1",
+                  "net": "USB_TIMER",
+                  "x": 0,
+                  "y": 6.114
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C43",
+              "kind": "component",
+              "label": "C43",
+              "sourceNodeId": "tree:component:C43",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 3.571,
+                "right": 5.429,
+                "top": -6.464,
+                "bottom": -2.536
+              },
+              "collisionBoxes": [
+                {
+                  "left": 3.571,
+                  "right": 5.429,
+                  "top": -6.464,
+                  "bottom": -2.536
+                }
+              ],
+              "width": 1.858,
+              "height": 3.928,
+              "placements": [
+                {
+                  "designator": "C43",
+                  "x": 4.5,
+                  "y": -4.5,
+                  "rotate": 90,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C43.2",
+                  "net": "GND",
+                  "x": 4.5,
+                  "y": -5.5
+                },
+                {
+                  "ref": "C43.1",
+                  "net": "BAT",
+                  "x": 4.5,
+                  "y": -3.5
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C42",
+              "kind": "component",
+              "label": "C42",
+              "sourceNodeId": "tree:component:C42",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -5.464,
+                "right": -1.536,
+                "top": -4.429,
+                "bottom": -2.571
+              },
+              "collisionBoxes": [
+                {
+                  "left": -5.464,
+                  "right": -1.536,
+                  "top": -4.429,
+                  "bottom": -2.571
+                }
+              ],
+              "width": 3.927,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C42",
+                  "x": -3.5,
+                  "y": -3.5,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C42.2",
+                  "net": "GND",
+                  "x": -4.5,
+                  "y": -3.5
+                },
+                {
+                  "ref": "C42.1",
+                  "net": "SYS",
+                  "x": -2.5,
+                  "y": -3.5
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            }
+          ],
+          "placements": [
+            {
+              "designator": "U11",
+              "x": 1,
+              "y": -2,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R37",
+              "x": 0.784,
+              "y": -5.735,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R36",
+              "x": 1.284,
+              "y": -7.971,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R32",
+              "x": 0.75,
+              "y": 1.735,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R34",
+              "x": -2.735,
+              "y": -0.25,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R33",
+              "x": 0,
+              "y": 4,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R35",
+              "x": 0,
+              "y": 7.114,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C43",
+              "x": 4.5,
+              "y": -4.5,
+              "rotate": 90,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C42",
+              "x": -3.5,
+              "y": -3.5,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            }
+          ],
+          "selected": false
+        },
+        {
+          "stage": "singles",
+          "hypothesis": "original",
+          "quality": {
+            "score": 3351.232383828054,
+            "electrical": 3245.634680628054,
+            "localStretch": 349.25389394634846,
+            "wire": 25.08611526761632,
+            "maxLocal": 4.672258986828535,
+            "area": 179.16915200000003,
+            "width": 12.928,
+            "height": 13.859,
+            "exposure": 14.7475,
+            "links": {
+              "C43.1->U11": 2.3589724055189794,
+              "R36.1->U11": 4.625673330446065,
+              "R37.1->U11": 2.242430547419474,
+              "R36.2->U11": 4.478988056469898,
+              "R37.2->U11": 2.985100006699943,
+              "C42.1->U11": 2.358071381447135,
+              "R34.1->U11": 2.2350000089485453,
+              "R35.1->U11": 3.7338859396076898,
+              "R33.1->U11": 4.672258986828535,
+              "R32.1->U11": 2.235000002237136
+            },
+            "ports": {
+              "U11.1": {
+                "x": 1.5,
+                "y": 0.7347
+              },
+              "U11.2": {
+                "x": 1.5,
+                "y": 0.23460000000000003
+              },
+              "U11.3": {
+                "x": 1.5,
+                "y": -0.2652999999999999
+              },
+              "C43.1": {
+                "x": 3.5,
+                "y": 1.4855000000000003
+              },
+              "U11.6": {
+                "x": 0.2498,
+                "y": -1.5154999999999998
+              },
+              "R36.1": {
+                "x": 1.4322,
+                "y": -5.9875
+              },
+              "R37.1": {
+                "x": 0.4321999999999999,
+                "y": -3.7505
+              },
+              "U11.7": {
+                "x": -0.2501,
+                "y": -1.5154999999999998
+              },
+              "R36.2": {
+                "x": -0.5002,
+                "y": -5.9875
+              },
+              "U11.9": {
+                "x": -1.5,
+                "y": -0.7654
+              },
+              "R37.2": {
+                "x": -1.5002,
+                "y": -3.7505
+              },
+              "U11.10": {
+                "x": -1.5,
+                "y": -0.2652999999999999
+              },
+              "U11.11": {
+                "x": -1.5,
+                "y": 0.23460000000000003
+              },
+              "C42.1": {
+                "x": -3.5,
+                "y": -1.5145
+              },
+              "U11.13": {
+                "x": -0.7502,
+                "y": 1.4845000000000002
+              }
+            }
+          },
+          "primitives": [
+            {
+              "id": "primitive:tree:component:U11",
+              "kind": "component",
+              "label": "U11",
+              "sourceNodeId": "tree:component:U11",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -2.179,
+                "right": 2.179,
+                "top": -2.18,
+                "bottom": 2.178
+              },
+              "collisionBoxes": [
+                {
+                  "left": -2.179,
+                  "right": 2.179,
+                  "top": -2.18,
+                  "bottom": 2.178
+                }
+              ],
+              "width": 4.358,
+              "height": 4.358,
+              "placements": [
+                {
+                  "designator": "U11",
+                  "x": 0,
+                  "y": -0.001,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "U11.1",
+                  "net": "BAT_NTC",
+                  "x": 1.5,
+                  "y": 0.749
+                },
+                {
+                  "ref": "U11.2",
+                  "net": "BAT",
+                  "x": 1.5,
+                  "y": 0.249
+                },
+                {
+                  "ref": "U11.3",
+                  "net": "BAT",
+                  "x": 1.5,
+                  "y": -0.251
+                },
+                {
+                  "ref": "U11.4",
+                  "net": "GND",
+                  "x": 1.5,
+                  "y": -0.751
+                },
+                {
+                  "ref": "U11.5",
+                  "net": "GND",
+                  "x": 0.75,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.6",
+                  "net": "3V3",
+                  "x": 0.25,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.7",
+                  "net": "USB_PGOOD_N",
+                  "x": -0.25,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.8",
+                  "net": "GND",
+                  "x": -0.75,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.9",
+                  "net": "USB_CHG_N",
+                  "x": -1.5,
+                  "y": -0.751
+                },
+                {
+                  "ref": "U11.10",
+                  "net": "SYS",
+                  "x": -1.5,
+                  "y": -0.251
+                },
+                {
+                  "ref": "U11.11",
+                  "net": "SYS",
+                  "x": -1.5,
+                  "y": 0.249
+                },
+                {
+                  "ref": "U11.12",
+                  "net": "USB_ILIM",
+                  "x": -1.5,
+                  "y": 0.749
+                },
+                {
+                  "ref": "U11.13",
+                  "net": "USB_5V",
+                  "x": -0.75,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.14",
+                  "net": "USB_TIMER",
+                  "x": -0.25,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.15",
+                  "net": "USB_ITERM",
+                  "x": 0.25,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.16",
+                  "net": "USB_ISET",
+                  "x": 0.75,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.17",
+                  "net": "GND",
+                  "x": 0,
+                  "y": -0.001
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R37",
+              "kind": "component",
+              "label": "R37",
+              "sourceNodeId": "tree:component:R37",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -2.32,
+                "right": 1.253,
+                "top": -4.679,
+                "bottom": -2.794
+              },
+              "collisionBoxes": [
+                {
+                  "left": -2.32,
+                  "right": 1.253,
+                  "top": -4.679,
+                  "bottom": -2.794
+                }
+              ],
+              "width": 3.573,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R37",
+                  "x": -0.534,
+                  "y": -3.736,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R37.2",
+                  "net": "USB_CHG_N",
+                  "x": -1.5,
+                  "y": -3.736
+                },
+                {
+                  "ref": "R37.1",
+                  "net": "3V3",
+                  "x": 0.432,
+                  "y": -3.736
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R36",
+              "kind": "component",
+              "label": "R36",
+              "sourceNodeId": "tree:component:R36",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.32,
+                "right": 2.253,
+                "top": -6.915,
+                "bottom": -5.03
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.32,
+                  "right": 2.253,
+                  "top": -6.915,
+                  "bottom": -5.03
+                }
+              ],
+              "width": 3.573,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R36",
+                  "x": 0.466,
+                  "y": -5.973,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R36.2",
+                  "net": "USB_PGOOD_N",
+                  "x": -0.5,
+                  "y": -5.973
+                },
+                {
+                  "ref": "R36.1",
+                  "net": "3V3",
+                  "x": 1.432,
+                  "y": -5.973
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R32",
+              "kind": "component",
+              "label": "R32",
+              "sourceNodeId": "tree:component:R32",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -2.07,
+                "right": 1.57,
+                "top": 2.792,
+                "bottom": 4.677
+              },
+              "collisionBoxes": [
+                {
+                  "left": -2.07,
+                  "right": 1.57,
+                  "top": 2.792,
+                  "bottom": 4.677
+                }
+              ],
+              "width": 3.641,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R32",
+                  "x": -0.25,
+                  "y": 3.734,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R32.2",
+                  "net": "GND",
+                  "x": -1.25,
+                  "y": 3.734
+                },
+                {
+                  "ref": "R32.1",
+                  "net": "USB_ISET",
+                  "x": 0.75,
+                  "y": 3.734
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R34",
+              "kind": "component",
+              "label": "R34",
+              "sourceNodeId": "tree:component:R34",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -4.678,
+                "right": -2.792,
+                "top": -0.071,
+                "bottom": 3.569
+              },
+              "collisionBoxes": [
+                {
+                  "left": -4.678,
+                  "right": -2.792,
+                  "top": -0.071,
+                  "bottom": 3.569
+                }
+              ],
+              "width": 1.886,
+              "height": 3.64,
+              "placements": [
+                {
+                  "designator": "R34",
+                  "x": -3.735,
+                  "y": 1.749,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R34.2",
+                  "net": "GND",
+                  "x": -3.735,
+                  "y": 2.749
+                },
+                {
+                  "ref": "R34.1",
+                  "net": "USB_ILIM",
+                  "x": -3.735,
+                  "y": 0.749
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R33",
+              "kind": "component",
+              "label": "R33",
+              "sourceNodeId": "tree:component:R33",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.82,
+                "right": 1.82,
+                "top": 5.058,
+                "bottom": 6.944
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.82,
+                  "right": 1.82,
+                  "top": 5.058,
+                  "bottom": 6.944
+                }
+              ],
+              "width": 3.64,
+              "height": 1.886,
+              "placements": [
+                {
+                  "designator": "R33",
+                  "x": 0,
+                  "y": 6.001,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R33.2",
+                  "net": "GND",
+                  "x": 1,
+                  "y": 6.001
+                },
+                {
+                  "ref": "R33.1",
+                  "net": "USB_ITERM",
+                  "x": -1,
+                  "y": 6.001
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R35",
+              "kind": "component",
+              "label": "R35",
+              "sourceNodeId": "tree:component:R35",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 1.921,
+                "right": 5.561,
+                "top": 2.791,
+                "bottom": 4.677
+              },
+              "collisionBoxes": [
+                {
+                  "left": 1.921,
+                  "right": 5.561,
+                  "top": 2.791,
+                  "bottom": 4.677
+                }
+              ],
+              "width": 3.64,
+              "height": 1.886,
+              "placements": [
+                {
+                  "designator": "R35",
+                  "x": 3.741,
+                  "y": 3.734,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R35.2",
+                  "net": "GND",
+                  "x": 4.741,
+                  "y": 3.734
+                },
+                {
+                  "ref": "R35.1",
+                  "net": "USB_TIMER",
+                  "x": 2.741,
+                  "y": 3.734
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C43",
+              "kind": "component",
+              "label": "C43",
+              "sourceNodeId": "tree:component:C43",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 2.536,
+                "right": 6.464,
+                "top": 0.571,
+                "bottom": 2.429
+              },
+              "collisionBoxes": [
+                {
+                  "left": 2.536,
+                  "right": 6.464,
+                  "top": 0.571,
+                  "bottom": 2.429
+                }
+              ],
+              "width": 3.928,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C43",
+                  "x": 4.5,
+                  "y": 1.5,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C43.2",
+                  "net": "GND",
+                  "x": 5.5,
+                  "y": 1.5
+                },
+                {
+                  "ref": "C43.1",
+                  "net": "BAT",
+                  "x": 3.5,
+                  "y": 1.5
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C42",
+              "kind": "component",
+              "label": "C42",
+              "sourceNodeId": "tree:component:C42",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -6.464,
+                "right": -2.536,
+                "top": -2.429,
+                "bottom": -0.571
+              },
+              "collisionBoxes": [
+                {
+                  "left": -6.464,
+                  "right": -2.536,
+                  "top": -2.429,
+                  "bottom": -0.571
+                }
+              ],
+              "width": 3.927,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C42",
+                  "x": -4.5,
+                  "y": -1.5,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C42.2",
+                  "net": "GND",
+                  "x": -5.5,
+                  "y": -1.5
+                },
+                {
+                  "ref": "C42.1",
+                  "net": "SYS",
+                  "x": -3.5,
+                  "y": -1.5
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            }
+          ],
+          "placements": [
+            {
+              "designator": "U11",
+              "x": 0,
+              "y": -0.001,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R37",
+              "x": -0.534,
+              "y": -3.736,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R36",
+              "x": 0.466,
+              "y": -5.973,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R32",
+              "x": -0.25,
+              "y": 3.734,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R34",
+              "x": -3.735,
+              "y": 1.749,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R33",
+              "x": 0,
+              "y": 6.001,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R35",
+              "x": 3.741,
+              "y": 3.734,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C43",
+              "x": 4.5,
+              "y": 1.5,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C42",
+              "x": -4.5,
+              "y": -1.5,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            }
+          ],
+          "selected": false
+        },
+        {
+          "stage": "singles+postrefine",
+          "hypothesis": "original",
+          "quality": {
+            "score": 2784.1695427210816,
+            "electrical": 2678.5718395210815,
+            "localStretch": 328.85624708415645,
+            "wire": 24.55897984313824,
+            "maxLocal": 4.672258986828535,
+            "area": 179.16915200000003,
+            "width": 12.928,
+            "height": 13.859,
+            "exposure": 14.7475,
+            "links": {
+              "C43.1->U11": 2.3589724055189794,
+              "R36.1->U11": 4.625673330446065,
+              "R37.1->U11": 2.242430547419474,
+              "R36.2->U11": 4.478988056469898,
+              "R37.2->U11": 2.985100006699943,
+              "C42.1->U11": 2.358071381447135,
+              "R34.1->U11": 2.2350000089485453,
+              "R35.1->U11": 2.4484740166070784,
+              "R33.1->U11": 4.672258986828535,
+              "R32.1->U11": 2.993276500759661
+            },
+            "ports": {
+              "U11.1": {
+                "x": 1.5,
+                "y": 0.7347
+              },
+              "U11.2": {
+                "x": 1.5,
+                "y": 0.23460000000000003
+              },
+              "U11.3": {
+                "x": 1.5,
+                "y": -0.2652999999999999
+              },
+              "C43.1": {
+                "x": 3.5,
+                "y": 1.4855000000000003
+              },
+              "U11.6": {
+                "x": 0.2498,
+                "y": -1.5154999999999998
+              },
+              "R36.1": {
+                "x": 1.4322,
+                "y": -5.9875
+              },
+              "R37.1": {
+                "x": 0.4321999999999999,
+                "y": -3.7505
+              },
+              "U11.7": {
+                "x": -0.2501,
+                "y": -1.5154999999999998
+              },
+              "R36.2": {
+                "x": -0.5002,
+                "y": -5.9875
+              },
+              "U11.9": {
+                "x": -1.5,
+                "y": -0.7654
+              },
+              "R37.2": {
+                "x": -1.5002,
+                "y": -3.7505
+              },
+              "U11.10": {
+                "x": -1.5,
+                "y": -0.2652999999999999
+              },
+              "U11.11": {
+                "x": -1.5,
+                "y": 0.23460000000000003
+              },
+              "C42.1": {
+                "x": -3.5,
+                "y": -1.5145
+              },
+              "U11.13": {
+                "x": -0.7502,
+                "y": 1.4845000000000002
+              }
+            }
+          },
+          "primitives": [
+            {
+              "id": "primitive:tree:component:U11",
+              "kind": "component",
+              "label": "U11",
+              "sourceNodeId": "tree:component:U11",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -2.179,
+                "right": 2.179,
+                "top": -2.18,
+                "bottom": 2.178
+              },
+              "collisionBoxes": [
+                {
+                  "left": -2.179,
+                  "right": 2.179,
+                  "top": -2.18,
+                  "bottom": 2.178
+                }
+              ],
+              "width": 4.358,
+              "height": 4.358,
+              "placements": [
+                {
+                  "designator": "U11",
+                  "x": 0,
+                  "y": -0.001,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "U11.1",
+                  "net": "BAT_NTC",
+                  "x": 1.5,
+                  "y": 0.749
+                },
+                {
+                  "ref": "U11.2",
+                  "net": "BAT",
+                  "x": 1.5,
+                  "y": 0.249
+                },
+                {
+                  "ref": "U11.3",
+                  "net": "BAT",
+                  "x": 1.5,
+                  "y": -0.251
+                },
+                {
+                  "ref": "U11.4",
+                  "net": "GND",
+                  "x": 1.5,
+                  "y": -0.751
+                },
+                {
+                  "ref": "U11.5",
+                  "net": "GND",
+                  "x": 0.75,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.6",
+                  "net": "3V3",
+                  "x": 0.25,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.7",
+                  "net": "USB_PGOOD_N",
+                  "x": -0.25,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.8",
+                  "net": "GND",
+                  "x": -0.75,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.9",
+                  "net": "USB_CHG_N",
+                  "x": -1.5,
+                  "y": -0.751
+                },
+                {
+                  "ref": "U11.10",
+                  "net": "SYS",
+                  "x": -1.5,
+                  "y": -0.251
+                },
+                {
+                  "ref": "U11.11",
+                  "net": "SYS",
+                  "x": -1.5,
+                  "y": 0.249
+                },
+                {
+                  "ref": "U11.12",
+                  "net": "USB_ILIM",
+                  "x": -1.5,
+                  "y": 0.749
+                },
+                {
+                  "ref": "U11.13",
+                  "net": "USB_5V",
+                  "x": -0.75,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.14",
+                  "net": "USB_TIMER",
+                  "x": -0.25,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.15",
+                  "net": "USB_ITERM",
+                  "x": 0.25,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.16",
+                  "net": "USB_ISET",
+                  "x": 0.75,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.17",
+                  "net": "GND",
+                  "x": 0,
+                  "y": -0.001
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R37",
+              "kind": "component",
+              "label": "R37",
+              "sourceNodeId": "tree:component:R37",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -2.32,
+                "right": 1.253,
+                "top": -4.679,
+                "bottom": -2.794
+              },
+              "collisionBoxes": [
+                {
+                  "left": -2.32,
+                  "right": 1.253,
+                  "top": -4.679,
+                  "bottom": -2.794
+                }
+              ],
+              "width": 3.573,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R37",
+                  "x": -0.534,
+                  "y": -3.736,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R37.2",
+                  "net": "USB_CHG_N",
+                  "x": -1.5,
+                  "y": -3.736
+                },
+                {
+                  "ref": "R37.1",
+                  "net": "3V3",
+                  "x": 0.432,
+                  "y": -3.736
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R36",
+              "kind": "component",
+              "label": "R36",
+              "sourceNodeId": "tree:component:R36",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.32,
+                "right": 2.253,
+                "top": -6.915,
+                "bottom": -5.03
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.32,
+                  "right": 2.253,
+                  "top": -6.915,
+                  "bottom": -5.03
+                }
+              ],
+              "width": 3.573,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R36",
+                  "x": 0.466,
+                  "y": -5.973,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R36.2",
+                  "net": "USB_PGOOD_N",
+                  "x": -0.5,
+                  "y": -5.973
+                },
+                {
+                  "ref": "R36.1",
+                  "net": "3V3",
+                  "x": 1.432,
+                  "y": -5.973
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R32",
+              "kind": "component",
+              "label": "R32",
+              "sourceNodeId": "tree:component:R32",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 1.921,
+                "right": 5.561,
+                "top": 2.791,
+                "bottom": 4.676
+              },
+              "collisionBoxes": [
+                {
+                  "left": 1.921,
+                  "right": 5.561,
+                  "top": 2.791,
+                  "bottom": 4.676
+                }
+              ],
+              "width": 3.64,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R32",
+                  "x": 3.741,
+                  "y": 3.734,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R32.2",
+                  "net": "GND",
+                  "x": 4.741,
+                  "y": 3.734
+                },
+                {
+                  "ref": "R32.1",
+                  "net": "USB_ISET",
+                  "x": 2.741,
+                  "y": 3.734
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R34",
+              "kind": "component",
+              "label": "R34",
+              "sourceNodeId": "tree:component:R34",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -4.678,
+                "right": -2.792,
+                "top": -0.071,
+                "bottom": 3.569
+              },
+              "collisionBoxes": [
+                {
+                  "left": -4.678,
+                  "right": -2.792,
+                  "top": -0.071,
+                  "bottom": 3.569
+                }
+              ],
+              "width": 1.886,
+              "height": 3.64,
+              "placements": [
+                {
+                  "designator": "R34",
+                  "x": -3.735,
+                  "y": 1.749,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R34.2",
+                  "net": "GND",
+                  "x": -3.735,
+                  "y": 2.749
+                },
+                {
+                  "ref": "R34.1",
+                  "net": "USB_ILIM",
+                  "x": -3.735,
+                  "y": 0.749
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R33",
+              "kind": "component",
+              "label": "R33",
+              "sourceNodeId": "tree:component:R33",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.82,
+                "right": 1.82,
+                "top": 5.058,
+                "bottom": 6.944
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.82,
+                  "right": 1.82,
+                  "top": 5.058,
+                  "bottom": 6.944
+                }
+              ],
+              "width": 3.64,
+              "height": 1.886,
+              "placements": [
+                {
+                  "designator": "R33",
+                  "x": 0,
+                  "y": 6.001,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R33.2",
+                  "net": "GND",
+                  "x": 1,
+                  "y": 6.001
+                },
+                {
+                  "ref": "R33.1",
+                  "net": "USB_ITERM",
+                  "x": -1,
+                  "y": 6.001
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R35",
+              "kind": "component",
+              "label": "R35",
+              "sourceNodeId": "tree:component:R35",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -2.07,
+                "right": 1.57,
+                "top": 2.791,
+                "bottom": 4.677
+              },
+              "collisionBoxes": [
+                {
+                  "left": -2.07,
+                  "right": 1.57,
+                  "top": 2.791,
+                  "bottom": 4.677
+                }
+              ],
+              "width": 3.64,
+              "height": 1.886,
+              "placements": [
+                {
+                  "designator": "R35",
+                  "x": -0.25,
+                  "y": 3.734,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R35.2",
+                  "net": "GND",
+                  "x": 0.75,
+                  "y": 3.734
+                },
+                {
+                  "ref": "R35.1",
+                  "net": "USB_TIMER",
+                  "x": -1.25,
+                  "y": 3.734
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C43",
+              "kind": "component",
+              "label": "C43",
+              "sourceNodeId": "tree:component:C43",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 2.536,
+                "right": 6.464,
+                "top": 0.571,
+                "bottom": 2.429
+              },
+              "collisionBoxes": [
+                {
+                  "left": 2.536,
+                  "right": 6.464,
+                  "top": 0.571,
+                  "bottom": 2.429
+                }
+              ],
+              "width": 3.928,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C43",
+                  "x": 4.5,
+                  "y": 1.5,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C43.2",
+                  "net": "GND",
+                  "x": 5.5,
+                  "y": 1.5
+                },
+                {
+                  "ref": "C43.1",
+                  "net": "BAT",
+                  "x": 3.5,
+                  "y": 1.5
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C42",
+              "kind": "component",
+              "label": "C42",
+              "sourceNodeId": "tree:component:C42",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -6.464,
+                "right": -2.536,
+                "top": -2.429,
+                "bottom": -0.571
+              },
+              "collisionBoxes": [
+                {
+                  "left": -6.464,
+                  "right": -2.536,
+                  "top": -2.429,
+                  "bottom": -0.571
+                }
+              ],
+              "width": 3.927,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C42",
+                  "x": -4.5,
+                  "y": -1.5,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C42.2",
+                  "net": "GND",
+                  "x": -5.5,
+                  "y": -1.5
+                },
+                {
+                  "ref": "C42.1",
+                  "net": "SYS",
+                  "x": -3.5,
+                  "y": -1.5
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            }
+          ],
+          "placements": [
+            {
+              "designator": "U11",
+              "x": 0,
+              "y": -0.001,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R37",
+              "x": -0.534,
+              "y": -3.736,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R36",
+              "x": 0.466,
+              "y": -5.973,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R32",
+              "x": 3.741,
+              "y": 3.734,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R34",
+              "x": -3.735,
+              "y": 1.749,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R33",
+              "x": 0,
+              "y": 6.001,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R35",
+              "x": -0.25,
+              "y": 3.734,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C43",
+              "x": 4.5,
+              "y": 1.5,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C42",
+              "x": -4.5,
+              "y": -1.5,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            }
+          ],
+          "selected": true
+        },
+        {
+          "stage": "pairs",
+          "hypothesis": "original",
+          "quality": {
+            "score": 2684.5400996753924,
+            "electrical": 2578.2610132753925,
+            "localStretch": 330.99360205043814,
+            "wire": 24.799647606711712,
+            "maxLocal": 4.672258986828535,
+            "area": 180.943104,
+            "width": 13.056000000000001,
+            "height": 13.859,
+            "exposure": 14.745750000000001,
+            "links": {
+              "C43.1->U11": 1.993000002508781,
+              "R36.1->U11": 4.625673330446065,
+              "R37.1->U11": 2.242430547419474,
+              "R36.2->U11": 4.478988056469898,
+              "R37.2->U11": 2.985100006699943,
+              "C42.1->U11": 2.4801963309383392,
+              "R34.1->U11": 2.2902019648930527,
+              "R35.1->U11": 2.4493868640947674,
+              "R33.1->U11": 4.672258986828535,
+              "R32.1->U11": 3.147197612162287
+            },
+            "ports": {
+              "U11.1": {
+                "x": 1.5710000000000002,
+                "y": 0.7347
+              },
+              "U11.2": {
+                "x": 1.5710000000000002,
+                "y": 0.23460000000000003
+              },
+              "U11.3": {
+                "x": 1.5710000000000002,
+                "y": -0.2652999999999999
+              },
+              "C43.1": {
+                "x": 3.5640000000000005,
+                "y": 0.23450000000000015
+              },
+              "U11.6": {
+                "x": 0.3208000000000002,
+                "y": -1.5154999999999998
+              },
+              "R36.1": {
+                "x": 1.5032,
+                "y": -5.9875
+              },
+              "R37.1": {
+                "x": 0.5032000000000001,
+                "y": -3.7505
+              },
+              "U11.7": {
+                "x": -0.17909999999999981,
+                "y": -1.5154999999999998
+              },
+              "R36.2": {
+                "x": -0.4291999999999998,
+                "y": -5.9875
+              },
+              "U11.9": {
+                "x": -1.4289999999999998,
+                "y": -0.7654
+              },
+              "R37.2": {
+                "x": -1.4291999999999998,
+                "y": -3.7505
+              },
+              "U11.10": {
+                "x": -1.4289999999999998,
+                "y": -0.2652999999999999
+              },
+              "U11.11": {
+                "x": -1.4289999999999998,
+                "y": 0.23460000000000003
+              },
+              "C42.1": {
+                "x": -3.5639999999999996,
+                "y": -1.5274999999999999
+              },
+              "U11.13": {
+                "x": -0.6791999999999998,
+                "y": 1.4845000000000002
+              }
+            }
+          },
+          "primitives": [
+            {
+              "id": "primitive:tree:component:U11",
+              "kind": "component",
+              "label": "U11",
+              "sourceNodeId": "tree:component:U11",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -2.179,
+                "right": 2.179,
+                "top": -2.18,
+                "bottom": 2.178
+              },
+              "collisionBoxes": [
+                {
+                  "left": -2.179,
+                  "right": 2.179,
+                  "top": -2.18,
+                  "bottom": 2.178
+                }
+              ],
+              "width": 4.358,
+              "height": 4.358,
+              "placements": [
+                {
+                  "designator": "U11",
+                  "x": 0,
+                  "y": -0.001,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "U11.1",
+                  "net": "BAT_NTC",
+                  "x": 1.5,
+                  "y": 0.749
+                },
+                {
+                  "ref": "U11.2",
+                  "net": "BAT",
+                  "x": 1.5,
+                  "y": 0.249
+                },
+                {
+                  "ref": "U11.3",
+                  "net": "BAT",
+                  "x": 1.5,
+                  "y": -0.251
+                },
+                {
+                  "ref": "U11.4",
+                  "net": "GND",
+                  "x": 1.5,
+                  "y": -0.751
+                },
+                {
+                  "ref": "U11.5",
+                  "net": "GND",
+                  "x": 0.75,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.6",
+                  "net": "3V3",
+                  "x": 0.25,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.7",
+                  "net": "USB_PGOOD_N",
+                  "x": -0.25,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.8",
+                  "net": "GND",
+                  "x": -0.75,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.9",
+                  "net": "USB_CHG_N",
+                  "x": -1.5,
+                  "y": -0.751
+                },
+                {
+                  "ref": "U11.10",
+                  "net": "SYS",
+                  "x": -1.5,
+                  "y": -0.251
+                },
+                {
+                  "ref": "U11.11",
+                  "net": "SYS",
+                  "x": -1.5,
+                  "y": 0.249
+                },
+                {
+                  "ref": "U11.12",
+                  "net": "USB_ILIM",
+                  "x": -1.5,
+                  "y": 0.749
+                },
+                {
+                  "ref": "U11.13",
+                  "net": "USB_5V",
+                  "x": -0.75,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.14",
+                  "net": "USB_TIMER",
+                  "x": -0.25,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.15",
+                  "net": "USB_ITERM",
+                  "x": 0.25,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.16",
+                  "net": "USB_ISET",
+                  "x": 0.75,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.17",
+                  "net": "GND",
+                  "x": 0,
+                  "y": -0.001
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R37",
+              "kind": "component",
+              "label": "R37",
+              "sourceNodeId": "tree:component:R37",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -2.32,
+                "right": 1.253,
+                "top": -4.679,
+                "bottom": -2.794
+              },
+              "collisionBoxes": [
+                {
+                  "left": -2.32,
+                  "right": 1.253,
+                  "top": -4.679,
+                  "bottom": -2.794
+                }
+              ],
+              "width": 3.573,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R37",
+                  "x": -0.534,
+                  "y": -3.736,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R37.2",
+                  "net": "USB_CHG_N",
+                  "x": -1.5,
+                  "y": -3.736
+                },
+                {
+                  "ref": "R37.1",
+                  "net": "3V3",
+                  "x": 0.432,
+                  "y": -3.736
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R36",
+              "kind": "component",
+              "label": "R36",
+              "sourceNodeId": "tree:component:R36",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.32,
+                "right": 2.253,
+                "top": -6.915,
+                "bottom": -5.03
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.32,
+                  "right": 2.253,
+                  "top": -6.915,
+                  "bottom": -5.03
+                }
+              ],
+              "width": 3.573,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R36",
+                  "x": 0.466,
+                  "y": -5.973,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R36.2",
+                  "net": "USB_PGOOD_N",
+                  "x": -0.5,
+                  "y": -5.973
+                },
+                {
+                  "ref": "R36.1",
+                  "net": "3V3",
+                  "x": 1.432,
+                  "y": -5.973
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R32",
+              "kind": "component",
+              "label": "R32",
+              "sourceNodeId": "tree:component:R32",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 2.791,
+                "right": 4.677,
+                "top": 1.679,
+                "bottom": 5.319
+              },
+              "collisionBoxes": [
+                {
+                  "left": 2.791,
+                  "right": 4.677,
+                  "top": 1.679,
+                  "bottom": 5.319
+                }
+              ],
+              "width": 1.886,
+              "height": 3.64,
+              "placements": [
+                {
+                  "designator": "R32",
+                  "x": 3.734,
+                  "y": 3.499,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R32.2",
+                  "net": "GND",
+                  "x": 3.734,
+                  "y": 4.499
+                },
+                {
+                  "ref": "R32.1",
+                  "net": "USB_ISET",
+                  "x": 3.734,
+                  "y": 2.499
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R34",
+              "kind": "component",
+              "label": "R34",
+              "sourceNodeId": "tree:component:R34",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -4.678,
+                "right": -2.792,
+                "top": 0.429,
+                "bottom": 4.069
+              },
+              "collisionBoxes": [
+                {
+                  "left": -4.678,
+                  "right": -2.792,
+                  "top": 0.429,
+                  "bottom": 4.069
+                }
+              ],
+              "width": 1.886,
+              "height": 3.64,
+              "placements": [
+                {
+                  "designator": "R34",
+                  "x": -3.735,
+                  "y": 2.249,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R34.2",
+                  "net": "GND",
+                  "x": -3.735,
+                  "y": 3.249
+                },
+                {
+                  "ref": "R34.1",
+                  "net": "USB_ILIM",
+                  "x": -3.735,
+                  "y": 1.249
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R33",
+              "kind": "component",
+              "label": "R33",
+              "sourceNodeId": "tree:component:R33",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.82,
+                "right": 1.82,
+                "top": 5.058,
+                "bottom": 6.944
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.82,
+                  "right": 1.82,
+                  "top": 5.058,
+                  "bottom": 6.944
+                }
+              ],
+              "width": 3.64,
+              "height": 1.886,
+              "placements": [
+                {
+                  "designator": "R33",
+                  "x": 0,
+                  "y": 6.001,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R33.2",
+                  "net": "GND",
+                  "x": 1,
+                  "y": 6.001
+                },
+                {
+                  "ref": "R33.1",
+                  "net": "USB_ITERM",
+                  "x": -1,
+                  "y": 6.001
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R35",
+              "kind": "component",
+              "label": "R35",
+              "sourceNodeId": "tree:component:R35",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -2.07,
+                "right": 1.57,
+                "top": 2.792,
+                "bottom": 4.678
+              },
+              "collisionBoxes": [
+                {
+                  "left": -2.07,
+                  "right": 1.57,
+                  "top": 2.792,
+                  "bottom": 4.678
+                }
+              ],
+              "width": 3.64,
+              "height": 1.886,
+              "placements": [
+                {
+                  "designator": "R35",
+                  "x": -0.25,
+                  "y": 3.735,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R35.2",
+                  "net": "GND",
+                  "x": 0.75,
+                  "y": 3.735
+                },
+                {
+                  "ref": "R35.1",
+                  "net": "USB_TIMER",
+                  "x": -1.25,
+                  "y": 3.735
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C43",
+              "kind": "component",
+              "label": "C43",
+              "sourceNodeId": "tree:component:C43",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 2.529,
+                "right": 6.457,
+                "top": -0.68,
+                "bottom": 1.178
+              },
+              "collisionBoxes": [
+                {
+                  "left": 2.529,
+                  "right": 6.457,
+                  "top": -0.68,
+                  "bottom": 1.178
+                }
+              ],
+              "width": 3.928,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C43",
+                  "x": 4.493,
+                  "y": 0.249,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C43.2",
+                  "net": "GND",
+                  "x": 5.493,
+                  "y": 0.249
+                },
+                {
+                  "ref": "C43.1",
+                  "net": "BAT",
+                  "x": 3.493,
+                  "y": 0.249
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C42",
+              "kind": "component",
+              "label": "C42",
+              "sourceNodeId": "tree:component:C42",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -6.599,
+                "right": -2.671,
+                "top": -2.442,
+                "bottom": -0.584
+              },
+              "collisionBoxes": [
+                {
+                  "left": -6.599,
+                  "right": -2.671,
+                  "top": -2.442,
+                  "bottom": -0.584
+                }
+              ],
+              "width": 3.927,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C42",
+                  "x": -4.635,
+                  "y": -1.513,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C42.2",
+                  "net": "GND",
+                  "x": -5.635,
+                  "y": -1.513
+                },
+                {
+                  "ref": "C42.1",
+                  "net": "SYS",
+                  "x": -3.635,
+                  "y": -1.513
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            }
+          ],
+          "placements": [
+            {
+              "designator": "U11",
+              "x": 0,
+              "y": -0.001,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R37",
+              "x": -0.534,
+              "y": -3.736,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R36",
+              "x": 0.466,
+              "y": -5.973,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R32",
+              "x": 3.734,
+              "y": 3.499,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R34",
+              "x": -3.735,
+              "y": 2.249,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R33",
+              "x": 0,
+              "y": 6.001,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R35",
+              "x": -0.25,
+              "y": 3.735,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C43",
+              "x": 4.493,
+              "y": 0.249,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C42",
+              "x": -4.635,
+              "y": -1.513,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            }
+          ],
+          "selected": true
+        },
+        {
+          "stage": "pairs+postrefine",
+          "hypothesis": "original",
+          "quality": {
+            "score": 2684.5400996753924,
+            "electrical": 2578.2610132753925,
+            "localStretch": 330.99360205043814,
+            "wire": 24.799647606711712,
+            "maxLocal": 4.672258986828535,
+            "area": 180.943104,
+            "width": 13.056000000000001,
+            "height": 13.859,
+            "exposure": 14.745750000000001,
+            "links": {
+              "C43.1->U11": 1.993000002508781,
+              "R36.1->U11": 4.625673330446065,
+              "R37.1->U11": 2.242430547419474,
+              "R36.2->U11": 4.478988056469898,
+              "R37.2->U11": 2.985100006699943,
+              "C42.1->U11": 2.4801963309383392,
+              "R34.1->U11": 2.2902019648930527,
+              "R35.1->U11": 2.4493868640947674,
+              "R33.1->U11": 4.672258986828535,
+              "R32.1->U11": 3.147197612162287
+            },
+            "ports": {
+              "U11.1": {
+                "x": 1.5710000000000002,
+                "y": 0.7347
+              },
+              "U11.2": {
+                "x": 1.5710000000000002,
+                "y": 0.23460000000000003
+              },
+              "U11.3": {
+                "x": 1.5710000000000002,
+                "y": -0.2652999999999999
+              },
+              "C43.1": {
+                "x": 3.5640000000000005,
+                "y": 0.23450000000000015
+              },
+              "U11.6": {
+                "x": 0.3208000000000002,
+                "y": -1.5154999999999998
+              },
+              "R36.1": {
+                "x": 1.5032,
+                "y": -5.9875
+              },
+              "R37.1": {
+                "x": 0.5032000000000001,
+                "y": -3.7505
+              },
+              "U11.7": {
+                "x": -0.17909999999999981,
+                "y": -1.5154999999999998
+              },
+              "R36.2": {
+                "x": -0.4291999999999998,
+                "y": -5.9875
+              },
+              "U11.9": {
+                "x": -1.4289999999999998,
+                "y": -0.7654
+              },
+              "R37.2": {
+                "x": -1.4291999999999998,
+                "y": -3.7505
+              },
+              "U11.10": {
+                "x": -1.4289999999999998,
+                "y": -0.2652999999999999
+              },
+              "U11.11": {
+                "x": -1.4289999999999998,
+                "y": 0.23460000000000003
+              },
+              "C42.1": {
+                "x": -3.5639999999999996,
+                "y": -1.5274999999999999
+              },
+              "U11.13": {
+                "x": -0.6791999999999998,
+                "y": 1.4845000000000002
+              }
+            }
+          },
+          "primitives": [
+            {
+              "id": "primitive:tree:component:U11",
+              "kind": "component",
+              "label": "U11",
+              "sourceNodeId": "tree:component:U11",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -2.179,
+                "right": 2.179,
+                "top": -2.18,
+                "bottom": 2.178
+              },
+              "collisionBoxes": [
+                {
+                  "left": -2.179,
+                  "right": 2.179,
+                  "top": -2.18,
+                  "bottom": 2.178
+                }
+              ],
+              "width": 4.358,
+              "height": 4.358,
+              "placements": [
+                {
+                  "designator": "U11",
+                  "x": 0,
+                  "y": -0.001,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "U11.1",
+                  "net": "BAT_NTC",
+                  "x": 1.5,
+                  "y": 0.749
+                },
+                {
+                  "ref": "U11.2",
+                  "net": "BAT",
+                  "x": 1.5,
+                  "y": 0.249
+                },
+                {
+                  "ref": "U11.3",
+                  "net": "BAT",
+                  "x": 1.5,
+                  "y": -0.251
+                },
+                {
+                  "ref": "U11.4",
+                  "net": "GND",
+                  "x": 1.5,
+                  "y": -0.751
+                },
+                {
+                  "ref": "U11.5",
+                  "net": "GND",
+                  "x": 0.75,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.6",
+                  "net": "3V3",
+                  "x": 0.25,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.7",
+                  "net": "USB_PGOOD_N",
+                  "x": -0.25,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.8",
+                  "net": "GND",
+                  "x": -0.75,
+                  "y": -1.501
+                },
+                {
+                  "ref": "U11.9",
+                  "net": "USB_CHG_N",
+                  "x": -1.5,
+                  "y": -0.751
+                },
+                {
+                  "ref": "U11.10",
+                  "net": "SYS",
+                  "x": -1.5,
+                  "y": -0.251
+                },
+                {
+                  "ref": "U11.11",
+                  "net": "SYS",
+                  "x": -1.5,
+                  "y": 0.249
+                },
+                {
+                  "ref": "U11.12",
+                  "net": "USB_ILIM",
+                  "x": -1.5,
+                  "y": 0.749
+                },
+                {
+                  "ref": "U11.13",
+                  "net": "USB_5V",
+                  "x": -0.75,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.14",
+                  "net": "USB_TIMER",
+                  "x": -0.25,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.15",
+                  "net": "USB_ITERM",
+                  "x": 0.25,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.16",
+                  "net": "USB_ISET",
+                  "x": 0.75,
+                  "y": 1.499
+                },
+                {
+                  "ref": "U11.17",
+                  "net": "GND",
+                  "x": 0,
+                  "y": -0.001
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R37",
+              "kind": "component",
+              "label": "R37",
+              "sourceNodeId": "tree:component:R37",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -2.32,
+                "right": 1.253,
+                "top": -4.679,
+                "bottom": -2.794
+              },
+              "collisionBoxes": [
+                {
+                  "left": -2.32,
+                  "right": 1.253,
+                  "top": -4.679,
+                  "bottom": -2.794
+                }
+              ],
+              "width": 3.573,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R37",
+                  "x": -0.534,
+                  "y": -3.736,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R37.2",
+                  "net": "USB_CHG_N",
+                  "x": -1.5,
+                  "y": -3.736
+                },
+                {
+                  "ref": "R37.1",
+                  "net": "3V3",
+                  "x": 0.432,
+                  "y": -3.736
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R36",
+              "kind": "component",
+              "label": "R36",
+              "sourceNodeId": "tree:component:R36",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.32,
+                "right": 2.253,
+                "top": -6.915,
+                "bottom": -5.03
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.32,
+                  "right": 2.253,
+                  "top": -6.915,
+                  "bottom": -5.03
+                }
+              ],
+              "width": 3.573,
+              "height": 1.885,
+              "placements": [
+                {
+                  "designator": "R36",
+                  "x": 0.466,
+                  "y": -5.973,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R36.2",
+                  "net": "USB_PGOOD_N",
+                  "x": -0.5,
+                  "y": -5.973
+                },
+                {
+                  "ref": "R36.1",
+                  "net": "3V3",
+                  "x": 1.432,
+                  "y": -5.973
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R32",
+              "kind": "component",
+              "label": "R32",
+              "sourceNodeId": "tree:component:R32",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 2.791,
+                "right": 4.677,
+                "top": 1.679,
+                "bottom": 5.319
+              },
+              "collisionBoxes": [
+                {
+                  "left": 2.791,
+                  "right": 4.677,
+                  "top": 1.679,
+                  "bottom": 5.319
+                }
+              ],
+              "width": 1.886,
+              "height": 3.64,
+              "placements": [
+                {
+                  "designator": "R32",
+                  "x": 3.734,
+                  "y": 3.499,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R32.2",
+                  "net": "GND",
+                  "x": 3.734,
+                  "y": 4.499
+                },
+                {
+                  "ref": "R32.1",
+                  "net": "USB_ISET",
+                  "x": 3.734,
+                  "y": 2.499
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R34",
+              "kind": "component",
+              "label": "R34",
+              "sourceNodeId": "tree:component:R34",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -4.678,
+                "right": -2.792,
+                "top": 0.429,
+                "bottom": 4.069
+              },
+              "collisionBoxes": [
+                {
+                  "left": -4.678,
+                  "right": -2.792,
+                  "top": 0.429,
+                  "bottom": 4.069
+                }
+              ],
+              "width": 1.886,
+              "height": 3.64,
+              "placements": [
+                {
+                  "designator": "R34",
+                  "x": -3.735,
+                  "y": 2.249,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R34.2",
+                  "net": "GND",
+                  "x": -3.735,
+                  "y": 3.249
+                },
+                {
+                  "ref": "R34.1",
+                  "net": "USB_ILIM",
+                  "x": -3.735,
+                  "y": 1.249
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R33",
+              "kind": "component",
+              "label": "R33",
+              "sourceNodeId": "tree:component:R33",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.82,
+                "right": 1.82,
+                "top": 5.058,
+                "bottom": 6.944
+              },
+              "collisionBoxes": [
+                {
+                  "left": -1.82,
+                  "right": 1.82,
+                  "top": 5.058,
+                  "bottom": 6.944
+                }
+              ],
+              "width": 3.64,
+              "height": 1.886,
+              "placements": [
+                {
+                  "designator": "R33",
+                  "x": 0,
+                  "y": 6.001,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R33.2",
+                  "net": "GND",
+                  "x": 1,
+                  "y": 6.001
+                },
+                {
+                  "ref": "R33.1",
+                  "net": "USB_ITERM",
+                  "x": -1,
+                  "y": 6.001
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:R35",
+              "kind": "component",
+              "label": "R35",
+              "sourceNodeId": "tree:component:R35",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -2.07,
+                "right": 1.57,
+                "top": 2.792,
+                "bottom": 4.678
+              },
+              "collisionBoxes": [
+                {
+                  "left": -2.07,
+                  "right": 1.57,
+                  "top": 2.792,
+                  "bottom": 4.678
+                }
+              ],
+              "width": 3.64,
+              "height": 1.886,
+              "placements": [
+                {
+                  "designator": "R35",
+                  "x": -0.25,
+                  "y": 3.735,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "R35.2",
+                  "net": "GND",
+                  "x": 0.75,
+                  "y": 3.735
+                },
+                {
+                  "ref": "R35.1",
+                  "net": "USB_TIMER",
+                  "x": -1.25,
+                  "y": 3.735
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C43",
+              "kind": "component",
+              "label": "C43",
+              "sourceNodeId": "tree:component:C43",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 2.529,
+                "right": 6.457,
+                "top": -0.68,
+                "bottom": 1.178
+              },
+              "collisionBoxes": [
+                {
+                  "left": 2.529,
+                  "right": 6.457,
+                  "top": -0.68,
+                  "bottom": 1.178
+                }
+              ],
+              "width": 3.928,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C43",
+                  "x": 4.493,
+                  "y": 0.249,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C43.2",
+                  "net": "GND",
+                  "x": 5.493,
+                  "y": 0.249
+                },
+                {
+                  "ref": "C43.1",
+                  "net": "BAT",
+                  "x": 3.493,
+                  "y": 0.249
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C42",
+              "kind": "component",
+              "label": "C42",
+              "sourceNodeId": "tree:component:C42",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -6.599,
+                "right": -2.671,
+                "top": -2.442,
+                "bottom": -0.584
+              },
+              "collisionBoxes": [
+                {
+                  "left": -6.599,
+                  "right": -2.671,
+                  "top": -2.442,
+                  "bottom": -0.584
+                }
+              ],
+              "width": 3.927,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C42",
+                  "x": -4.635,
+                  "y": -1.513,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C42.2",
+                  "net": "GND",
+                  "x": -5.635,
+                  "y": -1.513
+                },
+                {
+                  "ref": "C42.1",
+                  "net": "SYS",
+                  "x": -3.635,
+                  "y": -1.513
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            }
+          ],
+          "placements": [
+            {
+              "designator": "U11",
+              "x": 0,
+              "y": -0.001,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R37",
+              "x": -0.534,
+              "y": -3.736,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R36",
+              "x": 0.466,
+              "y": -5.973,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R32",
+              "x": 3.734,
+              "y": 3.499,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R34",
+              "x": -3.735,
+              "y": 2.249,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R33",
+              "x": 0,
+              "y": 6.001,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "R35",
+              "x": -0.25,
+              "y": 3.735,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C43",
+              "x": 4.493,
+              "y": 0.249,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C42",
+              "x": -4.635,
+              "y": -1.513,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            }
+          ],
+          "selected": false
+        }
+      ]
+    }
+  ],
+  "alternatives": [
+    {
+      "placements": [
+        {
+          "designator": "U11",
+          "x": -0.071,
+          "y": -0.001,
+          "rotate": 0,
+          "layer": "top",
+          "score": 0
+        },
+        {
+          "designator": "R37",
+          "x": -0.605,
+          "y": -3.736,
+          "rotate": 0,
+          "layer": "top",
+          "score": 0
+        },
+        {
+          "designator": "R36",
+          "x": 0.395,
+          "y": -5.973,
+          "rotate": 0,
+          "layer": "top",
+          "score": 0
+        },
+        {
+          "designator": "R32",
+          "x": 3.67,
+          "y": 3.734,
+          "rotate": 180,
+          "layer": "top",
+          "score": 0
+        },
+        {
+          "designator": "R34",
+          "x": -3.806,
+          "y": 1.749,
+          "rotate": 270,
+          "layer": "top",
+          "score": 0
+        },
+        {
+          "designator": "R33",
+          "x": -0.071,
+          "y": 6.001,
+          "rotate": 180,
+          "layer": "top",
+          "score": 0
+        },
+        {
+          "designator": "R35",
+          "x": -0.321,
+          "y": 3.734,
+          "rotate": 180,
+          "layer": "top",
+          "score": 0
+        },
+        {
+          "designator": "C43",
+          "x": 4.429,
+          "y": 1.5,
+          "rotate": 180,
+          "layer": "top",
+          "score": 0
+        },
+        {
+          "designator": "C42",
+          "x": -4.571,
+          "y": -1.5,
+          "rotate": 0,
+          "layer": "top",
+          "score": 0
+        }
+      ],
+      "quality": {
+        "score": 2784.1695427210816,
+        "electrical": 2678.5718395210815,
+        "localStretch": 328.85624708415645,
+        "wire": 24.55897984313824,
+        "maxLocal": 4.672258986828535,
+        "area": 179.16915200000003,
+        "width": 12.928,
+        "height": 13.859,
+        "exposure": 14.7475,
+        "links": {
+          "C43.1->U11": 2.3589724055189794,
+          "R36.1->U11": 4.625673330446065,
+          "R37.1->U11": 2.242430547419474,
+          "R36.2->U11": 4.478988056469898,
+          "R37.2->U11": 2.985100006699943,
+          "C42.1->U11": 2.358071381447135,
+          "R34.1->U11": 2.2350000089485453,
+          "R35.1->U11": 2.4484740166070784,
+          "R33.1->U11": 4.672258986828535,
+          "R32.1->U11": 2.993276500759661
+        },
+        "ports": {
+          "U11.1": {
+            "x": 1.5,
+            "y": 0.7347
+          },
+          "U11.2": {
+            "x": 1.5,
+            "y": 0.23460000000000003
+          },
+          "U11.3": {
+            "x": 1.5,
+            "y": -0.2652999999999999
+          },
+          "C43.1": {
+            "x": 3.5,
+            "y": 1.4855000000000003
+          },
+          "U11.6": {
+            "x": 0.2498,
+            "y": -1.5154999999999998
+          },
+          "R36.1": {
+            "x": 1.4322,
+            "y": -5.9875
+          },
+          "R37.1": {
+            "x": 0.4321999999999999,
+            "y": -3.7505
+          },
+          "U11.7": {
+            "x": -0.2501,
+            "y": -1.5154999999999998
+          },
+          "R36.2": {
+            "x": -0.5002,
+            "y": -5.9875
+          },
+          "U11.9": {
+            "x": -1.5,
+            "y": -0.7654
+          },
+          "R37.2": {
+            "x": -1.5002,
+            "y": -3.7505
+          },
+          "U11.10": {
+            "x": -1.5,
+            "y": -0.2652999999999999
+          },
+          "U11.11": {
+            "x": -1.5,
+            "y": 0.23460000000000003
+          },
+          "C42.1": {
+            "x": -3.5,
+            "y": -1.5145
+          },
+          "U11.13": {
+            "x": -0.7502,
+            "y": 1.4845000000000002
+          }
+        }
+      }
+    }
+  ]
+}

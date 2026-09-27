@@ -1,0 +1,10 @@
+{
+  "block": "Telemetry USB",
+  "checkpoints": [
+    "beam",
+    "singles",
+    "pairs"
+  ],
+  "identical": true,
+  "change": "Absolute validator API added; native search and checkpoint scoring unchanged."
+}

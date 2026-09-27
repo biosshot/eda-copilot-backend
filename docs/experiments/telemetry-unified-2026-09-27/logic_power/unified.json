@@ -1,0 +1,3148 @@
+{
+  "block": "logic_power",
+  "variant": {
+    "id": "unified",
+    "label": "Unified checkpoint portfolio"
+  },
+  "ms": 227.77570000000003,
+  "sourceInputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "c9Role": "decoupling_cap",
+  "sourceUnchanged": true,
+  "nativeHash": "2c648d0c85bbfb982374d340ff6d3caf3feecb0f7b20633ba4a10db9f93b290a",
+  "inventory": true,
+  "orientation": true,
+  "validation": {
+    "ok": true,
+    "violations": []
+  },
+  "metrics": {
+    "pairCount": 2,
+    "pairSum": 6.63,
+    "pairMax": 3.31,
+    "crossings": 0,
+    "foreignPadHits": 0,
+    "internalIcPadHits": 3,
+    "wireLength": 19.85,
+    "hpwl": 21.48,
+    "area": 117.38,
+    "aspect": 1.11
+  },
+  "allMetrics": {
+    "pairCount": 2,
+    "pairSum": 6.63,
+    "pairMax": 3.31,
+    "crossings": 2,
+    "foreignPadHits": 5,
+    "internalIcPadHits": 4,
+    "wireLength": 38.5,
+    "hpwl": 39.17,
+    "area": 117.38,
+    "aspect": 1.11
+  },
+  "pairs": [
+    {
+      "pair": "U12.4.L2.1",
+      "mm": 3.313204251174382
+    },
+    {
+      "pair": "U12.2.L2.2",
+      "mm": 3.313330996142703
+    }
+  ],
+  "localHardPairs": [
+    {
+      "hint": {
+        "relation": "critical_pair",
+        "source": {
+          "type": "pin",
+          "designator": "U12",
+          "pin_number": "4"
+        },
+        "target": {
+          "type": "pin",
+          "designator": "L2",
+          "pin_number": "1"
+        },
+        "priority": "critical",
+        "maxDistance": 5,
+        "weightMultiplier": 2.8,
+        "hard": true,
+        "crossingPenalty": 2,
+        "preferFacingPads": true,
+        "core": true,
+        "block": "logic_switch"
+      },
+      "mm": 3.313204251174382
+    },
+    {
+      "hint": {
+        "relation": "critical_pair",
+        "source": {
+          "type": "pin",
+          "designator": "U12",
+          "pin_number": "2"
+        },
+        "target": {
+          "type": "pin",
+          "designator": "L2",
+          "pin_number": "2"
+        },
+        "priority": "critical",
+        "maxDistance": 5,
+        "weightMultiplier": 2.8,
+        "hard": true,
+        "crossingPenalty": 2,
+        "preferFacingPads": true,
+        "core": true,
+        "block": "logic_switch"
+      },
+      "mm": 3.313330996142703
+    }
+  ],
+  "hardPairsOk": true,
+  "placements": [
+    {
+      "designator": "U12",
+      "x": 0.5,
+      "y": 0.83,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "L2",
+      "x": 0.5,
+      "y": -3.493,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C45",
+      "x": 3.174,
+      "y": 1.061,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C46",
+      "x": 4.174,
+      "y": -3.218,
+      "rotate": 90,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C44",
+      "x": -3.208,
+      "y": 0.246,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C47",
+      "x": 0.5,
+      "y": 4.387,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:logic_power",
+      "message": "Block postrefine: 1 moves, 29 ms"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:logic_power",
+      "message": "Block postrefine: 1 moves, 30 ms"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:logic_power",
+      "message": "Block postrefine: 0 moves, 17 ms"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:logic_power",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 2 retained; original/beam+postrefine: score=6271.47, electrical=6214.89, wire=14.97, area=117.38; original/beam: score=6281.06, electrical=6224.49, wire=15.17, area=117.38"
+    }
+  ],
+  "captures": [
+    {
+      "key": "829e62b1fa6e20a22ba93f88126c14d7bed099570774289126dc4641cd3aaf33",
+      "cached": true,
+      "replayedFrom": "308d82b6b57a0a682eab99e2855997222df36b8b1f06c6840e00d06fcaf1c12e",
+      "ms": 1.3377000000000407,
+      "components": [
+        "U12",
+        "L2",
+        "C44",
+        "C45",
+        "C46",
+        "C47"
+      ]
+    }
+  ],
+  "pools": [
+    {
+      "label": "logic_power",
+      "candidates": [
+        {
+          "stage": "beam",
+          "hypothesis": "original",
+          "quality": {
+            "score": 6281.063316792131,
+            "electrical": 6224.485556792131,
+            "localStretch": 74.77078661604759,
+            "wire": 15.174374215094502,
+            "maxLocal": 3.317470158117478,
+            "area": 117.38159999999998,
+            "width": 10.274999999999999,
+            "height": 11.424,
+            "exposure": 2.32235,
+            "links": {
+              "C44.1->U12": 1.779821409580186,
+              "C47.1->U12": 1.6263999999999998,
+              "C45.1->U12": 1.6740000746714436,
+              "C46.1->U12": 3.317470158117478,
+              "L2.2->U12": 3.313330996142703,
+              "L2.1->U12": 3.313204251174382
+            },
+            "ports": {
+              "C44.1": {
+                "x": -2.1735,
+                "y": 0.18100000000000005
+              },
+              "U12.5": {
+                "x": -0.46550000000000025,
+                "y": -0.3194999999999998
+              },
+              "U12.6": {
+                "x": -0.4654999999999998,
+                "y": 1.9955000000000003
+              },
+              "U12.8": {
+                "x": 0.5345000000000002,
+                "y": 1.9954999999999998
+              },
+              "C47.1": {
+                "x": 0.5344999999999999,
+                "y": 3.6218999999999997
+              },
+              "C45.1": {
+                "x": 3.2085,
+                "y": 1.996
+              },
+              "C46.1": {
+                "x": 4.208500000000001,
+                "y": -2.283
+              },
+              "U12.1": {
+                "x": 1.5344999999999998,
+                "y": -0.31950000000000023
+              },
+              "U12.10": {
+                "x": 1.5345000000000002,
+                "y": 1.9954999999999998
+              }
+            }
+          },
+          "primitives": [
+            {
+              "id": "primitive:tree:island:core_pairs:logic_switch",
+              "kind": "island",
+              "label": "core_pairs:logic_switch",
+              "sourceNodeId": "tree:island:core_pairs:logic_switch",
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.583,
+                "right": 2.583,
+                "top": -5.647,
+                "bottom": 2.647
+              },
+              "collisionBoxes": [
+                {
+                  "left": -0.894,
+                  "right": 1.894,
+                  "top": -0.987,
+                  "bottom": 2.647
+                },
+                {
+                  "left": -1.583,
+                  "right": 2.583,
+                  "top": -5.647,
+                  "bottom": -1.339
+                }
+              ],
+              "width": 4.166,
+              "height": 8.294,
+              "placements": [
+                {
+                  "designator": "U12",
+                  "x": 0.5,
+                  "y": 0.83,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                },
+                {
+                  "designator": "L2",
+                  "x": 0.5,
+                  "y": -3.493,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "U12.1",
+                  "net": "3V3",
+                  "x": 1.5,
+                  "y": -0.255
+                },
+                {
+                  "ref": "U12.2",
+                  "net": "SYS_L2",
+                  "x": 1,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.3",
+                  "net": "GND",
+                  "x": 0.5,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.4",
+                  "net": "SYS_L1",
+                  "x": 0,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.5",
+                  "net": "SYS",
+                  "x": -0.5,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.6",
+                  "net": "SYS",
+                  "x": -0.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.7",
+                  "net": "GND",
+                  "x": 0,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.8",
+                  "net": "SYS",
+                  "x": 0.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.9",
+                  "net": "GND",
+                  "x": 1,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.10",
+                  "net": "3V3",
+                  "x": 1.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.11",
+                  "net": "GND",
+                  "x": 0.5,
+                  "y": 0.903
+                },
+                {
+                  "ref": "L2.2",
+                  "net": "SYS_L2",
+                  "x": 1.7,
+                  "y": -3.493
+                },
+                {
+                  "ref": "L2.1",
+                  "net": "SYS_L1",
+                  "x": -0.7,
+                  "y": -3.493
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C45",
+              "kind": "component",
+              "label": "C45",
+              "sourceNodeId": "tree:component:C45",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 2.245,
+                "right": 4.103,
+                "top": -0.903,
+                "bottom": 3.025
+              },
+              "collisionBoxes": [
+                {
+                  "left": 2.245,
+                  "right": 4.103,
+                  "top": -0.903,
+                  "bottom": 3.025
+                }
+              ],
+              "width": 1.858,
+              "height": 3.928,
+              "placements": [
+                {
+                  "designator": "C45",
+                  "x": 3.174,
+                  "y": 1.061,
+                  "rotate": 90,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C45.2",
+                  "net": "GND",
+                  "x": 3.174,
+                  "y": 0.061
+                },
+                {
+                  "ref": "C45.1",
+                  "net": "3V3",
+                  "x": 3.174,
+                  "y": 2.061
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C46",
+              "kind": "component",
+              "label": "C46",
+              "sourceNodeId": "tree:component:C46",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 3.245,
+                "right": 5.103,
+                "top": -5.182,
+                "bottom": -1.254
+              },
+              "collisionBoxes": [
+                {
+                  "left": 3.245,
+                  "right": 5.103,
+                  "top": -5.182,
+                  "bottom": -1.254
+                }
+              ],
+              "width": 1.858,
+              "height": 3.928,
+              "placements": [
+                {
+                  "designator": "C46",
+                  "x": 4.174,
+                  "y": -3.218,
+                  "rotate": 90,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C46.2",
+                  "net": "GND",
+                  "x": 4.174,
+                  "y": -4.218
+                },
+                {
+                  "ref": "C46.1",
+                  "net": "3V3",
+                  "x": 4.174,
+                  "y": -2.218
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C44",
+              "kind": "component",
+              "label": "C44",
+              "sourceNodeId": "tree:component:C44",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -5.172,
+                "right": -1.244,
+                "top": -0.683,
+                "bottom": 1.175
+              },
+              "collisionBoxes": [
+                {
+                  "left": -5.172,
+                  "right": -1.244,
+                  "top": -0.683,
+                  "bottom": 1.175
+                }
+              ],
+              "width": 3.927,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C44",
+                  "x": -3.208,
+                  "y": 0.246,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C44.2",
+                  "net": "GND",
+                  "x": -4.208,
+                  "y": 0.246
+                },
+                {
+                  "ref": "C44.1",
+                  "net": "SYS",
+                  "x": -2.208,
+                  "y": 0.246
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C47",
+              "kind": "component",
+              "label": "C47",
+              "sourceNodeId": "tree:component:C47",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -0.21,
+                "right": 1.21,
+                "top": 2.997,
+                "bottom": 5.777
+              },
+              "collisionBoxes": [
+                {
+                  "left": -0.21,
+                  "right": 1.21,
+                  "top": 2.997,
+                  "bottom": 5.777
+                }
+              ],
+              "width": 1.42,
+              "height": 2.78,
+              "placements": [
+                {
+                  "designator": "C47",
+                  "x": 0.5,
+                  "y": 4.387,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C47.1",
+                  "net": "SYS",
+                  "x": 0.5,
+                  "y": 3.687
+                },
+                {
+                  "ref": "C47.2",
+                  "net": "GND",
+                  "x": 0.5,
+                  "y": 5.087
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            }
+          ],
+          "placements": [
+            {
+              "designator": "U12",
+              "x": 0.5,
+              "y": 0.83,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "L2",
+              "x": 0.5,
+              "y": -3.493,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C45",
+              "x": 3.174,
+              "y": 1.061,
+              "rotate": 90,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C46",
+              "x": 4.174,
+              "y": -3.218,
+              "rotate": 90,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C44",
+              "x": -3.208,
+              "y": 0.246,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C47",
+              "x": 0.5,
+              "y": 4.387,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            }
+          ],
+          "selected": true
+        },
+        {
+          "stage": "beam+postrefine",
+          "hypothesis": "original",
+          "quality": {
+            "score": 6271.465689326699,
+            "electrical": 6214.887929326699,
+            "localStretch": 74.81499423776776,
+            "wire": 14.974560326353199,
+            "maxLocal": 3.317470158117478,
+            "area": 117.38159999999998,
+            "width": 10.274999999999999,
+            "height": 11.424,
+            "exposure": 2.32235,
+            "links": {
+              "C44.1->U12": 1.779821409580186,
+              "C47.1->U12": 1.6263999999999998,
+              "C45.1->U12": 1.7034718224848922,
+              "C46.1->U12": 3.317470158117478,
+              "L2.2->U12": 3.313330996142703,
+              "L2.1->U12": 3.313204251174382
+            },
+            "ports": {
+              "C44.1": {
+                "x": -2.1735,
+                "y": 0.18100000000000005
+              },
+              "U12.5": {
+                "x": -0.46550000000000025,
+                "y": -0.3194999999999998
+              },
+              "U12.6": {
+                "x": -0.4654999999999998,
+                "y": 1.9955000000000003
+              },
+              "U12.8": {
+                "x": 0.5345000000000002,
+                "y": 1.9954999999999998
+              },
+              "C47.1": {
+                "x": 0.5344999999999999,
+                "y": 3.6218999999999997
+              },
+              "C45.1": {
+                "x": 3.2085,
+                "y": -0.0040000000000000036
+              },
+              "C46.1": {
+                "x": 4.208500000000001,
+                "y": -2.283
+              },
+              "U12.1": {
+                "x": 1.5344999999999998,
+                "y": -0.31950000000000023
+              },
+              "U12.10": {
+                "x": 1.5345000000000002,
+                "y": 1.9954999999999998
+              }
+            }
+          },
+          "primitives": [
+            {
+              "id": "primitive:tree:island:core_pairs:logic_switch",
+              "kind": "island",
+              "label": "core_pairs:logic_switch",
+              "sourceNodeId": "tree:island:core_pairs:logic_switch",
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.583,
+                "right": 2.583,
+                "top": -5.647,
+                "bottom": 2.647
+              },
+              "collisionBoxes": [
+                {
+                  "left": -0.894,
+                  "right": 1.894,
+                  "top": -0.987,
+                  "bottom": 2.647
+                },
+                {
+                  "left": -1.583,
+                  "right": 2.583,
+                  "top": -5.647,
+                  "bottom": -1.339
+                }
+              ],
+              "width": 4.166,
+              "height": 8.294,
+              "placements": [
+                {
+                  "designator": "U12",
+                  "x": 0.5,
+                  "y": 0.83,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                },
+                {
+                  "designator": "L2",
+                  "x": 0.5,
+                  "y": -3.493,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "U12.1",
+                  "net": "3V3",
+                  "x": 1.5,
+                  "y": -0.255
+                },
+                {
+                  "ref": "U12.2",
+                  "net": "SYS_L2",
+                  "x": 1,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.3",
+                  "net": "GND",
+                  "x": 0.5,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.4",
+                  "net": "SYS_L1",
+                  "x": 0,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.5",
+                  "net": "SYS",
+                  "x": -0.5,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.6",
+                  "net": "SYS",
+                  "x": -0.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.7",
+                  "net": "GND",
+                  "x": 0,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.8",
+                  "net": "SYS",
+                  "x": 0.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.9",
+                  "net": "GND",
+                  "x": 1,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.10",
+                  "net": "3V3",
+                  "x": 1.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.11",
+                  "net": "GND",
+                  "x": 0.5,
+                  "y": 0.903
+                },
+                {
+                  "ref": "L2.2",
+                  "net": "SYS_L2",
+                  "x": 1.7,
+                  "y": -3.493
+                },
+                {
+                  "ref": "L2.1",
+                  "net": "SYS_L1",
+                  "x": -0.7,
+                  "y": -3.493
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C45",
+              "kind": "component",
+              "label": "C45",
+              "sourceNodeId": "tree:component:C45",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 2.245,
+                "right": 4.103,
+                "top": -0.903,
+                "bottom": 3.025
+              },
+              "collisionBoxes": [
+                {
+                  "left": 2.245,
+                  "right": 4.103,
+                  "top": -0.903,
+                  "bottom": 3.025
+                }
+              ],
+              "width": 1.858,
+              "height": 3.928,
+              "placements": [
+                {
+                  "designator": "C45",
+                  "x": 3.174,
+                  "y": 1.061,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C45.2",
+                  "net": "GND",
+                  "x": 3.174,
+                  "y": 2.061
+                },
+                {
+                  "ref": "C45.1",
+                  "net": "3V3",
+                  "x": 3.174,
+                  "y": 0.061
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C46",
+              "kind": "component",
+              "label": "C46",
+              "sourceNodeId": "tree:component:C46",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 3.245,
+                "right": 5.103,
+                "top": -5.182,
+                "bottom": -1.254
+              },
+              "collisionBoxes": [
+                {
+                  "left": 3.245,
+                  "right": 5.103,
+                  "top": -5.182,
+                  "bottom": -1.254
+                }
+              ],
+              "width": 1.858,
+              "height": 3.928,
+              "placements": [
+                {
+                  "designator": "C46",
+                  "x": 4.174,
+                  "y": -3.218,
+                  "rotate": 90,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C46.2",
+                  "net": "GND",
+                  "x": 4.174,
+                  "y": -4.218
+                },
+                {
+                  "ref": "C46.1",
+                  "net": "3V3",
+                  "x": 4.174,
+                  "y": -2.218
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C44",
+              "kind": "component",
+              "label": "C44",
+              "sourceNodeId": "tree:component:C44",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -5.172,
+                "right": -1.244,
+                "top": -0.683,
+                "bottom": 1.175
+              },
+              "collisionBoxes": [
+                {
+                  "left": -5.172,
+                  "right": -1.244,
+                  "top": -0.683,
+                  "bottom": 1.175
+                }
+              ],
+              "width": 3.927,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C44",
+                  "x": -3.208,
+                  "y": 0.246,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C44.2",
+                  "net": "GND",
+                  "x": -4.208,
+                  "y": 0.246
+                },
+                {
+                  "ref": "C44.1",
+                  "net": "SYS",
+                  "x": -2.208,
+                  "y": 0.246
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C47",
+              "kind": "component",
+              "label": "C47",
+              "sourceNodeId": "tree:component:C47",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -0.21,
+                "right": 1.21,
+                "top": 2.997,
+                "bottom": 5.777
+              },
+              "collisionBoxes": [
+                {
+                  "left": -0.21,
+                  "right": 1.21,
+                  "top": 2.997,
+                  "bottom": 5.777
+                }
+              ],
+              "width": 1.42,
+              "height": 2.78,
+              "placements": [
+                {
+                  "designator": "C47",
+                  "x": 0.5,
+                  "y": 4.387,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C47.1",
+                  "net": "SYS",
+                  "x": 0.5,
+                  "y": 3.687
+                },
+                {
+                  "ref": "C47.2",
+                  "net": "GND",
+                  "x": 0.5,
+                  "y": 5.087
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            }
+          ],
+          "placements": [
+            {
+              "designator": "U12",
+              "x": 0.5,
+              "y": 0.83,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "L2",
+              "x": 0.5,
+              "y": -3.493,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C45",
+              "x": 3.174,
+              "y": 1.061,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C46",
+              "x": 4.174,
+              "y": -3.218,
+              "rotate": 90,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C44",
+              "x": -3.208,
+              "y": 0.246,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C47",
+              "x": 0.5,
+              "y": 4.387,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            }
+          ],
+          "selected": true
+        },
+        {
+          "stage": "singles",
+          "hypothesis": "original",
+          "quality": {
+            "score": 6281.063316792131,
+            "electrical": 6224.485556792131,
+            "localStretch": 74.77078661604759,
+            "wire": 15.174374215094502,
+            "maxLocal": 3.317470158117478,
+            "area": 117.38159999999998,
+            "width": 10.274999999999999,
+            "height": 11.424,
+            "exposure": 2.32235,
+            "links": {
+              "C44.1->U12": 1.779821409580186,
+              "C47.1->U12": 1.6263999999999998,
+              "C45.1->U12": 1.6740000746714436,
+              "C46.1->U12": 3.317470158117478,
+              "L2.2->U12": 3.313330996142703,
+              "L2.1->U12": 3.313204251174382
+            },
+            "ports": {
+              "C44.1": {
+                "x": -2.1735,
+                "y": 0.18100000000000005
+              },
+              "U12.5": {
+                "x": -0.46550000000000025,
+                "y": -0.3194999999999998
+              },
+              "U12.6": {
+                "x": -0.4654999999999998,
+                "y": 1.9955000000000003
+              },
+              "U12.8": {
+                "x": 0.5345000000000002,
+                "y": 1.9954999999999998
+              },
+              "C47.1": {
+                "x": 0.5344999999999999,
+                "y": 3.6218999999999997
+              },
+              "C45.1": {
+                "x": 3.2085,
+                "y": 1.996
+              },
+              "C46.1": {
+                "x": 4.208500000000001,
+                "y": -2.283
+              },
+              "U12.1": {
+                "x": 1.5344999999999998,
+                "y": -0.31950000000000023
+              },
+              "U12.10": {
+                "x": 1.5345000000000002,
+                "y": 1.9954999999999998
+              }
+            }
+          },
+          "primitives": [
+            {
+              "id": "primitive:tree:island:core_pairs:logic_switch",
+              "kind": "island",
+              "label": "core_pairs:logic_switch",
+              "sourceNodeId": "tree:island:core_pairs:logic_switch",
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.583,
+                "right": 2.583,
+                "top": -5.647,
+                "bottom": 2.647
+              },
+              "collisionBoxes": [
+                {
+                  "left": -0.894,
+                  "right": 1.894,
+                  "top": -0.987,
+                  "bottom": 2.647
+                },
+                {
+                  "left": -1.583,
+                  "right": 2.583,
+                  "top": -5.647,
+                  "bottom": -1.339
+                }
+              ],
+              "width": 4.166,
+              "height": 8.294,
+              "placements": [
+                {
+                  "designator": "U12",
+                  "x": 0.5,
+                  "y": 0.83,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                },
+                {
+                  "designator": "L2",
+                  "x": 0.5,
+                  "y": -3.493,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "U12.1",
+                  "net": "3V3",
+                  "x": 1.5,
+                  "y": -0.255
+                },
+                {
+                  "ref": "U12.2",
+                  "net": "SYS_L2",
+                  "x": 1,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.3",
+                  "net": "GND",
+                  "x": 0.5,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.4",
+                  "net": "SYS_L1",
+                  "x": 0,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.5",
+                  "net": "SYS",
+                  "x": -0.5,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.6",
+                  "net": "SYS",
+                  "x": -0.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.7",
+                  "net": "GND",
+                  "x": 0,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.8",
+                  "net": "SYS",
+                  "x": 0.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.9",
+                  "net": "GND",
+                  "x": 1,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.10",
+                  "net": "3V3",
+                  "x": 1.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.11",
+                  "net": "GND",
+                  "x": 0.5,
+                  "y": 0.903
+                },
+                {
+                  "ref": "L2.2",
+                  "net": "SYS_L2",
+                  "x": 1.7,
+                  "y": -3.493
+                },
+                {
+                  "ref": "L2.1",
+                  "net": "SYS_L1",
+                  "x": -0.7,
+                  "y": -3.493
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C45",
+              "kind": "component",
+              "label": "C45",
+              "sourceNodeId": "tree:component:C45",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 2.245,
+                "right": 4.103,
+                "top": -0.903,
+                "bottom": 3.025
+              },
+              "collisionBoxes": [
+                {
+                  "left": 2.245,
+                  "right": 4.103,
+                  "top": -0.903,
+                  "bottom": 3.025
+                }
+              ],
+              "width": 1.858,
+              "height": 3.928,
+              "placements": [
+                {
+                  "designator": "C45",
+                  "x": 3.174,
+                  "y": 1.061,
+                  "rotate": 90,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C45.2",
+                  "net": "GND",
+                  "x": 3.174,
+                  "y": 0.061
+                },
+                {
+                  "ref": "C45.1",
+                  "net": "3V3",
+                  "x": 3.174,
+                  "y": 2.061
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C46",
+              "kind": "component",
+              "label": "C46",
+              "sourceNodeId": "tree:component:C46",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 3.245,
+                "right": 5.103,
+                "top": -5.182,
+                "bottom": -1.254
+              },
+              "collisionBoxes": [
+                {
+                  "left": 3.245,
+                  "right": 5.103,
+                  "top": -5.182,
+                  "bottom": -1.254
+                }
+              ],
+              "width": 1.858,
+              "height": 3.928,
+              "placements": [
+                {
+                  "designator": "C46",
+                  "x": 4.174,
+                  "y": -3.218,
+                  "rotate": 90,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C46.2",
+                  "net": "GND",
+                  "x": 4.174,
+                  "y": -4.218
+                },
+                {
+                  "ref": "C46.1",
+                  "net": "3V3",
+                  "x": 4.174,
+                  "y": -2.218
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C44",
+              "kind": "component",
+              "label": "C44",
+              "sourceNodeId": "tree:component:C44",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -5.172,
+                "right": -1.244,
+                "top": -0.683,
+                "bottom": 1.175
+              },
+              "collisionBoxes": [
+                {
+                  "left": -5.172,
+                  "right": -1.244,
+                  "top": -0.683,
+                  "bottom": 1.175
+                }
+              ],
+              "width": 3.927,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C44",
+                  "x": -3.208,
+                  "y": 0.246,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C44.2",
+                  "net": "GND",
+                  "x": -4.208,
+                  "y": 0.246
+                },
+                {
+                  "ref": "C44.1",
+                  "net": "SYS",
+                  "x": -2.208,
+                  "y": 0.246
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C47",
+              "kind": "component",
+              "label": "C47",
+              "sourceNodeId": "tree:component:C47",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -0.21,
+                "right": 1.21,
+                "top": 2.997,
+                "bottom": 5.777
+              },
+              "collisionBoxes": [
+                {
+                  "left": -0.21,
+                  "right": 1.21,
+                  "top": 2.997,
+                  "bottom": 5.777
+                }
+              ],
+              "width": 1.42,
+              "height": 2.78,
+              "placements": [
+                {
+                  "designator": "C47",
+                  "x": 0.5,
+                  "y": 4.387,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C47.1",
+                  "net": "SYS",
+                  "x": 0.5,
+                  "y": 3.687
+                },
+                {
+                  "ref": "C47.2",
+                  "net": "GND",
+                  "x": 0.5,
+                  "y": 5.087
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            }
+          ],
+          "placements": [
+            {
+              "designator": "U12",
+              "x": 0.5,
+              "y": 0.83,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "L2",
+              "x": 0.5,
+              "y": -3.493,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C45",
+              "x": 3.174,
+              "y": 1.061,
+              "rotate": 90,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C46",
+              "x": 4.174,
+              "y": -3.218,
+              "rotate": 90,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C44",
+              "x": -3.208,
+              "y": 0.246,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C47",
+              "x": 0.5,
+              "y": 4.387,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            }
+          ],
+          "selected": false
+        },
+        {
+          "stage": "singles+postrefine",
+          "hypothesis": "original",
+          "quality": {
+            "score": 6271.465689326699,
+            "electrical": 6214.887929326699,
+            "localStretch": 74.81499423776776,
+            "wire": 14.974560326353199,
+            "maxLocal": 3.317470158117478,
+            "area": 117.38159999999998,
+            "width": 10.274999999999999,
+            "height": 11.424,
+            "exposure": 2.32235,
+            "links": {
+              "C44.1->U12": 1.779821409580186,
+              "C47.1->U12": 1.6263999999999998,
+              "C45.1->U12": 1.7034718224848922,
+              "C46.1->U12": 3.317470158117478,
+              "L2.2->U12": 3.313330996142703,
+              "L2.1->U12": 3.313204251174382
+            },
+            "ports": {
+              "C44.1": {
+                "x": -2.1735,
+                "y": 0.18100000000000005
+              },
+              "U12.5": {
+                "x": -0.46550000000000025,
+                "y": -0.3194999999999998
+              },
+              "U12.6": {
+                "x": -0.4654999999999998,
+                "y": 1.9955000000000003
+              },
+              "U12.8": {
+                "x": 0.5345000000000002,
+                "y": 1.9954999999999998
+              },
+              "C47.1": {
+                "x": 0.5344999999999999,
+                "y": 3.6218999999999997
+              },
+              "C45.1": {
+                "x": 3.2085,
+                "y": -0.0040000000000000036
+              },
+              "C46.1": {
+                "x": 4.208500000000001,
+                "y": -2.283
+              },
+              "U12.1": {
+                "x": 1.5344999999999998,
+                "y": -0.31950000000000023
+              },
+              "U12.10": {
+                "x": 1.5345000000000002,
+                "y": 1.9954999999999998
+              }
+            }
+          },
+          "primitives": [
+            {
+              "id": "primitive:tree:island:core_pairs:logic_switch",
+              "kind": "island",
+              "label": "core_pairs:logic_switch",
+              "sourceNodeId": "tree:island:core_pairs:logic_switch",
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -1.583,
+                "right": 2.583,
+                "top": -5.647,
+                "bottom": 2.647
+              },
+              "collisionBoxes": [
+                {
+                  "left": -0.894,
+                  "right": 1.894,
+                  "top": -0.987,
+                  "bottom": 2.647
+                },
+                {
+                  "left": -1.583,
+                  "right": 2.583,
+                  "top": -5.647,
+                  "bottom": -1.339
+                }
+              ],
+              "width": 4.166,
+              "height": 8.294,
+              "placements": [
+                {
+                  "designator": "U12",
+                  "x": 0.5,
+                  "y": 0.83,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                },
+                {
+                  "designator": "L2",
+                  "x": 0.5,
+                  "y": -3.493,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "U12.1",
+                  "net": "3V3",
+                  "x": 1.5,
+                  "y": -0.255
+                },
+                {
+                  "ref": "U12.2",
+                  "net": "SYS_L2",
+                  "x": 1,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.3",
+                  "net": "GND",
+                  "x": 0.5,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.4",
+                  "net": "SYS_L1",
+                  "x": 0,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.5",
+                  "net": "SYS",
+                  "x": -0.5,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.6",
+                  "net": "SYS",
+                  "x": -0.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.7",
+                  "net": "GND",
+                  "x": 0,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.8",
+                  "net": "SYS",
+                  "x": 0.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.9",
+                  "net": "GND",
+                  "x": 1,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.10",
+                  "net": "3V3",
+                  "x": 1.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.11",
+                  "net": "GND",
+                  "x": 0.5,
+                  "y": 0.903
+                },
+                {
+                  "ref": "L2.2",
+                  "net": "SYS_L2",
+                  "x": 1.7,
+                  "y": -3.493
+                },
+                {
+                  "ref": "L2.1",
+                  "net": "SYS_L1",
+                  "x": -0.7,
+                  "y": -3.493
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C45",
+              "kind": "component",
+              "label": "C45",
+              "sourceNodeId": "tree:component:C45",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 2.245,
+                "right": 4.103,
+                "top": -0.903,
+                "bottom": 3.025
+              },
+              "collisionBoxes": [
+                {
+                  "left": 2.245,
+                  "right": 4.103,
+                  "top": -0.903,
+                  "bottom": 3.025
+                }
+              ],
+              "width": 1.858,
+              "height": 3.928,
+              "placements": [
+                {
+                  "designator": "C45",
+                  "x": 3.174,
+                  "y": 1.061,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C45.2",
+                  "net": "GND",
+                  "x": 3.174,
+                  "y": 2.061
+                },
+                {
+                  "ref": "C45.1",
+                  "net": "3V3",
+                  "x": 3.174,
+                  "y": 0.061
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C46",
+              "kind": "component",
+              "label": "C46",
+              "sourceNodeId": "tree:component:C46",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 3.245,
+                "right": 5.103,
+                "top": -5.182,
+                "bottom": -1.254
+              },
+              "collisionBoxes": [
+                {
+                  "left": 3.245,
+                  "right": 5.103,
+                  "top": -5.182,
+                  "bottom": -1.254
+                }
+              ],
+              "width": 1.858,
+              "height": 3.928,
+              "placements": [
+                {
+                  "designator": "C46",
+                  "x": 4.174,
+                  "y": -3.218,
+                  "rotate": 90,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C46.2",
+                  "net": "GND",
+                  "x": 4.174,
+                  "y": -4.218
+                },
+                {
+                  "ref": "C46.1",
+                  "net": "3V3",
+                  "x": 4.174,
+                  "y": -2.218
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C44",
+              "kind": "component",
+              "label": "C44",
+              "sourceNodeId": "tree:component:C44",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -5.172,
+                "right": -1.244,
+                "top": -0.683,
+                "bottom": 1.175
+              },
+              "collisionBoxes": [
+                {
+                  "left": -5.172,
+                  "right": -1.244,
+                  "top": -0.683,
+                  "bottom": 1.175
+                }
+              ],
+              "width": 3.927,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C44",
+                  "x": -3.208,
+                  "y": 0.246,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C44.2",
+                  "net": "GND",
+                  "x": -4.208,
+                  "y": 0.246
+                },
+                {
+                  "ref": "C44.1",
+                  "net": "SYS",
+                  "x": -2.208,
+                  "y": 0.246
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C47",
+              "kind": "component",
+              "label": "C47",
+              "sourceNodeId": "tree:component:C47",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -0.21,
+                "right": 1.21,
+                "top": 2.997,
+                "bottom": 5.777
+              },
+              "collisionBoxes": [
+                {
+                  "left": -0.21,
+                  "right": 1.21,
+                  "top": 2.997,
+                  "bottom": 5.777
+                }
+              ],
+              "width": 1.42,
+              "height": 2.78,
+              "placements": [
+                {
+                  "designator": "C47",
+                  "x": 0.5,
+                  "y": 4.387,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C47.1",
+                  "net": "SYS",
+                  "x": 0.5,
+                  "y": 3.687
+                },
+                {
+                  "ref": "C47.2",
+                  "net": "GND",
+                  "x": 0.5,
+                  "y": 5.087
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            }
+          ],
+          "placements": [
+            {
+              "designator": "U12",
+              "x": 0.5,
+              "y": 0.83,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "L2",
+              "x": 0.5,
+              "y": -3.493,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C45",
+              "x": 3.174,
+              "y": 1.061,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C46",
+              "x": 4.174,
+              "y": -3.218,
+              "rotate": 90,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C44",
+              "x": -3.208,
+              "y": 0.246,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C47",
+              "x": 0.5,
+              "y": 4.387,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            }
+          ],
+          "selected": false
+        },
+        {
+          "stage": "pairs",
+          "hypothesis": "original",
+          "quality": {
+            "score": 6745.6101264163635,
+            "electrical": 6700.365034416363,
+            "localStretch": 159.9991695332805,
+            "wire": 15.80415794620699,
+            "maxLocal": 5.721616401857084,
+            "area": 88.59312,
+            "width": 7.755000000000001,
+            "height": 11.424,
+            "exposure": 2.324,
+            "links": {
+              "C44.1->U12": 1.7798214095801859,
+              "C47.1->U12": 1.6263999999999998,
+              "C45.1->U12": 5.721616401857084,
+              "C46.1->U12": 4.530725797264716,
+              "L2.2->U12": 3.313330996142703,
+              "L2.1->U12": 3.313204251174382
+            },
+            "ports": {
+              "C44.1": {
+                "x": -0.9135,
+                "y": 0.18100000000000005
+              },
+              "U12.5": {
+                "x": 0.7944999999999998,
+                "y": -0.3194999999999998
+              },
+              "U12.6": {
+                "x": 0.7945000000000002,
+                "y": 1.9955000000000003
+              },
+              "U12.8": {
+                "x": 1.7945000000000004,
+                "y": 1.9954999999999998
+              },
+              "C47.1": {
+                "x": 1.7944999999999998,
+                "y": 3.6218999999999997
+              },
+              "C45.1": {
+                "x": -2.9135,
+                "y": 2.39
+              },
+              "C46.1": {
+                "x": -0.9135,
+                "y": 4.599
+              },
+              "U12.1": {
+                "x": 2.7945,
+                "y": -0.31950000000000023
+              },
+              "U12.10": {
+                "x": 2.7945,
+                "y": 1.9954999999999998
+              }
+            }
+          },
+          "primitives": [
+            {
+              "id": "primitive:tree:island:core_pairs:logic_switch",
+              "kind": "island",
+              "label": "core_pairs:logic_switch",
+              "sourceNodeId": "tree:island:core_pairs:logic_switch",
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -0.083,
+                "right": 4.083,
+                "top": -5.647,
+                "bottom": 2.647
+              },
+              "collisionBoxes": [
+                {
+                  "left": 0.606,
+                  "right": 3.394,
+                  "top": -0.987,
+                  "bottom": 2.647
+                },
+                {
+                  "left": -0.083,
+                  "right": 4.083,
+                  "top": -5.647,
+                  "bottom": -1.339
+                }
+              ],
+              "width": 4.166,
+              "height": 8.294,
+              "placements": [
+                {
+                  "designator": "U12",
+                  "x": 2,
+                  "y": 0.83,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                },
+                {
+                  "designator": "L2",
+                  "x": 2,
+                  "y": -3.493,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "U12.1",
+                  "net": "3V3",
+                  "x": 3,
+                  "y": -0.255
+                },
+                {
+                  "ref": "U12.2",
+                  "net": "SYS_L2",
+                  "x": 2.5,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.3",
+                  "net": "GND",
+                  "x": 2,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.4",
+                  "net": "SYS_L1",
+                  "x": 1.5,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.5",
+                  "net": "SYS",
+                  "x": 1,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.6",
+                  "net": "SYS",
+                  "x": 1,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.7",
+                  "net": "GND",
+                  "x": 1.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.8",
+                  "net": "SYS",
+                  "x": 2,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.9",
+                  "net": "GND",
+                  "x": 2.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.10",
+                  "net": "3V3",
+                  "x": 3,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.11",
+                  "net": "GND",
+                  "x": 2,
+                  "y": 0.903
+                },
+                {
+                  "ref": "L2.2",
+                  "net": "SYS_L2",
+                  "x": 3.2,
+                  "y": -3.493
+                },
+                {
+                  "ref": "L2.1",
+                  "net": "SYS_L1",
+                  "x": 0.8,
+                  "y": -3.493
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C45",
+              "kind": "component",
+              "label": "C45",
+              "sourceNodeId": "tree:component:C45",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -3.672,
+                "right": 0.256,
+                "top": 1.526,
+                "bottom": 3.384
+              },
+              "collisionBoxes": [
+                {
+                  "left": -3.672,
+                  "right": 0.256,
+                  "top": 1.526,
+                  "bottom": 3.384
+                }
+              ],
+              "width": 3.928,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C45",
+                  "x": -1.708,
+                  "y": 2.455,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C45.2",
+                  "net": "GND",
+                  "x": -0.708,
+                  "y": 2.455
+                },
+                {
+                  "ref": "C45.1",
+                  "net": "3V3",
+                  "x": -2.708,
+                  "y": 2.455
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C46",
+              "kind": "component",
+              "label": "C46",
+              "sourceNodeId": "tree:component:C46",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -3.672,
+                "right": 0.256,
+                "top": 3.735,
+                "bottom": 5.593
+              },
+              "collisionBoxes": [
+                {
+                  "left": -3.672,
+                  "right": 0.256,
+                  "top": 3.735,
+                  "bottom": 5.593
+                }
+              ],
+              "width": 3.927,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C46",
+                  "x": -1.708,
+                  "y": 4.664,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C46.2",
+                  "net": "GND",
+                  "x": -2.708,
+                  "y": 4.664
+                },
+                {
+                  "ref": "C46.1",
+                  "net": "3V3",
+                  "x": -0.708,
+                  "y": 4.664
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C44",
+              "kind": "component",
+              "label": "C44",
+              "sourceNodeId": "tree:component:C44",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -3.672,
+                "right": 0.256,
+                "top": -0.683,
+                "bottom": 1.175
+              },
+              "collisionBoxes": [
+                {
+                  "left": -3.672,
+                  "right": 0.256,
+                  "top": -0.683,
+                  "bottom": 1.175
+                }
+              ],
+              "width": 3.927,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C44",
+                  "x": -1.708,
+                  "y": 0.246,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C44.2",
+                  "net": "GND",
+                  "x": -2.708,
+                  "y": 0.246
+                },
+                {
+                  "ref": "C44.1",
+                  "net": "SYS",
+                  "x": -0.708,
+                  "y": 0.246
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C47",
+              "kind": "component",
+              "label": "C47",
+              "sourceNodeId": "tree:component:C47",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 1.29,
+                "right": 2.71,
+                "top": 2.997,
+                "bottom": 5.777
+              },
+              "collisionBoxes": [
+                {
+                  "left": 1.29,
+                  "right": 2.71,
+                  "top": 2.997,
+                  "bottom": 5.777
+                }
+              ],
+              "width": 1.42,
+              "height": 2.78,
+              "placements": [
+                {
+                  "designator": "C47",
+                  "x": 2,
+                  "y": 4.387,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C47.1",
+                  "net": "SYS",
+                  "x": 2,
+                  "y": 3.687
+                },
+                {
+                  "ref": "C47.2",
+                  "net": "GND",
+                  "x": 2,
+                  "y": 5.087
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            }
+          ],
+          "placements": [
+            {
+              "designator": "U12",
+              "x": 2,
+              "y": 0.83,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "L2",
+              "x": 2,
+              "y": -3.493,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C45",
+              "x": -1.708,
+              "y": 2.455,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C46",
+              "x": -1.708,
+              "y": 4.664,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C44",
+              "x": -1.708,
+              "y": 0.246,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C47",
+              "x": 2,
+              "y": 4.387,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            }
+          ],
+          "selected": false
+        },
+        {
+          "stage": "pairs+postrefine",
+          "hypothesis": "original",
+          "quality": {
+            "score": 6745.6101264163635,
+            "electrical": 6700.365034416363,
+            "localStretch": 159.9991695332805,
+            "wire": 15.80415794620699,
+            "maxLocal": 5.721616401857084,
+            "area": 88.59312,
+            "width": 7.755000000000001,
+            "height": 11.424,
+            "exposure": 2.324,
+            "links": {
+              "C44.1->U12": 1.7798214095801859,
+              "C47.1->U12": 1.6263999999999998,
+              "C45.1->U12": 5.721616401857084,
+              "C46.1->U12": 4.530725797264716,
+              "L2.2->U12": 3.313330996142703,
+              "L2.1->U12": 3.313204251174382
+            },
+            "ports": {
+              "C44.1": {
+                "x": -0.9135,
+                "y": 0.18100000000000005
+              },
+              "U12.5": {
+                "x": 0.7944999999999998,
+                "y": -0.3194999999999998
+              },
+              "U12.6": {
+                "x": 0.7945000000000002,
+                "y": 1.9955000000000003
+              },
+              "U12.8": {
+                "x": 1.7945000000000004,
+                "y": 1.9954999999999998
+              },
+              "C47.1": {
+                "x": 1.7944999999999998,
+                "y": 3.6218999999999997
+              },
+              "C45.1": {
+                "x": -2.9135,
+                "y": 2.39
+              },
+              "C46.1": {
+                "x": -0.9135,
+                "y": 4.599
+              },
+              "U12.1": {
+                "x": 2.7945,
+                "y": -0.31950000000000023
+              },
+              "U12.10": {
+                "x": 2.7945,
+                "y": 1.9954999999999998
+              }
+            }
+          },
+          "primitives": [
+            {
+              "id": "primitive:tree:island:core_pairs:logic_switch",
+              "kind": "island",
+              "label": "core_pairs:logic_switch",
+              "sourceNodeId": "tree:island:core_pairs:logic_switch",
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -0.083,
+                "right": 4.083,
+                "top": -5.647,
+                "bottom": 2.647
+              },
+              "collisionBoxes": [
+                {
+                  "left": 0.606,
+                  "right": 3.394,
+                  "top": -0.987,
+                  "bottom": 2.647
+                },
+                {
+                  "left": -0.083,
+                  "right": 4.083,
+                  "top": -5.647,
+                  "bottom": -1.339
+                }
+              ],
+              "width": 4.166,
+              "height": 8.294,
+              "placements": [
+                {
+                  "designator": "U12",
+                  "x": 2,
+                  "y": 0.83,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                },
+                {
+                  "designator": "L2",
+                  "x": 2,
+                  "y": -3.493,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "U12.1",
+                  "net": "3V3",
+                  "x": 3,
+                  "y": -0.255
+                },
+                {
+                  "ref": "U12.2",
+                  "net": "SYS_L2",
+                  "x": 2.5,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.3",
+                  "net": "GND",
+                  "x": 2,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.4",
+                  "net": "SYS_L1",
+                  "x": 1.5,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.5",
+                  "net": "SYS",
+                  "x": 1,
+                  "y": -0.254
+                },
+                {
+                  "ref": "U12.6",
+                  "net": "SYS",
+                  "x": 1,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.7",
+                  "net": "GND",
+                  "x": 1.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.8",
+                  "net": "SYS",
+                  "x": 2,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.9",
+                  "net": "GND",
+                  "x": 2.5,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.10",
+                  "net": "3V3",
+                  "x": 3,
+                  "y": 2.061
+                },
+                {
+                  "ref": "U12.11",
+                  "net": "GND",
+                  "x": 2,
+                  "y": 0.903
+                },
+                {
+                  "ref": "L2.2",
+                  "net": "SYS_L2",
+                  "x": 3.2,
+                  "y": -3.493
+                },
+                {
+                  "ref": "L2.1",
+                  "net": "SYS_L1",
+                  "x": 0.8,
+                  "y": -3.493
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C45",
+              "kind": "component",
+              "label": "C45",
+              "sourceNodeId": "tree:component:C45",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -3.672,
+                "right": 0.256,
+                "top": 1.526,
+                "bottom": 3.384
+              },
+              "collisionBoxes": [
+                {
+                  "left": -3.672,
+                  "right": 0.256,
+                  "top": 1.526,
+                  "bottom": 3.384
+                }
+              ],
+              "width": 3.928,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C45",
+                  "x": -1.708,
+                  "y": 2.455,
+                  "rotate": 180,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C45.2",
+                  "net": "GND",
+                  "x": -0.708,
+                  "y": 2.455
+                },
+                {
+                  "ref": "C45.1",
+                  "net": "3V3",
+                  "x": -2.708,
+                  "y": 2.455
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C46",
+              "kind": "component",
+              "label": "C46",
+              "sourceNodeId": "tree:component:C46",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -3.672,
+                "right": 0.256,
+                "top": 3.735,
+                "bottom": 5.593
+              },
+              "collisionBoxes": [
+                {
+                  "left": -3.672,
+                  "right": 0.256,
+                  "top": 3.735,
+                  "bottom": 5.593
+                }
+              ],
+              "width": 3.927,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C46",
+                  "x": -1.708,
+                  "y": 4.664,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C46.2",
+                  "net": "GND",
+                  "x": -2.708,
+                  "y": 4.664
+                },
+                {
+                  "ref": "C46.1",
+                  "net": "3V3",
+                  "x": -0.708,
+                  "y": 4.664
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C44",
+              "kind": "component",
+              "label": "C44",
+              "sourceNodeId": "tree:component:C44",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": -3.672,
+                "right": 0.256,
+                "top": -0.683,
+                "bottom": 1.175
+              },
+              "collisionBoxes": [
+                {
+                  "left": -3.672,
+                  "right": 0.256,
+                  "top": -0.683,
+                  "bottom": 1.175
+                }
+              ],
+              "width": 3.927,
+              "height": 1.858,
+              "placements": [
+                {
+                  "designator": "C44",
+                  "x": -1.708,
+                  "y": 0.246,
+                  "rotate": 0,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C44.2",
+                  "net": "GND",
+                  "x": -2.708,
+                  "y": 0.246
+                },
+                {
+                  "ref": "C44.1",
+                  "net": "SYS",
+                  "x": -0.708,
+                  "y": 0.246
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            },
+            {
+              "id": "primitive:tree:component:C47",
+              "kind": "component",
+              "label": "C47",
+              "sourceNodeId": "tree:component:C47",
+              "locked": false,
+              "canRotate": true,
+              "allowedOrientations": [
+                0,
+                90,
+                180,
+                270
+              ],
+              "bbox": {
+                "left": 1.29,
+                "right": 2.71,
+                "top": 2.997,
+                "bottom": 5.777
+              },
+              "collisionBoxes": [
+                {
+                  "left": 1.29,
+                  "right": 2.71,
+                  "top": 2.997,
+                  "bottom": 5.777
+                }
+              ],
+              "width": 1.42,
+              "height": 2.78,
+              "placements": [
+                {
+                  "designator": "C47",
+                  "x": 2,
+                  "y": 4.387,
+                  "rotate": 270,
+                  "layer": "top",
+                  "score": 0
+                }
+              ],
+              "connectionPoints": [
+                {
+                  "ref": "C47.1",
+                  "net": "SYS",
+                  "x": 2,
+                  "y": 3.687
+                },
+                {
+                  "ref": "C47.2",
+                  "net": "GND",
+                  "x": 2,
+                  "y": 5.087
+                }
+              ],
+              "pathPorts": [],
+              "children": []
+            }
+          ],
+          "placements": [
+            {
+              "designator": "U12",
+              "x": 2,
+              "y": 0.83,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "L2",
+              "x": 2,
+              "y": -3.493,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C45",
+              "x": -1.708,
+              "y": 2.455,
+              "rotate": 180,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C46",
+              "x": -1.708,
+              "y": 4.664,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C44",
+              "x": -1.708,
+              "y": 0.246,
+              "rotate": 0,
+              "layer": "top",
+              "score": 0
+            },
+            {
+              "designator": "C47",
+              "x": 2,
+              "y": 4.387,
+              "rotate": 270,
+              "layer": "top",
+              "score": 0
+            }
+          ],
+          "selected": false
+        }
+      ]
+    }
+  ],
+  "alternatives": [
+    {
+      "placements": [
+        {
+          "designator": "U12",
+          "x": 0.5,
+          "y": 0.83,
+          "rotate": 270,
+          "layer": "top",
+          "score": 0
+        },
+        {
+          "designator": "L2",
+          "x": 0.5,
+          "y": -3.493,
+          "rotate": 180,
+          "layer": "top",
+          "score": 0
+        },
+        {
+          "designator": "C45",
+          "x": 3.174,
+          "y": 1.061,
+          "rotate": 90,
+          "layer": "top",
+          "score": 0
+        },
+        {
+          "designator": "C46",
+          "x": 4.174,
+          "y": -3.218,
+          "rotate": 90,
+          "layer": "top",
+          "score": 0
+        },
+        {
+          "designator": "C44",
+          "x": -3.208,
+          "y": 0.246,
+          "rotate": 0,
+          "layer": "top",
+          "score": 0
+        },
+        {
+          "designator": "C47",
+          "x": 0.5,
+          "y": 4.387,
+          "rotate": 270,
+          "layer": "top",
+          "score": 0
+        }
+      ],
+      "quality": {
+        "score": 6281.063316792131,
+        "electrical": 6224.485556792131,
+        "localStretch": 74.77078661604759,
+        "wire": 15.174374215094502,
+        "maxLocal": 3.317470158117478,
+        "area": 117.38159999999998,
+        "width": 10.274999999999999,
+        "height": 11.424,
+        "exposure": 2.32235,
+        "links": {
+          "C44.1->U12": 1.779821409580186,
+          "C47.1->U12": 1.6263999999999998,
+          "C45.1->U12": 1.6740000746714436,
+          "C46.1->U12": 3.317470158117478,
+          "L2.2->U12": 3.313330996142703,
+          "L2.1->U12": 3.313204251174382
+        },
+        "ports": {
+          "C44.1": {
+            "x": -2.1735,
+            "y": 0.18100000000000005
+          },
+          "U12.5": {
+            "x": -0.46550000000000025,
+            "y": -0.3194999999999998
+          },
+          "U12.6": {
+            "x": -0.4654999999999998,
+            "y": 1.9955000000000003
+          },
+          "U12.8": {
+            "x": 0.5345000000000002,
+            "y": 1.9954999999999998
+          },
+          "C47.1": {
+            "x": 0.5344999999999999,
+            "y": 3.6218999999999997
+          },
+          "C45.1": {
+            "x": 3.2085,
+            "y": 1.996
+          },
+          "C46.1": {
+            "x": 4.208500000000001,
+            "y": -2.283
+          },
+          "U12.1": {
+            "x": 1.5344999999999998,
+            "y": -0.31950000000000023
+          },
+          "U12.10": {
+            "x": 1.5345000000000002,
+            "y": 1.9954999999999998
+          }
+        }
+      }
+    }
+  ]
+}
