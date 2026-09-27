@@ -1,6 +1,6 @@
-import type { NativeBlockSolveProblemV3 } from './native/contract.ts';
+import type { NativeBlockSolveProblemV4 } from './native/contract.ts';
 
-export type BlockExperiments = NonNullable<NativeBlockSolveProblemV3['experiments']>;
+export type BlockExperiments = NonNullable<NativeBlockSolveProblemV4['experiments']>;
 
 export function placementPadCrossingWeight() { return 180; }
 

@@ -945,12 +945,14 @@ fn board_score(
     let overlap_weight = if high { 1.2 } else { 1.0 };
     let edge_weight = if high { 0.4 } else { 1.0 };
     let path_primitives: Vec<_> = primitives.iter().map(|item| &item.primitive).collect();
+    let scale = context.problem.soft_spacing.as_ref().map_or(1.0, |s| s.compactness_scale);
     relation_penalty(primitives, context) * relation_weight
         + hard_severity * 1_000_000.0
         + hard_count as f64 * 100_000_000.0
         + envelope_overlap_penalty(primitives, context) * overlap_weight
-        + width * height * area_weight
-        + (width + height) * perimeter_weight
+        + width * height * area_weight * scale
+        + (width + height) * perimeter_weight * scale
+        + soft_spacing_penalty(primitives, context)
         + edge_bias_penalty(primitives, context) * edge_weight
         + edge_place_penalty(primitives, context)
         + signal_path::topology_penalty(&path_primitives, &context.problem.relations)
@@ -1629,6 +1631,16 @@ fn placed_slot_centers(
 ) -> Vec<Point> {
     let mut centers = Vec::new();
     for box_ in placed.iter().flat_map(|primitive| packing_boxes(primitive)) {
+        // Both tight legal slots and slots at the preferred soft gap.
+        if let Some(spacing) = &context.problem.soft_spacing {
+            if spacing.gap > 0.0 {
+                let c = context.problem.clearance + spacing.gap;
+                let x = (box_.left+box_.right)/2.0; let y = (box_.top+box_.bottom)/2.0;
+                centers.extend([Point{x:box_.left-c-width/2.0,y},Point{x:box_.right+c+width/2.0,y},
+                    Point{x,y:box_.top-c-height/2.0},Point{x,y:box_.bottom+c+height/2.0}]);
+            }
+        }
+
         let clearance = context.problem.clearance;
         let left = box_.left - clearance - width / 2.0;
         let right = box_.right + clearance + width / 2.0;
@@ -2497,4 +2509,22 @@ fn compare_states(a: &SearchState, b: &SearchState) -> Ordering {
 }
 fn compare_candidates(a: &RankedCandidate, b: &RankedCandidate) -> Ordering {
     compare_rank(&a.rank, &b.rank).then(a.ordinal.cmp(&b.ordinal))
+}
+
+fn soft_spacing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let Some(spacing) = &context.problem.soft_spacing else { return 0.0; };
+    if spacing.gap <= 0.0 { return 0.0; }
+    let mut score = 0.0;
+    for i in 0..primitives.len() { for j in i+1..primitives.len() {
+        let a = &primitives[i]; let b = &primitives[j];
+        if (a.primitive.locked && b.primitive.locked) || !primitive_can_conflict(a,b,context) { continue; }
+        if spacing.exempt_pairs.iter().any(|p| (p[0]==a.primitive.id && p[1]==b.primitive.id)
+            || (p[1]==a.primitive.id && p[0]==b.primitive.id)) { continue; }
+        let a = a.primitive.bbox; let b = b.primitive.bbox;
+        let dx = (a.left-b.right).max(b.left-a.right).max(0.0);
+        let dy = (a.top-b.bottom).max(b.top-a.bottom).max(0.0);
+        let deficit = (context.problem.clearance + spacing.gap - dx.hypot(dy)).max(0.0);
+        score += 18.0 * deficit * deficit;
+    }}
+    score
 }

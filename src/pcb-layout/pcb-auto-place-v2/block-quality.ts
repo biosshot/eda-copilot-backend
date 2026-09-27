@@ -2,12 +2,13 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type { PlacementInput } from '#types/pcb/layout-model.ts';
 import { isGroundSignalName, isPowerSignalName } from '#utils/signals.ts';
 import { getPadWorld, unionBoxes } from '../pcb-auto-place/geometry.ts';
+import { createFixedPlacement } from '../pcb-auto-place/fixed.ts';
 import { minimumSpanningEdges } from '../pcb-auto-place/ratsnest.ts';
 import { encodeNativePostPlaceScoreProblem } from './native/encode-post-place-score.ts';
 import { encodeNativePostPlaceRefineProblem } from './native/encode-post-place-refine.ts';
 import type { ClearanceResolver } from '../pcb-auto-place/clearance-resolver.ts';
 import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
-import { blockScopedInput } from './block-post-refiner.ts';
+import { blockScopedInput, scopedPlacements } from './block-post-refiner.ts';
 import type { PlacementPrimitive } from './primitives.ts';
 
 export interface BlockQuality {
@@ -38,12 +39,19 @@ export function captureBlockCandidates(label: string, pool: BlockCandidate[], se
     capture.getStore()?.(label, pool, selected);
 }
 
-export function legalBlockCandidate(input: PlacementInput, primitives: PlacementPrimitive[], clearance: ClearanceResolver) {
-    const scoped = blockScopedInput(input, primitives);
-    const placements = primitives.flatMap(p => p.placements);
+export function legalBlockCandidate(input: PlacementInput, primitives: PlacementPrimitive[], clearance: ClearanceResolver, world = false) {
+    if (world && primitives.flatMap(p=>p.placements).some(p=> {
+        const c=input.components.find(c=>c.designator===p.designator)!;
+        const fixed=createFixedPlacement(input,c);
+        return fixed && (p.x!==fixed.x || p.y!==fixed.y || p.rotate!==fixed.rotate || p.layer!==fixed.layer);
+    })) return false;
+    const scoped = blockScopedInput(input, primitives, world);
+    const placements = scopedPlacements(input, primitives, world);
     const problem = encodeNativePostPlaceRefineProblem(scoped, placements, 1);
     problem.pairClearances = scoped.components.map(a => scoped.components.map(b => clearance(a.designator, b.designator)));
-    return loadNativeBoardPacker().validatePlacement(problem);
+    const scope = world ? primitives.flatMap(p=>p.placements).map(p=>p.designator)
+        .filter(d=>!input.components.find(c=>c.designator===d)?.pcb.fixedPlacement) : undefined;
+    return loadNativeBoardPacker().validatePlacement(problem, scope);
 }
 
 /** One role-independent acceptance objective. Search heuristics (including role

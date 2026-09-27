@@ -162,7 +162,8 @@ test.describe('pcb-auto-place-v2 island solver', () => {
         test(`keeps satellites near their own edge connectors (${exactPlacement ? 'fixed' : 'movable'})`, () => {
             const input = edgeSatelliteInput(exactPlacement);
             const result = solvePlacementTreeBottomUp(input, buildPlacementGraph(input));
-            assert.equal(result.diagnostics.filter((item) => item.message.includes('Dissolved edge-place')).length, 3);
+            assert.equal(result.diagnostics.filter((item) => item.message.includes('Dissolved edge-place')).length, exactPlacement ? 0 : 3);
+            if (exactPlacement) assert.equal(result.root.children.filter(p => p.anchored).length, 3);
             for (let index = 1; index <= 3; index += 1) {
                 const parent = result.root.placements.find((item) => item.designator === `SW${index}`)!;
                 const satellite = result.root.placements.find((item) => item.designator === `R${index}`)!;

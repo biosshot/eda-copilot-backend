@@ -2,6 +2,7 @@ import type { PlacementInput, PlacementReport } from '#types/pcb/layout-model.ts
 import { createPlacementReport } from '../pcb-auto-place/placement-report.ts';
 import { blockPortfolioInternalScore } from './block-quality.ts';
 import { globalPostPlaceScore } from './post-place-refiner.ts';
+import { boardSpacingPenalty, boardSpacingPolicy } from './board-spacing.ts';
 import { encodeNativePostPlaceRefineProblem } from './native/encode-post-place-refine.ts';
 import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
 import { translatePrimitive, unionPrimitive, type PlacementPrimitive, type PrimitiveSolveDiagnostic } from './primitives.ts';
@@ -10,7 +11,7 @@ import { translatePrimitive, unionPrimitive, type PlacementPrimitive, type Primi
  * block shapes before neighbourhoods are frozen. This is not a Cartesian search. */
 export function blockPortfolioSeed(roots: PlacementPrimitive[], index: number): PlacementPrimitive[] {
     return roots.map(p => {
-        const alternative = !p.locked ? p.layoutAlternatives?.[index] : undefined;
+        const alternative = !p.locked || p.anchored ? p.layoutAlternatives?.[index] : undefined;
         if (alternative) return { ...alternative,
             layoutAlternatives: [{ ...p, layoutAlternatives: undefined }, ...(p.layoutAlternatives ?? []).filter(q => q !== alternative)] };
         if (!p.children.length) return p;
@@ -23,8 +24,9 @@ export function blockPortfolioSeed(roots: PlacementPrimitive[], index: number): 
 export function choosePackedPortfolio(input: PlacementInput, candidates: PlacementPrimitive[][],
     diagnostics: PrimitiveSolveDiagnostic[]): PlacementPrimitive[] {
     const poses = (p: PlacementPrimitive[]) => p.flatMap(q => q.placements);
+    const gap = boardSpacingPolicy(input).gap;
     let best = candidates[0];
-    let score = globalPostPlaceScore(input, poses(best)) + blockPortfolioInternalScore(input, best);
+    let score = globalPostPlaceScore(input, poses(best)) + blockPortfolioInternalScore(input, best) + boardSpacingPenalty(input,best,gap);
     const constraints = encodeNativePostPlaceRefineProblem(input, poses(best), 1);
     const fixed = new Set(input.components.filter(c => c.pcb.fixedPlacement || c.pcb.edgeMount || c.pcb.edgePlace).map(c => c.designator));
     const baseline = new Map(poses(best).map(p => [p.designator, p]));
@@ -32,7 +34,7 @@ export function choosePackedPortfolio(input: PlacementInput, candidates: Placeme
     for (let index = 1; index < candidates.length; index++) {
         const candidate = poses(candidates[index]);
         if (candidate.some(p => fixed.has(p.designator) && ['x', 'y', 'rotate', 'layer'].some(k => p[k as keyof typeof p] !== baseline.get(p.designator)?.[k as keyof typeof p]))) continue;
-        const next = globalPostPlaceScore(input, candidate) + blockPortfolioInternalScore(input, candidates[index]);
+        const next = globalPostPlaceScore(input, candidate) + blockPortfolioInternalScore(input, candidates[index]) + boardSpacingPenalty(input,candidates[index],gap);
         if (next >= score - 1e-6 || !createPlacementReport(input, candidate).ok) continue;
         if (!loadNativeBoardPacker().validatePlacementChange(constraints, candidate)) continue;
         best = candidates[index]; score = next; selected = index;
@@ -50,32 +52,35 @@ export function selectBlockPortfolio(input: PlacementInput, roots: PlacementPrim
     diagnostics: PrimitiveSolveDiagnostic[] = []): PlacementPrimitive[] {
     const ids: string[] = [];
     const visit = (p: PlacementPrimitive) => {
-        if (!p.locked && p.layoutAlternatives?.length) ids.push(p.id);
+        if ((!p.locked || p.anchored) && p.layoutAlternatives?.length) ids.push(p.id);
+        if (p.anchored) return;
         p.children.forEach(visit);
     };
     roots.forEach(visit);
     if (!ids.length) return roots;
     const placements = (ps: PlacementPrimitive[]) => ps.flatMap(p => p.placements);
     let current = roots;
-    let score = globalPostPlaceScore(input, placements(current)) + blockPortfolioInternalScore(input, current);
+    const gap = boardSpacingPolicy(input).gap;
+    let score = globalPostPlaceScore(input, placements(current)) + blockPortfolioInternalScore(input, current) + boardSpacingPenalty(input,current,gap);
     let report = createPlacementReport(input, placements(current));
     let evaluated = 0, accepted = 0;
     for (const id of ids) {
-        const owner = find(current, id)!;
+        const owner = find(current, id);
+        if (!owner) continue;
         const constraints = encodeNativePostPlaceRefineProblem(input, placements(current), 1);
         let best = current, bestScore = score, bestReport = report;
         let bestVariant = 0, bestOffset = [0, 0];
         const variants = [owner, ...(owner.layoutAlternatives ?? [])];
-        const offsets = [[0, 0], [-grid, 0], [grid, 0], [0, -grid], [0, grid],
+        const offsets = owner.anchored ? [[0, 0]] : [[0, 0], [-grid, 0], [grid, 0], [0, -grid], [0, grid],
             [-2 * grid, 0], [2 * grid, 0], [0, -2 * grid], [0, 2 * grid]];
         const inventory = owner.placements.map(p => p.designator).sort().join('|');
         for (const variant of variants) for (const [dx, dy] of offsets) {
             if (variant === owner && dx === 0 && dy === 0) continue;
-            if (variant.placements.map(p => p.designator).sort().join('|') !== inventory || variant.locked) continue;
+            if (variant.placements.map(p => p.designator).sort().join('|') !== inventory || (variant.locked && !owner.anchored)) continue;
             const replacement = translatePrimitive({ ...variant, layoutAlternatives: undefined }, dx, dy);
             const candidate = replace(current, id, replacement);
             const proposed = placements(candidate);
-            const nextScore = globalPostPlaceScore(input, proposed) + blockPortfolioInternalScore(input, candidate);
+            const nextScore = globalPostPlaceScore(input, proposed) + blockPortfolioInternalScore(input, candidate) + boardSpacingPenalty(input,candidate,gap);
             evaluated++;
             if (nextScore >= bestScore - 1e-6) continue;
             // Check the complete board, including polygon, holes and opposite-side

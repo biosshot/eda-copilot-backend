@@ -15,7 +15,8 @@ import { priorityWeight } from '../pcb-auto-place/hints.ts';
 import type { ClearanceResolver } from '../pcb-auto-place/clearance-resolver.ts';
 import { solveBoardPackedPrimitives } from './board-packer-engine.ts';
 import type { PlacementPrimitive, PrimitiveSolveDiagnostic } from './primitives.ts';
-import { selectBlockPortfolio } from './block-portfolio.ts';
+import { selectBlockPortfolio, choosePackedPortfolio, blockPortfolioSeed } from './block-portfolio.ts';
+import { boardSpacingPolicy, boardSpacingExemptPairs } from './board-spacing.ts';
 
 const ORDINARY_NET_RELATION_PREFIX = '__ordinary_net__:';
 
@@ -34,10 +35,13 @@ export interface BoardSolveParams {
 }
 
 export function solveBoardPrimitives(params: BoardSolveParams) {
+    const spacing = boardSpacingPolicy(params.input);
+    params.diagnostics.push({severity:'warning',nodeId:params.node.id,
+        message:`Board soft spacing: ${spacing.gap.toFixed(2)}mm extra, density ${spacing.density.toFixed(3)}, compactness scale ${spacing.compactnessScale.toFixed(3)}`});
     const boardPrimitives = boardPlacementPrimitives(params);
     validateDissolvedGroupReferences(params.graph.relations, boardPrimitives.dissolvedScopes);
     const primitives = boardPrimitives.primitives.map(boardPackingPrimitive);
-    const pack = (primitives: PlacementPrimitive[]) => solveBoardPackedPrimitives({
+    const pack = (primitives: PlacementPrimitive[], comfortable = true) => solveBoardPackedPrimitives({
         node: params.node,
         primitives,
         relations: [
@@ -49,6 +53,7 @@ export function solveBoardPrimitives(params: BoardSolveParams) {
             ...ordinaryNetRelations(params, primitives),
         ],
         options: {
+            softSpacing: comfortable ? {...spacing,exemptPairs:boardSpacingExemptPairs(params.input,primitives)} : undefined,
             grid: params.grid,
             clearance: params.clearance,
             componentByDesignator: params.componentByDesignator,
@@ -62,7 +67,17 @@ export function solveBoardPrimitives(params: BoardSolveParams) {
             searchWidth: 32,
         },
     });
-    const packed = pack(primitives);
+    // Keep a tight packing as an independent search hypothesis. A comfort
+    // margin must earn its place under the same completed-board objective.
+    const comfortable = pack(primitives);
+    const hypotheses = [comfortable];
+    if (spacing.gap > 0) hypotheses.push(pack(primitives,false));
+    for (const index of [0,1]) {
+        const seed = blockPortfolioSeed(primitives,index);
+        if (seed.some((p,i)=>p!==primitives[i])) hypotheses.push(pack(seed));
+    }
+    const packed = hypotheses.length>1
+        ? choosePackedPortfolio(params.input,hypotheses,params.diagnostics) : comfortable;
     return selectBlockPortfolio(params.input, packed, params.grid, params.diagnostics);
 }
 
@@ -153,6 +168,10 @@ function boardPlacementPrimitives(params: BoardSolveParams) {
     const primitives: PlacementPrimitive[] = [];
 
     for (const primitive of params.childPrimitives) {
+        if (primitive.anchored) {
+            primitives.push(primitive);
+            continue;
+        }
         if (shouldDissolveEdgePlacePrimitive(params, primitive)) {
             primitives.push(...expandDissolvedChildren(params, primitive.children, dissolvedScopes));
             dissolvedScopes.add(primitive.sourceNodeId);

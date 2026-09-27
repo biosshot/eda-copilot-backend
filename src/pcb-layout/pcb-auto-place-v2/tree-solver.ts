@@ -409,9 +409,9 @@ function solveBlockNode(
     const originalPrimitives = childPrimitives;
     const originalRelations = relationsForPrimitives(context.graph.relations, node.id, childPrimitives);
     const relaxed = relaxBlockGroups(context.input, context.treeNodes, childPrimitives,
-        // Mechanical families are dissolved by the board solver. Their satellite
-        // node identities must survive until board-level anchors are compiled.
-        originalRelations, originalPrimitives.some(p => p.locked) || hasFixedOrEdgeDescendant(node) ? 'off' : 'all',
+        // Fixed families are solved in their real board frame. An unresolved
+        // edge-place intent still belongs to board placement and remains rigid.
+        originalRelations, hasFixedOrEdgeDescendant(node) && !originalPrimitives.some(p => p.locked) ? 'off' : 'all',
         designator => componentPrimitive(context, context.treeNodes.find(n => n.kind === 'component' && n.label === designator)!, node));
     childPrimitives = relaxed.primitives;
     if (relaxed.released.length) context.diagnostics.push({ severity: 'warning', nodeId: node.id,
@@ -437,16 +437,17 @@ function solveBlockNode(
             targetHeight: numeric(node.data?.maxBboxHeight),
             bounds: hasLockedChild ? boardBounds(context.input) : undefined,
             obstacles: hasLockedChild ? boardHoleBoxes(context.input) : undefined,
+            worldInput: hasLockedChild ? context.input : undefined,
         },
     };
     const refine = (primitives: PlacementPrimitive[]) => {
-        if (!ordinary || hasLockedChild || !policy.postRefine) return primitives;
-        const result = refineBlockPrimitives(context.input, primitives, context.clearanceResolver);
+        if (!ordinary || !policy.postRefine) return primitives;
+        const result = refineBlockPrimitives(context.input, primitives, context.clearanceResolver, hasLockedChild);
         context.diagnostics.push({ severity: 'warning', nodeId: node.id,
             message: `Block postrefine: ${result.moves} moves, ${Math.round(result.ms)} ms` });
         return result.primitives;
     };
-    if (!ordinary || hasLockedChild) return refine(solveBlockPrimitives(params));
+    if (!ordinary) return refine(solveBlockPrimitives(params));
     const pool: BlockCandidate[] = [];
     const expected = childPrimitives.flatMap(p => p.placements.map(q => q.designator)).sort().join('|');
     const add = (primitives: PlacementPrimitive[], stage: string, hypothesis: string, hardCount: number) => {
@@ -457,7 +458,7 @@ function solveBlockNode(
             const c = context.componentByDesignator.get(p.designator)!;
             return !c.pcb.allowedRotations.includes(p.rotate) || !c.pcb.allowedLayers.includes(p.layer);
         })) return;
-        if (!legalBlockCandidate(context.input, primitives, context.clearanceResolver)) return;
+        if (!legalBlockCandidate(context.input, primitives, context.clearanceResolver, hasLockedChild)) return;
         pool.push({ stage, hypothesis, primitives, quality: blockQuality(context.input, primitives) });
     };
     const run = (problem: BlockSolveParams, hypothesis: string) => {
@@ -470,7 +471,8 @@ function solveBlockNode(
         }
         return solved.result;
     };
-    if (relaxed.released.length) run({ ...params, primitives: originalPrimitives, relations: originalRelations }, 'grouped');
+    const groupedFallback = relaxed.released.length
+        ? run({ ...params, primitives: originalPrimitives, relations: originalRelations }, 'grouped') : undefined;
     const fallback = run(params, relaxed.released.length ? 'released' : 'original');
     const roles = suspiciousBlockRoles(params);
     for (const role of roles) run(withRoleHypotheses(params, [role]), `role:${role.designator}=${role.to}`);
@@ -488,7 +490,9 @@ function solveBlockNode(
     context.diagnostics.push({ severity: selected.length ? 'warning' : 'error', nodeId: node.id,
         message: `Block checkpoint portfolio: ${pool.length} legal candidates, ${selected.length} retained; ` +
             selected.map(c => `${c.hypothesis}/${c.stage}: score=${c.quality.score.toFixed(2)}, electrical=${c.quality.electrical.toFixed(2)}, wire=${c.quality.wire.toFixed(2)}, area=${c.quality.area.toFixed(2)}`).join('; ') });
-    if (!selected.length) return fallback;
+    // Keep named groups when local assembly cannot satisfy an external anchor;
+    // board-level dissolution still needs those names to resolve its relations.
+    if (!selected.length) return groupedFallback ?? fallback;
     context.blockQualities.set(node.id, selected[0].quality);
     context.blockAlternatives.set(node.id, selected.slice(1).map(c => c.primitives));
     return selected[0].primitives;
@@ -887,11 +891,13 @@ function rememberPrimitive(context: TreeSolveContext, primitive: PlacementPrimit
     primitive.blockQuality = context.blockQualities.get(primitive.sourceNodeId);
     const alternatives = context.blockAlternatives.get(primitive.sourceNodeId);
     if (alternatives) {
+        primitive.anchored = Boolean(primitive.locked);
         const signature = (p: PlacementPrimitive) => JSON.stringify(p.placements.map(q => [q.designator, q.x, q.y, q.rotate, q.layer]).sort());
         const seen = new Set([signature(primitive)]);
         primitive.layoutAlternatives = alternatives.map(children => {
             const p = unionPrimitive(primitive.id, primitive.kind, primitive.label, primitive.sourceNodeId, children, primitive.deferredRelations);
             p.blockQuality = blockQuality(context.input, children);
+            if (primitive.anchored) return { ...p, anchored: true };
             return translatePrimitive(p, (primitive.bbox.left + primitive.bbox.right - p.bbox.left - p.bbox.right) / 2,
                 (primitive.bbox.top + primitive.bbox.bottom - p.bbox.top - p.bbox.bottom) / 2);
         }).filter(p => { const key = signature(p); if (seen.has(key)) return false; seen.add(key); return true; });

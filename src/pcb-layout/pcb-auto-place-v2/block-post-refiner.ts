@@ -1,6 +1,7 @@
 import type { PlacementInput, TargetRef } from '#types/pcb/layout-model.ts';
 import type { ClearanceResolver } from '../pcb-auto-place/clearance-resolver.ts';
 import { familyBlockDesignators } from '../pcb-auto-place/report-helpers.ts';
+import { createFixedPlacement } from '../pcb-auto-place/fixed.ts';
 import { encodeNativePostPlaceRefineProblem } from './native/encode-post-place-refine.ts';
 import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
 import { rotatePrimitive, translatePrimitive, type PlacementPrimitive } from './primitives.ts';
@@ -9,8 +10,8 @@ import { rotatePrimitive, translatePrimitive, type PlacementPrimitive } from './
  * Islands stay rigid. Board anchors and external nets are evaluated later in
  * board context, never against invented positions in this local frame.
  */
-export function refineBlockPrimitives(input: PlacementInput, primitives: PlacementPrimitive[], clearance: ClearanceResolver) {
-    const placements = primitives.flatMap(p => p.placements);
+export function refineBlockPrimitives(input: PlacementInput, primitives: PlacementPrimitive[], clearance: ClearanceResolver, world = false) {
+    const placements = scopedPlacements(input, primitives, world);
     const names = new Set(placements.map(p => p.designator));
     const movable = new Set(primitives.filter(p => p.kind === 'component' && !p.locked && p.placements.length === 1)
         .map(p => p.placements[0].designator).filter(d => {
@@ -19,7 +20,7 @@ export function refineBlockPrimitives(input: PlacementInput, primitives: Placeme
         }));
     if (movable.size < 2) return { primitives, moves: 0, ms: 0 };
     const start = performance.now();
-    const scoped = blockScopedInput(input, primitives);
+    const scoped = blockScopedInput(input, primitives, world);
     const problem = encodeNativePostPlaceRefineProblem(scoped, placements, 1);
     problem.iterations = 8;
     problem.timeoutMs = 2000;
@@ -51,8 +52,18 @@ export function refineBlockPrimitives(input: PlacementInput, primitives: Placeme
 }
 
 /** Scope electrical constraints to a complete local block, without invented board anchors. */
-export function blockScopedInput(input: PlacementInput, primitives: PlacementPrimitive[]): PlacementInput {
-    const placements = primitives.flatMap(p => p.placements);
+export function scopedPlacements(input: PlacementInput, primitives: PlacementPrimitive[], world = false) {
+    const placements = primitives.flatMap(p=>p.placements);
+    if (world) for (const c of input.components) {
+        if (placements.some(p=>p.designator===c.designator)) continue;
+        const p = createFixedPlacement(input,c);
+        if (p) placements.push(p);
+    }
+    return placements;
+}
+
+export function blockScopedInput(input: PlacementInput, primitives: PlacementPrimitive[], world = false): PlacementInput {
+    const placements = scopedPlacements(input, primitives, world);
     const names = new Set(placements.map(p => p.designator));
     const movable = new Set(primitives.filter(p => !p.locked && p.kind === 'component' && p.placements.length === 1)
         .map(p => p.placements[0].designator));
@@ -63,8 +74,8 @@ export function blockScopedInput(input: PlacementInput, primitives: PlacementPri
     const extent = Math.max(10, ...primitives.flatMap(p => Object.values(p.bbox).map(Math.abs))) + 10;
     return {
         ...input,
-        board: { ...input.board, outline: { type: 'rect', width: extent * 2, height: extent * 2 } },
-        boardHoles: [], constraintRegions: [], modules: [],
+        board: world ? input.board : { ...input.board, outline: { type: 'rect', width: extent * 2, height: extent * 2 } },
+        boardHoles: world ? input.boardHoles : [], constraintRegions: world ? input.constraintRegions : [], modules: [],
         components: input.components.filter(c => names.has(c.designator)).map(c => ({ ...c, pcb: { ...c.pcb,
             fixedPlacement: movable.has(c.designator) ? c.pcb.fixedPlacement : placements.find(p => p.designator === c.designator)!,
         } })),

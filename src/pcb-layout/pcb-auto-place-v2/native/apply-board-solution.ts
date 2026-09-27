@@ -18,10 +18,10 @@ export function applyNativeBoardPackSolution(
     return solution.states.map((state) => {
         const primitive = primitivesById.get(state.primitiveId);
         if (!primitive) throw new Error(`Native board packer returned unknown primitive ${state.primitiveId}`);
-        // Preserve fixed path endpoints byte-for-byte. They are routing anchors and
-        // may carry more precision than the native placement grid.
-        if (primitive.locked && (primitive.pathPorts?.length ?? 0) > 0
-            && state.rotation === 0 && state.translationX === 0 && state.translationY === 0) {
+        // Mechanical anchors may carry more precision than the placement grid.
+        if (primitive.locked) {
+            if (state.rotation !== 0 || state.translationX !== 0 || state.translationY !== 0)
+                throw new Error(`Native solver moved locked primitive ${primitive.id}`);
             return primitive;
         }
         const rotated = rotatePrimitive(primitive, state.rotation);

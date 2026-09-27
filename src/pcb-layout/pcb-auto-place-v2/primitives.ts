@@ -37,6 +37,8 @@ export interface PlacementPrimitive {
     label: string;
     sourceNodeId: string;
     locked?: boolean;
+    /** Internal layouts may change, but their fixed anchors may not move. */
+    anchored?: boolean;
     canRotate?: boolean;
     allowedOrientations?: number[];
     bbox: Box;

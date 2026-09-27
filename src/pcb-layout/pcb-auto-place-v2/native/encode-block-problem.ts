@@ -1,19 +1,20 @@
 import type { PcbComponent, Placement } from '#types/pcb/layout-model.ts';
 import { isGroundSignalName, isPowerSignalName } from '#utils/signals.ts';
-import { componentBox, componentCollisionBoxes, componentPadBox, isThroughHolePad } from '../../pcb-auto-place/geometry.ts';
+import { boardOutlinePolygon, componentBox, componentCollisionBoxes, componentPadBox, isThroughHolePad } from '../../pcb-auto-place/geometry.ts';
+import { createFixedPlacement } from '../../pcb-auto-place/fixed.ts';
 import { placementsCanConflict } from '../../pcb-auto-place/utils.ts';
 import type { BlockSolveParams } from '../block-solver.ts';
 import type { PlacementPrimitive } from '../primitives.ts';
 import {
     NATIVE_BLOCK_SOLVE_CONTRACT_VERSION,
-    type NativeBlockSolveProblemV3,
+    type NativeBlockSolveProblemV4,
     type NativePrimitive,
     type NativeRelation,
 } from './contract.ts';
 
 type ComponentEntry = { component: PcbComponent; placement: Placement; primitiveId: string };
 
-export function encodeNativeBlockSolveProblem(params: BlockSolveParams): NativeBlockSolveProblemV3 {
+export function encodeNativeBlockSolveProblem(params: BlockSolveParams): NativeBlockSolveProblemV4 {
     const components = collectComponents(params);
     const count = components.length;
     const componentPairClearance = new Array<number>(count * count);
@@ -31,6 +32,7 @@ export function encodeNativeBlockSolveProblem(params: BlockSolveParams): NativeB
     }
 
     return {
+        world: params.options.worldInput ? encodeBlockWorld(params, components) : undefined,
         experiments: params.options.experiments,
         routingObstacles: components.flatMap(({component, placement, primitiveId}) => component.footprint.pads.map(pad => ({
             box: componentPadBox(placement, pad), primitiveId, ref: `${component.designator}.${pad.pin_number}`,
@@ -67,6 +69,27 @@ export function encodeNativeBlockSolveProblem(params: BlockSolveParams): NativeB
         })),
         componentPairClearance,
         componentConflict,
+    };
+}
+
+function encodeBlockWorld(params: BlockSolveParams, components: ComponentEntry[]) {
+    const input = params.options.worldInput!;
+    const own = new Set(components.map(c => c.component.designator));
+    const fixed = input.components.filter(c => !own.has(c.designator)).flatMap(c => {
+        const p = createFixedPlacement(input, c);
+        return p ? [{ c, p }] : [];
+    });
+    return {
+        outline: boardOutlinePolygon(input.board), edgeClearance: input.board.clearances.edge,
+        bounds: {left:-input.board.outline.width/2, right:input.board.outline.width/2,
+            top:-input.board.outline.height/2, bottom:input.board.outline.height/2},
+        obstacles: components.flatMap(({component:c,placement:p}) => [
+            ...fixed.flatMap(({c:other,p:pose}) => componentCollisionBoxes(other,pose,p.layer).map(box => ({
+                designator:c.designator, box, clearance:params.options.clearanceResolver?.(c.designator,other.designator) ?? params.options.clearance,
+            }))),
+            ...(input.constraintRegions ?? []).filter(r=>r.layers.includes(p.layer)&&!r.allowBlocks.includes(c.block_name))
+                .map(r=>({designator:c.designator,box:r.box,clearance:0})),
+        ]),
     };
 }
 

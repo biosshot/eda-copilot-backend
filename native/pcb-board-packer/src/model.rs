@@ -5,6 +5,8 @@ use std::sync::Arc;
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardPackProblem {
+    #[serde(default)]
+    pub soft_spacing: Option<SoftSpacing>,
     pub version: u32,
     pub grid: f64,
     pub clearance: f64,
@@ -175,6 +177,8 @@ pub struct BlockComponentGeometry {
 #[serde(rename_all = "camelCase")]
 pub struct BlockSolveProblem {
     #[serde(default)]
+    pub world: Option<BlockWorld>,
+    #[serde(default)]
     pub routing_obstacles: Vec<RouteObstacle>,
     #[serde(default)]
     pub external_nets: Vec<Arc<str>>,
@@ -198,6 +202,23 @@ pub struct BlockSolveProblem {
     pub components: Vec<BlockComponentGeometry>,
     pub component_pair_clearance: Vec<f64>,
     pub component_conflict: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockWorld {
+    pub outline: Vec<Point>,
+    pub bounds: Box2,
+    pub edge_clearance: f64,
+    pub obstacles: Vec<BlockWorldObstacle>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct BlockWorldObstacle {
+    pub designator: Arc<str>,
+    #[serde(rename = "box")]
+    pub box_: Box2,
+    pub clearance: f64,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -653,4 +674,14 @@ fn finite(value: f64, name: &str) -> std::result::Result<(), String> {
         .is_finite()
         .then_some(())
         .ok_or_else(|| format!("{name} is not finite"))
+}
+
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SoftSpacing {
+    pub gap: f64,
+    pub compactness_scale: f64,
+    #[serde(default)]
+    pub exempt_pairs: Vec<[Arc<str>; 2]>,
 }

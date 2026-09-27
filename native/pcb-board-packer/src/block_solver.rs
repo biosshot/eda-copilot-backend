@@ -1595,6 +1595,7 @@ fn hard_geometry_violation_count(primitives: &[WorkingPrimitive], context: &Cont
         }
     }
     for primitive in primitives {
+        count += world_violations(primitive, context);
         for obstacle in &context.problem.obstacles {
             let component_boxes;
             let boxes = if context.problem.hard_collision_mode.as_ref() == "primitive" {
@@ -1611,7 +1612,7 @@ fn hard_geometry_violation_count(primitives: &[WorkingPrimitive], context: &Cont
             }
         }
         if let Some(bounds) = context.problem.bounds {
-            if primitive_outside_bounds(primitive, &bounds) {
+            if !(context.problem.world.is_some() && primitive.primitive.locked) && primitive_outside_bounds(primitive, &bounds) {
                 count += 1;
             }
         }
@@ -1624,7 +1625,7 @@ fn candidate_hard_violation_count(
     placed: &[WorkingPrimitive],
     context: &Context,
 ) -> usize {
-    let mut count = 0;
+    let mut count = world_violations(candidate, context);
     for other in placed {
         if !primitive_can_conflict(candidate, other, context) {
             continue;
@@ -1656,6 +1657,22 @@ fn candidate_hard_violation_count(
     if let Some(bounds) = context.problem.bounds {
         if primitive_outside_bounds(candidate, &bounds) {
             count += 1;
+        }
+    }
+    count
+}
+
+fn world_violations(primitive: &WorkingPrimitive, context: &Context) -> usize {
+    let Some(world) = &context.problem.world else { return 0; };
+    // The fixed anchor may intentionally overhang the board. Only its movable
+    // support circuitry is constrained to the usable board interior.
+    if primitive.primitive.locked { return 0; }
+    let mut count = 0;
+    for (_, component) in primitive.components.iter() {
+        if !crate::geometry::box_inside_polygon_board(&component.body_box, &world.bounds,
+            &world.outline, world.edge_clearance) { count += 1; }
+        for obstacle in world.obstacles.iter().filter(|o| o.designator == component.designator) {
+            if overlap_depth(&component.body_box, &obstacle.box_, obstacle.clearance) > 0.0 { count += 1; }
         }
     }
     count

@@ -1290,9 +1290,23 @@ impl RefineProblem {
 }
 /// Absolute admission check for checkpoints: no baseline violations are exempt.
 pub fn validate_layout(p: RefineProblem) -> Result<bool, String> {
+    validate_layout_scope(p, None)
+}
+
+/// Scope only the editable family, while testing its collisions against every
+/// fixed obstacle. Pre-existing edge violations of unrelated mechanics are not
+/// attributed to the new family. Hard electrical constraints remain checked.
+pub fn validate_layout_scope(p: RefineProblem, scope: Option<Vec<String>>) -> Result<bool, String> {
     p.validate()?;
     let world = p.world(&p.placements)?;
-    let all: Vec<_> = (0..p.components.len()).collect();
+    let all: Vec<_> = if let Some(names) = scope {
+        let mut indices = Vec::new();
+        for name in names {
+            indices.push(p.components.iter().position(|c| c.designator.as_ref() == name)
+                .ok_or_else(|| format!("Unknown validation component {name}"))?);
+        }
+        indices
+    } else { (0..p.components.len()).collect() };
     Ok(p.violations(&world, &all).is_empty())
 }
 

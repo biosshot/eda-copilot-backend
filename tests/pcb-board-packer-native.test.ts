@@ -3,7 +3,7 @@ import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { applyNativeBoardPackSolution } from '../src/pcb-layout/pcb-auto-place-v2/native/apply-board-solution.ts';
-import type { NativeBoardPackProblemV3, NativePassiveIslandProblemV1 } from '../src/pcb-layout/pcb-auto-place-v2/native/contract.ts';
+import type { NativeBoardPackProblemV4, NativePassiveIslandProblemV1 } from '../src/pcb-layout/pcb-auto-place-v2/native/contract.ts';
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
 import type { PlacementPrimitive } from '../src/pcb-layout/pcb-auto-place-v2/primitives.ts';
 
@@ -14,6 +14,7 @@ nativeTest('parallel board search matches serial poses and rank with obstacles a
     const addon = loadNativeBoardPacker();
     const problem = minimalProblem();
     const count = 12;
+    problem.softSpacing = { gap: 2, compactnessScale: .25 };
     const base = problem.primitives[0];
     problem.primitives = Array.from({ length: count }, (_, i) => {
         const ref = `U${i + 1}`;
@@ -69,7 +70,7 @@ nativeTest('native board packer is deterministic and returns an applicable rigid
     const second = addon.solveBoardPacked(structuredClone(problem));
 
     assert.deepEqual(second, first);
-    assert.equal(first.version, 3);
+    assert.equal(first.version, 4);
     assert.equal(first.states.length, 1);
     assert.ok(Number.isFinite(first.rank.score));
 
@@ -83,7 +84,7 @@ nativeTest('native board packer is deterministic and returns an applicable rigid
 
 nativeTest('native board packer rejects incompatible and non-finite input', () => {
     const addon = loadNativeBoardPacker();
-    assert.throws(() => addon.solveBoardPacked({ ...minimalProblem(), version: 2 } as unknown as NativeBoardPackProblemV3), /unsupported contract/i);
+    assert.throws(() => addon.solveBoardPacked({ ...minimalProblem(), version: 2 } as unknown as NativeBoardPackProblemV4), /unsupported contract/i);
     assert.throws(() => addon.solveBoardPacked({ ...minimalProblem(), grid: Number.NaN }), /not finite|serde_json::Number/i);
 });
 
@@ -156,7 +157,7 @@ nativeTest('native block solver accepts the versioned contract directly', () => 
     const board = minimalProblem();
     const primitive = board.primitives[0];
     const solution = addon.solveBlockPrimitives({
-        version: 3,
+        version: 4,
         grid: board.grid,
         clearance: board.clearance,
         searchWidth: 4,
@@ -184,8 +185,8 @@ nativeTest('native block solver accepts the versioned contract directly', () => 
     });
     assert.deepEqual(solution.checkpoints.map(c => c.stage), ['beam', 'singles', 'pairs']);
     assert.ok(solution.checkpoints.every(c => c.states.length === 1 && c.rank.hardCount === 0));
-    assert.equal(addon.blockContractVersion(), 3);
-    assert.equal(solution.version, 3);
+    assert.equal(addon.blockContractVersion(), 4);
+    assert.equal(solution.version, 4);
     assert.equal(solution.states.length, 1);
     assert.ok(Number.isFinite(solution.rank.score));
 });
@@ -241,8 +242,8 @@ nativeTest('native route scorer sees obstacle detours and bounded local power ne
     assert.ok(addon.scoreRouteLayout(blockedPower, ['route:A']) > 0);
 });
 
-function routeScoreProblem(blocked: boolean, net: string): NativeBoardPackProblemV3 {
-    const makePrimitive = (id: string, x: number): NativeBoardPackProblemV3['primitives'][number] => ({
+function routeScoreProblem(blocked: boolean, net: string): NativeBoardPackProblemV4 {
+    const makePrimitive = (id: string, x: number): NativeBoardPackProblemV4['primitives'][number] => ({
         id: `route:${id}`,
         kind: 'component',
         label: id,
@@ -263,7 +264,7 @@ function routeScoreProblem(blocked: boolean, net: string): NativeBoardPackProble
     const a = makePrimitive('A', -4);
     const b = makePrimitive('B', 4);
     return {
-        version: 3,
+        version: 4,
         grid: 0.25,
         clearance: 0.25,
         searchWidth: 32,
@@ -291,10 +292,10 @@ function routeScoreProblem(blocked: boolean, net: string): NativeBoardPackProble
     };
 }
 
-function minimalProblem(): NativeBoardPackProblemV3 {
+function minimalProblem(): NativeBoardPackProblemV4 {
     const primitive = minimalPrimitive();
     return {
-        version: 3,
+        version: 4,
         grid: 0.5,
         clearance: 0.2,
         searchWidth: 32,

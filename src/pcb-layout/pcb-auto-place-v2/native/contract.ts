@@ -2,8 +2,8 @@ import type { NativePostPlaceRefineProblem } from './encode-post-place-refine.ts
 import type { PostPlaceRefineResult } from '../post-place-refiner.types.ts';
 import type { BoardEdge, Box, Layer, PlacementRelationKind, Point } from '#types/pcb/layout-model.ts';
 
-export const NATIVE_BOARD_PACK_CONTRACT_VERSION = 3 as const;
-export const NATIVE_BLOCK_SOLVE_CONTRACT_VERSION = 3 as const;
+export const NATIVE_BOARD_PACK_CONTRACT_VERSION = 4 as const;
+export const NATIVE_BLOCK_SOLVE_CONTRACT_VERSION = 4 as const;
 export const NATIVE_PASSIVE_ISLAND_CONTRACT_VERSION = 1 as const;
 export const NATIVE_POST_PLACE_SCORE_CONTRACT_VERSION = 1 as const;
 export const NATIVE_SIGNAL_PATH_CONTRACT_VERSION = 1 as const;
@@ -151,7 +151,8 @@ export interface NativeConstraintRegion {
     allowBlocks: string[];
 }
 
-export interface NativeBoardPackProblemV3 {
+export interface NativeBoardPackProblemV4 {
+    softSpacing?: {gap: number; compactnessScale: number; exemptPairs?: Array<[string,string]>};
     version: typeof NATIVE_BOARD_PACK_CONTRACT_VERSION;
     grid: number;
     clearance: number;
@@ -184,38 +185,38 @@ export interface NativePrimitivePackSolution {
     rank: { hardCount: number; hardSeverity: number; score: number };
 }
 
-export interface NativeBoardPackSolutionV3 extends NativePrimitivePackSolution {
+export interface NativeBoardPackSolutionV4 extends NativePrimitivePackSolution {
     version: typeof NATIVE_BOARD_PACK_CONTRACT_VERSION;
 }
 
-export interface NativeBlockSolveSolutionV3 extends NativePrimitivePackSolution {
+export interface NativeBlockSolveSolutionV4 extends NativePrimitivePackSolution {
     checkpoints: Array<NativePrimitivePackSolution & { stage: string }>;
     version: typeof NATIVE_BLOCK_SOLVE_CONTRACT_VERSION;
 }
 
 export interface NativeBoardPackerAddon {
     contractVersion(): number;
-    solveBoardPacked(problem: NativeBoardPackProblemV3): NativeBoardPackSolutionV3;
+    solveBoardPacked(problem: NativeBoardPackProblemV4): NativeBoardPackSolutionV4;
     /** Bounded Micro-A* score for routes affected by the listed component-level primitives. */
-    scoreRouteLayout(problem: NativeBoardPackProblemV3, changedPrimitiveIds: string[]): number;
+    scoreRouteLayout(problem: NativeBoardPackProblemV4, changedPrimitiveIds: string[]): number;
     /** Same score with enriched pad/copper obstacles used by post-place refinement. */
     scoreRouteLayoutWithObstacles(
-        problem: NativeBoardPackProblemV3,
+        problem: NativeBoardPackProblemV4,
         changedPrimitiveIds: string[],
         routingObstacles: NativeRoutingObstacle[],
     ): number;
     prepareRouteLayoutComparison(
-        problem: NativeBoardPackProblemV3,
+        problem: NativeBoardPackProblemV4,
         changedPrimitiveIds: string[],
         routingObstacles: NativeRoutingObstacle[],
     ): NativeRouteBaseline;
     compareRouteLayoutCandidate(
-        problem: NativeBoardPackProblemV3,
+        problem: NativeBoardPackProblemV4,
         routingObstacles: NativeRoutingObstacle[],
         baseline: NativeRouteBaseline,
     ): NativeRouteComparison;
     blockContractVersion(): number;
-    solveBlockPrimitives(problem: NativeBlockSolveProblemV3): NativeBlockSolveSolutionV3;
+    solveBlockPrimitives(problem: NativeBlockSolveProblemV4): NativeBlockSolveSolutionV4;
     passiveIslandContractVersion(): number;
     solvePassiveNetIsland(problem: NativePassiveIslandProblemV1): NativePassiveIslandSolutionV1;
     postPlaceRefineContractVersion(): number;
@@ -224,7 +225,7 @@ export interface NativeBoardPackerAddon {
     scorePostPlace(problem: NativePostPlaceScoreProblemV1): number;
     validatePlacementChange(problem: import('./encode-post-place-refine.ts').NativePostPlaceRefineProblem, placements: import('#types/pcb/layout-model.ts').Placement[]): boolean;
     /** Absolute hard-constraint validation, without accepting baseline violations. */
-    validatePlacement(problem: import('./encode-post-place-refine.ts').NativePostPlaceRefineProblem): boolean;
+    validatePlacement(problem: import('./encode-post-place-refine.ts').NativePostPlaceRefineProblem, scope?: string[]): boolean;
     signalPathContractVersion(): number;
     evaluateSignalPath(problem: NativeSignalPathEvaluationProblemV1): NativeSignalPathTopologyEvaluation | null;
     signalPathBridgeDeltas(problem: NativeSignalPathBridgeProblemV1): Point[];
@@ -236,7 +237,9 @@ export interface NativeBlockComponentGeometry extends NativeComponentGeometry {
     powerComponent: boolean;
 }
 
-export interface NativeBlockSolveProblemV3 {
+export interface NativeBlockSolveProblemV4 {
+    world?: { outline: Point[]; bounds: Box; edgeClearance: number;
+        obstacles: Array<{designator: string; box: Box; clearance: number}> };
     /** Opt-in research controls; deliberately not exposed by the placement DSL. */
     experiments?: {
         routingMetric?: 'micro' | 'off' | 'geometric';

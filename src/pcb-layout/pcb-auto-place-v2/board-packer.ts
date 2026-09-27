@@ -10,6 +10,7 @@ import type { PlacementPrimitive } from './primitives.ts';
 
 /** Input contract for the Rust board packer. Search and scoring live in the native crate. */
 export interface BoardPackerOptions {
+    softSpacing?: {gap: number; compactnessScale: number; exemptPairs?: Array<[string,string]>};
     grid: number;
     clearance: number;
     componentByDesignator?: Map<string, PcbComponent>;

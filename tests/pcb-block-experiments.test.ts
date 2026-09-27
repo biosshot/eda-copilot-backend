@@ -2,14 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
-import { NATIVE_BLOCK_SOLVE_CONTRACT_VERSION, type NativeBlockSolveProblemV3 } from '../src/pcb-layout/pcb-auto-place-v2/native/contract.ts';
+import { NATIVE_BLOCK_SOLVE_CONTRACT_VERSION, type NativeBlockSolveProblemV4 } from '../src/pcb-layout/pcb-auto-place-v2/native/contract.ts';
 import { blockPolicy } from '../src/pcb-layout/pcb-auto-place-v2/block-policy.ts';
 
 const read = (fixture: string, file: number) => JSON.parse(readFileSync(new URL(`./fixtures/block-placement/${fixture}/block-${file}.json`, import.meta.url), 'utf8'));
 const addon = loadNativeBoardPacker();
 const usb = read('Telemetry', 23);
 usb.problem.version = NATIVE_BLOCK_SOLVE_CONTRACT_VERSION;
-const solve = (experiments = {}, width = 1) => addon.solveBlockPrimitives({ ...structuredClone(usb.problem), experiments, searchWidth: width } as NativeBlockSolveProblemV3);
+const solve = (experiments = {}, width = 1) => addon.solveBlockPrimitives({ ...structuredClone(usb.problem), experiments, searchWidth: width } as NativeBlockSolveProblemV4);
 
 test('experiments are opt-in: captured USB baseline remains identical', () => {
     const { checkpoints, ...result } = solve();

@@ -22,8 +22,8 @@ use napi::{Error, Result, Status};
 use napi_derive::napi;
 use serde_json::Value;
 
-const CONTRACT_VERSION: u32 = 3;
-const BLOCK_CONTRACT_VERSION: u32 = 3;
+const CONTRACT_VERSION: u32 = 4;
+const BLOCK_CONTRACT_VERSION: u32 = 4;
 const PASSIVE_ISLAND_CONTRACT_VERSION: u32 = 1;
 const POST_PLACE_SCORE_CONTRACT_VERSION: u32 = 1;
 const SIGNAL_PATH_CONTRACT_VERSION: u32 = 1;
@@ -243,9 +243,9 @@ fn invalid_passive_island_problem(error: impl std::fmt::Display) -> Error {
 pub fn post_place_refine_contract_version() -> u32 { 2 }
 
 #[napi]
-pub fn validate_placement(problem: Value) -> Result<bool> {
+pub fn validate_placement(problem: Value, scope: Option<Vec<String>>) -> Result<bool> {
     let p: post_place_refine::RefineProblem = serde_json::from_value(problem).map_err(invalid_problem)?;
-    post_place_refine::validate_layout(p).map_err(invalid_problem)
+    post_place_refine::validate_layout_scope(p, scope).map_err(invalid_problem)
 }
 
 #[napi]
