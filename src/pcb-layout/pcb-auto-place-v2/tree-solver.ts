@@ -420,7 +420,7 @@ function solveBlockNode(
     const policy = blockPolicy(context.input.solverOptions.ignoredRatsnestSignals);
     // A block with satellite children still needs the same electrical search.
     // Children remain rigid primitives; their block names must not disable it.
-    const ordinary = childPrimitives.length >= 2 && (childPrimitives.length <= 12 || relaxed.released.length > 0);
+    const ordinary = childPrimitives.length >= 2;
     const params: BlockSolveParams = {
         node,
         primitives: childPrimitives,

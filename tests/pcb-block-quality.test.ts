@@ -10,6 +10,9 @@ import type { PlacementInput, Placement } from '../src/types/pcb/layout-model.ts
 import type { BlockSolveParams } from '../src/pcb-layout/pcb-auto-place-v2/block-solver.ts';
 import type { NativePostPlaceScoreProblemV1 } from '../src/pcb-layout/pcb-auto-place-v2/native/contract.ts';
 import type { PlacementPrimitive } from '../src/pcb-layout/pcb-auto-place-v2/primitives.ts';
+import { withBlockSolverCapture } from '../src/pcb-layout/pcb-auto-place-v2/block-solver-engine.ts';
+import { solvePlacementTreeBottomUp } from '../src/pcb-layout/pcb-auto-place-v2/tree-solver.ts';
+import { buildPlacementGraph } from '../src/pcb-layout/pcb-auto-place/placement-graph.ts';
 
 test('internal IC segment ignores only its own IC pads; every foreign pad still costs', () => {
     const addon = loadNativeBoardPacker();
@@ -77,4 +80,19 @@ test('checkpoint admission rejects a violated explicit hard pin distance', () =>
     data.hints.push({relation:'critical_pair',source:{type:'pin',designator:'C9',pin_number:'1'},
         target:{type:'pin',designator:'U2',pin_number:'6'},maxDistance:2,hard:true,priority:'critical'});
     assert.equal(legalBlockCandidate(data,ps,createClearanceResolver(data)),false);
+});
+
+test('plain blocks above twelve primitives receive the same beam policy', () => {
+    const data=input(), source=data.components.find(c=>c.designator==='C9')!;
+    data.components=Array.from({length:13},(_,i)=>({...structuredClone(source),designator:`C${i+1}`,block_name:'large',
+        pcb:{...source.pcb,role:'passive' as const},pins:source.pins.map(p=>({...p,signal_name:`N${i}_${p.pin_number}`}))}));
+    data.blocks=[{name:'large',description:'',role:'generic',component_designators:data.components.map(c=>c.designator)}];
+    data.hints=[];data.paths=[];data.modules=[];data.refineGroups=[];data.constraintRegions=[];data.boardHoles=[];
+    const stop=new Error('captured');
+    assert.throws(()=>withBlockSolverCapture(p=>{
+        assert.equal(p.primitives.length,13);
+        assert.equal(p.options.searchWidth,4);
+        assert.equal(p.options.experiments?.orderBranching,true);
+        throw stop;
+    },()=>solvePlacementTreeBottomUp(data,buildPlacementGraph(data))),e=>e===stop);
 });
