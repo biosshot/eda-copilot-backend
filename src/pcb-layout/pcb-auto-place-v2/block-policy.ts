@@ -13,8 +13,8 @@ export function placementPadCrossingWeight() {
  * a process-level A/B control and are inherited by subtree workers.
  */
 export function blockPolicy(ignoredNets: string[] = []) {
-    const flag = (name: string) => {
-        const value = process.env[name] ?? '1';
+    const flag = (name: string, fallback = '1') => {
+        const value = process.env[name] ?? fallback;
         if (!['0', '1'].includes(value)) throw new Error(`Unknown ${name}: ${value}`);
         return value === '1';
     };
@@ -30,6 +30,10 @@ export function blockPolicy(ignoredNets: string[] = []) {
         netCandidates: true, stableNetWeight: true, reducedHull: true, smoothAspect: true,
         frontierOrder: flag('PCB_BLOCK_FRONTIER'), padOwnerCandidates: flag('PCB_BLOCK_PAD_OWNER'),
         localAccess: flag('PCB_BLOCK_LOCAL_ACCESS'),
+        orderEqualCritical: flag('PCB_BLOCK_ORDER_EQUAL', '0'),
+        orderCoreAffinity: flag('PCB_BLOCK_ORDER_CORE', '0'),
+        orderBranching: flag('PCB_BLOCK_ORDER_BRANCH', '0'),
+        orderScarcity: flag('PCB_BLOCK_ORDER_SCARCITY', '0'),
         candidateClearance: candidates !== '0', candidateRings: candidates === '2',
         padCrossings: placementPadCrossingWeight() > 0,
         longNets: true, extraPasses: true, pairSwaps: true, reinsertPair: true, keepDenseAccess: true,

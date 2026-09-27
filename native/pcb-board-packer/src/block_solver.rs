@@ -364,7 +364,23 @@ fn solve_beam(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Worki
         }
         states = dedupe_states(expanded);
         states.sort_by(compare_states);
-        states.truncate(search_width);
+        if context.problem.experiments.order_branching && context.problem.experiments.frontier_order {
+            // Keep up to three different placed subsets, with the normal position
+            // beam within each subset. Partial costs of unlike subsets are biased.
+            let mut subsets: Vec<(Vec<u32>, usize)> = Vec::new();
+            states.retain(|state| {
+                let mut key: Vec<_> = state.remaining.iter().map(|p| p.id).collect();
+                key.sort();
+                if let Some((_, count)) = subsets.iter_mut().find(|(k, _)| *k == key) {
+                    *count += 1;
+                    *count <= search_width
+                } else if subsets.len() < 3 {
+                    subsets.push((key, 1)); true
+                } else { false }
+            });
+        } else {
+            states.truncate(search_width);
+        }
         if states.is_empty() {
             break;
         }
@@ -2805,21 +2821,66 @@ fn frontier_indices(remaining: &[WorkingPrimitive], placed: &[WorkingPrimitive],
         let mut value = 0.0;
         for other in placed {
             for net in own.intersection(&nets(other)) {
-                value += 10.0 / (fanout[net].saturating_sub(1).max(1) as f64);
+                let affinity = if context.problem.experiments.order_core_affinity {
+                    if core_size(other) > 0 { 4.0 } else { 0.25 }
+                } else { 1.0 };
+                value += affinity * 10.0 / (fanout[net].saturating_sub(1).max(1) as f64);
             }
             for r in &context.problem.relations {
                 if r.kind.as_ref() == "critical_pair" &&
                     ((primitive_touches_endpoint(p, &r.from) && primitive_touches_endpoint(other, &r.to))
                     || (primitive_touches_endpoint(p, &r.to) && primitive_touches_endpoint(other, &r.from))) {
-                    value += if r.hard { 100.0 } else { 30.0 };
+                    let bonus = if context.problem.experiments.order_equal_critical { 30.0 }
+                        else if r.hard { 100.0 } else { 30.0 };
+                    value += bonus * if context.problem.experiments.order_core_affinity && core_size(other) == 0 { 0.25 } else { 1.0 };
                 }
             }
         }
+        if context.problem.experiments.order_scarcity {
+            value += frontier_scarcity(p, placed, context);
+        }
         value
     };
-    remaining.iter().enumerate().max_by(|(_, a), (_, b)| compare_f64(score(a), score(b))
-        .then_with(|| core_size(a).cmp(&core_size(b))).then_with(|| b.id.cmp(&a.id)))
-        .map(|(index, _)| vec![index]).unwrap_or_default()
+    let mut ranked: Vec<_> = remaining.iter().enumerate().map(|(i, p)| (i, score(p))).collect();
+    ranked.sort_by(|(ai, a), (bi, b)| compare_f64(*b, *a)
+        .then_with(|| core_size(&remaining[*bi]).cmp(&core_size(&remaining[*ai])))
+        .then_with(|| remaining[*ai].id.cmp(&remaining[*bi].id)));
+    ranked.into_iter().take(if context.problem.experiments.order_branching { 3 } else { 1 })
+        .map(|(i, _)| i).collect()
+}
+
+// Count geometric opportunities close to the IC without routing or scoring.
+// Normalize by the number of generated nearby poses to avoid rewarding large
+// candidate lists. This is a heuristic, not an exhaustive free-space measure.
+fn frontier_scarcity(p: &WorkingPrimitive, placed: &[WorkingPrimitive], context: &Context) -> f64 {
+    let cores: Vec<_> = placed.iter().filter(|q| q.components.iter()
+        .any(|(_, c)| c.role.as_deref() == Some("main_ic"))).cloned().collect();
+    let distance = |q: &WorkingPrimitive| {
+        let mut sum = 0.0;
+        let mut count = 0usize;
+        for cp in q.primitive.connection_points.iter() {
+            let Some(net) = &cp.net else { continue };
+            if net.is_empty() || is_ground(net) || context.problem.experiments.ignored_nets.iter().any(|n| n.eq_ignore_ascii_case(net)) { continue; }
+            let nearest = cores.iter().flat_map(|c| c.primitive.connection_points.iter())
+                .filter(|t| t.net.as_ref() == Some(net))
+                .map(|t| (cp.x - t.x).hypot(cp.y - t.y)).fold(f64::INFINITY, f64::min);
+            if nearest.is_finite() { sum += nearest; count += 1; }
+        }
+        (sum, count)
+    };
+    let pins = distance(p).1;
+    if pins == 0 { return 0.0; }
+    let candidates: Vec<_> = orientation_variants(p).iter()
+        .flat_map(|v| net_anchored_candidates(v, &cores, context)).collect();
+    let candidates = dedupe_primitives(candidates);
+    let best = candidates.iter().filter(|q| candidate_hard_violation_count(q, &cores, context) == 0)
+        .map(|q| distance(q).0).fold(f64::INFINITY, f64::min);
+    if !best.is_finite() { return 0.0; }
+    let nearby: Vec<_> = candidates.iter().filter(|q| distance(q).0 <= best + pins as f64
+        && candidate_hard_violation_count(q, &cores, context) == 0).collect();
+    let legal = nearby.iter().filter(|q| candidate_hard_violation_count(q, placed, context) == 0).count();
+    let scarcity = if legal > 0 { 60.0 * (1.0 - legal as f64 / nearby.len().max(1) as f64) } else { 0.0 };
+    scarcity + 40.0 * pins.saturating_sub(1).min(2) as f64
 }
 
 fn seed_rank(primitive: &WorkingPrimitive, context: &Context) -> f64 {
@@ -3227,6 +3288,36 @@ mod candidate_tests {
         assert_eq!(frontier_indices(&[resistor.clone(), ic.clone()], &[], &context), vec![1]);
         assert_eq!(frontier_indices(&[resistor.clone()], &[ic], &context), vec![0]);
         assert_eq!(frontier_indices(&[resistor.clone(), resistor], &[], &context), vec![0, 1]);
+    }
+
+    #[test]
+    fn equal_critical_order_does_not_use_hardness_as_urgency() {
+        let (mut a, ic, mut context) = usb_fixture();
+        let mut b = a.clone(); a.id = 1; b.id = 2;
+        for cp in Arc::make_mut(&mut b.primitive.connection_points) {
+            cp.reference = Arc::from(format!("R99.{}", cp.reference.split('.').last().unwrap()));
+        }
+        context.problem.relations = vec![
+            serde_json::from_value(serde_json::json!({"id":"a", "kind":"critical_pair", "from":"pad:R36.1", "to":"component:U11", "hard":false, "effect":"attract", "satelliteAnchor":false})).unwrap(),
+            serde_json::from_value(serde_json::json!({"id":"b", "kind":"critical_pair", "from":"pad:R99.1", "to":"component:U11", "hard":true, "effect":"attract", "satelliteAnchor":false})).unwrap(),
+        ];
+        context.problem.experiments.frontier_order = true;
+        assert_eq!(frontier_indices(&[a.clone(), b.clone()], &[ic.clone()], &context), vec![1]);
+        context.problem.experiments.order_equal_critical = true;
+        assert_eq!(frontier_indices(&[a.clone(), b.clone()], &[ic.clone()], &context), vec![0]);
+        assert!(context.problem.relations[1].hard); // Constraints are not relaxed.
+        context.problem.experiments.order_branching = true;
+        assert_eq!(frontier_indices(&[a, b], &[ic], &context), vec![0, 1]);
+    }
+
+    #[test]
+    fn scarcity_recognizes_two_ic_links_but_excludes_ignored_nets() {
+        let (resistor, ic, mut context) = usb_fixture();
+        context.problem.experiments.candidate_clearance = true;
+        assert!(frontier_scarcity(&resistor, &[ic.clone()], &context) >= 40.0);
+        context.problem.experiments.ignored_nets = resistor.primitive.connection_points.iter()
+            .filter_map(|cp| cp.net.clone()).collect();
+        assert_eq!(frontier_scarcity(&resistor, &[ic], &context), 0.0);
     }
 
     #[test]

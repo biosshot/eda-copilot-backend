@@ -242,6 +242,10 @@ export interface NativeBlockSolveProblemV2 {
         candidateClearance?: boolean;
         candidateRings?: boolean;
         frontierOrder?: boolean;
+        orderEqualCritical?: boolean;
+        orderCoreAffinity?: boolean;
+        orderBranching?: boolean;
+        orderScarcity?: boolean;
         padOwnerCandidates?: boolean;
         localAccess?: boolean;
         padCrossings?: boolean;
