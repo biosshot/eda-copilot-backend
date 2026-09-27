@@ -1,0 +1,1760 @@
+[
+  {
+    "fixture": "Telemetry",
+    "mode": "legacy",
+    "settings": [
+      "legacy",
+      "micro",
+      "0"
+    ],
+    "ms": 61115.3712,
+    "blockMs": 7419.0403000000015,
+    "blockSolves": 45,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 2729.125,
+        "pairSum": 789.7047779863876,
+        "pairMax": 63.08269888273645,
+        "score": 9093840.859871918
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 2729.12425,
+        "pairSum": 789.7048979396682,
+        "pairMax": 63.08269888273645,
+        "score": 9093845.447490802
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 2716.38585,
+        "pairSum": 781.8444391761891,
+        "pairMax": 63.08269888273645,
+        "score": 9081988.707080433
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 2716.38585,
+        "pairSum": 781.8444391761891,
+        "pairMax": 63.08269888273645,
+        "score": 9081988.707080433
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "diagnostics": [
+      {
+        "code": "post_place_opportunity",
+        "message": "J1: safe post-place improvement J1 rotate += 180; global score 9081988.707 -> 9079444.126. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J1\", [\"J1\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J1",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J4: safe post-place improvement J4 rotate += 180; global score 9081988.707 -> 9081836.939. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J4\", [\"J4\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J4",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J7: safe post-place improvement J7 rotate += 180; global score 9081988.707 -> 9081987.09. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J7\", [\"J7\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J7",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "SW2: safe post-place improvement SW2 rotate += 180; global score 9081988.707 -> 9081699.437. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_SW2\", [\"SW2\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:SW2",
+        "severity": "warning"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "Telemetry",
+    "mode": "full-micro-single",
+    "settings": [
+      "full",
+      "micro",
+      "0"
+    ],
+    "ms": 65254.4459,
+    "blockMs": 15447.338899999993,
+    "blockSolves": 45,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 2997.387199999999,
+        "pairSum": 833.131019826451,
+        "pairMax": 69.12358289397332,
+        "score": 13049412.687784169
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 2997.3863999999994,
+        "pairSum": 833.1311026405438,
+        "pairMax": 69.12358289397332,
+        "score": 13049417.03703079
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 2967.111999999999,
+        "pairSum": 821.4298494945119,
+        "pairMax": 69.12358289397332,
+        "score": 13032024.936043939
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 2967.111999999999,
+        "pairSum": 821.4298494945119,
+        "pairMax": 69.12358289397332,
+        "score": 13032024.936043939
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "diagnostics": [
+      {
+        "code": "post_place_opportunity",
+        "message": "J1: safe post-place improvement J1 rotate += 180; global score 13032024.936 -> 13028812.923. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J1\", [\"J1\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J1",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J4: safe post-place improvement J4 rotate += 180; global score 13032024.936 -> 13031873.947. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J4\", [\"J4\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J4",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J7: safe post-place improvement J7 rotate += 180; global score 13032024.936 -> 13032024.137. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J7\", [\"J7\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J7",
+        "severity": "warning"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "Telemetry",
+    "mode": "full-micro",
+    "settings": [
+      "full",
+      "micro",
+      "1"
+    ],
+    "ms": 71084.7718,
+    "blockMs": 15964.542099999995,
+    "blockSolves": 63,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 2994.7781999999993,
+        "pairSum": 831.0702114955985,
+        "pairMax": 69.12358289397332,
+        "score": 12754912.575021544
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 2994.777399999999,
+        "pairSum": 831.0702923026128,
+        "pairMax": 69.12358289397332,
+        "score": 12754916.96789011
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 2964.5029999999992,
+        "pairSum": 821.22229722208,
+        "pairMax": 69.12358289397332,
+        "score": 12738606.066243364
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 2964.5029999999992,
+        "pairSum": 821.22229722208,
+        "pairMax": 69.12358289397332,
+        "score": 12738606.066243364
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected adc_supply in board context: variant 0, shift 0,-1mm; score 13049412.69 -> 13048999.87",
+        "nodeId": "tree:block:adc_supply"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected usb_charge in board context: variant 0, shift -1,0mm; score 13048999.87 -> 12950813.82",
+        "nodeId": "tree:block:usb_charge"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected logic_power in board context: variant 0, shift 0,-1mm; score 12950813.82 -> 12844846.20",
+        "nodeId": "tree:block:logic_power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected uart in board context: variant 0, shift 1,0mm; score 12844846.20 -> 12778288.89",
+        "nodeId": "tree:block:uart"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected afe_power in board context: variant 0, shift 0,1mm; score 12778288.89 -> 12762525.27",
+        "nodeId": "tree:block:afe_power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected sim_support in board context: variant 0, shift 0.5,0mm; score 12762525.27 -> 12754912.58",
+        "nodeId": "tree:block:sim_support"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 9 blocks, 180 candidates, 6 accepted",
+        "nodeId": "block-portfolio"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J1: safe post-place improvement J1 rotate += 180; global score 12738606.066 -> 12735394.053. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J1\", [\"J1\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J1",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J4: safe post-place improvement J4 rotate += 180; global score 12738606.066 -> 12738455.077. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J4\", [\"J4\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J4",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J7: safe post-place improvement J7 rotate += 180; global score 12738606.066 -> 12738605.721. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J7\", [\"J7\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J7",
+        "severity": "warning"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "Telemetry",
+    "mode": "full-off",
+    "settings": [
+      "full",
+      "off",
+      "1"
+    ],
+    "ms": 70952.8773,
+    "blockMs": 13280.332299999993,
+    "blockSolves": 63,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 2803.5052999999994,
+        "pairSum": 831.8211460943068,
+        "pairMax": 68.96431081726257,
+        "score": 10614023.825544046
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 2803.5047499999996,
+        "pairSum": 831.8213003378244,
+        "pairMax": 68.96431081726257,
+        "score": 10614028.190884206
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 2785.1958499999996,
+        "pairSum": 820.4776593514393,
+        "pairMax": 68.96431081726257,
+        "score": 10599623.4844822
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 2785.1958499999996,
+        "pairSum": 820.4776593514393,
+        "pairMax": 68.96431081726257,
+        "score": 10599623.4844822
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected adc_supply in board context: variant 1, shift -1,0mm; score 10916361.24 -> 10915889.67",
+        "nodeId": "tree:block:adc_supply"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected lte_power in board context: variant 0, shift -1,0mm; score 10915889.67 -> 10901504.82",
+        "nodeId": "tree:block:lte_power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected hv_pos in board context: variant 0, shift 0,1mm; score 10901504.82 -> 10865709.21",
+        "nodeId": "tree:block:hv_pos"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected usb_charge in board context: variant 2, shift -1,0mm; score 10865709.21 -> 10644437.21",
+        "nodeId": "tree:block:usb_charge"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected logic_power in board context: variant 1, shift 0,0mm; score 10644437.21 -> 10639522.16",
+        "nodeId": "tree:block:logic_power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected afe_power in board context: variant 0, shift 0,1mm; score 10639522.16 -> 10635986.39",
+        "nodeId": "tree:block:afe_power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected sim_support in board context: variant 0, shift 1,0mm; score 10635986.39 -> 10614023.83",
+        "nodeId": "tree:block:sim_support"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 9 blocks, 171 candidates, 7 accepted",
+        "nodeId": "block-portfolio"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J1: safe post-place improvement J1 rotate += 180; global score 10599623.484 -> 10596385.459. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J1\", [\"J1\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J1",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J4: safe post-place improvement J4 rotate += 180; global score 10599623.484 -> 10599468.421. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J4\", [\"J4\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J4",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "SW2: safe post-place improvement SW2 rotate += 180; global score 10599623.484 -> 10599332.489. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_SW2\", [\"SW2\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:SW2",
+        "severity": "warning"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "Telemetry",
+    "mode": "full-geometric-single",
+    "settings": [
+      "full",
+      "geometric",
+      "0"
+    ],
+    "ms": 64695.402500000004,
+    "blockMs": 13161.385199999999,
+    "blockSolves": 45,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 3091.850000000001,
+        "pairSum": 968.6560277187134,
+        "pairMax": 67.01387687710658,
+        "score": 13311288.618657533
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 3091.8496000000005,
+        "pairSum": 968.6561107573356,
+        "pairMax": 67.01387687710658,
+        "score": 13311293.678487483
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 3072.3430000000008,
+        "pairSum": 958.0727818865727,
+        "pairMax": 67.01387687710658,
+        "score": 13289804.565437192
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 3072.3430000000008,
+        "pairSum": 958.0727818865727,
+        "pairMax": 67.01387687710658,
+        "score": 13289804.565437192
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "diagnostics": [
+      {
+        "code": "post_place_opportunity",
+        "message": "J1: safe post-place improvement J1 rotate += 180; global score 13289804.565 -> 13286566.54. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J1\", [\"J1\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J1",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J4: safe post-place improvement J4 rotate += 180; global score 13289804.565 -> 13289658.453. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J4\", [\"J4\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J4",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J7: safe post-place improvement J7 rotate += 180; global score 13289804.565 -> 13289803.528. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J7\", [\"J7\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J7",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "SW2: safe post-place improvement SW2 rotate += 180; global score 13289804.565 -> 13289510.291. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_SW2\", [\"SW2\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:SW2",
+        "severity": "warning"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "Telemetry",
+    "mode": "full-geometric",
+    "settings": [
+      "full",
+      "geometric",
+      "1"
+    ],
+    "ms": 64634.7089,
+    "blockMs": 13027.982800000005,
+    "blockSolves": 63,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 3066.3099000000007,
+        "pairSum": 959.396508587237,
+        "pairMax": 67.01387687710658,
+        "score": 13039340.14251824
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 3066.3095000000008,
+        "pairSum": 959.3966004580665,
+        "pairMax": 67.01387687710658,
+        "score": 13039345.32112072
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 3045.9355000000005,
+        "pairSum": 949.0170923932432,
+        "pairMax": 67.01387687710658,
+        "score": 13019379.016830342
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 3045.9355000000005,
+        "pairSum": 949.0170923932432,
+        "pairMax": 67.01387687710658,
+        "score": 13019379.016830342
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected adc_supply in board context: variant 1, shift -1,0mm; score 13311288.62 -> 13310986.69",
+        "nodeId": "tree:block:adc_supply"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected lte_power in board context: variant 0, shift -1,0mm; score 13310986.69 -> 13291678.59",
+        "nodeId": "tree:block:lte_power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected usb_charge in board context: variant 0, shift 0,-1mm; score 13291678.59 -> 13191972.34",
+        "nodeId": "tree:block:usb_charge"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected logic_power in board context: variant 1, shift -1,0mm; score 13191972.34 -> 13145110.26",
+        "nodeId": "tree:block:logic_power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected uart in board context: variant 0, shift -1,0mm; score 13145110.26 -> 13047173.86",
+        "nodeId": "tree:block:uart"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected sim_support in board context: variant 0, shift 0,1mm; score 13047173.86 -> 13039340.14",
+        "nodeId": "tree:block:sim_support"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 9 blocks, 171 candidates, 6 accepted",
+        "nodeId": "block-portfolio"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J1: safe post-place improvement J1 rotate += 180; global score 13019379.017 -> 13016140.992. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J1\", [\"J1\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J1",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J4: safe post-place improvement J4 rotate += 180; global score 13019379.017 -> 13019232.904. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J4\", [\"J4\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J4",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J7: safe post-place improvement J7 rotate += 180; global score 13019379.017 -> 13019378.257. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J7\", [\"J7\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J7",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "SW2: safe post-place improvement SW2 rotate += 180; global score 13019379.017 -> 13019084.742. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_SW2\", [\"SW2\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:SW2",
+        "severity": "warning"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "ESPower",
+    "mode": "legacy",
+    "settings": [
+      "legacy",
+      "micro",
+      "0"
+    ],
+    "ms": 8187.4112,
+    "blockMs": 3308.808400000001,
+    "blockSolves": 24,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 441.23320000000007,
+        "pairSum": 94.20490206244259,
+        "pairMax": 42.32741428436186,
+        "score": 1602491.5453046232
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 441.23320000000007,
+        "pairSum": 94.20490206244259,
+        "pairMax": 42.32741428436186,
+        "score": 1602491.5453046232
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 435.5055,
+        "pairSum": 95.22638213232413,
+        "pairMax": 42.32741428436186,
+        "score": 1552851.7128527844
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 435.5055,
+        "pairSum": 95.22638213232413,
+        "pairMax": 42.32741428436186,
+        "score": 1552851.7128527844
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "82f28407129cb28f42f815ab3c14defe7b324c36f523271172caf245cbcc1f86",
+    "diagnostics": [],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "ESPower",
+    "mode": "full-micro-single",
+    "settings": [
+      "full",
+      "micro",
+      "0"
+    ],
+    "ms": 14585.731300000001,
+    "blockMs": 9127.9184,
+    "blockSolves": 24,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 444.53369999999995,
+        "pairSum": 94.79883041768397,
+        "pairMax": 42.32741428436186,
+        "score": 1682028.699788027
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 444.53369999999995,
+        "pairSum": 94.79883041768397,
+        "pairMax": 42.32741428436186,
+        "score": 1682028.699788027
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 438.1968,
+        "pairSum": 94.01303388033176,
+        "pairMax": 42.32741428436186,
+        "score": 1635007.978844777
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 438.1968,
+        "pairSum": 94.01303388033176,
+        "pairMax": 42.32741428436186,
+        "score": 1635007.978844777
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "82f28407129cb28f42f815ab3c14defe7b324c36f523271172caf245cbcc1f86",
+    "diagnostics": [],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "ESPower",
+    "mode": "full-micro",
+    "settings": [
+      "full",
+      "micro",
+      "1"
+    ],
+    "ms": 17887.024699999998,
+    "blockMs": 11574.899500000001,
+    "blockSolves": 34,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 443.10069999999996,
+        "pairSum": 94.30088784747292,
+        "pairMax": 42.32741428436186,
+        "score": 1675083.090659601
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 443.10069999999996,
+        "pairSum": 94.30088784747292,
+        "pairMax": 42.32741428436186,
+        "score": 1675083.090659601
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 436.7638,
+        "pairSum": 93.5156600683012,
+        "pairMax": 42.32741428436186,
+        "score": 1628062.9990623598
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 436.7638,
+        "pairSum": 93.5156600683012,
+        "pairMax": 42.32741428436186,
+        "score": 1628062.9990623598
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "82f28407129cb28f42f815ab3c14defe7b324c36f523271172caf245cbcc1f86",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected crystal in board context: variant 1, shift 0,0.5mm; score 1682028.70 -> 1681719.01",
+        "nodeId": "tree:block:crystal"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected battery_adc in board context: variant 0, shift 0.5,0mm; score 1681719.01 -> 1675083.09",
+        "nodeId": "tree:block:battery_adc"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 3 blocks, 69 candidates, 2 accepted",
+        "nodeId": "block-portfolio"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "ESPower",
+    "mode": "full-off",
+    "settings": [
+      "full",
+      "off",
+      "1"
+    ],
+    "ms": 15616.9778,
+    "blockMs": 9059.988699999996,
+    "blockSolves": 34,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 449.4334000000001,
+        "pairSum": 93.00211713577681,
+        "pairMax": 42.32741428436186,
+        "score": 1781440.3454779428
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 449.4334000000001,
+        "pairSum": 93.00211713577681,
+        "pairMax": 42.32741428436186,
+        "score": 1781440.3454779428
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 446.0391000000001,
+        "pairSum": 94.11762487137784,
+        "pairMax": 42.32741428436186,
+        "score": 1734748.6843267947
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 446.0391000000001,
+        "pairSum": 94.11762487137784,
+        "pairMax": 42.32741428436186,
+        "score": 1734748.6843267947
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "82f28407129cb28f42f815ab3c14defe7b324c36f523271172caf245cbcc1f86",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected charger in board context: variant 0, shift 0.5,0mm; score 1847037.99 -> 1781756.52",
+        "nodeId": "tree:block:charger"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected battery_adc in board context: variant 2, shift -0.25,0mm; score 1781756.52 -> 1781440.35",
+        "nodeId": "tree:block:battery_adc"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 3 blocks, 69 candidates, 2 accepted",
+        "nodeId": "block-portfolio"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "ESPower",
+    "mode": "full-geometric-single",
+    "settings": [
+      "full",
+      "geometric",
+      "0"
+    ],
+    "ms": 13962.7332,
+    "blockMs": 7542.497899999999,
+    "blockSolves": 24,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 441.38939999999997,
+        "pairSum": 100.25810932094905,
+        "pairMax": 42.32741428436186,
+        "score": 1506738.9843414496
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 441.38939999999997,
+        "pairSum": 100.25810932094905,
+        "pairMax": 42.32741428436186,
+        "score": 1506738.9843414496
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 436.2403,
+        "pairSum": 99.2941748759108,
+        "pairMax": 42.32741428436186,
+        "score": 1459282.502406441
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 436.2403,
+        "pairSum": 99.2941748759108,
+        "pairMax": 42.32741428436186,
+        "score": 1459282.502406441
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "82f28407129cb28f42f815ab3c14defe7b324c36f523271172caf245cbcc1f86",
+    "diagnostics": [],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "ESPower",
+    "mode": "full-geometric",
+    "settings": [
+      "full",
+      "geometric",
+      "1"
+    ],
+    "ms": 14148.6062,
+    "blockMs": 8036.7243,
+    "blockSolves": 34,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 446.1605,
+        "pairSum": 100.90031047663571,
+        "pairMax": 42.32741428436186,
+        "score": 1503187.3260467094
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 446.1605,
+        "pairSum": 100.90031047663571,
+        "pairMax": 42.32741428436186,
+        "score": 1503187.3260467094
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 441.55010000000004,
+        "pairSum": 100.85444965233229,
+        "pairMax": 42.32741428436186,
+        "score": 1455805.2354662237
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 441.55010000000004,
+        "pairSum": 100.85444965233229,
+        "pairMax": 42.32741428436186,
+        "score": 1455805.2354662237
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "82f28407129cb28f42f815ab3c14defe7b324c36f523271172caf245cbcc1f86",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected crystal in board context: variant 0, shift 0,-0.25mm; score 1506738.98 -> 1506460.24",
+        "nodeId": "tree:block:crystal"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected battery_adc in board context: variant 1, shift 0.5,0mm; score 1506460.24 -> 1503187.33",
+        "nodeId": "tree:block:battery_adc"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 3 blocks, 69 candidates, 2 accepted",
+        "nodeId": "block-portfolio"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "esp32c3",
+    "mode": "legacy",
+    "settings": [
+      "legacy",
+      "micro",
+      "0"
+    ],
+    "ms": 5712.5571,
+    "blockMs": 4230.999000000001,
+    "blockSolves": 11,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 561.781,
+        "pairSum": 303.2683207519236,
+        "pairMax": 30.926375428103437,
+        "score": 663879.6120817174
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 561.7811,
+        "pairSum": 303.2683207519236,
+        "pairMax": 30.926375428103437,
+        "score": 663879.61376424
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 561.5583,
+        "pairSum": 302.76714173322625,
+        "pairMax": 30.926375428103437,
+        "score": 660913.3460779672
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 561.5583,
+        "pairSum": 302.76714173322625,
+        "pairMax": 30.926375428103437,
+        "score": 660913.3460779672
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "43d5b455ddbd4f3ba8a5df0e981c282830ddf813c978dda41eb9a0debf8ba505",
+    "diagnostics": [],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "esp32c3",
+    "mode": "full-micro-single",
+    "settings": [
+      "full",
+      "micro",
+      "0"
+    ],
+    "ms": 7030.6065,
+    "blockMs": 5010.351099999999,
+    "blockSolves": 11,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 581.6549,
+        "pairSum": 307.73963888183994,
+        "pairMax": 30.926375428103437,
+        "score": 1619393.4788150974
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 581.655,
+        "pairSum": 307.73963888183994,
+        "pairMax": 30.926375428103437,
+        "score": 1619393.48049762
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 581.655,
+        "pairSum": 307.73963888183994,
+        "pairMax": 30.926375428103437,
+        "score": 1619390.3237823818
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 581.655,
+        "pairSum": 307.73963888183994,
+        "pairMax": 30.926375428103437,
+        "score": 1619390.3237823818
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "43d5b455ddbd4f3ba8a5df0e981c282830ddf813c978dda41eb9a0debf8ba505",
+    "diagnostics": [],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "esp32c3",
+    "mode": "full-micro",
+    "settings": [
+      "full",
+      "micro",
+      "1"
+    ],
+    "ms": 6603.545,
+    "blockMs": 4891.099999999999,
+    "blockSolves": 15,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 579.6549,
+        "pairSum": 306.0376265546559,
+        "pairMax": 30.926375428103437,
+        "score": 1615944.5623414253
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 579.655,
+        "pairSum": 306.0376265546559,
+        "pairMax": 30.926375428103437,
+        "score": 1615944.564023948
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 579.655,
+        "pairSum": 306.0376265546559,
+        "pairMax": 30.926375428103437,
+        "score": 1615941.4073087098
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 579.655,
+        "pairSum": 306.0376265546559,
+        "pairMax": 30.926375428103437,
+        "score": 1615941.4073087098
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "43d5b455ddbd4f3ba8a5df0e981c282830ddf813c978dda41eb9a0debf8ba505",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected USB_Termination in board context: variant 0, shift -0.5,0mm; score 1619393.48 -> 1617410.96",
+        "nodeId": "tree:block:USB_Termination"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected Power in board context: variant 0, shift 0.25,0mm; score 1617410.96 -> 1615944.56",
+        "nodeId": "tree:block:Power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 2 blocks, 34 candidates, 2 accepted",
+        "nodeId": "block-portfolio"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "esp32c3",
+    "mode": "full-off",
+    "settings": [
+      "full",
+      "off",
+      "1"
+    ],
+    "ms": 6906.376,
+    "blockMs": 4778.1565,
+    "blockSolves": 15,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 579.6549,
+        "pairSum": 306.0376265546559,
+        "pairMax": 30.926375428103437,
+        "score": 1615944.5623414253
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 579.655,
+        "pairSum": 306.0376265546559,
+        "pairMax": 30.926375428103437,
+        "score": 1615944.564023948
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 579.655,
+        "pairSum": 306.0376265546559,
+        "pairMax": 30.926375428103437,
+        "score": 1615941.4073087098
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 579.655,
+        "pairSum": 306.0376265546559,
+        "pairMax": 30.926375428103437,
+        "score": 1615941.4073087098
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "43d5b455ddbd4f3ba8a5df0e981c282830ddf813c978dda41eb9a0debf8ba505",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected USB_Termination in board context: variant 0, shift -0.5,0mm; score 1619393.48 -> 1617410.96",
+        "nodeId": "tree:block:USB_Termination"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected Power in board context: variant 0, shift 0.25,0mm; score 1617410.96 -> 1615944.56",
+        "nodeId": "tree:block:Power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 2 blocks, 34 candidates, 2 accepted",
+        "nodeId": "block-portfolio"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "esp32c3",
+    "mode": "full-geometric-single",
+    "settings": [
+      "full",
+      "geometric",
+      "0"
+    ],
+    "ms": 6523.8729,
+    "blockMs": 4682.0769,
+    "blockSolves": 11,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 581.6999000000001,
+        "pairSum": 307.76927514486863,
+        "pairMax": 30.926375428103437,
+        "score": 1619428.8040832141
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 581.7,
+        "pairSum": 307.76927514486863,
+        "pairMax": 30.926375428103437,
+        "score": 1619428.8057657368
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 581.7,
+        "pairSum": 307.76927514486863,
+        "pairMax": 30.926375428103437,
+        "score": 1619425.6533214194
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 581.7,
+        "pairSum": 307.76927514486863,
+        "pairMax": 30.926375428103437,
+        "score": 1619425.6533214194
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "43d5b455ddbd4f3ba8a5df0e981c282830ddf813c978dda41eb9a0debf8ba505",
+    "diagnostics": [],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "esp32c3",
+    "mode": "full-geometric",
+    "settings": [
+      "full",
+      "geometric",
+      "1"
+    ],
+    "ms": 6550.332899999999,
+    "blockMs": 4789.111699999999,
+    "blockSolves": 15,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 579.6999000000001,
+        "pairSum": 306.0672628176846,
+        "pairMax": 30.926375428103437,
+        "score": 1615976.9296332707
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 579.7,
+        "pairSum": 306.0672628176846,
+        "pairMax": 30.926375428103437,
+        "score": 1615976.9313157932
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 579.7,
+        "pairSum": 306.0672628176846,
+        "pairMax": 30.926375428103437,
+        "score": 1615973.778871476
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 579.7,
+        "pairSum": 306.0672628176846,
+        "pairMax": 30.926375428103437,
+        "score": 1615973.778871476
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "43d5b455ddbd4f3ba8a5df0e981c282830ddf813c978dda41eb9a0debf8ba505",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected USB_Termination in board context: variant 0, shift -0.5,0mm; score 1619428.80 -> 1617446.28",
+        "nodeId": "tree:block:USB_Termination"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected Power in board context: variant 0, shift 0.25,0mm; score 1617446.28 -> 1615976.93",
+        "nodeId": "tree:block:Power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 2 blocks, 34 candidates, 2 accepted",
+        "nodeId": "block-portfolio"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "Telemetry",
+    "mode": "full-micro-repack",
+    "settings": [
+      "full",
+      "micro",
+      "2"
+    ],
+    "ms": 146101.8705,
+    "blockMs": 16920.957700000003,
+    "blockSolves": 63,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 2994.7781999999993,
+        "pairSum": 831.0702114955985,
+        "pairMax": 69.12358289397332,
+        "score": 12754912.575021544
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 2994.777399999999,
+        "pairSum": 831.0702923026128,
+        "pairMax": 69.12358289397332,
+        "score": 12754916.96789011
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 2964.5029999999992,
+        "pairSum": 821.22229722208,
+        "pairMax": 69.12358289397332,
+        "score": 12738606.066243364
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 2964.5029999999992,
+        "pairSum": 821.22229722208,
+        "pairMax": 69.12358289397332,
+        "score": 12738606.066243364
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio repack: 3 board hypotheses, selected 0, score 13049412.69",
+        "nodeId": "block-portfolio-repack"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected adc_supply in board context: variant 0, shift 0,-1mm; score 13049412.69 -> 13048999.87",
+        "nodeId": "tree:block:adc_supply"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected usb_charge in board context: variant 0, shift -1,0mm; score 13048999.87 -> 12950813.82",
+        "nodeId": "tree:block:usb_charge"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected logic_power in board context: variant 0, shift 0,-1mm; score 12950813.82 -> 12844846.20",
+        "nodeId": "tree:block:logic_power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected uart in board context: variant 0, shift 1,0mm; score 12844846.20 -> 12778288.89",
+        "nodeId": "tree:block:uart"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected afe_power in board context: variant 0, shift 0,1mm; score 12778288.89 -> 12762525.27",
+        "nodeId": "tree:block:afe_power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected sim_support in board context: variant 0, shift 0.5,0mm; score 12762525.27 -> 12754912.58",
+        "nodeId": "tree:block:sim_support"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 9 blocks, 180 candidates, 6 accepted",
+        "nodeId": "block-portfolio"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J1: safe post-place improvement J1 rotate += 180; global score 12738606.066 -> 12735394.053. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J1\", [\"J1\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J1",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J4: safe post-place improvement J4 rotate += 180; global score 12738606.066 -> 12738455.077. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J4\", [\"J4\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J4",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J7: safe post-place improvement J7 rotate += 180; global score 12738606.066 -> 12738605.721. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J7\", [\"J7\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J7",
+        "severity": "warning"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "Telemetry",
+    "mode": "full-geometric-repack",
+    "settings": [
+      "full",
+      "geometric",
+      "2"
+    ],
+    "ms": 139200.08120000002,
+    "blockMs": 13196.680200000004,
+    "blockSolves": 63,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 3066.3099000000007,
+        "pairSum": 959.396508587237,
+        "pairMax": 67.01387687710658,
+        "score": 13039340.14251824
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 3066.3095000000008,
+        "pairSum": 959.3966004580665,
+        "pairMax": 67.01387687710658,
+        "score": 13039345.32112072
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 3045.9355000000005,
+        "pairSum": 949.0170923932432,
+        "pairMax": 67.01387687710658,
+        "score": 13019379.016830342
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 3045.9355000000005,
+        "pairSum": 949.0170923932432,
+        "pairMax": 67.01387687710658,
+        "score": 13019379.016830342
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio repack: 3 board hypotheses, selected 0, score 13311288.62",
+        "nodeId": "block-portfolio-repack"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected adc_supply in board context: variant 1, shift -1,0mm; score 13311288.62 -> 13310986.69",
+        "nodeId": "tree:block:adc_supply"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected lte_power in board context: variant 0, shift -1,0mm; score 13310986.69 -> 13291678.59",
+        "nodeId": "tree:block:lte_power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected usb_charge in board context: variant 0, shift 0,-1mm; score 13291678.59 -> 13191972.34",
+        "nodeId": "tree:block:usb_charge"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected logic_power in board context: variant 1, shift -1,0mm; score 13191972.34 -> 13145110.26",
+        "nodeId": "tree:block:logic_power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected uart in board context: variant 0, shift -1,0mm; score 13145110.26 -> 13047173.86",
+        "nodeId": "tree:block:uart"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected sim_support in board context: variant 0, shift 0,1mm; score 13047173.86 -> 13039340.14",
+        "nodeId": "tree:block:sim_support"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 9 blocks, 171 candidates, 6 accepted",
+        "nodeId": "block-portfolio"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J1: safe post-place improvement J1 rotate += 180; global score 13019379.017 -> 13016140.992. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J1\", [\"J1\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J1",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J4: safe post-place improvement J4 rotate += 180; global score 13019379.017 -> 13019232.904. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J4\", [\"J4\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J4",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "J7: safe post-place improvement J7 rotate += 180; global score 13019379.017 -> 13019378.257. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J7\", [\"J7\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:J7",
+        "severity": "warning"
+      },
+      {
+        "code": "post_place_opportunity",
+        "message": "SW2: safe post-place improvement SW2 rotate += 180; global score 13019379.017 -> 13019084.742. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_SW2\", [\"SW2\"], { rotateBy: [180] }) if this fixed component may rotate.",
+        "nodeId": "post-place:SW2",
+        "severity": "warning"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "ESPower",
+    "mode": "full-micro-repack",
+    "settings": [
+      "full",
+      "micro",
+      "2"
+    ],
+    "ms": 24159.5962,
+    "blockMs": 10445.075000000003,
+    "blockSolves": 34,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 438.39125,
+        "pairSum": 92.34990049784187,
+        "pairMax": 42.32741428436186,
+        "score": 1532952.620503038
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 438.39125,
+        "pairSum": 92.34990049784187,
+        "pairMax": 42.32741428436186,
+        "score": 1532952.620503038
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 436.4377,
+        "pairSum": 92.31905877847163,
+        "pairMax": 42.32741428436186,
+        "score": 1485243.709278377
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 436.4377,
+        "pairSum": 92.31905877847163,
+        "pairMax": 42.32741428436186,
+        "score": 1485243.709278377
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "82f28407129cb28f42f815ab3c14defe7b324c36f523271172caf245cbcc1f86",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio repack: 3 board hypotheses, selected 2, score 1533262.31",
+        "nodeId": "block-portfolio-repack"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected crystal in board context: variant 1, shift 0,0.5mm; score 1533262.31 -> 1532952.62",
+        "nodeId": "tree:block:crystal"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 3 blocks, 69 candidates, 1 accepted",
+        "nodeId": "block-portfolio"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "ESPower",
+    "mode": "full-geometric-repack",
+    "settings": [
+      "full",
+      "geometric",
+      "2"
+    ],
+    "ms": 23470.444,
+    "blockMs": 8454.463700000004,
+    "blockSolves": 34,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 446.1605,
+        "pairSum": 100.90031047663571,
+        "pairMax": 42.32741428436186,
+        "score": 1503187.3260467094
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 446.1605,
+        "pairSum": 100.90031047663571,
+        "pairMax": 42.32741428436186,
+        "score": 1503187.3260467094
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 441.55010000000004,
+        "pairSum": 100.85444965233229,
+        "pairMax": 42.32741428436186,
+        "score": 1455805.2354662237
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 441.55010000000004,
+        "pairSum": 100.85444965233229,
+        "pairMax": 42.32741428436186,
+        "score": 1455805.2354662237
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "82f28407129cb28f42f815ab3c14defe7b324c36f523271172caf245cbcc1f86",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio repack: 3 board hypotheses, selected 0, score 1506738.98",
+        "nodeId": "block-portfolio-repack"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected crystal in board context: variant 0, shift 0,-0.25mm; score 1506738.98 -> 1506460.24",
+        "nodeId": "tree:block:crystal"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected battery_adc in board context: variant 1, shift 0.5,0mm; score 1506460.24 -> 1503187.33",
+        "nodeId": "tree:block:battery_adc"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 3 blocks, 69 candidates, 2 accepted",
+        "nodeId": "block-portfolio"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "esp32c3",
+    "mode": "full-micro-repack",
+    "settings": [
+      "full",
+      "micro",
+      "2"
+    ],
+    "ms": 6987.2508,
+    "blockMs": 5049.540500000002,
+    "blockSolves": 15,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 579.6549,
+        "pairSum": 306.0376265546559,
+        "pairMax": 30.926375428103437,
+        "score": 1615944.5623414253
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 579.655,
+        "pairSum": 306.0376265546559,
+        "pairMax": 30.926375428103437,
+        "score": 1615944.564023948
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 579.655,
+        "pairSum": 306.0376265546559,
+        "pairMax": 30.926375428103437,
+        "score": 1615941.4073087098
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 579.655,
+        "pairSum": 306.0376265546559,
+        "pairMax": 30.926375428103437,
+        "score": 1615941.4073087098
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "43d5b455ddbd4f3ba8a5df0e981c282830ddf813c978dda41eb9a0debf8ba505",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio repack: 3 board hypotheses, selected 0, score 1619393.48",
+        "nodeId": "block-portfolio-repack"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected USB_Termination in board context: variant 0, shift -0.5,0mm; score 1619393.48 -> 1617410.96",
+        "nodeId": "tree:block:USB_Termination"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected Power in board context: variant 0, shift 0.25,0mm; score 1617410.96 -> 1615944.56",
+        "nodeId": "tree:block:Power"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 2 blocks, 34 candidates, 2 accepted",
+        "nodeId": "block-portfolio"
+      }
+    ],
+    "node": "v26.5.0"
+  },
+  {
+    "fixture": "esp32c3",
+    "mode": "full-geometric-repack",
+    "settings": [
+      "full",
+      "geometric",
+      "2"
+    ],
+    "ms": 7382.8948,
+    "blockMs": 4930.392399999998,
+    "blockSolves": 15,
+    "ok": true,
+    "fixedChanges": [],
+    "stageMetrics": [
+      {
+        "stage": "01-v2-tree",
+        "hpwl": 588.601,
+        "pairSum": 306.0672628176846,
+        "pairMax": 30.926375428103437,
+        "score": 1610883.8601188816
+      },
+      {
+        "stage": "02-v2-legalize",
+        "hpwl": 588.6011000000001,
+        "pairSum": 306.0672628176846,
+        "pairMax": 30.926375428103437,
+        "score": 1610883.8618014043
+      },
+      {
+        "stage": "03-v2-post-place",
+        "hpwl": 586.8431,
+        "pairSum": 306.0672628176846,
+        "pairMax": 30.926375428103437,
+        "score": 1610782.3193522512
+      },
+      {
+        "stage": "04-v2-final",
+        "hpwl": 586.8431,
+        "pairSum": 306.0672628176846,
+        "pairMax": 30.926375428103437,
+        "score": 1610782.3193522512
+      }
+    ],
+    "nativeHash": "97daf07271a6404354ade4d690cfdd21055623e184e094d735ab3982f72c0981",
+    "inputHash": "43d5b455ddbd4f3ba8a5df0e981c282830ddf813c978dda41eb9a0debf8ba505",
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio repack: 3 board hypotheses, selected 1, score 1616939.01",
+        "nodeId": "block-portfolio-repack"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio selected USB_Termination in board context: variant 1, shift -0.5,0mm; score 1616939.01 -> 1610883.86",
+        "nodeId": "tree:block:USB_Termination"
+      },
+      {
+        "severity": "warning",
+        "code": "v2_solver",
+        "message": "Block portfolio: 2 blocks, 34 candidates, 1 accepted",
+        "nodeId": "block-portfolio"
+      }
+    ],
+    "node": "v26.5.0"
+  }
+]

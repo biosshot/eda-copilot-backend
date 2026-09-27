@@ -1,11 +1,12 @@
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { createPostPlaceRouteScoreContext, preparePostPlaceRouteComparison, comparePostPlaceRouteCandidate } from '../src/pcb-layout/pcb-auto-place-v2/post-place-route-score.ts';
-const [fixture='Telemetry'] = process.argv.slice(2);
-const root=`.test-output/board-experiments/${fixture}`;
+const [fixture='Telemetry', runSet='board-experiments', baselineVariant='B0'] = process.argv.slice(2);
+if (!['board-experiments', 'architecture'].includes(runSet)) throw Error(`Unknown run set: ${runSet}`);
+const root=`.test-output/${runSet}/${fixture}`;
 const input=JSON.parse(readFileSync(`tests/fixtures/block-placement/${fixture}/input.json`));
 const readPoses=v=>JSON.parse(readFileSync(`${root}/${v}/placement.json`)).placements;
 const context=createPostPlaceRouteScoreContext(input);
-const baseline=preparePostPlaceRouteComparison(input,readPoses('B0'),new Set(input.components.map(c=>c.designator)),context);
+const baseline=preparePostPlaceRouteComparison(input,readPoses(baselineVariant),new Set(input.components.map(c=>c.designator)),context);
 const rows=[];
 for(const variant of readdirSync(root,{withFileTypes:true}).filter(e=>e.isDirectory()).map(e=>e.name)) {
  const result=comparePostPlaceRouteCandidate(input,readPoses(variant),baseline,context);
