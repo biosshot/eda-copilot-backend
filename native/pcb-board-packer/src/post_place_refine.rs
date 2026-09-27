@@ -28,6 +28,8 @@ const EPS: f64 = 0.001;
 #[serde(rename_all = "camelCase")]
 pub struct RefineProblem {
     version: u32,
+    #[serde(default)]
+    pad_crossing_weight: f64,
     threads: usize,
     iterations: usize,
     timeout_ms: u64,
@@ -455,12 +457,15 @@ impl RefineProblem {
     fn score(&self, w: &World) -> Result<f64, String> {
         let mut p = PostPlaceScoreProblem {
             version: 1,
+            pad_crossing_weight: self.pad_crossing_weight,
+            routing_obstacles: if self.pad_crossing_weight > 0.0 { w.obstacles.clone() } else { vec![] },
             nets: self
                 .nets
                 .iter()
                 .map(|net| PostPlaceNet {
                     name: net.name.clone(),
                     weight: net.weight,
+                    layers: net.points.iter().map(|b| w.obstacles[self.components[b.component].obstacle_offset + b.pad].layer.clone()).collect(),
                     points: net
                         .points
                         .iter()

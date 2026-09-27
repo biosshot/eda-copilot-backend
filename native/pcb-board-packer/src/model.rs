@@ -209,6 +209,7 @@ pub struct BlockExperiments {
     pub net_candidates: bool,
     pub candidate_clearance: bool,
     pub candidate_rings: bool,
+    pub pad_crossings: bool,
     pub stable_net_weight: bool,
     pub reduced_hull: bool,
     pub smooth_aspect: bool,
@@ -280,6 +281,10 @@ pub struct PassiveIslandPlacement {
 #[serde(rename_all = "camelCase")]
 pub struct PostPlaceScoreProblem {
     pub version: u32,
+    #[serde(default)]
+    pub pad_crossing_weight: f64,
+    #[serde(default)]
+    pub routing_obstacles: Vec<RouteObstacle>,
     pub nets: Vec<PostPlaceNet>,
     pub distances: Vec<PostPlaceDistance>,
     pub clearances: Vec<PostPlaceClearance>,
@@ -293,6 +298,8 @@ pub struct PostPlaceScoreProblem {
 pub struct PostPlaceNet {
     pub name: Arc<str>,
     pub points: Vec<Point>,
+    #[serde(default)]
+    pub layers: Vec<Option<Arc<str>>>,
     pub weight: f64,
 }
 

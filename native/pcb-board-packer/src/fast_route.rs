@@ -284,7 +284,7 @@ fn crosses(a: Point, b: Point, c: Point, d: Point) -> bool {
         |p: Point, q: Point, r: Point| (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
     orient(a, b, c) * orient(a, b, d) < -1e-9 && orient(c, d, a) * orient(c, d, b) < -1e-9
 }
-fn hits(a: Point, b: Point, q: Box2) -> bool {
+pub(crate) fn hits(a: Point, b: Point, q: Box2) -> bool {
     let mut lo = 0.0_f64;
     let mut hi = 1.0_f64;
     for (start, delta, min, max) in [

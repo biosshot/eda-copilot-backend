@@ -241,6 +241,7 @@ export interface NativeBlockSolveProblemV2 {
         keepDenseAccess?: boolean;
         candidateClearance?: boolean;
         candidateRings?: boolean;
+        padCrossings?: boolean;
         netCandidates?: boolean;
         stableNetWeight?: boolean;
         reducedHull?: boolean;
@@ -317,7 +318,9 @@ export interface NativePassiveIslandSolutionV1 {
 
 export interface NativePostPlaceScoreProblemV1 {
     version: typeof NATIVE_POST_PLACE_SCORE_CONTRACT_VERSION;
-    nets: Array<{ name: string; points: Point[]; weight: number }>;
+    padCrossingWeight?: number;
+    routingObstacles?: NativeRoutingObstacle[];
+    nets: Array<{ name: string; points: Point[]; weight: number; layers?: Array<string | null> }>;
     distances: Array<{ source: Point; target: Point; weight: number; min?: number; max?: number }>;
     clearances: Array<{ source: Box; target: Box; minimum: number; weight: number }>;
     fixedPenalties: number[];

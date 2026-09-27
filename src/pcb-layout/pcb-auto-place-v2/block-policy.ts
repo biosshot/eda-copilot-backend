@@ -2,6 +2,12 @@ import type { NativeBlockSolveProblemV2 } from './native/contract.ts';
 
 export type BlockExperiments = NonNullable<NativeBlockSolveProblemV2['experiments']>;
 
+export function placementPadCrossingWeight() {
+    const flag = process.env.PCB_PLACEMENT_PAD_CROSSINGS ?? '1';
+    if (!['0', '1'].includes(flag)) throw new Error(`Unknown PCB_PLACEMENT_PAD_CROSSINGS: ${flag}`);
+    return process.env.PCB_BLOCK_PROFILE === 'legacy' || flag === '0' ? 0 : 180;
+}
+
 /** Research-branch defaults, also used by the ordinary tree solver (no test hooks).
  * Explicit input parameters keep native caching valid. Environment switches are
  * a process-level A/B control and are inherited by subtree workers.
@@ -18,6 +24,7 @@ export function blockPolicy(ignoredNets: string[] = []) {
     const experiments: BlockExperiments = profile === 'legacy' ? {} : {
         netCandidates: true, stableNetWeight: true, reducedHull: true, smoothAspect: true,
         candidateClearance: candidates !== '0', candidateRings: candidates === '2',
+        padCrossings: placementPadCrossingWeight() > 0,
         longNets: true, extraPasses: true, pairSwaps: true, reinsertPair: true, keepDenseAccess: true,
     };
     const portfolio = process.env.PCB_BLOCK_PORTFOLIO ?? '1';

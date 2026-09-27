@@ -436,6 +436,7 @@ function solveBlockNode(
             { ...policy.experiments, reducedHull: false, smoothAspect: false, pairSwaps: false, reinsertPair: false },
             { ignoredNets: policy.experiments.ignoredNets, routingMetric: policy.experiments.routingMetric,
                 candidateClearance: policy.experiments.candidateClearance, candidateRings: policy.experiments.candidateRings,
+                padCrossings: policy.experiments.padCrossings,
                 netCandidates: true, longNets: true },
         ].map(experiments => refine(solveBlockPrimitives({ ...params, options: { ...params.options, searchWidth: 1, experiments } })));
         context.blockAlternatives.set(node.id, variants);

@@ -67,7 +67,7 @@ const fixedChanges = input.components.filter(c => c.pcb.fixedPlacement).flatMap(
 });
 const require = createRequire(import.meta.url);
 const native = readFileSync(`native/pcb-board-packer/${require('../native/pcb-board-packer/platform.cjs').nativeFilename()}`);
-const summary = { fixture, mode, tag, candidates: process.env.PCB_BLOCK_CANDIDATES ?? '2', blockPostRefine: process.env.PCB_BLOCK_POST_REFINE ?? '1', settings, ms: elapsed, blockMs: captures.reduce((a, c) => a + c.ms, 0),
+const summary = { fixture, mode, tag, candidates: process.env.PCB_BLOCK_CANDIDATES ?? '2', blockPostRefine: process.env.PCB_BLOCK_POST_REFINE ?? '1', padCrossings: process.env.PCB_PLACEMENT_PAD_CROSSINGS ?? '1', settings, ms: elapsed, blockMs: captures.reduce((a, c) => a + c.ms, 0),
     blockSolves: captures.length, ok: result.report.ok, fixedChanges, stageMetrics,
     nativeHash: createHash('sha256').update(native).digest('hex'), inputHash: createHash('sha256').update(raw).digest('hex'),
     diagnostics: result.report.graphReport?.diagnostics, node: process.version };

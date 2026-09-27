@@ -510,17 +510,7 @@ fn block_micro_route_penalty(
     if context.problem.experiments.routing_metric == BlockRoutingMetric::Off { return 0.0; }
     if context.problem.experiments.routing_metric == BlockRoutingMetric::Geometric {
         let all: Vec<_> = placed.iter().chain(std::iter::once(candidate)).collect();
-        let mut obstacles = Vec::new();
-        for item in &all {
-            let source = &context.problem.primitives[item.source_index];
-            let origin = box_center(&source.bbox);
-            let center = box_center(&item.primitive.bbox);
-            for pad in context.problem.routing_obstacles.iter().filter(|p|p.primitive_id.as_ref()==Some(&source.id)) {
-                let mut pad=pad.clone();
-                pad.box_=translate_box(&rotate_box(&pad.box_,&origin,item.rotation),center.x-origin.x,center.y-origin.y);
-                obstacles.push(pad);
-            }
-        }
+        let mut obstacles = transformed_pad_obstacles(&all, context);
         for box_ in &context.problem.obstacles {
             obstacles.push(crate::model::RouteObstacle{box_:*box_,layer:None,reference:None,net:None,primitive_id:None});
         }
@@ -540,6 +530,37 @@ fn block_micro_route_penalty(
         &context.problem.obstacles,
         &config,
     )
+}
+
+fn transformed_pad_obstacles(primitives: &[&WorkingPrimitive], context: &Context) -> Vec<crate::model::RouteObstacle> {
+    let mut obstacles = Vec::new();
+    for item in primitives {
+        let source = &context.problem.primitives[item.source_index];
+        let origin = box_center(&source.bbox);
+        let center = box_center(&item.primitive.bbox);
+        for pad in context.problem.routing_obstacles.iter().filter(|p| p.primitive_id.as_ref() == Some(&source.id)) {
+            let mut pad = pad.clone();
+            pad.box_ = translate_box(&rotate_box(&pad.box_, &origin, item.rotation), center.x - origin.x, center.y - origin.y);
+            obstacles.push(pad);
+        }
+    }
+    obstacles
+}
+
+fn direct_pad_crossing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let obstacles = transformed_pad_obstacles(&primitives.iter().collect::<Vec<_>>(), context);
+    let mut nets = std::collections::BTreeMap::<Arc<str>, crate::model::PostPlaceNet>::new();
+    for p in primitives {
+        for cp in p.primitive.connection_points.iter() {
+            let Some(name) = &cp.net else { continue };
+            if name.is_empty() || is_ground(name) || context.problem.experiments.ignored_nets.iter().any(|n| n.eq_ignore_ascii_case(name)) { continue; }
+            let net = nets.entry(name.clone()).or_insert_with(|| crate::model::PostPlaceNet {
+                name: name.clone(), points: vec![], layers: vec![], weight: if is_power(name) { 0.25 } else { 1.0 } });
+            net.points.push(Point { x: cp.x, y: cp.y });
+            net.layers.push(obstacles.iter().find(|o| o.reference.as_ref() == Some(&cp.reference)).and_then(|o| o.layer.clone()));
+        }
+    }
+    crate::post_place::pad_crossing_penalty(&nets.into_values().collect::<Vec<_>>(), &obstacles) * 180.0
 }
 
 fn micro_route_bounds(
@@ -1703,6 +1724,9 @@ fn score_block_with_overlap_matrix(
     score += target_size_penalty(width, height, context) * target_weight;
     if context.problem.experiments.long_nets {
         score += long_local_net_penalty(primitives, context);
+    }
+    if context.problem.experiments.pad_crossings {
+        score += direct_pad_crossing_penalty(primitives, context);
     }
     let path_primitives: Vec<_> = primitives.iter().map(|item| &item.primitive).collect();
     score += signal_path::topology_penalty(&path_primitives, &context.problem.relations)

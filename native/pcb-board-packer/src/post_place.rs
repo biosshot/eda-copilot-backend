@@ -1,5 +1,5 @@
 use crate::geometry::Point;
-use crate::model::{PostPlaceNet, PostPlaceScoreProblem};
+use crate::model::{PostPlaceNet, PostPlaceScoreProblem, RouteObstacle};
 use crate::signal_path;
 
 const EPSILON: f64 = 0.001;
@@ -7,6 +7,8 @@ const EPSILON: f64 = 0.001;
 #[derive(Clone, Copy)]
 struct Segment {
     net: usize,
+    from: usize,
+    to: usize,
     a: Point,
     b: Point,
     length: f64,
@@ -27,6 +29,9 @@ pub fn score(problem: &PostPlaceScoreProblem) -> Result<f64, String> {
         score += segment.length * segment.length * 0.35 * segment.weight;
     }
     score += crossing_penalty(&segments) * 180.0;
+    if problem.pad_crossing_weight > 0.0 {
+        score += pad_hits(&segments, &problem.nets, &problem.routing_obstacles) * problem.pad_crossing_weight;
+    }
 
     for term in &problem.distances {
         let value = distance(term.source, term.target);
@@ -105,6 +110,8 @@ fn minimum_spanning_segments(net_index: usize, net: &PostPlaceNet) -> Vec<Segmen
         connected_count += 1;
         result.push(Segment {
             net: net_index,
+            from,
+            to,
             a: net.points[from],
             b: net.points[to],
             length,
@@ -112,6 +119,35 @@ fn minimum_spanning_segments(net_index: usize, net: &PostPlaceNet) -> Vec<Segmen
         });
     }
     result
+}
+
+/// One charge per segment / foreign physical pad. In particular, do not exempt
+/// the source/target component: its other pads can obstruct the connection.
+fn pad_hits(segments: &[Segment], nets: &[PostPlaceNet], obstacles: &[RouteObstacle]) -> f64 {
+    let mut penalty = 0.0;
+    for s in segments {
+        let net = &nets[s.net];
+        let a = net.layers.get(s.from).and_then(|l| l.as_deref());
+        let b = net.layers.get(s.to).and_then(|l| l.as_deref());
+        let layer = match (a, b) { (Some(a), Some(b)) if a == b => Some(a),
+            (Some(a), None) | (None, Some(a)) => Some(a), _ => None };
+        let mut seen = rustc_hash::FxHashSet::default();
+        for (i, pad) in obstacles.iter().enumerate() {
+            if pad.net.as_ref() == Some(&net.name)
+                || (layer.is_some() && pad.layer.is_some() && layer != pad.layer.as_deref()) { continue; }
+            if crate::fast_route::hits(s.a, s.b, pad.box_) {
+                // Named pads can occur more than once in imported obstacle lists.
+                let key = pad.reference.as_deref().map(|r| (r, 0)).unwrap_or(("", i + 1));
+                if seen.insert(key) { penalty += s.weight; }
+            }
+        }
+    }
+    penalty
+}
+
+pub(crate) fn pad_crossing_penalty(nets: &[PostPlaceNet], obstacles: &[RouteObstacle]) -> f64 {
+    let segments: Vec<_> = nets.iter().enumerate().flat_map(|(i, n)| minimum_spanning_segments(i, n)).collect();
+    pad_hits(&segments, nets, obstacles)
 }
 
 fn crossing_penalty(segments: &[Segment]) -> f64 {
@@ -169,7 +205,8 @@ fn validate(problem: &PostPlaceScoreProblem) -> Result<(), String> {
             problem.version
         ));
     }
-    let all_finite = problem.nets.iter().all(|net| {
+    let all_finite = problem.pad_crossing_weight.is_finite() && problem.pad_crossing_weight >= 0.0 && problem.nets.iter().all(|net| {
+        (net.layers.is_empty() || net.layers.len() == net.points.len()) &&
         net.weight.is_finite()
             && net
                 .points
