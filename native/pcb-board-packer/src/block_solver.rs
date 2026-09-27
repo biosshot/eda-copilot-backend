@@ -77,7 +77,12 @@ struct IncrementalEvaluation {
     size: usize,
 }
 
+#[path = "block_solver_trace.rs"]
+mod trace;
+
 struct Context {
+    trace: bool,
+    trace_phase: RefCell<&'static str>,
     problem: BlockSolveProblem,
     relations: Vec<CompiledRelation>,
     net_ground: Vec<bool>,
@@ -211,6 +216,8 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<BoardPackSolution, Stri
         .collect();
     let relations = compile_relations(&problem.relations, &primitives, problem.bounds.as_ref(), problem.experiments.local_access);
     let context = Context {
+        trace: trace::enabled(&problem),
+        trace_phase: RefCell::new("search"),
         problem,
         relations,
         net_ground,
@@ -228,10 +235,15 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<BoardPackSolution, Stri
     } else {
         solve_greedy(primitives, &context)
     };
+    trace::stage(&context, "beam_complete", &solved);
+    *context.trace_phase.borrow_mut() = "local_improve";
     let improved = local_improve(solved, &context);
+    trace::stage(&context, "local_complete", &improved);
+    *context.trace_phase.borrow_mut() = "pair_improve";
     let improved = if context.problem.experiments.pair_swaps || context.problem.experiments.reinsert_pair {
         pair_improve(improved, &context)
     } else { improved };
+    trace::stage(&context, "pair_complete", &improved);
     let has_global_frame =
         context.problem.bounds.is_some() || !context.problem.obstacles.is_empty();
     let final_primitives =
@@ -240,6 +252,7 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<BoardPackSolution, Stri
         } else {
             center_primitives(improved, context.problem.grid)
         };
+    trace::stage(&context, "native_final", &final_primitives);
     solution(&context, &final_primitives)
 }
 
@@ -381,6 +394,12 @@ fn solve_beam(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Worki
         } else {
             states.truncate(search_width);
         }
+        if context.trace {
+            trace::emit(&context, "beam_kept", serde_json::json!({"states": states.iter().map(|s| serde_json::json!({
+                "poses": trace::poses(&s.placed), "score":s.score, "hard":s.hard_violations,
+                "route":s.route_penalty, "ordinal":s.ordinal
+            })).collect::<Vec<_>>()}));
+        }
         if states.is_empty() {
             break;
         }
@@ -437,6 +456,11 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
                     .then_with(|| compare_f64(a.1.score, b.1.score))
                     .then_with(|| a.2.cmp(&b.2))
             });
+            if context.trace && trace::is_target(&current[index]) {
+                trace::emit(context, "local_candidates", serde_json::json!({"placed":trace::poses(&fixed),
+                    "current":trace::row(&current[index], &fixed, current_score, current_hard, 0, best_effective_score, best_effective_score-current_score),
+                    "candidates":ranked.iter().map(|(p,e,o)| trace::row(p,&fixed,e.score,e.hard_violations,*o,e.score,0.0)).collect::<Vec<_>>()}));
+            }
             ranked.truncate(16);
             for (candidate, evaluation, _) in ranked {
                 // Route corrections are nonnegative. This candidate cannot win
@@ -459,6 +483,12 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
                     best_base_score = evaluation.score;
                     best_effective_score = effective_score;
                 }
+            }
+            if context.trace && trace::is_target(&current[index]) {
+                let mut after = current.clone(); after[index] = best.clone();
+                trace::emit(context, "local_chosen", serde_json::json!({"placed":trace::poses(&fixed),
+                    "beforeParts":trace::parts(&current,context), "afterParts":trace::parts(&after,context),
+                    "candidate":trace::row(&best,&fixed,best_base_score,best_hard,0,best_effective_score,best_effective_score-best_base_score)}));
             }
             if primitive_pose_key(&best) != primitive_pose_key(&current[index]) {
                 current[index] = best;
@@ -501,6 +531,7 @@ fn ranked_block_candidates(
         });
     }
     ranked.sort_by(compare_candidates);
+    trace::candidates(context, "generated", placed, &ranked);
     // Retain spatial/orientation diversity before the expensive route score.
     if context.problem.experiments.pad_owner_candidates {
         let origin = box_center(&union_boxes(&placed.iter().map(|p| p.primitive.bbox).collect::<Vec<_>>()));
@@ -518,8 +549,9 @@ fn ranked_block_candidates(
         selected.sort_by(compare_candidates);
         ranked = selected;
     } else { ranked.truncate(16); }
+    trace::candidates(context, "shortlist", placed, &ranked);
     let baseline_hard = previous.evaluation.hard_violations;
-    crate::lazy_rank::top_k(ranked, limit, |a, a_exact, b, b_exact| {
+    let result = crate::lazy_rank::top_k(ranked, limit, |a, a_exact, b, b_exact| {
         let lower_score = |candidate: &RankedCandidate, exact: bool| candidate.score
             + if !exact && candidate.hard_violations == baseline_hard { parent_route_penalty } else { 0.0 };
         a.hard_violations.cmp(&b.hard_violations)
@@ -531,7 +563,9 @@ fn ranked_block_candidates(
             candidate.route_penalty = parent_route_penalty + correction;
             candidate.score += candidate.route_penalty;
         }
-    })
+    });
+    trace::candidates(context, "ranked_returned", placed, &result);
+    result
 }
 
 fn block_micro_route_penalty(
@@ -969,6 +1003,12 @@ fn pair_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<Wo
                 if e.hard_violations > best_hard || (e.hard_violations == best_hard && e.score >= best_score) { continue; }
                 let score = e.score + route_pair(&v);
                 if e.hard_violations < best_hard || (e.hard_violations == best_hard && score + 0.001 < best_score) {
+                    if context.trace && (trace::is_target(&current[i]) || trace::is_target(&current[j])) {
+                        trace::emit(context,"pair_accepted",serde_json::json!({"pair":[current[i].primitive.label,current[j].primitive.label],
+                            "before":trace::poses(&current),"after":trace::poses(&v),
+                            "beforeParts":trace::parts(&current,context),"afterParts":trace::parts(&v,context),
+                            "beforeEffective":best_score,"afterEffective":score}));
+                    }
                     current = v; best_hard = e.hard_violations; best_score = score;
                 }
             }
@@ -3237,7 +3277,7 @@ mod candidate_tests {
         };
         let resistor = make("R36");
         let ic = make("U11");
-        let context = Context { problem, relations: vec![], net_ground: vec![],
+        let context = Context { trace: false, trace_phase: RefCell::new("test"), problem, relations: vec![], net_ground: vec![],
             evaluation_cache: RefCell::new(FxHashMap::default()),
             net_scoring_scratch: RefCell::new(NetScoringScratch {
                 accumulators: vec![], signal_order: vec![], ground_order: vec![] }),
