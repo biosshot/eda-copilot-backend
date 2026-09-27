@@ -19,6 +19,7 @@ import { validatePrimitive } from '../pcb-auto-place/primitive-validation.ts';
 import { solveBoardPrimitives } from './board-solver.ts';
 import { solveBlockPrimitives } from './block-solver-engine.ts';
 import { blockPolicy } from './block-policy.ts';
+import { refineBlockPrimitives } from './block-post-refiner.ts';
 import type { BlockSolveParams } from './block-solver.ts';
 import { solvePlacementIslands } from './island-solver.ts';
 import { solveModulePrimitives } from './module-solver.ts';
@@ -422,12 +423,21 @@ function solveBlockNode(
             obstacles: hasLockedChild ? boardHoleBoxes(context.input) : undefined,
         },
     };
-    const result = solveBlockPrimitives(params);
+    const refine = (primitives: PlacementPrimitive[]) => {
+        if (!ordinary || hasLockedChild || !policy.postRefine) return primitives;
+        const result = refineBlockPrimitives(context.input, primitives, context.clearanceResolver);
+        context.diagnostics.push({ severity: 'warning', nodeId: node.id,
+            message: `Block postrefine: ${result.moves} moves, ${Math.round(result.ms)} ms` });
+        return result.primitives;
+    };
+    const result = refine(solveBlockPrimitives(params));
     if (ordinary && !hasLockedChild && policy.portfolio) {
         const variants = [
             { ...policy.experiments, reducedHull: false, smoothAspect: false, pairSwaps: false, reinsertPair: false },
-            { ignoredNets: policy.experiments.ignoredNets, routingMetric: policy.experiments.routingMetric, netCandidates: true, longNets: true },
-        ].map(experiments => solveBlockPrimitives({ ...params, options: { ...params.options, searchWidth: 1, experiments } }));
+            { ignoredNets: policy.experiments.ignoredNets, routingMetric: policy.experiments.routingMetric,
+                candidateClearance: policy.experiments.candidateClearance, candidateRings: policy.experiments.candidateRings,
+                netCandidates: true, longNets: true },
+        ].map(experiments => refine(solveBlockPrimitives({ ...params, options: { ...params.options, searchWidth: 1, experiments } })));
         context.blockAlternatives.set(node.id, variants);
     }
     return result;

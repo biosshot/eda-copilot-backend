@@ -200,7 +200,7 @@ function treeDiagnosticsForReport(diagnostics: Array<{ severity: 'warning' | 'er
                 nodeId: diagnostic.nodeId,
             }];
         }
-        if (diagnostic.message.startsWith('Deferred ') || diagnostic.message.startsWith('Block portfolio')) {
+        if (diagnostic.message.startsWith('Deferred ') || diagnostic.message.startsWith('Block portfolio') || diagnostic.message.startsWith('Block postrefine')) {
             return [{
                 severity: diagnostic.severity,
                 code: 'v2_solver',

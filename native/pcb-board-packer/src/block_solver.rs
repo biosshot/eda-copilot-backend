@@ -701,23 +701,25 @@ fn block_candidates_for_orientation(
     placed: &[WorkingPrimitive],
     context: &Context,
 ) -> Vec<WorkingPrimitive> {
-    let mut anchors: Vec<Box2> = placed
+    let mut anchors: Vec<(Box2, f64)> = placed
         .iter()
-        .flat_map(|item| primitive_candidate_boxes(item, context))
+        .flat_map(|item| primitive_candidate_boxes(item, context).into_iter()
+            .map(move |b| (b, candidate_clearance(primitive, item, context))))
         .collect();
-    anchors.push(union_boxes(
+    let union_clearance = anchors.iter().map(|(_, c)| *c).fold(0.0, f64::max);
+    anchors.push((union_boxes(
         &placed
             .iter()
             .map(|item| item.primitive.bbox)
             .collect::<Vec<_>>(),
-    ));
+    ), union_clearance));
     let mut candidates = Vec::new();
-    for anchor in anchors {
+    for (anchor, clearance) in anchors {
         let centers = adjacent_centers(
             primitive.primitive.width,
             primitive.primitive.height,
             &anchor,
-            context.problem.clearance,
+            clearance,
         );
         for center in centers {
             candidates.push(fit_to_bounds(
@@ -735,6 +737,7 @@ fn block_candidates_for_orientation(
                     primitive,
                     &moving_box,
                     &anchor,
+                    clearance,
                     context,
                 ));
             }
@@ -762,6 +765,26 @@ fn block_candidates_for_orientation(
     dedupe_primitives(candidates)
 }
 
+// Use the same pair matrix as the hard validator. Compounds conservatively use
+// their largest conflicting clearance; the legacy path remains replayable.
+fn candidate_clearance(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &Context) -> f64 {
+    if !context.problem.experiments.candidate_clearance
+        || context.problem.hard_collision_mode.as_ref() != "components"
+        || a.components.is_empty() || b.components.is_empty() {
+        return context.problem.clearance;
+    }
+    let count = context.problem.components.len();
+    let mut clearance: f64 = 0.0;
+    for (i, _) in a.components.iter() {
+        for (j, _) in b.components.iter() {
+            if context.problem.component_conflict[i * count + j] != 0 {
+                clearance = clearance.max(context.problem.component_pair_clearance[i * count + j]);
+            }
+        }
+    }
+    clearance + 0.001 // Survive placement rounding at the strict collision boundary.
+}
+
 fn net_anchored_candidates(
     primitive: &WorkingPrimitive, placed: &[WorkingPrimitive], context: &Context,
 ) -> Vec<WorkingPrimitive> {
@@ -784,9 +807,14 @@ fn net_anchored_candidates(
             let dx = moving.x - center.x;
             let dy = moving.y - center.y;
             let b = item.primitive.bbox;
-            let c = context.problem.clearance;
+            let clearance = candidate_clearance(primitive, item, context);
             let slide = context.problem.grid.max(0.25);
-            for s in [0.0, -slide, slide] {
+            let expanded = context.problem.experiments.candidate_rings;
+            let slides = if expanded { vec![0.0, -slide, slide, -2.0 * slide, 2.0 * slide] }
+                else { vec![0.0, -slide, slide] };
+            for ring in 0..(if expanded { 3 } else { 1 }) {
+            let c = clearance + ring as f64 * slide;
+            for &s in &slides {
                 for p in [
                     Point { x: b.left - c - primitive.primitive.width / 2.0, y: target.y - dy + s },
                     Point { x: b.right + c + primitive.primitive.width / 2.0, y: target.y - dy + s },
@@ -795,6 +823,7 @@ fn net_anchored_candidates(
                 ] {
                     candidates.push(fit_to_bounds(move_primitive_center_exact(primitive.clone(), p), context));
                 }
+            }
             }
         }
     }
@@ -928,13 +957,14 @@ fn box_anchored_candidates(
     primitive: &WorkingPrimitive,
     moving_box: &Box2,
     anchor: &Box2,
+    clearance: f64,
     context: &Context,
 ) -> Vec<WorkingPrimitive> {
     adjacent_centers(
         moving_box.right - moving_box.left,
         moving_box.bottom - moving_box.top,
         anchor,
-        context.problem.clearance,
+        clearance,
     )
     .into_iter()
     .flat_map(|center| {
@@ -2991,4 +3021,47 @@ fn point_to_box_distance(p: Point, b: &Box2) -> f64 {
         0.0
     };
     dx.hypot(dy)
+}
+
+#[cfg(test)]
+mod candidate_tests {
+    use super::*;
+
+    #[test]
+    fn usb_pad_candidates_respect_dense_ic_clearance_and_expand_outward() {
+        let json: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/fixtures/block-placement/Telemetry/block-23.json")
+        ).unwrap()).unwrap();
+        let problem: BlockSolveProblem = serde_json::from_value(json["problem"].clone()).unwrap();
+        let make = |name: &str| {
+            let (index, p) = problem.primitives.iter().enumerate()
+                .find(|(_, p)| p.placements.iter().any(|q| q.designator.as_ref() == name)).unwrap();
+            let components = Arc::new(problem.components.iter().cloned().enumerate()
+                .filter(|(_, c)| c.primitive_id == p.id).collect());
+            WorkingPrimitive { id: index as u32, source_index: index, primitive: p.clone(),
+                components: Arc::clone(&components), source_components: components,
+                source_placements: p.placements.clone(), source_node_ids: Arc::new(FxHashSet::default()),
+                point_net_ids: Arc::new(vec![]), rotation: 0 }
+        };
+        let resistor = make("R36");
+        let ic = make("U11");
+        let mut context = Context { problem, relations: vec![], net_ground: vec![],
+            evaluation_cache: RefCell::new(FxHashMap::default()),
+            net_scoring_scratch: RefCell::new(NetScoringScratch {
+                accumulators: vec![], signal_order: vec![], ground_order: vec![] }),
+            validate_incremental_scoring: false };
+        let old = net_anchored_candidates(&resistor, &[ic.clone()], &context);
+        let left = |p: &WorkingPrimitive| p.primitive.bbox.right < ic.primitive.bbox.left
+            && box_center(&p.primitive.bbox).y >= ic.primitive.bbox.top
+            && box_center(&p.primitive.bbox).y <= ic.primitive.bbox.bottom;
+        assert!(old.iter().any(left));
+        assert!(old.iter().filter(|p| left(p)).all(|p| component_overlap_depth(p, &ic, &context) > 0.0));
+        context.problem.experiments.candidate_clearance = true;
+        let corrected = net_anchored_candidates(&resistor, &[ic.clone()], &context);
+        assert!(corrected.iter().any(|p| left(p) && component_overlap_depth(p, &ic, &context) == 0.0));
+        context.problem.experiments.candidate_rings = true;
+        let expanded = net_anchored_candidates(&resistor, &[ic.clone()], &context);
+        assert!(expanded.len() > corrected.len());
+        assert!(expanded.iter().any(|p| left(p) && ic.primitive.bbox.left - p.primitive.bbox.right > 1.5));
+    }
 }

@@ -39,7 +39,8 @@ Object.defineProperty(addon, 'solveBlockPrimitives', { configurable: true, value
 const start = performance.now();
 const result = await autoPlacePcbWithReportAsync(input);
 const elapsed = performance.now() - start;
-const dir = `.test-output/architecture/${fixture}/${mode}`;
+const tag = process.env.PCB_EXPERIMENT_TAG ?? mode;
+const dir = `.test-output/architecture/${fixture}/${tag}`;
 mkdirSync(dir, { recursive: true });
 writePlacementArtifacts(dir, input, result.placements, result.report, result.layout, result.stages,
     renderPlacementSvg(input, result.placements), createPlacementDebugArtifacts(input, result.placements));
@@ -66,7 +67,7 @@ const fixedChanges = input.components.filter(c => c.pcb.fixedPlacement).flatMap(
 });
 const require = createRequire(import.meta.url);
 const native = readFileSync(`native/pcb-board-packer/${require('../native/pcb-board-packer/platform.cjs').nativeFilename()}`);
-const summary = { fixture, mode, settings, ms: elapsed, blockMs: captures.reduce((a, c) => a + c.ms, 0),
+const summary = { fixture, mode, tag, candidates: process.env.PCB_BLOCK_CANDIDATES ?? '2', blockPostRefine: process.env.PCB_BLOCK_POST_REFINE ?? '1', settings, ms: elapsed, blockMs: captures.reduce((a, c) => a + c.ms, 0),
     blockSolves: captures.length, ok: result.report.ok, fixedChanges, stageMetrics,
     nativeHash: createHash('sha256').update(native).digest('hex'), inputHash: createHash('sha256').update(raw).digest('hex'),
     diagnostics: result.report.graphReport?.diagnostics, node: process.version };

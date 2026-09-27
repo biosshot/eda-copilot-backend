@@ -239,6 +239,8 @@ export interface NativeBlockSolveProblemV2 {
         routingMetric?: 'micro' | 'off' | 'geometric';
         ignoredNets?: string[];
         keepDenseAccess?: boolean;
+        candidateClearance?: boolean;
+        candidateRings?: boolean;
         netCandidates?: boolean;
         stableNetWeight?: boolean;
         reducedHull?: boolean;

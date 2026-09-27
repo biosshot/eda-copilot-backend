@@ -207,6 +207,8 @@ pub struct BlockExperiments {
     pub ignored_nets: Vec<Arc<str>>,
     pub keep_dense_access: bool,
     pub net_candidates: bool,
+    pub candidate_clearance: bool,
+    pub candidate_rings: bool,
     pub stable_net_weight: bool,
     pub reduced_hull: bool,
     pub smooth_aspect: bool,
