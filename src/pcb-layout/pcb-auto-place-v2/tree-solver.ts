@@ -20,6 +20,7 @@ import { solveBoardPrimitives } from './board-solver.ts';
 import { solveBlockPrimitives } from './block-solver-engine.ts';
 import { blockPolicy } from './block-policy.ts';
 import { refineBlockPrimitives } from './block-post-refiner.ts';
+import { groupRelaxation, relaxBlockGroups } from './relaxed-block-groups.ts';
 import type { BlockSolveParams } from './block-solver.ts';
 import { solvePlacementIslands } from './island-solver.ts';
 import { solveModulePrimitives } from './module-solver.ts';
@@ -401,15 +402,21 @@ function solveBlockNode(
     childPrimitives: PlacementPrimitive[],
     clearance = context.clearance,
 ) {
+    const relaxed = relaxBlockGroups(context.input, context.treeNodes, childPrimitives,
+        relationsForPrimitives(context.graph.relations, node.id, childPrimitives), groupRelaxation(),
+        designator => componentPrimitive(context, context.treeNodes.find(n => n.kind === 'component' && n.label === designator)!, node));
+    childPrimitives = relaxed.primitives;
+    if (relaxed.released.length) context.diagnostics.push({ severity: 'warning', nodeId: node.id,
+        message: `Experimental independent placement: ${relaxed.released.join(', ')}; electrical constraints retained` });
     const hasLockedChild = childPrimitives.some((primitive) => primitive.locked);
     const policy = blockPolicy(context.input.solverOptions.ignoredRatsnestSignals);
     // A block with satellite children still needs the same electrical search.
     // Children remain rigid primitives; their block names must not disable it.
-    const ordinary = childPrimitives.length >= 2 && childPrimitives.length <= 12;
+    const ordinary = childPrimitives.length >= 2 && (childPrimitives.length <= 12 || relaxed.released.length > 0);
     const params: BlockSolveParams = {
         node,
         primitives: childPrimitives,
-        relations: relationsForPrimitives(context.graph.relations, node.id, childPrimitives),
+        relations: relaxed.relations,
         options: {
             ...(ordinary ? { searchWidth: policy.searchWidth, experiments: policy.experiments } : {}),
             grid: context.grid,
@@ -436,6 +443,8 @@ function solveBlockNode(
         const variants = [
             { ...policy.experiments, reducedHull: false, smoothAspect: false, pairSwaps: false, reinsertPair: false },
             { ignoredNets: policy.experiments.ignoredNets, routingMetric: policy.experiments.routingMetric,
+                frontierOrder: policy.experiments.frontierOrder, padOwnerCandidates: policy.experiments.padOwnerCandidates,
+                localAccess: policy.experiments.localAccess,
                 candidateClearance: policy.experiments.candidateClearance, candidateRings: policy.experiments.candidateRings,
                 padCrossings: policy.experiments.padCrossings,
                 netCandidates: true, longNets: true },

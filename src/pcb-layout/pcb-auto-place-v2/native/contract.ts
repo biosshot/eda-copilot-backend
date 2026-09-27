@@ -241,6 +241,9 @@ export interface NativeBlockSolveProblemV2 {
         keepDenseAccess?: boolean;
         candidateClearance?: boolean;
         candidateRings?: boolean;
+        frontierOrder?: boolean;
+        padOwnerCandidates?: boolean;
+        localAccess?: boolean;
         padCrossings?: boolean;
         netCandidates?: boolean;
         stableNetWeight?: boolean;

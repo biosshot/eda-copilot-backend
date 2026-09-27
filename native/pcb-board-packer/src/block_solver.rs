@@ -209,7 +209,7 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<BoardPackSolution, Stri
             }
         })
         .collect();
-    let relations = compile_relations(&problem.relations, &primitives, problem.bounds.as_ref());
+    let relations = compile_relations(&problem.relations, &primitives, problem.bounds.as_ref(), problem.experiments.local_access);
     let context = Context {
         problem,
         relations,
@@ -255,7 +255,8 @@ fn solve_greedy(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Wor
         .collect();
     remaining.sort_by(|a, b| compare_f64(seed_rank(b, context), seed_rank(a, context)));
     if placed.is_empty() && !remaining.is_empty() {
-        let seed = remaining.remove(0);
+        let first = frontier_indices(&remaining, &placed, context)[0];
+        let seed = remaining.remove(first);
         let candidates = block_candidates(&seed, &[], context);
         let candidate = best_candidate(&[], candidates, context)
             .unwrap_or_else(|| center_primitive(seed, context.problem.grid));
@@ -270,7 +271,8 @@ fn solve_greedy(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Wor
         let mut best_score = f64::INFINITY;
         let mut best_incremental = None;
         let mut best_route_penalty = route_penalty;
-        for (index, primitive) in remaining.iter().enumerate() {
+        for index in frontier_indices(&remaining, &placed, context) {
+            let primitive = &remaining[index];
             for candidate in ranked_block_candidates(primitive, &placed, &incremental, route_penalty, 1, context) {
                 let hard = candidate.hard_violations;
                 let score = candidate.score;
@@ -331,7 +333,7 @@ fn solve_beam(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Worki
                 continue;
             }
             let per_primitive_limit = 8usize.max(div_ceil(search_width, state.remaining.len()));
-            for index in 0..state.remaining.len() {
+            for index in frontier_indices(&state.remaining, &state.placed, context) {
                 let primitive = &state.remaining[index];
                 let mut ranked = ranked_block_candidates(
                     primitive,
@@ -483,7 +485,23 @@ fn ranked_block_candidates(
         });
     }
     ranked.sort_by(compare_candidates);
-    ranked.truncate(16);
+    // Retain spatial/orientation diversity before the expensive route score.
+    if context.problem.experiments.pad_owner_candidates {
+        let origin = box_center(&union_boxes(&placed.iter().map(|p| p.primitive.bbox).collect::<Vec<_>>()));
+        let mut buckets = FxHashMap::default();
+        let mut selected = Vec::new();
+        let mut rest = Vec::new();
+        for candidate in ranked {
+            let center = box_center(&candidate.primitive.primitive.bbox);
+            let key = (candidate.primitive.rotation, center.x >= origin.x, center.y >= origin.y);
+            let count = buckets.entry(key).or_insert(0usize);
+            if *count < 4 { *count += 1; selected.push(candidate); } else { rest.push(candidate); }
+        }
+        let space = 64usize.saturating_sub(selected.len());
+        selected.extend(rest.into_iter().take(space));
+        selected.sort_by(compare_candidates);
+        ranked = selected;
+    } else { ranked.truncate(16); }
     let baseline_hard = previous.evaluation.hard_violations;
     crate::lazy_rank::top_k(ranked, limit, |a, a_exact, b, b_exact| {
         let lower_score = |candidate: &RankedCandidate, exact: bool| candidate.score
@@ -823,11 +841,19 @@ fn net_anchored_candidates(
             }
         }
         anchors.sort_by(|(a, ap), (b, bp)| a.id.cmp(&b.id).then(ap.reference.cmp(&bp.reference)));
-        for (item, target) in anchors.into_iter().take(4) {
+        let anchor_limit = if context.problem.experiments.pad_owner_candidates { usize::MAX } else { 4 };
+        for (item, target) in anchors.into_iter().take(anchor_limit) {
             let center = box_center(&primitive.primitive.bbox);
             let dx = moving.x - center.x;
             let dy = moving.y - center.y;
-            let b = item.primitive.bbox;
+            // A compound's empty envelope must not hide space next to its IC.
+            // Hard legality still checks every actual component in the island.
+            let owner = target.reference.split_once('.').map(|(name, _)| name);
+            let b = if context.problem.experiments.pad_owner_candidates
+                && context.problem.hard_collision_mode.as_ref() == "components" {
+                item.components.iter().find(|(_, c)| Some(c.designator.as_ref()) == owner)
+                    .map(|(_, c)| c.body_box).unwrap_or(item.primitive.bbox)
+            } else { item.primitive.bbox };
             let clearance = candidate_clearance(primitive, item, context);
             let slide = context.problem.grid.max(0.25);
             let expanded = context.problem.experiments.candidate_rings;
@@ -2125,6 +2151,11 @@ fn external_port_exposure_penalty(primitives: &[WorkingPrimitive], context: &Con
     let mut penalty = 0.0;
     for compiled in &context.relations {
         let relation = &compiled.relation;
+        if context.problem.experiments.local_access {
+            // An endpoint in a not-yet-placed primitive is not an external port.
+            let external = |e: &CompiledEndpoint| matches!(e, CompiledEndpoint::Missing | CompiledEndpoint::Anchor(None));
+            if external(&compiled.from) == external(&compiled.to) { continue; }
+        }
         if relation.effect.as_ref() == "lock"
             || relation.kind.as_ref() == "net"
             || relation.effect.as_ref() == "score_only"
@@ -2139,14 +2170,43 @@ fn external_port_exposure_penalty(primitives: &[WorkingPrimitive], context: &Con
         let Some(inside) = from.or(to) else {
             continue;
         };
-        let boundary = (inside.point.x - bbox.left)
+        let boundary = if context.problem.experiments.local_access {
+            escape_blockage(inside, primitives, context.problem.clearance)
+        } else { (inside.point.x - bbox.left)
             .abs()
             .min((bbox.right - inside.point.x).abs())
             .min((inside.point.y - bbox.top).abs())
-            .min((bbox.bottom - inside.point.y).abs());
+            .min((bbox.bottom - inside.point.y).abs()) };
         penalty += boundary * relation_weight(relation) * weight;
     }
     penalty
+}
+
+// Four straight escape corridors: empty space has zero cost. Growing an
+// unrelated side of the block no longer buries every external pin. Internal
+// geometry of the rigid source island is assessed by its island solver.
+fn escape_blockage(source: EndpointPoint, primitives: &[WorkingPrimitive], clearance: f64) -> f64 {
+    let mut blocked = [0.0f64; 4];
+    let layer = primitives.iter().find(|p| Some(p.id) == source.primitive_id)
+        .and_then(|p| p.primitive.placements.first()).map(|p| &p.layer);
+    for p in primitives {
+        if Some(p.id) == source.primitive_id { continue; }
+        for (_, c) in p.components.iter() {
+            let boxes: Vec<_> = if layer.is_none_or(|l| l == &c.layer) { vec![c.body_box] }
+                else { c.through_hole_boxes.as_ref().clone() };
+            for b in boxes {
+                if source.point.y >= b.top - clearance && source.point.y <= b.bottom + clearance {
+                    blocked[0] += (b.right + clearance - source.point.x.max(b.left - clearance)).max(0.0);
+                    blocked[1] += (source.point.x.min(b.right + clearance) - b.left + clearance).max(0.0);
+                }
+                if source.point.x >= b.left - clearance && source.point.x <= b.right + clearance {
+                    blocked[2] += (b.bottom + clearance - source.point.y.max(b.top - clearance)).max(0.0);
+                    blocked[3] += (source.point.y.min(b.bottom + clearance) - b.top + clearance).max(0.0);
+                }
+            }
+        }
+    }
+    blocked.into_iter().fold(f64::INFINITY, f64::min)
 }
 
 fn port_facing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
@@ -2279,13 +2339,14 @@ fn compile_relations(
     relations: &[Relation],
     primitives: &[WorkingPrimitive],
     bounds: Option<&Box2>,
+    resolve_islands: bool,
 ) -> Vec<CompiledRelation> {
     relations
         .iter()
         .cloned()
         .map(|relation| CompiledRelation {
-            from: compile_endpoint(&relation.from, primitives, bounds),
-            to: compile_endpoint(&relation.to, primitives, bounds),
+            from: compile_endpoint(&relation.from, primitives, bounds, resolve_islands),
+            to: compile_endpoint(&relation.to, primitives, bounds, resolve_islands),
             relation,
         })
         .collect()
@@ -2295,6 +2356,7 @@ fn compile_endpoint(
     endpoint: &str,
     primitives: &[WorkingPrimitive],
     bounds: Option<&Box2>,
+    resolve_islands: bool,
 ) -> CompiledEndpoint {
     if let Some(anchor) = endpoint.strip_prefix("anchor:") {
         return CompiledEndpoint::Anchor(anchor_point(anchor, bounds));
@@ -2340,7 +2402,8 @@ fn compile_endpoint(
         }
         return CompiledEndpoint::Missing;
     }
-    for (prefix, tree_prefix) in [("block:", "tree:block:"), ("module:", "tree:module:")] {
+    for (prefix, tree_prefix) in [("block:", "tree:block:"), ("module:", "tree:module:"), ("island:", "tree:island:")] {
+        if prefix == "island:" && !resolve_islands { continue; }
         if let Some(name) = endpoint.strip_prefix(prefix) {
             let target = format!("{tree_prefix}{name}");
             return primitives
@@ -2714,6 +2777,51 @@ fn board_fallback_candidates(
     candidates
 }
 
+// Select a common electrical frontier across beam states. Comparing different
+// subsets by partial wire cost rewards postponing the IC and its missing nets.
+fn frontier_indices(remaining: &[WorkingPrimitive], placed: &[WorkingPrimitive], context: &Context) -> Vec<usize> {
+    let core_size = |p: &WorkingPrimitive| p.components.iter()
+        .filter(|(_, c)| c.role.as_deref() == Some("main_ic"))
+        .map(|(_, c)| c.pin_count).max().unwrap_or(0);
+    if !context.problem.experiments.frontier_order
+        || !remaining.iter().chain(placed).any(|p| core_size(p) > 0) {
+        return (0..remaining.len()).collect();
+    }
+    if !placed.iter().any(|p| core_size(p) > 0) {
+        let index = remaining.iter().enumerate().max_by(|(_, a), (_, b)|
+            core_size(a).cmp(&core_size(b)).then_with(|| b.id.cmp(&a.id))).map(|(i, _)| i);
+        return index.into_iter().collect();
+    }
+    let nets = |p: &WorkingPrimitive| -> FxHashSet<Arc<str>> {
+        p.primitive.connection_points.iter().filter_map(|cp| cp.net.clone())
+            .filter(|n| !n.is_empty() && !is_ground(n)
+                && !context.problem.experiments.ignored_nets.iter().any(|v| v.eq_ignore_ascii_case(n)))
+            .collect()
+    };
+    let mut fanout: FxHashMap<Arc<str>, usize> = FxHashMap::default();
+    for p in remaining.iter().chain(placed) { for net in nets(p) { *fanout.entry(net).or_default() += 1; } }
+    let score = |p: &WorkingPrimitive| {
+        let own = nets(p);
+        let mut value = 0.0;
+        for other in placed {
+            for net in own.intersection(&nets(other)) {
+                value += 10.0 / (fanout[net].saturating_sub(1).max(1) as f64);
+            }
+            for r in &context.problem.relations {
+                if r.kind.as_ref() == "critical_pair" &&
+                    ((primitive_touches_endpoint(p, &r.from) && primitive_touches_endpoint(other, &r.to))
+                    || (primitive_touches_endpoint(p, &r.to) && primitive_touches_endpoint(other, &r.from))) {
+                    value += if r.hard { 100.0 } else { 30.0 };
+                }
+            }
+        }
+        value
+    };
+    remaining.iter().enumerate().max_by(|(_, a), (_, b)| compare_f64(score(a), score(b))
+        .then_with(|| core_size(a).cmp(&core_size(b))).then_with(|| b.id.cmp(&a.id)))
+        .map(|(index, _)| vec![index]).unwrap_or_default()
+}
+
 fn seed_rank(primitive: &WorkingPrimitive, context: &Context) -> f64 {
     let degree = context
         .problem
@@ -3051,8 +3159,7 @@ fn point_to_box_distance(p: Point, b: &Box2) -> f64 {
 mod candidate_tests {
     use super::*;
 
-    #[test]
-    fn usb_pad_candidates_respect_dense_ic_clearance_and_expand_outward() {
+    fn usb_fixture() -> (WorkingPrimitive, WorkingPrimitive, Context) {
         let json: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(
             concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/fixtures/block-placement/Telemetry/block-23.json")
         ).unwrap()).unwrap();
@@ -3069,11 +3176,17 @@ mod candidate_tests {
         };
         let resistor = make("R36");
         let ic = make("U11");
-        let mut context = Context { problem, relations: vec![], net_ground: vec![],
+        let context = Context { problem, relations: vec![], net_ground: vec![],
             evaluation_cache: RefCell::new(FxHashMap::default()),
             net_scoring_scratch: RefCell::new(NetScoringScratch {
                 accumulators: vec![], signal_order: vec![], ground_order: vec![] }),
             validate_incremental_scoring: false };
+        (resistor, ic, context)
+    }
+
+    #[test]
+    fn usb_pad_candidates_respect_dense_ic_clearance_and_expand_outward() {
+        let (resistor, ic, mut context) = usb_fixture();
         let old = net_anchored_candidates(&resistor, &[ic.clone()], &context);
         let left = |p: &WorkingPrimitive| p.primitive.bbox.right < ic.primitive.bbox.left
             && box_center(&p.primitive.bbox).y >= ic.primitive.bbox.top
@@ -3087,5 +3200,63 @@ mod candidate_tests {
         let expanded = net_anchored_candidates(&resistor, &[ic.clone()], &context);
         assert!(expanded.len() > corrected.len());
         assert!(expanded.iter().any(|p| left(p) && ic.primitive.bbox.left - p.primitive.bbox.right > 1.5));
+    }
+
+    #[test]
+    fn pad_owner_candidates_reach_legal_space_inside_compound_envelope() {
+        let (resistor, mut ic, mut context) = usb_fixture();
+        context.problem.experiments.candidate_clearance = true;
+        ic.primitive.bbox.left -= 10.0;
+        ic.primitive.bbox.right += 10.0;
+        ic.primitive.bbox.top -= 10.0;
+        ic.primitive.bbox.bottom += 10.0;
+        let inside = |p: &WorkingPrimitive| p.primitive.bbox.left > ic.primitive.bbox.left
+            && p.primitive.bbox.right < ic.primitive.bbox.right
+            && p.primitive.bbox.top > ic.primitive.bbox.top
+            && p.primitive.bbox.bottom < ic.primitive.bbox.bottom;
+        assert!(!net_anchored_candidates(&resistor, &[ic.clone()], &context).iter().any(inside));
+        context.problem.experiments.pad_owner_candidates = true;
+        assert!(net_anchored_candidates(&resistor, &[ic.clone()], &context).iter()
+            .any(|p| inside(p) && component_overlap_depth(p, &ic, &context) == 0.0));
+    }
+
+    #[test]
+    fn frontier_seeds_the_ic_and_preserves_legacy_fallback_without_an_ic() {
+        let (resistor, ic, mut context) = usb_fixture();
+        context.problem.experiments.frontier_order = true;
+        assert_eq!(frontier_indices(&[resistor.clone(), ic.clone()], &[], &context), vec![1]);
+        assert_eq!(frontier_indices(&[resistor.clone()], &[ic], &context), vec![0]);
+        assert_eq!(frontier_indices(&[resistor.clone(), resistor], &[], &context), vec![0, 1]);
+    }
+
+    #[test]
+    fn island_endpoint_is_internal_when_its_rigid_primitive_is_present() {
+        let (_, mut ic, _) = usb_fixture();
+        ic.source_node_ids = Arc::new([Arc::<str>::from("tree:island:bank")].into_iter().collect());
+        assert!(matches!(compile_endpoint("island:bank", &[ic.clone()], None, false), CompiledEndpoint::Missing));
+        assert!(matches!(compile_endpoint("island:bank", &[ic], None, true), CompiledEndpoint::Primitive { .. }));
+    }
+
+    #[test]
+    fn open_escape_does_not_depend_on_the_whole_block_envelope() {
+        let (resistor, ic, _) = usb_fixture();
+        let source = EndpointPoint {point: box_center(&ic.primitive.bbox), primitive_id:Some(ic.id)};
+        let far = translate_primitive(&resistor, 100.0, 100.0);
+        assert_eq!(escape_blockage(source, &[ic.clone(), far], 0.35), 0.0);
+        let far = translate_primitive(&resistor, 200.0, 200.0);
+        assert_eq!(escape_blockage(source, &[ic, far], 0.35), 0.0);
+    }
+
+    #[test]
+    fn an_unplaced_internal_endpoint_is_not_an_external_escape_requirement() {
+        let (resistor, ic, mut context) = usb_fixture();
+        let mut r = context.problem.relations[0].clone();
+        r.from = Arc::from(format!("component:{}", ic.primitive.placements[0].designator));
+        r.to = Arc::from(format!("component:{}", resistor.primitive.placements[0].designator));
+        r.kind = Arc::from("hint"); r.effect = Arc::from("move_from");
+        context.relations = compile_relations(&[r], &[ic.clone(), resistor], None, true);
+        assert!(external_port_exposure_penalty(&[ic.clone()], &context) > 0.0);
+        context.problem.experiments.local_access = true;
+        assert_eq!(external_port_exposure_penalty(&[ic], &context), 0.0);
     }
 }
