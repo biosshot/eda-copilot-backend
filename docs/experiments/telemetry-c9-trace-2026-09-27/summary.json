@@ -1,0 +1,417 @@
+{
+  "sourceCommit": "894fc9f",
+  "runs": [
+    {
+      "tag": "base",
+      "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+      "nativeHash": "9fbd148addc083f442366ab03c51d544523ed30fec05a934f541d713647014a7",
+      "valid": true,
+      "matchesPriorRun": true,
+      "stages": [
+        {
+          "stage": "beam_complete",
+          "distances": [
+            12.183551739127635,
+            12.189580834876972
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 2.07,
+            "pairMax": 2.07,
+            "crossings": 0,
+            "foreignPadHits": 3,
+            "wireLength": 59.7,
+            "hpwl": 64.59,
+            "area": 431.95,
+            "aspect": 2.14
+          }
+        },
+        {
+          "stage": "c9_before_first_local",
+          "distances": [
+            12.183551739127635,
+            12.189580834876972
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 4.4,
+            "pairMax": 4.4,
+            "crossings": 0,
+            "foreignPadHits": 3,
+            "wireLength": 62.09,
+            "hpwl": 68.74,
+            "area": 396.41,
+            "aspect": 1.76
+          }
+        },
+        {
+          "stage": "c9_after_first_local",
+          "distances": [
+            12.183551739127635,
+            12.189580834876972
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 4.4,
+            "pairMax": 4.4,
+            "crossings": 0,
+            "foreignPadHits": 3,
+            "wireLength": 62.09,
+            "hpwl": 68.74,
+            "area": 396.41,
+            "aspect": 1.76
+          }
+        },
+        {
+          "stage": "local_complete",
+          "distances": [
+            12.183551739127635,
+            12.189580834876972
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 3.77,
+            "pairMax": 3.77,
+            "crossings": 0,
+            "foreignPadHits": 1,
+            "wireLength": 60.54,
+            "hpwl": 65.63,
+            "area": 394.54,
+            "aspect": 1.54
+          }
+        },
+        {
+          "stage": "pair_complete",
+          "distances": [
+            5.330279429823543,
+            4.631341547543216
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 3.77,
+            "pairMax": 3.77,
+            "crossings": 1,
+            "foreignPadHits": 1,
+            "wireLength": 41.96,
+            "hpwl": 45.33,
+            "area": 399.82,
+            "aspect": 1.47
+          }
+        },
+        {
+          "stage": "native_final",
+          "distances": [
+            5.330279429823543,
+            4.631341547543216
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 3.77,
+            "pairMax": 3.77,
+            "crossings": 1,
+            "foreignPadHits": 1,
+            "wireLength": 41.96,
+            "hpwl": 45.33,
+            "area": 399.82,
+            "aspect": 1.47
+          }
+        },
+        {
+          "stage": "postrefine_final",
+          "distances": [
+            5.330279429823543,
+            4.631341547543216
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 3.77,
+            "pairMax": 3.77,
+            "crossings": 1,
+            "foreignPadHits": 1,
+            "wireLength": 41.96,
+            "hpwl": 45.33,
+            "area": 399.82,
+            "aspect": 1.47
+          }
+        }
+      ]
+    },
+    {
+      "tag": "combined",
+      "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+      "nativeHash": "9fbd148addc083f442366ab03c51d544523ed30fec05a934f541d713647014a7",
+      "valid": true,
+      "matchesPriorRun": true,
+      "stages": [
+        {
+          "stage": "beam_complete",
+          "distances": [
+            2.6727000168369064,
+            2.6758500200870747
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 6.65,
+            "pairMax": 6.65,
+            "crossings": 0,
+            "foreignPadHits": 2,
+            "wireLength": 39.84,
+            "hpwl": 43.48,
+            "area": 469.5,
+            "aspect": 1.27
+          }
+        },
+        {
+          "stage": "c9_before_first_local",
+          "distances": [
+            2.6727000168369064,
+            2.6758500200870747
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 6.65,
+            "pairMax": 6.65,
+            "crossings": 0,
+            "foreignPadHits": 2,
+            "wireLength": 40.43,
+            "hpwl": 42.98,
+            "area": 469.5,
+            "aspect": 1.27
+          }
+        },
+        {
+          "stage": "c9_after_first_local",
+          "distances": [
+            5.19761651913644,
+            3.3873875671378375
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 6.65,
+            "pairMax": 6.65,
+            "crossings": 0,
+            "foreignPadHits": 1,
+            "wireLength": 43.07,
+            "hpwl": 45.47,
+            "area": 469.5,
+            "aspect": 1.27
+          }
+        },
+        {
+          "stage": "local_complete",
+          "distances": [
+            5.19761651913644,
+            3.3873875671378375
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 7.3,
+            "pairMax": 7.3,
+            "crossings": 0,
+            "foreignPadHits": 1,
+            "wireLength": 42.73,
+            "hpwl": 46.97,
+            "area": 469.5,
+            "aspect": 1.27
+          }
+        },
+        {
+          "stage": "pair_complete",
+          "distances": [
+            6.44573857521386,
+            6.392409133495759
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 2.25,
+            "pairMax": 2.25,
+            "crossings": 2,
+            "foreignPadHits": 2,
+            "wireLength": 43.49,
+            "hpwl": 46.52,
+            "area": 396.66,
+            "aspect": 1.22
+          }
+        },
+        {
+          "stage": "native_final",
+          "distances": [
+            6.44573857521386,
+            6.392409133495759
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 2.25,
+            "pairMax": 2.25,
+            "crossings": 2,
+            "foreignPadHits": 2,
+            "wireLength": 43.49,
+            "hpwl": 46.52,
+            "area": 396.66,
+            "aspect": 1.22
+          }
+        },
+        {
+          "stage": "postrefine_final",
+          "distances": [
+            5.99644789020967,
+            7.071651471191154
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 2.25,
+            "pairMax": 2.25,
+            "crossings": 1,
+            "foreignPadHits": 3,
+            "wireLength": 43.67,
+            "hpwl": 47.92,
+            "area": 396.66,
+            "aspect": 1.22
+          }
+        }
+      ]
+    },
+    {
+      "tag": "combined-c9-signal",
+      "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+      "nativeHash": "9fbd148addc083f442366ab03c51d544523ed30fec05a934f541d713647014a7",
+      "valid": true,
+      "matchesPriorRun": null,
+      "stages": [
+        {
+          "stage": "beam_complete",
+          "distances": [
+            2.698148139002008,
+            2.7190302186625286
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 2.19,
+            "pairMax": 2.19,
+            "crossings": 0,
+            "foreignPadHits": 1,
+            "wireLength": 35.28,
+            "hpwl": 37.02,
+            "area": 466.48,
+            "aspect": 1.15
+          }
+        },
+        {
+          "stage": "c9_before_first_local",
+          "distances": [
+            2.698148139002008,
+            2.7190302186625286
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 2.19,
+            "pairMax": 2.19,
+            "crossings": 0,
+            "foreignPadHits": 1,
+            "wireLength": 35.88,
+            "hpwl": 36.52,
+            "area": 466.48,
+            "aspect": 1.15
+          }
+        },
+        {
+          "stage": "c9_after_first_local",
+          "distances": [
+            2.698148139002008,
+            2.7190302186625286
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 2.19,
+            "pairMax": 2.19,
+            "crossings": 0,
+            "foreignPadHits": 1,
+            "wireLength": 35.88,
+            "hpwl": 36.52,
+            "area": 466.48,
+            "aspect": 1.15
+          }
+        },
+        {
+          "stage": "local_complete",
+          "distances": [
+            2.698148139002008,
+            2.7190302186625286
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 2.19,
+            "pairMax": 2.19,
+            "crossings": 0,
+            "foreignPadHits": 1,
+            "wireLength": 36.11,
+            "hpwl": 37.74,
+            "area": 466.48,
+            "aspect": 1.15
+          }
+        },
+        {
+          "stage": "pair_complete",
+          "distances": [
+            5.231619460549476,
+            5.357886237127473
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 2.65,
+            "pairMax": 2.65,
+            "crossings": 1,
+            "foreignPadHits": 2,
+            "wireLength": 41.58,
+            "hpwl": 44.03,
+            "area": 464.23,
+            "aspect": 1.16
+          }
+        },
+        {
+          "stage": "native_final",
+          "distances": [
+            5.231619460549476,
+            5.357886237127473
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 2.65,
+            "pairMax": 2.65,
+            "crossings": 1,
+            "foreignPadHits": 2,
+            "wireLength": 41.58,
+            "hpwl": 44.03,
+            "area": 464.23,
+            "aspect": 1.16
+          }
+        },
+        {
+          "stage": "postrefine_final",
+          "distances": [
+            5.231619460549476,
+            5.357886237127473
+          ],
+          "metrics": {
+            "pairCount": 1,
+            "pairSum": 2.65,
+            "pairMax": 2.65,
+            "crossings": 1,
+            "foreignPadHits": 2,
+            "wireLength": 41.58,
+            "hpwl": 44.03,
+            "area": 464.23,
+            "aspect": 1.16
+          }
+        }
+      ]
+    }
+  ],
+  "checks": {
+    "rustPassed": 52,
+    "rustIgnored": 1,
+    "unchangedReproductions": 2,
+    "validRuns": 3
+  },
+  "productionScoringChanged": false
+}

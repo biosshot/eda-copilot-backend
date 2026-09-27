@@ -1,0 +1,139 @@
+{
+  "diagnostics": [],
+  "moves": [],
+  "placements": [
+    {
+      "designator": "U2",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -1.5,
+      "y": 1.403
+    },
+    {
+      "designator": "C13",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 3.25,
+      "y": 8.582
+    },
+    {
+      "designator": "C14",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 6.603,
+      "y": 5.294
+    },
+    {
+      "designator": "C9",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 4.526,
+      "y": -6.33
+    },
+    {
+      "designator": "C15",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 7.103,
+      "y": 1.311
+    },
+    {
+      "designator": "C12",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -8.923,
+      "y": 3.145
+    },
+    {
+      "designator": "C10",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -8.923,
+      "y": 0.014
+    },
+    {
+      "designator": "C11",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": -10.694,
+      "y": 0.014
+    },
+    {
+      "designator": "C16",
+      "layer": "top",
+      "rotate": 180,
+      "score": 0,
+      "x": 7.103,
+      "y": 3.082
+    },
+    {
+      "designator": "R7",
+      "layer": "top",
+      "rotate": 0,
+      "score": 0,
+      "x": 7.305,
+      "y": -0.829
+    },
+    {
+      "designator": "R8",
+      "layer": "top",
+      "rotate": 270,
+      "score": 0,
+      "x": 6.53,
+      "y": -6.33
+    },
+    {
+      "designator": "R6",
+      "layer": "top",
+      "rotate": 90,
+      "score": 0,
+      "x": 9.805,
+      "y": -6.084
+    }
+  ],
+  "profile": {
+    "fixedDiagnosticsMs": 0.0003,
+    "initialScoreMs": 0.0223,
+    "iterationLimit": 8,
+    "iterations": [
+      {
+        "accepted": false,
+        "baselineCacheHits": 16,
+        "baselineEvaluations": 17,
+        "baselineMs": 24.9112,
+        "boundRejected": 32,
+        "candidates": 35,
+        "evaluationWallMs": 25.515,
+        "feasibilityRejected": 0,
+        "generatedCandidates": 35,
+        "generationMs": 0.038099999999999995,
+        "geometryMs": 0.0585,
+        "globalScoreMs": 0.42010000000000003,
+        "hardRejected": 2,
+        "insufficientImprovement": 1,
+        "routeEncodingMs": 0,
+        "routeEvaluations": 1,
+        "routeMs": 0.0435,
+        "routeNativeMs": 24.9547,
+        "scoreEncodingMs": 0,
+        "scoreNativeMs": 0.42010000000000003,
+        "timedOut": false
+      }
+    ],
+    "stopReason": "no_improvement",
+    "timedOut": false,
+    "timeoutMs": 2000,
+    "totalMs": 25.6094,
+    "workers": 1
+  },
+  "scoreAfter": 11364.195,
+  "scoreBefore": 11364.195
+}

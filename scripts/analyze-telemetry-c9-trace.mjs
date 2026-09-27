@@ -24,6 +24,10 @@ for(const tag of ['base','combined','combined-c9-signal']){
     const unchanged=JSON.stringify(signature(final.placements))===JSON.stringify(signature(old.placements));
     if(tag!=='combined-c9-signal'&&!unchanged)throw Error(`Tracing changed ${tag} geometry`);
     const stages=events.filter(e=>['beam_complete','local_complete','pair_complete','native_final'].includes(e.event)).map(e=>({stage:e.event,placements:e.data.poses,parts:e.data.parts}));
+    const firstLocal=events.find(e=>e.event==='local_candidates'),firstChosen=events.find(e=>e.event==='local_chosen');
+    if(firstLocal&&firstChosen) stages.splice(1,0,
+        {stage:'c9_before_first_local',placements:[...firstLocal.data.placed,...firstLocal.data.current.pose],parts:firstChosen.data.beforeParts},
+        {stage:'c9_after_first_local',placements:[...firstChosen.data.placed,...firstChosen.data.candidate.pose],parts:firstChosen.data.afterParts});
     stages.push({stage:'postrefine_final',placements:final.placements});
     for(const s of stages){s.distances=distance(s.placements);s.metrics=placementMetrics(input,s.placements);
         s.svg=`current_iso/${tag}-${s.stage}.svg`;
@@ -53,6 +57,8 @@ writeFileSync(`${out}/comparison.html`, `<!doctype html><html lang="ru"><meta ch
 <h1>C9: от кандидатов до финальной компоновки</h1>
 <p>Два воспроизведения current_iso: прежняя очередность и все четыре экспериментальных изменения. В них поиск и оценка не изменены; итоговые позиции совпали с предыдущими прогонами с точностью 0,00001 мм в системе координат U2. Третий прогон — контроль: только внутренний признак powerComponent у C9 снят, остальной вход и настройки сохранены. Остальные блоки не запускались.</p>
 <p>«Близкий» здесь означает: оба расстояния C9.1 → U2.6 и C9.2 → U2.7 не больше 3 мм, геометрических нарушений нет. Это диагностический порог, не новое ограничение. Красные линии — MST, расстояния в таблице измеряются непосредственно до U2.</p>
+<p><b>Найдено:</b> в общем экспериментальном варианте C9 успешно проходит beam с расстояниями 2,67 / 2,68 мм. Его отодвигает local_improve: power_yield уменьшается на 511,84, пересечения с падами — на 180, а длина дорожает только на 9,94 балла. Вход помечает сигнальный C9 как decoupling_cap, что превращает его в powerComponent. Поправка микророутера меняется всего на 0,118.</p>
+<p><b>Контроль:</b> снятие только powerComponent у C9 сохраняет 2,70 / 2,72 мм после одиночных перемещений. Затем пара C9 + R7 всё равно переносит его до 5,23 / 5,36 мм: сильные явные отношения R7 и геометрия блока перевешивают удлинение обычных сетей C9. Поэтому одной коррекции роли недостаточно.</p>
 <label>Очередность <select id="run"><option value="base">Прежняя</option><option value="combined">Все четыре изменения</option><option value="combined-c9-signal">Контроль: C9 не компонент питания</option></select></label>
 <section>${[0,1].map(i=>`<figure><select id="stage${i}"></select><a id="link${i}" target="_blank"><img id="img${i}"></a><p id="caption${i}"></p></figure>`).join('')}</section>
 <h2>Позиция C9 по этапам</h2><table id="stages"></table>
@@ -61,7 +67,7 @@ writeFileSync(`${out}/comparison.html`, `<!doctype html><html lang="ru"><meta ch
 <details><summary>Одиночные локальные перемещения C9</summary><table id="local"></table></details>
 <p>Подробности, состав оценок и позы сохранены в <a href="analysis.json">analysis.json</a>; исходные трассы лежат рядом с результатами. Никакое улучшение по умолчанию не включалось и не отключалось.</p>
 <script>const data=${JSON.stringify(data).replace(/</g,'\\u003c')};const el=id=>document.getElementById(id);
-const labels={beam_complete:'После beam search',local_complete:'После одиночных перемещений',pair_complete:'После парных перестановок',native_final:'После центрирования',postrefine_final:'После block postrefine'};
+const labels={c9_before_first_local:'Перед первым перемещением C9',c9_after_first_local:'Сразу после перемещения C9',beam_complete:'После beam search',local_complete:'После одиночных перемещений',pair_complete:'После парных перестановок',native_final:'После центрирования',postrefine_final:'После block postrefine'};
 const fmt=ds=>ds?.map(d=>d==null?'—':d.toFixed(2)).join(' / ')??'—';let current;
 function choose(){current=data.find(d=>d.tag===el('run').value);for(let i=0;i<2;i++){const s=el('stage'+i);s.replaceChildren();for(const r of current.stages)s.add(new Option(labels[r.stage],r.stage));s.value=i?'postrefine_final':'beam_complete';}draw();}
 function table(id,heads,rows){el(id).innerHTML='<tr>'+heads.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('');}
