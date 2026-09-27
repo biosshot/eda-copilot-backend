@@ -10,6 +10,127 @@
       "ok": true,
       "count": 154,
       "fixedChanges": [],
+      "criticalClearanceViolations": [
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "adc"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.62,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "usb_charge"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.43,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "adc"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.24,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "logic_power"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.61,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "usb_charge"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 2.29,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "low_charge_pos"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 2.01,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "low_charge_neg"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.51,
+          "expected": ">= 3.2mm clearance"
+        }
+      ],
       "board": {
         "pairCount": 48,
         "pairSum": 700.83,
@@ -62,6 +183,127 @@
       "ok": true,
       "count": 154,
       "fixedChanges": [],
+      "criticalClearanceViolations": [
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "adc"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.21,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "low_charge_pos"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.65,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_pos"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "low_charge_neg"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.78,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "lte"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 2.88,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "adc"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 0.57,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "logic_power"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 1.61,
+          "expected": ">= 3.2mm clearance"
+        },
+        {
+          "hint": {
+            "relation": "clearance",
+            "source": {
+              "type": "block",
+              "block_name": "hv_neg"
+            },
+            "target": {
+              "type": "block",
+              "block_name": "usb_charge"
+            },
+            "min": 3.2,
+            "priority": "critical"
+          },
+          "actual": 2.32,
+          "expected": ">= 3.2mm clearance"
+        }
+      ],
       "board": {
         "pairCount": 48,
         "pairSum": 791.25,

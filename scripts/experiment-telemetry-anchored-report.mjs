@@ -51,7 +51,9 @@ const summary=results.map(r=>{
     writeFileSync(`${dir}/${r.tag}-board-clean.svg`,renderPlacementSvg(input,r.placements,{ratsnest:false,signalPaths:false}));
     const fixedChanges=input.components.flatMap(c=>{const f=createFixedPlacement(input,c),p=r.placements.find(p=>p.designator===c.designator);
         return f&&(!p||['x','y','rotate','layer'].some(k=>p[k]!==f[k]))?[c.designator]:[];});
-    return {tag:r.tag,ok:r.report.ok,count:r.placements.length,fixedChanges,board:placementMetrics(input,r.placements),usb:placementMetrics(input,ps),gaps:gaps(r.placements),links:links(r.placements)};
+    return {tag:r.tag,ok:r.report.ok,count:r.placements.length,fixedChanges,
+        criticalClearanceViolations:r.report.hintViolations.filter(v=>v.hint.relation==='clearance'&&v.hint.priority==='critical'),
+        board:placementMetrics(input,r.placements),usb:placementMetrics(input,ps),gaps:gaps(r.placements),links:links(r.placements)};
 });
 const tree=results[1].stages.find(s=>s.name==='01-v2-tree').data;
 const family=tree.primitives.find(p=>p.label==='mechanic_J5'&&p.anchored);
@@ -75,6 +77,7 @@ body{font:16px system-ui;background:#f1f5f9;color:#172033;margin:24px auto;max-w
 <h1>Telemetry: обвязка фиксированного USB и мягкие зазоры</h1>
 <p>Одинаковая схема, контур и фиксированная механика. «До» — состояние ветки b747758. «После» — сборка обвязки в реальном окружении J5 и ограниченный мягкий отступ между блоками. Зелёная линия в USB — настоящий край платы. Нажмите изображение для открытия SVG.</p>
 <p style="background:#fff7ed;padding:14px;border-left:4px solid #ea580c"><strong>Результат смешанный.</strong> В USB уменьшилось число пересечений чужих площадок, но выросло число пересечений линий. Полная перепаковка ухудшила электрические метрики платы. Проверены четыре гипотезы упаковки: с отступами, плотная и два набора альтернативных блоков; выбран первый вариант. Это экспериментальный результат, а не подтверждение общего улучшения платы.</p>
+<p style="background:#fff1f2;padding:14px;border-left:4px solid #e11d48"><strong>Полная плата не прошла строгую проверку всех ограничений.</strong> И «До», и «После» имеют по семь нарушений заданного межгруппового зазора 3,2 мм. Обычный report.ok не считает эти замечания причиной отказа; абсолютная native-проверка их отклоняет. Перекрытий компонентов и перемещений фиксированной механики нет. ASM — для просмотра и сравнения, не готовый проверенный результат для изготовления.</p>
 <p>Проверка отчёта: ${summary.map(r=>`${r.tag}: ${r.ok?'OK':'есть замечания'}, ${r.count} компонентов, сдвинуто фиксированных: ${r.fixedChanges.length}`).join('; ')}. Метрики прямых линий MST служат для сравнения размещения; это не результат трассировки.</p>
 ${table('usb')}<label><input type="checkbox" id="ignored">Показать также игнорируемые сети USB</label>${pair('usb')}
 <h2>Полная плата</h2>${table('board')}
