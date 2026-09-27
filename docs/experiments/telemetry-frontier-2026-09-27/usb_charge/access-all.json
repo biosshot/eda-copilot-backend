@@ -1,0 +1,368 @@
+{
+  "block": "usb_charge",
+  "variant": {
+    "id": "access-all",
+    "label": "Новая оценка + очередность + кандидаты + разборка",
+    "frontier": true,
+    "owner": true,
+    "groups": "all",
+    "access": true
+  },
+  "ms": 9863.4381,
+  "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b",
+  "inventory": true,
+  "orientation": true,
+  "validation": {
+    "ok": true,
+    "violations": []
+  },
+  "metrics": {
+    "pairCount": 6,
+    "pairSum": 21.05,
+    "pairMax": 5.31,
+    "crossings": 1,
+    "foreignPadHits": 0,
+    "wireLength": 32.05,
+    "hpwl": 40.78,
+    "area": 150.57,
+    "aspect": 1.11
+  },
+  "allMetrics": {
+    "pairCount": 6,
+    "pairSum": 21.05,
+    "pairMax": 5.31,
+    "crossings": 3,
+    "foreignPadHits": 4,
+    "wireLength": 57.66,
+    "hpwl": 59.01,
+    "area": 150.57,
+    "aspect": 1.11
+  },
+  "pairs": [],
+  "localHardPairs": [],
+  "hardPairsOk": true,
+  "placements": [
+    {
+      "designator": "U11",
+      "x": 0,
+      "y": -0.499,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C42",
+      "x": -4.493,
+      "y": -0.75,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C43",
+      "x": 4.493,
+      "y": -0.249,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R36",
+      "x": -0.216,
+      "y": -4.234,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R37",
+      "x": -4.493,
+      "y": -3.817,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R32",
+      "x": 4.613,
+      "y": 2,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R33",
+      "x": 4.613,
+      "y": 5.114,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R34",
+      "x": -5.5,
+      "y": 3.114,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R35",
+      "x": -2.25,
+      "y": 3.235,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:usb_charge",
+      "message": "Block postrefine: 1 moves, 29 ms"
+    }
+  ],
+  "captures": [
+    {
+      "ms": 9823.0376,
+      "rank": {
+        "hardCount": 0,
+        "hardSeverity": 0,
+        "score": 2734.7150947746045
+      },
+      "members": [
+        {
+          "label": "U11",
+          "members": [
+            "U11"
+          ]
+        },
+        {
+          "label": "C42",
+          "members": [
+            "C42"
+          ]
+        },
+        {
+          "label": "C43",
+          "members": [
+            "C43"
+          ]
+        },
+        {
+          "label": "R32",
+          "members": [
+            "R32"
+          ]
+        },
+        {
+          "label": "R33",
+          "members": [
+            "R33"
+          ]
+        },
+        {
+          "label": "R34",
+          "members": [
+            "R34"
+          ]
+        },
+        {
+          "label": "R35",
+          "members": [
+            "R35"
+          ]
+        },
+        {
+          "label": "R36",
+          "members": [
+            "R36"
+          ]
+        },
+        {
+          "label": "R37",
+          "members": [
+            "R37"
+          ]
+        }
+      ],
+      "order": [
+        [
+          "U11"
+        ],
+        [
+          "C42"
+        ],
+        [
+          "C43"
+        ],
+        [
+          "R36"
+        ],
+        [
+          "R37"
+        ],
+        [
+          "R32"
+        ],
+        [
+          "R33"
+        ],
+        [
+          "R34"
+        ],
+        [
+          "R35"
+        ]
+      ],
+      "relations": [
+        {
+          "id": "connects_net:pad:U11.12->net:USB_ILIM::",
+          "kind": "net",
+          "from": "pad:U11.12",
+          "to": "net:USB_ILIM",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R34.1->net:USB_ILIM::",
+          "kind": "net",
+          "from": "pad:R34.1",
+          "to": "net:USB_ILIM",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U11.14->net:USB_TIMER::",
+          "kind": "net",
+          "from": "pad:U11.14",
+          "to": "net:USB_TIMER",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R35.1->net:USB_TIMER::",
+          "kind": "net",
+          "from": "pad:R35.1",
+          "to": "net:USB_TIMER",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U11.15->net:USB_ITERM::",
+          "kind": "net",
+          "from": "pad:U11.15",
+          "to": "net:USB_ITERM",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R33.1->net:USB_ITERM::",
+          "kind": "net",
+          "from": "pad:R33.1",
+          "to": "net:USB_ITERM",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U11.16->net:USB_ISET::",
+          "kind": "net",
+          "from": "pad:U11.16",
+          "to": "net:USB_ISET",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R32.1->net:USB_ISET::",
+          "kind": "net",
+          "from": "pad:R32.1",
+          "to": "net:USB_ISET",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:U11->component:J5:near:34",
+          "kind": "hint",
+          "from": "component:U11",
+          "to": "component:J5",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 140,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:pad:C42.1->pad:U11.10:critical_pair:62",
+          "kind": "critical_pair",
+          "from": "pad:C42.1",
+          "to": "pad:U11.10",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:pad:C43.1->pad:U11.2:critical_pair:63",
+          "kind": "critical_pair",
+          "from": "pad:C43.1",
+          "to": "pad:U11.2",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        }
+      ],
+      "experiments": {
+        "netCandidates": true,
+        "stableNetWeight": true,
+        "reducedHull": true,
+        "smoothAspect": true,
+        "frontierOrder": true,
+        "padOwnerCandidates": true,
+        "localAccess": true,
+        "candidateClearance": true,
+        "candidateRings": true,
+        "padCrossings": true,
+        "longNets": true,
+        "extraPasses": true,
+        "pairSwaps": true,
+        "reinsertPair": true,
+        "keepDenseAccess": true,
+        "ignoredNets": [
+          "GND",
+          "V_MEAS_N",
+          "I_OUT",
+          "HARVEST_P"
+        ],
+        "routingMetric": "micro"
+      }
+    }
+  ]
+}

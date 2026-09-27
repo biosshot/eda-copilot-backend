@@ -1,0 +1,868 @@
+{
+  "block": "adc",
+  "variant": {
+    "id": "caps",
+    "label": "То же + разборка cap-кластеров",
+    "frontier": true,
+    "owner": true,
+    "groups": "caps"
+  },
+  "ms": 99986.18239999999,
+  "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "inventory": true,
+  "orientation": true,
+  "validation": {
+    "ok": true,
+    "violations": []
+  },
+  "metrics": {
+    "pairCount": 3,
+    "pairSum": 35.77,
+    "pairMax": 15.21,
+    "crossings": 12,
+    "foreignPadHits": 13,
+    "wireLength": 89.38,
+    "hpwl": 111.09,
+    "area": 220.87,
+    "aspect": 1.46
+  },
+  "allMetrics": {
+    "pairCount": 3,
+    "pairSum": 35.77,
+    "pairMax": 15.21,
+    "crossings": 24,
+    "foreignPadHits": 22,
+    "wireLength": 115.05,
+    "hpwl": 134.05,
+    "area": 220.87,
+    "aspect": 1.46
+  },
+  "pairs": [],
+  "localHardPairs": [],
+  "hardPairsOk": true,
+  "placements": [
+    {
+      "designator": "U4",
+      "x": 2,
+      "y": 1.063,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R14",
+      "x": -1.797,
+      "y": 7.09,
+      "rotate": 90,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R15",
+      "x": -4.482,
+      "y": 3.086,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R10",
+      "x": -4.482,
+      "y": -1.388,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R12",
+      "x": -4.482,
+      "y": 0.849,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R16",
+      "x": -2.374,
+      "y": -6.73,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R17",
+      "x": -4.609,
+      "y": -6.73,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C20",
+      "x": -1.278,
+      "y": -3.849,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C21",
+      "x": -0.371,
+      "y": -6.43,
+      "rotate": 90,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C22",
+      "x": -4.409,
+      "y": -3.849,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C19",
+      "x": -4.481,
+      "y": 5.09,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C18",
+      "x": 3.937,
+      "y": -8.339,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C23",
+      "x": 2,
+      "y": 5.848,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R11",
+      "x": 2,
+      "y": -4.958,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "R13",
+      "x": 4.237,
+      "y": -4.958,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:adc_supply",
+      "message": "Experimental independent placement: cap_cluster:55; electrical constraints retained"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:adc_supply",
+      "message": "Block postrefine: 1 moves, 11 ms"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:adc",
+      "message": "Block postrefine: 3 moves, 395 ms"
+    }
+  ],
+  "captures": [
+    {
+      "ms": 988.1613000000001,
+      "rank": {
+        "hardCount": 0,
+        "hardSeverity": 0,
+        "score": 1474.2914368928514
+      },
+      "members": [
+        {
+          "label": "C20",
+          "members": [
+            "C20"
+          ]
+        },
+        {
+          "label": "C21",
+          "members": [
+            "C21"
+          ]
+        },
+        {
+          "label": "C22",
+          "members": [
+            "C22"
+          ]
+        },
+        {
+          "label": "passive_net:AFE_3V3",
+          "members": [
+            "R16",
+            "R17"
+          ]
+        }
+      ],
+      "order": [
+        [
+          "R16",
+          "R17"
+        ],
+        [
+          "C20"
+        ],
+        [
+          "C21"
+        ],
+        [
+          "C22"
+        ]
+      ],
+      "relations": [
+        {
+          "id": "hint:component:C20->pad:U4.1:cap_cluster:55",
+          "kind": "hint",
+          "from": "component:C20",
+          "to": "pad:U4.1",
+          "relation": "cap_cluster",
+          "priority": "critical",
+          "hard": true,
+          "weight": 240,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:C21->pad:U4.1:cap_cluster:55",
+          "kind": "hint",
+          "from": "component:C21",
+          "to": "pad:U4.1",
+          "relation": "cap_cluster",
+          "priority": "critical",
+          "hard": true,
+          "weight": 240,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:C22->pad:U4.1:cap_cluster:55",
+          "kind": "hint",
+          "from": "component:C22",
+          "to": "pad:U4.1",
+          "relation": "cap_cluster",
+          "priority": "critical",
+          "hard": true,
+          "weight": 240,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "island_target:island:cap_cluster:55->pad:U4.1:::released:component:C20:pad:U4.1",
+          "kind": "island_target",
+          "from": "component:C20",
+          "to": "pad:U4.1",
+          "priority": "critical",
+          "hard": true,
+          "weight": 23.333333333333332,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "island_target:island:cap_cluster:55->pad:U4.1:::released:component:C21:pad:U4.1",
+          "kind": "island_target",
+          "from": "component:C21",
+          "to": "pad:U4.1",
+          "priority": "critical",
+          "hard": true,
+          "weight": 23.333333333333332,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "island_target:island:cap_cluster:55->pad:U4.1:::released:component:C22:pad:U4.1",
+          "kind": "island_target",
+          "from": "component:C22",
+          "to": "pad:U4.1",
+          "priority": "critical",
+          "hard": true,
+          "weight": 23.333333333333332,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        }
+      ],
+      "experiments": {
+        "netCandidates": true,
+        "stableNetWeight": true,
+        "reducedHull": true,
+        "smoothAspect": true,
+        "frontierOrder": true,
+        "padOwnerCandidates": true,
+        "candidateClearance": true,
+        "candidateRings": true,
+        "padCrossings": true,
+        "longNets": true,
+        "extraPasses": true,
+        "pairSwaps": true,
+        "reinsertPair": true,
+        "keepDenseAccess": true,
+        "ignoredNets": [
+          "GND",
+          "V_MEAS_N",
+          "I_OUT",
+          "HARVEST_P"
+        ],
+        "routingMetric": "micro"
+      }
+    },
+    {
+      "ms": 98573.614,
+      "rank": {
+        "hardCount": 0,
+        "hardSeverity": 0,
+        "score": 22706.063845438337
+      },
+      "members": [
+        {
+          "label": "adc_supply",
+          "members": [
+            "R16",
+            "R17",
+            "C20",
+            "C21",
+            "C22"
+          ]
+        },
+        {
+          "label": "U4",
+          "members": [
+            "U4"
+          ]
+        },
+        {
+          "label": "R10",
+          "members": [
+            "R10"
+          ]
+        },
+        {
+          "label": "R11",
+          "members": [
+            "R11"
+          ]
+        },
+        {
+          "label": "R12",
+          "members": [
+            "R12"
+          ]
+        },
+        {
+          "label": "R13",
+          "members": [
+            "R13"
+          ]
+        },
+        {
+          "label": "R14",
+          "members": [
+            "R14"
+          ]
+        },
+        {
+          "label": "R15",
+          "members": [
+            "R15"
+          ]
+        },
+        {
+          "label": "C18",
+          "members": [
+            "C18"
+          ]
+        },
+        {
+          "label": "C19",
+          "members": [
+            "C19"
+          ]
+        },
+        {
+          "label": "C23",
+          "members": [
+            "C23"
+          ]
+        }
+      ],
+      "order": [
+        [
+          "U4"
+        ],
+        [
+          "R14"
+        ],
+        [
+          "R15"
+        ],
+        [
+          "R10"
+        ],
+        [
+          "R12"
+        ],
+        [
+          "R16",
+          "R17",
+          "C20",
+          "C21",
+          "C22"
+        ],
+        [
+          "C19"
+        ],
+        [
+          "C18"
+        ],
+        [
+          "C23"
+        ],
+        [
+          "R11"
+        ],
+        [
+          "R13"
+        ]
+      ],
+      "relations": [
+        {
+          "id": "connects_net:pad:U4.3->net:ADC_V_P::",
+          "kind": "net",
+          "from": "pad:U4.3",
+          "to": "net:ADC_V_P",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R10.2->net:ADC_V_P::",
+          "kind": "net",
+          "from": "pad:R10.2",
+          "to": "net:ADC_V_P",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R11.1->net:ADC_V_P::",
+          "kind": "net",
+          "from": "pad:R11.1",
+          "to": "net:ADC_V_P",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:C18.1->net:ADC_V_P::",
+          "kind": "net",
+          "from": "pad:C18.1",
+          "to": "net:ADC_V_P",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U4.4->net:ADC_V_N::",
+          "kind": "net",
+          "from": "pad:U4.4",
+          "to": "net:ADC_V_N",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R12.2->net:ADC_V_N::",
+          "kind": "net",
+          "from": "pad:R12.2",
+          "to": "net:ADC_V_N",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R13.1->net:ADC_V_N::",
+          "kind": "net",
+          "from": "pad:R13.1",
+          "to": "net:ADC_V_N",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:C18.2->net:ADC_V_N::",
+          "kind": "net",
+          "from": "pad:C18.2",
+          "to": "net:ADC_V_N",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U4.5->net:ADC_I_N::",
+          "kind": "net",
+          "from": "pad:U4.5",
+          "to": "net:ADC_I_N",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:C19.2->net:ADC_I_N::",
+          "kind": "net",
+          "from": "pad:C19.2",
+          "to": "net:ADC_I_N",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R15.2->net:ADC_I_N::",
+          "kind": "net",
+          "from": "pad:R15.2",
+          "to": "net:ADC_I_N",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U4.6->net:ADC_I_P::",
+          "kind": "net",
+          "from": "pad:U4.6",
+          "to": "net:ADC_I_P",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:C19.1->net:ADC_I_P::",
+          "kind": "net",
+          "from": "pad:C19.1",
+          "to": "net:ADC_I_P",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:R14.2->net:ADC_I_P::",
+          "kind": "net",
+          "from": "pad:R14.2",
+          "to": "net:ADC_I_P",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U4.18->net:ADC_CAP::",
+          "kind": "net",
+          "from": "pad:U4.18",
+          "to": "net:ADC_CAP",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:C23.1->net:ADC_CAP::",
+          "kind": "net",
+          "from": "pad:C23.1",
+          "to": "net:ADC_CAP",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:block:adc_supply->pad:U4.1:near:",
+          "kind": "hint",
+          "from": "block:adc_supply",
+          "to": "pad:U4.1",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 280,
+          "effect": "move_from",
+          "satelliteAnchor": true,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:U3->component:U4:near:39",
+          "kind": "hint",
+          "from": "component:U3",
+          "to": "component:U4",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 140,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:U4->component:U1:near:40",
+          "kind": "hint",
+          "from": "component:U4",
+          "to": "component:U1",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 140,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:U4->component:U2:near:41",
+          "kind": "hint",
+          "from": "component:U4",
+          "to": "component:U2",
+          "relation": "near",
+          "priority": "high",
+          "hard": false,
+          "weight": 140,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:C20->pad:U4.1:cap_cluster:55",
+          "kind": "hint",
+          "from": "component:C20",
+          "to": "pad:U4.1",
+          "relation": "cap_cluster",
+          "priority": "critical",
+          "hard": true,
+          "weight": 240,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:C21->pad:U4.1:cap_cluster:55",
+          "kind": "hint",
+          "from": "component:C21",
+          "to": "pad:U4.1",
+          "relation": "cap_cluster",
+          "priority": "critical",
+          "hard": true,
+          "weight": 240,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:C22->pad:U4.1:cap_cluster:55",
+          "kind": "hint",
+          "from": "component:C22",
+          "to": "pad:U4.1",
+          "relation": "cap_cluster",
+          "priority": "critical",
+          "hard": true,
+          "weight": 240,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "island_target:island:cap_cluster:55->pad:U4.1::",
+          "kind": "island_target",
+          "from": "island:cap_cluster:55",
+          "to": "pad:U4.1",
+          "priority": "critical",
+          "hard": true,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:pad:U1.11->pad:R10.1:critical_pair:75",
+          "kind": "critical_pair",
+          "from": "pad:U1.11",
+          "to": "pad:R10.1",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": false,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 20,
+          "satelliteAnchor": false,
+          "pathId": "voltage_P",
+          "pathShape": "flexible",
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:R10.2->pad:U4.3:critical_pair:76",
+          "kind": "critical_pair",
+          "from": "pad:R10.2",
+          "to": "pad:U4.3",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": false,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 6.5,
+          "satelliteAnchor": false,
+          "pathId": "voltage_P",
+          "pathShape": "flexible",
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:U1.10->pad:R12.1:critical_pair:77",
+          "kind": "critical_pair",
+          "from": "pad:U1.10",
+          "to": "pad:R12.1",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": false,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 20,
+          "satelliteAnchor": false,
+          "pathId": "voltage_N",
+          "pathShape": "flexible",
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:R12.2->pad:U4.4:critical_pair:78",
+          "kind": "critical_pair",
+          "from": "pad:R12.2",
+          "to": "pad:U4.4",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": false,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 6.5,
+          "satelliteAnchor": false,
+          "pathId": "voltage_N",
+          "pathShape": "flexible",
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:U2.11->pad:R14.1:critical_pair:79",
+          "kind": "critical_pair",
+          "from": "pad:U2.11",
+          "to": "pad:R14.1",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": false,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 20,
+          "satelliteAnchor": false,
+          "pathId": "current_P",
+          "pathShape": "flexible",
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:R14.2->pad:U4.6:critical_pair:80",
+          "kind": "critical_pair",
+          "from": "pad:R14.2",
+          "to": "pad:U4.6",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": false,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 6.5,
+          "satelliteAnchor": false,
+          "pathId": "current_P",
+          "pathShape": "flexible",
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:U2.10->pad:R15.1:critical_pair:81",
+          "kind": "critical_pair",
+          "from": "pad:U2.10",
+          "to": "pad:R15.1",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": false,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 20,
+          "satelliteAnchor": false,
+          "pathId": "current_N",
+          "pathShape": "flexible",
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:R15.2->pad:U4.5:critical_pair:82",
+          "kind": "critical_pair",
+          "from": "pad:R15.2",
+          "to": "pad:U4.5",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": false,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 6.5,
+          "satelliteAnchor": false,
+          "pathId": "current_N",
+          "pathShape": "flexible",
+          "preferFacingPads": true
+        }
+      ],
+      "experiments": {
+        "netCandidates": true,
+        "stableNetWeight": true,
+        "reducedHull": true,
+        "smoothAspect": true,
+        "frontierOrder": true,
+        "padOwnerCandidates": true,
+        "candidateClearance": true,
+        "candidateRings": true,
+        "padCrossings": true,
+        "longNets": true,
+        "extraPasses": true,
+        "pairSwaps": true,
+        "reinsertPair": true,
+        "keepDenseAccess": true,
+        "ignoredNets": [
+          "GND",
+          "V_MEAS_N",
+          "I_OUT",
+          "HARVEST_P"
+        ],
+        "routingMetric": "micro"
+      }
+    }
+  ]
+}

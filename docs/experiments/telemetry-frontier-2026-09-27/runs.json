@@ -1,0 +1,402 @@
+[
+  {
+    "block": "lte_power",
+    "variant": "base",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "lte_power",
+    "variant": "order",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "lte_power",
+    "variant": "pads",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "lte_power",
+    "variant": "both",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "lte_power",
+    "variant": "satellites",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "lte_power",
+    "variant": "caps",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "lte_power",
+    "variant": "all",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "lte_power",
+    "variant": "access",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "lte_power",
+    "variant": "access-both",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "lte_power",
+    "variant": "access-all",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "logic_power",
+    "variant": "base",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "logic_power",
+    "variant": "order",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "logic_power",
+    "variant": "pads",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "logic_power",
+    "variant": "both",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "logic_power",
+    "variant": "satellites",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "logic_power",
+    "variant": "caps",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "logic_power",
+    "variant": "all",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "logic_power",
+    "variant": "access",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "logic_power",
+    "variant": "access-both",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "logic_power",
+    "variant": "access-all",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "adc",
+    "variant": "base",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "adc",
+    "variant": "order",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "adc",
+    "variant": "pads",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "adc",
+    "variant": "both",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "adc",
+    "variant": "satellites",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "adc",
+    "variant": "caps",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "adc",
+    "variant": "all",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "adc",
+    "variant": "access",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "adc",
+    "variant": "access-both",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "adc",
+    "variant": "access-all",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "current_iso",
+    "variant": "base",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "current_iso",
+    "variant": "order",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "current_iso",
+    "variant": "pads",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "current_iso",
+    "variant": "both",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "current_iso",
+    "variant": "satellites",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "current_iso",
+    "variant": "caps",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "current_iso",
+    "variant": "all",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "current_iso",
+    "variant": "access",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "current_iso",
+    "variant": "access-both",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "current_iso",
+    "variant": "access-all",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "usb_charge",
+    "variant": "base",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "usb_charge",
+    "variant": "order",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "usb_charge",
+    "variant": "pads",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "usb_charge",
+    "variant": "both",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "usb_charge",
+    "variant": "satellites",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "usb_charge",
+    "variant": "caps",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "usb_charge",
+    "variant": "all",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": null
+  },
+  {
+    "block": "usb_charge",
+    "variant": "access",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "usb_charge",
+    "variant": "access-both",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  },
+  {
+    "block": "usb_charge",
+    "variant": "access-all",
+    "completed": true,
+    "ok": true,
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b"
+  }
+]

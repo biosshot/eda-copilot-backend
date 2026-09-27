@@ -1,0 +1,356 @@
+{
+  "block": "logic_power",
+  "variant": {
+    "id": "access",
+    "label": "Только исправление оценки выходов и island endpoints",
+    "frontier": false,
+    "owner": false,
+    "groups": "off",
+    "access": true
+  },
+  "ms": 2463.9224000000004,
+  "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "nativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b",
+  "inventory": true,
+  "orientation": true,
+  "validation": {
+    "ok": true,
+    "violations": []
+  },
+  "metrics": {
+    "pairCount": 2,
+    "pairSum": 6.63,
+    "pairMax": 3.31,
+    "crossings": 1,
+    "foreignPadHits": 4,
+    "wireLength": 23.24,
+    "hpwl": 25.21,
+    "area": 89.9,
+    "aspect": 1.45
+  },
+  "allMetrics": {
+    "pairCount": 2,
+    "pairSum": 6.63,
+    "pairMax": 3.31,
+    "crossings": 3,
+    "foreignPadHits": 7,
+    "wireLength": 38.02,
+    "hpwl": 35.87,
+    "area": 89.9,
+    "aspect": 1.45
+  },
+  "pairs": [
+    {
+      "pair": "U12.4.L2.1",
+      "mm": 3.313204251174382
+    },
+    {
+      "pair": "U12.2.L2.2",
+      "mm": 3.313330996142703
+    }
+  ],
+  "localHardPairs": [
+    {
+      "hint": {
+        "relation": "critical_pair",
+        "source": {
+          "type": "pin",
+          "designator": "U12",
+          "pin_number": "4"
+        },
+        "target": {
+          "type": "pin",
+          "designator": "L2",
+          "pin_number": "1"
+        },
+        "priority": "critical",
+        "maxDistance": 5,
+        "weightMultiplier": 2.8,
+        "hard": true,
+        "crossingPenalty": 2,
+        "preferFacingPads": true,
+        "core": true,
+        "block": "logic_switch"
+      },
+      "mm": 3.313204251174382
+    },
+    {
+      "hint": {
+        "relation": "critical_pair",
+        "source": {
+          "type": "pin",
+          "designator": "U12",
+          "pin_number": "2"
+        },
+        "target": {
+          "type": "pin",
+          "designator": "L2",
+          "pin_number": "2"
+        },
+        "priority": "critical",
+        "maxDistance": 5,
+        "weightMultiplier": 2.8,
+        "hard": true,
+        "crossingPenalty": 2,
+        "preferFacingPads": true,
+        "core": true,
+        "block": "logic_switch"
+      },
+      "mm": 3.313330996142703
+    }
+  ],
+  "hardPairsOk": true,
+  "placements": [
+    {
+      "designator": "C47",
+      "x": 1.823,
+      "y": 4.326,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C45",
+      "x": -2,
+      "y": 4.428,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C46",
+      "x": -2,
+      "y": 2.219,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "C44",
+      "x": -2,
+      "y": 0.01,
+      "rotate": 0,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "U12",
+      "x": 1.823,
+      "y": 0.769,
+      "rotate": 270,
+      "layer": "top",
+      "score": 0
+    },
+    {
+      "designator": "L2",
+      "x": 1.823,
+      "y": -3.554,
+      "rotate": 180,
+      "layer": "top",
+      "score": 0
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "nodeId": "tree:block:logic_power",
+      "message": "Block postrefine: 0 moves, 31 ms"
+    }
+  ],
+  "captures": [
+    {
+      "ms": 2316.4945000000002,
+      "rank": {
+        "hardCount": 0,
+        "hardSeverity": 0,
+        "score": 2555.223793900493
+      },
+      "members": [
+        {
+          "label": "core_pairs:logic_switch",
+          "members": [
+            "U12",
+            "L2"
+          ]
+        },
+        {
+          "label": "C44",
+          "members": [
+            "C44"
+          ]
+        },
+        {
+          "label": "C45",
+          "members": [
+            "C45"
+          ]
+        },
+        {
+          "label": "C46",
+          "members": [
+            "C46"
+          ]
+        },
+        {
+          "label": "C47",
+          "members": [
+            "C47"
+          ]
+        }
+      ],
+      "order": [
+        [
+          "C47"
+        ],
+        [
+          "C45"
+        ],
+        [
+          "C46"
+        ],
+        [
+          "C44"
+        ],
+        [
+          "U12",
+          "L2"
+        ]
+      ],
+      "relations": [
+        {
+          "id": "connects_net:pad:U12.2->net:SYS_L2::",
+          "kind": "net",
+          "from": "pad:U12.2",
+          "to": "net:SYS_L2",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:L2.2->net:SYS_L2::",
+          "kind": "net",
+          "from": "pad:L2.2",
+          "to": "net:SYS_L2",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:U12.4->net:SYS_L1::",
+          "kind": "net",
+          "from": "pad:U12.4",
+          "to": "net:SYS_L1",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "connects_net:pad:L2.1->net:SYS_L1::",
+          "kind": "net",
+          "from": "pad:L2.1",
+          "to": "net:SYS_L1",
+          "hard": false,
+          "effect": "score_only",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:component:U12->pad:U5.2:near:35",
+          "kind": "hint",
+          "from": "component:U12",
+          "to": "pad:U5.2",
+          "relation": "near",
+          "priority": "normal",
+          "hard": false,
+          "weight": 70,
+          "effect": "move_from",
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:pad:U12.4->pad:L2.1:critical_pair:44",
+          "kind": "critical_pair",
+          "from": "pad:U12.4",
+          "to": "pad:L2.1",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 672,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:U12.2->pad:L2.2:critical_pair:45",
+          "kind": "critical_pair",
+          "from": "pad:U12.2",
+          "to": "pad:L2.2",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 672,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "preferFacingPads": true
+        },
+        {
+          "id": "hint:pad:C44.1->pad:U12.5:critical_pair:47",
+          "kind": "critical_pair",
+          "from": "pad:C44.1",
+          "to": "pad:U12.5",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 5,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        },
+        {
+          "id": "hint:pad:C47.1->pad:U12.8:critical_pair:48",
+          "kind": "critical_pair",
+          "from": "pad:C47.1",
+          "to": "pad:U12.8",
+          "relation": "critical_pair",
+          "priority": "critical",
+          "hard": true,
+          "weight": 432,
+          "effect": "move_from",
+          "maxDistance": 4,
+          "satelliteAnchor": false,
+          "preferFacingPads": false
+        }
+      ],
+      "experiments": {
+        "netCandidates": true,
+        "stableNetWeight": true,
+        "reducedHull": true,
+        "smoothAspect": true,
+        "frontierOrder": false,
+        "padOwnerCandidates": false,
+        "localAccess": true,
+        "candidateClearance": true,
+        "candidateRings": true,
+        "padCrossings": true,
+        "longNets": true,
+        "extraPasses": true,
+        "pairSwaps": true,
+        "reinsertPair": true,
+        "keepDenseAccess": true,
+        "ignoredNets": [
+          "GND",
+          "V_MEAS_N",
+          "I_OUT",
+          "HARVEST_P"
+        ],
+        "routingMetric": "micro"
+      }
+    }
+  ]
+}

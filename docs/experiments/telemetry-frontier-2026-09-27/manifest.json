@@ -1,0 +1,22 @@
+{
+  "sourceCommit": "dd5662c",
+  "finalNativeHash": "1c34c75242396f7b32e3428a7f8cc97174c77c5cf7d2cc17439cbfbacd5a9b9b",
+  "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "scope": "Telemetry local subtrees only; no board pack or EasyEDA mutation",
+  "defaults": {
+    "frontier": true,
+    "padOwner": true,
+    "localAccess": true,
+    "relaxGroups": "off"
+  },
+  "validation": {
+    "pcbSuite": 163,
+    "additionalRegression": 1,
+    "nativePassed": 50,
+    "nativeIgnored": 1,
+    "typecheck": true,
+    "build": true,
+    "localLayouts": 50
+  },
+  "note": "Initial ablation runs preceded localAccess implementation; their native hash was not recorded. All switches are explicit in each result. Final native hash applies to the access runs and refreshed cap runs."
+}

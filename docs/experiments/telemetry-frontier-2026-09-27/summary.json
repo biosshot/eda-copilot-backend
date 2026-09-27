@@ -1,0 +1,1821 @@
+[
+  {
+    "block": "lte_power",
+    "components": 10,
+    "runs": [
+      {
+        "id": "base",
+        "ok": true,
+        "metrics": {
+          "pairCount": 5,
+          "pairSum": 23.21,
+          "pairMax": 8.91,
+          "crossings": 1,
+          "foreignPadHits": 3,
+          "wireLength": 43.39,
+          "hpwl": 47.96,
+          "area": 157.24,
+          "aspect": 1.4
+        },
+        "allMetrics": {
+          "pairCount": 5,
+          "pairSum": 23.21,
+          "pairMax": 8.91,
+          "crossings": 7,
+          "foreignPadHits": 7,
+          "wireLength": 72.74,
+          "hpwl": 69.78,
+          "area": 157.24,
+          "aspect": 1.4
+        },
+        "pairs": [
+          {
+            "pair": "C33.1.U10.3",
+            "mm": 8.907000002245423
+          },
+          {
+            "pair": "U10.11.L1.1",
+            "mm": 3.5540371987361086
+          },
+          {
+            "pair": "U10.9.L1.2",
+            "mm": 3.5541553553551934
+          }
+        ],
+        "ms": 12421.7477,
+        "released": []
+      },
+      {
+        "id": "order",
+        "ok": true,
+        "metrics": {
+          "pairCount": 5,
+          "pairSum": 30.82,
+          "pairMax": 9.23,
+          "crossings": 4,
+          "foreignPadHits": 1,
+          "wireLength": 54.51,
+          "hpwl": 62.5,
+          "area": 141.72,
+          "aspect": 1.2
+        },
+        "allMetrics": {
+          "pairCount": 5,
+          "pairSum": 30.82,
+          "pairMax": 9.23,
+          "crossings": 9,
+          "foreignPadHits": 5,
+          "wireLength": 79.17,
+          "hpwl": 81.11,
+          "area": 141.72,
+          "aspect": 1.2
+        },
+        "pairs": [
+          {
+            "pair": "C33.1.U10.3",
+            "mm": 8.075148853117199
+          },
+          {
+            "pair": "U10.11.L1.1",
+            "mm": 3.5540371987361072
+          },
+          {
+            "pair": "U10.9.L1.2",
+            "mm": 3.554155355355194
+          }
+        ],
+        "ms": 8750.6728,
+        "released": []
+      },
+      {
+        "id": "pads",
+        "ok": true,
+        "metrics": {
+          "pairCount": 5,
+          "pairSum": 21.87,
+          "pairMax": 6.93,
+          "crossings": 4,
+          "foreignPadHits": 2,
+          "wireLength": 45.06,
+          "hpwl": 52.52,
+          "area": 139.8,
+          "aspect": 1.78
+        },
+        "allMetrics": {
+          "pairCount": 5,
+          "pairSum": 21.87,
+          "pairMax": 6.93,
+          "crossings": 8,
+          "foreignPadHits": 8,
+          "wireLength": 72.06,
+          "hpwl": 71.71,
+          "area": 139.8,
+          "aspect": 1.78
+        },
+        "pairs": [
+          {
+            "pair": "C33.1.U10.3",
+            "mm": 6.934977793764014
+          },
+          {
+            "pair": "U10.11.L1.1",
+            "mm": 3.5540371987361077
+          },
+          {
+            "pair": "U10.9.L1.2",
+            "mm": 3.5541553553551934
+          }
+        ],
+        "ms": 10812.6699,
+        "released": []
+      },
+      {
+        "id": "both",
+        "ok": true,
+        "metrics": {
+          "pairCount": 5,
+          "pairSum": 35.6,
+          "pairMax": 9.73,
+          "crossings": 4,
+          "foreignPadHits": 2,
+          "wireLength": 60.13,
+          "hpwl": 65.94,
+          "area": 172.15,
+          "aspect": 1.34
+        },
+        "allMetrics": {
+          "pairCount": 5,
+          "pairSum": 35.6,
+          "pairMax": 9.73,
+          "crossings": 9,
+          "foreignPadHits": 5,
+          "wireLength": 85.79,
+          "hpwl": 88.94,
+          "area": 172.15,
+          "aspect": 1.34
+        },
+        "pairs": [
+          {
+            "pair": "C33.1.U10.3",
+            "mm": 9.670104135943935
+          },
+          {
+            "pair": "U10.11.L1.1",
+            "mm": 3.5540371987361077
+          },
+          {
+            "pair": "U10.9.L1.2",
+            "mm": 3.554155355355194
+          }
+        ],
+        "ms": 13671.752700000001,
+        "released": []
+      },
+      {
+        "id": "satellites",
+        "ok": true,
+        "metrics": {
+          "pairCount": 5,
+          "pairSum": 35.6,
+          "pairMax": 9.73,
+          "crossings": 4,
+          "foreignPadHits": 2,
+          "wireLength": 60.13,
+          "hpwl": 65.94,
+          "area": 172.15,
+          "aspect": 1.34
+        },
+        "allMetrics": {
+          "pairCount": 5,
+          "pairSum": 35.6,
+          "pairMax": 9.73,
+          "crossings": 9,
+          "foreignPadHits": 5,
+          "wireLength": 85.79,
+          "hpwl": 88.94,
+          "area": 172.15,
+          "aspect": 1.34
+        },
+        "pairs": [
+          {
+            "pair": "C33.1.U10.3",
+            "mm": 9.670104135943935
+          },
+          {
+            "pair": "U10.11.L1.1",
+            "mm": 3.5540371987361077
+          },
+          {
+            "pair": "U10.9.L1.2",
+            "mm": 3.554155355355194
+          }
+        ],
+        "ms": 9423.0089,
+        "released": []
+      },
+      {
+        "id": "caps",
+        "ok": true,
+        "metrics": {
+          "pairCount": 5,
+          "pairSum": 32.29,
+          "pairMax": 9.09,
+          "crossings": 3,
+          "foreignPadHits": 1,
+          "wireLength": 52.42,
+          "hpwl": 57.65,
+          "area": 179.96,
+          "aspect": 1.69
+        },
+        "allMetrics": {
+          "pairCount": 5,
+          "pairSum": 32.29,
+          "pairMax": 9.09,
+          "crossings": 9,
+          "foreignPadHits": 7,
+          "wireLength": 81.15,
+          "hpwl": 79.86,
+          "area": 179.96,
+          "aspect": 1.69
+        },
+        "pairs": [
+          {
+            "pair": "C33.1.U10.3",
+            "mm": 8.894000463233628
+          },
+          {
+            "pair": "U10.11.L1.1",
+            "mm": 3.5540371987361072
+          },
+          {
+            "pair": "U10.9.L1.2",
+            "mm": 3.554155355355194
+          }
+        ],
+        "ms": 15299.0708,
+        "released": [
+          "Experimental independent placement: cap_cluster:50; electrical constraints retained"
+        ]
+      },
+      {
+        "id": "all",
+        "ok": true,
+        "metrics": {
+          "pairCount": 5,
+          "pairSum": 32.29,
+          "pairMax": 9.09,
+          "crossings": 3,
+          "foreignPadHits": 1,
+          "wireLength": 52.42,
+          "hpwl": 57.65,
+          "area": 179.96,
+          "aspect": 1.69
+        },
+        "allMetrics": {
+          "pairCount": 5,
+          "pairSum": 32.29,
+          "pairMax": 9.09,
+          "crossings": 9,
+          "foreignPadHits": 7,
+          "wireLength": 81.15,
+          "hpwl": 79.86,
+          "area": 179.96,
+          "aspect": 1.69
+        },
+        "pairs": [
+          {
+            "pair": "C33.1.U10.3",
+            "mm": 8.894000463233628
+          },
+          {
+            "pair": "U10.11.L1.1",
+            "mm": 3.5540371987361072
+          },
+          {
+            "pair": "U10.9.L1.2",
+            "mm": 3.554155355355194
+          }
+        ],
+        "ms": 15312.5291,
+        "released": [
+          "Experimental independent placement: cap_cluster:50; electrical constraints retained"
+        ]
+      },
+      {
+        "id": "access",
+        "ok": true,
+        "metrics": {
+          "pairCount": 5,
+          "pairSum": 17.12,
+          "pairMax": 5.15,
+          "crossings": 1,
+          "foreignPadHits": 0,
+          "wireLength": 36.47,
+          "hpwl": 42.98,
+          "area": 168.88,
+          "aspect": 1.13
+        },
+        "allMetrics": {
+          "pairCount": 5,
+          "pairSum": 17.12,
+          "pairMax": 5.15,
+          "crossings": 6,
+          "foreignPadHits": 6,
+          "wireLength": 62.41,
+          "hpwl": 61.6,
+          "area": 168.88,
+          "aspect": 1.13
+        },
+        "pairs": [
+          {
+            "pair": "C33.1.U10.3",
+            "mm": 1.9169009416242664
+          },
+          {
+            "pair": "U10.11.L1.1",
+            "mm": 3.5540371987361077
+          },
+          {
+            "pair": "U10.9.L1.2",
+            "mm": 3.554155355355193
+          }
+        ],
+        "ms": 13455.998500000002,
+        "released": []
+      },
+      {
+        "id": "access-both",
+        "ok": true,
+        "metrics": {
+          "pairCount": 5,
+          "pairSum": 16.43,
+          "pairMax": 4.9,
+          "crossings": 1,
+          "foreignPadHits": 0,
+          "wireLength": 35.55,
+          "hpwl": 41.53,
+          "area": 158.98,
+          "aspect": 1.16
+        },
+        "allMetrics": {
+          "pairCount": 5,
+          "pairSum": 16.43,
+          "pairMax": 4.9,
+          "crossings": 5,
+          "foreignPadHits": 4,
+          "wireLength": 59.6,
+          "hpwl": 59.39,
+          "area": 158.98,
+          "aspect": 1.16
+        },
+        "pairs": [
+          {
+            "pair": "C33.1.U10.3",
+            "mm": 1.936
+          },
+          {
+            "pair": "U10.11.L1.1",
+            "mm": 3.5540371987361072
+          },
+          {
+            "pair": "U10.9.L1.2",
+            "mm": 3.554155355355193
+          }
+        ],
+        "ms": 10580.0699,
+        "released": []
+      },
+      {
+        "id": "access-all",
+        "ok": true,
+        "metrics": {
+          "pairCount": 5,
+          "pairSum": 23.14,
+          "pairMax": 9.46,
+          "crossings": 2,
+          "foreignPadHits": 0,
+          "wireLength": 44.54,
+          "hpwl": 49.35,
+          "area": 176.17,
+          "aspect": 1.01
+        },
+        "allMetrics": {
+          "pairCount": 5,
+          "pairSum": 23.14,
+          "pairMax": 9.46,
+          "crossings": 8,
+          "foreignPadHits": 3,
+          "wireLength": 69.09,
+          "hpwl": 67.79,
+          "area": 176.17,
+          "aspect": 1.01
+        },
+        "pairs": [
+          {
+            "pair": "C33.1.U10.3",
+            "mm": 1.936
+          },
+          {
+            "pair": "U10.11.L1.1",
+            "mm": 3.554037198736109
+          },
+          {
+            "pair": "U10.9.L1.2",
+            "mm": 3.554155355355194
+          }
+        ],
+        "ms": 13974.9212,
+        "released": [
+          "Experimental independent placement: cap_cluster:50; electrical constraints retained"
+        ]
+      }
+    ]
+  },
+  {
+    "block": "logic_power",
+    "components": 6,
+    "runs": [
+      {
+        "id": "base",
+        "ok": true,
+        "metrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 1,
+          "foreignPadHits": 4,
+          "wireLength": 22.8,
+          "hpwl": 24.25,
+          "area": 96.45,
+          "aspect": 1.35
+        },
+        "allMetrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 2,
+          "foreignPadHits": 7,
+          "wireLength": 38.28,
+          "hpwl": 35.49,
+          "area": 96.45,
+          "aspect": 1.35
+        },
+        "pairs": [
+          {
+            "pair": "U12.4.L2.1",
+            "mm": 3.313204251174382
+          },
+          {
+            "pair": "U12.2.L2.2",
+            "mm": 3.313330996142703
+          }
+        ],
+        "ms": 1919.6800999999998,
+        "released": []
+      },
+      {
+        "id": "order",
+        "ok": true,
+        "metrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 1,
+          "foreignPadHits": 4,
+          "wireLength": 22.16,
+          "hpwl": 23.51,
+          "area": 92.19,
+          "aspect": 1.42
+        },
+        "allMetrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 2,
+          "foreignPadHits": 7,
+          "wireLength": 37.36,
+          "hpwl": 34.37,
+          "area": 92.19,
+          "aspect": 1.42
+        },
+        "pairs": [
+          {
+            "pair": "U12.4.L2.1",
+            "mm": 3.313204251174382
+          },
+          {
+            "pair": "U12.2.L2.2",
+            "mm": 3.313330996142703
+          }
+        ],
+        "ms": 2161.6986,
+        "released": []
+      },
+      {
+        "id": "pads",
+        "ok": true,
+        "metrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 0,
+          "foreignPadHits": 2,
+          "wireLength": 25.7,
+          "hpwl": 26.72,
+          "area": 107.1,
+          "aspect": 1.78
+        },
+        "allMetrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 1,
+          "foreignPadHits": 5,
+          "wireLength": 40.58,
+          "hpwl": 39.42,
+          "area": 107.1,
+          "aspect": 1.78
+        },
+        "pairs": [
+          {
+            "pair": "U12.4.L2.1",
+            "mm": 3.3132042511743824
+          },
+          {
+            "pair": "U12.2.L2.2",
+            "mm": 3.3133309961427035
+          }
+        ],
+        "ms": 1957.6759999999997,
+        "released": []
+      },
+      {
+        "id": "both",
+        "ok": true,
+        "metrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 0,
+          "foreignPadHits": 2,
+          "wireLength": 25.7,
+          "hpwl": 26.72,
+          "area": 107.09,
+          "aspect": 1.78
+        },
+        "allMetrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 1,
+          "foreignPadHits": 5,
+          "wireLength": 40.58,
+          "hpwl": 39.42,
+          "area": 107.09,
+          "aspect": 1.78
+        },
+        "pairs": [
+          {
+            "pair": "U12.4.L2.1",
+            "mm": 3.3132042511743824
+          },
+          {
+            "pair": "U12.2.L2.2",
+            "mm": 3.3133309961427035
+          }
+        ],
+        "ms": 2084.6549,
+        "released": []
+      },
+      {
+        "id": "satellites",
+        "ok": true,
+        "metrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 0,
+          "foreignPadHits": 2,
+          "wireLength": 25.7,
+          "hpwl": 26.72,
+          "area": 107.09,
+          "aspect": 1.78
+        },
+        "allMetrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 1,
+          "foreignPadHits": 5,
+          "wireLength": 40.58,
+          "hpwl": 39.42,
+          "area": 107.09,
+          "aspect": 1.78
+        },
+        "pairs": [
+          {
+            "pair": "U12.4.L2.1",
+            "mm": 3.3132042511743824
+          },
+          {
+            "pair": "U12.2.L2.2",
+            "mm": 3.3133309961427035
+          }
+        ],
+        "ms": 1512.313,
+        "released": []
+      },
+      {
+        "id": "caps",
+        "ok": true,
+        "metrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 0,
+          "foreignPadHits": 2,
+          "wireLength": 25.7,
+          "hpwl": 26.72,
+          "area": 107.09,
+          "aspect": 1.78
+        },
+        "allMetrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 1,
+          "foreignPadHits": 5,
+          "wireLength": 40.58,
+          "hpwl": 39.42,
+          "area": 107.09,
+          "aspect": 1.78
+        },
+        "pairs": [
+          {
+            "pair": "U12.4.L2.1",
+            "mm": 3.3132042511743824
+          },
+          {
+            "pair": "U12.2.L2.2",
+            "mm": 3.3133309961427035
+          }
+        ],
+        "ms": 1866.3274999999999,
+        "released": []
+      },
+      {
+        "id": "all",
+        "ok": true,
+        "metrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 0,
+          "foreignPadHits": 2,
+          "wireLength": 25.7,
+          "hpwl": 26.72,
+          "area": 107.09,
+          "aspect": 1.78
+        },
+        "allMetrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 1,
+          "foreignPadHits": 5,
+          "wireLength": 40.58,
+          "hpwl": 39.42,
+          "area": 107.09,
+          "aspect": 1.78
+        },
+        "pairs": [
+          {
+            "pair": "U12.4.L2.1",
+            "mm": 3.3132042511743824
+          },
+          {
+            "pair": "U12.2.L2.2",
+            "mm": 3.3133309961427035
+          }
+        ],
+        "ms": 1885.8685,
+        "released": []
+      },
+      {
+        "id": "access",
+        "ok": true,
+        "metrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 1,
+          "foreignPadHits": 4,
+          "wireLength": 23.24,
+          "hpwl": 25.21,
+          "area": 89.9,
+          "aspect": 1.45
+        },
+        "allMetrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 3,
+          "foreignPadHits": 7,
+          "wireLength": 38.02,
+          "hpwl": 35.87,
+          "area": 89.9,
+          "aspect": 1.45
+        },
+        "pairs": [
+          {
+            "pair": "U12.4.L2.1",
+            "mm": 3.313204251174382
+          },
+          {
+            "pair": "U12.2.L2.2",
+            "mm": 3.313330996142703
+          }
+        ],
+        "ms": 2463.9224000000004,
+        "released": []
+      },
+      {
+        "id": "access-both",
+        "ok": true,
+        "metrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 19.96,
+          "hpwl": 20.48,
+          "area": 117.38,
+          "aspect": 1.11
+        },
+        "allMetrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 2,
+          "foreignPadHits": 8,
+          "wireLength": 37.96,
+          "hpwl": 37.17,
+          "area": 117.38,
+          "aspect": 1.11
+        },
+        "pairs": [
+          {
+            "pair": "U12.4.L2.1",
+            "mm": 3.313204251174382
+          },
+          {
+            "pair": "U12.2.L2.2",
+            "mm": 3.313330996142703
+          }
+        ],
+        "ms": 1872.6022999999998,
+        "released": []
+      },
+      {
+        "id": "access-all",
+        "ok": true,
+        "metrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 19.96,
+          "hpwl": 20.48,
+          "area": 117.38,
+          "aspect": 1.11
+        },
+        "allMetrics": {
+          "pairCount": 2,
+          "pairSum": 6.63,
+          "pairMax": 3.31,
+          "crossings": 2,
+          "foreignPadHits": 8,
+          "wireLength": 37.96,
+          "hpwl": 37.17,
+          "area": 117.38,
+          "aspect": 1.11
+        },
+        "pairs": [
+          {
+            "pair": "U12.4.L2.1",
+            "mm": 3.313204251174382
+          },
+          {
+            "pair": "U12.2.L2.2",
+            "mm": 3.313330996142703
+          }
+        ],
+        "ms": 1816.4158,
+        "released": []
+      }
+    ]
+  },
+  {
+    "block": "adc",
+    "components": 15,
+    "runs": [
+      {
+        "id": "base",
+        "ok": true,
+        "metrics": {
+          "pairCount": 3,
+          "pairSum": 31.86,
+          "pairMax": 11.34,
+          "crossings": 9,
+          "foreignPadHits": 12,
+          "wireLength": 86.22,
+          "hpwl": 97.17,
+          "area": 215.25,
+          "aspect": 1.42
+        },
+        "allMetrics": {
+          "pairCount": 3,
+          "pairSum": 31.86,
+          "pairMax": 11.34,
+          "crossings": 19,
+          "foreignPadHits": 18,
+          "wireLength": 118.88,
+          "hpwl": 123.72,
+          "area": 215.25,
+          "aspect": 1.42
+        },
+        "pairs": [],
+        "ms": 109665.5067,
+        "released": []
+      },
+      {
+        "id": "order",
+        "ok": true,
+        "metrics": {
+          "pairCount": 3,
+          "pairSum": 38.22,
+          "pairMax": 14.92,
+          "crossings": 10,
+          "foreignPadHits": 16,
+          "wireLength": 99.74,
+          "hpwl": 115.22,
+          "area": 230.7,
+          "aspect": 1.5
+        },
+        "allMetrics": {
+          "pairCount": 3,
+          "pairSum": 38.22,
+          "pairMax": 14.92,
+          "crossings": 18,
+          "foreignPadHits": 24,
+          "wireLength": 123.06,
+          "hpwl": 135.84,
+          "area": 230.7,
+          "aspect": 1.5
+        },
+        "pairs": [],
+        "ms": 92153.4872,
+        "released": []
+      },
+      {
+        "id": "pads",
+        "ok": true,
+        "metrics": {
+          "pairCount": 3,
+          "pairSum": 20.9,
+          "pairMax": 11.73,
+          "crossings": 1,
+          "foreignPadHits": 10,
+          "wireLength": 82.49,
+          "hpwl": 90.83,
+          "area": 234.25,
+          "aspect": 1.72
+        },
+        "allMetrics": {
+          "pairCount": 3,
+          "pairSum": 20.9,
+          "pairMax": 11.73,
+          "crossings": 5,
+          "foreignPadHits": 13,
+          "wireLength": 111.86,
+          "hpwl": 119.08,
+          "area": 234.25,
+          "aspect": 1.72
+        },
+        "pairs": [],
+        "ms": 114112.1503,
+        "released": []
+      },
+      {
+        "id": "both",
+        "ok": true,
+        "metrics": {
+          "pairCount": 3,
+          "pairSum": 38.22,
+          "pairMax": 14.92,
+          "crossings": 10,
+          "foreignPadHits": 16,
+          "wireLength": 99.74,
+          "hpwl": 115.22,
+          "area": 230.7,
+          "aspect": 1.5
+        },
+        "allMetrics": {
+          "pairCount": 3,
+          "pairSum": 38.22,
+          "pairMax": 14.92,
+          "crossings": 18,
+          "foreignPadHits": 24,
+          "wireLength": 123.06,
+          "hpwl": 135.84,
+          "area": 230.7,
+          "aspect": 1.5
+        },
+        "pairs": [],
+        "ms": 97412.957,
+        "released": []
+      },
+      {
+        "id": "satellites",
+        "ok": true,
+        "metrics": {
+          "pairCount": 3,
+          "pairSum": 12.23,
+          "pairMax": 5.4,
+          "crossings": 4,
+          "foreignPadHits": 7,
+          "wireLength": 78.62,
+          "hpwl": 84.51,
+          "area": 250.15,
+          "aspect": 1.15
+        },
+        "allMetrics": {
+          "pairCount": 3,
+          "pairSum": 12.23,
+          "pairMax": 5.4,
+          "crossings": 5,
+          "foreignPadHits": 13,
+          "wireLength": 105.36,
+          "hpwl": 109.03,
+          "area": 250.15,
+          "aspect": 1.15
+        },
+        "pairs": [],
+        "ms": 12697.486,
+        "released": [
+          "Experimental independent placement: adc_supply, passive_net:AFE_3V3; electrical constraints retained"
+        ]
+      },
+      {
+        "id": "caps",
+        "ok": true,
+        "metrics": {
+          "pairCount": 3,
+          "pairSum": 35.77,
+          "pairMax": 15.21,
+          "crossings": 12,
+          "foreignPadHits": 13,
+          "wireLength": 89.38,
+          "hpwl": 111.09,
+          "area": 220.87,
+          "aspect": 1.46
+        },
+        "allMetrics": {
+          "pairCount": 3,
+          "pairSum": 35.77,
+          "pairMax": 15.21,
+          "crossings": 24,
+          "foreignPadHits": 22,
+          "wireLength": 115.05,
+          "hpwl": 134.05,
+          "area": 220.87,
+          "aspect": 1.46
+        },
+        "pairs": [],
+        "ms": 99986.18239999999,
+        "released": [
+          "Experimental independent placement: cap_cluster:55; electrical constraints retained"
+        ]
+      },
+      {
+        "id": "all",
+        "ok": true,
+        "metrics": {
+          "pairCount": 3,
+          "pairSum": 13.76,
+          "pairMax": 7.29,
+          "crossings": 3,
+          "foreignPadHits": 4,
+          "wireLength": 88.6,
+          "hpwl": 87.83,
+          "area": 227.56,
+          "aspect": 1.61
+        },
+        "allMetrics": {
+          "pairCount": 3,
+          "pairSum": 13.76,
+          "pairMax": 7.29,
+          "crossings": 10,
+          "foreignPadHits": 11,
+          "wireLength": 121.83,
+          "hpwl": 114.03,
+          "area": 227.56,
+          "aspect": 1.61
+        },
+        "pairs": [],
+        "ms": 22446.593699999998,
+        "released": [
+          "Experimental independent placement: cap_cluster:55; electrical constraints retained",
+          "Experimental independent placement: adc_supply, passive_net:AFE_3V3; electrical constraints retained"
+        ]
+      },
+      {
+        "id": "access",
+        "ok": true,
+        "metrics": {
+          "pairCount": 3,
+          "pairSum": 35.73,
+          "pairMax": 17.53,
+          "crossings": 9,
+          "foreignPadHits": 13,
+          "wireLength": 94.8,
+          "hpwl": 113.88,
+          "area": 281.24,
+          "aspect": 1.21
+        },
+        "allMetrics": {
+          "pairCount": 3,
+          "pairSum": 35.73,
+          "pairMax": 17.53,
+          "crossings": 13,
+          "foreignPadHits": 16,
+          "wireLength": 119.12,
+          "hpwl": 136.92,
+          "area": 281.24,
+          "aspect": 1.21
+        },
+        "pairs": [],
+        "ms": 111972.93160000001,
+        "released": []
+      },
+      {
+        "id": "access-both",
+        "ok": true,
+        "metrics": {
+          "pairCount": 3,
+          "pairSum": 26.13,
+          "pairMax": 11.73,
+          "crossings": 6,
+          "foreignPadHits": 11,
+          "wireLength": 77.34,
+          "hpwl": 87.58,
+          "area": 218.05,
+          "aspect": 1.34
+        },
+        "allMetrics": {
+          "pairCount": 3,
+          "pairSum": 26.13,
+          "pairMax": 11.73,
+          "crossings": 13,
+          "foreignPadHits": 15,
+          "wireLength": 98.36,
+          "hpwl": 108.1,
+          "area": 218.05,
+          "aspect": 1.34
+        },
+        "pairs": [],
+        "ms": 93424.05129999999,
+        "released": []
+      },
+      {
+        "id": "access-all",
+        "ok": true,
+        "metrics": {
+          "pairCount": 3,
+          "pairSum": 12.94,
+          "pairMax": 5.01,
+          "crossings": 3,
+          "foreignPadHits": 7,
+          "wireLength": 76.45,
+          "hpwl": 85.21,
+          "area": 241.41,
+          "aspect": 1.55
+        },
+        "allMetrics": {
+          "pairCount": 3,
+          "pairSum": 12.94,
+          "pairMax": 5.01,
+          "crossings": 8,
+          "foreignPadHits": 11,
+          "wireLength": 103.64,
+          "hpwl": 108.56,
+          "area": 241.41,
+          "aspect": 1.55
+        },
+        "pairs": [],
+        "ms": 18718.1294,
+        "released": [
+          "Experimental independent placement: cap_cluster:55; electrical constraints retained",
+          "Experimental independent placement: adc_supply, passive_net:AFE_3V3; electrical constraints retained"
+        ]
+      }
+    ]
+  },
+  {
+    "block": "current_iso",
+    "components": 12,
+    "runs": [
+      {
+        "id": "base",
+        "ok": true,
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 5.02,
+          "pairMax": 5.02,
+          "crossings": 1,
+          "foreignPadHits": 5,
+          "wireLength": 53.37,
+          "hpwl": 64.48,
+          "area": 414.42,
+          "aspect": 1.06
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 5.02,
+          "pairMax": 5.02,
+          "crossings": 5,
+          "foreignPadHits": 14,
+          "wireLength": 93.05,
+          "hpwl": 103.43,
+          "area": 414.42,
+          "aspect": 1.06
+        },
+        "pairs": [
+          {
+            "pair": "C13.1.U2.1",
+            "mm": 2.165615847744009
+          },
+          {
+            "pair": "C15.1.U2.5",
+            "mm": 2.8349050777759737
+          }
+        ],
+        "ms": 26787.272399999998,
+        "released": []
+      },
+      {
+        "id": "order",
+        "ok": true,
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.19,
+          "pairMax": 3.19,
+          "crossings": 0,
+          "foreignPadHits": 5,
+          "wireLength": 52.33,
+          "hpwl": 64.79,
+          "area": 345.39,
+          "aspect": 1.27
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.19,
+          "pairMax": 3.19,
+          "crossings": 3,
+          "foreignPadHits": 14,
+          "wireLength": 96.09,
+          "hpwl": 106.59,
+          "area": 345.39,
+          "aspect": 1.27
+        },
+        "pairs": [
+          {
+            "pair": "C13.1.U2.1",
+            "mm": 2.165615847744009
+          },
+          {
+            "pair": "C15.1.U2.5",
+            "mm": 4.227395604861225
+          }
+        ],
+        "ms": 25608.4784,
+        "released": []
+      },
+      {
+        "id": "pads",
+        "ok": true,
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 4.77,
+          "pairMax": 4.77,
+          "crossings": 1,
+          "foreignPadHits": 5,
+          "wireLength": 53.11,
+          "hpwl": 64.14,
+          "area": 406.88,
+          "aspect": 1.1
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 4.77,
+          "pairMax": 4.77,
+          "crossings": 5,
+          "foreignPadHits": 14,
+          "wireLength": 92.64,
+          "hpwl": 102.75,
+          "area": 406.88,
+          "aspect": 1.1
+        },
+        "pairs": [
+          {
+            "pair": "C13.1.U2.1",
+            "mm": 2.1665888857833644
+          },
+          {
+            "pair": "C15.1.U2.5",
+            "mm": 2.8349050777759737
+          }
+        ],
+        "ms": 26700.1382,
+        "released": []
+      },
+      {
+        "id": "both",
+        "ok": true,
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.19,
+          "pairMax": 3.19,
+          "crossings": 0,
+          "foreignPadHits": 5,
+          "wireLength": 52.33,
+          "hpwl": 64.79,
+          "area": 345.41,
+          "aspect": 1.27
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.19,
+          "pairMax": 3.19,
+          "crossings": 3,
+          "foreignPadHits": 14,
+          "wireLength": 96.09,
+          "hpwl": 106.59,
+          "area": 345.41,
+          "aspect": 1.27
+        },
+        "pairs": [
+          {
+            "pair": "C13.1.U2.1",
+            "mm": 2.1665888857833644
+          },
+          {
+            "pair": "C15.1.U2.5",
+            "mm": 4.226878304375464
+          }
+        ],
+        "ms": 26389.5671,
+        "released": []
+      },
+      {
+        "id": "satellites",
+        "ok": true,
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.2,
+          "pairMax": 3.2,
+          "crossings": 0,
+          "foreignPadHits": 4,
+          "wireLength": 51.61,
+          "hpwl": 61.02,
+          "area": 351.78,
+          "aspect": 1.26
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.2,
+          "pairMax": 3.2,
+          "crossings": 3,
+          "foreignPadHits": 15,
+          "wireLength": 95.75,
+          "hpwl": 102.92,
+          "area": 351.78,
+          "aspect": 1.26
+        },
+        "pairs": [
+          {
+            "pair": "C13.1.U2.1",
+            "mm": 2.087100021561018
+          },
+          {
+            "pair": "C15.1.U2.5",
+            "mm": 3.9486816534129465
+          }
+        ],
+        "ms": 59722.602999999996,
+        "released": [
+          "Experimental independent placement: current_hdc, passive_net:I_OUT, current_hldo, passive_net:I_OUT, current_secondary; electrical constraints retained"
+        ]
+      },
+      {
+        "id": "caps",
+        "ok": true,
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.19,
+          "pairMax": 3.19,
+          "crossings": 0,
+          "foreignPadHits": 5,
+          "wireLength": 52.33,
+          "hpwl": 64.79,
+          "area": 345.41,
+          "aspect": 1.27
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.19,
+          "pairMax": 3.19,
+          "crossings": 3,
+          "foreignPadHits": 14,
+          "wireLength": 96.09,
+          "hpwl": 106.59,
+          "area": 345.41,
+          "aspect": 1.27
+        },
+        "pairs": [
+          {
+            "pair": "C13.1.U2.1",
+            "mm": 2.1656158477440086
+          },
+          {
+            "pair": "C15.1.U2.5",
+            "mm": 4.226361177183039
+          }
+        ],
+        "ms": 26251.0438,
+        "released": [
+          "Experimental independent placement: passive_net:I_OUT; electrical constraints retained",
+          "Experimental independent placement: passive_net:I_OUT; electrical constraints retained"
+        ]
+      },
+      {
+        "id": "all",
+        "ok": true,
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.2,
+          "pairMax": 3.2,
+          "crossings": 0,
+          "foreignPadHits": 4,
+          "wireLength": 51.61,
+          "hpwl": 61.02,
+          "area": 351.78,
+          "aspect": 1.26
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.2,
+          "pairMax": 3.2,
+          "crossings": 3,
+          "foreignPadHits": 15,
+          "wireLength": 95.75,
+          "hpwl": 102.92,
+          "area": 351.78,
+          "aspect": 1.26
+        },
+        "pairs": [
+          {
+            "pair": "C13.1.U2.1",
+            "mm": 2.087100021561018
+          },
+          {
+            "pair": "C15.1.U2.5",
+            "mm": 3.9486816534129465
+          }
+        ],
+        "ms": 58953.985100000005,
+        "released": [
+          "Experimental independent placement: passive_net:I_OUT; electrical constraints retained",
+          "Experimental independent placement: passive_net:I_OUT; electrical constraints retained",
+          "Experimental independent placement: current_hdc, current_hldo, current_secondary; electrical constraints retained"
+        ]
+      },
+      {
+        "id": "access",
+        "ok": true,
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 5.51,
+          "pairMax": 5.51,
+          "crossings": 1,
+          "foreignPadHits": 3,
+          "wireLength": 46.88,
+          "hpwl": 51.9,
+          "area": 429.48,
+          "aspect": 1.68
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 5.51,
+          "pairMax": 5.51,
+          "crossings": 6,
+          "foreignPadHits": 7,
+          "wireLength": 86.93,
+          "hpwl": 88.84,
+          "area": 429.48,
+          "aspect": 1.68
+        },
+        "pairs": [
+          {
+            "pair": "C13.1.U2.1",
+            "mm": 2.146226106448247
+          },
+          {
+            "pair": "C15.1.U2.5",
+            "mm": 4.088903544961657
+          }
+        ],
+        "ms": 28893.647,
+        "released": []
+      },
+      {
+        "id": "access-both",
+        "ok": true,
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.19,
+          "pairMax": 3.19,
+          "crossings": 0,
+          "foreignPadHits": 1,
+          "wireLength": 57.39,
+          "hpwl": 62.85,
+          "area": 384.81,
+          "aspect": 1.53
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.19,
+          "pairMax": 3.19,
+          "crossings": 5,
+          "foreignPadHits": 9,
+          "wireLength": 98.34,
+          "hpwl": 99.11,
+          "area": 384.81,
+          "aspect": 1.53
+        },
+        "pairs": [
+          {
+            "pair": "C13.1.U2.1",
+            "mm": 2.147198570230523
+          },
+          {
+            "pair": "C15.1.U2.5",
+            "mm": 3.7269729271890353
+          }
+        ],
+        "ms": 24297.306800000002,
+        "released": []
+      },
+      {
+        "id": "access-all",
+        "ok": true,
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 1,
+          "foreignPadHits": 1,
+          "wireLength": 41.96,
+          "hpwl": 45.33,
+          "area": 399.82,
+          "aspect": 1.47
+        },
+        "allMetrics": {
+          "pairCount": 1,
+          "pairSum": 3.77,
+          "pairMax": 3.77,
+          "crossings": 5,
+          "foreignPadHits": 3,
+          "wireLength": 80.85,
+          "hpwl": 79.45,
+          "area": 399.82,
+          "aspect": 1.47
+        },
+        "pairs": [
+          {
+            "pair": "C13.1.U2.1",
+            "mm": 2.0881000215506926
+          },
+          {
+            "pair": "C15.1.U2.5",
+            "mm": 2.699349329005047
+          }
+        ],
+        "ms": 56634.7034,
+        "released": [
+          "Experimental independent placement: passive_net:I_OUT; electrical constraints retained",
+          "Experimental independent placement: passive_net:I_OUT; electrical constraints retained",
+          "Experimental independent placement: current_hdc, current_hldo, current_secondary; electrical constraints retained"
+        ]
+      }
+    ]
+  },
+  {
+    "block": "usb_charge",
+    "components": 9,
+    "runs": [
+      {
+        "id": "base",
+        "ok": true,
+        "metrics": {
+          "pairCount": 6,
+          "pairSum": 20.01,
+          "pairMax": 5.02,
+          "crossings": 1,
+          "foreignPadHits": 1,
+          "wireLength": 31.25,
+          "hpwl": 38.22,
+          "area": 143.08,
+          "aspect": 1.47
+        },
+        "allMetrics": {
+          "pairCount": 6,
+          "pairSum": 20.01,
+          "pairMax": 5.02,
+          "crossings": 3,
+          "foreignPadHits": 5,
+          "wireLength": 58.68,
+          "hpwl": 56.81,
+          "area": 143.08,
+          "aspect": 1.47
+        },
+        "pairs": [],
+        "ms": 14886.0815,
+        "released": []
+      },
+      {
+        "id": "order",
+        "ok": true,
+        "metrics": {
+          "pairCount": 6,
+          "pairSum": 19.8,
+          "pairMax": 4.56,
+          "crossings": 1,
+          "foreignPadHits": 2,
+          "wireLength": 29.97,
+          "hpwl": 35.9,
+          "area": 146.62,
+          "aspect": 1.14
+        },
+        "allMetrics": {
+          "pairCount": 6,
+          "pairSum": 19.8,
+          "pairMax": 4.56,
+          "crossings": 1,
+          "foreignPadHits": 7,
+          "wireLength": 55.14,
+          "hpwl": 54.24,
+          "area": 146.62,
+          "aspect": 1.14
+        },
+        "pairs": [],
+        "ms": 10659.9903,
+        "released": []
+      },
+      {
+        "id": "pads",
+        "ok": true,
+        "metrics": {
+          "pairCount": 6,
+          "pairSum": 18.9,
+          "pairMax": 4.96,
+          "crossings": 1,
+          "foreignPadHits": 1,
+          "wireLength": 28.12,
+          "hpwl": 33.08,
+          "area": 143.48,
+          "aspect": 1.16
+        },
+        "allMetrics": {
+          "pairCount": 6,
+          "pairSum": 18.9,
+          "pairMax": 4.96,
+          "crossings": 1,
+          "foreignPadHits": 6,
+          "wireLength": 54.2,
+          "hpwl": 51.18,
+          "area": 143.48,
+          "aspect": 1.16
+        },
+        "pairs": [],
+        "ms": 14361.9992,
+        "released": []
+      },
+      {
+        "id": "both",
+        "ok": true,
+        "metrics": {
+          "pairCount": 6,
+          "pairSum": 19.8,
+          "pairMax": 4.56,
+          "crossings": 1,
+          "foreignPadHits": 2,
+          "wireLength": 29.97,
+          "hpwl": 35.9,
+          "area": 146.62,
+          "aspect": 1.14
+        },
+        "allMetrics": {
+          "pairCount": 6,
+          "pairSum": 19.8,
+          "pairMax": 4.56,
+          "crossings": 1,
+          "foreignPadHits": 7,
+          "wireLength": 55.13,
+          "hpwl": 54.23,
+          "area": 146.62,
+          "aspect": 1.14
+        },
+        "pairs": [],
+        "ms": 10551.8127,
+        "released": []
+      },
+      {
+        "id": "satellites",
+        "ok": true,
+        "metrics": {
+          "pairCount": 6,
+          "pairSum": 19.8,
+          "pairMax": 4.56,
+          "crossings": 1,
+          "foreignPadHits": 2,
+          "wireLength": 29.97,
+          "hpwl": 35.9,
+          "area": 146.62,
+          "aspect": 1.14
+        },
+        "allMetrics": {
+          "pairCount": 6,
+          "pairSum": 19.8,
+          "pairMax": 4.56,
+          "crossings": 1,
+          "foreignPadHits": 7,
+          "wireLength": 55.13,
+          "hpwl": 54.23,
+          "area": 146.62,
+          "aspect": 1.14
+        },
+        "pairs": [],
+        "ms": 9767.6346,
+        "released": []
+      },
+      {
+        "id": "caps",
+        "ok": true,
+        "metrics": {
+          "pairCount": 6,
+          "pairSum": 19.8,
+          "pairMax": 4.56,
+          "crossings": 1,
+          "foreignPadHits": 2,
+          "wireLength": 29.97,
+          "hpwl": 35.9,
+          "area": 146.62,
+          "aspect": 1.14
+        },
+        "allMetrics": {
+          "pairCount": 6,
+          "pairSum": 19.8,
+          "pairMax": 4.56,
+          "crossings": 1,
+          "foreignPadHits": 7,
+          "wireLength": 55.13,
+          "hpwl": 54.23,
+          "area": 146.62,
+          "aspect": 1.14
+        },
+        "pairs": [],
+        "ms": 9868.1757,
+        "released": []
+      },
+      {
+        "id": "all",
+        "ok": true,
+        "metrics": {
+          "pairCount": 6,
+          "pairSum": 19.8,
+          "pairMax": 4.56,
+          "crossings": 1,
+          "foreignPadHits": 2,
+          "wireLength": 29.97,
+          "hpwl": 35.9,
+          "area": 146.62,
+          "aspect": 1.14
+        },
+        "allMetrics": {
+          "pairCount": 6,
+          "pairSum": 19.8,
+          "pairMax": 4.56,
+          "crossings": 1,
+          "foreignPadHits": 7,
+          "wireLength": 55.13,
+          "hpwl": 54.23,
+          "area": 146.62,
+          "aspect": 1.14
+        },
+        "pairs": [],
+        "ms": 9682.9667,
+        "released": []
+      },
+      {
+        "id": "access",
+        "ok": true,
+        "metrics": {
+          "pairCount": 6,
+          "pairSum": 17.53,
+          "pairMax": 3.68,
+          "crossings": 0,
+          "foreignPadHits": 0,
+          "wireLength": 30.27,
+          "hpwl": 37.27,
+          "area": 167.29,
+          "aspect": 1
+        },
+        "allMetrics": {
+          "pairCount": 6,
+          "pairSum": 17.53,
+          "pairMax": 3.68,
+          "crossings": 0,
+          "foreignPadHits": 5,
+          "wireLength": 56.35,
+          "hpwl": 55.37,
+          "area": 167.29,
+          "aspect": 1
+        },
+        "pairs": [],
+        "ms": 13043.9316,
+        "released": []
+      },
+      {
+        "id": "access-both",
+        "ok": true,
+        "metrics": {
+          "pairCount": 6,
+          "pairSum": 21.05,
+          "pairMax": 5.31,
+          "crossings": 1,
+          "foreignPadHits": 0,
+          "wireLength": 32.05,
+          "hpwl": 40.78,
+          "area": 150.57,
+          "aspect": 1.11
+        },
+        "allMetrics": {
+          "pairCount": 6,
+          "pairSum": 21.05,
+          "pairMax": 5.31,
+          "crossings": 3,
+          "foreignPadHits": 4,
+          "wireLength": 57.66,
+          "hpwl": 59.01,
+          "area": 150.57,
+          "aspect": 1.11
+        },
+        "pairs": [],
+        "ms": 10042.2059,
+        "released": []
+      },
+      {
+        "id": "access-all",
+        "ok": true,
+        "metrics": {
+          "pairCount": 6,
+          "pairSum": 21.05,
+          "pairMax": 5.31,
+          "crossings": 1,
+          "foreignPadHits": 0,
+          "wireLength": 32.05,
+          "hpwl": 40.78,
+          "area": 150.57,
+          "aspect": 1.11
+        },
+        "allMetrics": {
+          "pairCount": 6,
+          "pairSum": 21.05,
+          "pairMax": 5.31,
+          "crossings": 3,
+          "foreignPadHits": 4,
+          "wireLength": 57.66,
+          "hpwl": 59.01,
+          "area": 150.57,
+          "aspect": 1.11
+        },
+        "pairs": [],
+        "ms": 9863.4381,
+        "released": []
+      }
+    ]
+  }
+]
