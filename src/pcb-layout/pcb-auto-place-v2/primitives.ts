@@ -49,6 +49,8 @@ export interface PlacementPrimitive {
     pathFragments?: PlacementPathFragment[];
     children: PlacementPrimitive[];
     deferredRelations?: string[];
+    /** Bounded alternative internal layouts, in the same coordinate frame. */
+    layoutAlternatives?: PlacementPrimitive[];
 }
 
 export interface PrimitiveSolveDiagnostic {
@@ -78,13 +80,17 @@ export function translatePrimitive(primitive: PlacementPrimitive, dx: number, dy
             y: roundPlacement(port.y + dy),
         })),
         children: primitive.children.map((child) => translatePrimitive(child, dx, dy)),
+        layoutAlternatives: primitive.layoutAlternatives?.map(p => translatePrimitive(p, dx, dy)),
     };
 }
 
 export function rotatePrimitive(primitive: PlacementPrimitive, angle: number): PlacementPrimitive {
+    return rotatePrimitiveAround(primitive, angle, boxCenter(primitive.bbox));
+}
+
+function rotatePrimitiveAround(primitive: PlacementPrimitive, angle: number, origin: Point): PlacementPrimitive {
     const normalizedAngle = normalizeRotation(angle);
     if (normalizedAngle === 0) return primitive;
-    const origin = boxCenter(primitive.bbox);
     const bbox = rotateBox(primitive.bbox, origin, normalizedAngle);
     return {
         ...primitive,
@@ -111,7 +117,8 @@ export function rotatePrimitive(primitive: PlacementPrimitive, angle: number): P
             ...rotatePoint(port, origin, normalizedAngle),
             normal: rotateVector(port.normal, normalizedAngle),
         })),
-        children: primitive.children.map((child) => rotatePrimitive(child, normalizedAngle)),
+        children: primitive.children.map((child) => rotatePrimitiveAround(child, normalizedAngle, origin)),
+        layoutAlternatives: primitive.layoutAlternatives?.map(p => rotatePrimitiveAround(p, normalizedAngle, origin)),
     };
 }
 

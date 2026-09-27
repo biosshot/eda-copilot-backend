@@ -2,6 +2,7 @@ mod post_place_refine;
 #[cfg(feature = "placement-bench")]
 mod post_place_probe;
 mod block_solver;
+mod fast_route;
 mod geometry;
 mod lazy_rank;
 mod model;
@@ -240,6 +241,13 @@ fn invalid_passive_island_problem(error: impl std::fmt::Display) -> Error {
 
 #[napi]
 pub fn post_place_refine_contract_version() -> u32 { 2 }
+
+#[napi]
+pub fn validate_placement_change(problem: Value, placements: Value) -> Result<bool> {
+    let p: post_place_refine::RefineProblem = serde_json::from_value(problem).map_err(invalid_problem)?;
+    let placements: Vec<model::Placement> = serde_json::from_value(placements).map_err(invalid_problem)?;
+    post_place_refine::validate_change(p, placements).map_err(invalid_problem)
+}
 
 #[napi]
 pub fn refine_post_placement(problem: Value) -> Result<Value> {

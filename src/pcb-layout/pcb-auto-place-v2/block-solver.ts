@@ -10,6 +10,7 @@ import type { PlacementPrimitive } from './primitives.ts';
 
 /** Input contract for the Rust block solver. Search and scoring live in the native crate. */
 export interface BlockSolverOptions {
+    experiments?: import('./block-policy.ts').BlockExperiments;
     grid: number;
     clearance: number;
     componentByDesignator?: Map<string, PcbComponent>;

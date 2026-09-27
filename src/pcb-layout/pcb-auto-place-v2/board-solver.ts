@@ -15,6 +15,7 @@ import { priorityWeight } from '../pcb-auto-place/hints.ts';
 import type { ClearanceResolver } from '../pcb-auto-place/clearance-resolver.ts';
 import { solveBoardPackedPrimitives } from './board-packer-engine.ts';
 import type { PlacementPrimitive, PrimitiveSolveDiagnostic } from './primitives.ts';
+import { selectBlockPortfolio } from './block-portfolio.ts';
 
 const ORDINARY_NET_RELATION_PREFIX = '__ordinary_net__:';
 
@@ -36,7 +37,7 @@ export function solveBoardPrimitives(params: BoardSolveParams) {
     const boardPrimitives = boardPlacementPrimitives(params);
     validateDissolvedGroupReferences(params.graph.relations, boardPrimitives.dissolvedScopes);
     const primitives = boardPrimitives.primitives.map(boardPackingPrimitive);
-    return solveBoardPackedPrimitives({
+    const packed = solveBoardPackedPrimitives({
         node: params.node,
         primitives,
         relations: [
@@ -61,6 +62,7 @@ export function solveBoardPrimitives(params: BoardSolveParams) {
             searchWidth: 32,
         },
     });
+    return selectBlockPortfolio(params.input, packed, params.grid, params.diagnostics);
 }
 
 /**

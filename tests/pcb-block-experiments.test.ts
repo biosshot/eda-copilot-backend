@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
 import type { NativeBlockSolveProblemV2 } from '../src/pcb-layout/pcb-auto-place-v2/native/contract.ts';
+import { blockPolicy } from '../src/pcb-layout/pcb-auto-place-v2/block-policy.ts';
 
 const read = (fixture: string, file: number) => JSON.parse(readFileSync(new URL(`./fixtures/block-placement/${fixture}/block-${file}.json`, import.meta.url), 'utf8'));
 const addon = loadNativeBoardPacker();
@@ -51,4 +52,11 @@ test('USB combined experiment shortens local two-terminal connections without ov
 
 test('unknown experiment flags fail instead of silently running the wrong variant', () => {
     assert.throws(() => solve({ netCandidateTypo: true }), /unknown field/);
+    assert.throws(() => solve({ routingMetric: 'typo' }), /unknown variant/);
+});
+
+test('full branch profile preserves USB hard legality with either alternative route term', () => {
+    for (const routingMetric of ['off', 'geometric']) {
+        assert.equal(solve({ ...blockPolicy().experiments, routingMetric }, 4).rank.hardCount, 0);
+    }
 });

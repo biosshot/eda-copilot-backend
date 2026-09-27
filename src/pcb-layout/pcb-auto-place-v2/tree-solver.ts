@@ -18,6 +18,8 @@ import { createClearanceResolver, type ClearanceResolver } from '../pcb-auto-pla
 import { validatePrimitive } from '../pcb-auto-place/primitive-validation.ts';
 import { solveBoardPrimitives } from './board-solver.ts';
 import { solveBlockPrimitives } from './block-solver-engine.ts';
+import { blockPolicy } from './block-policy.ts';
+import type { BlockSolveParams } from './block-solver.ts';
 import { solvePlacementIslands } from './island-solver.ts';
 import { solveModulePrimitives } from './module-solver.ts';
 import { canSolvePassiveNetIsland } from './passive-net-island.ts';
@@ -99,6 +101,7 @@ type TreeSolveContext = {
     emittedProgressStages: Set<PcbLayoutProgressStage>;
     primitives: PlacementPrimitive[];
     diagnostics: PrimitiveSolveDiagnostic[];
+    blockAlternatives: Map<string, PlacementPrimitive[][]>;
 };
 
 function createTreeSolveContext(
@@ -121,6 +124,7 @@ function createTreeSolveContext(
         emittedProgressStages: new Set(),
         primitives: [],
         diagnostics: [],
+        blockAlternatives: new Map(),
     };
 }
 
@@ -397,11 +401,15 @@ function solveBlockNode(
     clearance = context.clearance,
 ) {
     const hasLockedChild = childPrimitives.some((primitive) => primitive.locked);
-    return solveBlockPrimitives({
+    const policy = blockPolicy(context.input.solverOptions.ignoredRatsnestSignals);
+    const ordinary = childPrimitives.length >= 2 && childPrimitives.length <= 12
+        && new Set(childPrimitives.flatMap(p => p.placements.map(q => context.componentByDesignator.get(q.designator)?.block_name))).size === 1;
+    const params: BlockSolveParams = {
         node,
         primitives: childPrimitives,
         relations: relationsForPrimitives(context.graph.relations, node.id, childPrimitives),
         options: {
+            ...(ordinary ? { searchWidth: policy.searchWidth, experiments: policy.experiments } : {}),
             grid: context.grid,
             clearance: numeric(node.data?.placementClearance) ?? clearance,
             componentByDesignator: context.componentByDesignator,
@@ -413,7 +421,16 @@ function solveBlockNode(
             bounds: hasLockedChild ? boardBounds(context.input) : undefined,
             obstacles: hasLockedChild ? boardHoleBoxes(context.input) : undefined,
         },
-    });
+    };
+    const result = solveBlockPrimitives(params);
+    if (ordinary && !hasLockedChild && policy.portfolio) {
+        const variants = [
+            { ...policy.experiments, reducedHull: false, smoothAspect: false, pairSwaps: false, reinsertPair: false },
+            { ignoredNets: policy.experiments.ignoredNets, routingMetric: policy.experiments.routingMetric, netCandidates: true, longNets: true },
+        ].map(experiments => solveBlockPrimitives({ ...params, options: { ...params.options, searchWidth: 1, experiments } }));
+        context.blockAlternatives.set(node.id, variants);
+    }
+    return result;
 }
 
 function solveModuleNode(
@@ -806,6 +823,16 @@ function boardBounds(input: PlacementInput): Box {
 }
 
 function rememberPrimitive(context: TreeSolveContext, primitive: PlacementPrimitive): PlacementPrimitive {
+    const alternatives = context.blockAlternatives.get(primitive.sourceNodeId);
+    if (alternatives) {
+        const signature = (p: PlacementPrimitive) => JSON.stringify(p.placements.map(q => [q.designator, q.x, q.y, q.rotate, q.layer]).sort());
+        const seen = new Set([signature(primitive)]);
+        primitive.layoutAlternatives = alternatives.map(children => {
+            const p = unionPrimitive(primitive.id, primitive.kind, primitive.label, primitive.sourceNodeId, children, primitive.deferredRelations);
+            return translatePrimitive(p, (primitive.bbox.left + primitive.bbox.right - p.bbox.left - p.bbox.right) / 2,
+                (primitive.bbox.top + primitive.bbox.bottom - p.bbox.top - p.bbox.bottom) / 2);
+        }).filter(p => { const key = signature(p); if (seen.has(key)) return false; seen.add(key); return true; });
+    }
     context.primitives.push(primitive);
     return primitive;
 }

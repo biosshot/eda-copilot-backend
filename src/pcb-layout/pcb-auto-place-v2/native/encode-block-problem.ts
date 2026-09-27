@@ -1,6 +1,6 @@
 import type { PcbComponent, Placement } from '#types/pcb/layout-model.ts';
 import { isGroundSignalName, isPowerSignalName } from '#utils/signals.ts';
-import { componentBox, componentCollisionBoxes } from '../../pcb-auto-place/geometry.ts';
+import { componentBox, componentCollisionBoxes, componentPadBox, isThroughHolePad } from '../../pcb-auto-place/geometry.ts';
 import { placementsCanConflict } from '../../pcb-auto-place/utils.ts';
 import type { BlockSolveParams } from '../block-solver.ts';
 import type { PlacementPrimitive } from '../primitives.ts';
@@ -31,6 +31,15 @@ export function encodeNativeBlockSolveProblem(params: BlockSolveParams): NativeB
     }
 
     return {
+        experiments: params.options.experiments,
+        routingObstacles: components.flatMap(({component, placement, primitiveId}) => component.footprint.pads.map(pad => ({
+            box: componentPadBox(placement, pad), primitiveId, ref: `${component.designator}.${pad.pin_number}`,
+            net: component.pins.find(p=>String(p.pin_number)===String(pad.pin_number))?.signal_name || undefined,
+            layer: isThroughHolePad(pad) ? undefined : placement.layer,
+        }))),
+        externalNets: [...new Set([...(params.options.componentByDesignator?.values() ?? [])]
+            .filter(c=>!components.some(entry=>entry.component.designator===c.designator))
+            .flatMap(c=>c.pins.map(p=>p.signal_name).filter((net): net is string=>Boolean(net))))],
         version: NATIVE_BLOCK_SOLVE_CONTRACT_VERSION,
         grid: params.options.grid,
         clearance: params.options.clearance,

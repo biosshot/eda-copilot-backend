@@ -506,6 +506,29 @@ fn block_micro_route_penalty(
     context: &Context,
 ) -> f64 {
     let config = MicroRouteConfig::block();
+    use crate::model::BlockRoutingMetric;
+    if context.problem.experiments.routing_metric == BlockRoutingMetric::Off { return 0.0; }
+    if context.problem.experiments.routing_metric == BlockRoutingMetric::Geometric {
+        let all: Vec<_> = placed.iter().chain(std::iter::once(candidate)).collect();
+        let mut obstacles = Vec::new();
+        for item in &all {
+            let source = &context.problem.primitives[item.source_index];
+            let origin = box_center(&source.bbox);
+            let center = box_center(&item.primitive.bbox);
+            for pad in context.problem.routing_obstacles.iter().filter(|p|p.primitive_id.as_ref()==Some(&source.id)) {
+                let mut pad=pad.clone();
+                pad.box_=translate_box(&rotate_box(&pad.box_,&origin,item.rotation),center.x-origin.x,center.y-origin.y);
+                obstacles.push(pad);
+            }
+        }
+        for box_ in &context.problem.obstacles {
+            obstacles.push(crate::model::RouteObstacle{box_:*box_,layer:None,reference:None,net:None,primitive_id:None});
+        }
+        return crate::fast_route::candidate_penalty(&candidate.primitive,
+            &placed.iter().map(|p|&p.primitive).collect::<Vec<_>>(), &obstacles,
+            &context.problem.external_nets,&context.problem.experiments.ignored_nets,context.problem.clearance,
+            union_boxes(&all.iter().map(|p|p.primitive.bbox).collect::<Vec<_>>()));
+    }
     let bounds = micro_route_bounds(candidate, placed, context, &config);
     let placed_primitives: Vec<_> = placed.iter().map(|item| &item.primitive).collect();
     micro_router::candidate_penalty(

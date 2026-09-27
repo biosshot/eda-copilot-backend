@@ -1277,6 +1277,28 @@ impl RefineProblem {
         Ok(diagnostics)
     }
 }
+/// Reuse the exact hard-constraint model for block variants. No refinement or
+/// routing is performed here, and existing violations may not gain new keys.
+pub fn validate_change(p: RefineProblem, placements: Vec<Placement>) -> Result<bool, String> {
+    p.validate()?;
+    if placements.len()!=p.placements.len() {return Ok(false);}
+    let by_name: FxHashMap<_,_> = placements.iter().map(|q|(&q.designator,q)).collect();
+    if by_name.len()!=placements.len() {return Ok(false);}
+    let mut ordered=Vec::new();
+    for original in &p.placements {
+        let Some(pose)=by_name.get(&original.designator) else {return Ok(false);};
+        if !pose.x.is_finite() || !pose.y.is_finite() {return Ok(false);}
+        ordered.push((*pose).clone());
+    }
+    let before = p.world(&p.placements)?;
+    let after = match p.world(&ordered) { Ok(w)=>w, Err(_)=>return Ok(false) };
+    let changed: Vec<usize> = (0..p.components.len()).filter(|&i| {
+        let a=p.pose(&before,i);let b=p.pose(&after,i);
+        a.x!=b.x || a.y!=b.y || a.rotate!=b.rotate || a.layer!=b.layer
+    }).collect();
+    Ok(p.violations(&after,&changed).is_subset(&p.violations(&before,&changed)))
+}
+
 pub fn solve(p: RefineProblem) -> Result<Value, String> {
     p.validate()?;
     let started = Instant::now();

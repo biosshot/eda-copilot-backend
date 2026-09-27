@@ -174,6 +174,10 @@ pub struct BlockComponentGeometry {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlockSolveProblem {
+    #[serde(default)]
+    pub routing_obstacles: Vec<RouteObstacle>,
+    #[serde(default)]
+    pub external_nets: Vec<Arc<str>>,
     /// Branch-local experiments, explicit in the input so replay/cache keys stay valid.
     #[serde(default)]
     pub experiments: BlockExperiments,
@@ -199,6 +203,7 @@ pub struct BlockSolveProblem {
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(default, rename_all = "camelCase", deny_unknown_fields)]
 pub struct BlockExperiments {
+    pub routing_metric: BlockRoutingMetric,
     pub ignored_nets: Vec<Arc<str>>,
     pub keep_dense_access: bool,
     pub net_candidates: bool,
@@ -210,6 +215,10 @@ pub struct BlockExperiments {
     pub pair_swaps: bool,
     pub reinsert_pair: bool,
 }
+
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum BlockRoutingMetric { #[default] Micro, Off, Geometric }
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -458,6 +467,14 @@ impl BlockSolveProblem {
         }
         finite(self.grid, "grid")?;
         finite(self.clearance, "clearance")?;
+        for obstacle in &self.routing_obstacles {
+            if !is_finite_box(&obstacle.box_) || obstacle.box_.left > obstacle.box_.right || obstacle.box_.top > obstacle.box_.bottom {
+                return Err("routing obstacle has invalid bounds".into());
+            }
+            if obstacle.layer.as_deref().is_some_and(|l| l!="top" && l!="bottom") {
+                return Err("routing obstacle has invalid layer".into());
+            }
+        }
         if self.search_width == 0 {
             return Err("searchWidth must be positive".into());
         }

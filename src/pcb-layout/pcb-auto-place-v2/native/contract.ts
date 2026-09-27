@@ -221,6 +221,7 @@ export interface NativeBoardPackerAddon {
     refinePostPlacement(problem: NativePostPlaceRefineProblem): PostPlaceRefineResult;
     postPlaceScoreContractVersion(): number;
     scorePostPlace(problem: NativePostPlaceScoreProblemV1): number;
+    validatePlacementChange(problem: import('./encode-post-place-refine.ts').NativePostPlaceRefineProblem, placements: import('#types/pcb/layout-model.ts').Placement[]): boolean;
     signalPathContractVersion(): number;
     evaluateSignalPath(problem: NativeSignalPathEvaluationProblemV1): NativeSignalPathTopologyEvaluation | null;
     signalPathBridgeDeltas(problem: NativeSignalPathBridgeProblemV1): Point[];
@@ -235,6 +236,7 @@ export interface NativeBlockComponentGeometry extends NativeComponentGeometry {
 export interface NativeBlockSolveProblemV2 {
     /** Opt-in research controls; deliberately not exposed by the placement DSL. */
     experiments?: {
+        routingMetric?: 'micro' | 'off' | 'geometric';
         ignoredNets?: string[];
         keepDenseAccess?: boolean;
         netCandidates?: boolean;
@@ -246,6 +248,8 @@ export interface NativeBlockSolveProblemV2 {
         pairSwaps?: boolean;
         reinsertPair?: boolean;
     };
+    routingObstacles?: NativeRoutingObstacle[];
+    externalNets?: string[];
     version: typeof NATIVE_BLOCK_SOLVE_CONTRACT_VERSION;
     grid: number;
     clearance: number;
