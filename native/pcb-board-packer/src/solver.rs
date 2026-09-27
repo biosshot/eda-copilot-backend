@@ -541,6 +541,7 @@ fn position_candidates(
     centers.extend(free_rect_slot_centers(width, height, placed, context));
     centers.extend(placed_slot_centers(width, height, placed, context));
     centers.extend(relation_slot_centers(primitive, placed, context));
+    centers.extend(alignment_slot_centers(primitive, placed, context));
     let placed_primitives: Vec<_> = placed.iter().map(|item| &item.primitive).collect();
     let current_center = box_center(&pack_box);
     centers.extend(
@@ -953,6 +954,7 @@ fn board_score(
         + width * height * area_weight * scale
         + (width + height) * perimeter_weight * scale
         + soft_spacing_penalty(primitives, context)
+        + soft_alignment_score(primitives, context)
         + edge_bias_penalty(primitives, context) * edge_weight
         + edge_place_penalty(primitives, context)
         + signal_path::topology_penalty(&path_primitives, &context.problem.relations)
@@ -2527,4 +2529,58 @@ fn soft_spacing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f
         score += 18.0 * deficit * deficit;
     }}
     score
+}
+
+
+fn alignment_center(p: &WorkingPrimitive, anchor: &Option<Arc<str>>) -> Point {
+    anchor.as_ref().and_then(|name| p.primitive.placements.iter().find(|q| &q.designator == name))
+        .map_or_else(|| box_center(&p.primitive.bbox), |q| Point { x:q.x, y:q.y })
+}
+
+fn alignment_gap(a: &Box2, b: &Box2) -> f64 {
+    (a.left-b.right).max(b.left-a.right).max(0.0)
+        .hypot((a.top-b.bottom).max(b.top-a.bottom).max(0.0))
+}
+
+fn soft_alignment_score(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let Some(s) = &context.problem.soft_alignment else { return 0.0; };
+    let mut score=0.0;
+    for pair in &s.pairs {
+        let Some(a)=primitives.iter().find(|p| p.primitive.id==pair.a) else { continue; };
+        let Some(b)=primitives.iter().find(|p| p.primitive.id==pair.b) else { continue; };
+        let ac=alignment_center(a,&pair.anchor_a); let bc=alignment_center(b,&pair.anchor_b);
+        let error=((ac.x-bc.x).abs().min((ac.y-bc.y).abs())-s.tolerance).clamp(0.0,3.0);
+        let proximity=(1.0-(alignment_gap(&a.primitive.bbox,&b.primitive.bbox)-s.range)/s.fade).clamp(0.0,1.0);
+        score-=s.weight*pair.similarity*proximity*(9.0-error*error);
+    }
+    score
+}
+
+// These are ordinary candidates, not constraints. Use transformed component
+// centers so rotating an asymmetric block does not align its bbox by mistake.
+fn alignment_slot_centers(p: &WorkingPrimitive, placed: &[WorkingPrimitive], context: &Context) -> Vec<Point> {
+    let Some(s) = &context.problem.soft_alignment else { return Vec::new(); };
+    let mut centers=Vec::new();
+    let pb=packing_box(p); let pc=box_center(&pb);
+    let width=pb.right-pb.left; let height=pb.bottom-pb.top;
+    for pair in &s.pairs {
+        let (other,anchor,other_anchor)=if p.primitive.id==pair.a { (&pair.b,&pair.anchor_a,&pair.anchor_b) }
+            else if p.primitive.id==pair.b { (&pair.a,&pair.anchor_b,&pair.anchor_a) } else { continue; };
+        let Some(q)=placed.iter().find(|q| &q.primitive.id==other) else { continue; };
+        let a=alignment_center(p,anchor); let b=alignment_center(q,other_anchor);
+        let x=pc.x+b.x-a.x; let y=pc.y+b.y-a.y;
+        let qb=packing_box(q);
+        let comfort=context.problem.soft_spacing.as_ref().map_or(0.0,|s| s.gap);
+        for extra in [0.0,comfort,2.0] {
+            let gap=context.problem.clearance+extra;
+            centers.extend([Point{x,y:qb.top-gap-height/2.0},Point{x,y:qb.bottom+gap+height/2.0},
+                Point{x:qb.left-gap-width/2.0,y},Point{x:qb.right+gap+width/2.0,y}]);
+        }
+        // Project available free-rectangle slots onto the shared axes. This lets
+        // the packer leave room around the pair without forcing adjacency.
+        for slot in free_rect_slot_centers(width,height,placed,context).into_iter().take(24) {
+            centers.extend([Point{x,y:slot.y},Point{x:slot.x,y}]);
+        }
+    }
+    centers
 }

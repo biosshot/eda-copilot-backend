@@ -20,7 +20,7 @@ test('native transforms preserve the exact fixed pose, including sub-grid precis
     const find=(n:PlacementTreeNode):PlacementTreeNode|undefined=>n.kind==='component'&&n.label==='R30'?n:n.children.map(find).find(Boolean);
     const p=solvePlacementSubtreeSync({input,graph,node:find(graph.root)!}).root;
     const state={primitiveId:p.id,rotation:0,translationX:0,translationY:0};
-    const solution={version:4,states:[state],rank:{hardCount:0,hardSeverity:0,score:0}};
+    const solution={version:5,states:[state],rank:{hardCount:0,hardSeverity:0,score:0}};
     assert.equal(applyNativeBoardPackSolution([p],solution)[0],p);
     state.translationX=.5;
     assert.throws(()=>applyNativeBoardPackSolution([p],solution),/moved locked primitive/);

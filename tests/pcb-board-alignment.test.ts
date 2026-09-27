@@ -7,6 +7,11 @@ import { componentBox } from '../src/pcb-layout/pcb-auto-place/geometry.ts';
 import { createPlacementReport } from '../src/pcb-layout/pcb-auto-place/placement-report.ts';
 import type { PlacementInput, Placement, PlacementReport } from '../src/types/pcb/layout-model.ts';
 import type { PlacementPrimitive } from '../src/pcb-layout/pcb-auto-place-v2/primitives.ts';
+import { boardAlignmentPolicy, boardAlignmentScore } from '../src/pcb-layout/pcb-auto-place-v2/board-alignment.ts';
+import { buildPlacementGraph } from '../src/pcb-layout/pcb-auto-place/placement-graph.ts';
+import { encodeNativeBoardPackProblem } from '../src/pcb-layout/pcb-auto-place-v2/native/encode-board-problem.ts';
+import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
+import { translatePrimitive } from '../src/pcb-layout/pcb-auto-place-v2/primitives.ts';
 
 function telemetry() {
     const input = JSON.parse(readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json','utf8')) as PlacementInput;
@@ -100,4 +105,35 @@ test('Telemetry pass preserves hard hint magnitudes, fixed poses, and rigid bloc
         });
         assert.ok(diffs.every(d=>Math.abs(d[0]-diffs[0][0])<.002&&Math.abs(d[1]-diffs[0][1])<.002));
     }
+});
+
+test('packing discovers distant structural peers before placement, with bounded proximity reward',()=>{
+    const {input,roots,placements}=telemetry();
+    const policy=boardAlignmentPolicy(input,roots);
+    assert.ok(policy.pairs.some(p=>[p.anchorA,p.anchorB].includes('U1')&&[p.anchorA,p.anchorB].includes('U2')));
+    assert.ok(!findAlignmentPairs(input,roots,placements).some(p=>p.anchorA==='U2'&&p.anchorB==='U1'));
+    const f=simple(), p=boardAlignmentPolicy(f.input,f.roots);
+    assert.equal(boardAlignmentScore([f.roots[0]],p),0);
+    const aligned=[f.roots[0],translatePrimitive(f.roots[1],0,-1)];
+    assert.ok(boardAlignmentScore(aligned,p)<boardAlignmentScore(f.roots,p));
+    assert.equal(boardAlignmentScore([aligned[0],translatePrimitive(aligned[1],40,0)],p),0);
+    assert.equal(boardAlignmentScore([f.roots[0],translatePrimitive(f.roots[1],0,-.9)],p),boardAlignmentScore(aligned,p));
+});
+
+test('native and TS early alignment scores agree, anchors validated, rotated candidates remain legal',()=>{
+    const {input,roots}=simple(), policy=boardAlignmentPolicy(input,roots);
+    const problem=encodeNativeBoardPackProblem({node:buildPlacementGraph(input).root,primitives:roots.map(p=>({...p,locked:true})),relations:[],options:{
+        grid:.5,clearance:.2,bounds:{left:-49,right:49,top:-49,bottom:49},board:input.board,
+        componentByDesignator:new Map(input.components.map(c=>[c.designator,c])),softAlignment:policy}});
+    const addon=loadNativeBoardPacker();
+    const aligned=addon.solveBoardPacked(problem), plain=addon.solveBoardPacked({...problem,softAlignment:undefined});
+    assert.ok(Math.abs(aligned.rank.score-plain.rank.score-boardAlignmentScore(roots,policy))<1e-6);
+    assert.throws(()=>addon.solveBoardPacked({...problem,softAlignment:{...policy,fade:0}}),/softAlignment/);
+    assert.throws(()=>addon.solveBoardPacked({...problem,softAlignment:{...policy,pairs:[{...policy.pairs[0],anchorA:'absent'}]}}),/anchor/);
+    problem.primitives[1].locked=false;problem.primitives[1].allowedOrientations=[0,90,180,270];
+    const found=addon.solveBoardPacked(problem);
+    assert.equal(found.rank.hardCount,0);
+    const ps=found.states.flatMap(s=>s.placements??[]);
+    assert.equal(ps.length,2);
+    assert.ok(Math.min(Math.abs(ps[0].x-ps[1].x),Math.abs(ps[0].y-ps[1].y))<=.15);
 });

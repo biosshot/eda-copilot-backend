@@ -2,6 +2,7 @@ import type { PlacementInput, PlacementReport } from '#types/pcb/layout-model.ts
 import { createPlacementReport } from '../pcb-auto-place/placement-report.ts';
 import { blockPortfolioInternalScore } from './block-quality.ts';
 import { globalPostPlaceScore } from './post-place-refiner.ts';
+import { boardAlignmentPolicy, boardAlignmentScore, alignmentHardHintsNoWorse } from './board-alignment.ts';
 import { boardSpacingPenalty, boardSpacingPolicy } from './board-spacing.ts';
 import { encodeNativePostPlaceRefineProblem } from './native/encode-post-place-refine.ts';
 import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
@@ -26,7 +27,9 @@ export function choosePackedPortfolio(input: PlacementInput, candidates: Placeme
     const poses = (p: PlacementPrimitive[]) => p.flatMap(q => q.placements);
     const gap = boardSpacingPolicy(input).gap;
     let best = candidates[0];
-    let score = globalPostPlaceScore(input, poses(best)) + blockPortfolioInternalScore(input, best) + boardSpacingPenalty(input,best,gap);
+    const alignment = boardAlignmentPolicy(input,best);
+    const baselineReport = createPlacementReport(input,poses(best));
+    let score = globalPostPlaceScore(input, poses(best)) + blockPortfolioInternalScore(input, best) + boardSpacingPenalty(input,best,gap) + boardAlignmentScore(best,alignment);
     const constraints = encodeNativePostPlaceRefineProblem(input, poses(best), 1);
     const fixed = new Set(input.components.filter(c => c.pcb.fixedPlacement || c.pcb.edgeMount || c.pcb.edgePlace).map(c => c.designator));
     const baseline = new Map(poses(best).map(p => [p.designator, p]));
@@ -34,9 +37,14 @@ export function choosePackedPortfolio(input: PlacementInput, candidates: Placeme
     for (let index = 1; index < candidates.length; index++) {
         const candidate = poses(candidates[index]);
         if (candidate.some(p => fixed.has(p.designator) && ['x', 'y', 'rotate', 'layer'].some(k => p[k as keyof typeof p] !== baseline.get(p.designator)?.[k as keyof typeof p]))) continue;
-        const next = globalPostPlaceScore(input, candidate) + blockPortfolioInternalScore(input, candidates[index]) + boardSpacingPenalty(input,candidates[index],gap);
-        if (next >= score - 1e-6 || !createPlacementReport(input, candidate).ok) continue;
-        if (!loadNativeBoardPacker().validatePlacementChange(constraints, candidate)) continue;
+        const next = globalPostPlaceScore(input, candidate) + blockPortfolioInternalScore(input, candidates[index]) + boardSpacingPenalty(input,candidates[index],gap) + boardAlignmentScore(candidates[index],alignment);
+        const report = createPlacementReport(input,candidate);
+        const reason = next >= score-1e-6 ? 'score' : !report.ok ? 'geometry'
+            : !alignmentHardHintsNoWorse(baselineReport,report) ? 'mandatory hint magnitude'
+            : !loadNativeBoardPacker().validatePlacementChange(constraints,candidate) ? 'native constraints' : 'accepted';
+        diagnostics.push({severity:'warning',nodeId:'block-portfolio-repack',message:
+            `Block portfolio hypothesis ${index}: ${reason}, score ${next.toFixed(2)}, alignment ${boardAlignmentScore(candidates[index],alignment).toFixed(2)}`});
+        if(reason !== 'accepted')continue;
         best = candidates[index]; score = next; selected = index;
     }
     diagnostics.push({ severity: 'warning', nodeId: 'block-portfolio-repack',
@@ -60,8 +68,9 @@ export function selectBlockPortfolio(input: PlacementInput, roots: PlacementPrim
     if (!ids.length) return roots;
     const placements = (ps: PlacementPrimitive[]) => ps.flatMap(p => p.placements);
     let current = roots;
+    const alignment = boardAlignmentPolicy(input,roots);
     const gap = boardSpacingPolicy(input).gap;
-    let score = globalPostPlaceScore(input, placements(current)) + blockPortfolioInternalScore(input, current) + boardSpacingPenalty(input,current,gap);
+    let score = globalPostPlaceScore(input, placements(current)) + blockPortfolioInternalScore(input, current) + boardSpacingPenalty(input,current,gap) + boardAlignmentScore(current,alignment);
     let report = createPlacementReport(input, placements(current));
     let evaluated = 0, accepted = 0;
     for (const id of ids) {
@@ -80,7 +89,7 @@ export function selectBlockPortfolio(input: PlacementInput, roots: PlacementPrim
             const replacement = translatePrimitive({ ...variant, layoutAlternatives: undefined }, dx, dy);
             const candidate = replace(current, id, replacement);
             const proposed = placements(candidate);
-            const nextScore = globalPostPlaceScore(input, proposed) + blockPortfolioInternalScore(input, candidate) + boardSpacingPenalty(input,candidate,gap);
+            const nextScore = globalPostPlaceScore(input, proposed) + blockPortfolioInternalScore(input, candidate) + boardSpacingPenalty(input,candidate,gap) + boardAlignmentScore(candidate,alignment);
             evaluated++;
             if (nextScore >= bestScore - 1e-6) continue;
             // Check the complete board, including polygon, holes and opposite-side

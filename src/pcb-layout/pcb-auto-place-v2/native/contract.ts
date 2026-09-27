@@ -2,7 +2,7 @@ import type { NativePostPlaceRefineProblem } from './encode-post-place-refine.ts
 import type { PostPlaceRefineResult } from '../post-place-refiner.types.ts';
 import type { BoardEdge, Box, Layer, PlacementRelationKind, Point } from '#types/pcb/layout-model.ts';
 
-export const NATIVE_BOARD_PACK_CONTRACT_VERSION = 4 as const;
+export const NATIVE_BOARD_PACK_CONTRACT_VERSION = 5 as const;
 export const NATIVE_BLOCK_SOLVE_CONTRACT_VERSION = 4 as const;
 export const NATIVE_PASSIVE_ISLAND_CONTRACT_VERSION = 1 as const;
 export const NATIVE_POST_PLACE_SCORE_CONTRACT_VERSION = 1 as const;
@@ -151,7 +151,8 @@ export interface NativeConstraintRegion {
     allowBlocks: string[];
 }
 
-export interface NativeBoardPackProblemV4 {
+export interface NativeBoardPackProblemV5 {
+    softAlignment?: import('../board-alignment.ts').BoardSoftAlignment;
     softSpacing?: {gap: number; compactnessScale: number; exemptPairs?: Array<[string,string]>};
     version: typeof NATIVE_BOARD_PACK_CONTRACT_VERSION;
     grid: number;
@@ -185,7 +186,7 @@ export interface NativePrimitivePackSolution {
     rank: { hardCount: number; hardSeverity: number; score: number };
 }
 
-export interface NativeBoardPackSolutionV4 extends NativePrimitivePackSolution {
+export interface NativeBoardPackSolutionV5 extends NativePrimitivePackSolution {
     version: typeof NATIVE_BOARD_PACK_CONTRACT_VERSION;
 }
 
@@ -196,22 +197,22 @@ export interface NativeBlockSolveSolutionV4 extends NativePrimitivePackSolution 
 
 export interface NativeBoardPackerAddon {
     contractVersion(): number;
-    solveBoardPacked(problem: NativeBoardPackProblemV4): NativeBoardPackSolutionV4;
+    solveBoardPacked(problem: NativeBoardPackProblemV5): NativeBoardPackSolutionV5;
     /** Bounded Micro-A* score for routes affected by the listed component-level primitives. */
-    scoreRouteLayout(problem: NativeBoardPackProblemV4, changedPrimitiveIds: string[]): number;
+    scoreRouteLayout(problem: NativeBoardPackProblemV5, changedPrimitiveIds: string[]): number;
     /** Same score with enriched pad/copper obstacles used by post-place refinement. */
     scoreRouteLayoutWithObstacles(
-        problem: NativeBoardPackProblemV4,
+        problem: NativeBoardPackProblemV5,
         changedPrimitiveIds: string[],
         routingObstacles: NativeRoutingObstacle[],
     ): number;
     prepareRouteLayoutComparison(
-        problem: NativeBoardPackProblemV4,
+        problem: NativeBoardPackProblemV5,
         changedPrimitiveIds: string[],
         routingObstacles: NativeRoutingObstacle[],
     ): NativeRouteBaseline;
     compareRouteLayoutCandidate(
-        problem: NativeBoardPackProblemV4,
+        problem: NativeBoardPackProblemV5,
         routingObstacles: NativeRoutingObstacle[],
         baseline: NativeRouteBaseline,
     ): NativeRouteComparison;

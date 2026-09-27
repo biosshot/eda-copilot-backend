@@ -6,6 +6,8 @@ use std::sync::Arc;
 #[serde(rename_all = "camelCase")]
 pub struct BoardPackProblem {
     #[serde(default)]
+    pub soft_alignment: Option<SoftAlignment>,
+    #[serde(default)]
     pub soft_spacing: Option<SoftSpacing>,
     pub version: u32,
     pub grid: f64,
@@ -446,6 +448,23 @@ impl BoardPackProblem {
         finite(self.grid, "grid")?;
         finite(self.clearance, "clearance")?;
         finite(self.edge_clearance, "edgeClearance")?;
+        if let Some(s) = &self.soft_alignment {
+            if !s.weight.is_finite() || s.weight < 0.0 || !s.tolerance.is_finite() || s.tolerance < 0.0
+                || !s.range.is_finite() || s.range < 0.0 || !s.fade.is_finite() || s.fade <= 0.0 {
+                return Err("invalid softAlignment parameters".into());
+            }
+            for pair in &s.pairs {
+                if !pair.similarity.is_finite() || !(0.0..=1.0).contains(&pair.similarity) || pair.a == pair.b {
+                    return Err("invalid softAlignment pair".into());
+                }
+                for (id, anchor) in [(&pair.a,&pair.anchor_a),(&pair.b,&pair.anchor_b)] {
+                    let Some(p) = self.primitives.iter().find(|p| &p.id == id) else { return Err("unknown softAlignment primitive".into()); };
+                    if anchor.as_ref().is_some_and(|name| !p.placements.iter().any(|q| &q.designator == name)) {
+                        return Err("unknown softAlignment anchor".into());
+                    }
+                }
+            }
+        }
         if self.search_width == 0 {
             return Err("searchWidth must be positive".into());
         }
@@ -684,4 +703,23 @@ pub struct SoftSpacing {
     pub compactness_scale: f64,
     #[serde(default)]
     pub exempt_pairs: Vec<[Arc<str>; 2]>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SoftAlignment {
+    pub pairs: Vec<AlignmentPair>,
+    pub weight: f64,
+    pub tolerance: f64,
+    pub range: f64,
+    pub fade: f64,
+}
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AlignmentPair {
+    pub a: Arc<str>,
+    pub b: Arc<str>,
+    pub anchor_a: Option<Arc<str>>,
+    pub anchor_b: Option<Arc<str>>,
+    pub similarity: f64,
 }

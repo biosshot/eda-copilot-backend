@@ -208,7 +208,7 @@ function treeDiagnosticsForReport(diagnostics: Array<{ severity: 'warning' | 'er
             }];
         }
         if (['Deferred ', 'Block portfolio', 'Block postrefine', 'Block checkpoint', 'Role hypothesis',
-            'Independent placement', 'Board soft spacing'].some(prefix=>diagnostic.message.startsWith(prefix))) {
+            'Independent placement', 'Board soft spacing', 'Board search alignment'].some(prefix=>diagnostic.message.startsWith(prefix))) {
             return [{
                 severity: diagnostic.severity,
                 code: 'v2_solver',

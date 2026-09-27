@@ -1,0 +1,107 @@
+<!doctype html><html lang="ru"><meta charset="utf-8"><title>Telemetry — выравнивание в основном поиске</title><style>body{font:16px system-ui;background:#f1f5f9;color:#172033;max-width:1600px;margin:24px auto;padding:0 24px}p{max-width:1150px;line-height:1.5}.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}figure{margin:0;background:white;border:1px solid #cbd5e1;border-radius:10px;padding:12px}img{width:100%;max-height:850px;object-fit:contain}figcaption{font-weight:bold}table{border-collapse:collapse;width:100%;background:white;margin:20px 0}td,th{padding:10px;border-bottom:1px solid #ddd;text-align:left}.notice{background:#fff7ed;border-left:4px solid #ea580c;padding:14px}a{color:#0369a1}</style>
+<h1>Telemetry: мягкое выравнивание в основном поиске</h1>
+<p>«До» — последняя полная плата с фиксированным USB и мягкими зазорами. «После» — повторный board packaging с теми же сохранёнными локальными блоками и альтернативами, затем обычный postrefine и завершающее выравнивание. Локальная сборка блоков не повторялась.</p>
+<p><strong>Изменено компонентов в принятом результате: 0. Отобрана исходная гипотеза; итоговые изображения совпадают. Это отрицательный результат текущей настройки, а не подтверждение улучшения.</strong></p>
+<p>Похожие пары определяются до размещения, порог 0,78. В native score добавлен ограниченный бонус за общую ось центров основных компонентов, с допуском 0,15 мм. Бонус плавно исчезает при зазоре между блоками от 8 до 16 мм. Генерируются позиции на общих осях с несколькими промежутками и проекции свободных мест. Прежние кандидаты остаются. Проверяются пять полных гипотез: обычная, с выравниванием, плотная и две альтернативные сборки с выравниванием. Совместная атомарная постановка пары пока не добавлена.</p>
+<p>Время board packaging и последующих этапов: 272.29 с. Фиксированных компонентов сдвинуто: 0. Это сравнение размещения; трассировка не запускалась.</p>
+<p class="notice">Проверка изменения native: true; обязательные ограничения не ухудшены: true. Строгая абсолютная проверка: false → false. Число нарушений обязательного зазора: 7 → 7. Исходная плата уже содержала нарушения; файлы ASM — для просмотра, не подтверждение готовности к изготовлению.</p>
+<table><tr><th>Метрика</th><th>До</th><th>После</th></tr><tr><td>Длина MST, мм</td><td>2392.86</td><td>2392.86</td></tr><tr><td>Пересечения линий</td><td>299.00</td><td>299.00</td></tr><tr><td>Пересечения чужих падов</td><td>296.00</td><td>296.00</td></tr><tr><td>Бонус выравнивания после упаковки</td><td>-343.49</td><td>-343.49</td></tr><tr><td>Бонус выравнивания в конце</td><td>-343.49</td><td>-343.49</td></tr></table>
+<h2>Оси похожих блоков</h2><p>Меньшая разность X или Y центров, мм. Малое значение означает общую строку или колонку; это не расстояние между блоками.</p><table><tr><th>Центры</th><th>После упаковки: до / после</th><th>Итог: до / после</th></tr><tr><td>U14 / U18</td><td>8.00 / 8.00</td><td>8.00 / 8.00</td></tr><tr><td>R38 / R44</td><td>5.71 / 5.71</td><td>5.71 / 5.71</td></tr><tr><td>L4 / L3</td><td>1.24 / 1.24</td><td>1.24 / 1.24</td></tr><tr><td>U2 / U1</td><td>0.50 / 0.50</td><td>0.50 / 0.50</td></tr></table>
+<h2>Полная плата</h2><label><input id="clean" type="checkbox"> Скрыть линии связей</label><div class="pair"><figure><figcaption>До</figcaption><a href="before-board.svg"><img class="board" data-tag="before" src="before-board.svg"></a></figure><figure><figcaption>После</figcaption><a href="after-board.svg"><img class="board" data-tag="after" src="after-board.svg"></a></figure></div>
+<h2>U1 / U2</h2><div class="pair"><figure><figcaption>До</figcaption><a href="before-iso.svg"><img class="iso" data-tag="before" src="before-iso.svg"></a></figure><figure><figcaption>После</figcaption><a href="after-iso.svg"><img class="iso" data-tag="after" src="after-iso.svg"></a></figure></div><h2>L3 / L4</h2><div class="pair"><figure><figcaption>До</figcaption><a href="before-inductors.svg"><img class="inductors" data-tag="before" src="before-inductors.svg"></a></figure><figure><figcaption>После</figcaption><a href="after-inductors.svg"><img class="inductors" data-tag="after" src="after-inductors.svg"></a></figure></div><h2>U16 / U20</h2><div class="pair"><figure><figcaption>До</figcaption><a href="before-charge.svg"><img class="charge" data-tag="before" src="before-charge.svg"></a></figure><figure><figcaption>После</figcaption><a href="after-charge.svg"><img class="charge" data-tag="after" src="after-charge.svg"></a></figure></div><h2>J5</h2><div class="pair"><figure><figcaption>До</figcaption><a href="before-usb.svg"><img class="usb" data-tag="before" src="before-usb.svg"></a></figure><figure><figcaption>После</figcaption><a href="after-usb.svg"><img class="usb" data-tag="after" src="after-usb.svg"></a></figure></div>
+<h2>Отдельная проверка: что предложила новая упаковка</h2><p>Две первичные гипотезы до выбора альтернатив и postrefine. Слева обычная упаковка, справа — с новой метрикой и кандидатами. Это предложенный вариант, не принятый итог. Отбор: ordinary. Обязательные ограничения не ухудшены: false.</p><table><tr><th>Метрика</th><th>Обычная</th><th>С выравниванием</th></tr><tr><td>Бонус выравнивания</td><td>-324.77</td><td>-330.31</td></tr><tr><td>wireLength</td><td>2407.12</td><td>2435.65</td></tr><tr><td>crossings</td><td>304.00</td><td>309.00</td></tr><tr><td>foreignPadHits</td><td>299.00</td><td>304.00</td></tr></table><div class="pair"><figure><figcaption>ordinary</figcaption><a href="probe-ordinary.svg"><img src="probe-ordinary-clean.svg"></a></figure><figure><figcaption>aligned</figcaption><a href="probe-aligned.svg"><img src="probe-aligned-clean.svg"></a></figure></div><pre>Block portfolio hypothesis 1: score, score 16549028.51, alignment -330.31
+Block portfolio repack: 2 board hypotheses, selected 0, score 16198070.57</pre>
+<details><summary>Диагностика выбора</summary><pre>[
+  {
+    &quot;severity&quot;: &quot;warning&quot;,
+    &quot;nodeId&quot;: &quot;board&quot;,
+    &quot;message&quot;: &quot;Board soft spacing: 0.69mm extra, density 0.520, compactness scale 0.793&quot;,
+    &quot;code&quot;: &quot;v2_solver&quot;
+  },
+  {
+    &quot;severity&quot;: &quot;warning&quot;,
+    &quot;nodeId&quot;: &quot;board&quot;,
+    &quot;message&quot;: &quot;Board search alignment: 4 structural pairs; unaligned packing retained&quot;,
+    &quot;code&quot;: &quot;v2_solver&quot;
+  },
+  {
+    &quot;severity&quot;: &quot;warning&quot;,
+    &quot;nodeId&quot;: &quot;block-portfolio-repack&quot;,
+    &quot;message&quot;: &quot;Block portfolio repack: 5 board hypotheses, selected 0, score 16198070.57&quot;,
+    &quot;code&quot;: &quot;v2_solver&quot;
+  },
+  {
+    &quot;severity&quot;: &quot;warning&quot;,
+    &quot;nodeId&quot;: &quot;tree:block:voltage_iso&quot;,
+    &quot;message&quot;: &quot;Block portfolio selected voltage_iso in board context: variant 0, shift 0,0.5mm; score 16198070.57 -> 16161359.21&quot;,
+    &quot;code&quot;: &quot;v2_solver&quot;
+  },
+  {
+    &quot;severity&quot;: &quot;warning&quot;,
+    &quot;nodeId&quot;: &quot;tree:block:esp_supply&quot;,
+    &quot;message&quot;: &quot;Block portfolio selected esp_supply in board context: variant 0, shift 0.5,0mm; score 16161359.21 -> 16161144.58&quot;,
+    &quot;code&quot;: &quot;v2_solver&quot;
+  },
+  {
+    &quot;severity&quot;: &quot;warning&quot;,
+    &quot;nodeId&quot;: &quot;tree:block:lte_power&quot;,
+    &quot;message&quot;: &quot;Block portfolio selected lte_power in board context: variant 0, shift -1,0mm; score 16161144.58 -> 16137133.66&quot;,
+    &quot;code&quot;: &quot;v2_solver&quot;
+  },
+  {
+    &quot;severity&quot;: &quot;warning&quot;,
+    &quot;nodeId&quot;: &quot;tree:block:hv_neg&quot;,
+    &quot;message&quot;: &quot;Block portfolio selected hv_neg in board context: variant 1, shift 0,1mm; score 16137133.66 -> 15942074.82&quot;,
+    &quot;code&quot;: &quot;v2_solver&quot;
+  },
+  {
+    &quot;severity&quot;: &quot;warning&quot;,
+    &quot;nodeId&quot;: &quot;tree:block:hv_pos&quot;,
+    &quot;message&quot;: &quot;Block portfolio selected hv_pos in board context: variant 1, shift 0,0.5mm; score 15942074.82 -> 15884592.42&quot;,
+    &quot;code&quot;: &quot;v2_solver&quot;
+  },
+  {
+    &quot;severity&quot;: &quot;warning&quot;,
+    &quot;nodeId&quot;: &quot;tree:block:usb_charge&quot;,
+    &quot;message&quot;: &quot;Block portfolio selected usb_charge in board context: variant 0, shift -1,0mm; score 15884592.42 -> 15744346.86&quot;,
+    &quot;code&quot;: &quot;v2_solver&quot;
+  },
+  {
+    &quot;severity&quot;: &quot;warning&quot;,
+    &quot;nodeId&quot;: &quot;tree:block:logic_power&quot;,
+    &quot;message&quot;: &quot;Block portfolio selected logic_power in board context: variant 0, shift -1,0mm; score 15744346.86 -> 15710906.25&quot;,
+    &quot;code&quot;: &quot;v2_solver&quot;
+  },
+  {
+    &quot;severity&quot;: &quot;warning&quot;,
+    &quot;nodeId&quot;: &quot;tree:block:low_charge_neg&quot;,
+    &quot;message&quot;: &quot;Block portfolio selected low_charge_neg in board context: variant 0, shift 1,0mm; score 15710906.25 -> 15709938.42&quot;,
+    &quot;code&quot;: &quot;v2_solver&quot;
+  },
+  {
+    &quot;severity&quot;: &quot;warning&quot;,
+    &quot;nodeId&quot;: &quot;block-portfolio&quot;,
+    &quot;message&quot;: &quot;Block portfolio: 12 blocks, 249 candidates, 8 accepted&quot;,
+    &quot;code&quot;: &quot;v2_solver&quot;
+  },
+  {
+    &quot;code&quot;: &quot;v2_solver&quot;,
+    &quot;message&quot;: &quot;J1: safe post-place improvement J1 rotate += 180; global score 15616903.75 -> 15614415.49. It was not applied because fixed placement must be preserved. Add refineGroup(\&quot;post_J1\&quot;, [\&quot;J1\&quot;], { rotateBy: [180] }) if this fixed component may rotate.&quot;,
+    &quot;nodeId&quot;: &quot;post-place:J1&quot;,
+    &quot;severity&quot;: &quot;warning&quot;
+  },
+  {
+    &quot;code&quot;: &quot;v2_solver&quot;,
+    &quot;message&quot;: &quot;J7: safe post-place improvement J7 rotate += 180; global score 15616903.75 -> 15616854.217. It was not applied because fixed placement must be preserved. Add refineGroup(\&quot;post_J7\&quot;, [\&quot;J7\&quot;], { rotateBy: [180] }) if this fixed component may rotate.&quot;,
+    &quot;nodeId&quot;: &quot;post-place:J7&quot;,
+    &quot;severity&quot;: &quot;warning&quot;
+  },
+  {
+    &quot;severity&quot;: &quot;warning&quot;,
+    &quot;nodeId&quot;: &quot;board-alignment&quot;,
+    &quot;message&quot;: &quot;Board soft alignment: similarity >= 0.78, 3 nearby pairs, 74 candidates, 0 accepted; fixed components and block interiors preserved&quot;,
+    &quot;code&quot;: &quot;v2_solver&quot;
+  }
+]</pre></details>
+<p><a href="after.assemble.json">ASM после</a> · <a href="before.assemble.json">ASM до</a> · <a href="summary.json">Численные результаты</a>. Фиксированная механика, контур, отверстия и медь исключены из ASM. В EasyEDA ничего не применялось.</p>
+<script>document.querySelector('#clean').onchange=e=>document.querySelectorAll('img.board').forEach(img=>img.src=img.dataset.tag+'-board'+(e.target.checked?'-clean':'')+'.svg');</script></html>

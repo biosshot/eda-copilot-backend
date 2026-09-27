@@ -92,19 +92,37 @@ function currentRoots(input: PlacementInput, roots: PlacementPrimitive[], placem
 }
 
 export interface AlignmentPair { a: string; b: string; similarity: number; anchorA?: string; anchorB?: string }
-export function findAlignmentPairs(input: PlacementInput, roots: PlacementPrimitive[], placements: Placement[]): AlignmentPair[] {
+export function findAlignmentPairs(input: PlacementInput, roots: PlacementPrimitive[], placements: Placement[], local = true): AlignmentPair[] {
     const current = currentRoots(input, roots, placements), pairs: AlignmentPair[] = [];
     const components = (root: PlacementPrimitive) => input.components.filter(c => root.placements.some(p => p.designator === c.designator));
     for (let i = 0; i < current.length; i++) for (let j = i+1; j < current.length; j++) {
         const a = current[i], b = current[j];
         if (!a.placements.length || !b.placements.length || a.locked && b.locked) continue;
-        if (boxGap(a.bbox, b.bbox) > BOARD_ALIGNMENT_POLICY.neighbourGap) continue;
+        if (local && boxGap(a.bbox, b.bbox) > BOARD_ALIGNMENT_POLICY.neighbourGap) continue;
         if (a.placements.some(p => p.layer !== a.placements[0].layer) || b.placements.some(p => p.layer !== a.placements[0].layer)) continue;
         const ac = components(a), bc = components(b), similarity = blockSimilarity(ac, bc);
         if (similarity < BOARD_ALIGNMENT_POLICY.similarity) continue;
         pairs.push({ a: a.id, b: b.id, similarity, anchorA: alignmentAnchor(ac), anchorB: alignmentAnchor(bc) });
     }
     return pairs.sort((a,b) => b.similarity-a.similarity || a.a.localeCompare(b.a) || a.b.localeCompare(b.b));
+}
+export interface BoardSoftAlignment { pairs: AlignmentPair[]; weight: number; tolerance: number; range: number; fade: number }
+export function boardAlignmentPolicy(input: PlacementInput, roots: PlacementPrimitive[]): BoardSoftAlignment {
+    return { pairs: findAlignmentPairs(input,roots,roots.flatMap(p=>p.placements),false), weight:24, tolerance:.15, range:8, fade:8 };
+}
+/** Bounded reward, rather than a fading positive penalty: moving apart must not
+ * become a way to escape an alignment penalty. Incomplete pairs contribute zero. */
+export function boardAlignmentScore(roots: PlacementPrimitive[], policy: BoardSoftAlignment) {
+    let score=0;
+    for(const pair of policy.pairs) {
+        const a=roots.find(p=>p.id===pair.a), b=roots.find(p=>p.id===pair.b);
+        if(!a||!b)continue;
+        const ac=center(a,pair.anchorA), bc=center(b,pair.anchorB);
+        const error=Math.min(3,Math.max(0,Math.min(Math.abs(ac.x-bc.x),Math.abs(ac.y-bc.y))-policy.tolerance));
+        const proximity=Math.max(0,Math.min(1,1-(boxGap(a.bbox,b.bbox)-policy.range)/policy.fade));
+        score-=policy.weight*pair.similarity*proximity*(9-error*error);
+    }
+    return score;
 }
 function center(root: PlacementPrimitive, anchor?: string): Point {
     return root.placements.find(p => p.designator === anchor) ?? boxCenter(root.bbox);

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
-import type { NativeBoardPackProblemV4, NativePrimitive, NativeRelation, NativeRoutingObstacle } from '../src/pcb-layout/pcb-auto-place-v2/native/contract.ts';
+import type { NativeBoardPackProblemV5, NativePrimitive, NativeRelation, NativeRoutingObstacle } from '../src/pcb-layout/pcb-auto-place-v2/native/contract.ts';
 
 import { refinePostPlacement, refinePostPlacementAsync } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
 import { defaultSolverOptions } from '../src/pcb-layout/pcb-auto-place/utils.ts';
@@ -26,8 +26,8 @@ function relation(from: string, to: string): NativeRelation {
         relation: 'critical_pair', priority: 'critical', weight: 70, hard: false, effect: 'score_only',
         satelliteAnchor: false, preferFacingPads: false } as NativeRelation;
 }
-function problem(primitives: NativePrimitive[], relations: NativeRelation[] = []): NativeBoardPackProblemV4 {
-    return { version: 4, grid: 0.25, clearance: 0.25, searchWidth: 32, compactness: 'normal',
+function problem(primitives: NativePrimitive[], relations: NativeRelation[] = []): NativeBoardPackProblemV5 {
+    return { version: 5, grid: 0.25, clearance: 0.25, searchWidth: 32, compactness: 'normal',
         bounds, fullBoardBounds: bounds, boardOutline: [], edgeClearance: 0,
         primitives, relations, obstacles: [], constraintRegions: [], components: [],
         componentPairClearance: [], componentConflict: [] };
