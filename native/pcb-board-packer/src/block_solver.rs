@@ -154,7 +154,7 @@ enum CompiledEndpoint {
     Missing,
 }
 
-pub fn solve_block(problem: BlockSolveProblem) -> Result<BoardPackSolution, String> {
+pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolveSolution, String> {
     let primitive_ids = lexical_ids(
         problem
             .primitives
@@ -237,8 +237,9 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<BoardPackSolution, Stri
     };
     trace::stage(&context, "beam_complete", &solved);
     *context.trace_phase.borrow_mut() = "local_improve";
-    let improved = local_improve(solved, &context);
+    let improved = local_improve(solved.clone(), &context);
     trace::stage(&context, "local_complete", &improved);
+    let singles = improved.clone();
     *context.trace_phase.borrow_mut() = "pair_improve";
     let improved = if context.problem.experiments.pair_swaps || context.problem.experiments.reinsert_pair {
         pair_improve(improved, &context)
@@ -253,7 +254,13 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<BoardPackSolution, Stri
             center_primitives(improved, context.problem.grid)
         };
     trace::stage(&context, "native_final", &final_primitives);
-    solution(&context, &final_primitives)
+    let mut checkpoints = Vec::new();
+    for (stage, items) in [("beam", solved), ("singles", singles), ("pairs", final_primitives.clone())] {
+        let centered = if items.iter().any(|p| p.primitive.locked) || has_global_frame { items }
+            else { center_primitives(items, context.problem.grid) };
+        checkpoints.push(crate::model::BlockCheckpoint { stage, result: solution(&context, &centered)? });
+    }
+    Ok(crate::model::BlockSolveSolution { result: solution(&context, &final_primitives)?, checkpoints })
 }
 
 fn solve_greedy(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<WorkingPrimitive> {
@@ -623,8 +630,11 @@ fn direct_pad_crossing_penalty(primitives: &[WorkingPrimitive], context: &Contex
             let Some(name) = &cp.net else { continue };
             if name.is_empty() || is_ground(name) || context.problem.experiments.ignored_nets.iter().any(|n| n.eq_ignore_ascii_case(name)) { continue; }
             let net = nets.entry(name.clone()).or_insert_with(|| crate::model::PostPlaceNet {
-                name: name.clone(), points: vec![], layers: vec![], weight: if is_power(name) { 0.25 } else { 1.0 } });
+                name: name.clone(), points: vec![], layers: vec![], internal_owners: vec![], weight: if is_power(name) { 0.25 } else { 1.0 } });
             net.points.push(Point { x: cp.x, y: cp.y });
+            let owner = cp.reference.rsplit_once('.').map(|(d, _)| d);
+            net.internal_owners.push(p.components.iter().find(|(_, c)| Some(c.designator.as_ref()) == owner
+                && c.role.as_deref() == Some("main_ic")).map(|(_, c)| c.designator.clone()));
             net.layers.push(obstacles.iter().find(|o| o.reference.as_ref() == Some(&cp.reference)).and_then(|o| o.layer.clone()));
         }
     }

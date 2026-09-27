@@ -53,6 +53,8 @@ pub struct RefineProblem {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Component {
+    #[serde(default)]
+    internal_pad_owner: bool,
     designator: Arc<str>,
     pose_index: usize,
     obstacle_offset: usize,
@@ -464,6 +466,10 @@ impl RefineProblem {
                 .iter()
                 .map(|net| PostPlaceNet {
                     name: net.name.clone(),
+                    internal_owners: net.points.iter().map(|b| {
+                        let c = &self.components[b.component];
+                        c.internal_pad_owner.then(|| c.designator.clone())
+                    }).collect(),
                     weight: net.weight,
                     layers: net.points.iter().map(|b| w.obstacles[self.components[b.component].obstacle_offset + b.pad].layer.clone()).collect(),
                     points: net
@@ -1282,8 +1288,15 @@ impl RefineProblem {
         Ok(diagnostics)
     }
 }
-/// Reuse the exact hard-constraint model for block variants. No refinement or
-/// routing is performed here, and existing violations may not gain new keys.
+/// Absolute admission check for checkpoints: no baseline violations are exempt.
+pub fn validate_layout(p: RefineProblem) -> Result<bool, String> {
+    p.validate()?;
+    let world = p.world(&p.placements)?;
+    let all: Vec<_> = (0..p.components.len()).collect();
+    Ok(p.violations(&world, &all).is_empty())
+}
+
+/// Compare against a baseline during refinement; existing violations may not gain new keys.
 pub fn validate_change(p: RefineProblem, placements: Vec<Placement>) -> Result<bool, String> {
     p.validate()?;
     if placements.len()!=p.placements.len() {return Ok(false);}

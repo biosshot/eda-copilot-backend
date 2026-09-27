@@ -51,6 +51,7 @@ export interface PlacementPrimitive {
     deferredRelations?: string[];
     /** Bounded alternative internal layouts, in the same coordinate frame. */
     layoutAlternatives?: PlacementPrimitive[];
+    blockQuality?: import('./block-quality.ts').BlockQuality;
 }
 
 export interface PrimitiveSolveDiagnostic {

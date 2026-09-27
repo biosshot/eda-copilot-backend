@@ -3,13 +3,7 @@ import type { PlacementPrimitive } from './primitives.ts';
 
 export type GroupRelaxation = 'off' | 'satellites' | 'caps' | 'all';
 
-export function groupRelaxation(): GroupRelaxation {
-    const value = process.env.PCB_BLOCK_RELAX_GROUPS ?? 'off';
-    if (!['off', 'satellites', 'caps', 'all'].includes(value)) throw new Error(`Unknown PCB_BLOCK_RELAX_GROUPS: ${value}`);
-    return value as GroupRelaxation;
-}
-
-/** Experimental representation, not an input/netlist rewrite. Core pairs,
+/** Alternative representation, not an input/netlist rewrite. Core pairs,
  * lines, bypass islands, fixed geometry and explicit row topology stay rigid.
  * Removed group anchors are distributed over members. Explicit distance limits
  * on a whole group remain protected; a cap island's implicit target survives.

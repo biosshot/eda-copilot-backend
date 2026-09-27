@@ -122,7 +122,8 @@ fn minimum_spanning_segments(net_index: usize, net: &PostPlaceNet) -> Vec<Segmen
 }
 
 /// One charge per segment / foreign physical pad. In particular, do not exempt
-/// the source/target component: its other pads can obstruct the connection.
+/// the source/target component of an external connection. Only a segment with
+/// both endpoints on one IC may ignore pads of that same immovable IC.
 fn pad_hits(segments: &[Segment], nets: &[PostPlaceNet], obstacles: &[RouteObstacle]) -> f64 {
     let mut penalty = 0.0;
     for s in segments {
@@ -131,8 +132,14 @@ fn pad_hits(segments: &[Segment], nets: &[PostPlaceNet], obstacles: &[RouteObsta
         let b = net.layers.get(s.to).and_then(|l| l.as_deref());
         let layer = match (a, b) { (Some(a), Some(b)) if a == b => Some(a),
             (Some(a), None) | (None, Some(a)) => Some(a), _ => None };
+        let internal_owner = match (net.internal_owners.get(s.from).and_then(|v| v.as_deref()),
+            net.internal_owners.get(s.to).and_then(|v| v.as_deref())) {
+            (Some(a), Some(b)) if a == b => Some(a), _ => None,
+        };
         let mut seen = rustc_hash::FxHashSet::default();
         for (i, pad) in obstacles.iter().enumerate() {
+            if internal_owner.is_some_and(|owner| pad.reference.as_deref()
+                .and_then(|r| r.rsplit_once('.')).is_some_and(|(d, _)| d == owner)) { continue; }
             if pad.net.as_ref() == Some(&net.name)
                 || (layer.is_some() && pad.layer.is_some() && layer != pad.layer.as_deref()) { continue; }
             if crate::fast_route::hits(s.a, s.b, pad.box_) {
@@ -207,6 +214,7 @@ fn validate(problem: &PostPlaceScoreProblem) -> Result<(), String> {
     }
     let all_finite = problem.pad_crossing_weight.is_finite() && problem.pad_crossing_weight >= 0.0 && problem.nets.iter().all(|net| {
         (net.layers.is_empty() || net.layers.len() == net.points.len()) &&
+        (net.internal_owners.is_empty() || net.internal_owners.len() == net.points.len()) &&
         net.weight.is_finite()
             && net
                 .points

@@ -15,11 +15,11 @@ export function withBlockSolverCapture<T>(capture: (params: BlockSolveParams) =>
 }
 
 export function solveBlockPrimitives(params: BlockSolveParams): PlacementPrimitive[] {
-    blockSolverCapture.getStore()?.(params);
     return solveBlockPrimitivesRust(params).result;
 }
 
 export function solveBlockPrimitivesRust(params: BlockSolveParams) {
+    blockSolverCapture.getStore()?.(params);
     const primitives = prepareLocalLayoutPrimitives(
         params.node.label,
         params.primitives,
@@ -38,5 +38,7 @@ export function solveBlockPrimitivesRust(params: BlockSolveParams) {
     }
     const problem = encodeNativeBlockSolveProblem(prepared);
     const solution = cachedNativeSolve(addon, 'block', problem, () => addon.solveBlockPrimitives(problem));
-    return { result: applyNativeBoardPackSolution(primitives, solution, NATIVE_BLOCK_SOLVE_CONTRACT_VERSION), rank: solution.rank };
+    const checkpoints = solution.checkpoints.map(snapshot => ({ stage: snapshot.stage, rank: snapshot.rank,
+        primitives: applyNativeBoardPackSolution(primitives, snapshot, NATIVE_BLOCK_SOLVE_CONTRACT_VERSION) }));
+    return { checkpoints, result: applyNativeBoardPackSolution(primitives, solution, NATIVE_BLOCK_SOLVE_CONTRACT_VERSION), rank: solution.rank };
 }

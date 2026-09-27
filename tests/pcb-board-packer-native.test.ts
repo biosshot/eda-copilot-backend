@@ -156,7 +156,7 @@ nativeTest('native block solver accepts the versioned contract directly', () => 
     const board = minimalProblem();
     const primitive = board.primitives[0];
     const solution = addon.solveBlockPrimitives({
-        version: 2,
+        version: 3,
         grid: board.grid,
         clearance: board.clearance,
         searchWidth: 4,
@@ -182,8 +182,10 @@ nativeTest('native block solver accepts the versioned contract directly', () => 
         componentPairClearance: [0],
         componentConflict: [0],
     });
-    assert.equal(addon.blockContractVersion(), 2);
-    assert.equal(solution.version, 2);
+    assert.deepEqual(solution.checkpoints.map(c => c.stage), ['beam', 'singles', 'pairs']);
+    assert.ok(solution.checkpoints.every(c => c.states.length === 1 && c.rank.hardCount === 0));
+    assert.equal(addon.blockContractVersion(), 3);
+    assert.equal(solution.version, 3);
     assert.equal(solution.states.length, 1);
     assert.ok(Number.isFinite(solution.rank.score));
 });

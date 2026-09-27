@@ -1,3 +1,5 @@
+// Historical A/B harness: its environment modes were retired by the unified policy.
+if (process.argv[1]?.endsWith('diagnose-c33-frontier.mjs')) throw new Error('Archived placement experiment: replay on commit 90a77cf; use experiment-telemetry-unified.mjs on this branch.');
 import {readFileSync,writeFileSync} from 'node:fs';
 import {buildPlacementGraph} from '../src/pcb-layout/pcb-auto-place/placement-graph.ts';
 import {solvePlacementSubtreeSync} from '../src/pcb-layout/pcb-auto-place-v2/tree-solver.ts';

@@ -303,6 +303,9 @@ pub struct PostPlaceScoreProblem {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PostPlaceNet {
+    /// IC owner for each point; absent metadata means no exemption.
+    #[serde(default)]
+    pub internal_owners: Vec<Option<Arc<str>>>,
     pub name: Arc<str>,
     pub points: Vec<Point>,
     #[serde(default)]
@@ -375,6 +378,22 @@ pub struct BoardPackSolution {
     pub version: u32,
     pub states: Vec<PrimitiveState>,
     pub rank: Rank,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockSolveSolution {
+    #[serde(flatten)]
+    pub result: BoardPackSolution,
+    pub checkpoints: Vec<BlockCheckpoint>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockCheckpoint {
+    pub stage: &'static str,
+    #[serde(flatten)]
+    pub result: BoardPackSolution,
 }
 
 #[derive(Clone, Debug, Serialize)]

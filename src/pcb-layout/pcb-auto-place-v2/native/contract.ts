@@ -3,7 +3,7 @@ import type { PostPlaceRefineResult } from '../post-place-refiner.types.ts';
 import type { BoardEdge, Box, Layer, PlacementRelationKind, Point } from '#types/pcb/layout-model.ts';
 
 export const NATIVE_BOARD_PACK_CONTRACT_VERSION = 3 as const;
-export const NATIVE_BLOCK_SOLVE_CONTRACT_VERSION = 2 as const;
+export const NATIVE_BLOCK_SOLVE_CONTRACT_VERSION = 3 as const;
 export const NATIVE_PASSIVE_ISLAND_CONTRACT_VERSION = 1 as const;
 export const NATIVE_POST_PLACE_SCORE_CONTRACT_VERSION = 1 as const;
 export const NATIVE_SIGNAL_PATH_CONTRACT_VERSION = 1 as const;
@@ -188,7 +188,8 @@ export interface NativeBoardPackSolutionV3 extends NativePrimitivePackSolution {
     version: typeof NATIVE_BOARD_PACK_CONTRACT_VERSION;
 }
 
-export interface NativeBlockSolveSolutionV2 extends NativePrimitivePackSolution {
+export interface NativeBlockSolveSolutionV3 extends NativePrimitivePackSolution {
+    checkpoints: Array<NativePrimitivePackSolution & { stage: string }>;
     version: typeof NATIVE_BLOCK_SOLVE_CONTRACT_VERSION;
 }
 
@@ -214,7 +215,7 @@ export interface NativeBoardPackerAddon {
         baseline: NativeRouteBaseline,
     ): NativeRouteComparison;
     blockContractVersion(): number;
-    solveBlockPrimitives(problem: NativeBlockSolveProblemV2): NativeBlockSolveSolutionV2;
+    solveBlockPrimitives(problem: NativeBlockSolveProblemV3): NativeBlockSolveSolutionV3;
     passiveIslandContractVersion(): number;
     solvePassiveNetIsland(problem: NativePassiveIslandProblemV1): NativePassiveIslandSolutionV1;
     postPlaceRefineContractVersion(): number;
@@ -222,6 +223,8 @@ export interface NativeBoardPackerAddon {
     postPlaceScoreContractVersion(): number;
     scorePostPlace(problem: NativePostPlaceScoreProblemV1): number;
     validatePlacementChange(problem: import('./encode-post-place-refine.ts').NativePostPlaceRefineProblem, placements: import('#types/pcb/layout-model.ts').Placement[]): boolean;
+    /** Absolute hard-constraint validation, without accepting baseline violations. */
+    validatePlacement(problem: import('./encode-post-place-refine.ts').NativePostPlaceRefineProblem): boolean;
     signalPathContractVersion(): number;
     evaluateSignalPath(problem: NativeSignalPathEvaluationProblemV1): NativeSignalPathTopologyEvaluation | null;
     signalPathBridgeDeltas(problem: NativeSignalPathBridgeProblemV1): Point[];
@@ -233,7 +236,7 @@ export interface NativeBlockComponentGeometry extends NativeComponentGeometry {
     powerComponent: boolean;
 }
 
-export interface NativeBlockSolveProblemV2 {
+export interface NativeBlockSolveProblemV3 {
     /** Opt-in research controls; deliberately not exposed by the placement DSL. */
     experiments?: {
         routingMetric?: 'micro' | 'off' | 'geometric';
@@ -327,7 +330,7 @@ export interface NativePostPlaceScoreProblemV1 {
     version: typeof NATIVE_POST_PLACE_SCORE_CONTRACT_VERSION;
     padCrossingWeight?: number;
     routingObstacles?: NativeRoutingObstacle[];
-    nets: Array<{ name: string; points: Point[]; weight: number; layers?: Array<string | null> }>;
+    nets: Array<{ name: string; points: Point[]; weight: number; layers?: Array<string | null>; internalOwners?: Array<string | null> }>;
     distances: Array<{ source: Point; target: Point; weight: number; min?: number; max?: number }>;
     clearances: Array<{ source: Box; target: Box; minimum: number; weight: number }>;
     fixedPenalties: number[];

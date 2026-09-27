@@ -17,10 +17,12 @@ import { createFixedPlacement } from '../pcb-auto-place/fixed.ts';
 import { createClearanceResolver, type ClearanceResolver } from '../pcb-auto-place/clearance-resolver.ts';
 import { validatePrimitive } from '../pcb-auto-place/primitive-validation.ts';
 import { solveBoardPrimitives } from './board-solver.ts';
-import { solveBlockPrimitives } from './block-solver-engine.ts';
+import { solveBlockPrimitives, solveBlockPrimitivesRust } from './block-solver-engine.ts';
+import { blockQuality, legalBlockCandidate, selectBlockCandidates, captureBlockCandidates, type BlockCandidate } from './block-quality.ts';
+import { suspiciousBlockRoles, withRoleHypotheses } from './block-role-hypotheses.ts';
 import { blockPolicy } from './block-policy.ts';
 import { refineBlockPrimitives } from './block-post-refiner.ts';
-import { groupRelaxation, relaxBlockGroups } from './relaxed-block-groups.ts';
+import { relaxBlockGroups } from './relaxed-block-groups.ts';
 import type { BlockSolveParams } from './block-solver.ts';
 import { solvePlacementIslands } from './island-solver.ts';
 import { solveModulePrimitives } from './module-solver.ts';
@@ -104,6 +106,7 @@ type TreeSolveContext = {
     primitives: PlacementPrimitive[];
     diagnostics: PrimitiveSolveDiagnostic[];
     blockAlternatives: Map<string, PlacementPrimitive[][]>;
+    blockQualities: Map<string, import('./block-quality.ts').BlockQuality>;
 };
 
 function createTreeSolveContext(
@@ -127,6 +130,7 @@ function createTreeSolveContext(
         primitives: [],
         diagnostics: [],
         blockAlternatives: new Map(),
+        blockQualities: new Map(),
     };
 }
 
@@ -402,12 +406,16 @@ function solveBlockNode(
     childPrimitives: PlacementPrimitive[],
     clearance = context.clearance,
 ) {
+    const originalPrimitives = childPrimitives;
+    const originalRelations = relationsForPrimitives(context.graph.relations, node.id, childPrimitives);
     const relaxed = relaxBlockGroups(context.input, context.treeNodes, childPrimitives,
-        relationsForPrimitives(context.graph.relations, node.id, childPrimitives), groupRelaxation(),
+        // Mechanical families are dissolved by the board solver. Their satellite
+        // node identities must survive until board-level anchors are compiled.
+        originalRelations, originalPrimitives.some(p => p.locked) || hasFixedOrEdgeDescendant(node) ? 'off' : 'all',
         designator => componentPrimitive(context, context.treeNodes.find(n => n.kind === 'component' && n.label === designator)!, node));
     childPrimitives = relaxed.primitives;
     if (relaxed.released.length) context.diagnostics.push({ severity: 'warning', nodeId: node.id,
-        message: `Experimental independent placement: ${relaxed.released.join(', ')}; electrical constraints retained` });
+        message: `Independent placement hypothesis: ${relaxed.released.join(', ')}; electrical constraints retained` });
     const hasLockedChild = childPrimitives.some((primitive) => primitive.locked);
     const policy = blockPolicy(context.input.solverOptions.ignoredRatsnestSignals);
     // A block with satellite children still needs the same electrical search.
@@ -438,24 +446,52 @@ function solveBlockNode(
             message: `Block postrefine: ${result.moves} moves, ${Math.round(result.ms)} ms` });
         return result.primitives;
     };
-    const result = refine(solveBlockPrimitives(params));
-    if (ordinary && !hasLockedChild && policy.portfolio) {
-        const variants = [
-            { ...policy.experiments, reducedHull: false, smoothAspect: false, pairSwaps: false, reinsertPair: false },
-            { ignoredNets: policy.experiments.ignoredNets, routingMetric: policy.experiments.routingMetric,
-                frontierOrder: policy.experiments.frontierOrder, padOwnerCandidates: policy.experiments.padOwnerCandidates,
-                localAccess: policy.experiments.localAccess,
-                orderEqualCritical: policy.experiments.orderEqualCritical,
-                orderCoreAffinity: policy.experiments.orderCoreAffinity,
-                orderBranching: policy.experiments.orderBranching,
-                orderScarcity: policy.experiments.orderScarcity,
-                candidateClearance: policy.experiments.candidateClearance, candidateRings: policy.experiments.candidateRings,
-                padCrossings: policy.experiments.padCrossings,
-                netCandidates: true, longNets: true },
-        ].map(experiments => refine(solveBlockPrimitives({ ...params, options: { ...params.options, searchWidth: 1, experiments } })));
-        context.blockAlternatives.set(node.id, variants);
+    if (!ordinary || hasLockedChild) return refine(solveBlockPrimitives(params));
+    const pool: BlockCandidate[] = [];
+    const expected = childPrimitives.flatMap(p => p.placements.map(q => q.designator)).sort().join('|');
+    const add = (primitives: PlacementPrimitive[], stage: string, hypothesis: string, hardCount: number) => {
+        if (hardCount || primitives.flatMap(p => p.placements.map(q => q.designator)).sort().join('|') !== expected) return;
+        const root = unionPrimitive('quality-check', 'block', node.label, node.id, primitives);
+        if (!validatePrimitive(context.input, root, { clearanceResolver: context.clearanceResolver }).ok) return;
+        if (root.placements.some(p => {
+            const c = context.componentByDesignator.get(p.designator)!;
+            return !c.pcb.allowedRotations.includes(p.rotate) || !c.pcb.allowedLayers.includes(p.layer);
+        })) return;
+        if (!legalBlockCandidate(context.input, primitives, context.clearanceResolver)) return;
+        pool.push({ stage, hypothesis, primitives, quality: blockQuality(context.input, primitives) });
+    };
+    const run = (problem: BlockSolveParams, hypothesis: string) => {
+        const solved = solveBlockPrimitivesRust(problem);
+        for (const checkpoint of solved.checkpoints) {
+            add(checkpoint.primitives, checkpoint.stage, hypothesis, checkpoint.rank.hardCount);
+            // Refine every legal checkpoint: a bad pair stage cannot hide a useful
+            // swap/rotation available after beam or single-component moves.
+            if (!checkpoint.rank.hardCount) add(refine(checkpoint.primitives), `${checkpoint.stage}+postrefine`, hypothesis, 0);
+        }
+        return solved.result;
+    };
+    if (relaxed.released.length) run({ ...params, primitives: originalPrimitives, relations: originalRelations }, 'grouped');
+    const fallback = run(params, relaxed.released.length ? 'released' : 'original');
+    const roles = suspiciousBlockRoles(params);
+    for (const role of roles) run(withRoleHypotheses(params, [role]), `role:${role.designator}=${role.to}`);
+    if (roles.length > 1) run(withRoleHypotheses(params, roles), 'roles:combined');
+    const selected = selectBlockCandidates(pool);
+    captureBlockCandidates(node.label, pool, selected);
+    for (const role of roles) {
+        const individual = `role:${role.designator}=${role.to}`;
+        const bestFor = (hypothesis: string) => pool.filter(c => c.hypothesis === hypothesis)
+            .sort((a, b) => a.quality.score - b.quality.score)[0]?.quality.score.toFixed(2) ?? 'no legal result';
+        const kept = selected.filter(c => c.hypothesis === individual || c.hypothesis === 'roles:combined').map(c => c.hypothesis);
+        context.diagnostics.push({ severity: 'warning', nodeId: node.id,
+            message: `Role hypothesis ${role.designator}: ${role.from} -> ${role.to}; ${role.reason}; ${kept.length ? `retained via ${[...new Set(kept)].join(', ')}` : 'rejected'}; individual best score ${bestFor(individual)}; combined best score ${bestFor('roles:combined')}; selected score ${selected[0]?.quality.score.toFixed(2) ?? 'none'}. Source role unchanged.` });
     }
-    return result;
+    context.diagnostics.push({ severity: selected.length ? 'warning' : 'error', nodeId: node.id,
+        message: `Block checkpoint portfolio: ${pool.length} legal candidates, ${selected.length} retained; ` +
+            selected.map(c => `${c.hypothesis}/${c.stage}: score=${c.quality.score.toFixed(2)}, electrical=${c.quality.electrical.toFixed(2)}, wire=${c.quality.wire.toFixed(2)}, area=${c.quality.area.toFixed(2)}`).join('; ') });
+    if (!selected.length) return fallback;
+    context.blockQualities.set(node.id, selected[0].quality);
+    context.blockAlternatives.set(node.id, selected.slice(1).map(c => c.primitives));
+    return selected[0].primitives;
 }
 
 function solveModuleNode(
@@ -848,12 +884,14 @@ function boardBounds(input: PlacementInput): Box {
 }
 
 function rememberPrimitive(context: TreeSolveContext, primitive: PlacementPrimitive): PlacementPrimitive {
+    primitive.blockQuality = context.blockQualities.get(primitive.sourceNodeId);
     const alternatives = context.blockAlternatives.get(primitive.sourceNodeId);
     if (alternatives) {
         const signature = (p: PlacementPrimitive) => JSON.stringify(p.placements.map(q => [q.designator, q.x, q.y, q.rotate, q.layer]).sort());
         const seen = new Set([signature(primitive)]);
         primitive.layoutAlternatives = alternatives.map(children => {
             const p = unionPrimitive(primitive.id, primitive.kind, primitive.label, primitive.sourceNodeId, children, primitive.deferredRelations);
+            p.blockQuality = blockQuality(context.input, children);
             return translatePrimitive(p, (primitive.bbox.left + primitive.bbox.right - p.bbox.left - p.bbox.right) / 2,
                 (primitive.bbox.top + primitive.bbox.bottom - p.bbox.top - p.bbox.bottom) / 2);
         }).filter(p => { const key = signature(p); if (seen.has(key)) return false; seen.add(key); return true; });

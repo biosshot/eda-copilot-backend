@@ -68,6 +68,7 @@ export function encodeNativePostPlaceRefineProblem(input: PlacementInput, placem
     let obstacleOffset = 0;
     const components = input.components.map((c, i) => ({
         obstacleOffset: (() => { const start = obstacleOffset; obstacleOffset += c.footprint.pads.length; return start; })(),
+        internalPadOwner: c.pcb.role === 'main_ic',
         designator: c.designator, poseIndex: poseIndex.get(c.designator)!, lexRank: lexRank.get(c.designator)!,
         automatic: automatic[i], fixed: fixed[i], diagnostic: fixedMembers.includes(i),
         allowedRotations: (c.pcb.allowedRotations.length ? c.pcb.allowedRotations : [0, 90, 180, 270]).map(normalizeRotation),

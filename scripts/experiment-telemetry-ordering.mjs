@@ -1,3 +1,5 @@
+// Historical A/B harness: its environment modes were retired by the unified policy.
+if (process.argv[1]?.endsWith('experiment-telemetry-ordering.mjs')) throw new Error('Archived placement experiment: replay on commit 90a77cf; use experiment-telemetry-unified.mjs on this branch.');
 import { readFileSync, writeFileSync, mkdirSync, createWriteStream } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';

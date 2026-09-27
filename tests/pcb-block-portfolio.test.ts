@@ -9,22 +9,16 @@ import { encodeNativePostPlaceRefineProblem } from '../src/pcb-layout/pcb-auto-p
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
 import type { PlacementInput } from '../src/types/pcb/layout-model.ts';
 
-test('branch policy enables previous improvements and has an explicit legacy fallback', () => {
-    const saved = { ...process.env };
+test('unified branch policy enables all accepted ordering changes and ignores retired A/B switches', () => {
+    const saved = process.env.PCB_BLOCK_PROFILE;
     try {
-        delete process.env.PCB_BLOCK_PROFILE; delete process.env.PCB_BLOCK_ROUTING; delete process.env.PCB_BLOCK_PORTFOLIO;
+        process.env.PCB_BLOCK_PROFILE = 'legacy';
         const p = blockPolicy(['GND']);
         assert.equal(p.searchWidth, 4); assert.equal(p.portfolio, true);
-        for (const flag of ['netCandidates', 'stableNetWeight', 'reducedHull', 'smoothAspect', 'longNets', 'extraPasses', 'pairSwaps', 'reinsertPair', 'keepDenseAccess'] as const) assert.equal(p.experiments[flag], true);
-        process.env.PCB_BLOCK_PROFILE = 'legacy';
-        assert.equal(blockPolicy().searchWidth, 1); assert.equal(blockPolicy().portfolio, false);
-        process.env.PCB_BLOCK_ROUTING = 'typo';
-        assert.throws(() => blockPolicy(), /Unknown PCB_BLOCK_ROUTING/);
-    } finally {
-        for (const key of ['PCB_BLOCK_PROFILE', 'PCB_BLOCK_ROUTING', 'PCB_BLOCK_PORTFOLIO']) {
-            if (saved[key] === undefined) delete process.env[key]; else process.env[key] = saved[key];
-        }
-    }
+        for (const flag of ['netCandidates', 'stableNetWeight', 'reducedHull', 'smoothAspect', 'longNets', 'extraPasses',
+            'pairSwaps', 'reinsertPair', 'keepDenseAccess', 'orderEqualCritical', 'orderCoreAffinity', 'orderBranching', 'orderScarcity'] as const)
+            assert.equal(p.experiments[flag], true);
+    } finally { if (saved === undefined) delete process.env.PCB_BLOCK_PROFILE; else process.env.PCB_BLOCK_PROFILE = saved; }
 });
 
 test('nested children and portfolio rotate about the parent origin and translate together', () => {

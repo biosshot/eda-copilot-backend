@@ -23,6 +23,7 @@ export function encodeNativePostPlaceScoreProblem(
     const componentByDesignator = new Map(input.components.map((component) => [component.designator, component]));
     const ignored = new Set(input.solverOptions.ignoredRatsnestSignals.map((signal) => signal.toUpperCase()));
     const pointsByNet = new Map<string, Array<{ x: number; y: number }>>();
+    const ownersByNet = new Map<string, Array<string | null>>();
     const layersByNet = new Map<string, Array<string | null>>();
     const routingObstacles: NonNullable<NativePostPlaceScoreProblemV1['routingObstacles']> = [];
     for (const component of input.components) {
@@ -44,13 +45,16 @@ export function encodeNativePostPlaceScoreProblem(
             const layers = layersByNet.get(pin.signal_name) ?? [];
             layers.push(isThroughHolePad(pad) ? null : placement.layer);
             layersByNet.set(pin.signal_name, layers);
+            const owners = ownersByNet.get(pin.signal_name) ?? [];
+            owners.push(component.pcb.role === 'main_ic' ? component.designator : null);
+            ownersByNet.set(pin.signal_name, owners);
         }
     }
 
     const result: NativePostPlaceScoreProblemV1 = {
         version: NATIVE_POST_PLACE_SCORE_CONTRACT_VERSION,
         padCrossingWeight: placementPadCrossingWeight(), routingObstacles,
-        nets: [...pointsByNet.entries()].map(([name, points]) => ({ name, points, layers: layersByNet.get(name), weight: netSignalWeight(name) })),
+        nets: [...pointsByNet.entries()].map(([name, points]) => ({ name, points, layers: layersByNet.get(name), internalOwners: ownersByNet.get(name), weight: netSignalWeight(name) })),
         distances: [],
         clearances: [],
         fixedPenalties: [],

@@ -6,14 +6,14 @@ import type { BlockSolveParams } from '../block-solver.ts';
 import type { PlacementPrimitive } from '../primitives.ts';
 import {
     NATIVE_BLOCK_SOLVE_CONTRACT_VERSION,
-    type NativeBlockSolveProblemV2,
+    type NativeBlockSolveProblemV3,
     type NativePrimitive,
     type NativeRelation,
 } from './contract.ts';
 
 type ComponentEntry = { component: PcbComponent; placement: Placement; primitiveId: string };
 
-export function encodeNativeBlockSolveProblem(params: BlockSolveParams): NativeBlockSolveProblemV2 {
+export function encodeNativeBlockSolveProblem(params: BlockSolveParams): NativeBlockSolveProblemV3 {
     const components = collectComponents(params);
     const count = components.length;
     const componentPairClearance = new Array<number>(count * count);
