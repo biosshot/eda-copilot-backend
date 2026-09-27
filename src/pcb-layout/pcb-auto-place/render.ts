@@ -10,6 +10,8 @@ export interface RenderPlacementSvgOptions {
     viewLayer?: Placement['layer'];
     ratsnest?: boolean;
     ratsnestTopology?: 'chain' | 'mst';
+    /** Diagnostic view: include explicitly ignored nets without changing solve input. */
+    includeIgnoredSignals?: boolean;
     signalPaths?: boolean;
 }
 
@@ -81,7 +83,7 @@ export function renderPlacementSvg(input: PlacementInput, placements: Placement[
     }
 
     for (const net of options.ratsnest === false ? [] : allNets(input)) {
-        if (ignoredSignals.has(net)) continue;
+        if (!options.includeIgnoredSignals && ignoredSignals.has(net)) continue;
 
         const pads = input.components.flatMap((component) => component.pins
             .filter((pin) => pin.signal_name === net)
@@ -145,6 +147,7 @@ export function renderPlacementSubsetSvg(
         viewLayer: options.viewLayer,
         ratsnest: options.ratsnest,
         ratsnestTopology: options.ratsnestTopology,
+        includeIgnoredSignals: options.includeIgnoredSignals,
         signalPaths: options.signalPaths,
     });
 }

@@ -21,7 +21,10 @@ type CandidatePlacement = Placement & { component: PcbComponent; box: Box };
 export function canSolvePassiveNetIsland(components: PcbComponent[]) {
     if (components.length < 2 || components.length > 12) return false;
     if (!components.every((component) => PASSIVE_ROLES.has(component.pcb.role))) return false;
-    return Boolean(selectPassiveNetMainNet(components));
+    const mainNet = selectPassiveNetMainNet(components);
+    // Do not freeze an unrelated diode/resistor merely because two other
+    // remaining parts share a supply. Let the block solve its external links.
+    return Boolean(mainNet && components.every(component => component.pins.some(pin => pin.signal_name === mainNet)));
 }
 
 /** Builds the shared PlacementPrimitive shape from placements solved by Rust. */

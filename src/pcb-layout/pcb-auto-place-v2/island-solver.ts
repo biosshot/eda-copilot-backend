@@ -10,9 +10,11 @@ import type {
 } from '#types/pcb/layout-model.ts';
 import {
     componentBox,
+    componentPadBox,
     componentPairCollisionBoxPairs,
     dist,
     getPadOffset,
+    isThroughHolePad,
     overlaps,
     pointsBox,
     roundPlacement,
@@ -21,7 +23,8 @@ import {
 } from '../pcb-auto-place/geometry.ts';
 import type { ClearanceResolver } from '../pcb-auto-place/clearance-resolver.ts';
 import { createClearanceResolver } from '../pcb-auto-place/clearance-resolver.ts';
-import { placementsCanConflict } from '../pcb-auto-place/utils.ts';
+import { placementsCanConflict, segmentIntersectsBox } from '../pcb-auto-place/utils.ts';
+import { placementPadCrossingWeight } from './block-policy.ts';
 
 type IslandKind = 'line' | 'bypass' | 'cap_cluster' | 'core_pairs';
 
@@ -263,7 +266,26 @@ function solveTwoComponentCorePairs(island: IslandNode, components: PcbComponent
     for (const anchorRotate of coreAnchorRotations(anchor)) {
         const anchorPlacement = candidatePlacement(anchor, 0, 0, anchorRotate);
         for (const movingRotate of normalizedRotations(moving)) {
-            for (const center of movingCentersAround(anchorPlacement.box, rotatedSize(moving.footprint, movingRotate), grid, clearance)) {
+            const pairClearance = Math.max(clearance, clearanceResolver(anchor.designator, moving.designator)) + .001;
+            const centers = movingCentersAround(anchorPlacement.box, rotatedSize(moving.footprint, movingRotate), grid, pairClearance);
+            // Add exact pad alignments and the midpoint balancing both links;
+            // bbox/grid offsets alone miss these tangential positions.
+            const movingOrigin = candidatePlacement(moving, 0, 0, movingRotate);
+            const alignments = parseIslandPairs(island).flatMap(([a, b]) => {
+                const [fixedRef, movingRef] = a.startsWith(`${anchor.designator}.`) ? [a, b] : [b, a];
+                const fixedPad = padWorld(components, [anchorPlacement, movingOrigin], fixedRef);
+                const movingPad = padWorld(components, [anchorPlacement, movingOrigin], movingRef);
+                return fixedPad && movingPad ? [{ x: fixedPad.x - movingPad.x, y: fixedPad.y - movingPad.y }] : [];
+            });
+            if (alignments.length > 1) alignments.push({ x: alignments.reduce((n,p)=>n+p.x,0)/alignments.length, y: alignments.reduce((n,p)=>n+p.y,0)/alignments.length });
+            const size = rotatedSize(moving.footprint, movingRotate), box = anchorPlacement.box;
+            for (const p of alignments) centers.push(
+                { x: box.left - pairClearance - size.width / 2, y: p.y },
+                { x: box.right + pairClearance + size.width / 2, y: p.y },
+                { x: p.x, y: box.top - pairClearance - size.height / 2 },
+                { x: p.x, y: box.bottom + pairClearance + size.height / 2 },
+            );
+            for (const center of dedupePoints(centers)) {
                 variants.push([
                     anchorPlacement,
                     candidatePlacement(moving, center.x, center.y, movingRotate),
@@ -356,6 +378,10 @@ function scoreCorePairVariant(island: IslandNode, components: PcbComponent[], pl
     }
 
     score += (pairs.length > 0 ? pairScore * 10_000 : 0);
+    // This solver precedes the native block solver. Its internal geometry is
+    // subsequently rigid, so it must charge foreign-pad hits here as well.
+    // 100 scales the shared weight to this solver's 10,000-per-mm pair term.
+    score += corePairPadHits(island, components, placements) * placementPadCrossingWeight() * 100;
     score += pairBalancePenalty(island, components, placements) * 25;
     score += pairSegmentCrossingPenalty(island, components, placements) * 600;
     score += facingPadsPenalty(island, components, placements) * 15;
@@ -363,6 +389,31 @@ function scoreCorePairVariant(island: IslandNode, components: PcbComponent[], pl
     score += sumDistance + maxDistance;
     score += anchorPinOneUpperLeftPenalty(island, components, placements) * 5;
     return score;
+}
+
+function corePairPadHits(island: IslandNode, components: PcbComponent[], placements: CandidatePlacement[]) {
+    let hits = 0;
+    for (const [a, b] of parseIslandPairs(island)) {
+        const first = padWorld(components, placements, a), second = padWorld(components, placements, b);
+        if (!first || !second) continue;
+        const [designator, pin] = a.split('.');
+        const net = components.find(c => c.designator === designator)?.pins.find(p => String(p.pin_number) === pin)?.signal_name;
+        const endpoints = [a, b].map(ref => placements.find(p => p.designator === ref.split('.')[0])!);
+        const layer = endpoints[0].layer === endpoints[1].layer ? endpoints[0].layer : null;
+        const crossed = new Set<string>();
+        for (const component of components) {
+            const placement = placements.find(p => p.designator === component.designator)!;
+            for (const pad of component.footprint.pads) {
+                const ref = `${component.designator}.${pad.pin_number}`;
+                if (ref === a || ref === b) continue;
+                if (net && component.pins.some(p => String(p.pin_number) === String(pad.pin_number) && p.signal_name === net)) continue;
+                if (layer && placement.layer !== layer && !isThroughHolePad(pad)) continue;
+                if (segmentIntersectsBox(first, second, componentPadBox(placement, pad))) crossed.add(ref);
+            }
+        }
+        hits += crossed.size;
+    }
+    return hits;
 }
 
 function pairBalancePenalty(island: IslandNode, components: PcbComponent[], placements: CandidatePlacement[]) {

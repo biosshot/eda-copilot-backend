@@ -403,8 +403,9 @@ function solveBlockNode(
 ) {
     const hasLockedChild = childPrimitives.some((primitive) => primitive.locked);
     const policy = blockPolicy(context.input.solverOptions.ignoredRatsnestSignals);
-    const ordinary = childPrimitives.length >= 2 && childPrimitives.length <= 12
-        && new Set(childPrimitives.flatMap(p => p.placements.map(q => context.componentByDesignator.get(q.designator)?.block_name))).size === 1;
+    // A block with satellite children still needs the same electrical search.
+    // Children remain rigid primitives; their block names must not disable it.
+    const ordinary = childPrimitives.length >= 2 && childPrimitives.length <= 12;
     const params: BlockSolveParams = {
         node,
         primitives: childPrimitives,

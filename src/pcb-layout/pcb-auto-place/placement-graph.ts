@@ -115,8 +115,38 @@ export function buildPlacementGraph(input: PlacementInput): PlacementGraph {
     const { root, hierarchyDiagnostics, orphanComponents, unparentedBlocks, relationScopeContext } = buildPlacementTree(input, state);
     const relations = buildPlacementRelations(state, relationScopeContext);
     addUnattachedPassiveBlockDiagnostics(state, input, componentsByDesignator, relations);
+    addLocalConnectivityDiagnostics(state, input, componentsByDesignator, relations);
     const report = createGraphReport(state, root, relations, hierarchyDiagnostics, orphanComponents, unparentedBlocks);
     return { root, relations, paths: input.paths ?? [], report };
+}
+
+function addLocalConnectivityDiagnostics(state: GraphBuilderState, input: PlacementInput,
+    componentsByDesignator: Map<string, PcbComponent>, relations: PlacementRelation[]) {
+    const ignored = new Set(input.solverOptions.ignoredRatsnestSignals.map(net => net.toUpperCase()));
+    for (const component of input.components) {
+        const missing = component.pins.filter(pin => pin.signal_name && !component.footprint.pads.some(pad => String(pad.pin_number) === String(pin.pin_number)));
+        if (missing.length) addDiagnostic(state, 'warning', 'connected_pin_without_pad',
+            `${component.designator}: connected pin(s) ${missing.map(p => `${p.pin_number} (${p.signal_name})`).join(', ')} have no footprint pad; geometric connection scoring and ratsnest cannot represent them.`, componentNodeId(component.designator));
+    }
+    for (const block of input.blocks) {
+        const components = block.component_designators.map(d => componentsByDesignator.get(d)).filter((c): c is PcbComponent => Boolean(c));
+        if (components.length < 2) continue;
+        const nets = new Map<string, string[]>();
+        for (const c of components) for (const p of c.pins) {
+            if (!p.signal_name) continue;
+            const refs = nets.get(p.signal_name) ?? []; refs.push(`${c.designator}.${p.pin_number}`); nets.set(p.signal_name, refs);
+        }
+        const hidden = [...nets].filter(([net, refs]) => ignored.has(net.toUpperCase()) && !isGroundSignalName(net)
+            && new Set(refs.map(ref => ref.split('.')[0])).size >= 2);
+        if (hidden.length) addDiagnostic(state, 'warning', 'ignored_local_connections',
+            `Block ${block.name}: ignoredRatsnestSignals hides local connections ${hidden.map(([net, refs]) => `${net} [${refs.join(', ')}]`).join('; ')}. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.`, blockNodeId(block.name));
+        const localHints = relations.filter(r => r.kind !== 'net' && endpointBelongsToBlock(r.from, block.name, block.component_designators)
+            && endpointBelongsToBlock(r.to, block.name, block.component_designators));
+        if (components.length >= 4 && components.some(c => c.pcb.role === 'main_ic') && !localHints.length) {
+            addDiagnostic(state, 'warning', 'net_only_local_placement',
+                `Block ${block.name} (${components.length} components) has no explicit internal placement relations. Generic net-based placement remains active; add pin-level rules for any required switching loops, decoupling or sensitive paths that the netlist alone cannot specify.`, blockNodeId(block.name));
+        }
+    }
 }
 
 function addUnattachedPassiveBlockDiagnostics(
