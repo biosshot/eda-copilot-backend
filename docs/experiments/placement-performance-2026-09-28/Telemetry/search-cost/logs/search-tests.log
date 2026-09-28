@@ -1,0 +1,67 @@
+   Compiling pcb-board-packer v0.1.0 (D:\MyProject\NN\projects\Agents\easyeda-copilot\eda-copilot-backend\native\pcb-board-packer)
+warning: function `validate_layout` is never used
+    --> src\post_place_refine.rs:1292:8
+     |
+1292 | pub fn validate_layout(p: RefineProblem) -> Result<bool, String> {
+     |        ^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` on by default
+
+warning: field `id` is never read
+   --> src\model.rs:110:9
+    |
+109 | pub struct Relation {
+    |            -------- field in this struct
+110 |     pub id: Arc<str>,
+    |         ^^
+    |
+    = note: `Relation` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: field `name` is never read
+   --> src\model.rs:133:9
+    |
+132 | pub struct ConstraintRegion {
+    |            ---------------- field in this struct
+133 |     pub name: Arc<str>,
+    |         ^^^^
+    |
+    = note: `ConstraintRegion` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: field `block_name` is never read
+   --> src\model.rs:169:9
+    |
+166 | pub struct BlockComponentGeometry {
+    |            ---------------------- field in this struct
+...
+169 |     pub block_name: Arc<str>,
+    |         ^^^^^^^^^^
+    |
+    = note: `BlockComponentGeometry` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: field `path_id` is never read
+   --> src\model.rs:375:9
+    |
+374 | pub struct PostPlacePath {
+    |            ------------- field in this struct
+375 |     pub path_id: Arc<str>,
+    |         ^^^^^^^
+    |
+    = note: `PostPlacePath` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: `pcb-board-packer` (lib test) generated 5 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 10.04s
+     Running unittests src\lib.rs (native\pcb-board-packer\target\debug\deps\pcb_board_packer-3d4060f39591e808.exe)
+
+running 10 tests
+test block_solver::candidate_tests::shortlist_bounds_preserve_diversity_and_hard_rank ... ok
+test block_solver::candidate_tests::an_unplaced_internal_endpoint_is_not_an_external_escape_requirement ... ok
+test block_solver::candidate_tests::open_escape_does_not_depend_on_the_whole_block_envelope ... ok
+test block_solver::candidate_tests::island_endpoint_is_internal_when_its_rigid_primitive_is_present ... ok
+test block_solver::candidate_tests::frontier_seeds_the_ic_and_preserves_legacy_fallback_without_an_ic ... ok
+test block_solver::candidate_tests::pad_owner_candidates_reach_legal_space_inside_compound_envelope ... ok
+test block_solver::candidate_tests::equal_critical_order_does_not_use_hardness_as_urgency ... ok
+test block_solver::candidate_tests::escape_cache_tracks_moved_sources_and_foreign_obstacles ... ok
+test block_solver::candidate_tests::usb_pad_candidates_respect_dense_ic_clearance_and_expand_outward ... ok
+test block_solver::candidate_tests::scarcity_recognizes_two_ic_links_but_excludes_ignored_nets ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 49 filtered out; finished in 0.02s

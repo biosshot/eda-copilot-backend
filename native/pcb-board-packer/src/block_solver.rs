@@ -101,6 +101,8 @@ impl Drop for ProfileSpan<'_> {
     }
 }
 struct Context {
+    corridor_cache: RefCell<FxHashMap<(Arc<str>, usize, usize, usize), ([u64; 8], f64)>>,
+    escape_cache: RefCell<FxHashMap<(usize, usize), EscapeEntry>>,
     detail: DetailProfile,
     source_pads: Vec<Vec<crate::model::RouteObstacle>>,
     pad_nets: RefCell<Vec<crate::model::PostPlaceNet>>,
@@ -119,6 +121,14 @@ struct Context {
     evaluation_cache: RefCell<FxHashMap<Vec<PrimitivePoseKey>, Evaluation>>,
     net_scoring_scratch: RefCell<NetScoringScratch>,
     validate_incremental_scoring: bool,
+}
+
+struct EscapeEntry {
+    point: [u64; 2],
+    source: Option<u32>,
+    layer: Option<Arc<str>>,
+    pose: PrimitivePoseKey,
+    contributions: Vec<[f64; 4]>,
 }
 
 struct NetScoringScratch {
@@ -274,6 +284,7 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
     let mut net_signal = vec![false; net_ids.len()];
     for (net, id) in &net_ids { net_signal[*id as usize] = !(is_ground(net) || is_power(net) || is_switching_power(net)); }
     let context = Context {
+        corridor_cache: Default::default(), escape_cache: Default::default(),
         net_signal,
         pad_nets: RefCell::new(pad_nets), pad_net_indices, pad_point_metadata,
         pad_geometry: RefCell::new(vec![None; source_pads.len()]), source_pads,
@@ -600,6 +611,21 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
     current
 }
 
+/// Monotonically improving bound for membership in a score shortlist.
+struct ScoreWindow { limit: usize, values: Vec<(usize, f64)> }
+impl ScoreWindow {
+    fn new(limit: usize) -> Self { Self { limit, values: Vec::with_capacity(limit + 1) } }
+    fn ceiling(&self, hard: usize) -> f64 {
+        if self.values.len() < self.limit { return f64::INFINITY; }
+        let &(h, score) = self.values.last().unwrap();
+        match hard.cmp(&h) { Ordering::Less => f64::INFINITY, Ordering::Greater => f64::NEG_INFINITY, Ordering::Equal => score }
+    }
+    fn push(&mut self, hard: usize, score: f64) {
+        let index = self.values.partition_point(|&(h, s)| h < hard || (h == hard && s <= score));
+        if index < self.limit { self.values.insert(index, (hard, score)); self.values.truncate(self.limit); }
+    }
+}
+
 fn ranked_block_candidates(
     primitive: &WorkingPrimitive,
     placed: &[WorkingPrimitive],
@@ -609,14 +635,26 @@ fn ranked_block_candidates(
     context: &Context,
 ) -> Vec<RankedCandidate> {
     let mut ranked = Vec::new();
+    let diverse = context.problem.experiments.pad_owner_candidates;
+    let origin = box_center(&union_boxes(&placed.iter().map(|p| p.primitive.bbox).collect::<Vec<_>>()));
+    let mut global = ScoreWindow::new(if diverse { 64 } else { 16 });
+    let mut windows: FxHashMap<(i32, bool, bool), ScoreWindow> = FxHashMap::default();
     for (candidate_ordinal, candidate) in block_candidates(primitive, placed, context)
         .into_iter()
         .enumerate()
     {
         let mut variant = placed.to_vec();
         variant.push(candidate.clone());
-        let incremental = append_incremental_evaluation(placed, &variant, previous, context);
+        let hard = previous.evaluation.hard_violations + candidate_hard_violation_count(&candidate, placed, context);
+        let center = box_center(&candidate.primitive.bbox);
+        let bucket = (candidate.rotation, center.x >= origin.x, center.y >= origin.y);
+        let window = windows.entry(bucket).or_insert_with(|| ScoreWindow::new(4));
+        let ceiling = if context.trace { f64::INFINITY } else if diverse {
+            global.ceiling(hard).max(window.ceiling(hard))
+        } else { global.ceiling(hard) };
+        let Some(incremental) = append_incremental_evaluation(placed, &variant, previous, hard, ceiling, context) else { continue; };
         let evaluation = incremental.evaluation;
+        global.push(hard, evaluation.score); window.push(hard, evaluation.score);
         ranked.push(RankedCandidate {
             hard_violations: evaluation.hard_violations,
             score: evaluation.score,
@@ -1583,11 +1621,14 @@ fn append_incremental_evaluation(
     placed: &[WorkingPrimitive],
     primitives: &[WorkingPrimitive],
     previous: &IncrementalEvaluation,
+    hard: usize,
+    ceiling: f64,
     context: &Context,
-) -> IncrementalEvaluation {
+) -> Option<IncrementalEvaluation> {
     debug_assert_eq!(previous.size, placed.len());
     debug_assert_eq!(primitives.len(), placed.len() + 1);
     let candidate = primitives.last().expect("appended primitive");
+    if ceiling == f64::NEG_INFINITY { let _span = context.detail.span("candidates_pruned_hard"); return None; }
     let primitive_overlap_depths = extend_primitive_overlap_matrix(
         &previous.primitive_overlap_depths,
         placed,
@@ -1595,20 +1636,27 @@ fn append_incremental_evaluation(
         context,
     );
     let evaluation = Evaluation {
-        hard_violations: previous.evaluation.hard_violations
-            + candidate_hard_violation_count(candidate, placed, context),
-        score: score_block_with_overlap_matrix(
+        hard_violations: hard,
+        score: score_block_bounded(
             primitives,
             context,
             Some(&primitive_overlap_depths),
+            ceiling,
         ),
     };
+    if evaluation.score > ceiling {
+        if context.validate_incremental_scoring {
+            let full = score_block_with_overlap_matrix(primitives, context, Some(&primitive_overlap_depths));
+            assert!(full >= evaluation.score && full > ceiling, "invalid score lower bound");
+        }
+        let _span = context.detail.span("candidates_pruned_score"); return None;
+    }
     validate_incremental_evaluation(primitives, evaluation, context);
-    IncrementalEvaluation {
+    Some(IncrementalEvaluation {
         evaluation,
         primitive_overlap_depths,
         size: primitives.len(),
-    }
+    })
 }
 
 fn primitive_overlap_matrix(primitives: &[WorkingPrimitive], context: &Context) -> Vec<f64> {
@@ -1860,6 +1908,10 @@ fn score_block_with_overlap_matrix(
     context: &Context,
     primitive_overlap_depths: Option<&[f64]>,
 ) -> f64 {
+    score_block_bounded(primitives, context, primitive_overlap_depths, f64::INFINITY)
+}
+
+fn score_block_bounded(primitives: &[WorkingPrimitive], context: &Context, primitive_overlap_depths: Option<&[f64]>, ceiling: f64) -> f64 {
     let _span = context.detail.span("score_block_with_overlap_matrix");
     if primitives.is_empty() {
         return 0.0;
@@ -1907,11 +1959,14 @@ fn score_block_with_overlap_matrix(
     }
     score += overlap_penalty(primitives, context, primitive_overlap_depths);
     score += bounds_penalty(primitives, context.problem.bounds.as_ref());
+    if score > ceiling { return score; }
     score += dense_ic_access_penalty(primitives, context) * if high { 0.45 } else { 1.0 };
     score += power_yield_penalty(primitives, context) * if high { 0.3 } else { 1.0 };
     score += scoped_relation_penalty(primitives, context) * relation_weight_;
+    if score > ceiling { return score; }
     score += external_port_exposure_penalty(primitives, context) * if high { 0.35 } else { 1.0 };
     score += port_facing_penalty(primitives, context) * if high { 0.55 } else { 1.0 };
+    if score > ceiling { return score; }
     let component_count: usize = primitives
         .iter()
         .map(|primitive| primitive.primitive.placements.len())
@@ -1932,6 +1987,7 @@ fn score_block_with_overlap_matrix(
     if context.problem.experiments.long_nets {
         score += long_local_net_penalty(primitives, context);
     }
+    if score > ceiling { return score; }
     if context.problem.experiments.pad_crossings {
         score += direct_pad_crossing_penalty(primitives, context);
     }
@@ -2333,7 +2389,7 @@ fn external_port_exposure_penalty(primitives: &[WorkingPrimitive], context: &Con
         .sum();
     let weight = if count > 0 && count < 5 { 1.25 } else { 5.0 };
     let mut penalty = 0.0;
-    for compiled in &context.relations {
+    for (relation_index, compiled) in context.relations.iter().enumerate() {
         let relation = &compiled.relation;
         if context.problem.experiments.local_access {
             // An endpoint in a not-yet-placed primitive is not an external port.
@@ -2355,7 +2411,7 @@ fn external_port_exposure_penalty(primitives: &[WorkingPrimitive], context: &Con
             continue;
         };
         let boundary = if context.problem.experiments.local_access {
-            escape_blockage(inside, primitives, context.problem.clearance)
+            escape_blockage_cached(inside, primitives, relation_index, context)
         } else { (inside.point.x - bbox.left)
             .abs()
             .min((bbox.right - inside.point.x).abs())
@@ -2364,6 +2420,51 @@ fn external_port_exposure_penalty(primitives: &[WorkingPrimitive], context: &Con
         penalty += boundary * relation_weight(relation) * weight;
     }
     penalty
+}
+
+fn escape_blockage_cached(source: EndpointPoint, primitives: &[WorkingPrimitive], relation: usize, context: &Context) -> f64 {
+    let layer = primitives.iter().find(|p| Some(p.id) == source.primitive_id)
+        .and_then(|p| p.primitive.placements.first()).map(|p| p.layer.clone());
+    let point = [source.point.x.to_bits(), source.point.y.to_bits()];
+    let mut cache = context.escape_cache.borrow_mut();
+    let mut blocked = [0.0f64; 4];
+    for p in primitives {
+        if Some(p.id) == source.primitive_id { continue; }
+        let key = (relation, p.source_index);
+        let pose = primitive_pose_key(p);
+        let valid = cache.get(&key).is_some_and(|v| v.point == point && v.source == source.primitive_id && v.layer == layer && v.pose == pose);
+        if !valid {
+            let mut contributions = Vec::new();
+            for (_, c) in p.components.iter() {
+                let boxes = if layer.as_ref().is_none_or(|l| l == &c.layer) { std::slice::from_ref(&c.body_box) }
+                    else { c.through_hole_boxes.as_slice() };
+                for b in boxes { contributions.push(escape_box_contribution(source.point, b, context.problem.clearance)); }
+            }
+            cache.insert(key, EscapeEntry { point, source: source.primitive_id, layer: layer.clone(), pose, contributions });
+        }
+        // Keep the reference accumulation order, including separate component boxes.
+        for contribution in &cache[&key].contributions {
+            for i in 0..4 { blocked[i] += contribution[i]; }
+        }
+    }
+    let result = blocked.into_iter().fold(f64::INFINITY, f64::min);
+    if context.validate_incremental_scoring {
+        assert!((result - escape_blockage(source, primitives, context.problem.clearance)).abs() < 1e-8);
+    }
+    result
+}
+
+fn escape_box_contribution(point: Point, b: &Box2, clearance: f64) -> [f64; 4] {
+    let mut blocked = [0.0; 4];
+    if point.y >= b.top - clearance && point.y <= b.bottom + clearance {
+        blocked[0] = (b.right + clearance - point.x.max(b.left - clearance)).max(0.0);
+        blocked[1] = (point.x.min(b.right + clearance) - b.left + clearance).max(0.0);
+    }
+    if point.x >= b.left - clearance && point.x <= b.right + clearance {
+        blocked[2] = (b.bottom + clearance - point.y.max(b.top - clearance)).max(0.0);
+        blocked[3] = (point.y.min(b.bottom + clearance) - b.top + clearance).max(0.0);
+    }
+    blocked
 }
 
 // Four straight escape corridors: empty space has zero cost. Growing an
@@ -2376,8 +2477,8 @@ fn escape_blockage(source: EndpointPoint, primitives: &[WorkingPrimitive], clear
     for p in primitives {
         if Some(p.id) == source.primitive_id { continue; }
         for (_, c) in p.components.iter() {
-            let boxes: Vec<_> = if layer.is_none_or(|l| l == &c.layer) { vec![c.body_box] }
-                else { c.through_hole_boxes.as_ref().clone() };
+            let boxes = if layer.is_none_or(|l| l == &c.layer) { std::slice::from_ref(&c.body_box) }
+                else { c.through_hole_boxes.as_slice() };
             for b in boxes {
                 if source.point.y >= b.top - clearance && source.point.y <= b.bottom + clearance {
                     blocked[0] += (b.right + clearance - source.point.x.max(b.left - clearance)).max(0.0);
@@ -2874,6 +2975,7 @@ fn power_yield_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f6
         }
     }
     let corridor = 1.2f64.max(context.problem.clearance * 1.75);
+    let mut cache = context.corridor_cache.borrow_mut();
     let mut penalty = 0.0;
     for (net, points) in by_net {
         let limited = &points[..points.len().min(8)];
@@ -2890,15 +2992,25 @@ fn power_yield_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f6
                     if primitive.id == limited[i].0 || primitive.id == limited[j].0 {
                         continue;
                     }
-                    let distance_to_box =
-                        segment_box_distance(limited[i].1, limited[j].1, &primitive.primitive.bbox);
-                    if distance_to_box >= corridor {
-                        continue;
+                    let a = limited[i].1; let b = limited[j].1; let box_ = &primitive.primitive.bbox;
+                    let pose = [a.x.to_bits(), a.y.to_bits(), b.x.to_bits(), b.y.to_bits(),
+                        box_.left.to_bits(), box_.right.to_bits(), box_.top.to_bits(), box_.bottom.to_bits()];
+                    let key = (net.clone(), i, j, primitive.source_index);
+                    let value = if let Some((_, value)) = cache.get(&key).filter(|(old, _)| *old == pose) { *value }
+                    else {
+                        let outside = a.x.max(b.x) < box_.left - corridor || a.x.min(b.x) > box_.right + corridor
+                            || a.y.max(b.y) < box_.top - corridor || a.y.min(b.y) > box_.bottom + corridor;
+                        let d = if outside { corridor } else { segment_box_distance(a, b, box_) };
+                        let depth = (corridor - d).max(0.0);
+                        let value = (depth * depth * 220.0 + depth * 80.0) * affinity(primitive) * signal_net_weight(&net);
+                        cache.insert(key, (pose, value)); value
+                    };
+                    if context.validate_incremental_scoring {
+                        let depth = (corridor - segment_box_distance(a, b, box_)).max(0.0);
+                        let full = (depth * depth * 220.0 + depth * 80.0) * affinity(primitive) * signal_net_weight(&net);
+                        assert!((full-value).abs() < 1e-8, "corridor cache mismatch");
                     }
-                    let depth = corridor - distance_to_box;
-                    penalty += (depth * depth * 220.0 + depth * 80.0)
-                        * affinity(primitive)
-                        * signal_net_weight(&net);
+                    penalty += value;
                 }
             }
         }
@@ -3410,6 +3522,7 @@ mod candidate_tests {
         let resistor = make("R36");
         let ic = make("U11");
         let context = Context { trace: false, trace_phase: RefCell::new("test"), problem, relations: vec![], net_ground: vec![],
+            corridor_cache: Default::default(), escape_cache: Default::default(),
             detail: Default::default(), source_pads: vec![], pad_geometry: Default::default(),
             pad_crossings: Default::default(), split_pad_cache_safe: true, net_endpoint_counts: Default::default(),
             net_signal: vec![], pad_nets: Default::default(), pad_net_indices: vec![], pad_point_metadata: vec![],
@@ -3511,6 +3624,46 @@ mod candidate_tests {
         assert_eq!(escape_blockage(source, &[ic.clone(), far], 0.35), 0.0);
         let far = translate_primitive(&resistor, 200.0, 200.0);
         assert_eq!(escape_blockage(source, &[ic, far], 0.35), 0.0);
+    }
+
+    #[test]
+    fn shortlist_bounds_preserve_diversity_and_hard_rank() {
+        for bucket_count in [3, 7, 16] {
+        let mut global = ScoreWindow::new(64);
+        let mut buckets: Vec<_> = (0..16).map(|_| ScoreWindow::new(4)).collect();
+        let mut all = Vec::new(); let mut retained = Vec::new();
+        for id in 0..4000usize {
+            let bucket = (id * 37 + id / 17) % bucket_count;
+            let hard = (id * 19 + id / 11) % 3;
+            let score = ((id * 7919) % 997) as f64;
+            let row = (hard, score, id, bucket); all.push(row);
+            if score > global.ceiling(hard).max(buckets[bucket].ceiling(hard)) { continue; }
+            global.push(hard, score); buckets[bucket].push(hard, score); retained.push(row);
+        }
+        let select = |mut rows: Vec<(usize, f64, usize, usize)>| {
+            rows.sort_by(|a,b| a.0.cmp(&b.0).then_with(|| compare_f64(a.1,b.1)).then(a.2.cmp(&b.2)));
+            let mut counts = [0usize;16]; let mut selected = Vec::new(); let mut rest = Vec::new();
+            for row in rows { if counts[row.3] < 4 { counts[row.3] += 1; selected.push(row.2); } else { rest.push(row.2); } }
+            selected.extend(rest.into_iter().take(64usize.saturating_sub(selected.len()))); selected.sort(); selected
+        };
+        assert!(retained.len() < all.len()/2);
+        assert_eq!(select(all), select(retained));
+        }
+    }
+
+    #[test]
+    fn escape_cache_tracks_moved_sources_and_foreign_obstacles() {
+        let (resistor, ic, mut context) = usb_fixture();
+        context.validate_incremental_scoring = true;
+        for step in 0..20 {
+            let moved = translate_primitive(&resistor, step as f64 * 0.7 - 5.0, 0.0);
+            let source = EndpointPoint { point: Point { x: step as f64 * 0.2, y: 0.0 }, primitive_id: Some(ic.id) };
+            let primitives = [ic.clone(), moved];
+            for _ in 0..2 {
+                let cached = escape_blockage_cached(source, &primitives, 0, &context);
+                assert_eq!(cached, escape_blockage(source, &primitives, context.problem.clearance));
+            }
+        }
     }
 
     #[test]

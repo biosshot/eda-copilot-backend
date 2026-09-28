@@ -1,0 +1,64 @@
+   Compiling pcb-board-packer v0.1.0 (D:\MyProject\NN\projects\Agents\easyeda-copilot\eda-copilot-backend\native\pcb-board-packer)
+warning: function `validate_layout` is never used
+    --> src\post_place_refine.rs:1292:8
+     |
+1292 | pub fn validate_layout(p: RefineProblem) -> Result<bool, String> {
+     |        ^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` on by default
+
+warning: field `id` is never read
+   --> src\model.rs:110:9
+    |
+109 | pub struct Relation {
+    |            -------- field in this struct
+110 |     pub id: Arc<str>,
+    |         ^^
+    |
+    = note: `Relation` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: field `name` is never read
+   --> src\model.rs:133:9
+    |
+132 | pub struct ConstraintRegion {
+    |            ---------------- field in this struct
+133 |     pub name: Arc<str>,
+    |         ^^^^
+    |
+    = note: `ConstraintRegion` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: field `block_name` is never read
+   --> src\model.rs:169:9
+    |
+166 | pub struct BlockComponentGeometry {
+    |            ---------------------- field in this struct
+...
+169 |     pub block_name: Arc<str>,
+    |         ^^^^^^^^^^
+    |
+    = note: `BlockComponentGeometry` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: field `path_id` is never read
+   --> src\model.rs:375:9
+    |
+374 | pub struct PostPlacePath {
+    |            ------------- field in this struct
+375 |     pub path_id: Arc<str>,
+    |         ^^^^^^^
+    |
+    = note: `PostPlacePath` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: variant `Any` is never constructed
+  --> src\micro_router.rs:54:5
+   |
+51 | pub enum PreferredDirection {
+   |          ------------------ variant in this enum
+...
+54 |     Any,
+   |     ^^^
+   |
+   = note: `PreferredDirection` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: `pcb-board-packer` (lib) generated 6 warnings
+    Finished `release` profile [optimized] target(s) in 1m 26s
+Built pcb-board-packer.win32-x64-msvc.node
