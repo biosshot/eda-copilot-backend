@@ -230,20 +230,29 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
         validate_incremental_scoring: std::env::var_os("PCB_NATIVE_VALIDATE_INCREMENTAL_SCORING")
             .is_some_and(|value| value == "1"),
     };
+    let profile = std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some();
+    let started = std::time::Instant::now();
     let solved = if context.problem.search_width > 1 {
         solve_beam(primitives, &context)
     } else {
         solve_greedy(primitives, &context)
     };
+    let beam_ms = started.elapsed().as_secs_f64() * 1000.0;
     trace::stage(&context, "beam_complete", &solved);
     *context.trace_phase.borrow_mut() = "local_improve";
     let improved = local_improve(solved.clone(), &context);
+    let singles_ms = started.elapsed().as_secs_f64() * 1000.0 - beam_ms;
     trace::stage(&context, "local_complete", &improved);
     let singles = improved.clone();
     *context.trace_phase.borrow_mut() = "pair_improve";
     let improved = if context.problem.experiments.pair_swaps || context.problem.experiments.reinsert_pair {
         pair_improve(improved, &context)
     } else { improved };
+    if profile {
+        eprintln!("[pcb-block-solver] components={} beam_ms={:.1} singles_ms={:.1} pairs_ms={:.1}",
+            context.problem.components.len(), beam_ms, singles_ms,
+            started.elapsed().as_secs_f64() * 1000.0 - beam_ms - singles_ms);
+    }
     trace::stage(&context, "pair_complete", &improved);
     let has_global_frame =
         context.problem.bounds.is_some() || !context.problem.obstacles.is_empty();

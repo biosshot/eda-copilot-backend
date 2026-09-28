@@ -1,0 +1,1928 @@
+{
+  "board": "esp32c3",
+  "tag": "after",
+  "ms": 25673.7846,
+  "byMethod": {
+    "solveBlockPrimitives": {
+      "calls": 12,
+      "ms": 24405.841900000007
+    },
+    "solvePassiveNetIsland": {
+      "calls": 1,
+      "ms": 0.4569000000001324
+    },
+    "scorePostPlace": {
+      "calls": 103,
+      "ms": 45.89289999999846
+    },
+    "refinePostPlacement": {
+      "calls": 13,
+      "ms": 726.6735999999948
+    },
+    "solveBoardPacked": {
+      "calls": 1,
+      "ms": 35.95339999999851
+    }
+  },
+  "calls": [
+    {
+      "method": "solveBlockPrimitives",
+      "ms": 0.9519999999999982,
+      "components": 2,
+      "blocks": [
+        "MCU_Decoupling"
+      ]
+    },
+    {
+      "method": "solvePassiveNetIsland",
+      "ms": 0.4569000000001324,
+      "components": 2,
+      "blocks": []
+    },
+    {
+      "method": "solveBlockPrimitives",
+      "ms": 0.6127000000001317,
+      "components": 2,
+      "blocks": [
+        "Reset_Support"
+      ]
+    },
+    {
+      "method": "solveBlockPrimitives",
+      "ms": 0.447400000000016,
+      "components": 1,
+      "blocks": [
+        "Boot_Support"
+      ]
+    },
+    {
+      "method": "solveBlockPrimitives",
+      "ms": 9.889400000000023,
+      "components": 2,
+      "blocks": [
+        "USB_Termination"
+      ]
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.1170999999999367,
+      "blocks": []
+    },
+    {
+      "method": "refinePostPlacement",
+      "ms": 1.3678000000002157,
+      "components": 2,
+      "blocks": [],
+      "profile": {
+        "fixedDiagnosticsMs": 0.0073,
+        "initialScoreMs": 0.009000000000000001,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": false,
+            "baselineCacheHits": 3,
+            "baselineEvaluations": 3,
+            "baselineMs": 0.054,
+            "boundRejected": 6,
+            "candidates": 6,
+            "evaluationWallMs": 0.09720000000000001,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 6,
+            "generationMs": 0.0334,
+            "geometryMs": 0.0063999999999999994,
+            "globalScoreMs": 0.0073999999999999995,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 0,
+            "routeMs": 0,
+            "routeNativeMs": 0.054,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.0073999999999999995,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 0.1881,
+        "workers": 1
+      }
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.09549999999990177,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.06860000000006039,
+      "blocks": []
+    },
+    {
+      "method": "refinePostPlacement",
+      "ms": 1.432700000000068,
+      "components": 2,
+      "blocks": [],
+      "profile": {
+        "fixedDiagnosticsMs": 0.0005,
+        "initialScoreMs": 0.0063,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": false,
+            "baselineCacheHits": 3,
+            "baselineEvaluations": 3,
+            "baselineMs": 0.0403,
+            "boundRejected": 6,
+            "candidates": 6,
+            "evaluationWallMs": 0.0766,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 6,
+            "generationMs": 0.0167,
+            "geometryMs": 0.0077,
+            "globalScoreMs": 0.0072,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 0,
+            "routeMs": 0,
+            "routeNativeMs": 0.0403,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.0072,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 0.1266,
+        "workers": 1
+      }
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.11359999999990578,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.15409999999997126,
+      "blocks": []
+    },
+    {
+      "method": "refinePostPlacement",
+      "ms": 1.1274999999998272,
+      "components": 2,
+      "blocks": [],
+      "profile": {
+        "fixedDiagnosticsMs": 0.00039999999999999996,
+        "initialScoreMs": 0.0042,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": false,
+            "baselineCacheHits": 3,
+            "baselineEvaluations": 3,
+            "baselineMs": 0.0324,
+            "boundRejected": 6,
+            "candidates": 6,
+            "evaluationWallMs": 0.0658,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 6,
+            "generationMs": 0.015400000000000002,
+            "geometryMs": 0.006400000000000001,
+            "globalScoreMs": 0.0068000000000000005,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 0,
+            "routeMs": 0,
+            "routeNativeMs": 0.0324,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.0068000000000000005,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 0.1119,
+        "workers": 1
+      }
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.09920000000010987,
+      "blocks": []
+    },
+    {
+      "method": "solveBlockPrimitives",
+      "ms": 8354.9299,
+      "components": 8,
+      "blocks": [
+        "MCU_Decoupling",
+        "Reset_Support",
+        "Boot_Support",
+        "USB_Termination",
+        "MCU"
+      ]
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.7397000000000844,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.357399999998961,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.3427000000010594,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.3467000000000553,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.34279999999853317,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.33770000000004075,
+      "blocks": []
+    },
+    {
+      "method": "solveBlockPrimitives",
+      "ms": 14228.572100000001,
+      "components": 8,
+      "blocks": [
+        "MCU_Decoupling",
+        "Reset_Support",
+        "Boot_Support",
+        "USB_Termination",
+        "MCU"
+      ]
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.5756000000001222,
+      "blocks": []
+    },
+    {
+      "method": "refinePostPlacement",
+      "ms": 31.165400000001682,
+      "components": 13,
+      "blocks": [],
+      "profile": {
+        "fixedDiagnosticsMs": 0.0007,
+        "initialScoreMs": 0.067,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": false,
+            "baselineCacheHits": 3,
+            "baselineEvaluations": 6,
+            "baselineMs": 22.5322,
+            "boundRejected": 9,
+            "candidates": 9,
+            "evaluationWallMs": 23.1129,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 9,
+            "generationMs": 0.0126,
+            "geometryMs": 0.0434,
+            "globalScoreMs": 0.474,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 0,
+            "routeMs": 0,
+            "routeNativeMs": 22.5322,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.474,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 23.2409,
+        "workers": 1
+      }
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.32849999999962165,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.3253000000004249,
+      "blocks": []
+    },
+    {
+      "method": "refinePostPlacement",
+      "ms": 31.650299999997515,
+      "components": 13,
+      "blocks": [],
+      "profile": {
+        "fixedDiagnosticsMs": 0.0007,
+        "initialScoreMs": 0.0688,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": false,
+            "baselineCacheHits": 3,
+            "baselineEvaluations": 6,
+            "baselineMs": 23.847299999999997,
+            "boundRejected": 9,
+            "candidates": 9,
+            "evaluationWallMs": 24.404,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 9,
+            "generationMs": 0.0122,
+            "geometryMs": 0.0417,
+            "globalScoreMs": 0.4537,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 0,
+            "routeMs": 0,
+            "routeNativeMs": 23.847299999999997,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.4537,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 24.5243,
+        "workers": 1
+      }
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.34029999999984284,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.33580000000074506,
+      "blocks": []
+    },
+    {
+      "method": "refinePostPlacement",
+      "ms": 31.694900000002235,
+      "components": 13,
+      "blocks": [],
+      "profile": {
+        "fixedDiagnosticsMs": 0.0007999999999999999,
+        "initialScoreMs": 0.0625,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": false,
+            "baselineCacheHits": 3,
+            "baselineEvaluations": 6,
+            "baselineMs": 22.7274,
+            "boundRejected": 9,
+            "candidates": 9,
+            "evaluationWallMs": 23.2983,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 9,
+            "generationMs": 0.011,
+            "geometryMs": 0.04190000000000001,
+            "globalScoreMs": 0.4644999999999999,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 0,
+            "routeMs": 0,
+            "routeNativeMs": 22.7274,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.4644999999999999,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 23.4083,
+        "workers": 1
+      }
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.32259999999951106,
+      "blocks": []
+    },
+    {
+      "method": "solveBlockPrimitives",
+      "ms": 0.29140000000188593,
+      "components": 1,
+      "blocks": [
+        "Reset_Button"
+      ]
+    },
+    {
+      "method": "solveBlockPrimitives",
+      "ms": 0.3253999999978987,
+      "components": 1,
+      "blocks": [
+        "Boot_Button"
+      ]
+    },
+    {
+      "method": "solveBlockPrimitives",
+      "ms": 1323.0649000000012,
+      "components": 4,
+      "blocks": [
+        "USB_Port"
+      ]
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.4716999999982363,
+      "blocks": []
+    },
+    {
+      "method": "refinePostPlacement",
+      "ms": 28.05619999999908,
+      "components": 9,
+      "blocks": [],
+      "profile": {
+        "fixedDiagnosticsMs": 0.00039999999999999996,
+        "initialScoreMs": 0.0557,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": true,
+            "baselineCacheHits": 3,
+            "baselineEvaluations": 4,
+            "baselineMs": 11.740499999999999,
+            "boundRejected": 6,
+            "candidates": 7,
+            "evaluationWallMs": 13.1128,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 7,
+            "generationMs": 0.0115,
+            "geometryMs": 0.0458,
+            "globalScoreMs": 0.38130000000000003,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 1,
+            "routeMs": 0.88,
+            "routeNativeMs": 12.6205,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.38130000000000003,
+            "timedOut": false
+          },
+          {
+            "accepted": false,
+            "baselineCacheHits": 3,
+            "baselineEvaluations": 4,
+            "baselineMs": 7.7947999999999995,
+            "boundRejected": 7,
+            "candidates": 7,
+            "evaluationWallMs": 8.1683,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 7,
+            "generationMs": 0.0094,
+            "geometryMs": 0.029599999999999998,
+            "globalScoreMs": 0.30450000000000005,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 0,
+            "routeMs": 0,
+            "routeNativeMs": 7.7947999999999995,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.30450000000000005,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 21.420499999999997,
+        "workers": 1
+      }
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.23540000000139116,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.34879999999975553,
+      "blocks": []
+    },
+    {
+      "method": "refinePostPlacement",
+      "ms": 28.03679999999804,
+      "components": 9,
+      "blocks": [],
+      "profile": {
+        "fixedDiagnosticsMs": 0.0003,
+        "initialScoreMs": 0.056,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": true,
+            "baselineCacheHits": 3,
+            "baselineEvaluations": 4,
+            "baselineMs": 10.500800000000002,
+            "boundRejected": 6,
+            "candidates": 7,
+            "evaluationWallMs": 11.542,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 7,
+            "generationMs": 0.0121,
+            "geometryMs": 0.04100000000000001,
+            "globalScoreMs": 0.3424,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 1,
+            "routeMs": 0.6031,
+            "routeNativeMs": 11.1039,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.3424,
+            "timedOut": false
+          },
+          {
+            "accepted": false,
+            "baselineCacheHits": 3,
+            "baselineEvaluations": 4,
+            "baselineMs": 8.313,
+            "boundRejected": 7,
+            "candidates": 7,
+            "evaluationWallMs": 8.728100000000001,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 7,
+            "generationMs": 0.0098,
+            "geometryMs": 0.0306,
+            "globalScoreMs": 0.3401,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 0,
+            "routeMs": 0,
+            "routeNativeMs": 8.313,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.3401,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 20.4193,
+        "workers": 1
+      }
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.43879999999990105,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.2677000000003318,
+      "blocks": []
+    },
+    {
+      "method": "refinePostPlacement",
+      "ms": 24.308499999999185,
+      "components": 9,
+      "blocks": [],
+      "profile": {
+        "fixedDiagnosticsMs": 0.00039999999999999996,
+        "initialScoreMs": 0.0665,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": true,
+            "baselineCacheHits": 3,
+            "baselineEvaluations": 4,
+            "baselineMs": 8.937999999999999,
+            "boundRejected": 6,
+            "candidates": 7,
+            "evaluationWallMs": 10.0045,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 7,
+            "generationMs": 0.0103,
+            "geometryMs": 0.046,
+            "globalScoreMs": 0.35350000000000004,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 1,
+            "routeMs": 0.6135,
+            "routeNativeMs": 9.551499999999999,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.35350000000000004,
+            "timedOut": false
+          },
+          {
+            "accepted": false,
+            "baselineCacheHits": 3,
+            "baselineEvaluations": 4,
+            "baselineMs": 7.2401,
+            "boundRejected": 7,
+            "candidates": 7,
+            "evaluationWallMs": 7.6311,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 7,
+            "generationMs": 0.0098,
+            "geometryMs": 0.029199999999999997,
+            "globalScoreMs": 0.3215,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 0,
+            "routeMs": 0,
+            "routeNativeMs": 7.2401,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.3215,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 17.7755,
+        "workers": 1
+      }
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.2499000000025262,
+      "blocks": []
+    },
+    {
+      "method": "solveBlockPrimitives",
+      "ms": 485.94950000000244,
+      "components": 4,
+      "blocks": [
+        "Power"
+      ]
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.09610000000247965,
+      "blocks": []
+    },
+    {
+      "method": "refinePostPlacement",
+      "ms": 1.7056999999986147,
+      "components": 4,
+      "blocks": [],
+      "profile": {
+        "fixedDiagnosticsMs": 0.0003,
+        "initialScoreMs": 0.0052,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": false,
+            "baselineCacheHits": 0,
+            "baselineEvaluations": 2,
+            "baselineMs": 0.45580000000000004,
+            "boundRejected": 2,
+            "candidates": 2,
+            "evaluationWallMs": 0.4789,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 2,
+            "generationMs": 0.0035,
+            "geometryMs": 0.0024,
+            "globalScoreMs": 0.006500000000000001,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 0,
+            "routeMs": 0,
+            "routeNativeMs": 0.45580000000000004,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.006500000000000001,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 0.507,
+        "workers": 1
+      }
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.09639999999853899,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.09010000000125729,
+      "blocks": []
+    },
+    {
+      "method": "refinePostPlacement",
+      "ms": 1.970099999998638,
+      "components": 4,
+      "blocks": [],
+      "profile": {
+        "fixedDiagnosticsMs": 0.0005,
+        "initialScoreMs": 0.0076,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": false,
+            "baselineCacheHits": 0,
+            "baselineEvaluations": 2,
+            "baselineMs": 0.3658,
+            "boundRejected": 2,
+            "candidates": 2,
+            "evaluationWallMs": 0.3851,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 2,
+            "generationMs": 0.0045000000000000005,
+            "geometryMs": 0.0033,
+            "globalScoreMs": 0.0057,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 0,
+            "routeMs": 0,
+            "routeNativeMs": 0.3658,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.0057,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 0.4185,
+        "workers": 1
+      }
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.09180000000196742,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.09430000000065775,
+      "blocks": []
+    },
+    {
+      "method": "refinePostPlacement",
+      "ms": 1.8108000000029278,
+      "components": 4,
+      "blocks": [],
+      "profile": {
+        "fixedDiagnosticsMs": 0.00039999999999999996,
+        "initialScoreMs": 0.0056,
+        "iterationLimit": 8,
+        "iterations": [
+          {
+            "accepted": false,
+            "baselineCacheHits": 0,
+            "baselineEvaluations": 2,
+            "baselineMs": 0.4204,
+            "boundRejected": 2,
+            "candidates": 2,
+            "evaluationWallMs": 0.43970000000000004,
+            "feasibilityRejected": 0,
+            "generatedCandidates": 2,
+            "generationMs": 0.0037,
+            "geometryMs": 0.0031999999999999997,
+            "globalScoreMs": 0.0058,
+            "hardRejected": 0,
+            "insufficientImprovement": 0,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 0,
+            "routeMs": 0,
+            "routeNativeMs": 0.4204,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 0.0058,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 2000,
+        "totalMs": 0.4681,
+        "workers": 1
+      }
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.11949999999706051,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.09000000000014552,
+      "blocks": []
+    },
+    {
+      "method": "solveBlockPrimitives",
+      "ms": 0.3598000000019965,
+      "components": 1,
+      "blocks": [
+        "Header_Left"
+      ]
+    },
+    {
+      "method": "solveBlockPrimitives",
+      "ms": 0.4474000000009255,
+      "components": 1,
+      "blocks": [
+        "Header_Right"
+      ]
+    },
+    {
+      "method": "solveBoardPacked",
+      "ms": 35.95339999999851,
+      "components": 20,
+      "blocks": [
+        "MCU",
+        "Reset_Support",
+        "Boot_Support",
+        "MCU_Decoupling",
+        "USB_Termination",
+        "Reset_Button",
+        "Boot_Button",
+        "USB_Port",
+        "Power",
+        "Header_Left",
+        "Header_Right"
+      ]
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 1.0459999999984575,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.3459999999977299,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.21950000000288128,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.08600000000296859,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 1.1427000000003318,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.3951999999990221,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.22479999999995925,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.08719999999811989,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 1.4500000000007276,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.5432000000000698,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.22010000000227592,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.0812999999980093,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 1.3532000000013795,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.35979999999835854,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.2334000000009837,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.08659999999872525,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 1.1277999999983876,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.31639999999970314,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.46190000000206055,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.09790000000066357,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.9850000000005821,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.3224000000009255,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.2147000000004482,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.07970000000204891,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.8682000000007974,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.3118999999969674,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.21930000000065775,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.07810000000245054,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 1.0363999999972293,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.3184000000001106,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.21569999999701395,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.08209999999962747,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.855200000001787,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.31339999999909196,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.21449999999822467,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.07849999999962165,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.9447000000000116,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.3349999999991269,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.22580000000016298,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.082300000001851,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.8934000000008382,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.6961000000010245,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.47489999999743304,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.18449999999938882,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 1.8618999999998778,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.7669999999998254,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.44689999999900465,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.172099999999773,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 1.8693999999995867,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.6265000000021246,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.45089999999981956,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.16920000000027358,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 1.8405999999995402,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.5879000000022643,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.4503999999978987,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.16660000000047148,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 1.8536999999996624,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.5961000000024796,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.3735000000015134,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.12849999999889405,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 1.2403999999987718,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.6913000000022294,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.2699999999967986,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.1143000000010943,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.9877000000014959,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.32370000000082655,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.22049999999944703,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.07929999999760184,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.8646999999982654,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.3220000000001164,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.35239999999976135,
+      "blocks": []
+    },
+    {
+      "method": "scorePostPlace",
+      "ms": 0.1224999999976717,
+      "blocks": []
+    },
+    {
+      "method": "refinePostPlacement",
+      "ms": 542.3468999999968,
+      "components": 20,
+      "blocks": [],
+      "profile": {
+        "fixedDiagnosticsMs": 0.0005,
+        "initialScoreMs": 0.108,
+        "iterationLimit": 16,
+        "iterations": [
+          {
+            "accepted": true,
+            "baselineCacheHits": 21,
+            "baselineEvaluations": 23,
+            "baselineMs": 311.9463,
+            "boundRejected": 34,
+            "candidates": 44,
+            "evaluationWallMs": 182.0211,
+            "feasibilityRejected": 1,
+            "generatedCandidates": 44,
+            "generationMs": 0.0575,
+            "geometryMs": 0.3459,
+            "globalScoreMs": 5.453899999999999,
+            "hardRejected": 0,
+            "insufficientImprovement": 6,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 10,
+            "routeMs": 184.1941,
+            "routeNativeMs": 496.14039999999994,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 5.453899999999999,
+            "timedOut": false
+          },
+          {
+            "accepted": true,
+            "baselineCacheHits": 21,
+            "baselineEvaluations": 23,
+            "baselineMs": 308.161,
+            "boundRejected": 35,
+            "candidates": 44,
+            "evaluationWallMs": 176.7925,
+            "feasibilityRejected": 1,
+            "generatedCandidates": 44,
+            "generationMs": 0.0668,
+            "geometryMs": 0.36299999999999993,
+            "globalScoreMs": 6.056700000000001,
+            "hardRejected": 0,
+            "insufficientImprovement": 6,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 9,
+            "routeMs": 177.87779999999998,
+            "routeNativeMs": 486.0387999999999,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 6.056700000000001,
+            "timedOut": false
+          },
+          {
+            "accepted": false,
+            "baselineCacheHits": 21,
+            "baselineEvaluations": 23,
+            "baselineMs": 289.50419999999997,
+            "boundRejected": 37,
+            "candidates": 44,
+            "evaluationWallMs": 172.4699,
+            "feasibilityRejected": 1,
+            "generatedCandidates": 44,
+            "generationMs": 0.1015,
+            "geometryMs": 0.36,
+            "globalScoreMs": 5.6479,
+            "hardRejected": 0,
+            "insufficientImprovement": 6,
+            "routeEncodingMs": 0,
+            "routeEvaluations": 7,
+            "routeMs": 172.88569999999999,
+            "routeNativeMs": 462.3899,
+            "scoreEncodingMs": 0,
+            "scoreNativeMs": 5.6479,
+            "timedOut": false
+          }
+        ],
+        "stopReason": "no_improvement",
+        "timedOut": false,
+        "timeoutMs": 30000,
+        "totalMs": 531.7636,
+        "workers": 4
+      }
+    }
+  ],
+  "metrics": {
+    "pairCount": 18,
+    "pairSum": 306.08,
+    "pairMax": 30.93,
+    "crossings": 59,
+    "foreignPadHits": 47,
+    "internalIcPadHits": 1,
+    "wireLength": 475.94,
+    "hpwl": 561.16,
+    "area": 1444.56,
+    "aspect": 1.05
+  },
+  "report": {
+    "ok": true,
+    "placed": 20,
+    "unplaced": [],
+    "blockReports": [
+      {
+        "name": "MCU",
+        "components": 1,
+        "box": {
+          "left": -10.016500000000002,
+          "right": 10.016500000000002,
+          "top": -22,
+          "bottom": -1.9885999999999981
+        },
+        "width": 20.03,
+        "height": 20.01,
+        "area": 400.89,
+        "estimatedWidth": 26.29,
+        "estimatedHeight": 21.91,
+        "estimatedArea": 576.07,
+        "widthRatio": 0.76,
+        "heightRatio": 0.91,
+        "areaRatio": 0.7,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "MCU_Decoupling",
+        "components": 2,
+        "box": {
+          "left": -10.31295,
+          "right": -7.53305,
+          "top": -15.402050000000001,
+          "bottom": -12.16195
+        },
+        "width": 2.78,
+        "height": 3.24,
+        "area": 9.01,
+        "estimatedWidth": 4.05,
+        "estimatedHeight": 3.37,
+        "estimatedArea": 13.66,
+        "widthRatio": 0.69,
+        "heightRatio": 0.96,
+        "areaRatio": 0.66,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "Reset_Support",
+        "components": 2,
+        "box": {
+          "left": -11.952050000000002,
+          "right": -10.53195,
+          "top": -15.5996,
+          "bottom": -9.49705
+        },
+        "width": 1.42,
+        "height": 6.1,
+        "area": 8.67,
+        "estimatedWidth": 4.03,
+        "estimatedHeight": 3.36,
+        "estimatedArea": 13.56,
+        "widthRatio": 0.35,
+        "heightRatio": 1.82,
+        "areaRatio": 0.64,
+        "oversized": true,
+        "limitViolations": []
+      },
+      {
+        "name": "Reset_Button",
+        "components": 1,
+        "box": {
+          "left": -12.379100000000001,
+          "right": -6.6209,
+          "top": 11.6421,
+          "bottom": 15
+        },
+        "width": 5.76,
+        "height": 3.36,
+        "area": 19.34,
+        "estimatedWidth": 8.02,
+        "estimatedHeight": 3.65,
+        "estimatedArea": 29.26,
+        "widthRatio": 0.72,
+        "heightRatio": 0.92,
+        "areaRatio": 0.66,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "Boot_Support",
+        "components": 1,
+        "box": {
+          "left": -11.928,
+          "right": -10.556000000000001,
+          "top": -7.052600000000001,
+          "bottom": -4.2314
+        },
+        "width": 1.37,
+        "height": 2.82,
+        "area": 3.87,
+        "estimatedWidth": 3.07,
+        "estimatedHeight": 2.37,
+        "estimatedArea": 7.27,
+        "widthRatio": 0.45,
+        "heightRatio": 1.19,
+        "areaRatio": 0.53,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "Boot_Button",
+        "components": 1,
+        "box": {
+          "left": 6.6209,
+          "right": 12.379100000000001,
+          "top": 11.6421,
+          "bottom": 15
+        },
+        "width": 5.76,
+        "height": 3.36,
+        "area": 19.34,
+        "estimatedWidth": 8.02,
+        "estimatedHeight": 3.65,
+        "estimatedArea": 29.26,
+        "widthRatio": 0.72,
+        "heightRatio": 0.92,
+        "areaRatio": 0.66,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "USB_Port",
+        "components": 4,
+        "box": {
+          "left": -5.124050000000001,
+          "right": 5.124050000000001,
+          "top": 4.8469999999999995,
+          "bottom": 17
+        },
+        "width": 10.25,
+        "height": 12.15,
+        "area": 124.55,
+        "estimatedWidth": 20.54,
+        "estimatedHeight": 9.34,
+        "estimatedArea": 191.83,
+        "widthRatio": 0.5,
+        "heightRatio": 1.3,
+        "areaRatio": 0.65,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "USB_Termination",
+        "components": 2,
+        "box": {
+          "left": 10.5564,
+          "right": 13.377600000000001,
+          "top": -9.448,
+          "bottom": -6.453
+        },
+        "width": 2.82,
+        "height": 3,
+        "area": 8.45,
+        "estimatedWidth": 4.42,
+        "estimatedHeight": 3.05,
+        "estimatedArea": 13.45,
+        "widthRatio": 0.64,
+        "heightRatio": 0.98,
+        "areaRatio": 0.63,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "Power",
+        "components": 4,
+        "box": {
+          "left": -11.661950000000001,
+          "right": -5.3368,
+          "top": 4.3076,
+          "bottom": 10.19105
+        },
+        "width": 6.33,
+        "height": 5.88,
+        "area": 37.21,
+        "estimatedWidth": 8.74,
+        "estimatedHeight": 6.03,
+        "estimatedArea": 52.7,
+        "widthRatio": 0.72,
+        "heightRatio": 0.98,
+        "areaRatio": 0.71,
+        "oversized": false,
+        "limitViolations": []
+      },
+      {
+        "name": "Header_Left",
+        "components": 1,
+        "box": {
+          "left": -18.52,
+          "right": -15.979999999999999,
+          "top": -12.927,
+          "bottom": 12.927
+        },
+        "width": 2.54,
+        "height": 25.85,
+        "area": 65.67,
+        "estimatedWidth": 26.1,
+        "estimatedHeight": 6.69,
+        "estimatedArea": 174.51,
+        "widthRatio": 0.1,
+        "heightRatio": 3.86,
+        "areaRatio": 0.38,
+        "oversized": true,
+        "limitViolations": []
+      },
+      {
+        "name": "Header_Right",
+        "components": 1,
+        "box": {
+          "left": 15.979999999999999,
+          "right": 18.52,
+          "top": -12.927,
+          "bottom": 12.927
+        },
+        "width": 2.54,
+        "height": 25.85,
+        "area": 65.67,
+        "estimatedWidth": 26.1,
+        "estimatedHeight": 6.69,
+        "estimatedArea": 174.51,
+        "widthRatio": 0.1,
+        "heightRatio": 3.86,
+        "areaRatio": 0.38,
+        "oversized": true,
+        "limitViolations": []
+      }
+    ],
+    "moduleReports": [],
+    "graphReport": {
+      "ok": true,
+      "treeNodes": 133,
+      "relations": 138,
+      "roots": 7,
+      "maxDepth": 5,
+      "components": 20,
+      "pads": 99,
+      "nets": 25,
+      "blocks": 11,
+      "modules": 0,
+      "islands": 2,
+      "islandKinds": {
+        "cap_cluster": 2
+      },
+      "orphanComponents": [],
+      "unparentedBlocks": [
+        "MCU",
+        "Reset_Button",
+        "Boot_Button",
+        "USB_Port",
+        "Power",
+        "Header_Left",
+        "Header_Right"
+      ],
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 0 moves, 3 ms",
+          "nodeId": "tree:block:USB_Termination"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 0 moves, 4 ms",
+          "nodeId": "tree:block:USB_Termination"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 0 moves, 3 ms",
+          "nodeId": "tree:block:USB_Termination"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=11.13, electrical=0.00, wire=0.00, area=8.45",
+          "nodeId": "tree:block:USB_Termination"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Independent placement hypothesis: MCU_Decoupling, Reset_Support, passive_net:EN, Boot_Support, USB_Termination; electrical constraints retained",
+          "nodeId": "tree:block:MCU"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 0 moves, 0 ms",
+          "nodeId": "tree:block:MCU"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 0 moves, 0 ms",
+          "nodeId": "tree:block:MCU"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 0 moves, 0 ms",
+          "nodeId": "tree:block:MCU"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 0 moves, 42 ms",
+          "nodeId": "tree:block:MCU"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 0 moves, 43 ms",
+          "nodeId": "tree:block:MCU"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 0 moves, 41 ms",
+          "nodeId": "tree:block:MCU"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block checkpoint portfolio: 12 legal candidates, 1 retained; released/singles: score=4182.49, electrical=3893.11, wire=14.59, area=506.89",
+          "nodeId": "tree:block:MCU"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 1 moves, 42 ms",
+          "nodeId": "tree:block:USB_Port"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 1 moves, 41 ms",
+          "nodeId": "tree:block:USB_Port"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 1 moves, 33 ms",
+          "nodeId": "tree:block:USB_Port"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam+postrefine: score=3630.29, electrical=3572.56, wire=13.00, area=124.55",
+          "nodeId": "tree:block:USB_Port"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 0 moves, 3 ms",
+          "nodeId": "tree:block:Power"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 0 moves, 4 ms",
+          "nodeId": "tree:block:Power"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block postrefine: 0 moves, 4 ms",
+          "nodeId": "tree:block:Power"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block checkpoint portfolio: 6 legal candidates, 2 retained; original/singles: score=329.24, electrical=309.49, wire=2.25, area=37.21; original/beam: score=356.83, electrical=337.08, wire=2.18, area=37.21",
+          "nodeId": "tree:block:Power"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Board soft spacing: 0.00mm extra, density 0.683, compactness scale 1.000",
+          "nodeId": "board"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Board search alignment: 0 structural pairs; ordinary candidates and complete fallback retained; same block interiors",
+          "nodeId": "board"
+        },
+        {
+          "severity": "warning",
+          "code": "v2_solver",
+          "message": "Block portfolio: 1 blocks, 17 candidates, 0 accepted",
+          "nodeId": "block-portfolio"
+        }
+      ]
+    },
+    "outsideBoard": [],
+    "overlaps": [],
+    "boardHoleViolations": [],
+    "constraintRegionViolations": [],
+    "layerViolations": [],
+    "hintViolations": [
+      {
+        "hint": {
+          "relation": "near",
+          "source": {
+            "type": "component",
+            "designator": "U1"
+          },
+          "target": {
+            "type": "component",
+            "designator": "USB1"
+          },
+          "priority": "high"
+        },
+        "actual": 9.53,
+        "expected": "<= 8mm"
+      }
+    ],
+    "signalPaths": [
+      {
+        "id": "USB_DM_PATH",
+        "shape": "flexible",
+        "priority": "critical",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 19.501,
+        "pathDistance": 27.495,
+        "detour": 7.994,
+        "backtrack": 1.713,
+        "turns": 2.215,
+        "facing": 3.263,
+        "segments": [
+          {
+            "index": 0,
+            "source": "USB1.B7",
+            "target": "D1.1",
+            "resolved": true,
+            "distance": 1.97,
+            "maxDistance": 5,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D1.6",
+            "target": "R4.1",
+            "resolved": true,
+            "distance": 19.16,
+            "maxDistance": 25,
+            "withinConstraints": true
+          },
+          {
+            "index": 2,
+            "source": "R4.2",
+            "target": "U2.13",
+            "resolved": true,
+            "distance": 2.46,
+            "maxDistance": 5,
+            "withinConstraints": true
+          }
+        ]
+      },
+      {
+        "id": "USB_DP_PATH",
+        "shape": "flexible",
+        "priority": "critical",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 20.6,
+        "pathDistance": 27.122,
+        "detour": 6.522,
+        "backtrack": 1.618,
+        "turns": 1.943,
+        "facing": 2.225,
+        "segments": [
+          {
+            "index": 0,
+            "source": "USB1.A6",
+            "target": "D1.3",
+            "resolved": true,
+            "distance": 1.8,
+            "maxDistance": 5,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D1.4",
+            "target": "R5.1",
+            "resolved": true,
+            "distance": 18.96,
+            "maxDistance": 25,
+            "withinConstraints": true
+          },
+          {
+            "index": 2,
+            "source": "R5.2",
+            "target": "U2.14",
+            "resolved": true,
+            "distance": 2.45,
+            "maxDistance": 5,
+            "withinConstraints": true
+          }
+        ]
+      }
+    ],
+    "scoreByComponent": [
+      {
+        "designator": "U1",
+        "score": 0
+      },
+      {
+        "designator": "C1",
+        "score": 0
+      },
+      {
+        "designator": "C2",
+        "score": 0
+      },
+      {
+        "designator": "C3",
+        "score": 0
+      },
+      {
+        "designator": "U2",
+        "score": 0
+      },
+      {
+        "designator": "C4",
+        "score": 0
+      },
+      {
+        "designator": "C5",
+        "score": 0
+      },
+      {
+        "designator": "R6",
+        "score": 0
+      },
+      {
+        "designator": "R7",
+        "score": 0
+      },
+      {
+        "designator": "C6",
+        "score": 0
+      },
+      {
+        "designator": "SW1",
+        "score": 0
+      },
+      {
+        "designator": "SW2",
+        "score": 0
+      },
+      {
+        "designator": "USB1",
+        "score": 0
+      },
+      {
+        "designator": "R2",
+        "score": 0
+      },
+      {
+        "designator": "R3",
+        "score": 0
+      },
+      {
+        "designator": "D1",
+        "score": 0
+      },
+      {
+        "designator": "R4",
+        "score": 0
+      },
+      {
+        "designator": "R5",
+        "score": 0
+      },
+      {
+        "designator": "H1",
+        "score": 0
+      },
+      {
+        "designator": "H2",
+        "score": 0
+      }
+    ]
+  }
+}

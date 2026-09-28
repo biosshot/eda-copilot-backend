@@ -12,6 +12,40 @@ export class NativeSolveCache {
     constructor(private readonly maxEntries = 64, private readonly maxBytes = 16 * 1024 * 1024) {}
 
     solve<T extends NativePrimitivePackSolution>(operation: string, problem: object, run: () => T): T {
+        return this.solveMany(operation, [problem], () => [run()])[0];
+    }
+
+    /** Batch only misses; identical hypotheses share work and all returned values are isolated. */
+    solveMany<P extends object, T extends NativePrimitivePackSolution>(operation: string, problems: P[], run: (misses: P[]) => T[]): T[] {
+        const keys = problems.map(problem => this.key(operation, problem));
+        const results = new Map<number, T>();
+        const missing: P[] = [];
+        const pending = new Map<string, number>();
+        const slots: number[] = [];
+        for (let i = 0; i < problems.length; i++) {
+            const key = keys[i];
+            const hit = key === undefined ? undefined : this.entries.get(key);
+            if (hit && key !== undefined) {
+                this.entries.delete(key);
+                this.entries.set(key, hit);
+                results.set(i, structuredClone(hit.value) as T);
+            } else {
+                let slot = key === undefined ? undefined : pending.get(key);
+                if (slot === undefined) {
+                    slot = missing.length;
+                    missing.push(problems[i]);
+                    if (key !== undefined) pending.set(key, slot);
+                }
+                slots[i] = slot;
+            }
+        }
+        const values = missing.length ? run(missing) : [];
+        if (values.length !== missing.length) throw new Error('Native batch returned an incorrect number of results');
+        for (const [key, slot] of pending) this.put(key, values[slot]);
+        return problems.map((_, i) => results.get(i) ?? structuredClone(values[slots[i]]));
+    }
+
+    private key(operation: string, problem: object): string | undefined {
         let cacheable = true;
         let numberIndex = 0;
         const negativeZeros: number[] = [];
@@ -26,14 +60,10 @@ export class NativeSolveCache {
             return value;
         });
         const key = `${operation}:${serialized}:${negativeZeros.join(',')}`;
-        if (!cacheable || this.maxEntries <= 0 || key.length * 2 > this.maxBytes) return run();
-        const hit = this.entries.get(key);
-        if (hit) {
-            this.entries.delete(key);
-            this.entries.set(key, hit);
-            return structuredClone(hit.value) as T;
-        }
-        const value = run(); // Never cache exceptions.
+        return !cacheable || this.maxEntries <= 0 || key.length * 2 > this.maxBytes ? undefined : key;
+    }
+
+    private put(key: string, value: NativePrimitivePackSolution): void {
         const bytes = 2 * (key.length + JSON.stringify(value).length);
         if (bytes <= this.maxBytes) {
             while (this.entries.size >= this.maxEntries || this.bytes + bytes > this.maxBytes) {
@@ -44,7 +74,6 @@ export class NativeSolveCache {
             this.entries.set(key, { value: structuredClone(value), bytes });
             this.bytes += bytes;
         }
-        return value;
     }
 }
 
@@ -58,4 +87,13 @@ export function cachedNativeSolve<T extends NativePrimitivePackSolution>(
     let cache = caches.get(addon);
     if (!cache) { cache = new NativeSolveCache(); caches.set(addon, cache); }
     return cache.solve(operation, problem, run);
+}
+
+export function cachedNativeSolveMany<P extends object, T extends NativePrimitivePackSolution>(
+    addon: object, operation: string, problems: P[], run: (misses: P[]) => T[],
+): T[] {
+    if (process.env.PCB_NATIVE_SOLVE_CACHE === '0') return run(problems);
+    let cache = caches.get(addon);
+    if (!cache) { cache = new NativeSolveCache(); caches.set(addon, cache); }
+    return cache.solveMany(operation, problems, run);
 }

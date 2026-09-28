@@ -4,6 +4,25 @@ import { NativeSolveCache, cachedNativeSolve } from '../src/pcb-layout/pcb-auto-
 
 const solution = () => ({ version: 3, states: [], rank: { hardCount: 0, hardSeverity: 0, score: 123 } });
 
+test('native batch cache solves only unique misses and preserves order and result isolation', () => {
+    const cache = new NativeSolveCache(3);
+    const batches: number[][] = [];
+    const run = (problems: Array<{ id: number }>) => {
+        batches.push(problems.map(p => p.id));
+        return problems.map(p => ({ ...solution(), rank: { ...solution().rank, score: p.id } }));
+    };
+    cache.solveMany('block', [{ id: 1 }], run);
+    const values = cache.solveMany('block', [3, 1, 2, 3].map(id => ({ id })), run);
+    assert.deepEqual(batches, [[1], [3, 2]]);
+    assert.deepEqual(values.map(v => v.rank.score), [3, 1, 2, 3]);
+    values[0].rank.score = -1;
+    assert.equal(values[3].rank.score, 3);
+    assert.equal(cache.solve('block', { id: 3 }, () => { throw Error('cache miss'); }).rank.score, 3);
+    assert.throws(() => cache.solveMany('block', [{ id: 4 }], () => []), /number of results/);
+    cache.solveMany('block', [{ id: 4 }], run);
+    assert.deepEqual(batches.at(-1), [4]);
+});
+
 test('native solve cache reuses the complete problem and isolates mutable results', () => {
     const cache = new NativeSolveCache();
     let calls = 0;

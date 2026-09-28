@@ -13,6 +13,7 @@ export interface RenderPlacementSvgOptions {
     /** Diagnostic view: include explicitly ignored nets without changing solve input. */
     includeIgnoredSignals?: boolean;
     signalPaths?: boolean;
+    constraintRegions?: boolean;
 }
 
 export function renderPlacementSvg(input: PlacementInput, placements: Placement[], options: RenderPlacementSvgOptions = {}) {
@@ -45,6 +46,16 @@ export function renderPlacementSvg(input: PlacementInput, placements: Placement[
 </g>`;
     });
     const ratItems: string[] = [];
+    const regionItems = options.constraintRegions === false ? [] : (input.constraintRegions ?? [])
+        .filter(region => (options.viewLayer === undefined || region.layers.includes(options.viewLayer)) && boxesIntersect(region.box, viewport))
+        .map(region => {
+            const b = region.box;
+            const description = `${region.name}; layers: ${region.layers.join(', ')}; allowed blocks: ${region.allowBlocks.join(', ') || 'none'}`;
+            return `<g data-constraint-region="${escapeXml(region.name)}"><title>${escapeXml(description)}</title>
+  <rect x="${px(b.left)}" y="${py(b.top)}" width="${(b.right-b.left)*scale}" height="${(b.bottom-b.top)*scale}" fill="#f59e0b" fill-opacity="0.14" stroke="#b45309" stroke-width="1.5" stroke-dasharray="6 3"/>
+  <text x="${px(b.left)+3}" y="${py(b.top)+12}" font-size="10" font-family="Arial" fill="#92400e">${escapeXml(region.name)}</text>
+</g>`;
+        });
     const signalPathItems = options.signalPaths === false
         ? []
         : renderSignalPathGuides(input, placementByDesignator, px, py);
@@ -116,6 +127,7 @@ export function renderPlacementSvg(input: PlacementInput, placements: Placement[
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
 <rect x="0" y="0" width="${width}" height="${height}" fill="#f8fafc"/>
 ${boardLayer}
+${regionItems.join('\n')}
 ${title}
 ${ratItems.join('\n')}
 ${signalPathItems.join('\n')}
@@ -149,6 +161,7 @@ export function renderPlacementSubsetSvg(
         ratsnestTopology: options.ratsnestTopology,
         includeIgnoredSignals: options.includeIgnoredSignals,
         signalPaths: options.signalPaths,
+        constraintRegions: options.constraintRegions,
     });
 }
 

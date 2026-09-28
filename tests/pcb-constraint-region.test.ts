@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { resolveConstraintRegions } from '../src/pcb-layout/placement-input.ts';
 import { runPcbLayoutDsl } from '../src/pcb-layout/pcb-layout-dsl/spec.ts';
-import { createPlacementReport } from './fixtures/auto-place.ts';
+import { createPlacementReport, autoPlacePcbWithReportAsync } from './fixtures/auto-place.ts';
+import { renderPlacementSvg } from '../src/pcb-layout/pcb-auto-place/render.ts';
 import type { PlacementInput } from '../src/types/pcb/layout-model.ts';
 
 const footprint = {
@@ -39,7 +40,7 @@ test('normalizes mm constraint regions into board-space boxes', async () => {
     }]);
 });
 
-test('reports components placed inside forbidden constraint regions', async () => {
+test('reports forbidden regions and preserves their allow-list through full placement', async () => {
     const rules = runPcbLayoutDsl(`
         board.rect(16, 20, { layers: ["top", "bottom"] });
         constraintRegion("antenna_clearance", {
@@ -102,4 +103,17 @@ test('reports components placed inside forbidden constraint regions', async () =
         block: 'mcu',
         overlap: 2.5,
     }]);
+    // Keep the allowed antenna inside its region while the rest of the solver
+    // (packing, portfolio, postrefine and alignment) must avoid that region.
+    input.components[0].pcb.fixedPlacement = { x: 0, y: -7, rotate: 0, layer: 'top' };
+    const result = await autoPlacePcbWithReportAsync(input);
+    assert.equal(result.report.ok, true);
+    assert.deepEqual(result.report.constraintRegionViolations, []);
+    assert.equal(result.placements.find(p => p.designator === 'ANT1')!.y, -7);
+    const svg = renderPlacementSvg(input, result.placements);
+    assert.match(svg, /data-constraint-region="antenna_clearance"/);
+    assert.match(svg, /allowed blocks: antenna/);
+    assert.doesNotMatch(renderPlacementSvg(input, result.placements, { constraintRegions: false }), /data-constraint-region/);
+    input.constraintRegions[0].layers = ['top'];
+    assert.doesNotMatch(renderPlacementSvg(input, result.placements, { viewLayer: 'bottom' }), /data-constraint-region/);
 });

@@ -218,6 +218,7 @@ export interface NativeBoardPackerAddon {
     ): NativeRouteComparison;
     blockContractVersion(): number;
     solveBlockPrimitives(problem: NativeBlockSolveProblemV4): NativeBlockSolveSolutionV4;
+    solveBlockPrimitivesBatch?(problems: NativeBlockSolveProblemV4[], threads: number): NativeBlockSolveSolutionV4[];
     passiveIslandContractVersion(): number;
     solvePassiveNetIsland(problem: NativePassiveIslandProblemV1): NativePassiveIslandSolutionV1;
     postPlaceRefineContractVersion(): number;

@@ -1,0 +1,44 @@
+[
+  {
+    "round": 0,
+    "mode": "uncached",
+    "ms": 22430.5601,
+    "blocks": 12,
+    "exactResults": true
+  },
+  {
+    "round": 0,
+    "mode": "cached",
+    "ms": 22361.6061,
+    "blocks": 12,
+    "exactResults": true
+  },
+  {
+    "round": 1,
+    "mode": "cached",
+    "ms": 22352.913099999998,
+    "blocks": 12,
+    "exactResults": true
+  },
+  {
+    "round": 1,
+    "mode": "uncached",
+    "ms": 22419.7831,
+    "blocks": 12,
+    "exactResults": true
+  },
+  {
+    "round": 2,
+    "mode": "uncached",
+    "ms": 24204.889800000004,
+    "blocks": 12,
+    "exactResults": true
+  },
+  {
+    "round": 2,
+    "mode": "cached",
+    "ms": 21819.630099999995,
+    "blocks": 12,
+    "exactResults": true
+  }
+]

@@ -1,0 +1,56 @@
+{
+  "tag": "before-1",
+  "ms": 22062.4842,
+  "blocks": 12,
+  "exactResults": true,
+  "calls": [
+    {
+      "file": "block-1.json.gz",
+      "ms": 0.6861999999999853
+    },
+    {
+      "file": "block-3.json.gz",
+      "ms": 0.23790000000002465
+    },
+    {
+      "file": "block-4.json.gz",
+      "ms": 0.15099999999998204
+    },
+    {
+      "file": "block-5.json.gz",
+      "ms": 7.044700000000006
+    },
+    {
+      "file": "block-15.json.gz",
+      "ms": 7194.414000000001
+    },
+    {
+      "file": "block-22.json.gz",
+      "ms": 13155.8606
+    },
+    {
+      "file": "block-32.json.gz",
+      "ms": 0.7835999999988417
+    },
+    {
+      "file": "block-33.json.gz",
+      "ms": 0.214799999997922
+    },
+    {
+      "file": "block-34.json.gz",
+      "ms": 1247.4030999999995
+    },
+    {
+      "file": "block-44.json.gz",
+      "ms": 453.7584999999999
+    },
+    {
+      "file": "block-55.json.gz",
+      "ms": 0.29839999999967404
+    },
+    {
+      "file": "block-56.json.gz",
+      "ms": 0.2374999999992724
+    }
+  ]
+}

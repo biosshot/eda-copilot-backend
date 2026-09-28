@@ -1,0 +1,330 @@
+{
+  "board": "esp32c3",
+  "runs": [
+    {
+      "tag": "before",
+      "ms": 22755.1463,
+      "byMethod": {
+        "solveBlockPrimitives": {
+          "calls": 12,
+          "ms": 21682.768000000004
+        },
+        "solvePassiveNetIsland": {
+          "calls": 1,
+          "ms": 1.2287000000000035
+        },
+        "scorePostPlace": {
+          "calls": 103,
+          "ms": 34.78790000000697
+        },
+        "refinePostPlacement": {
+          "calls": 13,
+          "ms": 617.5319999999942
+        },
+        "solveBoardPacked": {
+          "calls": 1,
+          "ms": 30.522399999998015
+        }
+      }
+    },
+    {
+      "tag": "serial-control",
+      "ms": 26114.330299999998,
+      "byMethod": {
+        "solveBlockPrimitives": {
+          "calls": 12,
+          "ms": 24796.140700000004
+        },
+        "solvePassiveNetIsland": {
+          "calls": 1,
+          "ms": 0.24490000000002965
+        },
+        "scorePostPlace": {
+          "calls": 103,
+          "ms": 47.43039999999286
+        },
+        "refinePostPlacement": {
+          "calls": 13,
+          "ms": 792.4857000000068
+        },
+        "solveBoardPacked": {
+          "calls": 1,
+          "ms": 47.460299999998824
+        }
+      }
+    },
+    {
+      "tag": "parallel-1",
+      "ms": 16689.2942,
+      "byMethod": {
+        "solveBlockPrimitives": {
+          "calls": 10,
+          "ms": 1731.5922999999966
+        },
+        "solvePassiveNetIsland": {
+          "calls": 1,
+          "ms": 0.2805999999999358
+        },
+        "scorePostPlace": {
+          "calls": 103,
+          "ms": 35.91799999998625
+        },
+        "refinePostPlacement": {
+          "calls": 13,
+          "ms": 630.5502000000034
+        },
+        "solveBlockPrimitivesBatch": {
+          "calls": 1,
+          "ms": 13869.138400000002
+        },
+        "solveBoardPacked": {
+          "calls": 1,
+          "ms": 30.761099999999715
+        }
+      }
+    },
+    {
+      "tag": "parallel-2",
+      "ms": 18464.8531,
+      "byMethod": {
+        "solveBlockPrimitives": {
+          "calls": 10,
+          "ms": 1751.3945000000037
+        },
+        "solvePassiveNetIsland": {
+          "calls": 1,
+          "ms": 0.22879999999997835
+        },
+        "scorePostPlace": {
+          "calls": 103,
+          "ms": 45.79319999999541
+        },
+        "refinePostPlacement": {
+          "calls": 13,
+          "ms": 719.3424000000033
+        },
+        "solveBlockPrimitivesBatch": {
+          "calls": 1,
+          "ms": 15497.4342
+        },
+        "solveBoardPacked": {
+          "calls": 1,
+          "ms": 30.58469999999943
+        }
+      }
+    }
+  ],
+  "exactPlacements": true,
+  "exactNativeCheckpoints": true,
+  "metrics": {
+    "pairCount": 18,
+    "pairSum": 306.08,
+    "pairMax": 30.93,
+    "crossings": 59,
+    "foreignPadHits": 47,
+    "internalIcPadHits": 1,
+    "wireLength": 475.94,
+    "hpwl": 561.16,
+    "area": 1444.56,
+    "aspect": 1.05
+  },
+  "pathChecks": [
+    {
+      "name": "ESPower",
+      "declaredPaths": 3,
+      "declaredRegions": 0,
+      "paths": [
+        {
+          "id": "usb_dm",
+          "shape": "flexible",
+          "priority": "critical",
+          "resolved": true,
+          "withinConstraints": false,
+          "directDistance": 14.783,
+          "pathDistance": 14.853,
+          "detour": 0.07,
+          "backtrack": 0,
+          "turns": 0.103,
+          "facing": 0.322,
+          "segments": [
+            {
+              "index": 0,
+              "source": "U12.A7",
+              "target": "R7.1",
+              "resolved": true,
+              "distance": 10.26,
+              "maxDistance": 7,
+              "withinConstraints": false
+            },
+            {
+              "index": 1,
+              "source": "R7.2",
+              "target": "U1.25",
+              "resolved": true,
+              "distance": 3.08,
+              "maxDistance": 8,
+              "withinConstraints": true
+            }
+          ]
+        },
+        {
+          "id": "usb_dp",
+          "shape": "flexible",
+          "priority": "critical",
+          "resolved": true,
+          "withinConstraints": false,
+          "directDistance": 15.151,
+          "pathDistance": 15.526,
+          "detour": 0.375,
+          "backtrack": 0,
+          "turns": 0.077,
+          "facing": 0.807,
+          "segments": [
+            {
+              "index": 0,
+              "source": "U12.A6",
+              "target": "R8.1",
+              "resolved": true,
+              "distance": 10.61,
+              "maxDistance": 7,
+              "withinConstraints": false
+            },
+            {
+              "index": 1,
+              "source": "R8.2",
+              "target": "U1.26",
+              "resolved": true,
+              "distance": 3.41,
+              "maxDistance": 8,
+              "withinConstraints": true
+            }
+          ]
+        },
+        {
+          "id": "rf_feed",
+          "shape": "straight",
+          "priority": "critical",
+          "resolved": true,
+          "withinConstraints": true,
+          "directDistance": 9.253,
+          "pathDistance": 10.036,
+          "detour": 0.782,
+          "backtrack": 0,
+          "turns": 0.86,
+          "facing": 2.368,
+          "segments": [
+            {
+              "index": 0,
+              "source": "U1.1",
+              "target": "L1.1",
+              "resolved": true,
+              "distance": 2.07,
+              "maxDistance": 4,
+              "withinConstraints": true
+            },
+            {
+              "index": 1,
+              "source": "L1.2",
+              "target": "U11.1",
+              "resolved": true,
+              "distance": 6.87,
+              "maxDistance": 9,
+              "withinConstraints": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "esp32c3",
+      "declaredPaths": 2,
+      "declaredRegions": 0,
+      "paths": [
+        {
+          "id": "USB_DM_PATH",
+          "shape": "flexible",
+          "priority": "critical",
+          "resolved": true,
+          "withinConstraints": true,
+          "directDistance": 19.501,
+          "pathDistance": 27.495,
+          "detour": 7.994,
+          "backtrack": 1.713,
+          "turns": 2.215,
+          "facing": 3.263,
+          "segments": [
+            {
+              "index": 0,
+              "source": "USB1.B7",
+              "target": "D1.1",
+              "resolved": true,
+              "distance": 1.97,
+              "maxDistance": 5,
+              "withinConstraints": true
+            },
+            {
+              "index": 1,
+              "source": "D1.6",
+              "target": "R4.1",
+              "resolved": true,
+              "distance": 19.16,
+              "maxDistance": 25,
+              "withinConstraints": true
+            },
+            {
+              "index": 2,
+              "source": "R4.2",
+              "target": "U2.13",
+              "resolved": true,
+              "distance": 2.46,
+              "maxDistance": 5,
+              "withinConstraints": true
+            }
+          ]
+        },
+        {
+          "id": "USB_DP_PATH",
+          "shape": "flexible",
+          "priority": "critical",
+          "resolved": true,
+          "withinConstraints": true,
+          "directDistance": 20.6,
+          "pathDistance": 27.122,
+          "detour": 6.522,
+          "backtrack": 1.618,
+          "turns": 1.943,
+          "facing": 2.225,
+          "segments": [
+            {
+              "index": 0,
+              "source": "USB1.A6",
+              "target": "D1.3",
+              "resolved": true,
+              "distance": 1.8,
+              "maxDistance": 5,
+              "withinConstraints": true
+            },
+            {
+              "index": 1,
+              "source": "D1.4",
+              "target": "R5.1",
+              "resolved": true,
+              "distance": 18.96,
+              "maxDistance": 25,
+              "withinConstraints": true
+            },
+            {
+              "index": 2,
+              "source": "R5.2",
+              "target": "U2.14",
+              "resolved": true,
+              "distance": 2.45,
+              "maxDistance": 5,
+              "withinConstraints": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

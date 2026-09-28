@@ -127,6 +127,45 @@ pub fn passive_island_contract_version() -> u32 {
     PASSIVE_ISLAND_CONTRACT_VERSION
 }
 
+/// Independent hypotheses share no solver state. Results retain input order,
+/// so completion order cannot change checkpoint selection or tie breaking.
+#[napi]
+pub fn solve_block_primitives_batch(problems: Vec<Value>, threads: u32) -> Result<Vec<Value>> {
+    let problems = problems.into_iter().map(|value| {
+        let problem: BlockSolveProblem = serde_json::from_value(value).map_err(invalid_block_problem)?;
+        problem.validate(BLOCK_CONTRACT_VERSION).map_err(invalid_block_problem)?;
+        Ok(problem)
+    }).collect::<Result<Vec<_>>>()?;
+    let count = problems.len();
+    if count == 0 { return Ok(Vec::new()); }
+    let workers = (threads as usize).max(1).min(8).min(count)
+        .min(std::thread::available_parallelism().map_or(1, |n| n.get()));
+    let jobs = std::sync::Mutex::new(problems.into_iter().enumerate());
+    let mut results = std::thread::scope(|scope| {
+        let handles: Vec<_> = (0..workers).map(|_| scope.spawn(|| {
+            let mut completed = Vec::new();
+            loop {
+                let job = jobs.lock().expect("block job queue poisoned").next();
+                let Some((index, problem)) = job else { break; };
+                let result = block_solver::solve_block(problem)
+                    .and_then(|solution| serde_json::to_value(solution).map_err(|e| e.to_string()));
+                completed.push((index, result));
+            }
+            completed
+        })).collect();
+        let mut completed = Vec::with_capacity(count);
+        // Join every worker even if one panics; never unwind through N-API.
+        let mut failed = false;
+        for handle in handles {
+            match handle.join() { Ok(items) => completed.extend(items), Err(_) => failed = true }
+        }
+        if failed { Err(Error::new(Status::GenericFailure, "Block solver worker panicked")) }
+        else { Ok(completed) }
+    })?;
+    results.sort_by_key(|(index, _)| *index);
+    results.into_iter().map(|(_, result)| result.map_err(|e| Error::new(Status::GenericFailure, e))).collect()
+}
+
 #[napi]
 pub fn solve_passive_net_island(problem: Value) -> Result<Value> {
     let problem: PassiveIslandProblem =

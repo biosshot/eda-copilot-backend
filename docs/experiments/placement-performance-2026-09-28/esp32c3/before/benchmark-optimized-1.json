@@ -1,0 +1,56 @@
+{
+  "tag": "optimized-1",
+  "ms": 22265.003699999997,
+  "blocks": 12,
+  "exactResults": true,
+  "calls": [
+    {
+      "file": "block-1.json.gz",
+      "ms": 0.6598999999999933
+    },
+    {
+      "file": "block-3.json.gz",
+      "ms": 0.23980000000000246
+    },
+    {
+      "file": "block-4.json.gz",
+      "ms": 0.1600999999999999
+    },
+    {
+      "file": "block-5.json.gz",
+      "ms": 7.319000000000017
+    },
+    {
+      "file": "block-15.json.gz",
+      "ms": 7112.3418
+    },
+    {
+      "file": "block-22.json.gz",
+      "ms": 13418.177599999999
+    },
+    {
+      "file": "block-32.json.gz",
+      "ms": 0.26490000000194414
+    },
+    {
+      "file": "block-33.json.gz",
+      "ms": 0.20449999999982538
+    },
+    {
+      "file": "block-34.json.gz",
+      "ms": 1244.0789000000004
+    },
+    {
+      "file": "block-44.json.gz",
+      "ms": 479.61589999999705
+    },
+    {
+      "file": "block-55.json.gz",
+      "ms": 0.2926000000006752
+    },
+    {
+      "file": "block-56.json.gz",
+      "ms": 0.24120000000039
+    }
+  ]
+}

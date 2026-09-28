@@ -11,6 +11,18 @@ const usb = read('Telemetry', 23);
 usb.problem.version = NATIVE_BLOCK_SOLVE_CONTRACT_VERSION;
 const solve = (experiments = {}, width = 1) => addon.solveBlockPrimitives({ ...structuredClone(usb.problem), experiments, searchWidth: width } as NativeBlockSolveProblemV4);
 
+test('parallel block hypotheses preserve ordered solutions and all checkpoints', () => {
+    const problems = [{}, { netCandidates: true }, { pairSwaps: true }].map(experiments =>
+        ({ ...structuredClone(usb.problem), experiments, searchWidth: 1 } as NativeBlockSolveProblemV4));
+    const expected = problems.map(p => addon.solveBlockPrimitives(p));
+    assert.equal(typeof addon.solveBlockPrimitivesBatch, 'function');
+    for (const threads of [1, 2, 4]) {
+        assert.deepEqual(addon.solveBlockPrimitivesBatch!(problems, threads), expected);
+    }
+    assert.deepEqual(addon.solveBlockPrimitivesBatch!([], 4), []);
+    assert.throws(() => addon.solveBlockPrimitivesBatch!([problems[0], { ...problems[1], version: -1 }], 4), /Invalid/);
+});
+
 test('experiments are opt-in: captured USB baseline remains identical', () => {
     const { checkpoints, ...result } = solve();
     assert.deepEqual(result, { ...usb.solution, version: NATIVE_BLOCK_SOLVE_CONTRACT_VERSION });

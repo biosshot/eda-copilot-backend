@@ -17,7 +17,7 @@ import { createFixedPlacement } from '../pcb-auto-place/fixed.ts';
 import { createClearanceResolver, type ClearanceResolver } from '../pcb-auto-place/clearance-resolver.ts';
 import { validatePrimitive } from '../pcb-auto-place/primitive-validation.ts';
 import { solveBoardPrimitives } from './board-solver.ts';
-import { solveBlockPrimitives, solveBlockPrimitivesRust } from './block-solver-engine.ts';
+import { solveBlockPrimitives, solveBlockHypothesesRust } from './block-solver-engine.ts';
 import { blockQuality, legalBlockCandidate, selectBlockCandidates, captureBlockCandidates, type BlockCandidate } from './block-quality.ts';
 import { suspiciousBlockRoles, withRoleHypotheses } from './block-role-hypotheses.ts';
 import { blockPolicy } from './block-policy.ts';
@@ -461,22 +461,28 @@ function solveBlockNode(
         if (!legalBlockCandidate(context.input, primitives, context.clearanceResolver, hasLockedChild)) return;
         pool.push({ stage, hypothesis, primitives, quality: blockQuality(context.input, primitives) });
     };
-    const run = (problem: BlockSolveParams, hypothesis: string) => {
-        const solved = solveBlockPrimitivesRust(problem);
+    const hypotheses: Array<{ problem: BlockSolveParams; hypothesis: string }> = [];
+    if (relaxed.released.length) hypotheses.push({ problem: { ...params, primitives: originalPrimitives, relations: originalRelations }, hypothesis: 'grouped' });
+    const originalIndex = hypotheses.length;
+    hypotheses.push({ problem: params, hypothesis: relaxed.released.length ? 'released' : 'original' });
+    const roles = suspiciousBlockRoles(params);
+    for (const role of roles) hypotheses.push({ problem: withRoleHypotheses(params, [role]), hypothesis: `role:${role.designator}=${role.to}` });
+    if (roles.length > 1) hypotheses.push({ problem: withRoleHypotheses(params, roles), hypothesis: 'roles:combined' });
+    const solutions = solveBlockHypothesesRust(hypotheses.map(h => h.problem));
+    // Process checkpoints in the original deterministic order, irrespective of
+    // which native worker finished first. No hypothesis or stage is discarded.
+    for (let i = 0; i < hypotheses.length; i++) {
+        const { hypothesis } = hypotheses[i];
+        const solved = solutions[i];
         for (const checkpoint of solved.checkpoints) {
             add(checkpoint.primitives, checkpoint.stage, hypothesis, checkpoint.rank.hardCount);
             // Refine every legal checkpoint: a bad pair stage cannot hide a useful
             // swap/rotation available after beam or single-component moves.
             if (!checkpoint.rank.hardCount) add(refine(checkpoint.primitives), `${checkpoint.stage}+postrefine`, hypothesis, 0);
         }
-        return solved.result;
-    };
-    const groupedFallback = relaxed.released.length
-        ? run({ ...params, primitives: originalPrimitives, relations: originalRelations }, 'grouped') : undefined;
-    const fallback = run(params, relaxed.released.length ? 'released' : 'original');
-    const roles = suspiciousBlockRoles(params);
-    for (const role of roles) run(withRoleHypotheses(params, [role]), `role:${role.designator}=${role.to}`);
-    if (roles.length > 1) run(withRoleHypotheses(params, roles), 'roles:combined');
+    }
+    const groupedFallback = relaxed.released.length ? solutions[0].result : undefined;
+    const fallback = solutions[originalIndex].result;
     const selected = selectBlockCandidates(pool);
     captureBlockCandidates(node.label, pool, selected);
     for (const role of roles) {
