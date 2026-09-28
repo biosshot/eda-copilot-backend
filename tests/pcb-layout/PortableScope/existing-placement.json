@@ -1,0 +1,80 @@
+{
+  "board": {
+    "polygon": [
+      {
+        "x": -60,
+        "y": -30.4165
+      },
+      {
+        "x": 60,
+        "y": -30.4165
+      },
+      {
+        "x": 60,
+        "y": 30.4165
+      },
+      {
+        "x": -60,
+        "y": 30.4165
+      }
+    ]
+  },
+  "components": [
+    {
+      "designator": "J4",
+      "x": -55.936,
+      "y": 22.9635,
+      "rotate": 270,
+      "layer": "bottom"
+    },
+    {
+      "designator": "SW1",
+      "x": -55.16,
+      "y": -16.622499,
+      "rotate": 90,
+      "layer": "top"
+    },
+    {
+      "designator": "SW2",
+      "x": -55.16,
+      "y": 13.377499,
+      "rotate": 90,
+      "layer": "top"
+    },
+    {
+      "designator": "SW3",
+      "x": -55.16,
+      "y": -6.622499,
+      "rotate": 90,
+      "layer": "top"
+    },
+    {
+      "designator": "SW4",
+      "x": -55.16,
+      "y": 3.377499,
+      "rotate": 90,
+      "layer": "top"
+    },
+    {
+      "designator": "SW5",
+      "x": -37.14,
+      "y": -25.8045,
+      "rotate": 0,
+      "layer": "bottom"
+    },
+    {
+      "designator": "U6",
+      "x": -46.284,
+      "y": 0.1035,
+      "rotate": 180,
+      "layer": "top"
+    },
+    {
+      "designator": "RF1",
+      "x": 56.586,
+      "y": 0.6115,
+      "rotate": 270,
+      "layer": "top"
+    }
+  ]
+}
