@@ -469,8 +469,7 @@ function solveBlockNode(
     const originalIndex = hypotheses.length;
     hypotheses.push({ problem: params, hypothesis: relaxed.released.length ? 'released' : 'original' });
     const roles = suspiciousBlockRoles(params);
-    for (const role of roles) hypotheses.push({ problem: withRoleHypotheses(params, [role]), hypothesis: `role:${role.designator}=${role.to}` });
-    if (roles.length > 1) hypotheses.push({ problem: withRoleHypotheses(params, roles), hypothesis: 'roles:combined' });
+    if (roles.length) hypotheses.push({ problem: withRoleHypotheses(params, roles), hypothesis: 'roles:combined' });
     const solutions = solveBlockHypothesesRust(hypotheses.map(h => h.problem), 'initial');
     const pairSeeds: Array<BlockCandidate & { index: number }> = [];
     const pendingRefine: Array<BlockCandidate & { admitted: boolean }> = [];
@@ -525,12 +524,11 @@ function solveBlockNode(
     const selected = selectBlockCandidates(pool);
     captureBlockCandidates(node.label, pool, selected);
     for (const role of roles) {
-        const individual = `role:${role.designator}=${role.to}`;
         const bestFor = (hypothesis: string) => pool.filter(c => c.hypothesis === hypothesis)
             .sort((a, b) => a.quality.score - b.quality.score)[0]?.quality.score.toFixed(2) ?? 'no legal result';
-        const kept = selected.filter(c => c.hypothesis === individual || c.hypothesis === 'roles:combined').map(c => c.hypothesis);
+        const kept = selected.some(c => c.hypothesis === 'roles:combined');
         context.diagnostics.push({ severity: 'warning', nodeId: node.id,
-            message: `Role hypothesis ${role.designator}: ${role.from} -> ${role.to}; ${role.reason}; ${kept.length ? `retained via ${[...new Set(kept)].join(', ')}` : 'rejected'}; individual best score ${bestFor(individual)}; combined best score ${bestFor('roles:combined')}; selected score ${selected[0]?.quality.score.toFixed(2) ?? 'none'}. Source role unchanged.` });
+            message: `Suspicious placement role ${role.designator}: ${role.from} -> ${role.to}; ${role.reason}; all suspicious roles tried together; ${kept ? 'retained' : 'rejected'}; trial best score ${bestFor('roles:combined')}; selected score ${selected[0]?.quality.score.toFixed(2) ?? 'none'}. Source role unchanged.` });
     }
     context.diagnostics.push({ severity: selected.length ? 'warning' : 'error', nodeId: node.id,
         message: `Block checkpoint portfolio: ${pool.length} legal candidates, ${selected.length} retained; ` +

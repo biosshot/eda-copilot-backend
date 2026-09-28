@@ -72,6 +72,14 @@ test('a small area saving cannot buy several times longer C9 links; bad variants
     assert.deepEqual(chosen,[candidate]);
 });
 
+test('parallel capacitors on the same two nets do not multiply role trials', () => {
+    const data=input();
+    const designators=['C13','C14','C15','C16','C9'];
+    const primitives=designators.map((designator,i)=>primitive(data,{designator,x:i*8,y:0,rotate:0,layer:'top',score:0}));
+    const params={primitives,options:{componentByDesignator:new Map(data.components.map(c=>[c.designator,c]))}} as unknown as BlockSolveParams;
+    assert.deepEqual(suspiciousBlockRoles(params).map(r=>r.designator),['C9']);
+});
+
 test('checkpoint admission rejects a violated explicit hard pin distance', () => {
     const data=input();
     const snapshots=JSON.parse(readFileSync(new URL('./fixtures/block-placement/Telemetry/c9-checkpoints.json',import.meta.url),'utf8'));
