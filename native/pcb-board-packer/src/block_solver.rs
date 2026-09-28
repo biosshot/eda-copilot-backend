@@ -642,20 +642,27 @@ fn ranked_block_candidates(
     let origin = box_center(&union_boxes(&placed.iter().map(|p| p.primitive.bbox).collect::<Vec<_>>()));
     let mut global = ScoreWindow::new(if diverse { 64 } else { 16 });
     let mut windows: FxHashMap<(i32, bool, bool), ScoreWindow> = FxHashMap::default();
+    let mut variant = Vec::with_capacity(placed.len() + 1);
+    variant.extend_from_slice(placed);
+    let power_frame = PowerYieldFrame::new(placed, context);
+    let long_net_frame = context.problem.experiments.long_nets.then(|| LongNetFrame::new(placed, context));
     for (candidate_ordinal, candidate) in block_candidates(primitive, placed, context)
         .into_iter()
         .enumerate()
     {
-        let mut variant = placed.to_vec();
-        variant.push(candidate.clone());
-        let hard = previous.evaluation.hard_violations + candidate_hard_violation_count(&candidate, placed, context);
-        let center = box_center(&candidate.primitive.bbox);
-        let bucket = (candidate.rotation, center.x >= origin.x, center.y >= origin.y);
+        variant.push(candidate);
+        let appended = variant.last().expect("appended candidate");
+        let hard = previous.evaluation.hard_violations + candidate_hard_violation_count(appended, placed, context);
+        let center = box_center(&appended.primitive.bbox);
+        let bucket = (appended.rotation, center.x >= origin.x, center.y >= origin.y);
         let window = windows.entry(bucket).or_insert_with(|| ScoreWindow::new(4));
         let ceiling = if context.trace { f64::INFINITY } else if diverse {
             global.ceiling(hard).max(window.ceiling(hard))
         } else { global.ceiling(hard) };
-        let Some(incremental) = append_incremental_evaluation(placed, &variant, previous, hard, ceiling, context) else { continue; };
+        let incremental = append_incremental_evaluation(placed, &variant, previous, hard, ceiling,
+            power_frame.as_ref(), long_net_frame.as_ref(), context);
+        let candidate = variant.pop().expect("appended candidate");
+        let Some(incremental) = incremental else { continue; };
         let evaluation = incremental.evaluation;
         global.push(hard, evaluation.score); window.push(hard, evaluation.score);
         ranked.push(RankedCandidate {
@@ -899,6 +906,7 @@ fn block_candidates(
     result
 }
 
+
 fn block_candidates_inner(
     primitive: &WorkingPrimitive,
     placed: &[WorkingPrimitive],
@@ -1097,6 +1105,46 @@ fn net_anchored_candidates(
         }
     }
     candidates
+}
+
+struct LongNetFrame {
+    baseline: f64,
+    open: FxHashMap<Arc<str>, (u32, Point, f64)>,
+}
+
+impl LongNetFrame {
+    fn new(placed: &[WorkingPrimitive], context: &Context) -> Self {
+        let _span = context.detail.span("long_net_frame_build");
+        let baseline = long_local_net_penalty(placed, context);
+        let mut open = FxHashMap::default();
+        for p in placed {
+            for cp in p.primitive.connection_points.iter() {
+                let Some(net) = &cp.net else { continue };
+                if net.is_empty() || is_ground(net) || context.net_endpoint_counts.get(net) != Some(&2)
+                    || context.problem.experiments.ignored_nets.iter().any(|n| n.eq_ignore_ascii_case(net)) { continue; }
+                open.insert(net.clone(), (p.id, Point { x: cp.x, y: cp.y },
+                    p.primitive.width.max(p.primitive.height)));
+            }
+        }
+        Self { baseline, open }
+    }
+
+    fn with_candidate(&self, candidate: &WorkingPrimitive, context: &Context) -> f64 {
+        let _span = context.detail.span("long_net_frame_append");
+        let mut result = self.baseline;
+        let size = candidate.primitive.width.max(candidate.primitive.height);
+        for cp in candidate.primitive.connection_points.iter() {
+            let Some(net) = &cp.net else { continue };
+            if net.is_empty() || is_ground(net) || context.net_endpoint_counts.get(net) != Some(&2)
+                || context.problem.experiments.ignored_nets.iter().any(|n| n.eq_ignore_ascii_case(net)) { continue; }
+            let Some(&(id, point, old_size)) = self.open.get(net) else { continue };
+            if id == candidate.id { continue; }
+            let scale = ((old_size + size) * 0.5 + context.problem.clearance).max(1.0);
+            let excess = (distance(point, Point { x: cp.x, y: cp.y }) - scale).max(0.0);
+            result += excess * excess / scale * 12.0;
+        }
+        result
+    }
 }
 
 fn long_local_net_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
@@ -1648,6 +1696,8 @@ fn append_incremental_evaluation(
     previous: &IncrementalEvaluation,
     hard: usize,
     ceiling: f64,
+    power_frame: Option<&PowerYieldFrame<'_>>,
+    long_net_frame: Option<&LongNetFrame>,
     context: &Context,
 ) -> Option<IncrementalEvaluation> {
     debug_assert_eq!(previous.size, placed.len());
@@ -1660,19 +1710,25 @@ fn append_incremental_evaluation(
         candidate,
         context,
     );
+    // Incremental sums can differ from the full traversal by a few floating
+    // point ulps. Widen the pruning boundary so a near-tie is never lost.
+    let roundoff = if power_frame.is_some() || long_net_frame.is_some() { 1e-8 + ceiling.abs().min(1e12) * 1e-13 } else { 0.0 };
+    let safe_ceiling = ceiling + roundoff;
     let evaluation = Evaluation {
         hard_violations: hard,
         score: score_block_bounded(
             primitives,
             context,
             Some(&primitive_overlap_depths),
-            ceiling,
+            safe_ceiling,
+            power_frame,
+            long_net_frame,
         ),
     };
-    if evaluation.score > ceiling {
+    if evaluation.score > safe_ceiling {
         if context.validate_incremental_scoring {
             let full = score_block_with_overlap_matrix(primitives, context, Some(&primitive_overlap_depths));
-            assert!(full >= evaluation.score && full > ceiling, "invalid score lower bound");
+            assert!(full + roundoff >= evaluation.score && full > ceiling, "invalid score lower bound");
         }
         let _span = context.detail.span("candidates_pruned_score"); return None;
     }
@@ -1738,11 +1794,9 @@ fn validate_incremental_evaluation(
         actual.hard_violations, expected.hard_violations,
         "incremental hard violation count mismatch"
     );
-    assert_eq!(
-        actual.score.to_bits(),
-        expected.score.to_bits(),
-        "incremental block score mismatch"
-    );
+    let tolerance = 1e-8 + expected.score.abs() * 1e-13;
+    assert!((actual.score - expected.score).abs() <= tolerance,
+        "incremental block score mismatch: {} vs {}", actual.score, expected.score);
 }
 
 fn hard_geometry_violation_count(primitives: &[WorkingPrimitive], context: &Context) -> usize {
@@ -1933,10 +1987,11 @@ fn score_block_with_overlap_matrix(
     context: &Context,
     primitive_overlap_depths: Option<&[f64]>,
 ) -> f64 {
-    score_block_bounded(primitives, context, primitive_overlap_depths, f64::INFINITY)
+    score_block_bounded(primitives, context, primitive_overlap_depths, f64::INFINITY, None, None)
 }
 
-fn score_block_bounded(primitives: &[WorkingPrimitive], context: &Context, primitive_overlap_depths: Option<&[f64]>, ceiling: f64) -> f64 {
+fn score_block_bounded(primitives: &[WorkingPrimitive], context: &Context, primitive_overlap_depths: Option<&[f64]>, ceiling: f64,
+    power_frame: Option<&PowerYieldFrame<'_>>, long_net_frame: Option<&LongNetFrame>) -> f64 {
     let _span = context.detail.span("score_block_with_overlap_matrix");
     if primitives.is_empty() {
         return 0.0;
@@ -1986,7 +2041,9 @@ fn score_block_bounded(primitives: &[WorkingPrimitive], context: &Context, primi
     score += bounds_penalty(primitives, context.problem.bounds.as_ref());
     if score > ceiling { return score; }
     score += dense_ic_access_penalty(primitives, context) * if high { 0.45 } else { 1.0 };
-    score += power_yield_penalty(primitives, context) * if high { 0.3 } else { 1.0 };
+    score += power_frame.map_or_else(|| power_yield_penalty(primitives, context), |frame| {
+        frame.with_candidate(primitives.last().expect("appended candidate"), context)
+    }) * if high { 0.3 } else { 1.0 };
     score += scoped_relation_penalty(primitives, context) * relation_weight_;
     if score > ceiling { return score; }
     score += external_port_exposure_penalty(primitives, context) * if high { 0.35 } else { 1.0 };
@@ -2010,7 +2067,8 @@ fn score_block_bounded(primitives: &[WorkingPrimitive], context: &Context, primi
     score += ground_spread * if small { 2.5 } else { 0.15 } * net_weight;
     score += target_size_penalty(width, height, context) * target_weight;
     if context.problem.experiments.long_nets {
-        score += long_local_net_penalty(primitives, context);
+        score += long_net_frame.map_or_else(|| long_local_net_penalty(primitives, context),
+            |frame| frame.with_candidate(primitives.last().expect("appended candidate"), context));
     }
     if score > ceiling { return score; }
     if context.problem.experiments.pad_crossings {
@@ -2945,6 +3003,95 @@ fn dense_ic_access_penalty(primitives: &[WorkingPrimitive], context: &Context) -
         }
     }
     penalty
+}
+
+struct PowerYieldFrame<'a> {
+    baseline: f64,
+    by_net: FxHashMap<Arc<str>, Vec<(u32, Point)>>,
+    power: Vec<&'a WorkingPrimitive>,
+    connection_count: usize,
+}
+
+impl<'a> PowerYieldFrame<'a> {
+    fn new(placed: &'a [WorkingPrimitive], context: &Context) -> Option<Self> {
+        let _span = context.detail.span("power_frame_build");
+        let connection_count: usize = placed.iter().map(|p| p.primitive.connection_points.len()).sum();
+        // The full scorer changes policy at these sizes; preserve that boundary.
+        if placed.len() < 3 || placed.len() >= 36 || connection_count > 240 { return None; }
+        let power: Vec<_> = placed.iter().filter(|p| power_affinity(p) >= 0.55 && !p.primitive.locked).collect();
+        let baseline = if power.is_empty() { 0.0 } else { power_yield_penalty(placed, context) };
+        let mut by_net: FxHashMap<Arc<str>, Vec<(u32, Point)>> = FxHashMap::default();
+        for p in placed {
+            if power_affinity(p) >= 0.75 { continue; }
+            for (index, point) in p.primitive.connection_points.iter().enumerate() {
+                let Some(net) = &point.net else { continue };
+                if !context.net_signal[p.point_net_ids[index].expect("named net") as usize] { continue; }
+                let points = by_net.entry(net.clone()).or_default();
+                if points.len() < 8 { points.push((p.id, Point { x: point.x, y: point.y })); }
+            }
+        }
+        Some(Self { baseline, by_net, power, connection_count })
+    }
+
+    fn with_candidate(&self, candidate: &WorkingPrimitive, context: &Context) -> f64 {
+        let _span = context.detail.span("power_frame_append");
+        if self.connection_count + candidate.primitive.connection_points.len() > 240 { return 0.0; }
+        let mut score = self.baseline;
+        let affinity = power_affinity(candidate);
+        if affinity >= 0.55 && !candidate.primitive.locked {
+            for (net, points) in &self.by_net {
+                for i in 0..points.len() {
+                    for j in (i + 1)..points.len() {
+                        if points[i].0 != points[j].0 {
+                            score += power_yield_segment(net, points[i].1, points[j].1, candidate, context);
+                        }
+                    }
+                }
+            }
+        }
+        if affinity < 0.75 {
+            let mut new_by_net: FxHashMap<Arc<str>, Vec<Point>> = FxHashMap::default();
+            for (index, point) in candidate.primitive.connection_points.iter().enumerate() {
+                let Some(net) = &point.net else { continue };
+                if !context.net_signal[candidate.point_net_ids[index].expect("named net") as usize] { continue; }
+                let old = self.by_net.get(net).map_or(0, Vec::len);
+                let points = new_by_net.entry(net.clone()).or_default();
+                if old + points.len() < 8 { points.push(Point { x: point.x, y: point.y }); }
+            }
+            for (net, new_points) in new_by_net {
+                let Some(old_points) = self.by_net.get(&net) else { continue };
+                for new_point in new_points {
+                    for &(old_id, old_point) in old_points {
+                        if old_id == candidate.id { continue; }
+                        for power in &self.power {
+                            if power.id != old_id && power.id != candidate.id {
+                                score += power_yield_segment(&net, old_point, new_point, power, context);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        score
+    }
+}
+
+fn power_affinity(primitive: &WorkingPrimitive) -> f64 {
+    if primitive.components.is_empty() { return 0.0; }
+    primitive.components.iter().filter(|(_, c)| c.power_component).count() as f64
+        / primitive.components.len() as f64
+}
+
+fn power_yield_segment(net: &str, a: Point, b: Point, power: &WorkingPrimitive, context: &Context) -> f64 {
+    let direct = distance(a, b);
+    if !(0.5..=45.0).contains(&direct) { return 0.0; }
+    let corridor = 1.2f64.max(context.problem.clearance * 1.75);
+    let box_ = &power.primitive.bbox;
+    let outside = a.x.max(b.x) < box_.left - corridor || a.x.min(b.x) > box_.right + corridor
+        || a.y.max(b.y) < box_.top - corridor || a.y.min(b.y) > box_.bottom + corridor;
+    let d = if outside { corridor } else { segment_box_distance(a, b, box_) };
+    let depth = (corridor - d).max(0.0);
+    (depth * depth * 220.0 + depth * 80.0) * power_affinity(power) * signal_net_weight(net)
 }
 
 fn power_yield_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
