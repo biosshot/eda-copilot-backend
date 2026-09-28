@@ -1,0 +1,1153 @@
+{
+  "units": "[calls, inclusive nanoseconds]; nested spans must not be summed; worker spans are not batch wall time",
+  "before": {
+    "components": 10,
+    "pairsOnly": false,
+    "totals": {
+      "block_candidates": [
+        209,
+        533520700
+      ],
+      "block_micro_route_penalty": [
+        1648,
+        94880800
+      ],
+      "candidate_hard_violation_count": [
+        298970,
+        66953900
+      ],
+      "direct_pad_crossing_penalty": [
+        213819,
+        3075035500
+      ],
+      "hard_geometry_violation_count": [
+        22322,
+        24435600
+      ],
+      "long_local_net_penalty": [
+        213819,
+        770058800
+      ],
+      "scoped_relation_penalty": [
+        213819,
+        91928200
+      ],
+      "score_block_with_overlap_matrix": [
+        213820,
+        4977784900
+      ]
+    }
+  },
+  "after": [
+    {
+      "components": 10,
+      "padCache": [
+        5254978,
+        2884718
+      ],
+      "pairsOnly": false,
+      "totals": {
+        "block_candidates": [
+          209,
+          464986800
+        ],
+        "block_micro_route_penalty": [
+          1648,
+          87760400
+        ],
+        "candidate_hard_violation_count": [
+          298970,
+          57539500
+        ],
+        "convex_hull": [
+          213819,
+          267614600
+        ],
+        "dense_ic_access_penalty": [
+          213819,
+          75102700
+        ],
+        "direct_pad_crossing_penalty": [
+          213819,
+          854710700
+        ],
+        "external_port_exposure_penalty": [
+          213819,
+          182236700
+        ],
+        "hard_geometry_violation_count": [
+          22322,
+          22474300
+        ],
+        "long_local_net_penalty": [
+          213819,
+          514358000
+        ],
+        "overlap_penalty": [
+          213819,
+          31560000
+        ],
+        "port_facing_penalty": [
+          213819,
+          75503100
+        ],
+        "power_yield_penalty": [
+          213819,
+          49613200
+        ],
+        "same_net_spread_penalties": [
+          213819,
+          60154500
+        ],
+        "scoped_relation_penalty": [
+          213819,
+          73904100
+        ],
+        "score_block_with_overlap_matrix": [
+          213820,
+          2412743400
+        ],
+        "signal_path_topology": [
+          213819,
+          43887400
+        ]
+      }
+    },
+    {
+      "components": 10,
+      "padCache": [
+        8067676,
+        3992404
+      ],
+      "pairsOnly": false,
+      "totals": {
+        "block_candidates": [
+          256,
+          435425800
+        ],
+        "block_micro_route_penalty": [
+          2004,
+          91405200
+        ],
+        "candidate_hard_violation_count": [
+          347465,
+          56195400
+        ],
+        "convex_hull": [
+          252248,
+          327249500
+        ],
+        "dense_ic_access_penalty": [
+          252248,
+          93246000
+        ],
+        "direct_pad_crossing_penalty": [
+          252248,
+          994769600
+        ],
+        "external_port_exposure_penalty": [
+          252248,
+          221630800
+        ],
+        "hard_geometry_violation_count": [
+          40840,
+          45696400
+        ],
+        "long_local_net_penalty": [
+          252248,
+          616416100
+        ],
+        "overlap_penalty": [
+          252248,
+          50297000
+        ],
+        "port_facing_penalty": [
+          252248,
+          86818400
+        ],
+        "power_yield_penalty": [
+          252248,
+          63676300
+        ],
+        "same_net_spread_penalties": [
+          252248,
+          71934400
+        ],
+        "scoped_relation_penalty": [
+          252248,
+          81906300
+        ],
+        "score_block_with_overlap_matrix": [
+          252249,
+          2879501600
+        ],
+        "signal_path_topology": [
+          252248,
+          49371600
+        ]
+      }
+    },
+    {
+      "components": 10,
+      "padCache": [
+        7088999,
+        7161071
+      ],
+      "pairsOnly": true,
+      "totals": {
+        "block_candidates": [
+          168,
+          477001900
+        ],
+        "block_micro_route_penalty": [
+          647,
+          54932500
+        ],
+        "candidate_hard_violation_count": [
+          236888,
+          76229800
+        ],
+        "convex_hull": [
+          237486,
+          401859900
+        ],
+        "dense_ic_access_penalty": [
+          237486,
+          113422600
+        ],
+        "direct_pad_crossing_penalty": [
+          237486,
+          1671256800
+        ],
+        "external_port_exposure_penalty": [
+          237486,
+          289287400
+        ],
+        "hard_geometry_violation_count": [
+          598,
+          873300
+        ],
+        "long_local_net_penalty": [
+          237486,
+          704371100
+        ],
+        "overlap_penalty": [
+          237486,
+          44227600
+        ],
+        "port_facing_penalty": [
+          237486,
+          118318600
+        ],
+        "power_yield_penalty": [
+          237486,
+          69127700
+        ],
+        "same_net_spread_penalties": [
+          237486,
+          83107400
+        ],
+        "scoped_relation_penalty": [
+          237486,
+          106593200
+        ],
+        "score_block_with_overlap_matrix": [
+          237486,
+          3911181500
+        ],
+        "signal_path_topology": [
+          237486,
+          57582500
+        ]
+      }
+    },
+    {
+      "components": 9,
+      "padCache": [
+        6094953,
+        3037845
+      ],
+      "pairsOnly": false,
+      "totals": {
+        "block_candidates": [
+          247,
+          312441600
+        ],
+        "block_micro_route_penalty": [
+          1980,
+          81410900
+        ],
+        "candidate_hard_violation_count": [
+          312553,
+          51099500
+        ],
+        "convex_hull": [
+          207786,
+          245343700
+        ],
+        "dense_ic_access_penalty": [
+          207786,
+          71695300
+        ],
+        "direct_pad_crossing_penalty": [
+          207786,
+          738548200
+        ],
+        "external_port_exposure_penalty": [
+          207786,
+          119753900
+        ],
+        "hard_geometry_violation_count": [
+          23216,
+          23165900
+        ],
+        "long_local_net_penalty": [
+          207786,
+          580667000
+        ],
+        "overlap_penalty": [
+          207786,
+          36434600
+        ],
+        "port_facing_penalty": [
+          207786,
+          45393100
+        ],
+        "power_yield_penalty": [
+          207786,
+          53382600
+        ],
+        "same_net_spread_penalties": [
+          207786,
+          67288500
+        ],
+        "scoped_relation_penalty": [
+          207786,
+          48868600
+        ],
+        "score_block_with_overlap_matrix": [
+          207787,
+          2230399900
+        ],
+        "signal_path_topology": [
+          207786,
+          41329400
+        ]
+      }
+    },
+    {
+      "components": 9,
+      "padCache": [
+        10506558,
+        9791201
+      ],
+      "pairsOnly": true,
+      "totals": {
+        "block_candidates": [
+          216,
+          408060300
+        ],
+        "block_micro_route_penalty": [
+          859,
+          86647000
+        ],
+        "candidate_hard_violation_count": [
+          268293,
+          76546400
+        ],
+        "convex_hull": [
+          269084,
+          443341800
+        ],
+        "dense_ic_access_penalty": [
+          269084,
+          123577500
+        ],
+        "direct_pad_crossing_penalty": [
+          269084,
+          1761158600
+        ],
+        "external_port_exposure_penalty": [
+          269084,
+          203726300
+        ],
+        "hard_geometry_violation_count": [
+          791,
+          1123500
+        ],
+        "long_local_net_penalty": [
+          269084,
+          873905900
+        ],
+        "overlap_penalty": [
+          269084,
+          59323800
+        ],
+        "port_facing_penalty": [
+          269084,
+          72722900
+        ],
+        "power_yield_penalty": [
+          269084,
+          94581300
+        ],
+        "same_net_spread_penalties": [
+          269084,
+          98892200
+        ],
+        "scoped_relation_penalty": [
+          269084,
+          76155800
+        ],
+        "score_block_with_overlap_matrix": [
+          269084,
+          4129314300
+        ],
+        "signal_path_topology": [
+          269084,
+          55174700
+        ]
+      }
+    },
+    {
+      "components": 12,
+      "padCache": [
+        5535991,
+        2996430
+      ],
+      "pairsOnly": false,
+      "totals": {
+        "block_candidates": [
+          208,
+          642813400
+        ],
+        "block_micro_route_penalty": [
+          1512,
+          80737000
+        ],
+        "candidate_hard_violation_count": [
+          304969,
+          102044600
+        ],
+        "convex_hull": [
+          254348,
+          505460900
+        ],
+        "dense_ic_access_penalty": [
+          254348,
+          138983000
+        ],
+        "direct_pad_crossing_penalty": [
+          254348,
+          1210203800
+        ],
+        "external_port_exposure_penalty": [
+          254348,
+          848266200
+        ],
+        "hard_geometry_violation_count": [
+          36860,
+          54791700
+        ],
+        "long_local_net_penalty": [
+          254348,
+          769514200
+        ],
+        "overlap_penalty": [
+          254348,
+          58692500
+        ],
+        "port_facing_penalty": [
+          254348,
+          184488700
+        ],
+        "power_yield_penalty": [
+          254348,
+          973960100
+        ],
+        "same_net_spread_penalties": [
+          254348,
+          113451500
+        ],
+        "scoped_relation_penalty": [
+          254348,
+          149682000
+        ],
+        "score_block_with_overlap_matrix": [
+          254349,
+          5843948800
+        ],
+        "signal_path_topology": [
+          254348,
+          595814000
+        ]
+      }
+    },
+    {
+      "components": 12,
+      "padCache": [
+        14540047,
+        5877429
+      ],
+      "pairsOnly": false,
+      "totals": {
+        "block_candidates": [
+          352,
+          981616900
+        ],
+        "block_micro_route_penalty": [
+          2665,
+          132553900
+        ],
+        "candidate_hard_violation_count": [
+          591873,
+          183858400
+        ],
+        "convex_hull": [
+          437720,
+          930662000
+        ],
+        "dense_ic_access_penalty": [
+          437720,
+          253198300
+        ],
+        "direct_pad_crossing_penalty": [
+          437720,
+          2175797500
+        ],
+        "external_port_exposure_penalty": [
+          437720,
+          1490090400
+        ],
+        "hard_geometry_violation_count": [
+          40340,
+          90006400
+        ],
+        "long_local_net_penalty": [
+          437720,
+          1432353100
+        ],
+        "overlap_penalty": [
+          437720,
+          155466600
+        ],
+        "port_facing_penalty": [
+          437720,
+          402186200
+        ],
+        "power_yield_penalty": [
+          437720,
+          2536428900
+        ],
+        "same_net_spread_penalties": [
+          437720,
+          207687200
+        ],
+        "scoped_relation_penalty": [
+          437720,
+          371624900
+        ],
+        "score_block_with_overlap_matrix": [
+          437721,
+          11691112100
+        ],
+        "signal_path_topology": [
+          437720,
+          1155187000
+        ]
+      }
+    },
+    {
+      "components": 12,
+      "padCache": [
+        15727375,
+        6356339
+      ],
+      "pairsOnly": false,
+      "totals": {
+        "block_candidates": [
+          364,
+          995039700
+        ],
+        "block_micro_route_penalty": [
+          2718,
+          133344600
+        ],
+        "candidate_hard_violation_count": [
+          589503,
+          184450700
+        ],
+        "convex_hull": [
+          456609,
+          1049880600
+        ],
+        "dense_ic_access_penalty": [
+          456609,
+          272425100
+        ],
+        "direct_pad_crossing_penalty": [
+          456609,
+          2307494800
+        ],
+        "external_port_exposure_penalty": [
+          456609,
+          1618322200
+        ],
+        "hard_geometry_violation_count": [
+          60999,
+          131272000
+        ],
+        "long_local_net_penalty": [
+          456609,
+          1507199300
+        ],
+        "overlap_penalty": [
+          456609,
+          176447400
+        ],
+        "port_facing_penalty": [
+          456609,
+          425406700
+        ],
+        "power_yield_penalty": [
+          456609,
+          3793592100
+        ],
+        "same_net_spread_penalties": [
+          456609,
+          193369800
+        ],
+        "scoped_relation_penalty": [
+          456609,
+          378604600
+        ],
+        "score_block_with_overlap_matrix": [
+          456610,
+          13537023100
+        ],
+        "signal_path_topology": [
+          456609,
+          1210765400
+        ]
+      }
+    },
+    {
+      "components": 12,
+      "padCache": [
+        16015793,
+        6542556
+      ],
+      "pairsOnly": false,
+      "totals": {
+        "block_candidates": [
+          364,
+          1019307900
+        ],
+        "block_micro_route_penalty": [
+          2698,
+          124937900
+        ],
+        "candidate_hard_violation_count": [
+          598113,
+          189854800
+        ],
+        "convex_hull": [
+          463478,
+          1004263700
+        ],
+        "dense_ic_access_penalty": [
+          463478,
+          276798600
+        ],
+        "direct_pad_crossing_penalty": [
+          463478,
+          2392747400
+        ],
+        "external_port_exposure_penalty": [
+          463478,
+          1669706900
+        ],
+        "hard_geometry_violation_count": [
+          60458,
+          133000400
+        ],
+        "long_local_net_penalty": [
+          463478,
+          1549925300
+        ],
+        "overlap_penalty": [
+          463478,
+          176615500
+        ],
+        "port_facing_penalty": [
+          463478,
+          436016700
+        ],
+        "power_yield_penalty": [
+          463478,
+          3624356900
+        ],
+        "same_net_spread_penalties": [
+          463478,
+          210719900
+        ],
+        "scoped_relation_penalty": [
+          463478,
+          383924400
+        ],
+        "score_block_with_overlap_matrix": [
+          463479,
+          13579095900
+        ],
+        "signal_path_topology": [
+          463478,
+          1244121100
+        ]
+      }
+    },
+    {
+      "components": 12,
+      "padCache": [
+        16049748,
+        6518041
+      ],
+      "pairsOnly": false,
+      "totals": {
+        "block_candidates": [
+          364,
+          1031400800
+        ],
+        "block_micro_route_penalty": [
+          2686,
+          126361500
+        ],
+        "candidate_hard_violation_count": [
+          605470,
+          193029400
+        ],
+        "convex_hull": [
+          467534,
+          1064082400
+        ],
+        "dense_ic_access_penalty": [
+          467534,
+          276055000
+        ],
+        "direct_pad_crossing_penalty": [
+          467534,
+          2430433200
+        ],
+        "external_port_exposure_penalty": [
+          467534,
+          1663125200
+        ],
+        "hard_geometry_violation_count": [
+          60381,
+          127057200
+        ],
+        "long_local_net_penalty": [
+          467534,
+          1516596900
+        ],
+        "overlap_penalty": [
+          467534,
+          179915800
+        ],
+        "port_facing_penalty": [
+          467534,
+          428492300
+        ],
+        "power_yield_penalty": [
+          467534,
+          4097119900
+        ],
+        "same_net_spread_penalties": [
+          467534,
+          211529500
+        ],
+        "scoped_relation_penalty": [
+          467534,
+          391845400
+        ],
+        "score_block_with_overlap_matrix": [
+          467535,
+          14133393300
+        ],
+        "signal_path_topology": [
+          467534,
+          1260121800
+        ]
+      }
+    },
+    {
+      "components": 12,
+      "padCache": [
+        19361448,
+        7833758
+      ],
+      "pairsOnly": false,
+      "totals": {
+        "block_candidates": [
+          400,
+          1130183700
+        ],
+        "block_micro_route_penalty": [
+          2756,
+          138354800
+        ],
+        "candidate_hard_violation_count": [
+          592451,
+          188489000
+        ],
+        "convex_hull": [
+          518691,
+          1157027700
+        ],
+        "dense_ic_access_penalty": [
+          518691,
+          308909000
+        ],
+        "direct_pad_crossing_penalty": [
+          518691,
+          2742486900
+        ],
+        "external_port_exposure_penalty": [
+          518691,
+          1947217500
+        ],
+        "hard_geometry_violation_count": [
+          120733,
+          232829000
+        ],
+        "long_local_net_penalty": [
+          518691,
+          1742956400
+        ],
+        "overlap_penalty": [
+          518691,
+          228932800
+        ],
+        "port_facing_penalty": [
+          518691,
+          493796100
+        ],
+        "power_yield_penalty": [
+          518691,
+          5036779400
+        ],
+        "same_net_spread_penalties": [
+          518691,
+          222394500
+        ],
+        "scoped_relation_penalty": [
+          518691,
+          440744900
+        ],
+        "score_block_with_overlap_matrix": [
+          518692,
+          16484227200
+        ],
+        "signal_path_topology": [
+          518691,
+          1446086000
+        ]
+      }
+    },
+    {
+      "components": 12,
+      "padCache": [
+        14543989,
+        5802040
+      ],
+      "pairsOnly": false,
+      "totals": {
+        "block_candidates": [
+          352,
+          960921700
+        ],
+        "block_micro_route_penalty": [
+          2669,
+          120842300
+        ],
+        "candidate_hard_violation_count": [
+          589004,
+          186495200
+        ],
+        "convex_hull": [
+          436139,
+          930009700
+        ],
+        "dense_ic_access_penalty": [
+          436139,
+          240920500
+        ],
+        "direct_pad_crossing_penalty": [
+          436139,
+          2101940600
+        ],
+        "external_port_exposure_penalty": [
+          436139,
+          1361811100
+        ],
+        "hard_geometry_violation_count": [
+          40300,
+          69008400
+        ],
+        "long_local_net_penalty": [
+          436139,
+          1380556100
+        ],
+        "overlap_penalty": [
+          436139,
+          135538600
+        ],
+        "port_facing_penalty": [
+          436139,
+          382245300
+        ],
+        "power_yield_penalty": [
+          436139,
+          2893780000
+        ],
+        "same_net_spread_penalties": [
+          436139,
+          182954400
+        ],
+        "scoped_relation_penalty": [
+          436139,
+          341442600
+        ],
+        "score_block_with_overlap_matrix": [
+          436140,
+          11614319900
+        ],
+        "signal_path_topology": [
+          436139,
+          1111325900
+        ]
+      }
+    },
+    {
+      "components": 12,
+      "padCache": [
+        15727048,
+        6282753
+      ],
+      "pairsOnly": false,
+      "totals": {
+        "block_candidates": [
+          364,
+          835620300
+        ],
+        "block_micro_route_penalty": [
+          2692,
+          106707500
+        ],
+        "candidate_hard_violation_count": [
+          588882,
+          152410300
+        ],
+        "convex_hull": [
+          455788,
+          773208600
+        ],
+        "dense_ic_access_penalty": [
+          455788,
+          212969700
+        ],
+        "direct_pad_crossing_penalty": [
+          455788,
+          1852477900
+        ],
+        "external_port_exposure_penalty": [
+          455788,
+          1215885300
+        ],
+        "hard_geometry_violation_count": [
+          60071,
+          93707600
+        ],
+        "long_local_net_penalty": [
+          455788,
+          1218567500
+        ],
+        "overlap_penalty": [
+          455788,
+          132593300
+        ],
+        "port_facing_penalty": [
+          455788,
+          342312100
+        ],
+        "power_yield_penalty": [
+          455788,
+          3402837700
+        ],
+        "same_net_spread_penalties": [
+          455788,
+          160239900
+        ],
+        "scoped_relation_penalty": [
+          455788,
+          312279300
+        ],
+        "score_block_with_overlap_matrix": [
+          455789,
+          11128619600
+        ],
+        "signal_path_topology": [
+          455788,
+          1009840600
+        ]
+      }
+    },
+    {
+      "components": 12,
+      "padCache": [
+        37227189,
+        15245491
+      ],
+      "pairsOnly": true,
+      "totals": {
+        "block_candidates": [
+          396,
+          1163870900
+        ],
+        "block_micro_route_penalty": [
+          1099,
+          89113200
+        ],
+        "candidate_hard_violation_count": [
+          646332,
+          272695400
+        ],
+        "convex_hull": [
+          647531,
+          1396143400
+        ],
+        "dense_ic_access_penalty": [
+          647531,
+          363737100
+        ],
+        "direct_pad_crossing_penalty": [
+          647531,
+          3661866800
+        ],
+        "external_port_exposure_penalty": [
+          647531,
+          2871824300
+        ],
+        "hard_geometry_violation_count": [
+          1199,
+          2865100
+        ],
+        "long_local_net_penalty": [
+          647531,
+          2155487300
+        ],
+        "overlap_penalty": [
+          647531,
+          229183100
+        ],
+        "port_facing_penalty": [
+          647531,
+          621909600
+        ],
+        "power_yield_penalty": [
+          647531,
+          7140555600
+        ],
+        "same_net_spread_penalties": [
+          647531,
+          258663100
+        ],
+        "scoped_relation_penalty": [
+          647531,
+          542622900
+        ],
+        "score_block_with_overlap_matrix": [
+          647531,
+          21644094900
+        ],
+        "signal_path_topology": [
+          647531,
+          1661372400
+        ]
+      }
+    },
+    {
+      "components": 12,
+      "padCache": [
+        36890797,
+        15222310
+      ],
+      "pairsOnly": true,
+      "totals": {
+        "block_candidates": [
+          396,
+          1147600900
+        ],
+        "block_micro_route_penalty": [
+          1163,
+          89833900
+        ],
+        "candidate_hard_violation_count": [
+          641860,
+          267829200
+        ],
+        "convex_hull": [
+          643082,
+          1383087300
+        ],
+        "dense_ic_access_penalty": [
+          643082,
+          359899500
+        ],
+        "direct_pad_crossing_penalty": [
+          643082,
+          3731489200
+        ],
+        "external_port_exposure_penalty": [
+          643082,
+          2885219300
+        ],
+        "hard_geometry_violation_count": [
+          1222,
+          3091900
+        ],
+        "long_local_net_penalty": [
+          643082,
+          2120555800
+        ],
+        "overlap_penalty": [
+          643082,
+          226957700
+        ],
+        "port_facing_penalty": [
+          643082,
+          630979400
+        ],
+        "power_yield_penalty": [
+          643082,
+          10278457400
+        ],
+        "same_net_spread_penalties": [
+          643082,
+          259643300
+        ],
+        "scoped_relation_penalty": [
+          643082,
+          535810000
+        ],
+        "score_block_with_overlap_matrix": [
+          643082,
+          24848157000
+        ],
+        "signal_path_topology": [
+          643082,
+          1683703800
+        ]
+      }
+    }
+  ]
+}

@@ -80,12 +80,42 @@ struct IncrementalEvaluation {
 #[path = "block_solver_trace.rs"]
 mod trace;
 
+#[derive(Default)]
+struct DetailProfile {
+    enabled: bool,
+    totals: RefCell<std::collections::BTreeMap<&'static str, (u64, u64)>>,
+}
+struct ProfileSpan<'a> { profile: &'a DetailProfile, name: &'static str, started: Option<std::time::Instant> }
+impl DetailProfile {
+    fn span(&self, name: &'static str) -> ProfileSpan<'_> {
+        ProfileSpan { profile: self, name, started: self.enabled.then(std::time::Instant::now) }
+    }
+}
+impl Drop for ProfileSpan<'_> {
+    fn drop(&mut self) {
+        if let Some(started) = self.started {
+            let mut totals = self.profile.totals.borrow_mut();
+            let entry = totals.entry(self.name).or_default();
+            entry.0 += 1; entry.1 += started.elapsed().as_nanos() as u64;
+        }
+    }
+}
 struct Context {
+    detail: DetailProfile,
+    source_pads: Vec<Vec<crate::model::RouteObstacle>>,
+    pad_nets: RefCell<Vec<crate::model::PostPlaceNet>>,
+    pad_net_indices: Vec<Vec<Option<usize>>>,
+    pad_point_metadata: Vec<Vec<(Option<Arc<str>>, Option<Arc<str>>)>>,
+    pad_geometry: RefCell<Vec<Option<(PrimitivePoseKey, Arc<Vec<crate::model::RouteObstacle>>)>>> ,
+    pad_crossings: RefCell<crate::post_place::PadCrossingCache>,
+    split_pad_cache_safe: bool,
+    net_endpoint_counts: FxHashMap<Arc<str>, usize>,
     trace: bool,
     trace_phase: RefCell<&'static str>,
     problem: BlockSolveProblem,
     relations: Vec<CompiledRelation>,
     net_ground: Vec<bool>,
+    net_signal: Vec<bool>,
     evaluation_cache: RefCell<FxHashMap<Vec<PrimitivePoseKey>, Evaluation>>,
     net_scoring_scratch: RefCell<NetScoringScratch>,
     validate_incremental_scoring: bool,
@@ -215,7 +245,40 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
         })
         .collect();
     let relations = compile_relations(&problem.relations, &primitives, problem.bounds.as_ref(), problem.experiments.local_access);
+    let source_pads: Vec<Vec<_>> = problem.primitives.iter().map(|p| problem.routing_obstacles.iter()
+        .filter(|o| o.primitive_id.as_ref() == Some(&p.id)).cloned().collect()).collect();
+    let mut owners = FxHashMap::default();
+    let mut split_pad_cache_safe = true;
+    for (i, pads) in source_pads.iter().enumerate() { for pad in pads {
+        if let Some(r) = &pad.reference { if owners.insert(r.clone(), i).is_some_and(|old| old != i) { split_pad_cache_safe = false; } }
+    }}
+    let mut net_endpoint_counts = FxHashMap::default();
+    for p in &problem.primitives { for cp in p.connection_points.iter() {
+        if let Some(n) = &cp.net { *net_endpoint_counts.entry(n.clone()).or_insert(0usize) += 1; }
+    }}
+    let pad_nets: Vec<_> = problem.primitives.iter().flat_map(|p| p.connection_points.iter())
+        .filter_map(|cp| cp.net.clone()).filter(|n| !n.is_empty() && !is_ground(n)
+            && !problem.experiments.ignored_nets.iter().any(|ignored| ignored.eq_ignore_ascii_case(n)))
+        .collect::<std::collections::BTreeSet<_>>().into_iter().map(|name| crate::model::PostPlaceNet {
+            weight: if is_power(&name) { 0.25 } else { 1.0 }, name, points: vec![], layers: vec![], internal_owners: vec![],
+        }).collect();
+    let pad_net_indices = problem.primitives.iter().map(|p| p.connection_points.iter().map(|cp|
+        cp.net.as_ref().and_then(|name| pad_nets.binary_search_by(|n| n.name.cmp(name)).ok())).collect()).collect();
+    let pad_point_metadata = problem.primitives.iter().map(|p| p.connection_points.iter().map(|cp| {
+        let layer = source_pads.iter().flatten().find(|pad| pad.reference.as_ref() == Some(&cp.reference)).and_then(|pad| pad.layer.clone());
+        let owner = cp.reference.rsplit_once('.').map(|(d, _)| d);
+        let core = problem.components.iter().find(|c| c.primitive_id == p.id && Some(c.designator.as_ref()) == owner
+            && c.role.as_deref() == Some("main_ic")).map(|c| c.designator.clone());
+        (layer, core)
+    }).collect()).collect();
+    let mut net_signal = vec![false; net_ids.len()];
+    for (net, id) in &net_ids { net_signal[*id as usize] = !(is_ground(net) || is_power(net) || is_switching_power(net)); }
     let context = Context {
+        net_signal,
+        pad_nets: RefCell::new(pad_nets), pad_net_indices, pad_point_metadata,
+        pad_geometry: RefCell::new(vec![None; source_pads.len()]), source_pads,
+        pad_crossings: RefCell::new(Default::default()), split_pad_cache_safe, net_endpoint_counts,
+        detail: DetailProfile { enabled: std::env::var_os("PCB_BLOCK_SOLVER_DETAIL").is_some(), ..Default::default() },
         trace: trace::enabled(&problem),
         trace_phase: RefCell::new("search"),
         problem,
@@ -281,6 +344,10 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
         let centered = if items.iter().any(|p| p.primitive.locked) || has_global_frame { items }
             else { center_primitives(items, context.problem.grid) };
         checkpoints.push(crate::model::BlockCheckpoint { stage, result: solution(&context, &centered)? });
+    }
+    if context.detail.enabled {
+        eprintln!("[block-detail] {}", serde_json::json!({"components":context.problem.components.len(),
+            "pairsOnly":resumed,"totals":*context.detail.totals.borrow(), "padCache":context.pad_crossings.borrow().stats()}));
     }
     Ok(crate::model::BlockSolveSolution { result: solution(&context, &final_primitives)?, checkpoints, pair_seed })
 }
@@ -602,6 +669,7 @@ fn block_micro_route_penalty(
     placed: &[WorkingPrimitive],
     context: &Context,
 ) -> f64 {
+    let _span = context.detail.span("block_micro_route_penalty");
     let config = MicroRouteConfig::block();
     use crate::model::BlockRoutingMetric;
     if context.problem.experiments.routing_metric == BlockRoutingMetric::Off { return 0.0; }
@@ -629,38 +697,46 @@ fn block_micro_route_penalty(
     )
 }
 
-fn transformed_pad_obstacles(primitives: &[&WorkingPrimitive], context: &Context) -> Vec<crate::model::RouteObstacle> {
-    let mut obstacles = Vec::new();
-    for item in primitives {
-        let source = &context.problem.primitives[item.source_index];
-        let origin = box_center(&source.bbox);
-        let center = box_center(&item.primitive.bbox);
-        for pad in context.problem.routing_obstacles.iter().filter(|p| p.primitive_id.as_ref() == Some(&source.id)) {
-            let mut pad = pad.clone();
-            pad.box_ = translate_box(&rotate_box(&pad.box_, &origin, item.rotation), center.x - origin.x, center.y - origin.y);
-            obstacles.push(pad);
-        }
-    }
-    obstacles
+fn prepared_pad_obstacles(item: &WorkingPrimitive, context: &Context) -> Arc<Vec<crate::model::RouteObstacle>> {
+    let key = primitive_pose_key(item);
+    let mut cache = context.pad_geometry.borrow_mut();
+    if let Some((old, pads)) = &cache[item.source_index] { if *old == key { return pads.clone(); } }
+    let source = &context.problem.primitives[item.source_index];
+    let origin = box_center(&source.bbox);
+    let center = box_center(&item.primitive.bbox);
+    let pads = Arc::new(context.source_pads[item.source_index].iter().map(|pad| {
+        let mut pad = pad.clone();
+        pad.box_ = translate_box(&rotate_box(&pad.box_, &origin, item.rotation), center.x-origin.x, center.y-origin.y);
+        pad
+    }).collect());
+    cache[item.source_index] = Some((key, Arc::clone(&pads)));
+    pads
 }
-
+fn transformed_pad_obstacles(primitives: &[&WorkingPrimitive], context: &Context) -> Vec<crate::model::RouteObstacle> {
+    primitives.iter().flat_map(|p| prepared_pad_obstacles(p, context).as_ref().clone()).collect()
+}
 fn direct_pad_crossing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
-    let obstacles = transformed_pad_obstacles(&primitives.iter().collect::<Vec<_>>(), context);
-    let mut nets = std::collections::BTreeMap::<Arc<str>, crate::model::PostPlaceNet>::new();
+    let _span = context.detail.span("direct_pad_crossing_penalty");
+    let groups: Vec<_> = primitives.iter().map(|p| (p.source_index, prepared_pad_obstacles(p, context))).collect();
+    let mut nets = context.pad_nets.borrow_mut();
+    for net in nets.iter_mut() { net.points.clear(); net.layers.clear(); net.internal_owners.clear(); }
     for p in primitives {
-        for cp in p.primitive.connection_points.iter() {
-            let Some(name) = &cp.net else { continue };
-            if name.is_empty() || is_ground(name) || context.problem.experiments.ignored_nets.iter().any(|n| n.eq_ignore_ascii_case(name)) { continue; }
-            let net = nets.entry(name.clone()).or_insert_with(|| crate::model::PostPlaceNet {
-                name: name.clone(), points: vec![], layers: vec![], internal_owners: vec![], weight: if is_power(name) { 0.25 } else { 1.0 } });
+        for (i, cp) in p.primitive.connection_points.iter().enumerate() {
+            let Some(index) = context.pad_net_indices[p.source_index][i] else { continue };
+            let net = &mut nets[index];
             net.points.push(Point { x: cp.x, y: cp.y });
-            let owner = cp.reference.rsplit_once('.').map(|(d, _)| d);
-            net.internal_owners.push(p.components.iter().find(|(_, c)| Some(c.designator.as_ref()) == owner
-                && c.role.as_deref() == Some("main_ic")).map(|(_, c)| c.designator.clone()));
-            net.layers.push(obstacles.iter().find(|o| o.reference.as_ref() == Some(&cp.reference)).and_then(|o| o.layer.clone()));
+            let (layer, owner) = &context.pad_point_metadata[p.source_index][i];
+            net.internal_owners.push(owner.clone());
+            net.layers.push(if context.split_pad_cache_safe { layer.clone() } else {
+                groups.iter().flat_map(|(_, pads)| pads.iter()).find(|o| o.reference.as_ref() == Some(&cp.reference)).and_then(|o| o.layer.clone())
+            });
         }
     }
-    crate::post_place::pad_crossing_penalty(&nets.into_values().collect::<Vec<_>>(), &obstacles) * 180.0
+    let fresh = || crate::post_place::pad_crossing_penalty(&nets, &groups.iter().flat_map(|(_, p)| p.iter().cloned()).collect::<Vec<_>>());
+    if !context.split_pad_cache_safe { return fresh() * 180.0; }
+    let score = context.pad_crossings.borrow_mut().score(&nets, &groups);
+    if context.validate_incremental_scoring { assert!((score - fresh()).abs() < 1e-8, "incremental pad score mismatch"); }
+    score * 180.0
 }
 
 fn micro_route_bounds(
@@ -777,6 +853,7 @@ fn block_candidates(
     placed: &[WorkingPrimitive],
     context: &Context,
 ) -> Vec<WorkingPrimitive> {
+    let _span = context.detail.span("block_candidates");
     if primitive.primitive.locked {
         return vec![primitive.clone()];
     }
@@ -960,14 +1037,10 @@ fn net_anchored_candidates(
 }
 
 fn long_local_net_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let _span = context.detail.span("long_local_net_penalty");
     let mut nets: FxHashMap<Arc<str>, Vec<(u32, Point)>> = FxHashMap::default();
     // Count endpoints in the complete problem, never reclassify a partial bus as a pair.
-    let mut counts: FxHashMap<Arc<str>, usize> = FxHashMap::default();
-    for p in &context.problem.primitives {
-        for cp in p.connection_points.iter() {
-            if let Some(n) = &cp.net { *counts.entry(n.clone()).or_default() += 1; }
-        }
-    }
+    let counts = &context.net_endpoint_counts;
     for p in primitives {
         for cp in p.primitive.connection_points.iter() {
             let Some(n) = &cp.net else { continue };
@@ -1600,6 +1673,7 @@ fn validate_incremental_evaluation(
 }
 
 fn hard_geometry_violation_count(primitives: &[WorkingPrimitive], context: &Context) -> usize {
+    let _span = context.detail.span("hard_geometry_violation_count");
     let mut count = 0;
     for i in 0..primitives.len() {
         for j in (i + 1)..primitives.len() {
@@ -1647,6 +1721,7 @@ fn candidate_hard_violation_count(
     placed: &[WorkingPrimitive],
     context: &Context,
 ) -> usize {
+    let _span = context.detail.span("candidate_hard_violation_count");
     let mut count = world_violations(candidate, context);
     for other in placed {
         if !primitive_can_conflict(candidate, other, context) {
@@ -1785,6 +1860,7 @@ fn score_block_with_overlap_matrix(
     context: &Context,
     primitive_overlap_depths: Option<&[f64]>,
 ) -> f64 {
+    let _span = context.detail.span("score_block_with_overlap_matrix");
     if primitives.is_empty() {
         return 0.0;
     }
@@ -1819,7 +1895,7 @@ fn score_block_with_overlap_matrix(
                 .copied()
         })
         .collect();
-    let (hull_a, hull_p) = convex_hull_metrics(if boxes.is_empty() { vec![bbox] } else { boxes });
+    let (hull_a, hull_p) = { let _span = context.detail.span("convex_hull"); convex_hull_metrics(if boxes.is_empty() { vec![bbox] } else { boxes }) };
     let mut score = width * height * bbox_area
         + (width + height) * bbox_perimeter
         + hull_a * hull_area * if context.problem.experiments.reduced_hull { 0.25 } else { 1.0 }
@@ -1860,7 +1936,7 @@ fn score_block_with_overlap_matrix(
         score += direct_pad_crossing_penalty(primitives, context);
     }
     let path_primitives: Vec<_> = primitives.iter().map(|item| &item.primitive).collect();
-    score += signal_path::topology_penalty(&path_primitives, &context.problem.relations)
+    score += { let _span = context.detail.span("signal_path_topology"); signal_path::topology_penalty(&path_primitives, &context.problem.relations) }
         * if high { 2.5 } else { 4.0 };
     score
 }
@@ -1870,6 +1946,7 @@ fn overlap_penalty(
     context: &Context,
     primitive_overlap_depths: Option<&[f64]>,
 ) -> f64 {
+    let _span = context.detail.span("overlap_penalty");
     let envelope = context.problem.collision_mode.as_ref() == "envelope"
         || context.problem.collision_mode.as_ref() == "hybrid";
     let mut penalty = 0.0;
@@ -2215,6 +2292,7 @@ fn endpoint_anchored_candidates(
 }
 
 fn scoped_relation_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let _span = context.detail.span("scoped_relation_penalty");
     let mut penalty = 0.0;
     for compiled in &context.relations {
         let relation = &compiled.relation;
@@ -2242,6 +2320,7 @@ fn scoped_relation_penalty(primitives: &[WorkingPrimitive], context: &Context) -
 }
 
 fn external_port_exposure_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let _span = context.detail.span("external_port_exposure_penalty");
     let bbox = union_boxes(
         &primitives
             .iter()
@@ -2315,6 +2394,7 @@ fn escape_blockage(source: EndpointPoint, primitives: &[WorkingPrimitive], clear
 }
 
 fn port_facing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let _span = context.detail.span("port_facing_penalty");
     let mut penalty = 0.0;
     for compiled in &context.relations {
         let relation = &compiled.relation;
@@ -2606,6 +2686,7 @@ fn same_net_spread_penalties(
     ground_max_points: Option<usize>,
     ground_max_spread: Option<f64>,
 ) -> (f64, f64) {
+    let _span = context.detail.span("same_net_spread_penalties");
     let mut scratch = context.net_scoring_scratch.borrow_mut();
     let NetScoringScratch {
         accumulators,
@@ -2676,6 +2757,7 @@ fn spread_penalty(
 }
 
 fn dense_ic_access_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let _span = context.detail.span("dense_ic_access_penalty");
     if context.problem.search_width > 1 && !context.problem.experiments.keep_dense_access {
         return 0.0;
     }
@@ -2740,6 +2822,7 @@ fn dense_ic_access_penalty(primitives: &[WorkingPrimitive], context: &Context) -
 }
 
 fn power_yield_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let _span = context.detail.span("power_yield_penalty");
     if primitives.len() < 3 || primitives.len() > 36 {
         return 0.0;
     }
@@ -2774,11 +2857,11 @@ fn power_yield_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f6
         if affinity(primitive) >= 0.75 {
             continue;
         }
-        for point in primitive.primitive.connection_points.iter() {
+        for (point_index, point) in primitive.primitive.connection_points.iter().enumerate() {
             let Some(net) = &point.net else {
                 continue;
             };
-            if is_ground(net) || is_power(net) || is_switching_power(net) {
+            if !context.net_signal[primitive.point_net_ids[point_index].expect("named net") as usize] {
                 continue;
             }
             by_net.entry(net.clone()).or_default().push((
@@ -3327,6 +3410,9 @@ mod candidate_tests {
         let resistor = make("R36");
         let ic = make("U11");
         let context = Context { trace: false, trace_phase: RefCell::new("test"), problem, relations: vec![], net_ground: vec![],
+            detail: Default::default(), source_pads: vec![], pad_geometry: Default::default(),
+            pad_crossings: Default::default(), split_pad_cache_safe: true, net_endpoint_counts: Default::default(),
+            net_signal: vec![], pad_nets: Default::default(), pad_net_indices: vec![], pad_point_metadata: vec![],
             evaluation_cache: RefCell::new(FxHashMap::default()),
             net_scoring_scratch: RefCell::new(NetScoringScratch {
                 accumulators: vec![], signal_order: vec![], ground_order: vec![] }),

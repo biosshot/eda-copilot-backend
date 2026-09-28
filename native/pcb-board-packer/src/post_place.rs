@@ -157,6 +157,82 @@ pub(crate) fn pad_crossing_penalty(nets: &[PostPlaceNet], obstacles: &[RouteObst
     pad_hits(&segments, nets, obstacles)
 }
 
+/// Exact per-net/per-primitive reuse. A moved obstacle invalidates its contribution
+/// even when the net itself did not move. Call only when named-pad ownership is
+/// disjoint between groups; duplicate imports otherwise need global deduplication.
+#[derive(Default)]
+pub(crate) struct PadCrossingCache {
+    nets: rustc_hash::FxHashMap<std::sync::Arc<str>, CachedPadNet>,
+    hits: u64,
+    misses: u64,
+}
+struct CachedPadNet {
+    points: Vec<u64>,
+    layers: Vec<Option<std::sync::Arc<str>>>,
+    owners: Vec<Option<std::sync::Arc<str>>>,
+    weight: f64,
+    segments: Vec<Segment>,
+    groups: rustc_hash::FxHashMap<usize, (std::sync::Arc<Vec<RouteObstacle>>, f64)>,
+}
+impl PadCrossingCache {
+    pub(crate) fn stats(&self) -> (u64, u64) { (self.hits, self.misses) }
+    pub(crate) fn score(&mut self, nets: &[PostPlaceNet], groups: &[(usize, std::sync::Arc<Vec<RouteObstacle>>)]) -> f64 {
+        let mut total = 0.0;
+        for net in nets {
+            if net.points.len() < 2 { continue; }
+            let cached = self.nets.entry(net.name.clone()).or_insert_with(|| CachedPadNet {
+                points: vec![], layers: vec![], owners: vec![], weight: f64::NAN,
+                segments: vec![], groups: Default::default(),
+            });
+            if cached.points.len() != net.points.len()*2
+                || !cached.points.iter().copied().eq(net.points.iter().flat_map(|p| [p.x.to_bits(), p.y.to_bits()]))
+                || cached.layers != net.layers || cached.owners != net.internal_owners || cached.weight != net.weight {
+                cached.points.clear(); cached.points.extend(net.points.iter().flat_map(|p| [p.x.to_bits(), p.y.to_bits()]));
+                cached.layers.clone_from(&net.layers); cached.owners.clone_from(&net.internal_owners);
+                cached.weight = net.weight; cached.segments = minimum_spanning_segments(0, net); cached.groups.clear();
+            }
+            for (id, obstacles) in groups {
+                let value = if let Some((old, value)) = cached.groups.get(id).filter(|(old, _)| std::sync::Arc::ptr_eq(old, obstacles)) {
+                    let _ = old; self.hits += 1; *value
+                } else {
+                    self.misses += 1;
+                    let value = pad_hits(&cached.segments, std::slice::from_ref(net), obstacles);
+                    cached.groups.insert(*id, (obstacles.clone(), value)); value
+                };
+                total += value;
+            }
+        }
+        total
+    }
+}
+
+#[cfg(test)]
+mod incremental_pad_tests {
+    use super::*;
+    use std::sync::Arc;
+    #[test]
+    fn moving_foreign_pad_and_changing_net_invalidate_only_reusable_contributions() {
+        let mut cache = PadCrossingCache::default();
+        let mut net = PostPlaceNet { name: Arc::from("signal"), points: vec![Point{x:0.0,y:0.0},Point{x:4.0,y:0.0}],
+            layers: vec![Some(Arc::from("top"));2], internal_owners: vec![None;2], weight: 1.0 };
+        let obstacle = |y| Arc::new(vec![RouteObstacle {
+            box_: crate::geometry::Box2{left:1.0,right:2.0,top:y,bottom:y+0.5}, layer:Some(Arc::from("top")),
+            reference:Some(Arc::from("R2.1")),net:Some(Arc::from("other")),primitive_id:Some(Arc::from("R2")),
+        }]);
+        let mut groups = vec![(0,obstacle(2.0))];
+        for step in 0..6 {
+            if step==2 { groups[0].1=obstacle(-0.25); }
+            if step==3 { net.points[1].y=8.0; }
+            if step==4 { net.points[1].y=0.0; net.weight=0.25; }
+            if step==5 { net.layers=vec![Some(Arc::from("bottom"));2]; }
+            let expected=pad_crossing_penalty(std::slice::from_ref(&net),&groups[0].1);
+            assert_eq!(cache.score(std::slice::from_ref(&net),&groups),expected);
+            if step==2 { assert_eq!(expected,1.0); }
+        }
+        assert!(cache.stats().0>0);
+    }
+}
+
 fn crossing_penalty(segments: &[Segment]) -> f64 {
     let mut penalty = 0.0;
     for a_index in 0..segments.len() {

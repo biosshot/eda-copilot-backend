@@ -1,0 +1,79 @@
+{
+  "nativeHash": "2e109569f0c4147a8529fc088ffd8b1379b702bf1bc886a2a4786801e11b1141",
+  "detailProfile": true,
+  "reference": "docs/experiments/placement-performance-2026-09-28/Telemetry/isolated-block-metric",
+  "rows": [
+    {
+      "name": "lte_power",
+      "initialMs": 6491.1318,
+      "pairsMs": 7278.9911999999995,
+      "ms": 13770.123,
+      "beforeMs": 14576.787800000042,
+      "beforeTimes": [
+        12697.6731,
+        16455.902500000084
+      ],
+      "identicalCheckpoints": true,
+      "metrics": {
+        "pairCount": 5,
+        "pairSum": 16.25,
+        "pairMax": 4.3,
+        "crossings": 0,
+        "foreignPadHits": 0,
+        "internalIcPadHits": 0,
+        "wireLength": 33.66,
+        "hpwl": 37.64,
+        "area": 175.86,
+        "aspect": 1.25
+      }
+    },
+    {
+      "name": "usb_charge",
+      "initialMs": 5241.614800000001,
+      "pairsMs": 8083.9130000000005,
+      "ms": 13325.527800000002,
+      "beforeMs": 13149.222150000165,
+      "beforeTimes": [
+        12239.427499999998,
+        14059.016800000332
+      ],
+      "identicalCheckpoints": true,
+      "metrics": {
+        "pairCount": 6,
+        "pairSum": 20.27,
+        "pairMax": 4.58,
+        "crossings": 1,
+        "foreignPadHits": 0,
+        "internalIcPadHits": 0,
+        "wireLength": 35.09,
+        "hpwl": 40.5,
+        "area": 175.49,
+        "aspect": 1.05
+      }
+    },
+    {
+      "name": "current_iso",
+      "initialMs": 60104.864700000006,
+      "pairsMs": 63461.8664,
+      "ms": 123566.7311,
+      "beforeMs": 111921.89595000003,
+      "beforeTimes": [
+        117178.01710000006,
+        106665.77480000001
+      ],
+      "identicalCheckpoints": true,
+      "metrics": {
+        "pairCount": 1,
+        "pairSum": 2.75,
+        "pairMax": 2.75,
+        "crossings": 0,
+        "foreignPadHits": 0,
+        "internalIcPadHits": 3,
+        "wireLength": 36.72,
+        "hpwl": 40.6,
+        "area": 457.9,
+        "aspect": 1.17
+      }
+    }
+  ]
+}
