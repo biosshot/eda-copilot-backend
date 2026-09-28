@@ -1,0 +1,112 @@
+{
+  "before": {
+    "links": [
+      7.246058915024082,
+      5.360209784140919
+    ],
+    "cores": [
+      {
+        "designator": "U1",
+        "layer": "top",
+        "rotate": 0,
+        "score": 0,
+        "x": 4.236,
+        "y": 32.572
+      },
+      {
+        "designator": "U2",
+        "layer": "top",
+        "rotate": 90,
+        "score": 0,
+        "x": 29.482,
+        "y": 39.631
+      }
+    ],
+    "axisErrorX": 25.246
+  },
+  "beforeAlignment": {
+    "links": [
+      3.5036676469094465,
+      3.5788980887977213
+    ],
+    "cores": [
+      {
+        "designator": "U1",
+        "layer": "top",
+        "rotate": 0,
+        "score": 0,
+        "x": 26.375,
+        "y": 10.375
+      },
+      {
+        "designator": "U2",
+        "layer": "top",
+        "rotate": 90,
+        "score": 0,
+        "x": 27.309,
+        "y": 34.803
+      }
+    ],
+    "axisErrorX": 0.934000000000001
+  },
+  "after": {
+    "links": [
+      3.503667646909451,
+      3.5788980887977244
+    ],
+    "cores": [
+      {
+        "designator": "U1",
+        "layer": "top",
+        "rotate": 0,
+        "score": 0,
+        "x": 26.375,
+        "y": 9.375
+      },
+      {
+        "designator": "U2",
+        "layer": "top",
+        "rotate": 90,
+        "score": 0,
+        "x": 26.375,
+        "y": 32.803
+      }
+    ],
+    "axisErrorX": 0
+  },
+  "alignment": {
+    "wiringScoreBefore": 134348.34228026992,
+    "wiringScoreAfter": 134301.54966082878,
+    "totalWireBefore": 2168.269802483099,
+    "totalWireAfter": 2165.908027234985,
+    "growthPercent": -0.10892441731231717,
+    "mandatoryConstraintsNoWorse": true
+  },
+  "geometricBlockPostrefineCalls": 65,
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Suspicious placement role C9: decoupling_cap -> passive; decoupling_cap has two connected signal pins, no recognised supply/ground pin, and no parallel capacitor on the same two nets; all suspicious roles tried together; retained; trial best score 11638.71; selected score 11638.71. Source role unchanged.",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board alignment proposal: mandatory hint magnitude, score 10532737.13, alignment penalty 171.90",
+      "nodeId": "block-portfolio-repack"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board packaging: ordinary fallback selected, score 16056506.92",
+      "nodeId": "block-portfolio-repack"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "board-alignment",
+      "message": "Board soft alignment: similarity >= 0.78, 4 nearby pairs, 621 candidates, 2 accepted; fixed components and block interiors preserved",
+      "code": "v2_solver"
+    }
+  ]
+}

@@ -13,7 +13,7 @@ export function blockPolicy(ignoredNets: string[] = []) {
         orderEqualCritical: true, orderCoreAffinity: true, orderBranching: true, orderScarcity: true,
         candidateClearance: true, candidateRings: true, padCrossings: true,
         longNets: true, extraPasses: true, pairSwaps: true, reinsertPair: true, keepDenseAccess: true,
-        ignoredNets, routingMetric: 'micro',
+        ignoredNets, routingMetric: 'geometric',
     };
     return { searchWidth: 4, postRefine: true, experiments, portfolio: true };
 }

@@ -28,7 +28,7 @@ const summary={inputSha256:createHash('sha256').update(raw).digest('hex'),ms:per
     metrics:placementMetrics(input,result.placements),
     violations:Object.fromEntries(['unplaced','outsideBoard','overlaps','boardHoleViolations','constraintRegionViolations','layerViolations','hintViolations'].map(k=>[k,result.report[k]?.length??0])),
     diagnostics:result.report.graphReport?.diagnostics??[]};
-writeFileSync(`${out}/result.json.gz`,gzipSync(JSON.stringify({placements:result.placements,report:result.report,
+writeFileSync(`${out}/result.json.gz`,gzipSync(JSON.stringify({placements:result.placements,report:result.report,stages:result.stages,
     localBlocks:stage.data.primitives.filter(p=>p.kind==='block').map(p=>({id:p.id,label:p.label,sourceNodeId:p.sourceNodeId,placements:p.placements}))})));
 writeFileSync(`${out}/summary.json`,JSON.stringify(summary,null,2));
 console.log(JSON.stringify({ms:summary.ms,reportOk:summary.reportOk,inventoryOk,fixedChanges,metrics:summary.metrics}));

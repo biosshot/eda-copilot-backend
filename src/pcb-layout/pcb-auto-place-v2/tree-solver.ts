@@ -445,7 +445,7 @@ function solveBlockNode(
         if (!ordinary || !policy.postRefine) return primitives;
         const result = refineBlockPrimitives(context.input, primitives, context.clearanceResolver, hasLockedChild);
         context.diagnostics.push({ severity: 'warning', nodeId: node.id,
-            message: `Block postrefine: ${result.moves} moves, ${Math.round(result.ms)} ms` });
+            message: `Block postrefine: geometric; ${result.moves} moves, ${Math.round(result.ms)} ms` });
         return result.primitives;
     };
     if (!ordinary) return refine(solveBlockPrimitives(params));
@@ -518,7 +518,7 @@ function solveBlockNode(
     });
     refineCandidates(pairCandidates);
     context.diagnostics.push({ severity: 'warning', nodeId: node.id,
-        message: `Staged block search: ${hypotheses.length} beam/singles hypotheses; ${pairIndices.length} selected for pairs; ${skippedRefine} duplicate/near-duplicate postrefine calls skipped (0.15 mm pose, tight electrical gates). Originals retained.` });
+        message: `Staged block search: ${hypotheses.length} beam/singles hypotheses; ${pairIndices.length} selected for pairs; routing metric=${params.options.experiments?.routingMetric??'geometric'}; ${skippedRefine} duplicate/near-duplicate postrefine calls skipped (0.15 mm pose, tight electrical gates). Originals retained.` });
     const groupedFallback = relaxed.released.length ? solutions[0].result : undefined;
     const fallback = solutions[originalIndex].result;
     const selected = selectBlockCandidates(pool);

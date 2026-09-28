@@ -22,6 +22,7 @@ export function refineBlockPrimitives(input: PlacementInput, primitives: Placeme
     const start = performance.now();
     const scoped = blockScopedInput(input, primitives, world);
     const problem = encodeNativePostPlaceRefineProblem(scoped, placements, 1);
+    problem.routingMetric = 'geometric';
     problem.iterations = 8;
     problem.timeoutMs = 2000;
     problem.pairClearances = scoped.components.map(a => scoped.components.map(b => clearance(a.designator, b.designator)));
@@ -38,6 +39,7 @@ export function refineBlockPrimitives(input: PlacementInput, primitives: Placeme
     }
     for (const g of problem.groups) g.members = g.members.filter(i => movable.has(problem.components[i].designator));
     const addon = loadNativeBoardPacker();
+    if (addon.postPlaceRefineContractVersion() !== 3) throw new Error('Geometric block postrefine requires npm run native:build');
     const result = addon.refinePostPlacement(problem);
     if (!addon.validatePlacementChange(problem, result.placements)) throw new Error('Block postrefine violated placement constraints');
     const poses = new Map(result.placements.map(p => [p.designator, p]));

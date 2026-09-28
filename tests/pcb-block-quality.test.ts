@@ -101,6 +101,7 @@ test('plain blocks above twelve primitives receive the same beam policy', () => 
         assert.equal(p.primitives.length,13);
         assert.equal(p.options.searchWidth,4);
         assert.equal(p.options.experiments?.orderBranching,true);
+        assert.equal(p.options.experiments?.routingMetric,'geometric');
         throw stop;
     },()=>solvePlacementTreeBottomUp(data,buildPlacementGraph(data))),e=>e===stop);
 });

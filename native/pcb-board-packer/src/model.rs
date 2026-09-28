@@ -256,7 +256,7 @@ pub struct BlockExperiments {
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub enum BlockRoutingMetric { #[default] Micro, Off, Geometric }
+pub enum BlockRoutingMetric { Micro, Off, #[default] Geometric }
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]

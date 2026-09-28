@@ -24,10 +24,16 @@ use std::{
 };
 const EPS: f64 = 0.001;
 
+#[derive(Default, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+enum RefineRoutingMetric { #[default] Micro, Geometric }
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RefineProblem {
     version: u32,
+    #[serde(default)]
+    routing_metric: RefineRoutingMetric,
     #[serde(default)]
     pad_crossing_weight: f64,
     threads: usize,
@@ -246,7 +252,7 @@ fn rounded(x: f64) -> f64 {
 
 impl RefineProblem {
     fn validate(&self) -> Result<(), String> {
-        if self.version != 2
+        if !matches!(self.version, 2 | 3)
             || self.timeout_ms > 30_000
             || !self.min_delta.is_finite()
             || self.min_delta < 0.0
@@ -1023,6 +1029,16 @@ fn evaluate(
         stats.score_native_ms += time;
         if Instant::now() >= deadline {
             return Ok(None);
+        }
+        // Local block refinement uses the same geometric objective as its
+        // candidate pool. Only the final board stage requests Micro-A*.
+        if p.routing_metric == RefineRoutingMetric::Geometric {
+            let improvement = current_score - score;
+            if improvement <= p.min_delta {
+                stats.insufficient_improvement += 1;
+                return Ok(None);
+            }
+            return Ok(Some(Evaluation { score, comparison: RouteComparison::default(), improvement }));
         }
         if entry.baseline.is_none() {
             let started = Instant::now();

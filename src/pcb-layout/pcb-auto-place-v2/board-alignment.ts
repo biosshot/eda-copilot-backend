@@ -11,7 +11,7 @@ import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
 import type { PlacementPrimitive, PrimitiveSolveDiagnostic } from './primitives.ts';
 
 /** Conservative finishing pass, in mm. Similarity never attracts distant blocks. */
-export const BOARD_ALIGNMENT_POLICY = Object.freeze({ similarity: .78, neighbourGap: 8, maxShift: 3, passes: 2 });
+export const BOARD_ALIGNMENT_POLICY = Object.freeze({ similarity: .78, neighbourGap: 8, maxShift: 4, passes: 2 });
 const ALIGNMENT_SCORE = Object.freeze({weight:8,tolerance:.15,orientationWeight:24});
 
 function family(c: PcbComponent): string {
@@ -202,8 +202,10 @@ export function alignmentHardHintsNoWorse(before: PlacementReport, after: Placem
                 : b.actual === v.actual)));
 }
 
-/** Wiring-only guard: clearance/area gains must not pay for longer individual
- * nets. All nets are checked, including critical ones, against one baseline. */
+/** Wiring-only guard, independent of area/clearance rewards. Small external-net
+ * tradeoffs are necessary when translating rigid blocks. Bound total wire growth
+ * and individual stretch as well as the routing score; mandatory pin distances
+ * and signal-path limits are checked separately against the same baseline. */
 export function boardElectricalQuality(input: PlacementInput, placements: Placement[]) {
     const problem=encodeNativePostPlaceScoreProblem(input,placements);
     return {
@@ -214,7 +216,10 @@ export function boardElectricalQuality(input: PlacementInput, placements: Placem
 }
 export function boardElectricalRegression(before: ReturnType<typeof boardElectricalQuality>, after: ReturnType<typeof boardElectricalQuality>) {
     if(after.score>before.score+Math.min(40,.001*Math.abs(before.score)))return 'wiring score';
-    if(after.lengths.some((n,i)=>n>before.lengths[i]+Math.max(.5,.02*before.lengths[i])))return 'individual net length';
+    const beforeLength=before.lengths.reduce((sum,n)=>sum+n,0);
+    const afterLength=after.lengths.reduce((sum,n)=>sum+n,0);
+    if(afterLength>beforeLength+Math.max(.5,.005*beforeLength))return 'total net length';
+    if(after.lengths.some((n,i)=>n>before.lengths[i]+Math.max(.5,.25*before.lengths[i])))return 'individual net length';
     return undefined;
 }
 
@@ -225,7 +230,7 @@ export function refineBoardAlignment(input: PlacementInput, roots: PlacementPrim
     const before = alignmentErrors(current, pairs);
     const diagnostics: PrimitiveSolveDiagnostic[] = [];
     const rejected = { objective: 0, electrical: 0, netLength: 0, geometry: 0, hardHint: 0, native: 0 };
-    const moves: Array<{ blocks: string[]; axis: 'x' | 'y'; shifts: number[]; perpendicular: number; scoreBefore: number; scoreAfter: number }> = [];
+    const moves: Array<{ blocks: string[]; axis: 'x' | 'y'; shifts: number[]; perpendicularShifts: number[]; scoreBefore: number; scoreAfter: number }> = [];
     if (!pairs.length) return { placements, pairs, before, after: before, moves, diagnostics, evaluated: 0, rejected };
     const addon = loadNativeBoardPacker();
     const constraints = encodeNativePostPlaceRefineProblem(input, initial, 1);
@@ -246,35 +251,48 @@ export function refineBoardAlignment(input: PlacementInput, roots: PlacementPrim
         for (const pair of pairs) {
             const a = current.find(r => r.id === pair.a)!, b = current.find(r => r.id === pair.b)!;
             const ac = center(a,pair.anchorA), bc = center(b,pair.anchorB);
-            let best: { ps: Placement[]; rs: PlacementPrimitive[]; score: number; axis: 'x'|'y'; shifts: number[]; perpendicular: number } | undefined;
+            let best: { ps: Placement[]; rs: PlacementPrimitive[]; score: number; axis: 'x'|'y'; shifts: number[]; perpendicularShifts: number[] } | undefined;
             for (const axis of ['x','y'] as const) {
                 const delta = bc[axis]-ac[axis];
                 if (Math.abs(delta) < .001 || Math.abs(delta) > 2*BOARD_ALIGNMENT_POLICY.maxShift) continue;
-                for (const fraction of [1,.5,.25]) for (const shares of [[1,0],[0,-1],[.5,-.5]]) for (const perpendicular of [0,-.5,.5,-1,1]) {
-                    const shifts = shares.map(s => s*delta*fraction);
-                    if (shifts.some((d,i) => Math.abs(d) > .00001 && !movable(i===0?a:b))) continue;
-                    const offsets = new Map([...a.placements.map(p => [p.designator,shifts[0]] as const),
-                        ...b.placements.map(p => [p.designator,shifts[1]] as const)]);
+                const axisShifts = [1,.5,.25].flatMap(fraction => [[1,0],[0,-1],[.5,-.5]].map(shares=>shares.map(s=>s*delta*fraction)));
+                // Alignment need not happen at either existing axis or exactly
+                // halfway. Pad crossings and neighbouring blocks make small
+                // changes of the shared axis meaningful. Keep the old moves and
+                // add exact shared axes across the bounded interval.
+                const grid=Math.max(.5,input.solverOptions.placementGridStep??.5);
+                for(let target=Math.min(ac[axis],bc[axis]);target<=Math.max(ac[axis],bc[axis]);target+=grid)
+                    axisShifts.push([target-ac[axis],target-bc[axis]]);
+                const seenShifts=new Set<string>();
+                for (const shifts of axisShifts)
+                for (const perpendiculars of [[0,0],[-.5,-.5],[.5,.5],[-1,-1],[1,1],[0,-.5],[0,.5],[-.5,0],[.5,0],[0,-1],[0,1],[-1,0],[1,0]]) {
+                    const key=[...shifts,...perpendiculars].map(n=>n.toFixed(3)).join(',');
+                    if(seenShifts.has(key))continue;
+                    seenShifts.add(key);
+                    if (shifts.some((d,i) => (Math.abs(d) > .00001 || perpendiculars[i] !== 0) && !movable(i===0?a:b))) continue;
+                    const offsets = new Map([...a.placements.map(p => [p.designator,[shifts[0],perpendiculars[0]]] as const),
+                        ...b.placements.map(p => [p.designator,[shifts[1],perpendiculars[1]]] as const)]);
                     const other = axis === 'x' ? 'y' : 'x';
-                    const ps = placements.map(p => offsets.get(p.designator) ? { ...p,
-                        [axis]: Math.round((p[axis]+offsets.get(p.designator)!)*1000)/1000,
-                        [other]: Math.round((p[other]+perpendicular)*1000)/1000 } : p);
+                    const ps = placements.map(p => offsets.get(p.designator)?.some(d=>d!==0) ? { ...p,
+                        [axis]: Math.round((p[axis]+offsets.get(p.designator)![0])*1000)/1000,
+                        [other]: Math.round((p[other]+offsets.get(p.designator)![1])*1000)/1000 } : p);
                     if (ps.some(p => Math.hypot(p.x-baseline.get(p.designator)!.x,p.y-baseline.get(p.designator)!.y) > BOARD_ALIGNMENT_POLICY.maxShift+.001)) continue;
                     evaluated++;
                     const rs = currentRoots(input, roots, ps), next = objective(ps,rs);
                     if (next >= (best?.score ?? score)-1e-6 || penalty(rs,pairs) >= penalty(current,pairs)-1e-6) { rejected.objective++; continue; }
                     const e = electrical(ps);
-                    if (e.score > baseElectrical.score + Math.min(40, .001 * Math.abs(baseElectrical.score))) { rejected.electrical++; continue; }
-                    if (e.lengths.some((d,i) => d > baseElectrical.lengths[i] + Math.max(.5, .02*baseElectrical.lengths[i]))) { rejected.netLength++; continue; }
+                    const regression=boardElectricalRegression(baseElectrical,e);
+                    if (regression==='wiring score') { rejected.electrical++; continue; }
+                    if (regression) { rejected.netLength++; continue; }
                     const report = createPlacementReport(input,ps);
                     if (!report.ok) { rejected.geometry++; continue; }
                     if (!alignmentHardHintsNoWorse(baselineReport,report)) { rejected.hardHint++; continue; }
                     if (!addon.validatePlacementChange(constraints,ps)) { rejected.native++; continue; }
-                    best = { ps,rs,score: next,axis,shifts,perpendicular };
+                    best = { ps,rs,score: next,axis,shifts,perpendicularShifts:perpendiculars };
                 }
             }
             if (!best) continue;
-            moves.push({ blocks: [a.label,b.label], axis: best.axis, shifts: best.shifts, perpendicular: best.perpendicular, scoreBefore: score, scoreAfter: best.score });
+            moves.push({ blocks: [a.label,b.label], axis: best.axis, shifts: best.shifts, perpendicularShifts: best.perpendicularShifts, scoreBefore: score, scoreAfter: best.score });
             placements = best.ps; current = best.rs; score = best.score; accepted = true;
         }
         if (!accepted) break;

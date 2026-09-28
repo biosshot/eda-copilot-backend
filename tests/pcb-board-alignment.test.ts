@@ -8,7 +8,7 @@ import { createPlacementReport } from '../src/pcb-layout/pcb-auto-place/placemen
 import type { PlacementInput, Placement, PlacementReport } from '../src/types/pcb/layout-model.ts';
 import type { PlacementPrimitive } from '../src/pcb-layout/pcb-auto-place-v2/primitives.ts';
 import { boardAlignmentPolicy, boardAlignmentScore, footprintOrientationOffset } from '../src/pcb-layout/pcb-auto-place-v2/board-alignment.ts';
-import { boardElectricalRegression } from '../src/pcb-layout/pcb-auto-place-v2/board-alignment.ts';
+import { boardElectricalQuality, boardElectricalRegression } from '../src/pcb-layout/pcb-auto-place-v2/board-alignment.ts';
 import { buildPlacementGraph } from '../src/pcb-layout/pcb-auto-place/placement-graph.ts';
 import { encodeNativeBoardPackProblem } from '../src/pcb-layout/pcb-auto-place-v2/native/encode-board-problem.ts';
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
@@ -100,7 +100,7 @@ test('Telemetry pass preserves hard hint magnitudes, fixed poses, and rigid bloc
         const diffs=root.placements.map(p=>{
             const a=placements.find(q=>q.designator===p.designator)!,b=result.placements.find(q=>q.designator===p.designator)!;
             assert.equal(a.rotate,b.rotate);assert.equal(a.layer,b.layer);
-            assert.ok(Math.hypot(a.x-b.x,a.y-b.y)<=3.001);
+            assert.ok(Math.hypot(a.x-b.x,a.y-b.y)<=BOARD_ALIGNMENT_POLICY.maxShift+.001);
             if(input.components.find(c=>c.designator===p.designator)!.pcb.fixedPlacement)assert.deepEqual(a,b);
             return [b.x-a.x,b.y-a.y];
         });
@@ -148,11 +148,29 @@ test('axis penalty stays positive beyond 3.15mm and cannot be escaped by moving 
     assert.ok(score(0,3)>0);
 });
 
-test('electrical acceptance does not trade a stretched individual net for savings elsewhere',()=>{
+test('electrical acceptance bounds total wire growth and large individual stretches',()=>{
     const baseline={score:10000,lengths:[10,10,10]};
-    assert.equal(boardElectricalRegression(baseline,{score:9000,lengths:[11,2,2]}),'individual net length');
+    assert.equal(boardElectricalRegression(baseline,{score:9000,lengths:[14,2,2]}),'individual net length');
+    assert.equal(boardElectricalRegression(baseline,{score:9000,lengths:[11,10,10]}),'total net length');
+    assert.equal(boardElectricalRegression(baseline,{score:9000,lengths:[11,9,10]}),undefined);
     assert.equal(boardElectricalRegression(baseline,{score:10020,lengths:[10,10,10]}),'wiring score');
     assert.equal(boardElectricalRegression(baseline,{score:9990,lengths:[10.1,10,9]}),undefined);
+});
+
+test('Telemetry geometric blocks align on an intermediate axis without changing C9 or mandatory constraints',()=>{
+    const {input}=telemetry();
+    const saved=JSON.parse(gunzipSync(readFileSync('tests/fixtures/block-placement/Telemetry/board-alignment-geometric.json.gz')).toString()) as {roots:PlacementPrimitive[];placements:Placement[]};
+    const result=refineBoardAlignment(input,saved.roots,saved.placements);
+    const pair=result.after.find(p=>[p.anchorA,p.anchorB].includes('U1')&&[p.anchorA,p.anchorB].includes('U2'))!;
+    assert.ok(pair.error<=.15);
+    const before=new Map(saved.placements.map(p=>[p.designator,p]));
+    const after=new Map(result.placements.map(p=>[p.designator,p]));
+    for(const axis of ['x','y'] as const)
+        assert.ok(Math.abs((before.get('C9')![axis]-before.get('U2')![axis])-(after.get('C9')![axis]-after.get('U2')![axis]))<.001);
+    assert.equal(createPlacementReport(input,result.placements).ok,true);
+    assert.ok(alignmentHardHintsNoWorse(createPlacementReport(input,saved.placements),createPlacementReport(input,result.placements)));
+    assert.equal(boardElectricalRegression(boardElectricalQuality(input,saved.placements),boardElectricalQuality(input,result.placements)),undefined);
+    for(const c of input.components.filter(c=>c.pcb.fixedPlacement)) assert.deepEqual(after.get(c.designator),before.get(c.designator));
 });
 
 test('orientation uses main ICs, independently of larger alignment anchors, and normalizes library angle',()=>{

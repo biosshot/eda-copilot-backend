@@ -64,7 +64,7 @@ pub struct RouteBaseline {
     pub maximum_improvement: Option<f64>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RouteComparison {
     pub before_penalty: f64,

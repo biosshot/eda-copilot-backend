@@ -416,3 +416,16 @@ test('native timeout stops serial and parallel search and leaves a reusable vali
     assert.ok(parallelProfile.iterations.length > 0);
     assert.deepEqual(parallel, serial);
 });
+
+test('geometric postrefine evaluates swaps without any micro-router jobs; board default retains routing', () => {
+    const input=pairInput(), poses=pairPlacements(), addon=loadNativeBoardPacker();
+    const problem=encodeNativePostPlaceRefineProblem(input,poses,1);
+    assert.equal(problem.routingMetric,'micro');
+    const board=addon.refinePostPlacement(problem);
+    assert.ok(board.profile.iterations.some(p=>p.routeEvaluations>0));
+    const block=addon.refinePostPlacement({...problem,routingMetric:'geometric'});
+    assert.ok(block.moves.length>0);
+    assert.ok(block.scoreAfter<block.scoreBefore);
+    assert.ok(block.profile.iterations.every(p=>p.routeEvaluations===0));
+    assert.ok(block.moves.every(m=>m.routePenaltyBefore===0&&m.routePenaltyAfter===0));
+});

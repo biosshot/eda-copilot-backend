@@ -11,7 +11,7 @@ export type { PostPlaceMove, PostPlaceRefineResult, PostPlaceProfile } from './p
 
 function run(input: PlacementInput, placements: Placement[], threads: number): PostPlaceRefineResult {
     const addon = loadNativeBoardPacker();
-    if (addon.postPlaceRefineContractVersion() !== 2) throw new Error('Rust post-place refine contract does not match TypeScript contract 2; rebuild the native addon');
+    if (addon.postPlaceRefineContractVersion() !== 3) throw new Error('Rust post-place refine contract does not match TypeScript contract 3; rebuild the native addon');
     const started = performance.now();
     const problem = encodeNativePostPlaceRefineProblem(input, placements, threads);
     const encodingMs = performance.now() - started;

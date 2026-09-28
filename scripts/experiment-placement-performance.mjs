@@ -20,6 +20,8 @@ for(const method of ['solveBlockPrimitives','solveBlockPrimitivesBatch','solvePa
     Object.defineProperty(addon,method,{configurable:true,value:(...args)=>{
         if(method==='solveBlockPrimitives'&&routingMetric&&args[0].experiments)
             args[0]={...args[0],experiments:{...args[0].experiments,routingMetric}};
+        if(method==='solveBlockPrimitivesBatch'&&routingMetric)
+            args[0]=args[0].map(p=>({...p,experiments:{...p.experiments,routingMetric}}));
         const start=performance.now();
         const result=original(...args);
         const ms=performance.now()-start;

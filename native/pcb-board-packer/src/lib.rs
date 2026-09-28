@@ -282,7 +282,7 @@ fn invalid_passive_island_problem(error: impl std::fmt::Display) -> Error {
 }
 
 #[napi]
-pub fn post_place_refine_contract_version() -> u32 { 2 }
+pub fn post_place_refine_contract_version() -> u32 { 3 }
 
 #[napi]
 pub fn validate_placement(problem: Value, scope: Option<Vec<String>>) -> Result<bool> {
