@@ -1,0 +1,57 @@
+[
+  {
+    "fixture": "bank-rp2040_base",
+    "tag": "before",
+    "code": 0,
+    "cached": true
+  },
+  {
+    "fixture": "bank-rp2040_base",
+    "tag": "after",
+    "code": 0,
+    "signal": null,
+    "wallMs": 955146
+  },
+  {
+    "fixture": "bank-ICM20948_v2",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 1319622
+  },
+  {
+    "fixture": "bank-STEPPER_CONTROLLER",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 421981
+  },
+  {
+    "fixture": "bank-STEPPER_CONTROLLER",
+    "tag": "after",
+    "code": 0,
+    "signal": null,
+    "wallMs": 406471
+  },
+  {
+    "fixture": "bank-ICM20948_v2",
+    "tag": "after",
+    "code": 0,
+    "signal": null,
+    "wallMs": 1357476
+  },
+  {
+    "fixture": "bank-TPS63060DSCR",
+    "tag": "before",
+    "code": 0,
+    "signal": null,
+    "wallMs": 83822
+  },
+  {
+    "fixture": "bank-TPS63060DSCR",
+    "tag": "after",
+    "code": 0,
+    "signal": null,
+    "wallMs": 73819
+  }
+]

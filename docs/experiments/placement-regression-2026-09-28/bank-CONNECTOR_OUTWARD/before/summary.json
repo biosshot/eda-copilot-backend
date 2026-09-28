@@ -1,0 +1,56 @@
+{
+  "inputSha256": "29dba3480b5a8cee1489d13a8ba0fdab4ffe5d88e6200979d61c09ad9c8c15e6",
+  "ms": 186.02619999999996,
+  "componentCount": 20,
+  "blockCount": 20,
+  "reportOk": true,
+  "inventoryOk": true,
+  "fixedChanges": [],
+  "metrics": {
+    "pairCount": 0,
+    "pairSum": 0,
+    "pairMax": 0,
+    "crossings": 0,
+    "foreignPadHits": 0,
+    "internalIcPadHits": 0,
+    "wireLength": 0,
+    "hpwl": 0,
+    "area": 17886.86,
+    "aspect": 18.57
+  },
+  "violations": {
+    "unplaced": 0,
+    "outsideBoard": 0,
+    "overlaps": 0,
+    "boardHoleViolations": 0,
+    "constraintRegionViolations": 0,
+    "layerViolations": 0,
+    "hintViolations": 0
+  },
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board soft spacing: 3.00mm extra, density 0.064, compactness scale 0.100",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board search alignment: 0 structural pairs; unaligned packing retained",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio hypothesis 1: score, score 0.00, alignment 0.00",
+      "nodeId": "block-portfolio-repack"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio repack: 2 board hypotheses, selected 0, score 0.00",
+      "nodeId": "block-portfolio-repack"
+    }
+  ]
+}

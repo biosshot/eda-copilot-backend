@@ -1,0 +1,164 @@
+{
+  "inputSha256": "7f06a5dc57c52eb4c8773fed07234e2e3d1cd285ffc5bd9746b99e7b1a007ff2",
+  "ms": 73277.7608,
+  "componentCount": 16,
+  "blockCount": 7,
+  "reportOk": true,
+  "inventoryOk": true,
+  "fixedChanges": [],
+  "metrics": {
+    "pairCount": 5,
+    "pairSum": 21.92,
+    "pairMax": 5.15,
+    "crossings": 1,
+    "foreignPadHits": 4,
+    "internalIcPadHits": 0,
+    "wireLength": 86.58,
+    "hpwl": 92.61,
+    "area": 519.71,
+    "aspect": 2.63
+  },
+  "violations": {
+    "unplaced": 0,
+    "outsideBoard": 0,
+    "overlaps": 0,
+    "boardHoleViolations": 0,
+    "constraintRegionViolations": 0,
+    "layerViolations": 0,
+    "hintViolations": 1
+  },
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator_family includes satellite input_caps, but parent regulator_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator_family"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator_family includes satellite output_caps, but parent regulator_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator_family"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator_family includes satellite feedback, but parent regulator_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator_family"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator_family includes satellite auxiliary, but parent regulator_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator_family"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:input_caps"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:input_caps"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:input_caps"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=3639.87, electrical=3624.31, wire=1.18, area=24.90",
+      "nodeId": "tree:block:input_caps"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:auxiliary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:auxiliary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:auxiliary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=9.52, electrical=0.00, wire=0.00, area=9.58",
+      "nodeId": "tree:block:auxiliary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: input_caps, output_caps, feedback, passive_net:$1N33015, auxiliary; electrical constraints retained",
+      "nodeId": "tree:block:regulator_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:regulator_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:regulator_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:regulator_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 51 ms",
+      "nodeId": "tree:block:regulator_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 55 ms",
+      "nodeId": "tree:block:regulator_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 33 ms",
+      "nodeId": "tree:block:regulator_core"
+    },
+    {
+      "severity": "error",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 0 legal candidates, 0 retained; ",
+      "nodeId": "tree:block:regulator_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board soft spacing: 1.48mm extra, density 0.428, compactness scale 0.557",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board search alignment: 0 structural pairs; ordinary candidates and complete fallback retained; same block interiors",
+      "nodeId": "board"
+    }
+  ]
+}

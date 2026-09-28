@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="484.00800000000004" height="484.00800000000004" viewBox="0 0 484.00800000000004 484.00800000000004">
+<rect x="0" y="0" width="484.00800000000004" height="484.00800000000004" fill="#f8fafc"/>
+<rect x="0.5" y="0.5" width="483.00800000000004" height="483.00800000000004" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+
+
+
+
+
+<g>
+
+
+
+
+  <circle cx="56.00400000000002" cy="56.004000000000005" r="32.00400000000002" fill="none" stroke="#64748b" stroke-width="3.048"/>
+<polyline points="78.864,77.34 34.668000000000035,33.144000000000005" fill="none" stroke="#64748b" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="33.144000000000005,77.34 77.34000000000003,33.144000000000005" fill="none" stroke="#64748b" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="56.00400000000002" y="57.204000000000015" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">SCREW1</text>
+  <text x="56.00400000000002" y="42.804" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r0 bottom</text>
+</g>
+<g>
+
+
+
+
+  <circle cx="428.004" cy="56.004000000000005" r="32.004" fill="none" stroke="#64748b" stroke-width="3.048"/>
+<polyline points="450.86400000000003,77.34 406.668,33.144000000000005" fill="none" stroke="#64748b" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="405.144,77.34 449.34000000000003,33.144000000000005" fill="none" stroke="#64748b" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="428.004" y="57.204000000000015" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">SCREW2</text>
+  <text x="428.004" y="42.804" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r0 bottom</text>
+</g>
+<g>
+
+
+
+
+  <circle cx="56.00400000000002" cy="428.004" r="32.00400000000002" fill="none" stroke="#64748b" stroke-width="3.048"/>
+<polyline points="78.864,449.34000000000003 34.668000000000035,405.144" fill="none" stroke="#64748b" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="33.144000000000005,449.34000000000003 77.34000000000003,405.144" fill="none" stroke="#64748b" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="56.00400000000002" y="429.20400000000006" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">SCREW3</text>
+  <text x="56.00400000000002" y="414.804" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r0 bottom</text>
+</g>
+<g>
+
+
+
+
+  <circle cx="428.004" cy="428.004" r="32.004" fill="none" stroke="#64748b" stroke-width="3.048"/>
+<polyline points="450.86400000000003,449.34000000000003 406.668,405.144" fill="none" stroke="#64748b" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="405.144,449.34000000000003 449.34000000000003,405.144" fill="none" stroke="#64748b" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="428.004" y="429.20400000000006" font-size="11" font-family="Arial" text-anchor="middle" fill="#2563eb">SCREW4</text>
+  <text x="428.004" y="414.804" font-size="8" font-family="Arial" text-anchor="middle" fill="#2563eb">r0 bottom</text>
+</g>
+<g><polygon points="75.20640000000003,36.80160000000001 36.80160000000001,36.80160000000001 36.80160000000001,75.2064 75.20640000000003,75.2064" fill="#2563eb" opacity="0.9"/><circle cx="56.00400000000002" cy="56.004000000000005" r="19.2024" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>SCREW1.1 bottom</title></g>
+<g><polygon points="447.20640000000003,36.80160000000001 408.8016,36.80160000000001 408.8016,75.2064 447.20640000000003,75.2064" fill="#2563eb" opacity="0.9"/><circle cx="428.004" cy="56.004000000000005" r="19.2024" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>SCREW2.1 bottom</title></g>
+<g><polygon points="75.20640000000003,408.8016 36.80160000000001,408.8016 36.80160000000001,447.20640000000003 75.20640000000003,447.20640000000003" fill="#2563eb" opacity="0.9"/><circle cx="56.00400000000002" cy="428.004" r="19.2024" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>SCREW3.1 bottom</title></g>
+<g><polygon points="447.20640000000003,408.8016 408.8016,408.8016 408.8016,447.20640000000003 447.20640000000003,447.20640000000003" fill="#2563eb" opacity="0.9"/><circle cx="428.004" cy="428.004" r="19.2024" fill="#f8fafc" stroke="#334155" stroke-width="0.8"/><title>SCREW4.1 bottom</title></g>
+
+</svg>

@@ -1,0 +1,1910 @@
+{
+  "inputSha256": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "ms": 2040454.0798,
+  "componentCount": 154,
+  "blockCount": 45,
+  "reportOk": true,
+  "inventoryOk": true,
+  "fixedChanges": [],
+  "metrics": {
+    "pairCount": 48,
+    "pairSum": 791.25,
+    "pairMax": 71.58,
+    "crossings": 299,
+    "foreignPadHits": 296,
+    "internalIcPadHits": 13,
+    "wireLength": 2392.86,
+    "hpwl": 2791.7,
+    "area": 9905.17,
+    "aspect": 1
+  },
+  "violations": {
+    "unplaced": 0,
+    "outsideBoard": 0,
+    "overlaps": 0,
+    "boardHoleViolations": 0,
+    "constraintRegionViolations": 0,
+    "layerViolations": 0,
+    "hintViolations": 27
+  },
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "net_only_local_placement",
+      "message": "Block uart (7 components) has no explicit internal placement relations. Generic net-based placement remains active; add pin-level rules for any required switching loops, decoupling or sensitive paths that the netlist alone cannot specify.",
+      "nodeId": "block:uart"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block voltage_iso: ignoredRatsnestSignals hides local connections V_MEAS_N [U1.8, U1.7, U1.2, R5.2, C1.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block voltage_hdc: ignoredRatsnestSignals hides local connections V_MEAS_N [C5.2, C6.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block voltage_hldo: ignoredRatsnestSignals hides local connections V_MEAS_N [C7.2, C8.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block current_iso: ignoredRatsnestSignals hides local connections I_OUT [U2.2, U2.8, R6.2, R8.1]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block current_hdc: ignoredRatsnestSignals hides local connections I_OUT [C13.2, C14.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block current_hldo: ignoredRatsnestSignals hides local connections I_OUT [C15.2, C16.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block harvest_input: ignoredRatsnestSignals hides local connections HARVEST_P [F2.2, D1.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:harvest_input"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block hv_pos: ignoredRatsnestSignals hides local connections V_MEAS_N [U13.7, U13.8, U13.12, U13.16, U13.17, C48.2, C49.2, C50.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "net_only_local_placement",
+      "message": "Block low_charge_pos (10 components) has no explicit internal placement relations. Generic net-based placement remains active; add pin-level rules for any required switching loops, decoupling or sensitive paths that the netlist alone cannot specify.",
+      "nodeId": "block:low_charge_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block hv_neg: ignoredRatsnestSignals hides local connections HARVEST_P [U17.7, U17.8, U17.12, U17.16, U17.17, C55.2, C56.2, C57.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "net_only_local_placement",
+      "message": "Block low_charge_neg (10 components) has no explicit internal placement relations. Generic net-based placement remains active; add pin-level rules for any required switching loops, decoupling or sensitive paths that the netlist alone cannot specify.",
+      "nodeId": "block:low_charge_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:usb_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:usb_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:usb_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/pairs: score=54.05, electrical=22.96, wire=2.14, area=48.56",
+      "nodeId": "tree:block:usb_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: usb_input; electrical constraints retained",
+      "nodeId": "tree:block:mechanic_J5"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mechanic_J5"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mechanic_J5"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mechanic_J5"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 50 ms",
+      "nodeId": "tree:block:mechanic_J5"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 63 ms",
+      "nodeId": "tree:block:mechanic_J5"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 97 ms",
+      "nodeId": "tree:block:mechanic_J5"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 12 legal candidates, 1 retained; released/singles: score=1096.86, electrical=1005.72, wire=25.16, area=165.00",
+      "nodeId": "tree:block:mechanic_J5"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: cap_cluster:53; electrical constraints retained",
+      "nodeId": "tree:block:esp_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:esp_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:esp_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:esp_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:esp_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:esp_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:esp_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 12 legal candidates, 2 retained; grouped/beam: score=30.65, electrical=21.53, wire=0.50, area=14.25; released/beam: score=30.66, electrical=21.54, wire=0.50, area=14.25",
+      "nodeId": "tree:block:esp_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: lte_bulk; electrical constraints retained",
+      "nodeId": "tree:block:lte"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:lte"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:lte"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:lte"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:lte"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:lte"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:lte"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 12 legal candidates, 1 retained; grouped/beam: score=2896.71, electrical=2513.97, wire=9.59, area=894.51",
+      "nodeId": "tree:block:lte"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 18 ms",
+      "nodeId": "tree:block:uart"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 15 ms",
+      "nodeId": "tree:block:uart"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 12 ms",
+      "nodeId": "tree:block:uart"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/singles+postrefine: score=514.05, electrical=473.21, wire=8.90, area=57.01",
+      "nodeId": "tree:block:uart"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:sim_support"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:sim_support"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:sim_support"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=26.43, electrical=0.00, wire=0.00, area=29.57",
+      "nodeId": "tree:block:sim_support"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: cap_cluster:50; electrical constraints retained",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 24 ms",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 22 ms",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 16 ms",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 27 ms",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 20 ms",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 25 ms",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 12 legal candidates, 2 retained; grouped/singles: score=6588.54, electrical=6498.46, wire=35.13, area=176.33; grouped/beam: score=6596.44, electrical=6511.55, wire=33.81, area=175.86",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 26 ms",
+      "nodeId": "tree:block:usb_charge"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 40 ms",
+      "nodeId": "tree:block:usb_charge"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 20 ms",
+      "nodeId": "tree:block:usb_charge"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 2 retained; original/pairs: score=2684.54, electrical=2578.26, wire=24.80, area=180.94; original/singles+postrefine: score=2784.17, electrical=2678.57, wire=24.56, area=179.17",
+      "nodeId": "tree:block:usb_charge"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 26 ms",
+      "nodeId": "tree:block:logic_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 20 ms",
+      "nodeId": "tree:block:logic_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 18 ms",
+      "nodeId": "tree:block:logic_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 2 retained; original/beam+postrefine: score=6271.47, electrical=6214.89, wire=14.97, area=117.38; original/beam: score=6281.06, electrical=6224.49, wire=15.17, area=117.38",
+      "nodeId": "tree:block:logic_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: passive_net:U1_HDC; electrical constraints retained",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C5: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 26.28; combined best score 26.28; selected score 26.27. Source role unchanged.",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C6: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 26.28; combined best score 26.28; selected score 26.27. Source role unchanged.",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 30 legal candidates, 2 retained; grouped/beam: score=26.27, electrical=18.80, wire=1.77, area=8.87; released/beam: score=26.28, electrical=18.81, wire=1.77, area=8.87",
+      "nodeId": "tree:block:voltage_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: passive_net:U1_HLDO; electrical constraints retained",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C7: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 26.28; combined best score 26.28; selected score 26.27. Source role unchanged.",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C8: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 26.28; combined best score 26.28; selected score 26.27. Source role unchanged.",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 30 legal candidates, 2 retained; grouped/beam: score=26.27, electrical=18.80, wire=1.77, area=8.87; released/beam: score=26.28, electrical=18.81, wire=1.77, area=8.87",
+      "nodeId": "tree:block:voltage_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:voltage_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:voltage_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:voltage_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=30.27, electrical=18.81, wire=1.77, area=13.79",
+      "nodeId": "tree:block:voltage_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: voltage_hdc, passive_net:U1_HDC, voltage_hldo, passive_net:U1_HLDO, voltage_secondary; electrical constraints retained",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 50 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 57 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 61 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 270 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 160 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 147 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 138 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 105 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 94 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 278 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 220 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 218 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 127 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 139 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 135 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 199 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 335 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 272 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 242 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 207 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 223 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 182 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 322 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 361 ms",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C5: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; retained via role:C5=passive; individual best score 6046.06; combined best score 6309.91; selected score 5664.14. Source role unchanged.",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C6: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 6104.83; combined best score 6309.91; selected score 5664.14. Source role unchanged.",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C7: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 6408.38; combined best score 6309.91; selected score 5664.14. Source role unchanged.",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C8: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; retained via role:C8=passive; individual best score 5972.12; combined best score 6309.91; selected score 5664.14. Source role unchanged.",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C1: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 6578.15; combined best score 6309.91; selected score 5664.14. Source role unchanged.",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 43 legal candidates, 3 retained; released/beam+postrefine: score=5664.14, electrical=5458.62, wire=39.16, area=475.85; role:C8=passive/beam+postrefine: score=5972.12, electrical=5773.55, wire=40.37, area=461.52; role:C5=passive/beam+postrefine: score=6046.06, electrical=5808.57, wire=42.16, area=544.28",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: passive_net:I_OUT; electrical constraints retained",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 30 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 9 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C13: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 26.28; combined best score 26.28; selected score 26.27. Source role unchanged.",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C14: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 26.28; combined best score 26.28; selected score 26.27. Source role unchanged.",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 30 legal candidates, 2 retained; grouped/beam: score=26.27, electrical=18.80, wire=1.77, area=8.87; released/beam: score=26.28, electrical=18.81, wire=1.77, area=8.87",
+      "nodeId": "tree:block:current_hdc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: passive_net:I_OUT; electrical constraints retained",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C15: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 26.28; combined best score 26.28; selected score 26.27. Source role unchanged.",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C16: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 26.28; combined best score 26.28; selected score 26.27. Source role unchanged.",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 30 legal candidates, 2 retained; grouped/beam: score=26.27, electrical=18.80, wire=1.77, area=8.87; released/beam: score=26.28, electrical=18.81, wire=1.77, area=8.87",
+      "nodeId": "tree:block:current_hldo"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:current_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 7 ms",
+      "nodeId": "tree:block:current_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:current_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=30.27, electrical=18.81, wire=1.77, area=13.79",
+      "nodeId": "tree:block:current_secondary"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: current_hdc, passive_net:I_OUT, current_hldo, passive_net:I_OUT, current_secondary; electrical constraints retained",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 38 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 74 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 76 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 89 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 66 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 108 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 100 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 234 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 71 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 116 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 174 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 127 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 107 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 60 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 75 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 139 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 94 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 131 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 69 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 46 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 41 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 101 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 47 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 104 ms",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C13: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; retained via roles:combined; individual best score 12692.39; combined best score 11877.63; selected score 11877.63. Source role unchanged.",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C14: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; retained via roles:combined; individual best score 12682.28; combined best score 11877.63; selected score 11877.63. Source role unchanged.",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C15: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; retained via roles:combined; individual best score 12955.92; combined best score 11877.63; selected score 11877.63. Source role unchanged.",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C16: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; retained via roles:combined; individual best score 13568.37; combined best score 11877.63; selected score 11877.63. Source role unchanged.",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C9: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; retained via roles:combined, role:C9=passive; individual best score 12153.37; combined best score 11877.63; selected score 11877.63. Source role unchanged.",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 48 legal candidates, 3 retained; roles:combined/beam+postrefine: score=11877.63, electrical=11672.66, wire=35.20, area=449.32; role:C9=passive/singles: score=12531.87, electrical=12320.94, wire=36.67, area=466.49; role:C9=passive/beam+postrefine: score=12794.15, electrical=12583.23, wire=35.36, area=466.49",
+      "nodeId": "tree:block:current_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: cap_cluster:55; electrical constraints retained",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 12 legal candidates, 3 retained; grouped/beam: score=102.07, electrical=79.75, wire=7.48, area=33.58; released/beam: score=106.02, electrical=84.02, wire=7.86, area=32.69; released/pairs: score=106.03, electrical=84.02, wire=7.86, area=32.69",
+      "nodeId": "tree:block:adc_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: adc_supply, cap_cluster:55, passive_net:AFE_3V3; electrical constraints retained",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 147 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 105 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 193 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 713 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 204 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 188 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 464 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 4 moves, 543 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 4 moves, 531 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 5 moves, 675 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 5 moves, 517 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 5 moves, 519 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 5 moves, 595 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 5 moves, 550 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 5 moves, 519 ms",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C18: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; retained via roles:combined; individual best score 16534.55; combined best score 12714.12; selected score 12714.12. Source role unchanged.",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C19: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; retained via roles:combined, role:C19=passive; individual best score 13732.47; combined best score 12714.12; selected score 12714.12. Source role unchanged.",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 30 legal candidates, 2 retained; roles:combined/beam+postrefine: score=12714.12, electrical=12475.68, wire=60.42, area=345.18; role:C19=passive/beam+postrefine: score=13732.47, electrical=13522.85, wire=65.06, area=310.73",
+      "nodeId": "tree:block:adc"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 5 ms",
+      "nodeId": "tree:block:afe_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 5 ms",
+      "nodeId": "tree:block:afe_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 5 ms",
+      "nodeId": "tree:block:afe_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 2 retained; original/beam+postrefine: score=92.48, electrical=70.22, wire=4.46, area=32.75; original/beam: score=92.79, electrical=70.77, wire=4.49, area=32.76",
+      "nodeId": "tree:block:afe_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: passive_net:HV_3V3; electrical constraints retained",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 16 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 15 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 16 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 26 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 18 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 23 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 22 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 17 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 18 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 17 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 19 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 16 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 25 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 20 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 24 ms",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C48: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 11285.99; combined best score 11285.99; selected score 11222.66. Source role unchanged.",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C49: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 11285.99; combined best score 11285.99; selected score 11222.66. Source role unchanged.",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C50: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 11285.99; combined best score 11285.99; selected score 11222.66. Source role unchanged.",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 36 legal candidates, 2 retained; grouped/beam: score=11222.66, electrical=11060.77, wire=35.56, area=378.16; released/beam: score=11285.99, electrical=11143.38, wire=37.38, area=332.17",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: temp_pos, passive_net:HARVEST_TS; electrical constraints retained",
+      "nodeId": "tree:block:low_charge_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 19 ms",
+      "nodeId": "tree:block:low_charge_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 19 ms",
+      "nodeId": "tree:block:low_charge_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 12 ms",
+      "nodeId": "tree:block:low_charge_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 79 ms",
+      "nodeId": "tree:block:low_charge_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 68 ms",
+      "nodeId": "tree:block:low_charge_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 79 ms",
+      "nodeId": "tree:block:low_charge_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 12 legal candidates, 3 retained; grouped/pairs: score=1691.75, electrical=1606.56, wire=29.00, area=165.91; grouped/beam: score=1732.85, electrical=1641.55, wire=28.55, area=178.60; grouped/singles: score=1790.73, electrical=1705.55, wire=29.30, area=169.18",
+      "nodeId": "tree:block:low_charge_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 59 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 25 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 27 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 62 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 28 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 25 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 64 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 20 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 24 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 65 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 27 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 20 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 58 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 21 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 21 ms",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C55: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 14709.56; combined best score 14709.56; selected score 14709.56. Source role unchanged.",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C56: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 14709.56; combined best score 14709.56; selected score 14709.56. Source role unchanged.",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C57: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 14709.56; combined best score 14709.56; selected score 14709.56. Source role unchanged.",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 30 legal candidates, 3 retained; original/beam+postrefine: score=14709.56, electrical=14565.09, wire=45.73, area=347.25; original/singles: score=15130.15, electrical=14988.56, wire=46.63, area=340.16; original/pairs: score=15163.02, electrical=15021.42, wire=46.64, area=340.16",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: temp_neg, passive_net:HARVEST_TS_NEG; electrical constraints retained",
+      "nodeId": "tree:block:low_charge_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 23 ms",
+      "nodeId": "tree:block:low_charge_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 17 ms",
+      "nodeId": "tree:block:low_charge_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 14 ms",
+      "nodeId": "tree:block:low_charge_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 67 ms",
+      "nodeId": "tree:block:low_charge_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 70 ms",
+      "nodeId": "tree:block:low_charge_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 77 ms",
+      "nodeId": "tree:block:low_charge_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 12 legal candidates, 3 retained; grouped/pairs: score=1691.75, electrical=1606.56, wire=29.00, area=165.91; grouped/beam: score=1732.85, electrical=1641.55, wire=28.55, area=178.60; grouped/singles: score=1790.73, electrical=1705.55, wire=29.30, area=169.18",
+      "nodeId": "tree:block:low_charge_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board soft spacing: 0.69mm extra, density 0.520, compactness scale 0.793",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board search alignment: 4 structural pairs; ordinary candidates and complete fallback retained; same block interiors",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected voltage_iso in board context: variant 0, shift 0,0.5mm; score 16198521.17 -> 16161822.09",
+      "nodeId": "tree:block:voltage_iso"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected esp_supply in board context: variant 0, shift 0.5,0mm; score 16161822.09 -> 16161607.47",
+      "nodeId": "tree:block:esp_supply"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected lte_power in board context: variant 0, shift -1,0mm; score 16161607.47 -> 16137596.54",
+      "nodeId": "tree:block:lte_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected hv_neg in board context: variant 1, shift 0,1mm; score 16137596.54 -> 15942543.22",
+      "nodeId": "tree:block:hv_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected hv_pos in board context: variant 1, shift 0,0.5mm; score 15942543.22 -> 15885060.82",
+      "nodeId": "tree:block:hv_pos"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected usb_charge in board context: variant 0, shift -1,0mm; score 15885060.82 -> 15744815.27",
+      "nodeId": "tree:block:usb_charge"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected logic_power in board context: variant 0, shift -1,0mm; score 15744815.27 -> 15711374.65",
+      "nodeId": "tree:block:logic_power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected low_charge_neg in board context: variant 0, shift 1,0mm; score 15711374.65 -> 15710406.83",
+      "nodeId": "tree:block:low_charge_neg"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 12 blocks, 249 candidates, 8 accepted",
+      "nodeId": "block-portfolio"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "J1: safe post-place improvement J1 rotate += 180; global score 15616903.75 -> 15614415.49. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J1\", [\"J1\"], { rotateBy: [180] }) if this fixed component may rotate.",
+      "nodeId": "post-place:J1",
+      "severity": "warning"
+    },
+    {
+      "code": "post_place_opportunity",
+      "message": "J7: safe post-place improvement J7 rotate += 180; global score 15616903.75 -> 15616854.217. It was not applied because fixed placement must be preserved. Add refineGroup(\"post_J7\", [\"J7\"], { rotateBy: [180] }) if this fixed component may rotate.",
+      "nodeId": "post-place:J7",
+      "severity": "warning"
+    },
+    {
+      "severity": "warning",
+      "nodeId": "board-alignment",
+      "message": "Board soft alignment: similarity >= 0.78, 3 nearby pairs, 74 candidates, 0 accepted; fixed components and block interiors preserved",
+      "code": "v2_solver"
+    }
+  ]
+}

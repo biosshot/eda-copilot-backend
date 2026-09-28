@@ -1,0 +1,182 @@
+{
+  "inputSha256": "43d5b455ddbd4f3ba8a5df0e981c282830ddf813c978dda41eb9a0debf8ba505",
+  "ms": 33431.0941,
+  "componentCount": 20,
+  "blockCount": 11,
+  "reportOk": true,
+  "inventoryOk": true,
+  "fixedChanges": [],
+  "metrics": {
+    "pairCount": 18,
+    "pairSum": 306.08,
+    "pairMax": 30.93,
+    "crossings": 59,
+    "foreignPadHits": 47,
+    "internalIcPadHits": 1,
+    "wireLength": 475.94,
+    "hpwl": 561.16,
+    "area": 1444.56,
+    "aspect": 1.05
+  },
+  "violations": {
+    "unplaced": 0,
+    "outsideBoard": 0,
+    "overlaps": 0,
+    "boardHoleViolations": 0,
+    "constraintRegionViolations": 0,
+    "layerViolations": 0,
+    "hintViolations": 1
+  },
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:USB_Termination"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:USB_Termination"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:USB_Termination"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=11.13, electrical=0.00, wire=0.00, area=8.45",
+      "nodeId": "tree:block:USB_Termination"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: MCU_Decoupling, Reset_Support, passive_net:EN, Boot_Support, USB_Termination; electrical constraints retained",
+      "nodeId": "tree:block:MCU"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:MCU"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:MCU"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:MCU"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 62 ms",
+      "nodeId": "tree:block:MCU"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 53 ms",
+      "nodeId": "tree:block:MCU"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 45 ms",
+      "nodeId": "tree:block:MCU"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 12 legal candidates, 1 retained; released/singles: score=4182.49, electrical=3893.11, wire=14.59, area=506.89",
+      "nodeId": "tree:block:MCU"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 43 ms",
+      "nodeId": "tree:block:USB_Port"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 49 ms",
+      "nodeId": "tree:block:USB_Port"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 36 ms",
+      "nodeId": "tree:block:USB_Port"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam+postrefine: score=3630.29, electrical=3572.56, wire=13.00, area=124.55",
+      "nodeId": "tree:block:USB_Port"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:Power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:Power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 6 ms",
+      "nodeId": "tree:block:Power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 2 retained; original/singles: score=329.24, electrical=309.49, wire=2.25, area=37.21; original/beam: score=356.83, electrical=337.08, wire=2.18, area=37.21",
+      "nodeId": "tree:block:Power"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board soft spacing: 0.00mm extra, density 0.683, compactness scale 1.000",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board search alignment: 0 structural pairs; unaligned packing retained",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio hypothesis 1: score, score 72994.91, alignment 0.00",
+      "nodeId": "block-portfolio-repack"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio repack: 2 board hypotheses, selected 0, score 72832.69",
+      "nodeId": "block-portfolio-repack"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 1 blocks, 17 candidates, 0 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ]
+}

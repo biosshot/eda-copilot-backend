@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="90.096" height="75.3732" viewBox="0 0 90.096 75.3732">
+<rect x="0" y="0" width="90.096" height="75.3732" fill="#f8fafc"/>
+<rect x="0.5" y="0.5" width="89.096" height="74.3732" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+
+
+
+
+
+<g>
+
+
+
+
+  <circle cx="57.047999999999995" cy="27.047400000000003" r="0.7200000000000006" fill="none" stroke="#dc2626" stroke-width="0.7"/>
+<polygon points="57.047999999999995,27.048600000000004 57.047999999999995,46.248599999999996 33.048,46.248599999999996 33.048,27.048600000000004 57.047999999999995,27.048600000000004" fill="none" stroke="#dc2626" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="48.2748,27.048600000000004 41.821200000000005,27.048600000000004" fill="none" stroke="#64748b" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="48.2748,46.248599999999996 41.821200000000005,46.248599999999996" fill="none" stroke="#64748b" stroke-width="3.048" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="34.2492" cy="49.8486" r="1.524" fill="none" stroke="#64748b" stroke-width="3.048"/>
+<circle cx="33.048" cy="42.6462" r="1.524" fill="none" stroke="#dc2626" stroke-width="3.048"/>
+  <text x="45.048" y="38.8866" font-size="11" font-family="Arial" text-anchor="middle" fill="#dc2626">L1</text>
+  <text x="45.048" y="24.486600000000003" font-size="8" font-family="Arial" text-anchor="middle" fill="#dc2626">r0 top</text>
+</g>
+<g><polygon points="27.048000000000002,27.048600000000004 39.048,27.048600000000004 39.048,46.248599999999996 27.048000000000002,46.248599999999996" fill="#dc2626" opacity="0.9"/><title>L1.2 top</title></g>
+<g><polygon points="51.047999999999995,27.048600000000004 63.047999999999995,27.048600000000004 63.047999999999995,46.248599999999996 51.047999999999995,46.248599999999996" fill="#dc2626" opacity="0.9"/><title>L1.1 top</title></g>
+
+</svg>

@@ -1,0 +1,536 @@
+{
+  "inputSha256": "67021b5bf5dd7650b2ae59527978f521581b0b8b7824cbcf4a05fd9e9e110975",
+  "ms": 387392.901,
+  "componentCount": 69,
+  "blockCount": 20,
+  "reportOk": true,
+  "inventoryOk": true,
+  "fixedChanges": [],
+  "metrics": {
+    "pairCount": 21,
+    "pairSum": 162.41,
+    "pairMax": 30.64,
+    "crossings": 42,
+    "foreignPadHits": 45,
+    "internalIcPadHits": 0,
+    "wireLength": 751.46,
+    "hpwl": 824.58,
+    "area": 4751.71,
+    "aspect": 1.33
+  },
+  "violations": {
+    "unplaced": 0,
+    "outsideBoard": 0,
+    "overlaps": 0,
+    "boardHoleViolations": 0,
+    "constraintRegionViolations": 0,
+    "layerViolations": 0,
+    "hintViolations": 21
+  },
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "connected_pin_without_pad",
+      "message": "USB1: connected pin(s) 1 (GND), 2 (VUSB), 4 ($1N2051), 5 (DN), 6 (DP), 7 (DN), 8 (DP), 10 ($1N2056), 11 (VUSB), 12 (GND) have no footprint pad; geometric connection scoring and ratsnest cannot represent them.",
+      "nodeId": "component:USB1"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block poe_input: ignoredRatsnestSignals hides local connections PGND [RJ1.7, RJ1.8, C18.1]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:poe_input"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block buck_12v: ignoredRatsnestSignals hides local connections PGND [U16.3, U16.5, U16.6, D2.2, C2.2, L2.1, C3.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "ignored_local_connections",
+      "message": "Block protected_12v: ignoredRatsnestSignals hides local connections PGND [P1.2, D4.2, D5.2]. These nets are also excluded from pad-crossing and some routing scores; explicit placement hints still apply. Review this exclusion or use the diagnostic view including ignored signals.",
+      "nodeId": "block:protected_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 24 ms",
+      "nodeId": "tree:block:poe_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 21 ms",
+      "nodeId": "tree:block:poe_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 22 ms",
+      "nodeId": "tree:block:poe_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 20 ms",
+      "nodeId": "tree:block:poe_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 31 ms",
+      "nodeId": "tree:block:poe_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 33 ms",
+      "nodeId": "tree:block:poe_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C18: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score 9020.81; combined best score no legal result; selected score 9020.81. Source role unchanged.",
+      "nodeId": "tree:block:poe_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 12 legal candidates, 1 retained; original/beam: score=9020.81, electrical=8813.27, wire=21.63, area=445.01",
+      "nodeId": "tree:block:poe_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 31 ms",
+      "nodeId": "tree:block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 22 ms",
+      "nodeId": "tree:block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 18 ms",
+      "nodeId": "tree:block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 4 legal candidates, 1 retained; original/pairs: score=77789.49, electrical=77424.25, wire=18.16, area=938.69",
+      "nodeId": "tree:block:buck_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 18 ms",
+      "nodeId": "tree:block:protected_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 20 ms",
+      "nodeId": "tree:block:protected_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 17 ms",
+      "nodeId": "tree:block:protected_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=799.98, electrical=689.83, wire=34.06, area=259.41",
+      "nodeId": "tree:block:protected_12v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=2753.72, electrical=2728.71, wire=0.57, area=47.65",
+      "nodeId": "tree:block:linear_5v"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 4 ms",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 3 ms",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 2 retained; original/beam: score=6368.36, electrical=6337.83, wire=6.66, area=58.00; original/singles+postrefine: score=6374.94, electrical=6345.99, wire=7.05, area=54.31",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: load_switch_3v3; electrical constraints retained",
+      "nodeId": "tree:block:ldo_3v3p"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 10 ms",
+      "nodeId": "tree:block:ldo_3v3p"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 15 ms",
+      "nodeId": "tree:block:ldo_3v3p"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 14 ms",
+      "nodeId": "tree:block:ldo_3v3p"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 13 ms",
+      "nodeId": "tree:block:ldo_3v3p"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 11 ms",
+      "nodeId": "tree:block:ldo_3v3p"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 8 ms",
+      "nodeId": "tree:block:ldo_3v3p"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 12 legal candidates, 2 retained; grouped/singles: score=16331.41, electrical=16241.53, wire=24.05, area=208.50; grouped/pairs: score=16679.46, electrical=16591.92, wire=24.71, area=204.33",
+      "nodeId": "tree:block:ldo_3v3p"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: usb_power_protect, passive_net:VUSB; electrical constraints retained",
+      "nodeId": "tree:block:usb_port"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:usb_port"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:usb_port"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:usb_port"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 13 ms",
+      "nodeId": "tree:block:usb_port"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 10 ms",
+      "nodeId": "tree:block:usb_port"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 9 ms",
+      "nodeId": "tree:block:usb_port"
+    },
+    {
+      "severity": "error",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 0 legal candidates, 0 retained; ",
+      "nodeId": "tree:block:usb_port"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=111.06, electrical=76.13, wire=7.01, area=65.48",
+      "nodeId": "tree:block:mcu_boot_reset"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=2026.84, electrical=2001.24, wire=2.06, area=46.86",
+      "nodeId": "tree:block:manual_latch"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: usb_data_esd, mcu_decoupling, mcu_boot_reset, passive_net:EN, mcu_status_led, passive_net:$1N766, uart_connector, spi_connector, manual_latch; electrical constraints retained",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 51 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 39 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 36 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "error",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 0 legal candidates, 0 retained; ",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:rs485_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:rs485_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:rs485_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=116.26, electrical=86.72, wire=7.93, area=52.98",
+      "nodeId": "tree:block:rs485_bus"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 17 ms",
+      "nodeId": "tree:block:rs485_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 15 ms",
+      "nodeId": "tree:block:rs485_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 17 ms",
+      "nodeId": "tree:block:rs485_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 2 retained; original/beam+postrefine: score=48534.13, electrical=48397.70, wire=56.05, area=283.03; original/beam: score=48554.58, electrical=48414.61, wire=57.42, area=283.03",
+      "nodeId": "tree:block:rs485_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 14 ms",
+      "nodeId": "tree:block:mag_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 10 ms",
+      "nodeId": "tree:block:mag_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 11 ms",
+      "nodeId": "tree:block:mag_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 2 retained; original/pairs+postrefine: score=9145.76, electrical=9088.63, wire=12.71, area=125.44; original/pairs: score=9152.64, electrical=9095.51, wire=13.20, area=125.44",
+      "nodeId": "tree:block:mag_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board soft spacing: 1.06mm extra, density 0.476, compactness scale 0.681",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module power_tree before board placement: wide module 69.5mm uses 0.882 of usable board width; tall module 59.777mm uses 1.017 of usable board height; wide sparse bbox 69.5mm, fill 0.457; tall sparse bbox 59.777mm, fill 0.457; module area 4154.502mm2 is large and sparse, fill 0.457; locked module has fixed/edge child plus movable siblings (bottom, right); fixed/edge-mounted children inside multi-family module (bottom, right); fixed/edge-mounted children target multiple board edges (bottom, right); low pad density 0.019 pads/mm2",
+      "nodeId": "tree:module:power_tree"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module esp32_system before board placement: locked module has fixed/edge child plus movable siblings (left); low pad density 0.073 pads/mm2",
+      "nodeId": "tree:module:esp32_system"
+    },
+    {
+      "severity": "warning",
+      "code": "module_dissolved",
+      "message": "Dissolved sparse module field_io before board placement: locked module has fixed/edge child plus movable siblings (left)",
+      "nodeId": "tree:module:field_io"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board search alignment: 0 structural pairs; unaligned packing retained",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio hypothesis 1: score, score 56120064.83, alignment 0.00",
+      "nodeId": "block-portfolio-repack"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio hypothesis 2: mandatory hint magnitude, score 55017263.05, alignment 0.00",
+      "nodeId": "block-portfolio-repack"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio repack: 3 board hypotheses, selected 0, score 55044062.99",
+      "nodeId": "block-portfolio-repack"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected mag_input in board context: variant 1, shift 0,0mm; score 55044062.99 -> 55043991.97",
+      "nodeId": "tree:block:mag_input"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected rs485_core in board context: variant 0, shift 0.8,0mm; score 55043991.97 -> 54964030.85",
+      "nodeId": "tree:block:rs485_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected load_switch_3v3 in board context: variant 1, shift 1.6,0mm; score 54964030.85 -> 54812728.02",
+      "nodeId": "tree:block:load_switch_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 4 blocks, 52 candidates, 3 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ]
+}

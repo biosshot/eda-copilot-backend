@@ -1,0 +1,164 @@
+{
+  "inputSha256": "0f2534848b0b388056f1edd12e61941d38aa473153330c6144f38593470afa3f",
+  "ms": 184716.36450000003,
+  "componentCount": 17,
+  "blockCount": 9,
+  "reportOk": true,
+  "inventoryOk": true,
+  "fixedChanges": [],
+  "metrics": {
+    "pairCount": 4,
+    "pairSum": 13.59,
+    "pairMax": 4.07,
+    "crossings": 5,
+    "foreignPadHits": 11,
+    "internalIcPadHits": 0,
+    "wireLength": 103.85,
+    "hpwl": 117.92,
+    "area": 599.67,
+    "aspect": 2.16
+  },
+  "violations": {
+    "unplaced": 0,
+    "outsideBoard": 0,
+    "overlaps": 0,
+    "boardHoleViolations": 0,
+    "constraintRegionViolations": 0,
+    "layerViolations": 0,
+    "hintViolations": 2
+  },
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator includes satellite input_caps, but parent power_stage already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator includes satellite output_caps, but parent power_stage already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator includes satellite feedback, but parent power_stage already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator includes satellite enable, but parent power_stage already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator includes satellite compensation, but parent power_stage already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module regulator includes satellite rt, but parent power_stage already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:regulator"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: input_caps, output_caps, feedback, passive_net:FB, enable, passive_net:EN, compensation, passive_net:COMP_RC, rt; electrical constraints retained",
+      "nodeId": "tree:block:power_stage"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 42 ms",
+      "nodeId": "tree:block:power_stage"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 27 ms",
+      "nodeId": "tree:block:power_stage"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 31 ms",
+      "nodeId": "tree:block:power_stage"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 96 ms",
+      "nodeId": "tree:block:power_stage"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 94 ms",
+      "nodeId": "tree:block:power_stage"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 138 ms",
+      "nodeId": "tree:block:power_stage"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 95 ms",
+      "nodeId": "tree:block:power_stage"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 85 ms",
+      "nodeId": "tree:block:power_stage"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 3 moves, 127 ms",
+      "nodeId": "tree:block:power_stage"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Role hypothesis C5: decoupling_cap -> passive; decoupling_cap has two connected signal pins and no recognised supply/ground pin; rejected; individual best score no legal result; combined best score no legal result; selected score none. Source role unchanged.",
+      "nodeId": "tree:block:power_stage"
+    },
+    {
+      "severity": "error",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 0 legal candidates, 0 retained; ",
+      "nodeId": "tree:block:power_stage"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board soft spacing: 0.16mm extra, density 0.581, compactness scale 0.951",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board search alignment: 0 structural pairs; unaligned packing retained",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio hypothesis 1: score, score 914604.33, alignment 0.00",
+      "nodeId": "block-portfolio-repack"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio repack: 2 board hypotheses, selected 0, score 914604.33",
+      "nodeId": "block-portfolio-repack"
+    }
+  ]
+}

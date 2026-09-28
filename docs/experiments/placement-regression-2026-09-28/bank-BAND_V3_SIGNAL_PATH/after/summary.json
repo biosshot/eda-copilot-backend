@@ -1,0 +1,104 @@
+{
+  "inputSha256": "4114ae959dcccda1ddd726f05f0792f76de5cc065e747e5264758ffed86edbc5",
+  "ms": 3587.3725999999997,
+  "componentCount": 8,
+  "blockCount": 6,
+  "reportOk": true,
+  "inventoryOk": true,
+  "fixedChanges": [],
+  "metrics": {
+    "pairCount": 3,
+    "pairSum": 22.51,
+    "pairMax": 15.16,
+    "crossings": 0,
+    "foreignPadHits": 1,
+    "internalIcPadHits": 0,
+    "wireLength": 42.59,
+    "hpwl": 46.23,
+    "area": 1014.42,
+    "aspect": 2.98
+  },
+  "violations": {
+    "unplaced": 0,
+    "outsideBoard": 0,
+    "overlaps": 0,
+    "boardHoleViolations": 0,
+    "constraintRegionViolations": 0,
+    "layerViolations": 0,
+    "hintViolations": 0
+  },
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: bias_feed; electrical constraints retained",
+      "nodeId": "tree:block:rf_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:rf_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 4 ms",
+      "nodeId": "tree:block:rf_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:rf_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:rf_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:rf_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:rf_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 12 legal candidates, 2 retained; grouped/pairs: score=2749.50, electrical=2707.40, wire=6.28, area=83.38; grouped/beam: score=2795.87, electrical=2753.78, wire=6.22, area=83.37",
+      "nodeId": "tree:block:rf_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board soft spacing: 2.13mm extra, density 0.352, compactness scale 0.362",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board search alignment: 0 structural pairs; ordinary candidates and complete fallback retained; same block interiors",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected rf_core in board context: variant 0, shift 0,-0.5mm; score 26639.65 -> 26591.66",
+      "nodeId": "tree:block:rf_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 1 blocks, 17 candidates, 1 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ]
+}

@@ -1,0 +1,542 @@
+{
+  "inputSha256": "b0a06f3f4c9b0cff980f4eca642de962f6d77a527352dea2817cca7401ca6d7c",
+  "ms": 1319078.5918,
+  "componentCount": 54,
+  "blockCount": 18,
+  "reportOk": true,
+  "inventoryOk": true,
+  "fixedChanges": [],
+  "metrics": {
+    "pairCount": 46,
+    "pairSum": 540.23,
+    "pairMax": 34.79,
+    "crossings": 165,
+    "foreignPadHits": 124,
+    "internalIcPadHits": 33,
+    "wireLength": 809.45,
+    "hpwl": 949.72,
+    "area": 1607.02,
+    "aspect": 1.63
+  },
+  "violations": {
+    "unplaced": 0,
+    "outsideBoard": 0,
+    "overlaps": 0,
+    "boardHoleViolations": 0,
+    "constraintRegionViolations": 0,
+    "layerViolations": 0,
+    "hintViolations": 6
+  },
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module mcu includes satellite mcu_decoup_3v3, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:mcu"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module mcu includes satellite mcu_decoup_1v1, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:mcu"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module mcu includes satellite mcu_vreg, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:mcu"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module mcu includes satellite adc_filter, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:mcu"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module mcu includes satellite flash, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:mcu"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module mcu includes satellite clock, but parent mcu_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:mcu"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module sensor includes satellite sensor_decoup, but parent sensor_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:sensor"
+    },
+    {
+      "severity": "warning",
+      "code": "module_redundant_satellite",
+      "message": "Module sensor includes satellite level_shift, but parent sensor_core already owns it; reports and legalizer use the canonical parent family",
+      "nodeId": "module:sensor"
+    },
+    {
+      "severity": "warning",
+      "code": "unattached_passive_block",
+      "message": "Passive block status_leds has no parent or external placement relation, so board packing may place it in any free area. Make it a satellite with placement: \"satellite\", attachTo, and preferably anchor: pin(...), or add an external near(), veryNear(), or criticalPair() using comp()/pin() targets.",
+      "nodeId": "block:status_leds"
+    },
+    {
+      "severity": "warning",
+      "code": "island_crosses_unrelated_blocks",
+      "message": "Island island:core_pairs:level_shift spans unrelated blocks: mcu_core, level_shift",
+      "nodeId": "island:core_pairs:level_shift"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Deferred parent-level island core_pairs:level_shift; it references child primitives outside direct node components",
+      "nodeId": "tree:island:core_pairs:level_shift"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Deferred parent-level island core_pairs:flash; it references child primitives outside direct node components",
+      "nodeId": "tree:island:core_pairs:flash"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:adc_filter"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:adc_filter"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:adc_filter"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 2 retained; original/singles: score=15.81, electrical=7.37, wire=0.70, area=11.59; original/beam: score=16.25, electrical=7.37, wire=0.70, area=12.84",
+      "nodeId": "tree:block:adc_filter"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:clock"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 4 ms",
+      "nodeId": "tree:block:clock"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 5 ms",
+      "nodeId": "tree:block:clock"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=72.94, electrical=55.08, wire=5.19, area=28.54",
+      "nodeId": "tree:block:clock"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: mcu_decoup_3v3, mcu_decoup_1v1, mcu_vreg, adc_filter, flash; electrical constraints retained",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 87 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 66 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 71 ms",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 4 legal candidates, 1 retained; released/pairs: score=164824.72, electrical=164420.57, wire=77.46, area=380.23",
+      "nodeId": "tree:block:mcu_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:boot"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:boot"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:boot"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=33.59, electrical=19.07, wire=1.79, area=23.29",
+      "nodeId": "tree:block:boot"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Deferred parent-level island core_pairs:sensor_core; it references child primitives outside direct node components",
+      "nodeId": "tree:island:core_pairs:sensor_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:sensor_decoup"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:sensor_decoup"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:sensor_decoup"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=16.45, electrical=7.33, wire=0.70, area=12.29",
+      "nodeId": "tree:block:sensor_decoup"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 38 ms",
+      "nodeId": "tree:block:level_shift"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 39 ms",
+      "nodeId": "tree:block:level_shift"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 25 ms",
+      "nodeId": "tree:block:level_shift"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 2 retained; original/beam: score=99.99, electrical=71.22, wire=2.40, area=28.98; original/beam+postrefine: score=108.80, electrical=80.62, wire=3.15, area=28.98",
+      "nodeId": "tree:block:level_shift"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: sensor_decoup; electrical constraints retained",
+      "nodeId": "tree:block:sensor_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:sensor_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:sensor_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:sensor_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 12 ms",
+      "nodeId": "tree:block:sensor_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 15 ms",
+      "nodeId": "tree:block:sensor_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 16 ms",
+      "nodeId": "tree:block:sensor_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 12 legal candidates, 1 retained; released/pairs: score=30978.89, electrical=30922.28, wire=27.06, area=101.30",
+      "nodeId": "tree:block:sensor_core"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Deferred parent-level island cap_cluster:3; it references child primitives outside direct node components",
+      "nodeId": "tree:island:cap_cluster:3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:power_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:power_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 5 ms",
+      "nodeId": "tree:block:power_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 2 retained; original/beam: score=73.74, electrical=40.57, wire=2.82, area=68.96; original/singles: score=77.29, electrical=44.12, wire=3.02, area=68.95",
+      "nodeId": "tree:block:power_3v3"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:power_1v8"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:power_1v8"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:power_1v8"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=76.45, electrical=43.62, wire=2.45, area=67.09",
+      "nodeId": "tree:block:power_1v8"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:usb_series"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 3 ms",
+      "nodeId": "tree:block:usb_series"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 2 ms",
+      "nodeId": "tree:block:usb_series"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=8.05, electrical=0.00, wire=0.00, area=4.75",
+      "nodeId": "tree:block:usb_series"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Independent placement hypothesis: usb_series; electrical constraints retained",
+      "nodeId": "tree:block:usb_connector"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 12 ms",
+      "nodeId": "tree:block:usb_connector"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 11 ms",
+      "nodeId": "tree:block:usb_connector"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 11 ms",
+      "nodeId": "tree:block:usb_connector"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 15 ms",
+      "nodeId": "tree:block:usb_connector"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 18 ms",
+      "nodeId": "tree:block:usb_connector"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 15 ms",
+      "nodeId": "tree:block:usb_connector"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 12 legal candidates, 2 retained; grouped/beam: score=12509.19, electrical=12456.08, wire=11.58, area=111.57; released/beam: score=13257.64, electrical=13204.13, wire=11.61, area=111.57",
+      "nodeId": "tree:block:usb_connector"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:bottom_debug"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:bottom_debug"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 0 ms",
+      "nodeId": "tree:block:bottom_debug"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 1 retained; original/beam: score=60.77, electrical=13.83, wire=1.27, area=90.22",
+      "nodeId": "tree:block:bottom_debug"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 2 moves, 23 ms",
+      "nodeId": "tree:block:status_leds"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 0 moves, 11 ms",
+      "nodeId": "tree:block:status_leds"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block postrefine: 1 moves, 19 ms",
+      "nodeId": "tree:block:status_leds"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block checkpoint portfolio: 6 legal candidates, 2 retained; original/singles: score=115.83, electrical=84.61, wire=8.01, area=55.90; original/pairs+postrefine: score=117.37, electrical=86.52, wire=8.18, area=54.55",
+      "nodeId": "tree:block:status_leds"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board soft spacing: 0.00mm extra, density 0.609, compactness scale 1.000",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Board search alignment: 0 structural pairs; unaligned packing retained",
+      "nodeId": "board"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio hypothesis 1: mandatory hint magnitude, score 1615379.98, alignment 0.00",
+      "nodeId": "block-portfolio-repack"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio repack: 2 board hypotheses, selected 0, score 1628197.57",
+      "nodeId": "block-portfolio-repack"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected level_shift in board context: variant 1, shift 0.5,0mm; score 1628197.57 -> 1619057.22",
+      "nodeId": "tree:block:level_shift"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio selected status_leds in board context: variant 0, shift -0.5,0mm; score 1619057.22 -> 1618889.76",
+      "nodeId": "tree:block:status_leds"
+    },
+    {
+      "severity": "warning",
+      "code": "v2_solver",
+      "message": "Block portfolio: 4 blocks, 52 candidates, 2 accepted",
+      "nodeId": "block-portfolio"
+    }
+  ]
+}
