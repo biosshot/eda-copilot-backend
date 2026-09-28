@@ -207,7 +207,7 @@ function treeDiagnosticsForReport(diagnostics: Array<{ severity: 'warning' | 'er
                 nodeId: diagnostic.nodeId,
             }];
         }
-        if (['Deferred ', 'Block portfolio', 'Block postrefine', 'Block checkpoint', 'Role hypothesis',
+        if (['Deferred ', 'Block portfolio', 'Block postrefine', 'Block checkpoint', 'Role hypothesis', 'Staged block search',
             'Independent placement', 'Board soft spacing', 'Board search alignment'].some(prefix=>diagnostic.message.startsWith(prefix))) {
             return [{
                 severity: diagnostic.severity,

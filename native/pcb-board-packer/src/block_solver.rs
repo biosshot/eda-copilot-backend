@@ -232,7 +232,16 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
     };
     let profile = std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some();
     let started = std::time::Instant::now();
-    let solved = if context.problem.search_width > 1 {
+    let resumed = context.problem.pair_seed.is_some();
+    let solved = if let Some(seed) = &context.problem.pair_seed {
+        seed.iter().map(|state| {
+            let mut restored = primitives.iter().find(|p| p.primitive.id == state.primitive.id).expect("validated pair seed").clone();
+            restored.primitive = state.primitive.clone();
+            restored.rotation = state.rotation;
+            rebuild_component_geometry(&mut restored);
+            restored
+        }).collect()
+    } else if context.problem.search_width > 1 {
         solve_beam(primitives, &context)
     } else {
         solve_greedy(primitives, &context)
@@ -240,12 +249,15 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
     let beam_ms = started.elapsed().as_secs_f64() * 1000.0;
     trace::stage(&context, "beam_complete", &solved);
     *context.trace_phase.borrow_mut() = "local_improve";
-    let improved = local_improve(solved.clone(), &context);
+    let improved = if resumed { solved.clone() } else { local_improve(solved.clone(), &context) };
     let singles_ms = started.elapsed().as_secs_f64() * 1000.0 - beam_ms;
     trace::stage(&context, "local_complete", &improved);
     let singles = improved.clone();
+    // Preserve the search coordinate frame. Centering a display checkpoint can
+    // change grid-rounded candidate generation when refinement resumes later.
+    let pair_seed = if context.problem.defer_pairs { Some(singles.iter().map(|p| crate::model::BlockPairSeed { primitive: p.primitive.clone(), rotation: p.rotation }).collect()) } else { None };
     *context.trace_phase.borrow_mut() = "pair_improve";
-    let improved = if context.problem.experiments.pair_swaps || context.problem.experiments.reinsert_pair {
+    let improved = if !context.problem.defer_pairs && (context.problem.experiments.pair_swaps || context.problem.experiments.reinsert_pair) {
         pair_improve(improved, &context)
     } else { improved };
     if profile {
@@ -265,11 +277,12 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
     trace::stage(&context, "native_final", &final_primitives);
     let mut checkpoints = Vec::new();
     for (stage, items) in [("beam", solved), ("singles", singles), ("pairs", final_primitives.clone())] {
+        if resumed && stage != "pairs" { continue; }
         let centered = if items.iter().any(|p| p.primitive.locked) || has_global_frame { items }
             else { center_primitives(items, context.problem.grid) };
         checkpoints.push(crate::model::BlockCheckpoint { stage, result: solution(&context, &centered)? });
     }
-    Ok(crate::model::BlockSolveSolution { result: solution(&context, &final_primitives)?, checkpoints })
+    Ok(crate::model::BlockSolveSolution { result: solution(&context, &final_primitives)?, checkpoints, pair_seed })
 }
 
 fn solve_greedy(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<WorkingPrimitive> {

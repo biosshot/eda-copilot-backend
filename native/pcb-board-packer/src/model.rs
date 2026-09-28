@@ -27,7 +27,7 @@ pub struct BoardPackProblem {
     pub component_conflict: Vec<u8>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Primitive {
     pub id: Arc<str>,
@@ -60,7 +60,7 @@ pub struct Placement {
     pub score: f64,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ConnectionPoint {
     pub x: f64,
     pub y: f64,
@@ -81,7 +81,7 @@ pub struct RouteObstacle {
     pub primitive_id: Option<Arc<str>>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PathPort {
     pub x: f64,
@@ -94,7 +94,7 @@ pub struct PathPort {
     pub normal: Point,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct EdgePlaceIntent {
     pub edges: Arc<Vec<Arc<str>>>,
     pub inset: Option<f64>,
@@ -178,6 +178,11 @@ pub struct BlockComponentGeometry {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlockSolveProblem {
+    #[serde(default)]
+    pub defer_pairs: bool,
+    /// Resume only pair refinement from this ordered checkpoint (no new beam).
+    #[serde(default)]
+    pub pair_seed: Option<Vec<BlockPairSeed>>,
     #[serde(default)]
     pub world: Option<BlockWorld>,
     #[serde(default)]
@@ -403,12 +408,20 @@ pub struct BoardPackSolution {
     pub rank: Rank,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct BlockPairSeed {
+    pub primitive: Primitive,
+    pub rotation: i32,
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlockSolveSolution {
     #[serde(flatten)]
     pub result: BoardPackSolution,
     pub checkpoints: Vec<BlockCheckpoint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pair_seed: Option<Vec<BlockPairSeed>>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -419,7 +432,7 @@ pub struct BlockCheckpoint {
     pub result: BoardPackSolution,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PrimitiveState {
     pub primitive_id: Arc<str>,
@@ -542,6 +555,28 @@ impl BoardPackProblem {
 
 impl BlockSolveProblem {
     pub fn validate(&self, expected_version: u32) -> std::result::Result<(), String> {
+        if let Some(seed) = &self.pair_seed {
+            let mut seen = std::collections::HashSet::new();
+            if seed.len() != self.primitives.len() { return Err("pairSeed inventory mismatch".into()); }
+            for state in seed {
+                let q = &state.primitive;
+                let Some(p) = self.primitives.iter().find(|p| p.id == q.id) else { return Err("unknown pairSeed primitive".into()); };
+                if !seen.insert(&q.id) { return Err("duplicate pairSeed primitive".into()); }
+                if p.locked && (state.rotation != 0 || serde_json::to_value(q).ok() != serde_json::to_value(p).ok()) {
+                    return Err("pairSeed moves a locked primitive".into());
+                }
+                let allowed = if !p.allowed_orientations.is_empty() { p.allowed_orientations.as_ref().clone() }
+                    else if p.can_rotate { vec![0,90,180,270] } else { vec![0] };
+                if !allowed.contains(&state.rotation) { return Err("pairSeed rotation is not allowed".into()); }
+                if q.locked != p.locked || q.placements.len() != p.placements.len()
+                    || q.placements.iter().zip(p.placements.iter()).any(|(a,b)| a.designator != b.designator || a.layer != b.layer || !a.x.is_finite() || !a.y.is_finite())
+                    || q.connection_points.len() != p.connection_points.len()
+                    || q.connection_points.iter().zip(p.connection_points.iter()).any(|(a,b)| a.reference != b.reference || a.net != b.net || !a.x.is_finite() || !a.y.is_finite())
+                    || !is_finite_box(&q.bbox) || q.collision_boxes.iter().any(|b| !is_finite_box(b)) {
+                    return Err("invalid pairSeed geometry or inventory".into());
+                }
+            }
+        }
         if self.version != expected_version {
             return Err(format!(
                 "unsupported block contract {}; expected {expected_version}",

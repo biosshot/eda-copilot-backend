@@ -1,0 +1,390 @@
+{
+  "revision": "64cef2fbaaa934c19e4c46809c1cd2a9328351da",
+  "inputSha256": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "nativeSha256": "7fa74a7bcd86ebe284833ce674e9a328eb652e4b09c8e1128ce24b012b2a81d7",
+  "hardwareThreads": 12,
+  "defaultNativeThreadLimit": 6,
+  "subtreeProcessWorkers": 0,
+  "profileEnabled": true,
+  "totalMs": 700981.2501,
+  "blockMs": 585889.2986000001,
+  "boardNativeMs": 84397.14949999994,
+  "allPostrefineNativeMs": 17719.98040000008,
+  "remainingMs": 12974.821599999828,
+  "placementsIdenticalToPreviousGlobalRun": true,
+  "placementReportOk": true,
+  "blockTimes": [
+    {
+      "call": 409,
+      "ms": 203094.88709999996,
+      "hypotheses": 8,
+      "blocks": [
+        "current_hdc",
+        "current_hldo",
+        "current_iso",
+        "current_secondary"
+      ]
+    },
+    {
+      "call": 503,
+      "ms": 143520.78159999993,
+      "hypotheses": 5,
+      "blocks": [
+        "adc",
+        "adc_supply"
+      ]
+    },
+    {
+      "call": 239,
+      "ms": 115489.3876,
+      "hypotheses": 8,
+      "blocks": [
+        "voltage_hdc",
+        "voltage_hldo",
+        "voltage_iso",
+        "voltage_secondary"
+      ]
+    },
+    {
+      "call": 620,
+      "ms": 25365.183300000033,
+      "hypotheses": 2,
+      "blocks": [
+        "low_charge_pos",
+        "temp_pos"
+      ]
+    },
+    {
+      "call": 692,
+      "ms": 22507.870400000014,
+      "hypotheses": 2,
+      "blocks": [
+        "low_charge_neg",
+        "temp_neg"
+      ]
+    },
+    {
+      "call": 97,
+      "ms": 21689.949900000003,
+      "hypotheses": 2,
+      "blocks": [
+        "lte_power"
+      ]
+    },
+    {
+      "call": 74,
+      "ms": 21482.2468,
+      "hypotheses": 1,
+      "blocks": [
+        "uart"
+      ]
+    },
+    {
+      "call": 117,
+      "ms": 15977.168400000002,
+      "hypotheses": 1,
+      "blocks": [
+        "usb_charge"
+      ]
+    },
+    {
+      "call": 641,
+      "ms": 4917.250699999975,
+      "hypotheses": 5,
+      "blocks": [
+        "hv_neg"
+      ]
+    },
+    {
+      "call": 128,
+      "ms": 2973.1653000000006,
+      "hypotheses": 1,
+      "blocks": [
+        "logic_power"
+      ]
+    },
+    {
+      "call": 15,
+      "ms": 2953.571,
+      "hypotheses": 2,
+      "blocks": [
+        "mechanic_J5",
+        "usb_input"
+      ]
+    },
+    {
+      "call": 564,
+      "ms": 2656.373200000031,
+      "hypotheses": 6,
+      "blocks": [
+        "hv_pos"
+      ]
+    },
+    {
+      "call": 485,
+      "ms": 1642.838700000022,
+      "hypotheses": 2,
+      "blocks": [
+        "adc_supply"
+      ]
+    },
+    {
+      "call": 61,
+      "ms": 313.83599999999933,
+      "hypotheses": 2,
+      "blocks": [
+        "lte",
+        "lte_bulk"
+      ]
+    },
+    {
+      "call": 550,
+      "ms": 273.10190000000875,
+      "hypotheses": 1,
+      "blocks": [
+        "afe_power"
+      ]
+    },
+    {
+      "call": 86,
+      "ms": 258.38990000000194,
+      "hypotheses": 1,
+      "blocks": [
+        "sim_support"
+      ]
+    },
+    {
+      "call": 229,
+      "ms": 200.39569999999367,
+      "hypotheses": 1,
+      "blocks": [
+        "voltage_secondary"
+      ]
+    },
+    {
+      "call": 5,
+      "ms": 176.44100000000003,
+      "hypotheses": 1,
+      "blocks": [
+        "usb_input"
+      ]
+    },
+    {
+      "call": 399,
+      "ms": 159.35610000000452,
+      "hypotheses": 1,
+      "blocks": [
+        "current_secondary"
+      ]
+    },
+    {
+      "call": 36,
+      "ms": 50.34550000000036,
+      "hypotheses": 2,
+      "blocks": [
+        "esp_supply"
+      ]
+    },
+    {
+      "call": 140,
+      "ms": 46.265299999999115,
+      "hypotheses": 5,
+      "blocks": [
+        "voltage_hdc"
+      ]
+    },
+    {
+      "call": 310,
+      "ms": 41.56899999998859,
+      "hypotheses": 5,
+      "blocks": [
+        "current_hdc"
+      ]
+    },
+    {
+      "call": 355,
+      "ms": 40.95869999998831,
+      "hypotheses": 5,
+      "blocks": [
+        "current_hldo"
+      ]
+    },
+    {
+      "call": 185,
+      "ms": 36.69779999999446,
+      "hypotheses": 5,
+      "blocks": [
+        "voltage_hldo"
+      ]
+    },
+    {
+      "call": 1,
+      "ms": 5.171499999999924,
+      "hypotheses": 1,
+      "blocks": [
+        "mechanic_J1"
+      ]
+    },
+    {
+      "call": 33,
+      "ms": 0.9106999999999061,
+      "hypotheses": 1,
+      "blocks": [
+        "mechanic_U5"
+      ]
+    },
+    {
+      "call": 85,
+      "ms": 0.47520000000076834,
+      "hypotheses": 1,
+      "blocks": [
+        "lte_key"
+      ]
+    },
+    {
+      "call": 691,
+      "ms": 0.4740999999921769,
+      "hypotheses": 1,
+      "blocks": [
+        "temp_neg"
+      ]
+    },
+    {
+      "call": 60,
+      "ms": 0.4717000000000553,
+      "hypotheses": 1,
+      "blocks": [
+        "lte_bulk"
+      ]
+    },
+    {
+      "call": 34,
+      "ms": 0.4661999999998443,
+      "hypotheses": 1,
+      "blocks": [
+        "mechanic_SW1"
+      ]
+    },
+    {
+      "call": 617,
+      "ms": 0.46409999998286366,
+      "hypotheses": 1,
+      "blocks": [
+        "isolated_supply_pos"
+      ]
+    },
+    {
+      "call": 619,
+      "ms": 0.46080000000074506,
+      "hypotheses": 1,
+      "blocks": [
+        "temp_pos"
+      ]
+    },
+    {
+      "call": 32,
+      "ms": 0.4515000000001237,
+      "hypotheses": 1,
+      "blocks": [
+        "mechanic_J7"
+      ]
+    },
+    {
+      "call": 3,
+      "ms": 0.44659999999998945,
+      "hypotheses": 1,
+      "blocks": [
+        "mechanic_J3"
+      ]
+    },
+    {
+      "call": 96,
+      "ms": 0.44069999999919673,
+      "hypotheses": 1,
+      "blocks": [
+        "lte_reservoir"
+      ]
+    },
+    {
+      "call": 4,
+      "ms": 0.41689999999994143,
+      "hypotheses": 1,
+      "blocks": [
+        "mechanic_J4"
+      ]
+    },
+    {
+      "call": 2,
+      "ms": 0.39830000000006294,
+      "hypotheses": 1,
+      "blocks": [
+        "mechanic_J2"
+      ]
+    },
+    {
+      "call": 562,
+      "ms": 0.3941999999806285,
+      "hypotheses": 1,
+      "blocks": [
+        "harvest_input"
+      ]
+    },
+    {
+      "call": 57,
+      "ms": 0.38950000000022555,
+      "hypotheses": 1,
+      "blocks": [
+        "battery_sense"
+      ]
+    },
+    {
+      "call": 35,
+      "ms": 0.3556000000003223,
+      "hypotheses": 1,
+      "blocks": [
+        "mechanic_SW2"
+      ]
+    },
+    {
+      "call": 59,
+      "ms": 0.3555000000005748,
+      "hypotheses": 1,
+      "blocks": [
+        "temperature"
+      ]
+    },
+    {
+      "call": 689,
+      "ms": 0.34160000004339963,
+      "hypotheses": 1,
+      "blocks": [
+        "isolated_supply_neg"
+      ]
+    },
+    {
+      "call": 31,
+      "ms": 0.30609999999978754,
+      "hypotheses": 1,
+      "blocks": [
+        "mechanic_J6"
+      ]
+    },
+    {
+      "call": 54,
+      "ms": 0.29209999999966385,
+      "hypotheses": 1,
+      "blocks": [
+        "esp_enable"
+      ]
+    },
+    {
+      "call": 55,
+      "ms": 0.25820000000021537,
+      "hypotheses": 1,
+      "blocks": [
+        "esp_boot"
+      ]
+    }
+  ],
+  "interpretation": "Timing is from one current full run. Old 34-minute global run had concurrent load and is not a controlled A/B comparison. No algorithm or policy changes in this measurement."
+}

@@ -1,0 +1,156 @@
+[pcb-block-solver] components=1 beam_ms=0.1 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":5.171499999999924,"components":1,"blocks":["mechanic_J1"]}
+[pcb-block-solver] components=1 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.39830000000006294,"components":1,"blocks":["mechanic_J2"]}
+[pcb-block-solver] components=1 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.44659999999998945,"components":1,"blocks":["mechanic_J3"]}
+[pcb-block-solver] components=1 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.41689999999994143,"components":1,"blocks":["mechanic_J4"]}
+[pcb-block-solver] components=4 beam_ms=87.0 singles_ms=9.7 pairs_ms=79.0
+{"method":"solveBlockPrimitives","ms":176.44100000000003,"components":4,"blocks":["usb_input"]}
+[pcb-block-solver] components=5 beam_ms=37.0 singles_ms=43.2 pairs_ms=0.0
+[pcb-block-solver] components=5 beam_ms=1698.3 singles_ms=276.4 pairs_ms=975.7
+{"method":"solveBlockPrimitivesBatch","ms":2953.571,"blocks":[]}
+[pcb-block-solver] components=1 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.30609999999978754,"components":1,"blocks":["mechanic_J6"]}
+[pcb-block-solver] components=1 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.4515000000001237,"components":1,"blocks":["mechanic_J7"]}
+[pcb-block-solver] components=1 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.9106999999999061,"components":1,"blocks":["mechanic_U5"]}
+[pcb-block-solver] components=1 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.4661999999998443,"components":1,"blocks":["mechanic_SW1"]}
+[pcb-block-solver] components=1 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.3556000000003223,"components":1,"blocks":["mechanic_SW2"]}
+[pcb-block-solver] components=2 beam_ms=0.1 singles_ms=0.0 pairs_ms=0.0
+[pcb-block-solver] components=2 beam_ms=27.7 singles_ms=7.0 pairs_ms=14.4
+{"method":"solveBlockPrimitivesBatch","ms":50.34550000000036,"blocks":[]}
+{"method":"solvePassiveNetIsland","ms":0.19510000000036598,"components":2,"blocks":[]}
+[pcb-block-solver] components=2 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.29209999999966385,"components":2,"blocks":["esp_enable"]}
+[pcb-block-solver] components=1 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.25820000000021537,"components":1,"blocks":["esp_boot"]}
+{"method":"solvePassiveNetIsland","ms":0.8440999999993437,"components":3,"blocks":[]}
+[pcb-block-solver] components=3 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.38950000000022555,"components":3,"blocks":["battery_sense"]}
+{"method":"solvePassiveNetIsland","ms":1.1378999999997177,"components":3,"blocks":[]}
+[pcb-block-solver] components=3 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.3555000000005748,"components":3,"blocks":["temperature"]}
+[pcb-block-solver] components=3 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.4717000000000553,"components":3,"blocks":["lte_bulk"]}
+[pcb-block-solver] components=4 beam_ms=78.0 singles_ms=89.6 pairs_ms=122.9
+[pcb-block-solver] components=4 beam_ms=82.8 singles_ms=97.1 pairs_ms=130.2
+{"method":"solveBlockPrimitivesBatch","ms":313.83599999999933,"blocks":[]}
+[pcb-block-solver] components=7 beam_ms=7628.2 singles_ms=1780.0 pairs_ms=12071.3
+{"method":"solveBlockPrimitives","ms":21482.2468,"components":7,"blocks":["uart"]}
+{"method":"solvePassiveNetIsland","ms":1.4105999999992491,"components":3,"blocks":[]}
+[pcb-block-solver] components=3 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.47520000000076834,"components":3,"blocks":["lte_key"]}
+[pcb-block-solver] components=4 beam_ms=114.0 singles_ms=15.1 pairs_ms=128.0
+{"method":"solveBlockPrimitives","ms":258.38990000000194,"components":4,"blocks":["sim_support"]}
+[pcb-block-solver] components=1 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.44069999999919673,"components":1,"blocks":["lte_reservoir"]}
+[pcb-block-solver] components=10 beam_ms=7024.4 singles_ms=1448.4 pairs_ms=9029.3
+[pcb-block-solver] components=10 beam_ms=7717.8 singles_ms=2734.0 pairs_ms=11231.0
+{"method":"solveBlockPrimitivesBatch","ms":21689.949900000003,"blocks":[]}
+[pcb-block-solver] components=9 beam_ms=4984.6 singles_ms=1479.6 pairs_ms=9509.1
+{"method":"solveBlockPrimitives","ms":15977.168400000002,"components":9,"blocks":["usb_charge"]}
+[pcb-block-solver] components=6 beam_ms=1374.1 singles_ms=123.0 pairs_ms=1472.6
+{"method":"solveBlockPrimitives","ms":2973.1653000000006,"components":6,"blocks":["logic_power"]}
+{"method":"solvePassiveNetIsland","ms":0.2738999999855878,"components":2,"blocks":[]}
+[pcb-block-solver] components=2 beam_ms=0.1 singles_ms=0.0 pairs_ms=0.0
+[pcb-block-solver] components=2 beam_ms=27.2 singles_ms=4.6 pairs_ms=9.2
+[pcb-block-solver] components=2 beam_ms=24.7 singles_ms=5.0 pairs_ms=11.3
+[pcb-block-solver] components=2 beam_ms=27.4 singles_ms=4.4 pairs_ms=9.6
+[pcb-block-solver] components=2 beam_ms=27.7 singles_ms=5.1 pairs_ms=11.1
+{"method":"solveBlockPrimitivesBatch","ms":46.265299999999115,"blocks":[]}
+{"method":"solvePassiveNetIsland","ms":0.28250000000116415,"components":2,"blocks":[]}
+[pcb-block-solver] components=2 beam_ms=0.1 singles_ms=0.1 pairs_ms=0.0
+[pcb-block-solver] components=2 beam_ms=20.2 singles_ms=2.9 pairs_ms=9.8
+[pcb-block-solver] components=2 beam_ms=22.1 singles_ms=3.1 pairs_ms=8.4
+[pcb-block-solver] components=2 beam_ms=22.3 singles_ms=3.7 pairs_ms=7.8
+[pcb-block-solver] components=2 beam_ms=20.6 singles_ms=3.5 pairs_ms=9.9
+{"method":"solveBlockPrimitivesBatch","ms":36.69779999999446,"blocks":[]}
+[pcb-block-solver] components=3 beam_ms=107.3 singles_ms=16.0 pairs_ms=76.3
+{"method":"solveBlockPrimitives","ms":200.39569999999367,"components":3,"blocks":["voltage_secondary"]}
+[pcb-block-solver] components=14 beam_ms=49916.2 singles_ms=9799.3 pairs_ms=0.0
+[pcb-block-solver] components=14 beam_ms=48449.2 singles_ms=12547.0 pairs_ms=0.0
+[pcb-block-solver] components=14 beam_ms=49205.5 singles_ms=13150.9 pairs_ms=0.0
+[pcb-block-solver] components=14 beam_ms=49084.6 singles_ms=22749.5 pairs_ms=0.0
+[pcb-block-solver] components=14 beam_ms=49854.6 singles_ms=26026.3 pairs_ms=0.0
+[pcb-block-solver] components=14 beam_ms=27942.6 singles_ms=3783.7 pairs_ms=45933.0
+[pcb-block-solver] components=14 beam_ms=43435.1 singles_ms=8365.9 pairs_ms=0.0
+[pcb-block-solver] components=14 beam_ms=45784.5 singles_ms=8677.5 pairs_ms=0.0
+{"method":"solveBlockPrimitivesBatch","ms":115489.3876,"blocks":[]}
+{"method":"solvePassiveNetIsland","ms":0.1815000000060536,"components":2,"blocks":[]}
+[pcb-block-solver] components=2 beam_ms=0.1 singles_ms=0.0 pairs_ms=0.0
+[pcb-block-solver] components=2 beam_ms=24.0 singles_ms=2.8 pairs_ms=9.5
+[pcb-block-solver] components=2 beam_ms=24.3 singles_ms=2.9 pairs_ms=9.3
+[pcb-block-solver] components=2 beam_ms=23.6 singles_ms=4.9 pairs_ms=10.8
+[pcb-block-solver] components=2 beam_ms=24.6 singles_ms=5.1 pairs_ms=9.5
+{"method":"solveBlockPrimitivesBatch","ms":41.56899999998859,"blocks":[]}
+{"method":"solvePassiveNetIsland","ms":0.2766999999876134,"components":2,"blocks":[]}
+[pcb-block-solver] components=2 beam_ms=0.1 singles_ms=0.1 pairs_ms=0.0
+[pcb-block-solver] components=2 beam_ms=22.6 singles_ms=3.3 pairs_ms=10.1
+[pcb-block-solver] components=2 beam_ms=22.6 singles_ms=3.1 pairs_ms=10.8
+[pcb-block-solver] components=2 beam_ms=23.8 singles_ms=4.7 pairs_ms=8.8
+[pcb-block-solver] components=2 beam_ms=24.3 singles_ms=4.6 pairs_ms=9.7
+{"method":"solveBlockPrimitivesBatch","ms":40.95869999998831,"blocks":[]}
+[pcb-block-solver] components=3 beam_ms=98.1 singles_ms=10.4 pairs_ms=50.1
+{"method":"solveBlockPrimitives","ms":159.35610000000452,"components":3,"blocks":["current_secondary"]}
+[pcb-block-solver] components=12 beam_ms=18596.9 singles_ms=7911.4 pairs_ms=22993.8
+[pcb-block-solver] components=12 beam_ms=35069.8 singles_ms=6668.8 pairs_ms=73901.0
+[pcb-block-solver] components=12 beam_ms=35946.1 singles_ms=6686.2 pairs_ms=73821.5
+[pcb-block-solver] components=12 beam_ms=36642.7 singles_ms=8988.1 pairs_ms=75244.9
+[pcb-block-solver] components=12 beam_ms=34765.4 singles_ms=16581.6 pairs_ms=70743.9
+[pcb-block-solver] components=12 beam_ms=36953.0 singles_ms=8886.4 pairs_ms=76535.0
+[pcb-block-solver] components=12 beam_ms=32657.6 singles_ms=4489.8 pairs_ms=64968.3
+[pcb-block-solver] components=12 beam_ms=28994.5 singles_ms=3447.4 pairs_ms=54987.3
+{"method":"solveBlockPrimitivesBatch","ms":203094.88709999996,"blocks":[]}
+{"method":"solvePassiveNetIsland","ms":0.19150000001536682,"components":2,"blocks":[]}
+[pcb-block-solver] components=5 beam_ms=119.7 singles_ms=24.2 pairs_ms=43.8
+[pcb-block-solver] components=5 beam_ms=630.4 singles_ms=374.0 pairs_ms=635.5
+{"method":"solveBlockPrimitivesBatch","ms":1642.838700000022,"blocks":[]}
+[pcb-block-solver] components=15 beam_ms=67093.6 singles_ms=17074.0 pairs_ms=0.0
+[pcb-block-solver] components=15 beam_ms=67807.2 singles_ms=17541.5 pairs_ms=0.0
+[pcb-block-solver] components=15 beam_ms=68419.5 singles_ms=21939.1 pairs_ms=0.0
+[pcb-block-solver] components=15 beam_ms=68682.1 singles_ms=22863.5 pairs_ms=0.0
+[pcb-block-solver] components=15 beam_ms=51125.8 singles_ms=11141.6 pairs_ms=81237.4
+{"method":"solveBlockPrimitivesBatch","ms":143520.78159999993,"blocks":[]}
+[pcb-block-solver] components=3 beam_ms=117.0 singles_ms=28.3 pairs_ms=126.8
+{"method":"solveBlockPrimitives","ms":273.10190000000875,"components":3,"blocks":["afe_power"]}
+{"method":"solvePassiveNetIsland","ms":0.1687000000383705,"components":2,"blocks":[]}
+[pcb-block-solver] components=2 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.3941999999806285,"components":2,"blocks":["harvest_input"]}
+{"method":"solvePassiveNetIsland","ms":0.2153999999864027,"components":2,"blocks":[]}
+[pcb-block-solver] components=5 beam_ms=397.1 singles_ms=96.1 pairs_ms=473.2
+[pcb-block-solver] components=5 beam_ms=1388.6 singles_ms=133.7 pairs_ms=1069.8
+[pcb-block-solver] components=5 beam_ms=1396.1 singles_ms=129.6 pairs_ms=1092.0
+[pcb-block-solver] components=5 beam_ms=1416.2 singles_ms=121.0 pairs_ms=1095.0
+[pcb-block-solver] components=5 beam_ms=1422.9 singles_ms=118.7 pairs_ms=1100.0
+[pcb-block-solver] components=5 beam_ms=1409.3 singles_ms=125.2 pairs_ms=1117.0
+{"method":"solveBlockPrimitivesBatch","ms":2656.373200000031,"blocks":[]}
+[pcb-block-solver] components=1 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.46409999998286366,"components":1,"blocks":["isolated_supply_pos"]}
+{"method":"solvePassiveNetIsland","ms":1.4276000000536442,"components":3,"blocks":[]}
+[pcb-block-solver] components=3 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.46080000000074506,"components":3,"blocks":["temp_pos"]}
+[pcb-block-solver] components=13 beam_ms=13157.3 singles_ms=2229.4 pairs_ms=0.0
+[pcb-block-solver] components=13 beam_ms=10292.9 singles_ms=1067.8 pairs_ms=13998.3
+{"method":"solveBlockPrimitivesBatch","ms":25365.183300000033,"blocks":[]}
+[pcb-block-solver] components=6 beam_ms=2385.7 singles_ms=536.9 pairs_ms=1890.3
+[pcb-block-solver] components=6 beam_ms=2399.5 singles_ms=520.3 pairs_ms=1918.5
+[pcb-block-solver] components=6 beam_ms=2397.6 singles_ms=536.2 pairs_ms=1922.8
+[pcb-block-solver] components=6 beam_ms=2440.2 singles_ms=529.4 pairs_ms=1924.1
+[pcb-block-solver] components=6 beam_ms=2418.4 singles_ms=545.3 pairs_ms=1945.1
+{"method":"solveBlockPrimitivesBatch","ms":4917.250699999975,"blocks":[]}
+[pcb-block-solver] components=1 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.34160000004339963,"components":1,"blocks":["isolated_supply_neg"]}
+{"method":"solvePassiveNetIsland","ms":0.921100000035949,"components":3,"blocks":[]}
+[pcb-block-solver] components=3 beam_ms=0.0 singles_ms=0.0 pairs_ms=0.0
+{"method":"solveBlockPrimitives","ms":0.4740999999921769,"components":3,"blocks":["temp_neg"]}
+[pcb-block-solver] components=13 beam_ms=10706.6 singles_ms=2294.2 pairs_ms=0.0
+[pcb-block-solver] components=13 beam_ms=8010.8 singles_ms=998.5 pairs_ms=13491.4
+{"method":"solveBlockPrimitivesBatch","ms":22507.870400000014,"blocks":[]}
+{"method":"solveBoardPacked","ms":40841.58909999998,"components":154,"blocks":["mechanic_J1","mechanic_J2","mechanic_J3","mechanic_J4","mechanic_J5","usb_input","mechanic_J6","mechanic_J7","mechanic_U5","mechanic_SW1","mechanic_SW2","esp_supply","esp_enable","esp_boot","battery_sense","temperature","lte","lte_bulk","uart","lte_key","sim_support","lte_reservoir","lte_power","usb_charge","logic_power","voltage_iso","voltage_hldo","voltage_hdc","voltage_secondary","current_iso","current_hdc","current_hldo","current_secondary","adc","adc_supply","afe_power","harvest_input","hv_pos","isolated_supply_pos","low_charge_pos","temp_pos","hv_neg","isolated_supply_neg","low_charge_neg","temp_neg"]}
+{"method":"solveBoardPacked","ms":43555.56039999996,"components":154,"blocks":["mechanic_J1","mechanic_J2","mechanic_J3","mechanic_J4","mechanic_J5","usb_input","mechanic_J6","mechanic_J7","mechanic_U5","mechanic_SW1","mechanic_SW2","esp_supply","esp_enable","esp_boot","battery_sense","temperature","lte","lte_bulk","uart","lte_key","sim_support","lte_reservoir","lte_power","usb_charge","logic_power","voltage_iso","voltage_hldo","voltage_hdc","voltage_secondary","current_iso","current_hdc","current_hldo","current_secondary","adc","adc_supply","afe_power","harvest_input","hv_pos","isolated_supply_pos","low_charge_pos","temp_pos","hv_neg","isolated_supply_neg","low_charge_neg","temp_neg"]}
+{"board":"Telemetry","tag":"current-profile","ms":700981.2501,"byMethod":{"solveBlockPrimitives":{"calls":29,"ms":41514.00620000001},"scorePostPlace":{"calls":4846,"ms":3522.5964999968733},"refinePostPlacement":{"calls":193,"ms":17719.98040000008},"solveBlockPrimitivesBatch":{"calls":16,"ms":544367.7657999999},"solvePassiveNetIsland":{"calls":13,"ms":7.526600000108829},"solveBoardPacked":{"calls":2,"ms":84397.14949999994}}}

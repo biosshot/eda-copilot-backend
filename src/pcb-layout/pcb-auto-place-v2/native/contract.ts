@@ -191,6 +191,7 @@ export interface NativeBoardPackSolutionV7 extends NativePrimitivePackSolution {
 }
 
 export interface NativeBlockSolveSolutionV4 extends NativePrimitivePackSolution {
+    pairSeed?: NativeBlockPairSeed[];
     checkpoints: Array<NativePrimitivePackSolution & { stage: string }>;
     version: typeof NATIVE_BLOCK_SOLVE_CONTRACT_VERSION;
 }
@@ -217,6 +218,7 @@ export interface NativeBoardPackerAddon {
         baseline: NativeRouteBaseline,
     ): NativeRouteComparison;
     blockContractVersion(): number;
+    blockSearchStagesVersion?(): number;
     solveBlockPrimitives(problem: NativeBlockSolveProblemV4): NativeBlockSolveSolutionV4;
     solveBlockPrimitivesBatch?(problems: NativeBlockSolveProblemV4[], threads: number): NativeBlockSolveSolutionV4[];
     passiveIslandContractVersion(): number;
@@ -239,7 +241,11 @@ export interface NativeBlockComponentGeometry extends NativeComponentGeometry {
     powerComponent: boolean;
 }
 
+export interface NativeBlockPairSeed { primitive: NativePrimitive; rotation: number }
+
 export interface NativeBlockSolveProblemV4 {
+    deferPairs?: boolean;
+    pairSeed?: NativeBlockPairSeed[];
     world?: { outline: Point[]; bounds: Box; edgeClearance: number;
         obstacles: Array<{designator: string; box: Box; clearance: number}> };
     /** Opt-in research controls; deliberately not exposed by the placement DSL. */

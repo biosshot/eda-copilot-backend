@@ -127,6 +127,9 @@ pub fn passive_island_contract_version() -> u32 {
     PASSIVE_ISLAND_CONTRACT_VERSION
 }
 
+#[napi]
+pub fn block_search_stages_version() -> u32 { 1 }
+
 /// Independent hypotheses share no solver state. Results retain input order,
 /// so completion order cannot change checkpoint selection or tie breaking.
 #[napi]

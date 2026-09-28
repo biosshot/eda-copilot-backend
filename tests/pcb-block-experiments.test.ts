@@ -23,6 +23,24 @@ test('parallel block hypotheses preserve ordered solutions and all checkpoints',
     assert.throws(() => addon.solveBlockPrimitivesBatch!([problems[0], { ...problems[1], version: -1 }], 4), /Invalid/);
 });
 
+test('pair continuation resumes singles without repeating beam and preserves the solution', () => {
+    const problem = { ...structuredClone(usb.problem), searchWidth: 1, experiments: { pairSwaps: true, reinsertPair: true } };
+    const full = addon.solveBlockPrimitives(problem);
+    const initial = addon.solveBlockPrimitives({ ...problem, deferPairs: true });
+    const resumed = addon.solveBlockPrimitives({ ...problem, pairSeed: initial.pairSeed });
+    assert.deepEqual(resumed.checkpoints.map(c => c.stage), ['pairs']);
+    assert.equal(resumed.rank.hardCount, full.rank.hardCount);
+    assert.ok(Math.abs(resumed.rank.score - full.rank.score) < .001);
+    const poses = (r: typeof full) => r.states.flatMap(s => s.placements).sort((a, b) => a.designator.localeCompare(b.designator));
+    assert.deepEqual(poses(resumed), poses(full));
+    assert.throws(() => addon.solveBlockPrimitives({ ...problem, pairSeed: initial.pairSeed!.slice(1) }), /inventory/);
+    const duplicate = [...initial.pairSeed!]; duplicate[1] = duplicate[0];
+    assert.throws(() => addon.solveBlockPrimitives({ ...problem, pairSeed: duplicate }), /duplicate/);
+    const locked = structuredClone(problem); locked.primitives[0].locked = true;
+    const seed = structuredClone(initial.pairSeed!); const p = seed.find(s => s.primitive.id === locked.primitives[0].id)!; p.primitive.placements[0].x += 123;
+    assert.throws(() => addon.solveBlockPrimitives({ ...locked, pairSeed: seed }), /locked/);
+});
+
 test('experiments are opt-in: captured USB baseline remains identical', () => {
     const { checkpoints, ...result } = solve();
     assert.deepEqual(result, { ...usb.solution, version: NATIVE_BLOCK_SOLVE_CONTRACT_VERSION });

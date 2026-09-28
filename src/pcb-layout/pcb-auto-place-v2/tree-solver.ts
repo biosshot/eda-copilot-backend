@@ -18,6 +18,7 @@ import { createClearanceResolver, type ClearanceResolver } from '../pcb-auto-pla
 import { validatePrimitive } from '../pcb-auto-place/primitive-validation.ts';
 import { solveBoardPrimitives } from './board-solver.ts';
 import { solveBlockPrimitives, solveBlockHypothesesRust } from './block-solver-engine.ts';
+import { nearBlockLayout, selectPairSeeds } from './block-search-stages.ts';
 import { blockQuality, legalBlockCandidate, selectBlockCandidates, captureBlockCandidates, type BlockCandidate } from './block-quality.ts';
 import { suspiciousBlockRoles, withRoleHypotheses } from './block-role-hypotheses.ts';
 import { blockPolicy } from './block-policy.ts';
@@ -459,7 +460,9 @@ function solveBlockNode(
             return !c.pcb.allowedRotations.includes(p.rotate) || !c.pcb.allowedLayers.includes(p.layer);
         })) return;
         if (!legalBlockCandidate(context.input, primitives, context.clearanceResolver, hasLockedChild)) return;
-        pool.push({ stage, hypothesis, primitives, quality: blockQuality(context.input, primitives) });
+        const candidate = { stage, hypothesis, primitives, quality: blockQuality(context.input, primitives) };
+        pool.push(candidate);
+        return candidate;
     };
     const hypotheses: Array<{ problem: BlockSolveParams; hypothesis: string }> = [];
     if (relaxed.released.length) hypotheses.push({ problem: { ...params, primitives: originalPrimitives, relations: originalRelations }, hypothesis: 'grouped' });
@@ -468,19 +471,55 @@ function solveBlockNode(
     const roles = suspiciousBlockRoles(params);
     for (const role of roles) hypotheses.push({ problem: withRoleHypotheses(params, [role]), hypothesis: `role:${role.designator}=${role.to}` });
     if (roles.length > 1) hypotheses.push({ problem: withRoleHypotheses(params, roles), hypothesis: 'roles:combined' });
-    const solutions = solveBlockHypothesesRust(hypotheses.map(h => h.problem));
+    const solutions = solveBlockHypothesesRust(hypotheses.map(h => h.problem), 'initial');
+    const pairSeeds: Array<BlockCandidate & { index: number }> = [];
+    const pendingRefine: Array<BlockCandidate & { admitted: boolean }> = [];
     // Process checkpoints in the original deterministic order, irrespective of
-    // which native worker finished first. No hypothesis or stage is discarded.
+    // which native worker finished first. Every initial hypothesis is retained.
     for (let i = 0; i < hypotheses.length; i++) {
         const { hypothesis } = hypotheses[i];
         const solved = solutions[i];
         for (const checkpoint of solved.checkpoints) {
-            add(checkpoint.primitives, checkpoint.stage, hypothesis, checkpoint.rank.hardCount);
-            // Refine every legal checkpoint: a bad pair stage cannot hide a useful
-            // swap/rotation available after beam or single-component moves.
-            if (!checkpoint.rank.hardCount) add(refine(checkpoint.primitives), `${checkpoint.stage}+postrefine`, hypothesis, 0);
+            const candidate = add(checkpoint.primitives, checkpoint.stage, hypothesis, checkpoint.rank.hardCount);
+            if (!checkpoint.rank.hardCount) {
+                // Native hard rank covers geometry, whereas final admission also
+                // checks electrical hints. Postrefine can repair those hints.
+                const source = candidate ?? { primitives: checkpoint.primitives, stage: checkpoint.stage,
+                    hypothesis, quality: blockQuality(context.input, checkpoint.primitives) };
+                pendingRefine.push({ ...source, admitted: Boolean(candidate) });
+                if (checkpoint.stage === 'singles') pairSeeds.push({ ...source, index: i });
+            }
         }
     }
+    const refined: Array<BlockCandidate & { admitted: boolean }> = [];
+    let skippedRefine = 0;
+    const refineCandidates = (candidates: Array<BlockCandidate & { admitted: boolean }>) => {
+        for (const candidate of [...candidates].sort((a, b) => a.quality.score - b.quality.score)) {
+            if (refined.some(other => other.admitted === candidate.admitted && nearBlockLayout(candidate, other))) { skippedRefine++; continue; }
+            refined.push(candidate);
+            add(refine(candidate.primitives), `${candidate.stage}+postrefine`, candidate.hypothesis, 0);
+        }
+    };
+    refineCandidates(pendingRefine);
+    const pairChoices = selectPairSeeds(pairSeeds, pool);
+    // With no legal initial checkpoint, retain a bounded repair opportunity.
+    const repairIndices = pool.length || pairChoices.length ? [] : solutions.map((s, index) => ({ ...s.rank, index }))
+        .filter(s => hypotheses[s.index].problem.primitives.length <= 12)
+        .sort((a, b) => a.hardCount - b.hardCount || a.score - b.score).slice(0, 2).map(s => s.index);
+    const pairIndices = pairChoices.map(c => c.index).concat(repairIndices);
+    const paired = solveBlockHypothesesRust(pairIndices.map(i => hypotheses[i].problem), 'pairs', pairIndices.map(i => solutions[i].states));
+    const pairCandidates: Array<BlockCandidate & { admitted: boolean }> = [];
+    paired.forEach((solved, n) => {
+        const hypothesis = hypotheses[pairIndices[n]].hypothesis;
+        for (const checkpoint of solved.checkpoints) {
+            const candidate = add(checkpoint.primitives, 'pairs', hypothesis, checkpoint.rank.hardCount);
+            if (!checkpoint.rank.hardCount) pairCandidates.push({ ...(candidate ?? { primitives: checkpoint.primitives,
+                stage: 'pairs', hypothesis, quality: blockQuality(context.input, checkpoint.primitives) }), admitted: Boolean(candidate) });
+        }
+    });
+    refineCandidates(pairCandidates);
+    context.diagnostics.push({ severity: 'warning', nodeId: node.id,
+        message: `Staged block search: ${hypotheses.length} beam/singles hypotheses; ${pairIndices.length} selected for pairs; ${skippedRefine} duplicate/near-duplicate postrefine calls skipped (0.15 mm pose, tight electrical gates). Originals retained.` });
     const groupedFallback = relaxed.released.length ? solutions[0].result : undefined;
     const fallback = solutions[originalIndex].result;
     const selected = selectBlockCandidates(pool);

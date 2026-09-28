@@ -1,0 +1,17 @@
+{
+  "blocks": {
+    "current-profile": {
+      "voltage_iso": 115489.3876,
+      "current_iso": 203094.88709999996,
+      "adc": 143520.78159999993
+    },
+    "staged-final": {
+      "voltage_iso": 86960.5447,
+      "current_iso": 109625.32190000001,
+      "adc": 71633.6728
+    }
+  },
+  "hypotheses": 74,
+  "pairContinuationsSelected": 26,
+  "postrefineSkipDecisions": 78
+}
