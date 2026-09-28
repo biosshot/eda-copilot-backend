@@ -90,6 +90,9 @@ impl DetailProfile {
     fn span(&self, name: &'static str) -> ProfileSpan<'_> {
         ProfileSpan { profile: self, name, started: self.enabled.then(std::time::Instant::now) }
     }
+    fn count(&self, name: &'static str, amount: usize) {
+        if self.enabled { self.totals.borrow_mut().entry(name).or_default().0 += amount as u64; }
+    }
 }
 impl Drop for ProfileSpan<'_> {
     fn drop(&mut self) {
@@ -891,11 +894,22 @@ fn block_candidates(
     placed: &[WorkingPrimitive],
     context: &Context,
 ) -> Vec<WorkingPrimitive> {
+    let result = block_candidates_inner(primitive, placed, context);
+    context.detail.count("candidate_positions_unique", result.len());
+    result
+}
+
+fn block_candidates_inner(
+    primitive: &WorkingPrimitive,
+    placed: &[WorkingPrimitive],
+    context: &Context,
+) -> Vec<WorkingPrimitive> {
     let _span = context.detail.span("block_candidates");
     if primitive.primitive.locked {
         return vec![primitive.clone()];
     }
     let variants = orientation_variants(primitive);
+    context.detail.count("candidate_orientations", variants.len());
     if placed.is_empty() {
         let primary: Vec<_> = variants
             .iter()
@@ -979,10 +993,16 @@ fn block_candidates_for_orientation(
             }
         }
     }
-    candidates.extend(relation_anchored_candidates(primitive, placed, context));
+    context.detail.count("candidate_body_raw", candidates.len());
+    let relations = relation_anchored_candidates(primitive, placed, context);
+    context.detail.count("candidate_relation_raw", relations.len());
+    candidates.extend(relations);
     if context.problem.experiments.net_candidates {
-        candidates.extend(net_anchored_candidates(primitive, placed, context));
+        let nets = net_anchored_candidates(primitive, placed, context);
+        context.detail.count("candidate_net_raw", nets.len());
+        candidates.extend(nets);
     }
+    let before_bridges = candidates.len();
     let placed_primitives: Vec<_> = placed.iter().map(|item| &item.primitive).collect();
     for delta in signal_path::bridge_deltas(&primitive.primitive, &placed_primitives) {
         candidates.push(fit_to_bounds(
@@ -998,7 +1018,11 @@ fn block_candidates_for_orientation(
             context,
         ));
     }
-    dedupe_primitives(candidates)
+    context.detail.count("candidate_bridge_raw", candidates.len() - before_bridges);
+    context.detail.count("candidate_total_raw", candidates.len());
+    let unique = dedupe_primitives(candidates);
+    context.detail.count("candidate_per_orientation_unique", unique.len());
+    unique
 }
 
 // Use the same pair matrix as the hard validator. Compounds conservatively use
@@ -1040,6 +1064,7 @@ fn net_anchored_candidates(
         anchors.sort_by(|(a, ap), (b, bp)| a.id.cmp(&b.id).then(ap.reference.cmp(&bp.reference)));
         let anchor_limit = if context.problem.experiments.pad_owner_candidates { usize::MAX } else { 4 };
         for (item, target) in anchors.into_iter().take(anchor_limit) {
+            context.detail.count("candidate_net_pad_pairs", 1);
             let center = box_center(&primitive.primitive.bbox);
             let dx = moving.x - center.x;
             let dy = moving.y - center.y;
