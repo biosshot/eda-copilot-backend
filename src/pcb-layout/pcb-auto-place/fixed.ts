@@ -83,3 +83,9 @@ export function allowedPlacementLayers(input: PlacementInput, component: PcbComp
     if (input.board.allowedLayers.includes(input.board.defaultLayer)) return [input.board.defaultLayer];
     return input.board.allowedLayers[0] ? [input.board.allowedLayers[0]] : ['top'];
 }
+
+export function preferredPlacementLayers(layers: Layer[], defaultLayer: Layer): Layer[] {
+    return layers.includes(defaultLayer)
+        ? [defaultLayer, ...layers.filter((layer) => layer !== defaultLayer)]
+        : layers;
+}

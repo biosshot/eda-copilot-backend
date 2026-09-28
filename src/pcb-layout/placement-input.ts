@@ -1,4 +1,5 @@
 import { centeredBoard, defaultSolverOptions } from "#pcb-layout/pcb-auto-place/utils.ts";
+import { preferredPlacementLayers } from "#pcb-layout/pcb-auto-place/fixed.ts";
 import { boardAnchorPoint, outlineInsetPointFromCorner, pointsBox, rectBoardPolygon } from "#pcb-layout/pcb-auto-place/geometry.ts";
 import { compileAntenna, compileSolderJumper, compileThermalPad } from "#pcb-layout/procedural-footprints.ts";
 import {
@@ -768,7 +769,10 @@ export async function buildPlacementInput(
             footprint,
             pcb: {
                 role: rule?.role ?? inferComponentRole(component.designator, component.value),
-                allowedLayers: rule?.allowedLayers ?? (edgePlace?.layer ? [edgePlace.layer] : boardLayers.allowedLayers),
+                allowedLayers: preferredPlacementLayers(
+                    rule?.allowedLayers ?? (edgePlace?.layer ? [edgePlace.layer] : boardLayers.allowedLayers),
+                    boardLayers.defaultLayer,
+                ),
                 allowedRotations: faceConstraint.allowedRotations,
                 fixedPlacement: normalizeFixedPlacement(rule?.fixedPlacement),
                 boardOverflow: normalizeBoardOverflow(rule?.boardOverflow),

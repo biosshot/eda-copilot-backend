@@ -13,7 +13,7 @@ import type {
     TargetRef,
 } from '#types/pcb/layout-model.ts';
 import { componentBox, roundPlacement, rotatedSize } from '../pcb-auto-place/geometry.ts';
-import { createFixedPlacement } from '../pcb-auto-place/fixed.ts';
+import { createFixedPlacement, preferredPlacementLayers } from '../pcb-auto-place/fixed.ts';
 import { createClearanceResolver, type ClearanceResolver } from '../pcb-auto-place/clearance-resolver.ts';
 import { validatePrimitive } from '../pcb-auto-place/primitive-validation.ts';
 import { solveBoardPrimitives } from './board-solver.ts';
@@ -115,6 +115,14 @@ function createTreeSolveContext(
     graph: PlacementGraph,
     options: TreeSolverOptions,
 ): TreeSolveContext {
+    const components = input.components.map((component) => ({
+        ...component,
+        pcb: {
+            ...component.pcb,
+            allowedLayers: preferredPlacementLayers(component.pcb.allowedLayers, input.board.defaultLayer),
+        },
+    }));
+    input = { ...input, components };
     return {
         input,
         graph,
