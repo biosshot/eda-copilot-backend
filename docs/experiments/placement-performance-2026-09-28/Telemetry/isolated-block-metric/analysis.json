@@ -1,0 +1,404 @@
+{
+  "aggregate": {
+    "micro": {
+      "nativeMs": 451283.3744000001,
+      "wire": 287.46,
+      "crossings": 9,
+      "foreignPadHits": 5,
+      "score": 45682.32219508701,
+      "legal": 8
+    },
+    "geometric": {
+      "nativeMs": 346142.84540000034,
+      "wire": 293.89,
+      "crossings": 12,
+      "foreignPadHits": 7,
+      "score": 44320.12759158469,
+      "legal": 8
+    }
+  },
+  "differences": [
+    {
+      "name": "usb_input",
+      "microSeconds": 2.8868617500000475,
+      "geometrySeconds": 2.7726184000001166,
+      "speedup": 1.041204137576208,
+      "scoreChangePercent": 0,
+      "wire": [
+        25.16,
+        25.16
+      ],
+      "crossings": [
+        3,
+        3
+      ],
+      "pads": [
+        1,
+        1
+      ],
+      "legal": [
+        true,
+        true
+      ],
+      "timing": {
+        "micro": {
+          "initialSeconds": 1.908669200000048,
+          "pairSeconds": 0.978192549999999,
+          "totalRangeSeconds": [
+            2.8337912000000944,
+            2.9399323000000006
+          ],
+          "selectedStage": "singles"
+        },
+        "geometric": {
+          "initialSeconds": 1.8268686500000884,
+          "pairSeconds": 0.9457497500000286,
+          "totalRangeSeconds": [
+            2.6117733000002334,
+            2.9334635000000002
+          ],
+          "selectedStage": "singles"
+        }
+      },
+      "c9Links": {
+        "micro": {},
+        "geometric": {}
+      }
+    },
+    {
+      "name": "usb_charge",
+      "microSeconds": 12.8536972500001,
+      "geometrySeconds": 13.149222150000165,
+      "speedup": 0.9775252941482883,
+      "scoreChangePercent": 4.769625518607312,
+      "wire": [
+        30.19,
+        35.09
+      ],
+      "crossings": [
+        0,
+        1
+      ],
+      "pads": [
+        0,
+        0
+      ],
+      "legal": [
+        true,
+        true
+      ],
+      "timing": {
+        "micro": {
+          "initialSeconds": 5.579522650000023,
+          "pairSeconds": 7.274174600000077,
+          "totalRangeSeconds": [
+            12.386889000000199,
+            13.3205055
+          ],
+          "selectedStage": "pairs"
+        },
+        "geometric": {
+          "initialSeconds": 5.240112100000084,
+          "pairSeconds": 7.9091100500000815,
+          "totalRangeSeconds": [
+            12.239427499999998,
+            14.059016800000332
+          ],
+          "selectedStage": "pairs"
+        }
+      },
+      "c9Links": {
+        "micro": {},
+        "geometric": {}
+      }
+    },
+    {
+      "name": "lte_power",
+      "microSeconds": 16.105054000000038,
+      "geometrySeconds": 14.576787800000043,
+      "speedup": 1.1048424536988863,
+      "scoreChangePercent": -0.18296802214469166,
+      "wire": [
+        35.13,
+        33.66
+      ],
+      "crossings": [
+        0,
+        0
+      ],
+      "pads": [
+        0,
+        0
+      ],
+      "legal": [
+        true,
+        true
+      ],
+      "timing": {
+        "micro": {
+          "initialSeconds": 9.12372045000001,
+          "pairSeconds": 6.981333550000029,
+          "totalRangeSeconds": [
+            15.478972900000004,
+            16.73113510000007
+          ],
+          "selectedStage": "singles"
+        },
+        "geometric": {
+          "initialSeconds": 8.00258735000001,
+          "pairSeconds": 6.574200450000033,
+          "totalRangeSeconds": [
+            12.6976731,
+            16.455902500000082
+          ],
+          "selectedStage": "singles"
+        }
+      },
+      "c9Links": {
+        "micro": {},
+        "geometric": {}
+      }
+    },
+    {
+      "name": "voltage_iso",
+      "microSeconds": 139.59898750000008,
+      "geometrySeconds": 88.51342415000003,
+      "speedup": 1.5771504587081329,
+      "scoreChangePercent": -10.271519935578366,
+      "wire": [
+        36.12,
+        37.31
+      ],
+      "crossings": [
+        0,
+        0
+      ],
+      "pads": [
+        0,
+        0
+      ],
+      "legal": [
+        true,
+        true
+      ],
+      "timing": {
+        "micro": {
+          "initialSeconds": 109.34865485000007,
+          "pairSeconds": 30.250332649999997,
+          "totalRangeSeconds": [
+            139.1345025,
+            140.06347250000016
+          ],
+          "selectedStage": "singles"
+        },
+        "geometric": {
+          "initialSeconds": 88.51342275000002,
+          "pairSeconds": 0.0000014000000228406861,
+          "totalRangeSeconds": [
+            77.70385990000004,
+            99.32298840000003
+          ],
+          "selectedStage": "singles"
+        }
+      },
+      "c9Links": {
+        "micro": {},
+        "geometric": {}
+      }
+    },
+    {
+      "name": "current_iso",
+      "microSeconds": 137.74602399999992,
+      "geometrySeconds": 111.92189595000004,
+      "speedup": 1.2307334756153214,
+      "scoreChangePercent": -2.321048601819675,
+      "wire": [
+        35.69,
+        36.72
+      ],
+      "crossings": [
+        0,
+        0
+      ],
+      "pads": [
+        0,
+        0
+      ],
+      "legal": [
+        true,
+        true
+      ],
+      "timing": {
+        "micro": {
+          "initialSeconds": 65.92335449999996,
+          "pairSeconds": 71.82266949999996,
+          "totalRangeSeconds": [
+            136.54599979999986,
+            138.94604819999995
+          ],
+          "selectedStage": "beam"
+        },
+        "geometric": {
+          "initialSeconds": 56.596986850000015,
+          "pairSeconds": 55.32490910000002,
+          "totalRangeSeconds": [
+            106.66577480000001,
+            117.17801710000006
+          ],
+          "selectedStage": "pairs"
+        }
+      },
+      "c9Links": {
+        "micro": {
+          "C9.1->U2": 2.6727000168369064,
+          "C9.2->U2": 2.6758500200870747
+        },
+        "geometric": {
+          "C9.1->U2": 3.503667646909449,
+          "C9.2->U2": 3.578898088797723
+        }
+      }
+    },
+    {
+      "name": "adc",
+      "microSeconds": 89.44811314999998,
+      "geometrySeconds": 95.98141015000002,
+      "speedup": 0.9319316418690894,
+      "scoreChangePercent": -0.27821759765424003,
+      "wire": [
+        64.77,
+        68.47
+      ],
+      "crossings": [
+        4,
+        8
+      ],
+      "pads": [
+        4,
+        6
+      ],
+      "legal": [
+        true,
+        true
+      ],
+      "timing": {
+        "micro": {
+          "initialSeconds": 89.44811200000002,
+          "pairSeconds": 0.0000011499999673105775,
+          "totalRangeSeconds": [
+            71.12354869999993,
+            107.77267760000005
+          ],
+          "selectedStage": "singles"
+        },
+        "geometric": {
+          "initialSeconds": 95.98140649999998,
+          "pairSeconds": 0.000003650000027846545,
+          "totalRangeSeconds": [
+            85.6443487000001,
+            106.31847159999994
+          ],
+          "selectedStage": "beam"
+        }
+      },
+      "c9Links": {
+        "micro": {},
+        "geometric": {}
+      }
+    },
+    {
+      "name": "low_charge_pos",
+      "microSeconds": 25.60622485,
+      "geometrySeconds": 9.571380849999958,
+      "speedup": 2.6752905616539238,
+      "scoreChangePercent": -16.01325351392878,
+      "wire": [
+        30.2,
+        28.74
+      ],
+      "crossings": [
+        1,
+        0
+      ],
+      "pads": [
+        0,
+        0
+      ],
+      "legal": [
+        true,
+        true
+      ],
+      "timing": {
+        "micro": {
+          "initialSeconds": 12.642616649999981,
+          "pairSeconds": 12.963608200000017,
+          "totalRangeSeconds": [
+            25.546316299999948,
+            25.66613340000005
+          ],
+          "selectedStage": "pairs"
+        },
+        "geometric": {
+          "initialSeconds": 9.571379949999972,
+          "pairSeconds": 8.999999845400452e-7,
+          "totalRangeSeconds": [
+            9.34248709999991,
+            9.800274600000005
+          ],
+          "selectedStage": "singles"
+        }
+      },
+      "c9Links": {
+        "micro": {},
+        "geometric": {}
+      }
+    },
+    {
+      "name": "low_charge_neg",
+      "microSeconds": 27.038411899999947,
+      "geometrySeconds": 9.656105949999997,
+      "speedup": 2.8001362081160632,
+      "scoreChangePercent": -16.01325351392878,
+      "wire": [
+        30.2,
+        28.74
+      ],
+      "crossings": [
+        1,
+        0
+      ],
+      "pads": [
+        0,
+        0
+      ],
+      "legal": [
+        true,
+        true
+      ],
+      "timing": {
+        "micro": {
+          "initialSeconds": 14.023335299999976,
+          "pairSeconds": 13.015076599999972,
+          "totalRangeSeconds": [
+            25.555429999999934,
+            28.521393799999963
+          ],
+          "selectedStage": "pairs"
+        },
+        "geometric": {
+          "initialSeconds": 9.656105150000018,
+          "pairSeconds": 7.999999797903002e-7,
+          "totalRangeSeconds": [
+            9.34912249999994,
+            9.963089400000054
+          ],
+          "selectedStage": "singles"
+        }
+      },
+      "c9Links": {
+        "micro": {},
+        "geometric": {}
+      }
+    }
+  ]
+}

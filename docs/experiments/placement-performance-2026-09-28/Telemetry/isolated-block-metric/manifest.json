@@ -1,0 +1,216 @@
+{
+  "nativeHash": "709ac29ef50546d0df782c35e272f91d3d442406764eb10e758a3326f7214452",
+  "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+  "startedAt": "2026-09-28T12:07:14.801Z",
+  "threads": 6,
+  "rounds": 2,
+  "names": [
+    "usb_input",
+    "usb_charge",
+    "lte_power",
+    "voltage_iso",
+    "current_iso",
+    "adc",
+    "low_charge_pos",
+    "low_charge_neg"
+  ],
+  "scope": "Frozen native block inputs, beam + singles, up to two selected pair continuations. No board pack or post-refine. Common role-independent checkpoint selection.",
+  "cases": {
+    "usb_input": [
+      {
+        "file": "block-14-0.json.gz",
+        "hash": "e9d5df30ab95ea51cde18886d1a33097fbb0addea090528a7770d1c92be433d1",
+        "components": 5,
+        "primitives": 2
+      },
+      {
+        "file": "block-14-1.json.gz",
+        "hash": "5f8a053a96820df905fe96af0ff551aa66c9e045218eaef3b2135add584ff0f4",
+        "components": 5,
+        "primitives": 5
+      }
+    ],
+    "usb_charge": [
+      {
+        "file": "block-99.json.gz",
+        "hash": "d2cd4e0d6e9415fdae8b2ca14950013f473e9b8b1bd036e4a06545278347a4c1",
+        "components": 9,
+        "primitives": 9
+      }
+    ],
+    "lte_power": [
+      {
+        "file": "block-81-0.json.gz",
+        "hash": "0e8fb221abd9e9955e50251521c16263f3cc53b63f61bab8eff7fa1e10c98914",
+        "components": 10,
+        "primitives": 8
+      },
+      {
+        "file": "block-81-1.json.gz",
+        "hash": "d79da7b23b01c2124a472422aab75d5fe3790ebdfa0b658dd5c7378c3613baeb",
+        "components": 10,
+        "primitives": 9
+      }
+    ],
+    "voltage_iso": [
+      {
+        "file": "block-164-0.json.gz",
+        "hash": "5f49eefe49595ec5692ec3f8ac15591bb47f386151679d61cf39825208e26625",
+        "components": 14,
+        "primitives": 10
+      },
+      {
+        "file": "block-164-1.json.gz",
+        "hash": "d2c04f4931b202ed737c16d294340048204ea1698efc4fd94985d056cbcd0c81",
+        "components": 14,
+        "primitives": 14
+      },
+      {
+        "file": "block-164-2.json.gz",
+        "hash": "2dd201a291af00aa6228132ebe7009fd4b828ab052a20384a44320ac5ff268d9",
+        "components": 14,
+        "primitives": 14
+      },
+      {
+        "file": "block-164-3.json.gz",
+        "hash": "f0d57270ca3f5b52486851a6dd443bbc8f844fe3dca899bcdcdab2e284497ea8",
+        "components": 14,
+        "primitives": 14
+      },
+      {
+        "file": "block-164-4.json.gz",
+        "hash": "b026af83f4948f3b3c8e73d45e41b944b0934cbbbe519706fdbcf138ae6d239a",
+        "components": 14,
+        "primitives": 14
+      },
+      {
+        "file": "block-164-5.json.gz",
+        "hash": "cb4f6ae8c6c2f9c021cfebf2d0986e8c95e2827fd3db2894fa1ea6a899487a8c",
+        "components": 14,
+        "primitives": 14
+      },
+      {
+        "file": "block-164-6.json.gz",
+        "hash": "40678fb78c33e07dec7f848c6996aef5bdbc100e362a152644120bed9f2e626d",
+        "components": 14,
+        "primitives": 14
+      },
+      {
+        "file": "block-164-7.json.gz",
+        "hash": "2490893008e5cbf3de82f552beb9da3fb1e38e2ee307095ec90f379c006dea16",
+        "components": 14,
+        "primitives": 14
+      }
+    ],
+    "current_iso": [
+      {
+        "file": "block-257-0.json.gz",
+        "hash": "8b1094387cd452f9e9cee0fa51fdaf09b47c6db48a80200eda659f3c29054419",
+        "components": 12,
+        "primitives": 8
+      },
+      {
+        "file": "block-257-1.json.gz",
+        "hash": "8e3492b906c35c3cd268a4a8c2b3a00cc8668f599f472d811f099eedb7179ada",
+        "components": 12,
+        "primitives": 12
+      },
+      {
+        "file": "block-257-2.json.gz",
+        "hash": "a5e55226f90e4ef9ecb98c045b2601d939830d1e4e31f35f8fbe90e6ad7a824c",
+        "components": 12,
+        "primitives": 12
+      },
+      {
+        "file": "block-257-3.json.gz",
+        "hash": "d392b7af4c4e89c7ce75ee7995962f35a602020793bedbbe3ac4f307e547c1dd",
+        "components": 12,
+        "primitives": 12
+      },
+      {
+        "file": "block-257-4.json.gz",
+        "hash": "d4fbc476d572af301f3afad1ce15a27b5429fcdbdba7198deec372c9f9dbcf32",
+        "components": 12,
+        "primitives": 12
+      },
+      {
+        "file": "block-257-5.json.gz",
+        "hash": "fba9bcda7bc0ad2bcbae6f170f7f4cd4ab64f0f91327b8f976a6d9e2b59476b3",
+        "components": 12,
+        "primitives": 12
+      },
+      {
+        "file": "block-257-6.json.gz",
+        "hash": "b660033522b2d53f71b14c8cf659ebd6a8f113962ff1fa81c21d188321277d85",
+        "components": 12,
+        "primitives": 12
+      },
+      {
+        "file": "block-257-7.json.gz",
+        "hash": "db11f2a6d6d20c7b709e338b3d0c9fca1f285cde6aad5b60a2256fbf22c4c43f",
+        "components": 12,
+        "primitives": 12
+      }
+    ],
+    "adc": [
+      {
+        "file": "block-331-0.json.gz",
+        "hash": "6c0043d108299012f28aa45de41f4a0207b898a2185a896d0e003f547d1036ac",
+        "components": 15,
+        "primitives": 11
+      },
+      {
+        "file": "block-331-1.json.gz",
+        "hash": "5faf5588db8d642f9c94721ca58346c3412e64b56e36e629a605148d1d4c566a",
+        "components": 15,
+        "primitives": 15
+      },
+      {
+        "file": "block-331-2.json.gz",
+        "hash": "63b944fec28037890b7f2f4b9c40e3f72bdc8f63db767c5b813ba482a6c4f0b9",
+        "components": 15,
+        "primitives": 15
+      },
+      {
+        "file": "block-331-3.json.gz",
+        "hash": "47e8b324d5e12e6b22b702f7d467e507345ad6285dec80d647cd6c2f6a6de221",
+        "components": 15,
+        "primitives": 15
+      },
+      {
+        "file": "block-331-4.json.gz",
+        "hash": "b751f097c15e7a915ec0bb6b50cf25dab23018c80eb3577ef4cbaca974272364",
+        "components": 15,
+        "primitives": 15
+      }
+    ],
+    "low_charge_pos": [
+      {
+        "file": "block-397-0.json.gz",
+        "hash": "9950b79a69dc53834c22450e9168f5334daf3dc3f93e892f3c57508057df4b81",
+        "components": 13,
+        "primitives": 11
+      },
+      {
+        "file": "block-397-1.json.gz",
+        "hash": "c8ca23d5c31eb4b80786761cb774d68e7ac581de32f37e65d75cc1b5cd79ebd6",
+        "components": 13,
+        "primitives": 13
+      }
+    ],
+    "low_charge_neg": [
+      {
+        "file": "block-440-0.json.gz",
+        "hash": "2a518519de12633c71732c2aae913acaecc82bdbcb96971a705f4d4359ba5fca",
+        "components": 13,
+        "primitives": 11
+      },
+      {
+        "file": "block-440-1.json.gz",
+        "hash": "97110e2d66fd3da4026e88beb70ec206e4e292d060f96a9b1512cf38d6a090c3",
+        "components": 13,
+        "primitives": 13
+      }
+    ]
+  }
+}

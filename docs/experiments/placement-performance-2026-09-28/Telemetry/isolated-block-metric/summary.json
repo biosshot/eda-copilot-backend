@@ -1,0 +1,3400 @@
+{
+  "manifest": {
+    "nativeHash": "709ac29ef50546d0df782c35e272f91d3d442406764eb10e758a3326f7214452",
+    "inputHash": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
+    "startedAt": "2026-09-28T12:07:14.801Z",
+    "threads": 6,
+    "rounds": 2,
+    "names": [
+      "usb_input",
+      "usb_charge",
+      "lte_power",
+      "voltage_iso",
+      "current_iso",
+      "adc",
+      "low_charge_pos",
+      "low_charge_neg"
+    ],
+    "scope": "Frozen native block inputs, beam + singles, up to two selected pair continuations. No board pack or post-refine. Common role-independent checkpoint selection.",
+    "cases": {
+      "usb_input": [
+        {
+          "file": "block-14-0.json.gz",
+          "hash": "e9d5df30ab95ea51cde18886d1a33097fbb0addea090528a7770d1c92be433d1",
+          "components": 5,
+          "primitives": 2
+        },
+        {
+          "file": "block-14-1.json.gz",
+          "hash": "5f8a053a96820df905fe96af0ff551aa66c9e045218eaef3b2135add584ff0f4",
+          "components": 5,
+          "primitives": 5
+        }
+      ],
+      "usb_charge": [
+        {
+          "file": "block-99.json.gz",
+          "hash": "d2cd4e0d6e9415fdae8b2ca14950013f473e9b8b1bd036e4a06545278347a4c1",
+          "components": 9,
+          "primitives": 9
+        }
+      ],
+      "lte_power": [
+        {
+          "file": "block-81-0.json.gz",
+          "hash": "0e8fb221abd9e9955e50251521c16263f3cc53b63f61bab8eff7fa1e10c98914",
+          "components": 10,
+          "primitives": 8
+        },
+        {
+          "file": "block-81-1.json.gz",
+          "hash": "d79da7b23b01c2124a472422aab75d5fe3790ebdfa0b658dd5c7378c3613baeb",
+          "components": 10,
+          "primitives": 9
+        }
+      ],
+      "voltage_iso": [
+        {
+          "file": "block-164-0.json.gz",
+          "hash": "5f49eefe49595ec5692ec3f8ac15591bb47f386151679d61cf39825208e26625",
+          "components": 14,
+          "primitives": 10
+        },
+        {
+          "file": "block-164-1.json.gz",
+          "hash": "d2c04f4931b202ed737c16d294340048204ea1698efc4fd94985d056cbcd0c81",
+          "components": 14,
+          "primitives": 14
+        },
+        {
+          "file": "block-164-2.json.gz",
+          "hash": "2dd201a291af00aa6228132ebe7009fd4b828ab052a20384a44320ac5ff268d9",
+          "components": 14,
+          "primitives": 14
+        },
+        {
+          "file": "block-164-3.json.gz",
+          "hash": "f0d57270ca3f5b52486851a6dd443bbc8f844fe3dca899bcdcdab2e284497ea8",
+          "components": 14,
+          "primitives": 14
+        },
+        {
+          "file": "block-164-4.json.gz",
+          "hash": "b026af83f4948f3b3c8e73d45e41b944b0934cbbbe519706fdbcf138ae6d239a",
+          "components": 14,
+          "primitives": 14
+        },
+        {
+          "file": "block-164-5.json.gz",
+          "hash": "cb4f6ae8c6c2f9c021cfebf2d0986e8c95e2827fd3db2894fa1ea6a899487a8c",
+          "components": 14,
+          "primitives": 14
+        },
+        {
+          "file": "block-164-6.json.gz",
+          "hash": "40678fb78c33e07dec7f848c6996aef5bdbc100e362a152644120bed9f2e626d",
+          "components": 14,
+          "primitives": 14
+        },
+        {
+          "file": "block-164-7.json.gz",
+          "hash": "2490893008e5cbf3de82f552beb9da3fb1e38e2ee307095ec90f379c006dea16",
+          "components": 14,
+          "primitives": 14
+        }
+      ],
+      "current_iso": [
+        {
+          "file": "block-257-0.json.gz",
+          "hash": "8b1094387cd452f9e9cee0fa51fdaf09b47c6db48a80200eda659f3c29054419",
+          "components": 12,
+          "primitives": 8
+        },
+        {
+          "file": "block-257-1.json.gz",
+          "hash": "8e3492b906c35c3cd268a4a8c2b3a00cc8668f599f472d811f099eedb7179ada",
+          "components": 12,
+          "primitives": 12
+        },
+        {
+          "file": "block-257-2.json.gz",
+          "hash": "a5e55226f90e4ef9ecb98c045b2601d939830d1e4e31f35f8fbe90e6ad7a824c",
+          "components": 12,
+          "primitives": 12
+        },
+        {
+          "file": "block-257-3.json.gz",
+          "hash": "d392b7af4c4e89c7ce75ee7995962f35a602020793bedbbe3ac4f307e547c1dd",
+          "components": 12,
+          "primitives": 12
+        },
+        {
+          "file": "block-257-4.json.gz",
+          "hash": "d4fbc476d572af301f3afad1ce15a27b5429fcdbdba7198deec372c9f9dbcf32",
+          "components": 12,
+          "primitives": 12
+        },
+        {
+          "file": "block-257-5.json.gz",
+          "hash": "fba9bcda7bc0ad2bcbae6f170f7f4cd4ab64f0f91327b8f976a6d9e2b59476b3",
+          "components": 12,
+          "primitives": 12
+        },
+        {
+          "file": "block-257-6.json.gz",
+          "hash": "b660033522b2d53f71b14c8cf659ebd6a8f113962ff1fa81c21d188321277d85",
+          "components": 12,
+          "primitives": 12
+        },
+        {
+          "file": "block-257-7.json.gz",
+          "hash": "db11f2a6d6d20c7b709e338b3d0c9fca1f285cde6aad5b60a2256fbf22c4c43f",
+          "components": 12,
+          "primitives": 12
+        }
+      ],
+      "adc": [
+        {
+          "file": "block-331-0.json.gz",
+          "hash": "6c0043d108299012f28aa45de41f4a0207b898a2185a896d0e003f547d1036ac",
+          "components": 15,
+          "primitives": 11
+        },
+        {
+          "file": "block-331-1.json.gz",
+          "hash": "5faf5588db8d642f9c94721ca58346c3412e64b56e36e629a605148d1d4c566a",
+          "components": 15,
+          "primitives": 15
+        },
+        {
+          "file": "block-331-2.json.gz",
+          "hash": "63b944fec28037890b7f2f4b9c40e3f72bdc8f63db767c5b813ba482a6c4f0b9",
+          "components": 15,
+          "primitives": 15
+        },
+        {
+          "file": "block-331-3.json.gz",
+          "hash": "47e8b324d5e12e6b22b702f7d467e507345ad6285dec80d647cd6c2f6a6de221",
+          "components": 15,
+          "primitives": 15
+        },
+        {
+          "file": "block-331-4.json.gz",
+          "hash": "b751f097c15e7a915ec0bb6b50cf25dab23018c80eb3577ef4cbaca974272364",
+          "components": 15,
+          "primitives": 15
+        }
+      ],
+      "low_charge_pos": [
+        {
+          "file": "block-397-0.json.gz",
+          "hash": "9950b79a69dc53834c22450e9168f5334daf3dc3f93e892f3c57508057df4b81",
+          "components": 13,
+          "primitives": 11
+        },
+        {
+          "file": "block-397-1.json.gz",
+          "hash": "c8ca23d5c31eb4b80786761cb774d68e7ac581de32f37e65d75cc1b5cd79ebd6",
+          "components": 13,
+          "primitives": 13
+        }
+      ],
+      "low_charge_neg": [
+        {
+          "file": "block-440-0.json.gz",
+          "hash": "2a518519de12633c71732c2aae913acaecc82bdbcb96971a705f4d4359ba5fca",
+          "components": 13,
+          "primitives": 11
+        },
+        {
+          "file": "block-440-1.json.gz",
+          "hash": "97110e2d66fd3da4026e88beb70ec206e4e292d060f96a9b1512cf38d6a090c3",
+          "components": 13,
+          "primitives": 13
+        }
+      ]
+    }
+  },
+  "rows": [
+    {
+      "name": "usb_input",
+      "micro": {
+        "name": "usb_input",
+        "metric": "micro",
+        "round": 0,
+        "initialMs": 1930.2272999999998,
+        "pairsMs": 1009.7050000000004,
+        "ms": 2939.9323000000004,
+        "hypotheses": 2,
+        "pairHypotheses": [
+          1
+        ],
+        "legalCandidates": 5,
+        "retained": 1,
+        "selected": {
+          "hypothesis": "1",
+          "stage": "singles",
+          "quality": {
+            "score": 1096.8646356351562,
+            "electrical": 1005.7206743289062,
+            "localStretch": 3.913492655445853,
+            "wire": 25.164606721796016,
+            "maxLocal": 0,
+            "area": 164.997960875,
+            "width": 16.067500000000003,
+            "height": 10.269049999999998,
+            "exposure": 10.113200000000004,
+            "links": {},
+            "ports": {
+              "J5.A6": {
+                "x": 0.5762500000000017,
+                "y": -0.3194250000000025
+              },
+              "J5.B6": {
+                "x": -0.7737499999999997,
+                "y": 0.5354749999999981
+              },
+              "J5.A7": {
+                "x": 0.5762500000000017,
+                "y": 0.5303749999999976
+              },
+              "J5.B7": {
+                "x": -0.7737499999999997,
+                "y": -0.31462500000000304
+              },
+              "F1.2": {
+                "x": 7.0761500000000055,
+                "y": 0.10447499999999721
+              },
+              "C41.1": {
+                "x": 7.123750000000001,
+                "y": -3.044425000000004
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 5,
+          "pairSum": 15.45,
+          "pairMax": 5.4,
+          "crossings": 3,
+          "foreignPadHits": 1,
+          "internalIcPadHits": 0,
+          "wireLength": 25.16,
+          "hpwl": 28.28,
+          "area": 165,
+          "aspect": 1.56
+        },
+        "placements": [
+          {
+            "designator": "J5",
+            "x": -45,
+            "y": -16,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "F1",
+            "x": -36.791,
+            "y": -16.001,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R30",
+            "x": -37.771,
+            "y": -19.85,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R31",
+            "x": -36.791,
+            "y": -12.675,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C41",
+            "x": -34.89,
+            "y": -19.85,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 2886.8617500000473,
+        "times": [
+          2939.9323000000004,
+          2833.7912000000942
+        ]
+      },
+      "geometric": {
+        "name": "usb_input",
+        "metric": "geometric",
+        "round": 0,
+        "initialMs": 1941.1331000000005,
+        "pairsMs": 992.3303999999998,
+        "ms": 2933.4635000000003,
+        "hypotheses": 2,
+        "pairHypotheses": [
+          1
+        ],
+        "legalCandidates": 5,
+        "retained": 1,
+        "selected": {
+          "hypothesis": "1",
+          "stage": "singles",
+          "quality": {
+            "score": 1096.8646356351562,
+            "electrical": 1005.7206743289062,
+            "localStretch": 3.913492655445853,
+            "wire": 25.164606721796016,
+            "maxLocal": 0,
+            "area": 164.997960875,
+            "width": 16.067500000000003,
+            "height": 10.269049999999998,
+            "exposure": 10.113200000000004,
+            "links": {},
+            "ports": {
+              "J5.A6": {
+                "x": 0.5762500000000017,
+                "y": -0.3194250000000025
+              },
+              "J5.B6": {
+                "x": -0.7737499999999997,
+                "y": 0.5354749999999981
+              },
+              "J5.A7": {
+                "x": 0.5762500000000017,
+                "y": 0.5303749999999976
+              },
+              "J5.B7": {
+                "x": -0.7737499999999997,
+                "y": -0.31462500000000304
+              },
+              "F1.2": {
+                "x": 7.0761500000000055,
+                "y": 0.10447499999999721
+              },
+              "C41.1": {
+                "x": 7.123750000000001,
+                "y": -3.044425000000004
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 5,
+          "pairSum": 15.45,
+          "pairMax": 5.4,
+          "crossings": 3,
+          "foreignPadHits": 1,
+          "internalIcPadHits": 0,
+          "wireLength": 25.16,
+          "hpwl": 28.28,
+          "area": 165,
+          "aspect": 1.56
+        },
+        "placements": [
+          {
+            "designator": "J5",
+            "x": -45,
+            "y": -16,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "F1",
+            "x": -36.791,
+            "y": -16.001,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R30",
+            "x": -37.771,
+            "y": -19.85,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R31",
+            "x": -36.791,
+            "y": -12.675,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C41",
+            "x": -34.89,
+            "y": -19.85,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 2772.6184000001167,
+        "times": [
+          2933.4635000000003,
+          2611.7733000002336
+        ]
+      }
+    },
+    {
+      "name": "usb_charge",
+      "micro": {
+        "name": "usb_charge",
+        "metric": "micro",
+        "round": 0,
+        "initialMs": 5677.1865,
+        "pairsMs": 7643.3189999999995,
+        "ms": 13320.5055,
+        "hypotheses": 1,
+        "pairHypotheses": [
+          0
+        ],
+        "legalCandidates": 3,
+        "retained": 1,
+        "selected": {
+          "hypothesis": "0",
+          "stage": "pairs",
+          "quality": {
+            "score": 2684.5400996753924,
+            "electrical": 2578.2610132753925,
+            "localStretch": 330.99360205043814,
+            "wire": 24.799647606711712,
+            "maxLocal": 4.672258986828535,
+            "area": 180.943104,
+            "width": 13.056000000000001,
+            "height": 13.859,
+            "exposure": 14.745750000000001,
+            "links": {
+              "C43.1->U11": 1.993000002508781,
+              "R36.1->U11": 4.625673330446065,
+              "R37.1->U11": 2.242430547419474,
+              "R36.2->U11": 4.478988056469898,
+              "R37.2->U11": 2.985100006699943,
+              "C42.1->U11": 2.4801963309383392,
+              "R34.1->U11": 2.2902019648930527,
+              "R35.1->U11": 2.4493868640947674,
+              "R33.1->U11": 4.672258986828535,
+              "R32.1->U11": 3.147197612162287
+            },
+            "ports": {
+              "U11.1": {
+                "x": 1.5710000000000002,
+                "y": 0.7347
+              },
+              "U11.2": {
+                "x": 1.5710000000000002,
+                "y": 0.23460000000000003
+              },
+              "U11.3": {
+                "x": 1.5710000000000002,
+                "y": -0.2652999999999999
+              },
+              "C43.1": {
+                "x": 3.5640000000000005,
+                "y": 0.23450000000000015
+              },
+              "U11.6": {
+                "x": 0.3208000000000002,
+                "y": -1.5154999999999998
+              },
+              "R36.1": {
+                "x": 1.5032,
+                "y": -5.9875
+              },
+              "R37.1": {
+                "x": 0.5032000000000001,
+                "y": -3.7505
+              },
+              "U11.7": {
+                "x": -0.17909999999999981,
+                "y": -1.5154999999999998
+              },
+              "R36.2": {
+                "x": -0.4291999999999998,
+                "y": -5.9875
+              },
+              "U11.9": {
+                "x": -1.4289999999999998,
+                "y": -0.7654
+              },
+              "R37.2": {
+                "x": -1.4291999999999998,
+                "y": -3.7505
+              },
+              "U11.10": {
+                "x": -1.4289999999999998,
+                "y": -0.2652999999999999
+              },
+              "U11.11": {
+                "x": -1.4289999999999998,
+                "y": 0.23460000000000003
+              },
+              "C42.1": {
+                "x": -3.5639999999999996,
+                "y": -1.5274999999999999
+              },
+              "U11.13": {
+                "x": -0.6791999999999998,
+                "y": 1.4845000000000002
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 6,
+          "pairSum": 20.02,
+          "pairMax": 4.67,
+          "crossings": 0,
+          "foreignPadHits": 0,
+          "internalIcPadHits": 0,
+          "wireLength": 30.19,
+          "hpwl": 35.46,
+          "area": 180.93,
+          "aspect": 1.06
+        },
+        "placements": [
+          {
+            "designator": "U11",
+            "x": 0,
+            "y": -0.001,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R37",
+            "x": -0.534,
+            "y": -3.736,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R36",
+            "x": 0.466,
+            "y": -5.973,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R32",
+            "x": 3.734,
+            "y": 3.499,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R34",
+            "x": -3.735,
+            "y": 2.249,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R33",
+            "x": 0,
+            "y": 6.001,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R35",
+            "x": -0.25,
+            "y": 3.735,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C43",
+            "x": 4.493,
+            "y": 0.249,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C42",
+            "x": -4.635,
+            "y": -1.513,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 12853.6972500001,
+        "times": [
+          13320.5055,
+          12386.8890000002
+        ]
+      },
+      "geometric": {
+        "name": "usb_charge",
+        "metric": "geometric",
+        "round": 0,
+        "initialMs": 4674.3958999999995,
+        "pairsMs": 7565.031599999998,
+        "ms": 12239.427499999998,
+        "hypotheses": 1,
+        "pairHypotheses": [
+          0
+        ],
+        "legalCandidates": 3,
+        "retained": 1,
+        "selected": {
+          "hypothesis": "0",
+          "stage": "pairs",
+          "quality": {
+            "score": 2812.582609326756,
+            "electrical": 2709.6266118267563,
+            "localStretch": 430.34617453215367,
+            "wire": 25.845658987766747,
+            "maxLocal": 5.88064834860919,
+            "area": 175.51485,
+            "width": 12.915,
+            "height": 13.59,
+            "exposure": 14.13665,
+            "links": {
+              "C43.1->U11": 1.9940000025075226,
+              "R36.1->U11": 5.6319069594587585,
+              "R37.1->U11": 5.88064834860919,
+              "R36.2->U11": 4.579119968945998,
+              "R37.2->U11": 2.743496646617233,
+              "C42.1->U11": 1.9930000100351226,
+              "R34.1->U11": 3.188668850790248,
+              "R35.1->U11": 2.235000002237136,
+              "R33.1->U11": 4.4919211969935535,
+              "R32.1->U11": 3.0327119233451763
+            },
+            "ports": {
+              "U11.1": {
+                "x": 1.4995000000000003,
+                "y": 0.8682000000000003
+              },
+              "U11.2": {
+                "x": 1.4995000000000003,
+                "y": 0.3681000000000003
+              },
+              "U11.3": {
+                "x": 1.4995000000000003,
+                "y": -0.13179999999999967
+              },
+              "C43.1": {
+                "x": 3.4935000000000005,
+                "y": 0.36800000000000044
+              },
+              "U11.6": {
+                "x": 0.24930000000000035,
+                "y": -1.3819999999999997
+              },
+              "R36.1": {
+                "x": -3.1767,
+                "y": -5.851999999999999
+              },
+              "R37.1": {
+                "x": -5.5457,
+                "y": -2.3819999999999997
+              },
+              "U11.7": {
+                "x": -0.2505999999999996,
+                "y": -1.3819999999999997
+              },
+              "R36.2": {
+                "x": -1.2442999999999997,
+                "y": -5.851999999999999
+              },
+              "U11.9": {
+                "x": -1.5004999999999997,
+                "y": -0.6318999999999997
+              },
+              "R37.2": {
+                "x": -3.6133,
+                "y": -2.3819999999999997
+              },
+              "U11.10": {
+                "x": -1.5004999999999997,
+                "y": -0.13179999999999967
+              },
+              "U11.11": {
+                "x": -1.5004999999999997,
+                "y": 0.3681000000000003
+              },
+              "C42.1": {
+                "x": -3.4934999999999996,
+                "y": -0.13199999999999967
+              },
+              "U11.13": {
+                "x": -0.7506999999999996,
+                "y": 1.6180000000000003
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 6,
+          "pairSum": 20.27,
+          "pairMax": 4.58,
+          "crossings": 1,
+          "foreignPadHits": 0,
+          "internalIcPadHits": 0,
+          "wireLength": 35.09,
+          "hpwl": 40.5,
+          "area": 175.49,
+          "aspect": 1.05
+        },
+        "placements": [
+          {
+            "designator": "U11",
+            "x": 0.001,
+            "y": 0,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C42",
+            "x": -4.492,
+            "y": -0.25,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R34",
+            "x": -4.492,
+            "y": 2.85,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R36",
+            "x": -2.209,
+            "y": -5.97,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R37",
+            "x": -4.578,
+            "y": -2.5,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R33",
+            "x": 2.751,
+            "y": 5.734,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R32",
+            "x": 4.614,
+            "y": 2.5,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C43",
+            "x": 4.495,
+            "y": 0.25,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R35",
+            "x": -1.249,
+            "y": 3.735,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 13149.222150000165,
+        "times": [
+          12239.427499999998,
+          14059.016800000332
+        ]
+      }
+    },
+    {
+      "name": "lte_power",
+      "micro": {
+        "name": "lte_power",
+        "metric": "micro",
+        "round": 0,
+        "initialMs": 8866.526300000001,
+        "pairsMs": 6612.446600000003,
+        "ms": 15478.972900000004,
+        "hypotheses": 2,
+        "pairHypotheses": [
+          0
+        ],
+        "legalCandidates": 5,
+        "retained": 2,
+        "selected": {
+          "hypothesis": "0",
+          "stage": "singles",
+          "quality": {
+            "score": 6588.542534381776,
+            "electrical": 6498.456834381776,
+            "localStretch": 504.3205977666483,
+            "wire": 35.13238178225203,
+            "maxLocal": 4.585313295730184,
+            "area": 176.328,
+            "width": 11.625,
+            "height": 15.168,
+            "exposure": 7.4872,
+            "links": {
+              "R42.2->U10": 2.9014187994841425,
+              "C33.1->U10": 1.936,
+              "R28.1->U10": 4.242623822589036,
+              "R27.2->U10": 4.585313295730184,
+              "R27.1->U10": 3.285985091262588,
+              "C36.1->U10": 1.918901149095492,
+              "L1.2->U10": 3.554155355355193,
+              "L1.1->U10": 3.5540371987361072,
+              "R42.1->U10": 2.1609001874218996,
+              "C34.1->U10": 2.6880569655422115,
+              "C35.1->U10": 4.377352516076356,
+              "R29.1->U10": 4.301171148652423
+            },
+            "ports": {
+              "U10.7": {
+                "x": 0.4084000000000001,
+                "y": -2.3451
+              },
+              "U10.8": {
+                "x": -0.09169999999999989,
+                "y": -2.3451
+              },
+              "R27.1": {
+                "x": 2.6325000000000003,
+                "y": -4.763999999999999
+              },
+              "C36.1": {
+                "x": 0.4105000000000004,
+                "y": -4.263999999999999
+              },
+              "U10.12": {
+                "x": -0.09169999999999967,
+                "y": 0.5550999999999999
+              },
+              "U10.13": {
+                "x": 0.4084000000000003,
+                "y": 0.5550999999999999
+              },
+              "R42.1": {
+                "x": 0.40930000000000044,
+                "y": 2.716
+              },
+              "C34.1": {
+                "x": -1.6905,
+                "y": 2.716
+              },
+              "C35.1": {
+                "x": -3.8985,
+                "y": 2.716
+              },
+              "U10.14": {
+                "x": 0.9081000000000004,
+                "y": 0.5550999999999999
+              },
+              "R29.1": {
+                "x": 1.3755000000000002,
+                "y": 4.8308
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 5,
+          "pairSum": 16.25,
+          "pairMax": 4.3,
+          "crossings": 0,
+          "foreignPadHits": 0,
+          "internalIcPadHits": 0,
+          "wireLength": 35.13,
+          "hpwl": 37.88,
+          "area": 176.32,
+          "aspect": 1.3
+        },
+        "placements": [
+          {
+            "designator": "U10",
+            "x": 0.829,
+            "y": -1,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "L1",
+            "x": -3.541,
+            "y": -1,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R42",
+            "x": 1.493,
+            "y": 2.611,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C36",
+            "x": 0.528,
+            "y": -5.369,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R27",
+            "x": 2.75,
+            "y": -5.869,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C33",
+            "x": 3.912,
+            "y": -1.95,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R28",
+            "x": 4.987,
+            "y": -5.87,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C34",
+            "x": -1.573,
+            "y": 3.611,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C35",
+            "x": -3.781,
+            "y": 3.611,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R29",
+            "x": 1.493,
+            "y": 5.692,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 16105.054000000038,
+        "times": [
+          15478.972900000004,
+          16731.135100000072
+        ]
+      },
+      "geometric": {
+        "name": "lte_power",
+        "metric": "geometric",
+        "round": 0,
+        "initialMs": 6557.0100999999995,
+        "pairsMs": 6140.6630000000005,
+        "ms": 12697.6731,
+        "hypotheses": 2,
+        "pairHypotheses": [
+          0
+        ],
+        "legalCandidates": 5,
+        "retained": 2,
+        "selected": {
+          "hypothesis": "0",
+          "stage": "singles",
+          "quality": {
+            "score": 6576.487608418456,
+            "electrical": 6490.587017618456,
+            "localStretch": 514.6875491312735,
+            "wire": 33.659619365480786,
+            "maxLocal": 4.745304375906777,
+            "area": 175.87768800000003,
+            "width": 11.874,
+            "height": 14.812000000000001,
+            "exposure": 5.5001999999999995,
+            "links": {
+              "R42.2->U10": 2.9014187994841425,
+              "C33.1->U10": 1.9360000103305781,
+              "R28.1->U10": 4.238645078323968,
+              "R27.2->U10": 2.524304581463973,
+              "R27.1->U10": 4.745304375906777,
+              "C36.1->U10": 1.9189003152847723,
+              "L1.2->U10": 3.554155355355193,
+              "L1.1->U10": 3.5540371987361072,
+              "R42.1->U10": 2.1609001874218996,
+              "C34.1->U10": 2.6880569655422115,
+              "C35.1->U10": 4.377352516076356,
+              "R29.1->U10": 4.301171148652423
+            },
+            "ports": {
+              "U10.7": {
+                "x": 0.2838999999999998,
+                "y": -2.5231
+              },
+              "U10.8": {
+                "x": -0.21620000000000017,
+                "y": -2.5231
+              },
+              "R27.1": {
+                "x": 2.757,
+                "y": -6.573
+              },
+              "C36.1": {
+                "x": 0.28500000000000014,
+                "y": -4.442
+              },
+              "U10.12": {
+                "x": -0.21619999999999995,
+                "y": 0.3771
+              },
+              "U10.13": {
+                "x": 0.28390000000000004,
+                "y": 0.3771
+              },
+              "R42.1": {
+                "x": 0.28480000000000016,
+                "y": 2.5380000000000003
+              },
+              "C34.1": {
+                "x": -1.8150000000000002,
+                "y": 2.5380000000000003
+              },
+              "C35.1": {
+                "x": -4.023,
+                "y": 2.5380000000000003
+              },
+              "U10.14": {
+                "x": 0.7836000000000001,
+                "y": 0.3771
+              },
+              "R29.1": {
+                "x": 1.251,
+                "y": 4.652800000000001
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 5,
+          "pairSum": 16.25,
+          "pairMax": 4.3,
+          "crossings": 0,
+          "foreignPadHits": 0,
+          "internalIcPadHits": 0,
+          "wireLength": 33.66,
+          "hpwl": 37.64,
+          "area": 175.86,
+          "aspect": 1.25
+        },
+        "placements": [
+          {
+            "designator": "U10",
+            "x": 0.829,
+            "y": -1,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "L1",
+            "x": -3.541,
+            "y": -1,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R42",
+            "x": 1.493,
+            "y": 2.611,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C36",
+            "x": 0.527,
+            "y": -5.369,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R27",
+            "x": 2.999,
+            "y": -5.5,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C33",
+            "x": 3.912,
+            "y": -0.55,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R28",
+            "x": 5.236,
+            "y": -5.466,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C34",
+            "x": -1.573,
+            "y": 3.611,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C35",
+            "x": -3.781,
+            "y": 3.611,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R29",
+            "x": 1.493,
+            "y": 5.692,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 14576.787800000042,
+        "times": [
+          12697.6731,
+          16455.902500000084
+        ]
+      }
+    },
+    {
+      "name": "voltage_iso",
+      "micro": {
+        "name": "voltage_iso",
+        "metric": "micro",
+        "round": 0,
+        "initialMs": 109112.16860000003,
+        "pairsMs": 30022.33389999997,
+        "ms": 139134.5025,
+        "hypotheses": 8,
+        "pairHypotheses": [
+          0
+        ],
+        "legalCandidates": 13,
+        "retained": 1,
+        "selected": {
+          "hypothesis": "0",
+          "stage": "singles",
+          "quality": {
+            "score": 6045.0641891638315,
+            "electrical": 5845.957785563831,
+            "localStretch": 1033.2870823608514,
+            "wire": 36.11729581352138,
+            "maxLocal": 7.404792381289295,
+            "area": 455.77629600000006,
+            "width": 32.712,
+            "height": 13.933,
+            "exposure": 8.131099999999996,
+            "links": {
+              "R4.2->U1": 2.837700044049758,
+              "R5.1->U1": 5.329240240409509,
+              "C1.1->U1": 7.404792381289295,
+              "C3.1->U1": 3.1477288653885047,
+              "C2.1->U1": 2.6026000480288944,
+              "C6.1->U1": 3.1945373452191794,
+              "C5.1->U1": 2.3024132665531623,
+              "C8.1->U1": 3.8012099402690187,
+              "C7.1->U1": 2.78828388260593,
+              "C4.1->U1": 2.6504771287449365
+            },
+            "ports": {
+              "R1.1": {
+                "x": 15.536000000000001,
+                "y": -3.7215
+              },
+              "C3.1": {
+                "x": -14.2659,
+                "y": -4.2215
+              },
+              "U1.12": {
+                "x": -11.6633,
+                "y": -2.451
+              },
+              "C2.1": {
+                "x": -14.2659,
+                "y": -2.4505
+              },
+              "U1.11": {
+                "x": -11.6633,
+                "y": -3.721
+              },
+              "U1.10": {
+                "x": -11.6633,
+                "y": -4.9910000000000005
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 3,
+          "pairSum": 5.97,
+          "pairMax": 1.99,
+          "crossings": 0,
+          "foreignPadHits": 0,
+          "internalIcPadHits": 3,
+          "wireLength": 36.12,
+          "hpwl": 38.55,
+          "area": 455.76,
+          "aspect": 2.35
+        },
+        "placements": [
+          {
+            "designator": "U1",
+            "x": -6.5,
+            "y": -1.499,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C2",
+            "x": -14.997,
+            "y": -2.306,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C4",
+            "x": -14.997,
+            "y": -0.535,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C3",
+            "x": -14.997,
+            "y": -4.077,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R4",
+            "x": 2.532,
+            "y": -3.577,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C1",
+            "x": 6.523,
+            "y": -5.58,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R5",
+            "x": 2.532,
+            "y": -5.812,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R3",
+            "x": 6.523,
+            "y": -3.577,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R2",
+            "x": 10.514,
+            "y": -3.577,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R1",
+            "x": 14.505,
+            "y": -3.577,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C5",
+            "x": -1.806,
+            "y": 5.721,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C6",
+            "x": -3.576,
+            "y": 5.721,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C7",
+            "x": 1.997,
+            "y": -1.306,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C8",
+            "x": 1.997,
+            "y": 0.464,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 139598.98750000008,
+        "times": [
+          139134.5025,
+          140063.47250000015
+        ]
+      },
+      "geometric": {
+        "name": "voltage_iso",
+        "metric": "geometric",
+        "round": 0,
+        "initialMs": 99322.98640000002,
+        "pairsMs": 0.0020000000076834112,
+        "ms": 99322.98840000003,
+        "hypotheses": 8,
+        "pairHypotheses": [],
+        "legalCandidates": 14,
+        "retained": 1,
+        "selected": {
+          "hypothesis": "6",
+          "stage": "singles",
+          "quality": {
+            "score": 5424.14421585536,
+            "electrical": 5191.05034985536,
+            "localStretch": 436.8672186094957,
+            "wire": 37.30597799644775,
+            "maxLocal": 4.7717302574642675,
+            "area": 533.94276,
+            "width": 33.123,
+            "height": 16.12,
+            "exposure": 10.796199999999994,
+            "links": {
+              "R4.2->U1": 2.8813263508321993,
+              "R5.1->U1": 4.2385607863990815,
+              "C1.1->U1": 4.574104534223065,
+              "C3.1->U1": 4.7717302574642675,
+              "C2.1->U1": 3.2161102670772967,
+              "C6.1->U1": 2.6700478741026346,
+              "C5.1->U1": 2.2474000200231377,
+              "C8.1->U1": 3.4537945813264574,
+              "C7.1->U1": 2.650099433983563,
+              "C4.1->U1": 2.6227000305029167
+            },
+            "ports": {
+              "R1.1": {
+                "x": 15.7415,
+                "y": -3.128
+              },
+              "C3.1": {
+                "x": -15.851500000000001,
+                "y": -3.2189
+              },
+              "U1.12": {
+                "x": -11.4578,
+                "y": -1.3575000000000002
+              },
+              "C2.1": {
+                "x": -14.0805,
+                "y": -3.2189
+              },
+              "U1.11": {
+                "x": -11.4578,
+                "y": -2.6275000000000004
+              },
+              "U1.10": {
+                "x": -11.4578,
+                "y": -3.8975000000000004
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 3,
+          "pairSum": 5.97,
+          "pairMax": 1.99,
+          "crossings": 0,
+          "foreignPadHits": 0,
+          "internalIcPadHits": 3,
+          "wireLength": 37.31,
+          "hpwl": 38.75,
+          "area": 533.95,
+          "aspect": 2.05
+        },
+        "placements": [
+          {
+            "designator": "U1",
+            "x": -6.5,
+            "y": -0.499,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R4",
+            "x": 2.532,
+            "y": -3.076,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C8",
+            "x": 1.997,
+            "y": 0.964,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C6",
+            "x": 1.317,
+            "y": 3.574,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C4",
+            "x": -14.317,
+            "y": -0.737,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C2",
+            "x": -14.317,
+            "y": -3.868,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C3",
+            "x": -16.088,
+            "y": -3.868,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C1",
+            "x": -1.006,
+            "y": -7.04,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R5",
+            "x": 2.032,
+            "y": -6.189,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R3",
+            "x": 6.523,
+            "y": -3.077,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R2",
+            "x": 10.514,
+            "y": -3.077,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R1",
+            "x": 14.505,
+            "y": -3.077,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C7",
+            "x": 1.997,
+            "y": -0.807,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C5",
+            "x": -1.306,
+            "y": 6.721,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 88513.42415000004,
+        "times": [
+          99322.98840000003,
+          77703.85990000004
+        ]
+      }
+    },
+    {
+      "name": "current_iso",
+      "micro": {
+        "name": "current_iso",
+        "metric": "micro",
+        "round": 0,
+        "initialMs": 72529.65249999997,
+        "pairsMs": 66416.3957,
+        "ms": 138946.04819999996,
+        "hypotheses": 8,
+        "pairHypotheses": [
+          7,
+          6
+        ],
+        "legalCandidates": 18,
+        "retained": 3,
+        "selected": {
+          "hypothesis": "7",
+          "stage": "beam",
+          "quality": {
+            "score": 11916.853143614726,
+            "electrical": 11711.891201214727,
+            "localStretch": 493.895623134573,
+            "wire": 35.69102502475714,
+            "maxLocal": 4.817538186667544,
+            "area": 449.32326400000005,
+            "width": 26.344,
+            "height": 17.056,
+            "exposure": 12.9994,
+            "links": {
+              "C11.1->U2": 4.817538186667544,
+              "C10.1->U2": 3.2566132377057,
+              "C14.1->U2": 3.912255178282726,
+              "C13.1->U2": 2.0881000215506926,
+              "C16.1->U2": 3.492081929164893,
+              "C15.1->U2": 2.699349329005047,
+              "C12.1->U2": 2.6727000168369073,
+              "R7.2->U2": 4.582040171146472,
+              "C9.1->U2": 2.6727000168369064,
+              "R8.2->U2": 4.237056658813993,
+              "C9.2->U2": 2.6758500200870747
+            },
+            "ports": {
+              "C11.1": {
+                "x": -12.462,
+                "y": -2.5909000000000004
+              },
+              "C10.1": {
+                "x": -10.690999999999999,
+                "y": -2.5909000000000004
+              },
+              "U2.12": {
+                "x": -8.0183,
+                "y": -0.7302000000000001
+              },
+              "R6.1": {
+                "x": 11.190000000000001,
+                "y": -1.4997000000000007
+              },
+              "R7.1": {
+                "x": 8.036999999999999,
+                "y": -2.5000000000000004
+              },
+              "U2.10": {
+                "x": -8.0183,
+                "y": -3.2702
+              },
+              "U2.11": {
+                "x": -8.0183,
+                "y": -2.0002000000000004
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 3.31,
+          "pairMax": 3.31,
+          "crossings": 0,
+          "foreignPadHits": 0,
+          "internalIcPadHits": 3,
+          "wireLength": 35.69,
+          "hpwl": 40.5,
+          "area": 449.31,
+          "aspect": 1.54
+        },
+        "placements": [
+          {
+            "designator": "U2",
+            "x": -3.5,
+            "y": 0,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C13",
+            "x": 1.25,
+            "y": 7.179,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C14",
+            "x": -0.521,
+            "y": 7.179,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C9",
+            "x": 3.923,
+            "y": -2.659,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C15",
+            "x": 4.603,
+            "y": -0.189,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C12",
+            "x": -10.923,
+            "y": -0.119,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C16",
+            "x": 4.603,
+            "y": 1.582,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C10",
+            "x": -10.923,
+            "y": -3.25,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C11",
+            "x": -12.694,
+            "y": -3.25,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R7",
+            "x": 6.805,
+            "y": -2.459,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R8",
+            "x": 5.923,
+            "y": -5.342,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R6",
+            "x": 10.958,
+            "y": -4.525,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 137746.02399999992,
+        "times": [
+          138946.04819999996,
+          136545.99979999987
+        ]
+      },
+      "geometric": {
+        "name": "current_iso",
+        "metric": "geometric",
+        "round": 0,
+        "initialMs": 57305.964800000016,
+        "pairsMs": 59872.05230000004,
+        "ms": 117178.01710000006,
+        "hypotheses": 8,
+        "pairHypotheses": [
+          7,
+          6
+        ],
+        "legalCandidates": 18,
+        "retained": 1,
+        "selected": {
+          "hypothesis": "6",
+          "stage": "pairs",
+          "quality": {
+            "score": 11640.257190343953,
+            "electrical": 11432.523187093953,
+            "localStretch": 478.93942225135453,
+            "wire": 36.71987887317237,
+            "maxLocal": 4.912807153756394,
+            "area": 457.906295,
+            "width": 23.191000000000003,
+            "height": 19.744999999999997,
+            "exposure": 12.9994,
+            "links": {
+              "C11.1->U2": 4.5527965230174745,
+              "C10.1->U2": 2.8504055465845552,
+              "C14.1->U2": 2.7459241249532003,
+              "C13.1->U2": 2.0881000215506917,
+              "C16.1->U2": 4.112763572100881,
+              "C15.1->U2": 3.270494580334907,
+              "C12.1->U2": 2.8108268143021546,
+              "R7.2->U2": 2.8887000069235294,
+              "C9.1->U2": 3.503667646909449,
+              "R8.2->U2": 4.912807153756394,
+              "C9.2->U2": 3.578898088797723
+            },
+            "ports": {
+              "C11.1": {
+                "x": -10.8855,
+                "y": -0.3764000000000003
+              },
+              "C10.1": {
+                "x": -9.1145,
+                "y": -0.3764000000000003
+              },
+              "U2.12": {
+                "x": -6.441800000000001,
+                "y": 0.6143
+              },
+              "R6.1": {
+                "x": 9.613499999999998,
+                "y": -2.8442
+              },
+              "R7.1": {
+                "x": 7.947499999999999,
+                "y": -0.6555000000000002
+              },
+              "U2.10": {
+                "x": -6.441800000000001,
+                "y": -1.9257
+              },
+              "U2.11": {
+                "x": -6.441800000000001,
+                "y": -0.6557000000000002
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 1,
+          "pairSum": 2.75,
+          "pairMax": 2.75,
+          "crossings": 0,
+          "foreignPadHits": 0,
+          "internalIcPadHits": 3,
+          "wireLength": 36.72,
+          "hpwl": 40.6,
+          "area": 457.9,
+          "aspect": 1.17
+        },
+        "placements": [
+          {
+            "designator": "U2",
+            "x": -1.5,
+            "y": 1.13,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C13",
+            "x": 3.25,
+            "y": 8.309,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C14",
+            "x": 5.923,
+            "y": 5.591,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C9",
+            "x": 6.139,
+            "y": -3.512,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C15",
+            "x": 7.103,
+            "y": 1.311,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C12",
+            "x": -8.923,
+            "y": 1.881,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C16",
+            "x": 7.103,
+            "y": 3.082,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C10",
+            "x": -8.923,
+            "y": -1.25,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C11",
+            "x": -10.694,
+            "y": -1.25,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R7",
+            "x": 7.139,
+            "y": -0.829,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R8",
+            "x": 6.139,
+            "y": -7.073,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R6",
+            "x": 9.805,
+            "y": -6.084,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 111921.89595000003,
+        "times": [
+          117178.01710000006,
+          106665.77480000001
+        ]
+      }
+    },
+    {
+      "name": "adc",
+      "micro": {
+        "name": "adc",
+        "metric": "micro",
+        "round": 0,
+        "initialMs": 71123.54739999992,
+        "pairsMs": 0.0013000000035390258,
+        "ms": 71123.54869999993,
+        "hypotheses": 5,
+        "pairHypotheses": [],
+        "legalCandidates": 10,
+        "retained": 3,
+        "selected": {
+          "hypothesis": "4",
+          "stage": "singles",
+          "quality": {
+            "score": 13966.962078860877,
+            "electrical": 13750.227536710878,
+            "localStretch": 3392.730718323298,
+            "wire": 64.77335822337683,
+            "maxLocal": 7.773303609791656,
+            "area": 324.98154900000003,
+            "width": 20.109,
+            "height": 16.161,
+            "exposure": 42.428000000000004,
+            "links": {
+              "C20.1->U4": 2.266663367154462,
+              "C22.1->U4": 3.934334253720698,
+              "C21.1->U4": 2.9603981151189793,
+              "R16.2->U4": 6.28749322146752,
+              "R17.2->U4": 3.949263983326514,
+              "R10.2->U4": 4.303662371748043,
+              "R11.1->U4": 4.38612482836501,
+              "C18.1->U4": 6.367805463423014,
+              "R12.2->U4": 5.645545306699788,
+              "R13.1->U4": 7.515302110361233,
+              "C18.2->U4": 7.773303609791656,
+              "C19.2->U4": 2.6390785304723314,
+              "R15.2->U4": 5.1958137851543515,
+              "C19.1->U4": 2.539595511100144,
+              "R14.2->U4": 3.7992618612040943,
+              "R17.1->U4": 2.9112121255586993,
+              "R16.1->U4": 5.013277479852875,
+              "C23.1->U4": 4.748195973209194
+            },
+            "ports": {
+              "U4.1": {
+                "x": -1.6015000000000006,
+                "y": -2.5113999999999996
+              },
+              "U4.20": {
+                "x": 4.140499999999999,
+                "y": -2.5114000000000005
+              },
+              "C20.1": {
+                "x": -2.6016000000000004,
+                "y": -4.5455000000000005
+              },
+              "C22.1": {
+                "x": -2.6016000000000004,
+                "y": -6.3165
+              },
+              "C21.1": {
+                "x": 0.5494999999999999,
+                "y": -4.545400000000001
+              },
+              "R16.2": {
+                "x": 9.1115,
+                "y": 1.3385000000000002
+              },
+              "R17.2": {
+                "x": 6.8745,
+                "y": 0.3385
+              },
+              "U4.11": {
+                "x": 4.1405,
+                "y": 3.3387
+              },
+              "R17.1": {
+                "x": 6.8745,
+                "y": 2.3385000000000002
+              },
+              "U4.12": {
+                "x": 4.1405,
+                "y": 2.6887999999999996
+              },
+              "R16.1": {
+                "x": 9.1115,
+                "y": 3.3385000000000002
+              },
+              "U4.13": {
+                "x": 4.1405,
+                "y": 2.0387999999999993
+              },
+              "U4.14": {
+                "x": 4.1405,
+                "y": 1.3887999999999996
+              },
+              "U4.15": {
+                "x": 4.1405,
+                "y": 0.7387999999999995
+              },
+              "U4.16": {
+                "x": 4.1405,
+                "y": 0.08879999999999952
+              },
+              "U4.17": {
+                "x": 4.1405,
+                "y": -0.5614000000000005
+              },
+              "R10.1": {
+                "x": -7.4805,
+                "y": -3.0755
+              },
+              "R12.1": {
+                "x": -4.7305,
+                "y": -7.2605
+              },
+              "R14.1": {
+                "x": -6.476500000000001,
+                "y": 3.2225
+              },
+              "R15.1": {
+                "x": -2.1015,
+                "y": 7.2605
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 3,
+          "pairSum": 12.67,
+          "pairMax": 5.01,
+          "crossings": 4,
+          "foreignPadHits": 4,
+          "internalIcPadHits": 0,
+          "wireLength": 64.77,
+          "hpwl": 68.52,
+          "area": 324.98,
+          "aspect": 1.24
+        },
+        "placements": [
+          {
+            "designator": "U4",
+            "x": 1.5,
+            "y": 0,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C19",
+            "x": -3.746,
+            "y": 0.3,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R17",
+            "x": 7.105,
+            "y": 1.099,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C23",
+            "x": 9.109,
+            "y": -2.462,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R11",
+            "x": -5.75,
+            "y": -0.201,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C18",
+            "x": -8.434,
+            "y": -1.201,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R16",
+            "x": 9.342,
+            "y": 2.099,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R10",
+            "x": -6.25,
+            "y": -3.315,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R14",
+            "x": -5.246,
+            "y": 2.983,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C20",
+            "x": -1.671,
+            "y": -4.785,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C21",
+            "x": 0.78,
+            "y": -5.485,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C22",
+            "x": -1.671,
+            "y": -6.556,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R13",
+            "x": -7.236,
+            "y": -6.5,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R12",
+            "x": -4.5,
+            "y": -6.5,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R15",
+            "x": -1.871,
+            "y": 6.021,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 89448.11314999999,
+        "times": [
+          71123.54869999993,
+          107772.67760000005
+        ]
+      },
+      "geometric": {
+        "name": "adc",
+        "metric": "geometric",
+        "round": 0,
+        "initialMs": 85644.34250000003,
+        "pairsMs": 0.0062000000616535544,
+        "ms": 85644.34870000009,
+        "hypotheses": 5,
+        "pairHypotheses": [],
+        "legalCandidates": 10,
+        "retained": 1,
+        "selected": {
+          "hypothesis": "1",
+          "stage": "beam",
+          "quality": {
+            "score": 13928.103532499792,
+            "electrical": 13729.901797499791,
+            "localStretch": 1750.9602802830163,
+            "wire": 68.46966794906754,
+            "maxLocal": 5.965889372926722,
+            "area": 289.71209999999996,
+            "width": 15.7,
+            "height": 18.453,
+            "exposure": 39.86299999999999,
+            "links": {
+              "C20.1->U4": 3.679992663036164,
+              "C22.1->U4": 4.284407548308167,
+              "C21.1->U4": 4.407315330220881,
+              "R16.2->U4": 2.7783428532130454,
+              "R17.2->U4": 5.257989597745512,
+              "R10.2->U4": 5.437560906325556,
+              "R11.1->U4": 3.6931000000000003,
+              "C18.1->U4": 2.569245998342705,
+              "R12.2->U4": 5.115389761298742,
+              "R13.1->U4": 5.965889372926722,
+              "C18.2->U4": 3.8499520789225414,
+              "C19.2->U4": 2.437694708120769,
+              "R15.2->U4": 4.256285527311344,
+              "C19.1->U4": 2.3834734401708784,
+              "R14.2->U4": 5.284843544514823,
+              "R17.1->U4": 2.807346832865508,
+              "R16.1->U4": 3.8419928539756545,
+              "C23.1->U4": 4.931742677796561
+            },
+            "ports": {
+              "U4.1": {
+                "x": -2.7428999999999997,
+                "y": 2.150500000000001
+              },
+              "U4.20": {
+                "x": -2.7429000000000006,
+                "y": -3.591499999999999
+              },
+              "C20.1": {
+                "x": -5.5539,
+                "y": 4.525500000000001
+              },
+              "C22.1": {
+                "x": -3.8230999999999997,
+                "y": 6.296500000000001
+              },
+              "C21.1": {
+                "x": -7.14,
+                "y": 1.8506000000000005
+              },
+              "R16.2": {
+                "x": -2.243,
+                "y": -6.3245
+              },
+              "R17.2": {
+                "x": 1.749,
+                "y": -6.3245
+              },
+              "U4.11": {
+                "x": 3.1071999999999997,
+                "y": -3.5915
+              },
+              "R17.1": {
+                "x": 3.749,
+                "y": -6.3245
+              },
+              "U4.12": {
+                "x": 2.4572999999999996,
+                "y": -3.5915
+              },
+              "R16.1": {
+                "x": -0.24299999999999988,
+                "y": -6.3245
+              },
+              "U4.13": {
+                "x": 1.8072999999999995,
+                "y": -3.5914999999999995
+              },
+              "U4.14": {
+                "x": 1.1572999999999996,
+                "y": -3.5914999999999995
+              },
+              "U4.15": {
+                "x": 0.5072999999999996,
+                "y": -3.5914999999999995
+              },
+              "U4.16": {
+                "x": -0.14270000000000035,
+                "y": -3.5914999999999995
+              },
+              "U4.17": {
+                "x": -0.7929000000000003,
+                "y": -3.5914999999999995
+              },
+              "R10.1": {
+                "x": -5.136,
+                "y": -3.8404999999999996
+              },
+              "R12.1": {
+                "x": 2.045,
+                "y": 8.4065
+              },
+              "R14.1": {
+                "x": 7.03,
+                "y": 4.884500000000001
+              },
+              "R15.1": {
+                "x": -0.19199999999999995,
+                "y": 8.4065
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 3,
+          "pairSum": 11.58,
+          "pairMax": 4.93,
+          "crossings": 8,
+          "foreignPadHits": 6,
+          "internalIcPadHits": 0,
+          "wireLength": 68.47,
+          "hpwl": 70.85,
+          "area": 289.72,
+          "aspect": 1.18
+        },
+        "placements": [
+          {
+            "designator": "U4",
+            "x": 0,
+            "y": -0.5,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C19",
+            "x": 0,
+            "y": 4.746,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C18",
+            "x": -3.131,
+            "y": 4.746,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R16",
+            "x": -1.251,
+            "y": -6.104,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C23",
+            "x": -0.493,
+            "y": -8.296,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R11",
+            "x": -5.144,
+            "y": 1.371,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C20",
+            "x": -6.262,
+            "y": 4.746,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R17",
+            "x": 2.741,
+            "y": -6.104,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C21",
+            "x": -7.148,
+            "y": 1.371,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C22",
+            "x": -3.131,
+            "y": 6.517,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R15",
+            "x": -0.2,
+            "y": 7.627,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R12",
+            "x": 2.037,
+            "y": 7.627,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R13",
+            "x": 5.144,
+            "y": 1.871,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R14",
+            "x": 6.022,
+            "y": 5.105,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R10",
+            "x": -5.144,
+            "y": -2.62,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 95981.41015000001,
+        "times": [
+          85644.34870000009,
+          106318.47159999993
+        ]
+      }
+    },
+    {
+      "name": "low_charge_pos",
+      "micro": {
+        "name": "low_charge_pos",
+        "metric": "micro",
+        "round": 0,
+        "initialMs": 12335.781699999934,
+        "pairsMs": 13210.534600000014,
+        "ms": 25546.316299999948,
+        "hypotheses": 2,
+        "pairHypotheses": [
+          0
+        ],
+        "legalCandidates": 5,
+        "retained": 3,
+        "selected": {
+          "hypothesis": "0",
+          "stage": "pairs",
+          "quality": {
+            "score": 1691.7477568776255,
+            "electrical": 1606.5641298276255,
+            "localStretch": 1105.9360431079099,
+            "wire": 29.001758038684066,
+            "maxLocal": 6.249945200559761,
+            "area": 165.912363,
+            "width": 19.549,
+            "height": 8.487,
+            "exposure": 6.548150000000001,
+            "links": {
+              "C52.1->U15": 1.9583647310958188,
+              "C52.1->U16": 5.140177858790492,
+              "C51.1->U15": 2.322078211430442,
+              "R38.1->U15": 6.21349414178528,
+              "C53.1->U16": 1.5928115550811397,
+              "Q2.3->U16": 2.7340999999999998,
+              "TH2.1->U16": 4.425728329891025,
+              "R48.1->U16": 6.249945200559761,
+              "C61.1->U16": 3.1309481056063513,
+              "R39.1->U16": 2.767209245792591,
+              "R40.1->U16": 1.7565751022942344
+            },
+            "ports": {
+              "C51.1": {
+                "x": 3.9094999999999995,
+                "y": 1.2795
+              },
+              "R38.1": {
+                "x": 7.7924999999999995,
+                "y": 3.0658000000000003
+              },
+              "U15.1": {
+                "x": 2.9596,
+                "y": -0.8393999999999997
+              },
+              "C53.1": {
+                "x": -5.0884,
+                "y": -1.2425
+              },
+              "U16.A1": {
+                "x": -3.6576000000000004,
+                "y": -0.5425999999999999
+              },
+              "U16.C1": {
+                "x": -2.8575000000000004,
+                "y": -0.5426
+              },
+              "R40.1": {
+                "x": -1.1735000000000002,
+                "y": -1.0422999999999998
+              },
+              "R40.2": {
+                "x": -1.1735000000000002,
+                "y": -2.9746999999999995
+              },
+              "R43.1": {
+                "x": 0.7904999999999999,
+                "y": 3.1417
+              },
+              "Q2.1": {
+                "x": -1.2575,
+                "y": 3.1414999999999997
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 4,
+          "pairSum": 8.16,
+          "pairMax": 2.77,
+          "crossings": 1,
+          "foreignPadHits": 0,
+          "internalIcPadHits": 0,
+          "wireLength": 30.2,
+          "hpwl": 36.45,
+          "area": 165.91,
+          "aspect": 2.3
+        },
+        "placements": [
+          {
+            "designator": "U16",
+            "x": -3.5,
+            "y": -0.8,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R39",
+            "x": -6.031,
+            "y": -3.305,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R40",
+            "x": -1.416,
+            "y": -2.066,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C53",
+            "x": -6.031,
+            "y": -1.3,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C52",
+            "x": 0.807,
+            "y": -2.065,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "Q2",
+            "x": -2.5,
+            "y": 2.134,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "U15",
+            "x": 3.667,
+            "y": -2.197,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C51",
+            "x": 3.667,
+            "y": 2.222,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R38",
+            "x": 7.55,
+            "y": -0.058,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R48",
+            "x": -9.075,
+            "y": 1.225,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "TH2",
+            "x": -7.097,
+            "y": 1.225,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C61",
+            "x": -5.351,
+            "y": 1.225,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R43",
+            "x": 0.548,
+            "y": 2.118,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 25606.22485,
+        "times": [
+          25546.316299999948,
+          25666.13340000005
+        ]
+      },
+      "geometric": {
+        "name": "low_charge_pos",
+        "metric": "geometric",
+        "round": 0,
+        "initialMs": 9800.27390000003,
+        "pairsMs": 0.000699999975040555,
+        "ms": 9800.274600000004,
+        "hypotheses": 2,
+        "pairHypotheses": [],
+        "legalCandidates": 4,
+        "retained": 1,
+        "selected": {
+          "hypothesis": "1",
+          "stage": "singles",
+          "quality": {
+            "score": 1420.8438997526077,
+            "electrical": 1339.7556022526078,
+            "localStretch": 1038.1634847057742,
+            "wire": 27.621021186745878,
+            "maxLocal": 6.544684240664327,
+            "area": 157.73285,
+            "width": 9.361,
+            "height": 16.85,
+            "exposure": 6.388150000000003,
+            "links": {
+              "C52.1->U15": 1.8801000026594332,
+              "C52.1->U16": 2.2666803082922833,
+              "C51.1->U15": 2.1430210498266224,
+              "R38.1->U15": 5.369250119895701,
+              "C53.1->U16": 1.496712213486614,
+              "Q2.3->U16": 5.110623328910084,
+              "TH2.1->U16": 4.7080675536784735,
+              "R48.1->U16": 6.544684240664327,
+              "C61.1->U16": 3.4673310225589944,
+              "R39.1->U16": 1.9743279388186756,
+              "R40.1->U16": 1.7556164415953728
+            },
+            "ports": {
+              "C51.1": {
+                "x": 2.6805000000000003,
+                "y": 3.181
+              },
+              "R38.1": {
+                "x": 2.6808,
+                "y": 6.443
+              },
+              "U15.1": {
+                "x": 2.1806,
+                "y": 1.0971000000000002
+              },
+              "C53.1": {
+                "x": -1.6895000000000002,
+                "y": 0.8949
+              },
+              "U16.A1": {
+                "x": -1.3636,
+                "y": -0.5659
+              },
+              "U16.C1": {
+                "x": -1.3636,
+                "y": -1.366
+              },
+              "R40.1": {
+                "x": -1.8633,
+                "y": -3.049
+              },
+              "R40.2": {
+                "x": -3.7957,
+                "y": -3.049
+              },
+              "R43.1": {
+                "x": 3.5606999999999998,
+                "y": -7.483
+              },
+              "Q2.1": {
+                "x": 4.060499999999999,
+                "y": -5.436
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 4,
+          "pairSum": 7.33,
+          "pairMax": 2.11,
+          "crossings": 0,
+          "foreignPadHits": 0,
+          "internalIcPadHits": 0,
+          "wireLength": 28.74,
+          "hpwl": 31.71,
+          "area": 157.73,
+          "aspect": 1.8
+        },
+        "placements": [
+          {
+            "designator": "U16",
+            "x": -1.674,
+            "y": -1.03,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R39",
+            "x": -3.848,
+            "y": 0,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C53",
+            "x": -1.8,
+            "y": 1.531,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R40",
+            "x": -2.94,
+            "y": -3.113,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C52",
+            "x": 0.19,
+            "y": -0.567,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "U15",
+            "x": 3.02,
+            "y": -0.267,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C51",
+            "x": 1.57,
+            "y": 3.117,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C61",
+            "x": 0.19,
+            "y": -4.772,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "Q2",
+            "x": 3,
+            "y": -4.5,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R38",
+            "x": -0.496,
+            "y": 6.379,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R43",
+            "x": 2.484,
+            "y": -7.547,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "TH2",
+            "x": -2.281,
+            "y": -5.472,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R48",
+            "x": -1.72,
+            "y": -7.455,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 9571.380849999958,
+        "times": [
+          9800.274600000004,
+          9342.487099999911
+        ]
+      }
+    },
+    {
+      "name": "low_charge_neg",
+      "micro": {
+        "name": "low_charge_neg",
+        "metric": "micro",
+        "round": 0,
+        "initialMs": 15623.533999999985,
+        "pairsMs": 12897.859799999977,
+        "ms": 28521.39379999996,
+        "hypotheses": 2,
+        "pairHypotheses": [
+          0
+        ],
+        "legalCandidates": 5,
+        "retained": 3,
+        "selected": {
+          "hypothesis": "0",
+          "stage": "pairs",
+          "quality": {
+            "score": 1691.7477568776255,
+            "electrical": 1606.5641298276255,
+            "localStretch": 1105.9360431079099,
+            "wire": 29.001758038684066,
+            "maxLocal": 6.249945200559761,
+            "area": 165.912363,
+            "width": 19.549,
+            "height": 8.487,
+            "exposure": 6.548150000000001,
+            "links": {
+              "C59.1->U19": 1.9583647310958188,
+              "C59.1->U20": 5.140177858790492,
+              "C58.1->U19": 2.322078211430442,
+              "R44.1->U19": 6.21349414178528,
+              "C60.1->U20": 1.5928115550811397,
+              "Q3.3->U20": 2.7340999999999998,
+              "TH3.1->U20": 4.425728329891025,
+              "R49.1->U20": 6.249945200559761,
+              "C62.1->U20": 3.1309481056063513,
+              "R45.1->U20": 2.767209245792591,
+              "R46.1->U20": 1.7565751022942344
+            },
+            "ports": {
+              "C58.1": {
+                "x": 3.9094999999999995,
+                "y": 1.2795
+              },
+              "R44.1": {
+                "x": 7.7924999999999995,
+                "y": 3.0658000000000003
+              },
+              "U19.1": {
+                "x": 2.9596,
+                "y": -0.8393999999999997
+              },
+              "C60.1": {
+                "x": -5.0884,
+                "y": -1.2425
+              },
+              "U20.A1": {
+                "x": -3.6576000000000004,
+                "y": -0.5425999999999999
+              },
+              "U20.C1": {
+                "x": -2.8575000000000004,
+                "y": -0.5426
+              },
+              "R46.1": {
+                "x": -1.1735000000000002,
+                "y": -1.0422999999999998
+              },
+              "R46.2": {
+                "x": -1.1735000000000002,
+                "y": -2.9746999999999995
+              },
+              "R47.1": {
+                "x": 0.7904999999999999,
+                "y": 3.1417
+              },
+              "Q3.1": {
+                "x": -1.2575,
+                "y": 3.1414999999999997
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 4,
+          "pairSum": 8.16,
+          "pairMax": 2.77,
+          "crossings": 1,
+          "foreignPadHits": 0,
+          "internalIcPadHits": 0,
+          "wireLength": 30.2,
+          "hpwl": 36.45,
+          "area": 165.91,
+          "aspect": 2.3
+        },
+        "placements": [
+          {
+            "designator": "U20",
+            "x": -3.5,
+            "y": -0.8,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R45",
+            "x": -6.031,
+            "y": -3.305,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R46",
+            "x": -1.416,
+            "y": -2.066,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C60",
+            "x": -6.031,
+            "y": -1.3,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C59",
+            "x": 0.807,
+            "y": -2.065,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "Q3",
+            "x": -2.5,
+            "y": 2.134,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "U19",
+            "x": 3.667,
+            "y": -2.197,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C58",
+            "x": 3.667,
+            "y": 2.222,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R44",
+            "x": 7.55,
+            "y": -0.058,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R49",
+            "x": -9.075,
+            "y": 1.225,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "TH3",
+            "x": -7.097,
+            "y": 1.225,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C62",
+            "x": -5.351,
+            "y": 1.225,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R47",
+            "x": 0.548,
+            "y": 2.118,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 27038.41189999995,
+        "times": [
+          28521.39379999996,
+          25555.429999999935
+        ]
+      },
+      "geometric": {
+        "name": "low_charge_neg",
+        "metric": "geometric",
+        "round": 0,
+        "initialMs": 9963.088600000017,
+        "pairsMs": 0.000800000037997961,
+        "ms": 9963.089400000055,
+        "hypotheses": 2,
+        "pairHypotheses": [],
+        "legalCandidates": 4,
+        "retained": 1,
+        "selected": {
+          "hypothesis": "1",
+          "stage": "singles",
+          "quality": {
+            "score": 1420.8438997526077,
+            "electrical": 1339.7556022526078,
+            "localStretch": 1038.1634847057742,
+            "wire": 27.621021186745878,
+            "maxLocal": 6.544684240664327,
+            "area": 157.73285,
+            "width": 9.361,
+            "height": 16.85,
+            "exposure": 6.388150000000003,
+            "links": {
+              "C59.1->U19": 1.8801000026594332,
+              "C59.1->U20": 2.2666803082922833,
+              "C58.1->U19": 2.1430210498266224,
+              "R44.1->U19": 5.369250119895701,
+              "C60.1->U20": 1.496712213486614,
+              "Q3.3->U20": 5.110623328910084,
+              "TH3.1->U20": 4.7080675536784735,
+              "R49.1->U20": 6.544684240664327,
+              "C62.1->U20": 3.4673310225589944,
+              "R45.1->U20": 1.9743279388186756,
+              "R46.1->U20": 1.7556164415953728
+            },
+            "ports": {
+              "C58.1": {
+                "x": 2.6805000000000003,
+                "y": 3.181
+              },
+              "R44.1": {
+                "x": 2.6808,
+                "y": 6.443
+              },
+              "U19.1": {
+                "x": 2.1806,
+                "y": 1.0971000000000002
+              },
+              "C60.1": {
+                "x": -1.6895000000000002,
+                "y": 0.8949
+              },
+              "U20.A1": {
+                "x": -1.3636,
+                "y": -0.5659
+              },
+              "U20.C1": {
+                "x": -1.3636,
+                "y": -1.366
+              },
+              "R46.1": {
+                "x": -1.8633,
+                "y": -3.049
+              },
+              "R46.2": {
+                "x": -3.7957,
+                "y": -3.049
+              },
+              "R47.1": {
+                "x": 3.5606999999999998,
+                "y": -7.483
+              },
+              "Q3.1": {
+                "x": 4.060499999999999,
+                "y": -5.436
+              }
+            }
+          },
+          "legal": true,
+          "nativeHard": 0
+        },
+        "metrics": {
+          "pairCount": 4,
+          "pairSum": 7.33,
+          "pairMax": 2.11,
+          "crossings": 0,
+          "foreignPadHits": 0,
+          "internalIcPadHits": 0,
+          "wireLength": 28.74,
+          "hpwl": 31.71,
+          "area": 157.73,
+          "aspect": 1.8
+        },
+        "placements": [
+          {
+            "designator": "U20",
+            "x": -1.674,
+            "y": -1.03,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R45",
+            "x": -3.848,
+            "y": 0,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C60",
+            "x": -1.8,
+            "y": 1.531,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R46",
+            "x": -2.94,
+            "y": -3.113,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C59",
+            "x": 0.19,
+            "y": -0.567,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "U19",
+            "x": 3.02,
+            "y": -0.267,
+            "rotate": 270,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C58",
+            "x": 1.57,
+            "y": 3.117,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "C62",
+            "x": 0.19,
+            "y": -4.772,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "Q3",
+            "x": 3,
+            "y": -4.5,
+            "rotate": 90,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R44",
+            "x": -0.496,
+            "y": 6.379,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R47",
+            "x": 2.484,
+            "y": -7.547,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "TH3",
+            "x": -2.281,
+            "y": -5.472,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          },
+          {
+            "designator": "R49",
+            "x": -1.72,
+            "y": -7.455,
+            "rotate": 180,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "medianMs": 9656.105949999997,
+        "times": [
+          9963.089400000055,
+          9349.12249999994
+        ]
+      }
+    }
+  ]
+}
