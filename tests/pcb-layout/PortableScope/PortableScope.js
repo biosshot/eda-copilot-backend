@@ -40,9 +40,9 @@ block("adc_digital_supply", ["C7", "C8"], "analog", {
 block("adc_clock", ["U2", "C11", "C12", "C13", "C14", "R3", "R4"], "analog");
 component("U1").role("main_ic");
 component("U2").role("main_ic");
-for (const analog of ["R1", "R2", "C9", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C10", "C11", "C12", "C13", "C14", "R3", "R4", "R60", "R61", "R62", "R63", "R64", "C95", "C96", "C97", "C98", "C122", "R73", "R74", "C100", "FB1", "FB2", "FB3", "C101", "C102", "C103", "C104", "C105", "C106", "C107", "C108", "C109"]) component(analog).top();
-component("U1").top();
-component("U2").top();
+for (const analog of ["R1", "R2", "C9", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C10", "C11", "C12", "C13", "C14", "R3", "R4", "R60", "R61", "R62", "R63", "R64", "C95", "C96", "C97", "C98", "C122", "R73", "R74", "C100", "FB1", "FB2", "FB3", "C101", "C102", "C103", "C104", "C105", "C106", "C107", "C108", "C109"]) component(analog).bottom();
+component("U1").bottom();
+component("U2").bottom();
 veryNear(pin("C9", "1"), pin("U1", "13"), "high");
 signalPath("sample_clock_p", [[pin("U2", "4"), pin("C11", "1")], [pin("C11", "2"), pin("U1", "10")]], { priority: "high" });
 signalPath("sample_clock_m", [[pin("U2", "5"), pin("C12", "1")], [pin("C12", "2"), pin("U1", "11")]], { priority: "high" });
@@ -65,8 +65,8 @@ block("afe_negative_rail", ["FB2", "C103", "C104", "C108"], "power", {
 block("afe_3v3_rail", ["FB3", "C105", "C106", "C109"], "power", {
   placement: "satellite", attachTo: "afe_fda", anchor: pin("U27", "5")
 });
-for (const ic of ["U20", "U21", "U22", "U23", "U24", "U25", "U26", "U27"]) component(ic).role("main_ic").top();
-for (const passive of ["R66", "C99", "R65", "R67", "R68", "R69", "R70", "R71", "R72"]) component(passive).top();
+for (const ic of ["U20", "U21", "U22", "U23", "U24", "U25", "U26", "U27"]) component(ic).role("main_ic").bottom();
+for (const passive of ["R66", "C99", "R65", "R67", "R68", "R69", "R70", "R71", "R72"]) component(passive).bottom();
 near(comp("RF1"), comp("R60"), "high");
 near(comp("R61"), comp("U21"), "high");
 signalPath("direct_range_to_adc", [
