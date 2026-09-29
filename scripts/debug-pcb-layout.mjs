@@ -75,7 +75,7 @@ async function capture(fixture) {
         windowsHide: true,
         stdio: ['ignore', 'pipe', 'pipe'],
     });
-    for (const stream of [child.stdout, child.stderr]) stream.on('data', chunk => { log.write(chunk); process.stderr.write(chunk); });
+    for (const stream of [child.stdout, child.stderr]) stream.on('data', chunk => { log.write(chunk); });
     const code = await new Promise((done, reject) => { child.on('error', reject); child.on('close', done); });
     await new Promise(done => log.end(done));
     const rows = captures(output);
@@ -113,7 +113,9 @@ async function capture(fixture) {
         'Batch wall time belongs to the complete batch and must not be summed across its hypotheses.',
         'Compare result quality and write the experiment verdict in `docs/experimental/pcb/`.', '',
     ].join('\n'));
-    console.log(output);
+    console.log(`PCB capture ${fixture}: ${summary.status} in ${(summary.wallMs / 1000).toFixed(1)} s; ${rows.length} native requests`);
+    console.log(`Summary: ${join(output, 'summary.md')}`);
+    if (code !== 0) console.error(`Details: ${join(output, 'run.log')}`);
     if (code !== 0) process.exitCode = code || 1;
 }
 
