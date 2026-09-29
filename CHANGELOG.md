@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased - 2026-09-29
+
+### PCB layout
+
+- Use unified block checkpoint selection across beam, single moves, pair refinement, and role hypotheses, including blocks larger than twelve primitives. Retain only comparable legal variants and report selection diagnostics.
+- Add fixed-connector-family placement in board context, adaptive block spacing, and conservative soft alignment/orientation proposals with a fallback to ordinary packing.
+- Switch block scoring to geometric evaluation, retain route-aware checks at later board stages, and add incremental scoring and caches for stable block interactions, pad geometry, and access penalties.
+- Batch independent block hypotheses, combine suspicious-role trials, and prune duplicate or provably dominated candidates. Add profiling for candidate generation, search stages, and concurrency. These changes do not establish that large-board runtime is acceptable; continue measuring full-board wall time.
+- Respect board default layers, per-side silk and pad geometry, and fixed component origins throughout placement, scoring, rendering, and refinement. Preserve pad sides in block and board native contracts.
+- Add PortableScope as a PCB placement fixture, restore signal-path guides and constraint-region diagnostics in regression artifacts, and save Telemetry and ICM20948 V2 comparison snapshots.
+
+### Developer workflow
+
+- Add opt-in PCB layout capture and replay for exact native block and board inputs, outputs, stage timings, and Rust profiles; save source fixtures, visual previews, and assembly JSON in timestamped `debugging/pcb-layout/` runs.
+- Consolidate generated results under `debugging/`, including circuit layout galleries and pattern tests. Add a repository-wide `AGENTS.md` with experiment-record and performance-check requirements; remove retired placement experiment runners.
+
 ## 0.3.5 - 2026-09-26
 
 - Hide console windows on Windows when starting PCB layout and subtree placement process workers.
