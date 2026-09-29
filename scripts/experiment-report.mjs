@@ -1,6 +1,6 @@
 import {readFileSync,writeFileSync,mkdirSync,readdirSync,existsSync,copyFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-const dest='docs/experiments/block-placement-2026-09-26'; mkdirSync(dest,{recursive:true});
+const dest='docs/experimental/pcb/block-placement-2026-09-26'; mkdirSync(dest,{recursive:true});
 const round=n=>Math.round(n*100)/100;
 const blocks=['ordinary-experiments','v2-experiments','ablation-experiments'].map(name=>{
  const data=JSON.parse(readFileSync(`debugging/${name}.json`));

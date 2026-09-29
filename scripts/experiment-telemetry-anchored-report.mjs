@@ -6,8 +6,8 @@ import {componentBox,unionBoxes,boxGap,boardOutlinePolygon,getPadWorld} from '..
 import {createFixedPlacement} from '../src/pcb-layout/pcb-auto-place/fixed.ts';
 import {placementMetrics} from './experiment-placement-metrics.mjs';
 import {boardSpacingPolicy} from '../src/pcb-layout/pcb-auto-place-v2/board-spacing.ts';
-const dir='docs/experiments/telemetry-anchored-2026-09-27';
-const input=JSON.parse(readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json'));
+const dir='docs/experimental/pcb/telemetry-anchored-2026-09-27';
+const input=JSON.parse(readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json'));
 const names=new Set(['J5','R30','R31','F1','C41']);
 const load=name=>JSON.parse(existsSync(`${dir}/${name}.json`)?readFileSync(`${dir}/${name}.json`):gunzipSync(readFileSync(`${dir}/${name}.json.gz`)));
 const results=['before','after'].map(tag=>({tag,...load(tag==='after'&&(existsSync(`${dir}/after-final.json`)||existsSync(`${dir}/after-final.json.gz`))?'after-final':tag)}));
@@ -62,7 +62,7 @@ const control=existsSync(`${dir}/usb-control.json`)?JSON.parse(readFileSync(`${d
 alternatives.forEach((p,i)=>writeFileSync(`${dir}/usb-variant-${i+1}.svg`,usbSvg(p.placements)));
 writeFileSync(`${dir}/summary.json`,JSON.stringify({spacing:boardSpacingPolicy(input),results:summary,usbVariants:alternatives.length,
     control:control?{ok:control.report.ok,validChange:control.validChange,metrics:control.metrics}:undefined,
-    inputSha256:createHash('sha256').update(readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json')).digest('hex'),
+    inputSha256:createHash('sha256').update(readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json')).digest('hex'),
     nativeSha256:createHash('sha256').update(readFileSync('native/pcb-board-packer/pcb-board-packer.win32-x64-msvc.node')).digest('hex')},null,2));
 for(const name of ['before','after','after-final'])if(existsSync(`${dir}/${name}.json`))
     writeFileSync(`${dir}/${name}.json.gz`,gzipSync(readFileSync(`${dir}/${name}.json`)));

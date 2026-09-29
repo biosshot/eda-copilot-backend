@@ -12,10 +12,10 @@ import {placementMetrics} from './experiment-placement-metrics.mjs';
 
 // Frozen native inputs isolate the search metric from child solving, board
 // packing, native post-refine, and JS/native result-cache hits.
-const root='docs/experiments/placement-performance-2026-09-28/Telemetry';
+const root='docs/experimental/pcb/placement-performance-2026-09-28/Telemetry';
 const source=`${root}/staged-final`;
 const out=`${root}/isolated-block-metric`;mkdirSync(out,{recursive:true});
-const inputBytes=readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json');
+const inputBytes=readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json');
 const input=JSON.parse(inputBytes),clearance=createClearanceResolver(input);
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const addon=loadNativeBoardPacker();

@@ -15,12 +15,12 @@ import {createPlacementReport} from '../src/pcb-layout/pcb-auto-place/placement-
 import {createPcbLayout} from '../src/pcb-layout/pcb-auto-place/layout.ts';
 import {createBoardAssemble} from '../src/pcb-layout/board-assemble.ts';
 import {placementMetrics} from './experiment-placement-metrics.mjs';
-const dir='docs/experiments/telemetry-anchored-2026-09-27';
+const dir='docs/experimental/pcb/telemetry-anchored-2026-09-27';
 const source=process.argv[2] ?? 'after', tag=process.argv[3] ?? 'after-final';
 const outputDir=process.argv[4] ?? dir;
 mkdirSync(outputDir,{recursive:true});
 const raw=existsSync(`${dir}/${source}.json`)?readFileSync(`${dir}/${source}.json`):gunzipSync(readFileSync(`${dir}/${source}.json.gz`)), prior=JSON.parse(raw);
-const input=JSON.parse(readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json'));
+const input=JSON.parse(readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json'));
 const graph=buildPlacementGraph(input), tree=prior.stages.find(s=>s.name==='01-v2-tree').data;
 const childPrimitives=graph.root.children.filter(n=>n.kind!=='pad').map(n=>{
     const p=tree.primitives.find(p=>p.sourceNodeId===n.id);

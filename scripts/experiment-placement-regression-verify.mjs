@@ -2,13 +2,13 @@ import {readFileSync,existsSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {gunzipSync} from 'node:zlib';
 import {BoardAssembleSchema} from '../src/types/pcb/board-assemble.ts';
-const dir=resolve('docs/experiments/placement-regression-2026-09-28');
+const dir=resolve('docs/experimental/pcb/placement-regression-2026-09-28');
 const data=JSON.parse(readFileSync(`${dir}/summary.json`));
 const errors=[];
 for(const board of data.boards){
     if(board.error){errors.push(`${board.name}: ${board.error}`);continue;}
     if(board.summaryBefore.inputSha256!==board.summaryAfter.inputSha256)errors.push(`${board.name}: different inputs`);
-    const input=JSON.parse(readFileSync(`docs/experiments/global-placement-2026-09-27/${board.name}/input.json`));
+    const input=JSON.parse(readFileSync(`docs/experimental/pcb/global-placement-2026-09-27/${board.name}/input.json`));
     const expectedAssembly=new Set(input.components.filter(c=>!(c.pcb.fixedPlacement||c.pcb.edgeMount||c.pcb.edgePlace)).map(c=>c.designator));
     for(const tag of ['before','after']){
         const paths=[`${board.name}/${tag}/board.svg`,`${board.name}/${tag}/assembly.json`,`${board.name}/${tag}/result.json.gz`,

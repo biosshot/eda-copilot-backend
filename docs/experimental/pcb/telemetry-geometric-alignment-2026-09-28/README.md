@@ -37,7 +37,7 @@
 
 ```powershell
 npm run native:build
-node --import tsx scripts/experiment-placement-regression-run.mjs docs/experiments/global-placement-2026-09-27/Telemetry/input.json docs/experiments/telemetry-geometric-alignment-2026-09-28/after/Telemetry
-node --import tsx scripts/experiment-placement-compare-report.mjs docs/experiments/global-placement-2026-09-27/Telemetry/input.json docs/experiments/full-placement-2026-09-28/Telemetry docs/experiments/telemetry-geometric-alignment-2026-09-28/after/Telemetry docs/experiments/telemetry-geometric-alignment-2026-09-28
+node --import tsx scripts/experiment-placement-regression-run.mjs docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json docs/experimental/pcb/telemetry-geometric-alignment-2026-09-28/after/Telemetry
+node --import tsx scripts/experiment-placement-compare-report.mjs docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json docs/experimental/pcb/full-placement-2026-09-28/Telemetry docs/experimental/pcb/telemetry-geometric-alignment-2026-09-28/after/Telemetry docs/experimental/pcb/telemetry-geometric-alignment-2026-09-28
 node --import tsx --test tests/pcb-block-quality.test.ts tests/pcb-board-alignment.test.ts tests/pcb-post-place-refiner.test.ts tests/pcb-post-place-route-aware.test.ts
 ```

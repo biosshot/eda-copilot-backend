@@ -8,10 +8,10 @@ import {withBlockCandidateCapture} from '../src/pcb-layout/pcb-auto-place-v2/blo
 
 const [board='esp32c3',tag='before',routingMetric]=process.argv.slice(2);
 if(routingMetric&&!['geometric','micro'].includes(routingMetric))throw Error('Unsupported routing metric');
-const out=`docs/experiments/placement-performance-2026-09-28/${board}/${tag}`;
+const out=`docs/experimental/pcb/placement-performance-2026-09-28/${board}/${tag}`;
 mkdirSync(out,{recursive:true});
 writeFileSync(`${out}/provenance.json`,JSON.stringify({nativeHash:createHash('sha256').update(readFileSync('native/pcb-board-packer/pcb-board-packer.win32-x64-msvc.node')).digest('hex'),startedAt:new Date().toISOString()},null,2));
-const input=JSON.parse(readFileSync(`docs/experiments/global-placement-2026-09-27/${board}/input.json`));
+const input=JSON.parse(readFileSync(`docs/experimental/pcb/global-placement-2026-09-27/${board}/input.json`));
 const addon=loadNativeBoardPacker(),calls=[];
 for(const method of ['solveBlockPrimitives','solveBlockPrimitivesBatch','solvePassiveNetIsland','solveBoardPacked','refinePostPlacement','scorePostPlace',
     'scoreRouteLayout','scoreRouteLayoutWithObstacles','prepareRouteLayoutComparison','compareRouteLayoutCandidate']){

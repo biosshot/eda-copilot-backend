@@ -2,8 +2,8 @@ import {readFileSync,writeFileSync,mkdirSync,existsSync,openSync,closeSync} from
 import {spawn,execFileSync} from 'node:child_process';
 import {resolve} from 'node:path';
 const current=resolve('.'),baseline=resolve('..','eda-copilot-baseline-run');
-const output=resolve('docs/experiments/placement-regression-2026-09-28');
-const bank=resolve('docs/experiments/global-placement-2026-09-27');
+const output=resolve('docs/experimental/pcb/placement-regression-2026-09-28');
+const bank=resolve('docs/experimental/pcb/global-placement-2026-09-27');
 const measurements=JSON.parse(readFileSync(`${bank}/measurements.json`));
 const names=process.argv.slice(2);
 const boards=measurements.filter(b=>b.entities?.length&&!b.duplicateOf&&(!names.length||names.includes(b.name)));

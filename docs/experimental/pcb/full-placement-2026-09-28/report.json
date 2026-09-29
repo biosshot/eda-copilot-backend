@@ -1,7 +1,7 @@
 [
   {
     "name": "Telemetry",
-    "inputPath": "docs/experiments/global-placement-2026-09-27/Telemetry/input.json",
+    "inputPath": "docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json",
     "summary": {
       "inputSha256": "3e464127e125882209baff8a4b66a2b9a346d6afa047c27865ac490c57cd4459",
       "ms": 170923.01080000002,
@@ -2016,7 +2016,7 @@
   },
   {
     "name": "ICM20948_v2",
-    "inputPath": "docs/experiments/global-placement-2026-09-27/bank-ICM20948_v2/input.json",
+    "inputPath": "docs/experimental/pcb/global-placement-2026-09-27/bank-ICM20948_v2/input.json",
     "summary": {
       "inputSha256": "b0a06f3f4c9b0cff980f4eca642de962f6d77a527352dea2817cca7401ca6d7c",
       "ms": 70320.9429,

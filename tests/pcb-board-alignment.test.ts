@@ -15,8 +15,8 @@ import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/nativ
 import { translatePrimitive } from '../src/pcb-layout/pcb-auto-place-v2/primitives.ts';
 
 function telemetry() {
-    const input = JSON.parse(readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json','utf8')) as PlacementInput;
-    const saved = JSON.parse(gunzipSync(readFileSync('docs/experiments/telemetry-anchored-2026-09-27/after-final.json.gz')).toString());
+    const input = JSON.parse(readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json','utf8')) as PlacementInput;
+    const saved = JSON.parse(gunzipSync(readFileSync('docs/experimental/pcb/telemetry-anchored-2026-09-27/after-final.json.gz')).toString());
     return { input, placements: saved.placements as Placement[], roots: saved.stages[0].data.root.children as PlacementPrimitive[] };
 }
 test('structural similarity tolerates a diode and ignores reference/net names and enumeration order', () => {

@@ -19,6 +19,8 @@ Entry points: `.`, `/components`, `/schematic`, `/pcb`, `/types`. All runtime de
 
 ## Development
 
+See the [architecture map](docs/architecture-map.md) to find the existing implementation before changing a module.
+
 ```sh
 npm ci
 npm run native:build

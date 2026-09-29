@@ -10,9 +10,9 @@ import {choosePackedPortfolio} from '../src/pcb-layout/pcb-auto-place-v2/block-p
 import {createPlacementReport} from '../src/pcb-layout/pcb-auto-place/placement-report.ts';
 import {renderPlacementSvg} from '../src/pcb-layout/pcb-auto-place/render.ts';
 import {placementMetrics} from './experiment-placement-metrics.mjs';
-const dir='docs/experiments/telemetry-pack-alignment-2026-09-27';
-const input=JSON.parse(readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json'));
-const prior=JSON.parse(gunzipSync(readFileSync('docs/experiments/telemetry-anchored-2026-09-27/after-final.json.gz')));
+const dir='docs/experimental/pcb/telemetry-pack-alignment-2026-09-27';
+const input=JSON.parse(readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json'));
+const prior=JSON.parse(gunzipSync(readFileSync('docs/experimental/pcb/telemetry-anchored-2026-09-27/after-final.json.gz')));
 const graph=buildPlacementGraph(input),tree=prior.stages[0].data;
 const childPrimitives=graph.root.children.filter(n=>n.kind!=='pad').map(n=>tree.primitives.find(p=>p.sourceNodeId===n.id));
 let params;const stop=new Error('capture only');

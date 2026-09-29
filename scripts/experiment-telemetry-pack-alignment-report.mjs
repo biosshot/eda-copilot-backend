@@ -12,11 +12,11 @@ import {encodeNativePostPlaceRefineProblem} from '../src/pcb-layout/pcb-auto-pla
 import {loadNativeBoardPacker} from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
 import {placementMetrics} from './experiment-placement-metrics.mjs';
 
-const dir=process.argv[2]??'docs/experiments/telemetry-pack-alignment-2026-09-27';
+const dir=process.argv[2]??'docs/experimental/pcb/telemetry-pack-alignment-2026-09-27';
 const orientationRun=dir.includes('orientation');
-const inputRaw=readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json');
+const inputRaw=readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json');
 const input=JSON.parse(inputRaw);
-const source=process.argv[3]??'docs/experiments/telemetry-anchored-2026-09-27/after-final.json.gz';
+const source=process.argv[3]??'docs/experimental/pcb/telemetry-anchored-2026-09-27/after-final.json.gz';
 const results=[source,`${dir}/after.json.gz`].map(path=>JSON.parse(gunzipSync(readFileSync(path))));
 const roots=results[0].stages[0].data.root.children;
 const policy=boardAlignmentPolicy(input,roots);

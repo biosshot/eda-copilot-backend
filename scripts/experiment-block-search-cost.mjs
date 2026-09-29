@@ -6,11 +6,11 @@ import {applyNativeBoardPackSolution} from '../src/pcb-layout/pcb-auto-place-v2/
 import {blockQuality,legalBlockCandidate,selectBlockCandidates} from '../src/pcb-layout/pcb-auto-place-v2/block-quality.ts';
 import {selectPairSeeds} from '../src/pcb-layout/pcb-auto-place-v2/block-search-stages.ts';
 import {createClearanceResolver} from '../src/pcb-layout/pcb-auto-place/clearance-resolver.ts';
-const root='docs/experiments/placement-performance-2026-09-28/Telemetry';
+const root='docs/experimental/pcb/placement-performance-2026-09-28/Telemetry';
 const src=`${root}/isolated-block-metric`,out=`${root}/search-cost/${process.env.BLOCK_COST_LABEL??'exact'}`;
 mkdirSync(out,{recursive:true});
 const unpack=p=>JSON.parse(gunzipSync(readFileSync(p)));
-const input=JSON.parse(readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json'));
+const input=JSON.parse(readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json'));
 const clearance=createClearanceResolver(input),native=loadNativeBoardPacker();
 for(const name of process.argv.slice(2).length?process.argv.slice(2):['current_iso']){
     const before=unpack(`${src}/${name}-geometric-0.json.gz`),all=unpack(`${src}/${name}-inputs.json.gz`);

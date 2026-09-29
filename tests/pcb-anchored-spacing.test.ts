@@ -11,7 +11,7 @@ import {boardSpacingPolicy,boardSpacingPenalty} from '../src/pcb-layout/pcb-auto
 import {translatePrimitive} from '../src/pcb-layout/pcb-auto-place-v2/primitives.ts';
 import {applyNativeBoardPackSolution} from '../src/pcb-layout/pcb-auto-place-v2/native/apply-board-solution.ts';
 
-const fixture=()=>JSON.parse(readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json','utf8')) as PlacementInput;
+const fixture=()=>JSON.parse(readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json','utf8')) as PlacementInput;
 
 test('native transforms preserve the exact fixed pose, including sub-grid precision',()=>{
     const input=fixture();

@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createCanvas, loadImage } from 'canvas';
-const out = 'docs/experiments/global-placement-2026-09-27';
+const out = 'docs/experimental/pcb/global-placement-2026-09-27';
 const data = JSON.parse(readFileSync(`${out}/measurements.json`, 'utf8'));
 async function sheet(kind, examples, height) {
     const width = 800, canvas = createCanvas(width * 2, height * examples.length), ctx = canvas.getContext('2d');

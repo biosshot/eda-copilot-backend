@@ -7,12 +7,12 @@ import {BoardAssembleSchema} from '../src/types/pcb/board-assemble.ts';
 import {blockQuality} from '../src/pcb-layout/pcb-auto-place-v2/block-quality.ts';
 import {placementMetrics} from './experiment-placement-metrics.mjs';
 
-const root='docs/experiments/placement-performance-2026-09-28/Telemetry';
+const root='docs/experimental/pcb/placement-performance-2026-09-28/Telemetry';
 const tag=process.argv[2]??'staged-final';
 const out=`${root}/staged-comparison`;mkdirSync(out,{recursive:true});
 const read=p=>JSON.parse(readFileSync(p));
 const unpack=p=>JSON.parse(gunzipSync(readFileSync(p)));
-const input=read('docs/experiments/global-placement-2026-09-27/Telemetry/input.json');
+const input=read('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json');
 const before=unpack(`${root}/current-profile/result.json.gz`),after=unpack(`${root}/${tag}/result.json.gz`);
 const bs=read(`${root}/current-profile/summary.json`),as=read(`${root}/${tag}/summary.json`);
 const stages=r=>r.stages.find(s=>s.name==='01-v2-tree').data.primitives;

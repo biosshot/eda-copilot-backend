@@ -3,7 +3,7 @@ import {gzipSync,gunzipSync} from 'node:zlib';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {loadNativeBoardPacker} from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
-const root='docs/experiments/placement-performance-2026-09-28/Telemetry';
+const root='docs/experimental/pcb/placement-performance-2026-09-28/Telemetry';
 const source=`${root}/isolated-block-metric`,out=`${root}/incremental-score`;mkdirSync(out,{recursive:true});
 const unpack=p=>JSON.parse(gunzipSync(readFileSync(p)));
 const old=JSON.parse(readFileSync(`${source}/summary.json`));

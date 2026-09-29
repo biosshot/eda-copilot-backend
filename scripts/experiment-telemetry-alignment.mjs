@@ -12,10 +12,10 @@ import {loadNativeBoardPacker} from '../src/pcb-layout/pcb-auto-place-v2/native/
 import {BoardAssembleSchema} from '../src/types/pcb/board-assemble.ts';
 import {placementMetrics} from './experiment-placement-metrics.mjs';
 
-const dir='docs/experiments/telemetry-alignment-2026-09-27';
+const dir='docs/experimental/pcb/telemetry-alignment-2026-09-27';
 mkdirSync(dir,{recursive:true});
-const inputRaw=readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json');
-const baselineRaw=readFileSync('docs/experiments/telemetry-anchored-2026-09-27/after-final.json.gz');
+const inputRaw=readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json');
+const baselineRaw=readFileSync('docs/experimental/pcb/telemetry-anchored-2026-09-27/after-final.json.gz');
 const input=JSON.parse(inputRaw), baseline=JSON.parse(gunzipSync(baselineRaw));
 const roots=baseline.stages.find(s=>s.name==='01-v2-tree').data.root.children;
 const start=performance.now();

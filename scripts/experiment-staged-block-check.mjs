@@ -9,7 +9,7 @@ import {solvePlacementSubtreeSync} from '../src/pcb-layout/pcb-auto-place-v2/tre
 
 // Correctness replay only, not a performance benchmark. Exact encoded initial
 // problems from this same native build may reuse their saved output.
-const root='docs/experiments/placement-performance-2026-09-28/Telemetry';
+const root='docs/experimental/pcb/placement-performance-2026-09-28/Telemetry';
 const nativeHash=createHash('sha256').update(readFileSync('native/pcb-board-packer/pcb-board-packer.win32-x64-msvc.node')).digest('hex');
 const bank=new Map();
 const canonical=x=>JSON.stringify(x,(_k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b))):v);
@@ -38,7 +38,7 @@ Object.defineProperty(addon,'solveBlockPrimitives',{configurable:true,value:p=>r
 Object.defineProperty(addon,'solveBlockPrimitivesBatch',{configurable:true,value:ps=>run(ps)});
 const ceilings={voltage_iso:5664.15,current_iso:11877.64,adc:12714.13};
 for(const name of process.argv.slice(2).length?process.argv.slice(2):Object.keys(ceilings)){
-    const input=JSON.parse(readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json'));
+    const input=JSON.parse(readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json'));
     const graph=buildPlacementGraph(input);
     const find=n=>n.kind==='block'&&n.label===name?n:n.children.map(find).find(Boolean);
     let selected;

@@ -85,7 +85,7 @@ been tested and is not claimed to solve those limitations.
 From the backend root, with the rebuilt native addon:
 
 ```
-node --import tsx scripts/experiment-telemetry-repack.mjs after-final after docs/experiments/telemetry-pack-alignment-2026-09-27
+node --import tsx scripts/experiment-telemetry-repack.mjs after-final after docs/experimental/pcb/telemetry-pack-alignment-2026-09-27
 node --import tsx scripts/experiment-telemetry-pack-alignment-probe.mjs
 node --import tsx scripts/experiment-telemetry-pack-alignment-report.mjs
 ```

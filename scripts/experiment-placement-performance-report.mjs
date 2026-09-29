@@ -6,11 +6,11 @@ import {createBoardAssemble} from '../src/pcb-layout/board-assemble.ts';
 import {BoardAssembleSchema} from '../src/types/pcb/board-assemble.ts';
 import {createPlacementReport} from '../src/pcb-layout/pcb-auto-place/placement-report.ts';
 
-const root='docs/experiments/placement-performance-2026-09-28';
+const root='docs/experimental/pcb/placement-performance-2026-09-28';
 const board='esp32c3',dir=`${root}/${board}`;
 const read=p=>JSON.parse(readFileSync(p));
 const unzip=p=>JSON.parse(gunzipSync(readFileSync(p)));
-const input=read(`docs/experiments/global-placement-2026-09-27/${board}/input.json`);
+const input=read(`docs/experimental/pcb/global-placement-2026-09-27/${board}/input.json`);
 const tags=['before','serial-control','parallel-1','parallel-2'];
 const runs=tags.map(tag=>({tag,summary:read(`${dir}/${tag}/summary.json`),result:unzip(`${dir}/${tag}/result.json.gz`)}));
 const baseline=runs[0];
@@ -38,8 +38,8 @@ const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll
 const seconds=ms=>(ms/1000).toFixed(2);
 const pathChecks=[];
 for(const name of ['ESPower','esp32c3']){
-    const i=read(`docs/experiments/global-placement-2026-09-27/${name}/input.json`);
-    const result=name===board?selected.result:unzip(`docs/experiments/placement-regression-2026-09-28/${name}/after/result.json.gz`);
+    const i=read(`docs/experimental/pcb/global-placement-2026-09-27/${name}/input.json`);
+    const result=name===board?selected.result:unzip(`docs/experimental/pcb/placement-regression-2026-09-28/${name}/after/result.json.gz`);
     const report=createPlacementReport(i,result.placements);
     const svg=renderPlacementSvg(i,result.placements,{ratsnest:true,ratsnestTopology:'mst',signalPaths:true});
     assert.match(svg,/data-path-segment/);

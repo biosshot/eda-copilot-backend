@@ -10,8 +10,8 @@ import {placementMetrics} from './experiment-placement-metrics.mjs';
 import {minimumSpanningEdges} from '../src/pcb-layout/pcb-auto-place/ratsnest.ts';
 import {encodeNativePostPlaceScoreProblem} from '../src/pcb-layout/pcb-auto-place-v2/native/encode-post-place-score.ts';
 
-const out=resolve('docs/experiments/placement-regression-2026-09-28');
-const bank=resolve('docs/experiments/global-placement-2026-09-27');
+const out=resolve('docs/experimental/pcb/placement-regression-2026-09-28');
+const bank=resolve('docs/experimental/pcb/global-placement-2026-09-27');
 const measured=JSON.parse(readFileSync(`${bank}/measurements.json`));
 const manifest=JSON.parse(readFileSync(`${bank}/manifest.json`));
 const boards=measured.filter(b=>b.entities?.length&&!b.duplicateOf);

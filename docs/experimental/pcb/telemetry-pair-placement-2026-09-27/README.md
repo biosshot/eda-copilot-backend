@@ -34,7 +34,7 @@ The corresponding high-voltage inductor pair is L3/L4 (hv_pos/hv_neg); L2 belong
 
 ```powershell
 npm run native:build
-node --import tsx scripts/experiment-telemetry-repack.mjs after-final after docs/experiments/telemetry-pair-placement-2026-09-27
+node --import tsx scripts/experiment-telemetry-repack.mjs after-final after docs/experimental/pcb/telemetry-pair-placement-2026-09-27
 node --import tsx scripts/experiment-telemetry-pair-report.mjs
 ```
 

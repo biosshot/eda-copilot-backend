@@ -10,7 +10,7 @@ import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/nativ
 import { withBlockCandidateCapture } from '../src/pcb-layout/pcb-auto-place-v2/block-quality.ts';
 import { placementMetrics } from './experiment-placement-metrics.mjs';
 
-export const out = 'docs/experiments/telemetry-unified-2026-09-27';
+export const out = 'docs/experimental/pcb/telemetry-unified-2026-09-27';
 export const blocks = ['current_iso', 'usb_charge', 'lte_power', 'logic_power', 'adc'];
 export const variants = [{id:'unified', label:'Unified checkpoint portfolio'}];
 
@@ -18,7 +18,7 @@ if (process.argv[2] === '--worker') {
     const [block, tag] = process.argv.slice(3), variant = variants.find(v => v.id === tag);
     if (!blocks.includes(block) || !variant) throw Error('Unknown block/variant');
     Object.assign(process.env, { PCB_NATIVE_SOLVE_CACHE: '0', PCB_POST_PLACE_THREADS: '1' });
-    const raw = readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json');
+    const raw = readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json');
     const input = JSON.parse(raw), sourceInput = structuredClone(input);
     const graph = buildPlacementGraph(input);
     const find = n => n.kind === 'block' && n.label === block ? n : n.children.map(find).find(Boolean);

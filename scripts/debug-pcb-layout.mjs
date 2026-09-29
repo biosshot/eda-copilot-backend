@@ -111,7 +111,7 @@ async function capture(fixture) {
         '- Original fixture files: `source/`', '- [Machine summary](summary.json)',
         '- Exact native inputs and outputs: `native/`', '',
         'Batch wall time belongs to the complete batch and must not be summed across its hypotheses.',
-        'Compare result quality and write the experiment verdict in `docs/experiments/`.', '',
+        'Compare result quality and write the experiment verdict in `docs/experimental/pcb/`.', '',
     ].join('\n'));
     console.log(output);
     if (code !== 0) process.exitCode = code || 1;

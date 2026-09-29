@@ -48,7 +48,7 @@ test('R6.2 is present and explicitly ignored; diagnostic rendering restores its 
     const input = fixture(), graph = buildPlacementGraph(input);
     const diagnostics = graph.report.diagnostics.filter(d => d.code === 'ignored_local_connections');
     assert.ok(diagnostics.some(d => d.message.includes('I_OUT') && d.message.includes('R6.2')));
-    const all = JSON.parse(readFileSync(new URL('../docs/experiments/global-placement-2026-09-27/Telemetry/pads-placement.json', import.meta.url), 'utf8')).placements;
+    const all = JSON.parse(readFileSync(new URL('../docs/experimental/pcb/global-placement-2026-09-27/Telemetry/pads-placement.json', import.meta.url), 'utf8')).placements;
     const names = new Set(input.blocks.find(b => b.name === 'current_iso')!.component_designators);
     const placements = all.filter((p: {designator: string}) => names.has(p.designator));
     const source = JSON.stringify(input);

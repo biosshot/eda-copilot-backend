@@ -2,78 +2,78 @@
   {
     "name": "Telemetry",
     "source": "captured board",
-    "input": "docs/experiments/global-placement-2026-09-27/Telemetry/input.json"
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json"
   },
   {
     "name": "ESPower",
     "source": "captured board",
-    "input": "docs/experiments/global-placement-2026-09-27/ESPower/input.json"
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/ESPower/input.json"
   },
   {
     "name": "esp32c3",
     "source": "captured board",
-    "input": "docs/experiments/global-placement-2026-09-27/esp32c3/input.json"
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/esp32c3/input.json"
   },
   {
     "name": "bank-BAND_V3_SIGNAL_PATH",
     "source": "tests/pcb-layout/BAND_V3_SIGNAL_PATH",
-    "input": "docs/experiments/global-placement-2026-09-27/bank-BAND_V3_SIGNAL_PATH/input.json",
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/bank-BAND_V3_SIGNAL_PATH/input.json",
     "components": 8,
     "blocks": 6
   },
   {
     "name": "bank-CNTRL_ACESS_MAX",
     "source": "tests/pcb-layout/CNTRL_ACESS_MAX",
-    "input": "docs/experiments/global-placement-2026-09-27/bank-CNTRL_ACESS_MAX/input.json",
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/bank-CNTRL_ACESS_MAX/input.json",
     "components": 69,
     "blocks": 20
   },
   {
     "name": "bank-CONNECTOR_OUTWARD",
     "source": "tests/pcb-layout/CONNECTOR_OUTWARD",
-    "input": "docs/experiments/global-placement-2026-09-27/bank-CONNECTOR_OUTWARD/input.json",
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/bank-CONNECTOR_OUTWARD/input.json",
     "components": 20,
     "blocks": 20
   },
   {
     "name": "bank-CONNECTOR_ROTATIONS",
     "source": "tests/pcb-layout/CONNECTOR_ROTATIONS",
-    "input": "docs/experiments/global-placement-2026-09-27/bank-CONNECTOR_ROTATIONS/input.json",
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/bank-CONNECTOR_ROTATIONS/input.json",
     "components": 20,
     "blocks": 20
   },
   {
     "name": "bank-CONNECTOR_ROTATIONS_90",
     "source": "tests/pcb-layout/CONNECTOR_ROTATIONS_90",
-    "input": "docs/experiments/global-placement-2026-09-27/bank-CONNECTOR_ROTATIONS_90/input.json",
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/bank-CONNECTOR_ROTATIONS_90/input.json",
     "components": 20,
     "blocks": 20
   },
   {
     "name": "bank-dc-dc",
     "source": "tests/pcb-layout/dc-dc",
-    "input": "docs/experiments/global-placement-2026-09-27/bank-dc-dc/input.json",
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/bank-dc-dc/input.json",
     "components": 17,
     "blocks": 9
   },
   {
     "name": "bank-ELRS",
     "source": "tests/pcb-layout/ELRS",
-    "input": "docs/experiments/global-placement-2026-09-27/bank-ELRS/input.json",
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/bank-ELRS/input.json",
     "components": 36,
     "blocks": 17
   },
   {
     "name": "bank-esp32c3",
     "source": "tests/pcb-layout/esp32c3",
-    "input": "docs/experiments/global-placement-2026-09-27/bank-esp32c3/input.json",
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/bank-esp32c3/input.json",
     "components": 20,
     "blocks": 11
   },
   {
     "name": "bank-ESpower",
     "source": "tests/pcb-layout/ESpower",
-    "input": "docs/experiments/global-placement-2026-09-27/bank-ESpower/input.json",
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/bank-ESpower/input.json",
     "components": 53,
     "blocks": 24
   },
@@ -94,7 +94,7 @@
   {
     "name": "bank-ICM20948_v2",
     "source": "tests/pcb-layout/ICM20948_v2",
-    "input": "docs/experiments/global-placement-2026-09-27/bank-ICM20948_v2/input.json",
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/bank-ICM20948_v2/input.json",
     "components": 54,
     "blocks": 18
   },
@@ -116,28 +116,28 @@
   {
     "name": "bank-rp2040_base",
     "source": "tests/pcb-layout/rp2040_base",
-    "input": "docs/experiments/global-placement-2026-09-27/bank-rp2040_base/input.json",
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/bank-rp2040_base/input.json",
     "components": 42,
     "blocks": 16
   },
   {
     "name": "bank-STEPPER_CONTROLLER",
     "source": "tests/pcb-layout/STEPPER_CONTROLLER",
-    "input": "docs/experiments/global-placement-2026-09-27/bank-STEPPER_CONTROLLER/input.json",
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/bank-STEPPER_CONTROLLER/input.json",
     "components": 85,
     "blocks": 16
   },
   {
     "name": "bank-ThunderF722",
     "source": "tests/pcb-layout/ThunderF722",
-    "input": "docs/experiments/global-placement-2026-09-27/bank-ThunderF722/input.json",
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/bank-ThunderF722/input.json",
     "components": 116,
     "blocks": 38
   },
   {
     "name": "bank-TPS63060DSCR",
     "source": "tests/pcb-layout/TPS63060DSCR",
-    "input": "docs/experiments/global-placement-2026-09-27/bank-TPS63060DSCR/input.json",
+    "input": "docs/experimental/pcb/global-placement-2026-09-27/bank-TPS63060DSCR/input.json",
     "components": 16,
     "blocks": 7
   },

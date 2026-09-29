@@ -10,7 +10,7 @@ test('default board layer is used for unrestricted components, while explicit an
     assert.deepEqual(preferredPlacementLayers(['top', 'bottom'], 'bottom'), ['bottom', 'top']);
     assert.deepEqual(preferredPlacementLayers(['top'], 'bottom'), ['top']);
 
-    const input = JSON.parse(readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json', 'utf8')) as PlacementInput;
+    const input = JSON.parse(readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json', 'utf8')) as PlacementInput;
     input.board.allowedLayers = ['top', 'bottom'];
     input.board.defaultLayer = 'bottom';
     const unrestricted = input.components.find((item) => item.designator === 'R30')!;

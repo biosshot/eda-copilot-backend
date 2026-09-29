@@ -1,11 +1,11 @@
 import {readFileSync,writeFileSync} from 'node:fs';
 import {createCanvas,loadImage} from 'canvas';
 import assert from 'node:assert/strict';
-const out='docs/experiments/placement-performance-2026-09-28/Telemetry/isolated-block-metric';
+const out='docs/experimental/pcb/placement-performance-2026-09-28/Telemetry/isolated-block-metric';
 const {rows,manifest}=JSON.parse(readFileSync(`${out}/summary.json`));
 const runs=JSON.parse(readFileSync(`${out}/runs.json`));
 const median=a=>{a=[...a].sort((a,b)=>a-b);return(a[Math.floor((a.length-1)/2)]+a[Math.floor(a.length/2)])/2;};
-const input=JSON.parse(readFileSync('docs/experiments/global-placement-2026-09-27/Telemetry/input.json'));
+const input=JSON.parse(readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json'));
 for(const r of rows)for(const metric of ['micro','geometric']){
     const result=r[metric];
     for(const p of result.placements){

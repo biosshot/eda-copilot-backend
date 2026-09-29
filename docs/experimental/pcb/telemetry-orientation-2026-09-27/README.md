@@ -83,8 +83,8 @@ not rejected hypothesis 3, and pass BoardAssembleSchema.
 ## Reproduction and validation
 
 ```
-node --import tsx scripts/experiment-telemetry-repack.mjs after-final after docs/experiments/telemetry-orientation-2026-09-27
-node --import tsx scripts/experiment-telemetry-pack-alignment-report.mjs docs/experiments/telemetry-orientation-2026-09-27 docs/experiments/telemetry-pack-alignment-2026-09-27/after.json.gz
+node --import tsx scripts/experiment-telemetry-repack.mjs after-final after docs/experimental/pcb/telemetry-orientation-2026-09-27
+node --import tsx scripts/experiment-telemetry-pack-alignment-report.mjs docs/experimental/pcb/telemetry-orientation-2026-09-27 docs/experimental/pcb/telemetry-pack-alignment-2026-09-27/after.json.gz
 ```
 
 69 distinct targeted TypeScript tests passed, including native/TS orientation

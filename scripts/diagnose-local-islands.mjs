@@ -20,7 +20,7 @@ for (const [name, refs] of [['lte_switch', [['U10.11','L1.1'], ['U10.9','L1.2']]
 }
 const canvas=createCanvas(1600,1100),ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,1600,1100);
 for(const [k,id] of [8,11,16,27].entries()) {
-    let svg=readFileSync(`docs/experiments/global-placement-2026-09-27/Telemetry/pads-block-${id}.svg`,'utf8');
+    let svg=readFileSync(`docs/experimental/pcb/global-placement-2026-09-27/Telemetry/pads-block-${id}.svg`,'utf8');
     svg=svg.replace(/width="([0-9.]+)" height="([0-9.]+)"/,(_,w,h)=>`width="${w*3}" height="${h*3}"`);
     const img=await loadImage(Buffer.from(svg)),s=Math.min(780/img.width,530/img.height);
     ctx.drawImage(img,k%2*800,Math.floor(k/2)*550,img.width*s,img.height*s);
