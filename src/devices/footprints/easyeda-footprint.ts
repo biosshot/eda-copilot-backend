@@ -167,6 +167,9 @@ export function parseEasyEdaFootprintDataStr(dataStr: string, fallbackName = "EA
         })),
         graphics: rawGraphics.map(({ box: _box, ...graphic }) => normalizeGraphic(graphic, center)),
         ...(inferredBodyBox ? { bodyBox: normalizeBox(inferredBodyBox, center) } : {}),
+        ...(inferredBodyBox ? { bodyBoxSource: occupiedTopBoxes.length
+            ? bodyBoxes.length > 0 && (physicalTopSilkscreenBoxes.length > 0 || !hasBottomSilk) ? 'body' as const : 'silk' as const
+            : 'pads' as const } : {}),
         sourceOriginOffset: {
             x: roundMm(center.x),
             y: roundMm(-center.y),
@@ -521,16 +524,23 @@ function uniquePointCount(points: Point[]) {
 }
 
 function collectGeometryPoints(value: unknown): Point[] {
-    if (Array.isArray(value) && String(value[0]).toUpperCase() === 'R') {
-        return rectanglePoints(value);
-    }
+    if (!Array.isArray(value)) return [];
+    const shape = typeof value[0] === 'string' ? value[0].toUpperCase() : '';
+    if (shape === 'R') return rectanglePoints(value);
+    // Named shapes have dimensions/angles mixed with coordinates. Their bounds
+    // are handled by collectShapeBoxes or a dedicated decoder, never by pairs.
+    if (['CIRCLE', 'ELLIPSE', 'ROUND', 'OVAL', 'RECT', 'ARC'].includes(shape)) return [];
     if (isEasyEdaPath(value)) {
         return collectPathPoints(value);
     }
-
-    const points: Point[] = [];
-    collectNumbers(value, [], points);
-    return points;
+    if (value.every((item) => typeof item === 'number' && Number.isFinite(item))) {
+        const points: Point[] = [];
+        for (let index = 0; index + 1 < value.length; index += 2) {
+            points.push({ x: value[index] as number, y: value[index + 1] as number });
+        }
+        return points;
+    }
+    return value.flatMap(collectGeometryPoints);
 }
 
 function rectanglePoints(value: unknown[]): Point[] {
@@ -579,24 +589,6 @@ function collectPathPoints(path: unknown[]): Point[] {
     }
 
     return points;
-}
-
-function collectNumbers(value: unknown, pending: number[], points: Point[]) {
-    if (typeof value === "number" && Number.isFinite(value)) {
-        pending.push(value);
-        if (pending.length === 2) {
-            points.push({ x: pending[0], y: pending[1] });
-            pending.length = 0;
-        }
-        return;
-    }
-
-    if (Array.isArray(value)) {
-        const localPending: number[] = [];
-        for (const item of value) {
-            collectNumbers(item, localPending, points);
-        }
-    }
 }
 
 function collectShapeBoxes(value: unknown): Box[] {

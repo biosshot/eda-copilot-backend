@@ -307,16 +307,16 @@ export function componentBox(component: PcbComponent, placement: Placement): Box
 
 export function componentCollisionBoxes(component: PcbComponent, placement: Placement, layer: Layer): Box[] {
     const sameSide = placement.layer === layer;
-    const body = sameSide
-        ? [component.footprint.bodyBox
-            ? localBoxWorld(placement, component.footprint.bodyBox)
-            : componentBox(component, placement)]
-        : [];
+    const override = component.pcb.occupiedAreas?.[sameSide ? 'top' : 'bottom'];
+    const body = override !== undefined
+        ? override.map((box) => localBoxWorld(placement, box))
+        : sameSide ? [component.footprint.bodyBox
+            ? localBoxWorld(placement, component.footprint.bodyBox) : componentBox(component, placement)] : [];
     const pads = component.footprint.pads
         .filter((pad) => isThroughHolePad(pad)
             || (sameSide ? pad.layer !== 'bottom' : pad.layer === 'bottom'))
         .map((pad) => componentPadBox(placement, pad));
-    const reverseSilk = sameSide ? [] : (component.footprint.graphics ?? [])
+    const reverseSilk = sameSide || override !== undefined ? [] : (component.footprint.graphics ?? [])
         .filter((graphic) => graphic.layer === 'silk' && graphic.side === 'bottom')
         .map((graphic) => graphicBoxWorld(placement, graphic));
     const oppositeLayerPolygons = sameSide ? [] : (component.pcb.generatedGeometry ?? [])
@@ -327,6 +327,14 @@ export function componentCollisionBoxes(component: PcbComponent, placement: Plac
 }
 
 export function componentBodyBox(component: PcbComponent, placement: Placement): Box {
+    const override = component.pcb.occupiedAreas?.top;
+    if (override !== undefined) {
+        const ownPads = component.footprint.pads.filter((pad) => isThroughHolePad(pad) || pad.layer !== 'bottom')
+            .map((pad) => componentPadBox(placement, pad));
+        const boxes = [...override.map((box) => localBoxWorld(placement, box)), ...ownPads];
+        return boxes.length ? unionBoxes(boxes)
+            : { left: placement.x, right: placement.x, top: placement.y, bottom: placement.y };
+    }
     return component.footprint.bodyBox
         ? localBoxWorld(placement, component.footprint.bodyBox)
         : componentBox(component, placement);

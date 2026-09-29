@@ -356,6 +356,8 @@ interface ComponentBuilder {
   block(name: string): ComponentBuilder;
   /** Set placement role; affects ordering and default aesthetics. */
   role(role: ComponentRole): ComponentBuilder;
+  /** Override inferred occupied body areas in footprint-local millimeters. Pads remain occupied; sides swap when mounted on bottom. An empty array clears inferred body on that side. */
+  occupancy(areas: { top?: Array<{left:number;right:number;top:number;bottom:number}>; bottom?: Array<{left:number;right:number;top:number;bottom:number}> }): ComponentBuilder;
   /** Allow component on specific layers. */
   layers(...layers: Layer[]): ComponentBuilder;
   /** Restrict component to top side. */

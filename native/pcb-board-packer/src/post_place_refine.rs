@@ -402,7 +402,10 @@ impl RefineProblem {
         let primitive = &mut w.route.primitives[i];
         let body = w.bodies[i];
         primitive.bbox = body;
-        primitive.collision_boxes = Arc::new(vec![body]);
+        primitive.collision_boxes = Arc::new(std::iter::once(body).chain(w.opposite[i].iter().copied()).collect());
+        let other_layer: Arc<str> = Arc::from(if pose.layer.as_ref() == "top" { "bottom" } else { "top" });
+        primitive.collision_box_layers = Arc::new(std::iter::once(pose.layer.clone())
+            .chain(std::iter::repeat_n(other_layer, w.opposite[i].len())).collect());
         primitive.width = body.right - body.left;
         primitive.height = body.bottom - body.top;
         primitive.placements = Arc::new(vec![pose.clone()]);
@@ -684,6 +687,8 @@ impl RefineProblem {
                 let required = self.pair_clearances[a][b];
                 let collision = if same {
                     gap(w.bodies[a], w.bodies[b]) + EPS < required
+                        || w.opposite[a].iter().any(|aa| w.opposite[b].iter()
+                            .any(|bb| gap(*aa, *bb) + EPS < required))
                 } else {
                     w.opposite[b]
                         .iter()

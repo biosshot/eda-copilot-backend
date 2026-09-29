@@ -10,6 +10,7 @@ import { isConnectedSignalName } from '#utils/signals.ts';
 import {
     boardBox,
     componentBox,
+    componentCollisionBoxes,
     componentPadBox,
     getPadWorld,
     isThroughHolePad,
@@ -125,7 +126,8 @@ export function routeLayoutProblem(input: PlacementInput, placements: Placement[
             const net = pin && isConnectedSignalName(pin.signal_name) ? pin.signal_name : undefined;
             return {
                 box: componentPadBox(placement, pad),
-                layer: isThroughHolePad(pad) ? undefined : placement.layer,
+                layer: isThroughHolePad(pad) ? undefined
+                    : pad.layer === 'bottom' ? (placement.layer === 'top' ? 'bottom' : 'top') : placement.layer,
                 ref: `${component.designator}.${String(pad.pin_number)}`,
                 net,
                 primitiveId: `post:${component.designator}`,
@@ -137,6 +139,8 @@ export function routeLayoutProblem(input: PlacementInput, placements: Placement[
 
 function componentPrimitive(component: PcbComponent, placement: Placement): PlacementPrimitive {
     const bbox = componentBox(component, placement);
+    const physicalBoxes = (['top', 'bottom'] as const).flatMap((layer) =>
+        componentCollisionBoxes(component, placement, layer).map((box) => ({ box, layer })));
     const connectionPoints = component.pins.flatMap((pin) => {
         if (!isConnectedSignalName(pin.signal_name)) return [];
         const point = getPadWorld(component, placement, pin.pin_number);
@@ -156,7 +160,13 @@ function componentPrimitive(component: PcbComponent, placement: Placement): Plac
         canRotate: false,
         allowedOrientations: [0],
         bbox,
-        collisionBoxes: [bbox],
+        collisionBoxes: physicalBoxes.map(({ box }) => box),
+        collisionBoxLayers: physicalBoxes.map(({ layer }) => layer),
+        connectionPointLayers: connectionPoints.map((point) => {
+            const pad = component.footprint.pads.find((item) => `${component.designator}.${String(item.pin_number)}` === point.ref);
+            if (pad && isThroughHolePad(pad)) return 'multi';
+            return pad?.layer === 'bottom' ? (placement.layer === 'top' ? 'bottom' : 'top') : placement.layer;
+        }),
         width: bbox.right - bbox.left,
         height: bbox.bottom - bbox.top,
         placements: [{ ...placement }],

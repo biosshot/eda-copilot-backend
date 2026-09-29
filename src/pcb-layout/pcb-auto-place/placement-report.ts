@@ -35,11 +35,19 @@ export function createPlacementReport(input: PlacementInput, placements: Placeme
     const blockReports = createBlockReports(input, placements);
     const moduleReports = createModuleReports(input, placements);
     const graphReport = buildPlacementGraph(input).report;
-    const mergedGraphReport = solverDiagnostics.length > 0
+    const occupancyDiagnostics = input.components.filter((component) =>
+        component.footprint.bodyBoxSource === 'silk'
+        && !component.pcb.occupiedAreas
+        && component.footprint.width * component.footprint.height >= 100)
+        .map((component) => ({ severity: 'warning' as const, code: 'inferred_silkscreen_occupancy',
+            nodeId: `component:${component.designator}`,
+            message: `${component.designator}: occupied body was inferred from footprint silkscreen; verify which side the physical body occupies or set component occupancy explicitly.` }));
+    const allDiagnostics = [...solverDiagnostics, ...occupancyDiagnostics];
+    const mergedGraphReport = allDiagnostics.length > 0
         ? {
             ...graphReport,
-            ok: graphReport.ok && !solverDiagnostics.some((diagnostic) => diagnostic.severity === 'error'),
-            diagnostics: [...graphReport.diagnostics, ...solverDiagnostics],
+            ok: graphReport.ok && !allDiagnostics.some((diagnostic) => diagnostic.severity === 'error'),
+            diagnostics: [...graphReport.diagnostics, ...allDiagnostics],
         }
         : graphReport;
 

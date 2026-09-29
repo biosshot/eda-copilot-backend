@@ -1,5 +1,5 @@
 import type { Box, Layer, PcbComponent, PlacementInput, TargetRef } from '#types/pcb/layout-model.ts';
-import { componentBox, componentCollisionBoxes, boardHoleKeepoutRadius, pointInBoard, boxGap } from '../pcb-auto-place/geometry.ts';
+import { componentBodyBox, componentCollisionBoxes, boardHoleKeepoutRadius, pointInBoard, boxGap } from '../pcb-auto-place/geometry.ts';
 import type { PlacementPrimitive } from './primitives.ts';
 
 export function boardSpacingExemptPairs(input: PlacementInput, roots: PlacementPrimitive[]): Array<[string,string]> {
@@ -22,18 +22,21 @@ export function boardSpacingExemptPairs(input: PlacementInput, roots: PlacementP
  * beam state; changing order or translating a block cannot change this budget. */
 export function boardSpacingPolicy(input: PlacementInput) {
     const {width,height} = input.board.outline;
+    const area=(b:Box)=>(b.right-b.left+input.board.clearances.component)*(b.bottom-b.top+input.board.clearances.component);
     const occupied = input.components.reduce((sum,c)=> {
-        const b=componentBox(c,{designator:c.designator,x:0,y:0,rotate:c.pcb.fixedPlacement?.rotate ?? 0,
-            layer:c.pcb.allowedLayers[0] ?? 'top',score:0});
-        return sum+(b.right-b.left+input.board.clearances.component)*(b.bottom-b.top+input.board.clearances.component);
+        const pose={designator:c.designator,x:0,y:0,rotate:c.pcb.fixedPlacement?.rotate ?? 0,
+            layer:c.pcb.fixedPlacement?.layer ?? c.pcb.allowedLayers[0] ?? 'top',score:0};
+        return sum+input.board.allowedLayers.reduce((sideSum,layer)=>sideSum+(layer===pose.layer
+            ? area(componentBodyBox(c,pose))
+            : componentCollisionBoxes(c,pose,layer).reduce((boxSum,box)=>boxSum+area(box),0)),0);
     },0);
     let usable=0;
     const samples=64;
-    for(let x=0;x<samples;x++) for(let y=0;y<samples;y++) {
+    for(const layer of input.board.allowedLayers) for(let x=0;x<samples;x++) for(let y=0;y<samples;y++) {
         const p={x:-width/2+(x+.5)*width/samples,y:-height/2+(y+.5)*height/samples};
         if(!pointInBoard(input.board,p,input.board.clearances.edge)) continue;
         if((input.boardHoles ?? []).some(h=>Math.hypot(p.x-h.x,p.y-h.y)<boardHoleKeepoutRadius(h))) continue;
-        if((input.constraintRegions ?? []).some(r=>r.layers.includes(input.board.defaultLayer)&&p.x>=r.box.left&&p.x<=r.box.right&&p.y>=r.box.top&&p.y<=r.box.bottom)) continue;
+        if((input.constraintRegions ?? []).some(r=>r.layers.includes(layer)&&p.x>=r.box.left&&p.x<=r.box.right&&p.y>=r.box.top&&p.y<=r.box.bottom)) continue;
         usable++;
     }
     const density=occupied/Math.max(1,usable*width*height/(samples*samples));

@@ -118,11 +118,20 @@ function encodePrimitive(
         collisionBoxes: physicalBoxes.length
             ? physicalBoxes.map(({box})=>cloneBox(box))
             : (primitive.collisionBoxes?.length ? primitive.collisionBoxes : [primitive.bbox]).map(cloneBox),
-        collisionBoxLayers: physicalBoxes.map(({layer})=>layer),
+        collisionBoxLayers: physicalBoxes.length ? physicalBoxes.map(({layer})=>layer) : primitive.collisionBoxLayers ?? [],
         width: primitive.width,
         height: primitive.height,
         placements: primitive.placements.map((placement) => ({ ...placement })),
         connectionPoints: primitive.connectionPoints.map((point) => ({ ...point })),
+        connectionPointLayers: componentByDesignator ? primitive.connectionPoints.map((point) => {
+            const owner = primitive.placements.find((placement) => point.ref.startsWith(`${placement.designator}.`));
+            if (!owner) return primitive.placements[0]?.layer ?? 'top';
+            const pin = point.ref.slice(owner.designator.length + 1);
+            const pad = componentByDesignator?.get(owner.designator)?.footprint.pads
+                .find((item) => String(item.pin_number) === pin);
+            if (pad?.layer === 'multi' || (pad?.drillDiameter ?? 0) > 0 || pad?.mount === 'through_hole') return 'multi';
+            return pad?.layer === 'bottom' ? (owner.layer === 'top' ? 'bottom' : 'top') : owner.layer;
+        }) : primitive.connectionPointLayers ?? [],
         pathPorts: (primitive.pathPorts ?? []).map((port) => ({ ...port, normal: { ...port.normal } })),
         edgePlace: primitiveEdgePlaceIntent(primitive, componentByDesignator),
     };

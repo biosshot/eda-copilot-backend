@@ -117,6 +117,7 @@ mod tests {
                 reference: Arc::from(format!("{id}.{}", index + 1)),
                 net: Some(Arc::from(*net)),
             }).collect()),
+            connection_point_layers: Arc::new(vec![]),
             path_ports: Arc::new(vec![]),
             edge_place: None,
         }

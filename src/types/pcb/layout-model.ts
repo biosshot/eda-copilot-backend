@@ -135,6 +135,7 @@ export interface FootprintSpec {
     graphics?: FootprintGraphic[];
     /** Inferred occupied body on the source footprint's top side. */
     bodyBox?: Box;
+    bodyBoxSource?: 'silk' | 'body' | 'pads';
     sourceOriginOffset?: Point;
 }
 
@@ -179,6 +180,7 @@ export const FootprintSpecSchema = () => z.object({
         }),
     ])).optional(),
     bodyBox: z.object({ left: z.number(), right: z.number(), top: z.number(), bottom: z.number() }).optional(),
+    bodyBoxSource: z.enum(['silk', 'body', 'pads']).optional(),
     sourceOriginOffset: FootprintPointSchema().optional(),
 });
 
@@ -215,6 +217,8 @@ export interface PcbComponent {
         syntheticBoardPad?: PcbSyntheticBoardPad;
         syntheticFootprint?: PcbGeneratedGeometry;
         generatedGeometry?: PcbGeneratedGeometry[];
+        /** Explicit source-footprint occupancy; top/bottom swap when placed on bottom. Pads remain occupied. */
+        occupiedAreas?: Partial<Record<Layer, Box[]>>;
     };
 }
 

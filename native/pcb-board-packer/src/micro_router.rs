@@ -540,15 +540,14 @@ fn points_by_net(primitive: &Primitive, config: &MicroRouteConfig) -> FxHashMap<
         primitive.connection_points.len().min(256),
         Default::default(),
     );
-    for point in primitive.connection_points.iter() {
+    for (index, point) in primitive.connection_points.iter().enumerate() {
         let Some(net) = point.net.as_ref() else { continue };
-        result.entry(net.clone()).or_default().push(RouteEndpoint {
-            point: Point { x: point.x, y: point.y },
-            layer: point_layer(primitive, point.reference.as_ref(), config),
-            primitive_id: primitive.id.clone(),
-            reference: point.reference.clone(),
-            net: net.clone(),
-        });
+        for layer in point_layers(primitive, index, config) {
+            result.entry(net.clone()).or_default().push(RouteEndpoint {
+                point: Point { x: point.x, y: point.y }, layer,
+                primitive_id: primitive.id.clone(), reference: point.reference.clone(), net: net.clone(),
+            });
+        }
     }
     result
 }
@@ -556,15 +555,13 @@ fn points_by_net(primitive: &Primitive, config: &MicroRouteConfig) -> FxHashMap<
 fn resolve_endpoint(endpoint: &str, primitives: &[&Primitive], config: &MicroRouteConfig) -> Vec<RouteEndpoint> {
     if let Some(reference) = endpoint.strip_prefix("pad:") {
         for primitive in primitives {
-            if let Some(point) = primitive.connection_points.iter().find(|point| point.reference.as_ref() == reference) {
+            if let Some((index, point)) = primitive.connection_points.iter().enumerate()
+                .find(|(_, point)| point.reference.as_ref() == reference) {
                 if let Some(net) = point.net.as_ref() {
-                    return vec![RouteEndpoint {
-                        point: Point { x: point.x, y: point.y },
-                        layer: point_layer(primitive, point.reference.as_ref(), config),
-                        primitive_id: primitive.id.clone(),
-                        reference: point.reference.clone(),
-                        net: net.clone(),
-                    }];
+                    return point_layers(primitive, index, config).into_iter().map(|layer| RouteEndpoint {
+                        point: Point { x: point.x, y: point.y }, layer,
+                        primitive_id: primitive.id.clone(), reference: point.reference.clone(), net: net.clone(),
+                    }).collect();
                 }
             }
         }
@@ -577,15 +574,13 @@ fn resolve_endpoint(endpoint: &str, primitives: &[&Primitive], config: &MicroRou
             .filter(|primitive| primitive.placements.iter().any(|p| p.designator.as_ref() == designator))
             .flat_map(|primitive| {
                 let prefix = prefix.clone();
-                primitive.connection_points.iter().filter_map(move |point| {
-                    let net = point.net.as_ref()?;
-                    point.reference.starts_with(&prefix).then(|| RouteEndpoint {
-                        point: Point { x: point.x, y: point.y },
-                        layer: point_layer(primitive, point.reference.as_ref(), config),
-                        primitive_id: primitive.id.clone(),
-                        reference: point.reference.clone(),
-                        net: net.clone(),
-                    })
+                primitive.connection_points.iter().enumerate().flat_map(move |(index, point)| {
+                    let Some(net) = point.net.as_ref() else { return vec![]; };
+                    if !point.reference.starts_with(&prefix) { return vec![]; }
+                    point_layers(primitive, index, config).into_iter().map(|layer| RouteEndpoint {
+                        point: Point { x: point.x, y: point.y }, layer,
+                        primitive_id: primitive.id.clone(), reference: point.reference.clone(), net: net.clone(),
+                    }).collect::<Vec<_>>()
                 })
             })
             .collect();
@@ -610,7 +605,8 @@ fn closest_shared_net_pair(a: &[RouteEndpoint], b: &[RouteEndpoint]) -> Option<(
         for right in b {
             if left.net != right.net { continue; }
             let d = distance(left.point, right.point);
-            if best.as_ref().is_none_or(|(_, _, best_d)| d < *best_d - EPS) {
+            if best.as_ref().is_none_or(|(best_a, best_b, best_d)| d < *best_d - EPS
+                || (d - *best_d).abs() <= EPS && left.layer == right.layer && best_a.layer != best_b.layer) {
                 best = Some((left.clone(), right.clone(), d));
             }
         }
@@ -623,7 +619,8 @@ fn closest_pair(a: &[RouteEndpoint], b: &[RouteEndpoint]) -> Option<(RouteEndpoi
     for left in a {
         for right in b {
             let d = distance(left.point, right.point);
-            if best.as_ref().is_none_or(|(_, _, best_d)| d < *best_d - EPS) {
+            if best.as_ref().is_none_or(|(best_a, best_b, best_d)| d < *best_d - EPS
+                || (d - *best_d).abs() <= EPS && left.layer == right.layer && best_a.layer != best_b.layer) {
                 best = Some((left.clone(), right.clone(), d));
             }
         }
@@ -637,12 +634,19 @@ fn primitive_layer(primitive: &Primitive, config: &MicroRouteConfig) -> usize {
         .unwrap_or(0)
 }
 
-fn point_layer(primitive: &Primitive, reference: &str, config: &MicroRouteConfig) -> usize {
+fn point_layers(primitive: &Primitive, index: usize, config: &MicroRouteConfig) -> Vec<usize> {
+    if let Some(layer) = primitive.connection_point_layers.get(index) {
+        if layer.as_ref() == "multi" { return (0..config.layers.len()).collect(); }
+        if let Some(found) = config.layers.iter().position(|candidate| candidate.name.as_ref() == layer.as_ref()) {
+            return vec![found];
+        }
+    }
+    let reference = primitive.connection_points[index].reference.as_ref();
     let designator = reference.split_once('.').map(|(name, _)| name).unwrap_or(reference);
-    primitive.placements.iter()
+    vec![primitive.placements.iter()
         .find(|placement| placement.designator.as_ref() == designator)
         .and_then(|placement| config.layers.iter().position(|layer| layer.name.as_ref() == placement.layer.as_ref()))
-        .unwrap_or_else(|| primitive_layer(primitive, config))
+        .unwrap_or_else(|| primitive_layer(primitive, config))]
 }
 
 fn collect_obstacles(
@@ -1144,6 +1148,20 @@ mod tests {
     use super::*;
     use crate::model::{ConnectionPoint, Placement};
 
+    #[test]
+    fn mixed_primitive_uses_each_pad_and_obstacle_layer() {
+        let mut block = primitive("U1", 0.0, 0.0, "SIG");
+        block.connection_point_layers = Arc::new(vec![Arc::from("bottom")]);
+        let config = MicroRouteConfig::board();
+        let bottom = config.layers.iter().position(|layer| layer.name.as_ref() == "bottom").unwrap();
+        assert_eq!(point_layers(&block, 0, &config), vec![bottom]);
+        block.connection_point_layers = Arc::new(vec![Arc::from("multi")]);
+        assert_eq!(point_layers(&block, 0, &config).len(), config.layers.len());
+        block.collision_box_layers = Arc::new(vec![Arc::from("bottom")]);
+        let obstacles = collect_obstacles(&[&block], &[], &[], &config);
+        assert_eq!(obstacles[0].layer, Some(bottom));
+    }
+
     pub(super) fn primitive(id: &str, x: f64, y: f64, net: &str) -> Primitive {
         Primitive {
             id: Arc::from(id), kind: Arc::from("component"), label: Arc::from(id),
@@ -1155,6 +1173,7 @@ mod tests {
             width: 1.0, height: 1.0,
             placements: Arc::new(vec![Placement { designator: Arc::from(id), x, y, rotate: 0, layer: Arc::from("top"), score: 0.0 }]),
             connection_points: Arc::new(vec![ConnectionPoint { x, y, reference: Arc::from(format!("{id}.1")), net: Some(Arc::from(net)) }]),
+            connection_point_layers: Arc::new(vec![]),
             path_ports: Arc::new(vec![]), edge_place: None,
         }
     }

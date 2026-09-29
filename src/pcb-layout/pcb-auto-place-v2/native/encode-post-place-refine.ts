@@ -2,7 +2,7 @@ import type { PlacementInput, Placement, TargetRef, Point } from '#types/pcb/lay
 import { normalizeRotation } from '#utils/math.ts';
 import { samePartUuid } from '#types/lcsc.ts';
 import { isConnectedSignalName } from '#utils/signals.ts';
-import { boardBox, boardAnchorPoint, boardHoleKeepoutRadius, getBox, componentBox, componentCollisionBoxes, getLocalPointWorld, componentPadBox, isThroughHolePad } from '../../pcb-auto-place/geometry.ts';
+import { boardBox, boardAnchorPoint, boardHoleKeepoutRadius, getBox, componentBodyBox, componentCollisionBoxes, getLocalPointWorld, componentPadBox, isThroughHolePad } from '../../pcb-auto-place/geometry.ts';
 import { componentPairClearance, familyBlockDesignators, canonicalModuleDesignators, blockBboxLimit, familyBboxLimit, moduleBboxLimit } from '../../pcb-auto-place/report-helpers.ts';
 import { expandHints } from '../../pcb-auto-place/hints.ts';
 import { createPostPlaceRouteScoreContext, routeLayoutProblem } from '../post-place-route-score.ts';
@@ -73,12 +73,15 @@ export function encodeNativePostPlaceRefineProblem(input: PlacementInput, placem
         automatic: automatic[i], fixed: fixed[i], diagnostic: fixedMembers.includes(i),
         allowedRotations: (c.pcb.allowedRotations.length ? c.pcb.allowedRotations : [0, 90, 180, 270]).map(normalizeRotation),
         allowedLayers: c.pcb.allowedLayers.filter(l => input.board.allowedLayers.includes(l)),
-        overflow: { left: 0, right: 0, top: 0, bottom: 0, ...c.pcb.boardOverflow }, through: c.footprint.pads.some(isThroughHolePad), keys: keys[i],
+        overflow: { left: 0, right: 0, top: 0, bottom: 0, ...c.pcb.boardOverflow },
+        through: c.footprint.pads.some(isThroughHolePad)
+            || componentCollisionBoxes(c, { designator: c.designator, x: 0, y: 0, rotate: 0, layer: 'top', score: 0 }, 'bottom').length > 0,
+        keys: keys[i],
         pads: c.footprint.pads.map(p => ({ ref: `${c.designator}.${String(p.pin_number)}`, through: isThroughHolePad(p), net: (() => { const pin = c.pins.find(pin => String(pin.pin_number) === String(p.pin_number)); return pin && isConnectedSignalName(pin.signal_name) ? pin.signal_name : undefined; })() })),
         pins: c.pins.flatMap(pin => { const pad = c.footprint.pads.findIndex(p => String(p.pin_number) === String(pin.pin_number)); return pad >= 0 && isConnectedSignalName(pin.signal_name) ? [{ pad, net: pin.signal_name, ref: `${c.designator}.${String(pin.pin_number)}` }] : []; }),
         orientations: angles.flatMap(rotate => (['top', 'bottom'] as const).map(layer => {
             const pose: Placement = { designator: c.designator, x: 0, y: 0, rotate, layer, score: 0 };
-            return { rotate, layer, box: getBox(c, pose), body: componentBox(c, pose), opposite: componentCollisionBoxes(c, pose, layer === 'top' ? 'bottom' : 'top'),
+            return { rotate, layer, box: getBox(c, pose), body: componentBodyBox(c, pose), opposite: componentCollisionBoxes(c, pose, layer === 'top' ? 'bottom' : 'top'),
                 points: c.footprint.pads.map(p => getLocalPointWorld(pose, p)), padBoxes: c.footprint.pads.map(p => componentPadBox(pose, p)) };
         })),
     }));

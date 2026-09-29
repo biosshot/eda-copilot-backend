@@ -35,6 +35,21 @@ describe('easyeda footprint parser', () => {
         assert.equal(footprint.pads.find((pad) => pad.pin_number === '2')?.layer, 'bottom');
         assert.equal(footprint.graphics?.find((graphic) => graphic.layer === 'silk')?.side, 'bottom');
     });
+    it('rotates R rectangles and never treats circle radius as a coordinate', () => {
+        const footprint = parseEasyEdaFootprintDataStr([
+            '["DOCTYPE","FOOTPRINT"]',
+            '["PAD","p",0,"",1,"1",0,0,0,null,["RECT",20,20,0],[],0,0,0,1,0,null,null,null,null,0]',
+            '["POLY","rotated",0,"",3,10,["R",-100,50,200,100,90,0],0]',
+            '["FILL","circle",0,"",13,0.2,0,[["CIRCLE",1000,1000,10]],0]',
+        ].join('\n'));
+        const rectangle = footprint.graphics?.find((graphic) => graphic.kind === 'path' && graphic.layer === 'silk');
+        assert.ok(rectangle && rectangle.kind === 'path');
+        const xs = rectangle.points.map((point) => point.x);
+        const ys = rectangle.points.map((point) => point.y);
+        assert.ok(Math.abs(Math.max(...xs) - Math.min(...xs) - 2.54) < 0.001);
+        assert.ok(Math.abs(Math.max(...ys) - Math.min(...ys) - 5.08) < 0.001);
+        assert.equal(footprint.graphics?.some((graphic) => graphic.kind === 'path' && graphic.layer === 'document'), false);
+    });
 
     it('leaves a top-mounted display center available on bottom but blocks its drilled pads', () => {
         const display = parseEasyEdaFootprintDataStr([
@@ -57,6 +72,19 @@ describe('easyeda footprint parser', () => {
         const onHole = { ...bottom, x: 0 };
         assert.equal(componentPairCollisionBoxPairs(u6, top, r1, onHole).some(({ a, b }) =>
             a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top), true);
+    });
+    it('flips explicit source-side body areas when the component mounts on bottom', () => {
+        const footprint = parseEasyEdaFootprintDataStr([
+            '["DOCTYPE","FOOTPRINT"]',
+            '["PAD","hole",0,"",12,"1",0,0,0,["ROUND",36,36],["ELLIPSE",60,60],[],0,0,0,1,0,null,null,null,null,0]',
+            '["POLY","outline",0,"",3,10,["R",-200,200,400,400,0,0],0]',
+        ].join('\n'));
+        const component = { footprint, pcb: { occupiedAreas: { top: [], bottom: [{ left: 3, right: 5, top: -1, bottom: 1 }] } } } as PcbComponent;
+        const top = { x: 0, y: 0, rotate: 0, layer: 'top', score: 0 } as Placement;
+        const bottom = { ...top, layer: 'bottom' as const };
+        assert.equal(componentCollisionBoxes(component, top, 'top').some((box) => box.left <= -4), false);
+        assert.equal(componentCollisionBoxes(component, top, 'bottom').some((box) => box.left === 3 && box.right === 5), true);
+        assert.equal(componentCollisionBoxes(component, bottom, 'top').some((box) => box.left === -5 && box.right === -3), true);
     });
     it('parses polygon pads such as exposed thermal pads', () => {
         const dataStr = [

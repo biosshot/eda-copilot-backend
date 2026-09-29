@@ -1,4 +1,4 @@
-import type { Box, Placement, Point } from '#types/pcb/layout-model.ts';
+import type { Box, Layer, Placement, Point } from '#types/pcb/layout-model.ts';
 import {
     boxCenter,
     rotateBox,
@@ -43,6 +43,8 @@ export interface PlacementPrimitive {
     allowedOrientations?: number[];
     bbox: Box;
     collisionBoxes?: Box[];
+    collisionBoxLayers?: Layer[];
+    connectionPointLayers?: Array<Layer | 'multi'>;
     width: number;
     height: number;
     placements: Placement[];

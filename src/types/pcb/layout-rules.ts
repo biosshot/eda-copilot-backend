@@ -236,6 +236,10 @@ const ComponentRuleSchema = () => z.object({
     block_name: nullableSchema(z.string()),
     role: nullableSchema(z.enum(PCB_COMPONENT_ROLES)),
     footprint: nullableSchema(FootprintSchema()),
+    occupiedAreas: nullableSchema(z.object({
+        top: z.array(z.object({ left: z.number(), right: z.number(), top: z.number(), bottom: z.number() })).optional(),
+        bottom: z.array(z.object({ left: z.number(), right: z.number(), top: z.number(), bottom: z.number() })).optional(),
+    })),
     allowedLayers: nullableSchema(z.array(LayerSchema())),
     allowedRotations: nullableSchema(z.array(z.number())),
     fixedPlacement: nullableSchema(FixedPlacementSchema()),

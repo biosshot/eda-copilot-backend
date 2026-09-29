@@ -107,6 +107,7 @@ export interface NativePrimitive {
     height: number;
     placements: NativePlacement[];
     connectionPoints: NativeConnectionPoint[];
+    connectionPointLayers?: Array<Layer | 'multi'>;
     pathPorts: NativePathPort[];
     edgePlace: NativeEdgePlaceIntent | null;
 }

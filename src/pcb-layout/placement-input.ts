@@ -785,6 +785,7 @@ export async function buildPlacementInput(
                 designatorText: normalizeDesignatorTextOptions(rule?.designatorText),
                 syntheticBoardPad: normalizeSyntheticBoardPad(boardPadByName.get(component.designator)),
                 syntheticFootprint: compiledProcedural?.geometry,
+                occupiedAreas: rule?.occupiedAreas ?? undefined,
             },
         };
     }));

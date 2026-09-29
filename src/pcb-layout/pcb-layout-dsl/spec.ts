@@ -2,7 +2,7 @@ import { backendResource } from '#runtime/resources.ts';
 import { readFileSync } from "node:fs";
 import { Script, createContext } from "node:vm";
 import { compileAntenna, compileSolderJumper } from "#pcb-layout/procedural-footprints.ts";
-import type { FootprintSpec, BoardAnchor, BoardEdge, ComponentRole, Layer, PcbRuleLevel, TargetRef } from "#types/pcb/layout-model.ts";
+import type { FootprintSpec, BoardAnchor, BoardEdge, Box, ComponentRole, Layer, PcbRuleLevel, TargetRef } from "#types/pcb/layout-model.ts";
 import {
     PCB_BLOCK_PLACEMENTS,
     PCB_BLOCK_ROLES,
@@ -596,6 +596,7 @@ class PcbLayoutDslBuilder {
             block_name: blockName,
             role: "connector",
             footprint,
+            occupiedAreas: null,
             allowedLayers: layer === "bottom" ? ["bottom"] : ["top"],
             allowedRotations: [0],
             fixedPlacement: {
@@ -772,6 +773,7 @@ class PcbLayoutDslBuilder {
                 ...options.footprint,
                 pads: options.footprint.pads.map((pad) => ({ ...pad, name: pad.name ?? null, shape: pad.shape ?? null, mount: pad.mount ?? null, drillDiameter: pad.drillDiameter ?? null })),
             } : null,
+            occupiedAreas: null,
             allowedLayers: [options.layer],
             allowedRotations: [0, 90, 180, 270],
             fixedPlacement: options.fixedPlacement,
@@ -998,6 +1000,7 @@ class PcbLayoutDslBuilder {
                 block_name: null,
                 role: null,
                 footprint: null,
+                occupiedAreas: null,
                 allowedLayers: null,
                 allowedRotations: null,
                 fixedPlacement: null,
@@ -1017,6 +1020,16 @@ class PcbLayoutDslBuilder {
             },
             role: (role: ComponentRole) => {
                 rule.role = role;
+                return this.component(designator);
+            },
+            occupancy: (areas: Partial<Record<Layer, Box[]>>) => {
+                for (const boxes of Object.values(areas)) for (const box of boxes ?? []) {
+                    if (![box.left, box.right, box.top, box.bottom].every(Number.isFinite)
+                        || box.left > box.right || box.top > box.bottom) {
+                        throw new Error(`${designator}: occupancy boxes must have finite ordered bounds`);
+                    }
+                }
+                rule.occupiedAreas = areas;
                 return this.component(designator);
             },
             layers: (...layers: Layer[]) => {

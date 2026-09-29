@@ -47,6 +47,8 @@ pub struct Primitive {
     pub placements: Arc<Vec<Placement>>,
     pub connection_points: Arc<Vec<ConnectionPoint>>,
     #[serde(default)]
+    pub connection_point_layers: Arc<Vec<Arc<str>>>,
+    #[serde(default)]
     pub path_ports: Arc<Vec<PathPort>>,
     pub edge_place: Option<EdgePlaceIntent>,
 }

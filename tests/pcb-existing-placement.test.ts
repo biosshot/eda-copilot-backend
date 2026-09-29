@@ -4,6 +4,10 @@ import { applyExistingBoard, applyExistingComponentPlacements, ensurePreservedCo
 import { runPcbLayoutDsl } from '../src/pcb-layout/pcb-layout-dsl/spec.ts';
 import { createPlacementReport } from './fixtures/auto-place.ts';
 import { centeredBoard, defaultSolverOptions } from '../src/pcb-layout/pcb-auto-place/utils.ts';
+import { getLocalPointOffset } from '../src/pcb-layout/pcb-auto-place/geometry.ts';
+import { parseEasyEdaFootprintDataStr } from '../src/devices/footprints/easyeda-footprint.ts';
+import { createPcbLayout } from '../src/pcb-layout/pcb-auto-place/layout.ts';
+import { createBoardAssemble } from '../src/pcb-layout/board-assemble.ts';
 import { validatePlacementRulesForCircuit } from '../src/pcb-layout/placement-input.ts';
 import type { ExplainCircuit } from '../src/types/circuit.ts';
 import type { ExistingPlacement, PcbComponent, PlacementInput } from '../src/types/pcb/layout-model.ts';
@@ -116,6 +120,34 @@ test('converts a preserved source origin to the footprint body center', () => {
     });
 });
 
+test('allows explicit per-side occupied areas without moving a fixed part', () => {
+    const rules = runPcbLayoutDsl('component("U6").occupancy({ top: [], bottom: [{ left: -5, right: 5, top: -4, bottom: 4 }] });');
+    assert.deepEqual(JSON.parse(JSON.stringify(rules.component_rules.find((rule) => rule.designator === 'U6')?.occupiedAreas)),
+        { top: [], bottom: [{ left: -5, right: 5, top: -4, bottom: 4 }] });
+});
+
+test('U6 source mounting coordinates survive the corrected rectangle normalization', () => {
+    const input = placementInput(['U6']);
+    input.components[0].footprint = parseEasyEdaFootprintDataStr([
+        '["DOCTYPE","FOOTPRINT"]',
+        '["PAD","p1",0,"",12,"1",0,0,0,["ROUND",36,36],["ELLIPSE",60,60],[],0,0,0,1,0,null,null,null,null,0]',
+        '["POLY","outline",0,"",3,10,["R",-78.7402,1198.4252,4251.9685,2396.8504,0,0],0]',
+    ].join('\n'));
+    for (const layer of ['top', 'bottom'] as const) {
+        const source = { designator: 'U6', x: 13, y: 21, rotate: 90, layer };
+        const applied = applyExistingComponentPlacements(input, { components: ['U6'] }, { components: [source] });
+        const fixed = applied.components[0].pcb.fixedPlacement!;
+        const offset = getLocalPointOffset(input.components[0].footprint.sourceOriginOffset!, source.rotate, source.layer);
+        assert.ok(Math.abs(fixed.x + offset.x - source.x) < 1e-9);
+        assert.ok(Math.abs(fixed.y + offset.y - source.y) < 1e-9);
+        assert.equal(fixed.rotate, source.rotate);
+        assert.equal(fixed.layer, source.layer);
+        const assembly = createBoardAssemble(createPcbLayout(applied, [{ designator: 'U6', ...fixed, score: 0 }]));
+        assert.equal(assembly.components?.[0]?.x, source.x);
+        assert.equal(assembly.components?.[0]?.y, -source.y);
+    }
+});
+
 test('placement report includes fixed-to-fixed and movable-to-fixed overlaps', () => {
     const input = placementInput(['U1', 'C1', 'R1']);
     const applied = applyExistingComponentPlacements(
@@ -154,6 +186,14 @@ test('placement report ignores outside-board errors for fixed components', () =>
 
     assert.equal(report.ok, true);
     assert.deepEqual(report.outsideBoard, []);
+});
+
+test('reports large occupied areas inferred from silkscreen', () => {
+    const input = placementInput(['U6']);
+    input.components[0].footprint = { name: 'DISPLAY', width: 20, height: 20, pads: [],
+        bodyBox: { left: -10, right: 10, top: -10, bottom: 10 }, bodyBoxSource: 'silk' };
+    const report = createPlacementReport(input, [{ designator: 'U6', x: 0, y: 0, rotate: 0, layer: 'top', score: 0 }]);
+    assert.equal(report.graphReport.diagnostics.some((item) => item.code === 'inferred_silkscreen_occupancy'), true);
 });
 
 test('uses compact placement clearance defaults', () => {
