@@ -1,0 +1,17 @@
+{
+  "fixture": "CONNECTOR_ROTATIONS_90",
+  "placementOk": true,
+  "wallMs": 16948.0882,
+  "stageMs": {
+    "parse_dsl": 24.79819999999995,
+    "validate_dsl": 1.799600000000055,
+    "resolve_footprints": 1992.8096,
+    "build_graph": 3.5556000000001404,
+    "auto_place": 14079.639299999999,
+    "render_and_artifacts": 29.233600000003207,
+    "assemble_and_report": 17.50069999999687
+  },
+  "blockRequests": 20,
+  "boardRequests": 1,
+  "nativeSha256": "cce707209ebb4f8d1dfd751577746c02696e81eb31ccc413a79931a56d8ff53f"
+}

@@ -1,0 +1,11 @@
+# PCB debugging workflow, 2026-09-29
+
+Implementation: commit `67a3e60` on branch `experiments/block-placement-quality`. This experiment changes diagnostics and generated output paths, not placement scores or search policy. The exact full-run command was `npm run debug:pcb-layout -- capture CONNECTOR_ROTATIONS_90`; the native replays used `npm run debug:pcb-layout -- replay <capture-directory> 1`.
+
+Result: the small `CONNECTOR_ROTATIONS_90` fixture completed twice with a valid placement. The runs took 12.87 s and 16.95 s; the latter spent 1.99 s resolving footprints and 14.08 s in auto placement. Each capture recorded 20 block requests and one board request, plus exact native inputs, solutions, Rust profile lines, original fixture sources, resolved placement input, block and board SVGs, and assembly JSON. The captured board replays took 5.84 ms and 5.26 ms and matched their baseline solutions and ranks exactly. A separate two-primitive ESP32-C3 block replay took 10.79 ms and also matched exactly. These replay times exclude TypeScript preparation and the rest of placement; they are not full-board speedups. The spread between the two full runs shows why timing comparisons need repeated, comparable runs.
+
+Saved result: [full-board SVG](connector-rotations-90.svg) and [machine-readable verification](verification.json). The complete per-call capture stays in ignored `debugging/pcb-layout/runs/CONNECTOR_ROTATIONS_90/` because its native inputs are large and run-specific.
+
+One attempted capture of `PROCEDURAL_FOOTPRINTS` failed during DSL validation because block `led` combines an `edgePlace` component with a component lacking `edgePlace`. The failure was captured in `run.log` and `summary.json`; no solver performance conclusion follows from it. The fixture DSL was left unchanged.
+
+Verdict: **successful developer tooling**. Exact block and board replay works on current native contract 4/7 inputs, and the fixture output remains geometry-valid. Full PortableScope was deliberately not rerun. Future solver experiments must record their own before/after quality and timing here or in a dedicated experiment report; this run does not establish a performance change in the solver.
