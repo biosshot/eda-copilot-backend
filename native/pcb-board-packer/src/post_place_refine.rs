@@ -98,6 +98,8 @@ struct Pad {
     #[serde(rename = "ref")]
     reference: Arc<str>,
     through: bool,
+    #[serde(default)]
+    opposite: bool,
     net: Option<Arc<str>>,
 }
 #[derive(Deserialize)]
@@ -405,7 +407,7 @@ impl RefineProblem {
         primitive.collision_boxes = Arc::new(std::iter::once(body).chain(w.opposite[i].iter().copied()).collect());
         let other_layer: Arc<str> = Arc::from(if pose.layer.as_ref() == "top" { "bottom" } else { "top" });
         primitive.collision_box_layers = Arc::new(std::iter::once(pose.layer.clone())
-            .chain(std::iter::repeat_n(other_layer, w.opposite[i].len())).collect());
+            .chain(std::iter::repeat_n(other_layer.clone(), w.opposite[i].len())).collect());
         primitive.width = body.right - body.left;
         primitive.height = body.bottom - body.top;
         primitive.placements = Arc::new(vec![pose.clone()]);
@@ -420,13 +422,17 @@ impl RefineProblem {
                 })
                 .collect(),
         );
+        primitive.connection_point_layers = Arc::new(c.pins.iter().map(|pin| {
+            let pad = &c.pads[pin.pad];
+            if pad.through { Arc::from("multi") } else if pad.opposite { other_layer.clone() } else { pose.layer.clone() }
+        }).collect());
         for (j, pad) in c.pads.iter().enumerate() {
             let obstacle = &mut w.obstacles[c.obstacle_offset + j];
             obstacle.box_ = shift(o.pad_boxes[j], pose);
             obstacle.layer = if pad.through {
                 None
             } else {
-                Some(pose.layer.clone())
+                Some(if pad.opposite { other_layer.clone() } else { pose.layer.clone() })
             };
         }
         Ok(())
@@ -665,11 +671,11 @@ impl RefineProblem {
             }
             for (j, r) in self.regions.iter().enumerate() {
                 if !r.allowed.contains(&i)
-                    && r.layers.contains(&p.layer)
-                    && b.left < r.box_.right - EPS
-                    && b.right > r.box_.left + EPS
-                    && b.top < r.box_.bottom - EPS
-                    && b.bottom > r.box_.top + EPS
+                    && std::iter::once((&w.bodies[i], p.layer.as_ref()))
+                        .chain(w.opposite[i].iter().map(|b| (b, if p.layer.as_ref() == "top" { "bottom" } else { "top" })))
+                        .any(|(b, layer)| r.layers.iter().any(|l| l.as_ref() == layer)
+                            && b.left < r.box_.right - EPS && b.right > r.box_.left + EPS
+                            && b.top < r.box_.bottom - EPS && b.bottom > r.box_.top + EPS)
                 {
                     keys.insert(format!("{prefix}:region:{}:{j}", r.name));
                 }

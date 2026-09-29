@@ -1,6 +1,6 @@
 import type { Box, PcbComponent, Placement, PlacementInput } from '#types/pcb/layout-model.ts';
 import { isConnectedSignalName } from '#utils/signals.ts';
-import { boardBox, getBox, getPadWorld, componentPadBox, isThroughHolePad } from '../../pcb-auto-place/geometry.ts';
+import { boardBox, getBox, getPadWorld, componentPadBox, isThroughHolePad, padPlacementLayer } from '../../pcb-auto-place/geometry.ts';
 import { placementPadCrossingWeight } from '../block-policy.ts';
 import { expandHints } from '../../pcb-auto-place/hints.ts';
 import {
@@ -32,7 +32,7 @@ export function encodeNativePostPlaceScoreProblem(
         for (const pad of component.footprint.pads) routingObstacles.push({
             box: componentPadBox(placement, pad), ref: `${component.designator}.${String(pad.pin_number)}`,
             net: component.pins.find(p => String(p.pin_number) === String(pad.pin_number))?.signal_name ?? undefined,
-            layer: isThroughHolePad(pad) ? undefined : placement.layer,
+            layer: padPlacementLayer(pad, placement),
         });
         for (const pin of component.pins) {
             if (!isConnectedSignalName(pin.signal_name) || ignored.has(pin.signal_name.toUpperCase())) continue;
@@ -43,7 +43,7 @@ export function encodeNativePostPlaceScoreProblem(
             pointsByNet.set(pin.signal_name, points);
             const pad = component.footprint.pads.find(p => String(p.pin_number) === String(pin.pin_number))!;
             const layers = layersByNet.get(pin.signal_name) ?? [];
-            layers.push(isThroughHolePad(pad) ? null : placement.layer);
+            layers.push(padPlacementLayer(pad, placement) ?? null);
             layersByNet.set(pin.signal_name, layers);
             const owners = ownersByNet.get(pin.signal_name) ?? [];
             owners.push(component.pcb.role === 'main_ic' ? component.designator : null);

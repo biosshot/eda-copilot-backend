@@ -1,6 +1,6 @@
 import type { PcbComponent, Placement } from '#types/pcb/layout-model.ts';
 import { isGroundSignalName, isPowerSignalName } from '#utils/signals.ts';
-import { boardOutlinePolygon, componentBodyBox, componentCollisionBoxes, componentPadBox, isThroughHolePad } from '../../pcb-auto-place/geometry.ts';
+import { boardOutlinePolygon, componentBodyBox, componentCollisionBoxes, componentPadBox, isThroughHolePad, padPlacementLayer } from '../../pcb-auto-place/geometry.ts';
 import { createFixedPlacement } from '../../pcb-auto-place/fixed.ts';
 import { placementsCanConflict } from '../../pcb-auto-place/utils.ts';
 import type { BlockSolveParams } from '../block-solver.ts';
@@ -37,7 +37,7 @@ export function encodeNativeBlockSolveProblem(params: BlockSolveParams): NativeB
         routingObstacles: components.flatMap(({component, placement, primitiveId}) => component.footprint.pads.map(pad => ({
             box: componentPadBox(placement, pad), primitiveId, ref: `${component.designator}.${pad.pin_number}`,
             net: component.pins.find(p=>String(p.pin_number)===String(pad.pin_number))?.signal_name || undefined,
-            layer: isThroughHolePad(pad) ? undefined : placement.layer,
+            layer: padPlacementLayer(pad, placement),
         }))),
         externalNets: [...new Set([...(params.options.componentByDesignator?.values() ?? [])]
             .filter(c=>!components.some(entry=>entry.component.designator===c.designator))
@@ -83,13 +83,13 @@ function encodeBlockWorld(params: BlockSolveParams, components: ComponentEntry[]
         outline: boardOutlinePolygon(input.board), edgeClearance: input.board.clearances.edge,
         bounds: {left:-input.board.outline.width/2, right:input.board.outline.width/2,
             top:-input.board.outline.height/2, bottom:input.board.outline.height/2},
-        obstacles: components.flatMap(({component:c,placement:p}) => [
-            ...fixed.flatMap(({c:other,p:pose}) => componentCollisionBoxes(other,pose,p.layer).map(box => ({
-                designator:c.designator, box, clearance:params.options.clearanceResolver?.(c.designator,other.designator) ?? params.options.clearance,
+        obstacles: components.flatMap(({component:c}) => (['top', 'bottom'] as const).flatMap(layer => [
+            ...fixed.flatMap(({c:other,p:pose}) => componentCollisionBoxes(other,pose,layer).map(box => ({
+                designator:c.designator, layer, box, clearance:params.options.clearanceResolver?.(c.designator,other.designator) ?? params.options.clearance,
             }))),
-            ...(input.constraintRegions ?? []).filter(r=>r.layers.includes(p.layer)&&!r.allowBlocks.includes(c.block_name))
-                .map(r=>({designator:c.designator,box:r.box,clearance:0})),
-        ]),
+            ...(input.constraintRegions ?? []).filter(r=>r.layers.includes(layer)&&!r.allowBlocks.includes(c.block_name))
+                .map(r=>({designator:c.designator,layer,box:r.box,clearance:0})),
+        ])),
     };
 }
 

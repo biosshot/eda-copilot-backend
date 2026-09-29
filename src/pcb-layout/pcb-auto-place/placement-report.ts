@@ -1,5 +1,5 @@
 import type { Box, PcbBlock, PcbComponent, PcbModule, Placement, PlacementGraphDiagnostic, PlacementInput, PlacementReport, Point } from '#types/pcb/layout-model.ts';
-import { boardBox, boardHoleKeepoutRadius, boxClearanceGap, boxGap, boxPointGap, componentPairCollisionBoxPairs, dist, distanceToEdge, GEOMETRY_EPSILON, getBox, getPadWorld, PLACEMENT_EPSILON, round } from './geometry.ts';
+import { boardBox, boardHoleKeepoutRadius, boxClearanceGap, boxGap, boxPointGap, componentPairCollisionBoxPairs, componentCollisionBoxes, dist, distanceToEdge, GEOMETRY_EPSILON, getBox, getPadWorld, PLACEMENT_EPSILON, round } from './geometry.ts';
 import { componentOutsideBoard } from './fixed.ts';
 import { expandHints } from './hints.ts';
 import {
@@ -76,8 +76,8 @@ export function createPlacementReport(input: PlacementInput, placements: Placeme
 
         for (const region of input.constraintRegions ?? []) {
             if (region.allowBlocks.includes(component.block_name)) continue;
-            if (!region.layers.includes(placement.layer)) continue;
-            const overlap = boxOverlapDepth(box, region.box);
+            const overlap = Math.max(0, ...region.layers.flatMap(layer =>
+                componentCollisionBoxes(component, placement, layer).map(box => boxOverlapDepth(box, region.box))));
             if (overlap > 0) {
                 constraintRegionViolations.push({
                     designator: component.designator,

@@ -77,7 +77,7 @@ export function encodeNativePostPlaceRefineProblem(input: PlacementInput, placem
         through: c.footprint.pads.some(isThroughHolePad)
             || componentCollisionBoxes(c, { designator: c.designator, x: 0, y: 0, rotate: 0, layer: 'top', score: 0 }, 'bottom').length > 0,
         keys: keys[i],
-        pads: c.footprint.pads.map(p => ({ ref: `${c.designator}.${String(p.pin_number)}`, through: isThroughHolePad(p), net: (() => { const pin = c.pins.find(pin => String(pin.pin_number) === String(p.pin_number)); return pin && isConnectedSignalName(pin.signal_name) ? pin.signal_name : undefined; })() })),
+        pads: c.footprint.pads.map(p => ({ ref: `${c.designator}.${String(p.pin_number)}`, through: isThroughHolePad(p), opposite: p.layer === 'bottom', net: (() => { const pin = c.pins.find(pin => String(pin.pin_number) === String(p.pin_number)); return pin && isConnectedSignalName(pin.signal_name) ? pin.signal_name : undefined; })() })),
         pins: c.pins.flatMap(pin => { const pad = c.footprint.pads.findIndex(p => String(p.pin_number) === String(pin.pin_number)); return pad >= 0 && isConnectedSignalName(pin.signal_name) ? [{ pad, net: pin.signal_name, ref: `${c.designator}.${String(pin.pin_number)}` }] : []; }),
         orientations: angles.flatMap(rotate => (['top', 'bottom'] as const).map(layer => {
             const pose: Placement = { designator: c.designator, x: 0, y: 0, rotate, layer, score: 0 };

@@ -227,6 +227,8 @@ pub struct BlockWorld {
 #[derive(Clone, Debug, Deserialize)]
 pub struct BlockWorldObstacle {
     pub designator: Arc<str>,
+    #[serde(default)]
+    pub layer: Option<Arc<str>>,
     #[serde(rename = "box")]
     pub box_: Box2,
     pub clearance: f64,

@@ -571,6 +571,11 @@ fn has_overlap(problem: &PassiveIslandProblem, placements: &[CandidatePlacement]
                 ) {
                     return true;
                 }
+                if a_orientation.through_hole_boxes.iter().any(|a_box|
+                    b_orientation.through_hole_boxes.iter().any(|b_box|
+                        boxes_overlap(&world_box(a_box, a), &world_box(b_box, b), clearance))) {
+                    return true;
+                }
             } else {
                 let a_body = body_world_box(a_orientation, a);
                 let b_body = body_world_box(b_orientation, b);

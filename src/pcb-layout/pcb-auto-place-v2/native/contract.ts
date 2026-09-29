@@ -249,7 +249,7 @@ export interface NativeBlockSolveProblemV4 {
     deferPairs?: boolean;
     pairSeed?: NativeBlockPairSeed[];
     world?: { outline: Point[]; bounds: Box; edgeClearance: number;
-        obstacles: Array<{designator: string; box: Box; clearance: number}> };
+        obstacles: Array<{designator: string; layer?: Layer; box: Box; clearance: number}> };
     /** Opt-in research controls; deliberately not exposed by the placement DSL. */
     experiments?: {
         routingMetric?: 'micro' | 'off' | 'geometric';

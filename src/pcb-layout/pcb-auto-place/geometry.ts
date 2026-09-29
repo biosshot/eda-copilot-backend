@@ -460,3 +460,9 @@ export function unionBoxes(boxes: Box[]): Box {
 export function normalizeRotation(value: number) {
     return ((Math.round(value) % 360) + 360) % 360;
 }
+
+/** Absolute copper side; undefined means a pad occupies both sides. */
+export function padPlacementLayer(pad: FootprintPad, placement: Placement): Layer | undefined {
+    return isThroughHolePad(pad) ? undefined : pad.layer === 'bottom'
+        ? (placement.layer === 'top' ? 'bottom' : 'top') : placement.layer;
+}

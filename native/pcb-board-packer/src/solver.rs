@@ -1337,6 +1337,20 @@ fn polygon_board_outside_severity(box_: &Box2, bounds: &Box2, edge: f64, context
     severity
 }
 
+fn component_region_overlap(component: &ComponentGeometry, region: &crate::model::ConstraintRegion) -> f64 {
+    let opposite = if component.layer.as_ref() == "top" { "bottom" } else { "top" };
+    let mut depth: f64 = 0.0;
+    if region.layers.contains(&component.layer) {
+        depth = overlap_depth(&component.body_box, &region.box_, 0.0);
+    }
+    if region.layers.iter().any(|layer| layer.as_ref() == opposite) {
+        for box_ in component.through_hole_boxes.iter() {
+            depth = depth.max(overlap_depth(box_, &region.box_, 0.0));
+        }
+    }
+    depth
+}
+
 fn constraint_violation_count(primitive: &WorkingPrimitive, context: &Context) -> usize {
     context
         .problem
@@ -1345,8 +1359,7 @@ fn constraint_violation_count(primitive: &WorkingPrimitive, context: &Context) -
         .filter(|region| {
             primitive.components.iter().any(|(_, component)| {
                 !region.allow_blocks.contains(&component.block_name)
-                    && region.layers.contains(&component.layer)
-                    && overlap_depth(&component.body_box, &region.box_, 0.0) > 0.0
+                    && component_region_overlap(component, region) > 0.0
             })
         })
         .count()
@@ -1360,11 +1373,10 @@ fn constraint_violation_severity(primitive: &WorkingPrimitive, context: &Context
         .flat_map(|region| {
             primitive.components.iter().filter_map(|(_, component)| {
                 if region.allow_blocks.contains(&component.block_name)
-                    || !region.layers.contains(&component.layer)
                 {
                     return None;
                 }
-                Some(overlap_depth(&component.body_box, &region.box_, 0.0))
+                Some(component_region_overlap(component, region))
             })
         })
         .sum()
@@ -2757,6 +2769,15 @@ mod alignment_search_tests {
         assert_eq!(envelope_overlap_penalty(&[display.clone(), candidate.clone()], &context), 0.0);
         let occupied = relevant_occupied_boxes(&display, &candidate);
         assert_eq!(occupied, vec![pad_box]);
+        let mut region: crate::model::ConstraintRegion = serde_json::from_value(json!({
+            "name":"bottom-only", "box":bottom_box, "layers":["bottom"], "allowBlocks":[]
+        })).unwrap();
+        assert_eq!(component_region_overlap(&display.components[0].1, &region), 0.0);
+        region.box_ = pad_box;
+        assert!(component_region_overlap(&display.components[0].1, &region) > 0.0);
+        region.box_ = bottom_box;
+        region.layers = vec![Arc::from("top")];
+        assert!(component_region_overlap(&display.components[0].1, &region) > 0.0);
         let mut near_pad = candidate.clone();
         translate_primitive(&mut near_pad, -20.0, 0.0);
         assert!(primitive_hard_overlap(&display, &near_pad, &context) > 0.0);

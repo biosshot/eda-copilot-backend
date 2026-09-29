@@ -1893,10 +1893,14 @@ fn world_violations(primitive: &WorkingPrimitive, context: &Context) -> usize {
     if primitive.primitive.locked { return 0; }
     let mut count = 0;
     for (_, component) in primitive.components.iter() {
-        if !crate::geometry::box_inside_polygon_board(&component.body_box, &world.bounds,
-            &world.outline, world.edge_clearance) { count += 1; }
+        if std::iter::once(&component.body_box).chain(component.through_hole_boxes.iter()).any(|b|
+            !crate::geometry::box_inside_polygon_board(b, &world.bounds,
+                &world.outline, world.edge_clearance)) { count += 1; }
         for obstacle in world.obstacles.iter().filter(|o| o.designator == component.designator) {
-            if overlap_depth(&component.body_box, &obstacle.box_, obstacle.clearance) > 0.0 { count += 1; }
+            let boxes = if obstacle.layer.as_ref().is_none_or(|l| l == &component.layer) {
+                std::slice::from_ref(&component.body_box)
+            } else { component.through_hole_boxes.as_slice() };
+            if boxes.iter().any(|b| overlap_depth(b, &obstacle.box_, obstacle.clearance) > 0.0) { count += 1; }
         }
     }
     count
@@ -1929,6 +1933,11 @@ fn component_overlap_depth(a: &WorkingPrimitive, b: &WorkingPrimitive, context: 
                     &b_component.body_box,
                     clearance,
                 ));
+                for a_box in a_component.through_hole_boxes.iter() {
+                    for b_box in b_component.through_hole_boxes.iter() {
+                        max_overlap = max_overlap.max(overlap_depth(a_box, b_box, clearance));
+                    }
+                }
             } else {
                 for box_ in b_component.through_hole_boxes.iter() {
                     max_overlap =

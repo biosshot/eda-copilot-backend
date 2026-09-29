@@ -1,3 +1,4 @@
+import { encodeNativePostPlaceScoreProblem } from '../src/pcb-layout/pcb-auto-place-v2/native/encode-post-place-score.ts';
 import { refinePostPlacement as refinePostPlacementSerial } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
 import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import assert from 'node:assert/strict';
@@ -428,4 +429,40 @@ test('geometric postrefine evaluates swaps without any micro-router jobs; board 
     assert.ok(block.scoreAfter<block.scoreBefore);
     assert.ok(block.profile.iterations.every(p=>p.routeEvaluations===0));
     assert.ok(block.moves.every(m=>m.routePenaltyBefore===0&&m.routePenaltyAfter===0));
+});
+
+
+test('post-refine retains opposite SMD pad sides when rebuilding the world', () => {
+    const input = pairInput();
+    input.hints = [];
+    input.paths = [];
+    for (const component of input.components) {
+        component.footprint = structuredClone(component.footprint);
+        for (const pad of component.footprint.pads) pad.layer = component.designator === 'A' ? 'bottom' : 'top';
+    }
+    const poses = pairPlacements();
+    const problem = encodeNativePostPlaceRefineProblem(input, poses, 1);
+    assert.ok(problem.components.find(c => c.designator === 'A')?.pads.every(p => p.opposite));
+    const addon = loadNativeBoardPacker();
+    const result = addon.refinePostPlacement({ ...problem, routingMetric: 'geometric', iterations: 0 });
+    const expected = addon.scorePostPlace(encodeNativePostPlaceScoreProblem(input, poses));
+    assert.ok(Math.abs(result.scoreBefore - expected) < 0.002, `${result.scoreBefore} != ${expected}`);
+    assert.deepEqual(result.placements, poses);
+});
+
+
+test('native refinement validates constraint regions against opposite-side pads', () => {
+    const input = pairInput();
+    input.hints = [];
+    input.paths = [];
+    const poses = pairPlacements();
+    const component = componentByDesignator(input, 'A');
+    component.footprint = structuredClone(component.footprint);
+    const pose = poses.find(p => p.designator === 'A')!;
+    input.constraintRegions = [{ name: 'bottom-keepout', layers: ['bottom'], allowBlocks: [],
+        box: { left: pose.x - 2, right: pose.x + 2, top: pose.y - 2, bottom: pose.y + 2 } }];
+    const addon = loadNativeBoardPacker();
+    assert.equal(addon.validatePlacement(encodeNativePostPlaceRefineProblem(input, poses, 1)), true);
+    component.footprint.pads[0].layer = 'bottom';
+    assert.equal(addon.validatePlacement(encodeNativePostPlaceRefineProblem(input, poses, 1)), false);
 });

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { boardSpacingPenalty, boardSpacingPolicy } from '../src/pcb-layout/pcb-auto-place-v2/board-spacing.ts';
 import { routeLayoutProblem } from '../src/pcb-layout/pcb-auto-place-v2/post-place-route-score.ts';
+import { encodeNativePostPlaceScoreProblem } from '../src/pcb-layout/pcb-auto-place-v2/native/encode-post-place-score.ts';
 import type { PlacementInput, PcbComponent } from '../src/types/pcb/layout-model.ts';
 import type { PlacementPrimitive } from '../src/pcb-layout/pcb-auto-place-v2/primitives.ts';
 
@@ -34,7 +35,7 @@ test('board route input preserves pad sides inside one mixed component', () => {
     const input = { board: { coordinateSystem: 'centered', outline: { width: 20, height: 20 },
         defaultLayer: 'top', allowedLayers: ['top', 'bottom'], clearances: { component: 0.35, edge: 0.5 } },
         components: [component], blocks: [], modules: [], hints: [], constraintRegions: [],
-        solverOptions: { placementGridStep: 0.5, compactness: 'normal' } } as PlacementInput;
+        solverOptions: { placementGridStep: 0.5, compactness: 'normal', ignoredRatsnestSignals: [] } } as PlacementInput;
     const pose = { designator: 'RF1', x: 0, y: 0, rotate: 0, layer: 'top' as const, score: 0 };
     const { problem, routingObstacles } = routeLayoutProblem(input, [pose], {
         relations: [], componentByDesignator: new Map([['RF1', component]]), clearanceResolver: () => 0.35,
@@ -42,4 +43,10 @@ test('board route input preserves pad sides inside one mixed component', () => {
     assert.deepEqual(problem.primitives[0].connectionPointLayers, ['top', 'bottom']);
     assert.ok(problem.primitives[0].collisionBoxLayers?.includes('bottom'));
     assert.deepEqual(routingObstacles.map((obstacle) => obstacle.layer), ['top', 'bottom']);
+    for (const layer of ['top', 'bottom'] as const) {
+        const score = encodeNativePostPlaceScoreProblem(input, [{ ...pose, layer }]);
+        const expected = layer === 'top' ? ['top', 'bottom'] : ['bottom', 'top'];
+        assert.deepEqual(score.routingObstacles?.map(o => o.layer), expected);
+        assert.deepEqual(score.nets.map(n => n.layers?.[0]), expected);
+    }
 });
