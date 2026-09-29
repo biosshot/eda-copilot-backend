@@ -21,7 +21,7 @@ node --import tsx tests/pcb-layout/CONNECTOR_ROTATIONS_90/CONNECTOR_ROTATIONS_90
 
 Review these generated artifacts:
 
-- `.test-output/pcb-layout/CONNECTOR_ROTATIONS_90/placement.svg` — full column;
+- `debugging/pcb-layout/CONNECTOR_ROTATIONS_90/placement.svg` — full column;
 - `auto-face-report.md` — inferred `faceAt0` and selected angle for all parts;
 - `previews/J1.svg` through `J20.svg` — enlarged footprint views.
 

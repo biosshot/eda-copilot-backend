@@ -1,3 +1,5 @@
+> Historical experiment: its retired runner was removed from the current branch. Use the recorded historical commit for exact reproduction; use `npm run debug:pcb-layout` for current captures and replays.
+
 # Block scoring and board-context alternatives
 
 **Начать здесь: [объяснение всех режимов по-русски](modes-ru.md).** В обычном запуске режимы не соревнуются между собой: по умолчанию выбран Full Micro. Автоматически выбираются варианты расстановки внутри этого режима. Переключение Micro / Geometry / Off относится к оценке размещения обычного блока, а не к замене полного трассировщика платы.
@@ -47,7 +49,7 @@ node scripts/experiment-placement-matrix.mjs --repack
 
 Other fixture names are `ESPower` and `esp32c3`. Modes are `legacy`, `full-micro-single`, `full-micro`, `full-off`, `full-geometric-single`, `full-geometric`. `single` disables the portfolio, not beam search.
 
-Artifacts appear in `.test-output/architecture/<fixture>/<mode>/`: full placement, full-board and block SVGs, stage data, report, native block captures, timings, input/native hashes and diagnostics. Inputs are versioned resolved board snapshots; these commands do not alter a live EasyEDA document.
+Artifacts appear in `debugging/architecture/<fixture>/<mode>/`: full placement, full-board and block SVGs, stage data, report, native block captures, timings, input/native hashes and diagnostics. Inputs are versioned resolved board snapshots; these commands do not alter a live EasyEDA document.
 
 For the independent bounded routing probe and rendered comparison:
 

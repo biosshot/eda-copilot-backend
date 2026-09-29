@@ -22,8 +22,8 @@ type Report = { file: string; title: string; fingerprint?: string; id: string; i
     regressions?: string[]; review?: string[]; variants?: Record<'before' | 'after', Variant>; error?: string };
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const output = join(root, '.test-output', process.env.SCHEMATIC_LAYOUT_GALLERY ?? 'new-circuit-layout');
-const cache = join(root, '.test-output', 'new-circuit-layout', 'cache');
+const output = join(root, 'debugging', 'circuit-layout', process.env.SCHEMATIC_LAYOUT_GALLERY ?? 'gallery');
+const cache = join(root, 'debugging', 'circuit-layout', 'cache');
 const digest = (s: string) => createHash('sha256').update(s).digest('hex');
 const html = (s: unknown) => String(s ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 const json = async (path: string) => JSON.parse(await readFile(path, 'utf8'));
@@ -208,7 +208,7 @@ async function sourceFingerprint() {
 }
 
 async function main(options: ReturnType<typeof parseOptions>) {
-    if (options.help) { console.log('npm run test:schematics -- [--limit N] [--filter TEXT] [--case cached.json | --cached] [--offline] [--resume] [--workers N] [--timeout SECONDS] [--no-patterns] [--no-dense-net-labels] [--group-seed N | --group-seeds N,N,...]\nWorkers: up to 4 by default (limited by available CPUs); --workers 1 runs sequentially.\nDefault group seeds: 1,2,4. Output: .test-output/new-circuit-layout/index.html; generated inputs and images stay ignored.'); return; }
+    if (options.help) { console.log('npm run test:schematics -- [--limit N] [--filter TEXT] [--case cached.json | --cached] [--offline] [--resume] [--workers N] [--timeout SECONDS] [--no-patterns] [--no-dense-net-labels] [--group-seed N | --group-seeds N,N,...]\nWorkers: up to 4 by default (limited by available CPUs); --workers 1 runs sequentially.\nDefault group seeds: 1,2,4. Output: debugging/circuit-layout/gallery/index.html; generated inputs and images stay ignored.'); return; }
     await mkdir(cache, { recursive: true });
     const fingerprint = digest(await sourceFingerprint() + JSON.stringify({ patterns: !options['no-patterns'] }));
     const candidates = options.case ? [{ file: options.case, cached: true }] : (await readdir(options.cached ? cache : options.bank!)).filter(f => f.endsWith('.json')).sort().map(file => ({ file, cached: !!options.cached }));

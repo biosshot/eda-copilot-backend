@@ -20,4 +20,4 @@ cd D:\MyProject\NN\projects\Agents\easyeda-copilot\eda-copilot-backend
 node --import tsx tests/pcb-layout/PortableScope/PortableScope.ts
 ```
 
-The runner writes `placement.svg`, reports and `board.assemble.json` under `.test-output/pcb-layout/PortableScope/`; it does not modify the EasyEDA document.
+The runner writes `placement.svg`, reports and `board.assemble.json` under `debugging/pcb-layout/PortableScope/`; it does not modify the EasyEDA document.

@@ -15,7 +15,7 @@ npm run test:pcb-layout --workspace=eda-copilot-backend -- --all
 
 The command selects fixture directory names, including `rp2040_base`, `CNTRL_ACESS_MAX` and `ThunderF722`, whose runner filenames differ. Each board runs in a separate process with a ten-minute timeout; a batch continues after failures and exits unsuccessfully if any fixture fails.
 
-Results are written to `backend/.test-output/pcb-layout/<outputName>/`: `placement.svg`, board assembly, placement reports, intermediate stages and additional previews produced by the individual runners. The original assertions and DSL are preserved. A fixture without assertions reports placement errors but does not turn a non-clean layout into a failing process; inspect its report as with the original runner.
+Results are written to `backend/debugging/pcb-layout/<outputName>/`: `placement.svg`, board assembly, placement reports, intermediate stages and additional previews produced by the individual runners. The original assertions and DSL are preserved. A fixture without assertions reports placement errors but does not turn a non-clean layout into a failing process; inspect its report as with the original runner.
 
 These examples resolve real footprints through the public EasyEDA API, so they need network access and are separate from the deterministic default tests. They do not call the Copilot server. Run the PCB unit tests with:
 

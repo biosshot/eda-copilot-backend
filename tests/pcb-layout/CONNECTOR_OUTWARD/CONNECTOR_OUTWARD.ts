@@ -36,7 +36,7 @@ const diagnostics = run.placementInput.components.map((component) => {
   };
 });
 
-const outputDir = resolve(".test-output/pcb-layout/CONNECTOR_OUTWARD");
+const outputDir = resolve("debugging/pcb-layout/CONNECTOR_OUTWARD");
 const previewDir = resolve(outputDir, "previews");
 mkdirSync(previewDir, { recursive: true });
 writeFileSync(resolve(outputDir, "outward-report.json"), JSON.stringify(diagnostics, null, 2));

@@ -1,3 +1,5 @@
+> Historical experiment: its retired runner was removed from the current branch. Use the recorded historical commit for exact reproduction; use `npm run debug:pcb-layout` for current captures and replays.
+
 # Острова, локальная компоновка и скрытые цепи
 
 Откройте `comparison.html`. Кнопки L1/L2/R6/D2 выбирают четыре указанных блока Telemetry; доступны полные платы, остальные блоки и модули. Переключатель скрытых цепей включает также земли и пересчитывает метрики выбранного вида, не меняя вход решателя. Сравнение «до» — последний глобальный тест со штрафами за пады, а не Legacy.

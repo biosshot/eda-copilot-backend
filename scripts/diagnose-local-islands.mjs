@@ -25,4 +25,4 @@ for(const [k,id] of [8,11,16,27].entries()) {
     const img=await loadImage(Buffer.from(svg)),s=Math.min(780/img.width,530/img.height);
     ctx.drawImage(img,k%2*800,Math.floor(k/2)*550,img.width*s,img.height*s);
 }
-writeFileSync('.test-output/diagnose-blocks.png',canvas.toBuffer('image/png'));
+writeFileSync('debugging/diagnose-blocks.png',canvas.toBuffer('image/png'));

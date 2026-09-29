@@ -24,7 +24,7 @@ Object.defineProperty(addon, 'solveBlockPrimitives', { configurable:true,value:p
  captures.push({problem:p,solution,ms:performance.now()-start}); return solution;
 }});
 const start=performance.now(); const result=await autoPlacePcbWithReportAsync(input);
-const dir=`.test-output/board-experiments/${fixture}/${variant}`; mkdirSync(dir,{recursive:true});
+const dir=`debugging/board-experiments/${fixture}/${variant}`; mkdirSync(dir,{recursive:true});
 writePlacementArtifacts(dir,input,result.placements,result.report,result.layout,result.stages,renderPlacementSvg(input,result.placements),createPlacementDebugArtifacts(input,result.placements));
 const stageMetrics = result.stages.map(stage=>{
  const nets = new Map();

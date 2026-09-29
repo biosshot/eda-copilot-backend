@@ -10,7 +10,7 @@ assert.equal(run.boardAssemble.components?.some((component) => component.designa
 assert.equal(run.boardAssemble.pads?.filter((pad) => pad.name.startsWith("SJ_BOOT.")).length, 2);
 assert.equal(run.boardAssemble.vias?.filter((via) => via.net === "GND").length, 9);
 assert.equal(run.boardAssemble.polygons?.filter((polygon) => polygon.net === "GND" && polygon.layer === "bottom").length, 1);
-const previewDir = resolve(".test-output/pcb-layout/PROCEDURAL_FOOTPRINTS/previews");
+const previewDir = resolve("debugging/pcb-layout/PROCEDURAL_FOOTPRINTS/previews");
 mkdirSync(previewDir, { recursive: true });
 
 for (const [fileName, designator, viewLayer] of [

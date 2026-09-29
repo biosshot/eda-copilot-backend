@@ -58,7 +58,7 @@ export function metrics(problem, solution) {
   pairSum:lengths.reduce((a,b)=>a+b,0), pairMax:lengths.at(-1)??0, p95:lengths[Math.max(0,Math.ceil(lengths.length*.95)-1)]??0, pairLengths };
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
- const [variantList = 'B0,N,W4,S,C1,C2,L,P,X', filter = '', root = 'tests/fixtures/block-placement', out = '.test-output/block-replay.json'] = process.argv.slice(2);
+ const [variantList = 'B0,N,W4,S,C1,C2,L,P,X', filter = '', root = 'tests/fixtures/block-placement', out = 'debugging/block-replay.json'] = process.argv.slice(2);
  const rows = [];
  for (const fixture of readdirSync(root)) {
   const input = JSON.parse(readFileSync(`${root}/${fixture}/input.json`));

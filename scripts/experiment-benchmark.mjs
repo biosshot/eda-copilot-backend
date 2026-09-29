@@ -13,4 +13,4 @@ for(const variant of ['B0','N','L','ALLX','NCLR']) {
  for(let i=0;i<3;i++) { const start=performance.now(); const result=addon.solveBlockPrimitives(input); times.push(performance.now()-start); assert.deepEqual(result,expected); }
  rows.push({variant,times,median:times.toSorted((a,b)=>a-b)[1],deterministic:true});
 }
-writeFileSync('.test-output/usb-timing.json',JSON.stringify(rows,null,2));console.log(JSON.stringify(rows));
+writeFileSync('debugging/usb-timing.json',JSON.stringify(rows,null,2));console.log(JSON.stringify(rows));

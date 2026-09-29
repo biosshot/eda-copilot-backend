@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { createPostPlaceRouteScoreContext, preparePostPlaceRouteComparison, comparePostPlaceRouteCandidate } from '../src/pcb-layout/pcb-auto-place-v2/post-place-route-score.ts';
 const [fixture='Telemetry', runSet='board-experiments', baselineVariant='B0'] = process.argv.slice(2);
 if (!['board-experiments', 'architecture'].includes(runSet)) throw Error(`Unknown run set: ${runSet}`);
-const root=`.test-output/${runSet}/${fixture}`;
+const root=`debugging/${runSet}/${fixture}`;
 const input=JSON.parse(readFileSync(`tests/fixtures/block-placement/${fixture}/input.json`));
 const readPoses=v=>JSON.parse(readFileSync(`${root}/${v}/placement.json`)).placements;
 const context=createPostPlaceRouteScoreContext(input);

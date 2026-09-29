@@ -377,7 +377,7 @@ export async function writePatternArtifacts(
     options?: { patternCatalog?: CircuitLayoutPattern[] },
 ) {
     const outputDirectory = fileURLToPath(new URL(
-        `../../.test-output/circuit-patterns/${folderName}/`,
+        `../../debugging/circuit-layout/patterns/${folderName}/`,
         import.meta.url,
     ));
     await mkdir(outputDirectory, { recursive: true });

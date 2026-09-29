@@ -27,15 +27,15 @@ if (process.argv[2] === '--worker') {
     const captures = [], pools = [];
     const addon = loadNativeBoardPacker(), nativeSolve = addon.solveBlockPrimitives;
     const nativeHash = createHash('sha256').update(readFileSync('native/pcb-board-packer/pcb-board-packer.win32-x64-msvc.node')).digest('hex');
-    mkdirSync('.test-output/unified-native-cache',{recursive:true});
+    mkdirSync('debugging/unified-native-cache',{recursive:true});
     addon.solveBlockPrimitives = problem => {
         const key = createHash('sha256').update(nativeHash + JSON.stringify(problem)).digest('hex');
-        const path = `.test-output/unified-native-cache/${key}.json`;
+        const path = `debugging/unified-native-cache/${key}.json`;
         // Explicit offline replay only: caller must establish solver compatibility.
         // Production caching remains keyed by its complete input and addon instance.
         const compatibleHash = process.env.PCB_EXPERIMENT_REPLAY_NATIVE_HASH;
         const compatibleKey = compatibleHash && createHash('sha256').update(compatibleHash + JSON.stringify(problem)).digest('hex');
-        const compatiblePath = compatibleKey && `.test-output/unified-native-cache/${compatibleKey}.json`;
+        const compatiblePath = compatibleKey && `debugging/unified-native-cache/${compatibleKey}.json`;
         const replayPath = existsSync(path) ? path : compatiblePath && existsSync(compatiblePath) ? compatiblePath : null;
         const cached = Boolean(replayPath), start = performance.now();
         const solution = cached ? JSON.parse(readFileSync(replayPath)) : nativeSolve(problem);
@@ -73,11 +73,11 @@ if (process.argv[2] === '--worker') {
 } else if (process.argv[1]?.endsWith('experiment-telemetry-unified.mjs')) {
     const requested=process.argv.slice(2), chosen=process.env.PCB_EXPERIMENT_VARIANTS?.split(',');
     const queue=blocks.filter(b=>!requested.length||requested.includes(b)).flatMap(b=>variants.filter(v=>!chosen||chosen.includes(v.id)).map(v=>[b,v.id]));
-    mkdirSync('.test-output/telemetry-unified',{recursive:true});
+    mkdirSync('debugging/telemetry-unified',{recursive:true});
     mkdirSync(out,{recursive:true});
     const statuses=[];
     await Promise.all([0,1,2,3].map(async()=>{while(queue.length){const [block,tag]=queue.shift();
-        const result=await new Promise(resolve=>{const log=createWriteStream(`.test-output/telemetry-unified/${block}-${tag}.log`);
+        const result=await new Promise(resolve=>{const log=createWriteStream(`debugging/telemetry-unified/${block}-${tag}.log`);
             const child=spawn(process.execPath,['--import','tsx',import.meta.filename,'--worker',block,tag],{windowsHide:true,stdio:['ignore','pipe','pipe']});
             child.stdout.pipe(log);child.stderr.pipe(log);child.on('error',e=>resolve({block,tag,error:String(e)}));child.on('exit',code=>{log.end();resolve({block,tag,code});});});
         statuses.push(result);console.log(JSON.stringify(result));writeFileSync(`${out}/runs.json`,JSON.stringify(statuses,null,2));

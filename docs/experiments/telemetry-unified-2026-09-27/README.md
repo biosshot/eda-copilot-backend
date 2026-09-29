@@ -38,4 +38,4 @@ node --import tsx scripts/experiment-telemetry-unified.mjs
 node --import tsx scripts/experiment-telemetry-unified-report.mjs
 ```
 
-The harness has a binary/input-keyed local cache in `.test-output/unified-native-cache`. Production flags for legacy/full/order/group A/B combinations are retired. Historical harnesses explicitly reject execution on this branch; replay those with their recorded historical commit. Low-level native search parameters remain explicit in the version-3 contract and cache keys for tests and diagnostics.
+The harness has a binary/input-keyed local cache in `debugging/unified-native-cache`. Production flags for legacy/full/order/group A/B combinations are retired. Historical harnesses explicitly reject execution on this branch; replay those with their recorded historical commit. Low-level native search parameters remain explicit in the version-3 contract and cache keys for tests and diagnostics.

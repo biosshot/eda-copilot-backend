@@ -1,3 +1,5 @@
+> Historical experiment: its retired runner was removed from the current branch. Use the recorded historical commit for exact reproduction; use `npm run debug:pcb-layout` for current captures and replays.
+
 # C9 full role substitution — 2026-09-27
 
 Open comparison.html. Four current_iso subtree runs, comparing decoupling_cap and passive under previous and experimental combined ordering. The only input change is C9.pcb.role, before graph construction, clearance calculation, encoding, placement and block postrefine. The source DSL, fixture, production defaults and live EasyEDA remain unchanged. No role detector or role portfolio is added.
@@ -24,4 +26,4 @@ node --import tsx scripts/experiment-telemetry-c9-role.mjs
 node --import tsx scripts/experiment-telemetry-c9-role-report.mjs
 ```
 
-summary.json contains compact results and stage distances. measurements.json contains placements and native captures. Compressed stage-event traces retain beam survivors, local decisions and accepted pair changes; complete candidate logs remain under ignored .test-output/telemetry-c9-role. HTML offers both ordering families, four stages, and an ignored-net toggle. Distances and MST are straight geometric measurements, not routed wire lengths. No complete-board test was run.
+summary.json contains compact results and stage distances. measurements.json contains placements and native captures. Compressed stage-event traces retain beam survivors, local decisions and accepted pair changes; complete candidate logs remain under ignored debugging/telemetry-c9-role. HTML offers both ordering families, four stages, and an ignored-net toggle. Distances and MST are straight geometric measurements, not routed wire lengths. No complete-board test was run.

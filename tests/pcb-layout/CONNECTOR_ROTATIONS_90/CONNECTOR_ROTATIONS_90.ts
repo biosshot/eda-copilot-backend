@@ -33,7 +33,7 @@ const diagnostics = run.placementInput.components.map((component) => {
   };
 });
 
-const outputDir = resolve(".test-output/pcb-layout/CONNECTOR_ROTATIONS_90");
+const outputDir = resolve("debugging/pcb-layout/CONNECTOR_ROTATIONS_90");
 const previewDir = resolve(outputDir, "previews");
 mkdirSync(previewDir, { recursive: true });
 writeFileSync(resolve(outputDir, "auto-face-report.json"), JSON.stringify(diagnostics, null, 2));

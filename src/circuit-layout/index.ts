@@ -892,7 +892,7 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
         for (const child of block.children ?? []) recordGeneratedStyles(child);
     };
     recordGeneratedStyles(elkNodes);
-    // writeFile('.test-output/signalMap_f.json', JSON.stringify(signalMap, null, 2));
+    // writeFile('debugging/signalMap_f.json', JSON.stringify(signalMap, null, 2));
 
     const clientManagedLabels: Array<{ pinId: string; signalName: string }> = [];
     const namedWireLabels: Array<{ pinId: string; signalName: string }> = [];
@@ -931,10 +931,10 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
     applyImprovements([elkNodes], { improvements: series });
     const orientedDesignators = new Set([...absorbedDesignators, ...series.flatMap(s => s.type === 'rotate' ? [s.designator] : [])]);
 
-    // writeFile('.test-output/signalMap.json', JSON.stringify(signalMap, null, 2));
-    // writeFile('.test-output/elkNodes.json', JSON.stringify(elkNodes, null, 2));
+    // writeFile('debugging/signalMap.json', JSON.stringify(signalMap, null, 2));
+    // writeFile('debugging/elkNodes.json', JSON.stringify(elkNodes, null, 2));
 
-    // elkNodes = await readFile('.test-output/elkNodes.json', 'utf-8').then(JSON.parse) as unknown as BlockNode;
+    // elkNodes = await readFile('debugging/elkNodes.json', 'utf-8').then(JSON.parse) as unknown as BlockNode;
     // return;
     try {
         const bestLayout = {
@@ -1308,6 +1308,6 @@ export function refinedBlockBounds(circuit: Circuit, added: CircuitComponent[], 
 }
 
 // Example usage
-// const circuit = await readFile('.test-output/c_v4.json', 'utf-8').then(JSON.parse) as Circuit;
-// const result = await makeAutoPlacement(circuit, ".test-output/сircuit.png", undefined, { splitMultiPartComponent: true });
-// writeFile('.test-output/place_circuit.json', JSON.stringify(result, null, 2));
+// const circuit = await readFile('debugging/c_v4.json', 'utf-8').then(JSON.parse) as Circuit;
+// const result = await makeAutoPlacement(circuit, "debugging/сircuit.png", undefined, { splitMultiPartComponent: true });
+// writeFile('debugging/place_circuit.json', JSON.stringify(result, null, 2));

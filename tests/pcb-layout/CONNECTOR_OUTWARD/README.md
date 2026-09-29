@@ -22,4 +22,4 @@ node --import tsx tests/pcb-layout/CONNECTOR_OUTWARD/CONNECTOR_OUTWARD.ts
 ```
 
 Review `placement.svg`, `outward-report.md`, and the per-connector `previews` in
-`.test-output/pcb-layout/CONNECTOR_OUTWARD`.
+`debugging/pcb-layout/CONNECTOR_OUTWARD`.

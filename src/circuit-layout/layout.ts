@@ -94,13 +94,13 @@ export async function layout(
     // hierarchy keeps the legacy options, so inter-block placement is unchanged.
     applyProfileToLocalBlocks(graph, profile, includeDirectRoot);
 
-    // await writeFile(".test-output/elk.json", JSON.stringify(graph, null, 2));
-    // const graph = await readFile(".test-output/elk.json", 'utf-8').then(JSON.parse)
+    // await writeFile("debugging/elk.json", JSON.stringify(graph, null, 2));
+    // const graph = await readFile("debugging/elk.json", 'utf-8').then(JSON.parse)
 
     const layoutedGraph = (includeDirectRoot ? await layoutIndependentBlocks(graph, elk, addedSymbol) : undefined)
         ?? await elk.layout(graph, { layoutOptions: BASELINE_LAYOUT_PROFILE.options });
 
-    // await writeFile(".test-output/elk_output.json", JSON.stringify(layoutedGraph, null, 2));
+    // await writeFile("debugging/elk_output.json", JSON.stringify(layoutedGraph, null, 2));
 
     // Compute absolute positions for components
 

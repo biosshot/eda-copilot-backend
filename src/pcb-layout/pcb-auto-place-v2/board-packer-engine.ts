@@ -5,6 +5,7 @@ import { NATIVE_BOARD_PACK_CONTRACT_VERSION } from './native/contract.ts';
 import { encodeNativeBoardPackProblem } from './native/encode-board-problem.ts';
 import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
 import { cachedNativeSolve } from './native/solve-cache.ts';
+import { beginNativeSolveCapture } from './native/debug-capture.ts';
 import type { PlacementPrimitive } from './primitives.ts';
 
 const boardPackerCapture = new AsyncLocalStorage<(params: BoardPackParams) => void>();
@@ -24,8 +25,14 @@ export function solveBoardPackedPrimitivesRust(params: BoardPackParams) {
     if (nativeVersion !== NATIVE_BOARD_PACK_CONTRACT_VERSION) {
         throw new Error(`Rust PCB board packer contract ${nativeVersion} does not match TypeScript contract ${NATIVE_BOARD_PACK_CONTRACT_VERSION}`);
     }
+    const started = process.env.PCB_LAYOUT_DEBUG_DIR ? performance.now() : 0;
     const problem = encodeNativeBoardPackProblem(params);
+    const encodeMs = started ? performance.now() - started : 0;
+    const captureEnd = started ? beginNativeSolveCapture('board', problem,
+        { batchSize: 1, encodeMs, index: 0 }) : undefined;
+    const solveStarted = started ? performance.now() : 0;
     const nativeSolution = cachedNativeSolve(addon, 'board', problem, () => addon.solveBoardPacked(problem));
+    if (solveStarted) captureEnd?.(nativeSolution, performance.now() - solveStarted);
     return {
         result: applyNativeBoardPackSolution(params.primitives, nativeSolution),
         rank: nativeSolution.rank,

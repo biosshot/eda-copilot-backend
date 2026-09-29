@@ -1,3 +1,5 @@
+> Historical experiment: its retired runner was removed from the current branch. Use the recorded historical commit for exact reproduction; use `npm run debug:pcb-layout` for current captures and replays.
+
 # Что означают режимы эксперимента
 
 Названия получились слишком техническими. Это сохранённые настройки одного плейсера для сравнительных запусков. В обычном запуске программа **не запускает все режимы и не выбирает лучший из них**.
@@ -85,7 +87,7 @@ node --import tsx scripts/experiment-placement-architecture.mjs Telemetry full-g
 node --import tsx scripts/experiment-placement-architecture.mjs Telemetry full-off
 ```
 
-Последний аргумент выбирает один режим одного запуска. Скрипт сам выставляет нужные переключатели в своём процессе. Он читает сохранённый тестовый вход, пишет результаты в `.test-output/architecture/Telemetry/<имя-режима>/` и не меняет открытую плату EasyEDA. Выбранный им режим не сохраняется как новый режим backend для последующих запусков.
+Последний аргумент выбирает один режим одного запуска. Скрипт сам выставляет нужные переключатели в своём процессе. Он читает сохранённый тестовый вход, пишет результаты в `debugging/architecture/Telemetry/<имя-режима>/` и не меняет открытую плату EasyEDA. Выбранный им режим не сохраняется как новый режим backend для последующих запусков.
 
 В обычном backend используются переменные окружения процесса:
 

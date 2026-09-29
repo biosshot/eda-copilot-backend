@@ -24,7 +24,7 @@ for (const placement of run.placements) {
     `${placement.designator} must retain its visually verified mechanical rotation`);
 }
 
-const previewDir = resolve(".test-output/pcb-layout/CONNECTOR_ROTATIONS/previews");
+const previewDir = resolve("debugging/pcb-layout/CONNECTOR_ROTATIONS/previews");
 mkdirSync(previewDir, { recursive: true });
 for (const placement of run.placements) {
   const component = run.placementInput.components.find((item) => item.designator === placement.designator)!;

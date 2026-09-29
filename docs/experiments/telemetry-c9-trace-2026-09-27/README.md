@@ -1,3 +1,5 @@
+> Historical experiment: its retired runner was removed from the current branch. Use the recorded historical commit for exact reproduction; use `npm run debug:pcb-layout` for current captures and replays.
+
 # C9 placement trace — 2026-09-27
 
 Open comparison.html. Only the Telemetry current_iso subtree was run. Production candidates, scoring, defaults, input fixture and live EasyEDA were not changed. Instrumentation is opt-in with PCB_BLOCK_TRACE_C9=1 and emits JSONL to stderr. Trace archives are gzip-compressed JSONL.
@@ -40,4 +42,4 @@ node --import tsx scripts/experiment-telemetry-c9-trace.mjs
 node --import tsx scripts/analyze-telemetry-c9-trace.mjs
 ```
 
-Runner emits raw worker logs under .test-output/telemetry-c9-trace. The analyzer archives traces, renders seven stages per run and checks the two unchanged baselines. analysis.json contains every surviving beam state, candidate counts, close-candidate scores, local moves and accepted pair changes. summary.json contains hashes and compact measurements.
+Runner emits raw worker logs under debugging/telemetry-c9-trace. The analyzer archives traces, renders seven stages per run and checks the two unchanged baselines. analysis.json contains every surviving beam state, candidate counts, close-candidate scores, local moves and accepted pair changes. summary.json contains hashes and compact measurements.

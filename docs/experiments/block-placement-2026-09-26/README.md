@@ -103,9 +103,9 @@ ALLX:
 ```powershell
 npm run native:build
 npm run build
-node scripts/experiment-block-replay.mjs B0,N,W4,W8,W16,S,C1,C2,L,P,X,R,NW,NWS,NWSC,ALL,ALLP,ALLX,ALLR '' tests/fixtures/block-placement .test-output/ordinary-experiments.json
-node scripts/experiment-block-replay.mjs B0,NCL,NCLP,NCLX,NCLR,NCLW,W4A '' tests/fixtures/block-placement .test-output/v2-experiments.json
-node scripts/experiment-block-replay.mjs ALL,ALL_noN,ALL_noW,ALL_noS,ALL_noC1,ALL_noC2,ALL_noL '' tests/fixtures/block-placement .test-output/ablation-experiments.json
+node scripts/experiment-block-replay.mjs B0,N,W4,W8,W16,S,C1,C2,L,P,X,R,NW,NWS,NWSC,ALL,ALLP,ALLX,ALLR '' tests/fixtures/block-placement debugging/ordinary-experiments.json
+node scripts/experiment-block-replay.mjs B0,NCL,NCLP,NCLX,NCLR,NCLW,W4A '' tests/fixtures/block-placement debugging/v2-experiments.json
+node scripts/experiment-block-replay.mjs ALL,ALL_noN,ALL_noW,ALL_noS,ALL_noC1,ALL_noC2,ALL_noL '' tests/fixtures/block-placement debugging/ablation-experiments.json
 node --import tsx scripts/experiment-board-replay.mjs Telemetry B0
 node --import tsx scripts/experiment-board-replay.mjs Telemetry ALLX
 node --import tsx scripts/experiment-route-probe.mjs Telemetry
@@ -113,4 +113,4 @@ node scripts/experiment-benchmark.mjs
 npm run test:pcb
 ```
 
-Для других стендов заменить Telemetry на ESPower/esp32c3. Все варианты определены в `scripts/experiment-block-replay.mjs`. Для сравнения иного бинарника используется `PCB_BOARD_PACKER_NATIVE_PATH`. Сохранённые артефакты полной платы находятся в `.test-output/board-experiments/<fixture>/<variant>`; они локальные, воспроизводятся из versioned inputs и не применяются в редактор.
+Для других стендов заменить Telemetry на ESPower/esp32c3. Все варианты определены в `scripts/experiment-block-replay.mjs`. Для сравнения иного бинарника используется `PCB_BOARD_PACKER_NATIVE_PATH`. Сохранённые артефакты полной платы находятся в `debugging/board-experiments/<fixture>/<variant>`; они локальные, воспроизводятся из versioned inputs и не применяются в редактор.

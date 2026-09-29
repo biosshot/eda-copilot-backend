@@ -7216,7 +7216,7 @@
   {
     "name": "bank-BAND_V3_SIGNAL_PATH",
     "source": "tests/pcb-layout/BAND_V3_SIGNAL_PATH",
-    "input": ".test-output/global-placement/bank-BAND_V3_SIGNAL_PATH/input.json",
+    "input": "debugging/global-placement/bank-BAND_V3_SIGNAL_PATH/input.json",
     "components": 8,
     "blocks": 6,
     "inputHash": "4114ae959dcccda1ddd726f05f0792f76de5cc065e747e5264758ffed86edbc5",
@@ -7426,7 +7426,7 @@
   {
     "name": "bank-CNTRL_ACESS_MAX",
     "source": "tests/pcb-layout/CNTRL_ACESS_MAX",
-    "input": ".test-output/global-placement/bank-CNTRL_ACESS_MAX/input.json",
+    "input": "debugging/global-placement/bank-CNTRL_ACESS_MAX/input.json",
     "components": 69,
     "blocks": 20,
     "inputHash": "67021b5bf5dd7650b2ae59527978f521581b0b8b7824cbcf4a05fd9e9e110975",
@@ -10709,7 +10709,7 @@
   {
     "name": "bank-CONNECTOR_OUTWARD",
     "source": "tests/pcb-layout/CONNECTOR_OUTWARD",
-    "input": ".test-output/global-placement/bank-CONNECTOR_OUTWARD/input.json",
+    "input": "debugging/global-placement/bank-CONNECTOR_OUTWARD/input.json",
     "components": 20,
     "blocks": 20,
     "inputHash": "29dba3480b5a8cee1489d13a8ba0fdab4ffe5d88e6200979d61c09ad9c8c15e6",
@@ -10848,7 +10848,7 @@
   {
     "name": "bank-CONNECTOR_ROTATIONS",
     "source": "tests/pcb-layout/CONNECTOR_ROTATIONS",
-    "input": ".test-output/global-placement/bank-CONNECTOR_ROTATIONS/input.json",
+    "input": "debugging/global-placement/bank-CONNECTOR_ROTATIONS/input.json",
     "components": 20,
     "blocks": 20,
     "inputHash": "771e799bf9d42c98035eb7b000198ff93cfe69015218503f6fccc901e9426660",
@@ -10987,7 +10987,7 @@
   {
     "name": "bank-CONNECTOR_ROTATIONS_90",
     "source": "tests/pcb-layout/CONNECTOR_ROTATIONS_90",
-    "input": ".test-output/global-placement/bank-CONNECTOR_ROTATIONS_90/input.json",
+    "input": "debugging/global-placement/bank-CONNECTOR_ROTATIONS_90/input.json",
     "components": 20,
     "blocks": 20,
     "inputHash": "ea206f518aa213b7e5ac81e7fed5ebf30b8ee1a36bbd3e54339c23c72bb46a16",
@@ -11126,7 +11126,7 @@
   {
     "name": "bank-dc-dc",
     "source": "tests/pcb-layout/dc-dc",
-    "input": ".test-output/global-placement/bank-dc-dc/input.json",
+    "input": "debugging/global-placement/bank-dc-dc/input.json",
     "components": 17,
     "blocks": 9,
     "inputHash": "0f2534848b0b388056f1edd12e61941d38aa473153330c6144f38593470afa3f",
@@ -12120,7 +12120,7 @@
   {
     "name": "bank-ELRS",
     "source": "tests/pcb-layout/ELRS",
-    "input": ".test-output/global-placement/bank-ELRS/input.json",
+    "input": "debugging/global-placement/bank-ELRS/input.json",
     "components": 36,
     "blocks": 17,
     "inputHash": "695b24056859ef2d328724294caa37f309b039fd4dad926271951ed5849465a3",
@@ -13821,7 +13821,7 @@
   {
     "name": "bank-esp32c3",
     "source": "tests/pcb-layout/esp32c3",
-    "input": ".test-output/global-placement/bank-esp32c3/input.json",
+    "input": "debugging/global-placement/bank-esp32c3/input.json",
     "components": 20,
     "blocks": 11,
     "inputHash": "43d5b455ddbd4f3ba8a5df0e981c282830ddf813c978dda41eb9a0debf8ba505",
@@ -14705,7 +14705,7 @@
   {
     "name": "bank-ESpower",
     "source": "tests/pcb-layout/ESpower",
-    "input": ".test-output/global-placement/bank-ESpower/input.json",
+    "input": "debugging/global-placement/bank-ESpower/input.json",
     "components": 53,
     "blocks": 24,
     "inputHash": "82f28407129cb28f42f815ab3c14defe7b324c36f523271172caf245cbcc1f86",
@@ -16322,7 +16322,7 @@
   {
     "name": "bank-ICM20948_v2",
     "source": "tests/pcb-layout/ICM20948_v2",
-    "input": ".test-output/global-placement/bank-ICM20948_v2/input.json",
+    "input": "debugging/global-placement/bank-ICM20948_v2/input.json",
     "components": 54,
     "blocks": 18,
     "inputHash": "b0a06f3f4c9b0cff980f4eca642de962f6d77a527352dea2817cca7401ca6d7c",
@@ -18741,7 +18741,7 @@
   {
     "name": "bank-rp2040_base",
     "source": "tests/pcb-layout/rp2040_base",
-    "input": ".test-output/global-placement/bank-rp2040_base/input.json",
+    "input": "debugging/global-placement/bank-rp2040_base/input.json",
     "components": 42,
     "blocks": 16,
     "inputHash": "45e297b34c808f676b50faf52fe5e9bb8bd050af1df13b8386a2c89cc01a3889",
@@ -21197,7 +21197,7 @@
   {
     "name": "bank-STEPPER_CONTROLLER",
     "source": "tests/pcb-layout/STEPPER_CONTROLLER",
-    "input": ".test-output/global-placement/bank-STEPPER_CONTROLLER/input.json",
+    "input": "debugging/global-placement/bank-STEPPER_CONTROLLER/input.json",
     "components": 85,
     "blocks": 16,
     "inputHash": "a5e1f92ab24cba93aa93aced1e845b669e96877531b58444fa4c6804ba917629",
@@ -23286,7 +23286,7 @@
   {
     "name": "bank-ThunderF722",
     "source": "tests/pcb-layout/ThunderF722",
-    "input": ".test-output/global-placement/bank-ThunderF722/input.json",
+    "input": "debugging/global-placement/bank-ThunderF722/input.json",
     "components": 116,
     "blocks": 38,
     "inputHash": "637e15d101f558d9395e8da86b58d92bf2c86ff79a6192204a6b0452696fb9f1",
@@ -27315,7 +27315,7 @@
   {
     "name": "bank-TPS63060DSCR",
     "source": "tests/pcb-layout/TPS63060DSCR",
-    "input": ".test-output/global-placement/bank-TPS63060DSCR/input.json",
+    "input": "debugging/global-placement/bank-TPS63060DSCR/input.json",
     "components": 16,
     "blocks": 7,
     "inputHash": "7f06a5dc57c52eb4c8773fed07234e2e3d1cd285ffc5bd9746b99e7b1a007ff2",

@@ -1,3 +1,5 @@
+> Historical experiment: its retired runner was removed from the current branch. Use the recorded historical commit for exact reproduction; use `npm run debug:pcb-layout` for current captures and replays.
+
 # Глобальное сравнение размещения
 
 Откройте `comparison.html`: полные платы, все блоки с двумя и более компонентами, модули; блоки можно смотреть сразу после сборки и на итоговой плате. `block-comparison.png` и `board-comparison.png` дают несколько примеров без переключателей.
@@ -30,6 +32,6 @@ node --import tsx scripts/experiment-global-report.mjs
 node scripts/experiment-global-contact-sheet.mjs
 ```
 
-Подготовка загружает текущие footprints. Для повторения с сохранённой геометрией пропустите подготовку и выполните `node scripts/experiment-global-placement.mjs --saved`. Одиночный повтор: `node scripts/experiment-global-placement.mjs --saved <fixture-name>`. Снимки native block-проблем и промежуточные стадии остаются в `.test-output/architecture/<fixture>/global-<tag>/`.
+Подготовка загружает текущие footprints. Для повторения с сохранённой геометрией пропустите подготовку и выполните `node scripts/experiment-global-placement.mjs --saved`. Одиночный повтор: `node scripts/experiment-global-placement.mjs --saved <fixture-name>`. Снимки native block-проблем и промежуточные стадии остаются в `debugging/architecture/<fixture>/global-<tag>/`.
 
 Проверены все 1101 ссылки на SVG, сохранность составов/фиксированных позиций, соответствие хешей входов и единый native hash. HTML открыт в headless Edge, визуально проверены блоки и переключение начального выбора через URL. Пять тестов pad-crossing/MST прошли.

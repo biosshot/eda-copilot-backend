@@ -40,6 +40,6 @@ npm run test:schematics -- --filter portable-scope-live- --workers 2 --timeout 3
 ```
 
 The runner writes `before.png`, `after.png`, SVGs, serialized ASM, metrics,
-and an `index.html` gallery to `.test-output/new-circuit-layout/`. A `failed` layout
+and an `index.html` gallery to `debugging/circuit-layout/gallery/`. A `failed` layout
 case can still have valid connectivity; inspect `report.json` for the exact
 visual regression.

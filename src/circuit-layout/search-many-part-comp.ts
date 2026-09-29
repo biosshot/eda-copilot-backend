@@ -181,4 +181,4 @@ export async function splitMultiPartComponent(circuit: Circuit, loadSymbol = get
 //             "part_uuid": "50a68d56924049f8ba698a03698c50ca"
 //         },
 //     ]
-// }).then(d => writeFileSync('.test-output/splitted-circuit.json', JSON.stringify(d, null, 2)))
+// }).then(d => writeFileSync('debugging/splitted-circuit.json', JSON.stringify(d, null, 2)))

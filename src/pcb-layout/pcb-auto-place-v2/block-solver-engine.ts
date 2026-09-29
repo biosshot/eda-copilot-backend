@@ -6,6 +6,7 @@ import { NATIVE_BLOCK_SOLVE_CONTRACT_VERSION, type NativeBlockPairSeed } from '.
 import { encodeNativeBlockSolveProblem } from './native/encode-block-problem.ts';
 import { loadNativeBoardPacker } from './native/load-native-board-packer.ts';
 import { cachedNativeSolveMany } from './native/solve-cache.ts';
+import { beginNativeSolveCapture } from './native/debug-capture.ts';
 import type { PlacementPrimitive } from './primitives.ts';
 import { prepareLocalLayoutPrimitives } from './local-layout.ts';
 
@@ -32,6 +33,7 @@ export function solveBlockHypothesesRust(hypotheses: BlockSolveParams[], stage: 
     if (nativeVersion !== NATIVE_BLOCK_SOLVE_CONTRACT_VERSION) {
         throw new Error(`Rust PCB block solver contract ${nativeVersion} does not match TypeScript contract ${NATIVE_BLOCK_SOLVE_CONTRACT_VERSION}`);
     }
+    const encodeStarted = process.env.PCB_LAYOUT_DEBUG_DIR ? performance.now() : 0;
     const preparedHypotheses = hypotheses.map((params, index) => {
         blockSolverCapture.getStore()?.(params);
         const primitives = prepareLocalLayoutPrimitives(
@@ -56,10 +58,20 @@ export function solveBlockHypothesesRust(hypotheses: BlockSolveParams[], stage: 
     // Share the CPU budget with opt-in subtree processes instead of multiplying it.
     const subtreeWorkers = Math.max(1, Math.min(limit, Number(process.env.PCB_LAYOUT_SUBTREE_WORKERS) || 1));
     const threads = Math.max(1, Math.floor(budget / subtreeWorkers));
+    const encodeMs = encodeStarted ? performance.now() - encodeStarted : 0;
+    const captureEnds = process.env.PCB_LAYOUT_DEBUG_DIR
+        ? preparedHypotheses.map((hypothesis, index) => beginNativeSolveCapture('block', hypothesis.problem,
+            { stage, batchSize: preparedHypotheses.length, encodeMs, index }))
+        : [];
+    const solveStarted = process.env.PCB_LAYOUT_DEBUG_DIR ? performance.now() : 0;
     const solutions = cachedNativeSolveMany(addon, 'block', preparedHypotheses.map(p => p.problem), misses =>
         threads > 1 && misses.length > 1 && addon.solveBlockPrimitivesBatch
             ? addon.solveBlockPrimitivesBatch(misses, threads)
             : misses.map(problem => addon.solveBlockPrimitives(problem)));
+    if (solveStarted) {
+        const batchWallMs = performance.now() - solveStarted;
+        solutions.forEach((solution, index) => captureEnds[index]?.(solution, batchWallMs));
+    }
     return solutions.map((solution, index) => {
         const { primitives } = preparedHypotheses[index];
         const checkpoints = solution.checkpoints.filter(s => stage !== 'initial' || s.stage !== 'pairs').map(snapshot => ({ stage: snapshot.stage, rank: snapshot.rank,

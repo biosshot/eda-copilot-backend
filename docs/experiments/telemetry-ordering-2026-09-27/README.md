@@ -1,3 +1,5 @@
+> Historical experiment: its retired runner was removed from the current branch. Use the recorded historical commit for exact reproduction; use `npm run debug:pcb-layout` for current captures and replays.
+
 # Telemetry: ordering experiments, 2026-09-27
 
 30 offline runs: six variants on five local subtrees. Open comparison.html for aligned before/after SVGs, insertion order, direct passive-to-IC distances, normal and hidden-net metrics. No full board or live EasyEDA changes.

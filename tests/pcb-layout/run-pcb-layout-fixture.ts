@@ -10,7 +10,7 @@ export async function runPcbLayoutFixture(metaUrl: string, fixtureName: string, 
     const run = await runPcbLayout({
         circuit: JSON.parse(read(`${fixtureName}.json`)) as ExplainCircuit,
         code: read(`${fixtureName}.js`),
-        outputDir: path.join(".test-output", "pcb-layout", outputName),
+        outputDir: path.join("debugging", "pcb-layout", outputName),
     });
 
     console.log([

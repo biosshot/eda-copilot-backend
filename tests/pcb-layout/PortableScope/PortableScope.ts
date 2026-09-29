@@ -11,7 +11,7 @@ const run = await runPcbLayout({
     circuit: JSON.parse(read("PortableScope.json")) as ExplainCircuit,
     code: read("PortableScope.js"),
     existingPlacement: JSON.parse(read("existing-placement.json")) as ExistingPlacement,
-    outputDir: path.join(".test-output", "pcb-layout", "PortableScope"),
+    outputDir: path.join("debugging", "pcb-layout", "PortableScope"),
 });
 
 console.log([

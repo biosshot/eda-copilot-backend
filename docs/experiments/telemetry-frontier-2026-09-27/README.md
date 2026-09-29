@@ -1,3 +1,5 @@
+> Historical experiment: its retired runner was removed from the current branch. Use the recorded historical commit for exact reproduction; use `npm run debug:pcb-layout` for current captures and replays.
+
 # Telemetry: electrical frontier, pad access and relaxed groups
 
 Open `comparison.html`. Five complete block families, ten controlled variants each; no full-board packing or live EasyEDA changes. `blocks.png` is a compact overview. The HTML also shows ignored nets and distances from passives to matching pins on the main IC.

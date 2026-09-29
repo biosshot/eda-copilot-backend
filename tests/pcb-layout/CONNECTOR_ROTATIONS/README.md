@@ -12,10 +12,10 @@ node --import tsx tests/pcb-layout/CONNECTOR_ROTATIONS/CONNECTOR_ROTATIONS.ts
 
 Review:
 
-- `.test-output/pcb-layout/CONNECTOR_ROTATIONS/placement.svg` — complete board;
-- `.test-output/pcb-layout/CONNECTOR_ROTATIONS/previews/J1.svg` through `J20.svg`
+- `debugging/pcb-layout/CONNECTOR_ROTATIONS/placement.svg` — complete board;
+- `debugging/pcb-layout/CONNECTOR_ROTATIONS/previews/J1.svg` through `J20.svg`
   — close-ups with part name and applied rotation;
-- `.test-output/pcb-layout/CONNECTOR_ROTATIONS/layout.json` — resolved real
+- `debugging/pcb-layout/CONNECTOR_ROTATIONS/layout.json` — resolved real
   footprint geometry and mechanical-face constraints.
 
 | Ref | Connector | Intended placement | Rotation |

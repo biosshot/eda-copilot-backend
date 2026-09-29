@@ -3,12 +3,12 @@ import {createHash} from 'node:crypto';
 const dest='docs/experiments/block-placement-2026-09-26'; mkdirSync(dest,{recursive:true});
 const round=n=>Math.round(n*100)/100;
 const blocks=['ordinary-experiments','v2-experiments','ablation-experiments'].map(name=>{
- const data=JSON.parse(readFileSync(`.test-output/${name}.json`));
+ const data=JSON.parse(readFileSync(`debugging/${name}.json`));
  return {name,nativeHash:data.nativeHash,rows:data.rows.map(({solution,...row})=>row)};
 });
 const boards=[];
 for(const fixture of ['Telemetry','ESPower','esp32c3']) {
- const root=`.test-output/board-experiments/${fixture}`;
+ const root=`debugging/board-experiments/${fixture}`;
  for(const variant of readdirSync(root)) {
   const path=`${root}/${variant}/summary.json`; if(!existsSync(path))continue;
   const s=JSON.parse(readFileSync(path)); const placements=JSON.parse(readFileSync(`${root}/${variant}/placement.json`)).placements;
@@ -27,5 +27,5 @@ for(const fixture of ['Telemetry','ESPower','esp32c3']) {
 writeFileSync(`${dest}/measurements.json`,JSON.stringify({blocks,boards},null,2));
 const table=boards.map(s=>{ const m=s.stageMetrics.at(-1); return `| ${s.fixture} | ${s.variant} | ${s.ok} | ${round(m.hpwl)} | ${round(m.pairSum)} | ${round(m.pairMax)} | ${s.fixedChanged.length} | ${round(s.ms/1000)} |`; }).join('\n');
 writeFileSync(`${dest}/board-results.md`,`# Full-board exploratory results\n\nTiming is single-run wall time under variable concurrent load; it is not a performance acceptance benchmark. Lengths are mm. HPWL and pairSum are different metrics and must not be added. Placement ok is not routing completeness.\n\n| Fixture | Variant | Placement ok | HPWL | Two-terminal sum | Worst pair | Fixed changes | Seconds |\n|---|---|---|---:|---:|---:|---:|---:|\n${table}\n`);
-for(const variant of ['B0','ALLX']) copyFileSync(`.test-output/usb-comparison/${variant}.png`,`${dest}/usb-${variant}.png`);
+for(const variant of ['B0','ALLX']) copyFileSync(`debugging/usb-comparison/${variant}.png`,`${dest}/usb-${variant}.png`);
 console.log({blockRuns:blocks.reduce((s,b)=>s+b.rows.length,0),boardRuns:boards.length,fixedChanges:boards.reduce((s,b)=>s+b.fixedChanged.length,0)});
