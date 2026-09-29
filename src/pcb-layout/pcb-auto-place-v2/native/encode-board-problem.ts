@@ -1,5 +1,5 @@
-import type { BoardEdge, Box, PcbComponent, Placement } from '#types/pcb/layout-model.ts';
-import { boardOutlinePolygon, componentBox, componentCollisionBoxes } from '../../pcb-auto-place/geometry.ts';
+import type { BoardEdge, Box, Layer, PcbComponent, Placement } from '#types/pcb/layout-model.ts';
+import { boardOutlinePolygon, componentBodyBox, componentCollisionBoxes } from '../../pcb-auto-place/geometry.ts';
 import { placementsCanConflict } from '../../pcb-auto-place/utils.ts';
 import type { BoardPackParams } from '../board-packer.ts';
 import type { PlacementPrimitive } from '../primitives.ts';
@@ -61,7 +61,7 @@ export function encodeNativeBoardPackProblem(params: BoardPackParams): NativeBoa
             primitiveId,
             blockName: component.block_name,
             layer: placement.layer,
-            bodyBox: componentBox(component, placement),
+            bodyBox: componentBodyBox(component, placement),
             throughHoleBoxes: componentCollisionBoxes(
                 component,
                 placement,
@@ -99,6 +99,12 @@ function encodePrimitive(
     primitive: PlacementPrimitive,
     componentByDesignator: Map<string, PcbComponent> | undefined,
 ): NativePrimitive {
+    const physicalBoxes: Array<{box:Box;layer:Layer}> = primitive.placements.flatMap((placement) => {
+        const component=componentByDesignator?.get(placement.designator);
+        if(!component)return [];
+        return (['top','bottom'] as Layer[]).flatMap((layer)=>
+            componentCollisionBoxes(component,placement,layer).map((box)=>({box,layer})));
+    });
     return {
         id: primitive.id,
         kind: primitive.kind,
@@ -109,7 +115,10 @@ function encodePrimitive(
         canRotate: primitive.canRotate === true,
         allowedOrientations: [...(primitive.allowedOrientations ?? (primitive.canRotate ? [0, 90, 180, 270] : [0]))],
         bbox: cloneBox(primitive.bbox),
-        collisionBoxes: (primitive.collisionBoxes?.length ? primitive.collisionBoxes : [primitive.bbox]).map(cloneBox),
+        collisionBoxes: physicalBoxes.length
+            ? physicalBoxes.map(({box})=>cloneBox(box))
+            : (primitive.collisionBoxes?.length ? primitive.collisionBoxes : [primitive.bbox]).map(cloneBox),
+        collisionBoxLayers: physicalBoxes.map(({layer})=>layer),
         width: primitive.width,
         height: primitive.height,
         placements: primitive.placements.map((placement) => ({ ...placement })),

@@ -62,6 +62,7 @@ export function parseEasyEdaFootprintDataStr(dataStr: string, fallbackName = "EA
     const bodyBoxes: Box[] = [];
     const fallbackBodyBoxes: Box[] = [];
     const silkscreenBoxes: Box[] = [];
+    const topSilkscreenBoxes: Box[] = [];
     const rawGraphics: Array<FootprintGraphic & { box: Box }> = [];
     let name = fallbackName;
     let mechanicalHoleIndex = 1;
@@ -112,7 +113,10 @@ export function parseEasyEdaFootprintDataStr(dataStr: string, fallbackName = "EA
         const graphic = parseGraphic(item);
         if (graphic && !isIgnorableFootprintGraphic(graphic)) {
             rawGraphics.push(graphic);
-            if (graphic.layer === "silk") silkscreenBoxes.push(graphic.box);
+            if (graphic.layer === "silk") {
+                silkscreenBoxes.push(graphic.box);
+                if (graphic.side === 'top') topSilkscreenBoxes.push(graphic.box);
+            }
         }
 
         const box = bodyGeometryBox(item);
@@ -133,6 +137,7 @@ export function parseEasyEdaFootprintDataStr(dataStr: string, fallbackName = "EA
     const physicalSilkscreenBoxes = bodyBox
         ? silkscreenBoxes.filter((box) => isPhysicalSilkscreenBox(box, physicalBaseBox))
         : silkscreenBoxes;
+    const physicalTopSilkscreenBoxes = physicalSilkscreenBoxes.filter((box) => topSilkscreenBoxes.includes(box));
     const visualBoxes = [physicalBaseBox, ...physicalSilkscreenBoxes];
     const visualBox = visualBoxes.length > 0 ? mergeBoxes(visualBoxes) : null;
     const footprintBox = visualBox && boxContains(visualBox, paddedPadBox)
@@ -142,6 +147,14 @@ export function parseEasyEdaFootprintDataStr(dataStr: string, fallbackName = "EA
         x: (footprintBox.left + footprintBox.right) / 2,
         y: (footprintBox.top + footprintBox.bottom) / 2,
     };
+    const hasBottomSilk = physicalSilkscreenBoxes.some((box) => !topSilkscreenBoxes.includes(box));
+    const occupiedTopBoxes = bodyBoxes.length > 0 && (physicalTopSilkscreenBoxes.length > 0 || !hasBottomSilk)
+        ? [...bodyBoxes, ...physicalTopSilkscreenBoxes]
+        : physicalTopSilkscreenBoxes;
+    const topPadBoxes = pads.filter((pad) => pad.layer !== 'bottom').map((pad) => pad.box);
+    const inferredBodyBox = occupiedTopBoxes.length > 0
+        ? mergeBoxes([...occupiedTopBoxes, ...topPadBoxes])
+        : null;
 
     return {
         name,
@@ -153,6 +166,7 @@ export function parseEasyEdaFootprintDataStr(dataStr: string, fallbackName = "EA
             y: roundMm(pad.y - center.y),
         })),
         graphics: rawGraphics.map(({ box: _box, ...graphic }) => normalizeGraphic(graphic, center)),
+        ...(inferredBodyBox ? { bodyBox: normalizeBox(inferredBodyBox, center) } : {}),
         sourceOriginOffset: {
             x: roundMm(center.x),
             y: roundMm(-center.y),
@@ -185,6 +199,7 @@ function parseFootprintVia(item: unknown[], index: number): (FootprintPad & { bo
         width: diameter,
         height: diameter,
         mount: "through_hole",
+        layer: 'multi',
         drillDiameter: drill,
         box: {
             left: center.x - radius,
@@ -232,6 +247,7 @@ function parseMechanicalHole(item: unknown[], index: number): (FootprintPad & { 
         width: diameter,
         height: diameter,
         mount: "through_hole",
+        layer: 'multi',
         drillDiameter: diameter,
         box,
     };
@@ -280,6 +296,7 @@ function parsePad(item: unknown[]): (FootprintPad & { box: Box }) | null {
     return {
         ...pad,
         mount: isThroughHole ? "through_hole" : "smd",
+        ...(layer === 1 || layer === 2 || isThroughHole ? { layer: isThroughHole ? 'multi' as const : layer === 2 ? 'bottom' as const : 'top' as const } : {}),
         ...(drillDiameter !== null ? { drillDiameter: roundMm(drillDiameter) } : {}),
         box,
     };
@@ -408,6 +425,7 @@ function parseGraphic(item: unknown[]): (FootprintGraphic & { box: Box }) | null
         return {
             kind: "circle",
             layer,
+            ...(graphicSide(layerNumber) ? { side: graphicSide(layerNumber) } : {}),
             x: milToMm(circle.x),
             y: milToMm(circle.y),
             radius: milToMm(circle.radius),
@@ -422,6 +440,7 @@ function parseGraphic(item: unknown[]): (FootprintGraphic & { box: Box }) | null
     return {
         kind: "path",
         layer,
+        ...(graphicSide(layerNumber) ? { side: graphicSide(layerNumber) } : {}),
         points,
         closed: isClosedPath(points),
         strokeWidth,
@@ -435,6 +454,17 @@ function graphicLayer(layer: number | null): FootprintGraphicLayer | null {
     if (layer === 49) return "marking";
     if (layer === 13) return "document";
     return null;
+}
+
+function graphicSide(layer: number | null): 'top' | 'bottom' | undefined {
+    return layer === 3 ? 'top' : layer === 4 ? 'bottom' : undefined;
+}
+
+function normalizeBox(box: Box, center: Point): Box {
+    return {
+        left: roundMm(center.x - box.right), right: roundMm(center.x - box.left),
+        top: roundMm(box.top - center.y), bottom: roundMm(box.bottom - center.y),
+    };
 }
 
 function singleCircle(value: unknown): { x: number; y: number; radius: number } | null {
@@ -491,6 +521,9 @@ function uniquePointCount(points: Point[]) {
 }
 
 function collectGeometryPoints(value: unknown): Point[] {
+    if (Array.isArray(value) && String(value[0]).toUpperCase() === 'R') {
+        return rectanglePoints(value);
+    }
     if (isEasyEdaPath(value)) {
         return collectPathPoints(value);
     }
@@ -498,6 +531,18 @@ function collectGeometryPoints(value: unknown): Point[] {
     const points: Point[] = [];
     collectNumbers(value, [], points);
     return points;
+}
+
+function rectanglePoints(value: unknown[]): Point[] {
+    const [x, y, width, height, rotation] = [1, 2, 3, 4, 5].map((index) => numberAt(value, index));
+    if (x === null || y === null || width === null || height === null) return [];
+    const cx = x + width / 2;
+    const cy = y - height / 2;
+    const radians = (rotation ?? 0) * Math.PI / 180;
+    const cos = Math.cos(radians), sin = Math.sin(radians);
+    return [[x, y], [x + width, y], [x + width, y - height], [x, y - height], [x, y]]
+        .map(([px, py]) => ({ x: cx + (px - cx) * cos - (py - cy) * sin,
+            y: cy + (px - cx) * sin + (py - cy) * cos }));
 }
 
 function isEasyEdaPath(value: unknown): value is unknown[] {

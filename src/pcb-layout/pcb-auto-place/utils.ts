@@ -18,7 +18,7 @@ import type {
     Box,
 } from '../../types/pcb/layout-model.ts';
 import { isConnectedSignalName } from '#utils/signals.ts';
-import { dist, GEOMETRY_EPSILON } from './geometry.ts';
+import { componentCollisionBoxes, dist, GEOMETRY_EPSILON } from './geometry.ts';
 
 export const defaultSolverOptions = {
     candidateRadii: [1.2, 2.0, 3.5, 5.0, 8.0, 12.0, 18.0],
@@ -210,8 +210,8 @@ export function componentHasThroughHolePads(component: PcbComponent) {
 
 export function placementsCanConflict(a: PcbComponent, aPlacement: Placement, b: PcbComponent, bPlacement: Placement) {
     return aPlacement.layer === bPlacement.layer
-        || componentHasThroughHolePads(a)
-        || componentHasThroughHolePads(b);
+        || componentCollisionBoxes(a, aPlacement, bPlacement.layer).length > 0
+        || componentCollisionBoxes(b, bPlacement, aPlacement.layer).length > 0;
 }
 
 export function isFixedComponent(component: PcbComponent) {

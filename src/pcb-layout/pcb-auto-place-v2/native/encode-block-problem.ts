@@ -1,6 +1,6 @@
 import type { PcbComponent, Placement } from '#types/pcb/layout-model.ts';
 import { isGroundSignalName, isPowerSignalName } from '#utils/signals.ts';
-import { boardOutlinePolygon, componentBox, componentCollisionBoxes, componentPadBox, isThroughHolePad } from '../../pcb-auto-place/geometry.ts';
+import { boardOutlinePolygon, componentBodyBox, componentCollisionBoxes, componentPadBox, isThroughHolePad } from '../../pcb-auto-place/geometry.ts';
 import { createFixedPlacement } from '../../pcb-auto-place/fixed.ts';
 import { placementsCanConflict } from '../../pcb-auto-place/utils.ts';
 import type { BlockSolveParams } from '../block-solver.ts';
@@ -61,7 +61,7 @@ export function encodeNativeBlockSolveProblem(params: BlockSolveParams): NativeB
             primitiveId,
             blockName: component.block_name,
             layer: placement.layer,
-            bodyBox: componentBox(component, placement),
+            bodyBox: componentBodyBox(component, placement),
             throughHoleBoxes: componentCollisionBoxes(component, placement, placement.layer === 'top' ? 'bottom' : 'top'),
             pinCount: component.pins.length,
             role: component.pcb.role,

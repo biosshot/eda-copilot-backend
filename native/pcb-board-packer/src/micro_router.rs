@@ -536,7 +536,6 @@ fn primitive_has_net(primitive: &Primitive, net: &str) -> bool {
 }
 
 fn points_by_net(primitive: &Primitive, config: &MicroRouteConfig) -> FxHashMap<Arc<str>, Vec<RouteEndpoint>> {
-    let layer = primitive_layer(primitive, config);
     let mut result: FxHashMap<Arc<str>, Vec<RouteEndpoint>> = FxHashMap::with_capacity_and_hasher(
         primitive.connection_points.len().min(256),
         Default::default(),
@@ -545,7 +544,7 @@ fn points_by_net(primitive: &Primitive, config: &MicroRouteConfig) -> FxHashMap<
         let Some(net) = point.net.as_ref() else { continue };
         result.entry(net.clone()).or_default().push(RouteEndpoint {
             point: Point { x: point.x, y: point.y },
-            layer,
+            layer: point_layer(primitive, point.reference.as_ref(), config),
             primitive_id: primitive.id.clone(),
             reference: point.reference.clone(),
             net: net.clone(),
@@ -557,12 +556,11 @@ fn points_by_net(primitive: &Primitive, config: &MicroRouteConfig) -> FxHashMap<
 fn resolve_endpoint(endpoint: &str, primitives: &[&Primitive], config: &MicroRouteConfig) -> Vec<RouteEndpoint> {
     if let Some(reference) = endpoint.strip_prefix("pad:") {
         for primitive in primitives {
-            let layer = primitive_layer(primitive, config);
             if let Some(point) = primitive.connection_points.iter().find(|point| point.reference.as_ref() == reference) {
                 if let Some(net) = point.net.as_ref() {
                     return vec![RouteEndpoint {
                         point: Point { x: point.x, y: point.y },
-                        layer,
+                        layer: point_layer(primitive, point.reference.as_ref(), config),
                         primitive_id: primitive.id.clone(),
                         reference: point.reference.clone(),
                         net: net.clone(),
@@ -578,13 +576,12 @@ fn resolve_endpoint(endpoint: &str, primitives: &[&Primitive], config: &MicroRou
             .iter()
             .filter(|primitive| primitive.placements.iter().any(|p| p.designator.as_ref() == designator))
             .flat_map(|primitive| {
-                let layer = primitive_layer(primitive, config);
                 let prefix = prefix.clone();
                 primitive.connection_points.iter().filter_map(move |point| {
                     let net = point.net.as_ref()?;
                     point.reference.starts_with(&prefix).then(|| RouteEndpoint {
                         point: Point { x: point.x, y: point.y },
-                        layer,
+                        layer: point_layer(primitive, point.reference.as_ref(), config),
                         primitive_id: primitive.id.clone(),
                         reference: point.reference.clone(),
                         net: net.clone(),
@@ -640,6 +637,14 @@ fn primitive_layer(primitive: &Primitive, config: &MicroRouteConfig) -> usize {
         .unwrap_or(0)
 }
 
+fn point_layer(primitive: &Primitive, reference: &str, config: &MicroRouteConfig) -> usize {
+    let designator = reference.split_once('.').map(|(name, _)| name).unwrap_or(reference);
+    primitive.placements.iter()
+        .find(|placement| placement.designator.as_ref() == designator)
+        .and_then(|placement| config.layers.iter().position(|layer| layer.name.as_ref() == placement.layer.as_ref()))
+        .unwrap_or_else(|| primitive_layer(primitive, config))
+}
+
 fn collect_obstacles(
     primitives: &[&Primitive],
     global_obstacles: &[Box2],
@@ -648,13 +653,15 @@ fn collect_obstacles(
 ) -> Vec<StaticObstacle> {
     let mut result = Vec::new();
     for primitive in primitives {
-        let layer = Some(primitive_layer(primitive, config));
         let boxes: Vec<Box2> = if primitive.collision_boxes.is_empty() {
             vec![primitive.bbox]
         } else {
             primitive.collision_boxes.as_ref().clone()
         };
-        for box_ in boxes {
+        for (index, box_) in boxes.into_iter().enumerate() {
+            let layer = primitive.collision_box_layers.get(index)
+                .and_then(|name| config.layers.iter().position(|layer| layer.name.as_ref() == name.as_ref()))
+                .or_else(|| Some(primitive_layer(primitive, config)));
             result.push(StaticObstacle {
                 box_: inflate_box(box_, config.clearance + config.trace_width / 2.0),
                 layer,
@@ -1144,6 +1151,7 @@ mod tests {
             locked: false, can_rotate: false, allowed_orientations: Arc::new(vec![0]),
             bbox: Box2 { left: x - 0.5, right: x + 0.5, top: y - 0.5, bottom: y + 0.5 },
             collision_boxes: Arc::new(vec![Box2 { left: x - 0.5, right: x + 0.5, top: y - 0.5, bottom: y + 0.5 }]),
+            collision_box_layers: Arc::new(vec![]),
             width: 1.0, height: 1.0,
             placements: Arc::new(vec![Placement { designator: Arc::from(id), x, y, rotate: 0, layer: Arc::from("top"), score: 0.0 }]),
             connection_points: Arc::new(vec![ConnectionPoint { x, y, reference: Arc::from(format!("{id}.1")), net: Some(Arc::from(net)) }]),

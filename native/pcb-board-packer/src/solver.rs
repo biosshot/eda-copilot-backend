@@ -627,8 +627,8 @@ fn position_candidates(
     } else {
     centers.extend(edge_place_centers(primitive, width, height, context));
     centers.extend(board_slot_centers(width, height, &context.problem.bounds));
-    centers.extend(free_rect_slot_centers(width, height, placed, context));
-    centers.extend(placed_slot_centers(width, height, placed, context));
+    centers.extend(free_rect_slot_centers(primitive, width, height, placed, context));
+    centers.extend(placed_slot_centers(primitive, width, height, placed, context));
     centers.extend(relation_slot_centers(primitive, placed, context));
     let placed_primitives: Vec<_> = placed.iter().map(|item| &item.primitive).collect();
     let current_center = box_center(&pack_box);
@@ -1153,6 +1153,11 @@ fn primitive_hard_overlap(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &
                     &b_component.body_box,
                     clearance,
                 ));
+                max_overlap = max_overlap.max(boxes_overlap_depth(
+                    &a_component.through_hole_boxes,
+                    &b_component.through_hole_boxes,
+                    clearance,
+                ));
             } else {
                 max_overlap = max_overlap.max(boxes_overlap_depth(
                     &[a_component.body_box],
@@ -1262,30 +1267,23 @@ fn primitive_outside_severity(primitive: &WorkingPrimitive, context: &Context) -
 
 fn component_outside(component: &ComponentGeometry, context: &Context) -> bool {
     if has_board_overflow(component) {
-        return box_outside_bounds_severity(
-            &component.body_box,
-            &component_board_bounds(component, context),
-        ) > 0.0;
+        return std::iter::once(&component.body_box).chain(component.through_hole_boxes.iter())
+            .any(|box_| box_outside_bounds_severity(box_, &component_board_bounds(component, context)) > 0.0);
     }
-    !box_inside_polygon_board(
-        &component.body_box,
-        &context.problem.full_board_bounds,
-        &context.problem.board_outline,
-        component.edge_clearance,
-    )
+    std::iter::once(&component.body_box).chain(component.through_hole_boxes.iter()).any(|box_| {
+        !box_inside_polygon_board(box_, &context.problem.full_board_bounds,
+            &context.problem.board_outline, component.edge_clearance)
+    })
 }
 
 fn component_outside_severity(component: &ComponentGeometry, context: &Context) -> f64 {
     let bounds = component_board_bounds(component, context);
     if has_board_overflow(component) {
-        return box_outside_bounds_severity(&component.body_box, &bounds);
+        return std::iter::once(&component.body_box).chain(component.through_hole_boxes.iter())
+            .map(|box_| box_outside_bounds_severity(box_, &bounds)).sum();
     }
-    polygon_board_outside_severity(
-        &component.body_box,
-        &bounds,
-        component.edge_clearance,
-        context,
-    )
+    std::iter::once(&component.body_box).chain(component.through_hole_boxes.iter())
+        .map(|box_| polygon_board_outside_severity(box_, &bounds, component.edge_clearance, context)).sum()
 }
 
 fn component_board_bounds(component: &ComponentGeometry, context: &Context) -> Box2 {
@@ -1379,11 +1377,13 @@ fn envelope_overlap_penalty(primitives: &[WorkingPrimitive], context: &Context) 
             if !primitive_can_conflict(&primitives[i], &primitives[j], context) {
                 continue;
             }
-            let depth = overlap_depth(
-                &primitives[i].primitive.bbox,
-                &primitives[j].primitive.bbox,
-                context.problem.clearance,
-            );
+            let depth = ["top", "bottom"].into_iter().filter_map(|layer| {
+                Some(overlap_depth(
+                    &layer_envelope(&primitives[i], layer)?,
+                    &layer_envelope(&primitives[j], layer)?,
+                    context.problem.clearance,
+                ))
+            }).fold(0.0_f64, f64::max);
             if depth > 0.0 {
                 penalty += depth.powi(2) * 700.0 + depth * 140.0;
             }
@@ -1541,6 +1541,7 @@ fn board_slot_centers(width: f64, height: f64, bounds: &Box2) -> Vec<Point> {
 }
 
 fn free_rect_slot_centers(
+    moving: &WorkingPrimitive,
     width: f64,
     height: f64,
     placed: &[WorkingPrimitive],
@@ -1548,11 +1549,8 @@ fn free_rect_slot_centers(
 ) -> Vec<Point> {
     let mut occupied: Vec<Box2> = placed
         .iter()
-        .flat_map(|primitive| {
-            packing_boxes(primitive)
-                .iter()
-                .map(|box_| inflate_box(box_, context.problem.clearance))
-        })
+        .flat_map(|primitive| relevant_occupied_boxes(primitive, moving)
+            .into_iter().map(|box_| inflate_box(&box_, context.problem.clearance)))
         .collect();
     occupied.extend(
         context
@@ -1715,13 +1713,17 @@ fn inflate_box(box_: &Box2, value: f64) -> Box2 {
 }
 
 fn placed_slot_centers(
+    moving: &WorkingPrimitive,
     width: f64,
     height: f64,
     placed: &[WorkingPrimitive],
     context: &Context,
 ) -> Vec<Point> {
     let mut centers = Vec::new();
-    for box_ in placed.iter().flat_map(|primitive| packing_boxes(primitive)) {
+    let placed_boxes: Vec<_> = placed.iter()
+        .flat_map(|primitive| relevant_occupied_boxes(primitive, moving))
+        .collect();
+    for box_ in &placed_boxes {
         // Both tight legal slots and slots at the preferred soft gap.
         if let Some(spacing) = &context.problem.soft_spacing {
             if spacing.gap > 0.0 {
@@ -1753,10 +1755,6 @@ fn placed_slot_centers(
             },
         ]);
     }
-    let placed_boxes: Vec<_> = placed
-        .iter()
-        .flat_map(|primitive| packing_boxes(primitive).iter().copied())
-        .collect();
     let x_values: Vec<_> = placed_boxes
         .iter()
         .flat_map(|box_| {
@@ -2442,6 +2440,50 @@ fn move_packing_center(primitive: &mut WorkingPrimitive, center: Point) {
 fn packing_boxes(primitive: &WorkingPrimitive) -> &[Box2] {
     &primitive.primitive.collision_boxes
 }
+// `through_hole_boxes` also carries bottom-side silk and SMD pads on a
+// top-mounted footprint (and vice versa). Keep the existing component shape.
+fn occupied_boxes_on_layer(primitive: &WorkingPrimitive, layer: &str) -> Vec<Box2> {
+    if primitive.components.is_empty() {
+        return packing_boxes(primitive).to_vec();
+    }
+    primitive.components.iter().flat_map(|(_, component)| {
+        let mut boxes = if component.layer.as_ref() == layer {
+            vec![component.body_box]
+        } else {
+            Vec::new()
+        };
+        if component.layer.as_ref() != layer {
+            boxes.extend(component.through_hole_boxes.iter().copied());
+        }
+        boxes
+    }).collect()
+}
+fn layer_envelope(primitive: &WorkingPrimitive, layer: &str) -> Option<Box2> {
+    let mut result: Option<Box2> = None;
+    let mut add = |box_: Box2| {
+        result = Some(match result {
+            Some(current) => Box2 { left: current.left.min(box_.left), right: current.right.max(box_.right),
+                top: current.top.min(box_.top), bottom: current.bottom.max(box_.bottom) },
+            None => box_,
+        });
+    };
+    if primitive.components.is_empty() {
+        for box_ in packing_boxes(primitive) { add(*box_); }
+    } else {
+        for (_, component) in primitive.components.iter() {
+            if component.layer.as_ref() == layer { add(component.body_box); }
+            else { for box_ in component.through_hole_boxes.iter() { add(*box_); } }
+        }
+    }
+    result
+}
+fn relevant_occupied_boxes(placed: &WorkingPrimitive, moving: &WorkingPrimitive) -> Vec<Box2> {
+    if moving.components.is_empty() { return packing_boxes(placed).to_vec(); }
+    ["top", "bottom"].into_iter()
+        .filter(|layer| layer_envelope(moving, layer).is_some())
+        .flat_map(|layer| occupied_boxes_on_layer(placed, layer))
+        .collect()
+}
 fn packing_box(primitive: &WorkingPrimitive) -> Box2 {
     union_boxes(packing_boxes(primitive))
 }
@@ -2611,11 +2653,17 @@ fn soft_spacing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f
         if (a.primitive.locked && b.primitive.locked) || !primitive_can_conflict(a,b,context) { continue; }
         if spacing.exempt_pairs.iter().any(|p| (p[0]==a.primitive.id && p[1]==b.primitive.id)
             || (p[1]==a.primitive.id && p[0]==b.primitive.id)) { continue; }
-        let a = a.primitive.bbox; let b = b.primitive.bbox;
-        let dx = (a.left-b.right).max(b.left-a.right).max(0.0);
-        let dy = (a.top-b.bottom).max(b.top-a.bottom).max(0.0);
-        let deficit = (context.problem.clearance + spacing.gap - dx.hypot(dy)).max(0.0);
-        score += 18.0 * deficit * deficit;
+        let closest = ["top", "bottom"].into_iter().filter_map(|layer| {
+            let a = layer_envelope(a, layer)?;
+            let b = layer_envelope(b, layer)?;
+            let dx = (a.left-b.right).max(b.left-a.right).max(0.0);
+            let dy = (a.top-b.bottom).max(b.top-a.bottom).max(0.0);
+            Some(dx.hypot(dy))
+        }).fold(f64::INFINITY, f64::min);
+        if closest.is_finite() {
+            let deficit = (context.problem.clearance + spacing.gap - closest).max(0.0);
+            score += 18.0 * deficit * deficit;
+        }
     }}
     score
 }
@@ -2667,7 +2715,7 @@ fn alignment_slot_centers(p: &WorkingPrimitive, placed: &[WorkingPrimitive], con
         }
         // Project available free-rectangle slots onto the shared axes. This lets
         // the packer leave room around the pair without forcing adjacency.
-        for slot in free_rect_slot_centers(width,height,placed,context).into_iter().take(24) {
+        for slot in free_rect_slot_centers(p,width,height,placed,context).into_iter().take(24) {
             centers.extend([Point{x,y:slot.y},Point{x:slot.x,y}]);
         }
     }
@@ -2678,6 +2726,41 @@ fn alignment_slot_centers(p: &WorkingPrimitive, placed: &[WorkingPrimitive], con
 mod alignment_search_tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn top_display_only_occupies_bottom_at_its_drilled_pads() {
+        let (mut context, state) = fixture();
+        let display_box = Box2 { left: -50.0, right: 50.0, top: -30.0, bottom: 30.0 };
+        let pad_box = Box2 { left: -0.5, right: 0.5, top: -0.5, bottom: 0.5 };
+        let bottom_box = Box2 { left: 19.0, right: 21.0, top: -1.0, bottom: 1.0 };
+        let mut display = state.remaining[0].clone();
+        display.primitive.bbox = display_box;
+        display.primitive.collision_boxes = Arc::new(vec![display_box, pad_box]);
+        display.components = Arc::new(vec![(0, ComponentGeometry {
+            designator: Arc::from("U6"), primitive_id: Arc::from("U6"), block_name: Arc::from("display"),
+            layer: Arc::from("top"), body_box: display_box, through_hole_boxes: Arc::new(vec![pad_box]),
+            board_overflow: Default::default(), edge_clearance: 0.0,
+        })]);
+        let mut candidate = state.remaining[1].clone();
+        candidate.primitive.bbox = bottom_box;
+        candidate.primitive.collision_boxes = Arc::new(vec![bottom_box]);
+        candidate.components = Arc::new(vec![(1, ComponentGeometry {
+            designator: Arc::from("R1"), primitive_id: Arc::from("R1"), block_name: Arc::from("bottom"),
+            layer: Arc::from("bottom"), body_box: bottom_box, through_hole_boxes: Arc::new(vec![]),
+            board_overflow: Default::default(), edge_clearance: 0.0,
+        })]);
+        let problem = Arc::get_mut(&mut context.problem).unwrap();
+        problem.components = vec![display.components[0].1.clone(), candidate.components[0].1.clone()];
+        problem.component_pair_clearance = vec![0.0, 0.2, 0.2, 0.0];
+        problem.component_conflict = vec![1, 1, 1, 1];
+        assert_eq!(primitive_hard_overlap(&display, &candidate, &context), 0.0);
+        assert_eq!(envelope_overlap_penalty(&[display.clone(), candidate.clone()], &context), 0.0);
+        let occupied = relevant_occupied_boxes(&display, &candidate);
+        assert_eq!(occupied, vec![pad_box]);
+        let mut near_pad = candidate.clone();
+        translate_primitive(&mut near_pad, -20.0, 0.0);
+        assert!(primitive_hard_overlap(&display, &near_pad, &context) > 0.0);
+    }
 
     fn fixture() -> (Context,SearchState) {
         let primitives:Vec<_>=(0..3).map(|i| {

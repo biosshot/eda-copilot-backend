@@ -101,6 +101,8 @@ export interface FootprintPad {
     height: number;
     shape?: BoardPadShape;
     mount?: 'smd' | 'through_hole';
+    /** Source footprint side; bottom-side placement mirrors top/bottom. */
+    layer?: Layer | 'multi';
     drillDiameter?: number;
 }
 
@@ -110,6 +112,7 @@ export type FootprintGraphic =
     | {
         kind: 'path';
         layer: FootprintGraphicLayer;
+        side?: Layer;
         points: Point[];
         closed: boolean;
         strokeWidth: number;
@@ -117,6 +120,7 @@ export type FootprintGraphic =
     | {
         kind: 'circle';
         layer: FootprintGraphicLayer;
+        side?: Layer;
         x: number;
         y: number;
         radius: number;
@@ -129,6 +133,8 @@ export interface FootprintSpec {
     height: number;
     pads: FootprintPad[];
     graphics?: FootprintGraphic[];
+    /** Inferred occupied body on the source footprint's top side. */
+    bodyBox?: Box;
     sourceOriginOffset?: Point;
 }
 
@@ -150,12 +156,14 @@ export const FootprintSpecSchema = () => z.object({
         height: z.number().positive(),
         shape: z.enum(["rect", "oval", "round"]).optional(),
         mount: z.enum(["smd", "through_hole"]).optional(),
+        layer: z.enum(["top", "bottom", "multi"]).optional(),
         drillDiameter: z.number().positive().optional(),
     })),
     graphics: z.array(z.discriminatedUnion("kind", [
         z.object({
             kind: z.literal("path"),
             layer: z.enum(["silk", "body", "marking", "document", "other"]),
+            side: z.enum(["top", "bottom"]).optional(),
             points: z.array(FootprintPointSchema()),
             closed: z.boolean(),
             strokeWidth: z.number().nonnegative(),
@@ -163,12 +171,14 @@ export const FootprintSpecSchema = () => z.object({
         z.object({
             kind: z.literal("circle"),
             layer: z.enum(["silk", "body", "marking", "document", "other"]),
+            side: z.enum(["top", "bottom"]).optional(),
             x: z.number(),
             y: z.number(),
             radius: z.number().nonnegative(),
             strokeWidth: z.number().nonnegative(),
         }),
     ])).optional(),
+    bodyBox: z.object({ left: z.number(), right: z.number(), top: z.number(), bottom: z.number() }).optional(),
     sourceOriginOffset: FootprintPointSchema().optional(),
 });
 

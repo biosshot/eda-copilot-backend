@@ -1,5 +1,5 @@
-import type { PlacementInput, TargetRef } from '#types/pcb/layout-model.ts';
-import { componentBox, boardHoleKeepoutRadius, pointInBoard, boxGap } from '../pcb-auto-place/geometry.ts';
+import type { Box, Layer, PcbComponent, PlacementInput, TargetRef } from '#types/pcb/layout-model.ts';
+import { componentBox, componentCollisionBoxes, boardHoleKeepoutRadius, pointInBoard, boxGap } from '../pcb-auto-place/geometry.ts';
 import type { PlacementPrimitive } from './primitives.ts';
 
 export function boardSpacingExemptPairs(input: PlacementInput, roots: PlacementPrimitive[]): Array<[string,string]> {
@@ -46,13 +46,31 @@ export function boardSpacingPenalty(input: PlacementInput, roots: PlacementPrimi
     if(gap<=0)return 0;
     let score=0;
     const exempt=boardSpacingExemptPairs(input,roots);
+    const components=new Map(input.components.map(component=>[component.designator,component]));
+    const envelopes=new Map(roots.map(root=>[root.id,{
+        top:primitiveLayerBox(components,root,'top'),bottom:primitiveLayerBox(components,root,'bottom'),
+    }]));
     for(let i=0;i<roots.length;i++)for(let j=i+1;j<roots.length;j++) {
         const a=roots[i],b=roots[j];
         if(exempt.some(([x,y])=>x===a.id&&y===b.id||x===b.id&&y===a.id))continue;
         if(a.locked&&b.locked)continue;
-        if(!a.placements.some(p=>b.placements.some(q=>p.layer===q.layer)))continue;
-        const deficit=Math.max(0,input.board.clearances.component+gap-boxGap(a.bbox,b.bbox));
+        const distances=(['top','bottom'] as Layer[]).flatMap(layer=>{
+            const x=envelopes.get(a.id)?.[layer],y=envelopes.get(b.id)?.[layer];
+            return x&&y?[boxGap(x,y)]:[];
+        });
+        if(!distances.length)continue;
+        const deficit=Math.max(0,input.board.clearances.component+gap-Math.min(...distances));
         score+=18*deficit*deficit;
     }
     return score;
+}
+
+function primitiveLayerBox(components: Map<string,PcbComponent>, primitive: PlacementPrimitive, layer: Layer): Box | undefined {
+    const boxes=primitive.placements.flatMap(placement=>{
+        const component=components.get(placement.designator);
+        return component?componentCollisionBoxes(component,placement,layer):[];
+    });
+    if(!boxes.length)return undefined;
+    return {left:Math.min(...boxes.map(box=>box.left)),right:Math.max(...boxes.map(box=>box.right)),
+        top:Math.min(...boxes.map(box=>box.top)),bottom:Math.max(...boxes.map(box=>box.bottom))};
 }

@@ -105,6 +105,7 @@ mod tests {
             allowed_orientations: Arc::new(vec![0]),
             bbox: Box2 { left: x - 0.5, right: x + 0.5, top: -0.5, bottom: 0.5 },
             collision_boxes: Arc::new(vec![]),
+            collision_box_layers: Arc::new(vec![]),
             width: 1.0,
             height: 1.0,
             placements: Arc::new(vec![Placement {

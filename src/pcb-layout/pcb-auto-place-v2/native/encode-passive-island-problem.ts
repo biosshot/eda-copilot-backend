@@ -1,7 +1,7 @@
 import type { PcbComponent, PlacementTreeNode } from '#types/pcb/layout-model.ts';
 import { isGroundSignalName } from '#utils/signals.ts';
 import {
-    componentBox,
+    componentBodyBox,
     componentCollisionBoxes,
     getLocalPointOffset,
 } from '../../pcb-auto-place/geometry.ts';
@@ -43,7 +43,7 @@ export function encodeNativePassiveIslandProblem(params: PassiveNetIslandSolvePa
             pinNetIds: pins.map((pin) => netIds.get(pin.signal_name)!),
             orientations: normalizedRotations(component).map((rotation) => {
                 const placement = { designator: component.designator, x: 0, y: 0, rotate: rotation, layer, score: 0 };
-                const bodyBox = componentBox(component, placement);
+                const bodyBox = componentBodyBox(component, placement);
                 const oppositeLayer = layer === 'top' ? 'bottom' : 'top';
                 return {
                     rotation,

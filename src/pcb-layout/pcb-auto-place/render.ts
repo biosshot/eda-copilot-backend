@@ -70,9 +70,7 @@ export function renderPlacementSvg(input: PlacementInput, placements: Placement[
         const fallbackBody = !componentVisible || component.footprint.graphics?.length
             ? ''
             : `<rect x="${px(box.left)}" y="${py(box.top)}" width="${(box.right - box.left) * scale}" height="${(box.bottom - box.top) * scale}" rx="3" fill="${colors.fill}" stroke="${colors.stroke}" stroke-width="1.5"/>`;
-        const footprintGraphics = componentVisible
-            ? renderFootprintGraphics(component, placement, scale, px, py, colors)
-            : '';
+        const footprintGraphics = renderFootprintGraphics(component, placement, scale, px, py, colors, options.viewLayer);
         const routingKeepouts = renderGeneratedRoutingKeepouts(component, placement, scale, px, py, options.viewLayer);
         const generatedCopper = renderGeneratedPolygons(component, placement, scale, px, py, options.viewLayer);
         const labels = options.labels === false ? '' : `
@@ -88,7 +86,10 @@ export function renderPlacementSvg(input: PlacementInput, placements: Placement[
 
         for (const pad of component.footprint.pads) {
             const throughHole = pad.mount === 'through_hole' || (pad.drillDiameter ?? 0) > 0;
-            if (options.viewLayer !== undefined && options.viewLayer !== placement.layer && !throughHole) continue;
+            const padLayer = pad.layer === 'bottom'
+                ? (placement.layer === 'top' ? 'bottom' : 'top')
+                : placement.layer;
+            if (options.viewLayer !== undefined && options.viewLayer !== padLayer && !throughHole) continue;
             padItems.push(renderFootprintPad(component, placement, pad, scale, px, py, colors));
         }
     }
@@ -259,8 +260,14 @@ function renderFootprintGraphics(
     px: (value: number) => number,
     py: (value: number) => number,
     colors: ReturnType<typeof componentLayerColors>,
+    viewLayer?: Placement['layer'],
 ) {
-    return (component.footprint.graphics ?? []).map((graphic) => {
+    return (component.footprint.graphics ?? []).filter((graphic) => {
+        const layer = graphic.side === 'bottom'
+            ? (placement.layer === 'top' ? 'bottom' : 'top')
+            : placement.layer;
+        return viewLayer === undefined || viewLayer === layer;
+    }).map((graphic) => {
         const stroke = graphic.layer === 'silk'
             ? '#64748b'
             : graphic.layer === 'body'
@@ -269,11 +276,13 @@ function renderFootprintGraphics(
                     ? colors.text
                     : colors.muted;
         const strokeWidth = Math.max(0.7, graphic.strokeWidth * scale);
+        const oppositeSilk = graphic.layer === 'silk' && graphic.side === 'bottom';
+        const dash = oppositeSilk ? ' stroke-dasharray="4 3"' : '';
 
         if (graphic.kind === 'circle') {
             const center = getLocalPointWorld(placement, graphic);
             const edge = getLocalPointWorld(placement, { x: graphic.x + graphic.radius, y: graphic.y });
-            return `<circle cx="${px(center.x)}" cy="${py(center.y)}" r="${dist(center, edge) * scale}" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}"/>`;
+            return `<circle cx="${px(center.x)}" cy="${py(center.y)}" r="${dist(center, edge) * scale}" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}"${dash}/>`;
         }
 
         const points = graphic.points.map((point) => {
@@ -281,7 +290,7 @@ function renderFootprintGraphics(
             return `${px(world.x)},${py(world.y)}`;
         }).join(' ');
         const tag = graphic.closed ? 'polygon' : 'polyline';
-        return `<${tag} points="${points}" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/>`;
+        return `<${tag} points="${points}" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}"${dash} stroke-linecap="round" stroke-linejoin="round"/>`;
     }).join('\n');
 }
 

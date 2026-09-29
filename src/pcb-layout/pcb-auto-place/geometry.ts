@@ -306,15 +306,45 @@ export function componentBox(component: PcbComponent, placement: Placement): Box
 }
 
 export function componentCollisionBoxes(component: PcbComponent, placement: Placement, layer: Layer): Box[] {
-    if (placement.layer === layer) return [componentBox(component, placement)];
-    const throughHolePads = component.footprint.pads
-        .filter(isThroughHolePad)
+    const sameSide = placement.layer === layer;
+    const body = sameSide
+        ? [component.footprint.bodyBox
+            ? localBoxWorld(placement, component.footprint.bodyBox)
+            : componentBox(component, placement)]
+        : [];
+    const pads = component.footprint.pads
+        .filter((pad) => isThroughHolePad(pad)
+            || (sameSide ? pad.layer !== 'bottom' : pad.layer === 'bottom'))
         .map((pad) => componentPadBox(placement, pad));
-    const oppositeLayerPolygons = (component.pcb.generatedGeometry ?? [])
+    const reverseSilk = sameSide ? [] : (component.footprint.graphics ?? [])
+        .filter((graphic) => graphic.layer === 'silk' && graphic.side === 'bottom')
+        .map((graphic) => graphicBoxWorld(placement, graphic));
+    const oppositeLayerPolygons = sameSide ? [] : (component.pcb.generatedGeometry ?? [])
         .flatMap((geometry) => geometry.polygons)
         .filter((polygon) => polygon.layer === 'opposite')
         .map((polygon) => pointsBox(polygon.points.map((point) => getLocalPointWorld(placement, point))));
-    return [...throughHolePads, ...oppositeLayerPolygons];
+    return [...body, ...pads, ...reverseSilk, ...oppositeLayerPolygons];
+}
+
+export function componentBodyBox(component: PcbComponent, placement: Placement): Box {
+    return component.footprint.bodyBox
+        ? localBoxWorld(placement, component.footprint.bodyBox)
+        : componentBox(component, placement);
+}
+
+function localBoxWorld(placement: Placement, box: Box): Box {
+    return pointsBox([
+        { x: box.left, y: box.top }, { x: box.right, y: box.top },
+        { x: box.right, y: box.bottom }, { x: box.left, y: box.bottom },
+    ].map((point) => getLocalPointWorld(placement, point)));
+}
+
+function graphicBoxWorld(placement: Placement, graphic: NonNullable<PcbComponent['footprint']['graphics']>[number]): Box {
+    if (graphic.kind === 'circle') {
+        return localBoxWorld(placement, { left: graphic.x - graphic.radius, right: graphic.x + graphic.radius,
+            top: graphic.y - graphic.radius, bottom: graphic.y + graphic.radius });
+    }
+    return pointsBox(graphic.points.map((point) => getLocalPointWorld(placement, point)));
 }
 
 export function componentPairCollisionBoxPairs(
@@ -323,9 +353,7 @@ export function componentPairCollisionBoxPairs(
     b: PcbComponent,
     bPlacement: Placement,
 ): Array<{ a: Box; b: Box }> {
-    const layers = aPlacement.layer === bPlacement.layer
-        ? [aPlacement.layer]
-        : [aPlacement.layer, bPlacement.layer];
+    const layers: Layer[] = ['top', 'bottom'];
     const pairs: Array<{ a: Box; b: Box }> = [];
     for (const layer of layers) {
         const aBoxes = componentCollisionBoxes(a, aPlacement, layer);

@@ -40,6 +40,8 @@ pub struct Primitive {
     pub allowed_orientations: Arc<Vec<i32>>,
     pub bbox: Box2,
     pub collision_boxes: Arc<Vec<Box2>>,
+    #[serde(default)]
+    pub collision_box_layers: Arc<Vec<Arc<str>>>,
     pub width: f64,
     pub height: f64,
     pub placements: Arc<Vec<Placement>>,

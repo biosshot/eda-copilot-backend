@@ -102,6 +102,7 @@ export interface NativePrimitive {
     allowedOrientations: number[];
     bbox: Box;
     collisionBoxes: Box[];
+    collisionBoxLayers?: Layer[];
     width: number;
     height: number;
     placements: NativePlacement[];

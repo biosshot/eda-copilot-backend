@@ -1,8 +1,63 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseEasyEdaFootprintDataStr } from '../src/devices/footprints/easyeda-footprint.ts';
+import { componentCollisionBoxes, componentPairCollisionBoxPairs } from '../src/pcb-layout/pcb-auto-place/geometry.ts';
+import type { PcbComponent, Placement } from '../src/types/pcb/layout-model.ts';
 
 describe('easyeda footprint parser', () => {
+    it('keeps the PortableScope U6 display outline and mounting holes at their real size', () => {
+        const dataStr = [
+            '["DOCTYPE","FOOTPRINT","1.7"]',
+            '["PAD","e2",0,"",12,"1",0,470,-90,["ROUND",36,36],["ELLIPSE",60,60],[],0,0,0,1,0,null,null,null,null,0]',
+            '["PAD","e15",0,"",12,"14",0,-553.6226,-90,["ROUND",36,36],["ELLIPSE",60,60],[],0,0,0,1,0,null,null,null,null,0]',
+            '["POLY","e1",0,"",3,10,["CIRCLE",39.3701,1078.7402,62.9921],0]',
+            '["POLY","e16",0,"",3,10,["CIRCLE",4055.1182,1078.7402,62.9921],0]',
+            '["POLY","e17",0,"",3,10,["CIRCLE",4055.1182,-1082.6772,62.9921],0]',
+            '["POLY","e18",0,"",3,10,["CIRCLE",39.3701,-1082.6772,62.9921],0]',
+            '["POLY","e38",0,"",3,10,["R",-78.7402,1198.4252,4251.9685,2396.8504,0,0],0]',
+        ].join('\n');
+        const footprint = parseEasyEdaFootprintDataStr(dataStr);
+        assert.equal(footprint.width, 108);
+        assert.equal(footprint.height, 60.88);
+        assert.equal(footprint.graphics?.filter((graphic) => graphic.kind === 'circle' && graphic.side === 'top').length, 4);
+        assert.equal(footprint.graphics?.some((graphic) => graphic.kind === 'path' && graphic.closed && graphic.side === 'top'), true);
+        assert.equal(footprint.pads.every((pad) => pad.mount === 'through_hole' && pad.layer === 'multi'), true);
+    });
+
+    it('preserves bottom silk and bottom SMD pads as opposite-side geometry', () => {
+        const dataStr = [
+            '["DOCTYPE","FOOTPRINT"]',
+            '["PAD","top",0,"",1,"1",0,0,0,null,["RECT",20,20,0],[],0,0,0,1,0,null,null,null,null,0]',
+            '["PAD","bottom",0,"",2,"2",100,0,0,null,["RECT",20,20,0],[],0,0,0,1,0,null,null,null,null,0]',
+            '["POLY","silk",0,"",4,10,["R",70,30,60,60,0,0],0]',
+        ].join('\n');
+        const footprint = parseEasyEdaFootprintDataStr(dataStr);
+        assert.equal(footprint.pads.find((pad) => pad.pin_number === '2')?.layer, 'bottom');
+        assert.equal(footprint.graphics?.find((graphic) => graphic.layer === 'silk')?.side, 'bottom');
+    });
+
+    it('leaves a top-mounted display center available on bottom but blocks its drilled pads', () => {
+        const display = parseEasyEdaFootprintDataStr([
+            '["DOCTYPE","FOOTPRINT"]',
+            '["PAD","hole",0,"",12,"1",0,0,0,["ROUND",36,36],["ELLIPSE",60,60],[],0,0,0,1,0,null,null,null,null,0]',
+            '["POLY","outline",0,"",3,10,["R",-200,200,400,400,0,0],0]',
+        ].join('\n'));
+        const passive = parseEasyEdaFootprintDataStr([
+            '["DOCTYPE","FOOTPRINT"]',
+            '["PAD","smd",0,"",1,"1",0,0,0,null,["RECT",20,20,0],[],0,0,0,1,0,null,null,null,null,0]',
+        ].join('\n'));
+        const u6 = { footprint: display, pcb: {} } as PcbComponent;
+        const r1 = { footprint: passive, pcb: {} } as PcbComponent;
+        const top = { x: 0, y: 0, rotate: 0, layer: 'top', score: 0 } as Placement;
+        const bottom = { x: 4, y: 0, rotate: 0, layer: 'bottom', score: 0 } as Placement;
+        const bottomBoxes = componentCollisionBoxes(u6, top, 'bottom');
+        assert.equal(bottomBoxes.length, 1);
+        assert.equal(componentPairCollisionBoxPairs(u6, top, r1, bottom).some(({ a, b }) =>
+            a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top), false);
+        const onHole = { ...bottom, x: 0 };
+        assert.equal(componentPairCollisionBoxPairs(u6, top, r1, onHole).some(({ a, b }) =>
+            a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top), true);
+    });
     it('parses polygon pads such as exposed thermal pads', () => {
         const dataStr = [
             '["DOCTYPE","FOOTPRINT"]',
