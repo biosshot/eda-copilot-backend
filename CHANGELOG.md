@@ -13,6 +13,7 @@
 
 ### Developer workflow
 
+- Refresh the USB block CPU reference with user approval; record the pre-existing placement regression as open technical debt rather than treating the fixture update as a quality fix.
 - Scope the CubeCL implementation roadmap to native block solving and saved FPGA replay; preserve prior GPU experiments, require reuse of the fast full-score path, and record validation/performance evidence before accepting each milestone.
 - Keep PCB capture console output short; save full child-process output in `run.log` and document the `runs/` and `replays/` artifacts.
 - Keep root agent rules short, add scoped PCB/native/circuit instructions and an architecture map, and move preserved PCB experiments to `docs/experimental/pcb/` with updated references.
