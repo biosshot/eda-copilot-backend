@@ -14,6 +14,7 @@
 
 ### Developer workflow
 
+- Document a separate shared GPU infrastructure roadmap: extract the existing CubeCL runtime within the same addon, preserve block solver behavior/performance, and define runtime/domain ownership and validation. Board packer and post-place/refiner are future consumers; their implementation is outside this roadmap. Infrastructure extraction has not started.
 - Implement the roadmap's user-approved first-stage GPU F64 and whole-block CPU restart, with separate exhaustive candidate/pruning validation and full-cycle benchmark tools. Defer all-CPU/GPU F32 migration to a separate future task without a date; retain the approved CPU F64 / GPU F32 intermediate option. The proposed 1.6x F32/F64 performance difference remains an unmeasured hypothesis.
 - Add an isolated F64/F32 FPGA block-search precision check with exact F64 replay, offline cross-scoring, placement previews, and evidence of clearance-boundary score discontinuities. Production precision remains F64.
 - Refresh the USB block CPU reference with user approval; record the pre-existing placement regression as open technical debt rather than treating the fixture update as a quality fix.
