@@ -4,6 +4,7 @@
 
 ### PCB layout
 
+- Add a Rust/CubeCL F64 backend for supported native block Beam, singles and pair-reinsert batches, including GPU scoring, pruning, ranking and frontier checks. Reuse one process-wide Vulkan runtime; keep small/unsupported blocks on CPU and restart the original native block call on CPU after a GPU failure. On the saved four-block Windows/RTX 3060 package, warm full-cycle time improves from 130.600 s to 16.159 s; full FPGA time improves from 127.146 s to 13.748 s with identical reference outputs. Ship a single 17.687 MB Windows addon with no helper/compiler DLL or CPU JIT. See `docs/experimental/pcb/cubecl-backend/RESULTS.md` for scope, validation and limits.
 - Use unified block checkpoint selection across beam, single moves, pair refinement, and role hypotheses, including blocks larger than twelve primitives. Retain only comparable legal variants and report selection diagnostics.
 - Add fixed-connector-family placement in board context, adaptive block spacing, and conservative soft alignment/orientation proposals with a fallback to ordinary packing.
 - Switch block scoring to geometric evaluation, retain route-aware checks at later board stages, and add incremental scoring and caches for stable block interactions, pad geometry, and access penalties.
@@ -13,6 +14,8 @@
 
 ### Developer workflow
 
+- Implement the roadmap's user-approved first-stage GPU F64 and whole-block CPU restart, with separate exhaustive candidate/pruning validation and full-cycle benchmark tools. Defer all-CPU/GPU F32 migration to a separate future task without a date; retain the approved CPU F64 / GPU F32 intermediate option. The proposed 1.6x F32/F64 performance difference remains an unmeasured hypothesis.
+- Add an isolated F64/F32 FPGA block-search precision check with exact F64 replay, offline cross-scoring, placement previews, and evidence of clearance-boundary score discontinuities. Production precision remains F64.
 - Refresh the USB block CPU reference with user approval; record the pre-existing placement regression as open technical debt rather than treating the fixture update as a quality fix.
 - Scope the CubeCL implementation roadmap to native block solving and saved FPGA replay; preserve prior GPU experiments, require reuse of the fast full-score path, and record validation/performance evidence before accepting each milestone.
 - Keep PCB capture console output short; save full child-process output in `run.log` and document the `runs/` and `replays/` artifacts.

@@ -28,6 +28,13 @@ const PASSIVE_ISLAND_CONTRACT_VERSION: u32 = 1;
 const POST_PLACE_SCORE_CONTRACT_VERSION: u32 = 1;
 const SIGNAL_PATH_CONTRACT_VERSION: u32 = 1;
 
+#[cfg(all(feature = "gpu", feature = "placement-bench"))]
+#[napi]
+pub fn block_gpu_probe(values: Vec<f64>, inject_panic: bool) -> Result<Value> {
+    block_solver::gpu_runtime::probe(&values, inject_panic)
+        .map_err(|message| Error::new(Status::GenericFailure, message))
+}
+
 #[napi]
 pub fn contract_version() -> u32 {
     CONTRACT_VERSION

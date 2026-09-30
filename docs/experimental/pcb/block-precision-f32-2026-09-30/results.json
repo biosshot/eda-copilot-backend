@@ -1,0 +1,1782 @@
+{
+  "manifest": {
+    "capture": "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\debugging\\pcb-layout\\runs\\PortableScope\\2026-09-29T12-02-18-665Z\\native\\block\\process-19228-thread-0\\00091-fpga_1v1_caps_fpga_2v5_caps_fpga_1v8_caps_fpga_3v3_caps_fpga_cor-9db75277e8",
+    "problemHash": "9db75277e877b4765cf9ae32b16a698a16b8155101c8a06cc35a80f6a77a640f",
+    "sourceManifest": [
+      {
+        "path": "src\\block_solver.rs",
+        "sha256": "d94146fa1fcb50936f5046fa3abd78f3b34c99c0a566267adf90d74f549c29b1"
+      },
+      {
+        "path": "src\\block_solver_trace.rs",
+        "sha256": "d90cf90d228d9ea7a8c41fa38398015b8704434a8e01fc08332492102e5cd890"
+      },
+      {
+        "path": "src\\fast_route.rs",
+        "sha256": "9c277c6ff28aa88e297ca02499bd1ddada6e0b0f207e59ed6554d2f243e17c36"
+      },
+      {
+        "path": "src\\geometry.rs",
+        "sha256": "2a4dc07197daca9bfdc10ed12cff63c6ae5a10ed434c6c80f7e545e10522d707"
+      },
+      {
+        "path": "src\\lazy_rank.rs",
+        "sha256": "01a50eb65618bf24acd4c91b5b51b255d992df1924707201cdced3166d481d71"
+      },
+      {
+        "path": "src\\micro_router\\comparison.rs",
+        "sha256": "74a855c19514c620364aa37bef16e9a0805d82bde94bb287ac2dd4a49defeb35"
+      },
+      {
+        "path": "src\\micro_router\\grid.rs",
+        "sha256": "ca71d2f51c23276a5a3a8436518fa97cabd1ae28a6a120f2133b41080202fbf3"
+      },
+      {
+        "path": "src\\micro_router\\grid_tests.rs",
+        "sha256": "1a5ef932349d673f21a593507528f136b8fab7cc158456c7c153590d2b1c01a9"
+      },
+      {
+        "path": "src\\micro_router\\performance_tests.rs",
+        "sha256": "ef61d8db09245ee78bfe534b0c3ae4cbe99e0d41c1f98be3e268435b035bc8a0"
+      },
+      {
+        "path": "src\\micro_router\\temporary.rs",
+        "sha256": "c0847b88f6b9412857cbd475b461d2297368f3b71bc8456019ed48e949b15a23"
+      },
+      {
+        "path": "src\\micro_router.rs",
+        "sha256": "68f588f0a39f84b0c853fdcc161307b3717f65501e9a0fa66f4db2b5502b0efb"
+      },
+      {
+        "path": "src\\model.rs",
+        "sha256": "38bf1bbad1891d2f5c41fb7f7320222bee99637839f6dde4e2c7f5ffab4dfba4"
+      },
+      {
+        "path": "src\\net_class.rs",
+        "sha256": "1cbee148dde37ef30f53b4785fb7359743db28daa0c39994f1a012db176aea90"
+      },
+      {
+        "path": "src\\ordinary_net.rs",
+        "sha256": "2c8c698a03d2eb9b9a85f8664bfffadab3b75a0205cbac1fc3ef43ce5b13d9df"
+      },
+      {
+        "path": "src\\passive_island_solver.rs",
+        "sha256": "1949117adf689e778192d279ff7518cef694d537efdee4eac5fa2c3fba2c06c6"
+      },
+      {
+        "path": "src\\post_place.rs",
+        "sha256": "7b116d5f4688ca348fc93cf6c0a44b34f85179ca785818c8279784d2fb43bdf3"
+      },
+      {
+        "path": "src\\post_place_probe.rs",
+        "sha256": "47544bda69530dc2f0e7eb30a79552fd5ef281e5cb273d3e8b34f40d9c7cee81"
+      },
+      {
+        "path": "src\\post_place_refine.rs",
+        "sha256": "72035e1680a5063466b5c0ab25b94a65bdd571562cda1852f210898ebd80facf"
+      },
+      {
+        "path": "src\\signal_path.rs",
+        "sha256": "e223db88516a11e9766414dc8c7209159e33cc2a1096525767bd8d9d0286e4fd"
+      },
+      {
+        "path": "src\\solver.rs",
+        "sha256": "443cdc43929d36fe3f58c2ac5941270a7fae7264672f0cab947bb5591a9980ec"
+      }
+    ],
+    "method": "Full native CPU search in f64 versus f32; all source floating types/math converted, same formulas, epsilons, search parameters. Not a GPU benchmark."
+  },
+  "searches": {
+    "f64": {
+      "binaryHash": "f7adfb8dabd9a717b11c5d4c102f6157a8455c8a2fc4a136ca8e8d1d3465a07f",
+      "wallMs": 138536.0319
+    },
+    "f32": {
+      "binaryHash": "dd297d8f00d4fe097fe893a1f9d5b546fb25529e0375df693933207f89a92f96",
+      "wallMs": 90689.3487
+    }
+  },
+  "evaluators": {
+    "binaryHash": "bbbd0bdd255c4cba7c30a00729da8fdc23b023533eaa8a8184bbca55e1ce7eab",
+    "f32BinaryHash": "800a556c3801ae2c7b4ce2fd8aba837a19a6ffb753624b55ed0db359c4a4f199",
+    "scriptHash": "0a77cede3e1f1baf6a961f897d917f84bdea4bd276c35519073bb94af6bf4d54",
+    "problemHash": "9db75277e877b4765cf9ae32b16a698a16b8155101c8a06cc35a80f6a77a640f"
+  },
+  "comparison": {
+    "method": "Full native CPU search in f64 versus f32; all source floating types/math converted, same formulas, epsilons, search parameters. Not a GPU benchmark.",
+    "exactF64Reference": true,
+    "firstDifferentBeamDepth": 3,
+    "beamLayers": [
+      {
+        "depth": 1,
+        "keptF64": 4,
+        "keptF32": 4,
+        "sameRetainedPosesAndOrder": true
+      },
+      {
+        "depth": 2,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": true
+      },
+      {
+        "depth": 3,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 4,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 5,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 6,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 7,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": true
+      },
+      {
+        "depth": 8,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 9,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 10,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 11,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 12,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 13,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 14,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 15,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 16,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 17,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 18,
+        "keptF64": 12,
+        "keptF32": 12,
+        "sameRetainedPosesAndOrder": false
+      },
+      {
+        "depth": 19,
+        "keptF64": 4,
+        "keptF32": 4,
+        "sameRetainedPosesAndOrder": false
+      }
+    ],
+    "stages": [
+      {
+        "stage": "beam",
+        "f64Score": 5969.483094641118,
+        "f32ReportedScore": 5943.62841796875,
+        "f32RawGeometryF64Score": 20005943.647341423,
+        "rawF32GeometryOverlapPairs": [
+          {
+            "a": "primitive:tree:component:C20",
+            "b": "primitive:tree:component:C30",
+            "depthMm": 9.536743128535363e-8
+          },
+          {
+            "a": "primitive:tree:component:C30",
+            "b": "primitive:tree:component:C21",
+            "depthMm": 9.536743128535363e-8
+          }
+        ],
+        "f32PosesF64Score": 5943.628256573449,
+        "scoreChangePercent": -0.4331168655269257,
+        "hardF64": 0,
+        "hardF32Reported": 0,
+        "hardF32PosesF64": 0,
+        "difference": {
+          "missing": [],
+          "added": [],
+          "duplicates": 0,
+          "changedAtPlacementResolution": [
+            {
+              "designator": "U3",
+              "before": {
+                "designator": "U3",
+                "x": 0,
+                "y": 0,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "U3",
+                "x": 1,
+                "y": 0,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 1,
+              "distanceMm": 1,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C24",
+              "before": {
+                "designator": "C24",
+                "x": -11.208,
+                "y": 0.709,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C24",
+                "x": -10.208,
+                "y": 0.709,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.9999998168945314,
+              "distanceMm": 1,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C31",
+              "before": {
+                "designator": "C31",
+                "x": -11.208,
+                "y": -3.906,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C31",
+                "x": -10.208,
+                "y": -3.906,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.9999998168945365,
+              "distanceMm": 1,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C20",
+              "before": {
+                "designator": "C20",
+                "x": -11.208,
+                "y": 4.709,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C20",
+                "x": -10.208,
+                "y": 4.709,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.9999998168945374,
+              "distanceMm": 1,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C30",
+              "before": {
+                "designator": "C30",
+                "x": -11.908,
+                "y": 6.693,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C30",
+                "x": -10.908,
+                "y": 6.693,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 1.0000000076294069,
+              "distanceMm": 1,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C21",
+              "before": {
+                "designator": "C21",
+                "x": -12.607,
+                "y": 4.709,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C21",
+                "x": -11.607,
+                "y": 4.709,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.9999996490478569,
+              "distanceMm": 1,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C22",
+              "before": {
+                "designator": "C22",
+                "x": -11.628,
+                "y": 2.911,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C22",
+                "x": -10.628,
+                "y": 2.911,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.999999740600586,
+              "distanceMm": 1,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C15",
+              "before": {
+                "designator": "C15",
+                "x": 11.201,
+                "y": 1.399,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C15",
+                "x": 12.209,
+                "y": -3.731,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 5.228093602239326,
+              "distanceMm": 5.22809372525015,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C16",
+              "before": {
+                "designator": "C16",
+                "x": 11.395,
+                "y": -1.746,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C16",
+                "x": 12.209,
+                "y": -1.932,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.834979891412784,
+              "distanceMm": 0.8349802392871343,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C17",
+              "before": {
+                "designator": "C17",
+                "x": 11.201,
+                "y": 2.798,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C17",
+                "x": 12.209,
+                "y": -0.533,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 3.480175887924611,
+              "distanceMm": 3.480176001296486,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C18",
+              "before": {
+                "designator": "C18",
+                "x": 11.201,
+                "y": 0,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C18",
+                "x": 12.209,
+                "y": 0.866,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 1.328916572226304,
+              "distanceMm": 1.3289168521769894,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C19",
+              "before": {
+                "designator": "C19",
+                "x": 11.201,
+                "y": 4.197,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C19",
+                "x": 12.209,
+                "y": 2.265,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 2.1791481951370733,
+              "distanceMm": 2.179148457540238,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C29",
+              "before": {
+                "designator": "C29",
+                "x": 11.395,
+                "y": -4.011,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C29",
+                "x": 12.209,
+                "y": 4.53,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 8.57970162579999,
+              "distanceMm": 8.579701451682338,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C25",
+              "before": {
+                "designator": "C25",
+                "x": -11.198,
+                "y": -7,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C25",
+                "x": -10.198,
+                "y": -7,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 1.0000000457763676,
+              "distanceMm": 1,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C26",
+              "before": {
+                "designator": "C26",
+                "x": -12.793,
+                "y": -3.906,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C26",
+                "x": -11.793,
+                "y": -1.241,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 2.846440629557063,
+              "distanceMm": 2.8464407599667343,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C27",
+              "before": {
+                "designator": "C27",
+                "x": -12.793,
+                "y": -1.241,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C27",
+                "x": -11.793,
+                "y": -3.906,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 2.8464405875915024,
+              "distanceMm": 2.8464407599667343,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C28",
+              "before": {
+                "designator": "C28",
+                "x": -12.793,
+                "y": -6.571,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C28",
+                "x": -11.793,
+                "y": -6.571,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.9999997787475627,
+              "distanceMm": 1,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C32",
+              "before": {
+                "designator": "C32",
+                "x": -11.665,
+                "y": -8.985,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C32",
+                "x": -10.665,
+                "y": -8.985,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 1.0000000381470306,
+              "distanceMm": 1,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C23",
+              "before": {
+                "designator": "C23",
+                "x": -12.793,
+                "y": 0.958,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C23",
+                "x": -11.793,
+                "y": 0.958,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.9999997787475579,
+              "distanceMm": 1,
+              "rotationChanged": false,
+              "layerChanged": false
+            }
+          ],
+          "rotated": 4,
+          "maxRawDistanceMm": 8.57970162579999,
+          "maxDistanceMm": 8.579701451682338
+        }
+      },
+      {
+        "stage": "singles",
+        "f64Score": 5528.140155316541,
+        "f32ReportedScore": 5529.8837890625,
+        "f32RawGeometryF64Score": 20005529.90239374,
+        "rawF32GeometryOverlapPairs": [
+          {
+            "a": "primitive:tree:component:C20",
+            "b": "primitive:tree:component:C30",
+            "depthMm": 9.536743128535363e-8
+          },
+          {
+            "a": "primitive:tree:component:C30",
+            "b": "primitive:tree:component:C21",
+            "depthMm": 9.536743128535363e-8
+          }
+        ],
+        "f32PosesF64Score": 5529.883368821761,
+        "scoreChangePercent": 0.03153345349871279,
+        "hardF64": 0,
+        "hardF32Reported": 0,
+        "hardF32PosesF64": 0,
+        "difference": {
+          "missing": [],
+          "added": [],
+          "duplicates": 0,
+          "changedAtPlacementResolution": [
+            {
+              "designator": "U3",
+              "before": {
+                "designator": "U3",
+                "x": 1,
+                "y": 0,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "U3",
+                "x": 1.024,
+                "y": 0,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.024000048637390137,
+              "distanceMm": 0.02400000000000002,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C24",
+              "before": {
+                "designator": "C24",
+                "x": -10.209,
+                "y": 0.869,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C24",
+                "x": -10.185,
+                "y": 0.869,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.023999580383306896,
+              "distanceMm": 0.023999999999999133,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C31",
+              "before": {
+                "designator": "C31",
+                "x": -13.377,
+                "y": 1.238,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C31",
+                "x": -13.378,
+                "y": 0.958,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.28000178234362516,
+              "distanceMm": 0.2800017857085915,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C20",
+              "before": {
+                "designator": "C20",
+                "x": -10.209,
+                "y": 4.709,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C20",
+                "x": -10.208,
+                "y": 4.709,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.0009998169006510817,
+              "distanceMm": 0.0009999999999994458,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C15",
+              "before": {
+                "designator": "C15",
+                "x": 12.201,
+                "y": 1.399,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C15",
+                "x": 12.209,
+                "y": -3.731,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 5.130006183836199,
+              "distanceMm": 5.130006237812972,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C16",
+              "before": {
+                "designator": "C16",
+                "x": 12.201,
+                "y": -1.399,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C16",
+                "x": 12.209,
+                "y": -1.932,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.53306006965002,
+              "distanceMm": 0.5330600341424969,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C17",
+              "before": {
+                "designator": "C17",
+                "x": 12.201,
+                "y": 2.798,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C17",
+                "x": 12.209,
+                "y": -0.533,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 3.331009598201982,
+              "distanceMm": 3.3310096067108543,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C18",
+              "before": {
+                "designator": "C18",
+                "x": 12.201,
+                "y": 0,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C18",
+                "x": 12.209,
+                "y": 0.866,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.8660369439923364,
+              "distanceMm": 0.8660369507128434,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C19",
+              "before": {
+                "designator": "C19",
+                "x": 12.201,
+                "y": 4.197,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C19",
+                "x": 12.209,
+                "y": 2.265,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 1.9320164566563707,
+              "distanceMm": 1.932016563076,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C29",
+              "before": {
+                "designator": "C29",
+                "x": 12.395,
+                "y": -4.011,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C29",
+                "x": 12.209,
+                "y": 4.53,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 8.54302526744343,
+              "distanceMm": 8.543025049711607,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C25",
+              "before": {
+                "designator": "C25",
+                "x": -10.179,
+                "y": -6.357,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C25",
+                "x": -10.394,
+                "y": -6.105,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.3312536993777483,
+              "distanceMm": 0.33125367922485,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C26",
+              "before": {
+                "designator": "C26",
+                "x": -11.957,
+                "y": -4.158,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C26",
+                "x": -11.393,
+                "y": -2.074,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 2.158970330681635,
+              "distanceMm": 2.158970124851199,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C27",
+              "before": {
+                "designator": "C27",
+                "x": -11.793,
+                "y": -1.707,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C27",
+                "x": -11.393,
+                "y": -3.873,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 2.2026247696538714,
+              "distanceMm": 2.2026247978264477,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C28",
+              "before": {
+                "designator": "C28",
+                "x": -10.394,
+                "y": -1.707,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C28",
+                "x": -12.213,
+                "y": -5.456,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 4.166984757228237,
+              "distanceMm": 4.166984761191238,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C32",
+              "before": {
+                "designator": "C32",
+                "x": -13.377,
+                "y": -1.893,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C32",
+                "x": -13.378,
+                "y": -2.173,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.28000188390929176,
+              "distanceMm": 0.2800017857085915,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C23",
+              "before": {
+                "designator": "C23",
+                "x": -11.607,
+                "y": 0.869,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C23",
+                "x": -11.583,
+                "y": 0.869,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.023999816894537052,
+              "distanceMm": 0.023999999999999133,
+              "rotationChanged": false,
+              "layerChanged": false
+            }
+          ],
+          "rotated": 6,
+          "maxRawDistanceMm": 8.54302526744343,
+          "maxDistanceMm": 8.543025049711607
+        }
+      },
+      {
+        "stage": "pairs",
+        "f64Score": 5528.140155316541,
+        "f32ReportedScore": 5529.8837890625,
+        "f32RawGeometryF64Score": 20005529.90239374,
+        "rawF32GeometryOverlapPairs": [
+          {
+            "a": "primitive:tree:component:C20",
+            "b": "primitive:tree:component:C30",
+            "depthMm": 9.536743128535363e-8
+          },
+          {
+            "a": "primitive:tree:component:C30",
+            "b": "primitive:tree:component:C21",
+            "depthMm": 9.536743128535363e-8
+          }
+        ],
+        "f32PosesF64Score": 5529.883368821761,
+        "scoreChangePercent": 0.03153345349871279,
+        "hardF64": 0,
+        "hardF32Reported": 0,
+        "hardF32PosesF64": 0,
+        "difference": {
+          "missing": [],
+          "added": [],
+          "duplicates": 0,
+          "changedAtPlacementResolution": [
+            {
+              "designator": "U3",
+              "before": {
+                "designator": "U3",
+                "x": 1,
+                "y": 0,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "U3",
+                "x": 1.024,
+                "y": 0,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.024000048637390137,
+              "distanceMm": 0.02400000000000002,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C24",
+              "before": {
+                "designator": "C24",
+                "x": -10.209,
+                "y": 0.869,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C24",
+                "x": -10.185,
+                "y": 0.869,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.023999580383306896,
+              "distanceMm": 0.023999999999999133,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C31",
+              "before": {
+                "designator": "C31",
+                "x": -13.377,
+                "y": 1.238,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C31",
+                "x": -13.378,
+                "y": 0.958,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.28000178234362516,
+              "distanceMm": 0.2800017857085915,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C20",
+              "before": {
+                "designator": "C20",
+                "x": -10.209,
+                "y": 4.709,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C20",
+                "x": -10.208,
+                "y": 4.709,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.0009998169006510817,
+              "distanceMm": 0.0009999999999994458,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C15",
+              "before": {
+                "designator": "C15",
+                "x": 12.201,
+                "y": 1.399,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C15",
+                "x": 12.209,
+                "y": -3.731,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 5.130006183836199,
+              "distanceMm": 5.130006237812972,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C16",
+              "before": {
+                "designator": "C16",
+                "x": 12.201,
+                "y": -1.399,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C16",
+                "x": 12.209,
+                "y": -1.932,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.53306006965002,
+              "distanceMm": 0.5330600341424969,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C17",
+              "before": {
+                "designator": "C17",
+                "x": 12.201,
+                "y": 2.798,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C17",
+                "x": 12.209,
+                "y": -0.533,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 3.331009598201982,
+              "distanceMm": 3.3310096067108543,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C18",
+              "before": {
+                "designator": "C18",
+                "x": 12.201,
+                "y": 0,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C18",
+                "x": 12.209,
+                "y": 0.866,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.8660369439923364,
+              "distanceMm": 0.8660369507128434,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C19",
+              "before": {
+                "designator": "C19",
+                "x": 12.201,
+                "y": 4.197,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C19",
+                "x": 12.209,
+                "y": 2.265,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 1.9320164566563707,
+              "distanceMm": 1.932016563076,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C29",
+              "before": {
+                "designator": "C29",
+                "x": 12.395,
+                "y": -4.011,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C29",
+                "x": 12.209,
+                "y": 4.53,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 8.54302526744343,
+              "distanceMm": 8.543025049711607,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C25",
+              "before": {
+                "designator": "C25",
+                "x": -10.179,
+                "y": -6.357,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C25",
+                "x": -10.394,
+                "y": -6.105,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.3312536993777483,
+              "distanceMm": 0.33125367922485,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C26",
+              "before": {
+                "designator": "C26",
+                "x": -11.957,
+                "y": -4.158,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C26",
+                "x": -11.393,
+                "y": -2.074,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 2.158970330681635,
+              "distanceMm": 2.158970124851199,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C27",
+              "before": {
+                "designator": "C27",
+                "x": -11.793,
+                "y": -1.707,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C27",
+                "x": -11.393,
+                "y": -3.873,
+                "rotate": 0,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 2.2026247696538714,
+              "distanceMm": 2.2026247978264477,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C28",
+              "before": {
+                "designator": "C28",
+                "x": -10.394,
+                "y": -1.707,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C28",
+                "x": -12.213,
+                "y": -5.456,
+                "rotate": 180,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 4.166984757228237,
+              "distanceMm": 4.166984761191238,
+              "rotationChanged": true,
+              "layerChanged": false
+            },
+            {
+              "designator": "C32",
+              "before": {
+                "designator": "C32",
+                "x": -13.377,
+                "y": -1.893,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C32",
+                "x": -13.378,
+                "y": -2.173,
+                "rotate": 90,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.28000188390929176,
+              "distanceMm": 0.2800017857085915,
+              "rotationChanged": false,
+              "layerChanged": false
+            },
+            {
+              "designator": "C23",
+              "before": {
+                "designator": "C23",
+                "x": -11.607,
+                "y": 0.869,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "after": {
+                "designator": "C23",
+                "x": -11.583,
+                "y": 0.869,
+                "rotate": 270,
+                "layer": "bottom"
+              },
+              "rawDistanceMm": 0.023999816894537052,
+              "distanceMm": 0.023999999999999133,
+              "rotationChanged": false,
+              "layerChanged": false
+            }
+          ],
+          "rotated": 6,
+          "maxRawDistanceMm": 8.54302526744343,
+          "maxDistanceMm": 8.543025049711607
+        }
+      }
+    ],
+    "f64Metrics": {
+      "hard": 0,
+      "lockedChanged": 0,
+      "width": 27.21205,
+      "height": 17.639900000000004,
+      "area": 480.01784079500015,
+      "aspect": 1.5426419650905048,
+      "hpwl": 87.94000000000001,
+      "pairSum": 0,
+      "pairMax": 0,
+      "p95": 0,
+      "pairLengths": {}
+    },
+    "f32Metrics": {
+      "hard": 0,
+      "lockedChanged": 0,
+      "width": 27.221049999999998,
+      "height": 17.639900000000004,
+      "area": 480.1765998950001,
+      "aspect": 1.543152172064467,
+      "hpwl": 87.519,
+      "pairSum": 0,
+      "pairMax": 0,
+      "p95": 0,
+      "pairLengths": {}
+    },
+    "sameLayoutControl": {
+      "f64Score": 5528.140155316541,
+      "f32Score": 10005528,
+      "f32HardCount": 0,
+      "f32OverlapPairs": [
+        {
+          "a": "primitive:tree:component:C27",
+          "b": "primitive:tree:component:C32",
+          "depthMm": 9.5367431640625e-7
+        }
+      ]
+    },
+    "finalDifference": {
+      "missing": [],
+      "added": [],
+      "duplicates": 0,
+      "changedAtPlacementResolution": [
+        {
+          "designator": "U3",
+          "before": {
+            "designator": "U3",
+            "x": 1,
+            "y": 0,
+            "rotate": 0,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "U3",
+            "x": 1.024,
+            "y": 0,
+            "rotate": 0,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 0.024000048637390137,
+          "distanceMm": 0.02400000000000002,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "C24",
+          "before": {
+            "designator": "C24",
+            "x": -10.209,
+            "y": 0.869,
+            "rotate": 270,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C24",
+            "x": -10.185,
+            "y": 0.869,
+            "rotate": 270,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 0.023999580383306896,
+          "distanceMm": 0.023999999999999133,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "C31",
+          "before": {
+            "designator": "C31",
+            "x": -13.377,
+            "y": 1.238,
+            "rotate": 270,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C31",
+            "x": -13.378,
+            "y": 0.958,
+            "rotate": 270,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 0.28000178234362516,
+          "distanceMm": 0.2800017857085915,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "C20",
+          "before": {
+            "designator": "C20",
+            "x": -10.209,
+            "y": 4.709,
+            "rotate": 90,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C20",
+            "x": -10.208,
+            "y": 4.709,
+            "rotate": 90,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 0.0009998169006510817,
+          "distanceMm": 0.0009999999999994458,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "C15",
+          "before": {
+            "designator": "C15",
+            "x": 12.201,
+            "y": 1.399,
+            "rotate": 180,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C15",
+            "x": 12.209,
+            "y": -3.731,
+            "rotate": 270,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 5.130006183836199,
+          "distanceMm": 5.130006237812972,
+          "rotationChanged": true,
+          "layerChanged": false
+        },
+        {
+          "designator": "C16",
+          "before": {
+            "designator": "C16",
+            "x": 12.201,
+            "y": -1.399,
+            "rotate": 180,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C16",
+            "x": 12.209,
+            "y": -1.932,
+            "rotate": 180,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 0.53306006965002,
+          "distanceMm": 0.5330600341424969,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "C17",
+          "before": {
+            "designator": "C17",
+            "x": 12.201,
+            "y": 2.798,
+            "rotate": 180,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C17",
+            "x": 12.209,
+            "y": -0.533,
+            "rotate": 180,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 3.331009598201982,
+          "distanceMm": 3.3310096067108543,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "C18",
+          "before": {
+            "designator": "C18",
+            "x": 12.201,
+            "y": 0,
+            "rotate": 180,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C18",
+            "x": 12.209,
+            "y": 0.866,
+            "rotate": 180,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 0.8660369439923364,
+          "distanceMm": 0.8660369507128434,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "C19",
+          "before": {
+            "designator": "C19",
+            "x": 12.201,
+            "y": 4.197,
+            "rotate": 180,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C19",
+            "x": 12.209,
+            "y": 2.265,
+            "rotate": 180,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 1.9320164566563707,
+          "distanceMm": 1.932016563076,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "C29",
+          "before": {
+            "designator": "C29",
+            "x": 12.395,
+            "y": -4.011,
+            "rotate": 270,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C29",
+            "x": 12.209,
+            "y": 4.53,
+            "rotate": 90,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 8.54302526744343,
+          "distanceMm": 8.543025049711607,
+          "rotationChanged": true,
+          "layerChanged": false
+        },
+        {
+          "designator": "C25",
+          "before": {
+            "designator": "C25",
+            "x": -10.179,
+            "y": -6.357,
+            "rotate": 180,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C25",
+            "x": -10.394,
+            "y": -6.105,
+            "rotate": 90,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 0.3312536993777483,
+          "distanceMm": 0.33125367922485,
+          "rotationChanged": true,
+          "layerChanged": false
+        },
+        {
+          "designator": "C26",
+          "before": {
+            "designator": "C26",
+            "x": -11.957,
+            "y": -4.158,
+            "rotate": 0,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C26",
+            "x": -11.393,
+            "y": -2.074,
+            "rotate": 90,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 2.158970330681635,
+          "distanceMm": 2.158970124851199,
+          "rotationChanged": true,
+          "layerChanged": false
+        },
+        {
+          "designator": "C27",
+          "before": {
+            "designator": "C27",
+            "x": -11.793,
+            "y": -1.707,
+            "rotate": 90,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C27",
+            "x": -11.393,
+            "y": -3.873,
+            "rotate": 0,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 2.2026247696538714,
+          "distanceMm": 2.2026247978264477,
+          "rotationChanged": true,
+          "layerChanged": false
+        },
+        {
+          "designator": "C28",
+          "before": {
+            "designator": "C28",
+            "x": -10.394,
+            "y": -1.707,
+            "rotate": 90,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C28",
+            "x": -12.213,
+            "y": -5.456,
+            "rotate": 180,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 4.166984757228237,
+          "distanceMm": 4.166984761191238,
+          "rotationChanged": true,
+          "layerChanged": false
+        },
+        {
+          "designator": "C32",
+          "before": {
+            "designator": "C32",
+            "x": -13.377,
+            "y": -1.893,
+            "rotate": 90,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C32",
+            "x": -13.378,
+            "y": -2.173,
+            "rotate": 90,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 0.28000188390929176,
+          "distanceMm": 0.2800017857085915,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "C23",
+          "before": {
+            "designator": "C23",
+            "x": -11.607,
+            "y": 0.869,
+            "rotate": 270,
+            "layer": "bottom"
+          },
+          "after": {
+            "designator": "C23",
+            "x": -11.583,
+            "y": 0.869,
+            "rotate": 270,
+            "layer": "bottom"
+          },
+          "rawDistanceMm": 0.023999816894537052,
+          "distanceMm": 0.023999999999999133,
+          "rotationChanged": false,
+          "layerChanged": false
+        }
+      ],
+      "rotated": 6,
+      "maxRawDistanceMm": 8.54302526744343,
+      "maxDistanceMm": 8.543025049711607
+    }
+  }
+}

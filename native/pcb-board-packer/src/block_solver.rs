@@ -80,6 +80,16 @@ struct IncrementalEvaluation {
 #[path = "block_solver_trace.rs"]
 mod trace;
 
+#[cfg(feature = "gpu")]
+#[path = "block_solver/gpu_runtime.rs"]
+pub(crate) mod gpu_runtime;
+#[cfg(feature = "gpu")]
+#[path = "block_solver/gpu_kernels.rs"]
+mod gpu_kernels;
+#[cfg(feature = "gpu")]
+#[path = "block_solver/cubecl.rs"]
+mod cubecl;
+
 #[derive(Default)]
 struct DetailProfile {
     enabled: bool,
@@ -104,6 +114,10 @@ impl Drop for ProfileSpan<'_> {
     }
 }
 struct Context {
+    #[cfg(feature = "gpu")]
+    gpu_sources: Vec<WorkingPrimitive>,
+    #[cfg(feature = "gpu")]
+    gpu_engine: RefCell<Option<cubecl::Engine>>,
     corridor_cache: RefCell<FxHashMap<(Arc<str>, usize, usize, usize), ([u64; 8], f64)>>,
     escape_cache: RefCell<FxHashMap<(usize, usize), EscapeEntry>>,
     detail: DetailProfile,
@@ -198,6 +212,39 @@ enum CompiledEndpoint {
 }
 
 pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolveSolution, String> {
+    #[cfg(feature = "gpu")]
+    {
+        let requested=std::env::var("PCB_BLOCK_BACKEND").unwrap_or_else(|_|"auto".into());
+        // Avoid GPU startup for small independent blocks. Once a substantial
+        // block initializes the shared device, measured >=6-component batches
+        // can benefit too. Explicit cubecl mode is retained for validation.
+        let substantial=problem.primitives.len()>=10 || problem.primitives.iter().map(|p|p.connection_points.len()).sum::<usize>()>=240;
+        let use_gpu=if requested=="cubecl" {problem.primitives.len()>=3}
+            else {requested=="auto" && problem.primitives.len()>=6 && (substantial || gpu_runtime::ready())};
+        if use_gpu {
+            let original=problem.clone();let started=std::time::Instant::now();
+            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(||solve_block_inner(problem,true))) {
+                Ok(result)=>return result,
+                Err(payload)=>{
+                    let expected=payload.downcast_ref::<cubecl::GpuFailure>();
+                    let reason=expected.map(|e|e.0.clone()).or_else(||payload.downcast_ref::<String>().cloned())
+                        .or_else(||payload.downcast_ref::<&str>().map(|s|(*s).into()))
+                        .unwrap_or_else(||"GPU block attempt panicked".into());
+                    let validating=["PCB_BLOCK_GPU_VERIFY","PCB_BLOCK_GPU_VERIFY_PRUNE","PCB_BLOCK_GPU_VERIFY_FRONTIER"].iter().any(|key|std::env::var_os(key).is_some());
+                    if expected.is_none() && validating {return Err(reason);}
+                    let failed_ms=started.elapsed().as_secs_f64()*1000.0;
+                    let result=solve_block_inner(original,false);
+                    if requested=="cubecl" || std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some() {
+                        eprintln!("[block-gpu-fallback] {}",serde_json::json!({"requested":requested,"actual":"cpu","precision":"f64","reason":reason,"gpuAttemptMs":failed_ms,"totalMs":started.elapsed().as_secs_f64()*1000.0}));
+                    }
+                    return result;
+                }
+            }
+        }
+    }
+    solve_block_inner(problem,false)
+}
+fn solve_block_inner(problem: BlockSolveProblem, _gpu_enabled:bool) -> Result<crate::model::BlockSolveSolution, String> {
     let primitive_ids = lexical_ids(
         problem
             .primitives
@@ -287,6 +334,10 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
     let mut net_signal = vec![false; net_ids.len()];
     for (net, id) in &net_ids { net_signal[*id as usize] = !(is_ground(net) || is_power(net) || is_switching_power(net)); }
     let context = Context {
+        #[cfg(feature = "gpu")]
+        gpu_sources: if _gpu_enabled {primitives.clone()} else {vec![]},
+        #[cfg(feature = "gpu")]
+        gpu_engine: Default::default(),
         corridor_cache: Default::default(), escape_cache: Default::default(),
         net_signal,
         pad_nets: RefCell::new(pad_nets), pad_net_indices, pad_point_metadata,
@@ -307,6 +358,11 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
         validate_incremental_scoring: std::env::var_os("PCB_NATIVE_VALIDATE_INCREMENTAL_SCORING")
             .is_some_and(|value| value == "1"),
     };
+    #[cfg(feature = "gpu")]
+    if _gpu_enabled {
+        let engine=cubecl::init(&context).unwrap_or_else(|reason|cubecl::fail(reason));
+        *context.gpu_engine.borrow_mut()=Some(engine);
+    }
     let profile = std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some();
     let started = std::time::Instant::now();
     let resumed = context.problem.pair_seed.is_some();
@@ -324,10 +380,14 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
         solve_greedy(primitives, &context)
     };
     let beam_ms = started.elapsed().as_secs_f64() * 1000.0;
+    #[cfg(feature = "gpu")]
+    cubecl::checkpoint(&context,"beam");
     trace::stage(&context, "beam_complete", &solved);
     *context.trace_phase.borrow_mut() = "local_improve";
     let improved = if resumed { solved.clone() } else { local_improve(solved.clone(), &context) };
     let singles_ms = started.elapsed().as_secs_f64() * 1000.0 - beam_ms;
+    #[cfg(feature = "gpu")]
+    cubecl::checkpoint(&context,"singles");
     trace::stage(&context, "local_complete", &improved);
     let singles = improved.clone();
     // Preserve the search coordinate frame. Centering a display checkpoint can
@@ -337,6 +397,8 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
     let improved = if !context.problem.defer_pairs && (context.problem.experiments.pair_swaps || context.problem.experiments.reinsert_pair) {
         pair_improve(improved, &context)
     } else { improved };
+    #[cfg(feature = "gpu")]
+    cubecl::checkpoint(&context,"pairs");
     if profile {
         eprintln!("[pcb-block-solver] components={} beam_ms={:.1} singles_ms={:.1} pairs_ms={:.1}",
             context.problem.components.len(), beam_ms, singles_ms,
@@ -362,6 +424,17 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
     if context.detail.enabled {
         eprintln!("[block-detail] {}", serde_json::json!({"components":context.problem.components.len(),
             "pairsOnly":resumed,"totals":*context.detail.totals.borrow(), "padCache":context.pad_crossings.borrow().stats()}));
+    }
+    if profile {
+        #[cfg(feature="gpu")]
+        let counts=context.gpu_engine.borrow().as_ref().map(|e|e.counters());
+        #[cfg(not(feature="gpu"))]
+        let counts:Option<(usize,usize)>=None;
+        eprintln!("[block-backend] {}",serde_json::json!({
+            "block":context.problem.primitives.iter().map(|p|p.id.as_ref()).collect::<Vec<_>>(),
+            "backend":if counts.is_some(){"cubecl"}else{"cpu"},"precision":"f64","pairsOnly":resumed,
+            "beamMs":beam_ms,"singlesMs":singles_ms,"totalMs":started.elapsed().as_secs_f64()*1000.0,
+            "gpuBatches":counts.map_or(0,|c|c.0),"gpuCandidates":counts.map_or(0,|c|c.1)}));
     }
     Ok(crate::model::BlockSolveSolution { result: solution(&context, &final_primitives)?, checkpoints, pair_seed })
 }
@@ -551,7 +624,11 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
             let mut best_base_score = current_score;
             let mut best_effective_score = current_score
                 + block_micro_route_penalty(&current[index], &fixed, context);
-            let mut ranked: Vec<_> = block_candidates(&current[index], &fixed, context)
+            #[cfg(feature = "gpu")]
+            let gpu_ranked=if context.gpu_engine.borrow().is_some() {Some(cubecl::shortlist(&current,index,context,false))}else{None};
+            #[cfg(not(feature = "gpu"))]
+            let gpu_ranked:Option<Vec<(WorkingPrimitive,Evaluation,usize)>>=None;
+            let mut ranked: Vec<_> = gpu_ranked.unwrap_or_else(||block_candidates(&current[index], &fixed, context)
                 .into_iter()
                 .enumerate()
                 .map(|(ordinal, candidate)| {
@@ -559,7 +636,7 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
                     variant[index] = candidate.clone();
                     (candidate, evaluate(&variant, context), ordinal)
                 })
-                .collect();
+                .collect());
             ranked.sort_by(|a, b| {
                 a.1.hard_violations
                     .cmp(&b.1.hard_violations)
@@ -637,6 +714,8 @@ fn ranked_block_candidates(
     limit: usize,
     context: &Context,
 ) -> Vec<RankedCandidate> {
+    #[cfg(feature = "gpu")]
+    if context.gpu_engine.borrow().is_some() {return cubecl::ranked(primitive,placed,previous,parent_route_penalty,limit,context);}
     let mut ranked = Vec::new();
     let diverse = context.problem.experiments.pad_owner_candidates;
     let origin = box_center(&union_boxes(&placed.iter().map(|p| p.primitive.bbox).collect::<Vec<_>>()));
@@ -3281,6 +3360,12 @@ fn frontier_indices(remaining: &[WorkingPrimitive], placed: &[WorkingPrimitive],
     };
     let mut fanout: FxHashMap<Arc<str>, usize> = FxHashMap::default();
     for p in remaining.iter().chain(placed) { for net in nets(p) { *fanout.entry(net).or_default() += 1; } }
+    #[cfg(feature="gpu")]
+    let gpu_scarcity=if context.problem.experiments.order_scarcity && context.gpu_engine.borrow().is_some() {
+        Some(cubecl::scarcity(remaining,placed,context))
+    } else {None};
+    #[cfg(not(feature="gpu"))]
+    let gpu_scarcity:Option<Vec<f64>>=None;
     let score = |p: &WorkingPrimitive| {
         let own = nets(p);
         let mut value = 0.0;
@@ -3302,7 +3387,7 @@ fn frontier_indices(remaining: &[WorkingPrimitive], placed: &[WorkingPrimitive],
             }
         }
         if context.problem.experiments.order_scarcity {
-            value += frontier_scarcity(p, placed, context);
+            value += gpu_scarcity.as_ref().map(|scores|scores[p.source_index]).unwrap_or_else(||frontier_scarcity(p, placed, context));
         }
         value
     };
@@ -3318,6 +3403,7 @@ fn frontier_indices(remaining: &[WorkingPrimitive], placed: &[WorkingPrimitive],
 // Normalize by the number of generated nearby poses to avoid rewarding large
 // candidate lists. This is a heuristic, not an exhaustive free-space measure.
 fn frontier_scarcity(p: &WorkingPrimitive, placed: &[WorkingPrimitive], context: &Context) -> f64 {
+    let _span = context.detail.span("frontier_scarcity");
     let cores: Vec<_> = placed.iter().filter(|q| q.components.iter()
         .any(|(_, c)| c.role.as_deref() == Some("main_ic"))).cloned().collect();
     let distance = |q: &WorkingPrimitive| {
@@ -3703,6 +3789,8 @@ mod candidate_tests {
         let resistor = make("R36");
         let ic = make("U11");
         let context = Context { trace: false, trace_phase: RefCell::new("test"), problem, relations: vec![], net_ground: vec![],
+            #[cfg(feature = "gpu")] gpu_sources:vec![],
+            #[cfg(feature = "gpu")] gpu_engine:Default::default(),
             corridor_cache: Default::default(), escape_cache: Default::default(),
             detail: Default::default(), source_pads: vec![], pad_geometry: Default::default(),
             pad_crossings: Default::default(), split_pad_cache_safe: true, net_endpoint_counts: Default::default(),
