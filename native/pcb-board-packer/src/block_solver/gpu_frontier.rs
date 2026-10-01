@@ -1,4 +1,13 @@
 use super::*;
+// Frontier scratch has its own local layout, independent of score buffers.
+#[derive(Clone, Copy)]
+enum FrontierScratch { Scores, Tags, Legal, Counts }
+impl FrontierScratch {
+    fn key(self) -> crate::compute::ScratchKey {
+        crate::compute::ScratchKey::new("block-frontier", self as usize)
+    }
+}
+
 
 // The archived solver caches the core-relative scarcity frame. Keep that cache
 // on the GPU; legality against the changing partial placement is never cached.
@@ -98,7 +107,7 @@ pub(in crate::block_solver) fn scarcity(
     }
     let count = frame.poses.len();
     let sources = context.problem.primitives.len();
-    let counts = gpu_runtime::with_session(|session| {
+    let counts = gpu_runtime::with_session(GPU_REQUIREMENTS, |session| {
         if engine.handles.is_none() {
             engine.handles = Some((
                 session.client.create_from_slice(f64::as_bytes(&engine.sf)),
@@ -118,10 +127,10 @@ pub(in crate::block_solver) fn scarcity(
             ));
         }
         let (pf, pi, nearby, pins) = frame.resident.as_ref().unwrap();
-        let scores = session.workspace(16, count * 8);
-        let tags = session.workspace(17, count * 2 * 4);
-        let legal = session.workspace(18, count * 4);
-        let output = session.workspace(19, sources * 3 * 4);
+        let scores = session.workspace(FrontierScratch::Scores.key(), count * 8);
+        let tags = session.workspace(FrontierScratch::Tags.key(), count * 2 * 4);
+        let legal = session.workspace(FrontierScratch::Legal.key(), count * 4);
+        let output = session.workspace(FrontierScratch::Counts.key(), sources * 3 * 4);
         let client = &session.client;
         let input = |ff: &Vec<f64>, fi: &Vec<u32>| unsafe {
             let fh = client.create_from_slice(f64::as_bytes(ff));
@@ -187,7 +196,7 @@ pub(in crate::block_solver) fn scarcity(
             .map_err(|e| format!("GPU frontier readback: {e:?}"))?;
         Ok(u32::from_bytes(&bytes)[..sources * 3].to_vec())
     })
-    .unwrap_or_else(|reason| fail(reason));
+    .unwrap_or_else(|reason| fail(reason.to_string()));
     engine.frontier_batches += 1;
     engine.frontier_candidates += count;
     let mut result = vec![0.0; sources];

@@ -4,12 +4,12 @@ import {mkdirSync,openSync,closeSync,readFileSync,writeFileSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import assert from 'node:assert/strict';
 const out=resolve(process.argv[2]??'debugging/cubecl-block-migration-2026-09-30/lease-after-failure');mkdirSync(out,{recursive:true});
-const reference=resolve('debugging/cubecl-block-migration-2026-09-30/recovery-mid/reference/results.json');
+const reference=resolve(process.argv[3]??'debugging/cubecl-block-migration-2026-09-30/recovery-mid/reference/results.json');
 const original=JSON.parse(readFileSync(reference));
 const env={...process.env};for(const k of Object.keys(env))if(k.startsWith('PCB_BLOCK_GPU_')||k.startsWith('CUBECL_DEBUG_')||k==='VK_DRIVER_FILES')delete env[k];
 const fd=openSync(join(out,'failed-owner.log'),'w');
 const code=`const fs=require('fs');process.env.PCB_BLOCK_BACKEND='cubecl';process.env.PCB_BLOCK_GPU_FAIL_BATCH='8';process.env.PCB_BLOCK_SOLVER_PROFILE='1';
-const addon=require(${JSON.stringify(resolve('native/pcb-board-packer/pcb-board-packer.win32-x64-msvc.node'))});
+const addon=require(${JSON.stringify(resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH??'native/pcb-board-packer/pcb-board-packer.win32-x64-msvc.node'))});
 const solution=addon.solveBlockPrimitives(JSON.parse(fs.readFileSync(${JSON.stringify(original.blocks[0].path)})));process.send({solution});process.on('message',()=>process.exit(0));`;
 const owner=spawn(process.execPath,['-e',code],{env,stdio:['ignore',fd,fd,'ipc'],windowsHide:true});
 try {

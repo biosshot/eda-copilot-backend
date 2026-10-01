@@ -81,8 +81,9 @@ struct IncrementalEvaluation {
 mod trace;
 
 #[cfg(feature = "gpu")]
-#[path = "block_solver/gpu_runtime.rs"]
-pub(crate) mod gpu_runtime;
+use crate::compute::gpu as gpu_runtime;
+#[cfg(feature = "gpu")]
+const GPU_REQUIREMENTS: crate::compute::Requirements = crate::compute::Requirements { f64: true, u64: true };
 #[cfg(feature = "gpu")]
 #[path = "block_solver/gpu_kernels.rs"]
 mod gpu_kernels;

@@ -4,7 +4,7 @@ import {mkdirSync,readFileSync,writeFileSync,openSync,closeSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import assert from 'node:assert/strict';
 const base=resolve(process.argv[2]??'debugging/cubecl-block-migration-2026-09-30/processes');mkdirSync(base,{recursive:true});
-const reference=resolve('debugging/cubecl-block-migration-2026-09-30/recovery-mid/reference/results.json');
+const reference=resolve(process.argv[3]??'debugging/cubecl-block-migration-2026-09-30/recovery-mid/reference/results.json');
 const env={...process.env};for(const k of Object.keys(env))if(k.startsWith('PCB_BLOCK_GPU_')||k.startsWith('CUBECL_DEBUG_')||k==='VK_DRIVER_FILES')delete env[k];
 const usedMemory=()=>{const r=spawnSync('nvidia-smi',['--query-gpu=memory.used','--format=csv,noheader,nounits'],{encoding:'utf8',windowsHide:true});return r.status===0?Number(r.stdout.trim().split(/\r?\n/)[0]):null;};
 const rows=[];

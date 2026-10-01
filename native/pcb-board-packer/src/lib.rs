@@ -2,6 +2,7 @@ mod post_place_refine;
 #[cfg(feature = "placement-bench")]
 mod post_place_probe;
 mod block_solver;
+mod compute;
 mod fast_route;
 mod geometry;
 mod lazy_rank;
@@ -31,8 +32,8 @@ const SIGNAL_PATH_CONTRACT_VERSION: u32 = 1;
 #[cfg(all(feature = "gpu", feature = "placement-bench"))]
 #[napi]
 pub fn block_gpu_probe(values: Vec<f64>, inject_panic: bool) -> Result<Value> {
-    block_solver::gpu_runtime::probe(&values, inject_panic)
-        .map_err(|message| Error::new(Status::GenericFailure, message))
+    compute::gpu::probe(&values, inject_panic)
+        .map_err(|message| Error::new(Status::GenericFailure, message.to_string()))
 }
 
 #[napi]

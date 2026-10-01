@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 
 const addonPath = resolve(process.argv[2] ?? 'debugging/cubecl-block-migration-2026-09-30/runtime/packer.node');
 const mode = process.argv[3];
-const out = resolve('debugging/cubecl-block-migration-2026-09-30/runtime');
+const out = resolve(process.argv[4] ?? 'debugging/cubecl-block-migration-2026-09-30/runtime');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 if (mode) {
   const addon = createRequire(import.meta.url)(addonPath);
@@ -39,7 +39,7 @@ if (mode) {
   mkdirSync(out, { recursive: true });
   const rows = [];
   for (const check of ['normal', 'import-disabled', 'disabled', 'panic']) {
-    const child = spawnSync(process.execPath, [process.argv[1], addonPath, check], {
+    const child = spawnSync(process.execPath, [process.argv[1], addonPath, check, out], {
       encoding: 'utf8', windowsHide: true, timeout: 120000,
       env: { ...process.env, PCB_BLOCK_GPU_DISABLED: check.includes('disabled') ? '1' : '0' },
     });
@@ -48,7 +48,8 @@ if (mode) {
       result: child.status === 0 ? JSON.parse(child.stdout.trim()) : null });
   }
   const files = ['native/pcb-board-packer/Cargo.toml', 'native/pcb-board-packer/Cargo.lock',
-    'native/pcb-board-packer/src/block_solver/gpu_runtime.rs', 'native/pcb-board-packer/src/lib.rs',
+    'native/pcb-board-packer/src/compute/mod.rs', 'native/pcb-board-packer/src/compute/gpu.rs',
+    'native/pcb-board-packer/src/compute/workspace.rs', 'native/pcb-board-packer/src/compute/numerics.rs', 'native/pcb-board-packer/src/lib.rs',
     'scripts/build-native.mjs', 'scripts/experiment-block-gpu-runtime.mjs'];
   const report = { scope: 'runtime smoke only; no solver performance claim', addonPath,
     addonSha256: hash(readFileSync(addonPath)), bytes: statSync(addonPath).size,

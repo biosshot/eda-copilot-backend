@@ -4,6 +4,14 @@ use super::*;
 use ::cubecl::prelude::*;
 use ::cubecl::server::Handle;
 use ::cubecl::wgpu::WgpuRuntime;
+// Local meanings and layout belong to this scorer, never to compute.
+#[derive(Clone, Copy)]
+enum ScoreScratch { Hull, HullCount, Pads, Segments, SegmentTags, Costs, Scores, Tags, Best, Mask, OutputIds, OutputScores }
+impl ScoreScratch {
+    fn key(self) -> crate::compute::ScratchKey {
+        crate::compute::ScratchKey::new("block-score", self as usize)
+    }
+}
 #[repr(C)]
 #[derive(Clone, Copy, Default, serde::Serialize)]
 struct B {
@@ -756,7 +764,7 @@ impl Engine {
             force_no_prune || verify || std::env::var_os("PCB_BLOCK_GPU_NO_PRUNE").is_some();
         drop(preparing);
         let batch_span = context.detail.span("gpu_batch");
-        let (rows, all) = gpu_runtime::with_session(|session| {
+        let (rows, all) = gpu_runtime::with_session(GPU_REQUIREMENTS, |session| {
             if self.fail_batch == Some(self.batches + 1) {
                 panic!("injected GPU runtime failure at batch {}", self.batches + 1);
             }
@@ -772,18 +780,18 @@ impl Engine {
             let ih = session.client.create_from_slice(u32::as_bytes(&fi));
             let ph = session.client.create_from_slice(f64::as_bytes(&pf));
             let th = session.client.create_from_slice(u32::as_bytes(&pi));
-            let hull = session.workspace(0, 160 * 8);
-            let hc = session.workspace(1, 4);
-            let pads = session.workspace(2, self.pads.len() * 4 * 8);
-            let segments = session.workspace(3, c.nsegment as usize * 4 * 8);
-            let st = session.workspace(4, c.nsegment as usize * 4 * 4);
-            let costs = session.workspace(5, c.nsegment as usize * 4);
-            let scores = session.workspace(6, poses.len() * 8);
-            let tags = session.workspace(7, poses.len() * 3 * 4);
-            let best = session.workspace(8, 128 * 4);
-            let mask = session.workspace(9, poses.len() * 4);
-            let oi = session.workspace(10, 130 * 4);
-            let of = session.workspace(11, 64 * 8);
+            let hull = session.workspace(ScoreScratch::Hull.key(), 160 * 8);
+            let hc = session.workspace(ScoreScratch::HullCount.key(), 4);
+            let pads = session.workspace(ScoreScratch::Pads.key(), self.pads.len() * 4 * 8);
+            let segments = session.workspace(ScoreScratch::Segments.key(), c.nsegment as usize * 4 * 8);
+            let st = session.workspace(ScoreScratch::SegmentTags.key(), c.nsegment as usize * 4 * 4);
+            let costs = session.workspace(ScoreScratch::Costs.key(), c.nsegment as usize * 4);
+            let scores = session.workspace(ScoreScratch::Scores.key(), poses.len() * 8);
+            let tags = session.workspace(ScoreScratch::Tags.key(), poses.len() * 3 * 4);
+            let best = session.workspace(ScoreScratch::Best.key(), 128 * 4);
+            let mask = session.workspace(ScoreScratch::Mask.key(), poses.len() * 4);
+            let oi = session.workspace(ScoreScratch::OutputIds.key(), 130 * 4);
+            let of = session.workspace(ScoreScratch::OutputScores.key(), 64 * 8);
             let client = &session.client;
             let input = || unsafe {
                 k::InputLaunch::new(
@@ -1000,7 +1008,7 @@ impl Engine {
                 None
             };
             Ok((rows, all))
-        })?;
+        }).map_err(|e| e.to_string())?;
         drop(batch_span);
         self.batches += 1;
         self.candidates += poses.len();
@@ -1039,7 +1047,7 @@ impl Engine {
                 );
                 if (cpu.score - scores[i]).abs() > tolerance {
                     if let Some(path) = std::env::var_os("PCB_BLOCK_GPU_FAILURE_CAPTURE") {
-                        let geometry = gpu_runtime::with_session(|session| {
+                        let geometry = gpu_runtime::with_session(GPU_REQUIREMENTS, |session| {
                             let client = &session.client;
                             macro_rules! upload {
                                 ($v:expr,$t:ty) => {{
@@ -1113,7 +1121,7 @@ pub(super) fn init(context: &Context) -> Result<Engine, String> {
     if !supported(context) {
         return Err("unsupported block features for complete GPU scoring".into());
     }
-    gpu_runtime::with_session(|_| Ok(()))?;
+    gpu_runtime::with_session(GPU_REQUIREMENTS, |_| Ok(())).map_err(|e| e.to_string())?;
     Ok(Engine::new(context))
 }
 pub(super) fn shortlist(
