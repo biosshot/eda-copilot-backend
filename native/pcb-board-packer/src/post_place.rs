@@ -305,3 +305,22 @@ fn validate(problem: &PostPlaceScoreProblem) -> Result<(), String> {
     }
     Ok(())
 }
+
+/// Independent CPU graph evidence for the optional GPU validation path.
+#[cfg(feature="gpu")]
+pub(crate) fn graph_reference(problem:&PostPlaceScoreProblem)->Vec<(usize,usize,usize,f64)> {
+    let mut base=0;let mut result=Vec::new();
+    for (i,net) in problem.nets.iter().enumerate(){for edge in minimum_spanning_segments(i,net){result.push((base+edge.from,base+edge.to,i,edge.length));}base+=net.points.len();}result
+}
+
+/// Validate each GPU score family through the original scalar scorer, rather
+/// than maintaining a second host implementation of its formulas.
+#[cfg(feature="gpu")]
+pub(crate) fn term_reference(p:&PostPlaceScoreProblem)->Result<Vec<f64>,String>{
+ let mut empty=PostPlaceScoreProblem{version:1,pad_crossing_weight:0.0,routing_obstacles:vec![],nets:vec![],distances:vec![],clearances:vec![],fixed_penalties:vec![],edges:vec![],paths:vec![]};let mut result=Vec::new();
+ for t in &p.distances {empty.distances=vec![*t];result.push(score(&empty)?);}empty.distances.clear();
+ for t in &p.clearances {empty.clearances=vec![*t];result.push(score(&empty)?);}empty.clearances.clear();
+ empty.fixed_penalties=p.fixed_penalties.clone();result.push(score(&empty)?);empty.fixed_penalties.clear();
+ for t in &p.edges {empty.edges=vec![t.clone()];result.push(score(&empty)?);}empty.edges.clear();
+ for t in &p.paths {empty.paths=vec![t.clone()];result.push(score(&empty)?);}Ok(result)
+}

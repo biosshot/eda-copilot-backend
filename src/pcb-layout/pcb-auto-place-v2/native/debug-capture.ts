@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { threadId } from 'node:worker_threads';
 
-export type NativeDebugKind = 'block' | 'board';
+export type NativeDebugKind = 'block' | 'board' | 'refine';
 type CaptureMeta = { stage?: string; batchSize: number; batchWallMs: number; encodeMs: number; index: number };
 
 let sequence = 0;
@@ -31,7 +31,7 @@ export function beginNativeSolveCapture(
     const label = kind === 'block'
         ? [...new Set(((problem as { components?: Array<{ blockName?: string }> }).components ?? [])
             .map(component => component.blockName).filter(Boolean))].join('+')
-        : 'board';
+        : kind;
     const safeLabel = (label || 'unnamed').replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 64);
     const id = `${String(++sequence).padStart(5, '0')}-${safeLabel}-${hash.slice(0, 10)}`;
     const directory = join(root, 'native', kind, `process-${process.pid}-thread-${threadId}`, id);

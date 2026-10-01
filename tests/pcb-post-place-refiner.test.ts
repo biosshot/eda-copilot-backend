@@ -2,6 +2,9 @@ import { encodeNativePostPlaceScoreProblem } from '../src/pcb-layout/pcb-auto-pl
 import { refinePostPlacement as refinePostPlacementSerial } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
 import { terminatePcbSubtreeWorkerPool } from '../src/pcb-layout/pcb-auto-place-v2/tree-subtree-pool.ts';
 import assert from 'node:assert/strict';
+import { spawn, spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
+import { createRequire } from 'node:module';
 import test from 'node:test';
 import { availableParallelism } from 'node:os';
 import { refinePostPlacementAsync, refinePostPlacement } from '../src/pcb-layout/pcb-auto-place-v2/post-place-refiner.ts';
@@ -219,6 +222,122 @@ function block(name: string, componentDesignators: string[]): PlacementInput['bl
 function pairPlacements(): Placement[] {
     return [pose('A', -5, 0), pose('B', 5, 0), pose('LEFT', -9, 0), pose('RIGHT', 9, 0)];
 }
+
+function gpuRefine(problem: object, backend: string, options: Record<string,string> = {}) {
+    const require = createRequire(import.meta.url);
+    const addon = resolve('native/pcb-board-packer', require('../native/pcb-board-packer/platform.cjs').nativeFilename());
+    const child = spawnSync(process.execPath, ['-e',
+        'const a=require(process.argv[1]),p=JSON.parse(require("node:fs").readFileSync(0,"utf8"));const r=a.refinePostPlacement(p);console.log(JSON.stringify({result:r,valid:a.validatePlacementChange(p,r.placements)}));', addon], {
+        input: JSON.stringify(problem), encoding: 'utf8', windowsHide: true,
+        env: { ...process.env, PCB_POST_PLACE_BACKEND: backend, ...options },
+    });
+    assert.equal(child.status, 0, child.stderr || String(child.error));
+    const {result,valid} = JSON.parse(child.stdout);
+    assert.equal(valid, true);
+    const {profile,...value}=result;
+    return {value,profile,log:child.stderr};
+}
+
+test('post-place GPU preserves full scores, paths, layers, clearance and stable winners', {skip:process.env.PCB_POST_PLACE_GPU_TESTS!=='1'}, () => {
+    const input=pairInput();
+    const problem=encodeNativePostPlaceRefineProblem(input,pairPlacements(),1);
+    problem.padCrossingWeight=13;
+    const target=(component:number)=>({kind:'component' as const,component});
+    problem.hints.push(
+        {kind:'distance',source:target(0),target:target(2),all:false,weight:1.7,min:1,max:6},
+        {kind:'clearance',source:target(0),target:{kind:'missing'},all:true,weight:2,min:3},
+        {kind:'same_side',source:target(0),target:target(1),all:false,weight:4},
+        {kind:'prefer_layer',source:target(0),target:{kind:'missing'},all:false,weight:7,layer:'bottom'},
+        {kind:'edge',source:{kind:'group',members:[0,1]},target:{kind:'missing'},all:false,weight:3,edge:'right'},
+    );
+    problem.paths=[{id:'probe',shape:'straight',priority:'high',preferFacingPads:true,
+        ports:[0,2,1,3].map((component,order)=>({target:{kind:'pin',component,pad:0},order,ref:`p${order}`,role:'endpoint'}))}];
+    problem.nets.push({name:'mst-ties',weight:0.65,points:[0,1,2,3].map(component=>({component,pad:0}))});
+    const cpu=gpuRefine(problem,'cpu');
+    const gpu=gpuRefine(problem,'cubecl',{PCB_POST_PLACE_GPU_VERIFY:'1'});
+    assert.deepEqual(gpu.value,cpu.value);
+    assert.match(gpu.log,/\[post-place-gpu\]/);
+    assert.doesNotMatch(gpu.log,/fallback|validation failed/);
+});
+
+test('post-place GPU failure discards moves and restores the full CPU budget', {skip:process.env.PCB_POST_PLACE_GPU_TESTS!=='1'}, () => {
+    const problem=encodeNativePostPlaceRefineProblem(pairInput(),pairPlacements(),1);
+    const cpu=gpuRefine(problem,'cpu');
+    for(const stage of ['batch','after_move','diagnostics']) {
+        const replay=gpuRefine(problem,'cubecl',{PCB_POST_PLACE_GPU_FAIL:stage});
+        assert.deepEqual(replay.value,cpu.value,stage);
+        assert.match(replay.log,/\[post-place-gpu-fallback\]/);
+        assert.match(replay.log,new RegExp(`"cpuBudgetMs":${problem.timeoutMs}`));
+    }
+});
+
+test('post-place GPU chunk boundaries and worker budgets preserve the complete selection', {skip:process.env.PCB_POST_PLACE_GPU_TESTS!=='1'}, () => {
+    const problem=encodeNativePostPlaceRefineProblem(pairInput(),pairPlacements(),1);
+    const cpu=gpuRefine(problem,'cpu');
+    for(const [chunk,workers] of [[1,1],[17,2],[128,4]]) {
+        const gpu=gpuRefine({...problem,threads:workers},'cubecl',{PCB_POST_PLACE_GPU_CHUNK_SIZE:String(chunk),PCB_POST_PLACE_GPU_VERIFY:'1'});
+        assert.deepEqual(gpu.value,cpu.value);
+        assert.doesNotMatch(gpu.log,/fallback|validation failed/);
+    }
+});
+
+test('post-place auto and zero timeout stay CPU; disabled GPU preserves the original result', {skip:process.env.PCB_POST_PLACE_GPU_TESTS!=='1'}, () => {
+    const problem=encodeNativePostPlaceRefineProblem(pairInput(),pairPlacements(),1);
+    const cpu=gpuRefine(problem,'cpu');
+    const auto=gpuRefine(problem,'auto');
+    assert.deepEqual(auto.value,cpu.value);
+    assert.doesNotMatch(auto.log,/\[post-place-gpu\]/);
+    const disabled=gpuRefine(problem,'cubecl',{PCB_BLOCK_GPU_DISABLED:'1'});
+    assert.deepEqual(disabled.value,cpu.value);
+    assert.match(disabled.log,/GPU disabled/);
+    const zero=gpuRefine({...problem,timeoutMs:0},'cubecl');
+    assert.deepEqual(zero.value.placements,problem.placements);
+    assert.equal(zero.profile.timedOut,true);
+    assert.match(zero.log,/"batches":0/);
+});
+
+test('post-place GPU lease contention falls back and a failed owner releases the device', {skip:process.env.PCB_POST_PLACE_GPU_TESTS!=='1',timeout:30000}, async () => {
+    const p=encodeNativePostPlaceRefineProblem(pairInput(),pairPlacements(),1);
+    const cpu=gpuRefine(p,'cpu');
+    const require=createRequire(import.meta.url);
+    const addon=resolve('native/pcb-board-packer',require('../native/pcb-board-packer/platform.cjs').nativeFilename());
+    const owner=spawn(process.execPath,['-e',
+        'const a=require(process.argv[1]),p=JSON.parse(require("node:fs").readFileSync(0,"utf8"));a.refinePostPlacement(p);process.send("ready");process.on("message",()=>{process.env.PCB_POST_PLACE_GPU_FAIL="after_move";a.refinePostPlacement(p);process.send("failed");});',addon],{
+        windowsHide:true,stdio:['pipe','ignore','pipe','ipc'],env:{...process.env,PCB_POST_PLACE_BACKEND:'cubecl'},
+    });
+    let log='';owner.stderr!.on('data',data=>{log+=data;});
+    const next=()=>new Promise<void>((ok,fail)=>{owner.once('message',()=>ok());owner.once('error',fail);});
+    try {
+        const ready=next();owner.stdin!.end(JSON.stringify(p));await ready;
+        const busy=gpuRefine(p,'cubecl');assert.deepEqual(busy.value,cpu.value);assert.match(busy.log,/GPU owned by another process/);
+        const failed=next();owner.send('fail');await failed;
+        const recovered=gpuRefine(p,'cubecl');assert.deepEqual(recovered.value,cpu.value);assert.doesNotMatch(recovered.log,/fallback/);
+        assert.equal(owner.exitCode,null);assert.match(log,/post-place-gpu-fallback/);
+    }finally{owner.kill();}
+});
+
+test('post-place GPU guards and absent Vulkan driver replay the original CPU input', {skip:process.env.PCB_POST_PLACE_GPU_TESTS!=='1'}, () => {
+    const original=encodeNativePostPlaceRefineProblem(pairInput(),pairPlacements(),1);
+    const cases: [string, typeof original, Record<string,string>][]=[];
+    const negative=structuredClone(original);negative.nets[0].weight=-1;
+    cases.push(['negative MST crossing weight',negative,{}]);
+    const duplicate=structuredClone(original);duplicate.nets.push(structuredClone(duplicate.nets[0]));
+    cases.push(['duplicate post-place net names',duplicate,{}]);
+    const unsafe=structuredClone(original);
+    unsafe.hints.push({kind:'distance',source:{kind:'component',component:0},target:{kind:'point',point:{x:1e8,y:0}},all:false,weight:0});
+    cases.push(['unsafe post-place GPU number',unsafe,{}]);
+    const layer=structuredClone(original);
+    layer.hints.push({kind:'prefer_layer',source:{kind:'component',component:0},target:{kind:'missing'},all:false,weight:1,layer:'inner'});
+    cases.push(['unsupported post-place layer',layer,{}]);
+    cases.push(['no compatible F64 Vulkan GPU',original,{VK_DRIVER_FILES:resolve('debugging/nonexistent-vulkan-driver.json')}]);
+    for(const [reason,problem,environment] of cases) {
+        const cpu=gpuRefine(problem,'cpu');
+        const gpu=gpuRefine(problem,'cubecl',environment);
+        assert.deepEqual(gpu.value,cpu.value,reason);
+        assert.ok(gpu.log.includes(reason),gpu.log);
+        assert.doesNotMatch(gpu.log,/"backend":"cubecl"/);
+    }
+});
 
 function pose(designator: string, x: number, y: number): Placement {
     return { designator, x, y, rotate: 0, layer: 'top', score: 0 };

@@ -122,7 +122,7 @@ async function capture(fixture) {
 function replay(source, count) {
     const inputDir = existsSync(join(source, 'meta.json')) ? source : dirname(source);
     const meta = json(join(inputDir, 'meta.json'));
-    if (!['block', 'board'].includes(meta.kind)) throw Error('Expected block or board capture');
+    if (!['block', 'board', 'refine'].includes(meta.kind)) throw Error('Expected block, board or refine capture');
     const raw = readFileSync(join(inputDir, 'problem.json'), 'utf8');
     if (sha256(raw) !== meta.inputSha256) throw Error('Captured native input checksum mismatch');
     const problem = JSON.parse(raw, (_key, value) => {
@@ -142,10 +142,11 @@ function replay(source, count) {
     let solution;
     for (let i = 0; i < count; i++) {
         const start = performance.now();
-        solution = meta.kind === 'block' ? addon.solveBlockPrimitives(problem) : addon.solveBoardPacked(problem);
+        solution = meta.kind === 'block' ? addon.solveBlockPrimitives(problem) : meta.kind === 'refine' ? addon.refinePostPlacement(problem) : addon.solveBoardPacked(problem);
         times.push(performance.now() - start);
     }
-    const exact = baseline ? JSON.stringify(solution) === JSON.stringify(baseline) : null;
+    const comparable = value => { if (meta.kind !== 'refine') return value; const {profile,...result}=value; return result; };
+    const exact = baseline ? JSON.stringify(comparable(solution)) === JSON.stringify(comparable(baseline)) : null;
     const summary = { version: 1, source: resolve(inputDir), kind: meta.kind, label: meta.label,
         inputSha256: meta.inputSha256, repeats: count, timesMs: times,
         minMs: Math.min(...times), medianMs: [...times].sort((a, b) => a - b)[Math.floor(times.length / 2)],

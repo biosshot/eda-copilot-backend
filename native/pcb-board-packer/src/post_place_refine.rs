@@ -23,6 +23,9 @@ use std::{
     time::{Duration, Instant},
 };
 const EPS: f64 = 0.001;
+#[cfg(feature = "gpu")]
+#[path = "post_place/cubecl.rs"]
+mod gpu;
 
 #[derive(Default, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -471,7 +474,8 @@ impl RefineProblem {
             _ => None,
         }
     }
-    fn score(&self, w: &World) -> Result<f64, String> {
+    fn score(&self, w: &World) -> Result<f64, String> { post_place::score(&self.score_problem(w)) }
+    fn score_problem(&self, w: &World) -> PostPlaceScoreProblem {
         let mut p = PostPlaceScoreProblem {
             version: 1,
             pad_crossing_weight: self.pad_crossing_weight,
@@ -594,7 +598,7 @@ impl RefineProblem {
                 prefer_facing_pads: path.prefer_facing_pads,
             });
         }
-        post_place::score(&p)
+        p
     }
     fn clearance_targets(&self, h: &Hint, w: &World) -> Vec<(String, Box2)> {
         if h.all {
@@ -1002,6 +1006,7 @@ fn evaluate(
     cache: &mut FxHashMap<Vec<usize>, Cache>,
     stats: &mut BatchProfile,
     incumbent: Option<f64>,
+    precomputed: Option<f64>,
     deadline: Instant,
 ) -> Result<Option<Evaluation>, String> {
     if Instant::now() >= deadline {
@@ -1020,11 +1025,11 @@ fn evaluate(
         let changed: Vec<_> = c.changes.iter().map(|(i, _)| *i).collect();
         let started = Instant::now();
         let entry = cache.entry(changed.clone()).or_insert_with(|| Cache {
-            violations: p.violations(current, &changed),
+            violations: if precomputed.is_some() { FxHashSet::default() } else { p.violations(current, &changed) },
             baseline: None,
         });
         let world = &*scratch;
-        let valid = p.violations(world, &changed).is_subset(&entry.violations);
+        let valid = precomputed.is_some() || p.violations(world, &changed).is_subset(&entry.violations);
         stats.geometry_ms += elapsed(started);
         if !valid {
             stats.hard_rejected += 1;
@@ -1034,7 +1039,7 @@ fn evaluate(
             return Ok(None);
         }
         let started = Instant::now();
-        let score = p.score(world)?;
+        let score = match precomputed { Some(score) => score, None => p.score(world)? };
         let time = elapsed(started);
         stats.global_score_ms += time;
         stats.score_native_ms += time;
@@ -1119,6 +1124,7 @@ fn iteration(
     candidates: &[Candidate],
     threads: usize,
     deadline: Instant,
+    precomputed: Option<&[Option<f64>]>,
 ) -> Result<(Vec<Option<Evaluation>>, BatchProfile), String> {
     if threads <= 1 {
         let mut cache = FxHashMap::default();
@@ -1126,7 +1132,8 @@ fn iteration(
         let mut result = Vec::new();
         let mut best: Option<f64> = None;
         let mut scratch = current.clone();
-        for c in candidates {
+        for (i, c) in candidates.iter().enumerate() {
+            if precomputed.is_some_and(|scores| scores[i].is_none()) { result.push(None); continue; }
             if Instant::now() >= deadline {
                 break;
             }
@@ -1139,6 +1146,7 @@ fn iteration(
                 &mut cache,
                 &mut stats,
                 best,
+                precomputed.and_then(|scores|scores[i]),
                 deadline,
             )?;
             if let Some(v) = &value {
@@ -1181,6 +1189,7 @@ fn iteration(
                         }
                         let mut cache = FxHashMap::default();
                         for &i in &groups[g] {
+                            if precomputed.is_some_and(|scores| scores[i].is_none()) { continue; }
                             if Instant::now() >= deadline {
                                 break;
                             }
@@ -1195,6 +1204,7 @@ fn iteration(
                                     &mut cache,
                                     &mut stats,
                                     None,
+                                    precomputed.and_then(|scores|scores[i]),
                                     deadline,
                                 )?,
                             ));
@@ -1360,7 +1370,30 @@ pub fn validate_change(p: RefineProblem, placements: Vec<Placement>) -> Result<b
 
 pub fn solve(p: RefineProblem) -> Result<Value, String> {
     p.validate()?;
-    let started = Instant::now();
+    let backend=std::env::var("PCB_POST_PLACE_BACKEND").unwrap_or_else(|_|"auto".into());
+    if !matches!(backend.as_str(),"cpu"|"cubecl"|"auto") {return Err(format!("unsupported PCB_POST_PLACE_BACKEND {backend}"));}
+    #[cfg(feature="gpu")]
+    if backend=="cubecl" || (backend=="auto" && gpu::profitable(&p)) {
+        let started=Instant::now();
+        match gpu::Engine::new(&p) {
+            Ok(engine)=>{
+                let mut engine=Some(engine);
+                let result=solve_inner(&p,started,&mut engine);
+                let engine=engine.unwrap();
+                if let Some(error)=&engine.failure {
+                    eprintln!("[post-place-gpu-fallback] {}",json!({"reason":error.to_string(),"kind":error.kind,"discardedGpuMs":elapsed(started),"cpuBudgetMs":p.timeout_ms,"replay":"original native refine call"}));
+                    drop(engine);
+                    return solve_inner(&p,Instant::now(),&mut None);
+                }
+                engine.report();eprintln!("[post-place-backend] {}",json!({"backend":if engine.batches>0 {"cubecl"}else{"cpu"},"requested":backend}));return result;
+            },
+            Err(error)=>eprintln!("[post-place-backend] {}",json!({"backend":"cpu","requested":backend,"reason":error.to_string()})),
+        }
+    }
+    if std::env::var_os("PCB_BOARD_PACKER_PROFILE").is_some(){eprintln!("[post-place-backend] {}",json!({"backend":"cpu","requested":backend,"reason":if backend=="cpu" {"explicit CPU"}else if !cfg!(feature="gpu") {"CPU-only build"}else{"outside measured workload/readiness threshold"}}));}
+    solve_inner(&p,Instant::now(),#[cfg(feature="gpu")] &mut None)
+}
+fn solve_inner(p:&RefineProblem,started:Instant,#[cfg(feature="gpu")] engine:&mut Option<gpu::Engine>) -> Result<Value,String> {
     let deadline = started + Duration::from_millis(p.timeout_ms);
     let threads = p.threads.max(1).min(
         (thread::available_parallelism()
@@ -1390,8 +1423,14 @@ pub fn solve(p: RefineProblem) -> Result<Value, String> {
         let candidates = p.candidates(&current)?;
         let generation_ms = elapsed(generation);
         let evaluation = Instant::now();
-        let (results, stats) =
-            iteration(&p, &current, current_score, &candidates, threads, deadline)?;
+        let (results, stats) = {
+            #[cfg(feature="gpu")]
+            if let Some(gpu)=engine.as_mut() {
+                gpu_iteration(p,&current,current_score,&candidates,threads,deadline,gpu)?
+            } else {iteration(p,&current,current_score,&candidates,threads,deadline,None)?}
+            #[cfg(not(feature="gpu"))]
+            iteration(p,&current,current_score,&candidates,threads,deadline,None)?
+        };
         let evaluation_ms = elapsed(evaluation);
         let mut best: Option<(usize, Evaluation)> = None;
         for (i, value) in results.into_iter().enumerate() {
@@ -1432,7 +1471,11 @@ pub fn solve(p: RefineProblem) -> Result<Value, String> {
             p.apply(&mut current, *i, pose)?;
         }
         current_score = best.score;
+        #[cfg(feature="gpu")]
+        if let Some(gpu)=engine.as_mut(){gpu.injected("after_move")?;}
     }
+    #[cfg(feature="gpu")]
+    if let Some(gpu)=engine.as_mut(){gpu.injected("diagnostics")?;}
     let diag = Instant::now();
     let diagnostics = p.diagnostics(&current, current_score, deadline)?;
     let diag_ms = elapsed(diag);
@@ -1448,3 +1491,119 @@ pub fn solve(p: RefineProblem) -> Result<Value, String> {
         json!({"placements":current.placements,"diagnostics":diagnostics,"moves":moves,"scoreBefore":rounded(initial_score),"scoreAfter":rounded(current_score),"profile":{"workers":threads,"initialScoreMs":initial_ms,"fixedDiagnosticsMs":diag_ms,"totalMs":total,"iterations":profiles,"iterationLimit":p.iterations,"timeoutMs":p.timeout_ms,"timedOut":timed_out,"stopReason":stop_reason}}),
     )
 }
+
+#[cfg(feature="gpu")]
+fn gpu_iteration(p:&RefineProblem,current:&World,current_score:f64,candidates:&[Candidate],threads:usize,deadline:Instant,engine:&mut gpu::Engine)->Result<(Vec<Option<Evaluation>>,BatchProfile),String>{
+    if threads<=1 {return gpu_iteration_serial(p,current,current_score,candidates,threads,deadline,engine);}
+    // Completed geometric groups feed the original CPU route evaluator while
+    // the producer works on the next GPU batch. A route group never spans
+    // workers, so its baseline cache and feasibility sequence stay intact.
+    let mut groups:Vec<Vec<usize>>=Vec::new();
+    if threads<=1 {for chunk in (0..candidates.len()).collect::<Vec<_>>().chunks(engine.chunk_size()){groups.push(chunk.to_vec());}}
+    else {let mut map=FxHashMap::default();for (i,c) in candidates.iter().enumerate(){let key=c.changes.iter().map(|(i,_)|*i).collect::<Vec<_>>();let id=*map.entry(key).or_insert_with(||{groups.push(vec![]);groups.len()-1});groups[id].push(i);}}
+    let order:Vec<_>=groups.iter().flatten().copied().collect();
+    let mut owner=vec![0;candidates.len()];for (g,ids) in groups.iter().enumerate(){for &id in ids {owner[id]=g;}}
+    let mut pending:Vec<Vec<(usize,f64)>>=groups.iter().map(|_|vec![]).collect();
+    let mut remaining:Vec<_>=groups.iter().map(Vec::len).collect();
+    let (send,receive)=std::sync::mpsc::channel::<Vec<(usize,f64)>>();let receive=std::sync::Mutex::new(receive);
+    let verify=std::env::var("PCB_POST_PLACE_GPU_VERIFY").ok().as_deref()==Some("1");
+    let cpu_budget=CpuBudget::new(threads);
+    thread::scope(|scope| {
+        let mut handles=Vec::new();
+        for _ in 0..threads.max(1).min(groups.len().max(1)) {let receive=&receive;let cpu_budget=&cpu_budget;
+            handles.push(scope.spawn(move ||->Result<_,String>{
+                let mut scratch=current.clone();let mut stats=BatchProfile::default();let mut values=Vec::new();let mut best:Option<f64>=None;let mut serial_cache=FxHashMap::default();
+                loop {
+                    let job=receive.lock().map_err(|_|"post-place route queue poisoned")?.recv();let Ok(job)=job else{break;};
+                    if Instant::now()>=deadline {break;}
+                    let mut group_cache=FxHashMap::default();let cache=if threads<=1 {&mut serial_cache}else{&mut group_cache};
+                    for (id,score) in job {
+                        if Instant::now()>=deadline {break;}
+                        let permit=cpu_budget.acquire();
+                        let value=evaluate(p,current,current_score,&candidates[id],&mut scratch,cache,&mut stats,if threads<=1 {best}else{None},Some(score),deadline)?;drop(permit);
+                        if let Some(v)=&value {if best.is_none_or(|b|v.improvement>b+EPS){best=Some(v.improvement);}}
+                        values.push((id,value));
+                    }
+                }Ok((values,stats))
+            }));
+        }
+        let produced=(||->Result<_,String>{
+            let mut scratch=current.clone();let mut violations=FxHashMap::default();let mut profile=BatchProfile::default();let mut next_group=0;
+            for ids in order.chunks(engine.chunk_size()) {
+                if Instant::now()>=deadline {break;}
+                let mut valid=Vec::new();let mut valid_ids=Vec::new();let mut visited=Vec::new();let mut expected=Vec::new();let started=Instant::now();let permit=cpu_budget.acquire();
+                for &id in ids {
+                    if Instant::now()>=deadline {break;}
+                    let c=&candidates[id];for (i,pose) in &c.changes {p.apply(&mut scratch,*i,pose)?;}
+                    let changed:Vec<_>=c.changes.iter().map(|(i,_)|*i).collect();let baseline=violations.entry(changed.clone()).or_insert_with(||p.violations(current,&changed));
+                    if p.violations(&scratch,&changed).is_subset(baseline){valid.push(c);valid_ids.push(id);if verify {expected.push(p.score(&scratch)?);}}
+                    else{profile.hard_rejected+=1;profile.candidates+=1;}
+                    for (i,_) in &c.changes {p.apply(&mut scratch,*i,p.pose(current,*i))?;}visited.push(id);
+                }
+                drop(permit);profile.geometry_ms+=elapsed(started);
+                if !valid.is_empty() && Instant::now()<deadline {
+                    let started=Instant::now();let scores=engine.scores(p,current,&valid,Some(&cpu_budget))?;let ms=elapsed(started);profile.global_score_ms+=ms;profile.score_native_ms+=ms;
+                    for (j,(&id,score)) in valid_ids.iter().zip(scores).enumerate(){
+                        if verify && (score-expected[j]).abs()>1e-8+expected[j].abs()*1e-12 {return Err(engine.fail(crate::compute::Error::new(crate::compute::ErrorKind::RuntimeFailure,format!("post-place GPU validation failed candidate {id}: GPU={score:.17} CPU={:.17}",expected[j]))));}
+                        pending[owner[id]].push((id,score));
+                    }
+                }
+                for id in visited {remaining[owner[id]]-=1;}
+                while next_group<groups.len()&&remaining[next_group]==0 {let job=std::mem::take(&mut pending[next_group]);if !job.is_empty(){let _=send.send(job);}next_group+=1;}
+            }
+            // On a cooperative timeout only completed scores are eligible.
+            for job in pending {if !job.is_empty(){let _=send.send(job);}}
+            Ok(profile)
+        })();
+        drop(send);
+        let mut result:Vec<_>=(0..candidates.len()).map(|_|None).collect();let mut profile=BatchProfile::default();
+        for h in handles {let (values,stats)=h.join().map_err(|_|"post-place GPU route worker panicked")??;profile.add(&stats);for (id,value) in values {result[id]=value;}}
+        profile.add(&produced?);Ok((result,profile))
+    })
+}
+
+#[cfg(feature="gpu")]
+fn gpu_iteration_serial(p:&RefineProblem,current:&World,current_score:f64,candidates:&[Candidate],threads:usize,deadline:Instant,engine:&mut gpu::Engine)->Result<(Vec<Option<Evaluation>>,BatchProfile),String>{
+    let mut scores=vec![None;candidates.len()];let mut scratch=current.clone();
+    let mut violations=FxHashMap::default();let mut pre=BatchProfile::default();
+    let verify=std::env::var("PCB_POST_PLACE_GPU_VERIFY").ok().as_deref()==Some("1");
+    for (chunk,items) in candidates.chunks(engine.chunk_size()).enumerate(){
+        if Instant::now()>=deadline {break;}
+        let offset=chunk*engine.chunk_size();let mut valid=Vec::new();let mut ids=Vec::new();let mut expected=Vec::new();
+        let geometry_started=Instant::now();
+        for (i,c) in items.iter().enumerate(){
+            if Instant::now()>=deadline {break;}
+            for (component,pose) in &c.changes {p.apply(&mut scratch,*component,pose)?;}
+            let changed:Vec<_>=c.changes.iter().map(|(i,_)|*i).collect();
+            let baseline=violations.entry(changed.clone()).or_insert_with(||p.violations(current,&changed));
+            if p.violations(&scratch,&changed).is_subset(baseline){valid.push(c);ids.push(offset+i);if verify{expected.push(p.score(&scratch)?);}}
+            else{pre.hard_rejected+=1;pre.candidates+=1;}
+            for (component,_) in &c.changes {p.apply(&mut scratch,*component,p.pose(current,*component))?;}
+        }
+        pre.geometry_ms+=elapsed(geometry_started);
+        if valid.is_empty() || Instant::now()>=deadline {continue;}
+        let started=Instant::now();let values=engine.scores(p,current,&valid,None)?;let ms=elapsed(started);pre.global_score_ms+=ms;pre.score_native_ms+=ms;
+        for (j,(&id,&score)) in ids.iter().zip(&values).enumerate(){
+            if verify && (score-expected[j]).abs()>1e-8+expected[j].abs()*1e-12 {
+                return Err(engine.fail(crate::compute::Error::new(crate::compute::ErrorKind::RuntimeFailure,format!("post-place GPU validation failed candidate {id}: GPU={score:.17} CPU={:.17}",expected[j]))));
+            }
+            scores[id]=Some(score);
+        }
+    }
+    let (result,mut profile)=iteration(p,current,current_score,candidates,threads,deadline,Some(&scores))?;profile.add(&pre);Ok((result,profile))
+}
+
+// The GPU producer releases its CPU permit while awaiting the device. Route
+// workers may use that core then, but CPU preparation/compilation and route
+// evaluation never exceed the configured active CPU budget together.
+#[cfg(feature="gpu")]
+struct CpuBudget {available:std::sync::Mutex<usize>,wake:std::sync::Condvar}
+#[cfg(feature="gpu")]
+struct CpuPermit<'a>(&'a CpuBudget);
+#[cfg(feature="gpu")]
+impl CpuBudget {
+ fn new(count:usize)->Self{Self{available:std::sync::Mutex::new(count.max(1)),wake:std::sync::Condvar::new()}}
+ fn acquire(&self)->CpuPermit<'_>{let mut n=self.available.lock().unwrap();while *n==0 {n=self.wake.wait(n).unwrap();}*n-=1;CpuPermit(self)}
+}
+#[cfg(feature="gpu")]
+impl Drop for CpuPermit<'_>{fn drop(&mut self){*self.0.available.lock().unwrap()+=1;self.0.wake.notify_one();}}

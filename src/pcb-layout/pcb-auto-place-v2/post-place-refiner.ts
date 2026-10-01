@@ -1,3 +1,4 @@
+import { beginNativeSolveCapture } from './native/debug-capture.ts';
 import { availableParallelism } from 'node:os';
 import { performance } from 'node:perf_hooks';
 import type { PlacementInput, Placement } from '#types/pcb/layout-model.ts';
@@ -15,7 +16,10 @@ function run(input: PlacementInput, placements: Placement[], threads: number): P
     const started = performance.now();
     const problem = encodeNativePostPlaceRefineProblem(input, placements, threads);
     const encodingMs = performance.now() - started;
+    const capture = beginNativeSolveCapture('refine', problem, { stage: 'final', batchSize: 1, encodeMs: encodingMs, index: 0 });
+    const nativeStarted = performance.now();
     const result = addon.refinePostPlacement(problem);
+    capture?.(result, performance.now() - nativeStarted);
     return { ...result, profile: { ...result.profile, encodingMs, componentCount: problem.componentCount,
         pinCount: problem.pinCount, adaptiveIterationLimit: problem.adaptiveIterationLimit, requestedIterations: problem.requestedIterations } };
 }

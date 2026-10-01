@@ -1,3 +1,4 @@
+import { beginNativeSolveCapture } from './native/debug-capture.ts';
 import type { PlacementInput, TargetRef } from '#types/pcb/layout-model.ts';
 import type { ClearanceResolver } from '../pcb-auto-place/clearance-resolver.ts';
 import { familyBlockDesignators } from '../pcb-auto-place/report-helpers.ts';
@@ -40,7 +41,10 @@ export function refineBlockPrimitives(input: PlacementInput, primitives: Placeme
     for (const g of problem.groups) g.members = g.members.filter(i => movable.has(problem.components[i].designator));
     const addon = loadNativeBoardPacker();
     if (addon.postPlaceRefineContractVersion() !== 3) throw new Error('Geometric block postrefine requires npm run native:build');
+    const capture = beginNativeSolveCapture('refine', problem, { stage: 'local', batchSize: 1, encodeMs: performance.now() - start, index: 0 });
+    const nativeStarted = performance.now();
     const result = addon.refinePostPlacement(problem);
+    capture?.(result, performance.now() - nativeStarted);
     if (!addon.validatePlacementChange(problem, result.placements)) throw new Error('Block postrefine violated placement constraints');
     const poses = new Map(result.placements.map(p => [p.designator, p]));
     const refined = primitives.map(p => {

@@ -19,10 +19,12 @@ All generated files are local and Git-ignored under `debugging/pcb-layout/`:
 | `runs/<fixture>/<timestamp>/source/` | Copy of the fixture's JS, JSON, and TypeScript runner at capture time. |
 | `runs/<fixture>/<timestamp>/stages.json` | End-to-end stage durations and `placementOk`, if placement reached completion. |
 | `runs/<fixture>/<timestamp>/placement/` | Full-board SVG and JSON, block/stage previews, resolved input, and `board.assemble.json`, if generated. |
-| `runs/<fixture>/<timestamp>/native/<block\|board>/<process>/<request>/` | One exact Rust solver call: `problem.json` input, `meta.json` identity/timing, and `solution.json` when it completed. |
-| `replays/<block\|board>/<timestamp>-<label>/` | Result of rerunning **one saved native call**, not a new full-board run. Contains `summary.md`, `summary.json` with timings and baseline match, and the new `solution.json`. |
+| `runs/<fixture>/<timestamp>/native/<block\|board\|refine>/<process>/<request>/` | One exact Rust solver call: `problem.json` input, `meta.json` identity/timing, and `solution.json` when it completed. |
+| `replays/<block\|board\|refine>/<timestamp>-<label>/` | Result of rerunning **one saved native call**, not a new full-board run. Contains `summary.md`, `summary.json` with timings and baseline match, and the new `solution.json`. |
 
 To investigate one slow block, locate its request directory under a run's `native/block/` using the block label or `summary.json`, then pass that directory to `replay`. The replay uses the captured `problem.json` exactly; it does not parse the DSL, rebuild the graph, or create board/block SVGs. `replays/` is therefore separate from `runs/` and is not an alternative board placement.
+
+Native refiner captures include both local geometric and final route-aware calls, distinguished by `meta.stage`. Replay keeps the captured timeout and compares result fields without nondeterministic profile timings. Two time-limited searches can finish different candidate subsets; inspect quality and stop reasons rather than assuming a result mismatch proves arithmetic drift.
 
 A process exit of zero is not enough to establish a successful placement. Check `stages.json` (`placementOk`), the placement report, and hard violations. If a capture fails early, some output files are absent; `run.log` and `summary.json` explain what happened.
 

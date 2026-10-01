@@ -1,8 +1,10 @@
 # Post-place / Refiner: массовые оценки на GPU
 
-Дата: 2026-09-30. **Статус: план; реализация не начата.** Выполнять после [Board Packager roadmap](BOARD_PACKAGER_GPU_ROADMAP.md). Техническая обязательная зависимость — завершённый `compute`, описанный в [GPU API](GPU_INFRASTRUCTURE_API.md) и [результатах инфраструктуры](GPU_INFRASTRUCTURE_RESULTS.md). Этот модуль не требует board GPU kernels: готовую board реализацию используем как потребителя общего runtime и сохраняем её регрессионные проверки.
+Дата: 2026-09-30. **Статус на 2026-10-01: реализован и принят в измеренной области; результаты и ограничения — в [отчёте](POST_PLACE_GPU_RESULTS.md).** Выполнять после [Board Packager roadmap](BOARD_PACKAGER_GPU_ROADMAP.md). Техническая обязательная зависимость — завершённый `compute`, описанный в [GPU API](GPU_INFRASTRUCTURE_API.md) и [результатах инфраструктуры](GPU_INFRASTRUCTURE_RESULTS.md). Этот модуль не требует board GPU kernels: готовую board реализацию используем как потребителя общего runtime и сохраняем её регрессионные проверки.
 
-Перед реализацией проверить актуальные исходники, незакоммиченные изменения и hash addon. На дату написания общая инфраструктура завершена в рабочем дереве поверх `6d1f9c8`; один этот commit не является её полной базой. После предыдущей задачи заново сохранить baseline, не сравнивать изменившийся весь pipeline только с историческими числами.
+База реализации — Board Packager commit `c17b564`; исходный addon и hashes сохранены в `debugging/post-place-gpu-2026-10-01/baseline/`. Финальный native build, исходники и addon связаны через `build-final/manifest.json`. Сам commit `c17b564` ещё не содержит эту реализацию Refiner.
+
+Уточнение пользователя 2026-10-01: те же правила тестирования — один CPU и один GPU проход на тест/версию; подходящие сохранённые CPU inputs/results использовать повторно. Серии медиан и обязательные тёплые повторы отменены. Повторять лишь после изменения кода или обнаруженной ошибки.
 
 ## Результат и границы
 
@@ -16,8 +18,8 @@ CPU сохраняет генерацию moves, дешёвую проверку
 
 | Источник | Назначение и граница |
 |---|---|
-| `native/pcb-board-packer/src/post_place.rs::score` | CPU эталон общей цели: MST, длины, crossings, pad hits, distances, clearances, fixed penalties, edges, paths; будущий единый GPU scorer |
-| `post_place_refine.rs::score` | Сейчас заново собирает `PostPlaceScoreProblem` из `World`; для массового GPU пути нужен resident topology и компактные изменения poses, без полной пересборки/копирования всех nets/obstacles для каждого кандидата |
+| `native/pcb-board-packer/src/post_place.rs::score` | CPU эталон общей цели: MST, длины, crossings, pad hits, distances, clearances, fixed penalties, edges, paths; CPU reference для единого GPU scorer |
+| `post_place_refine.rs::score` | CPU/scalar строит `PostPlaceScoreProblem` из `World`; массовый GPU путь использует resident topology и компактные changes/poses без полной пересборки nets/obstacles |
 | `evaluate`, `iteration`, `solve` в том же файле | Доменный GPU Engine и batches, CPU validity/route stages, прежние candidate IDs и стабильный выбор лучшего move |
 | `post_place_refine.rs::diagnostics` | Сохранить финальные диагностические проверки и разрешения на fixed changes; учитывать их время в полном вызове, не вырезать ради benchmark |
 | `src/pcb-layout/pcb-auto-place-v2/block-post-refiner.ts` | Тот же native refiner с `routingMetric=geometric`, 8 passes и 2 с; острова остаются rigid, scopes и allowed rotations сохраняются |
@@ -25,7 +27,7 @@ CPU сохраняет генерацию moves, дешёвую проверку
 | `globalPostPlaceScore`, `scorePostPlace` | Существующий scalar контракт сохраняется. Для одиночных маленьких вызовов допустим CPU; не выполнять отдельный GPU dispatch на каждый TS вызов автоматически |
 | `micro_router/comparison.rs` | Существующие baseline, maximum improvement bound, feasibility и маршруты остаются CPU. Jobs внутри сравнения резервируют `TemporaryRoutes` последовательно, это не независимый GPU batch |
 
-Имена предполагаемых новых файлов — `post_place/cubecl.rs`, `post_place/gpu_kernels.rs` или аналогичные внутренние подмодули. GPU формулы принадлежат post-place, а не board packer и не `compute`. Общие геометрические/численные helpers выделять только при совпадении правил; block MST или pad cache не считать автоматически эквивалентными post-place.
+Реализация — `post_place/cubecl.rs` и `post_place/gpu_kernels.rs`. GPU формулы принадлежат post-place, а не board packer и не `compute`. Общие геометрические/численные helpers выделять только при совпадении правил; block MST или pad cache не считать автоматически эквивалентными post-place.
 
 ## Контракт batches и выбора результата
 
@@ -41,7 +43,7 @@ CPU сохраняет генерацию moves, дешёвую проверку
 
 ## Timeout, CPU fallback и точность
 
-Предлагаемый доменный flag — `PCB_POST_PLACE_BACKEND=cpu|cubecl|auto` для refiner и его общего scorer; это планируемое имя. Сохранить существующие thread settings и scalar NAPI. `cpu` не требует GPU, `cubecl` не обходит guards, `auto` выбирается по измеренным batch/geometry размерам и cold/ready runtime. Возможность держать scalar standalone score на CPU не должна оставлять массовый refiner на CPU незаметно для отчёта.
+Реализованный доменный flag — `PCB_POST_PLACE_BACKEND=cpu|cubecl|auto` для native refiner, default `auto`; scalar standalone score остаётся CPU. Сохранить существующие thread settings и scalar NAPI. `cpu` не требует GPU, `cubecl` не обходит guards, `auto` выбирается по измеренным batch/geometry размерам и cold/ready runtime. Возможность держать scalar standalone score на CPU не должна оставлять массовый refiner на CPU незаметно для отчёта.
 
 При неподдержанном входе/no-device/disabled/busy весь native refinement выполняется CPU. При ошибке GPU после начала поиска полностью отбросить GPU moves, scores, caches и placements, повторить `refinePostPlacement` с **исходным RefineProblem и исходными placements**, без GPU retry. Не продолжать CPU с уже улучшенной GPU расстановки. Для самостоятельного read-only `scorePostPlace` граница повтора — тот же исходный score request. Некорректный вход сохраняет прежнюю ошибку валидации.
 
@@ -60,49 +62,52 @@ CPU F64 остаётся reference. Проверять hard decisions, геом�
 
 Если оба запуска упираются в 30 с, не писать «ускорение в N раз» по отношению одинаковых wall times. GPU может выполнить больше работы за тот же бюджет. Не требовать идентичных outputs между двумя разными недовыполненными поисками, но сохранять hard invariants и проверять качество независимым CPU scorer/validator вне таймера. Если same-budget качество ухудшилось, выяснить причину, не скрывать это увеличением числа кандидатов. Timed CPU replay также может завершиться на другой границе; exact comparison выполнять на законченных детерминированных cases.
 
-## Этапы
+## Закрытые этапы и evidence
+
+Исходные проверки ниже уточнены по фактически выполненному объёму. Широкие
+неизмеренные матрицы перечислены отдельно; они не объявлены пройденными.
 
 ### 1. Baseline и полная карта цели
 
-- [ ] Прочитать root/native/PCB `AGENTS.md`, GPU API, `post_place.rs`, весь путь refiner и оба TS callers. Найти существующие score/cache helpers, tests, capture и benchmarks.
-- [ ] Зафиксировать реальные исходные **native RefineProblem** и CPU outputs для нескольких локальных блоков (включая тяжёлый при наличии), финальных плат Telemetry/esp32c3/ESPower и тяжёлого captured случая. Сохранить local geometric и final route-aware случаи, valid references, inputs/source/addon hashes.
-- [ ] Разделить encoding/world update, generation, geometry, MST/score terms, route baseline/compare, diagnostics, mutex и total wall. Суммарные worker milliseconds не выдавать за wall time. Сохранить finished и timeout cases.
-- [ ] Составить матрицу score terms/guards и зафиксировать уже согласованный полный CPU replay с новым исходным бюджетом в проверках. Не переносить лимит 20 primitives из block scorer: размеры post-place определяются его собственными данными и GPU limits.
-
-**Выход:** реальный baseline, объём выигрышной массовой работы и полный контракт поддержки.
+- [x] Прочитаны root/native/PCB правила, GPU API, CPU scorer/refiner и оба TS callers; переиспользованы существующие encoding, geometry, route comparison и capture.
+- [x] Сохранены точные native inputs и CPU outputs: Telemetry/ESPower final, три USB local, FPGA capacitor group и полный 19-primitive FPGA local. esp32c3 проверен полным циклом с CPU refiner в auto. CPU references повторно не пересчитывались для финального GPU build.
+- [x] Зафиксированы generation, legality/geometry, score, route baseline/compare, evaluation wall и полный native wall; runtime сообщает encoding/operations/mutex/workspace. Worker sums не выданы за wall; законченные и timeout cases разделены. Отдельный hardware timestamp каждого kernel не добавлялся.
+- [x] В отчёте приведена матрица всех score terms, guards и полный CPU replay с новым исходным бюджетом.
 
 ### 2. Единый GPU scorer и численная проверка
 
-- [ ] Реализовать resident representation и полный batched evaluator на сохранённых candidates, включая подвижные pads/obstacles и derived hints/path terms. Не копировать CPU scorer отдельно под каждого caller.
-- [ ] Сравнить каждый term/score с CPU, MST endpoints/ties, crossings и pad-hit dedup, near-boundary/large-coordinate cases, signed/zero weights в пределах действующего контракта, empty/singleton nets. Проверить реальные GPU kernels, не только host версию helpers.
-- [ ] Проверить разные batch/chunk sizes, порядок candidates, кеши при moves/rotations/swaps, изменившийся foreign pad при неподвижном net и общий scratch с другими consumers. Сопоставить pruned/unpruned результаты при добавлении отсечения.
-
-**Выход:** один корректный полный score kernel pipeline с известной стоимостью upload/compute/readback и resident памяти.
+- [x] Resident topology/templates, compact poses/changes, полный score: geometry, MST, crossings, pad hits, distance/clearance/fixed/edge/path terms; одна реализация для обоих callers.
+- [x] Реальные GPU kernels сверены с независимыми CPU geometry/MST endpoints/lengths, отдельными hint/path terms и aggregate score. Полные ESPower и FPGA local проходят проверку каждого допустимого кандидата; focused test покрывает MST ties и составную цель. Negative net weights, unsupported layers, unsafe numbers и duplicate nets уходят на CPU.
+- [x] Проверены chunks 1/17/128, workers 1/2/4, полный выбор после moves/swaps, shared runtime и независимость buffers. Нового geometric top-K или приближённого pruning не вводилось.
 
 ### 3. Интеграция обоих режимов refiner
 
-- [ ] Подключить batches сначала к geometric режиму, затем к route-aware; сохранить validity subset, группировку changed components, baseline caches, bounds и stable winner.
-- [ ] Сохранить route-only улучшения: существующий тест «swap can be selected purely by Micro-A* routability» обязателен. Проверить explicit fixed permissions, rotations/swaps, default layer и opposite-side pads.
-- [ ] Проверить полные local и final native calls: initial score, generation, все завершённые passes, diagnostics и итоговый результат. Подобрать `auto` и batches по полному времени, а не только kernel benchmark.
-- [ ] Оставить scalar `scorePostPlace` совместимым. Подключать GPU к независимым массивам score requests только там, где существующий caller действительно имеет batch и это окупается; TS alignment/portfolio алгоритмы и новый NAPI batch контракт не являются обязательной частью этого roadmap.
-
-**Выход:** local и final refinement используют один scorer, route semantics и budgets сохранены; преимущества/CPU остаток измерены отдельно.
+- [x] Geometric и route-aware используют единый evaluator; CPU violation subset, changed-component groups, caches, bounds и stable reduction сохранены.
+- [x] Тест «swap can be selected purely by Micro-A* routability» отдельно пройден на настоящем GPU. Проверены fixed permissions, rotations/swaps и opposite-side pads.
+- [x] Измерены полные native calls с initial/final работой. Telemetry: 17.634 -> 12.887 с (1 worker, cold), 7.053 -> 5.649 с (4 workers, ready GPU). На 6 workers CPU быстрее: auto сохраняет CPU.
+- [x] Auto допускает >=154 components, >=660 pads, >=235 MST segments, iterations>0, timeout>=2000 ms и 1 worker либо <=4 с ready runtime. Малые local calls остаются CPU. Scalar score и NAPI совместимы; массового CPU rescoring в production GPU пути нет.
 
 ### 4. Восстановление, timeout и приёмка
 
-- [ ] Проверить no-device/disabled/busy/unsupported/unsafe, failure в batch, после принятого move и перед diagnostics; исходный CPU replay без смешивания poses/moves двух попыток, профиль обеих попыток.
-- [ ] Проверить timeout 0/малый/штатный, истечение перед/между batches, bounded overshoot, корректное состояние scratch после отказа, no-improvement и iteration-limit завершения.
-- [ ] Проверить 1/2/4 разрешённых native workers, mixed block/board/post-place workload и разные процессы с OS lease. Одна сессия, отсутствие лишних context и CPU oversubscription, сохранение готовых block/board результатов.
-- [ ] Выполнить `npm run native:build`, Rust tests с GPU и `--no-default-features`, `npm test -- pcb-post-place`, `npm test -- pcb-block`, `npm test -- pcb-board`, `npm run typecheck` и затронутые score/geometry tests. Проверить addon size/imports и изолированные GPU/CPU вызовы.
-- [ ] Провести same-work series: первый запуск и минимум три тёплых повтора на одинаковой машине без внешней GPU нагрузки. Отдельно production-budget quality runs и полный цикл нескольких плат с зафиксированными остальными backends; оценить local refine aggregate и final refine отдельно.
-- [ ] Записать stage speedups, полное время, candidates/passes, route metrics, validation/placementOk, hashes, fallback coverage и limitations; обновить changelog и закрыть пункты только с evidence.
+- [x] Проверены disabled/no-device/busy, domain guards, ошибки batch/after_move/diagnostics. Отбрасывается весь GPU результат, CPU повторяет исходный input с полным timeout; runtime/lease освобождается.
+- [x] Проверены zero/small timeout, законченные no-improvement/iteration-limit calls, production 2-second geometric budget probe. За одинаковый бюджет GPU принимает 6 улучшений вместо 3, CPU rescoring подтверждает лучший score и hard validity. Cooperative overshoot сохранён и измерен.
+- [x] 1/2/4 workers, межпроцессный lease и освобождение после failure, block -> board -> block regression, полный ESPower с block/board/post-place на одном runtime. Producer и route workers разделяют CPU permits.
+- [x] Native build; Rust GPU 64 pass/2 ignore, CPU-only 60 pass/1 ignore; 29 focused tests + 1 forced GPU route-only + 3 Board/block regressions + 1 guards/no-device test. Typecheck и package build успешны. Addon 20,088,320 bytes (20.088 MB / 19.158 MiB), прежние системные imports, один `.node`.
+- [x] Один CPU/GPU проход на каждую версию/конфигурацию с сохранёнными CPU references; повтор GPU только после изменения реализации. Полные ESPower и esp32c3 имеют placementOk=true, точные placements и побайтно одинаковые SVG с сохранёнными references. Принудительный GPU на малом ESPower не ускоряет весь pipeline; это явно отражено в отчёте.
+- [x] Обновлены results/changelog, сохранены hashes, stage profiles, failures и ограничения. Exact capture/replay добавлен через существующий механизм, без нового production API.
+
+### Непроверенные расширения области
+
+- [ ] Полный TypeScript цикл Telemetry/PortableScope с новым Refiner и отдельный 30-second timeout quality run на тяжёлой route-aware плате. Эти дорогие дополнительные проходы не выполнялись; native Telemetry и два полных меньших примера не подменяют их.
+- [ ] Исчерпывающая матрица больших/пограничных чисел, empty/singleton nets и всех signed hint combinations на GPU. Проверенные реальные inputs и guards не являются доказательством всех комбинаций.
+- [ ] Производительность и аппаратный F64 capability fallback на других GPU. No-device проверен недоступным Vulkan driver на текущей машине, а не физическим устройством без F64.
 
 **Приёмка:** полная массовая score цель на GPU, сохранённый выбор на одинаковой законченной работе, корректный replay и hard invariants; измеримое улучшение полного refinement либо объёма работы за тот же бюджет без скрытого ухудшения качества. Один ускоренный scorer без проверки целого refiner не закрывает задачу. Не обещать заранее множитель и не исправлять unrelated placement bugs через смену reference.
 
 ## Инструменты, evidence и последующие задачи
 
-Переиспользовать `scripts/benchmark-post-place.ts`, `benchmark-native-post-place.ts`, `benchmark-post-place-boundary.ts` и [capture инфраструктуру](../../../pcb-layout-debugging.md). У существующих benchmarks есть искусственные ограничения состава групп/числа итераций, а boundary benchmark не измеряет полный refiner: проверить и явно записать условия. Текущий debug capture описывает block/board; exact refiner capture добавить через существующий механизм при реализации, не утверждать, что он уже есть. Native solve cache и validation CPU rescoring выключить в performance runs.
+Переиспользовать `scripts/benchmark-post-place.ts`, `benchmark-native-post-place.ts`, `benchmark-post-place-boundary.ts` и [capture инфраструктуру](../../../pcb-layout-debugging.md). У существующих benchmarks есть искусственные ограничения состава групп/числа итераций, а boundary benchmark не измеряет полный refiner: проверить и явно записать условия. Debug capture теперь сохраняет точные `refine` inputs/outputs для local/final calls; `scripts/debug-pcb-layout.mjs` воспроизводит их. `scripts/experiment-post-place-gpu.mjs` делает один полный native проход и сравнивает с сохранённым CPU reference. Native solve cache и validation CPU rescoring выключить в performance runs.
 
-Evidence — отдельный `debugging/post-place-gpu-<date>/`; выводы и команды — будущий `POST_PLACE_GPU_RESULTS.md`. Сохранять входные placements до каждой стадии, чтобы сравнение scorer/refiner не зависело от новых board outputs. Полная интеграционная проверка отдельно использует естественную последовательность стадий.
+Evidence — отдельный `debugging/post-place-gpu-<date>/`; выводы, условия замеров и проверки — [POST_PLACE_GPU_RESULTS.md](POST_PLACE_GPU_RESULTS.md). Сохранять входные placements до каждой стадии, чтобы сравнение scorer/refiner не зависело от новых board outputs. Полная интеграционная проверка отдельно использует естественную последовательность стадий.
 
 За пределами этого плана: GPU Micro-A*, перенос TS controllers, отдельные GPU alignment/portfolio/island solvers и F32. После приёмки смотреть новый профиль: не создавать следующий roadmap только потому, что в коде встречается слово `score`.
