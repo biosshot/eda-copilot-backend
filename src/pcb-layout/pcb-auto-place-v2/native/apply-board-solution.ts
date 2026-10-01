@@ -2,6 +2,9 @@ import { rotatePrimitive, translatePrimitive, type PlacementPrimitive } from '..
 import { roundPlacement } from '../../pcb-auto-place/geometry.ts';
 import { NATIVE_BOARD_PACK_CONTRACT_VERSION, type NativePrimitivePackSolution } from './contract.ts';
 import { primitiveInFrame, frameTranslation } from './numeric-frame.ts';
+import { f32 } from '../../f32.ts';
+
+const LOCKED_TRANSLATION_EPSILON_MM = f32(0.01);
 
 export function applyNativeBoardPackSolution(
     primitives: PlacementPrimitive[],
@@ -19,9 +22,11 @@ export function applyNativeBoardPackSolution(
     return solution.states.map((state) => {
         const primitive = primitivesById.get(state.primitiveId);
         if (!primitive) throw new Error(`Native board packer returned unknown primitive ${state.primitiveId}`);
-        // Mechanical anchors may carry more precision than the placement grid.
+        // Tolerate small native transform residuals, but keep the authored pose exact.
         if (primitive.locked) {
-            if (state.rotation !== 0 || state.translationX !== 0 || state.translationY !== 0)
+            if (state.rotation !== 0
+                || !(Math.abs(state.translationX) <= LOCKED_TRANSLATION_EPSILON_MM)
+                || !(Math.abs(state.translationY) <= LOCKED_TRANSLATION_EPSILON_MM))
                 throw new Error(`Native solver moved locked primitive ${primitive.id}`);
             return primitive;
         }

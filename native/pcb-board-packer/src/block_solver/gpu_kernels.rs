@@ -164,10 +164,10 @@ fn load_prim(d: &Input, i: usize, candidate: usize) -> Prim {
         v[1] = rp(v[1] + dx);
         v[2] = rp(v[2] + dy);
         v[3] = rp(v[3] + dy);
-        v[4] += dx;
-        v[5] += dx;
-        v[6] += dy;
-        v[7] += dy;
+        v[4] = rp(v[4] + dx);
+        v[5] = rp(v[5] + dx);
+        v[6] = rp(v[6] + dy);
+        v[7] = rp(v[7] + dy);
         v[8] = dx;
         v[9] = dy;
     }

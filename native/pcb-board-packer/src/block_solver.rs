@@ -1567,25 +1567,20 @@ fn rebuild_component_geometry(primitive: &mut WorkingPrimitive) {
                     .find(|placement| placement.designator == component.designator);
                 if let (Some(source), Some(target)) = (source, target) {
                     let delta_rotation = crate::geometry::subtract_rotation(target.rotate, source.rotate);
-                    let source_width = component.body_box.right - component.body_box.left;
-                    let source_height = component.body_box.bottom - component.body_box.top;
-                    let (width, height) = if delta_rotation == 90 || delta_rotation == 270 {
-                        (source_height, source_width)
-                    } else {
-                        (source_width, source_height)
-                    };
-                    component.body_box = Box2 {
-                        left: target.x - width / 2.0,
-                        right: target.x + width / 2.0,
-                        top: target.y - height / 2.0,
-                        bottom: target.y + height / 2.0,
-                    };
                     let source_origin = Point {
                         x: source.x,
                         y: source.y,
                     };
                     let dx = round_placement(target.x - source.x);
                     let dy = round_placement(target.y - source.y);
+                    // Body bounds can be offset from the footprint origin. Transform
+                    // the original bounds just like the other component geometry;
+                    // rebuilding a centered rectangle loses that authored offset.
+                    component.body_box = translate_box(
+                        &rotate_box(&component.body_box, &source_origin, delta_rotation),
+                        dx,
+                        dy,
+                    );
                     component.through_hole_boxes = Arc::new(
                         component
                             .through_hole_boxes
@@ -3782,6 +3777,59 @@ fn point_to_box_distance(p: Point, b: &Box2) -> f32 {
 #[cfg(test)]
 mod candidate_tests {
     use super::*;
+
+    #[test]
+    fn component_body_preserves_offset_on_rotation_and_translation() {
+        let (mut primitive, _, _) = usb_fixture();
+        let mut source = primitive.source_placements[0].clone();
+        source.x = 10.0;
+        source.y = -7.0;
+        source.rotate = 0;
+        primitive.source_placements = Arc::new(vec![source.clone()]);
+        let mut component = primitive.source_components[0].clone();
+        component.1.body_box = Box2 { left: 9.0, right: 13.0, top: -9.0, bottom: -6.0 };
+        primitive.source_components = Arc::new(vec![component]);
+        // Expected local bounds about the placement origin, not the body's center.
+        for (angle, local) in [
+            (0, [-1.0, 3.0, -2.0, 1.0]),
+            (90, [-1.0, 2.0, -1.0, 3.0]),
+            (180, [-3.0, 1.0, -1.0, 2.0]),
+            (270, [-2.0, 1.0, -3.0, 1.0]),
+        ] {
+            let mut target = source.clone();
+            target.x = -4.0;
+            target.y = 6.0;
+            target.rotate = angle;
+            primitive.primitive.placements = Arc::new(vec![target]);
+            rebuild_component_geometry(&mut primitive);
+            assert_eq!(primitive.components[0].1.body_box, Box2 {
+                left: -4.0 + local[0], right: -4.0 + local[1],
+                top: 6.0 + local[2], bottom: 6.0 + local[3],
+            });
+        }
+    }
+
+    #[test]
+    fn asymmetric_crystal_body_does_not_hide_clearance_violation() {
+        let (mut primitive, _, _) = usb_fixture();
+        let mut source = primitive.source_placements[0].clone();
+        source.x = 0.0;
+        source.y = 0.0;
+        source.rotate = 0;
+        primitive.source_placements = Arc::new(vec![source.clone()]);
+        let mut component = primitive.source_components[0].clone();
+        component.1.body_box = Box2 { left: -2.413, right: 2.413, top: -1.817, bottom: 1.7392 };
+        primitive.source_components = Arc::new(vec![component]);
+        source.x = -0.227;
+        source.y = -4.745;
+        source.rotate = 180;
+        primitive.primitive.placements = Arc::new(vec![source]);
+        rebuild_component_geometry(&mut primitive);
+        let crystal = primitive.components[0].1.body_box;
+        let mcu = Box2 { left: -1.5, right: 4.3025, top: -1.8315, bottom: 3.7735 };
+        let depth = overlap_depth(&mcu, &crystal, 1.125);
+        assert!((depth - 0.0285).abs() < 0.001, "missed U1-X1 clearance: {depth}");
+    }
 
     fn usb_fixture() -> (WorkingPrimitive, WorkingPrimitive, Context) {
         let json: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(

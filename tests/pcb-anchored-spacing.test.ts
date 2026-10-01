@@ -22,7 +22,19 @@ test('native transforms preserve the exact fixed pose, including sub-grid precis
     const state={primitiveId:p.id,rotation:0,translationX:0,translationY:0};
     const solution={version:7,states:[state],rank:{hardCount:0,hardSeverity:0,score:0}};
     assert.equal(applyNativeBoardPackSolution([p],solution)[0],p);
-    state.translationX=.5;
+    for(const residual of [-0.01,-0.0010000000474974513,0,0.01]) {
+        state.translationX=Math.fround(residual);
+        state.translationY=-Math.fround(residual);
+        assert.equal(applyNativeBoardPackSolution([p],solution)[0],p,
+            'accepted transform noise must not alter the authored fixed pose');
+    }
+    for(const axis of ['translationX','translationY'] as const) for(const invalid of [-0.0101,0.0101,.5,NaN,Infinity,-Infinity]) {
+        state.translationX=state.translationY=0;
+        state[axis]=invalid;
+        assert.throws(()=>applyNativeBoardPackSolution([p],solution),/moved locked primitive/);
+    }
+    state.translationX=state.translationY=0;
+    state.rotation=90;
     assert.throws(()=>applyNativeBoardPackSolution([p],solution),/moved locked primitive/);
 });
 
