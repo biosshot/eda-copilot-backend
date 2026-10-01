@@ -509,7 +509,8 @@ impl BoardPackProblem {
             return Err("board outline contains non-finite values".into());
         }
         let component_count = self.components.len();
-        let matrix_size = component_count * component_count;
+        let matrix_size = component_count.checked_mul(component_count)
+            .ok_or_else(|| "board component matrix size overflow".to_string())?;
         if self.component_pair_clearance.len() != matrix_size
             || self.component_conflict.len() != matrix_size
         {

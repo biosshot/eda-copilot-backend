@@ -49,6 +49,9 @@ test.describe('PCB board assemble adapter', () => {
         const { layout } = autoPlacePcbWithReport(fakePcbPlacementExample);
         const component = layout.components.find((item) => item.designator === 'J1') ?? layout.components[0];
         component.rotate = 0;
+        // This assertion checks origin conversion; use an exact binary value so
+        // message rounding does not depend on the auto-placer's fixture pose.
+        component.y = -8;
         component.footprint = {
             ...component.footprint,
             sourceOriginOffset: { x: 0, y: 1.25 },

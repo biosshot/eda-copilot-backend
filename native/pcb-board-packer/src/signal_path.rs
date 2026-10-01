@@ -5,11 +5,11 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 
 #[derive(Clone, Copy)]
-struct PathMetadata {
-    straight: bool,
-    priority: u8,
-    weight: f64,
-    prefer_facing_pads: bool,
+pub(crate) struct PathMetadata {
+    pub straight: bool,
+    pub priority: u8,
+    pub weight: f64,
+    pub prefer_facing_pads: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -323,7 +323,7 @@ fn unique_ordered_ports(mut ports: Vec<&PathPort>) -> Vec<&PathPort> {
     ports
 }
 
-fn path_metadata(relations: &[Relation]) -> BTreeMap<&str, PathMetadata> {
+pub(crate) fn path_metadata(relations: &[Relation]) -> BTreeMap<&str, PathMetadata> {
     let mut result = BTreeMap::new();
     for relation in relations {
         let Some(path_id) = relation.path_id.as_deref() else {

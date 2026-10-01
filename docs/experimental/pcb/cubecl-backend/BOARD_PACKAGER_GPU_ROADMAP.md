@@ -1,6 +1,8 @@
 # Board Packager: массовые вычисления на GPU
 
-Дата: 2026-09-30. **Статус: план; реализация не начата.** Документ подготовлен вместе с [Post-place / Refiner roadmap](POST_PLACE_GPU_ROADMAP.md). Выполнять последовательно: сначала Board Packager, затем Post-place / Refiner. Каждый модуль зависит от готовой общей инфраструктуры, а не от реализации второго roadmap.
+Уточнение пользователя 2026-10-01: работа возобновлена для устранения недостатков GPU pipeline. Проверять по одному проходу на тест, CPU references/замеры переиспользовать; серии медиан и три тёплых повтора ниже больше не требуются. Повторять проверку только после изменения реализации или для исправления найденной ошибки.
+
+Дата: 2026-09-30. **Статус на 2026-10-01: Реализация и оптимизация Board Packager завершены в проверенной области; по указанию пользователя переходим к Post-place / Refiner. Недостатки GPU pipeline исправлены. Полный native Telemetry ordinary + aligned ускорен с 341,976 до 162,887 с (2,10x CPU); результаты точные. Полный цикл ESPower прошёл с неизменной расстановкой. Новые замеры — по одному проходу; широкая приёмка полного TS pipeline остаётся отдельно открытой.** Ход работы и evidence — [результаты](BOARD_PACKAGER_GPU_RESULTS.md). Документ подготовлен вместе с [Post-place / Refiner roadmap](POST_PLACE_GPU_ROADMAP.md). Выполнять последовательно: сначала Board Packager, затем Post-place / Refiner. Каждый модуль зависит от готовой общей инфраструктуры, а не от реализации второго roadmap.
 
 Основа: завершённые [GPU infrastructure roadmap](GPU_INFRASTRUCTURE_ROADMAP.md), [API](GPU_INFRASTRUCTURE_API.md), [результаты](GPU_INFRASTRUCTURE_RESULTS.md). При начале реализации проверить актуальное дерево: на момент написания завершённое выделение `compute` находится в локальных изменениях поверх `6d1f9c8`, поэтому этот commit сам по себе не воспроизводит новый runtime. Сохранить исходники, addon hash и CPU/GPU baseline; чужие изменения не откатывать и не включать молча в новую работу.
 
@@ -41,7 +43,7 @@ Board score — не block score и не post-place score. Не копирова
 
 ## Выбор backend и восстановление
 
-Предлагаемый доменный переключатель — `PCB_BOARD_BACKEND=cpu|cubecl|auto`; это **новый планируемый API**, а не существующий flag. Текущие `PCB_BOARD_PACKER_THREADS`, profiling и NAPI контракт сохраняются. `cpu` не инициализирует GPU; `cubecl` не обходит guards; `auto` включает GPU только на измеренно выгодных размерах с учётом cold/ready runtime. Порог block solver не переносить автоматически. Существующий общий запрет инициализации через `PCB_BLOCK_GPU_DISABLED=1` сохраняется по [API](GPU_INFRASTRUCTURE_API.md); не заводить второй runtime ради нового имени настройки.
+Доменный переключатель — `PCB_BOARD_BACKEND=cpu|cubecl|auto`; это новый API реализации Board Packager. Текущие `PCB_BOARD_PACKER_THREADS`, profiling и NAPI контракт сохраняются. `cpu` не инициализирует GPU; `cubecl` не обходит guards; `auto` включает GPU только на измеренно выгодных размерах с учётом cold/ready runtime. Порог block solver не переносить автоматически. Существующий общий запрет инициализации через `PCB_BLOCK_GPU_DISABLED=1` сохраняется по [API](GPU_INFRASTRUCTURE_API.md); не заводить второй runtime ради нового имени настройки.
 
 Guard проверяет **весь вход текущего native board call** до поиска. Промежуточная поддержка простых плат допустима для разработки, но завершение требует реальной GPU работы на объявленном контрольном наборе, а не CPU fallback на всех сложных платах. Неподдержанный term не пропускается и не считается нулём.
 
@@ -51,38 +53,40 @@ Guard проверяет **весь вход текущего native board call*
 
 ### 1. Baseline и матрица покрытия
 
-- [ ] Прочитать root/native/PCB `AGENTS.md`, общую GPU API, весь board scorer и callers; найти существующие helpers, tests и replay прежде, чем добавлять новые.
-- [ ] Сохранить addon/source/input hashes, CPU outputs и stage timings для нескольких разных плат: Telemetry, esp32c3, ESPower; тяжёлый PortableScope использовать при наличии capture. Нужны valid references и отдельные stress/repair cases. Исторический невалидный PortableScope годится для profiling, не как доказательство качества.
+- [x] Прочитать root/native/PCB `AGENTS.md`, общую GPU API, весь board scorer и callers; найти существующие helpers, tests и replay прежде, чем добавлять новые.
+- [x] Сохранить addon/source/input hashes, CPU outputs и stage timings для нескольких разных плат: Telemetry, esp32c3, ESPower; тяжёлый PortableScope использовать при наличии capture. Нужны valid references и отдельные stress/repair cases. Исторический невалидный PortableScope годится для profiling, не как доказательство качества.
 - [ ] Измерить generation, legality, rank terms, route shortlist, Beam, joint pairs, local improve, repair, native wall и полный board stage (ordinary + aligned + выбор). Заморозить block/refiner backends и параметры.
-- [ ] Записать term/support matrix, точные исходные правила order/dedupe/rounding и ожидаемые CPU leftovers. Выбрать guard и кандидатов на общий код по данным, не по сходству названий.
+- [x] Записать term/support matrix, точные исходные правила order/dedupe/rounding и ожидаемые CPU leftovers. Выбрать guard и кандидатов на общий код по данным, не по сходству названий.
 
 **Выход:** воспроизводимые references и понимание, какую долю полного времени действительно занимает переносимая работа.
 
 ### 2. GPU evaluator на сохранённых batches
 
-- [ ] Создать доменный Engine и compact representation; перенести все активные hard/soft terms контрольного набора, legality и полные ranks. Обрабатывать и single-move, и two-move/full-state repair batches.
-- [ ] Сравнить каждый кандидат с CPU вне performance runs: geometry, hard count/severity, term scores, aggregate rank, IDs и порядок. Проверить compound/layer/outline/region/overflow/locked случаи и численные границы.
-- [ ] Проверить GPU shortlist и любые pruning с неотсечённым вариантом, chunk-size invariance, empty/small/large batches и cache invalidation. Не включать GPU по умолчанию до этих проверок.
+- [x] Создать доменный Engine и compact representation; перенести все активные hard/soft terms контрольного набора, legality и полные ranks. Обрабатывать и single-move, и two-move/full-state repair batches.
+- [x] Сравнить каждый кандидат с CPU вне performance runs: geometry, hard count/severity, term scores, aggregate rank, IDs и порядок. Проверить compound/layer/outline/region/overflow/locked случаи и численные границы.
+- [x] Проверить GPU shortlist и любые pruning с неотсечённым вариантом, chunk-size invariance, empty/small/large batches и cache invalidation. Не включать GPU по умолчанию до этих проверок.
 
 **Выход:** корректный массовый scorer с измеренными upload/dispatch/readback и памятью, без CPU полной оценки каждого production кандидата.
 
 ### 3. Полная интеграция поиска
 
-- [ ] Подключить общий доменный evaluator к Beam, legality filtering, joint pairs, local improve и repair, сохранив группировку и CPU route policy.
-- [ ] Проверить результаты после каждой стадии и весь native call, включая ordinary/aligned варианты. Отдельно измерить ускорение каждой стадии и остаточную CPU стоимость.
-- [ ] Настроить batch sizes и `auto` по cold/warm полным вызовам. Маленькие задачи должны оставаться выгодными; не менять качество/search width ради скорости.
+- [x] Подключить общий доменный evaluator к Beam, legality filtering, joint pairs, local improve и repair, сохранив группировку и CPU route policy.
+- [x] Проверить результаты после каждой стадии и весь native call, включая ordinary/aligned варианты. Отдельно измерить ускорение каждой стадии и остаточную CPU стоимость.
+- [x] Настроить batch sizes и `auto` по полным вызовам (сохранённые cold/warm baseline и один финальный проход согласно уточнению пользователя). Маленькие задачи должны оставаться выгодными; не менять качество/search width ради скорости.
+
+**Evidence 2026-10-01:** финальный addon 19,26 МБ; 20 GPU tests, 24 native/assembly integration tests, 64 GPU / 60 CPU-only Rust tests и typecheck прошли. Telemetry: 10,51 млн неизменённых оценок, 5 040 вместо 22 506 batches; CPU reference переиспользован. ESPower: все 53 компонента, `placementOk=true`, точные placements и SVG. Не повторять stress/median series ради закрытия чекбоксов; открытые пункты означают ограничения имеющегося evidence.
 
 **Выход:** ускоряется полный board solver, а не один демонстрационный kernel; фактический backend и причины fallback видны в отчёте.
 
 ### 4. Recovery, совместная работа и приёмка
 
-- [ ] Проверить disabled/no-device/unsupported/unsafe, failure внутри score и после Beam/local improve/repair, включая второй aligned call. Сравнить полный CPU replay с самостоятельным CPU запуском того же исходного входа.
-- [ ] Проверить 1/2/4 допустимых native workers, смешанное использование block → board → block в одном процессе и конкуренцию процессов/lease. Одна инициализация, независимые layouts/Engine, без oversubscription и смешивания результатов.
+- [x] Проверить disabled/no-device/unsupported/unsafe, failure внутри score и после Beam/local improve/repair, включая второй aligned call. Сравнить полный CPU replay с самостоятельным CPU запуском того же исходного входа.
+- [x] Проверить 1/2/4 допустимых native workers, смешанное использование block → board → block в одном процессе и конкуренцию процессов/lease. Одна инициализация, независимые layouts/Engine, без oversubscription и смешивания результатов.
 - [ ] Выполнить native build/tests с GPU и CPU-only, `npm test -- pcb-board`, `npm test -- pcb-block`, `npm run typecheck` и дополнительные затронутые geometry/path tests. Проверить единый release addon, размер, imports и изолированный CPU/GPU запуск.
-- [ ] Повторить точные native inputs: первый запуск и минимум три тёплых повтора, на той же машине без конкурирующей GPU нагрузки, с одинаковым CPU budget. Отдельно проверить representative full boards, `placementOk`, hard violations, inventory, locked poses, ориентации, итоговые scores и previews.
-- [ ] Записать результаты, ограничения поддержки, backend coverage, hashes и changelog; только после evidence закрыть roadmap.
+- [ ] Проверить точные native inputs одним проходом на версию, на той же машине без конкурирующей GPU нагрузки, с одинаковым CPU budget; переиспользовать сохранённые CPU references. Требование трёх тёплых повторов отменено пользователем 2026-10-01. Отдельно проверить representative full boards, `placementOk`, hard violations, inventory, locked poses, ориентации, итоговые scores и previews.
+- [x] Записать результаты, ограничения поддержки, backend coverage, hashes и changelog. Ниже сохранены ограничения приёмки; не выдавать отсутствующие проверки за выполненные.
 
-**Приёмка:** контрольные valid boards остаются valid, детерминированные результаты сохранены, все заявленные массовые стадии работают на GPU; показано устойчивое ускорение полного тяжёлого board stage и отсутствует регрессия малых `auto` задач. Конкретный множитель заранее не обещается. Если итоговое время не улучшилось, этап остаётся незавершённым с измеренным объяснением.
+**Приёмка:** контрольные valid boards остаются valid, детерминированные результаты сохранены, все заявленные массовые стадии работают на GPU; показано ускорение полного тяжёлого native board solve в согласованном одиночном замере и отсутствует регрессия малых `auto` задач. Конкретный множитель заранее не обещается. Если итоговое время не улучшилось, этап остаётся незавершённым с измеренным объяснением.
 
 ## Инструменты и артефакты
 
@@ -91,3 +95,7 @@ Guard проверяет **весь вход текущего native board call*
 Новые evidence — отдельный каталог `debugging/board-gpu-<date>/`, выводы и команды — соседний `BOARD_PACKAGER_GPU_RESULTS.md`, созданный при реализации. Не перезаписывать старые captures/references. CPU/GPU candidate validation выключена во всех замерах скорости; суммы worker times не приравнивать к wall time.
 
 Следующая задача — [Post-place / Refiner](POST_PLACE_GPU_ROADMAP.md). Не включать её kernels в этот этап ради более красивого общего ускорения платы.
+
+## Передача следующему этапу, 2026-10-01
+
+Пользователь поручил перейти к Post-place / Refiner после коммита этой работы. Открытые чекбоксы выше описывают более широкую исходную программу измерений: полное TS portfolio Telemetry, отдельный полный профиль всех мелких стадий и всю исходную регрессионную матрицу на последнем addon. Они не выполнены заново и не являются заявленными результатами. Основная реализация и выявленные недостатки закрыты; дальнейшие массовые повторения ради чекбоксов не требуются. Для следующего roadmap действуют те же один проход на тест/версию и переиспользование CPU references.

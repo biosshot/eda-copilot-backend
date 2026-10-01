@@ -1,3 +1,10 @@
+mod profile;
+#[cfg(feature = "gpu")]
+mod compact;
+#[cfg(feature = "gpu")]
+mod cubecl;
+#[cfg(feature = "gpu")]
+mod gpu_kernels;
 use crate::geometry::{
     box_center, box_corners, box_inside_polygon_board, box_outside_bounds_severity,
     boxes_overlap_depth, normalize_rotation, overlap_depth, point_in_polygon,
@@ -26,6 +33,8 @@ struct WorkingPrimitive {
     point_component_ids: Arc<Vec<Option<u32>>>,
     components: Arc<Vec<(usize, ComponentGeometry)>>,
     rotation: i32,
+    #[cfg(feature = "gpu")]
+    gpu_pose: Option<compact::Pose>,
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -123,6 +132,9 @@ struct Context {
     outside_cache: RefCell<FxHashMap<PoseKey, bool>>,
     outside_severity_cache: RefCell<FxHashMap<PoseKey, f64>>,
     joint_candidates: Arc<AtomicUsize>,
+    profile: Arc<profile::Profile>,
+    #[cfg(feature = "gpu")]
+    gpu: Option<Arc<cubecl::Control>>,
 }
 
 pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
@@ -131,10 +143,46 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
     let threads = std::env::var("PCB_BOARD_PACKER_THREADS")
         .ok().and_then(|value| value.parse::<usize>().ok())
         .unwrap_or(limit).clamp(1, limit);
+    let backend=std::env::var("PCB_BOARD_BACKEND").unwrap_or_else(|_|"auto".into());
+    if !matches!(backend.as_str(),"cpu"|"cubecl"|"auto") {return Err(format!("unsupported PCB_BOARD_BACKEND {backend}"));}
+    #[cfg(feature = "gpu")]
+    if backend=="cubecl" || (backend=="auto" && cubecl::auto_profitable(&problem,threads.min(4))) {
+        let control=match cubecl::Control::new(&problem) {
+            Ok(control)=>control,
+            Err(error)=>{
+                eprintln!("[board-backend] {}",serde_json::json!({"backend":"cpu","requested":backend,"reason":error.to_string(),"kind":error.kind}));
+                return solve_with_threads(problem,threads);
+            }
+        };
+        let original=problem.clone();
+        // GPU operations share one queue. Keep the measured host-worker budget
+        // instead of silently rejecting a GPU workload on a six-worker host.
+        let gpu_threads=if backend=="auto" {threads.min(4)}else{threads};
+        let attempt=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||solve_inner(problem,gpu_threads,Some(control.clone()))));
+        if let Some(error)=control.failure() {
+            eprintln!("[board-gpu-fallback] {}",serde_json::json!({"reason":error.to_string(),"kind":error.kind,"replay":"original board native call"}));
+            eprintln!("[board-backend] {}",serde_json::json!({"backend":"cpu","requested":backend,"reason":"gpu failure; full CPU replay"}));
+            drop(control);drop(attempt);
+            return solve_with_threads(original,threads);
+        }
+        return match attempt {
+            Ok(result)=>{if result.is_ok() {control.report();eprintln!("[board-backend] {}",serde_json::json!({"backend":if control.performed_work() {"cubecl"} else {"cpu"},"requested":backend}));}result},
+            Err(payload)=>std::panic::resume_unwind(payload),
+        };
+    }
+    if std::env::var_os("PCB_BOARD_PACKER_PROFILE").is_some() {
+        eprintln!("[board-backend] {}",serde_json::json!({"backend":"cpu","requested":backend,
+            "reason":if backend=="cpu" {"explicit CPU"}else if !cfg!(feature="gpu") {"CPU-only build"}else{"outside measured board GPU workload/thread threshold"}}));
+    }
     solve_with_threads(problem, threads)
 }
 
 fn solve_with_threads(problem: BoardPackProblem, threads: usize) -> Result<BoardPackSolution, String> {
+    solve_inner(problem,threads,#[cfg(feature = "gpu")] None)
+}
+fn solve_inner(problem: BoardPackProblem, threads: usize,
+    #[cfg(feature = "gpu")] gpu: Option<Arc<cubecl::Control>>,
+) -> Result<BoardPackSolution, String> {
     let profile = std::env::var_os("PCB_BOARD_PACKER_PROFILE").is_some();
     let started = std::time::Instant::now();
     let primitive_ids = lexical_ids(
@@ -162,6 +210,9 @@ fn solve_with_threads(problem: BoardPackProblem, threads: usize) -> Result<Board
         outside_cache: RefCell::new(FxHashMap::default()),
         outside_severity_cache: RefCell::new(FxHashMap::default()),
         joint_candidates: Arc::new(AtomicUsize::new(0)),
+        profile: profile::Profile::new(),
+        #[cfg(feature = "gpu")]
+        gpu,
     };
     let mut components_by_primitive: FxHashMap<Arc<str>, Vec<(usize, ComponentGeometry)>> =
         FxHashMap::default();
@@ -208,10 +259,14 @@ fn solve_with_threads(problem: BoardPackProblem, threads: usize) -> Result<Board
                 point_component_ids,
                 components: Arc::new(components),
                 rotation: 0,
+                #[cfg(feature = "gpu")]
+                gpu_pose: None,
             }
         })
         .collect();
     for primitive in &mut primitives {
+        #[cfg(feature = "gpu")]
+        if context.gpu.is_some() {primitive.gpu_pose=Some(compact::Pose::from_primitive(primitive));}
         if !primitive.primitive.locked {
             fit_to_bounds(primitive, &context);
         }
@@ -251,6 +306,9 @@ fn solve_with_threads(problem: BoardPackProblem, threads: usize) -> Result<Board
             outside_cache: RefCell::new(FxHashMap::default()),
             outside_severity_cache: RefCell::new(FxHashMap::default()),
             joint_candidates: context.joint_candidates.clone(),
+            profile: context.profile.clone(),
+            #[cfg(feature = "gpu")]
+            gpu: context.gpu.clone(),
         }).collect();
 
     while states.iter().any(|state| !state.remaining.is_empty()) {
@@ -298,12 +356,21 @@ fn solve_with_threads(problem: BoardPackProblem, threads: usize) -> Result<Board
         .find(|state| state.remaining.is_empty())
         .ok_or_else(|| "Rust board packer did not produce a complete state".to_string())?;
     if profile { eprintln!("[pcb-board-packer] beam {:.3}s, threads={}, hard={}, joint candidates={}", started.elapsed().as_secs_f64(), lanes.len(), best.rank.hard_count,context.joint_candidates.load(AtomicOrdering::Relaxed)); }
+    profile::checkpoint("beam",&best.placed,&context);
+    #[cfg(feature = "gpu")]
+    if let Some(gpu)=&context.gpu {gpu.checkpoint("after_beam");gpu.set_phase("local_improve");}
     let phase = std::time::Instant::now();
     let improved = local_improve(best.placed, &context, &mut lanes);
     if profile { eprintln!("[pcb-board-packer] local_improve {:.3}s", phase.elapsed().as_secs_f64()); }
+    profile::checkpoint("local_improve",&improved,&context);
+    #[cfg(feature = "gpu")]
+    if let Some(gpu)=&context.gpu {gpu.checkpoint("after_local_improve");gpu.set_phase("repair");}
     let phase = std::time::Instant::now();
     let repaired = repair_hard_violations(improved, &context, &mut lanes);
     if profile { eprintln!("[pcb-board-packer] repair {:.3}s, total {:.3}s", phase.elapsed().as_secs_f64(), started.elapsed().as_secs_f64()); }
+    profile::checkpoint("repair",&repaired,&context);
+    #[cfg(feature = "gpu")]
+    if let Some(gpu)=&context.gpu {gpu.checkpoint("after_repair");}
     let final_rank = state_rank(&repaired, &context);
     let states = repaired
         .iter()
@@ -350,6 +417,7 @@ fn solve_with_threads(problem: BoardPackProblem, threads: usize) -> Result<Board
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
+    context.profile.report();
     Ok(BoardPackSolution {
         version: context.problem.version,
         states,
@@ -412,12 +480,15 @@ fn joint_pair_states(state: &SearchState, next_index: usize, context: &Context) 
     peers.sort_by(|(a,i),(b,j)| compare_f64(b.similarity,a.similarity).then(i.cmp(j)));
     let Some((pair,peer_index))=peers.first().copied() else {return Vec::new();};
     let peer=&state.remaining[peer_index];
+    let _profile=context.profile.span(13);
     let mut anchors=cheap_candidates(next,&state.placed,state.route_penalty,context);
     // Keep one location per rotation as well as the best few overall locations.
     let mut rotations=FxHashSet::default();
     let mut extra=0;
     anchors.retain(|c| if rotations.insert(c.primitive.rotation) {true} else {extra+=1;extra<=4});
     let mut result=Vec::new();
+    #[cfg(feature = "gpu")]
+    let mut pair_moves=Vec::new();
     for first in anchors {
         for variant in orientation_variants(peer) {
             let (a,b)=if pair.a==next.primitive.id {(&pair.anchor_a,&pair.anchor_b)} else {(&pair.anchor_b,&pair.anchor_a)};
@@ -436,6 +507,8 @@ fn joint_pair_states(state: &SearchState, next_index: usize, context: &Context) 
                     let dx=(board.left-bounds.left).max(0.0)-(bounds.right-board.right).max(0.0);
                     let dy=(board.top-bounds.top).max(0.0)-(bounds.bottom-board.bottom).max(0.0);
                     translate_primitive(&mut a,dx,dy); translate_primitive(&mut b,dx,dy);
+                    #[cfg(feature = "gpu")]
+                    if context.gpu.is_some() {pair_moves.push(vec![a,b]);continue;}
                     if candidate_hard_count(&a,&state.placed,context)>0 {continue;}
                     let mut placed=state.placed.clone(); placed.push(a);
                     if candidate_hard_count(&b,&placed,context)>0 {continue;}
@@ -445,6 +518,25 @@ fn joint_pair_states(state: &SearchState, next_index: usize, context: &Context) 
                     result.push(SearchState{rank:state_rank(&placed,context),placed,remaining,route_penalty:state.route_penalty,ordinal:0});
                 }
             }
+        }
+    }
+    #[cfg(feature = "gpu")]
+    if let Some(gpu)=&context.gpu {
+        let baseline=hard_count(&state.placed,context);
+        let legality=gpu.legality(&state.placed,&pair_moves,context);
+        let mut seen=FxHashSet::default();
+        let survivors=pair_moves.into_iter().zip(legality).filter_map(|(moves,rank)| {
+            if rank.hard_count!=baseline {return None;}
+            let mut keys=moves.iter().map(primitive_key).collect::<Vec<_>>();keys.sort();
+            seen.insert(keys).then_some(moves)
+        }).collect::<Vec<_>>();
+        let rows=gpu.shortlist(&state.placed,&survivors,&vec![false;survivors.len()],16,0,context);
+        for row in rows {
+            let rank=row.rank;
+            let mut placed=state.placed.clone();placed.extend(survivors[row.index].iter().cloned());
+            let mut remaining=state.remaining.clone();
+            remaining.remove(next_index.max(peer_index));remaining.remove(next_index.min(peer_index));
+            result.push(SearchState{rank,placed,remaining,route_penalty:state.route_penalty,ordinal:0});
         }
     }
     result=dedupe_states(result); result.sort_by(compare_states);
@@ -480,6 +572,10 @@ fn local_candidates(
     lanes: &mut [Context],
 ) -> Vec<RankedCandidate> {
     let variants = orientation_variants(primitive);
+    // Select after dedupe over every orientation. Per-lane shortlist selection
+    // could discard needed candidates when identical poses occur in two lanes.
+    #[cfg(feature = "gpu")]
+    if context.gpu.is_some() {return finish_cheap_candidates(score_positions(variants.iter(),placed,0.0,context));}
     if lanes.len() == 1 || variants.len() <= 1 {
         return cheap_candidates(primitive, placed, 0.0, context);
     }
@@ -499,6 +595,46 @@ fn score_positions<'a>(
     parent_route_penalty: f64,
     context: &Context,
 ) -> Vec<RankedCandidate> {
+    #[cfg(feature = "gpu")]
+    if let Some(gpu)=&context.gpu {
+        let baseline=hard_count(placed,context);
+        let mut groups=Vec::new();let mut moves=Vec::new();
+        for variant in variants {
+            for alignment in [false,true] {
+                let start=moves.len();
+                moves.extend(position_proposals(variant,placed,context,alignment).into_iter().map(|p|vec![p]));
+                groups.push((start,moves.len(),alignment));
+            }
+        }
+        let rows=gpu.legality(placed,&moves,context);
+        let mut selected=Vec::new();
+        for (start,end,alignment) in groups {
+            let any_legal=rows[start..end].iter().any(|r|r.hard_count==baseline);
+            for index in start..end {
+                if !any_legal || rows[index].hard_count==baseline {selected.push((index,alignment));}
+            }
+        }
+        if std::env::var("PCB_BOARD_GPU_VERIFY").as_deref()==Ok("1") && std::env::var("PCB_BOARD_GPU_VERIFY_SHORTLIST").as_deref()!=Ok("1") {
+            return selected.into_iter().map(|(i,alignment)| {
+                let mut primitive=moves[i][0].clone();compact::materialize(&mut primitive);
+                RankedCandidate {primitive,rank:rows[i].clone(),route_penalty:parent_route_penalty,ordinal:0,alignment}
+            }).collect();
+        }
+        // Dedupe after each source group's legal filter, exactly as the CPU
+        // finish step does. GPU shortlist IDs are returned in generator order.
+        let mut seen=FxHashSet::default();
+        selected.retain(|&(i,_)|seen.insert(primitive_key(&moves[i][0])));
+        let survivors=selected.iter().map(|&(i,_)|moves[i].clone()).collect::<Vec<_>>();
+        let flags=selected.iter().map(|&(_,alignment)|alignment).collect::<Vec<_>>();
+        let winners=gpu.shortlist(placed,&survivors,&flags,32,16,context);
+        let candidates=winners.into_iter().map(|row| {
+            let (i,alignment)=selected[row.index];
+            let mut primitive=moves[i][0].clone();
+            compact::materialize(&mut primitive);
+            RankedCandidate {primitive,rank:row.rank,route_penalty:parent_route_penalty,ordinal:0,alignment}
+        }).collect();
+        return candidates;
+    }
     let mut candidates = Vec::new();
     for variant in variants {
         for alignment in [false,true] {
@@ -599,6 +735,7 @@ fn board_micro_route_penalty(
     placed: &[WorkingPrimitive],
     context: &Context,
 ) -> f64 {
+    let _profile = context.profile.span(12);
     let config = MicroRouteConfig::board();
     let placed_primitives: Vec<_> = placed.iter().map(|item| &item.primitive).collect();
     micro_router::candidate_penalty_cached(
@@ -618,6 +755,25 @@ fn position_candidates(
     context: &Context,
     alignment_only: bool,
 ) -> Vec<WorkingPrimitive> {
+    let candidates = position_proposals(primitive, placed, context, alignment_only);
+    let legal: Vec<_> = candidates
+        .iter()
+        .filter(|candidate| candidate_hard_count(candidate, placed, context) == 0)
+        .cloned()
+        .collect();
+    if legal.is_empty() {
+        candidates
+    } else {
+        legal
+    }
+}
+fn position_proposals(
+    primitive: &WorkingPrimitive,
+    placed: &[WorkingPrimitive],
+    context: &Context,
+    alignment_only: bool,
+) -> Vec<WorkingPrimitive> {
+    let _profile = context.profile.span(0);
     let pack_box = packing_box(primitive);
     let width = pack_box.right - pack_box.left;
     let height = pack_box.bottom - pack_box.top;
@@ -652,20 +808,15 @@ fn position_candidates(
     let mut candidates = Vec::with_capacity(centers.len());
     for center in centers {
         let mut candidate = primitive.clone();
+        #[cfg(feature = "gpu")]
+        if context.gpu.is_some() {
+            if let Some(pose)=&mut candidate.gpu_pose {pose.deferred=true;}
+        }
         move_packing_center(&mut candidate, center);
         fit_to_bounds(&mut candidate, context);
         candidates.push(candidate);
     }
-    let legal: Vec<_> = candidates
-        .iter()
-        .filter(|candidate| candidate_hard_count(candidate, placed, context) == 0)
-        .cloned()
-        .collect();
-    if legal.is_empty() {
-        candidates
-    } else {
-        legal
-    }
+    candidates
 }
 
 fn orientation_variants(primitive: &WorkingPrimitive) -> Vec<WorkingPrimitive> {
@@ -687,6 +838,15 @@ fn orientation_variants(primitive: &WorkingPrimitive) -> Vec<WorkingPrimitive> {
 }
 
 fn translate_primitive(primitive: &mut WorkingPrimitive, dx: f64, dy: f64) {
+    #[cfg(feature = "gpu")]
+    if let Some(pose) = &mut primitive.gpu_pose {
+        pose.translations.push((dx, dy));
+        if !pose.template.primitive.collision_boxes.is_empty() {pose.packing_bounds=translate_box(&pose.packing_bounds,dx,dy);}
+        if pose.deferred {
+            primitive.primitive.bbox=translate_box(&primitive.primitive.bbox,dx,dy);
+            return;
+        }
+    }
     primitive.primitive.bbox = translate_box(&primitive.primitive.bbox, dx, dy);
     for box_ in Arc::make_mut(&mut primitive.primitive.collision_boxes) {
         *box_ = translate_box(box_, dx, dy);
@@ -776,9 +936,12 @@ fn rotate_primitive(primitive: &mut WorkingPrimitive, angle: i32) {
         }
     }
     primitive.rotation = normalize_rotation(primitive.rotation + angle);
+    #[cfg(feature = "gpu")]
+    if primitive.gpu_pose.is_some() { primitive.gpu_pose = Some(compact::Pose::from_primitive(primitive)); }
 }
 
 fn state_rank(primitives: &[WorkingPrimitive], context: &Context) -> Rank {
+    let _profile = context.profile.span(2);
     let hard_count = hard_count(primitives, context);
     let hard_severity = hard_severity(primitives, context);
     Rank {
@@ -845,7 +1008,15 @@ fn repair_hard_violations(
     let max_passes = 8.max(current.len() * 6);
     for _ in 0..max_passes {
         let variants = hard_repair_variants(&current, context);
-        let ranks = if variants.len() <= 1 || lanes.len() == 1 {
+        #[cfg(feature = "gpu")]
+        let (variants,gpu_ranks)=if let Some(gpu)=&context.gpu {
+            let flags=vec![false;variants.len()];let winners=gpu.shortlist(&[],&variants,&flags,1,0,context);
+            let selected=winners.iter().map(|row|variants[row.index].clone()).collect();
+            (selected,Some(winners.into_iter().map(|row|row.rank).collect::<Vec<_>>()))
+        }else{(variants,None)};
+        #[cfg(not(feature = "gpu"))]
+        let gpu_ranks:Option<Vec<Rank>>=None;
+        let ranks = if let Some(rows)=gpu_ranks {rows} else if variants.len() <= 1 || lanes.len() == 1 {
             variants.iter().map(|variant| state_rank(variant, context)).collect::<Vec<_>>()
         } else {
             let chunk_size = variants.len().div_ceil(lanes.len());
@@ -1035,6 +1206,10 @@ fn board_score(
     let overlap_weight = if high { 1.2 } else { 1.0 };
     let edge_weight = if high { 0.4 } else { 1.0 };
     let path_primitives: Vec<_> = primitives.iter().map(|item| &item.primitive).collect();
+    let topology = {
+        let _profile = context.profile.span(11);
+        signal_path::topology_penalty(&path_primitives, &context.problem.relations)
+    };
     let scale = context.problem.soft_spacing.as_ref().map_or(1.0, |s| s.compactness_scale);
     relation_penalty(primitives, context) * relation_weight
         + hard_severity * 1_000_000.0
@@ -1046,11 +1221,12 @@ fn board_score(
         + soft_alignment_score(primitives, context)
         + edge_bias_penalty(primitives, context) * edge_weight
         + edge_place_penalty(primitives, context)
-        + signal_path::topology_penalty(&path_primitives, &context.problem.relations)
+        + topology
             * if high { 3.0 } else { 5.0 }
 }
 
 fn hard_count(primitives: &[WorkingPrimitive], context: &Context) -> usize {
+    let _profile = context.profile.span(3);
     let mut count = 0;
     for i in 0..primitives.len() {
         for j in i + 1..primitives.len() {
@@ -1082,6 +1258,7 @@ fn hard_count(primitives: &[WorkingPrimitive], context: &Context) -> usize {
 }
 
 fn hard_severity(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let _profile = context.profile.span(4);
     let mut severity = 0.0;
     for i in 0..primitives.len() {
         for j in i + 1..primitives.len() {
@@ -1108,6 +1285,7 @@ fn candidate_hard_count(
     placed: &[WorkingPrimitive],
     context: &Context,
 ) -> usize {
+    let _profile = context.profile.span(1);
     let mut count = usize::from(primitive_outside(candidate, context));
     count += usize::from(edge_place_violation(candidate, context) > 0.0);
     count += placed
@@ -1383,6 +1561,7 @@ fn constraint_violation_severity(primitive: &WorkingPrimitive, context: &Context
 }
 
 fn envelope_overlap_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let _profile = context.profile.span(6);
     let mut penalty = 0.0;
     for i in 0..primitives.len() {
         for j in i + 1..primitives.len() {
@@ -1405,6 +1584,7 @@ fn envelope_overlap_penalty(primitives: &[WorkingPrimitive], context: &Context) 
 }
 
 fn relation_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let _profile = context.profile.span(5);
     let mut penalty = 0.0;
     for relation in context.relations.iter() {
         if relation.skip {
@@ -1438,6 +1618,7 @@ fn relation_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
 }
 
 fn edge_bias_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let _profile = context.profile.span(9);
     let board_area = box_area(&context.problem.bounds).max(1.0);
     primitives
         .iter()
@@ -1459,6 +1640,7 @@ fn edge_bias_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 
 }
 
 fn edge_place_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let _profile = context.profile.span(10);
     primitives
         .iter()
         .map(|primitive| {
@@ -2497,6 +2679,8 @@ fn relevant_occupied_boxes(placed: &WorkingPrimitive, moving: &WorkingPrimitive)
         .collect()
 }
 fn packing_box(primitive: &WorkingPrimitive) -> Box2 {
+    #[cfg(feature = "gpu")]
+    if let Some(pose)=primitive.gpu_pose.as_ref().filter(|p|p.deferred) {return pose.packing_bounds;}
     union_boxes(packing_boxes(primitive))
 }
 fn inset_box(box_: &Box2, value: f64) -> Box2 {
@@ -2558,13 +2742,22 @@ fn primitive_key(primitive: &WorkingPrimitive) -> PrimitiveKey {
         .placements
         .iter()
         .zip(primitive.placement_ids.iter())
-        .map(|(placement, designator)| PlacementKey {
+        .map(|(placement, designator)| {
+            let (mut x,mut y)=(placement.x,placement.y);
+            #[cfg(feature = "gpu")]
+            if let Some(pose)=primitive.gpu_pose.as_ref().filter(|p|p.deferred) {
+                // Deferred placements are the last materialized state, whereas
+                // the template plus ordered translations is the exact origin.
+                let original=pose.template.primitive.placements.iter().find(|p|p.designator==placement.designator).unwrap();
+                x=compact::coordinate(pose,original.x,0);y=compact::coordinate(pose,original.y,1);
+            }
+            PlacementKey {
             designator: *designator,
-            x: number_key(placement.x),
-            y: number_key(placement.y),
+            x: number_key(x),
+            y: number_key(y),
             rotation: placement.rotate,
             layer: layer_key(&placement.layer),
-        })
+        }})
         .collect();
     placements.sort();
     PrimitiveKey {
@@ -2657,6 +2850,7 @@ fn compare_candidates(a: &RankedCandidate, b: &RankedCandidate) -> Ordering {
 }
 
 fn soft_spacing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let _profile = context.profile.span(7);
     let Some(spacing) = &context.problem.soft_spacing else { return 0.0; };
     if spacing.gap <= 0.0 { return 0.0; }
     let mut score = 0.0;
@@ -2687,6 +2881,7 @@ fn alignment_center(p: &WorkingPrimitive, anchor: &Option<Arc<str>>) -> Point {
 }
 
 fn soft_alignment_score(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+    let _profile = context.profile.span(8);
     let Some(s) = &context.problem.soft_alignment else { return 0.0; };
     let mut score=0.0;
     for pair in &s.pairs {
@@ -2802,9 +2997,11 @@ mod alignment_search_tests {
         let context=Context{route_cache:micro_router::BoardRouteCache::new(&problem.board_outline,problem.bounds,&MicroRouteConfig::board(),1000),
             problem:Arc::new(problem),relations:Arc::new(vec![]),hard_overlap_cache:RefCell::new(FxHashMap::default()),
             outside_cache:RefCell::new(FxHashMap::default()),outside_severity_cache:RefCell::new(FxHashMap::default()),
-            joint_candidates:Arc::new(AtomicUsize::new(0))};
+            joint_candidates:Arc::new(AtomicUsize::new(0)),profile:profile::Profile::new(),
+            #[cfg(feature = "gpu")] gpu:None};
         let remaining=primitives.into_iter().enumerate().map(|(i,p)|WorkingPrimitive{id:i as u32,source_index:i,
-            primitive:p,placement_ids:Arc::new(vec![i as u32]),point_component_ids:Arc::new(vec![]),components:Arc::new(vec![]),rotation:0}).collect();
+            primitive:p,placement_ids:Arc::new(vec![i as u32]),point_component_ids:Arc::new(vec![]),components:Arc::new(vec![]),rotation:0,
+            #[cfg(feature = "gpu")] gpu_pose:None}).collect();
         let state=SearchState{placed:vec![],remaining,rank:state_rank(&[],&context),route_penalty:0.0,ordinal:0};
         (context,state)
     }
