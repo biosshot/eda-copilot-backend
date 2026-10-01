@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type { Box, PcbComponent, Placement, PlacementTreeNode } from '#types/pcb/layout-model.ts';
 import {
     componentBox,
@@ -50,8 +51,8 @@ export function createPassiveNetIslandPrimitive(
         canRotate: true,
         bbox,
         collisionBoxes,
-        width: roundPlacement(bbox.right - bbox.left),
-        height: roundPlacement(bbox.bottom - bbox.top),
+        width: roundPlacement(fp.sub(bbox.right, bbox.left)),
+        height: roundPlacement(fp.sub(bbox.bottom, bbox.top)),
         placements: positioned.map(({ designator, x, y, rotate, layer, score }) => ({ designator, x, y, rotate, layer, score })),
         connectionPoints: connectionPointsForPlacements(components, positioned),
         children: [],
@@ -70,12 +71,12 @@ export function selectPassiveNetMainNet(components: PcbComponent[]) {
         for (const pin of component.pins) {
             const net = pin.signal_name;
             if (!net || IGNORED_MAIN_NETS.has(net.toUpperCase())) continue;
-            counts.set(net, (counts.get(net) ?? 0) + 1);
+            counts.set(net, fp.add((counts.get(net) ?? 0), 1));
         }
     }
     return [...counts.entries()]
         .filter(([, count]) => count >= 2)
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
+        .sort((a, b) => fp.sub(b[1], a[1]) || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
 }
 
 function connectionPointsForPlacements(
@@ -95,8 +96,8 @@ function connectionPointsForPlacements(
             result.push({
                 ref: `${component.designator}.${String(pin.pin_number)}`,
                 net: pin.signal_name,
-                x: roundPlacement(placement.x + offset.x),
-                y: roundPlacement(placement.y + offset.y),
+                x: roundPlacement(fp.add(placement.x, offset.x)),
+                y: roundPlacement(fp.add(placement.y, offset.y)),
             });
         }
     }

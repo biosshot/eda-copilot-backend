@@ -1,3 +1,4 @@
+import * as fp from '../../f32.ts';
 import type { PlacementInput, Placement, TargetRef, Point } from '#types/pcb/layout-model.ts';
 import { normalizeRotation } from '#utils/math.ts';
 import { samePartUuid } from '#types/lcsc.ts';
@@ -39,7 +40,7 @@ export function encodeNativePostPlaceRefineProblem(input: PlacementInput, placem
     const geometrySignature = (i: number, angle: number) => {
         const c = input.components[i];
         const rotate = (p: Point) => getLocalPointWorld({ designator: '', x: 0, y: 0, rotate: angle, layer: 'top', score: 0 }, p);
-        const round = (n: number) => Math.round(n * 1000) / 1000;
+        const round = (n: number) => fp.div(Math.round(fp.mul(n, 1000)), 1000);
         const size = angle % 180 === 0 ? [c.footprint.width, c.footprint.height] : [c.footprint.height, c.footprint.width];
         const pads = c.footprint.pads.map(p => { const q = rotate(p); return [round(q.x), round(q.y), round(angle % 180 ? p.height : p.width), round(angle % 180 ? p.width : p.height), p.shape ?? '', p.mount ?? '', round(p.drillDiameter ?? 0)].join(':'); }).sort();
         return `${round(size[0])}x${round(size[1])}|${pads.join('|')}`;
@@ -91,7 +92,7 @@ export function encodeNativePostPlaceRefineProblem(input: PlacementInput, placem
         const list = netPoints.get(pin.net) ?? []; list.push({ component: i, pad: pin.pad }); netPoints.set(pin.net, list);
     }
     const nets = [...netPoints].map(([name, points]) => ({ name, points, weight: /^(?:VBUS|VCC|VDD|VIN|BAT|AVDD|DVDD|IOVDD|ADC_AVDD|VREG|[+]\w+)/i.test(name) ? 0.25 : 1 }));
-    const hints = expandHints(input).map(h => ({ ...h, source: target(h.source), target: target(h.target), all: h.target === 'all', weight: Math.max(1, h.weight) }));
+    const hints = expandHints(input).map(h => ({ ...h, source: target(h.source), target: target(h.target), all: h.target === 'all', weight: fp.max(1, h.weight) }));
     const hierarchy: Array<{ key: string; source: RefineTarget; maxWidth?: number | null; maxHeight?: number | null; anchor?: RefineTarget; offset?: Point; maxGap?: number }> = [];
     for (const b of input.blocks) {
         const source = target({ type: 'block', block_name: b.name });
@@ -101,10 +102,10 @@ export function encodeNativePostPlaceRefineProblem(input: PlacementInput, placem
     }
     for (const m of input.modules) if (m.hardBbox) hierarchy.push({ key: `module:${m.name}:bbox`, source: { kind: 'group', members: members(canonicalModuleDesignators(input, m)) }, ...moduleBboxLimit(input, m, componentMap) });
     const route = routeLayoutProblem(input, placements, createPostPlaceRouteScoreContext(input));
-    return { version: 3, routingMetric: 'micro' as 'micro' | 'geometric', threads, padCrossingWeight: placementPadCrossingWeight(), ...postPlaceBudget(input), minDelta: Math.max(0, input.solverOptions.localImproveMinDelta),
+    return { version: 3, routingMetric: 'micro' as 'micro' | 'geometric', threads, padCrossingWeight: placementPadCrossingWeight(), ...postPlaceBudget(input), minDelta: fp.max(0, input.solverOptions.localImproveMinDelta),
         placements, components, groups, compatibility, nets, hints, hierarchy, routeProblem: route.problem,
         board: boardBox(input.board), polygon: input.board.outline.type === 'polygon' ? input.board.outline.points : [], edgeClearance: input.board.clearances.edge,
-        holes: (input.boardHoles ?? []).map(h => ({ x: h.x, y: h.y, radius: boardHoleKeepoutRadius(h) + input.board.clearances.component })),
+        holes: (input.boardHoles ?? []).map(h => ({ x: h.x, y: h.y, radius: fp.add(boardHoleKeepoutRadius(h), input.board.clearances.component) })),
         regions: (input.constraintRegions ?? []).map(r => ({ name: r.name, box: r.box, layers: r.layers, allowed: members(input.components.filter(c => r.allowBlocks.includes(c.block_name)).map(c => c.designator)) })),
         pairClearances: input.components.map(a => input.components.map(b => componentPairClearance(input, a, b))),
         paths: (input.paths ?? []).map(p => ({ id: p.id, shape: p.shape, priority: p.priority, preferFacingPads: p.preferFacingPads,

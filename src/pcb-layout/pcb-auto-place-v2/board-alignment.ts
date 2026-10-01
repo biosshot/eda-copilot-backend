@@ -1,3 +1,5 @@
+import { sinCosDegrees, cosDegrees } from '../f32.ts';
+import * as fp from '../f32.ts';
 import type { PcbComponent, Placement, PlacementInput, PlacementReport, Point } from '#types/pcb/layout-model.ts';
 import { boxCenter, boxGap, componentBox, unionBoxes } from '../pcb-auto-place/geometry.ts';
 import { minimumSpanningEdges } from '../pcb-auto-place/ratsnest.ts';
@@ -18,21 +20,21 @@ function family(c: PcbComponent): string {
     if (c.pcb.role === 'main_ic') return `IC${c.pins.length}`;
     return c.designator.match(/^[A-Za-z]+/)?.[0].toUpperCase() ?? c.pcb.role;
 }
-const area = (c: PcbComponent) => c.footprint.width * c.footprint.height;
+const area = (c: PcbComponent) => fp.mul(c.footprint.width, c.footprint.height);
 const weight = (key: string) => key.startsWith('IC') ? 4 : key === 'L' ? 3 : 1;
 function histogram(keys: string[]) {
     const result = new Map<string, number>();
-    for (const key of keys) result.set(key, (result.get(key) ?? 0) + 1);
+    for (const key of keys) result.set(key, fp.add((result.get(key) ?? 0), 1));
     return result;
 }
 function dice(a: Map<string, number>, b: Map<string, number>, weighted = false) {
     let shared = 0, total = 0;
     for (const key of new Set([...a.keys(), ...b.keys()])) {
         const w = weighted ? weight(key) : 1;
-        shared += w * Math.min(a.get(key) ?? 0, b.get(key) ?? 0);
-        total += w * ((a.get(key) ?? 0) + (b.get(key) ?? 0));
+        shared = fp.add(shared, fp.mul(w, fp.min(a.get(key) ?? 0, b.get(key) ?? 0)));
+        total = fp.add(total, fp.mul(w, (fp.add((a.get(key) ?? 0), (b.get(key) ?? 0)))));
     }
-    return total ? 2 * shared / total : 1;
+    return total ? fp.div(fp.mul(2, shared), total) : 1;
 }
 function signature(components: PcbComponent[]) {
     const nets = new Map<string, Set<PcbComponent>>();
@@ -53,12 +55,12 @@ function signature(components: PcbComponent[]) {
 }
 
 export function alignmentAnchor(components: PcbComponent[]): string | undefined {
-    const sorted = [...components].sort((a, b) => area(b) - area(a) || a.designator.localeCompare(b.designator));
+    const sorted = [...components].sort((a, b) => fp.sub(area(b), area(a)) || a.designator.localeCompare(b.designator));
     if (!sorted.length) return undefined;
-    if (sorted.length === 1 || area(sorted[0]) >= 1.5 * area(sorted[1])) return sorted[0].designator;
+    if (sorted.length === 1 || area(sorted[0]) >= fp.mul(1.5, area(sorted[1]))) return sorted[0].designator;
     // When no footprint dominates, prefer a substantial IC; otherwise the block
     // bbox center is less arbitrary than choosing one of many equal passives.
-    return sorted.find(c => c.pcb.role === 'main_ic' && area(c) >= .7 * area(sorted[0]))?.designator;
+    return sorted.find(c => c.pcb.role === 'main_ic' && area(c) >= fp.mul(.7, area(sorted[0])))?.designator;
 }
 
 export function blockSimilarity(a: PcbComponent[], b: PcbComponent[]): number {
@@ -69,14 +71,13 @@ export function blockSimilarity(a: PcbComponent[], b: PcbComponent[]): number {
     if (aa && ba) {
         const x = a.find(c => c.designator === aa)!, y = b.find(c => c.designator === ba)!;
         if (family(x) !== family(y)) return 0;
-        const dims = (c: PcbComponent) => [c.footprint.width, c.footprint.height].sort((a,b) => a-b);
+        const dims = (c: PcbComponent) => [c.footprint.width, c.footprint.height].sort((a,b) => fp.sub(a, b));
         const xd = dims(x), yd = dims(y);
-        shape = Math.min(xd[0], yd[0]) / Math.max(xd[0], yd[0], .001)
-            * Math.min(xd[1], yd[1]) / Math.max(xd[1], yd[1], .001);
+        shape = fp.div(fp.mul(fp.div(fp.min(xd[0], yd[0]), fp.max(xd[0], yd[0], .001)), fp.min(xd[1], yd[1])), fp.max(xd[1], yd[1], .001));
         if (shape < .5) return 0;
     }
     const x = signature(a), y = signature(b);
-    return .55 * dice(x.nodes, y.nodes, true) + .3 * dice(x.edges, y.edges) + .15 * shape;
+    return fp.add(fp.add(fp.mul(.55, dice(x.nodes, y.nodes, true)), fp.mul(.3, dice(x.edges, y.edges))), fp.mul(.15, shape));
 }
 
 /** Refresh bounds from postrefine poses without changing ownership or using stale
@@ -88,14 +89,14 @@ function currentRoots(input: PlacementInput, roots: PlacementPrimitive[], placem
         const poses = root.placements.map(p => ps.get(p.designator)!).filter(Boolean);
         const boxes = poses.map(p => componentBox(cs.get(p.designator)!, p));
         const bbox = unionBoxes(boxes);
-        return { ...root, placements: poses, bbox, width: bbox.right-bbox.left, height: bbox.bottom-bbox.top };
+        return { ...root, placements: poses, bbox, width: fp.sub(bbox.right, bbox.left), height: fp.sub(bbox.bottom, bbox.top) };
     });
 }
 
 /** Direction belongs to a main IC even when an inductor or resistor is the
  * largest footprint. Pin count distinguishes a core from small support ICs. */
 export function orientationAnchor(components: PcbComponent[]): PcbComponent | undefined {
-    return [...components].filter(c=>c.pcb.role==='main_ic').sort((a,b)=>b.pins.length-a.pins.length || area(b)-area(a) || a.designator.localeCompare(b.designator))[0]
+    return [...components].filter(c=>c.pcb.role==='main_ic').sort((a,b)=>b.pins.length-a.pins.length || fp.sub(area(b), area(a)) || a.designator.localeCompare(b.designator))[0]
         ?? components.find(c=>c.designator===alignmentAnchor(components));
 }
 
@@ -107,28 +108,28 @@ export function footprintOrientationOffset(a: PcbComponent, b: PcbComponent): nu
     const pattern=(c:PcbComponent)=>{
         const groups=new Map<string,Point[]>();
         for(const p of c.footprint.pads){const key=String(p.pin_number);const ps=groups.get(key)??[];ps.push(p);groups.set(key,ps);}
-        const ps=[...groups].sort(([a],[b])=>a.localeCompare(b)).map(([key,ps])=>({key,x:ps.reduce((s,p)=>s+p.x,0)/ps.length,y:ps.reduce((s,p)=>s+p.y,0)/ps.length}));
-        const cx=ps.reduce((s,p)=>s+p.x,0)/ps.length,cy=ps.reduce((s,p)=>s+p.y,0)/ps.length;
-        return ps.map(p=>({...p,x:p.x-cx,y:p.y-cy}));
+        const ps=[...groups].sort(([a],[b])=>a.localeCompare(b)).map(([key,ps])=>({key,x:fp.div(ps.reduce((s,p)=>fp.add(s, p.x),0), ps.length),y:fp.div(ps.reduce((s,p)=>fp.add(s, p.y),0), ps.length)}));
+        const cx=fp.div(ps.reduce((s,p)=>fp.add(s, p.x),0), ps.length),cy=fp.div(ps.reduce((s,p)=>fp.add(s, p.y),0), ps.length);
+        return ps.map(p=>({...p,x:fp.sub(p.x, cx),y:fp.sub(p.y, cy)}));
     };
     const ap=pattern(a),bp=pattern(b);
     if(ap.length<2 || ap.length!==bp.length || ap.some((p,i)=>p.key!==bp[i].key))return undefined;
-    const span=Math.max(...ap.map(p=>Math.hypot(p.x,p.y)),...bp.map(p=>Math.hypot(p.x,p.y)));
+    const span=fp.max(...ap.map(p=>fp.hypot(p.x, p.y)), ...bp.map(p=>fp.hypot(p.x, p.y)));
     if(span<.01)return undefined;
     const matches=[0,90,180,270].map(angle=>{
-        const t=angle*Math.PI/180,c=Math.cos(t),s=Math.sin(t);
-        const rotated=ap.map(p=>({x:p.x*c-p.y*s,y:p.x*s+p.y*c}));
+        const [s,c]=sinCosDegrees(angle);
+        const rotated=ap.map(p=>({x:fp.sub(fp.mul(p.x, c), fp.mul(p.y, s)),y:fp.add(fp.mul(p.x, s), fp.mul(p.y, c))}));
         // Libraries may choose different row spacing for the same package. Fit
         // modest positive axis scales; never permit reflection or pin remapping.
         const scale=(axis:'x'|'y')=>{
-            const from=Math.max(...rotated.map(p=>Math.abs(p[axis]))),to=Math.max(...bp.map(p=>Math.abs(p[axis])));
-            return from<.01&&to<.01?1:to/Math.max(.0001,from);
+            const from=fp.max(...rotated.map(p=>fp.abs(p[axis]))),to=fp.max(...bp.map(p=>fp.abs(p[axis])));
+            return from<.01&&to<.01?1:fp.div(to, fp.max(.0001, from));
         };
         const sx=scale('x'),sy=scale('y');
         return {angle,error:sx<.8||sx>1.25||sy<.8||sy>1.25?Infinity:
-            Math.max(...rotated.map((p,i)=>Math.hypot(p.x*sx-bp[i].x,p.y*sy-bp[i].y)))};
-    }).sort((a,b)=>a.error-b.error||a.angle-b.angle);
-    return matches[0].error<=Math.max(.05,span*.03)?matches[0].angle:undefined;
+            fp.max(...rotated.map((p,i)=>fp.hypot(fp.sub(fp.mul(p.x, sx), bp[i].x), fp.sub(fp.mul(p.y, sy), bp[i].y))))};
+    }).sort((a,b)=>fp.sub(a.error, b.error)||a.angle-b.angle);
+    return matches[0].error<=fp.max(.05, fp.mul(span, .03))?matches[0].angle:undefined;
 }
 
 export interface AlignmentPair { a: string; b: string; similarity: number; anchorA?: string; anchorB?: string;
@@ -149,7 +150,7 @@ export function findAlignmentPairs(input: PlacementInput, roots: PlacementPrimit
             orientation:oa&&ob&&offset!==undefined?{a:oa.designator,b:ob.designator,
                 offset:a.placements[0].layer==='bottom'?-offset:offset}:undefined });
     }
-    return pairs.sort((a,b) => b.similarity-a.similarity || a.a.localeCompare(b.a) || a.b.localeCompare(b.b));
+    return pairs.sort((a,b) => fp.sub(b.similarity, a.similarity) || a.a.localeCompare(b.a) || a.b.localeCompare(b.b));
 }
 export interface BoardSoftAlignment { pairs: AlignmentPair[]; weight: number; tolerance: number; orientationWeight?:number }
 export function boardAlignmentPolicy(input: PlacementInput, roots: PlacementPrimitive[]): BoardSoftAlignment {
@@ -163,10 +164,10 @@ export function boardAlignmentScore(roots: PlacementPrimitive[], policy: BoardSo
         const a=roots.find(p=>p.id===pair.a), b=roots.find(p=>p.id===pair.b);
         if(!a||!b)continue;
         const ac=center(a,pair.anchorA), bc=center(b,pair.anchorB);
-        const error=Math.max(0,Math.min(Math.abs(ac.x-bc.x),Math.abs(ac.y-bc.y))-policy.tolerance);
-        score+=policy.weight*pair.similarity*(error<=1?error*error/2:error-.5);
+        const error=fp.max(0, fp.sub(fp.min(fp.abs(fp.sub(ac.x, bc.x)), fp.abs(fp.sub(ac.y, bc.y))), policy.tolerance));
+        score = fp.add(score, fp.mul(fp.mul(policy.weight, pair.similarity), (error<=1?fp.div(fp.mul(error, error), 2):fp.sub(error, .5))));
         const angle=orientationError(a,b,pair);
-        if(angle!==undefined)score+=(policy.orientationWeight??0)*pair.similarity*(1-Math.cos(angle*Math.PI/180))/2;
+        if(angle!==undefined)score = fp.add(score, fp.div(fp.mul(fp.mul((policy.orientationWeight??0), pair.similarity), (fp.sub(1, cosDegrees(angle)))), 2));
     }
     return score;
 }
@@ -174,7 +175,7 @@ function orientationError(a:PlacementPrimitive,b:PlacementPrimitive,pair:Alignme
     const o=pair.orientation;if(!o)return undefined;
     const ap=a.placements.find(p=>p.designator===o.a),bp=b.placements.find(p=>p.designator===o.b);
     if(!ap||!bp)return undefined;
-    const angle=((ap.rotate-bp.rotate-o.offset)%360+360)%360;
+    const angle=fp.mod((fp.add(fp.mod((fp.sub(ap.rotate-bp.rotate, o.offset)), 360), 360)), 360);
     return Math.min(angle,360-angle);
 }
 function center(root: PlacementPrimitive, anchor?: string): Point {
@@ -184,7 +185,7 @@ export function alignmentErrors(roots: PlacementPrimitive[], pairs: AlignmentPai
     return pairs.map(pair => {
         const a = center(roots.find(r => r.id === pair.a)!, pair.anchorA);
         const b = center(roots.find(r => r.id === pair.b)!, pair.anchorB);
-        return { ...pair, error: Math.min(Math.abs(a.x-b.x), Math.abs(a.y-b.y)),
+        return { ...pair, error: fp.min(fp.abs(fp.sub(a.x, b.x)), fp.abs(fp.sub(a.y, b.y))),
             orientationError:orientationError(roots.find(r=>r.id===pair.a)!,roots.find(r=>r.id===pair.b)!,pair) };
     });
 }
@@ -211,15 +212,15 @@ export function boardElectricalQuality(input: PlacementInput, placements: Placem
     return {
         score:loadNativeBoardPacker().scorePostPlace({...problem,distances:[],clearances:[],fixedPenalties:[],edges:[],paths:[]}),
         lengths:problem.nets.map(net=>minimumSpanningEdges(net.points).reduce((s,[a,b])=>
-            s+Math.hypot(net.points[a].x-net.points[b].x,net.points[a].y-net.points[b].y),0)),
+            fp.add(s, fp.hypot(fp.sub(net.points[a].x, net.points[b].x), fp.sub(net.points[a].y, net.points[b].y))),0)),
     };
 }
 export function boardElectricalRegression(before: ReturnType<typeof boardElectricalQuality>, after: ReturnType<typeof boardElectricalQuality>) {
-    if(after.score>before.score+Math.min(40,.001*Math.abs(before.score)))return 'wiring score';
-    const beforeLength=before.lengths.reduce((sum,n)=>sum+n,0);
-    const afterLength=after.lengths.reduce((sum,n)=>sum+n,0);
-    if(afterLength>beforeLength+Math.max(.5,.005*beforeLength))return 'total net length';
-    if(after.lengths.some((n,i)=>n>before.lengths[i]+Math.max(.5,.25*before.lengths[i])))return 'individual net length';
+    if(after.score>fp.add(before.score, fp.min(40, fp.mul(.001, fp.abs(before.score)))))return 'wiring score';
+    const beforeLength=before.lengths.reduce((sum,n)=>fp.add(sum, n),0);
+    const afterLength=after.lengths.reduce((sum,n)=>fp.add(sum, n),0);
+    if(afterLength>fp.add(beforeLength, fp.max(.5, fp.mul(.005, beforeLength))))return 'total net length';
+    if(after.lengths.some((n,i)=>n>fp.add(before.lengths[i], fp.max(.5, fp.mul(.25, before.lengths[i])))))return 'individual net length';
     return undefined;
 }
 
@@ -243,8 +244,7 @@ export function refineBoardAlignment(input: PlacementInput, roots: PlacementPrim
     });
     const electrical = (ps: Placement[]) => boardElectricalQuality(input,ps);
     const baseElectrical = electrical(initial);
-    const objective = (ps: Placement[], rs: PlacementPrimitive[]) => globalPostPlaceScore(input, ps)
-        + boardSpacingPenalty(input, rs, spacing) + penalty(rs, pairs);
+    const objective = (ps: Placement[], rs: PlacementPrimitive[]) => fp.add(fp.add(globalPostPlaceScore(input, ps), boardSpacingPenalty(input, rs, spacing)), penalty(rs, pairs));
     let score = objective(placements, current), evaluated = 0;
     for (let pass = 0; pass < BOARD_ALIGNMENT_POLICY.passes; pass++) {
         let accepted = false;
@@ -253,33 +253,33 @@ export function refineBoardAlignment(input: PlacementInput, roots: PlacementPrim
             const ac = center(a,pair.anchorA), bc = center(b,pair.anchorB);
             let best: { ps: Placement[]; rs: PlacementPrimitive[]; score: number; axis: 'x'|'y'; shifts: number[]; perpendicularShifts: number[] } | undefined;
             for (const axis of ['x','y'] as const) {
-                const delta = bc[axis]-ac[axis];
-                if (Math.abs(delta) < .001 || Math.abs(delta) > 2*BOARD_ALIGNMENT_POLICY.maxShift) continue;
-                const axisShifts = [1,.5,.25].flatMap(fraction => [[1,0],[0,-1],[.5,-.5]].map(shares=>shares.map(s=>s*delta*fraction)));
+                const delta = fp.sub(bc[axis], ac[axis]);
+                if (fp.abs(delta) < .001 || fp.abs(delta) > fp.mul(2, BOARD_ALIGNMENT_POLICY.maxShift)) continue;
+                const axisShifts = [1,.5,.25].flatMap(fraction => [[1,0],[0,-1],[.5,-.5]].map(shares=>shares.map(s=>fp.mul(fp.mul(s, delta), fraction))));
                 // Alignment need not happen at either existing axis or exactly
                 // halfway. Pad crossings and neighbouring blocks make small
                 // changes of the shared axis meaningful. Keep the old moves and
                 // add exact shared axes across the bounded interval.
-                const grid=Math.max(.5,input.solverOptions.placementGridStep??.5);
-                for(let target=Math.min(ac[axis],bc[axis]);target<=Math.max(ac[axis],bc[axis]);target+=grid)
-                    axisShifts.push([target-ac[axis],target-bc[axis]]);
+                const grid=fp.max(.5, input.solverOptions.placementGridStep??.5);
+                for(let target=fp.min(ac[axis], bc[axis]);target<=fp.max(ac[axis], bc[axis]);target = fp.add(target, grid))
+                    axisShifts.push([fp.sub(target, ac[axis]),fp.sub(target, bc[axis])]);
                 const seenShifts=new Set<string>();
                 for (const shifts of axisShifts)
                 for (const perpendiculars of [[0,0],[-.5,-.5],[.5,.5],[-1,-1],[1,1],[0,-.5],[0,.5],[-.5,0],[.5,0],[0,-1],[0,1],[-1,0],[1,0]]) {
                     const key=[...shifts,...perpendiculars].map(n=>n.toFixed(3)).join(',');
                     if(seenShifts.has(key))continue;
                     seenShifts.add(key);
-                    if (shifts.some((d,i) => (Math.abs(d) > .00001 || perpendiculars[i] !== 0) && !movable(i===0?a:b))) continue;
+                    if (shifts.some((d,i) => (fp.abs(d) > .00001 || perpendiculars[i] !== 0) && !movable(i===0?a:b))) continue;
                     const offsets = new Map([...a.placements.map(p => [p.designator,[shifts[0],perpendiculars[0]]] as const),
                         ...b.placements.map(p => [p.designator,[shifts[1],perpendiculars[1]]] as const)]);
                     const other = axis === 'x' ? 'y' : 'x';
                     const ps = placements.map(p => offsets.get(p.designator)?.some(d=>d!==0) ? { ...p,
-                        [axis]: Math.round((p[axis]+offsets.get(p.designator)![0])*1000)/1000,
-                        [other]: Math.round((p[other]+offsets.get(p.designator)![1])*1000)/1000 } : p);
-                    if (ps.some(p => Math.hypot(p.x-baseline.get(p.designator)!.x,p.y-baseline.get(p.designator)!.y) > BOARD_ALIGNMENT_POLICY.maxShift+.001)) continue;
+                        [axis]: fp.div(Math.round(fp.mul((fp.add(p[axis], offsets.get(p.designator)![0])), 1000)), 1000),
+                        [other]: fp.div(Math.round(fp.mul((fp.add(p[other], offsets.get(p.designator)![1])), 1000)), 1000) } : p);
+                    if (ps.some(p => fp.hypot(fp.sub(p.x, baseline.get(p.designator)!.x), fp.sub(p.y, baseline.get(p.designator)!.y)) > fp.add(BOARD_ALIGNMENT_POLICY.maxShift, .001))) continue;
                     evaluated++;
                     const rs = currentRoots(input, roots, ps), next = objective(ps,rs);
-                    if (next >= (best?.score ?? score)-1e-6 || penalty(rs,pairs) >= penalty(current,pairs)-1e-6) { rejected.objective++; continue; }
+                    if (next >= fp.sub((best?.score ?? score), 1e-6) || penalty(rs,pairs) >= fp.sub(penalty(current,pairs), 1e-6)) { rejected.objective++; continue; }
                     const e = electrical(ps);
                     const regression=boardElectricalRegression(baseElectrical,e);
                     if (regression==='wiring score') { rejected.electrical++; continue; }

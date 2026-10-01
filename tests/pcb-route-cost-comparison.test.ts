@@ -203,8 +203,8 @@ test('ESPower post-processor accepts the R7/R8 swap despite a worse geometric sc
     assert.ok(move.routePenaltyAfter < move.routePenaltyBefore);
     assert.ok(move.effectiveImprovement > 0);
     const pose = (items: Placement[], id: string) => items.find(p => p.designator === id)!;
-    assert.equal(pose(result.placements, 'R7').x, pose(placements, 'R8').x);
-    assert.equal(pose(result.placements, 'R8').x, pose(placements, 'R7').x);
+    assert.ok(Math.abs(pose(result.placements, 'R7').x - pose(placements, 'R8').x) < 1e-5);
+    assert.ok(Math.abs(pose(result.placements, 'R8').x - pose(placements, 'R7').x) < 1e-5);
     for (const fixed of placements.filter(p => p.designator !== 'R7' && p.designator !== 'R8')) {
         assert.deepEqual(pose(result.placements, fixed.designator), fixed);
     }

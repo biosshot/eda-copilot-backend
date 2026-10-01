@@ -21,11 +21,11 @@ pub(super) fn emit(c: &Context, event: &str, data: Value) {
     if c.trace { eprintln!("PCB_TRACE {}", json!({"event":event,"phase":*c.trace_phase.borrow(),"data":data})); }
 }
 
-pub(super) fn row(p: &WorkingPrimitive, placed: &[WorkingPrimitive], base: f64, hard: usize, ordinal: usize, score: f64, route: f64) -> Value {
+pub(super) fn row(p: &WorkingPrimitive, placed: &[WorkingPrimitive], base: f32, hard: usize, ordinal: usize, score: f32, route: f32) -> Value {
     let distances: Vec<_> = [("C9.1", "U2.6"), ("C9.2", "U2.7")].iter().map(|(a,b)| {
         let from = p.primitive.connection_points.iter().find(|cp| cp.reference.as_ref() == *a);
         let to = placed.iter().flat_map(|q| q.primitive.connection_points.iter()).find(|cp| cp.reference.as_ref() == *b);
-        from.zip(to).map(|(a,b)| (a.x-b.x).hypot(a.y-b.y))
+        from.zip(to).map(|(a,b)| crate::numerics::hypot(a.x-b.x,a.y-b.y))
     }).collect();
     json!({"pose":p.primitive.placements,"distances":distances,"base":base,"hard":hard,"ordinal":ordinal,"score":score,"route":route})
 }
@@ -52,8 +52,8 @@ pub(super) fn candidates(c: &Context, event: &str, placed: &[WorkingPrimitive], 
     if !c.trace || !ranked.first().is_some_and(|r|is_target(&r.primitive)) { return; }
     let rows: Vec<_> = ranked.iter().map(|r|row(&r.primitive,placed,r.incremental.evaluation.score,r.hard_violations,r.ordinal,r.score,r.route_penalty)).collect();
     let nearest = rows.iter().filter(|r|r["hard"] == 0).min_by(|a,b| {
-        let sum = |r: &Value| r["distances"].as_array().unwrap().iter().map(|n|n.as_f64().unwrap_or(f64::INFINITY)).sum::<f64>();
-        compare_f64(sum(a),sum(b))
+        let sum = |r: &Value| r["distances"].as_array().unwrap().iter().map(|n|n.as_f64().map(|value| value as f32).unwrap_or(f32::INFINITY)).sum::<f32>();
+        compare_f32(sum(a),sum(b))
     }).and_then(|r|r["ordinal"].as_u64());
     let details: Vec<_> = ranked.iter().enumerate().filter(|(i,r)|*i == 0 || Some(r.ordinal as u64) == nearest).map(|(_,r)| {
         let mut ps=placed.to_vec(); ps.push(r.primitive.clone());

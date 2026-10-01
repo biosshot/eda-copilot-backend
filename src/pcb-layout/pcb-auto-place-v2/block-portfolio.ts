@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type { PlacementInput, PlacementReport } from '#types/pcb/layout-model.ts';
 import { createPlacementReport } from '../pcb-auto-place/placement-report.ts';
 import { blockPortfolioInternalScore } from './block-quality.ts';
@@ -30,7 +31,7 @@ export function choosePackedPortfolio(input: PlacementInput, candidates: Placeme
     const alignment = boardAlignmentPolicy(input,best);
     const baselineReport = createPlacementReport(input,poses(best));
     const baselineElectrical = boardElectricalQuality(input,poses(best));
-    let score = globalPostPlaceScore(input, poses(best)) + blockPortfolioInternalScore(input, best) + boardSpacingPenalty(input,best,gap) + boardAlignmentScore(best,alignment);
+    let score = fp.add(fp.add(fp.add(globalPostPlaceScore(input, poses(best)), blockPortfolioInternalScore(input, best)), boardSpacingPenalty(input,best,gap)), boardAlignmentScore(best,alignment));
     const constraints = encodeNativePostPlaceRefineProblem(input, poses(best), 1);
     const fixed = new Set(input.components.filter(c => c.pcb.fixedPlacement || c.pcb.edgeMount || c.pcb.edgePlace).map(c => c.designator));
     const baseline = new Map(poses(best).map(p => [p.designator, p]));
@@ -38,10 +39,10 @@ export function choosePackedPortfolio(input: PlacementInput, candidates: Placeme
     for (let index = 1; index < candidates.length; index++) {
         const candidate = poses(candidates[index]);
         if (candidate.some(p => fixed.has(p.designator) && ['x', 'y', 'rotate', 'layer'].some(k => p[k as keyof typeof p] !== baseline.get(p.designator)?.[k as keyof typeof p]))) continue;
-        const next = globalPostPlaceScore(input, candidate) + blockPortfolioInternalScore(input, candidates[index]) + boardSpacingPenalty(input,candidates[index],gap) + boardAlignmentScore(candidates[index],alignment);
+        const next = fp.add(fp.add(fp.add(globalPostPlaceScore(input, candidate), blockPortfolioInternalScore(input, candidates[index])), boardSpacingPenalty(input,candidates[index],gap)), boardAlignmentScore(candidates[index],alignment));
         const report = createPlacementReport(input,candidate);
         const electricalRegression = boardElectricalRegression(baselineElectrical,boardElectricalQuality(input,candidate));
-        const reason = next >= score-1e-6 ? 'score' : !report.ok ? 'geometry'
+        const reason = next >= fp.sub(score, 1e-6) ? 'score' : !report.ok ? 'geometry'
             : !alignmentHardHintsNoWorse(baselineReport,report) ? 'mandatory hint magnitude'
             : electricalRegression ? electricalRegression
             : !loadNativeBoardPacker().validatePlacementChange(constraints,candidate) ? 'native constraints' : 'accepted';
@@ -73,7 +74,7 @@ export function selectBlockPortfolio(input: PlacementInput, roots: PlacementPrim
     let current = roots;
     const alignment = boardAlignmentPolicy(input,roots);
     const gap = boardSpacingPolicy(input).gap;
-    let score = globalPostPlaceScore(input, placements(current)) + blockPortfolioInternalScore(input, current) + boardSpacingPenalty(input,current,gap) + boardAlignmentScore(current,alignment);
+    let score = fp.add(fp.add(fp.add(globalPostPlaceScore(input, placements(current)), blockPortfolioInternalScore(input, current)), boardSpacingPenalty(input,current,gap)), boardAlignmentScore(current,alignment));
     let report = createPlacementReport(input, placements(current));
     let evaluated = 0, accepted = 0;
     for (const id of ids) {
@@ -84,7 +85,7 @@ export function selectBlockPortfolio(input: PlacementInput, roots: PlacementPrim
         let bestVariant = 0, bestOffset = [0, 0];
         const variants = [owner, ...(owner.layoutAlternatives ?? [])];
         const offsets = owner.anchored ? [[0, 0]] : [[0, 0], [-grid, 0], [grid, 0], [0, -grid], [0, grid],
-            [-2 * grid, 0], [2 * grid, 0], [0, -2 * grid], [0, 2 * grid]];
+            [fp.mul(-2, grid), 0], [fp.mul(2, grid), 0], [0, fp.mul(-2, grid)], [0, fp.mul(2, grid)]];
         const inventory = owner.placements.map(p => p.designator).sort().join('|');
         for (const variant of variants) for (const [dx, dy] of offsets) {
             if (variant === owner && dx === 0 && dy === 0) continue;
@@ -92,9 +93,9 @@ export function selectBlockPortfolio(input: PlacementInput, roots: PlacementPrim
             const replacement = translatePrimitive({ ...variant, layoutAlternatives: undefined }, dx, dy);
             const candidate = replace(current, id, replacement);
             const proposed = placements(candidate);
-            const nextScore = globalPostPlaceScore(input, proposed) + blockPortfolioInternalScore(input, candidate) + boardSpacingPenalty(input,candidate,gap) + boardAlignmentScore(candidate,alignment);
+            const nextScore = fp.add(fp.add(fp.add(globalPostPlaceScore(input, proposed), blockPortfolioInternalScore(input, candidate)), boardSpacingPenalty(input,candidate,gap)), boardAlignmentScore(candidate,alignment));
             evaluated++;
-            if (nextScore >= bestScore - 1e-6) continue;
+            if (nextScore >= fp.sub(bestScore, 1e-6)) continue;
             // Check the complete board, including polygon, holes and opposite-side
             // through-hole collisions. Never trade legality for a lower wire score.
             const nextReport = createPlacementReport(input, proposed);

@@ -1,4 +1,5 @@
-use cubecl::{client::ComputeClient, server::Handle, wgpu::WgpuRuntime};
+use crate::compute::f32_runtime::PcbRuntime as WgpuRuntime;
+use cubecl::{client::ComputeClient, server::Handle};
 use std::collections::BTreeMap;
 
 /// A consumer-owned layout name and a slot local to that layout. The runtime

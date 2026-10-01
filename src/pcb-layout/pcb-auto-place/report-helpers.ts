@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type { Box, PcbBlock, PcbComponent, PcbModule, Placement, PlacementInput, Point, TargetRef } from '#types/pcb/layout-model.ts';
 import { isGroundSignalName, isPowerSignalName } from '#utils/signals.ts';
 import { boardAnchorPoint, getBox, getPadWorld, round } from './geometry.ts';
@@ -26,11 +27,11 @@ export function componentPairClearance(input: PlacementInput, a: PcbComponent, b
     const blockB = cache.componentBlock.get(b.designator) ?? null;
     let clearance = input.board.clearances.component;
     if (blockA && blockB && blocksAreRelated(cache, blockA, blockB)) {
-        clearance = Math.min(input.board.clearances.component, ...pairPlacementClearanceValues(cache, blockA, blockB));
+        clearance = fp.min(input.board.clearances.component, ...pairPlacementClearanceValues(cache, blockA, blockB));
     }
 
     if (!isTightCriticalPowerPair(input, cache, a, b, blockA, blockB)) {
-        clearance = Math.max(clearance, denseIcPairClearance(input.board.clearances.component, a, b));
+        clearance = fp.max(clearance, denseIcPairClearance(input.board.clearances.component, a, b));
     }
 
     cache.componentPair.set(key, clearance);
@@ -71,8 +72,8 @@ function sameDesignatorPair(a1: string, b1: string, a2: string, b2: string) {
 function denseIcPairClearance(baseClearance: number, a: PcbComponent, b: PcbComponent) {
     const aExtra = denseIcClearanceExtra(a, b);
     const bExtra = denseIcClearanceExtra(b, a);
-    const extra = Math.max(aExtra, bExtra);
-    return extra > 0 ? baseClearance + extra : 0;
+    const extra = fp.max(aExtra, bExtra);
+    return extra > 0 ? fp.add(baseClearance, extra) : 0;
 }
 
 function denseIcClearanceExtra(source: PcbComponent, neighbor: PcbComponent) {
@@ -81,10 +82,10 @@ function denseIcClearanceExtra(source: PcbComponent, neighbor: PcbComponent) {
     if (pinCount < 12 && source.pcb.role !== 'main_ic') return 0;
     if (pinCount < 16 && !isSignalDenseMainIc(source)) return 0;
 
-    const baseExtra = Math.min(1.5, Math.max(0.35, (pinCount - 8) * 0.035));
-    if (neighbor.pcb.role === 'decoupling_cap') return Math.min(0.55, baseExtra * 0.45);
-    if (neighbor.pcb.role === 'passive' && isMostlyPowerSupport(neighbor)) return Math.min(0.8, baseExtra * 0.6);
-    if (neighbor.pcb.role === 'passive') return Math.min(1.0, baseExtra * 0.75);
+    const baseExtra = fp.min(1.5, fp.max(0.35, fp.mul((pinCount - 8), 0.035)));
+    if (neighbor.pcb.role === 'decoupling_cap') return fp.min(0.55, fp.mul(baseExtra, 0.45));
+    if (neighbor.pcb.role === 'passive' && isMostlyPowerSupport(neighbor)) return fp.min(0.8, fp.mul(baseExtra, 0.6));
+    if (neighbor.pcb.role === 'passive') return fp.min(1.0, fp.mul(baseExtra, 0.75));
     return baseExtra;
 }
 
@@ -107,7 +108,7 @@ function denseIcPackingPadding(component: PcbComponent) {
     if (component.pcb.role === 'connector') return 0;
     if (pinCount < 12 && component.pcb.role !== 'main_ic') return 0;
     if (pinCount < 16 && !isSignalDenseMainIc(component)) return 0;
-    return Math.min(1.5, Math.max(0.35, (pinCount - 8) * 0.035));
+    return fp.min(1.5, fp.max(0.35, fp.mul((pinCount - 8), 0.035)));
 }
 
 export function blockInternalPlacementClearance(input: PlacementInput, block: PcbBlock) {
@@ -115,7 +116,7 @@ export function blockInternalPlacementClearance(input: PlacementInput, block: Pc
     const cached = cache.blockInternal.get(block.name);
     if (cached !== undefined) return cached;
 
-    const clearance = Math.min(input.board.clearances.component, ...blockPlacementClearance(block));
+    const clearance = fp.min(input.board.clearances.component, ...blockPlacementClearance(block));
     cache.blockInternal.set(block.name, clearance);
     return clearance;
 }
@@ -168,7 +169,7 @@ function pairPlacementClearanceValues(cache: ClearanceCache, a: PcbBlock, b: Pcb
 
 function blockPlacementClearance(block: PcbBlock) {
     return typeof block.placementClearance === 'number' && Number.isFinite(block.placementClearance)
-        ? [Math.max(0, block.placementClearance)]
+        ? [fp.max(0, block.placementClearance)]
         : [];
 }
 
@@ -214,29 +215,29 @@ export function estimateBlockBounds(
 
     const clearance = blockInternalPlacementClearance(input, block);
     const inflated = components.map((component) => ({
-        width: component.footprint.width + clearance + denseIcPackingPadding(component),
-        height: component.footprint.height + clearance + denseIcPackingPadding(component),
+        width: fp.add(fp.add(component.footprint.width, clearance), denseIcPackingPadding(component)),
+        height: fp.add(fp.add(component.footprint.height, clearance), denseIcPackingPadding(component)),
     }));
-    const area = inflated.reduce((sum, size) => sum + size.width * size.height, 0);
-    const largestWidth = Math.max(...inflated.map((size) => size.width));
-    const largestHeight = Math.max(...inflated.map((size) => size.height));
+    const area = inflated.reduce((sum, size) => fp.add(sum, fp.mul(size.width, size.height)), 0);
+    const largestWidth = fp.max(...inflated.map((size) => size.width));
+    const largestHeight = fp.max(...inflated.map((size) => size.height));
     const aspectRatio = block.role === 'connector' ? 2.2 : block.role === 'mcu' ? 1.2 : 1.45;
     const packingFactor = components.length <= 2 ? 1.35 : components.length <= 5 ? 1.7 : components.length <= 12 ? 2.15 : 2.6;
-    const estimatedArea = Math.max(area * packingFactor, largestWidth * largestHeight);
-    const width = Math.max(Math.sqrt(estimatedArea * aspectRatio), largestWidth);
-    const height = Math.max(Math.sqrt(estimatedArea / aspectRatio), largestHeight);
+    const estimatedArea = fp.max(fp.mul(area, packingFactor), fp.mul(largestWidth, largestHeight));
+    const width = fp.max(fp.sqrt(fp.mul(estimatedArea, aspectRatio)), largestWidth);
+    const height = fp.max(fp.sqrt(fp.div(estimatedArea, aspectRatio)), largestHeight);
 
     return {
         width: round(width),
         height: round(height),
-        area: round(width * height),
+        area: round(fp.mul(width, height)),
     };
 }
 
 export function blockBboxLimit(input: PlacementInput, block: PcbBlock, componentsByDesignator: Map<string, PcbComponent>) {
     const estimate = estimateBlockBounds(input, block, componentsByDesignator);
-    const scaleWidth = block.maxBboxScale ? estimate.width * block.maxBboxScale : null;
-    const scaleHeight = block.maxBboxScale ? estimate.height * block.maxBboxScale : null;
+    const scaleWidth = block.maxBboxScale ? fp.mul(estimate.width, block.maxBboxScale) : null;
+    const scaleHeight = block.maxBboxScale ? fp.mul(estimate.height, block.maxBboxScale) : null;
     return {
         maxWidth: minDefined(scaleWidth, block.maxBboxWidth),
         maxHeight: minDefined(scaleHeight, block.maxBboxHeight),
@@ -247,8 +248,8 @@ export function familyBboxLimit(input: PlacementInput, parent: PcbBlock, compone
     const familyDesignators = familyBlockDesignators(input, parent);
     const familyBlock = { ...parent, component_designators: familyDesignators };
     const estimate = estimateBlockBounds(input, familyBlock, componentsByDesignator);
-    const scaleWidth = parent.familyMaxBboxScale ? estimate.width * parent.familyMaxBboxScale : null;
-    const scaleHeight = parent.familyMaxBboxScale ? estimate.height * parent.familyMaxBboxScale : null;
+    const scaleWidth = parent.familyMaxBboxScale ? fp.mul(estimate.width, parent.familyMaxBboxScale) : null;
+    const scaleHeight = parent.familyMaxBboxScale ? fp.mul(estimate.height, parent.familyMaxBboxScale) : null;
     return {
         maxWidth: minDefined(scaleWidth, parent.familyMaxWidth),
         maxHeight: minDefined(scaleHeight, parent.familyMaxHeight),
@@ -285,17 +286,17 @@ export function designatorsBox(
     });
     if (boxes.length === 0) return null;
     return {
-        left: Math.min(...boxes.map((box) => box.left)),
-        right: Math.max(...boxes.map((box) => box.right)),
-        top: Math.min(...boxes.map((box) => box.top)),
-        bottom: Math.max(...boxes.map((box) => box.bottom)),
+        left: fp.min(...boxes.map((box) => box.left)),
+        right: fp.max(...boxes.map((box) => box.right)),
+        top: fp.min(...boxes.map((box) => box.top)),
+        bottom: fp.max(...boxes.map((box) => box.bottom)),
     };
 }
 
 export function pointToBoxGap(point: Point, box: Box) {
-    const dx = point.x < box.left ? box.left - point.x : point.x > box.right ? point.x - box.right : 0;
-    const dy = point.y < box.top ? box.top - point.y : point.y > box.bottom ? point.y - box.bottom : 0;
-    return Math.hypot(dx, dy);
+    const dx = point.x < box.left ? fp.sub(box.left, point.x) : point.x > box.right ? fp.sub(point.x, box.right) : 0;
+    const dy = point.y < box.top ? fp.sub(box.top, point.y) : point.y > box.bottom ? fp.sub(point.y, box.bottom) : 0;
+    return fp.hypot(dx, dy);
 }
 
 export function resolveTargetPoint(
@@ -319,7 +320,7 @@ export function resolveTargetPoint(
     }
     if (target.type === 'block') {
         const box = blockBox(input, target.block_name, placements, componentsByDesignator, currentComponent, currentPlacement);
-        return box ? { x: (box.left + box.right) / 2, y: (box.top + box.bottom) / 2 } : null;
+        return box ? { x: fp.div((fp.add(box.left, box.right)), 2), y: fp.div((fp.add(box.top, box.bottom)), 2) } : null;
     }
     return null;
 }
@@ -353,8 +354,8 @@ export function resolveBlockAnchorPoint(
     const point = resolveTargetPoint(input, block.anchor, placements, componentsByDesignator);
     if (!point) return null;
     return {
-        x: point.x + (block.anchorOffset?.x ?? 0),
-        y: point.y + (block.anchorOffset?.y ?? 0),
+        x: fp.add(point.x, (block.anchorOffset?.x ?? 0)),
+        y: fp.add(point.y, (block.anchorOffset?.y ?? 0)),
     };
 }
 
@@ -375,10 +376,10 @@ export function blockBox(
 
     if (boxes.length === 0) return null;
     return {
-        left: Math.min(...boxes.map((box) => box.left)),
-        right: Math.max(...boxes.map((box) => box.right)),
-        top: Math.min(...boxes.map((box) => box.top)),
-        bottom: Math.max(...boxes.map((box) => box.bottom)),
+        left: fp.min(...boxes.map((box) => box.left)),
+        right: fp.max(...boxes.map((box) => box.right)),
+        top: fp.min(...boxes.map((box) => box.top)),
+        bottom: fp.max(...boxes.map((box) => box.bottom)),
     };
 }
 
@@ -409,8 +410,8 @@ export function canonicalModuleDesignators(input: PlacementInput, module: PcbMod
 export function moduleBboxLimit(input: PlacementInput, module: PcbModule, componentsByDesignator: Map<string, PcbComponent>) {
     const pseudoBlock = modulePseudoBlock(input, module);
     const estimate = estimateBlockBounds(input, pseudoBlock, componentsByDesignator);
-    const scaleWidth = module.maxBboxScale ? estimate.width * module.maxBboxScale : null;
-    const scaleHeight = module.maxBboxScale ? estimate.height * module.maxBboxScale : null;
+    const scaleWidth = module.maxBboxScale ? fp.mul(estimate.width, module.maxBboxScale) : null;
+    const scaleHeight = module.maxBboxScale ? fp.mul(estimate.height, module.maxBboxScale) : null;
     return {
         estimate,
         maxWidth: minDefined(scaleWidth, module.maxWidth),
@@ -431,5 +432,5 @@ function modulePseudoBlock(input: PlacementInput, module: PcbModule): PcbBlock {
 
 function minDefined(...values: Array<number | null | undefined>) {
     const defined = values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0);
-    return defined.length > 0 ? Math.min(...defined) : null;
+    return defined.length > 0 ? fp.min(...defined) : null;
 }

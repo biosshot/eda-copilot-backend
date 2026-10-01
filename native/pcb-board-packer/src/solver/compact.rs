@@ -16,7 +16,7 @@ pub(super) struct Template {
 #[derive(Clone)]
 pub(super) struct Pose {
     pub template: Arc<Template>,
-    pub translations: SmallVec<[(f64, f64); 4]>,
+    pub translations: SmallVec<[(f32, f32); 4]>,
     pub deferred: bool,
     pub packing_bounds: crate::geometry::Box2,
 }
@@ -39,20 +39,20 @@ pub(super) fn materialize(p: &mut WorkingPrimitive) {
     p.gpu_pose = Some(Pose { deferred: false, ..pose });
 }
 
-pub(super) fn coordinate(pose: &Pose, mut value: f64, axis: usize) -> f64 {
+pub(super) fn coordinate(pose: &Pose, mut value: f32, axis: usize) -> f32 {
     for &(x,y) in &pose.translations { value = crate::geometry::round_placement(value + if axis==0 {x}else{y}); }
     value
 }
 
 impl Template {
-    pub fn key(&self) -> Vec<u64> {
+    pub fn key(&self) -> Vec<u32> {
         let p=&self.primitive;
-        let mut key=vec![self.id as u64,p.collision_boxes.len() as u64,self.components.len() as u64];
+        let mut key=vec![self.id as u32,p.collision_boxes.len() as u32,self.components.len() as u32];
         let mut box_key=|b:crate::geometry::Box2| {key.extend([b.left.to_bits(),b.right.to_bits(),b.top.to_bits(),b.bottom.to_bits()]);};
         box_key(p.bbox);for b in p.collision_boxes.iter() {box_key(*b);}
         for (_,c) in self.components.iter() {box_key(c.body_box);for b in c.through_hole_boxes.iter() {box_key(*b);}}
         for q in p.connection_points.iter() {key.extend([q.x.to_bits(),q.y.to_bits()]);}
-        for q in p.placements.iter() {key.extend([q.x.to_bits(),q.y.to_bits(),q.rotate as u64]);}
+        for q in p.placements.iter() {key.extend([q.x.to_bits(),q.y.to_bits(),q.rotate as u32]);}
         for q in p.path_ports.iter() {key.extend([q.x.to_bits(),q.y.to_bits(),q.normal.x.to_bits(),q.normal.y.to_bits()]);}
         key
     }

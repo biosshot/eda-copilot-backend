@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type { Box, PcbBlock, PcbComponent, PcbModule, Placement, PlacementGraphDiagnostic, PlacementInput, PlacementReport, Point } from '#types/pcb/layout-model.ts';
 import { boardBox, boardHoleKeepoutRadius, boxClearanceGap, boxGap, boxPointGap, componentPairCollisionBoxPairs, componentCollisionBoxes, dist, distanceToEdge, GEOMETRY_EPSILON, getBox, getPadWorld, PLACEMENT_EPSILON, round } from './geometry.ts';
 import { componentOutsideBoard } from './fixed.ts';
@@ -38,7 +39,7 @@ export function createPlacementReport(input: PlacementInput, placements: Placeme
     const occupancyDiagnostics = input.components.filter((component) =>
         component.footprint.bodyBoxSource === 'silk'
         && !component.pcb.occupiedAreas
-        && component.footprint.width * component.footprint.height >= 100)
+        && fp.mul(component.footprint.width, component.footprint.height) >= 100)
         .map((component) => ({ severity: 'warning' as const, code: 'inferred_silkscreen_occupancy',
             nodeId: `component:${component.designator}`,
             message: `${component.designator}: occupied body was inferred from footprint silkscreen; verify which side the physical body occupies or set component occupancy explicitly.` }));
@@ -55,16 +56,15 @@ export function createPlacementReport(input: PlacementInput, placements: Placeme
         const placement = placementByDesignator.get(component.designator);
         if (!placement) continue;
         if (component.pcb.fixedPlacement !== undefined) continue;
-
         const box = getBox(component, placement);
         if (componentOutsideBoard(input, component, box)) {
             outsideBoard.push({ designator: component.designator, box, board });
         }
 
         for (const hole of input.boardHoles ?? []) {
-            const required = boardHoleKeepoutRadius(hole) + input.board.clearances.component;
+            const required = fp.add(boardHoleKeepoutRadius(hole), input.board.clearances.component);
             const gap = boxPointGap(box, hole);
-            if (gap + PLACEMENT_EPSILON < required) {
+            if (fp.add(gap, PLACEMENT_EPSILON) < required) {
                 boardHoleViolations.push({
                     designator: component.designator,
                     hole: hole.name,
@@ -76,7 +76,7 @@ export function createPlacementReport(input: PlacementInput, placements: Placeme
 
         for (const region of input.constraintRegions ?? []) {
             if (region.allowBlocks.includes(component.block_name)) continue;
-            const overlap = Math.max(0, ...region.layers.flatMap(layer =>
+            const overlap = fp.max(0, ...region.layers.flatMap(layer =>
                 componentCollisionBoxes(component, placement, layer).map(box => boxOverlapDepth(box, region.box))));
             if (overlap > 0) {
                 constraintRegionViolations.push({
@@ -106,9 +106,9 @@ export function createPlacementReport(input: PlacementInput, placements: Placeme
 
             const boxPairs = componentPairCollisionBoxPairs(a, aPlacement, b, bPlacement);
             if (boxPairs.length === 0) continue;
-            const gap = Math.min(...boxPairs.map((pair) => boxClearanceGap(pair.a, pair.b)));
+            const gap = fp.min(...boxPairs.map((pair) => boxClearanceGap(pair.a, pair.b)));
             const required = componentPairClearance(input, a, b);
-            if (gap + PLACEMENT_EPSILON < required) {
+            if (fp.add(gap, PLACEMENT_EPSILON) < required) {
                 overlapsReport.push({ a: a.designator, b: b.designator, gap: round(gap), required });
             }
         }
@@ -149,8 +149,8 @@ function createSignalPathReports(input: PlacementInput, placements: Placement[])
             if (target) ports.push({ ...target, pathId: path.id, order: segment.index * 2 + 1, ref: formatPathPin(segment.target.designator, segment.target.pin_number), role: segment.index === path.segments.length - 1 ? 'target' : 'entry' });
             const distance = source && target ? round(dist(source, target)) : null;
             const withinConstraints = distance !== null
-                && (segment.minDistance === undefined || distance + PLACEMENT_EPSILON >= segment.minDistance)
-                && (segment.maxDistance === undefined || distance <= segment.maxDistance + PLACEMENT_EPSILON);
+                && (segment.minDistance === undefined || fp.add(distance, PLACEMENT_EPSILON) >= segment.minDistance)
+                && (segment.maxDistance === undefined || distance <= fp.add(segment.maxDistance, PLACEMENT_EPSILON));
             return {
                 index: segment.index,
                 source: formatPathPin(segment.source.designator, segment.source.pin_number),
@@ -189,11 +189,11 @@ function createSignalPathReports(input: PlacementInput, placements: Placement[])
             if (!component || !placement) return null;
             const point = getPadWorld(component, placement, pinNumber);
             if (!point) return null;
-            const vector = { x: point.x - placement.x, y: point.y - placement.y };
-            const length = Math.hypot(vector.x, vector.y);
+            const vector = { x: fp.sub(point.x, placement.x), y: fp.sub(point.y, placement.y) };
+            const length = fp.hypot(vector.x, vector.y);
             return {
                 ...point,
-                normal: length > 0.000001 ? { x: vector.x / length, y: vector.y / length } : { x: 0, y: 0 },
+                normal: length > 0.000001 ? { x: fp.div(vector.x, length), y: fp.div(vector.y, length) } : { x: 0, y: 0 },
             };
         }
     });
@@ -204,9 +204,9 @@ function formatPathPin(designator: string, pinNumber: string | number) {
 }
 
 function boxOverlapDepth(a: Box, b: Box) {
-    const x = Math.min(a.right - b.left, b.right - a.left);
-    const y = Math.min(a.bottom - b.top, b.bottom - a.top);
-    return Math.max(0, Math.min(x, y));
+    const x = fp.min(fp.sub(a.right, b.left), fp.sub(b.right, a.left));
+    const y = fp.min(fp.sub(a.bottom, b.top), fp.sub(b.bottom, a.top));
+    return fp.max(0, fp.min(x, y));
 }
 
 function createModuleReports(input: PlacementInput, placements: Placement[]): PlacementReport['moduleReports'] {
@@ -218,9 +218,9 @@ function createModuleReports(input: PlacementInput, placements: Placement[]): Pl
         const box = designatorsBox([...designators], placementByDesignator, componentsByDesignator);
         if (!box) return [];
 
-        const width = box.right - box.left;
-        const height = box.bottom - box.top;
-        const area = width * height;
+        const width = fp.sub(box.right, box.left);
+        const height = fp.sub(box.bottom, box.top);
+        const area = fp.mul(width, height);
         const limitViolations = moduleLimitViolations(input, module, box, componentsByDesignator);
 
         return [{
@@ -271,7 +271,7 @@ function createHintViolationReport(input: PlacementInput, placements: Placement[
                 }
 
                 const actual = boxClearanceGap(source, target);
-                if (rule.min !== undefined && actual + PLACEMENT_EPSILON < rule.min) {
+                if (rule.min !== undefined && fp.add(actual, PLACEMENT_EPSILON) < rule.min) {
                     violations.push({ hint, actual: round(actual), expected: `>= ${rule.min}mm clearance` });
                 }
             }
@@ -322,12 +322,12 @@ function createBlockReports(input: PlacementInput, placements: Placement[]): Pla
         if (!box) return [];
 
         const estimate = estimateBlockBounds(input, block, componentsByDesignator);
-        const width = box.right - box.left;
-        const height = box.bottom - box.top;
-        const area = width * height;
-        const widthRatio = estimate.width > 0 ? width / estimate.width : 1;
-        const heightRatio = estimate.height > 0 ? height / estimate.height : 1;
-        const areaRatio = estimate.area > 0 ? area / estimate.area : 1;
+        const width = fp.sub(box.right, box.left);
+        const height = fp.sub(box.bottom, box.top);
+        const area = fp.mul(width, height);
+        const widthRatio = estimate.width > 0 ? fp.div(width, estimate.width) : 1;
+        const heightRatio = estimate.height > 0 ? fp.div(height, estimate.height) : 1;
+        const areaRatio = estimate.area > 0 ? fp.div(area, estimate.area) : 1;
         const limitViolations = blockLimitViolations(input, block, box, placementByDesignator, componentsByDesignator);
 
         return [{
@@ -357,20 +357,20 @@ function blockLimitViolations(
     componentsByDesignator: Map<string, PcbComponent>,
 ) {
     const violations: string[] = [];
-    const width = box.right - box.left;
-    const height = box.bottom - box.top;
+    const width = fp.sub(box.right, box.left);
+    const height = fp.sub(box.bottom, box.top);
     const blockLimit = blockBboxLimit(input, block, componentsByDesignator);
-    if (blockLimit.maxWidth && width > blockLimit.maxWidth + GEOMETRY_EPSILON) {
+    if (blockLimit.maxWidth && width > fp.add(blockLimit.maxWidth, GEOMETRY_EPSILON)) {
         violations.push(`block width ${round(width)}mm > ${round(blockLimit.maxWidth)}mm`);
     }
-    if (blockLimit.maxHeight && height > blockLimit.maxHeight + GEOMETRY_EPSILON) {
+    if (blockLimit.maxHeight && height > fp.add(blockLimit.maxHeight, GEOMETRY_EPSILON)) {
         violations.push(`block height ${round(height)}mm > ${round(blockLimit.maxHeight)}mm`);
     }
 
     if (block.anchor && block.maxAnchorGap) {
         const target = resolveBlockAnchorPoint(input, block, placements, componentsByDesignator);
         const gap = target ? pointToBoxGap(target, box) : null;
-        if (gap !== null && gap > block.maxAnchorGap + GEOMETRY_EPSILON) {
+        if (gap !== null && gap > fp.add(block.maxAnchorGap, GEOMETRY_EPSILON)) {
             violations.push(`anchor gap ${round(gap)}mm > ${round(block.maxAnchorGap)}mm`);
         }
     }
@@ -378,12 +378,12 @@ function blockLimitViolations(
     const familyLimit = familyBboxLimit(input, block, componentsByDesignator);
     const familyBoxValue = familyBox(input, block, placements, componentsByDesignator);
     if (familyBoxValue && (familyLimit.maxWidth || familyLimit.maxHeight)) {
-        const familyWidth = familyBoxValue.right - familyBoxValue.left;
-        const familyHeight = familyBoxValue.bottom - familyBoxValue.top;
-        if (familyLimit.maxWidth && familyWidth > familyLimit.maxWidth + GEOMETRY_EPSILON) {
+        const familyWidth = fp.sub(familyBoxValue.right, familyBoxValue.left);
+        const familyHeight = fp.sub(familyBoxValue.bottom, familyBoxValue.top);
+        if (familyLimit.maxWidth && familyWidth > fp.add(familyLimit.maxWidth, GEOMETRY_EPSILON)) {
             violations.push(`family width ${round(familyWidth)}mm > ${round(familyLimit.maxWidth)}mm`);
         }
-        if (familyLimit.maxHeight && familyHeight > familyLimit.maxHeight + GEOMETRY_EPSILON) {
+        if (familyLimit.maxHeight && familyHeight > fp.add(familyLimit.maxHeight, GEOMETRY_EPSILON)) {
             violations.push(`family height ${round(familyHeight)}mm > ${round(familyLimit.maxHeight)}mm`);
         }
     }
@@ -398,14 +398,14 @@ function moduleLimitViolations(
     componentsByDesignator: Map<string, PcbComponent>,
 ) {
     const violations: string[] = [];
-    const width = box.right - box.left;
-    const height = box.bottom - box.top;
+    const width = fp.sub(box.right, box.left);
+    const height = fp.sub(box.bottom, box.top);
     const limit = moduleBboxLimit(input, module, componentsByDesignator);
 
-    if (limit.maxWidth && width > limit.maxWidth + GEOMETRY_EPSILON) {
+    if (limit.maxWidth && width > fp.add(limit.maxWidth, GEOMETRY_EPSILON)) {
         violations.push(`module width ${round(width)}mm > ${round(limit.maxWidth)}mm`);
     }
-    if (limit.maxHeight && height > limit.maxHeight + GEOMETRY_EPSILON) {
+    if (limit.maxHeight && height > fp.add(limit.maxHeight, GEOMETRY_EPSILON)) {
         violations.push(`module height ${round(height)}mm > ${round(limit.maxHeight)}mm`);
     }
 

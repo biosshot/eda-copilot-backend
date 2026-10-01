@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { f32ScoreTolerance } from './helpers/f32.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
@@ -24,11 +25,11 @@ test('internal IC segment ignores only its own IC pads; every foreign pad still 
         distances:[], clearances:[], fixedPenalties:[], edges:[], paths:[],
     };
     const baseline = addon.scorePostPlace({...problem,routingObstacles:[]});
-    assert.equal(addon.scorePostPlace(problem)-baseline, 360);
+    assert.ok(Math.abs(addon.scorePostPlace(problem)-baseline-360) <= f32ScoreTolerance(addon.scorePostPlace(problem),baseline));
     problem.nets[0].internalOwners = ['U1',null];
-    assert.equal(addon.scorePostPlace(problem)-baseline, 720, 'external line still sees unrelated IC pads');
+    assert.ok(Math.abs(addon.scorePostPlace(problem)-baseline-720) <= f32ScoreTolerance(addon.scorePostPlace(problem),baseline), 'external line still sees unrelated IC pads');
     problem.routingObstacles!.push(problem.routingObstacles![2]);
-    assert.equal(addon.scorePostPlace(problem)-baseline, 720, 'duplicate physical pad is charged once');
+    assert.ok(Math.abs(addon.scorePostPlace(problem)-baseline-720) <= f32ScoreTolerance(addon.scorePostPlace(problem),baseline), 'duplicate physical pad is charged once');
 });
 
 const input = (): PlacementInput => JSON.parse(readFileSync(new URL('./fixtures/block-placement/Telemetry/input.json', import.meta.url),'utf8'));

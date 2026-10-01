@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type {
     Box,
     Layer,
@@ -114,9 +115,9 @@ function solveIsland(
         scope: island.ref ?? island.id,
         placements: placements.map(({ designator, x, y, rotate, layer, score }) => ({ designator, x, y, rotate, layer, score })),
         bbox,
-        width: roundPlacement(bbox.right - bbox.left),
-        height: roundPlacement(bbox.bottom - bbox.top),
-        area: roundPlacement((bbox.right - bbox.left) * (bbox.bottom - bbox.top)),
+        width: roundPlacement(fp.sub(bbox.right, bbox.left)),
+        height: roundPlacement(fp.sub(bbox.bottom, bbox.top)),
+        area: roundPlacement(fp.mul((fp.sub(bbox.right, bbox.left)), (fp.sub(bbox.bottom, bbox.top)))),
         score: roundPlacement(score),
         diagnostics,
     };
@@ -126,8 +127,8 @@ function solveCapCluster(island: IslandNode, components: PcbComponent[], input: 
     const axis = island.data.axis === 'x' || island.data.axis === 'y' ? island.data.axis : null;
     const maxRows = island.data.maxRows === 1 || island.data.maxRows === 2 ? island.data.maxRows : 2;
     const topology = island.data.topology === 'center_power_bus' ? 'center_power_bus' : 'edge_bus';
-    const gap = typeof island.data.gap === 'number' ? Math.max(island.data.gap, clearance) : clearance;
-    const rowGap = typeof island.data.rowGap === 'number' ? Math.max(island.data.rowGap, clearance) : gap;
+    const gap = typeof island.data.gap === 'number' ? fp.max(island.data.gap, clearance) : clearance;
+    const rowGap = typeof island.data.rowGap === 'number' ? fp.max(island.data.rowGap, clearance) : gap;
     const axes: Array<'x' | 'y'> = axis ? [axis] : ['x', 'y'];
     const rotations = normalizedRotations(components[0]);
     const variants: CandidatePlacement[][] = [];
@@ -137,10 +138,10 @@ function solveCapCluster(island: IslandNode, components: PcbComponent[], input: 
         for (let rows = 1; rows <= maxRows; rows += 1) {
             const maxPerRow = typeof island.data.maxPerRow === 'number'
                 ? Math.max(1, Math.floor(island.data.maxPerRow))
-                : Math.ceil(components.length / rows);
-            const actualRows = Math.ceil(components.length / maxPerRow);
+                : Math.ceil(fp.div(components.length, rows));
+            const actualRows = Math.ceil(fp.div(components.length, maxPerRow));
             if (actualRows > maxRows) continue;
-            if (topology === 'center_power_bus' && rows === 1 && maxRows >= 2 && Math.ceil(components.length / maxPerRow) >= 2) {
+            if (topology === 'center_power_bus' && rows === 1 && maxRows >= 2 && Math.ceil(fp.div(components.length, maxPerRow)) >= 2) {
                 // a two-row center_power_bus variant will be generated at rows === 2
                 continue;
             }
@@ -172,7 +173,7 @@ function solveBypass(island: IslandNode, input: PlacementInput, components: PcbC
         return solveCapCluster({ ...island, data: { ...island.data, ...promoted } }, components, input, grid, clearance, _clearanceResolver);
     }
     const axis = island.data.axis === 'x' || island.data.axis === 'y' ? island.data.axis : chooseCompactAxis(components);
-    const gap = typeof island.data.gap === 'number' ? Math.max(island.data.gap, clearance) : clearance;
+    const gap = typeof island.data.gap === 'number' ? fp.max(island.data.gap, clearance) : clearance;
     const targetNet = resolveTargetNet(island, input);
     const explicitRotate = typeof island.data.rotate === 'number' ? normalizeRotation(island.data.rotate) : null;
     const rotate = explicitRotate ?? (targetNet ? bestBypassRotation(components, axis, targetNet) : bestLineRotation(components, axis, island, input, clearance, _clearanceResolver));
@@ -190,7 +191,7 @@ function promotedBypassClusterData(island: IslandNode, input: PlacementInput, co
         powerNet,
         returnNet,
         maxRows: 2,
-        maxPerRow: Math.ceil(components.length / 2),
+        maxPerRow: Math.ceil(fp.div(components.length, 2)),
         topology: 'center_power_bus',
         axis: island.data.axis === 'x' || island.data.axis === 'y' ? island.data.axis : null,
         rowGap: typeof island.data.rowGap === 'number' ? island.data.rowGap : island.data.gap,
@@ -203,11 +204,11 @@ function commonBypassReturnNet(components: PcbComponent[], powerNet: string) {
         const nets = new Set(component.pins
             .map((pin) => pin.signal_name)
             .filter((net): net is string => Boolean(net) && net !== powerNet));
-        for (const net of nets) counts.set(net, (counts.get(net) ?? 0) + 1);
+        for (const net of nets) counts.set(net, fp.add((counts.get(net) ?? 0), 1));
     }
     return [...counts.entries()]
-        .filter(([, count]) => count >= Math.max(2, Math.floor(components.length * 0.5)))
-        .sort((a, b) => b[1] - a[1] || Number(isGroundNet(b[0])) - Number(isGroundNet(a[0])) || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
+        .filter(([, count]) => count >= Math.max(2, Math.floor(fp.mul(components.length, 0.5))))
+        .sort((a, b) => fp.sub(b[1], a[1]) || fp.sub(Number(isGroundNet(b[0])), Number(isGroundNet(a[0]))) || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
 }
 
 function bestBypassRotation(components: PcbComponent[], axis: 'x' | 'y', targetNet: string): number {
@@ -222,21 +223,21 @@ function bestBypassRotation(components: PcbComponent[], axis: 'x' | 'y', targetN
             const offset = getPadOffset(component, pin.pin_number, rotate);
             if (!offset) continue;
             const cross = axis === 'x' ? offset.y : offset.x;
-            sumAbs += Math.abs(cross);
-            if (cross > 0.0001) positive += 1;
-            else if (cross < -0.0001) negative += 1;
+            sumAbs = fp.add(sumAbs, fp.abs(cross));
+            if (cross > 0.0001) positive = fp.add(positive, 1);
+            else if (cross < -0.0001) negative = fp.add(negative, 1);
         }
         const sameSide = positive === 0 || negative === 0;
-        return { rotate, score: sameSide ? sumAbs : sumAbs * 0.2 };
+        return { rotate, score: sameSide ? sumAbs : fp.mul(sumAbs, 0.2) };
     });
-    scored.sort((a, b) => b.score - a.score);
+    scored.sort((a, b) => fp.sub(b.score, a.score));
     return scored[0]?.rotate ?? 0;
 }
 
 function solveCompactIsland(island: IslandNode, components: PcbComponent[], grid: number, clearance: number, clearanceResolver: ClearanceResolver): CandidatePlacement[] {
     const ordered = components
         .slice()
-        .sort((a, b) => pairDegree(island, b.designator) - pairDegree(island, a.designator) || footprintArea(b) - footprintArea(a));
+        .sort((a, b) => fp.sub(pairDegree(island, b.designator), pairDegree(island, a.designator)) || fp.sub(footprintArea(b), footprintArea(a)));
     const placed: CandidatePlacement[] = [];
 
     for (const component of ordered) {
@@ -266,7 +267,7 @@ function solveTwoComponentCorePairs(island: IslandNode, components: PcbComponent
     for (const anchorRotate of coreAnchorRotations(anchor)) {
         const anchorPlacement = candidatePlacement(anchor, 0, 0, anchorRotate);
         for (const movingRotate of normalizedRotations(moving)) {
-            const pairClearance = Math.max(clearance, clearanceResolver(anchor.designator, moving.designator)) + .001;
+            const pairClearance = fp.add(fp.max(clearance, clearanceResolver(anchor.designator, moving.designator)), .001);
             const centers = movingCentersAround(anchorPlacement.box, rotatedSize(moving.footprint, movingRotate), grid, pairClearance);
             // Add exact pad alignments and the midpoint balancing both links;
             // bbox/grid offsets alone miss these tangential positions.
@@ -275,15 +276,15 @@ function solveTwoComponentCorePairs(island: IslandNode, components: PcbComponent
                 const [fixedRef, movingRef] = a.startsWith(`${anchor.designator}.`) ? [a, b] : [b, a];
                 const fixedPad = padWorld(components, [anchorPlacement, movingOrigin], fixedRef);
                 const movingPad = padWorld(components, [anchorPlacement, movingOrigin], movingRef);
-                return fixedPad && movingPad ? [{ x: fixedPad.x - movingPad.x, y: fixedPad.y - movingPad.y }] : [];
+                return fixedPad && movingPad ? [{ x: fp.sub(fixedPad.x, movingPad.x), y: fp.sub(fixedPad.y, movingPad.y) }] : [];
             });
-            if (alignments.length > 1) alignments.push({ x: alignments.reduce((n,p)=>n+p.x,0)/alignments.length, y: alignments.reduce((n,p)=>n+p.y,0)/alignments.length });
+            if (alignments.length > 1) alignments.push({ x: fp.div(alignments.reduce((n,p)=>fp.add(n, p.x),0), alignments.length), y: fp.div(alignments.reduce((n,p)=>fp.add(n, p.y),0), alignments.length) });
             const size = rotatedSize(moving.footprint, movingRotate), box = anchorPlacement.box;
             for (const p of alignments) centers.push(
-                { x: box.left - pairClearance - size.width / 2, y: p.y },
-                { x: box.right + pairClearance + size.width / 2, y: p.y },
-                { x: p.x, y: box.top - pairClearance - size.height / 2 },
-                { x: p.x, y: box.bottom + pairClearance + size.height / 2 },
+                { x: fp.sub(fp.sub(box.left, pairClearance), fp.div(size.width, 2)), y: p.y },
+                { x: fp.add(fp.add(box.right, pairClearance), fp.div(size.width, 2)), y: p.y },
+                { x: p.x, y: fp.sub(fp.sub(box.top, pairClearance), fp.div(size.height, 2)) },
+                { x: p.x, y: fp.add(fp.add(box.bottom, pairClearance), fp.div(size.height, 2)) },
             );
             for (const center of dedupePoints(centers)) {
                 variants.push([
@@ -301,48 +302,48 @@ function coreAnchorRotations(anchor: PcbComponent) {
     const rotations = normalizedRotations(anchor);
     if (anchor.pcb.role !== 'main_ic') return rotations;
     const scored = rotations.map((rotate) => ({ rotate, score: pinOneUpperLeftRotationPenalty(anchor, rotate) }));
-    const best = Math.min(...scored.map((item) => item.score));
+    const best = fp.min(...scored.map((item) => item.score));
     return scored
-        .filter((item) => item.score <= best + 0.001)
+        .filter((item) => item.score <= fp.add(best, 0.001))
         .map((item) => item.rotate);
 }
 
 function selectCoreAnchor(island: IslandNode, components: PcbComponent[]) {
     return components.slice().sort((a, b) =>
-        Number(b.pcb.role === 'main_ic') - Number(a.pcb.role === 'main_ic')
-        || pairDegree(island, b.designator) - pairDegree(island, a.designator)
+        fp.sub(Number(b.pcb.role === 'main_ic'), Number(a.pcb.role === 'main_ic'))
+        || fp.sub(pairDegree(island, b.designator), pairDegree(island, a.designator))
         || b.footprint.pads.length - a.footprint.pads.length
-        || footprintArea(b) - footprintArea(a))[0];
+        || fp.sub(footprintArea(b), footprintArea(a)))[0];
 }
 
 function movingCentersAround(anchorBox: Box, movingSize: { width: number; height: number }, _grid: number, clearance: number) {
     const anchorCenter = {
-        x: (anchorBox.left + anchorBox.right) / 2,
-        y: (anchorBox.top + anchorBox.bottom) / 2,
+        x: fp.div((fp.add(anchorBox.left, anchorBox.right)), 2),
+        y: fp.div((fp.add(anchorBox.top, anchorBox.bottom)), 2),
     };
     const offsets = uniqueNumbers([
         0,
         clearance,
         -clearance,
-        clearance * 2,
-        -clearance * 2,
-        movingSize.width / 2,
-        -movingSize.width / 2,
-        movingSize.height / 2,
-        -movingSize.height / 2,
+        fp.mul(clearance, 2),
+        fp.mul(-clearance, 2),
+        fp.div(movingSize.width, 2),
+        fp.div(-movingSize.width, 2),
+        fp.div(movingSize.height, 2),
+        fp.div(-movingSize.height, 2),
     ]);
     const baseCenters = [
-        { x: anchorBox.left - clearance - movingSize.width / 2, y: anchorCenter.y, axis: 'y' as const },
-        { x: anchorBox.right + clearance + movingSize.width / 2, y: anchorCenter.y, axis: 'y' as const },
-        { x: anchorCenter.x, y: anchorBox.top - clearance - movingSize.height / 2, axis: 'x' as const },
-        { x: anchorCenter.x, y: anchorBox.bottom + clearance + movingSize.height / 2, axis: 'x' as const },
+        { x: fp.sub(fp.sub(anchorBox.left, clearance), fp.div(movingSize.width, 2)), y: anchorCenter.y, axis: 'y' as const },
+        { x: fp.add(fp.add(anchorBox.right, clearance), fp.div(movingSize.width, 2)), y: anchorCenter.y, axis: 'y' as const },
+        { x: anchorCenter.x, y: fp.sub(fp.sub(anchorBox.top, clearance), fp.div(movingSize.height, 2)), axis: 'x' as const },
+        { x: anchorCenter.x, y: fp.add(fp.add(anchorBox.bottom, clearance), fp.div(movingSize.height, 2)), axis: 'x' as const },
     ];
     const centers: Point[] = [];
     for (const base of baseCenters) {
         for (const offset of offsets) {
             centers.push({
-                x: roundPlacement(base.x + (base.axis === 'x' ? offset : 0)),
-                y: roundPlacement(base.y + (base.axis === 'y' ? offset : 0)),
+                x: roundPlacement(fp.add(base.x, (base.axis === 'x' ? offset : 0))),
+                y: roundPlacement(fp.add(base.y, (base.axis === 'y' ? offset : 0))),
             });
         }
     }
@@ -352,8 +353,8 @@ function movingCentersAround(anchorBox: Box, movingSize: { width: number; height
 function bestCorePairVariant(island: IslandNode, components: PcbComponent[], variants: CandidatePlacement[][], clearanceResolver: ClearanceResolver) {
     return variants
         .filter((variant) => !hasOverlap(components, variant, clearanceResolver))
-        .sort((a, b) => scoreCorePairVariant(island, components, a, clearanceResolver) - scoreCorePairVariant(island, components, b, clearanceResolver))[0]
-        ?? variants.sort((a, b) => scoreCorePairVariant(island, components, a, clearanceResolver) - scoreCorePairVariant(island, components, b, clearanceResolver))[0]
+        .sort((a, b) => fp.sub(scoreCorePairVariant(island, components, a, clearanceResolver), scoreCorePairVariant(island, components, b, clearanceResolver)))[0]
+        ?? variants.sort((a, b) => fp.sub(scoreCorePairVariant(island, components, a, clearanceResolver), scoreCorePairVariant(island, components, b, clearanceResolver)))[0]
         ?? [];
 }
 
@@ -371,23 +372,23 @@ function scoreCorePairVariant(island: IslandNode, components: PcbComponent[], pl
         const second = padWorld(components, placements, b);
         if (!first || !second) continue;
         const value = dist(first, second);
-        const excess = expectedMax !== null ? Math.max(0, value - expectedMax) : 0;
-        pairScore += value + excess * excess * 100;
-        sumDistance += value;
-        maxDistance = Math.max(maxDistance, value);
+        const excess = expectedMax !== null ? fp.max(0, fp.sub(value, expectedMax)) : 0;
+        pairScore = fp.add(pairScore, fp.add(value, fp.mul(fp.mul(excess, excess), 100)));
+        sumDistance = fp.add(sumDistance, value);
+        maxDistance = fp.max(maxDistance, value);
     }
 
-    score += (pairs.length > 0 ? pairScore * 10_000 : 0);
+    score = fp.add(score, (pairs.length > 0 ? fp.mul(pairScore, 10_000) : 0));
     // This solver precedes the native block solver. Its internal geometry is
     // subsequently rigid, so it must charge foreign-pad hits here as well.
     // 100 scales the shared weight to this solver's 10,000-per-mm pair term.
-    score += corePairPadHits(island, components, placements) * placementPadCrossingWeight() * 100;
-    score += pairBalancePenalty(island, components, placements) * 25;
-    score += pairSegmentCrossingPenalty(island, components, placements) * 600;
-    score += facingPadsPenalty(island, components, placements) * 15;
-    score += (bbox.right - bbox.left) * (bbox.bottom - bbox.top) * 0.4;
-    score += sumDistance + maxDistance;
-    score += anchorPinOneUpperLeftPenalty(island, components, placements) * 5;
+    score = fp.add(score, fp.mul(fp.mul(corePairPadHits(island, components, placements), placementPadCrossingWeight()), 100));
+    score = fp.add(score, fp.mul(pairBalancePenalty(island, components, placements), 25));
+    score = fp.add(score, fp.mul(pairSegmentCrossingPenalty(island, components, placements), 600));
+    score = fp.add(score, fp.mul(facingPadsPenalty(island, components, placements), 15));
+    score = fp.add(score, fp.mul(fp.mul((fp.sub(bbox.right, bbox.left)), (fp.sub(bbox.bottom, bbox.top))), 0.4));
+    score = fp.add(score, fp.add(sumDistance, maxDistance));
+    score = fp.add(score, fp.mul(anchorPinOneUpperLeftPenalty(island, components, placements), 5));
     return score;
 }
 
@@ -411,7 +412,7 @@ function corePairPadHits(island: IslandNode, components: PcbComponent[], placeme
                 if (segmentIntersectsBox(first, second, componentPadBox(placement, pad))) crossed.add(ref);
             }
         }
-        hits += crossed.size;
+        hits = fp.add(hits, crossed.size);
     }
     return hits;
 }
@@ -423,7 +424,7 @@ function pairBalancePenalty(island: IslandNode, components: PcbComponent[], plac
         return first && second ? dist(first, second) : 0;
     }).filter((value) => value > 0);
     if (distances.length < 2) return 0;
-    return Math.max(...distances) - Math.min(...distances);
+    return fp.sub(fp.max(...distances), fp.min(...distances));
 }
 
 function pairSegmentCrossingPenalty(island: IslandNode, components: PcbComponent[], placements: CandidatePlacement[]) {
@@ -435,7 +436,7 @@ function pairSegmentCrossingPenalty(island: IslandNode, components: PcbComponent
     let penalty = 0;
     for (let i = 0; i < segments.length; i += 1) {
         for (let j = i + 1; j < segments.length; j += 1) {
-            if (segmentsCross(segments[i][0], segments[i][1], segments[j][0], segments[j][1])) penalty += 1;
+            if (segmentsCross(segments[i][0], segments[i][1], segments[j][0], segments[j][1])) penalty = fp.add(penalty, 1);
         }
     }
     return penalty;
@@ -454,11 +455,11 @@ function facingPadsPenalty(island: IslandNode, components: PcbComponent[], place
         const aPad = padPoint(aComponent, aPlacement, aPin);
         const bPad = padPoint(bComponent, bPlacement, bPin);
         if (!aPad || !bPad) continue;
-        const aOut = normalizeVector({ x: aPad.x - aPlacement.x, y: aPad.y - aPlacement.y });
-        const bOut = normalizeVector({ x: bPad.x - bPlacement.x, y: bPad.y - bPlacement.y });
-        const link = normalizeVector({ x: bPad.x - aPad.x, y: bPad.y - aPad.y });
-        penalty += Math.max(0, 1 - dot(aOut, link));
-        penalty += Math.max(0, 1 + dot(bOut, link));
+        const aOut = normalizeVector({ x: fp.sub(aPad.x, aPlacement.x), y: fp.sub(aPad.y, aPlacement.y) });
+        const bOut = normalizeVector({ x: fp.sub(bPad.x, bPlacement.x), y: fp.sub(bPad.y, bPlacement.y) });
+        const link = normalizeVector({ x: fp.sub(bPad.x, aPad.x), y: fp.sub(bPad.y, aPad.y) });
+        penalty = fp.add(penalty, fp.max(0, fp.sub(1, dot(aOut, link))));
+        penalty = fp.add(penalty, fp.max(0, fp.add(1, dot(bOut, link))));
     }
     return penalty;
 }
@@ -479,11 +480,9 @@ function pinOneUpperLeftRotationPenalty(component: PcbComponent, rotate: number)
 
 function pinOneUpperLeftPenaltyForOffset(component: PcbComponent, pinOne: Point, rotate: number) {
     const size = rotatedSize(component.footprint, rotate);
-    const normalizedX = pinOne.x / Math.max(size.width / 2, 0.001);
-    const normalizedY = pinOne.y / Math.max(size.height / 2, 0.001);
-    return Math.max(0, normalizedX + 0.25) ** 2
-        + Math.max(0, normalizedY + 0.25) ** 2
-        + Math.max(0, normalizedX - normalizedY) * 0.15;
+    const normalizedX = fp.div(pinOne.x, fp.max(fp.div(size.width, 2), 0.001));
+    const normalizedY = fp.div(pinOne.y, fp.max(fp.div(size.height, 2), 0.001));
+    return fp.add(fp.add(fp.pow(fp.max(0, fp.add(normalizedX, 0.25)), 2), fp.pow(fp.max(0, fp.add(normalizedY, 0.25)), 2)), fp.mul(fp.max(0, fp.sub(normalizedX, normalizedY)), 0.15));
 }
 
 function compactCandidates(component: PcbComponent, placed: CandidatePlacement[], grid: number, clearance: number) {
@@ -498,14 +497,14 @@ function compactCandidates(component: PcbComponent, placed: CandidatePlacement[]
     for (const rotate of rotations) {
         const size = rotatedSize(component.footprint, rotate);
         const offsets = [
-            { x: bbox.right + clearance + size.width / 2, y: 0 },
-            { x: bbox.left - clearance - size.width / 2, y: 0 },
-            { x: 0, y: bbox.bottom + clearance + size.height / 2 },
-            { x: 0, y: bbox.top - clearance - size.height / 2 },
-            { x: bbox.right + clearance + size.width / 2, y: bbox.bottom + clearance + size.height / 2 },
-            { x: bbox.right + clearance + size.width / 2, y: bbox.top - clearance - size.height / 2 },
-            { x: bbox.left - clearance - size.width / 2, y: bbox.bottom + clearance + size.height / 2 },
-            { x: bbox.left - clearance - size.width / 2, y: bbox.top - clearance - size.height / 2 },
+            { x: fp.add(fp.add(bbox.right, clearance), fp.div(size.width, 2)), y: 0 },
+            { x: fp.sub(fp.sub(bbox.left, clearance), fp.div(size.width, 2)), y: 0 },
+            { x: 0, y: fp.add(fp.add(bbox.bottom, clearance), fp.div(size.height, 2)) },
+            { x: 0, y: fp.sub(fp.sub(bbox.top, clearance), fp.div(size.height, 2)) },
+            { x: fp.add(fp.add(bbox.right, clearance), fp.div(size.width, 2)), y: fp.add(fp.add(bbox.bottom, clearance), fp.div(size.height, 2)) },
+            { x: fp.add(fp.add(bbox.right, clearance), fp.div(size.width, 2)), y: fp.sub(fp.sub(bbox.top, clearance), fp.div(size.height, 2)) },
+            { x: fp.sub(fp.sub(bbox.left, clearance), fp.div(size.width, 2)), y: fp.add(fp.add(bbox.bottom, clearance), fp.div(size.height, 2)) },
+            { x: fp.sub(fp.sub(bbox.left, clearance), fp.div(size.width, 2)), y: fp.sub(fp.sub(bbox.top, clearance), fp.div(size.height, 2)) },
         ];
         for (const point of offsets) candidates.push(candidatePlacement(component, snap(point.x, grid), snap(point.y, grid), rotate));
     }
@@ -522,42 +521,41 @@ function placeGrid(
     gap?: number,
     rowGap?: number,
 ): CandidatePlacement[] {
-    const componentGap = Math.max(gap ?? clearance, clearance);
-    const rowSpacing = Math.max(rowGap ?? gap ?? clearance, clearance);
+    const componentGap = fp.max(gap ?? clearance, clearance);
+    const rowSpacing = fp.max(rowGap ?? gap ?? clearance, clearance);
     const sizes = components.map((component) => rotatedSize(component.footprint, rotate));
-    const rowCount = Math.ceil(components.length / maxPerRow);
+    const rowCount = Math.ceil(fp.div(components.length, maxPerRow));
     const rowSizes: Array<{ width: number; height: number }> = [];
     for (let row = 0; row < rowCount; row += 1) {
-        const rowComponents = components.slice(row * maxPerRow, (row + 1) * maxPerRow);
-        const rowComponentSizes = sizes.slice(row * maxPerRow, (row + 1) * maxPerRow);
+        const rowComponents = components.slice(fp.mul(row, maxPerRow), fp.mul((row + 1), maxPerRow));
+        const rowComponentSizes = sizes.slice(fp.mul(row, maxPerRow), fp.mul((row + 1), maxPerRow));
         const width = axis === 'x'
-            ? rowComponentSizes.reduce((sum, size) => sum + size.width, 0) + componentGap * Math.max(0, rowComponents.length - 1)
-            : Math.max(...rowComponentSizes.map((size) => size.width));
+            ? fp.add(rowComponentSizes.reduce((sum, size) => fp.add(sum, size.width), 0), fp.mul(componentGap, Math.max(0, rowComponents.length - 1)))
+            : fp.max(...rowComponentSizes.map((size) => size.width));
         const height = axis === 'x'
-            ? Math.max(...rowComponentSizes.map((size) => size.height))
-            : rowComponentSizes.reduce((sum, size) => sum + size.height, 0) + componentGap * Math.max(0, rowComponents.length - 1);
+            ? fp.max(...rowComponentSizes.map((size) => size.height))
+            : fp.add(rowComponentSizes.reduce((sum, size) => fp.add(sum, size.height), 0), fp.mul(componentGap, Math.max(0, rowComponents.length - 1)));
         rowSizes.push({ width, height });
     }
 
     const placements: CandidatePlacement[] = [];
-    let crossCursor = -rowSizes.reduce((sum, size) => sum + (axis === 'x' ? size.height : size.width), 0) / 2
-        - rowSpacing * Math.max(0, rowCount - 1) / 2;
+    let crossCursor = fp.sub(fp.div(-rowSizes.reduce((sum, size) => fp.add(sum, (axis === 'x' ? size.height : size.width)), 0), 2), fp.div(fp.mul(rowSpacing, Math.max(0, rowCount - 1)), 2));
     for (let row = 0; row < rowCount; row += 1) {
-        const start = row * maxPerRow;
-        const end = Math.min(components.length, start + maxPerRow);
+        const start = fp.mul(row, maxPerRow);
+        const end = fp.min(components.length, fp.add(start, maxPerRow));
         const rowSize = rowSizes[row];
-        let mainCursor = -(axis === 'x' ? rowSize.width : rowSize.height) / 2;
-        const crossCenter = crossCursor + (axis === 'x' ? rowSize.height : rowSize.width) / 2;
+        let mainCursor = fp.div(-(axis === 'x' ? rowSize.width : rowSize.height), 2);
+        const crossCenter = fp.add(crossCursor, fp.div((axis === 'x' ? rowSize.height : rowSize.width), 2));
         for (let index = start; index < end; index += 1) {
             const component = components[index];
             const size = sizes[index];
-            const mainCenter = mainCursor + (axis === 'x' ? size.width : size.height) / 2;
+            const mainCenter = fp.add(mainCursor, fp.div((axis === 'x' ? size.width : size.height), 2));
             const x = axis === 'x' ? mainCenter : crossCenter;
             const y = axis === 'x' ? crossCenter : mainCenter;
             placements.push(candidatePlacement(component, roundPlacement(x), roundPlacement(y), rotate));
-            mainCursor += (axis === 'x' ? size.width : size.height) + componentGap;
+            mainCursor = fp.add(mainCursor, fp.add((axis === 'x' ? size.width : size.height), componentGap));
         }
-        crossCursor += (axis === 'x' ? rowSize.height : rowSize.width) + rowSpacing;
+        crossCursor = fp.add(crossCursor, fp.add((axis === 'x' ? rowSize.height : rowSize.width), rowSpacing));
     }
     return centerPlacements(placements, grid);
 }
@@ -585,36 +583,36 @@ function placeCenterPowerBus(
     island: IslandNode,
     powerSide: 1 | -1,
 ): CandidatePlacement[] {
-    const rowCount = Math.ceil(components.length / maxPerRow);
+    const rowCount = Math.ceil(fp.div(components.length, maxPerRow));
     if (rowCount < 2) {
         return placeRowWithPowerSide(components, axis, powerSide, gap, grid, island);
     }
 
     const rows: CandidatePlacement[][] = [];
     for (let row = 0; row < rowCount; row += 1) {
-        const start = row * maxPerRow;
-        const rowComponents = components.slice(start, start + maxPerRow);
+        const start = fp.mul(row, maxPerRow);
+        const rowComponents = components.slice(start, fp.add(start, maxPerRow));
         const desiredSide = row === 0 ? powerSide : (-powerSide as 1 | -1);
         rows.push(placeRowWithPowerSide(rowComponents, axis, desiredSide, gap, grid, island));
     }
 
     const rowCrossSizes = rows.map((rowPlacements) => {
         const box = unionBoxes(rowPlacements.map((placement) => placement.box));
-        return axis === 'x' ? box.bottom - box.top : box.right - box.left;
+        return axis === 'x' ? fp.sub(box.bottom, box.top) : fp.sub(box.right, box.left);
     });
-    const totalCross = rowCrossSizes.reduce((sum, size) => sum + size, 0) + rowGap * (rows.length - 1);
-    let crossCursor = -totalCross / 2;
+    const totalCross = fp.add(rowCrossSizes.reduce((sum, size) => fp.add(sum, size), 0), fp.mul(rowGap, (rows.length - 1)));
+    let crossCursor = fp.div(-totalCross, 2);
 
     const result: CandidatePlacement[] = [];
     for (let row = 0; row < rows.length; row += 1) {
         const rowBox = unionBoxes(rows[row].map((placement) => placement.box));
-        const rowCrossCenter = crossCursor + rowCrossSizes[row] / 2;
-        const dx = axis === 'x' ? -(rowBox.left + rowBox.right) / 2 : rowCrossCenter;
-        const dy = axis === 'x' ? rowCrossCenter : -(rowBox.top + rowBox.bottom) / 2;
+        const rowCrossCenter = fp.add(crossCursor, fp.div(rowCrossSizes[row], 2));
+        const dx = axis === 'x' ? fp.div(-(fp.add(rowBox.left, rowBox.right)), 2) : rowCrossCenter;
+        const dy = axis === 'x' ? rowCrossCenter : fp.div(-(fp.add(rowBox.top, rowBox.bottom)), 2);
         for (const placement of rows[row]) {
-            result.push(candidatePlacement(placement.component, roundPlacement(placement.x + dx), roundPlacement(placement.y + dy), placement.rotate));
+            result.push(candidatePlacement(placement.component, roundPlacement(fp.add(placement.x, dx)), roundPlacement(fp.add(placement.y, dy)), placement.rotate));
         }
-        crossCursor += rowCrossSizes[row] + rowGap;
+        crossCursor = fp.add(crossCursor, fp.add(rowCrossSizes[row], rowGap));
     }
     return result;
 }
@@ -640,8 +638,8 @@ function placeRowWithPowerSide(
             if (!powerOffset || !returnOffset) continue;
             const powerCross = axis === 'x' ? powerOffset.y : powerOffset.x;
             const returnCross = axis === 'x' ? returnOffset.y : returnOffset.x;
-            const axisAlign = Math.abs(axis === 'x' ? powerOffset.x - returnOffset.x : powerOffset.y - returnOffset.y);
-            const score = powerCross * desiredSide + returnCross * (-desiredSide) - axisAlign;
+            const axisAlign = fp.abs(axis === 'x' ? fp.sub(powerOffset.x, returnOffset.x) : fp.sub(powerOffset.y, returnOffset.y));
+            const score = fp.sub(fp.add(fp.mul(powerCross, desiredSide), fp.mul(returnCross, (-desiredSide))), axisAlign);
             if (score > bestScore) {
                 bestScore = score;
                 bestRotate = rotate;
@@ -651,16 +649,16 @@ function placeRowWithPowerSide(
         placements.push(candidatePlacement(component, 0, 0, bestRotate));
     }
 
-    const mainSize = sizes.reduce((sum, size) => sum + (axis === 'x' ? size.width : size.height), 0) + gap * Math.max(0, sizes.length - 1);
-    let mainCursor = -mainSize / 2;
+    const mainSize = fp.add(sizes.reduce((sum, size) => fp.add(sum, (axis === 'x' ? size.width : size.height)), 0), fp.mul(gap, Math.max(0, sizes.length - 1)));
+    let mainCursor = fp.div(-mainSize, 2);
     const result: CandidatePlacement[] = [];
     for (let index = 0; index < components.length; index += 1) {
         const size = sizes[index];
-        const mainCenter = mainCursor + (axis === 'x' ? size.width : size.height) / 2;
+        const mainCenter = fp.add(mainCursor, fp.div((axis === 'x' ? size.width : size.height), 2));
         const x = axis === 'x' ? mainCenter : 0;
         const y = axis === 'x' ? 0 : mainCenter;
         result.push(candidatePlacement(components[index], roundPlacement(x), roundPlacement(y), placements[index].rotate));
-        mainCursor += (axis === 'x' ? size.width : size.height) + gap;
+        mainCursor = fp.add(mainCursor, fp.add((axis === 'x' ? size.width : size.height), gap));
     }
     return centerPlacements(result, grid);
 }
@@ -684,13 +682,13 @@ function bestVariant(island: IslandNode, components: PcbComponent[], variants: C
 function scorePlacements(island: IslandNode, components: PcbComponent[], placements: CandidatePlacement[], clearanceResolver: ClearanceResolver) {
     if (placements.length === 0) return Infinity;
     const bbox = placementsBox(components, placements);
-    const width = bbox.right - bbox.left;
-    const height = bbox.bottom - bbox.top;
-    let score = width * height * 2 + (width + height);
-    if (hasOverlap(components, placements, clearanceResolver)) score += 1_000_000;
-    score += pairDistancePenalty(island, components, placements) * 8;
-    score += sameNetPadSpreadPenalty(components, placements) * 5;
-    score += capClusterPadAlignmentPenalty(island, components, placements) * 6;
+    const width = fp.sub(bbox.right, bbox.left);
+    const height = fp.sub(bbox.bottom, bbox.top);
+    let score = fp.add(fp.mul(fp.mul(width, height), 2), (fp.add(width, height)));
+    if (hasOverlap(components, placements, clearanceResolver)) score = fp.add(score, 1_000_000);
+    score = fp.add(score, fp.mul(pairDistancePenalty(island, components, placements), 8));
+    score = fp.add(score, fp.mul(sameNetPadSpreadPenalty(components, placements), 5));
+    score = fp.add(score, fp.mul(capClusterPadAlignmentPenalty(island, components, placements), 6));
     return score;
 }
 
@@ -701,7 +699,7 @@ function pairDistancePenalty(island: IslandNode, components: PcbComponent[], pla
         const first = padWorld(components, placements, a);
         const second = padWorld(components, placements, b);
         if (!first || !second) continue;
-        penalty += dist(first, second);
+        penalty = fp.add(penalty, dist(first, second));
     }
     return penalty;
 }
@@ -730,8 +728,8 @@ function sameNetPadSpreadPenalty(components: PcbComponent[], placements: Candida
     for (const [net, points] of padsByNet.entries()) {
         if (points.length < 2) continue;
         const box = pointsBox(points);
-        const spread = (box.right - box.left) + (box.bottom - box.top);
-        penalty += isGroundNet(net) ? spread * GROUND_NET_SPREAD_WEIGHT : spread;
+        const spread = fp.add((fp.sub(box.right, box.left)), (fp.sub(box.bottom, box.top)));
+        penalty = fp.add(penalty, isGroundNet(net) ? fp.mul(spread, GROUND_NET_SPREAD_WEIGHT) : spread);
     }
     return penalty;
 }
@@ -741,9 +739,9 @@ function capClusterPadAlignmentPenalty(island: IslandNode, components: PcbCompon
     const powerNet = typeof island.data.powerNet === 'string' ? island.data.powerNet : null;
     const returnNet = typeof island.data.returnNet === 'string' ? island.data.returnNet : null;
     if (!powerNet || !returnNet) return 0;
-    let penalty = netAlignmentPenalty(components, placements, powerNet) + netAlignmentPenalty(components, placements, returnNet);
+    let penalty = fp.add(netAlignmentPenalty(components, placements, powerNet), netAlignmentPenalty(components, placements, returnNet));
     if (island.data.topology === 'center_power_bus') {
-        penalty += centerPowerBusCentroidPenalty(island, components, placements);
+        penalty = fp.add(penalty, centerPowerBusCentroidPenalty(island, components, placements));
     }
     return penalty;
 }
@@ -757,8 +755,8 @@ function centerPowerBusCentroidPenalty(island: IslandNode, components: PcbCompon
     const returnCentroid = netCentroidCross(components, placements, returnNet, axis);
     if (powerCentroid === null || returnCentroid === null) return 0;
     // power pads should be closer to island center than return pads
-    const outward = Math.max(0, Math.abs(powerCentroid) - Math.abs(returnCentroid));
-    return outward * 100;
+    const outward = fp.max(0, fp.sub(fp.abs(powerCentroid), fp.abs(returnCentroid)));
+    return fp.mul(outward, 100);
 }
 
 function netCentroidCross(components: PcbComponent[], placements: CandidatePlacement[], net: string, axis: 'x' | 'y') {
@@ -770,10 +768,10 @@ function netCentroidCross(components: PcbComponent[], placements: CandidatePlace
         if (!pin || !placement) continue;
         const point = padPoint(component, placement, pin.pin_number);
         if (!point) continue;
-        sum += axis === 'x' ? point.y : point.x;
+        sum = fp.add(sum, axis === 'x' ? point.y : point.x);
         count += 1;
     }
-    return count > 0 ? sum / count : null;
+    return count > 0 ? fp.div(sum, count) : null;
 }
 
 function netAlignmentPenalty(components: PcbComponent[], placements: CandidatePlacement[], net: string) {
@@ -787,7 +785,7 @@ function netAlignmentPenalty(components: PcbComponent[], placements: CandidatePl
     }
     if (points.length < 2) return 0;
     const box = pointsBox(points);
-    return Math.min(box.right - box.left, box.bottom - box.top);
+    return fp.min(fp.sub(box.right, box.left), fp.sub(box.bottom, box.top));
 }
 
 function rotationsForAxis(rotations: number[], components: PcbComponent[], island: IslandNode, axis: 'x' | 'y') {
@@ -796,10 +794,10 @@ function rotationsForAxis(rotations: number[], components: PcbComponent[], islan
     if (!powerNet || !returnNet) return rotations;
     const scored = rotations.map((rotate) => ({
         rotate,
-        score: components.reduce((sum, component) => sum + padVectorAxisScore(component, powerNet, returnNet, rotate, axis), 0),
+        score: components.reduce((sum, component) => fp.add(sum, padVectorAxisScore(component, powerNet, returnNet, rotate, axis)), 0),
     }));
-    const bestScore = Math.min(...scored.map((item) => item.score));
-    return scored.filter((item) => item.score <= bestScore + 0.001).map((item) => item.rotate);
+    const bestScore = fp.min(...scored.map((item) => item.score));
+    return scored.filter((item) => item.score <= fp.add(bestScore, 0.001)).map((item) => item.rotate);
 }
 
 function padVectorAxisScore(component: PcbComponent, powerNet: string, returnNet: string, rotate: number, axis: 'x' | 'y') {
@@ -809,9 +807,9 @@ function padVectorAxisScore(component: PcbComponent, powerNet: string, returnNet
     const power = getPadOffset(component, powerPin.pin_number, rotate);
     const ret = getPadOffset(component, returnPin.pin_number, rotate);
     if (!power || !ret) return 0;
-    const dx = Math.abs(power.x - ret.x);
-    const dy = Math.abs(power.y - ret.y);
-    return axis === 'x' ? dx - dy : dy - dx;
+    const dx = fp.abs(fp.sub(power.x, ret.x));
+    const dy = fp.abs(fp.sub(power.y, ret.y));
+    return axis === 'x' ? fp.sub(dx, dy) : fp.sub(dy, dx);
 }
 
 function bestLineRotation(components: PcbComponent[], axis: 'x' | 'y', island: IslandNode, input: PlacementInput, clearance: number, clearanceResolver: ClearanceResolver) {
@@ -824,8 +822,8 @@ function bestLineRotation(components: PcbComponent[], axis: 'x' | 'y', island: I
             compact: scorePlacements(island, components, placeGrid(components, axis, components.length, rotate, 0.5, clearance), clearanceResolver),
         }));
         scored.sort((a, b) => {
-            if (b.topology !== a.topology) return b.topology - a.topology;
-            return a.compact - b.compact;
+            if (b.topology !== a.topology) return fp.sub(b.topology, a.topology);
+            return fp.sub(a.compact, b.compact);
         });
         return scored[0]?.rotate ?? 0;
     }
@@ -839,7 +837,7 @@ function bestSharedRotation(components: PcbComponent[], axis: 'x' | 'y', island:
             rotate,
             score: scorePlacements(island, components, placeGrid(components, axis, components.length, rotate, 0.5, 0.8), clearanceResolver),
         }))
-        .sort((a, b) => a.score - b.score)[0]?.rotate ?? 0;
+        .sort((a, b) => fp.sub(a.score, b.score))[0]?.rotate ?? 0;
 }
 
 function resolveTargetNet(island: IslandNode, input: PlacementInput): string | null {
@@ -866,15 +864,15 @@ function targetPadPerpendicularScore(components: PcbComponent[], axis: 'x' | 'y'
         const layer = component.pcb.allowedLayers[0] ?? 'top';
         const offset = getPadOffset(component, pad.pin_number, rotate, layer);
         if (!offset) continue;
-        total += axis === 'x' ? Math.abs(offset.y) : Math.abs(offset.x);
+        total = fp.add(total, axis === 'x' ? fp.abs(offset.y) : fp.abs(offset.x));
         count += 1;
     }
-    return count > 0 ? total / count : 0;
+    return count > 0 ? fp.div(total, count) : 0;
 }
 
 function chooseCompactAxis(components: PcbComponent[]) {
-    const totalWidth = components.reduce((sum, component) => sum + component.footprint.width, 0);
-    const totalHeight = components.reduce((sum, component) => sum + component.footprint.height, 0);
+    const totalWidth = components.reduce((sum, component) => fp.add(sum, component.footprint.width), 0);
+    const totalHeight = components.reduce((sum, component) => fp.add(sum, component.footprint.height), 0);
     return totalWidth <= totalHeight ? 'x' : 'y';
 }
 
@@ -923,12 +921,12 @@ function candidatePlacement(component: PcbComponent, x: number, y: number, rotat
 function centerPlacements(placements: CandidatePlacement[], grid: number) {
     if (placements.length === 0) return [];
     const bbox = unionBoxes(placements.map((placement) => placement.box));
-    const dx = (bbox.left + bbox.right) / 2;
-    const dy = (bbox.top + bbox.bottom) / 2;
+    const dx = fp.div((fp.add(bbox.left, bbox.right)), 2);
+    const dy = fp.div((fp.add(bbox.top, bbox.bottom)), 2);
     return placements.map((placement) => candidatePlacement(
         placement.component,
-        roundPlacement(placement.x - dx),
-        roundPlacement(placement.y - dy),
+        roundPlacement(fp.sub(placement.x, dx)),
+        roundPlacement(fp.sub(placement.y, dy)),
         placement.rotate,
     ));
 }
@@ -943,7 +941,7 @@ function padWorld(components: PcbComponent[], placements: CandidatePlacement[], 
 
 function padPoint(component: PcbComponent, placement: Placement, pin: string | number) {
     const offset = getPadOffset(component, pin, placement.rotate, placement.layer);
-    return offset ? { x: placement.x + offset.x, y: placement.y + offset.y } : null;
+    return offset ? { x: fp.add(placement.x, offset.x), y: fp.add(placement.y, offset.y) } : null;
 }
 
 
@@ -983,24 +981,24 @@ function hasOverlap(components: PcbComponent[], placements: Placement[], clearan
 
 
 function segmentsCross(a: Point, b: Point, c: Point, d: Point) {
-    return orientation(a, b, c) * orientation(a, b, d) < 0
-        && orientation(c, d, a) * orientation(c, d, b) < 0;
+    return fp.mul(orientation(a, b, c), orientation(a, b, d)) < 0
+        && fp.mul(orientation(c, d, a), orientation(c, d, b)) < 0;
 }
 
 function orientation(a: Point, b: Point, c: Point) {
-    const value = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-    if (Math.abs(value) < 0.000001) return 0;
+    const value = fp.sub(fp.mul((fp.sub(b.x, a.x)), (fp.sub(c.y, a.y))), fp.mul((fp.sub(b.y, a.y)), (fp.sub(c.x, a.x))));
+    if (fp.abs(value) < 0.000001) return 0;
     return value > 0 ? 1 : -1;
 }
 
 function normalizeVector(vector: Point) {
-    const length = Math.hypot(vector.x, vector.y);
+    const length = fp.hypot(vector.x, vector.y);
     if (length <= 0.000001) return { x: 0, y: 0 };
-    return { x: vector.x / length, y: vector.y / length };
+    return { x: fp.div(vector.x, length), y: fp.div(vector.y, length) };
 }
 
 function dot(a: Point, b: Point) {
-    return a.x * b.x + a.y * b.y;
+    return fp.add(fp.mul(a.x, b.x), fp.mul(a.y, b.y));
 }
 
 function uniqueNumbers(values: number[]) {
@@ -1020,10 +1018,10 @@ function dedupePoints(points: Point[]) {
 
 
 function footprintArea(component: PcbComponent) {
-    return component.footprint.width * component.footprint.height;
+    return fp.mul(component.footprint.width, component.footprint.height);
 }
 
 function snap(value: number, grid: number) {
     if (grid <= 0) return value;
-    return Math.round(value / grid) * grid;
+    return fp.mul(Math.round(fp.div(value, grid)), grid);
 }

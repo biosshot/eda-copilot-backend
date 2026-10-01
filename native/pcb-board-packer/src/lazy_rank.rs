@@ -86,7 +86,7 @@ mod tests {
     fn local_improvement_matches_eager_with_severity_epsilon_and_score_ties() {
         use crate::model::Rank;
         use crate::solver::rank_improves;
-        let compare = |a: &(Rank, usize, f64), b: &(Rank, usize, f64)| {
+        let compare = |a: &(Rank, usize, f32), b: &(Rank, usize, f32)| {
             a.0.hard_count.cmp(&b.0.hard_count)
                 .then_with(|| a.0.hard_severity.total_cmp(&b.0.hard_severity))
                 .then_with(|| a.0.score.total_cmp(&b.0.score))
@@ -96,10 +96,10 @@ mod tests {
             let mut random = seed + 1;
             let mut next = || { random = random.wrapping_mul(6364136223846793005).wrapping_add(1); random >> 32 };
             let incumbent = Rank { hard_count: (next() % 3) as usize,
-                hard_severity: (next() % 8) as f64 * 0.0005, score: (next() % 40) as f64 - 10.0 };
+                hard_severity: (next() % 8) as f32 * 0.0005, score: (next() % 40) as f32 - 10.0 };
             let values: Vec<_> = (0..32).map(|id| (Rank { hard_count: (next() % 3) as usize,
-                hard_severity: (next() % 8) as f64 * 0.0005, score: (next() % 40) as f64 - 10.0 },
-                id, (next() % 40) as f64 * 0.25)).collect();
+                hard_severity: (next() % 8) as f32 * 0.0005, score: (next() % 40) as f32 - 10.0 },
+                id, (next() % 40) as f32 * 0.25)).collect();
             let mut eager = values.clone();
             for value in &mut eager { value.0.score += value.2; }
             eager.sort_by(compare);

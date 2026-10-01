@@ -223,14 +223,20 @@ function pairPlacements(): Placement[] {
     return [pose('A', -5, 0), pose('B', 5, 0), pose('LEFT', -9, 0), pose('RIGHT', 9, 0)];
 }
 
-function gpuRefine(problem: object, backend: string, options: Record<string,string> = {}) {
+function gpuRefine(problem: object, backend: string, options: Record<string,string> = {}, boundaryError?: RegExp) {
     const require = createRequire(import.meta.url);
-    const addon = resolve('native/pcb-board-packer', require('../native/pcb-board-packer/platform.cjs').nativeFilename());
+    const addon = resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH ?? resolve('native/pcb-board-packer', require('../native/pcb-board-packer/platform.cjs').nativeFilename()));
     const child = spawnSync(process.execPath, ['-e',
         'const a=require(process.argv[1]),p=JSON.parse(require("node:fs").readFileSync(0,"utf8"));const r=a.refinePostPlacement(p);console.log(JSON.stringify({result:r,valid:a.validatePlacementChange(p,r.placements)}));', addon], {
         input: JSON.stringify(problem), encoding: 'utf8', windowsHide: true,
         env: { ...process.env, PCB_POST_PLACE_BACKEND: backend, ...options },
     });
+    if (boundaryError) {
+        assert.notEqual(child.status,0);
+        assert.match(child.stderr,boundaryError);
+        assert.doesNotMatch(child.stderr,/\[post-place-gpu\]/);
+        return {value:null,profile:null,log:child.stderr};
+    }
     assert.equal(child.status, 0, child.stderr || String(child.error));
     const {result,valid} = JSON.parse(child.stdout);
     assert.equal(valid, true);
@@ -325,11 +331,14 @@ test('post-place GPU guards and absent Vulkan driver replay the original CPU inp
     cases.push(['duplicate post-place net names',duplicate,{}]);
     const unsafe=structuredClone(original);
     unsafe.hints.push({kind:'distance',source:{kind:'component',component:0},target:{kind:'point',point:{x:1e8,y:0}},all:false,weight:0});
-    cases.push(['unsafe post-place GPU number',unsafe,{}]);
+    // Keep wider-frame rejection explicit; its support is not accepted yet.
+    for (const backend of ['cpu','cubecl']) {
+        gpuRefine(unsafe,backend,{},/coordinate exceeds the documented absolute\/local frame/);
+    }
     const layer=structuredClone(original);
     layer.hints.push({kind:'prefer_layer',source:{kind:'component',component:0},target:{kind:'missing'},all:false,weight:1,layer:'inner'});
     cases.push(['unsupported post-place layer',layer,{}]);
-    cases.push(['no compatible F64 Vulkan GPU',original,{VK_DRIVER_FILES:resolve('debugging/nonexistent-vulkan-driver.json')}]);
+    cases.push(['no compatible F32 Vulkan GPU',original,{VK_DRIVER_FILES:resolve('debugging/nonexistent-vulkan-driver.json')}]);
     for(const [reason,problem,environment] of cases) {
         const cpu=gpuRefine(problem,'cpu');
         const gpu=gpuRefine(problem,'cubecl',environment);

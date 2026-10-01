@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type { HintPriority, NumericRule, PlacementHint, PlacementInput } from '#types/pcb/layout-model.ts';
 
 export function expandHints(input: PlacementInput): NumericRule[] {
@@ -16,7 +17,7 @@ export function expandHints(input: PlacementInput): NumericRule[] {
                 target: hint.target,
                 min: hint.minDistance,
                 max: hint.path ? hint.maxDistance : hint.maxDistance ?? (hint.core ? 3 : semanticDistance('very_near', hint.priority)),
-                weight: weight * multiplier,
+                weight: fp.mul(weight, multiplier),
                 hard: hint.hard ?? (hint.path ? false : hint.priority === 'critical'),
                 criticalPair: true,
                 corePair: hint.core,
@@ -31,7 +32,7 @@ export function expandHints(input: PlacementInput): NumericRule[] {
                 source: hint.source,
                 edge: hint.edge,
                 orientation: hint.orientation ?? 'any',
-                max: input.board.clearances.edge + 0.5,
+                max: fp.add(input.board.clearances.edge, 0.5),
                 weight,
                 hard: hint.priority === 'critical',
             }];

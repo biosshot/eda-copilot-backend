@@ -42,11 +42,11 @@ struct Occupancy {
 impl TemporaryRoutes {
     pub(super) fn is_empty(&self) -> bool { self.occupied.is_empty() }
 
-    pub(super) fn new(bounds: Box2, grid: f64, layers: usize) -> Self {
+    pub(super) fn new(bounds: Box2, grid: f32, layers: usize) -> Self {
         Self::with_cell_limit(bounds, grid, layers, MAX_DENSE_CELLS)
     }
 
-    fn with_cell_limit(bounds: Box2, grid: f64, layers: usize, max_cells: usize) -> Self {
+    fn with_cell_limit(bounds: Box2, grid: f32, layers: usize, max_cells: usize) -> Self {
         let dense = max_cells.checked_div(layers)
             .and_then(|limit| GridShape::new(bounds, grid, limit))
             .and_then(|shape| {
@@ -118,7 +118,7 @@ impl TemporaryRoutes {
     }
 
     /// Test actual centerlines and via landings with the original tolerances.
-    pub(super) fn conflicts(&self, a: Cell, b: Cell, net: &Arc<str>, grid: f64, spacing: f64) -> bool {
+    pub(super) fn conflicts(&self, a: Cell, b: Cell, net: &Arc<str>, grid: f32, spacing: f32) -> bool {
         if self.occupied.is_empty() { return false; }
         if a.layer != b.layer {
             return self.conflicts(a, a, net, grid, spacing)
@@ -152,19 +152,19 @@ fn unit_step(a: Cell, b: Cell) -> bool {
     (i64::from(a.x) - i64::from(b.x)).abs() + (i64::from(a.y) - i64::from(b.y)).abs() <= 1
 }
 
-fn point_segment_squared(p: Cell, a: Cell, b: Cell) -> f64 {
-    let dx = (b.x - a.x) as f64;
-    let dy = (b.y - a.y) as f64;
-    let px = (p.x - a.x) as f64;
-    let py = (p.y - a.y) as f64;
+fn point_segment_squared(p: Cell, a: Cell, b: Cell) -> f32 {
+    let dx = (b.x - a.x) as f32;
+    let dy = (b.y - a.y) as f32;
+    let px = (p.x - a.x) as f32;
+    let py = (p.y - a.y) as f32;
     let length_squared = dx * dx + dy * dy;
     let t = if length_squared <= EPS { 0.0 } else { ((px * dx + py * dy) / length_squared).clamp(0.0, 1.0) };
     (px - t * dx).powi(2) + (py - t * dy).powi(2)
 }
 
-fn segments_squared(a: Cell, b: Cell, c: Cell, d: Cell) -> f64 {
-    let cross = |p: Cell, q: Cell, r: Cell| -> f64 {
-        (q.x - p.x) as f64 * (r.y - p.y) as f64 - (q.y - p.y) as f64 * (r.x - p.x) as f64
+fn segments_squared(a: Cell, b: Cell, c: Cell, d: Cell) -> f32 {
+    let cross = |p: Cell, q: Cell, r: Cell| -> f32 {
+        (q.x - p.x) as f32 * (r.y - p.y) as f32 - (q.y - p.y) as f32 * (r.x - p.x) as f32
     };
     if a.x.min(b.x) <= c.x.max(d.x) && c.x.min(d.x) <= a.x.max(b.x)
         && a.y.min(b.y) <= c.y.max(d.y) && c.y.min(d.y) <= a.y.max(b.y)
@@ -230,7 +230,7 @@ impl LegacyTemporaryRoutes {
     /// Test the entire candidate segment against reserved centerlines. A via
     /// transition tests its landing point on both layers (same diameter model
     /// as the existing estimator; this is not a manufacturing via DRC).
-    pub(super) fn conflicts(&self, a: Cell, b: Cell, net: &Arc<str>, grid: f64, spacing: f64) -> bool {
+    pub(super) fn conflicts(&self, a: Cell, b: Cell, net: &Arc<str>, grid: f32, spacing: f32) -> bool {
         if self.cells.is_empty() { return false; }
         if a.layer != b.layer {
             return self.conflicts(a, a, net, grid, spacing)

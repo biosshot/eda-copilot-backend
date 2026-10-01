@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import { round } from './geometry.ts';
 import type { Placement, PlacementGraphDiagnostic, PlacementStage, PlacementInput } from '#types/pcb/layout-model.ts';
 import { PlacementError, PCB_PLACEMENT_ASSUMPTIONS } from '#types/pcb/layout-model.ts';
@@ -173,7 +174,7 @@ function postPlaceStageData(result: ReturnType<typeof refinePostPlacement>) {
 
 function diagnosticScore(score: number) {
     if (score <= 0) return 0;
-    return round(score / (1 + score / DIAGNOSTIC_SCORE_SCALE));
+    return round(fp.div(score, (fp.add(1, fp.div(score, DIAGNOSTIC_SCORE_SCALE)))));
 }
 
 export function autoPlacePcbWithReport(input: PlacementInput) {

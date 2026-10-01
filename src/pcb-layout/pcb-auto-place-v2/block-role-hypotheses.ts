@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type { PcbComponent } from '#types/pcb/layout-model.ts';
 import { isGroundSignalName, isPowerSignalName } from '#utils/signals.ts';
 import type { BlockSolveParams } from './block-solver.ts';
@@ -17,7 +18,7 @@ export function suspiciousBlockRoles(params: BlockSolveParams): RoleHypothesis[]
         const nets = c.pins.map(pin => pin.signal_name);
         if (nets.length !== 2 || nets.some(n => !n)) continue;
         const key = [...nets].sort().join('\u0000');
-        capPairs.set(key, (capPairs.get(key) ?? 0) + 1);
+        capPairs.set(key, fp.add((capPairs.get(key) ?? 0), 1));
     }
     return params.primitives.flatMap(p => {
         if (p.locked || p.placements.length !== 1) return [];

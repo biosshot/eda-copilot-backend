@@ -4,15 +4,15 @@ use std::collections::{BTreeMap};
 use rustc_hash::{FxHashMap}; 
 
 pub const MARKER_PREFIX: &str = "__ordinary_net__:";
-pub const ORDINARY_NET_SCALE: f64 = 0.5;
-pub const ORDINARY_PAIR_AFFINITY_CAP: f64 = 4.0;
-pub const ORDINARY_DISTANCE_CAP_MM: f64 = 30.0;
+pub const ORDINARY_NET_SCALE: f32 = 0.5;
+pub const ORDINARY_PAIR_AFFINITY_CAP: f32 = 4.0;
+pub const ORDINARY_DISTANCE_CAP_MM: f32 = 30.0;
 pub const ORDINARY_MAX_FANOUT: usize = 8;
 
 #[derive(Clone, Copy, Default)]
 struct PairScore {
-    affinity: f64,
-    min_distance: f64,
+    affinity: f32,
+    min_distance: f32,
 }
 
 /// Weak board-level electrical affinity. Marker relations are produced by the
@@ -20,8 +20,8 @@ struct PairScore {
 /// the normal (1.0) or power (0.1) net weight. They intentionally have
 /// unresolvable endpoints so the ordinary relation scorer never treats them as
 /// explicit placement constraints.
-pub fn penalty(primitives: &[&Primitive], relations: &[Relation]) -> f64 {
-    let markers: BTreeMap<&str, f64> = relations
+pub fn penalty(primitives: &[&Primitive], relations: &[Relation]) -> f32 {
+    let markers: BTreeMap<&str, f32> = relations
         .iter()
         .filter_map(|relation| {
             let net = relation.from.strip_prefix(MARKER_PREFIX)?;
@@ -54,14 +54,14 @@ pub fn penalty(primitives: &[&Primitive], relations: &[Relation]) -> f64 {
         if count < 2 || count > ORDINARY_MAX_FANOUT {
             continue;
         }
-        let contribution = net_weight / (count as f64 - 1.0);
+        let contribution = net_weight / (count as f32 - 1.0);
         for a in 0..count {
             for b in (a + 1)..count {
                 let key = (by_primitive[a].0, by_primitive[b].0);
                 let distance = shortest_point_distance(&by_primitive[a].1, &by_primitive[b].1);
                 let entry = pairs.entry(key).or_insert(PairScore {
                     affinity: 0.0,
-                    min_distance: f64::INFINITY,
+                    min_distance: f32::INFINITY,
                 });
                 entry.affinity = (entry.affinity + contribution).min(ORDINARY_PAIR_AFFINITY_CAP);
                 entry.min_distance = entry.min_distance.min(distance);
@@ -76,11 +76,11 @@ pub fn penalty(primitives: &[&Primitive], relations: &[Relation]) -> f64 {
         .sum()
 }
 
-fn shortest_point_distance(a: &[Point], b: &[Point]) -> f64 {
-    let mut best = f64::INFINITY;
+fn shortest_point_distance(a: &[Point], b: &[Point]) -> f32 {
+    let mut best = f32::INFINITY;
     for left in a {
         for right in b {
-            best = best.min((left.x - right.x).hypot(left.y - right.y));
+            best = best.min(crate::numerics::hypot(left.x - right.x,left.y - right.y));
         }
     }
     best
@@ -93,7 +93,7 @@ mod tests {
     use crate::model::{ConnectionPoint, Placement};
     use std::sync::Arc;
 
-    fn primitive(id: &str, x: f64, nets: &[&str]) -> Primitive {
+    fn primitive(id: &str, x: f32, nets: &[&str]) -> Primitive {
         Primitive {
             id: Arc::from(id),
             kind: Arc::from("block"),
@@ -113,7 +113,7 @@ mod tests {
             }]),
             connection_points: Arc::new(nets.iter().enumerate().map(|(index, net)| ConnectionPoint {
                 x,
-                y: index as f64 * 0.1,
+                y: index as f32 * 0.1,
                 reference: Arc::from(format!("{id}.{}", index + 1)),
                 net: Some(Arc::from(*net)),
             }).collect()),
@@ -123,7 +123,7 @@ mod tests {
         }
     }
 
-    fn marker(net: &str, weight: f64) -> Relation {
+    fn marker(net: &str, weight: f32) -> Relation {
         Relation {
             id: Arc::from(format!("{MARKER_PREFIX}{net}")),
             kind: Arc::from("net"),
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn fanout_above_eight_is_ignored() {
-        let primitives: Vec<_> = (0..9).map(|index| primitive(&format!("P{index}"), index as f64, &["BUS"])).collect();
+        let primitives: Vec<_> = (0..9).map(|index| primitive(&format!("P{index}"), index as f32, &["BUS"])).collect();
         let refs: Vec<_> = primitives.iter().collect();
         assert_eq!(penalty(&refs, &[marker("BUS", 1.0)]), 0.0);
     }

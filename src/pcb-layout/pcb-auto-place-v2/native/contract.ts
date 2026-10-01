@@ -1,6 +1,7 @@
 import type { NativePostPlaceRefineProblem } from './encode-post-place-refine.ts';
 import type { PostPlaceRefineResult } from '../post-place-refiner.types.ts';
 import type { BoardEdge, Box, Layer, PlacementRelationKind, Point } from '#types/pcb/layout-model.ts';
+import type { NativeNumericFrame } from './numeric-frame.ts';
 
 export const NATIVE_BOARD_PACK_CONTRACT_VERSION = 7 as const;
 export const NATIVE_BLOCK_SOLVE_CONTRACT_VERSION = 4 as const;
@@ -61,6 +62,7 @@ export interface NativeRouteBaseline {
     topologyNets?: string[];
     /** Conservative route-score improvement ceiling; absent on older addons. */
     maximumImprovement?: number;
+    penaltyCeiling?: number;
 }
 
 export interface NativeRouteComparison {
@@ -183,6 +185,7 @@ export interface NativePrimitiveState {
 }
 
 export interface NativePrimitivePackSolution {
+    numericFrame?: NativeNumericFrame;
     version: number;
     states: NativePrimitiveState[];
     rank: { hardCount: number; hardSeverity: number; score: number };
@@ -199,6 +202,7 @@ export interface NativeBlockSolveSolutionV4 extends NativePrimitivePackSolution 
 }
 
 export interface NativeBoardPackerAddon {
+    numericContract?: () => string;
     contractVersion(): number;
     solveBoardPacked(problem: NativeBoardPackProblemV7): NativeBoardPackSolutionV7;
     /** Bounded Micro-A* score for routes affected by the listed component-level primitives. */

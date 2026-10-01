@@ -1,3 +1,4 @@
+import * as fp from '../../f32.ts';
 import type { PcbComponent, PlacementTreeNode } from '#types/pcb/layout-model.ts';
 import { isGroundSignalName } from '#utils/signals.ts';
 import {
@@ -47,8 +48,8 @@ export function encodeNativePassiveIslandProblem(params: PassiveNetIslandSolvePa
                 const oppositeLayer = layer === 'top' ? 'bottom' : 'top';
                 return {
                     rotation,
-                    width: bodyBox.right - bodyBox.left,
-                    height: bodyBox.bottom - bodyBox.top,
+                    width: fp.sub(bodyBox.right, bodyBox.left),
+                    height: fp.sub(bodyBox.bottom, bodyBox.top),
                     bodyBox,
                     throughHoleBoxes: componentCollisionBoxes(component, placement, oppositeLayer),
                     pinPoints: pins.map((pin) => {

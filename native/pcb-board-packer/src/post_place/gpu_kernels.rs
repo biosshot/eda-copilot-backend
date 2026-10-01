@@ -2,15 +2,15 @@
 use cubecl::prelude::*;
 use crate::compute::numerics::rp;
 #[derive(CubeLaunch, CubeType)]
-pub struct Input {pub si:Array<u32>,pub sf:Array<f64>,pub bi:Array<u32>,pub bf:Array<f64>,pub geometry:Array<f64>,pub edges:Array<u32>,pub lengths:Array<f64>}
+pub struct Input {pub si:Array<u32>,pub sf:Array<f32>,pub bi:Array<u32>,pub bf:Array<f32>,pub geometry:Array<f32>,pub edges:Array<u32>,pub lengths:Array<f32>}
 #[derive(Clone,Copy,CubeType)]
-pub struct P {pub x:f64,pub y:f64}
+pub struct P {pub x:f32,pub y:f32}
 #[derive(Clone,Copy,CubeType)]
-pub struct B {pub l:f64,pub r:f64,pub t:f64,pub b:f64}
-#[cube] fn min(a:f64,b:f64)->f64 {if a<b {a}else{b}}
-#[cube] fn max(a:f64,b:f64)->f64 {if a>b {a}else{b}}
-#[cube] fn length(x:f64,y:f64)->f64 {(x*x+y*y).sqrt()}
-#[cube] fn distance(a:P,b:P)->f64 {length(a.x-b.x,a.y-b.y)}
+pub struct B {pub l:f32,pub r:f32,pub t:f32,pub b:f32}
+#[cube] fn min(a:f32,b:f32)->f32 {if a<b {a}else{b}}
+#[cube] fn max(a:f32,b:f32)->f32 {if a>b {a}else{b}}
+#[cube] fn length(x:f32,y:f32)->f32 {(x*x+y*y).sqrt()}
+#[cube] fn distance(a:P,b:P)->f32 {length(a.x-b.x,a.y-b.y)}
 #[cube] fn geometry_offset(g:&Input,c:usize,i:usize)->usize {c*g.si[11] as usize+g.si[g.si[1] as usize+i*4] as usize}
 #[cube] fn point(g:&Input,c:usize,index:usize)->P {
  let a=g.si[4] as usize+index*2;let o=geometry_offset(g,c,g.si[a] as usize)+7+g.si[a+1] as usize*7;
@@ -35,25 +35,25 @@ pub struct B {pub l:f64,pub r:f64,pub t:f64,pub b:f64}
  else{let b=target_box(g,c,t);p.x=(b.l+b.r)/2.0;p.y=(b.t+b.b)/2.0;}p
 }
 #[cube(launch_unchecked)]
-pub fn materialize(g:&Input,out:&mut Array<f64>){
+pub fn materialize(g:&Input,out:&mut Array<f32>){
  let i=ABSOLUTE_POS as usize;let n=g.si[0] as usize;let c=i/n;let comp=i%n;
  if c<g.bi[0] as usize {let mut p=1+comp*3;let f=1+n*3+c*2;let begin=g.bi[f] as usize;
   for j in 0..g.bi[f+1] as usize {let q=begin+j*4;if g.bi[q] as usize==comp {p=q+1;}}
   let o=g.bi[p] as usize;let pos=g.bi[p+1] as usize;let layer=g.bi[p+2];let dx=g.bf[pos];let dy=g.bf[pos+1];
-  let desc=g.si[1] as usize+comp*4;let dst=geometry_offset(g,c,comp);out[dst]=dx;out[dst+1]=dy;out[dst+2]=layer as f64;
+  let desc=g.si[1] as usize+comp*4;let dst=geometry_offset(g,c,comp);out[dst]=dx;out[dst+1]=dy;out[dst+2]=layer as f32;
   out[dst+3]=g.sf[o]+dx;out[dst+4]=g.sf[o+1]+dx;out[dst+5]=g.sf[o+2]+dy;out[dst+6]=g.sf[o+3]+dy;
   for pad in 0..g.si[desc+1] as usize {let src=o+4+pad*6;let a=dst+7+pad*7;
    out[a]=g.sf[src]+dx;out[a+1]=g.sf[src+1]+dy;out[a+2]=g.sf[src+2]+dx;out[a+3]=g.sf[src+3]+dx;out[a+4]=g.sf[src+4]+dy;out[a+5]=g.sf[src+5]+dy;
-   let flags=g.si[g.si[desc+2] as usize+pad*4+3];let mut side=layer;if flags==1 {side=0;}if flags==2 {side=3-layer;}out[a+6]=side as f64;
+   let flags=g.si[g.si[desc+2] as usize+pad*4+3];let mut side=layer;if flags==1 {side=0;}if flags==2 {side=3-layer;}out[a+6]=side as f32;
   }
  }
 }
 #[cube(launch_unchecked)]
-pub fn mst(g:&Input,connected:&mut Array<u32>,edges:&mut Array<u32>,lengths:&mut Array<f64>){
+pub fn mst(g:&Input,connected:&mut Array<u32>,edges:&mut Array<u32>,lengths:&mut Array<f32>){
  let job=ABSOLUTE_POS as usize;let nets=g.si[2] as usize;let c=job/nets;let net=job%nets;
  if c<g.bi[0] as usize {let n=g.si[3] as usize+net*4;let start=g.si[n] as usize;let count=g.si[n+1] as usize;let es=g.si[n+2] as usize;let base=c*g.si[6] as usize+start;
   for j in 0..count {connected[base+j]=0;}if count>0 {connected[base]=1;}
-  for step in 1..count {let mut best=1e300;let mut bf=0usize;let mut bt=0usize;let mut found=false;
+  for step in 1..count {let mut best=f32::from_bits(0x7f800000u32);let mut bf=0usize;let mut bt=0usize;let mut found=false;
    for a in 0..count {if connected[base+a]!=0 {for b in 0..count {if connected[base+b]==0 {
     let d=distance(point(g,c,start+a),point(g,c,start+b));
     if !found || d<best-0.001 || ((d-best).abs()<=0.001 && (a<bf || (a==bf && b<bt))) {best=d;bf=a;bt=b;found=true;}
@@ -61,8 +61,8 @@ pub fn mst(g:&Input,connected:&mut Array<u32>,edges:&mut Array<u32>,lengths:&mut
   }
  }
 }
-#[cube] fn cross(a:P,b:P,c:P)->f64 {(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x)}
-#[cube] fn opposite(a:f64,b:f64)->bool {(a>0.001 && b< -0.001)||(a< -0.001 && b>0.001)}
+#[cube] fn cross(a:P,b:P,c:P)->f32 {(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x)}
+#[cube] fn opposite(a:f32,b:f32)->bool {(a>0.001 && b< -0.001)||(a< -0.001 && b>0.001)}
 #[cube] fn intersects(a:P,b:P,c:P,d:P)->bool {opposite(cross(a,b,c),cross(a,b,d))&&opposite(cross(c,d,a),cross(c,d,b))}
 #[cube] fn hits(a:P,b:P,q:B)->bool {
  let mut lo=0.0;let mut hi=1.0;let mut valid=true;
@@ -73,7 +73,7 @@ pub fn mst(g:&Input,connected:&mut Array<u32>,edges:&mut Array<u32>,lengths:&mut
  }valid
 }
 #[cube(launch_unchecked)]
-pub fn segment_costs(g:&Input,out:&mut Array<f64>,masks:&mut Array<u32>){
+pub fn segment_costs(g:&Input,out:&mut Array<f32>,masks:&mut Array<u32>){
  let job=ABSOLUTE_POS as usize;let ns=g.si[5] as usize;let c=job/ns;let i=job%ns;
  if c<g.bi[0] as usize {let e=job*3;let net=g.edges[e+2] as usize;let a=point(g,c,g.edges[e] as usize);let b=point(g,c,g.edges[e+1] as usize);let w=g.sf[g.si[g.si[3] as usize+net*4+3] as usize];let words=(ns+31)/32;for word in 0..words {masks[job*words+word]=0;}
   for j in i+1..ns {let f=(c*ns+j)*3;let other=g.edges[f+2] as usize;if other!=net {let x=point(g,c,g.edges[f] as usize);let y=point(g,c,g.edges[f+1] as usize);
@@ -96,13 +96,13 @@ pub fn segment_costs(g:&Input,out:&mut Array<f64>,masks:&mut Array<u32>){
   }out[job*2+1]=pads;
  }
 }
-#[cube] fn dot(a:P,b:P)->f64 {a.x*b.x+a.y*b.y}
+#[cube] fn dot(a:P,b:P)->f32 {a.x*b.x+a.y*b.y}
 #[cube] fn normalize(p:P)->P {let l=length(p.x,p.y);let mut r=P{x:0.0,y:0.0};if l>0.000001 {r.x=p.x/l;r.y=p.y/l;}r}
 #[cube] fn port(g:&Input,c:usize,index:usize)->P {target_point(g,c,g.si[index] as usize)}
 #[cube] fn normal(g:&Input,c:usize,index:usize)->P {
  let p=port(g,c,index);let comp=g.si[index+2] as usize;let o=geometry_offset(g,c,comp);let dx=p.x-g.geometry[o];let dy=p.y-g.geometry[o+1];let l=length(dx,dy);let mut n=P{x:0.0,y:0.0};if l>0.001 {n.x=dx/l;n.y=dy/l;}n
 }
-#[cube] fn path_cost(g:&Input,c:usize,path:usize)->f64 {
+#[cube] fn path_cost(g:&Input,c:usize,path:usize)->f32 {
  let t=g.si[10] as usize+path*5;let off=g.si[t] as usize;let count=g.si[t+1] as usize;let mut cost=0.0;
  if count>=3 {let first=port(g,c,off);let last=port(g,c,off+(count-1)*3);let direct=distance(first,last);
   if direct>=0.001 {let axis=normalize(P{x:last.x-first.x,y:last.y-first.y});let mut distance_sum=0.0;let mut back=0.0;let mut turns=0.0;let mut edges:u32=0;let mut prev=P{x:0.0,y:0.0};
@@ -117,7 +117,7 @@ pub fn segment_costs(g:&Input,out:&mut Array<f64>,masks:&mut Array<u32>){
  }cost
 }
 #[cube(launch_unchecked)]
-pub fn terms(g:&Input,out:&mut Array<f64>){
+pub fn terms(g:&Input,out:&mut Array<f32>){
  let job=ABSOLUTE_POS as usize;let nt=g.si[7] as usize;let total=nt+g.si[9] as usize;let c=job/total;let i=job%total;
  if c<g.bi[0] as usize {let mut a=0.0;let mut b=0.0;let mut d=0.0;
   if i<nt {let t=g.si[8] as usize+i*5;let kind=g.si[t];let src=g.si[t+1] as usize;let dst=g.si[t+2] as usize;let f=g.si[t+3] as usize;let flags=g.si[t+4];let w=g.sf[f];
@@ -130,7 +130,7 @@ pub fn terms(g:&Input,out:&mut Array<f64>){
  }
 }
 #[cube(launch_unchecked)]
-pub fn reduce(g:&Input,segments:&Array<f64>,masks:&Array<u32>,terms:&Array<f64>,out:&mut Array<f64>){
+pub fn reduce(g:&Input,segments:&Array<f32>,masks:&Array<u32>,terms:&Array<f32>,out:&mut Array<f32>){
  let c=ABSOLUTE_POS as usize;if c<g.bi[0] as usize {let ns=g.si[5] as usize;let nt=g.si[7] as usize;let total=nt+g.si[9] as usize;let mut score=0.0;let mut crossing=0.0;let mut pads=0.0;
   for j in 0..ns {let e=c*ns+j;let n=g.edges[e*3+2] as usize;let w=g.sf[g.si[g.si[3] as usize+n*4+3] as usize];let l=g.lengths[e];score+=l*10.0*w;score+=l*l*0.35*w;for k in j+1..ns {if masks[e*((ns+31)/32)+k/32]&(1u32<<(k%32) as u32)!=0 {let other=g.edges[(c*ns+k)*3+2] as usize;crossing+=(w*g.sf[g.si[g.si[3] as usize+other*4+3] as usize]).sqrt();}}for hit in 0..segments[e*2+1] as usize {let _hit=hit;pads+=w;}}
   score+=crossing*180.0;if g.sf[g.si[12] as usize]>0.0 {score+=pads*g.sf[g.si[12] as usize];}

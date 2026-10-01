@@ -172,10 +172,12 @@ if (['capture', 'replay'].includes(mode) && !process.env.PCB_BOARD_GPU_EXPERIMEN
         rows.push({ run, first: run === 0, callMs, wallMs, exactReferenceMatch, exactCaptureMatch, solutions });
         write(join(out, 'results.json'), { ...before, inputs: inputs.map(({ problem, ...input }) => input), rows,
             scope: 'exact native board calls; excludes block/refiner and TypeScript portfolio',
+            comparisonMode: args.comparison === 'quality' ? 'quality; requires separate geometry/metric review' : 'exact',
             validation: process.env.PCB_BOARD_GPU_VERIFY === '1',
             shortlistValidation: process.env.PCB_BOARD_GPU_VERIFY_SHORTLIST === '1',
             stageValidation: process.env.PCB_BOARD_GPU_VERIFY_STAGES === '1' });
         console.log(JSON.stringify({ run, wallMs, callMs, exactReferenceMatch, out }));
-        if (exactReferenceMatch === false || exactCaptureMatch === false) throw Error('Board result differs from CPU reference/captured output');
+        if (args.comparison !== 'quality' && (exactReferenceMatch === false || exactCaptureMatch === false))
+            throw Error('Board result differs from CPU reference/captured output');
     }
 } else throw Error('Use build, snapshot, capture or replay');

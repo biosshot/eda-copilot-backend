@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import { beginNativeSolveCapture } from './native/debug-capture.ts';
 import { availableParallelism } from 'node:os';
 import { performance } from 'node:perf_hooks';

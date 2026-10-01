@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import { performance } from 'node:perf_hooks';
 import type {
     PcbComponent,
@@ -167,8 +168,8 @@ function componentPrimitive(component: PcbComponent, placement: Placement): Plac
             if (pad && isThroughHolePad(pad)) return 'multi';
             return pad?.layer === 'bottom' ? (placement.layer === 'top' ? 'bottom' : 'top') : placement.layer;
         }),
-        width: bbox.right - bbox.left,
-        height: bbox.bottom - bbox.top,
+        width: fp.sub(bbox.right, bbox.left),
+        height: fp.sub(bbox.bottom, bbox.top),
         placements: [{ ...placement }],
         connectionPoints,
         pathPorts: [],
@@ -178,12 +179,12 @@ function componentPrimitive(component: PcbComponent, placement: Placement): Plac
 
 function boardHoleBoxes(input: PlacementInput) {
     return (input.boardHoles ?? []).map((hole) => {
-        const radius = Math.max(hole.keepout, hole.diameter / 2, hole.drill / 2);
+        const radius = fp.max(hole.keepout, fp.div(hole.diameter, 2), fp.div(hole.drill, 2));
         return {
-            left: hole.x - radius,
-            right: hole.x + radius,
-            top: hole.y - radius,
-            bottom: hole.y + radius,
+            left: fp.sub(hole.x, radius),
+            right: fp.add(hole.x, radius),
+            top: fp.sub(hole.y, radius),
+            bottom: fp.add(hole.y, radius),
         };
     });
 }

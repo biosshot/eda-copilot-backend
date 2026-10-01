@@ -1,3 +1,4 @@
+import * as fp from './f32.ts';
 import { centeredBoard, defaultSolverOptions } from "#pcb-layout/pcb-auto-place/utils.ts";
 import { preferredPlacementLayers } from "#pcb-layout/pcb-auto-place/fixed.ts";
 import { boardAnchorPoint, outlineInsetPointFromCorner, pointsBox, rectBoardPolygon } from "#pcb-layout/pcb-auto-place/geometry.ts";
@@ -1017,15 +1018,15 @@ function normalizeSyntheticBoardPad(rule: BoardPadRule | undefined): PcbSyntheti
 
 function boardPadCells(rule: BoardPadRule): PcbSyntheticBoardPad["pads"] {
     const rows = rule.pads.length;
-    const columns = Math.max(...rule.pads.map((row) => row.length));
+    const columns = fp.max(...rule.pads.map((row) => row.length));
     const raw: PcbSyntheticBoardPadCell[] = rule.pads.flatMap((row, rowIndex) => row.map((pad, columnIndex) => {
-        const pin_number = String(rule.pads.slice(0, rowIndex).reduce((sum, current) => sum + current.length, 0) + columnIndex + 1);
+        const pin_number = String(fp.add(fp.add(rule.pads.slice(0, rowIndex).reduce((sum, current) => fp.add(sum, current.length), 0), columnIndex), 1));
         const base = {
             pin_number,
             name: pad.name,
             net: pad.net,
-            x: columnIndex * rule.pitch,
-            y: rowIndex * rule.rowPitch,
+            x: fp.mul(columnIndex, rule.pitch),
+            y: fp.mul(rowIndex, rule.rowPitch),
             shape: pad.shape,
         };
         const hole = normalizeSyntheticBoardPadHole(pad.hole);
@@ -1034,21 +1035,21 @@ function boardPadCells(rule: BoardPadRule): PcbSyntheticBoardPad["pads"] {
             : { ...base, shape: pad.shape, width: pad.width, height: pad.height, ...(hole ? { hole } : {}) };
     }));
     const boxes = raw.map((pad) => ({
-        left: pad.x - boardPadCellWidth(pad) / 2,
-        right: pad.x + boardPadCellWidth(pad) / 2,
-        top: pad.y - boardPadCellHeight(pad) / 2,
-        bottom: pad.y + boardPadCellHeight(pad) / 2,
+        left: fp.sub(pad.x, fp.div(boardPadCellWidth(pad), 2)),
+        right: fp.add(pad.x, fp.div(boardPadCellWidth(pad), 2)),
+        top: fp.sub(pad.y, fp.div(boardPadCellHeight(pad), 2)),
+        bottom: fp.add(pad.y, fp.div(boardPadCellHeight(pad), 2)),
     }));
-    const left = Math.min(...boxes.map((box) => box.left), 0);
-    const right = Math.max(...boxes.map((box) => box.right), (columns - 1) * rule.pitch);
-    const top = Math.min(...boxes.map((box) => box.top), 0);
-    const bottom = Math.max(...boxes.map((box) => box.bottom), (rows - 1) * rule.rowPitch);
-    const centerX = (left + right) / 2;
-    const centerY = (top + bottom) / 2;
+    const left = fp.min(...boxes.map((box) => box.left), 0);
+    const right = fp.max(...boxes.map((box) => box.right), fp.mul((fp.sub(columns, 1)), rule.pitch));
+    const top = fp.min(...boxes.map((box) => box.top), 0);
+    const bottom = fp.max(...boxes.map((box) => box.bottom), fp.mul((fp.sub(rows, 1)), rule.rowPitch));
+    const centerX = fp.div((fp.add(left, right)), 2);
+    const centerY = fp.div((fp.add(top, bottom)), 2);
     return raw.map((pad) => ({
         ...pad,
-        x: roundForMessage(pad.x - centerX),
-        y: roundForMessage(pad.y - centerY),
+        x: roundForMessage(fp.sub(pad.x, centerX)),
+        y: roundForMessage(fp.sub(pad.y, centerY)),
     }));
 }
 
@@ -1084,8 +1085,8 @@ export function resolveConstraintRegions(rules: ConstraintRegionRule[], board: P
 }
 
 function resolveConstraintRegionRect(shape: ConstraintRegionRule["shape"], board: PlacementInput["board"]) {
-    const width = Math.max(0, shape.width);
-    const height = Math.max(0, shape.height);
+    const width = fp.max(0, shape.width);
+    const height = fp.max(0, shape.height);
     const anchorPoint = boardAnchorPoint(board, shape.anchor.anchor);
     const offset = shape.offset ?? { x: 0, y: 0 };
     const dx = offset.x ?? 0;
@@ -1095,19 +1096,19 @@ function resolveConstraintRegionRect(shape: ConstraintRegionRule["shape"], board
     const left = anchorHasLeft(anchor)
         ? anchorPoint.x
         : anchorHasRight(anchor)
-            ? anchorPoint.x - width
-            : anchorPoint.x - width / 2;
+            ? fp.sub(anchorPoint.x, width)
+            : fp.sub(anchorPoint.x, fp.div(width, 2));
     const top = anchorHasTop(anchor)
         ? anchorPoint.y
         : anchorHasBottom(anchor)
-            ? anchorPoint.y - height
-            : anchorPoint.y - height / 2;
+            ? fp.sub(anchorPoint.y, height)
+            : fp.sub(anchorPoint.y, fp.div(height, 2));
 
     return {
-        left: roundForMessage(left + dx),
-        right: roundForMessage(left + width + dx),
-        top: roundForMessage(top + dy),
-        bottom: roundForMessage(top + height + dy),
+        left: roundForMessage(fp.add(left, dx)),
+        right: roundForMessage(fp.add(fp.add(left, width), dx)),
+        top: roundForMessage(fp.add(top, dy)),
+        bottom: roundForMessage(fp.add(fp.add(top, height), dy)),
     };
 }
 
@@ -1135,11 +1136,11 @@ export function resolveBoardHoles(rules: BoardHoleRule[], board: PlacementInput[
         const offset = rule.offset ?? { x: 0, y: 0 };
         const drill = rule.drill;
         const diameter = rule.diameter ?? drill;
-        const keepout = rule.keepout ?? Math.max(diameter, drill) / 2;
+        const keepout = rule.keepout ?? fp.div(fp.max(diameter, drill), 2);
         return {
             name: rule.name,
-            x: roundForMessage(anchorPoint.x + (offset.x ?? 0)),
-            y: roundForMessage(anchorPoint.y + (offset.y ?? 0)),
+            x: roundForMessage(fp.add(anchorPoint.x, (offset.x ?? 0))),
+            y: roundForMessage(fp.add(anchorPoint.y, (offset.y ?? 0))),
             drill,
             diameter,
             keepout,
@@ -1167,11 +1168,14 @@ function boardFromRule(boardRule: Board, components: PcbComponent[]): CenteredRe
 
     const points = boardPolygonFromRule(boardRule);
     const box = pointsBox(points);
-    const width = roundForMessage(box.right - box.left);
-    const height = roundForMessage(box.bottom - box.top);
+    // Original polygon points are binary64 transport. Localize before any F32
+    // arithmetic so small outlines at a large authored offset remain distinct.
+    const origin = { x: (box.left + box.right) / 2, y: (box.top + box.bottom) / 2 };
+    const width = roundForMessage(fp.f32(box.right - box.left));
+    const height = roundForMessage(fp.f32(box.bottom - box.top));
     const centeredPoints = points.map((point) => ({
-        x: roundForMessage(point.x - (box.left + box.right) / 2),
-        y: roundForMessage(point.y - (box.top + box.bottom) / 2),
+        x: roundForMessage(fp.f32(point.x - origin.x)),
+        y: roundForMessage(fp.f32(point.y - origin.y)),
     }));
     const board = centeredBoard(width, height);
     board.outline = {
@@ -1186,10 +1190,10 @@ function boardFromRule(boardRule: Board, components: PcbComponent[]): CenteredRe
 function boardPolygonFromRule(boardRule: Exclude<Board, { type: "auto" | "rect" }>) {
     if (boardRule.type === "polygon") return boardRule.points;
     if (boardRule.type === "roundedRect") {
-        return roundedRectPolygon(boardRule.width, boardRule.height, boardRule.radius ?? Math.min(boardRule.width, boardRule.height) * 0.08, boardRule.segments ?? 6);
+        return roundedRectPolygon(boardRule.width, boardRule.height, boardRule.radius ?? fp.mul(fp.min(boardRule.width, boardRule.height), 0.08), boardRule.segments ?? 6);
     }
     if (boardRule.type === "chamferedRect") {
-        return chamferedRectPolygon(boardRule.width, boardRule.height, boardRule.chamfer ?? Math.min(boardRule.width, boardRule.height) * 0.08);
+        return chamferedRectPolygon(boardRule.width, boardRule.height, boardRule.chamfer ?? fp.mul(fp.min(boardRule.width, boardRule.height), 0.08));
     }
     if (boardRule.type === "notchedRect") {
         return notchedRectPolygon(boardRule.width, boardRule.height, boardRule.side ?? "top", boardRule.notchWidth, boardRule.notchDepth, boardRule.offset ?? 0);
@@ -1207,94 +1211,94 @@ function boardPolygonFromRule(boardRule: Exclude<Board, { type: "auto" | "rect" 
 }
 
 function roundedRectPolygon(width: number, height: number, radius: number, segments: number) {
-    const clampedRadius = clamp(radius, 0, Math.min(width, height) / 2);
+    const clampedRadius = clamp(radius, 0, fp.div(fp.min(width, height), 2));
     if (clampedRadius <= 0) return rectBoardPolygon(width, height);
     const cornerSegments = Math.max(2, Math.min(16, Math.floor(segments)));
     const corners = [
-        { cx: width / 2 - clampedRadius, cy: -height / 2 + clampedRadius, start: -90, end: 0 },
-        { cx: width / 2 - clampedRadius, cy: height / 2 - clampedRadius, start: 0, end: 90 },
-        { cx: -width / 2 + clampedRadius, cy: height / 2 - clampedRadius, start: 90, end: 180 },
-        { cx: -width / 2 + clampedRadius, cy: -height / 2 + clampedRadius, start: 180, end: 270 },
+        { cx: fp.sub(fp.div(width, 2), clampedRadius), cy: fp.add(fp.div(-height, 2), clampedRadius), start: -90, end: 0 },
+        { cx: fp.sub(fp.div(width, 2), clampedRadius), cy: fp.sub(fp.div(height, 2), clampedRadius), start: 0, end: 90 },
+        { cx: fp.add(fp.div(-width, 2), clampedRadius), cy: fp.sub(fp.div(height, 2), clampedRadius), start: 90, end: 180 },
+        { cx: fp.add(fp.div(-width, 2), clampedRadius), cy: fp.add(fp.div(-height, 2), clampedRadius), start: 180, end: 270 },
     ];
-    return corners.flatMap((corner) => Array.from({ length: cornerSegments + 1 }, (_, index) => {
-        const angle = (corner.start + (corner.end - corner.start) * index / cornerSegments) * Math.PI / 180;
+    return corners.flatMap((corner) => Array.from({ length: fp.add(cornerSegments, 1) }, (_, index) => {
+        const angle = fp.div(fp.mul((fp.add(corner.start, fp.div(fp.mul((fp.sub(corner.end, corner.start)), index), cornerSegments))), Math.PI), 180);
         return {
-            x: corner.cx + Math.cos(angle) * clampedRadius,
-            y: corner.cy + Math.sin(angle) * clampedRadius,
+            x: fp.add(corner.cx, fp.mul(fp.cos(angle), clampedRadius)),
+            y: fp.add(corner.cy, fp.mul(fp.sin(angle), clampedRadius)),
         };
     }));
 }
 
 function chamferedRectPolygon(width: number, height: number, chamfer: number) {
-    const value = clamp(chamfer, 0, Math.min(width, height) / 2);
+    const value = clamp(chamfer, 0, fp.div(fp.min(width, height), 2));
     if (value <= 0) return rectBoardPolygon(width, height);
-    const left = -width / 2;
-    const right = width / 2;
-    const top = -height / 2;
-    const bottom = height / 2;
+    const left = fp.div(-width, 2);
+    const right = fp.div(width, 2);
+    const top = fp.div(-height, 2);
+    const bottom = fp.div(height, 2);
     return [
-        { x: left + value, y: top },
-        { x: right - value, y: top },
-        { x: right, y: top + value },
-        { x: right, y: bottom - value },
-        { x: right - value, y: bottom },
-        { x: left + value, y: bottom },
-        { x: left, y: bottom - value },
-        { x: left, y: top + value },
+        { x: fp.add(left, value), y: top },
+        { x: fp.sub(right, value), y: top },
+        { x: right, y: fp.add(top, value) },
+        { x: right, y: fp.sub(bottom, value) },
+        { x: fp.sub(right, value), y: bottom },
+        { x: fp.add(left, value), y: bottom },
+        { x: left, y: fp.sub(bottom, value) },
+        { x: left, y: fp.add(top, value) },
     ];
 }
 
 function notchedRectPolygon(width: number, height: number, side: "left" | "right" | "top" | "bottom", notchWidth: number, notchDepth: number, offset: number) {
-    const halfWidth = width / 2;
-    const halfHeight = height / 2;
-    const notchHalf = Math.max(0, notchWidth) / 2;
-    const depth = Math.max(0, notchDepth);
+    const halfWidth = fp.div(width, 2);
+    const halfHeight = fp.div(height, 2);
+    const notchHalf = fp.div(fp.max(0, notchWidth), 2);
+    const depth = fp.max(0, notchDepth);
     if (side === "top") {
-        const cx = clamp(offset, -halfWidth + notchHalf, halfWidth - notchHalf);
+        const cx = clamp(offset, fp.add(-halfWidth, notchHalf), fp.sub(halfWidth, notchHalf));
         return [
             { x: -halfWidth, y: -halfHeight },
-            { x: cx - notchHalf, y: -halfHeight },
-            { x: cx - notchHalf, y: -halfHeight + depth },
-            { x: cx + notchHalf, y: -halfHeight + depth },
-            { x: cx + notchHalf, y: -halfHeight },
+            { x: fp.sub(cx, notchHalf), y: -halfHeight },
+            { x: fp.sub(cx, notchHalf), y: fp.add(-halfHeight, depth) },
+            { x: fp.add(cx, notchHalf), y: fp.add(-halfHeight, depth) },
+            { x: fp.add(cx, notchHalf), y: -halfHeight },
             { x: halfWidth, y: -halfHeight },
             { x: halfWidth, y: halfHeight },
             { x: -halfWidth, y: halfHeight },
         ];
     }
     if (side === "bottom") {
-        const cx = clamp(offset, -halfWidth + notchHalf, halfWidth - notchHalf);
+        const cx = clamp(offset, fp.add(-halfWidth, notchHalf), fp.sub(halfWidth, notchHalf));
         return [
             { x: -halfWidth, y: -halfHeight },
             { x: halfWidth, y: -halfHeight },
             { x: halfWidth, y: halfHeight },
-            { x: cx + notchHalf, y: halfHeight },
-            { x: cx + notchHalf, y: halfHeight - depth },
-            { x: cx - notchHalf, y: halfHeight - depth },
-            { x: cx - notchHalf, y: halfHeight },
+            { x: fp.add(cx, notchHalf), y: halfHeight },
+            { x: fp.add(cx, notchHalf), y: fp.sub(halfHeight, depth) },
+            { x: fp.sub(cx, notchHalf), y: fp.sub(halfHeight, depth) },
+            { x: fp.sub(cx, notchHalf), y: halfHeight },
             { x: -halfWidth, y: halfHeight },
         ];
     }
-    const cy = clamp(offset, -halfHeight + notchHalf, halfHeight - notchHalf);
+    const cy = clamp(offset, fp.add(-halfHeight, notchHalf), fp.sub(halfHeight, notchHalf));
     if (side === "left") {
         return [
             { x: -halfWidth, y: -halfHeight },
             { x: halfWidth, y: -halfHeight },
             { x: halfWidth, y: halfHeight },
             { x: -halfWidth, y: halfHeight },
-            { x: -halfWidth, y: cy + notchHalf },
-            { x: -halfWidth + depth, y: cy + notchHalf },
-            { x: -halfWidth + depth, y: cy - notchHalf },
-            { x: -halfWidth, y: cy - notchHalf },
+            { x: -halfWidth, y: fp.add(cy, notchHalf) },
+            { x: fp.add(-halfWidth, depth), y: fp.add(cy, notchHalf) },
+            { x: fp.add(-halfWidth, depth), y: fp.sub(cy, notchHalf) },
+            { x: -halfWidth, y: fp.sub(cy, notchHalf) },
         ];
     }
     return [
         { x: -halfWidth, y: -halfHeight },
         { x: halfWidth, y: -halfHeight },
-        { x: halfWidth, y: cy - notchHalf },
-        { x: halfWidth - depth, y: cy - notchHalf },
-        { x: halfWidth - depth, y: cy + notchHalf },
-        { x: halfWidth, y: cy + notchHalf },
+        { x: halfWidth, y: fp.sub(cy, notchHalf) },
+        { x: fp.sub(halfWidth, depth), y: fp.sub(cy, notchHalf) },
+        { x: fp.sub(halfWidth, depth), y: fp.add(cy, notchHalf) },
+        { x: halfWidth, y: fp.add(cy, notchHalf) },
         { x: halfWidth, y: halfHeight },
         { x: -halfWidth, y: halfHeight },
     ];
@@ -1303,29 +1307,29 @@ function notchedRectPolygon(width: number, height: number, side: "left" | "right
 function ovalPolygon(width: number, height: number, segments: number) {
     const count = Math.max(12, Math.min(96, Math.floor(segments)));
     return Array.from({ length: count }, (_, index) => {
-        const angle = index * 2 * Math.PI / count;
+        const angle = fp.div(fp.mul(index * 2, Math.PI), count);
         return {
-            x: Math.cos(angle) * width / 2,
-            y: Math.sin(angle) * height / 2,
+            x: fp.div(fp.mul(fp.cos(angle), width), 2),
+            y: fp.div(fp.mul(fp.sin(angle), height), 2),
         };
     });
 }
 
 function lShapePolygon(width: number, height: number, cutoutWidth: number, cutoutHeight: number, corner: "top_left" | "top_right" | "bottom_right" | "bottom_left") {
-    const left = -width / 2;
-    const right = width / 2;
-    const top = -height / 2;
-    const bottom = height / 2;
+    const left = fp.div(-width, 2);
+    const right = fp.div(width, 2);
+    const top = fp.div(-height, 2);
+    const bottom = fp.div(height, 2);
     const cw = clamp(cutoutWidth, 0, width);
     const ch = clamp(cutoutHeight, 0, height);
-    if (corner === "top_left") return [{ x: left + cw, y: top }, { x: right, y: top }, { x: right, y: bottom }, { x: left, y: bottom }, { x: left, y: top + ch }, { x: left + cw, y: top + ch }];
-    if (corner === "top_right") return [{ x: left, y: top }, { x: right - cw, y: top }, { x: right - cw, y: top + ch }, { x: right, y: top + ch }, { x: right, y: bottom }, { x: left, y: bottom }];
-    if (corner === "bottom_right") return [{ x: left, y: top }, { x: right, y: top }, { x: right, y: bottom - ch }, { x: right - cw, y: bottom - ch }, { x: right - cw, y: bottom }, { x: left, y: bottom }];
-    return [{ x: left, y: top }, { x: right, y: top }, { x: right, y: bottom }, { x: left + cw, y: bottom }, { x: left + cw, y: bottom - ch }, { x: left, y: bottom - ch }];
+    if (corner === "top_left") return [{ x: fp.add(left, cw), y: top }, { x: right, y: top }, { x: right, y: bottom }, { x: left, y: bottom }, { x: left, y: fp.add(top, ch) }, { x: fp.add(left, cw), y: fp.add(top, ch) }];
+    if (corner === "top_right") return [{ x: left, y: top }, { x: fp.sub(right, cw), y: top }, { x: fp.sub(right, cw), y: fp.add(top, ch) }, { x: right, y: fp.add(top, ch) }, { x: right, y: bottom }, { x: left, y: bottom }];
+    if (corner === "bottom_right") return [{ x: left, y: top }, { x: right, y: top }, { x: right, y: fp.sub(bottom, ch) }, { x: fp.sub(right, cw), y: fp.sub(bottom, ch) }, { x: fp.sub(right, cw), y: bottom }, { x: left, y: bottom }];
+    return [{ x: left, y: top }, { x: right, y: top }, { x: right, y: bottom }, { x: fp.add(left, cw), y: bottom }, { x: fp.add(left, cw), y: fp.sub(bottom, ch) }, { x: left, y: fp.sub(bottom, ch) }];
 }
 
 function inverseLPolygon(width: number, height: number, legWidth: number, legHeight: number, corner: "top_left" | "top_right" | "bottom_right" | "bottom_left") {
-    return lShapePolygon(width, height, Math.max(0, width - legWidth), Math.max(0, height - legHeight), corner);
+    return lShapePolygon(width, height, fp.max(0, fp.sub(width, legWidth)), fp.max(0, fp.sub(height, legHeight)), corner);
 }
 
 function boardCornerAnchor(corner: "top_left" | "top_right" | "bottom_right" | "bottom_left") {
@@ -1340,17 +1344,17 @@ export function autoBoardSize(
     const edgeClearance = boardRule.edgeClearance ?? 0.8;
     const aspectRatio = clamp(boardRule.aspectRatio ?? 1.45, 0.5, 2.5);
     const componentDensity = clamp(boardRule.componentDensity ?? DEFAULT_COMPONENT_DENSITY, 0.1, 0.85);
-    const totalFootprintArea = components.reduce((sum, component) => sum + component.footprint.width * component.footprint.height, 0);
-    const largestWidth = Math.max(...components.map((component) => component.footprint.width), 1);
-    const largestHeight = Math.max(...components.map((component) => component.footprint.height), 1);
-    const requiredWidth = largestWidth + componentClearance * 2 + edgeClearance * 2;
-    const requiredHeight = largestHeight + componentClearance * 2 + edgeClearance * 2;
-    const targetArea = Math.max(totalFootprintArea / componentDensity, requiredWidth * requiredHeight, 25);
+    const totalFootprintArea = components.reduce((sum, component) => fp.add(sum, fp.mul(component.footprint.width, component.footprint.height)), 0);
+    const largestWidth = fp.max(...components.map((component) => component.footprint.width), 1);
+    const largestHeight = fp.max(...components.map((component) => component.footprint.height), 1);
+    const requiredWidth = fp.add(fp.add(largestWidth, fp.mul(componentClearance, 2)), fp.mul(edgeClearance, 2));
+    const requiredHeight = fp.add(fp.add(largestHeight, fp.mul(componentClearance, 2)), fp.mul(edgeClearance, 2));
+    const targetArea = fp.max(fp.div(totalFootprintArea, componentDensity), fp.mul(requiredWidth, requiredHeight), 25);
 
-    let width = Math.sqrt(targetArea * aspectRatio);
-    let height = Math.sqrt(targetArea / aspectRatio);
-    width = Math.max(width, requiredWidth, boardRule.minWidth ?? 0);
-    height = Math.max(height, requiredHeight, boardRule.minHeight ?? 0);
+    let width = fp.sqrt(fp.mul(targetArea, aspectRatio));
+    let height = fp.sqrt(fp.div(targetArea, aspectRatio));
+    width = fp.max(width, requiredWidth, boardRule.minWidth ?? 0);
+    height = fp.max(height, requiredHeight, boardRule.minHeight ?? 0);
 
     if (boardRule.maxWidth !== null && boardRule.maxWidth < requiredWidth) {
         throw new Error(`board.auto.maxWidth ${boardRule.maxWidth}mm is smaller than the largest footprint requirement ${roundForMessage(requiredWidth)}mm`);
@@ -1359,8 +1363,8 @@ export function autoBoardSize(
         throw new Error(`board.auto.maxHeight ${boardRule.maxHeight}mm is smaller than the largest footprint requirement ${roundForMessage(requiredHeight)}mm`);
     }
 
-    width = boardRule.maxWidth === null ? width : Math.min(width, boardRule.maxWidth);
-    height = boardRule.maxHeight === null ? height : Math.min(height, boardRule.maxHeight);
+    width = boardRule.maxWidth === null ? width : fp.min(width, boardRule.maxWidth);
+    height = boardRule.maxHeight === null ? height : fp.min(height, boardRule.maxHeight);
     return [roundForMessage(width), roundForMessage(height)];
 }
 

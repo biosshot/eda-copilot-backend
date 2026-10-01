@@ -1,4 +1,6 @@
-import { rotatePoint } from '#utils/math.ts';
+import * as fp from '../f32.ts';
+import { coordinateAdd, sourceCoordinateAdd, coordinateDifference, coordinateCenter, coordinateRound, coordinateOrigin } from '../coordinate-transport.ts';
+import { rotatePoint, sinCosDegrees, roundPlacement as canonicalRoundPlacement } from '../f32.ts';
 import type { BoardAnchor, BoardEdge, BoardHole, Box, CenteredRectBoard, FootprintPad, FootprintSpec, Layer, PcbComponent, Placement, Point } from '../../types/pcb/layout-model.ts';
 
 export const GEOMETRY_EPSILON = 1e-6;
@@ -21,8 +23,8 @@ export function getPadOffset(component: PcbComponent, pin: string | number, rota
 export function getLocalPointWorld(placement: Placement, point: Point) {
     const offset = getLocalPointOffset(point, placement.rotate, placement.layer);
     return {
-        x: placement.x + offset.x,
-        y: placement.y + offset.y,
+        x: sourceCoordinateAdd(placement.x, offset.x),
+        y: sourceCoordinateAdd(placement.y, offset.y),
     };
 }
 
@@ -35,35 +37,35 @@ export function getLocalPointOffset(point: Point, rotate: number, layer: Layer =
 
 export function getBox(component: PcbComponent, placement: Placement): Box {
     const footprint = component.footprint;
-    const radians = placement.rotate * Math.PI / 180;
-    const cos = Math.abs(Math.cos(radians));
-    const sin = Math.abs(Math.sin(radians));
-    const halfWidth = (footprint.width * cos + footprint.height * sin) / 2;
-    const halfHeight = (footprint.width * sin + footprint.height * cos) / 2;
+    const [rawSin, rawCos] = sinCosDegrees(placement.rotate);
+    const cos = fp.abs(rawCos);
+    const sin = fp.abs(rawSin);
+    const halfWidth = fp.div((fp.add(fp.mul(footprint.width, cos), fp.mul(footprint.height, sin))), 2);
+    const halfHeight = fp.div((fp.add(fp.mul(footprint.width, sin), fp.mul(footprint.height, cos))), 2);
 
     return {
-        left: placement.x - halfWidth,
-        right: placement.x + halfWidth,
-        top: placement.y - halfHeight,
-        bottom: placement.y + halfHeight,
+        left: sourceCoordinateAdd(placement.x, -halfWidth),
+        right: sourceCoordinateAdd(placement.x, halfWidth),
+        top: sourceCoordinateAdd(placement.y, -halfHeight),
+        bottom: sourceCoordinateAdd(placement.y, halfHeight),
     };
 }
 
 export function boardBox(board: CenteredRectBoard): Box {
     return {
-        left: -board.outline.width / 2,
-        right: board.outline.width / 2,
-        top: -board.outline.height / 2,
-        bottom: board.outline.height / 2,
+        left: fp.div(-board.outline.width, 2),
+        right: fp.div(board.outline.width, 2),
+        top: fp.div(-board.outline.height, 2),
+        bottom: fp.div(board.outline.height, 2),
     };
 }
 
 export function rectBoardPolygon(width: number, height: number): Point[] {
     return [
-        { x: -width / 2, y: -height / 2 },
-        { x: width / 2, y: -height / 2 },
-        { x: width / 2, y: height / 2 },
-        { x: -width / 2, y: height / 2 },
+        { x: fp.div(-width, 2), y: fp.div(-height, 2) },
+        { x: fp.div(width, 2), y: fp.div(-height, 2) },
+        { x: fp.div(width, 2), y: fp.div(height, 2) },
+        { x: fp.div(-width, 2), y: fp.div(height, 2) },
     ];
 }
 
@@ -92,17 +94,17 @@ export function pointsBox(points: Point[]): Box {
 export function pointInBoard(board: CenteredRectBoard, point: Point, edgeClearance = 0) {
     const box = boardBox(board);
     if (
-        point.x < box.left + edgeClearance - GEOMETRY_EPSILON
-        || point.x > box.right - edgeClearance + GEOMETRY_EPSILON
-        || point.y < box.top + edgeClearance - GEOMETRY_EPSILON
-        || point.y > box.bottom - edgeClearance + GEOMETRY_EPSILON
+        point.x < fp.sub(fp.add(box.left, edgeClearance), GEOMETRY_EPSILON)
+        || point.x > fp.add(fp.sub(box.right, edgeClearance), GEOMETRY_EPSILON)
+        || point.y < fp.sub(fp.add(box.top, edgeClearance), GEOMETRY_EPSILON)
+        || point.y > fp.add(fp.sub(box.bottom, edgeClearance), GEOMETRY_EPSILON)
     ) {
         return false;
     }
 
     if (board.outline.type !== 'polygon') return true;
     if (!pointInPolygon(point, board.outline.points)) return false;
-    return edgeClearance <= 0 || pointToPolygonDistance(point, board.outline.points) + GEOMETRY_EPSILON >= edgeClearance;
+    return edgeClearance <= 0 || fp.add(pointToPolygonDistance(point, board.outline.points), GEOMETRY_EPSILON) >= edgeClearance;
 }
 
 export function boxInsideBoard(board: CenteredRectBoard, box: Box, edgeClearance = 0) {
@@ -122,6 +124,11 @@ export function boxInsideBoard(board: CenteredRectBoard, box: Box, edgeClearance
 }
 
 export function pointInPolygon(point: Point, polygon: Point[]) {
+    const ox = coordinateOrigin(point.x), oy = coordinateOrigin(point.y);
+    if (ox !== 0 || oy !== 0) {
+        const local = (p: Point) => ({ x: fp.f32(p.x - ox), y: fp.f32(p.y - oy) });
+        return pointInPolygon(local(point), polygon.map(local));
+    }
     if (polygon.length < 3) return false;
     let inside = false;
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -129,7 +136,7 @@ export function pointInPolygon(point: Point, polygon: Point[]) {
         const b = polygon[j];
         if (pointOnSegment(point, a, b)) return true;
         const intersects = ((a.y > point.y) !== (b.y > point.y))
-            && point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y) + a.x;
+            && point.x < fp.add(fp.div((fp.mul((fp.sub(b.x, a.x)), (fp.sub(point.y, a.y)))), (fp.sub(b.y, a.y))), a.x);
         if (intersects) inside = !inside;
     }
     return inside;
@@ -148,39 +155,44 @@ export function pointToPolygonDistance(point: Point, polygon: Point[]) {
 }
 
 export function pointToSegmentDistance(point: Point, a: Point, b: Point) {
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const lengthSquared = dx * dx + dy * dy;
+    const ox = coordinateOrigin(point.x), oy = coordinateOrigin(point.y);
+    if (ox !== 0 || oy !== 0) {
+        const local = (p: Point) => ({ x: fp.f32(p.x - ox), y: fp.f32(p.y - oy) });
+        return pointToSegmentDistance(local(point), local(a), local(b));
+    }
+    const dx = fp.sub(b.x, a.x);
+    const dy = fp.sub(b.y, a.y);
+    const lengthSquared = fp.add(fp.mul(dx, dx), fp.mul(dy, dy));
     if (lengthSquared < GEOMETRY_EPSILON) return dist(point, a);
-    const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared));
-    const projectionX = a.x + t * dx;
-    const projectionY = a.y + t * dy;
-    const projectionDx = point.x - projectionX;
-    const projectionDy = point.y - projectionY;
-    return Math.sqrt(projectionDx * projectionDx + projectionDy * projectionDy);
+    const t = fp.max(0, fp.min(1, fp.div((fp.add(fp.mul((fp.sub(point.x, a.x)), dx), fp.mul((fp.sub(point.y, a.y)), dy))), lengthSquared)));
+    const projectionX = fp.add(a.x, fp.mul(t, dx));
+    const projectionY = fp.add(a.y, fp.mul(t, dy));
+    const projectionDx = fp.sub(point.x, projectionX);
+    const projectionDy = fp.sub(point.y, projectionY);
+    return fp.sqrt(fp.add(fp.mul(projectionDx, projectionDx), fp.mul(projectionDy, projectionDy)));
 }
 
 export function outlineInsetPointFromCorner(board: CenteredRectBoard, corner: Exclude<BoardAnchor, 'board.center' | 'board.left' | 'board.right' | 'board.top' | 'board.bottom'>, inset: number) {
     const boxCorner = boardAnchorPoint(board, corner);
     if (board.outline.type !== 'polygon') {
         return {
-            x: boxCorner.x + (corner.includes('left') ? inset : -inset),
-            y: boxCorner.y + (corner.includes('top') ? inset : -inset),
+            x: fp.add(boxCorner.x, (corner.includes('left') ? inset : -inset)),
+            y: fp.add(boxCorner.y, (corner.includes('top') ? inset : -inset)),
         };
     }
-    const directionLength = Math.hypot(boxCorner.x, boxCorner.y);
+    const directionLength = fp.hypot(boxCorner.x, boxCorner.y);
     if (directionLength < GEOMETRY_EPSILON) return boxCorner;
-    const direction = { x: -boxCorner.x / directionLength, y: -boxCorner.y / directionLength };
+    const direction = { x: fp.div(-boxCorner.x, directionLength), y: fp.div(-boxCorner.y, directionLength) };
     const center = { x: 0, y: 0 };
     const polygon = boardOutlinePolygon(board);
     const intersections = polygon
         .map((point, index) => segmentIntersection(boxCorner, center, point, polygon[(index + 1) % polygon.length]))
         .filter((point): point is Point => point !== null)
-        .sort((a, b) => dist(boxCorner, a) - dist(boxCorner, b));
+        .sort((a, b) => fp.sub(dist(boxCorner, a), dist(boxCorner, b)));
     const edgePoint = intersections[0] ?? boxCorner;
     return {
-        x: edgePoint.x + direction.x * inset,
-        y: edgePoint.y + direction.y * inset,
+        x: fp.add(edgePoint.x, fp.mul(direction.x, inset)),
+        y: fp.add(edgePoint.y, fp.mul(direction.y, inset)),
     };
 }
 
@@ -204,10 +216,10 @@ export function boardAnchorPoint(board: CenteredRectBoard, anchorValue: BoardAnc
 export function distanceToEdge(board: CenteredRectBoard, component: PcbComponent, placement: Placement, edge: BoardEdge) {
     const box = boardBox(board);
     const componentBox = getBox(component, placement);
-    if (edge === 'left') return Math.abs(componentBox.left - box.left);
-    if (edge === 'right') return Math.abs(box.right - componentBox.right);
-    if (edge === 'top') return Math.abs(componentBox.top - box.top);
-    return Math.abs(box.bottom - componentBox.bottom);
+    if (edge === 'left') return fp.abs(fp.sub(componentBox.left, box.left));
+    if (edge === 'right') return fp.abs(fp.sub(box.right, componentBox.right));
+    if (edge === 'top') return fp.abs(fp.sub(componentBox.top, box.top));
+    return fp.abs(fp.sub(box.bottom, componentBox.bottom));
 }
 
 export function rotatedSize(footprint: FootprintSpec, rotate: number) {
@@ -217,18 +229,13 @@ export function rotatedSize(footprint: FootprintSpec, rotate: number) {
 }
 
 export function overlaps(a: Box, b: Box, clearance: number) {
-    return !(
-        a.right + clearance - PLACEMENT_EPSILON < b.left ||
-        a.left - clearance + PLACEMENT_EPSILON > b.right ||
-        a.bottom + clearance - PLACEMENT_EPSILON < b.top ||
-        a.top - clearance + PLACEMENT_EPSILON > b.bottom
-    );
+    return boxClearanceGap(a, b) <= fp.sub(clearance, PLACEMENT_EPSILON);
 }
 
 export function boxGap(a: Box, b: Box) {
-    const xGap = Math.max(0, Math.max(b.left - a.right, a.left - b.right));
-    const yGap = Math.max(0, Math.max(b.top - a.bottom, a.top - b.bottom));
-    return Math.sqrt(xGap * xGap + yGap * yGap);
+    const xGap = fp.max(0, fp.max(coordinateDifference(b.left, a.right), coordinateDifference(a.left, b.right)));
+    const yGap = fp.max(0, fp.max(coordinateDifference(b.top, a.bottom), coordinateDifference(a.top, b.bottom)));
+    return fp.sqrt(fp.add(fp.mul(xGap, xGap), fp.mul(yGap, yGap)));
 }
 
 /**
@@ -237,71 +244,77 @@ export function boxGap(a: Box, b: Box) {
  * A negative value means they overlap (or are closer than touching).
  */
 export function boxClearanceGap(a: Box, b: Box): number {
-    const xSep = Math.max(b.left - a.right, a.left - b.right);
-    const ySep = Math.max(b.top - a.bottom, a.top - b.bottom);
-    return Math.max(xSep, ySep);
+    const xSep = fp.max(coordinateDifference(b.left, a.right), coordinateDifference(a.left, b.right));
+    const ySep = fp.max(coordinateDifference(b.top, a.bottom), coordinateDifference(a.top, b.bottom));
+    return fp.max(xSep, ySep);
 }
 
 export function boxPointGap(box: Box, point: Point) {
-    const xGap = Math.max(box.left - point.x, 0, point.x - box.right);
-    const yGap = Math.max(box.top - point.y, 0, point.y - box.bottom);
-    return Math.sqrt(xGap * xGap + yGap * yGap);
+    const xGap = fp.max(coordinateDifference(box.left, point.x), 0, coordinateDifference(point.x, box.right));
+    const yGap = fp.max(coordinateDifference(box.top, point.y), 0, coordinateDifference(point.y, box.bottom));
+    return fp.sqrt(fp.add(fp.mul(xGap, xGap), fp.mul(yGap, yGap)));
 }
 
 export function boardHoleKeepoutRadius(hole: BoardHole) {
-    return Math.max(hole.keepout, hole.diameter / 2, hole.drill / 2);
+    return fp.max(hole.keepout, fp.div(hole.diameter, 2), fp.div(hole.drill, 2));
 }
 
 export function overlapsBoardHole(box: Box, hole: BoardHole, clearance = 0) {
-    return boxPointGap(box, hole) + GEOMETRY_EPSILON < boardHoleKeepoutRadius(hole) + clearance;
+    return fp.add(boxPointGap(box, hole), GEOMETRY_EPSILON) < fp.add(boardHoleKeepoutRadius(hole), clearance);
 }
 
 export function polar(radius: number, angle: number) {
-    const radians = angle * Math.PI / 180;
-    return { x: Math.cos(radians) * radius, y: Math.sin(radians) * radius };
+    const [sin, cos] = sinCosDegrees(angle);
+    return { x: fp.mul(cos, radius), y: fp.mul(sin, radius) };
 }
 
 function pointOnSegment(point: Point, a: Point, b: Point) {
-    return Math.abs((b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x)) < GEOMETRY_EPSILON
-        && point.x <= Math.max(a.x, b.x) + GEOMETRY_EPSILON
-        && point.x >= Math.min(a.x, b.x) - GEOMETRY_EPSILON
-        && point.y <= Math.max(a.y, b.y) + GEOMETRY_EPSILON
-        && point.y >= Math.min(a.y, b.y) - GEOMETRY_EPSILON;
+    return fp.abs(fp.sub(fp.mul((fp.sub(b.x, a.x)), (fp.sub(point.y, a.y))), fp.mul((fp.sub(b.y, a.y)), (fp.sub(point.x, a.x))))) < GEOMETRY_EPSILON
+        && point.x <= fp.add(fp.max(a.x, b.x), GEOMETRY_EPSILON)
+        && point.x >= fp.sub(fp.min(a.x, b.x), GEOMETRY_EPSILON)
+        && point.y <= fp.add(fp.max(a.y, b.y), GEOMETRY_EPSILON)
+        && point.y >= fp.sub(fp.min(a.y, b.y), GEOMETRY_EPSILON);
 }
 
 function segmentIntersection(a: Point, b: Point, c: Point, d: Point): Point | null {
-    const denominator = (a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x);
-    if (Math.abs(denominator) < GEOMETRY_EPSILON) return null;
-    const t = ((a.x - c.x) * (c.y - d.y) - (a.y - c.y) * (c.x - d.x)) / denominator;
-    const u = -((a.x - b.x) * (a.y - c.y) - (a.y - b.y) * (a.x - c.x)) / denominator;
-    if (t < -GEOMETRY_EPSILON || t > 1 + GEOMETRY_EPSILON || u < -GEOMETRY_EPSILON || u > 1 + GEOMETRY_EPSILON) return null;
+    const ox = coordinateOrigin(a.x), oy = coordinateOrigin(a.y);
+    if (ox !== 0 || oy !== 0) {
+        const local = (p: Point) => ({ x: fp.f32(p.x - ox), y: fp.f32(p.y - oy) });
+        const p = segmentIntersection(local(a), local(b), local(c), local(d));
+        return p ? { x: p.x + ox, y: p.y + oy } : null;
+    }
+    const denominator = fp.sub(fp.mul((fp.sub(a.x, b.x)), (fp.sub(c.y, d.y))), fp.mul((fp.sub(a.y, b.y)), (fp.sub(c.x, d.x))));
+    if (fp.abs(denominator) < GEOMETRY_EPSILON) return null;
+    const t = fp.div((fp.sub(fp.mul((fp.sub(a.x, c.x)), (fp.sub(c.y, d.y))), fp.mul((fp.sub(a.y, c.y)), (fp.sub(c.x, d.x))))), denominator);
+    const u = fp.div(-(fp.sub(fp.mul((fp.sub(a.x, b.x)), (fp.sub(a.y, c.y))), fp.mul((fp.sub(a.y, b.y)), (fp.sub(a.x, c.x))))), denominator);
+    if (t < -GEOMETRY_EPSILON || t > fp.add(1, GEOMETRY_EPSILON) || u < -GEOMETRY_EPSILON || u > fp.add(1, GEOMETRY_EPSILON)) return null;
     return {
-        x: a.x + t * (b.x - a.x),
-        y: a.y + t * (b.y - a.y),
+        x: fp.add(a.x, fp.mul(t, (fp.sub(b.x, a.x)))),
+        y: fp.add(a.y, fp.mul(t, (fp.sub(b.y, a.y)))),
     };
 }
 
 export function dist(a: Point, b: Point) {
-    const dx = a.x - b.x;
-    const dy = a.y - b.y;
-    return Math.sqrt(dx * dx + dy * dy);
+    const dx = coordinateDifference(a.x, b.x);
+    const dy = coordinateDifference(a.y, b.y);
+    return fp.sqrt(fp.add(fp.mul(dx, dx), fp.mul(dy, dy)));
 }
 
 export function round(value: number) {
-    return Math.round(value * 100) / 100;
+    return fp.div(Math.round(fp.mul(value, 100)), 100);
 }
 
 export function roundPlacement(value: number) {
-    return Math.round(value * 1000) / 1000;
+    return canonicalRoundPlacement(value);
 }
 
 export function componentBox(component: PcbComponent, placement: Placement): Box {
     const size = rotatedSize(component.footprint, placement.rotate);
     return {
-        left: placement.x - size.width / 2,
-        right: placement.x + size.width / 2,
-        top: placement.y - size.height / 2,
-        bottom: placement.y + size.height / 2,
+        left: sourceCoordinateAdd(placement.x, -fp.div(size.width, 2)),
+        right: sourceCoordinateAdd(placement.x, fp.div(size.width, 2)),
+        top: sourceCoordinateAdd(placement.y, -fp.div(size.height, 2)),
+        bottom: sourceCoordinateAdd(placement.y, fp.div(size.height, 2)),
     };
 }
 
@@ -349,8 +362,8 @@ function localBoxWorld(placement: Placement, box: Box): Box {
 
 function graphicBoxWorld(placement: Placement, graphic: NonNullable<PcbComponent['footprint']['graphics']>[number]): Box {
     if (graphic.kind === 'circle') {
-        return localBoxWorld(placement, { left: graphic.x - graphic.radius, right: graphic.x + graphic.radius,
-            top: graphic.y - graphic.radius, bottom: graphic.y + graphic.radius });
+        return localBoxWorld(placement, { left: fp.sub(graphic.x, graphic.radius), right: fp.add(graphic.x, graphic.radius),
+            top: fp.sub(graphic.y, graphic.radius), bottom: fp.add(graphic.y, graphic.radius) });
     }
     return pointsBox(graphic.points.map((point) => getLocalPointWorld(placement, point)));
 }
@@ -376,13 +389,13 @@ export function componentPairCollisionBoxPairs(
 }
 
 export function componentPadBox(placement: Placement, pad: FootprintPad): Box {
-    const width = Math.max(pad.width, pad.drillDiameter ?? 0);
-    const height = Math.max(pad.height, pad.drillDiameter ?? 0);
+    const width = fp.max(pad.width, pad.drillDiameter ?? 0);
+    const height = fp.max(pad.height, pad.drillDiameter ?? 0);
     const corners = [
-        { x: pad.x - width / 2, y: pad.y - height / 2 },
-        { x: pad.x + width / 2, y: pad.y - height / 2 },
-        { x: pad.x + width / 2, y: pad.y + height / 2 },
-        { x: pad.x - width / 2, y: pad.y + height / 2 },
+        { x: fp.sub(pad.x, fp.div(width, 2)), y: fp.sub(pad.y, fp.div(height, 2)) },
+        { x: fp.add(pad.x, fp.div(width, 2)), y: fp.sub(pad.y, fp.div(height, 2)) },
+        { x: fp.add(pad.x, fp.div(width, 2)), y: fp.add(pad.y, fp.div(height, 2)) },
+        { x: fp.sub(pad.x, fp.div(width, 2)), y: fp.add(pad.y, fp.div(height, 2)) },
     ].map((corner) => getLocalPointWorld(placement, corner));
     return pointsBox(corners);
 }
@@ -393,38 +406,38 @@ export function isThroughHolePad(pad: FootprintPad) {
 
 export function translateBox(box: Box, dx: number, dy: number): Box {
     return {
-        left: roundPlacement(box.left + dx),
-        right: roundPlacement(box.right + dx),
-        top: roundPlacement(box.top + dy),
-        bottom: roundPlacement(box.bottom + dy),
+        left: coordinateRound(coordinateAdd(box.left, dx)),
+        right: coordinateRound(coordinateAdd(box.right, dx)),
+        top: coordinateRound(coordinateAdd(box.top, dy)),
+        bottom: coordinateRound(coordinateAdd(box.bottom, dy)),
     };
 }
 
 export function rotatePointAround(point: Point, origin: Point, angle: number): Point {
-    const radians = angle * Math.PI / 180;
-    const cos = Math.cos(radians);
-    const sin = Math.sin(radians);
-    const dx = point.x - origin.x;
-    const dy = point.y - origin.y;
+    const [sin, cos] = sinCosDegrees(angle);
+    const dx = coordinateDifference(point.x, origin.x);
+    const dy = coordinateDifference(point.y, origin.y);
+    switch (((angle % 360) + 360) % 360) {
+        case 0: return {x:coordinateRound(point.x),y:coordinateRound(point.y)};
+        case 90: return {x:coordinateRound(coordinateAdd(origin.x,-dy)),y:coordinateRound(coordinateAdd(origin.y,dx))};
+        case 180: return {x:coordinateRound(coordinateAdd(origin.x,-dx)),y:coordinateRound(coordinateAdd(origin.y,-dy))};
+        case 270: return {x:coordinateRound(coordinateAdd(origin.x,dy)),y:coordinateRound(coordinateAdd(origin.y,-dx))};
+    }
     return {
-        x: roundPlacement(origin.x + dx * cos - dy * sin),
-        y: roundPlacement(origin.y + dx * sin + dy * cos),
+        x: coordinateRound(coordinateAdd(coordinateAdd(origin.x, fp.mul(dx, cos)), -fp.mul(dy, sin))),
+        y: coordinateRound(coordinateAdd(coordinateAdd(origin.y, fp.mul(dx, sin)), fp.mul(dy, cos))),
     };
 }
 
 export function rotateBox(box: Box, origin: Point, angle: number): Box {
-    const radians = angle * Math.PI / 180;
-    const cos = Math.cos(radians);
-    const sin = Math.sin(radians);
     let left = Infinity;
     let right = -Infinity;
     let top = Infinity;
     let bottom = -Infinity;
     const visit = (x: number, y: number) => {
-        const dx = x - origin.x;
-        const dy = y - origin.y;
-        const rotatedX = roundPlacement(origin.x + dx * cos - dy * sin);
-        const rotatedY = roundPlacement(origin.y + dx * sin + dy * cos);
+        const rotated=rotatePointAround({x,y},origin,angle);
+        const rotatedX=rotated.x;
+        const rotatedY=rotated.y;
         if (rotatedX < left) left = rotatedX;
         if (rotatedX > right) right = rotatedX;
         if (rotatedY < top) top = rotatedY;
@@ -438,7 +451,7 @@ export function rotateBox(box: Box, origin: Point, angle: number): Box {
 }
 
 export function boxCenter(box: Box): Point {
-    return { x: roundPlacement((box.left + box.right) / 2), y: roundPlacement((box.top + box.bottom) / 2) };
+    return { x: coordinateRound(coordinateCenter(box.left, box.right)), y: coordinateRound(coordinateCenter(box.top, box.bottom)) };
 }
 
 export function unionBoxes(boxes: Box[]): Box {

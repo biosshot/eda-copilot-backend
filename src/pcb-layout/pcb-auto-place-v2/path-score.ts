@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type { PlacementRelation } from '#types/pcb/layout-model.ts';
 import {
     NATIVE_SIGNAL_PATH_CONTRACT_VERSION,
@@ -16,7 +17,7 @@ export interface SignalPathTopologyOptions {
 }
 
 export function signalPathTopologyPenalty(primitives: PlacementPrimitive[], relations: PlacementRelation[]) {
-    return evaluateSignalPathTopology(primitives, relations).reduce((sum, path) => sum + path.penalty, 0);
+    return evaluateSignalPathTopology(primitives, relations).reduce((sum, path) => fp.add(sum, path.penalty), 0);
 }
 
 /** Uses the same native bridge generator as the board and block solvers. */
@@ -87,13 +88,13 @@ function pathMetadata(relations: PlacementRelation[]) {
         if (!pathId) continue;
         const shape = relation.data?.pathShape === 'straight' ? 'straight' as const : 'flexible' as const;
         const weight = typeof relation.weight === 'number' && Number.isFinite(relation.weight)
-            ? Math.max(0.25, relation.weight / 70)
+            ? fp.max(0.25, fp.div(relation.weight, 70))
             : 1;
         const previous = result.get(pathId);
         result.set(pathId, {
             shape: previous?.shape === 'straight' || shape === 'straight' ? 'straight' : 'flexible',
             priority: strongerPriority(previous?.priority, relation.priority),
-            weight: Math.max(previous?.weight ?? 0, weight),
+            weight: fp.max(previous?.weight ?? 0, weight),
             preferFacingPads: (previous?.preferFacingPads ?? false) || relation.data?.preferFacingPads === true,
         });
     }

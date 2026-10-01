@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type { PlacementRules } from '#types/pcb/layout-rules.ts';
 import type { PcbComponent, PlacementInput } from '#types/pcb/layout-model.ts';
 import { componentBox } from '../pcb-auto-place/geometry.ts';
@@ -207,8 +208,8 @@ export function legalizeLocalLayout(
                 const clearance = clearanceResolver?.(aDesignator, bDesignator) ?? defaultClearance;
                 const correction = separationCorrection(a, b, clearance, seedCenters.get(a.id)!, seedCenters.get(b.id)!);
                 if (!correction) continue;
-                current[aIndex] = translatePrimitive(a, -correction.x / 2, -correction.y / 2);
-                current[bIndex] = translatePrimitive(b, correction.x / 2, correction.y / 2);
+                current[aIndex] = translatePrimitive(a, fp.div(-correction.x, 2), fp.div(-correction.y, 2));
+                current[bIndex] = translatePrimitive(b, fp.div(correction.x, 2), fp.div(correction.y, 2));
                 changed = true;
             }
         }
@@ -246,8 +247,8 @@ function splitPrimitiveWhenNeeded(
             allowedOrientations: component.pcb.fixedPlacement ? [0] : allowedOrientations,
             bbox,
             collisionBoxes: [bbox],
-            width: bbox.right - bbox.left,
-            height: bbox.bottom - bbox.top,
+            width: fp.sub(bbox.right, bbox.left),
+            height: fp.sub(bbox.bottom, bbox.top),
             placements: [{ ...placement }],
             connectionPoints: primitive.connectionPoints.filter((point) => point.ref.startsWith(refPrefix)).map((point) => ({ ...point })),
             pathPorts: primitive.pathPorts?.filter((port) => port.ref.startsWith(refPrefix)).map((port) => ({ ...port, normal: { ...port.normal } })),
@@ -262,7 +263,7 @@ function applySeedPose(primitive: PlacementPrimitive, seed: LocalLayoutSeed) {
     const requestedRotation = normalizeRotation(seed.rotate ?? placement.rotate);
     const rotated = rotatePrimitive(primitive, requestedRotation - placement.rotate);
     const afterRotation = rotated.placements[0];
-    const positioned = translatePrimitive(rotated, seed.x - afterRotation.x, seed.y - afterRotation.y);
+    const positioned = translatePrimitive(rotated, fp.sub(seed.x, afterRotation.x), fp.sub(seed.y, afterRotation.y));
     return {
         ...positioned,
         locked: false,
@@ -284,12 +285,12 @@ function separationCorrection(
 
     for (const boxA of boxesA) {
         for (const boxB of boxesB) {
-            const x = Math.min(boxA.right, boxB.right) - Math.max(boxA.left, boxB.left) + clearance;
-            const y = Math.min(boxA.bottom, boxB.bottom) - Math.max(boxA.top, boxB.top) + clearance;
+            const x = fp.add(fp.sub(fp.min(boxA.right, boxB.right), fp.max(boxA.left, boxB.left)), clearance);
+            const y = fp.add(fp.sub(fp.min(boxA.bottom, boxB.bottom), fp.max(boxA.top, boxB.top)), clearance);
             if (x <= EPSILON || y <= EPSILON) continue;
             overlaps = true;
-            requiredX = Math.max(requiredX, x);
-            requiredY = Math.max(requiredY, y);
+            requiredX = fp.max(requiredX, x);
+            requiredY = fp.max(requiredY, y);
         }
     }
     if (!overlaps) return null;
@@ -299,22 +300,22 @@ function separationCorrection(
     // ordering, preserve that axis even if separating along the perpendicular
     // axis would require a smaller displacement. Only fall back to the minimal
     // correction axis for coincident/ambiguous seed positions.
-    const seedDx = Math.abs(seedB.x - seedA.x);
-    const seedDy = Math.abs(seedB.y - seedA.y);
-    if (seedDx > seedDy + EPSILON) {
+    const seedDx = fp.abs(fp.sub(seedB.x, seedA.x));
+    const seedDy = fp.abs(fp.sub(seedB.y, seedA.y));
+    if (seedDx > fp.add(seedDy, EPSILON)) {
         const sign = orderedSign(seedA.x, seedB.x, a.id, b.id);
-        return { x: requiredX * sign, y: 0 };
+        return { x: fp.mul(requiredX, sign), y: 0 };
     }
-    if (seedDy > seedDx + EPSILON) {
+    if (seedDy > fp.add(seedDx, EPSILON)) {
         const sign = orderedSign(seedA.y, seedB.y, a.id, b.id);
-        return { x: 0, y: requiredY * sign };
+        return { x: 0, y: fp.mul(requiredY, sign) };
     }
     if (requiredX <= requiredY) {
         const sign = orderedSign(seedA.x, seedB.x, a.id, b.id);
-        return { x: requiredX * sign, y: 0 };
+        return { x: fp.mul(requiredX, sign), y: 0 };
     }
     const sign = orderedSign(seedA.y, seedB.y, a.id, b.id);
-    return { x: 0, y: requiredY * sign };
+    return { x: 0, y: fp.mul(requiredY, sign) };
 }
 
 function hasLocalViolations(
@@ -337,8 +338,8 @@ function hasLocalViolations(
 }
 
 function orderedSign(a: number, b: number, aId: string, bId: string) {
-    if (b > a + EPSILON) return 1;
-    if (b < a - EPSILON) return -1;
+    if (b > fp.add(a, EPSILON)) return 1;
+    if (b < fp.sub(a, EPSILON)) return -1;
     return aId.localeCompare(bId) <= 0 ? 1 : -1;
 }
 
@@ -346,8 +347,8 @@ function primitiveCenter(primitive: PlacementPrimitive) {
     const placement = primitive.placements[0];
     if (placement) return { x: placement.x, y: placement.y };
     return {
-        x: (primitive.bbox.left + primitive.bbox.right) / 2,
-        y: (primitive.bbox.top + primitive.bbox.bottom) / 2,
+        x: fp.div((fp.add(primitive.bbox.left, primitive.bbox.right)), 2),
+        y: fp.div((fp.add(primitive.bbox.top, primitive.bbox.bottom)), 2),
     };
 }
 

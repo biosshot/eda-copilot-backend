@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { f32ScoreTolerance } from './helpers/f32.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
@@ -128,7 +129,7 @@ test('native and TS early alignment scores agree, anchors validated, rotated can
         componentByDesignator:new Map(input.components.map(c=>[c.designator,c])),softAlignment:policy}});
     const addon=loadNativeBoardPacker();
     const aligned=addon.solveBoardPacked(problem), plain=addon.solveBoardPacked({...problem,softAlignment:undefined});
-    assert.ok(Math.abs(aligned.rank.score-plain.rank.score-boardAlignmentScore(roots,policy))<1e-6);
+    assert.ok(Math.abs(aligned.rank.score-plain.rank.score-boardAlignmentScore(roots,policy)) <= f32ScoreTolerance(aligned.rank.score,plain.rank.score));
     assert.throws(()=>addon.solveBoardPacked({...problem,softAlignment:{...policy,weight:-1}}),/softAlignment/);
     assert.throws(()=>addon.solveBoardPacked({...problem,softAlignment:{...policy,pairs:[{...policy.pairs[0],anchorA:'absent'}]}}),/anchor/);
     problem.primitives[1].locked=false;problem.primitives[1].allowedOrientations=[0,90,180,270];

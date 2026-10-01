@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type {
     BlockRole,
     BoardEdge,
@@ -150,7 +151,7 @@ function dissolvedSatelliteRelations(params: BoardSolveParams, dissolvedScopes: 
             to: `component:${designator}`,
             relation: 'near',
             priority: 'high',
-            weight: priorityWeight('high') * 2 / parent.component_designators.length,
+            weight: fp.div(fp.mul(priorityWeight('high'), 2), parent.component_designators.length),
             scope: params.node.id,
             effect: 'move_from',
         }));
@@ -238,30 +239,30 @@ function moduleDissolveDecision(
 ): { dissolve: boolean; reasons: string[] } {
     if (primitive.kind !== 'module' || primitive.children.length <= 1) return { dissolve: false, reasons: [] };
 
-    const usableWidth = bounds.right - bounds.left;
-    const usableHeight = bounds.bottom - bounds.top;
-    const boardArea = Math.max(1, usableWidth * usableHeight);
-    const width = Math.max(0, primitive.width);
-    const height = Math.max(0, primitive.height);
-    const area = Math.max(1, width * height);
+    const usableWidth = fp.sub(bounds.right, bounds.left);
+    const usableHeight = fp.sub(bounds.bottom, bounds.top);
+    const boardArea = fp.max(1, fp.mul(usableWidth, usableHeight));
+    const width = fp.max(0, primitive.width);
+    const height = fp.max(0, primitive.height);
+    const area = fp.max(1, fp.mul(width, height));
     const fillDensity = moduleFillDensity(primitive);
     const padDensity = modulePadDensity(params, primitive);
-    const aspectRatio = height > 0 && width > 0 ? Math.max(width / height, height / width) : Infinity;
+    const aspectRatio = height > 0 && width > 0 ? fp.max(fp.div(width, height), fp.div(height, width)) : Infinity;
     const fixedEdges = moduleFixedEdges(params, primitive, bounds);
 
     const reasons: string[] = [];
-    if (width > usableWidth * 0.82) reasons.push(`wide module ${round(width)}mm uses ${round(width / usableWidth)} of usable board width`);
-    if (height > usableHeight * 0.82) reasons.push(`tall module ${round(height)}mm uses ${round(height / usableHeight)} of usable board height`);
-    if (width > usableWidth * 0.45 && fillDensity < 0.65) reasons.push(`wide sparse bbox ${round(width)}mm, fill ${round(fillDensity)}`);
-    if (height > usableHeight * 0.45 && fillDensity < 0.65) reasons.push(`tall sparse bbox ${round(height)}mm, fill ${round(fillDensity)}`);
-    if (area > boardArea * 0.28 && fillDensity < 0.7) reasons.push(`module area ${round(area)}mm2 is large and sparse, fill ${round(fillDensity)}`);
+    if (width > fp.mul(usableWidth, 0.82)) reasons.push(`wide module ${round(width)}mm uses ${round(fp.div(width, usableWidth))} of usable board width`);
+    if (height > fp.mul(usableHeight, 0.82)) reasons.push(`tall module ${round(height)}mm uses ${round(fp.div(height, usableHeight))} of usable board height`);
+    if (width > fp.mul(usableWidth, 0.45) && fillDensity < 0.65) reasons.push(`wide sparse bbox ${round(width)}mm, fill ${round(fillDensity)}`);
+    if (height > fp.mul(usableHeight, 0.45) && fillDensity < 0.65) reasons.push(`tall sparse bbox ${round(height)}mm, fill ${round(fillDensity)}`);
+    if (area > fp.mul(boardArea, 0.28) && fillDensity < 0.7) reasons.push(`module area ${round(area)}mm2 is large and sparse, fill ${round(fillDensity)}`);
     if (aspectRatio > 1.9 && fillDensity < 0.72) reasons.push(`stretched aspect ratio ${round(aspectRatio)}`);
     if (primitive.locked && fixedEdges.size >= 1 && primitive.children.length >= 2) {
         reasons.push(`locked module has fixed/edge child plus movable siblings (${[...fixedEdges].join(', ')})`);
     }
     if (fixedEdges.size >= 1 && primitive.children.length >= 3) reasons.push(`fixed/edge-mounted children inside multi-family module (${[...fixedEdges].join(', ')})`);
     if (fixedEdges.size >= 2) reasons.push(`fixed/edge-mounted children target multiple board edges (${[...fixedEdges].join(', ')})`);
-    if (padDensity < 0.09 && (width > usableWidth * 0.35 || height > usableHeight * 0.35)) {
+    if (padDensity < 0.09 && (width > fp.mul(usableWidth, 0.35) || height > fp.mul(usableHeight, 0.35))) {
         reasons.push(`low pad density ${round(padDensity)} pads/mm2`);
     }
 
@@ -269,19 +270,19 @@ function moduleDissolveDecision(
 }
 
 function moduleFillDensity(primitive: PlacementPrimitive) {
-    const moduleArea = Math.max(1, primitive.width * primitive.height);
+    const moduleArea = fp.max(1, fp.mul(primitive.width, primitive.height));
     const boxes = primitive.children.length > 0 ? primitive.children.map((child) => child.bbox) : [primitive.bbox];
-    const occupied = boxes.reduce((sum, box) => sum + boxArea(box), 0);
-    return Math.min(1, occupied / moduleArea);
+    const occupied = boxes.reduce((sum, box) => fp.add(sum, boxArea(box)), 0);
+    return fp.min(1, fp.div(occupied, moduleArea));
 }
 
 function modulePadDensity(params: BoardSolveParams, primitive: PlacementPrimitive) {
-    const moduleArea = Math.max(1, primitive.width * primitive.height);
+    const moduleArea = fp.max(1, fp.mul(primitive.width, primitive.height));
     const padCount = primitive.placements.reduce((sum, placement) => {
         const component = params.componentByDesignator.get(placement.designator);
-        return sum + (component?.pins.length ?? 0);
+        return fp.add(sum, (component?.pins.length ?? 0));
     }, 0);
-    return padCount / moduleArea;
+    return fp.div(padCount, moduleArea);
 }
 
 function moduleFixedEdges(params: BoardSolveParams, primitive: PlacementPrimitive, bounds: Box) {
@@ -299,7 +300,7 @@ function moduleFixedEdges(params: BoardSolveParams, primitive: PlacementPrimitiv
         if (!component.pcb.fixedPlacement) continue;
         const box = componentBox(component, placement);
         const nearest = nearestBoardEdge(box, bounds);
-        if (nearest.distance <= Math.max(2, params.input.board.clearances.edge + 1)) edges.add(nearest.edge);
+        if (nearest.distance <= fp.max(2, fp.add(params.input.board.clearances.edge, 1))) edges.add(nearest.edge);
     }
     return edges;
 }
@@ -318,40 +319,40 @@ function fixedPlacementEdge(anchor: unknown): BoardEdge | null {
 
 function nearestBoardEdge(box: Box, bounds: Box) {
     const distances: Array<{ edge: BoardEdge; distance: number }> = [
-        { edge: 'left', distance: Math.abs(box.left - bounds.left) },
-        { edge: 'right', distance: Math.abs(bounds.right - box.right) },
-        { edge: 'top', distance: Math.abs(box.top - bounds.top) },
-        { edge: 'bottom', distance: Math.abs(bounds.bottom - box.bottom) },
+        { edge: 'left', distance: fp.abs(fp.sub(box.left, bounds.left)) },
+        { edge: 'right', distance: fp.abs(fp.sub(bounds.right, box.right)) },
+        { edge: 'top', distance: fp.abs(fp.sub(box.top, bounds.top)) },
+        { edge: 'bottom', distance: fp.abs(fp.sub(bounds.bottom, box.bottom)) },
     ];
-    return distances.sort((a, b) => a.distance - b.distance)[0];
+    return distances.sort((a, b) => fp.sub(a.distance, b.distance))[0];
 }
 
 function boardBounds(input: PlacementInput): Box {
     const edge = input.board.clearances.edge ?? 0;
     return {
-        left: -input.board.outline.width / 2 + edge,
-        right: input.board.outline.width / 2 - edge,
-        top: -input.board.outline.height / 2 + edge,
-        bottom: input.board.outline.height / 2 - edge,
+        left: fp.add(fp.div(-input.board.outline.width, 2), edge),
+        right: fp.sub(fp.div(input.board.outline.width, 2), edge),
+        top: fp.add(fp.div(-input.board.outline.height, 2), edge),
+        bottom: fp.sub(fp.div(input.board.outline.height, 2), edge),
     };
 }
 
 function boardHoleBoxes(input: PlacementInput): Box[] {
     return (input.boardHoles ?? []).map((hole) => {
-        const radius = Math.max(hole.keepout, hole.diameter / 2, hole.drill / 2);
+        const radius = fp.max(hole.keepout, fp.div(hole.diameter, 2), fp.div(hole.drill, 2));
         return {
-            left: hole.x - radius,
-            right: hole.x + radius,
-            top: hole.y - radius,
-            bottom: hole.y + radius,
+            left: fp.sub(hole.x, radius),
+            right: fp.add(hole.x, radius),
+            top: fp.sub(hole.y, radius),
+            bottom: fp.add(hole.y, radius),
         };
     });
 }
 
 function boxArea(box: Box) {
-    return Math.max(0, box.right - box.left) * Math.max(0, box.bottom - box.top);
+    return fp.mul(fp.max(0, fp.sub(box.right, box.left)), fp.max(0, fp.sub(box.bottom, box.top)));
 }
 
 function round(value: number) {
-    return Math.round(value * 1000) / 1000;
+    return fp.div(Math.round(fp.mul(value, 1000)), 1000);
 }

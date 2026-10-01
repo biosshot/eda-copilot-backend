@@ -2,7 +2,7 @@ use crate::geometry::{is_finite_box, is_finite_point, Box2, Point};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardPackProblem {
     #[serde(default)]
@@ -10,20 +10,20 @@ pub struct BoardPackProblem {
     #[serde(default)]
     pub soft_spacing: Option<SoftSpacing>,
     pub version: u32,
-    pub grid: f64,
-    pub clearance: f64,
+    pub grid: f32,
+    pub clearance: f32,
     pub search_width: usize,
     pub compactness: Arc<str>,
     pub bounds: Box2,
     pub full_board_bounds: Box2,
     pub board_outline: Vec<Point>,
-    pub edge_clearance: f64,
+    pub edge_clearance: f32,
     pub primitives: Vec<Primitive>,
     pub relations: Vec<Relation>,
     pub obstacles: Vec<Box2>,
     pub constraint_regions: Vec<ConstraintRegion>,
     pub components: Vec<ComponentGeometry>,
-    pub component_pair_clearance: Vec<f64>,
+    pub component_pair_clearance: Vec<f32>,
     pub component_conflict: Vec<u8>,
 }
 
@@ -42,8 +42,8 @@ pub struct Primitive {
     pub collision_boxes: Arc<Vec<Box2>>,
     #[serde(default)]
     pub collision_box_layers: Arc<Vec<Arc<str>>>,
-    pub width: f64,
-    pub height: f64,
+    pub width: f32,
+    pub height: f32,
     pub placements: Arc<Vec<Placement>>,
     pub connection_points: Arc<Vec<ConnectionPoint>>,
     #[serde(default)]
@@ -57,23 +57,23 @@ pub struct Primitive {
 #[serde(rename_all = "camelCase")]
 pub struct Placement {
     pub designator: Arc<str>,
-    pub x: f64,
-    pub y: f64,
+    pub x: f32,
+    pub y: f32,
     pub rotate: i32,
     pub layer: Arc<str>,
-    pub score: f64,
+    pub score: f32,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ConnectionPoint {
-    pub x: f64,
-    pub y: f64,
+    pub x: f32,
+    pub y: f32,
     #[serde(rename = "ref")]
     pub reference: Arc<str>,
     pub net: Option<Arc<str>>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RouteObstacle {
     #[serde(rename = "box")]
@@ -88,8 +88,8 @@ pub struct RouteObstacle {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PathPort {
-    pub x: f64,
-    pub y: f64,
+    pub x: f32,
+    pub y: f32,
     pub path_id: Arc<str>,
     pub order: i32,
     #[serde(rename = "ref")]
@@ -101,14 +101,14 @@ pub struct PathPort {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct EdgePlaceIntent {
     pub edges: Arc<Vec<Arc<str>>>,
-    pub inset: Option<f64>,
+    pub inset: Option<f32>,
     pub align: Option<Arc<str>>,
-    pub x: Option<f64>,
-    pub y: Option<f64>,
-    pub offset: Option<f64>,
+    pub x: Option<f32>,
+    pub y: Option<f32>,
+    pub offset: Option<f32>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Relation {
     pub id: Arc<str>,
@@ -118,10 +118,10 @@ pub struct Relation {
     pub relation: Option<Arc<str>>,
     pub priority: Option<Arc<str>>,
     pub hard: bool,
-    pub weight: Option<f64>,
+    pub weight: Option<f32>,
     pub effect: Arc<str>,
-    pub max_distance: Option<f64>,
-    pub min_distance: Option<f64>,
+    pub max_distance: Option<f32>,
+    pub min_distance: Option<f32>,
     pub satellite_anchor: bool,
     pub anchor_offset: Option<Point>,
     pub side_preference: Option<Arc<str>>,
@@ -131,7 +131,7 @@ pub struct Relation {
     pub prefer_facing_pads: bool,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConstraintRegion {
     pub name: Arc<str>,
@@ -141,7 +141,7 @@ pub struct ConstraintRegion {
     pub allow_blocks: Vec<Arc<str>>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ComponentGeometry {
     pub designator: Arc<str>,
@@ -153,19 +153,19 @@ pub struct ComponentGeometry {
     #[serde(default)]
     pub board_overflow: BoardOverflow,
     #[serde(default)]
-    pub edge_clearance: f64,
+    pub edge_clearance: f32,
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardOverflow {
-    pub left: f64,
-    pub right: f64,
-    pub top: f64,
-    pub bottom: f64,
+    pub left: f32,
+    pub right: f32,
+    pub top: f32,
+    pub bottom: f32,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlockComponentGeometry {
     pub designator: Arc<str>,
@@ -179,7 +179,7 @@ pub struct BlockComponentGeometry {
     pub power_component: bool,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlockSolveProblem {
     #[serde(default)]
@@ -197,12 +197,12 @@ pub struct BlockSolveProblem {
     #[serde(default)]
     pub experiments: BlockExperiments,
     pub version: u32,
-    pub grid: f64,
-    pub clearance: f64,
+    pub grid: f32,
+    pub clearance: f32,
     pub search_width: usize,
     pub compactness: Arc<str>,
-    pub target_width: Option<f64>,
-    pub target_height: Option<f64>,
+    pub target_width: Option<f32>,
+    pub target_height: Option<f32>,
     pub bounds: Option<Box2>,
     pub collision_mode: Arc<str>,
     pub hard_collision_mode: Arc<str>,
@@ -211,30 +211,30 @@ pub struct BlockSolveProblem {
     pub relations: Vec<Relation>,
     pub obstacles: Vec<Box2>,
     pub components: Vec<BlockComponentGeometry>,
-    pub component_pair_clearance: Vec<f64>,
+    pub component_pair_clearance: Vec<f32>,
     pub component_conflict: Vec<u8>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlockWorld {
     pub outline: Vec<Point>,
     pub bounds: Box2,
-    pub edge_clearance: f64,
+    pub edge_clearance: f32,
     pub obstacles: Vec<BlockWorldObstacle>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BlockWorldObstacle {
     pub designator: Arc<str>,
     #[serde(default)]
     pub layer: Option<Arc<str>>,
     #[serde(rename = "box")]
     pub box_: Box2,
-    pub clearance: f64,
+    pub clearance: f32,
 }
 
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default, rename_all = "camelCase", deny_unknown_fields)]
 pub struct BlockExperiments {
     pub routing_metric: BlockRoutingMetric,
@@ -260,25 +260,25 @@ pub struct BlockExperiments {
     pub reinsert_pair: bool,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BlockRoutingMetric { Micro, Off, #[default] Geometric }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PassiveIslandProblem {
     pub version: u32,
-    pub grid: f64,
-    pub clearance: f64,
+    pub grid: f32,
+    pub clearance: f32,
     pub main_net_id: usize,
     pub net_names: Vec<Arc<str>>,
     pub net_ground: Vec<bool>,
     pub components: Vec<PassiveIslandComponent>,
-    pub component_pair_clearance: Vec<f64>,
+    pub component_pair_clearance: Vec<f32>,
     pub component_conflict: Vec<u8>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PassiveIslandComponent {
     pub id: usize,
@@ -288,12 +288,12 @@ pub struct PassiveIslandComponent {
     pub orientations: Vec<PassiveIslandOrientation>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PassiveIslandOrientation {
     pub rotation: i32,
-    pub width: f64,
-    pub height: f64,
+    pub width: f32,
+    pub height: f32,
     pub body_box: Box2,
     pub through_hole_boxes: Vec<Box2>,
     pub pin_points: Vec<Option<Point>>,
@@ -304,7 +304,7 @@ pub struct PassiveIslandOrientation {
 pub struct PassiveIslandSolution {
     pub version: u32,
     pub placements: Vec<PassiveIslandPlacement>,
-    pub score: f64,
+    pub score: f32,
     pub legal: bool,
     pub evaluated_variants: usize,
 }
@@ -313,28 +313,28 @@ pub struct PassiveIslandSolution {
 #[serde(rename_all = "camelCase")]
 pub struct PassiveIslandPlacement {
     pub component_id: usize,
-    pub x: f64,
-    pub y: f64,
+    pub x: f32,
+    pub y: f32,
     pub rotation: i32,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PostPlaceScoreProblem {
     pub version: u32,
     #[serde(default)]
-    pub pad_crossing_weight: f64,
+    pub pad_crossing_weight: f32,
     #[serde(default)]
     pub routing_obstacles: Vec<RouteObstacle>,
     pub nets: Vec<PostPlaceNet>,
     pub distances: Vec<PostPlaceDistance>,
     pub clearances: Vec<PostPlaceClearance>,
-    pub fixed_penalties: Vec<f64>,
+    pub fixed_penalties: Vec<f32>,
     pub edges: Vec<PostPlaceEdge>,
     pub paths: Vec<PostPlacePath>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PostPlaceNet {
     /// IC owner for each point; absent metadata means no exemption.
@@ -344,49 +344,49 @@ pub struct PostPlaceNet {
     pub points: Vec<Point>,
     #[serde(default)]
     pub layers: Vec<Option<Arc<str>>>,
-    pub weight: f64,
+    pub weight: f32,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PostPlaceDistance {
     pub source: Point,
     pub target: Point,
-    pub weight: f64,
-    pub min: Option<f64>,
-    pub max: Option<f64>,
+    pub weight: f32,
+    pub min: Option<f32>,
+    pub max: Option<f32>,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PostPlaceClearance {
     pub source: Box2,
     pub target: Box2,
-    pub minimum: f64,
-    pub weight: f64,
+    pub minimum: f32,
+    pub weight: f32,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PostPlaceEdge {
     pub source: Box2,
     pub board: Box2,
     pub edge: Arc<str>,
-    pub weight: f64,
+    pub weight: f32,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PostPlacePath {
     pub path_id: Arc<str>,
     pub ports: Vec<PathPort>,
     pub shape: Arc<str>,
     pub priority: Arc<str>,
-    pub weight: f64,
+    pub weight: f32,
     pub prefer_facing_pads: bool,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignalPathEvaluationProblem {
     pub version: u32,
@@ -394,11 +394,11 @@ pub struct SignalPathEvaluationProblem {
     pub ports: Vec<PathPort>,
     pub shape: Arc<str>,
     pub priority: Arc<str>,
-    pub weight: f64,
+    pub weight: f32,
     pub prefer_facing_pads: bool,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignalPathBridgeProblem {
     pub version: u32,
@@ -443,8 +443,8 @@ pub struct BlockCheckpoint {
 pub struct PrimitiveState {
     pub primitive_id: Arc<str>,
     pub rotation: i32,
-    pub translation_x: f64,
-    pub translation_y: f64,
+    pub translation_x: f32,
+    pub translation_y: f32,
     pub placements: Vec<Placement>,
 }
 
@@ -452,8 +452,8 @@ pub struct PrimitiveState {
 #[serde(rename_all = "camelCase")]
 pub struct Rank {
     pub hard_count: usize,
-    pub hard_severity: f64,
-    pub score: f64,
+    pub hard_severity: f32,
+    pub score: f32,
 }
 
 impl BoardPackProblem {
@@ -738,7 +738,7 @@ impl Primitive {
     }
 }
 
-fn finite(value: f64, name: &str) -> std::result::Result<(), String> {
+fn finite(value: f32, name: &str) -> std::result::Result<(), String> {
     value
         .is_finite()
         .then_some(())
@@ -746,25 +746,25 @@ fn finite(value: f64, name: &str) -> std::result::Result<(), String> {
 }
 
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SoftSpacing {
-    pub gap: f64,
-    pub compactness_scale: f64,
+    pub gap: f32,
+    pub compactness_scale: f32,
     #[serde(default)]
     pub exempt_pairs: Vec<[Arc<str>; 2]>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SoftAlignment {
     #[serde(default)]
-    pub orientation_weight: f64,
+    pub orientation_weight: f32,
     pub pairs: Vec<AlignmentPair>,
-    pub weight: f64,
-    pub tolerance: f64,
+    pub weight: f32,
+    pub tolerance: f32,
 }
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AlignmentPair {
     pub orientation: Option<AlignmentOrientation>,
@@ -772,12 +772,12 @@ pub struct AlignmentPair {
     pub b: Arc<str>,
     pub anchor_a: Option<Arc<str>>,
     pub anchor_b: Option<Arc<str>>,
-    pub similarity: f64,
+    pub similarity: f32,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AlignmentOrientation {
     pub a: Arc<str>,
     pub b: Arc<str>,
-    pub offset: f64,
+    pub offset: f32,
 }

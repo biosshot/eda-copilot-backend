@@ -13,7 +13,7 @@ impl FrontierScratch {
 // on the GPU; legality against the changing partial placement is never cached.
 pub(super) struct Frame {
     poses: Vec<Pose>,
-    floats: Vec<f64>,
+    floats: Vec<f32>,
     ids: Vec<u32>,
     ranges: Vec<u32>,
     resident: Option<(Handle, Handle, Handle, Handle)>,
@@ -25,7 +25,7 @@ fn frame_data(
     dummy: &WorkingPrimitive,
     frame: &Frame,
     context: &Context,
-) -> (Vec<f64>, Vec<u32>) {
+) -> (Vec<f32>, Vec<u32>) {
     let mut ff = vec![context.problem.clearance, 0.0, 0.0];
     let mut fi = vec![0; k::HEADER];
     fi[k::N] = (placed.len() + 1) as u32;
@@ -49,7 +49,7 @@ pub(in crate::block_solver) fn scarcity(
     remaining: &[WorkingPrimitive],
     placed: &[WorkingPrimitive],
     context: &Context,
-) -> Vec<f64> {
+) -> Vec<f32> {
     let _span = context.detail.span("gpu_frontier");
     let cores: Vec<_> = placed
         .iter()
@@ -110,7 +110,7 @@ pub(in crate::block_solver) fn scarcity(
     let counts = gpu_runtime::with_session(GPU_REQUIREMENTS, |session| {
         if engine.handles.is_none() {
             engine.handles = Some((
-                session.client.create_from_slice(f64::as_bytes(&engine.sf)),
+                session.client.create_from_slice(f32::as_bytes(&engine.sf)),
                 session.client.create_from_slice(i32::as_bytes(&engine.si)),
             ));
         }
@@ -120,20 +120,20 @@ pub(in crate::block_solver) fn scarcity(
             frame.resident = Some((
                 session
                     .client
-                    .create_from_slice(f64::as_bytes(&frame.floats)),
+                    .create_from_slice(f32::as_bytes(&frame.floats)),
                 session.client.create_from_slice(u32::as_bytes(&frame.ids)),
                 session.client.empty(count * 4),
                 session.client.empty(sources * 4),
             ));
         }
         let (pf, pi, nearby, pins) = frame.resident.as_ref().unwrap();
-        let scores = session.workspace(FrontierScratch::Scores.key(), count * 8);
+        let scores = session.workspace(FrontierScratch::Scores.key(), count * 4);
         let tags = session.workspace(FrontierScratch::Tags.key(), count * 2 * 4);
         let legal = session.workspace(FrontierScratch::Legal.key(), count * 4);
         let output = session.workspace(FrontierScratch::Counts.key(), sources * 3 * 4);
         let client = &session.client;
-        let input = |ff: &Vec<f64>, fi: &Vec<u32>| unsafe {
-            let fh = client.create_from_slice(f64::as_bytes(ff));
+        let input = |ff: &Vec<f32>, fi: &Vec<u32>| unsafe {
+            let fh = client.create_from_slice(f32::as_bytes(ff));
             let ih = client.create_from_slice(u32::as_bytes(fi));
             k::InputLaunch::new(
                 ArrayArg::from_raw_parts(sf.clone(), engine.sf.len()),
@@ -214,10 +214,10 @@ pub(in crate::block_solver) fn scarcity(
             0.0
         } else {
             (if legal > 0 {
-                60.0 * (1.0 - legal as f64 / nearby.max(1) as f64)
+                60.0 * (1.0 - legal as f32 / nearby.max(1) as f32)
             } else {
                 0.0
-            }) + 40.0 * pins.saturating_sub(1).min(2) as f64
+            }) + 40.0 * pins.saturating_sub(1).min(2) as f32
         };
     }
     drop(borrow);

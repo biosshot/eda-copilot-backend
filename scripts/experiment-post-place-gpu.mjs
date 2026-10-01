@@ -38,7 +38,9 @@ const ref=args.reference?read(args.reference):null;
 if(ref && ref.inputSha256!==hash(bytes)) throw Error('CPU input identity differs');
 const exact=ref?isDeepStrictEqual(value(result),value(ref.result)):null;
 const valid=addon.validatePlacementChange(problem,result.placements);
-const report={inputSha256:hash(bytes),addonSha256:hash(readFileSync(addonPath)),backend:process.env.PCB_POST_PLACE_BACKEND,wallMs,valid,exact,result};
+const report={inputSha256:hash(bytes),addonSha256:hash(readFileSync(addonPath)),harnessSha256:hash(readFileSync(new URL(import.meta.url))),comparisonMode:args.comparison??'exact',backend:process.env.PCB_POST_PLACE_BACKEND,wallMs,valid,exact,result};
 writeFileSync(join(out,'results.json'),JSON.stringify(report,null,2));
 console.log(JSON.stringify({out,wallMs,valid,exact,passes:result.profile.iterations.length,stop:result.profile.stopReason}));
-if(!valid || (exact===false&&!result.profile.timedOut&&!ref.result.profile.timedOut)) throw Error('Refiner validation failed');
+// Quality mode retains mismatch evidence for separate geometry/term review.
+// Default exact mode remains available for historical same-precision replays.
+if(!valid || (args.comparison!=='quality'&&exact===false&&!result.profile.timedOut&&!ref.result.profile.timedOut)) throw Error('Refiner validation failed');

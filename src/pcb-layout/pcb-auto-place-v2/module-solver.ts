@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type { Box, PlacementRelation, PlacementTreeNode } from '#types/pcb/layout-model.ts';
 import type { BlockSolverOptions } from './block-solver.ts';
 import { solveBlockPrimitives } from './block-solver-engine.ts';
@@ -23,7 +24,7 @@ export function solveModulePrimitives(params: ModuleSolveParams): PlacementPrimi
         relations: params.relations,
         options: {
             ...params.options,
-            clearance: Math.max(params.options.clearance, 1),
+            clearance: fp.max(params.options.clearance, 1),
             searchWidth: 32
         },
     });

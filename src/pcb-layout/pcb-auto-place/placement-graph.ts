@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type {
     BoardAnchor,
     HintPriority,
@@ -229,7 +230,7 @@ function addSmallBlockGroundHints(
 }
 
 function compareGroundHintAnchors(a: PcbComponent, b: PcbComponent) {
-    const roleDifference = groundHintAnchorRoleRank(b) - groundHintAnchorRoleRank(a);
+    const roleDifference = fp.sub(groundHintAnchorRoleRank(b), groundHintAnchorRoleRank(a));
     if (roleDifference !== 0) return roleDifference;
     const pinDifference = b.pins.length - a.pins.length;
     if (pinDifference !== 0) return pinDifference;
@@ -263,7 +264,7 @@ function nearestLocalGroundPair(anchor: PcbComponent, component: PcbComponent) {
                     const anchorReach = localPadDistance(anchor, anchorGroundPin.pin_number, anchorSignalPin.pin_number);
                     const componentReach = localPadDistance(component, componentGroundPin.pin_number, componentSignalPin.pin_number);
                     if (anchorReach === null || componentReach === null) continue;
-                    const localReach = anchorReach + componentReach;
+                    const localReach = fp.add(anchorReach, componentReach);
                     if (!best || localReach < best.localReach) {
                         best = { anchorGround: anchorGroundPin, componentGround: componentGroundPin, localReach };
                     }
@@ -278,7 +279,7 @@ function localPadDistance(component: PcbComponent, firstPin: string | number, se
     const first = component.footprint.pads.find((pad) => String(pad.pin_number) === String(firstPin));
     const second = component.footprint.pads.find((pad) => String(pad.pin_number) === String(secondPin));
     if (!first || !second) return null;
-    return Math.hypot(first.x - second.x, first.y - second.y);
+    return fp.hypot(fp.sub(first.x, second.x), fp.sub(first.y, second.y));
 }
 
 function normalizedSignal(signal: string) {
@@ -441,7 +442,7 @@ function addBlockNodes(
                         relation: 'near',
                         priority,
                         hard: block.hardAnchor ?? false,
-                        weight: priorityWeight(priority) * 2,
+                        weight: fp.mul(priorityWeight(priority), 2),
                         data: {
                             satelliteAnchor: true,
                             maxDistance: block.maxAnchorGap ?? null,
@@ -512,7 +513,7 @@ function addModuleNodes(state: GraphBuilderState, input: PlacementInput) {
                 addDiagnostic(state, 'error', 'module_unknown_block', `Module ${module.name} references missing block ${blockName}`, moduleId);
                 continue;
             }
-            validBlocks += 1;
+            validBlocks = fp.add(validBlocks, 1);
             addEdge(state, 'module_contains', moduleId, blockNodeId(blockName), { hard: true });
             if (block.attachTo && moduleBlocks.has(block.attachTo)) {
                 addDiagnostic(
@@ -621,7 +622,7 @@ function addHintEdges(state: GraphBuilderState, hint: PlacementHint, index: numb
 
 function hintRelationWeight(hint: PlacementHint) {
     if (hint.relation === 'critical_pair') {
-        return priorityWeight(hint.priority) * (hint.weightMultiplier ?? (hint.core ? 2.4 : 1.8));
+        return fp.mul(priorityWeight(hint.priority), (hint.weightMultiplier ?? (hint.core ? 2.4 : 1.8)));
     }
     return priorityWeight(hint.priority);
 }
@@ -739,7 +740,7 @@ function createGraphReport(
     unparentedBlocks: string[],
 ): PlacementGraphReport {
     const islandKinds: PlacementGraphReport['islandKinds'] = {};
-    for (const island of state.islands) islandKinds[island.kind] = (islandKinds[island.kind] ?? 0) + 1;
+    for (const island of state.islands) islandKinds[island.kind] = fp.add((islandKinds[island.kind] ?? 0), 1);
     const nodeCount = (kind: InternalGraphNode['kind']) => state.nodes.filter((node) => node.kind === kind).length;
     const diagnostics = [...state.diagnostics, ...hierarchyDiagnostics];
     return {
@@ -1178,11 +1179,11 @@ function treeNode(
 
 function treeDepth(node: PlacementTreeNode): number {
     if (node.children.length === 0) return 1;
-    return 1 + Math.max(...node.children.map(treeDepth));
+    return fp.add(1, fp.max(...node.children.map(treeDepth)));
 }
 
 function countTreeNodes(node: PlacementTreeNode): number {
-    return 1 + node.children.reduce((sum, child) => sum + countTreeNodes(child), 0);
+    return fp.add(1, node.children.reduce((sum, child) => fp.add(sum, countTreeNodes(child)), 0));
 }
 
 function treeModuleId(name: string) {
@@ -1231,7 +1232,7 @@ function uniqueEdgeId(state: GraphBuilderState, baseId: string) {
     let id = baseId;
     let suffix = 1;
     while (state.edgeIds.has(id)) {
-        suffix += 1;
+        suffix = fp.add(suffix, 1);
         id = `${baseId}#${suffix}`;
     }
     state.edgeIds.add(id);
@@ -1293,7 +1294,7 @@ function unique<T>(items: T[]) {
 }
 
 function maxPriority(priorities: HintPriority[]) {
-    return priorities.slice().sort((a, b) => priorityRank(b) - priorityRank(a))[0] ?? 'normal';
+    return priorities.slice().sort((a, b) => fp.sub(priorityRank(b), priorityRank(a)))[0] ?? 'normal';
 }
 
 function priorityRank(priority: HintPriority) {
@@ -1305,7 +1306,7 @@ function priorityRank(priority: HintPriority) {
 
 function minNumber(values: Array<number | undefined>) {
     const numbers = values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
-    return numbers.length > 0 ? Math.min(...numbers) : null;
+    return numbers.length > 0 ? fp.min(...numbers) : null;
 }
 
 function formatPinRef(target: Extract<TargetRef, { type: 'pin' }>) {

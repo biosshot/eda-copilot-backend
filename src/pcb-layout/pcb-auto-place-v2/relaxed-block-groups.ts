@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type { PlacementInput, PlacementRelation, PlacementTreeNode } from '#types/pcb/layout-model.ts';
 import type { PlacementPrimitive } from './primitives.ts';
 
@@ -46,7 +47,7 @@ export function relaxBlockGroups(input: PlacementInput, nodes: PlacementTreeNode
         if (from[0] === r.from && to[0] === r.to) return [r];
         return from.flatMap(a => to.filter(b => b !== a).map(b => ({ ...r,
             id: `${r.id}:released:${a}:${b}`, from: a, to: b,
-            weight: (r.weight ?? 70) / (from.length * to.length),
+            weight: fp.div((r.weight ?? 70), (from.length * to.length)),
         })));
     });
     return { primitives: expanded, relations: mapped, released };

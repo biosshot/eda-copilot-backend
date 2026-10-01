@@ -32,31 +32,31 @@ pub const HEADER: usize = 24;
 
 #[derive(CubeLaunch, CubeType)]
 pub struct Input {
-    pub sf: Array<f64>,
+    pub sf: Array<f32>,
     pub si: Array<i32>,
-    pub ff: Array<f64>,
+    pub ff: Array<f32>,
     pub fi: Array<u32>,
-    pub poses: Array<f64>,
+    pub poses: Array<f32>,
     pub ids: Array<u32>,
 }
 #[derive(Clone, Copy, CubeType)]
 pub struct B {
-    pub l: f64,
-    pub r: f64,
-    pub t: f64,
-    pub b: f64,
+    pub l: f32,
+    pub r: f32,
+    pub t: f32,
+    pub b: f32,
 }
 #[derive(Clone, Copy, CubeType)]
 pub struct P {
-    pub x: f64,
-    pub y: f64,
+    pub x: f32,
+    pub y: f32,
 }
 #[derive(Clone, Copy, CubeType)]
 pub struct Prim {
     pub bbox: B,
     pub body: B,
-    pub dx: f64,
-    pub dy: f64,
+    pub dx: f32,
+    pub dy: f32,
     pub cp: usize,
     pub nc: usize,
     pub pad: usize,
@@ -69,15 +69,15 @@ pub struct Prim {
 }
 #[derive(Clone, Copy, CubeType)]
 pub struct Cp {
-    pub x: f64,
-    pub y: f64,
+    pub x: f32,
+    pub y: f32,
     pub net: i32,
     pub owner: i32,
     pub layer: i32,
 }
 
 #[cube]
-fn choose(test: bool, a: f64, b: f64) -> f64 {
+fn choose(test: bool, a: f32, b: f32) -> f32 {
     let mut v = a;
     if !test {
         v = b;
@@ -85,7 +85,7 @@ fn choose(test: bool, a: f64, b: f64) -> f64 {
     v
 }
 #[cube]
-fn min(a: f64, b: f64) -> f64 {
+fn min(a: f32, b: f32) -> f32 {
     if a < b {
         a
     } else {
@@ -93,7 +93,7 @@ fn min(a: f64, b: f64) -> f64 {
     }
 }
 #[cube]
-fn max(a: f64, b: f64) -> f64 {
+fn max(a: f32, b: f32) -> f32 {
     if a > b {
         a
     } else {
@@ -101,7 +101,7 @@ fn max(a: f64, b: f64) -> f64 {
     }
 }
 #[cube]
-fn distance(a: P, b: P) -> f64 {
+fn distance(a: P, b: P) -> f32 {
     let x = a.x - b.x;
     let y = a.y - b.y;
     (x * x + y * y).sqrt()
@@ -114,7 +114,7 @@ fn center(b: B) -> P {
     }
 }
 #[cube]
-fn overlap(a: B, b: B, c: f64) -> f64 {
+fn overlap(a: B, b: B, c: f32) -> f32 {
     let x1 = a.r + c - b.l;
     let x2 = b.r + c - a.l;
     let y1 = a.b + c - b.t;
@@ -126,7 +126,7 @@ fn overlap(a: B, b: B, c: f64) -> f64 {
     value
 }
 #[cube]
-fn cross(a: P, b: P, c: P) -> f64 {
+fn cross(a: P, b: P, c: P) -> f32 {
     (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
 }
 #[cube]
@@ -139,7 +139,7 @@ fn load_prim(d: &Input, i: usize, candidate: usize) -> Prim {
         f = template * 10;
         t = template * 9;
     }
-    let mut v = Array::<f64>::new(10usize);
+    let mut v = Array::<f32>::new(10usize);
     let mut tags = Array::<i32>::new(9usize);
     #[unroll]
     for j in 0usize..10usize {
@@ -225,8 +225,8 @@ fn ep(d: &Input, ri: usize, side: usize, candidate: usize) -> P {
     let count = d.fi[t + 2] as usize;
     let mut result = center(p.bbox);
     if count > 0 {
-        let mut x = 0.0f64;
-        let mut y = 0.0f64;
+        let mut x = 0.0f32;
+        let mut y = 0.0f32;
         for j in 0usize..count {
             let q = cp_at(
                 d,
@@ -236,13 +236,13 @@ fn ep(d: &Input, ri: usize, side: usize, candidate: usize) -> P {
             x += q.x;
             y += q.y;
         }
-        result.x = x / count as f64;
-        result.y = y / count as f64;
+        result.x = x / count as f32;
+        result.y = y / count as f32;
     }
     result
 }
 #[cube]
-fn insert(points: &mut Array<f64>, n: usize, p: P) {
+fn insert(points: &mut Array<f32>, n: usize, p: P) {
     let mut k = n;
     while k > 0 {
         let x = points[(k - 1) * 2];
@@ -258,7 +258,7 @@ fn insert(points: &mut Array<f64>, n: usize, p: P) {
     points[k * 2 + 1] = p.y;
 }
 #[cube]
-fn point(points: &Array<f64>, i: usize) -> P {
+fn point(points: &Array<f32>, i: usize) -> P {
     P {
         x: points[i * 2],
         y: points[i * 2 + 1],
@@ -266,13 +266,13 @@ fn point(points: &Array<f64>, i: usize) -> P {
 }
 
 #[cube]
-fn make_tree(d: &Input, ni: usize, candidate: usize, out: &mut Array<f64>, tags: &mut Array<i32>) {
+fn make_tree(d: &Input, ni: usize, candidate: usize, out: &mut Array<f32>, tags: &mut Array<i32>) {
     let net = d.fi[NET_I] as usize + ni * 8;
     let n = d.fi[net + 1] as usize;
-    let mut points = Array::<f64>::new(64usize);
+    let mut points = Array::<f32>::new(64usize);
     let mut meta = Array::<i32>::new(64usize);
     let mut used = Array::<u32>::new(32usize);
-    let mut distances = Array::<f64>::new(1024usize);
+    let mut distances = Array::<f32>::new(1024usize);
     for i in 0usize..n {
         let p = ref_cp(d, d.fi[net] as usize + i, candidate);
         points[i * 2] = p.x;
@@ -293,7 +293,7 @@ fn make_tree(d: &Input, ni: usize, candidate: usize, out: &mut Array<f64>, tags:
         let mut found = false;
         let mut bf = 0usize;
         let mut bt = 0usize;
-        let mut best = 0.0f64;
+        let mut best = 0.0f32;
         for f in 0usize..n {
             if used[f] != 0 {
                 for t in 0usize..n {
@@ -338,11 +338,11 @@ fn make_tree(d: &Input, ni: usize, candidate: usize, out: &mut Array<f64>, tags:
     }
 }
 #[cube]
-fn hit(ax: f64, ay: f64, bx: f64, by: f64, p: B) -> bool {
+fn hit(ax: f32, ay: f32, bx: f32, by: f32, p: B) -> bool {
     let mut valid =
         !(p.r < min(ax, bx) || p.l > max(ax, bx) || p.b < min(ay, by) || p.t > max(ay, by));
-    let mut lo = 0.0f64;
-    let mut hi = 1.0f64;
+    let mut lo = 0.0f32;
+    let mut hi = 1.0f32;
     for axis in 0usize..2usize {
         let start = choose(axis == 0, ax, ay);
         let delta = choose(axis == 0, bx - ax, by - ay);
@@ -377,7 +377,7 @@ fn pad_at(d: &Input, p: Prim, j: usize) -> B {
     }
 }
 #[cube(launch_unchecked)]
-pub fn frame_pads(d: &Input, out: &mut Array<f64>) {
+pub fn frame_pads(d: &Input, out: &mut Array<f32>) {
     let i = CUBE_POS as usize;
     if i != d.fi[MOVING] as usize {
         let p = load_prim(d, i, d.fi[COUNT] as usize);
@@ -394,13 +394,13 @@ pub fn frame_pads(d: &Input, out: &mut Array<f64>) {
     }
 }
 #[cube(launch_unchecked)]
-pub fn frame_mst(d: &Input, segments: &mut Array<f64>, tags: &mut Array<i32>) {
+pub fn frame_mst(d: &Input, segments: &mut Array<f32>, tags: &mut Array<i32>) {
     let ni = ABSOLUTE_POS as usize;
     if ni < d.fi[NETS] as usize {
         let net = d.fi[NET_I] as usize + ni * 8;
         let count = d.fi[net + 1] as usize;
         if d.fi[net + 5] != 0 && count >= 2 {
-            let mut s = Array::<f64>::new(128usize);
+            let mut s = Array::<f32>::new(128usize);
             let mut t = Array::<i32>::new(128usize);
             make_tree(d, ni, d.fi[COUNT] as usize, &mut s, &mut t);
             for j in 0usize..(count - 1) * 4 {
@@ -414,9 +414,9 @@ pub fn frame_mst(d: &Input, segments: &mut Array<f64>, tags: &mut Array<i32>) {
 #[cube(launch_unchecked)]
 pub fn frame_hits(
     d: &Input,
-    segments: &Array<f64>,
+    segments: &Array<f32>,
     tags: &Array<i32>,
-    pads: &Array<f64>,
+    pads: &Array<f32>,
     costs: &mut Array<i32>,
 ) {
     let si = CUBE_POS as usize;
@@ -471,11 +471,11 @@ pub fn frame_hits(
 #[cube(launch_unchecked)]
 pub fn full(
     d: &Input,
-    static_segments: &Array<f64>,
+    static_segments: &Array<f32>,
     static_tags: &Array<i32>,
     fixed_costs: &Array<i32>,
-    pads: &Array<f64>,
-    scores: &mut Array<f64>,
+    pads: &Array<f32>,
+    scores: &mut Array<f32>,
     tags: &mut Array<u32>,
     mask: &Array<u32>,
     use_mask: u32,
@@ -484,11 +484,11 @@ pub fn full(
     let candidate = CUBE_POS as usize;
     let lane = UNIT_POS as usize;
     if use_mask == 0 || mask[candidate] != 0 {
-        let mut segments = SharedMemory::<f64>::new(512usize);
+        let mut segments = SharedMemory::<f32>::new(512usize);
         let mut meta = SharedMemory::<i32>::new(512usize);
         let mut cached = SharedMemory::<i32>::new(128usize);
         // Transform each moving pad once per candidate, shared by all segments.
-        let mut moving_pads = SharedMemory::<f64>::new(pad_capacity * 4);
+        let mut moving_pads = SharedMemory::<f32>::new(pad_capacity * 4);
         let moving = load_prim(d, d.fi[MOVING] as usize, candidate);
         let mut pj = lane;
         while pj < moving.np {
@@ -505,7 +505,7 @@ pub fn full(
             let net = d.fi[NET_I] as usize + ni * 8;
             let count = d.fi[net + 1] as usize;
             if d.fi[net + 5] != 0 && count >= 2 {
-                let mut local_s = Array::<f64>::new(128usize);
+                let mut local_s = Array::<f32>::new(128usize);
                 let mut local_t = Array::<i32>::new(128usize);
                 let changed = (d.fi[net + 7] & 2) != 0;
                 if changed {
@@ -611,14 +611,14 @@ pub fn full(
             sync_cube();
         }
         if lane == 0 {
-            scores[candidate] += partial[0] as f64 * 45.0;
+            scores[candidate] += partial[0] as f32 * 45.0;
             tags[candidate * 3 + 1] = 1;
         }
     }
 }
 
 #[cube]
-fn before(ah: u32, a: f64, ai: usize, bh: u32, b: f64, bi: usize) -> bool {
+fn before(ah: u32, a: f32, ai: usize, bh: u32, b: f32, bi: usize) -> bool {
     ah < bh || (ah == bh && (a < b || (a == b && ai < bi)))
 }
 #[cube(launch_unchecked)]
@@ -628,7 +628,7 @@ pub fn clear_best(best: &mut Array<u32>) {
 #[cube(launch_unchecked)]
 pub fn rank(
     d: &Input,
-    scores: &Array<f64>,
+    scores: &Array<f32>,
     tags: &Array<u32>,
     best: &mut Array<u32>,
     mask: &mut Array<u32>,
@@ -677,10 +677,11 @@ pub fn rank(
 #[cube(launch_unchecked)]
 pub fn prune(
     d: &Input,
-    scores: &Array<f64>,
+    scores: &Array<f32>,
     tags: &Array<u32>,
     best: &Array<u32>,
     mask: &mut Array<u32>,
+    operations: u32,
 ) {
     let i = ABSOLUTE_POS as usize;
     if i < d.fi[COUNT] as usize {
@@ -691,7 +692,15 @@ pub fn prune(
                 last = 63;
             }
             let mut keep = false;
-            let lower = scores[i] - (1e-8 + scores[i].abs() * 1e-12);
+            let nu = operations as f32 * 0.000000059604644775390625;
+            let mut lower = f32::from_bits(0xff800000u32);
+            if nu < 0.25 {
+                // Factor two covers rounding of the gamma expression itself,
+                // including the Vulkan division accuracy bound. Unknown or
+                // large error budgets keep the candidate instead of pruning.
+                let gamma = 2.0 * nu / (1.0 - nu);
+                lower = scores[i] - gamma * scores[i].abs();
+            }
             for k in 0usize..2usize {
                 if k == 0 || d.fi[DIVERSE] != 0 {
                     let mut slot = last;
@@ -718,11 +727,11 @@ pub fn prune(
 #[cube(launch_unchecked)]
 pub fn compact(
     d: &Input,
-    scores: &Array<f64>,
+    scores: &Array<f32>,
     tags: &Array<u32>,
     best: &Array<u32>,
     out_i: &mut Array<u32>,
-    out_f: &mut Array<f64>,
+    out_f: &mut Array<f32>,
 ) {
     // Only the already bounded (<=128) shortlist is compacted by one lane.
     let mut chosen = Array::<u32>::new(64usize);
@@ -780,7 +789,7 @@ pub fn compact(
     out_i[129] = 0;
     for i in 0usize..d.fi[COUNT] as usize {
         let s = scores[i];
-        if s != s || s.abs() > 1.7976931348623157e308 {
+        if s != s || s.abs() > 3.4028234663852886e38 {
             out_i[129] = 1;
         }
     }
@@ -793,7 +802,7 @@ pub fn compact(
     }
 }
 #[cube]
-fn convex(points: &mut Array<f64>, length: usize, hull: &mut Array<f64>) -> usize {
+fn convex(points: &mut Array<f32>, length: usize, hull: &mut Array<f32>) -> usize {
     let mut n = 0usize;
     for i in 0usize..length {
         let p = point(points, i);
@@ -857,9 +866,9 @@ fn convex(points: &mut Array<f64>, length: usize, hull: &mut Array<f64>) -> usiz
     count
 }
 #[cube(launch_unchecked)]
-pub fn frame_hull(d: &Input, out: &mut Array<f64>, count_out: &mut Array<u32>) {
-    let mut points = Array::<f64>::new(160usize);
-    let mut hull = Array::<f64>::new(320usize);
+pub fn frame_hull(d: &Input, out: &mut Array<f32>, count_out: &mut Array<u32>) {
+    let mut points = Array::<f32>::new(160usize);
+    let mut hull = Array::<f32>::new(320usize);
     let mut n = 0usize;
     for i in 0usize..d.fi[N] as usize {
         if i != d.fi[MOVING] as usize {
@@ -915,9 +924,9 @@ pub fn frame_hull(d: &Input, out: &mut Array<f64>, count_out: &mut Array<u32>) {
 #[cube(launch_unchecked)]
 pub fn cheap(
     d: &Input,
-    fixed_hull: &Array<f64>,
+    fixed_hull: &Array<f32>,
     hull_count: &Array<u32>,
-    scores: &mut Array<f64>,
+    scores: &mut Array<f32>,
     tags: &mut Array<u32>,
 ) {
     let candidate = ABSOLUTE_POS as usize;
@@ -935,8 +944,8 @@ pub fn cheap(
         }
         let w = bbox.r - bbox.l;
         let h = bbox.b - bbox.t;
-        let mut points = Array::<f64>::new(160usize);
-        let mut hull = Array::<f64>::new(320usize);
+        let mut points = Array::<f32>::new(160usize);
+        let mut hull = Array::<f32>::new(320usize);
         let mut n = hull_count[0] as usize;
         for i in 0usize..n * 2 {
             points[i] = fixed_hull[i];
@@ -979,8 +988,8 @@ pub fn cheap(
         );
         n += 1;
         let count = convex(&mut points, n, &mut hull);
-        let mut area = 0.0f64;
-        let mut perimeter = 0.0f64;
+        let mut area = 0.0f32;
+        let mut perimeter = 0.0f32;
         if count < 3 {
             area = w * h;
             perimeter = w + h;
@@ -997,7 +1006,7 @@ pub fn cheap(
             + (w + h) * (choose(high, 5.4, 2.5))
             + area * (choose(high, 14.4, 10.0)) * (choose(d.fi[REDUCED] != 0, 0.25, 1.0))
             + perimeter * (choose(high, 12.0, 1.5));
-        let mut excess = 0.0f64;
+        let mut excess = 0.0f32;
         if w > 0.0 && h > 0.0 {
             excess = max(max(w / h, h / w) - 5.0, 0.0);
         }
@@ -1007,7 +1016,7 @@ pub fn cheap(
             let x = max(ratio - 2.0, 0.0);
             score += x * x * min(w, h) * 12.0;
         }
-        let mut ov = 0.0f64;
+        let mut ov = 0.0f32;
         let mut hard = 0u32;
         for i in 0usize..nprim {
             let a = load_prim(d, i, candidate);
@@ -1028,12 +1037,12 @@ pub fn cheap(
             }
         }
         score += ov;
-        let mut dense = 0.0f64;
+        let mut dense = 0.0f32;
         if d.fi[DENSE] != 0 {
             for i in 0usize..nprim {
                 let a = load_prim(d, i, candidate);
                 if a.role != 4 && a.pins >= 8 {
-                    let halo = min(1.5, max(0.25, (a.pins as f64 - 8.0) * 0.025));
+                    let halo = min(1.5, max(0.25, (a.pins as f32 - 8.0) * 0.025));
                     let b = B {
                         l: a.body.l - halo,
                         r: a.body.r + halo,
@@ -1060,8 +1069,8 @@ pub fn cheap(
             }
         }
         score += dense * (choose(high, 0.45, 1.0));
-        let mut relation = 0.0f64;
-        let mut exposure = 0.0f64;
+        let mut relation = 0.0f32;
+        let mut exposure = 0.0f32;
         for i in 0usize..d.fi[RELS] as usize {
             let t = d.fi[REL_I] as usize + i * 10;
             let f = 3 + nprim * 10 + i * 7;
@@ -1077,7 +1086,7 @@ pub fn cheap(
                 }
                 let dist = distance(a, b);
                 let mult = choose(d.fi[t + 6] != 0, 5.0, 1.0);
-                let mut limit = 0.0f64;
+                let mut limit = 0.0f32;
                 if d.ff[f + 2] >= 0.0 {
                     let x = max(dist - d.ff[f + 2], 0.0);
                     limit += (x * x * 1500.0 + x * 120.0) * weight * mult;
@@ -1086,7 +1095,7 @@ pub fn cheap(
                     let x = max(d.ff[f + 1] - dist, 0.0);
                     limit += (x * x * 800.0 + x * 80.0) * weight * mult;
                 }
-                let mut side = 0.0f64;
+                let mut side = 0.0f32;
                 if d.fi[t + 8] != 0 {
                     let mut dx = a.x - b.x;
                     let mut dy = a.y - b.y;
@@ -1107,10 +1116,10 @@ pub fn cheap(
                 let primitive = if from >= 0 { from } else { to } as usize;
                 let owner = load_prim(d, primitive, candidate);
                 let cl = d.ff[0];
-                let mut b0 = 0.0f64;
-                let mut b1 = 0.0f64;
-                let mut b2 = 0.0f64;
-                let mut b3 = 0.0f64;
+                let mut b0 = 0.0f32;
+                let mut b1 = 0.0f32;
+                let mut b2 = 0.0f32;
+                let mut b3 = 0.0f32;
                 for j in 0usize..nprim {
                     let p = load_prim(d, j, candidate);
                     if j != primitive && p.layer == owner.layer {
@@ -1131,17 +1140,17 @@ pub fn cheap(
         score += relation * (choose(high, 0.45, 1.0));
         score += exposure * (choose(high, 0.35, 1.0));
         let small = d.fi[SMALL] != 0;
-        let mut signal = 0.0f64;
-        let mut ground = 0.0f64;
+        let mut signal = 0.0f32;
+        let mut ground = 0.0f32;
         for ni in 0usize..d.fi[NETS] as usize {
             let net = d.fi[NET_I] as usize + ni * 8;
             let count = d.fi[net + 1] as usize;
             let g = d.fi[net + 3] != 0;
             if d.fi[net + 2] >= 2 && !(g && !small && count > 3) {
-                let mut l = 1e300f64;
-                let mut r = score * 0.0 - 1e300;
-                let mut t = 1e300f64;
-                let mut b = score * 0.0 - 1e300;
+                let mut l = f32::from_bits(0x7f800000u32);
+                let mut r = score * 0.0 - f32::from_bits(0x7f800000u32);
+                let mut t = f32::from_bits(0x7f800000u32);
+                let mut b = score * 0.0 - f32::from_bits(0x7f800000u32);
                 for j in 0usize..count {
                     let q = ref_cp(d, d.fi[net] as usize + j, candidate);
                     l = min(l, q.x);
@@ -1179,7 +1188,7 @@ pub fn cheap(
 
 // Offline failure diagnostics only; never dispatched in normal scoring.
 #[cube(launch_unchecked)]
-pub fn inspect_geometry(d: &Input, candidate: u32, out: &mut Array<f64>) {
+pub fn inspect_geometry(d: &Input, candidate: u32, out: &mut Array<f32>) {
     let i = ABSOLUTE_POS as usize;
     if i < d.fi[N] as usize {
         let p = load_prim(d, i, candidate as usize);
@@ -1206,7 +1215,7 @@ pub fn inspect_geometry(d: &Input, candidate: u32, out: &mut Array<f64>) {
 
 // Mass candidate checks used by the existing frontier-scarcity heuristic.
 #[cube(launch_unchecked)]
-pub fn scarcity_probe(d: &Input, scores: &mut Array<f64>, tags: &mut Array<u32>) {
+pub fn scarcity_probe(d: &Input, scores: &mut Array<f32>, tags: &mut Array<u32>) {
     let candidate = ABSOLUTE_POS as usize;
     if candidate < d.fi[COUNT] as usize {
         let p = load_prim(d, d.fi[MOVING] as usize, candidate);
@@ -1221,13 +1230,13 @@ pub fn scarcity_probe(d: &Input, scores: &mut Array<f64>, tags: &mut Array<u32>)
                 hard += 1;
             }
         }
-        let mut sum = 0.0f64;
+        let mut sum = 0.0f32;
         let mut pins = 0u32;
         for j in 0usize..p.nc {
             let cp = cp_at(d, p, j);
             let t = d.fi[CP_I] as usize + (p.cp + j) * 4;
             if d.si[t + 3] != 0 {
-                let mut nearest = 1e300f64;
+                let mut nearest = f32::from_bits(0x7f800000u32);
                 let mut found = false;
                 for i in 0usize..d.fi[MOVING] as usize {
                     let core = load_prim(d, i, candidate);
@@ -1262,7 +1271,7 @@ pub fn scarcity_probe(d: &Input, scores: &mut Array<f64>, tags: &mut Array<u32>)
 #[cube(launch_unchecked)]
 pub fn scarcity_nearby(
     d: &Input,
-    scores: &Array<f64>,
+    scores: &Array<f32>,
     tags: &Array<u32>,
     nearby: &mut Array<u32>,
     pins: &mut Array<u32>,
@@ -1272,7 +1281,7 @@ pub fn scarcity_nearby(
         let range = d.fi[NET_I] as usize + source * 2;
         let start = d.fi[range] as usize;
         let end = d.fi[range + 1] as usize;
-        let mut best = 1e300f64;
+        let mut best = f32::from_bits(0x7f800000u32);
         let mut found = false;
         let mut count = 0u32;
         for i in start..end {
@@ -1288,7 +1297,7 @@ pub fn scarcity_nearby(
         pins[source] = count;
         for i in start..end {
             nearby[i] = 0;
-            if found && count > 0 && tags[i * 2] == 0 && scores[i] <= best + count as f64 {
+            if found && count > 0 && tags[i * 2] == 0 && scores[i] <= best + count as f32 {
                 nearby[i] = 1;
             }
         }

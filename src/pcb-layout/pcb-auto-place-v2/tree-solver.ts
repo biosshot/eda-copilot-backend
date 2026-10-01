@@ -1,3 +1,5 @@
+import * as fp from '../f32.ts';
+import { sinCosDegrees } from '../f32.ts';
 import type {
     Box,
     BoardEdge,
@@ -406,7 +408,7 @@ function hasFixedOrEdgeDescendant(node: PlacementTreeNode): boolean {
 
 function countComponentDescendants(node: PlacementTreeNode): number {
     const own = node.kind === 'component' ? 1 : 0;
-    return own + node.children.reduce((sum, child) => sum + countComponentDescendants(child), 0);
+    return fp.add(own, node.children.reduce((sum, child) => fp.add(sum, countComponentDescendants(child)), 0));
 }
 
 function solveBlockNode(
@@ -501,7 +503,7 @@ function solveBlockNode(
     const refined: Array<BlockCandidate & { admitted: boolean }> = [];
     let skippedRefine = 0;
     const refineCandidates = (candidates: Array<BlockCandidate & { admitted: boolean }>) => {
-        for (const candidate of [...candidates].sort((a, b) => a.quality.score - b.quality.score)) {
+        for (const candidate of [...candidates].sort((a, b) => fp.sub(a.quality.score, b.quality.score))) {
             if (refined.some(other => other.admitted === candidate.admitted && nearBlockLayout(candidate, other))) { skippedRefine++; continue; }
             refined.push(candidate);
             add(refine(candidate.primitives), `${candidate.stage}+postrefine`, candidate.hypothesis, 0);
@@ -512,7 +514,7 @@ function solveBlockNode(
     // With no legal initial checkpoint, retain a bounded repair opportunity.
     const repairIndices = pool.length || pairChoices.length ? [] : solutions.map((s, index) => ({ ...s.rank, index }))
         .filter(s => hypotheses[s.index].problem.primitives.length <= 12)
-        .sort((a, b) => a.hardCount - b.hardCount || a.score - b.score).slice(0, 2).map(s => s.index);
+        .sort((a, b) => a.hardCount - b.hardCount || fp.sub(a.score, b.score)).slice(0, 2).map(s => s.index);
     const pairIndices = pairChoices.map(c => c.index).concat(repairIndices);
     const paired = solveBlockHypothesesRust(pairIndices.map(i => hypotheses[i].problem), 'pairs', pairIndices.map(i => solutions[i].states));
     const pairCandidates: Array<BlockCandidate & { admitted: boolean }> = [];
@@ -533,7 +535,7 @@ function solveBlockNode(
     captureBlockCandidates(node.label, pool, selected);
     for (const role of roles) {
         const bestFor = (hypothesis: string) => pool.filter(c => c.hypothesis === hypothesis)
-            .sort((a, b) => a.quality.score - b.quality.score)[0]?.quality.score.toFixed(2) ?? 'no legal result';
+            .sort((a, b) => fp.sub(a.quality.score, b.quality.score))[0]?.quality.score.toFixed(2) ?? 'no legal result';
         const kept = selected.some(c => c.hypothesis === 'roles:combined');
         context.diagnostics.push({ severity: 'warning', nodeId: node.id,
             message: `Suspicious placement role ${role.designator}: ${role.from} -> ${role.to}; ${role.reason}; all suspicious roles tried together; ${kept ? 'retained' : 'rejected'}; trial best score ${bestFor('roles:combined')}; selected score ${selected[0]?.quality.score.toFixed(2) ?? 'none'}. Source role unchanged.` });
@@ -577,12 +579,12 @@ function solveModuleNode(
 
 function boardHoleBoxes(input: PlacementInput): Box[] {
     return (input.boardHoles ?? []).map((hole) => {
-        const radius = Math.max(hole.keepout, hole.diameter / 2, hole.drill / 2);
+        const radius = fp.max(hole.keepout, fp.div(hole.diameter, 2), fp.div(hole.drill, 2));
         return {
-            left: hole.x - radius,
-            right: hole.x + radius,
-            top: hole.y - radius,
-            bottom: hole.y + radius,
+            left: fp.sub(hole.x, radius),
+            right: fp.add(hole.x, radius),
+            top: fp.sub(hole.y, radius),
+            bottom: fp.add(hole.y, radius),
         };
     });
 }
@@ -637,8 +639,8 @@ function componentPrimitive(context: TreeSolveContext, node: PlacementTreeNode, 
         allowedOrientations: fixed ? [0] : allowedOrientationsForComponent(component, rotate),
         bbox,
         collisionBoxes: [bbox],
-        width: roundPlacement(bbox.right - bbox.left),
-        height: roundPlacement(bbox.bottom - bbox.top),
+        width: roundPlacement(fp.sub(bbox.right, bbox.left)),
+        height: roundPlacement(fp.sub(bbox.bottom, bbox.top)),
         placements: [placement],
         connectionPoints,
         pathPorts: pathPortsForPlacements(context, [placement], connectionPoints),
@@ -672,7 +674,7 @@ function chooseInitialComponentRotation(
 
             for (const target of sideTargets) {
                 if (String(target.pin) !== String(pin.pin_number)) continue;
-                score += (1 - dot(sourceDirection, target.direction)) * target.weight;
+                score = fp.add(score, fp.mul((fp.sub(1, dot(sourceDirection, target.direction))), target.weight));
             }
 
             if (ignoredNet(context, pin.signal_name)) continue;
@@ -681,10 +683,10 @@ function chooseInitialComponentRotation(
                 const targetDirection = normalizeVector(target.point);
                 if (!targetDirection) continue;
                 const alignment = dot(sourceDirection, targetDirection);
-                score += (1 - alignment) * target.weight;
+                score = fp.add(score, fp.mul((fp.sub(1, alignment)), target.weight));
             }
         }
-        if (score < bestScore - 0.0001) {
+        if (score < fp.sub(bestScore, 0.0001)) {
             bestScore = score;
             bestRotation = rotate;
         }
@@ -707,7 +709,7 @@ function fixedExternalNetTargets(context: TreeSolveContext, source: PcbComponent
             targets.push({
                 net: pin.signal_name,
                 point,
-                weight: roleWeight * netSignalWeight(pin.signal_name),
+                weight: fp.mul(roleWeight, netSignalWeight(pin.signal_name)),
             });
         }
     }
@@ -739,7 +741,7 @@ function sideAnchorTargetForBlock(component: PcbComponent, node: PlacementTreeNo
     return {
         pin: anchor.pin,
         direction: sideDirection(side),
-        weight: 80 * hardWeight * gapWeight,
+        weight: fp.mul(fp.mul(80, hardWeight), gapWeight),
     };
 }
 
@@ -802,13 +804,13 @@ function passiveNetIslandPrimitive(
 
 function packPrimitives(primitives: PlacementPrimitive[], grid: number, clearance: number): PlacementPrimitive[] {
     if (primitives.length <= 1) return primitives;
-    const sorted = primitives.slice().sort((a, b) => b.height - a.height || b.width - a.width);
-    const totalWidth = sorted.reduce((sum, primitive) => sum + primitive.width, 0) + clearance * (sorted.length - 1);
-    let cursor = -totalWidth / 2;
+    const sorted = primitives.slice().sort((a, b) => fp.sub(b.height, a.height) || fp.sub(b.width, a.width));
+    const totalWidth = fp.add(sorted.reduce((sum, primitive) => fp.add(sum, primitive.width), 0), fp.mul(clearance, (sorted.length - 1)));
+    let cursor = fp.div(-totalWidth, 2);
     return sorted.map((primitive) => {
-        const dx = snap(cursor + primitive.width / 2 - (primitive.bbox.left + primitive.bbox.right) / 2, grid);
-        const dy = snap(-(primitive.bbox.top + primitive.bbox.bottom) / 2, grid);
-        cursor += primitive.width + clearance;
+        const dx = snap(fp.sub(fp.add(cursor, fp.div(primitive.width, 2)), fp.div((fp.add(primitive.bbox.left, primitive.bbox.right)), 2)), grid);
+        const dy = snap(fp.div(-(fp.add(primitive.bbox.top, primitive.bbox.bottom)), 2), grid);
+        cursor = fp.add(cursor, fp.add(primitive.width, clearance));
         return translatePrimitive(primitive, dx, dy);
     });
 }
@@ -856,7 +858,7 @@ function pathPortsForPlacements(
             const ref = `${target.designator}.${String(target.pin_number)}`;
             const point = pointByRef.get(ref);
             if (!placement || !point) return;
-            const normal = normalizeVector({ x: point.x - placement.x, y: point.y - placement.y }) ?? { x: 0, y: 0 };
+            const normal = normalizeVector({ x: fp.sub(point.x, placement.x), y: fp.sub(point.y, placement.y) }) ?? { x: 0, y: 0 };
             ports.push({
                 pathId: path.id,
                 order,
@@ -879,7 +881,7 @@ function islandComponentLabels(node: PlacementTreeNode): Set<string> {
 function sortedIslandChildren(node: PlacementTreeNode) {
     return node.children
         .filter((child) => child.kind === 'island')
-        .sort((a, b) => islandSolveRank(a) - islandSolveRank(b));
+        .sort((a, b) => fp.sub(islandSolveRank(a), islandSolveRank(b)));
 }
 
 function islandSolveRank(node: PlacementTreeNode) {
@@ -931,10 +933,10 @@ function numeric(value: unknown) {
 function boardBounds(input: PlacementInput): Box {
     const edge = input.board.clearances.edge ?? 0;
     return {
-        left: -input.board.outline.width / 2 + edge,
-        right: input.board.outline.width / 2 - edge,
-        top: -input.board.outline.height / 2 + edge,
-        bottom: input.board.outline.height / 2 - edge,
+        left: fp.add(fp.div(-input.board.outline.width, 2), edge),
+        right: fp.sub(fp.div(input.board.outline.width, 2), edge),
+        top: fp.add(fp.div(-input.board.outline.height, 2), edge),
+        bottom: fp.sub(fp.div(input.board.outline.height, 2), edge),
     };
 }
 
@@ -949,8 +951,8 @@ function rememberPrimitive(context: TreeSolveContext, primitive: PlacementPrimit
             const p = unionPrimitive(primitive.id, primitive.kind, primitive.label, primitive.sourceNodeId, children, primitive.deferredRelations);
             p.blockQuality = blockQuality(context.input, children);
             if (primitive.anchored) return { ...p, anchored: true };
-            return translatePrimitive(p, (primitive.bbox.left + primitive.bbox.right - p.bbox.left - p.bbox.right) / 2,
-                (primitive.bbox.top + primitive.bbox.bottom - p.bbox.top - p.bbox.bottom) / 2);
+            return translatePrimitive(p, fp.div((fp.sub(fp.sub(fp.add(primitive.bbox.left, primitive.bbox.right), p.bbox.left), p.bbox.right)), 2),
+                fp.div((fp.sub(fp.sub(fp.add(primitive.bbox.top, primitive.bbox.bottom), p.bbox.top), p.bbox.bottom)), 2));
         }).filter(p => { const key = signature(p); if (seen.has(key)) return false; seen.add(key); return true; });
     }
     context.primitives.push(primitive);
@@ -988,15 +990,15 @@ function padWorld(component: PcbComponent, placement: Placement, pin: string | n
     const pad = component.footprint.pads.find((item) => String(item.pin_number) === String(pin));
     if (!pad) return null;
     const offset = padOffset(pad, placement.rotate, placement.layer);
-    return { x: roundPlacement(placement.x + offset.x), y: roundPlacement(placement.y + offset.y) };
+    return { x: roundPlacement(fp.add(placement.x, offset.x)), y: roundPlacement(fp.add(placement.y, offset.y)) };
 }
 
 function padOffset(point: Point, rotate: number, layer: Layer) {
     const local = layer === 'bottom' ? { x: -point.x, y: point.y } : point;
-    const radians = rotate * Math.PI / 180;
+    const [sin, cos] = sinCosDegrees(rotate);
     return {
-        x: local.x * Math.cos(radians) - local.y * Math.sin(radians),
-        y: local.x * Math.sin(radians) + local.y * Math.cos(radians),
+        x: fp.sub(fp.mul(local.x, cos), fp.mul(local.y, sin)),
+        y: fp.add(fp.mul(local.x, sin), fp.mul(local.y, cos)),
     };
 }
 
@@ -1042,16 +1044,16 @@ function netSignalWeight(net: string) {
 }
 
 function normalizeVector(point: Point): Point | null {
-    const length = Math.hypot(point.x, point.y);
+    const length = fp.hypot(point.x, point.y);
     if (length < 0.000001) return null;
-    return { x: point.x / length, y: point.y / length };
+    return { x: fp.div(point.x, length), y: fp.div(point.y, length) };
 }
 
 function dot(a: Point, b: Point) {
-    return a.x * b.x + a.y * b.y;
+    return fp.add(fp.mul(a.x, b.x), fp.mul(a.y, b.y));
 }
 
 function snap(value: number, grid: number) {
     if (grid <= 0) return value;
-    return Math.round(value / grid) * grid;
+    return fp.mul(Math.round(fp.div(value, grid)), grid);
 }

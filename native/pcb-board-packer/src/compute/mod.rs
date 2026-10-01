@@ -2,7 +2,9 @@
 #[cfg(feature = "gpu")]
 pub(crate) mod gpu;
 #[cfg(feature = "gpu")]
-pub(crate) mod numerics;
+pub(crate) mod f32_runtime;
+#[cfg(feature = "gpu")]
+pub(crate) use crate::numerics;
 #[cfg(feature = "gpu")]
 mod workspace;
 #[cfg(feature = "gpu")]
@@ -11,21 +13,21 @@ pub(crate) use workspace::ScratchKey;
 #[cfg(feature = "gpu")]
 #[derive(Clone, Copy, Debug, serde::Serialize)]
 pub(crate) struct Capabilities {
-    pub f64: bool,
+    pub f32: bool,
     pub u64: bool,
 }
 
 #[cfg(feature = "gpu")]
 #[derive(Clone, Copy)]
 pub(crate) struct Requirements {
-    pub f64: bool,
+    pub f32: bool,
     pub u64: bool,
 }
 
 #[cfg(feature = "gpu")]
 impl Capabilities {
     fn check(self, required: Requirements) -> Result<(), Error> {
-        if (required.f64 && !self.f64) || (required.u64 && !self.u64) {
+        if (required.f32 && !self.f32) || (required.u64 && !self.u64) {
             Err(Error::new(
                 ErrorKind::MissingCapabilities,
                 "GPU lacks requested capabilities",
@@ -106,16 +108,16 @@ mod tests {
     #[test]
     fn missing_consumer_capability_is_a_rejection_not_a_runtime_failure() {
         let required = Requirements {
-            f64: true,
+            f32: true,
             u64: true,
         };
         for available in [
             Capabilities {
-                f64: false,
+                f32: false,
                 u64: true,
             },
             Capabilities {
-                f64: true,
+                f32: true,
                 u64: false,
             },
         ] {
@@ -124,11 +126,11 @@ mod tests {
             assert!(!error.disables_runtime());
         }
         Capabilities {
-            f64: true,
+            f32: true,
             u64: false,
         }
         .check(Requirements {
-            f64: true,
+            f32: true,
             u64: false,
         })
         .unwrap();

@@ -4,7 +4,7 @@ use smallvec::SmallVec;
 use std::cmp::Ordering;
 use rustc_hash::{FxHashSet}; 
 
-const PLACEMENT_EPSILON: f64 = 0.005;
+const PLACEMENT_EPSILON: f32 = 0.005;
 const ROTATION_LIMIT: usize = 4096;
 
 #[derive(Clone, Copy)]
@@ -17,14 +17,14 @@ enum Axis {
 struct CandidatePlacement {
     component_id: usize,
     orientation_index: usize,
-    x: f64,
-    y: f64,
+    x: f32,
+    y: f32,
 }
 
 #[derive(Clone)]
 struct BestCandidate {
     placements: Vec<CandidatePlacement>,
-    score: f64,
+    score: f32,
     legal: bool,
 }
 
@@ -101,7 +101,7 @@ pub fn solve(problem: PassiveIslandProblem) -> Result<PassiveIslandSolution, Str
     })
 }
 
-fn is_better(best: &Option<BestCandidate>, score: f64) -> bool {
+fn is_better(best: &Option<BestCandidate>, score: f32) -> bool {
     if best
         .as_ref()
         .is_none_or(|current| score.total_cmp(&current.score) == Ordering::Less)
@@ -274,8 +274,8 @@ fn place_grid(
         if start >= end {
             continue;
         }
-        let mut width: f64 = 0.0;
-        let mut height: f64 = 0.0;
+        let mut width: f32 = 0.0;
+        let mut height: f32 = 0.0;
         for index in start..end {
             let orientation = &problem.components[order[index]].orientations[orientations[index]];
             match axis {
@@ -289,7 +289,7 @@ fn place_grid(
                 }
             }
         }
-        let gaps = problem.clearance * (end - start).saturating_sub(1) as f64;
+        let gaps = problem.clearance * (end - start).saturating_sub(1) as f32;
         match axis {
             Axis::X => width += gaps,
             Axis::Y => height += gaps,
@@ -297,7 +297,7 @@ fn place_grid(
         row_sizes.push((width, height));
     }
 
-    let cross_total: f64 = row_sizes
+    let cross_total: f32 = row_sizes
         .iter()
         .map(|(width, height)| match axis {
             Axis::X => *height,
@@ -305,7 +305,7 @@ fn place_grid(
         })
         .sum();
     let mut cross_cursor =
-        -cross_total / 2.0 - problem.clearance * row_sizes.len().saturating_sub(1) as f64 / 2.0;
+        -cross_total / 2.0 - problem.clearance * row_sizes.len().saturating_sub(1) as f32 / 2.0;
     let mut placements = Vec::with_capacity(order.len());
     for (row, (row_width, row_height)) in row_sizes.iter().copied().enumerate() {
         let start = row * max_per_row;
@@ -379,7 +379,7 @@ fn score_variant(
     problem: &PassiveIslandProblem,
     placements: &[CandidatePlacement],
     legal: bool,
-) -> f64 {
+) -> f32 {
     let bbox = placements_box(problem, placements);
     let width = bbox.right - bbox.left;
     let height = bbox.bottom - bbox.top;
@@ -395,7 +395,7 @@ fn score_variant(
     score
 }
 
-fn aspect_ratio_penalty(width: f64, height: f64) -> f64 {
+fn aspect_ratio_penalty(width: f32, height: f32) -> f32 {
     if width <= 0.0 || height <= 0.0 {
         return 0.0;
     }
@@ -411,7 +411,7 @@ fn aspect_ratio_penalty(width: f64, height: f64) -> f64 {
 fn shared_net_spread_penalty(
     problem: &PassiveIslandProblem,
     placements: &[CandidatePlacement],
-) -> f64 {
+) -> f32 {
     let mut score = 0.0;
     let mut seen = vec![false; problem.net_names.len()];
     let mut nets = Vec::with_capacity(
@@ -449,7 +449,7 @@ fn shared_net_spread_penalty(
 fn shared_component_net_pair_penalty(
     problem: &PassiveIslandProblem,
     placements: &[CandidatePlacement],
-) -> f64 {
+) -> f32 {
     let mut score = 0.0;
     for i in 0..placements.len() {
         for j in (i + 1)..placements.len() {
@@ -502,7 +502,7 @@ fn shared_two_net_vector_penalty(
     a: &CandidatePlacement,
     b: &CandidatePlacement,
     common_nets: &[usize],
-) -> f64 {
+) -> f32 {
     let mut nets = common_nets.to_vec();
     nets.sort_by(|left, right| {
         if *left == problem.main_net_id {
@@ -596,7 +596,7 @@ fn has_overlap(problem: &PassiveIslandProblem, placements: &[CandidatePlacement]
     false
 }
 
-fn boxes_overlap(a: &Box2, b: &Box2, clearance: f64) -> bool {
+fn boxes_overlap(a: &Box2, b: &Box2, clearance: f32) -> bool {
     !(a.right + clearance - PLACEMENT_EPSILON < b.left
         || a.left - clearance + PLACEMENT_EPSILON > b.right
         || a.bottom + clearance - PLACEMENT_EPSILON < b.top
@@ -643,7 +643,7 @@ fn net_spread(
     problem: &PassiveIslandProblem,
     placements: &[CandidatePlacement],
     net: usize,
-) -> f64 {
+) -> f32 {
     let points = net_points(problem, placements, net);
     if points.len() < 2 {
         0.0
@@ -656,7 +656,7 @@ fn net_centroid_distance(
     problem: &PassiveIslandProblem,
     placements: &[CandidatePlacement],
     net: usize,
-) -> f64 {
+) -> f32 {
     let points = net_points(problem, placements, net);
     points_centroid_distance(&points)
 }
@@ -716,7 +716,7 @@ fn has_net(problem: &PassiveIslandProblem, component: usize, net: usize) -> bool
     problem.components[component].pin_net_ids.contains(&net)
 }
 
-fn points_spread(points: &[Point]) -> f64 {
+fn points_spread(points: &[Point]) -> f32 {
     let mut left = points[0].x;
     let mut right = points[0].x;
     let mut top = points[0].y;
@@ -730,7 +730,7 @@ fn points_spread(points: &[Point]) -> f64 {
     (right - left) + (bottom - top)
 }
 
-fn points_centroid_distance(points: &[Point]) -> f64 {
+fn points_centroid_distance(points: &[Point]) -> f32 {
     if points.len() < 2 {
         return 0.0;
     }
@@ -740,8 +740,8 @@ fn points_centroid_distance(points: &[Point]) -> f64 {
         sum_x += point.x;
         sum_y += point.y;
     }
-    let center_x = sum_x / points.len() as f64;
-    let center_y = sum_y / points.len() as f64;
+    let center_x = sum_x / points.len() as f32;
+    let center_y = sum_y / points.len() as f32;
     points
         .iter()
         .map(|point| {

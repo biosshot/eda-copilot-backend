@@ -1,4 +1,5 @@
 import type { NativePrimitivePackSolution } from './contract.ts';
+import { PCB_NUMERIC_CONTRACT } from '../../f32.ts';
 
 /** Process-local, bounded LRU. Keys contain the complete encoded solver input.
  * No pose rounding or net/constraint omissions: a changed problem is a miss.
@@ -59,7 +60,7 @@ export class NativeSolveCache {
             }
             return value;
         });
-        const key = `${operation}:${serialized}:${negativeZeros.join(',')}`;
+        const key = `${PCB_NUMERIC_CONTRACT}:${operation}:${serialized}:${negativeZeros.join(',')}`;
         return !cacheable || this.maxEntries <= 0 || key.length * 2 > this.maxBytes ? undefined : key;
     }
 

@@ -2,20 +2,20 @@ use serde::{Deserialize, Serialize};
 use rustc_hash::FxHashMap;
 use std::cell::RefCell;
 
-const GEOMETRY_EPSILON: f64 = 1e-6;
+const GEOMETRY_EPSILON: f32 = 1e-6;
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Point {
-    pub x: f64,
-    pub y: f64,
+    pub x: f32,
+    pub y: f32,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Box2 {
-    pub left: f64,
-    pub right: f64,
-    pub top: f64,
-    pub bottom: f64,
+    pub left: f32,
+    pub right: f32,
+    pub top: f32,
+    pub bottom: f32,
 }
 
 /// Exact distance memoization for one immutable outline, owned by a solve context.
@@ -29,7 +29,7 @@ pub(crate) struct PolygonDistanceCache {
 
 #[derive(Default)]
 struct PolygonDistanceCacheData {
-    values: FxHashMap<(u64, u64), f64>,
+    values: FxHashMap<(u32, u32), f32>,
     #[cfg(test)]
     hits: u64,
     #[cfg(test)]
@@ -50,7 +50,7 @@ impl PolygonDistanceCache {
         &self.polygon
     }
 
-    pub(crate) fn distance(&self, point: &Point) -> f64 {
+    pub(crate) fn distance(&self, point: &Point) -> f32 {
         let cacheable = self.finite_polygon && is_finite_point(point);
         let key = (point.x.to_bits(), point.y.to_bits());
         let mut data = self.data.borrow_mut();
@@ -80,18 +80,27 @@ impl PolygonDistanceCache {
 }
 
 #[inline(always)]
-pub fn js_round(value: f64) -> f64 {
-    (value + 0.5).floor()
+pub fn js_round(value: f32) -> f32 {
+    crate::numerics::js_round(value)
 }
 
 #[inline(always)]
-pub fn round_placement(value: f64) -> f64 {
-    js_round(value * 1000.0) / 1000.0
+pub fn round_placement(value: f32) -> f32 {
+    crate::numerics::rp(value)
 }
 
 #[inline(always)]
 pub fn normalize_rotation(value: i32) -> i32 {
     ((value % 360) + 360) % 360
+}
+
+#[inline(always)]
+pub fn add_rotation(a: i32, b: i32) -> i32 {
+    normalize_rotation(normalize_rotation(a)+normalize_rotation(b))
+}
+#[inline(always)]
+pub fn subtract_rotation(a: i32, b: i32) -> i32 {
+    normalize_rotation(normalize_rotation(a)-normalize_rotation(b))
 }
 
 #[inline(always)]
@@ -103,7 +112,7 @@ pub fn box_center(box_: &Box2) -> Point {
 }
 
 #[inline(always)]
-pub fn translate_box(box_: &Box2, dx: f64, dy: f64) -> Box2 {
+pub fn translate_box(box_: &Box2, dx: f32, dy: f32) -> Box2 {
     Box2 {
         left: round_placement(box_.left + dx),
         right: round_placement(box_.right + dx),
@@ -114,10 +123,16 @@ pub fn translate_box(box_: &Box2, dx: f64, dy: f64) -> Box2 {
 
 #[inline(always)]
 pub fn rotate_point(point: &Point, origin: &Point, angle: i32) -> Point {
-    let radians = f64::from(angle).to_radians();
-    let (sin, cos) = radians.sin_cos();
     let dx = point.x - origin.x;
     let dy = point.y - origin.y;
+    match normalize_rotation(angle) {
+        0 => return Point { x: round_placement(point.x), y: round_placement(point.y) },
+        90 => return Point { x: round_placement(origin.x-dy), y: round_placement(origin.y+dx) },
+        180 => return Point { x: round_placement(origin.x-dx), y: round_placement(origin.y-dy) },
+        270 => return Point { x: round_placement(origin.x+dy), y: round_placement(origin.y-dx) },
+        _ => (),
+    }
+    let (sin, cos) = crate::rotation::sin_cos_degrees(angle);
     Point {
         x: round_placement(origin.x + dx * cos - dy * sin),
         y: round_placement(origin.y + dx * sin + dy * cos),
@@ -165,7 +180,7 @@ pub fn union_boxes(boxes: &[Box2]) -> Box2 {
 }
 
 #[inline(always)]
-pub fn overlap_depth(a: &Box2, b: &Box2, clearance: f64) -> f64 {
+pub fn overlap_depth(a: &Box2, b: &Box2, clearance: f32) -> f32 {
     let x1 = a.right + clearance - b.left;
     let x2 = b.right + clearance - a.left;
     if x1 <= 0.0 || x2 <= 0.0 {
@@ -180,8 +195,8 @@ pub fn overlap_depth(a: &Box2, b: &Box2, clearance: f64) -> f64 {
 }
 
 #[inline(always)]
-pub fn boxes_overlap_depth(a_boxes: &[Box2], b_boxes: &[Box2], clearance: f64) -> f64 {
-    let mut max_overlap: f64 = 0.0;
+pub fn boxes_overlap_depth(a_boxes: &[Box2], b_boxes: &[Box2], clearance: f32) -> f32 {
+    let mut max_overlap: f32 = 0.0;
     for a in a_boxes {
         for b in b_boxes {
             max_overlap = max_overlap.max(overlap_depth(a, b, clearance));
@@ -191,7 +206,7 @@ pub fn boxes_overlap_depth(a_boxes: &[Box2], b_boxes: &[Box2], clearance: f64) -
 }
 
 #[inline(always)]
-pub fn box_outside_bounds_severity(box_: &Box2, bounds: &Box2) -> f64 {
+pub fn box_outside_bounds_severity(box_: &Box2, bounds: &Box2) -> f32 {
     (bounds.left - box_.left).max(0.0)
         + (box_.right - bounds.right).max(0.0)
         + (bounds.top - box_.top).max(0.0)
@@ -222,11 +237,11 @@ pub fn point_in_polygon(point: &Point, polygon: &[Point]) -> bool {
 }
 
 #[inline(always)]
-pub fn point_to_polygon_distance(point: &Point, polygon: &[Point]) -> f64 {
+pub fn point_to_polygon_distance(point: &Point, polygon: &[Point]) -> f32 {
     if polygon.is_empty() {
-        return f64::INFINITY;
+        return f32::INFINITY;
     }
-    let mut min = f64::INFINITY;
+    let mut min = f32::INFINITY;
     for index in 0..polygon.len() {
         min = min.min(point_to_segment_distance(
             point,
@@ -242,7 +257,7 @@ pub fn box_inside_polygon_board(
     box_: &Box2,
     bounds: &Box2,
     polygon: &[Point],
-    edge_clearance: f64,
+    edge_clearance: f32,
 ) -> bool {
     let corners = box_corners(box_);
     for corner in &corners {
@@ -321,7 +336,7 @@ fn point_on_segment(point: &Point, a: &Point, b: &Point) -> bool {
 }
 
 #[inline(always)]
-fn point_to_segment_distance(point: &Point, a: &Point, b: &Point) -> f64 {
+fn point_to_segment_distance(point: &Point, a: &Point, b: &Point) -> f32 {
     let dx = b.x - a.x;
     let dy = b.y - a.y;
     let length_squared = dx * dx + dy * dy;
@@ -362,6 +377,17 @@ mod tests {
         assert_eq!(js_round(-1.5), -1.0);
         assert_eq!(js_round(-2.5), -2.0);
         assert_eq!(js_round(1.5), 2.0);
+    }
+
+    #[test]
+    fn integer_angles_do_not_narrow_to_f32_or_overflow_before_normalization() {
+        for a in [i32::MIN,i32::MAX,16_777_219,-1,270] {
+            for b in [i32::MIN,i32::MAX,180,270] {
+                let modulo=|v: i64|((v%360+360)%360) as i32;
+                assert_eq!(add_rotation(a,b),modulo(a as i64+b as i64));
+                assert_eq!(subtract_rotation(a,b),modulo(a as i64-b as i64));
+            }
+        }
     }
 
     #[test]
@@ -432,7 +458,7 @@ mod tests {
 mod polygon_distance_cache_tests {
     use super::*;
 
-    fn square(size: f64) -> Vec<Point> {
+    fn square(size: f32) -> Vec<Point> {
         vec![Point { x: 0.0, y: 0.0 }, Point { x: size, y: 0.0 },
              Point { x: size, y: size }, Point { x: 0.0, y: size }]
     }
@@ -451,7 +477,7 @@ mod polygon_distance_cache_tests {
         assert_same(&cache, point);
         assert_same(&cache, point);
         assert_eq!(cache.stats(), (1, 1, 1));
-        assert_same(&cache, Point { x: f64::from_bits(point.x.to_bits() + 1), y: point.y });
+        assert_same(&cache, Point { x: f32::from_bits(point.x.to_bits() + 1), y: point.y });
         assert_same(&cache, Point { x: 0.0, y: 3.0 });
         assert_same(&cache, Point { x: -0.0, y: 3.0 });
         assert_eq!(cache.stats(), (1, 4, 4));
@@ -496,7 +522,7 @@ mod polygon_distance_cache_tests {
             for _ in 0..2 {
                 for x in -4..=44 {
                     for y in -4..=44 {
-                        assert_same(&cache, Point { x: x as f64 * 0.25, y: y as f64 * 0.25 });
+                        assert_same(&cache, Point { x: x as f32 * 0.25, y: y as f32 * 0.25 });
                     }
                 }
                 for delta in [-1e-9, 0.0, 1e-9, -1e-6, 1e-6] {
@@ -509,7 +535,7 @@ mod polygon_distance_cache_tests {
     #[test]
     fn nonfinite_inputs_and_results_are_not_memoized() {
         let cache = PolygonDistanceCache::new(&square(10.0), 100);
-        for point in [Point { x: f64::NAN, y: 0.0 }, Point { x: f64::INFINITY, y: 0.0 }] {
+        for point in [Point { x: f32::NAN, y: 0.0 }, Point { x: f32::INFINITY, y: 0.0 }] {
             assert_same(&cache, point);
             assert_same(&cache, point);
         }
@@ -517,7 +543,7 @@ mod polygon_distance_cache_tests {
         let empty = PolygonDistanceCache::new(&[], 100);
         assert_same(&empty, Point { x: 0.0, y: 0.0 });
         assert_eq!(empty.stats(), (0, 1, 0));
-        let invalid = PolygonDistanceCache::new(&[Point { x: f64::NAN, y: 0.0 }], 100);
+        let invalid = PolygonDistanceCache::new(&[Point { x: f32::NAN, y: 0.0 }], 100);
         assert_same(&invalid, Point { x: 0.0, y: 0.0 });
         assert_eq!(invalid.stats(), (0, 1, 0));
     }

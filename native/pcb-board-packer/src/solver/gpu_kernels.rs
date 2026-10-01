@@ -4,23 +4,23 @@ use crate::compute::numerics::rp;
 
 #[derive(CubeLaunch, CubeType)]
 pub struct Input {
-    pub sf: Array<f64>,
+    pub sf: Array<f32>,
     pub si: Array<u32>,
-    pub pf: Array<f64>,
+    pub pf: Array<f32>,
     pub pi: Array<u32>,
     pub frame: Array<u32>,
-    pub geometry: Array<f64>,pub pairs:Array<f64>,pub unary:Array<f64>,pub unary_tags:Array<u32>,
-    pub fixed_geometry:Array<f64>,pub fixed_pairs:Array<f64>,pub fixed_unary:Array<f64>,pub fixed_tags:Array<u32>,
+    pub geometry: Array<f32>,pub pairs:Array<f32>,pub unary:Array<f32>,pub unary_tags:Array<u32>,
+    pub fixed_geometry:Array<f32>,pub fixed_pairs:Array<f32>,pub fixed_unary:Array<f32>,pub fixed_tags:Array<u32>,
 }
 #[derive(Clone, Copy, CubeType)]
-pub struct Costs {pub first:f64,pub second:f64}
+pub struct Costs {pub first:f32,pub second:f32}
 #[derive(Clone, Copy, CubeType)]
-pub struct B { pub l: f64, pub r: f64, pub t: f64, pub b: f64 }
+pub struct B { pub l: f32, pub r: f32, pub t: f32, pub b: f32 }
 
 #[cube]
-fn min(a: f64, b: f64) -> f64 { if a < b { a } else { b } }
+fn min(a: f32, b: f32) -> f32 { if a < b { a } else { b } }
 #[cube]
-fn max(a: f64, b: f64) -> f64 { if a > b { a } else { b } }
+fn max(a: f32, b: f32) -> f32 { if a > b { a } else { b } }
 #[cube]
 fn pose(g: &Input, c: usize, i: usize) -> usize {
     let nf = g.frame[1] as usize;
@@ -32,7 +32,7 @@ fn pose(g: &Input, c: usize, i: usize) -> usize {
 #[cube]
 fn template(g: &Input, p: usize) -> usize { g.pi[p] as usize }
 #[cube]
-fn coord(g: &Input, p: usize, f: usize, axis: usize) -> f64 {
+fn coord(g: &Input, p: usize, f: usize, axis: usize) -> f32 {
     let t=template(g,p);
     let _axis=axis;
     let offset=g.pi[p+3] as usize+f-g.si[t+15] as usize;
@@ -52,7 +52,7 @@ fn packing(g: &Input, p: usize) -> B {
     box_at(g,p,g.si[template(g,p)+18] as usize)
 }
 #[cube]
-fn overlap(a: B,b: B,c: f64) -> f64 {
+fn overlap(a: B,b: B,c: f32) -> f32 {
     let x1=a.r+c-b.l; let x2=b.r+c-a.l;
     let y1=a.b+c-b.t; let y2=b.b+c-a.t;
     let mut result=0.0;
@@ -60,7 +60,7 @@ fn overlap(a: B,b: B,c: f64) -> f64 {
     result
 }
 #[cube]
-fn packing_overlap(g:&Input,a:usize,b:usize,c:f64)->f64 {
+fn packing_overlap(g:&Input,a:usize,b:usize,c:f32)->f32 {
     let ta=template(g,a); let tb=template(g,b); let mut result=0.0;
     // A union bound can only reject pairs which the exact box loops reject.
     if overlap(packing(g,a),packing(g,b),c)>0.0 {
@@ -72,7 +72,7 @@ fn packing_overlap(g:&Input,a:usize,b:usize,c:f64)->f64 {
 #[cube]
 fn component(g:&Input,p:usize,i:usize)->usize { g.si[template(g,p)+5] as usize+i*8 }
 #[cube]
-fn component_clearance(g:&Input,a:usize,b:usize)->f64 {
+fn component_clearance(g:&Input,a:usize,b:usize)->f32 {
     g.sf[g.si[3] as usize+g.si[a] as usize*g.si[1] as usize+g.si[b] as usize]
 }
 #[cube]
@@ -85,7 +85,7 @@ fn can_conflict(g:&Input,a:usize,b:usize)->bool {
     g.si[g.si[20] as usize+ai*g.si[12] as usize+bi]!=0
 }
 #[cube]
-fn hard_overlap(g:&Input,a:usize,b:usize)->f64 {
+fn hard_overlap(g:&Input,a:usize,b:usize)->f32 {
     let na=g.si[template(g,a)+6] as usize; let nb=g.si[template(g,b)+6] as usize;
     let ai=g.si[template(g,a)] as usize;let bi=g.si[template(g,b)] as usize;
     let broad=g.sf[g.si[19] as usize+ai*g.si[12] as usize+bi];
@@ -111,11 +111,11 @@ fn hard_overlap(g:&Input,a:usize,b:usize)->f64 {
     if result<=1e-9 {result=0.0;} result
 }
 #[cube]
-fn outside_bounds(b:B,board:B)->f64 {
+fn outside_bounds(b:B,board:B)->f32 {
     max(board.l-b.l,0.0)+max(b.r-board.r,0.0)+max(board.t-b.t,0.0)+max(b.b-board.b,0.0)
 }
 #[derive(Clone, Copy, CubeType)]
-pub struct P { pub x:f64, pub y:f64 }
+pub struct P { pub x:f32, pub y:f32 }
 #[cube]
 fn corner(b:B,i:usize)->P {
     let mut x=b.l;let mut y=b.t;
@@ -130,7 +130,7 @@ fn on_segment(p:P,a:P,b:P)->bool {
         && p.y<=max(a.y,b.y)+1e-6 && p.y>=min(a.y,b.y)-1e-6
 }
 #[cube]
-fn distance_segment(p:P,a:P,b:P)->f64 {
+fn distance_segment(p:P,a:P,b:P)->f32 {
     let dx=b.x-a.x;let dy=b.y-a.y;let length=dx*dx+dy*dy;
     let mut x=p.x-a.x;let mut y=p.y-a.y;
     if length>=1e-6 {
@@ -150,8 +150,8 @@ fn inside_polygon(g:&Input,p:P)->bool {
     }}inside || boundary
 }
 #[cube]
-fn distance_polygon(g:&Input,p:P)->f64 {
-    let count=g.si[5] as usize;let mut result=1e300;
+fn distance_polygon(g:&Input,p:P)->f32 {
+    let count=g.si[5] as usize;let mut result=f32::from_bits(0x7f800000u32);
     for i in 0..count {result=min(result,distance_segment(p,polygon_point(g,i),polygon_point(g,(i+1)%count)));}result
 }
 #[cube]
@@ -164,7 +164,7 @@ fn crosses(a:P,b:P,c:P,d:P)->bool {
     }result
 }
 #[cube]
-fn outside_polygon(g:&Input,b:B,board:B,edge:f64)->bool {
+fn outside_polygon(g:&Input,b:B,board:B,edge:f32)->bool {
     let mut outside=false;
     for i in 0..4 {let p=corner(b,i);
         if p.x<board.l+edge-1e-6 || p.x>board.r-edge+1e-6 || p.y<board.t+edge-1e-6 || p.y>board.b-edge+1e-6
@@ -175,7 +175,7 @@ fn outside_polygon(g:&Input,b:B,board:B,edge:f64)->bool {
     }}outside
 }
 #[cube]
-fn polygon_severity(g:&Input,b:B,bounds:B,edge:f64)->f64 {
+fn polygon_severity(g:&Input,b:B,bounds:B,edge:f32)->f32 {
     let mut severity=outside_bounds(b,bounds);
     for i in 0..4 {
         let p=corner(b,i);let d=distance_polygon(g,p);
@@ -185,7 +185,7 @@ fn polygon_severity(g:&Input,b:B,bounds:B,edge:f64)->f64 {
 #[cube]
 fn envelope(g:&Input,p:usize,layer:u32)->B {
     let t=template(g,p); let nc=g.si[t+6] as usize;
-    let mut result=B{l:1e300,r:-1e300,t:1e300,b:-1e300};
+    let mut result=B{l:f32::from_bits(0x7f800000u32),r:-f32::from_bits(0x7f800000u32),t:f32::from_bits(0x7f800000u32),b:-f32::from_bits(0x7f800000u32)};
     if nc==0 {for i in 0..g.si[t+4] as usize {add_box(&mut result,box_at(g,p,g.si[t+3] as usize+i*4));}}
     else {for i in 0..nc {
         let c=component(g,p,i);
@@ -194,7 +194,7 @@ fn envelope(g:&Input,p:usize,layer:u32)->B {
     }} result
 }
 #[cube]
-fn edge_distance(b:B,board:B,inset:f64,edge:u32)->f64 {
+fn edge_distance(b:B,board:B,inset:f32,edge:u32)->f32 {
     let mut d=(b.b-(board.b-inset)).abs();
     if edge==0 {d=(b.l-(board.l+inset)).abs();}
     if edge==1 {d=(b.r-(board.r-inset)).abs();}
@@ -202,7 +202,7 @@ fn edge_distance(b:B,board:B,inset:f64,edge:u32)->f64 {
 }
 
 #[derive(Clone, Copy, CubeType)]
-pub struct Endpoint { pub x:f64, pub y:f64, pub owner:u32, pub present:bool }
+pub struct Endpoint { pub x:f32, pub y:f32, pub owner:u32, pub present:bool }
 #[cube]
 fn find_pose(g:&Input,c:usize,id:u32)->usize {
     let mut found=0xffffffffusize;
@@ -235,7 +235,7 @@ fn endpoint(g:&Input,c:usize,e:usize)->Endpoint {
                     }
                 }
                 assign_p(&mut xy,center(box_at(g,p,g.si[t+2] as usize)));
-                if count>0 {assign_p(&mut xy,P{x:rp(x/count as f64),y:rp(y/count as f64)});}
+                if count>0 {assign_p(&mut xy,P{x:rp(x/count as f32),y:rp(y/count as f32)});}
             }
             assign_e(&mut result,Endpoint{x:xy.x,y:xy.y,owner:owner,present:true});
         }
@@ -310,15 +310,15 @@ fn cp(g:&Input,p:usize,index:usize)->P {
     P{x:coord(g,p,f,0),y:coord(g,p,f+1,1)}
 }
 #[cube]
-fn ordinary_term(g:&Input,c:usize,i:usize)->f64 {
+fn ordinary_term(g:&Input,c:usize,i:usize)->f32 {
     let mut score=0.0;
     {
         let pair=g.frame[3] as usize+i*5;
         let a=pose(g,c,g.frame[pair] as usize);let b=pose(g,c,g.frame[pair+1] as usize);
-        let mut distance=1e300;
+        let mut distance=f32::from_bits(0x7f800000u32);
         for net in 0..g.frame[pair+4] as usize {
             let q=g.frame[pair+3] as usize+net*4;
-            let mut shortest=1e300;
+            let mut shortest=f32::from_bits(0x7f800000u32);
             for x in 0..g.frame[q+1] as usize {for y in 0..g.frame[q+3] as usize {
                 let left=cp(g,a,g.frame[g.frame[q] as usize+x] as usize);
                 let right=cp(g,b,g.frame[g.frame[q+2] as usize+y] as usize);
@@ -349,16 +349,16 @@ fn resolve_port(g:&Input,c:usize,group:usize)->Port {
     }result
 }
 #[cube]
-fn magnitude(p:P)->f64 {(p.x*p.x+p.y*p.y).sqrt()}
+fn magnitude(p:P)->f32 {(p.x*p.x+p.y*p.y).sqrt()}
 #[cube]
 fn normalize(p:P)->P {
     let length=magnitude(p);let mut result=P{x:0.0,y:0.0};
     if length>0.000001 {assign_p(&mut result,P{x:p.x/length,y:p.y/length});}result
 }
 #[cube]
-fn dot(a:P,b:P)->f64 {a.x*b.x+a.y*b.y}
+fn dot(a:P,b:P)->f32 {a.x*b.x+a.y*b.y}
 #[cube]
-fn path_term(g:&Input,c:usize,path:usize)->f64 {
+fn path_term(g:&Input,c:usize,path:usize)->f32 {
     let mut total=0.0;
     {
         let info=g.si[17] as usize+path*4;let groups=g.si[info] as usize;let count=g.si[info+1] as usize;
@@ -408,7 +408,7 @@ fn path_term(g:&Input,c:usize,path:usize)->f64 {
     }total
 }
 #[cube(launch_unchecked)]
-pub fn materialize(g:&Input,values:&mut Array<f64>,start:u32) {
+pub fn materialize(g:&Input,values:&mut Array<f32>,start:u32) {
     let p=(CUBE_POS_X as usize+start as usize)*4;let local=CUBE_POS_Y as usize*128+UNIT_POS_X as usize;
     let t=template(g,p);let len=g.si[t+16] as usize;
     if local<len {
@@ -419,7 +419,7 @@ pub fn materialize(g:&Input,values:&mut Array<f64>,start:u32) {
     }
 }
 #[cube(launch_unchecked)]
-pub fn unary(g:&Input,values:&mut Array<f64>,counts:&mut Array<u32>,start:u32,end:u32,#[comptime] full_ranks:bool) {
+pub fn unary(g:&Input,values:&mut Array<f32>,counts:&mut Array<u32>,start:u32,end:u32,#[comptime] full_ranks:bool) {
     let index=ABSOLUTE_POS as usize+start as usize;
     if index<end as usize {
         let board=raw_box(g,0);let full=raw_box(g,4);let mut hard=0u32;let mut bias=0.0;
@@ -454,7 +454,7 @@ pub fn unary(g:&Input,values:&mut Array<f64>,counts:&mut Array<u32>,start:u32,en
             let b=packing(g,a);let ep=g.si[ta+7] as usize;
             let mut violation=0.0;let mut ep_score=0.0;
             if ep!=0 {
-                let ef=g.si[ep+1] as usize;let inset=max(g.sf[ef],0.0);let mut distance=1e300;ep_score=1e300;
+                let ef=g.si[ep+1] as usize;let inset=max(g.sf[ef],0.0);let mut distance=f32::from_bits(0x7f800000u32);ep_score=f32::from_bits(0x7f800000u32);
                 for e in 0..g.si[ep] as usize {
                     let edge=g.si[ep+4+e];let d=edge_distance(b,full,inset,edge);distance=min(distance,d);
                     let mut exact=0.0;
@@ -513,7 +513,7 @@ fn pair_index(g:&Input,c:usize,i:usize,j:usize)->usize {
     }result
 }
 #[cube(launch_unchecked)]
-pub fn pair_terms(g:&Input,values:&mut Array<f64>,start:u32,end:u32,#[comptime] full_ranks:bool) {
+pub fn pair_terms(g:&Input,values:&mut Array<f32>,start:u32,end:u32,#[comptime] full_ranks:bool) {
     let index=ABSOLUTE_POS as usize+start as usize;let nf=g.frame[1] as usize;let nm=g.frame[2] as usize;
     let fixed=fixed_pair_count(nf);let cross=nf*nm+fixed_pair_count(nm);
     if index<end as usize {
@@ -536,7 +536,7 @@ pub fn pair_terms(g:&Input,values:&mut Array<f64>,start:u32,end:u32,#[comptime] 
         let mut envelope_score=0.0;let mut spacing=0.0;
                 let b=pose(g,candidate,j); let d=hard_overlap(g,a,b);
                 if full_ranks && can_conflict(g,a,b) {
-                    let mut depth=0.0;let mut closest=1e300;
+                    let mut depth=0.0;let mut closest=f32::from_bits(0x7f800000u32);
                     for layer in 0..2u32 {
                         let ea=envelope(g,a,layer);let eb=envelope(g,b,layer);
                         if ea.l<=ea.r && eb.l<=eb.r {
@@ -548,7 +548,7 @@ pub fn pair_terms(g:&Input,values:&mut Array<f64>,start:u32,end:u32,#[comptime] 
                     if depth>0.0 {envelope_score=depth*depth*700.0+depth*140.0;}
                     let tb=template(g,b);
                     let exempt=g.si[g.si[11] as usize+g.si[ta] as usize*g.si[12] as usize+g.si[tb] as usize]!=0;
-                    if g.sf[11]>0.0 && closest<1e300 && !(g.si[ta+1]&1!=0 && g.si[tb+1]&1!=0) && !exempt {
+                    if g.sf[11]>0.0 && closest<f32::from_bits(0x7f800000u32) && !(g.si[ta+1]&1!=0 && g.si[tb+1]&1!=0) && !exempt {
                         let deficit=max(g.sf[8]+g.sf[11]-closest,0.0);
                         spacing=18.0*deficit*deficit;
                     }
@@ -557,9 +557,9 @@ pub fn pair_terms(g:&Input,values:&mut Array<f64>,start:u32,end:u32,#[comptime] 
     }
 }
 #[cube(launch_unchecked)]
-pub fn ranks(g:&Input,scores:&mut Array<f64>,tags:&mut Array<u32>,terms:&mut Array<f64>,#[comptime] verify:bool) {
+pub fn ranks(g:&Input,scores:&mut Array<f32>,tags:&mut Array<u32>,terms:&mut Array<f32>,#[comptime] verify:bool) {
     let candidate=CUBE_POS as usize;let lane=UNIT_POS as usize;
-    let mut first=SharedMemory::<f64>::new(128usize);let mut second=SharedMemory::<f64>::new(128usize);
+    let mut first=SharedMemory::<f32>::new(128usize);let mut second=SharedMemory::<f32>::new(128usize);
     let mut relations=0.0;let mut alignment=0.0;let mut path=0.0;let mut ordinary=0.0;
     // Calculate independent terms across the workgroup, then retain the exact
     // CPU addition order. Floating-point reduction is deliberately not a tree.
@@ -589,7 +589,7 @@ pub fn ranks(g:&Input,scores:&mut Array<f64>,tags:&mut Array<u32>,terms:&mut Arr
         let nf=g.frame[1] as usize;let nm=g.frame[2] as usize;let n=nf+nm;
         let mut hard=0u32;let mut severity=0.0;let mut envelope_score=0.0;let mut spacing=0.0;
         let mut bias=0.0;let mut edge_score=0.0;
-        let mut extent=B{l:1e300,r:-1e300,t:1e300,b:-1e300};
+        let mut extent=B{l:f32::from_bits(0x7f800000u32),r:-f32::from_bits(0x7f800000u32),t:f32::from_bits(0x7f800000u32),b:-f32::from_bits(0x7f800000u32)};
         for i in 0..n {
             let a=pose(g,candidate,i);let ta=template(g,a);
             for k in 0..g.si[ta+4] as usize {add_box(&mut extent,box_at(g,a,g.si[ta+3] as usize+k*4));}
@@ -611,7 +611,7 @@ pub fn ranks(g:&Input,scores:&mut Array<f64>,tags:&mut Array<u32>,terms:&mut Arr
 
         if n>0 {
             if extent.l<=extent.r {w=extent.r-extent.l;h=extent.b-extent.t;}
-            score=relations*relation_weight+severity*1000000.0+hard as f64*100000000.0+envelope_score*overlap_weight+w*h*area_weight*g.sf[10]
+            score=relations*relation_weight+severity*1000000.0+envelope_score*overlap_weight+w*h*area_weight*g.sf[10]
                 +(w+h)*perimeter_weight*g.sf[10]+spacing+alignment+bias*edge_weight+edge_score+(path+ordinary)*topology_weight;
         }
         scores[candidate*2]=severity;scores[candidate*2+1]=score;tags[candidate]=hard;
@@ -661,7 +661,7 @@ pub fn legality(g:&Input,parent:&Array<u32>,tags:&mut Array<u32>) {
 }
 
 #[cube]
-fn less(ah:u32,av:f64,ascore:f64,ai:usize,bh:u32,bv:f64,bscore:f64,bi:usize)->bool {
+fn less(ah:u32,av:f32,ascore:f32,ai:usize,bh:u32,bv:f32,bscore:f32,bi:usize)->bool {
     ah<bh || (ah==bh && (av<bv || (av==bv && (ascore<bscore || (ascore==bscore && ai<bi)))))
 }
 #[cube(launch_unchecked)]
@@ -671,7 +671,7 @@ pub fn clear_selection(ids:&mut Array<u32>) {
 
 // Independent candidate ranks; strict ordinal tie-break gives unique writers.
 #[cube(launch_unchecked)]
-pub fn select(scores:&Array<f64>,tags:&Array<u32>,alignment:&Array<u32>,ids:&mut Array<u32>,values:&mut Array<f64>,
+pub fn select(scores:&Array<f32>,tags:&Array<u32>,alignment:&Array<u32>,ids:&mut Array<u32>,values:&mut Array<f32>,
     #[comptime] ordinary:usize,#[comptime] aligned:usize,
 ) {
     let i=ABSOLUTE_POS as usize;
@@ -691,11 +691,11 @@ pub fn select(scores:&Array<f64>,tags:&Array<u32>,alignment:&Array<u32>,ids:&mut
 }
 
 #[cube]
-fn pair_value(g:&Input,index:usize)->f64 {
+fn pair_value(g:&Input,index:usize)->f32 {
     let mut value=0.0;if index<fixed_pair_count(g.frame[1] as usize)*3 {value=g.fixed_pairs[index];}else{value=g.pairs[index];}value
 }
 #[cube]
-fn unary_value(g:&Input,index:usize)->f64 {
+fn unary_value(g:&Input,index:usize)->f32 {
     let mut value=0.0;if index<g.frame[1] as usize*(g.si[7] as usize+6) {value=g.fixed_unary[index];}else{value=g.unary[index];}value
 }
 #[cube]

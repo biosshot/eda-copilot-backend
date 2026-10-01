@@ -20,8 +20,8 @@ fn benchmark_route_search() {
         }
         if scenario == "dense" {
             for i in 0..200 {
-                let x = -9.0 + (i % 20) as f64 * 0.9;
-                let y = -9.0 + (i / 20) as f64 * 1.8;
+                let x = -9.0 + (i % 20) as f32 * 0.9;
+                let y = -9.0 + (i / 20) as f32 * 1.8;
                 obstacles.push(StaticObstacle { box_: Box2 { left: x, right: x + 0.2, top: y, bottom: y + 0.2 },
                     layer: Some(0), primitive_id: None, reference: None, net: None });
             }

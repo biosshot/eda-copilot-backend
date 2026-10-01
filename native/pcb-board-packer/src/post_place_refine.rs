@@ -22,27 +22,27 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-const EPS: f64 = 0.001;
+const EPS: f32 = 0.001;
 #[cfg(feature = "gpu")]
 #[path = "post_place/cubecl.rs"]
 mod gpu;
 
-#[derive(Default, Deserialize, PartialEq)]
+#[derive(Default, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 enum RefineRoutingMetric { #[default] Micro, Geometric }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RefineProblem {
     version: u32,
     #[serde(default)]
     routing_metric: RefineRoutingMetric,
     #[serde(default)]
-    pad_crossing_weight: f64,
+    pad_crossing_weight: f32,
     threads: usize,
     iterations: usize,
     timeout_ms: u64,
-    min_delta: f64,
+    min_delta: f32,
     placements: Vec<Placement>,
     components: Vec<Component>,
     groups: Vec<Group>,
@@ -53,13 +53,13 @@ pub struct RefineProblem {
     route_problem: BoardPackProblem,
     board: Box2,
     polygon: Vec<Point>,
-    edge_clearance: f64,
+    edge_clearance: f32,
     holes: Vec<Hole>,
     regions: Vec<Region>,
-    pair_clearances: Vec<Vec<f64>>,
+    pair_clearances: Vec<Vec<f32>>,
     paths: Vec<Path>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Component {
     #[serde(default)]
@@ -80,23 +80,23 @@ struct Component {
     pins: Vec<Pin>,
     orientations: Vec<Orientation>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Overflow {
-    left: f64,
-    right: f64,
-    top: f64,
-    bottom: f64,
+    left: f32,
+    right: f32,
+    top: f32,
+    bottom: f32,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct PoseKey {
-    x: f64,
-    y: f64,
+    x: f32,
+    y: f32,
     rotate: i32,
     layer: Arc<str>,
     key: String,
     rank: usize,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Pad {
     #[serde(rename = "ref")]
     reference: Arc<str>,
@@ -105,14 +105,14 @@ struct Pad {
     opposite: bool,
     net: Option<Arc<str>>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Pin {
     pad: usize,
     net: Arc<str>,
     #[serde(rename = "ref")]
     reference: Arc<str>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Orientation {
     rotate: i32,
@@ -124,7 +124,7 @@ struct Orientation {
     points: Vec<Point>,
     pad_boxes: Vec<Box2>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Group {
     name: String,
     members: Vec<usize>,
@@ -132,7 +132,7 @@ struct Group {
     swap: bool,
     deltas: Vec<i32>,
 }
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Serialize)]
 struct Target {
     kind: String,
     component: Option<usize>,
@@ -140,49 +140,49 @@ struct Target {
     members: Option<Vec<usize>>,
     point: Option<Point>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct BoundPoint {
     component: usize,
     pad: usize,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Net {
     name: Arc<str>,
     points: Vec<BoundPoint>,
-    weight: f64,
+    weight: f32,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Hint {
     kind: String,
     source: Target,
     target: Target,
     all: bool,
-    weight: f64,
-    min: Option<f64>,
-    max: Option<f64>,
+    weight: f32,
+    min: Option<f32>,
+    max: Option<f32>,
     hard: Option<bool>,
     edge: Option<String>,
     layer: Option<Arc<str>>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Hierarchy {
     key: String,
     source: Target,
-    max_width: Option<f64>,
-    max_height: Option<f64>,
+    max_width: Option<f32>,
+    max_height: Option<f32>,
     anchor: Option<Target>,
     offset: Option<Point>,
-    max_gap: Option<f64>,
+    max_gap: Option<f32>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Hole {
-    x: f64,
-    y: f64,
-    radius: f64,
+    x: f32,
+    y: f32,
+    radius: f32,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Region {
     name: String,
     #[serde(rename = "box")]
@@ -190,7 +190,7 @@ struct Region {
     layers: Vec<Arc<str>>,
     allowed: Vec<usize>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Path {
     id: Arc<str>,
@@ -199,7 +199,7 @@ struct Path {
     prefer_facing_pads: bool,
     ports: Vec<Port>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Port {
     target: Target,
     order: i32,
@@ -234,16 +234,14 @@ fn shift(b: Box2, p: &Placement) -> Box2 {
         bottom: b.bottom + p.y,
     }
 }
-fn gap(a: Box2, b: Box2) -> f64 {
+fn gap(a: Box2, b: Box2) -> f32 {
     (b.left - a.right)
         .max(a.left - b.right)
         .max((b.top - a.bottom).max(a.top - b.bottom))
 }
-fn point_gap(p: Point, b: Box2) -> f64 {
-    (b.left - p.x)
-        .max(0.0)
-        .max(p.x - b.right)
-        .hypot((b.top - p.y).max(0.0).max(p.y - b.bottom))
+fn point_gap(p: Point, b: Box2) -> f32 {
+    crate::numerics::hypot((b.left - p.x).max(0.0).max(p.x - b.right),
+        (b.top - p.y).max(0.0).max(p.y - b.bottom))
 }
 fn center(b: Box2) -> Point {
     Point {
@@ -251,7 +249,7 @@ fn center(b: Box2) -> Point {
         y: (b.top + b.bottom) / 2.0,
     }
 }
-fn rounded(x: f64) -> f64 {
+fn rounded(x: f32) -> f32 {
     js_round(x * 1000.0) / 1000.0
 }
 
@@ -474,7 +472,7 @@ impl RefineProblem {
             _ => None,
         }
     }
-    fn score(&self, w: &World) -> Result<f64, String> { post_place::score(&self.score_problem(w)) }
+    fn score(&self, w: &World) -> Result<f32, String> { post_place::score(&self.score_problem(w)) }
     fn score_problem(&self, w: &World) -> PostPlaceScoreProblem {
         let mut p = PostPlaceScoreProblem {
             version: 1,
@@ -570,7 +568,7 @@ impl RefineProblem {
                     let pose = self.pose(w, i);
                     let dx = point.x - pose.x;
                     let dy = point.y - pose.y;
-                    let len = dx.hypot(dy);
+                    let len = crate::numerics::hypot(dx,dy);
                     Some(PathPort {
                         x: point.x,
                         y: point.y,
@@ -728,7 +726,7 @@ impl RefineProblem {
                         self.target_point(&h.source, w),
                         self.target_point(&h.target, w),
                     ) {
-                        let d = (a.x - b.x).hypot(a.y - b.y);
+                        let d = crate::numerics::hypot(a.x - b.x,a.y - b.y);
                         if h.min.is_some_and(|min| d + EPS < min) {
                             keys.insert(format!("{prefix}:min"));
                         }
@@ -789,7 +787,7 @@ impl RefineProblem {
         }
         keys
     }
-    fn edge_gap(&self, b: Box2, edge: &str) -> f64 {
+    fn edge_gap(&self, b: Box2, edge: &str) -> f32 {
         match edge {
             "left" => (b.left - self.board.left).abs(),
             "right" => (self.board.right - b.right).abs(),
@@ -844,12 +842,12 @@ impl RefineProblem {
                 pa.x = bp.x;
                 pa.y = bp.y;
                 pa.layer = bp.layer.clone();
-                pa.rotate = normalize_rotation(bp.rotate + offset + ad);
+                pa.rotate = crate::geometry::add_rotation(crate::geometry::add_rotation(bp.rotate, offset), ad);
                 let mut pb = bp.clone();
                 pb.x = ap.x;
                 pb.y = ap.y;
                 pb.layer = ap.layer.clone();
-                pb.rotate = normalize_rotation(ap.rotate - offset + bd);
+                pb.rotate = crate::geometry::add_rotation(crate::geometry::subtract_rotation(ap.rotate, offset), bd);
                 if !self.components[a].allowed_rotations.contains(&pa.rotate)
                     || !self.components[b].allowed_rotations.contains(&pb.rotate)
                 {
@@ -895,7 +893,7 @@ impl RefineProblem {
         let mut result = Vec::new();
         let mut rotate = |i: usize, name: &str| -> Result<(), String> {
             let mut pose = self.pose(current, i).clone();
-            pose.rotate = normalize_rotation(pose.rotate + 180);
+            pose.rotate = crate::geometry::add_rotation(pose.rotate, 180);
             if self.components[i].allowed_rotations.contains(&pose.rotate) {
                 result.push(self.candidate(
                     vec![(i, pose)],
@@ -990,9 +988,9 @@ struct Cache {
     baseline: Option<RouteBaseline>,
 }
 struct Evaluation {
-    score: f64,
+    score: f32,
     comparison: RouteComparison,
-    improvement: f64,
+    improvement: f32,
 }
 fn elapsed(s: Instant) -> f64 {
     s.elapsed().as_secs_f64() * 1000.0
@@ -1000,13 +998,13 @@ fn elapsed(s: Instant) -> f64 {
 fn evaluate(
     p: &RefineProblem,
     current: &World,
-    current_score: f64,
+    current_score: f32,
     c: &Candidate,
     scratch: &mut World,
     cache: &mut FxHashMap<Vec<usize>, Cache>,
     stats: &mut BatchProfile,
-    incumbent: Option<f64>,
-    precomputed: Option<f64>,
+    incumbent: Option<f32>,
+    precomputed: Option<f32>,
     deadline: Instant,
 ) -> Result<Option<Evaluation>, String> {
     if Instant::now() >= deadline {
@@ -1078,12 +1076,10 @@ fn evaluate(
             return Ok(None);
         }
         let baseline = entry.baseline.as_ref().unwrap();
-        if let Some(ceiling) = baseline.maximum_improvement.filter(|v| v.is_finite()) {
-            let upper = current_score + ceiling - score;
-            let margin =
-                EPS + 32.0 * f64::EPSILON * (current_score.abs() + score.abs() + ceiling.abs());
-            if upper + margin < p.min_delta
-                || incumbent.is_some_and(|best| upper + margin < best - EPS)
+        if let Some(upper)=comparison::total_improvement_ceiling(baseline,current_score,score) {
+            use crate::interval::Interval as I;
+            if upper < p.min_delta
+                || incumbent.is_some_and(|best| upper < I::exact(best).sub(I::exact(EPS)).lo)
             {
                 stats.bound_rejected += 1;
                 return Ok(None);
@@ -1120,17 +1116,17 @@ fn evaluate(
 fn iteration(
     p: &RefineProblem,
     current: &World,
-    current_score: f64,
+    current_score: f32,
     candidates: &[Candidate],
     threads: usize,
     deadline: Instant,
-    precomputed: Option<&[Option<f64>]>,
+    precomputed: Option<&[Option<f32>]>,
 ) -> Result<(Vec<Option<Evaluation>>, BatchProfile), String> {
     if threads <= 1 {
         let mut cache = FxHashMap::default();
         let mut stats = BatchProfile::default();
         let mut result = Vec::new();
-        let mut best: Option<f64> = None;
+        let mut best: Option<f32> = None;
         let mut scratch = current.clone();
         for (i, c) in candidates.iter().enumerate() {
             if precomputed.is_some_and(|scores| scores[i].is_none()) { result.push(None); continue; }
@@ -1176,6 +1172,7 @@ fn iteration(
                 let groups = &groups;
                 let next = &next;
                 scope.spawn(move || -> Result<_, String> {
+                    let _float_env = crate::float_env::Guard::enter();
                     let mut stats = BatchProfile::default();
                     let mut result = Vec::new();
                     let mut scratch = current.clone();
@@ -1237,7 +1234,7 @@ impl RefineProblem {
     fn diagnostics(
         &self,
         current: &World,
-        current_score: f64,
+        current_score: f32,
         deadline: Instant,
     ) -> Result<Vec<Value>, String> {
         let fixed: Vec<_> = self
@@ -1259,7 +1256,7 @@ impl RefineProblem {
                 let variants = self.swaps(current, a, b, &[0, 180], "")?;
                 let changed = vec![a, b];
                 let before = self.violations(current, &changed);
-                let mut best: Option<(Candidate, f64)> = None;
+                let mut best: Option<(Candidate, f32)> = None;
                 for c in variants {
                     if Instant::now() >= deadline {
                         return Ok(diagnostics);
@@ -1302,7 +1299,7 @@ impl RefineProblem {
                 continue;
             }
             let mut pose = self.pose(current, i).clone();
-            pose.rotate = normalize_rotation(pose.rotate + 180);
+            pose.rotate = crate::geometry::add_rotation(pose.rotate, 180);
             if !self.components[i].allowed_rotations.contains(&pose.rotate) {
                 continue;
             }
@@ -1493,7 +1490,7 @@ fn solve_inner(p:&RefineProblem,started:Instant,#[cfg(feature="gpu")] engine:&mu
 }
 
 #[cfg(feature="gpu")]
-fn gpu_iteration(p:&RefineProblem,current:&World,current_score:f64,candidates:&[Candidate],threads:usize,deadline:Instant,engine:&mut gpu::Engine)->Result<(Vec<Option<Evaluation>>,BatchProfile),String>{
+fn gpu_iteration(p:&RefineProblem,current:&World,current_score:f32,candidates:&[Candidate],threads:usize,deadline:Instant,engine:&mut gpu::Engine)->Result<(Vec<Option<Evaluation>>,BatchProfile),String>{
     if threads<=1 {return gpu_iteration_serial(p,current,current_score,candidates,threads,deadline,engine);}
     // Completed geometric groups feed the original CPU route evaluator while
     // the producer works on the next GPU batch. A route group never spans
@@ -1503,16 +1500,17 @@ fn gpu_iteration(p:&RefineProblem,current:&World,current_score:f64,candidates:&[
     else {let mut map=FxHashMap::default();for (i,c) in candidates.iter().enumerate(){let key=c.changes.iter().map(|(i,_)|*i).collect::<Vec<_>>();let id=*map.entry(key).or_insert_with(||{groups.push(vec![]);groups.len()-1});groups[id].push(i);}}
     let order:Vec<_>=groups.iter().flatten().copied().collect();
     let mut owner=vec![0;candidates.len()];for (g,ids) in groups.iter().enumerate(){for &id in ids {owner[id]=g;}}
-    let mut pending:Vec<Vec<(usize,f64)>>=groups.iter().map(|_|vec![]).collect();
+    let mut pending:Vec<Vec<(usize,f32)>>=groups.iter().map(|_|vec![]).collect();
     let mut remaining:Vec<_>=groups.iter().map(Vec::len).collect();
-    let (send,receive)=std::sync::mpsc::channel::<Vec<(usize,f64)>>();let receive=std::sync::Mutex::new(receive);
+    let (send,receive)=std::sync::mpsc::channel::<Vec<(usize,f32)>>();let receive=std::sync::Mutex::new(receive);
     let verify=std::env::var("PCB_POST_PLACE_GPU_VERIFY").ok().as_deref()==Some("1");
     let cpu_budget=CpuBudget::new(threads);
     thread::scope(|scope| {
         let mut handles=Vec::new();
         for _ in 0..threads.max(1).min(groups.len().max(1)) {let receive=&receive;let cpu_budget=&cpu_budget;
             handles.push(scope.spawn(move ||->Result<_,String>{
-                let mut scratch=current.clone();let mut stats=BatchProfile::default();let mut values=Vec::new();let mut best:Option<f64>=None;let mut serial_cache=FxHashMap::default();
+                let _float_env = crate::float_env::Guard::enter();
+                let mut scratch=current.clone();let mut stats=BatchProfile::default();let mut values=Vec::new();let mut best:Option<f32>=None;let mut serial_cache=FxHashMap::default();
                 loop {
                     let job=receive.lock().map_err(|_|"post-place route queue poisoned")?.recv();let Ok(job)=job else{break;};
                     if Instant::now()>=deadline {break;}
@@ -1544,7 +1542,7 @@ fn gpu_iteration(p:&RefineProblem,current:&World,current_score:f64,candidates:&[
                 if !valid.is_empty() && Instant::now()<deadline {
                     let started=Instant::now();let scores=engine.scores(p,current,&valid,Some(&cpu_budget))?;let ms=elapsed(started);profile.global_score_ms+=ms;profile.score_native_ms+=ms;
                     for (j,(&id,score)) in valid_ids.iter().zip(scores).enumerate(){
-                        if verify && (score-expected[j]).abs()>1e-8+expected[j].abs()*1e-12 {return Err(engine.fail(crate::compute::Error::new(crate::compute::ErrorKind::RuntimeFailure,format!("post-place GPU validation failed candidate {id}: GPU={score:.17} CPU={:.17}",expected[j]))));}
+                        if verify && !crate::f32_policy::score_close(score,expected[j]) {return Err(engine.fail(crate::compute::Error::new(crate::compute::ErrorKind::RuntimeFailure,format!("post-place GPU validation failed candidate {id}: GPU={score:.17} CPU={:.17}",expected[j]))));}
                         pending[owner[id]].push((id,score));
                     }
                 }
@@ -1563,7 +1561,7 @@ fn gpu_iteration(p:&RefineProblem,current:&World,current_score:f64,candidates:&[
 }
 
 #[cfg(feature="gpu")]
-fn gpu_iteration_serial(p:&RefineProblem,current:&World,current_score:f64,candidates:&[Candidate],threads:usize,deadline:Instant,engine:&mut gpu::Engine)->Result<(Vec<Option<Evaluation>>,BatchProfile),String>{
+fn gpu_iteration_serial(p:&RefineProblem,current:&World,current_score:f32,candidates:&[Candidate],threads:usize,deadline:Instant,engine:&mut gpu::Engine)->Result<(Vec<Option<Evaluation>>,BatchProfile),String>{
     let mut scores=vec![None;candidates.len()];let mut scratch=current.clone();
     let mut violations=FxHashMap::default();let mut pre=BatchProfile::default();
     let verify=std::env::var("PCB_POST_PLACE_GPU_VERIFY").ok().as_deref()==Some("1");
@@ -1584,7 +1582,7 @@ fn gpu_iteration_serial(p:&RefineProblem,current:&World,current_score:f64,candid
         if valid.is_empty() || Instant::now()>=deadline {continue;}
         let started=Instant::now();let values=engine.scores(p,current,&valid,None)?;let ms=elapsed(started);pre.global_score_ms+=ms;pre.score_native_ms+=ms;
         for (j,(&id,&score)) in ids.iter().zip(&values).enumerate(){
-            if verify && (score-expected[j]).abs()>1e-8+expected[j].abs()*1e-12 {
+            if verify && !crate::f32_policy::score_close(score,expected[j]) {
                 return Err(engine.fail(crate::compute::Error::new(crate::compute::ErrorKind::RuntimeFailure,format!("post-place GPU validation failed candidate {id}: GPU={score:.17} CPU={:.17}",expected[j]))));
             }
             scores[id]=Some(score);

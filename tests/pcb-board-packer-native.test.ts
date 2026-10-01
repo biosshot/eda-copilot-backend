@@ -230,7 +230,7 @@ nativeTest('native post-place score owns ratsnest scoring', () => {
         paths: [],
     });
     assert.equal(addon.postPlaceScoreContractVersion(), 1);
-    assert.equal(score, 33.15);
+    assert.ok(Math.abs(score - 33.15) < 1e-4);
 });
 
 nativeTest('native route scorer sees obstacle detours and bounded local power nets', () => {

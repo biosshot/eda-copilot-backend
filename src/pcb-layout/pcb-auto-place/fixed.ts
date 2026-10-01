@@ -1,3 +1,5 @@
+import * as fp from '../f32.ts';
+import { coordinateDifference } from '../coordinate-transport.ts';
 import type { Box, Layer, PcbComponent, Placement, PlacementInput } from '#types/pcb/layout-model.ts';
 import { boardAnchorPoint, boardBox, boxInsideBoard, GEOMETRY_EPSILON } from './geometry.ts';
 import { isFixedComponent } from './utils.ts';
@@ -32,6 +34,8 @@ export function createFixedPlacement(input: PlacementInput, component: PcbCompon
 
     return {
         designator: component.designator,
+        // Authored locked pose transport. Geometry localizes this pose before
+        // narrowing; keep the original coordinate precision for output.
         x: x + (offset.x ?? 0),
         y: y + (offset.y ?? 0),
         rotate,
@@ -53,8 +57,8 @@ export function isFixedDesignator(input: PlacementInput, designator: string) {
 export function sameFixedPlacement(candidate: Placement, fixedPlacement: Placement) {
     return candidate.layer === fixedPlacement.layer
         && candidate.rotate === fixedPlacement.rotate
-        && Math.abs(candidate.x - fixedPlacement.x) < 0.001
-        && Math.abs(candidate.y - fixedPlacement.y) < 0.001;
+        && fp.abs(coordinateDifference(candidate.x, fixedPlacement.x)) < 0.001
+        && fp.abs(coordinateDifference(candidate.y, fixedPlacement.y)) < 0.001;
 }
 
 export function componentOutsideBoard(input: PlacementInput, component: PcbComponent, box: Box) {
@@ -62,18 +66,18 @@ export function componentOutsideBoard(input: PlacementInput, component: PcbCompo
     const edge = input.board.clearances.edge;
     const overflow = component.pcb.boardOverflow ?? {};
     const hasOverflow = (overflow.left ?? 0) > 0 || (overflow.right ?? 0) > 0 || (overflow.top ?? 0) > 0 || (overflow.bottom ?? 0) > 0;
-    const tolerance = 0.01 + GEOMETRY_EPSILON;
+    const tolerance = fp.add(0.01, GEOMETRY_EPSILON);
     if (input.board.outline.type === 'polygon' && !hasOverflow) {
-        return !boxInsideBoard(input.board, box, Math.max(0, edge - tolerance));
+        return !boxInsideBoard(input.board, box, fp.max(0, fp.sub(edge, tolerance)));
     }
-    const leftLimit = (overflow.left ?? 0) > 0 ? board.left - (overflow.left ?? 0) : board.left + edge;
-    const rightLimit = (overflow.right ?? 0) > 0 ? board.right + (overflow.right ?? 0) : board.right - edge;
-    const topLimit = (overflow.top ?? 0) > 0 ? board.top - (overflow.top ?? 0) : board.top + edge;
-    const bottomLimit = (overflow.bottom ?? 0) > 0 ? board.bottom + (overflow.bottom ?? 0) : board.bottom - edge;
-    return box.left < leftLimit - tolerance
-        || box.right > rightLimit + tolerance
-        || box.top < topLimit - tolerance
-        || box.bottom > bottomLimit + tolerance;
+    const leftLimit = (overflow.left ?? 0) > 0 ? fp.sub(board.left, (overflow.left ?? 0)) : fp.add(board.left, edge);
+    const rightLimit = (overflow.right ?? 0) > 0 ? fp.add(board.right, (overflow.right ?? 0)) : fp.sub(board.right, edge);
+    const topLimit = (overflow.top ?? 0) > 0 ? fp.sub(board.top, (overflow.top ?? 0)) : fp.add(board.top, edge);
+    const bottomLimit = (overflow.bottom ?? 0) > 0 ? fp.add(board.bottom, (overflow.bottom ?? 0)) : fp.sub(board.bottom, edge);
+    return box.left < fp.sub(leftLimit, tolerance)
+        || box.right > fp.add(rightLimit, tolerance)
+        || box.top < fp.sub(topLimit, tolerance)
+        || box.bottom > fp.add(bottomLimit, tolerance);
 }
 
 export function allowedPlacementLayers(input: PlacementInput, component: PcbComponent): Layer[] {

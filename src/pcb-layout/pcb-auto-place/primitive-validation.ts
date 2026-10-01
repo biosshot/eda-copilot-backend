@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type { Box, PcbComponent, Placement, PlacementInput, Point } from '#types/pcb/layout-model.ts';
 import { componentBox, componentPairCollisionBoxPairs, overlaps } from './geometry.ts';
 import type { ClearanceResolver } from './clearance-resolver.ts';
@@ -61,10 +62,10 @@ export function validatePrimitive(
         const edgeClearance = options.edgeClearance ?? 0;
         for (const { placement, component, box } of placementBoxes) {
             if (
-                box.left + edgeClearance < options.bounds.left - 1e-6
-                || box.right - edgeClearance > options.bounds.right + 1e-6
-                || box.top + edgeClearance < options.bounds.top - 1e-6
-                || box.bottom - edgeClearance > options.bounds.bottom + 1e-6
+                fp.add(box.left, edgeClearance) < fp.sub(options.bounds.left, 1e-6)
+                || fp.sub(box.right, edgeClearance) > fp.add(options.bounds.right, 1e-6)
+                || fp.add(box.top, edgeClearance) < fp.sub(options.bounds.top, 1e-6)
+                || fp.sub(box.bottom, edgeClearance) > fp.add(options.bounds.bottom, 1e-6)
             ) {
                 violations.push({
                     type: 'outside_bounds',
@@ -90,7 +91,7 @@ export function validatePrimitive(
 
     if (options.checkHoles) {
         for (const hole of input.boardHoles ?? []) {
-            const radius = Math.max(hole.keepout, hole.diameter / 2, hole.drill / 2);
+            const radius = fp.max(hole.keepout, fp.div(hole.diameter, 2), fp.div(hole.drill, 2));
             const holeBox = boxAroundPoint(hole, radius);
             for (const { placement, component, box } of placementBoxes) {
                 if (overlaps(box, holeBox, 0)) {
@@ -109,9 +110,9 @@ export function validatePrimitive(
 
 function boxAroundPoint(point: Point, radius: number): Box {
     return {
-        left: point.x - radius,
-        right: point.x + radius,
-        top: point.y - radius,
-        bottom: point.y + radius,
+        left: fp.sub(point.x, radius),
+        right: fp.add(point.x, radius),
+        top: fp.sub(point.y, radius),
+        bottom: fp.add(point.y, radius),
     };
 }

@@ -19,11 +19,11 @@ fn grid_shape_is_checked_and_includes_non_aligned_last_cell() {
     assert_eq!(shape.index(5,0),None);
     assert_eq!(shape.index(0,5),None);
     assert!(GridShape::new(bounds,1.0,24).is_none());
-    for grid in [0.0,-1.0,f64::NAN,f64::INFINITY,1e-30] {
+    for grid in [0.0,-1.0,f32::NAN,f32::INFINITY,1e-30] {
         assert!(GridShape::new(bounds,grid,1_000_000).is_none());
     }
     assert!(GridShape::new(Box2 { right: -9.0, ..bounds },1.0,100).is_none());
-    assert!(GridShape::new(Box2 { right: f64::INFINITY, ..bounds },1.0,100).is_none());
+    assert!(GridShape::new(Box2 { right: f32::INFINITY, ..bounds },1.0,100).is_none());
 }
 
 #[test]
@@ -171,7 +171,7 @@ fn reference_search(
     obstacles: &[StaticObstacle],
     temporary: &TemporaryRoutes,
     config: &MicroRouteConfig,
-    search_via_cost: f64,
+    search_via_cost: f32,
     max_expanded: usize,
     route_cache: Option<&BoardRouteCache>,
 ) -> RouteOutcome {

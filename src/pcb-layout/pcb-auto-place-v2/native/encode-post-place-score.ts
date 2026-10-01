@@ -1,3 +1,4 @@
+import * as fp from '../../f32.ts';
 import type { Box, PcbComponent, Placement, PlacementInput } from '#types/pcb/layout-model.ts';
 import { isConnectedSignalName } from '#utils/signals.ts';
 import { boardBox, getBox, getPadWorld, componentPadBox, isThroughHolePad, padPlacementLayer } from '../../pcb-auto-place/geometry.ts';
@@ -63,7 +64,7 @@ export function encodeNativePostPlaceScoreProblem(
     };
 
     for (const rule of expandHints(input)) {
-        const weight = Math.max(1, rule.weight);
+        const weight = fp.max(1, rule.weight);
         if (rule.kind === 'distance' && rule.target && rule.target !== 'all') {
             const source = resolveTargetPoint(input, rule.source, placementByDesignator, componentByDesignator);
             const target = resolveTargetPoint(input, rule.target, placementByDesignator, componentByDesignator);
@@ -87,11 +88,11 @@ export function encodeNativePostPlaceScoreProblem(
             && rule.source.type === 'component' && rule.target.type === 'component') {
             const source = placementByDesignator.get(rule.source.designator);
             const target = placementByDesignator.get(rule.target.designator);
-            if (source && target && source.layer !== target.layer) result.fixedPenalties.push(weight * 20);
+            if (source && target && source.layer !== target.layer) result.fixedPenalties.push(fp.mul(weight, 20));
         }
         if (rule.kind === 'prefer_layer' && rule.source.type === 'component' && rule.layer) {
             const placement = placementByDesignator.get(rule.source.designator);
-            if (placement && placement.layer !== rule.layer) result.fixedPenalties.push(weight * 10);
+            if (placement && placement.layer !== rule.layer) result.fixedPenalties.push(fp.mul(weight, 10));
         }
         if (rule.kind === 'edge' && rule.edge) {
             const source = resolveTargetBox(input, rule.source, placementByDesignator, componentByDesignator);
@@ -132,15 +133,15 @@ function pathPort(
     if (!component || !placement) return null;
     const point = getPadWorld(component, placement, target.pin_number);
     if (!point) return null;
-    const vector = { x: point.x - placement.x, y: point.y - placement.y };
-    const length = Math.hypot(vector.x, vector.y);
+    const vector = { x: fp.sub(point.x, placement.x), y: fp.sub(point.y, placement.y) };
+    const length = fp.hypot(vector.x, vector.y);
     return {
         ...point,
         pathId,
         order,
         ref: `${target.designator}.${String(target.pin_number)}`,
         role,
-        normal: length > EPSILON ? { x: vector.x / length, y: vector.y / length } : { x: 0, y: 0 },
+        normal: length > EPSILON ? { x: fp.div(vector.x, length), y: fp.div(vector.y, length) } : { x: 0, y: 0 },
     };
 }
 

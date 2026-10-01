@@ -19,7 +19,7 @@ mod performance_tests;
 pub mod comparison;
 use temporary::TemporaryRoutes;
 
-const EPS: f64 = 1e-9;
+const EPS: f32 = 1e-9;
 
 /// Solve-owned contour mask and reusable temporary-copper storage. No global
 /// state: parallel solves own separate workspaces and immutable outline snapshots.
@@ -70,15 +70,15 @@ pub struct ViaTransition {
 pub struct MicroRouteConfig {
     pub layers: Vec<RouteLayer>,
     pub via_transitions: Vec<ViaTransition>,
-    pub grid: f64,
-    pub trace_width: f64,
-    pub clearance: f64,
+    pub grid: f32,
+    pub trace_width: f32,
+    pub clearance: f32,
     /** Normal explicit-route via cost in mm-equivalent. */
-    pub via_cost: f64,
-    pub ordinary_via_cost: f64,
-    pub high_via_cost: f64,
-    pub critical_via_cost: f64,
-    pub power_via_cost: f64,
+    pub via_cost: f32,
+    pub ordinary_via_cost: f32,
+    pub high_via_cost: f32,
+    pub critical_via_cost: f32,
+    pub power_via_cost: f32,
     pub include_local_power: bool,
     pub max_power_fanout: usize,
     pub max_expanded: usize,
@@ -87,8 +87,8 @@ pub struct MicroRouteConfig {
     pub max_total_jobs: usize,
     pub max_ordinary_jobs: usize,
     pub max_ordinary_jobs_per_net: usize,
-    pub route_scale: f64,
-    pub unroutable_penalty_mm: f64,
+    pub route_scale: f32,
+    pub unroutable_penalty_mm: f32,
 }
 
 impl MicroRouteConfig {
@@ -158,8 +158,8 @@ struct RouteJob {
     source: RouteEndpoint,
     target: RouteEndpoint,
     priority: u8,
-    weight: f64,
-    via_cost: f64,
+    weight: f32,
+    via_cost: f32,
     ordinary: bool,
 }
 
@@ -187,7 +187,7 @@ struct State {
 
 #[derive(Clone, Copy, Debug)]
 struct PathCost {
-    physical: f64,
+    physical: f32,
     vias: usize,
     bends: usize,
     preference: usize,
@@ -209,7 +209,7 @@ struct SearchRecord {
 struct OpenNode {
     state: State,
     g: PathCost,
-    estimate: f64,
+    estimate: f32,
     serial: usize,
 }
 
@@ -221,7 +221,7 @@ impl PartialEq for OpenNode {
 }
 impl Ord for OpenNode {
     fn cmp(&self, other: &Self) -> Ordering {
-        compare_f64(other.estimate, self.estimate)
+        compare_f32(other.estimate, self.estimate)
             .then_with(|| other.g.vias.cmp(&self.g.vias))
             .then_with(|| other.g.bends.cmp(&self.g.bends))
             .then_with(|| other.g.preference.cmp(&self.g.preference))
@@ -258,7 +258,7 @@ pub fn candidate_penalty(
     board_outline: &[Point],
     global_obstacles: &[Box2],
     config: &MicroRouteConfig,
-) -> f64 {
+) -> f32 {
     candidate_penalty_impl(candidate, placed, relations, bounds, board_outline,
         global_obstacles, config, None)
 }
@@ -273,7 +273,7 @@ pub(crate) fn candidate_penalty_cached(
     route_cache: &BoardRouteCache,
     global_obstacles: &[Box2],
     config: &MicroRouteConfig,
-) -> f64 {
+) -> f32 {
     candidate_penalty_impl(candidate, placed, relations, bounds, route_cache.polygon(),
         global_obstacles, config, Some(route_cache))
 }
@@ -288,7 +288,7 @@ fn candidate_penalty_impl(
     global_obstacles: &[Box2],
     config: &MicroRouteConfig,
     route_cache: Option<&BoardRouteCache>,
-) -> f64 {
+) -> f32 {
     if config.layers.is_empty() || config.grid <= 0.0 || config.max_total_jobs == 0 {
         return 0.0;
     }
@@ -315,7 +315,7 @@ pub fn changed_layout_penalty(
     routing_obstacles: &[RouteObstacle],
     changed_primitive_ids: &[String],
     config: &MicroRouteConfig,
-) -> f64 {
+) -> f32 {
     if config.layers.is_empty() || config.grid <= 0.0 || config.max_total_jobs == 0 {
         return 0.0;
     }
@@ -348,7 +348,7 @@ fn route_jobs_penalty(
     routing_obstacles: &[RouteObstacle],
     config: &MicroRouteConfig,
     route_cache: Option<&BoardRouteCache>,
-) -> f64 {
+) -> f32 {
     if jobs.is_empty() {
         return 0.0;
     }
@@ -600,7 +600,7 @@ fn resolve_endpoint(endpoint: &str, primitives: &[&Primitive], config: &MicroRou
 }
 
 fn closest_shared_net_pair(a: &[RouteEndpoint], b: &[RouteEndpoint]) -> Option<(RouteEndpoint, RouteEndpoint)> {
-    let mut best: Option<(RouteEndpoint, RouteEndpoint, f64)> = None;
+    let mut best: Option<(RouteEndpoint, RouteEndpoint, f32)> = None;
     for left in a {
         for right in b {
             if left.net != right.net { continue; }
@@ -615,7 +615,7 @@ fn closest_shared_net_pair(a: &[RouteEndpoint], b: &[RouteEndpoint]) -> Option<(
 }
 
 fn closest_pair(a: &[RouteEndpoint], b: &[RouteEndpoint]) -> Option<(RouteEndpoint, RouteEndpoint)> {
-    let mut best: Option<(RouteEndpoint, RouteEndpoint, f64)> = None;
+    let mut best: Option<(RouteEndpoint, RouteEndpoint, f32)> = None;
     for left in a {
         for right in b {
             let d = distance(left.point, right.point);
@@ -699,7 +699,7 @@ fn collect_obstacles(
     result
 }
 
-fn unresolved_detour(job: &RouteJob, known_detour: f64, config: &MicroRouteConfig) -> f64 {
+fn unresolved_detour(job: &RouteJob, known_detour: f32, config: &MicroRouteConfig) -> f32 {
     // A missing route must not be cheaper than either compared successful
     // route, or than a normal top-bottom-top escape at this job's via price.
     known_detour.max(2.0 * job.via_cost) + config.unroutable_penalty_mm
@@ -736,7 +736,7 @@ fn route_job_impl(
     match route_job_search(job, bounds, board_outline, obstacles, temporary, config,
         search_via_cost, config.retry_expanded, route_cache) {
         RouteOutcome::Found(mut result) => {
-            result.cost.physical += result.cost.vias as f64 * (job.via_cost - search_via_cost);
+            result.cost.physical += result.cost.vias as f32 * (job.via_cost - search_via_cost);
             result.expanded += expanded;
             result.used_fallback = true;
             RouteOutcome::Found(result)
@@ -754,7 +754,7 @@ fn route_job_search(
     obstacles: &[StaticObstacle],
     temporary: &TemporaryRoutes,
     config: &MicroRouteConfig,
-    search_via_cost: f64,
+    search_via_cost: f32,
     max_expanded: usize,
     route_cache: Option<&BoardRouteCache>,
 ) -> RouteOutcome {
@@ -769,8 +769,8 @@ fn route_job_search(
         .map(|layer| minimum_vias(layer, goal_cell.layer, config).unwrap_or(0))
         .collect();
     let estimate = |cell: Cell| {
-        let planar = ((cell.x - goal_cell.x).abs() + (cell.y - goal_cell.y).abs()) as f64 * config.grid;
-        planar + via_distances[cell.layer] as f64 * search_via_cost
+        let planar = ((cell.x - goal_cell.x).abs() + (cell.y - goal_cell.y).abs()) as f32 * config.grid;
+        planar + via_distances[cell.layer] as f32 * search_via_cost
     };
     // A forbidden landing cannot be reached even by going to another layer.
     for cell in [start_cell, goal_cell] {
@@ -849,7 +849,7 @@ fn route_job_search(
     RouteOutcome::NoPath { expanded }
 }
 
-fn neighbors(state: State, config: &MicroRouteConfig, via_cost: f64) -> SmallVec<[(State, PathCost); 6]> {
+fn neighbors(state: State, config: &MicroRouteConfig, via_cost: f32) -> SmallVec<[(State, PathCost); 6]> {
     let mut result = SmallVec::new();
     let moves = [(1, 0, 0u8), (-1, 0, 1u8), (0, 1, 2u8), (0, -1, 3u8)];
     for (dx, dy, direction) in moves {
@@ -961,18 +961,18 @@ fn blocked_static(
     false
 }
 
-fn baseline_cost(job: &RouteJob, config: &MicroRouteConfig) -> f64 {
+fn baseline_cost(job: &RouteJob, config: &MicroRouteConfig) -> f32 {
     let planar = (job.source.point.x - job.target.point.x).abs()
         + (job.source.point.y - job.target.point.y).abs();
     let vias = minimum_vias(job.source.layer, job.target.layer, config).unwrap_or(0);
-    planar + vias as f64 * job.via_cost
+    planar + vias as f32 * job.via_cost
 }
 
 #[cfg(test)]
-fn heuristic(cell: Cell, goal: Cell, config: &MicroRouteConfig, via_cost: f64) -> f64 {
-    let planar = ((cell.x - goal.x).abs() + (cell.y - goal.y).abs()) as f64 * config.grid;
+fn heuristic(cell: Cell, goal: Cell, config: &MicroRouteConfig, via_cost: f32) -> f32 {
+    let planar = ((cell.x - goal.x).abs() + (cell.y - goal.y).abs()) as f32 * config.grid;
     let vias = minimum_vias(cell.layer, goal.layer, config).unwrap_or(0);
-    planar + vias as f64 * via_cost
+    planar + vias as f32 * via_cost
 }
 
 fn minimum_vias(from: usize, to: usize, config: &MicroRouteConfig) -> Option<usize> {
@@ -1036,16 +1036,16 @@ fn farthest_point_sample(mut jobs: Vec<RouteJob>, limit: usize) -> Vec<RouteJob>
         acc.2 + job.target.point.x,
         acc.3 + job.target.point.y,
     ));
-    let n = jobs.len() as f64;
+    let n = jobs.len() as f32;
     let centroid = (centroid.0 / n, centroid.1 / n, centroid.2 / n, centroid.3 / n);
     let first = (0..jobs.len()).max_by(|&a, &b| {
-        compare_f64(feature_distance_to_centroid(&jobs[a], centroid), feature_distance_to_centroid(&jobs[b], centroid))
+        compare_f32(feature_distance_to_centroid(&jobs[a], centroid), feature_distance_to_centroid(&jobs[b], centroid))
             .then_with(|| job_key(&jobs[b]).cmp(&job_key(&jobs[a])))
     }).unwrap_or(0);
     let mut selected = vec![jobs.remove(first)];
     while selected.len() < limit && !jobs.is_empty() {
         let next = (0..jobs.len()).max_by(|&a, &b| {
-            compare_f64(min_feature_distance(&jobs[a], &selected), min_feature_distance(&jobs[b], &selected))
+            compare_f32(min_feature_distance(&jobs[a], &selected), min_feature_distance(&jobs[b], &selected))
                 .then_with(|| job_key(&jobs[b]).cmp(&job_key(&jobs[a])))
         }).unwrap_or(0);
         selected.push(jobs.remove(next));
@@ -1053,15 +1053,15 @@ fn farthest_point_sample(mut jobs: Vec<RouteJob>, limit: usize) -> Vec<RouteJob>
     selected
 }
 
-fn min_feature_distance(job: &RouteJob, selected: &[RouteJob]) -> f64 {
-    selected.iter().map(|other| feature_distance(job, other)).fold(f64::INFINITY, f64::min)
+fn min_feature_distance(job: &RouteJob, selected: &[RouteJob]) -> f32 {
+    selected.iter().map(|other| feature_distance(job, other)).fold(f32::INFINITY, f32::min)
 }
-fn feature_distance(a: &RouteJob, b: &RouteJob) -> f64 {
+fn feature_distance(a: &RouteJob, b: &RouteJob) -> f32 {
     distance(a.source.point, b.source.point) + distance(a.target.point, b.target.point)
 }
-fn feature_distance_to_centroid(job: &RouteJob, c: (f64, f64, f64, f64)) -> f64 {
-    (job.source.point.x - c.0).hypot(job.source.point.y - c.1)
-        + (job.target.point.x - c.2).hypot(job.target.point.y - c.3)
+fn feature_distance_to_centroid(job: &RouteJob, c: (f32, f32, f32, f32)) -> f32 {
+    crate::numerics::hypot(job.source.point.x - c.0,job.source.point.y - c.1)
+        + crate::numerics::hypot(job.target.point.x - c.2,job.target.point.y - c.3)
 }
 
 fn dedupe_jobs(jobs: Vec<RouteJob>) -> Vec<RouteJob> {
@@ -1087,11 +1087,11 @@ fn job_order(a: &RouteJob, b: &RouteJob) -> Ordering {
 fn priority_rank(value: Option<&str>) -> u8 {
     match value { Some("critical") => 4, Some("high") => 3, Some("low") => 1, _ => 2 }
 }
-fn priority_weight(priority: u8) -> f64 {
+fn priority_weight(priority: u8) -> f32 {
     match priority { 4 => 4.0, 3 => 2.5, 2 => 1.5, _ => 1.0 }
 }
 
-fn route_via_cost(priority: u8, net: &str, ordinary: bool, config: &MicroRouteConfig) -> f64 {
+fn route_via_cost(priority: u8, net: &str, ordinary: bool, config: &MicroRouteConfig) -> f32 {
     if ordinary {
         if is_switching_power(net) {
             return config.high_via_cost.max(config.power_via_cost);
@@ -1118,30 +1118,30 @@ fn add_cost(a: PathCost, b: PathCost) -> PathCost {
     }
 }
 fn compare_cost(a: PathCost, b: PathCost) -> Ordering {
-    compare_f64(a.physical, b.physical)
+    compare_f32(a.physical, b.physical)
         .then_with(|| a.vias.cmp(&b.vias))
         .then_with(|| a.bends.cmp(&b.bends))
         .then_with(|| a.preference.cmp(&b.preference))
 }
-fn compare_f64(a: f64, b: f64) -> Ordering { a.partial_cmp(&b).unwrap_or(Ordering::Equal) }
-fn point_to_cell(point: Point, layer: usize, bounds: Box2, grid: f64) -> Cell {
+fn compare_f32(a: f32, b: f32) -> Ordering { a.total_cmp(&b) }
+fn point_to_cell(point: Point, layer: usize, bounds: Box2, grid: f32) -> Cell {
     Cell {
         x: ((point.x - bounds.left) / grid).round() as i32,
         y: ((point.y - bounds.top) / grid).round() as i32,
         layer,
     }
 }
-fn cell_to_point(cell: Cell, bounds: Box2, grid: f64) -> Point {
-    Point { x: bounds.left + cell.x as f64 * grid, y: bounds.top + cell.y as f64 * grid }
+fn cell_to_point(cell: Cell, bounds: Box2, grid: f32) -> Point {
+    Point { x: bounds.left + cell.x as f32 * grid, y: bounds.top + cell.y as f32 * grid }
 }
 fn chebyshev(a: Cell, b: Cell) -> i32 { (a.x - b.x).abs().max((a.y - b.y).abs()) }
 fn point_in_box(point: Point, box_: Box2) -> bool {
     point.x + EPS >= box_.left && point.x - EPS <= box_.right && point.y + EPS >= box_.top && point.y - EPS <= box_.bottom
 }
-fn inflate_box(box_: Box2, value: f64) -> Box2 {
+fn inflate_box(box_: Box2, value: f32) -> Box2 {
     Box2 { left: box_.left - value, right: box_.right + value, top: box_.top - value, bottom: box_.bottom + value }
 }
-fn distance(a: Point, b: Point) -> f64 { (a.x - b.x).hypot(a.y - b.y) }
+fn distance(a: Point, b: Point) -> f32 { crate::numerics::hypot(a.x - b.x,a.y - b.y) }
 
 #[cfg(test)]
 mod tests {
@@ -1162,7 +1162,7 @@ mod tests {
         assert_eq!(obstacles[0].layer, Some(bottom));
     }
 
-    pub(super) fn primitive(id: &str, x: f64, y: f64, net: &str) -> Primitive {
+    pub(super) fn primitive(id: &str, x: f32, y: f32, net: &str) -> Primitive {
         Primitive {
             id: Arc::from(id), kind: Arc::from("component"), label: Arc::from(id),
             source_node_id: Arc::from(format!("component:{id}")), source_node_ids: Arc::new(vec![]),

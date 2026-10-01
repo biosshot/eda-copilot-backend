@@ -14,8 +14,8 @@ pub struct PlannedJob {
     pub target_primitive: Arc<str>,
     pub target_ref: Arc<str>,
     pub priority: u8,
-    pub weight: f64,
-    pub via_cost: f64,
+    pub weight: f32,
+    pub via_cost: f32,
     pub ordinary: bool,
 }
 
@@ -39,9 +39,9 @@ pub enum RouteStatus { Found, BudgetExhausted, NoPath }
 pub struct RouteSample {
     pub job: PlannedJob,
     pub status: RouteStatus,
-    pub detour: Option<f64>,
-    pub physical_cost: Option<f64>,
-    pub planar_length: Option<f64>,
+    pub detour: Option<f32>,
+    pub physical_cost: Option<f32>,
+    pub planar_length: Option<f32>,
     pub vias: usize,
     pub expanded: usize,
     pub used_fallback: bool,
@@ -61,14 +61,18 @@ pub struct RouteBaseline {
     /// Upper bound on before_penalty - after_penalty, even for unresolved jobs.
     /// Optional for compatibility with previously saved baselines.
     #[serde(default)]
-    pub maximum_improvement: Option<f64>,
+    pub maximum_improvement: Option<f32>,
+    /// Bound on either ordered penalty sum, for enclosing the subsequent
+    /// addition to the geometric score. Missing bounds disable pruning.
+    #[serde(default)]
+    pub penalty_ceiling: Option<f32>,
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RouteComparison {
-    pub before_penalty: f64,
-    pub after_penalty: f64,
+    pub before_penalty: f32,
+    pub after_penalty: f32,
     pub unresolved_before: usize,
     pub unresolved_after: usize,
     pub budget_exhausted_before: usize,
@@ -84,17 +88,82 @@ pub fn prepare(problem: &BoardPackProblem, obstacles: &[RouteObstacle], changed:
     let jobs = plan_jobs(&problem.primitives, &problem.relations, changed, &config);
     let (jobs, topology_nets) = complete_net_plans(&problem.primitives, jobs, &config);
     let jobs = evaluate(problem, obstacles, jobs, &config);
-    let maximum_improvement = Some(maximum_improvement(&jobs, &config));
-    RouteBaseline { version: 2, jobs, topology_nets, maximum_improvement }
+    let (maximum_improvement, penalty_ceiling) = improvement_bounds(&jobs, &config);
+    RouteBaseline { version: 2, jobs, topology_nets, maximum_improvement, penalty_ceiling }
 }
 
-fn maximum_improvement(jobs: &[RouteSample], config: &MicroRouteConfig) -> f64 {
-    jobs.iter().map(|sample| {
-        // For missing -> found with detour d, the improvement is
-        // max(d, 2*via_cost) + penalty - d <= 2*via_cost + penalty.
-        sample.detour.unwrap_or(2.0 * sample.job.via_cost + config.unroutable_penalty_mm)
-            * sample.job.weight * config.route_scale
-    }).sum()
+/// A returned path's cost history contains at most the search's expansion
+/// budget in edges: every cost addition follows an expanded predecessor.
+/// Each edge costs grid or via_cost. Enclose accumulation and the retry's
+/// repricing separately. This is a cost bound, not a shorter search budget.
+fn route_cost_ceiling(via_cost: f32, config: &MicroRouteConfig) -> Option<f32> {
+    use crate::interval::Interval as I;
+    use crate::f32_policy::nonnegative_sum_error;
+    if !via_cost.is_finite() || via_cost < 0.0 || !config.grid.is_finite() || config.grid <= 0.0
+        || config.max_expanded > (1 << 24) || config.retry_expanded > (1 << 24) { return None; }
+    let path = |steps: usize, via: f32| {
+        let sum=I::exact(steps as f32).mul(I::exact(config.grid.max(via)));
+        sum.add(I::exact(nonnegative_sum_error(steps,sum.hi)))
+    };
+    let first=path(config.max_expanded,via_cost);
+    let retry_via=via_cost.min(config.grid*4.0);
+    let correction=I::exact(config.retry_expanded as f32)
+        .mul(I::exact(via_cost-retry_via));
+    let retry=path(config.retry_expanded,retry_via).add(correction);
+    let ceiling=first.hi.max(retry.hi);
+    ceiling.is_finite().then_some(ceiling)
+}
+
+fn improvement_bounds(jobs: &[RouteSample], config: &MicroRouteConfig) -> (Option<f32>,Option<f32>) {
+    use crate::interval::Interval as I;
+    use crate::f32_policy::nonnegative_sum_error;
+    if !config.unroutable_penalty_mm.is_finite() || config.unroutable_penalty_mm < 0.0 {
+        return (None,None);
+    }
+    let mut delta=I::exact(0.0);
+    let mut terms=I::exact(0.0);
+    for sample in jobs {
+        let scale=sample.job.weight*config.route_scale;
+        let Some(cost)=route_cost_ceiling(sample.job.via_cost,config) else {return (None,None);};
+        let detour=sample.detour.unwrap_or(0.0);
+        if !detour.is_finite() || detour<0.0 || !scale.is_finite() || scale<0.0
+            || (sample.status==RouteStatus::Found)!=sample.detour.is_some() {return (None,None);}
+        let via=2.0*sample.job.via_cost;
+        let missing=I::exact(cost.max(detour).max(via)).add(I::exact(config.unroutable_penalty_mm));
+        let term=missing.mul(I::exact(scale));
+        terms=terms.add(term);
+        if sample.status==RouteStatus::Found {
+            // The before term is fixed; every after term is nonnegative.
+            delta=delta.add(I::exact(detour*scale));
+        } else {
+            // If after is also unresolved the terms are identical. Otherwise
+            // missing=max(after_detour,2*via)+penalty. Its exact difference
+            // from after_detour is <= 2*via+penalty. Three RTE operations
+            // (missing addition and both multiplications) introduce at most
+            // gamma_3*term_ceiling. Do not assume exact F32 cancellation.
+            let base=I::exact(via).add(I::exact(config.unroutable_penalty_mm)).mul(I::exact(scale));
+            delta=delta.add(base).add(I::exact(nonnegative_sum_error(3,term.hi)));
+        }
+    }
+    // Both separately accumulated sums can err in opposite directions.
+    let error=nonnegative_sum_error(jobs.len(),terms.hi);
+    let ceiling=delta.add(I::exact(error)).add(I::exact(error)).hi;
+    let penalty=terms.add(I::exact(error)).hi;
+    if ceiling.is_finite() && penalty.is_finite() {(Some(ceiling.max(0.0)),Some(penalty.max(0.0)))}
+    else {(None,None)}
+}
+
+pub(crate) fn total_improvement_ceiling(baseline: &RouteBaseline, current: f32, candidate: f32) -> Option<f32> {
+    use crate::interval::Interval as I;
+    let (ceiling,penalty)=(baseline.maximum_improvement?,baseline.penalty_ceiling?);
+    if ![current,candidate,ceiling,penalty].iter().all(|v|v.is_finite()) || ceiling<0.0 || penalty<0.0 {return None;}
+    // Acceptance is (current+before)-(candidate+after), with independently
+    // rounded additions. This cannot be regrouped without their error bounds.
+    let addition_error=|value: f32| crate::f32_policy::nonnegative_sum_error(1,
+        I::exact(value.abs()).add(I::exact(penalty)).hi);
+    let upper=I::exact(current).sub(I::exact(candidate)).add(I::exact(ceiling))
+        .add(I::exact(addition_error(current))).add(I::exact(addition_error(candidate))).hi;
+    upper.is_finite().then_some(upper)
 }
 
 pub fn compare(problem: &BoardPackProblem, obstacles: &[RouteObstacle], baseline: &RouteBaseline) -> Result<RouteComparison, String> {
@@ -197,7 +266,7 @@ fn evaluate(problem: &BoardPackProblem, routing_obstacles: &[RouteObstacle], job
                 sample.status = RouteStatus::Found;
                 sample.detour = Some((result.cost.physical - baseline_cost(&job, config)).max(0.0));
                 sample.physical_cost = Some(result.cost.physical);
-                sample.planar_length = Some(result.cost.physical - result.cost.vias as f64 * job.via_cost);
+                sample.planar_length = Some(result.cost.physical - result.cost.vias as f32 * job.via_cost);
                 sample.vias = result.cost.vias;
                 sample.expanded = result.expanded;
                 sample.used_fallback = result.used_fallback;
@@ -234,7 +303,7 @@ fn compare_samples(before: &[RouteSample], after: Vec<RouteSample>, config: &Mic
         result.budget_exhausted_after += usize::from(b.status == RouteStatus::BudgetExhausted);
     }
     for priority in (0..5).rev() {
-        match compare_f64(after_unresolved[priority], before_unresolved[priority]) {
+        match compare_f32(after_unresolved[priority], before_unresolved[priority]) {
             Ordering::Less => { result.feasibility_order = -1; break; }
             Ordering::Greater => { result.feasibility_order = 1; break; }
             Ordering::Equal => {}
@@ -247,6 +316,36 @@ fn compare_samples(before: &[RouteSample], after: Vec<RouteSample>, config: &Mic
 mod tests {
     use super::*;
     use super::super::tests::{primitive, bounds};
+
+    /// Diagnose unknown bounded outcomes on a saved layout. This test-only
+    /// search never changes the production budgets or replacement placement.
+    #[test]
+    #[ignore = "requires PCB_ROUTE_DIAGNOSTIC_INPUT and PCB_ROUTE_DIAGNOSTIC_OUTPUT"]
+    fn captured_route_budget_diagnostic() {
+        let _env = crate::float_env::Guard::enter();
+        let path = std::env::var("PCB_ROUTE_DIAGNOSTIC_INPUT").unwrap();
+        let mut input: serde_json::Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        let frame = crate::boundary::Frame::localize(&mut input["problem"]).unwrap();
+        frame.localize_related(&mut input["routingObstacles"]).unwrap();
+        let problem: BoardPackProblem = serde_json::from_value(input["problem"].take()).unwrap();
+        problem.validate(crate::CONTRACT_VERSION).unwrap();
+        let obstacles: Vec<RouteObstacle> = serde_json::from_value(input["routingObstacles"].take()).unwrap();
+        let changed: Vec<String> = problem.primitives.iter().map(|p| p.id.to_string()).collect();
+        let config = MicroRouteConfig::post_place();
+        let jobs = plan_jobs(&problem.primitives, &problem.relations, &changed, &config);
+        let (jobs, _) = complete_net_plans(&problem.primitives, jobs, &config);
+        let mut rows = Vec::new();
+        for retry in [6_000, 12_000] {
+            let mut diagnostic = config.clone();
+            diagnostic.retry_expanded = retry;
+            rows.push(serde_json::json!({"maxExpanded": diagnostic.max_expanded,
+                "retryExpanded": retry, "jobs": evaluate(&problem, &obstacles, jobs.clone(), &diagnostic)}));
+        }
+        let output = std::env::var("PCB_ROUTE_DIAGNOSTIC_OUTPUT").unwrap();
+        let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(output).unwrap();
+        use std::io::Write;
+        file.write_all(serde_json::to_string_pretty(&rows).unwrap().as_bytes()).unwrap();
+    }
 
     #[test]
     fn search_cutoff_is_not_no_path() {
@@ -281,22 +380,79 @@ mod tests {
 
     #[test]
     fn improvement_ceiling_covers_resolved_missing_and_expensive_candidate_routes() {
+        let _env=crate::float_env::Guard::enter();
         let config = MicroRouteConfig::post_place();
         let spec = PlannedJob { net: Arc::from("SIG"), source_ref: Arc::from("A.1"), target_ref: Arc::from("B.1"),
             source_primitive: Arc::from("A"), target_primitive: Arc::from("B"), priority: 4, weight: 16.0,
             via_cost: 45.0, ordinary: false };
         for before_detour in [None, Some(0.0), Some(10.0), Some(250.0)] {
             for after_detour in [None, Some(0.0), Some(10.0), Some(250.0), Some(10_000.0)] {
-                let sample = |detour: Option<f64>| RouteSample { job: spec.clone(),
+                let sample = |detour: Option<f32>| RouteSample { job: spec.clone(),
                     status: if detour.is_some() { RouteStatus::Found } else { RouteStatus::BudgetExhausted },
                     detour, physical_cost: detour, planar_length: detour,
                     vias: 0, expanded: 0, used_fallback: false };
                 let before = vec![sample(before_detour)];
-                let ceiling = maximum_improvement(&before, &config);
+                let ceiling = improvement_bounds(&before, &config).0.unwrap();
                 let result = compare_samples(&before, vec![sample(after_detour)], &config);
                 assert!(result.before_penalty - result.after_penalty <= ceiling);
             }
         }
+    }
+
+    #[test]
+    fn resolved_ceiling_covers_ordered_f32_accumulation_at_different_scales() {
+        let _env=crate::float_env::Guard::enter();
+        let config=MicroRouteConfig::post_place();
+        let spec=PlannedJob {net:Arc::from("SIG"),source_ref:Arc::from("A.1"),target_ref:Arc::from("B.1"),
+            source_primitive:Arc::from("A"),target_primitive:Arc::from("B"),priority:4,weight:1.7,
+            via_cost:45.0,ordinary:false};
+        let before:Vec<_>=(0..64).map(|i|RouteSample {job:spec.clone(),status:RouteStatus::Found,
+            detour:Some(if i==0 {16_777_216.0}else{0.001*(i as f32+1.0)}),physical_cost:None,
+            planar_length:None,vias:0,expanded:0,used_fallback:false}).collect();
+        let ceiling=improvement_bounds(&before,&config).0.unwrap();
+        let mut after=before.clone();for sample in &mut after {sample.detour=Some(0.0);}
+        let result=compare_samples(&before,after,&config);
+        assert!(ceiling>=result.before_penalty-result.after_penalty);
+        let mut unresolved=before;unresolved[63].status=RouteStatus::BudgetExhausted;unresolved[63].detour=None;
+        assert!(improvement_bounds(&unresolved,&config).0.is_some());
+    }
+
+    #[test]
+    fn unresolved_ceiling_covers_mixed_scales_and_separate_score_additions() {
+        let _env=crate::float_env::Guard::enter();
+        let config=MicroRouteConfig::post_place();
+        let spec=PlannedJob {net:Arc::from("SIG"),source_ref:Arc::from("A.1"),target_ref:Arc::from("B.1"),
+            source_primitive:Arc::from("A"),target_primitive:Arc::from("B"),priority:4,weight:1.7,
+            via_cost:45.0,ordinary:false};
+        for count in [1,2,8,32] {
+            for seed in 0..19 {
+                let before:Vec<_>=(0..count).map(|i|RouteSample {job:PlannedJob {weight:if i%3==0 {16.0}else{1.7},..spec.clone()},
+                    status:if (i+seed)%3==0 {RouteStatus::Found}else{RouteStatus::BudgetExhausted},
+                    detour:((i+seed)%3==0).then_some(0.001*(i as f32+1.0)),physical_cost:None,
+                    planar_length:None,vias:0,expanded:0,used_fallback:false}).collect();
+                let (maximum_improvement,penalty_ceiling)=improvement_bounds(&before,&config);
+                let baseline=RouteBaseline {version:2,jobs:before.clone(),topology_nets:vec![],maximum_improvement,penalty_ceiling};
+                let limit=route_cost_ceiling(spec.via_cost,&config).unwrap();
+                let mut after=before.clone();
+                for (i,sample) in after.iter_mut().enumerate() {
+                    sample.detour=if (i+seed)%4==0 {None}else{Some(match (i+seed)%4 {1=>0.0,2=>limit.next_down(),_=>0.001})};
+                    sample.status=if sample.detour.is_some() {RouteStatus::Found}else{RouteStatus::NoPath};
+                }
+                let comparison=compare_samples(&before,after,&config);
+                assert!(comparison.before_penalty-comparison.after_penalty<=maximum_improvement.unwrap());
+                assert!(comparison.before_penalty<=penalty_ceiling.unwrap());
+                assert!(comparison.after_penalty<=penalty_ceiling.unwrap());
+                for current in [0.0f32,0.001,1e6,16_777_216.0,300_000_000.0] {
+                    for candidate in [current,current.next_up(),current*0.75] {
+                        let actual=(current+comparison.before_penalty)-(candidate+comparison.after_penalty);
+                        assert!(actual<=total_improvement_ceiling(&baseline,current,candidate).unwrap());
+                    }
+                }
+            }
+        }
+        let mut bad=config;bad.retry_expanded=1<<25;
+        assert!(route_cost_ceiling(45.0,&bad).is_none());
+        assert!(route_cost_ceiling(f32::INFINITY,&bad).is_none());
     }
 }
 
@@ -343,7 +499,7 @@ fn spanning_jobs(terminals: &[RouteEndpoint], template: &RouteJob) -> Vec<RouteJ
     connected[0] = true;
     let mut jobs = Vec::new();
     for _ in 1..terminals.len() {
-        let mut best: Option<(usize, usize, f64)> = None;
+        let mut best: Option<(usize, usize, f32)> = None;
         for a in 0..terminals.len() {
             if !connected[a] { continue; }
             for b in 0..terminals.len() {

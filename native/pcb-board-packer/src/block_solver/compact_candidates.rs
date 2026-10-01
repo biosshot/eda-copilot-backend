@@ -4,7 +4,7 @@ pub(super) struct Compact {
     pub pose: Pose,
     pub bbox: Box2,
 }
-fn translate_primitive(p: &WorkingPrimitive, dx: f64, dy: f64) -> Compact {
+fn translate_primitive(p: &WorkingPrimitive, dx: f32, dy: f32) -> Compact {
     Compact {
         pose: Pose {
             template_index: (p.source_index * 4 + normalize_rotation(p.rotation) as usize / 90)
@@ -24,7 +24,7 @@ fn move_primitive_center_exact(p: &WorkingPrimitive, center: Point) -> Compact {
         round_placement(center.y - origin.y),
     )
 }
-fn move_primitive_center(p: &WorkingPrimitive, center: Point, grid: f64) -> Compact {
+fn move_primitive_center(p: &WorkingPrimitive, center: Point, grid: f32) -> Compact {
     let origin = box_center(&p.primitive.bbox);
     translate_primitive(
         p,
@@ -40,7 +40,7 @@ fn move_box_center_exact(p: &WorkingPrimitive, b: &Box2, center: Point) -> Compa
         round_placement(center.y - origin.y),
     )
 }
-fn move_box_center(p: &WorkingPrimitive, b: &Box2, center: Point, grid: f64) -> Compact {
+fn move_box_center(p: &WorkingPrimitive, b: &Box2, center: Point, grid: f32) -> Compact {
     let origin = box_center(b);
     translate_primitive(
         p,
@@ -97,7 +97,7 @@ fn block_candidates_for_orientation(
     placed: &[WorkingPrimitive],
     context: &Context,
 ) -> Vec<Compact> {
-    let mut anchors: Vec<(Box2, f64)> = placed
+    let mut anchors: Vec<(Box2, f32)> = placed
         .iter()
         .flat_map(|item| {
             primitive_candidate_boxes(item, context)
@@ -105,7 +105,7 @@ fn block_candidates_for_orientation(
                 .map(move |b| (b, candidate_clearance(primitive, item, context)))
         })
         .collect();
-    let union_clearance = anchors.iter().map(|(_, c)| *c).fold(0.0, f64::max);
+    let union_clearance = anchors.iter().map(|(_, c)| *c).fold(0.0, f32::max);
     anchors.push((
         union_boxes(
             &placed
@@ -247,7 +247,7 @@ fn net_anchored_candidates(
                 vec![0.0, -slide, slide]
             };
             for ring in 0..(if expanded { 3 } else { 1 }) {
-                let c = clearance + ring as f64 * slide;
+                let c = clearance + ring as f32 * slide;
                 for &s in &slides {
                     for p in [
                         Point {
@@ -283,7 +283,7 @@ fn box_anchored_candidates(
     primitive: &WorkingPrimitive,
     moving_box: &Box2,
     anchor: &Box2,
-    clearance: f64,
+    clearance: f32,
     context: &Context,
 ) -> Vec<Compact> {
     adjacent_centers(

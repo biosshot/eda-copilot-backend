@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 pub(crate) struct PathMetadata {
     pub straight: bool,
     pub priority: u8,
-    pub weight: f64,
+    pub weight: f32,
     pub prefer_facing_pads: bool,
 }
 
@@ -20,16 +20,16 @@ pub struct TopologyEvaluation {
     pub resolved_points: usize,
     pub first_order: i32,
     pub last_order: i32,
-    pub direct_distance: f64,
-    pub path_distance: f64,
-    pub detour: f64,
-    pub backtrack: f64,
-    pub turns: f64,
-    pub facing: f64,
-    pub penalty: f64,
+    pub direct_distance: f32,
+    pub path_distance: f32,
+    pub detour: f32,
+    pub backtrack: f32,
+    pub turns: f32,
+    pub facing: f32,
+    pub penalty: f32,
 }
 
-pub fn topology_penalty(primitives: &[&Primitive], relations: &[Relation]) -> f64 {
+pub fn topology_penalty(primitives: &[&Primitive], relations: &[Relation]) -> f32 {
     let metadata = path_metadata(relations);
     let mut ports_by_path: BTreeMap<&str, Vec<&PathPort>> = BTreeMap::new();
     for primitive in primitives {
@@ -40,7 +40,7 @@ pub fn topology_penalty(primitives: &[&Primitive], relations: &[Relation]) -> f6
                 .push(port);
         }
     }
-    let path_penalty: f64 = ports_by_path
+    let path_penalty: f32 = ports_by_path
         .into_iter()
         .filter_map(|(path_id, ports)| {
             evaluate_path_ports(path_id, &ports, metadata.get(path_id).copied())
@@ -54,9 +54,9 @@ pub fn topology_penalty_for_ports(
     ports: &[PathPort],
     straight: bool,
     priority: &str,
-    weight: f64,
+    weight: f32,
     prefer_facing_pads: bool,
-) -> f64 {
+) -> f32 {
     let refs: Vec<_> = ports.iter().collect();
     evaluate_path_ports(
         "",
@@ -82,7 +82,7 @@ pub fn evaluate_ports(
     ports: &[PathPort],
     straight: bool,
     priority: &str,
-    weight: f64,
+    weight: f32,
     prefer_facing_pads: bool,
 ) -> Option<TopologyEvaluation> {
     let refs: Vec<_> = ports.iter().collect();
@@ -186,8 +186,7 @@ pub fn bridge_deltas_for_ports(moving_ports: &[PathPort], placed_ports: &[PathPo
 }
 
 pub fn rotate_normal(normal: &Point, angle: i32) -> Point {
-    let radians = f64::from(angle).to_radians();
-    let (sin, cos) = radians.sin_cos();
+    let (sin, cos) = crate::rotation::sin_cos_degrees(angle);
     Point {
         x: round_placement(normal.x * cos - normal.y * sin),
         y: round_placement(normal.x * sin + normal.y * cos),
@@ -226,10 +225,10 @@ fn evaluate_path_ports(
         return None;
     }
 
-    let path_distance: f64 = edges.iter().map(magnitude).sum();
+    let path_distance: f32 = edges.iter().map(magnitude).sum();
     let detour = (path_distance - direct_distance).max(0.0);
-    let backtrack: f64 = edges.iter().map(|edge| (-dot(edge, &axis)).max(0.0)).sum();
-    let turns: f64 = edges
+    let backtrack: f32 = edges.iter().map(|edge| (-dot(edge, &axis)).max(0.0)).sum();
+    let turns: f32 = edges
         .windows(2)
         .map(|pair| (1.0 - dot(&normalize(pair[0]), &normalize(pair[1]))).max(0.0))
         .sum();
@@ -277,7 +276,7 @@ fn evaluate_path_ports(
     })
 }
 
-fn routed_segment_facing_penalty(ports: &[&PathPort]) -> f64 {
+fn routed_segment_facing_penalty(ports: &[&PathPort]) -> f32 {
     let by_order: BTreeMap<i32, &PathPort> = ports.iter().map(|port| (port.order, *port)).collect();
     let Some(max_order) = by_order.keys().next_back().copied() else {
         return 0.0;
@@ -359,7 +358,7 @@ pub(crate) fn path_metadata(relations: &[Relation]) -> BTreeMap<&str, PathMetada
 }
 
 fn interpolate_by_order(before: &PathPort, after: &PathPort, order: i32) -> Point {
-    let ratio = f64::from(order - before.order) / f64::from(after.order - before.order);
+    let ratio = ((order - before.order) as f32) / ((after.order - before.order) as f32);
     Point {
         x: before.x + (after.x - before.x) * ratio,
         y: before.y + (after.y - before.y) * ratio,
@@ -392,11 +391,11 @@ fn normalize(point: Point) -> Point {
     }
 }
 
-fn magnitude(point: &Point) -> f64 {
-    point.x.hypot(point.y)
+fn magnitude(point: &Point) -> f32 {
+    crate::numerics::hypot(point.x,point.y)
 }
 
-fn dot(a: &Point, b: &Point) -> f64 {
+fn dot(a: &Point, b: &Point) -> f32 {
     a.x * b.x + a.y * b.y
 }
 

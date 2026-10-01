@@ -40,8 +40,8 @@ struct WorkingPrimitive {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct PlacementKey {
     designator: u32,
-    x: u64,
-    y: u64,
+    x: u32,
+    y: u32,
     rotation: i32,
     layer: u8,
 }
@@ -49,10 +49,10 @@ struct PlacementKey {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct PrimitiveKey {
     id: u32,
-    left: u64,
-    top: u64,
-    right: u64,
-    bottom: u64,
+    left: u32,
+    top: u32,
+    right: u32,
+    bottom: u32,
     placements: Vec<PlacementKey>,
 }
 
@@ -66,8 +66,8 @@ struct SearchStateKey {
 struct PoseKey {
     primitive: u32,
     rotation: i32,
-    left: u64,
-    top: u64,
+    left: u32,
+    top: u32,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -80,7 +80,7 @@ struct SearchState {
     placed: Vec<WorkingPrimitive>,
     remaining: Vec<WorkingPrimitive>,
     rank: Rank,
-    route_penalty: f64,
+    route_penalty: f32,
     ordinal: usize,
 }
 
@@ -88,7 +88,7 @@ struct SearchState {
 struct RankedCandidate {
     primitive: WorkingPrimitive,
     rank: Rank,
-    route_penalty: f64,
+    route_penalty: f32,
     ordinal: usize,
     alignment: bool,
 }
@@ -116,9 +116,9 @@ struct CompiledRelation {
     to: CompiledEndpoint,
     skip: bool,
     hard: bool,
-    weight: f64,
-    max_distance: Option<f64>,
-    min_distance: Option<f64>,
+    weight: f32,
+    max_distance: Option<f32>,
+    min_distance: Option<f32>,
     satellite_anchor: bool,
     anchor_offset: Option<Point>,
     side: Option<Side>,
@@ -128,9 +128,9 @@ struct Context {
     problem: Arc<BoardPackProblem>,
     relations: Arc<Vec<CompiledRelation>>,
     route_cache: micro_router::BoardRouteCache,
-    hard_overlap_cache: RefCell<FxHashMap<PosePairKey, f64>>,
+    hard_overlap_cache: RefCell<FxHashMap<PosePairKey, f32>>,
     outside_cache: RefCell<FxHashMap<PoseKey, bool>>,
-    outside_severity_cache: RefCell<FxHashMap<PoseKey, f64>>,
+    outside_severity_cache: RefCell<FxHashMap<PoseKey, f32>>,
     joint_candidates: Arc<AtomicUsize>,
     profile: Arc<profile::Profile>,
     #[cfg(feature = "gpu")]
@@ -281,7 +281,7 @@ fn solve_inner(problem: BoardPackProblem, threads: usize,
             remaining.push(primitive);
         }
     }
-    remaining.sort_by(|a, b| compare_f64(seed_rank(b, &context), seed_rank(a, &context)));
+    remaining.sort_by(|a, b| compare_f32(seed_rank(b, &context), seed_rank(a, &context)));
 
     let mut ordinal = 0usize;
     let initial_rank = state_rank(&locked, &context);
@@ -324,7 +324,7 @@ fn solve_inner(problem: BoardPackProblem, threads: usize,
             let chunk_size = states.len().div_ceil(lanes.len());
             std::thread::scope(|scope| {
                 let handles: Vec<_> = states.chunks(chunk_size).zip(lanes.iter_mut())
-                    .map(|(chunk, lane)| scope.spawn(move || expand_states(chunk, search_width, lane)))
+                    .map(|(chunk, lane)| scope.spawn(move || { let _float_env = crate::float_env::Guard::enter(); expand_states(chunk, search_width, lane) }))
                     .collect();
                 let mut expanded = Vec::new();
                 // Joining in input order keeps tie breaks independent of scheduling.
@@ -372,6 +372,9 @@ fn solve_inner(problem: BoardPackProblem, threads: usize,
     #[cfg(feature = "gpu")]
     if let Some(gpu)=&context.gpu {gpu.checkpoint("after_repair");}
     let final_rank = state_rank(&repaired, &context);
+    if !final_rank.score.is_finite() || !final_rank.hard_severity.is_finite() {
+        return Err("board F32 rank overflow or invalid arithmetic".into());
+    }
     let states = repaired
         .iter()
         .map(|primitive| {
@@ -459,7 +462,7 @@ fn expand_states(states: &[SearchState], search_width: usize, context: &Context)
 fn ranked_candidates(
     primitive: &WorkingPrimitive,
     placed: &[WorkingPrimitive],
-    parent_route_penalty: f64,
+    parent_route_penalty: f32,
     limit: Option<usize>,
     context: &Context,
 ) -> Vec<RankedCandidate> {
@@ -477,7 +480,7 @@ fn joint_pair_states(state: &SearchState, next_index: usize, context: &Context) 
         let other=if pair.a==next.primitive.id {&pair.b} else if pair.b==next.primitive.id {&pair.a} else {return None;};
         state.remaining.iter().position(|p| &p.primitive.id==other).map(|index|(pair,index))
     }).collect();
-    peers.sort_by(|(a,i),(b,j)| compare_f64(b.similarity,a.similarity).then(i.cmp(j)));
+    peers.sort_by(|(a,i),(b,j)| compare_f32(b.similarity,a.similarity).then(i.cmp(j)));
     let Some((pair,peer_index))=peers.first().copied() else {return Vec::new();};
     let peer=&state.remaining[peer_index];
     let _profile=context.profile.span(13);
@@ -557,7 +560,7 @@ fn joint_pair_states(state: &SearchState, next_index: usize, context: &Context) 
 fn cheap_candidates(
     primitive: &WorkingPrimitive,
     placed: &[WorkingPrimitive],
-    parent_route_penalty: f64,
+    parent_route_penalty: f32,
     context: &Context,
 ) -> Vec<RankedCandidate> {
     finish_cheap_candidates(score_positions(orientation_variants(primitive).iter(), placed, parent_route_penalty, context))
@@ -582,7 +585,7 @@ fn local_candidates(
     let chunk_size = variants.len().div_ceil(lanes.len());
     let candidates = std::thread::scope(|scope| {
         let handles: Vec<_> = variants.chunks(chunk_size).zip(lanes.iter_mut())
-            .map(|(chunk, lane)| scope.spawn(move || score_positions(chunk.iter(), placed, 0.0, lane)))
+            .map(|(chunk, lane)| scope.spawn(move || { let _float_env = crate::float_env::Guard::enter(); score_positions(chunk.iter(), placed, 0.0, lane) }))
             .collect();
         handles.into_iter().flat_map(|handle| handle.join().expect("Local candidate thread panicked")).collect()
     });
@@ -592,7 +595,7 @@ fn local_candidates(
 fn score_positions<'a>(
     variants: impl Iterator<Item = &'a WorkingPrimitive>,
     placed: &[WorkingPrimitive],
-    parent_route_penalty: f64,
+    parent_route_penalty: f32,
     context: &Context,
 ) -> Vec<RankedCandidate> {
     #[cfg(feature = "gpu")]
@@ -669,7 +672,7 @@ fn rerank_candidates(
     mut candidates: Vec<RankedCandidate>,
     primitive: &WorkingPrimitive,
     placed: &[WorkingPrimitive],
-    parent_route_penalty: f64,
+    parent_route_penalty: f32,
     limit: Option<usize>,
     context: &Context,
 ) -> Vec<RankedCandidate> {
@@ -683,8 +686,8 @@ fn rerank_candidates(
         let lower_score = |candidate: &RankedCandidate, exact: bool| candidate.rank.score
             + if !exact && candidate.rank.hard_count == baseline_hard { parent_route_penalty } else { 0.0 };
         a.rank.hard_count.cmp(&b.rank.hard_count)
-            .then_with(|| compare_f64(a.rank.hard_severity, b.rank.hard_severity))
-            .then_with(|| compare_f64(lower_score(a, a_exact), lower_score(b, b_exact)))
+            .then_with(|| compare_f32(a.rank.hard_severity, b.rank.hard_severity))
+            .then_with(|| compare_f32(lower_score(a, a_exact), lower_score(b, b_exact)))
             .then_with(|| a.ordinal.cmp(&b.ordinal))
     }, |candidate| {
         if candidate.rank.hard_count == baseline_hard {
@@ -734,7 +737,7 @@ fn board_micro_route_penalty(
     candidate: &WorkingPrimitive,
     placed: &[WorkingPrimitive],
     context: &Context,
-) -> f64 {
+) -> f32 {
     let _profile = context.profile.span(12);
     let config = MicroRouteConfig::board();
     let placed_primitives: Vec<_> = placed.iter().map(|item| &item.primitive).collect();
@@ -837,7 +840,7 @@ fn orientation_variants(primitive: &WorkingPrimitive) -> Vec<WorkingPrimitive> {
         .collect()
 }
 
-fn translate_primitive(primitive: &mut WorkingPrimitive, dx: f64, dy: f64) {
+fn translate_primitive(primitive: &mut WorkingPrimitive, dx: f32, dy: f32) {
     #[cfg(feature = "gpu")]
     if let Some(pose) = &mut primitive.gpu_pose {
         pose.translations.push((dx, dy));
@@ -887,7 +890,7 @@ fn rotate_primitive(primitive: &mut WorkingPrimitive, angle: i32) {
         round_placement(primitive.primitive.bbox.bottom - primitive.primitive.bbox.top);
     let orientations = Arc::make_mut(&mut primitive.primitive.allowed_orientations);
     for orientation in orientations.iter_mut() {
-        *orientation = normalize_rotation(*orientation - angle);
+        *orientation = crate::geometry::subtract_rotation(*orientation, angle);
     }
     orientations.sort_unstable();
     orientations.dedup();
@@ -902,7 +905,7 @@ fn rotate_primitive(primitive: &mut WorkingPrimitive, angle: i32) {
         );
         placement.x = point.x;
         placement.y = point.y;
-        placement.rotate = normalize_rotation(placement.rotate + angle);
+        placement.rotate = crate::geometry::add_rotation(placement.rotate, angle);
     }
     for point in Arc::make_mut(&mut primitive.primitive.connection_points) {
         let rotated = rotate_point(
@@ -935,7 +938,7 @@ fn rotate_primitive(primitive: &mut WorkingPrimitive, angle: i32) {
             *box_ = rotate_box(box_, &origin, angle);
         }
     }
-    primitive.rotation = normalize_rotation(primitive.rotation + angle);
+    primitive.rotation = crate::geometry::add_rotation(primitive.rotation, angle);
     #[cfg(feature = "gpu")]
     if primitive.gpu_pose.is_some() { primitive.gpu_pose = Some(compact::Pose::from_primitive(primitive)); }
 }
@@ -1022,7 +1025,7 @@ fn repair_hard_violations(
             let chunk_size = variants.len().div_ceil(lanes.len());
             std::thread::scope(|scope| {
                 let handles: Vec<_> = variants.chunks(chunk_size).zip(lanes.iter_mut())
-                    .map(|(chunk, lane)| scope.spawn(move || chunk.iter().map(|variant| state_rank(variant, lane)).collect::<Vec<_>>()))
+                    .map(|(chunk, lane)| scope.spawn(move || { let _float_env = crate::float_env::Guard::enter(); chunk.iter().map(|variant| state_rank(variant, lane)).collect::<Vec<_>>() }))
                     .collect();
                 handles.into_iter().flat_map(|handle| handle.join().expect("Repair scoring thread panicked")).collect()
             })
@@ -1121,7 +1124,7 @@ fn separation_variants(
         } else {
             sign_or_negative((a_box.top + a_box.bottom) / 2.0 - (b_box.top + b_box.bottom) / 2.0)
         };
-        let distance = round_placement(overlap + (0.001_f64).max(context.problem.grid * 0.1));
+        let distance = round_placement(overlap + (0.001f32).max(context.problem.grid * 0.1));
         let a_share = if a.primitive.locked {
             0.0
         } else if b.primitive.locked {
@@ -1162,7 +1165,7 @@ fn separation_variants(
 fn translated_for_repair(
     primitive: &WorkingPrimitive,
     axis: char,
-    distance: f64,
+    distance: f32,
     context: &Context,
 ) -> WorkingPrimitive {
     let mut moved = primitive.clone();
@@ -1175,7 +1178,7 @@ fn translated_for_repair(
     moved
 }
 
-fn sign_or_negative(value: f64) -> f64 {
+fn sign_or_negative(value: f32) -> f32 {
     if value > 0.0 {
         1.0
     } else {
@@ -1186,9 +1189,9 @@ fn sign_or_negative(value: f64) -> f64 {
 fn board_score(
     primitives: &[WorkingPrimitive],
     context: &Context,
-    hard_count: usize,
-    hard_severity: f64,
-) -> f64 {
+    _hard_count: usize,
+    hard_severity: f32,
+) -> f32 {
     if primitives.is_empty() {
         return 0.0;
     }
@@ -1213,7 +1216,10 @@ fn board_score(
     let scale = context.problem.soft_spacing.as_ref().map_or(1.0, |s| s.compactness_scale);
     relation_penalty(primitives, context) * relation_weight
         + hard_severity * 1_000_000.0
-        + hard_count as f64 * 100_000_000.0
+        // Count is already the first integer rank field. Its constant offset
+        // cancels in every same-count comparison, but at F32 scales of 2e8
+        // it would erase improvements of up to 16 score units. Keep severity
+        // here because rank_improves allows its existing 0.001 tie zone.
         + envelope_overlap_penalty(primitives, context) * overlap_weight
         + width * height * area_weight * scale
         + (width + height) * perimeter_weight * scale
@@ -1257,7 +1263,7 @@ fn hard_count(primitives: &[WorkingPrimitive], context: &Context) -> usize {
     count
 }
 
-fn hard_severity(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+fn hard_severity(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     let _profile = context.profile.span(4);
     let mut severity = 0.0;
     for i in 0..primitives.len() {
@@ -1307,7 +1313,7 @@ fn candidate_hard_count(
     count + constraint_violation_count(candidate, context)
 }
 
-fn primitive_hard_overlap(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &Context) -> f64 {
+fn primitive_hard_overlap(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &Context) -> f32 {
     let key = pose_pair_key(a, b);
     if let Some(value) = context.hard_overlap_cache.borrow().get(&key).copied() {
         return value;
@@ -1317,7 +1323,7 @@ fn primitive_hard_overlap(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &
         cache_insert(&context.hard_overlap_cache, key, 0.0);
         return 0.0;
     }
-    let mut max_overlap: f64 = 0.0;
+    let mut max_overlap: f32 = 0.0;
     for (a_index, a_component) in a.components.iter() {
         for (b_index, b_component) in b.components.iter() {
             let count = context.problem.components.len();
@@ -1359,7 +1365,7 @@ fn primitive_hard_overlap(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &
     result
 }
 
-fn primitive_clearance(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &Context) -> f64 {
+fn primitive_clearance(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &Context) -> f32 {
     let mut clearance = context.problem.clearance;
     let count = context.problem.components.len();
     for (a_index, _) in a.components.iter() {
@@ -1414,7 +1420,7 @@ fn primitive_outside(primitive: &WorkingPrimitive, context: &Context) -> bool {
     result
 }
 
-fn primitive_outside_severity(primitive: &WorkingPrimitive, context: &Context) -> f64 {
+fn primitive_outside_severity(primitive: &WorkingPrimitive, context: &Context) -> f32 {
     let key = pose_key(primitive);
     if let Some(value) = context.outside_severity_cache.borrow().get(&key).copied() {
         return value;
@@ -1454,7 +1460,7 @@ fn component_outside(component: &ComponentGeometry, context: &Context) -> bool {
     })
 }
 
-fn component_outside_severity(component: &ComponentGeometry, context: &Context) -> f64 {
+fn component_outside_severity(component: &ComponentGeometry, context: &Context) -> f32 {
     let bounds = component_board_bounds(component, context);
     if has_board_overflow(component) {
         return std::iter::once(&component.body_box).chain(component.through_hole_boxes.iter())
@@ -1499,7 +1505,7 @@ fn has_board_overflow(component: &ComponentGeometry) -> bool {
         || component.board_overflow.bottom > 0.0
 }
 
-fn polygon_board_outside_severity(box_: &Box2, bounds: &Box2, edge: f64, context: &Context) -> f64 {
+fn polygon_board_outside_severity(box_: &Box2, bounds: &Box2, edge: f32, context: &Context) -> f32 {
     let mut severity = box_outside_bounds_severity(box_, bounds);
     for corner in box_corners(box_) {
         let inside = point_in_polygon(&corner, &context.problem.board_outline)
@@ -1515,9 +1521,9 @@ fn polygon_board_outside_severity(box_: &Box2, bounds: &Box2, edge: f64, context
     severity
 }
 
-fn component_region_overlap(component: &ComponentGeometry, region: &crate::model::ConstraintRegion) -> f64 {
+fn component_region_overlap(component: &ComponentGeometry, region: &crate::model::ConstraintRegion) -> f32 {
     let opposite = if component.layer.as_ref() == "top" { "bottom" } else { "top" };
-    let mut depth: f64 = 0.0;
+    let mut depth: f32 = 0.0;
     if region.layers.contains(&component.layer) {
         depth = overlap_depth(&component.body_box, &region.box_, 0.0);
     }
@@ -1543,7 +1549,7 @@ fn constraint_violation_count(primitive: &WorkingPrimitive, context: &Context) -
         .count()
 }
 
-fn constraint_violation_severity(primitive: &WorkingPrimitive, context: &Context) -> f64 {
+fn constraint_violation_severity(primitive: &WorkingPrimitive, context: &Context) -> f32 {
     context
         .problem
         .constraint_regions
@@ -1560,7 +1566,7 @@ fn constraint_violation_severity(primitive: &WorkingPrimitive, context: &Context
         .sum()
 }
 
-fn envelope_overlap_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+fn envelope_overlap_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     let _profile = context.profile.span(6);
     let mut penalty = 0.0;
     for i in 0..primitives.len() {
@@ -1574,7 +1580,7 @@ fn envelope_overlap_penalty(primitives: &[WorkingPrimitive], context: &Context) 
                     &layer_envelope(&primitives[j], layer)?,
                     context.problem.clearance,
                 ))
-            }).fold(0.0_f64, f64::max);
+            }).fold(0.0f32, f32::max);
             if depth > 0.0 {
                 penalty += depth.powi(2) * 700.0 + depth * 140.0;
             }
@@ -1583,7 +1589,7 @@ fn envelope_overlap_penalty(primitives: &[WorkingPrimitive], context: &Context) 
     penalty
 }
 
-fn relation_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+fn relation_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     let _profile = context.profile.span(5);
     let mut penalty = 0.0;
     for relation in context.relations.iter() {
@@ -1617,7 +1623,67 @@ fn relation_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
     penalty
 }
 
-fn edge_bias_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+/// Diagnostic enclosure for the relation expression on bit-identical
+/// materialized F32 geometry. This is not a proof about original physical
+/// geometry and is never used by legality, pruning or candidate selection.
+#[cfg(feature = "gpu")]
+fn relation_penalty_enclosure(primitives: &[WorkingPrimitive], context: &Context) -> crate::interval::Interval {
+    use crate::interval::Interval as I;
+    fn endpoint(primitives: &[WorkingPrimitive], e: CompiledEndpoint) -> Option<([I;2],Option<u32>)> {
+        let (point,owner)=endpoint_point(primitives,e)?;
+        if let CompiledEndpoint::Component {primitive,designator}=e {
+            let p=primitives.iter().find(|p|p.id==primitive)?;
+            let mut sum=[0.0f32;2];let mut count=0usize;
+            for (index,point) in p.primitive.connection_points.iter().enumerate() {
+                if p.point_component_ids[index]==Some(designator) {sum[0]+=point.x;sum[1]+=point.y;count+=1;}
+            }
+            if count>0 {
+                return Some((sum.map(|v|I::exact(v).div_vulkan(I::exact(count as f32)).placement()),owner));
+            }
+        }
+        Some(([I::exact(point.x),I::exact(point.y)],owner))
+    }
+    let zero=I::exact(0.0);let mut total=zero;
+    for relation in context.relations.iter() {
+        if relation.skip {continue;}
+        let Some((from,a))=endpoint(primitives,relation.from) else {continue;};
+        let Some((mut to,b))=endpoint(primitives,relation.to) else {continue;};
+        if a==b {continue;}
+        if relation.satellite_anchor {
+            if let Some(offset)=relation.anchor_offset {
+                to[0]=to[0].add(I::exact(offset.x)).placement();
+                to[1]=to[1].add(I::exact(offset.y)).placement();
+            }
+        }
+        let dx=from[0].sub(to[0]);let dy=from[1].sub(to[1]);
+        let distance=dx.square().add(dy.square()).max(zero).sqrt_vulkan();
+        let weight=I::exact(relation.weight);
+        let multiplier=I::exact(if relation.hard {5.0}else{1.0});
+        let mut limits=zero;
+        if let Some(max)=relation.max_distance {
+            let excess=distance.sub(I::exact(max)).max(zero);
+            limits=limits.add(excess.square().mul(I::exact(1500.0)).add(excess.mul(I::exact(120.0))).mul(weight).mul(multiplier));
+        }
+        if let Some(min)=relation.min_distance {
+            let shortage=I::exact(min).sub(distance).max(zero);
+            limits=limits.add(shortage.square().mul(I::exact(800.0)).add(shortage.mul(I::exact(80.0))).mul(weight).mul(multiplier));
+        }
+        total=total.add(distance.mul(weight).add(limits.min(I::exact(250_000.0))));
+        if relation.satellite_anchor {
+            if let Some(side)=relation.side {
+                let (ax,ay)=if distance.lo>0.000001 {
+                    (dx.div_vulkan(distance),dy.div_vulkan(distance))
+                } else if distance.hi<=0.000001 { (zero,zero) }
+                else {return I::WHOLE;};
+                let (x,y)=match side {Side::Left=>(-1.0,0.0),Side::Right=>(1.0,0.0),Side::Top=>(0.0,-1.0),Side::Bottom=>(0.0,1.0)};
+                total=total.add(I::exact(1.0).sub(ax.mul(I::exact(x))).sub(ay.mul(I::exact(y))).max(zero).mul(weight).mul(I::exact(120.0)));
+            }
+        }
+    }
+    total
+}
+
+fn edge_bias_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     let _profile = context.profile.span(9);
     let board_area = box_area(&context.problem.bounds).max(1.0);
     primitives
@@ -1639,7 +1705,7 @@ fn edge_bias_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 
         .sum()
 }
 
-fn edge_place_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+fn edge_place_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     let _profile = context.profile.span(10);
     primitives
         .iter()
@@ -1673,17 +1739,17 @@ fn edge_place_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64
                     };
                     distance * 800.0 + exact.unwrap_or(0.0) * 35.0
                 })
-                .fold(f64::INFINITY, f64::min)
+                .fold(f32::INFINITY, f32::min)
         })
         .sum()
 }
 
-fn edge_place_violation(primitive: &WorkingPrimitive, context: &Context) -> f64 {
+fn edge_place_violation(primitive: &WorkingPrimitive, context: &Context) -> f32 {
     let Some(intent) = &primitive.primitive.edge_place else {
         return 0.0;
     };
     let box_ = packing_box(primitive);
-    let tolerance = 0.05_f64.max(context.problem.grid * 0.51);
+    let tolerance = 0.05f32.max(context.problem.grid * 0.51);
     let best = intent
         .edges
         .iter()
@@ -1696,11 +1762,11 @@ fn edge_place_violation(primitive: &WorkingPrimitive, context: &Context) -> f64 
                 _ => (box_.bottom - (context.problem.full_board_bounds.bottom - inset)).abs(),
             }
         })
-        .fold(f64::INFINITY, f64::min);
+        .fold(f32::INFINITY, f32::min);
     (best - tolerance).max(0.0) * 8.0
 }
 
-fn board_slot_centers(width: f64, height: f64, bounds: &Box2) -> Vec<Point> {
+fn board_slot_centers(width: f32, height: f32, bounds: &Box2) -> Vec<Point> {
     let left = bounds.left + width / 2.0;
     let right = bounds.right - width / 2.0;
     let top = bounds.top + height / 2.0;
@@ -1736,8 +1802,8 @@ fn board_slot_centers(width: f64, height: f64, bounds: &Box2) -> Vec<Point> {
 
 fn free_rect_slot_centers(
     moving: &WorkingPrimitive,
-    width: f64,
-    height: f64,
+    width: f32,
+    height: f32,
     placed: &[WorkingPrimitive],
     context: &Context,
 ) -> Vec<Point> {
@@ -1885,7 +1951,7 @@ fn prune_free_rects(rects: Vec<Box2>, limit: usize) -> Vec<Box2> {
             .iter()
             .any(|other| other != item && box_contains(other, item))
     });
-    unique.sort_by(|a, b| compare_f64(box_area(b), box_area(a)));
+    unique.sort_by(|a, b| compare_f32(box_area(b), box_area(a)));
     unique.truncate(limit);
     unique
 }
@@ -1897,7 +1963,7 @@ fn box_contains(container: &Box2, item: &Box2) -> bool {
         && container.bottom >= item.bottom
 }
 
-fn inflate_box(box_: &Box2, value: f64) -> Box2 {
+fn inflate_box(box_: &Box2, value: f32) -> Box2 {
     Box2 {
         left: round_placement(box_.left - value),
         right: round_placement(box_.right + value),
@@ -1908,8 +1974,8 @@ fn inflate_box(box_: &Box2, value: f64) -> Box2 {
 
 fn placed_slot_centers(
     moving: &WorkingPrimitive,
-    width: f64,
-    height: f64,
+    width: f32,
+    height: f32,
     placed: &[WorkingPrimitive],
     context: &Context,
 ) -> Vec<Point> {
@@ -1992,8 +2058,8 @@ fn placed_slot_centers(
 
 fn edge_place_centers(
     primitive: &WorkingPrimitive,
-    width: f64,
-    height: f64,
+    width: f32,
+    height: f32,
     context: &Context,
 ) -> Vec<Point> {
     let Some(intent) = &primitive.primitive.edge_place else {
@@ -2029,11 +2095,11 @@ fn edge_place_centers(
 
 fn edge_cross_coordinates(
     edge: &str,
-    width: f64,
-    height: f64,
+    width: f32,
+    height: f32,
     intent: &crate::model::EdgePlaceIntent,
     context: &Context,
-) -> Vec<f64> {
+) -> Vec<f32> {
     let offset = intent.offset.unwrap_or(0.0);
     let exact = if edge == "left" || edge == "right" {
         intent.y
@@ -2067,14 +2133,14 @@ fn edge_cross_coordinates(
     };
     let mut values = vec![preferred, center, start, end];
     for index in 1..8 {
-        values.push(min + (max - min) * index as f64 / 8.0 + offset);
+        values.push(min + (max - min) * index as f32 / 8.0 + offset);
     }
     let mut seen = FxHashSet::default();
     values.retain(|value| value.is_finite() && seen.insert(value.clamp(min, max).to_bits()));
     for value in &mut values {
         *value = value.clamp(min, max);
     }
-    values.sort_by(|a, b| compare_f64((a - preferred).abs(), (b - preferred).abs()));
+    values.sort_by(|a, b| compare_f32((a - preferred).abs(), (b - preferred).abs()));
     values
 }
 
@@ -2189,7 +2255,7 @@ fn endpoint_centers(
         .collect()
 }
 
-fn coarse_grid_centers(width: f64, height: f64, bounds: &Box2, grid: f64) -> Vec<Point> {
+fn coarse_grid_centers(width: f32, height: f32, bounds: &Box2, grid: f32) -> Vec<Point> {
     let left = bounds.left + width / 2.0;
     let right = bounds.right - width / 2.0;
     let top = bounds.top + height / 2.0;
@@ -2199,8 +2265,8 @@ fn coarse_grid_centers(width: f64, height: f64, bounds: &Box2, grid: f64) -> Vec
         for y in 0..7 {
             result.push(snap_point(
                 Point {
-                    x: left + (right - left) * x as f64 / 6.0,
-                    y: top + (bottom - top) * y as f64 / 6.0,
+                    x: left + (right - left) * x as f32 / 6.0,
+                    y: top + (bottom - top) * y as f32 / 6.0,
                 },
                 grid,
             ));
@@ -2246,8 +2312,8 @@ fn endpoint_point(
                 box_center(&primitive.primitive.bbox)
             } else {
                 Point {
-                    x: round_placement(x / count as f64),
-                    y: round_placement(y / count as f64),
+                    x: round_placement(x / count as f32),
+                    y: round_placement(y / count as f32),
                 }
             };
             Some((point, Some(primitive.id)))
@@ -2395,7 +2461,7 @@ fn anchor_point(anchor: &str, bounds: &Box2) -> Option<Point> {
     })
 }
 
-fn seed_rank(primitive: &WorkingPrimitive, context: &Context) -> f64 {
+fn seed_rank(primitive: &WorkingPrimitive, context: &Context) -> f32 {
     let area = box_area(&packing_box(primitive));
     let board_area = box_area(&context.problem.bounds).max(1.0);
     let relation_count = context
@@ -2430,7 +2496,7 @@ fn seed_rank(primitive: &WorkingPrimitive, context: &Context) -> f64 {
         0.0
     } + area / board_area * 8_000.0
         + primitive.primitive.width.max(primitive.primitive.height) * 45.0
-        + relation_count as f64 * 90.0
+        + relation_count as f32 * 90.0
         + if primitive.primitive.kind.as_ref() == "module" {
             700.0
         } else if primitive.primitive.kind.as_ref() == "block" {
@@ -2443,7 +2509,7 @@ fn seed_rank(primitive: &WorkingPrimitive, context: &Context) -> f64 {
 
 fn choose_next(state: &SearchState, context: &Context) -> usize {
     let mut best = 0;
-    let mut best_rank = f64::NEG_INFINITY;
+    let mut best_rank = f32::NEG_INFINITY;
     for (index, primitive) in state.remaining.iter().enumerate() {
         let placed_relations = context
             .relations
@@ -2455,7 +2521,7 @@ fn choose_next(state: &SearchState, context: &Context) -> usize {
                     })
             })
             .map(|relation| relation.weight)
-            .sum::<f64>();
+            .sum::<f32>();
         let rank = seed_rank(primitive, context) + placed_relations * 80.0;
         if rank > best_rank {
             best = index;
@@ -2478,7 +2544,7 @@ fn touches(primitive: &WorkingPrimitive, endpoint: CompiledEndpoint) -> bool {
     }
 }
 
-fn relation_weight(relation: &Relation) -> f64 {
+fn relation_weight(relation: &Relation) -> f32 {
     let priority = match relation.priority.as_deref() {
         Some("critical") => 30.0,
         Some("high") => 16.0,
@@ -2506,7 +2572,7 @@ fn relation_weight(relation: &Relation) -> f64 {
             .unwrap_or(1.0)
 }
 
-fn distance_limit_penalty(relation: &CompiledRelation, value: f64, weight: f64) -> f64 {
+fn distance_limit_penalty(relation: &CompiledRelation, value: f32, weight: f32) -> f32 {
     let multiplier = if relation.hard { 5.0 } else { 1.0 };
     let mut penalty = 0.0;
     if let Some(max) = relation.max_distance {
@@ -2520,7 +2586,7 @@ fn distance_limit_penalty(relation: &CompiledRelation, value: f64, weight: f64) 
     penalty.min(250_000.0)
 }
 
-fn side_penalty(side: Side, from: Point, to: Point, weight: f64) -> f64 {
+fn side_penalty(side: Side, from: Point, to: Point, weight: f32) -> f32 {
     let dx = from.x - to.x;
     let dy = from.y - to.y;
     let length = (dx * dx + dy * dy).sqrt();
@@ -2603,7 +2669,7 @@ fn fit_to_bounds(primitive: &mut WorkingPrimitive, context: &Context) {
     }
 }
 
-fn slot_positions(min: f64, max: f64, values: &[f64]) -> Vec<f64> {
+fn slot_positions(min: f32, max: f32, values: &[f32]) -> Vec<f32> {
     if max < min {
         return Vec::new();
     }
@@ -2617,7 +2683,7 @@ fn slot_positions(min: f64, max: f64, values: &[f64]) -> Vec<f64> {
     for value in &mut result {
         *value = round_placement(value.clamp(min, max));
     }
-    result.sort_by(|a, b| compare_f64((a - center).abs(), (b - center).abs()));
+    result.sort_by(|a, b| compare_f32((a - center).abs(), (b - center).abs()));
     result.truncate(18);
     result
 }
@@ -2683,7 +2749,7 @@ fn packing_box(primitive: &WorkingPrimitive) -> Box2 {
     if let Some(pose)=primitive.gpu_pose.as_ref().filter(|p|p.deferred) {return pose.packing_bounds;}
     union_boxes(packing_boxes(primitive))
 }
-fn inset_box(box_: &Box2, value: f64) -> Box2 {
+fn inset_box(box_: &Box2, value: f32) -> Box2 {
     Box2 {
         left: box_.left + value,
         right: box_.right - value,
@@ -2691,10 +2757,10 @@ fn inset_box(box_: &Box2, value: f64) -> Box2 {
         bottom: box_.bottom - value,
     }
 }
-fn box_area(box_: &Box2) -> f64 {
+fn box_area(box_: &Box2) -> f32 {
     (box_.right - box_.left).max(0.0) * (box_.bottom - box_.top).max(0.0)
 }
-fn snap_point(point: Point, grid: f64) -> Point {
+fn snap_point(point: Point, grid: f32) -> Point {
     if grid <= 0.0 {
         Point {
             x: round_placement(point.x),
@@ -2779,7 +2845,7 @@ fn lexical_ids(values: impl IntoIterator<Item = Arc<str>>) -> FxHashMap<Arc<str>
         .collect()
 }
 
-fn number_key(value: f64) -> u64 {
+fn number_key(value: f32) -> u32 {
     if value == 0.0 {
         0
     } else {
@@ -2827,14 +2893,14 @@ fn layer_key(layer: &str) -> u8 {
 fn candidate_limit(search_width: usize, remaining: usize) -> usize {
     28.max(120.min((search_width * 3).div_ceil(remaining.max(1))))
 }
-fn compare_f64(a: f64, b: f64) -> Ordering {
-    a.partial_cmp(&b).unwrap_or(Ordering::Equal)
+fn compare_f32(a: f32, b: f32) -> Ordering {
+    a.total_cmp(&b)
 }
 fn compare_rank(a: &Rank, b: &Rank) -> Ordering {
     a.hard_count
         .cmp(&b.hard_count)
-        .then_with(|| compare_f64(a.hard_severity, b.hard_severity))
-        .then_with(|| compare_f64(a.score, b.score))
+        .then_with(|| compare_f32(a.hard_severity, b.hard_severity))
+        .then_with(|| compare_f32(a.score, b.score))
 }
 pub(crate) fn rank_improves(rank: &Rank, best: &Rank) -> bool {
     rank.hard_count < best.hard_count
@@ -2849,7 +2915,7 @@ fn compare_candidates(a: &RankedCandidate, b: &RankedCandidate) -> Ordering {
     compare_rank(&a.rank, &b.rank).then(a.ordinal.cmp(&b.ordinal))
 }
 
-fn soft_spacing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+fn soft_spacing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     let _profile = context.profile.span(7);
     let Some(spacing) = &context.problem.soft_spacing else { return 0.0; };
     if spacing.gap <= 0.0 { return 0.0; }
@@ -2864,8 +2930,8 @@ fn soft_spacing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f
             let b = layer_envelope(b, layer)?;
             let dx = (a.left-b.right).max(b.left-a.right).max(0.0);
             let dy = (a.top-b.bottom).max(b.top-a.bottom).max(0.0);
-            Some(dx.hypot(dy))
-        }).fold(f64::INFINITY, f64::min);
+            Some(crate::numerics::hypot(dx,dy))
+        }).fold(f32::INFINITY, f32::min);
         if closest.is_finite() {
             let deficit = (context.problem.clearance + spacing.gap - closest).max(0.0);
             score += 18.0 * deficit * deficit;
@@ -2880,7 +2946,7 @@ fn alignment_center(p: &WorkingPrimitive, anchor: &Option<Arc<str>>) -> Point {
         .map_or_else(|| box_center(&p.primitive.bbox), |q| Point { x:q.x, y:q.y })
 }
 
-fn soft_alignment_score(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+fn soft_alignment_score(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     let _profile = context.profile.span(8);
     let Some(s) = &context.problem.soft_alignment else { return 0.0; };
     let mut score=0.0;
@@ -2892,8 +2958,8 @@ fn soft_alignment_score(primitives: &[WorkingPrimitive], context: &Context) -> f
         score+=s.weight*pair.similarity*if error<=1.0 {error*error/2.0} else {error-0.5};
         if let Some(o) = &pair.orientation {
             if let (Some(ap),Some(bp))=(a.primitive.placements.iter().find(|p| p.designator==o.a),b.primitive.placements.iter().find(|p| p.designator==o.b)) {
-                let angle=(ap.rotate as f64-bp.rotate as f64-o.offset).to_radians();
-                score+=s.orientation_weight*pair.similarity*(1.0-angle.cos())/2.0;
+                let angle=ap.rotate as f32-bp.rotate as f32-o.offset;
+                score+=s.orientation_weight*pair.similarity*(1.0-crate::rotation::cos_degrees(angle))/2.0;
             }
         }
     }

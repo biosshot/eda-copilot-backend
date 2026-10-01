@@ -14,9 +14,9 @@ pub fn candidate_penalty(
     obstacles: &[RouteObstacle],
     external: &[Arc<str>],
     ignored: &[Arc<str>],
-    clearance: f64,
+    clearance: f32,
     bounds: Box2,
-) -> f64 {
+) -> f32 {
     let eligible = |n: &str| {
         !n.is_empty() && !is_ground(n) && !ignored.iter().any(|s| s.eq_ignore_ascii_case(n))
     };
@@ -78,7 +78,7 @@ pub fn candidate_penalty(
                     layer.as_deref(),
                 )
             })
-            .reduce(f64::min)
+            .reduce(f32::min)
         {
             total += best;
         }
@@ -119,7 +119,7 @@ pub fn candidate_penalty(
                         ) + distance(a, b) * 0.25
                     })
                 })
-                .reduce(f64::min)
+                .reduce(f32::min)
                 .unwrap_or(0.0);
             total += escape * 0.5;
         }
@@ -153,7 +153,7 @@ fn skeleton(
         let mut used = vec![false; pts.len()];
         used[0] = true;
         for _ in 1..pts.len() {
-            let mut best = (f64::INFINITY, 0, 0);
+            let mut best = (f32::INFINITY, 0, 0);
             for a in 0..pts.len() {
                 if !used[a] {
                     continue;
@@ -196,9 +196,9 @@ fn path_cost(
     net: &str,
     obstacles: &[RouteObstacle],
     skeleton: &[(Arc<str>, Segment)],
-    clearance: f64,
+    clearance: f32,
     layer: Option<&str>,
-) -> f64 {
+) -> f32 {
     let middle = Point {
         x: (a.x + b.x) * 0.5,
         y: (a.y + b.y) * 0.5,
@@ -239,7 +239,7 @@ fn path_cost(
     paths
         .iter()
         .map(|path| {
-            let mut cost = (path.windows(2).map(|s| distance(s[0], s[1])).sum::<f64>()
+            let mut cost = (path.windows(2).map(|s| distance(s[0], s[1])).sum::<f32>()
                 - distance(a, b))
             .max(0.0);
             for obstacle in obstacles {
@@ -272,12 +272,12 @@ fn path_cost(
             }
             cost
         })
-        .reduce(f64::min)
+        .reduce(f32::min)
         .unwrap_or(0.0)
 }
 
-fn distance(a: Point, b: Point) -> f64 {
-    (a.x - b.x).hypot(a.y - b.y)
+fn distance(a: Point, b: Point) -> f32 {
+    crate::numerics::hypot(a.x - b.x,a.y - b.y)
 }
 fn crosses(a: Point, b: Point, c: Point, d: Point) -> bool {
     let orient =
@@ -285,8 +285,8 @@ fn crosses(a: Point, b: Point, c: Point, d: Point) -> bool {
     orient(a, b, c) * orient(a, b, d) < -1e-9 && orient(c, d, a) * orient(c, d, b) < -1e-9
 }
 pub(crate) fn hits(a: Point, b: Point, q: Box2) -> bool {
-    let mut lo = 0.0_f64;
-    let mut hi = 1.0_f64;
+    let mut lo = 0.0f32;
+    let mut hi = 1.0f32;
     for (start, delta, min, max) in [
         (a.x, b.x - a.x, q.left, q.right),
         (a.y, b.y - a.y, q.top, q.bottom),

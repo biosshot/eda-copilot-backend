@@ -1,3 +1,4 @@
+import * as fp from '../../f32.ts';
 import type { PcbComponent, Placement } from '#types/pcb/layout-model.ts';
 import { isGroundSignalName, isPowerSignalName } from '#utils/signals.ts';
 import { boardOutlinePolygon, componentBodyBox, componentCollisionBoxes, componentPadBox, isThroughHolePad, padPlacementLayer } from '../../pcb-auto-place/geometry.ts';
@@ -81,8 +82,8 @@ function encodeBlockWorld(params: BlockSolveParams, components: ComponentEntry[]
     });
     return {
         outline: boardOutlinePolygon(input.board), edgeClearance: input.board.clearances.edge,
-        bounds: {left:-input.board.outline.width/2, right:input.board.outline.width/2,
-            top:-input.board.outline.height/2, bottom:input.board.outline.height/2},
+        bounds: {left:fp.div(-input.board.outline.width, 2), right:fp.div(input.board.outline.width, 2),
+            top:fp.div(-input.board.outline.height, 2), bottom:fp.div(input.board.outline.height, 2)},
         obstacles: components.flatMap(({component:c}) => (['top', 'bottom'] as const).flatMap(layer => [
             ...fixed.flatMap(({c:other,p:pose}) => componentCollisionBoxes(other,pose,layer).map(box => ({
                 designator:c.designator, layer, box, clearance:params.options.clearanceResolver?.(c.designator,other.designator) ?? params.options.clearance,

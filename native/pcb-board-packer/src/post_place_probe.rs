@@ -15,6 +15,7 @@ fn repeats(value: u32) -> Result<usize> {
 
 #[napi]
 pub fn probe_decode_score(value: Value) -> Result<Value> {
+    let _float_env=crate::float_env::Guard::enter();
     let started = Instant::now();
     let problem: PostPlaceScoreProblem = serde_json::from_value(value).map_err(error)?;
     let items = problem.nets.len();
@@ -23,6 +24,7 @@ pub fn probe_decode_score(value: Value) -> Result<Value> {
 }
 #[napi]
 pub fn probe_decode_route(problem: Value, obstacles: Value, baseline: Value) -> Result<Value> {
+    let _float_env=crate::float_env::Guard::enter();
     let started = Instant::now();
     let problem: BoardPackProblem = serde_json::from_value(problem).map_err(error)?;
     problem.validate(crate::CONTRACT_VERSION).map_err(error)?;
@@ -44,6 +46,7 @@ pub struct PreparedPostPlaceProbe {
 impl PreparedPostPlaceProbe {
     #[napi(constructor)]
     pub fn new(problem: Value, obstacles: Value, score: Value, baseline: Value) -> Result<Self> {
+        let _float_env=crate::float_env::Guard::enter();
         let problem: BoardPackProblem = serde_json::from_value(problem).map_err(error)?;
         problem.validate(crate::CONTRACT_VERSION).map_err(error)?;
         Ok(Self { problem, obstacles: serde_json::from_value(obstacles).map_err(error)?,
@@ -51,6 +54,7 @@ impl PreparedPostPlaceProbe {
     }
     #[napi]
     pub fn score(&self, count: u32) -> Result<Value> {
+        let _float_env=crate::float_env::Guard::enter();
         let count = repeats(count)?;
         let started = Instant::now();
         let mut result = 0.0;
@@ -59,6 +63,7 @@ impl PreparedPostPlaceProbe {
     }
     #[napi]
     pub fn prepare(&self, changed: Vec<String>, count: u32) -> Result<Value> {
+        let _float_env=crate::float_env::Guard::enter();
         let count = repeats(count)?;
         let started = Instant::now();
         let mut result = None;
@@ -68,6 +73,7 @@ impl PreparedPostPlaceProbe {
     }
     #[napi]
     pub fn compare(&self, count: u32) -> Result<Value> {
+        let _float_env=crate::float_env::Guard::enter();
         let count = repeats(count)?;
         let started = Instant::now();
         let mut result = None;

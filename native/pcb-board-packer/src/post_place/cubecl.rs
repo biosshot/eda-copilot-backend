@@ -1,17 +1,18 @@
 //! One resident evaluator shared by local geometric and final route-aware refinement.
+use crate::compute::f32_runtime::PcbRuntime as WgpuRuntime;
 use super::{Candidate,RefineProblem,World,Target};
 use crate::compute::{gpu,Error,ErrorKind,Requirements,ScratchKey};
-use cubecl::{prelude::*,server::Handle,wgpu::WgpuRuntime};
+use cubecl::{prelude::*,server::Handle};
 use std::time::{Instant};
 use rustc_hash::FxHashMap;
 #[path="gpu_kernels.rs"] mod k;
-const REQUIREMENTS:Requirements=Requirements{f64:true,u64:true};
+const REQUIREMENTS:Requirements=Requirements{f32:true,u64:false};
 const MAX_BYTES:usize=64*1024*1024;
 fn invalid(s:impl Into<String>)->Error {Error::new(ErrorKind::InvalidInput,s)}
 fn layer(s:&str)->Result<u32,Error>{match s{"top"=>Ok(1),"bottom"=>Ok(2),_=>Err(invalid("unsupported post-place layer"))}}
-struct Data {si:Vec<u32>,sf:Vec<f64>}
+struct Data {si:Vec<u32>,sf:Vec<f32>}
 impl Data {
- fn floats(&mut self,v:&[f64])->u32 {let o=self.sf.len() as u32;self.sf.extend(v);o}
+ fn floats(&mut self,v:&[f32])->u32 {let o=self.sf.len() as u32;self.sf.extend(v);o}
  fn ints(&mut self,v:&[u32])->u32 {let o=self.si.len() as u32;self.si.extend(v);o}
  fn target(&mut self,t:&Target)->Option<u32>{
   let record=match t.kind.as_str(){
@@ -77,21 +78,21 @@ impl Engine {
    paths.extend([d.ints(&raw),(raw.len()/3) as u32,u32::from(path.shape.as_ref()=="straight"),d.floats(&[priority]),u32::from(path.prefer_facing_pads)]);
   }d.si[9]=p.paths.len() as u32;d.si[10]=d.ints(&paths);
   if d.sf.iter().any(|x|!x.is_finite()||x.abs()>1e7) || !p.pad_crossing_weight.is_finite() || p.pad_crossing_weight<0.0 {return Err(invalid("unsafe post-place GPU number"));}
-  if geometry*8+(points.len()/2)*4+segment_count*(36+segment_count.div_ceil(32)*4)+((terms.len()/5)+(paths.len()/5))*24>MAX_BYTES || d.si.len()*4+d.sf.len()*8>MAX_BYTES || segment_count>4096 {return Err(invalid("post-place resident capacity"));}
+  if geometry*4+(points.len()/2)*4+segment_count*(24+segment_count.div_ceil(32)*4)+((terms.len()/5)+(paths.len()/5))*12>MAX_BYTES || d.si.len()*4+d.sf.len()*4>MAX_BYTES || segment_count>4096 {return Err(invalid("post-place resident capacity"));}
   Ok(Self{data:d,orientations,handles:None,failure:None,batches:0,candidates:0,milliseconds:0.0,encode_ms:0.0})
  }
  pub fn fail(&mut self,error:Error)->String{let text=error.to_string();self.failure=Some(error);text}
  pub fn injected(&mut self,stage:&str)->Result<(),String>{if std::env::var("PCB_POST_PLACE_GPU_FAIL").ok().as_deref()==Some(stage){let error=gpu::with_session::<()>(REQUIREMENTS,|_|Err(Error::new(ErrorKind::RuntimeFailure,format!("injected post-place GPU failure: {stage}")))).unwrap_err();return Err(self.fail(error));}Ok(())}
- fn pose(&self,p:&RefineProblem,component:usize,pose:&crate::model::Placement,f:&mut Vec<f64>)->Result<[u32;3],Error>{
+ fn pose(&self,p:&RefineProblem,component:usize,pose:&crate::model::Placement,f:&mut Vec<f32>)->Result<[u32;3],Error>{
   if !pose.x.is_finite()||!pose.y.is_finite()||pose.x.abs()>1e6||pose.y.abs()>1e6{return Err(invalid("unsafe post-place pose"));}
   let orientation=p.components[component].orientations.iter().position(|o|o.rotate==crate::geometry::normalize_rotation(pose.rotate)&&o.layer==pose.layer).ok_or_else(||invalid("post-place orientation unavailable"))?;
   let off=f.len() as u32;f.extend([pose.x,pose.y]);Ok([self.orientations[component][orientation],off,layer(&pose.layer)?])
  }
- pub fn chunk_size(&self)->usize{let d=&self.data.si;let ns=d[5] as usize;let bytes=d[11] as usize*8+d[6] as usize*4+ns*(12+8+16+ns.div_ceil(32)*4)+(d[7]+d[9]) as usize*24+8;
+ pub fn chunk_size(&self)->usize{let d=&self.data.si;let ns=d[5] as usize;let bytes=d[11] as usize*4+d[6] as usize*4+ns*(12+4+8+ns.div_ceil(32)*4)+(d[7]+d[9]) as usize*12+4;
   let dispatch=(65535*128)/(d[0].max(d[2]).max(d[5]).max(d[7]+d[9]).max(1) as usize);
   std::env::var("PCB_POST_PLACE_GPU_CHUNK_SIZE").ok().and_then(|s|s.parse::<usize>().ok()).unwrap_or(128).clamp(1,256).min((MAX_BYTES/bytes.max(1)).max(1)).min(dispatch.max(1))
  }
- pub fn scores(&mut self,p:&RefineProblem,current:&World,candidates:&[&Candidate],budget:Option<&super::CpuBudget>)->Result<Vec<f64>,String>{
+ pub fn scores(&mut self,p:&RefineProblem,current:&World,candidates:&[&Candidate],budget:Option<&super::CpuBudget>)->Result<Vec<f32>,String>{
   self.injected("batch")?;let permit=budget.map(|b|b.acquire());let started=Instant::now();let mut bi=vec![candidates.len() as u32];let mut bf=Vec::new();
   for i in 0..p.components.len(){let pose=self.pose(p,i,p.pose(current,i),&mut bf).map_err(|e|self.fail(e))?;bi.extend(pose);}
   let frames=bi.len();bi.resize(frames+candidates.len()*2,0);
@@ -100,11 +101,11 @@ impl Engine {
   let started=Instant::now();let count=candidates.len();let d=&self.data;let ns=d.si[5] as usize;let nt=(d.si[7]+d.si[9]) as usize;
   let verify=std::env::var("PCB_POST_PLACE_GPU_VERIFY").ok().as_deref()==Some("1");
   let result=gpu::with_session(REQUIREMENTS,|session|{
-   if self.handles.is_none(){self.handles=Some((session.client.create_from_slice(u32::as_bytes(&d.si)),session.client.create_from_slice(f64::as_bytes(&d.sf))));}
-   let (si,sf)=self.handles.as_ref().unwrap();let bih=session.client.create_from_slice(u32::as_bytes(&bi));let bfh=session.client.create_from_slice(f64::as_bytes(&bf));
+   if self.handles.is_none(){self.handles=Some((session.client.create_from_slice(u32::as_bytes(&d.si)),session.client.create_from_slice(f32::as_bytes(&d.sf))));}
+   let (si,sf)=self.handles.as_ref().unwrap();let bih=session.client.create_from_slice(u32::as_bytes(&bi));let bfh=session.client.create_from_slice(f32::as_bytes(&bf));
    let geometry_len=count*d.si[11] as usize;let edge_len=(count*ns*3).max(1);let length_len=(count*ns).max(1);let conn_len=(count*d.si[6] as usize).max(1);let term_len=(count*nt*3).max(1);let seg_len=(count*ns*2).max(1);let mask_len=(count*ns*ns.div_ceil(32)).max(1);
-   let geo=session.workspace(ScratchKey::new("post-place-f64",0),geometry_len*8);let edges=session.workspace(ScratchKey::new("post-place-f64",1),edge_len*4);let lengths=session.workspace(ScratchKey::new("post-place-f64",2),length_len*8);let connected=session.workspace(ScratchKey::new("post-place-f64",3),conn_len*4);
-   let terms=session.workspace(ScratchKey::new("post-place-f64",4),term_len*8);let segments=session.workspace(ScratchKey::new("post-place-f64",5),seg_len*8);let masks=session.workspace(ScratchKey::new("post-place-f64",6),mask_len*4);let output=session.workspace(ScratchKey::new("post-place-f64",7),count*8);
+   let geo=session.workspace(ScratchKey::new("post-place-f32",0),geometry_len*4);let edges=session.workspace(ScratchKey::new("post-place-f32",1),edge_len*4);let lengths=session.workspace(ScratchKey::new("post-place-f32",2),length_len*4);let connected=session.workspace(ScratchKey::new("post-place-f32",3),conn_len*4);
+   let terms=session.workspace(ScratchKey::new("post-place-f32",4),term_len*4);let segments=session.workspace(ScratchKey::new("post-place-f32",5),seg_len*4);let masks=session.workspace(ScratchKey::new("post-place-f32",6),mask_len*4);let output=session.workspace(ScratchKey::new("post-place-f32",7),count*4);
    let input=||unsafe{k::InputLaunch::new(ArrayArg::from_raw_parts(si.clone(),d.si.len()),ArrayArg::from_raw_parts(sf.clone(),d.sf.len()),ArrayArg::from_raw_parts(bih.clone(),bi.len()),ArrayArg::from_raw_parts(bfh.clone(),bf.len()),ArrayArg::from_raw_parts(geo.clone(),geometry_len),ArrayArg::from_raw_parts(edges.clone(),edge_len),ArrayArg::from_raw_parts(lengths.clone(),length_len))};
    let grid=|n:usize|CubeCount::Static(n.div_ceil(128) as u32,1,1);let dim=CubeDim::new_1d(128);
    unsafe{
@@ -120,8 +121,8 @@ impl Engine {
     let l=session.client.read_one(lengths).map_err(|e|Error::new(ErrorKind::RuntimeFailure,e.to_string()))?;
     let g=session.client.read_one(geo).map_err(|e|Error::new(ErrorKind::RuntimeFailure,e.to_string()))?;
     let t=session.client.read_one(terms).map_err(|e|Error::new(ErrorKind::RuntimeFailure,e.to_string()))?;
-    Some((u32::from_bytes(&e).to_vec(),f64::from_bytes(&l).to_vec(),f64::from_bytes(&g).to_vec(),f64::from_bytes(&t).to_vec()))
-   }else{None};Ok((f64::from_bytes(&bytes)[..count].to_vec(),diagnostic))
+    Some((u32::from_bytes(&e).to_vec(),f32::from_bytes(&l).to_vec(),f32::from_bytes(&g).to_vec(),f32::from_bytes(&t).to_vec()))
+   }else{None};Ok((f32::from_bytes(&bytes)[..count].to_vec(),diagnostic))
   });
   self.milliseconds+=started.elapsed().as_secs_f64()*1000.0;let (scores,diagnostic)=result.map_err(|e|self.fail(e))?;
   if let Some((edges,lengths,geometry,terms))=diagnostic {
@@ -134,14 +135,14 @@ impl Engine {
     for j in 0..nt {let kind=if j<self.data.si[7] as usize{self.data.si[self.data.si[8] as usize+j*5]}else{4};let off=(i*nt+j)*3;
      if kind==2 {fixed+=terms[off];}else{if kind>=3 && !added{actual.push(fixed);added=true;}actual.push((terms[off]+terms[off+1])+terms[off+2]);}
     }if !added {actual.push(fixed);}
-    if actual.len()!=expected_terms.len() || actual.iter().zip(&expected_terms).any(|(a,b)|(a-b).abs()>1e-8+b.abs()*1e-12) {return Err(self.fail(Error::new(ErrorKind::RuntimeFailure,format!("post-place GPU term mismatch candidate {i}: GPU={actual:?} CPU={expected_terms:?}"))));}
+    if actual.len()!=expected_terms.len() || actual.iter().zip(&expected_terms).any(|(a,b)|!crate::f32_policy::score_close(*a,*b)) {return Err(self.fail(Error::new(ErrorKind::RuntimeFailure,format!("post-place GPU term mismatch candidate {i}: GPU={actual:?} CPU={expected_terms:?}"))));}
     let expected=crate::post_place::graph_reference(&score_problem);
     for (j,(from,to,net,len)) in expected.into_iter().enumerate(){let e=i*ns+j;
-     if edges[e*3]!=from as u32 || edges[e*3+1]!=to as u32 || edges[e*3+2]!=net as u32 || (lengths[e]-len).abs()>1e-10+len.abs()*1e-13 {return Err(self.fail(Error::new(ErrorKind::RuntimeFailure,format!("post-place GPU MST mismatch candidate {i} edge {j}"))));}
+     if edges[e*3]!=from as u32 || edges[e*3+1]!=to as u32 || edges[e*3+2]!=net as u32 || !crate::f32_policy::score_close(lengths[e],len) {return Err(self.fail(Error::new(ErrorKind::RuntimeFailure,format!("post-place GPU MST mismatch candidate {i} edge {j}"))));}
     }
     for (component,def) in p.components.iter().enumerate(){let base=i*self.data.si[11] as usize+self.data.si[self.data.si[1] as usize+component*4] as usize;let b=world.boxes[component];let pose=p.pose(&world,component);
-     let mut cpu=vec![pose.x,pose.y,layer(&pose.layer).unwrap() as f64,b.left,b.right,b.top,b.bottom];
-     for (pad,point) in world.points[component].iter().enumerate(){let obs=&world.obstacles[def.obstacle_offset+pad];let b=obs.box_;cpu.extend([point.x,point.y,b.left,b.right,b.top,b.bottom,obs.layer.as_ref().map_or(0,|s|layer(s).unwrap()) as f64]);}
+     let mut cpu=vec![pose.x,pose.y,layer(&pose.layer).unwrap() as f32,b.left,b.right,b.top,b.bottom];
+     for (pad,point) in world.points[component].iter().enumerate(){let obs=&world.obstacles[def.obstacle_offset+pad];let b=obs.box_;cpu.extend([point.x,point.y,b.left,b.right,b.top,b.bottom,obs.layer.as_ref().map_or(0,|s|layer(s).unwrap()) as f32]);}
      if !cpu.iter().zip(&geometry[base..base+cpu.len()]).all(|(a,b)|a==b){return Err(self.fail(Error::new(ErrorKind::RuntimeFailure,format!("post-place GPU geometry mismatch candidate {i} component {component}"))));}
     }
     for (component,_) in &c.changes {p.apply(&mut world,*component,p.pose(current,*component))?;}
@@ -150,7 +151,7 @@ impl Engine {
   if scores.iter().any(|s|!s.is_finite()){return Err(self.fail(Error::new(ErrorKind::RuntimeFailure,"non-finite post-place GPU score")));}
   self.batches+=1;self.candidates+=count;Ok(scores)
  }
- pub fn report(&self){eprintln!("[post-place-gpu] {}",serde_json::json!({"batches":self.batches,"candidates":self.candidates,"gpuOperationMs":self.milliseconds,"encodeMs":self.encode_ms,"residentBytes":self.data.si.len()*4+self.data.sf.len()*8,"runtime":gpu::statistics()}));}
+ pub fn report(&self){eprintln!("[post-place-gpu] {}",serde_json::json!({"batches":self.batches,"candidates":self.candidates,"gpuOperationMs":self.milliseconds,"encodeMs":self.encode_ms,"residentBytes":self.data.si.len()*4+self.data.sf.len()*4,"runtime":gpu::statistics()}));}
 }
 
 // Cold single-worker Telemetry is measured; multi-worker admission additionally

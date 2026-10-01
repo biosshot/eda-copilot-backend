@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
 import type { NativePostPlaceScoreProblemV1, NativeRoutingObstacle } from '../src/pcb-layout/pcb-auto-place-v2/native/contract.ts';
 import { minimumSpanningEdges } from '../src/pcb-layout/pcb-auto-place/ratsnest.ts';
+import { f32ScoreTolerance } from './helpers/f32.ts';
 
 const addon = loadNativeBoardPacker();
 const pad = (ref: string, x: number, net = 'OTHER', layer: 'top' | 'bottom' | undefined = 'top'): NativeRoutingObstacle => ({
@@ -51,5 +52,6 @@ test('comparison ratsnest uses the same spanning-tree length as the native objec
         const points = p.nets[0].points, d = Math.hypot(points[a].x - points[b].x, points[a].y - points[b].y);
         return sum + d * 10 + d * d * .35;
     }, 0);
-    assert.ok(Math.abs(addon.scorePostPlace(p) - score) < .000001);
+    const actual=addon.scorePostPlace(p);
+    assert.ok(Math.abs(actual-score)<=f32ScoreTolerance(actual,score));
 });

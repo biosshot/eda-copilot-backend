@@ -1,3 +1,4 @@
+import * as fp from '../../f32.ts';
 import type { BoardEdge, Box, Layer, PcbComponent, Placement } from '#types/pcb/layout-model.ts';
 import { boardOutlinePolygon, componentBodyBox, componentCollisionBoxes } from '../../pcb-auto-place/geometry.ts';
 import { placementsCanConflict } from '../../pcb-auto-place/utils.ts';
@@ -68,12 +69,12 @@ export function encodeNativeBoardPackProblem(params: BoardPackParams): NativeBoa
                 placement.layer === 'top' ? 'bottom' : 'top',
             ),
             boardOverflow: {
-                left: Math.max(0, component.pcb.boardOverflow?.left ?? 0),
-                right: Math.max(0, component.pcb.boardOverflow?.right ?? 0),
-                top: Math.max(0, component.pcb.boardOverflow?.top ?? 0),
-                bottom: Math.max(0, component.pcb.boardOverflow?.bottom ?? 0),
+                left: fp.max(0, component.pcb.boardOverflow?.left ?? 0),
+                right: fp.max(0, component.pcb.boardOverflow?.right ?? 0),
+                top: fp.max(0, component.pcb.boardOverflow?.top ?? 0),
+                bottom: fp.max(0, component.pcb.boardOverflow?.bottom ?? 0),
             },
-            edgeClearance: Math.max(0, component.pcb.edgePlace?.inset ?? params.options.edgeClearance ?? 0),
+            edgeClearance: fp.max(0, component.pcb.edgePlace?.inset ?? params.options.edgeClearance ?? 0),
         })),
         componentPairClearance,
         componentConflict,
@@ -161,7 +162,7 @@ function primitiveEdgePlaceIntent(
         const edgePlace = componentByDesignator?.get(placement.designator)?.pcb.edgePlace;
         if (!edgePlace) continue;
         for (const edge of edgePlace.edges) edges.add(edge);
-        inset = Math.max(inset ?? 0, edgePlace.inset ?? 0);
+        inset = fp.max(inset ?? 0, edgePlace.inset ?? 0);
         align ??= edgePlace.align;
         x ??= edgePlace.x;
         y ??= edgePlace.y;
@@ -193,7 +194,7 @@ function encodeRelation(relation: BoardPackParams['relations'][number]): NativeR
 }
 
 function centeredBoardBounds(width: number, height: number): Box {
-    return { left: -width / 2, right: width / 2, top: -height / 2, bottom: height / 2 };
+    return { left: fp.div(-width, 2), right: fp.div(width, 2), top: fp.div(-height, 2), bottom: fp.div(height, 2) };
 }
 
 function boxPolygon(box: Box) {

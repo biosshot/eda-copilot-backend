@@ -1,6 +1,7 @@
 import { rotatePrimitive, translatePrimitive, type PlacementPrimitive } from '../primitives.ts';
 import { roundPlacement } from '../../pcb-auto-place/geometry.ts';
 import { NATIVE_BOARD_PACK_CONTRACT_VERSION, type NativePrimitivePackSolution } from './contract.ts';
+import { primitiveInFrame, frameTranslation } from './numeric-frame.ts';
 
 export function applyNativeBoardPackSolution(
     primitives: PlacementPrimitive[],
@@ -24,8 +25,13 @@ export function applyNativeBoardPackSolution(
                 throw new Error(`Native solver moved locked primitive ${primitive.id}`);
             return primitive;
         }
-        const rotated = rotatePrimitive(primitive, state.rotation);
-        const transformed = translatePrimitive(rotated, state.translationX, state.translationY);
+        const frame = solution.numericFrame;
+        const source = frame ? primitiveInFrame(primitive, frame.origin) : primitive;
+        const rotated = rotatePrimitive(source, state.rotation);
+        const dx = frame ? frameTranslation(state.translationX, frame.origin.x, frame.outputOrigin.x) : state.translationX;
+        const dy = frame ? frameTranslation(state.translationY, frame.origin.y, frame.outputOrigin.y) : state.translationY;
+        const local = translatePrimitive(rotated, dx, dy);
+        const transformed = frame ? primitiveInFrame(local, frame.outputOrigin, true) : local;
         if (state.placements) {
             const canonical = ({ designator, x, y, rotate, layer }: typeof state.placements[number]) => ({
                 designator,
@@ -34,8 +40,12 @@ export function applyNativeBoardPackSolution(
                 rotate,
                 layer,
             });
-            const expected = JSON.stringify(state.placements.map(canonical));
-            const actual = JSON.stringify(transformed.placements.map(canonical));
+            // Compare ticks in the local output frame; narrowing restored
+            // absolute coordinates would collapse adjacent ticks at 1e9 mm.
+            const toLocal = (p: typeof state.placements[number]) => frame
+                ? { ...p, x: p.x-frame.outputOrigin.x, y: p.y-frame.outputOrigin.y } : p;
+            const expected = JSON.stringify(state.placements.map(toLocal).map(canonical));
+            const actual = JSON.stringify(local.placements.map(canonical));
             if (expected !== actual) throw new Error(`Native primitive transform mismatch for ${primitive.id}: expected=${expected} actual=${actual}`);
         }
         return transformed;

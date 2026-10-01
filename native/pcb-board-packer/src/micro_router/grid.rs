@@ -15,13 +15,13 @@ pub(super) struct GridShape {
 }
 
 impl GridShape {
-    pub(super) fn new(bounds: Box2, grid: f64, max_cells: usize) -> Option<Self> {
+    pub(super) fn new(bounds: Box2, grid: f32, max_cells: usize) -> Option<Self> {
         if !is_finite_box(&bounds) || !grid.is_finite() || grid <= 0.0 {
             return None;
         }
-        let count = |low: f64, high: f64| -> Option<usize> {
+        let count = |low: f32, high: f32| -> Option<usize> {
             let steps = ((high - low) / grid).ceil();
-            if high < low || !steps.is_finite() || steps < 0.0 || steps >= i32::MAX as f64 {
+            if high < low || !steps.is_finite() || steps < 0.0 || steps >= i32::MAX as f32 {
                 return None;
             }
             (steps as usize).checked_add(1)
@@ -46,8 +46,8 @@ impl GridShape {
 pub(super) struct OutlineMask {
     fallback: PolygonDistanceCache,
     bounds: Box2,
-    grid: f64,
-    edge_clearance: f64,
+    grid: f32,
+    edge_clearance: f32,
     dense: Option<(GridShape, Vec<ValueCell<u8>>)>,
     #[cfg(test)]
     hits: ValueCell<u64>,

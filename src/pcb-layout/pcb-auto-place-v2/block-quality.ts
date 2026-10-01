@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { PlacementInput } from '#types/pcb/layout-model.ts';
 import { isGroundSignalName, isPowerSignalName } from '#utils/signals.ts';
@@ -61,7 +62,7 @@ export function blockQuality(input: PlacementInput, primitives: PlacementPrimiti
     const local = blockScopedInput(input, primitives);
     const problem = encodeNativePostPlaceScoreProblem(local, placements);
     const box = unionBoxes(primitives.map(p => p.bbox));
-    const width = box.right - box.left, height = box.bottom - box.top, area = width * height;
+    const width = fp.sub(box.right, box.left), height = fp.sub(box.bottom, box.top), area = fp.mul(width, height);
     const poses = new Map(placements.map(p => [p.designator, p]));
     const ignored = new Set(input.solverOptions.ignoredRatsnestSignals.map(n => n.toUpperCase()));
     const nets = new Map<string, Array<{ x: number; y: number; ref: string; owner: string; core: boolean }>>();
@@ -81,48 +82,48 @@ export function blockQuality(input: PlacementInput, primitives: PlacementPrimiti
     for (const [net, points] of nets) {
         const weight = isPowerSignalName(net) ? .25 : 1;
         for (const [i, j] of minimumSpanningEdges(points)) {
-            const a = points[i], b = points[j], d = Math.hypot(a.x - b.x, a.y - b.y);
-            wire += d * weight;
+            const a = points[i], b = points[j], d = fp.hypot(fp.sub(a.x, b.x), fp.sub(a.y, b.y));
+            wire = fp.add(wire, fp.mul(d, weight));
             // Even multi-terminal nets pay for an individually stretched edge.
-            if (a.owner !== b.owner) localStretch += weight * 2 * Math.max(0, d - 4) ** 2;
+            if (a.owner !== b.owner) localStretch = fp.add(localStretch, fp.mul(fp.mul(weight, 2), fp.pow(fp.max(0, fp.sub(d, 4)), 2)));
         }
         // MST can hide a distant passive behind another passive. Measure each
         // pin's access to each connected IC as well, using its nearest same-net pad.
         const cores = [...new Set(points.filter(p => p.core).map(p => p.owner))];
         for (const p of points.filter(p => !p.core)) for (const core of cores) {
-            const d = Math.min(...points.filter(q => q.owner === core).map(q => Math.hypot(p.x - q.x, p.y - q.y)));
+            const d = fp.min(...points.filter(q => q.owner === core).map(q => fp.hypot(fp.sub(p.x, q.x), fp.sub(p.y, q.y))));
             links[`${p.ref}->${core}`] = d;
-            localStretch += weight * (6 * d + 32 * Math.max(0, d - 3) ** 2);
+            localStretch = fp.add(localStretch, fp.mul(weight, (fp.add(fp.mul(6, d), fp.mul(32, fp.pow(fp.max(0, fp.sub(d, 3)), 2))))));
         }
         if (external.has(net)) {
-            exposure += weight * Math.min(...points.map(p =>
-                Math.max(0, Math.min(p.x - box.left, box.right - p.x, p.y - box.top, box.bottom - p.y))));
-            for (const p of points) ports[p.ref] = { x: p.x - (box.left + box.right) / 2, y: p.y - (box.top + box.bottom) / 2 };
+            exposure = fp.add(exposure, fp.mul(weight, fp.min(...points.map(p =>
+                fp.max(0, fp.min(fp.sub(p.x, box.left), fp.sub(box.right, p.x), fp.sub(p.y, box.top), fp.sub(box.bottom, p.y)))))));
+            for (const p of points) ports[p.ref] = { x: fp.sub(p.x, fp.div((fp.add(box.left, box.right)), 2)), y: fp.sub(p.y, fp.div((fp.add(box.top, box.bottom)), 2)) };
         }
     }
-    const electrical = loadNativeBoardPacker().scorePostPlace(problem) + localStretch;
+    const electrical = fp.add(loadNativeBoardPacker().scorePostPlace(problem), localStretch);
     // mm² has a deliberately modest price compared with mm of local connection.
-    return { score: electrical + .35 * area + .5 * (width + height) + 2 * exposure,
-        electrical, localStretch, wire, maxLocal: Math.max(0, ...Object.values(links)), area, width, height, exposure, links, ports };
+    return { score: fp.add(fp.add(fp.add(electrical, fp.mul(.35, area)), fp.mul(.5, (fp.add(width, height)))), fp.mul(2, exposure)),
+        electrical, localStretch, wire, maxLocal: fp.max(0, ...Object.values(links)), area, width, height, exposure, links, ports };
 }
 
 export function comparableBlockQuality(candidate: BlockQuality, best: BlockQuality) {
-    return candidate.electrical <= best.electrical * 1.12 + 20
-        && candidate.wire <= best.wire * 1.15 + 1
-        && Object.entries(best.links).every(([key, d]) => (candidate.links[key] ?? Infinity) <= d + Math.max(1.5, d * .35));
+    return candidate.electrical <= fp.add(fp.mul(best.electrical, 1.12), 20)
+        && candidate.wire <= fp.add(fp.mul(best.wire, 1.15), 1)
+        && Object.entries(best.links).every(([key, d]) => (candidate.links[key] ?? Infinity) <= fp.add(d, fp.max(1.5, fp.mul(d, .35))));
 }
 
 function signature(primitives: PlacementPrimitive[]) {
     const ps = primitives.flatMap(p => p.placements).sort((a, b) => a.designator.localeCompare(b.designator));
     const origin = ps[0];
-    return JSON.stringify(ps.map(p => [p.designator, Math.round((p.x - origin.x) * 1000),
-        Math.round((p.y - origin.y) * 1000), p.rotate, p.layer]));
+    return JSON.stringify(ps.map(p => [p.designator, Math.round(fp.mul((fp.sub(p.x, origin.x)), 1000)),
+        Math.round(fp.mul((fp.sub(p.y, origin.y)), 1000)), p.rotate, p.layer]));
 }
 
 /** Quality gate first, then retain useful geometry/port diversity; never pad to three. */
 export function selectBlockCandidates(candidates: BlockCandidate[]): BlockCandidate[] {
     const seen = new Set<string>();
-    const ranked = candidates.filter(c => Number.isFinite(c.quality.score)).sort((a, b) => a.quality.score - b.quality.score)
+    const ranked = candidates.filter(c => Number.isFinite(c.quality.score)).sort((a, b) => fp.sub(a.quality.score, b.quality.score))
         .filter(c => { const key = signature(c.primitives); if (seen.has(key)) return false; seen.add(key); return true; });
     if (!ranked.length) return [];
     const best = ranked[0];
@@ -131,11 +132,11 @@ export function selectBlockCandidates(candidates: BlockCandidate[]): BlockCandid
     for (const c of comparable.slice(1)) {
         // A lower-quality candidate needs a useful improvement in shape or access.
         const q = c.quality;
-        if (selected.some(s => s.quality.electrical <= q.electrical + 1 && s.quality.wire <= q.wire + .05
-            && s.quality.width <= q.width + .1 && s.quality.height <= q.height + .1 && s.quality.exposure <= q.exposure + .1
+        if (selected.some(s => s.quality.electrical <= fp.add(q.electrical, 1) && s.quality.wire <= fp.add(q.wire, .05)
+            && s.quality.width <= fp.add(q.width, .1) && s.quality.height <= fp.add(q.height, .1) && s.quality.exposure <= fp.add(q.exposure, .1)
             && Object.entries(q.ports).every(([key, p]) => {
                 const other = s.quality.ports[key];
-                return other && Math.hypot(p.x - other.x, p.y - other.y) < .5;
+                return other && fp.hypot(fp.sub(p.x, other.x), fp.sub(p.y, other.y)) < .5;
             }))) continue;
         selected.push(c);
         if (selected.length === 3) break;
@@ -145,6 +146,6 @@ export function selectBlockCandidates(candidates: BlockCandidate[]): BlockCandid
 
 /** Re-score retained layouts in world coordinates with the very same objective. */
 export function blockPortfolioInternalScore(input: PlacementInput, roots: PlacementPrimitive[]): number {
-    return roots.reduce((sum, p) => sum + (p.blockQuality ? blockQuality(input, p.children).score
-        : blockPortfolioInternalScore(input, p.children)), 0);
+    return roots.reduce((sum, p) => fp.add(sum, (p.blockQuality ? blockQuality(input, p.children).score
+        : blockPortfolioInternalScore(input, p.children))), 0);
 }

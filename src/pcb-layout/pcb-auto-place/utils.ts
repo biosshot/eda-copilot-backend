@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type {
     BlockRole,
     BlockPlacement,
@@ -64,17 +65,17 @@ export function qfnPads(
     padHeight: number,
     aliasesByPin: Record<number, string>,
 ) {
-    const pinsPerSide = pinCount / 4;
-    const half = bodySize / 2 + 0.3;
-    const first = -((pinsPerSide - 1) * pitch) / 2;
+    const pinsPerSide = fp.div(pinCount, 4);
+    const half = fp.add(fp.div(bodySize, 2), 0.3);
+    const first = fp.div(-(fp.mul((fp.sub(pinsPerSide, 1)), pitch)), 2);
     const pads: FootprintPad[] = [];
 
     for (let index = 0; index < pinsPerSide; index++) {
-        const offset = first + index * pitch;
+        const offset = fp.add(first, fp.mul(index, pitch));
         const topPin = index + 1;
-        const rightPin = pinsPerSide + index + 1;
-        const bottomPin = pinsPerSide * 2 + index + 1;
-        const leftPin = pinsPerSide * 3 + index + 1;
+        const rightPin = fp.add(fp.add(pinsPerSide, index), 1);
+        const bottomPin = fp.add(fp.add(fp.mul(pinsPerSide, 2), index), 1);
+        const leftPin = fp.add(fp.add(fp.mul(pinsPerSide, 3), index), 1);
 
         pads.push(pad(aliasesByPin[topPin] ?? `NC${topPin}`, offset, -half, padWidth, padHeight));
         pads.push(pad(aliasesByPin[rightPin] ?? `NC${rightPin}`, half, offset, padHeight, padWidth));
@@ -82,7 +83,7 @@ export function qfnPads(
         pads.push(pad(aliasesByPin[leftPin] ?? `NC${leftPin}`, -half, -offset, padHeight, padWidth));
     }
 
-    return pads.sort((a, b) => naturalPinOrder(a.pin_number) - naturalPinOrder(b.pin_number));
+    return pads.sort((a, b) => fp.sub(naturalPinOrder(a.pin_number), naturalPinOrder(b.pin_number)));
 }
 
 export function component(designator: string, value: string, footprintValue: FootprintSpec, blockName: string, role: ComponentRole, nets: Record<string, string>): PcbComponent {
@@ -201,7 +202,7 @@ export function naturalPinOrder(pinNumber: string | number) {
 }
 
 export function componentArea(component: PcbComponent) {
-    return component.footprint.width * component.footprint.height;
+    return fp.mul(component.footprint.width, component.footprint.height);
 }
 
 export function componentHasThroughHolePads(component: PcbComponent) {
@@ -219,42 +220,42 @@ export function isFixedComponent(component: PcbComponent) {
 }
 
 export function orientation(a: Point, b: Point, c: Point) {
-    const value = (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y);
-    if (Math.abs(value) < GEOMETRY_EPSILON) return 0;
+    const value = fp.sub(fp.mul((fp.sub(b.y, a.y)), (fp.sub(c.x, b.x))), fp.mul((fp.sub(b.x, a.x)), (fp.sub(c.y, b.y))));
+    if (fp.abs(value) < GEOMETRY_EPSILON) return 0;
     return value > 0 ? 1 : 2;
 }
 
 export function pointOnSegment(point: Point, a: Point, b: Point) {
-    return point.x <= Math.max(a.x, b.x) + GEOMETRY_EPSILON
-        && point.x >= Math.min(a.x, b.x) - GEOMETRY_EPSILON
-        && point.y <= Math.max(a.y, b.y) + GEOMETRY_EPSILON
-        && point.y >= Math.min(a.y, b.y) - GEOMETRY_EPSILON;
+    return point.x <= fp.add(fp.max(a.x, b.x), GEOMETRY_EPSILON)
+        && point.x >= fp.sub(fp.min(a.x, b.x), GEOMETRY_EPSILON)
+        && point.y <= fp.add(fp.max(a.y, b.y), GEOMETRY_EPSILON)
+        && point.y >= fp.sub(fp.min(a.y, b.y), GEOMETRY_EPSILON);
 }
 
 export function pointInsideBox(point: Point, box: Box) {
-    return point.x >= box.left - GEOMETRY_EPSILON
-        && point.x <= box.right + GEOMETRY_EPSILON
-        && point.y >= box.top - GEOMETRY_EPSILON
-        && point.y <= box.bottom + GEOMETRY_EPSILON;
+    return point.x >= fp.sub(box.left, GEOMETRY_EPSILON)
+        && point.x <= fp.add(box.right, GEOMETRY_EPSILON)
+        && point.y >= fp.sub(box.top, GEOMETRY_EPSILON)
+        && point.y <= fp.add(box.bottom, GEOMETRY_EPSILON);
 }
 
 export function expandBox(box: Box, amount: number): Box {
     return {
-        left: box.left - amount,
-        right: box.right + amount,
-        top: box.top - amount,
-        bottom: box.bottom + amount,
+        left: fp.sub(box.left, amount),
+        right: fp.add(box.right, amount),
+        top: fp.sub(box.top, amount),
+        bottom: fp.add(box.bottom, amount),
     };
 }
 
 export function pathLength(path: Point[]) {
-    return path.reduce((sum, point, index) => index === 0 ? 0 : sum + dist(path[index - 1], point), 0);
+    return path.reduce((sum, point, index) => index === 0 ? 0 : fp.add(sum, dist(path[index - 1], point)), 0);
 }
 
 export function normalizeVector(vector: Point): Point | null {
-    const length = Math.hypot(vector.x, vector.y);
+    const length = fp.hypot(vector.x, vector.y);
     if (length < GEOMETRY_EPSILON) return null;
-    return { x: vector.x / length, y: vector.y / length };
+    return { x: fp.div(vector.x, length), y: fp.div(vector.y, length) };
 }
 
 export function segmentIntersectsBox(a: Point, b: Point, box: Box) {

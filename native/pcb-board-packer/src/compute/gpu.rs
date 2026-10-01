@@ -1,8 +1,9 @@
-//! Shared CubeCL F64 runtime. Adapted from archived compute/gpu.rs (b09f3e5).
+//! Shared CubeCL F32 runtime. Adapted from archived compute/gpu.rs (b09f3e5).
 //! A single process owns a device lease; all native workers share its client.
 use super::workspace::{ScratchKey, Workspace};
 use super::{Capabilities, Error, ErrorKind, Requirements};
-use cubecl::wgpu::{WgpuDevice, WgpuRuntime};
+use cubecl::wgpu::WgpuDevice;
+use super::f32_runtime::PcbRuntime as WgpuRuntime;
 use cubecl::{client::ComputeClient, prelude::*, server::Handle};
 use std::sync::{Mutex, OnceLock};
 
@@ -12,6 +13,7 @@ pub(crate) struct Session {
     _lease: std::fs::File,
     workspaces: Workspace,
     pub capabilities: Capabilities,
+    float_controls: serde_json::Value,
 }
 enum State {
     New,
@@ -45,7 +47,7 @@ fn initialize() -> Result<Option<Session>, Error> {
             .iter()
             .filter(|a| a.get_info().device_type == kind)
             .enumerate()
-            .find(|(_, a)| a.features().contains(wgpu::Features::SHADER_F64))
+            .next()
         {
             selected = Some((
                 match kind {
@@ -59,7 +61,25 @@ fn initialize() -> Result<Option<Session>, Error> {
         }
     }
     let (device, id) =
-        selected.ok_or_else(|| Error::new(ErrorKind::NoDevice, "no compatible F64 Vulkan GPU"))?;
+        selected.ok_or_else(|| Error::new(ErrorKind::NoDevice, "no compatible F32 Vulkan GPU"))?;
+    let float_controls = unsafe {
+        let adapter = adapters.iter().find(|a| {
+            let actual=a.get_info();actual.vendor==id.vendor&&actual.device==id.device&&actual.device_type==id.device_type
+        }).ok_or_else(|| Error::new(ErrorKind::AdapterMismatch,"selected Vulkan adapter disappeared"))?;
+        let hal=adapter.as_hal::<wgpu::hal::api::Vulkan>().ok_or_else(|| Error::new(ErrorKind::NoDevice,"Vulkan HAL unavailable"))?;
+        let mut controls=ash::vk::PhysicalDeviceFloatControlsProperties::default();
+        let mut properties=ash::vk::PhysicalDeviceProperties2::default().push_next(&mut controls);
+        hal.shared_instance().raw_instance().get_physical_device_properties2(hal.raw_physical_device(),&mut properties);
+        serde_json::json!({"rte":controls.shader_rounding_mode_rte_float32!=0,
+            "denormPreserve":controls.shader_denorm_preserve_float32!=0,
+            "denormFlushToZero":controls.shader_denorm_flush_to_zero_float32!=0,
+            "signedZeroInfNanPreserve":controls.shader_signed_zero_inf_nan_preserve_float32!=0,
+            "denormIndependence":controls.denorm_behavior_independence.as_raw(),
+            "roundingIndependence":controls.rounding_mode_independence.as_raw()})
+    };
+    if ["rte","signedZeroInfNanPreserve"].iter().any(|key|float_controls[key]!=true) {
+        return Err(Error::new(ErrorKind::MissingCapabilities,format!("F32 float controls unavailable: {float_controls}")));
+    }
     let directory = std::env::temp_dir().join("eda-copilot-gpu");
     std::fs::create_dir_all(&directory)
         .map_err(|e| Error::new(ErrorKind::Lease, format!("GPU lease directory: {e}")))?;
@@ -77,53 +97,38 @@ fn initialize() -> Result<Option<Session>, Error> {
             return Err(Error::new(ErrorKind::Lease, format!("GPU lease: {e}")))
         }
     }
-    let setup = cubecl::wgpu::init_setup::<cubecl::wgpu::Vulkan>(&device, Default::default());
-    let actual = setup.adapter.get_info();
-    // The probe and runtime must select the same adapter, including its limits.
-    if actual.device_type == wgpu::DeviceType::Cpu
-        || actual.vendor != id.vendor
-        || actual.device != id.device
-    {
-        return Err(Error::new(
-            ErrorKind::AdapterMismatch,
-            "GPU probe/runtime adapter mismatch",
-        ));
-    }
     let client = WgpuRuntime::client(&device);
+    if *client.info()!=wgpu::Backend::Vulkan {
+        return Err(Error::new(ErrorKind::AdapterMismatch,"PCB F32 float controls were probed for Vulkan but CubeCL selected a different backend"));
+    }
     let capabilities = Capabilities {
-        f64: client
+        f32: client
             .features()
-            .supports_type(cubecl::ir::ElemType::Float(cubecl::ir::FloatKind::F64)),
+            .supports_type(cubecl::ir::ElemType::Float(cubecl::ir::FloatKind::F32)),
         u64: client
             .features()
             .supports_type(cubecl::ir::ElemType::UInt(cubecl::ir::UIntKind::U64)),
     };
-    // Preserve the current F64/U64 initialization policy and adapter selection.
-    if !capabilities.f64 {
+    // Preserve the current F32/U64 initialization policy and adapter selection.
+    if !capabilities.f32 {
         return Err(Error::new(
             ErrorKind::MissingCapabilities,
-            "CubeCL runtime lacks F64",
-        ));
-    }
-    if !capabilities.u64 {
-        return Err(Error::new(
-            ErrorKind::MissingCapabilities,
-            "CubeCL runtime lacks U64 for exact coordinate rounding",
+            "CubeCL runtime lacks F32",
         ));
     }
     // One compatibility check per device. No candidate CPU scoring is involved.
-    let mut values: Vec<f64> = (-2048..2048).map(|i| i as f64 / 1000.0).collect();
-    values.extend([-0.565, -1.985, 0.0005, -0.0005, 1e12, -1e12, 2e12, -2e12]);
+    let mut values: Vec<f32> = (-2048..2048).map(|i| i as f32 / 1000.0).collect();
+    values.extend([-0.565, -1.985, 0.0005, -0.0005, 1024.0, -1024.0, 512.0, -512.0]);
     for n in -64..=64 {
-        let middle = (n as f64 + 0.5) / 1000.0;
+        let middle = (n as f32 + 0.5) / 1000.0;
         values.extend([
-            f64::from_bits(middle.to_bits().wrapping_sub(1)),
+            f32::from_bits(middle.to_bits().wrapping_sub(1)),
             middle,
-            f64::from_bits(middle.to_bits().wrapping_add(1)),
+            f32::from_bits(middle.to_bits().wrapping_add(1)),
         ]);
     }
-    let input = client.create_from_slice(f64::as_bytes(&values));
-    let output = client.empty(values.len() * 8);
+    let input = client.create_from_slice(f32::as_bytes(&values));
+    let output = client.empty(values.len() * 4);
     unsafe {
         super::numerics::rounding_probe::launch_unchecked::<WgpuRuntime>(
             &client,
@@ -138,24 +143,65 @@ fn initialize() -> Result<Option<Session>, Error> {
         .map_err(|e| format!("GPU arithmetic probe: {e:?}"))?;
     if let Some((value, got)) = values
         .iter()
-        .zip(f64::from_bytes(&bytes))
+        .zip(f32::from_bytes(&bytes))
         .find(|(v, got)| crate::geometry::round_placement(**v) != **got)
     {
         return Err(Error::new(ErrorKind::ArithmeticIncompatibility, format!("GPU coordinate arithmetic failed CPU compatibility probe: input={value:?}, CPU={:?}, GPU={got:?}",crate::geometry::round_placement(*value))));
+    }
+    let values = [0.0f32, -0.0, f32::from_bits(1), -f32::from_bits(1),
+        f32::from_bits(0x007fffff), -f32::from_bits(0x007fffff),
+        f32::MIN_POSITIVE, -f32::MIN_POSITIVE,
+        f32::from_bits(0x3f800001), f32::from_bits(0x3f7ffffe)];
+    let mut expected: Vec<f32> = values.iter().flat_map(|&x| [x * 2.0, x * 0.5, x * 2.0f32.powi(126)]).collect();
+    expected.push(values[values.len()-2] * values[values.len()-1] - 1.0);
+    let input = client.create_from_slice(f32::as_bytes(&values));
+    let output = client.empty(expected.len() * 4);
+    unsafe {
+        super::numerics::execution_probe::launch_unchecked::<WgpuRuntime>(
+            &client, CubeCount::Static(1, 1, 1), CubeDim::new_1d(32),
+            ArrayArg::from_raw_parts(input, values.len()),
+            ArrayArg::from_raw_parts(output.clone(), expected.len()));
+    }
+    let bytes = client.read_one(output).map_err(|e| format!("GPU FTZ probe: {e:?}"))?;
+    for (index, (&cpu, &actual)) in expected.iter().zip(f32::from_bytes(&bytes)).enumerate() {
+        if cpu.to_bits() != actual.to_bits() {
+            return Err(Error::new(ErrorKind::ArithmeticIncompatibility,
+                format!("F32 execution probe {index}: CPU={:08x} GPU={:08x}", cpu.to_bits(), actual.to_bits())));
+        }
+    }
+    // RTE float controls do not make Vulkan division/sqrt correctly rounded.
+    // Check their specified precision with live inputs and outward bounds.
+    let values=[0.0f32,-0.0,0.00025,0.001,0.3,1.0,2.0,512.0,1024.0,
+        f32::MIN_POSITIVE,-f32::MIN_POSITIVE,f32::from_bits(1)];
+    let input=client.create_from_slice(f32::as_bytes(&values));
+    let output=client.empty(values.len()*2*4);
+    unsafe {super::numerics::arithmetic_probe::launch_unchecked::<WgpuRuntime>(
+        &client,CubeCount::Static(1,1,1),CubeDim::new_1d(32),
+        ArrayArg::from_raw_parts(input,values.len()),ArrayArg::from_raw_parts(output.clone(),values.len()*2));}
+    let bytes=client.read_one(output).map_err(|e|format!("GPU division/sqrt probe: {e:?}"))?;
+    let actual=f32::from_bytes(&bytes);
+    for (i,&value) in values.iter().enumerate() {
+        use crate::interval::Interval as I;
+        let division=I::exact(value).div_vulkan(I::exact(1.3));
+        let root=I::exact(value.abs()).sqrt_vulkan();
+        if !division.contains(actual[i*2]) || !root.contains(actual[i*2+1]) {
+            return Err(Error::new(ErrorKind::ArithmeticIncompatibility,format!("GPU division/sqrt precision probe failed for input {value}")));
+        }
     }
     let initializations = INITIALIZATIONS.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
     if std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some() {
         eprintln!(
             "[block-gpu-runtime] {}",
-            serde_json::json!({"device":actual.name,"initializations":initializations,"precision":"f64"})
+            serde_json::json!({"device":id.name,"initializations":initializations,"precision":"f32","floatControls":float_controls})
         );
     }
     Ok(Some(Session {
         client,
-        name: actual.name,
+        name: id.name,
         _lease: lease,
         workspaces: Workspace::default(),
         capabilities,
+        float_controls,
     }))
 }
 
@@ -168,6 +214,7 @@ pub(crate) fn with_session<T>(
     requirements: Requirements,
     f: impl FnOnce(&mut Session) -> Result<T, Error>,
 ) -> Result<T, Error> {
+    let _float_env = crate::float_env::Guard::enter();
     let wait_started = std::time::Instant::now();
     let mut state = STATE
         .get_or_init(|| Mutex::new(State::New))
@@ -236,10 +283,10 @@ impl Session {
 }
 
 // Runtime-only smoke: each GPU lane handles a separate input, including values
-// that cannot be represented in F32. This is not a block scoring benchmark.
+// that exercise binary32 arithmetic. This is not a block scoring benchmark.
 #[cfg(any(test, feature = "placement-bench"))]
 #[cube(launch_unchecked)]
-fn probe_kernel(input: &Array<f64>, output: &mut Array<f64>) {
+fn probe_kernel(input: &Array<f32>, output: &mut Array<f32>) {
     let i = ABSOLUTE_POS as usize;
     if i < input.len() {
         output[i] = (input[i] + 0.125) * 2.0;
@@ -247,21 +294,21 @@ fn probe_kernel(input: &Array<f64>, output: &mut Array<f64>) {
 }
 
 #[cfg(any(test, feature = "placement-bench"))]
-pub(crate) fn probe(values: &[f64], inject_panic: bool) -> Result<serde_json::Value, Error> {
+pub(crate) fn probe(values: &[f32], inject_panic: bool) -> Result<serde_json::Value, Error> {
     if values.is_empty() || values.iter().any(|v| !v.is_finite()) {
         return Err(Error::new(ErrorKind::InvalidInput, "invalid probe input"));
     }
     with_session(
         Requirements {
-            f64: true,
-            u64: true,
+            f32: true,
+            u64: false,
         },
         |s| {
             if inject_panic {
                 panic!("injected GPU runtime panic");
             }
-            let input = s.client.create_from_slice(f64::as_bytes(values));
-            let output = s.workspace(ScratchKey::new("runtime-probe", 0), values.len() * 8);
+            let input = s.client.create_from_slice(f32::as_bytes(values));
+            let output = s.workspace(ScratchKey::new("runtime-probe", 0), values.len() * 4);
             unsafe {
                 probe_kernel::launch_unchecked::<WgpuRuntime>(
                     &s.client,
@@ -275,12 +322,12 @@ pub(crate) fn probe(values: &[f64], inject_panic: bool) -> Result<serde_json::Va
                 .client
                 .read_one(output)
                 .map_err(|e| format!("GPU readback: {e:?}"))?;
-            let result = f64::from_bytes(&bytes)[..values.len()].to_vec();
+            let result = f32::from_bytes(&bytes)[..values.len()].to_vec();
             if result.iter().any(|v| !v.is_finite()) {
                 return Err("nonfinite GPU result".into());
             }
             Ok(
-                serde_json::json!({"device":s.name,"precision":"f64","values":result,
+                serde_json::json!({"device":s.name,"precision":"f32","values":result,
             "initializations":INITIALIZATIONS.load(std::sync::atomic::Ordering::Relaxed)}),
             )
         },
@@ -299,6 +346,8 @@ pub(crate) fn statistics() -> serde_json::Value {
     serde_json::json!({"initializations":INITIALIZATIONS.load(std::sync::atomic::Ordering::Relaxed),
         "mutexWaitMs":WAIT_NANOS.load(std::sync::atomic::Ordering::Relaxed) as f64/1e6,"workspaceBytes":bytes,"device":match &*state {State::Ready(s)=>Some(&s.name),_=>None},
         "capabilities":match &*state {State::Ready(s)=>Some(s.capabilities),_=>None},
+        "precision":"f32-rte-ftz-v1",
+        "floatControls":match &*state {State::Ready(s)=>Some(&s.float_controls),_=>None},
         "state":match &*state {State::New=>"new",State::Ready(_)=>"ready",State::Busy(_)=>"busy",State::Disabled(_)=>"disabled"},
         "unavailableReason":match &*state {State::Busy(_)=>Some(ErrorKind::Busy),State::Disabled(e)=>Some(e.kind),_=>None}})
 }
@@ -328,8 +377,8 @@ mod tests {
     #[ignore = "requires a compatible unleased GPU; run alone with --ignored --exact"]
     fn shared_workspace_alternates_layouts_and_releases_on_failure() {
         let requirements = Requirements {
-            f64: true,
-            u64: true,
+            f32: true,
+            u64: false,
         };
         assert!(!ready());
         assert_eq!(statistics()["initializations"], 0);
@@ -340,13 +389,13 @@ mod tests {
             // Two independent consumer layouts deliberately use local slot 0.
             // Both outputs stay live in one operation, proving non-aliasing;
             // subsequent operations alternate growth and reuse of both layouts.
-            let floats: Vec<_> = (0..count).map(|i| 16777216.0 + i as f64 * 0.25).collect();
+            let floats: Vec<_> = (0..count).map(|i| 128.0 + i as f32 * 0.25).collect();
             let tags: Vec<_> = (0..count.div_ceil(2)).map(|i| i as u32).collect();
             with_session(requirements, |s| {
-                let output = s.workspace(ScratchKey::new("test-floats", 0), floats.len() * 8);
+                let output = s.workspace(ScratchKey::new("test-floats", 0), floats.len() * 4);
                 let integers = s.workspace(ScratchKey::new("test-tags", 0), tags.len() * 4);
                 if count != 0 {
-                    let input = s.client.create_from_slice(f64::as_bytes(&floats));
+                    let input = s.client.create_from_slice(f32::as_bytes(&floats));
                     let input_tags = s.client.create_from_slice(u32::as_bytes(&tags));
                     unsafe {
                         probe_kernel::launch_unchecked::<WgpuRuntime>(
@@ -368,7 +417,7 @@ mod tests {
                         cubecl::future::block_on(s.client.read_async(vec![output, integers]))
                             .map_err(|e| format!("workspace test readback: {e:?}"))?;
                     assert_eq!(
-                        &f64::from_bytes(&buffers[0])[..count],
+                        &f32::from_bytes(&buffers[0])[..count],
                         floats.iter().map(|v| (v + 0.125) * 2.0).collect::<Vec<_>>()
                     );
                     assert_eq!(
@@ -377,7 +426,7 @@ mod tests {
                     );
                 }
                 peak = peak.max(count.max(1));
-                let expected = (peak * 8).max(8).next_power_of_two()
+                let expected = (peak * 4).max(8).next_power_of_two()
                     + (peak.div_ceil(2) * 4).max(8).next_power_of_two();
                 assert_eq!(s.workspaces.bytes(), expected);
                 Ok(())
@@ -404,6 +453,6 @@ mod tests {
             ErrorKind::RuntimeFailure
         );
         assert_eq!(statistics()["initializations"], 1);
-        println!("Shared F64/U32 layouts: empty/small/growth/reuse exact; one initialization; input rejection preserves runtime; failure drops scratch and disables retries.");
+        println!("Shared F32/U32 layouts: empty/small/growth/reuse exact; one initialization; input rejection preserves runtime; failure drops scratch and disables retries.");
     }
 }

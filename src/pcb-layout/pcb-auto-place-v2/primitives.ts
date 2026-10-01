@@ -1,7 +1,10 @@
+import * as fp from '../f32.ts';
+import { coordinateAdd, coordinateDifference, coordinateRound } from '../coordinate-transport.ts';
 import type { Box, Layer, Placement, Point } from '#types/pcb/layout-model.ts';
 import {
     boxCenter,
     rotateBox,
+    rotatePointAround,
     roundPlacement,
     translateBox,
     unionBoxes,
@@ -71,18 +74,18 @@ export function translatePrimitive(primitive: PlacementPrimitive, dx: number, dy
         collisionBoxes: primitive.collisionBoxes?.map((box) => translateBox(box, dx, dy)),
         placements: primitive.placements.map((placement) => ({
             ...placement,
-            x: roundPlacement(placement.x + dx),
-            y: roundPlacement(placement.y + dy),
+            x: coordinateRound(coordinateAdd(placement.x, dx)),
+            y: coordinateRound(coordinateAdd(placement.y, dy)),
         })),
         connectionPoints: primitive.connectionPoints.map((point) => ({
             ...point,
-            x: roundPlacement(point.x + dx),
-            y: roundPlacement(point.y + dy),
+            x: coordinateRound(coordinateAdd(point.x, dx)),
+            y: coordinateRound(coordinateAdd(point.y, dy)),
         })),
         pathPorts: primitive.pathPorts?.map((port) => ({
             ...port,
-            x: roundPlacement(port.x + dx),
-            y: roundPlacement(port.y + dy),
+            x: coordinateRound(coordinateAdd(port.x, dx)),
+            y: coordinateRound(coordinateAdd(port.y, dy)),
         })),
         children: primitive.children.map((child) => translatePrimitive(child, dx, dy)),
         layoutAlternatives: primitive.layoutAlternatives?.map(p => translatePrimitive(p, dx, dy)),
@@ -102,8 +105,8 @@ function rotatePrimitiveAround(primitive: PlacementPrimitive, angle: number, ori
         bbox,
         allowedOrientations: rotateAllowedOrientations(primitive.allowedOrientations, normalizedAngle),
         collisionBoxes: primitive.collisionBoxes?.map((box) => rotateBox(box, origin, normalizedAngle)),
-        width: roundPlacement(bbox.right - bbox.left),
-        height: roundPlacement(bbox.bottom - bbox.top),
+        width: roundPlacement(coordinateDifference(bbox.right, bbox.left)),
+        height: roundPlacement(coordinateDifference(bbox.bottom, bbox.top)),
         placements: primitive.placements.map((placement) => {
             const point = rotatePoint(placement, origin, normalizedAngle);
             return {
@@ -141,8 +144,8 @@ export function unionPrimitive(id: string, kind: PlacementPrimitiveKind, label: 
         allowedOrientations,
         bbox,
         collisionBoxes: children.flatMap((child) => child.collisionBoxes?.length ? child.collisionBoxes : [child.bbox]),
-        width: roundPlacement(bbox.right - bbox.left),
-        height: roundPlacement(bbox.bottom - bbox.top),
+        width: roundPlacement(coordinateDifference(bbox.right, bbox.left)),
+        height: roundPlacement(coordinateDifference(bbox.bottom, bbox.top)),
         placements: children.flatMap((child) => child.placements),
         connectionPoints: children.flatMap((child) => child.connectionPoints),
         pathPorts,
@@ -178,24 +181,14 @@ function uniqueAngles(values: number[]) {
 }
 
 function rotatePoint(point: Point, origin: Point, angle: number): Point {
-    const radians = angle * Math.PI / 180;
-    const cos = Math.cos(radians);
-    const sin = Math.sin(radians);
-    const dx = point.x - origin.x;
-    const dy = point.y - origin.y;
-    return {
-        x: roundPlacement(origin.x + dx * cos - dy * sin),
-        y: roundPlacement(origin.y + dx * sin + dy * cos),
-    };
+    return rotatePointAround(point,origin,angle);
 }
 
 function rotateVector(point: Point, angle: number): Point {
-    const radians = angle * Math.PI / 180;
-    const cos = Math.cos(radians);
-    const sin = Math.sin(radians);
+    const rotated=fp.rotatePoint(point,angle);
     return {
-        x: roundPlacement(point.x * cos - point.y * sin),
-        y: roundPlacement(point.x * sin + point.y * cos),
+        x: roundPlacement(rotated.x),
+        y: roundPlacement(rotated.y),
     };
 }
 
@@ -220,7 +213,7 @@ function summarizePathFragments(ports: PlacementPathPort[]): PlacementPathFragme
         if (ordered.length < 2) return [];
         let internalCost = 0;
         for (let index = 1; index < ordered.length; index += 1) {
-            internalCost += Math.hypot(ordered[index].x - ordered[index - 1].x, ordered[index].y - ordered[index - 1].y);
+            internalCost = fp.add(internalCost, fp.hypot(coordinateDifference(ordered[index].x, ordered[index - 1].x), coordinateDifference(ordered[index].y, ordered[index - 1].y)));
         }
         return [{
             pathId,

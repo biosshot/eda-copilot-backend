@@ -13,7 +13,7 @@ const addonPath = resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH
     ?? resolve('native/pcb-board-packer', require('../native/pcb-board-packer/platform.cjs').nativeFilename()));
 const gpuEnabled = process.env.PCB_BOARD_GPU_TESTS === '1';
 
-function run(problem: NativeBoardPackProblemV7, backend: string | undefined, options: Record<string, string> = {}) {
+function run(problem: NativeBoardPackProblemV7, backend: string | undefined, options: Record<string, string> = {}, boundaryError?: RegExp) {
     const child = spawnSync(process.execPath, ['--input-type=commonjs', '-e',
         'const fs=require("node:fs");const addon=require(process.argv[1]);const inputs=JSON.parse(fs.readFileSync(0,"utf8"));'
         + 'console.log(JSON.stringify(inputs.map(p=>addon.solveBoardPacked(p))));', addonPath], {
@@ -21,6 +21,12 @@ function run(problem: NativeBoardPackProblemV7, backend: string | undefined, opt
         env: { ...process.env, PCB_BOARD_BACKEND: backend, PCB_BOARD_PACKER_THREADS: '1',
             PCB_BOARD_PACKER_PROFILE: '1', PCB_BLOCK_SOLVER_PROFILE: '1', ...options },
     });
+    if (boundaryError) {
+        assert.notEqual(child.status,0);
+        assert.match(child.stderr,boundaryError);
+        assert.doesNotMatch(child.stderr,/\[block-gpu-runtime\]/);
+        return {solution:null,log:child.stderr};
+    }
     assert.equal(child.status, 0, child.stderr || String(child.error));
     return { solution: JSON.parse(child.stdout)[0], log: child.stderr };
 }
@@ -48,11 +54,11 @@ test('disabled board GPU replays the complete original CPU call', () => {
 test('unsafe board coordinates are rejected by the domain before GPU initialization', () => {
     const p = minimalProblem();
     p.primitives[0].placements[0].x = 1e9;
-    const cpu = run(p, 'cpu');
-    const guarded = run(p, 'cubecl');
-    assert.deepEqual(guarded.solution, cpu.solution);
-    assert.doesNotMatch(guarded.log, /\[block-gpu-runtime\]/);
-    assert.match(guarded.log, /unsafe board GPU number|CPU-only build/);
+    // A billion-mm local extent, rather than a translated small board.
+    // Wider previously supported frames remain an open migration case.
+    for (const backend of ['cpu','cubecl']) {
+        run(p,backend,{},/coordinate exceeds the documented absolute\/local frame/);
+    }
 });
 
 test('board GPU evaluates all candidates and preserves the complete CPU result', { skip: !gpuEnabled }, () => {
@@ -232,7 +238,7 @@ test('board GPU has no-device recovery without changing the CPU result', { skip:
     const cpu = run(p, 'cpu');
     const gpu = run(p, 'cubecl', { VK_DRIVER_FILES: resolve('debugging/nonexistent-vulkan-driver.json') });
     assert.deepEqual(gpu.solution, cpu.solution);
-    assert.match(gpu.log, /no compatible F64 Vulkan GPU/);
+    assert.match(gpu.log, /no compatible F32 Vulkan GPU/);
     assert.doesNotMatch(gpu.log, /"backend":"cubecl"/);
 });
 

@@ -3,7 +3,7 @@ use super::gpu_kernels as k;
 use super::*;
 use ::cubecl::prelude::*;
 use ::cubecl::server::Handle;
-use ::cubecl::wgpu::WgpuRuntime;
+use crate::compute::f32_runtime::PcbRuntime as WgpuRuntime;
 // Local meanings and layout belong to this scorer, never to compute.
 #[derive(Clone, Copy)]
 enum ScoreScratch { Hull, HullCount, Pads, Segments, SegmentTags, Costs, Scores, Tags, Best, Mask, OutputIds, OutputScores }
@@ -15,10 +15,10 @@ impl ScoreScratch {
 #[repr(C)]
 #[derive(Clone, Copy, Default, serde::Serialize)]
 struct B {
-    l: f64,
-    r: f64,
-    t: f64,
-    b: f64,
+    l: f32,
+    r: f32,
+    t: f32,
+    b: f32,
 }
 impl From<Box2> for B {
     fn from(v: Box2) -> Self {
@@ -35,8 +35,8 @@ impl From<Box2> for B {
 struct Prim {
     bbox: B,
     body: B,
-    pad_dx: f64,
-    pad_dy: f64,
+    pad_dx: f32,
+    pad_dy: f32,
     cp: u32,
     nc: u32,
     pad: u32,
@@ -51,8 +51,8 @@ struct Prim {
 #[repr(C)]
 #[derive(Clone, Copy, Default, serde::Serialize)]
 struct Cp {
-    x: f64,
-    y: f64,
+    x: f32,
+    y: f32,
     net: i32,
     owner: i32,
     layer: i32,
@@ -89,13 +89,13 @@ struct Endpoint {
 struct Rel {
     from: Endpoint,
     to: Endpoint,
-    weight: f64,
-    min: f64,
-    max: f64,
-    ox: f64,
-    oy: f64,
-    dx: f64,
-    dy: f64,
+    weight: f32,
+    min: f32,
+    max: f32,
+    ox: f32,
+    oy: f32,
+    dx: f32,
+    dy: f32,
     hard: u32,
     offset: u32,
     side: u32,
@@ -104,7 +104,7 @@ struct Rel {
 #[repr(C)]
 #[derive(Clone, Copy, Default, serde::Serialize)]
 struct Config {
-    clearance: f64,
+    clearance: f32,
     nprim: u32,
     moving: u32,
     ncandidate: u32,
@@ -277,10 +277,10 @@ pub(super) use frontier::scarcity;
 #[repr(C)]
 #[derive(Clone, Copy, Default, serde::Serialize)]
 struct Pad {
-    left: f64,
-    right: f64,
-    top: f64,
-    bottom: f64,
+    left: f32,
+    right: f32,
+    top: f32,
+    bottom: f32,
     net: i32,
     layer: i32,
     owner: i32,
@@ -291,15 +291,15 @@ struct Pad {
 pub(super) struct Pose {
     template_index: u32,
     ordinal: u32,
-    dx: f64,
-    dy: f64,
+    dx: f32,
+    dy: f32,
 }
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 struct Row {
     index: u32,
     hard: u32,
-    base: f64,
+    base: f32,
 }
 
 pub(super) struct Engine {
@@ -308,7 +308,7 @@ pub(super) struct Engine {
     pads: Vec<Pad>,
     names: Vec<Arc<str>>,
     ids: FxHashMap<Arc<str>, i32>,
-    sf: Vec<f64>,
+    sf: Vec<f32>,
     si: Vec<i32>,
     offsets: [u32; 6],
     handles: Option<(Handle, Handle)>,
@@ -606,7 +606,7 @@ fn prepare(
     (c, prims, nets, refs, relations, eprefs)
 }
 
-fn prim_f(p: Prim) -> [f64; 10] {
+fn prim_f(p: Prim) -> [f32; 10] {
     [
         p.bbox.l, p.bbox.r, p.bbox.t, p.bbox.b, p.body.l, p.body.r, p.body.t, p.body.b, p.pad_dx,
         p.pad_dy,
@@ -625,7 +625,7 @@ fn prim_i(p: Prim) -> [i32; 9] {
         p.power as i32,
     ]
 }
-fn finite(values: &[f64]) -> bool {
+fn finite(values: &[f32]) -> bool {
     values.iter().all(|v| v.is_finite() && v.abs() <= 1e12)
 }
 impl Engine {
@@ -739,7 +739,7 @@ impl Engine {
             x: round_placement(now.x - source.x),
             y: round_placement(now.y - source.y),
         };
-        let pf: Vec<f64> = poses
+        let pf: Vec<f32> = poses
             .iter()
             .flat_map(|p| {
                 [
@@ -760,6 +760,10 @@ impl Engine {
             .max(1)
             .next_power_of_two() as usize;
         let verify = std::env::var_os("PCB_BLOCK_GPU_VERIFY").is_some();
+        let numerical_entities = context.problem.primitives.iter().map(|p|
+            1 + p.connection_points.len() + p.path_ports.len() + p.collision_boxes.len()).sum::<usize>()
+            + context.problem.components.len() + context.problem.relations.len();
+        let pruning_operations = numerical_entities.saturating_pow(3).saturating_mul(128).min(u32::MAX as usize) as u32;
         let no_prune =
             force_no_prune || verify || std::env::var_os("PCB_BLOCK_GPU_NO_PRUNE").is_some();
         drop(preparing);
@@ -771,27 +775,27 @@ impl Engine {
             let upload = context.detail.span("gpu_upload");
             if self.handles.is_none() {
                 self.handles = Some((
-                    session.client.create_from_slice(f64::as_bytes(&self.sf)),
+                    session.client.create_from_slice(f32::as_bytes(&self.sf)),
                     session.client.create_from_slice(i32::as_bytes(&self.si)),
                 ));
             }
             let (sf, si) = self.handles.as_ref().unwrap();
-            let fh = session.client.create_from_slice(f64::as_bytes(&ff));
+            let fh = session.client.create_from_slice(f32::as_bytes(&ff));
             let ih = session.client.create_from_slice(u32::as_bytes(&fi));
-            let ph = session.client.create_from_slice(f64::as_bytes(&pf));
+            let ph = session.client.create_from_slice(f32::as_bytes(&pf));
             let th = session.client.create_from_slice(u32::as_bytes(&pi));
-            let hull = session.workspace(ScoreScratch::Hull.key(), 160 * 8);
+            let hull = session.workspace(ScoreScratch::Hull.key(), 160 * 4);
             let hc = session.workspace(ScoreScratch::HullCount.key(), 4);
-            let pads = session.workspace(ScoreScratch::Pads.key(), self.pads.len() * 4 * 8);
-            let segments = session.workspace(ScoreScratch::Segments.key(), c.nsegment as usize * 4 * 8);
+            let pads = session.workspace(ScoreScratch::Pads.key(), self.pads.len() * 4 * 4);
+            let segments = session.workspace(ScoreScratch::Segments.key(), c.nsegment as usize * 4 * 4);
             let st = session.workspace(ScoreScratch::SegmentTags.key(), c.nsegment as usize * 4 * 4);
             let costs = session.workspace(ScoreScratch::Costs.key(), c.nsegment as usize * 4);
-            let scores = session.workspace(ScoreScratch::Scores.key(), poses.len() * 8);
+            let scores = session.workspace(ScoreScratch::Scores.key(), poses.len() * 4);
             let tags = session.workspace(ScoreScratch::Tags.key(), poses.len() * 3 * 4);
             let best = session.workspace(ScoreScratch::Best.key(), 128 * 4);
             let mask = session.workspace(ScoreScratch::Mask.key(), poses.len() * 4);
             let oi = session.workspace(ScoreScratch::OutputIds.key(), 130 * 4);
-            let of = session.workspace(ScoreScratch::OutputScores.key(), 64 * 8);
+            let of = session.workspace(ScoreScratch::OutputScores.key(), 64 * 4);
             let client = &session.client;
             let input = || unsafe {
                 k::InputLaunch::new(
@@ -921,6 +925,7 @@ impl Engine {
                         a!(tags, poses.len() * 3),
                         a!(best, 128),
                         a!(mask, poses.len()),
+                        pruning_operations,
                     );
                     k::full::launch_unchecked::<WgpuRuntime>(
                         client,
@@ -974,7 +979,7 @@ impl Engine {
                 .map_err(|e| format!("GPU shortlist readback: {e:?}"))?;
             drop(read);
             let ids = u32::from_bytes(&buffers[0]);
-            let values = f64::from_bytes(&buffers[1]);
+            let values = f32::from_bytes(&buffers[1]);
             if ids[0] > 64 || ids[129] != 0 {
                 return Err("invalid GPU scores or shortlist count".into());
             }
@@ -1001,7 +1006,7 @@ impl Engine {
                     .read_one(tags)
                     .map_err(|e| format!("GPU verify counts: {e:?}"))?;
                 Some((
-                    f64::from_bytes(&f)[..poses.len()].to_vec(),
+                    f32::from_bytes(&f)[..poses.len()].to_vec(),
                     u32::from_bytes(&i)[..poses.len() * 3].to_vec(),
                 ))
             } else {
@@ -1039,7 +1044,7 @@ impl Engine {
                     );
                 }
                 let cpu = evaluate(&variant, context);
-                let tolerance = 1e-8 + cpu.score.abs() * 1e-12;
+                let tolerance = crate::f32_policy::diagnostic_tolerance(cpu.score, scores[i]);
                 assert_eq!(
                     cpu.hard_violations,
                     tags[i * 3] as usize,
@@ -1055,14 +1060,14 @@ impl Engine {
                                     ArrayArg::from_raw_parts(h, $v.len())
                                 }};
                             }
-                            let output = client.empty(current.len() * 16 * 8);
+                            let output = client.empty(current.len() * 16 * 4);
                             unsafe {
                                 let input = k::InputLaunch::new(
-                                    upload!(&self.sf, f64),
+                                    upload!(&self.sf, f32),
                                     upload!(&self.si, i32),
-                                    upload!(&ff, f64),
+                                    upload!(&ff, f32),
                                     upload!(&fi, u32),
-                                    upload!(&pf, f64),
+                                    upload!(&pf, f32),
                                     upload!(&pi, u32),
                                 );
                                 k::inspect_geometry::launch_unchecked::<WgpuRuntime>(
@@ -1077,7 +1082,7 @@ impl Engine {
                             let bytes = client
                                 .read_one(output)
                                 .map_err(|e| format!("diagnostic read: {e:?}"))?;
-                            Ok(f64::from_bytes(&bytes).to_vec())
+                            Ok(f32::from_bytes(&bytes).to_vec())
                         })
                         .unwrap();
                         let dump = serde_json::json!({"gpuGeometry":geometry,"candidate":i,"cpu":cpu.score,"gpu":scores[i],"phase":*context.trace_phase.borrow(),
@@ -1171,7 +1176,7 @@ pub(super) fn ranked(
     primitive: &WorkingPrimitive,
     placed: &[WorkingPrimitive],
     previous: &IncrementalEvaluation,
-    parent: f64,
+    parent: f32,
     limit: usize,
     context: &Context,
 ) -> Vec<RankedCandidate> {
@@ -1220,7 +1225,7 @@ pub(super) fn ranked(
             };
             a.hard_violations
                 .cmp(&b.hard_violations)
-                .then_with(|| compare_f64(lower(a, ae), lower(b, be)))
+                .then_with(|| compare_f32(lower(a, ae), lower(b, be)))
                 .then_with(|| a.ordinal.cmp(&b.ordinal))
         },
         |v| {
@@ -1237,7 +1242,7 @@ pub(super) fn checkpoint(context: &Context, stage: &str) {
         if std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some() {
             eprintln!(
                 "[block-gpu-stage] {}",
-                serde_json::json!({"stage":stage,"backend":"cubecl","precision":"f64","batches":engine.batches,"candidates":engine.candidates,"frontierBatches":engine.frontier_batches,"frontierCandidates":engine.frontier_candidates,"frontierFrames":engine.frontiers.len(),"runtime":gpu_runtime::statistics()})
+                serde_json::json!({"stage":stage,"backend":"cubecl","precision":"f32","batches":engine.batches,"candidates":engine.candidates,"frontierBatches":engine.frontier_batches,"frontierCandidates":engine.frontier_candidates,"frontierFrames":engine.frontiers.len(),"runtime":gpu_runtime::statistics()})
             );
         }
         if std::env::var("PCB_BLOCK_GPU_FAIL_AT").as_deref() == Ok(stage) {

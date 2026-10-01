@@ -33,8 +33,8 @@ struct SearchState {
     remaining: Vec<WorkingPrimitive>,
     incremental: IncrementalEvaluation,
     hard_violations: usize,
-    score: f64,
-    route_penalty: f64,
+    score: f32,
+    route_penalty: f32,
     ordinal: usize,
 }
 
@@ -43,8 +43,8 @@ struct RankedCandidate {
     primitive: WorkingPrimitive,
     incremental: IncrementalEvaluation,
     hard_violations: usize,
-    score: f64,
-    route_penalty: f64,
+    score: f32,
+    route_penalty: f32,
     ordinal: usize,
 }
 
@@ -52,10 +52,10 @@ struct RankedCandidate {
 struct PrimitivePoseKey {
     primitive_id: u32,
     rotation: i32,
-    left: u64,
-    top: u64,
-    right: u64,
-    bottom: u64,
+    left: u32,
+    top: u32,
+    right: u32,
+    bottom: u32,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -67,13 +67,13 @@ struct SearchStateKey {
 #[derive(Clone, Copy)]
 struct Evaluation {
     hard_violations: usize,
-    score: f64,
+    score: f32,
 }
 
 #[derive(Clone)]
 struct IncrementalEvaluation {
     evaluation: Evaluation,
-    primitive_overlap_depths: Vec<f64>,
+    primitive_overlap_depths: Vec<f32>,
     size: usize,
 }
 
@@ -83,7 +83,7 @@ mod trace;
 #[cfg(feature = "gpu")]
 use crate::compute::gpu as gpu_runtime;
 #[cfg(feature = "gpu")]
-const GPU_REQUIREMENTS: crate::compute::Requirements = crate::compute::Requirements { f64: true, u64: true };
+const GPU_REQUIREMENTS: crate::compute::Requirements = crate::compute::Requirements { f32: true, u64: false };
 #[cfg(feature = "gpu")]
 #[path = "block_solver/gpu_kernels.rs"]
 mod gpu_kernels;
@@ -119,7 +119,7 @@ struct Context {
     gpu_sources: Vec<WorkingPrimitive>,
     #[cfg(feature = "gpu")]
     gpu_engine: RefCell<Option<cubecl::Engine>>,
-    corridor_cache: RefCell<FxHashMap<(Arc<str>, usize, usize, usize), ([u64; 8], f64)>>,
+    corridor_cache: RefCell<FxHashMap<(Arc<str>, usize, usize, usize), ([u32; 8], f32)>>,
     escape_cache: RefCell<FxHashMap<(usize, usize), EscapeEntry>>,
     detail: DetailProfile,
     source_pads: Vec<Vec<crate::model::RouteObstacle>>,
@@ -142,11 +142,11 @@ struct Context {
 }
 
 struct EscapeEntry {
-    point: [u64; 2],
+    point: [u32; 2],
     source: Option<u32>,
     layer: Option<Arc<str>>,
     pose: PrimitivePoseKey,
-    contributions: Vec<[f64; 4]>,
+    contributions: Vec<[f32; 4]>,
 }
 
 struct NetScoringScratch {
@@ -161,10 +161,10 @@ struct NetAccumulator {
     point_count: usize,
     primitive_count: usize,
     last_primitive: u32,
-    min_x: f64,
-    max_x: f64,
-    min_y: f64,
-    max_y: f64,
+    min_x: f32,
+    max_x: f32,
+    min_y: f32,
+    max_y: f32,
 }
 
 impl Default for NetAccumulator {
@@ -174,10 +174,10 @@ impl Default for NetAccumulator {
             point_count: 0,
             primitive_count: 0,
             last_primitive: u32::MAX,
-            min_x: f64::INFINITY,
-            max_x: f64::NEG_INFINITY,
-            min_y: f64::INFINITY,
-            max_y: f64::NEG_INFINITY,
+            min_x: f32::INFINITY,
+            max_x: f32::NEG_INFINITY,
+            min_y: f32::INFINITY,
+            max_y: f32::NEG_INFINITY,
         }
     }
 }
@@ -236,7 +236,7 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
                     let failed_ms=started.elapsed().as_secs_f64()*1000.0;
                     let result=solve_block_inner(original,false);
                     if requested=="cubecl" || std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some() {
-                        eprintln!("[block-gpu-fallback] {}",serde_json::json!({"requested":requested,"actual":"cpu","precision":"f64","reason":reason,"gpuAttemptMs":failed_ms,"totalMs":started.elapsed().as_secs_f64()*1000.0}));
+                        eprintln!("[block-gpu-fallback] {}",serde_json::json!({"requested":requested,"actual":"cpu","precision":"f32","reason":reason,"gpuAttemptMs":failed_ms,"totalMs":started.elapsed().as_secs_f64()*1000.0}));
                     }
                     return result;
                 }
@@ -407,7 +407,7 @@ fn solve_block_inner(problem: BlockSolveProblem, _gpu_enabled:bool) -> Result<cr
     }
     trace::stage(&context, "pair_complete", &improved);
     let has_global_frame =
-        context.problem.bounds.is_some() || !context.problem.obstacles.is_empty();
+        context.problem.bounds.is_some() || !context.problem.obstacles.is_empty() || context.problem.world.is_some();
     let final_primitives =
         if improved.iter().any(|primitive| primitive.primitive.locked) || has_global_frame {
             improved
@@ -433,7 +433,7 @@ fn solve_block_inner(problem: BlockSolveProblem, _gpu_enabled:bool) -> Result<cr
         let counts:Option<(usize,usize)>=None;
         eprintln!("[block-backend] {}",serde_json::json!({
             "block":context.problem.primitives.iter().map(|p|p.id.as_ref()).collect::<Vec<_>>(),
-            "backend":if counts.is_some(){"cubecl"}else{"cpu"},"precision":"f64","pairsOnly":resumed,
+            "backend":if counts.is_some(){"cubecl"}else{"cpu"},"precision":"f32","pairsOnly":resumed,
             "beamMs":beam_ms,"singlesMs":singles_ms,"totalMs":started.elapsed().as_secs_f64()*1000.0,
             "gpuBatches":counts.map_or(0,|c|c.0),"gpuCandidates":counts.map_or(0,|c|c.1)}));
     }
@@ -450,7 +450,7 @@ fn solve_greedy(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Wor
         .into_iter()
         .filter(|primitive| !primitive.primitive.locked)
         .collect();
-    remaining.sort_by(|a, b| compare_f64(seed_rank(b, context), seed_rank(a, context)));
+    remaining.sort_by(|a, b| compare_f32(seed_rank(b, context), seed_rank(a, context)));
     if placed.is_empty() && !remaining.is_empty() {
         let first = frontier_indices(&remaining, &placed, context)[0];
         let seed = remaining.remove(first);
@@ -465,7 +465,7 @@ fn solve_greedy(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Wor
         let mut best_index = 0usize;
         let mut best: Option<WorkingPrimitive> = None;
         let mut best_hard = usize::MAX;
-        let mut best_score = f64::INFINITY;
+        let mut best_score = f32::INFINITY;
         let mut best_incremental = None;
         let mut best_route_penalty = route_penalty;
         for index in frontier_indices(&remaining, &placed, context) {
@@ -474,7 +474,7 @@ fn solve_greedy(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Wor
                 let hard = candidate.hard_violations;
                 let score = candidate.score;
                 if hard < best_hard
-                    || (hard == best_hard && compare_f64(score, best_score) == Ordering::Less)
+                    || (hard == best_hard && compare_f32(score, best_score) == Ordering::Less)
                 {
                     best_index = index;
                     best = Some(candidate.primitive);
@@ -509,7 +509,7 @@ fn solve_beam(primitives: Vec<WorkingPrimitive>, context: &Context) -> Vec<Worki
         .into_iter()
         .filter(|primitive| !primitive.primitive.locked)
         .collect();
-    remaining.sort_by(|a, b| compare_f64(seed_rank(b, context), seed_rank(a, context)));
+    remaining.sort_by(|a, b| compare_f32(seed_rank(b, context), seed_rank(a, context)));
     let mut ordinal = 0usize;
     let initial_incremental = incremental_evaluation(&locked, context);
     let initial_evaluation = initial_incremental.evaluation;
@@ -641,7 +641,7 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
             ranked.sort_by(|a, b| {
                 a.1.hard_violations
                     .cmp(&b.1.hard_violations)
-                    .then_with(|| compare_f64(a.1.score, b.1.score))
+                    .then_with(|| compare_f32(a.1.score, b.1.score))
                     .then_with(|| a.2.cmp(&b.2))
             });
             if context.trace && trace::is_target(&current[index]) {
@@ -693,15 +693,15 @@ fn local_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<W
 }
 
 /// Monotonically improving bound for membership in a score shortlist.
-struct ScoreWindow { limit: usize, values: Vec<(usize, f64)> }
+struct ScoreWindow { limit: usize, values: Vec<(usize, f32)> }
 impl ScoreWindow {
     fn new(limit: usize) -> Self { Self { limit, values: Vec::with_capacity(limit + 1) } }
-    fn ceiling(&self, hard: usize) -> f64 {
-        if self.values.len() < self.limit { return f64::INFINITY; }
+    fn ceiling(&self, hard: usize) -> f32 {
+        if self.values.len() < self.limit { return f32::INFINITY; }
         let &(h, score) = self.values.last().unwrap();
-        match hard.cmp(&h) { Ordering::Less => f64::INFINITY, Ordering::Greater => f64::NEG_INFINITY, Ordering::Equal => score }
+        match hard.cmp(&h) { Ordering::Less => f32::INFINITY, Ordering::Greater => f32::NEG_INFINITY, Ordering::Equal => score }
     }
-    fn push(&mut self, hard: usize, score: f64) {
+    fn push(&mut self, hard: usize, score: f32) {
         let index = self.values.partition_point(|&(h, s)| h < hard || (h == hard && s <= score));
         if index < self.limit { self.values.insert(index, (hard, score)); self.values.truncate(self.limit); }
     }
@@ -711,7 +711,7 @@ fn ranked_block_candidates(
     primitive: &WorkingPrimitive,
     placed: &[WorkingPrimitive],
     previous: &IncrementalEvaluation,
-    parent_route_penalty: f64,
+    parent_route_penalty: f32,
     limit: usize,
     context: &Context,
 ) -> Vec<RankedCandidate> {
@@ -736,7 +736,7 @@ fn ranked_block_candidates(
         let center = box_center(&appended.primitive.bbox);
         let bucket = (appended.rotation, center.x >= origin.x, center.y >= origin.y);
         let window = windows.entry(bucket).or_insert_with(|| ScoreWindow::new(4));
-        let ceiling = if context.trace { f64::INFINITY } else if diverse {
+        let ceiling = if context.trace { f32::INFINITY } else if diverse {
             global.ceiling(hard).max(window.ceiling(hard))
         } else { global.ceiling(hard) };
         let incremental = append_incremental_evaluation(placed, &variant, previous, hard, ceiling,
@@ -779,7 +779,7 @@ fn ranked_block_candidates(
         let lower_score = |candidate: &RankedCandidate, exact: bool| candidate.score
             + if !exact && candidate.hard_violations == baseline_hard { parent_route_penalty } else { 0.0 };
         a.hard_violations.cmp(&b.hard_violations)
-            .then_with(|| compare_f64(lower_score(a, a_exact), lower_score(b, b_exact)))
+            .then_with(|| compare_f32(lower_score(a, a_exact), lower_score(b, b_exact)))
             .then_with(|| a.ordinal.cmp(&b.ordinal))
     }, |candidate| {
         if candidate.hard_violations == baseline_hard {
@@ -796,7 +796,7 @@ fn block_micro_route_penalty(
     candidate: &WorkingPrimitive,
     placed: &[WorkingPrimitive],
     context: &Context,
-) -> f64 {
+) -> f32 {
     let _span = context.detail.span("block_micro_route_penalty");
     let config = MicroRouteConfig::block();
     use crate::model::BlockRoutingMetric;
@@ -843,7 +843,7 @@ fn prepared_pad_obstacles(item: &WorkingPrimitive, context: &Context) -> Arc<Vec
 fn transformed_pad_obstacles(primitives: &[&WorkingPrimitive], context: &Context) -> Vec<crate::model::RouteObstacle> {
     primitives.iter().flat_map(|p| prepared_pad_obstacles(p, context).as_ref().clone()).collect()
 }
-fn direct_pad_crossing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+fn direct_pad_crossing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     let _span = context.detail.span("direct_pad_crossing_penalty");
     let groups: Vec<_> = primitives.iter().map(|p| (p.source_index, prepared_pad_obstacles(p, context))).collect();
     let mut nets = context.pad_nets.borrow_mut();
@@ -878,7 +878,7 @@ fn micro_route_bounds(
     boxes.push(candidate.primitive.bbox);
     boxes.extend(context.problem.obstacles.iter().copied());
     let bounds = union_boxes(&boxes);
-    let margin = 5.0_f64.max(config.clearance * 4.0 + config.trace_width);
+    let margin = 5.0f32.max(config.clearance * 4.0 + config.trace_width);
     Box2 {
         left: bounds.left - margin,
         right: bounds.right + margin,
@@ -894,7 +894,7 @@ fn best_candidate(
 ) -> Option<WorkingPrimitive> {
     let mut best = None;
     let mut best_hard = usize::MAX;
-    let mut best_score = f64::INFINITY;
+    let mut best_score = f32::INFINITY;
     for candidate in candidates {
         let mut variant = placed.to_vec();
         variant.push(candidate.clone());
@@ -902,7 +902,7 @@ fn best_candidate(
         let hard = evaluation.hard_violations;
         let score = evaluation.score;
         if hard < best_hard
-            || (hard == best_hard && compare_f64(score, best_score) == Ordering::Less)
+            || (hard == best_hard && compare_f32(score, best_score) == Ordering::Less)
         {
             best = Some(candidate);
             best_hard = hard;
@@ -962,6 +962,9 @@ fn solution(
         })
         .collect();
     let evaluation = evaluate(primitives, context);
+    if !evaluation.score.is_finite() {
+        return Err("block F32 score overflow or invalid arithmetic".into());
+    }
     Ok(BoardPackSolution {
         version: context.problem.version,
         states,
@@ -1039,12 +1042,12 @@ fn block_candidates_for_orientation(
     placed: &[WorkingPrimitive],
     context: &Context,
 ) -> Vec<WorkingPrimitive> {
-    let mut anchors: Vec<(Box2, f64)> = placed
+    let mut anchors: Vec<(Box2, f32)> = placed
         .iter()
         .flat_map(|item| primitive_candidate_boxes(item, context).into_iter()
             .map(move |b| (b, candidate_clearance(primitive, item, context))))
         .collect();
-    let union_clearance = anchors.iter().map(|(_, c)| *c).fold(0.0, f64::max);
+    let union_clearance = anchors.iter().map(|(_, c)| *c).fold(0.0, f32::max);
     anchors.push((union_boxes(
         &placed
             .iter()
@@ -1115,14 +1118,14 @@ fn block_candidates_for_orientation(
 
 // Use the same pair matrix as the hard validator. Compounds conservatively use
 // their largest conflicting clearance; the legacy path remains replayable.
-fn candidate_clearance(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &Context) -> f64 {
+fn candidate_clearance(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &Context) -> f32 {
     if !context.problem.experiments.candidate_clearance
         || context.problem.hard_collision_mode.as_ref() != "components"
         || a.components.is_empty() || b.components.is_empty() {
         return context.problem.clearance;
     }
     let count = context.problem.components.len();
-    let mut clearance: f64 = 0.0;
+    let mut clearance: f32 = 0.0;
     for (i, _) in a.components.iter() {
         for (j, _) in b.components.iter() {
             if context.problem.component_conflict[i * count + j] != 0 {
@@ -1170,7 +1173,7 @@ fn net_anchored_candidates(
             let slides = if expanded { vec![0.0, -slide, slide, -2.0 * slide, 2.0 * slide] }
                 else { vec![0.0, -slide, slide] };
             for ring in 0..(if expanded { 3 } else { 1 }) {
-            let c = clearance + ring as f64 * slide;
+            let c = clearance + ring as f32 * slide;
             for &s in &slides {
                 for p in [
                     Point { x: b.left - c - primitive.primitive.width / 2.0, y: target.y - dy + s },
@@ -1188,8 +1191,8 @@ fn net_anchored_candidates(
 }
 
 struct LongNetFrame {
-    baseline: f64,
-    open: FxHashMap<Arc<str>, (u32, Point, f64)>,
+    baseline: f32,
+    open: FxHashMap<Arc<str>, (u32, Point, f32)>,
 }
 
 impl LongNetFrame {
@@ -1209,7 +1212,7 @@ impl LongNetFrame {
         Self { baseline, open }
     }
 
-    fn with_candidate(&self, candidate: &WorkingPrimitive, context: &Context) -> f64 {
+    fn with_candidate(&self, candidate: &WorkingPrimitive, context: &Context) -> f32 {
         let _span = context.detail.span("long_net_frame_append");
         let mut result = self.baseline;
         let size = candidate.primitive.width.max(candidate.primitive.height);
@@ -1227,7 +1230,7 @@ impl LongNetFrame {
     }
 }
 
-fn long_local_net_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+fn long_local_net_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     let _span = context.detail.span("long_local_net_penalty");
     let mut nets: FxHashMap<Arc<str>, Vec<(u32, Point)>> = FxHashMap::default();
     // Count endpoints in the complete problem, never reclassify a partial bus as a pair.
@@ -1288,13 +1291,13 @@ fn pair_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<Wo
                 [i, j].iter().map(|&k| {
                     let others: Vec<_> = v.iter().enumerate().filter(|(n,_)| *n != k).map(|(_,p)| p.clone()).collect();
                     block_micro_route_penalty(&v[k], &others, context)
-                }).sum::<f64>()
+                }).sum::<f32>()
             };
             let old = evaluate(&current, context);
             let mut best_score = old.score + route_pair(&current);
             let mut best_hard = old.hard_violations;
             let mut ranked: Vec<_> = variants.into_iter().map(|v| { let e = evaluate(&v, context); (v,e) }).collect();
-            ranked.sort_by(|a,b| a.1.hard_violations.cmp(&b.1.hard_violations).then_with(|| compare_f64(a.1.score,b.1.score)));
+            ranked.sort_by(|a,b| a.1.hard_violations.cmp(&b.1.hard_violations).then_with(|| compare_f32(a.1.score,b.1.score)));
             for (v,e) in ranked.into_iter().take(4) {
                 if e.hard_violations > best_hard || (e.hard_violations == best_hard && e.score >= best_score) { continue; }
                 let score = e.score + route_pair(&v);
@@ -1313,7 +1316,7 @@ fn pair_improve(mut current: Vec<WorkingPrimitive>, context: &Context) -> Vec<Wo
     current
 }
 
-fn adjacent_centers(width: f64, height: f64, anchor: &Box2, clearance: f64) -> [Point; 8] {
+fn adjacent_centers(width: f32, height: f32, anchor: &Box2, clearance: f32) -> [Point; 8] {
     let cx = (anchor.left + anchor.right) / 2.0;
     let cy = (anchor.top + anchor.bottom) / 2.0;
     [
@@ -1356,7 +1359,7 @@ fn box_anchored_candidates(
     primitive: &WorkingPrimitive,
     moving_box: &Box2,
     anchor: &Box2,
-    clearance: f64,
+    clearance: f32,
     context: &Context,
 ) -> Vec<WorkingPrimitive> {
     adjacent_centers(
@@ -1397,7 +1400,7 @@ fn orientation_variants(primitive: &WorkingPrimitive) -> Vec<WorkingPrimitive> {
         .collect()
 }
 
-fn translate_primitive(primitive: &WorkingPrimitive, dx: f64, dy: f64) -> WorkingPrimitive {
+fn translate_primitive(primitive: &WorkingPrimitive, dx: f32, dy: f32) -> WorkingPrimitive {
     let mut next = primitive.clone();
     next.primitive.bbox = translate_box(&next.primitive.bbox, dx, dy);
     next.primitive.collision_boxes = Arc::new(
@@ -1454,13 +1457,13 @@ fn rotate_primitive(primitive: &WorkingPrimitive, angle: i32) -> WorkingPrimitiv
     }
     let origin = box_center(&primitive.primitive.bbox);
     let mut next = primitive.clone();
-    next.rotation = normalize_rotation(next.rotation + normalized);
+    next.rotation = crate::geometry::add_rotation(next.rotation, normalized);
     if !next.primitive.allowed_orientations.is_empty() {
         let mut orientations: Vec<_> = next
             .primitive
             .allowed_orientations
             .iter()
-            .map(|orientation| normalize_rotation(*orientation - normalized))
+            .map(|orientation| crate::geometry::subtract_rotation(*orientation, normalized))
             .collect();
         orientations.sort();
         orientations.dedup();
@@ -1494,7 +1497,7 @@ fn rotate_primitive(primitive: &WorkingPrimitive, angle: i32) -> WorkingPrimitiv
                 );
                 placement.x = point.x;
                 placement.y = point.y;
-                placement.rotate = normalize_rotation(placement.rotate + normalized);
+                placement.rotate = crate::geometry::add_rotation(placement.rotate, normalized);
                 placement
             })
             .collect(),
@@ -1563,7 +1566,7 @@ fn rebuild_component_geometry(primitive: &mut WorkingPrimitive) {
                     .iter()
                     .find(|placement| placement.designator == component.designator);
                 if let (Some(source), Some(target)) = (source, target) {
-                    let delta_rotation = normalize_rotation(target.rotate - source.rotate);
+                    let delta_rotation = crate::geometry::subtract_rotation(target.rotate, source.rotate);
                     let source_width = component.body_box.right - component.body_box.left;
                     let source_height = component.body_box.bottom - component.body_box.top;
                     let (width, height) = if delta_rotation == 90 || delta_rotation == 270 {
@@ -1603,7 +1606,7 @@ fn rebuild_component_geometry(primitive: &mut WorkingPrimitive) {
     );
 }
 
-fn center_primitives(primitives: Vec<WorkingPrimitive>, grid: f64) -> Vec<WorkingPrimitive> {
+fn center_primitives(primitives: Vec<WorkingPrimitive>, grid: f32) -> Vec<WorkingPrimitive> {
     if primitives.is_empty() {
         return primitives;
     }
@@ -1621,14 +1624,14 @@ fn center_primitives(primitives: Vec<WorkingPrimitive>, grid: f64) -> Vec<Workin
         .collect()
 }
 
-fn center_primitive(primitive: WorkingPrimitive, grid: f64) -> WorkingPrimitive {
+fn center_primitive(primitive: WorkingPrimitive, grid: f32) -> WorkingPrimitive {
     move_primitive_center(primitive, Point { x: 0.0, y: 0.0 }, grid)
 }
 
 fn move_primitive_center(
     primitive: WorkingPrimitive,
     center: Point,
-    grid: f64,
+    grid: f32,
 ) -> WorkingPrimitive {
     let current = box_center(&primitive.primitive.bbox);
     let dx = snap(center.x - current.x, grid);
@@ -1649,7 +1652,7 @@ fn move_box_center(
     primitive: WorkingPrimitive,
     box_: &Box2,
     center: Point,
-    grid: f64,
+    grid: f32,
 ) -> WorkingPrimitive {
     let current = box_center(box_);
     let dx = snap(center.x - current.x, grid);
@@ -1775,7 +1778,7 @@ fn append_incremental_evaluation(
     primitives: &[WorkingPrimitive],
     previous: &IncrementalEvaluation,
     hard: usize,
-    ceiling: f64,
+    ceiling: f32,
     power_frame: Option<&PowerYieldFrame<'_>>,
     long_net_frame: Option<&LongNetFrame>,
     context: &Context,
@@ -1783,7 +1786,7 @@ fn append_incremental_evaluation(
     debug_assert_eq!(previous.size, placed.len());
     debug_assert_eq!(primitives.len(), placed.len() + 1);
     let candidate = primitives.last().expect("appended primitive");
-    if ceiling == f64::NEG_INFINITY { let _span = context.detail.span("candidates_pruned_hard"); return None; }
+    if ceiling == f32::NEG_INFINITY { let _span = context.detail.span("candidates_pruned_hard"); return None; }
     let primitive_overlap_depths = extend_primitive_overlap_matrix(
         &previous.primitive_overlap_depths,
         placed,
@@ -1792,26 +1795,27 @@ fn append_incremental_evaluation(
     );
     // Incremental sums can differ from the full traversal by a few floating
     // point ulps. Widen the pruning boundary so a near-tie is never lost.
-    let roundoff = if power_frame.is_some() || long_net_frame.is_some() { 1e-8 + ceiling.abs().min(1e12) * 1e-13 } else { 0.0 };
-    let safe_ceiling = ceiling + roundoff;
-    let evaluation = Evaluation {
-        hard_violations: hard,
-        score: score_block_bounded(
-            primitives,
-            context,
-            Some(&primitive_overlap_depths),
-            safe_ceiling,
-            power_frame,
-            long_net_frame,
-        ),
-    };
-    if evaluation.score > safe_ceiling {
+    let roundoff = if power_frame.is_some() || long_net_frame.is_some() {
+        let count = context.problem.primitives.iter().map(|p|
+            1 + p.connection_points.len() + p.path_ports.len() + p.collision_boxes.len()).sum::<usize>()
+            + context.problem.components.len() + context.problem.relations.len();
+        // Scorers have at most three nested entity loops; 128 bounds the
+        // arithmetic per combination. Terms are nonnegative (configured
+        // relation weights are clamped by relation_weight).
+        let operations = count.saturating_pow(3).saturating_mul(128);
+        crate::f32_policy::nonnegative_sum_error(operations, ceiling.abs())
+    } else { 0.0 };
+    let Some(score) = score_block_bounded(
+        primitives, context, Some(&primitive_overlap_depths), ceiling, roundoff,
+        power_frame, long_net_frame,
+    ) else {
         if context.validate_incremental_scoring {
             let full = score_block_with_overlap_matrix(primitives, context, Some(&primitive_overlap_depths));
-            assert!(full + roundoff >= evaluation.score && full > ceiling, "invalid score lower bound");
+            assert!(full > ceiling, "invalid score lower bound");
         }
         let _span = context.detail.span("candidates_pruned_score"); return None;
-    }
+    };
+    let evaluation = Evaluation { hard_violations: hard, score };
     validate_incremental_evaluation(primitives, evaluation, context);
     Some(IncrementalEvaluation {
         evaluation,
@@ -1820,7 +1824,7 @@ fn append_incremental_evaluation(
     })
 }
 
-fn primitive_overlap_matrix(primitives: &[WorkingPrimitive], context: &Context) -> Vec<f64> {
+fn primitive_overlap_matrix(primitives: &[WorkingPrimitive], context: &Context) -> Vec<f32> {
     let size = primitives.len();
     let mut depths = vec![0.0; size * size];
     for i in 0..size {
@@ -1837,11 +1841,11 @@ fn primitive_overlap_matrix(primitives: &[WorkingPrimitive], context: &Context) 
 }
 
 fn extend_primitive_overlap_matrix(
-    previous: &[f64],
+    previous: &[f32],
     placed: &[WorkingPrimitive],
     candidate: &WorkingPrimitive,
     context: &Context,
-) -> Vec<f64> {
+) -> Vec<f32> {
     let old_size = placed.len();
     let size = old_size + 1;
     debug_assert_eq!(previous.len(), old_size * old_size);
@@ -1874,7 +1878,7 @@ fn validate_incremental_evaluation(
         actual.hard_violations, expected.hard_violations,
         "incremental hard violation count mismatch"
     );
-    let tolerance = 1e-8 + expected.score.abs() * 1e-13;
+    let tolerance = crate::f32_policy::diagnostic_tolerance(expected.score, actual.score);
     assert!((actual.score - expected.score).abs() <= tolerance,
         "incremental block score mismatch: {} vs {}", actual.score, expected.score);
 }
@@ -1998,9 +2002,9 @@ fn primitive_can_conflict(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &
     })
 }
 
-fn component_overlap_depth(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &Context) -> f64 {
+fn component_overlap_depth(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &Context) -> f32 {
     let count = context.problem.components.len();
-    let mut max_overlap: f64 = 0.0;
+    let mut max_overlap: f32 = 0.0;
     for (a_index, a_component) in a.components.iter() {
         for (b_index, b_component) in b.components.iter() {
             if context.problem.component_conflict[a_index * count + b_index] == 0 {
@@ -2033,8 +2037,8 @@ fn component_overlap_depth(a: &WorkingPrimitive, b: &WorkingPrimitive, context: 
     max_overlap
 }
 
-fn primitive_overlap_depth(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &Context) -> f64 {
-    let mut max_overlap: f64 = 0.0;
+fn primitive_overlap_depth(a: &WorkingPrimitive, b: &WorkingPrimitive, context: &Context) -> f32 {
+    let mut max_overlap: f32 = 0.0;
     for a_box in primitive_collision_boxes(a, context) {
         for b_box in primitive_collision_boxes(b, context) {
             max_overlap = max_overlap.max(overlap_depth(&a_box, &b_box, context.problem.clearance));
@@ -2067,23 +2071,24 @@ fn primitive_outside_bounds(primitive: &WorkingPrimitive, bounds: &Box2) -> bool
         || primitive.primitive.bbox.bottom > bounds.bottom
 }
 
-fn score_block(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+fn score_block(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     score_block_with_overlap_matrix(primitives, context, None)
 }
 
 fn score_block_with_overlap_matrix(
     primitives: &[WorkingPrimitive],
     context: &Context,
-    primitive_overlap_depths: Option<&[f64]>,
-) -> f64 {
-    score_block_bounded(primitives, context, primitive_overlap_depths, f64::INFINITY, None, None)
+    primitive_overlap_depths: Option<&[f32]>,
+) -> f32 {
+    score_block_bounded(primitives, context, primitive_overlap_depths, f32::INFINITY, 0.0, None, None)
+        .expect("an unbounded score cannot be pruned")
 }
 
-fn score_block_bounded(primitives: &[WorkingPrimitive], context: &Context, primitive_overlap_depths: Option<&[f64]>, ceiling: f64,
-    power_frame: Option<&PowerYieldFrame<'_>>, long_net_frame: Option<&LongNetFrame>) -> f64 {
+fn score_block_bounded(primitives: &[WorkingPrimitive], context: &Context, primitive_overlap_depths: Option<&[f32]>, ceiling: f32,
+    cached_roundoff: f32, power_frame: Option<&PowerYieldFrame<'_>>, long_net_frame: Option<&LongNetFrame>) -> Option<f32> {
     let _span = context.detail.span("score_block_with_overlap_matrix");
     if primitives.is_empty() {
-        return 0.0;
+        return Some(0.0);
     }
     let bbox = union_boxes(
         &primitives
@@ -2128,16 +2133,21 @@ fn score_block_bounded(primitives: &[WorkingPrimitive], context: &Context, primi
     }
     score += overlap_penalty(primitives, context, primitive_overlap_depths);
     score += bounds_penalty(primitives, context.problem.bounds.as_ref());
-    if score > ceiling { return score; }
+    // This exact prefix is identical in cached and uncached evaluation. Every
+    // subsequent contribution is nonnegative, so monotone F32 additions cannot
+    // bring the full score below this prefix. Cached-sum uncertainty does not
+    // apply yet, even when its later bound is infinite.
+    if score > ceiling { return None; }
+    let safe_ceiling = ceiling + cached_roundoff;
     score += dense_ic_access_penalty(primitives, context) * if high { 0.45 } else { 1.0 };
     score += power_frame.map_or_else(|| power_yield_penalty(primitives, context), |frame| {
         frame.with_candidate(primitives.last().expect("appended candidate"), context)
     }) * if high { 0.3 } else { 1.0 };
     score += scoped_relation_penalty(primitives, context) * relation_weight_;
-    if score > ceiling { return score; }
+    if score > safe_ceiling { return None; }
     score += external_port_exposure_penalty(primitives, context) * if high { 0.35 } else { 1.0 };
     score += port_facing_penalty(primitives, context) * if high { 0.55 } else { 1.0 };
-    if score > ceiling { return score; }
+    if score > safe_ceiling { return None; }
     let component_count: usize = primitives
         .iter()
         .map(|primitive| primitive.primitive.placements.len())
@@ -2159,21 +2169,22 @@ fn score_block_bounded(primitives: &[WorkingPrimitive], context: &Context, primi
         score += long_net_frame.map_or_else(|| long_local_net_penalty(primitives, context),
             |frame| frame.with_candidate(primitives.last().expect("appended candidate"), context));
     }
-    if score > ceiling { return score; }
+    if score > safe_ceiling { return None; }
     if context.problem.experiments.pad_crossings {
         score += direct_pad_crossing_penalty(primitives, context);
     }
     let path_primitives: Vec<_> = primitives.iter().map(|item| &item.primitive).collect();
     score += { let _span = context.detail.span("signal_path_topology"); signal_path::topology_penalty(&path_primitives, &context.problem.relations) }
         * if high { 2.5 } else { 4.0 };
-    score
+    if score > safe_ceiling { return None; }
+    Some(score)
 }
 
 fn overlap_penalty(
     primitives: &[WorkingPrimitive],
     context: &Context,
-    primitive_overlap_depths: Option<&[f64]>,
-) -> f64 {
+    primitive_overlap_depths: Option<&[f32]>,
+) -> f32 {
     let _span = context.detail.span("overlap_penalty");
     let envelope = context.problem.collision_mode.as_ref() == "envelope"
         || context.problem.collision_mode.as_ref() == "hybrid";
@@ -2210,7 +2221,7 @@ fn overlap_penalty(
     penalty
 }
 
-fn bounds_penalty(primitives: &[WorkingPrimitive], bounds: Option<&Box2>) -> f64 {
+fn bounds_penalty(primitives: &[WorkingPrimitive], bounds: Option<&Box2>) -> f32 {
     let Some(bounds) = bounds else {
         return 0.0;
     };
@@ -2231,7 +2242,7 @@ fn bounds_penalty(primitives: &[WorkingPrimitive], bounds: Option<&Box2>) -> f64
         .sum()
 }
 
-fn aspect_ratio_penalty(width: f64, height: f64) -> f64 {
+fn aspect_ratio_penalty(width: f32, height: f32) -> f32 {
     if width <= 0.0 || height <= 0.0 {
         return 0.0;
     }
@@ -2244,8 +2255,8 @@ fn aspect_ratio_penalty(width: f64, height: f64) -> f64 {
     }
 }
 
-fn target_size_penalty(width: f64, height: f64, context: &Context) -> f64 {
-    let excess = |value: f64| {
+fn target_size_penalty(width: f32, height: f32, context: &Context) -> f32 {
+    let excess = |value: f32| {
         let value = value.max(0.0);
         value * value * 20_000.0 + value * 2_000.0
     };
@@ -2261,7 +2272,7 @@ fn target_size_penalty(width: f64, height: f64, context: &Context) -> f64 {
             .unwrap_or(0.0)
 }
 
-fn convex_hull_metrics(boxes: Vec<Box2>) -> (f64, f64) {
+fn convex_hull_metrics(boxes: Vec<Box2>) -> (f32, f32) {
     let mut points: Vec<Point> = boxes
         .iter()
         .flat_map(|box_| {
@@ -2289,7 +2300,7 @@ fn convex_hull_metrics(boxes: Vec<Box2>) -> (f64, f64) {
             y: round_placement(point.y),
         })
         .collect();
-    points.sort_by(|a, b| compare_f64(a.x, b.x).then_with(|| compare_f64(a.y, b.y)));
+    points.sort_by(|a, b| compare_f32(a.x, b.x).then_with(|| compare_f32(a.y, b.y)));
     points.dedup_by(|a, b| a.x == b.x && a.y == b.y);
     if points.len() < 3 {
         let bbox = union_boxes(&boxes);
@@ -2325,7 +2336,7 @@ fn convex_hull_metrics(boxes: Vec<Box2>) -> (f64, f64) {
     for index in 0..lower.len() {
         let next = lower[(index + 1) % lower.len()];
         area += lower[index].x * next.y - next.x * lower[index].y;
-        perimeter += (lower[index].x - next.x).hypot(lower[index].y - next.y);
+        perimeter += crate::numerics::hypot(lower[index].x - next.x,lower[index].y - next.y);
     }
     (area.abs() / 2.0, perimeter)
 }
@@ -2519,7 +2530,7 @@ fn endpoint_anchored_candidates(
         .collect()
 }
 
-fn scoped_relation_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+fn scoped_relation_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     let _span = context.detail.span("scoped_relation_penalty");
     let mut penalty = 0.0;
     for compiled in &context.relations {
@@ -2547,7 +2558,7 @@ fn scoped_relation_penalty(primitives: &[WorkingPrimitive], context: &Context) -
     penalty
 }
 
-fn external_port_exposure_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+fn external_port_exposure_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     let _span = context.detail.span("external_port_exposure_penalty");
     let bbox = union_boxes(
         &primitives
@@ -2594,12 +2605,12 @@ fn external_port_exposure_penalty(primitives: &[WorkingPrimitive], context: &Con
     penalty
 }
 
-fn escape_blockage_cached(source: EndpointPoint, primitives: &[WorkingPrimitive], relation: usize, context: &Context) -> f64 {
+fn escape_blockage_cached(source: EndpointPoint, primitives: &[WorkingPrimitive], relation: usize, context: &Context) -> f32 {
     let layer = primitives.iter().find(|p| Some(p.id) == source.primitive_id)
         .and_then(|p| p.primitive.placements.first()).map(|p| p.layer.clone());
     let point = [source.point.x.to_bits(), source.point.y.to_bits()];
     let mut cache = context.escape_cache.borrow_mut();
-    let mut blocked = [0.0f64; 4];
+    let mut blocked = [0.0f32; 4];
     for p in primitives {
         if Some(p.id) == source.primitive_id { continue; }
         let key = (relation, p.source_index);
@@ -2619,14 +2630,14 @@ fn escape_blockage_cached(source: EndpointPoint, primitives: &[WorkingPrimitive]
             for i in 0..4 { blocked[i] += contribution[i]; }
         }
     }
-    let result = blocked.into_iter().fold(f64::INFINITY, f64::min);
+    let result = blocked.into_iter().fold(f32::INFINITY, f32::min);
     if context.validate_incremental_scoring {
         assert!((result - escape_blockage(source, primitives, context.problem.clearance)).abs() < 1e-8);
     }
     result
 }
 
-fn escape_box_contribution(point: Point, b: &Box2, clearance: f64) -> [f64; 4] {
+fn escape_box_contribution(point: Point, b: &Box2, clearance: f32) -> [f32; 4] {
     let mut blocked = [0.0; 4];
     if point.y >= b.top - clearance && point.y <= b.bottom + clearance {
         blocked[0] = (b.right + clearance - point.x.max(b.left - clearance)).max(0.0);
@@ -2642,8 +2653,8 @@ fn escape_box_contribution(point: Point, b: &Box2, clearance: f64) -> [f64; 4] {
 // Four straight escape corridors: empty space has zero cost. Growing an
 // unrelated side of the block no longer buries every external pin. Internal
 // geometry of the rigid source island is assessed by its island solver.
-fn escape_blockage(source: EndpointPoint, primitives: &[WorkingPrimitive], clearance: f64) -> f64 {
-    let mut blocked = [0.0f64; 4];
+fn escape_blockage(source: EndpointPoint, primitives: &[WorkingPrimitive], clearance: f32) -> f32 {
+    let mut blocked = [0.0f32; 4];
     let layer = primitives.iter().find(|p| Some(p.id) == source.primitive_id)
         .and_then(|p| p.primitive.placements.first()).map(|p| &p.layer);
     for p in primitives {
@@ -2663,10 +2674,10 @@ fn escape_blockage(source: EndpointPoint, primitives: &[WorkingPrimitive], clear
             }
         }
     }
-    blocked.into_iter().fold(f64::INFINITY, f64::min)
+    blocked.into_iter().fold(f32::INFINITY, f32::min)
 }
 
-fn port_facing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+fn port_facing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     let _span = context.detail.span("port_facing_penalty");
     let mut penalty = 0.0;
     for compiled in &context.relations {
@@ -2706,7 +2717,7 @@ fn endpoint_facing_penalty(
     primitives: &[WorkingPrimitive],
     source: EndpointPoint,
     target: Point,
-) -> f64 {
+) -> f32 {
     let Some(id) = source.primitive_id else {
         return 0.0;
     };
@@ -2771,8 +2782,8 @@ fn endpoint_point(
                     y += point.y;
                 }
                 Point {
-                    x: x / point_indices.len() as f64,
-                    y: y / point_indices.len() as f64,
+                    x: x / point_indices.len() as f32,
+                    y: y / point_indices.len() as f32,
                 }
             };
             Some(EndpointPoint {
@@ -2891,7 +2902,7 @@ fn relation_target_point(mut point: EndpointPoint, relation: &Relation) -> Endpo
     point
 }
 
-fn relation_weight(relation: &Relation) -> f64 {
+fn relation_weight(relation: &Relation) -> f32 {
     let priority = match relation.priority.as_deref() {
         Some("critical") => 30.0,
         Some("high") => 16.0,
@@ -2921,7 +2932,7 @@ fn relation_weight(relation: &Relation) -> f64 {
     priority * kind * effect * configured
 }
 
-fn relation_distance_limit_penalty(relation: &Relation, value: f64, weight: f64) -> f64 {
+fn relation_distance_limit_penalty(relation: &Relation, value: f32, weight: f32) -> f32 {
     let multiplier = if relation.hard { 5.0 } else { 1.0 };
     let mut penalty = 0.0;
     if let Some(maximum) = relation.max_distance {
@@ -2935,7 +2946,7 @@ fn relation_distance_limit_penalty(relation: &Relation, value: f64, weight: f64)
     penalty.min(250_000.0)
 }
 
-fn relation_side_penalty(relation: &Relation, from: Point, to: Point, weight: f64) -> f64 {
+fn relation_side_penalty(relation: &Relation, from: Point, to: Point, weight: f32) -> f32 {
     if !relation.satellite_anchor {
         return 0.0;
     }
@@ -2957,8 +2968,8 @@ fn same_net_spread_penalties(
     primitives: &[WorkingPrimitive],
     context: &Context,
     ground_max_points: Option<usize>,
-    ground_max_spread: Option<f64>,
-) -> (f64, f64) {
+    ground_max_spread: Option<f32>,
+) -> (f32, f32) {
     let _span = context.detail.span("same_net_spread_penalties");
     let mut scratch = context.net_scoring_scratch.borrow_mut();
     let NetScoringScratch {
@@ -3010,8 +3021,8 @@ fn spread_penalty(
     accumulators: &[NetAccumulator],
     order: &[usize],
     max_points: Option<usize>,
-    max_spread: Option<f64>,
-) -> f64 {
+    max_spread: Option<f32>,
+) -> f32 {
     let mut penalty = 0.0;
     for &net_index in order {
         let accumulator = accumulators[net_index];
@@ -3029,7 +3040,7 @@ fn spread_penalty(
     penalty
 }
 
-fn dense_ic_access_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+fn dense_ic_access_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     let _span = context.detail.span("dense_ic_access_penalty");
     if context.problem.search_width > 1 && !context.problem.experiments.keep_dense_access {
         return 0.0;
@@ -3053,7 +3064,7 @@ fn dense_ic_access_penalty(primitives: &[WorkingPrimitive], context: &Context) -
         if source.role.as_deref() == Some("connector") || source.pin_count < 8 {
             continue;
         }
-        let halo = 1.5f64.min(0.25f64.max((source.pin_count as f64 - 8.0) * 0.025));
+        let halo = 1.5f32.min(0.25f32.max((source.pin_count as f32 - 8.0) * 0.025));
         let halo_box = Box2 {
             left: source.body_box.left - halo,
             right: source.body_box.right + halo,
@@ -3095,7 +3106,7 @@ fn dense_ic_access_penalty(primitives: &[WorkingPrimitive], context: &Context) -
 }
 
 struct PowerYieldFrame<'a> {
-    baseline: f64,
+    baseline: f32,
     by_net: FxHashMap<Arc<str>, Vec<(u32, Point)>>,
     power: Vec<&'a WorkingPrimitive>,
     connection_count: usize,
@@ -3122,7 +3133,7 @@ impl<'a> PowerYieldFrame<'a> {
         Some(Self { baseline, by_net, power, connection_count })
     }
 
-    fn with_candidate(&self, candidate: &WorkingPrimitive, context: &Context) -> f64 {
+    fn with_candidate(&self, candidate: &WorkingPrimitive, context: &Context) -> f32 {
         let _span = context.detail.span("power_frame_append");
         if self.connection_count + candidate.primitive.connection_points.len() > 240 { return 0.0; }
         let mut score = self.baseline;
@@ -3165,16 +3176,16 @@ impl<'a> PowerYieldFrame<'a> {
     }
 }
 
-fn power_affinity(primitive: &WorkingPrimitive) -> f64 {
+fn power_affinity(primitive: &WorkingPrimitive) -> f32 {
     if primitive.components.is_empty() { return 0.0; }
-    primitive.components.iter().filter(|(_, c)| c.power_component).count() as f64
-        / primitive.components.len() as f64
+    primitive.components.iter().filter(|(_, c)| c.power_component).count() as f32
+        / primitive.components.len() as f32
 }
 
-fn power_yield_segment(net: &str, a: Point, b: Point, power: &WorkingPrimitive, context: &Context) -> f64 {
+fn power_yield_segment(net: &str, a: Point, b: Point, power: &WorkingPrimitive, context: &Context) -> f32 {
     let direct = distance(a, b);
     if !(0.5..=45.0).contains(&direct) { return 0.0; }
-    let corridor = 1.2f64.max(context.problem.clearance * 1.75);
+    let corridor = 1.2f32.max(context.problem.clearance * 1.75);
     let box_ = &power.primitive.bbox;
     let outside = a.x.max(b.x) < box_.left - corridor || a.x.min(b.x) > box_.right + corridor
         || a.y.max(b.y) < box_.top - corridor || a.y.min(b.y) > box_.bottom + corridor;
@@ -3183,7 +3194,7 @@ fn power_yield_segment(net: &str, a: Point, b: Point, power: &WorkingPrimitive, 
     (depth * depth * 220.0 + depth * 80.0) * power_affinity(power) * signal_net_weight(net)
 }
 
-fn power_yield_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f64 {
+fn power_yield_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f32 {
     let _span = context.detail.span("power_yield_penalty");
     if primitives.len() < 3 || primitives.len() > 36 {
         return 0.0;
@@ -3203,8 +3214,8 @@ fn power_yield_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f6
                 .components
                 .iter()
                 .filter(|(_, component)| component.power_component)
-                .count() as f64
-                / primitive.components.len() as f64
+                .count() as f32
+                / primitive.components.len() as f32
         }
     };
     let power: Vec<_> = primitives
@@ -3235,7 +3246,7 @@ fn power_yield_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f6
             ));
         }
     }
-    let corridor = 1.2f64.max(context.problem.clearance * 1.75);
+    let corridor = 1.2f32.max(context.problem.clearance * 1.75);
     let mut cache = context.corridor_cache.borrow_mut();
     let mut penalty = 0.0;
     for (net, points) in by_net {
@@ -3317,7 +3328,7 @@ fn board_fallback_candidates(
             y += step;
         }
         centers.sort_by(|a, b| {
-            compare_f64(
+            compare_f32(
                 preferred_distance_squared(*a, &preferred),
                 preferred_distance_squared(*b, &preferred),
             )
@@ -3366,7 +3377,7 @@ fn frontier_indices(remaining: &[WorkingPrimitive], placed: &[WorkingPrimitive],
         Some(cubecl::scarcity(remaining,placed,context))
     } else {None};
     #[cfg(not(feature="gpu"))]
-    let gpu_scarcity:Option<Vec<f64>>=None;
+    let gpu_scarcity:Option<Vec<f32>>=None;
     let score = |p: &WorkingPrimitive| {
         let own = nets(p);
         let mut value = 0.0;
@@ -3375,7 +3386,7 @@ fn frontier_indices(remaining: &[WorkingPrimitive], placed: &[WorkingPrimitive],
                 let affinity = if context.problem.experiments.order_core_affinity {
                     if core_size(other) > 0 { 4.0 } else { 0.25 }
                 } else { 1.0 };
-                value += affinity * 10.0 / (fanout[net].saturating_sub(1).max(1) as f64);
+                value += affinity * 10.0 / (fanout[net].saturating_sub(1).max(1) as f32);
             }
             for r in &context.problem.relations {
                 if r.kind.as_ref() == "critical_pair" &&
@@ -3393,7 +3404,7 @@ fn frontier_indices(remaining: &[WorkingPrimitive], placed: &[WorkingPrimitive],
         value
     };
     let mut ranked: Vec<_> = remaining.iter().enumerate().map(|(i, p)| (i, score(p))).collect();
-    ranked.sort_by(|(ai, a), (bi, b)| compare_f64(*b, *a)
+    ranked.sort_by(|(ai, a), (bi, b)| compare_f32(*b, *a)
         .then_with(|| core_size(&remaining[*bi]).cmp(&core_size(&remaining[*ai])))
         .then_with(|| remaining[*ai].id.cmp(&remaining[*bi].id)));
     ranked.into_iter().take(if context.problem.experiments.order_branching { 3 } else { 1 })
@@ -3403,7 +3414,7 @@ fn frontier_indices(remaining: &[WorkingPrimitive], placed: &[WorkingPrimitive],
 // Count geometric opportunities close to the IC without routing or scoring.
 // Normalize by the number of generated nearby poses to avoid rewarding large
 // candidate lists. This is a heuristic, not an exhaustive free-space measure.
-fn frontier_scarcity(p: &WorkingPrimitive, placed: &[WorkingPrimitive], context: &Context) -> f64 {
+fn frontier_scarcity(p: &WorkingPrimitive, placed: &[WorkingPrimitive], context: &Context) -> f32 {
     let _span = context.detail.span("frontier_scarcity");
     let cores: Vec<_> = placed.iter().filter(|q| q.components.iter()
         .any(|(_, c)| c.role.as_deref() == Some("main_ic"))).cloned().collect();
@@ -3415,7 +3426,7 @@ fn frontier_scarcity(p: &WorkingPrimitive, placed: &[WorkingPrimitive], context:
             if net.is_empty() || is_ground(net) || context.problem.experiments.ignored_nets.iter().any(|n| n.eq_ignore_ascii_case(net)) { continue; }
             let nearest = cores.iter().flat_map(|c| c.primitive.connection_points.iter())
                 .filter(|t| t.net.as_ref() == Some(net))
-                .map(|t| (cp.x - t.x).hypot(cp.y - t.y)).fold(f64::INFINITY, f64::min);
+                .map(|t| crate::numerics::hypot(cp.x - t.x,cp.y - t.y)).fold(f32::INFINITY, f32::min);
             if nearest.is_finite() { sum += nearest; count += 1; }
         }
         (sum, count)
@@ -3426,16 +3437,16 @@ fn frontier_scarcity(p: &WorkingPrimitive, placed: &[WorkingPrimitive], context:
         .flat_map(|v| net_anchored_candidates(v, &cores, context)).collect();
     let candidates = dedupe_primitives(candidates);
     let best = candidates.iter().filter(|q| candidate_hard_violation_count(q, &cores, context) == 0)
-        .map(|q| distance(q).0).fold(f64::INFINITY, f64::min);
+        .map(|q| distance(q).0).fold(f32::INFINITY, f32::min);
     if !best.is_finite() { return 0.0; }
-    let nearby: Vec<_> = candidates.iter().filter(|q| distance(q).0 <= best + pins as f64
+    let nearby: Vec<_> = candidates.iter().filter(|q| distance(q).0 <= best + pins as f32
         && candidate_hard_violation_count(q, &cores, context) == 0).collect();
     let legal = nearby.iter().filter(|q| candidate_hard_violation_count(q, placed, context) == 0).count();
-    let scarcity = if legal > 0 { 60.0 * (1.0 - legal as f64 / nearby.len().max(1) as f64) } else { 0.0 };
-    scarcity + 40.0 * pins.saturating_sub(1).min(2) as f64
+    let scarcity = if legal > 0 { 60.0 * (1.0 - legal as f32 / nearby.len().max(1) as f32) } else { 0.0 };
+    scarcity + 40.0 * pins.saturating_sub(1).min(2) as f32
 }
 
-fn seed_rank(primitive: &WorkingPrimitive, context: &Context) -> f64 {
+fn seed_rank(primitive: &WorkingPrimitive, context: &Context) -> f32 {
     let degree = context
         .problem
         .relations
@@ -3446,7 +3457,7 @@ fn seed_rank(primitive: &WorkingPrimitive, context: &Context) -> f64 {
         })
         .count();
     primitive.primitive.width * primitive.primitive.height
-        + degree as f64 * 10.0
+        + degree as f32 * 10.0
         + if primitive.primitive.label.as_ref() == "core"
             || primitive.primitive.label.contains("main")
         {
@@ -3492,7 +3503,7 @@ fn dedupe_states(states: Vec<SearchState>) -> Vec<SearchState> {
         .collect()
 }
 
-fn number_key(value: f64) -> u64 {
+fn number_key(value: f32) -> u32 {
     if value == 0.0 {
         0
     } else {
@@ -3503,14 +3514,14 @@ fn number_key(value: f64) -> u64 {
 fn compare_candidates(a: &RankedCandidate, b: &RankedCandidate) -> Ordering {
     a.hard_violations
         .cmp(&b.hard_violations)
-        .then_with(|| compare_f64(a.score, b.score))
+        .then_with(|| compare_f32(a.score, b.score))
         .then_with(|| a.ordinal.cmp(&b.ordinal))
 }
 
 fn compare_states(a: &SearchState, b: &SearchState) -> Ordering {
     a.hard_violations
         .cmp(&b.hard_violations)
-        .then_with(|| compare_f64(a.score, b.score))
+        .then_with(|| compare_f32(a.score, b.score))
         .then_with(|| a.ordinal.cmp(&b.ordinal))
 }
 
@@ -3525,41 +3536,41 @@ fn lexical_ids(values: impl IntoIterator<Item = Arc<str>>) -> FxHashMap<Arc<str>
         .collect()
 }
 
-fn compare_f64(a: f64, b: f64) -> Ordering {
-    a.partial_cmp(&b).unwrap_or(Ordering::Equal)
+fn compare_f32(a: f32, b: f32) -> Ordering {
+    a.total_cmp(&b)
 }
 fn div_ceil(value: usize, divisor: usize) -> usize {
     (value + divisor - 1) / divisor
 }
-fn snap(value: f64, grid: f64) -> f64 {
+fn snap(value: f32, grid: f32) -> f32 {
     if grid <= 0.0 {
         value
     } else {
         (value / grid + 0.5).floor() * grid
     }
 }
-fn snap_up(value: f64, grid: f64) -> f64 {
+fn snap_up(value: f32, grid: f32) -> f32 {
     if grid <= 0.0 {
         value
     } else {
         (value / grid).ceil() * grid
     }
 }
-fn snap_down(value: f64, grid: f64) -> f64 {
+fn snap_down(value: f32, grid: f32) -> f32 {
     if grid <= 0.0 {
         value
     } else {
         (value / grid).floor() * grid
     }
 }
-fn distance(a: Point, b: Point) -> f64 {
-    (a.x - b.x).hypot(a.y - b.y)
+fn distance(a: Point, b: Point) -> f32 {
+    crate::numerics::hypot(a.x - b.x,a.y - b.y)
 }
-fn dot(a: Point, b: Point) -> f64 {
+fn dot(a: Point, b: Point) -> f32 {
     a.x * b.x + a.y * b.y
 }
 fn normalize(point: Point) -> Point {
-    let length = point.x.hypot(point.y);
+    let length = crate::numerics::hypot(point.x,point.y);
     if length > 0.000001 {
         Point {
             x: point.x / length,
@@ -3577,21 +3588,21 @@ fn point_box(point: Point) -> Box2 {
         bottom: point.y,
     }
 }
-fn dedupe_numbers(values: Vec<f64>) -> Vec<f64> {
+fn dedupe_numbers(values: Vec<f32>) -> Vec<f32> {
     let mut seen = FxHashSet::default();
     values
         .into_iter()
         .filter(|value| value.is_finite() && seen.insert(round_placement(*value).to_bits()))
         .collect()
 }
-fn preferred_distance_squared(point: Point, preferred: &[Point]) -> f64 {
+fn preferred_distance_squared(point: Point, preferred: &[Point]) -> f32 {
     if preferred.is_empty() {
         point.x * point.x + point.y * point.y
     } else {
         preferred
             .iter()
             .map(|target| (point.x - target.x).powi(2) + (point.y - target.y).powi(2))
-            .fold(f64::INFINITY, f64::min)
+            .fold(f32::INFINITY, f32::min)
     }
 }
 
@@ -3629,7 +3640,7 @@ fn anchor_point(anchor: &str, bounds: Option<&Box2>) -> Option<Point> {
     })
 }
 
-fn signal_net_weight(net: &str) -> f64 {
+fn signal_net_weight(net: &str) -> f32 {
     let value = net.to_ascii_uppercase();
     if [
         "USB", "D+", "D-", "DP", "DM", "QSPI", "SPI", "I2C", "SDA", "SCL", "XIN", "XOUT", "CLK",
@@ -3644,7 +3655,7 @@ fn signal_net_weight(net: &str) -> f64 {
     }
 }
 
-fn segment_box_distance(a: Point, b: Point, box_: &Box2) -> f64 {
+fn segment_box_distance(a: Point, b: Point, box_: &Box2) -> f32 {
     if segment_intersects_box(a, b, box_) {
         return 0.0;
     }
@@ -3720,7 +3731,7 @@ fn segment_intersects_box(a: Point, b: Point, box_: &Box2) -> bool {
 fn point_inside_box(p: Point, b: &Box2) -> bool {
     p.x >= b.left && p.x <= b.right && p.y >= b.top && p.y <= b.bottom
 }
-fn orientation(a: Point, b: Point, c: Point) -> f64 {
+fn orientation(a: Point, b: Point, c: Point) -> f32 {
     (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
 }
 fn segments_intersect(a: Point, b: Point, c: Point, d: Point) -> bool {
@@ -3734,7 +3745,7 @@ fn segments_intersect(a: Point, b: Point, c: Point, d: Point) -> bool {
         || (o4 == 0.0 && point_to_segment_distance(b, c, d) < 0.000001)
         || (o1 > 0.0) != (o2 > 0.0) && (o3 > 0.0) != (o4 > 0.0)
 }
-fn point_to_segment_distance(p: Point, a: Point, b: Point) -> f64 {
+fn point_to_segment_distance(p: Point, a: Point, b: Point) -> f32 {
     let dx = b.x - a.x;
     let dy = b.y - a.y;
     let length_squared = dx * dx + dy * dy;
@@ -3750,7 +3761,7 @@ fn point_to_segment_distance(p: Point, a: Point, b: Point) -> f64 {
         },
     )
 }
-fn point_to_box_distance(p: Point, b: &Box2) -> f64 {
+fn point_to_box_distance(p: Point, b: &Box2) -> f32 {
     let dx = if p.x < b.left {
         b.left - p.x
     } else if p.x > b.right {
@@ -3765,7 +3776,7 @@ fn point_to_box_distance(p: Point, b: &Box2) -> f64 {
     } else {
         0.0
     };
-    dx.hypot(dy)
+    crate::numerics::hypot(dx,dy)
 }
 
 #[cfg(test)]
@@ -3905,13 +3916,13 @@ mod candidate_tests {
         for id in 0..4000usize {
             let bucket = (id * 37 + id / 17) % bucket_count;
             let hard = (id * 19 + id / 11) % 3;
-            let score = ((id * 7919) % 997) as f64;
+            let score = ((id * 7919) % 997) as f32;
             let row = (hard, score, id, bucket); all.push(row);
             if score > global.ceiling(hard).max(buckets[bucket].ceiling(hard)) { continue; }
             global.push(hard, score); buckets[bucket].push(hard, score); retained.push(row);
         }
-        let select = |mut rows: Vec<(usize, f64, usize, usize)>| {
-            rows.sort_by(|a,b| a.0.cmp(&b.0).then_with(|| compare_f64(a.1,b.1)).then(a.2.cmp(&b.2)));
+        let select = |mut rows: Vec<(usize, f32, usize, usize)>| {
+            rows.sort_by(|a,b| a.0.cmp(&b.0).then_with(|| compare_f32(a.1,b.1)).then(a.2.cmp(&b.2)));
             let mut counts = [0usize;16]; let mut selected = Vec::new(); let mut rest = Vec::new();
             for row in rows { if counts[row.3] < 4 { counts[row.3] += 1; selected.push(row.2); } else { rest.push(row.2); } }
             selected.extend(rest.into_iter().take(64usize.saturating_sub(selected.len()))); selected.sort(); selected
@@ -3922,12 +3933,42 @@ mod candidate_tests {
     }
 
     #[test]
+    fn exact_score_prefix_prunes_even_with_unbounded_later_cache_error() {
+        let _env = crate::float_env::Guard::enter();
+        let (mut resistor, mut ic, context) = usb_fixture();
+        for p in [&mut resistor, &mut ic] {
+            p.primitive.connection_points = Arc::new(vec![]);
+            p.primitive.path_ports = Arc::new(vec![]);
+        }
+        let primitives = [resistor, ic];
+        let cached = LongNetFrame { baseline: 0.0, open: Default::default() };
+        assert!(score_block_bounded(&primitives, &context, None, 0.0,
+            f32::INFINITY, None, Some(&cached)).is_none());
+        let full = score_block_with_overlap_matrix(&primitives, &context, None);
+        assert!(full > 0.0 && full.is_finite());
+        assert_eq!(score_block_bounded(&primitives, &context, None, f32::INFINITY,
+            f32::INFINITY, None, Some(&cached)), Some(full));
+        // Compare pruning with complete evaluation over different shapes and
+        // score thresholds, including equality and adjacent F32 values.
+        for step in -10..=10 {
+            let changed = [translate_primitive(&primitives[0], step as f32, 0.0), primitives[1].clone()];
+            let full = score_block_with_overlap_matrix(&changed, &context, None);
+            for ceiling in [0.0, full.next_down(), full, full.next_up()] {
+                let bounded = score_block_bounded(&changed, &context, None, ceiling,
+                    f32::INFINITY, None, Some(&cached));
+                if full <= ceiling { assert_eq!(bounded, Some(full)); }
+                if bounded.is_none() { assert!(full > ceiling); }
+            }
+        }
+    }
+
+    #[test]
     fn escape_cache_tracks_moved_sources_and_foreign_obstacles() {
         let (resistor, ic, mut context) = usb_fixture();
         context.validate_incremental_scoring = true;
         for step in 0..20 {
-            let moved = translate_primitive(&resistor, step as f64 * 0.7 - 5.0, 0.0);
-            let source = EndpointPoint { point: Point { x: step as f64 * 0.2, y: 0.0 }, primitive_id: Some(ic.id) };
+            let moved = translate_primitive(&resistor, step as f32 * 0.7 - 5.0, 0.0);
+            let source = EndpointPoint { point: Point { x: step as f32 * 0.2, y: 0.0 }, primitive_id: Some(ic.id) };
             let primitives = [ic.clone(), moved];
             for _ in 0..2 {
                 let cached = escape_blockage_cached(source, &primitives, 0, &context);

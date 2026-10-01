@@ -1,3 +1,4 @@
+import * as fp from './f32.ts';
 import type {
     BoardEdge,
     FootprintSpec,
@@ -23,7 +24,7 @@ export function applyEdgeMountPlacement(
 
     const boardOverflow = mergeBoardOverflowAllowance(
         component.pcb.boardOverflow,
-        boardOverflowAllowanceForEdge(edgeMount.edge, Math.max(0, edgeMount.overhang ?? 0)),
+        boardOverflowAllowanceForEdge(edgeMount.edge, fp.max(0, edgeMount.overhang ?? 0)),
     );
     if (edgeMount.slide === true) {
         return {
@@ -39,22 +40,22 @@ export function applyEdgeMountPlacement(
     const rotate = normalizeRotation(component.pcb.allowedRotations[0] ?? 0);
     const halfSize = rotatedHalfSize(component.footprint, rotate);
     const boardBounds = boardBoundsBox(board);
-    const overhang = Math.max(0, edgeMount.overhang ?? 0);
+    const overhang = fp.max(0, edgeMount.overhang ?? 0);
     const crossOffset = edgeMount.offset ?? 0;
     const fixedPlacement = edgeMount.edge === "left" || edgeMount.edge === "right"
         ? {
             x: edgeMount.edge === "left"
-                ? boardBounds.left - overhang + halfSize.width
-                : boardBounds.right + overhang - halfSize.width,
-            y: (edgeMount.y ?? alignedCrossCoordinate(edgeMount.edge, edgeMount.align ?? "center", boardBounds, halfSize, board.clearances.edge)) + crossOffset,
+                ? fp.add(fp.sub(boardBounds.left, overhang), halfSize.width)
+                : fp.sub(fp.add(boardBounds.right, overhang), halfSize.width),
+            y: fp.add((edgeMount.y ?? alignedCrossCoordinate(edgeMount.edge, edgeMount.align ?? "center", boardBounds, halfSize, board.clearances.edge)), crossOffset),
             rotate,
             layer: edgeMount.layer ?? component.pcb.allowedLayers[0] ?? board.defaultLayer,
         }
         : {
-            x: (edgeMount.x ?? alignedCrossCoordinate(edgeMount.edge, edgeMount.align ?? "center", boardBounds, halfSize, board.clearances.edge)) + crossOffset,
+            x: fp.add((edgeMount.x ?? alignedCrossCoordinate(edgeMount.edge, edgeMount.align ?? "center", boardBounds, halfSize, board.clearances.edge)), crossOffset),
             y: edgeMount.edge === "top"
-                ? boardBounds.top - overhang + halfSize.height
-                : boardBounds.bottom + overhang - halfSize.height,
+                ? fp.add(fp.sub(boardBounds.top, overhang), halfSize.height)
+                : fp.sub(fp.add(boardBounds.bottom, overhang), halfSize.height),
             rotate,
             layer: edgeMount.layer ?? component.pcb.allowedLayers[0] ?? board.defaultLayer,
         };
@@ -89,22 +90,22 @@ export function applyEdgePlacePlacement(
     const rotate = normalizeRotation(component.pcb.allowedRotations[0] ?? 0);
     const halfSize = rotatedHalfSize(component.footprint, rotate);
     const boardBounds = boardBoundsBox(board);
-    const inset = Math.max(0, edgePlace.inset ?? 0);
+    const inset = fp.max(0, edgePlace.inset ?? 0);
     const crossOffset = edgePlace.offset ?? 0;
     const fixedPlacement = edge === "left" || edge === "right"
         ? {
             x: edge === "left"
-                ? boardBounds.left + inset + halfSize.width
-                : boardBounds.right - inset - halfSize.width,
-            y: (edgePlace.y ?? 0) + crossOffset,
+                ? fp.add(fp.add(boardBounds.left, inset), halfSize.width)
+                : fp.sub(fp.sub(boardBounds.right, inset), halfSize.width),
+            y: fp.add((edgePlace.y ?? 0), crossOffset),
             rotate,
             layer: edgePlace.layer ?? component.pcb.allowedLayers[0] ?? board.defaultLayer,
         }
         : {
-            x: (edgePlace.x ?? 0) + crossOffset,
+            x: fp.add((edgePlace.x ?? 0), crossOffset),
             y: edge === "top"
-                ? boardBounds.top + inset + halfSize.height
-                : boardBounds.bottom - inset - halfSize.height,
+                ? fp.add(fp.add(boardBounds.top, inset), halfSize.height)
+                : fp.sub(fp.sub(boardBounds.bottom, inset), halfSize.height),
             rotate,
             layer: edgePlace.layer ?? component.pcb.allowedLayers[0] ?? board.defaultLayer,
         };
@@ -196,21 +197,21 @@ export function normalizeFaceDirection(value: FaceDirection | null | undefined):
 }
 
 function rotatedHalfSize(footprint: FootprintSpec, rotate: number) {
-    const radians = rotate * Math.PI / 180;
-    const cos = Math.abs(Math.cos(radians));
-    const sin = Math.abs(Math.sin(radians));
+    const radians = fp.div(fp.mul(rotate, Math.PI), 180);
+    const cos = fp.abs(fp.cos(radians));
+    const sin = fp.abs(fp.sin(radians));
     return {
-        width: (footprint.width * cos + footprint.height * sin) / 2,
-        height: (footprint.width * sin + footprint.height * cos) / 2,
+        width: fp.div((fp.add(fp.mul(footprint.width, cos), fp.mul(footprint.height, sin))), 2),
+        height: fp.div((fp.add(fp.mul(footprint.width, sin), fp.mul(footprint.height, cos))), 2),
     };
 }
 
 function boardBoundsBox(board: PlacementInput["board"]) {
     return {
-        left: -board.outline.width / 2,
-        right: board.outline.width / 2,
-        top: -board.outline.height / 2,
-        bottom: board.outline.height / 2,
+        left: fp.div(-board.outline.width, 2),
+        right: fp.div(board.outline.width, 2),
+        top: fp.div(-board.outline.height, 2),
+        bottom: fp.div(board.outline.height, 2),
     };
 }
 
@@ -224,12 +225,12 @@ function alignedCrossCoordinate(
     if (align === "center") return 0;
     if (edge === "top" || edge === "bottom") {
         return align === "start"
-            ? boardBounds.left + halfSize.width + edgeClearance
-            : boardBounds.right - halfSize.width - edgeClearance;
+            ? fp.add(fp.add(boardBounds.left, halfSize.width), edgeClearance)
+            : fp.sub(fp.sub(boardBounds.right, halfSize.width), edgeClearance);
     }
     return align === "start"
-        ? boardBounds.top + halfSize.height + edgeClearance
-        : boardBounds.bottom - halfSize.height - edgeClearance;
+        ? fp.add(fp.add(boardBounds.top, halfSize.height), edgeClearance)
+        : fp.sub(fp.sub(boardBounds.bottom, halfSize.height), edgeClearance);
 }
 
 function mergeBoardOverflowAllowance(
@@ -237,10 +238,10 @@ function mergeBoardOverflowAllowance(
     next: PcbComponent["pcb"]["boardOverflow"],
 ) {
     return {
-        left: Math.max(current?.left ?? 0, next?.left ?? 0),
-        right: Math.max(current?.right ?? 0, next?.right ?? 0),
-        top: Math.max(current?.top ?? 0, next?.top ?? 0),
-        bottom: Math.max(current?.bottom ?? 0, next?.bottom ?? 0),
+        left: fp.max(current?.left ?? 0, next?.left ?? 0),
+        right: fp.max(current?.right ?? 0, next?.right ?? 0),
+        top: fp.max(current?.top ?? 0, next?.top ?? 0),
+        bottom: fp.max(current?.bottom ?? 0, next?.bottom ?? 0),
     };
 }
 
@@ -259,7 +260,7 @@ function normalizeAllowedRotations(rotations: number[]) {
 }
 
 function rotationToFace(faceAt0: MechanicalFaceDirection, faceTo: MechanicalFaceDirection) {
-    return normalizeRotation(directionAngle(faceTo) - directionAngle(faceAt0));
+    return normalizeRotation(fp.sub(directionAngle(faceTo), directionAngle(faceAt0)));
 }
 
 function directionAngle(direction: MechanicalFaceDirection) {
@@ -273,35 +274,35 @@ function detectFaceAt0ByPads(footprint: FootprintSpec): MechanicalFaceDirection 
     if (footprint.pads.length === 0) return "right";
 
     const avg = footprint.pads.reduce((sum, pad) => ({
-        x: sum.x + pad.x,
-        y: sum.y + pad.y,
+        x: fp.add(sum.x, pad.x),
+        y: fp.add(sum.y, pad.y),
     }), { x: 0, y: 0 });
-    const avgX = avg.x / footprint.pads.length;
-    const avgY = avg.y / footprint.pads.length;
-    if (Math.abs(avgX) >= Math.abs(avgY) && Math.abs(avgX) > 0.05) {
+    const avgX = fp.div(avg.x, footprint.pads.length);
+    const avgY = fp.div(avg.y, footprint.pads.length);
+    if (fp.abs(avgX) >= fp.abs(avgY) && fp.abs(avgX) > 0.05) {
         return avgX > 0 ? "left" : "right";
     }
-    if (Math.abs(avgY) > 0.05) {
+    if (fp.abs(avgY) > 0.05) {
         return avgY > 0 ? "top" : "bottom";
     }
 
     const padBox = footprint.pads.reduce((box, pad) => ({
-        left: Math.min(box.left, pad.x - pad.width / 2),
-        right: Math.max(box.right, pad.x + pad.width / 2),
-        top: Math.min(box.top, pad.y - pad.height / 2),
-        bottom: Math.max(box.bottom, pad.y + pad.height / 2),
+        left: fp.min(box.left, fp.sub(pad.x, fp.div(pad.width, 2))),
+        right: fp.max(box.right, fp.add(pad.x, fp.div(pad.width, 2))),
+        top: fp.min(box.top, fp.sub(pad.y, fp.div(pad.height, 2))),
+        bottom: fp.max(box.bottom, fp.add(pad.y, fp.div(pad.height, 2))),
     }), { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity });
     const body = {
-        left: -footprint.width / 2,
-        right: footprint.width / 2,
-        top: -footprint.height / 2,
-        bottom: footprint.height / 2,
+        left: fp.div(-footprint.width, 2),
+        right: fp.div(footprint.width, 2),
+        top: fp.div(-footprint.height, 2),
+        bottom: fp.div(footprint.height, 2),
     };
     const margins: Array<{ direction: MechanicalFaceDirection; value: number }> = [
-        { direction: "left", value: padBox.left - body.left },
-        { direction: "right", value: body.right - padBox.right },
-        { direction: "top", value: padBox.top - body.top },
-        { direction: "bottom", value: body.bottom - padBox.bottom },
+        { direction: "left", value: fp.sub(padBox.left, body.left) },
+        { direction: "right", value: fp.sub(body.right, padBox.right) },
+        { direction: "top", value: fp.sub(padBox.top, body.top) },
+        { direction: "bottom", value: fp.sub(body.bottom, padBox.bottom) },
     ];
-    return margins.sort((a, b) => b.value - a.value)[0]?.direction ?? "right";
+    return margins.sort((a, b) => fp.sub(b.value, a.value))[0]?.direction ?? "right";
 }

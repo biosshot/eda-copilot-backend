@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import { beginNativeSolveCapture } from './native/debug-capture.ts';
 import type { PlacementInput, TargetRef } from '#types/pcb/layout-model.ts';
 import type { ClearanceResolver } from '../pcb-auto-place/clearance-resolver.ts';
@@ -52,7 +53,7 @@ export function refineBlockPrimitives(input: PlacementInput, primitives: Placeme
         const before = p.placements[0], after = poses.get(before.designator)!;
         if (after.layer !== before.layer) throw new Error('Block postrefine changed component layer');
         const rotated = rotatePrimitive(p, after.rotate - before.rotate);
-        return translatePrimitive(rotated, after.x - rotated.placements[0].x, after.y - rotated.placements[0].y);
+        return translatePrimitive(rotated, fp.sub(after.x, rotated.placements[0].x), fp.sub(after.y, rotated.placements[0].y));
     });
     return { primitives: refined, moves: result.moves.length, ms: performance.now() - start };
 }
@@ -77,10 +78,10 @@ export function blockScopedInput(input: PlacementInput, primitives: PlacementPri
     const blockNames = new Set(blocks.map(b => b.name));
     const local = (t: TargetRef | 'all' | undefined): boolean => !t || t === 'all' ||
         (t.type === 'block' ? blockNames.has(t.block_name) : t.type !== 'board_anchor' && names.has(t.designator));
-    const extent = Math.max(10, ...primitives.flatMap(p => Object.values(p.bbox).map(Math.abs))) + 10;
+    const extent = fp.add(fp.max(10, ...primitives.flatMap(p => Object.values(p.bbox).map(Math.abs))), 10);
     return {
         ...input,
-        board: world ? input.board : { ...input.board, outline: { type: 'rect', width: extent * 2, height: extent * 2 } },
+        board: world ? input.board : { ...input.board, outline: { type: 'rect', width: fp.mul(extent, 2), height: fp.mul(extent, 2) } },
         boardHoles: world ? input.boardHoles : [], constraintRegions: world ? input.constraintRegions : [], modules: [],
         components: input.components.filter(c => names.has(c.designator)).map(c => ({ ...c, pcb: { ...c.pcb,
             fixedPlacement: movable.has(c.designator) ? c.pcb.fixedPlacement : placements.find(p => p.designator === c.designator)!,

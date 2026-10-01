@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { availableParallelism } from 'node:os';
 import type { BlockSolveParams } from './block-solver.ts';
@@ -52,12 +53,12 @@ export function solveBlockHypothesesRust(hypotheses: BlockSolveParams[], stage: 
         if (stage === 'pairs') problem.pairSeed = seeds![index];
         return { primitives, problem };
     });
-    const limit = Math.max(1, Math.min(8, Math.floor(availableParallelism() / 2)));
+    const limit = Math.max(1, Math.min(8, Math.floor(fp.div(availableParallelism(), 2))));
     const requested = Number(process.env.PCB_BOARD_PACKER_THREADS ?? limit);
-    const budget = Number.isFinite(requested) && requested > 0 ? Math.min(limit, Math.floor(requested)) : limit;
+    const budget = Number.isFinite(requested) && requested > 0 ? fp.min(limit, Math.floor(requested)) : limit;
     // Share the CPU budget with opt-in subtree processes instead of multiplying it.
-    const subtreeWorkers = Math.max(1, Math.min(limit, Number(process.env.PCB_LAYOUT_SUBTREE_WORKERS) || 1));
-    const threads = Math.max(1, Math.floor(budget / subtreeWorkers));
+    const subtreeWorkers = fp.max(1, fp.min(limit, Number(process.env.PCB_LAYOUT_SUBTREE_WORKERS) || 1));
+    const threads = Math.max(1, Math.floor(fp.div(budget, subtreeWorkers)));
     const encodeMs = encodeStarted ? performance.now() - encodeStarted : 0;
     const captureEnds = process.env.PCB_LAYOUT_DEBUG_DIR
         ? preparedHypotheses.map((hypothesis, index) => beginNativeSolveCapture('block', hypothesis.problem,

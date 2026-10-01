@@ -1,6 +1,6 @@
 // Full native block cycle: initial search/singles and deferred pair continuation.
 // Saved problems and fixtures are never edited. Validation stays outside timing.
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, openSync, closeSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, openSync, closeSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
@@ -13,6 +13,7 @@ if (!['cpu','cubecl','auto'].includes(mode)) throw Error('backend must be cpu, c
 // Parent saves native stderr as evidence and annotates timings with actual backend.
 if (!process.env.PCB_BLOCK_EXPERIMENT_CHILD) {
   const out=resolve(args.out ?? `debugging/cubecl-block-migration-2026-09-30/${mode}-${Date.now()}`);
+  if (existsSync(out)) throw Error(`Immutable output already exists: ${out}`);
   mkdirSync(out,{recursive:true});
   const stdout=openSync(join(out,'stdout.log'),'w'),stderr=openSync(join(out,'stderr.log'),'w');
   const child=spawnSync(process.execPath,[process.argv[1],...process.argv.slice(2).filter(a=>!a.startsWith('out=')),`out=${out}`],{
@@ -42,7 +43,7 @@ const addonPath=resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH ?? `native/pcb-
 const addon=require(addonPath);
 const root=resolve(args.root ?? 'debugging/pcb-layout/runs/PortableScope/2026-09-29T12-02-18-665Z/native/block/process-19228-thread-0');
 const prefixes=(args.blocks ?? '00079,00097,00091').split(',');
-const runs=Number(args.runs ?? 4),workers=Number(args.workers ?? 1);
+const runs=Number(args.runs ?? 1),workers=Number(args.workers ?? 1);
 if (!Number.isInteger(runs)||runs<1||!Number.isInteger(workers)||workers<1||workers>8) throw Error('invalid runs/workers');
 const out=resolve(args.out ?? `debugging/cubecl-block-migration-2026-09-30/${mode}-${Date.now()}`);
 mkdirSync(out,{recursive:true});
@@ -94,7 +95,7 @@ for(let run=0;run<runs;run++) {
   const exactReferenceMatch=reference ? isDeepStrictEqual(results,expected) : null;
   const row={run,first:run===0,initialMs,pairsMs,totalMs,exactReferenceMatch,results};
   rows.push(row);
-  writeFileSync(join(out,'results.json'),JSON.stringify({backendRequested:mode,precision:'f64',workers,
+  writeFileSync(join(out,'results.json'),JSON.stringify({backendRequested:mode,precision:addon.numericContract?.()??'f64',workers,
     validation:!!process.env.PCB_BLOCK_GPU_VERIFY,verifyPruning:!!process.env.PCB_BLOCK_GPU_VERIFY_PRUNE,verifyFrontier:!!process.env.PCB_BLOCK_GPU_VERIFY_FRONTIER,noPrune:!!process.env.PCB_BLOCK_GPU_NO_PRUNE,
     scope:pairsOnly?'deferred-pairs call replayed with original pairSeed':'full native block cycle; includes deferred pairs for <=12 primitives; not whole board',
     addonPath,addonSha256:hash(readFileSync(addonPath)),sourceReport:args.sourceReport??null,sourceHashes,blocks:blocks.map(({problem,...b})=>b),rows},null,2));

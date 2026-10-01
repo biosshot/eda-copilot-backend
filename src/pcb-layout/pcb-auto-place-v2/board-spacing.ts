@@ -1,3 +1,4 @@
+import * as fp from '../f32.ts';
 import type { Box, Layer, PcbComponent, PlacementInput, TargetRef } from '#types/pcb/layout-model.ts';
 import { componentBodyBox, componentCollisionBoxes, boardHoleKeepoutRadius, pointInBoard, boxGap } from '../pcb-auto-place/geometry.ts';
 import type { PlacementPrimitive } from './primitives.ts';
@@ -22,26 +23,26 @@ export function boardSpacingExemptPairs(input: PlacementInput, roots: PlacementP
  * beam state; changing order or translating a block cannot change this budget. */
 export function boardSpacingPolicy(input: PlacementInput) {
     const {width,height} = input.board.outline;
-    const area=(b:Box)=>(b.right-b.left+input.board.clearances.component)*(b.bottom-b.top+input.board.clearances.component);
+    const area=(b:Box)=>fp.mul((fp.add(fp.sub(b.right, b.left), input.board.clearances.component)), (fp.add(fp.sub(b.bottom, b.top), input.board.clearances.component)));
     const occupied = input.components.reduce((sum,c)=> {
         const pose={designator:c.designator,x:0,y:0,rotate:c.pcb.fixedPlacement?.rotate ?? 0,
             layer:c.pcb.fixedPlacement?.layer ?? c.pcb.allowedLayers[0] ?? 'top',score:0};
-        return sum+input.board.allowedLayers.reduce((sideSum,layer)=>sideSum+(layer===pose.layer
+        return fp.add(sum, input.board.allowedLayers.reduce((sideSum,layer)=>fp.add(sideSum, (layer===pose.layer
             ? area(componentBodyBox(c,pose))
-            : componentCollisionBoxes(c,pose,layer).reduce((boxSum,box)=>boxSum+area(box),0)),0);
+            : componentCollisionBoxes(c,pose,layer).reduce((boxSum,box)=>fp.add(boxSum, area(box)),0))),0));
     },0);
     let usable=0;
     const samples=64;
     for(const layer of input.board.allowedLayers) for(let x=0;x<samples;x++) for(let y=0;y<samples;y++) {
-        const p={x:-width/2+(x+.5)*width/samples,y:-height/2+(y+.5)*height/samples};
+        const p={x:fp.add(fp.div(-width, 2), fp.div(fp.mul((fp.add(x, .5)), width), samples)),y:fp.add(fp.div(-height, 2), fp.div(fp.mul((fp.add(y, .5)), height), samples))};
         if(!pointInBoard(input.board,p,input.board.clearances.edge)) continue;
-        if((input.boardHoles ?? []).some(h=>Math.hypot(p.x-h.x,p.y-h.y)<boardHoleKeepoutRadius(h))) continue;
+        if((input.boardHoles ?? []).some(h=>fp.hypot(fp.sub(p.x, h.x), fp.sub(p.y, h.y))<boardHoleKeepoutRadius(h))) continue;
         if((input.constraintRegions ?? []).some(r=>r.layers.includes(layer)&&p.x>=r.box.left&&p.x<=r.box.right&&p.y>=r.box.top&&p.y<=r.box.bottom)) continue;
         usable++;
     }
-    const density=occupied/Math.max(1,usable*width*height/(samples*samples));
-    const freedom=Math.max(0,Math.min(1,(.60-density)/.35));
-    return {gap:3*freedom, compactnessScale:1-.9*freedom, density};
+    const density=fp.div(occupied, fp.max(1, fp.div(fp.mul(fp.mul(usable, width), height), (fp.mul(samples, samples)))));
+    const freedom=fp.max(0, fp.min(1, fp.div((fp.sub(.60, density)), .35)));
+    return {gap:fp.mul(3, freedom), compactnessScale:fp.sub(1, fp.mul(.9, freedom)), density};
 }
 
 /** Same pair penalty as the native board objective. No reward beyond the gap. */
@@ -62,8 +63,8 @@ export function boardSpacingPenalty(input: PlacementInput, roots: PlacementPrimi
             return x&&y?[boxGap(x,y)]:[];
         });
         if(!distances.length)continue;
-        const deficit=Math.max(0,input.board.clearances.component+gap-Math.min(...distances));
-        score+=18*deficit*deficit;
+        const deficit=fp.max(0, fp.sub(fp.add(input.board.clearances.component, gap), fp.min(...distances)));
+        score = fp.add(score, fp.mul(fp.mul(18, deficit), deficit));
     }
     return score;
 }
@@ -74,6 +75,6 @@ function primitiveLayerBox(components: Map<string,PcbComponent>, primitive: Plac
         return component?componentCollisionBoxes(component,placement,layer):[];
     });
     if(!boxes.length)return undefined;
-    return {left:Math.min(...boxes.map(box=>box.left)),right:Math.max(...boxes.map(box=>box.right)),
-        top:Math.min(...boxes.map(box=>box.top)),bottom:Math.max(...boxes.map(box=>box.bottom))};
+    return {left:fp.min(...boxes.map(box=>box.left)),right:fp.max(...boxes.map(box=>box.right)),
+        top:fp.min(...boxes.map(box=>box.top)),bottom:fp.max(...boxes.map(box=>box.bottom))};
 }
