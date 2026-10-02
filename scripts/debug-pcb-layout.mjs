@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
+import { nativeBackendRequest } from '../src/pcb-layout/pcb-auto-place-v2/native/debug-capture.ts';
 
 const backend = fileURLToPath(new URL('../', import.meta.url));
 const debugRoot = join(backend, 'debugging', 'pcb-layout');
@@ -27,12 +28,22 @@ function captures(directory) {
     return rows.sort((a, b) => a.capturedAt.localeCompare(b.capturedAt));
 }
 
-function nativeProfile(logFile) {
+export function nativeProfile(logFile) {
     const lines = readFileSync(logFile, 'utf8').split(/\r?\n/);
     const blocks = [];
     const board = [];
     const detail = [];
+    const backendDecisions = [];
+    const boardDetails = [];
     for (const line of lines) {
+        const decision = line.match(/\[(block-backend|block-gpu-fallback|board-backend|board-gpu-fallback|post-place-backend)\] (\{.*\})/);
+        if (decision) {
+            try { backendDecisions.push({ source: decision[1], ...JSON.parse(decision[2]) }); } catch { /* Raw log retains partial lines. */ }
+        }
+        const boardDetail = line.match(/\[board-detail\] (\{.*\})/);
+        if (boardDetail) {
+            try { boardDetails.push(JSON.parse(boardDetail[1])); } catch { /* Raw log retains partial lines. */ }
+        }
         const block = line.match(/\[pcb-block-solver\] components=(\d+) beam_ms=([\d.]+) singles_ms=([\d.]+) pairs_ms=([\d.]+)/);
         if (block) blocks.push({ components: +block[1], beamMs: +block[2], singlesMs: +block[3], pairsMs: +block[4] });
         const boardLine = line.match(/\[pcb-board-packer\] (.*)/);
@@ -49,7 +60,7 @@ function nativeProfile(logFile) {
         sum[1] += pair[1];
         totals[name] = sum;
     }
-    return { blockStageSamples: blocks, boardStageLines: board, blockDetailSamples: detail.length,
+    return { blockStageSamples: blocks, boardStageLines: board, boardDetails, backendDecisions, blockDetailSamples: detail.length,
         detailTotals: Object.fromEntries(Object.entries(totals).map(([name, [calls, nanoseconds]]) =>
             [name, { calls, milliseconds: nanoseconds / 1e6 }])) };
 }
@@ -66,12 +77,24 @@ async function capture(fixture) {
     const sourceFiles = readdirSync(directory).filter(name =>
         name.endsWith('.js') || name.endsWith('.json') || name === runners[0]);
     for (const file of sourceFiles) copyFileSync(join(directory, file), join(sourceDir, file));
+    // Freeze provenance before starting the child. Interrupted captures need it too;
+    // rebuilding the addon while a run is active must not relabel its input binary.
+    const revision = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: backend, encoding: 'utf8' }).trim();
+    const workingTreeDirty = execFileSync('git', ['status', '--porcelain'], { cwd: backend, encoding: 'utf8' }).trim().length > 0;
+    const require = createRequire(import.meta.url);
+    const nativeFile = join(backend, 'native', 'pcb-board-packer', require('../native/pcb-board-packer/platform.cjs').nativeFilename());
+    const nativeSha256 = existsSync(nativeFile) ? sha256(readFileSync(nativeFile)) : null;
+    const provenance = { revision, workingTreeDirty, nativeSha256,
+        backendRequests: Object.fromEntries(['block', 'board', 'refine'].map(kind => [kind, nativeBackendRequest(kind)])),
+        sourceFiles: Object.fromEntries(sourceFiles.map(file => [file, sha256(readFileSync(join(sourceDir, file)))])) };
+    const manifest = { version: 1, fixture, status: 'started', startedAt: new Date().toISOString(), ...provenance };
+    writeJson(join(output, 'run-manifest.json'), manifest);
     const log = createWriteStream(join(output, 'run.log'));
     const start = performance.now();
     const child = spawn(process.execPath, ['--import', 'tsx', join(directory, runners[0])], {
         cwd: backend,
         env: { ...process.env, PCB_LAYOUT_DEBUG_DIR: output, PCB_BLOCK_SOLVER_PROFILE: '1',
-            PCB_BLOCK_SOLVER_DETAIL: '1', PCB_BOARD_PACKER_PROFILE: '1' },
+            PCB_BLOCK_SOLVER_DETAIL: '1', PCB_BOARD_PACKER_PROFILE: '1', PCB_BOARD_PACKER_DETAIL: '1' },
         windowsHide: true,
         stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -81,24 +104,22 @@ async function capture(fixture) {
     const rows = captures(output);
     const phases = existsSync(join(output, 'stages.json')) ? json(join(output, 'stages.json')) : null;
     const profile = nativeProfile(join(output, 'run.log'));
-    const revision = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: backend, encoding: 'utf8' }).trim();
-    const require = createRequire(import.meta.url);
-    const nativeFile = join(backend, 'native', 'pcb-board-packer',
-        require('../native/pcb-board-packer/platform.cjs').nativeFilename());
-    const nativeSha256 = existsSync(nativeFile) ? sha256(readFileSync(nativeFile)) : null;
     const summary = { version: 1, fixture, status: code === 0 ? 'completed' : 'failed', exitCode: code,
-        revision, nativeSha256, sourceFiles: Object.fromEntries(sourceFiles.map(file =>
-            [file, sha256(readFileSync(join(sourceDir, file)))])),
+        ...provenance,
         wallMs: performance.now() - start, phases, profile, nativeRequests: rows.length,
         blockCalls: rows.filter(row => row.kind === 'block').length,
         boardCalls: rows.filter(row => row.kind === 'board').length,
         note: 'batchWallMs is the whole batch duration, not individual hypothesis CPU time.', captures: rows };
     writeJson(join(output, 'summary.json'), summary);
+    writeJson(join(output, 'run-manifest.json'), { ...manifest, status: summary.status, exitCode: code, wallMs: summary.wallMs });
     writeFileSync(join(output, 'summary.md'), [
         `# PCB layout: ${fixture}`, '', `Status: ${summary.status} (exit ${code})`,
         `Wall time: ${(summary.wallMs / 1000).toFixed(2)} s`,
         `Native requests: ${rows.length} (${summary.blockCalls} block, ${summary.boardCalls} board; cache hits may be included)`,
         `Placement valid: ${phases?.placementOk ?? 'unknown'}`, '',
+        '## Backend requests', '',
+        ...Object.entries(provenance.backendRequests).map(([kind, request]) =>
+            `- ${kind}: ${request.requested} (${request.explicit ? request.variable : 'native default'}); actual choices/reasons are in summary.json profile.backendDecisions and run.log`), '',
         '## Stage wall times', '',
         ...Object.entries(phases?.stagesMs ?? {}).map(([name, ms]) => `- ${name}: ${(ms / 1000).toFixed(2)} s`),
         '', '## Native detail totals', '',
@@ -162,12 +183,13 @@ function replay(source, count) {
 }
 
 const [command, first, ...rest] = process.argv.slice(2);
-if (command === 'capture' && first) await capture(first);
-else if (command === 'replay' && first) {
+const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain && command === 'capture' && first) await capture(first);
+else if (isMain && command === 'replay' && first) {
     const count = Number(rest[0] ?? 1);
     if (!Number.isSafeInteger(count) || count < 1 || count > 100) throw Error('Repeat count must be 1..100');
     replay(resolve(first), count);
-} else {
+} else if (isMain) {
     console.log('Usage: node --import tsx scripts/debug-pcb-layout.mjs capture <fixture>');
     console.log('       node --import tsx scripts/debug-pcb-layout.mjs replay <capture-dir-or-meta.json> [repeats]');
     process.exitCode = 1;

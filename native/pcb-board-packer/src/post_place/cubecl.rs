@@ -154,11 +154,11 @@ impl Engine {
  pub fn report(&self){eprintln!("[post-place-gpu] {}",serde_json::json!({"batches":self.batches,"candidates":self.candidates,"gpuOperationMs":self.milliseconds,"encodeMs":self.encode_ms,"residentBytes":self.data.si.len()*4+self.data.sf.len()*4,"runtime":gpu::statistics()}));}
 }
 
-// Cold single-worker Telemetry is measured; multi-worker admission additionally
-// requires an already initialized shared GPU so startup cannot erase the gain.
+// Workload/time floors relaxed by approximately 8x from the Telemetry baseline.
+// Keep the existing multi-worker readiness and concurrency requirements.
 pub(super) fn profitable(p:&RefineProblem)->bool {
  let workers=p.threads.max(1).min((std::thread::available_parallelism().map_or(1,|n|n.get())/2).clamp(1,8));
- p.components.len()>=154 && p.components.iter().map(|c|c.pads.len()).sum::<usize>()>=660
-  && p.nets.iter().map(|n|n.points.len().saturating_sub(1)).sum::<usize>()>=235
-  && p.iterations>0 && p.timeout_ms>=2000 && (workers==1 || (workers<=4 && gpu::ready()))
+ p.components.len()>=19 && p.components.iter().map(|c|c.pads.len()).sum::<usize>()>=82
+  && p.nets.iter().map(|n|n.points.len().saturating_sub(1)).sum::<usize>()>=29
+  && p.iterations>0 && p.timeout_ms>=250 && (workers==1 || (workers<=4 && gpu::ready()))
 }

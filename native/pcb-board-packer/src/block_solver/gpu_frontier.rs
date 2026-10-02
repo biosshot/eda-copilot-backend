@@ -33,6 +33,10 @@ fn frame_data(
     fi[k::COUNT] = frame.poses.len() as u32;
     fi[k::COMPONENTS] = context.problem.components.len() as u32;
     fi[k::CP_F..k::CP_F + 6].copy_from_slice(&engine.offsets);
+    fi[k::GEOMETRY_F] = engine.geometry_offset;
+    fi[k::COMPONENT_I] = engine.component_offset;
+    fi[k::SOURCES] = context.problem.primitives.len() as u32;
+    fi[k::FLAGS..k::FLAGS+11].copy_from_slice(&engine.options);
     fi[k::FIXED_I] = fi.len() as u32;
     for p in placed.iter().chain(std::iter::once(dummy)) {
         let p = engine.frame_primitive(p, context);
@@ -67,6 +71,8 @@ pub(in crate::block_solver) fn scarcity(
     let mut borrow = context.gpu_engine.borrow_mut();
     let engine = borrow.as_mut().unwrap();
     if !engine.frontiers.contains_key(&key) {
+        let cached_bytes:usize=engine.frontiers.values().map(|f|f.floats.len()*4+f.ids.len()*4+f.poses.len()*12).sum();
+        if engine.frontiers.len()>=64 || cached_bytes>16*1024*1024 {engine.frontiers.clear();}
         let mut poses = Vec::new();
         let mut ranges = Vec::new();
         for p in &context.gpu_sources {
@@ -106,6 +112,7 @@ pub(in crate::block_solver) fn scarcity(
         fail("unsupported numeric range in GPU frontier".into());
     }
     let count = frame.poses.len();
+    if count.saturating_mul(40)>engine.max_allocation {fail("GPU frontier exceeds memory budget".into());}
     let sources = context.problem.primitives.len();
     let counts = gpu_runtime::with_session(GPU_REQUIREMENTS, |session| {
         if engine.handles.is_none() {
@@ -163,7 +170,7 @@ pub(in crate::block_solver) fn scarcity(
                 );
                 k::scarcity_nearby::launch_unchecked::<WgpuRuntime>(
                     client,
-                    CubeCount::Static(1, 1, 1),
+                    CubeCount::Static(sources.div_ceil(32) as u32, 1, 1),
                     CubeDim::new_1d(32),
                     input(cf, ci),
                     a!(scores, count),
@@ -182,7 +189,7 @@ pub(in crate::block_solver) fn scarcity(
             );
             k::scarcity_counts::launch_unchecked::<WgpuRuntime>(
                 client,
-                CubeCount::Static(1, 1, 1),
+                CubeCount::Static(sources.div_ceil(32) as u32, 1, 1),
                 CubeDim::new_1d(32),
                 input(&ff, &fi),
                 a!(nearby, count),

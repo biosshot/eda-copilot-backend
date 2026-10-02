@@ -4,6 +4,12 @@
 
 ### PCB layout
 
+- Relax Board Packager, block solver and post-place/refiner GPU workload admission floors by approximately 8x (integer floor, minimum one). Preserve concurrency/readiness requirements, device/input/memory guards and full CPU recovery. This broadens GPU eligibility; it is not a measured speed guarantee.
+
+- Record capture backend requests and launch-time addon/source provenance before execution so interrupted captures remain identifiable; retain actual native backend/fallback decisions in summaries and enable Board Packager detail profiling. Capture continues to inherit backend settings without forcing CPU/GPU. Review incomplete PortableScope `2026-10-02T07-57-08-534Z`: Board Packager deliberately chooses CPU under `auto` (28 primitives/23 unlocked below measured floors), with 369.442 s beam; grouped FPGA/MCU also miss the primitive-count GPU gate. No full-board rerun.
+
+- Extend the F32 CubeCL block solver to composite blocks and up to 256 components/primitives with resident geometry ranges, bounded candidate chunks, device memory guards and complete CPU fallback. Add through-hole, topology/facing, long-net, power-yield, anchor and world-constraint scoring; fix frontier dispatch above 32 primitives. Full two-hypothesis DDR replay improves from 740.782 s CPU to 168.627 s GPU (4.39×), with valid final geometry and a +0.694% released-hypothesis score difference. Record single-pass evidence, recovery tests and remaining limits in `BLOCK_GPU_256_RESULTS_2026-10-02.md`.
+
 - Preserve asymmetric component body offsets when native block search rotates or translates placements; transform original bounds around the component origin instead of rebuilding a centered rectangle. Match GPU candidate body translation to the shared native placement-grid rounding. Add regression coverage for all quarter turns and the ESPower U1–X1 clearance violation.
 
 - Allow up to 0.01 mm per-axis native translation residuals when TypeScript applies a locked primitive, preserving its exact authored pose. Continue rejecting rotation, larger shifts and non-finite translations. This accepts PortableScope U6's spurious -0.001 mm metadata without changing native geometry or search.

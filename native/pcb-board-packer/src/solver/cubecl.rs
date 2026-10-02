@@ -62,13 +62,11 @@ fn put_box(v: &mut Vec<f32>, b: Box2) -> u32 {
 }
 fn layer(value: &str) -> u32 { if value=="top" {0} else {1} }
 
-// Conservative floor of the measured Telemetry workload. Cold and ready
-// runtimes use the same floor: initialization is negligible for this full call.
-// Smaller or route-dominated inputs remain CPU even when the runtime is ready.
-// More than four workers is outside the measured crossover; preserve CPU there.
+// Workload floors relaxed by approximately 8x from the Telemetry baseline.
+// These are admission heuristics; device/input guards and CPU recovery still apply.
 pub(super) fn auto_profitable(p:&BoardPackProblem,threads:usize)->bool {
-    threads<=4 && p.primitives.len()>=34 && p.components.len()>=154 && p.search_width>=32 && p.relations.len()>=535
-        && p.primitives.iter().filter(|p|!p.locked).count()>=24
+    threads<=4 && p.primitives.len()>=4 && p.components.len()>=19 && p.search_width>=4 && p.relations.len()>=66
+        && p.primitives.iter().filter(|p|!p.locked).count()>=3
 }
 
 pub(super) fn supported(p: &BoardPackProblem) -> Result<(), String> {

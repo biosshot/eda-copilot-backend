@@ -8,6 +8,14 @@ type CaptureMeta = { stage?: string; batchSize: number; batchWallMs: number; enc
 
 let sequence = 0;
 
+/** Requested settings only; the actual backend and fallback reason belong to native profiles. */
+export function nativeBackendRequest(kind: NativeDebugKind, env: NodeJS.ProcessEnv = process.env) {
+    const variable = kind === 'block' ? 'PCB_BLOCK_BACKEND' : kind === 'board' ? 'PCB_BOARD_BACKEND' : 'PCB_POST_PLACE_BACKEND';
+    const threadsVariable = kind === 'board' ? 'PCB_BOARD_PACKER_THREADS' : kind === 'refine' ? 'PCB_POST_PLACE_THREADS' : undefined;
+    return { variable, requested: env[variable] ?? 'auto', explicit: env[variable] !== undefined,
+        threadsVariable: threadsVariable ?? null, threads: threadsVariable ? env[threadsVariable] ?? null : null };
+}
+
 /** Writes the input before entering Rust, so a hung or crashed solve remains replayable. */
 export function beginNativeSolveCapture(
     kind: NativeDebugKind,
@@ -39,6 +47,7 @@ export function beginNativeSolveCapture(
     writeFileSync(join(directory, 'problem.json'), input);
     const metadata = {
         version: 1, kind, label, inputSha256: hash, pid: process.pid, threadId,
+        backendRequest: nativeBackendRequest(kind),
         ...meta,
         capturedAt: new Date().toISOString(),
     };

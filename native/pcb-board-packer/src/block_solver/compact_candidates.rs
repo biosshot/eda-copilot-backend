@@ -71,6 +71,16 @@ pub(super) fn generate(
     placed: &[WorkingPrimitive],
     c: &Context,
 ) -> Vec<Pose> {
+    if p.primitive.locked {return vec![Pose{template_index:(p.source_index*4+normalize_rotation(p.rotation) as usize/90) as u32,ordinal:0,dx:0.0,dy:0.0}];}
+    if c.problem.bounds.is_some() {
+        // Reuse the reference bounded generator, including its board fallback.
+        // The compact path remains allocation-light for ordinary unbounded blocks.
+        return super::super::block_candidates(p,placed,c).into_iter().enumerate().map(|(ordinal,q)| {
+            let rotated=rotate_primitive(p,normalize_rotation(q.rotation-p.rotation));
+            let a=box_center(&rotated.primitive.bbox);let b=box_center(&q.primitive.bbox);
+            Pose{template_index:(q.source_index*4+normalize_rotation(q.rotation) as usize/90) as u32,ordinal:ordinal as u32,dx:round_placement(b.x-a.x),dy:round_placement(b.y-a.y)}
+        }).collect();
+    }
     let variants = orientation_variants(p);
     let candidates = if placed.is_empty() {
         variants

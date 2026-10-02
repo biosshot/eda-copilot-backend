@@ -216,12 +216,11 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
     #[cfg(feature = "gpu")]
     {
         let requested=std::env::var("PCB_BLOCK_BACKEND").unwrap_or_else(|_|"auto".into());
-        // Avoid GPU startup for small independent blocks. Once a substantial
-        // block initializes the shared device, measured >=6-component batches
-        // can benefit too. Explicit cubecl mode is retained for validation.
-        let substantial=problem.primitives.len()>=10 || problem.primitives.iter().map(|p|p.connection_points.len()).sum::<usize>()>=240;
-        let use_gpu=if requested=="cubecl" {problem.primitives.len()>=3}
-            else {requested=="auto" && problem.primitives.len()>=6 && (substantial || gpu_runtime::ready())};
+        // Relax workload floors by approximately 8x, with a minimum of one primitive.
+        // Device/input guards and complete CPU recovery remain in force.
+        let substantial=problem.primitives.len()>=1 || problem.primitives.iter().map(|p|p.connection_points.len()).sum::<usize>()>=30;
+        let use_gpu=if requested=="cubecl" {problem.primitives.len()>=1}
+            else {requested=="auto" && problem.primitives.len()>=1 && (substantial || gpu_runtime::ready())};
         if use_gpu {
             let original=problem.clone();let started=std::time::Instant::now();
             match std::panic::catch_unwind(std::panic::AssertUnwindSafe(||solve_block_inner(problem,true))) {
@@ -2267,7 +2266,7 @@ fn target_size_penalty(width: f32, height: f32, context: &Context) -> f32 {
             .unwrap_or(0.0)
 }
 
-fn convex_hull_metrics(boxes: Vec<Box2>) -> (f32, f32) {
+fn convex_hull_vertices(boxes: &[Box2]) -> (Vec<Point>, bool) {
     let mut points: Vec<Point> = boxes
         .iter()
         .flat_map(|box_| {
@@ -2297,12 +2296,7 @@ fn convex_hull_metrics(boxes: Vec<Box2>) -> (f32, f32) {
         .collect();
     points.sort_by(|a, b| compare_f32(a.x, b.x).then_with(|| compare_f32(a.y, b.y)));
     points.dedup_by(|a, b| a.x == b.x && a.y == b.y);
-    if points.len() < 3 {
-        let bbox = union_boxes(&boxes);
-        let width = (bbox.right - bbox.left).max(0.0);
-        let height = (bbox.bottom - bbox.top).max(0.0);
-        return (width * height, width + height);
-    }
+    if points.len() < 3 {return (points,true);}
     let cross =
         |a: Point, b: Point, c: Point| (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
     let mut lower = Vec::new();
@@ -2326,6 +2320,15 @@ fn convex_hull_metrics(boxes: Vec<Box2>) -> (f32, f32) {
     lower.pop();
     upper.pop();
     lower.extend(upper);
+    (lower,false)
+}
+
+fn convex_hull_metrics(boxes: Vec<Box2>) -> (f32, f32) {
+    let (lower,degenerate)=convex_hull_vertices(&boxes);
+    if degenerate {
+        let bbox=union_boxes(&boxes);let width=(bbox.right-bbox.left).max(0.0);let height=(bbox.bottom-bbox.top).max(0.0);
+        return (width*height,width+height);
+    }
     let mut area = 0.0;
     let mut perimeter = 0.0;
     for index in 0..lower.len() {

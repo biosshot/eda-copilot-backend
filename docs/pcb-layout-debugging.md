@@ -9,6 +9,23 @@ npm run debug:pcb-layout -- replay <native-capture-dir-or-meta.json> [repeats]
 
 `capture` runs the complete fixture once. The console shows its status, duration, native request count, and the path to `summary.md`. Detailed progress, profiles, and errors go to `run.log`.
 
+Capture inherits `PCB_BLOCK_BACKEND`, `PCB_BOARD_BACKEND` and `PCB_POST_PLACE_BACKEND`;
+it does not change solver selection. Unset means the native default `auto`, which
+can deliberately select CPU for a workload below its measured GPU threshold.
+An explicit GPU request for board packing in PowerShell is
+`$env:PCB_BOARD_BACKEND='cubecl'` before the capture command. Missing/unsupported
+GPU and runtime failures still recover on CPU. Clear that variable afterward
+with `Remove-Item Env:PCB_BOARD_BACKEND` if subsequent runs should use `auto`.
+
+`run-manifest.json` is written **before** launching the fixture and contains
+requested backends, revision/dirty state, source hashes and the addon hash at
+launch. It survives an interrupted run. Each native `meta.json` also records
+`backendRequest` before solving. These fields describe the **request**, not the
+actual execution backend. Native decisions/fallback reasons are in `run.log`
+and, on completion, `summary.json.profile.backendDecisions`. Capture enables
+board detail profiling as well as block detail; `profile.boardDetails` stores
+nested accumulated worker timings, which must not be added to wall time.
+
 All generated files are local and Git-ignored under `debugging/pcb-layout/`:
 
 | Path | Contents |
