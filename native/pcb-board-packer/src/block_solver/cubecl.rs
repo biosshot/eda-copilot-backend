@@ -1217,7 +1217,7 @@ pub(super) fn init(context: &Context) -> Result<Engine, String> {
     let mut engine=Engine::new(context);
     gpu_runtime::with_session(GPU_REQUIREMENTS,|session| {
         let props=session.client.properties();
-        engine.max_allocation=(props.memory.max_page_size as usize).min(64*1024*1024);
+        engine.max_allocation=session.allocation_budget();
         engine.shared_limit=props.hardware.max_shared_memory_size;
         let static_bytes=(engine.sf.len()+engine.si.len())*4;
         if static_bytes>=engine.max_allocation {return Err("GPU resident geometry exceeds memory budget".into());}

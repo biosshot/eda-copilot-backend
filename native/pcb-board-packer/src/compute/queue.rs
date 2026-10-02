@@ -1,6 +1,6 @@
 //! Process-wide admission queue. GPU scratch is owned by each admitted operation.
 //! Queue depth is separate from CPU worker count and starts at the midpoint.
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Condvar, Mutex, OnceLock};
 use std::time::Instant;
 
@@ -26,19 +26,23 @@ struct State {
     window_saturated: bool,
     decisions: u64,
     last_decision: &'static str,
+    headroom:Option<u64>,
+    reserved_bytes:usize,
+    observed_workspace:HashMap<&'static str,usize>,
+    memory_waits:u64,
 }
 impl Default for State {
     fn default() -> Self {Self { next:0, waiting:VecDeque::new(), active:0,
         depth:INITIAL_DEPTH, completed:0, wait_ms:0.0, service_ms:0.0,
         controller:Controller::default(),window_class:"",window_started:Instant::now(),
         window_jobs:0,window_work:0.0,window_latency:0.0,window_saturated:false,
-        decisions:0,last_decision:"middle_start" }}
+        decisions:0,last_decision:"middle_start",headroom:None,reserved_bytes:0,observed_workspace:HashMap::new(),memory_waits:0 }}
 }
 #[derive(Default)]
 struct Queue { state: Mutex<State>, changed: Condvar }
 static QUEUE: OnceLock<Queue> = OnceLock::new();
 
-pub(super) struct Permit { started: Instant, class: &'static str, work:f64, saturated:bool }
+pub(super) struct Permit { started: Instant, class: &'static str, work:f64, saturated:bool, reservation:usize }
 
 #[derive(Default, Debug)]
 struct Controller { baseline:Option<(f64,f64,usize)>, reduce_trial:bool }
@@ -70,19 +74,22 @@ pub(super) fn acquire(class: &'static str, work:usize) -> Permit {
     let start=Instant::now();
     let mut s=queue.state.lock().unwrap_or_else(|e|e.into_inner());
     let saturated=s.active>=s.depth;
+    let reservation=s.observed_workspace.get(class).copied().unwrap_or(0);
+    let fits=|s:&State| memory_fits(s.active,s.headroom,s.reserved_bytes,reservation);
+    if !fits(&s) {s.memory_waits+=1;}
     let ticket=s.next;s.next+=1;s.waiting.push_back(ticket);
-    while s.waiting.front()!=Some(&ticket) || s.active>=s.depth {
+    while s.waiting.front()!=Some(&ticket) || s.active>=s.depth || !fits(&s) {
         s=queue.changed.wait(s).unwrap_or_else(|e|e.into_inner());
     }
-    s.waiting.pop_front();s.active+=1;s.wait_ms+=start.elapsed().as_secs_f64()*1000.0;
+    s.waiting.pop_front();s.active+=1;s.reserved_bytes=s.reserved_bytes.saturating_add(reservation);s.wait_ms+=start.elapsed().as_secs_f64()*1000.0;
     queue.changed.notify_all();
-    Permit {started:Instant::now(),class,work:work as f64,saturated}
+    Permit {started:Instant::now(),class,work:work as f64,saturated,reservation}
 }
 impl Drop for Permit {
     fn drop(&mut self) {
         let queue=QUEUE.get().unwrap();
         let mut s=queue.state.lock().unwrap_or_else(|e|e.into_inner());
-        s.active-=1;s.completed+=1;
+        s.active-=1;s.completed+=1;s.reserved_bytes=s.reserved_bytes.saturating_sub(self.reservation);
         let duration=self.started.elapsed().as_secs_f64()*1000.0;s.service_ms+=duration;
         if self.work>0.0 {
             if s.window_class!=self.class {
@@ -105,18 +112,43 @@ impl Drop for Permit {
         queue.changed.notify_all();
     }
 }
+pub(super) fn observe_memory(headroom:Option<u64>,class:&'static str,workspace:usize) {
+    let queue=QUEUE.get_or_init(Queue::default);
+    let mut s=queue.state.lock().unwrap_or_else(|e|e.into_inner());
+    s.headroom=headroom;
+    if workspace>0 {let estimate=s.observed_workspace.entry(class).or_default();*estimate=(*estimate).max(workspace);}
+    queue.changed.notify_all();
+}
+
+// Reservations are conservative admission estimates, not guaranteed free VRAM.
+// One operation must remain admissible to make progress when reusable buffers
+// consume the budget; domain allocation guards and runtime recovery still apply.
+fn memory_fits(active:usize,headroom:Option<u64>,reserved:usize,requested:usize)->bool {
+    active==0 || headroom.is_none_or(|free|
+        (reserved as u64).saturating_add(requested as u64)<=free)
+}
+
 pub(super) fn statistics()->serde_json::Value {
     let queue=QUEUE.get_or_init(Queue::default);
     let s=queue.state.lock().unwrap_or_else(|e|e.into_inner());
     serde_json::json!({"queued":s.waiting.len(),"active":s.active,"depth":s.depth,
         "initialDepth":INITIAL_DEPTH,"minDepth":MIN_DEPTH,"maxDepth":MAX_DEPTH,
         "completed":s.completed,"queueWaitMs":s.wait_ms,"serviceWorkerMs":s.service_ms,
-        "adaptive":true,"decisions":s.decisions,"lastDecision":s.last_decision})
+        "estimatedBytesPerFlightByClass":s.observed_workspace,"reservedBytes":s.reserved_bytes,"usableHeadroomBytes":s.headroom,"memoryWaits":s.memory_waits,"adaptive":true,"decisions":s.decisions,"lastDecision":s.last_decision})
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn memory_pressure_limits_overlap_without_deadlocking_reuse() {
+        assert!(memory_fits(1,Some(1000),400,600));
+        assert!(!memory_fits(1,Some(999),400,600));
+        assert!(!memory_fits(3,Some(0),0,1));
+        assert!(memory_fits(0,Some(0),0,1000));
+        assert!(memory_fits(3,None,400,600));
+        assert!(!memory_fits(1,Some(1000),usize::MAX,usize::MAX));
+    }
     #[test]
     fn controller_starts_midrange_and_reverts_useless_concurrency() {
         assert_eq!(State::default().depth,4);

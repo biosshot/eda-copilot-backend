@@ -4,6 +4,8 @@
 
 ### PCB layout
 
+- Add backend-neutral GPU memory-budget observations, with current Vulkan driver estimates cached for 250 ms and unavailable telemetry explicitly reported as unknown. Admission uses conservative per-workload scratch estimates to reduce overlap under memory pressure; block initialization uses the observed budget and backend allocation limit instead of a fixed 64 MiB cap. A dynamic 5% budget margin covers observation races. This is not complete allocation accounting or CUDA support.
+
 - Start the adaptive GPU manager roadmap. Remove CPU-thread-count gates and the board auto four-worker cap. Run one full board packing with pair-normalized weak positional alignment instead of two full searches; production positional alignment does not trigger atomic pair expansion. Add process-wide FIFO GPU admission starting at four operations, isolated reusable per-flight scratch and throughput/latency depth trials; release the device-state mutex before execution/readback. Backend portability, dynamic device memory budgeting, cooperative CPU scheduling and load-based auto routing remain in progress.
 
 - Relax Board Packager, block solver and post-place/refiner GPU workload admission floors by approximately 8x (integer floor, minimum one). Preserve concurrency/readiness requirements, device/input/memory guards and full CPU recovery. This broadens GPU eligibility; it is not a measured speed guarantee.

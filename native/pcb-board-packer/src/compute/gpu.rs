@@ -15,6 +15,7 @@ pub(crate) struct Session {
     in_flight: bool,
     pub capabilities: Capabilities,
     float_controls: serde_json::Value,
+    memory: Arc<super::memory::Monitor>,
 }
 enum State {
     New,
@@ -198,6 +199,10 @@ fn initialize() -> Result<Option<Session>, Error> {
             serde_json::json!({"device":id.name,"initializations":initializations,"precision":"f32","floatControls":float_controls})
         );
     }
+    let adapter=adapters.into_iter().find(|a| {
+        let info=a.get_info();info.vendor==id.vendor&&info.device==id.device&&info.device_type==id.device_type
+    }).ok_or_else(||Error::new(ErrorKind::AdapterMismatch,"budget adapter disappeared"))?;
+    let memory=Arc::new(super::memory::Monitor::new(super::memory::VulkanBudget::new(adapter)));
     Ok(Some(Session {
         client,
         name: id.name,
@@ -206,6 +211,7 @@ fn initialize() -> Result<Option<Session>, Error> {
         in_flight: false,
         capabilities,
         float_controls,
+        memory,
     }))
 }
 
@@ -221,6 +227,7 @@ pub(crate) fn with_session<T>(
 pub(crate) fn with_batch<T>(requirements:Requirements,class:&'static str,work:usize,
     f:impl FnOnce(&mut Session)->Result<T,Error>)->Result<T,Error> {
     let _float_env = crate::float_env::Guard::enter();
+    if let Some(memory)=memory_monitor() {super::queue::observe_memory(memory.snapshot().map(|b|b.usable()),class,0);}
     let _permit=super::queue::acquire(class,work);
     let wait_started=std::time::Instant::now();
     let state_mutex=STATE.get_or_init(||Mutex::new(State::New));
@@ -240,7 +247,7 @@ pub(crate) fn with_batch<T>(requirements:Requirements,class:&'static str,work:us
         State::Ready(s)=>{
             s.capabilities.check(requirements)?;
             Session {client:s.client.clone(),name:s.name.clone(),_lease:s._lease.clone(),
-                capabilities:s.capabilities,float_controls:s.float_controls.clone(),in_flight:true,
+                capabilities:s.capabilities,float_controls:s.float_controls.clone(),memory:s.memory.clone(),in_flight:true,
                 workspaces:IDLE_WORKSPACES.lock().unwrap_or_else(|e|e.into_inner()).pop().unwrap_or_default()}
         },
         State::Busy(_)=>return Err(Error::new(ErrorKind::Busy,"GPU owned by another process")),
@@ -252,6 +259,7 @@ pub(crate) fn with_batch<T>(requirements:Requirements,class:&'static str,work:us
     ACTIVE_BYTES.fetch_add(initial_bytes,std::sync::atomic::Ordering::Relaxed);
     let attempted=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||f(&mut session)));
     ACTIVE_BYTES.fetch_sub(session.workspaces.bytes(),std::sync::atomic::Ordering::Relaxed);
+    super::queue::observe_memory(session.memory.snapshot().map(|b|b.usable()),class,session.workspaces.bytes());
     let result=match attempted {
         Ok(result)=>result,
         Err(payload)=>Err(Error::new(ErrorKind::RuntimeFailure,
@@ -274,7 +282,19 @@ pub(crate) fn with_batch<T>(requirements:Requirements,class:&'static str,work:us
     result
 }
 
+fn memory_monitor()->Option<Arc<super::memory::Monitor>> {
+    let state=STATE.get()?.lock().unwrap_or_else(|e|e.into_inner());
+    match &*state {State::Ready(s)=>Some(s.memory.clone()),_=>None}
+}
+
 impl Session {
+    /// No fixed application quota. Unknown telemetry falls back to the actual
+    /// backend allocation limit, never to a fabricated free-memory value.
+    pub fn allocation_budget(&self)->usize {
+        let limit=self.client.properties().memory.max_page_size as usize;
+        self.memory.snapshot().map_or(limit,|b|limit.min(b.usable().min(usize::MAX as u64) as usize))
+    }
+
     /// Scratch contents belong to this protected operation only. Cloned handles
     /// must not escape its readback or be stored in an Engine. Resident handles
     /// use client.create_from_slice/empty instead and belong to this runtime.
@@ -351,6 +371,7 @@ pub(crate) fn statistics() -> serde_json::Value {
         "mutexWaitMs":WAIT_NANOS.load(std::sync::atomic::Ordering::Relaxed) as f64/1e6,"workspaceBytes":bytes,"device":match &*state {State::Ready(s)=>Some(&s.name),_=>None},
         "capabilities":match &*state {State::Ready(s)=>Some(s.capabilities),_=>None},
         "precision":"f32-rte-ftz-v1",
+        "memory":match &*state {State::Ready(s)=>s.memory.report(),_=>serde_json::Value::Null},
         "floatControls":match &*state {State::Ready(s)=>Some(&s.float_controls),_=>None},
         "state":match &*state {State::New=>"new",State::Ready(_)=>"ready",State::Busy(_)=>"busy",State::Disabled(_)=>"disabled"},
         "unavailableReason":match &*state {State::Busy(_)=>Some(ErrorKind::Busy),State::Disabled(e)=>Some(e.kind),_=>None}})
@@ -404,6 +425,14 @@ mod tests {
         });
         assert_eq!(statistics()["queue"]["active"],0);
         assert_eq!(statistics()["initializations"],1);
+        let report=statistics();
+        assert!(report["memory"]["known"].is_boolean());
+        if report["memory"]["known"]==true {
+            let budget=report["memory"]["budgetBytes"].as_u64().unwrap();
+            let usage=report["memory"]["usageBytes"].as_u64().unwrap();
+            assert_eq!(report["memory"]["headroomBytes"].as_u64(),Some(budget.saturating_sub(usage)));
+        } else {assert!(report["memory"]["headroomBytes"].is_null());}
+        eprintln!("gpu-memory-probe: {}",report["memory"]);
     }
 
     #[test]

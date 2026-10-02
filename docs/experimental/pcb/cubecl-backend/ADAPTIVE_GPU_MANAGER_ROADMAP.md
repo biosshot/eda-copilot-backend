@@ -80,7 +80,7 @@ The manager reports active/queued/completed work, depth, decision reason, queue 
 and accumulated service time. These are not hardware execution timestamps.
 
 Remaining required work: backend-neutral CUDA/platform execution and conformance;
-actual device-memory-budget integration (existing domain caps still apply); async
+complete device-memory reservation accounting (board/refiner domain caps still apply); async
 continuations/cooperative CPU worker scheduling; board Engine mutex removal through
 safe domain job ownership; multi-process coordination; auto load-based CPU selection;
 representative full-board performance/quality acceptance. Workers still wait in the
@@ -114,3 +114,61 @@ Validation so far:
   move from GPU-only execution, but does not settle the fixture's acceptance criteria.
 - No PortableScope rerun and no median benchmark suite. Logs remain under ignored
   `debugging/adaptive-gpu-*`. No whole-board speedup is claimed.
+
+
+## Memory-budget checkpoint (2026-10-02, after 361338c)
+
+Added a backend-neutral `BudgetSource` / cached `Monitor`. The current runtime
+implements this using Vulkan `VK_EXT_memory_budget` on the largest device-local
+heap; unsupported telemetry stays unknown rather than substituting physical VRAM.
+The driver reports a changing per-process allocation budget and estimated usage,
+not a reservation or a guarantee that a future allocation will succeed. See the
+[Vulkan budget contract](https://docs.vulkan.org/refpages/latest/refpages/source/VkPhysicalDeviceMemoryBudgetPropertiesEXT.html).
+
+Readings refresh at most every 250 ms. Usable headroom subtracts a dynamic 5% of
+the driver budget as a race margin, not a fixed application quota. Queue admission
+uses per-workload observed scratch peaks and in-flight reservations to reduce
+concurrent jobs when memory pressure rises. Unknown readings retain depth-based
+admission. One operation can proceed when no other job is active, avoiding a
+permanent stall when existing reusable buffers already occupy the available budget.
+Allocation guards and original-call CPU recovery remain necessary.
+
+Block engine initialization now derives its allocation ceiling from that reading
+and the actual backend allocation limit instead of the fixed 64 MiB ceiling.
+This does not remove dispatch limits or increase candidate coverage. Board/refiner
+resident/cache limits are still unchanged. Full dynamic sizing, accounting of all
+resident/uploads and releasing idle allocations under pressure remain open.
+Scratch estimates are conservative: pooled buffers may include older workloads,
+and a driver usage reading may already include bytes counted as reservations.
+Do not call this precise global free-memory accounting, CPU scheduling, CUDA
+support, or completion of P4/P6. Those milestones remain unchecked.
+
+Validation:
+- Rust normal suite: 86 passed, 5 hardware tests ignored.
+- Real GPU four-operation scratch isolation/readback test passed. Driver budget
+  5,479,858,176 bytes; usage 76,791,808 bytes; headroom 5,403,066,368 bytes;
+  usable headroom after margin 5,129,073,460 bytes at the sampled instant.
+- Unit checks cover unknown telemetry, saturating headroom, overlap restriction
+  under pressure, overflow and forward progress with retained scratch.
+- Release build succeeded (3m 53s): Windows addon 21,186,560 bytes (~20.21 MiB),
+  SHA256 `0981971d4104aa16009319f3445e6ac9c6e898a529a6761538b707dc66fa31cc`.
+  Still slightly above the preferred 20 MiB; no new dependency/helper DLL.
+- Four focused block GPU tests passed: full-cycle composite score/geometry,
+  absent-GPU recovery, injected failure after singles, locked/world constraints.
+- Exact saved MCU input `4312292b68` replayed once in 1,749.429 ms with exact
+  baseline output, but the existing supported-input guard selected CPU. This is
+  recovery evidence, not GPU performance evidence.
+- A different supported saved USB_Termination input `c2780c5c38` replayed once:
+  GPU, 57,562.822 ms cold process, exact baseline output and rank (zero hard
+  violations), 12 GPU batches / 644 candidates. Saved capture had 44.704 ms for
+  this call in an already-running GPU process. These are NOT comparable warm/cold
+  performance samples and establish no speedup. Current queue wait totals only
+  0.0059 ms; almost all elapsed time is in first beam evaluation (57,165.603 ms),
+  while singles take 8.844 ms. Cold compilation/pipeline creation is a strong
+  hypothesis, not a separately timed measurement in this replay. Preserve the
+  shared runtime across work and measure compilation separately in subsequent
+  manager work; do not try to hide startup cost using warm-only timings.
+- Logs: `debugging/adaptive-memory-*`; exact replays at
+  `2026-10-02T12-52-25-289Z-MCU_Decoupling_Reset_Support_Boot_Support_USB_Termination_MCU`
+  and `2026-10-02T12-53-20-922Z-USB_Termination`. No input was replayed twice;
+  existing baseline outputs were reused and PortableScope was not rerun.
