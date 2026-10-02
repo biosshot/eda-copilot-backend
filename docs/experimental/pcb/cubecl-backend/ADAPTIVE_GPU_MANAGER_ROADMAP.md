@@ -368,3 +368,56 @@ closed: estimates omit some temporary/resident allocation overlap, there is no
 global VRAM reservation across processes or asynchronous memory-pressure wait,
 and actual runtime allocation failure retains existing device-disable/replay
 behavior. No roadmap completion is claimed by this checkpoint.
+
+## Bounded CPU compensation for independent block batches (2026-10-02)
+
+`solveBlockPrimitivesBatch` now gives its jobs a shared active-CPU budget equal
+to the existing requested/hardware-capped worker count. GPU-capable batches may
+have up to eight extra native worker stacks, bounded by input count. Each worker
+must own a CPU permit for solver work, including a complete CPU recovery. While
+waiting for local GPU admission, device ownership, runtime state or block readback,
+it lends that permit to another independent job. CPU-only/disabled batches retain
+their original worker count. Input-order result assembly and full search stages
+are preserved; cold kernel compilation remains CPU work under the permit.
+
+This is blocking compensation: the original OS thread may still be parked; an
+already-created replacement thread does useful work in its CPU slot. It is not
+an unbounded thread-per-candidate scheme or a general continuation executor. A
+single block with no independent companion gains no extra useful work this way.
+Board beam/local/repair and refiner do not yet register in this scheduler, so P5
+remains open for those paths. CUDA/P3 also remains open.
+
+Nested waits lend a permit only once, and unwinding restores it before CPU
+recovery. Cooperative runtime locking never retains a mutex guard while waiting
+to reacquire the CPU permit; otherwise a CPU-slot owner needing that mutex could
+deadlock. `[block-cpu-scheduler]` reports thread/job counts, active limit, actual
+peak CPU slots and accumulated suspended worker time (including resumption wait;
+not GPU execution time). Runtime mutex/admission wall timing may now also include
+CPU-slot resumption. Budgets are per native batch, respecting its existing process
+allocation; this does not introduce a cross-process CPU scheduler.
+
+Validation:
+- Rust: 96 passed / 5 hardware tests ignored; CPU-only: 76 passed / 2 ignored.
+  Three focused scheduler tests also pass after the final test refinement: a
+  one-slot waiter allows a peer to run, nested waits/panic restore ownership, and
+  mutex acquisition does not retain a guard while reacquiring the CPU slot.
+- TypeScript typecheck and final native release build passed. An earlier build
+  was superseded before GPU testing to repair the mutex/CPU-slot lock ordering.
+- New live GPU batch regression passed (78.663 s including cold preparation):
+  two independent inputs, one CPU slot, two worker stacks, measured peak one
+  active CPU slot, positive suspension count and zero leaked active slots.
+  Both complete GPU calls preserve geometry/checkpoint stages/quality bounds and
+  locked poses. A distinct injected-after-singles failure scenario exactly
+  matches the full CPU batch result and retains the one-slot limit. CPU reference
+  is evaluated once and reused for both normal/failure conditions.
+- One saved USB GPU replay `c2780c5c38`,
+  `2026-10-02T15-17-54-582Z-USB_Termination`: 3,534.555 ms, exact baseline match,
+  hardCount=0, score=236.94454956054688. This single-call replay is a correctness
+  check, not proof of batch scheduler speedup. Cache: 9 hits/2 misses, source
+  compilation 2,477.723 ms, first-launch host time 3,140.620 ms (overlapping).
+  No saved CPU rerun or PortableScope capture.
+- Logs: `debugging/adaptive-cpu-*`. Final build key `8782a6f96f24e273`, addon
+  21,357,568 bytes (~20.37 MiB), SHA256
+  `ef70c7b7795bea4741cc4dfbcecf6a8466c9d1ddd8693ccfdb5d5237e0a1ee95`.
+  No new dependency/helper binary. Full-board throughput and memory impact of
+  additional waiting stacks remain unmeasured; P5 is not marked complete.

@@ -1067,7 +1067,7 @@ impl Engine {
             }
             drop(dispatch);
             let read = context.detail.span("gpu_readback");
-            let buffers = ::cubecl::future::block_on(client.read_async(vec![oi, of]))
+            let buffers = crate::compute::cpu::waiting(||::cubecl::future::block_on(client.read_async(vec![oi, of])))
                 .map_err(|e| format!("GPU shortlist readback: {e:?}"))?;
             drop(read);
             let ids = u32::from_bytes(&buffers[0]);
@@ -1091,11 +1091,9 @@ impl Engine {
                 rows.push(Row { index, hard, base });
             }
             let all = if verify {
-                let f = client
-                    .read_one(scores)
+                let f = crate::compute::cpu::waiting(||client.read_one(scores))
                     .map_err(|e| format!("GPU verify scores: {e:?}"))?;
-                let i = client
-                    .read_one(tags)
+                let i = crate::compute::cpu::waiting(||client.read_one(tags))
                     .map_err(|e| format!("GPU verify counts: {e:?}"))?;
                 Some((
                     f32::from_bytes(&f)[..poses.len()].to_vec(),
@@ -1171,8 +1169,7 @@ impl Engine {
                                     ArrayArg::from_raw_parts(output.clone(), current.len() * 16),
                                 );
                             }
-                            let bytes = client
-                                .read_one(output)
+                            let bytes = crate::compute::cpu::waiting(||client.read_one(output))
                                 .map_err(|e| format!("diagnostic read: {e:?}"))?;
                             Ok(f32::from_bytes(&bytes).to_vec())
                         })

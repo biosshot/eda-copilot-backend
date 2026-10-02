@@ -10,6 +10,40 @@ const require = createRequire(import.meta.url);
 const addon = resolve('native/pcb-board-packer', require('../native/pcb-board-packer/platform.cjs').nativeFilename());
 const gpuEnabled = process.env.PCB_BLOCK_GPU_TESTS === '1';
 
+test('GPU batch lends one CPU slot while retaining ordered results and full-call recovery', { skip: !gpuEnabled }, () => {
+    const first=problem();const second=problem();second.primitives[0].locked=true;
+    const problems=[first,second];
+    const invoke=(backend:string,extra:Record<string,string>={})=>{
+        const child=spawnSync(process.execPath,['--input-type=commonjs','-e',
+            'const a=require(process.argv[1]);const p=JSON.parse(require("node:fs").readFileSync(0,"utf8"));console.log(JSON.stringify(a.solveBlockPrimitivesBatch(p,1)));',addon],{
+            input:JSON.stringify(problems),encoding:'utf8',windowsHide:true,maxBuffer:8*1024*1024,timeout:180_000,
+            env:{...process.env,PCB_BLOCK_BACKEND:backend,PCB_BLOCK_SOLVER_PROFILE:'1',...extra},
+        });
+        assert.equal(child.status,0,child.stderr||String(child.error));
+        const schedulerLine=child.stderr.split('\n').find(line=>line.startsWith('[block-cpu-scheduler] '));
+        assert.ok(schedulerLine,'batch scheduler telemetry');
+        return {values:JSON.parse(child.stdout) as NativeBlockSolveSolutionV4[],log:child.stderr,
+            scheduler:JSON.parse(schedulerLine.slice('[block-cpu-scheduler] '.length))};
+    };
+    const cpu=invoke('cpu');const gpu=invoke('cubecl');
+    assert.equal(gpu.scheduler.threads,2);assert.equal(gpu.scheduler.cpu.activeLimit,1);
+    assert.equal(gpu.scheduler.cpu.peakActive,1);assert.equal(gpu.scheduler.cpu.active,0);
+    assert.ok(gpu.scheduler.cpu.suspensions>0);
+    assert.doesNotMatch(gpu.log,/block-gpu-fallback/);
+    for(let i=0;i<problems.length;i++) {
+        checkGeometry(problems[i],gpu.values[i]);
+        assert.deepEqual(gpu.values[i].checkpoints.map(c=>c.stage),cpu.values[i].checkpoints.map(c=>c.stage));
+        assert.ok(gpu.values[i].rank.score<=cpu.values[i].rank.score*1.01+.01);
+    }
+    const locked=second.primitives[0].id;
+    assert.deepEqual(gpu.values[1].states.find(s=>s.primitiveId===locked)?.placements,
+        cpu.values[1].states.find(s=>s.primitiveId===locked)?.placements);
+    const failed=invoke('cubecl',{PCB_BLOCK_GPU_FAIL_AT:'singles'});
+    assert.deepEqual(failed.values,cpu.values);
+    assert.match(failed.log,/block-gpu-fallback/);
+    assert.equal(failed.scheduler.cpu.peakActive,1);assert.equal(failed.scheduler.cpu.active,0);
+});
+
 function problem(): NativeBlockSolveProblemV4 {
     const source = minimalProblem();
     const primitives = [0, 1, 2].map(i => {

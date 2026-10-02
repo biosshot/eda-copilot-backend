@@ -2,6 +2,8 @@
 #[cfg(feature = "gpu")]
 pub(crate) mod gpu;
 #[cfg(feature = "gpu")]
+pub(crate) mod cpu;
+#[cfg(feature = "gpu")]
 mod queue;
 #[cfg(feature = "gpu")]
 mod lease;

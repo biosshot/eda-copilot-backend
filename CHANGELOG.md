@@ -4,6 +4,8 @@
 
 ### PCB layout
 
+- Let independent native block-batch jobs lend their bounded CPU execution slots while waiting for GPU admission, ownership and readback. Keep at most eight extra waiting stacks, preserve input-order result assembly, and include full-call CPU recovery in the same CPU budget. Report active/peak CPU slots and suspended worker time. This is bounded blocking compensation for block batches, not a completed continuation scheduler for board/refiner or a CUDA backend.
+
 - Separate GPU hardware allocation limits from driver free-memory estimates. Low estimated headroom now reduces block, board and refiner batches instead of disabling the shared runtime during block setup; release idle scratch and request allocator cleanup under pressure. Board/refiner batch sizing no longer uses a fixed 64 MiB quota. Preserve one-candidate forward progress and whole-call CPU recovery on actual runtime failure. This remains estimated accounting, not guaranteed VRAM reservation or a completed asynchronous scheduler.
 
 - Scope GPU device ownership to complete solver calls instead of idle runtime lifetime. Explicit `cubecl` waits for a busy device; `auto` can decline occupied device/local admission before GPU work starts. Keep the same process runtime and kernel cache, release ownership before original-input CPU recovery, and report process lease waits separately. Refiner admission wait does not consume its refinement time budget. OS lock waiting is still blocking and does not yet provide fair cross-process GPU scheduling.

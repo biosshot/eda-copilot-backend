@@ -238,7 +238,7 @@ fn with_batch_policy<T>(requirements:Requirements,class:&'static str,work:usize,
     f:impl FnOnce(&mut Session)->Result<T,Error>)->Result<T,Error> {
     let _float_env = crate::float_env::Guard::enter();
     if let Some(memory)=memory_monitor() {super::queue::observe_memory(memory.snapshot().map(|b|b.usable()),class,0);}
-    let _permit=super::queue::acquire(class,work,policy==Admission::Wait)?;
+    let _permit=super::cpu::waiting(||super::queue::acquire(class,work,policy==Admission::Wait))?;
     let wait_started=std::time::Instant::now();
     let state_mutex=STATE.get_or_init(||Mutex::new(State::New));
     let mut state=lock_state(state_mutex,policy)?;
@@ -277,7 +277,7 @@ fn with_batch_policy<T>(requirements:Requirements,class:&'static str,work:usize,
             payload.downcast_ref::<String>().cloned().or_else(||payload.downcast_ref::<&str>().map(|s|s.to_string()))
                 .unwrap_or_else(||"GPU runtime panicked".into())))
     };
-    let mut state=state_mutex.lock().unwrap_or_else(|e|e.into_inner());
+    let mut state=super::cpu::lock(state_mutex);
     if let Err(error)=&result {
         if error.disables_runtime() {
             *state=State::Disabled(error.clone());
@@ -300,7 +300,7 @@ fn lock_state(state_mutex:&Mutex<State>,policy:Admission)->Result<std::sync::Mut
             Err(std::sync::TryLockError::Poisoned(error))=>Ok(error.into_inner()),
             Err(std::sync::TryLockError::WouldBlock)=>Err(Error::new(ErrorKind::Busy,"GPU initialization or state update pending")),
         }
-    } else {Ok(state_mutex.lock().unwrap_or_else(|e|e.into_inner()))}
+    } else {Ok(super::cpu::lock(state_mutex))}
 }
 
 fn memory_monitor()->Option<Arc<super::memory::Monitor>> {
@@ -393,10 +393,7 @@ pub(crate) fn probe(values: &[f32], inject_panic: bool) -> Result<serde_json::Va
 }
 
 pub(crate) fn statistics() -> serde_json::Value {
-    let state = STATE
-        .get_or_init(|| Mutex::new(State::New))
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
+    let state = super::cpu::lock(STATE.get_or_init(|| Mutex::new(State::New)));
     let bytes = match &*state {
         State::Ready(_) => IDLE_WORKSPACES.lock().unwrap_or_else(|e|e.into_inner()).iter().map(Workspace::bytes).sum::<usize>() + ACTIVE_BYTES.load(std::sync::atomic::Ordering::Relaxed),
         _ => 0,
@@ -418,7 +415,7 @@ pub(crate) fn statistics() -> serde_json::Value {
 pub(crate) fn ready() -> bool {
     STATE.get().is_some_and(|state| {
         matches!(
-            &*state.lock().unwrap_or_else(|e| e.into_inner()),
+            &*super::cpu::lock(state),
             State::Ready(_)
         )
     })

@@ -11,6 +11,9 @@ pub(crate) struct Permit {lease:Arc<Lease>}
 impl Lease {
     pub fn new(file:File)->Arc<Self>{Arc::new(Self{file,state:Mutex::new(State::default()),changed:Condvar::new()})}
     pub fn acquire(self:&Arc<Self>,policy:Admission)->Result<Permit,Error> {
+        super::cpu::waiting(||self.acquire_inner(policy))
+    }
+    fn acquire_inner(self:&Arc<Self>,policy:Admission)->Result<Permit,Error> {
         let started=Instant::now();let mut state=self.state.lock().unwrap_or_else(|e|e.into_inner());
         while state.acquiring {
             if policy==Admission::Try {state.busy+=1;return Err(Error::new(ErrorKind::Busy,"GPU admission pending in this process"));}

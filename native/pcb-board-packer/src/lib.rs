@@ -210,10 +210,21 @@ pub fn solve_block_primitives_batch(problems: Vec<Value>, threads: u32) -> Resul
     if count == 0 { return Ok(Vec::new()); }
     let workers = (threads as usize).max(1).min(8).min(count)
         .min(std::thread::available_parallelism().map_or(1, |n| n.get()));
+    #[cfg(feature="gpu")]
+    let cpu_budget=compute::cpu::Budget::new(workers);
+    // At most eight additional stacks may wait for GPU. Active CPU execution
+    // remains bounded by `workers`, including full-call CPU recovery.
+    #[cfg(feature="gpu")]
+    let worker_slots=if std::env::var("PCB_BLOCK_BACKEND").as_deref()!=Ok("cpu")
+        && std::env::var("PCB_BLOCK_GPU_DISABLED").as_deref()!=Ok("1") {count.min(workers+8)}else{workers};
+    #[cfg(not(feature="gpu"))]
+    let worker_slots=workers;
     let jobs = std::sync::Mutex::new(problems.into_iter().enumerate());
     let mut results = std::thread::scope(|scope| {
-        let handles: Vec<_> = (0..workers).map(|_| scope.spawn(|| {
+        let handles: Vec<_> = (0..worker_slots).map(|_| scope.spawn(|| {
             let _float_env = float_env::Guard::enter();
+            #[cfg(feature="gpu")]
+            let _cpu_worker=cpu_budget.enter();
             let mut completed = Vec::new();
             loop {
                 let job = jobs.lock().expect("block job queue poisoned").next();
@@ -234,6 +245,10 @@ pub fn solve_block_primitives_batch(problems: Vec<Value>, threads: u32) -> Resul
         if failed { Err(Error::new(Status::GenericFailure, "Block solver worker panicked")) }
         else { Ok(completed) }
     })?;
+    #[cfg(feature="gpu")]
+    if std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some() {
+        eprintln!("[block-cpu-scheduler] {}",serde_json::json!({"threads":worker_slots,"jobs":count,"cpu":cpu_budget.report()}));
+    }
     results.sort_by_key(|(index, _)| *index);
     results.into_iter().map(|(_, result)| result.map_err(|e| Error::new(Status::GenericFailure, e))).collect()
 }
