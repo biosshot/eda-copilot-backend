@@ -128,3 +128,11 @@ mod tests {
         assert_eq!(report["known"],false);assert!(report["headroomBytes"].is_null());
     }
 }
+
+pub(super) struct CudaBudget(pub std::sync::Arc<cudarc::driver::CudaContext>);
+impl BudgetSource for CudaBudget {
+ fn read(&self)->Option<Budget> {
+  let (free,total)=self.0.mem_get_info().ok()?;
+  Some(Budget{budget_bytes:total as u64,usage_bytes:total.saturating_sub(free) as u64,source:"cuda_mem_get_info"})
+ }
+}

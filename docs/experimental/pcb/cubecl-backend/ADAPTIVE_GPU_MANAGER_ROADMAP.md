@@ -1,6 +1,8 @@
 # Adaptive GPU manager and single board search
 
-Status: active, approved 2026-10-02. Do not mark complete without evidence.
+Status: final implementation/acceptance, approved 2026-10-02. Latest evidence is in
+[ADAPTIVE_GPU_MANAGER_RESULTS.md](ADAPTIVE_GPU_MANAGER_RESULTS.md). Historical
+checkpoint limitations below describe their dated versions, not the current implementation.
 
 ## Agreed scope
 
@@ -29,26 +31,26 @@ free VRAM. Reuse allocations; retain dynamic safety headroom for concurrent syst
   No second full search or expensive atomic pair search solely for cosmetic alignment.
   Retain local improvement/repair and existing block portfolio. Test one invocation,
   hard geometry, locked poses, weak alignment and full-cycle saved input.
-- [ ] P3: Implement backend-neutral runtime selection and strict F32 implementations.
+- [x] P3: Implement backend-neutral runtime selection and strict F32 implementations.
   Audit pinned CubeCL 0.10 compiler requirements, driver discovery and deployment.
   Prefer CUDA when usable, then Vulkan and supported platform alternatives. Actual
   execution probes and unsupported-backend fallback must be tested. No silent claim
   that building one backend validates other OSes. Record addon size/dependencies.
-- [ ] P4: Central GPU manager with explicit bounded queue, owned per-flight scratch,
+- [x] P4: Central GPU manager with explicit bounded queue, owned per-flight scratch,
   completion handles, cancellation/failure cleanup and fair admission. Protect buffer
   lifetimes until readback. Account for subprocess ownership, not only Rust threads.
   No mutex held around all GPU execution/readback; no detached work escaping recovery.
-- [ ] P5: Cooperative CPU task scheduling: preparing independent work/CPU scoring while
+- [x] P5: Cooperative CPU task scheduling: preparing independent work/CPU scoring while
   GPU requests are pending; deterministic results independent of completion order.
   Preserve dependencies between beam levels and existing full-call recovery.
-- [ ] P6: Adaptive admission from a middle starting point using memory and measured
+- [x] P6: Adaptive admission from a middle starting point using memory and measured
   throughput/latency. Record queued, running, completed, queue/service/readback time,
   byte estimates, available budget and each controller decision. Controlled tests for
   congestion, changing workloads, unavailable memory telemetry and bounded growth.
-- [ ] P7: Load-based CPU selection only in auto. Explicit cubecl queues GPU work; device
+- [x] P7: Load-based CPU selection only in auto. Explicit cubecl queues GPU work; device
   absence/real failure still uses agreed full original-input CPU recovery. Avoid
   per-candidate thrashing or automatic retries after partial GPU failure.
-- [ ] P8: One-pass complete validation on representative saved inputs, plus full board
+- [x] P8: One-pass complete validation on representative saved inputs, plus full board
   quality/time when appropriate. Reuse saved CPU references; do not run median suites.
   Distinguish GPU execution, waiting, worker accumulation and full pipeline wall time.
   Record all remaining limitations instead of closing incomplete milestones.
@@ -421,3 +423,50 @@ Validation:
   `ef70c7b7795bea4741cc4dfbcecf6a8466c9d1ddd8693ccfdb5d5237e0a1ee95`.
   No new dependency/helper binary. Full-board throughput and memory impact of
   additional waiting stacks remain unmeasured; P5 is not marked complete.
+
+
+## Final implementation, 2026-10-02
+
+CUDA execution/selection, board/refiner CPU-wait compensation and full-call
+allocation recovery are implemented. See the final results report and
+[CUDA integration](CUDA_INTEGRATION.md) for the strict compiler patch, deployment,
+failed diagnostic attempts and corrected backend allocation path.
+
+P3 is checked for the two implemented backends, CUDA and Vulkan, with real Windows
+execution/fallback tests; it does not certify other operating systems or add HIP/
+Metal. P5 uses bounded blocking compensation for independent block/beam work and
+the refiner's producer/consumer pipeline. A parked OS thread can remain parked;
+its CPU slot is available to another independent job. Local dependencies remain
+serial and no extra CPU workers are enabled on CPU-only fallback.
+
+The completed P7 policy is admission-time load choice only in auto; explicit GPU
+waits, and actual device/allocation failure always replays the full original call.
+The new CUDA backend-level allocation failure test supplements the manager-level
+injection because the latter did not exercise upstream allocator error handling.
+
+Final saved-input evidence, artifacts and acceptance limitations are recorded in
+the results report. The old esp32c3 specific-swap fixture assertion is still open;
+its authored inputs and expected poses have not been silently changed.
+
+
+Final evidence closes P4/P6/P8 within the documented synchronous native API:
+scoped jobs own their buffers through completion/failure; local FIFO plus an OS
+whole-call lease handles contention; no detached GPU job escapes CPU recovery.
+External queued-call cancellation and strict FIFO between separate processes are
+not provided by that API. Memory/throughput admission starts at four and reached
+six on the saved full board (68 decisions), with unknown-budget/pressure/controller
+unit checks and both manager/backend allocation-failure recovery tests.
+
+Accepted one-pass native Board Packager PortableScope: 157.272 s saved GPU ->
+60.072 s CUDA (2.62x), exact output including pre-existing nine hard violations.
+USB runs the full GPU cycle with zero NVIDIA sanitizer errors; refiner preserves
+all poses/move decisions with one-ULP score differences. No PortableScope capture.
+See the results report for final binary hash/size, cold-start contributions and
+all actual checks.
+
+Implementation work is complete. P2's specific historical esp32c3 fixture
+acceptance remains unchecked: production uses one pack and all 15 alignment
+checks pass, but the saved full-pipeline fixture demands the R4/R5 swap which
+both the saved GPU and CPU refiner omit. Do not call that assertion green or
+change fixture expectations implicitly. This is the remaining quality-acceptance
+exception, not an unimplemented CUDA, scheduling or memory-recovery item.

@@ -166,3 +166,18 @@ test('GPU bounded block retains locked poses and world constraints', { skip: !gp
     assert.deepEqual(fixed.placements, cpu.solution.states.find(s => s.primitiveId === fixed.primitiveId)!.placements);
     assert.ok(gpu.solution.rank.score <= cpu.solution.rank.score * 1.01 + .01);
 });
+
+test('GPU external relations select the present endpoint in both directions', {skip:!gpuEnabled},()=>{
+    for (const reverse of [false,true]) {
+        const p=problem();
+        p.relations.push({...p.relations[0],id:'external',
+            from:reverse?'pad:OUTSIDE.1':'pad:C0.1',to:reverse?'pad:C0.1':'pad:OUTSIDE.1',
+            effect:'move_from',weight:12,preferFacingPads:false});
+        const cpu=run(p,'cpu');
+        const gpu=run(p,'cubecl',{PCB_BLOCK_GPU_VERIFY:'1'});
+        assert.match(gpu.log,/"backend":"cubecl"/);
+        assert.doesNotMatch(gpu.log,/block-gpu-fallback|validation failed/);
+        checkGeometry(p,gpu.solution);
+        assert.ok(gpu.solution.rank.score<=cpu.solution.rank.score*1.01+.01);
+    }
+});

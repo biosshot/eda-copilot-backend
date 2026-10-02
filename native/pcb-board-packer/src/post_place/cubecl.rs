@@ -1,5 +1,4 @@
 //! One resident evaluator shared by local geometric and final route-aware refinement.
-use crate::compute::f32_runtime::PcbRuntime as WgpuRuntime;
 use super::{Candidate,RefineProblem,World,Target};
 use crate::compute::{gpu,Error,ErrorKind,Requirements,ScratchKey};
 use cubecl::{prelude::*,server::Handle};
@@ -99,33 +98,34 @@ impl Engine {
   for i in 0..p.components.len(){let pose=self.pose(p,i,p.pose(current,i),&mut bf).map_err(|e|self.fail(e))?;bi.extend(pose);}
   let frames=bi.len();bi.resize(frames+candidates.len()*2,0);
   for (i,c) in candidates.iter().enumerate(){bi[frames+i*2]=bi.len() as u32;bi[frames+i*2+1]=c.changes.len() as u32;for (id,placement) in &c.changes{bi.push(*id as u32);bi.extend(self.pose(p,*id,placement,&mut bf).map_err(|e|self.fail(e))?);}}
-  self.encode_ms+=started.elapsed().as_secs_f64()*1000.0;
+  self.encode_ms+=started.elapsed().as_secs_f64()*1000.0;drop(permit);
   let started=Instant::now();let count=candidates.len();let d=&self.data;let ns=d.si[5] as usize;let nt=(d.si[7]+d.si[9]) as usize;
   let verify=std::env::var("PCB_POST_PLACE_GPU_VERIFY").ok().as_deref()==Some("1");
-  let result=gpu::with_batch(REQUIREMENTS,"refine-score",count.saturating_mul(p.components.len().max(1)),|session|{
-   if self.handles.is_none(){self.handles=Some((session.client.create_from_slice(u32::as_bytes(&d.si)),session.client.create_from_slice(f32::as_bytes(&d.sf))));}
-   let (si,sf)=self.handles.as_ref().unwrap();let bih=session.client.create_from_slice(u32::as_bytes(&bi));let bfh=session.client.create_from_slice(f32::as_bytes(&bf));
+  let result=gpu::with_batch(REQUIREMENTS,"refine-score",count.saturating_mul(p.components.len().max(1)),|session|{ crate::compute::client::with_client!(session.client.clone(), |client,WgpuRuntime| {
+   let permit=budget.map(|b|b.acquire());
+   if self.handles.is_none(){self.handles=Some((client.create_from_slice(u32::as_bytes(&d.si)),client.create_from_slice(f32::as_bytes(&d.sf))));}
+   let (si,sf)=self.handles.as_ref().unwrap();let bih=client.create_from_slice(u32::as_bytes(&bi));let bfh=client.create_from_slice(f32::as_bytes(&bf));
    let geometry_len=count*d.si[11] as usize;let edge_len=(count*ns*3).max(1);let length_len=(count*ns).max(1);let conn_len=(count*d.si[6] as usize).max(1);let term_len=(count*nt*3).max(1);let seg_len=(count*ns*2).max(1);let mask_len=(count*ns*ns.div_ceil(32)).max(1);
    let geo=session.workspace(ScratchKey::new("post-place-f32",0),geometry_len*4);let edges=session.workspace(ScratchKey::new("post-place-f32",1),edge_len*4);let lengths=session.workspace(ScratchKey::new("post-place-f32",2),length_len*4);let connected=session.workspace(ScratchKey::new("post-place-f32",3),conn_len*4);
    let terms=session.workspace(ScratchKey::new("post-place-f32",4),term_len*4);let segments=session.workspace(ScratchKey::new("post-place-f32",5),seg_len*4);let masks=session.workspace(ScratchKey::new("post-place-f32",6),mask_len*4);let output=session.workspace(ScratchKey::new("post-place-f32",7),count*4);
    let input=||unsafe{k::InputLaunch::new(ArrayArg::from_raw_parts(si.clone(),d.si.len()),ArrayArg::from_raw_parts(sf.clone(),d.sf.len()),ArrayArg::from_raw_parts(bih.clone(),bi.len()),ArrayArg::from_raw_parts(bfh.clone(),bf.len()),ArrayArg::from_raw_parts(geo.clone(),geometry_len),ArrayArg::from_raw_parts(edges.clone(),edge_len),ArrayArg::from_raw_parts(lengths.clone(),length_len))};
    let grid=|n:usize|CubeCount::Static(n.div_ceil(128) as u32,1,1);let dim=CubeDim::new_1d(128);
    unsafe{
-    k::materialize::launch_unchecked::<WgpuRuntime>(&session.client,grid(count*d.si[0] as usize),dim,input(),ArrayArg::from_raw_parts(geo.clone(),geometry_len));
-    if d.si[2]>0{k::mst::launch_unchecked::<WgpuRuntime>(&session.client,grid(count*d.si[2] as usize),dim,input(),ArrayArg::from_raw_parts(connected,conn_len),ArrayArg::from_raw_parts(edges.clone(),edge_len),ArrayArg::from_raw_parts(lengths.clone(),length_len));}
-    if ns>0{k::segment_costs::launch_unchecked::<WgpuRuntime>(&session.client,grid(count*ns),dim,input(),ArrayArg::from_raw_parts(segments.clone(),seg_len),ArrayArg::from_raw_parts(masks.clone(),mask_len));}
-    if nt>0{k::terms::launch_unchecked::<WgpuRuntime>(&session.client,grid(count*nt),dim,input(),ArrayArg::from_raw_parts(terms.clone(),term_len));}
-    k::reduce::launch_unchecked::<WgpuRuntime>(&session.client,grid(count),dim,input(),ArrayArg::from_raw_parts(segments,seg_len),ArrayArg::from_raw_parts(masks,mask_len),ArrayArg::from_raw_parts(terms.clone(),term_len),ArrayArg::from_raw_parts(output.clone(),count));
+    k::materialize::launch_unchecked::<WgpuRuntime>(&client,grid(count*d.si[0] as usize),dim,input(),ArrayArg::from_raw_parts(geo.clone(),geometry_len));
+    if d.si[2]>0{k::mst::launch_unchecked::<WgpuRuntime>(&client,grid(count*d.si[2] as usize),dim,input(),ArrayArg::from_raw_parts(connected,conn_len),ArrayArg::from_raw_parts(edges.clone(),edge_len),ArrayArg::from_raw_parts(lengths.clone(),length_len));}
+    if ns>0{k::segment_costs::launch_unchecked::<WgpuRuntime>(&client,grid(count*ns),dim,input(),ArrayArg::from_raw_parts(segments.clone(),seg_len),ArrayArg::from_raw_parts(masks.clone(),mask_len));}
+    if nt>0{k::terms::launch_unchecked::<WgpuRuntime>(&client,grid(count*nt),dim,input(),ArrayArg::from_raw_parts(terms.clone(),term_len));}
+    k::reduce::launch_unchecked::<WgpuRuntime>(&client,grid(count),dim,input(),ArrayArg::from_raw_parts(segments,seg_len),ArrayArg::from_raw_parts(masks,mask_len),ArrayArg::from_raw_parts(terms.clone(),term_len),ArrayArg::from_raw_parts(output.clone(),count));
    }
    drop(permit);
-   let bytes=session.client.read_one(output).map_err(|e|Error::new(ErrorKind::RuntimeFailure,e.to_string()))?;let diagnostic=if verify {
-    let e=session.client.read_one(edges).map_err(|e|Error::new(ErrorKind::RuntimeFailure,e.to_string()))?;
-    let l=session.client.read_one(lengths).map_err(|e|Error::new(ErrorKind::RuntimeFailure,e.to_string()))?;
-    let g=session.client.read_one(geo).map_err(|e|Error::new(ErrorKind::RuntimeFailure,e.to_string()))?;
-    let t=session.client.read_one(terms).map_err(|e|Error::new(ErrorKind::RuntimeFailure,e.to_string()))?;
+   let bytes=crate::compute::client::read_one(client, output).map_err(|e|Error::new(ErrorKind::RuntimeFailure,e.to_string()))?;let diagnostic=if verify {
+    let e=crate::compute::client::read_one(client, edges).map_err(|e|Error::new(ErrorKind::RuntimeFailure,e.to_string()))?;
+    let l=crate::compute::client::read_one(client, lengths).map_err(|e|Error::new(ErrorKind::RuntimeFailure,e.to_string()))?;
+    let g=crate::compute::client::read_one(client, geo).map_err(|e|Error::new(ErrorKind::RuntimeFailure,e.to_string()))?;
+    let t=crate::compute::client::read_one(client, terms).map_err(|e|Error::new(ErrorKind::RuntimeFailure,e.to_string()))?;
     Some((u32::from_bytes(&e).to_vec(),f32::from_bytes(&l).to_vec(),f32::from_bytes(&g).to_vec(),f32::from_bytes(&t).to_vec()))
    }else{None};Ok((f32::from_bytes(&bytes)[..count].to_vec(),diagnostic))
-  });
+  }) });
   self.milliseconds+=started.elapsed().as_secs_f64()*1000.0;let (scores,diagnostic)=result.map_err(|e|self.fail(e))?;
   if let Some((edges,lengths,geometry,terms))=diagnostic {
    let mut world=current.clone();

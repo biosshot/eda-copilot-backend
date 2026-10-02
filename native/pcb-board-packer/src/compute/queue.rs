@@ -110,7 +110,7 @@ impl Drop for Permit {
             }
             s.window_jobs+=1;s.window_work+=self.work;s.window_latency+=duration;
             s.window_saturated|=self.saturated;
-            if s.window_jobs>=32 && s.active==0 {
+            if s.window_jobs>=32 {
                 let seconds=s.window_started.elapsed().as_secs_f64();
                 let rate=s.window_work/seconds.max(1e-9);let latency=s.window_latency/s.window_jobs as f64;
                 let depth=s.depth;let saturated=s.window_saturated;

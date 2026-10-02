@@ -4,6 +4,14 @@
 
 ### PCB layout
 
+- Fix CubeCL block external-relation endpoint selection: use a runtime index instead of a constant-branch expression that compiled to side one and could read the missing endpoint. NVIDIA Compute Sanitizer exposed the out-of-bounds access on the saved USB block; retain full-call CPU recovery and cover both relation directions.
+
+- Bound CUDA allocator streams to eight instead of the upstream default 128; clean idle allocations across streams and discard obsolete board GPU caches at phase barriers. Latch actual backend allocation errors before resolving unbound handles so they reach whole-call CPU recovery instead of repeated worker panics.
+
+- Add a real CubeCL CUDA backend, selected before Vulkan only after dependency and live strict-F32 probes. Keep one addon, dynamic installed CUDA/NVRTC discovery, whole-call CPU recovery, CUDA free-memory observations and compilation timing. Pin NVRTC FTZ/no-FMA/precise arithmetic and release compiler programs. Vulkan remains available when CUDA is absent; other operating systems/backends are not certified by the Windows checks.
+
+- Extend bounded GPU-wait compensation to Board Packager beam lanes with separately owned evaluators; keep local/repair CPU fallbacks within the original thread cap. Pipeline refiner GPU work with CPU route evaluation even with one CPU slot. Tune admission under sustained load, classify allocation failures, and preserve full original-input CPU replay with a fresh refiner budget.
+
 - Let independent native block-batch jobs lend their bounded CPU execution slots while waiting for GPU admission, ownership and readback. Keep at most eight extra waiting stacks, preserve input-order result assembly, and include full-call CPU recovery in the same CPU budget. Report active/peak CPU slots and suspended worker time. This is bounded blocking compensation for block batches, not a completed continuation scheduler for board/refiner or a CUDA backend.
 
 - Separate GPU hardware allocation limits from driver free-memory estimates. Low estimated headroom now reduces block, board and refiner batches instead of disabling the shared runtime during block setup; release idle scratch and request allocator cleanup under pressure. Board/refiner batch sizing no longer uses a fixed 64 MiB quota. Preserve one-candidate forward progress and whole-call CPU recovery on actual runtime failure. This remains estimated accounting, not guaranteed VRAM reservation or a completed asynchronous scheduler.

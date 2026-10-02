@@ -180,6 +180,12 @@ test('auto keeps the CPU worker budget while using GPU', {
     assert.deepEqual(auto.solution, cpu.solution);
     assert.match(auto.log, /"backend":"cubecl"/);
     assert.match(auto.log, /threads=6/);
+    const schedulerLine=auto.log.split('\n').find(line=>line.startsWith('[board-cpu-scheduler] '));
+    assert.ok(schedulerLine,'board beam scheduler telemetry');
+    const scheduler=JSON.parse(schedulerLine.slice('[board-cpu-scheduler] '.length));
+    assert.equal(scheduler.cpu.activeLimit,6);
+    assert.ok(scheduler.cpu.peakActive<=6);
+    assert.equal(scheduler.cpu.active,0);
     assert.doesNotMatch(auto.log, /board-gpu-fallback/);
 });
 
@@ -236,7 +242,7 @@ test('production GPU shortlist preserves polygon/edge decisions, ties and chunk 
 test('board GPU has no-device recovery without changing the CPU result', { skip: !gpuEnabled }, () => {
     const p = minimalProblem();
     const cpu = run(p, 'cpu');
-    const gpu = run(p, 'cubecl', { VK_DRIVER_FILES: resolve('debugging/nonexistent-vulkan-driver.json') });
+    const gpu = run(p, 'cubecl', { PCB_GPU_RUNTIME: 'vulkan', VK_DRIVER_FILES: resolve('debugging/nonexistent-vulkan-driver.json') });
     assert.deepEqual(gpu.solution, cpu.solution);
     assert.match(gpu.log, /no compatible F32 Vulkan GPU/);
     assert.doesNotMatch(gpu.log, /"backend":"cubecl"/);
@@ -424,4 +430,33 @@ test('unsafe edge generator offsets fall back before GPU initialization', () => 
     assert.deepEqual(gpu.solution, cpu.solution);
     assert.doesNotMatch(gpu.log, /\[block-gpu-runtime\]/);
     assert.match(gpu.log, /unsafe board GPU number|CPU-only build/);
+});
+
+
+test('runtime selection uses CUDA without Vulkan and Vulkan without CUDA', {skip:process.env.PCB_CUDA_GPU_TESTS!=='1'},()=>{
+    const p=minimalProblem();const cpu=run(p,'cpu');
+    const cuda=run(p,'cubecl',{PCB_GPU_RUNTIME:'auto',VK_DRIVER_FILES:resolve('debugging/nonexistent-vulkan-driver.json')});
+    assert.match(cuda.log,/"backend":"cuda"/);assert.doesNotMatch(cuda.log,/board-gpu-fallback/);
+    assert.deepEqual(cuda.solution,cpu.solution);
+    const vulkan=run(p,'cubecl',{PCB_GPU_RUNTIME:'auto',PCB_GPU_CUDA_DISABLED:'1'});
+    assert.match(vulkan.log,/"backend":"vulkan"/);assert.doesNotMatch(vulkan.log,/board-gpu-fallback/);
+    assert.deepEqual(vulkan.solution,cpu.solution);
+});
+
+test('GPU allocation failure discards the call and restores its CPU result', {skip:!gpuEnabled},()=>{
+    const p=minimalProblem();const cpu=run(p,'cpu');
+    const failed=run(p,'cubecl',{PCB_GPU_FAIL_ALLOCATION:'1'});
+    assert.match(failed.log,/injected GPU out of memory/);
+    assert.match(failed.log,/board-gpu-fallback/);assert.deepEqual(failed.solution,cpu.solution);
+});
+
+test('CUDA server allocation failure returns CPU recovery without invalid-handle panics', {skip:process.env.PCB_CUDA_GPU_TESTS!=='1'},()=>{
+    const p=minimalProblem();
+    const cpu=run(p,'cpu');
+    const gpu=run(p,'cubecl',{PCB_GPU_RUNTIME:'cuda',PCB_CUDA_FAIL_ALLOCATION_AFTER:'8'});
+    assert.deepEqual(gpu.solution,cpu.solution);
+    assert.match(gpu.log,/"backend":"cuda"/);
+    assert.match(gpu.log,/board-gpu-fallback/);
+    assert.match(gpu.log,/CUDA out of memory/);
+    assert.doesNotMatch(gpu.log,/Memory page .* doesn't exist|memory allocation of .* failed/);
 });

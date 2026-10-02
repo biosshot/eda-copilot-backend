@@ -1491,7 +1491,6 @@ fn solve_inner(p:&RefineProblem,started:Instant,#[cfg(feature="gpu")] engine:&mu
 
 #[cfg(feature="gpu")]
 fn gpu_iteration(p:&RefineProblem,current:&World,current_score:f32,candidates:&[Candidate],threads:usize,deadline:Instant,engine:&mut gpu::Engine)->Result<(Vec<Option<Evaluation>>,BatchProfile),String>{
-    if threads<=1 {return gpu_iteration_serial(p,current,current_score,candidates,threads,deadline,engine);}
     let chunk_size=engine.chunk_size()?;
     // Completed geometric groups feed the original CPU route evaluator while
     // the producer works on the next GPU batch. A route group never spans
@@ -1559,38 +1558,6 @@ fn gpu_iteration(p:&RefineProblem,current:&World,current_score:f32,candidates:&[
         for h in handles {let (values,stats)=h.join().map_err(|_|"post-place GPU route worker panicked")??;profile.add(&stats);for (id,value) in values {result[id]=value;}}
         profile.add(&produced?);Ok((result,profile))
     })
-}
-
-#[cfg(feature="gpu")]
-fn gpu_iteration_serial(p:&RefineProblem,current:&World,current_score:f32,candidates:&[Candidate],threads:usize,deadline:Instant,engine:&mut gpu::Engine)->Result<(Vec<Option<Evaluation>>,BatchProfile),String>{
-    let chunk_size=engine.chunk_size()?;
-    let mut scores=vec![None;candidates.len()];let mut scratch=current.clone();
-    let mut violations=FxHashMap::default();let mut pre=BatchProfile::default();
-    let verify=std::env::var("PCB_POST_PLACE_GPU_VERIFY").ok().as_deref()==Some("1");
-    for (chunk,items) in candidates.chunks(chunk_size).enumerate(){
-        if Instant::now()>=deadline {break;}
-        let offset=chunk*chunk_size;let mut valid=Vec::new();let mut ids=Vec::new();let mut expected=Vec::new();
-        let geometry_started=Instant::now();
-        for (i,c) in items.iter().enumerate(){
-            if Instant::now()>=deadline {break;}
-            for (component,pose) in &c.changes {p.apply(&mut scratch,*component,pose)?;}
-            let changed:Vec<_>=c.changes.iter().map(|(i,_)|*i).collect();
-            let baseline=violations.entry(changed.clone()).or_insert_with(||p.violations(current,&changed));
-            if p.violations(&scratch,&changed).is_subset(baseline){valid.push(c);ids.push(offset+i);if verify{expected.push(p.score(&scratch)?);}}
-            else{pre.hard_rejected+=1;pre.candidates+=1;}
-            for (component,_) in &c.changes {p.apply(&mut scratch,*component,p.pose(current,*component))?;}
-        }
-        pre.geometry_ms+=elapsed(geometry_started);
-        if valid.is_empty() || Instant::now()>=deadline {continue;}
-        let started=Instant::now();let values=engine.scores(p,current,&valid,None)?;let ms=elapsed(started);pre.global_score_ms+=ms;pre.score_native_ms+=ms;
-        for (j,(&id,&score)) in ids.iter().zip(&values).enumerate(){
-            if verify && !crate::f32_policy::score_close(score,expected[j]) {
-                return Err(engine.fail(crate::compute::Error::new(crate::compute::ErrorKind::RuntimeFailure,format!("post-place GPU validation failed candidate {id}: GPU={score:.17} CPU={:.17}",expected[j]))));
-            }
-            scores[id]=Some(score);
-        }
-    }
-    let (result,mut profile)=iteration(p,current,current_score,candidates,threads,deadline,Some(&scores))?;profile.add(&pre);Ok((result,profile))
 }
 
 // The GPU producer releases its CPU permit while awaiting the device. Route

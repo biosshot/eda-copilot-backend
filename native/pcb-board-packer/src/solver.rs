@@ -294,7 +294,13 @@ fn solve_inner(problem: BoardPackProblem, threads: usize,
     let search_width = context.problem.search_width.max(32);
     // Each lane retains its own mutable geometry and routing caches across beam
     // levels. No N-API calls or JS objects cross these native thread boundaries.
-    let mut lanes: Vec<Context> = (0..threads.min(search_width).min(states[0].remaining.len().max(1)))
+    #[cfg(feature="gpu")]
+    let lane_count=if context.gpu.is_some(){threads.saturating_add(8)}else{threads};
+    #[cfg(not(feature="gpu"))]
+    let lane_count=threads;
+    #[cfg(feature="gpu")]
+    let cpu_budget=crate::compute::cpu::Budget::new(threads);
+    let mut lanes: Vec<Context> = (0..lane_count.min(search_width).min(states[0].remaining.len().max(1)))
         .map(|_| Context {
             problem: context.problem.clone(),
             relations: context.relations.clone(),
@@ -323,7 +329,15 @@ fn solve_inner(problem: BoardPackProblem, threads: usize,
             let chunk_size = states.len().div_ceil(lanes.len());
             std::thread::scope(|scope| {
                 let handles: Vec<_> = states.chunks(chunk_size).zip(lanes.iter_mut())
-                    .map(|(chunk, lane)| scope.spawn(move || { let _float_env = crate::float_env::Guard::enter(); expand_states(chunk, search_width, lane) }))
+                    .map(|(chunk, lane)| {
+                        #[cfg(feature="gpu")]
+                        let budget=cpu_budget.clone();
+                        scope.spawn(move || {let _float_env=crate::float_env::Guard::enter();
+                            #[cfg(feature="gpu")]
+                            let _cpu=budget.enter();
+                            expand_states(chunk,search_width,lane)
+                        })
+                    })
                     .collect();
                 let mut expanded = Vec::new();
                 // Joining in input order keeps tie breaks independent of scheduling.
@@ -354,11 +368,16 @@ fn solve_inner(problem: BoardPackProblem, threads: usize,
         .into_iter()
         .find(|state| state.remaining.is_empty())
         .ok_or_else(|| "Rust board packer did not produce a complete state".to_string())?;
-    if profile { eprintln!("[pcb-board-packer] beam {:.3}s, threads={}, hard={}, joint candidates={}", started.elapsed().as_secs_f64(), lanes.len(), best.rank.hard_count,context.joint_candidates.load(AtomicOrdering::Relaxed)); }
+    if profile { eprintln!("[pcb-board-packer] beam {:.3}s, threads={}, hard={}, joint candidates={}", started.elapsed().as_secs_f64(), threads, best.rank.hard_count,context.joint_candidates.load(AtomicOrdering::Relaxed)); }
+    #[cfg(feature="gpu")]
+    if profile && context.gpu.is_some() {eprintln!("[board-cpu-scheduler] {}",serde_json::json!({"lanes":lanes.len(),"cpu":cpu_budget.report()}));}
     profile::checkpoint("beam",&best.placed,&context);
     #[cfg(feature = "gpu")]
     if let Some(gpu)=&context.gpu {gpu.checkpoint("after_beam");gpu.set_phase("local_improve");}
     let phase = std::time::Instant::now();
+    // Extra lanes compensate for beam GPU waits. Local/repair CPU fallbacks
+    // spawn one worker per lane without that scheduler, so retain the CPU cap.
+    lanes.truncate(threads.max(1));
     let improved = local_improve(best.placed, &context, &mut lanes);
     if profile { eprintln!("[pcb-board-packer] local_improve {:.3}s", phase.elapsed().as_secs_f64()); }
     profile::checkpoint("local_improve",&improved,&context);

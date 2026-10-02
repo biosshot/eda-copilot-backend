@@ -13,6 +13,7 @@ fn main() {
     println!("cargo:rerun-if-changed=Cargo.lock");
     println!("cargo:rerun-if-changed=Cargo.toml");
     let mut hash=DefaultHasher::new();hash_sources(Path::new("src"),&mut hash);
+    println!("cargo:rerun-if-changed=vendor");hash_sources(Path::new("vendor"),&mut hash);
     for file in ["Cargo.lock","Cargo.toml","build.rs"] {std::fs::read(file).unwrap().hash(&mut hash);}
     for name in ["TARGET","PROFILE","CARGO_ENCODED_RUSTFLAGS"] {std::env::var(name).ok().hash(&mut hash);}
     let mut features:Vec<_>=std::env::vars().filter(|(name,_)|name.starts_with("CARGO_FEATURE_")).collect();features.sort();features.hash(&mut hash);

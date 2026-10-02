@@ -114,11 +114,11 @@ pub(in crate::block_solver) fn scarcity(
     let count = frame.poses.len();
     if count.saturating_mul(40)>engine.max_allocation {fail("GPU frontier exceeds memory budget".into());}
     let sources = context.problem.primitives.len();
-    let counts = gpu_runtime::with_session(GPU_REQUIREMENTS, |session| {
+    let counts = gpu_runtime::with_session(GPU_REQUIREMENTS, |session| { crate::compute::client::with_client!(session.client.clone(), |client,WgpuRuntime| {
         if engine.handles.is_none() {
             engine.handles = Some((
-                session.client.create_from_slice(f32::as_bytes(&engine.sf)),
-                session.client.create_from_slice(i32::as_bytes(&engine.si)),
+                client.create_from_slice(f32::as_bytes(&engine.sf)),
+                client.create_from_slice(i32::as_bytes(&engine.si)),
             ));
         }
         let (sf, si) = engine.handles.as_ref().unwrap();
@@ -128,9 +128,9 @@ pub(in crate::block_solver) fn scarcity(
                 session
                     .client
                     .create_from_slice(f32::as_bytes(&frame.floats)),
-                session.client.create_from_slice(u32::as_bytes(&frame.ids)),
-                session.client.empty(count * 4),
-                session.client.empty(sources * 4),
+                client.create_from_slice(u32::as_bytes(&frame.ids)),
+                client.empty(count * 4),
+                client.empty(sources * 4),
             ));
         }
         let (pf, pi, nearby, pins) = frame.resident.as_ref().unwrap();
@@ -138,7 +138,7 @@ pub(in crate::block_solver) fn scarcity(
         let tags = session.workspace(FrontierScratch::Tags.key(), count * 2 * 4);
         let legal = session.workspace(FrontierScratch::Legal.key(), count * 4);
         let output = session.workspace(FrontierScratch::Counts.key(), sources * 3 * 4);
-        let client = &session.client;
+        let client = &client;
         let input = |ff: &Vec<f32>, fi: &Vec<u32>| unsafe {
             let fh = client.create_from_slice(f32::as_bytes(ff));
             let ih = client.create_from_slice(u32::as_bytes(fi));
@@ -198,11 +198,10 @@ pub(in crate::block_solver) fn scarcity(
                 a!(output, sources * 3),
             );
         }
-        let bytes = client
-            .read_one(output)
+        let bytes = crate::compute::client::read_one(client, output)
             .map_err(|e| format!("GPU frontier readback: {e:?}"))?;
         Ok(u32::from_bytes(&bytes)[..sources * 3].to_vec())
-    })
+    }) })
     .unwrap_or_else(|reason| fail(reason.to_string()));
     engine.frontier_batches += 1;
     engine.frontier_candidates += count;

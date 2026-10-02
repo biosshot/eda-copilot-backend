@@ -1,5 +1,5 @@
-use crate::compute::f32_runtime::PcbRuntime as WgpuRuntime;
-use cubecl::{client::ComputeClient, server::Handle};
+use super::client::Client;
+use cubecl::server::Handle;
 use std::collections::BTreeMap;
 
 /// A consumer-owned layout name and a slot local to that layout. The runtime
@@ -24,7 +24,7 @@ pub(super) struct Workspace {
 impl Workspace {
     pub fn buffer(
         &mut self,
-        client: &ComputeClient<WgpuRuntime>,
+        client: &Client,
         key: ScratchKey,
         size: usize,
     ) -> Handle {

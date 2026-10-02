@@ -1436,7 +1436,11 @@ pub fn cheap(
                 }
             }
             if ((d.fi[t + 9]&1) != 0 || (d.fi[FLAGS]&4)==0) && (d.fi[t+9]&4)==0 && (from == -1 || to == -1) && (from >= 0 || from == -2 || to >= 0 || to == -2) {
-                let side = if from >= 0 || from == -2 { 0usize } else { 1usize };
+                // Keep a runtime scalar: CubeCL 0.10 treats a value-producing
+                // branch of usize literals as compile-time and selects side 1.
+                // That can pass the missing endpoint (-1) to load_prim.
+                let mut side = 0usize;
+                if !(from >= 0 || from == -2) { side = 1; }
                 let source = ep(d, i, side, candidate);
                 let primitive = if from >= 0 || from == -2 { from } else { to } as usize;
                 let mut owner_layer=0i32;

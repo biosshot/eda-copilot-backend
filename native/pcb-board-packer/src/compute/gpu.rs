@@ -5,11 +5,11 @@ use super::workspace::{ScratchKey, Workspace};
 use super::{Capabilities, Error, ErrorKind, Requirements};
 use cubecl::wgpu::WgpuDevice;
 use super::f32_runtime::PcbRuntime as WgpuRuntime;
-use cubecl::{client::ComputeClient, prelude::*, server::Handle};
+use cubecl::{prelude::*, server::Handle};
 use std::sync::{Arc, Mutex, OnceLock};
 
 pub(crate) struct Session {
-    pub client: ComputeClient<WgpuRuntime>,
+    pub client: super::client::Client,
     pub name: String,
     lease: Arc<super::lease::Lease>,
     workspaces: Workspace,
@@ -31,7 +31,7 @@ static WAIT_NANOS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::
 static INITIALIZATIONS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 static MEMORY_TRIMS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
-fn initialize(policy:Admission) -> Result<Option<Session>, Error> {
+fn initialize_vulkan(policy:Admission) -> Result<Option<Session>, Error> {
     if std::env::var_os("PCB_BLOCK_GPU_DISABLED").is_some_and(|v| v == "1") {
         return Err(Error::new(
             ErrorKind::Disabled,
@@ -94,7 +94,7 @@ fn initialize(policy:Admission) -> Result<Option<Session>, Error> {
         .write(true)
         .create(true)
         .truncate(false)
-        .open(directory.join(format!("vulkan-{:x}-{:x}.lock", id.vendor, id.device)))
+        .open(directory.join("device.lock"))
         .map_err(|e| Error::new(ErrorKind::Lease, format!("GPU lease file: {e}")))?;
     let lease=super::lease::Lease::new(lease);
     let _initial_lease=match lease.acquire(policy) {
@@ -121,6 +121,43 @@ fn initialize(policy:Admission) -> Result<Option<Session>, Error> {
             "CubeCL runtime lacks F32",
         ));
     }
+    let client=super::client::Client::Vulkan(client);
+    validate_client(&client)?;
+    let initializations = INITIALIZATIONS.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+    if std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some() {
+        eprintln!(
+            "[block-gpu-runtime] {}",
+            serde_json::json!({"device":id.name,"initializations":initializations,"precision":"f32","floatControls":float_controls})
+        );
+    }
+    let adapter=adapters.into_iter().find(|a| {
+        let info=a.get_info();info.vendor==id.vendor&&info.device==id.device&&info.device_type==id.device_type
+    }).ok_or_else(||Error::new(ErrorKind::AdapterMismatch,"budget adapter disappeared"))?;
+    let memory=Arc::new(super::memory::Monitor::new(super::memory::VulkanBudget::new(adapter)));
+    Ok(Some(Session {
+        client,
+        name: id.name,
+        lease,
+        workspaces: Workspace::default(),
+        in_flight: false,
+        capabilities,
+        float_controls,
+        memory,
+    }))
+}
+
+// This is a live arithmetic probe, never a constant-folded compiler reference.
+#[inline(never)]
+fn execution_expected(values:&[f32])->Vec<f32> {
+    use std::hint::black_box as live;
+    let _env=crate::float_env::Guard::enter();
+    let mut expected:Vec<_>=values.iter().flat_map(|&x| [live(x)*live(2.0),live(x)*live(0.5),live(x)*live(2.0f32.powi(126))]).collect();
+    expected.push(live(values[values.len()-2])*live(values[values.len()-1])-live(1.0));
+    expected
+}
+
+fn validate_client(client:&super::client::Client)->Result<(),Error> {
+ crate::compute::client::with_client!(client, |client,WgpuRuntime| {
     // One compatibility check per device. No candidate CPU scoring is involved.
     let mut values: Vec<f32> = (-2048..2048).map(|i| i as f32 / 1000.0).collect();
     values.extend([-0.565, -1.985, 0.0005, -0.0005, 1024.0, -1024.0, 512.0, -512.0]);
@@ -157,8 +194,7 @@ fn initialize(policy:Admission) -> Result<Option<Session>, Error> {
         f32::from_bits(0x007fffff), -f32::from_bits(0x007fffff),
         f32::MIN_POSITIVE, -f32::MIN_POSITIVE,
         f32::from_bits(0x3f800001), f32::from_bits(0x3f7ffffe)];
-    let mut expected: Vec<f32> = values.iter().flat_map(|&x| [x * 2.0, x * 0.5, x * 2.0f32.powi(126)]).collect();
-    expected.push(values[values.len()-2] * values[values.len()-1] - 1.0);
+    let expected=execution_expected(&values);
     let input = client.create_from_slice(f32::as_bytes(&values));
     let output = client.empty(expected.len() * 4);
     unsafe {
@@ -193,27 +229,51 @@ fn initialize(policy:Admission) -> Result<Option<Session>, Error> {
             return Err(Error::new(ErrorKind::ArithmeticIncompatibility,format!("GPU division/sqrt precision probe failed for input {value}")));
         }
     }
-    let initializations = INITIALIZATIONS.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
-    if std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some() {
-        eprintln!(
-            "[block-gpu-runtime] {}",
-            serde_json::json!({"device":id.name,"initializations":initializations,"precision":"f32","floatControls":float_controls})
-        );
-    }
-    let adapter=adapters.into_iter().find(|a| {
-        let info=a.get_info();info.vendor==id.vendor&&info.device==id.device&&info.device_type==id.device_type
-    }).ok_or_else(||Error::new(ErrorKind::AdapterMismatch,"budget adapter disappeared"))?;
-    let memory=Arc::new(super::memory::Monitor::new(super::memory::VulkanBudget::new(adapter)));
-    Ok(Some(Session {
-        client,
-        name: id.name,
-        lease,
-        workspaces: Workspace::default(),
-        in_flight: false,
-        capabilities,
-        float_controls,
-        memory,
-    }))
+    Ok(())
+ })
+}
+
+fn initialize(policy:Admission)->Result<Option<Session>,Error> {
+ if std::env::var("PCB_BLOCK_GPU_DISABLED").as_deref()==Ok("1") {return Err(Error::new(ErrorKind::Disabled,"GPU disabled by PCB_BLOCK_GPU_DISABLED"));}
+ let requested=std::env::var("PCB_GPU_RUNTIME").unwrap_or_else(|_|"auto".into());
+ if !matches!(requested.as_str(),"auto"|"cuda"|"vulkan") {return Err(Error::new(ErrorKind::InvalidInput,"PCB_GPU_RUNTIME must be auto, cuda or vulkan"));}
+ if requested!="vulkan" {
+  let cuda=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||initialize_cuda(policy)));
+  match cuda {
+   Ok(Ok(session))=>return Ok(session),
+   failure=>{
+    let reason=match failure {Ok(Err(e))=>e.to_string(),Err(_)=>"CUDA initialization panicked".into(),_=>unreachable!()};
+    if requested=="cuda" {return Err(Error::new(ErrorKind::NoDevice,reason));}
+    if std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some() {eprintln!("[gpu-backend-unavailable] cuda: {reason}");}
+   }
+  }
+ }
+ initialize_vulkan(policy)
+}
+fn initialize_cuda(policy:Admission)->Result<Option<Session>,Error> {
+ if std::env::var("PCB_GPU_CUDA_DISABLED").as_deref()==Ok("1") {return Err(Error::new(ErrorKind::NoDevice,"CUDA disabled by PCB_GPU_CUDA_DISABLED"));}
+ super::cuda_runtime::prepare_libraries();
+ if unsafe {!cudarc::driver::sys::is_culib_present() || !cudarc::nvrtc::sys::is_culib_present()} {
+  return Err(Error::new(ErrorKind::NoDevice,"CUDA driver or NVRTC unavailable"));
+ }
+ if !cubecl::cuda::install::include_path().join("cuda_runtime.h").is_file() {
+  return Err(Error::new(ErrorKind::NoDevice,"CUDA compiler headers unavailable"));
+ }
+ let directory=std::env::temp_dir().join("eda-copilot-gpu");
+ std::fs::create_dir_all(&directory).map_err(|e|Error::new(ErrorKind::Lease,e.to_string()))?;
+ let file=std::fs::OpenOptions::new().read(true).write(true).create(true).truncate(false).open(directory.join("device.lock")).map_err(|e|Error::new(ErrorKind::Lease,e.to_string()))?;
+ let lease=super::lease::Lease::new(file);
+ let _permit=match lease.acquire(policy) {Ok(p)=>p,Err(e) if e.kind==ErrorKind::Busy=>return Ok(None),Err(e)=>return Err(e)};
+ let context=cudarc::driver::CudaContext::new(0).map_err(|e|Error::new(ErrorKind::NoDevice,e.to_string()))?;
+ let name=context.name().map_err(|e|Error::new(ErrorKind::NoDevice,e.to_string()))?;
+ let client=super::client::Client::Cuda(super::cuda_runtime::PcbCudaRuntime::client(&cubecl::cuda::CudaDevice::new(0)));
+ validate_client(&client)?;
+ let capabilities=Capabilities{f32:true,u64:client.features().supports_type(cubecl::ir::ElemType::UInt(cubecl::ir::UIntKind::U64))};
+ let float_controls=serde_json::json!({"rte":true,"signedZeroInfNanPreserve":true,"denormFlushToZero":true,"implicitFma":false,"liveProbesPassed":true});
+ INITIALIZATIONS.fetch_add(1,std::sync::atomic::Ordering::Relaxed);
+ if std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some() {eprintln!("[block-gpu-runtime] {}",serde_json::json!({"device":name,"backend":"cuda","precision":"f32","floatControls":float_controls}));}
+ Ok(Some(Session{client,name,lease,workspaces:Workspace::default(),in_flight:false,capabilities,float_controls,
+  memory:Arc::new(super::memory::Monitor::new(super::memory::CudaBudget(context)))}))
 }
 
 /// Admit through the shared FIFO queue, then own scratch until readback completes.
@@ -268,12 +328,17 @@ fn with_batch_policy<T>(requirements:Requirements,class:&'static str,work:usize,
     let _operation_lease=session.lease.acquire(policy)?;
     let initial_bytes=session.workspaces.bytes();
     ACTIVE_BYTES.fetch_add(initial_bytes,std::sync::atomic::Ordering::Relaxed);
-    let attempted=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||f(&mut session)));
+    let attempted=std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        if work>0 && std::env::var("PCB_GPU_FAIL_ALLOCATION").as_deref()==Ok("1") {
+            return Err(Error::new(ErrorKind::OutOfMemory,"injected GPU out of memory"));
+        }
+        f(&mut session)
+    }));
     ACTIVE_BYTES.fetch_sub(session.workspaces.bytes(),std::sync::atomic::Ordering::Relaxed);
     super::queue::observe_memory(session.memory.snapshot().map(|b|b.usable()),class,session.workspaces.bytes());
     let result=match attempted {
         Ok(result)=>result,
-        Err(payload)=>Err(Error::new(ErrorKind::RuntimeFailure,
+        Err(payload)=>Err(Error::from(
             payload.downcast_ref::<String>().cloned().or_else(||payload.downcast_ref::<&str>().map(|s|s.to_string()))
                 .unwrap_or_else(||"GPU runtime panicked".into())))
     };
@@ -309,6 +374,14 @@ fn memory_monitor()->Option<Arc<super::memory::Monitor>> {
 }
 
 impl Session {
+    pub fn trim_idle(&mut self) {
+        let bytes=self.workspaces.bytes();
+        self.workspaces=Workspace::default();
+        if self.in_flight {ACTIVE_BYTES.fetch_sub(bytes,std::sync::atomic::Ordering::Relaxed);}
+        IDLE_WORKSPACES.lock().unwrap_or_else(|e|e.into_inner()).clear();
+        self.client.memory_cleanup();
+        MEMORY_TRIMS.fetch_add(1,std::sync::atomic::Ordering::Relaxed);
+    }
     pub fn allocation_limit(&self)->usize {
         self.client.properties().memory.max_page_size.min(usize::MAX as u64) as usize
     }
@@ -361,15 +434,15 @@ pub(crate) fn probe(values: &[f32], inject_panic: bool) -> Result<serde_json::Va
             f32: true,
             u64: false,
         },
-        |s| {
+        |s| { crate::compute::client::with_client!(s.client.clone(), |client,WgpuRuntime| {
             if inject_panic {
                 panic!("injected GPU runtime panic");
             }
-            let input = s.client.create_from_slice(f32::as_bytes(values));
+            let input = client.create_from_slice(f32::as_bytes(values));
             let output = s.workspace(ScratchKey::new("runtime-probe", 0), values.len() * 4);
             unsafe {
                 probe_kernel::launch_unchecked::<WgpuRuntime>(
-                    &s.client,
+                    &client,
                     CubeCount::Static(values.len().div_ceil(128) as u32, 1, 1),
                     CubeDim::new_1d(128),
                     ArrayArg::from_raw_parts(input, values.len()),
@@ -388,7 +461,7 @@ pub(crate) fn probe(values: &[f32], inject_panic: bool) -> Result<serde_json::Va
                 serde_json::json!({"device":s.name,"precision":"f32","values":result,
             "initializations":INITIALIZATIONS.load(std::sync::atomic::Ordering::Relaxed)}),
             )
-        },
+        }) },
     )
 }
 
@@ -402,9 +475,11 @@ pub(crate) fn statistics() -> serde_json::Value {
         "mutexWaitMs":WAIT_NANOS.load(std::sync::atomic::Ordering::Relaxed) as f64/1e6,"workspaceBytes":bytes,"device":match &*state {State::Ready(s)=>Some(&s.name),_=>None},
         "capabilities":match &*state {State::Ready(s)=>Some(s.capabilities),_=>None},
         "precision":"f32-rte-ftz-v1",
+        "backend":match &*state {State::Ready(s)=>Some(s.client.backend()),_=>None},
         "memoryTrims":MEMORY_TRIMS.load(std::sync::atomic::Ordering::Relaxed),
         "kernelPreparation":super::startup::statistics(),
         "kernelCache":super::kernel_cache::statistics(),
+        "cudaCompilation":({let (count,ns)=cubecl::cuda::pcb_nvrtc_statistics();serde_json::json!({"compilations":count,"nativeCompilationMs":ns as f64/1e6})}),
         "processLease":match &*state {State::Ready(s)=>s.lease.statistics(),_=>serde_json::Value::Null},
         "memory":match &*state {State::Ready(s)=>s.memory.report(),_=>serde_json::Value::Null},
         "floatControls":match &*state {State::Ready(s)=>Some(&s.float_controls),_=>None},
@@ -451,19 +526,19 @@ mod tests {
             let handles:Vec<_>=(0..4).map(|job| {
                 let barrier=barrier.clone();
                 scope.spawn(move || {
-                    with_session(Requirements {f32:true,u64:false},|s| {
+                    with_session(Requirements {f32:true,u64:false},|s| { crate::compute::client::with_client!(s.client.clone(), |client,WgpuRuntime| {
                         let values=vec![job as f32+0.25;257];
-                        let input=s.client.create_from_slice(f32::as_bytes(&values));
+                        let input=client.create_from_slice(f32::as_bytes(&values));
                         let output=s.workspace(ScratchKey::new("concurrent-probe",0),257*4);
                         // All four operations own their buffers before any launch.
                         barrier.wait();
-                        unsafe {probe_kernel::launch_unchecked::<WgpuRuntime>(&s.client,
+                        unsafe {probe_kernel::launch_unchecked::<WgpuRuntime>(&client,
                             CubeCount::Static(3,1,1),CubeDim::new_1d(128),
                             ArrayArg::from_raw_parts(input,257),ArrayArg::from_raw_parts(output.clone(),257));}
-                        let bytes=s.client.read_one(output).map_err(|e|format!("concurrent read: {e:?}"))?;
+                        let bytes=client.read_one(output).map_err(|e|format!("concurrent read: {e:?}"))?;
                         assert!(f32::from_bytes(&bytes)[..257].iter().all(|&v|v==(job as f32+0.375)*2.0));
                         Ok(())
-                    }).unwrap();
+                    }) }).unwrap();
                 })
             }).collect();
             for handle in handles {handle.join().unwrap();}
@@ -498,22 +573,22 @@ mod tests {
             // subsequent operations alternate growth and reuse of both layouts.
             let floats: Vec<_> = (0..count).map(|i| 128.0 + i as f32 * 0.25).collect();
             let tags: Vec<_> = (0..count.div_ceil(2)).map(|i| i as u32).collect();
-            with_session(requirements, |s| {
+            with_session(requirements, |s| { crate::compute::client::with_client!(s.client.clone(), |client,WgpuRuntime| {
                 let output = s.workspace(ScratchKey::new("test-floats", 0), floats.len() * 4);
                 let integers = s.workspace(ScratchKey::new("test-tags", 0), tags.len() * 4);
                 if count != 0 {
-                    let input = s.client.create_from_slice(f32::as_bytes(&floats));
-                    let input_tags = s.client.create_from_slice(u32::as_bytes(&tags));
+                    let input = client.create_from_slice(f32::as_bytes(&floats));
+                    let input_tags = client.create_from_slice(u32::as_bytes(&tags));
                     unsafe {
                         probe_kernel::launch_unchecked::<WgpuRuntime>(
-                            &s.client,
+                            &client,
                             CubeCount::Static(count.div_ceil(128) as u32, 1, 1),
                             CubeDim::new_1d(128),
                             ArrayArg::from_raw_parts(input, count),
                             ArrayArg::from_raw_parts(output.clone(), count),
                         );
                         integer_probe::launch_unchecked::<WgpuRuntime>(
-                            &s.client,
+                            &client,
                             CubeCount::Static(tags.len().div_ceil(128) as u32, 1, 1),
                             CubeDim::new_1d(128),
                             ArrayArg::from_raw_parts(input_tags, tags.len()),
@@ -521,7 +596,7 @@ mod tests {
                         );
                     }
                     let buffers =
-                        cubecl::future::block_on(s.client.read_async(vec![output, integers]))
+                        cubecl::future::block_on(client.read_async(vec![output, integers]))
                             .map_err(|e| format!("workspace test readback: {e:?}"))?;
                     assert_eq!(
                         &f32::from_bytes(&buffers[0])[..count],
@@ -537,7 +612,7 @@ mod tests {
                     + (peak.div_ceil(2) * 4).max(8).next_power_of_two();
                 assert_eq!(s.workspaces.bytes(), expected);
                 Ok(())
-            })
+            }) })
             .unwrap();
             assert_eq!(statistics()["initializations"], 1);
         }

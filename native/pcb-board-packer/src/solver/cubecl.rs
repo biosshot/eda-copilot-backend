@@ -1,5 +1,4 @@
 //! Board-owned resident templates, bounded batches and shared runtime access.
-use crate::compute::f32_runtime::PcbRuntime as WgpuRuntime;
 use super::{compact::Pose, compact::Template, Context, WorkingPrimitive, CompiledEndpoint, Side};
 use crate::compute::{gpu, Error, ErrorKind, Requirements, ScratchKey};
 use crate::geometry::Box2;
@@ -42,7 +41,8 @@ pub(super) struct Evaluated {pub index:usize,pub rank:Rank}
 #[derive(Clone,Copy)]
 struct Selection<'a> {flags:&'a[bool],ordinary:usize,aligned:usize}
 pub(super) struct Control {
-    engine: Mutex<Engine>,
+    engines: Mutex<Vec<Engine>>,
+    phase: Mutex<&'static str>,
     failure: Mutex<Option<Error>>,
     wait_nanos:AtomicU64,
     _call:Option<gpu::CallPermit>,
@@ -428,14 +428,14 @@ impl Engine {
             let count=chunk.len();
             let encode_ms=encode_started.elapsed().as_secs_f64()*1000.0;
             let operation_started=Instant::now();
-            let (rows,all_rows,materialized,term_values,upload_ms,submit_ms,read_ms)=gpu::with_batch(REQUIREMENTS,"board-score",count.saturating_mul(context.problem.components.len().max(1)),|session| {
+            let (rows,all_rows,materialized,term_values,upload_ms,submit_ms,read_ms)=gpu::with_batch(REQUIREMENTS,"board-score",count.saturating_mul(context.problem.components.len().max(1)),|session| { crate::compute::client::with_client!(session.client.clone(), |client,WgpuRuntime| {
                 if self.fail_batch==Some(self.batches+1) {panic!("injected board GPU failure at batch {}",self.batches+1);}
                 let upload_started=Instant::now();
-                if self.handles.is_none() {self.handles=Some((session.client.create_from_slice(f32::as_bytes(&self.sf)),
-                    session.client.create_from_slice(u32::as_bytes(&self.si))));}
+                if self.handles.is_none() {self.handles=Some((client.create_from_slice(f32::as_bytes(&self.sf)),
+                    client.create_from_slice(u32::as_bytes(&self.si))));}
                 let (sf,si)=self.handles.as_ref().unwrap();
-                let pfh=session.client.create_from_slice(f32::as_bytes(&pf));let pih=session.client.create_from_slice(u32::as_bytes(&pi));
-                let fh=session.client.create_from_slice(u32::as_bytes(&frame));
+                let pfh=client.create_from_slice(f32::as_bytes(&pf));let pih=client.create_from_slice(u32::as_bytes(&pi));
+                let fh=client.create_from_slice(u32::as_bytes(&frame));
                 let output=session.workspace(ScratchKey::new("board-ranks-f32",0),count*2*4);
                 let parent=session.workspace(ScratchKey::new("board-ranks-f32",9),4);
                 let diagnostic_tags=session.workspace(ScratchKey::new("board-ranks-f32",10),if verify {count*4}else{4});
@@ -449,17 +449,17 @@ impl Engine {
                 let unary_tags=session.workspace(ScratchKey::new("board-ranks-f32",5),pose_count*4);
                 let limits=selection.map(|s|(s.ordinary,s.aligned));
                 let flags=selection.map(|s|s.flags[chunk_start..chunk_start+count].iter().map(|&a|u32::from(a)).collect::<Vec<_>>());
-                let flag_handle=flags.as_ref().map(|flags|session.client.create_from_slice(u32::as_bytes(flags)));
+                let flag_handle=flags.as_ref().map(|flags|client.create_from_slice(u32::as_bytes(flags)));
                 let limit=limits.map_or(0,|(a,b)|a+b);
                 let winner_ids=session.workspace(ScratchKey::new("board-ranks-f32",6),limit.max(1)*2*4);
                 let winner_scores=session.workspace(ScratchKey::new("board-ranks-f32",7),limit.max(1)*2*4);
                 let cached=self.frames.get(&frame_key).cloned();
                 let fresh=cached.is_none();
                 let parent_frame=cached.unwrap_or_else(||FixedFrame {
-                    geometry:session.client.empty((fixed_geometry_len*4).max(8)),
-                    unary:session.client.empty((fixed.len()*unary_stride*4).max(8)),
-                    tags:session.client.empty((fixed.len()*4).max(8)),
-                    pairs:session.client.empty((fixed_pairs*3*4).max(8)),
+                    geometry:client.empty((fixed_geometry_len*4).max(8)),
+                    unary:client.empty((fixed.len()*unary_stride*4).max(8)),
+                    tags:client.empty((fixed.len()*4).max(8)),
+                    pairs:client.empty((fixed_pairs*3*4).max(8)),
                     bytes:fixed_geometry_len*4+fixed.len()*(unary_stride*4+4)+fixed_pairs*12,
                 });
                 let input=|| unsafe {k::InputLaunch::new(ArrayArg::from_raw_parts(sf.clone(),self.sf.len()),ArrayArg::from_raw_parts(si.clone(),self.si.len()),
@@ -474,29 +474,29 @@ impl Engine {
                 let submit_started=Instant::now();
                 unsafe {
                     if fresh && !fixed.is_empty() {
-                        k::materialize::launch_unchecked::<WgpuRuntime>(&session.client,CubeCount::Static(fixed.len() as u32,max_geometry.div_ceil(128) as u32,1),CubeDim::new_1d(128),input(),ArrayArg::from_raw_parts(parent_frame.geometry.clone(),fixed_geometry_len),0);
-                        k::unary::launch_unchecked::<WgpuRuntime>(&session.client,CubeCount::Static(fixed.len().div_ceil(128) as u32,1,1),CubeDim::new_1d(128),input(),ArrayArg::from_raw_parts(parent_frame.unary.clone(),fixed.len()*unary_stride),ArrayArg::from_raw_parts(parent_frame.tags.clone(),fixed.len()),0,fixed.len() as u32,true);
-                        if fixed_pairs>0 {k::pair_terms::launch_unchecked::<WgpuRuntime>(&session.client,CubeCount::Static(fixed_pairs.div_ceil(128) as u32,1,1),CubeDim::new_1d(128),input(),ArrayArg::from_raw_parts(parent_frame.pairs.clone(),fixed_pairs*3),0,fixed_pairs as u32,true);}
+                        k::materialize::launch_unchecked::<WgpuRuntime>(&client,CubeCount::Static(fixed.len() as u32,max_geometry.div_ceil(128) as u32,1),CubeDim::new_1d(128),input(),ArrayArg::from_raw_parts(parent_frame.geometry.clone(),fixed_geometry_len),0);
+                        k::unary::launch_unchecked::<WgpuRuntime>(&client,CubeCount::Static(fixed.len().div_ceil(128) as u32,1,1),CubeDim::new_1d(128),input(),ArrayArg::from_raw_parts(parent_frame.unary.clone(),fixed.len()*unary_stride),ArrayArg::from_raw_parts(parent_frame.tags.clone(),fixed.len()),0,fixed.len() as u32,true);
+                        if fixed_pairs>0 {k::pair_terms::launch_unchecked::<WgpuRuntime>(&client,CubeCount::Static(fixed_pairs.div_ceil(128) as u32,1,1),CubeDim::new_1d(128),input(),ArrayArg::from_raw_parts(parent_frame.pairs.clone(),fixed_pairs*3),0,fixed_pairs as u32,true);}
                     }
                     if pose_count>fixed.len() {
-                        k::materialize::launch_unchecked::<WgpuRuntime>(&session.client,CubeCount::Static((pose_count-fixed.len()) as u32,max_geometry.div_ceil(128) as u32,1),CubeDim::new_1d(128),input(),ArrayArg::from_raw_parts(geometry.clone(),geometry_floats),fixed.len() as u32);
-                        k::unary::launch_unchecked::<WgpuRuntime>(&session.client,CubeCount::Static((pose_count-fixed.len()).div_ceil(128) as u32,1,1),CubeDim::new_1d(128),input(),ArrayArg::from_raw_parts(unary_values.clone(),pose_count*unary_stride),ArrayArg::from_raw_parts(unary_tags.clone(),pose_count),fixed.len() as u32,pose_count as u32,full_ranks);
+                        k::materialize::launch_unchecked::<WgpuRuntime>(&client,CubeCount::Static((pose_count-fixed.len()) as u32,max_geometry.div_ceil(128) as u32,1),CubeDim::new_1d(128),input(),ArrayArg::from_raw_parts(geometry.clone(),geometry_floats),fixed.len() as u32);
+                        k::unary::launch_unchecked::<WgpuRuntime>(&client,CubeCount::Static((pose_count-fixed.len()).div_ceil(128) as u32,1,1),CubeDim::new_1d(128),input(),ArrayArg::from_raw_parts(unary_values.clone(),pose_count*unary_stride),ArrayArg::from_raw_parts(unary_tags.clone(),pose_count),fixed.len() as u32,pose_count as u32,full_ranks);
                     }
-                    if pair_count>fixed_pairs {k::pair_terms::launch_unchecked::<WgpuRuntime>(&session.client,CubeCount::Static((pair_count-fixed_pairs).div_ceil(128) as u32,1,1),CubeDim::new_1d(128),input(),ArrayArg::from_raw_parts(pair_values.clone(),pair_count*3),fixed_pairs as u32,pair_count as u32,full_ranks);}
+                    if pair_count>fixed_pairs {k::pair_terms::launch_unchecked::<WgpuRuntime>(&client,CubeCount::Static((pair_count-fixed_pairs).div_ceil(128) as u32,1,1),CubeDim::new_1d(128),input(),ArrayArg::from_raw_parts(pair_values.clone(),pair_count*3),fixed_pairs as u32,pair_count as u32,full_ranks);}
                     if !full_ranks || verify {
-                        k::legality_parent::launch_unchecked::<WgpuRuntime>(&session.client,CubeCount::Static(1,1,1),CubeDim::new_1d(1),
+                        k::legality_parent::launch_unchecked::<WgpuRuntime>(&client,CubeCount::Static(1,1,1),CubeDim::new_1d(1),
                             input(),ArrayArg::from_raw_parts(parent.clone(),1));
-                        k::legality::launch_unchecked::<WgpuRuntime>(&session.client,CubeCount::Static(count.div_ceil(128) as u32,1,1),CubeDim::new_1d(128),
+                        k::legality::launch_unchecked::<WgpuRuntime>(&client,CubeCount::Static(count.div_ceil(128) as u32,1,1),CubeDim::new_1d(128),
                             input(),ArrayArg::from_raw_parts(parent.clone(),1),ArrayArg::from_raw_parts(if verify {diagnostic_tags.clone()}else{tags.clone()},count));
                     }
                     if full_ranks {
-                        k::ranks::launch_unchecked::<WgpuRuntime>(&session.client,CubeCount::Static(count as u32,1,1),CubeDim::new_1d(128),
+                        k::ranks::launch_unchecked::<WgpuRuntime>(&client,CubeCount::Static(count as u32,1,1),CubeDim::new_1d(128),
                             input(),ArrayArg::from_raw_parts(output.clone(),count*2),ArrayArg::from_raw_parts(tags.clone(),count),
                             ArrayArg::from_raw_parts(term_output.clone(),if verify {count*10}else{1}),verify);
                     }
                     if let Some((ordinary,aligned))=limits {
-                        k::clear_selection::launch_unchecked::<WgpuRuntime>(&session.client,CubeCount::Static((limit*2).div_ceil(128) as u32,1,1),CubeDim::new_1d(128),ArrayArg::from_raw_parts(winner_ids.clone(),limit*2));
-                        k::select::launch_unchecked::<WgpuRuntime>(&session.client,CubeCount::Static(count.div_ceil(128) as u32,1,1),CubeDim::new_1d(128),
+                        k::clear_selection::launch_unchecked::<WgpuRuntime>(&client,CubeCount::Static((limit*2).div_ceil(128) as u32,1,1),CubeDim::new_1d(128),ArrayArg::from_raw_parts(winner_ids.clone(),limit*2));
+                        k::select::launch_unchecked::<WgpuRuntime>(&client,CubeCount::Static(count.div_ceil(128) as u32,1,1),CubeDim::new_1d(128),
                             ArrayArg::from_raw_parts(output.clone(),count*2),ArrayArg::from_raw_parts(tags.clone(),count),
                             ArrayArg::from_raw_parts(flag_handle.as_ref().unwrap().clone(),count),
                             ArrayArg::from_raw_parts(winner_ids.clone(),limit*2),ArrayArg::from_raw_parts(winner_scores.clone(),limit*2),ordinary,aligned);
@@ -505,20 +505,20 @@ impl Engine {
                 let submit_ms=submit_started.elapsed().as_secs_f64()*1000.0;
                 let read_started=Instant::now();
                 let all_rows=if selection.is_none() || verify || verify_shortlist {
-                    let values=if full_ranks {Some(session.client.read_one(output).map_err(|e|format!("board GPU score readback: {e:?}"))?)}else{None};
-                    let counts=session.client.read_one(tags).map_err(|e|format!("board GPU count readback: {e:?}"))?;
+                    let values=if full_ranks {Some(crate::compute::client::read_one(client, output).map_err(|e|format!("board GPU score readback: {e:?}"))?)}else{None};
+                    let counts=crate::compute::client::read_one(client, tags).map_err(|e|format!("board GPU count readback: {e:?}"))?;
                     let values=values.as_ref().map(|b|f32::from_bytes(b)).unwrap_or(&[]);let counts=u32::from_bytes(&counts);
                     Some((0..count).map(|i|Rank{hard_count:counts[i] as usize,hard_severity:if full_ranks {values[i*2]}else{0.0},score:if full_ranks {values[i*2+1]}else{0.0}}).collect::<Vec<_>>())
                 }else{None};
                 if verify {
-                    let diagnostic=session.client.read_one(diagnostic_tags).map_err(|e|format!("board GPU diagnostic legality: {e:?}"))?;
+                    let diagnostic=crate::compute::client::read_one(client, diagnostic_tags).map_err(|e|format!("board GPU diagnostic legality: {e:?}"))?;
                     let diagnostic=u32::from_bytes(&diagnostic);
                     if all_rows.as_ref().unwrap().iter().zip(diagnostic).any(|(r,&h)|r.hard_count!=h as usize) {
                         return Err("board GPU legality differs from full rank".into());
                     }
                 }
                 let mut rows=if selection.is_some() {
-                    let mut read=cubecl::future::block_on(session.client.read_async(vec![winner_ids,winner_scores]))
+                    let mut read=crate::compute::cpu::waiting(||cubecl::future::block_on(client.read_async(vec![winner_ids,winner_scores])))
                         .map_err(|e|format!("board GPU shortlist readback: {e:?}"))?;
                     let values=read.pop().unwrap();let ids=read.pop().unwrap();
                     let ids=u32::from_bytes(&ids);let values=f32::from_bytes(&values);
@@ -536,18 +536,18 @@ impl Engine {
                 rows.sort_by_key(|r|r.index);
                 if rows.iter().any(|r|!r.rank.hard_severity.is_finite() || !r.rank.score.is_finite()) {return Err("nonfinite board GPU rank".into());}
                 let materialized=if verify {
-                    let bytes=session.client.read_one(geometry).map_err(|e|format!("board GPU geometry readback: {e:?}"))?;
+                    let bytes=crate::compute::client::read_one(client, geometry).map_err(|e|format!("board GPU geometry readback: {e:?}"))?;
                     let mut values=f32::from_bytes(&bytes).to_vec();
-                    if fixed_geometry_len>0 {let bytes=session.client.read_one(parent_frame.geometry.clone()).map_err(|e|format!("fixed geometry: {e:?}"))?;values[..fixed_geometry_len].copy_from_slice(&f32::from_bytes(&bytes)[..fixed_geometry_len]);}
+                    if fixed_geometry_len>0 {let bytes=crate::compute::client::read_one(client, parent_frame.geometry.clone()).map_err(|e|format!("fixed geometry: {e:?}"))?;values[..fixed_geometry_len].copy_from_slice(&f32::from_bytes(&bytes)[..fixed_geometry_len]);}
                     Some(values)
                 }else{None};
-                let term_values=if verify {Some(session.client.read_one(term_output).map_err(|e|format!("board GPU term readback: {e:?}"))?)}else{None};
+                let term_values=if verify {Some(crate::compute::client::read_one(client, term_output).map_err(|e|format!("board GPU term readback: {e:?}"))?)}else{None};
                 if fresh {
                     if self.frames.len()>=16 || self.frames.values().map(|f|f.bytes).sum::<usize>()+parent_frame.bytes>64*1024*1024 {self.frames.clear();}
                     self.frames.insert(frame_key.clone(),parent_frame);self.frame_misses+=1;
                 }else{self.frame_hits+=1;}
                 Ok((rows,all_rows,materialized,term_values,upload_ms,submit_ms,read_started.elapsed().as_secs_f64()*1000.0))
-            })?;
+            }) })?;
             let gpu_operation_ms=operation_started.elapsed().as_secs_f64()*1000.0;
             if verify {
                 let actual=materialized.as_ref().unwrap();
@@ -633,7 +633,7 @@ impl Control {
     pub fn new(p:&BoardPackProblem,explicit:bool)->Result<Arc<Self>,Error> {
         let engine=Engine::new(p)?;
         let call=if p.primitives.iter().any(|p|!p.locked) {Some(gpu::enter(REQUIREMENTS,gpu::Admission::explicit(explicit))?)}else{None};
-        Ok(Arc::new(Self {engine:Mutex::new(engine),failure:Mutex::new(None),wait_nanos:AtomicU64::new(0),_call:call}))
+        Ok(Arc::new(Self {engines:Mutex::new(vec![engine]),phase:Mutex::new("beam"),failure:Mutex::new(None),wait_nanos:AtomicU64::new(0),_call:call}))
     }
     pub fn failure(&self)->Option<Error> {self.failure.lock().unwrap_or_else(|e|e.into_inner()).clone()}
     pub fn legality(&self,fixed:&[WorkingPrimitive],states:&[Vec<WorkingPrimitive>],context:&Context)->Vec<Rank> {
@@ -645,25 +645,49 @@ impl Control {
     fn evaluate_mode(&self,fixed:&[WorkingPrimitive],states:&[Vec<WorkingPrimitive>],context:&Context,legality_only:bool,selection:Option<Selection<'_>>)->Vec<Evaluated> {
         if self.failure().is_some() {std::panic::panic_any(Abort);}
         let waiting=Instant::now();
-        let mut engine=self.engine.lock().unwrap_or_else(|e|e.into_inner());
+        let mut engine=crate::compute::cpu::lock(&self.engines).pop().unwrap_or_else(||Engine::new(&context.problem).expect("validated board GPU input"));
+        engine.phase=*crate::compute::cpu::lock(&self.phase);
         self.wait_nanos.fetch_add(waiting.elapsed().as_nanos() as u64,Ordering::Relaxed);
         if self.failure().is_some() {std::panic::panic_any(Abort);}
         let result=engine.evaluate(fixed,states,context,legality_only,selection);
+        crate::compute::cpu::lock(&self.engines).push(engine);
         match result {
             Ok(rows)=>rows,
             Err(error)=>{*self.failure.lock().unwrap_or_else(|e|e.into_inner())=Some(error);std::panic::panic_any(Abort);}
         }
     }
-    pub fn set_phase(&self,phase:&'static str) {self.engine.lock().unwrap_or_else(|e|e.into_inner()).phase=phase;}
+    pub fn set_phase(&self,phase:&'static str) {
+        *crate::compute::cpu::lock(&self.phase)=phase;
+        // Phase boundaries join all board jobs. Parent caches from the beam
+        // cannot benefit the serial local/repair phase; release their VRAM.
+        for engine in crate::compute::cpu::lock(&self.engines).iter_mut() {
+            engine.frames.clear();engine.handles=None;
+        }
+        if let Err(error)=gpu::with_session(REQUIREMENTS,|session|{session.trim_idle();Ok(())}) {
+            *self.failure.lock().unwrap_or_else(|e|e.into_inner())=Some(error);
+            std::panic::panic_any(Abort);
+        }
+    }
     pub fn checkpoint(&self,stage:&str) {
         if std::env::var("PCB_BOARD_GPU_FAIL_AT").as_deref()!=Ok(stage) {return;}
         let failure=gpu::with_session::<()>(REQUIREMENTS,|_|panic!("injected board GPU failure at {stage}"));
         if let Err(error)=failure {*self.failure.lock().unwrap_or_else(|e|e.into_inner())=Some(error);std::panic::panic_any(Abort);}
     }
-    pub fn performed_work(&self)->bool {self.engine.lock().unwrap_or_else(|e|e.into_inner()).batches>0}
+    pub fn performed_work(&self)->bool {crate::compute::cpu::lock(&self.engines).iter().any(|e|e.batches>0)}
     pub fn report(&self) {
-        let engine=self.engine.lock().unwrap_or_else(|e|e.into_inner());
-        eprintln!("[board-gpu-stage] {}",serde_json::json!({"batches":engine.batches,"candidates":engine.candidates,
-            "frameHits":engine.frame_hits,"frameMisses":engine.frame_misses,"frameBytes":engine.frames.values().map(|f|f.bytes).sum::<usize>(),"templates":engine.templates.len(),"legalityCandidates":engine.legality_candidates,"rankCandidates":engine.rank_candidates,"residentBytes":engine.sf.len()*4+engine.si.len()*4,"stages":engine.stages,"engineWaitWorkerMs":self.wait_nanos.load(Ordering::Relaxed) as f64/1e6,"runtime":gpu::statistics()}));
+        let engines=crate::compute::cpu::lock(&self.engines);
+        let mut stages:BTreeMap<&str,Timings>=BTreeMap::new();
+        for engine in engines.iter() {for (phase,t) in &engine.stages {
+            let sum=stages.entry(phase).or_default();sum.batches+=t.batches;sum.candidates+=t.candidates;
+            sum.encode_ms+=t.encode_ms;sum.upload_ms+=t.upload_ms;sum.submit_ms+=t.submit_ms;
+            sum.read_ms+=t.read_ms;sum.gpu_operation_ms+=t.gpu_operation_ms;
+        }}
+        eprintln!("[board-gpu-stage] {}",serde_json::json!({"batches":engines.iter().map(|e|e.batches).sum::<usize>(),
+            "candidates":engines.iter().map(|e|e.candidates).sum::<usize>(),"engines":engines.len(),
+            "frameHits":engines.iter().map(|e|e.frame_hits).sum::<usize>(),"frameMisses":engines.iter().map(|e|e.frame_misses).sum::<usize>(),
+            "frameBytes":engines.iter().flat_map(|e|e.frames.values()).map(|f|f.bytes).sum::<usize>(),
+            "templates":engines.iter().map(|e|e.templates.len()).sum::<usize>(),"legalityCandidates":engines.iter().map(|e|e.legality_candidates).sum::<usize>(),
+            "rankCandidates":engines.iter().map(|e|e.rank_candidates).sum::<usize>(),"residentBytes":engines.iter().map(|e|(e.sf.len()+e.si.len())*4).sum::<usize>(),
+            "stages":stages,"engineWaitWorkerMs":self.wait_nanos.load(Ordering::Relaxed) as f64/1e6,"runtime":gpu::statistics()}));
     }
 }

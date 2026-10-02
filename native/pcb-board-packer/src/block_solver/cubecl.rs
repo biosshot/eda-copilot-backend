@@ -3,7 +3,6 @@ use super::gpu_kernels as k;
 use super::*;
 use ::cubecl::prelude::*;
 use ::cubecl::server::Handle;
-use crate::compute::f32_runtime::PcbRuntime as WgpuRuntime;
 // Local meanings and layout belong to this scorer, never to compute.
 #[derive(Clone, Copy)]
 enum ScoreScratch { Hull, HullCount, Pads, Segments, SegmentTags, Costs, Scores, Tags, Best, Mask, OutputIds, OutputScores }
@@ -857,22 +856,22 @@ impl Engine {
             force_no_prune || verify || std::env::var_os("PCB_BLOCK_GPU_NO_PRUNE").is_some();
         drop(preparing);
         let batch_span = context.detail.span("gpu_batch");
-        let (rows, all) = gpu_runtime::with_batch(GPU_REQUIREMENTS, "block-score", poses.len().saturating_mul(context.problem.components.len().max(1)), |session| {
+        let (rows, all) = gpu_runtime::with_batch(GPU_REQUIREMENTS, "block-score", poses.len().saturating_mul(context.problem.components.len().max(1)), |session| { crate::compute::client::with_client!(session.client.clone(), |client,WgpuRuntime| {
             if self.fail_batch == Some(self.batches + 1) {
                 panic!("injected GPU runtime failure at batch {}", self.batches + 1);
             }
             let upload = context.detail.span("gpu_upload");
             if self.handles.is_none() {
                 self.handles = Some((
-                    session.client.create_from_slice(f32::as_bytes(&self.sf)),
-                    session.client.create_from_slice(i32::as_bytes(&self.si)),
+                    client.create_from_slice(f32::as_bytes(&self.sf)),
+                    client.create_from_slice(i32::as_bytes(&self.si)),
                 ));
             }
             let (sf, si) = self.handles.as_ref().unwrap();
-            let fh = session.client.create_from_slice(f32::as_bytes(&ff));
-            let ih = session.client.create_from_slice(u32::as_bytes(&fi));
-            let ph = session.client.create_from_slice(f32::as_bytes(&pf));
-            let th = session.client.create_from_slice(u32::as_bytes(&pi));
+            let fh = client.create_from_slice(f32::as_bytes(&ff));
+            let ih = client.create_from_slice(u32::as_bytes(&fi));
+            let ph = client.create_from_slice(f32::as_bytes(&pf));
+            let th = client.create_from_slice(u32::as_bytes(&pi));
             let hull = session.workspace(ScoreScratch::Hull.key(), self.hull_capacity * 2 * 4);
             let hc = session.workspace(ScoreScratch::HullCount.key(), 4);
             let pads = session.workspace(ScoreScratch::Pads.key(), self.pads.len() * 4 * 4);
@@ -885,7 +884,7 @@ impl Engine {
             let mask = session.workspace(ScoreScratch::Mask.key(), poses.len() * 4);
             let oi = session.workspace(ScoreScratch::OutputIds.key(), 130 * 4);
             let of = session.workspace(ScoreScratch::OutputScores.key(), 64 * 4);
-            let client = &session.client;
+
             let input = || unsafe {
                 k::InputLaunch::new(
                     ArrayArg::from_raw_parts(sf.clone(), self.sf.len()),
@@ -1091,9 +1090,9 @@ impl Engine {
                 rows.push(Row { index, hard, base });
             }
             let all = if verify {
-                let f = crate::compute::cpu::waiting(||client.read_one(scores))
+                let f = crate::compute::cpu::waiting(||crate::compute::client::read_one(client, scores))
                     .map_err(|e| format!("GPU verify scores: {e:?}"))?;
-                let i = crate::compute::cpu::waiting(||client.read_one(tags))
+                let i = crate::compute::cpu::waiting(||crate::compute::client::read_one(client, tags))
                     .map_err(|e| format!("GPU verify counts: {e:?}"))?;
                 Some((
                     f32::from_bytes(&f)[..poses.len()].to_vec(),
@@ -1103,7 +1102,7 @@ impl Engine {
                 None
             };
             Ok((rows, all))
-        }).map_err(|e| e.to_string())?;
+        }) }).map_err(|e| e.to_string())?;
         drop(batch_span);
         self.batches += 1;
         self.candidates += poses.len();
@@ -1142,8 +1141,8 @@ impl Engine {
                 );
                 if (cpu.score - scores[i]).abs() > tolerance {
                     if let Some(path) = std::env::var_os("PCB_BLOCK_GPU_FAILURE_CAPTURE") {
-                        let geometry = gpu_runtime::with_session(GPU_REQUIREMENTS, |session| {
-                            let client = &session.client;
+                        let geometry = gpu_runtime::with_session(GPU_REQUIREMENTS, |session| { crate::compute::client::with_client!(session.client.clone(), |client,WgpuRuntime| {
+
                             macro_rules! upload {
                                 ($v:expr,$t:ty) => {{
                                     let h = client.create_from_slice(<$t>::as_bytes($v));
@@ -1169,10 +1168,10 @@ impl Engine {
                                     ArrayArg::from_raw_parts(output.clone(), current.len() * 16),
                                 );
                             }
-                            let bytes = crate::compute::cpu::waiting(||client.read_one(output))
+                            let bytes = crate::compute::cpu::waiting(||crate::compute::client::read_one(client, output))
                                 .map_err(|e| format!("diagnostic read: {e:?}"))?;
                             Ok(f32::from_bytes(&bytes).to_vec())
-                        })
+                        }) })
                         .unwrap();
                         let dump = serde_json::json!({"gpuGeometry":geometry,"candidate":i,"cpu":cpu.score,"gpu":scores[i],"phase":*context.trace_phase.borrow(),
                             "sf":self.sf,"si":self.si,"ff":ff,"fi":fi,"poses":pf,"ids":pi,

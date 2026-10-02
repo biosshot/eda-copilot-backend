@@ -1,33 +1,102 @@
 # Внутренний GPU API
 
-`native/pcb-board-packer/src/compute/` входит в существующий crate и addon. Все его GPU модули и типы закрыты `feature = "gpu"`; CPU-only сборка не включает CubeCL/wgpu. Зависимость направлена от домена к `compute`; инфраструктура не импортирует solver.
+Актуальный контракт adaptive manager, 2026-10-02. `native/pcb-board-packer/src/compute/`
+входит в один существующий `.node`; публичные DTO/NAPI контракты solver не меняются.
+GPU-код закрыт feature `gpu`, CPU-only сборка не требует GPU runtime или компилятора.
 
-## Runtime и доступ
+## Выбор исполнения
 
-`gpu::with_session(requirements, operation)` лениво получает единственную process-wide сессию. `Requirements` задаёт требования F32/опционального U64 потребителя; `Capabilities` содержит проверенные возможности client. Активная [F32 миграция](F32_MIGRATION_ROADMAP.md) больше не требует F64. Проверяются Vulkan Float32 properties, backend фактического client и реальные arithmetic probes. Приёмка всей миграции остаётся открытой; прежние F64 измерения сохранены в исторических results.
+`GPU auto` сначала проверяет CUDA, затем Vulkan. Это выбор runtime внутри CubeCL;
+`PCB_BLOCK_BACKEND`, `PCB_BOARD_BACKEND`, `PCB_POST_PLACE_BACKEND` по-прежнему выбирают
+`cpu` / `auto` / `cubecl` на уровне solver. `PCB_GPU_RUNTIME=auto|cuda|vulkan` позволяет
+диагностически выбрать конкретный runtime; значение по умолчанию — `auto`.
+`PCB_BLOCK_GPU_DISABLED=1` отключает GPU целиком. `PCB_GPU_CUDA_DISABLED=1` позволяет
+проверить автоматический переход к Vulkan при отсутствии CUDA.
 
-Внутренний `PcbRuntime` делегирует выполнение и память одному существующему `WgpuServer`. Обёртка compiled task добавляет в фактически исполняемый SPIR-V RTE, SignedZeroInfNanPreserve и NoContraction и отвергает F64/fast-math/RelaxedPrecision/FMA. Scoped CPU environment и TS helpers используют signed FTZ. На текущем RTX Vulkan оба denorm properties false, поэтому shader канонизирует subnormal inputs/results целочисленными bit operations. Неподдерживаемый execution mode FTZ не запрашивается. Влияние этого pass на полную производительность ещё не принято.
+CUDA требует доступного NVIDIA driver, NVRTC и заголовков CUDA/CCCL установленного
+Toolkit. В Windows учитывается `CUDA_PATH`, включая расположение DLL в `bin/x64`
+CUDA 13. Библиотеки Toolkit не копируются в дистрибутив. Vulkan требует установленного
+Vulkan driver/loader. Наличие одного из этих GPU runtime достаточно; без обоих
+действует исходный CPU solver. Metal/HIP здесь не реализованы; наличие CubeCL само
+по себе не добавляет их поддержку. Проверки на одной Windows машине не являются
+сертификацией остальных ОС.
 
-Mutex защищает всю связанную GPU операцию: upload, dispatch цепочки kernels и необходимый readback. Генерация кандидатов и доменные проверки входа выполняются снаружи. Нельзя захватывать эту блокировку рекурсивно, включая вызов `statistics()` из operation. Между процессами действует прежняя OS lease; занятый lease переводит runtime в `Busy` с повторной проверкой через одну секунду. `ready()` проверяет состояние без инициализации и без повторного получения занятого lease.
+`client::Client` владеет одним выбранным ComputeClient. `with_client!` выбирает
+конкретный runtime при запуске тех же исходников ядра; алгоритмы scoring не
+дублируются. GPU handles никогда не переходят между runtime. Backend выбирается
+при инициализации, не меняется посреди поиска. Недоступный/несовместимый CUDA
+отклоняется до начала solver GPU-работы, после чего проверяется Vulkan.
 
-`Error.kind` доступен без разбора сообщения: `Busy`, `Disabled`, `NoDevice`, `MissingCapabilities`, `Lease`, `AdapterMismatch`, `ArithmeticIncompatibility`, `RuntimeFailure`, `InvalidInput`. Runtime не вызывает CPU solver. При ошибке инициализации или runtime failure сессия становится `Disabled`; повторная инициализация не выполняется. Panic перехватывается внутри mutex. Домен отбрасывает свой Engine и самостоятельно выбирает границу CPU replay. Block controller сохраняет полный повтор исходного native call; deferred pairs повторяются с исходным `pairSeed`.
+## Численный контракт
 
-`InvalidInput` и отсутствие запрошенной потребителем capability у уже готовой сессии не отключают runtime. `InvalidInput` разрешён только до GPU работы; после dispatch операция обязана завершить необходимый readback либо вернуть `RuntimeFailure`. Доменная неподдерживаемая геометрия и небезопасные численные значения проверяются block solver до передачи их GPU и не становятся ошибкой общей сессии.
+Оба runtime проходят реальные пробы placement rounding, signed FTZ, отсутствия
+неявного FMA, division/sqrt bounds. CPU эталон пробы вычисляется во время исполнения,
+с black-box операндами и scoped float environment, а не constant folding компилятора.
+Численный контракт завершённой [F32 миграции](F32_MIGRATION_ROADMAP.md) сохраняется.
 
-## Память
+`PcbRuntime` исправляет исполняемый SPIR-V: RTE, signed FTZ через bit operations,
+SignedZeroInfNanPreserve, NoContraction, запрет F64/fast math. CUDA runtime использует
+закреплённый CubeCL CUDA patch: `--fmad=false --ftz=true --prec-div=true --prec-sqrt=true`
+и отключённый fast math CppCompiler. Политика и build fingerprint входят в kernel ID.
+`PCB_F32_SHADER_AUDIT_DIR` сохраняет SPIR-V для Vulkan и CUDA source для CUDA.
 
-`Session::workspace(ScratchKey::new(layout, local_slot), bytes)` возвращает handle из одного общего workspace. Уникальное статическое имя layout назначает потребитель; local slot имеет смысл только внутри него. Block scorer хранит значения в своём `ScoreScratch`, frontier — в `FrontierScratch`. Инфраструктура не знает их форматов. Рост сохраняет прежнюю политику: минимум 8 байт и округление capacity до следующей степени двойки; меньшие последующие запросы переиспользуют capacity. Отдельных contexts или заранее выделенного пула нет.
+## Очередь, CPU и владение
 
-Scratch принадлежит защищённой операции. Его handles можно клонировать для kernels этой операции, но нельзя сохранять в Engine, возвращать для последующего GPU использования или читать после передачи workspace следующему заданию. Rust `Handle` сам по себе не кодирует эту границу времени; соблюдение проверяется в местах unsafe запуска kernels. Операция возвращает CPU данные после readback.
+`gpu::with_batch(requirements, class, work, operation)` получает FIFO admission и
+собственный scratch до завершения readback. Process-wide depth начинается с 4,
+адаптируется в диапазоне 1..8 по throughput/latency и исключает окна холодной
+компиляции. Изменение depth не требует полного опустошения очереди. Это число
+допущенных операций, не число физических GPU-ядер или аппаратных очередей.
 
-Resident templates, frames и кеши создаются через тот же session client, принадлежат доменному Engine и могут переживать отдельные операции. Домен управляет их содержимым и инвалидацией. При runtime failure Engine уничтожается; его handles нельзя использовать с другим runtime. Автоматическое восстановление устройства и эпохи кешей не введены.
+Mutex runtime защищает состояние/инициализацию, не весь upload/dispatch/readback.
+Board evaluator извлекается из доменного пула на время запроса, затем возвращается;
+его изменяемые caches не разделяются между одновременными jobs. Между процессами
+действует scoped OS lease на весь исходный solver call; idle runtime не удерживает
+lease. Это сериализация процессов, а не отдельный daemon или глобальный RPC broker.
+ОС не предоставляет контракт строгой FIFO-очереди между процессами.
 
-При отключении сессии сбрасываются scratch handles и OS lease. Глобальный CubeCL client/allocator может удерживать context и память драйвера до выхода процесса. `workspaceBytes` считает только capacities scratch, включая все уже использованные layouts; это не суммарная VRAM, resident память или память allocator.
+Пакетные block jobs и независимые board beam lanes используют bounded CPU budget.
+Ожидающий GPU поток отдаёт CPU permit другому job; резерв ограничен восемью стеками.
+Refiner использует producer/consumer pipeline с общим CPU бюджетом, включая один
+CPU-поток. Зависимые поисковые шаги остаются последовательными. Если независимой
+работы нет, ожидание само по себе не может дать ускорение.
 
-## Числа и диагностика
+## Память и восстановление
 
-`compute::numerics` содержит общую F32 семантику `rp`, `grid_quotient`, `hypot` и execution/arithmetic probes. Placement half ties идут к +Infinity, обычная арифметика использует RTE/FTZ. `grid_quotient` восстанавливает canonical tick/1000 без зависимости от погрешности GPU division; четвертьобороты используют точные перестановки, остальные integer-degree углы — общие F32 bits коэффициентов. Block scoring, MST, collisions, pruning и ranking остаются в домене. Деление и sqrt проверяются с учётом обещанной Vulkan точности; diagnostic score tolerance не служит physical tolerance или pruning margin.
+Headroom берётся из Vulkan memory budget или CUDA mem_get_info, обновляется с кэшем
+250 ms и динамическим запасом 5%. Неизвестный бюджет остаётся неизвестным.
+Размеры батчей учитывают этот сигнал и переиспользуемый scratch; при давлении
+освобождаются idle buffers и запрашивается best-effort cleanup allocator.
+Оценки не являются глобальной гарантией VRAM или резервированием чужих процессов.
+Сохраняется минимальный батч в один кандидат, чтобы собственный reusable allocator
+не приводил к вечному ожиданию. Реальный отказ allocation — ошибка исполнения.
 
-`statistics()` сохраняет `initializations`, накопленный `mutexWaitMs`, `workspaceBytes`, device, capabilities, state и типизированный `unavailableReason`; добавляет precision и Float32 properties/independence. Workspace bytes не являются полной VRAM. Подробные доменные счётчики и стадии остаются в solver. Профилирование не включается автоматически. `PCB_F32_SHADER_AUDIT_DIR` сохраняет фактически исполняемые shader bytes; `PCB_F32_NATIVE_CAPTURE_DIR` сохраняет typed local DTO и frame/original locked metadata перед timed solve, не меняя scores/cache keys.
+В `auto` занятое устройство/очередь может привести к выбору CPU до начала GPU call.
+Явный `cubecl` ожидает admission; из-за нагрузки он не меняет backend посреди поиска.
+При настоящем GPU сбое, включая OOM, все частичные результаты вызова отбрасываются,
+выполняется полный CPU F32 повтор с исходного входа; refiner получает полный timeout.
+Повреждённый runtime отключается до конца процесса. Уже запущенные операции
+завершают ожидание, sibling-результаты после отключения не публикуются. Автоматических
+GPU повторов после частичного исполнения нет. `PCB_GPU_FAIL_ALLOCATION=1` — только
+диагностическая инъекция этой ветви, без искусственного заполнения всей VRAM.
 
-Сохраняются прежние `PCB_BLOCK_BACKEND`, `PCB_BLOCK_GPU_DISABLED`, `PCB_BLOCK_SOLVER_PROFILE`, validation и fault injection flags, лог-теги и `placement-bench` NAPI probe. Новых aliases переменных среды нет; приоритет прежних flags не изменён. Сохранено поведение: только значение `PCB_BLOCK_GPU_DISABLED=1` запрещает инициализацию, а наличие `PCB_BLOCK_SOLVER_PROFILE` включает соответствующие логи.
+## Диагностика
+
+`statistics()` содержит backend, capabilities, state, unavailableReason, queue,
+processLease, memory, memoryTrims, workspaceBytes и startup/cache metrics.
+`cudaCompilation.nativeCompilationMs` учитывает NVRTC; `kernelPreparation.firstLaunchHostMs`
+включает подготовку первого запуска и пересекается с временем компиляции — эти
+времена нельзя складывать. Vulkan disk cache использует build/device/options keys;
+CUDA kernel IDs также включают fingerprint для безопасности upstream PTX cache.
+
+`[block-cpu-scheduler]` и `[board-cpu-scheduler]` показывают active CPU limit/peak и
+suspended worker time. Readback и suspended time включают ожидание, а не только
+копирование байтов. Итоговую скорость оценивают по wall time полного исходного
+вызова, с указанием состояния shader cache и качества итоговой геометрии.
+
+CUDA uses at most eight backend allocator streams, matching the admission ceiling;
+it does not retain the upstream default of 128 pools for short-lived beam threads.
+At board phase barriers, obsolete frame/resident handles and idle scratch are
+released before local/repair work. CUDA cleanup visits all allocator pools.
+A failed allocation is latched inside the backend before an unbound handle can
+reach launch/write; readback delivers the error to full CPU recovery.
