@@ -1,4 +1,5 @@
 import type { CircuitAssembly, Circuit, CircuitComponent } from "#types/circuit.ts";
+import type { EdaEdition } from '#devices/eda-api.ts';
 import { circuitToSymbols, getSymbol } from "#devices/symbols/symbol-parser.ts";
 import type { ElkEdgeSection, LayoutOptions, ElkNode, ElkPort, ElkExtendedEdge } from 'elkjs';
 import type { SymbolData, SymbolPin, SymbolWithMeta, ShortSymbol } from "#types/symbol.ts";
@@ -1198,6 +1199,7 @@ export async function autoPlaceCircuitWithHierarchy(sch: Circuit, nodes: SymbolW
 }
 
 export async function makeAutoPlacement(circuit: Circuit, previewImg?: string, hooks?: Hooks, options?: {
+    edaEdition?: EdaEdition;
     splitMultiPartComponent?: boolean;
     externalSignals?: string[];
     requiredExternalSignals?: string[];
@@ -1212,10 +1214,11 @@ export async function makeAutoPlacement(circuit: Circuit, previewImg?: string, h
     // if (nullComponents.length > 0)
     //     throw new Error(`Not found component: ${JSON.stringify(nullComponents.map(c => c.designator))}`)
 
+    const loadSymbol: typeof getSymbol = (partUuid, partId) => getSymbol(partUuid, partId, options?.edaEdition);
     if (options?.splitMultiPartComponent)
-        circuit = await splitMultiPartComponent(circuit);
+        circuit = await splitMultiPartComponent(circuit, loadSymbol);
 
-    const { nodes, subParts } = await circuitToSymbols(circuit);
+    const { nodes, subParts } = await circuitToSymbols(circuit, loadSymbol);
 
     // console.log(nodes.map(n => n.symbol.pins))
 

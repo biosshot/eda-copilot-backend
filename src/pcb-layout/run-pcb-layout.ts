@@ -1,6 +1,7 @@
 import { autoPlacePcbWithReportAsync, renderPlacementSvg } from "#pcb-layout/pcb-auto-place/auto-place.ts";
 import { runPcbLayoutDsl } from "#pcb-layout/pcb-layout-dsl/spec.ts";
 import type { ExplainCircuit } from "#types/circuit.ts";
+import type { EdaEdition } from '#devices/eda-api.ts';
 import type { ExistingPlacement, FootprintSpec } from "#types/pcb/layout-model.ts";
 import { LayoutRulesSchema } from "#types/pcb/layout-rules.ts";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -28,6 +29,7 @@ import {
 import { applyExistingBoard, applyExistingComponentPlacements, ensurePreservedComponentBlocks, resolvePreservedComponentDesignators } from "./existing-placement.ts";
 
 export type RunPcbLayoutOptions = {
+    edaEdition?: EdaEdition;
     code: string;
     circuit: ExplainCircuit;
     existingPlacement?: ExistingPlacement;
@@ -80,7 +82,7 @@ export async function runPcbLayout(options: RunPcbLayoutOptions) {
         emitProgress('resolve_footprints', PCB_LAYOUT_PROGRESS.resolveFootprints, 'Resolving PCB footprints and component geometry.');
         const placementInput = attachLocalLayoutSeeds(
             applyExistingComponentPlacements(
-                await buildPlacementInput(circuit, rules, options.footprints),
+                await buildPlacementInput(circuit, rules, options.footprints, options.edaEdition),
                 rules.preserve,
                 options.existingPlacement,
             ),

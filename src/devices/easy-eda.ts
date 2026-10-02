@@ -5,9 +5,10 @@ import type { EasyEdaProductApiResponce, EasyEdaProduct, EasyEdaDeviceInfo, Easy
 import { memoize } from "#utils/memoize.ts";
 import { normalizeEasyEdaSymbolInfo } from "./easy-eda-datastr.ts";
 import { getPartLibraryUuid, getPartUuid, type PartUuid } from "#types/lcsc.ts";
+import { getEdaApiBase, type EdaEdition } from './eda-api.ts';
 
-export const getEasyEdaSymbolInfo = memoize(async (symUuid: string, libraryUuid: string = 'lcsc') => {
-    const res = await fetchWithRetry(`https://pro.easyeda.com/api/v2/components/${encodeURIComponent(symUuid)}?uuid=${encodeURIComponent(symUuid)}&path=${encodeURIComponent(libraryUuid)}`);
+export const getEasyEdaSymbolInfo = memoize(async (symUuid: string, libraryUuid: string = 'lcsc', edaEdition: EdaEdition = 'easyeda') => {
+    const res = await fetchWithRetry(`${getEdaApiBase(edaEdition)}/api/v2/components/${encodeURIComponent(symUuid)}?uuid=${encodeURIComponent(symUuid)}&path=${encodeURIComponent(libraryUuid)}`);
     if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
     }
@@ -18,10 +19,10 @@ export const getEasyEdaSymbolInfo = memoize(async (symUuid: string, libraryUuid:
     return normalizeEasyEdaSymbolInfo(json.result);
 });
 
-export const getEasyEdaDevice = memoize(async (partUuid: PartUuid) => {
+export const getEasyEdaDevice = memoize(async (partUuid: PartUuid, edaEdition: EdaEdition = 'easyeda') => {
     const uuid = getPartUuid(partUuid);
     const libraryUuid = getPartLibraryUuid(partUuid);
-    const res = await fetchWithRetry(`https://pro.easyeda.com/api/devices/${encodeURIComponent(uuid)}?uuid=${encodeURIComponent(uuid)}&path=${encodeURIComponent(libraryUuid)}`);
+    const res = await fetchWithRetry(`${getEdaApiBase(edaEdition)}/api/devices/${encodeURIComponent(uuid)}?uuid=${encodeURIComponent(uuid)}&path=${encodeURIComponent(libraryUuid)}`);
     if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
     }
@@ -55,21 +56,22 @@ export async function normalizeEasyEdaProductSymbolInfo(product: EasyEdaProduct)
     return product;
 }
 
-export async function easyEdaDeviceToComponent(device: EasyEdaDeviceInfo | EasyEdaDeviceApiResult): Promise<Component | undefined> {
-    if (!('symbol' in device)) return easyEdaSearch(device.product_code).then(r => r[0]);
+export async function easyEdaDeviceToComponent(device: EasyEdaDeviceInfo | EasyEdaDeviceApiResult, edaEdition: EdaEdition = 'easyeda'): Promise<Component | undefined> {
+    if (!('symbol' in device)) return easyEdaSearch(device.product_code, undefined, true, edaEdition).then(r => r[0]);
     const libraryUuid = device.owner?.uuid === '0819f05c4eef4c71ace90d822a990e87' ? 'lcsc' : device.owner?.uuid;
     const partUuid: PartUuid = libraryUuid && libraryUuid !== 'lcsc'
         ? { uuid: device.uuid, libraryUuid }
         : device.uuid;
-    return easyEdaDeviceToComponentInLibrary(device, partUuid);
+    return easyEdaDeviceToComponentInLibrary(device, partUuid, edaEdition);
 }
 
 export async function easyEdaDeviceToComponentInLibrary(
     device: EasyEdaDeviceApiResult,
     partUuid: PartUuid,
+    edaEdition: EdaEdition = 'easyeda',
 ): Promise<Component | undefined> {
     if (!device.symbol?.uuid || !device.footprint?.uuid) return undefined;
-    const symbolInfo = await getEasyEdaSymbolInfo(device.symbol.uuid, getPartLibraryUuid(partUuid));
+    const symbolInfo = await getEasyEdaSymbolInfo(device.symbol.uuid, getPartLibraryUuid(partUuid), edaEdition);
     const pins = extractPinsFromComponent({ device_info: { symbol_info: symbolInfo } } as EasyEdaProduct);
     return {
         pins: pins ?? [],
@@ -101,7 +103,7 @@ type DeviceSearchResponse = EasyEdaApiResponce<{
     count: number;
 }>;
 
-export async function easyEdaDeviceSearch(query: string, libraryUuid: string, page = 1, limit = 10) {
+export async function easyEdaDeviceSearch(query: string, libraryUuid: string, page = 1, limit = 10, edaEdition: EdaEdition = 'easyeda') {
     const body = new URLSearchParams({
         uid: libraryUuid,
         path: libraryUuid,
@@ -110,7 +112,7 @@ export async function easyEdaDeviceSearch(query: string, libraryUuid: string, pa
         pageSize: String(limit),
         withSymbolPackage: 'true',
     });
-    const response = await fetchWithRetry('https://pro.easyeda.com/api/devices/search', { method: 'POST', body }) as unknown as Response;
+    const response = await fetchWithRetry(`${getEdaApiBase(edaEdition)}/api/devices/search`, { method: 'POST', body }) as unknown as Response;
     if (!response.ok) throw new Error(`EasyEDA device search failed: ${response.status}`);
     const json = await response.json() as DeviceSearchResponse;
     if (!json.success || !json.result) throw new Error(`EasyEDA device search failed: ${json.msg ?? 'unknown error'}`);
@@ -118,7 +120,7 @@ export async function easyEdaDeviceSearch(query: string, libraryUuid: string, pa
     const components = (await Promise.all(devices.map(async device => {
         const requestedPartUuid: PartUuid = libraryUuid === 'lcsc' ? device.uuid : { uuid: device.uuid, libraryUuid };
         const partUuid = canonicalEasyEdaPartUuid(device, requestedPartUuid);
-        return easyEdaDeviceToComponentInLibrary(device, partUuid).catch(() => undefined);
+        return easyEdaDeviceToComponentInLibrary(device, partUuid, edaEdition).catch(() => undefined);
     }))).filter((component): component is Component => Boolean(component));
     return {
         components,
@@ -132,7 +134,8 @@ export async function easyEdaDeviceSearch(query: string, libraryUuid: string, pa
 export async function easyEdaSearch(
     data: { catalogId: number, params: { [key: string]: string | string[] } | null, currPage: number, pageSize: number } | string,
     filter: (comp: Component) => boolean = () => true,
-    fullPage = true
+    fullPage = true,
+    edaEdition: EdaEdition = 'easyeda',
 ): Promise<Component[]> {
     const MAX_PER_PAGE = 50; // API enforces maximum 50 items per page
     const pathParam = '0819f05c4eef4c71ace90d822a990e87'; // Fixed path for keyword search
@@ -174,14 +177,14 @@ export async function easyEdaSearch(
                     pageSize: MAX_PER_PAGE.toString(),
                     path: pathParam
                 });
-                response = await fetchWithRetry('https://pro.easyeda.com/api/v2/eda/product/search', {
+                response = await fetchWithRetry(`${getEdaApiBase(edaEdition)}/api/v2/eda/product/search`, {
                     method: 'POST',
                     body
                 }) as unknown as Response;;
             }
             // Handle catalog search (GET request)
             else {
-                const apiUrl = `https://pro.easyeda.com/api/v2/eda/product/list?` +
+                const apiUrl = `${getEdaApiBase(edaEdition)}/api/v2/eda/product/list?` +
                     `catalog=${encodeURIComponent(data.catalogId)}` +
                     `&currPage=${currentPage}` +
                     `&pageSize=${MAX_PER_PAGE}` +
@@ -240,7 +243,7 @@ export async function easyEdaSearch(
     return result;
 }
 
-export async function easyEdaSearcPassiveComponent({ componentType = '', value = '', currPage = 1, pageSize = 10 }) {
+export async function easyEdaSearcPassiveComponent({ componentType = '', value = '', currPage = 1, pageSize = 10 }, edaEdition: EdaEdition = 'easyeda') {
     const catalogIdMap: { [key: string]: number } = {
         'capacitor': 312,
         'inductor': 316,
@@ -266,5 +269,5 @@ export async function easyEdaSearcPassiveComponent({ componentType = '', value =
         params["Number of Pins"] = [value + 'P'];
     }
 
-    return await easyEdaSearch({ catalogId, params, currPage: currPage ?? 1, pageSize: pageSize ?? 25 });
+    return await easyEdaSearch({ catalogId, params, currPage: currPage ?? 1, pageSize: pageSize ?? 25 }, undefined, true, edaEdition);
 }

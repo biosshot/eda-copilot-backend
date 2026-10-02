@@ -2,6 +2,10 @@
 
 ## Unreleased - 2026-09-29
 
+### Component libraries
+
+- Accept optional `edaEdition: 'easyeda' | 'jlceda'` API options for component search, symbol previews, schematic assembly and PCB footprint resolution. Default to international EasyEDA; use JLCEDA's API domain when explicitly selected, including PCB workers and edition-separated caches. Keep UUID and DSL formats unchanged.
+
 ### PCB layout
 
 - Fix EasyEDA footprint bounds for ARC/CARC and Bezier contours, including nested circles; retain NGON pads and center asymmetric polygon pad envelopes on their geometry. Cover the real 10mm capacitor footprint, curve extrema, pad forms, rotations and both PCB sides.

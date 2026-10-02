@@ -1,4 +1,5 @@
 import * as fp from './f32.ts';
+import type { EdaEdition } from '#devices/eda-api.ts';
 import { centeredBoard, defaultSolverOptions } from "#pcb-layout/pcb-auto-place/utils.ts";
 import { preferredPlacementLayers } from "#pcb-layout/pcb-auto-place/fixed.ts";
 import { boardAnchorPoint, outlineInsetPointFromCorner, pointsBox, rectBoardPolygon } from "#pcb-layout/pcb-auto-place/geometry.ts";
@@ -716,6 +717,7 @@ export async function buildPlacementInput(
     circuit: ExplainCircuit,
     rules: PlacementRules,
     footprints?: Readonly<Record<string, FootprintSpec>>,
+    edaEdition?: EdaEdition,
 ): Promise<PlacementInput> {
     const componentRules = new Map(rules.component_rules.map((rule) => [rule.designator, rule]));
     const footprintCache = new Map<string, Promise<FootprintSpec | null>>();
@@ -747,7 +749,7 @@ export async function buildPlacementInput(
                 : null;
         const footprint = compiledProcedural?.footprint
             ?? normalizeFootprintSpec(rule?.footprint)
-            ?? await requireResolvedComponentFootprint(component, footprintCache, footprints);
+            ?? await requireResolvedComponentFootprint(component, footprintCache, footprints, edaEdition);
         const baseAllowedRotations = rule?.allowedRotations ?? [0, 90, 180, 270];
         const edgeMount = normalizeEdgeMountRule(rule?.edgeMount);
         const edgePlace = normalizeEdgePlaceRule(rule?.edgePlace);

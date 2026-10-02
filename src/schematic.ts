@@ -7,6 +7,7 @@ import { getSymbol } from './devices/symbols/symbol-parser.ts';
 import { rotatePointClockwise } from './utils/math.ts';
 import { recalculateRootBlock } from './utils/circuit-merge.ts';
 import type { SymbolPin } from './types/symbol.ts';
+import type { EdaApiOptions } from './devices/eda-api.ts';
 import masterLogger from './logger.ts';
 import { getPartUuid, isMissingPartUuid } from './types/lcsc.ts';
 import { canonicalEasyEdaPartUuid, getEasyEdaDevice } from './devices/easy-eda.ts';
@@ -29,7 +30,7 @@ type CircuitState = {
 };
 
 /** Existing MCP postprocessing, with the sequential LangGraph steps expressed as async calls. */
-export async function extractCircuit(input: ExtractCircuitInput): Promise<{ circuit: CircuitAssembly }> {
+export async function extractCircuit(input: ExtractCircuitInput, options: EdaApiOptions = {}): Promise<{ circuit: CircuitAssembly }> {
   // Reject disabled blocks before schema validation, network access or any layout work.
   if (Array.isArray(input?.circuit?.add_reused_blocks) && input.circuit.add_reused_blocks.length) {
     throw new Error('Reusable blocks are not supported. Do not use add_reused_blocks; add individual components instead.');
@@ -39,7 +40,7 @@ export async function extractCircuit(input: ExtractCircuitInput): Promise<{ circ
   if (missing.length) throw new Error('All add_components must have part_uuid: ' + missing.map(c => c.designator).join(', '));
   data.circuit.add_components = await Promise.all(data.circuit.add_components.map(async component => {
     if (!component.part_uuid || typeof component.part_uuid === 'string' || component.part_uuid.libraryUuid !== 'user') return component;
-    const device = await getEasyEdaDevice(component.part_uuid);
+    const device = await getEasyEdaDevice(component.part_uuid, options.edaEdition);
     return { ...component, part_uuid: canonicalEasyEdaPartUuid(device, component.part_uuid) };
   }));
   const state: CircuitState = {
@@ -80,8 +81,8 @@ export async function extractCircuit(input: ExtractCircuitInput): Promise<{ circ
                 return symbolPins.map((spin) => ({ ...spin, signal_name: component.pins.find(cpin => cpin.pin_number == spin.num)?.signal_name ?? crypto.randomUUID().slice(0, 8) }));
             }
 
-            const oldSymbol = await getSymbol(schComponent.part_uuid);
-            const newSymbol = await getSymbol(component.part_uuid);
+            const oldSymbol = await getSymbol(schComponent.part_uuid, undefined, options.edaEdition);
+            const newSymbol = await getSymbol(component.part_uuid, undefined, options.edaEdition);
 
             if (!oldSymbol || !newSymbol) {
                 logger.warn({ designator }, 'not found symbol')
@@ -287,6 +288,7 @@ export async function extractCircuit(input: ExtractCircuitInput): Promise<{ circ
         };
 
         const result: CircuitAssembly = await makeAutoPlacement(circuit, undefined, {}, {
+            edaEdition: options.edaEdition,
             splitMultiPartComponent: true,
             layoutRefinement: true,
             externalSignals: [...new Set([...externalSignals, ...otherPageSignals])],

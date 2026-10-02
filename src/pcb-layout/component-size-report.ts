@@ -1,5 +1,6 @@
 import type { ExplainCircuit } from "#types/circuit.ts";
 import type { FootprintSpec } from "#types/pcb/layout-model.ts";
+import type { EdaEdition } from '#devices/eda-api.ts';
 import { roundForMessage } from "./common.ts";
 import { requireResolvedComponentFootprint, resolveComponentFootprint } from "./footprints.ts";
 
@@ -14,11 +15,12 @@ export async function getComponentSizeReport(
     circuit: ExplainCircuit,
     query: ComponentSizeQuery,
     footprints?: Readonly<Record<string, FootprintSpec>>,
+    edaEdition?: EdaEdition,
 ) {
     const selected = selectCircuitComponents(circuit, query);
     const footprintCache = new Map<string, ReturnType<typeof resolveComponentFootprint>>();
     const componentsRaw = await Promise.all(selected.map(async (component) => {
-        const footprint = await requireResolvedComponentFootprint(component, footprintCache, footprints).catch(e => undefined);
+        const footprint = await requireResolvedComponentFootprint(component, footprintCache, footprints, edaEdition).catch(e => undefined);
         if (!footprint) return null;
         const area = footprint.width * footprint.height;
         return {

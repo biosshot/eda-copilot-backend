@@ -4,6 +4,7 @@ import type { ExplainCircuit } from "#types/circuit.ts";
 import type { ComponentRole, FootprintSpec } from "#types/pcb/layout-model.ts";
 import type { BoardOverflowAllowance, FixedPlacement, Footprint } from "#types/pcb/layout-rules.ts";
 import { getPartUuid, getPartUuidKey, type PartUuid } from "#types/lcsc.ts";
+import type { EdaEdition } from '#devices/eda-api.ts';
 
 const logger = masterLogger.child({ TAG: "pcb-layout-footprints" });
 const EASYEDA_UUID_RE = /^[a-f0-9]{32}$/i;
@@ -12,6 +13,7 @@ export async function resolveComponentFootprint(
     component: ExplainCircuit["components"][number],
     cache = new Map<string, Promise<FootprintSpec | null>>(),
     footprints?: Readonly<Record<string, FootprintSpec>>,
+    edaEdition: EdaEdition = 'easyeda',
 ) {
     const provided = providedComponentFootprint(component, footprints);
     if (provided) return provided;
@@ -20,28 +22,29 @@ export async function resolveComponentFootprint(
     const partUuid = validPartUuid(component.part_uuid) ? component.part_uuid : null;
 
     if (footprintUuid) {
-        const cacheKey = `footprint:${footprintUuid}`;
+        const cacheKey = `${edaEdition}:footprint:${footprintUuid}`;
         const cached = cache.get(cacheKey);
         if (cached) return cached;
 
-        const promise = resolveEasyEdaFootprintByUuid(footprintUuid)
+        const promise = resolveEasyEdaFootprintByUuid(footprintUuid, undefined, edaEdition)
             .catch((error) => {
                 logger.warn({ error, designator: component.designator, footprint_uuid: footprintUuid }, "Failed to resolve EasyEDA footprint by footprint_uuid");
-                return partUuid ? resolveFootprintByPartUuid(component, partUuid, cache) : null;
+                return partUuid ? resolveFootprintByPartUuid(component, partUuid, cache, edaEdition) : null;
             });
         cache.set(cacheKey, promise);
         return promise;
     }
 
-    return partUuid ? resolveFootprintByPartUuid(component, partUuid, cache) : null;
+    return partUuid ? resolveFootprintByPartUuid(component, partUuid, cache, edaEdition) : null;
 }
 
 export async function requireResolvedComponentFootprint(
     component: ExplainCircuit["components"][number],
     cache = new Map<string, Promise<FootprintSpec | null>>(),
     footprints?: Readonly<Record<string, FootprintSpec>>,
+    edaEdition: EdaEdition = 'easyeda',
 ) {
-    const footprint = await resolveComponentFootprint(component, cache, footprints);
+    const footprint = await resolveComponentFootprint(component, cache, footprints, edaEdition);
     if (footprint) return footprint;
 
     const hasFootprintUuid = validEasyEdaUuid(component.footprint_uuid);
@@ -70,12 +73,13 @@ function resolveFootprintByPartUuid(
     component: ExplainCircuit["components"][number],
     partUuid: PartUuid,
     cache: Map<string, Promise<FootprintSpec | null>>,
+    edaEdition: EdaEdition,
 ) {
-    const cacheKey = `part:${getPartUuidKey(partUuid)}`;
+    const cacheKey = `${edaEdition}:part:${getPartUuidKey(partUuid)}`;
     const cached = cache.get(cacheKey);
     if (cached) return cached;
 
-    const promise = resolveEasyEdaFootprintByPartUuid(partUuid)
+    const promise = resolveEasyEdaFootprintByPartUuid(partUuid, edaEdition)
         .catch((error) => {
             logger.warn({ error, designator: component.designator, part_uuid: partUuid }, "Failed to resolve EasyEDA footprint by part_uuid");
             return null;

@@ -6,6 +6,7 @@ import { memoize } from "#utils/memoize.ts";
 import masterLogger from "#logger.ts";
 import { getPinDirection } from "#circuit-layout/improvement.ts";
 import type { EasyEdaProduct } from "#types/easy-eda-api.ts";
+import type { EdaEdition } from '#devices/eda-api.ts';
 import { getEasyEdaDevice, getEasyEdaSymbolInfo } from "../easy-eda.ts";
 import { countDiffChars } from "#utils/math.ts";
 import { getPartIdFromDesignator } from "#utils/component.ts";
@@ -161,10 +162,10 @@ export const extractPinsFromComponent = (product: EasyEdaProduct) => {
     return extractPins(parsedData);
 };
 
-export const getSymbol = memoize(async function getSymbol(partUuid: PartUuid, partId?: number) {
+export const getSymbol = memoize(async function getSymbol(partUuid: PartUuid, partId?: number, edaEdition: EdaEdition = 'easyeda') {
     try {
-        const device = await getEasyEdaDevice(partUuid);
-        const symbol = await getEasyEdaSymbolInfo(device.symbol.uuid, getPartLibraryUuid(partUuid));
+        const device = await getEasyEdaDevice(partUuid, edaEdition);
+        const symbol = await getEasyEdaSymbolInfo(device.symbol.uuid, getPartLibraryUuid(partUuid), edaEdition);
 
         const dataStr = symbol.dataStr as string;
         const parsed = parseSymbolData(dataStr);

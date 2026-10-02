@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { EdaApiOptions } from './devices/eda-api.ts';
 import { ExplainCircuitStruct } from './types/circuit.ts';
 import { ExistingPlacementSchema, FootprintSpecSchema, PlacementError } from './types/pcb/layout-model.ts';
 import { formatComponentSizeReport, getComponentSizeReport } from './pcb-layout/component-size-report.ts';
@@ -22,10 +23,10 @@ const sizesSchema = z.object({
 export type MakePcbLayoutInput = z.input<typeof layoutSchema>;
 export type GetPcbComponentSizesInput = z.input<typeof sizesSchema>;
 
-export async function getPcbComponentSizes(input: GetPcbComponentSizesInput) {
+export async function getPcbComponentSizes(input: GetPcbComponentSizesInput, options: EdaApiOptions = {}) {
   const data = sizesSchema.parse(input);
   try {
-    const report = await getComponentSizeReport(data.circuit, data, data.footprints);
+    const report = await getComponentSizeReport(data.circuit, data, data.footprints, options.edaEdition);
     return { content: formatComponentSizeReport(report), report };
   } catch (error) {
     return { error: `Error: ${(error as Error).message}` };
@@ -36,7 +37,7 @@ export async function makePcbLayout(input: MakePcbLayoutInput, options: RunPcbLa
   options.signal?.throwIfAborted();
   const data = layoutSchema.parse(input);
   try {
-    const run = await runPcbLayoutQueued(data, options);
+    const run = await runPcbLayoutQueued({ ...data, edaEdition: options.edaEdition }, options);
     options.signal?.throwIfAborted();
     return {
       content: formatPcbToolReportForMessage(run.toolReport),

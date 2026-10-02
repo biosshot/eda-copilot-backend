@@ -1,5 +1,6 @@
 
 import { backendResource } from "#runtime/resources.ts";
+import type { EdaEdition } from '#devices/eda-api.ts';
 import workerpool, { type Pool } from "workerpool";
 import { placementWorkerForkOptions } from "./worker-process-options.ts";
 import env from "#utils/env.ts";
@@ -23,6 +24,7 @@ type PcbLayoutWorkerPoolConfig = {
 };
 
 export type RunPcbLayoutQueuedOptions = {
+    edaEdition?: EdaEdition;
     onProgress?: PcbLayoutProgressReporter;
     signal?: AbortSignal;
 };
