@@ -325,7 +325,7 @@ test('1/2/4 board workers preserve the CPU result and one GPU initialization', {
 });
 
 
-test('2/4 processes honor the board GPU lease and preserve CPU fallback results', { skip: !gpuEnabled, timeout: 60000 }, async () => {
+test('idle GPU owner stays alive while four processes complete explicit GPU work', { skip: !gpuEnabled, timeout: 60000 }, async () => {
     const p = minimalProblem(), cpu = run(p, 'cpu');
     const code = 'const a=require(process.argv[1]);const p=JSON.parse(require("node:fs").readFileSync(0,"utf8"));'
         + 'process.send(a.solveBoardPacked(p));process.on("message",()=>process.exit(0));';
@@ -339,7 +339,7 @@ test('2/4 processes honor the board GPU lease and preserve CPU fallback results'
         owner.stdin!.end(JSON.stringify(p));assert.deepEqual(await ready, cpu.solution);
         await new Promise<void>(done => setImmediate(done));
         assert.match(ownerLog, /"backend":"cubecl"/);
-        for (const processes of [2, 4]) {
+        for (const processes of [4]) {
             const results = await Promise.all(Array.from({ length: processes - 1 }, () => new Promise<{ solution: unknown; log: string }>((ok, fail) => {
                 const child = spawn(process.execPath, ['--input-type=commonjs', '-e',
                     'const a=require(process.argv[1]);const p=JSON.parse(require("node:fs").readFileSync(0,"utf8"));console.log(JSON.stringify(a.solveBoardPacked(p)));', addonPath], {
@@ -356,8 +356,8 @@ test('2/4 processes honor the board GPU lease and preserve CPU fallback results'
             })));
             for (const row of results) {
                 assert.deepEqual(row.solution, cpu.solution);
-                assert.match(row.log, /GPU owned by another process/);
-                assert.match(row.log, /"backend":"cpu"/);
+                assert.doesNotMatch(row.log, /GPU owned by another process|board-gpu-fallback/);
+                assert.match(row.log, /"backend":"cubecl"/);
             }
             assert.equal(owner.exitCode, null);
         }

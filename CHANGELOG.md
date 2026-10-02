@@ -4,6 +4,8 @@
 
 ### PCB layout
 
+- Scope GPU device ownership to complete solver calls instead of idle runtime lifetime. Explicit `cubecl` waits for a busy device; `auto` can decline occupied device/local admission before GPU work starts. Keep the same process runtime and kernel cache, release ownership before original-input CPU recovery, and report process lease waits separately. Refiner admission wait does not consume its refinement time budget. OS lock waiting is still blocking and does not yet provide fair cross-process GPU scheduling.
+
 - Persist strict F32 SPIR-V between processes using source/dependency/toolchain/build and device/options cache keys, checksummed entries and atomic writes. Invalid or unavailable cache data falls back to compilation; shader-audit runs bypass the cache. No extra runtime dependency or helper binary.
 
 - Measure first-kernel host preparation and strict SPIR-V source compilation separately from accumulated queue/service time. Exclude GPU admission-controller windows overlapping cold kernel preparation, including concurrent sibling jobs, while retaining full startup time in telemetry.

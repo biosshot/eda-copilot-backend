@@ -25,9 +25,10 @@ impl Data {
 pub(super) struct Engine {
  data:Data,orientations:Vec<Vec<u32>>,handles:Option<(Handle,Handle)>,
  pub failure:Option<Error>,pub batches:usize,pub candidates:usize,pub milliseconds:f64,pub encode_ms:f64,
+ _call:Option<gpu::CallPermit>,
 }
 impl Engine {
- pub fn new(p:&RefineProblem)->Result<Self,Error>{
+ pub fn new(p:&RefineProblem,explicit:bool)->Result<Self,Error>{
   let mut d=Data{si:vec![0;18],sf:vec![]};let n=p.components.len();
   if p.nets.iter().map(|n|n.name.as_ref()).collect::<std::collections::HashSet<_>>().len()!=p.nets.len() {return Err(invalid("duplicate post-place net names"));}
   if n==0 || n>4096 {return Err(invalid("post-place component capacity"));}
@@ -79,7 +80,8 @@ impl Engine {
   }d.si[9]=p.paths.len() as u32;d.si[10]=d.ints(&paths);
   if d.sf.iter().any(|x|!x.is_finite()||x.abs()>1e7) || !p.pad_crossing_weight.is_finite() || p.pad_crossing_weight<0.0 {return Err(invalid("unsafe post-place GPU number"));}
   if geometry*4+(points.len()/2)*4+segment_count*(24+segment_count.div_ceil(32)*4)+((terms.len()/5)+(paths.len()/5))*12>MAX_BYTES || d.si.len()*4+d.sf.len()*4>MAX_BYTES || segment_count>4096 {return Err(invalid("post-place resident capacity"));}
-  Ok(Self{data:d,orientations,handles:None,failure:None,batches:0,candidates:0,milliseconds:0.0,encode_ms:0.0})
+  let call=if p.timeout_ms>0 && p.iterations>0 {Some(gpu::enter(REQUIREMENTS,gpu::Admission::explicit(explicit))?)}else{None};
+  Ok(Self{data:d,orientations,handles:None,failure:None,batches:0,candidates:0,milliseconds:0.0,encode_ms:0.0,_call:call})
  }
  pub fn fail(&mut self,error:Error)->String{let text=error.to_string();self.failure=Some(error);text}
  pub fn injected(&mut self,stage:&str)->Result<(),String>{if std::env::var("PCB_POST_PLACE_GPU_FAIL").ok().as_deref()==Some(stage){let error=gpu::with_session::<()>(REQUIREMENTS,|_|Err(Error::new(ErrorKind::RuntimeFailure,format!("injected post-place GPU failure: {stage}")))).unwrap_err();return Err(self.fail(error));}Ok(())}

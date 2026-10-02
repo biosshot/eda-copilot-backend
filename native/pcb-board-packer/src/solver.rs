@@ -147,7 +147,7 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
     if !matches!(backend.as_str(),"cpu"|"cubecl"|"auto") {return Err(format!("unsupported PCB_BOARD_BACKEND {backend}"));}
     #[cfg(feature = "gpu")]
     if backend=="cubecl" || (backend=="auto" && cubecl::auto_profitable(&problem)) {
-        let control=match cubecl::Control::new(&problem) {
+        let control=match cubecl::Control::new(&problem,backend=="cubecl") {
             Ok(control)=>control,
             Err(error)=>{
                 eprintln!("[board-backend] {}",serde_json::json!({"backend":"cpu","requested":backend,"reason":error.to_string(),"kind":error.kind}));

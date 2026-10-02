@@ -268,6 +268,7 @@ pub(super) struct Engine {
     frontiers: FxHashMap<Vec<PrimitivePoseKey>, frontier::Frame>,
     frontier_batches: usize,
     frontier_candidates: usize,
+    _call:Option<gpu_runtime::CallPermit>,
 }
 impl Engine {
     fn new(context: &Context) -> Self {
@@ -310,6 +311,7 @@ impl Engine {
             batches: 0,
             candidates: 0,
             frontiers: Default::default(),
+            _call:None,
             frontier_batches: 0,
             frontier_candidates: 0,
             fail_batch: std::env::var("PCB_BLOCK_GPU_FAIL_BATCH")
@@ -1213,8 +1215,9 @@ pub(super) fn init(context: &Context) -> Result<Engine, String> {
     if !supported(context) {
         return Err("unsupported block features for complete GPU scoring".into());
     }
-    gpu_runtime::with_session(GPU_REQUIREMENTS, |_| Ok(())).map_err(|e| e.to_string())?;
-    let mut engine=Engine::new(context);
+    let policy=gpu_runtime::Admission::explicit(std::env::var("PCB_BLOCK_BACKEND").as_deref()==Ok("cubecl"));
+    let call=gpu_runtime::enter(GPU_REQUIREMENTS,policy).map_err(|e|e.to_string())?;
+    let mut engine=Engine::new(context);engine._call=Some(call);
     gpu_runtime::with_session(GPU_REQUIREMENTS,|session| {
         let props=session.client.properties();
         engine.max_allocation=session.allocation_budget();

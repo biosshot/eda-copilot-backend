@@ -4,6 +4,8 @@ pub(crate) mod gpu;
 #[cfg(feature = "gpu")]
 mod queue;
 #[cfg(feature = "gpu")]
+mod lease;
+#[cfg(feature = "gpu")]
 mod startup;
 #[cfg(feature = "gpu")]
 mod kernel_cache;

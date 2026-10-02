@@ -45,6 +45,7 @@ pub(super) struct Control {
     engine: Mutex<Engine>,
     failure: Mutex<Option<Error>>,
     wait_nanos:AtomicU64,
+    _call:Option<gpu::CallPermit>,
 }
 #[derive(Debug)]
 pub(super) struct Abort;
@@ -632,8 +633,10 @@ impl Engine {
 }
 
 impl Control {
-    pub fn new(p:&BoardPackProblem)->Result<Arc<Self>,Error> {
-        Ok(Arc::new(Self {engine:Mutex::new(Engine::new(p)?),failure:Mutex::new(None),wait_nanos:AtomicU64::new(0)}))
+    pub fn new(p:&BoardPackProblem,explicit:bool)->Result<Arc<Self>,Error> {
+        let engine=Engine::new(p)?;
+        let call=if p.primitives.iter().any(|p|!p.locked) {Some(gpu::enter(REQUIREMENTS,gpu::Admission::explicit(explicit))?)}else{None};
+        Ok(Arc::new(Self {engine:Mutex::new(engine),failure:Mutex::new(None),wait_nanos:AtomicU64::new(0),_call:call}))
     }
     pub fn failure(&self)->Option<Error> {self.failure.lock().unwrap_or_else(|e|e.into_inner()).clone()}
     pub fn legality(&self,fixed:&[WorkingPrimitive],states:&[Vec<WorkingPrimitive>],context:&Context)->Vec<Rank> {

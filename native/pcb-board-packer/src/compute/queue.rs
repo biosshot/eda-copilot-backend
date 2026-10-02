@@ -70,13 +70,16 @@ impl Controller {
     }
 }
 
-pub(super) fn acquire(class: &'static str, work:usize) -> Permit {
+pub(super) fn acquire(class: &'static str, work:usize,wait:bool) -> Result<Permit,super::Error> {
     let queue=QUEUE.get_or_init(Queue::default);
     let start=Instant::now();
     let mut s=queue.state.lock().unwrap_or_else(|e|e.into_inner());
     let saturated=s.active>=s.depth;
     let reservation=s.observed_workspace.get(class).copied().unwrap_or(0);
     let fits=|s:&State| memory_fits(s.active,s.headroom,s.reserved_bytes,reservation);
+    if !wait && (!s.waiting.is_empty() || s.active>=s.depth || !fits(&s)) {
+        return Err(super::Error::new(super::ErrorKind::Busy,"auto GPU admission queue busy"));
+    }
     if !fits(&s) {s.memory_waits+=1;}
     let ticket=s.next;s.next+=1;s.waiting.push_back(ticket);
     while s.waiting.front()!=Some(&ticket) || s.active>=s.depth || !fits(&s) {
@@ -84,7 +87,7 @@ pub(super) fn acquire(class: &'static str, work:usize) -> Permit {
     }
     s.waiting.pop_front();s.active+=1;s.reserved_bytes=s.reserved_bytes.saturating_add(reservation);s.wait_ms+=start.elapsed().as_secs_f64()*1000.0;
     queue.changed.notify_all();
-    Permit {started:Instant::now(),class,work:work as f64,saturated,reservation,startup:super::startup::snapshot()}
+    Ok(Permit {started:Instant::now(),class,work:work as f64,saturated,reservation,startup:super::startup::snapshot()})
 }
 impl Drop for Permit {
     fn drop(&mut self) {
@@ -148,6 +151,18 @@ pub(super) fn statistics()->serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn auto_declines_a_full_queue_while_explicit_waits_for_a_slot() {
+        let mut held:Vec<_>=(0..INITIAL_DEPTH).map(|_|acquire("admission-test",0,true).unwrap()).collect();
+        assert!(matches!(acquire("admission-test",0,false),Err(super::super::Error{kind:super::super::ErrorKind::Busy,..})));
+        std::thread::scope(|scope| {
+            let (tx,rx)=std::sync::mpsc::channel();
+            let pending=scope.spawn(move || {let permit=acquire("admission-test",0,true).unwrap();tx.send(()).unwrap();permit});
+            assert!(rx.recv_timeout(std::time::Duration::from_millis(20)).is_err());
+            held.pop();rx.recv_timeout(std::time::Duration::from_secs(2)).unwrap();drop(pending.join().unwrap());
+        });
+        drop(held);assert_eq!(statistics()["active"],0);
+    }
     #[test]
     fn memory_pressure_limits_overlap_without_deadlocking_reuse() {
         assert!(memory_fits(1,Some(1000),400,600));

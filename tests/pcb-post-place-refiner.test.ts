@@ -296,13 +296,14 @@ test('post-place auto and zero timeout stay CPU; disabled GPU preserves the orig
     const disabled=gpuRefine(problem,'cubecl',{PCB_BLOCK_GPU_DISABLED:'1'});
     assert.deepEqual(disabled.value,cpu.value);
     assert.match(disabled.log,/GPU disabled/);
-    const zero=gpuRefine({...problem,timeoutMs:0},'cubecl');
+    const zero=gpuRefine({...problem,timeoutMs:0},'cubecl',{PCB_BLOCK_SOLVER_PROFILE:'1'});
+    assert.doesNotMatch(zero.log,/\[block-gpu-runtime\]/);
     assert.deepEqual(zero.value.placements,problem.placements);
     assert.equal(zero.profile.timedOut,true);
     assert.match(zero.log,/"batches":0/);
 });
 
-test('post-place GPU lease contention falls back and a failed owner releases the device', {skip:process.env.PCB_POST_PLACE_GPU_TESTS!=='1',timeout:30000}, async () => {
+test('post-place idle and failed owners release the GPU while their process stays alive', {skip:process.env.PCB_POST_PLACE_GPU_TESTS!=='1',timeout:30000}, async () => {
     const p=encodeNativePostPlaceRefineProblem(pairInput(),pairPlacements(),1);
     const cpu=gpuRefine(p,'cpu');
     const require=createRequire(import.meta.url);
@@ -315,7 +316,7 @@ test('post-place GPU lease contention falls back and a failed owner releases the
     const next=()=>new Promise<void>((ok,fail)=>{owner.once('message',()=>ok());owner.once('error',fail);});
     try {
         const ready=next();owner.stdin!.end(JSON.stringify(p));await ready;
-        const busy=gpuRefine(p,'cubecl');assert.deepEqual(busy.value,cpu.value);assert.match(busy.log,/GPU owned by another process/);
+        const nextCall=gpuRefine(p,'cubecl');assert.deepEqual(nextCall.value,cpu.value);assert.match(nextCall.log,/\[post-place-gpu\]/);assert.doesNotMatch(nextCall.log,/GPU owned by another process|fallback/);
         const failed=next();owner.send('fail');await failed;
         const recovered=gpuRefine(p,'cubecl');assert.deepEqual(recovered.value,cpu.value);assert.doesNotMatch(recovered.log,/fallback/);
         assert.equal(owner.exitCode,null);assert.match(log,/post-place-gpu-fallback/);

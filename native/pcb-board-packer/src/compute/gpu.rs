@@ -1,5 +1,6 @@
 //! Shared CubeCL F32 runtime. Adapted from archived compute/gpu.rs (b09f3e5).
 //! A single process owns a device lease; all native workers share its client.
+pub(crate) use super::lease::{Admission,Permit as CallPermit};
 use super::workspace::{ScratchKey, Workspace};
 use super::{Capabilities, Error, ErrorKind, Requirements};
 use cubecl::wgpu::WgpuDevice;
@@ -10,7 +11,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 pub(crate) struct Session {
     pub client: ComputeClient<WgpuRuntime>,
     pub name: String,
-    _lease: Arc<std::fs::File>,
+    lease: Arc<super::lease::Lease>,
     workspaces: Workspace,
     in_flight: bool,
     pub capabilities: Capabilities,
@@ -29,7 +30,7 @@ static ACTIVE_BYTES: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicU
 static WAIT_NANOS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 static INITIALIZATIONS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
-fn initialize() -> Result<Option<Session>, Error> {
+fn initialize(policy:Admission) -> Result<Option<Session>, Error> {
     if std::env::var_os("PCB_BLOCK_GPU_DISABLED").is_some_and(|v| v == "1") {
         return Err(Error::new(
             ErrorKind::Disabled,
@@ -94,13 +95,12 @@ fn initialize() -> Result<Option<Session>, Error> {
         .truncate(false)
         .open(directory.join(format!("vulkan-{:x}-{:x}.lock", id.vendor, id.device)))
         .map_err(|e| Error::new(ErrorKind::Lease, format!("GPU lease file: {e}")))?;
-    match lease.try_lock() {
-        Ok(()) => (),
-        Err(std::fs::TryLockError::WouldBlock) => return Ok(None),
-        Err(std::fs::TryLockError::Error(e)) => {
-            return Err(Error::new(ErrorKind::Lease, format!("GPU lease: {e}")))
-        }
-    }
+    let lease=super::lease::Lease::new(lease);
+    let _initial_lease=match lease.acquire(policy) {
+        Ok(permit)=>permit,
+        Err(error) if error.kind==ErrorKind::Busy=>return Ok(None),
+        Err(error)=>return Err(error),
+    };
     let client = WgpuRuntime::client(&device);
     if *client.info()!=wgpu::Backend::Vulkan {
         return Err(Error::new(ErrorKind::AdapterMismatch,"PCB F32 float controls were probed for Vulkan but CubeCL selected a different backend"));
@@ -206,7 +206,7 @@ fn initialize() -> Result<Option<Session>, Error> {
     Ok(Some(Session {
         client,
         name: id.name,
-        _lease: Arc::new(lease),
+        lease,
         workspaces: Workspace::default(),
         in_flight: false,
         capabilities,
@@ -226,16 +226,25 @@ pub(crate) fn with_session<T>(
 
 pub(crate) fn with_batch<T>(requirements:Requirements,class:&'static str,work:usize,
     f:impl FnOnce(&mut Session)->Result<T,Error>)->Result<T,Error> {
+    with_batch_policy(requirements,class,work,Admission::Wait,f)
+}
+
+/// Hold ownership for the whole original solver call, including its GPU batches.
+pub(crate) fn enter(requirements:Requirements,policy:Admission)->Result<CallPermit,Error> {
+    with_batch_policy(requirements,"admission",0,policy,|s|s.lease.acquire(policy))
+}
+fn with_batch_policy<T>(requirements:Requirements,class:&'static str,work:usize,policy:Admission,
+    f:impl FnOnce(&mut Session)->Result<T,Error>)->Result<T,Error> {
     let _float_env = crate::float_env::Guard::enter();
     if let Some(memory)=memory_monitor() {super::queue::observe_memory(memory.snapshot().map(|b|b.usable()),class,0);}
-    let _permit=super::queue::acquire(class,work);
+    let _permit=super::queue::acquire(class,work,policy==Admission::Wait)?;
     let wait_started=std::time::Instant::now();
     let state_mutex=STATE.get_or_init(||Mutex::new(State::New));
-    let mut state=state_mutex.lock().unwrap_or_else(|e|e.into_inner());
+    let mut state=lock_state(state_mutex,policy)?;
     WAIT_NANOS.fetch_add(wait_started.elapsed().as_nanos() as u64,std::sync::atomic::Ordering::Relaxed);
-    if matches!(&*state,State::Busy(until) if std::time::Instant::now()>=*until) {*state=State::New;}
+    if matches!(&*state,State::Busy(until) if policy==Admission::Wait || std::time::Instant::now()>=*until) {*state=State::New;}
     if matches!(&*state,State::New) {
-        let initialized=std::panic::catch_unwind(std::panic::AssertUnwindSafe(initialize));
+        let initialized=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||initialize(policy)));
         match initialized {
             Ok(Ok(Some(session)))=>*state=State::Ready(session),
             Ok(Ok(None))=>*state=State::Busy(std::time::Instant::now()+std::time::Duration::from_secs(1)),
@@ -246,7 +255,7 @@ pub(crate) fn with_batch<T>(requirements:Requirements,class:&'static str,work:us
     let mut session=match &*state {
         State::Ready(s)=>{
             s.capabilities.check(requirements)?;
-            Session {client:s.client.clone(),name:s.name.clone(),_lease:s._lease.clone(),
+            Session {client:s.client.clone(),name:s.name.clone(),lease:s.lease.clone(),
                 capabilities:s.capabilities,float_controls:s.float_controls.clone(),memory:s.memory.clone(),in_flight:true,
                 workspaces:IDLE_WORKSPACES.lock().unwrap_or_else(|e|e.into_inner()).pop().unwrap_or_default()}
         },
@@ -255,6 +264,7 @@ pub(crate) fn with_batch<T>(requirements:Requirements,class:&'static str,work:us
         State::New=>unreachable!(),
     };
     drop(state);
+    let _operation_lease=session.lease.acquire(policy)?;
     let initial_bytes=session.workspaces.bytes();
     ACTIVE_BYTES.fetch_add(initial_bytes,std::sync::atomic::Ordering::Relaxed);
     let attempted=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||f(&mut session)));
@@ -282,8 +292,18 @@ pub(crate) fn with_batch<T>(requirements:Requirements,class:&'static str,work:us
     result
 }
 
+fn lock_state(state_mutex:&Mutex<State>,policy:Admission)->Result<std::sync::MutexGuard<'_,State>,Error> {
+    if policy==Admission::Try {
+        match state_mutex.try_lock() {
+            Ok(state)=>Ok(state),
+            Err(std::sync::TryLockError::Poisoned(error))=>Ok(error.into_inner()),
+            Err(std::sync::TryLockError::WouldBlock)=>Err(Error::new(ErrorKind::Busy,"GPU initialization or state update pending")),
+        }
+    } else {Ok(state_mutex.lock().unwrap_or_else(|e|e.into_inner()))}
+}
+
 fn memory_monitor()->Option<Arc<super::memory::Monitor>> {
-    let state=STATE.get()?.lock().unwrap_or_else(|e|e.into_inner());
+    let state=STATE.get()?.try_lock().ok()?;
     match &*state {State::Ready(s)=>Some(s.memory.clone()),_=>None}
 }
 
@@ -373,6 +393,7 @@ pub(crate) fn statistics() -> serde_json::Value {
         "precision":"f32-rte-ftz-v1",
         "kernelPreparation":super::startup::statistics(),
         "kernelCache":super::kernel_cache::statistics(),
+        "processLease":match &*state {State::Ready(s)=>s.lease.statistics(),_=>serde_json::Value::Null},
         "memory":match &*state {State::Ready(s)=>s.memory.report(),_=>serde_json::Value::Null},
         "floatControls":match &*state {State::Ready(s)=>Some(&s.float_controls),_=>None},
         "state":match &*state {State::New=>"new",State::Ready(_)=>"ready",State::Busy(_)=>"busy",State::Disabled(_)=>"disabled"},
@@ -400,6 +421,16 @@ mod tests {
         }
     }
 
+    #[test]
+    fn auto_does_not_wait_for_a_sibling_initialization() {
+        let state=Mutex::new(State::New);let held=state.lock().unwrap();
+        std::thread::scope(|scope| {
+            let (tx,rx)=std::sync::mpsc::channel();let state=&state;
+            let task=scope.spawn(move || {let busy=matches!(lock_state(state,Admission::Try),Err(Error{kind:ErrorKind::Busy,..}));tx.send(busy).unwrap();});
+            let reply=rx.recv_timeout(std::time::Duration::from_secs(2));
+            drop(held);task.join().unwrap();assert_eq!(reply.unwrap(),true);
+        });
+    }
     #[test]
     #[ignore = "requires a compatible unleased GPU; run alone with --ignored --exact"]
     fn concurrent_operations_own_scratch_until_readback() {

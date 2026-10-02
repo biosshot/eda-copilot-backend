@@ -245,3 +245,72 @@ The explicit real-GPU four-operation scratch isolation/readback test also passes
 CPU-only Rust: 76 passed / 2 ignored. Full GPU-feature Rust: 89 passed / 5 ignored.
 The original P3/P4/P5/P6/P7/P8 milestones remain open; this checkpoint adds startup
 cost control and cross-process kernel reuse, not CUDA or cooperative CPU scheduling.
+
+
+## Scoped process ownership checkpoint (2026-10-02)
+
+Replace the process-lifetime device lock with scoped ownership held by each GPU
+solver engine/control for its entire original call. Nested batches and concurrent
+calls within the owning process share a reference-counted permit; the last permit
+unlocks the OS file lock. The device/runtime, cached kernels and idle scratch stay
+available for reuse, but an idle process no longer excludes other GPU processes.
+Real failures still discard partial GPU results; engine/control teardown releases
+ownership before CPU recovery. No mid-search switch based on congestion.
+
+All three solver entry paths distinguish admission policy. Explicit `cubecl`
+waits for device ownership. `auto` may choose CPU if another process owns the GPU
+or local FIFO admission has no immediate capacity. After a call enters GPU, its
+batches wait for local admission irrespective of `auto`, avoiding repeated full
+CPU restarts merely because load changes. Input/device/capability guards remain.
+Empty/fully locked board calls still avoid GPU initialization. Refiner starts its
+refinement budget after admission; a failed GPU call retains fresh CPU replay time.
+
+`processLease` reports holders, acquisition state/count, accumulated wait time and
+busy outcomes for the current device lease. This is host waiting, not GPU compute.
+Unit checks cover shared local permits, release on last holder, nonblocking busy
+rejection, explicit wait/unblock, and local queue saturation policy. Rust: 91 passed,
+5 hardware tests ignored. TypeScript typecheck passed.
+
+Validation before the final zero-budget-refiner guard:
+- Five focused board GPU tests passed: absent GPU, full recovery/release after
+  failure while the process remains alive, an idle owner plus three explicit GPU
+  processes, empty/fully locked calls, and unsupported-input early guards.
+- Four selected refiner tests passed (three GPU policy/recovery tests plus the
+  matching CPU fixture): full fresh-budget CPU replay, auto/zero/disabled behavior,
+  idle owner reuse and failed-owner release while its process remains alive.
+- One saved full native board replay `07d9023cc9`,
+  `2026-10-02T13-52-04-138Z-board`: explicit GPU, 864.666 ms, exact baseline output,
+  5 batches / 4278 candidates. Baseline AND replay have hardCount=1 and
+  hardSeverity=0.8001001477; this is unchanged intermediate solver output, not a
+  claim of a fully legal board or whole-board speedup. Cached/source preparation
+  and initialization are included in native wall time. No CPU reference rerun.
+- Diagnostic build: 21,274,112 bytes, SHA256
+  `a12e90f0a7d535b4eea542d7d377f90b93db6a672b3203a23c913dc17ae11fde`.
+
+Final review also skips GPU admission/initialization when refiner timeout or
+iteration count is zero. The zero-budget regression now explicitly checks absence
+of runtime initialization, rather than only zero GPU score batches. This small
+follow-up requires rebuilding and rerunning its affected test; the saved board
+replay above belongs to the diagnostic build and is not repeated as a benchmark.
+The follow-up zero-budget test passed and the block failure-after-singles test
+also passed (full original-input CPU result). Final review additionally made
+`auto` state admission nonblocking while a sibling is initializing/waiting for the
+device; memory observation skips a busy state mutex. An isolated mutex test covers
+this case without GPU initialization. Current Rust suite: 92 passed / 5 ignored;
+CPU-only suite: 76 passed / 2 ignored. Final release checks:
+- Auto with six CPU workers and the four-process explicit GPU test both passed.
+- The strengthened zero-timeout/auto/disabled refiner test passed.
+- Real GPU four-operation scratch isolation/readback test passed.
+- Final addon: 21,266,432 bytes (~20.28 MiB), SHA256
+  `8dfcf1c9db6969b216dd39b6666cbcbbe6467f4abbe4545265152c9ce889e102`.
+  No dependency/helper binary added. The earlier diagnostic replay is retained
+  without a redundant board benchmark. Logs: `debugging/adaptive-lease-*`.
+
+Limits: OS lock waits still block the requesting thread, so P5 is not completed.
+This serializes different processes at full-call granularity and does not implement
+a central cross-process work broker, strict process FIFO fairness or cancellation
+of a queued native call. Idle GPU allocations may remain cached and must still be
+accounted for by memory telemetry. Existing domain capacity guards and low-memory
+failure paths have not been redesigned into transient-memory waiting; P7 is not
+claimed fully closed by the device/queue ownership change. P4/P6 and the complete
+roadmap remain open.

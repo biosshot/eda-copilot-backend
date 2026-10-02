@@ -1371,9 +1371,9 @@ pub fn solve(p: RefineProblem) -> Result<Value, String> {
     if !matches!(backend.as_str(),"cpu"|"cubecl"|"auto") {return Err(format!("unsupported PCB_POST_PLACE_BACKEND {backend}"));}
     #[cfg(feature="gpu")]
     if backend=="cubecl" || (backend=="auto" && gpu::profitable(&p)) {
-        let started=Instant::now();
-        match gpu::Engine::new(&p) {
+        match gpu::Engine::new(&p,backend=="cubecl") {
             Ok(engine)=>{
+                let started=Instant::now();
                 let mut engine=Some(engine);
                 let result=solve_inner(&p,started,&mut engine);
                 let engine=engine.unwrap();
