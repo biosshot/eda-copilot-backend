@@ -18,6 +18,8 @@ pub(crate) struct PcbRuntime;
 #[derive(Debug)]
 pub(crate) struct PcbServer {
     inner: WgpuServer,
+    seen: std::collections::HashSet<KernelId>,
+    properties_hash:u64,
     utilities: Arc<ServerUtilities<Self>>,
 }
 impl DeviceService for PcbServer {
@@ -26,7 +28,7 @@ impl DeviceService for PcbServer {
         let source = <WgpuServer as ComputeServer>::utilities(&inner);
         let utilities = ServerUtilities::new(source.properties.clone(), source.logger.clone(), source.info,
             ContiguousMemoryLayoutPolicy::new(source.properties.memory.alignment as usize));
-        Self { inner, utilities: Arc::new(utilities) }
+        Self { properties_hash:source.properties_hash, inner, seen:Default::default(), utilities: Arc::new(utilities) }
     }
     fn utilities(&self) -> ServerUtilitiesHandle { self.utilities.clone() }
 }
@@ -45,7 +47,9 @@ impl ComputeServer for PcbServer {
     fn sync(&mut self,s:StreamId)->DynFut<Result<(),ServerError>> {self.inner.sync(s)}
     fn get_resource(&mut self,b:Binding,s:StreamId)->Result<ManagedResource<<Self::Storage as ComputeStorage>::Resource>,ServerError> {self.inner.get_resource(b,s)}
     unsafe fn launch(&mut self,k:Self::Kernel,n:CubeCount,b:KernelArguments,m:ExecutionMode,s:StreamId) {
-        self.inner.launch(Box::new(StrictTask(k)),n,b,m,s);
+        let mut id=k.id();id.mode(m);
+        let _cold=if self.seen.insert(id) {Some(super::startup::ColdLaunch::new(k.name()))} else {None};
+        self.inner.launch(Box::new(StrictTask(k,self.properties_hash)),n,b,m,s);
     }
     fn flush(&mut self,s:StreamId)->Result<(),ServerError> {self.inner.flush(s)}
     fn memory_usage(&mut self,s:StreamId)->Result<MemoryUsage,ServerError> {self.inner.memory_usage(s)}
@@ -64,14 +68,21 @@ impl Runtime for PcbRuntime {
     fn enumerate_devices(t:u16,i:&wgpu::Backend)->Vec<DeviceId> {WgpuRuntime::enumerate_devices(t,i)}
     fn enumerate_all_devices(i:&wgpu::Backend)->Vec<DeviceId> {WgpuRuntime::enumerate_all_devices(i)}
 }
-struct StrictTask(Box<dyn CubeTask<AutoCompiler>>);
+struct StrictTask(Box<dyn CubeTask<AutoCompiler>>,u64);
 impl KernelMetadata for StrictTask {
     fn name(&self)->&'static str {self.0.name()}
-    fn id(&self)->KernelId {let original=self.0.id(); original.clone().info((original,"pcb-f32-rte-explicit-ftz-no-contraction-v4"))}
+    fn id(&self)->KernelId {let original=self.0.id(); original.clone().info((original,"pcb-f32-rte-explicit-ftz-no-contraction-v4",env!("PCB_KERNEL_BUILD_KEY")))}
     fn address_type(&self)->StorageType {self.0.address_type()}
 }
 impl CubeTask<AutoCompiler> for StrictTask {
     fn compile(&self,c:&mut AutoCompiler,o:&WgpuCompilationOptions,m:ExecutionMode,a:StorageType)->Result<CompiledKernel<AutoCompiler>,CompilationError> {
+        let mut id=self.id();id.mode(m);
+        let options=format!("{:?}:{:?}",o,a);
+        let key=format!("{:016x}-{:x}-{:016x}",self.1,id.stable_hash(),{
+            use std::hash::{Hash,Hasher};let mut hash=std::hash::DefaultHasher::new();options.hash(&mut hash);hash.finish()
+        });
+        if let Some(cached)=super::kernel_cache::load(&key,self.name()) {return Ok(cached);}
+        let _compilation=super::startup::Compilation::new();
         let mut result=self.0.compile(c,o,m,a)?;
         let Some(AutoRepresentation::SpirV(ref mut kernel))=result.repr else {
             panic!("PCB F32 requires SPIR-V execution modes");
@@ -85,6 +96,8 @@ impl CubeTask<AutoCompiler> for StrictTask {
             let bytes:Vec<u8>=kernel.assembled_module.iter().flat_map(|w|w.to_le_bytes()).collect();
             std::fs::write(path.join(format!("{}-{:x}.spv",result.entrypoint_name,self.id().stable_hash())),bytes).expect("shader audit output");
         }
+        drop(_compilation);
+        super::kernel_cache::save(&key,&result);
         Ok(result)
     }
 }

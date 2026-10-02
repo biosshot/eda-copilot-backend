@@ -172,3 +172,76 @@ Validation:
   `2026-10-02T12-52-25-289Z-MCU_Decoupling_Reset_Support_Boot_Support_USB_Termination_MCU`
   and `2026-10-02T12-53-20-922Z-USB_Termination`. No input was replayed twice;
   existing baseline outputs were reused and PortableScope was not rerun.
+
+
+## Cold-start diagnosis (in progress)
+
+The pinned CubeCL 0.10 `CompilationConfig` defaults to no persistent compilation
+cache. Its in-memory pipeline map survives only as long as its process/runtime.
+The runtime now measures `kernelPreparation.firstLaunchHostMs` (host compilation,
+pipeline creation, binding and enqueue on first use) and its nested
+`sourceCompilationMs` (CubeCL source compilation plus strict F32 transformation).
+They overlap and must not be added; neither is GPU execution time. Optional
+`PCB_GPU_PROFILE_KERNELS=1` reports individual first-use kernel names/timings.
+
+A preparation generation plus active-preparation count invalidates controller
+windows overlapping cold starts, even when another in-flight job triggered them.
+`coldSamplesExcluded` records this exclusion; actual service and wall times remain
+reported. Initial admission depth remains four. Rust tests: 87 passed / 5 ignored.
+Diagnostic replay `2026-10-02T13-16-32-671Z-USB_Termination` ran once after
+instrumentation changed: 68,310.437 ms total, exact baseline output. First-use
+host preparation totals 67,540.927 ms; nested source compilation 59,588.116 ms.
+`cheap` first-use preparation alone takes 62,878.182 ms; `full` takes 4,064.230 ms.
+Queue wait is 0.0056 ms. The driver/pipeline/binding remainder is not separately
+attributed as pure driver time. Two startup-overlapping samples were excluded
+from controller training and admission depth stayed four.
+
+The next implementation persists CubeCL's serialized SPIR-V representation after
+strict F32 transformation, with build fingerprint, device-properties hash, kernel
+specialization/execution mode, address type and compilation options in its identity.
+The fingerprint covers native sources, Cargo.lock/Cargo.toml, build script, Rust
+version, target, profile, Rust flags and enabled Cargo features. In-memory/pinned
+CubeCL cache IDs also include the fingerprint, preventing stale code reuse when
+an external CubeCL configuration enables its own cache.
+
+The adapter reuses CubeCL's kernel serialization, but owns the small persistence
+layer: pinned CubeCL's cache has `expect` on chunk reads/writes and no application
+source fingerprint. Here entries are checksummed, size bounded and atomically
+renamed; miss/corruption/I/O failure compiles normally instead of failing the solve.
+Existing disk entries are only performance data. Cache misses still incur cold
+compilation; this does not eliminate first-installation startup or driver pipeline
+creation. Shader audits bypass this cache to retain emitted-IR verification.
+
+Cache normally lives under the user's platform cache root in
+`eda-copilot/gpu-kernels/<build-key>`. Diagnostics can override the root using
+`PCB_GPU_KERNEL_CACHE_DIR` or disable it with `PCB_GPU_KERNEL_CACHE_DISABLED=1`.
+No helper binary/dependency is added. Rust cache tests: 89 passed / 5 ignored.
+Cache-state validation (each one pass, existing output reused):
+
+| Exact USB_Termination input | Native wall time | Source compilation | Cache |
+| --- | ---: | ---: | --- |
+| Empty cache, new process | 63,939.011 ms | 54,689.188 ms | 11 misses, 11 writes |
+| Populated cache, another new process | 516.819 ms | 0 ms | 11 hits, zero misses |
+
+Both runs preserve the complete saved output, including rank and checkpoints.
+No CPU reference rerun. Numeric runtime probes also run successfully from cached
+kernels. First-launch host preparation drops from 63,116.969 to 52.021 ms;
+these figures include nested compilation and are not pure GPU execution times.
+The warmed-on-disk cache contains 11 entries / 1,289,929 bytes. No cache errors.
+This proves avoiding repeated cold preparation for this input; it does not establish
+whole-board speedup, eliminate the initial cache fill, or benchmark other GPU models.
+
+Replay artifacts:
+- `2026-10-02T13-28-01-044Z-USB_Termination` (empty cache).
+- `2026-10-02T13-29-40-756Z-USB_Termination` (persisted cache in a new process).
+- Logs and isolated cache: `debugging/adaptive-cache-*` and
+  `debugging/adaptive-kernel-cache/`; no PortableScope capture rerun.
+
+Release addon: 21,261,824 bytes (~20.28 MiB), SHA256
+`e04844f45691ecc0a476bff50a22ee64da537820d05cc6296ef45fc2f2a22ede`.
+Build fingerprint `ce83f754148296ab`; no new runtime dependency or binary.
+Focused GPU block test preserves locked poses and world bounds and passes.
+The explicit real-GPU four-operation scratch isolation/readback test also passes.
+CPU-only Rust: 76 passed / 2 ignored. Full GPU-feature Rust: 89 passed / 5 ignored.
+The original P3/P4/P5/P6/P7/P8 milestones remain open; this checkpoint adds startup
+cost control and cross-process kernel reuse, not CUDA or cooperative CPU scheduling.

@@ -30,19 +30,20 @@ struct State {
     reserved_bytes:usize,
     observed_workspace:HashMap<&'static str,usize>,
     memory_waits:u64,
+    cold_samples:u64,
 }
 impl Default for State {
     fn default() -> Self {Self { next:0, waiting:VecDeque::new(), active:0,
         depth:INITIAL_DEPTH, completed:0, wait_ms:0.0, service_ms:0.0,
         controller:Controller::default(),window_class:"",window_started:Instant::now(),
         window_jobs:0,window_work:0.0,window_latency:0.0,window_saturated:false,
-        decisions:0,last_decision:"middle_start",headroom:None,reserved_bytes:0,observed_workspace:HashMap::new(),memory_waits:0 }}
+        decisions:0,last_decision:"middle_start",headroom:None,reserved_bytes:0,observed_workspace:HashMap::new(),memory_waits:0,cold_samples:0 }}
 }
 #[derive(Default)]
 struct Queue { state: Mutex<State>, changed: Condvar }
 static QUEUE: OnceLock<Queue> = OnceLock::new();
 
-pub(super) struct Permit { started: Instant, class: &'static str, work:f64, saturated:bool, reservation:usize }
+pub(super) struct Permit { started: Instant, class: &'static str, work:f64, saturated:bool, reservation:usize, startup:super::startup::Snapshot }
 
 #[derive(Default, Debug)]
 struct Controller { baseline:Option<(f64,f64,usize)>, reduce_trial:bool }
@@ -83,7 +84,7 @@ pub(super) fn acquire(class: &'static str, work:usize) -> Permit {
     }
     s.waiting.pop_front();s.active+=1;s.reserved_bytes=s.reserved_bytes.saturating_add(reservation);s.wait_ms+=start.elapsed().as_secs_f64()*1000.0;
     queue.changed.notify_all();
-    Permit {started:Instant::now(),class,work:work as f64,saturated,reservation}
+    Permit {started:Instant::now(),class,work:work as f64,saturated,reservation,startup:super::startup::snapshot()}
 }
 impl Drop for Permit {
     fn drop(&mut self) {
@@ -91,7 +92,14 @@ impl Drop for Permit {
         let mut s=queue.state.lock().unwrap_or_else(|e|e.into_inner());
         s.active-=1;s.completed+=1;s.reserved_bytes=s.reserved_bytes.saturating_sub(self.reservation);
         let duration=self.started.elapsed().as_secs_f64()*1000.0;s.service_ms+=duration;
-        if self.work>0.0 {
+        if !super::startup::unchanged(self.startup) {
+            s.cold_samples+=1;
+            // Discard the whole window: its wall time overlaps preparation,
+            // including jobs other than the one that triggered compilation.
+            s.window_started=Instant::now();s.window_jobs=0;s.window_work=0.0;
+            s.window_latency=0.0;s.window_saturated=false;s.controller=Controller::default();
+            s.last_decision="cold_preparation_excluded";
+        } else if self.work>0.0 {
             if s.window_class!=self.class {
                 s.window_class=self.class;s.window_started=self.started;s.window_jobs=0;
                 s.window_work=0.0;s.window_latency=0.0;s.window_saturated=false;
@@ -133,7 +141,7 @@ pub(super) fn statistics()->serde_json::Value {
     let s=queue.state.lock().unwrap_or_else(|e|e.into_inner());
     serde_json::json!({"queued":s.waiting.len(),"active":s.active,"depth":s.depth,
         "initialDepth":INITIAL_DEPTH,"minDepth":MIN_DEPTH,"maxDepth":MAX_DEPTH,
-        "completed":s.completed,"queueWaitMs":s.wait_ms,"serviceWorkerMs":s.service_ms,
+        "completed":s.completed,"coldSamplesExcluded":s.cold_samples,"queueWaitMs":s.wait_ms,"serviceWorkerMs":s.service_ms,
         "estimatedBytesPerFlightByClass":s.observed_workspace,"reservedBytes":s.reserved_bytes,"usableHeadroomBytes":s.headroom,"memoryWaits":s.memory_waits,"adaptive":true,"decisions":s.decisions,"lastDecision":s.last_decision})
 }
 

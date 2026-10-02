@@ -371,6 +371,8 @@ pub(crate) fn statistics() -> serde_json::Value {
         "mutexWaitMs":WAIT_NANOS.load(std::sync::atomic::Ordering::Relaxed) as f64/1e6,"workspaceBytes":bytes,"device":match &*state {State::Ready(s)=>Some(&s.name),_=>None},
         "capabilities":match &*state {State::Ready(s)=>Some(s.capabilities),_=>None},
         "precision":"f32-rte-ftz-v1",
+        "kernelPreparation":super::startup::statistics(),
+        "kernelCache":super::kernel_cache::statistics(),
         "memory":match &*state {State::Ready(s)=>s.memory.report(),_=>serde_json::Value::Null},
         "floatControls":match &*state {State::Ready(s)=>Some(&s.float_controls),_=>None},
         "state":match &*state {State::New=>"new",State::Ready(_)=>"ready",State::Busy(_)=>"busy",State::Disabled(_)=>"disabled"},
