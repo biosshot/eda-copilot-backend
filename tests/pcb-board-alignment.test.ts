@@ -213,3 +213,12 @@ test('orientation penalty is soft, bounded, and matches Rust at 0, 90, 180 and n
     const rs=structuredClone(roots);rs[0].placements[0].rotate=90;
     assert.ok(Math.abs(boardAlignmentScore(rs,policy)-parallelScore)<1e-6);
 });
+
+
+test('default board alignment is a weak positional preference normalized by pair count', () => {
+    const {input,roots}=telemetry();
+    const policy=boardAlignmentPolicy(input,roots);
+    assert.ok(policy.pairs.length>0);
+    assert.equal(policy.orientationWeight,0);
+    assert.ok(Math.abs(policy.weight*policy.pairs.length-1)<1e-6);
+});

@@ -2,6 +2,8 @@
 #[cfg(feature = "gpu")]
 pub(crate) mod gpu;
 #[cfg(feature = "gpu")]
+mod queue;
+#[cfg(feature = "gpu")]
 pub(crate) mod f32_runtime;
 #[cfg(feature = "gpu")]
 pub(crate) use crate::numerics;

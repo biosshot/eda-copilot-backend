@@ -64,8 +64,8 @@ fn layer(value: &str) -> u32 { if value=="top" {0} else {1} }
 
 // Workload floors relaxed by approximately 8x from the Telemetry baseline.
 // These are admission heuristics; device/input guards and CPU recovery still apply.
-pub(super) fn auto_profitable(p:&BoardPackProblem,threads:usize)->bool {
-    threads<=4 && p.primitives.len()>=4 && p.components.len()>=19 && p.search_width>=4 && p.relations.len()>=66
+pub(super) fn auto_profitable(p:&BoardPackProblem)->bool {
+    p.primitives.len()>=4 && p.components.len()>=19 && p.search_width>=4 && p.relations.len()>=66
         && p.primitives.iter().filter(|p|!p.locked).count()>=3
 }
 
@@ -430,7 +430,7 @@ impl Engine {
             let count=chunk.len();
             let encode_ms=encode_started.elapsed().as_secs_f64()*1000.0;
             let operation_started=Instant::now();
-            let (rows,all_rows,materialized,term_values,upload_ms,submit_ms,read_ms)=gpu::with_session(REQUIREMENTS,|session| {
+            let (rows,all_rows,materialized,term_values,upload_ms,submit_ms,read_ms)=gpu::with_batch(REQUIREMENTS,"board-score",count.saturating_mul(context.problem.components.len().max(1)),|session| {
                 if self.fail_batch==Some(self.batches+1) {panic!("injected board GPU failure at batch {}",self.batches+1);}
                 let upload_started=Instant::now();
                 if self.handles.is_none() {self.handles=Some((session.client.create_from_slice(f32::as_bytes(&self.sf)),

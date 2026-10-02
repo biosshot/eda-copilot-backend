@@ -4,6 +4,8 @@
 
 ### PCB layout
 
+- Start the adaptive GPU manager roadmap. Remove CPU-thread-count gates and the board auto four-worker cap. Run one full board packing with pair-normalized weak positional alignment instead of two full searches; production positional alignment does not trigger atomic pair expansion. Add process-wide FIFO GPU admission starting at four operations, isolated reusable per-flight scratch and throughput/latency depth trials; release the device-state mutex before execution/readback. Backend portability, dynamic device memory budgeting, cooperative CPU scheduling and load-based auto routing remain in progress.
+
 - Relax Board Packager, block solver and post-place/refiner GPU workload admission floors by approximately 8x (integer floor, minimum one). Preserve concurrency/readiness requirements, device/input/memory guards and full CPU recovery. This broadens GPU eligibility; it is not a measured speed guarantee.
 
 - Record capture backend requests and launch-time addon/source provenance before execution so interrupted captures remain identifiable; retain actual native backend/fallback decisions in summaries and enable Board Packager detail profiling. Capture continues to inherit backend settings without forcing CPU/GPU. Review incomplete PortableScope `2026-10-02T07-57-08-534Z`: Board Packager deliberately chooses CPU under `auto` (28 primitives/23 unlocked below measured floors), with 369.442 s beam; grouped FPGA/MCU also miss the primitive-count GPU gate. No full-board rerun.

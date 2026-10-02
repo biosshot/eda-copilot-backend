@@ -159,7 +159,7 @@ test('GPU failure at every board stage restarts the original CPU input', { skip:
     }
 });
 
-test('auto caps heavy GPU work at four host workers instead of disabling the GPU', {
+test('auto keeps the CPU worker budget while using GPU', {
     skip: !gpuEnabled || Math.floor(availableParallelism() / 2) <= 4,
 }, () => {
     const p = minimalProblem();
@@ -179,7 +179,7 @@ test('auto caps heavy GPU work at four host workers instead of disabling the GPU
     const auto = run(p, 'auto', { PCB_BOARD_PACKER_THREADS: '6' });
     assert.deepEqual(auto.solution, cpu.solution);
     assert.match(auto.log, /"backend":"cubecl"/);
-    assert.match(auto.log, /threads=4/);
+    assert.match(auto.log, /threads=6/);
     assert.doesNotMatch(auto.log, /board-gpu-fallback/);
 });
 

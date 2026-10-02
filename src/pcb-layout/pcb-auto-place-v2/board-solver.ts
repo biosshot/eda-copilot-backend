@@ -16,7 +16,7 @@ import { priorityWeight } from '../pcb-auto-place/hints.ts';
 import type { ClearanceResolver } from '../pcb-auto-place/clearance-resolver.ts';
 import { solveBoardPackedPrimitives } from './board-packer-engine.ts';
 import type { PlacementPrimitive, PrimitiveSolveDiagnostic } from './primitives.ts';
-import { choosePackedPortfolio, selectBlockPortfolio } from './block-portfolio.ts';
+import { selectBlockPortfolio } from './block-portfolio.ts';
 import { boardAlignmentPolicy } from './board-alignment.ts';
 import { boardSpacingPolicy, boardSpacingExemptPairs } from './board-spacing.ts';
 
@@ -43,7 +43,8 @@ export function solveBoardPrimitives(params: BoardSolveParams) {
     const boardPrimitives = boardPlacementPrimitives(params);
     validateDissolvedGroupReferences(params.graph.relations, boardPrimitives.dissolvedScopes);
     const primitives = boardPrimitives.primitives.map(boardPackingPrimitive);
-    const pack = (aligned: boolean) => solveBoardPackedPrimitives({
+    const alignment = boardAlignmentPolicy(params.input, primitives);
+    const packed = solveBoardPackedPrimitives({
         node: params.node,
         primitives,
         relations: [
@@ -55,7 +56,7 @@ export function solveBoardPrimitives(params: BoardSolveParams) {
             ...ordinaryNetRelations(params, primitives),
         ],
         options: {
-            softAlignment: aligned ? boardAlignmentPolicy(params.input,primitives) : undefined,
+            softAlignment: alignment.pairs.length ? alignment : undefined,
             softSpacing: {...spacing,exemptPairs:boardSpacingExemptPairs(params.input,primitives)},
             grid: params.grid,
             clearance: params.clearance,
@@ -70,17 +71,8 @@ export function solveBoardPrimitives(params: BoardSolveParams) {
             searchWidth: 32,
         },
     });
-    // Preserve the ordinary complete result as a fallback. The aligned search
-    // uses exactly the same block interiors; no alternative portfolio seeds.
-    const ordinary = pack(false);
-    const candidates = [ordinary];
-    const alignment=boardAlignmentPolicy(params.input,primitives);
-    if(alignment.pairs.length) candidates.push(pack(true));
-    params.diagnostics.push({severity:'warning',nodeId:params.node.id,message:`Board search alignment: ${alignment.pairs.length} structural pairs; ordinary candidates and complete fallback retained; same block interiors`});
-    const packed = candidates.length>1
-        ? choosePackedPortfolio(params.input,candidates,params.diagnostics) : ordinary;
-    // Retain the established local portfolio stage after choosing the packing.
-    // The two board searches themselves still use identical block interiors.
+    params.diagnostics.push({severity:'warning',nodeId:params.node.id,
+        message:`Board search: one complete packing with weak alignment for ${alignment.pairs.length} structural pairs`});
     return selectBlockPortfolio(params.input,packed,params.grid,params.diagnostics);
 }
 

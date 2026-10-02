@@ -852,7 +852,7 @@ impl Engine {
             force_no_prune || verify || std::env::var_os("PCB_BLOCK_GPU_NO_PRUNE").is_some();
         drop(preparing);
         let batch_span = context.detail.span("gpu_batch");
-        let (rows, all) = gpu_runtime::with_session(GPU_REQUIREMENTS, |session| {
+        let (rows, all) = gpu_runtime::with_batch(GPU_REQUIREMENTS, "block-score", poses.len().saturating_mul(context.problem.components.len().max(1)), |session| {
             if self.fail_batch == Some(self.batches + 1) {
                 panic!("injected GPU runtime failure at batch {}", self.batches + 1);
             }

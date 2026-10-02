@@ -5,13 +5,14 @@ use super::{Capabilities, Error, ErrorKind, Requirements};
 use cubecl::wgpu::WgpuDevice;
 use super::f32_runtime::PcbRuntime as WgpuRuntime;
 use cubecl::{client::ComputeClient, prelude::*, server::Handle};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 pub(crate) struct Session {
     pub client: ComputeClient<WgpuRuntime>,
     pub name: String,
-    _lease: std::fs::File,
+    _lease: Arc<std::fs::File>,
     workspaces: Workspace,
+    in_flight: bool,
     pub capabilities: Capabilities,
     float_controls: serde_json::Value,
 }
@@ -22,6 +23,8 @@ enum State {
     Disabled(Error),
 }
 static STATE: OnceLock<Mutex<State>> = OnceLock::new();
+static IDLE_WORKSPACES: Mutex<Vec<Workspace>> = Mutex::new(Vec::new());
+static ACTIVE_BYTES: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 static WAIT_NANOS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 static INITIALIZATIONS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
@@ -198,79 +201,77 @@ fn initialize() -> Result<Option<Session>, Error> {
     Ok(Some(Session {
         client,
         name: id.name,
-        _lease: lease,
+        _lease: Arc::new(lease),
         workspaces: Workspace::default(),
+        in_flight: false,
         capabilities,
         float_controls,
     }))
 }
 
-/// Runs related upload/dispatch/readback under the one process mutex. CPU
-/// candidate generation belongs outside. Runtime failures disable this session
-/// and release scratch/lease; domain rejections preserve a ready runtime.
-/// Report InvalidInput before issuing GPU work. Once work is issued, complete
-/// its required readback or return RuntimeFailure so scratch cannot be reused.
+/// Admit through the shared FIFO queue, then own scratch until readback completes.
+/// The device-state mutex protects initialization/failure, never GPU execution.
 pub(crate) fn with_session<T>(
     requirements: Requirements,
     f: impl FnOnce(&mut Session) -> Result<T, Error>,
 ) -> Result<T, Error> {
+    with_batch(requirements,"setup",0,f)
+}
+
+pub(crate) fn with_batch<T>(requirements:Requirements,class:&'static str,work:usize,
+    f:impl FnOnce(&mut Session)->Result<T,Error>)->Result<T,Error> {
     let _float_env = crate::float_env::Guard::enter();
-    let wait_started = std::time::Instant::now();
-    let mut state = STATE
-        .get_or_init(|| Mutex::new(State::New))
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
-    WAIT_NANOS.fetch_add(
-        wait_started.elapsed().as_nanos() as u64,
-        std::sync::atomic::Ordering::Relaxed,
-    );
-    // Catch while holding the lock: a runtime panic cannot poison the mutex.
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        if matches!(&*state, State::Busy(until) if std::time::Instant::now() >= *until) {
-            *state = State::New;
-        }
-        if matches!(&*state, State::New) {
-            match initialize()? {
-                Some(session) => *state = State::Ready(session),
-                None => {
-                    *state =
-                        State::Busy(std::time::Instant::now() + std::time::Duration::from_secs(1))
-                }
-            }
-        }
-        match &mut *state {
-            State::Ready(s) => {
-                s.capabilities.check(requirements)?;
-                f(s)
-            }
-            State::Busy(_) => Err(Error::new(ErrorKind::Busy, "GPU owned by another process")),
-            State::Disabled(reason) => Err(reason.clone()),
-            State::New => unreachable!(),
-        }
-    }));
-    match result {
-        Ok(Ok(value)) => Ok(value),
-        failure => {
-            let reason = match failure {
-                Ok(Err(reason)) => reason,
-                Err(payload) => Error::new(
-                    ErrorKind::RuntimeFailure,
-                    payload
-                        .downcast_ref::<String>()
-                        .cloned()
-                        .or_else(|| payload.downcast_ref::<&str>().map(|s| (*s).into()))
-                        .unwrap_or_else(|| "GPU runtime panicked".into()),
-                ),
-                _ => unreachable!(),
-            };
-            if !matches!(&*state, State::Busy(_))
-                && (reason.disables_runtime() || !matches!(&*state, State::Ready(_)))
-            {
-                *state = State::Disabled(reason.clone());
-            }
-            Err(reason)
+    let _permit=super::queue::acquire(class,work);
+    let wait_started=std::time::Instant::now();
+    let state_mutex=STATE.get_or_init(||Mutex::new(State::New));
+    let mut state=state_mutex.lock().unwrap_or_else(|e|e.into_inner());
+    WAIT_NANOS.fetch_add(wait_started.elapsed().as_nanos() as u64,std::sync::atomic::Ordering::Relaxed);
+    if matches!(&*state,State::Busy(until) if std::time::Instant::now()>=*until) {*state=State::New;}
+    if matches!(&*state,State::New) {
+        let initialized=std::panic::catch_unwind(std::panic::AssertUnwindSafe(initialize));
+        match initialized {
+            Ok(Ok(Some(session)))=>*state=State::Ready(session),
+            Ok(Ok(None))=>*state=State::Busy(std::time::Instant::now()+std::time::Duration::from_secs(1)),
+            Ok(Err(error))=>{*state=State::Disabled(error.clone());return Err(error);},
+            Err(_)=>{let error=Error::new(ErrorKind::RuntimeFailure,"GPU initialization panicked");*state=State::Disabled(error.clone());return Err(error);}
         }
     }
+    let mut session=match &*state {
+        State::Ready(s)=>{
+            s.capabilities.check(requirements)?;
+            Session {client:s.client.clone(),name:s.name.clone(),_lease:s._lease.clone(),
+                capabilities:s.capabilities,float_controls:s.float_controls.clone(),in_flight:true,
+                workspaces:IDLE_WORKSPACES.lock().unwrap_or_else(|e|e.into_inner()).pop().unwrap_or_default()}
+        },
+        State::Busy(_)=>return Err(Error::new(ErrorKind::Busy,"GPU owned by another process")),
+        State::Disabled(error)=>return Err(error.clone()),
+        State::New=>unreachable!(),
+    };
+    drop(state);
+    let initial_bytes=session.workspaces.bytes();
+    ACTIVE_BYTES.fetch_add(initial_bytes,std::sync::atomic::Ordering::Relaxed);
+    let attempted=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||f(&mut session)));
+    ACTIVE_BYTES.fetch_sub(session.workspaces.bytes(),std::sync::atomic::Ordering::Relaxed);
+    let result=match attempted {
+        Ok(result)=>result,
+        Err(payload)=>Err(Error::new(ErrorKind::RuntimeFailure,
+            payload.downcast_ref::<String>().cloned().or_else(||payload.downcast_ref::<&str>().map(|s|s.to_string()))
+                .unwrap_or_else(||"GPU runtime panicked".into())))
+    };
+    let mut state=state_mutex.lock().unwrap_or_else(|e|e.into_inner());
+    if let Err(error)=&result {
+        if error.disables_runtime() {
+            *state=State::Disabled(error.clone());
+            IDLE_WORKSPACES.lock().unwrap_or_else(|e|e.into_inner()).clear();
+        }
+    }
+    // Another in-flight operation may have disabled the device. Never publish
+    // its sibling's partial result after a session failure.
+    if let State::Disabled(error)=&*state {return Err(error.clone());}
+    if matches!(&*state,State::Ready(_)) {
+        IDLE_WORKSPACES.lock().unwrap_or_else(|e|e.into_inner()).push(session.workspaces);
+    }
+    result
 }
 
 impl Session {
@@ -278,7 +279,10 @@ impl Session {
     /// must not escape its readback or be stored in an Engine. Resident handles
     /// use client.create_from_slice/empty instead and belong to this runtime.
     pub fn workspace(&mut self, key: ScratchKey, size: usize) -> Handle {
-        self.workspaces.buffer(&self.client, key, size)
+        let before=self.workspaces.bytes();
+        let handle=self.workspaces.buffer(&self.client, key, size);
+        if self.in_flight {ACTIVE_BYTES.fetch_add(self.workspaces.bytes()-before,std::sync::atomic::Ordering::Relaxed);}
+        handle
     }
 }
 
@@ -340,10 +344,10 @@ pub(crate) fn statistics() -> serde_json::Value {
         .lock()
         .unwrap_or_else(|e| e.into_inner());
     let bytes = match &*state {
-        State::Ready(s) => s.workspaces.bytes(),
+        State::Ready(_) => IDLE_WORKSPACES.lock().unwrap_or_else(|e|e.into_inner()).iter().map(Workspace::bytes).sum::<usize>() + ACTIVE_BYTES.load(std::sync::atomic::Ordering::Relaxed),
         _ => 0,
     };
-    serde_json::json!({"initializations":INITIALIZATIONS.load(std::sync::atomic::Ordering::Relaxed),
+    serde_json::json!({"queue":super::queue::statistics(),"initializations":INITIALIZATIONS.load(std::sync::atomic::Ordering::Relaxed),
         "mutexWaitMs":WAIT_NANOS.load(std::sync::atomic::Ordering::Relaxed) as f64/1e6,"workspaceBytes":bytes,"device":match &*state {State::Ready(s)=>Some(&s.name),_=>None},
         "capabilities":match &*state {State::Ready(s)=>Some(s.capabilities),_=>None},
         "precision":"f32-rte-ftz-v1",
@@ -371,6 +375,35 @@ mod tests {
         if i < input.len() {
             output[i] = input[i] * 3 + 7;
         }
+    }
+
+    #[test]
+    #[ignore = "requires a compatible unleased GPU; run alone with --ignored --exact"]
+    fn concurrent_operations_own_scratch_until_readback() {
+        let barrier=std::sync::Arc::new(std::sync::Barrier::new(4));
+        std::thread::scope(|scope| {
+            let handles:Vec<_>=(0..4).map(|job| {
+                let barrier=barrier.clone();
+                scope.spawn(move || {
+                    with_session(Requirements {f32:true,u64:false},|s| {
+                        let values=vec![job as f32+0.25;257];
+                        let input=s.client.create_from_slice(f32::as_bytes(&values));
+                        let output=s.workspace(ScratchKey::new("concurrent-probe",0),257*4);
+                        // All four operations own their buffers before any launch.
+                        barrier.wait();
+                        unsafe {probe_kernel::launch_unchecked::<WgpuRuntime>(&s.client,
+                            CubeCount::Static(3,1,1),CubeDim::new_1d(128),
+                            ArrayArg::from_raw_parts(input,257),ArrayArg::from_raw_parts(output.clone(),257));}
+                        let bytes=s.client.read_one(output).map_err(|e|format!("concurrent read: {e:?}"))?;
+                        assert!(f32::from_bytes(&bytes)[..257].iter().all(|&v|v==(job as f32+0.375)*2.0));
+                        Ok(())
+                    }).unwrap();
+                })
+            }).collect();
+            for handle in handles {handle.join().unwrap();}
+        });
+        assert_eq!(statistics()["queue"]["active"],0);
+        assert_eq!(statistics()["initializations"],1);
     }
 
     #[test]

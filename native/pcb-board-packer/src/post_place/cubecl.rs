@@ -100,7 +100,7 @@ impl Engine {
   self.encode_ms+=started.elapsed().as_secs_f64()*1000.0;
   let started=Instant::now();let count=candidates.len();let d=&self.data;let ns=d.si[5] as usize;let nt=(d.si[7]+d.si[9]) as usize;
   let verify=std::env::var("PCB_POST_PLACE_GPU_VERIFY").ok().as_deref()==Some("1");
-  let result=gpu::with_session(REQUIREMENTS,|session|{
+  let result=gpu::with_batch(REQUIREMENTS,"refine-score",count.saturating_mul(p.components.len().max(1)),|session|{
    if self.handles.is_none(){self.handles=Some((session.client.create_from_slice(u32::as_bytes(&d.si)),session.client.create_from_slice(f32::as_bytes(&d.sf))));}
    let (si,sf)=self.handles.as_ref().unwrap();let bih=session.client.create_from_slice(u32::as_bytes(&bi));let bfh=session.client.create_from_slice(f32::as_bytes(&bf));
    let geometry_len=count*d.si[11] as usize;let edge_len=(count*ns*3).max(1);let length_len=(count*ns).max(1);let conn_len=(count*d.si[6] as usize).max(1);let term_len=(count*nt*3).max(1);let seg_len=(count*ns*2).max(1);let mask_len=(count*ns*ns.div_ceil(32)).max(1);
@@ -155,10 +155,9 @@ impl Engine {
 }
 
 // Workload/time floors relaxed by approximately 8x from the Telemetry baseline.
-// Keep the existing multi-worker readiness and concurrency requirements.
+// CPU worker count is independent of GPU eligibility.
 pub(super) fn profitable(p:&RefineProblem)->bool {
- let workers=p.threads.max(1).min((std::thread::available_parallelism().map_or(1,|n|n.get())/2).clamp(1,8));
  p.components.len()>=19 && p.components.iter().map(|c|c.pads.len()).sum::<usize>()>=82
   && p.nets.iter().map(|n|n.points.len().saturating_sub(1)).sum::<usize>()>=29
-  && p.iterations>0 && p.timeout_ms>=250 && (workers==1 || (workers<=4 && gpu::ready()))
+  && p.iterations>0 && p.timeout_ms>=250
 }

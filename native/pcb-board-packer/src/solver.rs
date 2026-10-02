@@ -146,7 +146,7 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
     let backend=std::env::var("PCB_BOARD_BACKEND").unwrap_or_else(|_|"auto".into());
     if !matches!(backend.as_str(),"cpu"|"cubecl"|"auto") {return Err(format!("unsupported PCB_BOARD_BACKEND {backend}"));}
     #[cfg(feature = "gpu")]
-    if backend=="cubecl" || (backend=="auto" && cubecl::auto_profitable(&problem,threads.min(4))) {
+    if backend=="cubecl" || (backend=="auto" && cubecl::auto_profitable(&problem)) {
         let control=match cubecl::Control::new(&problem) {
             Ok(control)=>control,
             Err(error)=>{
@@ -155,9 +155,8 @@ pub fn solve(problem: BoardPackProblem) -> Result<BoardPackSolution, String> {
             }
         };
         let original=problem.clone();
-        // GPU operations share one queue. Keep the measured host-worker budget
-        // instead of silently rejecting a GPU workload on a six-worker host.
-        let gpu_threads=if backend=="auto" {threads.min(4)}else{threads};
+        // CPU preparation/routing keeps its existing budget independently of GPU admission.
+        let gpu_threads=threads;
         let attempt=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||solve_inner(problem,gpu_threads,Some(control.clone()))));
         if let Some(error)=control.failure() {
             eprintln!("[board-gpu-fallback] {}",serde_json::json!({"reason":error.to_string(),"kind":error.kind,"replay":"original board native call"}));
@@ -441,7 +440,11 @@ fn expand_states(states: &[SearchState], search_width: usize, context: &Context)
         let candidates = ranked_candidates(next, &state.placed, state.route_penalty, Some(limit), context);
         // Additional transitions; the original single-component expansion below
         // is always generated, even when an aligned pair is possible.
-        expanded.extend(joint_pair_states(state, next_index, context));
+        // Atomic pair search is reserved for explicit orientation policies. The
+        // production weak positional preference uses ordinary alignment slots.
+        if context.problem.soft_alignment.as_ref().is_some_and(|p| p.orientation_weight > 0.0) {
+            expanded.extend(joint_pair_states(state, next_index, context));
+        }
         let any_legal = candidates.iter().any(|candidate| candidate.rank.hard_count == state.rank.hard_count);
         for candidate in candidates.into_iter()
             .filter(|candidate| !any_legal || candidate.rank.hard_count == state.rank.hard_count)

@@ -14,7 +14,7 @@ import type { PlacementPrimitive, PrimitiveSolveDiagnostic } from './primitives.
 
 /** Conservative finishing pass, in mm. Similarity never attracts distant blocks. */
 export const BOARD_ALIGNMENT_POLICY = Object.freeze({ similarity: .78, neighbourGap: 8, maxShift: 4, passes: 2 });
-const ALIGNMENT_SCORE = Object.freeze({weight:8,tolerance:.15,orientationWeight:24});
+const ALIGNMENT_SCORE = Object.freeze({weight:1,tolerance:.15,orientationWeight:0});
 
 function family(c: PcbComponent): string {
     if (c.pcb.role === 'main_ic') return `IC${c.pins.length}`;
@@ -154,7 +154,9 @@ export function findAlignmentPairs(input: PlacementInput, roots: PlacementPrimit
 }
 export interface BoardSoftAlignment { pairs: AlignmentPair[]; weight: number; tolerance: number; orientationWeight?:number }
 export function boardAlignmentPolicy(input: PlacementInput, roots: PlacementPrimitive[]): BoardSoftAlignment {
-    return { pairs: findAlignmentPairs(input,roots,roots.flatMap(p=>p.placements),false), ...ALIGNMENT_SCORE };
+    const pairs = findAlignmentPairs(input,roots,roots.flatMap(p=>p.placements),false);
+    // Cosmetic alignment must not grow stronger simply because more pairs exist.
+    return { ...ALIGNMENT_SCORE, pairs, weight: fp.div(ALIGNMENT_SCORE.weight, Math.max(1, pairs.length)) };
 }
 /** Zero at alignment, quadratic near the axis and linear beyond 1mm. No distance
  * attenuation: moving a pair apart cannot erase its misalignment penalty. */
