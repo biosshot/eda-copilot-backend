@@ -709,10 +709,13 @@ impl Engine {
         }
     }
     fn evaluate(&mut self,current:&[WorkingPrimitive],moving:usize,poses:&[Pose],diverse:bool,origin:Point,context:&Context,force_no_prune:bool)->Result<Vec<Row>,String> {
-        if poses.len()<=self.batch_limit {return self.evaluate_batch(current,moving,poses,diverse,origin,context,force_no_prune);}
+        let fixed=(self.sf.len()+self.si.len())*4+self.pads.len()*16+self.hull_capacity*8;
+        let batch_limit=gpu_runtime::with_session(GPU_REQUIREMENTS,|session|
+            session.batch_capacity(fixed,36,self.batch_limit)).map_err(|e|e.to_string())?;
+        if poses.len()<=batch_limit {return self.evaluate_batch(current,moving,poses,diverse,origin,context,force_no_prune);}
         let mut rows=Vec::new();
-        for (chunk,part) in poses.chunks(self.batch_limit).enumerate() {
-            let offset=(chunk*self.batch_limit) as u32;
+        for (chunk,part) in poses.chunks(batch_limit).enumerate() {
+            let offset=(chunk*batch_limit) as u32;
             rows.extend(self.evaluate_batch(current,moving,part,diverse,origin,context,force_no_prune)?.into_iter().map(|mut r|{r.index+=offset;r}));
         }
         rows.sort_by(|a,b|a.hard.cmp(&b.hard).then_with(||compare_f32(a.base,b.base)).then_with(||a.index.cmp(&b.index)));
@@ -1220,13 +1223,12 @@ pub(super) fn init(context: &Context) -> Result<Engine, String> {
     let mut engine=Engine::new(context);engine._call=Some(call);
     gpu_runtime::with_session(GPU_REQUIREMENTS,|session| {
         let props=session.client.properties();
-        engine.max_allocation=session.allocation_budget();
+        engine.max_allocation=session.allocation_limit();
         engine.shared_limit=props.hardware.max_shared_memory_size;
         let static_bytes=(engine.sf.len()+engine.si.len())*4;
-        if static_bytes>=engine.max_allocation {return Err("GPU resident geometry exceeds memory budget".into());}
         // Per candidate: pose + IDs + score + tags + mask = 36 bytes.
-        let available=engine.max_allocation-static_bytes;
-        engine.batch_limit=(available/36).min(4096).min(props.hardware.max_cube_count.0 as usize).max(1);
+        engine.batch_limit=4096.min(props.hardware.max_cube_count.0 as usize).max(1);
+        session.batch_capacity(static_bytes,36,engine.batch_limit)?;
         if let Ok(limit)=std::env::var("PCB_BLOCK_GPU_BATCH_SIZE").unwrap_or_default().parse::<usize>() {engine.batch_limit=engine.batch_limit.min(limit.max(1));}
         if std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some() {eprintln!("[block-gpu-memory] {}",serde_json::json!({"components":context.problem.components.len(),"primitives":context.problem.primitives.len(),"residentBytes":static_bytes,"batchLimit":engine.batch_limit,"allocationBudgetBytes":engine.max_allocation,"sharedLimitBytes":engine.shared_limit,"hullPoints":engine.hull_capacity,"netEndpoints":engine.net_capacity,"segments":engine.segment_capacity,"movingPads":engine.pad_capacity,"sharedBytes":engine.segment_capacity*36+engine.pad_capacity*16+512}));}
         Ok(())

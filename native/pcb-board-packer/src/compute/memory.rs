@@ -33,6 +33,10 @@ impl Monitor {
         if let Some((at,value))=*cached {if at.elapsed()<Duration::from_millis(250){return value;}}
         let value=self.source.read();*cached=Some((Instant::now(),value));value
     }
+    pub fn refresh(&self)->Option<Budget> {
+        let mut cached=self.cached.lock().unwrap_or_else(|e|e.into_inner());
+        let value=self.source.read();*cached=Some((Instant::now(),value));value
+    }
     pub fn report(&self)->serde_json::Value {
         match self.snapshot() {
             Some(b)=>serde_json::json!({"known":true,"source":b.source,"budgetBytes":b.budget_bytes,
@@ -42,6 +46,23 @@ impl Monitor {
                 "headroomBytes":null,"usableHeadroomBytes":null,"estimated":true,"refreshIntervalMs":250}),
         }
     }
+}
+
+/// Free VRAM is an estimate, not a hard per-call capacity. Keep one candidate
+/// admissible under pressure: cached allocator pages may satisfy it without a
+/// new driver allocation. Actual allocation failures use whole-call recovery.
+pub(super) fn batch_capacity(limit:usize,free:Option<u64>,reusable:usize,
+    fixed:usize,per_candidate:usize,requested:usize)->Result<usize,super::Error> {
+    let required=fixed.checked_add(per_candidate).ok_or_else(||
+        super::Error::new(super::ErrorKind::InvalidInput,"GPU memory size overflow"))?;
+    if required>limit {
+        return Err(super::Error::new(super::ErrorKind::InvalidInput,
+            "GPU minimum batch exceeds backend allocation limit"));
+    }
+    let budget=free.map_or(limit,|bytes|
+        (bytes.min(usize::MAX as u64) as usize).saturating_add(reusable).min(limit));
+    let capacity=budget.saturating_sub(fixed)/per_candidate.max(1);
+    Ok(requested.max(1).min(capacity.max(1)))
 }
 
 /// Vulkan adapter implementation is private to the infrastructure, never used
@@ -80,6 +101,18 @@ impl BudgetSource for VulkanBudget {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn batch_capacity_distinguishes_driver_pressure_from_hardware_limits() {
+        assert_eq!(batch_capacity(1000,Some(800),0,200,100,10).unwrap(),6);
+        assert_eq!(batch_capacity(1000,Some(0),0,200,100,10).unwrap(),1);
+        assert_eq!(batch_capacity(1000,Some(0),600,200,100,10).unwrap(),4);
+        assert_eq!(batch_capacity(1000,None,0,200,100,10).unwrap(),8);
+        assert_eq!(batch_capacity(1000,Some(9000),0,200,100,10).unwrap(),8);
+        let error=batch_capacity(1000,Some(9000),0,901,100,10).unwrap_err();
+        assert_eq!(error.kind,super::super::ErrorKind::InvalidInput);
+        assert!(!error.disables_runtime());
+        assert!(batch_capacity(usize::MAX,None,0,usize::MAX,1,10).is_err());
+    }
     #[test]
     fn budget_uses_driver_headroom_and_saturates_under_pressure() {
         let b=Budget{budget_bytes:1000,usage_bytes:200,source:"test"};

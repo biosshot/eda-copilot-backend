@@ -1492,11 +1492,12 @@ fn solve_inner(p:&RefineProblem,started:Instant,#[cfg(feature="gpu")] engine:&mu
 #[cfg(feature="gpu")]
 fn gpu_iteration(p:&RefineProblem,current:&World,current_score:f32,candidates:&[Candidate],threads:usize,deadline:Instant,engine:&mut gpu::Engine)->Result<(Vec<Option<Evaluation>>,BatchProfile),String>{
     if threads<=1 {return gpu_iteration_serial(p,current,current_score,candidates,threads,deadline,engine);}
+    let chunk_size=engine.chunk_size()?;
     // Completed geometric groups feed the original CPU route evaluator while
     // the producer works on the next GPU batch. A route group never spans
     // workers, so its baseline cache and feasibility sequence stay intact.
     let mut groups:Vec<Vec<usize>>=Vec::new();
-    if threads<=1 {for chunk in (0..candidates.len()).collect::<Vec<_>>().chunks(engine.chunk_size()){groups.push(chunk.to_vec());}}
+    if threads<=1 {for chunk in (0..candidates.len()).collect::<Vec<_>>().chunks(chunk_size){groups.push(chunk.to_vec());}}
     else {let mut map=FxHashMap::default();for (i,c) in candidates.iter().enumerate(){let key=c.changes.iter().map(|(i,_)|*i).collect::<Vec<_>>();let id=*map.entry(key).or_insert_with(||{groups.push(vec![]);groups.len()-1});groups[id].push(i);}}
     let order:Vec<_>=groups.iter().flatten().copied().collect();
     let mut owner=vec![0;candidates.len()];for (g,ids) in groups.iter().enumerate(){for &id in ids {owner[id]=g;}}
@@ -1527,7 +1528,7 @@ fn gpu_iteration(p:&RefineProblem,current:&World,current_score:f32,candidates:&[
         }
         let produced=(||->Result<_,String>{
             let mut scratch=current.clone();let mut violations=FxHashMap::default();let mut profile=BatchProfile::default();let mut next_group=0;
-            for ids in order.chunks(engine.chunk_size()) {
+            for ids in order.chunks(chunk_size) {
                 if Instant::now()>=deadline {break;}
                 let mut valid=Vec::new();let mut valid_ids=Vec::new();let mut visited=Vec::new();let mut expected=Vec::new();let started=Instant::now();let permit=cpu_budget.acquire();
                 for &id in ids {
@@ -1562,12 +1563,13 @@ fn gpu_iteration(p:&RefineProblem,current:&World,current_score:f32,candidates:&[
 
 #[cfg(feature="gpu")]
 fn gpu_iteration_serial(p:&RefineProblem,current:&World,current_score:f32,candidates:&[Candidate],threads:usize,deadline:Instant,engine:&mut gpu::Engine)->Result<(Vec<Option<Evaluation>>,BatchProfile),String>{
+    let chunk_size=engine.chunk_size()?;
     let mut scores=vec![None;candidates.len()];let mut scratch=current.clone();
     let mut violations=FxHashMap::default();let mut pre=BatchProfile::default();
     let verify=std::env::var("PCB_POST_PLACE_GPU_VERIFY").ok().as_deref()==Some("1");
-    for (chunk,items) in candidates.chunks(engine.chunk_size()).enumerate(){
+    for (chunk,items) in candidates.chunks(chunk_size).enumerate(){
         if Instant::now()>=deadline {break;}
-        let offset=chunk*engine.chunk_size();let mut valid=Vec::new();let mut ids=Vec::new();let mut expected=Vec::new();
+        let offset=chunk*chunk_size;let mut valid=Vec::new();let mut ids=Vec::new();let mut expected=Vec::new();
         let geometry_started=Instant::now();
         for (i,c) in items.iter().enumerate(){
             if Instant::now()>=deadline {break;}

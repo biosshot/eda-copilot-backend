@@ -366,13 +366,10 @@ impl Engine {
                 +8+p.primitive.connection_points.len()*2+p.primitive.placements.len()*2+p.primitive.path_ports.len()*4
         };
         let pose_bytes=|p:&WorkingPrimitive|geometry_size(p)*4+(context.problem.obstacles.len()+6)*4+4;
-        let budget=64*1024*1024usize;
         let fixed_bytes=fixed.iter().map(pose_bytes).sum::<usize>()+fixed_pairs*12;
         let moving_bytes=states.iter().map(|s|s.iter().map(pose_bytes).sum::<usize>()).max().unwrap_or(0)+cross_pairs*24;
-        if fixed_bytes>=budget || moving_bytes>budget-fixed_bytes {
-            return Err(Error::new(ErrorKind::InvalidInput,"board GPU workspace capacity guard"));
-        }
-        let chunk_size=requested_chunk.min(((budget-fixed_bytes)/moving_bytes.max(1)).max(1));
+        let chunk_size=gpu::with_session(REQUIREMENTS,|session|
+            session.batch_capacity(fixed_bytes,moving_bytes,requested_chunk))?;
         for (chunk_number,chunk) in states.chunks(chunk_size).enumerate() {
             let chunk_start=chunk_number*chunk_size;
             let encode_started=Instant::now();

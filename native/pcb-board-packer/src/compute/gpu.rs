@@ -29,6 +29,7 @@ static IDLE_WORKSPACES: Mutex<Vec<Workspace>> = Mutex::new(Vec::new());
 static ACTIVE_BYTES: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 static WAIT_NANOS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 static INITIALIZATIONS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+static MEMORY_TRIMS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 fn initialize(policy:Admission) -> Result<Option<Session>, Error> {
     if std::env::var_os("PCB_BLOCK_GPU_DISABLED").is_some_and(|v| v == "1") {
@@ -308,11 +309,24 @@ fn memory_monitor()->Option<Arc<super::memory::Monitor>> {
 }
 
 impl Session {
-    /// No fixed application quota. Unknown telemetry falls back to the actual
-    /// backend allocation limit, never to a fabricated free-memory value.
-    pub fn allocation_budget(&self)->usize {
-        let limit=self.client.properties().memory.max_page_size as usize;
-        self.memory.snapshot().map_or(limit,|b|limit.min(b.usable().min(usize::MAX as u64) as usize))
+    pub fn allocation_limit(&self)->usize {
+        self.client.properties().memory.max_page_size.min(usize::MAX as u64) as usize
+    }
+
+    pub fn batch_capacity(&self,fixed:usize,per_candidate:usize,requested:usize)->Result<usize,Error> {
+        let mut free=self.memory.snapshot().map(|b|b.usable());
+        let desired=fixed.saturating_add(per_candidate.saturating_mul(requested));
+        if free.is_some_and(|bytes|bytes.saturating_add(self.workspaces.bytes() as u64)<desired as u64) {
+            // Only idle scratch is released. Resident and in-flight handles stay
+            // owned by their engines/jobs. Cleanup is not a retry of GPU work.
+            let idle=std::mem::take(&mut *IDLE_WORKSPACES.lock().unwrap_or_else(|e|e.into_inner()));
+            if !idle.is_empty() {
+                drop(idle);self.client.memory_cleanup();
+                MEMORY_TRIMS.fetch_add(1,std::sync::atomic::Ordering::Relaxed);
+                free=self.memory.refresh().map(|b|b.usable());
+            }
+        }
+        super::memory::batch_capacity(self.allocation_limit(),free,self.workspaces.bytes(),fixed,per_candidate,requested)
     }
 
     /// Scratch contents belong to this protected operation only. Cloned handles
@@ -391,6 +405,7 @@ pub(crate) fn statistics() -> serde_json::Value {
         "mutexWaitMs":WAIT_NANOS.load(std::sync::atomic::Ordering::Relaxed) as f64/1e6,"workspaceBytes":bytes,"device":match &*state {State::Ready(s)=>Some(&s.name),_=>None},
         "capabilities":match &*state {State::Ready(s)=>Some(s.capabilities),_=>None},
         "precision":"f32-rte-ftz-v1",
+        "memoryTrims":MEMORY_TRIMS.load(std::sync::atomic::Ordering::Relaxed),
         "kernelPreparation":super::startup::statistics(),
         "kernelCache":super::kernel_cache::statistics(),
         "processLease":match &*state {State::Ready(s)=>s.lease.statistics(),_=>serde_json::Value::Null},

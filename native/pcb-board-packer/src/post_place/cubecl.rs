@@ -7,7 +7,6 @@ use std::time::{Instant};
 use rustc_hash::FxHashMap;
 #[path="gpu_kernels.rs"] mod k;
 const REQUIREMENTS:Requirements=Requirements{f32:true,u64:false};
-const MAX_BYTES:usize=64*1024*1024;
 fn invalid(s:impl Into<String>)->Error {Error::new(ErrorKind::InvalidInput,s)}
 fn layer(s:&str)->Result<u32,Error>{match s{"top"=>Ok(1),"bottom"=>Ok(2),_=>Err(invalid("unsupported post-place layer"))}}
 struct Data {si:Vec<u32>,sf:Vec<f32>}
@@ -79,7 +78,7 @@ impl Engine {
    paths.extend([d.ints(&raw),(raw.len()/3) as u32,u32::from(path.shape.as_ref()=="straight"),d.floats(&[priority]),u32::from(path.prefer_facing_pads)]);
   }d.si[9]=p.paths.len() as u32;d.si[10]=d.ints(&paths);
   if d.sf.iter().any(|x|!x.is_finite()||x.abs()>1e7) || !p.pad_crossing_weight.is_finite() || p.pad_crossing_weight<0.0 {return Err(invalid("unsafe post-place GPU number"));}
-  if geometry*4+(points.len()/2)*4+segment_count*(24+segment_count.div_ceil(32)*4)+((terms.len()/5)+(paths.len()/5))*12>MAX_BYTES || d.si.len()*4+d.sf.len()*4>MAX_BYTES || segment_count>4096 {return Err(invalid("post-place resident capacity"));}
+  if segment_count>4096 {return Err(invalid("post-place segment capacity"));}
   let call=if p.timeout_ms>0 && p.iterations>0 {Some(gpu::enter(REQUIREMENTS,gpu::Admission::explicit(explicit))?)}else{None};
   Ok(Self{data:d,orientations,handles:None,failure:None,batches:0,candidates:0,milliseconds:0.0,encode_ms:0.0,_call:call})
  }
@@ -90,9 +89,10 @@ impl Engine {
   let orientation=p.components[component].orientations.iter().position(|o|o.rotate==crate::geometry::normalize_rotation(pose.rotate)&&o.layer==pose.layer).ok_or_else(||invalid("post-place orientation unavailable"))?;
   let off=f.len() as u32;f.extend([pose.x,pose.y]);Ok([self.orientations[component][orientation],off,layer(&pose.layer)?])
  }
- pub fn chunk_size(&self)->usize{let d=&self.data.si;let ns=d[5] as usize;let bytes=d[11] as usize*4+d[6] as usize*4+ns*(12+4+8+ns.div_ceil(32)*4)+(d[7]+d[9]) as usize*12+4;
+ pub fn chunk_size(&self)->Result<usize,String>{let d=&self.data.si;let ns=d[5] as usize;let bytes=d[11] as usize*4+d[6] as usize*4+ns*(12+4+8+ns.div_ceil(32)*4)+(d[7]+d[9]) as usize*12+4;
   let dispatch=(65535*128)/(d[0].max(d[2]).max(d[5]).max(d[7]+d[9]).max(1) as usize);
-  std::env::var("PCB_POST_PLACE_GPU_CHUNK_SIZE").ok().and_then(|s|s.parse::<usize>().ok()).unwrap_or(128).clamp(1,256).min((MAX_BYTES/bytes.max(1)).max(1)).min(dispatch.max(1))
+  let requested=std::env::var("PCB_POST_PLACE_GPU_CHUNK_SIZE").ok().and_then(|s|s.parse::<usize>().ok()).unwrap_or(128).clamp(1,256).min(dispatch.max(1));
+  gpu::with_session(REQUIREMENTS,|session|session.batch_capacity((self.data.si.len()+self.data.sf.len())*4,bytes,requested)).map_err(|e|e.to_string())
  }
  pub fn scores(&mut self,p:&RefineProblem,current:&World,candidates:&[&Candidate],budget:Option<&super::CpuBudget>)->Result<Vec<f32>,String>{
   self.injected("batch")?;let permit=budget.map(|b|b.acquire());let started=Instant::now();let mut bi=vec![candidates.len() as u32];let mut bf=Vec::new();

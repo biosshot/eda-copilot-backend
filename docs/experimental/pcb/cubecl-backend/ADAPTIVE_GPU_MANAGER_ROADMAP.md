@@ -314,3 +314,57 @@ accounted for by memory telemetry. Existing domain capacity guards and low-memor
 failure paths have not been redesigned into transient-memory waiting; P7 is not
 claimed fully closed by the device/queue ownership change. P4/P6 and the complete
 roadmap remain open.
+
+## Memory-pressure batch sizing checkpoint (2026-10-02)
+
+Separate the hardware allocation limit from estimated driver headroom. Previously
+block setup stored their minimum as a hard limit; a small transient free-memory
+estimate could produce a RuntimeFailure and disable the shared runtime. Block
+setup now preserves the hardware limit. Shared sizing chooses smaller batches
+from current estimated headroom and reusable scratch, keeping one candidate for
+forward progress when cached allocator pages may satisfy the allocation. Only
+an impossible minimum batch/hardware limit is rejected as InvalidInput; this does
+not disable the runtime. Actual GPU failures still replay the full call on CPU.
+
+Block sizing is refreshed for each evaluation, board sizing for each candidate
+set, and refiner sizing once per iteration (fixed for that iteration to preserve
+candidate offsets). Board/refiner batch sizing no longer uses a 64 MiB quota.
+Board resident/cache structural guards and dispatch/input limits remain in place.
+Under estimated pressure, release other idle scratch workspaces and request
+CubeCL allocator cleanup; retain live resident and in-flight handles. Report
+cleanup requests as `memoryTrims`. Cleanup is best effort, not guaranteed released
+VRAM, and headroom remains a cached driver estimate with a 5% margin.
+
+Validation on release build `58390f1177dcb87d`:
+- Rust: 93 passed, 5 hardware tests ignored. New unit coverage includes zero and
+  unknown headroom, reusable bytes, oversized driver estimates, overflow, and
+  non-disabling rejection at hardware limits.
+- Native release build passed. One focused board GPU CPU/result comparison and
+  one refiner GPU score/path/layer/clearance/winner comparison passed.
+- One explicit GPU replay per saved input; all three exactly match saved output,
+  with no CPU reference rerun and no PortableScope capture:
+  - USB `c2780c5c38`: 59,899.301 ms, replay
+    `2026-10-02T14-55-17-737Z-USB_Termination`. Cold source compilation 52,049.647 ms;
+    first-launch host preparation 59,488.396 ms (overlapping, not additive).
+  - Board `07d9023cc9`: 2,064.064 ms, replay
+    `2026-10-02T14-56-39-604Z-board`. Baseline/replay both retain hardCount=1 and
+    severity=0.8001001477; this is an intermediate native result.
+  - Final refiner `2114f1219b`: 692.466 ms, replay
+    `2026-10-02T14-56-57-876Z-refine`, 3 batches/129 candidates, no source compilation.
+- Logs: `debugging/adaptive-memory-*`. These runs verify correctness, not a
+  whole-board speedup or a comparison of equivalent cold/warm cache conditions.
+- Addon: 21,326,336 bytes (~20.34 MiB), SHA256
+  `3836076344563083a5eb1f632c606ad4b083720b89068f1fb23c71518c501e78`.
+  No new dependency or helper binary. Actual low-VRAM cleanup was not exercised
+  on this machine; the pressure arithmetic is unit-tested.
+
+P5 (cooperative CPU scheduling) and P3 (CUDA execution/selection) remain open.
+Fresh machine inspection finds CUDA_PATH pointing to CUDA v13.0 with nvcc,
+headers and NVRTC DLLs in bin/x64. This is installation evidence, not a successful
+CUDA execution test. Pinned CubeCL CUDA's NVRTC invocation does not set the strict
+FTZ/FMA options; backend/compiler adaptation and live arithmetic/domain probes
+are still required. Production continues to use Vulkan. P6/P7 are also not fully
+closed: estimates omit some temporary/resident allocation overlap, there is no
+global VRAM reservation across processes or asynchronous memory-pressure wait,
+and actual runtime allocation failure retains existing device-disable/replay
+behavior. No roadmap completion is claimed by this checkpoint.
