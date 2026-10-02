@@ -4,6 +4,7 @@ import type { FootprintGraphic, FootprintGraphicLayer, FootprintPad, FootprintSp
 import { fetchWithRetry } from "#utils/fetch-with-retry.ts";
 import { memoize } from "#utils/memoize.ts";
 import { getPartLibraryUuid, type PartUuid } from "#types/lcsc.ts";
+import * as fp from '#pcb-layout/f32.ts';
 
 const MIL_PER_MM = 39.37007874015748;
 const PAD_ONLY_FOOTPRINT_MARGIN_MM = 0.254;
@@ -288,8 +289,8 @@ function parsePad(item: unknown[]): (FootprintPad & { box: Box }) | null {
     const pad: FootprintPad = {
         pin_number: pinNumber,
         name: String(pinNumber),
-        x: center.x,
-        y: center.y,
+        x: (box.left + box.right) / 2,
+        y: (box.top + box.bottom) / 2,
         width: roundMm(box.right - box.left),
         height: roundMm(box.bottom - box.top),
     };
@@ -345,6 +346,14 @@ function padShapeLocalBox(shape: unknown[]): Box | null {
     if (type === "CIRCLE") {
         const diameter = numberAt(shape, 1) ?? numberAt(shape, 3);
         return diameter !== null ? centeredMilBox(diameter, diameter) : null;
+    }
+
+    if (type === "NGON") {
+        const diameter = numberAt(shape, 1);
+        const sides = numberAt(shape, 2);
+        if (diameter === null || sides === null || !Number.isInteger(sides) || sides < 3) return null;
+        // The placement model stores rectangular pad envelopes.
+        return centeredMilBox(diameter, diameter);
     }
 
     if (type === "POLY") {
@@ -472,6 +481,7 @@ function normalizeBox(box: Box, center: Point): Box {
 
 function singleCircle(value: unknown): { x: number; y: number; radius: number } | null {
     if (!Array.isArray(value)) return null;
+    if (Array.isArray(value[0]) && value.length !== 1) return null;
     const circle = Array.isArray(value[0]) ? value[0] : value;
     if (!Array.isArray(circle) || String(circle[0]).toUpperCase() !== "CIRCLE") return null;
 
@@ -527,6 +537,13 @@ function collectGeometryPoints(value: unknown): Point[] {
     if (!Array.isArray(value)) return [];
     const shape = typeof value[0] === 'string' ? value[0].toUpperCase() : '';
     if (shape === 'R') return rectanglePoints(value);
+    if (shape === 'CIRCLE') {
+        const circle = singleCircle(value);
+        return circle ? Array.from({ length: 17 }, (_, i) => ({
+            x: circle.x + fp.mul(circle.radius, fp.cos(fp.mul(i, Math.PI / 8))),
+            y: circle.y + fp.mul(circle.radius, fp.sin(fp.mul(i, Math.PI / 8))),
+        })) : [];
+    }
     // Named shapes have dimensions/angles mixed with coordinates. Their bounds
     // are handled by collectShapeBoxes or a dedicated decoder, never by pairs.
     if (['CIRCLE', 'ELLIPSE', 'ROUND', 'OVAL', 'RECT', 'ARC'].includes(shape)) return [];
@@ -556,25 +573,49 @@ function rectanglePoints(value: unknown[]): Point[] {
 }
 
 function isEasyEdaPath(value: unknown): value is unknown[] {
-    return Array.isArray(value) && value.some((item) => item === "L" || item === "ARC");
+    return Array.isArray(value) && value.some((item) => ['L', 'ARC', 'CARC', 'C', 'Q'].includes(String(item)));
 }
 
 function collectPathPoints(path: unknown[]): Point[] {
     const points: Point[] = [];
+    let mode = 'L';
 
     for (let index = 0; index < path.length;) {
         const token = path[index];
-        if (token === "L") {
+        if (token === "L" || token === "C" || token === "Q") {
+            mode = token;
             index++;
             continue;
         }
 
-        if (token === "ARC") {
+        if (token === "ARC" || token === "CARC") {
+            const angle = numberAt(path, index + 1);
             const x = numberAt(path, index + 2);
             const y = numberAt(path, index + 3);
-            if (x !== null && y !== null) points.push({ x, y });
+            if (x !== null && y !== null) {
+                const end = { x, y };
+                const start = points.at(-1);
+                if (start && angle !== null) points.push(...arcPoints(start, end, angle));
+                else points.push(end);
+            }
             index += 4;
+            mode = 'L';
             continue;
+        }
+
+        if ((mode === 'C' || mode === 'Q') && points.length) {
+            const count = mode === 'C' ? 3 : 2;
+            const controls: Point[] = [points.at(-1)!];
+            for (let offset = 0; offset < count; offset++) {
+                const x = numberAt(path, index + offset * 2), y = numberAt(path, index + offset * 2 + 1);
+                if (x === null || y === null) break;
+                controls.push({ x, y });
+            }
+            if (controls.length === count + 1) {
+                points.push(...bezierPoints(controls));
+                index += count * 2;
+                continue;
+            }
         }
 
         const x = numberAt(path, index);
@@ -589,6 +630,58 @@ function collectPathPoints(path: unknown[]): Point[] {
     }
 
     return points;
+}
+
+function arcPoints(start: Point, end: Point, angle: number): Point[] {
+    if (angle === 0 || (start.x === end.x && start.y === end.y)) return [end];
+    // Decode in a local F32 frame, restoring source coordinates only at output.
+    const sweep = fp.mul(angle, Math.PI / 180);
+    const dx = fp.f32(end.x - start.x), dy = fp.f32(end.y - start.y);
+    const half = fp.div(sweep, 2);
+    const offset = fp.div(fp.cos(half), fp.mul(2, fp.sin(half)));
+    const cx = fp.sub(fp.div(dx, 2), fp.mul(dy, offset));
+    const cy = fp.add(fp.div(dy, 2), fp.mul(dx, offset));
+    const radius = fp.hypot(cx, cy);
+    const initial = fp.atan2(-cy, -cx);
+    const times = new Set<number>();
+    // Intermediate points render the curve; cardinal extrema make its bbox exact.
+    const steps = Math.ceil(Math.abs(angle) / 15);
+    for (let step = 1; step < steps; step++) times.add(fp.div(step, steps));
+    for (let axis = 0; axis < 4; axis++) {
+        const delta = fp.mod(fp.add(fp.mod(fp.mul(Math.sign(sweep), fp.sub(fp.mul(axis, Math.PI / 2), initial)), 2 * Math.PI), 2 * Math.PI), 2 * Math.PI);
+        const t = fp.div(delta, fp.abs(sweep));
+        if (t > 0 && t < 1) times.add(t);
+    }
+    return [...[...times].sort((a, b) => a - b).map(t => ({
+        x: start.x + fp.add(cx, fp.mul(radius, fp.cos(fp.add(initial, fp.mul(sweep, t))))),
+        y: start.y + fp.add(cy, fp.mul(radius, fp.sin(fp.add(initial, fp.mul(sweep, t))))),
+    })), end];
+}
+
+function bezierPoints(controls: Point[]): Point[] {
+    const origin = controls[0];
+    const end = controls.at(-1)!;
+    controls = controls.map(point => ({ x: fp.f32(point.x - origin.x), y: fp.f32(point.y - origin.y) }));
+    const times = new Set<number>();
+    for (let step = 1; step < 16; step++) times.add(fp.div(step, 16));
+    for (const axis of ['x', 'y'] as const) {
+        const [p0, p1, p2, p3] = controls.map(point => point[axis]);
+        const a = controls.length === 4 ? fp.add(fp.sub(fp.add(-p0, fp.mul(3, p1)), fp.mul(3, p2)), p3) : 0;
+        const b = fp.mul(controls.length === 4 ? 2 : 1, fp.add(fp.sub(p0, fp.mul(2, p1)), p2));
+        const c = fp.sub(p1, p0);
+        const discriminant = fp.sub(fp.mul(b, b), fp.mul(fp.mul(4, a), c));
+        const roots = a === 0 ? (b === 0 ? [] : [fp.div(-c, b)])
+            : discriminant < 0 ? [] : [fp.div(fp.add(-b, fp.sqrt(discriminant)), fp.mul(2, a)), fp.div(fp.sub(-b, fp.sqrt(discriminant)), fp.mul(2, a))];
+        for (const t of roots) if (t > 0 && t < 1) times.add(t);
+    }
+    return [...[...times].sort((a, b) => a - b).map(t => {
+        let level = controls;
+        while (level.length > 1) level = level.slice(1).map((point, i) => ({
+            x: fp.add(fp.mul(fp.sub(1, t), level[i].x), fp.mul(t, point.x)),
+            y: fp.add(fp.mul(fp.sub(1, t), level[i].y), fp.mul(t, point.y)),
+        }));
+        return { x: origin.x + level[0].x, y: origin.y + level[0].y };
+    }), end];
 }
 
 function collectShapeBoxes(value: unknown): Box[] {

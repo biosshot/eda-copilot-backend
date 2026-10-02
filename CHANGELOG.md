@@ -4,6 +4,8 @@
 
 ### PCB layout
 
+- Fix EasyEDA footprint bounds for ARC/CARC and Bezier contours, including nested circles; retain NGON pads and center asymmetric polygon pad envelopes on their geometry. Cover the real 10mm capacitor footprint, curve extrema, pad forms, rotations and both PCB sides.
+
 - Fix CubeCL block external-relation endpoint selection: use a runtime index instead of a constant-branch expression that compiled to side one and could read the missing endpoint. NVIDIA Compute Sanitizer exposed the out-of-bounds access on the saved USB block; retain full-call CPU recovery and cover both relation directions.
 
 - Bound CUDA allocator streams to eight instead of the upstream default 128; clean idle allocations across streams and discard obsolete board GPU caches at phase barriers. Latch actual backend allocation errors before resolving unbound handles so they reach whole-call CPU recovery instead of repeated worker panics.
