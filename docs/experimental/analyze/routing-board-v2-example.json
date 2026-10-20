@@ -1,0 +1,118 @@
+{
+  "outline": [
+    { "x": 0, "y": 0 }, { "x": 10, "y": 0 },
+    { "x": 10, "y": 10 }, { "x": 0, "y": 10 }
+  ],
+  "cutouts": [
+    [{ "x": 4, "y": 4 }, { "x": 6, "y": 4 }, { "x": 6, "y": 6 }, { "x": 4, "y": 6 }]
+  ],
+  "layers": [
+    { "name": "top", "index": 0, "side": "top" },
+    { "name": "bottom", "index": 1, "side": "bottom" }
+  ],
+  "nets": [{ "name": "GND" }],
+  "components": [{
+    "id": "example-component-U1",
+    "designator": "U1",
+    "at": { "x": 7.5, "y": 7.5 },
+    "rotationDeg": 0,
+    "side": "top",
+    "footprintName": "EXAMPLE_QFN16_3X3",
+    "packageName": "QFN-16 3x3 mm",
+    "bodySizeMm": { "x": 3, "y": 3, "z": 0.9 },
+    "bodyOutline": {
+      "outer": [{ "x": 6, "y": 6 }, { "x": 9, "y": 6 }, { "x": 9, "y": 9 }, { "x": 6, "y": 9 }]
+    }
+  }],
+  "pads": [],
+  "keepouts": [],
+  "holes": [],
+  "stackup": {
+    "boardThicknessMm": 1.6,
+    "viaPlatingThicknessUm": 25,
+    "layers": [
+      { "kind": "copper", "layer": "top", "thicknessMm": 0.035 },
+      { "kind": "dielectric", "name": "core", "thicknessMm": 1.53, "relativePermittivity": 4.2, "lossTangent": 0.02, "material": "example-FR4" },
+      { "kind": "copper", "layer": "bottom", "thicknessMm": 0.035 }
+    ]
+  },
+  "rules": {
+    "default": {
+      "clearanceMm": 0.2,
+      "edgeClearanceMm": 0.5,
+      "minTrackWidthMm": 0.15,
+      "preferredTrackWidthMm": 0.25,
+      "via": {
+        "minDiameterMm": 0.5,
+        "preferredDiameterMm": 0.6,
+        "minDrillMm": 0.25,
+        "preferredDrillMm": 0.3
+      }
+    },
+    "nets": [],
+    "refill": [{
+      "id": "gnd-copper-rules",
+      "clearances": [
+        { "obstacle": "track", "netRelation": "different-net", "mm": 0.2 },
+        { "obstacle": "edge", "netRelation": "any", "mm": 0.5 }
+      ],
+      "preserveIslands": true
+    }]
+  },
+  "copper": {
+    "fixed": {
+      "tracks": [],
+      "vias": [],
+      "zones": [
+        {
+          "id": "pour-gnd-top",
+          "kind": "pour",
+          "net": "GND",
+          "layers": ["top"],
+          "outline": {
+            "outer": [{ "x": 0, "y": 0 }, { "x": 10, "y": 0 }, { "x": 10, "y": 10 }, { "x": 0, "y": 10 }]
+          },
+          "priority": 1,
+          "clearanceMm": 0.2,
+          "fill": { "style": "solid" },
+          "padConnection": { "mode": "thermal", "thermalGapMm": 0.25, "spokeWidthMm": 0.3, "spokeCount": 4, "spokeAngleDeg": 45 },
+          "filledPolygons": [{
+            "layer": "top",
+            "source": "cad",
+            "nativePrimitiveIds": ["example-poured-fragment-1"],
+            "status": "available",
+            "freshness": "unknown",
+            "polygons": [{
+              "outer": [{ "x": 0.5, "y": 0.5 }, { "x": 9.5, "y": 0.5 }, { "x": 9.5, "y": 9.5 }, { "x": 0.5, "y": 9.5 }],
+              "holes": [[{ "x": 3.5, "y": 3.5 }, { "x": 3.5, "y": 6.5 }, { "x": 6.5, "y": 6.5 }, { "x": 6.5, "y": 3.5 }]]
+            }]
+          }],
+          "refillRules": {
+            "status": "partial",
+            "ruleSetId": "gnd-copper-rules",
+            "unresolved": ["same-net overlap policy", "equal-priority zone policy"]
+          }
+        },
+        {
+          "id": "fill-bottom-1",
+          "kind": "fill",
+          "layers": ["bottom"],
+          "outline": {
+            "outer": [{ "x": 1, "y": 1 }, { "x": 3, "y": 1 }, { "x": 3, "y": 2 }, { "x": 1, "y": 2 }]
+          },
+          "filledPolygons": [{
+            "layer": "bottom",
+            "source": "cad",
+            "nativePrimitiveIds": ["example-fill-1"],
+            "status": "available",
+            "freshness": "current",
+            "polygons": [{
+              "outer": [{ "x": 1, "y": 1 }, { "x": 3, "y": 1 }, { "x": 3, "y": 2 }, { "x": 1, "y": 2 }]
+            }]
+          }]
+        }
+      ]
+    },
+    "editable": { "tracks": [], "vias": [], "zones": [] }
+  }
+}
