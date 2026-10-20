@@ -1,0 +1,1424 @@
+{
+  "case": {
+    "input": {
+      "board": {
+        "coordinateSystem": "centered",
+        "outline": {
+          "type": "rect",
+          "width": 160,
+          "height": 160
+        },
+        "defaultLayer": "top",
+        "allowedLayers": [
+          "top"
+        ],
+        "clearances": {
+          "component": 0.35,
+          "edge": 0.8
+        }
+      },
+      "boardHoles": [],
+      "constraintRegions": [],
+      "silkscreen": {
+        "designators": {
+          "height": 0.9,
+          "margin": 0.2
+        }
+      },
+      "blocks": [
+        {
+          "name": "b1",
+          "role": "power",
+          "description": "",
+          "component_designators": [
+            "L1"
+          ]
+        },
+        {
+          "name": "b2",
+          "role": "power",
+          "description": "",
+          "component_designators": [
+            "L2"
+          ]
+        },
+        {
+          "name": "b3",
+          "role": "power",
+          "description": "",
+          "component_designators": [
+            "L3"
+          ]
+        },
+        {
+          "name": "b4",
+          "role": "power",
+          "description": "",
+          "component_designators": [
+            "L4"
+          ]
+        }
+      ],
+      "modules": [
+        {
+          "name": "limited",
+          "block_names": [
+            "b1",
+            "b2"
+          ],
+          "hardBbox": true,
+          "maxHeight": 13.5
+        }
+      ],
+      "components": [
+        {
+          "designator": "L1",
+          "value": "220uH",
+          "pins": [
+            {
+              "pin_number": "2",
+              "name": "2",
+              "signal_name": ""
+            },
+            {
+              "pin_number": "1",
+              "name": "1",
+              "signal_name": ""
+            }
+          ],
+          "block_name": "b1",
+          "search_query": "220uH IND-SMD_L12.5-W12.5_SRR1260",
+          "part_uuid": "c32e3875623447abac48312b4ecb24a0",
+          "footprint_uuid": null,
+          "footprint": {
+            "name": "IND-SMD_L12.5-W12.5_SRR1260",
+            "width": 13.708,
+            "height": 12.5,
+            "pads": [
+              {
+                "pin_number": "2",
+                "name": "2",
+                "x": -4.85,
+                "y": 0,
+                "width": 3.5,
+                "height": 5.4,
+                "mount": "smd"
+              },
+              {
+                "pin_number": "1",
+                "name": "1",
+                "x": 4.85,
+                "y": 0,
+                "width": 3.5,
+                "height": 5.4,
+                "mount": "smd"
+              }
+            ],
+            "graphics": [
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": 6.25,
+                    "y": 6.25
+                  },
+                  {
+                    "x": -6.25,
+                    "y": 6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": -6.25,
+                    "y": -6.25
+                  },
+                  {
+                    "x": 6.25,
+                    "y": -6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": 6.25,
+                    "y": -6.25
+                  },
+                  {
+                    "x": 6.25,
+                    "y": -2.9311
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": 6.25,
+                    "y": 2.9311
+                  },
+                  {
+                    "x": 6.25,
+                    "y": 6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": -6.25,
+                    "y": 6.25
+                  },
+                  {
+                    "x": -6.25,
+                    "y": 2.9311
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": -6.25,
+                    "y": -2.9311
+                  },
+                  {
+                    "x": -6.25,
+                    "y": -6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              }
+            ],
+            "sourceOriginOffset": {
+              "x": 0,
+              "y": 0
+            }
+          },
+          "pcb": {
+            "role": "passive",
+            "allowedLayers": [
+              "top"
+            ],
+            "allowedRotations": [
+              0,
+              90,
+              180,
+              270
+            ],
+            "generatedGeometry": []
+          }
+        },
+        {
+          "designator": "L2",
+          "value": "220uH",
+          "pins": [
+            {
+              "pin_number": "2",
+              "name": "2",
+              "signal_name": ""
+            },
+            {
+              "pin_number": "1",
+              "name": "1",
+              "signal_name": ""
+            }
+          ],
+          "block_name": "b2",
+          "search_query": "220uH IND-SMD_L12.5-W12.5_SRR1260",
+          "part_uuid": "c32e3875623447abac48312b4ecb24a0",
+          "footprint_uuid": null,
+          "footprint": {
+            "name": "IND-SMD_L12.5-W12.5_SRR1260",
+            "width": 13.708,
+            "height": 12.5,
+            "pads": [
+              {
+                "pin_number": "2",
+                "name": "2",
+                "x": -4.85,
+                "y": 0,
+                "width": 3.5,
+                "height": 5.4,
+                "mount": "smd"
+              },
+              {
+                "pin_number": "1",
+                "name": "1",
+                "x": 4.85,
+                "y": 0,
+                "width": 3.5,
+                "height": 5.4,
+                "mount": "smd"
+              }
+            ],
+            "graphics": [
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": 6.25,
+                    "y": 6.25
+                  },
+                  {
+                    "x": -6.25,
+                    "y": 6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": -6.25,
+                    "y": -6.25
+                  },
+                  {
+                    "x": 6.25,
+                    "y": -6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": 6.25,
+                    "y": -6.25
+                  },
+                  {
+                    "x": 6.25,
+                    "y": -2.9311
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": 6.25,
+                    "y": 2.9311
+                  },
+                  {
+                    "x": 6.25,
+                    "y": 6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": -6.25,
+                    "y": 6.25
+                  },
+                  {
+                    "x": -6.25,
+                    "y": 2.9311
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": -6.25,
+                    "y": -2.9311
+                  },
+                  {
+                    "x": -6.25,
+                    "y": -6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              }
+            ],
+            "sourceOriginOffset": {
+              "x": 0,
+              "y": 0
+            }
+          },
+          "pcb": {
+            "role": "passive",
+            "allowedLayers": [
+              "top"
+            ],
+            "allowedRotations": [
+              0,
+              90,
+              180,
+              270
+            ],
+            "generatedGeometry": []
+          }
+        },
+        {
+          "designator": "L3",
+          "value": "220uH",
+          "pins": [
+            {
+              "pin_number": "2",
+              "name": "2",
+              "signal_name": ""
+            },
+            {
+              "pin_number": "1",
+              "name": "1",
+              "signal_name": ""
+            }
+          ],
+          "block_name": "b3",
+          "search_query": "220uH IND-SMD_L12.5-W12.5_SRR1260",
+          "part_uuid": "c32e3875623447abac48312b4ecb24a0",
+          "footprint_uuid": null,
+          "footprint": {
+            "name": "IND-SMD_L12.5-W12.5_SRR1260",
+            "width": 13.708,
+            "height": 12.5,
+            "pads": [
+              {
+                "pin_number": "2",
+                "name": "2",
+                "x": -4.85,
+                "y": 0,
+                "width": 3.5,
+                "height": 5.4,
+                "mount": "smd"
+              },
+              {
+                "pin_number": "1",
+                "name": "1",
+                "x": 4.85,
+                "y": 0,
+                "width": 3.5,
+                "height": 5.4,
+                "mount": "smd"
+              }
+            ],
+            "graphics": [
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": 6.25,
+                    "y": 6.25
+                  },
+                  {
+                    "x": -6.25,
+                    "y": 6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": -6.25,
+                    "y": -6.25
+                  },
+                  {
+                    "x": 6.25,
+                    "y": -6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": 6.25,
+                    "y": -6.25
+                  },
+                  {
+                    "x": 6.25,
+                    "y": -2.9311
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": 6.25,
+                    "y": 2.9311
+                  },
+                  {
+                    "x": 6.25,
+                    "y": 6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": -6.25,
+                    "y": 6.25
+                  },
+                  {
+                    "x": -6.25,
+                    "y": 2.9311
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": -6.25,
+                    "y": -2.9311
+                  },
+                  {
+                    "x": -6.25,
+                    "y": -6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              }
+            ],
+            "sourceOriginOffset": {
+              "x": 0,
+              "y": 0
+            }
+          },
+          "pcb": {
+            "role": "passive",
+            "allowedLayers": [
+              "top"
+            ],
+            "allowedRotations": [
+              0,
+              90,
+              180,
+              270
+            ],
+            "generatedGeometry": []
+          }
+        },
+        {
+          "designator": "L4",
+          "value": "220uH",
+          "pins": [
+            {
+              "pin_number": "2",
+              "name": "2",
+              "signal_name": ""
+            },
+            {
+              "pin_number": "1",
+              "name": "1",
+              "signal_name": ""
+            }
+          ],
+          "block_name": "b4",
+          "search_query": "220uH IND-SMD_L12.5-W12.5_SRR1260",
+          "part_uuid": "c32e3875623447abac48312b4ecb24a0",
+          "footprint_uuid": null,
+          "footprint": {
+            "name": "IND-SMD_L12.5-W12.5_SRR1260",
+            "width": 13.708,
+            "height": 12.5,
+            "pads": [
+              {
+                "pin_number": "2",
+                "name": "2",
+                "x": -4.85,
+                "y": 0,
+                "width": 3.5,
+                "height": 5.4,
+                "mount": "smd"
+              },
+              {
+                "pin_number": "1",
+                "name": "1",
+                "x": 4.85,
+                "y": 0,
+                "width": 3.5,
+                "height": 5.4,
+                "mount": "smd"
+              }
+            ],
+            "graphics": [
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": 6.25,
+                    "y": 6.25
+                  },
+                  {
+                    "x": -6.25,
+                    "y": 6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": -6.25,
+                    "y": -6.25
+                  },
+                  {
+                    "x": 6.25,
+                    "y": -6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": 6.25,
+                    "y": -6.25
+                  },
+                  {
+                    "x": 6.25,
+                    "y": -2.9311
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": 6.25,
+                    "y": 2.9311
+                  },
+                  {
+                    "x": 6.25,
+                    "y": 6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": -6.25,
+                    "y": 6.25
+                  },
+                  {
+                    "x": -6.25,
+                    "y": 2.9311
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              },
+              {
+                "kind": "path",
+                "layer": "silk",
+                "points": [
+                  {
+                    "x": -6.25,
+                    "y": -2.9311
+                  },
+                  {
+                    "x": -6.25,
+                    "y": -6.25
+                  }
+                ],
+                "closed": false,
+                "strokeWidth": 0.254
+              }
+            ],
+            "sourceOriginOffset": {
+              "x": 0,
+              "y": 0
+            }
+          },
+          "pcb": {
+            "role": "passive",
+            "allowedLayers": [
+              "top"
+            ],
+            "allowedRotations": [
+              0,
+              90,
+              180,
+              270
+            ],
+            "generatedGeometry": []
+          }
+        }
+      ],
+      "hints": [],
+      "paths": [],
+      "refineGroups": [],
+      "solverOptions": {
+        "candidateRadii": [
+          1.2,
+          2,
+          3.5,
+          5,
+          8,
+          12,
+          18
+        ],
+        "candidateAngles": [
+          0,
+          45,
+          90,
+          135,
+          180,
+          225,
+          270,
+          315
+        ],
+        "fallbackGridStep": 4,
+        "placementGridStep": 0.5,
+        "ignoredRatsnestSignals": [
+          "GND",
+          "V_MEAS_N",
+          "I_OUT",
+          "HARVEST_P"
+        ],
+        "localImproveIterations": 16,
+        "localImproveMinDelta": 0.05,
+        "hierarchicalBlocks": true,
+        "compactness": "normal",
+        "preview": false,
+        "placeOnlyComponents": [],
+        "ignoreComponents": []
+      }
+    },
+    "roots": [
+      {
+        "id": "L1",
+        "label": "L1",
+        "sourceNodeId": "L1",
+        "kind": "block",
+        "bbox": {
+          "left": -36.854000091552734,
+          "right": -23.145999908447266,
+          "top": -6.25,
+          "bottom": 6.25
+        },
+        "width": 13.708000183105469,
+        "height": 12.5,
+        "placements": [
+          {
+            "designator": "L1",
+            "x": -30,
+            "y": 0,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "children": [],
+        "connectionPoints": []
+      },
+      {
+        "id": "L2",
+        "label": "L2",
+        "sourceNodeId": "L2",
+        "kind": "block",
+        "bbox": {
+          "left": -16.854000091552734,
+          "right": -3.1459999084472656,
+          "top": -5.25,
+          "bottom": 7.25
+        },
+        "width": 13.708000183105469,
+        "height": 12.5,
+        "placements": [
+          {
+            "designator": "L2",
+            "x": -10,
+            "y": 1,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "children": [],
+        "connectionPoints": []
+      },
+      {
+        "id": "L3",
+        "label": "L3",
+        "sourceNodeId": "L3",
+        "kind": "block",
+        "bbox": {
+          "left": 3.1459999084472656,
+          "right": 16.854000091552734,
+          "top": -4.25,
+          "bottom": 8.25
+        },
+        "width": 13.708000183105469,
+        "height": 12.5,
+        "placements": [
+          {
+            "designator": "L3",
+            "x": 10,
+            "y": 2,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "children": [],
+        "connectionPoints": []
+      },
+      {
+        "id": "L4",
+        "label": "L4",
+        "sourceNodeId": "L4",
+        "kind": "block",
+        "bbox": {
+          "left": 23.145999908447266,
+          "right": 36.854000091552734,
+          "top": -3.25,
+          "bottom": 9.25
+        },
+        "width": 13.708000183105469,
+        "height": 12.5,
+        "placements": [
+          {
+            "designator": "L4",
+            "x": 30,
+            "y": 3,
+            "rotate": 0,
+            "layer": "top",
+            "score": 0
+          }
+        ],
+        "children": [],
+        "connectionPoints": []
+      }
+    ],
+    "placements": [
+      {
+        "designator": "L1",
+        "x": -30,
+        "y": 0,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "L2",
+        "x": -10,
+        "y": 1,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "L3",
+        "x": 10,
+        "y": 2,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "L4",
+        "x": 30,
+        "y": 3,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      }
+    ]
+  },
+  "tested": 1,
+  "ys": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "bounded": [
+    0,
+    1,
+    0
+  ],
+  "old": {
+    "placements": [
+      {
+        "designator": "L1",
+        "x": -30,
+        "y": 1.5,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "L2",
+        "x": -10,
+        "y": 1.625,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "L3",
+        "x": 10,
+        "y": 1.875,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "L4",
+        "x": 30,
+        "y": 2,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      }
+    ],
+    "pairs": [
+      {
+        "a": "L1",
+        "b": "L2",
+        "similarity": 1,
+        "anchorA": "L1",
+        "anchorB": "L2",
+        "orientation": {
+          "a": "L1",
+          "b": "L2",
+          "offset": 0
+        }
+      },
+      {
+        "a": "L2",
+        "b": "L3",
+        "similarity": 1,
+        "anchorA": "L2",
+        "anchorB": "L3",
+        "orientation": {
+          "a": "L2",
+          "b": "L3",
+          "offset": 0
+        }
+      },
+      {
+        "a": "L3",
+        "b": "L4",
+        "similarity": 1,
+        "anchorA": "L3",
+        "anchorB": "L4",
+        "orientation": {
+          "a": "L3",
+          "b": "L4",
+          "offset": 0
+        }
+      }
+    ],
+    "before": [
+      {
+        "a": "L1",
+        "b": "L2",
+        "similarity": 1,
+        "anchorA": "L1",
+        "anchorB": "L2",
+        "orientation": {
+          "a": "L1",
+          "b": "L2",
+          "offset": 0
+        },
+        "error": 1,
+        "orientationError": 0
+      },
+      {
+        "a": "L2",
+        "b": "L3",
+        "similarity": 1,
+        "anchorA": "L2",
+        "anchorB": "L3",
+        "orientation": {
+          "a": "L2",
+          "b": "L3",
+          "offset": 0
+        },
+        "error": 1,
+        "orientationError": 0
+      },
+      {
+        "a": "L3",
+        "b": "L4",
+        "similarity": 1,
+        "anchorA": "L3",
+        "anchorB": "L4",
+        "orientation": {
+          "a": "L3",
+          "b": "L4",
+          "offset": 0
+        },
+        "error": 1,
+        "orientationError": 0
+      }
+    ],
+    "after": [
+      {
+        "a": "L1",
+        "b": "L2",
+        "similarity": 1,
+        "anchorA": "L1",
+        "anchorB": "L2",
+        "orientation": {
+          "a": "L1",
+          "b": "L2",
+          "offset": 0
+        },
+        "error": 0.125,
+        "orientationError": 0
+      },
+      {
+        "a": "L2",
+        "b": "L3",
+        "similarity": 1,
+        "anchorA": "L2",
+        "anchorB": "L3",
+        "orientation": {
+          "a": "L2",
+          "b": "L3",
+          "offset": 0
+        },
+        "error": 0.25,
+        "orientationError": 0
+      },
+      {
+        "a": "L3",
+        "b": "L4",
+        "similarity": 1,
+        "anchorA": "L3",
+        "anchorB": "L4",
+        "orientation": {
+          "a": "L3",
+          "b": "L4",
+          "offset": 0
+        },
+        "error": 0.125,
+        "orientationError": 0
+      }
+    ],
+    "moves": [
+      {
+        "blocks": [
+          "L1",
+          "L2"
+        ],
+        "axis": "y",
+        "shifts": [
+          1,
+          0
+        ],
+        "perpendicularShifts": [
+          0,
+          0
+        ],
+        "scoreBefore": 1.0837500095367432,
+        "scoreAfter": 0.7225000262260437
+      },
+      {
+        "blocks": [
+          "L2",
+          "L3"
+        ],
+        "axis": "y",
+        "shifts": [
+          0.5,
+          0
+        ],
+        "perpendicularShifts": [
+          0,
+          0
+        ],
+        "scoreBefore": 0.7225000262260437,
+        "scoreAfter": 0.48375001549720764
+      },
+      {
+        "blocks": [
+          "L3",
+          "L4"
+        ],
+        "axis": "y",
+        "shifts": [
+          0,
+          -1
+        ],
+        "perpendicularShifts": [
+          0,
+          0
+        ],
+        "scoreBefore": 0.48375001549720764,
+        "scoreAfter": 0.1224999949336052
+      },
+      {
+        "blocks": [
+          "L1",
+          "L2"
+        ],
+        "axis": "y",
+        "shifts": [
+          0.5,
+          0
+        ],
+        "perpendicularShifts": [
+          0,
+          0
+        ],
+        "scoreBefore": 0.1224999949336052,
+        "scoreAfter": 0.0612499974668026
+      },
+      {
+        "blocks": [
+          "L2",
+          "L3"
+        ],
+        "axis": "y",
+        "shifts": [
+          0.125,
+          -0.125
+        ],
+        "perpendicularShifts": [
+          0,
+          0
+        ],
+        "scoreBefore": 0.0612499974668026,
+        "scoreAfter": 0.004999999422580004
+      }
+    ],
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "nodeId": "board-alignment",
+        "message": "Board soft alignment: similarity >= 0.78, 3 nearby pairs, 702 candidates, 5 accepted; fixed components and block interiors preserved"
+      }
+    ],
+    "evaluated": 702,
+    "rejected": {
+      "objective": 696,
+      "electrical": 0,
+      "netLength": 0,
+      "geometry": 0,
+      "hardHint": 0,
+      "native": 0
+    }
+  },
+  "next": {
+    "placements": [
+      {
+        "designator": "L1",
+        "x": -30,
+        "y": 1,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "L2",
+        "x": -10,
+        "y": 1,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "L3",
+        "x": 10,
+        "y": 1.5,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      },
+      {
+        "designator": "L4",
+        "x": 30,
+        "y": 1.5,
+        "rotate": 0,
+        "layer": "top",
+        "score": 0
+      }
+    ],
+    "pairs": [
+      {
+        "a": "L1",
+        "b": "L2",
+        "similarity": 1,
+        "anchorA": "L1",
+        "anchorB": "L2",
+        "orientation": {
+          "a": "L1",
+          "b": "L2",
+          "offset": 0
+        }
+      },
+      {
+        "a": "L2",
+        "b": "L3",
+        "similarity": 1,
+        "anchorA": "L2",
+        "anchorB": "L3",
+        "orientation": {
+          "a": "L2",
+          "b": "L3",
+          "offset": 0
+        }
+      },
+      {
+        "a": "L3",
+        "b": "L4",
+        "similarity": 1,
+        "anchorA": "L3",
+        "anchorB": "L4",
+        "orientation": {
+          "a": "L3",
+          "b": "L4",
+          "offset": 0
+        }
+      }
+    ],
+    "before": [
+      {
+        "a": "L1",
+        "b": "L2",
+        "similarity": 1,
+        "anchorA": "L1",
+        "anchorB": "L2",
+        "orientation": {
+          "a": "L1",
+          "b": "L2",
+          "offset": 0
+        },
+        "error": 1,
+        "orientationError": 0
+      },
+      {
+        "a": "L2",
+        "b": "L3",
+        "similarity": 1,
+        "anchorA": "L2",
+        "anchorB": "L3",
+        "orientation": {
+          "a": "L2",
+          "b": "L3",
+          "offset": 0
+        },
+        "error": 1,
+        "orientationError": 0
+      },
+      {
+        "a": "L3",
+        "b": "L4",
+        "similarity": 1,
+        "anchorA": "L3",
+        "anchorB": "L4",
+        "orientation": {
+          "a": "L3",
+          "b": "L4",
+          "offset": 0
+        },
+        "error": 1,
+        "orientationError": 0
+      }
+    ],
+    "after": [
+      {
+        "a": "L1",
+        "b": "L2",
+        "similarity": 1,
+        "anchorA": "L1",
+        "anchorB": "L2",
+        "orientation": {
+          "a": "L1",
+          "b": "L2",
+          "offset": 0
+        },
+        "error": 0,
+        "orientationError": 0
+      },
+      {
+        "a": "L2",
+        "b": "L3",
+        "similarity": 1,
+        "anchorA": "L2",
+        "anchorB": "L3",
+        "orientation": {
+          "a": "L2",
+          "b": "L3",
+          "offset": 0
+        },
+        "error": 0.5,
+        "orientationError": 0
+      },
+      {
+        "a": "L3",
+        "b": "L4",
+        "similarity": 1,
+        "anchorA": "L3",
+        "anchorB": "L4",
+        "orientation": {
+          "a": "L3",
+          "b": "L4",
+          "offset": 0
+        },
+        "error": 0,
+        "orientationError": 0
+      }
+    ],
+    "moves": [
+      {
+        "axis": "y",
+        "blocks": [
+          "L1",
+          "L2"
+        ],
+        "perpendicularShifts": [
+          0,
+          0
+        ],
+        "scoreAfter": 0.7225000262260437,
+        "scoreBefore": 1.0837500095367432,
+        "shifts": [
+          1,
+          0
+        ]
+      },
+      {
+        "axis": "y",
+        "blocks": [
+          "L3",
+          "L4"
+        ],
+        "perpendicularShifts": [
+          0,
+          0
+        ],
+        "scoreAfter": 0.36125001311302185,
+        "scoreBefore": 0.7225000262260437,
+        "shifts": [
+          0,
+          -1
+        ]
+      },
+      {
+        "axis": "y",
+        "blocks": [
+          "L2",
+          "L3"
+        ],
+        "perpendicularShifts": [
+          0,
+          0
+        ],
+        "scoreAfter": 0.1224999949336052,
+        "scoreBefore": 0.36125001311302185,
+        "shifts": [
+          0,
+          -0.5
+        ]
+      },
+      {
+        "axis": "y",
+        "blocks": [
+          "L3",
+          "L4"
+        ],
+        "perpendicularShifts": [
+          0,
+          0
+        ],
+        "scoreAfter": 0.0612499974668026,
+        "scoreBefore": 0.1224999949336052,
+        "shifts": [
+          0,
+          -0.5
+        ]
+      }
+    ],
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "nodeId": "board-alignment",
+        "message": "Board soft alignment: similarity >= 0.78, 3 nearby pairs, 585 candidates, 4 accepted; fixed components and block interiors preserved"
+      }
+    ],
+    "evaluated": 585,
+    "rejected": {
+      "electrical": 0,
+      "geometry": 0,
+      "hardHint": 0,
+      "native": 91,
+      "netLength": 0,
+      "objective": 490
+    }
+  },
+  "oldValid": true,
+  "newValid": true,
+  "fourThreadsIdentical": true
+}

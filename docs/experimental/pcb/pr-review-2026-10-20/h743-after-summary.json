@@ -1,0 +1,27 @@
+{
+  "label": "after",
+  "binary": "../eda-copilot-backend-pr-review/debugging/all-native.node",
+  "results": [
+    {
+      "backend": "cpu",
+      "status": 0,
+      "fallback": false,
+      "rank": {
+        "hardCount": 0,
+        "hardSeverity": 0,
+        "score": 2090.879150390625
+      }
+    },
+    {
+      "backend": "cubecl",
+      "status": 0,
+      "fallback": false,
+      "rank": {
+        "hardCount": 0,
+        "hardSeverity": 0,
+        "score": 2090.879150390625
+      }
+    }
+  ],
+  "equal": true
+}
