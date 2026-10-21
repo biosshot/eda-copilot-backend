@@ -2817,6 +2817,11 @@ fn layer_envelope(primitive: &WorkingPrimitive, layer: &str) -> Option<Box2> {
     }
     result
 }
+/// The same union as `layer_envelope`, for boxes already selected by layer.
+pub(crate) fn envelope(boxes: impl IntoIterator<Item = Box2>) -> Option<Box2> {
+    boxes.into_iter().reduce(|current, box_| Box2 { left: current.left.min(box_.left), right: current.right.max(box_.right),
+        top: current.top.min(box_.top), bottom: current.bottom.max(box_.bottom) })
+}
 fn relevant_occupied_boxes(placed: &WorkingPrimitive, moving: &WorkingPrimitive) -> Vec<Box2> {
     if moving.components.is_empty() { return packing_boxes(placed).to_vec(); }
     ["top", "bottom"].into_iter()
@@ -3005,19 +3010,25 @@ fn soft_spacing_penalty(primitives: &[WorkingPrimitive], context: &Context) -> f
         if (a.primitive.locked && b.primitive.locked) || !primitive_can_conflict(a,b,context) { continue; }
         if spacing.exempt_pairs.iter().any(|p| (p[0]==a.primitive.id && p[1]==b.primitive.id)
             || (p[1]==a.primitive.id && p[0]==b.primitive.id)) { continue; }
-        let closest = ["top", "bottom"].into_iter().filter_map(|layer| {
-            let a = layer_envelope(a, layer)?;
-            let b = layer_envelope(b, layer)?;
-            let dx = (a.left-b.right).max(b.left-a.right).max(0.0);
-            let dy = (a.top-b.bottom).max(b.top-a.bottom).max(0.0);
-            Some(crate::numerics::hypot(dx,dy))
-        }).fold(f32::INFINITY, f32::min);
-        if closest.is_finite() {
-            let deficit = (context.problem.clearance + spacing.gap - closest).max(0.0);
-            score += 18.0 * deficit * deficit;
-        }
+        score += spacing_term(|layer| Some((layer_envelope(a, LAYERS[layer])?, layer_envelope(b, LAYERS[layer])?)),
+            context.problem.clearance, spacing.gap);
     }}
     score
+}
+
+const LAYERS: [&str; 2] = ["top", "bottom"];
+/// Soft spacing deficit of one primitive pair; `envelopes(layer)` gives both
+/// primitives' envelopes on top (0) and bottom (1), when both occupy it.
+pub(crate) fn spacing_term(envelopes: impl Fn(usize) -> Option<(Box2, Box2)>, clearance: f32, gap: f32) -> f32 {
+    let closest = (0..2).filter_map(|layer| {
+        let (a, b) = envelopes(layer)?;
+        let dx = (a.left-b.right).max(b.left-a.right).max(0.0);
+        let dy = (a.top-b.bottom).max(b.top-a.bottom).max(0.0);
+        Some(crate::numerics::hypot(dx,dy))
+    }).fold(f32::INFINITY, f32::min);
+    if !closest.is_finite() { return 0.0; }
+    let deficit = (clearance + gap - closest).max(0.0);
+    18.0 * deficit * deficit
 }
 
 
@@ -3035,6 +3046,15 @@ fn soft_alignment_score(primitives: &[WorkingPrimitive], context: &Context) -> f
 fn primitive_alignment_center(p: &Primitive, anchor: &Option<Arc<str>>) -> Point {
     anchor.as_ref().and_then(|name| p.placements.iter().find(|q| &q.designator == name))
         .map_or_else(|| box_center(&p.bbox), |q| Point { x:q.x, y:q.y })
+}
+
+/// Minimal primitive for `alignment_score`, which reads ids, bboxes and placements.
+pub(crate) fn alignment_primitive(id: Arc<str>, bbox: Box2, placements: Vec<crate::model::Placement>) -> Primitive {
+    let empty: Arc<str> = Arc::from("");
+    Primitive { id, kind: empty.clone(), label: empty.clone(), source_node_id: empty, source_node_ids: Arc::new(vec![]), locked: false,
+        can_rotate: false, allowed_orientations: Arc::new(vec![0]), bbox, collision_boxes: Arc::new(vec![bbox]), collision_box_layers: Arc::new(vec![]),
+        width: bbox.right - bbox.left, height: bbox.bottom - bbox.top, placements: Arc::new(placements), connection_points: Arc::new(vec![]),
+        connection_point_layers: Arc::new(vec![]), path_ports: Arc::new(vec![]), edge_place: None }
 }
 
 pub fn alignment_score<'a>(primitives: impl Clone + Iterator<Item=&'a Primitive>, s: &crate::model::SoftAlignment) -> f32 {

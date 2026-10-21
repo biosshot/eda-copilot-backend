@@ -12,7 +12,7 @@ import { createPcbLayout } from './layout.ts';
 import { createPlacementReport } from './placement-report.ts';
 import { buildPlacementGraph } from './placement-graph.ts';
 import { solvePlacementTreeBottomUp, solvePlacementTreeBottomUpAsync } from '../pcb-auto-place-v2/tree-solver.ts';
-import { refinePostPlacement, refinePostPlacementAsync } from '../pcb-auto-place-v2/post-place-refiner.ts';
+import { postPlaceThreads, refinePostPlacement, refinePostPlacementAsync } from '../pcb-auto-place-v2/post-place-refiner.ts';
 import { refineBoardAlignment } from '../pcb-auto-place-v2/board-alignment.ts';
 import { emitPcbLayoutProgress, type PcbLayoutProgressReporter } from '../progress.ts';
 export { PCB_PLACEMENT_ASSUMPTIONS, PlacementError } from '#types/pcb/layout-model.ts';
@@ -126,7 +126,7 @@ async function autoPlacePcbInternalAsync(
     });
     solverDiagnostics.push(...refined.diagnostics);
     pushStage('03-v2-post-place', refined.placements, postPlaceStageData(refined));
-    const aligned = refineBoardAlignment(refinementInput, tree.root.children, refined.placements);
+    const aligned = refineBoardAlignment(refinementInput, tree.root.children, refined.placements, postPlaceThreads());
     assertFixedBlockPlacements(refinementInput, aligned.placements);
     solverDiagnostics.push(...aligned.diagnostics.map(d => ({ ...d, code: 'v2_solver' })));
     pushStage('03b-v2-board-alignment', aligned.placements, aligned);

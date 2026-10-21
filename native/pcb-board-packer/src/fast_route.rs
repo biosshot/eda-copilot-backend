@@ -7,7 +7,9 @@ use crate::net_class::is_ground;
 use std::sync::Arc;
 
 mod arithmetic;
+mod incremental;
 mod layout;
+pub(crate) use incremental::RouteCache;
 pub(crate) use layout::{layout_plan, nets_plan};
 pub(crate) mod plan;
 #[cfg(feature="gpu")]

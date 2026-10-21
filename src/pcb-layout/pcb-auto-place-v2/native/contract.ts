@@ -204,11 +204,22 @@ export interface NativeBoardPackerAddon {
     postPlaceScoreContractVersion(): number;
     scorePostPlace(problem: NativePostPlaceScoreProblemV1): number;
     validatePlacementChange(problem: import('./encode-post-place-refine.ts').NativePostPlaceRefineProblem, placements: import('#types/pcb/layout-model.ts').Placement[]): boolean;
+    boardAlignmentContractVersion(): number;
+    refineBoardAlignment(problem: import('./encode-board-alignment.ts').NativeBoardAlignmentProblem): NativeBoardAlignmentResult;
     /** Absolute hard-constraint validation, without accepting baseline violations. */
     validatePlacement(problem: import('./encode-post-place-refine.ts').NativePostPlaceRefineProblem, scope?: string[]): boolean;
     signalPathContractVersion(): number;
     evaluateSignalPath(problem: NativeSignalPathEvaluationProblemV1): NativeSignalPathTopologyEvaluation | null;
     signalPathBridgeDeltas(problem: NativeSignalPathBridgeProblemV1): Point[];
+}
+
+export interface NativeBoardAlignmentResult {
+    /** Final x/y per input placement; null where it did not move. */
+    positions: Array<[number, number] | null>;
+    moves: import('../board-alignment.ts').BoardAlignmentMove[];
+    evaluated: number;
+    rejected: { objective: number; electrical: number; netLength: number; geometry: number; hardHint: number; native: number };
+    profile: Record<string, unknown>;
 }
 
 export interface NativeBlockComponentGeometry extends NativeComponentGeometry {

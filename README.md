@@ -78,6 +78,19 @@ per-candidate addon conversion or TypeScript callback is used in this loop.
 The subtree pool remains process-based because loading the addon in multiple
 Node worker threads caused heap corruption on Windows.
 
+The board alignment finishing pass, after post-placement refinement, is also
+one native call. TypeScript finds the similar block pairs and compiles each
+component's geometry at its own pose with x = y = 0; Rust generates every
+candidate translation, evaluates the objective, the electrical guard, the
+placement-report geometry, mandatory hints and the native change validation,
+and accepts moves in the original order. A candidate updates only the
+components it moves, and the route term re-evaluates only the obstacle and
+crossing terms of moved pads and changed links. A pair's candidates are checked
+on the post-placement thread budget (`PCB_POST_PLACE_THREADS` and its
+fallbacks); the synchronous API uses one thread. Results do not depend on the
+thread count. With `PCB_BOARD_PACKER_PROFILE=1` it logs
+`[pcb-board-alignment-native]` with stage counts and times.
+
 With `PCB_BOARD_PACKER_PROFILE=1`, post-place logs include candidate counts,
 hard/bound/feasibility/improvement rejections, baseline cache hits, and timings
 for geometry, scoring, routing and iteration wall time. Worker timings are

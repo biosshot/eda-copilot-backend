@@ -22,6 +22,11 @@ pub(crate) fn route_plan(problem: &PostPlaceScoreProblem) -> crate::fast_route::
 }
 
 pub fn score(problem: &PostPlaceScoreProblem) -> Result<f32, String> {
+    score_with_route(problem, |p| route_plan(p).cpu())
+}
+
+/// `score`, with the route term supplied by an equivalent evaluator.
+pub(crate) fn score_with_route(problem: &PostPlaceScoreProblem, route: impl FnOnce(&PostPlaceScoreProblem) -> f32) -> Result<f32, String> {
     validate(problem)?;
     let segments: Vec<_> = problem
         .nets
@@ -66,7 +71,7 @@ pub fn score(problem: &PostPlaceScoreProblem) -> Result<f32, String> {
             path.prefer_facing_pads,
         );
     }
-    score += route_plan(problem).cpu();
+    score += route(problem);
     if !score.is_finite() {
         return Err("post-place F32 score overflow or invalid arithmetic".into());
     }

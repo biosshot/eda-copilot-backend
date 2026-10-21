@@ -94,6 +94,8 @@ impl Frame {
         Ok(frame)
     }
 
+    pub(crate) fn origin(&self) -> [f64; 2] { self.origin }
+
     pub(crate) fn localize_block(value: &mut Value) -> Result<Self, String> {
         let centered = value["bounds"].is_null() && value["world"].is_null()
             && value["obstacles"].as_array().is_none_or(|items| items.is_empty())

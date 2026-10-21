@@ -42,6 +42,20 @@ fn intern(data: Vec<f32>, storage: &mut Vec<f32>, sets: &mut FxHashMap<Vec<u32>,
         storage.extend(data); range
     })
 }
+/// The seven candidate routes of one link.
+pub(super) fn alternatives(a:Point,b:Point,clearance:f32)->Vec<Vec<Point>> {
+    let middle=Point{x:(a.x+b.x)*0.5,y:(a.y+b.y)*0.5}; let gap=clearance.max(0.25)*2.0;
+    let mut paths=vec![vec![a,b],vec![a,Point{x:a.x,y:b.y},b],vec![a,Point{x:b.x,y:a.y},b]];
+    for d in [-gap,gap] {
+        paths.push(vec![a,Point{x:middle.x+d,y:a.y},Point{x:middle.x+d,y:b.y},b]);
+        paths.push(vec![a,Point{x:a.x,y:middle.y+d},Point{x:b.x,y:middle.y+d},b]);
+    }
+    paths
+}
+/// Route length beyond the direct segment.
+pub(super) fn excess(path:&[Point],a:Point,b:Point)->f32 {
+    (path.windows(2).map(|s|distance(s[0],s[1])).sum::<f32>()-distance(a,b)).max(0.0)
+}
 impl Plan {
     /// One root per layout, one dispatch for the whole candidate batch.
     pub(crate) fn append(&mut self, mut other: Self) {
@@ -71,15 +85,9 @@ impl Plan {
             [c.x,c.y,d.x,d.y,crate::relation_score::crossing_factor(class,explicit_class(n,*c,*d,explicit))]).collect();
         let (oi,on)=intern(boxes,&mut self.obstacles,&mut self.obstacle_sets,4);
         let (li,ln)=intern(edges,&mut self.links,&mut self.link_sets,5);
-        let middle=Point{x:(a.x+b.x)*0.5,y:(a.y+b.y)*0.5}; let gap=clearance.max(0.25)*2.0;
-        let mut paths=vec![vec![a,b],vec![a,Point{x:a.x,y:b.y},b],vec![a,Point{x:b.x,y:a.y},b]];
-        for d in [-gap,gap] {
-            paths.push(vec![a,Point{x:middle.x+d,y:a.y},Point{x:middle.x+d,y:b.y},b]);
-            paths.push(vec![a,Point{x:a.x,y:middle.y+d},Point{x:b.x,y:middle.y+d},b]);
-        }
         let job=self.ints.len()/35;
-        for path in paths {
-            let excess=(path.windows(2).map(|s|distance(s[0],s[1])).sum::<f32>()-distance(a,b)).max(0.0);
+        for path in alternatives(a,b,clearance) {
+            let excess=excess(&path,a,b);
             for i in 0..4 { let p=path[i.min(path.len()-1)]; self.floats.extend([p.x,p.y]); }
             self.floats.extend([excess,clearance,crate::relation_score::pad_factor(class)]);
             self.ints.extend([path.len() as u32,oi,on,li,ln]);

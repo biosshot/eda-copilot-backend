@@ -21,29 +21,13 @@ pub(crate) fn layout_plan(primitives: &[&Primitive], obstacles: &[RouteObstacle]
 pub(crate) fn nets_plan(nets: &[PostPlaceNet], obstacles: &[RouteObstacle], explicit: &[ExplicitConnection], external: &[Arc<str>], ignored: &[Arc<str>], clearance: f32, bounds: Box2) -> Plan {
     // Stable accumulation order even when primitive insertion order changes.
     let mut obstacles = obstacles.to_vec();
-    obstacles.sort_by(|a,b| a.net.cmp(&b.net).then(a.layer.cmp(&b.layer)).then(a.reference.cmp(&b.reference))
-        .then(a.box_.left.total_cmp(&b.box_.left)).then(a.box_.right.total_cmp(&b.box_.right))
-        .then(a.box_.top.total_cmp(&b.box_.top)).then(a.box_.bottom.total_cmp(&b.box_.bottom)));
-    obstacles.dedup_by(|a,b| a.reference.is_some() && a.reference==b.reference && a.net==b.net && a.layer==b.layer
-        && a.box_.left==b.box_.left && a.box_.right==b.box_.right && a.box_.top==b.box_.top && a.box_.bottom==b.box_.bottom);
+    obstacles.sort_by(obstacle_order);
+    obstacles.dedup_by(|a,b| same_obstacle(a,b));
     let obstacles = obstacles.as_slice();
-    let mut nets: Vec<_> = nets.iter().filter(|n| !n.name.is_empty() && !is_ground(&n.name) && !ignored.iter().any(|s| s.eq_ignore_ascii_case(&n.name))).collect();
-    nets.sort_by(|a,b| a.name.cmp(&b.name));
-    let mut links = Vec::new();
-    for net in &nets { links.extend(spanning_segments(net.points.clone()).into_iter().map(|s| (net.name.clone(), s))); }
-    let mut explicit = explicit.to_vec();
-    explicit.sort_by(|a,b| a.net.cmp(&b.net).then(a.source.x.total_cmp(&b.source.x)).then(a.source.y.total_cmp(&b.source.y)).then(a.target.x.total_cmp(&b.target.x)).then(a.target.y.total_cmp(&b.target.y)));
-    extend_explicit_skeleton(&mut links, &explicit);
-    let layer = |net: &Arc<str>, a: Point, b: Point| -> Option<Arc<str>> {
-        if let Some(e) = explicit.iter().find(|e| &e.net==net && ((distance(a,e.source)<0.001 && distance(b,e.target)<0.001)||(distance(b,e.source)<0.001 && distance(a,e.target)<0.001))) { return e.layer.clone(); }
-        let endpoint = |p: Point| {
-            let mut layers = nets.iter().filter(|n| &n.name==net).flat_map(|n| n.points.iter().enumerate().filter(move |(_,q)|distance(p,**q)<0.001).map(move |(i,_)| n.layers.get(i).cloned().flatten()));
-            let first=layers.next().flatten();
-            if layers.all(|l| l==first) { first } else { None }
-        };
-        match (endpoint(a),endpoint(b)) { (Some(a),Some(b)) if a==b => Some(a), (Some(a),None)|(None,Some(a))=>Some(a), _=>None }
-    };
-    let layers: Vec<_> = links.iter().map(|(n,(a,b))| layer(n,*a,*b)).collect();
+    let nets = route_nets(nets, ignored);
+    let explicit = sorted_explicit(explicit);
+    let links = route_links(&nets, nets.iter().map(|net| spanning_segments(net.points.clone())), &explicit);
+    let layers: Vec<_> = links.iter().map(|(n,(a,b))| link_layer(&nets, &explicit, n, *a, *b)).collect();
     let mut plan = Plan::default();
     let mut costs = Vec::new();
     for ((net,(a,b)),layer) in links.iter().zip(&layers) {
@@ -63,7 +47,52 @@ pub(crate) fn nets_plan(nets: &[PostPlaceNet], obstacles: &[RouteObstacle], expl
     plan
 }
 
-fn spanning_segments(mut pts: Vec<Point>) -> Vec<Segment> {
+fn obstacle_order(a: &RouteObstacle, b: &RouteObstacle) -> std::cmp::Ordering {
+    a.net.cmp(&b.net).then(a.layer.cmp(&b.layer)).then(a.reference.cmp(&b.reference))
+        .then(a.box_.left.total_cmp(&b.box_.left)).then(a.box_.right.total_cmp(&b.box_.right))
+        .then(a.box_.top.total_cmp(&b.box_.top)).then(a.box_.bottom.total_cmp(&b.box_.bottom))
+}
+fn same_obstacle(a: &RouteObstacle, b: &RouteObstacle) -> bool {
+    a.reference.is_some() && a.reference==b.reference && a.net==b.net && a.layer==b.layer
+        && a.box_.left==b.box_.left && a.box_.right==b.box_.right && a.box_.top==b.box_.top && a.box_.bottom==b.box_.bottom
+}
+/// Input indices of the obstacles in the same order and deduplication as `nets_plan`.
+pub(super) fn sorted_obstacles(obstacles: &[RouteObstacle]) -> Vec<usize> {
+    let mut ids: Vec<usize> = (0..obstacles.len()).collect();
+    ids.sort_by(|&a,&b| obstacle_order(&obstacles[a],&obstacles[b]));
+    ids.dedup_by(|a,b| same_obstacle(&obstacles[*a],&obstacles[*b]));
+    ids
+}
+/// Routed nets, in name order.
+pub(super) fn route_nets<'a>(nets: &'a [PostPlaceNet], ignored: &[Arc<str>]) -> Vec<&'a PostPlaceNet> {
+    let mut nets: Vec<_> = nets.iter().filter(|n| !n.name.is_empty() && !is_ground(&n.name) && !ignored.iter().any(|s| s.eq_ignore_ascii_case(&n.name))).collect();
+    nets.sort_by(|a,b| a.name.cmp(&b.name));
+    nets
+}
+pub(super) fn sorted_explicit(explicit: &[ExplicitConnection]) -> Vec<ExplicitConnection> {
+    let mut explicit = explicit.to_vec();
+    explicit.sort_by(|a,b| a.net.cmp(&b.net).then(a.source.x.total_cmp(&b.source.x)).then(a.source.y.total_cmp(&b.source.y)).then(a.target.x.total_cmp(&b.target.x)).then(a.target.y.total_cmp(&b.target.y)));
+    explicit
+}
+/// Spanning links of every routed net, then authored connections not already in them.
+pub(super) fn route_links(nets: &[&PostPlaceNet], segments: impl Iterator<Item = Vec<Segment>>, explicit: &[ExplicitConnection]) -> Vec<(Arc<str>, Segment)> {
+    let mut links = Vec::new();
+    for (net, segments) in nets.iter().zip(segments) { links.extend(segments.into_iter().map(|s| (net.name.clone(), s))); }
+    extend_explicit_skeleton(&mut links, explicit);
+    links
+}
+/// Copper side of one link: its authored connection's, else a side shared by both endpoints.
+pub(super) fn link_layer(nets: &[&PostPlaceNet], explicit: &[ExplicitConnection], net: &Arc<str>, a: Point, b: Point) -> Option<Arc<str>> {
+    if let Some(e) = explicit.iter().find(|e| &e.net==net && ((distance(a,e.source)<0.001 && distance(b,e.target)<0.001)||(distance(b,e.source)<0.001 && distance(a,e.target)<0.001))) { return e.layer.clone(); }
+    let endpoint = |p: Point| {
+        let mut layers = nets.iter().filter(|n| &n.name==net).flat_map(|n| n.points.iter().enumerate().filter(move |(_,q)|distance(p,**q)<0.001).map(move |(i,_)| n.layers.get(i).cloned().flatten()));
+        let first=layers.next().flatten();
+        if layers.all(|l| l==first) { first } else { None }
+    };
+    match (endpoint(a),endpoint(b)) { (Some(a),Some(b)) if a==b => Some(a), (Some(a),None)|(None,Some(a))=>Some(a), _=>None }
+}
+
+pub(super) fn spanning_segments(mut pts: Vec<Point>) -> Vec<Segment> {
     pts.sort_by(|a,b| a.x.total_cmp(&b.x).then(a.y.total_cmp(&b.y)));
     pts.dedup_by(|a,b| distance(*a,*b)<1e-6);
     if pts.is_empty() { return vec![]; }

@@ -1312,6 +1312,72 @@ pub fn validate_change(p: RefineProblem, placements: Vec<Placement>) -> Result<b
     Ok(p.violations(&after,&changed).is_subset(&p.violations(&before,&changed)))
 }
 
+/// `validate_change` for one baseline and many candidates that only move
+/// existing poses. Each thread owns a scratch world that holds the accepted
+/// moves (`accept`) and reverts each candidate after its check.
+pub(crate) struct ChangeCheck { p: RefineProblem, before: World, distinct: bool }
+/// The baseline world with every accepted move applied, and the components
+/// whose accepted pose differs from the baseline.
+#[derive(Clone)]
+pub(crate) struct ChangeScratch { world: World, moved: Vec<usize> }
+impl ChangeCheck {
+    pub(crate) fn new(p: RefineProblem) -> Result<Self, String> {
+        p.validate()?;
+        let distinct = p.placements.iter().map(|q| &q.designator).collect::<FxHashSet<_>>().len() == p.placements.len();
+        let before = p.world(&p.placements)?;
+        Ok(Self { p, before, distinct })
+    }
+    pub(crate) fn placements(&self) -> &[Placement] { &self.p.placements }
+    pub(crate) fn scratch(&self) -> ChangeScratch { ChangeScratch { world: self.before.clone(), moved: Vec::new() } }
+    /// Poses of `moved` (pose index, local x, local y) that differ from the
+    /// scratch's current poses, with the pose each replaces.
+    fn updates(&self, scratch: &ChangeScratch, moved: &[(usize, f32, f32)]) -> Vec<(usize, Placement, Placement)> {
+        let mut updates = Vec::new();
+        for (i, c) in self.p.components.iter().enumerate() {
+            let Some(&(_, x, y)) = moved.iter().rev().find(|(pose, _, _)| *pose == c.pose_index) else { continue };
+            let current = self.p.pose(&scratch.world, i);
+            if current.x != x || current.y != y { updates.push((i, Placement { x, y, ..current.clone() }, current.clone())); }
+        }
+        updates
+    }
+    fn differs(&self, i: usize, pose: &Placement) -> bool {
+        let before = self.p.pose(&self.before, i);
+        before.x != pose.x || before.y != pose.y || before.rotate != pose.rotate || before.layer != pose.layer
+    }
+    /// Same result as `validate_change` for the baseline with the accepted
+    /// moves and then `moved` poses (pose index, local x, local y) replaced.
+    pub(crate) fn check(&self, scratch: &mut ChangeScratch, moved: &[(usize, f32, f32)]) -> Result<bool, String> {
+        if !self.distinct { return Ok(false); }
+        if moved.iter().any(|(_, x, y)| !x.is_finite() || !y.is_finite()) { return Ok(false); }
+        let updates = self.updates(scratch, moved);
+        // validate_change compares every component that differs from the
+        // baseline in the complete candidate, including accepted moves.
+        let mut indices: Vec<usize> = scratch.moved.iter().copied()
+            .filter(|i| !updates.iter().any(|(j, _, _)| j == i)).collect();
+        indices.extend(updates.iter().filter(|(i, pose, _)| self.differs(*i, pose)).map(|(i, _, _)| *i));
+        indices.sort_unstable();
+        let mut result = Ok(true);
+        for (i, pose, _) in &updates {
+            if self.p.apply(&mut scratch.world, *i, pose).is_err() { result = Ok(false); break; }
+        }
+        if result == Ok(true) {
+            result = Ok(self.p.violations(&scratch.world, &indices).is_subset(&self.p.violations(&self.before, &indices)));
+        }
+        for (i, _, previous) in &updates { self.p.apply(&mut scratch.world, *i, previous)?; }
+        result
+    }
+    /// Keep accepted moves in the scratch, so later checks see the complete
+    /// current layout while still comparing with the original baseline.
+    pub(crate) fn accept(&self, scratch: &mut ChangeScratch, moved: &[(usize, f32, f32)]) -> Result<(), String> {
+        for (i, pose, _) in self.updates(scratch, moved) {
+            self.p.apply(&mut scratch.world, i, &pose)?;
+            scratch.moved.retain(|j| *j != i);
+            if self.differs(i, &pose) { scratch.moved.push(i); }
+        }
+        Ok(())
+    }
+}
+
 pub fn solve(p: RefineProblem) -> Result<Value, String> {
     p.validate()?;
     let backend=std::env::var("PCB_POST_PLACE_BACKEND").unwrap_or_else(|_|"auto".into());

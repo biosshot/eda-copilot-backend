@@ -30,6 +30,7 @@ pub fn hits(a: P, b: P, l: f32, r: f32, t: f32, bottom: f32) -> bool {
     crate::geometry_policy::hits_box(a.x,a.y,b.x,b.y,l,r,t,bottom)
 }
 #[cfg_attr(feature = "gpu", cube)]
+#[inline(always)]
 pub fn obstacle(p: Path, l: f32, r: f32, t: f32, b: f32, clearance: f32, pad_factor: f32) -> f32 {
     let mut direct = false; let mut band = false;
     for i in 0..p.count-1 {
@@ -46,6 +47,7 @@ pub fn obstacle(p: Path, l: f32, r: f32, t: f32, b: f32, clearance: f32, pad_fac
     cost
 }
 #[cfg_attr(feature = "gpu", cube)]
+#[inline(always)]
 pub fn crossing(p: Path, a: P, b: P, factor: f32) -> f32 {
     let mut hit = false;
     for i in 0..p.count-1 { if crosses(point(p,i),point(p,i+1),a,b) { hit = true; } }

@@ -1,4 +1,5 @@
 mod post_place_refine;
+mod board_alignment;
 mod block_solver;
 mod compute;
 mod fast_route;
@@ -527,6 +528,16 @@ pub fn refine_post_placement(mut problem: Value) -> Result<Value> {
     frame.restore(&mut output).map_err(invalid_problem)?;
     output["numericFrame"] = frame.metadata();
     Ok(output)
+}
+
+#[napi]
+pub fn board_alignment_contract_version() -> u32 { board_alignment::CONTRACT_VERSION }
+
+/// Complete board alignment finishing pass; see `board_alignment`.
+#[napi]
+pub fn refine_board_alignment(problem: Value) -> Result<Value> {
+    let _float_env = float_env::Guard::enter();
+    board_alignment::solve(problem).map_err(invalid_problem)
 }
 
 #[napi]
