@@ -250,7 +250,7 @@ function pairPlacements(): Placement[] {
 
 function gpuRefine(problem: object, backend: string, options: Record<string,string> = {}, boundaryError?: RegExp) {
     const require = createRequire(import.meta.url);
-    const addon = resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH ?? resolve('native/pcb-board-packer', require('../native/pcb-board-packer/platform.cjs').nativeFilename()));
+    const addon = resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH ?? resolve('native/node-addon', require('../native/node-addon/platform.cjs').nativeFilename()));
     const child = spawnSync(process.execPath, ['-e',
         'const a=require(process.argv[1]),p=JSON.parse(require("node:fs").readFileSync(0,"utf8"));const r=a.refinePostPlacement(p);console.log(JSON.stringify({result:r,valid:a.validatePlacementChange(p,r.placements)}));', addon], {
         input: JSON.stringify(problem), encoding: 'utf8', windowsHide: true, timeout: 60_000,
@@ -344,7 +344,7 @@ test('post-place idle and failed owners release the GPU while their process stay
     const p=encodeNativePostPlaceRefineProblem(pairInput(),pairPlacements(),1);
     const cpu=gpuRefine(p,'cpu');
     const require=createRequire(import.meta.url);
-    const addon=resolve('native/pcb-board-packer',require('../native/pcb-board-packer/platform.cjs').nativeFilename());
+    const addon=resolve('native/node-addon',require('../native/node-addon/platform.cjs').nativeFilename());
     const owner=spawn(process.execPath,['-e',
         'const a=require(process.argv[1]),p=JSON.parse(require("node:fs").readFileSync(0,"utf8"));a.refinePostPlacement(p);process.send("ready");process.on("message",()=>{process.env.PCB_POST_PLACE_GPU_FAIL="after_move";a.refinePostPlacement(p);process.send("failed");});',addon],{
         windowsHide:true,stdio:['pipe','ignore','pipe','ipc'],env:{...process.env,PCB_POST_PLACE_BACKEND:'cubecl'},

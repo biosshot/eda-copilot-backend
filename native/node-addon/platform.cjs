@@ -5,7 +5,7 @@ function nativeFilename(platform = process.platform, arch = process.arch, report
   const suffix = platform === 'win32' ? 'msvc' : platform === 'darwin' ? ''
     : platform === 'linux' && report?.header?.glibcVersionRuntime ? 'gnu' : null;
   if (suffix === null) throw new Error(`Unsupported PCB solver platform: ${platform}-${arch} (Linux requires glibc)`);
-  return `pcb-board-packer.${platform}-${arch}${suffix ? '-' + suffix : ''}.node`;
+  return `eda-copilot-node.${platform}-${arch}${suffix ? '-' + suffix : ''}.node`;
 }
 
 module.exports = { nativeFilename };

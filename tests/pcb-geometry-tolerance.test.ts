@@ -6,14 +6,14 @@ import { minimalProblem } from './helpers/native-board-problem.ts';
 import { PCB_PLACEMENT_EPSILON } from '../src/pcb-layout/f32.ts';
 import { boxInsideBoard, overlaps, PLACEMENT_EPSILON } from '../src/pcb-layout/pcb-auto-place/geometry.ts';
 
-const native = createRequire(import.meta.url)('../native/pcb-board-packer/index.cjs');
+const native = createRequire(import.meta.url)('../native/node-addon/index.cjs');
 
 test('clearance boundary candidates agree in actual CPU/GPU Board search', { skip: process.env.PCB_BOARD_GPU_TESTS !== '1' }, () => {
     const p = touchingPair();
     p.searchWidth = 4;
     const run = (backend: string) => {
         const child = spawnSync(process.execPath, ['-e',
-            'const a=require("./native/pcb-board-packer/index.cjs");const p=JSON.parse(require("node:fs").readFileSync(0,"utf8"));console.log(JSON.stringify(a.solveBoardPacked(p)));'], {
+            'const a=require("./native/node-addon/index.cjs");const p=JSON.parse(require("node:fs").readFileSync(0,"utf8"));console.log(JSON.stringify(a.solveBoardPacked(p)));'], {
             input: JSON.stringify(p), encoding: 'utf8', windowsHide: true,
             env: { ...process.env, PCB_BOARD_BACKEND: backend, PCB_BOARD_GPU_VERIFY: '1', PCB_BOARD_PACKER_PROFILE: '1', PCB_BOARD_PACKER_THREADS: '1' },
         });

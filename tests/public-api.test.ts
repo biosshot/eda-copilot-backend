@@ -119,10 +119,10 @@ test('public PCB API runs the native worker, reports progress, preserves inputs 
 });
 
 test('native filename selection is strict across supported operating systems and architectures', () => {
-  const { nativeFilename } = createRequire(import.meta.url)('../native/pcb-board-packer/platform.cjs');
-  assert.equal(nativeFilename('win32', 'x64', {}), 'pcb-board-packer.win32-x64-msvc.node');
-  assert.equal(nativeFilename('linux', 'x64', { header: { glibcVersionRuntime: '2.31' } }), 'pcb-board-packer.linux-x64-gnu.node');
-  for (const arch of ['arm64', 'x64']) assert.equal(nativeFilename('darwin', arch, {}), `pcb-board-packer.darwin-${arch}.node`);
+  const { nativeFilename } = createRequire(import.meta.url)('../native/node-addon/platform.cjs');
+  assert.equal(nativeFilename('win32', 'x64', {}), 'eda-copilot-node.win32-x64-msvc.node');
+  assert.equal(nativeFilename('linux', 'x64', { header: { glibcVersionRuntime: '2.31' } }), 'eda-copilot-node.linux-x64-gnu.node');
+  for (const arch of ['arm64', 'x64']) assert.equal(nativeFilename('darwin', arch, {}), `eda-copilot-node.darwin-${arch}.node`);
   assert.throws(() => nativeFilename('linux', 'x64', {}), /glibc/);
   assert.throws(() => nativeFilename('win32', 'ia32', {}), /architecture/);
 });

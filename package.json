@@ -38,8 +38,11 @@
   },
   "files": [
     "dist",
-    "native/pcb-board-packer/*.node",
-    "native/pcb-board-packer/*.cjs",
+    "native/node-addon/*.node",
+    "native/node-addon/*.cjs",
+    "native/node-addon/*.d.cts",
+    "native/pcb-board-packer/*.d.ts",
+    "native/analyze/*.d.ts",
     "README.md",
     "LICENSE"
   ],

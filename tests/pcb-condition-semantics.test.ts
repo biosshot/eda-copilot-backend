@@ -9,7 +9,7 @@ import {encodeNativeBlockSolveProblem} from '../src/pcb-layout/pcb-auto-place-v2
 import {encodeNativePostPlaceScoreProblem} from '../src/pcb-layout/pcb-auto-place-v2/native/encode-post-place-score.ts';
 import {encodeNativePostPlaceRefineProblem} from '../src/pcb-layout/pcb-auto-place-v2/native/encode-post-place-refine.ts';
 import {createClearanceResolver} from '../src/pcb-layout/pcb-auto-place/clearance-resolver.ts';
-const addon=createRequire(import.meta.url)('../native/pcb-board-packer/index.cjs');
+const addon=createRequire(import.meta.url)('../native/node-addon/index.cjs');
 const endpoint=d=>({type:'component',designator:d});
 function fixture(distance=2, layer='top', hints=[]) {
   const components=['A','B'].map(designator=>({designator,value:designator,block_name:designator,pins:[],search_query:'',part_uuid:null,footprint_uuid:null,

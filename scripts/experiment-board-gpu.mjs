@@ -23,7 +23,7 @@ const json = path => JSON.parse(readFileSync(path, 'utf8'), (_, value) => {
 });
 const write = (path, value) => writeFileSync(path, JSON.stringify(value, null, 2));
 const addonPath = resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH ??
-    join('native/pcb-board-packer', require('../native/pcb-board-packer/platform.cjs').nativeFilename()));
+    join('native/node-addon', require('../native/node-addon/platform.cjs').nativeFilename()));
 function sources() {
     const paths = execFileSync('rg', ['--files', 'native/pcb-board-packer/src',
         'src/pcb-layout/pcb-auto-place-v2', 'scripts'], { encoding: 'utf8' }).trim().split(/\r?\n/);

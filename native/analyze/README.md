@@ -1,7 +1,9 @@
 # PCB analyze: board import
 
 Standalone Rust library (`pcb-analyze`, ordinary `rlib`) with no Node addon,
-packer dependency, GPU initialization or runtime integration. This step implements
+packer dependency or GPU initialization. The shared
+[Node host](../node-addon/README.md) calls this importer through the internal
+`importAnalysisBoard(json)` binding. This library implements
 only the RoutingBoardV2 input boundary. It does not complete P3/P4 of the broader
 analysis plan.
 

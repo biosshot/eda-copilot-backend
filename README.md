@@ -32,6 +32,8 @@ npm run test:package
 
 Node >=20.19 is required. Rust/Cargo and the platform C/C++ toolchain are needed only to build the native solver from source. `npm run dev` watches TypeScript and copies its assets; rebuild Rust separately when changing native code.
 
+`native:build` builds [the shared N-API host](native/node-addon/README.md), which links the ordinary Rust libraries `pcb-board-packer` and `pcb-analyze`. Its loader and `eda-copilot-node.<platform>.node` binary live in `native/node-addon`; each library owns its declarations, re-exported by the host. The internal `importAnalysisBoard(json)` binding exposes structural import diagnostics; it does not introduce a public analysis DSL or physical solver.
+
 The repository contains its own `src/types`. `component.ts`, `circuit.ts`, `lcsc.ts` and `reused.ts` were copied from the original `copilot-server/src/types` during extraction. They are normal source files maintained here, not aliases or generated links. The existing lightweight Zod preprocess helpers are local. There is no `@copilot/shared` dependency and no EasyEDA repository checkout is required to build or test this package.
 
 `npm run test:package` builds a local npm archive from existing build outputs, installs only that archive into an isolated consumer with install scripts disabled, and exercises public APIs, declarations, workers, assets and the native solver. API calls use local fixtures. It does not publish anything.

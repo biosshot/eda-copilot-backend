@@ -25,7 +25,7 @@ jobs:
         with:
           pattern: native-*
           merge-multiple: true
-          path: native/pcb-board-packer
+          path: native/node-addon
       - run: npm run build
       - run: npm run check:release
       - run: npm run test:package

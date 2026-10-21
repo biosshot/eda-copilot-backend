@@ -26,7 +26,7 @@ if (process.argv[2] === '--worker') {
     if (!node) throw Error(`Missing ${block}`);
     const captures = [], pools = [];
     const addon = loadNativeBoardPacker(), nativeSolve = addon.solveBlockPrimitives;
-    const nativeHash = createHash('sha256').update(readFileSync('native/pcb-board-packer/pcb-board-packer.win32-x64-msvc.node')).digest('hex');
+    const nativeHash = createHash('sha256').update(readFileSync('native/node-addon/eda-copilot-node.win32-x64-msvc.node')).digest('hex');
     mkdirSync('debugging/unified-native-cache',{recursive:true});
     addon.solveBlockPrimitives = problem => {
         const key = createHash('sha256').update(nativeHash + JSON.stringify(problem)).digest('hex');
@@ -63,7 +63,7 @@ if (process.argv[2] === '--worker') {
     const allInput={...input,solverOptions:{...input.solverOptions,ignoredRatsnestSignals:[]}};
     const data={block,variant,ms,sourceInputHash:createHash('sha256').update(raw).digest('hex'),
         inputHash:createHash('sha256').update(JSON.stringify(input)).digest('hex'),c9Role:input.components.find(c=>c.designator==='C9').pcb.role,sourceUnchanged:JSON.stringify(input)===JSON.stringify(sourceInput),
-        nativeHash:createHash('sha256').update(readFileSync('native/pcb-board-packer/pcb-board-packer.win32-x64-msvc.node')).digest('hex'),inventory,orientation,validation,
+        nativeHash:createHash('sha256').update(readFileSync('native/node-addon/eda-copilot-node.win32-x64-msvc.node')).digest('hex'),inventory,orientation,validation,
         metrics:placementMetrics(input,placements),allMetrics:placementMetrics(allInput,placements),pairs,localHardPairs,hardPairsOk,
         placements,diagnostics:result.diagnostics,captures,pools,alternatives:result.root.layoutAlternatives?.map(p=>({placements:p.placements,quality:p.blockQuality}))};
     mkdirSync(`${out}/${block}`,{recursive:true});

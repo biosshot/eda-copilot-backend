@@ -102,8 +102,8 @@ export class DiskSolveCache {
         mkdirSync(dir, { recursive: true });
         if (identity !== undefined) { this.identity = identity; return; }
         const require = createRequire(import.meta.url);
-        const { nativeFilename } = require(backendResource('native', 'pcb-board-packer', 'platform.cjs')) as { nativeFilename: () => string };
-        const binary = env.PCB_BOARD_PACKER_NATIVE_PATH ? resolve(env.PCB_BOARD_PACKER_NATIVE_PATH) : backendResource('native', 'pcb-board-packer', nativeFilename());
+        const { nativeFilename } = require(backendResource('native', 'node-addon', 'platform.cjs')) as { nativeFilename: () => string };
+        const binary = env.PCB_BOARD_PACKER_NATIVE_PATH ? resolve(env.PCB_BOARD_PACKER_NATIVE_PATH) : backendResource('native', 'node-addon', nativeFilename());
         this.identity = createHash('sha256').update(readFileSync(binary)).update(`:${env.PCB_BLOCK_BACKEND ?? ''}:${env.PCB_BLOCK_GPU_DISABLED ?? ''}`).digest('hex');
     }
     private path(key: string) { return join(this.dir, createHash('sha256').update(this.identity).update(key).digest('hex') + '.bin'); }

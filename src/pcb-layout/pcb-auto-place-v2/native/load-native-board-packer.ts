@@ -13,7 +13,7 @@ export function loadNativeBoardPacker(): NativeBoardPackerAddon {
     const configuredPath = env.PCB_BOARD_PACKER_NATIVE_PATH;
     const addonPath = configuredPath
         ? resolve(configuredPath)
-        : backendResource('native', 'pcb-board-packer', 'index.cjs');
+        : backendResource('native', 'node-addon', 'index.cjs');
     try {
         const addon = require(addonPath) as NativeBoardPackerAddon;
         const precision = addon.numericContract?.();

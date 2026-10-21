@@ -1,0 +1,33 @@
+[package]
+name = "eda-copilot-node"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "3", features = ["napi9", "serde-json"] }
+napi-derive = "3"
+serde_json = "1"
+pcb-board-packer = { path = "../pcb-board-packer", default-features = false }
+pcb-analyze = { path = "../analyze" }
+
+[build-dependencies]
+napi-build = "2"
+
+[features]
+default = ["gpu"]
+gpu = ["pcb-board-packer/gpu"]
+placement-bench = ["pcb-board-packer/placement-bench"]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+# Preserve full-call CPU recovery after a GPU panic.
+panic = "unwind"
+strip = "symbols"
+
+[patch.crates-io]
+cubecl-cuda = { path = "../pcb-board-packer/vendor/cubecl-cuda" }

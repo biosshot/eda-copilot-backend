@@ -44,7 +44,7 @@ const stageMetrics = result.stages.map(stage=>{
  return {stage:stage.name,hpwl,pairSum:Object.values(pairs).reduce((a,b)=>a+b,0),pairMax:Math.max(0,...Object.values(pairs)),pairs};
 });
 const require=createRequire(import.meta.url);
-const nativePath=resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH??`native/pcb-board-packer/${require('../native/pcb-board-packer/platform.cjs').nativeFilename()}`);
+const nativePath=resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH??`native/node-addon/${require('../native/node-addon/platform.cjs').nativeFilename()}`);
 const fixedChanges=input.components.filter(c=>c.pcb.fixedPlacement).flatMap(c=>{
  const p=result.placements.find(p=>p.designator===c.designator), fixed=c.pcb.fixedPlacement;
  return !p || Math.abs(p.x-fixed.x)>.005 || Math.abs(p.y-fixed.y)>.005 || p.rotate!==fixed.rotate || p.layer!==fixed.layer ? [c.designator]:[];

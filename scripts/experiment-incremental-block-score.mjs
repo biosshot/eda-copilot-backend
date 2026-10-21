@@ -29,7 +29,7 @@ for(const name of ['lte_power','usb_charge','current_iso']){
     const row={name,initialMs,pairsMs,ms:initialMs+pairsMs,beforeMs:previous.medianMs,beforeTimes:previous.times,
         identicalCheckpoints:true,metrics:previous.metrics};rows.push(row);
     writeFileSync(`${out}/${name}.json.gz`,gzipSync(JSON.stringify({initial,pairs,row})));
-    writeFileSync(`${out}/summary.json`,JSON.stringify({nativeHash:createHash('sha256').update(readFileSync('native/pcb-board-packer/pcb-board-packer.win32-x64-msvc.node')).digest('hex'),
+    writeFileSync(`${out}/summary.json`,JSON.stringify({nativeHash:createHash('sha256').update(readFileSync('native/node-addon/eda-copilot-node.win32-x64-msvc.node')).digest('hex'),
         detailProfile:Boolean(process.env.PCB_BLOCK_SOLVER_DETAIL),reference:source,rows},null,2));
     console.log(JSON.stringify(row));
 }

@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
-const nativePath = resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH ?? `native/pcb-board-packer/${require('../native/pcb-board-packer/platform.cjs').nativeFilename()}`);
+const nativePath = resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH ?? `native/node-addon/${require('../native/node-addon/platform.cjs').nativeFilename()}`);
 const addon = require(nativePath);
 export const variants = {
  NCL: {netCandidates:true,reducedHull:true,longNets:true},

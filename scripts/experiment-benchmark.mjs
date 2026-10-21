@@ -4,7 +4,7 @@ import {resolve} from 'node:path';
 import assert from 'node:assert/strict';
 import {variants} from './experiment-block-replay.mjs';
 const require=createRequire(import.meta.url);
-const addon=require(resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH??`native/pcb-board-packer/${require('../native/pcb-board-packer/platform.cjs').nativeFilename()}`));
+const addon=require(resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH??`native/node-addon/${require('../native/node-addon/platform.cjs').nativeFilename()}`));
 const {problem}=JSON.parse(readFileSync('tests/fixtures/block-placement/Telemetry/block-23.json'));
 const rows=[];
 for(const variant of ['B0','N','L','ALLX','NCLR']) {

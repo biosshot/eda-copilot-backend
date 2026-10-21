@@ -8,7 +8,6 @@ fn hash_sources(path:&Path,hash:&mut DefaultHasher) {
     }
 }
 fn main() {
-    napi_build::setup();
     println!("cargo:rerun-if-changed=src");
     println!("cargo:rerun-if-changed=Cargo.lock");
     println!("cargo:rerun-if-changed=Cargo.toml");

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Native addon boundary
+
+- Move N-API registration/status adaptation, loader and the single installed `eda-copilot-node.<platform>.node` binary into `native/node-addon`, linking the ordinary packer and analyze Rust libraries. Preserve placement operation order, F32 guards, contracts and GPU support; add only internal `importAnalysisBoard(json)` diagnostics with the independent F64 importer. Each library owns its declarations, aggregated by the host. Verify source/installed-package imports without adding analysis runtime or solver stages.
+
 ### Analysis import
 
 - Add the standalone `native/analyze` Rust library with a strict RoutingBoardV2 input adapter, independent indexed board data, retained source IDs and explicit diagnostics for invalid/missing/limited data. Preserve F64 millimetres/Y-down geometry and CAD fill states without repair or refill. Add focused import tests and replay all eight captured boards; leave placement, addon packaging and the analysis DSL unchanged.

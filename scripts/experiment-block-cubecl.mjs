@@ -39,7 +39,7 @@ if (!process.env.PCB_BLOCK_EXPERIMENT_CHILD) {
 process.env.PCB_BLOCK_BACKEND=mode;
 process.env.PCB_BLOCK_SOLVER_PROFILE='1';
 const require=createRequire(import.meta.url);
-const addonPath=resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH ?? `native/pcb-board-packer/${require('../native/pcb-board-packer/platform.cjs').nativeFilename()}`);
+const addonPath=resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH ?? `native/node-addon/${require('../native/node-addon/platform.cjs').nativeFilename()}`);
 const addon=require(addonPath);
 const root=resolve(args.root ?? 'debugging/pcb-layout/runs/PortableScope/2026-09-29T12-02-18-665Z/native/block/process-19228-thread-0');
 const prefixes=(args.blocks ?? '00079,00097,00091').split(',');

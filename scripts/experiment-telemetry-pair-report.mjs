@@ -62,7 +62,7 @@ for(const [name,refs] of crops){
 const oldPack=before.hypotheses[0].roots.flatMap(r=>r.placements);
 const poseKey=ps=>JSON.stringify(ps.map(p=>[p.designator,p.x,p.y,p.rotate,p.layer]).sort((a,b)=>a[0].localeCompare(b[0])));
 const summary={source,inputSha256:createHash('sha256').update(raw).digest('hex'),
-    nativeSha256:createHash('sha256').update(readFileSync('native/pcb-board-packer/pcb-board-packer.win32-x64-msvc.node')).digest('hex'),
+    nativeSha256:createHash('sha256').update(readFileSync('native/node-addon/eda-copilot-node.win32-x64-msvc.node')).digest('hex'),
     ms:after.ms,changed,policy,checks,final,packed,diagnostics,worsened,ordinaryPackingPreserved:poseKey(oldPack)===poseKey(pps[0])};
 writeFileSync(`${dir}/summary.json`,JSON.stringify(summary,null,2));
 const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;'),n=x=>Number(x).toFixed(2);

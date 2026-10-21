@@ -82,7 +82,7 @@ async function capture(fixture) {
     const revision = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: backend, encoding: 'utf8' }).trim();
     const workingTreeDirty = execFileSync('git', ['status', '--porcelain'], { cwd: backend, encoding: 'utf8' }).trim().length > 0;
     const require = createRequire(import.meta.url);
-    const nativeFile = join(backend, 'native', 'pcb-board-packer', require('../native/pcb-board-packer/platform.cjs').nativeFilename());
+    const nativeFile = join(backend, 'native', 'node-addon', require('../native/node-addon/platform.cjs').nativeFilename());
     const nativeSha256 = existsSync(nativeFile) ? sha256(readFileSync(nativeFile)) : null;
     const provenance = { revision, workingTreeDirty, nativeSha256,
         backendRequests: Object.fromEntries(['block', 'board', 'refine'].map(kind => [kind, nativeBackendRequest(kind)])),

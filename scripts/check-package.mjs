@@ -30,9 +30,12 @@ function pack(cwd) {
 
 const backendPack = pack(backend);
 const filenames = backendPack.files.map(file => file.path);
-for (const file of ['dist/spec-doc.d.ts', 'dist/run-pcb-layout.worker.js', 'dist/tree-subtree.worker.js', 'native/pcb-board-packer/index.cjs', 'native/pcb-board-packer/platform.cjs']) assert.ok(filenames.includes(file), file);
-const { nativeFilename } = require('../native/pcb-board-packer/platform.cjs');
-assert.ok(filenames.includes('native/pcb-board-packer/' + nativeFilename()), 'Host native solver missing');
+for (const file of ['dist/spec-doc.d.ts', 'dist/run-pcb-layout.worker.js', 'dist/tree-subtree.worker.js', 'native/node-addon/index.cjs', 'native/node-addon/platform.cjs', 'native/node-addon/index.d.cts', 'native/pcb-board-packer/index.d.ts', 'native/analyze/index.d.ts']) assert.ok(filenames.includes(file), file);
+const { nativeFilename } = require('../native/node-addon/platform.cjs');
+assert.ok(filenames.includes('native/node-addon/' + nativeFilename()), 'Host native addon missing');
+assert.equal(filenames.filter(name => name.endsWith('/' + nativeFilename())).length, 1, 'Exactly one installed host addon');
+assert.ok(!filenames.some(name => /^native\/(?:analyze|pcb-board-packer)\/.*\.(?:node|cjs)$/.test(name)), 'Rust libraries contain declarations only, no separate runtime addons');
+assert.ok(!filenames.some(name => /^native\/.*(?:Cargo\.|\.rs$)/.test(name)), 'Rust sources are not installed runtime assets');
 assert.ok(!filenames.some(name => /^(?:src|tests|\.artifacts)\/|\/target\/|\.env/.test(name)), 'Unexpected package contents');
 for (const file of filenames.filter(name => name.startsWith('dist/') && /\.(?:js|ts)$/.test(name))) {
   assert.ok(!/post-place-refiner\.reference|evaluatePostPlaceBatch/.test(readFileSync(join(backend, file), 'utf8')), `Retired TypeScript refiner leaked into package: ${file}`);
@@ -44,19 +47,33 @@ run([npmCli, 'install', '--ignore-scripts', '--no-audit', '--no-fund', '--fetch-
 const manifest = JSON.parse(readFileSync(join(consumer, 'node_modules/eda-copilot-backend/package.json'), 'utf8'));
 assert.ok(!manifest.dependencies['@copilot/shared'] && !manifest.devDependencies['@copilot/shared']);
 copyFileSync(join(backend, 'tests/fixtures/api-fixtures.mjs'), join(consumer, 'fixtures.mjs'));
+const localNative = require('../native/node-addon/index.cjs');
+assert.equal(typeof localNative.importAnalysisBoard, 'function', 'Build the shared addon before packaging');
+const analysisFixtures = ['NanoScope', 'NanoSpec', 'ESPower', 'BandAmpV5', 'USB_PD_Trigger_5A', 'STM32G0_CAN_RS485', 'TPS63060DSCR', 'ThunderF722']
+  .map(name => {
+    const json = readFileSync(join(backend, 'tests/pcb-analyze', name, name + '.json'), 'utf8');
+    return { name, json, expected: localNative.importAnalysisBoard(json) };
+  });
+writeFileSync(join(consumer, 'analysis-fixtures.json'), JSON.stringify(analysisFixtures));
 writeFileSync(join(consumer, 'smoke.mjs'), `
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { componentSearch, searchReusedBlock, extractCircuit, getPcbComponentSizes, makePcbLayout, disposeBackend } from 'eda-copilot-backend';
 import { installEasyEdaFixture, schematicInput, pcbInput } from './fixtures.mjs';
 const nativeRequire = createRequire(import.meta.url);
 const backendRoot = join(process.cwd(), 'node_modules/eda-copilot-backend');
-const native = nativeRequire(join(backendRoot, 'native/pcb-board-packer/index.cjs'));
+const native = nativeRequire(join(backendRoot, 'native/node-addon/index.cjs'));
 assert.equal(native.postPlaceRefineContractVersion(), 3, 'Installed package must contain the F32 Rust refiner');
 assert.equal(native.numericContract(), 'f32-rte-ftz-v1');
 assert.equal(native.placementScoreContractVersion(), 13);
 assert.equal(typeof native.refinePostPlacement, 'function');
+assert.deepEqual(Object.keys(native).sort(), ${JSON.stringify(Object.keys(localNative).sort())});
+assert.equal(native.importAnalysisBoard('{').imported, false);
+for (const { name, json, expected } of JSON.parse(readFileSync('analysis-fixtures.json', 'utf8'))) {
+  assert.deepEqual(native.importAnalysisBoard(json), expected, 'Installed analysis import: ' + name);
+}
 const transport = installEasyEdaFixture();
 try {
   assert.deepEqual(await searchReusedBlock({ query: 'power' }), []);
@@ -86,6 +103,10 @@ for (const options of [
 writeFileSync(join(consumer, 'consumer.ts'), `
 import { componentSearch, extractCircuit, makePcbLayout, getPcbComponentSizes, disposeBackend } from 'eda-copilot-backend';
 import type { CircuitMod, FootprintSpec } from 'eda-copilot-backend/types';
+import native = require('./node_modules/eda-copilot-backend/native/node-addon/index.cjs');
+const imported: boolean = native.importAnalysisBoard('{}').imported;
+const sourceId: string | null = native.importAnalysisBoard('{}').diagnostics[0].source_id;
+const existingContract: number = native.contractVersion();
 const circuit: CircuitMod = { add_components: [], add_reused_blocks: [], rm_components: null, external_rm_connect: null, external_connect: null };
 const footprint: FootprintSpec = { name: 'local', width: 2, height: 1, pads: [] };
 componentSearch({ MPN: 'TEST' });
