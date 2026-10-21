@@ -42,6 +42,13 @@ The repository contains its own `src/types`. `component.ts`, `circuit.ts`, `lcsc
 
 Real board examples are in `tests/pcb-layout`; run `npm run test:pcb-layout -- --list`, selected fixture names, or `--all`. These optional examples query the public footprint catalogue and require network access.
 
+The internal [analysis runtime](src/analyze/README.md) executes the structural
+importer in isolated processes with a bounded queue, admission-based deadlines
+and targeted cancellation. `disposeBackend()` closes both placement and analysis
+pools. Run the eight saved boards with
+`npm run test:pcb-analyze -- --all --name import`; each run retains its full report.
+This adds no public `/analyze` entry point or physical analysis implementation.
+
 ## Native releases
 
 `.github/workflows/ci.yml` builds and tests Windows x64, Linux x64 on Ubuntu 22.04 (glibc 2.35 baseline), macOS Intel and macOS arm64 on Node 20/24. `.github/workflows/publish.yml` runs only on a `v*` tag. It waits for CI, collects all four `.node` binaries into one package, runs `npm run check:release` and tests the archive before publishing. There is no install-time Rust compilation.

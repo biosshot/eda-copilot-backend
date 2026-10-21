@@ -9,6 +9,8 @@ export default defineConfig({
     types: 'src/types.ts',
     'run-pcb-layout.worker': 'src/pcb-layout/run-pcb-layout.worker.ts',
     'tree-subtree.worker': 'src/pcb-layout/pcb-auto-place-v2/tree-subtree.worker.ts',
+    'run-analysis.worker': 'src/analyze/run-analysis.worker.ts',
+    'analysis-runtime': 'src/analyze/run-analysis.ts',
   },
   format: ['esm'],
   platform: 'node',

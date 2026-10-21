@@ -30,7 +30,7 @@ function pack(cwd) {
 
 const backendPack = pack(backend);
 const filenames = backendPack.files.map(file => file.path);
-for (const file of ['dist/spec-doc.d.ts', 'dist/run-pcb-layout.worker.js', 'dist/tree-subtree.worker.js', 'native/node-addon/index.cjs', 'native/node-addon/platform.cjs', 'native/node-addon/index.d.cts', 'native/pcb-board-packer/index.d.ts', 'native/analyze/index.d.ts']) assert.ok(filenames.includes(file), file);
+for (const file of ['dist/spec-doc.d.ts', 'dist/run-pcb-layout.worker.js', 'dist/tree-subtree.worker.js', 'dist/run-analysis.worker.js', 'dist/analysis-runtime.js', 'native/node-addon/index.cjs', 'native/node-addon/platform.cjs', 'native/node-addon/index.d.cts', 'native/pcb-board-packer/index.d.ts', 'native/analyze/index.d.ts']) assert.ok(filenames.includes(file), file);
 const { nativeFilename } = require('../native/node-addon/platform.cjs');
 assert.ok(filenames.includes('native/node-addon/' + nativeFilename()), 'Host native addon missing');
 assert.equal(filenames.filter(name => name.endsWith('/' + nativeFilename())).length, 1, 'Exactly one installed host addon');
@@ -46,6 +46,8 @@ console.log('Installing standalone backend archive into an isolated consumer...'
 run([npmCli, 'install', '--ignore-scripts', '--no-audit', '--no-fund', '--fetch-timeout=30000', '--fetch-retries=0', '--registry=https://registry.npmjs.org', backendPack.archive], consumer);
 const manifest = JSON.parse(readFileSync(join(consumer, 'node_modules/eda-copilot-backend/package.json'), 'utf8'));
 assert.ok(!manifest.dependencies['@copilot/shared'] && !manifest.devDependencies['@copilot/shared']);
+assert.ok(!manifest.exports['./analyze'], 'Analysis runtime stays internal');
+assert.ok(!manifest.dependencies.tsx, 'Installed workers do not require tsx');
 copyFileSync(join(backend, 'tests/fixtures/api-fixtures.mjs'), join(consumer, 'fixtures.mjs'));
 const localNative = require('../native/node-addon/index.cjs');
 assert.equal(typeof localNative.importAnalysisBoard, 'function', 'Build the shared addon before packaging');
@@ -60,20 +62,30 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { componentSearch, searchReusedBlock, extractCircuit, getPcbComponentSizes, makePcbLayout, disposeBackend } from 'eda-copilot-backend';
 import { installEasyEdaFixture, schematicInput, pcbInput } from './fixtures.mjs';
 const nativeRequire = createRequire(import.meta.url);
 const backendRoot = join(process.cwd(), 'node_modules/eda-copilot-backend');
 const native = nativeRequire(join(backendRoot, 'native/node-addon/index.cjs'));
+const { runAnalysisProblem, terminateAnalysisPool } = await import(pathToFileURL(join(backendRoot, 'dist/analysis-runtime.js')).href);
 assert.equal(native.postPlaceRefineContractVersion(), 3, 'Installed package must contain the F32 Rust refiner');
 assert.equal(native.numericContract(), 'f32-rte-ftz-v1');
 assert.equal(native.placementScoreContractVersion(), 13);
 assert.equal(typeof native.refinePostPlacement, 'function');
 assert.deepEqual(Object.keys(native).sort(), ${JSON.stringify(Object.keys(localNative).sort())});
 assert.equal(native.importAnalysisBoard('{').imported, false);
+try {
 for (const { name, json, expected } of JSON.parse(readFileSync('analysis-fixtures.json', 'utf8'))) {
   assert.deepEqual(native.importAnalysisBoard(json), expected, 'Installed analysis import: ' + name);
+  const progress = [];
+  assert.deepEqual(await runAnalysisProblem({ kind: 'import-board', boardJson: json }, { onProgress: event => progress.push(event.phase) }), expected, 'Installed analysis worker: ' + name);
+  assert.deepEqual(progress, ['queued', 'started', 'completed']);
 }
+assert.equal((await runAnalysisProblem({ kind: 'import-board', boardJson: '{' })).imported, false);
+await terminateAnalysisPool();
+assert.equal((await runAnalysisProblem({ kind: 'import-board', boardJson: '{}' })).imported, false);
+} finally { await terminateAnalysisPool(); }
 const transport = installEasyEdaFixture();
 try {
   assert.deepEqual(await searchReusedBlock({ query: 'power' }), []);
@@ -88,7 +100,7 @@ try {
   const failed = await makePcbLayout({ ...pcbInput, code: 'nonexistent();' });
   assert.match(failed.content, /nonexistent/);
 } finally { transport.restore(); await disposeBackend(); }
-console.log('Installed backend: component search, schematic, native PCB worker and assets passed.');
+console.log('Installed backend: component search, schematic, native PCB worker, eight analysis workers and assets passed.');
 `);
 process.stdout.write(run([join(consumer, 'smoke.mjs')], consumer, cleanEnv));
 console.log('Checking the installed archive with GPU disabled and with both GPU drivers unavailable...');

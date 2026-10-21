@@ -6,6 +6,7 @@ import { formatComponentSizeReport, getComponentSizeReport } from './pcb-layout/
 import { svgToDataUrl } from './pcb-layout/artifacts.ts';
 import { createPcbDslErrorReport, createPcbToolReport, formatPcbToolReportForMessage, formatPlacementError } from './pcb-layout/report.ts';
 import { runPcbLayoutQueued, terminatePcbLayoutWorkerPool, type RunPcbLayoutQueuedOptions } from './pcb-layout/run-pcb-layout-pool.ts';
+import { terminateAnalysisPool } from './analyze/run-analysis.ts';
 
 export const layoutSchema = z.object({
   code: z.string().min(1),
@@ -63,7 +64,11 @@ export async function makePcbLayout(input: MakePcbLayoutInput, options: RunPcbLa
   }
 }
 
-export const disposeBackend = () => terminatePcbLayoutWorkerPool(true);
+export async function disposeBackend() {
+  const results = await Promise.allSettled([terminatePcbLayoutWorkerPool(true), terminateAnalysisPool()]);
+  const errors = results.flatMap(result => result.status === 'rejected' ? [result.reason] : []);
+  if (errors.length) throw new AggregateError(errors, 'Backend worker shutdown failed');
+}
 export { validatePcbLayoutIntent } from './pcb-layout/intent-validation/validate.ts';
 export { pcbLayoutDslSkeleton } from './pcb-layout/intent-validation/schematic-declarations.ts';
 export { detectCircuitPatterns } from './pcb-layout/intent-validation/recognition/detect.ts';

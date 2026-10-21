@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Analysis execution
+
+- Add an internal lazy process-worker runtime for structural board import with a bounded FIFO, admission-based monotonic deadlines, typed execution failures, targeted process cancellation and idempotent shutdown through `disposeBackend`. Add eight named `import` fixture runs and installed-package analysis/placement worker checks. Keep native import reports, F64 analyze, placement behavior and saved inputs unchanged; no public analysis DSL or physical solver is introduced.
+
 ### Native addon boundary
 
 - Move N-API registration/status adaptation, loader and the single installed `eda-copilot-node.<platform>.node` binary into `native/node-addon`, linking the ordinary packer and analyze Rust libraries. Preserve placement operation order, F32 guards, contracts and GPU support; add only internal `importAnalysisBoard(json)` diagnostics with the independent F64 importer. Each library owns its declarations, aggregated by the host. Verify source/installed-package imports without adding analysis runtime or solver stages.

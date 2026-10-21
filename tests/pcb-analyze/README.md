@@ -2,8 +2,9 @@
 
 Captured, routed EasyEDA PCBs for analysis development. Each directory is one
 selected PCB, following the per-board structure of `tests/pcb-layout`. Different
-analysis scripts may later share the same input. No analysis `.ts` files or
-numerical reference results are included yet.
+analysis scripts share the same input. Each fixture now includes `import.ts`
+for structural import through the isolated process runtime. No physical-analysis
+scripts or numerical reference results are included yet.
 
 ## Saved inputs
 
@@ -16,6 +17,7 @@ tests/pcb-analyze/
     source-pcb.txt          # Native source of the selected PCB
     export-evidence.json    # Native autoroute JSON, Raw PCB, DRC and diagnostics
     README.md               # Selected revision and capture notes
+    import.ts               # Shared-helper structural import in a process worker
   NanoSpec/
   ESPower/
   BandAmpV5/
@@ -64,6 +66,8 @@ Run commands from the Backend repository root:
 
 ```bash
 npm run test:pcb-analyze -- --list
+npm run test:pcb-analyze -- NanoScope --name import
+npm run test:pcb-analyze -- --all --name import
 npm run test:pcb-analyze -- NanoScope --name dc
 npm run test:pcb-analyze -- NanoScope --name emi
 npm run test:pcb-analyze -- NanoScope NanoSpec --name dc
@@ -72,8 +76,10 @@ npm run test:pcb-analyze -- --all --name dc
 
 `--name dc` selects **`tests/pcb-analyze/<fixture>/dc.ts`**, not an output label.
 `--name dc.ts` is also accepted. A fixture can contain any number of independently
-named analyses. Currently `--list` reports data-only fixtures; requesting an absent
-analysis returns a nonzero exit code without creating a run directory.
+named analyses. Currently `--list` reports `import.ts`; requesting an absent
+analysis returns a nonzero exit code without creating a run directory. Only
+`import.ts` is currently implemented; the `dc`/`emi` examples illustrate future
+independent filenames and are not placeholder scripts.
 
 Each selected analysis runs sequentially in its own Node process with `tsx`, with
 the Backend root as its working directory and a 10-minute timeout, as in the PCB
@@ -107,7 +113,15 @@ Analysis scripts read saved fixture inputs and write their results under
 `PCB_ANALYZE_RUN_DIR`. `debugging/` is ignored by Git. Inputs stay in the test bank;
 new runs do not overwrite earlier runs or become expected reference results.
 
-The launcher's own infrastructure tests run without committed analysis scripts:
+`import.ts` delegates to `tests/helpers/pcb-analysis-import.ts`. The helper reads
+the saved `<fixture>.json`, calls [the analysis runtime](../../src/analyze/README.md),
+writes the full `report.json` into the run directory and disposes the runtime in
+`finally`. Invalid import or execution failure returns a nonzero exit code;
+`missing`/`limitation` diagnostics with `imported: true` remain successful
+structural imports. Neither result is a physical-analysis reference. Build the
+shared addon (`npm run native:build`) and JS workers (`npm run build`) first.
+
+The launcher's own infrastructure tests also cover data-only fixtures:
 
 ```bash
 node --test scripts/test-pcb-analyze.test.mjs
