@@ -23,6 +23,8 @@ pub(crate) mod f32_runtime;
 pub(crate) use crate::numerics;
 #[cfg(feature = "gpu")]
 mod workspace;
+#[cfg(all(test, feature = "gpu", target_os = "macos"))]
+mod metal_probe;
 #[cfg(feature = "gpu")]
 pub(crate) use workspace::ScratchKey;
 

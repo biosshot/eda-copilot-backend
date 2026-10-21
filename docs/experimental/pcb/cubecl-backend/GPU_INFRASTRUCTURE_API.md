@@ -6,9 +6,9 @@ GPU-код закрыт feature `gpu`, CPU-only сборка не требует
 
 ## Выбор исполнения
 
-`GPU auto` сначала проверяет CUDA, затем Vulkan. Это выбор runtime внутри CubeCL;
+`GPU auto` сначала проверяет CUDA, затем Vulkan, а в macOS с включённым Metal — Metal. Это выбор runtime внутри CubeCL;
 `PCB_BLOCK_BACKEND`, `PCB_BOARD_BACKEND`, `PCB_POST_PLACE_BACKEND` по-прежнему выбирают
-`cpu` / `auto` / `cubecl` на уровне solver. `PCB_GPU_RUNTIME=auto|cuda|vulkan` позволяет
+`cpu` / `auto` / `cubecl` на уровне solver. `PCB_GPU_RUNTIME=auto|cuda|vulkan|metal` позволяет
 диагностически выбрать конкретный runtime; значение по умолчанию — `auto`.
 `PCB_BLOCK_GPU_DISABLED=1` отключает GPU целиком. `PCB_GPU_CUDA_DISABLED=1` позволяет
 проверить автоматический переход к Vulkan при отсутствии CUDA.
@@ -17,9 +17,15 @@ CUDA требует доступного NVIDIA driver, NVRTC и заголов�
 Toolkit. В Windows учитывается `CUDA_PATH`, включая расположение DLL в `bin/x64`
 CUDA 13. Библиотеки Toolkit не копируются в дистрибутив. Vulkan требует установленного
 Vulkan driver/loader. Наличие одного из этих GPU runtime достаточно; без обоих
-действует исходный CPU solver. Metal/HIP здесь не реализованы; наличие CubeCL само
-по себе не добавляет их поддержку. Проверки на одной Windows машине не являются
+действует исходный CPU solver. HIP здесь не реализован; наличие CubeCL само
+по себе не добавляет его поддержку. Проверки на одной Windows машине не являются
 сертификацией остальных ОС.
+
+Metal (macOS 15+) отключён по умолчанию: его включает только `PCB_GPU_METAL_DISABLED=0`,
+и `PCB_GPU_RUNTIME=metal` этот запрет не обходит. Допуск требует побитового совпадения
+F32-проб с CPU. В `auto` на Metal GPU получает только начальную стадию блоков с ≥ 80
+точками соединения, у которых есть цепь (в пакете — одну такую гипотезу); упаковка платы
+и post-place остаются на CPU. Сборка в macOS компилирует только MSL и не требует Vulkan SDK.
 
 `client::Client` владеет одним выбранным ComputeClient. `with_client!` выбирает
 конкретный runtime при запуске тех же исходников ядра; алгоритмы scoring не

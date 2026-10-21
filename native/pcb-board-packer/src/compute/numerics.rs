@@ -103,6 +103,41 @@ pub fn arithmetic_probe(input: &Array<f32>, out: &mut Array<f32>) {
     if i<input.len() {let x=input[i];out[i*2]=x/1.3;out[i*2+1]=x.abs().sqrt();}
 }
 
+/// Bitwise F32 contract probe for runtimes without float-control queries
+/// (Metal). Each lane reads one (a,b,c) triple. Rows exercise rounding, division,
+/// sqrt, contraction, reassociation, NaN/Inf/signed-zero folding and FTZ.
+#[cfg(feature = "gpu")]
+#[cube(launch_unchecked)]
+pub fn strict_probe(input: &Array<f32>, out: &mut Array<f32>) {
+    let i = ABSOLUTE_POS as usize;
+    if i * 3 < input.len() {
+        let a = input[i * 3];
+        let b = input[i * 3 + 1];
+        let c = input[i * 3 + 2];
+        let o = i * 16;
+        out[o] = a + b;
+        out[o + 1] = a - b;
+        out[o + 2] = a * b;
+        out[o + 3] = a / b;
+        out[o + 4] = a.abs().sqrt();
+        out[o + 5] = a * b + c;
+        out[o + 6] = (a + b) - b;
+        let mut nan = 0.0f32;
+        if a != a { nan = 1.0; }
+        out[o + 7] = nan;
+        out[o + 8] = 1.0 / a;
+        out[o + 9] = -a * 0.0;
+        out[o + 10] = a - a;
+        out[o + 11] = a * b - a * b;
+        out[o + 12] = a * 85070591730234615865843651857942052864.0;
+        let mut zero = 0.0f32;
+        if a == 0.0 { zero = 1.0; }
+        out[o + 13] = zero;
+        out[o + 14] = a.max(b);
+        out[o + 15] = a.min(b);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

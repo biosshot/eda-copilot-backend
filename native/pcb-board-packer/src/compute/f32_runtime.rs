@@ -1,10 +1,13 @@
-//! Enforce the PCB float contract on every compiled CubeCL SPIR-V kernel.
+//! Enforce the PCB float contract on every compiled CubeCL kernel: SPIR-V
+//! execution modes for Vulkan, MSL pragmas and precise functions for Metal.
 //! Delegates all execution/memory to the existing WgpuServer and one device.
 use std::sync::Arc;
 use cubecl::{client::ComputeClient, device::{DeviceId, DeviceService, ServerUtilitiesHandle},
     future::DynFut, ir::{StorageType, TargetProperties}, prelude::*, Runtime,
-    stream_id::StreamId, wgpu::{AutoCompiler, AutoRepresentation, WgpuDevice, WgpuRuntime, WgpuServer},
+    stream_id::StreamId, wgpu::{AutoCompiler, WgpuDevice, WgpuRuntime, WgpuServer},
     CompilationError, CubeTask, WgpuCompilationOptions};
+#[cfg(not(target_os="macos"))]
+use cubecl::wgpu::AutoRepresentation;
 use cubecl_runtime::{
     allocator::ContiguousMemoryLayoutPolicy,
     logging::ServerLogger, memory_management::{ManagedMemoryHandle, MemoryUsage, MemoryAllocationMode},
@@ -61,7 +64,9 @@ impl ComputeServer for PcbServer {
 impl Runtime for PcbRuntime {
     type Compiler=AutoCompiler; type Server=PcbServer; type Device=WgpuDevice;
     fn client(d:&WgpuDevice)->ComputeClient<Self> {ComputeClient::load(d)}
-    fn name(_: &ComputeClient<Self>)->&'static str {"wgpu<spirv,pcb-f32-strict>"}
+    fn name(c: &ComputeClient<Self>)->&'static str {
+        if *c.info()==wgpu::Backend::Metal {"wgpu<msl,pcb-f32-strict>"} else {"wgpu<spirv,pcb-f32-strict>"}
+    }
     fn max_cube_count()->(u32,u32,u32) {WgpuRuntime::max_cube_count()}
     fn can_read_tensor(s:&cubecl::zspace::Shape,t:&cubecl::zspace::Strides)->bool {WgpuRuntime::can_read_tensor(s,t)}
     fn target_properties()->TargetProperties {WgpuRuntime::target_properties()}
@@ -76,6 +81,22 @@ impl KernelMetadata for StrictTask {
 }
 impl CubeTask<AutoCompiler> for StrictTask {
     fn compile(&self,c:&mut AutoCompiler,o:&WgpuCompilationOptions,m:ExecutionMode,a:StorageType)->Result<CompiledKernel<AutoCompiler>,CompilationError> {
+        // macOS builds only the MSL compiler (Metal); elsewhere only SPIR-V (Vulkan).
+        #[cfg(target_os="macos")]
+        {
+            let AutoCompiler::Msl(_)=c else {panic!("PCB F32 on macOS requires the MSL compiler");};
+            // The persisted kernel cache only holds SPIR-V.
+            let _compilation=super::startup::Compilation::new();
+            let mut result=self.0.compile(c,o,m,a)?;
+            result.source=enforce_msl(&result.source);
+            if let Some(path)=std::env::var_os("PCB_F32_SHADER_AUDIT_DIR") {
+                let path=std::path::PathBuf::from(path);std::fs::create_dir_all(&path).expect("shader audit directory");
+                std::fs::write(path.join(format!("{}-{:x}.metal",result.entrypoint_name,self.id().stable_hash())),&result.source).expect("shader audit output");
+            }
+            Ok(result)
+        }
+        #[cfg(not(target_os="macos"))]
+        {
         let mut id=self.id();id.mode(m);
         let options=format!("{:?}:{:?}",o,a);
         let key=format!("{:016x}-{:x}-{:016x}",self.1,id.stable_hash(),{
@@ -99,7 +120,61 @@ impl CubeTask<AutoCompiler> for StrictTask {
         drop(_compilation);
         super::kernel_cache::save(&key,&result);
         Ok(result)
+        }
     }
+}
+
+/// Pin the Metal float contract in the emitted MSL text. MTLCompileOptions
+/// default to fast math and wgpu's MSL passthrough does not change them; the
+/// file-scope pragmas take precedence. FP32 library functions stay fast by
+/// default, so sqrt is routed to the precise namespace explicitly. Apple GPU
+/// arithmetic flushes subnormals like the CPU FZ mode (checked by probes), but
+/// min/max pass them through and order signed zeros differently, so they get
+/// explicit FTZ and the CPU's +0 > -0 order.
+pub(crate) fn enforce_msl(source:&str)->String {
+    const ANCHOR:&str="using namespace metal;\n";
+    const HELPERS:&str="inline float pcb_ftz(float x){uint b=as_type<uint>(x);return (b&0x7f800000u)==0u?as_type<float>(b&0x80000000u):x;}
+inline float pcb_max(float a,float b){return pcb_ftz(a==b?as_type<float>(as_type<uint>(a)&as_type<uint>(b)):max(a,b));}
+inline float pcb_min(float a,float b){return pcb_ftz(a==b?as_type<float>(as_type<uint>(a)|as_type<uint>(b)):min(a,b));}
+template<typename T> inline T pcb_max(T a,T b){return max(a,b);}
+template<typename T> inline T pcb_min(T a,T b){return min(a,b);}
+template<int N> inline vec<float,N> pcb_max(vec<float,N> a,vec<float,N> b){vec<float,N> r;for(int i=0;i<N;i++)r[i]=pcb_max(a[i],b[i]);return r;}
+template<int N> inline vec<float,N> pcb_min(vec<float,N> a,vec<float,N> b){vec<float,N> r;for(int i=0;i<N;i++)r[i]=pcb_min(a[i],b[i]);return r;}
+";
+    assert_eq!(source.matches(ANCHOR).count(),1,"unexpected CubeCL MSL prelude");
+    for forbidden in ["fast::","__fdividef","fma(","rsqrt(","double ","pcb_"] {
+        assert!(!source.contains(forbidden),"MSL construct outside the PCB F32 contract: {forbidden}");
+    }
+    // Test-only ablation, to show which part of the contract each edit enforces.
+    let ablation=if cfg!(test) {std::env::var("PCB_METAL_MSL_ABLATION").unwrap_or_default()} else {String::new()};
+    // As on CUDA, CubeCL 0.10 bitcasts f32 constants (infinity sentinels) by
+    // binding a reference to a uint temporary, which Metal rejects. as_type
+    // keeps exactly the same bits.
+    let mut out=source.replace("reinterpret_cast<thread float const&>(uint(","as_type<float>(uint(");
+    if ablation!="fast-sqrt" {out=rename_calls(&out,"sqrt","precise::sqrt");}
+    if ablation!="raw-minmax" {out=rename_calls(&out,"max","pcb_max");out=rename_calls(&out,"min","pcb_min");}
+    let pragmas=match ablation.as_str() {
+        "no-pragmas"=>"",
+        "no-contract"=>"#pragma METAL fp math_mode(safe)\n",
+        "no-math-mode"=>"#pragma METAL fp contract(off)\n",
+        _=>"#pragma METAL fp math_mode(safe)\n#pragma METAL fp contract(off)\n",
+    };
+    out.replacen(ANCHOR,&format!("{ANCHOR}{pragmas}{HELPERS}"),1)
+}
+/// Rename free calls `name(`, leaving identifiers and qualified calls alone.
+fn rename_calls(source:&str,name:&str,replacement:&str)->String {
+    let call=format!("{name}(");
+    let mut out=String::with_capacity(source.len()+64);
+    let mut rest=source;
+    while let Some(at)=rest.find(&call) {
+        let qualified=rest[..at].chars().next_back().is_some_and(|c|c.is_ascii_alphanumeric()||c=='_'||c==':');
+        out.push_str(&rest[..at]);
+        out.push_str(if qualified {name} else {replacement});
+        out.push('(');
+        rest=&rest[at+call.len()..];
+    }
+    out.push_str(rest);
+    out
 }
 
 /// Amend assembled SPIR-V using its stable binary instruction layout, without
@@ -248,6 +323,27 @@ fn enforce_modes(words: &[u32]) -> Vec<u32> {
     }
     assert!(capabilities && modes && decorations && constants, "missing SPIR-V declaration sections");
     out
+}
+
+#[cfg(test)]
+mod msl_tests {
+    use super::enforce_msl;
+    const PRELUDE:&str="#include <metal_stdlib>\nusing namespace metal;\n";
+    #[test]
+    fn pins_safe_math_without_contraction_and_precise_sqrt() {
+        if std::env::var_os("PCB_METAL_MSL_ABLATION").is_some() {return;}
+        let out=enforce_msl(&format!("{PRELUDE}float f(float x){{return sqrt(x)+abs(x)/precise::sqrt(x)+my_sqrt(x)+max(x,min(x,1.0));}}"));
+        assert!(out.contains("using namespace metal;\n#pragma METAL fp math_mode(safe)\n#pragma METAL fp contract(off)\n"));
+        assert!(out.contains("return precise::sqrt(x)+abs(x)/precise::sqrt(x)+my_sqrt(x)+pcb_max(x,pcb_min(x,1.0));"));
+    }
+    #[test]
+    fn rejects_fast_math_constructs() {
+        for body in ["fast::sqrt(x)","__fdividef(x,y)","fma(x,y,z)","rsqrt(x)"] {
+            let source=format!("{PRELUDE}{body}");
+            assert!(std::panic::catch_unwind(||enforce_msl(&source)).is_err(),"{body}");
+        }
+        assert!(std::panic::catch_unwind(||enforce_msl("float x;")).is_err());
+    }
 }
 
 #[cfg(test)]

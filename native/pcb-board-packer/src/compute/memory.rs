@@ -129,6 +129,22 @@ mod tests {
     }
 }
 
+/// Apple GPUs share system memory: Metal's recommended working set is the
+/// budget and the device's current allocation its usage.
+#[cfg(target_os="macos")]
+pub(super) struct MetalBudget(Option<objc2::rc::Retained<objc2::runtime::ProtocolObject<dyn objc2_metal::MTLDevice>>>);
+#[cfg(target_os="macos")]
+impl MetalBudget {pub fn new()->Self {Self(objc2_metal::MTLCreateSystemDefaultDevice())}}
+#[cfg(target_os="macos")]
+impl BudgetSource for MetalBudget {
+ fn read(&self)->Option<Budget> {
+  use objc2_metal::MTLDevice;
+  let device=self.0.as_ref()?;
+  let budget=device.recommendedMaxWorkingSetSize();
+  (budget>0).then(||Budget{budget_bytes:budget,usage_bytes:device.currentAllocatedSize() as u64,source:"metal_working_set"})
+ }
+}
+
 pub(super) struct CudaBudget(pub std::sync::Arc<cudarc::driver::CudaContext>);
 impl BudgetSource for CudaBudget {
  fn read(&self)->Option<Budget> {

@@ -1,8 +1,13 @@
 //! Optional persisted strict SPIR-V. Cache I/O must never fail a solve.
+//! macOS builds no SPIR-V compiler, so it keeps the cache only for the shared
+//! entry format and its tests; Metal kernels are not persisted.
+#![cfg_attr(target_os="macos",allow(dead_code,unused_imports))]
 //! Reuses CubeCL's serde representation; no separate compiler or GPU dependency.
 use std::{fs::{self,File,OpenOptions},io::{Read,Write},path::{Path,PathBuf},
     sync::{OnceLock,atomic::{AtomicU64,Ordering}}};
-use cubecl::{prelude::*,wgpu::{AutoCompiler,AutoRepresentation}};
+use cubecl::{prelude::*,wgpu::AutoCompiler};
+#[cfg(not(target_os="macos"))]
+use cubecl::wgpu::AutoRepresentation;
 const MAX_ENTRY:u64=64*1024*1024;
 static ROOT:OnceLock<Option<PathBuf>>=OnceLock::new();
 static HITS:AtomicU64=AtomicU64::new(0);
@@ -49,6 +54,7 @@ fn write_entry(path:&Path,entry:&Entry)->std::io::Result<bool> {
     })();
     let _=fs::remove_file(&temp);result
 }
+#[cfg(not(target_os="macos"))]
 pub(super) fn load(key:&str,name:&'static str)->Option<CompiledKernel<AutoCompiler>> {
     let root=root()?;let path=root.join(format!("{key}.json"));
     let cached=(|| {
@@ -66,6 +72,7 @@ pub(super) fn load(key:&str,name:&'static str)->Option<CompiledKernel<AutoCompil
     }
     cached
 }
+#[cfg(not(target_os="macos"))]
 pub(super) fn save(key:&str,result:&CompiledKernel<AutoCompiler>) {
     let Some(root)=root() else{return;};
     let Some(AutoRepresentation::SpirV(kernel))=&result.repr else{return;};

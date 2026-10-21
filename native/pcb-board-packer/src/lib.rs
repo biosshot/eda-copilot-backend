@@ -341,6 +341,11 @@ pub fn solve_block_primitives_batch(problems: Vec<Value>, threads: u32) -> Resul
         && std::env::var("PCB_BLOCK_GPU_DISABLED").as_deref()!=Ok("1") {count.min(workers+8)}else{workers};
     #[cfg(not(feature="gpu"))]
     let worker_slots=workers;
+    #[cfg(feature="gpu")]
+    let gpu_choice=block_solver::metal_batch_gpu_choice(&problems.iter().map(|(p,_)|p).collect::<Vec<_>>());
+    #[cfg(not(feature="gpu"))]
+    let gpu_choice=vec![true;problems.len()];
+    let gpu_choice=&gpu_choice;
     let jobs = std::sync::Mutex::new(problems.into_iter().enumerate());
     let mut results = std::thread::scope(|scope| {
         let handles: Vec<_> = (0..worker_slots).map(|_| scope.spawn(|| {
@@ -351,7 +356,7 @@ pub fn solve_block_primitives_batch(problems: Vec<Value>, threads: u32) -> Resul
             loop {
                 let job = jobs.lock().expect("block job queue poisoned").next();
                 let Some((index, (problem,frame))) = job else { break; };
-                let result = block_solver::solve_block_with_threads(problem, pair_threads)
+                let result = block_solver::solve_block_with_gpu_choice(problem, pair_threads, gpu_choice[index])
                     .and_then(|solution| serde_json::to_value(solution).map_err(|e| e.to_string()))
                     .and_then(|solution| frame.finish_block(solution));
                 completed.push((index, result));

@@ -1383,7 +1383,7 @@ pub fn solve(p: RefineProblem) -> Result<Value, String> {
     let backend=std::env::var("PCB_POST_PLACE_BACKEND").unwrap_or_else(|_|"auto".into());
     if !matches!(backend.as_str(),"cpu"|"cubecl"|"auto") {return Err(format!("unsupported PCB_POST_PLACE_BACKEND {backend}"));}
     #[cfg(feature="gpu")]
-    if backend=="cubecl" || (backend=="auto" && gpu::profitable(&p)) {
+    if backend=="cubecl" || (backend=="auto" && gpu::profitable(&p) && !crate::compute::gpu::auto_targets_metal()) {
         match gpu::Engine::new(&p,backend=="cubecl") {
             Ok(engine)=>{
                 let started=Instant::now();

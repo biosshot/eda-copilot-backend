@@ -121,7 +121,7 @@ fn initialize_vulkan(policy:Admission) -> Result<Option<Session>, Error> {
             "CubeCL runtime lacks F32",
         ));
     }
-    let client=super::client::Client::Vulkan(client);
+    let client=super::client::Client::Wgpu(client);
     validate_client(&client)?;
     let initializations = INITIALIZATIONS.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
     if std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some() {
@@ -156,7 +156,7 @@ fn execution_expected(values:&[f32])->Vec<f32> {
     expected
 }
 
-fn validate_client(client:&super::client::Client)->Result<(),Error> {
+pub(super) fn validate_client(client:&super::client::Client)->Result<(),Error> {
  crate::compute::client::with_client!(client, |client,WgpuRuntime| {
     // One compatibility check per device. No candidate CPU scoring is involved.
     let mut values: Vec<f32> = (-2048..2048).map(|i| i as f32 / 1000.0).collect();
@@ -233,10 +233,134 @@ fn validate_client(client:&super::client::Client)->Result<(),Error> {
  })
 }
 
+/// Rows written per lane by numerics::strict_probe.
+pub(super) const STRICT_OPS: usize = 16;
+const STRICT_NAMES: [&str; STRICT_OPS] = ["a+b", "a-b", "a*b", "a/b", "sqrt|a|", "a*b+c", "(a+b)-b", "a!=a",
+    "1/a", "-a*0", "a-a", "a*b-a*b", "x*2^126", "a==0", "max(a,b)", "min(a,b)"];
+
+/// Live CPU reference for numerics::strict_probe, never constant-folded.
+#[inline(never)]
+pub(super) fn strict_expected(input: &[f32]) -> Vec<f32> {
+    use std::hint::black_box as live;
+    let _env = crate::float_env::Guard::enter();
+    input.chunks_exact(3).flat_map(|t| {
+        let (a, b, c) = (live(t[0]), live(t[1]), live(t[2]));
+        [a + b, a - b, a * b, a / b, a.abs().sqrt(), a * b + c, (a + b) - b,
+            if a != a { 1.0 } else { 0.0 }, live(1.0f32) / a, -a * live(0.0f32), a - a,
+            a * b - a * b, a * live(2.0f32.powi(126)), if a == live(0.0f32) { 1.0 } else { 0.0 },
+            a.max(b), a.min(b)]
+    }).collect()
+}
+
+/// Special values paired with each other, then `random` deterministic rounds
+/// of arbitrary bit patterns and board-scale magnitudes on the 0.001 grid.
+pub(super) fn strict_inputs(random: usize) -> Vec<f32> {
+    let special = [0.0f32, -0.0, 1.0, -1.0, 1.3, 0.1, 3.0, 1024.0, -0.0005, f32::INFINITY,
+        f32::NEG_INFINITY, f32::NAN, f32::MIN_POSITIVE, -f32::MIN_POSITIVE, f32::from_bits(1),
+        -f32::from_bits(1), f32::from_bits(0x007fffff), f32::MAX, f32::from_bits(0x3f800001),
+        f32::from_bits(0x3f7ffffe), 2.0f32.powi(-100), 2.0f32.powi(100)];
+    let mut values = Vec::new();
+    for &a in &special { for &b in &special { values.extend([a, b, -1.0]); } }
+    let mut state = 0x9e3779b97f4a7c15u64;
+    let mut next = || { state ^= state << 13; state ^= state >> 7; state ^= state << 17; state };
+    for _ in 0..random {
+        let r = next();
+        values.extend([f32::from_bits(r as u32), f32::from_bits((r >> 32) as u32), f32::from_bits(next() as u32)]);
+        let r = next();
+        values.extend([((r & 0xfffff) as f32 - 524288.0) / 1000.0, (((r >> 20) & 0xfffff) as f32 - 524288.0) / 997.0,
+            -f32::from_bits(0x3f800000 | ((r >> 40) as u32 & 0x7fffff))]);
+    }
+    values
+}
+
+/// Metal exposes no float-control query, and fast division/sqrt still fit
+/// the Vulkan bounds in validate_client. Require bit equality with the CPU
+/// F32 reference (only NaN payloads may differ) before admitting the device.
+fn validate_strict(client:&super::client::Client)->Result<(),Error> {
+ crate::compute::client::with_client!(client, |client,WgpuRuntime| {
+    let input=strict_inputs(4096);
+    let expected=strict_expected(&input);
+    let lanes=input.len()/3;
+    let handle=client.create_from_slice(f32::as_bytes(&input));
+    let output=client.empty(expected.len()*4);
+    unsafe {
+        super::numerics::strict_probe::launch_unchecked::<WgpuRuntime>(&client,
+            CubeCount::Static(lanes.div_ceil(64) as u32,1,1),CubeDim::new_1d(64),
+            ArrayArg::from_raw_parts(handle,input.len()),ArrayArg::from_raw_parts(output.clone(),expected.len()));
+    }
+    let bytes=client.read_one(output).map_err(|e|format!("GPU strict F32 probe: {e:?}"))?;
+    for (index,(&cpu,&gpu)) in expected.iter().zip(f32::from_bytes(&bytes)).enumerate() {
+        if cpu.to_bits()!=gpu.to_bits() && !(cpu.is_nan() && gpu.is_nan()) {
+            let t=&input[(index/STRICT_OPS)*3..][..3];
+            return Err(Error::new(ErrorKind::ArithmeticIncompatibility,format!(
+                "F32 strict probe {}: a={:08x} b={:08x} c={:08x} CPU={:08x} GPU={:08x}",STRICT_NAMES[index%STRICT_OPS],
+                t[0].to_bits(),t[1].to_bits(),t[2].to_bits(),cpu.to_bits(),gpu.to_bits())));
+        }
+    }
+    Ok(())
+ })
+}
+
+/// MSL math_mode pragmas exist from macOS 15; an older compiler may ignore
+/// them and keep fast math. The strict probe would also reject that.
+#[cfg(target_os="macos")]
+fn macos_version()->Option<(u32,u32)> {
+    let plist=std::fs::read_to_string("/System/Library/CoreServices/SystemVersion.plist").ok()?;
+    let after=&plist[plist.find("<key>ProductVersion</key>")?..];
+    let start=after.find("<string>")?+8;let end=after[start..].find("</string>")?+start;
+    let mut parts=after[start..end].split('.').map(|p|p.trim().parse::<u32>());
+    Some((parts.next()?.ok()?,parts.next().and_then(|p|p.ok()).unwrap_or(0)))
+}
+
+#[cfg(target_os="macos")]
+fn initialize_metal(policy:Admission)->Result<Option<Session>,Error> {
+    if !metal_enabled() {return Err(Error::new(ErrorKind::NoDevice,"Metal disabled; set PCB_GPU_METAL_DISABLED=0 to enable it"));}
+    let version=macos_version().ok_or_else(||Error::new(ErrorKind::MissingCapabilities,"macOS version unavailable for Metal F32 admission"))?;
+    if version<(15,0) {return Err(Error::new(ErrorKind::MissingCapabilities,format!("Metal F32 math pragmas need macOS 15, found {}.{}",version.0,version.1)));}
+    let instance=wgpu::Instance::new(wgpu::InstanceDescriptor {
+        backends: wgpu::Backends::METAL,
+        ..wgpu::InstanceDescriptor::new_without_display_handle()
+    });
+    let adapters=cubecl::future::block_on(instance.enumerate_adapters(wgpu::Backends::METAL));
+    let (device,id)=[wgpu::DeviceType::DiscreteGpu,wgpu::DeviceType::IntegratedGpu].into_iter().find_map(|kind| {
+        let (index,adapter)=adapters.iter().filter(|a|a.get_info().device_type==kind).enumerate().next()?;
+        Some((if kind==wgpu::DeviceType::DiscreteGpu {WgpuDevice::DiscreteGpu(index)} else {WgpuDevice::IntegratedGpu(index)},adapter.get_info()))
+    }).ok_or_else(||Error::new(ErrorKind::NoDevice,"no Metal GPU"))?;
+    let directory=std::env::temp_dir().join("eda-copilot-gpu");
+    std::fs::create_dir_all(&directory).map_err(|e|Error::new(ErrorKind::Lease,format!("GPU lease directory: {e}")))?;
+    let file=std::fs::OpenOptions::new().read(true).write(true).create(true).truncate(false).open(directory.join("device.lock"))
+        .map_err(|e|Error::new(ErrorKind::Lease,format!("GPU lease file: {e}")))?;
+    let lease=super::lease::Lease::new(file);
+    let _initial_lease=match lease.acquire(policy) {Ok(p)=>p,Err(e) if e.kind==ErrorKind::Busy=>return Ok(None),Err(e)=>return Err(e)};
+    let client=WgpuRuntime::client(&device);
+    if *client.info()!=wgpu::Backend::Metal {
+        return Err(Error::new(ErrorKind::AdapterMismatch,"Metal requested but CubeCL selected a different backend"));
+    }
+    let capabilities=Capabilities {
+        f32:client.features().supports_type(cubecl::ir::ElemType::Float(cubecl::ir::FloatKind::F32)),
+        u64:client.features().supports_type(cubecl::ir::ElemType::UInt(cubecl::ir::UIntKind::U64)),
+    };
+    if !capabilities.f32 {return Err(Error::new(ErrorKind::MissingCapabilities,"CubeCL runtime lacks F32"));}
+    let client=super::client::Client::Wgpu(client);
+    validate_client(&client)?;
+    validate_strict(&client)?;
+    let float_controls=serde_json::json!({"rte":true,"signedZeroInfNanPreserve":true,"denormFlushToZero":true,"implicitFma":false,
+        "mathMode":"safe","fp32Functions":"precise","macos":format!("{}.{}",version.0,version.1),"liveProbesPassed":true});
+    let initializations=INITIALIZATIONS.fetch_add(1,std::sync::atomic::Ordering::Relaxed)+1;
+    if std::env::var_os("PCB_BLOCK_SOLVER_PROFILE").is_some() {
+        eprintln!("[block-gpu-runtime] {}",serde_json::json!({"device":id.name,"backend":"metal","initializations":initializations,"precision":"f32","floatControls":float_controls}));
+    }
+    Ok(Some(Session{client,name:id.name,lease,workspaces:Workspace::default(),in_flight:false,capabilities,float_controls,
+        memory:Arc::new(super::memory::Monitor::new(super::memory::MetalBudget::new()))}))
+}
+#[cfg(not(target_os="macos"))]
+fn initialize_metal(_:Admission)->Result<Option<Session>,Error> {Err(Error::new(ErrorKind::NoDevice,"Metal is only available on macOS"))}
+
 fn initialize(policy:Admission)->Result<Option<Session>,Error> {
  if std::env::var("PCB_BLOCK_GPU_DISABLED").as_deref()==Ok("1") {return Err(Error::new(ErrorKind::Disabled,"GPU disabled by PCB_BLOCK_GPU_DISABLED"));}
  let requested=std::env::var("PCB_GPU_RUNTIME").unwrap_or_else(|_|"auto".into());
- if !matches!(requested.as_str(),"auto"|"cuda"|"vulkan") {return Err(Error::new(ErrorKind::InvalidInput,"PCB_GPU_RUNTIME must be auto, cuda or vulkan"));}
+ if !matches!(requested.as_str(),"auto"|"cuda"|"vulkan"|"metal") {return Err(Error::new(ErrorKind::InvalidInput,"PCB_GPU_RUNTIME must be auto, cuda, vulkan or metal"));}
+ if requested=="metal" {return initialize_metal(policy);}
  if requested!="vulkan" {
   let cuda=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||initialize_cuda(policy)));
   match cuda {
@@ -248,7 +372,14 @@ fn initialize(policy:Admission)->Result<Option<Session>,Error> {
    }
   }
  }
- initialize_vulkan(policy)
+ let vulkan=initialize_vulkan(policy);
+ // On macOS, auto continues with native Metal. The Vulkan reason stays the
+ // reported one when Metal is disabled.
+ if vulkan.is_err() && requested=="auto" && cfg!(target_os="macos") && metal_enabled() {
+  if let (Err(reason),Some(_))=(&vulkan,std::env::var_os("PCB_BLOCK_SOLVER_PROFILE")) {eprintln!("[gpu-backend-unavailable] vulkan: {reason}");}
+  return initialize_metal(policy);
+ }
+ vulkan
 }
 fn initialize_cuda(policy:Admission)->Result<Option<Session>,Error> {
  if std::env::var("PCB_GPU_CUDA_DISABLED").as_deref()==Ok("1") {return Err(Error::new(ErrorKind::NoDevice,"CUDA disabled by PCB_GPU_CUDA_DISABLED"));}
@@ -485,6 +616,22 @@ pub(crate) fn statistics() -> serde_json::Value {
         "floatControls":match &*state {State::Ready(s)=>Some(&s.float_controls),_=>None},
         "state":match &*state {State::New=>"new",State::Ready(_)=>"ready",State::Busy(_)=>"busy",State::Disabled(_)=>"disabled"},
         "unavailableReason":match &*state {State::Busy(_)=>Some(ErrorKind::Busy),State::Disabled(e)=>Some(e.kind),_=>None}})
+}
+
+/// Native Metal is opt-in: only PCB_GPU_METAL_DISABLED=0 enables it, also
+/// when PCB_GPU_RUNTIME=metal requests it.
+pub(crate) fn metal_enabled() -> bool {
+    std::env::var("PCB_GPU_METAL_DISABLED").as_deref()==Ok("0")
+}
+
+/// Whether `auto` decisions target native Metal: the ready runtime is Metal,
+/// or, before initialization, macOS with Metal enabled and no explicit
+/// CUDA/Vulkan request (CubeCL selects Metal there). Other platforms: never.
+pub(crate) fn auto_targets_metal() -> bool {
+    if let Some(state)=STATE.get() {
+        if let State::Ready(session)=&*super::cpu::lock(state) {return session.client.backend()=="metal";}
+    }
+    cfg!(target_os="macos") && metal_enabled() && !matches!(std::env::var("PCB_GPU_RUNTIME").as_deref(),Ok("cuda"|"vulkan"))
 }
 
 pub(crate) fn ready() -> bool {

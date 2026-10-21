@@ -330,6 +330,11 @@ test('auto keeps the CPU worker budget while using GPU', {
     const cpu = run(p, 'cpu', { PCB_BOARD_PACKER_THREADS: '6' });
     const auto = run(p, 'auto', { PCB_BOARD_PACKER_THREADS: '6' });
     assert.deepEqual(auto.solution, cpu.solution);
+    // Opt-in Metal keeps auto board packing on the CPU; other runtimes use the GPU.
+    if (process.platform === 'darwin' && process.env.PCB_GPU_METAL_DISABLED === '0') {
+        assert.doesNotMatch(auto.log, /"backend":"cubecl"/);
+        return;
+    }
     assert.match(auto.log, /"backend":"cubecl"/);
     assert.match(auto.log, /threads=6/);
     const schedulerLine=auto.log.split('\n').find(line=>line.startsWith('[board-cpu-scheduler] '));
@@ -404,7 +409,7 @@ test('board completes on CPU with both GPU drivers unavailable or GPU disabled',
     const p = minimalProblem();
     const cpu = run(p, 'cpu');
     for (const backend of ['auto', 'cubecl']) for (const options of [
-        { PCB_GPU_RUNTIME: 'auto', PCB_GPU_CUDA_DISABLED: '1', VK_DRIVER_FILES: resolve('debugging/nonexistent-vulkan-driver.json') },
+        { PCB_GPU_RUNTIME: 'auto', PCB_GPU_CUDA_DISABLED: '1', PCB_GPU_METAL_DISABLED: '1', VK_DRIVER_FILES: resolve('debugging/nonexistent-vulkan-driver.json') },
         { PCB_BLOCK_GPU_DISABLED: '1' },
     ]) {
         const result = run(p, backend, options);
@@ -558,7 +563,7 @@ test('empty and fully locked boards complete on CPU when both GPU drivers are un
         const cpu = run(input, 'cpu');
         for (const backend of ['auto', 'cubecl']) {
             const fallback = run(input, backend, {
-                PCB_GPU_RUNTIME: 'auto', PCB_GPU_CUDA_DISABLED: '1',
+                PCB_GPU_RUNTIME: 'auto', PCB_GPU_CUDA_DISABLED: '1', PCB_GPU_METAL_DISABLED: '1',
                 VK_DRIVER_FILES: resolve('debugging/nonexistent-vulkan-driver.json'),
             });
             assert.deepEqual(fallback.solution, cpu.solution);

@@ -77,7 +77,7 @@ process.stdout.write(run([join(consumer, 'smoke.mjs')], consumer, cleanEnv));
 console.log('Checking the installed archive with GPU disabled and with both GPU drivers unavailable...');
 for (const options of [
   { PCB_BLOCK_GPU_DISABLED: '1' },
-  { PCB_GPU_RUNTIME: 'auto', PCB_GPU_CUDA_DISABLED: '1', VK_DRIVER_FILES: join(consumer, 'nonexistent-vulkan-driver.json') },
+  { PCB_GPU_RUNTIME: 'auto', PCB_GPU_CUDA_DISABLED: '1', PCB_GPU_METAL_DISABLED: '1', VK_DRIVER_FILES: join(consumer, 'nonexistent-vulkan-driver.json') },
 ]) {
   process.stdout.write(run([join(consumer, 'smoke.mjs')], consumer, {
     ...cleanEnv, PCB_BLOCK_BACKEND: 'cubecl', PCB_BOARD_BACKEND: 'cubecl', PCB_POST_PLACE_BACKEND: 'cubecl', ...options,

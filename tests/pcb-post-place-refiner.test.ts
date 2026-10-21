@@ -377,7 +377,7 @@ test('post-place GPU guards and absent Vulkan driver replay the original CPU inp
     layer.hints.push({kind:'prefer_layer',source:{kind:'component',component:0},target:{kind:'missing'},all:false,weight:1,layer:'inner'});
     cases.push(['unsupported post-place layer',layer,{}]);
     cases.push(['no compatible F32 Vulkan GPU',original,{PCB_GPU_RUNTIME:'vulkan',VK_DRIVER_FILES:resolve('debugging/nonexistent-vulkan-driver.json')}]);
-    cases.push(['no compatible F32 Vulkan GPU',original,{PCB_GPU_RUNTIME:'auto',PCB_GPU_CUDA_DISABLED:'1',VK_DRIVER_FILES:resolve('debugging/nonexistent-vulkan-driver.json')}]);
+    cases.push(['no compatible F32 Vulkan GPU',original,{PCB_GPU_RUNTIME:'auto',PCB_GPU_CUDA_DISABLED:'1',PCB_GPU_METAL_DISABLED:'1',VK_DRIVER_FILES:resolve('debugging/nonexistent-vulkan-driver.json')}]);
     for(const [reason,problem,environment] of cases) {
         const cpu=gpuRefine(problem,'cpu');
         const gpu=gpuRefine(problem,'cubecl',environment);

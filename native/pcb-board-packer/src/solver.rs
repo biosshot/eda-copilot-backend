@@ -150,7 +150,7 @@ pub fn solve(mut problem: BoardPackProblem) -> Result<BoardPackSolution, String>
     if !matches!(backend.as_str(),"cpu"|"cubecl"|"auto") {return Err(format!("unsupported PCB_BOARD_BACKEND {backend}"));}
     #[cfg(feature = "gpu")]
     if problem.primitives.iter().any(|p| !p.locked)
-        && (backend=="cubecl" || (backend=="auto" && cubecl::auto_profitable(&problem))) {
+        && (backend=="cubecl" || (backend=="auto" && cubecl::auto_profitable(&problem) && !crate::compute::gpu::auto_targets_metal())) {
         let control=match cubecl::Control::new(&problem,backend=="cubecl") {
             Ok(control)=>control,
             Err(error)=>{

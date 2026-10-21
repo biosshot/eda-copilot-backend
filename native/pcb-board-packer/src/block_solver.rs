@@ -218,7 +218,14 @@ pub fn solve_block(problem: BlockSolveProblem) -> Result<crate::model::BlockSolv
 }
 
 /// `pair_threads` only parallelizes the pair neighbourhood; the result does not depend on it.
-pub fn solve_block_with_threads(mut problem: BlockSolveProblem, pair_threads: usize) -> Result<crate::model::BlockSolveSolution, String> {
+pub fn solve_block_with_threads(problem: BlockSolveProblem, pair_threads: usize) -> Result<crate::model::BlockSolveSolution, String> {
+    solve_block_with_gpu_choice(problem, pair_threads, true)
+}
+
+/// `gpu_allowed=false` keeps an `auto` call on the CPU (explicit `cubecl` is unaffected).
+pub(crate) fn solve_block_with_gpu_choice(mut problem: BlockSolveProblem, pair_threads: usize, gpu_allowed: bool) -> Result<crate::model::BlockSolveSolution, String> {
+    #[cfg(not(feature = "gpu"))]
+    let _ = gpu_allowed;
     attach_group_relation_points(&mut problem)?;
     #[cfg(feature = "gpu")]
     {
@@ -227,7 +234,8 @@ pub fn solve_block_with_threads(mut problem: BlockSolveProblem, pair_threads: us
         // Device/input guards and complete CPU recovery remain in force.
         let substantial=problem.primitives.len()>=1 || problem.primitives.iter().map(|p|p.connection_points.len()).sum::<usize>()>=30;
         let use_gpu=if requested=="cubecl" {problem.primitives.len()>=1}
-            else {requested=="auto" && problem.primitives.len()>=1 && (substantial || gpu_runtime::ready())};
+            else {gpu_allowed && requested=="auto" && problem.primitives.len()>=1 && (substantial || gpu_runtime::ready())
+                && (!gpu_runtime::auto_targets_metal() || metal_auto_profitable(&problem))};
         if use_gpu {
             let original=problem.clone();let started=std::time::Instant::now();
             match std::panic::catch_unwind(std::panic::AssertUnwindSafe(||solve_block_inner(problem,true,pair_threads))) {
@@ -251,6 +259,35 @@ pub fn solve_block_with_threads(mut problem: BlockSolveProblem, pair_threads: us
     }
     solve_block_inner(problem,false,pair_threads)
 }
+/// Apple GPUs beat the CPU threads only in the initial (beam/singles) stage of
+/// blocks with many netted connection points; the pair stage and small blocks
+/// lose (isolated replays of 298 block calls from six fixtures on an M5 Max).
+/// Netted points exclude the group endpoints attached before this decision.
+#[cfg(feature = "gpu")]
+fn metal_auto_profitable(problem: &BlockSolveProblem) -> bool {
+    problem.defer_pairs && problem.primitives.iter()
+        .map(|p|p.connection_points.iter().filter(|c|c.net.is_some()).count()).sum::<usize>()>=METAL_AUTO_MIN_NETTED_POINTS
+}
+#[cfg(feature = "gpu")]
+const METAL_AUTO_MIN_NETTED_POINTS: usize = 80;
+
+/// On Metal, a batch hands the GPU only to its largest eligible hypothesis;
+/// the rest run on the CPU threads meanwhile. Otherwise hypotheses race for the
+/// single device and the loser of the initialization falls back to the CPU, so
+/// which block got the GPU (and the wall time) changed from run to run.
+#[cfg(feature = "gpu")]
+pub(crate) fn metal_batch_gpu_choice(problems: &[&BlockSolveProblem]) -> Vec<bool> {
+    if !gpu_runtime::auto_targets_metal() || std::env::var("PCB_BLOCK_BACKEND").as_deref()==Ok("cubecl") {
+        return vec![true; problems.len()];
+    }
+    let netted=|p:&BlockSolveProblem| p.primitives.iter().map(|q|q.connection_points.iter().filter(|c|c.net.is_some()).count()).sum::<usize>();
+    let chosen=problems.iter().enumerate().filter(|(_,p)|metal_auto_profitable(p))
+        // Hypotheses of one block share their nets; more movable primitives
+        // means more search work (ICM: 10 primitives 32 s vs 7 primitives 19 s).
+        .max_by_key(|(i,p)|(netted(p),p.primitives.iter().filter(|q|!q.locked).count(),std::cmp::Reverse(*i))).map(|(i,_)|i);
+    (0..problems.len()).map(|i|Some(i)==chosen).collect()
+}
+
 pub(crate) fn attach_group_relation_points(problem: &mut BlockSolveProblem) -> Result<(), String> {
     crate::group_endpoints::attach(&mut problem.primitives, &problem.relations, &Default::default(),
         &problem.components.iter().map(|c| (&c.designator, &c.primitive_id, &c.block_name, c.body_box)).collect::<Vec<_>>())?;
