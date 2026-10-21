@@ -51,6 +51,7 @@
     "test:pcb": "node scripts/test.mjs pcb-",
     "test:recovery": "node --import tsx --test --test-concurrency=1 --test-name-pattern=\"failure|recovery|disabled|absent|allocation|empty|unsupported|runtime selection|driver|unavailable|do not initialize\" tests/pcb-block-gpu.test.ts tests/pcb-board-gpu.test.ts tests/pcb-post-place-refiner.test.ts",
     "test:pcb-layout": "node scripts/test-pcb-layout.mjs",
+    "test:pcb-analyze": "node scripts/test-pcb-analyze.mjs",
     "debug:pcb-layout": "node --import tsx scripts/debug-pcb-layout.mjs",
     "debug:pcb-validation": "node --import tsx scripts/debug-pcb-validation.mjs",
     "test:schematics": "node scripts/test-schematic-layout.ts",

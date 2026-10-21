@@ -1,0 +1,228 @@
+{
+  "name": "NanoSpec",
+  "project": {
+    "name": "NanoSpec",
+    "uuid": "68e8515756854180a5480226148d80b6"
+  },
+  "pcb": {
+    "name": "PCB1",
+    "uuid": "2395b4129dfc4025acb1fa48c0154d5f"
+  },
+  "capturedAt": "2026-10-21T14:28:15.015Z",
+  "versions": {
+    "editor": "3.2.206",
+    "extension": "1.3.2",
+    "mcp": "1.3.2",
+    "revisions": {
+      "backend": "832dca321367d1e292afa1db2141420f8d13166a",
+      "copilot": "3654a69166deab037f9c7d1a4a51511d9899754f"
+    },
+    "backendRoutingBoardV2Sha256": "9b7be233eae5ff446e9eb7833300ca68fb482cb0e13198182c8e750c96cd396b"
+  },
+  "export": {
+    "status": "exported",
+    "diagnostics": [
+      {
+        "code": "EASYEDA_V2_SEQUENTIAL_CAPTURE",
+        "severity": "warning",
+        "message": "CAD reads are sequential, not atomic. Do not edit the PCB during export; native pour freshness is unknown."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e7748: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e9259: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e9260: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e5732: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e18: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e201: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e208: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e1580: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e2136: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e2139: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e4173: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e4304: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e4907: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e6103: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e6155: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e6158: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e6958: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e6965: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e8369: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e1594: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e2254: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e2715: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      }
+    ],
+    "inventory": {
+      "layers": 2,
+      "components": 128,
+      "pads": 509,
+      "padDrills": 28,
+      "independentHoles": 0,
+      "tracks": 823,
+      "vias": 553,
+      "pours": 7,
+      "fills": 18
+    }
+  },
+  "nativeSummary": {
+    "components": 128,
+    "pads": 509,
+    "tracks": 788,
+    "arcs": 35,
+    "vias": 553,
+    "pours": 7,
+    "fillFragments": 225,
+    "layers": [
+      "TOP",
+      "BOTTOM"
+    ],
+    "viaTypes": {
+      "0": 77,
+      "2": 476
+    },
+    "padDrills": 28,
+    "slottedPadDrills": 6
+  },
+  "verification": {
+    "sourceRecordsUnchanged": true,
+    "sourceRecordCount": 2875,
+    "audit": "Captured and inventoried; physical completeness has not yet been accepted as an analysis reference",
+    "v2InventoryVerified": true,
+    "v2ReplayMatchesLiveExport": true,
+    "archiveComparison": {
+      "projectArchiveContainsSelectedPcb": true,
+      "archiveCrcVerified": true,
+      "nativeRecordCount": 2874,
+      "archiveRecordCount": 3643,
+      "archiveRecordsMatchSelectedSource": false,
+      "mismatch": {
+        "CANVAS": 1,
+        "LAYER": 119,
+        "RULE": 8,
+        "RULE_SELECTOR": 3,
+        "META": 1,
+        "ELE_PLACEHOLDER": 738,
+        "VIA": 552,
+        "PAD": 5,
+        "FILL": 31,
+        "REGION": 4,
+        "POURED": 7,
+        "POUR": 3,
+        "IMAGE": 2,
+        "STRING": 3,
+        "COMPONENT": 1,
+        "PAD_NET": 504,
+        "ATTR": 384
+      },
+      "note": "Project archive and editor-selected source are distinct native representations. Record equality and physical equivalence are not assumed; V2 uses the captured editor input."
+    }
+  },
+  "files": {
+    "source.epro2": {
+      "bytes": 1565372,
+      "sha256": "98b7c2afc2df8bc16bffbcd5d85693cac2955b0e39178a0e498c672e8eb4876a",
+      "normalization": "binary"
+    },
+    "source-pcb.txt": {
+      "bytes": 913486,
+      "sha256": "cffa3960f82d4986fbe9ce85adb0bdfee1ac07ea3c4e21ff899e288830a607cc",
+      "normalization": "lf"
+    },
+    "export-evidence.json": {
+      "bytes": 2094752,
+      "sha256": "1f24ec5572bcfa49bca197bec184a3aefd4d7b6894285751cce8db8e18b52589",
+      "normalization": "lf"
+    },
+    "NanoSpec.json": {
+      "bytes": 3345921,
+      "sha256": "ce42600487100c4f103cfc0d744a4ef323b1411192acec2b003c5f0fb21347d6",
+      "normalization": "lf"
+    }
+  }
+}

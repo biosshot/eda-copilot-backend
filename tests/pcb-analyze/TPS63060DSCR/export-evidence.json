@@ -1,0 +1,4067 @@
+{
+  "capture": {
+    "name": "Copilot_Routing_Input",
+    "size": 51251,
+    "type": "",
+    "text": "{\n\t\"boardOutline\": {\n\t\t\"bbox\": [\n\t\t\t-16,\n\t\t\t16,\n\t\t\t-13,\n\t\t\t13\n\t\t],\n\t\t\"path\": [\n\t\t\t[\n\t\t\t\t-16.00003302006604,\n\t\t\t\t-13.000025400050802\n\t\t\t],\n\t\t\t[\n\t\t\t\t-16.00003302006604,\n\t\t\t\t13.000025400050802\n\t\t\t],\n\t\t\t[\n\t\t\t\t16.00003302006604,\n\t\t\t\t13.000025400050802\n\t\t\t],\n\t\t\t[\n\t\t\t\t16.00003302006604,\n\t\t\t\t-13.000025400050802\n\t\t\t],\n\t\t\t[\n\t\t\t\t-16.00003302006604,\n\t\t\t\t-13.000025400050802\n\t\t\t]\n\t\t]\n\t},\n\t\"layers\": {\n\t\t\"route\": [\n\t\t\t1,\n\t\t\t2\n\t\t],\n\t\t\"notRoute\": []\n\t},\n\t\"routingCorner\": \"45\",\n\t\"rules\": {\n\t\t\"safeClearances\": {\n\t\t\t\"copperThickness1oz\": [\n\t\t\t\t{\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1,\n\t\t\t\t\t\t2\n\t\t\t\t\t],\n\t\t\t\t\t\"trackToTrack\": 0.102,\n\t\t\t\t\t\"trackToVia\": 0.152,\n\t\t\t\t\t\"trackToPad\": 0.152,\n\t\t\t\t\t\"trackToFillRegion\": 0.152,\n\t\t\t\t\t\"trackToProhibitedRegion\": 0.3,\n\t\t\t\t\t\"trackToBoardOutline\": 0.3,\n\t\t\t\t\t\"viaToVia\": 0.152,\n\t\t\t\t\t\"viaToPad\": 0.152,\n\t\t\t\t\t\"viaToFillRegion\": 0.152,\n\t\t\t\t\t\"viaToProhibitedRegion\": 0.152,\n\t\t\t\t\t\"viaToBoardOutline\": 0.3\n\t\t\t\t}\n\t\t\t],\n\t\t\t\"copperThickness2oz\": [\n\t\t\t\t{\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1,\n\t\t\t\t\t\t2\n\t\t\t\t\t],\n\t\t\t\t\t\"trackToTrack\": 0.203,\n\t\t\t\t\t\"trackToVia\": 0.152,\n\t\t\t\t\t\"trackToPad\": 0.152,\n\t\t\t\t\t\"trackToFillRegion\": 0.152,\n\t\t\t\t\t\"trackToProhibitedRegion\": 0.3,\n\t\t\t\t\t\"trackToBoardOutline\": 0.3,\n\t\t\t\t\t\"viaToVia\": 0.152,\n\t\t\t\t\t\"viaToPad\": 0.152,\n\t\t\t\t\t\"viaToFillRegion\": 0.152,\n\t\t\t\t\t\"viaToProhibitedRegion\": 0.152,\n\t\t\t\t\t\"viaToBoardOutline\": 0.3\n\t\t\t\t}\n\t\t\t],\n\t\t\t\"copilot_router_net_0_spacing\": [\n\t\t\t\t{\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1,\n\t\t\t\t\t\t2\n\t\t\t\t\t],\n\t\t\t\t\t\"trackToTrack\": 0.152,\n\t\t\t\t\t\"trackToVia\": 0.152,\n\t\t\t\t\t\"trackToPad\": 0.152,\n\t\t\t\t\t\"trackToFillRegion\": 0.152,\n\t\t\t\t\t\"trackToProhibitedRegion\": 0.152,\n\t\t\t\t\t\"trackToBoardOutline\": 0.152,\n\t\t\t\t\t\"viaToVia\": 0.152,\n\t\t\t\t\t\"viaToPad\": 0.152,\n\t\t\t\t\t\"viaToFillRegion\": 0.152,\n\t\t\t\t\t\"viaToProhibitedRegion\": 0.152,\n\t\t\t\t\t\"viaToBoardOutline\": 0.152\n\t\t\t\t}\n\t\t\t]\n\t\t},\n\t\t\"trackWidths\": {\n\t\t\t\"copperThickness1oz\": [\n\t\t\t\t{\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1,\n\t\t\t\t\t\t2\n\t\t\t\t\t],\n\t\t\t\t\t\"trackWidth\": [\n\t\t\t\t\t\t0.127,\n\t\t\t\t\t\t0.254,\n\t\t\t\t\t\t2.54\n\t\t\t\t\t]\n\t\t\t\t}\n\t\t\t],\n\t\t\t\"copperThickness2oz\": [\n\t\t\t\t{\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1,\n\t\t\t\t\t\t2\n\t\t\t\t\t],\n\t\t\t\t\t\"trackWidth\": [\n\t\t\t\t\t\t0.203,\n\t\t\t\t\t\t0.254,\n\t\t\t\t\t\t2.54\n\t\t\t\t\t]\n\t\t\t\t}\n\t\t\t],\n\t\t\t\"copilot_router_net_0_track\": [\n\t\t\t\t{\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1,\n\t\t\t\t\t\t2\n\t\t\t\t\t],\n\t\t\t\t\t\"trackWidth\": [\n\t\t\t\t\t\t0.127,\n\t\t\t\t\t\t0.254,\n\t\t\t\t\t\t1.254\n\t\t\t\t\t]\n\t\t\t\t}\n\t\t\t],\n\t\t\t\"copilot_router_net_3_track\": [\n\t\t\t\t{\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1,\n\t\t\t\t\t\t2\n\t\t\t\t\t],\n\t\t\t\t\t\"trackWidth\": [\n\t\t\t\t\t\t0.127,\n\t\t\t\t\t\t0.75,\n\t\t\t\t\t\t1.75\n\t\t\t\t\t]\n\t\t\t\t}\n\t\t\t],\n\t\t\t\"copilot_router_net_7_track\": [\n\t\t\t\t{\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1,\n\t\t\t\t\t\t2\n\t\t\t\t\t],\n\t\t\t\t\t\"trackWidth\": [\n\t\t\t\t\t\t0.127,\n\t\t\t\t\t\t0.55,\n\t\t\t\t\t\t1.55\n\t\t\t\t\t]\n\t\t\t\t}\n\t\t\t],\n\t\t\t\"copilot_router_net_1_track\": [\n\t\t\t\t{\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1,\n\t\t\t\t\t\t2\n\t\t\t\t\t],\n\t\t\t\t\t\"trackWidth\": [\n\t\t\t\t\t\t0.127,\n\t\t\t\t\t\t0.127,\n\t\t\t\t\t\t1.127\n\t\t\t\t\t]\n\t\t\t\t}\n\t\t\t]\n\t\t},\n\t\t\"viaSizes\": {\n\t\t\t\"viaSize\": [\n\t\t\t\t0.61,\n\t\t\t\t0.305\n\t\t\t],\n\t\t\t\"copilot_router_net_0_via\": [\n\t\t\t\t0.61,\n\t\t\t\t0.305\n\t\t\t]\n\t\t},\n\t\t\"differentialPairs\": {\n\t\t\t\"differentialPair\": [\n\t\t\t\t{\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1,\n\t\t\t\t\t\t2\n\t\t\t\t\t],\n\t\t\t\t\t\"lengthTolerance\": 0.254,\n\t\t\t\t\t\"width\": [\n\t\t\t\t\t\t0.127,\n\t\t\t\t\t\t0.254,\n\t\t\t\t\t\t2.54\n\t\t\t\t\t],\n\t\t\t\t\t\"clearance\": [\n\t\t\t\t\t\t0.152,\n\t\t\t\t\t\t0.152\n\t\t\t\t\t]\n\t\t\t\t}\n\t\t\t]\n\t\t},\n\t\t\"trackLengths\": {\n\t\t\t\"netLength\": [\n\t\t\t\t0,\n\t\t\t\t0\n\t\t\t]\n\t\t}\n\t},\n\t\"classes\": {\n\t\t\"netClasses\": {},\n\t\t\"differentialPairClasses\": {},\n\t\t\"netClearancesClasses\": {\n\t\t\t\"copilot_router_net_0_spacing\": [\n\t\t\t\t\"GND\",\n\t\t\t\t\"VIN\",\n\t\t\t\t\"VOUT\",\n\t\t\t\t\"VAUX\",\n\t\t\t\t\"FB\",\n\t\t\t\t\"SW1\",\n\t\t\t\t\"SW2\"\n\t\t\t],\n\t\t\t\"copperThickness1oz\": [\n\t\t\t\t\"PG\"\n\t\t\t]\n\t\t}\n\t},\n\t\"nets\": [\n\t\t{\n\t\t\t\"net\": \"GND\",\n\t\t\t\"routing\": true,\n\t\t\t\"safeClearance\": \"copilot_router_net_0_spacing\",\n\t\t\t\"trackWidth\": \"copilot_router_net_1_track\",\n\t\t\t\"viaSize\": \"copilot_router_net_0_via\",\n\t\t\t\"differentialPair\": \"differentialPair\",\n\t\t\t\"trackLength\": \"netLength\"\n\t\t},\n\t\t{\n\t\t\t\"net\": \"VIN\",\n\t\t\t\"routing\": true,\n\t\t\t\"safeClearance\": \"copilot_router_net_0_spacing\",\n\t\t\t\"trackWidth\": \"copilot_router_net_3_track\",\n\t\t\t\"viaSize\": \"copilot_router_net_0_via\",\n\t\t\t\"differentialPair\": \"differentialPair\",\n\t\t\t\"trackLength\": \"netLength\"\n\t\t},\n\t\t{\n\t\t\t\"net\": \"VOUT\",\n\t\t\t\"routing\": true,\n\t\t\t\"safeClearance\": \"copilot_router_net_0_spacing\",\n\t\t\t\"trackWidth\": \"copilot_router_net_7_track\",\n\t\t\t\"viaSize\": \"copilot_router_net_0_via\",\n\t\t\t\"differentialPair\": \"differentialPair\",\n\t\t\t\"trackLength\": \"netLength\"\n\t\t},\n\t\t{\n\t\t\t\"net\": \"VAUX\",\n\t\t\t\"routing\": true,\n\t\t\t\"safeClearance\": \"copilot_router_net_0_spacing\",\n\t\t\t\"trackWidth\": \"copilot_router_net_0_track\",\n\t\t\t\"viaSize\": \"copilot_router_net_0_via\",\n\t\t\t\"differentialPair\": \"differentialPair\",\n\t\t\t\"trackLength\": \"netLength\"\n\t\t},\n\t\t{\n\t\t\t\"net\": \"FB\",\n\t\t\t\"routing\": true,\n\t\t\t\"safeClearance\": \"copilot_router_net_0_spacing\",\n\t\t\t\"trackWidth\": \"copilot_router_net_0_track\",\n\t\t\t\"viaSize\": \"copilot_router_net_0_via\",\n\t\t\t\"differentialPair\": \"differentialPair\",\n\t\t\t\"trackLength\": \"netLength\"\n\t\t},\n\t\t{\n\t\t\t\"net\": \"PG\",\n\t\t\t\"routing\": true,\n\t\t\t\"safeClearance\": \"copperThickness1oz\",\n\t\t\t\"trackWidth\": \"copperThickness1oz\",\n\t\t\t\"viaSize\": \"viaSize\",\n\t\t\t\"differentialPair\": \"differentialPair\",\n\t\t\t\"trackLength\": \"netLength\"\n\t\t},\n\t\t{\n\t\t\t\"net\": \"SW1\",\n\t\t\t\"routing\": true,\n\t\t\t\"safeClearance\": \"copilot_router_net_0_spacing\",\n\t\t\t\"trackWidth\": \"copilot_router_net_3_track\",\n\t\t\t\"viaSize\": \"copilot_router_net_0_via\",\n\t\t\t\"differentialPair\": \"differentialPair\",\n\t\t\t\"trackLength\": \"netLength\"\n\t\t},\n\t\t{\n\t\t\t\"net\": \"SW2\",\n\t\t\t\"routing\": true,\n\t\t\t\"safeClearance\": \"copilot_router_net_0_spacing\",\n\t\t\t\"trackWidth\": \"copilot_router_net_3_track\",\n\t\t\t\"viaSize\": \"copilot_router_net_0_via\",\n\t\t\t\"differentialPair\": \"differentialPair\",\n\t\t\t\"trackLength\": \"netLength\"\n\t\t}\n\t],\n\t\"components\": {\n\t\t\"C1\": {\n\t\t\t\"name\": \"GRM21BR61E106KA73L\",\n\t\t\t\"footprint\": \"C0805\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t-3.05,\n\t\t\t\t1.8\n\t\t\t],\n\t\t\t\"rotation\": 90,\n\t\t\t\"nets\": {\n\t\t\t\t\"e15\": \"GND\",\n\t\t\t\t\"e16\": \"VIN\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e15\": \"2\",\n\t\t\t\t\"e16\": \"1\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I62\"\n\t\t\t}\n\t\t},\n\t\t\"C2\": {\n\t\t\t\"name\": \"GRM21BR61E106KA73L\",\n\t\t\t\"footprint\": \"C0805\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t-5.2,\n\t\t\t\t1.8\n\t\t\t],\n\t\t\t\"rotation\": 90,\n\t\t\t\"nets\": {\n\t\t\t\t\"e15\": \"GND\",\n\t\t\t\t\"e16\": \"VIN\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e15\": \"2\",\n\t\t\t\t\"e16\": \"1\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I63\"\n\t\t\t}\n\t\t},\n\t\t\"C3\": {\n\t\t\t\"name\": \"GRM21BR61C226ME44L\",\n\t\t\t\"footprint\": \"C0805_113defca69e0d308\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t3.05,\n\t\t\t\t1.8\n\t\t\t],\n\t\t\t\"rotation\": 90,\n\t\t\t\"nets\": {\n\t\t\t\t\"e15\": \"GND\",\n\t\t\t\t\"e16\": \"VOUT\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e15\": \"2\",\n\t\t\t\t\"e16\": \"1\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I64\"\n\t\t\t}\n\t\t},\n\t\t\"C4\": {\n\t\t\t\"name\": \"GRM21BR61C226ME44L\",\n\t\t\t\"footprint\": \"C0805_113defca69e0d308\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t5.2,\n\t\t\t\t1.8\n\t\t\t],\n\t\t\t\"rotation\": 90,\n\t\t\t\"nets\": {\n\t\t\t\t\"e15\": \"GND\",\n\t\t\t\t\"e16\": \"VOUT\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e15\": \"2\",\n\t\t\t\t\"e16\": \"1\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I65\"\n\t\t\t}\n\t\t},\n\t\t\"C5\": {\n\t\t\t\"name\": \"GRM21BR61C226ME44L\",\n\t\t\t\"footprint\": \"C0805_113defca69e0d308\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t7.35,\n\t\t\t\t1.8\n\t\t\t],\n\t\t\t\"rotation\": 90,\n\t\t\t\"nets\": {\n\t\t\t\t\"e15\": \"GND\",\n\t\t\t\t\"e16\": \"VOUT\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e15\": \"2\",\n\t\t\t\t\"e16\": \"1\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I66\"\n\t\t\t}\n\t\t},\n\t\t\"C6\": {\n\t\t\t\"name\": \"GRM188R71H104KA93D\",\n\t\t\t\"footprint\": \"C0603\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t1.25,\n\t\t\t\t-2.5\n\t\t\t],\n\t\t\t\"rotation\": 180,\n\t\t\t\"nets\": {\n\t\t\t\t\"e14\": \"GND\",\n\t\t\t\t\"e15\": \"VAUX\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e14\": \"2\",\n\t\t\t\t\"e15\": \"1\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I67\"\n\t\t\t}\n\t\t},\n\t\t\"C7\": {\n\t\t\t\"name\": \"C0603C100C5GACTU\",\n\t\t\t\"footprint\": \"C0603\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t4.8,\n\t\t\t\t-2\n\t\t\t],\n\t\t\t\"rotation\": 180,\n\t\t\t\"nets\": {\n\t\t\t\t\"e14\": \"FB\",\n\t\t\t\t\"e15\": \"VOUT\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e14\": \"2\",\n\t\t\t\t\"e15\": \"1\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I68\"\n\t\t\t}\n\t\t},\n\t\t\"J1\": {\n\t\t\t\"name\": \"2.54mm-2P ZZ\",\n\t\t\t\"footprint\": \"CONN-TH_2.54MM-2P-ZZ\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t-11.5,\n\t\t\t\t0\n\t\t\t],\n\t\t\t\"rotation\": 90,\n\t\t\t\"nets\": {\n\t\t\t\t\"e15\": \"VIN\",\n\t\t\t\t\"e16\": \"GND\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e15\": \"1\",\n\t\t\t\t\"e16\": \"2\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I57\"\n\t\t\t}\n\t\t},\n\t\t\"J2\": {\n\t\t\t\"name\": \"2.54mm-2P ZZ\",\n\t\t\t\"footprint\": \"CONN-TH_2.54MM-2P-ZZ\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t11.5,\n\t\t\t\t0\n\t\t\t],\n\t\t\t\"rotation\": 90,\n\t\t\t\"nets\": {\n\t\t\t\t\"e15\": \"VOUT\",\n\t\t\t\t\"e16\": \"GND\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e15\": \"1\",\n\t\t\t\t\"e16\": \"2\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I58\"\n\t\t\t}\n\t\t},\n\t\t\"J3\": {\n\t\t\t\"name\": \"2.54mm-2P ZZ\",\n\t\t\t\"footprint\": \"CONN-TH_2.54MM-2P-ZZ\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t-5.5,\n\t\t\t\t-9\n\t\t\t],\n\t\t\t\"rotation\": 0,\n\t\t\t\"nets\": {\n\t\t\t\t\"e15\": \"PG\",\n\t\t\t\t\"e16\": \"GND\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e15\": \"1\",\n\t\t\t\t\"e16\": \"2\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I59\"\n\t\t\t}\n\t\t},\n\t\t\"L1\": {\n\t\t\t\"name\": \"XFL4020-102MEC\",\n\t\t\t\"footprint\": \"IND-SMD_L4.0-W4.0_XFL4020-102MEB\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t0,\n\t\t\t\t4.9\n\t\t\t],\n\t\t\t\"rotation\": 180,\n\t\t\t\"nets\": {\n\t\t\t\t\"e10\": \"SW1\",\n\t\t\t\t\"e11\": \"SW2\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e10\": \"1\",\n\t\t\t\t\"e11\": \"2\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I61\"\n\t\t\t}\n\t\t},\n\t\t\"R1\": {\n\t\t\t\"name\": \"RC0603FR-071ML\",\n\t\t\t\"footprint\": \"R0603\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t4.8,\n\t\t\t\t-0.9\n\t\t\t],\n\t\t\t\"rotation\": 180,\n\t\t\t\"nets\": {\n\t\t\t\t\"e7\": \"FB\",\n\t\t\t\t\"e8\": \"VOUT\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e7\": \"2\",\n\t\t\t\t\"e8\": \"1\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I69\"\n\t\t\t}\n\t\t},\n\t\t\"R2\": {\n\t\t\t\"name\": \"TNPW0603111KBEEA\",\n\t\t\t\"footprint\": \"R0603_b74739c524765536\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t3,\n\t\t\t\t-1.5\n\t\t\t],\n\t\t\t\"rotation\": -90,\n\t\t\t\"nets\": {\n\t\t\t\t\"e7\": \"GND\",\n\t\t\t\t\"e8\": \"FB\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e7\": \"2\",\n\t\t\t\t\"e8\": \"1\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I71\"\n\t\t\t}\n\t\t},\n\t\t\"R3\": {\n\t\t\t\"name\": \"RC0603FR-071ML\",\n\t\t\t\"footprint\": \"R0603\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t-2.286,\n\t\t\t\t-3.175\n\t\t\t],\n\t\t\t\"rotation\": 90,\n\t\t\t\"nets\": {\n\t\t\t\t\"e7\": \"PG\",\n\t\t\t\t\"e8\": \"VOUT\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e7\": \"2\",\n\t\t\t\t\"e8\": \"1\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I70\"\n\t\t\t}\n\t\t},\n\t\t\"U1\": {\n\t\t\t\"name\": \"TPS63060DSCR\",\n\t\t\t\"footprint\": \"WSON-10_L3.0-W3.0-P0.50-BL-EP-A\",\n\t\t\t\"layer\": 1,\n\t\t\t\"location\": [\n\t\t\t\t0,\n\t\t\t\t1\n\t\t\t],\n\t\t\t\"rotation\": -90,\n\t\t\t\"nets\": {\n\t\t\t\t\"e23\": \"GND\",\n\t\t\t\t\"e24\": \"SW2\",\n\t\t\t\t\"e25\": \"VOUT\",\n\t\t\t\t\"e26\": \"FB\",\n\t\t\t\t\"e27\": \"GND\",\n\t\t\t\t\"e28\": \"VAUX\",\n\t\t\t\t\"e29\": \"PG\",\n\t\t\t\t\"e30\": \"GND\",\n\t\t\t\t\"e31\": \"VIN\",\n\t\t\t\t\"e32\": \"VIN\",\n\t\t\t\t\"e33\": \"SW1\"\n\t\t\t},\n\t\t\t\"pinName\": {\n\t\t\t\t\"e23\": \"PAD\",\n\t\t\t\t\"e24\": \"L2\",\n\t\t\t\t\"e25\": \"VOUT\",\n\t\t\t\t\"e26\": \"FB\",\n\t\t\t\t\"e27\": \"GND\",\n\t\t\t\t\"e28\": \"VAUX\",\n\t\t\t\t\"e29\": \"PG\",\n\t\t\t\t\"e30\": \"PS/SYNC\",\n\t\t\t\t\"e31\": \"EN\",\n\t\t\t\t\"e32\": \"VIN\",\n\t\t\t\t\"e33\": \"L1\"\n\t\t\t},\n\t\t\t\"reuseModules\": {\n\t\t\t\t\"moduleName\": \"\",\n\t\t\t\t\"groupID\": \"\",\n\t\t\t\t\"channelID\": \"$1I60\"\n\t\t\t}\n\t\t}\n\t},\n\t\"footprints\": {\n\t\t\"C0805\": {\n\t\t\t\"pads\": {\n\t\t\t\t\"e15\": {\n\t\t\t\t\t\"number\": \"2\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t1,\n\t\t\t\t\t\t0\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.29499618999238003,\n\t\t\t\t\t\t\t-0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.29499618999238003,\n\t\t\t\t\t\t\t0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.7050038100076204,\n\t\t\t\t\t\t\t0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.7050038100076204,\n\t\t\t\t\t\t\t-0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.29499618999238003,\n\t\t\t\t\t\t\t-0.6750063500127\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e16\": {\n\t\t\t\t\t\"number\": \"1\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t-1,\n\t\t\t\t\t\t0\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7050038100076204,\n\t\t\t\t\t\t\t-0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7050038100076204,\n\t\t\t\t\t\t\t0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.29499618999238003,\n\t\t\t\t\t\t\t0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.29499618999238003,\n\t\t\t\t\t\t\t-0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7050038100076204,\n\t\t\t\t\t\t\t-0.6750063500127\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t}\n\t\t\t},\n\t\t\t\"bbox\": [\n\t\t\t\t-2.0398,\n\t\t\t\t2.0398,\n\t\t\t\t-0.9798,\n\t\t\t\t0.9798\n\t\t\t]\n\t\t},\n\t\t\"C0805_113defca69e0d308\": {\n\t\t\t\"pads\": {\n\t\t\t\t\"e15\": {\n\t\t\t\t\t\"number\": \"2\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t1,\n\t\t\t\t\t\t0\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.29499618999238003,\n\t\t\t\t\t\t\t-0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.29499618999238003,\n\t\t\t\t\t\t\t0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.7050038100076204,\n\t\t\t\t\t\t\t0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.7050038100076204,\n\t\t\t\t\t\t\t-0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.29499618999238003,\n\t\t\t\t\t\t\t-0.6750063500127\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e16\": {\n\t\t\t\t\t\"number\": \"1\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t-1,\n\t\t\t\t\t\t0\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7050038100076204,\n\t\t\t\t\t\t\t-0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7050038100076204,\n\t\t\t\t\t\t\t0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.29499618999238003,\n\t\t\t\t\t\t\t0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.29499618999238003,\n\t\t\t\t\t\t\t-0.6750063500127\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7050038100076204,\n\t\t\t\t\t\t\t-0.6750063500127\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t}\n\t\t\t},\n\t\t\t\"bbox\": [\n\t\t\t\t-2.0398,\n\t\t\t\t2.0398,\n\t\t\t\t-0.9798,\n\t\t\t\t0.9798\n\t\t\t]\n\t\t},\n\t\t\"C0603\": {\n\t\t\t\"pads\": {\n\t\t\t\t\"e14\": {\n\t\t\t\t\t\"number\": \"2\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t0.7,\n\t\t\t\t\t\t0\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.3000254000508001,\n\t\t\t\t\t\t\t-0.45000000000000007\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.3000254000508001,\n\t\t\t\t\t\t\t0.45000000000000007\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.1000254000508003,\n\t\t\t\t\t\t\t0.45000000000000007\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.1000254000508003,\n\t\t\t\t\t\t\t-0.45000000000000007\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.3000254000508001,\n\t\t\t\t\t\t\t-0.45000000000000007\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e15\": {\n\t\t\t\t\t\"number\": \"1\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t-0.7,\n\t\t\t\t\t\t0\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1000254000508003,\n\t\t\t\t\t\t\t-0.45000000000000007\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1000254000508003,\n\t\t\t\t\t\t\t0.45000000000000007\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.3000254000508001,\n\t\t\t\t\t\t\t0.45000000000000007\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.3000254000508001,\n\t\t\t\t\t\t\t-0.45000000000000007\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1000254000508003,\n\t\t\t\t\t\t\t-0.45000000000000007\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t}\n\t\t\t},\n\t\t\t\"bbox\": [\n\t\t\t\t-1.5169,\n\t\t\t\t1.517,\n\t\t\t\t-0.837,\n\t\t\t\t0.8371\n\t\t\t]\n\t\t},\n\t\t\"CONN-TH_2.54MM-2P-ZZ\": {\n\t\t\t\"pads\": {\n\t\t\t\t\"e15\": {\n\t\t\t\t\t\"number\": \"1\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1,\n\t\t\t\t\t\t2\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t-1.2499,\n\t\t\t\t\t\t0\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.4249301498602998,\n\t\t\t\t\t\t\t0\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-2.0749428498857,\n\t\t\t\t\t\t\t0,\n\t\t\t\t\t\t\t-180\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.4249301498602998,\n\t\t\t\t\t\t\t0,\n\t\t\t\t\t\t\t-180\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": 1.65\n\t\t\t\t},\n\t\t\t\t\"e16\": {\n\t\t\t\t\t\"number\": \"2\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1,\n\t\t\t\t\t\t2\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t1.2499,\n\t\t\t\t\t\t0\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t2.0749428498857,\n\t\t\t\t\t\t\t0\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.4249301498602998,\n\t\t\t\t\t\t\t0,\n\t\t\t\t\t\t\t-180\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t2.0749428498857,\n\t\t\t\t\t\t\t0,\n\t\t\t\t\t\t\t-180\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": 1.65\n\t\t\t\t}\n\t\t\t},\n\t\t\t\"bbox\": [\n\t\t\t\t-3.877,\n\t\t\t\t3.877,\n\t\t\t\t-3.727,\n\t\t\t\t2.3271\n\t\t\t]\n\t\t},\n\t\t\"IND-SMD_L4.0-W4.0_XFL4020-102MEB\": {\n\t\t\t\"pads\": {\n\t\t\t\t\"e10\": {\n\t\t\t\t\t\"number\": \"1\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t1.189,\n\t\t\t\t\t\t0\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.5889763779527559,\n\t\t\t\t\t\t\t-1.9000000000000001\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.5889763779527559,\n\t\t\t\t\t\t\t1.9000000000000001\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.7889763779527563,\n\t\t\t\t\t\t\t1.9000000000000001\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.7889763779527563,\n\t\t\t\t\t\t\t-1.9000000000000001\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.5889763779527559,\n\t\t\t\t\t\t\t-1.9000000000000001\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e11\": {\n\t\t\t\t\t\"number\": \"2\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t-1.189,\n\t\t\t\t\t\t0\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.5889763779527556,\n\t\t\t\t\t\t\t1.9000000000000001\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.588976377952756,\n\t\t\t\t\t\t\t-1.9000000000000001\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7889763779527563,\n\t\t\t\t\t\t\t-1.9\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7889763779527559,\n\t\t\t\t\t\t\t1.9000000000000004\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.5889763779527556,\n\t\t\t\t\t\t\t1.9000000000000001\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t}\n\t\t\t},\n\t\t\t\"bbox\": [\n\t\t\t\t-2.227,\n\t\t\t\t2.8025,\n\t\t\t\t-2.327,\n\t\t\t\t2.227\n\t\t\t]\n\t\t},\n\t\t\"R0603\": {\n\t\t\t\"pads\": {\n\t\t\t\t\"e7\": {\n\t\t\t\t\t\"number\": \"2\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t0.7534,\n\t\t\t\t\t\t0\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.3501270002540006,\n\t\t\t\t\t\t\t-0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.3501270002540006,\n\t\t\t\t\t\t\t0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.1566040132080266,\n\t\t\t\t\t\t\t0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.1566040132080266,\n\t\t\t\t\t\t\t-0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.3501270002540006,\n\t\t\t\t\t\t\t-0.432004064008128\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e8\": {\n\t\t\t\t\t\"number\": \"1\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t-0.7534,\n\t\t\t\t\t\t0\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1566040132080266,\n\t\t\t\t\t\t\t-0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1566040132080266,\n\t\t\t\t\t\t\t0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.3501270002540006,\n\t\t\t\t\t\t\t0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.3501270002540006,\n\t\t\t\t\t\t\t-0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1566040132080266,\n\t\t\t\t\t\t\t-0.432004064008128\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t}\n\t\t\t},\n\t\t\t\"bbox\": [\n\t\t\t\t-1.4613,\n\t\t\t\t1.4613,\n\t\t\t\t-0.7368,\n\t\t\t\t0.7368\n\t\t\t]\n\t\t},\n\t\t\"R0603_b74739c524765536\": {\n\t\t\t\"pads\": {\n\t\t\t\t\"e7\": {\n\t\t\t\t\t\"number\": \"2\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t0.7534,\n\t\t\t\t\t\t0\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.3501270002540006,\n\t\t\t\t\t\t\t-0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.3501270002540006,\n\t\t\t\t\t\t\t0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.1566040132080266,\n\t\t\t\t\t\t\t0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.1566040132080266,\n\t\t\t\t\t\t\t-0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.3501270002540006,\n\t\t\t\t\t\t\t-0.432004064008128\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e8\": {\n\t\t\t\t\t\"number\": \"1\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t-0.7534,\n\t\t\t\t\t\t0\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1566040132080266,\n\t\t\t\t\t\t\t-0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1566040132080266,\n\t\t\t\t\t\t\t0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.3501270002540006,\n\t\t\t\t\t\t\t0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.3501270002540006,\n\t\t\t\t\t\t\t-0.432004064008128\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1566040132080266,\n\t\t\t\t\t\t\t-0.432004064008128\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t}\n\t\t\t},\n\t\t\t\"bbox\": [\n\t\t\t\t-1.4613,\n\t\t\t\t1.4613,\n\t\t\t\t-0.7368,\n\t\t\t\t0.7368\n\t\t\t]\n\t\t},\n\t\t\"WSON-10_L3.0-W3.0-P0.50-BL-EP-A\": {\n\t\t\t\"pads\": {\n\t\t\t\t\"e23\": {\n\t\t\t\t\t\"number\": \"11\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t0.0001,\n\t\t\t\t\t\t0.0001\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.0739141478282956,\n\t\t\t\t\t\t\t0.7001524003048006\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.7751333502667006,\n\t\t\t\t\t\t\t0.7001524003048006\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.7751333502667006,\n\t\t\t\t\t\t\t0.5001524003048007\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.0739141478282956,\n\t\t\t\t\t\t\t0.5001524003048007\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.0739141478282956,\n\t\t\t\t\t\t\t0.3001524003048006\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.7751333502667006,\n\t\t\t\t\t\t\t0.3001524003048006\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.7751333502667006,\n\t\t\t\t\t\t\t0.10015240030480062\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.0739141478282956,\n\t\t\t\t\t\t\t0.10015240030480062\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.0739141478282956,\n\t\t\t\t\t\t\t-0.09984759969519941\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.7751333502667006,\n\t\t\t\t\t\t\t-0.09984759969519941\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.7751333502667006,\n\t\t\t\t\t\t\t-0.2998475996951994\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.0751333502667006,\n\t\t\t\t\t\t\t-0.2998475996951994\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.0751333502667006,\n\t\t\t\t\t\t\t-0.4998475996951994\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.7751333502667006,\n\t\t\t\t\t\t\t-0.4998475996951994\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.7751333502667006,\n\t\t\t\t\t\t\t-0.6998475996951995\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.0739141478282956,\n\t\t\t\t\t\t\t-0.6998475996951995\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.0739141478282956,\n\t\t\t\t\t\t\t-0.8498602997205996\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.0760985521971045,\n\t\t\t\t\t\t\t-0.8498602997205996\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.0760985521971045,\n\t\t\t\t\t\t\t-0.6998475996951995\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7748793497586997,\n\t\t\t\t\t\t\t-0.6998475996951995\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7748793497586997,\n\t\t\t\t\t\t\t-0.4998475996951994\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.0760985521971045,\n\t\t\t\t\t\t\t-0.4998475996951994\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.0760985521971045,\n\t\t\t\t\t\t\t-0.2998475996951994\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7748793497586997,\n\t\t\t\t\t\t\t-0.2998475996951994\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7748793497586997,\n\t\t\t\t\t\t\t-0.09984759969519941\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.0760985521971045,\n\t\t\t\t\t\t\t-0.09984759969519941\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.0760985521971045,\n\t\t\t\t\t\t\t0.10015240030480062\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7748793497586997,\n\t\t\t\t\t\t\t0.10015240030480062\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7748793497586997,\n\t\t\t\t\t\t\t0.3001524003048006\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.0760985521971045,\n\t\t\t\t\t\t\t0.3001524003048006\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.0760985521971045,\n\t\t\t\t\t\t\t0.5001524003048007\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7748793497586997,\n\t\t\t\t\t\t\t0.5001524003048007\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.7748793497586997,\n\t\t\t\t\t\t\t0.7001524003048006\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.0760985521971045,\n\t\t\t\t\t\t\t0.7001524003048006\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.0760985521971045,\n\t\t\t\t\t\t\t0.8501397002794007\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.0739141478282956,\n\t\t\t\t\t\t\t0.8501397002794007\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.0739141478282956,\n\t\t\t\t\t\t\t0.7001524003048006\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e24\": {\n\t\t\t\t\t\"number\": \"10\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t-0.9999,\n\t\t\t\t\t\t1.5\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1398780797561596,\n\t\t\t\t\t\t\t1.0618491236982477\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1398780797561596,\n\t\t\t\t\t\t\t1.9381508763017528\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.8598679197358395,\n\t\t\t\t\t\t\t1.9381508763017528\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.8598679197358395,\n\t\t\t\t\t\t\t1.0618491236982477\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1398780797561596,\n\t\t\t\t\t\t\t1.0618491236982477\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e25\": {\n\t\t\t\t\t\"number\": \"9\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t-0.5,\n\t\t\t\t\t\t1.5\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.6400050800101601,\n\t\t\t\t\t\t\t1.0618491236982477\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.6400050800101601,\n\t\t\t\t\t\t\t1.9381508763017528\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.35999491998984,\n\t\t\t\t\t\t\t1.9381508763017528\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.35999491998984,\n\t\t\t\t\t\t\t1.0618491236982477\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.6400050800101601,\n\t\t\t\t\t\t\t1.0618491236982477\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e26\": {\n\t\t\t\t\t\"number\": \"8\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t-0.0006,\n\t\t\t\t\t\t1.4728\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.14064008128016253,\n\t\t\t\t\t\t\t1.0346710693421386\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.14064008128016253,\n\t\t\t\t\t\t\t1.910972821945644\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.1393700787401575,\n\t\t\t\t\t\t\t1.910972821945644\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.1393700787401575,\n\t\t\t\t\t\t\t1.0346710693421386\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.14064008128016253,\n\t\t\t\t\t\t\t1.0346710693421386\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e27\": {\n\t\t\t\t\t\"number\": \"7\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t0.4992,\n\t\t\t\t\t\t1.4726\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.359232918465837,\n\t\t\t\t\t\t\t1.0344170688341376\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.359232918465837,\n\t\t\t\t\t\t\t1.9107188214376434\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.6392430784861571,\n\t\t\t\t\t\t\t1.9107188214376434\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.6392430784861571,\n\t\t\t\t\t\t\t1.0344170688341376\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.359232918465837,\n\t\t\t\t\t\t\t1.0344170688341376\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e28\": {\n\t\t\t\t\t\"number\": \"6\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t0.9994,\n\t\t\t\t\t\t1.4738\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.8593599187198376,\n\t\t\t\t\t\t\t1.035687071374143\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.8593599187198376,\n\t\t\t\t\t\t\t1.9119888239776481\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.1393700787401575,\n\t\t\t\t\t\t\t1.9119888239776481\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.1393700787401575,\n\t\t\t\t\t\t\t1.035687071374143\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.8593599187198376,\n\t\t\t\t\t\t\t1.035687071374143\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e29\": {\n\t\t\t\t\t\"number\": \"5\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t0.9999,\n\t\t\t\t\t\t-1.5\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.8598679197358395,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.8598679197358395,\n\t\t\t\t\t\t\t-1.0618491236982477\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.1398780797561596,\n\t\t\t\t\t\t\t-1.0618491236982477\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t1.1398780797561596,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.8598679197358395,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e30\": {\n\t\t\t\t\t\"number\": \"4\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t0.5,\n\t\t\t\t\t\t-1.5\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.35999491998984,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.35999491998984,\n\t\t\t\t\t\t\t-1.0618491236982477\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.6400050800101601,\n\t\t\t\t\t\t\t-1.0618491236982477\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.6400050800101601,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.35999491998984,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e31\": {\n\t\t\t\t\t\"number\": \"3\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t0.0001,\n\t\t\t\t\t\t-1.5\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.1398780797561595,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.1398780797561595,\n\t\t\t\t\t\t\t-1.0618491236982477\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.14013208026416052,\n\t\t\t\t\t\t\t-1.0618491236982477\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t0.14013208026416052,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.1398780797561595,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e32\": {\n\t\t\t\t\t\"number\": \"2\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t-0.5,\n\t\t\t\t\t\t-1.5\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.6400050800101601,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.6400050800101601,\n\t\t\t\t\t\t\t-1.0618491236982477\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.35999491998984,\n\t\t\t\t\t\t\t-1.0618491236982477\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.35999491998984,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.6400050800101601,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t},\n\t\t\t\t\"e33\": {\n\t\t\t\t\t\"number\": \"1\",\n\t\t\t\t\t\"layers\": [\n\t\t\t\t\t\t1\n\t\t\t\t\t],\n\t\t\t\t\t\"location\": [\n\t\t\t\t\t\t-0.9999,\n\t\t\t\t\t\t-1.5\n\t\t\t\t\t],\n\t\t\t\t\t\"path\": [\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1398780797561596,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1398780797561596,\n\t\t\t\t\t\t\t-1.0618491236982477\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.8598679197358395,\n\t\t\t\t\t\t\t-1.0618491236982477\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-0.8598679197358395,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t],\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t-1.1398780797561596,\n\t\t\t\t\t\t\t-1.9381508763017528\n\t\t\t\t\t\t]\n\t\t\t\t\t],\n\t\t\t\t\t\"diameter\": null\n\t\t\t\t}\n\t\t\t},\n\t\t\t\"bbox\": [\n\t\t\t\t-1.801,\n\t\t\t\t1.7982,\n\t\t\t\t-2.5041,\n\t\t\t\t1.9382\n\t\t\t]\n\t\t}\n\t},\n\t\"constraintRegions\": {},\n\t\"tracks\": [\n\t\t{\n\t\t\t\"id\": \"ece2e53a5c1d9833\",\n\t\t\t\"width\": 0.254,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"FB\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t3.0000050800101605,\n\t\t\t\t\t-0.7466014732029465\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t3.8932080264160533,\n\t\t\t\t\t-0.7466014732029465\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t4.046609093218187,\n\t\t\t\t\t-0.9000025400050802\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R1\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C7\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e26\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"b6b92347ac98f19c\",\n\t\t\t\"width\": 0.254,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"FB\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t4.046609093218187,\n\t\t\t\t\t-0.9000025400050802\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t4.046609093218187,\n\t\t\t\t\t-1.9466040132080267\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t4.1000076200152415,\n\t\t\t\t\t-2.00000508001016\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R1\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C7\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e26\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"4dab314aec432973\",\n\t\t\t\"width\": 0.252,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"VAUX\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t1.4738023876047754,\n\t\t\t\t\t0.0005994411988823979\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t1.4738023876047754,\n\t\t\t\t\t-2.0238049276098553\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t1.95000508001016,\n\t\t\t\t\t-2.5000050800101605\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e28\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C6\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"cb27164be957b294\",\n\t\t\t\"width\": 0.252,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"SW1\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t-1.1890017780035562,\n\t\t\t\t\t4.9000101600203205\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-1.1890017780035562,\n\t\t\t\t\t2.3109042418084838\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-1.5000025400050803,\n\t\t\t\t\t1.99990347980696\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"L1\",\n\t\t\t\t\t\"e10\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e33\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"5977908cc73a81b8\",\n\t\t\t\"width\": 0.252,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"SW2\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t1.1890017780035562,\n\t\t\t\t\t4.9000101600203205\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t1.1890017780035562,\n\t\t\t\t\t2.3109042418084838\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t1.5000025400050803,\n\t\t\t\t\t1.99990347980696\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"L1\",\n\t\t\t\t\t\"e11\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e24\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"8e61a8567627476a\",\n\t\t\t\"width\": 0.252,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"VOUT\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t3.0500050800101604,\n\t\t\t\t\t1.3500025400050801\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t3.0500050800101604,\n\t\t\t\t\t0.8000025400050801\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e25\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R1\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C7\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R3\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"b66a9b09b30daa1a\",\n\t\t\t\"width\": 0.55,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"VOUT\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t5.20001016002032,\n\t\t\t\t\t0.8000025400050801\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t7.35001524003048,\n\t\t\t\t\t0.8000025400050801\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e25\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R1\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C7\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R3\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"0dcad09cc6b7587e\",\n\t\t\t\"width\": 0.55,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"VOUT\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t7.35001524003048,\n\t\t\t\t\t0.8000025400050801\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t9.450119380238762,\n\t\t\t\t\t0.8000025400050801\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t11.500022860045721,\n\t\t\t\t\t-1.2499034798069597\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e25\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R1\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C7\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R3\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"d5203a58f3a8ffa9\",\n\t\t\t\"width\": 0.252,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"VIN\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t-1.5000025400050803,\n\t\t\t\t\t0.9999009398018799\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-1.5000025400050803,\n\t\t\t\t\t1.5000025400050803\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e31\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e32\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"94f4bc31e454d91a\",\n\t\t\t\"width\": 0.252,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"VIN\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t-1.5000025400050803,\n\t\t\t\t\t0.9999009398018799\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-2.8501066802133606,\n\t\t\t\t\t0.9999009398018799\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-3.0500050800101604,\n\t\t\t\t\t0.8000025400050801\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e31\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e32\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"e4c07b361c898d21\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"FB\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t1.4738023876047754,\n\t\t\t\t\t1.000701041402083\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t2.14000508001016,\n\t\t\t\t\t1.000701041402083\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t2.14000508001016,\n\t\t\t\t\t-0.7466014732029465\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t3.0000050800101605,\n\t\t\t\t\t-0.7466014732029465\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R1\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C7\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e26\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"c28755cb1c7f49c7\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t0.00009906019812039625,\n\t\t\t\t\t0.9999009398018799\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t0.38109982219964444,\n\t\t\t\t\t0.6189001778003557\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t0.5081000762001525,\n\t\t\t\t\t0.6189001778003557\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e27\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e30\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C6\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"af5ec6787b8e8ec2\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t0.00009906019812039625,\n\t\t\t\t\t0.9999009398018799\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-0.49980187960375927,\n\t\t\t\t\t0.5\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-1.5000025400050803,\n\t\t\t\t\t0.5\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e27\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e30\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C6\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"84547caaf51f2cbe\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t0.00009906019812039625,\n\t\t\t\t\t0.9999009398018799\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t0.00009906019812039625,\n\t\t\t\t\t2.9999060198120397\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-0.12690119380238762,\n\t\t\t\t\t3.126906273812548\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-0.12690119380238762,\n\t\t\t\t\t3.158905257810516\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e27\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e30\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C6\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"1d3884e0384f6f46\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t-3.0500050800101604,\n\t\t\t\t\t2.8000050800101604\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-5.20001016002032,\n\t\t\t\t\t2.8000050800101604\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e27\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e30\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C6\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"dfd61b2d39d622ae\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t3.0500050800101604,\n\t\t\t\t\t2.8000050800101604\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t5.20001016002032,\n\t\t\t\t\t2.8000050800101604\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e27\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e30\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C6\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"f957531e8ccd6195\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t5.20001016002032,\n\t\t\t\t\t2.8000050800101604\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t7.35001524003048,\n\t\t\t\t\t2.8000050800101604\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e27\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e30\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C6\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"adc26e3dc08082a4\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t0.5081000762001525,\n\t\t\t\t\t0.6189001778003557\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t0.5081000762001525,\n\t\t\t\t\t-2.4581051562103124\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t0.55,\n\t\t\t\t\t-2.5000050800101605\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e27\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e30\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C6\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"7150017634006917\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t0.55,\n\t\t\t\t\t-2.5000050800101605\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t1.2294030988061977,\n\t\t\t\t\t-3.179405638811278\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t2.45500381000762,\n\t\t\t\t\t-3.179405638811278\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t3.0000050800101605,\n\t\t\t\t\t-2.6344043688087377\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t3.0000050800101605,\n\t\t\t\t\t-2.2534036068072134\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e27\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e30\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C6\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"7d253a4b6b3e5400\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t7.35001524003048,\n\t\t\t\t\t2.8000050800101604\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t9.94991871983744,\n\t\t\t\t\t2.8000050800101604\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t11.500022860045721,\n\t\t\t\t\t1.2499034798069597\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e27\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e30\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C6\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"e86ea8d4d9a2c78f\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t-5.20001016002032,\n\t\t\t\t\t2.8000050800101604\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-9.94991871983744,\n\t\t\t\t\t2.8000050800101604\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-11.500022860045721,\n\t\t\t\t\t1.2499034798069597\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e27\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e30\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C6\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"916b370ba40bbca7\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 2,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t-11.500022860045721,\n\t\t\t\t\t1.2499034798069597\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-4.250109220218441,\n\t\t\t\t\t-6.0000127000254\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-4.250109220218441,\n\t\t\t\t\t-9.000017780035561\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"a8fe06d8105285f2\",\n\t\t\t\"width\": 0.254,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"PG\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t-2.2466040132080267,\n\t\t\t\t\t-2.2143484886969778\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-4.2786080772161545,\n\t\t\t\t\t-2.2143484886969778\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-6.74991363982728,\n\t\t\t\t\t-4.685654051308103\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-6.74991363982728,\n\t\t\t\t\t-9.000017780035561\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"R3\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e29\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"74a512601a5a4cfe\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t0.5081000762001525,\n\t\t\t\t\t0.6189001778003557\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t0.6262001524003049,\n\t\t\t\t\t0.5008001016002033\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t1.4726035052070106,\n\t\t\t\t\t0.5008001016002033\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e27\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e30\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C6\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"284c9af1621d6f4c\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t-2.793906527813056,\n\t\t\t\t\t4.199108458216917\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-2.793906527813056,\n\t\t\t\t\t3.0561036322072646\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-3.0500050800101604,\n\t\t\t\t\t2.8000050800101604\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e27\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e30\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C6\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"c55eb84e05d96d71\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 2,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t-0.12690119380238762,\n\t\t\t\t\t3.158905257810516\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-1.753703327406655,\n\t\t\t\t\t3.158905257810516\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-2.793906527813056,\n\t\t\t\t\t4.199108458216917\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"1ddb01350acb3fca\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t2.794104648209297,\n\t\t\t\t\t4.198907797815597\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t2.794104648209297,\n\t\t\t\t\t3.055905511811024\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t3.0500050800101604,\n\t\t\t\t\t2.8000050800101604\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e27\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e30\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C6\",\n\t\t\t\t\t\"e14\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R2\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"e251b00b94ebaf84\",\n\t\t\t\"width\": 0.127,\n\t\t\t\"layer\": 2,\n\t\t\t\"net\": \"GND\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t2.794104648209297,\n\t\t\t\t\t4.198907797815597\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t1.7541021082042165,\n\t\t\t\t\t3.158905257810516\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-0.12690119380238762,\n\t\t\t\t\t3.158905257810516\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"8ef8a7be2ef3387b\",\n\t\t\t\"width\": 0.75,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"VIN\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t-3.0500050800101604,\n\t\t\t\t\t0.8000025400050801\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-5.4230099060198125,\n\t\t\t\t\t0.8000025400050801\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-8.001016002032005,\n\t\t\t\t\t-1.7780035560071124\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-10.971955803911609,\n\t\t\t\t\t-1.7780035560071124\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-11.500022860045721,\n\t\t\t\t\t-1.249936499873\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J1\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e31\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e32\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C1\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C2\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"b387fe0dd6379d5f\",\n\t\t\t\"width\": 0.55,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"VOUT\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t3.0500050800101604,\n\t\t\t\t\t1.3500025400050801\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t3.6000050800101606,\n\t\t\t\t\t0.8000025400050801\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t5.20001016002032,\n\t\t\t\t\t0.8000025400050801\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e25\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R1\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C7\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R3\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"49ca761969a1a20b\",\n\t\t\t\"width\": 0.252,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"VOUT\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t1.5000025400050803,\n\t\t\t\t\t1.5000025400050803\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t2.9000050800101604,\n\t\t\t\t\t1.5000025400050803\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t3.0500050800101604,\n\t\t\t\t\t1.3500025400050801\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e25\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R1\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C7\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R3\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"f4972b2e7fae8c34\",\n\t\t\t\"width\": 0.55,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"VOUT\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t5.20001016002032,\n\t\t\t\t\t0.8000025400050801\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t5.553411226822454,\n\t\t\t\t\t0.44660147320294646\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t5.553411226822454,\n\t\t\t\t\t-0.9000025400050802\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e25\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R1\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C7\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R3\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"71b6c2117a688d4c\",\n\t\t\t\"width\": 0.55,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"VOUT\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t5.553411226822454,\n\t\t\t\t\t-0.9000025400050802\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t5.553411226822454,\n\t\t\t\t\t-2.009387858775718\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t5.589215138430278,\n\t\t\t\t\t-2.3711125222250446\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t4.312466344932691,\n\t\t\t\t\t-3.928382016764034\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-2.286004572009144,\n\t\t\t\t\t-3.928374396748794\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"J2\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e25\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C3\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C4\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C5\",\n\t\t\t\t\t\"e16\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R1\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"C7\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"R3\",\n\t\t\t\t\t\"e8\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"66315929de06c75a\",\n\t\t\t\"width\": 0.252,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"PG\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t-1.5000025400050803,\n\t\t\t\t\t0.00009906019812039625\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-1.5000025400050803,\n\t\t\t\t\t-2.2143484886969778\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-2.2466040132080267,\n\t\t\t\t\t-2.2143484886969778\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"R3\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e29\"\n\t\t\t\t]\n\t\t\t]\n\t\t},\n\t\t{\n\t\t\t\"id\": \"9197552068f49977\",\n\t\t\t\"width\": 0.252,\n\t\t\t\"layer\": 1,\n\t\t\t\"net\": \"PG\",\n\t\t\t\"path\": [\n\t\t\t\t[\n\t\t\t\t\t-2.2466040132080267,\n\t\t\t\t\t-2.2143484886969778\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-2.2466040132080267,\n\t\t\t\t\t-2.382240284480569\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t-2.286004572009144,\n\t\t\t\t\t-2.421640843281687\n\t\t\t\t]\n\t\t\t],\n\t\t\t\"pads\": [\n\t\t\t\t[\n\t\t\t\t\t\"R3\",\n\t\t\t\t\t\"e7\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"J3\",\n\t\t\t\t\t\"e15\"\n\t\t\t\t],\n\t\t\t\t[\n\t\t\t\t\t\"U1\",\n\t\t\t\t\t\"e29\"\n\t\t\t\t]\n\t\t\t]\n\t\t}\n\t],\n\t\"vias\": [\n\t\t{\n\t\t\t\"id\": \"a3766dece689d18c\",\n\t\t\t\"location\": [\n\t\t\t\t-0.399,\n\t\t\t\t0.6\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"b72e9b5e0d21a4c4\",\n\t\t\t\"location\": [\n\t\t\t\t-0.399,\n\t\t\t\t1.4\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"52f596f42bc46ff7\",\n\t\t\t\"location\": [\n\t\t\t\t0.401,\n\t\t\t\t0.6\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"6e95ce80874cd4cb\",\n\t\t\t\"location\": [\n\t\t\t\t0.401,\n\t\t\t\t1.4\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"26e1bceae72d5a8d\",\n\t\t\t\"location\": [\n\t\t\t\t-0.1269,\n\t\t\t\t3.1589\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"f8ab2e1cca13ecf2\",\n\t\t\t\"location\": [\n\t\t\t\t-2.7939,\n\t\t\t\t4.1991\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"7e79ebd4f51b04dd\",\n\t\t\t\"location\": [\n\t\t\t\t2.7941,\n\t\t\t\t4.1989\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"a16ff992ca17df1b\",\n\t\t\t\"location\": [\n\t\t\t\t-0.82,\n\t\t\t\t-2.1082\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"28273f7036b0bf6c\",\n\t\t\t\"location\": [\n\t\t\t\t-3.556,\n\t\t\t\t-1.143\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"613af030fb5e7e4e\",\n\t\t\t\"location\": [\n\t\t\t\t-4.5261,\n\t\t\t\t4.9761\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"ccc8d8e2a9e911bc\",\n\t\t\t\"location\": [\n\t\t\t\t-6.6761,\n\t\t\t\t4.9761\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"936f184249634fb1\",\n\t\t\t\"location\": [\n\t\t\t\t-5.2,\n\t\t\t\t4.9761\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"707550046dfed6fe\",\n\t\t\t\"location\": [\n\t\t\t\t-5.08,\n\t\t\t\t-1.778\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"04df96dbe5fe4deb\",\n\t\t\t\"location\": [\n\t\t\t\t-7.3761,\n\t\t\t\t2.6254\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"44af2d448bcbf48b\",\n\t\t\t\"location\": [\n\t\t\t\t5.2261,\n\t\t\t\t4.2761\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"62766e1a5782fa3c\",\n\t\t\t\"location\": [\n\t\t\t\t3.724,\n\t\t\t\t4.9761\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"63838f20b595b5f8\",\n\t\t\t\"location\": [\n\t\t\t\t5.2,\n\t\t\t\t4.9761\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"be66d4695a621701\",\n\t\t\t\"location\": [\n\t\t\t\t7.3761,\n\t\t\t\t4.2761\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"b2caad94be90871a\",\n\t\t\t\"location\": [\n\t\t\t\t6.6761,\n\t\t\t\t-1.376\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"0526eb6692a2c550\",\n\t\t\t\"location\": [\n\t\t\t\t5.874,\n\t\t\t\t4.9761\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"786c9133e006b7e3\",\n\t\t\t\"location\": [\n\t\t\t\t7.35,\n\t\t\t\t4.9761\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"ac0ff770eba9fe97\",\n\t\t\t\"location\": [\n\t\t\t\t9.5261,\n\t\t\t\t4.2761\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"c253d0ca476da851\",\n\t\t\t\"location\": [\n\t\t\t\t9.5261,\n\t\t\t\t2.6254\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t},\n\t\t{\n\t\t\t\"id\": \"ef9e795f93228030\",\n\t\t\t\"location\": [\n\t\t\t\t7.112,\n\t\t\t\t-2.032\n\t\t\t],\n\t\t\t\"size\": [\n\t\t\t\t0.6096012192024385,\n\t\t\t\t0.30480060960121924\n\t\t\t],\n\t\t\t\"net\": \"GND\"\n\t\t}\n\t],\n\t\"fillRegions\": [],\n\t\"prohibitedRegions\": []\n}",
+    "drc": {
+      "ruleConfiguration": {
+        "Spacing": {
+          "Safe Spacing": {
+            "copperThickness1oz": {
+              "editName": "copperThickness1oz",
+              "unit": "mm",
+              "isSetDefault": true,
+              "column": [
+                "Track",
+                "SMD Pad",
+                "TH Pad",
+                "SMD Test Point",
+                "TH Test Point",
+                "Via",
+                "Fill Region/Teardrop",
+                "Copper/Plane Zone",
+                "Slot Region",
+                "Line",
+                "Text/Image",
+                "Board Outline"
+              ],
+              "row": [
+                "Track",
+                "SMD Pad",
+                "TH Pad",
+                "SMD Test Point",
+                "TH Test Point",
+                "Via",
+                "Fill Region/Teardrop",
+                "Copper/Plane Zone",
+                "Slot Region",
+                "Line",
+                "Text/Image",
+                "Board Outline",
+                "Hole"
+              ],
+              "status": 0,
+              "tables": {
+                "1": {
+                  "status": 1,
+                  "content": [
+                    [
+                      0.10199878
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.254,
+                      0.254,
+                      0.254,
+                      0.254,
+                      0.254,
+                      0.254,
+                      0.254,
+                      0.254
+                    ],
+                    [
+                      0.29999939999999997,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.254,
+                      0.15239999999999998
+                    ],
+                    [
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.254,
+                      0.29999939999999997,
+                      0.15239999999999998
+                    ],
+                    [
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.254,
+                      0.15239999999999998,
+                      0.15239999999999998,
+                      0.15239999999999998
+                    ],
+                    [
+                      0.29972,
+                      0.29972,
+                      0.29972,
+                      0.29972,
+                      0.29972,
+                      0.29972,
+                      0.29972,
+                      0.254,
+                      0.29972,
+                      0.29972,
+                      0.29972
+                    ],
+                    [
+                      0.1759966,
+                      0.1759966,
+                      0.1759966,
+                      0.1759966,
+                      0.1759966,
+                      0.1759966,
+                      0.1759966,
+                      0.254,
+                      0.1759966,
+                      0.1759966,
+                      0.1759966,
+                      0.1759966
+                    ]
+                  ]
+                }
+              }
+            },
+            "copperThickness2oz": {
+              "editName": "copperThickness2oz",
+              "unit": "mm",
+              "isSetDefault": false,
+              "column": [
+                "Track",
+                "SMD Pad",
+                "TH Pad",
+                "SMD Test Point",
+                "TH Test Point",
+                "Via",
+                "Fill Region/Teardrop",
+                "Copper/Plane Zone",
+                "Slot Region",
+                "Line",
+                "Text/Image",
+                "Board Outline"
+              ],
+              "row": [
+                "Track",
+                "SMD Pad",
+                "TH Pad",
+                "SMD Test Point",
+                "TH Test Point",
+                "Via",
+                "Fill Region/Teardrop",
+                "Copper/Plane Zone",
+                "Slot Region",
+                "Line",
+                "Text/Image",
+                "Board Outline",
+                "Hole"
+              ],
+              "status": 0,
+              "tables": {
+                "1": {
+                  "status": 1,
+                  "content": [
+                    [
+                      0.20299933999999997
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.254,
+                      0.254,
+                      0.254,
+                      0.254,
+                      0.254,
+                      0.254,
+                      0.254,
+                      0.254
+                    ],
+                    [
+                      0.29999939999999997,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.254,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.254,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.254,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.29999939999999997,
+                      0.29999939999999997,
+                      0.29999939999999997,
+                      0.29999939999999997,
+                      0.29999939999999997,
+                      0.29999939999999997,
+                      0.29999939999999997,
+                      0.254,
+                      0.29999939999999997,
+                      0.29999939999999997,
+                      0.29999939999999997
+                    ],
+                    [
+                      0.1759966,
+                      0.1759966,
+                      0.1759966,
+                      0.1759966,
+                      0.1759966,
+                      0.1759966,
+                      0.1759966,
+                      0.254,
+                      0.1759966,
+                      0.1759966,
+                      0.1759966,
+                      0.1759966
+                    ]
+                  ]
+                }
+              }
+            },
+            "copilot_router_net_0_spacing": {
+              "editName": "copilot_router_net_0_spacing",
+              "unit": "mm",
+              "isSetDefault": false,
+              "column": [
+                "Track",
+                "SMD Pad",
+                "TH Pad",
+                "SMD Test Point",
+                "TH Test Point",
+                "Via",
+                "Fill Region/Teardrop",
+                "Copper/Plane Zone",
+                "Slot Region",
+                "Line",
+                "Text/Image",
+                "Board Outline"
+              ],
+              "row": [
+                "Track",
+                "SMD Pad",
+                "TH Pad",
+                "SMD Test Point",
+                "TH Test Point",
+                "Via",
+                "Fill Region/Teardrop",
+                "Copper/Plane Zone",
+                "Slot Region",
+                "Line",
+                "Text/Image",
+                "Board Outline",
+                "Hole"
+              ],
+              "status": 0,
+              "tables": {
+                "1": {
+                  "status": 1,
+                  "content": [
+                    [
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ],
+                    [
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122,
+                      0.15200122
+                    ]
+                  ]
+                }
+              }
+            }
+          },
+          "Other Spacing": {
+            "otherClearance": {
+              "editName": "otherClearance",
+              "unit": "mm",
+              "isSetDefault": true,
+              "form": {
+                "device2device": 0,
+                "thru2Smd": 0,
+                "hole2Hole": 0.29999939999999997
+              }
+            }
+          },
+          "Creepage Distance": {
+            "creepage": {
+              "editName": "creepage",
+              "unit": "mm",
+              "isSetDefault": true,
+              "form": {
+                "creepageDistance": 0,
+                "ignoreLayer": true
+              }
+            }
+          }
+        },
+        "Physics": {
+          "Track": {
+            "copperThickness1oz": {
+              "editName": "copperThickness1oz",
+              "unit": "mm",
+              "isSetDefault": true,
+              "form": {
+                "status": 1,
+                "data": {
+                  "1": {
+                    "minValue": 0.127,
+                    "defaultValue": 0.254,
+                    "maxValue": 2.54
+                  }
+                }
+              }
+            },
+            "copperThickness2oz": {
+              "editName": "copperThickness2oz",
+              "unit": "mm",
+              "isSetDefault": false,
+              "form": {
+                "status": 1,
+                "data": {
+                  "1": {
+                    "minValue": 0.20299933999999997,
+                    "defaultValue": 0.254,
+                    "maxValue": 2.54
+                  }
+                }
+              }
+            },
+            "copilot_router_net_0_track": {
+              "editName": "copilot_router_net_0_track",
+              "unit": "mm",
+              "isSetDefault": false,
+              "form": {
+                "status": 1,
+                "data": {
+                  "1": {
+                    "minValue": 0.127,
+                    "defaultValue": 0.254,
+                    "maxValue": 1.25400054
+                  }
+                }
+              }
+            },
+            "copilot_router_net_3_track": {
+              "editName": "copilot_router_net_3_track",
+              "unit": "mm",
+              "isSetDefault": false,
+              "form": {
+                "status": 1,
+                "data": {
+                  "1": {
+                    "minValue": 0.127,
+                    "defaultValue": 0.75000104,
+                    "maxValue": 1.7499990399999998
+                  }
+                }
+              }
+            },
+            "copilot_router_net_7_track": {
+              "editName": "copilot_router_net_7_track",
+              "unit": "mm",
+              "isSetDefault": false,
+              "form": {
+                "status": 1,
+                "data": {
+                  "1": {
+                    "minValue": 0.127,
+                    "defaultValue": 0.5499989,
+                    "maxValue": 1.54999944
+                  }
+                }
+              }
+            },
+            "copilot_router_net_1_track": {
+              "editName": "copilot_router_net_1_track",
+              "unit": "mm",
+              "isSetDefault": false,
+              "form": {
+                "status": 1,
+                "data": {
+                  "1": {
+                    "minValue": 0.127,
+                    "defaultValue": 0.127,
+                    "maxValue": 1.12700054
+                  }
+                }
+              }
+            }
+          },
+          "Net Length Range": {
+            "netLength": {
+              "editName": "netLength",
+              "unit": "mm",
+              "isSetDefault": true,
+              "form": {
+                "netLengthMin": 0,
+                "netLengthMax": 0
+              }
+            }
+          },
+          "Net Length Tolerance": {
+            "netLengthTolerance": {
+              "editName": "netLengthTolerance",
+              "unit": "mm",
+              "isSetDefault": true,
+              "form": {
+                "netLengthTolerance": 25.4
+              }
+            }
+          },
+          "Differential Pair": {
+            "differentialPair": {
+              "editName": "differentialPair",
+              "unit": "mm",
+              "isSetDefault": true,
+              "form": {
+                "strokeWidthTables": {
+                  "status": 1,
+                  "data": {
+                    "1": {
+                      "minValue": 0.127,
+                      "defaultValue": 0.254,
+                      "maxValue": 2.54
+                    }
+                  }
+                },
+                "diffPairSpacingTables": {
+                  "status": 1,
+                  "data": {
+                    "1": {
+                      "minValue": 0.15239999999999998,
+                      "defaultValue": 0.15239999999999998,
+                      "maxValue": null
+                    }
+                  }
+                },
+                "differentailPairLenTolerMax": 0.254
+              }
+            }
+          },
+          "Blind/Buried Via": {
+            "blindVia": {
+              "editName": "blindVia",
+              "isSetDefault": true,
+              "table": []
+            }
+          },
+          "Via Size": {
+            "viaSize": {
+              "editName": "viaSize",
+              "unit": "mm",
+              "isSetDefault": true,
+              "form": {
+                "viaOuterdiameterMin": 0.49999899999999997,
+                "viaOuterdiameterMax": 10.00000032,
+                "viaOuterdiameterDefault": 0.61000132,
+                "viaInnerdiameterMin": 0.29999939999999997,
+                "viaInnerdiameterMax": 6.2999975599999996,
+                "viaInnerdiameterDefault": 0.30499812
+              }
+            },
+            "copilot_router_net_0_via": {
+              "editName": "copilot_router_net_0_via",
+              "unit": "mm",
+              "isSetDefault": false,
+              "form": {
+                "viaOuterdiameterMin": 0.61000132,
+                "viaOuterdiameterMax": 0.61000132,
+                "viaOuterdiameterDefault": 0.61000132,
+                "viaInnerdiameterMin": 0.30499812,
+                "viaInnerdiameterMax": 0.30499812,
+                "viaInnerdiameterDefault": 0.30499812
+              }
+            }
+          }
+        },
+        "Plane": {
+          "Plane Zone": {
+            "innerPlane": {
+              "editName": "innerPlane",
+              "unit": "mm",
+              "isSetDefault": true,
+              "form": {
+                "status": 1,
+                "data": {
+                  "1": {
+                    "connectMode": 0,
+                    "lineClearance": 0.254,
+                    "lineWidth": 0.254,
+                    "lineAngle": 90
+                  }
+                }
+              }
+            }
+          },
+          "Copper Zone": {
+            "copperRegion": {
+              "editName": "copperRegion",
+              "unit": "mm",
+              "isSetDefault": true,
+              "form": {
+                "singleLayerPadModel": {
+                  "status": 1,
+                  "data": {
+                    "1": {
+                      "connectMode": 0,
+                      "lineClearance": 0.254,
+                      "lineWidth": 0.254,
+                      "lineAngle": 90
+                    }
+                  }
+                },
+                "multiLayerPadModel": {
+                  "status": 1,
+                  "data": {
+                    "1": {
+                      "connectMode": 0,
+                      "lineClearance": 0.254,
+                      "lineWidth": 0.254,
+                      "lineAngle": 90
+                    }
+                  }
+                },
+                "trackConnectModel": {
+                  "status": 1,
+                  "data": {
+                    "1": {
+                      "trackConnectMode": 0
+                    }
+                  }
+                }
+              }
+            },
+            "copilot_router_zone_0_copper": {
+              "editName": "copilot_router_zone_0_copper",
+              "unit": "mm",
+              "isSetDefault": false,
+              "form": {
+                "singleLayerPadModel": {
+                  "status": 1,
+                  "data": {
+                    "1": {
+                      "connectMode": 1,
+                      "lineClearance": 0.254,
+                      "lineWidth": 0.254,
+                      "lineAngle": 90
+                    }
+                  }
+                },
+                "multiLayerPadModel": {
+                  "status": 1,
+                  "data": {
+                    "1": {
+                      "connectMode": 1,
+                      "lineClearance": 0.254,
+                      "lineWidth": 0.254,
+                      "lineAngle": 90
+                    }
+                  }
+                },
+                "trackConnectModel": {
+                  "status": 1,
+                  "data": {
+                    "1": {
+                      "trackConnectMode": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Expansion": {
+          "Solder Mask Expansion": {
+            "solderMaskExpansion": {
+              "editName": "solderMaskExpansion",
+              "unit": "mm",
+              "isSetDefault": true,
+              "form": {
+                "padToplayerExpansion": 0.0508,
+                "padBottomlayerExpansion": 0.0508,
+                "viaToplayerExpansion": -25.4,
+                "viaBottomlayerExpansion": -25.4,
+                "testPointToplayerExpansion": 0.0508,
+                "testPointBottomlayerExpansion": 0.0508
+              }
+            }
+          },
+          "Paste Mask Expansion": {
+            "pasteMaskExpansion": {
+              "editName": "pasteMaskExpansion",
+              "unit": "mm",
+              "isSetDefault": true,
+              "form": {
+                "padToplayerExpansion": 0,
+                "padBottomlayerExpansion": 0,
+                "testPointToplayerExpansion": -25.4,
+                "testPointBottomlayerExpansion": -25.4
+              }
+            }
+          }
+        }
+      },
+      "netRules": [
+        {
+          "type": "net",
+          "name": "GND",
+          "Safe Spacing": "copilot_router_net_0_spacing",
+          "Copper Safe Spacing": "copilot_router_net_0_spacing",
+          "Plane Safe Spacing": null,
+          "Track": "copilot_router_net_1_track",
+          "Net Length Range": "default",
+          "Net Length Tolerance": null,
+          "Blind/Buried Via": "default",
+          "Via Size": "copilot_router_net_0_via",
+          "Plane Zone": "default",
+          "Copper Zone": "copilot_router_zone_0_copper",
+          "Solder Mask Expansion": "default",
+          "Paste Mask Expansion": "default",
+          "Creepage Distance": null,
+          "targetNet": null
+        },
+        {
+          "type": "net",
+          "name": "VIN",
+          "Safe Spacing": "copilot_router_net_0_spacing",
+          "Copper Safe Spacing": "copilot_router_net_0_spacing",
+          "Plane Safe Spacing": null,
+          "Track": "copilot_router_net_3_track",
+          "Net Length Range": "default",
+          "Net Length Tolerance": null,
+          "Blind/Buried Via": "default",
+          "Via Size": "copilot_router_net_0_via",
+          "Plane Zone": "default",
+          "Copper Zone": "copilot_router_zone_0_copper",
+          "Solder Mask Expansion": "default",
+          "Paste Mask Expansion": "default",
+          "Creepage Distance": null,
+          "targetNet": null
+        },
+        {
+          "type": "net",
+          "name": "VOUT",
+          "Safe Spacing": "copilot_router_net_0_spacing",
+          "Copper Safe Spacing": "copilot_router_net_0_spacing",
+          "Plane Safe Spacing": null,
+          "Track": "copilot_router_net_7_track",
+          "Net Length Range": "default",
+          "Net Length Tolerance": null,
+          "Blind/Buried Via": "default",
+          "Via Size": "copilot_router_net_0_via",
+          "Plane Zone": "default",
+          "Copper Zone": "copilot_router_zone_0_copper",
+          "Solder Mask Expansion": "default",
+          "Paste Mask Expansion": "default",
+          "Creepage Distance": null,
+          "targetNet": null
+        },
+        {
+          "type": "net",
+          "name": "VAUX",
+          "Safe Spacing": "copilot_router_net_0_spacing",
+          "Copper Safe Spacing": null,
+          "Plane Safe Spacing": null,
+          "Track": "copilot_router_net_0_track",
+          "Net Length Range": "default",
+          "Net Length Tolerance": null,
+          "Blind/Buried Via": "default",
+          "Via Size": "copilot_router_net_0_via",
+          "Plane Zone": "default",
+          "Copper Zone": "default",
+          "Solder Mask Expansion": "default",
+          "Paste Mask Expansion": "default",
+          "Creepage Distance": null,
+          "targetNet": null
+        },
+        {
+          "type": "net",
+          "name": "FB",
+          "Safe Spacing": "copilot_router_net_0_spacing",
+          "Copper Safe Spacing": null,
+          "Plane Safe Spacing": null,
+          "Track": "copilot_router_net_0_track",
+          "Net Length Range": "default",
+          "Net Length Tolerance": null,
+          "Blind/Buried Via": "default",
+          "Via Size": "copilot_router_net_0_via",
+          "Plane Zone": "default",
+          "Copper Zone": "default",
+          "Solder Mask Expansion": "default",
+          "Paste Mask Expansion": "default",
+          "Creepage Distance": null,
+          "targetNet": null
+        },
+        {
+          "type": "net",
+          "name": "PG",
+          "Safe Spacing": "default",
+          "Copper Safe Spacing": null,
+          "Plane Safe Spacing": null,
+          "Track": "default",
+          "Net Length Range": "default",
+          "Net Length Tolerance": null,
+          "Blind/Buried Via": "default",
+          "Via Size": "default",
+          "Plane Zone": "default",
+          "Copper Zone": "default",
+          "Solder Mask Expansion": "default",
+          "Paste Mask Expansion": "default",
+          "Creepage Distance": null,
+          "targetNet": null
+        },
+        {
+          "type": "net",
+          "name": "SW1",
+          "Safe Spacing": "copilot_router_net_0_spacing",
+          "Copper Safe Spacing": "copilot_router_net_0_spacing",
+          "Plane Safe Spacing": null,
+          "Track": "copilot_router_net_3_track",
+          "Net Length Range": "default",
+          "Net Length Tolerance": null,
+          "Blind/Buried Via": "default",
+          "Via Size": "copilot_router_net_0_via",
+          "Plane Zone": "default",
+          "Copper Zone": "copilot_router_zone_0_copper",
+          "Solder Mask Expansion": "default",
+          "Paste Mask Expansion": "default",
+          "Creepage Distance": null,
+          "targetNet": null
+        },
+        {
+          "type": "net",
+          "name": "SW2",
+          "Safe Spacing": "copilot_router_net_0_spacing",
+          "Copper Safe Spacing": "copilot_router_net_0_spacing",
+          "Plane Safe Spacing": null,
+          "Track": "copilot_router_net_3_track",
+          "Net Length Range": "default",
+          "Net Length Tolerance": null,
+          "Blind/Buried Via": "default",
+          "Via Size": "copilot_router_net_0_via",
+          "Plane Zone": "default",
+          "Copper Zone": "copilot_router_zone_0_copper",
+          "Solder Mask Expansion": "default",
+          "Paste Mask Expansion": "default",
+          "Creepage Distance": null,
+          "targetNet": null
+        }
+      ]
+    },
+    "pcb": {
+      "routing": {
+        "layers": [
+          "TOP",
+          "BOTTOM"
+        ],
+        "planeLayers": [],
+        "polylines": [],
+        "outlines": [
+          [
+            -16,
+            -13,
+            "L",
+            -16,
+            13,
+            16,
+            13,
+            16,
+            -13,
+            -16,
+            -13
+          ]
+        ],
+        "pours": [
+          {
+            "id": "42da3f6bb34ed3c0",
+            "net": "GND",
+            "layer": "BOTTOM",
+            "sources": [
+              [
+                -16,
+                -13,
+                "L",
+                -16,
+                13,
+                16,
+                13,
+                16,
+                -13,
+                -16,
+                -13
+              ]
+            ],
+            "fill": true,
+            "lineWidth": 0.0051,
+            "priority": 1,
+            "preserveIslands": false,
+            "pouredIds": [
+              "42da3f6bb34ed3c0"
+            ]
+          },
+          {
+            "id": "545e4771d7d5f549",
+            "net": "SW1",
+            "layer": "TOP",
+            "sources": [
+              [
+                -0.469,
+                2.62,
+                "L",
+                -0.904,
+                2.62,
+                -0.904,
+                1.8319,
+                -2.096,
+                1.8319,
+                -2.096,
+                4.589,
+                -1.909,
+                4.589,
+                -1.909,
+                7.18,
+                -0.469,
+                7.18,
+                -0.469,
+                2.62
+              ]
+            ],
+            "fill": true,
+            "lineWidth": 0.0051,
+            "priority": 1,
+            "preserveIslands": true,
+            "pouredIds": [
+              "545e4771d7d5f549"
+            ]
+          },
+          {
+            "id": "7ea991a6c4ecaab1",
+            "net": "SW2",
+            "layer": "TOP",
+            "sources": [
+              [
+                1.909,
+                4.589,
+                "L",
+                2.096,
+                4.589,
+                2.096,
+                1.8319,
+                0.904,
+                1.8319,
+                0.904,
+                2.62,
+                0.469,
+                2.62,
+                0.469,
+                7.18,
+                1.909,
+                7.18,
+                1.909,
+                4.589
+              ]
+            ],
+            "fill": true,
+            "lineWidth": 0.0051,
+            "priority": 3,
+            "preserveIslands": true,
+            "pouredIds": [
+              "7ea991a6c4ecaab1"
+            ]
+          },
+          {
+            "id": "2b35636f0c4e2419",
+            "net": "VIN",
+            "layer": "TOP",
+            "sources": [
+              [
+                -4.39,
+                -0.2008,
+                "L",
+                -6.4291,
+                -2.2399,
+                -12.49,
+                -2.2399,
+                -12.49,
+                -0.2599,
+                -11.145,
+                -0.2599,
+                -9.1961,
+                1.689,
+                -1.5,
+                1.689,
+                -1.5,
+                1.668,
+                -1.2282,
+                1.668,
+                -1.2282,
+                0.803,
+                -2.24,
+                0.803,
+                -2.24,
+                -0.046,
+                -4.39,
+                -0.046,
+                -4.39,
+                -0.2008
+              ]
+            ],
+            "fill": true,
+            "lineWidth": 0.0051,
+            "priority": 5,
+            "preserveIslands": true,
+            "pouredIds": [
+              "2b35636f0c4e2419"
+            ]
+          },
+          {
+            "id": "9d9a35c1d13f0460",
+            "net": "VOUT",
+            "layer": "TOP",
+            "sources": [
+              [
+                9.3383,
+                1.646,
+                "L",
+                11.2442,
+                -0.2599,
+                12.49,
+                -0.2599,
+                12.49,
+                -2.2399,
+                8.6986,
+                -2.2399,
+                6.5047,
+                -0.046,
+                2.24,
+                -0.046,
+                2.24,
+                1.281,
+                0.9742,
+                1.281,
+                0.9742,
+                1.646,
+                9.3383,
+                1.646
+              ]
+            ],
+            "fill": true,
+            "lineWidth": 0.0051,
+            "priority": 7,
+            "preserveIslands": true,
+            "pouredIds": [
+              "9d9a35c1d13f0460"
+            ]
+          },
+          {
+            "id": "83871c2423781d84",
+            "net": "GND",
+            "layer": "TOP",
+            "sources": [
+              [
+                -16,
+                -13,
+                "L",
+                -16,
+                13,
+                16,
+                13,
+                16,
+                -13,
+                -16,
+                -13
+              ]
+            ],
+            "fill": true,
+            "lineWidth": 0.0051,
+            "priority": 8,
+            "preserveIslands": false,
+            "pouredIds": [
+              "83871c2423781d84"
+            ]
+          }
+        ]
+      },
+      "board": {
+        "polygon": [
+          {
+            "x": -16,
+            "y": -13
+          },
+          {
+            "x": -16,
+            "y": 13
+          },
+          {
+            "x": 16,
+            "y": 13
+          },
+          {
+            "x": 16,
+            "y": -13
+          }
+        ]
+      },
+      "arcs": [],
+      "components": [
+        {
+          "id": "6dcffa1574e9216d",
+          "value": "10uF",
+          "partUuid": {
+            "uuid": "bb9497214556b84a",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "C0805",
+          "designator": "C1",
+          "x": -3.05,
+          "y": 1.8,
+          "rotate": 90,
+          "layer": "TOP"
+        },
+        {
+          "id": "0066c7b6aea5c300",
+          "value": "10uF",
+          "partUuid": {
+            "uuid": "bb9497214556b84a",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "C0805",
+          "designator": "C2",
+          "x": -5.2,
+          "y": 1.8,
+          "rotate": 90,
+          "layer": "TOP"
+        },
+        {
+          "id": "bd299d460b82ebc4",
+          "value": "22uF",
+          "partUuid": {
+            "uuid": "52b85b29104168b3",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "C0805",
+          "designator": "C3",
+          "x": 3.05,
+          "y": 1.8,
+          "rotate": 90,
+          "layer": "TOP"
+        },
+        {
+          "id": "fa24e5e48dea9a9e",
+          "value": "22uF",
+          "partUuid": {
+            "uuid": "52b85b29104168b3",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "C0805",
+          "designator": "C4",
+          "x": 5.2,
+          "y": 1.8,
+          "rotate": 90,
+          "layer": "TOP"
+        },
+        {
+          "id": "5b115a300b2f3060",
+          "value": "22uF",
+          "partUuid": {
+            "uuid": "52b85b29104168b3",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "C0805",
+          "designator": "C5",
+          "x": 7.35,
+          "y": 1.8,
+          "rotate": 90,
+          "layer": "TOP"
+        },
+        {
+          "id": "aee8b3375a81f580",
+          "value": "100nF",
+          "partUuid": {
+            "uuid": "fdf2dcd9b61c97fa",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "C0603",
+          "designator": "C6",
+          "x": 1.25,
+          "y": -2.5,
+          "rotate": 180,
+          "layer": "TOP"
+        },
+        {
+          "id": "9825ab324c7e44fc",
+          "value": "10pF",
+          "partUuid": {
+            "uuid": "bd47f8e3d9c8fefc",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "C0603",
+          "designator": "C7",
+          "x": 4.8,
+          "y": -2,
+          "rotate": 180,
+          "layer": "TOP"
+        },
+        {
+          "id": "cd8747d128aec8e3",
+          "value": "={Manufacturer Part}",
+          "partUuid": {
+            "uuid": "e967e4d9b9fe7f29",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "CONN-TH_2.54MM-2P-ZZ",
+          "designator": "J1",
+          "x": -11.5,
+          "y": 0,
+          "rotate": 90,
+          "layer": "TOP"
+        },
+        {
+          "id": "c4f8ea570042d7f4",
+          "value": "={Manufacturer Part}",
+          "partUuid": {
+            "uuid": "e967e4d9b9fe7f29",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "CONN-TH_2.54MM-2P-ZZ",
+          "designator": "J2",
+          "x": 11.5,
+          "y": 0,
+          "rotate": 90,
+          "layer": "TOP"
+        },
+        {
+          "id": "8b0b3383b3d2a79c",
+          "value": "={Manufacturer Part}",
+          "partUuid": {
+            "uuid": "e967e4d9b9fe7f29",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "CONN-TH_2.54MM-2P-ZZ",
+          "designator": "J3",
+          "x": -5.5,
+          "y": -9,
+          "rotate": 0,
+          "layer": "TOP"
+        },
+        {
+          "id": "50adddb519ce9c1d",
+          "value": "1uH",
+          "partUuid": {
+            "uuid": "603cca24a28e69d6",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "IND-SMD_L4.0-W4.0_XFL4020-102MEB",
+          "designator": "L1",
+          "x": 0,
+          "y": 4.9,
+          "rotate": 180,
+          "layer": "TOP"
+        },
+        {
+          "id": "0098f338764add62",
+          "value": "1MΩ",
+          "partUuid": {
+            "uuid": "251348a4d0628fe5",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "R0603",
+          "designator": "R1",
+          "x": 4.8,
+          "y": -0.9,
+          "rotate": 180,
+          "layer": "TOP"
+        },
+        {
+          "id": "f2c0493dc9801e80",
+          "value": "111kΩ",
+          "partUuid": {
+            "uuid": "2ba3cc08ea2f2885",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "R0603",
+          "designator": "R2",
+          "x": 3,
+          "y": -1.5,
+          "rotate": -90.00000000000001,
+          "layer": "TOP"
+        },
+        {
+          "id": "26c8b6752b2becb4",
+          "value": "1MΩ",
+          "partUuid": {
+            "uuid": "251348a4d0628fe5",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "R0603",
+          "designator": "R3",
+          "x": -2.286,
+          "y": -3.175,
+          "rotate": 90,
+          "layer": "TOP"
+        },
+        {
+          "id": "387993583cdeb7cc",
+          "value": "={Manufacturer Part}",
+          "partUuid": {
+            "uuid": "821f204ce7e66a5b",
+            "libraryUuid": "8b594a9a623248f7bd372e9777657293"
+          },
+          "footprintName": "WSON-10_L3.0-W3.0-P0.50-BL-EP-A",
+          "designator": "U1",
+          "x": 0,
+          "y": 1,
+          "rotate": -90.00000000000001,
+          "layer": "TOP"
+        }
+      ],
+      "pads": [
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "6dcffa1574e9216de15",
+          "component": "C1",
+          "x": -3.0505,
+          "y": 2.7991,
+          "net": "GND",
+          "padNumber": "2",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            1.4097,
+            1.3487,
+            0
+          ],
+          "rotation": 1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "6dcffa1574e9216de16",
+          "component": "C1",
+          "x": -3.0505,
+          "y": 0.8001,
+          "net": "VIN",
+          "padNumber": "1",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            1.4097,
+            1.3487,
+            0
+          ],
+          "rotation": 1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "0066c7b6aea5c300e15",
+          "component": "C2",
+          "x": -5.1994,
+          "y": 2.7991,
+          "net": "GND",
+          "padNumber": "2",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            1.4097,
+            1.3487,
+            0
+          ],
+          "rotation": 1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "0066c7b6aea5c300e16",
+          "component": "C2",
+          "x": -5.1994,
+          "y": 0.8001,
+          "net": "VIN",
+          "padNumber": "1",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            1.4097,
+            1.3487,
+            0
+          ],
+          "rotation": 1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "bd299d460b82ebc4e15",
+          "component": "C3",
+          "x": 3.0505,
+          "y": 2.7991,
+          "net": "GND",
+          "padNumber": "2",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            1.4097,
+            1.3487,
+            0
+          ],
+          "rotation": 1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "bd299d460b82ebc4e16",
+          "component": "C3",
+          "x": 3.0505,
+          "y": 0.8001,
+          "net": "VOUT",
+          "padNumber": "1",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            1.4097,
+            1.3487,
+            0
+          ],
+          "rotation": 1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "fa24e5e48dea9a9ee15",
+          "component": "C4",
+          "x": 5.1994,
+          "y": 2.7991,
+          "net": "GND",
+          "padNumber": "2",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            1.4097,
+            1.3487,
+            0
+          ],
+          "rotation": 1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "fa24e5e48dea9a9ee16",
+          "component": "C4",
+          "x": 5.1994,
+          "y": 0.8001,
+          "net": "VOUT",
+          "padNumber": "1",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            1.4097,
+            1.3487,
+            0
+          ],
+          "rotation": 1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "5b115a300b2f3060e15",
+          "component": "C5",
+          "x": 7.3508,
+          "y": 2.7991,
+          "net": "GND",
+          "padNumber": "2",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            1.4097,
+            1.3487,
+            0
+          ],
+          "rotation": 1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "5b115a300b2f3060e16",
+          "component": "C5",
+          "x": 7.3508,
+          "y": 0.8001,
+          "net": "VOUT",
+          "padNumber": "1",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            1.4097,
+            1.3487,
+            0
+          ],
+          "rotation": 1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "aee8b3375a81f580e14",
+          "component": "C6",
+          "x": 0.5512,
+          "y": -2.4994,
+          "net": "GND",
+          "padNumber": "2",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.8001,
+            0.8992,
+            0
+          ],
+          "rotation": 3.141592653589793
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "aee8b3375a81f580e15",
+          "component": "C6",
+          "x": 1.9507,
+          "y": -2.4994,
+          "net": "VAUX",
+          "padNumber": "1",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.8001,
+            0.8992,
+            0
+          ],
+          "rotation": 3.141592653589793
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "9825ab324c7e44fce14",
+          "component": "C7",
+          "x": 4.0996,
+          "y": -1.999,
+          "net": "FB",
+          "padNumber": "2",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.8001,
+            0.8992,
+            0
+          ],
+          "rotation": 3.141592653589793
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "9825ab324c7e44fce15",
+          "component": "C7",
+          "x": 5.4991,
+          "y": -1.999,
+          "net": "VOUT",
+          "padNumber": "1",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.8001,
+            0.8992,
+            0
+          ],
+          "rotation": 3.141592653589793
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "cd8747d128aec8e3e15",
+          "component": "J1",
+          "x": -11.5011,
+          "y": -1.2497,
+          "net": "VIN",
+          "padNumber": "1",
+          "layer": "MULTI",
+          "shape": [
+            "ELLIPSE",
+            1.651,
+            1.651
+          ],
+          "rotation": -1.5707963267948966,
+          "hole": {
+            "data": [
+              "ROUND",
+              1.1
+            ],
+            "offsetX": 0.001,
+            "offsetY": -0.0005,
+            "rotation": 0
+          }
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "cd8747d128aec8e3e16",
+          "component": "J1",
+          "x": -11.5011,
+          "y": 1.2497,
+          "net": "GND",
+          "padNumber": "2",
+          "layer": "MULTI",
+          "shape": [
+            "ELLIPSE",
+            1.651,
+            1.651
+          ],
+          "rotation": -1.5707963267948966,
+          "hole": {
+            "data": [
+              "ROUND",
+              1.1
+            ],
+            "offsetX": -0.0003,
+            "offsetY": -0.0005,
+            "rotation": 0
+          }
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "c4f8ea570042d7f4e15",
+          "component": "J2",
+          "x": 11.5011,
+          "y": -1.2497,
+          "net": "VOUT",
+          "padNumber": "1",
+          "layer": "MULTI",
+          "shape": [
+            "ELLIPSE",
+            1.651,
+            1.651
+          ],
+          "rotation": -1.5707963267948966,
+          "hole": {
+            "data": [
+              "ROUND",
+              1.1
+            ],
+            "offsetX": 0.001,
+            "offsetY": -0.0005,
+            "rotation": 0
+          }
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "c4f8ea570042d7f4e16",
+          "component": "J2",
+          "x": 11.5011,
+          "y": 1.2497,
+          "net": "GND",
+          "padNumber": "2",
+          "layer": "MULTI",
+          "shape": [
+            "ELLIPSE",
+            1.651,
+            1.651
+          ],
+          "rotation": -1.5707963267948966,
+          "hole": {
+            "data": [
+              "ROUND",
+              1.1
+            ],
+            "offsetX": -0.0003,
+            "offsetY": -0.0005,
+            "rotation": 0
+          }
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "8b0b3383b3d2a79ce15",
+          "component": "J3",
+          "x": -6.7488,
+          "y": -8.9992,
+          "net": "PG",
+          "padNumber": "1",
+          "layer": "MULTI",
+          "shape": [
+            "ELLIPSE",
+            1.651,
+            1.651
+          ],
+          "rotation": 3.141592653589793,
+          "hole": {
+            "data": [
+              "ROUND",
+              1.1
+            ],
+            "offsetX": 0.001,
+            "offsetY": -0.0005,
+            "rotation": 0
+          }
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "8b0b3383b3d2a79ce16",
+          "component": "J3",
+          "x": -4.2494,
+          "y": -8.9992,
+          "net": "GND",
+          "padNumber": "2",
+          "layer": "MULTI",
+          "shape": [
+            "ELLIPSE",
+            1.651,
+            1.651
+          ],
+          "rotation": 3.141592653589793,
+          "hole": {
+            "data": [
+              "ROUND",
+              1.1
+            ],
+            "offsetX": -0.0003,
+            "offsetY": -0.0005,
+            "rotation": 0
+          }
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "50adddb519ce9c1de10",
+          "component": "L1",
+          "x": -1.1887,
+          "y": 4.8997,
+          "net": "SW1",
+          "padNumber": "1",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            1.1989,
+            3.7998,
+            0
+          ],
+          "rotation": 3.141592653589793
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "50adddb519ce9c1de11",
+          "component": "L1",
+          "x": 1.1887,
+          "y": 4.8997,
+          "net": "SW2",
+          "padNumber": "2",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            1.1989,
+            3.7998,
+            0
+          ],
+          "rotation": 0
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "0098f338764add62e7",
+          "component": "R1",
+          "x": 4.0462,
+          "y": -0.8992,
+          "net": "FB",
+          "padNumber": "2",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.8077,
+            0.8636,
+            0
+          ],
+          "rotation": 3.141592653589793
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "0098f338764add62e8",
+          "component": "R1",
+          "x": 5.5524,
+          "y": -0.8992,
+          "net": "VOUT",
+          "padNumber": "1",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.8077,
+            0.8636,
+            0
+          ],
+          "rotation": 3.141592653589793
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "f2c0493dc9801e80e7",
+          "component": "R2",
+          "x": 2.9997,
+          "y": -2.253,
+          "net": "GND",
+          "padNumber": "2",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.8077,
+            0.8636,
+            0
+          ],
+          "rotation": -1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "f2c0493dc9801e80e8",
+          "component": "R2",
+          "x": 2.9997,
+          "y": -0.7468,
+          "net": "FB",
+          "padNumber": "1",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.8077,
+            0.8636,
+            0
+          ],
+          "rotation": -1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "26c8b6752b2becb4e7",
+          "component": "R3",
+          "x": -2.286,
+          "y": -2.4206,
+          "net": "PG",
+          "padNumber": "2",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.8077,
+            0.8636,
+            0
+          ],
+          "rotation": 1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "26c8b6752b2becb4e8",
+          "component": "R3",
+          "x": -2.286,
+          "y": -3.9294,
+          "net": "VOUT",
+          "padNumber": "1",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.8077,
+            0.8636,
+            0
+          ],
+          "rotation": 1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "387993583cdeb7cce23",
+          "component": "U1",
+          "x": 0,
+          "y": 1.0008,
+          "net": "GND",
+          "padNumber": "11",
+          "layer": "TOP",
+          "shape": [
+            "POLYGON",
+            [
+              [
+                0.7002,
+                -0.0739,
+                "L",
+                0.7002,
+                -0.7751,
+                0.5002,
+                -0.7751,
+                0.5002,
+                -0.0739,
+                0.3002,
+                -0.0739,
+                0.3002,
+                -0.7751,
+                0.1002,
+                -0.7751,
+                0.1002,
+                -0.0739,
+                -0.0998,
+                -0.0739,
+                -0.0998,
+                -0.7751,
+                -0.2998,
+                -0.7751,
+                -0.2998,
+                -0.0751,
+                -0.4998,
+                -0.0751,
+                -0.4998,
+                -0.7751,
+                -0.6998,
+                -0.7751,
+                -0.6998,
+                -0.0739,
+                -0.8499,
+                -0.0739,
+                -0.8499,
+                2.0761,
+                -0.6998,
+                2.0761,
+                -0.6998,
+                2.7749,
+                -0.4998,
+                2.7749,
+                -0.4998,
+                2.0761,
+                -0.2998,
+                2.0761,
+                -0.2998,
+                2.7749,
+                -0.0998,
+                2.7749,
+                -0.0998,
+                2.0761,
+                0.1002,
+                2.0761,
+                0.1002,
+                2.7749,
+                0.3002,
+                2.7749,
+                0.3002,
+                2.0761,
+                0.5002,
+                2.0761,
+                0.5002,
+                2.7749,
+                0.7002,
+                2.7749,
+                0.7002,
+                2.0761,
+                0.8501,
+                2.0761,
+                0.8501,
+                -0.0739,
+                0.7002,
+                -0.0739
+              ]
+            ]
+          ],
+          "rotation": -1.5707963267948966,
+          "hole": {
+            "data": [
+              "ROUND",
+              1.02
+            ],
+            "offsetX": 0,
+            "offsetY": 0,
+            "rotation": 0
+          }
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "387993583cdeb7cce24",
+          "component": "U1",
+          "x": 1.5011,
+          "y": 1.999,
+          "net": "SW2",
+          "padNumber": "10",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.2794,
+            0.8763,
+            0
+          ],
+          "rotation": -1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "387993583cdeb7cce25",
+          "component": "U1",
+          "x": 1.5011,
+          "y": 1.5011,
+          "net": "VOUT",
+          "padNumber": "9",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.2794,
+            0.8763,
+            0
+          ],
+          "rotation": -1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "387993583cdeb7cce26",
+          "component": "U1",
+          "x": 1.4732,
+          "y": 1.0008,
+          "net": "FB",
+          "padNumber": "8",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.2794,
+            0.8763,
+            0
+          ],
+          "rotation": -1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "387993583cdeb7cce27",
+          "component": "U1",
+          "x": 1.4732,
+          "y": 0.5004,
+          "net": "GND",
+          "padNumber": "7",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.2794,
+            0.8763,
+            0
+          ],
+          "rotation": -1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "387993583cdeb7cce28",
+          "component": "U1",
+          "x": 1.4732,
+          "y": 0,
+          "net": "VAUX",
+          "padNumber": "6",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.2794,
+            0.8763,
+            0
+          ],
+          "rotation": -1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "387993583cdeb7cce29",
+          "component": "U1",
+          "x": -1.5011,
+          "y": 0,
+          "net": "PG",
+          "padNumber": "5",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.2794,
+            0.8763,
+            0
+          ],
+          "rotation": -1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "387993583cdeb7cce30",
+          "component": "U1",
+          "x": -1.5011,
+          "y": 0.5004,
+          "net": "GND",
+          "padNumber": "4",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.2794,
+            0.8763,
+            0
+          ],
+          "rotation": -1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "387993583cdeb7cce31",
+          "component": "U1",
+          "x": -1.5011,
+          "y": 1.0008,
+          "net": "VIN",
+          "padNumber": "3",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.2794,
+            0.8763,
+            0
+          ],
+          "rotation": -1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "387993583cdeb7cce32",
+          "component": "U1",
+          "x": -1.5011,
+          "y": 1.5011,
+          "net": "VIN",
+          "padNumber": "2",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.2794,
+            0.8763,
+            0
+          ],
+          "rotation": -1.5707963267948966
+        },
+        {
+          "plated": true,
+          "specialPad": [],
+          "id": "387993583cdeb7cce33",
+          "component": "U1",
+          "x": -1.5011,
+          "y": 1.999,
+          "net": "SW1",
+          "padNumber": "1",
+          "layer": "TOP",
+          "shape": [
+            "RECT",
+            0.2794,
+            0.8763,
+            0
+          ],
+          "rotation": -1.5707963267948966
+        }
+      ],
+      "polygons": [
+        {
+          "id": "33851623ca8a06c3",
+          "pourId": "545e4771d7d5f549",
+          "net": "SW1",
+          "layer": "TOP",
+          "fill": true,
+          "lineWidth": 0,
+          "sources": [
+            [
+              -1.106,
+              2.0761,
+              "L",
+              -1.106,
+              1.9335,
+              -1.9944,
+              1.9335,
+              -1.9944,
+              4.4874,
+              -1.909,
+              4.4874,
+              "ARC",
+              90.00000000000011,
+              -1.8074,
+              4.589,
+              "L",
+              -1.8074,
+              7.0784,
+              -0.5706,
+              7.0784,
+              -0.5706,
+              3.5021,
+              "ARC",
+              50.89967259053148,
+              -0.6731,
+              3.031,
+              "L",
+              -0.6998,
+              3.031,
+              "ARC",
+              90.0000000000001,
+              -0.956,
+              2.7749,
+              "L",
+              -0.956,
+              2.7073,
+              "ARC",
+              59.23453728551161,
+              -1.0056,
+              2.62,
+              "L",
+              -1.0056,
+              2.2794,
+              "ARC",
+              52.54820264794445,
+              -1.106,
+              2.0761
+            ]
+          ]
+        },
+        {
+          "id": "6bbb4aee698819bf",
+          "pourId": "7ea991a6c4ecaab1",
+          "net": "SW2",
+          "layer": "TOP",
+          "fill": true,
+          "lineWidth": 0,
+          "sources": [
+            [
+              0.7002,
+              3.031,
+              "L",
+              0.5706,
+              3.031,
+              0.5706,
+              7.0784,
+              1.8074,
+              7.0784,
+              1.8074,
+              4.589,
+              "ARC",
+              90.00000000000011,
+              1.909,
+              4.4874,
+              "L",
+              1.9944,
+              4.4874,
+              1.9944,
+              1.9335,
+              1.1063,
+              1.9335,
+              1.1063,
+              2.0761,
+              "ARC",
+              52.626888120981086,
+              1.0056,
+              2.2797,
+              "L",
+              1.0056,
+              2.62,
+              "ARC",
+              59.03428939032333,
+              0.9563,
+              2.7071,
+              "L",
+              0.9563,
+              2.7749,
+              "ARC",
+              89.99999999999982,
+              0.7002,
+              3.031
+            ]
+          ]
+        },
+        {
+          "id": "dcd831c48bf0f432",
+          "pourId": "2b35636f0c4e2419",
+          "net": "VIN",
+          "layer": "TOP",
+          "fill": true,
+          "lineWidth": 0,
+          "sources": [
+            [
+              -9.154,
+              1.5874,
+              "L",
+              -2.1723,
+              1.5874,
+              "ARC",
+              17.33806333526269,
+              -2.096,
+              1.5758,
+              "L",
+              -1.5426,
+              1.5758,
+              "ARC",
+              24.769586826590796,
+              -1.5,
+              1.5664,
+              "L",
+              -1.3298,
+              1.5664,
+              -1.3298,
+              0.9046,
+              -2.24,
+              0.9046,
+              "ARC",
+              89.99999999999994,
+              -2.3416,
+              0.803,
+              "L",
+              -2.3416,
+              0.0556,
+              -4.39,
+              0.0556,
+              "ARC",
+              90.00000000000017,
+              -4.4916,
+              -0.046,
+              "L",
+              -4.4916,
+              -0.1587,
+              -6.4712,
+              -2.1383,
+              -12.3884,
+              -2.1383,
+              -12.3884,
+              -0.3615,
+              -11.145,
+              -0.3615,
+              "ARC",
+              44.99996182095725,
+              -11.0732,
+              -0.3317,
+              "L",
+              -9.154,
+              1.5874
+            ]
+          ]
+        },
+        {
+          "id": "ba3f0f1aa624bcf5",
+          "pourId": "9d9a35c1d13f0460",
+          "net": "VOUT",
+          "layer": "TOP",
+          "fill": true,
+          "lineWidth": 0,
+          "sources": [
+            [
+              2.24,
+              1.3826,
+              "L",
+              1.9951,
+              1.3826,
+              "ARC",
+              19.163247091260544,
+              1.911,
+              1.3968,
+              "L",
+              1.1063,
+              1.3968,
+              1.1063,
+              1.5444,
+              9.2962,
+              1.5444,
+              11.1723,
+              -0.3317,
+              "ARC",
+              44.99999999999994,
+              11.2442,
+              -0.3615,
+              "L",
+              12.3884,
+              -0.3615,
+              12.3884,
+              -2.1383,
+              8.7407,
+              -2.1383,
+              6.5766,
+              0.0258,
+              "ARC",
+              45.00003931109774,
+              6.5047,
+              0.0556,
+              "L",
+              2.4596,
+              0.0556,
+              2.4596,
+              1.0007,
+              "ARC",
+              50.89949288690512,
+              2.3416,
+              1.2488,
+              "L",
+              2.3416,
+              1.281,
+              "ARC",
+              90,
+              2.24,
+              1.3826
+            ]
+          ]
+        },
+        {
+          "id": "acc17153ca98c9a1",
+          "pourId": "83871c2423781d84",
+          "net": "GND",
+          "layer": "TOP",
+          "fill": true,
+          "lineWidth": 0,
+          "sources": [
+            [
+              15.7439,
+              12.7439,
+              "L",
+              15.7439,
+              -12.7439,
+              -15.7439,
+              -12.7439,
+              -15.7439,
+              12.7439,
+              15.7439,
+              12.7439
+            ],
+            [
+              -9.1961,
+              1.9451,
+              "ARC",
+              44.99996182095731,
+              -9.3772,
+              1.8701,
+              "L",
+              -11.2511,
+              -0.0038,
+              -12.49,
+              -0.0038,
+              "ARC",
+              90.00000000000011,
+              -12.7461,
+              -0.2599,
+              "L",
+              -12.7461,
+              -2.2399,
+              "ARC",
+              90.0000000000002,
+              -12.49,
+              -2.496,
+              "L",
+              -6.4291,
+              -2.496,
+              "ARC",
+              44.99999999999494,
+              -6.248,
+              -2.421,
+              "L",
+              -4.2089,
+              -0.3819,
+              "ARC",
+              21.68453061012059,
+              -4.1548,
+              -0.3021,
+              "L",
+              -2.2574,
+              -0.3021,
+              "ARC",
+              55.67872099844632,
+              -1.9841,
+              -0.495,
+              "L",
+              -1.9841,
+              -1.6603,
+              -2.718,
+              -1.6603,
+              "ARC",
+              36.148644442065276,
+              -2.9293,
+              -1.7292,
+              "L",
+              -4.2786,
+              -1.7292,
+              "ARC",
+              44.999999999999886,
+              -4.6216,
+              -1.8713,
+              "L",
+              -7.0929,
+              -4.3426,
+              "ARC",
+              45,
+              -7.235,
+              -4.6856,
+              "L",
+              -7.235,
+              -7.9209,
+              "ARC",
+              155.79247470251684,
+              -6.75,
+              -10.1831,
+              "ARC",
+              155.79247470251693,
+              -6.2648,
+              -7.9209,
+              "L",
+              -6.2648,
+              -4.8866,
+              -4.0776,
+              -2.6995,
+              -3.0761,
+              -2.6995,
+              -3.0761,
+              -2.8249,
+              "ARC",
+              89.99999999999989,
+              -2.718,
+              -3.183,
+              "L",
+              -1.854,
+              -3.183,
+              "ARC",
+              90,
+              -1.4959,
+              -2.8249,
+              "L",
+              -1.4959,
+              -2.6985,
+              "ARC",
+              89.50972384785973,
+              -1.0159,
+              -2.2143,
+              "L",
+              -1.0159,
+              -0.495,
+              "ARC",
+              82.6217904523441,
+              -0.7037,
+              -0.1399,
+              "L",
+              -0.7037,
+              0.1401,
+              "ARC",
+              89.99999999999994,
+              -1.0618,
+              0.4983,
+              "L",
+              -1.9381,
+              0.4983,
+              "ARC",
+              7.331910699616941,
+              -1.9839,
+              0.4953,
+              "L",
+              -1.9839,
+              0.5469,
+              -1.2282,
+              0.5469,
+              "ARC",
+              38.921143326405854,
+              -1.0673,
+              0.6037,
+              "L",
+              -1.0618,
+              0.6037,
+              "ARC",
+              90,
+              -0.8057,
+              0.8599,
+              "L",
+              -0.8057,
+              1.1399,
+              "ARC",
+              25.447115277510818,
+              -0.8306,
+              1.2499,
+              "ARC",
+              25.447115277510534,
+              -0.8057,
+              1.36,
+              "L",
+              -0.8057,
+              1.5954,
+              "ARC",
+              67.4298407866728,
+              -0.6479,
+              1.8319,
+              "L",
+              -0.6479,
+              2.3639,
+              -0.469,
+              2.3639,
+              "ARC",
+              90,
+              -0.2129,
+              2.62,
+              "L",
+              -0.2129,
+              7.18,
+              "ARC",
+              89.99999999999999,
+              -0.469,
+              7.4361,
+              "L",
+              -1.909,
+              7.4361,
+              "ARC",
+              89.99999999999994,
+              -2.1651,
+              7.18,
+              "L",
+              -2.1651,
+              4.8356,
+              "ARC",
+              74.33609309933858,
+              -2.3521,
+              4.589,
+              "L",
+              -2.3521,
+              1.9451,
+              -9.1961,
+              1.9451
+            ],
+            [
+              0.7181,
+              1.646,
+              "L",
+              0.7181,
+              1.281,
+              "ARC",
+              40.18193633926296,
+              0.7785,
+              1.1157,
+              "L",
+              0.7785,
+              0.8606,
+              "ARC",
+              90,
+              1.0347,
+              0.6045,
+              "L",
+              1.8204,
+              0.6045,
+              1.8204,
+              0.3968,
+              1.0357,
+              0.3968,
+              "ARC",
+              90,
+              0.7795,
+              0.1406,
+              "L",
+              0.7795,
+              -0.1394,
+              "ARC",
+              90,
+              1.0357,
+              -0.3955,
+              "L",
+              1.0917,
+              -0.3955,
+              1.0917,
+              -2.0238,
+              "ARC",
+              45.00015280463691,
+              1.2036,
+              -2.294,
+              "L",
+              1.2939,
+              -2.3843,
+              1.2939,
+              -2.95,
+              "ARC",
+              89.99999999999994,
+              1.55,
+              -3.2061,
+              "L",
+              2.35,
+              -3.2061,
+              "ARC",
+              90,
+              2.6062,
+              -2.95,
+              "L",
+              2.6062,
+              -2.05,
+              "ARC",
+              90,
+              2.35,
+              -1.7939,
+              "L",
+              1.8559,
+              -1.7939,
+              1.8559,
+              -0.8932,
+              "ARC",
+              62.706693051160926,
+              2.14,
+              -1.0662,
+              "L",
+              2.3119,
+              -1.0662,
+              2.3119,
+              -1.1499,
+              "ARC",
+              89.99999999999994,
+              2.568,
+              -1.406,
+              "L",
+              3.3982,
+              -1.406,
+              "ARC",
+              23.835587942354607,
+              3.449,
+              -1.4988,
+              "ARC",
+              11.531643184175635,
+              3.4438,
+              -1.55,
+              "L",
+              3.4438,
+              -2.45,
+              "ARC",
+              90,
+              3.7,
+              -2.7061,
+              "L",
+              4.5,
+              -2.7061,
+              "ARC",
+              90,
+              4.7561,
+              -2.45,
+              "L",
+              4.7561,
+              -1.55,
+              "ARC",
+              38.83274486905342,
+              4.6995,
+              -1.3894,
+              "ARC",
+              12.946212403811387,
+              4.706,
+              -1.332,
+              "L",
+              4.706,
+              -0.468,
+              "ARC",
+              40.35349413272336,
+              4.6451,
+              -0.3021,
+              "L",
+              4.9549,
+              -0.3021,
+              "ARC",
+              40.353494132723426,
+              4.894,
+              -0.468,
+              "L",
+              4.894,
+              -1.332,
+              "ARC",
+              12.946212403811131,
+              4.9005,
+              -1.3894,
+              "ARC",
+              38.832744869053215,
+              4.8439,
+              -1.55,
+              "L",
+              4.8439,
+              -2.45,
+              "ARC",
+              38.51162971997587,
+              4.8996,
+              -2.6095,
+              "L",
+              4.1316,
+              -3.5462,
+              -1.5979,
+              -3.5462,
+              -1.5979,
+              -3.5251,
+              "ARC",
+              89.99999999999994,
+              -1.854,
+              -3.269,
+              "L",
+              -2.718,
+              -3.269,
+              "ARC",
+              90,
+              -2.9741,
+              -3.5251,
+              "L",
+              -2.9741,
+              -4.3316,
+              "ARC",
+              90,
+              -2.718,
+              -4.5877,
+              "L",
+              -1.854,
+              -4.5877,
+              "ARC",
+              89.99999999999994,
+              -1.5979,
+              -4.3316,
+              "L",
+              -1.5979,
+              -4.3105,
+              4.3125,
+              -4.3105,
+              "ARC",
+              50.652965608117654,
+              4.608,
+              -4.1707,
+              "L",
+              5.8087,
+              -2.7061,
+              5.9,
+              -2.7061,
+              "ARC",
+              90,
+              6.1562,
+              -2.45,
+              "L",
+              6.1562,
+              -1.55,
+              "ARC",
+              11.531643184175593,
+              6.151,
+              -1.4988,
+              "ARC",
+              40.63034534202552,
+              6.2127,
+              -1.332,
+              "L",
+              6.2127,
+              -0.468,
+              "ARC",
+              40.35349413272341,
+              6.1518,
+              -0.3021,
+              "L",
+              6.3986,
+              -0.3021,
+              8.5175,
+              -2.421,
+              "ARC",
+              45.00003931109765,
+              8.6986,
+              -2.496,
+              "L",
+              12.49,
+              -2.496,
+              "ARC",
+              90.00000000000023,
+              12.7461,
+              -2.2399,
+              "L",
+              12.7461,
+              -0.2599,
+              "ARC",
+              90.00000000000017,
+              12.49,
+              -0.0038,
+              "L",
+              11.3503,
+              -0.0038,
+              9.5194,
+              1.8271,
+              "ARC",
+              45,
+              9.3383,
+              1.9021,
+              "L",
+              2.3521,
+              1.9021,
+              2.3521,
+              4.589,
+              "ARC",
+              74.3360930993387,
+              2.1651,
+              4.8356,
+              "L",
+              2.1651,
+              7.18,
+              "ARC",
+              89.99999999999994,
+              1.909,
+              7.4361,
+              "L",
+              0.469,
+              7.4361,
+              "ARC",
+              89.99999999999991,
+              0.2129,
+              7.18,
+              "L",
+              0.2129,
+              2.62,
+              "ARC",
+              90,
+              0.469,
+              2.3639,
+              "L",
+              0.6479,
+              2.3639,
+              0.6479,
+              1.8319,
+              "ARC",
+              43.51222492316157,
+              0.7183,
+              1.6555,
+              "ARC",
+              2.1331992123266446,
+              0.7181,
+              1.646
+            ]
+          ]
+        },
+        {
+          "id": "8fe974f553983367",
+          "pourId": "42da3f6bb34ed3c0",
+          "net": "GND",
+          "layer": "BOTTOM",
+          "fill": true,
+          "lineWidth": 0,
+          "sources": [
+            [
+              15.7439,
+              12.7439,
+              "L",
+              15.7439,
+              -12.7439,
+              -15.7439,
+              -12.7439,
+              -15.7439,
+              12.7439,
+              15.7439,
+              12.7439
+            ],
+            [
+              -11.5,
+              -0.1688,
+              "ARC",
+              180,
+              -11.5,
+              -2.3311,
+              "ARC",
+              180,
+              -11.5,
+              -0.1688
+            ],
+            [
+              -5.5668,
+              -9,
+              "ARC",
+              180,
+              -7.9331,
+              -9,
+              "ARC",
+              180,
+              -5.5668,
+              -9
+            ],
+            [
+              11.5,
+              -0.1688,
+              "ARC",
+              180,
+              11.5,
+              -2.3311,
+              "ARC",
+              180,
+              11.5,
+              -0.1688
+            ]
+          ]
+        }
+      ],
+      "tracks": [
+        {
+          "id": "ece2e53a5c1d9833",
+          "x1": 3,
+          "y1": -0.7466,
+          "x2": 3.8932,
+          "y2": -0.7466,
+          "width": 0.254,
+          "layer": "TOP",
+          "net": "FB"
+        },
+        {
+          "id": "b3501bc00f8d9742",
+          "x1": 3.8932,
+          "y1": -0.7466,
+          "x2": 4.0466,
+          "y2": -0.9,
+          "width": 0.254,
+          "layer": "TOP",
+          "net": "FB"
+        },
+        {
+          "id": "b6b92347ac98f19c",
+          "x1": 4.0466,
+          "y1": -0.9,
+          "x2": 4.0466,
+          "y2": -1.9466,
+          "width": 0.254,
+          "layer": "TOP",
+          "net": "FB"
+        },
+        {
+          "id": "03414cd4c30780b9",
+          "x1": 4.0466,
+          "y1": -1.9466,
+          "x2": 4.1,
+          "y2": -2,
+          "width": 0.254,
+          "layer": "TOP",
+          "net": "FB"
+        },
+        {
+          "id": "4dab314aec432973",
+          "x1": 1.4738,
+          "y1": 0.0006,
+          "x2": 1.4738,
+          "y2": -2.0238,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "VAUX"
+        },
+        {
+          "id": "fd1b6a2d4e927aa6",
+          "x1": 1.4738,
+          "y1": -2.0238,
+          "x2": 1.95,
+          "y2": -2.5,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "VAUX"
+        },
+        {
+          "id": "cb27164be957b294",
+          "x1": -1.189,
+          "y1": 4.9,
+          "x2": -1.189,
+          "y2": 2.3109,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "SW1"
+        },
+        {
+          "id": "5dd6366abb8f0354",
+          "x1": -1.189,
+          "y1": 2.3109,
+          "x2": -1.5,
+          "y2": 1.9999,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "SW1"
+        },
+        {
+          "id": "5977908cc73a81b8",
+          "x1": 1.189,
+          "y1": 4.9,
+          "x2": 1.189,
+          "y2": 2.3109,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "SW2"
+        },
+        {
+          "id": "335c99567207e471",
+          "x1": 1.189,
+          "y1": 2.3109,
+          "x2": 1.5,
+          "y2": 1.9999,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "SW2"
+        },
+        {
+          "id": "8e61a8567627476a",
+          "x1": 3.05,
+          "y1": 1.35,
+          "x2": 3.05,
+          "y2": 0.8,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "VOUT"
+        },
+        {
+          "id": "b66a9b09b30daa1a",
+          "x1": 5.2,
+          "y1": 0.8,
+          "x2": 7.35,
+          "y2": 0.8,
+          "width": 0.55,
+          "layer": "TOP",
+          "net": "VOUT"
+        },
+        {
+          "id": "0dcad09cc6b7587e",
+          "x1": 7.35,
+          "y1": 0.8,
+          "x2": 9.4501,
+          "y2": 0.8,
+          "width": 0.55,
+          "layer": "TOP",
+          "net": "VOUT"
+        },
+        {
+          "id": "053b8c55f01dbaa5",
+          "x1": 9.4501,
+          "y1": 0.8,
+          "x2": 11.5,
+          "y2": -1.2499,
+          "width": 0.55,
+          "layer": "TOP",
+          "net": "VOUT"
+        },
+        {
+          "id": "d5203a58f3a8ffa9",
+          "x1": -1.5,
+          "y1": 0.9999,
+          "x2": -1.5,
+          "y2": 1.5,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "VIN"
+        },
+        {
+          "id": "94f4bc31e454d91a",
+          "x1": -1.5,
+          "y1": 0.9999,
+          "x2": -2.8501,
+          "y2": 0.9999,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "VIN"
+        },
+        {
+          "id": "9a1cd4bf052b2362",
+          "x1": -2.8501,
+          "y1": 0.9999,
+          "x2": -3.05,
+          "y2": 0.8,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "VIN"
+        },
+        {
+          "id": "e4c07b361c898d21",
+          "x1": 1.4738,
+          "y1": 1.0007,
+          "x2": 2.14,
+          "y2": 1.0007,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "FB"
+        },
+        {
+          "id": "2b1e978b4ff9dd83",
+          "x1": 2.14,
+          "y1": 1.0007,
+          "x2": 2.14,
+          "y2": -0.7466,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "FB"
+        },
+        {
+          "id": "fcfd2466a3107aea",
+          "x1": 2.14,
+          "y1": -0.7466,
+          "x2": 3,
+          "y2": -0.7466,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "FB"
+        },
+        {
+          "id": "c28755cb1c7f49c7",
+          "x1": 0.0001,
+          "y1": 0.9999,
+          "x2": 0.3811,
+          "y2": 0.6189,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "af5ec6787b8e8ec2",
+          "x1": 0.0001,
+          "y1": 0.9999,
+          "x2": -0.4998,
+          "y2": 0.5,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "d0bc1049eb536c6a",
+          "x1": -0.4998,
+          "y1": 0.5,
+          "x2": -1.5,
+          "y2": 0.5,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "84547caaf51f2cbe",
+          "x1": 0.0001,
+          "y1": 0.9999,
+          "x2": 0.0001,
+          "y2": 2.9999,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "a039dd13f2f9de36",
+          "x1": 0.0001,
+          "y1": 2.9999,
+          "x2": -0.1269,
+          "y2": 3.1269,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "23fca09a054cfca1",
+          "x1": -0.1269,
+          "y1": 3.1269,
+          "x2": -0.1269,
+          "y2": 3.1589,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "1d3884e0384f6f46",
+          "x1": -3.05,
+          "y1": 2.8,
+          "x2": -5.2,
+          "y2": 2.8,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "dfd61b2d39d622ae",
+          "x1": 3.05,
+          "y1": 2.8,
+          "x2": 5.2,
+          "y2": 2.8,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "f957531e8ccd6195",
+          "x1": 5.2,
+          "y1": 2.8,
+          "x2": 7.35,
+          "y2": 2.8,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "adc26e3dc08082a4",
+          "x1": 0.5081,
+          "y1": 0.6189,
+          "x2": 0.5081,
+          "y2": -2.4581,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "8db6de2d2a3b8425",
+          "x1": 0.3811,
+          "y1": 0.6189,
+          "x2": 0.5081,
+          "y2": 0.6189,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "f8e04262007a57d6",
+          "x1": 0.5081,
+          "y1": -2.4581,
+          "x2": 0.55,
+          "y2": -2.5,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "7150017634006917",
+          "x1": 0.55,
+          "y1": -2.5,
+          "x2": 1.2294,
+          "y2": -3.1794,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "2a97cb0914c6c796",
+          "x1": 1.2294,
+          "y1": -3.1794,
+          "x2": 2.455,
+          "y2": -3.1794,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "ceba330fc201a634",
+          "x1": 2.455,
+          "y1": -3.1794,
+          "x2": 3,
+          "y2": -2.6344,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "b6a44b46db902829",
+          "x1": 3,
+          "y1": -2.6344,
+          "x2": 3,
+          "y2": -2.2534,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "7d253a4b6b3e5400",
+          "x1": 7.35,
+          "y1": 2.8,
+          "x2": 9.9499,
+          "y2": 2.8,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "31bac87b09537e08",
+          "x1": 9.9499,
+          "y1": 2.8,
+          "x2": 11.5,
+          "y2": 1.2499,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "e86ea8d4d9a2c78f",
+          "x1": -5.2,
+          "y1": 2.8,
+          "x2": -9.9499,
+          "y2": 2.8,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "a79be2de2d7e2d04",
+          "x1": -9.9499,
+          "y1": 2.8,
+          "x2": -11.5,
+          "y2": 1.2499,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "916b370ba40bbca7",
+          "x1": -11.5,
+          "y1": 1.2499,
+          "x2": -4.2501,
+          "y2": -6,
+          "width": 0.127,
+          "layer": "BOTTOM",
+          "net": "GND"
+        },
+        {
+          "id": "31cbe8d8353ef7b9",
+          "x1": -4.2501,
+          "y1": -6,
+          "x2": -4.2501,
+          "y2": -9,
+          "width": 0.127,
+          "layer": "BOTTOM",
+          "net": "GND"
+        },
+        {
+          "id": "a8fe06d8105285f2",
+          "x1": -2.2466,
+          "y1": -2.2143,
+          "x2": -4.2786,
+          "y2": -2.2143,
+          "width": 0.254,
+          "layer": "TOP",
+          "net": "PG"
+        },
+        {
+          "id": "f9f40e3876ba67fb",
+          "x1": -4.2786,
+          "y1": -2.2143,
+          "x2": -6.7499,
+          "y2": -4.6856,
+          "width": 0.254,
+          "layer": "TOP",
+          "net": "PG"
+        },
+        {
+          "id": "545c519018f92530",
+          "x1": -6.7499,
+          "y1": -4.6856,
+          "x2": -6.7499,
+          "y2": -9,
+          "width": 0.254,
+          "layer": "TOP",
+          "net": "PG"
+        },
+        {
+          "id": "74a512601a5a4cfe",
+          "x1": 0.5081,
+          "y1": 0.6189,
+          "x2": 0.6262,
+          "y2": 0.5008,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "634388b2455008ac",
+          "x1": 0.6262,
+          "y1": 0.5008,
+          "x2": 1.4726,
+          "y2": 0.5008,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "284c9af1621d6f4c",
+          "x1": -2.7939,
+          "y1": 4.1991,
+          "x2": -2.7939,
+          "y2": 3.0561,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "bc5289ef67c8035c",
+          "x1": -2.7939,
+          "y1": 3.0561,
+          "x2": -3.05,
+          "y2": 2.8,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "c55eb84e05d96d71",
+          "x1": -0.1269,
+          "y1": 3.1589,
+          "x2": -1.7537,
+          "y2": 3.1589,
+          "width": 0.127,
+          "layer": "BOTTOM",
+          "net": "GND"
+        },
+        {
+          "id": "5f5a0bfce7ada367",
+          "x1": -1.7537,
+          "y1": 3.1589,
+          "x2": -2.7939,
+          "y2": 4.1991,
+          "width": 0.127,
+          "layer": "BOTTOM",
+          "net": "GND"
+        },
+        {
+          "id": "1ddb01350acb3fca",
+          "x1": 2.7941,
+          "y1": 4.1989,
+          "x2": 2.7941,
+          "y2": 3.0559,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "af8596d49b9860b9",
+          "x1": 2.7941,
+          "y1": 3.0559,
+          "x2": 3.05,
+          "y2": 2.8,
+          "width": 0.127,
+          "layer": "TOP",
+          "net": "GND"
+        },
+        {
+          "id": "e251b00b94ebaf84",
+          "x1": 2.7941,
+          "y1": 4.1989,
+          "x2": 1.7541,
+          "y2": 3.1589,
+          "width": 0.127,
+          "layer": "BOTTOM",
+          "net": "GND"
+        },
+        {
+          "id": "379a18edc67255f8",
+          "x1": 1.7541,
+          "y1": 3.1589,
+          "x2": -0.1269,
+          "y2": 3.1589,
+          "width": 0.127,
+          "layer": "BOTTOM",
+          "net": "GND"
+        },
+        {
+          "id": "8ef8a7be2ef3387b",
+          "x1": -10.9719,
+          "y1": -1.778,
+          "x2": -11.5,
+          "y2": -1.2499,
+          "width": 0.75,
+          "layer": "TOP",
+          "net": "VIN"
+        },
+        {
+          "id": "0aed73aa4f8ed7ba",
+          "x1": -5.423,
+          "y1": 0.8,
+          "x2": -8.001,
+          "y2": -1.778,
+          "width": 0.75,
+          "layer": "TOP",
+          "net": "VIN"
+        },
+        {
+          "id": "8ec6f60da2b452c6",
+          "x1": -8.001,
+          "y1": -1.778,
+          "x2": -10.9719,
+          "y2": -1.778,
+          "width": 0.75,
+          "layer": "TOP",
+          "net": "VIN"
+        },
+        {
+          "id": "aaebaad289af84fe",
+          "x1": -5.423,
+          "y1": 0.8,
+          "x2": -3.05,
+          "y2": 0.8,
+          "width": 0.75,
+          "layer": "TOP",
+          "net": "VIN"
+        },
+        {
+          "id": "b387fe0dd6379d5f",
+          "x1": 3.05,
+          "y1": 1.35,
+          "x2": 3.6,
+          "y2": 0.8,
+          "width": 0.55,
+          "layer": "TOP",
+          "net": "VOUT"
+        },
+        {
+          "id": "476cc6786c82a8c2",
+          "x1": 3.6,
+          "y1": 0.8,
+          "x2": 5.2,
+          "y2": 0.8,
+          "width": 0.55,
+          "layer": "TOP",
+          "net": "VOUT"
+        },
+        {
+          "id": "49ca761969a1a20b",
+          "x1": 1.5,
+          "y1": 1.5,
+          "x2": 2.9,
+          "y2": 1.5,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "VOUT"
+        },
+        {
+          "id": "df5b045b7d453068",
+          "x1": 2.9,
+          "y1": 1.5,
+          "x2": 3.05,
+          "y2": 1.35,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "VOUT"
+        },
+        {
+          "id": "f4972b2e7fae8c34",
+          "x1": 5.2,
+          "y1": 0.8,
+          "x2": 5.5534,
+          "y2": 0.4466,
+          "width": 0.55,
+          "layer": "TOP",
+          "net": "VOUT"
+        },
+        {
+          "id": "3cff16d4e3fb8528",
+          "x1": 5.5534,
+          "y1": 0.4466,
+          "x2": 5.5534,
+          "y2": -0.9,
+          "width": 0.55,
+          "layer": "TOP",
+          "net": "VOUT"
+        },
+        {
+          "id": "71b6c2117a688d4c",
+          "x1": 5.5534,
+          "y1": -0.9,
+          "x2": 5.5534,
+          "y2": -2.0094,
+          "width": 0.55,
+          "layer": "TOP",
+          "net": "VOUT"
+        },
+        {
+          "id": "be151fad035aa64a",
+          "x1": 5.5534,
+          "y1": -2.0094,
+          "x2": 5.5892,
+          "y2": -2.3711,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "VOUT"
+        },
+        {
+          "id": "285e7c8080e3e45c",
+          "x1": 5.5892,
+          "y1": -2.3711,
+          "x2": 4.3125,
+          "y2": -3.9284,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "VOUT"
+        },
+        {
+          "id": "3817b66702bd23ce",
+          "x1": 4.3125,
+          "y1": -3.9284,
+          "x2": -2.286,
+          "y2": -3.9284,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "VOUT"
+        },
+        {
+          "id": "66315929de06c75a",
+          "x1": -1.5,
+          "y1": 0.0001,
+          "x2": -1.5,
+          "y2": -2.2143,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "PG"
+        },
+        {
+          "id": "129277bbc7c5b68d",
+          "x1": -1.5,
+          "y1": -2.2143,
+          "x2": -2.2466,
+          "y2": -2.2143,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "PG"
+        },
+        {
+          "id": "9197552068f49977",
+          "x1": -2.2466,
+          "y1": -2.2143,
+          "x2": -2.2466,
+          "y2": -2.3822,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "PG"
+        },
+        {
+          "id": "23ab118e0345a2f7",
+          "x1": -2.2466,
+          "y1": -2.3822,
+          "x2": -2.286,
+          "y2": -2.4216,
+          "width": 0.252,
+          "layer": "TOP",
+          "net": "PG"
+        }
+      ],
+      "vias": [
+        {
+          "net": "GND",
+          "x": -0.399,
+          "y": 0.6,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "a3766dece689d18c",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": -0.399,
+          "y": 1.4,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "b72e9b5e0d21a4c4",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": 0.401,
+          "y": 0.6,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "52f596f42bc46ff7",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": 0.401,
+          "y": 1.4,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "6e95ce80874cd4cb",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": -0.1269,
+          "y": 3.1589,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "26e1bceae72d5a8d",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": -2.7939,
+          "y": 4.1991,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "f8ab2e1cca13ecf2",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": 2.7941,
+          "y": 4.1989,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "7e79ebd4f51b04dd",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": -0.82,
+          "y": -2.1082,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "a16ff992ca17df1b",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": -3.556,
+          "y": -1.143,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "28273f7036b0bf6c",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": -4.526,
+          "y": 4.976,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "613af030fb5e7e4e",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": -6.676,
+          "y": 4.976,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "ccc8d8e2a9e911bc",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": -5.2,
+          "y": 4.976,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "936f184249634fb1",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": -5.08,
+          "y": -1.778,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "707550046dfed6fe",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": -7.376,
+          "y": 2.6253,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "04df96dbe5fe4deb",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": 5.226,
+          "y": 4.276,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "44af2d448bcbf48b",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": 3.724,
+          "y": 4.976,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "62766e1a5782fa3c",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": 5.2,
+          "y": 4.976,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "63838f20b595b5f8",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": 7.376,
+          "y": 4.276,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "be66d4695a621701",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": 6.676,
+          "y": -1.376,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "b2caad94be90871a",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": 5.874,
+          "y": 4.976,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "0526eb6692a2c550",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": 7.35,
+          "y": 4.976,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "786c9133e006b7e3",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": 9.526,
+          "y": 4.276,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "ac0ff770eba9fe97",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": 9.526,
+          "y": 2.6253,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "c253d0ca476da851",
+          "viaType": 0,
+          "blindViaRule": ""
+        },
+        {
+          "net": "GND",
+          "x": 7.112,
+          "y": -2.032,
+          "diameter": 0.6096,
+          "drill": 0.3048,
+          "id": "ef9e795f93228030",
+          "viaType": 0,
+          "blindViaRule": ""
+        }
+      ]
+    }
+  },
+  "diagnostics": [
+    {
+      "code": "EASYEDA_V2_SEQUENTIAL_CAPTURE",
+      "severity": "warning",
+      "message": "CAD reads are sequential, not atomic. Do not edit the PCB during export; native pour freshness is unknown."
+    }
+  ]
+}

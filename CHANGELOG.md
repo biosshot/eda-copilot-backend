@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### PCB analysis fixtures
+
+- Add eight captured PCBs from the selected projects, including NanoScope and NanoSpec from the editable NanoSpec project, with native project/PCB sources, RoutingBoard V2, capture evidence and hashed provenance. Add named analysis launches through `test:pcb-analyze`; each invocation retains a separate `debugging/pcb-analyze/<fixture>/runs/<timestamp>-<name>-<unique>/` directory. Analysis scripts will be added for individual tasks later.
+
 ### PCB layout
 
 - Honor explicit `PCB_LAYOUT_SUBTREE_WORKERS`, `PCB_BOARD_PACKER_THREADS` and `PCB_POST_PLACE_THREADS` values up to the number of logical cores, in TypeScript and in the native board packer and post-placement refiner. The default stays at half the logical cores, at most 8. On H743 (18-core host, CPU build) poses are identical and 8 / 16 / 16 reduced wall time from 112 s to 93 s; see [thread overrides](docs/experimental/pcb/thread-overrides-2026-10-17/README.md).

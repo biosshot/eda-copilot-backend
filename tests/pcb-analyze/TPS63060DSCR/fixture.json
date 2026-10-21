@@ -1,0 +1,106 @@
+{
+  "name": "TPS63060DSCR",
+  "project": {
+    "name": "TPS63060DSCR - 5V Buck-Boost",
+    "uuid": "8b594a9a623248f7bd372e9777657293"
+  },
+  "pcb": {
+    "name": "PCB1",
+    "uuid": "08ede5c28e5bc681"
+  },
+  "capturedAt": "2026-10-21T14:29:48.114Z",
+  "versions": {
+    "editor": "3.2.206",
+    "extension": "1.3.2",
+    "mcp": "1.3.2",
+    "revisions": {
+      "backend": "832dca321367d1e292afa1db2141420f8d13166a",
+      "copilot": "3654a69166deab037f9c7d1a4a51511d9899754f"
+    },
+    "backendRoutingBoardV2Sha256": "9b7be233eae5ff446e9eb7833300ca68fb482cb0e13198182c8e750c96cd396b"
+  },
+  "export": {
+    "status": "exported",
+    "diagnostics": [
+      {
+        "code": "EASYEDA_V2_SEQUENTIAL_CAPTURE",
+        "severity": "warning",
+        "message": "CAD reads are sequential, not atomic. Do not edit the PCB during export; native pour freshness is unknown."
+      }
+    ],
+    "inventory": {
+      "layers": 2,
+      "components": 15,
+      "pads": 39,
+      "padDrills": 7,
+      "independentHoles": 0,
+      "tracks": 73,
+      "vias": 24,
+      "pours": 6,
+      "fills": 0
+    }
+  },
+  "nativeSummary": {
+    "components": 15,
+    "pads": 39,
+    "tracks": 73,
+    "arcs": 0,
+    "vias": 24,
+    "pours": 6,
+    "fillFragments": 6,
+    "layers": [
+      "TOP",
+      "BOTTOM"
+    ],
+    "viaTypes": {
+      "0": 24
+    },
+    "padDrills": 7,
+    "slottedPadDrills": 0
+  },
+  "verification": {
+    "sourceRecordsUnchanged": true,
+    "sourceRecordCount": 370,
+    "audit": "Captured and inventoried; physical completeness has not yet been accepted as an analysis reference",
+    "v2InventoryVerified": true,
+    "v2ReplayMatchesLiveExport": true,
+    "archiveComparison": {
+      "projectArchiveContainsSelectedPcb": true,
+      "archiveCrcVerified": true,
+      "nativeRecordCount": 369,
+      "archiveRecordCount": 390,
+      "archiveRecordsMatchSelectedSource": false,
+      "mismatch": {
+        "META": 1,
+        "LAYER": 2,
+        "ATTR": 6,
+        "COMPONENT": 2,
+        "ELE_PLACEHOLDER": 20,
+        "POURED": 4
+      },
+      "note": "Project archive and editor-selected source are distinct native representations. Record equality and physical equivalence are not assumed; V2 uses the captured editor input."
+    }
+  },
+  "files": {
+    "source.epro2": {
+      "bytes": 127599,
+      "sha256": "5ed72dc18fc5c8f7adba771bddb57d03d4f3a2f2495882e86fba18cb81be65bb",
+      "normalization": "binary"
+    },
+    "source-pcb.txt": {
+      "bytes": 104002,
+      "sha256": "6957ce3a89130b4eac774e3ff0ef5e81916127b1a58eb21d1bc79a3abf84d0cf",
+      "normalization": "lf"
+    },
+    "export-evidence.json": {
+      "bytes": 177594,
+      "sha256": "a15f48ad9ee48440786bfa2c62e5a55609dc72cfe7b63e1d4efe69308493d680",
+      "normalization": "lf"
+    },
+    "TPS63060DSCR.json": {
+      "bytes": 191136,
+      "sha256": "801bfb82ad413398975d0a0a17b172300edec090e1c202006b3c7744e70fdf4e",
+      "normalization": "lf"
+    }
+  }
+}
