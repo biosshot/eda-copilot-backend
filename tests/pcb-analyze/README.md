@@ -49,6 +49,17 @@ project and library context, not a byte-identical replacement for that capture.
 
 ## Named analyses
 
+The standalone Rust importer can already read all eight saved boards without
+per-fixture scripts:
+
+```bash
+cargo test --locked --manifest-path native/analyze/Cargo.toml eight_saved_boards -- --nocapture
+```
+
+See [the import library](../../native/analyze/README.md) for diagnostic semantics
+and individual JSON reading commands. This checks structural import, not physical
+analysis results or independent CAD fidelity.
+
 Run commands from the Backend repository root:
 
 ```bash

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Analysis import
+
+- Add the standalone `native/analyze` Rust library with a strict RoutingBoardV2 input adapter, independent indexed board data, retained source IDs and explicit diagnostics for invalid/missing/limited data. Preserve F64 millimetres/Y-down geometry and CAD fill states without repair or refill. Add focused import tests and replay all eight captured boards; leave placement, addon packaging and the analysis DSL unchanged.
+
 ### PCB analysis fixtures
 
 - Add eight captured PCBs from the selected projects, including NanoScope and NanoSpec from the editable NanoSpec project, with native project/PCB sources, RoutingBoard V2, capture evidence and hashed provenance. Add named analysis launches through `test:pcb-analyze`; each invocation retains a separate `debugging/pcb-analyze/<fixture>/runs/<timestamp>-<name>-<unique>/` directory. Analysis scripts will be added for individual tasks later.
