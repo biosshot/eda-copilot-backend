@@ -1,10 +1,18 @@
 # RoutingBoardV2: читаемая структура TypeScript
 
-Обновлено **2026-10-19**. **Текущая структура предварительно зафиксирована пользователем как рабочий контракт; требует перепроверки.** Это документация будущего API. [Полный JSON-пример](routing-board-v2-example.json) — искусственные данные, не экспорт реальной платы. [Подробности и ограничения](routing-board-v2-draft.md).
+**Рабочая структура принята пользователем для начала P0–P2.** Правила заливки хранятся непосредственно в Pour.refillRules; индивидуального pad.zoneConnection нет. Дальнейшие изменения — по конкретным результатам аудита, а не ради предварительного универсального охвата. Принятие структуры не означает доказанную достаточность для всех плат и анализов; источник данных, применимость приближений и физические результаты проверяются отдельно.
+
+Обновлено **2026-10-21**. По решению пользователя неподтверждённые расширения удалены из текущей TypeScript-структуры и перенесены в отдельный список на будущее. Это документация будущего API, не реализованный контракт. [Полный JSON-пример](routing-board-v2-example.json) соответствует сокращённой структуре и содержит искусственные данные, не экспорт реальной платы. [Подробности и ограничения](routing-board-v2-draft.md).
 
 При итоговом пересмотре всего плана обязательно проверить преобразование native PourFills в `PolygonMm[]`: один элемент описывает заполненную область, `outer` — её внешнюю границу, `holes` — вырезы в меди этой области, которые не обязательно являются сверлениями платы. Это нормализованное представление, а не готовые поля ответа EasyEDA. Проверить островки, вложенные контуры, strokes, thermals, точность аппроксимации и доступность остальных полей на реальном экспорте. Предварительная фиксация не означает, что эти проверки уже пройдены.
 
 По последнему уточнению **`schemaVersion` и `importInfo` убраны**. V2 остаётся рабочим именем типа на время обсуждения. Ошибки чтения можно возвращать обычными diagnostics операции; для этого не нужен новый раздел внутри платы.
+
+**Роль в analyze:** RoutingBoardV2 — входной формат обмена. При поступлении он проверяется и преобразуется адаптером во внутренние данные анализатора; физические решатели не зависят от внешнего DTO напрямую. [Граница адаптера и ограничения заменяемости](implementation-structure.md). Форма ниже остаётся предварительной: её достаточность проверяется на реальном экспорте и корпусе плат.
+
+**Статическая перепроверка 2026-10-21:** [аудит достаточности](routing-board-v2-sufficiency.md) обнаружил пробелы G1–G7. Оставлены optional partUuid/value, послойные формы площадок и разрешённые правила подключения внутри Pour. Индивидуального zoneConnection у площадок нет. Окна маски, специальные формы via и неподтверждённые refill-параметры отложены. Это не подтверждение полноты экспорта: поля и ограничения проверяются на P0–P2 [плана](implementation-plan.md).
+
+**Граница сокращения:** существующая геометрия RoutingBoard, диагностические поля экспортёра и ранее согласованные данные из DSL/каталога сохраняются. Они не обязаны иметь одноимённый CAD getter. Исключены именно неподтверждённые расширения экспорта; неподтверждённые поля зоны также не наследуются скрыто через RoutedZone. Span via остаётся обязательной физической информацией: при невозможности его восстановить объект признаётся неподдержанным, а не сквозным по умолчанию.
 
 ## Что сохраняем и что добавляем
 
@@ -15,9 +23,12 @@
 Ниже уже существующие типы импортируются, а не объявляются заново. Относительный путь обозначает проверенную текущую декларацию; это не предложение runtime-зависимости backend от пакета router.
 
 ```ts
+// Существующий тип: string (LCSC) | { uuid: string; libraryUuid: string }.
+// Переиспользование формы типа, не runtime-зависимость Rust от TS/EasyEDA.
+import type { PartUuid } from '../../../src/types/lcsc.ts';
 import type {
   PointMm, PolygonMm, RoutingBoard, RoutingComponent, RoutingPad,
-  RoutingPadShape, RoutingRules, RoutedTrack, RoutedVia,
+  RoutingPadShape, RoutedTrack, RoutedVia,
   RoutedZone, RoutingCopper,
 } from '../../../../copilot-router/src/core/contracts';
 
@@ -38,16 +49,29 @@ type FilledPolygons = {
     }
 );
 
-// НОВОЕ: Pour сохраняет ВСЕ существующие поля RoutedZone:
-// outline, layers, net, priority, clearanceMm, minThicknessMm,
-// connection, fill (solid/hatch), padConnection, removeIslandsBelowMm2.
-type PourZoneV2 = Omit<RoutedZone, 'id'> & {
+// Общая форма параметров подключения, без неподтверждённого spokeCount.
+type PourPadConnection = Pick<
+  NonNullable<RoutedZone['padConnection']>,
+  'mode' | 'thermalGapMm' | 'spokeWidthMm' | 'spokeAngleDeg'
+>;
+
+// Pick намеренно не наследует неподтверждённые параметры refill.
+type PourZoneV2 = Pick<RoutedZone,
+  'net' | 'layers' | 'outline' | 'priority'
+> & {
   id: string;
   kind: 'pour';
+  preserveIslands?: boolean; // Pour.getState_PreserveSilos()
   filledPolygons: readonly FilledPolygons[];
   refillRules: {
-    status: 'complete' | 'partial' | 'unknown';
-    ruleSetId?: string;              // ссылка на rules.refill
+    // Эффективные значения для этой зоны, уже разрешённые адаптером.
+    clearanceMm?: number; // только если применим один общий зазор
+    padConnection?: {
+      singleLayer?: PourPadConnection;
+      multiLayer?: PourPadConnection;
+    };
+    // Полного описания refill в текущей редакции ещё нет.
+    status: 'partial' | 'unknown';
     unresolved: readonly string[];  // чего не смогли узнать из CAD
   };
 };
@@ -62,29 +86,10 @@ type FillZoneV2 = Pick<RoutedZone, 'net' | 'layers' | 'outline'> & {
 
 type RoutedZoneV2 = PourZoneV2 | FillZoneV2;
 
-// НОВОЕ: различия CAD rules, которые не выражаются одним clearanceMm.
-// Это дополнение к прежним полям zone, не их вторая копия.
-type RoutingRulesV2 = RoutingRules & {
-  refill?: readonly {
-    id: string;
-    clearances?: readonly {
-      obstacle: 'track' | 'smd-pad' | 'th-pad' | 'via'
-        | 'zone' | 'edge' | 'hole' | 'keepout';
-      netRelation: 'same-net' | 'different-net' | 'any';
-      mm: number;
-      nets?: readonly string[];
-      layers?: readonly string[];
-      region?: PolygonMm;
-    }[];
-    viaConnection?: RoutedZone['padConnection'];
-    thPadConnection?: RoutedZone['padConnection'];
-    preserveIslands?: boolean;
-    hatchOrigin?: PointMm;
-  }[];
-};
-
 type RoutingComponentV2 = RoutingComponent & {
   id?: string;
+  partUuid?: PartUuid;     // optional ссылка на device, не на footprint/экземпляр
+  value?: string;          // optional значение именно размещённого компонента
   footprintName?: string;  // напрямую из getState_Footprint()?.name
   packageName?: string;    // распознанный конкретный вариант корпуса
   bodySizeMm?: { x: number; y: number; z: number }; // из каталога/DSL
@@ -96,27 +101,32 @@ type RoutingPadV2 = Omit<RoutingPad, 'id' | 'component'> & {
   id: string;
   component?: string;     // отсутствует у standalone pad
   shapesByLayer?: Readonly<Record<string, RoutingPadShape>>;
-  zoneConnection?: RoutedZone['padConnection'];
+  // Если задано — разрешённые формы для всех pad.layers, без null.
+  // Если отсутствует — общий shape на всех pad.layers.
   // hole, offsets, rotation и plated УЖЕ есть в RoutingPad.
 };
 
 // net можно не знать, но физическая медь всё равно остаётся на плате.
-// Это единственное изменение формы track/via в данном примере.
 type RoutedTrackV2 = Omit<RoutedTrack, 'net'> & { net?: string };
-type RoutedViaV2 = Omit<RoutedVia, 'net'> & { net?: string };
+type RoutedViaV2 = Omit<RoutedVia, 'net' | 'type'> & {
+  net?: string;
+  type: Exclude<NonNullable<RoutedVia['type']>, 'micro'>;
+  // through | blind-buried; технология micro пока отложена.
+  // УЖЕ есть: at, diameterMm, drillMm, fromLayer, toLayer, optional id.
+  // fromLayer/toLayer — концы непрерывного физического span, включительно.
+};
 
 type RoutingCopperV2 = Omit<RoutingCopper, 'tracks' | 'vias' | 'zones'> & {
   tracks: readonly RoutedTrackV2[];  // прежние points + widthMm
-  vias: readonly RoutedViaV2[];     // прежние from/to, diameters, type
+  vias: readonly RoutedViaV2[];     // прежние from/to/diameters, type обязателен
   zones: readonly RoutedZoneV2[];
 };
 
 type RoutingBoardV2 = Omit<RoutingBoard,
-  'components' | 'pads' | 'rules' | 'copper'
+  'components' | 'pads' | 'copper'
 > & {
   components: readonly RoutingComponentV2[];
   pads: readonly RoutingPadV2[];
-  rules: RoutingRulesV2;
   copper: {
     fixed: RoutingCopperV2;
     editable: RoutingCopperV2;
@@ -128,7 +138,6 @@ type RoutingBoardV2 = Omit<RoutingBoard,
     at: PointMm;
     hole: NonNullable<RoutingPad['hole']>;
   }[];
-
 };
 ```
 
@@ -141,10 +150,103 @@ type RoutingBoardV2 = Omit<RoutingBoard,
 // layers: RoutingLayer[];
 // nets: RoutingNet[];
 // keepouts: RoutingKeepout[];
+// rules: RoutingRules; // без нового rules.refill
 // stackup?: RoutingStackup;
 ```
 
 `stackup` может прийти из DSL/профиля производителя, а в будущем — из CAD API. Меняется источник заполнения существующего поля. `keepouts` сохраняет прежние polygon/layers/forbid. Дополнительные неизвестные native правила отмечаются в diagnostics операции и `refillRules.unresolved` до уточнения их модели.
+
+## Правила непосредственно в Pour
+
+По решению пользователя pad.zoneConnection удалён. В текущем варианте небольшие разрешённые значения хранятся непосредственно в zone.refillRules. Общую таблицу пресетов и ruleSetId не вводим: одного ID недостаточно без содержимого пресета; inline-значения делают снимок самостоятельным. Повторение нескольких чисел у зон допустимо. Общий preset ID можно рассмотреть позже при реальной необходимости дедупликации.
+
+Это нормализация, не утверждение о per-zone хранении внутри CAD: существующий [assignCopperZonePreset](../../../../easyeda-copilot/mcp/src/routing/easyeda-drc-adapter.ts) назначает Copper Safe Spacing и Copper Zone через правила сети. Экспортёр разрешает применимые пресеты/наследование и копирует эффективные значения в каждую соответствующую Pour. Экспорт не создаёт независимые native overrides и не меняет CAD.
+
+| Источник в DRC-адаптере | Поле зоны |
+| --- | --- |
+| Copper Safe Spacing | refillRules.clearanceMm, только при действительно одинаковом применимом зазоре |
+| Copper Zone / singleLayerPadModel | refillRules.padConnection.singleLayer |
+| Copper Zone / multiLayerPadModel | refillRules.padConnection.multiLayer |
+| connectMode | mode: thermal / solid / none |
+| lineClearance / lineWidth / lineAngle | thermalGapMm / spokeWidthMm / spokeAngleDeg |
+
+singleLayer/multiLayer сохраняют различие двух native групп площадок. Точное отнесение объектов к группам, единицы, активность записей и наследование проверяются на корпусе. Отсутствующая группа не означает none и не наследует соседнюю по догадке. Если spacing является неоднородной матрицей, нельзя брать первое/минимальное/максимальное число и называть его точным общим зазором: поле не заполняется, причина указывается в unresolved. Формат матрицы остаётся будущим уточнением по реальному payload.
+
+Обратная запись уже знает перечисленные native поля, но чтение и разрешение их эффективного состояния ещё не реализованы для V2. Поэтому status пока partial/unknown. Число спиц и неподтверждённые параметры hatch не добавляем.
+
+SDK описывает HeatWelding у pad, поэтому удаление per-pad поля — ограничение нашего текущего контракта, а не доказательство отсутствия такого состояния в EasyEDA. Если аудит обнаружит отличающееся индивидуальное поведение, правила зоны не выдаются за полные: фиксируется ограничение refill. При наличии реальной CAD-заливки её медь уже содержит фактическое соединение и анализируется без повторного применения правил.
+
+## G1: Part UUID и параметры только нужных компонентов
+
+`partUuid` переиспользует существующий [PartUuid](../../../src/types/lcsc.ts). Строка обозначает LCSC device, объект сохраняет uuid и libraryUuid другой библиотеки. Внешний тип не требует нового каталога идентификаторов; другой CAD может не заполнять это поле. Это ссылка на библиотечную деталь, не ID экземпляра на плате, не footprint UUID и не обещание готовой физической модели.
+
+Источник EasyEDA: `getState_Component()` возвращает uuid/libraryUuid; существующий [readPartUuidFromPrimitive](../../../../easyeda-copilot/extension/src/eda/component-part-ref.ts) также учитывает сохранённое свойство `EasyEDA Copilot Part Ref`. Невалидная/нулевая/недоступная ссылка не выдаётся за рабочую. Применение helper к реальным PCB-компонентам надо проверить на корпусе. Функция [getEasyEdaDevice](../../../src/devices/easy-eda.ts) уже получает device по PartUuid, но доступность номиналов и полнота нормализации его attributes ещё требуют проверки.
+
+Предлагаем оставить **optional `value`** как дешёвое сохранение значения экземпляра из CAD (например `10k` или `100nF`). Пользователь мог поменять его относительно библиотечной детали; один UUID этого не выражает. Это не обязательный численный resistance/capacitance и не требование заполнить полный BOM. Неизвестное значение не подменяется manufacturer ID или произвольным display name. Если value не переносится, тот же случай закрывается явным DSL override.
+
+Приоритет: явные параметры/модель DSL → подтверждённые свойства установленного экземпляра → совместимые библиотечные данные. Если номинал экземпляра противоречит точной модели библиотечной детали, не смешивать их молча: нужна согласованная модель или диагностика. Ручные списки выводов и явные поля не дополняются скрыто. Неизвестные физические параметры не выводятся только из префикса R/C или корпуса.
+
+| Расчёт | Какие параметры компонентов нужны |
+| --- | --- |
+| Геометрия или DC только медного участка с заданными портами | Номиналы всех R/C не нужны |
+| DC через последовательный резистор/шунт | Нужно сопротивление этого элемента либо явно заданная эквивалентная модель |
+| AC/transient PI | Нужны модели участвующих decaps и других электрических элементов, в выбранной полосе — необходимые ESR/ESL/зависимости |
+| SI с терминацией или AC-coupling | Нужны соответствующие R/C и модель драйвера/приёмника, а не весь BOM |
+| Thermal с явно заданным тепловыделением | Электрические номиналы не обязательны; нужны используемые thermal parameters |
+
+Без UUID экспорт корректен. Если нужные параметры уже заданы DSL, библиотека не требуется. Если параметры нужны и ниоткуда не получены, prepare выдаёт конкретный список компонентов/полей, а LLM/пользователь заполняет существующий `.components([...])`. Решатель сам не ведёт диалог и не останавливает импорт всех остальных данных. Неучтённый элемент в существенном электрическом пути нельзя молча считать коротким замыканием/разрывом. Не относящийся к выбранной модели компонент не требует загрузки параметров.
+
+```ts
+const components = [
+  resistor({ designator: 'R7', resistanceOhm: 1000 }),
+  capacitor({ designator: 'C3', capacitanceF: 10e-6,
+    esrOhm: 0.02, eslH: 1e-9 }),
+];
+// Эти описания можно передать соответствующему builder.components(components).
+// UUID не нужен; числа иллюстративны, не автоматически известны из корпуса.
+```
+
+Разрешение библиотеки выполняется на TS-стороне подготовки/ресурсов, не сетевым запросом из Rust-решателя. Для воспроизводимого расчёта сохраняются уже разрешённые параметры/модели и их происхождение в артефактах задачи; один UUID не фиксирует изменяемое содержимое библиотеки. Ручной путь должен работать без сети.
+
+## G2–G7: текущая граница
+
+| Пробел | Текущий контракт | Что остаётся проверить / расширить |
+| --- | --- | --- |
+| G2: физическая геометрия | Existing points/polygons/pads/cutouts и отдельные holes; постоянная медь в Fill | Полнота native-чтения, strokes, отверстия, медная графика и точность аппроксимации |
+| G3: via/padstack | Обычный круглый via, fromLayer/toLayer, through или blind-buried; формы pad по слоям | Разрешение blind-via rule в span; специальные via padstacks, micro и backdrill отложены |
+| G4: материалы/маска | Существующий stackup и ресурсы DSL | Фактические окна маски отложены; выбранное приближение маски указывается в отчёте |
+| G5: корпус | footprintName, optional packageName/bodySizeMm из каталога/DSL, существующий bodyOutline | Геометрия тела, её смещение и тепловые пути не выводятся автоматически из bbox |
+| G6: refill | priority, preserveIslands и inline refillRules с зазором/подключениями двух групп площадок; partial/unknown | Полное восстановление CAD rules отложено; тип больше не допускает complete |
+| G7: область платы | Одна плоская PCB, один глобальный stackup, cutouts | Несколько тел, rigid-flex, cavities и local stackup остаются будущими расширениями |
+
+**Span via** сохраняем: без него нельзя определить, какие слои соединены. fromLayer/toLayer — крайние слои непрерывного металлизированного ствола, включительно; порядок берём из board.layers. Тип blind-buried охватывает слепой и скрытый переход; их различают по концам. SDK [IPCB_PrimitiveVia](../../../../easyeda-copilot/mcp/docs/execution/easyeda-api/references/classes/IPCB_PrimitiveVia.md) предоставляет ViaType и DesignRuleBlindViaName, но не готовые from/to. Разрешение правила ещё проверяется на P0–P2. Неизвестный span нельзя молча заменить TOP→BOTTOM. SUTURE нельзя считать micro. Неподдержанный переход должен дать диагностику и ограничить зависящий анализ.
+
+**Формы площадок по слоям:** источник подтверждён — [SpecialPad](https://prodocs.easyeda.com/en/api/reference/pro-api.tpcb_primitivespecialpadshape.html) содержит диапазоны startLayer/endLayer и формы. Если shapesByLayer задан, адаптер должен разрешить эффективную форму для каждого pad.layers; неизвестные слои не заполняются догадкой. При отсутствии специальных форм используется общий shape. Формы локальны относительно at/rotationDeg. Прежний вариант с null удалён: native способ отсутствия annular pad ещё не подтверждён. Необычное удаление площадок не подменяется общей формой.
+
+Толщина металлизации пока задаётся общим stackup.viaPlatingThicknessUm. Это характеристика изготовления, не толщина кольца меди. Для plated pad-hole сквозной ствол допускается лишь при подтверждённой геометрии.
+
+## Будущие расширения — не входят в текущую TypeScript-структуру
+
+| Отложено | Почему и что требуется перед возвратом |
+| --- | --- |
+| board.solderMaskOpenings | Нужна проверенная нормализация expansion, наследования, tenting и масочных примитивов. Готового массива окон проверенный API не даёт |
+| via.shapesByLayer | Аналог SpecialPad для Via в проверенном API не найден |
+| null в pad.shapesByLayer | Не подтверждён native способ удаления annular pad |
+| via.platingThicknessUm | Локальный CAD-источник не подтверждён; общее значение stackup сохраняется |
+| via.type: micro | Технология не следует из enum VIA/BLIND/SUTURE |
+| Pour.minThicknessMm, connection, fill, removeIslandsBelowMm2 и дубли правил на верхнем уровне зоны | Неподтверждённые настройки отложены. Подтверждённые кандидаты clearance/padConnection теперь только внутри refillRules; реальная медь уже передаётся через filledPolygons |
+| rules.refill целиком; refillRules.ruleSetId; status: complete | Матрица зазоров, региональные правила, overrides TH/via и их приоритеты пока не доказаны |
+| hatchOrigin и spokeCount | Источники не подтверждены; отсутствуют и в явных полях, и в наследуемой форме текущей зоны |
+
+Для будущих окон маски достаточно `top?: readonly PolygonMm[]` и `bottom?: readonly PolygonMm[]`. PolygonMm уже содержит outer и holes; PolygonMm[][] добавляет ненужную группировку. В полигоне окна holes исключают участки из окна, сохраняя там маску. Это описание будущего расширения, не поле текущего board.
+
+[API expansion](https://prodocs.easyeda.com/en/api/reference/pro-api.ipcb_primitivesoldermaskandpastemaskexpansion.html) подтверждает отступы solder mask/paste mask, но не весь результат построения. Отсутствие окон в текущем формате не означает сплошную или отсутствующую маску: подробный расчёт требует явного приближения либо отклоняет неподдержанную постановку.
+
+Полный fallback-refill сохраняется в плане развития. После доказательства источников его контракт будет расширен отдельно; минимальная текущая форма намеренно не позволяет заявлять CAD-эквивалентную реконструкцию.
+
+## Плата, материалы и условия: это не новый вопрос к пользователю
+
+Разделение уже согласовано: board описывает конструкцию; stackup/materials уточняют физические свойства; сценарий задаёт режим работы. Экспорт EasyEDA сейчас не обязан сам знать ток U1, тепловыделение MOSFET, характеристики радиатора, частоту SW или фронт драйвера. Они задаются существующими builders/ресурсами DSL. Например, геометрия конденсатора приходит из платы, его электрическая модель — из доступного ресурса или ручного `.components`, а изменение тока нагрузки — из сценария PI. Ресурс может заполняться автоматически по partUuid, но это не делает все параметры обязательными полями RoutingBoardV2.
 
 ## Компоненты и приближённые корпуса
 
@@ -186,31 +288,33 @@ type RawPcbPolygon = {
 
 Дополнительно выполнены три проверки существующих функций в памяти, без изменения исходников: CIRCLE дал 24 точки; Q с ожидаемым концом `(3,4)` вернул `(4,4)`; квадратное отверстие площадью 0.04 mm² внутри внешнего контура было удалено `cleanPolygonRings`. Это подтверждает конкретные ограничения, а не заменяет проверку native-экспорта на контрольных платах.
 
-## Можно ли заполнить все поля
+## Источники текущих полей
 
-Проверка ниже основана на исходниках и локальном SDK; новый полный экспорт из живого CAD не выполнялся.
+Проверка основана на исходниках и SDK; полный экспорт из живого CAD и аудит корпуса ещё не выполнены.
 
-| Поля | Доступный источник | Что пока ограничено |
-| --- | --- | --- |
-| `kind`, `id`, `net`, `layers`, `outline` зоны | Тип native primitive, ID/net/layer/ComplexPolygon у Pour/Fill | Нужна правильная нормализация; orphan Poured требует диагностики |
-| `filledPolygons.polygons` | Poured `getState_PourFills()`; Fill `getState_ComplexPolygon()` | Чтение уже есть, конвертер физической меди ещё требуется; RawPcb сам не хранит PolygonMm |
-| `nativePrimitiveIds` | ID Pour/Poured/Fill и fragment.id | Текущий RawPcb часть связей теряет; их можно сохранить на этапе чтения |
-| `status`, `source`, `refillRules.status/unresolved` | Назначает экспортёр по реально прочитанным данным и ошибкам | Это результаты чтения, не значения CAD API |
-| `freshness` | При доказательстве актуальности — current/stale, иначе unknown | Проверенного универсального сигнала актуальности Poured пока нет |
-| `priority`, `fill`, `preserveIslands` | Pour priority, fill method, preserve silos | Priority/preserve доступны; fill method в SDK имеет тип any, преобразование его вариантов ещё проверить |
-| `clearanceMm`, `minThicknessMm`, `padConnection`, `rules.refill` | Native DRC presets/assignments; pad `getState_HeatWelding()` | Полный импорт наследования, spokeCount, hatchOrigin и всех режимов не подтверждён; неизвестное не заполнять догадкой |
-| `refillRules.ruleSetId` | Назначает адаптер для нормализованного набора правил | Отсутствует, если набор не удалось восстановить |
-| component `id`, `designator`, `at`, `rotationDeg`, `side` | Native component API; часть уже переносится autoroute adapter | Сверить преобразования bottom/rotation; исходный компонент уже есть в модели |
-| `footprintName` | `getState_Footprint()?.name`; autoroute component.footprint | Уже читается в `readComponents`, но не переносится текущим RoutingComponent importer |
-| `packageName`, `bodySizeMm`, точный `bodyOutline` тела | Распознавание footprint + каталог размеров, явные данные DSL | Прямое надёжное чтение всех этих полей из текущего пути не подтверждено; optional |
-| `shapesByLayer` | Только при наличии соответствующей информации native padstack | Полное чтение не подтверждено; optional, общий shape уже есть |
-| pad `hole`, via span/type, отдельные holes | Pad API/правила переходов/источник сверлений | Нынешний autoroute импорт неполон; NPTH и span нельзя выводить из keepout/наличия размеров |
-| `stackup` | Пока DSL/профиль; будущее CAD API | Физические толщины/материалы текущим импортёром не читаются |
-| `keepouts`, локальные ограничения | Autoroute prohibitedRegions и дополнительные native сведения | Точный перенос всех видов запретов и constraintRegions ещё не подтверждён |
+| Поля | Источник / ограничение |
+| --- | --- |
+| kind/id/net/layers/outline зоны | Тип native primitive, ID, Net, Layer, ComplexPolygon; правильная нормализация ещё проверяется |
+| filledPolygons.polygons | Poured.getState_PourFills() либо геометрия Fill с реальными FillMode/LineWidth |
+| nativePrimitiveIds | ID native объектов/фрагментов; текущий RawPcb теряет часть связей, новое чтение должно сохранить их |
+| status/source/freshness/refillRules | Диагностика адаптера, не прямые CAD-поля. Для Poured без доказательства актуальности freshness: unknown |
+| priority / preserveIslands | Pour.getState_PourPriority() / getState_PreserveSilos(); boolean не превращается в порог площади |
+| zone.refillRules.clearanceMm / padConnection | Copper Safe Spacing / Copper Zone, singleLayerPadModel/multiLayerPadModel в существующем DRC-адаптере; обратное чтение, единицы и наследование ещё проверить |
+| component id/designator/at/rotationDeg/side | Native component API; сверить bottom и повороты |
+| partUuid / value / footprintName | Device reference + существующий helper; явное значение экземпляра; getState_Footprint()?.name. Все optional |
+| packageName/bodySizeMm/bodyOutline тела | Ранее согласованное обогащение из каталога/DSL; bbox не доказывает размер тела, высоту и смещение |
+| pad.shapesByLayer | getState_SpecialPad(): диапазоны слоёв и формы; декодирование и эффективные формы требуют проверки |
+| pad.hole / plated | Hole, HoleOffsetX/Y, HoleRotation, Metallization: ROUND/SLOT и признак металлизации существуют |
+| via span/type | ViaType + разрешение DesignRuleBlindViaName; неизвестный span — ограничение, не дефолт |
+| holes / cutouts | Сверления и геометрия вырезов; исключить повтор pad/via holes |
+| существующие rules / keepouts | Текущий RoutingBoard и адаптер; это не доказательство полного переноса всех native правил. Нового rules.refill нет |
+| stackup | Ранее согласованный DSL/профиль изготовления, не обещание текущего CAD API |
 
-Локальный SDK также описывает `getState_Model3D()` с необязательным именем связанной библиотечной 3D-модели. Это имя можно рассматривать как дополнительную подсказку адаптера при распознавании корпуса; оно само по себе не даёт размеров. Отдельное поле для него в текущий эскиз не добавлено, CAD 3D-геометрия не импортируется.
+Fill классифицируется по [слою](../../../../easyeda-copilot/mcp/docs/execution/easyeda-api/references/types/TPCB_LayersOfFill.md): медный → постоянная медь; MULTI → slot region для вырезов. Масочный Fill относится к отложенной геометрии маски; silk/document не становится медью. Текущий RawPcb выставляет Fill fill: true и lineWidth: 0, что нельзя считать корректной нормализацией всех режимов.
 
-**Расширение формы небольшое, но работа касается не только зон.** Зоны и корпуса — главные добавления; ещё потребуется надёжно заполнить существующие поля. Геометрические проверки используют медь и связность; DC требует толщин, проводимости, металлизации и нагрузок; SI — stackup/электрических материалов и моделей канала; thermal — тепловых материалов, мощностей и условий охлаждения. Один только импорт зон не обеспечивает все эти расчёты.
+PCB_Drc.getCurrentRuleConfiguration() возвращает произвольную структуру, Pour.getState_PourFillMethod() — any. Это ещё не доказательство извлечения полных refill rules. LineWidth нельзя приравнять к minThicknessMm, PreserveSilos — к removeIslandsBelowMm2.
+
+Удаление полей не закрывает физические пробелы G1–G7. Для каждой постановки отдельно проверяются доступные данные и допущения; формат пока не объявляется достаточным для любой PCB.
 
 ## Как читать заполнение
 
@@ -218,9 +322,9 @@ type RawPcbPolygon = {
 
 Нельзя заменять failed/missing на пустой массив. Для доступной меди freshness может оставаться unknown: это не запрещает показывать или исследовать её, но расчёт должен сообщить об этом. Для постоянного Fill current означает соответствие прочитанному состоянию объекта, а не наличие операции refill.
 
-Параметры `priority`, `clearanceMm`, `fill`, `padConnection` и другие существующие поля Pour используются для возможного восстановления. `rules.refill` добавляет недостающие различия правил. Этот TS-эскиз не закрывает все advanced режимы из аудита: неизвестный tie-break приоритетов, overrides, способ удаления островков и другие пробелы перечисляются в `unresolved`, поэтому такой набор не становится `complete` автоматически.
+В текущем контракте сохранены свойства зоны, разрешённые зазор/подключения внутри refillRules и описание недостающих правил. Поэтому refillRules.status ограничен partial/unknown; unresolved содержит конкретные пробелы и не должен быть пустым. Базовые routing rules не доказывают полноту правил Pour.
 
-Свой refill вызывается для Pour, когда это требуется сценарием и хватает данных. Его результат хранится в результате запуска анализа, с `source: 'refill'`, zone ID и параметрами движка; исходные `source: 'cad'` полигоны сохраняются. На один расчёт выбирается одна версия. Физически дефектная CAD-медь сначала проверяется как прочитана.
+Если реальной заливки нет, текущий контракт сообщает missing/failed/unsupported. Точный fallback-refill требует будущего расширения правил. Явно выбранная пользователем приближённая реконструкция может быть отдельной постановкой с допущениями; её результат не подменяет source: cad и не учитывается вместе с исходной медью. Физически дефектная CAD-медь сначала проверяется как прочитана.
 
 ## Дуги и RawPcb после уточнения
 

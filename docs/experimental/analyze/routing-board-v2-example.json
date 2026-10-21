@@ -49,15 +49,7 @@
         "preferredDrillMm": 0.3
       }
     },
-    "nets": [],
-    "refill": [{
-      "id": "gnd-copper-rules",
-      "clearances": [
-        { "obstacle": "track", "netRelation": "different-net", "mm": 0.2 },
-        { "obstacle": "edge", "netRelation": "any", "mm": 0.5 }
-      ],
-      "preserveIslands": true
-    }]
+    "nets": []
   },
   "copper": {
     "fixed": {
@@ -73,9 +65,7 @@
             "outer": [{ "x": 0, "y": 0 }, { "x": 10, "y": 0 }, { "x": 10, "y": 10 }, { "x": 0, "y": 10 }]
           },
           "priority": 1,
-          "clearanceMm": 0.2,
-          "fill": { "style": "solid" },
-          "padConnection": { "mode": "thermal", "thermalGapMm": 0.25, "spokeWidthMm": 0.3, "spokeCount": 4, "spokeAngleDeg": 45 },
+          "preserveIslands": true,
           "filledPolygons": [{
             "layer": "top",
             "source": "cad",
@@ -88,9 +78,13 @@
             }]
           }],
           "refillRules": {
+            "clearanceMm": 0.2,
+            "padConnection": {
+              "singleLayer": { "mode": "thermal", "thermalGapMm": 0.25, "spokeWidthMm": 0.3, "spokeAngleDeg": 45 },
+              "multiLayer": { "mode": "solid" }
+            },
             "status": "partial",
-            "ruleSetId": "gnd-copper-rules",
-            "unresolved": ["same-net overlap policy", "equal-priority zone policy"]
+            "unresolved": ["fill method", "same-net overlap policy", "equal-priority zone policy"]
           }
         },
         {
