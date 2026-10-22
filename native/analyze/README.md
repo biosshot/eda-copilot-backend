@@ -1,9 +1,10 @@
-# PCB analyze: board import and copper geometry
+# PCB analyze: board import, copper geometry and conduction mesh
 
 Standalone Rust library (`pcb-analyze`, ordinary `rlib`) with no Node addon,
 packer dependency or GPU initialization. The shared
 [Node host](../node-addon/README.md) calls this importer through the internal
 `importAnalysisBoard(json)` and `prepareAnalysisGeometry(json, options?)` bindings.
+`prepareAnalysisConduction(json, options?)` prepares a layered mesh through the same host.
 The importer retains its original semantics. `geometry::prepare` consumes its
 validated `model::Board`; `geometry::prepare_json` is a boundary convenience.
 The separate serializable geometry report does not expose the internal Board.
@@ -19,6 +20,32 @@ retained. Invalid drill generation stops preparation instead of using an
 unconfirmed hole. Finite approximation limits still apply.
 This is a geometric part of P4, not completion of P4 or a physical solver.
 See [geometry precision, tests and artifacts](../../docs/experimental/analyze/copper-geometry-verification.md).
+
+## Conduction preparation
+
+`conduction::prepare_json` accepts `{ geometry?, mesh?, profile? }` options.
+`conduction::prepare(&Board, options)` and
+`conduction::prepare_geometry(&Board, &PreparationReport, options)` avoid JSON round-trips.
+The latter requires matching geometry options and geometry from the same board.
+One layer union is triangulated once; overlaps do not multiply thickness.
+Layer domains have independent node indices. Terminals retain pad fragments,
+element membership and boundary subedges, including drilled annuli. Barrels retain
+separate layer contacts and adjacent participating-layer segments, never ideal nodes.
+
+Profiles contain ordered tagged copper/dielectric `stackup` entries, per-layer
+`materials` (`conductivity_s_m`, explicit `state`), optional barrel material,
+`plating_thickness_mm` and `diameter_convention` (`finished_hole` or `before_plating`).
+Explicit stackup/plating override board values; no omitted material or gap is filled.
+Sheet coefficients and barrel area/length/conductance are SI; mesh coordinates stay mm.
+Plated slots retain planar copper/cutouts but have no supported barrel section.
+
+Mesh options bound maximum area, requested minimum angle, total nodes/triangles and
+refinement steps. Constraints are noded, divided to the area-derived boundary size,
+then kept fixed during bounded refinement. Unachievable quality/budgets remain partial.
+`mesh_complete`, `topology_confirmed`, `copper_complete`, `physics_complete` and
+`dc_ready` are separate for every domain. Known drill/contact uncertainty and missing
+fill freshness are not erased by successful meshing. There is no electrical solution
+or electrical convergence claim. See [representation, checks and limits](../../docs/experimental/analyze/conduction-mesh-verification.md).
 
 ## API and data boundary
 
@@ -95,7 +122,7 @@ counts, including available/unavailable per-layer fill states.
   shorts and copper overlaps uncertified. Import does not certify ring topology or
   CAD export fidelity. Mask openings are not present in the current transport.
 
-There is no meshing, refill, solver, cache, GPU, DSL or common compute runtime.
+There is no refill, electrical solver, cache, GPU, DSL or common compute runtime.
 
 ## Build and checks
 

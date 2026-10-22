@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Analysis conduction mesh
+
+- Retain geometry-confirmed barrel contacts independently of mesh success, with per-contact mapping/readiness reasons; block affected barrels and dependent domains when a required contact is missing or incomplete. Carry existing `barrel_contact_uncertain` diagnostics into topology/barrel readiness while preserving independent domains and genuinely absent layer contacts. Geometry, physical coefficients and placement remain unchanged.
+
+- Prepare one CPU/F64 constrained copper mesh per layer domain using pinned Spade, with finite-area pad terminals, traced boundary subedges and separate finite-conductance round barrel segments. Resolve explicit stackup/material/plating profiles without material defaults; retain geometry uncertainty, incomplete fills and unsupported plated slots as readiness limitations. Add `prepare-conduction` to the existing shared addon/process runtime, focused coupons and eight named diagnostic `mesh` runs. No electrical solve, refill, DSL, GPU, cache, placement or V2/export changes.
+
 ### Analysis copper geometry
 
 - Keep one copper `regions` collection and one `contacts`/`islands` graph; remove whole-board reliable/possible envelopes, duplicate reports and the second graph. Prevent the false intra-source drill neck with enclosing drill polygons and a temporary local split check with explicit uncertainty diagnostics. Preserve the review regression and strict addon export check, including `prepareAnalysisGeometry`.

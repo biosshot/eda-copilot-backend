@@ -246,3 +246,12 @@ pub fn prepare_analysis_geometry(json: String, options: Option<Value>) -> Result
     let report = pcb_analyze::geometry::prepare_json(&json, options);
     serde_json::to_value(report).map_err(|e| napi::Error::from_reason(e.to_string()))
 }
+
+/// CPU/F64 layered discretization; no placement guard, GPU or electrical solve.
+#[napi]
+pub fn prepare_analysis_conduction(json: String, options: Option<Value>) -> Result<Value> {
+    let options = options.map(serde_json::from_value::<pcb_analyze::conduction::ConductionOptions>)
+        .transpose().map_err(|e| napi::Error::from_reason(e.to_string()))?.unwrap_or_default();
+    serde_json::to_value(pcb_analyze::conduction::prepare_json(&json, options))
+        .map_err(|e| napi::Error::from_reason(e.to_string()))
+}

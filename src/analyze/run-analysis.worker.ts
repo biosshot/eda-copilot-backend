@@ -11,6 +11,11 @@ function importAnalysisInWorker(problem: unknown, jobId: string): AnalysisResult
     if (typeof addon.importAnalysisBoard !== 'function') throw new Error('Rebuild the shared addon: npm run native:build');
     if (problem.kind === 'prepare-geometry' && typeof addon.prepareAnalysisGeometry !== 'function') throw new Error('Rebuild the shared addon: npm run native:build');
     workerpool.workerEmit({ jobId, phase: 'started' });
+    if (problem.kind === 'prepare-conduction') return addon.prepareAnalysisConduction(problem.boardJson, {
+        ...(problem.geometry ? { geometry: problem.geometry } : {}),
+        ...(problem.mesh ? { mesh: problem.mesh } : {}),
+        ...(problem.profile ? { profile: problem.profile } : {}),
+    });
     return problem.kind === 'prepare-geometry' ? addon.prepareAnalysisGeometry(problem.boardJson, problem.geometry) : addon.importAnalysisBoard(problem.boardJson);
 }
 

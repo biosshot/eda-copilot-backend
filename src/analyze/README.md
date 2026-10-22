@@ -1,6 +1,6 @@
 # Analysis execution boundary
 
-Internal infrastructure for structural RoutingBoardV2 import and copper geometry preparation.
+Internal infrastructure for structural RoutingBoardV2 import, copper geometry and conduction mesh preparation.
 There is no public `/analyze` package export or analysis DSL at this stage.
 
 ```text
@@ -22,7 +22,14 @@ Separate islands are not a confirmed open; consult geometry diagnostics.
 The optional geometry settings are validated and copied on admission. See
 [geometry policy and evidence](../../docs/experimental/analyze/copper-geometry-verification.md).
 The built `dist/analysis-runtime.js` is an internal package smoke-test entry.
-Only the serializable task (JSON string and optional numeric geometry settings)
+`runAnalysisProblem({ kind: 'prepare-conduction', boardJson, geometry?, mesh?, profile? }, options)`
+uses the same admission/deadline/abort/shutdown path and returns `AnalysisConductionReport`.
+Its nested profile/options are validated and snapshotted at admission. There is no
+new queue or session. Detailed nodes/elements live once in this report; geometry
+snapshots are not embedded. Native compact Rust JSON byte count and stage timers
+are reported; fixture runs separately measure actual Node JSON bytes and wall time.
+See [conduction preparation and limits](../../docs/experimental/analyze/conduction-mesh-verification.md).
+Only the serializable task (JSON string, optional geometry/mesh settings and physical profile)
 and job ID cross IPC; callbacks and AbortSignal stay in
 the parent. Importing the runtime does not load the addon. The ready process
 loads `native/node-addon/index.cjs`, emits `started`, and calls its synchronous

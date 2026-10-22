@@ -3,8 +3,9 @@
 Captured, routed EasyEDA PCBs for analysis development. Each directory is one
 selected PCB, following the per-board structure of `tests/pcb-layout`. Different
 analysis scripts share the same input. Each fixture now includes `import.ts`
-for structural import through the isolated process runtime. No physical-analysis
-scripts or numerical reference results are included yet.
+for structural import, `geometry.ts` for copper preparation and `mesh.ts` for
+diagnostic conduction meshing through the isolated process runtime. No electrical
+solver or measured physical reference is included.
 
 ## Saved inputs
 
@@ -18,6 +19,8 @@ tests/pcb-analyze/
     export-evidence.json    # Native autoroute JSON, Raw PCB, DRC and diagnostics
     README.md               # Selected revision and capture notes
     import.ts               # Shared-helper structural import in a process worker
+    geometry.ts             # Single copper geometry / contacts / islands
+    mesh.ts                 # Diagnostic mesh; no assumed physical material profile
   NanoSpec/
   ESPower/
   BandAmpV5/
@@ -68,6 +71,7 @@ Run commands from the Backend repository root:
 npm run test:pcb-analyze -- --list
 npm run test:pcb-analyze -- NanoScope --name import
 npm run test:pcb-analyze -- --all --name import
+npm run test:pcb-analyze -- --all --name mesh
 npm run test:pcb-analyze -- NanoScope --name dc
 npm run test:pcb-analyze -- NanoScope --name emi
 npm run test:pcb-analyze -- NanoScope NanoSpec --name dc
@@ -76,10 +80,17 @@ npm run test:pcb-analyze -- --all --name dc
 
 `--name dc` selects **`tests/pcb-analyze/<fixture>/dc.ts`**, not an output label.
 `--name dc.ts` is also accepted. A fixture can contain any number of independently
-named analyses. Currently `--list` reports `import.ts`; requesting an absent
+named analyses. Currently `--list` reports `import.ts`, `geometry.ts`, `mesh.ts`; requesting an absent
 analysis returns a nonzero exit code without creating a run directory. Only
-`import.ts` is currently implemented; the `dc`/`emi` examples illustrate future
+these three scripts are currently implemented; the `dc`/`emi` examples illustrate future
 independent filenames and are not placeholder scripts.
+
+Mesh runs save compact detailed `mesh.json` once, a small `report.json` with readiness,
+counts, missing/uncertain data and measurements, and per-layer SVG overlays. Gold is
+mesh, cyan is constraints and pink is pad terminal boundaries. These eight runs supply
+no demonstration material profile; missing physics stays missing. Explicit complete
+physical coupons and independent checks are documented in
+[mesh verification](../../docs/experimental/analyze/conduction-mesh-verification.md).
 
 Each selected analysis runs sequentially in its own Node process with `tsx`, with
 the Backend root as its working directory and a 10-minute timeout, as in the PCB

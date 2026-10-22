@@ -62,7 +62,9 @@ export class AnalysisPool {
         const snapshot = { ...options };
         return new Promise((resolve, reject) => {
             const job: Job = {
-                id: randomUUID(), problem: problem.kind === 'prepare-geometry'
+                id: randomUUID(), problem: problem.kind === 'prepare-conduction'
+                    ? structuredClone(problem)
+                    : problem.kind === 'prepare-geometry'
                     ? { kind: problem.kind, boardJson: problem.boardJson, ...(problem.geometry ? { geometry: { ...problem.geometry } } : {}) }
                     : { kind: problem.kind, boardJson: problem.boardJson }, options: snapshot,
                 deadline: acceptedAt + (snapshot.timeoutMs ?? this.config.timeoutMs),

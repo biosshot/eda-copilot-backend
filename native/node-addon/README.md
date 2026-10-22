@@ -22,6 +22,12 @@ argument type remains a N-API argument error. The internal Board is not serializ
 This call does not enter the packer's F32 guard or GPU runtime; analyze remains
 F64. Import success is not physical-analysis readiness.
 
+`prepareAnalysisGeometry(json, options?)` and
+`prepareAnalysisConduction(json, { geometry?, mesh?, profile? }?)` likewise call
+the independent F64 library without placement guards or GPU entry points. The
+conduction operation returns layer-domain meshes, finite-area terminals, round
+barrel coefficients and separate readiness/diagnostics. It does not solve a circuit.
+
 ## Build boundary
 
 From the repository root:
@@ -52,16 +58,14 @@ existing opt-in probe feature. CPU-only host builds use `--no-default-features`;
 production builds keep GPU support. `napi-build` runs only for the host; the
 packer's build script still computes its kernel source/build key.
 
-The host lockfile starts from the previous addon lock and adds only the analyze
-path dependency and `serde_path_to_error`. Existing registry versions, including
-N-API, serde and GPU crates, are preserved. Analyze's standalone lock stays
-unchanged; its compatible serde dependencies resolve to the packer's existing
-locked versions in the combined graph. Node/Rust parity tests compare against
-the standalone Rust reader, including full diagnostic messages.
+The host lockfile preserves existing N-API, serde and GPU registry versions.
+The analysis dependency now includes pinned Spade for meshing; no external native
+solver or additional addon is introduced. Analyze retains its independent lockfile.
+Node/Rust parity tests compare reports with the standalone Rust library.
 
 Each library owns its declarations: `native/pcb-board-packer/index.d.ts` describes
-the placement functions; `native/analyze/index.d.ts` describes import and its
-diagnostic report. `native/node-addon/index.d.cts` re-exports both groups for the
+the placement functions; `native/analyze/index.d.ts` describes import, geometry and
+conduction reports. `native/node-addon/index.d.cts` re-exports both groups for the
 single CommonJS loader. The package includes all three declaration files.
 These are internal bindings, not a public analysis DSL or new package entry point.
 The optional benchmark-only GPU probe is not a production declaration.

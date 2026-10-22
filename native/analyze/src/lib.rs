@@ -1,4 +1,5 @@
-//! Standalone board import library. No Node, placement, GPU or solver dependencies.
+//! Standalone board import, copper and mesh library. No Node, placement, GPU or solver dependencies.
+pub mod conduction;
 pub mod geometry;
 pub mod input;
 pub mod model;

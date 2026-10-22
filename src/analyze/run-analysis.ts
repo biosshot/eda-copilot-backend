@@ -4,6 +4,7 @@ import type { AnalysisProblem, AnalysisResult, RunAnalysisOptions } from './type
 export { AnalysisExecutionError } from './types.ts';
 export type { AnalysisImportReport, AnalysisGeometryReport, AnalysisGeometryOptions, AnalysisResult, AnalysisProblem, AnalysisProgress, RunAnalysisOptions } from './types.ts';
 export type { AnalysisPolygon } from '../../native/analyze/index.js';
+export type { AnalysisConductionOptions, AnalysisConductionReport, AnalysisConductionDomain, AnalysisPhysicalProfile } from '../../native/analyze/index.js';
 
 let pool: AnalysisPool | undefined;
 let disposing: Promise<void> | undefined;
