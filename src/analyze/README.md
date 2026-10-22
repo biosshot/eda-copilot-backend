@@ -1,7 +1,48 @@
 # Analysis execution boundary
 
 Internal infrastructure for structural RoutingBoardV2 import, copper geometry and conduction mesh preparation.
-There is no public `/analyze` package export or analysis DSL at this stage.
+There is no separate `/analyze` package export. The root exports the scenario DSL
+runner described below; native preparations remain internal.
+
+## Analysis scenarios
+
+`runAnalysisDsl({code, board?, profiles?, models?}, options)` runs ordinary JavaScript
+with `await` and the globals documented by `analysisDslDocumentation()` (the
+installed `dist/analysis-spec-doc.d.ts`). It does not transpile TypeScript.
+`analysis()` is boardless; only `analysis({board})` opts into the snapshot. Catalogs
+are explicit host data with no built-in project models or environmental defaults.
+Builders snapshot sections, replace repeated sections and call the small internal
+`executor.ts` boundary only after structural preparation. All production analysis
+executors are currently unavailable; import/geometry/conduction are not user solvers.
+
+Each scenario owns one disposable workerpool process using the existing process
+fork options. A parent monotonic deadline includes startup and stops loops before
+or after `await`; abort kills only that scenario, with exit awaited before return.
+There is no additional compute queue/framework. `node:vm` restricts convenience
+globals/code generation but is **not a security boundary for hostile source**.
+No process, require, filesystem, network or timers are supplied as DSL globals.
+Callbacks stay in JS; only finite JSON tasks reach the executor boundary.
+
+Default limits: 120000 ms, 1000 report entries (across contexts), 4 MiB serialized
+output. Options accept positive finite `timeoutMs`, `maxEntries` 1–100000 and
+`maxOutputBytes` 4096–64 MiB; 2048 bytes are reserved for a bounded error envelope.
+Context headers count against bytes. `filename` is at most 512 UTF-8 bytes with
+no control characters. Diagnostics/messages may be explicitly truncated. These
+are output/lifecycle limits, not a hard RSS or hostile-code containment guarantee.
+Results are `{status:'complete'|'failed', reports, error?}`; errors retain source
+location and prior reports. Invalid host requests reject with `INVALID_REQUEST`.
+Progress sends append-only report entries; it does not recopy accumulated plots
+on every log/check. Context/report payloads remain bounded across the scenario.
+Checks never throw for a failed/unknown condition. Report output-limit errors and
+program errors are distinct. Plot stores a typed description/data, never a fake file.
+
+See [coverage, tests and limits](../../docs/experimental/analyze/analysis-dsl-verification.md).
+`createAnalysisApi` and `executeScenario` are internal: tests explicitly inject a
+test executor; the public runner has no executor/module-path override. Physical
+result processing/timing and search algorithms are not implemented. Explicit-value
+sweep runs its callback on every candidate and records individual failures.
+
+## Internal native preparation
 
 ```text
 parent TypeScript → bounded FIFO → reusable workerpool process → shared .node

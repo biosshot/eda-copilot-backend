@@ -1,0 +1,89 @@
+import type { AnalysisKind, Configurations, DataDescription, Diagnostic, Json, Network, Resource, Results, TimingOptions } from './spec-doc.js';
+import type { RoutingBoardV2 } from '../../types/pcb/routing-board-v2.ts';
+import type { AnalysisPhysicalProfile } from '../../../native/analyze/index.js';
+import { z } from 'zod';
+import { AnalysisDslError, parse, port, selector, text, timingOptions } from './schema.ts';
+import { freeze, json, unavailable, value } from './data.ts';
+
+/** Small analysis dispatch boundary. No transport/session, no callbacks, no
+ * internal mesh or import operation masquerading as a completed analysis. */
+export interface AnalysisTask<K extends AnalysisKind = AnalysisKind> {
+  kind: K; contextId: string; boardIdentity?: string; board?: RoutingBoardV2;
+  config: Readonly<Configurations[K]>; descriptors: readonly Json[];
+  variantChanges: readonly Json[];
+  conductionProfile?: AnalysisPhysicalProfile;
+}
+/** Internal serializable result envelope; accessors are created on JS side.
+ * Test executors inject this envelope explicitly; production never fabricates it. */
+export interface ExecutionResult {
+  id: string; status: 'complete' | 'partial'; method: string;
+  diagnostics: readonly Diagnostic[]; assumptions: readonly string[];
+  metrics: Readonly<Record<string, DataDescription>>;
+  finalState?: Json; violations?: readonly Json[];
+  network?: Resource;
+  electrical?: ExecutionResult; thermal?: ExecutionResult;
+}
+export type AnalysisExecutor = (task: AnalysisTask) => Promise<ExecutionResult>;
+export const executeAnalysis: AnalysisExecutor = async task => {
+  throw new AnalysisDslError('ANALYZER_NOT_IMPLEMENTED', `Analysis executor '${task.kind}' is not implemented`, [{ code: 'ANALYZER_NOT_IMPLEMENTED', severity: 'error', message: `No production ${task.kind} solver is installed` }]);
+};
+
+const properties: Record<AnalysisKind, Record<string, string>> = {
+  geometry: { measurements: 'mm' },
+  dc: { resistance: 'Ohm', losses: 'W', lossMap: 'W', voltageMap: 'V', currentDensityMap: 'A/mm2' },
+  pi: { resistance: 'Ohm', losses: 'W', lossMap: 'W', voltageMap: 'V', currentDensityMap: 'A/mm2', resonances: 'Hz' },
+  thermal: { temperatureMap: 'degC', energyBalance: 'J' },
+  electrothermal: { losses: 'W', convergence: '1' },
+  impedance: { characteristicImpedance: 'Ohm', rlgc: '1', delay: 's', segments: '1' },
+  tdr: { reflection: '1', impedance: 'Ohm', distance: 'mm' },
+  si: {}, eye: { diagram: 'V', height: 'V', width: 's', timingMargin: 's', voltageMargin: 'V' },
+  emi: { risks: '1', spectra: 'V' }, em: { sParameters: '1', fields: 'V/m', radiation: 'W', pattern: '1', radiatedPower: 'W' }, networkParameters: {},
+};
+export function resultFor<K extends AnalysisKind>(task: AnalysisTask<K>, payload: ExecutionResult, validate: (input: unknown) => void, networkFactory: (model: Resource) => Network): Results[K] {
+  const safe = freeze(json(payload)) as unknown as ExecutionResult;
+  const result: Record<string, unknown> = { id: safe.id, kind: task.kind, contextId: task.contextId, status: safe.status, method: safe.method, inputs: json(task.config), diagnostics: safe.diagnostics, assumptions: safe.assumptions };
+  const metric = (name: string, unit: string, argument?: unknown) => {
+    if (argument !== undefined) validate(argument);
+    const suffix = argument && typeof argument === 'object' && 'id' in argument ? `:${argument.id}` : argument === undefined ? '' : `:${JSON.stringify(json(argument))}`;
+    const d = safe.metrics[name + suffix];
+    return d ? value({ ...d, contextId: task.contextId }) : unavailable(unit, `Result metric '${name + suffix}' is unavailable`, task.contextId);
+  };
+  for (const [name, unit] of Object.entries(properties[task.kind])) result[name] = metric(name, unit);
+  const accessors: Partial<Record<AnalysisKind, Record<string, string>>> = {
+    dc: { voltage: 'V', current: 'A' }, pi: { voltage: 'V', current: 'A', impedance: 'Ohm', transfer: '1' },
+    thermal: { temperature: 'degC', heatFlow: 'W' }, si: { voltage: 'V', differentialVoltage: 'V' },
+    emi: { voltage: 'V', current: 'A', measurement: 'V' }, networkParameters: { parameter: '1' },
+  };
+  const argumentsFor: Record<string, z.ZodType> = {
+    voltage: port, impedance: port, current: z.union([port, selector, text]), transfer: z.strictObject({ from: port, to: port }),
+    temperature: z.union([text, z.strictObject({ target: selector, node: text })]), heatFlow: text,
+    differentialVoltage: z.strictObject({ positive: port, negative: port }), measurement: text,
+    parameter: z.strictObject({ out: text, in: text }),
+  };
+  for (const [name, unit] of Object.entries(accessors[task.kind] ?? {}) as [string, string][]) Object.defineProperty(result, name, { value: (argument: unknown) => metric(name, unit, parse(argumentsFor[name], json(argument))) });
+  if (task.kind === 'geometry') result.violations = freeze(Object.defineProperty({ items: safe.violations ?? [] }, 'count', { value: () => safe.violations ? value({ kind: 'scalar', value: safe.violations.length, unit: '1', validity: { status: 'valid' }, diagnostics: [], contextId: task.contextId }) : unavailable('1', 'Violations were not evaluated', task.contextId) }));
+  if (task.kind === 'si') Object.defineProperty(result, 'timing', { value: (options: TimingOptions) => {
+    parse(timingOptions, json(options));
+    validate(options);
+    const diagnostic: Diagnostic = { code: 'ANALYZER_NOT_IMPLEMENTED', severity: 'warning', message: 'SI timing extraction is not implemented' };
+    return freeze({ ...Object.fromEntries(['samples', 'events', 'setup', 'hold', 'delay', 'skew', 'delaySpread'].map(k => [k, unavailable('s', diagnostic.message, task.contextId)])), diagnostics: [diagnostic] });
+  } });
+  if (['pi', 'thermal'].includes(task.kind)) Object.defineProperty(result, 'finalState', { enumerable: !!safe.finalState, get: () => {
+    if (safe.finalState === undefined) throw new AnalysisDslError('RESULT_UNAVAILABLE', 'No final state in result');
+    return freeze({ kind: 'finalState', contextId: task.contextId, analysisId: safe.id, data: safe.finalState });
+  } });
+  if (task.kind === 'electrothermal') {
+    for (const kind of ['electrical', 'thermal'] as const) Object.defineProperty(result, kind, { enumerable: !!safe[kind], get: () => {
+      if (!safe[kind]) throw new AnalysisDslError('RESULT_UNAVAILABLE', `No ${kind} result`);
+      return resultFor({ ...task, kind: kind === 'electrical' ? 'dc' : 'thermal', config: {} }, safe[kind], validate, networkFactory);
+    } });
+  }
+  if (['impedance', 'em', 'networkParameters'].includes(task.kind)) {
+    let network: Network | undefined;
+    Object.defineProperty(result, 'network', { enumerable: !!safe.network, get: () => {
+      if (!safe.network) throw new AnalysisDslError('RESULT_UNAVAILABLE', 'No extracted network in result');
+      return network ??= networkFactory(safe.network);
+    } });
+  }
+  return freeze(result) as unknown as Results[K];
+}

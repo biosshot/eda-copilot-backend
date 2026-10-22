@@ -17,6 +17,8 @@ try {
 
 Entry points: `.`, `/components`, `/schematic`, `/pcb`, `/types`. All runtime dependencies belong to this package. Component/UUID resolution uses public EasyEDA APIs; supplied footprints allow offline placement. No private Copilot server, LLM credentials or database is required.
 
+The root also exports `runAnalysisDsl({ code, board?, profiles?, models? }, options)` and `analysisDslDocumentation()`. Analysis accepts ordinary JavaScript with `await`, explicit resources and independent immutable builders. Structural preparation, descriptions, checks/reports and explicit-value sweeps work; physical `.run()` currently fails with `ANALYZER_NOT_IMPLEMENTED`. The installed reference is `dist/analysis-spec-doc.d.ts`, separate from PCB Layout's `dist/spec-doc.d.ts`. See [API coverage, verification and limits](docs/experimental/analyze/analysis-dsl-verification.md).
+
 Use `validatePcbLayoutIntent({ code, circuit, footprints?, existingPlacement? })` for offline structured DSL diagnostics, or `detectCircuitPatterns({ circuit, footprints? })` to reuse deterministic recognition independently. The catalog contains 57 conservative checks. See [PCB intent validation](docs/pcb-intent-validation.md) for English diagnostics and scope limits.
 
 ## Development
@@ -32,7 +34,7 @@ npm run test:package
 
 Node >=20.19 is required. Rust/Cargo and the platform C/C++ toolchain are needed only to build the native solver from source. `npm run dev` watches TypeScript and copies its assets; rebuild Rust separately when changing native code.
 
-`native:build` builds [the shared N-API host](native/node-addon/README.md), which links the ordinary Rust libraries `pcb-board-packer` and `pcb-analyze`. Its loader and `eda-copilot-node.<platform>.node` binary live in `native/node-addon`; each library owns its declarations, re-exported by the host. The internal `importAnalysisBoard(json)` binding exposes structural import diagnostics; it does not introduce a public analysis DSL or physical solver.
+`native:build` builds [the shared N-API host](native/node-addon/README.md), which links the ordinary Rust libraries `pcb-board-packer` and `pcb-analyze`. Its loader and `eda-copilot-node.<platform>.node` binary live in `native/node-addon`; each library owns its declarations, re-exported by the host. The internal `importAnalysisBoard(json)` binding exposes structural import diagnostics; the public DSL is a separate TypeScript layer and does not equate import/preparation with a physical solve.
 
 The repository contains its own `src/types`. `component.ts`, `circuit.ts`, `lcsc.ts` and `reused.ts` were copied from the original `copilot-server/src/types` during extraction. They are normal source files maintained here, not aliases or generated links. The existing lightweight Zod preprocess helpers are local. There is no `@copilot/shared` dependency and no EasyEDA repository checkout is required to build or test this package.
 

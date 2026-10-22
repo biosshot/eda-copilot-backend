@@ -87,7 +87,7 @@ analysis({ board }) содержит только плату/отчёт. Каж�
 | eye | signal из расчёта | bitRateBps, discardS, phaseS, thresholdV |
 | geometry | board | scope, rules |
 | emi | board/components/stackup/materials или circuit для conducted | kind, signals/rules либо sources/loads/excitations/measurement/time/spectrum |
-| em | target, components, stackup/materials либо scene | method, solver, frequency, space, excitations, observation, outputs |
+| em | target, components, stackup/materials либо scene | method, frequency, space, excitations, observation, outputs; внешнего solver setter нет |
 | networkParameters | network | frequency, representation, referenceOhm |
 
 sweep/solve/optimize — объектные операции с evaluate, а не ещё один solver-builder. check/plot/log/report остаются непосредственными операциями отчёта. Без платы сохраняются standalone line, conductor, circuit, thermalNetwork и EM scene. Новая обязательная детекция ground/supplies не вводится: [контактная модель нагрузки зафиксирована отдельно](dsl-components-simple.md).

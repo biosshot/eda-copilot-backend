@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Analysis DSL
+
+- Gate all wrapped `check` predicates on compatible units: dimensionless `equals` with an incompatible explicit unit remains `unknown` and execution continues. Retain comparisons without a unit or with `unit: "1"` and cover the production runner with a regression test.
+
+- Add `runAnalysisDsl` and `analysisDslDocumentation`: isolated async JavaScript scenarios, immutable typed builders/descriptions for the agreed analysis vocabulary, strict structural/reference validation, bounded reports, non-throwing pass/fail/unknown checks and explicit-value sweeps. Package an independent `analysis-spec-doc.d.ts` beside PCB Layout's reference. Reuse RoutingBoardV2, RoutingStackup and the existing conduction profile through explicit adapters; production physical analyses, result numerical processing and solve/optimize reject or return unavailable with diagnostics. No physical solver, native algorithm, CAD/export or placement change.
+
 ### Analysis conduction mesh
 
 - Retain geometry-confirmed barrel contacts independently of mesh success, with per-contact mapping/readiness reasons; block affected barrels and dependent domains when a required contact is missing or incomplete. Carry existing `barrel_contact_uncertain` diagnostics into topology/barrel readiness while preserving independent domains and genuinely absent layer contacts. Geometry, physical coefficients and placement remain unchanged.

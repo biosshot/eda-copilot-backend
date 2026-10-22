@@ -1,0 +1,293 @@
+/** Analysis DSL, variant B. Executable source is JavaScript with top-level await.
+ * Reference this file for IDE globals. No production physical solver is installed:
+ * every analysis run currently rejects with ANALYZER_NOT_IMPLEMENTED after prepare.
+ * Descriptions, validation, reports and explicit-value sweep are implemented.
+ * Coordinates: millimetres, absolute board Y down; no implicit material defaults.
+ * This document imports only the package's public, existing board transport.
+ */
+import type { RoutingBoardV2, RoutingStackup, PolygonMm } from '../../types/pcb/routing-board-v2.ts';
+export type { RoutingBoardV2 };
+export type Json = null | boolean | number | string | readonly Json[] | { readonly [key: string]: Json };
+export type AnalysisKind = 'geometry' | 'dc' | 'pi' | 'thermal' | 'electrothermal' | 'impedance' | 'tdr' | 'si' | 'eye' | 'emi' | 'em' | 'networkParameters';
+export interface Diagnostic { code: string; message: string; path?: string; severity: 'error' | 'warning' | 'info' }
+export interface Validity { status: 'valid' | 'conditional' | 'unavailable'; reason?: string; domain?: Json }
+export interface Complex { real: number; imaginary: number }
+export interface DataDescription {
+  kind: 'scalar' | 'series' | 'map' | 'table' | 'eye' | 'polar' | 'bar';
+  unit: string; validity: Validity; diagnostics: readonly Diagnostic[];
+  value?: number | Complex | boolean | string;
+  values?: readonly (number | Complex | null)[];
+  axis?: { name: 'timeS' | 'frequencyHz'; unit: 's' | 'Hz'; values: readonly number[] };
+  /** Actual supplied data or artifact identity, never a fabricated file path. */
+  data?: Json; contextId?: string;
+}
+/** Operations preserve units and missing data. Numerical post-processing is not
+ * implemented at this stage (except identity min/max of real scalar data).
+ * Unsupported operations return unavailable with diagnostics, never zero.
+ */
+export interface DataValue extends DataDescription {
+  min(): DataValue; max(): DataValue; abs(): DataValue;
+  real(): DataValue; imaginary(): DataValue; magnitude(): DataValue; phaseDeg(): DataValue;
+  at(position: { timeS: number } | { frequencyHz: number }): DataValue;
+}
+export type Selector = { kind: 'pad'; designator: string; number: string }
+  | { kind: 'padId'; id: string } | { kind: 'component'; designator: string }
+  | { kind: 'net'; name: string } | { kind: 'region'; layers: readonly string[]; polygon: PolygonMm };
+export type PadSelector = Extract<Selector, { kind: 'pad' | 'padId' }>;
+export interface Handle { readonly kind: string; readonly id: string; readonly contextId: string }
+export interface Port extends Handle { readonly kind: 'port' }
+export interface Channel extends Handle { readonly kind: 'channel' }
+export interface Differential extends Handle { readonly kind: 'differential' }
+export interface PortObject extends Handle { port(name: string): Port }
+export interface Line extends PortObject { readonly kind: 'line' }
+export interface Circuit extends PortObject { readonly kind: 'circuit' }
+export interface ThermalNetwork extends Handle { readonly kind: 'thermalNetwork' }
+export interface Network extends PortObject { readonly kind: 'network' | 'connect' }
+export interface Scene extends PortObject { readonly kind: 'scene' }
+export interface Antenna extends Handle { readonly kind: 'antenna' }
+export interface Conductor extends Handle { readonly kind: 'conductor' }
+export type Target = Line | Channel | Differential | Scene | Antenna | Resource | RoutingBoardV2;
+export type Waveform =
+  | { kind: 'step'; from: number; to: number; atS: number; riseS: number }
+  | { kind: 'sine'; offset: number; amplitude: number; periodS: number; phaseDeg: number }
+  | { kind: 'pulse'; low: number; high: number; delayS: number; riseS: number; highS: number; fallS: number; periodS: number; count: number }
+  | { kind: 'pwl'; points: readonly (readonly [number, number])[]; interpolation: 'linear' | 'hold'; repeat?: { periodS: number; count: number } };
+export interface Frequency { startHz: number; stopHz: number; points: number; scale: 'linear' | 'log' }
+export interface Time { stopS: number; sampleStepS: number }
+export interface Spectrum { frequencyHz: readonly number[]; values: readonly Complex[]; unit: 'V' | 'A' }
+export interface Environment { name: string; ambientC: number | Waveform }
+/** Resources are explicit host data, not file loaders. ports lists the names the
+ * resource exposes; parameters lists permitted scene parameters. No IBIS/SPICE/
+ * Touchstone format is implied. Missing models never resolve by a similar name. */
+export interface Resource {
+  id: string; kind: string; source?: string; analyses?: readonly AnalysisKind[];
+  ports?: readonly string[]; parameters?: Readonly<Record<string, number>>;
+  validity?: Validity; data?: Json;
+}
+export interface Material {
+  id?: string; conductivitySM?: number; relativePermittivity?: number; lossTangent?: number;
+  thermalConductivityWPerMK?: number; densityKgM3?: number; specificHeatJPerKgK?: number;
+  referenceC?: number; temperatureCoefficientPerK?: number; source?: string; state?: string;
+  /** Explicit host resource metadata (e.g. supplied property tables). No table
+   * interpolation, file loading or material applicability is implemented here. */
+  kind?: 'material'; data?: Json; validity?: Validity; analyses?: readonly AnalysisKind[];
+}
+export type Materials = Readonly<Record<string, Material>>;
+export type Model = Resource | LocalModel;
+export type LocalModel =
+  | { kind: 'resistor'; resistanceOhm: number; referenceC?: number; temperatureCoefficientPerK?: number }
+  | { kind: 'capacitor'; capacitanceF: number; esrOhm?: number; eslH?: number; ideal?: boolean }
+  | { kind: 'inductor'; inductanceH: number; seriesResistanceOhm?: number; ideal?: boolean }
+  | { kind: 'linear-driver'; lowV: number; highV: number; outputResistanceOhm: number }
+  | { kind: 'rc-input'; capacitanceF: number; resistanceOhm?: number }
+  | { kind: 'thermal-network' | 'thermal-path'; nodes: readonly ThermalNode[]; links: readonly ThermalLink[] }
+  | { kind: 'heatsink'; heatCapacityJPerK: number }
+  | { kind: 'thermal-interface'; resistanceKPerW: number }
+  | ({ kind: 'cooling' } & ({ resistanceKPerW: number; table?: never } | { resistanceKPerW?: never; table: readonly { deltaTemperatureK: number; heatFlowW: number }[] }));
+export interface ComponentDescription {
+  designator: string; kind: 'ic' | 'resistor' | 'capacitor' | 'inductor' | 'device';
+  model?: Model; pins?: Readonly<Record<string, string | readonly string[]>>;
+  ground?: readonly string[]; supplies?: Readonly<Record<string, readonly string[]>>;
+  thermalNodes?: readonly string[]; resistanceOhm?: number; capacitanceF?: number;
+  inductanceH?: number; esrOhm?: number; eslH?: number; seriesResistanceOhm?: number;
+  referenceC?: number; temperatureCoefficientPerK?: number; ideal?: boolean;
+}
+export type ComponentInput = Omit<ComponentDescription, 'kind'>;
+export type ComponentBase = Pick<ComponentInput, 'designator' | 'model' | 'pins' | 'ground' | 'supplies' | 'thermalNodes'>;
+export type ResistorInput = ComponentBase & Pick<ComponentInput, 'resistanceOhm' | 'referenceC' | 'temperatureCoefficientPerK'>;
+export type CapacitorInput = ComponentBase & Pick<ComponentInput, 'capacitanceF' | 'esrOhm' | 'eslH' | 'ideal'>;
+export type InductorInput = ComponentBase & Pick<ComponentInput, 'inductanceH' | 'seriesResistanceOhm' | 'ideal'>;
+export type StackupInput = Omit<RoutingStackup, 'layers'> & {
+  layers: readonly (
+    | { kind: 'copper'; name: string; thicknessMm?: number; thicknessOz?: number; material?: string }
+    | { kind: 'dielectric'; name: string; thicknessMm: number; material?: string; relativePermittivity?: number; lossTangent?: number }
+  )[];
+};
+/** Adapter output reuses RoutingStackup; provenance preserves authored input.
+ * Oz→mm uses 0.03479 mm/oz, matching the captured routing stack convention. No fallback supplied.
+ * boardThicknessMm excludes solder mask; inconsistent thicknesses are rejected. */
+export interface StackupDescription { kind: 'stackup'; input: StackupInput; routing: RoutingStackup }
+export type Stimulus = { kind: 'bits'; bits: string; bitRateBps: number; riseS: number; fallS: number; repeatCount: number }
+  | { kind: 'prbs'; order: number; seed: number; bits: number; bitRateBps: number; riseS: number; fallS: number }
+  | { kind: 'waveform'; voltageV: Waveform };
+export type Binding = { port: Port; ports?: never } | { ports: Readonly<Record<string, Port>>; port?: never };
+export type Driver = Binding & { model: Model; stimulus: Stimulus };
+export type Receiver = Binding & { model: Model };
+export interface Source { port: Port; voltageV?: number; currentA?: number; model?: Model | 'ideal'; waveform?: Waveform; voltageSpectrum?: Spectrum; currentSpectrum?: Spectrum }
+export interface PortLoad { port: Port; currentA?: number; powerW?: number; resistanceOhm?: number; model?: Model; waveform?: Waveform }
+/** Selected pin lists replace the group completely. Default return is exact GND;
+ * both sides default equal; each override is part of, not additional to, currentA.
+ * A nonnegative remainder is shared only among unspecified pins on that side.
+ * Dynamic override distribution is deferred (prepare reports it as unverified). */
+export interface ComponentLoad {
+  designator: string; rail: Extract<Selector, { kind: 'net' }>; currentA: number;
+  return?: Extract<Selector, { kind: 'net' }>; domain?: string; pins?: readonly string[]; returnPins?: readonly string[];
+  distribution?: 'equal'; returnDistribution?: 'equal'; waveform?: Waveform;
+  pinCurrentsA?: Readonly<Record<string, number | Waveform>>; returnPinCurrentsA?: Readonly<Record<string, number | Waveform>>;
+}
+export type Load = PortLoad | ComponentLoad;
+export interface LoadDefaults { rail: Extract<Selector, { kind: 'net' }>; defaultCurrentA: number; return?: Extract<Selector, { kind: 'net' }>; overrides: Readonly<Record<string, { currentA: number }>> }
+export interface ThermalNode { id: string; boundary?: 'environment'; heatCapacityJPerK?: number }
+export interface ThermalLink { from: string; to: string; resistanceKPerW?: number; model?: Model }
+export interface ThermalNetworkInput { nodes: readonly ThermalNode[]; links: readonly ThermalLink[]; sources: readonly { node: string; powerW: number | Waveform }[] }
+export type CircuitElement =
+  | { id: string; kind: 'resistor'; nodes: readonly [string, string]; resistanceOhm: number; referenceC?: number; temperatureCoefficientPerK?: number }
+  | { id: string; kind: 'capacitor'; nodes: readonly [string, string]; capacitanceF: number; esrOhm?: number; eslH?: number; ideal?: boolean }
+  | { id: string; kind: 'inductor'; nodes: readonly [string, string]; inductanceH: number; seriesResistanceOhm?: number; ideal?: boolean }
+  | { id: string; kind: 'voltage-source'; nodes: readonly [string, string]; voltageV: number; model: Model | 'ideal'; waveform?: Waveform }
+  | { id: string; kind: 'current-source'; nodes: readonly [string, string]; currentA: number; waveform?: Waveform }
+  | { id: string; kind: 'model'; model: Model; pins: Readonly<Record<string, string>> };
+export interface CircuitInput { nodes: readonly string[]; reference?: string; ports: readonly { id: string; positive: string; negative: string }[]; elements: readonly CircuitElement[] }
+export type LineInput = { widthMm: number; copperThicknessMm: number; lengthMm?: number; solderMask?: RoutingStackup['solderMask'] } & (
+  | { kind: 'microstrip'; dielectricHeightMm: number; material: Material }
+  | { kind: 'coupled-microstrip'; dielectricHeightMm: number; material: Material; gapMm: number }
+  | { kind: 'stripline'; topDielectricHeightMm: number; bottomDielectricHeightMm: number; topMaterial: Material; bottomMaterial: Material }
+  | { kind: 'coupled-stripline'; topDielectricHeightMm: number; bottomDielectricHeightMm: number; topMaterial: Material; bottomMaterial: Material; gapMm: number }
+);
+export interface Cooling { boardSurfaces?: Model; heatsinks?: readonly { target: Selector; thermalNode: string; model: Model; interface: Model; cooling: Model }[] }
+export type Heat = readonly { target: Selector; node: string; powerW: number | Waveform }[] | { category: 'ic' | 'device' | 'resistor'; defaultPowerW: number; overrides: Readonly<Record<string, { powerW: number }>> };
+export interface Numerics { relativeTolerance?: number; absoluteTolerance?: number; maxIterations?: number }
+export interface CommonOptions { name?: string; numerics?: Numerics; budget?: { maxSeconds?: number; maxMemoryMiB?: number } }
+export interface PhysicalOptions { components?: readonly ComponentDescription[]; stackup?: StackupDescription; materials?: Materials }
+export interface ElectricalOptions extends PhysicalOptions { sources?: readonly Source[]; loads?: readonly Load[] | LoadDefaults; temperatureC?: number; circuit?: Circuit }
+export interface ThermalOptions extends PhysicalOptions { network?: ThermalNetwork; heat?: Heat; losses?: DataValue; cooling?: Cooling; environment?: Environment; initialC?: number | 'ambient'; initial?: 'steady' | FinalState; domain?: 'steady' | 'time'; atS?: number; time?: Time }
+export type Rule = { kind: 'connectivity' } | { kind: 'clearance' | 'edge-clearance'; minMm: number }
+  | { kind: 'length'; channel: Channel; maxMm: number } | { kind: 'skew'; channels: readonly Channel[]; maxMm: number }
+  | { kind: 'reference-continuity'; channel: Channel } | { kind: 'return-transition'; channel: Channel; maxDistanceMm: number };
+export type Excitation = { name?: string; port: Port; voltageV?: number | Waveform; currentA?: number | Waveform; voltageSpectrum?: Spectrum; currentSpectrum?: Spectrum }
+  | { name: string; model: Resource; placement: { positionMm: { x: number; y: number; z: number }; rotationDeg: { x: number; y: number; z: number } }; voltageV?: number | Waveform; currentA?: number | Waveform };
+export interface Measurement { id?: string; port: Port; quantity: 'voltage' | 'current'; model?: Model; detector?: 'rms' | 'peak'; bandwidthHz?: number }
+export interface EmExcitation { port: Port; incidentPowerW: number; phaseDeg: number }
+export type Coupling = { target: Selector; thermalNode: string } | { element: string; thermalNode: string };
+export interface Configurations {
+  geometry: CommonOptions & { scope?: readonly Selector[]; rules?: readonly Rule[] };
+  dc: CommonOptions & ElectricalOptions & { conductor?: Conductor; currentA?: number; voltageV?: number };
+  pi: CommonOptions & ElectricalOptions & { domain?: 'frequency' | 'time'; frequency?: Frequency; frequencyHz?: number; time?: Time; initial?: 'steady' | FinalState };
+  thermal: CommonOptions & ThermalOptions;
+  electrothermal: CommonOptions & Pick<PhysicalOptions, 'stackup' | 'materials'> & { electrical?: ElectricalOptions & { operating?: readonly { target: Selector; gateVoltageV: number }[] }; thermal?: ThermalOptions; couplings?: readonly Coupling[]; time?: Time };
+  impedance: CommonOptions & PhysicalOptions & { target?: Line | Channel | Differential | Resource; method?: 'formula' | 'cross-section' | 'layered'; frequency?: Frequency; frequencyHz?: number; temperatureC?: number };
+  tdr: CommonOptions & PhysicalOptions & { target?: Line | Channel | Differential | Resource | Network; referenceOhm?: number | Readonly<Record<string, number>>; riseS?: number; termination?: 'matched' | 'open' | 'short' | Model; time?: Time; temperatureC?: number };
+  si: CommonOptions & PhysicalOptions & { channels?: readonly (Channel | Differential | Line)[]; network?: Network | Line; drivers?: readonly Driver[]; receivers?: readonly Receiver[]; time?: Time; temperatureC?: number };
+  eye: CommonOptions & { signal?: DataValue; bitRateBps?: number; discardS?: number; phaseS?: number; thresholdV?: number };
+  emi: CommonOptions & ElectricalOptions & { kind?: 'risk' | 'conducted' | 'coupling'; signals?: readonly { channel: Channel | Differential; riseS: number }[]; rules?: readonly Rule[]; excitations?: readonly Excitation[]; measurement?: Measurement | readonly Measurement[]; time?: Time; frequency?: Frequency; frequencyHz?: number; spectrum?: { discardS: number; window: 'hann' | 'rectangular'; startHz: number; stopHz: number } };
+  em: CommonOptions & PhysicalOptions & { target?: Target; method?: 'full-wave'; frequency?: Frequency; frequencyHz?: number; space?: { kind: 'free-space' }; outputs?: readonly ('sParameters' | 'fields' | 'radiation')[]; excitation?: EmExcitation | Excitation; excitations?: readonly (EmExcitation | Excitation)[]; observation?: { frequenciesHz: readonly number[]; thetaDeg: { from: number; to: number; step: number }; phiDeg: { from: number; to: number; step: number }; distanceM: number }; temperatureC?: number };
+  networkParameters: CommonOptions & { network?: Network | Line; frequency?: Frequency; frequencyHz?: number; representation?: 'S' | 'Z' | 'Y'; referenceOhm?: number | Readonly<Record<string, number>> };
+}
+export interface Preparation {
+  kind: AnalysisKind; contextId: string; structurallyValid: boolean; physicalReady: false;
+  executorAvailable: false; diagnostics: readonly Diagnostic[]; components: readonly Json[];
+  /** Explicit field provenance; requirements needing extraction remain unverified. */
+  inputs: Readonly<Record<string, { source: 'manual'; value: Json }>>;
+  assumptions: readonly string[];
+}
+export type Builder<K extends AnalysisKind> = {
+  readonly [P in keyof Configurations[K]]-?: (value: NonNullable<Configurations[K][P]>) => Builder<K>
+} & { prepare(): Promise<Preparation>; run(): Promise<Results[K]> };
+export interface FinalState { kind: 'finalState'; contextId: string; analysisId: string; data: Json }
+export interface ResultBase {
+  id: string; kind: AnalysisKind; status: 'complete' | 'partial'; diagnostics: readonly Diagnostic[];
+  method: string; inputs: Json; assumptions: readonly string[]; contextId: string;
+}
+export interface DcResult extends ResultBase {
+  voltage(port: Port): DataValue; current(target: Port | Selector | string): DataValue;
+  resistance: DataValue; losses: DataValue; lossMap: DataValue; voltageMap: DataValue; currentDensityMap: DataValue;
+}
+export interface PiResult extends DcResult { impedance(port: Port): DataValue; transfer(path: { from: Port; to: Port }): DataValue; resonances: DataValue; finalState: FinalState }
+export interface ThermalResult extends ResultBase {
+  temperature(node: string | { target: Selector; node: string }): DataValue;
+  heatFlow(link: string): DataValue; temperatureMap: DataValue; finalState: FinalState; energyBalance: DataValue;
+}
+export type TimingOptions = { kind: 'sampling'; data: readonly { port: Port; lowV: number; highV: number }[]; clock: { port: Port; thresholdV: number; edges: 'rising' | 'falling' | 'both'; sampleOffsetS: number }; window: { startS: number; stopS: number } }
+  | { kind: 'propagation'; paths: readonly { from: Port; to: Port; sourceThresholdV: number; destinationThresholdV: number }[]; edges: 'rising' | 'falling' | 'both'; maxDelayS: number; window: { startS: number; stopS: number } };
+/** Timing processing is not implemented. Missing events, ambiguous matching or
+ * window-limited intervals remain unavailable; there is no implicit zero delay. */
+export interface TimingResult { samples: DataValue; events: DataValue; setup: DataValue; hold: DataValue; delay: DataValue; skew: DataValue; delaySpread: DataValue; diagnostics: readonly Diagnostic[] }
+export interface SiResult extends ResultBase { voltage(port: Port): DataValue; differentialVoltage(ports: { positive: Port; negative: Port }): DataValue; timing(options: TimingOptions): TimingResult }
+export interface GeometryResult extends ResultBase { violations: { count(): DataValue; items: readonly Json[] }; measurements: DataValue }
+export interface ImpedanceResult extends ResultBase { characteristicImpedance: DataValue; rlgc: DataValue; delay: DataValue; segments: DataValue; network: Network }
+export interface TdrResult extends ResultBase { reflection: DataValue; impedance: DataValue; distance: DataValue }
+export interface EyeResult extends ResultBase { diagram: DataValue; height: DataValue; width: DataValue; timingMargin: DataValue; voltageMargin: DataValue }
+export interface EmiResult extends ResultBase { voltage(port: Port): DataValue; current(port: Port): DataValue; measurement(id: string): DataValue; risks: DataValue; spectra: DataValue }
+export interface EmResult extends ResultBase { network: Network; sParameters: DataValue; fields: DataValue; radiation: DataValue; pattern: DataValue; radiatedPower: DataValue }
+export interface NetworkParametersResult extends ResultBase { parameter(ports: { out: string; in: string }): DataValue; network: Network }
+export interface Results { geometry: GeometryResult; dc: DcResult; pi: PiResult; thermal: ThermalResult; electrothermal: ResultBase & { electrical: DcResult; thermal: ThermalResult; losses: DataValue; convergence: DataValue }; impedance: ImpedanceResult; tdr: TdrResult; si: SiResult; eye: EyeResult; emi: EmiResult; em: EmResult; networkParameters: NetworkParametersResult }
+export interface CheckInput { name: string; actual: DataValue | number | boolean | string | null; min?: number; max?: number; target?: number; tolerance?: number; unit?: string; equals?: boolean | string | number }
+export interface CheckRecord { id: string; name: string; status: 'pass' | 'fail' | 'unknown'; actual: Json; expected: Json; message: string }
+export interface PlotInput { title: string; data: DataValue | Json; kind?: 'line' | 'heatmap' | 'table' | 'eye' | 'polar' | 'bar'; layer?: string; atS?: number; atHz?: number }
+export interface Report {
+  contextId: string; boardIdentity?: string; descriptors: readonly Json[]; calculations: readonly Json[];
+  checks: readonly CheckRecord[]; logs: readonly Json[]; plots: readonly Json[];
+  summary: { pass: number; fail: number; unknown: number }; diagnostics: readonly Diagnostic[];
+}
+export interface SweepParameter<T = number | Model | Environment> { name: string; unit?: string; values: readonly T[] }
+export type Metric = DataValue | number;
+export type Evaluation = Metric | Readonly<Record<string, Metric>>;
+export interface SweepResult { attempts: readonly { parameters: Json; status: 'complete' | 'failed'; value?: Json; error?: string }[]; series: DataValue }
+export interface SearchParameter { unit?: string; min?: number; max?: number; values?: readonly number[] }
+export interface SearchResult { status: 'found' | 'not-found' | 'budget-exhausted' | 'failed'; best?: Json; history: readonly Json[]; violations: readonly Json[] }
+export interface SolveOptions { parameter: SearchParameter & { name: string }; evaluate: (value: number) => Promise<DataValue> | DataValue; target: number; tolerance: number; unit: string; maxEvaluations: number }
+export interface OptimizeOptions { parameters: Readonly<Record<string, SearchParameter>>; evaluate: (values: Readonly<Record<string, number>>) => Promise<Readonly<Record<string, DataValue>>> | Readonly<Record<string, DataValue>>; objective: { metric: string; direction: 'minimize' | 'maximize'; unit: string }; constraints: readonly { metric: string; min?: number; max?: number; unit: string }[]; maxEvaluations: number; seed: number }
+export type VariantChange = { kind: 'track-width'; target: Selector; widthMm: number }
+  | { kind: 'stackup'; stackup: StackupDescription }
+  | { kind: 'material'; name: string; material: Material }
+  | { kind: 'component-model'; target: Selector; model: Model }
+  | { kind: 'component-pose'; target: Selector; xMm: number; yMm: number; rotationDeg: number };
+export interface AnalysisContext {
+  geometry(): Builder<'geometry'>; dc(): Builder<'dc'>; pi(): Builder<'pi'>;
+  thermal(): Builder<'thermal'>; electrothermal(): Builder<'electrothermal'>;
+  impedance(): Builder<'impedance'>; tdr(): Builder<'tdr'>; si(): Builder<'si'>;
+  eye(): Builder<'eye'>; emi(): Builder<'emi'>; em(): Builder<'em'>; networkParameters(): Builder<'networkParameters'>;
+  port(input: { positive: PadSelector | readonly PadSelector[]; negative: PadSelector | readonly PadSelector[] }): Port;
+  channel(input: { from: Port; to: Port; via?: readonly Selector[]; scope?: readonly Selector[] }): Channel;
+  differential(input: { positive: Channel; negative: Channel }): Differential;
+  conductor(input: { lengthMm: number; widthMm: number; thicknessMm: number; material: Material }): Conductor;
+  line(input: LineInput): Line; circuit(input: CircuitInput): Circuit;
+  thermalNetwork(input: ThermalNetworkInput): ThermalNetwork;
+  model(input: LocalModel): LocalModel;
+  scene(input: { model: Resource; parameters?: Readonly<Record<string, number>> }): Scene;
+  antenna(input: { structure: RoutingBoardV2 | Scene; feed: Port; models?: readonly Model[] }): Antenna;
+  network(input: { model: Resource; ports: Readonly<Record<string, string>> }): Network;
+  connect(input: { networks: readonly (Network | Line)[]; connections: readonly { from: Port; to: Port }[]; ports: Readonly<Record<string, Port>> }): Network;
+  variant(input: { changes: readonly VariantChange[] }): AnalysisContext;
+  check(input: CheckInput): CheckRecord;
+  log(input: { level: 'info' | 'warning' | 'error'; message: string; data?: Json }): void;
+  plot(input: PlotInput): void; report(): Report;
+  sweep<T>(options: { parameter: SweepParameter<T>; evaluate: (value: T) => Evaluation | Promise<Evaluation> }): Promise<SweepResult>;
+  sweep(options: { parameters: Readonly<Record<string, Omit<SweepParameter, 'name'>>>; mode: 'cartesian' | 'zip'; evaluate: (values: Readonly<Record<string, number | Model | Environment>>) => Evaluation | Promise<Evaluation> }): Promise<SweepResult>;
+  /** Search algorithms are unavailable; reject ANALYZER_NOT_IMPLEMENTED. */
+  solve(options: SolveOptions): Promise<SearchResult>; optimize(options: OptimizeOptions): Promise<SearchResult>;
+}
+export interface ProfilesInput { environments?: Readonly<Record<string, Environment>>; stackups?: Readonly<Record<string, StackupDescription>>; cooling?: Readonly<Record<string, Cooling | Model>>; checks?: Readonly<Record<string, readonly Rule[]>>; numerics?: Readonly<Record<string, Numerics>> }
+export interface Profiles extends Required<ProfilesInput> { environment(input: Environment): Environment; sample(input: { environment: Environment; atS: number }): number }
+export interface MaterialCatalog { readonly [key: string]: Material | MaterialCatalog }
+export interface ModelCatalog { readonly [key: string]: Model | ModelCatalog | readonly ComponentDescription[] | readonly Coupling[] }
+export interface EmCatalog { readonly [key: string]: Resource | EmCatalog }
+/** Catalogs may use project namespaces (e.g. electrical.sbc.pmicBoundary).
+ * Project-specific TS declarations can narrow these resource/namespace unions;
+ * arbitrary absent keys are never resolved automatically at runtime. */
+export interface Models { materials?: MaterialCatalog; electrical?: ModelCatalog; thermal?: ModelCatalog; em?: EmCatalog }
+/** No built-in project resources. All catalogs are provided by the host.
+ * Example (boardless):
+ * const a = analysis();
+ * const line = a.line({kind:'microstrip', widthMm:.3, copperThicknessMm:.035,
+ *   dielectricHeightMm:.18, material:{relativePermittivity:4.2}});
+ * const preparation = await a.impedance().target(line).method('formula').frequencyHz(1e9).prepare();
+ * a.log({level:'info',message:JSON.stringify(preparation.diagnostics)});
+ */
+declare global {
+  const board: RoutingBoardV2 | undefined;
+  const profiles: Profiles;
+  const models: Readonly<Models>;
+  function analysis(options?: { board: RoutingBoardV2 }): AnalysisContext;
+  function pad(designator: string, number: string | number): Extract<Selector, { kind: 'pad' }>;
+  function padId(id: string): Extract<Selector, { kind: 'padId' }>;
+  function component(designator: string): Extract<Selector, { kind: 'component' }>;
+  function net(name: string): Extract<Selector, { kind: 'net' }>;
+  function region(input: { layers: readonly string[]; polygon: PolygonMm }): Extract<Selector, { kind: 'region' }>;
+  function stackup(input: StackupInput): StackupDescription;
+  function ic(input: ComponentBase): ComponentDescription;
+  function resistor(input: ResistorInput): ComponentDescription;
+  function capacitor(input: CapacitorInput): ComponentDescription;
+  function inductor(input: InductorInput): ComponentDescription;
+  function device(input: ComponentBase & { model: Model }): ComponentDescription;
+}
