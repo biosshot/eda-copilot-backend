@@ -2,10 +2,11 @@
 
 2026-10-21. Review found R1 (false intra-source neck) and R2 (missing strict
 addon export expectation). Initial measurements below are historical and are
-**not evidence of topology preservation**. The correction record at the end
-supersedes the initial connectivity/numeric claims. Awaiting repeat review.
+**not evidence of topology preservation**. The current single-geometry policy
+and verification record below supersede the historical connectivity claims.
 
-2026-10-21. Implements `next-task-copper-geometry.md`; awaiting review, no commit.
+Initial stage implemented `next-task-copper-geometry.md`. Current revision removes
+the three-set correction at the user's request; no commit is made for this revision.
 This is physical copper/topology preparation, not completion of P4 or DC.
 
 ## Boundaries and modules
@@ -72,63 +73,46 @@ misplaced/intersecting holes and invalid boolean output are not repaired.
 No small-area/island filter is enabled. Input CAD tessellation error/freshness
 is not improved or certified by tightening these settings.
 
-### Two-sided connectivity policy (R1 correction)
+### Single-geometry connectivity policy (current revision)
 
-Let P be an uncut nominal source, D an inscribed nominal drill, M the supplied
-board material, e the source/drill sagitta, and g = 2 * boolean_error_bound_mm.
-Generated round primitives satisfy P contained in true source contained in
-P expanded by e; CAD polygons are taken as supplied, without certifying native
-arc tessellation. Envelopes are formed **before** clipping/subtraction:
+There is one `regions` collection and one graph, `contacts` / `islands`.
+Findings reference the same region IDs. `layers` aggregates those regions for
+rendering/area measurement. No whole-board offsets, second graph, alternative
+region/contact/island collections or offset guard retry loop are retained.
 
-- reliable copper: shrink(P, g) intersect shrink(M, g) minus union(expand(D, e + g));
-- possible copper: expand(P, source_e + g) intersect expand(M, g) minus union(shrink(D, g)).
+Copper curves retain their existing inscribed tessellation. Round and slot
+drills reuse that builder with circumscribed circles: the existing angular
+phase and vertex radius `r/cos(pi/n)`, choosing n so that
+`r*(sec(pi/n)-1) <= max_deviation_mm`. The drill radius additionally includes
+`2*boolean_error_bound_mm` for conversion rounding. Slot centreline length,
+local offset/rotation, plating and confirmed layer scope retain their meanings.
+The derived drill polygon encloses the physical bore instead of leaving copper
+inside it. `approximation_mm` includes the curve and drill conversion allowance.
+This changes prepared drill contours/areas within their explicit allowance;
+the saved inputs and CAD fill polygons are not rewritten.
 
-Exact straight sources wholly inside material and without nearby drills retain
-their original boundaries. All other operands have a rounding guard. Offsets
-reuse pinned geo/i_overlay, with Round(pi/4) joins and twice the requested distance.
-The pinned join implementation floors segment counts: actual arc steps can
-approach pi/2. The factor 2 still covers the requested disk because
-2 cos(pi/4) > 1, for expanded holes and shrunken copper at concave corners.
-This guard is deliberately conservative; it is not a tighter nominal tolerance.
+Only when subtraction splits or entirely removes a source polygon, a temporary
+local subtraction with inscribed drills compares component counts. A difference
+produces `drill_topology_uncertain` with source ID/path and `partial` status.
+An exhausted local comparison produces `drill_topology_unresolved`. No second
+board or graph survives that check. Failure to generate/validate an enclosing
+drill returns `invalid` / `drill_geometry_unresolved`, without unconfirmed
+connectivity fallback or relaxed tolerance. Vertex budgets count generated
+primitives including the temporary local check.
 
-Every connected polygon of reliable copper becomes a graph node. An internal
-nominal neck can therefore split into several reliable nodes. The upper graph
-joins potential overlaps, near/point contacts and possible barrel associations;
-its edges are always `reliable:false`. Comparing upper components against lower
-components reports zero/multiple lower components as `topology_uncertain`, with
-source IDs/paths. No short finding is deleted after graph construction.
-`net_islands` lists separate **reliable** components; it does not prove an open.
-A genuine narrow bridge remains possible until precision resolves it. A feature
-erased from nominal copper can still survive in the upper bound, because bounds
-are not made by buffering that already-cut snapshot.
+The supplied Ø2 mm / 1.999 mm strip no longer produces a confirmed short. A
+true 2.001 mm strip can be conservatively split at coarse tolerance; this is
+explicitly uncertain, **not a confirmed open**, and finer tolerance resolves
+the control case. Neither a boundary-error bound nor the local component-count
+check is a universal topology proof: it does not compare every possible contact
+partition or certify arbitrary sub-resolution features. No such claim is made.
 
-`regions`, `holes`, `layers` retain nominal snapshots/areas. `reliable_regions`
-are referenced by reliable `contacts`/`islands`/findings; `possible_regions` are
-referenced by `possible_contacts`/`possible_islands`. Namespace prefixes and
-source path + layer distinguish these representations; fragment correspondence
-need not be one-to-one. SVGs show gold nominal, green reliable, purple possible
-copper; red highlights reliable shorts.
-
-Contacts still distinguish area, line, point and uncertain overlap. Original
-uncut predicates prevent a rounded positive source gap from becoming reliable.
-Shared straight edges need an original shared edge. Plating remains a surface,
-not a filled hole: a witness patch must be strictly inside the uncut source,
-clear of board/other holes, and close to its surviving reliable fragment within
-the envelope guard. Round/slot drills are convex; that clear local patch can
-reach the true barrel without crossing another void. No net filtering is used.
-
-Offset workspace is checked before construction (12 input vertices per ring
-vertex at the fixed join setting); actual offset vertices and both retained
-boolean envelopes count against `max_generated_vertices`. Overflow/invalid
-bounds give source-specific invalid diagnostics, without nominal fallback or
-tolerance relaxation. A degenerate generated envelope permits at most six
-local guard attempts (g, 2g, 4g, 8g, 16g, 32g), consuming the same budget. A successful wider
-guard is reported as `envelope_guard_widened`; this widens uncertainty, never
-changes nominal sagitta or repairs captured geometry. Boolean intermediate allocation/CAD input volume still
-have no hard RSS quota; process deadline/cancellation remain the isolation bound.
-No global ultra-fine tessellation, adaptive curve refinement, new dependency, solver or
-GPU work is introduced. Tightening e cannot resolve features below the separate
-boolean guard or certify missing/stale CAD data.
+Contacts retain the existing area/line/point/uncertain classification and uncut
+source-gap check. Plating requires a clear uncut-source witness near the
+surviving bore boundary. Net labels never repair geometry. `net_islands` lists
+separate reliable components and does not establish an open. Missing/stale CAD
+fills, unconfirmed drill spans and arbitrary near-tangencies remain explicit
+limits; tighter tolerance cannot supply missing CAD evidence.
 
 ## Supported geometry and semantics
 
@@ -286,21 +270,34 @@ The debug overlays were also rendered/read for BandAmpV5 and ESPower ([BandAmpV5
 
 - Final measured launcher run used the existing test-only dlopen hook and an external Windows process sampler at 100 ms; no instrumentation/debug API was added to production. [Sampler script](../../../debugging/copper-geometry/measure-launcher.ps1), [raw PID log](../../../debugging/copper-geometry/worker-pids.jsonl), [observed OS peak working sets](../../../debugging/copper-geometry/process-resources.json). Worker+IPC time excludes subsequent artifact formatting/writing. Peak samples cover worker processes, not total parent+child RSS, and are observations rather than a memory quota or universal bound.
 - Initial pre-review dispersed 100 / 500 / 1000 rectangle coupons: **0 narrow-phase pairs**, 5 / 17 / 37 ms in the recorded Rust run (concurrent native build). Generation counts are 400 / 2000 / 4000. This demonstrates no required whole-board all-pairs narrow phase; it does not promise universal linear complexity, and dense overlapping bounds can still be expensive.
-- Sagitta refinement, vertex-limit rejection, the straight-vertex budget and extreme finite coordinates are asserted by coupons. No tolerance increase, small island removal, board source repair or boundary-as-fill fallback is performed. Primitive/envelope retained vertices are bounded; CAD input volume, transient boolean allocation and OS memory are not separately quota-limited. Existing process deadline/cancellation remain the isolation boundary.
+- Sagitta refinement, vertex-limit rejection, the straight-vertex budget and extreme finite coordinates are asserted by coupons. No tolerance increase, small island removal, board source repair or boundary-as-fill fallback is performed. Generated primitive vertices are bounded; CAD input volume, transient boolean allocation and OS memory are not separately quota-limited. Existing process deadline/cancellation remain the isolation boundary.
 - Full `npm test`/full placement benchmarks, real GPU numerical replay, Linux/macOS builds and Node 20/24 were **not run locally**. Existing CI already runs locked Rust analyze tests, package build/tests and installed smoke across those target OS/Node matrices; no remote CI result is claimed.
 - `complete` only certifies preparation of confirmed geometric input; it is not DC readiness, FEM mesh validity, full DRC or proof of CAD agreement. Unknown/stale fills, unresolved spans, error-band contacts, native capture precision and fragment identity limitations remain explicit. No mesh, DC/thermal/PI/SI/EM solver, refill, materials, DSL, GPU analysis, cache, sessions, compute-runtime or placement algorithm change was introduced.
 
 **Stopped for review. No commit and no following stage.**
 
-## Review correction verification (2026-10-22)
+## Single-geometry revision verification (2026-10-22)
 
-R1 and R2 are corrected in this uncommitted stage. This record supersedes the initial pre-review topology claims. Repeat acceptance remains with the reviewer.
+The previous three-set implementation and its 129.970 s / 94.68 MiB NanoScope
+measurement are historical. Their reports/evidence are preserved under
+`debugging/copper-geometry/three-set-baseline/`, including the old verification
+record. The earlier original one-set baseline is preserved separately under
+`corrections-baseline/`. Neither historical baseline is overwritten.
 
-The supplied drill_approximation_cannot_create_a_reliable_path_inside_one_source test retains its dimensions, angle, tolerances and assertions. Reliable graph nodes now come from lower copper envelopes, not nominal source polygons. Upper envelopes retain uncertain paths and features absent from the nominal snapshot. The addon test adds exactly prepareAnalysisGeometry and retains strict runtime/declaration/version equality.
+The supplied P1 test is unchanged (including dimensions, angle, tolerances and
+assertions). Additional controls retain round/slot, rotated/translated cuts,
+near-edge holes, robust true shorts, refined true narrow bridges and exhausted
+budgets. The coarse ambiguous true-bridge control faces an enclosing-drill
+vertex toward the strip edge (-90 degrees); the original supplied cut remains
+at -87.5 degrees. The existing topology test additionally retains an uncertain
+near contact across the full drill/boolean error allowance.
 
-Additional controls cover round/slot cuts, rotations/translations, off-centre holes near copper edges, a robust true bridge/short, a real narrow bridge resolved by refinement, budget exhaustion, and refined true bridges on board half-extents 5/10/20/100 mm. At most six local guard attempts handle offset degeneracy with unchanged sagitta and the same finite vertex budget.
+Final source code uses the original curve sampling phase. An intermediate
+half-step phase produced many sub-tolerance annulus fragments on captured
+boards; it was removed before final verification. Rust/corpus and native checks
+were rerun after that change and after aligning the broad-phase error bound.
 
-### Commands and results
+Verification commands:
 
 ```powershell
 $env:PCB_ANALYZE_RUST_REPORT_DIR = "$PWD/debugging/copper-geometry/rust"
@@ -315,90 +312,113 @@ node --import tsx --test --test-concurrency=1 tests/pcb-native-addon.test.ts tes
 node --test scripts/test-pcb-analyze.test.mjs
 npm run test:package
 node debugging/copper-geometry/compatibility.mjs
-# One final launcher pass, executed by the external sampler below:
-npm run test:pcb-analyze -- --all --name geometry
-# Actual measured invocation (the sampler invokes the launcher once):
+# Invokes test-pcb-analyze --all --name geometry once, with external sampling:
 & ./debugging/copper-geometry/measure-launcher.ps1
 node scripts/check-pcb-analysis-geometry.mjs
 cargo fmt --manifest-path native/analyze/Cargo.toml --check
 git diff --check
 ```
 
-- Rust: **34 passed** (21 geometry + 13 import). All eight preparations assert partial and no nominal source exclusions.
-- Fresh production addon, typecheck and build pass. **43/43 joint Node tests**, zero skipped, including the real addon/process-worker regression and strict addon export test.
-- Launcher: **4/4 tests** including saved-source hashes/native inventories; final geometry launch: **8 completed, 0 failed**.
-- Installed-package smoke passes normally, with GPU disabled, and with GPU drivers unavailable. This includes geometry, old APIs, declarations, workers and assets. Analyze requests no GPU initialization.
-- **8/8 full standalone Rust / Node worker preparation reports match**: all diagnostics, counts, topology and coordinates. Independent native pad/track, through-via and fill-hole checks pass on BandAmpV5 and ESPower.
-- Old 43 exports and all versions are retained, plus only prepareAnalysisGeometry. Eight old full import reports are identical to the pre-geometry baseline. Short CPU solution and quality replay match exactly, also across geometry execution: hardCount=0, hardSeverity=0, score=772.9915771484375; numericContract=f32-rte-ftz-v1.
+This revision does not change
+RoutingBoardV2, exporters, fixture captures, placement algorithms or numeric
+contracts; no following analysis stage is implemented.
 
-Logs: [Rust](../../../debugging/copper-geometry/rust-tests.log), [native](../../../debugging/copper-geometry/native-build.log), [Node](../../../debugging/copper-geometry/node-tests.log), [package](../../../debugging/copper-geometry/package.log), [compatibility](../../../debugging/copper-geometry/compatibility.json), [launcher](../../../debugging/copper-geometry/launcher.log).
 
-### Regression outputs
+### Results of the single-geometry revision
 
-| Case | Status | Reliable A/B | Possible A/B | Confirmed shorts |
-| --- | --- | --- | --- | ---: |
-| Cut e=0.001 | partial | False | True | 0 |
-| Cut e=0.0001 | complete | False | False | 0 |
-| Real narrow bridge e=0.001 | partial | False | True | 0 |
-| Real narrow bridge e=0.00001 | partial | True | True | 1 |
-| Vertex budget=100 | invalid | False | False | 0 |
+- **34 Rust tests pass**: 21 geometry and 13 import, including all eight saved
+  boards. The supplied P1 regression remains unchanged and passes.
+- **43 Node tests pass**, zero skipped: strict addon exports/declarations,
+  real geometry/worker parity, cancellation/recovery, runtime and legacy packer
+  and public APIs. Removed arrays/counters are explicitly asserted absent.
+- Fresh production native build, typecheck, build and **4 launcher tests** pass.
+  Saved input hashes/native inventories are unchanged.
+- Installed-package checks pass in all three configurations: ordinary, GPU
+  disabled and unavailable GPU drivers. Geometry/import and legacy workers,
+  assets and declarations load from the installed archive.
+- Final launcher: **8 completed, 0 failed**. Full Node worker reports equal
+  standalone Rust reports on all eight boards, including geometry coordinates,
+  diagnostics, counts and graph references. Independent native pad/track,
+  through-via and circular fill-void checks pass on BandAmpV5 and ESPower.
+- All **43 previous exports and versions** remain, plus the existing
+  `prepareAnalysisGeometry` export. Eight previous full import reports are
+  unchanged. Short CPU replay solution and quality match exactly, before and
+  after geometry: hardCount=0, hardSeverity=0, score=772.9915771484375,
+  numericContract=f32-rte-ftz-v1.
 
-The cut never produces a reliable A/B path. The real narrow bridge remains possible at coarse precision and becomes a confirmed short after refinement. No findings are removed after graph construction. A budget-limited invalid report is not preparation success.
+| Regression | Status | A/B joined | Shorts | Diagnostic |
+| --- | --- | --- | ---: | --- |
+| Ø2 / 1.999 strip, e=0.001 | partial | No | 0 | drill_topology_uncertain |
+| Same cut, e=0.0001 | complete | No | 0 | None |
+| True 2.001 strip, e=0.001, vertex-facing control | partial | No | 0 | drill_topology_uncertain |
+| Same true strip, e=0.00001 | complete | Yes | 1 | None |
+| Generated vertex budget=100 | invalid | No | 0 | drill_geometry_unresolved |
 
-### Preserved baseline and corpus comparison
+No post-graph short suppression is used. Partial/invalid results and separated
+islands do not assert an open. Regression JSON is under
+[regression/](../../../debugging/copper-geometry/regression/).
 
-All eight source inventories, nominal source polygons and per-layer union areas match the original baseline **exactly**. The original baseline remains under corrections-baseline. Source counts describe nominal inventory, not certified connectivity.
+### Measured corpus comparison
 
-| Fixture | Nominal regions | Reliable / possible regions | Old islands -> reliable / possible | Uncertain possible components |
+Before means the removed three-set implementation; after means the current
+single set. Time measures worker preparation plus report serialization/IPC;
+it excludes subsequent pretty-JSON formatting/writing and SVG generation.
+Peak working set uses the existing external 100 ms Windows sampler, with one
+uncontended final launcher pass. These are observations, not hard resource limits.
+
+| Fixture | Worker+IPC seconds, before → after | Pretty report MiB, before → after | Worker peak MiB, before → after | Regions / islands now |
 | --- | ---: | ---: | ---: | ---: |
-| BandAmpV5 | 321 | 319 / 321 | 8 -> 6 / 8 | 2 |
-| ESPower | 668 | 666 / 668 | 56 -> 54 / 54 | 0 |
-| NanoScope | 3019 | 3066 / 3030 | 175 -> 222 / 175 | 19 |
-| NanoSpec | 2509 | 2541 / 2509 | 160 -> 192 / 159 | 13 |
-| STM32G0_CAN_RS485 | 849 | 844 / 849 | 73 -> 65 / 73 | 8 |
-| TPS63060DSCR | 170 | 170 / 170 | 8 -> 8 / 8 | 0 |
-| ThunderF722 | 1896 | 1898 / 1896 | 117 -> 117 / 116 | 1 |
-| USB_PD_Trigger_5A | 388 | 388 / 388 | 20 -> 20 / 20 | 0 |
+| BandAmpV5 | 2.986 → 0.631 | 11.50 → 3.93 | 98.1 → 74.4 | 319 / 6 |
+| ESPower | 11.928 → 2.533 | 15.13 → 5.76 | 123.5 → 85.2 | 668 / 56 |
+| NanoScope | 129.970 → 25.335 | 94.68 → 35.26 | 449.2 → 224.1 | 3019 / 175 |
+| NanoSpec | 58.238 → 12.961 | 69.48 → 24.49 | 299.8 → 173.2 | 2509 / 160 |
+| STM32G0_CAN_RS485 | 2.959 → 1.003 | 17.15 → 6.13 | 125.7 → 84.0 | 844 / 65 |
+| TPS63060DSCR | 0.707 → 0.323 | 4.29 → 1.50 | 72.5 → 72.7 | 170 / 8 |
+| ThunderF722 | 35.676 → 9.935 | 66.48 → 25.52 | 289.8 → 194.8 | 1895 / 116 |
+| USB_PD_Trigger_5A | 3.024 → 0.882 | 11.81 → 4.06 | 108.5 → 73.9 | 388 / 20 |
 
-| Fixture | Reliable / uncertain contacts: old -> new | Worker+IPC seconds: old -> new | Pretty report MiB: old -> new | Observed worker peak MiB |
-| --- | --- | ---: | ---: | ---: |
-| BandAmpV5 | 729/1 -> 729/1 | 1.319 -> 2.986 | 3.98 -> 11.50 | 98.1 |
-| ESPower | 990/5 -> 990/1 | 3.152 -> 11.928 | 5.74 -> 15.13 | 123.5 |
-| NanoScope | 4616/15 -> 4616/115 | 34.356 -> 129.970 | 35.19 -> 94.68 | 449.2 |
-| NanoSpec | 4355/14 -> 4355/85 | 18.891 -> 58.238 | 24.39 -> 69.48 | 299.8 |
-| STM32G0_CAN_RS485 | 1166/18 -> 1172/17 | 1.322 -> 2.959 | 6.47 -> 17.15 | 125.7 |
-| TPS63060DSCR | 413/0 -> 413/0 | 0.406 -> 0.707 | 1.50 -> 4.29 | 72.5 |
-| ThunderF722 | 2761/8 -> 2765/8 | 13.326 -> 35.676 | 25.48 -> 66.48 | 289.8 |
-| USB_PD_Trigger_5A | 796/4 -> 796/4 | 1.157 -> 3.024 | 4.07 -> 11.81 | 108.5 |
+All eight remain partial, with zero excluded sources and zero confirmed shorts;
+this is not a short-free certificate. Source inventories/provenance and CAD
+fill states match the preserved baseline exactly. Prepared polygons/areas are
+**not identical**: circumscribed drill cuts replace inscribed ones. The checker
+bounds per-layer area differences by drill perimeter × boundary allowance plus
+boolean rounding allowance; it does not require the old flawed drill contours.
 
-All eight remain partial, with zero nominal exclusions and zero confirmed shorts. These are not short-free certificates. Existing freshness/span limitations remain, with additional two-sided contact/topology uncertainty. Upper-only components have no reliable core; possible island counts can therefore exceed reliable counts. Conversely one possible component can contain multiple reliable islands: that is uncertainty, not a confirmed open.
+BandAmpV5 loses two sub-tolerance pad-ring fragments. STM32G0 loses eight thin
+pad fragments and splits three tracks. ThunderF722 loses one drilled track
+fragment. Each affected source has a local drill-topology diagnostic, including
+features removed entirely. No small-feature filter or source modification is
+used. ESPower/NanoScope/NanoSpec/TPS/USB retain nominal region counts; that alone
+does not prove topology. Complete details and area changes are in comparison.json.
 
-BandAmpV5 pad 2f0f346e43eca4b3 has 0.0020091856 mm2 nominal remnants on TOP/BOTTOM without reliable cores at this tolerance; possible copper is retained. ESPower tracks d7f127a3ed86bbb1 and ebfb63c042cfe9e9 similarly have 0.0000482537 mm2 nominal remnants. NanoScope/NanoSpec gain separate lower fragments where necks are within the envelope. STM32G0_CAN_RS485 loses 8 nominal fragments from its reliable bound and gains 3 split fragments; its guarded barrel associations increase from 251 to 254. Such barrel associations still prove a clear uncut-source patch, rather than connecting through a filled hole centre. Per-source fragment changes and all before/after finding counts are saved in comparison.json.
+- [Machine evidence](../../../debugging/copper-geometry/evidence.json)
+- [Performance / geometry comparison](../../../debugging/copper-geometry/comparison.json)
+- [Legacy compatibility and CPU replay](../../../debugging/copper-geometry/compatibility.json)
+- [Current revision diff](../../../debugging/copper-geometry/single-geometry.patch), relative to HEAD `94d853e`
+- [Rust log](../../../debugging/copper-geometry/rust-tests.log), [Node log](../../../debugging/copper-geometry/node-tests.log), [package log](../../../debugging/copper-geometry/package.log)
+- [Full parity / independent checks](../../../debugging/copper-geometry/artifact-check.log), [launcher log](../../../debugging/copper-geometry/launcher.log)
 
-Local widened guards were needed for captured fills e2412 (NanoScope), e8048 (NanoSpec) and e664 (ThunderF722); diagnostics include guards and source paths. Nominal snapshots are unchanged. No source repair, global tolerance reduction or nominal-graph fallback was used.
+Current reports, geometry JSON and per-layer SVGs:
 
-[Machine evidence](../../../debugging/copper-geometry/evidence.json), [before/after comparison](../../../debugging/copper-geometry/comparison.json), [preserved original baseline](../../../debugging/copper-geometry/corrections-baseline/evidence.json).
+- BandAmpV5: [report](../../../debugging/pcb-analyze/BandAmpV5/runs/2026-10-22T08-02-05-400Z-geometry-PmtIIW/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/BandAmpV5/runs/2026-10-22T08-02-05-400Z-geometry-PmtIIW/).
+- ESPower: [report](../../../debugging/pcb-analyze/ESPower/runs/2026-10-22T08-02-06-418Z-geometry-mQWtYT/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/ESPower/runs/2026-10-22T08-02-06-418Z-geometry-mQWtYT/).
+- NanoScope: [report](../../../debugging/pcb-analyze/NanoScope/runs/2026-10-22T08-02-09-268Z-geometry-dmDRYO/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/NanoScope/runs/2026-10-22T08-02-09-268Z-geometry-dmDRYO/).
+- NanoSpec: [report](../../../debugging/pcb-analyze/NanoSpec/runs/2026-10-22T08-02-35-163Z-geometry-m9hEe5/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/NanoSpec/runs/2026-10-22T08-02-35-163Z-geometry-m9hEe5/).
+- STM32G0_CAN_RS485: [report](../../../debugging/pcb-analyze/STM32G0_CAN_RS485/runs/2026-10-22T08-02-48-590Z-geometry-PvYKIt/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/STM32G0_CAN_RS485/runs/2026-10-22T08-02-48-590Z-geometry-PvYKIt/).
+- TPS63060DSCR: [report](../../../debugging/pcb-analyze/TPS63060DSCR/runs/2026-10-22T08-02-49-903Z-geometry-BWTbFs/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/TPS63060DSCR/runs/2026-10-22T08-02-49-903Z-geometry-BWTbFs/).
+- ThunderF722: [report](../../../debugging/pcb-analyze/ThunderF722/runs/2026-10-22T08-02-50-509Z-geometry-frcIge/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/ThunderF722/runs/2026-10-22T08-02-50-509Z-geometry-frcIge/).
+- USB_PD_Trigger_5A: [report](../../../debugging/pcb-analyze/USB_PD_Trigger_5A/runs/2026-10-22T08-03-00-923Z-geometry-HUDE3N/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/USB_PD_Trigger_5A/runs/2026-10-22T08-03-00-923Z-geometry-HUDE3N/).
 
-### Current artifacts
+Verified on Windows x64 / Node 26.5.0. Linux/macOS, other Node versions, remote
+CI, full npm test and GPU numerical benchmarks were not rerun. Analyze remains
+F64 and does not request GPU initialization. Finite approximation, local
+component-count checks, missing/stale CAD data and capture discrepancies remain
+limits, as described above. No mesh, solver, refill, DSL or next stage is added.
 
-[Full uncommitted implementation diff](../../../debugging/copper-geometry/copper-geometry.patch) is relative to HEAD bf3869c and includes the supplied regression test unchanged; the user's review-note files are not included in the patch.
+### Validator disposition after the memory tradeoff
 
-Rendered/read diagnostic views: [drill coupon](../../../debugging/copper-geometry/regression/cut-comparison.png), [zoomable coupon SVG](../../../debugging/copper-geometry/regression/cut-comparison.svg), [BandAmpV5 bounds](../../../debugging/copper-geometry/BandAmpV5-TOP-bounds.png), [ESPower bounds](../../../debugging/copper-geometry/ESPower-TOP-bounds.png). They supplement the numeric oracles; sub-tolerance necks are not certified from pixels.
+2026-10-22: accepted for continued development by source/diff inspection only, at the user's explicit request not to run tests or builds. The commands/results above are the implementation author's record, not independently rerun verification of this revision.
 
-- BandAmpV5: [report](../../../debugging/pcb-analyze/BandAmpV5/runs/2026-10-22T07-04-09-212Z-geometry-y351Hr/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/BandAmpV5/runs/2026-10-22T07-04-09-212Z-geometry-y351Hr/).
-- ESPower: [report](../../../debugging/pcb-analyze/ESPower/runs/2026-10-22T07-04-12-705Z-geometry-EkUZsu/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/ESPower/runs/2026-10-22T07-04-12-705Z-geometry-EkUZsu/).
-- NanoScope: [report](../../../debugging/pcb-analyze/NanoScope/runs/2026-10-22T07-04-25-118Z-geometry-NIAZfi/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/NanoScope/runs/2026-10-22T07-04-25-118Z-geometry-NIAZfi/).
-- NanoSpec: [report](../../../debugging/pcb-analyze/NanoSpec/runs/2026-10-22T07-06-36-513Z-geometry-jgFM5d/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/NanoSpec/runs/2026-10-22T07-06-36-513Z-geometry-jgFM5d/).
-- STM32G0_CAN_RS485: [report](../../../debugging/pcb-analyze/STM32G0_CAN_RS485/runs/2026-10-22T07-07-35-736Z-geometry-bzoqmg/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/STM32G0_CAN_RS485/runs/2026-10-22T07-07-35-736Z-geometry-bzoqmg/).
-- TPS63060DSCR: [report](../../../debugging/pcb-analyze/TPS63060DSCR/runs/2026-10-22T07-07-39-134Z-geometry-vaNvqk/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/TPS63060DSCR/runs/2026-10-22T07-07-39-134Z-geometry-vaNvqk/).
-- ThunderF722: [report](../../../debugging/pcb-analyze/ThunderF722/runs/2026-10-22T07-07-40-171Z-geometry-VcPkoa/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/ThunderF722/runs/2026-10-22T07-07-40-171Z-geometry-VcPkoa/).
-- USB_PD_Trigger_5A: [report](../../../debugging/pcb-analyze/USB_PD_Trigger_5A/runs/2026-10-22T07-08-16-787Z-geometry-tLy8XY/report.json), [geometry / SVG directory](../../../debugging/pcb-analyze/USB_PD_Trigger_5A/runs/2026-10-22T07-08-16-787Z-geometry-tLy8XY/).
+The user accepts finite-tolerance connectivity limitations instead of retaining whole-board lower/upper envelopes. The current code still contains the cheaper enclosing-drill mitigation and the original regression; it is not a complete rollback to inscribed drilling. No claim is made here that the regression was rerun or that the remaining cases are statistically rare: their frequency has not been measured.
 
-### Remaining limits
-
-- Envelopes, the second graph and serialization increase CPU time, memory and report size; the measured cost is shown above. Worker+IPC time excludes subsequent artifact formatting/writing. External 100 ms OS peak sampling is observational, not an RSS quota.
-- Sagitta alone does not preserve topology. Bounds are conditional on the supplied CAD snapshot. Degenerate offsets or exhausted budgets can still return invalid, with no nominal-connectivity fallback. CAD input volume and transient boolean allocation have no hard RAM quota.
-- Existing capture discrepancies in via dimensions/native fill fragment identity, unknown or stale fills and unconfirmed spans remain. Tightening tolerance cannot certify CAD equivalence.
-- Verified locally on Windows x64 / Node v26.5.0. Linux/macOS, Node 20/24, remote CI, full npm test and real GPU numerical benchmarks were not run for this correction. No mesh, solver, refill, DSL, GPU analysis, cache, board format/exporter or placement algorithm change is included.
-
-**Stopped for repeat review. No commit and no following stage.**
+Local component-count comparison is not a general proof of topology preservation: changes in feature/contact identity can occur without a change in component count. Near-tolerance bridges, gaps and contacts can therefore affect connectivity and future DC results without a dedicated warning in every case. `complete` must not be interpreted as such a proof. This is an accepted current limitation, not a requirement to restore the removed global envelopes. Subsequent DC validation must include geometry/mesh refinement on its supported cases.

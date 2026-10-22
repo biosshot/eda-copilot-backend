@@ -4,7 +4,7 @@
 
 ### Analysis copper geometry
 
-- Correct false intra-source drill necks by deriving reliable and possible copper envelopes before booleans, retaining the nominal snapshot separately. Report unresolved topology with source paths; separate reliable islands do not assert an open. Bound envelope generation, preserve real narrow bridges as possible, and add round/slot, rotated/translated and worker regressions. Include `prepareAnalysisGeometry` in the strict addon export contract test.
+- Keep one copper `regions` collection and one `contacts`/`islands` graph; remove whole-board reliable/possible envelopes, duplicate reports and the second graph. Prevent the false intra-source drill neck with enclosing drill polygons and a temporary local split check with explicit uncertainty diagnostics. Preserve the review regression and strict addon export check, including `prepareAnalysisGeometry`.
 
 - Prepare F64 physical copper and conservative connectivity from the existing validated analysis model. Add validated polygon operations, bounded curved primitives, global scoped drilling, source provenance, physical islands/short findings and explicit incomplete/uncertain states. Expose one internal preparation operation through the shared addon and existing process runtime, with eight named geometry runs saving JSON/SVG evidence. Preserve structural import reports, placement algorithms/contracts, V2 and captured inputs; no meshing, refill or physical solver is added.
 

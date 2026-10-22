@@ -14,11 +14,11 @@ Use `runAnalysisProblem({ kind: 'import-board', boardJson }, options)` from
 `runAnalysisProblem({ kind: 'prepare-geometry', boardJson, geometry? }, options)`
 uses the same queue, deadlines and lifecycle. Its inferred result is an
 `AnalysisGeometryReport`; the import operation still returns `AnalysisImportReport`.
-The geometry report distinguishes nominal snapshots from reliable/possible
-copper. Reliable islands and short findings reference `reliable_regions`, not
-nominal `regions`; possible edges are never marked reliable. Bounds share the
-source path/layer provenance. Consult `possible_islands` and `topology_uncertain`
-before interpreting a split as an open.
+The geometry report has one `regions` collection. Contacts, islands and short
+findings reference those region IDs. Drill polygons enclose the physical bore;
+local `drill_topology_uncertain` / `drill_topology_unresolved` diagnostics flag
+ambiguous cuts without retaining additional geometries or a second graph.
+Separate islands are not a confirmed open; consult geometry diagnostics.
 The optional geometry settings are validated and copied on admission. See
 [geometry policy and evidence](../../docs/experimental/analyze/copper-geometry-verification.md).
 The built `dist/analysis-runtime.js` is an internal package smoke-test entry.

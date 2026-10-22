@@ -48,16 +48,16 @@ test('active real geometry operation cancels and the shared runtime recovers', {
 });
 
 // Same dimensions/angle as the independent Rust review counterexample.
-function drillNeck(width = 1.999) {
+function drillNeck(width = 1.999, angle = -87.5) {
     const b = JSON.parse(coupon()); b.nets = [{ name: 'A' }, { name: 'B' }]; b.rules.nets = []; b.rules.differentialPairs = [];
-    const angle = -87.5, a = angle * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+    const a = angle * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
     const pad = (id: string, x: number, y: number, w: number, h: number, net?: string) => ({ id, number: '1', net,
         at: { x, y }, rotationDeg: angle, layers: [b.layers[0].name], shape: { kind: 'rect', widthMm: w, heightMm: h } });
     b.pads = [pad('bridge', 0, 0, 6, width), pad('left', -2*c, -2*s, 1, 1, 'A'), pad('right', 2*c, 2*s, 1, 1, 'B')];
     b.holes = [{ id: 'cut', at: { x: 0, y: 0 }, hole: { shape: 'round', diameterMm: 2, plated: false } }];
     return JSON.stringify(b);
 }
-test('real addon and worker distinguish the nominal drill neck from reliable and possible copper', { timeout: 30_000 }, async () => {
+test('real addon and worker use one geometry with explicit local drill uncertainty', { timeout: 30_000 }, async () => {
     const ab = (islands: Array<{ nets: string[] }>) => islands.some(i => i.nets.includes('A') && i.nets.includes('B'));
     try {
         const boardJson = drillNeck();
@@ -65,18 +65,26 @@ test('real addon and worker distinguish the nominal drill neck from reliable and
             const geometry = { max_deviation_mm: deviation };
             const report = await runAnalysisProblem({ kind: 'prepare-geometry', boardJson, geometry });
             assert.deepEqual(report, native.prepareAnalysisGeometry(boardJson, geometry));
+            for (const key of ['reliable_regions', 'possible_regions', 'possible_contacts', 'possible_islands']) {
+                assert.equal(Object.hasOwn(report, key), false);
+                assert.equal(Object.hasOwn(report.statistics, key), false);
+            }
+            const ids = new Set(report.regions.map(r => r.id));
+            assert.ok(report.contacts.every(c => ids.has(c.a) && ids.has(c.b)));
+            assert.ok(report.islands.every(i => i.region_ids.every(id => ids.has(id))));
             assert.equal(ab(report.islands), false); assert.equal(report.statistics.shorts, 0);
             assert.equal(report.findings.some(f => f.code === 'physical_short'), false);
             if (deviation === 0.001) {
-                assert.equal(report.status, 'partial'); assert.equal(ab(report.possible_islands), true);
-                assert.ok(report.diagnostics.some(d => d.code === 'topology_uncertain' && d.source_id === 'bridge' && d.path === 'pads[0]'));
-            } else assert.equal(ab(report.possible_islands), false);
+                assert.equal(report.status, 'partial');
+                assert.ok(report.diagnostics.some(d => d.code === 'drill_topology_uncertain' && d.source_id === 'bridge' && d.path === 'pads[0]'));
+            } else assert.equal(report.diagnostics.some(d => d.code === 'drill_topology_uncertain'), false);
             mkdirSync('debugging/copper-geometry/regression', { recursive: true });
             writeFileSync(`debugging/copper-geometry/regression/cut-${deviation}.json`, JSON.stringify(report, null, 2));
         }
-        const narrowJson = drillNeck(2.001);
+        const narrowJson = drillNeck(2.001, -90);
         const unresolved = native.prepareAnalysisGeometry(narrowJson);
-        assert.equal(ab(unresolved.islands), false); assert.equal(ab(unresolved.possible_islands), true);
+        assert.equal(ab(unresolved.islands), false); assert.equal(unresolved.status, 'partial');
+        assert.ok(unresolved.diagnostics.some(d => d.code === 'drill_topology_uncertain' && d.source_id === 'bridge'));
         const resolved = await runAnalysisProblem({ kind: 'prepare-geometry', boardJson: narrowJson, geometry: { max_deviation_mm: 0.00001 } });
         assert.deepEqual(resolved, native.prepareAnalysisGeometry(narrowJson, { max_deviation_mm: 0.00001 }));
         assert.equal(ab(resolved.islands), true); assert.equal(resolved.statistics.shorts, 1);
@@ -85,7 +93,7 @@ test('real addon and worker distinguish the nominal drill neck from reliable and
         writeFileSync('debugging/copper-geometry/regression/narrow-coarse.json', JSON.stringify(unresolved, null, 2));
         const limited = native.prepareAnalysisGeometry(narrowJson, { max_generated_vertices: 100 });
         assert.equal(limited.status, 'invalid'); assert.equal(ab(limited.islands), false);
-        assert.ok(limited.diagnostics.some(d => d.code === 'envelope_budget'));
+        assert.ok(limited.diagnostics.some(d => d.code === 'drill_geometry_unresolved'));
         writeFileSync('debugging/copper-geometry/regression/budget.json', JSON.stringify(limited, null, 2));
     } finally { await terminateAnalysisPool(); }
 });

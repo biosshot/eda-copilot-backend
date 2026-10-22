@@ -30,11 +30,6 @@ export interface AnalysisGeometryReport {
   import_diagnostics: AnalysisImportReport['diagnostics'];
   outline: AnalysisPolygon | null;
   regions: Array<{ id: string; layer: string; source: AnalysisProvenance; polygon: AnalysisPolygon; area_mm2: number; approximation_mm: number }>;
-  /** Conservative graph nodes; regions/layers above remain nominal snapshots. */
-  reliable_regions: AnalysisGeometryReport['regions'];
-  possible_regions: AnalysisGeometryReport['regions'];
-  possible_islands: AnalysisGeometryReport['islands'];
-  possible_contacts: AnalysisGeometryReport['contacts'];
   holes: Array<{id: string; source: AnalysisProvenance; layers: string[]; plated: boolean; span_confirmed: boolean; polygons: AnalysisPolygon[]}>;
   layers: Array<{layer: string; union_area_mm2: number; copper: AnalysisPolygon[]; regions: number}>;
   contacts: Array<{a: string; b: string; kind: 'area' | 'boundary' | 'point' | 'uncertain' | 'barrel'; reliable: boolean; overlap_mm2: number; drill_id: string | null}>;
@@ -44,7 +39,6 @@ export interface AnalysisGeometryReport {
   fills: Array<{source: AnalysisProvenance; layer: string; status: string; freshness: string | null; polygons: number}>;
   sources: AnalysisProvenance[]; excluded: AnalysisProvenance[];
   statistics: { source_counts: Record<string, number>; accepted_sources: number; excluded_sources: number; regions: number; islands: number;
-    reliable_regions: number; possible_regions: number; possible_islands: number; uncertain_components: number;
     candidate_pairs: number; narrow_phase_pairs: number; generated_vertices: number; shorts: number };
 }
 export declare function prepareAnalysisGeometry(json: string, options?: AnalysisGeometryOptions): AnalysisGeometryReport;

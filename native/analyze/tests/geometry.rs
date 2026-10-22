@@ -225,6 +225,19 @@ fn physical_topology_short_unknown_split_bbox_gap_boundary_point_bridge() {
         rp("bridge", 2., 0., 2.1, 0.02)
     ]);
     assert_eq!(run(&v).islands.len(), 1);
+    // Drilled regions include the conversion guard in their error allowance;
+    // the broad phase must retain near contacts across that entire allowance.
+    v["pads"] = json!([rp("a", 0., 0., 2., 2.), rp("b", 2.0021, 0., 2., 2.)]);
+    v["holes"] = json!([
+        {"id":"ha","at":{"x":-1.,"y":-1.099},"hole":{"shape":"round","diameterMm":0.2,"plated":false}},
+        {"id":"hb","at":{"x":3.0021,"y":-1.099},"hole":{"shape":"round","diameterMm":0.2,"plated":false}}
+    ]);
+    let r = run(&v);
+    assert_eq!(r.islands.len(), 2);
+    assert!(r
+        .contacts
+        .iter()
+        .any(|c| c.kind == "uncertain" && !c.reliable));
 }
 #[test]
 fn malformed_topology_is_never_repaired_and_equivalent_vertices_normalize() {
@@ -592,7 +605,7 @@ fn copper_within_drill_approximation_band_is_not_a_confirmed_barrel_path() {
     assert_eq!(r.statistics.shorts, 0);
     assert!(r.contacts.iter().filter(|c| c.kind == "barrel").all(|c| {
         [&c.a, &c.b].iter().all(|id| {
-            r.reliable_regions
+            r.regions
                 .iter()
                 .find(|r| r.id == ***id)
                 .unwrap()
@@ -691,8 +704,8 @@ fn drill_approximation_cannot_create_a_reliable_path_inside_one_source() {
 }
 
 // Review controls: the same cut in arbitrary board axes, plus a true bridge
-// on the other side of the tolerance. The unknown source must remain in both
-// graphs; net labels cannot be used to repair topology.
+// on the other side of the tolerance. The unknown source remains in the model;
+// net labels cannot be used to repair topology.
 fn neck_coupon(angle: f64, tx: f64, ty: f64, width: f64, slot: bool) -> Value {
     let mut v = board();
     let (s, c) = angle.to_radians().sin_cos();
@@ -734,7 +747,7 @@ fn drill_necks_rotations_translations_slots_and_near_edge() {
                     assert!(!ab(&r.islands), "{angle} {slot} {e}: {:?}", r.findings);
                     assert_eq!(r.statistics.shorts, 0);
                     assert!(r
-                        .reliable_regions
+                        .regions
                         .iter()
                         .any(|r| r.source.source_id.as_deref() == Some("bridge")
                             && r.source.net.is_none()));
@@ -744,21 +757,20 @@ fn drill_necks_rotations_translations_slots_and_near_edge() {
     }
 }
 #[test]
-fn two_sided_neck_uncertainty_refines_without_claiming_an_open() {
+fn local_drill_uncertainty_refines_without_claiming_an_open() {
     // A real 0.0005 mm edge bridge is too narrow to certify at 0.001,
-    // but must be preserved as possible and resolved by finer input tolerance.
-    let v = neck_coupon(-87.5, 0., 0., 2.001, false);
+    // and must have an explicit local diagnostic until finer input tolerance.
+    // Face an enclosing-drill vertex toward the strip edge in this control.
+    let v = neck_coupon(-90., 0., 0., 2.001, false);
     let coarse = run(&v);
     assert!(!ab(&coarse.islands));
-    assert!(ab(&coarse.possible_islands));
     assert_eq!(coarse.status, "partial");
     assert!(coarse
         .diagnostics
         .iter()
-        .any(|d| d.code == "topology_uncertain"
+        .any(|d| d.code == "drill_topology_uncertain"
             && d.source_id.as_deref() == Some("bridge")
             && d.path == "pads[0]"));
-    assert!(coarse.possible_contacts.iter().all(|c| !c.reliable));
     let fine = run_e(&v, 0.00001);
     assert!(ab(&fine.islands), "{:?}", fine.diagnostics);
     assert_eq!(fine.statistics.shorts, 1);
@@ -768,10 +780,16 @@ fn two_sided_neck_uncertainty_refines_without_claiming_an_open() {
     let cut = neck_coupon(-87.5, 0., 0., 1.999, false);
     let coarse_cut = run(&cut);
     assert!(!ab(&coarse_cut.islands));
-    assert!(ab(&coarse_cut.possible_islands));
+    assert!(coarse_cut
+        .diagnostics
+        .iter()
+        .any(|d| d.code == "drill_topology_uncertain"));
     let fine_cut = run_e(&cut, 0.0001);
     assert!(!ab(&fine_cut.islands));
-    assert!(!ab(&fine_cut.possible_islands));
+    assert!(!fine_cut
+        .diagnostics
+        .iter()
+        .any(|d| d.code == "drill_topology_uncertain"));
     let limited = prepare_json(
         &v.to_string(),
         GeometryOptions {
@@ -785,7 +803,7 @@ fn two_sided_neck_uncertainty_refines_without_claiming_an_open() {
     assert!(limited
         .diagnostics
         .iter()
-        .any(|d| d.code == "envelope_budget" && d.source_id.is_some()));
+        .any(|d| d.code == "drill_geometry_unresolved" && d.source_id.is_some()));
 }
 
 #[test]

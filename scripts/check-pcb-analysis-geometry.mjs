@@ -23,12 +23,15 @@ for (const name of names) {
     assert.equal(readdirSync(dir).filter(f => f.endsWith('.svg')).length, report.layers.length);
     const geometry = read(join(dir, 'geometry.json'));
     assert.deepEqual(geometry.regions, report.regions);
-    for (const key of ['reliable_regions', 'possible_regions', 'possible_contacts', 'possible_islands']) assert.deepEqual(geometry[key], report[key]);
-    const reliableIds = new Set(report.reliable_regions.map(r => r.id));
-    const possibleIds = new Set(report.possible_regions.map(r => r.id));
-    assert.ok(report.islands.every(i => i.region_ids.every(id => reliableIds.has(id))));
-    assert.ok(report.possible_islands.every(i => i.region_ids.every(id => possibleIds.has(id))));
-    assert.ok(report.possible_contacts.every(c => !c.reliable));
+    for (const key of ['reliable_regions', 'possible_regions', 'possible_contacts', 'possible_islands', 'uncertain_components']) {
+        assert.equal(Object.hasOwn(report, key), false);
+        assert.equal(Object.hasOwn(report.statistics, key), false);
+        assert.equal(Object.hasOwn(geometry, key), false);
+    }
+    const ids = new Set(report.regions.map(r => r.id));
+    assert.ok(report.islands.every(i => i.region_ids.every(id => ids.has(id))));
+    assert.ok(report.contacts.every(c => ids.has(c.a) && ids.has(c.b)));
+    for (const key of ['contacts', 'islands']) assert.deepEqual(geometry[key], report[key]);
     reports.set(name, report);
     const measurements = read(join(dir, 'measurements.json'));
     results.push({ name, run: dir, ...measurements, reportSha256: hash(join(dir, 'report.json')), geometryBytes: statSync(join(dir, 'geometry.json')).size,
@@ -67,8 +70,8 @@ for (const name of ['BandAmpV5', 'ESPower']) {
             && Math.abs(dx * Math.sin(a) + dy * Math.cos(a)) < pad.shape.heightMm / 2 - 0.01;
     });
     assert.ok(endpoint, 'Native track endpoint is strictly within the native rectangular pad');
-    const padIds = report.reliable_regions.filter(r => r.source.source_id === pad.id).map(r => r.id);
-    const trackIds = report.reliable_regions.filter(r => r.source.source_id === track.id).map(r => r.id);
+    const padIds = report.regions.filter(r => r.source.source_id === pad.id).map(r => r.id);
+    const trackIds = report.regions.filter(r => r.source.source_id === track.id).map(r => r.id);
     assert.ok(report.islands.some(i => padIds.some(id => i.region_ids.includes(id)) && trackIds.some(id => i.region_ids.includes(id))));
     const via = raw.vias[0], exportedVia = input.copper.fixed.vias.find(v => v.id === via.id);
     const nativeVia = records.find(r => r.head.type === 'VIA' && r.head.id === via.id).body;
@@ -77,8 +80,7 @@ for (const name of ['BandAmpV5', 'ESPower']) {
     near(exportedVia.at.x, via.x); near(exportedVia.at.y, -via.y); near(exportedVia.drillMm, via.drill); near(exportedVia.diameterMm, via.diameter);
     const lands = report.regions.filter(r => r.source.kind === 'via' && r.source.source_id === via.id);
     assert.equal(lands.length, 2);
-    const reliableLands = report.reliable_regions.filter(r => r.source.kind === 'via' && r.source.source_id === via.id);
-    assert.equal(reliableLands.length, 2); assert.ok(report.islands.some(i => reliableLands.every(r => i.region_ids.includes(r.id))));
+    assert.ok(report.islands.some(i => lands.every(r => i.region_ids.includes(r.id))));
     const ringExpected = Math.PI / 4 * (via.diameter ** 2 - via.drill ** 2);
     for (const land of lands) near(land.area_mm2, ringExpected, Math.PI * (via.diameter + via.drill) * report.options.max_deviation_mm + 1e-5);
     // These native hole contours consist of exactly two 180-degree arcs. Their
@@ -118,32 +120,49 @@ function groupBy(items, key) {
     for (const item of items) { const k = key(item); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(item); }
     return groups;
 }
-// Preserve and compare the pre-review corpus; never replace that baseline.
+// Preserve both historical baselines. Compare performance to the removed
+// three-set implementation, and bound geometry changes due to enclosing drills.
 let comparison = null;
-const baseline = join(root, 'corrections-baseline');
+const baseline = join(root, 'three-set-baseline');
 if (existsSync(join(baseline, 'evidence.json'))) {
     const previous = read(join(baseline, 'evidence.json'));
-    const shapes = report => report.regions.map(r => JSON.stringify([r.layer, r.source.path, r.polygon.outer, r.polygon.holes, r.area_mm2])).sort();
+    const original = read(join(root, 'corrections-baseline', 'evidence.json'));
+    const perimeter = p => [p.outer, ...p.holes].reduce((sum, ring) => sum + ring.reduce((n, a, i) => {
+        const b = ring[(i + 1) % ring.length]; return n + Math.hypot(b[0] - a[0], b[1] - a[1]);
+    }, 0), 0);
     const codes = findings => Object.fromEntries([...new Set(findings.map(f => f.code))].sort().map(c => [c, findings.filter(f => f.code === c).length]));
     comparison = results.map(result => {
         const name = result.name, before = read(join(baseline, 'rust', name + '.json')), after = reports.get(name);
-        const old = previous.results.find(r => r.name === name);
+        const old = previous.results.find(r => r.name === name), first = original.results.find(r => r.name === name);
         assert.deepEqual(after.statistics.source_counts, before.statistics.source_counts, name + ': source inventory unchanged');
-        assert.deepEqual(after.layers.map(l => l.union_area_mm2), before.layers.map(l => l.union_area_mm2), name + ': nominal layer areas unchanged');
-        assert.deepEqual(shapes(after), shapes(before), name + ': nominal source polygons unchanged');
+        assert.deepEqual(after.sources, before.sources, name + ': source provenance unchanged');
+        assert.deepEqual(after.fills, before.fills, name + ': CAD fill states unchanged');
+        const layerChanges = after.layers.map((layer, i) => {
+            const q = Math.max(after.boolean_error_bound_mm, before.boolean_error_bound_mm);
+            const drillBand = 2 * after.options.max_deviation_mm + 6 * q;
+            const drillAreaBound = before.holes.filter(h => h.layers.includes(layer.layer)).flatMap(h => h.polygons)
+                .reduce((sum, p) => sum + perimeter(p) * drillBand + Math.PI * drillBand ** 2, 0);
+            const roundingAreaBound = before.regions.filter(r => r.layer === layer.layer)
+                .reduce((sum, r) => sum + perimeter(r.polygon) * 4 * q, 0);
+            const boundMm2 = drillAreaBound + roundingAreaBound + 1e-8;
+            const deltaMm2 = layer.union_area_mm2 - before.layers[i].union_area_mm2;
+            assert.ok(Math.abs(deltaMm2) <= boundMm2, `${name}/${layer.layer}: drill geometry area delta exceeds bound`);
+            return { layer: layer.layer, beforeMm2: before.layers[i].union_area_mm2, afterMm2: layer.union_area_mm2, deltaMm2, boundMm2 };
+        });
         const key = r => r.layer + ':' + r.source.path;
-        const nominal = groupBy(before.regions, key), reliable = groupBy(after.reliable_regions, key), possible = groupBy(after.possible_regions, key);
-        const changedSources = [...nominal].filter(([k, rs]) => rs.length !== (reliable.get(k)?.length ?? 0)).map(([k, rs]) => ({
-            key: k, sourceId: rs[0].source.source_id, beforeRegions: rs.length, reliableRegions: reliable.get(k)?.length ?? 0,
-            possibleRegions: possible.get(k)?.length ?? 0, nominalAreasMm2: rs.map(r => r.area_mm2).sort((a,b) => a-b),
+        const oldGroups = groupBy(before.regions, key), newGroups = groupBy(after.regions, key);
+        const changedSources = [...oldGroups].filter(([k, rs]) => rs.length !== (newGroups.get(k)?.length ?? 0)).map(([k, rs]) => ({
+            key: k, sourceId: rs[0].source.source_id, beforeRegions: rs.length, afterRegions: newGroups.get(k)?.length ?? 0,
         }));
-        return { name, nominalShapesEqual: true, sourceCountsEqual: true,
-            before: { status: before.status, regions: before.regions.length, islands: before.islands.length,
+        return { name, sourceCountsEqual: true, sourceProvenanceEqual: true, cadFillStatesEqual: true, layerChanges,
+            original: { elapsedMs: first.elapsedMs, reportBytes: first.reportBytes },
+            before: { status: before.status, regions: before.regions.length, reliableRegions: before.reliable_regions.length,
+                possibleRegions: before.possible_regions.length, islands: before.islands.length,
                 reliableContacts: before.contacts.filter(c => c.reliable).length, uncertainContacts: before.contacts.filter(c => !c.reliable).length,
-                findings: codes(before.findings), elapsedMs: old.elapsedMs, reportBytes: old.reportBytes },
+                findings: codes(before.findings), elapsedMs: old.elapsedMs, reportBytes: old.reportBytes,
+                peakMiB: old.worker?.observedPeakMiB },
             after: { status: after.status, regions: after.regions.length, ...result.connectivity,
-                reliableRegions: after.reliable_regions.length, possibleRegions: after.possible_regions.length,
-                elapsedMs: result.elapsedMs, reportBytes: result.reportBytes }, changedSources };
+                elapsedMs: result.elapsedMs, reportBytes: result.reportBytes, peakMiB: result.worker?.observedPeakMiB }, changedSources };
     });
     writeFileSync(join(root, 'comparison.json'), JSON.stringify(comparison, null, 2) + '\n');
 }

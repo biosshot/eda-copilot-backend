@@ -24,7 +24,6 @@ pub(super) fn build(
     bores: &[Bore],
     raw: &[Raw],
     material: &AreaSet,
-    possible: bool,
     r: &mut PreparationReport,
 ) {
     let mut sets = Sets((0..copper.len()).collect());
@@ -62,7 +61,7 @@ pub(super) fn build(
         let polys: Vec<_> = indices.iter().map(|&i| copper[i].poly.clone()).collect();
         let pairs = spatial::candidates(
             &polys,
-            2. * (r.options.max_deviation_mm + r.boolean_error_bound_mm),
+            2. * (r.options.max_deviation_mm + 3. * r.boolean_error_bound_mm),
         );
         r.statistics.candidate_pairs += pairs.len();
         for (a, b) in pairs {
@@ -101,9 +100,7 @@ pub(super) fn build(
             // A boolean representation must never close an originally positive
             // gap. Consult the uncut input representation before accepting a
             // derived boundary or overlap as a conductor.
-            let (kind, reliable) = if possible {
-                (kind, true)
-            } else if reliable {
+            let (kind, reliable) = if reliable {
                 let original = raw_prepared[&(ca.layer, ca.provenance.path.as_str())]
                     .relate(&raw_prepared[&(cb.layer, cb.provenance.path.as_str())]);
                 if original.is_disjoint()
@@ -127,7 +124,7 @@ pub(super) fn build(
                 a: ca.id.clone(),
                 b: cb.id.clone(),
                 kind: kind.into(),
-                reliable: reliable && !possible,
+                reliable,
                 overlap_mm2: overlap,
                 drill_id: None,
             });
@@ -140,7 +137,7 @@ pub(super) fn build(
         let mut hits = Vec::new();
         let nearby = copper_index.query(
             bore.shape.bounding_rect().unwrap(),
-            4. * (r.options.max_deviation_mm + 2. * r.boolean_error_bound_mm),
+            2. * r.boolean_error_bound_mm,
         );
         for i in nearby {
             let c = &copper[i];
@@ -154,8 +151,8 @@ pub(super) fn build(
                 near |= m.get(CoordPos::OnBoundary, CoordPos::Inside) == Dimensions::OneDimensional;
                 // A fragment wholly inside the drilled empty centre is excluded
                 // by the global drill difference before this point.
-                near |= Euclidean.distance(&c.poly, hole.exterior())
-                    <= 4. * (r.options.max_deviation_mm + 2. * r.boolean_error_bound_mm);
+                near |=
+                    Euclidean.distance(&c.poly, hole.exterior()) <= 2. * r.boolean_error_bound_mm;
             }
             if near {
                 // Prove a nonzero barrel patch in the *uncut* source, away
@@ -164,10 +161,6 @@ pub(super) fn build(
                 // that already-proven patch with its surviving source fragment.
                 // It cannot create a contact between distinct copper sources.
                 'proof: {
-                    if possible {
-                        confirmed = true;
-                        break 'proof;
-                    }
                     let source = raw_by_source[&(c.layer, c.provenance.path.as_str())];
                     for hole in &bore.shape.0 {
                         for line in hole.exterior().lines() {
@@ -176,7 +169,8 @@ pub(super) fn build(
                                 (line.start.y + line.end.y) / 2.,
                             );
                             let margin = source.error
-                                + 4. * (r.options.max_deviation_mm + 2. * r.boolean_error_bound_mm);
+                                + r.options.max_deviation_mm
+                                + 4. * r.boolean_error_bound_mm;
                             let contained = source.shape.0.iter().any(|p| {
                                 p.contains(&witness)
                                     && std::iter::once(p.exterior())
@@ -202,9 +196,7 @@ pub(super) fn build(
                                 && on_board
                                 && !blocked
                                 && Euclidean.distance(&witness, &c.poly)
-                                    <= 4.
-                                        * (r.options.max_deviation_mm
-                                            + 2. * r.boolean_error_bound_mm)
+                                    <= 2. * r.boolean_error_bound_mm
                             {
                                 confirmed = true;
                                 break 'proof;
@@ -227,7 +219,7 @@ pub(super) fn build(
                     a: copper[first].id.clone(),
                     b: copper[other].id.clone(),
                     kind: "barrel".into(),
-                    reliable: !possible,
+                    reliable: true,
                     overlap_mm2: 0.,
                     drill_id: Some(bore.id.clone()),
                 });
@@ -276,7 +268,7 @@ pub(super) fn build(
     }
     for (net, islands) in &r.net_islands {
         if islands.len() > 1 {
-            r.findings.push(Finding{code:"net_islands".into(),nets:vec![net.clone()],region_ids:r.islands.iter().filter(|i|islands.contains(&i.id)).flat_map(|i|i.region_ids.clone()).collect(),source_ids:vec![],message:format!("Net label occurs in {} separate reliable components; possible_islands must be consulted, this is not a confirmed open",islands.len())});
+            r.findings.push(Finding{code:"net_islands".into(),nets:vec![net.clone()],region_ids:r.islands.iter().filter(|i|islands.contains(&i.id)).flat_map(|i|i.region_ids.clone()).collect(),source_ids:vec![],message:format!("Net label occurs in {} separate reliable components; geometry diagnostics must be consulted; this is not a confirmed open",islands.len())});
         }
     }
     for track in &board.tracks {

@@ -1,6 +1,5 @@
 //! Physical copper preparation; consumes validated model::Board only.
 mod areas;
-mod bounds;
 mod primitives;
 mod spatial;
 mod topology;
@@ -130,10 +129,6 @@ pub struct Statistics {
     pub excluded_sources: usize,
     pub regions: usize,
     pub islands: usize,
-    pub reliable_regions: usize,
-    pub possible_regions: usize,
-    pub possible_islands: usize,
-    pub uncertain_components: usize,
     pub candidate_pairs: usize,
     pub narrow_phase_pairs: usize,
     pub generated_vertices: usize,
@@ -151,11 +146,6 @@ pub struct PreparationReport {
     pub import_diagnostics: Vec<Diagnostic>,
     pub outline: Option<PolygonSnapshot>,
     pub regions: Vec<Region>,
-    /// Nominal regions above are a geometric snapshot, not graph nodes.
-    pub reliable_regions: Vec<Region>,
-    pub possible_regions: Vec<Region>,
-    pub possible_islands: Vec<Island>,
-    pub possible_contacts: Vec<Contact>,
     pub holes: Vec<Hole>,
     pub layers: Vec<LayerSnapshot>,
     pub contacts: Vec<Contact>,
@@ -175,6 +165,9 @@ struct Copper {
     id: String,
 }
 struct Bore {
+    drill: model::Drill,
+    at: model::Point,
+    rotation_deg: f64,
     shape: AreaSet,
     layers: Vec<usize>,
     plated: bool,
@@ -241,10 +234,6 @@ fn empty(options: GeometryOptions) -> PreparationReport {
         import_diagnostics: vec![],
         outline: None,
         regions: vec![],
-        reliable_regions: vec![],
-        possible_regions: vec![],
-        possible_islands: vec![],
-        possible_contacts: vec![],
         holes: vec![],
         layers: vec![],
         contacts: vec![],
@@ -354,6 +343,9 @@ pub fn prepare(board: &Board, options: GeometryOptions) -> PreparationReport {
                         diagnostic(&mut r,&p,"drill_span_unconfirmed","Pad hole has no confirmed full span: cut only declared pad layers; no intermediate layers, through cut or barrel links inferred","limitation");
                     }
                     bores.push(Bore {
+                        drill: drill.clone(),
+                        at: pad.at,
+                        rotation_deg: pad.rotation_deg,
                         shape: s,
                         layers: pad.layers.clone(),
                         plated: drill.plated,
@@ -402,6 +394,15 @@ pub fn prepare(board: &Board, options: GeometryOptions) -> PreparationReport {
                     });
                 }
                 bores.push(Bore {
+                    drill: model::Drill {
+                        shape: model::DrillShape::Round,
+                        diameter_mm: v.drill_mm,
+                        offset: None,
+                        rotation_deg: None,
+                        plated: true,
+                    },
+                    at: v.at,
+                    rotation_deg: 0.,
                     shape: h,
                     layers: span,
                     plated: true,
@@ -432,6 +433,9 @@ pub fn prepare(board: &Board, options: GeometryOptions) -> PreparationReport {
         };
         match builder.drill(&d.drill, d.at, 0.) {
             Ok(s) => bores.push(Bore {
+                drill: d.drill.clone(),
+                at: d.at,
+                rotation_deg: 0.,
                 shape: s,
                 layers,
                 plated: d.drill.plated,
@@ -609,6 +613,39 @@ pub fn prepare(board: &Board, options: GeometryOptions) -> PreparationReport {
             "missing",
         );
     }
+    // Retain one drilled geometry. Circumscribed circles/capsules contain the
+    // physical drill; the conversion guard prevents a rounded false copper neck.
+    for b in &mut bores {
+        match builder.enclosing_drill(
+            &b.drill,
+            b.at,
+            b.rotation_deg,
+            2. * r.boolean_error_bound_mm,
+        ) {
+            Ok(shape) => b.shape = shape,
+            Err(e) => {
+                diagnostic(&mut r, &b.source, "drill_geometry_unresolved", e, "invalid");
+                r.statistics.generated_vertices = builder.generated;
+                return r;
+            }
+        }
+        if b.shape.0.iter().any(|p| {
+            !p.is_valid()
+                || p.exterior().0.iter().any(|p| {
+                    !p.x.is_finite() || !p.y.is_finite() || p.x.abs().max(p.y.abs()) > 10000.
+                })
+        }) {
+            diagnostic(
+                &mut r,
+                &b.source,
+                "drill_geometry_unresolved",
+                "Enclosing drill is invalid or exceeds finite coordinate limit",
+                "invalid",
+            );
+            r.statistics.generated_vertices = builder.generated;
+            return r;
+        }
+    }
     let drill_index = spatial::Index::new(
         bores
             .iter()
@@ -616,30 +653,6 @@ pub fn prepare(board: &Board, options: GeometryOptions) -> PreparationReport {
             .filter_map(|(i, b)| b.shape.bounding_rect().map(|r| (i, r))),
     );
     let mut copper = Vec::new();
-    let mut reliable = Vec::new();
-    let mut possible = Vec::new();
-    let guard = 2. * r.boolean_error_bound_mm;
-    // A bore's nominal polygon is inscribed. Expanding by its sagitta plus
-    // rounding guard encloses the true drill; shrinking is a subset of it.
-    let bore_bounds: Vec<_> = bores
-        .iter()
-        .map(|b| {
-            Ok::<_, String>((
-                bounds::offset(&b.shape, options.max_deviation_mm + guard, &mut builder)?,
-                bounds::offset(&b.shape, -guard, &mut builder)?,
-            ))
-        })
-        .collect();
-    let material_bounds = if !valid.is_empty() {
-        (|| {
-            Ok::<_, String>((
-                bounds::offset(&material, -guard, &mut builder)?,
-                bounds::offset(&material, guard, &mut builder)?,
-            ))
-        })()
-    } else {
-        Ok((material.clone(), material.clone()))
-    };
     for x in &valid {
         let outside = x.shape.difference(&material).unsigned_area();
         if outside > 0. {
@@ -651,28 +664,34 @@ pub fn prepare(board: &Board, options: GeometryOptions) -> PreparationReport {
             x.shape.intersection(&material)
         };
         let nearby: Vec<_> = drill_index
-            .query(
-                x.shape.bounding_rect().unwrap(),
-                4. * (options.max_deviation_mm + 32. * guard),
-            )
+            .query(x.shape.bounding_rect().unwrap(), 0.)
             .into_iter()
             .filter(|&i| bores[i].layers.contains(&x.layer))
             .collect();
-        let drills = areas::union(
-            drill_index
-                .query(x.shape.bounding_rect().unwrap(), 0.)
-                .into_iter()
-                .filter(|&i| bores[i].layers.contains(&x.layer))
-                .flat_map(|i| bores[i].shape.0.clone()),
-        );
+        let drills = areas::union(nearby.iter().flat_map(|&i| bores[i].shape.0.clone()));
         let shape = areas::subtract(&inside, &drills);
-        let error = if nearby.is_empty() {
-            x.error
-        } else {
-            x.error.max(options.max_deviation_mm)
-        };
-        for p in areas::sorted(shape.0) {
-            if !p.is_valid() {
+        // Only a split/disappearing source can hide a path/feature with this
+        // drill enclosure. Compare locally with inscribed drills, then discard
+        // the temporary polygons; no second board or graph is retained.
+        if !nearby.is_empty()
+            && (shape.0.len() > inside.0.len() || (shape.0.is_empty() && !inside.0.is_empty()))
+        {
+            let check = (|| {
+                let mut pieces = Vec::new();
+                for &i in &nearby {
+                    let b = &bores[i];
+                    pieces.extend(builder.drill(&b.drill, b.at, b.rotation_deg)?.0);
+                }
+                Ok::<_, String>(areas::subtract(&inside, &areas::union(pieces)))
+            })();
+            match check {
+                Ok(check) if check.0.len()!=shape.0.len() => diagnostic(&mut r,&x.source,"drill_topology_uncertain","Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve","limitation"),
+                Err(e) => diagnostic(&mut r,&x.source,"drill_topology_unresolved",e,"limitation"),
+                _=>{}
+            }
+        }
+        for poly in areas::sorted(shape.0) {
+            if !poly.is_valid() {
                 invalid_source(
                     &mut r,
                     x.source.clone(),
@@ -681,103 +700,56 @@ pub fn prepare(board: &Board, options: GeometryOptions) -> PreparationReport {
                 continue;
             }
             copper.push(Copper {
-                poly: p,
+                poly,
                 provenance: x.source.clone(),
                 layer: x.layer,
-                error,
+                error: if nearby.is_empty() {
+                    x.error
+                } else {
+                    x.error.max(options.max_deviation_mm) + 2. * r.boolean_error_bound_mm
+                },
                 id: String::new(),
             });
         }
-        let mut envelopes = Err("No envelope attempt".into());
-        for factor in [1., 2., 4., 8., 16., 32.] {
-            let attempt = bounds::derive(
-                x,
-                &material,
-                &bores,
-                &nearby,
-                &bore_bounds,
-                &material_bounds,
-                guard,
-                guard * factor,
-                &mut builder,
-            );
-            match attempt {
-                Ok(pair) => {
-                    if factor > 1. {
-                        diagnostic(&mut r,&x.source,"envelope_guard_widened",format!("Local rounding guard widened from {guard} to {} mm after a degenerate envelope; nominal snapshot and sagitta unchanged",guard*factor),"limitation");
-                    }
-                    envelopes = Ok(pair);
-                    break;
-                }
-                Err(e) => {
-                    let budget = e.contains("budget") || e.contains("overflow");
-                    envelopes = Err(e);
-                    if budget {
-                        break;
-                    }
-                }
-            }
-        }
-        match envelopes {
-            Ok((lower, upper)) => {
-                let vertices = lower
-                    .0
-                    .iter()
-                    .chain(&upper.0)
-                    .map(|p| {
-                        std::iter::once(p.exterior())
-                            .chain(p.interiors())
-                            .map(|ring| ring.0.len())
-                            .sum::<usize>()
-                    })
-                    .sum();
-                if let Err(e) = builder.reserve(vertices) {
-                    diagnostic(&mut r, &x.source, "envelope_budget", e, "invalid");
-                    continue;
-                }
-                for (set, out) in [(lower, &mut reliable), (upper, &mut possible)] {
-                    for poly in areas::sorted(set.0) {
-                        out.push(Copper {
-                            poly,
-                            provenance: x.source.clone(),
-                            layer: x.layer,
-                            error,
-                            id: String::new(),
-                        });
-                    }
-                }
-            }
-            Err(e) => {
-                let code = if e.contains("budget") || e.contains("overflow") {
-                    "envelope_budget"
-                } else {
-                    "envelope_invalid"
-                };
-                diagnostic(&mut r, &x.source, code, e, "invalid");
-            }
-        }
     }
-    bounds::identify(&mut copper, "region");
-    bounds::identify(&mut reliable, "reliable");
-    bounds::identify(&mut possible, "possible");
-    topology::build(board, &reliable, &bores, &valid, &material, false, &mut r);
-    let mut upper_report = empty(options);
-    upper_report.boolean_error_bound_mm = r.boolean_error_bound_mm;
-    topology::build(
-        board,
-        &possible,
-        &bores,
-        &valid,
-        &material,
-        true,
-        &mut upper_report,
-    );
-    r.possible_islands = upper_report.islands;
-    r.possible_contacts = upper_report.contacts;
-    bounds::compare(board, &reliable, &possible, &mut r);
-    r.regions = bounds::snapshots(board, &copper);
-    r.reliable_regions = bounds::snapshots(board, &reliable);
-    r.possible_regions = bounds::snapshots(board, &possible);
+    copper.sort_by(|a, b| {
+        key(&a.provenance)
+            .cmp(&key(&b.provenance))
+            .then(a.provenance.path.cmp(&b.provenance.path))
+            .then(a.layer.cmp(&b.layer))
+            .then_with(|| {
+                a.poly
+                    .bounding_rect()
+                    .unwrap()
+                    .min()
+                    .x
+                    .total_cmp(&b.poly.bounding_rect().unwrap().min().x)
+            })
+            .then_with(|| {
+                a.poly
+                    .bounding_rect()
+                    .unwrap()
+                    .min()
+                    .y
+                    .total_cmp(&b.poly.bounding_rect().unwrap().min().y)
+            })
+            .then_with(|| a.poly.unsigned_area().total_cmp(&b.poly.unsigned_area()))
+    });
+    for (i, c) in copper.iter_mut().enumerate() {
+        c.id = format!("region-{i:06}");
+    }
+    topology::build(board, &copper, &bores, &valid, &material, &mut r);
+    r.regions = copper
+        .iter()
+        .map(|c| Region {
+            id: c.id.clone(),
+            layer: board.layers[c.layer].name.clone(),
+            source: c.provenance.clone(),
+            polygon: areas::snapshot(&c.poly),
+            area_mm2: c.poly.unsigned_area(),
+            approximation_mm: c.error,
+        })
+        .collect();
     for b in &bores {
         r.holes.push(Hole {
             id: b.id.clone(),
@@ -820,9 +792,6 @@ pub fn prepare(board: &Board, options: GeometryOptions) -> PreparationReport {
         .saturating_sub(r.statistics.excluded_sources);
     r.statistics.regions = r.regions.len();
     r.statistics.islands = r.islands.len();
-    r.statistics.reliable_regions = r.reliable_regions.len();
-    r.statistics.possible_regions = r.possible_regions.len();
-    r.statistics.possible_islands = r.possible_islands.len();
     r.statistics.generated_vertices = builder.generated;
     r.statistics.shorts = r
         .findings

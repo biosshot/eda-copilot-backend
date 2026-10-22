@@ -7,14 +7,16 @@ packer dependency or GPU initialization. The shared
 The importer retains its original semantics. `geometry::prepare` consumes its
 validated `model::Board`; `geometry::prepare_json` is a boundary convenience.
 The separate serializable geometry report does not expose the internal Board.
-`regions`/`layers` are nominal geometry. `reliable_regions` are the graph nodes
-referenced by `contacts`, `islands`, and findings; `possible_regions` have their
-own `possible_contacts`/`possible_islands`. IDs use distinct namespaces; link
-snapshots by source path and layer (one source can have multiple fragments).
-The two bounds are constructed before clipping/drilling, including features
-absent from the nominal result. `topology_uncertain` means the bounds cannot
-establish connectivity; `net_islands` does not assert an open. Envelope budget
-failure is invalid and does not fall back to nominal connectivity.
+`regions` is the single prepared copper representation. `contacts`, `islands`
+and findings reference its IDs; `layers` aggregates the same regions for display.
+Drills use enclosing polygons with the reported curve/boolean error allowance,
+so a faceted drill cannot leave copper inside the physical bore. Only a source
+split or removed by drilling gets a temporary local comparison with inscribed
+drills. A component-count difference is `drill_topology_uncertain`, with source
+ID/path; exhausted local checks are `drill_topology_unresolved`. Such splits
+are not confirmed opens. No alternative board snapshots or second graph are
+retained. Invalid drill generation stops preparation instead of using an
+unconfirmed hole. Finite approximation limits still apply.
 This is a geometric part of P4, not completion of P4 or a physical solver.
 See [geometry precision, tests and artifacts](../../docs/experimental/analyze/copper-geometry-verification.md).
 
