@@ -123,6 +123,16 @@ shared addon (`npm run native:build`) and JS workers (`npm run build`) first.
 
 The launcher's own infrastructure tests also cover data-only fixtures:
 
+`geometry.ts` delegates to `tests/helpers/pcb-analysis-geometry.ts` through the
+same process runtime. Run `npm run test:pcb-analyze -- --all --name geometry`.
+Every run saves `report.json`, `geometry.json`, `measurements.json`, and one
+`layer-<index>-<name>.svg` per copper layer. SVG uses mm/Y-down, source IDs in
+attributes/tooltips, red copper for shorts and blue outlines for nets occurring
+in separate physical islands. It is debug evidence, not the product PCB Preview.
+`invalid` exits nonzero; `partial` is printed explicitly and retains limitations;
+short findings do not discard the snapshot. Cleanup runs in `finally`.
+See [geometry acceptance evidence](../../docs/experimental/analyze/copper-geometry-verification.md).
+
 ```bash
 node --test scripts/test-pcb-analyze.test.mjs
 ```

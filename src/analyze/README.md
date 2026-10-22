@@ -1,6 +1,6 @@
 # Analysis execution boundary
 
-Internal infrastructure for the existing structural RoutingBoardV2 importer.
+Internal infrastructure for structural RoutingBoardV2 import and copper geometry preparation.
 There is no public `/analyze` package export or analysis DSL at this stage.
 
 ```text
@@ -11,11 +11,22 @@ parent TypeScript → bounded FIFO → reusable workerpool process → shared .n
 
 Use `runAnalysisProblem({ kind: 'import-board', boardJson }, options)` from
 `run-analysis.ts`. The result type comes from `native/analyze/index.d.ts`.
+`runAnalysisProblem({ kind: 'prepare-geometry', boardJson, geometry? }, options)`
+uses the same queue, deadlines and lifecycle. Its inferred result is an
+`AnalysisGeometryReport`; the import operation still returns `AnalysisImportReport`.
+The geometry report distinguishes nominal snapshots from reliable/possible
+copper. Reliable islands and short findings reference `reliable_regions`, not
+nominal `regions`; possible edges are never marked reliable. Bounds share the
+source path/layer provenance. Consult `possible_islands` and `topology_uncertain`
+before interpreting a split as an open.
+The optional geometry settings are validated and copied on admission. See
+[geometry policy and evidence](../../docs/experimental/analyze/copper-geometry-verification.md).
 The built `dist/analysis-runtime.js` is an internal package smoke-test entry.
-Only the string task and job ID cross IPC; callbacks and AbortSignal stay in
+Only the serializable task (JSON string and optional numeric geometry settings)
+and job ID cross IPC; callbacks and AbortSignal stay in
 the parent. Importing the runtime does not load the addon. The ready process
 loads `native/node-addon/index.cjs`, emits `started`, and calls its synchronous
-`importAnalysisBoard` binding. Internal Rust Board data is neither returned nor
+selected import/preparation binding. Internal Rust Board data is neither returned nor
 retained between calls. Analyze stays F64 and does not initialize GPU.
 
 ## Limits and lifecycle
@@ -66,7 +77,7 @@ placement and analysis shutdown even when either fails.
 
 Queue/process limits are not native RAM or RSS limits. No V8 heap limit is
 claimed as a Rust memory limit. Global placement/analysis CPU scheduling, hard
-RSS control, caching, sessions, geometry preparation and solvers remain outside
+RSS control, caching, sessions, meshing and solvers remain outside
 this stage.
 
 ## Checks

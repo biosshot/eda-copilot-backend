@@ -237,3 +237,12 @@ pub fn import_analysis_board(json: String) -> Value {
     let report = pcb_analyze::import_json(&json);
     serde_json::json!({"imported":report.board.is_some(),"accepted":report.accepted,"diagnostics":report.diagnostics})
 }
+
+/// F64 physical copper preparation; no placement float guard or GPU context.
+#[napi]
+pub fn prepare_analysis_geometry(json: String, options: Option<Value>) -> Result<Value> {
+    let options = options.map(serde_json::from_value::<pcb_analyze::geometry::GeometryOptions>)
+        .transpose().map_err(|e| napi::Error::from_reason(e.to_string()))?.unwrap_or_default();
+    let report = pcb_analyze::geometry::prepare_json(&json, options);
+    serde_json::to_value(report).map_err(|e| napi::Error::from_reason(e.to_string()))
+}

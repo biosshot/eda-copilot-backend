@@ -41,7 +41,7 @@ function rustReports(paths: string[]): AnalysisImportReport[] {
 }
 
 test('single addon retains all production exports, versions and matching CommonJS declarations', () => {
-    assert.deepEqual(Object.keys(addon).sort(), [...previousExports, 'importAnalysisBoard'].sort());
+    assert.deepEqual(Object.keys(addon).sort(), [...previousExports, 'importAnalysisBoard', 'prepareAnalysisGeometry'].sort());
     const declaration = readFileSync('native/pcb-board-packer/index.d.ts', 'utf8') + readFileSync('native/analyze/index.d.ts', 'utf8');
     const aggregate = readFileSync('native/node-addon/index.d.cts', 'utf8');
     assert.match(aggregate, /export \* from '\.\.\/pcb-board-packer\/index\.js'/);

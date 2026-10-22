@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Analysis copper geometry
+
+- Correct false intra-source drill necks by deriving reliable and possible copper envelopes before booleans, retaining the nominal snapshot separately. Report unresolved topology with source paths; separate reliable islands do not assert an open. Bound envelope generation, preserve real narrow bridges as possible, and add round/slot, rotated/translated and worker regressions. Include `prepareAnalysisGeometry` in the strict addon export contract test.
+
+- Prepare F64 physical copper and conservative connectivity from the existing validated analysis model. Add validated polygon operations, bounded curved primitives, global scoped drilling, source provenance, physical islands/short findings and explicit incomplete/uncertain states. Expose one internal preparation operation through the shared addon and existing process runtime, with eight named geometry runs saving JSON/SVG evidence. Preserve structural import reports, placement algorithms/contracts, V2 and captured inputs; no meshing, refill or physical solver is added.
+
 ### Analysis execution
 
 - Add an internal lazy process-worker runtime for structural board import with a bounded FIFO, admission-based monotonic deadlines, typed execution failures, targeted process cancellation and idempotent shutdown through `disposeBackend`. Add eight named `import` fixture runs and installed-package analysis/placement worker checks. Keep native import reports, F64 analyze, placement behavior and saved inputs unchanged; no public analysis DSL or physical solver is introduced.

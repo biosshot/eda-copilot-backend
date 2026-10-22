@@ -1,11 +1,22 @@
-# PCB analyze: board import
+# PCB analyze: board import and copper geometry
 
 Standalone Rust library (`pcb-analyze`, ordinary `rlib`) with no Node addon,
 packer dependency or GPU initialization. The shared
 [Node host](../node-addon/README.md) calls this importer through the internal
-`importAnalysisBoard(json)` binding. This library implements
-only the RoutingBoardV2 input boundary. It does not complete P3/P4 of the broader
-analysis plan.
+`importAnalysisBoard(json)` and `prepareAnalysisGeometry(json, options?)` bindings.
+The importer retains its original semantics. `geometry::prepare` consumes its
+validated `model::Board`; `geometry::prepare_json` is a boundary convenience.
+The separate serializable geometry report does not expose the internal Board.
+`regions`/`layers` are nominal geometry. `reliable_regions` are the graph nodes
+referenced by `contacts`, `islands`, and findings; `possible_regions` have their
+own `possible_contacts`/`possible_islands`. IDs use distinct namespaces; link
+snapshots by source path and layer (one source can have multiple fragments).
+The two bounds are constructed before clipping/drilling, including features
+absent from the nominal result. `topology_uncertain` means the bounds cannot
+establish connectivity; `net_islands` does not assert an open. Envelope budget
+failure is invalid and does not fall back to nominal connectivity.
+This is a geometric part of P4, not completion of P4 or a physical solver.
+See [geometry precision, tests and artifacts](../../docs/experimental/analyze/copper-geometry-verification.md).
 
 ## API and data boundary
 
@@ -43,7 +54,7 @@ All coordinates and lengths stay F64 millimetres in the authored absolute Y-down
 board frame; rotations stay in degrees. No origin shift, Y inversion, bottom-side
 mirror, rounding or winding change is performed. Pad shapes, drill offsets and
 drill rotations remain pad-local; component outlines remain absolute. Geometry
-placement/boolean operations belong to a later preparation stage.
+placement/boolean operations are performed separately by `geometry`, not import.
 
 Layers must be listed in physical order with strictly increasing indices and
 consistent top/inner/bottom sides. Explicit via endpoints must increase in that

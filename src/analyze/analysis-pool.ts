@@ -6,14 +6,14 @@ import { placementWorkerForkOptions } from '../pcb-layout/worker-process-options
 import env from '../utils/env.ts';
 import {
     AnalysisExecutionError, isAnalysisProblem,
-    type AnalysisExecutionCode, type AnalysisImportReport, type AnalysisProblem,
+    type AnalysisExecutionCode, type AnalysisResult, type AnalysisProblem,
     type AnalysisProgress, type RunAnalysisOptions,
 } from './types.ts';
 
 type Config = { maxWorkers: number; maxQueueSize: number; timeoutMs: number; terminateTimeoutMs: number };
 type Job = {
     id: string; problem: AnalysisProblem; options: RunAnalysisOptions; deadline: number;
-    resolve: (report: AnalysisImportReport) => void; reject: (error: AnalysisExecutionError) => void;
+    resolve: (report: AnalysisResult) => void; reject: (error: AnalysisExecutionError) => void;
     timer?: ReturnType<typeof setTimeout>; abort: () => void; settled: boolean; started: boolean; slot?: Slot;
 };
 type Slot = { pool: Pool; job?: Job; stopping?: Promise<void> };
@@ -46,7 +46,8 @@ export class AnalysisPool {
 
     constructor(private readonly workerScript: string, private readonly config = analysisPoolConfig()) {}
 
-    run(problem: AnalysisProblem, options: RunAnalysisOptions = {}): Promise<AnalysisImportReport> {
+    run<P extends AnalysisProblem>(problem: P, options?: RunAnalysisOptions): Promise<AnalysisResult<P>>;
+    run(problem: AnalysisProblem, options: RunAnalysisOptions = {}): Promise<AnalysisResult> {
         if (this.closed) return Promise.reject(new AnalysisExecutionError('DISPOSED', 'Analysis pool is disposing or disposed'));
         if (!isAnalysisProblem(problem) || !validOptions(options)) {
             return Promise.reject(new AnalysisExecutionError('INVALID_REQUEST', 'Invalid analysis problem or execution options'));
@@ -61,7 +62,9 @@ export class AnalysisPool {
         const snapshot = { ...options };
         return new Promise((resolve, reject) => {
             const job: Job = {
-                id: randomUUID(), problem: { kind: problem.kind, boardJson: problem.boardJson }, options: snapshot,
+                id: randomUUID(), problem: problem.kind === 'prepare-geometry'
+                    ? { kind: problem.kind, boardJson: problem.boardJson, ...(problem.geometry ? { geometry: { ...problem.geometry } } : {}) }
+                    : { kind: problem.kind, boardJson: problem.boardJson }, options: snapshot,
                 deadline: acceptedAt + (snapshot.timeoutMs ?? this.config.timeoutMs),
                 resolve, reject, settled: false, started: false, abort: () => this.fail(job, 'ABORTED'),
             };
@@ -102,7 +105,7 @@ export class AnalysisPool {
         job.timer = setTimeout(() => this.armDeadline(job), Math.min(remaining, 2_147_483_647));
     }
 
-    private finish(job: Job, report?: AnalysisImportReport, error?: AnalysisExecutionError) {
+    private finish(job: Job, report?: AnalysisResult, error?: AnalysisExecutionError) {
         if (job.settled) return;
         job.settled = true;
         clearTimeout(job.timer);
@@ -157,7 +160,7 @@ export class AnalysisPool {
     }
 
     private execute(slot: Slot, job: Job) {
-        let result: PromiseLike<AnalysisImportReport>;
+        let result: PromiseLike<AnalysisResult>;
         try {
             result = slot.pool.exec('importAnalysisInWorker', [job.problem, job.id], { on: event => {
                 if (job.settled || job.started || event?.jobId !== job.id || event.phase !== 'started') return;

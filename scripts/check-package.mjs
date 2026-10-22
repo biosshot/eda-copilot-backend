@@ -57,6 +57,13 @@ const analysisFixtures = ['NanoScope', 'NanoSpec', 'ESPower', 'BandAmpV5', 'USB_
     return { name, json, expected: localNative.importAnalysisBoard(json) };
   });
 writeFileSync(join(consumer, 'analysis-fixtures.json'), JSON.stringify(analysisFixtures));
+const geometryCoupon = JSON.parse(analysisFixtures[0].json);
+geometryCoupon.pads = geometryCoupon.pads.slice(0, 1);
+geometryCoupon.holes = [];
+geometryCoupon.copper = { fixed: { tracks: [], vias: [], zones: [] }, editable: { tracks: [], vias: [], zones: [] } };
+const geometryJson = JSON.stringify(geometryCoupon);
+assert.equal(typeof localNative.prepareAnalysisGeometry, 'function', 'Rebuild the shared addon for copper geometry');
+writeFileSync(join(consumer, 'geometry-fixture.json'), JSON.stringify({ json: geometryJson, expected: localNative.prepareAnalysisGeometry(geometryJson) }));
 writeFileSync(join(consumer, 'smoke.mjs'), `
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -83,6 +90,10 @@ for (const { name, json, expected } of JSON.parse(readFileSync('analysis-fixture
   assert.deepEqual(progress, ['queued', 'started', 'completed']);
 }
 assert.equal((await runAnalysisProblem({ kind: 'import-board', boardJson: '{' })).imported, false);
+const geometry = JSON.parse(readFileSync('geometry-fixture.json', 'utf8'));
+assert.deepEqual(native.prepareAnalysisGeometry(geometry.json), geometry.expected);
+assert.deepEqual(await runAnalysisProblem({ kind: 'prepare-geometry', boardJson: geometry.json }), geometry.expected);
+assert.equal((await runAnalysisProblem({ kind: 'prepare-geometry', boardJson: '{' })).status, 'invalid');
 await terminateAnalysisPool();
 assert.equal((await runAnalysisProblem({ kind: 'import-board', boardJson: '{}' })).imported, false);
 } finally { await terminateAnalysisPool(); }
@@ -119,6 +130,7 @@ import native = require('./node_modules/eda-copilot-backend/native/node-addon/in
 const imported: boolean = native.importAnalysisBoard('{}').imported;
 const sourceId: string | null = native.importAnalysisBoard('{}').diagnostics[0].source_id;
 const existingContract: number = native.contractVersion();
+const geometryStatus: 'complete' | 'partial' | 'invalid' = native.prepareAnalysisGeometry('{}', { max_deviation_mm: 0.001 }).status;
 const circuit: CircuitMod = { add_components: [], add_reused_blocks: [], rm_components: null, external_rm_connect: null, external_connect: null };
 const footprint: FootprintSpec = { name: 'local', width: 2, height: 1, pads: [] };
 componentSearch({ MPN: 'TEST' });
