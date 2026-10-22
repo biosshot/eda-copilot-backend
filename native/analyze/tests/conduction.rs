@@ -300,11 +300,23 @@ fn plated_spans_npth_missing_layer_contacts_and_finite_barrels() {
     b["pads"][0]["hole"]["plated"] = json!(true);
     b["pads"][0]["hole"]["shape"] = json!("slot");
     b["pads"][0]["hole"]["slotLengthMm"] = json!(2);
-    let r = run(&b, options());
-    assert!(!r.barrels[0].ready);
-    assert!(r.barrels[0]
-        .reasons
-        .contains(&"plated_slot_unsupported".into()));
+    let mut slot_options = options();
+    slot_options.mesh.max_edge_mm = Some(0.25);
+    let r = run(&b, slot_options);
+    assert!(
+        r.barrels[0].ready,
+        "{:?} {:?}",
+        r.barrels[0].reasons, r.diagnostics
+    );
+    assert_eq!(r.barrels[0].segments.len(), 3);
+    let slot_section = (std::f64::consts::PI * (0.525f64.powi(2) - 0.5f64.powi(2))
+        + 2. * (2. - 1.) * 0.025)
+        * 1e-6;
+    near(
+        r.barrels[0].segments[0].cross_section_m2.unwrap(),
+        slot_section,
+        1e-14,
+    );
     assert!(r.counts.triangles > 0);
 }
 #[test]
@@ -717,4 +729,31 @@ fn absent_geometry_contact_does_not_require_copper_on_every_span_layer() {
     assert_eq!(barrel.contacts.len(), 3);
     assert_eq!(barrel.segments.len(), 2);
     assert!(r.domains.iter().all(|d| d.readiness.dc_ready));
+}
+
+#[test]
+fn boundary_subdivision_roundoff_does_not_create_isolated_triangles() {
+    let shape: Value = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/conduction-boundary-roundoff.json"
+    ))
+    .unwrap();
+    let mut b = board();
+    b["outline"] = pts(&[[-30., -30.], [30., -30.], [30., 30.], [-30., 30.]]);
+    let convert = |v: &Value| {
+        v.as_array()
+            .unwrap()
+            .iter()
+            .map(|p| json!({"x":p[0],"y":p[1]}))
+            .collect::<Vec<_>>()
+    };
+    let mut p = pad("boundary", 0., 0., 1., 1.);
+    p["shape"] = json!({"kind":"polygon","polygon":{"outer":convert(&shape["outer"]),"holes":shape["holes"].as_array().unwrap().iter().map(convert).collect::<Vec<_>>()}});
+    b["pads"] = json!([p]);
+    let mut o = options();
+    o.mesh.max_edge_mm = Some(0.5);
+    o.mesh.max_area_mm2 = 1.;
+    let r = run(&b, o);
+    assert!(r.domains[0].readiness.dc_ready, "{:?}", r.diagnostics);
+    near(r.domains[0].area_mm2, r.domains[0].mesh_area_mm2, 1e-8);
+    assert_eq!(r.domains[0].terminals.len(), 1);
 }

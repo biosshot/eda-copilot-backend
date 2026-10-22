@@ -25,19 +25,18 @@ function context(b?: RoutingBoardV2) {
   const api = createAnalysisApi({ board: b }, options, () => {});
   return { api, a: b ? api.globals.analysis({ board: b }) : api.globals.analysis() };
 }
-const wire = `const a=analysis(); const c=a.conductor({lengthMm:10,widthMm:1,thicknessMm:.035,material:{conductivitySM:58e6}});`;
+const wire = `const a=analysis(); const c=a.conductor({lengthMm:10,widthMm:1,thicknessMm:.035,material:{conductivitySM:58e6,state:'constant isotropic coupon'}});`;
 
-test('production runner awaits JS, retains failed/unknown checks and explicit solver failure diagnostics', async () => {
+test('production runner awaits JS, retains failed/unknown checks and computes conductor DC', async () => {
   const result = await runAnalysisDsl({ code: `${wire}
     a.check({name:'fail', actual:2,max:1,unit:'V'});
     a.check({name:'unknown',actual:NaN,min:0,unit:'V'});
     await Promise.resolve(); a.log({level:'info',message:'after checks'});
     await a.dc().conductor(c).currentA(1).run();` });
-  assert.equal(result.status, 'failed'); assert.equal(result.error?.code, 'ANALYZER_NOT_IMPLEMENTED');
+  assert.equal(result.status, 'complete');
   assert.deepEqual(result.reports[0].summary, { pass: 0, fail: 1, unknown: 1 });
   assert.equal((result.reports[0].logs[0] as { message: string }).message, 'after checks');
-  assert.ok(result.reports[0].diagnostics.some(d => d.code === 'ANALYZER_NOT_IMPLEMENTED'));
-  assert.ok(result.error?.line);
+  assert.equal((result.reports[0].calculations.at(-1) as {result:{status:string}}).result.status,'complete');
 });
 
 test('production equals checks reject incompatible units without stopping execution', async () => {
@@ -141,7 +140,7 @@ test('missing sections, units, modes and fabricated targets are rejected without
   assert.throws(() => a.model({ kind: 'driver', lowV: 0, highV: 3.3, outputResistanceOhm: 20 } as never));
   assert.throws(() => a.model({ kind: 'capacitor', capacitanceF: 1e-6 }), /parasitics/);
   const p = await a.dc().conductor(c).currentA(1).prepare();
-  assert.equal(p.structurallyValid, true); assert.equal(p.physicalReady, false); assert.equal(p.executorAvailable, false);
+  assert.equal(p.structurallyValid, true); assert.equal(p.physicalReady, false); assert.equal(p.executorAvailable, true);
 });
 
 test('boardless analysis does not capture global board; unknown and ambiguous references fail', async () => {
@@ -205,7 +204,7 @@ test('checks preserve units, validity and unknown data; result operations do not
   assert.equal(a.check({ name: 'missing', actual: unavailable('V', 'not evaluated'), min: 0, unit: 'V' }).status, 'unknown');
   assert.equal(a.check({ name: 'config', actual: 1, min: 2, max: 0, unit: 'V' }).status, 'unknown');
   assert.equal(a.check({ name: 'no condition', actual: 1 }).status, 'unknown');
-  assert.equal(real.abs().validity.status, 'unavailable');
+  assert.equal(real.abs().value, 3.3); assert.equal(real.abs().validity.status, 'conditional');
   assert.equal(real.at({ frequencyHz: 1 }).validity.status, 'unavailable');
   assert.doesNotThrow(() => JSON.stringify(a.report()));
 });
@@ -336,6 +335,12 @@ test('incompatible resource analyses, wrong spectrum units, SI model bindings an
   const si = await a.si().network(n).drivers([{ port: n.port('input'), model: { id: 'pair-driver', kind: 'driver', ports: ['p', 'n'], analyses: ['thermal'] }, stimulus: { kind: 'bits', bits: '01', bitRateBps: 1e6, riseS: 1e-9, fallS: 1e-9, repeatCount: 1 } }]).receivers([{ port: n.port('output'), model: { kind: 'rc-input', capacitanceF: 1e-12 } }]).time({ stopS: 1e-5, sampleStepS: 1e-9 }).prepare();
   assert.equal(si.structurallyValid, false);
   assert.ok(si.diagnostics.some(d => d.code === 'INVALID_BINDING')); assert.ok(si.diagnostics.some(d => d.code === 'INCOMPATIBLE_MODEL'));
+});
+
+test('explicit large report budget is bounded without changing the default', async () => {
+  const result = await runAnalysisDsl({ code: 'analysis().log({level:"info",message:"explicit large report budget"});' }, { maxOutputBytes: 128*1024*1024 });
+  assert.equal(result.status, 'complete');
+  await assert.rejects(() => runAnalysisDsl({ code: 'analysis();' }, { maxOutputBytes: 128*1024*1024+1 }), /Invalid scenario limits/);
 });
 
 test('byte/entry limits apply across contexts and large errors remain bounded', async () => {

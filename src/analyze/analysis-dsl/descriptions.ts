@@ -29,7 +29,8 @@ export function stackup(input: StackupInput): StackupDescription {
   });
   const total = layers.reduce((sum, l) => sum + l.thicknessMm, 0);
   if (v.boardThicknessMm !== undefined && Math.abs(total - v.boardThicknessMm) > 1e-6) invalid('boardThicknessMm must equal layer sum, excluding mask (tolerance 1e-6 mm)');
-  const routing: RoutingStackup = { ...v, layers };
+  const { platingMaterial: _platingMaterial, diameterConvention: _diameterConvention, ...routingInput } = v;
+  const routing: RoutingStackup = { ...routingInput, layers };
   return freeze({ kind: 'stackup', input: v, routing });
 }
 

@@ -1,6 +1,6 @@
 /** Analysis DSL, variant B. Executable source is JavaScript with top-level await.
- * Reference this file for IDE globals. No production physical solver is installed:
- * every analysis run currently rejects with ANALYZER_NOT_IMPLEMENTED after prepare.
+ * Reference this file for IDE globals. Production supports constant linear DC;
+ * other analyses reject with ANALYZER_NOT_IMPLEMENTED after prepare.
  * Descriptions, validation, reports and explicit-value sweep are implemented.
  * Coordinates: millimetres, absolute board Y down; no implicit material defaults.
  * This document imports only the package's public, existing board transport.
@@ -21,9 +21,10 @@ export interface DataDescription {
   /** Actual supplied data or artifact identity, never a fabricated file path. */
   data?: Json; contextId?: string;
 }
-/** Operations preserve units and missing data. Numerical post-processing is not
- * implemented at this stage (except identity min/max of real scalar data).
- * Unsupported operations return unavailable with diagnostics, never zero.
+/** Real scalar abs/real/imaginary/magnitude and finite real min/max reducers.
+ * Partial reducers remain conditional; potentials with independent references
+ * cannot be reduced together. Complex/series transforms and at() are unavailable.
+ * Unsupported operations return unavailable with diagnostics, never physical zero.
  */
 export interface DataValue extends DataDescription {
   min(): DataValue; max(): DataValue; abs(): DataValue;
@@ -98,6 +99,8 @@ export type ResistorInput = ComponentBase & Pick<ComponentInput, 'resistanceOhm'
 export type CapacitorInput = ComponentBase & Pick<ComponentInput, 'capacitanceF' | 'esrOhm' | 'eslH' | 'ideal'>;
 export type InductorInput = ComponentBase & Pick<ComponentInput, 'inductanceH' | 'seriesResistanceOhm' | 'ideal'>;
 export type StackupInput = Omit<RoutingStackup, 'layers'> & {
+  /** Explicit scenario barrel physics, never added to RoutingBoardV2. */
+  platingMaterial?: string; diameterConvention?: 'finished_hole' | 'before_plating';
   layers: readonly (
     | { kind: 'copper'; name: string; thicknessMm?: number; thicknessOz?: number; material?: string }
     | { kind: 'dielectric'; name: string; thicknessMm: number; material?: string; relativePermittivity?: number; lossTangent?: number }
@@ -161,7 +164,11 @@ export interface EmExcitation { port: Port; incidentPowerW: number; phaseDeg: nu
 export type Coupling = { target: Selector; thermalNode: string } | { element: string; thermalNode: string };
 export interface Configurations {
   geometry: CommonOptions & { scope?: readonly Selector[]; rules?: readonly Rule[] };
-  dc: CommonOptions & ElectricalOptions & { conductor?: Conductor; currentA?: number; voltageV?: number };
+  dc: CommonOptions & ElectricalOptions & { conductor?: Conductor; currentA?: number; voltageV?: number;
+    /** Unknown CAD fill freshness may be used only as an explicitly conditional snapshot. */
+    inputPolicy?: { cadFill: 'strict' | 'snapshot' };
+    mesh?: { maxAreaMm2?: number; minAngleDeg?: number; maxNodes?: number; maxTriangles?: number; maxRefinementSteps?: number; geometryDeviationMm?: number };
+  };
   pi: CommonOptions & ElectricalOptions & { domain?: 'frequency' | 'time'; frequency?: Frequency; frequencyHz?: number; time?: Time; initial?: 'steady' | FinalState };
   thermal: CommonOptions & ThermalOptions;
   electrothermal: CommonOptions & Pick<PhysicalOptions, 'stackup' | 'materials'> & { electrical?: ElectricalOptions & { operating?: readonly { target: Selector; gateVoltageV: number }[] }; thermal?: ThermalOptions; couplings?: readonly Coupling[]; time?: Time };
@@ -174,8 +181,8 @@ export interface Configurations {
   networkParameters: CommonOptions & { network?: Network | Line; frequency?: Frequency; frequencyHz?: number; representation?: 'S' | 'Z' | 'Y'; referenceOhm?: number | Readonly<Record<string, number>> };
 }
 export interface Preparation {
-  kind: AnalysisKind; contextId: string; structurallyValid: boolean; physicalReady: false;
-  executorAvailable: false; diagnostics: readonly Diagnostic[]; components: readonly Json[];
+  kind: AnalysisKind; contextId: string; structurallyValid: boolean; physicalReady: boolean;
+  executorAvailable: boolean; diagnostics: readonly Diagnostic[]; components: readonly Json[];
   /** Explicit field provenance; requirements needing extraction remain unverified. */
   inputs: Readonly<Record<string, { source: 'manual'; value: Json }>>;
   assumptions: readonly string[];
@@ -189,6 +196,20 @@ export interface ResultBase {
   method: string; inputs: Json; assumptions: readonly string[]; contextId: string;
 }
 export interface DcResult extends ResultBase {
+  /** Real solution/mesh, quality, coverage and timings. Map data references this ID.
+   * External pad electrodes use the first physical layer; no across-layer pad short.
+   * Barrel rings are circumferential equipotential electrodes with finite segments.
+   * Current density is volumetric A/mm²; triangle losses are W. Peaks at ideal
+   * sharp corners depend on mesh; no transient or constant-power model. */
+  solution?: Json;
+  /** Port declarations alone do not connect electrodes or select domains.
+   * Active source/load/element pads use their electrode potential. A passive
+   * single-pad side reads the area-weighted piecewise-linear FEM potential over
+   * all prepared copper terminal triangles on its first physical surface,
+   * excluding bores; it adds no conductivity or solve. Later-declared ports may
+   * observe this immutable result too. Missing/uncomputed/incomplete coverage,
+   * incompatible mathematical gauges and aggregated sides are unavailable.
+   * No fallback to another layer or first mesh node is performed. */
   voltage(port: Port): DataValue; current(target: Port | Selector | string): DataValue;
   resistance: DataValue; losses: DataValue; lossMap: DataValue; voltageMap: DataValue; currentDensityMap: DataValue;
 }

@@ -83,6 +83,7 @@ fn err(d: &mut Domain, r: &mut ConductionReport, code: &str, msg: &str) {
 }
 pub(super) fn build_domain(
     g: &PreparationReport,
+    planar: &PlanarConnectivity,
     layer: &str,
     snapshot: &PolygonSnapshot,
     r: &mut ConductionReport,
@@ -113,29 +114,42 @@ pub(super) fn build_domain(
         .collect();
     let ids: Vec<_> = regions.iter().map(|v| v.id.clone()).collect();
     let mut reasons = Vec::<String>::new();
-    let uncertain =
-        g.contacts.iter().any(|c| {
-            !c.reliable && c.kind != "point" && (ids.contains(&c.a) || ids.contains(&c.b))
-        }) || g.diagnostics.iter().any(|d| {
-            paths.contains(&d.path)
-                && (d.code.contains("topology_uncertain")
-                    || d.code.contains("topology_unresolved")
-                    || d.code == "barrel_contact_uncertain")
-        });
+    let uncertain = g.contacts.iter().any(|c| {
+        !c.reliable
+            && c.kind != "point"
+            && !planar.connected(&c.a, &c.b)
+            && (ids.contains(&c.a) || ids.contains(&c.b))
+    }) || g.diagnostics.iter().any(|d| {
+        paths.contains(&d.path)
+            && !planar.split_warning_redundant(g, d)
+            && (d.code.contains("topology_uncertain")
+                || d.code.contains("topology_unresolved")
+                || (d.code == "barrel_contact_uncertain" && !planar.barrel_warning_redundant(g, d)))
+    });
     if uncertain {
         reasons.push("topology_uncertain".into());
     }
-    let copper_complete = g.excluded.is_empty()
+    let copper_available = g.excluded.is_empty()
         && !g
             .diagnostics
             .iter()
             .any(|d| d.code == "independent_drills_missing" || d.code == "drill_span_unconfirmed")
-        && !g.fills.iter().any(|f| {
-            f.layer == layer
-                && (f.status != "available" || f.freshness.as_deref() != Some("current"))
-        });
+        && !g
+            .fills
+            .iter()
+            .any(|f| f.layer == layer && f.status != "available");
+    let freshness_current = !g
+        .fills
+        .iter()
+        .any(|f| f.layer == layer && f.freshness.as_deref() != Some("current"));
+    let copper_complete = copper_available && freshness_current;
     if !copper_complete {
-        reasons.push("incomplete_copper_or_fill_freshness".into());
+        if !copper_available {
+            reasons.push("incomplete_copper".into());
+        }
+        if !freshness_current {
+            reasons.push("fill_freshness_unconfirmed".into());
+        }
     }
     let sheet = r
         .profile
@@ -374,15 +388,97 @@ fn build(
                         .max((original[0] - point[0]).hypot(original[1] - point[1]));
                 }
             }
-            constraints.extend(pad_edges.into_iter().filter(|s| s.a != s.b));
+            for edge in pad_edges.into_iter().filter(|s| s.a != s.b) {
+                // A clipped pad edge can span several collinear boundary edges.
+                // Reuse their covered intervals, retaining only its interior parts.
+                let dx = edge.b[0] - edge.a[0];
+                let dy = edge.b[1] - edge.a[1];
+                let length = dx.hypot(dy);
+                let envelope = AABB::from_corners(
+                    [
+                        edge.a[0].min(edge.b[0]) - align,
+                        edge.a[1].min(edge.b[1]) - align,
+                    ],
+                    [
+                        edge.a[0].max(edge.b[0]) + align,
+                        edge.a[1].max(edge.b[1]) + align,
+                    ],
+                );
+                let mut covered = vec![];
+                for boundary in domain_segments.locate_in_envelope_intersecting(&envelope) {
+                    let project = |p: [f64; 2]| {
+                        ((p[0] - edge.a[0]) * dx + (p[1] - edge.a[1]) * dy) / (length * length)
+                    };
+                    let line_distance = |p: [f64; 2]| {
+                        ((p[0] - edge.a[0]) * dy - (p[1] - edge.a[1]) * dx).abs() / length
+                    };
+                    if line_distance(boundary.a) > align || line_distance(boundary.b) > align {
+                        continue;
+                    }
+                    let (a, b) = (project(boundary.a), project(boundary.b));
+                    let (lo, hi) = if a < b { (a, b) } else { (b, a) };
+                    if hi > 0. && lo < 1. {
+                        covered.push((lo.max(0.), hi.min(1.)));
+                    }
+                }
+                covered.sort_by(|a, b| a.0.total_cmp(&b.0));
+                let mut gaps = vec![];
+                let mut end = 0f64;
+                for (a, b) in covered {
+                    if a > end {
+                        gaps.push((end, a));
+                    }
+                    end = end.max(b);
+                }
+                if end < 1. {
+                    gaps.push((end, 1.));
+                }
+                for (a, b) in gaps {
+                    if (b - a) * length <= tol * 16. {
+                        continue;
+                    }
+                    let point = |t: f64| {
+                        if t == 0. {
+                            edge.a
+                        } else if t == 1. {
+                            edge.b
+                        } else {
+                            let p = [edge.a[0] + t * dx, edge.a[1] + t * dy];
+                            let envelope = AABB::from_corners(
+                                [p[0] - align, p[1] - align],
+                                [p[0] + align, p[1] + align],
+                            );
+                            domain_segments
+                                .locate_in_envelope_intersecting(&envelope)
+                                .flat_map(|s| [s.a, s.b])
+                                .filter(|q| (p[0] - q[0]).hypot(p[1] - q[1]) <= align)
+                                .min_by(|a, b| {
+                                    (p[0] - a[0])
+                                        .hypot(p[1] - a[1])
+                                        .total_cmp(&(p[0] - b[0]).hypot(p[1] - b[1]))
+                                })
+                                .unwrap_or(p)
+                        }
+                    };
+                    let (a, b) = (point(a), point(b));
+                    if a != b {
+                        constraints.push(Segment {
+                            a,
+                            b,
+                            ..edge.clone()
+                        });
+                    }
+                }
+            }
         }
     }
     if constraints.len().saturating_mul(2) > max_nodes || max_nodes < 3 {
         return Err("Input constraints exceed remaining mesh node/triangle budget".into());
     }
     constraints.sort_by(|a, b| {
-        a.a[0]
-            .total_cmp(&b.a[0])
+        (a.kind == "terminal")
+            .cmp(&(b.kind == "terminal"))
+            .then(a.a[0].total_cmp(&b.a[0]))
             .then(a.a[1].total_cmp(&b.a[1]))
             .then(a.b[0].total_cmp(&b.b[0]))
             .then(a.b[1].total_cmp(&b.b[1]))
@@ -396,7 +492,11 @@ fn build(
             return Err("Constraint intersection budget exhausted before insertion".into());
         }
         let length = (s.b[0] - s.a[0]).hypot(s.b[1] - s.a[1]);
-        let pieces = (length / (2. * opt.max_area_mm2).sqrt()).ceil().max(1.) as usize;
+        let edge_limit = opt
+            .max_edge_mm
+            .unwrap_or(f64::INFINITY)
+            .min((2. * opt.max_area_mm2).sqrt());
+        let pieces = (length / edge_limit).ceil().max(1.) as usize;
         if pieces > max_nodes.saturating_sub(cdt.num_vertices()) {
             return Err("Boundary subdivision exceeds node budget".into());
         }
@@ -455,6 +555,19 @@ fn build(
             (p[0][0] + p[1][0] + p[2][0]) / 3.,
             (p[0][1] + p[1][1] + p[2][1]) / 3.,
         );
+        // Subdividing an exact straight boundary in F64 can put its
+        // collinear points a few ulps on either side. These faces belong to
+        // the boundary, not the copper interior; centroid rounding is unsafe.
+        let bounds = AABB::from_corners(
+            [centre.x() - tol * 16., centre.y() - tol * 16.],
+            [centre.x() + tol * 16., centre.y() + tol * 16.],
+        );
+        if domain_segments
+            .locate_in_envelope_intersecting(&bounds)
+            .any(|edge| p.iter().all(|&point| on(point, edge, tol * 16.)))
+        {
+            continue;
+        }
         if !poly.contains(&centre) {
             continue;
         }
@@ -533,7 +646,9 @@ fn build(
                 .iter()
                 .any(|s| s.kind == "outer" || s.kind == "hole")
         {
-            return Err("Open mesh edge has no copper boundary provenance".into());
+            return Err(format!(
+                "Open mesh edge has no copper boundary provenance: {a:?} -> {b:?}"
+            ));
         }
         if !matches.is_empty() {
             let kind = if matches.iter().any(|s| s.kind == "hole") {

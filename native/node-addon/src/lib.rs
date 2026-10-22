@@ -255,3 +255,20 @@ pub fn prepare_analysis_conduction(json: String, options: Option<Value>) -> Resu
     serde_json::to_value(pcb_analyze::conduction::prepare_json(&json, options))
         .map_err(|e| napi::Error::from_reason(e.to_string()))
 }
+
+/// Scenario-owned preparation and sparse factorization. No GPU or process-global cache.
+#[napi]
+pub struct AnalysisDcSession { inner: pcb_analyze::dc::Session }
+#[napi]
+impl AnalysisDcSession {
+    #[napi(constructor)]
+    pub fn new() -> Self { Self { inner: Default::default() } }
+    #[napi]
+    pub fn solve(&mut self, request: Value) -> Result<Value> {
+        let request=serde_json::from_value::<pcb_analyze::dc::Request>(request)
+            .map_err(|e| napi::Error::from_reason(format!("Invalid DC request: {e}")))?;
+        Ok(self.inner.solve(request))
+    }
+    #[napi]
+    pub fn clear(&mut self) { self.inner=Default::default(); }
+}

@@ -35,8 +35,8 @@ export function applyReportUpdate(reports: Report[], update: ReportUpdate): void
   (report[update.section] as Json[]).push(update.record);
   if (update.section === 'checks') report.summary[(update.record as unknown as CheckRecord).status]++;
 }
-/** Data operations are an explicit future computation boundary. Identity scalar
- * min/max is useful to test reports without pretending to implement series math. */
+/** Real scalar transforms and supplied finite-value reducers. No missing value
+ * becomes zero; partial reductions retain an explicit conditional coverage. */
 export function value(input: DataDescription): DataValue {
   const description = parse(data, json(input)) as DataDescription;
   const result = { ...description };
@@ -44,6 +44,18 @@ export function value(input: DataDescription): DataValue {
   for (const name of ['min', 'max', 'abs', 'real', 'imaginary', 'magnitude', 'phaseDeg', 'at']) {
     Object.defineProperty(result, name, { value: (position?: unknown) => {
       if (name === 'at') parse(z.union([z.strictObject({ timeS: z.number().finite().nonnegative() }), z.strictObject({ frequencyHz: z.number().finite().positive() })]), position);
+      if (description.validity.status !== 'unavailable') {
+        if (['min','max'].includes(name) && description.values) {
+          const references = description.data && typeof description.data === 'object' && 'independentReferences' in description.data ? description.data.independentReferences : undefined;
+          if (description.kind === 'map' && description.unit === 'V' && Array.isArray(references) && references.length > 1) return unavailable('V','Cannot reduce potentials across independent mathematical references',description.contextId);
+          const numbers = description.values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+          if (numbers.length) {
+            const partial = numbers.length !== description.values.length;
+            return value({kind:'scalar',unit:description.unit,value:numbers.reduce((a,b)=>name==='min'?Math.min(a,b):Math.max(a,b)),validity:partial?{status:'conditional',reason:'Reducer covers available real values only; missing/complex values excluded',domain:description.data}:description.validity,diagnostics:description.diagnostics,...(description.contextId?{contextId:description.contextId}:{})});
+          }
+        }
+        if (description.kind === 'scalar' && typeof description.value === 'number' && ['abs','real','imaginary','magnitude'].includes(name)) return value({...description,value:name==='imaginary'?0:name==='real'?description.value:Math.abs(description.value)});
+      }
       return (name === 'min' || name === 'max') && description.kind === 'scalar' && typeof description.value === 'number' ? value(description) : unsupported(name);
     } });
   }

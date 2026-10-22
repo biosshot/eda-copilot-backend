@@ -23,4 +23,6 @@ The project archive passed ZIP CRC verification and contains the selected PCB. I
 
 CAD fill freshness is unknown. Diagnostics retained: `EASYEDA_V2_SEQUENTIAL_CAPTURE`. Stroke expansion, where reported, still requires a physical CAD comparison. No stackup/material reference or independent numerical-analysis reference has been accepted.
 
-No analysis scripts are included yet. See [the fixture-bank README](../README.md) for future named launches and run output directories.
+Named import, geometry, mesh and DC analyses share this fixture. See [the fixture-bank README](../README.md) for commands and run output directories.
+
+DC example: edit [`dc.js`](dc.js) directly; [`dc.ts`](dc.ts) only launches it unchanged. [`dc.expectations.json`](dc.expectations.json) holds test expectations, not physical inputs. Run `npm run test:pcb-analyze -- STM32G0_CAN_RS485 --name dc` from the backend root. Exact code/provenance, audit and HTML are saved per run.

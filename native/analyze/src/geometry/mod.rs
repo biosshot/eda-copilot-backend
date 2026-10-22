@@ -771,7 +771,16 @@ pub fn prepare(board: &Board, options: GeometryOptions) -> PreparationReport {
             .map(|c| c.poly.clone())
             .collect();
         let n = ps.len();
-        let merged = areas::union(ps);
+        let mut merged = areas::union(ps);
+        let mut resolved=Vec::new();
+        for p in merged.0 {
+            if p.is_valid() { resolved.push(p); }
+            else { match areas::separate_touches(&p) {
+                Ok(parts)=>{ resolved.extend(parts); r.diagnostics.push(GeometryDiagnostic{code:"union_boundary_decomposed".into(),path:format!("layers.{}",l.name),source_id:None,message:"Overlay boundary decomposed at exact vertex touches; coordinates, area and voids retained".into(),category:"limitation".into()}); },
+                Err(_)=>resolved.push(p),
+            }}
+        }
+        merged.0=resolved;
         r.layers.push(LayerSnapshot {
             layer: l.name.clone(),
             union_area_mm2: merged.unsigned_area(),

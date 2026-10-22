@@ -41,12 +41,12 @@ function rustReports(paths: string[]): AnalysisImportReport[] {
 }
 
 test('single addon retains all production exports, versions and matching CommonJS declarations', () => {
-    assert.deepEqual(Object.keys(addon).sort(), [...previousExports, 'importAnalysisBoard', 'prepareAnalysisGeometry', 'prepareAnalysisConduction'].sort());
+    assert.deepEqual(Object.keys(addon).sort(), [...previousExports, 'importAnalysisBoard', 'prepareAnalysisGeometry', 'prepareAnalysisConduction', 'AnalysisDcSession'].sort());
     const declaration = readFileSync('native/pcb-board-packer/index.d.ts', 'utf8') + readFileSync('native/analyze/index.d.ts', 'utf8');
     const aggregate = readFileSync('native/node-addon/index.d.cts', 'utf8');
     assert.match(aggregate, /export \* from '\.\.\/pcb-board-packer\/index\.js'/);
     assert.match(aggregate, /export \* from '\.\.\/analyze\/index\.js'/);
-    const declared = [...declaration.matchAll(/export declare function (\w+)\(/g)].map(m => m[1]);
+    const declared = [...declaration.matchAll(/export declare (?:function|class) (\w+)[\s(]/g)].map(m => m[1]);
     assert.deepEqual(declared.sort(), Object.keys(addon).sort());
     assert.deepEqual([
         addon.contractVersion(), addon.blockContractVersion(), addon.passiveIslandContractVersion(),

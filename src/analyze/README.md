@@ -1,6 +1,6 @@
 # Analysis execution boundary
 
-Internal infrastructure for structural RoutingBoardV2 import, copper geometry and conduction mesh preparation.
+Internal infrastructure for RoutingBoardV2 import, copper geometry, conduction mesh and steady DC.
 There is no separate `/analyze` package export. The root exports the scenario DSL
 runner described below; native preparations remain internal.
 
@@ -12,8 +12,9 @@ installed `dist/analysis-spec-doc.d.ts`). It does not transpile TypeScript.
 `analysis()` is boardless; only `analysis({board})` opts into the snapshot. Catalogs
 are explicit host data with no built-in project models or environmental defaults.
 Builders snapshot sections, replace repeated sections and call the small internal
-`executor.ts` boundary only after structural preparation. All production analysis
-executors are currently unavailable; import/geometry/conduction are not user solvers.
+`executor.ts` boundary only after structural preparation. Constant linear DC is
+implemented; other physical analyses remain unavailable. Import/geometry/conduction
+preparations are not substitutes for a user geometry/DRC analysis.
 
 Each scenario owns one disposable workerpool process using the existing process
 fork options. A parent monotonic deadline includes startup and stops loops before
@@ -25,7 +26,7 @@ Callbacks stay in JS; only finite JSON tasks reach the executor boundary.
 
 Default limits: 120000 ms, 1000 report entries (across contexts), 4 MiB serialized
 output. Options accept positive finite `timeoutMs`, `maxEntries` 1–100000 and
-`maxOutputBytes` 4096–64 MiB; 2048 bytes are reserved for a bounded error envelope.
+`maxOutputBytes` 4096–128 MiB; 2048 bytes are reserved for a bounded error envelope.
 Context headers count against bytes. `filename` is at most 512 UTF-8 bytes with
 no control characters. Diagnostics/messages may be explicitly truncated. These
 are output/lifecycle limits, not a hard RSS or hostile-code containment guarantee.
@@ -39,8 +40,65 @@ program errors are distinct. Plot stores a typed description/data, never a fake 
 See [coverage, tests and limits](../../docs/experimental/analyze/analysis-dsl-verification.md).
 `createAnalysisApi` and `executeScenario` are internal: tests explicitly inject a
 test executor; the public runner has no executor/module-path override. Physical
-result processing/timing and search algorithms are not implemented. Explicit-value
+timing, complex/series transformations and search algorithms are not implemented. Explicit-value
 sweep runs its callback on every candidate and records individual failures.
+
+## Steady DC
+
+Production `dc().run()` automatically validates/imports/prepares supported copper,
+assembles CPU/F64 triangle sheet conductance and finite barrel segments, then uses
+`faer` sparse QR. `prepare()` is a structural diagnostic, with physicalReady
+false until native validation; executorAvailable distinguishes DC from future solvers.
+Standalone rectangular conductors use the exact uniform-strip resistance formula.
+Ideal constant voltage/current sources and constant current/resistive loads are
+supported. Circuit, constant power, dynamic operating points, resource models and
+ideal inductors are explicitly rejected. Capacitors remain DC opens.
+
+Pad electrodes cover existing finite terminal triangles on the first physical
+surface; an unmeshed first surface cannot silently fall back to the bottom.
+Barrel ring electrodes remain connected only by finite segment conductance.
+No ideal net/GND merging or hidden gmin. Current is positive delivered by a source,
+absorbed by a load; pad selectors return explicitly assigned external injection.
+Text currents use stable `source-1`/`load-1`/`component:<designator>` element IDs.
+Arbitrary net current and voltages across independent gauges are unavailable.
+
+`stackup` accepts scenario-only `platingMaterial` and `diameterConvention` alongside
+existing plating thickness. Materials need explicit conductivity/state. A complete
+referenceC/temperatureCoefficientPerK/temperatureC law applies linear resistivity;
+its unspecified empirical range remains conditional. Missing barrel physics is
+never selected from a copper name. V2 remains unchanged.
+
+Strict CAD fill freshness remains default. `.inputPolicy({cadFill:'snapshot'})`
+permits only available polygons with unknown freshness, records original freshness
+and board hash, and makes result/check/map conditional. It does not waive missing
+copper/drills, stale fills, topology, unbuilt mesh, contacts or unspecified hole spans.
+
+`.mesh({maxAreaMm2,...})` controls existing discretization. DC uses bounded boundary
+subdivision `max_edge_mm=sqrt(maxAreaMm2/4)` while keeping constraint edges fixed
+during Spade refinement. General diagnostic mesh defaults remain unchanged.
+Default DC caps: 100000 mesh nodes, 200000 triangles, 100000 reduced unknowns,
+1024 MiB conservative planning, 120 seconds. Defaults/explicit limits and actual
+counts/timings are recorded. Planning covers preparation, sparse assembly and symbolic QR factor/workspace sizes
+and maps before large allocations; RSS is measured at native call boundaries,
+not as a hard allocator ceiling or peak. Parent deadline/abort covers all stages.
+
+One scenario owns at most one native preparation/factorization; changed context,
+geometry/profile/contact/element matrix or limits invalidates it. New RHS reuses
+the factorization. Independent internal DC problems clear their session after the
+call. Native solve runs in the disposable DSL process, with no nested child to
+orphan on cancellation. There is no global DC cache or competing public runner.
+
+`result.solution` retains computed-domain mesh, real fields, geometry/bores, quality,
+physical profile, requests and provenance. Omitted-domain summaries retain original
+counts/readiness; omitted arrays do not mean absent copper. Repeated geometry uses
+a solution-ID reference in the same report. Maps carry this identity and actual
+values. J is A/mm², triangle loss W; barrel loss is separate. Real scalar transforms
+and min/max reducers preserve units/validity; partial maps stay conditional and
+potentials from independent references cannot be reduced together.
+
+See [DC verification](../../docs/experimental/analyze/dc-analysis-verification.md):
+all eight selected real PDNs solve at two loads/two meshes with convergence below 2%,
+after re-exporting three fixtures and preserving small F64 refinement corrections. Coupon physics and real-board eligibility are separate acceptance criteria.
 
 ## Internal native preparation
 
@@ -149,3 +207,28 @@ integration tests fail with rebuild guidance when the addon is missing/stale.
 The installed-package smoke uses compiled JS without repository source or tsx.
 See [fixture runs](../../tests/pcb-analyze/README.md) and the
 [verification record](../../docs/experimental/analyze/analysis-runtime-verification.md).
+
+## DC observations and saved examples
+
+`a.port` only describes selectors. Board DC activates finite-area pad electrodes
+from the current builder's sources, loads, resolved IC assignments and explicit
+resistive elements. An unused ordinary/aggregated/unready port does not change
+assembly; standalone conductor ignores board-port descriptors.
+
+`dc.voltage(port)` uses active electrode potential where present; otherwise each
+single-pad side integrates the immutable piecewise-linear FEM field over all
+prepared terminal triangles on the first physical surface (area-weighted mean,
+bores excluded). It adds no `join_all`, conductivity, domain or solve. Incomplete,
+uncomputed or incompatible-reference coverage and aggregate observations return
+unavailable with a reason; there is no first-node or other-layer fallback. A port
+may be declared after solve. Current observations still require explicit elements.
+
+Native preparation/factorization reuse is separate from report geometry reuse.
+A compact mesh reference is emitted only if its target covers all computed domains
+in the same context/board/profile/mesh; otherwise the current result retains its
+mesh and becomes the next eligible geometry owner. Earlier results remain frozen.
+
+Real-board `dc.js` files are directly authored DSL. Thin named launchers preserve
+exact text/filename and hashes, run the production runner, save evidence and invoke
+`tests/helpers/pcb-analysis-dc-audit.ts`. The audit and its negative tests are saved
+in the repository and do not invoke FEM. See the fixture README and DC verification.

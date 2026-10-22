@@ -1,12 +1,27 @@
 # Analysis DSL: полный рабочий справочник
 
-**Реализация языка, 2026-10-22:** см. [актуальные декларации](../../../../src/analyze/analysis-dsl/spec-doc.d.ts) и [статусы/проверки](analysis-dsl-verification.md). Builders и структурная подготовка реализованы; физические run, timing/численные операции над результатами и solve/optimize ещё недоступны. Ниже сохранены предметные сценарии; это не обещание работающих решателей. Каталоги ресурсов предоставляются хостом явно; иллюстративные профили среды не создаются автоматически.
+**Реализация языка, 2026-10-22:** см. [актуальные декларации](../../../../src/analyze/analysis-dsl/spec-doc.d.ts), [проверки DSL](analysis-dsl-verification.md) и [DC](dc-analysis-verification.md). Реализован постоянный линейный DC для полосы и пригодной меди платы; остальные физические run, timing, комплексные преобразования и solve/optimize недоступны. Все восемь выбранных PDN-постановок рассчитаны с проверкой сходимости после обновления трёх V2-фикстур и исправления накопления малых F64-поправок. Ниже сохранены предметные сценарии полного плана; они не обещают поддержку всех моделей. Каталоги ресурсов задаются явно.
 
 **Базовый DSL согласован:** [решения по сценариям](dsl-scenario-decisions.md), [рабочий контракт](dsl-working-contract.md). Приняты channels([...]), drivers/receivers, port/ports, timing(options) у результата, a.model и операции измерений. Отдельный механизм контроля границ/двойного учёта моделей отклонён. Языковой слой реализован; статусы вычислений перечислены в отчёте проверки, изменения допускаются по обнаруженным ограничениям.
 
 Предметная редакция: **2026-10-20**, языковая реализация: **2026-10-22**. Покрывает согласованные способы работы по плате и без платы. Это полный перечень пользовательских операций текущего плана, а не заявление о готовом решателе или поддержке произвольной физической модели.
 
-**Согласованная основа:** вариант B — `analysis({ board })` хранит snapshot платы и отчёт; каждый анализ получает собственный builder с явным `.run()`. Компоненты, stackup, материалы и условия передаются выбранному анализу. Компоненты — массив описаний с `designator`. `stackup(...)` создаёт переиспользуемое описание стека. Структурная подготовка работает; выполнение физических анализов пока недоступно.
+**Согласованная основа:** вариант B — `analysis({ board })` хранит snapshot платы и отчёт; каждый анализ получает собственный builder с явным `.run()`. Компоненты, stackup, материалы и условия передаются выбранному анализу. Компоненты — массив описаний с `designator`. `stackup(...)` создаёт переиспользуемое описание стека. Структурная подготовка работает; физическая готовность DC отдельно проверяется Rust.
+
+### Реализованное подмножество DC
+
+- Board: идеальные постоянные voltage/current sources на паре конкретных площадок; постоянные токовые и резистивные нагрузки. Компонентные токи используют прежнее распределение остатка и независимые возвраты. Defaults выбирает только явно описанные `ic`/`device`, не конденсаторы по одному net.
+- Standalone: `a.conductor({lengthMm,widthMm,thicknessMm,material:{conductivitySM,state}})` и `a.dc().conductor(c).currentA(...)` либо `.voltageV(...)`. `R=L/(sigma*w*t)` с переводом mm→SI; нет скрытого выбора меди.
+- `.stackup(...)` дополнительно принимает `platingMaterial` (ключ из `.materials(...)`) и `diameterConvention: 'finished_hole' | 'before_plating'`, помимо толщины металлизации. Это параметры сценария, V2 не расширяется. Полный закон referenceC/temperatureCoefficientPerK/temperatureC изменяет проводимость через линейную удельную резистивность; эмпирическая область не предполагается.
+- `.inputPolicy({cadFill:'snapshot'})` принимает только доступную заливку с неизвестной свежестью, явно условно. Default `strict`; stale, missing copper, topology, незавершённая mesh, slots/потерянные barrel-контакты не обходятся.
+- `.mesh({maxAreaMm2,minAngleDeg,maxNodes,maxTriangles,maxRefinementSteps,geometryDeviationMm})` задаёт дискретизацию существующего mesher. Фактическая mesh и исходные readiness сохраняются; DC использует ограниченное предварительное деление границ, без свободного дробления constraints.
+- Терминал — идеальная конечная область площадки на первом физическом слое. Межслойная площадка не закорачивает слои в обход barrel. Порты с несколькими площадками на стороне пока отклоняются: задавайте отдельные источники/нагрузки или компонентные токи.
+- `voltage(port)` — разность двух контактов с общей математической опорой; `current(port)` — ток единственного связанного элемента; `current(pad(...))` — назначенный внешний ток. Текстовые цели: `source-1`, `load-1`, `component:<designator>`. Ток произвольной net без сечения недоступен.
+- `losses` включает медь+barrel, отдельно от мощности резистивных нагрузок. `voltageMap` содержит потенциалы узлов с явной опорой, `currentDensityMap` — A/mm² треугольников, `lossMap` — W элементов. Срезы массивов и `solutionId` связывают поля с реальной mesh. Пик J у острого угла зависит от сетки.
+- Реальные scalar abs/real/imaginary/magnitude, min/max доступных real-данных сохраняют единицы и validity. Частичный reducer остаётся conditional; потенциалы независимых опор не сравниваются. Unknown не становится нулём.
+- `result.solution` содержит реальные поля/балансы/профили/coverage. Повторные RHS ссылаются на первую геометрию; у нерассчитанных доменов остаются counts/readiness и серый контур. `a.plot` хранит эти данные, локальный renderer fixtures их только отображает.
+
+Circuit, power loads, динамическая точка atS, сложные ресурсы источников/нагрузок/компонентов, нулевой DCR и произвольные solver tolerances пока отклоняются с `UNSUPPORTED_DC_MODEL`; остальные анализы — `ANALYZER_NOT_IMPLEMENTED`. Безопасное ограничение модели не считается успешно решённой платой.
 
 **Подтверждено пользователем:** `check` регистрирует результат и не останавливает последующий код; `board`, `profiles`, `models` доступны глобально; нужны профили холодной/горячей среды и изменений температуры. Остальные формы ниже — конкретный черновик для обсуждения.
 
@@ -907,3 +922,27 @@ BER, механика, CFD, корпус устройства/кабели, ун
 | 7 | Проверка и последовательность реализации | Эталонные задачи/измерения, критерии точности и производительности, порядок создания общих решателей и итоговая перепроверка всего плана |
 
 Равномерная нагрузка и ручные токи питания/возврата уже приняты. Дальше требуется проверить достаточность данных на платах, многопортовые/корпусные модели, динамические overrides и формы пространственных couplings. Распределение по площади — кандидат явного режима, не новый default. Реализация не начата.
+
+## DC passive measurements and geometry references (D1/D2)
+
+Declaring a port does not connect it. Only sources, loads, resolved pin-current
+assignments and explicitly connected resistive elements create active pad
+electrodes for the current DC builder. Unsupported aggregate sources still reject;
+an unused aggregate descriptor does not. The boardless conductor path ignores
+board-port descriptions.
+
+`dc.voltage(port)` returns positive-side minus negative-side potential. An active
+pad uses its equipotential electrode. A passive single pad uses the area-weighted
+integral of the solved linear FEM potential over its finite copper contact on the
+first physical surface, excluding holes. Every prepared contact part on that
+surface must have complete computed triangle coverage and a common mathematical
+gauge. Missing/uncomputed coverage, incompatible gauges and aggregate measurement
+sides yield unavailable; there is no point-node fallback or additional solve.
+Ports declared after solve can observe the same immutable field. Measurement does
+not add conductivity or select another region.
+
+`solution.meshReference` addresses compatible stored geometry, independently of
+native preparation/matrix reuse. All computed domains must be present at its target;
+otherwise a new compact mesh is retained. Map/plot references continue to address
+their original solution and field. Eight real-board examples live directly in
+`tests/pcb-analyze/*/dc.js`, with test-only expectations in adjacent JSON files.

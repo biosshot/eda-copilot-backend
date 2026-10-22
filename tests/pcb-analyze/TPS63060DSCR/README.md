@@ -11,7 +11,7 @@
 | Copper layers | 2 |
 | Components | 15 |
 | Copper pads | 39 |
-| Pad drills (slots included) | 7 |
+| Pad drills (slots included) | 6 |
 | Independent holes | 0 |
 | Tracks (arcs tessellated) | 73 |
 | Vias | 24 |
@@ -23,4 +23,8 @@ The project archive passed ZIP CRC verification and contains the selected PCB. I
 
 CAD fill freshness is unknown. Diagnostics retained: `EASYEDA_V2_SEQUENTIAL_CAPTURE`. Stroke expansion, where reported, still requires a physical CAD comparison. No stackup/material reference or independent numerical-analysis reference has been accepted.
 
-No analysis scripts are included yet. See [the fixture-bank README](../README.md) for future named launches and run output directories.
+Named import, geometry, mesh and DC analyses share this fixture. See [the fixture-bank README](../README.md) for commands and run output directories.
+
+V2 was re-exported from the unchanged native capture with Copilot `c7b40f2`: single-layer POLYGON API holes are omitted with `EASYEDA_V2_SINGLE_LAYER_POLYGON_HOLE_IGNORED` diagnostics. `fixture.json.reexport` records provenance; `nativeSummary` still describes the original raw capture.
+
+DC example: edit [`dc.js`](dc.js) directly; [`dc.ts`](dc.ts) only launches it unchanged. [`dc.expectations.json`](dc.expectations.json) holds test expectations, not physical inputs. Run `npm run test:pcb-analyze -- TPS63060DSCR --name dc` from the backend root. Exact code/provenance, audit and HTML are saved per run.

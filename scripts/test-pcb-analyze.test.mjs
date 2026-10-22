@@ -95,7 +95,13 @@ test('saved PCB inputs match their hashes and preserve the native capture invent
     assert.deepEqual(ids(board.components), ids(raw.components));
     assert.deepEqual(ids(board.pads), ids(raw.pads.filter(p => p.shape && (copper(p.layer) || p.layer === 'MULTI'))));
     assert.deepEqual(ids(board.holes ?? []), ids(raw.pads.filter(p => !p.shape && p.hole && p.plated === false)));
-    assert.equal(board.pads.filter(p => p.hole).length + (board.holes?.length ?? 0), raw.pads.filter(p => p.hole).length);
+    // Captures preserve the original API bug; corrected V2 omits only explicitly
+    // diagnosed single-surface polygon holes (Copilot c7b40f2).
+    const omitted = raw.pads.filter(p => p.hole && p.shape?.[0] === 'POLYGON' && ['TOP', 'BOTTOM'].includes(p.layer));
+    const warnings = evidence.diagnostics.filter(d => d.code === 'EASYEDA_V2_SINGLE_LAYER_POLYGON_HOLE_IGNORED');
+    assert.deepEqual(warnings.map(d => d.message.match(/\(([^)]+)\): ignored API hole /)?.[1]).sort(), ids(omitted), `${name}: exact omitted-hole diagnostics`);
+    const ignoredIds = new Set(ids(omitted));
+    assert.deepEqual(ids([...board.pads.filter(p => p.hole), ...(board.holes ?? [])]), ids(raw.pads.filter(p => p.hole && !ignoredIds.has(p.id))), `${name}: preserved drill IDs`);
     assert.deepEqual(ids(fixed.vias), ids(raw.vias));
     const expectedTracks = [...raw.tracks, ...raw.arcs, ...raw.routing.polylines].filter(t => copper(t.layer));
     assert.deepEqual([...new Set(ids(fixed.tracks))], [...new Set(ids(expectedTracks))]);

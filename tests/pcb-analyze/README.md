@@ -4,8 +4,9 @@ Captured, routed EasyEDA PCBs for analysis development. Each directory is one
 selected PCB, following the per-board structure of `tests/pcb-layout`. Different
 analysis scripts share the same input. Each fixture now includes `import.ts`
 for structural import, `geometry.ts` for copper preparation and `mesh.ts` for
-diagnostic conduction meshing through the isolated process runtime. No electrical
-solver or measured physical reference is included.
+diagnostic conduction meshing through the isolated process runtime. `dc.ts` runs
+production linear DC by reading the directly authored `dc.js` without transformation. Captured
+boards are not independently measured physical references.
 
 ## Saved inputs
 
@@ -21,6 +22,9 @@ tests/pcb-analyze/
     import.ts               # Shared-helper structural import in a process worker
     geometry.ts             # Single copper geometry / contacts / islands
     mesh.ts                 # Diagnostic mesh; no assumed physical material profile
+    dc.js                   # Authored Analysis DSL: physical inputs, sweep/check/plot
+    dc.ts                   # Thin launcher for the unchanged --name dc command
+    dc.expectations.json    # Test case IDs, checks and convergence; no physical models
   NanoSpec/
   ESPower/
   BandAmpV5/
@@ -80,10 +84,29 @@ npm run test:pcb-analyze -- --all --name dc
 
 `--name dc` selects **`tests/pcb-analyze/<fixture>/dc.ts`**, not an output label.
 `--name dc.ts` is also accepted. A fixture can contain any number of independently
-named analyses. Currently `--list` reports `import.ts`, `geometry.ts`, `mesh.ts`; requesting an absent
-analysis returns a nonzero exit code without creating a run directory. Only
-these three scripts are currently implemented; the `dc`/`emi` examples illustrate future
-independent filenames and are not placeholder scripts.
+named analyses. `--list` reports only runnable `import.ts`, `geometry.ts`, `mesh.ts`
+and `dc.ts`. The `.js` and expectation JSON are not additional analyses. An absent
+analysis returns a nonzero exit code without creating a run directory. `emi`
+remains a future example, with no placeholder solver.
+
+Read/edit sources, loads, explicit stack/material assumptions, mesh, sweeps,
+measurements and checks directly in each `dc.js`. The helper reads its exact text
+into `runAnalysisDsl({board, code}, {filename: authoredPath, ...})`; there is no
+scenario generator or secondary physical input contract. Ordinary JS functions
+and builders remain available. Launch budgets stay explicit in the thin `dc.ts`.
+`dc.expectations.json` contains only expected cases/measurement labels/checks,
+quality/convergence test policy and required barrel-current coverage.
+
+DC runs retain exact executed JS and its authored path/hash, input/profile/implementation/native hashes, JSON and self-contained per-layer HTML in the usual
+named run directory. `debugging/pcb-analyze/dc/index.html` links all eight reports.
+Every board attempts nominal/raised current and 1/0.5 mm² meshes; failed sweep
+callbacks, missing cases/measurements, invalid geometry/plot references, nonfinite fields, failed numerical guards or >2% convergence fail the launcher after saving evidence. `audit.json` records the exact failure/pass; expected authored voltage-check failures do not abort execution. An explained native rejection
+is a completed diagnostic attempt, not a solved PCB. All eight DC scenarios now
+require four successful physical results. NanoScope, NanoSpec and TPS63060DSCR V2
+JSONs were replayed from the unchanged captures through Copilot c7b40f2; per-fixture
+reexport metadata, inventories and hashes record the 12 omitted API phantom holes.
+The original native captures, source text and project archives remain unchanged. See the complete
+[DC verification](../../docs/experimental/analyze/dc-analysis-verification.md).
 
 Mesh runs save compact detailed `mesh.json` once, a small `report.json` with readiness,
 counts, missing/uncertain data and measurements, and per-layer SVG overlays. Gold is
@@ -162,3 +185,17 @@ Eight PCBs from seven projects; both NanoScope and NanoSpec use the NanoSpec pro
 | TPS63060DSCR | 2 | 15 | 39 | 73 | 24 | 6 / 0 |
 | ThunderF722 | 6 | 116 | 340 | 494 | 136 | 31 / 0 |
 | USB_PD_Trigger_5A | 2 | 17 | 65 | 144 | 80 | 2 / 0 |
+
+The saved validator is `tests/helpers/pcb-analysis-dc-audit.ts`; regression tests:
+
+```bash
+node --import tsx --test tests/pcb-analysis-dc-audit.test.ts tests/pcb-analysis-dc-ports.test.ts
+```
+
+Every observed port is compared between both meshes at each load. Conductor loss
+includes copper + finite barrels, excluding external load power. Relative limit:
+2%; separate floors: 1e-9 V and 1e-9 W. Original solver residual/KCL/power guards
+remain unchanged. Port declarations alone do not connect electrodes; passive
+pad measurements read the existing finite-area field. Missing coverage stays
+unavailable. `dc.case` is ordinary `a.log` data consumed by the helper/HTML, not a
+new DSL method or hidden physical configuration.

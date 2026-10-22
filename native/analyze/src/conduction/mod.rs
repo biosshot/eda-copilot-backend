@@ -1,4 +1,4 @@
-//! Layered CPU/F64 discretization. No matrix assembly, sources or electrical solve.
+//! Layered CPU/F64 discretization, shared by diagnostics and the separate DC module.
 mod mesh;
 pub mod profile;
 use crate::{
@@ -16,6 +16,8 @@ use std::{collections::BTreeMap, time::Instant};
 #[serde(default, deny_unknown_fields)]
 pub struct MeshOptions {
     pub max_area_mm2: f64,
+    /// Optional boundary subdivision cap. None preserves the diagnostic mesh.
+    pub max_edge_mm: Option<f64>,
     pub min_angle_deg: f64,
     pub max_nodes: usize,
     pub max_triangles: usize,
@@ -25,6 +27,7 @@ impl Default for MeshOptions {
     fn default() -> Self {
         Self {
             max_area_mm2: 1.,
+            max_edge_mm: None,
             min_angle_deg: 10.,
             max_nodes: 500_000,
             max_triangles: 1_000_000,
@@ -35,6 +38,9 @@ impl Default for MeshOptions {
 impl MeshOptions {
     pub fn validate(&self) -> bool {
         self.max_area_mm2.is_finite()
+            && self
+                .max_edge_mm
+                .is_none_or(|v| v.is_finite() && (1e-6..=1e6).contains(&v))
             && (1e-8..=1e6).contains(&self.max_area_mm2)
             && self.min_angle_deg.is_finite()
             && (0.0..=30.).contains(&self.min_angle_deg)
@@ -222,6 +228,100 @@ pub fn prepare(board: &Board, options: ConductionOptions) -> ConductionReport {
     finalize_size(&mut r);
     r
 }
+/// A warning cannot change connectivity when an independently confirmed,
+/// same-layer copper path already joins its endpoints. Never use net names or
+/// barrel edges as evidence for a planar path.
+struct PlanarConnectivity {
+    roots: std::collections::BTreeMap<String, usize>,
+}
+impl PlanarConnectivity {
+    fn new(g: &PreparationReport) -> Self {
+        let indices: std::collections::BTreeMap<_, _> = g
+            .regions
+            .iter()
+            .enumerate()
+            .map(|(i, r)| (r.id.as_str(), i))
+            .collect();
+        let mut roots: Vec<_> = (0..g.regions.len()).collect();
+        fn root(roots: &[usize], mut i: usize) -> usize {
+            while roots[i] != i {
+                i = roots[i];
+            }
+            i
+        }
+        for c in g
+            .contacts
+            .iter()
+            .filter(|c| c.reliable && c.kind != "barrel")
+        {
+            let (Some(&a), Some(&b)) = (indices.get(c.a.as_str()), indices.get(c.b.as_str()))
+            else {
+                continue;
+            };
+            if g.regions[a].layer != g.regions[b].layer {
+                continue;
+            }
+            let (a, b) = (root(&roots, a), root(&roots, b));
+            roots[a.max(b)] = a.min(b);
+        }
+        Self {
+            roots: g
+                .regions
+                .iter()
+                .enumerate()
+                .map(|(i, r)| (r.id.clone(), root(&roots, i)))
+                .collect(),
+        }
+    }
+    fn connected(&self, a: &str, b: &str) -> bool {
+        self.roots
+            .get(a)
+            .is_some_and(|r| Some(r) == self.roots.get(b))
+    }
+    fn split_warning_redundant(&self, g: &PreparationReport, warning: &GeometryDiagnostic) -> bool {
+        if warning.code != "drill_topology_uncertain" {
+            return false;
+        }
+        let regions: Vec<_> = g
+            .regions
+            .iter()
+            .filter(|r| r.source.path == warning.path)
+            .collect();
+        // Every surviving fragment of the split source must already have an
+        // independent planar path around the drill; a disappeared source fails.
+        regions.len() > 1
+            && regions.iter().all(|r| {
+                let same: Vec<_> = regions
+                    .iter()
+                    .filter(|other| other.layer == r.layer)
+                    .collect();
+                same.len() > 1 && same.iter().all(|other| self.connected(&r.id, &other.id))
+            })
+    }
+    fn barrel_warning_redundant(
+        &self,
+        g: &PreparationReport,
+        warning: &geometry::GeometryDiagnostic,
+    ) -> bool {
+        let Some((hole, _)) = warning.message.split_once(": ") else {
+            return false;
+        };
+        let regions: Vec<_> = g
+            .regions
+            .iter()
+            .filter(|r| r.source.path == warning.path)
+            .collect();
+        !regions.is_empty()
+            && regions.iter().all(|region| {
+                g.contacts
+                    .iter()
+                    .filter(|c| {
+                        c.reliable && c.kind == "barrel" && c.drill_id.as_deref() == Some(hole)
+                    })
+                    .any(|c| self.connected(&region.id, &c.a) || self.connected(&region.id, &c.b))
+            })
+    }
+}
 pub fn prepare_geometry(
     board: &Board,
     g: &PreparationReport,
@@ -276,9 +376,31 @@ pub fn prepare_geometry(
                 .iter()
                 .any(|v| d.path == format!("layers.{}", v.layer))
     });
+    let planar = PlanarConnectivity::new(g);
+    for c in g
+        .contacts
+        .iter()
+        .filter(|c| !c.reliable && c.kind != "point" && planar.connected(&c.a, &c.b))
+    {
+        issue(&mut r,"contact_topology_redundant",&c.a,None,&format!("{} and {} have an independently confirmed same-layer path; the uncertain direct contact is retained as a geometry limitation",c.a,c.b),"limitation");
+    }
+    for warning in g
+        .diagnostics
+        .iter()
+        .filter(|d| d.code == "barrel_contact_uncertain" && planar.barrel_warning_redundant(g, d))
+    {
+        issue(&mut r,"barrel_contact_topology_redundant",&warning.path,warning.source_id.clone(),&format!("{}; every affected source fragment has an independently confirmed same-layer path to a confirmed contact of this barrel",warning.message),"limitation");
+    }
+    for warning in g
+        .diagnostics
+        .iter()
+        .filter(|d| planar.split_warning_redundant(g, d))
+    {
+        issue(&mut r,"drill_split_topology_redundant",&warning.path,warning.source_id.clone(),"All surviving split fragments have an independently confirmed same-layer path around the drill; drill approximation remains recorded","limitation");
+    }
     for layer in &g.layers {
         for polygon in &layer.copper {
-            mesh::build_domain(g, &layer.layer, polygon, &mut r);
+            mesh::build_domain(g, &planar, &layer.layer, polygon, &mut r);
         }
     }
     build_barrels(board, g, &mut r);
@@ -357,6 +479,7 @@ fn finalize_size(r: &mut ConductionReport) {
     }
 }
 fn build_barrels(board: &Board, g: &PreparationReport, r: &mut ConductionReport) {
+    let planar = PlanarConnectivity::new(g);
     for h in g.holes.iter().filter(|h| h.plated) {
         let drill = board
             .pads
@@ -374,9 +497,6 @@ fn build_barrels(board: &Board, g: &PreparationReport, r: &mut ConductionReport)
         let diameter = drill
             .map(|d| d.diameter_mm)
             .or_else(|| via.map(|v| v.drill_mm));
-        let round = drill
-            .map(|d| matches!(d.shape, crate::model::DrillShape::Round))
-            .unwrap_or(via.is_some());
         let mut b = Barrel {
             source: h.source.clone(),
             hole_id: h.id.clone(),
@@ -390,17 +510,14 @@ fn build_barrels(board: &Board, g: &PreparationReport, r: &mut ConductionReport)
         if !h.span_confirmed {
             b.reasons.push("span_unconfirmed".into());
         }
-        if !round {
-            b.reasons.push("plated_slot_unsupported".into());
-        }
         // Geometry diagnostics identify the hole in the message, not in a
         // contact edge. An own annulus is not proof that this warning is redundant.
         let hole_prefix = format!("{}:", h.id);
-        for warning in g
-            .diagnostics
-            .iter()
-            .filter(|d| d.code == "barrel_contact_uncertain" && d.message.starts_with(&hole_prefix))
-        {
+        for warning in g.diagnostics.iter().filter(|d| {
+            d.code == "barrel_contact_uncertain"
+                && d.message.starts_with(&hole_prefix)
+                && !planar.barrel_warning_redundant(g, d)
+        }) {
             b.reasons
                 .push(format!("barrel_contact_uncertain:{}", warning.path));
         }
@@ -514,10 +631,14 @@ fn build_barrels(board: &Board, g: &PreparationReport, r: &mut ConductionReport)
         }
         let bp = r.profile.barrel.clone();
         let section = diameter
-            .filter(|_| round)
             .zip(bp.plating_thickness_mm)
             .zip(bp.diameter_convention.as_ref())
-            .and_then(|((d, t), c)| profile::barrel_area_mm2(d, t, c))
+            .and_then(|((d, t), c)| match drill.map(|d| &d.shape) {
+                Some(crate::model::DrillShape::Slot { length_mm }) => {
+                    profile::slot_barrel_area_mm2(d, *length_mm, t, c)
+                }
+                _ => profile::barrel_area_mm2(d, t, c),
+            })
             .map(profile::square_metres);
         if section.is_none() || bp.material.is_none() {
             b.reasons

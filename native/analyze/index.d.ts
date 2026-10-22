@@ -52,6 +52,7 @@ export interface AnalysisPhysicalProfile {
   barrel?: { plating_thickness_mm?: number; material?: AnalysisMaterial; diameter_convention?: 'finished_hole' | 'before_plating' };
 }
 export interface AnalysisMeshOptions {
+  max_edge_mm?: number | null;
   max_area_mm2?: number; min_angle_deg?: number; max_nodes?: number; max_triangles?: number; max_refinement_steps?: number;
 }
 export interface AnalysisConductionOptions { geometry?: AnalysisGeometryOptions; mesh?: AnalysisMeshOptions; profile?: AnalysisPhysicalProfile }
@@ -83,3 +84,31 @@ export interface AnalysisConductionReport {
   timings_ms: Record<string, number>; serialized_bytes: number;
 }
 export declare function prepareAnalysisConduction(json: string, options?: AnalysisConductionOptions): AnalysisConductionReport;
+
+export interface AnalysisDcRequest {
+  context_id: string; board_json: string | null;
+  conductor: { length_mm: number; width_mm: number; thickness_mm: number; conductivity_s_m: number; state: string } | null;
+  conduction?: AnalysisConductionOptions; snapshot?: boolean;
+  terminals: Array<{ id: string; pad_id: string }>;
+  elements: Array<{ id: string; kind: 'voltage' | 'current' | 'resistance'; positive: string; negative: string; value: number; role: 'source' | 'load' }>;
+  limits?: { max_memory_mib: number; max_unknowns: number; max_seconds: number };
+}
+export interface AnalysisDcReport {
+  operation: 'dc'; status: 'complete' | 'rejected'; method: string; conditional: boolean;
+  diagnostics: Array<{ code: string; message: string }>;
+  mesh?: AnalysisConductionReport | null; elapsed_ms: number;
+  geometry?: Pick<AnalysisGeometryReport, 'outline'|'layers'|'holes'> | null;
+  reused_preparation?: boolean; reused_factorization?: boolean;
+  standalone?: { resistance_ohm: number; voltage_v: number; current_a: number; loss_w: number; current_density_a_mm2: number; conductor: NonNullable<AnalysisDcRequest['conductor']> };
+  included_domains?: string[]; excluded_domains?: string[];
+  terminals?: Record<string, { voltage_v: number; reference_node: number; electrical_node: number }>;
+  domains?: Array<{ domain_id: string; layer: string; voltage_v: number[]; current_density_a_mm2: number[]; current_density_vector_a_mm2: [number,number][]; loss_w: number[]; reference_node: number }>;
+  barrels?: Array<{ hole_id: string; from_layer: string; to_layer: string; current_a: number; drop_v: number; loss_w: number }>;
+  elements?: Array<{id: string; kind: string; role: string; positive: string; negative: string; voltage_v: number; delivered_current_a: number; absorbed_power_w: number}>;
+  copper_loss_w?: number; barrel_loss_w?: number; load_power_w?: number; source_power_w?: number;
+  quality?: { relative_residual: number; current_balance_a: number; power_balance_w: number; normalized_current_balance?: number; normalized_power_balance?: number; voltage_constraint_error_v?: number };
+  system?: { unknowns: number; nonzeros: number; memory_plan_bytes: number; memory_metric: string; gauges: number[]; node_count: number; solver: string; refinement_steps: number };
+  timings_ms?: Record<string,number>;
+}
+/** Internal addon object, disposed with its owning worker/scenario. */
+export declare class AnalysisDcSession { constructor(); solve(request: AnalysisDcRequest): AnalysisDcReport; clear(): void }

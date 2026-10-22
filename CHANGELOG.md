@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Analysis DC
+
+- Separate active DC electrodes from passive port observations: integrate first-surface FEM potential by copper contact area without changing the system, and keep unsupported/uncomputed observations unavailable. Restrict compact-mesh references to geometry covering every computed domain.
+- Replace generated real-board scenarios with eight directly authored `dc.js` DSL examples and thin named launchers. Run a saved result audit for case/measurement identity, mesh/plot references, finite fields, original quality guards, per-port two-mesh convergence and USB/Thunder checks; add positive/negative audit and production D1/D2 regressions.
+
+- Re-export the NanoScope, NanoSpec and TPS63060DSCR analysis fixtures through Copilot `c7b40f2`, removing only the 12 diagnosed single-layer polygon API holes. Preserve native captures/CAD sources, update diagnostics/inventories/hashes and require successful DC rather than the former barrel-readiness refusal.
+
+- Add production CPU/F64 steady DC through the existing analysis DSL/process/addon: linear triangle FEM on conduction domains, finite barrel segments, pad electrodes, explicit ideal sources and current/resistive loads, sparse `faer` QR, balance guards, real fields and scenario-local RHS/factorization reuse. Preserve strict readiness; explicit snapshot permission covers unknown CAD fill freshness only. No other physical analyzer, refill, placement or V2/export change.
+- Add explicit plating material/bore convention adaptation, DC mesh controls, real scalar/map reducers, eight reviewable board scenarios and local layer reports. All eight real PDN scenarios solve at both loads and both mesh levels, with integral convergence below 2%, after the three affected inputs were re-exported and small F64 refinement corrections preserved. Analytical coupons are separate numerical references, not substitutes for that coverage.
+
+- Retain sub-ULP F64 refinement corrections and use compensated voltage differences consistently for KCL, copper fields and barrel/element drops. Add a numerical rail-offset regression which failed the former implementation; keep the existing tolerances and three refinement steps.
+
+- Correct coincident terminal/boundary constraints and exact touching union contours without moving copper; retain topology warnings and prove redundant contacts only through independent reliable planar paths. Add finite plated-slot barrel sections. Preserve FEM constant-potential invariance and evaluate KCL/refinement from physical voltage differences; retain numerical guards. Use sparse symbolic QR allocation planning instead of a dense-fill estimate. Keep the 4 MiB default report budget; allow an explicit bounded 128 MiB report for the six-layer four-case corpus.
+
 ### Analysis DSL
 
 - Gate all wrapped `check` predicates on compatible units: dimensionless `equals` with an incompatible explicit unit remains `unknown` and execution continues. Retain comparisons without a unit or with `unit: "1"` and cover the production runner with a regression test.

@@ -5,6 +5,15 @@ packer dependency or GPU initialization. The shared
 [Node host](../node-addon/README.md) calls this importer through the internal
 `importAnalysisBoard(json)` and `prepareAnalysisGeometry(json, options?)` bindings.
 `prepareAnalysisConduction(json, options?)` prepares a layered mesh through the same host.
+
+Production steady DC is implemented in `src/dc/` using that mesh and pinned
+`faer` 0.24.4 sparse QR (CPU/F64, std+sparse-linalg, no mandatory BLAS installation).
+The addon `AnalysisDcSession` owns at most one preparation/factorization; `clear()`
+releases it deterministically. No Node dependency is added to this Rust library.
+The public entry remains `runAnalysisDsl`, with explicit source/load/material
+adapters. [DC verification](../../docs/experimental/analyze/dc-analysis-verification.md)
+records numerical tests and eight converged real-board scenarios. F64 refinement
+retains sub-ULP corrections for stable small voltage differences on a nonzero rail.
 The importer retains its original semantics. `geometry::prepare` consumes its
 validated `model::Board`; `geometry::prepare_json` is a boundary convenience.
 The separate serializable geometry report does not expose the internal Board.

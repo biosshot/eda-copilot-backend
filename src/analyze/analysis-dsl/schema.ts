@@ -65,7 +65,7 @@ export const componentInput = z.strictObject({ designator: text, model: model.op
 export const componentDescription = componentInput.extend({ kind: z.enum(['ic', 'resistor', 'capacitor', 'inductor', 'device']) });
 const maskSide = z.strictObject({ thicknessMm: positive.optional(), relativePermittivity: positive.optional() });
 const mask = z.strictObject({ top: maskSide.optional(), bottom: maskSide.optional() });
-export const stackupInput = z.strictObject({ boardThicknessMm: positive.optional(), fallbackCopperThicknessOz: positive.optional(), viaPlatingThicknessUm: positive.optional(), solderMask: mask.optional(), layers: z.array(z.discriminatedUnion('kind', [
+export const stackupInput = z.strictObject({ platingMaterial: text.optional(), diameterConvention: z.enum(['finished_hole', 'before_plating']).optional(), boardThicknessMm: positive.optional(), fallbackCopperThicknessOz: positive.optional(), viaPlatingThicknessUm: positive.optional(), solderMask: mask.optional(), layers: z.array(z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('copper'), name: text, thicknessMm: positive.optional(), thicknessOz: positive.optional(), material: text.optional() }),
   z.strictObject({ kind: z.literal('dielectric'), name: text, thicknessMm: positive, material: text.optional(), relativePermittivity: positive.optional(), lossTangent: nonnegative.optional() }),
 ])).min(1) });
@@ -139,7 +139,10 @@ const angleRange = z.strictObject({ from: finite, to: finite, step: positive }).
 const common = { name: text.optional(), numerics: numerics.optional(), budget: z.strictObject({ maxSeconds: positive.optional(), maxMemoryMiB: positive.optional() }).optional() };
 export const schemas = {
   geometry: z.strictObject({ ...common, scope: z.array(selector).optional(), rules: z.array(rule).optional() }),
-  dc: z.strictObject({ ...common, ...electrical, conductor: hs(['conductor']).optional(), currentA: finite.optional(), voltageV: finite.optional() }),
+  dc: z.strictObject({ ...common, ...electrical, conductor: hs(['conductor']).optional(), currentA: finite.optional(), voltageV: finite.optional(),
+    inputPolicy: z.strictObject({ cadFill: z.enum(['strict', 'snapshot']) }).optional(),
+    mesh: z.strictObject({ maxAreaMm2: positive.min(1e-8).max(1e6).optional(), minAngleDeg: nonnegative.max(30).optional(), maxNodes: integer.min(3).max(2_000_000).optional(), maxTriangles: integer.max(4_000_000).optional(), maxRefinementSteps: nonnegative.int().max(64).optional(), geometryDeviationMm: positive.min(1e-6).max(.01).optional() }).optional(),
+  }),
   pi: z.strictObject({ ...common, ...electrical, ...freq, domain: z.enum(['frequency', 'time']).optional(), time: time.optional(), initial: z.union([z.literal('steady'), finalState]).optional() }),
   thermal: z.strictObject({ ...common, ...thermal }),
   electrothermal: z.strictObject({ ...common, stackup: physical.stackup, materials: physical.materials, electrical: z.strictObject({ ...electrical, operating: z.array(z.strictObject({ target: selector, gateVoltageV: finite })).optional() }).optional(), thermal: z.strictObject(thermal).optional(), couplings: z.array(z.union([z.strictObject({ target: selector, thermalNode: text }), z.strictObject({ element: text, thermalNode: text })])).optional(), time: time.optional() }),

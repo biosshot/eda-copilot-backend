@@ -1,0 +1,208 @@
+{
+  "outline": [
+    {
+      "x": -2,
+      "y": -3
+    },
+    {
+      "x": 12,
+      "y": -3
+    },
+    {
+      "x": 12,
+      "y": 8
+    },
+    {
+      "x": -2,
+      "y": 8
+    }
+  ],
+  "cutouts": [],
+  "layers": [
+    {
+      "name": "TOP",
+      "index": 0,
+      "side": "top"
+    }
+  ],
+  "nets": [
+    {
+      "name": "VCC"
+    },
+    {
+      "name": "GND"
+    }
+  ],
+  "components": [
+    {
+      "designator": "J1",
+      "at": {
+        "x": 0.5,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "side": "top"
+    },
+    {
+      "designator": "U1",
+      "at": {
+        "x": 9.5,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "side": "top"
+    },
+    {
+      "designator": "U2",
+      "at": {
+        "x": 9.5,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "side": "top"
+    }
+  ],
+  "keepouts": [],
+  "holes": [],
+  "pads": [
+    {
+      "id": "rail",
+      "number": "1",
+      "net": "VCC",
+      "at": {
+        "x": 5,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "layers": [
+        "TOP"
+      ],
+      "shape": {
+        "kind": "rect",
+        "widthMm": 10,
+        "heightMm": 2
+      }
+    },
+    {
+      "id": "return",
+      "number": "1",
+      "net": "GND",
+      "at": {
+        "x": 5,
+        "y": 5
+      },
+      "rotationDeg": 0,
+      "layers": [
+        "TOP"
+      ],
+      "shape": {
+        "kind": "rect",
+        "widthMm": 10,
+        "heightMm": 2
+      }
+    },
+    {
+      "id": "jp",
+      "number": "1",
+      "net": "VCC",
+      "at": {
+        "x": 0.5,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "layers": [
+        "TOP"
+      ],
+      "shape": {
+        "kind": "rect",
+        "widthMm": 1,
+        "heightMm": 2
+      },
+      "component": "J1"
+    },
+    {
+      "id": "jn",
+      "number": "2",
+      "net": "GND",
+      "at": {
+        "x": 0.5,
+        "y": 5
+      },
+      "rotationDeg": 0,
+      "layers": [
+        "TOP"
+      ],
+      "shape": {
+        "kind": "rect",
+        "widthMm": 1,
+        "heightMm": 2
+      },
+      "component": "J1"
+    },
+    {
+      "id": "up",
+      "number": "1",
+      "net": "VCC",
+      "at": {
+        "x": 9.5,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "layers": [
+        "TOP"
+      ],
+      "shape": {
+        "kind": "rect",
+        "widthMm": 1,
+        "heightMm": 2
+      },
+      "component": "U1"
+    },
+    {
+      "id": "un",
+      "number": "2",
+      "net": "GND",
+      "at": {
+        "x": 9.5,
+        "y": 5
+      },
+      "rotationDeg": 0,
+      "layers": [
+        "TOP"
+      ],
+      "shape": {
+        "kind": "rect",
+        "widthMm": 1,
+        "heightMm": 2
+      },
+      "component": "U1"
+    }
+  ],
+  "copper": {
+    "fixed": {
+      "tracks": [],
+      "vias": [],
+      "zones": []
+    },
+    "editable": {
+      "tracks": [],
+      "vias": [],
+      "zones": []
+    }
+  },
+  "rules": {
+    "default": {
+      "clearanceMm": 0.2,
+      "edgeClearanceMm": 0.3,
+      "minTrackWidthMm": 0.1,
+      "preferredTrackWidthMm": 0.2,
+      "via": {
+        "minDiameterMm": 0.5,
+        "preferredDiameterMm": 0.6,
+        "minDrillMm": 0.2,
+        "preferredDrillMm": 0.3
+      }
+    },
+    "nets": []
+  }
+}

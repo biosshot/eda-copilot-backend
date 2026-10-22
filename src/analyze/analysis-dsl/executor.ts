@@ -4,6 +4,9 @@ import type { AnalysisPhysicalProfile } from '../../../native/analyze/index.js';
 import { z } from 'zod';
 import { AnalysisDslError, parse, port, selector, text, timingOptions } from './schema.ts';
 import { freeze, json, unavailable, value } from './data.ts';
+import { createDcExecutor } from './dc-executor.ts';
+import { dcObservedVoltage } from './dc-observation.ts';
+import { object } from './descriptions.ts';
 
 /** Small analysis dispatch boundary. No transport/session, no callbacks, no
  * internal mesh or import operation masquerading as a completed analysis. */
@@ -12,6 +15,7 @@ export interface AnalysisTask<K extends AnalysisKind = AnalysisKind> {
   config: Readonly<Configurations[K]>; descriptors: readonly Json[];
   variantChanges: readonly Json[];
   conductionProfile?: AnalysisPhysicalProfile;
+  resolvedLoads?: readonly Json[];
 }
 /** Internal serializable result envelope; accessors are created on JS side.
  * Test executors inject this envelope explicitly; production never fabricates it. */
@@ -22,11 +26,16 @@ export interface ExecutionResult {
   finalState?: Json; violations?: readonly Json[];
   network?: Resource;
   electrical?: ExecutionResult; thermal?: ExecutionResult;
+  solution?: Json;
 }
 export type AnalysisExecutor = (task: AnalysisTask) => Promise<ExecutionResult>;
-export const executeAnalysis: AnalysisExecutor = async task => {
-  throw new AnalysisDslError('ANALYZER_NOT_IMPLEMENTED', `Analysis executor '${task.kind}' is not implemented`, [{ code: 'ANALYZER_NOT_IMPLEMENTED', severity: 'error', message: `No production ${task.kind} solver is installed` }]);
-};
+export function createAnalysisExecutor(): AnalysisExecutor {
+  const dc = createDcExecutor();
+  return async task => {
+    if (task.kind === 'dc') return dc(task as AnalysisTask<'dc'>);
+    throw new AnalysisDslError('ANALYZER_NOT_IMPLEMENTED', `Analysis executor '${task.kind}' is not implemented`, [{ code: 'ANALYZER_NOT_IMPLEMENTED', severity: 'error', message: `No production ${task.kind} solver is installed` }]);
+  };
+}
 
 const properties: Record<AnalysisKind, Record<string, string>> = {
   geometry: { measurements: 'mm' },
@@ -39,13 +48,15 @@ const properties: Record<AnalysisKind, Record<string, string>> = {
   si: {}, eye: { diagram: 'V', height: 'V', width: 's', timingMargin: 's', voltageMargin: 'V' },
   emi: { risks: '1', spectra: 'V' }, em: { sParameters: '1', fields: 'V/m', radiation: 'W', pattern: '1', radiatedPower: 'W' }, networkParameters: {},
 };
-export function resultFor<K extends AnalysisKind>(task: AnalysisTask<K>, payload: ExecutionResult, validate: (input: unknown) => void, networkFactory: (model: Resource) => Network): Results[K] {
+export function resultFor<K extends AnalysisKind>(task: AnalysisTask<K>, payload: ExecutionResult, validate: (input: unknown) => void, networkFactory: (model: Resource) => Network, describe?: (id: string) => unknown): Results[K] {
   const safe = freeze(json(payload)) as unknown as ExecutionResult;
   const result: Record<string, unknown> = { id: safe.id, kind: task.kind, contextId: task.contextId, status: safe.status, method: safe.method, inputs: json(task.config), diagnostics: safe.diagnostics, assumptions: safe.assumptions };
+  if (safe.solution) result.solution = safe.solution;
   const metric = (name: string, unit: string, argument?: unknown) => {
     if (argument !== undefined) validate(argument);
     const suffix = argument && typeof argument === 'object' && 'id' in argument ? `:${argument.id}` : argument === undefined ? '' : `:${JSON.stringify(json(argument))}`;
-    const d = safe.metrics[name + suffix];
+    const d = safe.metrics[name + suffix] ?? (task.kind === 'dc' && name === 'voltage' && argument && typeof argument === 'object' && 'id' in argument
+      ? dcObservedVoltage(task.board, describe?.(String(argument.id)) ?? task.descriptors.find(d => object(d) && d.id === argument.id), safe.metrics) : undefined);
     return d ? value({ ...d, contextId: task.contextId }) : unavailable(unit, `Result metric '${name + suffix}' is unavailable`, task.contextId);
   };
   for (const [name, unit] of Object.entries(properties[task.kind])) result[name] = metric(name, unit);

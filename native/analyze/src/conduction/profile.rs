@@ -310,3 +310,18 @@ pub fn barrel_area_mm2(d: f64, t: f64, convention: &DiameterConvention) -> Optio
     let area = std::f64::consts::PI * (outer * outer - inner * inner);
     (inner > 0. && outer.is_finite() && area.is_finite() && area > 0.).then_some(area)
 }
+
+/// Uniform plating around a round-ended slot: two straight walls plus
+/// the circular end caps. Length and width follow the same bore convention.
+pub fn slot_barrel_area_mm2(
+    width: f64,
+    length: f64,
+    t: f64,
+    convention: &DiameterConvention,
+) -> Option<f64> {
+    if !length.is_finite() || length < width {
+        return None;
+    }
+    let area = barrel_area_mm2(width, t, convention)? + 2. * (length - width) * t;
+    (area.is_finite() && area > 0.).then_some(area)
+}

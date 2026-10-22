@@ -136,13 +136,18 @@
         "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
         "severity": "warning",
         "message": "e2715: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_SINGLE_LAYER_POLYGON_HOLE_IGNORED",
+        "severity": "warning",
+        "message": "U5.11 (e20e23): ignored API hole on BOTTOM POLYGON pad (EasyEDA compatibility workaround)."
       }
     ],
     "inventory": {
       "layers": 2,
       "components": 128,
       "pads": 509,
-      "padDrills": 28,
+      "padDrills": 27,
       "independentHoles": 0,
       "tracks": 823,
       "vias": 553,
@@ -174,7 +179,6 @@
     "sourceRecordCount": 2875,
     "audit": "Captured and inventoried; physical completeness has not yet been accepted as an analysis reference",
     "v2InventoryVerified": true,
-    "v2ReplayMatchesLiveExport": true,
     "archiveComparison": {
       "projectArchiveContainsSelectedPcb": true,
       "archiveCrcVerified": true,
@@ -201,7 +205,9 @@
         "ATTR": 384
       },
       "note": "Project archive and editor-selected source are distinct native representations. Record equality and physical equivalence are not assumed; V2 uses the captured editor input."
-    }
+    },
+    "v2ReplayMatchesSavedCapture": true,
+    "liveExportAfterReexport": "not-repeated; replay of original native capture"
   },
   "files": {
     "source.epro2": {
@@ -215,14 +221,22 @@
       "normalization": "lf"
     },
     "export-evidence.json": {
-      "bytes": 2094752,
-      "sha256": "1f24ec5572bcfa49bca197bec184a3aefd4d7b6894285751cce8db8e18b52589",
+      "bytes": 1552972,
+      "sha256": "3424db9436494bd77477c96dcd66a77a3d65841bcd31d152014964d187800eab",
       "normalization": "lf"
     },
     "NanoSpec.json": {
-      "bytes": 3345921,
-      "sha256": "ce42600487100c4f103cfc0d744a4ef323b1411192acec2b003c5f0fb21347d6",
+      "bytes": 3345727,
+      "sha256": "a92ab7106b2adc39955eff988e03fbd4f4d669a4515b46073ef8af7e0e04a449",
       "normalization": "lf"
     }
+  },
+  "reexport": {
+    "at": "2026-10-22T17:50:03.252Z",
+    "method": "Replay unchanged captured autoroute JSON, Raw PCB and DRC through corrected V2 exporter",
+    "copilotRevision": "c7b40f257ef507f7ebfcc15ec044af46ef9152fd",
+    "captureSha256": "18aac87fa1f14ef987aaf5dc9e62ec3aa184c460a66d150ecf8a45ae0709f82c",
+    "previousBoardSha256": "ce42600487100c4f103cfc0d744a4ef323b1411192acec2b003c5f0fb21347d6",
+    "note": "Original capturedAt/versions/nativeSummary describe the unchanged CAD capture. Export inventory/diagnostics/file hashes describe this replay; no CAD edits, refill or fresh capture."
   }
 }

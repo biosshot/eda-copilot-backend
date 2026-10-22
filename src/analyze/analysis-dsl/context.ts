@@ -4,7 +4,7 @@ import type * as T from './spec-doc.js';
 import * as S from './schema.ts';
 import { freeze, json, ReportStore, value, type ReportUpdate } from './data.ts';
 import { boardSnapshot, componentDescription, makeProfiles, object, stackup } from './descriptions.ts';
-import { executeAnalysis, resultFor, type AnalysisExecutor, type AnalysisTask } from './executor.ts';
+import { createAnalysisExecutor, resultFor, type AnalysisExecutor, type AnalysisTask } from './executor.ts';
 import { prepare } from './prepare.ts';
 import { conductionProfile } from './profile-adapter.ts';
 
@@ -16,7 +16,7 @@ export interface ContextState {
 export interface DslInput { board?: T.RoutingBoardV2; profiles?: T.ProfilesInput; models?: T.Models }
 export interface Limits { maxEntries: number; maxOutputBytes: number }
 
-export function createAnalysisApi(input: DslInput, limits: Limits, changed: (update: ReportUpdate) => void, executor: AnalysisExecutor = executeAnalysis) {
+export function createAnalysisApi(input: DslInput, limits: Limits, changed: (update: ReportUpdate) => void, executor: AnalysisExecutor = createAnalysisExecutor()) {
   const reports: ReportStore[] = [];
   const budget = { entries: 0, bytes: 0 };
   const board = input.board === undefined ? undefined : boardSnapshot(input.board);
@@ -106,11 +106,11 @@ export function createAnalysisApi(input: DslInput, limits: Limits, changed: (upd
         run: { value: async () => {
           const p = preparation();
           if (!p.structurallyValid) throw new S.AnalysisDslError('INVALID_CONFIGURATION', 'Analysis configuration is incomplete or inconsistent', p.diagnostics);
-          const profile = conductionProfile(config.stackup as T.StackupDescription | undefined, config.materials as T.Materials | undefined);
-          const task: AnalysisTask<K> = freeze({ kind, contextId: id, ...(b ? { board: b, boardIdentity: identity } : {}), config: json(config) as T.Configurations[K], descriptors: [...descriptions.values()].map(json), variantChanges: json(state.changes) as T.Json[], ...(profile ? { conductionProfile: profile } : {}) });
+          const profile = kind === 'dc' ? conductionProfile(config.stackup as T.StackupDescription | undefined, config.materials as T.Materials | undefined, config.temperatureC as number | undefined) : undefined;
+          const task: AnalysisTask<K> = freeze({ kind, contextId: id, ...(b ? { board: b, boardIdentity: identity } : {}), config: json(config) as T.Configurations[K], descriptors: [...descriptions.values()].map(json), variantChanges: json(state.changes) as T.Json[], resolvedLoads: p.components, ...(profile ? { conductionProfile: profile } : {}) });
           try {
             const payload = await executor(task);
-            const result = resultFor(task, payload, validate, model => api.network({ model, ports: Object.fromEntries((model.ports ?? []).map(p => [p, p])) }));
+            const result = resultFor(task, payload, validate, model => api.network({ model, ports: Object.fromEntries((model.ports ?? []).map(p => [p, p])) }), id => descriptions.get(id));
             store.add('calculations', { kind, phase: 'completed', result: json(result) });
             return result;
           } catch (error) {

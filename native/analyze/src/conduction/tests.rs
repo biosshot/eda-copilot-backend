@@ -76,3 +76,38 @@ fn required_contact_mapping_and_refinement_failures_block_only_dependents() {
         );
     }
 }
+
+#[test]
+fn redundant_contact_requires_an_independent_planar_path() {
+    let input: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../tests/fixtures/conduction-contact-coupon.json"
+    ))
+    .unwrap();
+    let mut g = geometry::prepare_json(&input["board"].to_string(), Default::default());
+    let ids: Vec<_> = g
+        .regions
+        .iter()
+        .filter(|r| r.layer == "TOP")
+        .map(|r| r.id.clone())
+        .collect();
+    assert!(ids.len() >= 2);
+    let (a, b) = (&ids[0], &ids[1]);
+    g.contacts.clear();
+    let edge = |kind: &str, reliable: bool, drill: Option<String>| geometry::Contact {
+        a: a.clone(),
+        b: b.clone(),
+        kind: kind.into(),
+        reliable,
+        overlap_mm2: 1.,
+        drill_id: drill,
+    };
+    g.contacts.push(edge("uncertain", false, None));
+    assert!(!PlanarConnectivity::new(&g).connected(a, b));
+    g.contacts.push(edge("barrel", true, Some("test".into())));
+    assert!(
+        !PlanarConnectivity::new(&g).connected(a, b),
+        "A vertical path cannot prove a planar contact"
+    );
+    g.contacts.push(edge("area", true, None));
+    assert!(PlanarConnectivity::new(&g).connected(a, b));
+}

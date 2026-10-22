@@ -147,6 +147,14 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
     }
     for (const layer of stack?.input.layers ?? []) if (layer.material && !(layer.material in (c.materials as T.Materials ?? {}))) issue('INVALID_REFERENCE', `Missing material ${layer.material}`);
     const loads = c.loads;
+    if (kind === 'dc' && object(loads) && state.board) {
+      const defaults = loads as unknown as T.LoadDefaults;
+      const eligible = entries.filter(e => ['ic','device'].includes(e.kind) && state.board!.pads.some(p => p.component === e.designator && p.net === defaults.rail.name));
+      for (const designator of Object.keys(defaults.overrides)) if (!eligible.some(e => e.designator === designator)) issue('INVALID_LOAD', `Override ${designator} is not an explicitly classified IC/device on this rail`);
+      for (const entry of eligible) try { components.push(resolveLoad(state, { designator: entry.designator, rail: defaults.rail, currentA: defaults.overrides[entry.designator]?.currentA ?? defaults.defaultCurrentA, ...(defaults.return ? { return: defaults.return } : {}) }, entries, assumptions, diagnostics)); } catch(e) { issue('INVALID_LOAD', e instanceof Error ? e.message : String(e)); }
+      assumptions.push(`DC defaults selected explicit IC/device descriptors: ${eligible.map(e=>e.designator).join(', ') || 'none'}; other parts excluded, no footprint/BOM inference`);
+      if (!eligible.length) issue('INVALID_LOAD', 'DC defaults found no explicitly classified consumers');
+    }
     if (Array.isArray(loads)) for (const [i, load] of loads.entries()) {
       if (object(load) && 'designator' in load) {
         try { components.push(resolveLoad(state, load as unknown as T.ComponentLoad, entries, assumptions, diagnostics)); }
@@ -181,8 +189,8 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
   scan(config);
   if (state.changes.length) issue('VARIANT_REBUILD_REQUIRED', 'Variant intent is retained; no stale copper solve or implicit refill is permitted. Geometry/material/model rebuilding is not implemented', undefined, 'warning');
   issue('PHYSICAL_REQUIREMENTS_UNVERIFIED', 'Structure validation does not establish physical readiness; extraction/model applicability is not evaluated', undefined, 'warning');
-  issue('ANALYZER_NOT_IMPLEMENTED', `No production ${kind} executor`, undefined, 'warning');
-  return freeze({ kind, contextId: state.id, structurallyValid: !diagnostics.some(d => d.severity === 'error'), physicalReady: false, executorAvailable: false, diagnostics, components, inputs: Object.fromEntries(Object.entries(config).map(([key, v]) => [key, { source: 'manual' as const, value: json(v) }])), assumptions });
+  if (kind !== 'dc') issue('ANALYZER_NOT_IMPLEMENTED', `No production ${kind} executor`, undefined, 'warning');
+  return freeze({ kind, contextId: state.id, structurallyValid: !diagnostics.some(d => d.severity === 'error'), physicalReady: false, executorAvailable: kind === 'dc', diagnostics, components, inputs: Object.fromEntries(Object.entries(config).map(([key, v]) => [key, { source: 'manual' as const, value: json(v) }])), assumptions });
 }
 
 function descriptionInput(state: ContextState, handle: unknown): Record<string, unknown> | undefined {
