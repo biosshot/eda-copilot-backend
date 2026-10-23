@@ -6,6 +6,7 @@ import { AnalysisDslError, parse, port, selector, text, timingOptions } from './
 import { freeze, json, unavailable, value } from './data.ts';
 import { createDcExecutor } from './dc-executor.ts';
 import { dcObservedVoltage } from './dc-observation.ts';
+import {createElectricalExecutor,circuitObservedVoltage} from './electrical-executor.ts';
 import { object } from './descriptions.ts';
 
 /** Small analysis dispatch boundary. No transport/session, no callbacks, no
@@ -31,7 +32,9 @@ export interface ExecutionResult {
 export type AnalysisExecutor = (task: AnalysisTask) => Promise<ExecutionResult>;
 export function createAnalysisExecutor(): AnalysisExecutor {
   const dc = createDcExecutor();
+  const electrical=createElectricalExecutor();
   return async task => {
+    if ((task.kind==='dc'||task.kind==='pi')&&'circuit'in task.config&&task.config.circuit) return electrical(task as AnalysisTask<'dc'|'pi'>);
     if (task.kind === 'dc') return dc(task as AnalysisTask<'dc'>);
     throw new AnalysisDslError('ANALYZER_NOT_IMPLEMENTED', `Analysis executor '${task.kind}' is not implemented`, [{ code: 'ANALYZER_NOT_IMPLEMENTED', severity: 'error', message: `No production ${task.kind} solver is installed` }]);
   };
@@ -55,8 +58,8 @@ export function resultFor<K extends AnalysisKind>(task: AnalysisTask<K>, payload
   const metric = (name: string, unit: string, argument?: unknown) => {
     if (argument !== undefined) validate(argument);
     const suffix = argument && typeof argument === 'object' && 'id' in argument ? `:${argument.id}` : argument === undefined ? '' : `:${JSON.stringify(json(argument))}`;
-    const d = safe.metrics[name + suffix] ?? (task.kind === 'dc' && name === 'voltage' && argument && typeof argument === 'object' && 'id' in argument
-      ? dcObservedVoltage(task.board, describe?.(String(argument.id)) ?? task.descriptors.find(d => object(d) && d.id === argument.id), safe.metrics) : undefined);
+    const descriptor=argument&&typeof argument==='object'&&'id'in argument?describe?.(String(argument.id))??task.descriptors.find(d=>object(d)&&d.id===argument.id):undefined;
+    const d = safe.metrics[name + suffix] ?? (name==='voltage'&&'circuit'in task.config&&task.config.circuit?circuitObservedVoltage(task,descriptor,safe.metrics):task.kind==='dc'&&name==='voltage'?dcObservedVoltage(task.board,descriptor,safe.metrics):undefined);
     return d ? value({ ...d, contextId: task.contextId }) : unavailable(unit, `Result metric '${name + suffix}' is unavailable`, task.contextId);
   };
   for (const [name, unit] of Object.entries(properties[task.kind])) result[name] = metric(name, unit);

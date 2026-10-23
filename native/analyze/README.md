@@ -1,4 +1,4 @@
-# PCB analyze: board import, copper geometry and conduction mesh
+# PCB analyze: import, copper, conduction, DC and explicit RLC
 
 Standalone Rust library (`pcb-analyze`, ordinary `rlib`) with no Node addon,
 packer dependency or GPU initialization. The shared
@@ -159,3 +159,12 @@ The example accepts multiple filenames and exits nonzero on any rejected input
 or read error. It is a development reader; it does not alter the existing named
 analysis launcher or write into fixtures. Generated reports belong in ignored
 `debugging/`, not in the source test bank.
+
+## Explicit electrical network
+
+`electrical::Session` compiles explicitly given R/C/L/independent-source networks
+into sparse G/E, using faer CPU/F64 sparse LU for DC, real-block complex driving-point
+impedance and adaptive BE time integration. One bounded compiled model/factor/latest
+state per session; no PCB extraction, placement/GPU or global cache. N-API remains
+in the single node-addon host. See [semantics](../../docs/experimental/analyze/electrical-network-semantics.md)
+and [verification](../../docs/experimental/analyze/electrical-network-verification.md).

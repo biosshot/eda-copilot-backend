@@ -26,3 +26,11 @@ CAD fill freshness is unknown. Diagnostics retained: `EASYEDA_V2_SEQUENTIAL_CAPT
 Named import, geometry, mesh and DC analyses share this fixture. See [the fixture-bank README](../README.md) for commands and run output directories.
 
 DC example: edit [`dc.js`](dc.js) directly; [`dc.ts`](dc.ts) only launches it unchanged. [`dc.expectations.json`](dc.expectations.json) holds test expectations, not physical inputs. Run `npm run test:pcb-analyze -- STM32G0_CAN_RS485 --name dc` from the backend root. Exact code/provenance, audit and HTML are saved per run.
+
+### Explicit RLC section model
+
+Run `npm run test:pcb-analyze -- STM32G0_CAN_RS485 --name rlc` after current `dc` evidence.
+Direct `rlc.js` binds verified fixture pads/nets to an explicitly given RLC test
+model; all coefficients are hypotheses, no PCB frequency extraction. The launcher
+saves source/inputs/hashes/quality/audit/HTML, copies current matching board DC
+and compares load/ESR, integrator refinement and continuation.

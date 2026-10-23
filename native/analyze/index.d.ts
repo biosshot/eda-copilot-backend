@@ -112,3 +112,24 @@ export interface AnalysisDcReport {
 }
 /** Internal addon object, disposed with its owning worker/scenario. */
 export declare class AnalysisDcSession { constructor(); solve(request: AnalysisDcRequest): AnalysisDcReport; clear(): void }
+
+/** Explicit network DTOs. One owning scenario/process; CPU/F64, no PCB extraction. */
+export interface AnalysisElectricalCircuit {
+  nodes: string[]; reference: string; ports: {id:string;positive:string;negative:string}[];
+  elements: Array<{id:string;kind:string;nodes:[string,string];resistanceOhm?:number;capacitanceF?:number;esrOhm?:number;eslH?:number;inductanceH?:number;seriesResistanceOhm?:number;voltageV?:number;currentA?:number;waveform?:unknown}>;
+}
+export interface AnalysisElectricalRequest {
+  contextId:string; circuit:AnalysisElectricalCircuit; mode:'dc'|'frequency'|'time'; frequencies?:number[];
+  time?:{stopS:number;sampleStepS:number}; initial?:unknown;
+  numerics?:{relativeTolerance?:number;absoluteTolerance?:number;maxIterations?:number}; budget?:{maxSeconds?:number;maxMemoryMiB?:number};
+}
+export interface AnalysisElectricalReport {
+  status:'complete'|'rejected'; mode?:string; diagnostics:{code:string;message:string;severity:'error'|'warning'|'info'}[];
+  axis?:number[]; nodeVoltages?:Record<string,number|number[]>; currents?:Record<string,number|number[]>;
+  impedances?:Record<string,{real:number;imaginary:number}[]>; losses?:number|number[];
+  quality?:Record<string,number>; counters?:Record<string,number>; finalState?:unknown;
+  request?:AnalysisElectricalRequest; elapsedMs:number; excitation?:string; interpolation?:string;
+  resources?:{peakRssBytes:number;metric:string};
+  system?:{unknowns:number;nodalUnknowns:number;gNonzeros:number;eNonzeros:number;solver:string};
+}
+export declare class AnalysisElectricalSession {constructor();solve(request:AnalysisElectricalRequest):AnalysisElectricalReport;clear():void}

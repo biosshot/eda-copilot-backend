@@ -6,10 +6,16 @@ import type { AnalysisProblem, AnalysisResult } from './types.ts';
  * disposable process, so cancellation cannot orphan a nested native worker. */
 export function createProblemExecutor(retainDcForScenario = false) {
   let session: import('../../native/analyze/index.js').AnalysisDcSession | undefined;
+  let electrical: import('../../native/analyze/index.js').AnalysisElectricalSession | undefined;
   return <P extends AnalysisProblem>(problem: P): AnalysisResult<P> => {
     const addon = createRequire(import.meta.url)(backendResource('native', 'node-addon', 'index.cjs')) as typeof import('../../native/node-addon/index.cjs');
     let result: AnalysisResult;
-    if (problem.kind === 'dc') {
+    if (problem.kind === 'electrical-network') {
+      electrical ??= new addon.AnalysisElectricalSession();
+      try { result=electrical.solve(problem.request); }
+      finally {if(!retainDcForScenario){electrical.clear();electrical=undefined;}}
+    }
+    else if (problem.kind === 'dc') {
       session ??= new addon.AnalysisDcSession();
       try { result = session.solve(problem.request); }
       finally { if (!retainDcForScenario) { session.clear(); session=undefined; } }

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Explicit electrical networks (P6a)
+
+- Fix periodic pulse/PWL right-hand event values, admit continuation output from its verified state time, and reject oversized frequency/port requests before materializing the JS axis. Keep native output/memory limits and independent boundary/budget regressions.
+- Add CPU/F64 sparse MNA for explicitly authored R/C/L through the existing Analysis DSL/process/shared addon: DC, independent-port complex impedance, adaptive backward-Euler transient and checked state continuation. Preserve PCB FEM DC and placement/F32; no PCB frequency extraction.
+- Add complex series transforms, oriented element currents, passive observations, numerical/resource diagnostics, analytical/negative regressions and three direct board-bound RLC examples with audited visual reports. See electrical-network semantics and verification under experimental/analyze.
+
 ### Analysis DC
 
 - Separate active DC electrodes from passive port observations: integrate first-surface FEM potential by copper contact area without changing the system, and keep unsupported/uncomputed observations unavailable. Restrict compact-mesh references to geometry covering every computed domain.

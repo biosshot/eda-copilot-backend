@@ -946,3 +946,16 @@ native preparation/matrix reuse. All computed domains must be present at its tar
 otherwise a new compact mesh is retained. Map/plot references continue to address
 their original solution and field. Eight real-board examples live directly in
 `tests/pcb-analyze/*/dc.js`, with test-only expectations in adjacent JSON files.
+
+## Explicit RLC networks (P6a)
+
+`a.dc().circuit(c).run()` solves the operating point;
+`a.pi().circuit(c).domain("frequency").frequency(...).run()` returns complex
+driving-point `impedance(port)`; `.domain("time").initial("steady").time(...).run()`
+returns V/A/loss series and checked `finalState`. Continuation uses absolute stopS.
+See [complete semantics and limits](electrical-network-semantics.md) and the
+[executed task example](../../../tests/fixtures/analysis-electrical.js).
+R/C/L local model contacts are p/n. I(first→second), source power is negative.
+Waveforms are absolute; passive ports never stamp loads. Complex transformations
+include real/imaginary/magnitude/phaseDeg, phase range [-180,180] and undefined zero.
+No automatic PCB AC extraction or standalone geometric maps.

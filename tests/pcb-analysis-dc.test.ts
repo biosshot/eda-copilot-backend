@@ -64,7 +64,7 @@ test('unsupported DC power/dynamics/resources/circuit are explicit; other analyz
     const r=await runAnalysisDsl({board:dcCoupon(),code:`${couponSetup}await base${config}.run();`});assert.equal(r.error?.code,'UNSUPPORTED_DC_MODEL',JSON.stringify(r.error));
   }
   const r=await runAnalysisDsl({board:dcCoupon(),code:'await analysis({board}).geometry().rules([]).run();'});assert.equal(r.error?.code,'ANALYZER_NOT_IMPLEMENTED');
-  const circuit=await runAnalysisDsl({code:`const a=analysis();const c=a.circuit({nodes:['p','gnd'],ports:[{id:'port',positive:'p',negative:'gnd'}],elements:[{id:'v',kind:'voltage-source',nodes:['p','gnd'],voltageV:1,model:'ideal'}]});await a.dc().circuit(c).run();`});assert.equal(circuit.error?.code,'UNSUPPORTED_DC_MODEL');
+  const circuit=await runAnalysisDsl({code:`const a=analysis();const c=a.circuit({nodes:['p','gnd'],ports:[{id:'port',positive:'p',negative:'gnd'}],elements:[{id:'v',kind:'voltage-source',nodes:['p','gnd'],voltageV:1,model:'ideal'}]});await a.dc().circuit(c).run();`});assert.equal(circuit.status,'complete',JSON.stringify(circuit.error));
 });
 test('unknown/partial numeric data retains unit/validity instead of becoming zero or a full map maximum',()=>{
   const partial=value({kind:'map',unit:'V',values:[1,null,2],validity:{status:'valid'},diagnostics:[],data:{coverage:'partial'}});

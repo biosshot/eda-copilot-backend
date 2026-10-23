@@ -1,0 +1,17 @@
+{
+  "voltageV": 3.3,
+  "resistanceOhm": 0.05,
+  "inductanceH": 1e-08,
+  "seriesResistanceOhm": 0.01,
+  "capacitanceF": 0.0001,
+  "eslH": 1e-09,
+  "esrOhm": [
+    0.02,
+    0.08
+  ],
+  "initialA": 0.1,
+  "loadA": [
+    0.2,
+    0.4
+  ]
+}

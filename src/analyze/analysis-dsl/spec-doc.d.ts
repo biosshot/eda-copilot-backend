@@ -1,5 +1,5 @@
 /** Analysis DSL, variant B. Executable source is JavaScript with top-level await.
- * Reference this file for IDE globals. Production supports constant linear DC;
+ * Reference this file for IDE globals. Production supports board/conductor DC and explicit circuit DC/Z(f)/transient;
  * other analyses reject with ANALYZER_NOT_IMPLEMENTED after prepare.
  * Descriptions, validation, reports and explicit-value sweep are implemented.
  * Coordinates: millimetres, absolute board Y down; no implicit material defaults.
@@ -23,7 +23,9 @@ export interface DataDescription {
 }
 /** Real scalar abs/real/imaginary/magnitude and finite real min/max reducers.
  * Partial reducers remain conditional; potentials with independent references
- * cannot be reduced together. Complex/series transforms and at() are unavailable.
+ * cannot be reduced together. Complex/series real, imaginary, magnitude and phaseDeg preserve axes; phase is
+ * [-180,180] deg, zero phase undefined. Complex extrema require real/magnitude.
+ * at() selects an exactly saved axis position without interpolation.
  * Unsupported operations return unavailable with diagnostics, never physical zero.
  */
 export interface DataValue extends DataDescription {
@@ -140,6 +142,11 @@ export type CircuitElement =
   | { id: string; kind: 'voltage-source'; nodes: readonly [string, string]; voltageV: number; model: Model | 'ideal'; waveform?: Waveform }
   | { id: string; kind: 'current-source'; nodes: readonly [string, string]; currentA: number; waveform?: Waveform }
   | { id: string; kind: 'model'; model: Model; pins: Readonly<Record<string, string>> };
+/** Explicit linear network; no automatic PCB connection. Reference is mandatory
+ * or the documented gnd. V=first-second, I first-to-second, passive power sign.
+ * Local R/C/L model mapping uses exactly p/n. No hidden ESR/ESL/DCR.
+ * DC uses constants; time waveforms are absolute and initial steady uses t=0+.
+ * AC Z zeroes independent sources and injects +1 A into positive/extracts negative. */
 export interface CircuitInput { nodes: readonly string[]; reference?: string; ports: readonly { id: string; positive: string; negative: string }[]; elements: readonly CircuitElement[] }
 export type LineInput = { widthMm: number; copperThicknessMm: number; lengthMm?: number; solderMask?: RoutingStackup['solderMask'] } & (
   | { kind: 'microstrip'; dielectricHeightMm: number; material: Material }
@@ -149,6 +156,10 @@ export type LineInput = { widthMm: number; copperThicknessMm: number; lengthMm?:
 );
 export interface Cooling { boardSurfaces?: Model; heatsinks?: readonly { target: Selector; thermalNode: string; model: Model; interface: Model; cooling: Model }[] }
 export type Heat = readonly { target: Selector; node: string; powerW: number | Waveform }[] | { category: 'ic' | 'device' | 'resistor'; defaultPowerW: number; overrides: Readonly<Record<string, { powerW: number }>> };
+/** Circuit time: relative local step-doubling tolerance (default 1e-6);
+ * absoluteTolerance multiplies 1 V for voltage / 1 A for current (default 1e-9);
+ * maxIterations bounds attempted internal steps (default 200000, max 1000000).
+ * Circuit DC/AC custom numerics explicitly reject. */
 export interface Numerics { relativeTolerance?: number; absoluteTolerance?: number; maxIterations?: number }
 export interface CommonOptions { name?: string; numerics?: Numerics; budget?: { maxSeconds?: number; maxMemoryMiB?: number } }
 export interface PhysicalOptions { components?: readonly ComponentDescription[]; stackup?: StackupDescription; materials?: Materials }
@@ -196,6 +207,9 @@ export interface ResultBase {
   method: string; inputs: Json; assumptions: readonly string[]; contextId: string;
 }
 export interface DcResult extends ResultBase {
+  /** Explicit circuits instead expose MNA node/element values, quality and
+   * requests in solution. No circuit spatial maps. Circuit current(elementId)
+   * is first-node to second-node; losses are R/ESR/DCR dissipation. */
   /** Real solution/mesh, quality, coverage and timings. Map data references this ID.
    * External pad electrodes use the first physical layer; no across-layer pad short.
    * Barrel rings are circumferential equipotential electrodes with finite segments.
@@ -213,6 +227,11 @@ export interface DcResult extends ResultBase {
   voltage(port: Port): DataValue; current(target: Port | Selector | string): DataValue;
   resistance: DataValue; losses: DataValue; lossMap: DataValue; voltageMap: DataValue; currentDensityMap: DataValue;
 }
+/** Explicit circuits: Z(f) complex Ohm/Hz; time V/A/W series on seconds.
+ * No implicit AC voltage/current, transfer/resonances or spatial maps.
+ * finalState is the latest compatible state in this bounded session; stopS is
+ * absolute, waveform phases do not restart. Altered/foreign/unknown states reject.
+ * sampleStepS controls output only; sampled extrema can miss internal peaks. */
 export interface PiResult extends DcResult { impedance(port: Port): DataValue; transfer(path: { from: Port; to: Port }): DataValue; resonances: DataValue; finalState: FinalState }
 export interface ThermalResult extends ResultBase {
   temperature(node: string | { target: Selector; node: string }): DataValue;

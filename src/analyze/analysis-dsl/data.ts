@@ -45,7 +45,25 @@ export function value(input: DataDescription): DataValue {
     Object.defineProperty(result, name, { value: (position?: unknown) => {
       if (name === 'at') parse(z.union([z.strictObject({ timeS: z.number().finite().nonnegative() }), z.strictObject({ frequencyHz: z.number().finite().positive() })]), position);
       if (description.validity.status !== 'unavailable') {
+        const transform=(v:NonNullable<DataDescription['value']>):number|null=>{
+          if(typeof v!=='number'&&(typeof v!=='object'||!v))return null;
+          const re=typeof v==='number'?v:v.real,im=typeof v==='number'?0:v.imaginary;
+          if(name==='real')return re;if(name==='imaginary')return im;
+          if(name==='phaseDeg')return re===0&&im===0?null:Math.atan2(im,re)*180/Math.PI;
+          return Math.hypot(re,im);
+        };
+        if(['real','imaginary','magnitude','phaseDeg','abs'].includes(name)&&(description.kind==='series'&&description.values||typeof description.value==='object'||name==='phaseDeg'&&typeof description.value==='number')){
+          const unit=name==='phaseDeg'?'deg':description.unit;
+          if(description.values){const values=description.values.map(v=>v===null?null:transform(v));const partial=values.some(v=>v===null);return value({...description,unit,values,validity:partial?{status:'conditional',reason:'Undefined phase/missing samples remain null'}:description.validity});}
+          const scalar=description.value===undefined?null:transform(description.value);return scalar===null?unavailable(unit,'Phase of zero is undefined',description.contextId):value({...description,unit,value:scalar});
+        }
+        if(name==='at'&&description.axis&&description.values){
+          const p=position as {timeS?:number;frequencyHz?:number};const target=p[description.axis.name];const i=description.axis.values.indexOf(target!);
+          if(i>=0&&description.values[i]!==null)return value({kind:'scalar',unit:description.unit,value:description.values[i]!,validity:description.validity,diagnostics:description.diagnostics,contextId:description.contextId});
+          return unavailable(description.unit,'at() requires an exactly saved axis position; no extrapolation',description.contextId);
+        }
         if (['min','max'].includes(name) && description.values) {
+          if(description.values.some(v=>v!==null&&typeof v==='object'))return unavailable(description.unit,'Complex extrema require real() or magnitude() first',description.contextId);
           const references = description.data && typeof description.data === 'object' && 'independentReferences' in description.data ? description.data.independentReferences : undefined;
           if (description.kind === 'map' && description.unit === 'V' && Array.isArray(references) && references.length > 1) return unavailable('V','Cannot reduce potentials across independent mathematical references',description.contextId);
           const numbers = description.values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v));

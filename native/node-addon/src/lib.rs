@@ -272,3 +272,20 @@ impl AnalysisDcSession {
     #[napi]
     pub fn clear(&mut self) { self.inner=Default::default(); }
 }
+
+/// Explicit linear RLC network, CPU/F64, scenario-owned sparse factors.
+#[napi]
+pub struct AnalysisElectricalSession { inner: pcb_analyze::electrical::Session }
+#[napi]
+impl AnalysisElectricalSession {
+    #[napi(constructor)]
+    pub fn new() -> Self { Self { inner: Default::default() } }
+    #[napi]
+    pub fn solve(&mut self, request: Value) -> Result<Value> {
+        let request=serde_json::from_value::<pcb_analyze::electrical::Request>(request)
+            .map_err(|e| napi::Error::from_reason(format!("Invalid electrical request: {e}")))?;
+        Ok(self.inner.solve(request))
+    }
+    #[napi]
+    pub fn clear(&mut self) { self.inner=Default::default(); }
+}

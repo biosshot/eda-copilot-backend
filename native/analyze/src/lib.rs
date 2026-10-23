@@ -1,6 +1,7 @@
 //! Standalone CPU/F64 board import, copper, mesh and DC. No Node, placement or GPU.
 pub mod conduction;
 pub mod dc;
+pub mod electrical;
 pub mod geometry;
 pub mod input;
 pub mod model;

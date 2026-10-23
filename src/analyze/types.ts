@@ -1,14 +1,16 @@
 import type { AnalysisImportReport, AnalysisGeometryReport, AnalysisGeometryOptions } from '../../native/analyze/index.js';
 import type { AnalysisConductionOptions, AnalysisConductionReport } from '../../native/analyze/index.js';
 import type { AnalysisDcRequest, AnalysisDcReport } from '../../native/analyze/index.js';
+import type { AnalysisElectricalRequest, AnalysisElectricalReport } from '../../native/analyze/index.js';
 
 export type { AnalysisImportReport, AnalysisGeometryReport, AnalysisGeometryOptions };
 export type { AnalysisConductionOptions, AnalysisConductionReport };
 export type AnalysisProblem = Readonly<{ kind: 'import-board'; boardJson: string }>
     | Readonly<{ kind: 'prepare-geometry'; boardJson: string; geometry?: Readonly<AnalysisGeometryOptions> }>
     | Readonly<{ kind: 'prepare-conduction'; boardJson: string } & AnalysisConductionOptions>
-    | Readonly<{ kind: 'dc'; request: AnalysisDcRequest }>;
-export type AnalysisResult<P extends AnalysisProblem = AnalysisProblem> = P extends { kind: 'dc' } ? AnalysisDcReport : P extends { kind: 'import-board' } ? AnalysisImportReport : P extends { kind: 'prepare-conduction' } ? AnalysisConductionReport : AnalysisGeometryReport;
+    | Readonly<{ kind: 'dc'; request: AnalysisDcRequest }>
+    | Readonly<{ kind: 'electrical-network'; request: AnalysisElectricalRequest }>;
+export type AnalysisResult<P extends AnalysisProblem = AnalysisProblem> = P extends {kind:'electrical-network'} ? AnalysisElectricalReport : P extends { kind: 'dc' } ? AnalysisDcReport : P extends { kind: 'import-board' } ? AnalysisImportReport : P extends { kind: 'prepare-conduction' } ? AnalysisConductionReport : AnalysisGeometryReport;
 export type AnalysisProgress = {
     jobId: string;
     phase: 'queued' | 'started' | 'completed' | 'failed' | 'cancelled';
@@ -28,6 +30,7 @@ export class AnalysisExecutionError extends Error {
 
 // Validate both the parent boundary and the worker boundary before native calls.
 export function isAnalysisProblem(value: unknown): value is AnalysisProblem {
+    if (record(value) && value.kind === 'electrical-network') return keys(value,['kind','request']) && record(value.request) && typeof value.request.contextId==='string' && ['dc','frequency','time'].includes(String(value.request.mode)) && record(value.request.circuit) && finiteJson(value.request);
     if (record(value) && value.kind === 'dc') return keys(value, ['kind','request']) && validDcRequest(value.request);
     if (value === null || typeof value !== 'object' || !('boardJson' in value) || typeof value.boardJson !== 'string' || !('kind' in value)) return false;
     if (value.kind === 'import-board') return Object.keys(value).length === 2;
@@ -40,6 +43,8 @@ export function isAnalysisProblem(value: unknown): value is AnalysisProblem {
     if (value.kind !== 'prepare-geometry' || !Object.keys(value).every(k => ['kind', 'boardJson', 'geometry'].includes(k))) return false;
     return !('geometry' in value) || value.geometry === undefined || validGeometryOptions(value.geometry);
 }
+
+function finiteJson(v:unknown):boolean {return v===null||typeof v==='string'||typeof v==='boolean'||typeof v==='number'&&Number.isFinite(v)||Array.isArray(v)&&v.every(finiteJson)||record(v)&&Object.values(v).every(x=>x===undefined||finiteJson(x));}
 
 function record(v: unknown): v is Record<string, unknown> { return !!v && typeof v === 'object' && !Array.isArray(v); }
 function keys(v: Record<string, unknown>, names: string[]) { return Object.keys(v).every(k => names.includes(k)); }

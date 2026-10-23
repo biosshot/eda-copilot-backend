@@ -12,8 +12,8 @@ installed `dist/analysis-spec-doc.d.ts`). It does not transpile TypeScript.
 `analysis()` is boardless; only `analysis({board})` opts into the snapshot. Catalogs
 are explicit host data with no built-in project models or environmental defaults.
 Builders snapshot sections, replace repeated sections and call the small internal
-`executor.ts` boundary only after structural preparation. Constant linear DC is
-implemented; other physical analyses remain unavailable. Import/geometry/conduction
+`executor.ts` boundary only after structural preparation. Constant linear PCB DC
+and explicit circuit DC/Z(f)/transient are implemented; other physical analyses remain unavailable. Import/geometry/conduction
 preparations are not substitutes for a user geometry/DRC analysis.
 
 Each scenario owns one disposable workerpool process using the existing process
@@ -40,7 +40,7 @@ program errors are distinct. Plot stores a typed description/data, never a fake 
 See [coverage, tests and limits](../../docs/experimental/analyze/analysis-dsl-verification.md).
 `createAnalysisApi` and `executeScenario` are internal: tests explicitly inject a
 test executor; the public runner has no executor/module-path override. Physical
-timing, complex/series transformations and search algorithms are not implemented. Explicit-value
+timing and search algorithms are not implemented. Explicit-value
 sweep runs its callback on every candidate and records individual failures.
 
 ## Steady DC
@@ -51,7 +51,7 @@ assembles CPU/F64 triangle sheet conductance and finite barrel segments, then us
 false until native validation; executorAvailable distinguishes DC from future solvers.
 Standalone rectangular conductors use the exact uniform-strip resistance formula.
 Ideal constant voltage/current sources and constant current/resistive loads are
-supported. Circuit, constant power, dynamic operating points, resource models and
+supported. In board mode constant power, dynamic operating points, resource models and
 ideal inductors are explicitly rejected. Capacitors remain DC opens.
 
 Pad electrodes cover existing finite terminal triangles on the first physical
@@ -232,3 +232,13 @@ Real-board `dc.js` files are directly authored DSL. Thin named launchers preserv
 exact text/filename and hashes, run the production runner, save evidence and invoke
 `tests/helpers/pcb-analysis-dc-audit.ts`. The audit and its negative tests are saved
 in the repository and do not invoke FEM. See the fixture README and DC verification.
+
+## Explicit circuit networks (P6a)
+
+The existing dc/pi builders now accept explicitly authored R/C/L circuits for DC,
+complex driving-point Z(f), and adaptive transient/state continuation. CPU/F64
+Rust sparse MNA uses the same shared addon and disposable process. Board FEM DC
+remains independent. See [semantics](../../docs/experimental/analyze/electrical-network-semantics.md)
+and [verification](../../docs/experimental/analyze/electrical-network-verification.md)
+for signs, p/n model mapping, numerics, state/resource limits and direct RLC examples.
+No PCB frequency extraction or spatial circuit maps are produced.

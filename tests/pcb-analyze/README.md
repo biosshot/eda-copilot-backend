@@ -199,3 +199,14 @@ remain unchanged. Port declarations alone do not connect electrodes; passive
 pad measurements read the existing finite-area field. Missing coverage stays
 unavailable. `dc.case` is ordinary `a.log` data consumed by the helper/HTML, not a
 new DSL method or hidden physical configuration.
+
+## Explicit electrical network examples (P6a)
+
+`rlc.js` / thin `rlc.ts` are available for STM32G0_CAN_RS485,
+USB_PD_Trigger_5A and ThunderF722: `npm run test:pcb-analyze -- <fixture> --name rlc`.
+They retain dc.js, use explicit RLC test hypotheses tied to verified pad/net labels,
+and do not extract PCB frequency parameters. The launcher audits exact current-run
+results, copies reproducible board DC evidence and saves source/inputs/hashes,
+resource measurements, JSON and self-contained HTML/SVG. Numerical/reference and
+negative audit assertions live in versioned tests. See the electrical-network
+verification and semantics under docs/experimental/analyze.
