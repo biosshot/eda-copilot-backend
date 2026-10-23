@@ -120,7 +120,7 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
     if ((config.outputs as string[] | undefined)?.includes('radiation') && !config.excitation && !config.excitations) issue('MISSING_FIELD', 'Radiation needs explicit excitation(s)');
     if ((config.outputs as string[] | undefined)?.includes('fields') && !(config.outputs as string[]).includes('sParameters') && !config.excitation && !config.excitations) issue('MISSING_FIELD', 'Fields require explicit excitation or S-parameter normalized port excitations');
   }
-  if (kind === 'networkParameters') { required(['network', 'representation']); frequencyRequired(); if (config.representation === 'S') required(['referenceOhm']); }
+  if (kind === 'networkParameters') { required(['network', 'representation']); frequencyRequired(); if (config.representation === 'S') required(['referenceOhm']); else if(config.referenceOhm!==undefined) issue('INVALID_REFERENCE','Z/Y output cannot specify referenceOhm'); }
   if (object(config.referenceOhm)) {
     const handle = config.network ?? config.target;
     const d = object(handle) ? state.descriptions.get(String(handle.id)) : undefined;
@@ -189,7 +189,7 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
   scan(config);
   if (state.changes.length) issue('VARIANT_REBUILD_REQUIRED', 'Variant intent is retained; no stale copper solve or implicit refill is permitted. Geometry/material/model rebuilding is not implemented', undefined, 'warning');
   issue('PHYSICAL_REQUIREMENTS_UNVERIFIED', 'Structure validation does not establish physical readiness; extraction/model applicability is not evaluated', undefined, 'warning');
-  const available=kind==='dc'||kind==='pi'&&!!config.circuit;
+  const available=kind==='dc'||kind==='pi'&&!!config.circuit||kind==='networkParameters';
   if (!available) issue('ANALYZER_NOT_IMPLEMENTED', `No production ${kind} executor for this model`, undefined, 'warning');
   return freeze({ kind, contextId: state.id, structurallyValid: !diagnostics.some(d => d.severity === 'error'), physicalReady: false, executorAvailable: available, diagnostics, components, inputs: Object.fromEntries(Object.entries(config).map(([key, v]) => [key, { source: 'manual' as const, value: json(v) }])), assumptions });
 }

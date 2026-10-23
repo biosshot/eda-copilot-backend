@@ -210,3 +210,9 @@ results, copies reproducible board DC evidence and saves source/inputs/hashes,
 resource measurements, JSON and self-contained HTML/SVG. Numerical/reference and
 negative audit assertions live in versioned tests. See the electrical-network
 verification and semantics under docs/experimental/analyze.
+
+P6b explicit frequency scenarios: `npm run test:pcb-analyze -- BandAmpV5 STM32G0_CAN_RS485 --name network`.
+Edit adjacent `network.js` directly; `network.ts` only launches it. Versioned
+`network.resources.json` contains the section hypothesis; standalone RF resources
+are under `tests/fixtures/analysis-frequency`. Every run captures exact source
+bytes/hashes, model mapping, numerical audit and HTML in its own runs directory.

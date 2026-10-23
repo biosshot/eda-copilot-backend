@@ -8,7 +8,7 @@
 
 Это **заданные частотные модели**, а не автоматическое моделирование трасс/компонентов по PCB. Геометрическое извлечение, transient импортированных S-параметров, fitting/FFT, TDR и полноценный RF/SI останутся последующими этапами. P6b не объявляет весь P6 завершённым.
 
-Обязательный production-путь: `models`/локальный Resource → `a.network` → при необходимости `a.connect` → `a.networkParameters().run()` → Rust → комплексные DataValue → check/plot/report. Не создавать новый runner или новый DSL.
+Обязательный production-путь: `models`/локальный Resource (в том числе созданный через `a.model`) → `a.network` → при необходимости `a.connect` → `a.networkParameters().run()` → Rust → комплексные DataValue → check/plot/report. Не создавать новый runner или новый DSL.
 
 ## 2. Переиспользование и границы модулей
 
@@ -51,6 +51,16 @@ type TouchstoneNetworkData = {
 Обе формы находятся внутри Resource с `kind: "network"`, `id`, **упорядоченным** `ports: string[]`, `data` и необязательными существующими source/validity/analyses. Порядок Resource.ports определяет индексы матрицы/портов файла; никакой сортировки по алфавиту. Дубли, неверные размеры, пустые имена, NaN/Infinity и несогласованные данные отклоняются. Для Z/Y единицы — Ohm/Siemens; referenceOhm входного S нельзя трактовать как физические резисторы нагрузки. Неоднозначное лишнее поле referenceOhm у нормализованного Z/Y отклонять либо явно запретить схемой.
 
 `referenceTopology:"common"` — явное ограничение на модели с общей опорой внутри блока. Произвольные раздельные возвратные контакты, mixed-mode и привязка к PCB-площадкам пока не поддерживаются; не угадывать их. В `a.network` все порты ресурса должны быть однозначно представлены именами DSL. Частичную карту отклонять: отсутствие порта не означает согласованную нагрузку.
+
+### Расширение существующего `a.model()`
+
+В рамках P6b расширить фабрику `a.model()` входом Resource с `kind: "network"` и обеими описанными выше формами data: `network-parameters` (S/Z/Y) и `touchstone`. Сохранить все существующие варианты LocalModel и их валидацию. Это целевое расширение этапа, а не утверждение о поддержке в базе `38fb9a6`.
+
+- `a.model()` проверяет описание и возвращает неизменяемый объект модели в той же универсальной форме Resource, без регистрации экземпляра сети, запуска solver или загрузки данных. Обязательные поля не подставляются из скрытых defaults. Результат напрямую принимается `a.network({ model, ports })`; публичная TypeScript-сигнатура должна сохранять тип сетевого ресурса без casts со стороны пользователя (например, через перегрузку).
+- Прямой Resource в `a.network` и ресурсы каталога `models` остаются допустимыми. Фабрика и прямой путь используют общую структурную валидацию и ранние лимиты; обойти проверки пропуском `a.model()` нельзя. Численная проверка пассивности, преобразования и Touchstone parser остаются в общем production-пути Rust, без второго solver/parser в фабрике.
+- Одна модель переиспользуется несколькими `a.network`, каждый вызов создаёт отдельный экземпляр. `a.model` описывает поведение, `a.network` — экземпляр и mapping, `a.connect` — соединения, `networkParameters` — расчёт.
+- Не добавлять специальный `kind: "ideal-attenuator"`, генератор матриц аттенюатора или fluent-builder модели. Пользователь может вычислять коэффициенты обычным JavaScript. Универсальный объект остаётся пригодным для аттенюаторов, усилителей, фильтров и любых поддержанных многопортовых данных.
+- В примерах и связанных fixtures использовать ключ `models.electrical.attenuatorPad`, подпись **Attenuator Pad** и понятный model id вместо неоднозначного `models.electrical.pad`. Это имя конкретного ресурса, не новый тип модели и не контактная площадка PCB; отдельное поле display name в контракт не добавлять.
 
 ## 4. Ограниченный Touchstone
 
@@ -102,10 +112,10 @@ type TouchstoneNetworkData = {
 
 ## 7. Пример целевого DSL
 
-Host передаёт `models.electrical.pad` как Resource с двумя портами `p1/p2`. Например, два одинаковых отсчёта идеализированного согласованного аттенюатора на 1 и 2 GHz: S11=S22=0, S21=S12=0.5, reference=50 Ohm, `nature:"passive"`, common return. Это синтетическая модель, не параметры реального компонента. В Touchstone 1.0 она может быть задана так:
+Модель **Attenuator Pad** можно задать прямо в DSL через `a.model()` или передать из host как `models.electrical.attenuatorPad`, Resource с двумя портами `p1/p2`. Например, два одинаковых отсчёта идеализированного согласованного аттенюатора на 1 и 2 GHz: S11=S22=0, S21=S12=0.5, reference=50 Ohm, `nature:"passive"`, common return. Это синтетическая модель, не параметры реального компонента. В Touchstone 1.0 она может быть задана так:
 
 ```text
-! Synthetic matched attenuator, not measured hardware
+! Attenuator Pad: synthetic matched attenuator, not measured hardware
 # GHz S RI R 50
 1 0 0 0.5 0 0.5 0 0 0
 2 0 0 0.5 0 0.5 0 0 0
@@ -115,11 +125,32 @@ Host передаёт `models.electrical.pad` как Resource с двумя по
 
 ```js
 const a = analysis();
+const referenceOhm = 50;
+const frequenciesHz = [1e9, 2e9];
+const reflection = { real: 0, imaginary: 0 };
+const transmission = { real: 0.5, imaginary: 0 };
+const attenuatorModel = a.model({
+  id: "my-attenuator",
+  kind: "network",
+  ports: ["p1", "p2"],
+  data: {
+    format: "network-parameters",
+    representation: "S",
+    referenceOhm,
+    referenceTopology: "common",
+    nature: "passive",
+    frequenciesHz,
+    parameters: frequenciesHz.map(() => [
+      [reflection, transmission],
+      [transmission, reflection],
+    ]),
+  },
+});
 const first = a.network({
-  model: models.electrical.pad, ports: { input: "p1", output: "p2" },
+  model: attenuatorModel, ports: { input: "p1", output: "p2" },
 });
 const second = a.network({
-  model: models.electrical.pad, ports: { input: "p1", output: "p2" },
+  model: attenuatorModel, ports: { input: "p1", output: "p2" },
 });
 const cascade = a.connect({
   networks: [first, second],
@@ -135,6 +166,8 @@ a.check({ name: "S21 в исходной точке", unit: "1",
   actual: r.parameter({ out: "output", in: "input" }).at({ frequencyHz: 1e9 }).magnitude(),
   target: 0.25, tolerance: 1e-10 });
 ```
+
+Для варианта с каталогом заменить объявление модели на `const attenuatorModel = models.electrical.attenuatorPad;`, передав тот же Resource из host. Оба способа должны давать одинаковый результат. При необходимости пользователь задаёт ослабление через `10 ** (-attenuationDb / 20)` вместо `0.5`, без специального типа аттенюатора.
 
 Ожидаемый S21=0.25 следует из согласованных S11/S22=0. Для отражающих/невзаимных моделей такого произведения в общем случае недостаточно — это обязательно проверить отдельными тестами. Не добавлять `.db()` только ради этого примера: текущих magnitude/phaseDeg/real/imaginary достаточно. График dB при необходимости строит renderer с явной нормировкой и обработкой нуля.
 
@@ -161,6 +194,8 @@ a.check({ name: "S21 в исходной точке", unit: "1",
 
 ### Production и регрессии
 
+Проверить расширение `a.model()` через публичные типы и production DSL: сетевые S/Z/Y и Touchstone ресурсы принимаются и передаются в `a.network` без casts; существующие локальные модели и их отрицательные проверки сохраняются. Сравнить расчёт одной модели через фабрику, прямой Resource и каталог `models.electrical.attenuatorPad`. Проверить неизменяемость результата фабрики и независимость от последующей мутации исходного объекта. Повреждённые размеры/порты, обязательные поля, nonfinite и лимиты не обходятся прямым Resource; физически неверная passive-модель не становится допустимой после фабрики. Включить прямой сценарий из раздела 7 и сохранить S21=0.25 в исходной точке.
+
 Проверить публичный установленный пакет, два экземпляра одного ресурса, неточное/чужое mapping, immutable old result, reuse и инвалидацию, повторное использование `result.network`, report budget, timeout/cancel и успешный следующий запуск. Временные анализы импортированной табличной сети по-прежнему явно unsupported.
 
 Сохранить E1–E3, M1 и D1–D3. Не менять физические inputs существующих DC/RLC-плат и не ослаблять их guards. Новые tests/helper не реализуют собственный parser/network solver вместо production.
@@ -183,6 +218,6 @@ Versioned audit вызывается launcher на текущем результ
 
 Не реализовывать сейчас Touchstone export, смешанные дифференциальные режимы, IBIS/AMI, arbitrary SPICE, fitting/passivity repair/FFT/causality enforcement, transient импортированных моделей, PI/SI/EMI/thermal/full-wave, извлечение трасс/vias/PDN, GPU, отдельную библиотеку исполнения или новый board-контракт. Не добавлять инструмент для загрузки URL из DSL.
 
-Этап принят, когда весь заявленный поднабор работает через существующий DSL, есть независимые complex эталоны и отрицательные проверки, корректный thru не теряется из-за сингулярной Z, unequal reference/mapping не путаются с нагрузками, ограничения и неизвестность не превращаются в successful zero, есть исполняемые прямые сценарии и проверенные отчёты. Отдельно документировать, что пассивность проверена только на заявленных точках, а temporal model не получена.
+Этап принят, когда весь заявленный поднабор работает через существующий DSL, включая расширенный `a.model()` без регрессий локальных моделей, есть независимые complex эталоны и отрицательные проверки, корректный thru не теряется из-за сингулярной Z, unequal reference/mapping не путаются с нагрузками, ограничения и неизвестность не превращаются в successful zero, есть исполняемые прямые сценарии и проверенные отчёты. В актуальных примерах/fixtures/отчётах аттенюатор называется `attenuatorPad` / Attenuator Pad, старый ключ `models.electrical.pad` не используется. Отдельно документировать, что пассивность проверена только на заявленных точках, а temporal model не получена.
 
 Исполнитель выполняет focused Rust/Node regressions, native build, typecheck/build, package checks и один итоговый прогон новых fixtures на итоговую версию. Старые большие корпуса повторять при влияющем изменении общего пути; иначе сохранить evidence и честную проверку source parity, без циклических повторов. Записать фактические команды/exit codes, tolerances, версии, бюджеты, hash/provenance и ограничения в `frequency-networks-verification.md`. Обновить `spec-doc.d.ts`, DSL reference, module READMEs, architecture map, experimental index и CHANGELOG. Передать на ревью; новый этап и автоматический коммит не делать.

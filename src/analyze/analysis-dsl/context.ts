@@ -1,3 +1,4 @@
+import {networkResource} from './frequency-model.ts';
 import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type * as T from './spec-doc.js';
@@ -148,7 +149,8 @@ export function createAnalysisApi(input: DslInput, limits: Limits, changed: (upd
         if ([...p.links.flatMap(x => [x.from, x.to]), ...p.sources.map(x => x.node)].some(x => !ids.has(x))) S.invalid('Unknown thermal node');
         return descriptor('thermalNetwork', p) as T.ThermalNetwork;
       },
-      model(v: T.LocalModel) {
+      model: ((v: T.LocalModel | T.NetworkResource) => {
+        if (object(v) && v.kind === "network") return networkResource(v);
         const parsed = S.parse(S.localModel, json(v));
         if ('nodes' in parsed) {
           unique(parsed.nodes.map(n => n.id), 'thermal model nodes');
@@ -156,7 +158,7 @@ export function createAnalysisApi(input: DslInput, limits: Limits, changed: (upd
           if (parsed.links.some(l => !ids.has(l.from) || !ids.has(l.to))) S.invalid('Unknown thermal model node');
         }
         return freeze(parsed);
-      },
+      }) as T.AnalysisContext["model"],
       scene(v: Parameters<T.AnalysisContext['scene']>[0]) {
         const p = S.parse(z.strictObject({ model: S.resource, parameters: z.record(S.text, z.number().finite()).optional() }), json(v));
         if (Object.keys(p.parameters ?? {}).some(k => !(k in (p.model.parameters ?? {})))) S.invalid('Unknown scene parameter');
@@ -173,9 +175,12 @@ export function createAnalysisApi(input: DslInput, limits: Limits, changed: (upd
         return descriptor('antenna', { structure: 'kind' in structure ? structure : { boardIdentity: identity }, feed, ...(v.models ? { models: v.models.map(m => S.parse(S.model, json(m))) } : {}) }) as T.Antenna;
       },
       network(v: Parameters<T.AnalysisContext['network']>[0]) {
-        const p = S.parse(z.strictObject({ model: S.resource, ports: z.record(S.text, S.text) }), json(v));
+        if (!object(v) || !object(v.model)) S.invalid("Network requires a resource model and port mapping");
+        const model = v.model.kind === "network" ? networkResource(v.model) : S.parse(S.resource, json(v.model));
+        const p = S.parse(z.strictObject({ model: S.resource, ports: z.record(S.text, S.text) }), json({...v, model}));
         unique(Object.values(p.ports), 'network port mapping');
         if (!p.model.ports || Object.values(p.ports).some(n => !p.model.ports!.includes(n))) S.invalid('Network mapping references undeclared resource ports');
+        if (Object.keys(p.ports).length !== p.model.ports.length) S.invalid('Network mapping must cover every resource port');
         return descriptor('network', p, Object.keys(p.ports)) as T.Network;
       },
       connect(v: Parameters<T.AnalysisContext['connect']>[0]) {

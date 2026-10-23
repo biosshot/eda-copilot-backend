@@ -59,6 +59,8 @@ const analysisFixtures = ['NanoScope', 'NanoSpec', 'ESPower', 'BandAmpV5', 'USB_
 writeFileSync(join(consumer, 'analysis-fixtures.json'), JSON.stringify(analysisFixtures));
 copyFileSync(join(backend,'tests/fixtures/analysis-dc-coupon.json'),join(consumer,'dc-fixture.json'));
 copyFileSync(join(backend,'tests/fixtures/analysis-electrical.js'),join(consumer,'rlc-fixture.js'));
+copyFileSync(join(backend,'tests/fixtures/analysis-frequency/resources.json'),join(consumer,'frequency-resources.json'));
+copyFileSync(join(backend,'tests/fixtures/analysis-frequency/network.js'),join(consumer,'frequency-fixture.js'));
 const geometryCoupon = JSON.parse(analysisFixtures[0].json);
 geometryCoupon.pads = geometryCoupon.pads.slice(0, 1);
 geometryCoupon.holes = [];
@@ -92,6 +94,12 @@ assert.deepEqual(rlcDsl.reports[0].calculations.filter(c=>c.phase==='completed')
 assert.deepEqual(rlcDsl.reports[0].checks.map(c=>c.status),['pass','pass']);
 assert.equal(rlcDsl.reports[0].plots.length,5);
 const dcBoard=JSON.parse(readFileSync('dc-fixture.json','utf8'));
+const frequency=await runAnalysisDsl({code:readFileSync('frequency-fixture.js','utf8'),models:JSON.parse(readFileSync('frequency-resources.json','utf8'))},{maxOutputBytes:16*1024*1024});
+assert.equal(frequency.status,'complete',JSON.stringify(frequency.error));
+assert.deepEqual(frequency.reports.flatMap(r=>r.checks).map(c=>c.status),Array.from({length:5},()=>['fail','pass']).flat());
+const frequencyRuns=frequency.reports.flatMap(r=>r.calculations).filter(c=>c.phase==='completed');
+assert.equal(frequencyRuns.length,5);assert.ok(frequencyRuns.every(c=>c.result.solution.quality.maxResidual<=1e-8));
+assert.ok(Math.abs(frequencyRuns[1].result.solution.parameters[0][1][0].real-.2/.94)<1e-10);
 const boardDsl=await runAnalysisDsl({board:dcBoard,code:'const a=analysis({board});const s=a.port({positive:pad("J1","1"),negative:pad("J1","2")});const p=a.port({positive:pad("U1","1"),negative:pad("U1","2")});const base=a.dc().stackup(stackup({layers:[{kind:"copper",name:"TOP",thicknessMm:.035,material:"cu"}]})).materials({cu:{conductivitySM:58e6,state:"constant coupon"}}).sources([{port:s,voltageV:1,model:"ideal"}]).mesh({maxAreaMm2:.125,minAngleDeg:0,maxRefinementSteps:64});const unused=a.port({positive:[pad("J1","1"),pad("U1","1")],negative:pad("J1","2")});const observed=a.port({positive:padId("rail"),negative:padId("return")});for(const currentA of [1,2]){const d=await base.loads([{port:p,currentA}]).run();a.check({name:"passive board voltage",actual:d.voltage(observed),target:1-currentA*8e-3/(58e6*2e-3*.035e-3),tolerance:1e-8,unit:"V"});a.check({name:"physical board voltage",actual:d.voltage(p),target:1-currentA*16e-3/(58e6*2e-3*.035e-3),tolerance:1e-8,unit:"V"});a.plot({title:"Actual board current",data:d.currentDensityMap});}'});
 assert.equal(boardDsl.status,'complete');
 assert.deepEqual(boardDsl.reports[0].checks.map(c=>c.status),['pass','pass','pass','pass']);
@@ -157,6 +165,13 @@ writeFileSync(join(consumer, 'consumer.ts'), `
 import { componentSearch, extractCircuit, makePcbLayout, getPcbComponentSizes, disposeBackend } from 'eda-copilot-backend';
 import type { CircuitMod, FootprintSpec } from 'eda-copilot-backend/types';
 import native = require('./node_modules/eda-copilot-backend/native/node-addon/index.cjs');
+declare const analysisApi:ReturnType<typeof analysis>;
+const localNetwork=analysisApi.model({id:'types-coupon',kind:'network',ports:['p'],data:{format:'network-parameters',representation:'S',frequenciesHz:[1e9],parameters:[[[{real:0,imaginary:0}]]],referenceOhm:50,referenceTopology:'common',nature:'passive'}});
+const typedResource=localNetwork;
+analysisApi.network({model:localNetwork,ports:{input:'p'}});
+const textNetwork=analysisApi.model({id:'text-coupon',kind:'network',ports:['p'],data:{format:'touchstone',content:'# Hz S RI\\n1000000000 0 0\\n',referenceTopology:'common',nature:'passive'}});
+analysisApi.network({model:textNetwork,ports:{input:'p'}});
+analysisApi.model({kind:'resistor',resistanceOhm:1});
 const imported: boolean = native.importAnalysisBoard('{}').imported;
 const sourceId: string | null = native.importAnalysisBoard('{}').diagnostics[0].source_id;
 const existingContract: number = native.contractVersion();

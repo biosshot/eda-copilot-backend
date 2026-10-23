@@ -1,6 +1,10 @@
 # Анализаторы: рабочие материалы обсуждения
 
-**Следующее задание:** [P6b — частотные многопортовые модели](next-task-frequency-networks.md): S/Z/Y, ограниченный Touchstone и `a.connect`, с complex эталонами и визуальными отчётами. Это продолжение P6; извлечение PCB и временные отклики импортированных моделей пока не входят.
+**Следующее задание:** [P7a — численные сечения и однородные линии](next-task-line-cross-sections.md): собственный FEM сечения одиночной/связанной линии, C/L, импеданс/моды, частотная модель для P6b и три проверенных board-derived примера с визуализациями. Первый режим явно PEC/lossless quasi-TEM; полный PCB path/via/PDN и потери остаются последующими блоками.
+
+**Приёмка P6b, 2026-10-23:** [ревью и evidence](frequency-networks-acceptance-2026-10-23.md). Приняты S/Z/Y, ограниченный Touchstone, композиция и универсальный сетевой `a.model()`, название Attenuator Pad. Проверены исходники, hashes и сохранённые отчёты; повторных запусков тестов/сборки при ревью не было. Весь P6 и автоматическое PCB extraction этим не закрываются.
+
+**Предыдущее задание:** [P6b — частотные многопортовые модели](next-task-frequency-networks.md): S/Z/Y, ограниченный Touchstone и `a.connect`, с complex эталонами и визуальными отчётами. Временные отклики импортированных моделей остаются будущей работой.
 
 **Приёмка P6a, 2026-10-23:** [повторное ревью](electrical-network-acceptance-2026-10-23.md) закрывает E1–E3. Принято ядро явно заданных RLC-сетей; весь P6 и board AC/PI этим не закрываются. Проверены код, сохранённые проверки и hashes, без нового запуска тестов/сборки. Нижние статусы сохраняются как история.
 
@@ -174,3 +178,8 @@ meshing, refill и физические решатели в этом этапе 
 
 P6a adds explicitly authored lumped networks only. The remaining P6 and PCB
 frequency extraction P7 / extracted-board PI P8 remain separate tasks.
+
+P6b review delivery: [frequency-network subset and equations](frequency-network-semantics.md),
+[verification and artifacts](frequency-networks-verification.md). Includes universal
+network `a.model`, S/Z/Y, bounded Touchstone and explicit `a.connect`; P7/PCB
+extraction, board PI and SI remain separate unimplemented stages.

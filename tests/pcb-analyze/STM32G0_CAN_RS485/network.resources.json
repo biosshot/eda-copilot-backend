@@ -1,0 +1,92 @@
+{
+  "electrical": {
+    "boardSection": {
+      "id": "STM32G0_CAN_RS485-explicit-section-hypothesis",
+      "kind": "network",
+      "ports": [
+        "input",
+        "output"
+      ],
+      "source": "Synthetic passive impedance hypothesis for selected contacts; no measured/extracted behavior or automatic PCB connection",
+      "data": {
+        "format": "network-parameters",
+        "representation": "Z",
+        "referenceTopology": "common",
+        "nature": "passive",
+        "frequenciesHz": [
+          1000,
+          10000,
+          100000
+        ],
+        "parameters": [
+          [
+            [
+              {
+                "real": 1000,
+                "imaginary": 0
+              },
+              {
+                "real": 20,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 20,
+                "imaginary": 0
+              },
+              {
+                "real": 10,
+                "imaginary": 0
+              }
+            ]
+          ],
+          [
+            [
+              {
+                "real": 1000,
+                "imaginary": 0
+              },
+              {
+                "real": 20,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 20,
+                "imaginary": 0
+              },
+              {
+                "real": 10,
+                "imaginary": 0
+              }
+            ]
+          ],
+          [
+            [
+              {
+                "real": 1000,
+                "imaginary": 0
+              },
+              {
+                "real": 20,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 20,
+                "imaginary": 0
+              },
+              {
+                "real": 10,
+                "imaginary": 0
+              }
+            ]
+          ]
+        ]
+      }
+    }
+  }
+}

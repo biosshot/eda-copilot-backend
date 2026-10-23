@@ -1,4 +1,5 @@
 //! Explicit linear networks, CPU/F64. No PCB extraction or implicit parasitics.
+pub mod frequency;
 mod network;
 mod solve;
 mod waveform;

@@ -10,7 +10,12 @@ export function createProblemExecutor(retainDcForScenario = false) {
   return <P extends AnalysisProblem>(problem: P): AnalysisResult<P> => {
     const addon = createRequire(import.meta.url)(backendResource('native', 'node-addon', 'index.cjs')) as typeof import('../../native/node-addon/index.cjs');
     let result: AnalysisResult;
-    if (problem.kind === 'electrical-network') {
+    if (problem.kind === 'frequency-network') {
+      electrical ??= new addon.AnalysisElectricalSession();
+      try { result=electrical.solveFrequency(problem.request); }
+      finally {if(!retainDcForScenario){electrical.clear();electrical=undefined;}}
+    }
+    else if (problem.kind === 'electrical-network') {
       electrical ??= new addon.AnalysisElectricalSession();
       try { result=electrical.solve(problem.request); }
       finally {if(!retainDcForScenario){electrical.clear();electrical=undefined;}}

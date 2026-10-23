@@ -959,3 +959,17 @@ R/C/L local model contacts are p/n. I(first→second), source power is negative.
 Waveforms are absolute; passive ports never stamp loads. Complex transformations
 include real/imaginary/magnitude/phaseDeg, phase range [-180,180] and undefined zero.
 No automatic PCB AC extraction or standalone geometric maps.
+
+## Frequency multiports (P6b, 2026-10-23)
+
+`a.model(NetworkResource)` additionally returns an immutable universal Resource,
+without registering a device or solving; LocalModel overloads are preserved.
+`a.network({model,ports})` requires complete bijective resource-port mapping.
+Factory/direct/catalog paths share checks. `a.connect` supports nested explicit
+pairwise networks and one-port loads. `networkParameters` implements S/Z/Y with
+separate S output references and complex DataValues; result.network is reusable
+on its saved band. See [exact subset, equations and limits](frequency-network-semantics.md),
+[verification](frequency-networks-verification.md) and the executable example in
+[next task section 7](next-task-frequency-networks.md#7-пример-целевого-dsl).
+The catalog example is `models.electrical.attenuatorPad` / Attenuator Pad.
+No automatic matched loads, extrapolation, PCB extraction or temporal fitting.

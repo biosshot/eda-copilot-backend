@@ -1,3 +1,4 @@
+import {createFrequencyExecutor} from './frequency-executor.ts';
 import type { AnalysisKind, Configurations, DataDescription, Diagnostic, Json, Network, Resource, Results, TimingOptions } from './spec-doc.js';
 import type { RoutingBoardV2 } from '../../types/pcb/routing-board-v2.ts';
 import type { AnalysisPhysicalProfile } from '../../../native/analyze/index.js';
@@ -31,9 +32,11 @@ export interface ExecutionResult {
 }
 export type AnalysisExecutor = (task: AnalysisTask) => Promise<ExecutionResult>;
 export function createAnalysisExecutor(): AnalysisExecutor {
+  const frequency = createFrequencyExecutor();
   const dc = createDcExecutor();
   const electrical=createElectricalExecutor();
   return async task => {
+    if (task.kind==='networkParameters') return frequency(task as AnalysisTask<'networkParameters'>);
     if ((task.kind==='dc'||task.kind==='pi')&&'circuit'in task.config&&task.config.circuit) return electrical(task as AnalysisTask<'dc'|'pi'>);
     if (task.kind === 'dc') return dc(task as AnalysisTask<'dc'>);
     throw new AnalysisDslError('ANALYZER_NOT_IMPLEMENTED', `Analysis executor '${task.kind}' is not implemented`, [{ code: 'ANALYZER_NOT_IMPLEMENTED', severity: 'error', message: `No production ${task.kind} solver is installed` }]);
@@ -66,7 +69,7 @@ export function resultFor<K extends AnalysisKind>(task: AnalysisTask<K>, payload
   const accessors: Partial<Record<AnalysisKind, Record<string, string>>> = {
     dc: { voltage: 'V', current: 'A' }, pi: { voltage: 'V', current: 'A', impedance: 'Ohm', transfer: '1' },
     thermal: { temperature: 'degC', heatFlow: 'W' }, si: { voltage: 'V', differentialVoltage: 'V' },
-    emi: { voltage: 'V', current: 'A', measurement: 'V' }, networkParameters: { parameter: '1' },
+    emi: { voltage: 'V', current: 'A', measurement: 'V' }, networkParameters: { parameter: (task.config as Configurations['networkParameters']).representation==='Z'?'Ohm':(task.config as Configurations['networkParameters']).representation==='Y'?'S':'1' },
   };
   const argumentsFor: Record<string, z.ZodType> = {
     voltage: port, impedance: port, current: z.union([port, selector, text]), transfer: z.strictObject({ from: port, to: port }),

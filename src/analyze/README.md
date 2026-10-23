@@ -242,3 +242,13 @@ remains independent. See [semantics](../../docs/experimental/analyze/electrical-
 and [verification](../../docs/experimental/analyze/electrical-network-verification.md)
 for signs, p/n model mapping, numerics, state/resource limits and direct RLC examples.
 No PCB frequency extraction or spatial circuit maps are produced.
+
+## Frequency multiports (P6b)
+
+`a.model` additionally describes immutable network Resources. Factory/direct/catalog
+inputs share early validation; `a.network` creates mapped instances and `a.connect`
+pairs their ports. `networkParameters` dispatches through the existing process and
+shared addon to Rust, returning S/Z/Y complex DataValues and reusable result.network.
+See [semantics](../../docs/experimental/analyze/frequency-network-semantics.md) and
+[verification](../../docs/experimental/analyze/frequency-networks-verification.md).
+No PCB frequency extraction or imported-network transient is implemented.

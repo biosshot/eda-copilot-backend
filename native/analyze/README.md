@@ -131,7 +131,8 @@ counts, including available/unavailable per-layer fill states.
   shorts and copper overlaps uncertified. Import does not certify ring topology or
   CAD export fidelity. Mask openings are not present in the current transport.
 
-There is no refill, electrical solver, cache, GPU, DSL or common compute runtime.
+The import operation performs no refill or electrical solve and uses no GPU,
+DSL or common compute runtime. Separate calculation modules are described below.
 
 ## Build and checks
 
@@ -168,3 +169,11 @@ impedance and adaptive BE time integration. One bounded compiled model/factor/la
 state per session; no PCB extraction, placement/GPU or global cache. N-API remains
 in the single node-addon host. See [semantics](../../docs/experimental/analyze/electrical-network-semantics.md)
 and [verification](../../docs/experimental/analyze/electrical-network-verification.md).
+
+## Tabulated frequency blocks (P6b)
+
+`electrical::frequency` normalizes bounded S/Z/Y or Touchstone resources, solves
+common-return multiport wave connections and renormalization with CPU/F64 faer LU.
+It shares the existing addon/session boundary; no PCB extraction, temporal fitting
+or GPU. See [subset and equations](../../docs/experimental/analyze/frequency-network-semantics.md)
+and [verification](../../docs/experimental/analyze/frequency-networks-verification.md).

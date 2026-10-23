@@ -287,5 +287,11 @@ impl AnalysisElectricalSession {
         Ok(self.inner.solve(request))
     }
     #[napi]
+    pub fn solve_frequency(&mut self, request: Value) -> Result<Value> {
+        let request=serde_json::from_value::<pcb_analyze::electrical::frequency::Request>(request)
+            .map_err(|e| napi::Error::from_reason(format!("Invalid frequency request: {e}")))?;
+        Ok(pcb_analyze::electrical::frequency::run(request))
+    }
+    #[napi]
     pub fn clear(&mut self) { self.inner=Default::default(); }
 }

@@ -132,4 +132,19 @@ export interface AnalysisElectricalReport {
   resources?:{peakRssBytes:number;metric:string};
   system?:{unknowns:number;nodalUnknowns:number;gNonzeros:number;eNonzeros:number;solver:string};
 }
-export declare class AnalysisElectricalSession {constructor();solve(request:AnalysisElectricalRequest):AnalysisElectricalReport;clear():void}
+export declare class AnalysisElectricalSession {constructor();solve(request:AnalysisElectricalRequest):AnalysisElectricalReport; solveFrequency(request:AnalysisFrequencyRequest):AnalysisFrequencyReport;clear():void}
+
+/** Bounded common-return frequency multiports. Internal addon transport. */
+export interface AnalysisFrequencyResource {id:string;kind:string;ports:string[];data:unknown;source?:string;validity?:unknown;analyses?:string[]}
+export interface AnalysisFrequencyRequest {
+ instances:{id:string;model:AnalysisFrequencyResource;ports:string[]}[];
+ connections:[number,number][];ports:{name:string;index:number}[];frequencies:number[];
+ representation:'S'|'Z'|'Y';referenceOhm?:number[];budget?:AnalysisElectricalRequest['budget'];
+}
+export interface AnalysisFrequencyReport {
+ status:'complete'|'rejected';diagnostics:{code:string;message:string;severity:'error'|'warning'|'info'}[];elapsedMs:number;
+ frequenciesHz?:number[];ports?:{name:string;index:number}[];representation?:'S'|'Z'|'Y';referenceOhm?:number[]|null;
+ parameters?:{real:number;imaginary:number}[][][];nature?:'passive'|'active'|'unspecified';conditional?:boolean;
+ bandHz?:number[];interpolation?:unknown[];provenance?:unknown[];quality?:{maxResidual:number;maxCondition:number;solves:number};
+ resources?:{peakRssBytes:number;metric:string};
+}

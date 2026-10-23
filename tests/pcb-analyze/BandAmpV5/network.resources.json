@@ -1,0 +1,92 @@
+{
+  "electrical": {
+    "boardSection": {
+      "id": "BandAmpV5-explicit-section-hypothesis",
+      "kind": "network",
+      "ports": [
+        "input",
+        "output"
+      ],
+      "source": "Synthetic passive impedance hypothesis for selected contacts; no measured/extracted behavior or automatic PCB connection",
+      "data": {
+        "format": "network-parameters",
+        "representation": "Z",
+        "referenceTopology": "common",
+        "nature": "passive",
+        "frequenciesHz": [
+          1000000.0,
+          5000000.0,
+          10000000.0
+        ],
+        "parameters": [
+          [
+            [
+              {
+                "real": 100,
+                "imaginary": 0
+              },
+              {
+                "real": 10,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 10,
+                "imaginary": 0
+              },
+              {
+                "real": 75,
+                "imaginary": 0
+              }
+            ]
+          ],
+          [
+            [
+              {
+                "real": 100,
+                "imaginary": 0
+              },
+              {
+                "real": 10,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 10,
+                "imaginary": 0
+              },
+              {
+                "real": 75,
+                "imaginary": 0
+              }
+            ]
+          ],
+          [
+            [
+              {
+                "real": 100,
+                "imaginary": 0
+              },
+              {
+                "real": 10,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 10,
+                "imaginary": 0
+              },
+              {
+                "real": 75,
+                "imaginary": 0
+              }
+            ]
+          ]
+        ]
+      }
+    }
+  }
+}

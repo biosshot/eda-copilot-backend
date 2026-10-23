@@ -27,6 +27,7 @@ function context(b?: RoutingBoardV2) {
 }
 const wire = `const a=analysis(); const c=a.conductor({lengthMm:10,widthMm:1,thicknessMm:.035,material:{conductivitySM:58e6,state:'constant isotropic coupon'}});`;
 
+const tabulated = {format:'network-parameters' as const,representation:'S' as const,referenceTopology:'common' as const,nature:'unspecified' as const,referenceOhm:50,frequenciesHz:[1e6,1e9],parameters:[[[{real:0,imaginary:0},{real:.5,imaginary:0}],[{real:.5,imaginary:0},{real:0,imaginary:0}]],[[{real:0,imaginary:0},{real:.5,imaginary:0}],[{real:.5,imaginary:0},{real:0,imaginary:0}]]]};
 test('production runner awaits JS, retains failed/unknown checks and computes conductor DC', async () => {
   const result = await runAnalysisDsl({ code: `${wire}
     a.check({name:'fail', actual:2,max:1,unit:'V'});
@@ -185,9 +186,9 @@ test('descriptors validate graph nodes, network ownership/model ports and contex
   const { a } = context();
   assert.throws(() => a.circuit({ nodes: ['n'], ports: [], elements: [{ kind: 'resistor', id: 'R', nodes: ['n', 'x'], resistanceOhm: 1 }] }), /reference/);
   assert.throws(() => a.thermalNetwork({ nodes: [{ id: 'a' }], links: [{ from: 'a', to: 'b', resistanceKPerW: 1 }], sources: [] }), /Unknown thermal node/);
-  const n = a.network({ model: { id: 'rf', kind: 'network', ports: ['one', 'two'] }, ports: { input: 'one', output: 'two' } });
+  const n = a.network({ model: { id: 'rf', kind: 'network', ports: ['one', 'two'], data:tabulated }, ports: { input: 'one', output: 'two' } });
   assert.throws(() => n.port('foo'), /Unknown port/);
-  assert.throws(() => a.network({ model: { id: 'rf', kind: 'network', ports: ['one'] }, ports: { output: 'two' } }), /undeclared/);
+  assert.throws(() => a.network({ model: { id: 'rf', kind: 'network', ports: ['one'], data:{...tabulated,parameters:[[[{real:0,imaginary:0}]],[[{real:0,imaginary:0}]]]} }, ports: { output: 'two' } }), /undeclared/);
   const another = context().a;
   assert.throws(() => another.networkParameters().network(n), /another analysis|Unknown or incompatible/);
   assert.doesNotThrow(() => a.connect({ networks: [n], connections: [], ports: { input: n.port('input') } }));
@@ -320,7 +321,7 @@ test('named network/result references flow to dependent analyses without seriali
     a.check({name:'not calculated',actual:result.parameter({out:'output',in:'input'}).magnitude().max(),max:1,unit:'1'});
   ` }, options, () => {}, async task => {
     calls.push(task);
-    return { id: String(calls.length), status: 'complete', method: 'test only', diagnostics: [], assumptions: [], metrics: {}, ...(task.kind === 'impedance' ? { network: { id: 'extracted-test', kind: 'network', ports: ['input', 'output'] } } : {}) };
+    return { id: String(calls.length), status: 'complete', method: 'test only', diagnostics: [], assumptions: [], metrics: {}, ...(task.kind === 'impedance' ? { network: { id: 'extracted-test', kind: 'network', ports: ['input', 'output'], data:tabulated } } : {}) };
   });
   assert.equal(r.status, 'complete', JSON.stringify(r.error)); assert.equal(calls.length, 2);
   assert.ok(calls[1].descriptors.some(d => JSON.stringify(d).includes('extracted-test')));
@@ -329,7 +330,7 @@ test('named network/result references flow to dependent analyses without seriali
 
 test('incompatible resource analyses, wrong spectrum units, SI model bindings and reference maps fail prepare', async () => {
   const { a } = context();
-  const n = a.network({ model: { id: 'n', kind: 'network', ports: ['in', 'out'] }, ports: { input: 'in', output: 'out' } });
+  const n = a.network({ model: { id: 'n', kind: 'network', ports: ['in', 'out'], data:tabulated }, ports: { input: 'in', output: 'out' } });
   const np = await a.networkParameters().network(n).frequencyHz(1e6).representation('S').referenceOhm({ typo: 50 }).prepare();
   assert.equal(np.structurallyValid, false);
   const si = await a.si().network(n).drivers([{ port: n.port('input'), model: { id: 'pair-driver', kind: 'driver', ports: ['p', 'n'], analyses: ['thermal'] }, stimulus: { kind: 'bits', bits: '01', bitRateBps: 1e6, riseS: 1e-9, fallS: 1e-9, repeatCount: 1 } }]).receivers([{ port: n.port('output'), model: { kind: 'rc-input', capacitanceF: 1e-12 } }]).time({ stopS: 1e-5, sampleStepS: 1e-9 }).prepare();
@@ -358,7 +359,7 @@ test('provided resource payloads stay in executor tasks and become identities in
     return { id: 'only-test', status: 'complete', method: 'test', diagnostics: [], assumptions: [], metrics: {} };
   });
   const a = api.globals.analysis();
-  const n = a.network({ model: { id: 'resource', kind: 'network', ports: ['one'], source: 'explicit fixture', data: { text: 'large-resource-payload'.repeat(1000) } }, ports: { input: 'one' } });
+  const n = a.network({ model: { id: 'resource', kind: 'network', ports: ['one'], source: 'explicit fixture', data: {format:'touchstone',referenceTopology:'common',nature:'unspecified',content:'! large-resource-payload'.repeat(1000)+'\n# Hz S RI\n1000000 0 0\n'} }, ports: { input: 'one' } });
   await a.networkParameters().network(n).frequencyHz(1e6).representation('S').referenceOhm(50).run();
   const report = JSON.stringify(a.report());
   assert.ok(!report.includes('large-resource-payload')); assert.ok(report.includes('sha256'));

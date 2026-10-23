@@ -1,0 +1,58 @@
+import {randomUUID,createHash} from 'node:crypto';
+import type {AnalysisFrequencyRequest} from '../../../native/analyze/index.js';
+import type {AnalysisTask,ExecutionResult} from './executor.ts';
+import type * as T from './spec-doc.js';
+import {createProblemExecutor} from '../execute-problem.ts';
+import {object} from './descriptions.ts';
+import {AnalysisDslError,invalid} from './schema.ts';
+import {json} from './data.ts';
+import {networkResource} from './frequency-model.ts';
+/** Flatten descriptor instances, never Resource ids: repeated models are separate
+ * devices, repeated handles (including nested overlap) are errors. No solver here. */
+function topology(task:AnalysisTask<'networkParameters'>){
+ const descriptors=new Map(task.descriptors.filter((d):d is Record<string,T.Json>=>object(d)).map(d=>[String(d.id),d]));
+ const instances:AnalysisFrequencyRequest['instances']=[],connections:[number,number][]=[],seen=new Set<string>();let count=0;
+ function visit(id:string,depth=0):Map<string,number>{
+  if(depth>32)throw new AnalysisDslError('NETWORK_BUDGET','Nested topology depth exceeds 32');
+  const d=descriptors.get(id);if(!d||!object(d.input))invalid('Unknown network descriptor');
+  if(d.kind==='network'){
+   if(seen.has(id))invalid('Repeated instance handle / overlapping nested topology');seen.add(id);
+   const model=networkResource(d.input.model),mapping=d.input.ports;
+   if(!object(mapping)||Object.values(mapping).length!==model.ports.length||new Set(Object.values(mapping)).size!==model.ports.length||Object.values(mapping).some(p=>!model.ports.includes(p as string)))invalid('Incomplete/unknown port mapping');
+   const names=model.ports.map(p=>Object.keys(mapping).find(k=>mapping[k]===p)!);
+   const start=count;count+=names.length;if(count>128||instances.length>=32)throw new AnalysisDslError('NETWORK_BUDGET','Composition exceeds 128 ports or 32 blocks');
+   instances.push({id,model:{...model,ports:[...model.ports],analyses:model.analyses?[...model.analyses]:undefined},ports:names});
+   return new Map(names.map((name,i)=>[name,start+i]));
+  }
+  if(d.kind!=='connect')throw new AnalysisDslError('UNSUPPORTED_NETWORK_MODEL','Frequency networks require explicit tabulated resources, not PCB lines');
+  if(!Array.isArray(d.input.networks)||!Array.isArray(d.input.connections)||!object(d.input.ports))invalid('Invalid composition');
+  const child=new Map<string,Map<string,number>>();
+  for(const h of d.input.networks){if(!object(h)||child.has(String(h.id)))invalid('Repeated child handle');child.set(String(h.id),visit(String(h.id),depth+1));}
+  const resolve=(port:unknown)=>{if(!object(port))invalid('Invalid connection port');const pd=descriptors.get(String(port.id));if(!pd||!object(pd.input))invalid('Unknown port handle');const index=child.get(String(pd.input.owner))?.get(String(pd.input.name));if(index===undefined)invalid('Port must belong to a listed network');return index;};
+  for(const pair of d.input.connections){if(!object(pair))invalid('Invalid pair');connections.push([resolve(pair.from),resolve(pair.to)]);}
+  return new Map(Object.entries(d.input.ports).map(([name,port])=>[name,resolve(port)]));
+ }
+ const ports=[...visit(task.config.network!.id)].map(([name,index])=>({name,index}));
+ return {instances,connections,ports};
+}
+export function createFrequencyExecutor(){const execute=createProblemExecutor(true);return async(task:AnalysisTask<'networkParameters'>):Promise<ExecutionResult>=>{
+ const c=task.config;if(task.variantChanges.length)throw new AnalysisDslError('UNSUPPORTED_NETWORK_MODEL','Variants require an explicitly rebuilt frequency model');
+ if(c.numerics)throw new AnalysisDslError('UNSUPPORTED_NETWORK_MODEL','Frequency blocks use fixed validated F64 residual/conditioning/passivity guards; numerics overrides unsupported');
+ const graph=topology(task),n=graph.ports.length,points=c.frequencyHz===undefined?c.frequency?.points??0:1;
+ if(!Number.isSafeInteger(points)||points<1||n<1||n>16||points>100000||points>131072/n/n||points*graph.instances.reduce((s,i)=>s+i.ports.length,0)**3>1e8)throw new AnalysisDslError('NETWORK_BUDGET','Frequency output/work cap exceeded before axis allocation');
+ if(c.representation!=='S'&&c.referenceOhm!==undefined)invalid('Z/Y output cannot specify referenceOhm');
+ const references=c.representation==='S'?graph.ports.map(p=>typeof c.referenceOhm==='number'?c.referenceOhm:c.referenceOhm![p.name]):undefined;
+ const frequencies=c.frequencyHz!==undefined?[c.frequencyHz]:Array.from({length:points},(_,i)=>{const f=c.frequency!,t=points===1?0:i/(points-1);return f.scale==='log'?f.startHz*(f.stopHz/f.startHz)**t:f.startHz+(f.stopHz-f.startHz)*t;});
+ const report=execute({kind:'frequency-network',request:{...graph,frequencies,representation:c.representation!,referenceOhm:references,budget:c.budget}});
+ if(report.status!=='complete')throw new AnalysisDslError(report.diagnostics[0]?.code??'NETWORK_REJECTED',report.diagnostics.map(d=>d.message).join('; '),report.diagnostics);
+ report.resources={peakRssBytes:process.resourceUsage().maxRSS*1024,metric:'OS process high-water RSS through native call; includes Node/earlier solves'};
+ const validity:T.Validity={status:report.conditional?'conditional':'valid',...(report.conditional?{reason:'Interpolated source coefficients or conditional input validity; see solution provenance/intervals'}:{})};
+ const unit=c.representation==='S'?'1':c.representation==='Z'?'Ohm':'S';
+ const metrics:Record<string,T.DataDescription>={};for(let i=0;i<n;i++)for(let j=0;j<n;j++)metrics[`parameter:${JSON.stringify({out:graph.ports[i].name,in:graph.ports[j].name})}`]={kind:'series',unit,values:report.parameters!.map(m=>m[i][j]),axis:{name:'frequencyHz',unit:'Hz',values:report.frequenciesHz!},validity,diagnostics:[]};
+ const sourceHashes=graph.instances.map(i=>({instanceId:i.id,resourceId:i.model.id,sha256:createHash('sha256').update(JSON.stringify(json(i.model))).digest('hex')}));
+ const compactProvenance=report.provenance!.map((p:any,i)=>({instanceId:p.instanceId,resourceId:p.resource.id,sha256:sourceHashes[i].sha256,source:p.resource.source,sourcePorts:p.sourcePorts,mapping:p.mapping,sourceRepresentation:p.sourceRepresentation,sourceReferenceOhm:p.sourceReferenceOhm,bandHz:p.bandHz,nature:p.nature}));
+ const resource:T.NetworkResource={id:`computed-${randomUUID()}`,kind:'network',ports:graph.ports.map(p=>p.name),source:'Computed explicit frequency network; no temporal or PCB model',analyses:['networkParameters'],validity:{...validity,domain:json({bandHz:report.bandHz,provenance:compactProvenance,interpolation:report.interpolation})},data:{format:'network-parameters',representation:c.representation!,referenceTopology:'common',nature:report.nature!,frequenciesHz:report.frequenciesHz!,parameters:report.parameters!,...(c.representation==='S'?{referenceOhm:Object.fromEntries(graph.ports.map((p,i)=>[p.name,references![i]]))}:{})}};
+ // Include exact resource hashes independently of report Resource compaction.
+ const solution=json({...report,sourceHashes});
+ return{id:`${task.contextId}:frequency-${randomUUID()}`,status:'complete',method:'Explicit common-return multiport power waves; faer real-block LU CPU/F64',diagnostics:report.diagnostics,assumptions:['Synthetic/supplied tabulated frequency behavior; no PCB extraction, implicit terminations, temporal response or causal/stability proof.','Complex linear interpolation in each source representation/reference BEFORE conversion and composition.','Passivity checked at evaluated points only; active and nonreciprocal models allowed.'],metrics,network:resource,solution};
+ };}

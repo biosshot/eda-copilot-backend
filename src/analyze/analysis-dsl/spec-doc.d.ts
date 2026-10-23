@@ -1,6 +1,6 @@
 /** Analysis DSL, variant B. Executable source is JavaScript with top-level await.
  * Reference this file for IDE globals. Production supports board/conductor DC and explicit circuit DC/Z(f)/transient;
- * other analyses reject with ANALYZER_NOT_IMPLEMENTED after prepare.
+ * explicit S/Z/Y multiports and bounded Touchstone; other analyses reject with ANALYZER_NOT_IMPLEMENTED after prepare.
  * Descriptions, validation, reports and explicit-value sweep are implemented.
  * Coordinates: millimetres, absolute board Y down; no implicit material defaults.
  * This document imports only the package's public, existing board transport.
@@ -67,6 +67,16 @@ export interface Resource {
   ports?: readonly string[]; parameters?: Readonly<Record<string, number>>;
   validity?: Validity; data?: Json;
 }
+/** Explicit tabulated common-return model; source is provenance, never a URL loader.
+ * Matrix [frequency][out][in]. S uses positive real power-wave references;
+ * Z is Ohm, Y is Siemens. Interpolation is complex linear in source representation. */
+export type FrequencyNetworkData = {
+ format:'network-parameters'; representation:'S'|'Z'|'Y'; frequenciesHz:readonly number[];
+ parameters:readonly (readonly (readonly {real:number;imaginary:number}[])[])[];
+ referenceOhm?:number|Readonly<Record<string,number>>;referenceTopology:'common';nature:'passive'|'active'|'unspecified';
+};
+export type TouchstoneNetworkData = {format:'touchstone';content:string;referenceTopology:'common';nature:'passive'|'active'|'unspecified'};
+export type NetworkResource = Omit<Resource,'kind'|'ports'|'data'|'parameters'> & {kind:'network';ports:readonly string[];data:FrequencyNetworkData|TouchstoneNetworkData};
 export interface Material {
   id?: string; conductivitySM?: number; relativePermittivity?: number; lossTangent?: number;
   thermalConductivityWPerMK?: number; densityKgM3?: number; specificHeatJPerKgK?: number;
@@ -283,6 +293,7 @@ export interface AnalysisContext {
   conductor(input: { lengthMm: number; widthMm: number; thicknessMm: number; material: Material }): Conductor;
   line(input: LineInput): Line; circuit(input: CircuitInput): Circuit;
   thermalNetwork(input: ThermalNetworkInput): ThermalNetwork;
+  model(input: NetworkResource): NetworkResource;
   model(input: LocalModel): LocalModel;
   scene(input: { model: Resource; parameters?: Readonly<Record<string, number>> }): Scene;
   antenna(input: { structure: RoutingBoardV2 | Scene; feed: Port; models?: readonly Model[] }): Antenna;

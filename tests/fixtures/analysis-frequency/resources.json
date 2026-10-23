@@ -1,0 +1,398 @@
+{
+  "electrical": {
+    "attenuatorPad": {
+      "id": "synthetic-reflecting-attenuator-pad",
+      "kind": "network",
+      "ports": [
+        "p1",
+        "p2"
+      ],
+      "source": "Synthetic Attenuator Pad, not PCB pads or measured hardware",
+      "data": {
+        "format": "touchstone",
+        "content": "! Attenuator Pad: synthetic reflecting passive model, not measured hardware\n# GHz S RI R 50\n1 .1 0 .4 0 .3 0 .2 0\n2 .1 0 .4 0 .3 0 .2 0\n3 .1 0 .4 0 .3 0 .2 0\n",
+        "referenceTopology": "common",
+        "nature": "passive"
+      }
+    },
+    "secondPad": {
+      "id": "synthetic-second-attenuator",
+      "kind": "network",
+      "ports": [
+        "p1",
+        "p2"
+      ],
+      "source": "Synthetic analytical test data, not measurements or PCB extraction",
+      "data": {
+        "format": "network-parameters",
+        "representation": "S",
+        "frequenciesHz": [
+          1000000000.0,
+          1500000000.0,
+          3000000000.0
+        ],
+        "parameters": [
+          [
+            [
+              {
+                "real": 0.3,
+                "imaginary": 0
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 0.5,
+                "imaginary": 0
+              },
+              {
+                "real": -0.1,
+                "imaginary": 0
+              }
+            ]
+          ],
+          [
+            [
+              {
+                "real": 0.3,
+                "imaginary": 0
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 0.5,
+                "imaginary": 0
+              },
+              {
+                "real": -0.1,
+                "imaginary": 0
+              }
+            ]
+          ],
+          [
+            [
+              {
+                "real": 0.3,
+                "imaginary": 0
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 0.5,
+                "imaginary": 0
+              },
+              {
+                "real": -0.1,
+                "imaginary": 0
+              }
+            ]
+          ]
+        ],
+        "referenceTopology": "common",
+        "nature": "passive",
+        "referenceOhm": 50
+      }
+    },
+    "amplifier": {
+      "id": "synthetic-nonreciprocal-amplifier",
+      "kind": "network",
+      "ports": [
+        "p1",
+        "p2"
+      ],
+      "source": "Synthetic analytical test data, not measurements or PCB extraction",
+      "data": {
+        "format": "network-parameters",
+        "representation": "S",
+        "frequenciesHz": [
+          1000000000.0,
+          2000000000.0,
+          3000000000.0
+        ],
+        "parameters": [
+          [
+            [
+              {
+                "real": 0.1,
+                "imaginary": 0
+              },
+              {
+                "real": 0.01,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 1.5,
+                "imaginary": -0.5
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              }
+            ]
+          ],
+          [
+            [
+              {
+                "real": 0.1,
+                "imaginary": 0
+              },
+              {
+                "real": 0.01,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 2,
+                "imaginary": 0
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              }
+            ]
+          ],
+          [
+            [
+              {
+                "real": 0.1,
+                "imaginary": 0
+              },
+              {
+                "real": 0.01,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 1.5,
+                "imaginary": 0.5
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              }
+            ]
+          ]
+        ],
+        "referenceTopology": "common",
+        "nature": "active",
+        "referenceOhm": 50
+      }
+    },
+    "coupled": {
+      "id": "synthetic-coupled-three-port",
+      "kind": "network",
+      "ports": [
+        "p1",
+        "p2",
+        "p3"
+      ],
+      "source": "Synthetic analytical test data, not measurements or PCB extraction",
+      "data": {
+        "format": "network-parameters",
+        "representation": "S",
+        "frequenciesHz": [
+          1000000000.0,
+          2000000000.0,
+          3000000000.0
+        ],
+        "parameters": [
+          [
+            [
+              {
+                "real": 0.1,
+                "imaginary": 0
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              },
+              {
+                "real": 0.3,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 0.2,
+                "imaginary": 0
+              },
+              {
+                "real": 0.1,
+                "imaginary": 0
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 0.3,
+                "imaginary": 0
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              },
+              {
+                "real": 0.1,
+                "imaginary": 0
+              }
+            ]
+          ],
+          [
+            [
+              {
+                "real": 0.1,
+                "imaginary": 0
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              },
+              {
+                "real": 0.3,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 0.2,
+                "imaginary": 0
+              },
+              {
+                "real": 0.1,
+                "imaginary": 0
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 0.3,
+                "imaginary": 0
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              },
+              {
+                "real": 0.1,
+                "imaginary": 0
+              }
+            ]
+          ],
+          [
+            [
+              {
+                "real": 0.1,
+                "imaginary": 0
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              },
+              {
+                "real": 0.3,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 0.2,
+                "imaginary": 0
+              },
+              {
+                "real": 0.1,
+                "imaginary": 0
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 0.3,
+                "imaginary": 0
+              },
+              {
+                "real": 0.2,
+                "imaginary": 0
+              },
+              {
+                "real": 0.1,
+                "imaginary": 0
+              }
+            ]
+          ]
+        ],
+        "referenceTopology": "common",
+        "nature": "passive",
+        "referenceOhm": 50
+      }
+    },
+    "load": {
+      "id": "explicit-100-ohm-load",
+      "kind": "network",
+      "ports": [
+        "p"
+      ],
+      "source": "Synthetic analytical test data, not measurements or PCB extraction",
+      "data": {
+        "format": "network-parameters",
+        "representation": "Z",
+        "frequenciesHz": [
+          1000000000.0,
+          2000000000.0,
+          3000000000.0
+        ],
+        "parameters": [
+          [
+            [
+              {
+                "real": 100,
+                "imaginary": 0
+              }
+            ]
+          ],
+          [
+            [
+              {
+                "real": 100,
+                "imaginary": 0
+              }
+            ]
+          ],
+          [
+            [
+              {
+                "real": 100,
+                "imaginary": 0
+              }
+            ]
+          ]
+        ],
+        "referenceTopology": "common",
+        "nature": "passive"
+      }
+    }
+  }
+}

@@ -19,3 +19,9 @@ Start with the existing entry point or helper before adding a new implementation
 PCB flow: DSL and circuit → resolved placement input → placement graph and block search → board packing and refinement → report, SVG, and assembly JSON. The exact Rust inputs are encoded in [`src/pcb-layout/pcb-auto-place-v2/native/`](../src/pcb-layout/pcb-auto-place-v2/native/). Search there and in existing geometry/scoring modules before introducing a second representation.
 
 Local generated data belongs in ignored `debugging/`. Reviewed PCB experiment records and selected evidence live under [`docs/experimental/pcb/`](experimental/pcb/). The [changelog](../CHANGELOG.md) describes the current behavior; historical experiment reports describe how particular hypotheses were evaluated.
+
+Analysis frequency blocks: `src/analyze/analysis-dsl/frequency-model.ts` validates
+the shared Resource factory/direct path; `frequency-executor.ts` flattens instances
+and adapts results. `native/analyze/src/electrical/frequency/` owns the sole Touchstone
+parser, power-wave math and common-return composition. Existing MNA/FEM algorithms
+remain separate; one node-addon, existing disposable worker, CPU/F64.

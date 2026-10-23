@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Frequency multiport networks
+
+- Add CPU/F64 explicit S/Z/Y and bounded IBIS Touchstone 1.0/2.0 resources through the existing DSL/worker/shared addon. Extend universal `a.model` without changing local models; support complete port mappings, nested pairwise connections, renormalization, passivity/band/conditioning guards and reusable result networks. Add independent complex/negative tests and audited synthetic/board-context reports; no PCB extraction or temporal fitting.
+
 ### Explicit electrical networks (P6a)
 
 - Fix periodic pulse/PWL right-hand event values, admit continuation output from its verified state time, and reject oversized frequency/port requests before materializing the JS axis. Keep native output/memory limits and independent boundary/budget regressions.
