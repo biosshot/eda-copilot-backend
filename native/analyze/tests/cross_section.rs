@@ -203,7 +203,7 @@ fn invalid_inputs_limits_and_recovery() {
         bad.push(b);
     }
     for (key, v) in [
-        ("lossTangent", json!(0.01)),
+        ("lossTangent", json!(0.051)),
         ("conductivitySPerM", json!(1)),
         ("relativePermittivity", Value::Null),
         ("state", json!("")),

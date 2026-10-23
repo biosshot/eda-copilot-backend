@@ -71,13 +71,16 @@ export const stackupInput = z.strictObject({ platingMaterial: text.optional(), d
 ])).min(1) });
 export const stackupDescription = z.strictObject({ kind: z.literal('stackup'), input: stackupInput, routing: z.record(z.string(), z.unknown()) });
 export const conductor = z.strictObject({ lengthMm: positive, widthMm: positive, thicknessMm: positive, material });
-const lineCommon = { widthMm: positive, copperThicknessMm: positive, lengthMm: positive.optional(), solderMask: mask.optional() };
+const lineConductorMaterial = z.strictObject({conductivitySM:positive,state:text,id:text.optional(),source:text.optional(),kind:z.literal('material').optional()});
+const lineReferencePlane = z.strictObject({thicknessMm:positive,material:lineConductorMaterial});
+const lineConductors = z.strictObject({signal:lineConductorMaterial,referencePlanes:z.strictObject({bottom:lineReferencePlane,top:lineReferencePlane.optional()})});
+const lineCommon = { widthMm: positive, copperThicknessMm: positive, lengthMm: positive.optional(), solderMask: mask.optional(),conductors:lineConductors.optional() };
 export const lineInput = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('microstrip'), ...lineCommon, dielectricHeightMm: positive, material }),
   z.strictObject({ kind: z.literal('coupled-microstrip'), ...lineCommon, dielectricHeightMm: positive, material, gapMm: positive }),
   z.strictObject({ kind: z.literal('stripline'), ...lineCommon, topDielectricHeightMm: positive, bottomDielectricHeightMm: positive, topMaterial: material, bottomMaterial: material }),
   z.strictObject({ kind: z.literal('coupled-stripline'), ...lineCommon, topDielectricHeightMm: positive, bottomDielectricHeightMm: positive, topMaterial: material, bottomMaterial: material, gapMm: positive }),
-]);
+ ]).superRefine((line,ctx)=>{if(!line.conductors)return;const top=line.conductors.referencePlanes.top;if(line.kind.includes('microstrip')&&top)ctx.addIssue({code:'custom',message:'Microstrip supports bottom reference only',path:['conductors','referencePlanes','top']});if(!line.kind.includes('microstrip')&&!top)ctx.addIssue({code:'custom',message:'Stripline requires explicit top reference',path:['conductors','referencePlanes','top']});});
 const element = z.discriminatedUnion('kind', [
   z.strictObject({ id: text, kind: z.literal('resistor'), nodes: z.tuple([text, text]), resistanceOhm: positive, referenceC: finite.optional(), temperatureCoefficientPerK: finite.optional() }),
   z.strictObject({ id: text, kind: z.literal('capacitor'), nodes: z.tuple([text, text]), ...capacitorFields }).refine(capMode, 'Specify parasitics or ideal:true'),

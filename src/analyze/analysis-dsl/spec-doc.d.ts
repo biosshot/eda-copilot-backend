@@ -163,8 +163,10 @@ export interface CircuitInput { nodes: readonly string[]; reference?: string; po
 export interface CrossSectionMesh { maxNodes?: number; maxTriangles?: number; maxRefinements?: number; maxEdgeMm?: number; domainScale?: number }
 /** Height is clear dielectric from each plane to the adjacent signal face.
  * Stripline material interface is the lower signal face; top material fills gaps.
- * P7a requires explicit epsilon, lossTangent:0 and state; mask/losses reject. */
-export type LineInput = { widthMm: number; copperThicknessMm: number; lengthMm?: number; solderMask?: RoutingStackup['solderMask'] } & (
+ * Explicit epsilon, lossTangent (0..0.05) and state required; no mask/dispersion.
+ * Absent conductors means PEC. Losses require positive frequency, small skin depth
+ * and independently converged surface/region loss integrals. Fixed temperature. */
+export type LineInput = { widthMm: number; copperThicknessMm: number; lengthMm?: number; solderMask?: RoutingStackup['solderMask']; conductors?: {signal: Material;referencePlanes:{bottom:{thicknessMm:number;material:Material};top?:{thicknessMm:number;material:Material}}} } & (
   | { kind: 'microstrip'; dielectricHeightMm: number; material: Material }
   | { kind: 'coupled-microstrip'; dielectricHeightMm: number; material: Material; gapMm: number }
   | { kind: 'stripline'; topDielectricHeightMm: number; bottomDielectricHeightMm: number; topMaterial: Material; bottomMaterial: Material }
@@ -267,6 +269,10 @@ export interface GeometryResult extends ResultBase { violations: { count(): Data
 /** cross-section: single Z0 scalar Ohm; pair table Ohm with even/odd/differential/common rows.
  * rlgc is unit-1 structured mixed-unit matrices (F/m,H/m, assumed-zero Ohm/m,S/m).
  * delay is full-length scalar/modal s; missing length makes delay/network unavailable.
+ * With losses, single Zc is a complex frequency series, pair a frequency/mode table.
+ * rlgc contains frequenciesHz and samples of R, Lexternal, Linternal, Ltotal, G, C,
+ * modal alpha/beta/complex Zc, regional and physical surface contributions and units.
+ * Lossy delay is phase delay beta*length/omega [s], not group delay.
  * network is the immutable exact-grid P6b resource; interpolation stays conditional. */
 export interface ImpedanceResult extends ResultBase { characteristicImpedance: DataValue; rlgc: DataValue; delay: DataValue; segments: DataValue; network: Network }
 export interface TdrResult extends ResultBase { reflection: DataValue; impedance: DataValue; distance: DataValue }

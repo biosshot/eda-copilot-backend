@@ -19,6 +19,8 @@ pub struct Field {
     pub capacitance: Vec<Vec<f64>>,
     pub vacuum_capacitance: Vec<Vec<f64>>,
     pub quality: Value,
+    #[serde(skip)]
+    pub vacuum_reaction_c_per_m: Vec<Vec<f64>>,
 }
 fn axis(mut constraints: Vec<f64>, focus: &[f64], step: f64, feature: f64) -> Result<Vec<f64>> {
     constraints.sort_by(f64::total_cmp);
@@ -182,6 +184,7 @@ struct Solution {
     phi: Vec<Vec<f64>>,
     e: Vec<Vec<[f64; 2]>>,
     quality: Value,
+    reaction: Vec<Vec<f64>>,
 }
 fn solve_basis(
     nodes: &[[f64; 2]],
@@ -399,6 +402,10 @@ fn solve_basis(
         c,
         phi,
         e: fields,
+        reaction: reaction
+            .into_iter()
+            .map(|r| r.into_iter().map(|v| v * EPS0).collect())
+            .collect(),
         quality: json!({"normalizedResidual":residual,"normalizedSymmetry":symmetry,"normalizedChargeBalance":balance,"normalizedEnergyReactionError":energy_error,"energyJPerM":energy,"referenceChargeCPerM":refs,"factorizations":1,"rhs":n,"memoryPlanBytes":memory_plan,"factorValues":symbolic.len_val(),"solver":"faer sparse LLT CPU/F64; epsilon0-scaled stiffness; natural outer BC"}),
     })
 }
@@ -440,6 +447,7 @@ pub(super) fn solve(g: &Geometry, h: f64, limits: &Limits) -> Result<Field> {
         electric_fields_v_per_m: actual.e,
         capacitance: actual.c,
         vacuum_capacitance: vacuum.c,
+        vacuum_reaction_c_per_m: vacuum.reaction,
         quality: json!({"actual":actual.quality,"vacuum":vacuum.quality,"mesh":{"minimumAngleDeg":min_angle,"maximumAspect":max_aspect,"constraints":"axis-aligned P1 right triangles; material/PEC edges exact; anisotropy reported, maximumAspect<=1e9"}}),
     })
 }

@@ -28,8 +28,13 @@ remain separate; one node-addon, existing disposable worker, CPU/F64.
 
 
 Line cross sections: `cross-section-executor.ts` adapts the existing impedance
-builder to `native/analyze/src/extraction/{geometry,field,propagation}.rs` through
+builder to `native/analyze/src/extraction/{geometry,field,losses,propagation}.rs` through
 `AnalysisElectricalSession.solveCrossSection`. Geometry is in SI, the FEM mesh
 covers dielectric, C/C0/external L feed modal distributed propagation once per
 section; resulting NetworkResource uses the unchanged P6b composition engine.
 See [P7a semantics](experimental/analyze/line-cross-sections-semantics.md).
+Optional P7b losses recover the vacuum unit-current basis from FE boundary reactions,
+integrate each physical surface and each dielectric region once per field mesh,
+then reuse those integrals across frequency. Complex passive modal propagation
+produces the existing NetworkResource; no additional runtime/addon/network kind.
+See [loss conventions and pending acceptance](experimental/analyze/line-losses-semantics.md).

@@ -121,12 +121,14 @@ fn dielectric(v: &Value, id: &str, lo: f64, hi: f64) -> Result<Dielectric> {
     if !e.is_finite()
         || e <= 0.
         || e > 100.
-        || v["lossTangent"].as_f64() != Some(0.)
+        || v["lossTangent"]
+            .as_f64()
+            .is_none_or(|x| !x.is_finite() || !(0. ..=0.05).contains(&x))
         || v["state"].as_str().is_none_or(|s| s.trim().is_empty())
     {
         return Err(error(
             "SECTION_MATERIAL",
-            "positive epsilon<=100, explicit lossTangent:0 and nonempty state required",
+            "positive epsilon<=100, explicit 0<=lossTangent<=0.05 and nonempty state required",
         ));
     }
     Ok(Dielectric {
@@ -162,6 +164,7 @@ pub fn parse(v: &Value) -> Result<Geometry> {
         "bottomDielectricHeightMm",
         "topMaterial",
         "bottomMaterial",
+        "conductors",
     ];
     if v.as_object()
         .is_none_or(|o| o.keys().any(|k| !common.contains(&k.as_str())))

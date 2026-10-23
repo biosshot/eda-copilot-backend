@@ -61,6 +61,7 @@ copyFileSync(join(backend,'tests/fixtures/analysis-dc-coupon.json'),join(consume
 copyFileSync(join(backend,'tests/fixtures/analysis-electrical.js'),join(consumer,'rlc-fixture.js'));
 copyFileSync(join(backend,'tests/fixtures/analysis-frequency/resources.json'),join(consumer,'frequency-resources.json'));
 copyFileSync(join(backend,'tests/fixtures/analysis-frequency/network.js'),join(consumer,'frequency-fixture.js'));
+copyFileSync(join(backend,'tests/fixtures/analysis-line-losses/example.js'),join(consumer,'line-losses-fixture.js'));
 const geometryCoupon = JSON.parse(analysisFixtures[0].json);
 geometryCoupon.pads = geometryCoupon.pads.slice(0, 1);
 geometryCoupon.holes = [];
@@ -103,6 +104,9 @@ assert.ok(Math.abs(frequencyRuns[1].result.solution.parameters[0][1][0].real-.2/
 const sectionDsl=await runAnalysisDsl({code:'const a=analysis();const line=a.line({kind:"microstrip",widthMm:.3,copperThicknessMm:.035,dielectricHeightMm:.18,lengthMm:20,material:{relativePermittivity:4.2,lossTangent:0,state:"Explicit ideal PEC hypothesis"}});const z=await a.impedance().target(line).method("cross-section").frequencyHz(1e8).run();a.check({name:"positive Z0",actual:z.characteristicImpedance,min:1,unit:"Ohm"});const s=await a.networkParameters().network(z.network).frequencyHz(1e8).representation("S").referenceOhm(50).run();a.plot({title:"field-derived S21",data:s.parameter({out:"output",in:"input"}).phaseDeg()});'},{maxOutputBytes:64*1024*1024});
 assert.equal(sectionDsl.status,'complete',JSON.stringify(sectionDsl.error));assert.equal(sectionDsl.reports[0].checks[0].status,'pass');
 const sectionRuns=sectionDsl.reports[0].calculations.filter(c=>c.phase==='completed');assert.equal(sectionRuns[0].result.solution.status,'complete');assert.ok(sectionRuns[0].result.solution.field.quality.actual.normalizedResidual<=1e-8);assert.deepEqual(sectionRuns[1].result.solution.parameters,sectionRuns[0].result.solution.network.parameters);
+const lineLosses=await runAnalysisDsl({code:readFileSync('line-losses-fixture.js','utf8')},{maxOutputBytes:64*1024*1024});
+assert.equal(lineLosses.status,'complete',JSON.stringify(lineLosses.error));
+const lossRuns=lineLosses.reports[0].calculations.filter(c=>c.phase==='completed');assert.equal(lossRuns.length,2);assert.equal(lossRuns[0].result.characteristicImpedance.kind,'series');assert.equal(lossRuns[0].result.rlgc.data.samples.length,11);assert.ok(lossRuns[0].result.solution.network.maxPowerBalanceResidual<=1e-8);assert.ok(lossRuns[0].result.rlgc.data.samples.every(s=>s.surfaceContributions.find(v=>v.id==='bottom').resistanceOhmPerM[0][0]>0));assert.deepEqual(lossRuns[0].result.solution.network.parameters,lossRuns[1].result.solution.parameters);
 const boardDsl=await runAnalysisDsl({board:dcBoard,code:'const a=analysis({board});const s=a.port({positive:pad("J1","1"),negative:pad("J1","2")});const p=a.port({positive:pad("U1","1"),negative:pad("U1","2")});const base=a.dc().stackup(stackup({layers:[{kind:"copper",name:"TOP",thicknessMm:.035,material:"cu"}]})).materials({cu:{conductivitySM:58e6,state:"constant coupon"}}).sources([{port:s,voltageV:1,model:"ideal"}]).mesh({maxAreaMm2:.125,minAngleDeg:0,maxRefinementSteps:64});const unused=a.port({positive:[pad("J1","1"),pad("U1","1")],negative:pad("J1","2")});const observed=a.port({positive:padId("rail"),negative:padId("return")});for(const currentA of [1,2]){const d=await base.loads([{port:p,currentA}]).run();a.check({name:"passive board voltage",actual:d.voltage(observed),target:1-currentA*8e-3/(58e6*2e-3*.035e-3),tolerance:1e-8,unit:"V"});a.check({name:"physical board voltage",actual:d.voltage(p),target:1-currentA*16e-3/(58e6*2e-3*.035e-3),tolerance:1e-8,unit:"V"});a.plot({title:"Actual board current",data:d.currentDensityMap});}'});
 assert.equal(boardDsl.status,'complete');
 assert.deepEqual(boardDsl.reports[0].checks.map(c=>c.status),['pass','pass','pass','pass']);
@@ -182,6 +186,8 @@ const localNetwork=analysisApi.model({id:'types-coupon',kind:'network',ports:['p
 const typedResource=localNetwork;
 const typedLine=analysisApi.line({kind:'coupled-stripline',widthMm:.2,gapMm:.3,copperThicknessMm:.035,lengthMm:3,topDielectricHeightMm:.3,bottomDielectricHeightMm:.3,topMaterial:{relativePermittivity:4,lossTangent:0,state:'ideal'},bottomMaterial:{relativePermittivity:4,lossTangent:0,state:'ideal'}});
 const sectionBuilder=analysisApi.impedance().target(typedLine).method('cross-section').mesh({maxNodes:200000,maxRefinements:5}).frequencyHz(1e8);
+const typedLossLine=analysisApi.line({kind:'microstrip',widthMm:.3,copperThicknessMm:.035,dielectricHeightMm:.18,material:{relativePermittivity:4.2,lossTangent:.015,state:'constant band'},conductors:{signal:{conductivitySM:58e6,state:'smooth fixed temperature'},referencePlanes:{bottom:{thicknessMm:.035,material:{conductivitySM:58e6,state:'smooth fixed temperature'}}}}});
+analysisApi.impedance().target(typedLossLine).method('cross-section').frequencyHz(1e9);
 async function extractedLineTypes(){const z=await sectionBuilder.run();const network=z.network;const data=z.rlgc;analysisApi.networkParameters().network(network).frequencyHz(1e8).representation('S').referenceOhm(50);return data;}
 
 analysisApi.network({model:localNetwork,ports:{input:'p'}});

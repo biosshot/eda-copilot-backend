@@ -12,13 +12,14 @@ export function auditSectionOrigin(board:any,e:any){
 type Z={real:number;imaginary:number};const add=(a:Z,b:Z):Z=>({real:a.real+b.real,imaginary:a.imaginary+b.imaginary});const mul=(a:Z,b:Z):Z=>({real:a.real*b.real-a.imaginary*b.imaginary,imaginary:a.real*b.imaginary+a.imaginary*b.real});const scale=(a:Z,v:number):Z=>({real:a.real*v,imaginary:a.imaginary*v});
 /** Independent reflected-wave series, used only as an algebraic audit oracle. */
 function reflection(z:number,delay:number,l:number,f:number){const rho=(z-50)/(z+50),t=-2*Math.PI*f*delay*l,p={real:Math.cos(t),imaginary:Math.sin(t)},q=scale(mul(p,p),rho*rho);let term={real:1,imaginary:0},sum=term;for(let k=0;k<2000;k++){term=mul(term,q);sum=add(sum,term);if(Math.hypot(term.real,term.imaginary)<1e-17)break;}return {reflection:scale(mul(add({real:1,imaginary:0},scale(mul(p,p),-1)),sum),rho),transmission:scale(mul(p,sum),1-rho*rho)};}
-function expectedSeries(plots:any[],title:string,unit:string,axis:number[]){
+export function expectedSeries(plots:any[],title:string,unit:string,axis:number[]){
  const hits=plots.filter(p=>p.title===title);assert.equal(hits.length,1,`expected exactly one plot ${title}`);
  const plot=hits[0],data=plot.data;assert.equal(plot.kind,'line',title);assert.equal(data.kind,'series',title);assert.equal(data.unit,unit,title);assert.equal(data.validity.status,'conditional',title);
  assert.deepEqual(data.axis,{name:'frequencyHz',unit:'Hz',values:axis},title);assert.ok(Array.isArray(data.values),title);assert.equal(data.values.length,axis.length,`incomplete series ${title}`);
  for(let i=0;i<axis.length;i++)assert.ok(Number.isFinite(data.values[i]),`invalid sample ${i} in ${title}`);
  return data.values as number[];
 }
+export function parameterChange(a:any,b:any){let delta=0;for(const key of ['capacitanceFPerM','vacuumCapacitanceFPerM','inductanceHPerM']){const floor=.001*Math.max(...a[key].map((r:number[],i:number)=>Math.abs(r[i])));a[key].forEach((row:number[],i:number)=>row.forEach((v:number,j:number)=>{delta=Math.max(delta,Math.abs(v-b[key][i][j])/Math.max(Math.abs(v),floor));}));}a.modes.forEach((m:any,i:number)=>{for(const key of ['impedanceOhm','delaySPerM'])delta=Math.max(delta,Math.abs(m[key]-b.modes[i][key])/Math.abs(m[key]));});return delta;}
 export function auditCrossSection(result:any,board:any,e:any){
  assert.equal(result.status,'complete',JSON.stringify(result.error));auditSectionOrigin(board,e);
  const rr=sectionResults(result),z=rr.find((r:any)=>r.kind==='impedance'||r.solution?.field),s=z?.solution;assert.ok(s?.field,'missing FEM field');const p=s.parameters,n=e.tracks.length;
@@ -41,7 +42,7 @@ export function auditCrossSection(result:any,board:any,e:any){
  for(let i=0;i<n;i++)for(let j=0;j<n;j++){near(c[i][j],p.capacitanceFPerM[i][j]);near(field.capacitance[i][j],p.capacitanceFPerM[i][j]);near(field.vacuumCapacitance[i][j],p.vacuumCapacitanceFPerM[i][j]);near(p.capacitanceFPerM[i][j],p.capacitanceFPerM[j][i]);assert.ok(i===j?p.capacitanceFPerM[i][j]>0:p.capacitanceFPerM[i][j]<0);if(i!==j)assert.ok(p.inductanceHPerM[i][j]>0);const x=p.vacuumCapacitanceFPerM[i].reduce((s:number,v:number,k:number)=>s+v*p.inductanceHPerM[k][j],0);near(x,i===j?1.25663706212e-6*8.8541878128e-12:0,1e-8,1e-26);}
  for(const q of [field.quality.actual,field.quality.vacuum])for(const key of ['normalizedResidual','normalizedSymmetry','normalizedChargeBalance','normalizedEnergyReactionError'])assert.ok(Number.isFinite(q[key])&&q[key]<=1e-8);
  const conv=s.convergence;
- function parameterChange(a:any,b:any){let delta=0;for(const key of ['capacitanceFPerM','vacuumCapacitanceFPerM','inductanceHPerM']){const floor=.001*Math.max(...a[key].map((r:number[],i:number)=>Math.abs(r[i])));a[key].forEach((row:number[],i:number)=>row.forEach((v:number,j:number)=>{delta=Math.max(delta,Math.abs(v-b[key][i][j])/Math.max(Math.abs(v),floor));}));}a.modes.forEach((m:any,i:number)=>{for(const key of ['impedanceOhm','delaySPerM'])delta=Math.max(delta,Math.abs(m[key]-b.modes[i][key])/Math.abs(m[key]));});return delta;}
+
  conv.forEach((v:any,i:number)=>{if(i===0){assert.equal(v.maxRelativeChange,null);assert.equal(v.level,0);}else {near(v.maxRelativeChange,parameterChange(v.parameters,conv[i-1].parameters),1e-8,1e-12);if(v.kind==='mesh'){assert.equal(v.level,conv[i-1].level+1);near(v.stepM,conv[i-1].stepM/2);assert.equal(v.domainScale,conv[i-1].domainScale);}else {near(v.stepM,conv[i-1].stepM);near(v.domainScale,conv[i-1].domainScale*2);}}});
  assert.ok(conv.some((v:any)=>v.kind==='mesh')&&conv.some((v:any)=>v.kind==='domain'));for(const kind of ['mesh','domain']){const last=conv.filter((v:any)=>v.kind===kind).at(-1);assert.ok(last.maxRelativeChange!==null&&last.maxRelativeChange<=.01);}
  assert.deepEqual(conv.at(-1).parameters,p);assert.equal(s.convergenceTolerance,.01);assert.equal(s.mutualAbsoluteFloorRelativeToSelf,.001);

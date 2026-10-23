@@ -1,0 +1,1285 @@
+{
+  "method": "Independent constant boundary panels, midpoint collocation, analytic log Green integrals with exact infinite-plane images; no FEM imports",
+  "conventions": "exp(+j omega t); unit total longitudinal signal current; Rs=sqrt(pi f mu0/sigma); alpha=R/(2 Z0)",
+  "dependencies": {
+    "numpy": "1.26.4",
+    "scipy": "1.12.0"
+  },
+  "sigmaSM": 58000000.0,
+  "referenceThicknessM": 3.5e-05,
+  "geometryUnchanged": true,
+  "circle": [
+    {
+      "panels": 128,
+      "n": 128,
+      "kind": "cylinder over plane",
+      "radiusM": 0.0001,
+      "centerHeightM": 0.0005,
+      "frequencyHz": 1000000000.0,
+      "capacitanceFPerM": 2.4265201135473724e-11,
+      "impedanceOhm": 137.46603349209482,
+      "signalGramPerM": 1624.5179489135003,
+      "groundGramPerM": 324.8702740305852,
+      "resistanceOhmPerM": 16.08289437390696,
+      "alphaNpPerM": 0.058497702906485004,
+      "linearResidual": 4.440892098500626e-16,
+      "wallSeconds": 0.024216413497924805,
+      "exact": {
+        "capacitanceFPerM": 2.426790011282771e-11,
+        "signalGramPerM": 1624.3683359034924,
+        "groundGramPerM": 324.8736671806984
+      },
+      "relativeErrors": {
+        "capacitanceFPerM": -0.00011121594128205015,
+        "signalGramPerM": 9.210534747627896e-05,
+        "groundGramPerM": -1.0444521843400167e-05
+      }
+    },
+    {
+      "panels": 256,
+      "n": 256,
+      "kind": "cylinder over plane",
+      "radiusM": 0.0001,
+      "centerHeightM": 0.0005,
+      "frequencyHz": 1000000000.0,
+      "capacitanceFPerM": 2.4267223750306392e-11,
+      "impedanceOhm": 137.45457602826664,
+      "signalGramPerM": 1624.4057321699063,
+      "groundGramPerM": 324.87281830280574,
+      "resistanceOhmPerM": 16.081989551177415,
+      "alphaNpPerM": 0.05849928760418372,
+      "linearResidual": 4.440892098500626e-16,
+      "wallSeconds": 0.06826233863830566,
+      "exact": {
+        "capacitanceFPerM": 2.426790011282771e-11,
+        "signalGramPerM": 1624.3683359034924,
+        "groundGramPerM": 324.8736671806984
+      },
+      "relativeErrors": {
+        "capacitanceFPerM": -2.7870665289309038e-05,
+        "signalGramPerM": 2.3022036066189244e-05,
+        "groundGramPerM": -2.61294767300857e-06
+      }
+    },
+    {
+      "panels": 512,
+      "n": 512,
+      "kind": "cylinder over plane",
+      "radiusM": 0.0001,
+      "centerHeightM": 0.0005,
+      "frequencyHz": 1000000000.0,
+      "capacitanceFPerM": 2.426773082117672e-11,
+      "impedanceOhm": 137.4517039339612,
+      "signalGramPerM": 1624.3776842323036,
+      "groundGramPerM": 324.8734548938994,
+      "resistanceOhmPerM": 16.08176340136007,
+      "alphaNpPerM": 0.058499687312303414,
+      "linearResidual": 6.661338147750939e-16,
+      "wallSeconds": 0.32169675827026367,
+      "exact": {
+        "capacitanceFPerM": 2.426790011282771e-11,
+        "signalGramPerM": 1624.3683359034924,
+        "groundGramPerM": 324.8736671806984
+      },
+      "relativeErrors": {
+        "capacitanceFPerM": -6.975949719656427e-06,
+        "signalGramPerM": 5.755054814038374e-06,
+        "groundGramPerM": -6.53444155229721e-07
+      }
+    }
+  ],
+  "square": [
+    {
+      "panels": 640,
+      "n": 160,
+      "widthM": 0.001,
+      "heightM": 1.0,
+      "thicknessM": 0.001,
+      "frequencyHz": 1000000000.0,
+      "capacitanceFPerM": 6.8439211919121374e-12,
+      "impedanceOhm": 487.38739948136316,
+      "signalGramPerM": 314.5148201210552,
+      "groundGramPerM": 0.15907543306455596,
+      "resistanceOhmPerM": 2.5961309116659725,
+      "alphaNpPerM": 0.002663313530908429,
+      "linearResidual": 5.551115123125783e-16,
+      "wallSeconds": 0.6476223468780518,
+      "isolatedSignalExactGramPerM": 318.30988618379064,
+      "relativeSignalError": -0.011922551662577607
+    },
+    {
+      "panels": 1280,
+      "n": 320,
+      "widthM": 0.001,
+      "heightM": 1.0,
+      "thicknessM": 0.001,
+      "frequencyHz": 1000000000.0,
+      "capacitanceFPerM": 6.843921511810034e-12,
+      "impedanceOhm": 487.3873766999499,
+      "signalGramPerM": 315.9202043823184,
+      "groundGramPerM": 0.15907543306457733,
+      "resistanceOhmPerM": 2.607725650139621,
+      "alphaNpPerM": 0.002675208442816333,
+      "linearResidual": 1.1102230246251565e-15,
+      "wallSeconds": 2.1178383827209473,
+      "isolatedSignalExactGramPerM": 318.30988618379064,
+      "relativeSignalError": -0.007507406791922411
+    },
+    {
+      "panels": 2560,
+      "n": 640,
+      "widthM": 0.001,
+      "heightM": 1.0,
+      "thicknessM": 0.001,
+      "frequencyHz": 1000000000.0,
+      "capacitanceFPerM": 6.843921563715294e-12,
+      "impedanceOhm": 487.38737300353586,
+      "signalGramPerM": 316.80476907348816,
+      "groundGramPerM": 0.15907543306458066,
+      "resistanceOhmPerM": 2.615023509194851,
+      "alphaNpPerM": 0.0026826951764052777,
+      "linearResidual": 1.1102230246251565e-15,
+      "wallSeconds": 7.96879243850708,
+      "isolatedSignalExactGramPerM": 318.30988618379064,
+      "relativeSignalError": -0.004728464856518566
+    }
+  ],
+  "fixedCases": [
+    {
+      "history": [
+        {
+          "panels": 362,
+          "n": 160,
+          "widthM": 0.0003,
+          "heightM": 0.00018,
+          "thicknessM": 5e-06,
+          "frequencyHz": 20000000000.0,
+          "capacitanceFPerM": 3.445882666041905e-11,
+          "impedanceOhm": 96.80076994069316,
+          "signalGramPerM": 2978.4764345603257,
+          "groundGramPerM": 765.2037256880119,
+          "resistanceOhmPerM": 138.1273269547721,
+          "alphaNpPerM": 0.7134619230787029,
+          "linearResidual": 8.881784197001252e-16,
+          "wallSeconds": 0.186629056930542
+        },
+        {
+          "panels": 722,
+          "n": 320,
+          "widthM": 0.0003,
+          "heightM": 0.00018,
+          "thicknessM": 5e-06,
+          "frequencyHz": 20000000000.0,
+          "capacitanceFPerM": 3.445887105128843e-11,
+          "impedanceOhm": 96.80064523926785,
+          "signalGramPerM": 3006.583758148633,
+          "groundGramPerM": 765.2033480186941,
+          "resistanceOhmPerM": 139.16436461356471,
+          "alphaNpPerM": 0.7188194059532556,
+          "linearResidual": 8.881784197001252e-16,
+          "wallSeconds": 0.6013307571411133
+        },
+        {
+          "panels": 1446,
+          "n": 640,
+          "widthM": 0.0003,
+          "heightM": 0.00018,
+          "thicknessM": 5e-06,
+          "frequencyHz": 20000000000.0,
+          "capacitanceFPerM": 3.445887866853171e-11,
+          "impedanceOhm": 96.80062384118142,
+          "signalGramPerM": 3024.7293667557356,
+          "groundGramPerM": 765.2032833749814,
+          "resistanceOhmPerM": 139.83386504536364,
+          "alphaNpPerM": 0.722277705951492,
+          "linearResidual": 1.4432899320127035e-15,
+          "wallSeconds": 2.3785665035247803
+        },
+        {
+          "panels": 2890,
+          "n": 1280,
+          "widthM": 0.0003,
+          "heightM": 0.00018,
+          "thicknessM": 5e-06,
+          "frequencyHz": 20000000000.0,
+          "capacitanceFPerM": 3.4458879889397095e-11,
+          "impedanceOhm": 96.80062041157106,
+          "signalGramPerM": 3035.9679966396257,
+          "groundGramPerM": 765.203273028165,
+          "resistanceOhmPerM": 140.24852666411013,
+          "alphaNpPerM": 0.7244195650183329,
+          "linearResidual": 1.7763568394002505e-15,
+          "wallSeconds": 9.926783561706543
+        }
+      ],
+      "finest": {
+        "panels": 2890,
+        "n": 1280,
+        "widthM": 0.0003,
+        "heightM": 0.00018,
+        "thicknessM": 5e-06,
+        "frequencyHz": 20000000000.0,
+        "capacitanceFPerM": 3.4458879889397095e-11,
+        "impedanceOhm": 96.80062041157106,
+        "signalGramPerM": 3035.9679966396257,
+        "groundGramPerM": 765.203273028165,
+        "resistanceOhmPerM": 140.24852666411013,
+        "alphaNpPerM": 0.7244195650183329,
+        "linearResidual": 1.7763568394002505e-15,
+        "wallSeconds": 9.926783561706543
+      },
+      "cornerRichardsonEstimate": {
+        "signalGramPerM": 3055.100801809506,
+        "groundGramPerM": 765.2032554135958,
+        "resistanceOhmPerM": 140.95445256832343,
+        "alphaNpPerM": 0.7280658967020509
+      },
+      "observedCornerOrder": 0.691154280455723,
+      "estimatedRelativeUncertainty": 0.01,
+      "uncertaintyMeaning": "Conservative estimate from last panel changes and r^(-1/3) rectangular-corner asymptotics with cosine grading; not a rigorous bound. No FEM output or engineering result used."
+    },
+    {
+      "history": [
+        {
+          "panels": 352,
+          "n": 160,
+          "widthM": 0.001,
+          "heightM": 0.0003,
+          "thicknessM": 1e-05,
+          "frequencyHz": 5000000000.0,
+          "capacitanceFPerM": 5.175804375146007e-11,
+          "impedanceOhm": 64.4468127118377,
+          "signalGramPerM": 895.0186013916523,
+          "groundGramPerM": 372.86162706772313,
+          "resistanceOhmPerM": 23.38993975974193,
+          "alphaNpPerM": 0.1814670018230834,
+          "linearResidual": 8.881784197001252e-16,
+          "wallSeconds": 0.13132905960083008
+        },
+        {
+          "panels": 704,
+          "n": 320,
+          "widthM": 0.001,
+          "heightM": 0.0003,
+          "thicknessM": 1e-05,
+          "frequencyHz": 5000000000.0,
+          "capacitanceFPerM": 5.1758142013977405e-11,
+          "impedanceOhm": 64.44669035995632,
+          "signalGramPerM": 903.4371086628717,
+          "groundGramPerM": 372.8612009353013,
+          "resistanceOhmPerM": 23.54523708697319,
+          "alphaNpPerM": 0.18267219740428225,
+          "linearResidual": 1.1102230246251565e-15,
+          "wallSeconds": 0.6009266376495361
+        },
+        {
+          "panels": 1408,
+          "n": 640,
+          "widthM": 0.001,
+          "heightM": 0.0003,
+          "thicknessM": 1e-05,
+          "frequencyHz": 5000000000.0,
+          "capacitanceFPerM": 5.1758158331857605e-11,
+          "impedanceOhm": 64.44667004174164,
+          "signalGramPerM": 908.7027921759724,
+          "groundGramPerM": 372.8611303107401,
+          "resistanceOhmPerM": 23.642377467820296,
+          "alphaNpPerM": 0.18342590433692926,
+          "linearResidual": 1.4432899320127035e-15,
+          "wallSeconds": 2.537416934967041
+        },
+        {
+          "panels": 2816,
+          "n": 1280,
+          "widthM": 0.001,
+          "heightM": 0.0003,
+          "thicknessM": 1e-05,
+          "frequencyHz": 5000000000.0,
+          "capacitanceFPerM": 5.175816100706514e-11,
+          "impedanceOhm": 64.44666671070719,
+          "signalGramPerM": 912.0088346736625,
+          "groundGramPerM": 372.8611187485038,
+          "resistanceOhmPerM": 23.703367348952895,
+          "alphaNpPerM": 0.18389909485431005,
+          "linearResidual": 1.7763568394002505e-15,
+          "wallSeconds": 9.19934368133545
+        }
+      ],
+      "finest": {
+        "panels": 2816,
+        "n": 1280,
+        "widthM": 0.001,
+        "heightM": 0.0003,
+        "thicknessM": 1e-05,
+        "frequencyHz": 5000000000.0,
+        "capacitanceFPerM": 5.175816100706514e-11,
+        "impedanceOhm": 64.44666671070719,
+        "signalGramPerM": 912.0088346736625,
+        "groundGramPerM": 372.8611187485038,
+        "resistanceOhmPerM": 23.703367348952895,
+        "alphaNpPerM": 0.18389909485431005,
+        "linearResidual": 1.7763568394002505e-15,
+        "wallSeconds": 9.19934368133545
+      },
+      "cornerRichardsonEstimate": {
+        "signalGramPerM": 917.6370889755786,
+        "groundGramPerM": 372.86109906478646,
+        "resistanceOhmPerM": 23.80719739986656,
+        "alphaNpPerM": 0.18470466119743334
+      },
+      "observedCornerOrder": 0.6715155427787838,
+      "estimatedRelativeUncertainty": 0.01,
+      "uncertaintyMeaning": "Conservative estimate from last panel changes and r^(-1/3) rectangular-corner asymptotics with cosine grading; not a rigorous bound. No FEM output or engineering result used."
+    }
+  ],
+  "pairedCase": [
+    {
+      "n": 80,
+      "panels": 428,
+      "line": {
+        "kind": "coupled-microstrip",
+        "widthMm": 0.3,
+        "dielectricHeightMm": 0.18000000000000002,
+        "copperThicknessMm": 0.034999999999999996,
+        "gapMm": 0.2,
+        "relativePermittivity": 1
+      },
+      "frequencyHz": 1000000000.0,
+      "capacitanceFPerM": [
+        [
+          3.834594092291544e-11,
+          -7.249427144294504e-12
+        ],
+        [
+          -7.249427144294473e-12,
+          3.8345940922915425e-11
+        ]
+      ],
+      "surfaceGramPerM": [
+        [
+          [
+            2201.8597978381204,
+            -18.072795352111537
+          ],
+          [
+            -18.072795352111566,
+            95.97767039675097
+          ]
+        ],
+        [
+          [
+            95.97767039676289,
+            -18.072795352169265
+          ],
+          [
+            -18.072795352169294,
+            2201.8597978381604
+          ]
+        ],
+        [
+          [
+            699.9805883278914,
+            346.3013557181137
+          ],
+          [
+            346.30135571811365,
+            699.9805883278899
+          ]
+        ]
+      ],
+      "totalGramPerM": [
+        [
+          2997.8180565627745,
+          310.15576501383293
+        ],
+        [
+          310.1557650138328,
+          2997.8180565628013
+        ]
+      ],
+      "resistanceOhmPerM": [
+        [
+          24.73267796964271,
+          2.558855311356244
+        ],
+        [
+          2.558855311356243,
+          24.732677969642932
+        ]
+      ],
+      "modeResistanceOhmPerM": {
+        "even": 27.291533280998955,
+        "odd": 22.17382265828647
+      },
+      "linearResidual": 1.5543122344752192e-15
+    },
+    {
+      "n": 160,
+      "panels": 860,
+      "line": {
+        "kind": "coupled-microstrip",
+        "widthMm": 0.3,
+        "dielectricHeightMm": 0.18000000000000002,
+        "copperThicknessMm": 0.034999999999999996,
+        "gapMm": 0.2,
+        "relativePermittivity": 1
+      },
+      "frequencyHz": 1000000000.0,
+      "capacitanceFPerM": [
+        [
+          3.834613895498862e-11,
+          -7.249517908428658e-12
+        ],
+        [
+          -7.249517908428516e-12,
+          3.8346138954988504e-11
+        ]
+      ],
+      "surfaceGramPerM": [
+        [
+          [
+            2224.0362967335363,
+            -19.355625241751923
+          ],
+          [
+            -19.355625241751937,
+            97.0900328886035
+          ]
+        ],
+        [
+          [
+            97.09003288859726,
+            -19.35562524191826
+          ],
+          [
+            -19.35562524191829,
+            2224.036296733651
+          ]
+        ],
+        [
+          [
+            699.9791489321249,
+            346.3019391237109
+          ],
+          [
+            346.30193912371095,
+            699.9791489321245
+          ]
+        ]
+      ],
+      "totalGramPerM": [
+        [
+          3021.1054785542583,
+          307.5906886400407
+        ],
+        [
+          307.59068864004075,
+          3021.1054785543793
+        ]
+      ],
+      "resistanceOhmPerM": [
+        [
+          24.92480447565186,
+          2.537692850285046
+        ],
+        [
+          2.5376928502850467,
+          24.92480447565286
+        ]
+      ],
+      "modeResistanceOhmPerM": {
+        "even": 27.46249732593691,
+        "odd": 22.387111625366813
+      },
+      "linearResidual": 1.1102230246251565e-15
+    },
+    {
+      "n": 320,
+      "panels": 1716,
+      "line": {
+        "kind": "coupled-microstrip",
+        "widthMm": 0.3,
+        "dielectricHeightMm": 0.18000000000000002,
+        "copperThicknessMm": 0.034999999999999996,
+        "gapMm": 0.2,
+        "relativePermittivity": 1
+      },
+      "frequencyHz": 1000000000.0,
+      "capacitanceFPerM": [
+        [
+          3.83461707558595e-11,
+          -7.249532476816591e-12
+        ],
+        [
+          -7.249532476816772e-12,
+          3.834617075585967e-11
+        ]
+      ],
+      "surfaceGramPerM": [
+        [
+          [
+            2237.6383183670437,
+            -20.142554792540167
+          ],
+          [
+            -20.142554792540174,
+            97.7735485798919
+          ]
+        ],
+        [
+          [
+            97.77354858003989,
+            -20.14255479291846
+          ],
+          [
+            -20.14255479291846,
+            2237.6383183673856
+          ]
+        ],
+        [
+          [
+            699.9789183991395,
+            346.3020324243868
+          ],
+          [
+            346.3020324243866,
+            699.9789183991417
+          ]
+        ]
+      ],
+      "totalGramPerM": [
+        [
+          3035.3907853462233,
+          306.01692283892817
+        ],
+        [
+          306.01692283892794,
+          3035.390785346419
+        ]
+      ],
+      "resistanceOhmPerM": [
+        [
+          25.04266149229427,
+          2.524708925969379
+        ],
+        [
+          2.5247089259693767,
+          25.04266149229588
+        ]
+      ],
+      "modeResistanceOhmPerM": {
+        "even": 27.567370418263646,
+        "odd": 22.517952566324887
+      },
+      "linearResidual": 1.3322676295501878e-15
+    }
+  ],
+  "pairedCases": [
+    {
+      "gapMm": 0.034999999999999996,
+      "uncertaintyMeaning": "Estimated corner-limit uncertainty, not a rigorous bound; nominal reference remains finest raw panels; per-entry remaining tail shown separately",
+      "history": [
+        {
+          "n": 80,
+          "panels": 428,
+          "line": {
+            "kind": "coupled-microstrip",
+            "widthMm": 0.3,
+            "dielectricHeightMm": 0.18000000000000002,
+            "copperThicknessMm": 0.034999999999999996,
+            "gapMm": 0.034999999999999996,
+            "relativePermittivity": 1
+          },
+          "frequencyHz": 1000000000.0,
+          "capacitanceFPerM": [
+            [
+              5.141470991622068e-11,
+              -2.3702360038290027e-11
+            ],
+            [
+              -2.37023600382899e-11,
+              5.141470991622047e-11
+            ]
+          ],
+          "surfaceGramPerM": [
+            [
+              [
+                2485.088599932647,
+                -495.936542603485
+              ],
+              [
+                -495.93654260348495,
+                883.1078069135602
+              ]
+            ],
+            [
+              [
+                883.1078069136499,
+                -495.93654260360825
+              ],
+              [
+                -495.93654260360836,
+                2485.088599932764
+              ]
+            ],
+            [
+              [
+                637.3501394609791,
+                533.3703814145179
+              ],
+              [
+                533.3703814145181,
+                637.3501394609749
+              ]
+            ]
+          ],
+          "totalGramPerM": [
+            [
+              4005.546546307276,
+              -458.5027037925754
+            ],
+            [
+              -458.5027037925752,
+              4005.5465463072987
+            ]
+          ],
+          "resistanceOhmPerM": [
+            [
+              33.04666625959991,
+              -3.78275115672444
+            ],
+            [
+              -3.782751156724438,
+              33.0466662596001
+            ]
+          ],
+          "modeResistanceOhmPerM": {
+            "even": 29.26391510287547,
+            "odd": 36.829417416324354
+          },
+          "linearResidual": 1.3322676295501878e-15
+        },
+        {
+          "n": 160,
+          "panels": 860,
+          "line": {
+            "kind": "coupled-microstrip",
+            "widthMm": 0.3,
+            "dielectricHeightMm": 0.18000000000000002,
+            "copperThicknessMm": 0.034999999999999996,
+            "gapMm": 0.034999999999999996,
+            "relativePermittivity": 1
+          },
+          "frequencyHz": 1000000000.0,
+          "capacitanceFPerM": [
+            [
+              5.1415608512924015e-11,
+              -2.3703177238931693e-11
+            ],
+            [
+              -2.3703177238931102e-11,
+              5.141560851292342e-11
+            ]
+          ],
+          "surfaceGramPerM": [
+            [
+              [
+                2512.4819123486404,
+                -505.2188592503154
+              ],
+              [
+                -505.2188592503153,
+                894.0550620857589
+              ]
+            ],
+            [
+              [
+                894.0550620864144,
+                -505.2188592512886
+              ],
+              [
+                -505.21885925128856,
+                2512.481912349563
+              ]
+            ],
+            [
+              [
+                637.3473871090251,
+                533.3717191123382
+              ],
+              [
+                533.3717191123383,
+                637.3473871090221
+              ]
+            ]
+          ],
+          "totalGramPerM": [
+            [
+              4043.8843615440796,
+              -477.0659993892658
+            ],
+            [
+              -477.0659993892656,
+              4043.884361544344
+            ]
+          ],
+          "resistanceOhmPerM": [
+            [
+              33.362961918783014,
+              -3.935902549966312
+            ],
+            [
+              -3.9359025499663103,
+              33.36296191878519
+            ]
+          ],
+          "modeResistanceOhmPerM": {
+            "even": 29.4270593688167,
+            "odd": 37.29886446874932
+          },
+          "linearResidual": 1.5543122344752192e-15
+        },
+        {
+          "n": 320,
+          "panels": 1716,
+          "line": {
+            "kind": "coupled-microstrip",
+            "widthMm": 0.3,
+            "dielectricHeightMm": 0.18000000000000002,
+            "copperThicknessMm": 0.034999999999999996,
+            "gapMm": 0.034999999999999996,
+            "relativePermittivity": 1
+          },
+          "frequencyHz": 1000000000.0,
+          "capacitanceFPerM": [
+            [
+              5.1415753005568915e-11,
+              -2.370330865850507e-11
+            ],
+            [
+              -2.370330865850594e-11,
+              5.141575300556977e-11
+            ]
+          ],
+          "surfaceGramPerM": [
+            [
+              [
+                2529.2712444281233,
+                -510.90205082768557
+              ],
+              [
+                -510.90205082768557,
+                900.7661099288136
+              ]
+            ],
+            [
+              [
+                900.7661099284168,
+                -510.9020508279883
+              ],
+              [
+                -510.9020508279883,
+                2529.271244428476
+              ]
+            ],
+            [
+              [
+                637.3469453666701,
+                533.3719340917413
+              ],
+              [
+                533.3719340917406,
+                637.3469453666797
+              ]
+            ]
+          ],
+          "totalGramPerM": [
+            [
+              4067.3842997232105,
+              -488.4321675639326
+            ],
+            [
+              -488.43216756393326,
+              4067.3842997239694
+            ]
+          ],
+          "resistanceOhmPerM": [
+            [
+              33.55684173147497,
+              -4.029676011833827
+            ],
+            [
+              -4.029676011833832,
+              33.55684173148123
+            ]
+          ],
+          "modeResistanceOhmPerM": {
+            "even": 29.527165719641143,
+            "odd": 37.58651774330879
+          },
+          "linearResidual": 1.3322676295501878e-15
+        },
+        {
+          "n": 640,
+          "panels": 3436,
+          "line": {
+            "kind": "coupled-microstrip",
+            "widthMm": 0.3,
+            "dielectricHeightMm": 0.18000000000000002,
+            "copperThicknessMm": 0.034999999999999996,
+            "gapMm": 0.034999999999999996,
+            "relativePermittivity": 1
+          },
+          "frequencyHz": 1000000000.0,
+          "capacitanceFPerM": [
+            [
+              5.141577698336539e-11,
+              -2.370333046638391e-11
+            ],
+            [
+              -2.3703330466385234e-11,
+              5.1415776983366684e-11
+            ]
+          ],
+          "surfaceGramPerM": [
+            [
+              [
+                2539.9407187801185,
+                -514.5146126155466
+              ],
+              [
+                -514.5146126155466,
+                905.0337138809184
+              ]
+            ],
+            [
+              [
+                905.0337138791907,
+                -514.5146126097443
+              ],
+              [
+                -514.5146126097443,
+                2539.940718774579
+              ]
+            ],
+            [
+              [
+                637.3468721939371,
+                533.3719697392185
+              ],
+              [
+                533.3719697392185,
+                637.3468721939379
+              ]
+            ]
+          ],
+          "totalGramPerM": [
+            [
+              4082.321304853246,
+              -495.6572554860725
+            ],
+            [
+              -495.6572554860725,
+              4082.3213048494354
+            ]
+          ],
+          "resistanceOhmPerM": [
+            [
+              33.68007540701552,
+              -4.0892846236671705
+            ],
+            [
+              -4.0892846236671705,
+              33.68007540698408
+            ]
+          ],
+          "modeResistanceOhmPerM": {
+            "even": 29.590790783348353,
+            "odd": 37.76936003068269
+          },
+          "linearResidual": 1.5543122344752192e-15
+        }
+      ],
+      "cornerRichardsonResistanceOhmPerM": [
+        [
+          33.889870188839005,
+          -4.190763181857718
+        ],
+        [
+          -4.190763181857709,
+          33.88987018874338
+        ]
+      ],
+      "finestResidualEstimatePerEntry": [
+        [
+          0.006190486439000137,
+          0.024214815723746768
+        ],
+        [
+          0.0242148157237447,
+          0.0061904864371237255
+        ]
+      ],
+      "estimatedCornerLimitRelativeUncertainty": 0.015,
+      "finestToCornerPowerResidualEstimate": 0.008174058896348261,
+      "powerRefinementChanges": [
+        0.012746523984326946,
+        0.007712118818054614,
+        0.004864571083805075
+      ]
+    },
+    {
+      "gapMm": 0.6,
+      "uncertaintyMeaning": "Estimated corner-limit uncertainty, not a rigorous bound; nominal reference remains finest raw panels; per-entry remaining tail shown separately",
+      "history": [
+        {
+          "n": 80,
+          "panels": 428,
+          "line": {
+            "kind": "coupled-microstrip",
+            "widthMm": 0.3,
+            "dielectricHeightMm": 0.18000000000000002,
+            "copperThicknessMm": 0.034999999999999996,
+            "gapMm": 0.6,
+            "relativePermittivity": 1
+          },
+          "frequencyHz": 1000000000.0,
+          "capacitanceFPerM": [
+            [
+              3.6686059038005e-11,
+              -2.1995264354480743e-12
+            ],
+            [
+              -2.1995264354480456e-12,
+              3.6686059038005e-11
+            ]
+          ],
+          "surfaceGramPerM": [
+            [
+              [
+                2194.355798053215,
+                13.287652584844485
+              ],
+              [
+                13.287652584844485,
+                6.785334562391869
+              ]
+            ],
+            [
+              [
+                6.785334562397601,
+                13.287652584815184
+              ],
+              [
+                13.287652584815191,
+                2194.3557980532405
+              ]
+            ],
+            [
+              [
+                722.8635269955765,
+                139.2636103478516
+              ],
+              [
+                139.26361034785162,
+                722.8635269955768
+              ]
+            ]
+          ],
+          "totalGramPerM": [
+            [
+              2924.0046596111893,
+              165.83891551751128
+            ],
+            [
+              165.8389155175113,
+              2924.004659611209
+            ]
+          ],
+          "resistanceOhmPerM": [
+            [
+              24.123700726126422,
+              1.368208615379491
+            ],
+            [
+              1.3682086153794912,
+              24.123700726126582
+            ]
+          ],
+          "modeResistanceOhmPerM": {
+            "even": 25.491909341505913,
+            "odd": 22.75549211074693
+          },
+          "linearResidual": 1.1102230246251565e-15
+        },
+        {
+          "n": 160,
+          "panels": 860,
+          "line": {
+            "kind": "coupled-microstrip",
+            "widthMm": 0.3,
+            "dielectricHeightMm": 0.18000000000000002,
+            "copperThicknessMm": 0.034999999999999996,
+            "gapMm": 0.6,
+            "relativePermittivity": 1
+          },
+          "frequencyHz": 1000000000.0,
+          "capacitanceFPerM": [
+            [
+              3.668621822512122e-11,
+              -2.1995468202546284e-12
+            ],
+            [
+              -2.1995468202545925e-12,
+              3.6686218225121216e-11
+            ]
+          ],
+          "surfaceGramPerM": [
+            [
+              [
+                2216.281546866632,
+                13.193290782201748
+              ],
+              [
+                13.193290782201741,
+                6.841467547315207
+              ]
+            ],
+            [
+              [
+                6.841467547350355,
+                13.193290782136692
+              ],
+              [
+                13.193290782136692,
+                2216.281546866573
+              ]
+            ],
+            [
+              [
+                722.862525902713,
+                139.26374432404242
+              ],
+              [
+                139.26374432404245,
+                722.8625259027136
+              ]
+            ]
+          ],
+          "totalGramPerM": [
+            [
+              2945.9855403166957,
+              165.65032588838085
+            ],
+            [
+              165.65032588838088,
+              2945.9855403166016
+            ]
+          ],
+          "resistanceOhmPerM": [
+            [
+              24.305047970595872,
+              1.3666527082237894
+            ],
+            [
+              1.3666527082237896,
+              24.305047970595094
+            ]
+          ],
+          "modeResistanceOhmPerM": {
+            "even": 25.67170067881966,
+            "odd": 22.938395262372083
+          },
+          "linearResidual": 1.1102230246251565e-15
+        },
+        {
+          "n": 320,
+          "panels": 1716,
+          "line": {
+            "kind": "coupled-microstrip",
+            "widthMm": 0.3,
+            "dielectricHeightMm": 0.18000000000000002,
+            "copperThicknessMm": 0.034999999999999996,
+            "gapMm": 0.6,
+            "relativePermittivity": 1
+          },
+          "frequencyHz": 1000000000.0,
+          "capacitanceFPerM": [
+            [
+              3.668624379778588e-11,
+              -2.1995500948843357e-12
+            ],
+            [
+              -2.19955009488432e-12,
+              3.668624379778589e-11
+            ]
+          ],
+          "surfaceGramPerM": [
+            [
+              [
+                2229.729755215608,
+                13.135601553179384
+              ],
+              [
+                13.135601553179386,
+                6.876010175090435
+              ]
+            ],
+            [
+              [
+                6.876010175070182,
+                13.135601552973398
+              ],
+              [
+                13.135601552973398,
+                2229.729755215638
+              ]
+            ],
+            [
+              [
+                722.8623654663234,
+                139.26376578345108
+              ],
+              [
+                139.26376578345116,
+                722.8623654663229
+              ]
+            ]
+          ],
+          "totalGramPerM": [
+            [
+              2959.4681308570016,
+              165.53496888960387
+            ],
+            [
+              165.53496888960393,
+              2959.468130857051
+            ]
+          ],
+          "resistanceOhmPerM": [
+            [
+              24.416282396347604,
+              1.3657009868556265
+            ],
+            [
+              1.365700986855627,
+              24.416282396348013
+            ]
+          ],
+          "modeResistanceOhmPerM": {
+            "even": 25.781983383203233,
+            "odd": 23.05058140949198
+          },
+          "linearResidual": 1.1102230246251565e-15
+        },
+        {
+          "n": 640,
+          "panels": 3436,
+          "line": {
+            "kind": "coupled-microstrip",
+            "widthMm": 0.3,
+            "dielectricHeightMm": 0.18000000000000002,
+            "copperThicknessMm": 0.034999999999999996,
+            "gapMm": 0.6,
+            "relativePermittivity": 1
+          },
+          "frequencyHz": 1000000000.0,
+          "capacitanceFPerM": [
+            [
+              3.668624804214594e-11,
+              -2.199550638185436e-12
+            ],
+            [
+              -2.1995506381855686e-12,
+              3.668624804214596e-11
+            ]
+          ],
+          "surfaceGramPerM": [
+            [
+              [
+                2238.276719879493,
+                13.098921140871981
+              ],
+              [
+                13.098921140871983,
+                6.897991157707879
+              ]
+            ],
+            [
+              [
+                6.897991157726711,
+                13.098921140979783
+              ],
+              [
+                13.098921140979769,
+                2238.276719879532
+              ]
+            ],
+            [
+              [
+                722.8623389148116,
+                139.26376933527683
+              ],
+              [
+                139.26376933527683,
+                722.8623389148113
+              ]
+            ]
+          ],
+          "totalGramPerM": [
+            [
+              2968.0370499520313,
+              165.4616116171286
+            ],
+            [
+              165.4616116171286,
+              2968.0370499520513
+            ]
+          ],
+          "resistanceOhmPerM": [
+            [
+              24.4869779197338,
+              1.3650957727423516
+            ],
+            [
+              1.3650957727423516,
+              24.486977919733967
+            ]
+          ],
+          "modeResistanceOhmPerM": {
+            "even": 25.852073692476154,
+            "odd": 23.12188214699145
+          },
+          "linearResidual": 1.3322676295501878e-15
+        }
+      ],
+      "cornerRichardsonResistanceOhmPerM": [
+        [
+          24.607330995625162,
+          1.3640654475305616
+        ],
+        [
+          1.3640654475305607,
+          24.60733099562492
+        ]
+      ],
+      "finestResidualEstimatePerEntry": [
+        [
+          0.004890943918816686,
+          -0.000755334147386608
+        ],
+        [
+          -0.0007553341473872596,
+          0.004890943918800131
+        ]
+      ],
+      "estimatedCornerLimitRelativeUncertainty": 0.015,
+      "finestToCornerPowerResidualEstimate": 0.005222304105754198,
+      "powerRefinementChanges": [
+        0.00803775856547178,
+        0.0048907583044625206,
+        0.0030932294605804807
+      ]
+    }
+  ]
+}

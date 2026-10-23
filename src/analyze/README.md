@@ -260,11 +260,21 @@ DC copper mesh), C/C0/external L and lossless modal distributed propagation in
 `native/analyze/src/extraction/`. `z.network` reuses P6b, the existing process and
 single addon; no GPU or additional dependencies. See
 [semantics](../../docs/experimental/analyze/line-cross-sections-semantics.md).
-Only explicit PEC/nondispersive lossless materials; other losses/mask/targets
+Explicit PEC/lossless inputs retain their result forms. Optional `conductors`
+provides fixed-temperature smooth signal conductivity and complete reference
+thickness/materials; explicit 0..0.05 dielectric tangents use regional energy
+participation. Native skin-depth, weak-loss and independent 2% loss convergence
+guards reject ineligible cases. Mask/roughness/dispersion/temperature/other targets
 reject. Field reports retain mesh/phi/E, quality, independent mesh/domain
 convergence and exact-frequency matrices. Large reports require an explicit
 bounded report budget. Real-board examples are conditional geometry/stackup
 hypotheses, not measured/extracted complete PCB channels.
+Lossy RLGC additionally retains per-frequency full matrices, all physical
+surface/region contributions, unit-current surface fields and complex modal
+alpha/beta/Zc/phase delay. Stable full 2/4-port S and a longitudinal dissipation
+balance feed existing P6b. See [loss semantics](../../docs/experimental/analyze/line-losses-semantics.md)
+and [verification and limitations](../../docs/experimental/analyze/line-losses-verification.md).
+
 
 ## Geometry validation
 

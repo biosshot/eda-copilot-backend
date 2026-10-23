@@ -1,0 +1,52 @@
+{
+  "tracks": [
+    "e216"
+  ],
+  "segment": [
+    [
+      [
+        28.69,
+        27.0605
+      ],
+      [
+        28.69,
+        19.0596
+      ]
+    ]
+  ],
+  "net": [
+    "UART5_RX"
+  ],
+  "layer": "BOTTOM",
+  "widthMm": 0.254,
+  "lengthMm": 8.0009,
+  "dielectricHeightMm": 0.2,
+  "epsilon": 4.2,
+  "copperThicknessMm": 0.035,
+  "conditional": true,
+  "source": "Source-bound straight geometry; fixed-temperature smooth copper, dielectric, infinite reference and thickness are explicit hypotheses, not measured PCB losses",
+  "expectedChecks": [
+    "fail",
+    "pass"
+  ],
+  "frequencyHz": [
+    500000000.0,
+    1000000000.0,
+    41
+  ],
+  "kind": "microstrip",
+  "modes": [
+    "PEC/lossless",
+    "dielectric-only",
+    "conductor-only",
+    "combined"
+  ],
+  "conductivitySM": 58000000.0,
+  "referenceThicknessMm": 0.035,
+  "lossTangent": 0.015,
+  "mesh": {
+    "initialMaxEdgeMm": 0.008333333333333333,
+    "initialDomainScale": 16,
+    "reason": "Common accepted field discretization for all four loss modes; isolate coefficient effects from mesh/domain differences"
+  }
+}

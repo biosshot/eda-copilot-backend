@@ -995,5 +995,51 @@ Inter-point P6b phase is interpolated, not a new field/propagation solve.
 [board single/cascade](../../../tests/pcb-analyze/BandAmpV5/impedance.js),
 [real parallel pair](../../../tests/pcb-analyze/STM32G0_CAN_RS485/impedance.js),
 [third section](../../../tests/pcb-analyze/ThunderF722/impedance.js).
-Losses, mask, raw board/channel/differential targets and future layered methods
-remain explicit unsupported; R/G zero only describe the ideal PEC/lossless model.
+Mask, raw board/channel/differential targets and future layered methods remain
+unsupported; R/G zero above only describe the ideal PEC/lossless model.
+
+## P7b: bounded weak line loss perturbation (acceptance pending)
+
+The same four kinds accept explicit dielectric `0 <= lossTangent <= 0.05` and
+an optional additive `conductors` field:
+
+```ts
+conductors?: {
+  signal: Material; // positive conductivitySM and nonempty state required
+  referencePlanes: {
+    bottom: { thicknessMm: number; material: Material };
+    top?: { thicknessMm: number; material: Material };
+  };
+};
+```
+
+Microstrip requires bottom only; stripline requires both. Signal thickness stays
+`copperThicknessMm`. Absent conductors explicitly means PEC. Conductor materials
+accept conductivity/state, optional kind: "material", and identifying id/source only. Temperature overrides,
+roughness, coatings, dispersion, magnetic parameters and mask reject.
+
+Lossy frequency points must be positive. Native eligibility requires skin depth
+at most one tenth of each relevant transverse dimension/reference thickness,
+modal R/(ωLexternal) and G/(ωC) at most 0.05, plus the existing quasi-TEM screening.
+No point is cropped from an ineligible axis. `.prepare()` retains physicalReady
+false and identifies the additional applicability/convergence requirements.
+
+`rlgc` remains a mixed-unit table (`unit: '1'`), with conductorOrder, the full
+frequenciesHz and samples of resistanceOhmPerM, externalInductanceHPerM,
+internalInductanceHPerM, totalInductanceHPerM, conductanceSPerM and
+capacitanceFPerM. Samples also retain physical surface/reference contributions,
+regional C/G, modal alphaNpPerM/betaRadPerM/complex characteristicImpedanceOhm and
+phaseDelayS. Every coefficient has an explicit unit map. The legacy lossless
+scalar/table output shapes stay unchanged.
+
+Single lossy `characteristicImpedance` is a complex frequency series in Ohm;
+the pair uses a frequency/mode table with real/imaginary values and the existing
+differential/common convention. `delay` with a length means phase delay βl/ω in
+seconds, not group delay. Without length delay/network are unavailable while
+per-metre coefficients remain available. Surface currents are normalized basis
+functions and do not describe a real PCB excitation. All results/networks remain
+conditional; P6b interpolation stays conditional and extrapolation is forbidden.
+
+[Runnable standalone](../../../tests/fixtures/analysis-line-losses/example.js),
+[normalizations/limits](line-losses-semantics.md),
+[verification and unresolved acceptance requirements](line-losses-verification.md).

@@ -74,21 +74,220 @@ pub fn parameters(c: &[Vec<f64>], c0: &[Vec<f64>]) -> Result<Value> {
     )
 }
 #[derive(Clone, Copy, Default)]
-struct Z {
-    r: f64,
-    i: f64,
+pub(super) struct Z {
+    pub r: f64,
+    pub i: f64,
 }
 impl Z {
-    fn div(self, b: Self) -> Self {
+    pub fn div(self, b: Self) -> Self {
         let d = b.r * b.r + b.i * b.i;
         Self {
             r: (self.r * b.r + self.i * b.i) / d,
             i: (self.i * b.r - self.r * b.i) / d,
         }
     }
-    fn abs(self) -> f64 {
+    pub fn abs(self) -> f64 {
         self.r.hypot(self.i)
     }
+    pub fn mul(self, b: Self) -> Self {
+        Self {
+            r: self.r * b.r - self.i * b.i,
+            i: self.r * b.i + self.i * b.r,
+        }
+    }
+    pub fn add(self, b: Self) -> Self {
+        Self {
+            r: self.r + b.r,
+            i: self.i + b.i,
+        }
+    }
+    pub fn sub(self, b: Self) -> Self {
+        Self {
+            r: self.r - b.r,
+            i: self.i - b.i,
+        }
+    }
+    pub fn scale(self, x: f64) -> Self {
+        Self {
+            r: self.r * x,
+            i: self.i * x,
+        }
+    }
+    pub fn sqrt(self) -> Self {
+        // Stable passive principal root for Re/Im(zy)>=0 or Im(zy)>=0.
+        let m = self.abs();
+        if self.r >= 0. {
+            let r = ((m + self.r) / 2.).sqrt();
+            Self {
+                r,
+                i: self.i / (2. * r),
+            }
+        } else {
+            let i = ((m - self.r) / 2.).sqrt().copysign(self.i);
+            Self {
+                r: self.i / (2. * i),
+                i,
+            }
+        }
+    }
+    pub fn value(self) -> Value {
+        json!({"real":self.r,"imaginary":self.i})
+    }
+}
+
+/// Stable lossy modal waves; no positive exponential, cosh or sinh.
+pub fn lossy_network(samples: &[Value], length: f64, reference: f64) -> Result<Value> {
+    if !length.is_finite()
+        || length <= 0.
+        || !reference.is_finite()
+        || reference <= 0.
+        || samples.is_empty()
+    {
+        return Err(error(
+            "SECTION_INPUT",
+            "positive length/reference and samples required",
+        ));
+    }
+    let n = samples[0]["modes"]
+        .as_array()
+        .ok_or_else(|| error("SECTION_INPUT", "missing lossy modes"))?
+        .len();
+    if !(1..=2).contains(&n) {
+        return Err(error("SECTION_INPUT", "one/two lossy modes required"));
+    }
+    let mut all = vec![];
+    let mut max_passivity: f64 = 0.;
+    let mut max_reciprocity: f64 = 0.;
+    let mut max_power: f64 = 0.;
+    let mut power_balances = vec![];
+    for sample in samples {
+        let modes = sample["modes"].as_array().unwrap();
+        let mut out = vec![vec![Z::default(); 2 * n]; 2 * n];
+        for (k, m) in modes.iter().enumerate() {
+            let z = Z {
+                r: m["characteristicImpedanceOhm"]["real"].as_f64().unwrap(),
+                i: m["characteristicImpedanceOhm"]["imaginary"]
+                    .as_f64()
+                    .unwrap(),
+            };
+            let alpha = m["alphaNpPerM"].as_f64().unwrap();
+            let angle = m["betaRadPerM"].as_f64().unwrap() * length;
+            if !angle.is_finite() || angle.abs() > 1e9 {
+                return Err(error(
+                    "SECTION_APPLICABILITY",
+                    "phase exceeds validated argument range",
+                ));
+            }
+            let attenuation = (-alpha * length).exp();
+            let (s, c) = angle.sin_cos();
+            let q = Z {
+                r: attenuation * c,
+                i: -attenuation * s,
+            };
+            let one = Z { r: 1., i: 0. };
+            let zr = Z {
+                r: reference,
+                i: 0.,
+            };
+            let r = z.sub(zr).div(z.add(zr));
+            let q2 = q.mul(q);
+            let r2 = r.mul(r);
+            let den = one.sub(r2.mul(q2));
+            let refl = r.mul(one.sub(q2)).div(den);
+            let trans = one.sub(r2).mul(q).div(den);
+            let resistance = m["resistanceOhmPerM"]
+                .as_f64()
+                .ok_or_else(|| error("SECTION_INPUT", "missing modal R"))?;
+            let conductance = m["conductanceSPerM"]
+                .as_f64()
+                .ok_or_else(|| error("SECTION_INPUT", "missing modal G"))?;
+            let a = one
+                .add(refl)
+                .scale(reference.sqrt())
+                .add(z.mul(one.sub(refl).scale(1. / reference.sqrt())))
+                .scale(0.5);
+            let d = trans
+                .scale(reference.sqrt())
+                .sub(z.mul(trans.scale(1. / reference.sqrt())))
+                .scale(0.5);
+            let decay_integral = if alpha == 0. {
+                length
+            } else {
+                -(-2. * alpha * length).exp_m1() / (2. * alpha)
+            };
+            let beta = m["betaRadPerM"].as_f64().unwrap();
+            let cross = 2.
+                * a.mul(Z { r: d.r, i: -d.i }).r
+                * attenuation
+                * if beta == 0. {
+                    length
+                } else {
+                    angle.sin() / beta
+                };
+            let energy = (a.abs().powi(2) + d.abs().powi(2)) * decay_integral;
+            let loss = 0.5
+                * (resistance * (energy - cross) / z.abs().powi(2)
+                    + conductance * (energy + cross));
+            let absorbed = 0.5 * (1. - refl.abs().powi(2) - trans.abs().powi(2));
+            let residual = (loss - absorbed).abs() / 0.5;
+            if !residual.is_finite() || residual > 1e-8 {
+                return Err(error(
+                    "SECTION_POWER_BALANCE",
+                    format!("mode {k}: residual {residual}"),
+                ));
+            }
+            max_power = max_power.max(residual);
+            power_balances.push(json!({"frequencyHz":sample["frequencyHz"],"mode":k,"incidentW":0.5,"reflectedW":0.5*refl.abs().powi(2),"transmittedW":0.5*trans.abs().powi(2),"integratedDissipatedW":loss,"normalizedResidual":residual,"normalization":"unit peak power wave, incident average power 0.5 W; full modal R includes all signal/reference surfaces"}));
+            // The orthonormal conductor transform preserves full mutual loss.
+            for i in 0..n {
+                for j in 0..n {
+                    let w = if n == 1 {
+                        1.
+                    } else if k == 1 && i != j {
+                        -0.5
+                    } else {
+                        0.5
+                    };
+                    for (a, b, v) in [
+                        (i, j, refl),
+                        (i + n, j + n, refl),
+                        (i + n, j, trans),
+                        (i, j + n, trans),
+                    ] {
+                        out[a][b] = out[a][b].add(v.scale(w));
+                    }
+                }
+            }
+            // Each symmetric modal two-port diagonalizes under [1,+/-1].
+            // Largest singular value is max(|r+t|,|r-t|); orthonormal pair
+            // transformation leaves singular values unchanged.
+            max_passivity =
+                max_passivity.max(refl.add(trans).abs().max(refl.sub(trans).abs()) - 1.);
+        }
+        for i in 0..2 * n {
+            for j in 0..2 * n {
+                let v = out[i][j];
+                if !v.r.is_finite() || !v.i.is_finite() {
+                    return Err(error("SECTION_NONFINITE", "nonfinite lossy scattering"));
+                }
+                max_reciprocity = max_reciprocity.max(v.sub(out[j][i]).abs());
+            }
+        }
+        all.push(
+            out.iter()
+                .map(|r| r.iter().map(|v| v.value()).collect::<Vec<_>>())
+                .collect::<Vec<_>>(),
+        );
+    }
+    if max_passivity > 1e-10 || max_reciprocity > 1e-10 {
+        return Err(error(
+            "SECTION_PROPAGATION",
+            format!("passivity {max_passivity}, reciprocity {max_reciprocity}"),
+        ));
+    }
+    Ok(
+        json!({"ports":if n==1{vec!["input","output"]}else{vec!["positiveInput","negativeInput","positiveOutput","negativeOutput"]},"parameters":all,"referenceOhm":reference,"maxPassivityExcess":max_passivity,"maxReciprocityError":max_reciprocity,"maxPowerBalanceResidual":max_power,"powerBalances":power_balances,"phaseConvention":"exp(+j omega t), passive gamma, transmission exp(-gamma length), currents into both ends"}),
+    )
 }
 pub fn network(p: &Value, frequencies: &[f64], length: f64, reference: f64) -> Result<Value> {
     if !length.is_finite() || length <= 0. || !reference.is_finite() || reference <= 0. {

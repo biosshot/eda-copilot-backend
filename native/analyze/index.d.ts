@@ -175,12 +175,12 @@ export interface AnalysisFrequencyReport {
  resources?:{peakRssBytes:number;metric:string};
 }
 
-/** Internal one-shot PEC/lossless extraction transport; existing process/session. */
+/** Internal one-shot PEC or bounded weak-loss extraction; existing process/session. */
 export interface AnalysisCrossSectionRequest {line:unknown;frequencies:number[];mesh?:{maxNodes?:number;maxTriangles?:number;maxRefinements?:number;maxEdgeMm?:number;domainScale?:number};budget?:AnalysisElectricalRequest['budget']}
 export interface AnalysisCrossSectionReport {
  status:'complete'|'rejected';diagnostics:{code:string;message:string;severity:'error'|'warning'|'info'}[];elapsedMs:number;
  assumptions?:string[];parameters?:{modes:{name:string;impedanceOhm:number;delaySPerM:number}[];differentialOhm?:number|null;commonOhm?:number|null;[key:string]:unknown};
- network?:{ports:string[];parameters:{real:number;imaginary:number}[][][];referenceOhm:number;maxUnitarityError:number;phaseConvention:string}|null;
+ network?:{ports:string[];parameters:{real:number;imaginary:number}[][][];referenceOhm:number;maxUnitarityError?:number;maxPassivityExcess?:number;maxReciprocityError?:number;maxPowerBalanceResidual?:number;powerBalances?:unknown[];phaseConvention:string}|null;
  resources?:{peakRssBytes:number;metric:string};applicability?:unknown;
  [key:string]:unknown;
 }

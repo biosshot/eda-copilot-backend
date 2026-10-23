@@ -87,7 +87,16 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
       if (!descriptionInput(state, target)?.lengthMm) issue('MISSING_FIELD', 'Line lengthMm is required for TDR/EM');
     }
   }
-  if (kind === 'impedance') { required(['method']); frequencyRequired(); }
+  if (kind === 'impedance') { required(['method']); frequencyRequired();
+    if(config.method==='cross-section'){
+      const input=descriptionInput(state,config.target);
+      if(input){
+        const loss=input.conductors!==undefined||['material','topMaterial','bottomMaterial'].some(k=>object(input[k])&&Number(input[k].lossTangent)>0);
+        assumptions.push(input.conductors===undefined?'Line signal/reference surfaces explicitly retain PEC':'Line conductor conductivity and reference thickness are explicit fixed-temperature hypotheses');
+        if(loss)issue('SECTION_LOSS_APPLICABILITY_UNVERIFIED','Valid loss description still requires native skin-depth/weak-loss/quasi-TEM screening, unit-current normalization and separate surface/region mesh/domain convergence',undefined,'warning');
+      }
+    }
+  }
   if (kind === 'tdr') required(['referenceOhm', 'riseS', 'termination', 'time']);
   if (kind === 'si') {
     exclusive(['channels', 'network'], config, true); required(['drivers', 'receivers', 'time']);

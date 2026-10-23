@@ -7,6 +7,13 @@
 - Implement CPU/F64 `geometry()` connectivity, clearance and board-edge rules through the existing DSL/process/shared addon. Reuse conservative graph evidence; check scoped copper against surrounding same-layer copper, retain source polygons and shortest-distance witnesses, and report outside/cutout copper separately. Keep incomplete aggregate counts unavailable and channel/open intent explicitly unsupported.
 - Add bounded R-tree/segment checks, independent analytical and negative audits, eight authored real-board scenarios and interactive source/witness reports. Preserve base geometry/DC and original captured board rules.
 
+### Weak line loss perturbation (P7b)
+
+- Add explicit fixed-temperature smooth conductor materials/reference thicknesses and bounded dielectric loss tangents to the existing four cross sections. Vacuum unit-current surface Gram integrals include signal faces and every reference; regional electric energies provide G. Separate loss-power mesh/domain convergence retains existing P7a tolerances.
+- Add frequency R/Lexternal/Linternal/Ltotal/G/C, complex modal impedance/phase delay and stable passive full 2/4-port propagation with a longitudinal power balance. Preserve PEC/lossless result forms, absent-length unavailability and P6b composition.
+- Distinguish numeric overflow/underflow in skin-depth screening from the finite dimension limit without changing eligibility.
+- Add analytical coupons, independent complex ABCD references, applicability/negative audits, a standalone DSL and three source-bound four-mode board examples. Reviewer-approved independent BEM validates the two fixed conductor cases at 5%; historical Qucs differences remain visible. Two-gap full-power/both-mode BEM and published Johnson nominal-thickness comparisons close the reviewer-authorized R2 equivalent criterion; strong scalar mutual and one Johnson endpoint exceed 5% as explicitly retained diagnostics. Interactive HTML controls remain unverified. Numerical implementation accepted after review; interactive validation remains outstanding. See [verification](docs/experimental/analyze/line-losses-verification.md).
+
 ### Numerical line cross sections (P7a)
 
 - Require exactly one complete, finite frequency series per expected S/crosstalk/cascade plot in the visual report audit; validate kind, units, validity and full axis. Reject empty/truncated/extra samples, duplicates and malformed series in focused regressions; re-audit the three saved reports separately from simulation runs.
