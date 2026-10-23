@@ -27,7 +27,7 @@
 Собственный Rust CPU/F64 модуль проверки поверх существующего geometry preparation; отдельный TS executor, общий addon/process/runtime. Использовать пространственный индекс для кандидатов, точную поддержанную polygon distance/intersection для решения. Не делать все попарные проверки всей большой платы без broad phase и budget. Не переносить физическую геометрию и solver в TS.
 
 ```js
-const a = analysis();
+const a = analysis({ board });
 const g = await a.geometry().rules([
   { kind: 'connectivity' },
   { kind: 'clearance', minMm: 0.2 },
