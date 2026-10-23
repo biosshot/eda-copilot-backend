@@ -1,3 +1,4 @@
+import {createCrossSectionExecutor} from './cross-section-executor.ts';
 import {createFrequencyExecutor} from './frequency-executor.ts';
 import type { AnalysisKind, Configurations, DataDescription, Diagnostic, Json, Network, Resource, Results, TimingOptions } from './spec-doc.js';
 import type { RoutingBoardV2 } from '../../types/pcb/routing-board-v2.ts';
@@ -33,9 +34,11 @@ export interface ExecutionResult {
 export type AnalysisExecutor = (task: AnalysisTask) => Promise<ExecutionResult>;
 export function createAnalysisExecutor(): AnalysisExecutor {
   const frequency = createFrequencyExecutor();
+  const crossSection = createCrossSectionExecutor();
   const dc = createDcExecutor();
   const electrical=createElectricalExecutor();
   return async task => {
+    if (task.kind==='impedance') return crossSection(task as AnalysisTask<'impedance'>);
     if (task.kind==='networkParameters') return frequency(task as AnalysisTask<'networkParameters'>);
     if ((task.kind==='dc'||task.kind==='pi')&&'circuit'in task.config&&task.config.circuit) return electrical(task as AnalysisTask<'dc'|'pi'>);
     if (task.kind === 'dc') return dc(task as AnalysisTask<'dc'>);

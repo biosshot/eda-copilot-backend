@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Numerical line cross sections (P7a)
+
+- Require exactly one complete, finite frequency series per expected S/crosstalk/cascade plot in the visual report audit; validate kind, units, validity and full axis. Reject empty/truncated/extra samples, duplicates and malformed series in focused regressions; re-audit the three saved reports separately from simulation runs.
+- Add CPU/F64 PEC/lossless microstrip, stripline and symmetric coupled line extraction through the existing DSL/process/shared addon. Conforming dielectric P1 FEM obtains C/C0, external L and modal impedance/delay with separate mesh/domain convergence; analytic distributed propagation creates reusable P6b 2/4-port resources. Reject unsupported losses/targets and preserve absent-length unavailability.
+- Add independent field/engineering/complex references, negative and regression tests, source-bound straight-section examples for three saved PCBs and audited field/mesh/convergence/frequency visualizations. Keep existing DC/MNA/P6b/placement algorithms and V2 inputs unchanged; no full PCB channel, SI/TDR, GPU or cache.
+
 ### Frequency multiport networks
 
 - Add CPU/F64 explicit S/Z/Y and bounded IBIS Touchstone 1.0/2.0 resources through the existing DSL/worker/shared addon. Extend universal `a.model` without changing local models; support complete port mappings, nested pairwise connections, renormalization, passivity/band/conditioning guards and reusable result networks. Add independent complex/negative tests and audited synthetic/board-context reports; no PCB extraction or temporal fitting.

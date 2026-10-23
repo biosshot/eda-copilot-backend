@@ -1,6 +1,8 @@
 # Анализаторы: рабочие материалы обсуждения
 
-**Следующее задание:** [P7a — численные сечения и однородные линии](next-task-line-cross-sections.md): собственный FEM сечения одиночной/связанной линии, C/L, импеданс/моды, частотная модель для P6b и три проверенных board-derived примера с визуализациями. Первый режим явно PEC/lossless quasi-TEM; полный PCB path/via/PDN и потери остаются последующими блоками.
+**Приёмка P7a, 2026-10-23:** [повторное ревью закрывает R1](line-cross-sections-acceptance-2026-10-23.md). Приняты численные PEC/lossless сечения, модальное распространение и проверенные board-derived отчёты. Исходники и evidence сверены без повторного запуска тестов/сборки ревьюером. Полный P7 этим не закрывается.
+
+**Принятое задание:** [P7a — численные сечения и однородные линии](next-task-line-cross-sections.md): собственный FEM сечения одиночной/связанной линии, C/L, импеданс/моды, частотная модель для P6b и три проверенных board-derived примера с визуализациями. Первый режим явно PEC/lossless quasi-TEM; полный PCB path/via/PDN и потери остаются последующими блоками.
 
 **Приёмка P6b, 2026-10-23:** [ревью и evidence](frequency-networks-acceptance-2026-10-23.md). Приняты S/Z/Y, ограниченный Touchstone, композиция и универсальный сетевой `a.model()`, название Attenuator Pad. Проверены исходники, hashes и сохранённые отчёты; повторных запусков тестов/сборки при ревью не было. Весь P6 и автоматическое PCB extraction этим не закрываются.
 
@@ -183,3 +185,9 @@ P6b review delivery: [frequency-network subset and equations](frequency-network-
 [verification and artifacts](frequency-networks-verification.md). Includes universal
 network `a.model`, S/Z/Y, bounded Touchstone and explicit `a.connect`; P7/PCB
 extraction, board PI and SI remain separate unimplemented stages.
+
+
+P7a implementation (pending review): [line-cross-sections semantics](line-cross-sections-semantics.md),
+[verification](line-cross-sections-verification.md). Four explicit ideal line
+geometries, independent FEM/convergence/propagation references and three named
+board-geometry hypotheses; does not close the remaining P7/P6/P11 scope.

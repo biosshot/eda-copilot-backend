@@ -1,0 +1,38 @@
+{
+  "tracks": [
+    "e216"
+  ],
+  "segment": [
+    [
+      [
+        28.69,
+        27.0605
+      ],
+      [
+        28.69,
+        19.0596
+      ]
+    ]
+  ],
+  "net": [
+    "UART5_RX"
+  ],
+  "layer": "BOTTOM",
+  "widthMm": 0.254,
+  "lengthMm": 8.0009,
+  "dielectricHeightMm": 0.2,
+  "epsilon": 4.2,
+  "copperThicknessMm": 0.035,
+  "conditional": true,
+  "source": "Explicit selected straight section; stackup/epsilon/PEC/lossless are hypotheses, not verified CAD material/reference",
+  "expectedChecks": [
+    "fail",
+    "pass"
+  ],
+  "frequencyHz": [
+    1000000.0,
+    1000000000.0,
+    41
+  ],
+  "kind": "microstrip"
+}

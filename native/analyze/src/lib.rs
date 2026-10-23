@@ -2,6 +2,7 @@
 pub mod conduction;
 pub mod dc;
 pub mod electrical;
+pub mod extraction;
 pub mod geometry;
 pub mod input;
 pub mod model;

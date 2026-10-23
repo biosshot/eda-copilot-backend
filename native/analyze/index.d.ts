@@ -132,7 +132,7 @@ export interface AnalysisElectricalReport {
   resources?:{peakRssBytes:number;metric:string};
   system?:{unknowns:number;nodalUnknowns:number;gNonzeros:number;eNonzeros:number;solver:string};
 }
-export declare class AnalysisElectricalSession {constructor();solve(request:AnalysisElectricalRequest):AnalysisElectricalReport; solveFrequency(request:AnalysisFrequencyRequest):AnalysisFrequencyReport;clear():void}
+export declare class AnalysisElectricalSession {constructor();solve(request:AnalysisElectricalRequest):AnalysisElectricalReport; solveFrequency(request:AnalysisFrequencyRequest):AnalysisFrequencyReport; solveCrossSection(request:AnalysisCrossSectionRequest):AnalysisCrossSectionReport;clear():void}
 
 /** Bounded common-return frequency multiports. Internal addon transport. */
 export interface AnalysisFrequencyResource {id:string;kind:string;ports:string[];data:unknown;source?:string;validity?:unknown;analyses?:string[]}
@@ -147,4 +147,14 @@ export interface AnalysisFrequencyReport {
  parameters?:{real:number;imaginary:number}[][][];nature?:'passive'|'active'|'unspecified';conditional?:boolean;
  bandHz?:number[];interpolation?:unknown[];provenance?:unknown[];quality?:{maxResidual:number;maxCondition:number;solves:number};
  resources?:{peakRssBytes:number;metric:string};
+}
+
+/** Internal one-shot PEC/lossless extraction transport; existing process/session. */
+export interface AnalysisCrossSectionRequest {line:unknown;frequencies:number[];mesh?:{maxNodes?:number;maxTriangles?:number;maxRefinements?:number;maxEdgeMm?:number;domainScale?:number};budget?:AnalysisElectricalRequest['budget']}
+export interface AnalysisCrossSectionReport {
+ status:'complete'|'rejected';diagnostics:{code:string;message:string;severity:'error'|'warning'|'info'}[];elapsedMs:number;
+ assumptions?:string[];parameters?:{modes:{name:string;impedanceOhm:number;delaySPerM:number}[];differentialOhm?:number|null;commonOhm?:number|null;[key:string]:unknown};
+ network?:{ports:string[];parameters:{real:number;imaginary:number}[][][];referenceOhm:number;maxUnitarityError:number;phaseConvention:string}|null;
+ resources?:{peakRssBytes:number;metric:string};applicability?:unknown;
+ [key:string]:unknown;
 }

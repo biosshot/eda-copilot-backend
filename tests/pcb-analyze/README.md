@@ -216,3 +216,19 @@ Edit adjacent `network.js` directly; `network.ts` only launches it. Versioned
 `network.resources.json` contains the section hypothesis; standalone RF resources
 are under `tests/fixtures/analysis-frequency`. Every run captures exact source
 bytes/hashes, model mapping, numerical audit and HTML in its own runs directory.
+
+
+P7a named cross-section examples (direct JS, no generated scenarios):
+
+```sh
+npm run test:pcb-analyze -- BandAmpV5 STM32G0_CAN_RS485 ThunderF722 --name impedance
+```
+
+Uses saved V2 straight track IDs/coordinates/width/length; STM32 has two verified
+parallel SWCLK/SWDIO segments with gap .3002 mm (not claimed to be a differential
+bus). Stackup/material/ideal reference are explicit conditional hypotheses.
+Each run saves exact DSL/resources/expectations and source/native/board hashes,
+full FEM arrays, audited numerical/convergence/complex results, time/high-water
+RSS and self-contained HTML. `debugging/pcb-analyze/impedance/index.html` links
+latest runs; full histories remain in each fixture's timestamp-name-unique runs.
+Large field reports use an explicit 128 MiB report budget; no default increase.

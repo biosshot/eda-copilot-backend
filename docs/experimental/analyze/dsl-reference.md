@@ -973,3 +973,27 @@ on its saved band. See [exact subset, equations and limits](frequency-network-se
 [next task section 7](next-task-frequency-networks.md#7-пример-целевого-dsl).
 The catalog example is `models.electrical.attenuatorPad` / Attenuator Pad.
 No automatic matched loads, extrapolation, PCB extraction or temporal fitting.
+
+
+## P7a: production cross-section impedance
+
+`a.line()` supports microstrip/stripline/coupled variants through
+`a.impedance().target(line).method("cross-section").frequency(...).run()`.
+Materials must explicitly declare epsilon, `lossTangent:0`, state; conductors are
+PEC, no mask. Clear dielectric heights are measured to the adjacent conductor
+face. Pair gap is edge-to-edge. `mesh` controls initial edge size, node/triangle
+caps, refinement count and artificial domain scale; acceptance guards remain fixed.
+See [exact conventions, units, limits and tables](line-cross-sections-semantics.md).
+`characteristicImpedance` is scalar Ohm or modal table; `rlgc` is unit-1 structured
+mixed-unit C/L matrices plus assumed-zero R/G; `delay` is full-length s or modal s
+table. No length means delay/network unavailable, not a conditional metre.
+`z.network` is an immutable P6b resource on the exact requested frequency grid,
+with conditional geometry/material/provenance and geometric quasi-TEM screening.
+Inter-point P6b phase is interpolated, not a new field/propagation solve.
+
+[Direct task example](../../../tests/fixtures/analysis-cross-section/example.js),
+[board single/cascade](../../../tests/pcb-analyze/BandAmpV5/impedance.js),
+[real parallel pair](../../../tests/pcb-analyze/STM32G0_CAN_RS485/impedance.js),
+[third section](../../../tests/pcb-analyze/ThunderF722/impedance.js).
+Losses, mask, raw board/channel/differential targets and future layered methods
+remain explicit unsupported; R/G zero only describe the ideal PEC/lossless model.

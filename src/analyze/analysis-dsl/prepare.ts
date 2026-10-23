@@ -189,7 +189,7 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
   scan(config);
   if (state.changes.length) issue('VARIANT_REBUILD_REQUIRED', 'Variant intent is retained; no stale copper solve or implicit refill is permitted. Geometry/material/model rebuilding is not implemented', undefined, 'warning');
   issue('PHYSICAL_REQUIREMENTS_UNVERIFIED', 'Structure validation does not establish physical readiness; extraction/model applicability is not evaluated', undefined, 'warning');
-  const available=kind==='dc'||kind==='pi'&&!!config.circuit||kind==='networkParameters';
+  const available=kind==='dc'||kind==='pi'&&!!config.circuit||kind==='networkParameters'||kind==='impedance'&&config.method==='cross-section'&&object(config.target)&&config.target.kind==='line';
   if (!available) issue('ANALYZER_NOT_IMPLEMENTED', `No production ${kind} executor for this model`, undefined, 'warning');
   return freeze({ kind, contextId: state.id, structurallyValid: !diagnostics.some(d => d.severity === 'error'), physicalReady: false, executorAvailable: available, diagnostics, components, inputs: Object.fromEntries(Object.entries(config).map(([key, v]) => [key, { source: 'manual' as const, value: json(v) }])), assumptions });
 }

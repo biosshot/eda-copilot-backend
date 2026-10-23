@@ -158,6 +158,12 @@ export type CircuitElement =
  * DC uses constants; time waveforms are absolute and initial steady uses t=0+.
  * AC Z zeroes independent sources and injects +1 A into positive/extracts negative. */
 export interface CircuitInput { nodes: readonly string[]; reference?: string; ports: readonly { id: string; positive: string; negative: string }[]; elements: readonly CircuitElement[] }
+/** Graded dielectric P1 mesh; independent mesh/domain convergence fixed at 1%.
+ * Dimensions in mm; domainScale is artificial padding / physical transverse size. */
+export interface CrossSectionMesh { maxNodes?: number; maxTriangles?: number; maxRefinements?: number; maxEdgeMm?: number; domainScale?: number }
+/** Height is clear dielectric from each plane to the adjacent signal face.
+ * Stripline material interface is the lower signal face; top material fills gaps.
+ * P7a requires explicit epsilon, lossTangent:0 and state; mask/losses reject. */
 export type LineInput = { widthMm: number; copperThicknessMm: number; lengthMm?: number; solderMask?: RoutingStackup['solderMask'] } & (
   | { kind: 'microstrip'; dielectricHeightMm: number; material: Material }
   | { kind: 'coupled-microstrip'; dielectricHeightMm: number; material: Material; gapMm: number }
@@ -193,7 +199,7 @@ export interface Configurations {
   pi: CommonOptions & ElectricalOptions & { domain?: 'frequency' | 'time'; frequency?: Frequency; frequencyHz?: number; time?: Time; initial?: 'steady' | FinalState };
   thermal: CommonOptions & ThermalOptions;
   electrothermal: CommonOptions & Pick<PhysicalOptions, 'stackup' | 'materials'> & { electrical?: ElectricalOptions & { operating?: readonly { target: Selector; gateVoltageV: number }[] }; thermal?: ThermalOptions; couplings?: readonly Coupling[]; time?: Time };
-  impedance: CommonOptions & PhysicalOptions & { target?: Line | Channel | Differential | Resource; method?: 'formula' | 'cross-section' | 'layered'; frequency?: Frequency; frequencyHz?: number; temperatureC?: number };
+  impedance: CommonOptions & PhysicalOptions & { mesh?: CrossSectionMesh; target?: Line | Channel | Differential | Resource; method?: 'formula' | 'cross-section' | 'layered'; frequency?: Frequency; frequencyHz?: number; temperatureC?: number };
   tdr: CommonOptions & PhysicalOptions & { target?: Line | Channel | Differential | Resource | Network; referenceOhm?: number | Readonly<Record<string, number>>; riseS?: number; termination?: 'matched' | 'open' | 'short' | Model; time?: Time; temperatureC?: number };
   si: CommonOptions & PhysicalOptions & { channels?: readonly (Channel | Differential | Line)[]; network?: Network | Line; drivers?: readonly Driver[]; receivers?: readonly Receiver[]; time?: Time; temperatureC?: number };
   eye: CommonOptions & { signal?: DataValue; bitRateBps?: number; discardS?: number; phaseS?: number; thresholdV?: number };
@@ -254,6 +260,10 @@ export type TimingOptions = { kind: 'sampling'; data: readonly { port: Port; low
 export interface TimingResult { samples: DataValue; events: DataValue; setup: DataValue; hold: DataValue; delay: DataValue; skew: DataValue; delaySpread: DataValue; diagnostics: readonly Diagnostic[] }
 export interface SiResult extends ResultBase { voltage(port: Port): DataValue; differentialVoltage(ports: { positive: Port; negative: Port }): DataValue; timing(options: TimingOptions): TimingResult }
 export interface GeometryResult extends ResultBase { violations: { count(): DataValue; items: readonly Json[] }; measurements: DataValue }
+/** cross-section: single Z0 scalar Ohm; pair table Ohm with even/odd/differential/common rows.
+ * rlgc is unit-1 structured mixed-unit matrices (F/m,H/m, assumed-zero Ohm/m,S/m).
+ * delay is full-length scalar/modal s; missing length makes delay/network unavailable.
+ * network is the immutable exact-grid P6b resource; interpolation stays conditional. */
 export interface ImpedanceResult extends ResultBase { characteristicImpedance: DataValue; rlgc: DataValue; delay: DataValue; segments: DataValue; network: Network }
 export interface TdrResult extends ResultBase { reflection: DataValue; impedance: DataValue; distance: DataValue }
 export interface EyeResult extends ResultBase { diagram: DataValue; height: DataValue; width: DataValue; timingMargin: DataValue; voltageMargin: DataValue }

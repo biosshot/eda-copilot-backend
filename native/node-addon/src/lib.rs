@@ -293,5 +293,11 @@ impl AnalysisElectricalSession {
         Ok(pcb_analyze::electrical::frequency::run(request))
     }
     #[napi]
+    pub fn solve_cross_section(&mut self, request: Value) -> Result<Value> {
+        let request=serde_json::from_value::<pcb_analyze::extraction::Request>(request)
+            .map_err(|e| napi::Error::from_reason(format!("Invalid cross-section request: {e}")))?;
+        Ok(pcb_analyze::extraction::run(request))
+    }
+    #[napi]
     pub fn clear(&mut self) { self.inner=Default::default(); }
 }

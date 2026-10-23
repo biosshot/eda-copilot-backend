@@ -252,3 +252,15 @@ shared addon to Rust, returning S/Z/Y complex DataValues and reusable result.net
 See [semantics](../../docs/experimental/analyze/frequency-network-semantics.md) and
 [verification](../../docs/experimental/analyze/frequency-networks-verification.md).
 No PCB frequency extraction or imported-network transient is implemented.
+
+
+P7a cross sections: explicit `a.line()` geometries use dielectric P1 FEM (not the
+DC copper mesh), C/C0/external L and lossless modal distributed propagation in
+`native/analyze/src/extraction/`. `z.network` reuses P6b, the existing process and
+single addon; no GPU or additional dependencies. See
+[semantics](../../docs/experimental/analyze/line-cross-sections-semantics.md).
+Only explicit PEC/nondispersive lossless materials; other losses/mask/targets
+reject. Field reports retain mesh/phi/E, quality, independent mesh/domain
+convergence and exact-frequency matrices. Large reports require an explicit
+bounded report budget. Real-board examples are conditional geometry/stackup
+hypotheses, not measured/extracted complete PCB channels.

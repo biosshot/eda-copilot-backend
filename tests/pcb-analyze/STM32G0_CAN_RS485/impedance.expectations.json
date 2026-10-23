@@ -1,0 +1,51 @@
+{
+  "tracks": [
+    "5d83ad1362a81e70",
+    "f91dce6599297e96"
+  ],
+  "segment": [
+    [
+      [
+        -4.5101,
+        -0.4559
+      ],
+      [
+        -4.5101,
+        2.5951
+      ]
+    ],
+    [
+      [
+        -4.0099,
+        -0.4559
+      ],
+      [
+        -4.0099,
+        2.5951
+      ]
+    ]
+  ],
+  "net": [
+    "SWCLK",
+    "SWDIO"
+  ],
+  "layer": "TOP",
+  "widthMm": 0.2,
+  "gapMm": 0.3002,
+  "lengthMm": 3.051,
+  "dielectricHeightMm": 0.3,
+  "epsilon": 4.2,
+  "copperThicknessMm": 0.035,
+  "conditional": true,
+  "source": "Explicit selected straight section; stackup/epsilon/PEC/lossless are hypotheses, not verified CAD material/reference",
+  "expectedChecks": [
+    "fail",
+    "pass"
+  ],
+  "frequencyHz": [
+    1000000.0,
+    1000000000.0,
+    41
+  ],
+  "kind": "coupled-microstrip"
+}
