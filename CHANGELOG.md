@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Analysis execution plan
+
+- Record accepted versus remaining analyzer stages and define parallel P6 electrical-core completion / P7 PCB extraction ownership while Thermal continues. Preserve P8/P11 dependency gates and defer P14; add readable tasks, numerical acceptance requirements and a shared interface checkpoint.
+
 ### Geometry validation
 
 - Implement CPU/F64 `geometry()` connectivity, clearance and board-edge rules through the existing DSL/process/shared addon. Reuse conservative graph evidence; check scoped copper against surrounding same-layer copper, retain source polygons and shortest-distance witnesses, and report outside/cutout copper separately. Keep incomplete aggregate counts unavailable and channel/open intent explicitly unsupported.
