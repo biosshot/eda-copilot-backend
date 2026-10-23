@@ -256,6 +256,15 @@ pub fn prepare_json(json: &str, options: GeometryOptions) -> PreparationReport {
     report
 }
 pub fn prepare(board: &Board, options: GeometryOptions) -> PreparationReport {
+    prepare_observed(board, options, None)
+}
+/// Validation-only hook: inspect discarded outside copper without retaining a
+/// second whole-board geometry or changing the existing preparation contract.
+pub(crate) fn prepare_observed(
+    board: &Board,
+    options: GeometryOptions,
+    mut outside_observer: Option<&mut dyn FnMut(&Provenance, &str, &AreaSet, f64)>,
+) -> PreparationReport {
     let mut r = empty(options);
     let root = Provenance {
         kind: "board".into(),
@@ -669,6 +678,13 @@ pub fn prepare(board: &Board, options: GeometryOptions) -> PreparationReport {
             .filter(|&i| bores[i].layers.contains(&x.layer))
             .collect();
         let drills = areas::union(nearby.iter().flat_map(|&i| bores[i].shape.0.clone()));
+        if outside > 0. {
+            if let Some(observer) = &mut outside_observer {
+                observer(&x.source, &board.layers[x.layer].name,
+                    &areas::subtract(&x.shape.difference(&material), &drills),
+                    if nearby.is_empty() { x.error } else { x.error.max(options.max_deviation_mm) + 2. * r.boolean_error_bound_mm });
+            }
+        }
         let shape = areas::subtract(&inside, &drills);
         // Only a split/disappearing source can hide a path/feature with this
         // drill enclosure. Compare locally with inscribed drills, then discard

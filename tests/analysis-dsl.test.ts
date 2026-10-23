@@ -307,7 +307,7 @@ test('variants retain intent and stable selectors, never mutate the source board
   assert.equal(p.structurallyValid, true); assert.equal(p.physicalReady, false);
   assert.ok(p.diagnostics.some(d => d.code === 'VARIANT_REBUILD_REQUIRED'));
   assert.deepEqual(b, original);
-  await assert.rejects(candidate.geometry().rules([]).run(), { code: 'ANALYZER_NOT_IMPLEMENTED' });
+  await assert.rejects(candidate.geometry().rules([{kind:'connectivity'}]).run(), { code: 'GEOMETRY_UNSUPPORTED' });
   assert.throws(() => candidate.thermal().initial({ kind: 'finalState', contextId: a.report().contextId, analysisId: 'previous', data: {} }), /incompatible|another analysis/);
 });
 

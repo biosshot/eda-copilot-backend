@@ -189,3 +189,14 @@ reject. Field reports retain mesh/phi/E, quality, independent mesh/domain
 convergence and exact-frequency matrices. Large reports require an explicit
 bounded report budget. Real-board examples are conditional geometry/stackup
 hypotheses, not measured/extracted complete PCB channels.
+
+## Geometry rule validation
+
+`validation::validate_json` consumes a board JSON plus explicit rules and optional
+DSL selectors. `validateAnalysisGeometry` exposes that operation through the same
+addon/process boundary. The CPU/F64 checker reuses preparation and connectivity,
+uses R-tree broad phase and bounded exact segment witnesses, and retains discarded
+outside fragments only through an optional internal preparation observer. Normal
+preparation reports are unchanged. Incomplete coverage never proves no violations;
+opens/channel rules need unavailable intent/topology. See the geometry-validation
+semantics/verification documents under `docs/experimental/analyze`.

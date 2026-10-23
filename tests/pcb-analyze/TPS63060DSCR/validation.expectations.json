@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "fixture": "TPS63060DSCR",
+  "rules": [
+    {
+      "kind": "connectivity"
+    },
+    {
+      "kind": "clearance",
+      "minMm": 0.152
+    },
+    {
+      "kind": "edge-clearance",
+      "minMm": 0.3
+    }
+  ],
+  "expectedChecks": [
+    "unknown",
+    "fail",
+    "pass"
+  ],
+  "plotTitle": "TPS63060DSCR geometry measurements",
+  "snapshot": {
+    "measurements": 172,
+    "violations": 2,
+    "uncertain": 0,
+    "regions": 172,
+    "measurementSha256": "9e5262a760db922d00a1707c03968c3ab9e84e001ed61bd58ee64157c0d039ab",
+    "violationSha256": "5e4c71b4454b87fbab2d800bf865170a178a121c4407e0a1128a9f07d8c777d5",
+    "regionSha256": "959f642df4846ca832ec6b02a6cefbe2a38c4997fdc2a4f5f9d747e8f8db2cf1",
+    "diagnosticsSha256": "450456ff52977f1ab5b44d68ea24a10a0d3874b18d5aed1e88c235aa0453792c",
+    "coverageSha256": "c520038616c40762bf1e68a3bf900934880e0baeeae0aa6129da56e81d0e913d",
+    "graphSha256": "93aadbf02703f94c2f2a6101a440856cae8f56f050988eb2f48afc598a7af111",
+    "fillsSha256": "5446e05827bbf12e7896fa4b8b5a6fad7b2ba67b1a68708b1633f348dbfb5ccb",
+    "excludedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  }
+}

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Geometry validation
+
+- Implement CPU/F64 `geometry()` connectivity, clearance and board-edge rules through the existing DSL/process/shared addon. Reuse conservative graph evidence; check scoped copper against surrounding same-layer copper, retain source polygons and shortest-distance witnesses, and report outside/cutout copper separately. Keep incomplete aggregate counts unavailable and channel/open intent explicitly unsupported.
+- Add bounded R-tree/segment checks, independent analytical and negative audits, eight authored real-board scenarios and interactive source/witness reports. Preserve base geometry/DC and original captured board rules.
+
 ### Numerical line cross sections (P7a)
 
 - Require exactly one complete, finite frequency series per expected S/crosstalk/cascade plot in the visual report audit; validate kind, units, validity and full axis. Reject empty/truncated/extra samples, duplicates and malformed series in focused regressions; re-audit the three saved reports separately from simulation runs.

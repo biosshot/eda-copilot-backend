@@ -13,8 +13,9 @@ installed `dist/analysis-spec-doc.d.ts`). It does not transpile TypeScript.
 are explicit host data with no built-in project models or environmental defaults.
 Builders snapshot sections, replace repeated sections and call the small internal
 `executor.ts` boundary only after structural preparation. Constant linear PCB DC
-and explicit circuit DC/Z(f)/transient are implemented; other physical analyses remain unavailable. Import/geometry/conduction
-preparations are not substitutes for a user geometry/DRC analysis.
+and explicit circuit DC/Z(f)/transient are implemented. `geometry()` validates
+connectivity/clearance/edge-clearance with source witnesses and explicit coverage.
+Import/geometry/conduction preparations remain separate internal operations.
 
 Each scenario owns one disposable workerpool process using the existing process
 fork options. A parent monotonic deadline includes startup and stops loops before
@@ -48,7 +49,7 @@ sweep runs its callback on every candidate and records individual failures.
 Production `dc().run()` automatically validates/imports/prepares supported copper,
 assembles CPU/F64 triangle sheet conductance and finite barrel segments, then uses
 `faer` sparse QR. `prepare()` is a structural diagnostic, with physicalReady
-false until native validation; executorAvailable distinguishes DC from future solvers.
+false until native validation; executorAvailable reports installed analyzer support.
 Standalone rectangular conductors use the exact uniform-strip resistance formula.
 Ideal constant voltage/current sources and constant current/resistive loads are
 supported. In board mode constant power, dynamic operating points, resource models and
@@ -264,3 +265,29 @@ reject. Field reports retain mesh/phi/E, quality, independent mesh/domain
 convergence and exact-frequency matrices. Large reports require an explicit
 bounded report budget. Real-board examples are conditional geometry/stackup
 hypotheses, not measured/extracted complete PCB channels.
+
+## Geometry validation
+
+`analysis({board}).geometry().rules([{kind:'connectivity'},
+{kind:'clearance',minMm:0.2},{kind:'edge-clearance',minMm:0.3}]).run()`
+checks the captured copper without refill. Scope selectors select complete regions
+against relevant neighbours, including copper outside the scope. Distance witnesses
+and source polygons are retained in the solution; `measurements` is a table in mm.
+
+Connectivity reuses conservative shorts/contacts. Islands alone do not establish
+an open; terminal-group intent is unavailable. Same known net clearance is exempt;
+unknown nets remain conservative uncertain observations. Board edges include real
+cutouts and exclude drill holes. Missing/stale/uncertain input keeps coverage
+partial. Whenever requested coverage is incomplete, `violations.count()` is
+unavailable even when confirmed items exist; inspect `violations.items` and the
+explicitly labeled confirmed-report count in measurements. Generic checks keep
+running with unknown/fail results. Channel length/skew/reference rules reject.
+
+Native defaults: 120 s, 512 MiB allocation planning, 1 million broad-phase
+candidates, 5 million segment checks, 100000 measurements, 2 million report
+vertices and 96 MiB report JSON. The existing worker deadline is the hard execution
+boundary; allocation estimates are not an OS RSS guarantee. Scope/rule processing
+and report construction are bounded. Base preparation retains its existing limits.
+See [semantics](../../docs/experimental/analyze/geometry-validation-semantics.md)
+and [verification](../../docs/experimental/analyze/geometry-validation-verification.md).
+Run all eight direct scenarios with `npm run test:pcb-analyze -- --all --name validation`.

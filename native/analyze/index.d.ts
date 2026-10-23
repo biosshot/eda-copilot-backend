@@ -43,6 +43,32 @@ export interface AnalysisGeometryReport {
 }
 export declare function prepareAnalysisGeometry(json: string, options?: AnalysisGeometryOptions): AnalysisGeometryReport;
 
+export interface AnalysisValidationRequest {
+  board_json: string;
+  rules: readonly unknown[];
+  scope?: readonly unknown[];
+  geometry?: AnalysisGeometryOptions;
+  budget?: {maxSeconds?: number; maxMemoryMiB?: number};
+  limits?: {max_candidates?: number; max_exact_checks?: number; max_measurements?: number; max_report_vertices?: number; max_report_bytes?: number};
+}
+export interface AnalysisValidationMeasurement {
+  id: string; rule: string; code: string; status: 'confirmed'|'uncertain'|'pass';
+  region_ids: string[]; witness_region_ids: string[]; source_ids: string[]; nets: string[]; layers: string[];
+  actual_mm: number; required_mm: number; error_mm: number; witness: [[number, number], [number, number]]; outside_witness: [number,number]|null; message: string;
+}
+export interface AnalysisValidationSuccess {
+  operation: 'geometry-validation'; status: 'complete'|'partial'; units: 'mm'; coordinates: 'absolute-y-down'; method: string;
+  diagnostics: Array<{code: string; message: string; severity: 'warning'|'error'; path?: string; source_id?: string|null}>;
+  coverage: Array<{rule: string; required_mm: number; status: 'complete'|'partial'; measurements: number; opens: string}>;
+  measurements: AnalysisValidationMeasurement[]; violations: AnalysisValidationMeasurement[]; uncertain_count: number;
+  outline: AnalysisPolygon; regions: AnalysisGeometryReport['regions']; graph: unknown;
+  fills: AnalysisGeometryReport['fills']; excluded: AnalysisProvenance[];
+  statistics: {regions: number; selected_regions: number; outside_regions: number; report_vertices: number; candidate_pairs: number; exact_segment_checks: number; preparation: AnalysisGeometryReport['statistics']};
+  boolean_error_bound_mm: number; elapsed_ms: number;
+}
+export type AnalysisValidationReport = AnalysisValidationSuccess | {operation:'geometry-validation';status:'rejected';diagnostics:AnalysisValidationSuccess['diagnostics'];elapsed_ms:number};
+export declare function validateAnalysisGeometry(request: AnalysisValidationRequest): AnalysisValidationReport;
+
 export interface AnalysisMaterial { conductivity_s_m: number; state: string }
 export type AnalysisStackEntry = { kind: 'copper'; layer: string; thickness_mm: number }
   | { kind: 'dielectric'; name: string; thickness_mm: number };

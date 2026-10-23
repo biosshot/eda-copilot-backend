@@ -1,6 +1,6 @@
 /** Analysis DSL, variant B. Executable source is JavaScript with top-level await.
  * Reference this file for IDE globals. Production supports board/conductor DC and explicit circuit DC/Z(f)/transient;
- * explicit S/Z/Y multiports and bounded Touchstone; other analyses reject with ANALYZER_NOT_IMPLEMENTED after prepare.
+ * geometry connectivity/clearance/edge-clearance; explicit S/Z/Y multiports and bounded Touchstone; other analyses reject with ANALYZER_NOT_IMPLEMENTED after prepare.
  * Descriptions, validation, reports and explicit-value sweep are implemented.
  * Coordinates: millimetres, absolute board Y down; no implicit material defaults.
  * This document imports only the package's public, existing board transport.
@@ -259,6 +259,10 @@ export type TimingOptions = { kind: 'sampling'; data: readonly { port: Port; low
  * window-limited intervals remain unavailable; there is no implicit zero delay. */
 export interface TimingResult { samples: DataValue; events: DataValue; setup: DataValue; hold: DataValue; delay: DataValue; skew: DataValue; delaySpread: DataValue; diagnostics: readonly Diagnostic[] }
 export interface SiResult extends ResultBase { voltage(port: Port): DataValue; differentialVoltage(ports: { positive: Port; negative: Port }): DataValue; timing(options: TimingOptions): TimingResult }
+/** Measurements are nominal distances in mm with source polygons/witness references.
+ * Scope checks selected copper against surrounding copper. Connectivity reports
+ * conservative shorts/contacts; open intent is unavailable. count() is unavailable
+ * whenever requested coverage is incomplete; confirmed items remain retained. */
 export interface GeometryResult extends ResultBase { violations: { count(): DataValue; items: readonly Json[] }; measurements: DataValue }
 /** cross-section: single Z0 scalar Ohm; pair table Ohm with even/odd/differential/common rows.
  * rlgc is unit-1 structured mixed-unit matrices (F/m,H/m, assumed-zero Ohm/m,S/m).

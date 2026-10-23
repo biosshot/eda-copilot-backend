@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "fixture": "BandAmpV5",
+  "rules": [
+    {
+      "kind": "connectivity"
+    },
+    {
+      "kind": "clearance",
+      "minMm": 0.15
+    },
+    {
+      "kind": "edge-clearance",
+      "minMm": 0.15
+    }
+  ],
+  "expectedChecks": [
+    "unknown",
+    "fail",
+    "pass"
+  ],
+  "plotTitle": "BandAmpV5 geometry measurements",
+  "snapshot": {
+    "measurements": 320,
+    "violations": 8,
+    "uncertain": 1,
+    "regions": 319,
+    "measurementSha256": "d982a77dde5925b96c5f6f6fcab57f994b8a1583a9eecfb250d8d72d3c814c4c",
+    "violationSha256": "ceec3e845c3970d9c5cda1550e9f330361d8a1f65620c9d00b11f6809780885d",
+    "regionSha256": "d49034a9d7ff92476a77259ff01bc06b7eaf8836aa1fb358dc6099c3d5676af3",
+    "diagnosticsSha256": "f8b181f8b9ac537ada9b541792d1cea42a59ac6ead521258c940259f376fffc8",
+    "coverageSha256": "403d4d353c62ddea3e6e5d1f7fc33a48fd4ec8e6001a516e6567a654e9f936d9",
+    "graphSha256": "6ed23b584fe6a2c02e44fc00ff70f14a36235b08f2ceebd91e406ef74692d625",
+    "fillsSha256": "891bfe66e09d8a4e73be77e4f51da39abe228c96326014e9c7ce354fe032d8d8",
+    "excludedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  }
+}

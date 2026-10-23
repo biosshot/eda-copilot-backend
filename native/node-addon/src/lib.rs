@@ -3,6 +3,11 @@ use napi::{Error, Result, Status};
 use napi_derive::napi;
 use serde_json::Value;
 
+#[napi]
+pub fn validate_analysis_geometry(request: Value) -> Value {
+    pcb_analyze::validation::validate_json(request)
+}
+
 fn packer_error(error: pcb_board_packer::Error) -> Error {
     Error::new(
         match error.kind {

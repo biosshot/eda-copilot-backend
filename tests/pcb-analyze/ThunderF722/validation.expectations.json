@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "fixture": "ThunderF722",
+  "rules": [
+    {
+      "kind": "connectivity"
+    },
+    {
+      "kind": "clearance",
+      "minMm": 0.152
+    },
+    {
+      "kind": "edge-clearance",
+      "minMm": 0.152
+    }
+  ],
+  "expectedChecks": [
+    "unknown",
+    "fail",
+    "pass"
+  ],
+  "plotTitle": "ThunderF722 geometry measurements",
+  "snapshot": {
+    "measurements": 1903,
+    "violations": 0,
+    "uncertain": 8,
+    "regions": 1895,
+    "measurementSha256": "c733b80078fca9c3c5a7296fea21ea4a4d318a8f3069e8c815e879200873a0fa",
+    "violationSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "regionSha256": "ba9a8adb0e603f1898c85cb65b0b0020d65900c13a8916ad60def181492440b6",
+    "diagnosticsSha256": "d7ac3c27a2d1614bb3ae052d6fe3084e9a16b40892a882ef319f26e852c06a93",
+    "coverageSha256": "c804f1ce33d3bc3bbe7ca504cf2e3d232e697c28763dbe79da6c728ec1823dda",
+    "graphSha256": "cfd8de5d7c7dcbdd782e77bb73a9f7db3bb311cd65666b0d814099791885b77c",
+    "fillsSha256": "57b194fdbd88e4c79fbb8962bad43680764018c0c9c17df3bed57822b0a27a6c",
+    "excludedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  }
+}

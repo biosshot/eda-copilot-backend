@@ -1,3 +1,4 @@
+import {createGeometryExecutor} from './geometry-executor.ts';
 import {createCrossSectionExecutor} from './cross-section-executor.ts';
 import {createFrequencyExecutor} from './frequency-executor.ts';
 import type { AnalysisKind, Configurations, DataDescription, Diagnostic, Json, Network, Resource, Results, TimingOptions } from './spec-doc.js';
@@ -33,11 +34,13 @@ export interface ExecutionResult {
 }
 export type AnalysisExecutor = (task: AnalysisTask) => Promise<ExecutionResult>;
 export function createAnalysisExecutor(): AnalysisExecutor {
+  const geometry = createGeometryExecutor();
   const frequency = createFrequencyExecutor();
   const crossSection = createCrossSectionExecutor();
   const dc = createDcExecutor();
   const electrical=createElectricalExecutor();
   return async task => {
+    if (task.kind==='geometry') return geometry(task as AnalysisTask<'geometry'>);
     if (task.kind==='impedance') return crossSection(task as AnalysisTask<'impedance'>);
     if (task.kind==='networkParameters') return frequency(task as AnalysisTask<'networkParameters'>);
     if ((task.kind==='dc'||task.kind==='pi')&&'circuit'in task.config&&task.config.circuit) return electrical(task as AnalysisTask<'dc'|'pi'>);
@@ -81,7 +84,7 @@ export function resultFor<K extends AnalysisKind>(task: AnalysisTask<K>, payload
     parameter: z.strictObject({ out: text, in: text }),
   };
   for (const [name, unit] of Object.entries(accessors[task.kind] ?? {}) as [string, string][]) Object.defineProperty(result, name, { value: (argument: unknown) => metric(name, unit, parse(argumentsFor[name], json(argument))) });
-  if (task.kind === 'geometry') result.violations = freeze(Object.defineProperty({ items: safe.violations ?? [] }, 'count', { value: () => safe.violations ? value({ kind: 'scalar', value: safe.violations.length, unit: '1', validity: { status: 'valid' }, diagnostics: [], contextId: task.contextId }) : unavailable('1', 'Violations were not evaluated', task.contextId) }));
+  if (task.kind === 'geometry') result.violations = freeze(Object.defineProperty({ items: safe.violations ?? [] }, 'count', { value: () => safe.metrics.violationCount ? value({...safe.metrics.violationCount, contextId: task.contextId}) : safe.violations ? value({ kind: 'scalar', value: safe.violations.length, unit: '1', validity: { status: safe.status === 'complete' ? 'valid' : 'unavailable', reason: safe.status === 'complete' ? undefined : 'Requested geometry coverage is incomplete; confirmed items remain available' }, diagnostics: [], contextId: task.contextId }) : unavailable('1', 'Violations were not evaluated', task.contextId) }));
   if (task.kind === 'si') Object.defineProperty(result, 'timing', { value: (options: TimingOptions) => {
     parse(timingOptions, json(options));
     validate(options);

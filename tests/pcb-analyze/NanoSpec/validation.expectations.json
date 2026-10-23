@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "fixture": "NanoSpec",
+  "rules": [
+    {
+      "kind": "connectivity"
+    },
+    {
+      "kind": "clearance",
+      "minMm": 0.152
+    },
+    {
+      "kind": "edge-clearance",
+      "minMm": 0.152
+    }
+  ],
+  "expectedChecks": [
+    "unknown",
+    "fail",
+    "pass"
+  ],
+  "plotTitle": "NanoSpec geometry measurements",
+  "snapshot": {
+    "measurements": 2770,
+    "violations": 229,
+    "uncertain": 32,
+    "regions": 2509,
+    "measurementSha256": "ea899d3f7e9b4e8ff29500f567d0ae65e9f9678c34d855a7fd0c7aef69362786",
+    "violationSha256": "4d5d140195aa953869378ba2e0fc790e1de24f6c944ef84e3c69b95dc2682047",
+    "regionSha256": "e0299a7ef35f72f3076729a9c5a10833bf98d0d7f39329e57e88708eec4157ec",
+    "diagnosticsSha256": "3cf65608ef2d6188ad97cbfecbe7d466dcda2658debd795c0dbd6b1a0cb211d0",
+    "coverageSha256": "c55f292db681b1ba2c6644ce5c4fb3b1d0a6e016b73d249c4e09f0241ad037c9",
+    "graphSha256": "38a6fff86322d35125541f9d2f52d69291ae90c5fd0b55fc38fb0b4524d68d50",
+    "fillsSha256": "723f341fa063e93a7d9d84dcb51410ec1bf0ba2225e21d0c562acd5896cf6f59",
+    "excludedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  }
+}

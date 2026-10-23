@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
-import {mkdtempSync,writeFileSync,readFileSync} from 'node:fs';
+import {mkdirSync,mkdtempSync,writeFileSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {createRequire} from 'node:module';
@@ -59,11 +59,11 @@ test('DC defaults require explicit classified consumers and do not invent capaci
   assert.equal(r.status,'complete',JSON.stringify(r.error));assert.equal(completed(r)[0].solution.status,'complete');
   const bad=await runAnalysisDsl({board:dcCoupon(),code:`${couponSetup}await base.loads({rail:net('VCC'),defaultCurrentA:.1,overrides:{}}).run();`});assert.equal(bad.error?.code,'INVALID_CONFIGURATION');
 });
-test('unsupported DC power/dynamics/resources/circuit are explicit; other analyzers remain absent',async()=>{
+test('unsupported DC power/dynamics/resources are explicit; empty geometry rules refuse and circuit works',async()=>{
   for(const config of [".loads([{port:load,powerW:1}])",".loads([{port:load,currentA:1,waveform:{kind:'step',from:1,to:2,atS:1,riseS:0}}])",".sources([{port:source,voltageV:1,model:{id:'custom',kind:'source'}}]).loads([])"]){
     const r=await runAnalysisDsl({board:dcCoupon(),code:`${couponSetup}await base${config}.run();`});assert.equal(r.error?.code,'UNSUPPORTED_DC_MODEL',JSON.stringify(r.error));
   }
-  const r=await runAnalysisDsl({board:dcCoupon(),code:'await analysis({board}).geometry().rules([]).run();'});assert.equal(r.error?.code,'ANALYZER_NOT_IMPLEMENTED');
+  const r=await runAnalysisDsl({board:dcCoupon(),code:'await analysis({board}).geometry().rules([]).run();'});assert.equal(r.error?.code,'INVALID_CONFIGURATION');
   const circuit=await runAnalysisDsl({code:`const a=analysis();const c=a.circuit({nodes:['p','gnd'],ports:[{id:'port',positive:'p',negative:'gnd'}],elements:[{id:'v',kind:'voltage-source',nodes:['p','gnd'],voltageV:1,model:'ideal'}]});await a.dc().circuit(c).run();`});assert.equal(circuit.status,'complete',JSON.stringify(circuit.error));
 });
 test('unknown/partial numeric data retains unit/validity instead of becoming zero or a full map maximum',()=>{
@@ -112,6 +112,7 @@ for(const record of records())assert.equal(alive(record.pid),false);
 `;
   writeFileSync(join(directory,'source.mjs'),source);
   const child=spawnSync(process.execPath,['--input-type=module','-e',source],{cwd:resolve('.'),windowsHide:true,encoding:'utf8',timeout:45000,maxBuffer:2*1024*1024,env:{...process.env,NODE_OPTIONS:`--require="${resolve('tests/fixtures/analysis-dc-pid.cjs').replaceAll('\\','/')}"`,ANALYSIS_DC_PID_LOG:log}});
+  mkdirSync('debugging/analysis-dsl',{recursive:true});
   writeFileSync('debugging/analysis-dsl/dc-cancel.log',(child.stdout??'')+(child.stderr??''));
   assert.ifError(child.error);assert.equal(child.status,0,child.stdout+child.stderr);assert.doesNotMatch(child.stderr,/CubeCL|CUDA|Vulkan/i);
 });

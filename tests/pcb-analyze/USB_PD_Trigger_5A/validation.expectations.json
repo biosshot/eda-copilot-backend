@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "fixture": "USB_PD_Trigger_5A",
+  "rules": [
+    {
+      "kind": "connectivity"
+    },
+    {
+      "kind": "clearance",
+      "minMm": 0.2
+    },
+    {
+      "kind": "edge-clearance",
+      "minMm": 0.2
+    }
+  ],
+  "expectedChecks": [
+    "unknown",
+    "fail",
+    "pass"
+  ],
+  "plotTitle": "USB_PD_Trigger_5A geometry measurements",
+  "snapshot": {
+    "measurements": 397,
+    "violations": 0,
+    "uncertain": 9,
+    "regions": 388,
+    "measurementSha256": "f8a39255b3d6a835baf9407f67f3a7bd7d82a71bb7c46889d465507bd4cb53c1",
+    "violationSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "regionSha256": "d85d7c01401cccce57d116c67b8e5e7d969e1203e308f07a11d550e62ec37c1e",
+    "diagnosticsSha256": "ecac54ba9e27293c0ae298af773b70ef62e74d3f099771e465119c1c4f6e03e0",
+    "coverageSha256": "154fedb0732ef0f4d27608807e06ddc11003c0a9d55f2cc7758f50c22aa050bf",
+    "graphSha256": "e33079c9aceed6d91d039bd3c957efd1bc7625f9e45e19164a2d8998d3debf0d",
+    "fillsSha256": "bc380c458410e1189a1edf51eef66671449c49bafe5af0b415b23321a9de275a",
+    "excludedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  }
+}
