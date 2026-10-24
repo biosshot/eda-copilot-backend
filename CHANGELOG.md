@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Adopt the user-approved temperature-convergence criterion max(0.1 K,1% absolute rise from initial temperature), preserving physical guards and historical failures. Scope adaptive Thermal refinement stopping and sequential P7 geometry/pair-classification work.
+
 - Record copper partition provenance and near-pair overclassification evidence, retaining the STM613 integral refusal. Preserve the sole extended TPS run's temporal convergence failure (0.116855% against0.1%) without changing production behavior or acceptance thresholds.
 
 - Define the approved copper-partition/near-interaction audit and a single diagnostic TPS thermal convergence run capped at1800s, preserving production defaults, physical inputs and accuracy/memory gates.
