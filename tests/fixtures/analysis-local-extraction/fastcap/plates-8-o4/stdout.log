@@ -1,0 +1,42 @@
+
+FastCap 2.0, (c) by M.I.T.
+FastCap2 Windows porting and modifications, version 3.6
+    (c) 1998, 2015 by Enrico Di Lorenzo, www.fastfieldsolvers.com
+
+Running D:\MyProject\NN\projects\Agents\easyeda-copilot\analyze-p7-extraction\debugging\p7-design-checkpoint\fastcap-cli\fastcap-reference.exe 2.0 (18Sep92)
+  Input: input.qui
+  Input surfaces:
+   GROUP1
+    input.qui, conductor
+      title: `Two finite 1mm square 35um copper plates in vacuum, z0/1mm; SI metres'
+      outer permittivity: 1
+      number of panels: 768
+      number of extra evaluation points: 0
+      translation: (0 0 0)
+  Date: Fri Oct 23 23:03:27 2026
+
+INPUT SUMMARY
+  Expansion order: 4
+  Number of partitioning levels: 3
+  Overall permittivity factor: 1
+  Total number of panels: 768
+    Number of conductor panels: 768
+    Number of dielectric interface panels: 0
+    Number of thin conductor on dielectric interface panels: 0
+  Number of conductors: 2
+No expansions at level 3 (lowest)
+Percentage of multiplies done by multipole: 53.8%
+
+ITERATION DATA
+Starting on column 1 (plate0%GROUP1)
+1 2 3 4 5 6 7 
+Starting on column 2 (plate1%GROUP1)
+1 2 3 4 5 6 7 
+
+CAPACITANCE MATRIX, femtofarads
+                              1                2 
+plate0%GROUP1 1      48.12991666     -15.65921458
+plate1%GROUP1 2     -15.65921458      48.13023305
+
+Total time: 0.029
+Total memory allocated: 5374 kilobytes

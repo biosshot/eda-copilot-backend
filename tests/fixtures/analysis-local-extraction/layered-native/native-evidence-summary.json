@@ -1,0 +1,437 @@
+{
+  "scope": "Internal coupon evidence only; no production acceptance. All raw failures retained under ignored debugging.",
+  "tests": {
+    "layered": 4,
+    "localPrimitiveRegression": 11,
+    "independentAffinePatch": 1,
+    "heavyCargoIgnored": 4
+  },
+  "rows": {
+    "accepted-d64-domain": {
+      "inputSha256": "c41d5a8b730b3f5b33b77adfb7295155e2573d06666d924a7d1cc982875cb0ca",
+      "binarySha256": "2cb04a8eeb3f746042a089c7a40252f94dab0a3b816b3824e43a693f3888ac96",
+      "seconds": 2.599026900003082,
+      "peakBytes": 227405824,
+      "independentFullError": 0.04776650377662119,
+      "independentAccuracyPass": true,
+      "resourcePass": true,
+      "sameMeshFullParity": 2.91369293683136e-14,
+      "capacitanceF": [
+        [
+          5.026393578420777e-14,
+          -1.6126703417188295e-14
+        ],
+        [
+          -1.612670341718829e-14,
+          5.0279274901349914e-14
+        ]
+      ],
+      "plan": {
+        "elapsed_seconds": 2.5436192,
+        "factor_bytes": 174463560,
+        "free_nnz": 658203,
+        "free_nodes": 32489,
+        "full_nnz": 736493,
+        "local_terms": 2483568,
+        "nodes": 36501,
+        "planned_simultaneous_bytes": 273708847,
+        "scratch_bytes": 11082879
+      },
+      "balances": {
+        "freeResidualMax": 7.732032408365979e-13,
+        "chargeBalanceMax": 1.996127631579148e-12,
+        "workBalanceMax": 1.243883237083412e-13,
+        "recoveryMax": 6.025910276939264e-14
+      }
+    },
+    "accepted-d64-mesh": {
+      "inputSha256": "8b8a175103d33967bf05dcddc4560a9b1c491955f4555afc9f40dcd29add5f57",
+      "binarySha256": "2cb04a8eeb3f746042a089c7a40252f94dab0a3b816b3824e43a693f3888ac96",
+      "seconds": 3.8347566000011284,
+      "peakBytes": 296710144,
+      "independentFullError": 0.0441973862463946,
+      "independentAccuracyPass": true,
+      "resourcePass": true,
+      "sameMeshFullParity": 4.919827748598712e-14,
+      "separateDomainChange": 0.007824979578007263,
+      "separateMeshChange": 0.00605403665314182,
+      "capacitanceF": [
+        [
+          5.000602066984311e-14,
+          -1.5985072846103433e-14
+        ],
+        [
+          -1.5985072846103414e-14,
+          5.002133348028662e-14
+        ]
+      ],
+      "plan": {
+        "elapsed_seconds": 3.7469898,
+        "factor_bytes": 238269376,
+        "free_nnz": 747355,
+        "free_nodes": 36777,
+        "full_nnz": 828333,
+        "local_terms": 2796912,
+        "nodes": 40917,
+        "planned_simultaneous_bytes": 348648295,
+        "scratch_bytes": 12585279
+      },
+      "balances": {
+        "freeResidualMax": 9.957829357301985e-13,
+        "chargeBalanceMax": 1.5763028583417626e-12,
+        "workBalanceMax": 1.4558476896244875e-13,
+        "recoveryMax": 1.644686614338343e-14
+      }
+    },
+    "accepted-d64-mesh-cdt": {
+      "inputSha256": "8b8a175103d33967bf05dcddc4560a9b1c491955f4555afc9f40dcd29add5f57",
+      "binarySha256": "2cb04a8eeb3f746042a089c7a40252f94dab0a3b816b3824e43a693f3888ac96",
+      "seconds": 3.6688855000102194,
+      "peakBytes": 282722304,
+      "independentFullError": 0.04439251686624444,
+      "independentAccuracyPass": true,
+      "resourcePass": true,
+      "capacitanceF": [
+        [
+          5.002609245442585e-14,
+          -1.5990229167340054e-14
+        ],
+        [
+          -1.5990229167340047e-14,
+          5.0024420686598036e-14
+        ]
+      ],
+      "plan": {
+        "elapsed_seconds": 3.6082536,
+        "factor_bytes": 224064632,
+        "free_nnz": 747325,
+        "free_nodes": 36777,
+        "full_nnz": 828303,
+        "local_terms": 2797452,
+        "nodes": 40917,
+        "planned_simultaneous_bytes": 334450167,
+        "scratch_bytes": 12582015
+      },
+      "balances": {
+        "freeResidualMax": 1.8350028354840693e-12,
+        "chargeBalanceMax": 1.7031130496559207e-12,
+        "workBalanceMax": 1.2775665663700935e-13,
+        "recoveryMax": 4.7416148452607784e-14
+      }
+    },
+    "failed-d32": {
+      "inputSha256": "037e776762c13d6e1eacbaca703e40a4192180c4f7dd680a94f741f359339a58",
+      "binarySha256": "2cb04a8eeb3f746042a089c7a40252f94dab0a3b816b3824e43a693f3888ac96",
+      "seconds": 2.1880203000037,
+      "peakBytes": 200916992,
+      "independentFullError": 0.05596430846942433,
+      "independentAccuracyPass": false,
+      "resourcePass": true,
+      "sameMeshFullParity": 1.0707369438532493e-14,
+      "capacitanceF": [
+        [
+          5.039761683184627e-14,
+          -1.5993261353938613e-14
+        ],
+        [
+          -1.59932613539386e-14,
+          5.0413076047733656e-14
+        ]
+      ],
+      "plan": {
+        "elapsed_seconds": 2.1286032,
+        "factor_bytes": 145532760,
+        "free_nnz": 575407,
+        "free_nodes": 28485,
+        "full_nnz": 649665,
+        "local_terms": 2188656,
+        "nodes": 32305,
+        "planned_simultaneous_bytes": 234740639,
+        "scratch_bytes": 9693311
+      },
+      "balances": {
+        "freeResidualMax": 2.9949011326107244e-13,
+        "chargeBalanceMax": 5.312854566586244e-13,
+        "workBalanceMax": 5.373373793610434e-14,
+        "recoveryMax": 4.218006732185892e-15
+      }
+    },
+    "shifted-d32-coarse": {
+      "inputSha256": "432f758e5a3fb3a567037bacaee2a86eed38dea93773a81d5d5ef05eb07b0dd1",
+      "binarySha256": "2cb04a8eeb3f746042a089c7a40252f94dab0a3b816b3824e43a693f3888ac96",
+      "seconds": 1.92886329999601,
+      "peakBytes": 170070016,
+      "independentFullError": 0.05620139407306032,
+      "independentAccuracyPass": false,
+      "resourcePass": true,
+      "capacitanceF": [
+        [
+          5.0262189457049785e-14,
+          -1.571316544382699e-14
+        ],
+        [
+          -1.5713165443826986e-14,
+          5.0275830801213604e-14
+        ]
+      ],
+      "plan": {
+        "elapsed_seconds": 1.8631349,
+        "factor_bytes": 120754080,
+        "free_nnz": 578809,
+        "free_nodes": 28485,
+        "full_nnz": 653067,
+        "local_terms": 2274444,
+        "nodes": 32305,
+        "planned_simultaneous_bytes": 212784063,
+        "scratch_bytes": 9740351
+      },
+      "balances": {
+        "freeResidualMax": 4.2047149829074097e-14,
+        "chargeBalanceMax": 3.6817935707471385e-13,
+        "workBalanceMax": 1.7532350336884683e-14,
+        "recoveryMax": 1.9358636830310133e-14
+      }
+    },
+    "shifted-d64": {
+      "inputSha256": "8918cb0f0bc2379539abd8d502e58b0c0517909ca768233ae8802354cb71b120",
+      "binarySha256": "2cb04a8eeb3f746042a089c7a40252f94dab0a3b816b3824e43a693f3888ac96",
+      "seconds": 3.397337000002153,
+      "peakBytes": 256118784,
+      "independentFullError": 0.044406393180153866,
+      "independentAccuracyPass": true,
+      "resourcePass": true,
+      "separateDomainChange": 0.007857828415325611,
+      "separateMeshChange": 0.006067661818165892,
+      "accuracyPlusObservedReferenceChange": 0.045954819169245875,
+      "referenceMarginScreenPass": true,
+      "capacitanceF": [
+        [
+          4.987014888257689e-14,
+          -1.5706998151663445e-14
+        ],
+        [
+          -1.570699815166344e-14,
+          4.988370037275826e-14
+        ]
+      ],
+      "plan": {
+        "elapsed_seconds": 3.3124089,
+        "factor_bytes": 195766240,
+        "free_nnz": 751559,
+        "free_nodes": 36777,
+        "full_nnz": 832537,
+        "local_terms": 2902068,
+        "nodes": 40917,
+        "planned_simultaneous_bytes": 309606671,
+        "scratch_bytes": 12643583
+      },
+      "balances": {
+        "freeResidualMax": 9.320113989396483e-14,
+        "chargeBalanceMax": 1.498492648853659e-12,
+        "workBalanceMax": 1.087831601865388e-13,
+        "recoveryMax": 2.4194556849639706e-14
+      }
+    },
+    "shifted-d64-coarse": {
+      "inputSha256": "4061f728f4f89c62b1077ecf21ae5c83441732eb3264b88556abf41a26175f05",
+      "binarySha256": "2cb04a8eeb3f746042a089c7a40252f94dab0a3b816b3824e43a693f3888ac96",
+      "seconds": 2.8832049000047846,
+      "peakBytes": 232796160,
+      "independentFullError": 0.047967749664468505,
+      "independentAccuracyPass": true,
+      "resourcePass": true,
+      "capacitanceF": [
+        [
+          5.012738768819341e-14,
+          -1.5847717993391038e-14
+        ],
+        [
+          -1.5847717993391034e-14,
+          5.0140903935994694e-14
+        ]
+      ],
+      "plan": {
+        "elapsed_seconds": 2.8265616,
+        "factor_bytes": 178273128,
+        "free_nnz": 661605,
+        "free_nodes": 32489,
+        "full_nnz": 739895,
+        "local_terms": 2569356,
+        "nodes": 36501,
+        "planned_simultaneous_bytes": 280348839,
+        "scratch_bytes": 11138239
+      },
+      "balances": {
+        "freeResidualMax": 1.0378381440076895e-13,
+        "chargeBalanceMax": 7.932225751901024e-13,
+        "workBalanceMax": 6.791951044086683e-14,
+        "recoveryMax": 2.5584856236533578e-14
+      }
+    },
+    "three-d32": {
+      "inputSha256": "abf0153563ae7f20a2a5654d239037fa78f3c6f0f153f9f66af63f74153cb6bd",
+      "binarySha256": "2cb04a8eeb3f746042a089c7a40252f94dab0a3b816b3824e43a693f3888ac96",
+      "seconds": 3.5602423999953317,
+      "peakBytes": 279699456,
+      "independentFullError": 0.059977472221064976,
+      "independentAccuracyPass": false,
+      "resourcePass": true,
+      "capacitanceF": [
+        [
+          5.0724822889189864e-14,
+          -1.4771748809377414e-14,
+          -4.134737405782562e-15
+        ],
+        [
+          -1.4771748809377414e-14,
+          5.4581008072735236e-14,
+          -1.4771850941241258e-14
+        ],
+        [
+          -4.1347374057825645e-15,
+          -1.477185094124124e-14,
+          5.07248584745007e-14
+        ]
+      ],
+      "plan": {
+        "elapsed_seconds": 3.48151,
+        "factor_bytes": 216654648,
+        "free_nnz": 794890,
+        "free_nodes": 39240,
+        "full_nnz": 891234,
+        "local_terms": 3013020,
+        "nodes": 44233,
+        "planned_simultaneous_bytes": 334463396,
+        "scratch_bytes": 13378495
+      },
+      "balances": {
+        "freeResidualMax": 3.3456152244212544e-15,
+        "chargeBalanceMax": 9.014331615960818e-13,
+        "workBalanceMax": 5.736263447385022e-14,
+        "recoveryMax": 2.8325469628528163e-14
+      }
+    },
+    "three-d64": {
+      "inputSha256": "2da873d2adcd0d6457bc37fc2600dfd1a2c2635a6bceef336501ba36a0ed9e50",
+      "binarySha256": "2cb04a8eeb3f746042a089c7a40252f94dab0a3b816b3824e43a693f3888ac96",
+      "seconds": 5.245588500009035,
+      "peakBytes": 344920064,
+      "independentFullError": 0.04950096924612117,
+      "independentAccuracyPass": true,
+      "resourcePass": true,
+      "capacitanceF": [
+        [
+          5.061122372974991e-14,
+          -1.4860835430249244e-14,
+          -4.247547868590048e-15
+        ],
+        [
+          -1.4860835430249247e-14,
+          5.4510900764408e-14,
+          -1.4860937374266932e-14
+        ],
+        [
+          -4.2475478685900466e-15,
+          -1.4860937374266932e-14,
+          5.061125978814051e-14
+        ]
+      ],
+      "plan": {
+        "elapsed_seconds": 5.1625464,
+        "factor_bytes": 275707768,
+        "free_nnz": 893814,
+        "free_nodes": 44012,
+        "full_nnz": 994190,
+        "local_terms": 3363228,
+        "nodes": 49197,
+        "planned_simultaneous_bytes": 405557156,
+        "scratch_bytes": 15044479
+      },
+      "balances": {
+        "freeResidualMax": 5.0449848367082516e-15,
+        "chargeBalanceMax": 2.2630701610195204e-12,
+        "workBalanceMax": 2.3419250340135665e-13,
+        "recoveryMax": 9.603474049855302e-14
+      }
+    },
+    "three-d64-mesh": {
+      "inputSha256": "ed599b07482c825f65c1f5081aedaeb8d2e953f14f432eb75dbd3212ec8c3c89",
+      "binarySha256": "2cb04a8eeb3f746042a089c7a40252f94dab0a3b816b3824e43a693f3888ac96",
+      "seconds": 6.991924900008598,
+      "peakBytes": 381059072,
+      "independentFullError": 0.04900994315403507,
+      "independentAccuracyPass": true,
+      "resourcePass": true,
+      "separateDomainChange": 0.010015089270805348,
+      "separateMeshChange": 0.0005898908767113662,
+      "accuracyPlusObservedReferenceChange": 0.0507901105266562,
+      "referenceMarginScreenPass": false,
+      "capacitanceF": [
+        [
+          5.058340805306158e-14,
+          -1.4852105837973998e-14,
+          -4.243022644230556e-15
+        ],
+        [
+          -1.4852105837974013e-14,
+          5.448145406178874e-14,
+          -1.4852209974662003e-14
+        ],
+        [
+          -4.243022644230553e-15,
+          -1.4852209974661994e-14,
+          5.058344267274015e-14
+        ]
+      ],
+      "plan": {
+        "elapsed_seconds": 6.9024442,
+        "factor_bytes": 310377688,
+        "free_nnz": 908990,
+        "free_nodes": 44740,
+        "full_nnz": 1009702,
+        "local_terms": 3416220,
+        "nodes": 49941,
+        "planned_simultaneous_bytes": 442106756,
+        "scratch_bytes": 15300479
+      },
+      "balances": {
+        "freeResidualMax": 3.4583845734314968e-15,
+        "chargeBalanceMax": 2.1348974760203478e-12,
+        "workBalanceMax": 2.360282125002972e-13,
+        "recoveryMax": 4.5738556718532735e-14
+      }
+    }
+  },
+  "referenceUncertainty": {
+    "shifted": {
+      "n16to32FullChange": 0.0015484259890920058,
+      "rawReferenceReciprocity": 2.484236910089646e-06,
+      "uncertaintyMeaning": "Observed refinement change, not certified continuum bound."
+    },
+    "three": {
+      "n16to32FullChange": 0.0017801673726211282,
+      "rawReferenceReciprocity": 7.68338028578128e-06,
+      "uncertaintyMeaning": "Observed refinement change, not certified continuum bound."
+    }
+  },
+  "limitations": [
+    "Three-conductor raw accuracy4.90099% is within5%, but observed reference change0.178% exceeds its remaining margin; no continuum5% claim.",
+    "Three-conductor mesh control adds only8 longest interior edges/plane in predeclared high-flux annulus; small change is not a global discretization certificate.",
+    "Exact source polygons/thickness/z and shifts retained; geometry and finite domain assumptions are explicit, no actual PCB/via claim.",
+    "Opaque faer operations are checked before/after one original deadline; external process supervisor supplies hard60s/512MiB acceptance cap.",
+    "Internal coupon kernel only; no publicDSL, realboard, via or L acceptance."
+  ],
+  "buildSourceSha256": {
+    "native\\analyze\\src\\extraction\\local\\capacitance.rs": "661684d4e3e0d49e45cda7c2c5f02fc63a8828d0b5ff7fe7538e7c6a2c80a01e",
+    "native\\analyze\\src\\extraction\\local\\far.rs": "35cf59e3b13fdd6735f870b812eec944f38f9a0a820603d56726f8b7c31a98a6",
+    "native\\analyze\\src\\extraction\\local\\layered_capacitance.rs": "b54cbe395a85a5f27fb25a0fbebcca2c160638e2a6654daf2d0cf86359a71471",
+    "native\\analyze\\src\\extraction\\local\\mesh.rs": "e535a238bc3a9434f96a91f7e754c7ead0cb03f6905b25f7ca5069382c724017",
+    "native\\analyze\\src\\extraction\\local\\mod.rs": "bfb1a973acab4b312dd1f7d7a355587491f3e238e82db226ca0728a0f86579ec",
+    "native\\analyze\\src\\extraction\\local\\polyhedron.rs": "a69f0c4337ebd7debaa9c93ec98025b59737bc9009832ffb4fd9797d88299559",
+    "native\\analyze\\src\\extraction\\local\\prism.rs": "f75f271fc24cbb614c0aa9781644e870fe92f525fa5d50c4bef55a857633e8ae",
+    "native\\analyze\\src\\extraction\\local\\sheet.rs": "3b2232cee2c8f4390d24ee14738bcebdac9f6acea8936ac8bd772435bf3de6a2",
+    "native\\analyze\\examples\\layered_capacitance_coupon.rs": "0b356f181b4dd89d98a9d15bf154811c863c78273e92c74f11445bf044057e3f"
+  },
+  "buildBinarySha256": "2cb04a8eeb3f746042a089c7a40252f94dab0a3b816b3824e43a693f3888ac96",
+  "sourceConstantFileSha256VerifiedAfterBuild": "72d9e905efc572ddaab2a0d798480ec4c50053fc17dbd26d8a9540b2a7f72173"
+}

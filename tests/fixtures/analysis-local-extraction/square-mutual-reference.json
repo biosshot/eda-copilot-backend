@@ -1,0 +1,25 @@
+{
+  "method": "Independent direct smooth box product Gauss, no prism fan/production imports",
+  "results": [
+    {
+      "order": 4,
+      "mutualLh": 2.5533204431551075e-11,
+      "seconds": 0.0009220999927492812
+    },
+    {
+      "order": 8,
+      "mutualLh": 2.5533210945849455e-11,
+      "seconds": 0.010985499990056269
+    },
+    {
+      "order": 12,
+      "mutualLh": 2.5533210945850166e-11,
+      "seconds": 0.12550919999193866
+    },
+    {
+      "order": 16,
+      "mutualLh": 2.5533210945850166e-11,
+      "seconds": 0.5683196000027237
+    }
+  ]
+}

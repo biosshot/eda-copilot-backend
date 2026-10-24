@@ -1,6 +1,7 @@
 //! CPU/F64 PEC quasi-TEM cross sections. Geometry, FEM and propagation are separate.
 mod field;
 mod geometry;
+pub mod local;
 pub mod losses;
 pub mod propagation;
 pub use field::{solve_field, Field};

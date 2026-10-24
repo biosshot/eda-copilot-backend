@@ -1,0 +1,41 @@
+
+FastCap 2.0, (c) by M.I.T.
+FastCap2 Windows porting and modifications, version 3.6
+    (c) 1998, 2015 by Enrico Di Lorenzo, www.fastfieldsolvers.com
+
+Running D:\MyProject\NN\projects\Agents\easyeda-copilot\analyze-p7-extraction\debugging\p7-design-checkpoint\fastcap-cli\fastcap-reference.exe 2.0 (18Sep92)
+  Input: input.qui
+  Input surfaces:
+   GROUP1
+    input.qui, conductor
+      title: `Inscribed octahedral sphere radius1mm in vacuum; SI metres'
+      outer permittivity: 1
+      number of panels: 512
+      number of extra evaluation points: 0
+      translation: (0 0 0)
+  Date: Fri Oct 23 23:03:30 2026
+
+INPUT SUMMARY
+  Expansion order: 4
+  Number of partitioning levels: 3
+  Overall permittivity factor: 1
+  Total number of panels: 512
+    Number of conductor panels: 512
+    Number of dielectric interface panels: 0
+    Number of thin conductor on dielectric interface panels: 0
+  Number of conductors: 1
+No expansions at level 3 (lowest)
+No expansions at level 2
+Percentage of multiplies done by multipole: 0%
+Warning: no multipole acceleration
+
+ITERATION DATA
+Starting on column 1 (sphere%GROUP1)
+1 2 3 4 5 6 7 
+
+CAPACITANCE MATRIX, picofarads
+                              1 
+sphere%GROUP1 1     0.1102771246
+
+Total time: 0.021
+Total memory allocated: 4100 kilobytes

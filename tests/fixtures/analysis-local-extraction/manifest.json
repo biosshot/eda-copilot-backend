@@ -1,0 +1,60 @@
+{
+  "source": {
+    "repository": "https://github.com/ediloren/FastHenry2",
+    "branch": "WinMSVS",
+    "commit": "10959091782153754071c4e98645c82c11d5c9ac",
+    "download": "https://codeload.github.com/ediloren/FastHenry2/zip/10959091782153754071c4e98645c82c11d5c9ac",
+    "archiveSha256": "0ca7158d3608de99b3061889535ddaf7f08731b0c0a44dd12f4f17fa1e84e96f",
+    "bytes": 2242652,
+    "selectionReason": "2003 MIT permissive license, unlike archived WRCad header restriction"
+  },
+  "build": {
+    "externalSourceCommit": "10959091782153754071c4e98645c82c11d5c9ac",
+    "source": "https://github.com/ediloren/FastHenry2/tree/WinMSVS",
+    "purpose": "independent offline reference; no production dependency",
+    "acknowledgement": "FastHenry2 by FastFieldSolvers S.r.l., derived from MIT FastHenry; https://www.fastfieldsolvers.com",
+    "compiler": "clang version 23.1.2 (https://github.com/llvm/llvm-project 85ac560262434c9ccfc0c183ec22d4138ed647fb)\nTarget: x86_64-pc-windows-msvc\nThread model: posix\nInstalledDir: C:\\Program Files\\LLVM\\bin\nBuild config: +alloc:rpmalloc\n",
+    "flags": [
+      "-std=gnu89",
+      "-O2",
+      "-fcommon",
+      "-DWIN32",
+      "-DWINDOWS",
+      "-D_CRT_SECURE_NO_WARNINGS",
+      "-Dexception=_exception",
+      "-Wno-deprecated-non-prototype",
+      "-Wno-deprecated-declarations",
+      "-Wno-implicit-function-declaration",
+      "-Wno-return-type",
+      "-Wno-incompatible-pointer-types",
+      "-ID:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\analyze-p7-extraction\\debugging\\p7-design-checkpoint\\fasthenry-cli",
+      "-ID:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\analyze-p7-extraction\\debugging\\p7-design-checkpoint\\fasthenry-cli\\FastHenry",
+      "-include",
+      "stdint.h"
+    ],
+    "seconds": 7.792939399994793,
+    "patches": {
+      "FHWindow.h": "Reporting callback prototype specified for varargs console host",
+      "FastHenry/uglieralloc.c": "Parenthesize allocation assignment before result cast; no numerical routine changed",
+      "FastHenry/induct.c": "Uniquely name static blank-line reporting helper to avoid old C linkage collision",
+      "sparse/*.c": "Move existing int/void static function forward declarations from block to file scope; bodies unchanged; old invalid CreateInternalVectors(Matrix) forward declaration becomes unspecified-argument CreateInternalVectors()"
+    },
+    "consoleHostSha256": "637a49e23463194603ca6d7400c512ac4a7f57636b37289e886933a408469b5d",
+    "binarySha256": "4aa0b6edcb27606d2b09403f468259d054454c51bc0b8d4e7d38be179c896dcd"
+  },
+  "acknowledgement": "FastHenry2 by FastFieldSolvers S.r.l., derived from MIT FastHenry; https://www.fastfieldsolvers.com",
+  "scope": "Frozen primitive reference only; no board admission; external executable/source not distributed",
+  "files": {
+    "box-self-reference.json": "2eb829f457a998376b988a3556c912565507dd4aac113b787d92979b03877151",
+    "square-mutual-reference.json": "69367adaab29794126e3715724d721d31e224c1a010ac2d3f027855b97033ad2",
+    "square-self-reference.json": "2b0ad8c20c711d1d53e719d687924c6a7c3ed6db5342463a15c7fa6998a65b97",
+    "parallel-return-n1/input.inp": "2ce4c8a797cd214e0569359f655f841a4f9daf56a302c1bd28db1072cf2373f4",
+    "parallel-return-n1/Zc.mat": "46f29d75631dd4b0ec403b0b464ba88789f0604b580955bfc93f89cbc107a987",
+    "square-return-n1/input.inp": "b531c75ec41bbed78825e816c6d6c131db103221a082d4e71d6ff86566ffc36b",
+    "square-return-n1/Zc.mat": "23d6ec0a6a7cc2f0c160c4cf3273bb47f707345f24efc0cc95aa6e50ad1da21d",
+    "strip-n1/input.inp": "62e4f96854d1bb6ff8b250b5c85208f04aa396af7ecaad327722fc52464d98e8",
+    "strip-n1/Zc.mat": "092d149bda0c63d70ea1e93aa0cae5d4300e8226dea10cd72c906a0db2ca8506",
+    "close-return-n1/input.inp": "caf6aaf14ddead614ce97a47fe386b2007b8a7b6515dc51d10e4ddc71e4cdb86",
+    "close-return-n1/Zc.mat": "ba46549bcdb17a99e4a0b99a6e7553704baeed678b1e7594426e01190be59e3b"
+  }
+}

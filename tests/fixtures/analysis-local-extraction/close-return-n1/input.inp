@@ -1,0 +1,13 @@
+* P7 offline reference: straight uniform copper; dimensions mm, sigma S/mm
+.units mm
+.default sigma=58000 z=0 w=.5 h=.035 nwinc=1 nhinc=1
+N1 x=0 y=0
+N2 x=10 y=0
+E1 N1 N2
+.external N1 N2 signal
+N3 x=0 y=.501
+N4 x=10 y=.501
+E2 N3 N4
+.external N3 N4 return
+.freq fmin=1000 fmax=1000 ndec=1
+.end

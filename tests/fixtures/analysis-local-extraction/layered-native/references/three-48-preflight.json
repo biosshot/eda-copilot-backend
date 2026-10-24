@@ -1,0 +1,32 @@
+{
+  "refinement": 48,
+  "panels": 41472,
+  "sourceGeometry": "unchanged three1mm-square35um foils at z0/1/2mm, vacuum; same original panels() generator",
+  "inputSha256": "143b7a4d179647b942cc2360bf47ae0be4c5d840e47f13910a423dd6e9359e38",
+  "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+  "generatorSha256": "5da6211466a149298610b15f49c8b95e190a1d87c0c3b2cc4f6785a98d0d97d9",
+  "priorLevels": {
+    "16": {
+      "peakBytes": 78798848,
+      "seconds": 1.4061500000098022,
+      "panels": 4608
+    },
+    "32": {
+      "peakBytes": 333864960,
+      "seconds": 4.5836867000034545,
+      "panels": 18432
+    }
+  },
+  "predictedBytesAffinePanels": 758975146.6666667,
+  "memorySafetyFactor": 1.25,
+  "admittedPredictedBytes": 948718933.3333335,
+  "predictedSecondsQuadraticPanels": 23.204913918767488,
+  "timeSafetyFactor": 1.5,
+  "admittedPredictedSeconds": 34.80737087815123,
+  "caps": {
+    "bytes": 1073741824,
+    "seconds": 60
+  },
+  "reason": "n48 stays inside measured-panel memory/time envelopes; n64 affine memory estimate alone exceeds1GiB. One higher reference only; no native rerun.",
+  "screen": "native full quadratic error+2*last full reference change<=5%, strictly decreasing observed changes; not a certified continuum bound."
+}

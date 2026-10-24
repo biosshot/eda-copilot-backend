@@ -1,0 +1,339 @@
+{
+  "build": {
+    "sourceCommit": "04eee66446be0629f0607e68f369acad1072dc4d",
+    "source": "https://github.com/ediloren/FastCap2",
+    "acknowledgement": "FastCap2 by FastFieldSolvers S.r.l., derived from MIT FastCap; https://www.fastfieldsolvers.com",
+    "compiler": "clang version 23.1.2 (https://github.com/llvm/llvm-project 85ac560262434c9ccfc0c183ec22d4138ed647fb)\nTarget: x86_64-pc-windows-msvc\nThread model: posix\nInstalledDir: C:\\Program Files\\LLVM\\bin\nBuild config: +alloc:rpmalloc\n",
+    "flags": [
+      "-std=gnu89",
+      "-O2",
+      "-fcommon",
+      "-DWIN32",
+      "-DWINDOWS",
+      "-D_CRT_SECURE_NO_WARNINGS",
+      "-Dexception=_exception",
+      "-Wno-deprecated-non-prototype",
+      "-Wno-deprecated-declarations",
+      "-Wno-implicit-function-declaration",
+      "-Wno-return-type",
+      "-Wno-incompatible-pointer-types",
+      "-ID:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\analyze-p7-extraction\\debugging\\p7-design-checkpoint\\fastcap-cli",
+      "-ID:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\analyze-p7-extraction\\debugging\\p7-design-checkpoint\\fastcap-cli\\fastcap",
+      "-include",
+      "stdint.h"
+    ],
+    "patches": [
+      "FCWindow.h reporting callback varargs prototype",
+      "uglyalloc allocation assignment parentheses",
+      "mulDisplay report exports unsymmetrized raw capacitance before existing vendor symmetrization",
+      "console entry/report/exit host only; solver routines unchanged"
+    ],
+    "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+    "hostSha256": "4d50016ef4ee6a6d2415656e820ef71947e24b6986ede176ca2a6a29622f1156",
+    "seconds": 4.4662439999956405
+  },
+  "selected": [
+    {
+      "case": "plates",
+      "refinement": 8,
+      "panels": 768,
+      "rawCapacitanceF": [
+        [
+          4.812991665718138e-14,
+          -1.5659221007413157e-14
+        ],
+        [
+          -1.565920816248277e-14,
+          4.813023304695793e-14
+        ]
+      ],
+      "vendorSymmetrizedCapacitanceF": [
+        [
+          4.812991665718138e-14,
+          -1.5659214584947962e-14
+        ],
+        [
+          -1.5659214584947962e-14,
+          4.813023304695793e-14
+        ]
+      ],
+      "command": [
+        "fastcap-reference.exe",
+        "-t1e-8",
+        "-o4",
+        "input.qui"
+      ],
+      "seconds": 0.06766970000171568,
+      "sampledPeakRssBytes": 10072064,
+      "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+      "files": {
+        "capacitance-f.json": "135f26eac10a7df908783eb88d495f402a2ed0f23ec096c2d5c79e9392510140",
+        "capacitance-raw-f.json": "9fbb1a0a15d850ae855c313749e50bd56905afeb434ab88eed3063510012913e",
+        "input.qui": "1b98408d28c2aab14f47ad906fde3db9f7b48de3d371854b493237f91206be3a",
+        "stderr.log": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9",
+        "stdout.log": "1b81b897327d4d96aabf718fbd72e68127380b72e182b2e33175e155ec2cd8a9"
+      },
+      "method": "o4"
+    },
+    {
+      "case": "plates",
+      "refinement": 16,
+      "panels": 3072,
+      "rawCapacitanceF": [
+        [
+          4.8303497011210895e-14,
+          -1.5746747837535887e-14
+        ],
+        [
+          -1.5746709257485593e-14,
+          4.8304574899091857e-14
+        ]
+      ],
+      "vendorSymmetrizedCapacitanceF": [
+        [
+          4.8303497011210895e-14,
+          -1.574672854751074e-14
+        ],
+        [
+          -1.574672854751074e-14,
+          4.8304574899091857e-14
+        ]
+      ],
+      "command": [
+        "fastcap-reference.exe",
+        "-t1e-8",
+        "-o4",
+        "input.qui"
+      ],
+      "seconds": 0.24333140000817366,
+      "sampledPeakRssBytes": 28545024,
+      "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+      "files": {
+        "capacitance-f.json": "c3e7748ad46ceaa2d1fdeb871073a932765a9c1fa6cbae2dc47fd9cfe2e0a6ab",
+        "capacitance-raw-f.json": "75cbdf297b1e893be121f63e4e90ca8f0821abbf7e3089e7e6c63693901a41d6",
+        "input.qui": "3496da2432a6939f90fae8c37b1a4a1e17a2b91f05cfaf0d1f3b16e2b8cefecb",
+        "stderr.log": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9",
+        "stdout.log": "04d431aef36d7b34a0ecafc310fbdc98d8b77a653cd97260c2dbb572d02b4600"
+      },
+      "method": "o4"
+    },
+    {
+      "case": "plates",
+      "refinement": 32,
+      "panels": 12288,
+      "rawCapacitanceF": [
+        [
+          4.8365226744964583e-14,
+          -1.5776207705697653e-14
+        ],
+        [
+          -1.577608720538981e-14,
+          4.836393621181143e-14
+        ]
+      ],
+      "vendorSymmetrizedCapacitanceF": [
+        [
+          4.8365226744964583e-14,
+          -1.5776147455543734e-14
+        ],
+        [
+          -1.5776147455543734e-14,
+          4.836393621181143e-14
+        ]
+      ],
+      "command": [
+        "fastcap-reference.exe",
+        "-t1e-8",
+        "-o4",
+        "input.qui"
+      ],
+      "seconds": 2.2700956000044243,
+      "sampledPeakRssBytes": 128212992,
+      "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+      "files": {
+        "capacitance-f.json": "f907d8166d8ba326a30d0737889e446bce1f68f64854c459dfd427f451a62003",
+        "capacitance-raw-f.json": "d448b2492263c5e895c27c2a4f649647038a93289042a9bdcfd5f4303a841ff3",
+        "input.qui": "51b3d7bbdb8143518f416789bf14154faaaf0e384a876ea26cd8d81801b1881a",
+        "stderr.log": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9",
+        "stdout.log": "96bf5d32410123fcafd64db2a91c79e799749a5a207f1ff90dd6cc36d92f95a9"
+      },
+      "method": "o4"
+    },
+    {
+      "case": "plates",
+      "refinement": 32,
+      "panels": 12288,
+      "rawCapacitanceF": [
+        [
+          4.8364283971279784e-14,
+          -1.5775671386302734e-14
+        ],
+        [
+          -1.5775667394379073e-14,
+          4.836375260162879e-14
+        ]
+      ],
+      "vendorSymmetrizedCapacitanceF": [
+        [
+          4.8364283971279784e-14,
+          -1.5775669390340903e-14
+        ],
+        [
+          -1.5775669390340903e-14,
+          4.836375260162879e-14
+        ]
+      ],
+      "command": [
+        "fastcap-reference.exe",
+        "-t1e-8",
+        "-o6",
+        "input.qui"
+      ],
+      "seconds": 2.5494869999965886,
+      "sampledPeakRssBytes": 188489728,
+      "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+      "files": {
+        "capacitance-f.json": "c8f6c548563b708617a329dbb6511bdb93c86623c682cc0029b913ac4b69a45b",
+        "capacitance-raw-f.json": "d1863e362e3d5dfdf4ceffe6bbfd267bc8a35931be427dbfddcae5c0e4609345",
+        "input.qui": "51b3d7bbdb8143518f416789bf14154faaaf0e384a876ea26cd8d81801b1881a",
+        "stderr.log": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9",
+        "stdout.log": "bd2a9b8a13b6fb4e08a30582d21bc928b1a91652bb7df1f732ba66bf8c75c136"
+      },
+      "method": "o6"
+    },
+    {
+      "case": "sphere",
+      "refinement": 3,
+      "panels": 512,
+      "rawCapacitanceF": [
+        [
+          1.102771245871545e-13
+        ]
+      ],
+      "vendorSymmetrizedCapacitanceF": [
+        [
+          1.102771245871545e-13
+        ]
+      ],
+      "command": [
+        "fastcap-reference.exe",
+        "-t1e-8",
+        "-o4",
+        "input.qui"
+      ],
+      "seconds": 0.05043779998959508,
+      "sampledPeakRssBytes": 7270400,
+      "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+      "files": {
+        "capacitance-f.json": "7ddb4de3ecd4f47d29ed286d969af3d4e2533a775cc1d556162997dd8b2eddb3",
+        "capacitance-raw-f.json": "7ddb4de3ecd4f47d29ed286d969af3d4e2533a775cc1d556162997dd8b2eddb3",
+        "input.qui": "070288eeca3bbb5692588ae16fda0179615878b000651b61c6d107f7abc7629f",
+        "stderr.log": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9",
+        "stdout.log": "a27c775c1c1dd8e40515ae63ec2bab435799ba1c8f98291e47bab15d4df7bbf3"
+      },
+      "sphereAnalyticRelativeError": 0.008878631271311166,
+      "method": "o4"
+    },
+    {
+      "case": "sphere",
+      "refinement": 4,
+      "panels": 2048,
+      "rawCapacitanceF": [
+        [
+          1.110104016882156e-13
+        ]
+      ],
+      "vendorSymmetrizedCapacitanceF": [
+        [
+          1.110104016882156e-13
+        ]
+      ],
+      "command": [
+        "fastcap-reference.exe",
+        "-t1e-8",
+        "-o4",
+        "input.qui"
+      ],
+      "seconds": 0.3397294000023976,
+      "sampledPeakRssBytes": 36073472,
+      "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+      "files": {
+        "capacitance-f.json": "0b1cd2ece305fd3046e4f21a8aee795360226a4199adc02a71ff1ccd0d57ffe2",
+        "capacitance-raw-f.json": "0b1cd2ece305fd3046e4f21a8aee795360226a4199adc02a71ff1ccd0d57ffe2",
+        "input.qui": "4cfd8ae9abc43274d1ba49904701dbd0ff5e96361ebcef2effb8380c6a234e47",
+        "stderr.log": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9",
+        "stdout.log": "b433142fd34527e2f9e52c56269a055d15c0a05748c73c2c14066d441c64f145"
+      },
+      "sphereAnalyticRelativeError": 0.0022882653474453063,
+      "method": "o4"
+    },
+    {
+      "case": "sphere",
+      "refinement": 5,
+      "panels": 8192,
+      "rawCapacitanceF": [
+        [
+          1.1120351596651479e-13
+        ]
+      ],
+      "vendorSymmetrizedCapacitanceF": [
+        [
+          1.1120351596651479e-13
+        ]
+      ],
+      "command": [
+        "fastcap-reference.exe",
+        "-t1e-8",
+        "-o4",
+        "input.qui"
+      ],
+      "seconds": 1.443079899996519,
+      "sampledPeakRssBytes": 156610560,
+      "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+      "files": {
+        "capacitance-f.json": "4d62c4b9f77f49b16de3a97e25c89d43af23c7ddff9cfe054bd5ab3d7adaa391",
+        "capacitance-raw-f.json": "4d62c4b9f77f49b16de3a97e25c89d43af23c7ddff9cfe054bd5ab3d7adaa391",
+        "input.qui": "681023adff4a9d0497f3ecaa775b315d3a3574add9da7043eed8041928ac72a2",
+        "stderr.log": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9",
+        "stdout.log": "8851914f6c1d137430390275b85b0887b5b7b8172d0ed5e37c4f03fb11a4cee3"
+      },
+      "sphereAnalyticRelativeError": 0.0005526407694061986,
+      "method": "o4"
+    },
+    {
+      "case": "sphere",
+      "refinement": 4,
+      "panels": 2048,
+      "rawCapacitanceF": [
+        [
+          1.1101158181972115e-13
+        ]
+      ],
+      "vendorSymmetrizedCapacitanceF": [
+        [
+          1.1101158181972115e-13
+        ]
+      ],
+      "command": [
+        "fastcap-reference.exe",
+        "-t1e-8",
+        "-o6",
+        "input.qui"
+      ],
+      "seconds": 0.390606500004651,
+      "sampledPeakRssBytes": 48279552,
+      "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+      "files": {
+        "capacitance-f.json": "dca08de9e50397d5f3cf5df4303e04dcd300b3360981f05a94206dad330ba8d0",
+        "capacitance-raw-f.json": "dca08de9e50397d5f3cf5df4303e04dcd300b3360981f05a94206dad330ba8d0",
+        "input.qui": "4cfd8ae9abc43274d1ba49904701dbd0ff5e96361ebcef2effb8380c6a234e47",
+        "stderr.log": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9",
+        "stdout.log": "253819902fddf3b1c2d8c7c5084c92f81e4ff96b1d910706d84970b8fc40cb23"
+      },
+      "sphereAnalyticRelativeError": 0.0022776588544174414,
+      "method": "o6"
+    }
+  ],
+  "inputReproduction": "generate-inputs.py reproduces exact authored SI panel input; verify input.qui SHA256 in selected rows",
+  "scope": "External references, no native board/mesh accuracy admission"
+}

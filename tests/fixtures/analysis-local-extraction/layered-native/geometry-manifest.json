@@ -1,0 +1,310 @@
+{
+  "cases": [
+    {
+      "case": "failed-d32",
+      "inputSha256": "037e776762c13d6e1eacbaca703e40a4192180c4f7dd680a94f741f359339a58",
+      "nodes": 32305,
+      "xyNodes": [
+        497,
+        497
+      ],
+      "zPlanes": 65,
+      "domainHalfWidthMm": 32,
+      "nestedAnnuliMm": [
+        [
+          0.82,
+          1.78
+        ],
+        [
+          1.78,
+          4.0
+        ]
+      ],
+      "shiftMm": 0.0,
+      "conductors": 2,
+      "partialLongestInteriorEdges": false,
+      "partialAddedXYVerticesMm": []
+    },
+    {
+      "case": "accepted-d64-domain",
+      "inputSha256": "c41d5a8b730b3f5b33b77adfb7295155e2573d06666d924a7d1cc982875cb0ca",
+      "nodes": 36501,
+      "xyNodes": [
+        529,
+        529
+      ],
+      "zPlanes": 69,
+      "domainHalfWidthMm": 64,
+      "nestedAnnuliMm": [
+        [
+          0.82,
+          1.78
+        ],
+        [
+          1.78,
+          4.0
+        ]
+      ],
+      "shiftMm": 0.0,
+      "conductors": 2,
+      "partialLongestInteriorEdges": false,
+      "partialAddedXYVerticesMm": []
+    },
+    {
+      "case": "accepted-d64-mesh",
+      "inputSha256": "8b8a175103d33967bf05dcddc4560a9b1c491955f4555afc9f40dcd29add5f57",
+      "nodes": 40917,
+      "xyNodes": [
+        593,
+        593
+      ],
+      "zPlanes": 69,
+      "domainHalfWidthMm": 64,
+      "nestedAnnuliMm": [
+        [
+          0.82,
+          1.78
+        ],
+        [
+          1.78,
+          4.0
+        ],
+        [
+          0.58,
+          0.82
+        ]
+      ],
+      "shiftMm": 0.0,
+      "conductors": 2,
+      "partialLongestInteriorEdges": false,
+      "partialAddedXYVerticesMm": []
+    },
+    {
+      "case": "shifted-d64",
+      "inputSha256": "8918cb0f0bc2379539abd8d502e58b0c0517909ca768233ae8802354cb71b120",
+      "nodes": 40917,
+      "xyNodes": [
+        593,
+        593
+      ],
+      "zPlanes": 69,
+      "domainHalfWidthMm": 64,
+      "nestedAnnuliMm": [
+        [
+          0.82,
+          1.78
+        ],
+        [
+          1.78,
+          4.0
+        ],
+        [
+          0.58,
+          0.82
+        ]
+      ],
+      "shiftMm": 0.25,
+      "conductors": 2,
+      "partialLongestInteriorEdges": false,
+      "partialAddedXYVerticesMm": []
+    },
+    {
+      "case": "three-d64",
+      "inputSha256": "2da873d2adcd0d6457bc37fc2600dfd1a2c2635a6bceef336501ba36a0ed9e50",
+      "nodes": 49197,
+      "xyNodes": [
+        529,
+        529
+      ],
+      "zPlanes": 93,
+      "domainHalfWidthMm": 64,
+      "nestedAnnuliMm": [
+        [
+          0.82,
+          1.78
+        ],
+        [
+          1.78,
+          4.0
+        ]
+      ],
+      "shiftMm": 0.0,
+      "conductors": 3,
+      "partialLongestInteriorEdges": false,
+      "partialAddedXYVerticesMm": []
+    },
+    {
+      "case": "shifted-d32-coarse",
+      "inputSha256": "432f758e5a3fb3a567037bacaee2a86eed38dea93773a81d5d5ef05eb07b0dd1",
+      "nodes": 32305,
+      "xyNodes": [
+        497,
+        497
+      ],
+      "zPlanes": 65,
+      "domainHalfWidthMm": 32,
+      "nestedAnnuliMm": [
+        [
+          0.82,
+          1.78
+        ],
+        [
+          1.78,
+          4.0
+        ]
+      ],
+      "shiftMm": 0.25,
+      "conductors": 2,
+      "partialLongestInteriorEdges": false,
+      "partialAddedXYVerticesMm": []
+    },
+    {
+      "case": "shifted-d64-coarse",
+      "inputSha256": "4061f728f4f89c62b1077ecf21ae5c83441732eb3264b88556abf41a26175f05",
+      "nodes": 36501,
+      "xyNodes": [
+        529,
+        529
+      ],
+      "zPlanes": 69,
+      "domainHalfWidthMm": 64,
+      "nestedAnnuliMm": [
+        [
+          0.82,
+          1.78
+        ],
+        [
+          1.78,
+          4.0
+        ]
+      ],
+      "shiftMm": 0.25,
+      "conductors": 2,
+      "partialLongestInteriorEdges": false,
+      "partialAddedXYVerticesMm": []
+    },
+    {
+      "case": "three-d32",
+      "inputSha256": "abf0153563ae7f20a2a5654d239037fa78f3c6f0f153f9f66af63f74153cb6bd",
+      "nodes": 44233,
+      "xyNodes": [
+        497,
+        497
+      ],
+      "zPlanes": 89,
+      "domainHalfWidthMm": 32,
+      "nestedAnnuliMm": [
+        [
+          0.82,
+          1.78
+        ],
+        [
+          1.78,
+          4.0
+        ]
+      ],
+      "shiftMm": 0.0,
+      "conductors": 3,
+      "partialLongestInteriorEdges": false,
+      "partialAddedXYVerticesMm": []
+    },
+    {
+      "case": "three-d64-mesh",
+      "inputSha256": "ed599b07482c825f65c1f5081aedaeb8d2e953f14f432eb75dbd3212ec8c3c89",
+      "nodes": 49941,
+      "xyNodes": [
+        537,
+        537
+      ],
+      "zPlanes": 93,
+      "domainHalfWidthMm": 64,
+      "nestedAnnuliMm": [
+        [
+          0.82,
+          1.78
+        ],
+        [
+          1.78,
+          4.0
+        ]
+      ],
+      "shiftMm": 0.0,
+      "conductors": 3,
+      "partialLongestInteriorEdges": true,
+      "partialAddedXYVerticesMm": [
+        [
+          [
+            -0.7,
+            0.495
+          ],
+          [
+            -0.495,
+            -0.7
+          ],
+          [
+            0.495,
+            0.7
+          ],
+          [
+            0.7,
+            -0.495
+          ],
+          [
+            -0.7,
+            -0.495
+          ],
+          [
+            -0.495,
+            0.7
+          ],
+          [
+            0.495,
+            -0.7
+          ],
+          [
+            0.7,
+            0.495
+          ]
+        ],
+        [
+          [
+            -0.7,
+            0.495
+          ],
+          [
+            -0.495,
+            -0.7
+          ],
+          [
+            0.495,
+            0.7
+          ],
+          [
+            0.7,
+            -0.495
+          ],
+          [
+            -0.7,
+            -0.495
+          ],
+          [
+            -0.495,
+            0.7
+          ],
+          [
+            0.495,
+            -0.7
+          ],
+          [
+            0.7,
+            0.495
+          ]
+        ]
+      ]
+    }
+  ],
+  "generatorSha256": "3114d1ca76ab8534fdb6d7408242ff628080c69b181568adc850e8d50449b754",
+  "numpy": "1.26.4",
+  "scipy": "1.12.0",
+  "shapely": "2.1.1"
+}

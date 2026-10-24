@@ -1,0 +1,269 @@
+{
+  "nativeReuse": {
+    "inputSha256": "ed599b07482c825f65c1f5081aedaeb8d2e953f14f432eb75dbd3212ec8c3c89",
+    "binarySha256": "2cb04a8eeb3f746042a089c7a40252f94dab0a3b816b3824e43a693f3888ac96",
+    "seconds": 6.991924900008598,
+    "peakBytes": 381059072,
+    "independentFullError": 0.04900994315403507,
+    "independentAccuracyPass": true,
+    "resourcePass": true,
+    "separateDomainChange": 0.010015089270805348,
+    "separateMeshChange": 0.0005898908767113662,
+    "accuracyPlusObservedReferenceChange": 0.0507901105266562,
+    "referenceMarginScreenPass": false,
+    "capacitanceF": [
+      [
+        5.058340805306158e-14,
+        -1.4852105837973998e-14,
+        -4.243022644230556e-15
+      ],
+      [
+        -1.4852105837974013e-14,
+        5.448145406178874e-14,
+        -1.4852209974662003e-14
+      ],
+      [
+        -4.243022644230553e-15,
+        -1.4852209974661994e-14,
+        5.058344267274015e-14
+      ]
+    ],
+    "plan": {
+      "elapsed_seconds": 6.9024442,
+      "factor_bytes": 310377688,
+      "free_nnz": 908990,
+      "free_nodes": 44740,
+      "full_nnz": 1009702,
+      "local_terms": 3416220,
+      "nodes": 49941,
+      "planned_simultaneous_bytes": 442106756,
+      "scratch_bytes": 15300479
+    },
+    "balances": {
+      "freeResidualMax": 3.4583845734314968e-15,
+      "chargeBalanceMax": 2.1348974760203478e-12,
+      "workBalanceMax": 2.360282125002972e-13,
+      "recoveryMax": 4.5738556718532735e-14
+    }
+  },
+  "nativeSourceAndBinaryRevalidated": true,
+  "referenceRows": [
+    {
+      "refinement": 16,
+      "nativeFullError": 0.05008875011784397,
+      "rawReferenceF": [
+        [
+          4.865693886159473e-14,
+          -1.4483452798879895e-14,
+          -4.223050855200982e-15
+        ],
+        [
+          -1.4484029685803926e-14,
+          5.264235316046069e-14,
+          -1.448297418837052e-14
+        ],
+        [
+          -4.2228659848524766e-15,
+          -1.4483069367691837e-14,
+          4.8656461572303066e-14
+        ]
+      ],
+      "rawEntryRelativeErrors": [
+        [
+          0.039592897468266865,
+          -0.025453394588520563,
+          -0.004729232423279325
+        ],
+        [
+          -0.025412551627869526,
+          0.034935765422989914,
+          -0.025494472439781736
+        ],
+        [
+          -0.004773217869186285,
+          -0.025487733131598366,
+          0.03960380673332779
+        ]
+      ],
+      "maxRawEntryError": 0.03960380673332779,
+      "referencePositiveEigenvaluesF": [
+        2.7648289100478658e-14,
+        5.2879658619796315e-14,
+        6.94278058740835e-14
+      ],
+      "referenceRawReciprocity": 1.0958608219370431e-05
+    },
+    {
+      "refinement": 32,
+      "nativeFullError": 0.04900994315403507,
+      "rawReferenceF": [
+        [
+          4.87317455079368e-14,
+          -1.4516585668763292e-14,
+          -4.232187233822526e-15
+        ],
+        [
+          -1.4516990801389566e-14,
+          5.2728436079561744e-14,
+          -1.4516243139500413e-14
+        ],
+        [
+          -4.2320911538481324e-15,
+          -1.451621824893753e-14,
+          4.8731161355059443e-14
+        ]
+      ],
+      "rawEntryRelativeErrors": [
+        [
+          0.037997049476161414,
+          -0.023112884590532606,
+          -0.0025602389047053283
+        ],
+        [
+          -0.023084332088463565,
+          0.03324615923714997,
+          -0.02314420004769584
+        ],
+        [
+          -0.002582999747649858,
+          -0.023145954405105224,
+          0.03801020263368694
+        ]
+      ],
+      "maxRawEntryError": 0.03801020263368694,
+      "referencePositiveEigenvaluesF": [
+        2.767616502479944e-14,
+        5.296359261087824e-14,
+        6.955158530688032e-14
+      ],
+      "referenceRawReciprocity": 7.68338028578128e-06,
+      "lastObservedReferenceChange": 0.0017801673726211282,
+      "workingScreen": 0.052570277899277325,
+      "workingScreenPass": false
+    },
+    {
+      "refinement": 48,
+      "nativeFullError": 0.04880861422439144,
+      "rawReferenceF": [
+        [
+          4.874469757401885e-14,
+          -1.4522565385332232e-14,
+          -4.23371207341883e-15
+        ],
+        [
+          -1.452284073735433e-14,
+          5.2745821272643e-14,
+          -1.4522562266501808e-14
+        ],
+        [
+          -4.233688732787976e-15,
+          -1.4522392382629692e-14,
+          4.8744391673804344e-14
+        ]
+      ],
+      "rawEntryRelativeErrors": [
+        [
+          0.03772124088472701,
+          -0.022691614318679568,
+          -0.002199150686269404
+        ],
+        [
+          -0.022672224158788442,
+          0.03290559796527308,
+          -0.022699004632300398
+        ],
+        [
+          -0.0022046758823553183,
+          -0.02271096823046854,
+          0.037728463435191976
+        ]
+      ],
+      "maxRawEntryError": 0.037728463435191976,
+      "referencePositiveEigenvaluesF": [
+        2.7681615495887836e-14,
+        5.297824502409962e-14,
+        6.957505000047874e-14
+      ],
+      "referenceRawReciprocity": 5.220357090959326e-06,
+      "lastObservedReferenceChange": 0.00034254893206281693,
+      "workingScreen": 0.04949371208851708,
+      "workingScreenPass": true
+    }
+  ],
+  "observedFullReferenceChanges": {
+    "16->32": 0.0017801673726211282,
+    "32->48": 0.00034254893206281693,
+    "16->48": 0.0021187859278269812
+  },
+  "lastNativeFullError": 0.04880861422439144,
+  "lastReferenceChange": 0.00034254893206281693,
+  "twiceLastReferenceChange": 0.0006850978641256339,
+  "conservativeWorkingScreen": 0.04949371208851708,
+  "strictlyDecreasingReferenceChanges": true,
+  "screenPass": true,
+  "gate": 0.05,
+  "uncertifiedNature": "Observed reference changes and this conservative working screen are not certified continuum error bounds; all physical/discretization/domain limitations remain separate.",
+  "resources": {
+    "refinement": 48,
+    "panels": 41472,
+    "seconds": 39.82094340000185,
+    "peakBytes": 790548480,
+    "exitCode": 0,
+    "externalRefusal": null,
+    "inputSha256": "143b7a4d179647b942cc2360bf47ae0be4c5d840e47f13910a423dd6e9359e38",
+    "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+    "preflightSha256": "f6d5cc267dabcb191a13e363fc4a1e9f853b78fa78db521cf87e8559d64b6748",
+    "command": [
+      "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\analyze-p7-extraction\\debugging\\p7-design-checkpoint\\fastcap-cli\\fastcap-reference.exe",
+      "-t1e-8",
+      "-o6",
+      "input.qui"
+    ],
+    "primarySolverSource": {
+      "source": "https://github.com/ediloren/FastCap2",
+      "sourceCommit": "04eee66446be0629f0607e68f369acad1072dc4d",
+      "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1"
+    },
+    "driverSha256": "0ba2d9ad29ac8f9a3149e68c3c48e0532bf30723203da25a43c708a944467a22",
+    "stdout.logSha256": "cd7f56a6215c71454cd2e4421d474e70f21098201e6b8471a31a1823c37dd71e",
+    "stderr.logSha256": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9",
+    "rawCapacitanceF": [
+      [
+        4.874469757401885e-14,
+        -1.4522565385332232e-14,
+        -4.23371207341883e-15
+      ],
+      [
+        -1.452284073735433e-14,
+        5.2745821272643e-14,
+        -1.4522562266501808e-14
+      ],
+      [
+        -4.233688732787976e-15,
+        -1.4522392382629692e-14,
+        4.8744391673804344e-14
+      ]
+    ],
+    "capacitance-raw-f.jsonSha256": "405c9400a5bcbe3f7afa4e10acfdfda9a8cf526532127bf1828738cf6f40cf68"
+  },
+  "nativeControlNeeded": false,
+  "geometryDomainAndNativeUnchanged": true,
+  "priorFailuresPreserved": true,
+  "sha256": {
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\native-evidence-summary.json": "7fb425fa1ceb930820d84fddd87711cee530d6697a6f13d1ac99f70f38c6aaac",
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\generate-reference.py": "5da6211466a149298610b15f49c8b95e190a1d87c0c3b2cc4f6785a98d0d97d9",
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\refine-three-reference.py": "0ba2d9ad29ac8f9a3149e68c3c48e0532bf30723203da25a43c708a944467a22",
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\references\\three-48-preflight.json": "f6d5cc267dabcb191a13e363fc4a1e9f853b78fa78db521cf87e8559d64b6748",
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\references\\three-48-run.json": "283824130b8fdeda560064899c59ad481b419a202b543dbfeb0102660e33f4a1",
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\audit-reference-margin.py": "ce2967b656a6a0d051fa0903647effd565480578cfa21f14952fb527f2fd5c74",
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\references\\three-16\\capacitance-raw-f.json": "b29b90f1e538629897c3a9c58cd1387753b073c572e49ab6c60f2813272ecf90",
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\references\\three-16\\stderr.log": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9",
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\references\\three-16\\stdout.log": "e383fe3d6b213f0bf542f18d8835e8b721b47e66de629acf8e1e40c8b0b9fafc",
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\references\\three-32\\capacitance-raw-f.json": "7e4f554df21e1c149790ff573f37e8aa0276e71e0be4e16009837dedca719f1d",
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\references\\three-32\\stderr.log": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9",
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\references\\three-32\\stdout.log": "74b81d6f08ecc377b5e1c7551753eb1467005f921d672611f14353811fefa0d2",
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\references\\three-48\\capacitance-raw-f.json": "405c9400a5bcbe3f7afa4e10acfdfda9a8cf526532127bf1828738cf6f40cf68",
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\references\\three-48\\stderr.log": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9",
+    "tests\\fixtures\\analysis-local-extraction\\layered-native\\references\\three-48\\stdout.log": "cd7f56a6215c71454cd2e4421d474e70f21098201e6b8471a31a1823c37dd71e"
+  }
+}

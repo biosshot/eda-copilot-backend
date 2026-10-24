@@ -1,0 +1,47 @@
+
+FastCap 2.0, (c) by M.I.T.
+FastCap2 Windows porting and modifications, version 3.6
+    (c) 1998, 2015 by Enrico Di Lorenzo, www.fastfieldsolvers.com
+
+Running D:\MyProject\NN\projects\Agents\easyeda-copilot\analyze-p7-extraction\debugging\p7-design-checkpoint\fastcap-cli\fastcap-reference.exe 2.0 (18Sep92)
+  Input: input.qui
+  Input surfaces:
+   GROUP1
+    input.qui, conductor
+      title: `Finite35um foils, vacuum; primary FastCap offline reference SI metres'
+      outer permittivity: 1
+      number of panels: 41472
+      number of extra evaluation points: 0
+      translation: (0 0 0)
+  Date: Sat Oct 24 13:44:43 2026
+
+INPUT SUMMARY
+  Expansion order: 6
+  Number of partitioning levels: 6
+  Overall permittivity factor: 1
+  Total number of panels: 41472
+    Number of conductor panels: 41472
+    Number of dielectric interface panels: 0
+    Number of thin conductor on dielectric interface panels: 0
+  Number of conductors: 3
+Percentage of multiplies done by multipole: 98.4%
+
+ITERATION DATA
+Starting on column 1 (foil0%GROUP1)
+1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 
+16 
+Starting on column 2 (foil1%GROUP1)
+1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 
+16 
+Starting on column 3 (foil2%GROUP1)
+1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 
+16 
+
+CAPACITANCE MATRIX, femtofarads
+                             1                2                3 
+foil0%GROUP1 1      48.74469757     -14.52270306     -4.233700403
+foil1%GROUP1 2     -14.52270306      52.74582127     -14.52247732
+foil2%GROUP1 3     -4.233700403     -14.52247732      48.74439167
+
+Total time: 39.736
+Total memory allocated: 763774 kilobytes
