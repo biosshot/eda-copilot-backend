@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Record the isolated P6 resonant-model checkpoint: independently checked RLC/mutual coupons support a restricted authored passive class; coarse energy failures and the hidden-resonance counterexample remain explicit. No production fitting change.
+
 - Accept the bounded capacitance coupon evidence (4.42% independent full-matrix error) and authorize its internal Rust port. Approve the explicit physical-terminal P6 design; production P7 and Thermal acceptance remain open.
 ### Physical electrical conductor connections
 
