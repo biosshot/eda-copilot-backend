@@ -290,3 +290,7 @@ Physical terminals/R1 и внутреннее layered C приняты в огр
 ### Согласованное продолжение 2026-10-24
 
 Пользователь одобрил [P7 audit разбиения/near interactions](next-task-copper-partition-audit.md) и [один extended TPS transient](next-task-thermal-extended-convergence.md): explicit1800s, прежние memory/accuracy limits, сравнение с saved ordinary. Production defaults неизменны. P6 новых задач не получает.
+
+### Copper/extended Thermal review 2026-10-24
+
+[Review](review-copper-extended-thermal.md): аудит P7 принят как исследование; full ROI и STM613 остаются открыты. Единственный extended TPS завершён, но temporal0.116855%>0.1% FAIL сохранён. Никаких новых заданий до обсуждения.
