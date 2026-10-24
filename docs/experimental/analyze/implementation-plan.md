@@ -282,3 +282,7 @@ Physical terminals/R1 и внутреннее layered C приняты в огр
 ### Runtime/magnetic checkpoint 2026-10-24
 
 [Review](review-runtime-magnetic-profile.md): bounded resonant runtime и magnetic kernels приняты. Дальше внутренние FFT/свёртки (P6), near/far ускорение (P7) и малый Thermal blocked-solve prototype; whole-stage gates сохраняются.
+
+### Spectra/near-far review 2026-10-24
+
+[Review](review-spectra-near-far-thermal.md): внутренние signal и bounded near/far primitives приняты; Thermal supernodal candidate отвергнут по скорости/памяти. Новых заданий нет: следующие действия обсуждаются с пользователем.
