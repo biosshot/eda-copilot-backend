@@ -286,3 +286,7 @@ Physical terminals/R1 и внутреннее layered C приняты в огр
 ### Spectra/near-far review 2026-10-24
 
 [Review](review-spectra-near-far-thermal.md): внутренние signal и bounded near/far primitives приняты; Thermal supernodal candidate отвергнут по скорости/памяти. Новых заданий нет: следующие действия обсуждаются с пользователем.
+
+### Согласованное продолжение 2026-10-24
+
+Пользователь одобрил [P7 audit разбиения/near interactions](next-task-copper-partition-audit.md) и [один extended TPS transient](next-task-thermal-extended-convergence.md): explicit1800s, прежние memory/accuracy limits, сравнение с saved ordinary. Production defaults неизменны. P6 новых задач не получает.
