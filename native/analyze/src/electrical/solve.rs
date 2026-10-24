@@ -78,6 +78,12 @@ pub(super) fn output_samples(time: &Time, start: f64) -> Result<usize> {
     Ok((intervals as usize).max(1) + 1)
 }
 pub fn run(n: &mut Network, r: &Request, s: &mut Counters, start: Instant) -> Result<Value> {
+    if r.numerics.as_ref().is_some_and(|v| v.max_step_s.is_some()) {
+        return Err(fail(
+            "NETWORK_NUMERICS",
+            "maxStepS requires coupled descriptor SI backend",
+        ));
+    }
     let mut normalized = 0f64;
     let mut kcl = 0f64;
     if r.mode == "dc" {

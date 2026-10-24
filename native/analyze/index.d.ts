@@ -148,7 +148,7 @@ export interface AnalysisElectricalRequest {
   contextId:string; circuit:AnalysisElectricalCircuit; mode:'dc'|'frequency'|'time'; frequencies?:number[];
   acSources?:{elementId:string;values:{real:number;imaginary:number}[]}[];
   time?:{stopS:number;sampleStepS:number}; initial?:unknown;
-  numerics?:{relativeTolerance?:number;absoluteTolerance?:number;maxIterations?:number}; budget?:{maxSeconds?:number;maxMemoryMiB?:number};
+  numerics?:{relativeTolerance?:number;absoluteTolerance?:number;maxIterations?:number;maxStepS?:number}; budget?:{maxSeconds?:number;maxMemoryMiB?:number};
 }
 export interface AnalysisElectricalReport {
   status:'complete'|'rejected'; mode?:string; diagnostics:{code:string;message:string;severity:'error'|'warning'|'info'}[];
@@ -161,7 +161,7 @@ export interface AnalysisElectricalReport {
 }
 export interface AnalysisTransientRequest {
  resource?: AnalysisFrequencyRequest['instances'][number]['model'];
- topology?:Pick<AnalysisFrequencyRequest,'instances'|'connections'|'ports'>;
+ topology?:Pick<AnalysisFrequencyRequest,'instances'|'connections'|'connectionContacts'|'ports'>;
  drivers:{port:number;resistanceOhm:number;waveform:unknown}[];
  receivers:{port:number;resistanceOhm?:number;capacitanceF:number}[];
  time:{stopS:number;sampleStepS:number};initial?:unknown;
@@ -172,7 +172,7 @@ export interface AnalysisTransientReport {
  axis?:number[];portVoltages?:number[][];driverCurrentsA?:number[][];portCurrentsA?:number[][];energyJ?:number[];
  lumpedEnergyJ?:number[];delayEnergyJ?:number[];sourceWorkJ?:number[];resistiveLossJ?:number[];attenuationLossJ?:number[];beNumericalDissipationJ?:number[];
  fit?:unknown;conditional?:boolean;counters?:Record<string,number>;quality?:Record<string,number>;
- finalState?:unknown;assumptions?:string[];elapsedMs?:number;memoryPlanBytes?:number;
+ physicalRecovery?:unknown;assembledModel?:unknown;conductorPotentialsV?:number[][];conductorChargesC?:number[][];initialConductorChargesC?:number[];finalConductorChargesC?:number[];zeroEnergyGauges?:number;finalState?:unknown;assumptions?:string[];elapsedMs?:number;memoryPlanBytes?:number;
  resources?:{peakRssBytes:number;metric:string};
 }
 export declare class AnalysisElectricalSession {constructor();solve(request:AnalysisElectricalRequest):AnalysisElectricalReport; solveFrequency(request:AnalysisFrequencyRequest):AnalysisFrequencyReport; solveTransient(request:AnalysisTransientRequest):AnalysisTransientReport; solveCrossSection(request:AnalysisCrossSectionRequest):AnalysisCrossSectionReport;clear():void}
@@ -181,13 +181,13 @@ export declare class AnalysisElectricalSession {constructor();solve(request:Anal
 export interface AnalysisFrequencyResource {id:string;kind:string;ports:string[];data:unknown;source?:string;validity?:unknown;analyses?:string[]}
 export interface AnalysisFrequencyRequest {
  instances:{id:string;model:AnalysisFrequencyResource;ports:string[]}[];
- connections:[number,number][];ports:{name:string;index:number}[];frequencies:number[];
+ connectionContacts?:('both'|'positive'|'negative')[];connections:[number,number][];ports:{name:string;index:number}[];frequencies:number[];
  representation:'S'|'Z'|'Y';referenceOhm?:number[];budget?:AnalysisElectricalRequest['budget'];
 }
 export interface AnalysisFrequencyReport {
  status:'complete'|'rejected';diagnostics:{code:string;message:string;severity:'error'|'warning'|'info'}[];elapsedMs:number;
  frequenciesHz?:number[];ports?:{name:string;index:number}[];representation?:'S'|'Z'|'Y';referenceOhm?:number[]|null;
- parameters?:{real:number;imaginary:number}[][][];nature?:'passive'|'active'|'unspecified';conditional?:boolean;
+ physicalRecovery?:unknown;assembledModel?:unknown;validityLimitations?:string;parameters?:{real:number;imaginary:number}[][][];nature?:'passive'|'active'|'unspecified';conditional?:boolean;
  bandHz?:number[];interpolation?:unknown[];provenance?:unknown[];quality?:{maxResidual:number;maxCondition:number;solves:number};
  resources?:{peakRssBytes:number;metric:string};
 }

@@ -3,8 +3,8 @@ import {spawnSync} from 'node:child_process';
 import {mkdirSync,readFileSync,writeFileSync,copyFileSync,existsSync} from 'node:fs';
 import {join,resolve,dirname} from 'node:path';
 import {createHash} from 'node:crypto';
-const mixed=process.argv.includes('--mixed'),args=process.argv.slice(2).filter(a=>a!=='--mixed');
-const output=resolve(args[0]??(mixed?'debugging/p6-mixed-verification/installed':'debugging/p6-verification/installed'));mkdirSync(output,{recursive:true});
+const mixed=process.argv.includes('--mixed'),physical=process.argv.includes('--physical'),args=process.argv.slice(2).filter(a=>!['--mixed','--physical'].includes(a));
+const output=resolve(args[0]??(physical?'debugging/p6-physical-verification/installed':mixed?'debugging/p6-mixed-verification/installed':'debugging/p6-verification/installed'));mkdirSync(output,{recursive:true});
 const npmCli=process.env.npm_execpath??join(dirname(process.execPath),'node_modules/npm/bin/npm-cli.js');assert.ok(existsSync(npmCli),'Set npm_execpath to the actual npm CLI');
 const cleanEnv={...process.env};for(const key of Object.keys(cleanEnv))if(/^(?:PCB_.*|NODE_PATH|NODE_OPTIONS|OPENAI_API_KEY|ANTHROPIC_API_KEY|EASYEDA_COPILOT_SERVER_URL|KICAD_COPILOT_SERVER_URL)$/i.test(key))delete cleanEnv[key];
 function run(args,cwd,timeout=180000){const r=spawnSync(process.execPath,args,{cwd,encoding:'utf8',env:cleanEnv,windowsHide:true,timeout});writeFileSync(join(output,'last-command.log'),String(r.stdout)+String(r.stderr));if(r.error)throw r.error;assert.equal(r.status,0,r.stdout+'\n'+r.stderr);return r.stdout;}
@@ -12,15 +12,15 @@ const pack=JSON.parse(run([npmCli,'pack','--ignore-scripts','--json','--pack-des
 const archive=join(output,pack.filename),consumer=join(output,'consumer');mkdirSync(consumer,{recursive:true});writeFileSync(join(consumer,'package.json'),JSON.stringify({name:'p6-installed-consumer',private:true,type:'module'}));
 assert.equal(pack.files.filter(f=>/native\/node-addon\/.*\.node$/.test(f.path)).length,1);
 run([npmCli,'install','--ignore-scripts','--no-audit','--no-fund',archive],consumer);
-copyFileSync(`tests/fixtures/analysis-electrical-${mixed?'mixed':'core'}/scenario.js`,join(consumer,'scenario.js'));
+copyFileSync(`tests/fixtures/analysis-electrical-${physical?'physical':mixed?'mixed':'core'}/scenario.js`,join(consumer,'scenario.js'));
 writeFileSync(join(consumer,'smoke.mjs'),`
 import assert from 'node:assert/strict';import{readFileSync,writeFileSync}from'node:fs';import{createRequire}from'node:module';import{join}from'node:path';
 import{runAnalysisDsl,analysisDslDocumentation}from'eda-copilot-backend';
 const require=createRequire(import.meta.url),root=join(process.cwd(),'node_modules/eda-copilot-backend');
 const native=require(join(root,'native/node-addon/index.cjs'));assert.equal(native.numericContract(),'f32-rte-ftz-v1');assert.equal(typeof(new native.AnalysisElectricalSession()).solveTransient,'function');
-assert.match(analysisDslDocumentation(),/passive-relaxation/);assert.match(analysisDslDocumentation(),/delayed-scattering/);
+assert.match(analysisDslDocumentation(),/passive-relaxation/);assert.match(analysisDslDocumentation(),/delayed-scattering/);assert.match(analysisDslDocumentation(),/portTerminals/);
 const code=readFileSync('scenario.js','utf8');const result=await runAnalysisDsl({code},{timeoutMs:120000,maxOutputBytes:32*1024*1024});writeFileSync('result.json',JSON.stringify(result));assert.equal(result.status,'complete',JSON.stringify(result.error));
-assert.deepEqual(result.reports.flatMap(r=>r.checks).map(c=>c.status),${mixed?'[]':"['fail','pass']"});
+assert.deepEqual(result.reports.flatMap(r=>r.checks).map(c=>c.status),${mixed||physical?'[]':"['fail','pass']"});
 const timeout=await runAnalysisDsl({code:'const a=analysis();while(true){}'},{timeoutMs:25});assert.equal(timeout.error.code,'TIMEOUT');
 const controller=new AbortController();controller.abort();const aborted=await runAnalysisDsl({code},{signal:controller.signal});assert.equal(aborted.error.code,'ABORTED');
 const active=new AbortController();const pending=runAnalysisDsl({code:'const a=analysis();while(true){}'},{signal:active.signal,timeoutMs:5000});setTimeout(()=>active.abort(),150);const interrupted=await pending;assert.equal(interrupted.error.code,'ABORTED');

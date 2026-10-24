@@ -65,9 +65,9 @@ export function transientRequest(task:AnalysisTask<'si'>){
   if(resolved.model.kind!=='rc-input')fail('SI receiver requires an explicit passive rc-input');
   return{port:resolve(r),resistanceOhm:resolved.model.resistanceOhm,capacitanceF:resolved.model.capacitanceF};
  });
- const request:AnalysisTransientRequest={...(descriptor.kind==='network'?{resource:graph.instances[0].model}:{topology:graph}),drivers,receivers,time:c.time!,numerics:c.numerics,budget:c.budget};
+ const request:AnalysisTransientRequest={...(descriptor.kind==='network'&&c.initial===undefined?{resource:graph.instances[0].model}:{topology:graph}),drivers,receivers,time:c.time!,initial:c.initial,numerics:c.numerics,budget:c.budget};
  const sourceResources=graph.instances.map(i=>({instanceId:i.id,resource:i.model,sourceValidity:i.model.validity??null,allowedAnalyses:i.model.analyses??null,sha256:createHash('sha256').update(JSON.stringify(json(i.model))).digest('hex')}));
- const portMapping={outputs:graph.ports,instances:graph.instances.map(i=>({instanceId:i.id,sourcePorts:i.model.ports,logicalPorts:i.ports}))};
+ const portMapping={outputs:graph.ports,connections:graph.connections,connectionContacts:graph.connectionContacts??graph.connections.map(()=>'both'),instances:graph.instances.map(i=>({instanceId:i.id,sourcePorts:i.model.ports,logicalPorts:i.ports}))};
  return{request,names,conditional,resolvedModels,sourceResources,portMapping};
 }
 export function createTransientExecutor(){const execute=createProblemExecutor(true);return async(task:AnalysisTask<'si'>):Promise<ExecutionResult>=>{
@@ -77,7 +77,7 @@ export function createTransientExecutor(){const execute=createProblemExecutor(tr
  const conditional=adapted.conditional||report.conditional;
  const metrics:Record<string,T.DataDescription>={};
  for(let i=0;i<adapted.names.length;i++)metrics[`network-voltage:${adapted.names[i]}`]={kind:'series',unit:'V',values:report.portVoltages!.map(v=>v[i]),axis:{name:'timeS',unit:'s',values:report.axis!},validity:{status:conditional?'conditional':'valid',...(conditional?{reason:'Conditional source/model band/finite-sample closure; see solution provenance. A finite-front screen does not prove a bandlimited source.'}:{})},diagnostics:[]};
- return{id:`${task.contextId}:time-${randomUUID()}`,status:'complete',method:'Passive supplied temporal model CPU/F64, finite drivers, adaptive backward Euler',diagnostics:report.diagnostics,assumptions:report.assumptions??[],metrics,solution:json({...report,resolvedModels:adapted.resolvedModels,sourceResources:adapted.sourceResources,portMapping:adapted.portMapping,conditional})};
+ return{id:`${task.contextId}:time-${randomUUID()}`,status:'complete',method:'Passive supplied temporal model CPU/F64, finite drivers, adaptive backward Euler',diagnostics:report.diagnostics,assumptions:report.assumptions??[],metrics,solution:json({...report,physicalInitial:task.config.initial??null,resolvedModels:adapted.resolvedModels,sourceResources:adapted.sourceResources,portMapping:adapted.portMapping,conditional})};
  };}
 export function transientObservedVoltage(task:AnalysisTask,descriptor:unknown,metrics:Readonly<Record<string,T.DataDescription>>):T.DataDescription|undefined{
  if(task.kind!=='si'||!object(descriptor)||!object(descriptor.input)||descriptor.input.owner!==(task.config as T.Configurations['si']).network?.id)return;

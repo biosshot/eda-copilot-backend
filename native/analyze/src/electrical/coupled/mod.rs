@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 pub mod composition;
 #[path = "frequency.rs"]
 pub mod frequency_response;
+pub mod physical;
 pub mod time;
 
 pub type Entry = (usize, usize, f64);
@@ -23,6 +24,8 @@ pub struct Model {
     pub capacitance_f: Vec<Entry>,
     #[serde(default)]
     pub conserved_potential_modes: Vec<Vec<f64>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub port_terminals: Option<Vec<physical::PortTerminals>>,
 }
 pub struct System {
     pub(super) linear: network::Network,
@@ -173,6 +176,7 @@ impl System {
                 "Invalid descriptor identity/reference topology",
             ));
         }
+        physical::terminals(model, ports)?;
         let a = entries(&model.incidence, nv, ni)?;
         let b = entries(&model.port_incidence, nv, ports)?;
         for port in 0..ports {

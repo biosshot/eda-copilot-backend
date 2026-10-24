@@ -1,11 +1,11 @@
-//! Common-return canonical-potential composition. Differential infinity ports
-//! cannot be joined without a physical terminal map and are deliberately refused.
+//! Congruence assembly of authored full conductor models; no intermodel EM extraction.
 use super::*;
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Deserialize, Clone)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Topology {
     pub instances: Vec<crate::electrical::frequency::Instance>,
     pub connections: Vec<[usize; 2]>,
+    pub connection_contacts: Option<Vec<physical::Contacts>>,
     pub ports: Vec<crate::electrical::frequency::OutputPort>,
 }
 pub struct Built {
@@ -15,6 +15,8 @@ pub struct Built {
     pub ports: Vec<String>,
     pub band: Option<[f64; 2]>,
     pub source_memory: usize,
+    pub recovery: physical::Recovery,
+    pub assembly_plan: usize,
 }
 /// Includes original JSON, normalized arrays and retained source/fitted report
 /// matrices. This is reserved before fitting, independently of dense LU plans.
@@ -29,7 +31,19 @@ pub(crate) fn source_plan(resource: &crate::electrical::frequency::Resource) -> 
             _ => 32,
         }
     }
-    let raw = weight(&resource.data).saturating_mul(4);
+    let metadata = resource.id.len()
+        + resource.kind.len()
+        + resource.ports.iter().map(String::len).sum::<usize>()
+        + resource.source.as_ref().map(String::len).unwrap_or(0)
+        + resource
+            .analyses
+            .as_ref()
+            .map(|a| a.iter().map(String::len).sum::<usize>())
+            .unwrap_or(0);
+    let raw = weight(&resource.data)
+        .saturating_add(resource.validity.as_ref().map(weight).unwrap_or(0))
+        .saturating_add(metadata)
+        .saturating_mul(4);
     if resource.data["format"] == "touchstone" {
         raw.saturating_add(
             4096usize
@@ -91,6 +105,14 @@ pub fn resource(
     budget: Option<&Budget>,
     start: Instant,
 ) -> Result<Built> {
+    resource_for(resource, budget, start, "si")
+}
+fn resource_for(
+    resource: &crate::electrical::frequency::Resource,
+    budget: Option<&Budget>,
+    start: Instant,
+    operation: &str,
+) -> Result<Built> {
     super::super::deadline(start, budget, "Temporal source normalization")?;
     let source_memory = source_plan(resource);
     remaining_budget(budget, source_memory)?;
@@ -102,7 +124,7 @@ pub fn resource(
         || resource
             .analyses
             .as_ref()
-            .is_some_and(|a| !a.iter().any(|v| v == "si"))
+            .is_some_and(|a| !a.iter().any(|v| v == operation))
     {
         return Err(fail(
             "COUPLED_RESOURCE",
@@ -128,9 +150,16 @@ pub fn resource(
         let fit = relaxation::fit_started(resource, budget, start)?;
         (fit.model, Some(fit.report))
     };
-    let band = authored_band(resource)?;
+    let band = if operation == "si" {
+        authored_band(resource)?
+    } else {
+        None
+    };
     super::super::deadline(start, budget, "Temporal source normalization")?;
+    let recovery = physical::Recovery::single(&model, &resource.id);
     Ok(Built {
+        assembly_plan: 0,
+        recovery,
         model,
         conditional: conditional || fit.is_some() || band.is_some(),
         fit,
@@ -140,18 +169,39 @@ pub fn resource(
     })
 }
 pub fn build(topology: &Topology, budget: Option<&Budget>, start: Instant) -> Result<Built> {
+    build_for(topology, budget, start, "si")
+}
+pub(super) fn build_for(
+    topology: &Topology,
+    budget: Option<&Budget>,
+    start: Instant,
+    operation: &str,
+) -> Result<Built> {
     super::super::deadline(start, budget, "Temporal composition")?;
     let source_memory = topology
         .instances
         .iter()
         .fold(0usize, |n, i| n.saturating_add(source_plan(&i.model)));
+    let source_memory = source_memory.saturating_add(
+        topology
+            .instances
+            .iter()
+            .map(|i| i.id.len() + i.ports.iter().map(String::len).sum::<usize>())
+            .sum::<usize>()
+            .saturating_add(topology.ports.iter().map(|p| p.name.len()).sum::<usize>())
+            .saturating_mul(16),
+    );
     let matrix_budget = remaining_budget(budget, source_memory)?;
     let p = topology
         .instances
         .iter()
         .map(|i| i.ports.len())
         .sum::<usize>();
-    if topology.instances.is_empty()
+    if topology
+        .instances
+        .iter()
+        .any(|i| i.id.trim().is_empty() || i.id.len() > 1024)
+        || topology.instances.is_empty()
         || topology.instances.len() > 32
         || p > 128
         || p == 0
@@ -168,6 +218,16 @@ pub fn build(topology: &Topology, budget: Option<&Budget>, start: Instant) -> Re
         return Err(fail(
             "COUPLED_TOPOLOGY",
             "Invalid time composition size/identity",
+        ));
+    }
+    if topology
+        .connection_contacts
+        .as_ref()
+        .is_some_and(|v| v.len() != topology.connections.len())
+    {
+        return Err(fail(
+            "COUPLED_TERMINAL_MAP",
+            "connectionContacts must match pairs",
         ));
     }
     let mut assigned = vec![false; p];
@@ -230,11 +290,8 @@ pub fn build(topology: &Topology, budget: Option<&Budget>, start: Instant) -> Re
                 "Invalid complete instance port mapping",
             ));
         }
-        let block = resource(&instance.model, budget, start)?;
+        let block = resource_for(&instance.model, budget, start, operation)?;
         let m = &block.model;
-        if m.reference_topology != "grounded" {
-            return Err(fail("COUPLED_TERMINAL_MAP","Infinity/differential descriptor composition needs explicit physical terminal mapping; no return inferred"));
-        }
         total_v = total_v.saturating_add(m.potential_nodes.len());
         total_i = total_i.saturating_add(m.current_dofs.len());
         coefficients = coefficients.saturating_add(
@@ -255,40 +312,145 @@ pub fn build(topology: &Topology, budget: Option<&Budget>, start: Instant) -> Re
         super::super::deadline(start, budget, "Temporal block compile")?;
         built.push(block);
     }
-    let mut parent: Vec<_> = (0..total_v).collect();
+    let preplan = (2 * total_v + total_i)
+        .saturating_pow(2)
+        .saturating_mul(1280)
+        .saturating_add(coefficients.saturating_mul(128));
+    if preplan as f64 > matrix_budget.max_memory_mi_b.unwrap() * 1048576. {
+        return Err(fail(
+            "COUPLED_BUDGET",
+            "Pre-weld aggregate matrix/recovery plan exceeds memory",
+        ));
+    }
+    let mapped = built.iter().any(|b| b.model.port_terminals.is_some());
+    if (mapped || topology.connection_contacts.is_some())
+        && built.iter().any(|b| b.model.port_terminals.is_none())
+    {
+        return Err(fail(
+            "COUPLED_TERMINAL_MAP",
+            "Physical connection requires explicit contacts/return on every coupled endpoint",
+        ));
+    }
+    let grounded = built
+        .iter()
+        .any(|b| b.model.reference_topology == "grounded");
+    let ground = total_v;
+    let mut parent: Vec<_> = (0..=total_v).collect();
     let mut port_nodes = vec![];
     let mut offset = 0;
     for block in &built {
         let m = &block.model;
-        for port in 0..block.ports.len() {
-            let weights: Vec<_> = m
-                .port_incidence
-                .iter()
-                .filter(|(_, j, v)| *j == port && *v != 0.)
-                .collect();
-            if weights.len() != 1 || weights[0].2 != 1. {
+        if let Some(pairs) = physical::terminals(m, block.ports.len())? {
+            port_nodes.extend(
+                pairs
+                    .into_iter()
+                    .map(|p| p.map(|i| i.map(|i| offset + i).unwrap_or(ground))),
+            );
+        } else {
+            if m.reference_topology != "grounded" {
                 return Err(fail(
                     "COUPLED_TERMINAL_MAP",
-                    "Common-return composition requires canonical unit positive-potential ports",
+                    "Infinity composition requires explicit physical contacts",
                 ));
             }
-            port_nodes.push(offset + weights[0].0);
+            for port in 0..block.ports.len() {
+                let weights: Vec<_> = m
+                    .port_incidence
+                    .iter()
+                    .filter(|(_, j, v)| *j == port && *v != 0.)
+                    .collect();
+                if weights.len() != 1 || weights[0].2 != 1. {
+                    return Err(fail(
+                        "COUPLED_TERMINAL_MAP",
+                        "Legacy composition requires canonical grounded ports",
+                    ));
+                }
+                port_nodes.push([offset + weights[0].0, ground]);
+            }
         }
         offset += m.potential_nodes.len();
     }
-    for &[a, b] in &topology.connections {
-        merge(&mut parent, port_nodes[a], port_nodes[b]);
+    for (i, &[a, b]) in topology.connections.iter().enumerate() {
+        let contacts = topology
+            .connection_contacts
+            .as_ref()
+            .map(|v| v[i])
+            .unwrap_or_default();
+        if contacts != physical::Contacts::Negative {
+            merge(&mut parent, port_nodes[a][0], port_nodes[b][0]);
+        }
+        if contacts != physical::Contacts::Positive {
+            merge(&mut parent, port_nodes[a][1], port_nodes[b][1]);
+        }
     }
     let mut nodes = BTreeMap::new();
     let mut potential_nodes = vec![];
     let mut indices = vec![];
     for i in 0..total_v {
-        let root = root(&parent, i);
-        let index = *nodes.entry(root).or_insert_with(|| {
-            potential_nodes.push(format!("assembled:{root}"));
-            potential_nodes.len() - 1
-        });
+        let r = root(&parent, i);
+        let index = if r == root(&parent, ground) {
+            None
+        } else {
+            Some(*nodes.entry(r).or_insert_with(|| {
+                potential_nodes.push(format!("assembled:{r}"));
+                potential_nodes.len() - 1
+            }))
+        };
         indices.push(index);
+    }
+    let assembled_pair =
+        |p: usize| port_nodes[p].map(|i| if i == ground { None } else { indices[i] });
+    let mut port_incidence = vec![];
+    let mut port_terminals = vec![];
+    for (j, p) in topology.ports.iter().enumerate() {
+        let pair = assembled_pair(p.index);
+        if pair[0] == pair[1] {
+            return Err(fail(
+                "COUPLED_TERMINAL_MAP",
+                format!("External port {} shorted by physical weld", p.name),
+            ));
+        }
+        for (i, sign) in [(pair[0], 1.), (pair[1], -1.)] {
+            if let Some(i) = i {
+                port_incidence.push((i, j, sign));
+            }
+        }
+        let terminal = |i: Option<usize>| match i {
+            Some(i) => physical::Terminal::Node(physical::Node {
+                node: potential_nodes[i].clone(),
+            }),
+            None => physical::Terminal::Ground(physical::Ground {
+                reference: physical::GroundReference::Ground,
+            }),
+        };
+        port_terminals.push(physical::PortTerminals {
+            positive: terminal(pair[0]),
+            negative: terminal(pair[1]),
+        });
+    }
+    let mut recovery = physical::Recovery {
+        mapped,
+        ..Default::default()
+    };
+    let mut vbase = 0;
+    let mut ibase = 0;
+    for (instance, block) in topology.instances.iter().zip(&built) {
+        for (i, node) in block.model.potential_nodes.iter().enumerate() {
+            recovery.potentials.push(physical::Potential {
+                instance_id: instance.id.clone(),
+                node: node.clone(),
+                index: indices[vbase + i],
+            });
+        }
+        for (i, dof) in block.model.current_dofs.iter().enumerate() {
+            recovery.currents.push(physical::Current {
+                instance_id: instance.id.clone(),
+                dof: dof.clone(),
+                index: potential_nodes.len() + ibase + i,
+            });
+        }
+        vbase += block.model.potential_nodes.len();
+        ibase += block.model.current_dofs.len();
     }
     let mut a = Matrix::new();
     let mut r = Matrix::new();
@@ -338,10 +500,14 @@ pub fn build(topology: &Topology, budget: Option<&Budget>, start: Instant) -> Re
             candidates.push(v);
         }
         for (i, j, v) in m.incidence {
-            *a.entry((indices[vo + i], io + j)).or_default() += v;
+            if let Some(i) = indices[vo + i] {
+                *a.entry((i, io + j)).or_default() += v;
+            }
         }
         for (i, j, v) in m.capacitance_f {
-            *c.entry((indices[vo + i], indices[vo + j])).or_default() += v;
+            if let (Some(i), Some(j)) = (indices[vo + i], indices[vo + j]) {
+                *c.entry((i, j)).or_default() += v;
+            }
         }
         for (i, j, v) in m.resistance_ohm {
             r.insert((io + i, io + j), v);
@@ -362,15 +528,24 @@ pub fn build(topology: &Topology, budget: Option<&Budget>, start: Instant) -> Re
     let k = candidates.len();
     let mut modes = vec![];
     if k > 0 {
-        let differences: Vec<Vec<_>> = topology
-            .connections
-            .iter()
-            .map(|[a, b]| {
-                candidates
-                    .iter()
-                    .map(|v| v[port_nodes[*a]] - v[port_nodes[*b]])
-                    .collect()
+        let differences: Vec<Vec<f64>> = (0..total_v)
+            .filter_map(|i| {
+                let r = root(&parent, i);
+                if r == i {
+                    return None;
+                }
+                Some(
+                    candidates
+                        .iter()
+                        .map(|v| v[i] - if r == ground { 0. } else { v[r] })
+                        .collect(),
+                )
             })
+            .chain(
+                (0..total_v)
+                    .filter(|&i| root(&parent, i) == root(&parent, ground))
+                    .map(|i| candidates.iter().map(|v| v[i]).collect()),
+            )
             .collect();
         let gram = Mat::from_fn(k, k, |i, j| {
             differences.iter().map(|v| v[i] * v[j]).sum::<f64>()
@@ -395,7 +570,7 @@ pub fn build(topology: &Topology, budget: Option<&Budget>, start: Instant) -> Re
                 let mut reduced = vec![0.; potential_nodes.len()];
                 let mut seen = vec![false; potential_nodes.len()];
                 for (i, &v) in full.iter().enumerate() {
-                    let j = indices[i];
+                    let Some(j) = indices[i] else { continue };
                     if seen[j] && (reduced[j] - v).abs() > 1e-10 {
                         return Err(fail("COUPLED_GAUGE", "Unresolved assembly nullspace"));
                     }
@@ -413,16 +588,12 @@ pub fn build(topology: &Topology, budget: Option<&Budget>, start: Instant) -> Re
     };
     let model = Model {
         format: "coupled-rlc".into(),
-        reference_topology: "grounded".into(),
+        reference_topology: if grounded { "grounded" } else { "infinity" }.into(),
         potential_nodes,
         current_dofs,
         incidence: entries(a),
-        port_incidence: topology
-            .ports
-            .iter()
-            .enumerate()
-            .map(|(i, p)| (indices[port_nodes[p.index]], i, 1.))
-            .collect(),
+        port_incidence,
+        port_terminals: mapped.then_some(port_terminals),
         resistance_ohm: entries(r),
         inductance_h: entries(l),
         capacitance_f: entries(c),
@@ -441,6 +612,8 @@ pub fn build(topology: &Topology, budget: Option<&Budget>, start: Instant) -> Re
     };
     super::super::deadline(start, budget, "Temporal composition assembly")?;
     Ok(Built {
+        assembly_plan: preplan,
+        recovery,
         model,
         fit,
         conditional,

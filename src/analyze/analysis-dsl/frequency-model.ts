@@ -9,9 +9,10 @@ const temporal=z.strictObject({method:z.literal('passive-relaxation'),modeTransf
 const base={referenceTopology:z.literal('common'),nature:z.enum(['passive','active','unspecified']),temporal:temporal.optional()};
 const entry=z.tuple([z.number().int().nonnegative(),z.number().int().nonnegative(),z.number().finite()]);
 const matrix=z.array(entry).max(4_000_000);
+const terminal=z.union([z.strictObject({node:S.text}),z.strictObject({reference:z.literal('ground')})]);
 const data=z.discriminatedUnion('format',[
  z.strictObject({format:z.literal('delayed-scattering'),referenceTopology:z.literal('common'),nature:z.literal('passive'),referenceOhm:reference,scattering:z.array(z.array(z.number().finite()).max(16)).min(1).max(16),delayS:z.number().finite().nonnegative()}),
- z.strictObject({format:z.literal('coupled-rlc'),referenceTopology:z.enum(['grounded','infinity']),potentialNodes:z.array(S.text).min(1).max(1024),currentDofs:z.array(S.text).max(1536),incidence:matrix,portIncidence:matrix,resistanceOhm:matrix,inductanceH:matrix,capacitanceF:matrix,conservedPotentialModes:z.array(z.array(z.number().finite()).max(1024)).max(1024).optional()}),
+ z.strictObject({format:z.literal('coupled-rlc'),referenceTopology:z.enum(['grounded','infinity']),potentialNodes:z.array(S.text).min(1).max(1024),currentDofs:z.array(S.text).max(1536),incidence:matrix,portIncidence:matrix,resistanceOhm:matrix,inductanceH:matrix,capacitanceF:matrix,conservedPotentialModes:z.array(z.array(z.number().finite()).max(1024)).max(1024).optional(),portTerminals:z.array(z.strictObject({positive:terminal,negative:terminal})).min(1).max(16).optional()}),
  z.strictObject({...base,format:z.literal('touchstone'),content:z.string().min(1)}),
  z.strictObject({...base,format:z.literal('network-parameters'),representation:z.enum(['S','Z','Y']),frequenciesHz:z.array(z.number().finite().nonnegative()).min(1),parameters:z.array(z.array(z.array(z.strictObject({real:z.number().finite(),imaginary:z.number().finite()})))),referenceOhm:reference.optional()}),
 ]);
@@ -36,6 +37,7 @@ export function networkResource(input:unknown):NetworkResource{
  for(const axis of [d.frequenciesHz,d.parameters])if(Array.isArray(axis)&&(axis.length>100000||axis.length>262144/n/n))throw new S.AnalysisDslError('NETWORK_BUDGET','Resource frequency/coefficient cap exceeded');
  if(Array.isArray(d.parameters)&&d.parameters.some(m=>!Array.isArray(m)||m.length!==n||m.some(r=>!Array.isArray(r)||r.length!==n)))S.invalid('Matrix dimensions must match Resource.ports');
  if(d.format==='coupled-rlc'){
+  if(Array.isArray(d.portTerminals)&&d.portTerminals.length!==n)S.invalid('One physical contact pair per resource port required');
   const arrays=['incidence','portIncidence','resistanceOhm','inductanceH','capacitanceF'];
   if(arrays.reduce((sum,k)=>sum+(Array.isArray(d[k])?d[k].length:0),0)>4_000_000)throw new S.AnalysisDslError('NETWORK_BUDGET','Coupled coefficient cap exceeded before cloning');
  }

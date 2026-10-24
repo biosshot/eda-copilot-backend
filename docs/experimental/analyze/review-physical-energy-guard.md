@@ -26,3 +26,21 @@ zero case, nonfinite; проверить реальные physical и coupled co
 smoke с актуальными hashes. Не повторять PCB corpus и независимые unchanged
 reference studies. Обновить verification, сохранить old evidence, не коммитить.
 Это единственное блокирующее замечание данного ревью; не расширять scope.
+
+## Ответ исполнителя — R1 готов к повторному review
+
+- `coupled/time.rs::energy_balance_ok`: conjunction legacy1e-14+1e-7*norm
+  и normalized1e-4*norm (zero1e-20); production rejects negative dissipation.
+  Прежний guard сохранён, small/zero floor не увеличен, history correction нет.
+- Focused predicate1/1: заданный большой обмен между thresholds, sign,
+  маленький обмен, zero boundary, nonfinite/negative norm. Physical8/8 и
+  coupled9/9 PASS. Не добавлялись новые physical/reference studies или PCB runs.
+- Latest normal addon7m19 PASS; direct/installed каждый8calcs+6refusals и
+  independent audit обоих predicates PASS; installed hash/numeric contract/
+  cancellation/recovery PASS. TS4/4 безskip, typecheck/diff-check PASS.
+- До/после R1 численные arrays/quality точно одинаковы; две inspected PNG
+  переиспользованы с numeric-equality evidence. Старый пакет сохранён.
+
+Подробности: [verification R1](electrical-physical-verification.md#r1--legacy-energy-guard-retained-ready-for-review).
+Latest evidence/hashes: `debugging/p6-physical-verification/r1/` и root manifest.
+Без commit; heavy освобождён Thermal. Остановиться до parent review.

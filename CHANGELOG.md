@@ -3,6 +3,11 @@
 ## Unreleased
 
 - Accept the bounded capacitance coupon evidence (4.42% independent full-matrix error) and authorize its internal Rust port. Approve the explicit physical-terminal P6 design; production P7 and Thermal acceptance remain open.
+### Physical electrical conductor connections
+
+- Add explicit positive/negative physical terminal maps for full coupled RLC models and both/single contact selection through existing connect. Preserve exterior capacitance, nonzero common charge, physical initial states and zero-energy gauges in the existing CPU/F64 backend.
+- Reject unknown physical returns/reduced traces and physical delay joins; retain legacy grounded connections. Report conductor recovery/charge and independent energy accounting. Block-diagonal assembly does not extract absent intermodel mutual C/L; nearby coupled objects require a jointly extracted model. Placement F32/GPU remains unchanged.
+- Keep the legacy coupled energy guard together with the normalized physical guard, so neither large-exchange nor small/zero-energy acceptance is weakened.
 
 ### Mixed electrical delay and RLC networks
 

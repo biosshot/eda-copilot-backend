@@ -186,7 +186,7 @@ export function createAnalysisApi(input: DslInput, limits: Limits, changed: (upd
         return descriptor('network', p, Object.keys(p.ports)) as T.Network;
       },
       connect(v: Parameters<T.AnalysisContext['connect']>[0]) {
-        const p = S.parse(z.strictObject({ networks: z.array(S.handle.refine(h => ['network', 'connect', 'line'].includes(h.kind), 'Expected network/line handle')).min(1), connections: z.array(z.strictObject({ from: S.port, to: S.port })), ports: z.record(S.text, S.port) }), json(v));
+        const p = S.parse(z.strictObject({ networks: z.array(S.handle.refine(h => ['network', 'connect', 'line'].includes(h.kind), 'Expected network/line handle')).min(1), connections: z.array(z.strictObject({ from: S.port, to: S.port, contacts:z.enum(['both','positive','negative']).optional() })), ports: z.record(S.text, S.port) }), json(v));
         validate(p);
         const ids = new Set(p.networks.map(n => n.id));
         for (const port of [...p.connections.flatMap(c => [c.from, c.to]), ...Object.values(p.ports)]) {

@@ -208,3 +208,42 @@ the descriptor's mathematical time solution nor a small residual proves field
 extraction accuracy. Remaining limits and future P8/P11 dependencies are listed
 in the verification matrix; the original P6 stage is not labelled universally
 complete from these supported subsets.
+# Physical conductor composition extension (2026-10-24)
+
+Full unreduced coupled RLC Resources may declare `data.portTerminals` in
+Resource.ports order, each with positive/negative `{node: potentialNodeName}`.
+Only grounded Resources may explicitly author `{reference:'ground'}` as a
+physical return. The exact B column must equal positive minus negative trace.
+Existing `a.connect` welds both contacts by default; optional connection
+`contacts:'positive'|'negative'|'both'` requires explicitly mapped coupled
+endpoints. A one-contact weld does not constrain the other conductor or imply
+equality of differential port voltages. External ports shorted by weld reject.
+
+The existing coupled composer applies conductor congruence to full C/A/B,
+retains independent branch R/L blocks and recovers original conductor names.
+It does not extract absent intermodel mutual capacitance/inductance. Physically
+close objects with substantial mutual coupling require a jointly extracted
+model; a wire weld is not EM extraction. General B/reduced traces and delay
+ports without physical conductor/return/charge trace remain unsupported for
+physical composition. Legacy grounded/common-return graphs remain supported.
+
+SI `.initial({kind:'physical-state',steady:false,potentialsV:[{instanceId,node,
+value}],currentsA:[{instanceId,dof,value}]})` supplies every retained node and
+branch DOF after topology selection. Welded potentials must agree; snapshots
+are not averaged. Explicit initial state allows an unforced passive decay
+without drivers/receivers. `steady:true` must satisfy the assembled steady
+equations. Floating physical charge cannot silently default to zero; supply
+the complete physical state. Only proven zero-energy null modes are gauges.
+`numerics.maxStepS` is a coupled descriptor SI step cap independent of output
+cadence; other electrical backends reject this option.
+
+Reports retain conductor recovery, potential/charge traces, initial/final
+charges, gauges, raw work-loss-storage balance and separate BE dissipation.
+The energy exchange gate requires both the legacy `1e-14 + 1e-7*norm` bound
+and the normalized `1e-4*norm` bound (exact zero norm uses1e-20 J), with
+nonnegative physical/numerical dissipation. A tiny late transient exchange on a large charged rail may be
+unresolvable in F64 and explicitly reject with `COUPLED_ENERGY`. No energy
+floor relaxation, hidden ground or charge reset makes that continuation pass.
+Physical-state seed, contact selections and recovery enter continuation
+identity. Analysis remains CPU/F64; placement F32/GPU is unchanged. This
+extension does not close general P6, P8 or P11.

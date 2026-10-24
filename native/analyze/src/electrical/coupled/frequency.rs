@@ -4,7 +4,7 @@ use super::*;
 use crate::electrical::frequency::{math, Request};
 pub fn calculate(request: &Request) -> Result<Value> {
     if request.instances.len() != 1 || !request.connections.is_empty() {
-        return Err(fail("COUPLED_TOPOLOGY","Descriptor frequency composition requires explicit physical terminal mapping; use one complete block"));
+        return assembled(request);
     }
     let instance = &request.instances[0];
     let resource = &instance.model;
@@ -126,15 +126,140 @@ pub fn calculate(request: &Request) -> Result<Value> {
     result["conditional"] = json!(conditional);
     result["bandHz"] = json!(band);
     result["interpolation"] = json!([]);
-    result["provenance"] = json!([{"instanceId":instance.id,"resource":resource,"mapping":instance.ports,"sourcePorts":resource.ports,"sourceRepresentation":"coupled-rlc","sourceReferenceOhm":null,"bandHz":band,"nature":"passive","normalization":{"physicalDescriptor":true,"referenceTopology":model.reference_topology}}]);
+    result["provenance"] = json!([{"instanceId":instance.id,"resource":resource,"mapping":instance.ports,"sourcePorts":resource.ports,"sourceRepresentation":"coupled-rlc","sourceValidity":resource.validity,"allowedAnalyses":resource.analyses,"sourceReferenceOhm":null,"bandHz":band,"nature":"passive","normalization":{"physicalDescriptor":true,"referenceTopology":model.reference_topology}}]);
     result["conversionQuality"] = json!(quality);
     result["validityLimitations"]=json!("Exact evaluation of supplied full RLC model inside declared validity band; no PCB extraction accuracy inferred. Physical terminal mapping retained, no implicit common return.");
+    Ok(result)
+}
+/// Same physical conductor composer as time, with frequency permissions/bands.
+fn assembled(request: &Request) -> Result<Value> {
+    let start = Instant::now();
+    if request
+        .instances
+        .iter()
+        .any(|i| i.model.data["format"] != "coupled-rlc")
+    {
+        return Err(fail(
+            "COUPLED_TERMINAL_MAP",
+            "Physical descriptor composition requires coupled models with known terminal traces",
+        ));
+    }
+    let bands = request
+        .instances
+        .iter()
+        .map(|i| crate::electrical::frequency::declared_band(&i.model))
+        .collect::<Result<Vec<_>>>()?;
+    let band = [
+        bands.iter().map(|b| b[0]).fold(0., f64::max),
+        bands.iter().map(|b| b[1]).fold(f64::MAX, f64::min),
+    ];
+    if request
+        .frequencies
+        .iter()
+        .any(|f| *f < band[0] || *f > band[1])
+    {
+        return Err(fail(
+            "COUPLED_BAND",
+            "Requested point outside source band intersection",
+        ));
+    }
+    let topology = composition::Topology {
+        instances: request.instances.clone(),
+        connections: request.connections.clone(),
+        connection_contacts: request.connection_contacts.clone(),
+        ports: request.ports.clone(),
+    };
+    let built = composition::build_for(
+        &topology,
+        request.budget.as_ref(),
+        start,
+        "networkParameters",
+    )?;
+    let outputs = request
+        .frequencies
+        .len()
+        .saturating_mul(built.ports.len().saturating_pow(2))
+        .saturating_mul(256);
+    composition::remaining_budget(
+        request.budget.as_ref(),
+        built
+            .source_memory
+            .saturating_add(built.assembly_plan)
+            .saturating_add(outputs),
+    )?;
+    let mut inner = request.clone();
+    inner.instances = vec![crate::electrical::frequency::Instance {
+        id: "assembled".into(),
+        ports: built.ports.clone(),
+        model: crate::electrical::frequency::Resource {
+            id: "assembled".into(),
+            kind: "network".into(),
+            ports: built.ports.clone(),
+            data: json!(built.model),
+            source: Some("Physical conductor congruence assembly".into()),
+            validity: None,
+            analyses: Some(vec!["networkParameters".into()]),
+        },
+    }];
+    inner.connections.clear();
+    inner.connection_contacts = None;
+    inner.ports = inner
+        .ports
+        .iter()
+        .enumerate()
+        .map(|(i, p)| crate::electrical::frequency::OutputPort {
+            name: p.name.clone(),
+            index: i,
+        })
+        .collect();
+    let mut budget = composition::remaining_budget(request.budget.as_ref(), built.source_memory)?;
+    budget.max_seconds = Some(
+        request
+            .budget
+            .as_ref()
+            .and_then(|b| b.max_seconds)
+            .unwrap_or(120.)
+            - start.elapsed().as_secs_f64(),
+    );
+    if budget.max_seconds.unwrap() <= 0. {
+        return Err(fail(
+            "NETWORK_DEADLINE",
+            "Physical assembly exhausted shared deadline",
+        ));
+    }
+    inner.budget = Some(budget);
+    let mut result = calculate(&inner)?;
+    result["physicalRecovery"] = json!(built.recovery);
+    result["assembledModel"] = json!(built.model);
+    result["conditional"] = json!(built.conditional);
+    result["bandHz"] = json!(band);
+    result["provenance"]=json!(request.instances.iter().zip(bands).map(|(i,b)|json!({"instanceId":i.id,"resource":i.model,"mapping":i.ports,"sourcePorts":i.model.ports,"sourceRepresentation":"coupled-rlc","sourceValidity":i.model.validity,"allowedAnalyses":i.model.analyses,"sourceReferenceOhm":null,"bandHz":b,"nature":"passive","normalization":{"physicalDescriptor":true,"referenceTopology":i.model.data["referenceTopology"]}})).collect::<Vec<_>>());
+    result["memoryPlanBytes"] = json!(
+        result["memoryPlanBytes"]
+            .as_u64()
+            .unwrap_or(0)
+            .max(built.assembly_plan as u64)
+            + built.source_memory as u64
+            + outputs as u64
+    );
+    result["validityLimitations"]=json!("Physical conductor weld of block-diagonal supplied models; absent intermodel mutual C/L is not extracted. Close coupled objects require a jointly extracted model. AC increments do not determine initial common charge.");
     Ok(result)
 }
 /// Convert only explicit grounded canonical descriptors at the requested points.
 /// Their reference loads define S, not additional physical loads in composition.
 /// All subsequent pair joins use the existing passive wave composition backend.
 pub(crate) fn common_tables(request: &Request, start: Instant) -> Result<(Request, usize, f64)> {
+    if request.connection_contacts.is_some()
+        || request
+            .instances
+            .iter()
+            .any(|i| i.model.data.get("portTerminals").is_some())
+    {
+        return Err(fail(
+            "COUPLED_TERMINAL_MAP",
+            "Delay/common wave ports lack physical return/charge trace for mapped joins",
+        ));
+    }
     let p = request
         .instances
         .iter()

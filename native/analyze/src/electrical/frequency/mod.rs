@@ -40,6 +40,7 @@ pub struct Instance {
 pub struct Request {
     pub instances: Vec<Instance>,
     pub connections: Vec<[usize; 2]>,
+    pub connection_contacts: Option<Vec<super::coupled::physical::Contacts>>,
     pub ports: Vec<OutputPort>,
     pub frequencies: Vec<f64>,
     pub representation: String,
@@ -391,6 +392,18 @@ pub fn run(r: Request) -> Value {
     }
 }
 fn calculate(r: &Request, start: Instant) -> Result<Value> {
+    if r.connection_contacts.is_some()
+        && (r.connection_contacts.as_ref().unwrap().len() != r.connections.len()
+            || r.instances.iter().any(|i| {
+                i.model.data["format"] != "coupled-rlc"
+                    || i.model.data.get("portTerminals").is_none()
+            }))
+    {
+        return Err(fail(
+            "COUPLED_TERMINAL_MAP",
+            "contacts requires mapped coupled endpoints and one selection per pair",
+        ));
+    }
     if r.instances
         .iter()
         .any(|i| i.model.data["format"] == "coupled-rlc")

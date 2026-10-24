@@ -36,6 +36,7 @@ pub struct Numerics {
     pub relative_tolerance: Option<f64>,
     pub absolute_tolerance: Option<f64>,
     pub max_iterations: Option<usize>,
+    pub max_step_s: Option<f64>,
 }
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
@@ -223,6 +224,7 @@ mod deadline_tests {
                     ports: vec!["p".into()],
                 })
                 .collect(),
+            connection_contacts: None,
             connections: vec![],
             ports: vec![frequency::OutputPort {
                 name: "p".into(),
@@ -257,6 +259,7 @@ mod deadline_tests {
         .unwrap();
         let topology = coupled::composition::Topology {
             instances: vec![],
+            connection_contacts: None,
             connections: vec![],
             ports: vec![],
         };

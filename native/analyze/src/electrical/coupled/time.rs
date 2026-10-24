@@ -27,6 +27,15 @@ pub struct Request {
     pub numerics: Option<Numerics>,
     pub budget: Option<Budget>,
 }
+/// Both contracts apply: the normalized physical gate must never weaken the
+/// legacy absolute/relative guard at large exchange. Norm uses nonnegative loss.
+fn energy_balance_ok(balance: f64, norm: f64) -> bool {
+    balance.is_finite()
+        && norm.is_finite()
+        && norm >= 0.
+        && balance.abs() <= 1e-14 + 1e-7 * norm
+        && balance.abs() <= if norm == 0. { 1e-20 } else { 1e-4 * norm }
+}
 fn deadline(start: Instant, budget: Option<&Budget>) -> Result<()> {
     super::super::deadline(start, budget, "Descriptor time")
 }
@@ -84,8 +93,7 @@ pub(crate) fn validate_bindings(
     ports: usize,
     prefix: &str,
 ) -> Result<()> {
-    if drivers.is_empty()
-        || drivers.len() > 16
+    if drivers.len() > 16
         || receivers.len() > 32
         || drivers
             .iter()
@@ -169,6 +177,9 @@ impl System {
         })
         .self_adjoint_eigen(Side::Lower)
         .map_err(|e| fail("COUPLED_INITIAL", format!("{e:?}")))?;
+        if (0..n).all(|i| eigen.S()[i] >= 1e-14) {
+            return Ok(initial.to_vec());
+        }
         let mut matrix = Matrix::new();
         let mut b = vec![0.; n];
         for row in 0..n {
@@ -310,11 +321,43 @@ pub fn solve(request: Request) -> Result<Value> {
         ports: port_names,
         band,
         source_memory,
+        recovery,
+        assembly_plan,
     } = built;
     let ports = port_names.len();
-    let identity =
-        serde_json::to_string(&(&model, &port_names, &request.drivers, &request.receivers))
-            .map_err(|e| fail("COUPLED_INPUT", e))?;
+    let physical_initial = request.initial.as_ref().and_then(|v| {
+        if v["kind"] == "physical-state" {
+            Some(v)
+        } else {
+            v.get("physicalInitial").filter(|v| !v.is_null())
+        }
+    });
+    if physical_initial.is_some_and(|v| {
+        v["potentialsV"]
+            .as_array()
+            .is_none_or(|a| a.len() != recovery.potentials.len())
+            || v["currentsA"]
+                .as_array()
+                .is_none_or(|a| a.len() != recovery.currents.len())
+    }) {
+        return Err(fail(
+            "COUPLED_INITIAL_CHARGE",
+            "Complete bounded initial physical state required",
+        ));
+    }
+    let identity = serde_json::to_string(&(
+        &model,
+        &port_names,
+        &request.drivers,
+        &request.receivers,
+        &recovery,
+        &physical_initial,
+        &request
+            .topology
+            .as_ref()
+            .map(|t| (&t.connections, &t.connection_contacts)),
+    ))
+    .map_err(|e| fail("COUPLED_INPUT", e))?;
     validate_bindings(&request.drivers, &request.receivers, ports, "COUPLED")?;
     let fit_max = if let Some(report) = &fit {
         Some(
@@ -370,8 +413,41 @@ pub fn solve(request: Request) -> Result<Value> {
             if request.initial.as_ref().is_some_and(|v| v != "steady") {
                 return Err(fail("COUPLED_INITIAL", "Unknown initial condition"));
             }
+            if recovery.mapped
+                && system.null_modes()?.iter().any(|q| {
+                    let mut v = vec![0.; n];
+                    v[..system.nv].copy_from_slice(q);
+                    multiply(&system.linear.e, &v, n).iter().any(|v| *v != 0.)
+                })
+            {
+                return Err(fail(
+                    "COUPLED_INITIAL_CHARGE",
+                    "Floating physical charge requires explicit assembled physical-state",
+                ));
+            }
             let rhs = source(&system, &request.drivers, ports, 0.);
             (0., system.solve(0., rhs, &vec![0.; n], &mut stats)?)
+        }
+        Some(state) if state["kind"] == "physical-state" => {
+            let (x, steady) = recovery.initial(state, n)?;
+            let rhs = source(&system, &request.drivers, ports, 0.);
+            let initialized = if steady {
+                system.solve(0., rhs, &x, &mut stats)?
+            } else {
+                system.consistent(&x, &rhs, &mut stats)?
+            };
+            if steady
+                && initialized
+                    .iter()
+                    .zip(&x)
+                    .any(|(a, b)| (a - b).abs() > 1e-12 + 1e-9 * a.abs().max(b.abs()))
+            {
+                return Err(fail(
+                    "COUPLED_INITIAL",
+                    "Physical state is not an assembled steady solution",
+                ));
+            }
+            (0., initialized)
         }
         Some(state) => {
             if state["identity"] != identity {
@@ -402,12 +478,32 @@ pub fn solve(request: Request) -> Result<Value> {
     let initial_time = t;
     deadline(start, request.budget.as_ref())?;
     let initial_energy = system.energy(&x);
-    let samples = ((time.stop_s - t) / time.sample_step_s).ceil() as usize + 1;
+    if !initial_energy.is_finite() || x.iter().any(|v| !v.is_finite()) {
+        return Err(fail("COUPLED_NONFINITE", "Nonfinite initial state/energy"));
+    }
+    let charge =
+        |system: &System, x: &[f64]| multiply(&system.linear.e, x, n)[..system.nv].to_vec();
+    let initial_charge = charge(&system, &x);
+    let gauge_count = system.constraints(false, &x)?.len();
+    let capture_physical = recovery.mapped || physical_initial.is_some();
+    let mut conductor_potentials = if capture_physical {
+        vec![x[..system.nv].to_vec()]
+    } else {
+        vec![]
+    };
+    let mut conductor_charges = if capture_physical {
+        vec![initial_charge.clone()]
+    } else {
+        vec![]
+    };
+    let samples = super::super::solve::output_samples(time, t)?;
     let output_plan = samples
-        .saturating_mul(ports + request.drivers.len() + 4)
+        .saturating_mul(
+            ports + request.drivers.len() + if capture_physical { 2 * system.nv } else { 0 } + 4,
+        )
         .saturating_mul(64);
     if samples > 100001
-        || (system.memory_plan + output_plan + source_memory) as f64
+        || (system.memory_plan.max(assembly_plan) + output_plan + source_memory) as f64
             > request
                 .budget
                 .as_ref()
@@ -477,6 +573,27 @@ pub fn solve(request: Request) -> Result<Value> {
         .iter()
         .map(|d| d.waveform.max_step())
         .fold((time.stop_s - t) / 100., f64::min);
+    let maximum_step = request
+        .numerics
+        .as_ref()
+        .and_then(|v| v.max_step_s)
+        .unwrap_or(f64::INFINITY);
+    if maximum_step <= 0. || maximum_step.is_nan() || maximum_step == f64::NEG_INFINITY {
+        return Err(fail(
+            "COUPLED_NUMERICS",
+            "maxStepS must be finite positive when provided",
+        ));
+    }
+    if request
+        .numerics
+        .as_ref()
+        .and_then(|v| v.max_step_s)
+        .is_some_and(|v| !v.is_finite())
+    {
+        return Err(fail("COUPLED_NUMERICS", "maxStepS must be finite"));
+    }
+    let max_h = max_h.min(maximum_step);
+    let mut max_accepted_h = 0_f64;
     let mut h = seed;
     let (mut work, mut loss, mut numerical, mut maxerr) = (0., 0., 0., 0_f64);
     while t < time.stop_s {
@@ -530,6 +647,7 @@ pub fn solve(request: Request) -> Result<Value> {
         }
         maxerr = maxerr.max(err);
         stats.accepted_steps += 1;
+        max_accepted_h = max_accepted_h.max(h);
         let mut previous = &x;
         for (y, at) in [(&half, t + h / 2.), (&fine, t + h)] {
             let voltage = system.port_voltages(y, ports);
@@ -566,6 +684,10 @@ pub fn solve(request: Request) -> Result<Value> {
                     .collect(),
             );
             energies.push(system.energy(&state));
+            if capture_physical {
+                conductor_potentials.push(state[..system.nv].to_vec());
+                conductor_charges.push(charge(&system, &state));
+            }
             axis.push(out);
             outputs.push(voltage);
             next_sample += 1;
@@ -584,16 +706,15 @@ pub fn solve(request: Request) -> Result<Value> {
     let energy_change = system.energy(&x) - initial_energy;
     deadline(start, request.budget.as_ref())?;
     let balance = work - loss - energy_change - numerical;
-    if balance.abs()
-        > 1e-14 + 1e-7 * (work.abs() + loss.abs() + energy_change.abs() + numerical.abs())
-    {
+    let norm = work.abs() + loss + energy_change.abs() + numerical;
+    if loss < 0. || numerical < 0. || !energy_balance_ok(balance, norm) {
         return Err(fail(
             "COUPLED_ENERGY",
-            "BE discrete work/loss/storage/numerical-dissipation balance failed",
+            format!("BE work/loss/storage balance unresolved: defect {balance} J, exchange norm {norm} J; no energy-floor relaxation"),
         ));
     }
     Ok(
-        json!({"status":"complete","diagnostics":[],"axis":axis,"portVoltages":outputs,"driverCurrentsA":currents,"energyJ":energies,"fit":fit,"conditional":conditional,"counters":stats,"quality":{"relativeResidual":system.residual,"kclAbsA":system.kcl,"maximumLocalErrorRatio":maxerr,"workJ":work,"dissipatedJ":loss,"storedEnergyChangeJ":energy_change,"beNumericalDissipationJ":numerical,"energyBalanceJ":balance},"finalState":{"kind":"coupled-state","identity":identity,"timeS":t,"x":x},"elapsedMs":start.elapsed().as_secs_f64()*1000.,"memoryPlanBytes":system.memory_plan+output_plan+source_memory,"assumptions":["Full assembled descriptor; charge evolves with excitation; no per-island neutrality imposed","Continuous finite fronts, finite Thevenin drivers and passive RC receiver loads","Finite-band front screening is conditional and does not prove absence of source spectrum outside the authored band","Backward Euler step doubling; local error control is not independent global time convergence","Output is interpolation over accepted half steps; sampled extrema are not continuous extrema"]}),
+        json!({"status":"complete","diagnostics":[],"axis":axis,"portVoltages":outputs,"driverCurrentsA":currents,"energyJ":energies,"conductorPotentialsV":conductor_potentials,"conductorChargesC":conductor_charges,"physicalRecovery":recovery,"initialConductorChargesC":initial_charge,"finalConductorChargesC":charge(&system,&x),"zeroEnergyGauges":gauge_count,"fit":fit,"conditional":conditional,"counters":stats,"quality":{"relativeResidual":system.residual,"kclAbsA":system.kcl,"maximumLocalErrorRatio":maxerr,"workJ":work,"dissipatedJ":loss,"storedEnergyChangeJ":energy_change,"beNumericalDissipationJ":numerical,"energyBalanceJ":balance,"rawEnergyBalanceJ":balance+numerical,"energyNormalizationJ":norm,"normalizedEnergyBalance":if norm==0.{0.}else{balance.abs()/norm},"maximumAcceptedStepS":max_accepted_h},"finalState":{"kind":"coupled-state","physicalInitial":physical_initial,"identity":identity,"timeS":t,"x":x},"elapsedMs":start.elapsed().as_secs_f64()*1000.,"memoryPlanBytes":system.memory_plan.max(assembly_plan)+output_plan+source_memory,"assumptions":["Full assembled descriptor; charge evolves with excitation; no per-island neutrality imposed","Block-diagonal supplied models omit intermodel mutual C/L; close coupled objects require a jointly extracted model. Physical weld is not EM extraction","Continuous finite fronts, finite Thevenin drivers and passive RC receiver loads","Finite-band front screening is conditional and does not prove absence of source spectrum outside the authored band","Backward Euler step doubling; local error control is not independent global time convergence","Output is interpolation over accepted half steps; sampled extrema are not continuous extrema"]}),
     )
 }
 pub fn run(request: Request) -> Value {
@@ -608,6 +729,26 @@ pub fn run(request: Request) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn energy_guard_preserves_legacy_large_exchange_and_strict_small_zero_cases() {
+        // R1 counterexample: normalized-only accepts this, legacy must reject.
+        assert!(1e-8 <= 1e-4 * 1e-3);
+        assert!(!energy_balance_ok(1e-8, 1e-3));
+        assert!(!energy_balance_ok(-1e-8, 1e-3));
+        assert!(energy_balance_ok(5e-11, 1e-3));
+        // Do not restore the old small-energy floor as an alternative gate.
+        assert!(1e-15 <= 1e-14 + 1e-7 * 1e-12);
+        assert!(!energy_balance_ok(1e-15, 1e-12));
+        assert!(energy_balance_ok(5e-17, 1e-12));
+        assert!(energy_balance_ok(0., 0.));
+        assert!(energy_balance_ok(1e-20, 0.));
+        assert!(!energy_balance_ok(2e-20, 0.));
+        for invalid in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert!(!energy_balance_ok(invalid, 1.));
+            assert!(!energy_balance_ok(0., invalid));
+        }
+        assert!(!energy_balance_ok(0., -1.));
+    }
     #[test]
     fn balanced_currents_evolve_island_charges_and_preserve_nonzero_total_charge() {
         let c1 = 2.225300110895741e-13;

@@ -367,5 +367,43 @@ matrix reserve<128 KiB, output traces<32 MiB при 10001 samples; всё вме
 | P7 | Producer contract/geometry accuracy отдельно, P6 time backend не дублировать |
 | P8/P11 | Не закрыты и этим checkpoint не проверены |
 
-Checkpoint готов к review; production edits, новые builds/solves и commits
-до review не выполняются.
+Историческая остановка design checkpoint снята parent approval8a8369e выше.
+
+## Implementation handoff — 2026-10-24
+
+Bounded physical-terminal package готов к parent review, без commit.
+Результаты: [electrical-physical-verification.md](electrical-physical-verification.md);
+ignored evidence: `debugging/p6-physical-verification/manifest.json` и
+`metrics.json`, исходные JSON, native logs, installed package, две inspected PNG.
+
+- Existing conductor composer применяет full C/A/B congruence, explicit ground
+  recovery и both/single contact weld; unknown returns/traces/delay joins и
+  shorted external ports адресно отвергаются. Отсутствующие intermodel mutual
+  C/L не извлекаются; это явно указано в semantics, source и reports.
+- Physical initial state/charge, exact zero-energy gauges, continuation seed,
+  source permissions/domains и hash links сохранены. SI initial допускает
+  passive unforced decay; maxStepS — только coupled descriptor. Старый grounded
+  path и null-seed continuation проверены. Output axis переиспользует existing
+  electrical output_samples, без duplicate final sample.
+- Native physical8/8, coupled9/9, mixed13/13, delay4/4, admission2/2; TS4/4
+  безskip, independent saved audit и11corruptions; typecheck/build PASS.
+- Direct DSL и installed compiled worker:8 calculations+6refusals каждый,
+  cancellation/recovery и normal shared-addon f32-rte-ftz-v1 PASS. Max error
+  106.490µV→53.194µV; charge drift8.934e-23C, normalized energy2.118e-14.
+- Две PNG просмотрены; exact full model/source/artifact hashes в manifest.
+  Late continuation с tiny energy exchange на большом charged rail может
+  честно reject COUPLED_ENERGY: floor/charge/gauge не подгонялись радиacceptance.
+
+Heavy освобождён P7. Предыдущие ignored evidence сохранены; placement F32/GPU,
+main и другие worktrees не изменялись. P6 arbitrary joins/general B/reduced
+trace/infinity+delay и P8/P11 не закрыты. Остановиться до parent review.
+
+### R1 follow-up — 2026-10-24
+
+Единственный blocking review805f183 исправлен: legacy energy guard сохранён
+conjunction с normalized guard, dissipation nonnegative, small/zero floor не
+ослаблен. Predicate1/1 +physical8/8 +coupled9/9; latest addon/direct/installed
+и TS4/4 PASS. До/после численные arrays/quality точно одинаковы; old evidence
+сохранены. Latest hashes — root manifest, новые результаты — `r1/`.
+См. [R1 response](review-physical-energy-guard.md) и verification R1 section.
+Scope только R1; без PCB reruns/commit. Heavy освобождён Thermal, остановиться.

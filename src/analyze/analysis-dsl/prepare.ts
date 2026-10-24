@@ -100,7 +100,7 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
   }
   if (kind === 'tdr') required(['referenceOhm', 'riseS', 'termination', 'time']);
   if (kind === 'si') {
-    exclusive(['channels', 'network'], config, true); required(['drivers', 'receivers', 'time']);
+    exclusive(['channels', 'network'], config, true); required(config.network && config.initial!==undefined?['time']:['drivers', 'receivers', 'time']);
     const targets = config.channels as T.Handle[] | undefined ?? (config.network ? [config.network as T.Handle] : []);
     for (const t of targets) if (t.kind === 'line' && !descriptionInput(state, t)?.lengthMm) issue('MISSING_FIELD', 'Line lengthMm is required for SI');
     for (const [i, binding] of [...((config.drivers ?? []) as T.Driver[]), ...((config.receivers ?? []) as T.Receiver[])].entries()) {

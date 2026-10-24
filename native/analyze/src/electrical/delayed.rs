@@ -371,6 +371,12 @@ fn add_event(events: &mut BTreeSet<u64>, at: f64, stop: f64) -> Result<()> {
     Ok(())
 }
 pub fn time(request: coupled::time::Request, start: Instant) -> Result<Value> {
+    if request.drivers.is_empty() {
+        return Err(fail(
+            "DELAY_BINDING",
+            "Finite Thevenin driver required for delayed network",
+        ));
+    }
     super::deadline(start, request.budget.as_ref(), "Delayed model admission")?;
     if request.initial.as_ref().is_some_and(|v| v != "steady") {
         return Err(fail("DELAY_INITIAL","Only explicit constant steady prehistory is supported; arbitrary incoming waves/continuation are unsupported"));
@@ -384,6 +390,7 @@ pub fn time(request: coupled::time::Request, start: Instant) -> Result<Value> {
                     model: resource.clone(),
                     ports: resource.ports.clone(),
                 }],
+                connection_contacts: None,
                 connections: vec![],
                 ports: resource
                     .ports
@@ -400,6 +407,24 @@ pub fn time(request: coupled::time::Request, start: Instant) -> Result<Value> {
         (None, Some(topology)) => topology,
         _ => return Err(fail("DELAY_INPUT", "Choose one Resource or topology")),
     };
+    if topology.connection_contacts.is_some()
+        || topology
+            .instances
+            .iter()
+            .any(|i| i.model.data.get("portTerminals").is_some())
+    {
+        return Err(fail("COUPLED_TERMINAL_MAP","Physical contact joins with delay need authored conductor return/charge trace; contacts only for mapped coupled endpoints"));
+    }
+    if request
+        .numerics
+        .as_ref()
+        .is_some_and(|n| n.max_step_s.is_some())
+    {
+        return Err(fail(
+            "DELAY_NUMERICS",
+            "maxStepS currently requires coupled descriptor backend",
+        ));
+    }
     let p = topology
         .instances
         .iter()

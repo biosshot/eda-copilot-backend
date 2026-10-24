@@ -335,6 +335,7 @@ fn model(modes: &[Mode], u: &[Vec<f64>], ports: &[String]) -> coupled::Model {
             .map(|((i, j), v)| (i, j, v))
             .collect(),
         conserved_potential_modes: candidates,
+        port_terminals: None,
     }
 }
 pub fn fit(resource: &frequency::Resource, budget: Option<&Budget>) -> Result<Fit> {

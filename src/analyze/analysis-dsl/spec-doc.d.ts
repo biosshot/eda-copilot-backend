@@ -89,7 +89,9 @@ export type TouchstoneNetworkData = {format:'touchstone';content:string;referenc
 /** Full entries, no automatic symmetrization or discarded mutual coefficients.
  * Infinity keeps all metal potentials; candidate null modes are not a neutrality
  * condition. They must span null(A^T), and are reduced after source/load assembly. */
-export type CoupledRlcData={format:'coupled-rlc';referenceTopology:'grounded'|'infinity';potentialNodes:readonly string[];currentDofs:readonly string[];incidence:readonly(readonly[number,number,number])[];portIncidence:readonly(readonly[number,number,number])[];resistanceOhm:readonly(readonly[number,number,number])[];inductanceH:readonly(readonly[number,number,number])[];capacitanceF:readonly(readonly[number,number,number])[];conservedPotentialModes?:readonly(readonly number[])[]};
+export type PhysicalTerminal={node:string}|{reference:'ground'};
+export interface PhysicalState {kind:'physical-state';steady:boolean;potentialsV:readonly {instanceId:string;node:string;value:number}[];currentsA:readonly {instanceId:string;dof:string;value:number}[]}
+export type CoupledRlcData={format:'coupled-rlc';referenceTopology:'grounded'|'infinity';potentialNodes:readonly string[];currentDofs:readonly string[];incidence:readonly(readonly[number,number,number])[];portIncidence:readonly(readonly[number,number,number])[];resistanceOhm:readonly(readonly[number,number,number])[];inductanceH:readonly(readonly[number,number,number])[];capacitanceF:readonly(readonly[number,number,number])[];conservedPotentialModes?:readonly(readonly number[])[];portTerminals?:readonly {positive:PhysicalTerminal;negative:PhysicalTerminal}[]};
 export type DelayedScatteringData={format:'delayed-scattering';referenceTopology:'common';nature:'passive';referenceOhm:number|Readonly<Record<string,number>>;scattering:readonly(readonly number[])[];delayS:number};
 export type NetworkResource = Omit<Resource,'kind'|'ports'|'data'|'parameters'> & {kind:'network';ports:readonly string[];data:FrequencyNetworkData|TouchstoneNetworkData|CoupledRlcData|DelayedScatteringData};
 export interface Material {
@@ -193,7 +195,7 @@ export type Heat = readonly { target: Selector; node: string; powerW: number | W
  * absoluteTolerance multiplies 1 V for voltage / 1 A for current (default 1e-9);
  * maxIterations bounds attempted internal steps (default 200000, max 1000000).
  * Circuit DC/AC custom numerics explicitly reject. */
-export interface Numerics { relativeTolerance?: number; absoluteTolerance?: number; maxIterations?: number }
+export interface Numerics { relativeTolerance?: number; absoluteTolerance?: number; maxIterations?: number; /** Coupled descriptor time only. */ maxStepS?: number }
 export interface CommonOptions { name?: string; numerics?: Numerics; budget?: { maxSeconds?: number; maxMemoryMiB?: number } }
 export interface PhysicalOptions { components?: readonly ComponentDescription[]; stackup?: StackupDescription; materials?: Materials }
 export interface ElectricalOptions extends PhysicalOptions { sources?: readonly Source[]; loads?: readonly Load[] | LoadDefaults; temperatureC?: number; circuit?: Circuit }
@@ -218,7 +220,7 @@ export interface Configurations {
   electrothermal: CommonOptions & Pick<PhysicalOptions, 'stackup' | 'materials'> & { electrical?: ElectricalOptions & { operating?: readonly { target: Selector; gateVoltageV: number }[] }; thermal?: ThermalOptions; couplings?: readonly Coupling[]; time?: Time };
   impedance: CommonOptions & PhysicalOptions & { mesh?: CrossSectionMesh; target?: Line | Channel | Differential | Resource; method?: 'formula' | 'cross-section' | 'layered'; frequency?: Frequency; frequencyHz?: number; temperatureC?: number };
   tdr: CommonOptions & PhysicalOptions & { target?: Line | Channel | Differential | Resource | Network; referenceOhm?: number | Readonly<Record<string, number>>; riseS?: number; termination?: 'matched' | 'open' | 'short' | Model; time?: Time; temperatureC?: number };
-  si: CommonOptions & PhysicalOptions & { channels?: readonly (Channel | Differential | Line)[]; network?: Network | Line; drivers?: readonly Driver[]; receivers?: readonly Receiver[]; time?: Time; temperatureC?: number };
+  si: CommonOptions & PhysicalOptions & { initial?:'steady'|PhysicalState; channels?: readonly (Channel | Differential | Line)[]; network?: Network | Line; drivers?: readonly Driver[]; receivers?: readonly Receiver[]; time?: Time; temperatureC?: number };
   eye: CommonOptions & { signal?: DataValue; bitRateBps?: number; discardS?: number; phaseS?: number; thresholdV?: number };
   emi: CommonOptions & ElectricalOptions & { kind?: 'risk' | 'conducted' | 'coupling'; signals?: readonly { channel: Channel | Differential; riseS: number }[]; rules?: readonly Rule[]; excitations?: readonly Excitation[]; measurement?: Measurement | readonly Measurement[]; time?: Time; frequency?: Frequency; frequencyHz?: number; spectrum?: { discardS: number; window: 'hann' | 'rectangular'; startHz: number; stopHz: number } };
   em: CommonOptions & PhysicalOptions & { target?: Target; method?: 'full-wave'; frequency?: Frequency; frequencyHz?: number; space?: { kind: 'free-space' }; outputs?: readonly ('sParameters' | 'fields' | 'radiation')[]; excitation?: EmExcitation | Excitation; excitations?: readonly (EmExcitation | Excitation)[]; observation?: { frequenciesHz: readonly number[]; thetaDeg: { from: number; to: number; step: number }; phiDeg: { from: number; to: number; step: number }; distanceM: number }; temperatureC?: number };
@@ -335,7 +337,7 @@ export interface AnalysisContext {
   scene(input: { model: Resource; parameters?: Readonly<Record<string, number>> }): Scene;
   antenna(input: { structure: RoutingBoardV2 | Scene; feed: Port; models?: readonly Model[] }): Antenna;
   network(input: { model: Resource; ports: Readonly<Record<string, string>> }): Network;
-  connect(input: { networks: readonly (Network | Line)[]; connections: readonly { from: Port; to: Port }[]; ports: Readonly<Record<string, Port>> }): Network;
+  connect(input: { networks: readonly (Network | Line)[]; connections: readonly { from: Port; to: Port; contacts?:'both'|'positive'|'negative' }[]; ports: Readonly<Record<string, Port>> }): Network;
   variant(input: { changes: readonly VariantChange[] }): AnalysisContext;
   check(input: CheckInput): CheckRecord;
   log(input: { level: 'info' | 'warning' | 'error'; message: string; data?: Json }): void;
