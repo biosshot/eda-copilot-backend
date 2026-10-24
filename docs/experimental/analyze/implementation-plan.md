@@ -278,3 +278,7 @@ Physical terminals/R1 и внутреннее layered C приняты в огр
 ### Второй checkpoint 2026-10-24
 
 [Результаты ревью](review-resonant-thermal-2026-10-24.md): P6 bounded resonant prototype принят для дальнейшей runtime реализации; P7 magnetic task прерван provider и продолжается; Thermal temporal acceptance заблокирована deadline, следующий этап profiling/оптимизация без повышения лимитов.
+
+### Runtime/magnetic checkpoint 2026-10-24
+
+[Review](review-runtime-magnetic-profile.md): bounded resonant runtime и magnetic kernels приняты. Дальше внутренние FFT/свёртки (P6), near/far ускорение (P7) и малый Thermal blocked-solve prototype; whole-stage gates сохраняются.
