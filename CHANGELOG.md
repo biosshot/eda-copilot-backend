@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Accept the bounded capacitance coupon evidence (4.42% independent full-matrix error) and authorize its internal Rust port. Approve the explicit physical-terminal P6 design; production P7 and Thermal acceptance remain open.
+
 ### Mixed electrical delay and RLC networks
 
 - Assemble exact real-K delays with grounded canonical full RLC and permitted sampled-RC relaxation models through existing connect/SI builders. Preserve mutual matrices, finite sources/RC loads, assembled steady prehistory, shared deadline/memory admission and explicit unsupported terminal-map refusals.
