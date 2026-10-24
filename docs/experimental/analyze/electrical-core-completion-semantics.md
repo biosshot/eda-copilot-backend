@@ -247,3 +247,51 @@ floor relaxation, hidden ground or charge reset makes that continuation pass.
 Physical-state seed, contact selections and recovery enter continuation
 identity. Analysis remains CPU/F64; placement F32/GPU is unchanged. This
 extension does not close general P6, P8 or P11.
+
+# Authored resonant Y temporal admission (2026-10-24)
+
+The separate explicit temporal discriminator is:
+
+```js
+{format:'network-parameters', representation:'Y', referenceTopology:'common',
+ nature:'passive', frequenciesHz:[0, /* increasing positive samples */],
+ parameters:[/* full complex Siemens matrices */],
+ temporal:{method:'passive-resonant-y', normalizationOhm:50,
+   modeTransform:[[1,0],[0,1]],
+   dcSlopeF:[1e-9,0.25e-9],
+   highFrequency:{inverseInductancePerH:[1e5,4e4]}}}
+```
+
+One or two ordered ports; exactly one series-RLC section per authored modal
+column of constant real orthonormal U. All fields above are required; no default
+U, inferred closure, alternate S/Z/Touchstone representation or automatic class
+recognition. dcSlopeF is lim(Ymodal(s)/s) in farads; inverseInductancePerH is
+lim(s*Ymodal(s)) in inverse henries. Both are strictly positive per mode.
+normalizationOhm is one positive scalar numerical scale, not a physical load.
+U acts on unnormalized physical voltage/current coordinates and preserves power.
+The claim Y=U diag(k*s/(s*s+a*s+b)) U^T is authored, not proved from samples.
+
+Fit only positive training rows (alternating rows; remaining rows are holdout)
+using column-scaled reorthogonalized QR of 1/(Rnorm*Ymodal) in [1,z,1/z],
+z=s/omegaRef, omegaRef=2*pi*sqrt(fminPositive*fmax). Positive coefficients
+convert to physical R/L/C without clipping or pole reflection. Check closure,
+DC=0, reciprocity, modal off-diagonal error, sampled passivity and full matrix
+training/holdout residual <=0.5% +1e-8 normalized absolute floor. At most4096
+rows, >=24 rows, <=0.1decade gaps, >=8 training samples per fitted resonance
+linewidth, column-scaled QR condition<=1e10. Fit has fixed physical order2 per
+mode, no inferred extra branches or order escalation. The frozen checkpoint's
+higher-order refusals and coarse2ns energy failures remain historical evidence.
+
+Export A=[U;-I], B=[I;0], internal diagonal C, branch positive diagonal R/L
+into the existing grounded coupled descriptor. Execute existing AC/time assembly,
+steady initial-state solve and adaptive BE; retain all production guards and
+budgets. Source front >=10/min(sampled fmax,authored validity upper band) is only
+a conditional screen. All SI results and derivatives remain conditional, retain
+original Resource/provenance and band; composed sampled frequency outputs do
+not acquire an inferred temporal contract. Ordinary frequency samples and the
+existing passive-relaxation method retain their prior meaning.
+
+Unknown intersample/out-of-band resonances remain unexcluded: the frozen hidden
+Q=1e7 coupon demonstrates this limit. Parallel-Z ideal-L export, universal VF,
+noise repair, delay inference and arbitrary frequency-dependent modal bases are
+unsupported. This extension does not close all P6 or P11.

@@ -1,7 +1,7 @@
 /** Analysis DSL, variant B. Executable source is JavaScript with top-level await.
  * Reference this file for IDE globals. Production supports board/conductor DC and explicit circuit DC/Z(f)/transient;
  * geometry connectivity/clearance/edge-clearance; explicit S/Z/Y multiports and bounded Touchstone;
- * supplied passive relaxation/full-RLC/real-K-delay time models through si().network (not PCB SI, TDR, eye or timing).
+ * supplied passive relaxation/authored-resonant-Y/full-RLC/real-K-delay time models through si().network (not PCB SI, TDR, eye or timing).
  * Descriptions, validation, reports and explicit-value sweep are implemented.
  * Coordinates: millimetres, absolute board Y down; no implicit material defaults.
  * This document imports only the package's public, existing board transport.
@@ -76,6 +76,14 @@ export type PassiveRelaxationTemporal = {
  normalizationOhm?:number|Readonly<Record<string,number>>;
  highFrequency:{conductanceS:readonly number[];capacitanceF:readonly number[]};
 };
+/** Authored one series-RLC section per constant orthonormal mode. Y only,
+ * 1..2 ports; conditional finite-sample identification, no unknown-pole proof.
+ * dcSlopeF=lim(Ymode/s) in F; inverseInductancePerH=lim(s*Ymode) in 1/H. */
+export type PassiveResonantYTemporal = {
+ method:'passive-resonant-y'; modeTransform:readonly (readonly number[])[];
+ normalizationOhm:number; dcSlopeF:readonly number[];
+ highFrequency:{inverseInductancePerH:readonly number[]};
+};
 /** Explicit tabulated common-return model; source is provenance, never a URL loader.
  * Matrix [frequency][out][in]. S uses positive real power-wave references;
  * Z is Ohm, Y is Siemens. Interpolation is complex linear in source representation. */
@@ -83,7 +91,7 @@ export type FrequencyNetworkData = {
  format:'network-parameters'; representation:'S'|'Z'|'Y'; frequenciesHz:readonly number[];
  parameters:readonly (readonly (readonly {real:number;imaginary:number}[])[])[];
  referenceOhm?:number|Readonly<Record<string,number>>;referenceTopology:'common';nature:'passive'|'active'|'unspecified';
- temporal?:PassiveRelaxationTemporal;
+ temporal?:PassiveRelaxationTemporal|PassiveResonantYTemporal;
 };
 export type TouchstoneNetworkData = {format:'touchstone';content:string;referenceTopology:'common';nature:'passive'|'active'|'unspecified';temporal?:PassiveRelaxationTemporal};
 /** Full entries, no automatic symmetrization or discarded mutual coefficients.

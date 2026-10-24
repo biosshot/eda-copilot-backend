@@ -1,0 +1,15 @@
+{
+  "source": "Unmodified frozen analysis-resonant-checkpoint series/mutual samples, runtime metadata only",
+  "matrix": {"normalizationOhm":50,"relative":0.005,"absoluteNormalized":1e-8},
+  "closure": {"relative":0.0005,"strictlyPositive":true},
+  "current": {"scaleA":0.02,"transientFraction":0.01,"refinementFraction":0.001,"absoluteA":1e-12},
+  "voltage": {"scaleV":0.5,"transientFraction":0.01,"derivedFromTheveninOhm":25},
+  "additionalStateEnergyReference": {"scaleJ":2e-9,"fraction":0.01,"absoluteJ":1e-20},
+  "productionEnergy": "Unchanged conjunction: abs(balance)<=1e-14+1e-7*norm AND abs(balance)<=1e-4*norm (zero norm1e-20), nonnegative physical/BE loss",
+  "time": {"stopS":2e-5,"sampleStepS":1e-8,"riseS":2e-7,"sourceDelayS":[0,1.5e-7]},
+  "coarse": {"relativeTolerance":1e-5,"absoluteTolerance":1e-9,"maxStepS":2e-9},
+  "fine": {"relativeTolerance":2.5e-6,"absoluteTolerance":2.5e-10,"maxStepS":1e-9},
+  "resourceBudget": {"maxSeconds":60,"maxMemoryMiB":256},
+  "externalJob": {"processMiB":512,"aggregateJobMiB":512,"cpuSeconds":60,"wallSeconds":60},
+  "historicalCheckpoint": "RK4 fine/coarse results unchanged; runtime uses existing adaptive BE and original production guards. No transfer of RK4 energy acceptance to production."
+}

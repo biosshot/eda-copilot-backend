@@ -25,9 +25,10 @@ const execute=createFrequencyExecutor();
 test('resource propagation matrix: complete/reordered/cascade, coupled/delay/sampled, scope/reference/port order',async()=>{
  for(const kind of ['coupled','delay','sampled'])for(const mode of ['single','reordered','cascade']){
   const model=resource(kind);
-  if(kind==='coupled'&&mode!=='single'){await assert.rejects(()=>execute(task(model,mode)),(e:any)=>e.code==='COUPLED_TOPOLOGY'||e.code==='COUPLED_PORT');continue;}
+  if(kind==='coupled'&&mode==='reordered'){await assert.rejects(()=>execute(task(model,mode)),(e:any)=>e.code==='COUPLED_PORT');continue;}
   const result=await execute(task(model,mode)),derived=networkResource(result.network);
-  const analytic=mode==='single'&&kind!=='sampled';
+  // Accepted full coupled assembly supports composed graphs; direct ordering stays strict.
+  const analytic=kind==='coupled'||mode==='single'&&kind!=='sampled';
   assert.deepEqual(derived.ports,mode==='reordered'?['right','left']:['left','right']);
   assert.equal(derived.validity!.status,'conditional');
   assert.deepEqual(derived.analyses,analytic?model.analyses:['networkParameters']);

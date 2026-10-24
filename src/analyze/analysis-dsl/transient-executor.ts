@@ -8,6 +8,7 @@ import {electricalModel} from './electrical-models.ts';
 import {createProblemExecutor} from '../execute-problem.ts';
 import {json} from './data.ts';
 import {frequencyTopology} from './frequency-executor.ts';
+import {declaredNetworkBand} from './frequency-model.ts';
 function fail(message:string):never{throw new AnalysisDslError('UNSUPPORTED_TEMPORAL_MODEL',message);}
 /** Digital stimulus adapter only; differential equations and fitting stay Rust.
  * State emits its MSB before left shift; feedback is MSB XOR tap bit. No inversion.
@@ -75,9 +76,14 @@ export function createTransientExecutor(){const execute=createProblemExecutor(tr
  if(report.status!=='complete')throw new AnalysisDslError(report.diagnostics[0]?.code??'NETWORK_REJECTED',report.diagnostics.map(d=>d.message).join('; '),report.diagnostics);
  report.resources={peakRssBytes:process.resourceUsage().maxRSS*1024,metric:'OS process high-water RSS; includes Node and earlier scenario calculations'};
  const conditional=adapted.conditional||report.conditional;
+ const resonant=adapted.sourceResources.some(s=>object(s.resource.data)&&object(s.resource.data.temporal)&&s.resource.data.temporal.method==='passive-resonant-y');
+ const fitReports=Array.isArray(report.fit)?report.fit:[report.fit];
+ const fitUpper=Math.min(...fitReports.map(fit=>object(fit)&&Array.isArray(fit.frequenciesHz)?Number(fit.frequenciesHz.at(-1)):Number.MAX_VALUE));
+ const bandHz=resonant?[0,Math.min(fitUpper,...adapted.sourceResources.map(s=>declaredNetworkBand(s.resource)?.[1]??Number.MAX_VALUE))]:undefined;
+ const applicability=bandHz?{domain:{bandHz,sourceResourceHashes:adapted.sourceResources.map(s=>s.sha256),temporalClass:'passive-resonant-y',assumption:'Authored modal RLC class and closure; unknown intersample/extraband resonances remain unexcluded'}}:{};
  const metrics:Record<string,T.DataDescription>={};
- for(let i=0;i<adapted.names.length;i++)metrics[`network-voltage:${adapted.names[i]}`]={kind:'series',unit:'V',values:report.portVoltages!.map(v=>v[i]),axis:{name:'timeS',unit:'s',values:report.axis!},validity:{status:conditional?'conditional':'valid',...(conditional?{reason:'Conditional source/model band/finite-sample closure; see solution provenance. A finite-front screen does not prove a bandlimited source.'}:{})},diagnostics:[]};
- return{id:`${task.contextId}:time-${randomUUID()}`,status:'complete',method:'Passive supplied temporal model CPU/F64, finite drivers, adaptive backward Euler',diagnostics:report.diagnostics,assumptions:report.assumptions??[],metrics,solution:json({...report,physicalInitial:task.config.initial??null,resolvedModels:adapted.resolvedModels,sourceResources:adapted.sourceResources,portMapping:adapted.portMapping,conditional})};
+ for(let i=0;i<adapted.names.length;i++)metrics[`network-voltage:${adapted.names[i]}`]={kind:'series',unit:'V',values:report.portVoltages!.map(v=>v[i]),axis:{name:'timeS',unit:'s',values:report.axis!},validity:{status:conditional?'conditional':'valid',...applicability,...(conditional?{reason:'Conditional source/model band/finite-sample closure; see solution provenance. A finite-front screen does not prove a bandlimited source.'}:{})},diagnostics:[]};
+ return{id:`${task.contextId}:time-${randomUUID()}`,status:'complete',method:'Passive supplied temporal model CPU/F64, finite drivers, adaptive backward Euler',diagnostics:report.diagnostics,assumptions:report.assumptions??[],metrics,solution:json({...report,...(bandHz?{bandHz}:{}),physicalInitial:task.config.initial??null,resolvedModels:adapted.resolvedModels,sourceResources:adapted.sourceResources,portMapping:adapted.portMapping,conditional})};
  };}
 export function transientObservedVoltage(task:AnalysisTask,descriptor:unknown,metrics:Readonly<Record<string,T.DataDescription>>):T.DataDescription|undefined{
  if(task.kind!=='si'||!object(descriptor)||!object(descriptor.input)||descriptor.input.owner!==(task.config as T.Configurations['si']).network?.id)return;

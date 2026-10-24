@@ -5,7 +5,10 @@ import {object} from './descriptions.ts';
 import type {NetworkResource} from './spec-doc.js';
 const positive=z.number().finite().positive();
 const reference=z.union([positive,z.record(S.text,positive)]);
-const temporal=z.strictObject({method:z.literal('passive-relaxation'),modeTransform:z.array(z.array(z.number().finite()).max(4)).max(4).optional(),normalizationOhm:reference.optional(),highFrequency:z.strictObject({conductanceS:z.array(z.number().finite().nonnegative()).min(1).max(4),capacitanceF:z.array(z.number().finite().nonnegative()).min(1).max(4)})});
+const temporal=z.discriminatedUnion('method',[
+ z.strictObject({method:z.literal('passive-relaxation'),modeTransform:z.array(z.array(z.number().finite()).max(4)).max(4).optional(),normalizationOhm:reference.optional(),highFrequency:z.strictObject({conductanceS:z.array(z.number().finite().nonnegative()).min(1).max(4),capacitanceF:z.array(z.number().finite().nonnegative()).min(1).max(4)})}),
+ z.strictObject({method:z.literal('passive-resonant-y'),modeTransform:z.array(z.array(z.number().finite()).min(1).max(2)).min(1).max(2),normalizationOhm:positive,dcSlopeF:z.array(positive).min(1).max(2),highFrequency:z.strictObject({inverseInductancePerH:z.array(positive).min(1).max(2)})}),
+]);
 const base={referenceTopology:z.literal('common'),nature:z.enum(['passive','active','unspecified']),temporal:temporal.optional()};
 const entry=z.tuple([z.number().int().nonnegative(),z.number().int().nonnegative(),z.number().finite()]);
 const matrix=z.array(entry).max(4_000_000);
@@ -47,7 +50,12 @@ export function networkResource(input:unknown):NetworkResource{
   const refs=v.referenceOhm;if(object(refs)&&(Object.keys(refs).length!==n||ports.some(p=>!(p in refs))))S.invalid('Delayed power-wave references must match Resource.ports');
  }
  if('temporal'in v&&v.temporal){
-  if(v.temporal.highFrequency.conductanceS.length!==n||v.temporal.highFrequency.capacitanceF.length!==n||v.temporal.modeTransform?.some(row=>row.length!==n)||v.temporal.modeTransform&&v.temporal.modeTransform.length!==n)S.invalid('Temporal closure dimensions must match Resource.ports');
+  const t=v.temporal;
+  if(t.method==='passive-resonant-y'){
+   if(n>2||v.format!=='network-parameters'||v.representation!=='Y'||v.nature!=='passive')S.invalid('Resonant temporal class requires authored passive 1..2 port Y tables');
+   if(t.dcSlopeF.length!==n||t.highFrequency.inverseInductancePerH.length!==n)S.invalid('Resonant closure dimensions must match Resource.ports');
+  }else if(t.highFrequency.conductanceS.length!==n||t.highFrequency.capacitanceF.length!==n)S.invalid('Temporal closure dimensions must match Resource.ports');
+  if(t.modeTransform?.some(row=>row.length!==n)||t.modeTransform&&t.modeTransform.length!==n)S.invalid('Temporal mode dimensions must match Resource.ports');
   const refs=v.temporal.normalizationOhm;if(object(refs)&&(Object.keys(refs).length!==n||ports.some(p=>!(p in refs))))S.invalid('Temporal normalization keys must match Resource.ports');
  }
  if(v.format==='network-parameters'){

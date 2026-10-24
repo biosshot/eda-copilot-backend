@@ -147,7 +147,11 @@ fn resource_for(
             None,
         )
     } else {
-        let fit = relaxation::fit_started(resource, budget, start)?;
+        let fit = if resource.data["temporal"]["method"] == "passive-resonant-y" {
+            resonant::fit_started(resource, budget, start)?
+        } else {
+            relaxation::fit_started(resource, budget, start)?
+        };
         (fit.model, Some(fit.report))
     };
     let band = if operation == "si" {
