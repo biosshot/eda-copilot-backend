@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Consolidate P7 shared-coordinate geometry repair and individual near-pair reclassification into one implementation task, with separate correctness and end-to-end performance comparisons; no production code change.
+
 - Preserve the revised-rule Thermal temporal PASS and spatial stopping blockers; correct the assumption that refinement always exhausts its passes. Record exact P7 overlay provenance and a rejected bridge-breaking geometry shortcut; production behavior remains unchanged.
 
 - Adopt the user-approved temperature-convergence criterion max(0.1 K,1% absolute rise from initial temperature), preserving physical guards and historical failures. Scope adaptive Thermal refinement stopping and sequential P7 geometry/pair-classification work.

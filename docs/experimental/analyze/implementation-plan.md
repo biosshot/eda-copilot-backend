@@ -302,3 +302,7 @@ Physical terminals/R1 и внутреннее layered C приняты в огр
 ### Stopping/geometry checkpoint
 
 [Review](review-stopping-geometry-blockers.md): Thermal temporal pair PASS under new criterion, no proven earlier spatial stopping; native early control already exists. P7 phaseA remains a contract/prototype blocker, phaseB not started. No production acceptance or new assignments.
+
+### Unified geometry and immediate acceleration
+
+Обновлено [единое задание P7](next-task-copper-geometry-and-pairs.md): пользователь согласовал общий координатный контекст, реализацию existing individual near checks в той же поставке и обязательные раздельные G0/G1/G2 performance measurements. Это заменяет прежнюю остановку на выборе представления; новые geometry tolerances/FMM не разрешаются. Выдача/запуск агентов этим изменением документации не производится.

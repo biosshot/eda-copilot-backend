@@ -1,22 +1,51 @@
-# P7: согласованная геометрия, затем классификация пар
+# P7: единые координаты меди и ускорение классификации пар
 
-Исполнитель p7_medium, прежний worktree. Основание copper-partition-audit.md. Две последовательные фазы; failure первой не обходить ускорением второй. CPU F64 для анализа; placement F32/GPU и транспортный RoutingBoardV2 контракт не менять.
+## Решение и результат
 
-## Фаза A — исправление геометрии
+Пользователь согласовал общий координатный контекст и потребовал включить ускорение в это же задание. Эта редакция заменяет прежнюю остановку на proposal об общем представлении. Нужна реализация обоих изменений с измерением скорости, а не ещё один отчёт о вариантах.
 
-1. Заморозить минимальные regression inputs из source IDs STM668/556 и613. Полностью проследить происхождение613: предыдущий аудит не восстановил всю цепочку его возникновения. Установить, какие операции в native source polygons и экспериментальном GEOS layer union реально создают артефакт; не переносить исправление Python prototype в production под видом готовой PCB extraction.
-2. Реализовать минимальный способ согласованной геометрии общих авторских соединений: одинаковая точка/ширина/контакт не должны независимо округляться в разные искусственные границы. Выбрать механизм по доказанному происхождению; не назначать произвольный snap epsilon, фильтр площади или удаление всех тонких triangles.
-3. Сохранять реальные nets, gaps, bridges, drills, holes, pads, pours, material/layer interfaces и port/source IDs. Описать величину геометрического изменения и её связь с существующим approximation/Boolean error contract. Если исправление требует нового допуска/изменения контрактов, остановиться с конкретным предложением; не вводить его молча.
-4. Проверить не только исчезновение sliver, но источник-полигон→union→mesh→finite-prism chain. Новый near self интеграл проблемного участка должен проходить проверяемую accuracy/refinement либо явно оставаться unsupported. Нельзя заменить бывший error нулевым вкладом.
+Ускорение: индивидуальные существующие moment separation/remainder checks внутри coarse near leaves. На купоне подход подтверждён; аудит3ROI выявил48–62% потенциально переклассифицируемых near pairs. Оценка1.9–2.7x относится к условной работе, НЕ к гарантированному времени всего P7. Считать и проверять итоговый aggregate error обязательно.
 
-Приёмка A: реальные near-touching разные сети не замкнуты; настоящая тонкая перемычка не исчезает; общие узлы/повороты/разная ширина, translate/rotate, boundaries/holes, microscopic artifact regressions. Геометрия и connectivity на ВСЕХ доступных frozen board fixtures с отчётом differences/source IDs, без нового live export. На3ROI — density/contour/support counts before/after. Независимые magnetic coupons/energy gates сохранить. Большие DC/полные magnetic ROI не запускать. Если изменяется общая подготовка меди — обязательно focused geometry/connectivity/conduction/DC regression на малых случаях, не только тесты P7.
+## A. Общий координатный контекст
 
-## Фаза B — индивидуальная классификация внутри coarse near leaves
+- Использовать уже установленную геометрическую библиотеку и её integer/explicit-adapter API. Один детерминированный origin/scale для полного контекста подготовки платы, с запасом на габариты примитивов/операций. Источники, layers/nets сохраняют идентичность, но получают согласованное преобразование координат. Не выбирать новый adapter для каждой дорожки или промежуточного результата.
+- Согласованно провести primitive assembly, union, board clipping и drill subtraction. Не терять эту согласованность при последующем layer union/переходе к mesh. Указать, какие операции относятся к production Rust, а какие пока к experimental extraction harness; исправление только Python-копии не считать исправлением production.
+- По возможности удерживать integer coordinates между операциями, конвертируя в mm только на границах. Общие authored endpoints/cap facets преобразуются одинаково; intersections получают детерминированную обработку. Не строить собственный exact-rational engine, новую универсальную геометрическую подсистему или RoutingBoardV3.
+- Исполнитель сам выбирает минимальный internal API и численные параметры на основе диапазона integer API и существующего geometry/Boolean error budget; отдельное согласование каждого поля не требуется. Документировать overflow/extent и накопление погрешности. Если согласованное представление не укладывается в существующий бюджет, вернуть конкретный blocker; новый пользовательский snap tolerance не вводить.
+- Никакого удаления по площади/aspect ratio, склеивания разных сетей или нулевого вклада вместо failed integral. Для неразрешимых контактов использовать существующую диагностику/unsupported; не проектировать сложную новую систему авторемонта.
 
-Разрешена лишь после выполнения критериев A. Отдельным логическим diff внедрить existing individual moment separation/remainder checks для пар внутри coarse near blocks. Self и непрошедшие checks остаются exact-near. Геометрию/current basis дополнительно не менять; shared vertex/edge pairs не объявлять far без критерия. Никакого unchecked fallback.
+Основной критерий: устранить воспроизведённые округлительные артефакты STM668/556/613 без потери настоящего0.2µm bridge из counterexample. Восстановление источников уже выполнено — не повторять исследование с нуля. Изменить только необходимые helpers подготовки меди и их потребителей.
 
-Проверить полноту/единственность пар, reciprocity/PSD, нулевые/слабые режимы, полную aggregate physical energy bound и сохранённый independent full-operator reference. Per-pair error недостаточно. Сравнивать baseline и candidate на одной геометрии ПОСЛЕ фазыA; не смешивать изменение mesh и классификации в одном объяснении speedup.
+## B. Ускорение в том же изменении
 
-Count-only plans на3ROI: сколько near осталось, bounds/storage/preflight. Не объявлять1.9–2.7x гарантированным результатом, не запускать full ROI. Максимум один bounded coupon batch <=512MiB/120s на фазу; expensive source changes оправдывают focused rerun, green unchanged tests не повторять. Runtime caps не повышать. Общий addon rebuild лишь если изменён production path, согласовать heavy slot с Thermal, jobs1/isolated target.
+- В coarse near block проверить каждую пару существующим individual-ball moment admission. Self и непрошедшие условия остаются exact-near. Успешные пары переходят в far с тем же контролем remainder; для каждой пары ровно один путь вычисления.
+- Повторно использовать вычисленные centers/radii/moments и сохранять classification в ограниченном плане, чтобы не повторять expensive predicates/подготовку при каждом action. Не раздувать plan сверх действующего бюджета; допустимо compact representation/streaming там, где оно дешевле.
+- Не увеличивать theta, не ослаблять far error budget, не добавлять FMM/GPU/новую форму current basis. Важен меньший объём exact-near работы, а не полная переделка far solver.
+- Сохранять bound для полного физического пространства токов, zero/weak modes, reciprocity/PSD и честные отказы. Геометрия и классификация могут разрабатываться в одном задании, но измеряются отдельно: A-baseline и A+B имеют одну и ту же исправленную геометрию.
 
-Результат: два раздела implementation/evidence, чёткая граница исправленного production и experimental prototype, source overlays, topology comparisons, matrix/error/cost PNG, hashes и оставшиеся blockers. Сохранить все старые failure artifacts. Без коммита/новых агентов. После отчёта STOP, P7/P8/P11 целиком не закрывать.
+## Проверки правильности
+
+1. Минимальные source→union→mesh regressions STM613,668/556; true bridge/gap, разные сети, одинаковые endpoints, повороты/polyline, разная ширина, translation/rotation, pads/pours, drills/cutouts. Корректность контактной топологии сравнивать с authored intent и исходными объектами, не объявлять старый артефакт обязательным golden output.
+2. Geometry/connectivity comparison всего доступного корпуса8 frozen boards с source IDs/доказательствами differences. Не выполнять live re-export. Малые conduction/DC regressions обязательны, если меняются общие helpers; placement F32/GPU не менять.
+3. Проблемные post-fix supports должны проходить нужные finite-prism проверки без unchecked fallback. Independent magnetic coupons, full energy gate<=5% с отдельной reference uncertainty; near integral gate0.2%, прежние reciprocity и aggregate far budget не ослаблять.
+4. Pair coverage без потерь/дубликатов; forced-all-near vs optimized на малых coupons, null/weak modes и arbitrary-vector actions. Нельзя считать скорость на отказавшем baseline успешным ускорением.
+
+## Измерение скорости — обязательная часть
+
+До запуска зафиксировать конфигурации и результаты, которые сравниваются:
+
+- G0: старая подготовка геометрии (валидные случаи; failed случаи отдельно).
+- G1: единые координаты, прежняя coarse near classification.
+- G2: та же исправленная геометрия + individual near checks.
+
+На8boards измерить geometry preparation отдельно: cold/warm, wall, planned/observed memory, counts. На3ROI — plan construction, near/far counts, сохранённые moments/bytes. На малом физическом купоне — полный extraction/action wall вместе с классификацией, exact-near и aggregate-bound работой, а не только число пар.
+
+Не начинать с заведомо многочасового fullROI. Использовать representative deterministic near/far batch и count-only real plans; отдельно назвать extrapolation. Максимум два новых numerical coupon batches <=512MiB/120s каждый (G1/G2); короткие timing replays максимум3 на конфигурацию, без повторного независимого reference solve. Фикстуры/пороги/выборка заданы до результата.
+
+Acceptance ускорения: реальное уменьшение exact-near work и measurable end-to-end gain на объявленном валидном купоне при тех же error gates; geometry preparation и общий memory peak не должны существенно регрессировать без объяснённого tradeoff. Записать исходные timings/variance, не выдавать шум или снижение точности за выигрыш. Если быстрая часть работает, но baseline/новая геометрия какого-то ROI невалидна — обозначить её отдельно, не скрывать целиком полезный результат и не объявлять весь P7 готовым.
+
+## Границы поставки
+
+Один review packet с двумя логическими частями (geometry / classification), явными поддержанными случаями и blockers. Numeric/source overlays, topology differences, pair-count/cost/error plots и hashes. Tests используют сохранённые fixtures; артефакты в ignored debugging.
+
+CPU F64 анализ, прежние caps, jobs1/isolated target. Если production Rust изменён — один normal shared-addon build после focused tests; проверить compile/package совместимость, не менять ABI без необходимости. Общие файлы согласовать с Thermal, чужие изменения не переносить. Не начинать P8/P11/fullROI/CFD, не создавать агента/сервис/общую compute библиотеку. Без коммита исполнителя; итоговый отчёт и STOP для review.
