@@ -1,0 +1,529 @@
+{
+  "cells": [
+    {
+      "densityPerAmpM2": [
+        [
+          57142857.14285716,
+          -0.0
+        ],
+        [
+          0.0,
+          -0.0
+        ]
+      ],
+      "nodeIds": [
+        0,
+        1,
+        5
+      ],
+      "sourceId": "closed-triangle-0",
+      "triangleM": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0005,
+          0.0
+        ],
+        [
+          0.0005,
+          0.0005
+        ]
+      ],
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    },
+    {
+      "densityPerAmpM2": [
+        [
+          0.0,
+          -57142857.14285716
+        ],
+        [
+          0.0,
+          -0.0
+        ]
+      ],
+      "nodeIds": [
+        0,
+        5,
+        4
+      ],
+      "sourceId": "closed-triangle-1",
+      "triangleM": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0005,
+          0.0005
+        ],
+        [
+          0.0,
+          0.0005
+        ]
+      ],
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    },
+    {
+      "densityPerAmpM2": [
+        [
+          0.0,
+          -0.0
+        ],
+        [
+          57142857.14285716,
+          -0.0
+        ]
+      ],
+      "nodeIds": [
+        1,
+        2,
+        6
+      ],
+      "sourceId": "closed-triangle-2",
+      "triangleM": [
+        [
+          0.0005,
+          0.0
+        ],
+        [
+          0.001,
+          0.0
+        ],
+        [
+          0.001,
+          0.0005
+        ]
+      ],
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    },
+    {
+      "densityPerAmpM2": [
+        [
+          57142857.14285716,
+          57142857.14285716
+        ],
+        [
+          0.0,
+          -57142857.14285716
+        ]
+      ],
+      "nodeIds": [
+        1,
+        6,
+        5
+      ],
+      "sourceId": "closed-triangle-3",
+      "triangleM": [
+        [
+          0.0005,
+          0.0
+        ],
+        [
+          0.001,
+          0.0005
+        ],
+        [
+          0.0005,
+          0.0005
+        ]
+      ],
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    },
+    {
+      "densityPerAmpM2": [
+        [
+          0.0,
+          -0.0
+        ],
+        [
+          0.0,
+          -0.0
+        ]
+      ],
+      "nodeIds": [
+        2,
+        3,
+        7
+      ],
+      "sourceId": "closed-triangle-4",
+      "triangleM": [
+        [
+          0.001,
+          0.0
+        ],
+        [
+          0.0015,
+          0.0
+        ],
+        [
+          0.0015,
+          0.0005
+        ]
+      ],
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    },
+    {
+      "densityPerAmpM2": [
+        [
+          0.0,
+          -0.0
+        ],
+        [
+          57142857.14285716,
+          57142857.14285716
+        ]
+      ],
+      "nodeIds": [
+        2,
+        7,
+        6
+      ],
+      "sourceId": "closed-triangle-5",
+      "triangleM": [
+        [
+          0.001,
+          0.0
+        ],
+        [
+          0.0015,
+          0.0005
+        ],
+        [
+          0.001,
+          0.0005
+        ]
+      ],
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    },
+    {
+      "densityPerAmpM2": [
+        [
+          -57142857.14285716,
+          -57142857.14285716
+        ],
+        [
+          0.0,
+          -0.0
+        ]
+      ],
+      "nodeIds": [
+        4,
+        5,
+        9
+      ],
+      "sourceId": "closed-triangle-6",
+      "triangleM": [
+        [
+          0.0,
+          0.0005
+        ],
+        [
+          0.0005,
+          0.0005
+        ],
+        [
+          0.0005,
+          0.001
+        ]
+      ],
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    },
+    {
+      "densityPerAmpM2": [
+        [
+          0.0,
+          -0.0
+        ],
+        [
+          0.0,
+          -0.0
+        ]
+      ],
+      "nodeIds": [
+        4,
+        9,
+        8
+      ],
+      "sourceId": "closed-triangle-7",
+      "triangleM": [
+        [
+          0.0,
+          0.0005
+        ],
+        [
+          0.0005,
+          0.001
+        ],
+        [
+          0.0,
+          0.001
+        ]
+      ],
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    },
+    {
+      "densityPerAmpM2": [
+        [
+          0.0,
+          57142857.14285716
+        ],
+        [
+          -57142857.14285716,
+          -57142857.14285716
+        ]
+      ],
+      "nodeIds": [
+        5,
+        6,
+        10
+      ],
+      "sourceId": "closed-triangle-8",
+      "triangleM": [
+        [
+          0.0005,
+          0.0005
+        ],
+        [
+          0.001,
+          0.0005
+        ],
+        [
+          0.001,
+          0.001
+        ]
+      ],
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    },
+    {
+      "densityPerAmpM2": [
+        [
+          -57142857.14285716,
+          -0.0
+        ],
+        [
+          0.0,
+          -0.0
+        ]
+      ],
+      "nodeIds": [
+        5,
+        10,
+        9
+      ],
+      "sourceId": "closed-triangle-9",
+      "triangleM": [
+        [
+          0.0005,
+          0.0005
+        ],
+        [
+          0.001,
+          0.001
+        ],
+        [
+          0.0005,
+          0.001
+        ]
+      ],
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    },
+    {
+      "densityPerAmpM2": [
+        [
+          0.0,
+          -0.0
+        ],
+        [
+          0.0,
+          57142857.14285716
+        ]
+      ],
+      "nodeIds": [
+        6,
+        7,
+        11
+      ],
+      "sourceId": "closed-triangle-10",
+      "triangleM": [
+        [
+          0.001,
+          0.0005
+        ],
+        [
+          0.0015,
+          0.0005
+        ],
+        [
+          0.0015,
+          0.001
+        ]
+      ],
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    },
+    {
+      "densityPerAmpM2": [
+        [
+          0.0,
+          -0.0
+        ],
+        [
+          -57142857.14285716,
+          -0.0
+        ]
+      ],
+      "nodeIds": [
+        6,
+        11,
+        10
+      ],
+      "sourceId": "closed-triangle-11",
+      "triangleM": [
+        [
+          0.001,
+          0.0005
+        ],
+        [
+          0.0015,
+          0.001
+        ],
+        [
+          0.001,
+          0.001
+        ]
+      ],
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    }
+  ],
+  "gates": {
+    "bytes": 536870912,
+    "negativeEigenvalue": 0.0,
+    "reciprocity": 1e-09,
+    "referenceWorkingUncertainty": 0.01,
+    "relativeFullEnergyError": 0.05,
+    "seconds": 60
+  },
+  "geometry": "1.5x1mm finite35um foil;12exact prisms, two continuousP1 streamfunction hats. J=(dpsi/dy,-dpsi/dx)/h; all exterior normal current zero, internal normal flux continuous.",
+  "interiorStreamfunctionNodes": [
+    5,
+    6
+  ],
+  "normalFluxJumpOrExteriorFluxMaxA": 2.807775345559093e-17,
+  "pointsM": [
+    [
+      0.0,
+      0.0
+    ],
+    [
+      0.0005,
+      0.0
+    ],
+    [
+      0.001,
+      0.0
+    ],
+    [
+      0.0015,
+      0.0
+    ],
+    [
+      0.0,
+      0.0005
+    ],
+    [
+      0.0005,
+      0.0005
+    ],
+    [
+      0.001,
+      0.0005
+    ],
+    [
+      0.0015,
+      0.0005
+    ],
+    [
+      0.0,
+      0.001
+    ],
+    [
+      0.0005,
+      0.001
+    ],
+    [
+      0.001,
+      0.001
+    ],
+    [
+      0.0015,
+      0.001
+    ]
+  ],
+  "preflight": {
+    "nativeOrderedPairsPerRule": 144,
+    "nativeOrders": [
+      8,
+      12
+    ],
+    "nativeVolumeSamplesPerRefinedRule": 248832,
+    "physicalDimension": 2,
+    "plannedArrayEnvelopeBytes": 67108864,
+    "plannedLargestSampleArrayBytes": 2097152,
+    "plannedSimultaneousBytes": 268435456,
+    "prisms": 12,
+    "pythonRuntimeAllowanceBytes": 201326592,
+    "reason": "Earlier independently timed3case Sobol+boxes11.49s for16.5M+boxes;26.8M positive4D samples estimated26s; hard60s/512MiB retained. No ROI run.",
+    "referenceScrambleSeeds": [
+      20261024,
+      20261025,
+      20261026,
+      20261027
+    ],
+    "referenceSobolPowers": [
+      12,
+      14,
+      16
+    ],
+    "referenceTimeEstimateSeconds": 26,
+    "referenceTotal4DSamples": 26836992,
+    "referenceUniquePairs": 78
+  }
+}

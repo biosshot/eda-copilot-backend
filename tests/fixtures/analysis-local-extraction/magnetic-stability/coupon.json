@@ -1,0 +1,105 @@
+{
+  "stmPair": [
+    {
+      "triangleM": [
+        [
+          -0.0034541,
+          0.012424999995878233
+        ],
+        [
+          -0.0034541,
+          0.01242500000412177
+        ],
+        [
+          -0.0039541,
+          0.012175000000000002
+        ]
+      ],
+      "zM": [
+        0.001565,
+        0.0016
+      ]
+    },
+    {
+      "triangleM": [
+        [
+          -0.0034541,
+          0.01242500000412177
+        ],
+        [
+          -0.0034541,
+          0.012424999995878233
+        ],
+        [
+          -0.003454099999639392,
+          0.012425
+        ]
+      ],
+      "zM": [
+        0.001565,
+        0.0016
+      ]
+    }
+  ],
+  "bars": [
+    {
+      "sourceId": "bar0",
+      "x0M": 0.0,
+      "y0M": 0.0,
+      "lengthM": 0.0005,
+      "widthM": 0.0005,
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    },
+    {
+      "sourceId": "bar1",
+      "x0M": 0.0001,
+      "y0M": 0.001,
+      "lengthM": 0.0007,
+      "widthM": 0.00035,
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    },
+    {
+      "sourceId": "bar2",
+      "x0M": -0.0001,
+      "y0M": 0.002,
+      "lengthM": 0.00045,
+      "widthM": 0.0006,
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    },
+    {
+      "sourceId": "bar3",
+      "x0M": 5e-05,
+      "y0M": 0.0032,
+      "lengthM": 0.0008,
+      "widthM": 0.00045,
+      "zM": [
+        0.0,
+        3.5e-05
+      ]
+    }
+  ],
+  "outerRules": [
+    [
+      12,
+      8
+    ],
+    [
+      24,
+      16
+    ]
+  ],
+  "pairTolerance": 0.002,
+  "fullEnergyTolerance": 0.05,
+  "nearZeroAbsoluteScale": "0.002*sqrt(Lii*Ljj), no division by near-zero signed entries",
+  "physicalSpace": "Four finite parallel uniform-current bars; explicit terminal-current conservation sum(I)=0, three-dimensional B=[I3;-1,-1,-1]. Full4x4 partialL is also checked, no inferred external return/joints.",
+  "scope": "Finite-volume partial magnetic kernel coupon only; terminal end fields/external circuit not a real closed-board inductance."
+}

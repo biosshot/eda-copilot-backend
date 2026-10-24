@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Stabilize internal magnetic prism integrals for extreme slivers with controlled positive quadrature and independent closed-current energy references. Dense real-ROI cost remains unresolved; no public full-PCB extraction is enabled.
+
 - Support explicitly authored passive resonant Y models (one RLC section per constant mode, one or two ports) through existing coupled AC/transient execution. Preserve conditional finite-band provenance and existing energy guards; generic sampled fitting remains unsupported.
 
 - Record the isolated P6 resonant-model checkpoint: independently checked RLC/mutual coupons support a restricted authored passive class; coarse energy failures and the hidden-resonance counterexample remain explicit. No production fitting change.

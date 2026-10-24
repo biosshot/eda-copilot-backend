@@ -1,0 +1,170 @@
+{
+  "originalLegacyRangeFailure": {
+    "pairs": [
+      {
+        "aVolumeM3": 7.213095572222742e-20,
+        "bVolumeM3": 5.202197209276902e-29,
+        "forwardM5": {
+          "Err": "LOCAL_POLYHEDRON_RANGE: nonpositive/nonfinite point potential; no clipping applied"
+        },
+        "label": "stm668-556",
+        "reverseM5": {
+          "Ok": 5.349561367307447e-44
+        },
+        "seconds": 0.0006679,
+        "xyOrder": 12,
+        "zOrder": 8
+      },
+      {
+        "aVolumeM3": 7.213095572222742e-20,
+        "bVolumeM3": 5.202197209276902e-29,
+        "forwardM5": {
+          "Err": "LOCAL_POLYHEDRON_RANGE: nonpositive/nonfinite point potential; no clipping applied"
+        },
+        "label": "stm668-556",
+        "reverseM5": {
+          "Ok": 5.349439240777465e-44
+        },
+        "seconds": 0.0040969,
+        "xyOrder": 24,
+        "zOrder": 16
+      }
+    ],
+    "seconds": 0.0048027
+  },
+  "legacySourceHashes": {
+    "debugging\\p7-design-checkpoint\\magnetic-stability\\legacy-prism.rs": "f75f271fc24cbb614c0aa9781644e870fe92f525fa5d50c4bef55a857633e8ae",
+    "debugging\\p7-design-checkpoint\\magnetic-stability\\legacy-polyhedron.rs": "a69f0c4337ebd7debaa9c93ec98025b59737bc9009832ffb4fd9797d88299559"
+  },
+  "firstCandidateSourceHash": "7915f323fb90c628b183a84afe1ab73fa43f5c857f04c1f2f72c88350199f22d",
+  "firstCandidateBinaryHash": "43d7617e99ccd275c67428d3712a0ed917e1269fa433e08a7b55765c637dbb96",
+  "firstCandidateFailedPairEvidence": [
+    {
+      "aVolumeM3": 7.213095572222742e-20,
+      "bVolumeM3": 5.202197209276902e-29,
+      "forwardM5": {
+        "Ok": 5.26313121374208e-44
+      },
+      "label": "stm668-556",
+      "reverseM5": {
+        "Ok": 5.349561367307447e-44
+      },
+      "seconds": 0.021785,
+      "xyOrder": 12,
+      "zOrder": 8
+    },
+    {
+      "aVolumeM3": 7.213095572222742e-20,
+      "bVolumeM3": 5.202197209276902e-29,
+      "forwardM5": {
+        "Ok": 5.326899291387728e-44
+      },
+      "label": "stm668-556",
+      "reverseM5": {
+        "Ok": 5.349439240777465e-44
+      },
+      "seconds": 0.1555172,
+      "xyOrder": 24,
+      "zOrder": 16
+    },
+    {
+      "aVolumeM3": 7.213095572222742e-20,
+      "bVolumeM3": 7.213095572222742e-20,
+      "forwardM5": {
+        "Err": "LOCAL_POLYHEDRON_SOURCE_QUADRATURE: positive source rule did not meet explicit1e-5 refinement estimate through order63; no unchecked fallback"
+      },
+      "label": "stm668-self",
+      "reverseM5": {
+        "Err": "LOCAL_POLYHEDRON_SOURCE_QUADRATURE: positive source rule did not meet explicit1e-5 refinement estimate through order63; no unchecked fallback"
+      },
+      "seconds": 0.00023,
+      "xyOrder": 12,
+      "zOrder": 8
+    },
+    {
+      "aVolumeM3": 7.213095572222742e-20,
+      "bVolumeM3": 7.213095572222742e-20,
+      "forwardM5": {
+        "Err": "LOCAL_POLYHEDRON_SOURCE_QUADRATURE: positive source rule did not meet explicit1e-5 refinement estimate through order63; no unchecked fallback"
+      },
+      "label": "stm668-self",
+      "reverseM5": {
+        "Err": "LOCAL_POLYHEDRON_SOURCE_QUADRATURE: positive source rule did not meet explicit1e-5 refinement estimate through order63; no unchecked fallback"
+      },
+      "seconds": 0.0003823,
+      "xyOrder": 24,
+      "zOrder": 16
+    },
+    {
+      "aVolumeM3": 5.202197209276902e-29,
+      "bVolumeM3": 5.202197209276902e-29,
+      "forwardM5": {
+        "Ok": 2.593487628367539e-51
+      },
+      "label": "stm556-self",
+      "reverseM5": {
+        "Ok": 2.593487628367539e-51
+      },
+      "seconds": 0.0011218,
+      "xyOrder": 12,
+      "zOrder": 8
+    },
+    {
+      "aVolumeM3": 5.202197209276902e-29,
+      "bVolumeM3": 5.202197209276902e-29,
+      "forwardM5": {
+        "Ok": 2.592481887648709e-51
+      },
+      "label": "stm556-self",
+      "reverseM5": {
+        "Ok": 2.592481887648709e-51
+      },
+      "seconds": 0.0087475,
+      "xyOrder": 24,
+      "zOrder": 16
+    },
+    {
+      "aVolumeM3": 5.770476457778194e-19,
+      "bVolumeM3": 4.161757767421521e-28,
+      "forwardM5": {
+        "Ok": 1.6842019883974656e-42
+      },
+      "label": "stm-scaled",
+      "reverseM5": {
+        "Ok": 1.711859637538383e-42
+      },
+      "seconds": 0.0185601,
+      "xyOrder": 12,
+      "zOrder": 8
+    },
+    {
+      "aVolumeM3": 7.213095572222742e-20,
+      "bVolumeM3": 5.202197209276902e-29,
+      "forwardM5": {
+        "Ok": 5.26313121374208e-44
+      },
+      "label": "stm-translated",
+      "reverseM5": {
+        "Ok": 5.349561367307447e-44
+      },
+      "seconds": 0.0194167,
+      "xyOrder": 12,
+      "zOrder": 8
+    },
+    {
+      "aVolumeM3": 7.213095572222742e-20,
+      "bVolumeM3": 5.202197209276902e-29,
+      "forwardM5": {
+        "Ok": 5.26313121374208e-44
+      },
+      "label": "stm-rotated",
+      "reverseM5": {
+        "Ok": 5.349561367307447e-44
+      },
+      "seconds": 0.0200129,
+      "xyOrder": 12,
+      "zOrder": 8
+    }
+  ],
+  "note": "Initial cancellation-safe source still refused self order control and under-resolved target edge; fixed by source-edge geometric split and graded outer parameter, not tolerance change. Original and first raw outputs retained."
+}

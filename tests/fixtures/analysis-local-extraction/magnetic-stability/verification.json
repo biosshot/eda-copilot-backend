@@ -1,0 +1,946 @@
+{
+  "gates": {
+    "relativeIntegral": 0.002,
+    "fullPhysicalEnergy": 0.05,
+    "reciprocity": 1e-09,
+    "absoluteNearZeroEntry": "0.002sqrt(LiiLjj)",
+    "newCouponBytes": 536870912,
+    "newCouponSeconds": 60
+  },
+  "pairs": [
+    {
+      "aVolumeM3": 7.213095572222742e-20,
+      "bVolumeM3": 5.202197209276902e-29,
+      "forwardM5": {
+        "Ok": 5.350864377196621e-44
+      },
+      "label": "stm668-556",
+      "reverseM5": {
+        "Ok": 5.349561367307447e-44
+      },
+      "seconds": 0.0166565,
+      "xyOrder": 12,
+      "zOrder": 8,
+      "independentReferenceM5": 5.349410845865733e-44,
+      "absoluteReferenceUncertaintyM5": 7.823764601749811e-49,
+      "referenceRelativeUncertainty": 1.4625683566073111e-05,
+      "signedRelativeErrors": {
+        "forwardM5": 0.0002717180214362108,
+        "reverseM5": 2.8137947533043664e-05
+      },
+      "referenceMarginScreens": {
+        "forwardM5": 0.0002863476790640846,
+        "reverseM5": 4.276404263583359e-05
+      },
+      "directedReciprocity": 0.00024358007390316708
+    },
+    {
+      "aVolumeM3": 7.213095572222742e-20,
+      "bVolumeM3": 5.202197209276902e-29,
+      "forwardM5": {
+        "Ok": 5.349529669353931e-44
+      },
+      "label": "stm668-556",
+      "reverseM5": {
+        "Ok": 5.349439240777465e-44
+      },
+      "seconds": 0.1273436,
+      "xyOrder": 24,
+      "zOrder": 16,
+      "independentReferenceM5": 5.349410845865733e-44,
+      "absoluteReferenceUncertaintyM5": 7.823764601749811e-49,
+      "referenceRelativeUncertainty": 1.4625683566073111e-05,
+      "signedRelativeErrors": {
+        "forwardM5": 2.2212443878610734e-05,
+        "reverseM5": 5.308044670656138e-06
+      },
+      "referenceMarginScreens": {
+        "forwardM5": 3.683845231685924e-05,
+        "reverseM5": 1.9933805870510958e-05
+      },
+      "directedReciprocity": 1.6904399207954596e-05
+    },
+    {
+      "aVolumeM3": 7.213095572222742e-20,
+      "bVolumeM3": 7.213095572222742e-20,
+      "forwardM5": {
+        "Ok": 9.087694861865729e-35
+      },
+      "label": "stm668-self",
+      "reverseM5": {
+        "Ok": 9.087694861865729e-35
+      },
+      "seconds": 0.0134558,
+      "xyOrder": 12,
+      "zOrder": 8,
+      "independentReferenceM5": 9.087454246175318e-35,
+      "absoluteReferenceUncertaintyM5": 1.3605132998310173e-39,
+      "referenceRelativeUncertainty": 1.4971560042904087e-05,
+      "signedRelativeErrors": {
+        "forwardM5": 2.6477788376456478e-05,
+        "reverseM5": 2.6477788376456478e-05
+      },
+      "referenceMarginScreens": {
+        "forwardM5": 4.1449744833159047e-05,
+        "reverseM5": 4.1449744833159047e-05
+      },
+      "directedReciprocity": 0.0
+    },
+    {
+      "aVolumeM3": 7.213095572222742e-20,
+      "bVolumeM3": 7.213095572222742e-20,
+      "forwardM5": {
+        "Ok": 9.087474503359955e-35
+      },
+      "label": "stm668-self",
+      "reverseM5": {
+        "Ok": 9.087474503359955e-35
+      },
+      "seconds": 0.1111697,
+      "xyOrder": 24,
+      "zOrder": 16,
+      "independentReferenceM5": 9.087454246175318e-35,
+      "absoluteReferenceUncertaintyM5": 1.3605132998310173e-39,
+      "referenceRelativeUncertainty": 1.4971560042904087e-05,
+      "signedRelativeErrors": {
+        "forwardM5": 2.2291374556407203e-06,
+        "reverseM5": 2.2291374556407203e-06
+      },
+      "referenceMarginScreens": {
+        "forwardM5": 1.7200730872210068e-05,
+        "reverseM5": 1.7200730872210068e-05
+      },
+      "directedReciprocity": 0.0
+    },
+    {
+      "aVolumeM3": 5.202197209276902e-29,
+      "bVolumeM3": 5.202197209276902e-29,
+      "forwardM5": {
+        "Ok": 2.593487628367539e-51
+      },
+      "label": "stm556-self",
+      "reverseM5": {
+        "Ok": 2.593487628367539e-51
+      },
+      "seconds": 0.0009868,
+      "xyOrder": 12,
+      "zOrder": 8,
+      "independentReferenceM5": 2.5921181639687185e-51,
+      "absoluteReferenceUncertaintyM5": 4.166216401842817e-56,
+      "referenceRelativeUncertainty": 1.6072891363129684e-05,
+      "signedRelativeErrors": {
+        "forwardM5": 0.000528318661493298,
+        "reverseM5": 0.000528318661493298
+      },
+      "referenceMarginScreens": {
+        "forwardM5": 0.000544400044464879,
+        "reverseM5": 0.000544400044464879
+      },
+      "directedReciprocity": 0.0
+    },
+    {
+      "aVolumeM3": 5.202197209276902e-29,
+      "bVolumeM3": 5.202197209276902e-29,
+      "forwardM5": {
+        "Ok": 2.592481887648709e-51
+      },
+      "label": "stm556-self",
+      "reverseM5": {
+        "Ok": 2.592481887648709e-51
+      },
+      "seconds": 0.0090228,
+      "xyOrder": 24,
+      "zOrder": 16,
+      "independentReferenceM5": 2.5921181639687185e-51,
+      "absoluteReferenceUncertaintyM5": 4.166216401842817e-56,
+      "referenceRelativeUncertainty": 1.6072891363129684e-05,
+      "signedRelativeErrors": {
+        "forwardM5": 0.00014031909696334127,
+        "reverseM5": 0.00014031909696334127
+      },
+      "referenceMarginScreens": {
+        "forwardM5": 0.00015639424366007264,
+        "reverseM5": 0.00015639424366007264
+      },
+      "directedReciprocity": 0.0
+    },
+    {
+      "aVolumeM3": 5.770476457778194e-19,
+      "bVolumeM3": 4.161757767421521e-28,
+      "forwardM5": {
+        "Ok": 1.7122766007029188e-42
+      },
+      "label": "stm-scaled",
+      "reverseM5": {
+        "Ok": 1.711859637538383e-42
+      },
+      "seconds": 0.0165305,
+      "xyOrder": 12,
+      "zOrder": 8
+    },
+    {
+      "aVolumeM3": 7.213095572222742e-20,
+      "bVolumeM3": 5.202197209276902e-29,
+      "forwardM5": {
+        "Ok": 5.350864377196621e-44
+      },
+      "label": "stm-translated",
+      "reverseM5": {
+        "Ok": 5.349561367307447e-44
+      },
+      "seconds": 0.0164865,
+      "xyOrder": 12,
+      "zOrder": 8
+    },
+    {
+      "aVolumeM3": 7.213095572222742e-20,
+      "bVolumeM3": 5.202197209276902e-29,
+      "forwardM5": {
+        "Ok": 5.350864377197309e-44
+      },
+      "label": "stm-rotated",
+      "reverseM5": {
+        "Ok": 5.349561367307447e-44
+      },
+      "seconds": 0.0163414,
+      "xyOrder": 12,
+      "zOrder": 8
+    }
+  ],
+  "transformations": [
+    {
+      "label": "stm-scaled",
+      "relativeErrors": {
+        "forwardM5": 0.0,
+        "reverseM5": 0.0
+      }
+    },
+    {
+      "label": "stm-translated",
+      "relativeErrors": {
+        "forwardM5": 0.0,
+        "reverseM5": 0.0
+      }
+    },
+    {
+      "label": "stm-rotated",
+      "relativeErrors": {
+        "forwardM5": 1.2856382625159313e-13,
+        "reverseM5": 0.0
+      }
+    }
+  ],
+  "operator": [
+    {
+      "xyOrder": 12,
+      "zOrder": 8,
+      "rawLH": [
+        [
+          1.4198060040820479e-10,
+          3.707922747368863e-11,
+          1.1038913808042591e-11,
+          1.2574394934219092e-11
+        ],
+        [
+          3.7079227473688586e-11,
+          2.726858453433537e-10,
+          2.7168552134431428e-11,
+          2.4792053675298505e-11
+        ],
+        [
+          1.1038913808042596e-11,
+          2.716855213443149e-11,
+          1.1026959948990183e-10,
+          3.1078808174847655e-11
+        ],
+        [
+          1.2574394934219105e-11,
+          2.4792053675298554e-11,
+          3.107880817484763e-11,
+          2.988928832947232e-10
+        ]
+      ],
+      "rawReferenceLH": [
+        [
+          1.4198058291191759e-10,
+          3.7079227473688825e-11,
+          1.1038913808042673e-11,
+          1.2574394934219176e-11
+        ],
+        [
+          3.7079227473688825e-11,
+          2.7268576909866455e-10,
+          2.7168552134431644e-11,
+          2.4792053675298715e-11
+        ],
+        [
+          1.1038913808042673e-11,
+          2.7168552134431644e-11,
+          1.1026958654097654e-10,
+          3.107880817484781e-11
+        ],
+        [
+          1.2574394934219176e-11,
+          2.4792053675298715e-11,
+          3.107880817484781e-11,
+          2.988927788717749e-10
+        ]
+      ],
+      "signedRelativeEntryErrors": [
+        [
+          1.23230140638904e-07,
+          -5.228546258270485e-15,
+          -7.464044493987567e-15,
+          -6.681079399995291e-15
+        ],
+        [
+          -6.4485403852002646e-15,
+          2.796064106837033e-07,
+          -7.968355283358996e-15,
+          -8.471517937027522e-15
+        ],
+        [
+          -7.024983053164769e-15,
+          -5.70867244180943e-15,
+          1.1742970750931807e-07,
+          -4.990421897169555e-15
+        ],
+        [
+          -5.653221030765245e-15,
+          -6.516552259251941e-15,
+          -5.8221588800311475e-15,
+          3.493659121054851e-07
+        ]
+      ],
+      "absoluteNearZeroNormalizedErrors": [
+        [
+          1.23230140638904e-07,
+          9.85294180532591e-16,
+          6.585036878116201e-16,
+          4.078134459325764e-16
+        ],
+        [
+          1.2151961559901958e-15,
+          2.796064106837033e-07,
+          1.2484641453966584e-15,
+          7.356729538549946e-16
+        ],
+        [
+          6.197681767638776e-16,
+          8.94422074314024e-16,
+          1.1742970750931807e-07,
+          8.54311071097878e-16
+        ],
+        [
+          3.450729157891031e-16,
+          5.659022721961497e-16,
+          9.96696249614191e-16,
+          3.493659121054851e-07
+        ]
+      ],
+      "fullPositiveRangeError": 3.692644808620135e-07,
+      "physicalPositiveRangeError": 3.6045782644165535e-07,
+      "rawReciprocity": 3.540420710826345e-16,
+      "fullEigenvaluesH": [
+        1.0161649142190278e-10,
+        1.3223309996352138e-10,
+        2.62508062859061e-10,
+        3.274712742916987e-10
+      ],
+      "physicalEigenvaluesH": [
+        1.1257263762794496e-10,
+        1.7850938619188458e-10,
+        9.9364215773707e-10
+      ],
+      "physicalReferenceEigenvaluesH": [
+        1.1257262178750999e-10,
+        1.7850933318302778e-10,
+        9.936418066276145e-10
+      ],
+      "physicalRawLH": [
+        [
+          4.1572469383448976e-10,
+          2.9860566215889416e-10,
+          2.6627859399369904e-10
+        ],
+        [
+          2.9860566215889416e-10,
+          5.219946212874798e-10,
+          2.701905735790085e-10
+        ],
+        [
+          2.66278593993699e-10,
+          2.7019057357900845e-10,
+          3.4700486643492975e-10
+        ]
+      ],
+      "pairCosts": [
+        {
+          "i": 0,
+          "j": 0,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0020809
+        },
+        {
+          "i": 0,
+          "j": 1,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0019427
+        },
+        {
+          "i": 0,
+          "j": 2,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0019564
+        },
+        {
+          "i": 0,
+          "j": 3,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0019577
+        },
+        {
+          "i": 1,
+          "j": 0,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0019522
+        },
+        {
+          "i": 1,
+          "j": 1,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0020707
+        },
+        {
+          "i": 1,
+          "j": 2,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0019378
+        },
+        {
+          "i": 1,
+          "j": 3,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0019422
+        },
+        {
+          "i": 2,
+          "j": 0,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.001937
+        },
+        {
+          "i": 2,
+          "j": 1,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0019537
+        },
+        {
+          "i": 2,
+          "j": 2,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.002139
+        },
+        {
+          "i": 2,
+          "j": 3,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.001956
+        },
+        {
+          "i": 3,
+          "j": 0,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0019657
+        },
+        {
+          "i": 3,
+          "j": 1,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.001952
+        },
+        {
+          "i": 3,
+          "j": 2,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0019522
+        },
+        {
+          "i": 3,
+          "j": 3,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0020705
+        }
+      ],
+      "all64OrientedPrismPairSeconds": 0.0317667,
+      "meanOrientedPrismPairSeconds": 0.0004963546875,
+      "fullErrorSpectrum": [
+        1.0538655095895251e-07,
+        1.3177942362794065e-07,
+        3.0450540566142757e-07,
+        3.692644808620135e-07
+      ]
+    },
+    {
+      "xyOrder": 24,
+      "zOrder": 16,
+      "rawLH": [
+        [
+          1.4198058299295205e-10,
+          3.7079227473688845e-11,
+          1.1038913808042602e-11,
+          1.257439493421916e-11
+        ],
+        [
+          3.707922747368879e-11,
+          2.726857694518131e-10,
+          2.7168552134431528e-11,
+          2.4792053675298567e-11
+        ],
+        [
+          1.103891380804263e-11,
+          2.7168552134431457e-11,
+          1.1026958660080263e-10,
+          3.107880817484759e-11
+        ],
+        [
+          1.2574394934219102e-11,
+          2.4792053675298538e-11,
+          3.107880817484776e-11,
+          2.988927793383974e-10
+        ]
+      ],
+      "rawReferenceLH": [
+        [
+          1.4198058291191759e-10,
+          3.7079227473688825e-11,
+          1.1038913808042673e-11,
+          1.2574394934219176e-11
+        ],
+        [
+          3.7079227473688825e-11,
+          2.7268576909866455e-10,
+          2.7168552134431644e-11,
+          2.4792053675298715e-11
+        ],
+        [
+          1.1038913808042673e-11,
+          2.7168552134431644e-11,
+          1.1026958654097654e-10,
+          3.107880817484781e-11
+        ],
+        [
+          1.2574394934219176e-11,
+          2.4792053675298715e-11,
+          3.107880817484781e-11,
+          2.988927788717749e-10
+        ]
+      ],
+      "signedRelativeEntryErrors": [
+        [
+          5.707432854793549e-10,
+          5.228546258270484e-16,
+          -6.4395677987343715e-15,
+          -1.2848229615375559e-15
+        ],
+        [
+          -8.714243763784141e-16,
+          1.2950750245503857e-09,
+          -4.2815043313570725e-15,
+          -5.995228078511785e-15
+        ],
+        [
+          -3.951552967405183e-15,
+          -6.897979200519728e-15,
+          5.425439431987674e-10,
+          -7.069764354323537e-15
+        ],
+        [
+          -5.910185623072757e-15,
+          -7.168207485177135e-15,
+          -1.663473965723185e-15,
+          1.561170234590026e-09
+        ]
+      ],
+      "absoluteNearZeroNormalizedErrors": [
+        [
+          5.707432854793549e-10,
+          9.85294180532591e-17,
+          5.681208287002212e-16,
+          7.842566267934161e-17
+        ],
+        [
+          1.6421569675543185e-16,
+          1.2950750245503857e-09,
+          6.70816555735518e-16,
+          5.206300904204577e-16
+        ],
+        [
+          3.486195994296812e-16,
+          1.0807600064627789e-15,
+          5.425439431987674e-10,
+          1.2102740173886605e-15
+        ],
+        [
+          3.6075804832497143e-16,
+          6.224924994157646e-16,
+          2.84770357032626e-16,
+          1.561170234590026e-09
+        ]
+      ],
+      "fullPositiveRangeError": 1.653579210356986e-09,
+      "physicalPositiveRangeError": 1.6193270221140385e-09,
+      "rawReciprocity": 9.255036603560345e-16,
+      "fullEigenvaluesH": [
+        1.0161647612438142e-10,
+        1.3223307836496643e-10,
+        2.625079784008604e-10,
+        3.2747118549375674e-10
+      ],
+      "physicalEigenvaluesH": [
+        1.1257262186063799e-10,
+        1.785093334281469e-10,
+        9.936418082032443e-10
+      ],
+      "physicalReferenceEigenvaluesH": [
+        1.1257262178750999e-10,
+        1.7850933318302778e-10,
+        9.936418066276145e-10
+      ],
+      "physicalRawLH": [
+        [
+          4.1572457246291117e-10,
+          2.986055582025685e-10,
+          2.662784900373731e-10
+        ],
+        [
+          2.986055582025685e-10,
+          5.219944414396134e-10,
+          2.701904696226826e-10
+        ],
+        [
+          2.6627849003737334e-10,
+          2.7019046962268275e-10,
+          3.470047495895047e-10
+        ]
+      ],
+      "pairCosts": [
+        {
+          "i": 0,
+          "j": 0,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0161888
+        },
+        {
+          "i": 0,
+          "j": 1,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0154973
+        },
+        {
+          "i": 0,
+          "j": 2,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0154894
+        },
+        {
+          "i": 0,
+          "j": 3,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0154887
+        },
+        {
+          "i": 1,
+          "j": 0,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0155207
+        },
+        {
+          "i": 1,
+          "j": 1,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0162639
+        },
+        {
+          "i": 1,
+          "j": 2,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0155587
+        },
+        {
+          "i": 1,
+          "j": 3,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0155018
+        },
+        {
+          "i": 2,
+          "j": 0,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0155264
+        },
+        {
+          "i": 2,
+          "j": 1,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0154713
+        },
+        {
+          "i": 2,
+          "j": 2,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0163479
+        },
+        {
+          "i": 2,
+          "j": 3,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0154246
+        },
+        {
+          "i": 3,
+          "j": 0,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0154428
+        },
+        {
+          "i": 3,
+          "j": 1,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.015505
+        },
+        {
+          "i": 3,
+          "j": 2,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0155044
+        },
+        {
+          "i": 3,
+          "j": 3,
+          "prismPairs": 4,
+          "refusal": null,
+          "seconds": 0.0163884
+        }
+      ],
+      "all64OrientedPrismPairSeconds": 0.2511201,
+      "meanOrientedPrismPairSeconds": 0.0039237515625,
+      "fullErrorSpectrum": [
+        4.870876453762094e-10,
+        6.096928826903969e-10,
+        1.4083819133932403e-09,
+        1.653579210356986e-09
+      ]
+    }
+  ],
+  "physicalBasisB": [
+    [
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      -1.0,
+      -1.0,
+      -1.0
+    ]
+  ],
+  "physicalConservationResidual": 0.0,
+  "independentOperatorReferenceLastChange": 1.6645942980701366e-16,
+  "independentOperatorReferenceWorkingUncertainty": 1.0036295429136589e-13,
+  "referenceUncertaintyMeaning": "2*(last mutual operator change+max last self change)+128eps*condition; observed numerical screen, not certified arbitrary geometry bound.",
+  "independentSelfConvolutionLastChanges": [
+    3.3306690738754696e-15,
+    3.774758283725532e-15,
+    3.552713678800501e-15,
+    4.218847493575595e-15
+  ],
+  "resources": [
+    {
+      "mode": "current",
+      "command": [
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\analyze-p7-extraction\\debugging\\p7-design-checkpoint\\magnetic-stability\\current-probe.exe",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\analyze-p7-extraction\\tests\\fixtures\\analysis-local-extraction\\magnetic-stability\\coupon.json"
+      ],
+      "seconds": 0.6810896999959368,
+      "peakBytes": 4333568,
+      "capBytes": 536870912,
+      "capSeconds": 60,
+      "exitCode": 0,
+      "externalRefusal": null,
+      "binarySha256": "56d8ceb926ab53907514683a1753b2880e94d5cbe9e9b2d575ce192e2b05d3ba",
+      "inputSha256": "bebd77841dd394aacbac2bf479da0da02e62816779a5ea45528e3468753a4fb3",
+      "rawSha256": "9c63d19a8d7a250bfc74edf0c5731d12b32802d6778c4564ee8e06bf437d3fc5"
+    },
+    {
+      "mode": "reference",
+      "command": [
+        "C:\\Python311\\python.exe",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\analyze-p7-extraction\\tests\\fixtures\\analysis-local-extraction\\magnetic-stability\\independent-reference.py"
+      ],
+      "seconds": 11.48847250000108,
+      "peakBytes": 195715072,
+      "capBytes": 536870912,
+      "capSeconds": 60,
+      "exitCode": 0,
+      "externalRefusal": null,
+      "binarySha256": "d060511dd5aad279df7717ca75319b7198fba8b739041209b050fa0c4ed1608a",
+      "inputSha256": "bebd77841dd394aacbac2bf479da0da02e62816779a5ea45528e3468753a4fb3",
+      "rawSha256": "7a1df5588cb20ace97c38d189c5ba336c1b9eee2fd6336cd043ce31fb34a139b"
+    },
+    {
+      "mode": "legacy",
+      "command": [
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\analyze-p7-extraction\\debugging\\p7-design-checkpoint\\magnetic-stability\\legacy-probe.exe",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\analyze-p7-extraction\\tests\\fixtures\\analysis-local-extraction\\magnetic-stability\\coupon.json",
+        "--pair-only"
+      ],
+      "seconds": 0.07873160000599455,
+      "peakBytes": 4472832,
+      "capBytes": 134217728,
+      "capSeconds": 60,
+      "exitCode": 0,
+      "externalRefusal": null,
+      "binarySha256": "91eae33f5ba003a41dab25c0a3c006341749548cb19099bdafa0f23f7320f539",
+      "inputSha256": "bebd77841dd394aacbac2bf479da0da02e62816779a5ea45528e3468753a4fb3",
+      "rawSha256": "11ff8e1fd8e7888e001545b7ecd7ba1b2087e5b90e8ef8a766b117371ff47c64"
+    }
+  ],
+  "roiCostPreflight": [
+    {
+      "name": "BandAmpV5-supports",
+      "foilSupports": 2962,
+      "axialSupports": 768,
+      "packedScalarPairs": 4683499,
+      "packedScalarBytes": 37467992,
+      "oneDirectionCoarseSecondsEstimate": 2324.676682551563,
+      "oneDirectionRefinedSecondsEstimate": 18376.886519217187,
+      "twoDirectionTwoRuleSecondsEstimate": 41403.1264035375,
+      "sourceSha256": "6630d6b0bdc3cd5ad078e4901a75a19f14dc2fc2982fb3a4ba0144c20f454b02"
+    },
+    {
+      "name": "STM32G0_CAN_RS485-supports",
+      "foilSupports": 1002,
+      "axialSupports": 192,
+      "packedScalarPairs": 521031,
+      "packedScalarBytes": 4168248,
+      "oneDirectionCoarseSecondsEstimate": 258.6161791828125,
+      "oneDirectionRefinedSecondsEstimate": 2044.3962003609377,
+      "twoDirectionTwoRuleSecondsEstimate": 4606.0247590875,
+      "sourceSha256": "3b6db9414d5154b4b63a23a677244f9a963996a11a6ac6515ee0f7fc4e41fb8b"
+    },
+    {
+      "name": "TPS63060DSCR-supports",
+      "foilSupports": 2178,
+      "axialSupports": 576,
+      "packedScalarPairs": 2539107,
+      "packedScalarBytes": 20312856,
+      "oneDirectionCoarseSecondsEstimate": 1260.2976615140626,
+      "oneDirectionRefinedSecondsEstimate": 9962.825058604689,
+      "twoDirectionTwoRuleSecondsEstimate": 22446.2454402375,
+      "sourceSha256": "fa080f471ca729b150ff239b29fa721e8ea19a0be9cdd17be7460c31fd369858"
+    }
+  ],
+  "slenderSelfEnclosure": {
+    "method": "Independent exact-double-z1D triangle marginal convolution with finite-width transport enclosure",
+    "geometry": {
+      "areaM2": 2.0608840155256233e-15,
+      "baseWidthM": 8.243536062102486e-12,
+      "medianLengthM": 0.0005590169943749476,
+      "thicknessM": 3.500000000000009e-05
+    },
+    "derivation": [
+      "Uniform triangle marginal2r gives pair distance density g(v)=8/3-4v+4v^3/3.",
+      "Each transverse displacement <=w/2; pair radial perturbation<=w. Split v at epsilon=2w/L.",
+      "Far: |Hprime(rho)|<=2h/rho and rho>=Lv/2 give difference<=4hw/(Lv); g<=8/3.",
+      "Near finite source strip has XYarea<=8Aw/L. Symmetric decreasing rearrangement bounds its point potential by equal-area disk with source-z upper kernel2asinh(h/rho). Multiply by target volumeAh.",
+      "Near collapsed integral uses g<=8/3 and H(rho)<=2h*asinh(h/rho).",
+      "Finite-width geometry is not discarded: its entire change is included in the enclosure. MP50/80 numeric change recorded separately; this is not a native geometry replacement."
+    ],
+    "levels": [
+      {
+        "digits": 50,
+        "collapsedReferenceM5": "9.0874542461753181317414103472045212078920272766383e-35"
+      },
+      {
+        "digits": 80,
+        "collapsedReferenceM5": "9.0874542461753181317414103472045212078920272766382753106591447198044937698487381e-35"
+      }
+    ],
+    "referenceM5": 9.087454246175318e-35,
+    "absoluteGeometryEnclosureM5": 1.3605132998310173e-39,
+    "absoluteNumericalChangeM5": 2.4689340855280197e-85,
+    "absoluteTotalUncertaintyM5": 1.3605132998310173e-39,
+    "relativeUncertaintyToLowerEndpoint": 1.4971560042904089e-05,
+    "lowerM5": 9.087318194845335e-35,
+    "upperM5": 9.087590297505301e-35,
+    "boundComponentsM5": {
+      "nearCollapsed": 3.802341454415527e-40,
+      "nearFinite": 5.74845963450557e-40,
+      "farDifference": 4.054331909389076e-40
+    },
+    "seconds": 0.2471573999937391,
+    "inputSha256": "bebd77841dd394aacbac2bf479da0da02e62816779a5ea45528e3468753a4fb3",
+    "scriptSha256": "1c463198ef252bd881b87fedf18da2d3b2de93a05e32b4fcc52a4918b9ddf5f3"
+  },
+  "retainedInsufficientSlenderSelfQMCUncertainty": 0.0036247760338061195,
+  "limitations": [
+    "Full4x4 partial-volume magnetic kernel and full3D sum(I)=0 current space; no inferred exterior return/joint fields. Not a complete closed-PCB B-field/recovery certificate.",
+    "Point-source1e-5 order-change acceptance and conditioning indicator are controls, not universal certified error bounds. Independent accuracy applies to frozen coupons only.",
+    "Sobol6SE+2last-change uncertainty is empirical/statistical, not a deterministic bound. Slender self uses a separate finite-width geometry enclosure.",
+    "ROI timing is an extrapolation from saved small pair costs, not measured full-ROI performance; no large ROI was run. Dense cost remains a production blocker.",
+    "All old production geometry/resource refusals and failed first candidate/reference evidence remain; P7/C/P6/Thermal/DSL/vias not broadened."
+  ],
+  "sha256": {
+    "tests\\fixtures\\analysis-local-extraction\\magnetic-stability\\coupon.json": "bebd77841dd394aacbac2bf479da0da02e62816779a5ea45528e3468753a4fb3",
+    "tests\\fixtures\\analysis-local-extraction\\magnetic-stability\\stm-668-556.json": "b3a694becb7b7f8e28d65f822044803ea5ffaa072f5b8b86233ee120867c95d1",
+    "tests\\fixtures\\analysis-local-extraction\\magnetic-stability\\reference.json": "bd5c10d56638b55f40592c5fd4e0b21b40a90ee377099f21605461d595b7cb2a",
+    "tests\\fixtures\\analysis-local-extraction\\magnetic-stability\\slender-self-reference.json": "70eb37a71504697fa333ead745e16dcc0728cd94fd32d492b3c6e1f271dcffe9",
+    "tests\\fixtures\\analysis-local-extraction\\magnetic-stability\\audit.py": "21d1300be9d056376753b591fe51f43312d1353397b7c1c1821f5bb55d882d9a",
+    "native\\analyze\\examples\\magnetic_kernel_coupon.rs": "19a2d6b9c22e6a5a596e911dc6cd17670c504096decfd9ccf1dc7e92017ecd5a",
+    "native\\analyze\\tests\\magnetic_kernel.rs": "96bbccb8691cd99193e020d37470983eee52012f8c42908d1e6c46927b6069f7",
+    "native\\analyze\\src\\extraction\\local\\prism.rs": "22857c009475aa9b8884bab0cb8b5dede6d75c84a1a9112bd7ae284b20a8fddc",
+    "native\\analyze\\src\\extraction\\local\\polyhedron.rs": "1f9498a626e53e91a2d6de2882b799dd30612109fb2ab8996befe3854df81e5e"
+  }
+}

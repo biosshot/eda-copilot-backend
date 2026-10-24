@@ -96,7 +96,7 @@ impl GaussRule {
     }
 }
 
-fn radial(k: f64) -> f64 {
+pub(super) fn radial(k: f64) -> f64 {
     // ∫_0^1 r asinh(k/r) dr; this form avoids subtracting k*|k|.
     0.5 * (k.asinh() + k / (1_f64.hypot(k) + k.abs()))
 }
