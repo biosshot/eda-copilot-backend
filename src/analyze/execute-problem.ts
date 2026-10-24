@@ -10,7 +10,12 @@ export function createProblemExecutor(retainDcForScenario = false) {
   return <P extends AnalysisProblem>(problem: P): AnalysisResult<P> => {
     const addon = createRequire(import.meta.url)(backendResource('native', 'node-addon', 'index.cjs')) as typeof import('../../native/node-addon/index.cjs');
     let result: AnalysisResult;
-    if (problem.kind === 'geometry-validation') result = addon.validateAnalysisGeometry(problem.request);
+    if(problem.kind==='transient-network'){
+      electrical ??= new addon.AnalysisElectricalSession();
+      try {result=electrical.solveTransient(problem.request);}
+      finally{if(!retainDcForScenario){electrical.clear();electrical=undefined;}}
+    }
+    else if (problem.kind === 'geometry-validation') result = addon.validateAnalysisGeometry(problem.request);
     else if (problem.kind === 'cross-section') {
       electrical ??= new addon.AnalysisElectricalSession();
       try {result=electrical.solveCrossSection(problem.request);}

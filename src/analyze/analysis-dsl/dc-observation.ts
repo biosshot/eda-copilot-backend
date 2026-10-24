@@ -58,6 +58,7 @@ export function dcPadPotentials(board: RoutingBoardV2, r: AnalysisDcReport, vali
 export function dcObservedVoltage(board: RoutingBoardV2 | undefined, descriptor: unknown, metrics: Readonly<Record<string, T.DataDescription>>): T.DataDescription {
   const missing = (reason: string): T.DataDescription => ({ kind: 'scalar', unit: 'V', validity: { status: 'unavailable', reason }, diagnostics: [] });
   if (!object(descriptor) || !object(descriptor.input)) return missing('No physical pad-pair descriptor for this DC observation');
+  if(descriptor.input.layer!==undefined)return missing('Surface-specific port layer is not supported by this DC observation');
   const sides = [descriptor.input.positive, descriptor.input.negative].map(v => Array.isArray(v) ? v : [v]);
   if (sides.some(s => s.length !== 1 || !object(s[0]))) return missing('Aggregated DC voltage observations are unsupported');
   const samples = sides.map(s => {

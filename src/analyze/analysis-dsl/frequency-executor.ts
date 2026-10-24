@@ -6,10 +6,18 @@ import {createProblemExecutor} from '../execute-problem.ts';
 import {object} from './descriptions.ts';
 import {AnalysisDslError,invalid} from './schema.ts';
 import {json} from './data.ts';
-import {networkResource} from './frequency-model.ts';
+import {networkResource,declaredNetworkBand} from './frequency-model.ts';
+/** Retain applicability while linking generated ancestor history by hash.
+ * Reusing two copies of a result must not duplicate its entire history twice. */
+function compactValidity(value:unknown):unknown{
+ if(!object(value)||!object(value.domain)||!Array.isArray(value.domain.provenance)||!value.domain.provenance.every(p=>object(p)&&typeof p.sha256==='string'&&typeof p.resourceId==='string'))return value;
+ const domain:Record<string,unknown>={...value.domain,provenance:{sha256:createHash('sha256').update(JSON.stringify(json(value.domain.provenance))).digest('hex')}};
+ if(domain.sourceValidity!==undefined)domain.sourceValidity={sha256:createHash('sha256').update(JSON.stringify(json(domain.sourceValidity))).digest('hex')};
+ return {...value,domain};
+}
 /** Flatten descriptor instances, never Resource ids: repeated models are separate
  * devices, repeated handles (including nested overlap) are errors. No solver here. */
-function topology(task:AnalysisTask<'networkParameters'>){
+export function frequencyTopology(task:AnalysisTask<'networkParameters'|'si'>){
  const descriptors=new Map(task.descriptors.filter((d):d is Record<string,T.Json>=>object(d)).map(d=>[String(d.id),d]));
  const instances:AnalysisFrequencyRequest['instances']=[],connections:[number,number][]=[],seen=new Set<string>();let count=0;
  function visit(id:string,depth=0):Map<string,number>{
@@ -38,11 +46,13 @@ function topology(task:AnalysisTask<'networkParameters'>){
 export function createFrequencyExecutor(){const execute=createProblemExecutor(true);return async(task:AnalysisTask<'networkParameters'>):Promise<ExecutionResult>=>{
  const c=task.config;if(task.variantChanges.length)throw new AnalysisDslError('UNSUPPORTED_NETWORK_MODEL','Variants require an explicitly rebuilt frequency model');
  if(c.numerics)throw new AnalysisDslError('UNSUPPORTED_NETWORK_MODEL','Frequency blocks use fixed validated F64 residual/conditioning/passivity guards; numerics overrides unsupported');
- const graph=topology(task),n=graph.ports.length,points=c.frequencyHz===undefined?c.frequency?.points??0:1;
+ const graph=frequencyTopology(task),n=graph.ports.length,points=c.frequencyHz===undefined?c.frequency?.points??0:1;
  if(!Number.isSafeInteger(points)||points<1||n<1||n>16||points>100000||points>131072/n/n||points*graph.instances.reduce((s,i)=>s+i.ports.length,0)**3>1e8)throw new AnalysisDslError('NETWORK_BUDGET','Frequency output/work cap exceeded before axis allocation');
  if(c.representation!=='S'&&c.referenceOhm!==undefined)invalid('Z/Y output cannot specify referenceOhm');
  const references=c.representation==='S'?graph.ports.map(p=>typeof c.referenceOhm==='number'?c.referenceOhm:c.referenceOhm![p.name]):undefined;
  const frequencies=c.frequencyHz!==undefined?[c.frequencyHz]:Array.from({length:points},(_,i)=>{const f=c.frequency!,t=points===1?0:i/(points-1);return f.scale==='log'?f.startHz*(f.stopHz/f.startHz)**t:f.startHz+(f.stopHz-f.startHz)*t;});
+ const sourceBands=graph.instances.map(i=>declaredNetworkBand(i.model));
+ for(const band of sourceBands)if(band&&frequencies.some(f=>f<band[0]||f>band[1]))throw new AnalysisDslError('NETWORK_BAND','Requested frequency lies outside producer applicability');
  const report=execute({kind:'frequency-network',request:{...graph,frequencies,representation:c.representation!,referenceOhm:references,budget:c.budget}});
  if(report.status!=='complete')throw new AnalysisDslError(report.diagnostics[0]?.code??'NETWORK_REJECTED',report.diagnostics.map(d=>d.message).join('; '),report.diagnostics);
  report.resources={peakRssBytes:process.resourceUsage().maxRSS*1024,metric:'OS process high-water RSS through native call; includes Node/earlier solves'};
@@ -50,9 +60,16 @@ export function createFrequencyExecutor(){const execute=createProblemExecutor(tr
  const unit=c.representation==='S'?'1':c.representation==='Z'?'Ohm':'S';
  const metrics:Record<string,T.DataDescription>={};for(let i=0;i<n;i++)for(let j=0;j<n;j++)metrics[`parameter:${JSON.stringify({out:graph.ports[i].name,in:graph.ports[j].name})}`]={kind:'series',unit,values:report.parameters!.map(m=>m[i][j]),axis:{name:'frequencyHz',unit:'Hz',values:report.frequenciesHz!},validity,diagnostics:[]};
  const sourceHashes=graph.instances.map(i=>({instanceId:i.id,resourceId:i.model.id,sha256:createHash('sha256').update(JSON.stringify(json(i.model))).digest('hex')}));
- const compactProvenance=report.provenance!.map((p:any,i)=>({instanceId:p.instanceId,resourceId:p.resource.id,sha256:sourceHashes[i].sha256,source:p.resource.source,sourcePorts:p.sourcePorts,mapping:p.mapping,sourceRepresentation:p.sourceRepresentation,sourceReferenceOhm:p.sourceReferenceOhm,bandHz:p.bandHz,nature:p.nature}));
- const resource:T.NetworkResource={id:`computed-${randomUUID()}`,kind:'network',ports:graph.ports.map(p=>p.name),source:'Computed explicit frequency network; no temporal or PCB model',analyses:['networkParameters'],validity:{...validity,domain:json({bandHz:report.bandHz,provenance:compactProvenance,interpolation:report.interpolation})},data:{format:'network-parameters',representation:c.representation!,referenceTopology:'common',nature:report.nature!,frequenciesHz:report.frequenciesHz!,parameters:report.parameters!,...(c.representation==='S'?{referenceOhm:Object.fromEntries(graph.ports.map((p,i)=>[p.name,references![i]]))}:{})}};
+ const compactProvenance=report.provenance!.map((p:any,i)=>({instanceId:p.instanceId,resourceId:p.resource.id,sha256:sourceHashes[i].sha256,source:p.resource.source,sourcePorts:p.sourcePorts,mapping:p.mapping,sourceRepresentation:p.sourceRepresentation,sourceReferenceOhm:p.sourceReferenceOhm,bandHz:p.bandHz,nature:p.nature,sourceValidity:compactValidity(p.resource.validity)??null,allowedAnalyses:p.resource.analyses??null}));
+ const descriptor=graph.instances.length===1&&object(graph.instances[0].model.data)&&graph.instances[0].model.data.format==='coupled-rlc';
+ const analytic=descriptor||graph.instances.length===1&&object(graph.instances[0].model.data)&&graph.instances[0].model.data.format==='delayed-scattering'&&graph.connections.length===0&&graph.ports.length===graph.instances[0].ports.length&&graph.ports.every((p,i)=>p.index===i);
+ const originalValidity:Partial<T.Validity>=analytic&&object(graph.instances[0].model.validity)?compactValidity(graph.instances[0].model.validity) as T.Validity:{};
+ const originalDomain=object(originalValidity.domain)?originalValidity.domain:{};
+ const band=[Math.max(report.bandHz![0],...sourceBands.map(b=>b?.[0]??0),...(analytic?[]:[frequencies[0]])),Math.min(report.bandHz![1],...sourceBands.map(b=>b?.[1]??Number.MAX_VALUE),...(analytic?[]:[frequencies.at(-1)!]))];
+ const originalData=graph.instances[0].model.data;
+ const analyticData=analytic&&object(originalData)&&originalData.format==='delayed-scattering'&&object(originalData.referenceOhm)?{...originalData,referenceOhm:Object.fromEntries(graph.ports.map((p,i)=>[p.name,(originalData.referenceOhm as Record<string,T.Json>)[graph.instances[0].model.ports[i]]]))}:originalData;
+ const resource:T.NetworkResource={id:`computed-${randomUUID()}`,kind:'network',ports:graph.ports.map(p=>p.name),source:analytic?'Evaluated supplied analytic model; original terminal/reference/temporal semantics retained':'Computed explicit frequency network; no temporal or PCB model',analyses:analytic?(graph.instances[0].model.analyses??['networkParameters','si']) as T.AnalysisKind[]:['networkParameters'],validity:{...originalValidity,...validity,domain:json({...originalDomain,bandHz:band,provenance:compactProvenance,interpolation:report.interpolation,...(analytic?{sourceValidity:originalValidity}:{})})},data:analytic?analyticData as T.NetworkResource['data']:{format:'network-parameters',representation:c.representation!,referenceTopology:'common',nature:report.nature!,frequenciesHz:report.frequenciesHz!,parameters:report.parameters!,...(c.representation==='S'?{referenceOhm:Object.fromEntries(graph.ports.map((p,i)=>[p.name,references![i]]))}:{})}};
  // Include exact resource hashes independently of report Resource compaction.
  const solution=json({...report,sourceHashes});
- return{id:`${task.contextId}:frequency-${randomUUID()}`,status:'complete',method:'Explicit common-return multiport power waves; faer real-block LU CPU/F64',diagnostics:report.diagnostics,assumptions:['Synthetic/supplied tabulated frequency behavior; no PCB extraction, implicit terminations, temporal response or causal/stability proof.','Complex linear interpolation in each source representation/reference BEFORE conversion and composition.','Passivity checked at evaluated points only; active and nonreciprocal models allowed.'],metrics,network:resource,solution};
+ return{id:`${task.contextId}:frequency-${randomUUID()}`,status:'complete',method:descriptor?'Full passive RLC descriptor with physical differential ports; CPU/F64':analytic?'Exact causal real-K delayed scattering; CPU/F64':'Explicit common-return multiport power waves; faer real-block LU CPU/F64',diagnostics:report.diagnostics,assumptions:descriptor?['Supplied full RLC matrices, original reference topology and differential port incidence; no hidden terminal connections or PCB accuracy inferred.','Direct descriptor evaluation; infinity block composition requires an explicit physical terminal map.']:analytic?['Exact supplied passive real-K delay model; original ordered terminals, references and applicability retained.']:['Synthetic/supplied tabulated frequency behavior; no PCB extraction, implicit terminations, temporal response or causal/stability proof.','Complex linear interpolation in each source representation/reference BEFORE conversion and composition.','Passivity checked at evaluated points only; active and nonreciprocal models allowed.'],metrics,network:resource,solution};
  };}

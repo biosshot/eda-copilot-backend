@@ -132,9 +132,29 @@ pub fn run(n: &mut Network, r: &Request, s: &mut Counters, start: Instant) -> Re
             .map(|p| (p.id.clone(), vec![]))
             .collect();
         let mut power_error = 0f64;
-        for f in &r.frequencies {
+        let mut node_voltages: BTreeMap<String, Vec<Value>> =
+            n.nodes.keys().map(|id| (id.clone(), vec![])).collect();
+        let mut currents: BTreeMap<String, Vec<Value>> = n
+            .circuit
+            .elements
+            .iter()
+            .map(|e| (e.id().to_owned(), vec![]))
+            .collect();
+        for (frequency_index, f) in r.frequencies.iter().enumerate() {
             checkpoint(r, start)?;
             let w = 2. * std::f64::consts::PI * f;
+            if !r.ac_sources.is_empty() {
+                let (v, i, res, k, p) = ac::response(n, r, frequency_index, s)?;
+                normalized = normalized.max(res);
+                kcl = kcl.max(k);
+                power_error = power_error.max(p);
+                for (id, value) in v {
+                    node_voltages.get_mut(&id).unwrap().push(value);
+                }
+                for (id, value) in i {
+                    currents.get_mut(&id).unwrap().push(value);
+                }
+            }
             for p in n.circuit.ports.clone() {
                 let mut b = vec![0.; 2 * n.n];
                 if let Some(a) = n.nodes[&p.positive] {
@@ -174,9 +194,13 @@ pub fn run(n: &mut Network, r: &Request, s: &mut Counters, start: Instant) -> Re
                 }
             }
         }
-        return Ok(
-            json!({"status":"complete","mode":"frequency","axis":r.frequencies,"impedances":impedances,"quality":{"relativeResidual":normalized,"kclAbsA":kcl,"relativeComplexPowerError":power_error},"diagnostics":[],"excitation":"Each port separately: +1 A injected into positive, extracted from negative. Independent V=0, I=0. No matched loads; Z=Vpositive-Vnegative."}),
-        );
+        let mut report = json!({"status":"complete","mode":"frequency","axis":r.frequencies,"impedances":impedances,"quality":{"relativeResidual":normalized,"kclAbsA":kcl,"relativeComplexPowerError":power_error},"diagnostics":[],"excitation":"Each impedance port separately: +1 A injected into positive, extracted from negative. Independent V=0, I=0. No matched loads; Z=Vpositive-Vnegative."});
+        if !r.ac_sources.is_empty() {
+            report["nodeVoltages"] = json!(node_voltages);
+            report["currents"] = json!(currents);
+            report["acExcitation"] = json!({"sources":r.ac_sources,"convention":"Peak phasors Re(V exp(+j omega t)); independent prescribed response, separate from impedance tests"});
+        }
+        return Ok(report);
     }
     if r.mode != "time" {
         return Err(fail("NETWORK_INPUT", "Unknown analysis mode"));

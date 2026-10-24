@@ -24,6 +24,7 @@ export function createAnalysisApi(input: DslInput, limits: Limits, changed: (upd
   const profiles = makeProfiles(input.profiles);
   const models = freeze(json(input.models ?? {}));
   if (!object(models) || Object.keys(models).some(k => !['materials', 'electrical', 'thermal', 'em'].includes(k))) S.invalid('Unknown models catalog category');
+  const electricalModels=object(models)&&object(models.electrical)?models.electrical:undefined;
   const snapshot = () => reports.map(r => r.snapshot());
   function analysis(options?: { board: T.RoutingBoardV2 }, parent?: ContextState): T.AnalysisContext {
     if (reports.length >= limits.maxEntries) throw new S.AnalysisDslError('OUTPUT_LIMIT', 'Scenario context limit exceeded');
@@ -108,7 +109,7 @@ export function createAnalysisApi(input: DslInput, limits: Limits, changed: (upd
           const p = preparation();
           if (!p.structurallyValid) throw new S.AnalysisDslError('INVALID_CONFIGURATION', 'Analysis configuration is incomplete or inconsistent', p.diagnostics);
           const profile = kind === 'dc' ? conductionProfile(config.stackup as T.StackupDescription | undefined, config.materials as T.Materials | undefined, config.temperatureC as number | undefined) : undefined;
-          const task: AnalysisTask<K> = freeze({ kind, contextId: id, ...(b ? { board: b, boardIdentity: identity } : {}), config: json(config) as T.Configurations[K], descriptors: [...descriptions.values()].map(json), variantChanges: json(state.changes) as T.Json[], resolvedLoads: p.components, ...(profile ? { conductionProfile: profile } : {}) });
+          const task: AnalysisTask<K> = freeze({ kind, contextId: id, ...(b ? { board: b, boardIdentity: identity } : {}), config: json(config) as T.Configurations[K], descriptors: [...descriptions.values()].map(json), variantChanges: json(state.changes) as T.Json[], resolvedLoads: p.components, ...(profile ? { conductionProfile: profile } : {}), ...((kind==='dc'||kind==='pi')&&config.circuit&&electricalModels?{electricalModels}:{}) });
           try {
             const payload = await executor(task);
             const result = resultFor(task, payload, validate, model => api.network({ model, ports: Object.fromEntries((model.ports ?? []).map(p => [p, p])) }), id => descriptions.get(id));
@@ -127,7 +128,8 @@ export function createAnalysisApi(input: DslInput, limits: Limits, changed: (upd
       electrothermal: () => build('electrothermal'), impedance: () => build('impedance'), tdr: () => build('tdr'), si: () => build('si'), eye: () => build('eye'), emi: () => build('emi'), em: () => build('em'), networkParameters: () => build('networkParameters'),
       port(v: Parameters<T.AnalysisContext['port']>[0]) {
         const pad = S.selector.refine(s => s.kind === 'pad' || s.kind === 'padId');
-        const parsed = S.parse(z.strictObject({ positive: z.union([pad, z.array(pad).min(1)]), negative: z.union([pad, z.array(pad).min(1)]) }), json(v));
+        const parsed = S.parse(z.strictObject({ positive: z.union([pad, z.array(pad).min(1)]), negative: z.union([pad, z.array(pad).min(1)]), layer:S.text.optional() }), json(v));
+        if(parsed.layer!==undefined&&b&&!b.layers.some(l=>l.name===parsed.layer))S.invalid('Unknown physical port layer');
         return descriptor('port', parsed) as T.Port;
       },
       channel(v: Parameters<T.AnalysisContext['channel']>[0]) { return descriptor('channel', S.parse(z.strictObject({ from: S.port, to: S.port, via: z.array(S.selector).optional(), scope: z.array(S.selector).optional() }), json(v))) as T.Channel; },

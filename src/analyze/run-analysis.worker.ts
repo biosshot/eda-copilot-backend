@@ -9,7 +9,7 @@ const executeProblem = createProblemExecutor();
 
 function importAnalysisInWorker(problem: unknown, jobId: string): AnalysisResult {
     if (!isAnalysisProblem(problem) || typeof jobId !== 'string') throw new TypeError('Invalid analysis worker request');
-    if (problem.kind === 'dc'||problem.kind==='electrical-network'||problem.kind==='frequency-network'||problem.kind==='cross-section'||problem.kind==='geometry-validation') { workerpool.workerEmit({ jobId, phase: 'started' }); return executeProblem(problem); }
+    if (problem.kind === 'dc'||problem.kind==='electrical-network'||problem.kind==='frequency-network'||problem.kind==='cross-section'||problem.kind==='geometry-validation'||problem.kind==='transient-network') { workerpool.workerEmit({ jobId, phase: 'started' }); return executeProblem(problem); }
     const addon = require(backendResource('native', 'node-addon', 'index.cjs')) as typeof import('../../native/node-addon/index.cjs');
     if (typeof addon.importAnalysisBoard !== 'function') throw new Error('Rebuild the shared addon: npm run native:build');
     if (problem.kind === 'prepare-geometry' && typeof addon.prepareAnalysisGeometry !== 'function') throw new Error('Rebuild the shared addon: npm run native:build');

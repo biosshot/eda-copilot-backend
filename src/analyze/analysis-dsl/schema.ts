@@ -87,7 +87,7 @@ const element = z.discriminatedUnion('kind', [
   z.strictObject({ id: text, kind: z.literal('inductor'), nodes: z.tuple([text, text]), ...inductorFields }).refine(indMode, 'Specify series resistance or ideal:true'),
   z.strictObject({ id: text, kind: z.literal('voltage-source'), nodes: z.tuple([text, text]), voltageV: finite, model: z.union([z.literal('ideal'), model]), waveform: waveform.optional() }),
   z.strictObject({ id: text, kind: z.literal('current-source'), nodes: z.tuple([text, text]), currentA: finite, waveform: waveform.optional() }),
-  z.strictObject({ id: text, kind: z.literal('model'), model, pins: z.record(text, text) }),
+  z.strictObject({ id: text, kind: z.literal('model'), model: z.union([model,componentDescription]), pins: z.record(text, text) }),
 ]);
 export const circuitInput = z.strictObject({ nodes: z.array(text).min(1), reference: text.optional(), ports: z.array(z.strictObject({ id: text, positive: text, negative: text })), elements: z.array(element).min(1) });
 export const thermalNetworkInput = z.strictObject({ nodes: z.array(thermalNode).min(1), links: z.array(thermalLink), sources: z.array(z.strictObject({ node: text, powerW: z.union([nonnegative, waveform]) })) });

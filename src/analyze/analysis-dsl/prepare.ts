@@ -23,7 +23,8 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
   const boardOr = (other: string[]) => {
     const modes = other.filter(k => config[k] !== undefined);
     if (modes.length > 1 || !modes.length && !state.board) issue('MISSING_MODEL', `Need board or exactly one ${other.join('/')}`);
-    if (modes.length && ['components', 'sources', 'loads', 'stackup', 'materials', 'heat', 'losses', 'cooling'].some(k => config[k] !== undefined)) issue('CONFLICTING_MODES', 'Standalone model cannot be combined with board-mode sections');
+    const boardOnly=config.circuit?['components','stackup','materials','heat','losses','cooling']:['components','sources','loads','stackup','materials','heat','losses','cooling'];
+    if (modes.length && boardOnly.some(k => config[k] !== undefined)) issue('CONFLICTING_MODES', 'Standalone model cannot be combined with board-mode sections');
     return modes.length === 0;
   };
   if (kind === 'geometry') {
@@ -201,7 +202,8 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
   scan(config);
   if (state.changes.length) issue('VARIANT_REBUILD_REQUIRED', 'Variant intent is retained; no stale copper solve or implicit refill is permitted. Geometry/material/model rebuilding is not implemented', undefined, 'warning');
   issue('PHYSICAL_REQUIREMENTS_UNVERIFIED', 'Structure validation does not establish physical readiness; extraction/model applicability is not evaluated', undefined, 'warning');
-  const available=kind==='geometry'||kind==='dc'||kind==='pi'&&!!config.circuit||kind==='networkParameters'||kind==='impedance'&&config.method==='cross-section'&&object(config.target)&&config.target.kind==='line';
+  const available=kind==='geometry'||kind==='dc'||kind==='pi'&&!!config.circuit||kind==='networkParameters'||kind==='si'&&object(config.network)&&['network','connect'].includes(String(config.network.kind))||kind==='impedance'&&config.method==='cross-section'&&object(config.target)&&config.target.kind==='line';
+  if(kind==='si'&&available)assumptions.push('Explicit supplied passive temporal model only: supported relaxation/full RLC or real-K delay class; not board channels, arbitrary sampled RF, eye or timing. Numerical/model applicability is checked by run().');
   if (!available) issue('ANALYZER_NOT_IMPLEMENTED', `No production ${kind} executor for this model`, undefined, 'warning');
   return freeze({ kind, contextId: state.id, structurallyValid: !diagnostics.some(d => d.severity === 'error'), physicalReady: false, executorAvailable: available, diagnostics, components, inputs: Object.fromEntries(Object.entries(config).map(([key, v]) => [key, { source: 'manual' as const, value: json(v) }])), assumptions });
 }

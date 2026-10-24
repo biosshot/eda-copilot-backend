@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Electrical core completion (bounded model classes)
+
+- Preserve compact hash-linked validity history when computed frequency resources are reused, retaining conditional applicability, producer bands and allowed analyses. Verify installed compiled workers/shared addon, saved-result negative audits and static numeric plots; interactive HTML controls remain unverified.
+
+- Execute existing explicit circuit spectra/sources/loads with complex AC V/I and transfer, finite linear drivers/RC inputs, strict component-description pin mapping and authored/board-nominal/exact-PartUuid precedence.
+- Add conditional passive sampled-RC relaxation fitting with explicit DC/high-frequency closure, independent holdout/order gates and an existing SI-network time boundary. Ordinary frequency resources remain usable without temporal metadata.
+- Add full general-incidence R/L/C interchange with infinity potentials/charge retained, direct frequency evaluation and explicit grounded composition. Add exact real-K causal delay models, reflections and all-delay cascades; preserve separate delay storage and attenuation loss. General resonant fitting, arbitrary infinity terminal joins, mixed delay/RLC cascades and PCB SI remain unsupported. See electrical-core completion semantics and verification under experimental/analyze.
+
 ### Analysis execution plan
 
 - Record accepted versus remaining analyzer stages and define parallel P6 electrical-core completion / P7 PCB extraction ownership while Thermal continues. Preserve P8/P11 dependency gates and defer P14; add readable tasks, numerical acceptance requirements and a shared interface checkpoint.

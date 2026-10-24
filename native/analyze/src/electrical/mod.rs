@@ -1,6 +1,10 @@
 //! Explicit linear networks, CPU/F64. No PCB extraction or implicit parasitics.
+mod ac;
+pub mod coupled;
+mod delayed;
 pub mod frequency;
 mod network;
+pub mod relaxation;
 mod solve;
 mod waveform;
 pub use network::{Circuit, Element, Port};
@@ -11,6 +15,20 @@ pub use waveform::Waveform;
 type Result<T> = std::result::Result<T, String>;
 fn fail(code: &str, message: impl std::fmt::Display) -> String {
     format!("{code}: {message}")
+}
+/// A single monotonic deadline is passed through fitting, assembly and solving.
+pub(super) fn deadline(start: Instant, budget: Option<&Budget>, stage: &str) -> Result<()> {
+    let seconds = budget.and_then(|b| b.max_seconds).unwrap_or(120.);
+    if !seconds.is_finite() || seconds <= 0. {
+        return Err(fail("NETWORK_BUDGET", "Invalid request deadline"));
+    }
+    if start.elapsed().as_secs_f64() > seconds {
+        return Err(fail(
+            "NETWORK_DEADLINE",
+            format!("{stage}: shared request deadline exceeded"),
+        ));
+    }
+    Ok(())
 }
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
@@ -32,6 +50,18 @@ pub struct Budget {
     pub max_memory_mi_b: Option<f64>,
 }
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Phasor {
+    pub real: f64,
+    pub imaginary: f64,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct AcSource {
+    pub element_id: String,
+    pub values: Vec<Phasor>,
+}
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Request {
     pub context_id: String,
@@ -39,6 +69,8 @@ pub struct Request {
     pub mode: String,
     #[serde(default)]
     pub frequencies: Vec<f64>,
+    #[serde(default)]
+    pub ac_sources: Vec<AcSource>,
     pub time: Option<Time>,
     pub initial: Option<Value>,
     pub numerics: Option<Numerics>,
@@ -64,6 +96,7 @@ impl Session {
     pub fn solve(&mut self, request: Request) -> Value {
         let start = Instant::now();
         let result = (|| -> Result<Value> {
+            ac::validate(&request)?;
             let mut stats = Counters::default();
             let mut identity = request.circuit.clone();
             identity.ports.clear();
@@ -162,6 +195,86 @@ impl Session {
                 self.compiled = None;
                 json!({"status":"rejected","diagnostics":[{"code":e.split(':').next().unwrap_or("NETWORK_ERROR"),"message":e,"severity":"error"}],"elapsedMs":start.elapsed().as_secs_f64()*1000.})
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod deadline_tests {
+    use super::*;
+    #[test]
+    fn retained_sources_share_one_memory_allowance_before_fitting() {
+        let resource: frequency::Resource = serde_json::from_value(json!({
+            "id":"retained","kind":"network","ports":["p"],
+            "data":{"unvalidatedSource":vec![1.;1024]}
+        }))
+        .unwrap();
+        let bytes = coupled::composition::source_plan(&resource);
+        let budget = Budget {
+            max_seconds: Some(120.),
+            max_memory_mi_b: Some(bytes as f64 * 1.5 / 1048576.),
+        };
+        assert!(coupled::composition::remaining_budget(Some(&budget), bytes).is_ok());
+        let topology = coupled::composition::Topology {
+            instances: (0..2)
+                .map(|i| frequency::Instance {
+                    id: format!("b{i}"),
+                    model: resource.clone(),
+                    ports: vec!["p".into()],
+                })
+                .collect(),
+            connections: vec![],
+            ports: vec![frequency::OutputPort {
+                name: "p".into(),
+                index: 0,
+            }],
+        };
+        assert!(
+            coupled::composition::build(&topology, Some(&budget), Instant::now())
+                .err()
+                .unwrap()
+                .starts_with("COUPLED_BUDGET")
+        );
+        let tiny = Budget {
+            max_seconds: Some(120.),
+            max_memory_mi_b: Some(bytes as f64 / 2. / 1048576.),
+        };
+        assert!(relaxation::fit(&resource, Some(&tiny))
+            .err()
+            .unwrap()
+            .starts_with("COUPLED_BUDGET"));
+    }
+    #[test]
+    fn composed_fits_and_assembly_share_the_original_expired_start() {
+        let start = Instant::now() - std::time::Duration::from_secs(1);
+        let budget = Budget {
+            max_seconds: Some(0.1),
+            max_memory_mi_b: None,
+        };
+        let resource: frequency::Resource = serde_json::from_value(
+            json!({"id":"expired","kind":"network","ports":["p"],"data":{}}),
+        )
+        .unwrap();
+        let topology = coupled::composition::Topology {
+            instances: vec![],
+            connections: vec![],
+            ports: vec![],
+        };
+        for error in [
+            relaxation::fit_started(&resource, Some(&budget), start)
+                .err()
+                .unwrap(),
+            coupled::composition::resource(&resource, Some(&budget), start)
+                .err()
+                .unwrap(),
+            coupled::composition::build(&topology, Some(&budget), start)
+                .err()
+                .unwrap(),
+        ] {
+            assert!(
+                error.starts_with("NETWORK_DEADLINE"),
+                "A stage must not start a fresh budget: {error}"
+            );
         }
     }
 }

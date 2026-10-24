@@ -298,6 +298,12 @@ impl AnalysisElectricalSession {
         Ok(pcb_analyze::electrical::frequency::run(request))
     }
     #[napi]
+    pub fn solve_transient(&mut self, request: Value) -> Result<Value> {
+        let request=serde_json::from_value::<pcb_analyze::electrical::coupled::time::Request>(request)
+            .map_err(|e| napi::Error::from_reason(format!("Invalid transient request: {e}")))?;
+        Ok(pcb_analyze::electrical::coupled::time::run(request))
+    }
+    #[napi]
     pub fn solve_cross_section(&mut self, request: Value) -> Result<Value> {
         let request=serde_json::from_value::<pcb_analyze::extraction::Request>(request)
             .map_err(|e| napi::Error::from_reason(format!("Invalid cross-section request: {e}")))?;

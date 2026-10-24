@@ -9,8 +9,9 @@ import { AnalysisDslError, parse, port, selector, text, timingOptions } from './
 import { freeze, json, unavailable, value } from './data.ts';
 import { createDcExecutor } from './dc-executor.ts';
 import { dcObservedVoltage } from './dc-observation.ts';
-import {createElectricalExecutor,circuitObservedVoltage} from './electrical-executor.ts';
+import {createElectricalExecutor,circuitObservedVoltage,circuitObservedTransfer} from './electrical-executor.ts';
 import { object } from './descriptions.ts';
+import {createTransientExecutor,transientObservedVoltage} from './transient-executor.ts';
 
 /** Small analysis dispatch boundary. No transport/session, no callbacks, no
  * internal mesh or import operation masquerading as a completed analysis. */
@@ -20,6 +21,7 @@ export interface AnalysisTask<K extends AnalysisKind = AnalysisKind> {
   variantChanges: readonly Json[];
   conductionProfile?: AnalysisPhysicalProfile;
   resolvedLoads?: readonly Json[];
+  electricalModels?: Json;
 }
 /** Internal serializable result envelope; accessors are created on JS side.
  * Test executors inject this envelope explicitly; production never fabricates it. */
@@ -39,10 +41,12 @@ export function createAnalysisExecutor(): AnalysisExecutor {
   const crossSection = createCrossSectionExecutor();
   const dc = createDcExecutor();
   const electrical=createElectricalExecutor();
+  const transient=createTransientExecutor();
   return async task => {
     if (task.kind==='geometry') return geometry(task as AnalysisTask<'geometry'>);
     if (task.kind==='impedance') return crossSection(task as AnalysisTask<'impedance'>);
     if (task.kind==='networkParameters') return frequency(task as AnalysisTask<'networkParameters'>);
+    if(task.kind==='si')return transient(task as AnalysisTask<'si'>);
     if ((task.kind==='dc'||task.kind==='pi')&&'circuit'in task.config&&task.config.circuit) return electrical(task as AnalysisTask<'dc'|'pi'>);
     if (task.kind === 'dc') return dc(task as AnalysisTask<'dc'>);
     throw new AnalysisDslError('ANALYZER_NOT_IMPLEMENTED', `Analysis executor '${task.kind}' is not implemented`, [{ code: 'ANALYZER_NOT_IMPLEMENTED', severity: 'error', message: `No production ${task.kind} solver is installed` }]);
@@ -68,8 +72,14 @@ export function resultFor<K extends AnalysisKind>(task: AnalysisTask<K>, payload
     if (argument !== undefined) validate(argument);
     const suffix = argument && typeof argument === 'object' && 'id' in argument ? `:${argument.id}` : argument === undefined ? '' : `:${JSON.stringify(json(argument))}`;
     const descriptor=argument&&typeof argument==='object'&&'id'in argument?describe?.(String(argument.id))??task.descriptors.find(d=>object(d)&&d.id===argument.id):undefined;
-    const d = safe.metrics[name + suffix] ?? (name==='voltage'&&'circuit'in task.config&&task.config.circuit?circuitObservedVoltage(task,descriptor,safe.metrics):task.kind==='dc'&&name==='voltage'?dcObservedVoltage(task.board,descriptor,safe.metrics):undefined);
-    return d ? value({ ...d, contextId: task.contextId }) : unavailable(unit, `Result metric '${name + suffix}' is unavailable`, task.contextId);
+    const d = safe.metrics[name + suffix] ?? (name==='transfer'&&'circuit'in task.config&&task.config.circuit?circuitObservedTransfer(task,argument,safe.metrics,describe):name==='voltage'&&'circuit'in task.config&&task.config.circuit?circuitObservedVoltage(task,descriptor,safe.metrics):task.kind==='dc'&&name==='voltage'?dcObservedVoltage(task.board,descriptor,safe.metrics):undefined);
+    const transient=task.kind==='si'&&name==='voltage'?transientObservedVoltage(task,descriptor,safe.metrics):undefined;
+    if(task.kind==='si'&&name==='differentialVoltage'&&object(argument)&&object(argument.positive)&&object(argument.negative)){
+      const get=(p:Record<string,unknown>)=>transientObservedVoltage(task,describe?.(String(p.id))??task.descriptors.find(d=>object(d)&&d.id===p.id),safe.metrics);
+      const a=get(argument.positive),b=get(argument.negative);
+      if(a?.values&&b?.values)return value({...a,contextId:task.contextId,values:a.values.map((v,i)=>typeof v==='number'&&typeof b.values![i]==='number'?v-(b.values![i] as number):null),validity:{status:a.validity.status==='conditional'||b.validity.status==='conditional'?'conditional':'valid'}});
+    }
+    return d||transient ? value({ ...(d??transient!), contextId: task.contextId }) : unavailable(unit, `Result metric '${name + suffix}' is unavailable`, task.contextId);
   };
   for (const [name, unit] of Object.entries(properties[task.kind])) result[name] = metric(name, unit);
   const accessors: Partial<Record<AnalysisKind, Record<string, string>>> = {

@@ -146,19 +146,35 @@ export interface AnalysisElectricalCircuit {
 }
 export interface AnalysisElectricalRequest {
   contextId:string; circuit:AnalysisElectricalCircuit; mode:'dc'|'frequency'|'time'; frequencies?:number[];
+  acSources?:{elementId:string;values:{real:number;imaginary:number}[]}[];
   time?:{stopS:number;sampleStepS:number}; initial?:unknown;
   numerics?:{relativeTolerance?:number;absoluteTolerance?:number;maxIterations?:number}; budget?:{maxSeconds?:number;maxMemoryMiB?:number};
 }
 export interface AnalysisElectricalReport {
   status:'complete'|'rejected'; mode?:string; diagnostics:{code:string;message:string;severity:'error'|'warning'|'info'}[];
-  axis?:number[]; nodeVoltages?:Record<string,number|number[]>; currents?:Record<string,number|number[]>;
+  axis?:number[]; nodeVoltages?:Record<string,number|number[]|{real:number;imaginary:number}[]>; currents?:Record<string,number|number[]|{real:number;imaginary:number}[]>;
   impedances?:Record<string,{real:number;imaginary:number}[]>; losses?:number|number[];
   quality?:Record<string,number>; counters?:Record<string,number>; finalState?:unknown;
   request?:AnalysisElectricalRequest; elapsedMs:number; excitation?:string; interpolation?:string;
   resources?:{peakRssBytes:number;metric:string};
   system?:{unknowns:number;nodalUnknowns:number;gNonzeros:number;eNonzeros:number;solver:string};
 }
-export declare class AnalysisElectricalSession {constructor();solve(request:AnalysisElectricalRequest):AnalysisElectricalReport; solveFrequency(request:AnalysisFrequencyRequest):AnalysisFrequencyReport; solveCrossSection(request:AnalysisCrossSectionRequest):AnalysisCrossSectionReport;clear():void}
+export interface AnalysisTransientRequest {
+ resource?: AnalysisFrequencyRequest['instances'][number]['model'];
+ topology?:Pick<AnalysisFrequencyRequest,'instances'|'connections'|'ports'>;
+ drivers:{port:number;resistanceOhm:number;waveform:unknown}[];
+ receivers:{port:number;resistanceOhm?:number;capacitanceF:number}[];
+ time:{stopS:number;sampleStepS:number};initial?:unknown;
+ numerics?:AnalysisElectricalRequest['numerics'];budget?:AnalysisElectricalRequest['budget'];
+}
+export interface AnalysisTransientReport {
+ status:'complete'|'rejected';diagnostics:{code:string;severity:'error'|'warning';message:string}[];
+ axis?:number[];portVoltages?:number[][];driverCurrentsA?:number[][];energyJ?:number[];
+ fit?:unknown;conditional?:boolean;counters?:Record<string,number>;quality?:Record<string,number>;
+ finalState?:unknown;assumptions?:string[];elapsedMs?:number;memoryPlanBytes?:number;
+ resources?:{peakRssBytes:number;metric:string};
+}
+export declare class AnalysisElectricalSession {constructor();solve(request:AnalysisElectricalRequest):AnalysisElectricalReport; solveFrequency(request:AnalysisFrequencyRequest):AnalysisFrequencyReport; solveTransient(request:AnalysisTransientRequest):AnalysisTransientReport; solveCrossSection(request:AnalysisCrossSectionRequest):AnalysisCrossSectionReport;clear():void}
 
 /** Bounded common-return frequency multiports. Internal addon transport. */
 export interface AnalysisFrequencyResource {id:string;kind:string;ports:string[];data:unknown;source?:string;validity?:unknown;analyses?:string[]}

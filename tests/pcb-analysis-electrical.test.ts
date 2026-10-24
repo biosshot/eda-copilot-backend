@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync,mkdtempSync}from'node:fs';
+import {readFileSync,writeFileSync,mkdtempSync,mkdirSync}from'node:fs';
 import {tmpdir}from'node:os';
 import {join,resolve}from'node:path';
 import {spawnSync}from'node:child_process';
@@ -96,5 +96,5 @@ test('abort/timeout kill synchronous native transient and runner recovers withou
  const alive=pid=>{try{process.kill(pid,0);return true}catch{return false}};
  const script=${JSON.stringify(readFileSync('tests/fixtures/analysis-electrical.js','utf8').replace('500e-6','500').replace('0.5e-6','0.1').replace('{ kind: "step", from: 0.1, to: 1, atS: 100e-6, riseS: 1e-6 }','{ kind: "sine", offset: 0.1, amplitude: 1, periodS: 1e-6, phaseDeg: 0 }'))};
  for(const mode of ['abort','timeout']){const count=records().length,c=new AbortController();const pending=runAnalysisDsl({code:script},{signal:c.signal,timeoutMs:mode==='timeout'?1800:15000,maxOutputBytes:16*1024*1024});let started;const deadline=Date.now()+12000;while(!(started=records().slice(count).find(r=>r.phase==='solve-start'&&r.mode==='time'))){assert.ok(Date.now()<deadline);await new Promise(r=>setTimeout(r,10));}if(mode==='abort'){await new Promise(r=>setTimeout(r,50));c.abort();}const r=await pending;assert.equal(r.error?.code,mode==='abort'?'ABORTED':'TIMEOUT',JSON.stringify(r.error));assert.equal(alive(started.pid),false);assert.ok(!records().slice(count).some(r=>r.pid===started.pid&&r.phase==='solve-end'&&r.mode==='time'));const good=await runAnalysisDsl({code:${JSON.stringify(setup+'await a.dc().circuit(c).run();')}});assert.equal(good.status,'complete');console.log(JSON.stringify({mode,pid:started.pid,alive:alive(started.pid),recovery:good.status}));}for(const r of records())assert.equal(alive(r.pid),false); `;
- writeFileSync(path,code);const r=spawnSync(process.execPath,[path],{encoding:'utf8',timeout:45000,windowsHide:true,env:{...process.env,NODE_OPTIONS:`--require="${resolve('tests/fixtures/analysis-electrical-pid.cjs').replaceAll('\\','/')}"`,ANALYSIS_ELECTRICAL_PID_LOG:log}});assert.equal(r.status,0,r.stdout+r.stderr);assert.doesNotMatch(r.stderr,/CubeCL|CUDA|Vulkan/i);writeFileSync('debugging/analysis-dsl/electrical-cancel.log',r.stdout+r.stderr);
+ writeFileSync(path,code);const r=spawnSync(process.execPath,[path],{encoding:'utf8',timeout:45000,windowsHide:true,env:{...process.env,NODE_OPTIONS:`--require="${resolve('tests/fixtures/analysis-electrical-pid.cjs').replaceAll('\\','/')}"`,ANALYSIS_ELECTRICAL_PID_LOG:log}});assert.equal(r.status,0,r.stdout+r.stderr);assert.doesNotMatch(r.stderr,/CubeCL|CUDA|Vulkan/i);mkdirSync('debugging/analysis-dsl',{recursive:true});writeFileSync('debugging/analysis-dsl/electrical-cancel.log',r.stdout+r.stderr);
 });

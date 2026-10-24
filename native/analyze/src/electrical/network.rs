@@ -127,6 +127,39 @@ fn stamp(m: &mut BTreeMap<(usize, usize), f64>, i: Option<usize>, j: Option<usiz
     }
 }
 impl Network {
+    /// Same bounded sparse linear algebra for an explicitly assembled descriptor.
+    /// No synthetic electrical elements, reference node or diagonal shunts.
+    pub(super) fn descriptor(
+        nodes: &[String],
+        n: usize,
+        g: BTreeMap<(usize, usize), f64>,
+        e: BTreeMap<(usize, usize), f64>,
+    ) -> Self {
+        Self {
+            identity: String::new(),
+            matrix_identity: String::new(),
+            final_state: None,
+            circuit: Circuit {
+                nodes: nodes.to_vec(),
+                reference: String::new(),
+                ports: vec![],
+                elements: vec![],
+            },
+            nodes: nodes
+                .iter()
+                .enumerate()
+                .map(|(i, id)| (id.clone(), Some(i)))
+                .collect(),
+            n,
+            nv: nodes.len(),
+            branch: vec![],
+            cap: vec![],
+            g,
+            e,
+            symbolic: None,
+            factor: None,
+        }
+    }
     pub fn compile(c: &Circuit, identity: String, r: &Request) -> Result<Self> {
         if c.nodes.len() > 1024 || c.elements.len() > 2048 || c.ports.len() > 128 {
             return Err(fail(
@@ -267,9 +300,9 @@ impl Network {
             .unwrap_or(256.);
         // Conservative upper bound for sparse fill, real-block AC, solver workspace and output.
         let points = if r.mode == "frequency" {
-            r.frequencies
-                .len()
-                .saturating_mul(self.circuit.ports.len().max(1))
+            r.frequencies.len().saturating_mul(
+                self.circuit.ports.len().max(1) + usize::from(!r.ac_sources.is_empty()),
+            )
         } else if r.mode == "time" {
             let start = solve::initial_time(self, r)?;
             solve::output_samples(

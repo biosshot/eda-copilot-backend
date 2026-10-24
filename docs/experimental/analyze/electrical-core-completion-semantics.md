@@ -1,0 +1,181 @@
+# Electrical core: supported completion scope
+
+P6 implementation, CPU/F64; numerical/package acceptance is recorded separately
+in [verification](electrical-core-completion-verification.md). Existing PCB DC,
+P6b frequency tables, P7 cross sections and placement/GPU retain their contracts.
+Using the existing `si().network(...)` configuration exposes supplied temporal
+models only. It does not implement PCB channels, TDR, eye or timing.
+Start with the [executed user examples](electrical-core-examples.md) for source
+spectra, finite drivers/receivers and explicit sampled-model closure.
+
+## Circuit models and AC
+
+`pi().circuit(c).domain('frequency')` accepts existing `.sources/.loads`.
+Sources require a complete `voltageSpectrum` or `currentSpectrum` on exactly the
+requested frequencies, V/A, peak complex phasors with `exp(+jωt)`. DC constants
+and time waveforms are never inferred as AC amplitudes. Existing independent
+circuit sources are zeroed for both AC and separate unit-current impedance tests.
+Explicit spectra produce a separate response, with the actual finite source R
+and passive loads. AC complex power is checked independently of the solve.
+
+`voltage(port)`, element `current(id)` and `transfer({from,to})` retain complex
+series. Transfer means V(to)/V(from), requires exactly one active explicit source,
+and retains null/unavailable values at zero denominators. It is not S21.
+
+`linear-driver` is authored absolute voltage behind a positive output R; low/high
+map bits/PRBS levels, while Waveform is already absolute. `rc-input` is a positive
+input C with optional parallel positive R. No clipping, automatic switching,
+regulator feedback, general controlled-source family or component parasitics are
+inferred. Current/power load limitations remain explicit; constant-power models
+are not silently linearized.
+
+An explicit `kind:'model'` circuit element accepts ComponentDescription with
+`pins:{p,n}`. Parameter precedence: authored values/model (conflicts reject),
+exact board designator nominal, exact supplied PartUuid catalog. No board/BOM/
+network lookup is required. Strict SI values/embedded resistor forms are admitted;
+bare capacitor/inductor codes such as `104` reject. ESR/ESL/DCR require explicit
+values or explicit `ideal:true`; a nominal never supplies them. Resolved inputs
+and their source are saved.
+
+## Conditional sampled-to-time
+
+Ordinary S/Z/Y/Touchstone frequency use needs no temporal metadata. Optional
+`data.temporal` explicitly authorizes the restricted relaxation assumption:
+
+```
+method: 'passive-relaxation'
+modeTransform?: real orthonormal U
+normalizationOhm?: positive scalar / exact named port map
+highFrequency: {conductanceS: gInf[], capacitanceF: cInf[]}
+Y(s) = U diag(g0 + s*cInf + Σ h_k*s/(s+p_k)) Uᵀ
+```
+
+Known finite real DC at f=0, passive samples, 1–4 ports, ≤4096 rows, positive
+frequency gaps ≤0.1 decade, constant modal U and explicit high-frequency closure
+are required. `gInf` is the conducting remainder after subtracting `s*cInf`.
+`g0,cInf,h>=0`, `p>0`, `Σh=gInf-g0`; no pole reflection, passivity repair or missing
+DC/extraband coefficients are invented. The realization is physical parallel G/C
+and series RC branches. Stable poles alone are not the passivity argument.
+
+Starting from 8 logarithmic poles in `[10*2π*fMinPositive, 2π*fMax/10]`, bounded
+training-only enrichment adds four geometric midpoints per iteration, ≤64 poles.
+Constrained active-set NNLS checks feasibility and normalized KKT≤1e-9; unresolved
+conditioning fails. Odd rows are fixed holdout data. All normalized coefficient
+errors at training and holdout rows must be ≤0.005+1e-9 and final reported
+8/16/32/64 model-order change ≤0.001. Physical Y and fitted Y are saved separately.
+The normalization `sqrt(Ri Rj)*ΔYij` is authored for Y/Z; S defaults to its original
+real port references or an explicit normalization override. Conversion always
+uses the original S references. U transforms V/I together and preserves power.
+
+Fastest declared source front must be ≥10/fMax. Initial RC state is the complete
+assembled steady state, including finite drivers/receivers. Time error and model
+error are different checks. The result and derived values remain **conditional**:
+finite samples, a regular grid and holdout errors do not rule out unseen narrow
+resonances or prove original intersample/extraband behavior. General resonant,
+active/noncausal fitting, arbitrary delay inference and lossy P7b-table-to-time
+are unsupported. Successful approximation is not universal Touchstone-to-time.
+
+## Full coupled descriptor and P7
+
+Existing network Resource accepts `format:'coupled-rlc'` with ordered
+potentialNodes/currentDofs and sparse full triples for A, B, R[Ohm], L[H], C[F].
+General real A/B are dimensionless; duplicate/nonfinite/out-of-range entries,
+asymmetric matrices and nonpassive storage reject. First supported R is positive
+definite when current DOFs exist (finite-conductivity P7); L/C may be PSD/zero.
+
+`C vdot+A i=B ip`, `L idot+R i−Aᵀv=0`, `vp=Bᵀv`.
+Stored energy is `(vᵀCv+iᵀLi)/2`, dissipation `iᵀRi`. Mutual terms and all infinity
+potentials remain. `referenceTopology:'infinity'` is a mathematical reference,
+not an electrical return terminal; A/B columns conserve total charge. Explicit
+candidate `conservedPotentialModes` span null(Aᵀ), are checked for independence,
+and are reduced after external source/load assembly. Pure C defaults to all
+potential modes. DC compatibility is tested against the assembled nullspace;
+stored charge constraints differ from exact zero-energy mathematical gauges.
+Time evolves charge under excitation and never forces each island neutral.
+
+Direct single-block `networkParameters` evaluates the original matrices and
+keeps the coupled Resource, B, reference topology, analyses and original validity
+domain in `result.network`. It does not label arbitrary differential terminals
+as a physical common return. Infinity/noncanonical descriptor composition rejects
+until a physical terminal map is provided. Grounded canonical unit-potential
+ports can compose by the explicitly authored node identifications; block R/L/C
+are assembled before charge constraints/initialization. No geometry is extracted
+here; P7 owns recovery, constitutive assumptions, scope and convergence.
+
+Admission: ≤1024 potentials, ≤1536 currents, ≤2048 total states, ≤16 external
+ports, ≤4 million input coefficients. Conservative matrix/gauge/output plans
+must fit the requested memory, default256 MiB; caps do not imply every maximum
+fits simultaneously. Original equation residual≤1e-8 and energy/power guards
+remain mandatory. No gmin, hidden ground or PSD projection repairs a failure.
+
+## Exact real-K delay models
+
+`delayed-scattering` has real constant `scattering:K`, `delayS:τ>=0`, positive real
+`referenceOhm`, passive nature and common return. It defines `S(s)=K exp(−sτ)`
+on DC through high frequency; K is a contraction within1e-9. It is an explicit
+analytic resource, never an inferred property of a finite table.
+
+Power waves are `a=(V+RI)/(2√R)`, `b=(V−RI)/(2√R)`, with network current inward.
+Positive delay uses accepted incident-wave history only; h≤τ/4. Zero-delay K
+enters the same algebraic solve, including ideal-through constraints. Pairing
+joins authored positive and common return terminals; all block ports must be
+paired or external. Finite drivers and passive RC receivers load the network.
+All-delay cascades are supported; mixed delay/relaxation/full-RLC cascades reject.
+
+Initial travelling-wave history is solved as constant steady state before t=0;
+it is not zero-filled. Arbitrary incoming histories/continuation are unsupported.
+Finite source corners propagate by actual delays, with bounded event delivery;
+history interpolation is piecewise linear over accepted half steps. Independent
+global refinement is still necessary: local BE error does not certify delayed
+interpolation. Bounds include≤128 internal ports/32 blocks/16 external ports,
+2 million history numeric values,100000 delivered formula corners and an admitted
+matrix/history/output memory plan. Budget exhaustion gives incomplete/rejected,
+not a truncated complete trace.
+
+Delay energy is `Σ∫[t−τ,t] ||a(s)||²ds`; propagation loss is
+`||a(t−τ)||²−||K a(t−τ)||²`. They are separate from driver/receiver R and C energy.
+K=lossless through has zero internal loss; a passive attenuator's loss is not
+mislabelled as delayed energy. Source work/load/storage balance is checked.
+
+## Initial conditions, output and limits
+
+Frequency results retain a complete ordered single coupled/delay resource only
+when its original physical port order is preserved. Renamed delay reference
+dictionaries are remapped to the new port names. A reordered single-block delay
+connection or a cascade produces a frequency-only sampled resource, bounded by
+its evaluated output axis and all producer bands. Coupled joins/reordering remain
+explicitly unsupported. Existing sampled frequency results retain this same
+frequency-only boundary; temporal closure is not invented for a new sampled axis.
+All source validity/analysis permissions remain in derived provenance. A producer
+band constrains evaluation in addition to the resource's mathematical definition
+or stored samples; successful evaluation never expands that band or permissions.
+Repeated computed-resource reuse keeps direct-parent resource hashes and compact
+validity snapshots; generated ancestor provenance/history is SHA256-linked rather
+than recursively copied. Authored applicability, status/reason and permissions
+remain visible at each direct parent. Saved earlier results retain the full
+history represented by those links.
+
+One native request shares its original deadline across all source fits,
+normalization, composition, matrix compilation, initial solve and time steps.
+Retained source/fit reports are reserved together before fitting; matrix and
+output plans use the remaining memory allowance. Neither an additional block
+nor a new substage obtains a fresh full budget.
+
+An authored finite-band coupled model must explicitly authorize SI, include DC
+and pass the finite-front screen (fastest declared front at least `10/fMax`).
+Its result stays conditional: this screen does not establish absence of source
+spectrum outside the band or extend the producer's constitutive applicability.
+
+Descriptor BE uses increments and step doubling; sampleStepS selects output
+interpolation only. All models require continuous finite fronts in this new
+path; impulse/jump projection is not promised. Bits start at their first level
+at t=0 and hold the last after completion. PRBS7/9/15/23/31 use documented taps
+6/5/14/18/28, MSB before left shift, no inversion; unsupported orders reject.
+Waveforms/PRBS do not imply BER, eye masks, jitter or statistical validity.
+
+Current PCB extraction results only gain time applicability when their producer
+explicitly authorizes it with justified DC/band/constitutive assumptions. Neither
+the descriptor's mathematical time solution nor a small residual proves field
+extraction accuracy. Remaining limits and future P8/P11 dependencies are listed
+in the verification matrix; the original P6 stage is not labelled universally
+complete from these supported subsets.

@@ -1043,3 +1043,24 @@ conditional; P6b interpolation stays conditional and extrapolation is forbidden.
 [Runnable standalone](../../../tests/fixtures/analysis-line-losses/example.js),
 [normalizations/limits](line-losses-semantics.md),
 [verification and unresolved acceptance requirements](line-losses-verification.md).
+
+## P6 completion: explicit AC and supplied temporal models
+
+Existing circuit `.sources/.loads` execute in frequency mode with exact-axis
+complex Spectrum; DC constants/waveforms do not become AC amplitudes. Finite
+`linear-driver`, `rc-input` and explicit ComponentDescription/pins are supported.
+`transfer({from,to})` is V(to)/V(from) under one active explicit source.
+
+`a.si().network(n).drivers(...).receivers(...).time(...).run()` computes supported
+supplied passive temporal models: conditional sampled relaxation with authored
+DC/high-frequency closure, full coupled RLC, or analytic real-K delay models.
+This narrow path does not implement board channels, TDR, eye or timing.
+Finite-band tables without the required temporal assumptions remain frequency
+resources; active/resonant/general tables are not silently converted to time.
+Direct coupled frequency results retain actual differential reference topology;
+arbitrary terminal joins and mixed delay/RLC cascades remain explicit limits.
+
+See [exact mathematics, units, validity and limits](electrical-core-completion-semantics.md),
+[runnable AC and sampled-to-time examples](electrical-core-examples.md),
+[direct authored scenario](../../../tests/fixtures/analysis-electrical-core/scenario.js),
+and [verification/remaining P6 matrix](electrical-core-completion-verification.md).

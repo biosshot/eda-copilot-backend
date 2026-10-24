@@ -1,5 +1,5 @@
 //! Explicit tabulated multiports, common return, power waves, CPU/F64.
-mod math;
+pub(super) mod math;
 mod touchstone;
 use super::{fail, Budget, Result};
 use math::*;
@@ -63,15 +63,20 @@ enum Data {
         reference_ohm: Option<Value>,
         reference_topology: String,
         nature: String,
+        #[serde(default, rename = "temporal")]
+        _temporal: Option<Value>,
     },
     #[serde(rename = "touchstone", rename_all = "camelCase")]
     Touchstone {
         content: String,
         reference_topology: String,
         nature: String,
+        #[serde(default, rename = "temporal")]
+        _temporal: Option<Value>,
     },
 }
 struct Model {
+    band: [f64; 2],
     frequencies: Vec<f64>,
     parameters: Vec<Matrix>,
     refs: Vec<f64>,
@@ -79,6 +84,22 @@ struct Model {
     nature: String,
     metadata: Value,
     conditional: bool,
+    delayed: Option<super::delayed::Model>,
+}
+/// Producer applicability is independent of the mathematical resource class.
+pub(super) fn declared_band(resource: &Resource) -> Result<[f64; 2]> {
+    let Some(v) = resource
+        .validity
+        .as_ref()
+        .and_then(|v| v["domain"].get("bandHz"))
+    else {
+        return Ok([0., f64::MAX]);
+    };
+    let band: Vec<f64> = serde_json::from_value(v.clone()).map_err(|e| fail("NETWORK_BAND", e))?;
+    if band.len() != 2 || band.iter().any(|v| !v.is_finite() || *v < 0.) || band[1] < band[0] {
+        return Err(fail("NETWORK_BAND", "Invalid producer applicability band"));
+    }
+    Ok([band[0], band[1]])
 }
 fn admit_table(n: usize, f: usize) -> Result<()> {
     if n == 0 || n > 16 || f == 0 || f > 100000 || f > TABLE_ELEMENTS / n / n {
@@ -95,7 +116,7 @@ fn names(v: &[String]) -> bool {
         && v.iter().all(|s| !s.trim().is_empty())
         && v.iter().collect::<BTreeSet<_>>().len() == v.len()
 }
-fn refs(v: &Value, ports: &[String]) -> Result<Vec<f64>> {
+pub(super) fn refs(v: &Value, ports: &[String]) -> Result<Vec<f64>> {
     let out = if let Some(n) = v.as_f64() {
         vec![n; ports.len()]
     } else if let Some(o) = v.as_object() {
@@ -124,17 +145,20 @@ fn refs(v: &Value, ports: &[String]) -> Result<Vec<f64>> {
     Ok(out)
 }
 fn normalize(r: &Resource) -> Result<Model> {
+    normalize_for(r, "networkParameters")
+}
+fn normalize_for(r: &Resource, operation: &str) -> Result<Model> {
     if r.kind != "network" || !names(&r.ports) {
         return Err(fail("NETWORK_INPUT", "Invalid resource kind/ports"));
     }
     admit_table(r.ports.len(), 1)?;
     if r.analyses
         .as_ref()
-        .is_some_and(|a| !a.iter().any(|s| s == "networkParameters"))
+        .is_some_and(|a| !a.iter().any(|s| s == operation))
     {
         return Err(fail(
             "NETWORK_INPUT",
-            "Resource does not support networkParameters",
+            format!("Resource does not support {operation}"),
         ));
     }
     let conditional = match r
@@ -152,6 +176,21 @@ fn normalize(r: &Resource) -> Result<Model> {
             ))
         }
     };
+    let band = declared_band(r)?;
+    if r.data["format"] == "delayed-scattering" {
+        let model = super::delayed::model(r)?;
+        return Ok(Model {
+            band,
+            frequencies: vec![band[0], band[1]],
+            parameters: vec![],
+            refs: model.refs.clone(),
+            rep: "S".into(),
+            nature: "passive".into(),
+            metadata: json!({"format":"delayed-scattering","delayS":model.delay,"interpolation":"exact analytic exp(-jωτ), no finite-band extrapolation"}),
+            conditional,
+            delayed: Some(model),
+        });
+    }
     // Check lengths before deserializing/copying any table or tokenizing text.
     if let Some(t) = r.data.get("content").and_then(Value::as_str) {
         if t.len() > TEXT_BYTES {
@@ -188,6 +227,7 @@ fn normalize(r: &Resource) -> Result<Model> {
             reference_ohm,
             reference_topology,
             nature,
+            _temporal: _,
         } => {
             if !["S", "Z", "Y"].contains(&representation.as_str()) {
                 return Err(fail("NETWORK_INPUT", "Invalid representation"));
@@ -221,6 +261,7 @@ fn normalize(r: &Resource) -> Result<Model> {
             content,
             reference_topology,
             nature,
+            _temporal: _,
         } => {
             let (f, p, refs, metadata) = touchstone::parse(&content, r.ports.len())?;
             (
@@ -253,7 +294,15 @@ fn normalize(r: &Resource) -> Result<Model> {
     {
         return Err(fail("NETWORK_INPUT","Invalid topology/nature/frequency axis/coefficient dimensions or nonfinite coefficient"));
     }
+    let band = [band[0].max(f[0]), band[1].min(*f.last().unwrap())];
+    if band[0] > band[1] {
+        return Err(fail(
+            "NETWORK_BAND",
+            "Samples and producer applicability do not overlap",
+        ));
+    }
     Ok(Model {
+        band,
         frequencies: f,
         parameters: p,
         refs,
@@ -261,9 +310,19 @@ fn normalize(r: &Resource) -> Result<Model> {
         nature,
         metadata,
         conditional,
+        delayed: None,
     })
 }
 fn sampled(m: &Model, f: f64) -> Result<(Matrix, Option<[f64; 2]>)> {
+    if f < m.band[0] || f > m.band[1] {
+        return Err(fail(
+            "NETWORK_BAND",
+            "Frequency outside producer applicability",
+        ));
+    }
+    if let Some(model) = &m.delayed {
+        return Ok((super::delayed::sample(model, f)?, None));
+    }
     if f < m.frequencies[0] || f > *m.frequencies.last().unwrap() {
         return Err(fail(
             "NETWORK_BAND",
@@ -289,6 +348,36 @@ fn sampled(m: &Model, f: f64) -> Result<(Matrix, Option<[f64; 2]>)> {
         }
     }
 }
+/// Same source parser/conversion/passivity guards for the explicitly requested
+/// conditional temporal fit. Ordinary frequency calculation is unchanged.
+pub(super) fn admittance_samples(
+    r: &Resource,
+) -> Result<(Vec<f64>, Vec<Matrix>, Vec<f64>, String)> {
+    let m = normalize_for(r, "si")?;
+    if m.nature != "passive" {
+        return Err(fail(
+            "TEMPORAL_PASSIVITY",
+            "Sampled relaxation requires an authored passive resource",
+        ));
+    }
+    let mut quality = Quality::default();
+    let mut values = vec![];
+    for matrix in &m.parameters {
+        let s = to_s(matrix, &m.rep, &m.refs, &mut quality)?;
+        if !passive(&s) {
+            return Err(fail(
+                "TEMPORAL_PASSIVITY",
+                "Source samples violate passivity",
+            ));
+        }
+        values.push(if m.rep == "Y" {
+            matrix.clone()
+        } else {
+            from_s(&s, "Y", &m.refs, &mut quality)?
+        });
+    }
+    Ok((m.frequencies, values, m.refs, m.rep))
+}
 pub fn run(r: Request) -> Value {
     let start = Instant::now();
     match calculate(&r, start) {
@@ -302,6 +391,12 @@ pub fn run(r: Request) -> Value {
     }
 }
 fn calculate(r: &Request, start: Instant) -> Result<Value> {
+    if r.instances
+        .iter()
+        .any(|i| i.model.data["format"] == "coupled-rlc")
+    {
+        return super::coupled::frequency_response::calculate(r);
+    }
     let p = r
         .instances
         .iter()
@@ -492,10 +587,10 @@ fn calculate(r: &Request, start: Instant) -> Result<Value> {
         ));
     }
     let band = [
-        models.iter().map(|m| m.frequencies[0]).fold(0., f64::max),
+        models.iter().map(|m| m.band[0]).fold(0., f64::max),
         models
             .iter()
-            .map(|m| *m.frequencies.last().unwrap())
+            .map(|m| m.band[1])
             .fold(f64::INFINITY, f64::min),
     ];
     let mut quality = Quality::default();
@@ -504,7 +599,7 @@ fn calculate(r: &Request, start: Instant) -> Result<Value> {
     let mut conditional = models.iter().any(|m| m.conditional);
     let mut provenance = Vec::new();
     for (i, m) in models.iter().enumerate() {
-        provenance.push(json!({"instanceId":r.instances[i].id,"resource":r.instances[i].model,"mapping":r.instances[i].ports,"sourcePorts":r.instances[i].model.ports,"sourceRepresentation":m.rep,"sourceReferenceOhm":if m.rep=="S"{Some(&m.refs)}else{None},"bandHz":[m.frequencies[0],m.frequencies.last().unwrap()],"nature":m.nature,"normalization":m.metadata,"normalized":{"frequenciesHz":m.frequencies,"parameters":m.parameters,"representation":m.rep,"referenceOhm":if m.rep=="S"{Some(&m.refs)}else{None}},"interpolation":"linear real/imag in source representation and source references, BEFORE conversion/composition"}));
+        provenance.push(json!({"instanceId":r.instances[i].id,"resource":r.instances[i].model,"mapping":r.instances[i].ports,"sourcePorts":r.instances[i].model.ports,"sourceRepresentation":m.rep,"sourceReferenceOhm":if m.rep=="S"{Some(&m.refs)}else{None},"bandHz":m.band,"nature":m.nature,"normalization":m.metadata,"normalized":{"frequenciesHz":m.frequencies,"parameters":m.parameters,"representation":m.rep,"referenceOhm":if m.rep=="S"{Some(&m.refs)}else{None}},"interpolation":"linear real/imag in source representation and source references, BEFORE conversion/composition"}));
     }
     for &frequency in &r.frequencies {
         let step=(||->Result<Matrix>{
@@ -543,6 +638,6 @@ fn calculate(r: &Request, start: Instant) -> Result<Value> {
         "unspecified"
     };
     Ok(
-        json!({"status":"complete","diagnostics":[],"frequenciesHz":r.frequencies,"ports":r.ports,"representation":r.representation,"referenceOhm":if r.representation=="S"{Some(output_refs)}else{None},"parameters":parameters,"nature":nature,"conditional":conditional,"bandHz":band,"interpolation":interpolation,"provenance":provenance,"quality":quality,"topology":{"connections":r.connections,"totalPorts":p,"returnConvention":"Common within each resource; pair connections join positive and return terminals. Reference impedance creates no physical load."},"memoryPlanBytes":memory,"limits":{"resourcePorts":16,"resourceFrequencies":100000,"sourceElementsPerResource":TABLE_ELEMENTS,"aggregateSourceElements":524288,"totalPorts":128,"outputElements":OUTPUT_ELEMENTS,"passivityTolerance":1e-9,"residualTolerance":1e-8,"maxCondition":1e12},"validityLimitations":"Passivity only at evaluated frequencies; no causality/stability/temporal model or PCB extraction."}),
+        json!({"status":"complete","diagnostics":[],"frequenciesHz":r.frequencies,"ports":r.ports,"representation":r.representation,"referenceOhm":if r.representation=="S"{Some(output_refs)}else{None},"parameters":parameters,"nature":nature,"conditional":conditional,"bandHz":band,"interpolation":interpolation,"provenance":provenance,"quality":quality,"topology":{"connections":r.connections,"totalPorts":p,"returnConvention":"Common within each resource; pair connections join positive and return terminals. Reference impedance creates no physical load."},"memoryPlanBytes":memory,"limits":{"resourcePorts":16,"resourceFrequencies":100000,"sourceElementsPerResource":TABLE_ELEMENTS,"aggregateSourceElements":524288,"totalPorts":128,"outputElements":OUTPUT_ELEMENTS,"passivityTolerance":1e-9,"residualTolerance":1e-8,"maxCondition":1e12},"validityLimitations":if models.iter().all(|m|m.delayed.is_some()) { "Exact passive causal real-K delay resources and their frequency composition; producer bands retained. These output samples alone are not a temporal realization; no PCB extraction." } else { "Passivity only at evaluated frequencies; computed samples do not provide causality/stability/temporal model or PCB extraction." }}),
     )
 }

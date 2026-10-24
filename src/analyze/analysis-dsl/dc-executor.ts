@@ -37,6 +37,7 @@ export function createDcExecutor() {
     const pair = (port: T.Port): [string,string] => {
       const d = description(port.id);
       if (!object(d?.input) || !d.input.positive || !d.input.negative) unsupported('DC port is not a board pad pair');
+      if(d.input.layer!==undefined)unsupported('Surface-specific port layer is not supported by this DC contact model');
       const side = (v: unknown) => {
         const list = Array.isArray(v) ? v : [v];
         if (list.length !== 1) unsupported('DC aggregated port electrodes are not supported; use separate sources or explicit per-pin loads');

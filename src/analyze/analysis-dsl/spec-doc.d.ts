@@ -1,6 +1,7 @@
 /** Analysis DSL, variant B. Executable source is JavaScript with top-level await.
  * Reference this file for IDE globals. Production supports board/conductor DC and explicit circuit DC/Z(f)/transient;
- * geometry connectivity/clearance/edge-clearance; explicit S/Z/Y multiports and bounded Touchstone; other analyses reject with ANALYZER_NOT_IMPLEMENTED after prepare.
+ * geometry connectivity/clearance/edge-clearance; explicit S/Z/Y multiports and bounded Touchstone;
+ * supplied passive relaxation/full-RLC/real-K-delay time models through si().network (not PCB SI, TDR, eye or timing).
  * Descriptions, validation, reports and explicit-value sweep are implemented.
  * Coordinates: millimetres, absolute board Y down; no implicit material defaults.
  * This document imports only the package's public, existing board transport.
@@ -67,6 +68,14 @@ export interface Resource {
   ports?: readonly string[]; parameters?: Readonly<Record<string, number>>;
   validity?: Validity; data?: Json;
 }
+/** Optional authored sampled-to-time model assumption. Ordinary frequency use
+ * does not require it. gInf is the conducting remainder after subtracting s*CInf.
+ * Fitted time results remain conditional on finite samples and this closure. */
+export type PassiveRelaxationTemporal = {
+ method:'passive-relaxation'; modeTransform?:readonly (readonly number[])[];
+ normalizationOhm?:number|Readonly<Record<string,number>>;
+ highFrequency:{conductanceS:readonly number[];capacitanceF:readonly number[]};
+};
 /** Explicit tabulated common-return model; source is provenance, never a URL loader.
  * Matrix [frequency][out][in]. S uses positive real power-wave references;
  * Z is Ohm, Y is Siemens. Interpolation is complex linear in source representation. */
@@ -74,9 +83,15 @@ export type FrequencyNetworkData = {
  format:'network-parameters'; representation:'S'|'Z'|'Y'; frequenciesHz:readonly number[];
  parameters:readonly (readonly (readonly {real:number;imaginary:number}[])[])[];
  referenceOhm?:number|Readonly<Record<string,number>>;referenceTopology:'common';nature:'passive'|'active'|'unspecified';
+ temporal?:PassiveRelaxationTemporal;
 };
-export type TouchstoneNetworkData = {format:'touchstone';content:string;referenceTopology:'common';nature:'passive'|'active'|'unspecified'};
-export type NetworkResource = Omit<Resource,'kind'|'ports'|'data'|'parameters'> & {kind:'network';ports:readonly string[];data:FrequencyNetworkData|TouchstoneNetworkData};
+export type TouchstoneNetworkData = {format:'touchstone';content:string;referenceTopology:'common';nature:'passive'|'active'|'unspecified';temporal?:PassiveRelaxationTemporal};
+/** Full entries, no automatic symmetrization or discarded mutual coefficients.
+ * Infinity keeps all metal potentials; candidate null modes are not a neutrality
+ * condition. They must span null(A^T), and are reduced after source/load assembly. */
+export type CoupledRlcData={format:'coupled-rlc';referenceTopology:'grounded'|'infinity';potentialNodes:readonly string[];currentDofs:readonly string[];incidence:readonly(readonly[number,number,number])[];portIncidence:readonly(readonly[number,number,number])[];resistanceOhm:readonly(readonly[number,number,number])[];inductanceH:readonly(readonly[number,number,number])[];capacitanceF:readonly(readonly[number,number,number])[];conservedPotentialModes?:readonly(readonly number[])[]};
+export type DelayedScatteringData={format:'delayed-scattering';referenceTopology:'common';nature:'passive';referenceOhm:number|Readonly<Record<string,number>>;scattering:readonly(readonly number[])[];delayS:number};
+export type NetworkResource = Omit<Resource,'kind'|'ports'|'data'|'parameters'> & {kind:'network';ports:readonly string[];data:FrequencyNetworkData|TouchstoneNetworkData|CoupledRlcData|DelayedScatteringData};
 export interface Material {
   id?: string; conductivitySM?: number; relativePermittivity?: number; lossTangent?: number;
   thermalConductivityWPerMK?: number; densityKgM3?: number; specificHeatJPerKgK?: number;
@@ -151,7 +166,7 @@ export type CircuitElement =
   | { id: string; kind: 'inductor'; nodes: readonly [string, string]; inductanceH: number; seriesResistanceOhm?: number; ideal?: boolean }
   | { id: string; kind: 'voltage-source'; nodes: readonly [string, string]; voltageV: number; model: Model | 'ideal'; waveform?: Waveform }
   | { id: string; kind: 'current-source'; nodes: readonly [string, string]; currentA: number; waveform?: Waveform }
-  | { id: string; kind: 'model'; model: Model; pins: Readonly<Record<string, string>> };
+  | { id: string; kind: 'model'; model: Model | ComponentDescription; pins: Readonly<Record<string, string>> };
 /** Explicit linear network; no automatic PCB connection. Reference is mandatory
  * or the documented gnd. V=first-second, I first-to-second, passive power sign.
  * Local R/C/L model mapping uses exactly p/n. No hidden ESR/ESL/DCR.
@@ -307,7 +322,9 @@ export interface AnalysisContext {
   thermal(): Builder<'thermal'>; electrothermal(): Builder<'electrothermal'>;
   impedance(): Builder<'impedance'>; tdr(): Builder<'tdr'>; si(): Builder<'si'>;
   eye(): Builder<'eye'>; emi(): Builder<'emi'>; em(): Builder<'em'>; networkParameters(): Builder<'networkParameters'>;
-  port(input: { positive: PadSelector | readonly PadSelector[]; negative: PadSelector | readonly PadSelector[] }): Port;
+  /** Optional extraction surface for both contacts. Existing DC rejects active
+   * surface-specific contacts; passive DC observations remain unavailable. */
+  port(input: { positive: PadSelector | readonly PadSelector[]; negative: PadSelector | readonly PadSelector[]; layer?: string }): Port;
   channel(input: { from: Port; to: Port; via?: readonly Selector[]; scope?: readonly Selector[] }): Channel;
   differential(input: { positive: Channel; negative: Channel }): Differential;
   conductor(input: { lengthMm: number; widthMm: number; thicknessMm: number; material: Material }): Conductor;
