@@ -274,3 +274,7 @@ coupled RLC подтверждены [матрицей исходных пунк
 ## Review checkpoint 2026-10-24
 
 Physical terminals/R1 и внутреннее layered C приняты в ограниченном объёме: [review](review-physical-layered-2026-10-24.md). Это уточняет исторические статусы выше, не закрывает P6/P7/P9 целиком. Следующие задачи: resonant-model checkpoint (P6), magnetic-kernel stability (P7); Thermal продолжает final-mesh-transient.
+
+### Второй checkpoint 2026-10-24
+
+[Результаты ревью](review-resonant-thermal-2026-10-24.md): P6 bounded resonant prototype принят для дальнейшей runtime реализации; P7 magnetic task прерван provider и продолжается; Thermal temporal acceptance заблокирована deadline, следующий этап profiling/оптимизация без повышения лимитов.
