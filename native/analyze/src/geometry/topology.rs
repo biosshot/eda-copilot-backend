@@ -75,7 +75,7 @@ pub(super) fn build(
             let mut overlap = 0.;
             let (kind, reliable) =
                 if matrix.get(CoordPos::Inside, CoordPos::Inside) == Dimensions::TwoDimensional {
-                    let intersection = ca.poly.intersection(&cb.poly);
+                    let intersection = areas::intersection(&areas::one(ca.poly.clone()), &areas::one(cb.poly.clone()));
                     overlap = intersection.unsigned_area();
                     let narrow =
                         overlap <= intersection.0.iter().map(areas::perimeter).sum::<f64>() * error;

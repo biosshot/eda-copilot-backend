@@ -822,3 +822,53 @@ fn finer_true_neck_remains_resolvable_on_small_boards() {
         assert_eq!(r.statistics.shorts, 1);
     }
 }
+
+
+#[test]
+fn common_context_stm_sources_and_real_submicron_bridge() {
+    use geo::{Area, BooleanOps, LineString, Polygon};
+    let data:Value=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/copper-geometry/regressions.json")).unwrap();
+    let mut v=board();
+    let mut tracks=data["tracks"].clone();
+    for t in tracks.as_array_mut().unwrap(){t["net"]=json!("A");}
+    v["copper"]["fixed"]["tracks"]=tracks;
+    let r=run(&v);assert!(r.excluded.is_empty(),"{:?}",r.diagnostics);
+    for p in &r.layers[0].copper {
+        for ring in std::iter::once(&p.outer).chain(&p.holes) {
+            for i in 0..ring.len(){let a=ring[i];let b=ring[(i+1)%ring.len()];assert!((a[0]-b[0]).hypot(a[1]-b[1])>1e-9);}
+        }
+    }
+    // The regression pad spans the real straight side, not a cap artifact.
+    let bridge:Value=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/copper-geometry/construction-613.json")).unwrap();
+    let pts:Vec<[f64;2]>=serde_json::from_value(bridge["bridge"]["padPolygonMm"].clone()).unwrap();
+    v["pads"]=json!([pad("real-bridge",0.,0.,json!({"kind":"polygon","polygon":polygon(&pts)}))]);
+    let r=run(&v);assert!(r.excluded.is_empty());
+    let poly=|p:&pcb_analyze::geometry::PolygonSnapshot| {let mut v:Vec<_>=p.outer.iter().map(|p|(p[0],p[1])).collect();v.push(v[0]);Polygon::new(LineString::from(v),vec![])};
+    let a=r.regions.iter().find(|p|p.source.source_id.as_deref()==Some("ddd0394190d6ae65")).unwrap();
+    let b=r.regions.iter().find(|p|p.source.source_id.as_deref()==Some("real-bridge")).unwrap();
+    assert!(poly(&a.polygon).intersection(&poly(&b.polygon)).unsigned_area()>1e-8);
+}
+
+
+#[test]
+fn common_context_rotated_translated_mixed_width_nodes_and_true_gap() {
+    for angle in [0_f64,37.,89.] {
+        for (tx,ty) in [(0.,0.),(813.125,-901.75)] {
+            let (s,c)=angle.to_radians().sin_cos();
+            let transform=|p:[f64;2]| [tx+c*p[0]-s*p[1],ty+s*p[0]+c*p[1]];
+            let mut v=board();
+            let outline:Vec<_>=[[-100.,-100.],[100.,-100.],[100.,100.],[-100.,100.]].map(transform).to_vec();v["outline"]=points(&outline);
+            let p1= [[-2.,0.],[0.,0.]].map(transform);let p2=[[0.,0.],[0.,2.],[1.,2.]].map(transform);
+            v["copper"]["fixed"]["tracks"]=json!([track("thin",&p1,0.2),track("wide-turn",&p2,0.4)]);
+            let r=run(&v);assert!(r.excluded.is_empty(),"{angle} {tx}: {:?}",r.diagnostics);
+            assert_eq!(r.islands.len(),1,"{angle} {tx}: {:?}",r.contacts);
+            assert_eq!(r.sources.iter().filter(|p|p.kind=="track").count(),2);
+            // Two different nets separated by a genuine0.2um gap.
+            let p2=[[-2.,0.2002],[0.,0.2002]].map(transform);
+            v["copper"]["fixed"]["tracks"]=json!([track("gap-a",&p1,0.2),track("gap-b",&p2,0.2)]);
+            v["copper"]["fixed"]["tracks"][1]["net"]=json!("B");
+            let r=run(&v);assert_eq!(r.statistics.shorts,0);assert_eq!(r.islands.len(),2);
+            assert!(r.contacts.iter().all(|p|!p.reliable));
+        }
+    }
+}

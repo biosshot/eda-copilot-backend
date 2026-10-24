@@ -1,5 +1,6 @@
 //! Physical copper preparation; consumes validated model::Board only.
 mod areas;
+mod context;
 mod primitives;
 mod spatial;
 mod topology;
@@ -8,7 +9,7 @@ use crate::{
     Diagnostic,
 };
 use areas::{AreaSet, Poly};
-use geo::{Area, BooleanOps, BoundingRect, Validation};
+use geo::{Area, BoundingRect, Validation};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -263,7 +264,40 @@ pub fn prepare(board: &Board, options: GeometryOptions) -> PreparationReport {
 pub(crate) fn prepare_observed(
     board: &Board,
     options: GeometryOptions,
+    outside_observer: Option<&mut dyn FnMut(&Provenance, &str, &AreaSet, f64)>,
+) -> PreparationReport {
+    prepare_context(board, options, outside_observer, true)
+}
+/// Diagnostic G0 only; never selected by the DSL/runtime.
+#[doc(hidden)]
+pub fn prepare_legacy_for_diagnostic(board: &Board, options: GeometryOptions) -> PreparationReport {
+    prepare_context(board,options,None,false)
+}
+/// Extraction diagnostic boundary: reuse the production board adapter for ROI
+/// clipping. No alternative geometry tolerance or per-ROI adapter is selected.
+#[doc(hidden)]
+pub fn clip_layers_for_diagnostic(board:&Board, report:&PreparationReport, bounds:[f64;4]) -> Result<(BTreeMap<String,Vec<PolygonSnapshot>>,([f64;2],f64,f64)),String> {
+    let ctx=context::Context::for_board(board,report.options)?;
+    let metadata=ctx.metadata();let _scope=context::Context::install(Some(ctx));
+    let clip=areas::one(areas::polygon(&model::Polygon{outer:vec![
+        model::Point{x:bounds[0],y:bounds[1]},model::Point{x:bounds[2],y:bounds[1]},
+        model::Point{x:bounds[2],y:bounds[3]},model::Point{x:bounds[0],y:bounds[3]}],holes:vec![]})?);
+    let mut out=BTreeMap::new();
+    for l in &report.layers {
+        let polys=l.copper.iter().map(|p|areas::polygon(&model::Polygon{
+            outer:p.outer.iter().map(|p|model::Point{x:p[0],y:p[1]}).collect(),
+            holes:p.holes.iter().map(|r|r.iter().map(|p|model::Point{x:p[0],y:p[1]}).collect()).collect()
+        })).collect::<Result<Vec<_>,_>>()?;
+        let g=areas::intersection(&geo::MultiPolygon(polys),&clip);
+        out.insert(l.layer.clone(),g.0.iter().map(areas::snapshot).collect());
+    }
+    Ok((out,metadata))
+}
+fn prepare_context(
+    board: &Board,
+    options: GeometryOptions,
     mut outside_observer: Option<&mut dyn FnMut(&Provenance, &str, &AreaSet, f64)>,
+    shared: bool,
 ) -> PreparationReport {
     let mut r = empty(options);
     let root = Provenance {
@@ -280,6 +314,10 @@ pub(crate) fn prepare_observed(
         diagnostic(&mut r, &root, "invalid_options", e, "invalid");
         return r;
     }
+    let coordinate_context = if shared {match context::Context::for_board(board, options) {
+        Ok(c)=>Some(c),Err(e)=>{diagnostic(&mut r,&root,"coordinate_context",e,"invalid");return r;}
+    }} else {None};
+    let _coordinate_scope=context::Context::install(coordinate_context);
     let board_poly = match areas::polygon(&model::Polygon {
         outer: board.outline.clone(),
         holes: board.cutouts.clone(),
@@ -323,9 +361,9 @@ pub(crate) fn prepare_observed(
                 .as_ref()
                 .and_then(|m| m.get(&layer))
                 .unwrap_or(&pad.common_shape);
-            match builder.shape(shape) {
+            match builder.shape_at(shape, pad.at, pad.rotation_deg) {
                 Ok((s, e)) => pending.push(Raw {
-                    shape: primitives::transform(s, pad.at, pad.rotation_deg),
+                    shape: s,
                     source: p.clone(),
                     layer,
                     error: e,
@@ -578,7 +616,7 @@ pub(crate) fn prepare_observed(
         .map(|b| b.max().y)
         .fold(f64::NEG_INFINITY, f64::max);
     r.boolean_error_bound_mm =
-        ((maxx - minx).max(maxy - miny) * 64. / (1u64 << 29) as f64).max(1e-12);
+        ((maxx - minx).max(maxy - miny) * 64. / (1u64 << 29) as f64).max(1e-12).max(context::error_bound());
     // Validate transformed/generated polygons before handing anything to boolean
     // operations. No repair() or small-area filter is used.
     let mut valid = vec![];
@@ -663,14 +701,14 @@ pub(crate) fn prepare_observed(
     );
     let mut copper = Vec::new();
     for x in &valid {
-        let outside = x.shape.difference(&material).unsigned_area();
+        let outside = areas::difference(&x.shape, &material).unsigned_area();
         if outside > 0. {
             diagnostic(&mut r,&x.source,"copper_outside_board",format!("{outside:.9} mm2 lies outside board material; derived snapshot intersects outline/cutouts, edge/castellation validity unresolved"),"limitation");
         }
         let inside = if outside == 0. {
             x.shape.clone()
         } else {
-            x.shape.intersection(&material)
+            areas::intersection(&x.shape, &material)
         };
         let nearby: Vec<_> = drill_index
             .query(x.shape.bounding_rect().unwrap(), 0.)
@@ -681,7 +719,7 @@ pub(crate) fn prepare_observed(
         if outside > 0. {
             if let Some(observer) = &mut outside_observer {
                 observer(&x.source, &board.layers[x.layer].name,
-                    &areas::subtract(&x.shape.difference(&material), &drills),
+                    &areas::subtract(&areas::difference(&x.shape, &material), &drills),
                     if nearby.is_empty() { x.error } else { x.error.max(options.max_deviation_mm) + 2. * r.boolean_error_bound_mm });
             }
         }

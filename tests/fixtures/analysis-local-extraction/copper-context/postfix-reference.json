@@ -1,0 +1,90 @@
+{
+  "rows": [
+    {
+      "postfixIndex": 534,
+      "levels": [
+        {
+          "power": 16,
+          "valuesM5": [
+            1.880341197337606e-25,
+            1.8789570104420238e-25,
+            1.8806654498128724e-25,
+            1.8813941213125289e-25
+          ],
+          "meanM5": 1.8803394447262578e-25,
+          "seM5": 5.106980223184025e-29
+        },
+        {
+          "power": 18,
+          "valuesM5": [
+            1.8804026833843726e-25,
+            1.8802942879988024e-25,
+            1.8797941906391077e-25,
+            1.8807953123458873e-25
+          ],
+          "meanM5": 1.8803216185920425e-25,
+          "seM5": 2.0613193183230074e-29
+        },
+        {
+          "power": 20,
+          "valuesM5": [
+            1.8802356470040956e-25,
+            1.8803200941695225e-25,
+            1.880105444305787e-25,
+            1.8803825302343467e-25
+          ],
+          "meanM5": 1.880260928928438e-25,
+          "seM5": 5.9931938432045645e-30
+        }
+      ],
+      "referenceM5": 1.880260928928438e-25,
+      "absoluteWorkingUncertaintyM5": 4.8097095780133017e-29,
+      "relativeWorkingUncertainty": 0.0002558001128468036,
+      "nature": "Empirical/statistical working uncertainty, not a certified continuum enclosure."
+    },
+    {
+      "postfixIndex": 620,
+      "levels": [
+        {
+          "power": 16,
+          "valuesM5": [
+            3.504076247707634e-19,
+            3.5118456547165625e-19,
+            3.5037413574049953e-19,
+            3.500589650763485e-19
+          ],
+          "meanM5": 3.505063227648169e-19,
+          "seM5": 2.393318432359527e-22
+        },
+        {
+          "power": 18,
+          "valuesM5": [
+            3.5054348809990944e-19,
+            3.502416379129164e-19,
+            3.5048150536286235e-19,
+            3.502954461356106e-19
+          ],
+          "meanM5": 3.503905193778247e-19,
+          "seM5": 7.238927831974864e-23
+        },
+        {
+          "power": 20,
+          "valuesM5": [
+            3.503805075039701e-19,
+            3.504756596874804e-19,
+            3.5040016467225704e-19,
+            3.504290422242258e-19
+          ],
+          "meanM5": 3.504213435219833e-19,
+          "seM5": 2.0667284722132614e-23
+        }
+      ],
+      "referenceM5": 3.504213435219833e-19,
+      "absoluteWorkingUncertaintyM5": 1.8565199665000592e-22,
+      "relativeWorkingUncertainty": 0.0005297964866639444,
+      "nature": "Empirical/statistical working uncertainty, not a certified continuum enclosure."
+    }
+  ],
+  "seconds": 2.7358110999921337,
+  "method": "Frozen positive4D exact-double-z; no native face/source-potential imports"
+}

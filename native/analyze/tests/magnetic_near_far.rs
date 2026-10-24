@@ -208,3 +208,20 @@ fn independent_mixed_slender_far_reference() {
         0
     );
 }
+
+
+#[test]
+fn cached_individual_leaf_partition_matches_singleton_plan() {
+    let ps:Vec<_>=(0..24).map(|i|p((i%6) as f64*0.003+(i/6) as f64*0.0001,0.0005)).collect();
+    let coarse=Plan::new_coarse(&ps,0.4,8,budget()).unwrap();
+    let fine=Plan::new(&ps,0.4,8,budget()).unwrap();
+    let single=Plan::new(&ps,0.4,1,budget()).unwrap();
+    let n=pairs(&fine,false);let f=pairs(&fine,true);
+    assert!(fine.promoted_pairs>0);
+    assert_eq!(coarse.near_pairs-fine.near_pairs,fine.promoted_pairs);
+    assert_eq!(fine.far_pairs-coarse.far_pairs,fine.promoted_pairs);
+    assert!(n.is_disjoint(&f));assert_eq!(n.len()+f.len(),300);
+    assert_eq!(f,pairs(&single,true));
+    for i in 0..ps.len(){assert!(n.contains(&(i,i)));}
+    for _ in 0..3 {assert_eq!(f,pairs(&fine,true));}
+}

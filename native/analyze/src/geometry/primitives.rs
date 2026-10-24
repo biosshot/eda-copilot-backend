@@ -158,6 +158,12 @@ impl Builder {
             PadShape::Polygon(p) => (areas::one(areas::polygon(p)?), 0.),
         })
     }
+    pub fn shape_at(&mut self, s: &PadShape, at: Point, rotation: f64) -> Result<(AreaSet, f64), String> {
+        let scope=super::context::Context::frame(at, rotation);
+        let (shape,error)=self.shape(s)?;
+        drop(scope);
+        Ok((transform(shape,at,rotation),error))
+    }
     fn round_rect(&mut self, w: f64, h: f64, r: f64) -> Result<AreaSet, String> {
         self.round_rect_bound(w, h, r, false)
     }
@@ -209,6 +215,9 @@ impl Builder {
         guard: f64,
     ) -> Result<AreaSet, String> {
         let r = drill.diameter_mm / 2. + guard;
+        let offset = drill.offset.unwrap_or(Point { x: 0., y: 0. });
+        let center = transform_point(offset, at, rotation);
+        let scope=super::context::Context::frame(center,rotation+drill.rotation_deg.unwrap_or(0.));
         let shape = match drill.shape {
             DrillShape::Round => {
                 areas::one(self.circle_bound(Point { x: 0., y: 0. }, r, enclosing)?)
@@ -218,8 +227,7 @@ impl Builder {
             }
         };
         // Hole offset is pad-local; its own rotation rotates the slot, not offset.
-        let offset = drill.offset.unwrap_or(Point { x: 0., y: 0. });
-        let center = transform_point(offset, at, rotation);
+        drop(scope);
         Ok(transform(
             shape,
             center,

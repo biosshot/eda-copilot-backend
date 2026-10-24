@@ -79,6 +79,8 @@ pub struct Plan {
     pub far_pairs: usize,
     pub planned_bytes: usize,
     pub construction_seconds: f64,
+    pub promoted_pairs: usize,
+    promoted: Vec<u64>,
     budget: Budget,
     started: Instant,
     leaf: usize,
@@ -86,6 +88,13 @@ pub struct Plan {
 }
 impl Plan {
     pub fn new(prisms: &[Prism], theta: f64, leaf: usize, budget: Budget) -> Result<Self> {
+        Self::new_policy(prisms,theta,leaf,budget,true)
+    }
+    /// Retained G1 diagnostic baseline on exactly the same geometry.
+    pub fn new_coarse(prisms: &[Prism], theta: f64, leaf: usize, budget: Budget) -> Result<Self> {
+        Self::new_policy(prisms,theta,leaf,budget,false)
+    }
+    fn new_policy(prisms: &[Prism], theta: f64, leaf: usize, budget: Budget, individual: bool) -> Result<Self> {
         let started = Instant::now();
         clock(started, budget)?;
         if prisms.is_empty() || !(theta > 0. && theta < 1.) || !(1..=64).contains(&leaf) {
@@ -104,13 +113,14 @@ impl Plan {
             ));
         }
         let block_cap = total.min(budget.max_blocks);
-        let bytes = checked(
+        let mask_words=if individual {checked(total,63)?/64}else{0};
+        let bytes = checked(product(mask_words,8)?,checked(
             product(n, std::mem::size_of::<Moments>() + 8 + 8192)?,
             checked(
                 product(node_cap, std::mem::size_of::<Node>())?,
                 product(block_cap, std::mem::size_of::<Block>())?,
             )?,
-        )?;
+        )?)?;
         memory(bytes, budget)?;
         let mut moments = Vec::with_capacity(n);
         for p in prisms {
@@ -126,6 +136,8 @@ impl Plan {
             far_pairs: 0,
             planned_bytes: bytes,
             construction_seconds: 0.,
+            promoted_pairs: 0,
+            promoted: vec![0;mask_words],
             budget,
             started,
             leaf,
@@ -133,6 +145,26 @@ impl Plan {
         };
         let root = p.tree(0, n)?;
         p.interactions(root, root)?;
+        if individual {
+            let mut mask=std::mem::take(&mut p.promoted);
+            let mut count=0;
+            p.visit_pairs(false,|i,j| {
+                clock(started,budget)?;
+                if i!=j {
+                    let a=&p.moments[i];let b=&p.moments[j];
+                    let q=(a.radius_m+b.radius_m)/distance(a.center_m,b.center_m)*(1.+32.*f64::EPSILON);
+                    if q.is_finite() && q<=theta {
+                        // The same finite moment/remainder admission used by
+                        // the operator. A failed check stays exact-near.
+                        if a.pair(b).is_ok() {
+                            let k=p.pair_index(i,j);mask[k/64]|=1u64<<(k%64);count+=1;
+                        }
+                    }
+                }
+                Ok(())
+            })?;
+            p.promoted=mask;p.promoted_pairs=count;p.near_pairs-=count;p.far_pairs+=count;
+        }
         if checked(p.near_pairs, p.far_pairs)? != total {
             return Err(error(
                 "NEAR_FAR_COVERAGE",
@@ -261,17 +293,27 @@ impl Plan {
         far: bool,
         mut f: impl FnMut(usize, usize) -> Result<()>,
     ) -> Result<()> {
-        for block in self.blocks.iter().filter(|b| b.far == far) {
+        for block in &self.blocks {
+            if block.far && !far {continue;}
+            if !block.far && far && self.promoted_pairs==0 {continue;}
             let a = &self.nodes[block.a];
             let b = &self.nodes[block.b];
             for i in a.start..a.end {
                 let first = if block.a == block.b { i } else { b.start };
                 for j in first..b.end {
-                    f(self.order[i], self.order[j])?;
+                    let (ii,jj)=(self.order[i],self.order[j]);
+                    let k=self.pair_index(ii,jj);
+                    let promoted=!self.promoted.is_empty() && (self.promoted[k/64]>>(k%64))&1!=0;
+                    if (block.far || promoted)!=far {continue;}
+                    f(ii,jj)?;
                 }
             }
         }
         Ok(())
+    }
+    fn pair_index(&self,i:usize,j:usize)->usize {
+        let (i,j)=(i.min(j),i.max(j));let n=self.moments.len();
+        i*n-i*i.saturating_sub(1)/2+(j-i)
     }
     pub fn near_cache_upper_bytes(&self) -> Result<usize> {
         product(self.near_pairs, std::mem::size_of::<NearPair>())
@@ -386,6 +428,12 @@ impl Operator {
         theta: f64,
         leaf: usize,
     ) -> Result<Self> {
+        Self::new_policy(cache,densities,theta,leaf,true)
+    }
+    pub fn new_coarse(cache:&mut ExactCache,densities:Vec<Vec<[f64;3]>>,theta:f64,leaf:usize)->Result<Self> {
+        Self::new_policy(cache,densities,theta,leaf,false)
+    }
+    fn new_policy(cache:&mut ExactCache,densities:Vec<Vec<[f64;3]>>,theta:f64,leaf:usize,individual:bool)->Result<Self> {
         let n = cache.prisms.len();
         let k = densities.first().map_or(0, Vec::len);
         if densities.len() != n
@@ -401,7 +449,7 @@ impl Operator {
             ));
         }
         clock(cache.started, cache.budget)?;
-        let plan = Plan::new(&cache.prisms, theta, leaf, cache.budget)?;
+        let plan = Plan::new_policy(&cache.prisms, theta, leaf, cache.budget,individual)?;
         let bytes = checked(
             cache.planned_bytes,
             checked(

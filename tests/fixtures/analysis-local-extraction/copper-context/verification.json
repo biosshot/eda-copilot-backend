@@ -1,0 +1,1453 @@
+{
+  "meshCounts": [
+    {
+      "name": "STM32G0_CAN_RS485",
+      "nativeContext": [
+        [
+          0.0,
+          0.0
+        ],
+        2.384185791015625e-07,
+        5.3947966093944364e-06
+      ],
+      "layers": {
+        "BOTTOM": {
+          "triangles": 299,
+          "contours": 5,
+          "vertices": 105,
+          "areaMm2": 27.724032436468008,
+          "meshAreaDifferenceMm2": 0.0,
+          "potentialNodes": 201
+        },
+        "TOP": {
+          "triangles": 604,
+          "contours": 16,
+          "vertices": 430,
+          "areaMm2": 12.240939820523522,
+          "meshAreaDifferenceMm2": 0.0,
+          "potentialNodes": 525
+        }
+      },
+      "foil": 903,
+      "axial": 192,
+      "candidateCurrentCoefficients": 1902,
+      "maxAspect": 1268.8694705134467,
+      "minimumEdgeMm": 0.0007638695010152165,
+      "meaning": "Count-only experimental shared-grid GEOS arrangement/CDT; unchanged angular/plating hypothesis, no ROI physical operator or production mesher admission.",
+      "potentialNodes": 726,
+      "foilTrianglesPerMm2": 22.59478610902896
+    },
+    {
+      "name": "TPS63060DSCR",
+      "nativeContext": [
+        [
+          0.0,
+          0.0
+        ],
+        1.1920928955078125e-07,
+        2.6973983046972182e-06
+      ],
+      "layers": {
+        "BOTTOM": {
+          "triangles": 849,
+          "contours": 10,
+          "vertices": 259,
+          "areaMm2": 45.91427106507542,
+          "meshAreaDifferenceMm2": 0.0,
+          "potentialNodes": 547
+        },
+        "TOP": {
+          "triangles": 1062,
+          "contours": 16,
+          "vertices": 484,
+          "areaMm2": 36.55078809209663,
+          "meshAreaDifferenceMm2": 0.0,
+          "potentialNodes": 772
+        }
+      },
+      "foil": 1911,
+      "axial": 576,
+      "candidateCurrentCoefficients": 4110,
+      "maxAspect": 1621.1599636287333,
+      "minimumEdgeMm": 0.0011500120162963867,
+      "meaning": "Count-only experimental shared-grid GEOS arrangement/CDT; unchanged angular/plating hypothesis, no ROI physical operator or production mesher admission.",
+      "potentialNodes": 1319,
+      "foilTrianglesPerMm2": 23.173450907950983
+    },
+    {
+      "name": "BandAmpV5",
+      "nativeContext": [
+        [
+          0.0,
+          0.0
+        ],
+        1.1920928955078125e-07,
+        2.6973983046972182e-06
+      ],
+      "layers": {
+        "BOTTOM": {
+          "triangles": 1127,
+          "contours": 13,
+          "vertices": 340,
+          "areaMm2": 48.766878904242496,
+          "meshAreaDifferenceMm2": 0.0,
+          "potentialNodes": 724
+        },
+        "TOP": {
+          "triangles": 1473,
+          "contours": 18,
+          "vertices": 696,
+          "areaMm2": 37.626828761896036,
+          "meshAreaDifferenceMm2": 0.0,
+          "potentialNodes": 1080
+        }
+      },
+      "foil": 2600,
+      "axial": 768,
+      "candidateCurrentCoefficients": 5584,
+      "maxAspect": 137062.7743713625,
+      "minimumEdgeMm": 2.384185791015625e-07,
+      "meaning": "Count-only experimental shared-grid GEOS arrangement/CDT; unchanged angular/plating hypothesis, no ROI physical operator or production mesher admission.",
+      "potentialNodes": 1804,
+      "foilTrianglesPerMm2": 30.09478433368653
+    }
+  ],
+  "postfixNear": [
+    {
+      "postfixIndex": 534,
+      "refinementChange": 1.9445919342553353e-05,
+      "error": 4.022417734450556e-06,
+      "referenceWorkingUncertainty": 0.0002558001128468036,
+      "screen": 0.00025982253058125416,
+      "gate": 0.002,
+      "accepted": true
+    },
+    {
+      "postfixIndex": 620,
+      "refinementChange": 8.685554269138862e-07,
+      "error": 3.409308610236028e-05,
+      "referenceWorkingUncertainty": 0.0005297964866639444,
+      "screen": 0.0005638895727663047,
+      "gate": 0.002,
+      "accepted": true
+    }
+  ],
+  "coupon": [
+    {
+      "configuration": "G1",
+      "runs": [
+        {
+          "wallSeconds": 4.512671,
+          "kernelEvaluations": 576,
+          "kernelSeconds": 4.5114291,
+          "plan": {
+            "blocks": 10,
+            "constructionSeconds": 0.0001094,
+            "farPairs": 0,
+            "moments": 24,
+            "nearCacheUpperBytes": 9600,
+            "nearPairs": 300,
+            "plannedBytes": 235680,
+            "promotedPairs": 0
+          },
+          "fullError": 0.00046505969437156733,
+          "referenceWorkingUncertainty": 0.004009630857236319,
+          "fullScreen": 0.004474690551607887,
+          "aggregateFarBudget": 0.0,
+          "rawReciprocity": 5.5524764643054625e-11,
+          "physicalEigenvaluesH": [
+            3.1518674647727623e-10,
+            3.162449541759418e-10,
+            3.632112138367749e-10,
+            3.633037916929523e-10
+          ],
+          "matrixH": [
+            [
+              3.3948667654573634e-10,
+              -2.3770429248922212e-11,
+              -2.414114920718993e-13,
+              -1.5032802481711788e-13
+            ],
+            [
+              -2.377042926777213e-11,
+              3.3948667654573624e-10,
+              -4.250647526043086e-13,
+              -2.4141149207190356e-13
+            ],
+            [
+              -2.4141149207195415e-13,
+              -4.2506475260446997e-13,
+              3.394866765457363e-10,
+              -2.3770429248922248e-11
+            ],
+            [
+              -1.50328024817199e-13,
+              -2.4141149207194143e-13,
+              -2.3770429267772117e-11,
+              3.394866765457366e-10
+            ]
+          ],
+          "analyticBoundMatrixH": [
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "actions": [
+            {
+              "q": [
+                1.0,
+                -0.5,
+                0.2,
+                0.8
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1.0,
+                -1.0,
+                1.0,
+                -1.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                0.0,
+                0.0,
+                0.0,
+                0.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1e-12,
+                -1e-12,
+                0.0,
+                0.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            }
+          ],
+          "plannedSimultaneousBytes": 645536
+        },
+        {
+          "wallSeconds": 5.0119695,
+          "kernelEvaluations": 576,
+          "kernelSeconds": 5.0107668,
+          "plan": {
+            "blocks": 10,
+            "constructionSeconds": 7.31e-05,
+            "farPairs": 0,
+            "moments": 24,
+            "nearCacheUpperBytes": 9600,
+            "nearPairs": 300,
+            "plannedBytes": 235680,
+            "promotedPairs": 0
+          },
+          "fullError": 0.00046505969437156733,
+          "referenceWorkingUncertainty": 0.004009630857236319,
+          "fullScreen": 0.004474690551607887,
+          "aggregateFarBudget": 0.0,
+          "rawReciprocity": 5.5524764643054625e-11,
+          "physicalEigenvaluesH": [
+            3.1518674647727623e-10,
+            3.162449541759418e-10,
+            3.632112138367749e-10,
+            3.633037916929523e-10
+          ],
+          "matrixH": [
+            [
+              3.3948667654573634e-10,
+              -2.3770429248922212e-11,
+              -2.414114920718993e-13,
+              -1.5032802481711788e-13
+            ],
+            [
+              -2.377042926777213e-11,
+              3.3948667654573624e-10,
+              -4.250647526043086e-13,
+              -2.4141149207190356e-13
+            ],
+            [
+              -2.4141149207195415e-13,
+              -4.2506475260446997e-13,
+              3.394866765457363e-10,
+              -2.3770429248922248e-11
+            ],
+            [
+              -1.50328024817199e-13,
+              -2.4141149207194143e-13,
+              -2.3770429267772117e-11,
+              3.394866765457366e-10
+            ]
+          ],
+          "analyticBoundMatrixH": [
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "actions": [
+            {
+              "q": [
+                1.0,
+                -0.5,
+                0.2,
+                0.8
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1.0,
+                -1.0,
+                1.0,
+                -1.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                0.0,
+                0.0,
+                0.0,
+                0.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1e-12,
+                -1e-12,
+                0.0,
+                0.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            }
+          ],
+          "plannedSimultaneousBytes": 645536
+        },
+        {
+          "wallSeconds": 4.5971726,
+          "kernelEvaluations": 576,
+          "kernelSeconds": 4.596057600000001,
+          "plan": {
+            "blocks": 10,
+            "constructionSeconds": 9.34e-05,
+            "farPairs": 0,
+            "moments": 24,
+            "nearCacheUpperBytes": 9600,
+            "nearPairs": 300,
+            "plannedBytes": 235680,
+            "promotedPairs": 0
+          },
+          "fullError": 0.00046505969437156733,
+          "referenceWorkingUncertainty": 0.004009630857236319,
+          "fullScreen": 0.004474690551607887,
+          "aggregateFarBudget": 0.0,
+          "rawReciprocity": 5.5524764643054625e-11,
+          "physicalEigenvaluesH": [
+            3.1518674647727623e-10,
+            3.162449541759418e-10,
+            3.632112138367749e-10,
+            3.633037916929523e-10
+          ],
+          "matrixH": [
+            [
+              3.3948667654573634e-10,
+              -2.3770429248922212e-11,
+              -2.414114920718993e-13,
+              -1.5032802481711788e-13
+            ],
+            [
+              -2.377042926777213e-11,
+              3.3948667654573624e-10,
+              -4.250647526043086e-13,
+              -2.4141149207190356e-13
+            ],
+            [
+              -2.4141149207195415e-13,
+              -4.2506475260446997e-13,
+              3.394866765457363e-10,
+              -2.3770429248922248e-11
+            ],
+            [
+              -1.50328024817199e-13,
+              -2.4141149207194143e-13,
+              -2.3770429267772117e-11,
+              3.394866765457366e-10
+            ]
+          ],
+          "analyticBoundMatrixH": [
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "actions": [
+            {
+              "q": [
+                1.0,
+                -0.5,
+                0.2,
+                0.8
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1.0,
+                -1.0,
+                1.0,
+                -1.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                0.0,
+                0.0,
+                0.0,
+                0.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1e-12,
+                -1e-12,
+                0.0,
+                0.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            }
+          ],
+          "plannedSimultaneousBytes": 645536
+        }
+      ],
+      "meanWallSeconds": 4.707271033333334,
+      "medianWallSeconds": 4.5971726,
+      "wallRangeSeconds": [
+        4.512671,
+        5.0119695
+      ],
+      "batch": {
+        "configuration": "G1",
+        "wallSeconds": 21.959952099976363,
+        "peakSubtreeBytes": 231641088,
+        "capBytes": 536870912,
+        "capSeconds": 120,
+        "exitCode": 0,
+        "refusal": null
+      },
+      "sampleStdWallSeconds": 0.2672377158868174
+    },
+    {
+      "configuration": "G2",
+      "runs": [
+        {
+          "wallSeconds": 2.1901687,
+          "kernelEvaluations": 294,
+          "kernelSeconds": 2.188849400000001,
+          "plan": {
+            "blocks": 10,
+            "constructionSeconds": 0.0001769,
+            "farPairs": 141,
+            "moments": 24,
+            "nearCacheUpperBytes": 5088,
+            "nearPairs": 159,
+            "plannedBytes": 235720,
+            "promotedPairs": 141
+          },
+          "fullError": 0.0004650640020886515,
+          "referenceWorkingUncertainty": 0.004009630857236319,
+          "fullScreen": 0.004474694859324971,
+          "aggregateFarBudget": 0.0022227490535135053,
+          "rawReciprocity": 5.5524764643054625e-11,
+          "physicalEigenvaluesH": [
+            3.151867867840596e-10,
+            3.162449140326758e-10,
+            3.6321121216139036e-10,
+            3.633037932048197e-10
+          ],
+          "matrixH": [
+            [
+              3.3948667654573634e-10,
+              -2.3770429248922212e-11,
+              -2.4139058156713953e-13,
+              -1.5032285502264218e-13
+            ],
+            [
+              -2.377042926777213e-11,
+              3.3948667654573624e-10,
+              -4.250312910000937e-13,
+              -2.413905815671382e-13
+            ],
+            [
+              -2.4139058156713887e-13,
+              -4.2503129100008566e-13,
+              3.394866765457363e-10,
+              -2.3770429248922248e-11
+            ],
+            [
+              -1.5032285502264233e-13,
+              -2.4139058156713933e-13,
+              -2.3770429267772117e-11,
+              3.394866765457366e-10
+            ]
+          ],
+          "analyticBoundMatrixH": [
+            [
+              2.4391614708075056e-13,
+              -9.707085826521839e-14,
+              0.0,
+              0.0
+            ],
+            [
+              -9.707085826521839e-14,
+              7.502139865388548e-13,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              7.502139865388549e-13,
+              -9.707085826521853e-14
+            ],
+            [
+              0.0,
+              0.0,
+              -9.707085826521853e-14,
+              2.439161470807512e-13
+            ]
+          ],
+          "actions": [
+            {
+              "q": [
+                1.0,
+                -0.5,
+                0.2,
+                0.8
+              ],
+              "absoluteEnergyChangeJ": 3.392425838673329e-18,
+              "boundJ": 3.417963604645239e-13,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ],
+              "absoluteEnergyChangeJ": 8.045240849103877e-17,
+              "boundJ": 7.999884170891688e-13,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1.0,
+                -1.0,
+                1.0,
+                -1.0
+              ],
+              "absoluteEnergyChangeJ": 3.1896109235463124e-18,
+              "boundJ": 1.1882718501500428e-12,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                0.0,
+                0.0,
+                0.0,
+                0.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1e-12,
+                -1e-12,
+                0.0,
+                0.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 5.941359250750211e-37,
+              "energyGate": true,
+              "potentialGate": true
+            }
+          ],
+          "plannedSimultaneousBytes": 641064
+        },
+        {
+          "wallSeconds": 2.4975735,
+          "kernelEvaluations": 294,
+          "kernelSeconds": 2.4962584999999975,
+          "plan": {
+            "blocks": 10,
+            "constructionSeconds": 0.0001005,
+            "farPairs": 141,
+            "moments": 24,
+            "nearCacheUpperBytes": 5088,
+            "nearPairs": 159,
+            "plannedBytes": 235720,
+            "promotedPairs": 141
+          },
+          "fullError": 0.0004650640020886515,
+          "referenceWorkingUncertainty": 0.004009630857236319,
+          "fullScreen": 0.004474694859324971,
+          "aggregateFarBudget": 0.0022227490535135053,
+          "rawReciprocity": 5.5524764643054625e-11,
+          "physicalEigenvaluesH": [
+            3.151867867840596e-10,
+            3.162449140326758e-10,
+            3.6321121216139036e-10,
+            3.633037932048197e-10
+          ],
+          "matrixH": [
+            [
+              3.3948667654573634e-10,
+              -2.3770429248922212e-11,
+              -2.4139058156713953e-13,
+              -1.5032285502264218e-13
+            ],
+            [
+              -2.377042926777213e-11,
+              3.3948667654573624e-10,
+              -4.250312910000937e-13,
+              -2.413905815671382e-13
+            ],
+            [
+              -2.4139058156713887e-13,
+              -4.2503129100008566e-13,
+              3.394866765457363e-10,
+              -2.3770429248922248e-11
+            ],
+            [
+              -1.5032285502264233e-13,
+              -2.4139058156713933e-13,
+              -2.3770429267772117e-11,
+              3.394866765457366e-10
+            ]
+          ],
+          "analyticBoundMatrixH": [
+            [
+              2.4391614708075056e-13,
+              -9.707085826521839e-14,
+              0.0,
+              0.0
+            ],
+            [
+              -9.707085826521839e-14,
+              7.502139865388548e-13,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              7.502139865388549e-13,
+              -9.707085826521853e-14
+            ],
+            [
+              0.0,
+              0.0,
+              -9.707085826521853e-14,
+              2.439161470807512e-13
+            ]
+          ],
+          "actions": [
+            {
+              "q": [
+                1.0,
+                -0.5,
+                0.2,
+                0.8
+              ],
+              "absoluteEnergyChangeJ": 3.392425838673329e-18,
+              "boundJ": 3.417963604645239e-13,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ],
+              "absoluteEnergyChangeJ": 8.045240849103877e-17,
+              "boundJ": 7.999884170891688e-13,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1.0,
+                -1.0,
+                1.0,
+                -1.0
+              ],
+              "absoluteEnergyChangeJ": 3.1896109235463124e-18,
+              "boundJ": 1.1882718501500428e-12,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                0.0,
+                0.0,
+                0.0,
+                0.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1e-12,
+                -1e-12,
+                0.0,
+                0.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 5.941359250750211e-37,
+              "energyGate": true,
+              "potentialGate": true
+            }
+          ],
+          "plannedSimultaneousBytes": 641064
+        },
+        {
+          "wallSeconds": 2.6874928000000002,
+          "kernelEvaluations": 294,
+          "kernelSeconds": 2.6839252999999985,
+          "plan": {
+            "blocks": 10,
+            "constructionSeconds": 0.0001395,
+            "farPairs": 141,
+            "moments": 24,
+            "nearCacheUpperBytes": 5088,
+            "nearPairs": 159,
+            "plannedBytes": 235720,
+            "promotedPairs": 141
+          },
+          "fullError": 0.0004650640020886515,
+          "referenceWorkingUncertainty": 0.004009630857236319,
+          "fullScreen": 0.004474694859324971,
+          "aggregateFarBudget": 0.0022227490535135053,
+          "rawReciprocity": 5.5524764643054625e-11,
+          "physicalEigenvaluesH": [
+            3.151867867840596e-10,
+            3.162449140326758e-10,
+            3.6321121216139036e-10,
+            3.633037932048197e-10
+          ],
+          "matrixH": [
+            [
+              3.3948667654573634e-10,
+              -2.3770429248922212e-11,
+              -2.4139058156713953e-13,
+              -1.5032285502264218e-13
+            ],
+            [
+              -2.377042926777213e-11,
+              3.3948667654573624e-10,
+              -4.250312910000937e-13,
+              -2.413905815671382e-13
+            ],
+            [
+              -2.4139058156713887e-13,
+              -4.2503129100008566e-13,
+              3.394866765457363e-10,
+              -2.3770429248922248e-11
+            ],
+            [
+              -1.5032285502264233e-13,
+              -2.4139058156713933e-13,
+              -2.3770429267772117e-11,
+              3.394866765457366e-10
+            ]
+          ],
+          "analyticBoundMatrixH": [
+            [
+              2.4391614708075056e-13,
+              -9.707085826521839e-14,
+              0.0,
+              0.0
+            ],
+            [
+              -9.707085826521839e-14,
+              7.502139865388548e-13,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              7.502139865388549e-13,
+              -9.707085826521853e-14
+            ],
+            [
+              0.0,
+              0.0,
+              -9.707085826521853e-14,
+              2.439161470807512e-13
+            ]
+          ],
+          "actions": [
+            {
+              "q": [
+                1.0,
+                -0.5,
+                0.2,
+                0.8
+              ],
+              "absoluteEnergyChangeJ": 3.392425838673329e-18,
+              "boundJ": 3.417963604645239e-13,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ],
+              "absoluteEnergyChangeJ": 8.045240849103877e-17,
+              "boundJ": 7.999884170891688e-13,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1.0,
+                -1.0,
+                1.0,
+                -1.0
+              ],
+              "absoluteEnergyChangeJ": 3.1896109235463124e-18,
+              "boundJ": 1.1882718501500428e-12,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                0.0,
+                0.0,
+                0.0,
+                0.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 0.0,
+              "energyGate": true,
+              "potentialGate": true
+            },
+            {
+              "q": [
+                1e-12,
+                -1e-12,
+                0.0,
+                0.0
+              ],
+              "absoluteEnergyChangeJ": 0.0,
+              "boundJ": 5.941359250750211e-37,
+              "energyGate": true,
+              "potentialGate": true
+            }
+          ],
+          "plannedSimultaneousBytes": 641064
+        }
+      ],
+      "meanWallSeconds": 2.458411666666667,
+      "medianWallSeconds": 2.4975735,
+      "wallRangeSeconds": [
+        2.1901687,
+        2.6874928000000002
+      ],
+      "batch": {
+        "configuration": "G2",
+        "wallSeconds": 7.689475200022571,
+        "peakSubtreeBytes": 23670784,
+        "capBytes": 536870912,
+        "capSeconds": 120,
+        "exitCode": 0,
+        "refusal": null
+      },
+      "sampleStdWallSeconds": 0.2509642444706484
+    }
+  ],
+  "measuredMeanSpeedup": 1.9147611025275804,
+  "speedupNonoverlapLowerRatio": 1.6791378938764039,
+  "plans": [
+    {
+      "name": "STM32G0_CAN_RS485",
+      "G1": {
+        "nearPairs": 236969,
+        "farPairs": 189715,
+        "promotedPairs": 0,
+        "plannedBytes": 14946520,
+        "nearCacheUpperBytes": 7583008,
+        "constructionSeconds": 0.0028292,
+        "moments": 1095,
+        "blocks": 5897
+      },
+      "G2": {
+        "nearPairs": 97754,
+        "farPairs": 328930,
+        "promotedPairs": 139215,
+        "plannedBytes": 14999864,
+        "nearCacheUpperBytes": 3128128,
+        "constructionSeconds": 0.0457889,
+        "moments": 1095,
+        "blocks": 5897
+      },
+      "sameGeometry": true,
+      "physicalFullROIBound": "Unavailable; no constrained ROI operator/solve admitted."
+    },
+    {
+      "name": "TPS63060DSCR",
+      "G1": {
+        "nearPairs": 1023013,
+        "farPairs": 970079,
+        "promotedPairs": 0,
+        "plannedBytes": 31178840,
+        "nearCacheUpperBytes": 32736416,
+        "constructionSeconds": 0.0074957999999999995,
+        "moments": 2487,
+        "blocks": 25413
+      },
+      "G2": {
+        "nearPairs": 511123,
+        "farPairs": 1481969,
+        "promotedPairs": 511890,
+        "plannedBytes": 31427984,
+        "nearCacheUpperBytes": 16355936,
+        "constructionSeconds": 0.1744187,
+        "moments": 2487,
+        "blocks": 25413
+      },
+      "sameGeometry": true,
+      "physicalFullROIBound": "Unavailable; no constrained ROI operator/solve admitted."
+    },
+    {
+      "name": "BandAmpV5",
+      "G1": {
+        "nearPairs": 1583110,
+        "farPairs": 2093486,
+        "promotedPairs": 0,
+        "plannedBytes": 39389760,
+        "nearCacheUpperBytes": 50659520,
+        "constructionSeconds": 0.0145499,
+        "moments": 3368,
+        "blocks": 74272
+      },
+      "G2": {
+        "nearPairs": 843071,
+        "farPairs": 2833525,
+        "promotedPairs": 740039,
+        "plannedBytes": 39849336,
+        "nearCacheUpperBytes": 26978272,
+        "constructionSeconds": 0.2639799,
+        "moments": 3368,
+        "blocks": 74272
+      },
+      "sameGeometry": true,
+      "physicalFullROIBound": "Unavailable; no constrained ROI operator/solve admitted."
+    }
+  ],
+  "referenceNature": "Reused independent full physical matrix; empirical reference uncertainty, not certified continuum enclosure.",
+  "ROIReady": false,
+  "fullP7Closed": false,
+  "boards": [
+    {
+      "name": "BandAmpV5",
+      "G0Counts": {
+        "regions": 319,
+        "islands": 6,
+        "vertices": 26550,
+        "contours": 858
+      },
+      "G1Counts": {
+        "regions": 319,
+        "islands": 6,
+        "vertices": 26550,
+        "contours": 858
+      },
+      "G0ColdWarmSeconds": [
+        0.8028785,
+        0.888793
+      ],
+      "G1ColdWarmSeconds": [
+        0.7958666,
+        0.7294686
+      ],
+      "wallRatioG1OverG0": 0.9016734040858405,
+      "G0PeakBytes": 19357696,
+      "G1PeakBytes": 17608704,
+      "plannedSourceCoordinatePayloadUpperBytes": 129374936,
+      "memoryPlanMeaning": "Vertex/input payload envelope only; library overlay allocator peak is separately bounded by512MiB outer process monitor, not claimed as a certified full heap bound.",
+      "islandSourceMembershipSame": true,
+      "removedIslandSignatures": "Counter()",
+      "addedIslandSignatures": "Counter()",
+      "removedContactClassifications": "Counter()",
+      "addedContactClassifications": "Counter()",
+      "maxHausdorffMm": 1.3565897419176447e-07,
+      "maxAllowedDifferenceMm": 9.059906005859375e-06,
+      "geometryStatus": [
+        "partial",
+        "partial"
+      ],
+      "BooleanBoundsMm": [
+        4.5299530029296875e-06,
+        4.5299530029296875e-06
+      ]
+    },
+    {
+      "name": "ESPower",
+      "G0Counts": {
+        "regions": 668,
+        "islands": 56,
+        "vertices": 32687,
+        "contours": 985
+      },
+      "G1Counts": {
+        "regions": 668,
+        "islands": 56,
+        "vertices": 32692,
+        "contours": 985
+      },
+      "G0ColdWarmSeconds": [
+        3.6279673,
+        3.9650304
+      ],
+      "G1ColdWarmSeconds": [
+        3.5426394,
+        3.5411335
+      ],
+      "wallRatioG1OverG0": 0.9329349461017221,
+      "G0PeakBytes": 30375936,
+      "G1PeakBytes": 30560256,
+      "plannedSourceCoordinatePayloadUpperBytes": 138308584,
+      "memoryPlanMeaning": "Vertex/input payload envelope only; library overlay allocator peak is separately bounded by512MiB outer process monitor, not claimed as a certified full heap bound.",
+      "islandSourceMembershipSame": true,
+      "removedIslandSignatures": "Counter()",
+      "addedIslandSignatures": "Counter()",
+      "removedContactClassifications": "Counter()",
+      "addedContactClassifications": "Counter()",
+      "maxHausdorffMm": 1.2166263941817925e-06,
+      "maxAllowedDifferenceMm": 8.344650268554688e-06,
+      "geometryStatus": [
+        "partial",
+        "partial"
+      ],
+      "BooleanBoundsMm": [
+        4.172325134277344e-06,
+        4.172325134277344e-06
+      ]
+    },
+    {
+      "name": "NanoScope",
+      "G0Counts": {
+        "regions": 3019,
+        "islands": 175,
+        "vertices": 211009,
+        "contours": 5077
+      },
+      "G1Counts": {
+        "regions": 3019,
+        "islands": 175,
+        "vertices": 211012,
+        "contours": 5077
+      },
+      "G0ColdWarmSeconds": [
+        37.1738312,
+        39.8735201
+      ],
+      "G1ColdWarmSeconds": [
+        45.5828445,
+        41.6837716
+      ],
+      "wallRatioG1OverG0": 1.132636159810467,
+      "G0PeakBytes": 143450112,
+      "G1PeakBytes": 142430208,
+      "plannedSourceCoordinatePayloadUpperBytes": 204910840,
+      "memoryPlanMeaning": "Vertex/input payload envelope only; library overlay allocator peak is separately bounded by512MiB outer process monitor, not claimed as a certified full heap bound.",
+      "islandSourceMembershipSame": true,
+      "removedIslandSignatures": "Counter()",
+      "addedIslandSignatures": "Counter()",
+      "removedContactClassifications": "Counter({((('copper.fixed.tracks[756]', 'TOP'), ('copper.fixed.tracks[758]', 'TOP')), 'uncertain', False, None): 1, ((('copper.fixed.tracks[933]', 'BOTTOM'), ('copper.fixed.tracks[934]', 'BOTTOM')), 'uncertain', False, None): 1})",
+      "addedContactClassifications": "Counter({((('copper.fixed.tracks[756]', 'TOP'), ('copper.fixed.tracks[758]', 'TOP')), 'point', False, None): 1, ((('copper.fixed.tracks[933]', 'BOTTOM'), ('copper.fixed.tracks[934]', 'BOTTOM')), 'point', False, None): 1})",
+      "maxHausdorffMm": 1.7635339332637613e-06,
+      "maxAllowedDifferenceMm": 2.384185791015625e-05,
+      "geometryStatus": [
+        "partial",
+        "partial"
+      ],
+      "BooleanBoundsMm": [
+        1.1920928955078125e-05,
+        1.1920928955078125e-05
+      ]
+    },
+    {
+      "name": "NanoSpec",
+      "G0Counts": {
+        "regions": 2509,
+        "islands": 160,
+        "vertices": 158231,
+        "contours": 4719
+      },
+      "G1Counts": {
+        "regions": 2509,
+        "islands": 160,
+        "vertices": 158240,
+        "contours": 4719
+      },
+      "G0ColdWarmSeconds": [
+        21.5098792,
+        25.6733764
+      ],
+      "G1ColdWarmSeconds": [
+        24.3583972,
+        27.5690399
+      ],
+      "wallRatioG1OverG0": 1.1005479897406656,
+      "G0PeakBytes": 88260608,
+      "G1PeakBytes": 88276992,
+      "plannedSourceCoordinatePayloadUpperBytes": 155740920,
+      "memoryPlanMeaning": "Vertex/input payload envelope only; library overlay allocator peak is separately bounded by512MiB outer process monitor, not claimed as a certified full heap bound.",
+      "islandSourceMembershipSame": true,
+      "removedIslandSignatures": "Counter()",
+      "addedIslandSignatures": "Counter()",
+      "removedContactClassifications": "Counter()",
+      "addedContactClassifications": "Counter()",
+      "maxHausdorffMm": 2.1299369923247076e-06,
+      "maxAllowedDifferenceMm": 2.384185791015625e-05,
+      "geometryStatus": [
+        "partial",
+        "partial"
+      ],
+      "BooleanBoundsMm": [
+        1.1920928955078125e-05,
+        1.1920928955078125e-05
+      ]
+    },
+    {
+      "name": "STM32G0_CAN_RS485",
+      "G0Counts": {
+        "regions": 844,
+        "islands": 65,
+        "vertices": 36189,
+        "contours": 1082
+      },
+      "G1Counts": {
+        "regions": 844,
+        "islands": 65,
+        "vertices": 36189,
+        "contours": 1082
+      },
+      "G0ColdWarmSeconds": [
+        1.4297559,
+        1.366192
+      ],
+      "G1ColdWarmSeconds": [
+        1.5332632,
+        1.3307605
+      ],
+      "wallRatioG1OverG0": 1.0243480216494736,
+      "G0PeakBytes": 28737536,
+      "G1PeakBytes": 28778496,
+      "plannedSourceCoordinatePayloadUpperBytes": 134215328,
+      "memoryPlanMeaning": "Vertex/input payload envelope only; library overlay allocator peak is separately bounded by512MiB outer process monitor, not claimed as a certified full heap bound.",
+      "islandSourceMembershipSame": true,
+      "removedIslandSignatures": "Counter()",
+      "addedIslandSignatures": "Counter()",
+      "removedContactClassifications": "Counter({((('copper.fixed.tracks[97]', 'TOP'), ('copper.fixed.tracks[99]', 'TOP')), 'uncertain', False, None): 1, ((('copper.fixed.tracks[46]', 'TOP'), ('copper.fixed.tracks[49]', 'TOP')), 'uncertain', False, None): 1, ((('copper.fixed.tracks[280]', 'TOP'), ('copper.fixed.tracks[284]', 'TOP')), 'uncertain', False, None): 1, ((('copper.fixed.tracks[151]', 'TOP'), ('copper.fixed.tracks[153]', 'TOP')), 'uncertain', False, None): 1, ((('copper.fixed.tracks[31]', 'TOP'), ('copper.fixed.tracks[34]', 'TOP')), 'uncertain', False, None): 1, ((('copper.fixed.tracks[53]', 'TOP'), ('copper.fixed.tracks[55]', 'TOP')), 'uncertain', False, None): 1})",
+      "addedContactClassifications": "Counter({((('copper.fixed.tracks[97]', 'TOP'), ('copper.fixed.tracks[99]', 'TOP')), 'point', False, None): 1, ((('copper.fixed.tracks[46]', 'TOP'), ('copper.fixed.tracks[49]', 'TOP')), 'point', False, None): 1, ((('copper.fixed.tracks[280]', 'TOP'), ('copper.fixed.tracks[284]', 'TOP')), 'point', False, None): 1, ((('copper.fixed.tracks[151]', 'TOP'), ('copper.fixed.tracks[153]', 'TOP')), 'point', False, None): 1, ((('copper.fixed.tracks[31]', 'TOP'), ('copper.fixed.tracks[34]', 'TOP')), 'point', False, None): 1, ((('copper.fixed.tracks[53]', 'TOP'), ('copper.fixed.tracks[55]', 'TOP')), 'point', False, None): 1})",
+      "maxHausdorffMm": 1.6065489466200555e-06,
+      "maxAllowedDifferenceMm": 1.430511474609375e-05,
+      "geometryStatus": [
+        "partial",
+        "partial"
+      ],
+      "BooleanBoundsMm": [
+        7.152557373046875e-06,
+        7.152557373046875e-06
+      ]
+    },
+    {
+      "name": "ThunderF722",
+      "G0Counts": {
+        "regions": 1895,
+        "islands": 116,
+        "vertices": 148095,
+        "contours": 3723
+      },
+      "G1Counts": {
+        "regions": 1895,
+        "islands": 116,
+        "vertices": 148085,
+        "contours": 3723
+      },
+      "G0ColdWarmSeconds": [
+        18.0084522,
+        16.8615691
+      ],
+      "G1ColdWarmSeconds": [
+        15.6548139,
+        18.0323179
+      ],
+      "wallRatioG1OverG0": 0.9660771787369111,
+      "G0PeakBytes": 94367744,
+      "G1PeakBytes": 93376512,
+      "plannedSourceCoordinatePayloadUpperBytes": 174340696,
+      "memoryPlanMeaning": "Vertex/input payload envelope only; library overlay allocator peak is separately bounded by512MiB outer process monitor, not claimed as a certified full heap bound.",
+      "islandSourceMembershipSame": true,
+      "removedIslandSignatures": "Counter()",
+      "addedIslandSignatures": "Counter()",
+      "removedContactClassifications": "Counter({((('copper.fixed.tracks[480]', 'TOP'), ('copper.fixed.tracks[483]', 'TOP')), 'uncertain', False, None): 1})",
+      "addedContactClassifications": "Counter({((('copper.fixed.tracks[480]', 'TOP'), ('copper.fixed.tracks[483]', 'TOP')), 'point', False, None): 1})",
+      "maxHausdorffMm": 5.853084931576097e-07,
+      "maxAllowedDifferenceMm": 1.0789593218788873e-05,
+      "geometryStatus": [
+        "partial",
+        "partial"
+      ],
+      "BooleanBoundsMm": [
+        5.364406108856201e-06,
+        5.3947966093944364e-06
+      ]
+    },
+    {
+      "name": "TPS63060DSCR",
+      "G0Counts": {
+        "regions": 172,
+        "islands": 8,
+        "vertices": 9834,
+        "contours": 296
+      },
+      "G1Counts": {
+        "regions": 172,
+        "islands": 8,
+        "vertices": 9834,
+        "contours": 296
+      },
+      "G0ColdWarmSeconds": [
+        0.1980101,
+        0.2026914
+      ],
+      "G1ColdWarmSeconds": [
+        0.2217998,
+        0.2104324
+      ],
+      "wallRatioG1OverG0": 1.0786887496053794,
+      "G0PeakBytes": 12591104,
+      "G1PeakBytes": 12746752,
+      "plannedSourceCoordinatePayloadUpperBytes": 129585136,
+      "memoryPlanMeaning": "Vertex/input payload envelope only; library overlay allocator peak is separately bounded by512MiB outer process monitor, not claimed as a certified full heap bound.",
+      "islandSourceMembershipSame": true,
+      "removedIslandSignatures": "Counter()",
+      "addedIslandSignatures": "Counter()",
+      "removedContactClassifications": "Counter()",
+      "addedContactClassifications": "Counter()",
+      "maxHausdorffMm": 1.6160681011894084e-07,
+      "maxAllowedDifferenceMm": 7.62939453125e-06,
+      "geometryStatus": [
+        "partial",
+        "partial"
+      ],
+      "BooleanBoundsMm": [
+        3.814697265625e-06,
+        3.814697265625e-06
+      ]
+    },
+    {
+      "name": "USB_PD_Trigger_5A",
+      "G0Counts": {
+        "regions": 388,
+        "islands": 20,
+        "vertices": 27603,
+        "contours": 750
+      },
+      "G1Counts": {
+        "regions": 388,
+        "islands": 20,
+        "vertices": 27603,
+        "contours": 750
+      },
+      "G0ColdWarmSeconds": [
+        1.0964908,
+        1.1149898
+      ],
+      "G1ColdWarmSeconds": [
+        1.1632508,
+        1.0282293
+      ],
+      "wallRatioG1OverG0": 0.990956059031221,
+      "G0PeakBytes": 20377600,
+      "G1PeakBytes": 20611072,
+      "plannedSourceCoordinatePayloadUpperBytes": 131226512,
+      "memoryPlanMeaning": "Vertex/input payload envelope only; library overlay allocator peak is separately bounded by512MiB outer process monitor, not claimed as a certified full heap bound.",
+      "islandSourceMembershipSame": true,
+      "removedIslandSignatures": "Counter()",
+      "addedIslandSignatures": "Counter()",
+      "removedContactClassifications": "Counter()",
+      "addedContactClassifications": "Counter()",
+      "maxHausdorffMm": 1.8949542189467462e-07,
+      "maxAllowedDifferenceMm": 1.1920928955078125e-05,
+      "geometryStatus": [
+        "partial",
+        "partial"
+      ],
+      "BooleanBoundsMm": [
+        5.9604644775390625e-06,
+        5.9604644775390625e-06
+      ]
+    }
+  ]
+}

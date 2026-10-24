@@ -47,13 +47,21 @@ pub fn union(items: impl IntoIterator<Item = Poly>) -> AreaSet {
         .into_iter()
         .map(|p| p.orient(geo::orient::Direction::Default))
         .collect();
-    geo::algorithm::bool_ops::unary_union(&items)
+    let set=MultiPolygon(items);
+    super::context::overlay(&set, &MultiPolygon(vec![]), i_overlay::core::overlay_rule::OverlayRule::Subject)
+        .unwrap_or_else(|| geo::algorithm::bool_ops::unary_union(&set.0))
+}
+pub fn intersection(a: &AreaSet, b: &AreaSet) -> AreaSet {
+    super::context::overlay(a,b,i_overlay::core::overlay_rule::OverlayRule::Intersect).unwrap_or_else(|| a.intersection(b))
+}
+pub fn difference(a: &AreaSet, b: &AreaSet) -> AreaSet {
+    super::context::overlay(a,b,i_overlay::core::overlay_rule::OverlayRule::Difference).unwrap_or_else(|| a.difference(b))
 }
 pub fn subtract(a: &AreaSet, b: &AreaSet) -> AreaSet {
     if b.0.is_empty() {
         a.clone()
     } else {
-        a.difference(b)
+        difference(a,b)
     }
 }
 pub fn sorted(mut polys: Vec<Poly>) -> Vec<Poly> {

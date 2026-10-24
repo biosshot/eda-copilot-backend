@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Use one board-scoped dyadic copper overlay context and cache admissible individual far pairs inside coarse near blocks. Preserve real narrow bridges/gaps and reliable connectivity on eight boards; measure 1.915x coupon acceleration, with geometry-preparation regressions reported separately. Full real-ROI extraction remains unaccepted.
+
 - Consolidate P7 shared-coordinate geometry repair and individual near-pair reclassification into one implementation task, with separate correctness and end-to-end performance comparisons; no production code change.
 
 - Preserve the revised-rule Thermal temporal PASS and spatial stopping blockers; correct the assumption that refinement always exhausts its passes. Record exact P7 overlay provenance and a rejected bridge-breaking geometry shortcut; production behavior remains unchanged.
