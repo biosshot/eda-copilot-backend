@@ -12,6 +12,8 @@
 
 ### Analysis execution plan
 
+- Accept the bounded P6 extension and define its next mixed delay/RLC composition task, with independent temporal/energy references and direct board-context DSL reports. Keep P7 extraction and P9 acceptance separate; no premature P8/P11 closure.
+
 - Record accepted versus remaining analyzer stages and define parallel P6 electrical-core completion / P7 PCB extraction ownership while Thermal continues. Preserve P8/P11 dependency gates and defer P14; add readable tasks, numerical acceptance requirements and a shared interface checkpoint.
 
 ### Geometry validation
