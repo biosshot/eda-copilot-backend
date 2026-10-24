@@ -298,3 +298,7 @@ Physical terminals/R1 и внутреннее layered C приняты в огр
 ### Approved accuracy and continuation 2026-10-24
 
 Пользователь согласовал [Thermal temperature convergence](thermal-convergence-policy.md): max(0.1K,1% abs rise from initial). Historical FAIL остаётся историческим. Задания: [Thermal stopping](next-task-thermal-refinement-stopping.md), [P7 geometry then pair classification](next-task-copper-geometry-and-pairs.md). P6 остановлен.
+
+### Stopping/geometry checkpoint
+
+[Review](review-stopping-geometry-blockers.md): Thermal temporal pair PASS under new criterion, no proven earlier spatial stopping; native early control already exists. P7 phaseA remains a contract/prototype blocker, phaseB not started. No production acceptance or new assignments.

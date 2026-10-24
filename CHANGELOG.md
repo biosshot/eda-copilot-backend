@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Preserve the revised-rule Thermal temporal PASS and spatial stopping blockers; correct the assumption that refinement always exhausts its passes. Record exact P7 overlay provenance and a rejected bridge-breaking geometry shortcut; production behavior remains unchanged.
+
 - Adopt the user-approved temperature-convergence criterion max(0.1 K,1% absolute rise from initial temperature), preserving physical guards and historical failures. Scope adaptive Thermal refinement stopping and sequential P7 geometry/pair-classification work.
 
 - Record copper partition provenance and near-pair overclassification evidence, retaining the STM613 integral refusal. Preserve the sole extended TPS run's temporal convergence failure (0.116855% against0.1%) without changing production behavior or acceptance thresholds.
