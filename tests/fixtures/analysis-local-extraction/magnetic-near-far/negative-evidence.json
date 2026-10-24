@@ -1,0 +1,33 @@
+{
+  "focusedTestRecord": "focused-tests.json",
+  "result": "PASS",
+  "coveredRefusals": [
+    "theta0",
+    "theta1",
+    "thetaNaN",
+    "leaf0",
+    "bytecap1",
+    "nodecap0",
+    "blockcap0",
+    "paircap0",
+    "deadline0",
+    "dense65supports",
+    "emptyDensity",
+    "nonfiniteCoefficients",
+    "index999",
+    "overlappingMomentBalls"
+  ],
+  "coarseFarBudget": {
+    "theta": 0.7,
+    "fixedBudget": 0.01,
+    "actual": 0.04856124196702967,
+    "result": "FAIL preserved; no acceptance from low observed error"
+  },
+  "zeroAndWeak": "Direct currents; absolute bounds; no division/relative certificate",
+  "frozenReuse": {
+    "oldGeometrySha256": "8b61cdf62c6e0fe47faa5c47ff3d59cf05657067931f0e9b5987665261fe8df7",
+    "oldReferenceSha256": "39e5dc2f96242f589ec75703bf6a2cda0ccdeeb1aac005862f170acb906377f8",
+    "geometryAndDensitiesExactRigidCopies": true
+  },
+  "noFullROISolve": true
+}

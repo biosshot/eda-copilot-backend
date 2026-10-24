@@ -5,6 +5,7 @@
 pub mod capacitance;
 pub mod layered_capacitance;
 pub mod far;
+pub mod near_far;
 pub mod polyhedron;
 pub mod mesh;
 pub mod prism;

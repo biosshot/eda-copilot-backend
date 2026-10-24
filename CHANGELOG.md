@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add internal magnetic near/far planning and a bounded coupon operator with full-current-space truncation bounds. Preserve coarse-policy failure and unresolved real-ROI cost; no full PCB operator or subquadratic far action is claimed.
+
 - Add bounded CPU/F64 FFT/IFFT, explicitly normalized spectra and linear convolution primitives using pinned scalar RustFFT. Independent DFT/Parseval/PSD/convolution tests cover normalization, windows, units and resource refusals; no public DSL integration yet.
 
 - Stabilize internal magnetic prism integrals for extreme slivers with controlled positive quadrature and independent closed-current energy references. Dense real-ROI cost remains unresolved; no public full-PCB extraction is enabled.
