@@ -1,0 +1,30 @@
+{
+  "precision":"CPU F64, rustfft6.4.1 scalar Radix4 / Bluestein using Radix4 inner transform",
+  "maximumFftLength":262144,
+  "gates":{
+    "dftRelativeToInputL1":2e-11,"dftAbsolute":1e-12,
+    "roundtripRelativeToInputMaximum":2e-11,"roundtripAbsolute":1e-12,
+    "energyRelative":5e-11,"energyAbsolute":1e-24,
+    "amplitudeRelative":5e-11,"amplitudeAbsolute":1e-12,"phaseRadAbsolute":6e-11,
+    "frequencyAbsoluteOverSampleRate":1e-12,
+    "convolutionRelativeToProductL1":2e-11,"convolutionAbsolute":1e-12,
+    "hannOutsideMainlobeOverRectangular":0.1
+  },
+  "memory":{
+    "complexBytes":16,"realBytes":8,"spectralBinBytes":40,
+    "innerLength":"P for power2 P; nextPowerOfTwo(2P-1) otherwise",
+    "planPeakPerDirectionBytes":"16*(8*innerLength+4*P)+65536, source-audited conservative constructor/resident bound",
+    "scratchBoundBytes":"16*2*innerLength",
+    "fft":"borrowed complex input + owned complex output + scratch + one plan peak",
+    "spectrum":"borrowed input + complex work P + output bins + scratch + one plan peak; windows computed without window vector",
+    "convolution":"borrowed complex inputs + owned output capacity P + work P + scratch + two plan peaks; output aliases first FFT buffer",
+    "defaultBudgetMiB":256,"maximumBudgetMiB":512
+  },
+  "benchmark":{
+    "longLength":131072,"kernelLength":257,"dtSeconds":0.0009765625,
+    "directReferencePrefixLength":512,"gateRelativeToProductL1":2e-11,
+    "maxMemoryMiB":512,"maxSeconds":60,"numericalProcesses":1,
+    "input":"x[n]=.4+1.2*cos(2*pi*113*n/N+.17)+.3*sin(2*pi*1733.35*n/N)",
+    "kernel":"h[n]=exp(-n/30)/30 for0<=n<257"
+  }
+}

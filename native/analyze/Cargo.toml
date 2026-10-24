@@ -12,3 +12,4 @@ geo = { version = "=0.31.0", default-features = false }
 rstar = "=0.12.2"
 spade = { version = "=2.15.1", default-features = false, features = ["std"] }
 faer = { version = "=0.24.4", default-features = false, features = ["std", "sparse-linalg"] }
+rustfft = { version = "=6.4.1", default-features = false }

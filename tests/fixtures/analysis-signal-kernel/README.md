@@ -1,0 +1,37 @@
+# Internal electrical signal kernel
+
+`native/analyze/src/electrical/signal.rs` implements finite, uniformly sampled CPU/F64 primitives. No Node export, DSL method, frequency-model continuation, resampling, transient periodization or causality inference is added. Possible future callers are explicit finite waveform postprocessing and authored finite impulse-response evaluation; they must supply sample interval, units, finite record and resource budget themselves. This completes an internal primitive, not all P6/P11/EMI.
+
+## Numerical contract
+
+For transform length P, forward `X[k] = sum_n x[n] exp(-i 2 pi kn/P)` has no scaling. Inverse uses positive exponent and divides by P exactly once. The transform accepts complex finite arrays of length 1..262144; prime and odd lengths are supported. There is no implicit dt factor in a DFT coefficient. Its physical unit is the input unit U; its magnitude depends on record length/window.
+
+Spectrum explicitly receives either real or complex samples, dt in seconds, P >= sample count N, window, sides and unit. Fs=1/dt; bin spacing is Fs/P Hz. Two-sided output uses native DFT ordering: nonnegative frequencies through floor(P/2), then negative frequencies `(k-P)*Fs/P`; even Nyquist is represented as +Fs/2. This axis is not sorted. One-sided output is supported only for explicitly real input, with bins 0..floor(P/2).
+
+Rectangular weights equal 1. **Periodic** Hann is `w[n]=(1-cos(2 pi n/N))/2`, supported for N>=3. Define W=sum(w), E=sum(w²). Amplitude is `fold*abs(X)/W` in U; this recovers the peak amplitude of an isolated bin-centered real sinusoid. Off-bin components, overlapping mainlobes and arbitrary finite signals do not have that guarantee. Phase is the complex coefficient argument; phase of zero amplitude is undefined. PSD is `fold*abs(X)²/(Fs*E)` in U²/Hz. Here fold=2 only for real one-sided interior bins, and 1 for DC, even-P Nyquist, and every two-sided bin. For odd P the last one-sided bin is interior and is doubled.
+
+Coherent gain W/N corrects amplitude; mean-square window E/N corrects energy. They are different (Hann 1/2 and 3/8). ENBW is Fs*E/W². Integrating PSD with bin spacing gives `sum(abs(w*x)²)/E`, a window-weighted mean square, not necessarily the unwindowed signal's mean square or a claim of statistical stationarity. Unit metadata retains the input enum; coefficient/amplitude units are U and PSD units are U²/Hz. No new numerical unit conversion occurs.
+
+Zero padding retains record duration N*dt, unpadded spacing Fs/N and ENBW. It only samples the same finite-record Fourier transform more densely; it does not improve physical resolution or recover unknown bands.
+
+Linear convolution pads to P>=N+M-1 (default next power of two) and returns exactly N+M-1 samples, retaining allocated capacity P. Discrete mode is `sum_k a[k]b[n-k]`, with units Ua*Ub. Continuous approximation explicitly multiplies by dt once, with units Ua*Ub*s. Result metadata retains both units and the selected scale/dt; neither mode infers a time axis. Insufficient padding is refused. The separate circular reference demonstrates wrap-around aliasing; it is not a permitted linear result.
+
+## Bounds and cancellation
+
+`definition.json` and `arrays.json` were frozen and hashed before numerical runs; `prepare.py` only creates deterministic inputs, not reference transforms. Acceptance scales are input L1 (DFT), input maximum (roundtrip), input energy (Parseval/PSD), product of input L1 norms (convolution), and explicit amplitude/phase/frequency gates. They are not selected from measured residuals.
+
+Finite/shape/length/dt validation and memory reservation precede FFT plans and numerical work/output buffers. Max P=262144, default budget 256 MiB, hard accepted memory budget at most 512 MiB. Caller-owned inputs are counted; memory plans explicitly count output capacity, work, scratch and conservative plan-construction peaks. For power-of-two P let M=P; otherwise M=nextPowerOfTwo(2P-1). Pinned scalar Radix4/Bluestein uses scratch <=2M complex values. Reserve `16*(8M+4P)+65536` bytes per direction for plan construction/residence, plus `32M` scratch bytes. These bounds include temporary plan buffers, boxed-slice shrinking and small base butterflies; they are conservative, not allocator/RSS measurements. RustFFT's scalar Radix4 source allocates twiddle capacity 2M; Bluestein allocates M inner input, M inner scratch and P chirps. No global planner cache is retained. Dependency changes require re-auditing this bound.
+
+`MemoryPlan` covers one operation, including borrowed inputs. A caller retaining other results must subtract that storage from its remaining job budget. Runtime/allocator overhead and serialization must also fit the enclosing process limit. The evidence benchmark accounts retained objects separately and has an aggregate Windows job cap, including its supervisor.
+
+`Job` receives the existing shared monotonic `Instant` and `Budget`, invoking the electrical deadline helper before/after library calls and every 4096 scalar samples. An optional AtomicBool provides cooperative cancellation between calls. A RustFFT constructor/call is synchronous and cannot be interrupted internally. Existing analysis jobs execute synchronous native work in a disposable worker process (`run-analysis-dsl.ts`); terminating that process enforces hard cancellation/deadline. This internal module is not yet wired to that worker or any DSL and adds no compute-runtime dependency. Already-cancelled/expired jobs are refused before numerical allocation.
+
+## Dependency
+
+Repository search found no reusable FFT kernel or FFT dependency. Pinned [RustFFT 6.4.1 Cargo metadata](https://docs.rs/crate/rustfft/6.4.1/source/Cargo.toml) specifies MIT OR Apache-2.0, pure Rust, no external runtime. The downloaded crate archive is 337421 bytes; transitive additions are primal-check, strength_reduce and transpose (plus num-integer only in the standalone analyze lock; the addon reuses its existing num-integer). Existing versions are unchanged in both locks. `default-features=false` disables default AVX/SSE/NEON dispatch; direct scalar [Radix4/Bluestein algorithms](https://docs.rs/rustfft/6.4.1/rustfft/algorithm/index.html) make plan/scratch bounds auditable. Bluestein uses a power-of-two inner transform >=2P-1. No fast FFT is implemented locally. No addon rebuild is required by this task.
+
+## Reproduction
+
+Run `cargo test --manifest-path native/analyze/Cargo.toml --lib electrical::signal -- --test-threads=1` with an isolated target and CARGO_BUILD_JOBS=1. The ignored `electrical::signal::tests::bounded_evidence` test requires `P6_SIGNAL_EVIDENCE` pointing to an ignored output directory. Run the already-built test executable through the accepted `analysis-resonant-runtime/bounded.py META.json EXE --exact electrical::signal::tests::bounded_evidence --ignored --nocapture --test-threads=1`: one modest numerical process, 512 MiB aggregate/process commit and 60 s CPU/wall. Compilation is outside this measurement.
+
+Independent references in `signal_tests.rs` are direct O(N²) exponent sums and direct convolution loops. The long benchmark has N=131072, kernel length 257, and a direct first-512-output reference. A separate equal-length 512-point DFT/FFT comparison provides timing context. Debug scalar timings include planning; they imply nothing about whole SI performance. `audit.py` rechecks saved arrays and draws numeric spectrum/time PNGs without an external FFT. Frozen gates and original failure logs are retained if repair is needed.

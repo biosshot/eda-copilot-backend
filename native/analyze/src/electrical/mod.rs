@@ -6,6 +6,7 @@ pub mod frequency;
 mod network;
 pub mod relaxation;
 pub mod resonant;
+pub mod signal;
 mod solve;
 mod waveform;
 pub use network::{Circuit, Element, Port};
