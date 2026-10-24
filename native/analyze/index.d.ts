@@ -169,7 +169,8 @@ export interface AnalysisTransientRequest {
 }
 export interface AnalysisTransientReport {
  status:'complete'|'rejected';diagnostics:{code:string;severity:'error'|'warning';message:string}[];
- axis?:number[];portVoltages?:number[][];driverCurrentsA?:number[][];energyJ?:number[];
+ axis?:number[];portVoltages?:number[][];driverCurrentsA?:number[][];portCurrentsA?:number[][];energyJ?:number[];
+ lumpedEnergyJ?:number[];delayEnergyJ?:number[];sourceWorkJ?:number[];resistiveLossJ?:number[];attenuationLossJ?:number[];beNumericalDissipationJ?:number[];
  fit?:unknown;conditional?:boolean;counters?:Record<string,number>;quality?:Record<string,number>;
  finalState?:unknown;assumptions?:string[];elapsedMs?:number;memoryPlanBytes?:number;
  resources?:{peakRssBytes:number;metric:string};

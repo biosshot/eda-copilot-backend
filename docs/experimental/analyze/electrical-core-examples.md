@@ -114,3 +114,22 @@ also includes exact real-K delay models, matched/reflected port traces, a passiv
 pad/line frequency cascade and an expected failed check followed by a successful
 check. Its standalone and two board-context artifacts are described in
 [verification](electrical-core-completion-verification.md).
+
+
+## Mixed distributed delay and discrete filters
+
+`tests/fixtures/analysis-electrical-mixed/scenario.js` is a direct standalone or
+board-context DSL: matched delay to RC, delay to RLC to delay, and finite-driver/RC-receiver
+reflections, each with independent time/history refinement and full 2-port S
+frequency calculations. Run the existing evidence runner with `--mixed`:
+
+```powershell
+node --import tsx tests/helpers/electrical-core-verification.ts --mixed debugging/p6-mixed-verification/direct-dsl
+```
+
+The default contexts are standalone, STM32G0_CAN_RS485 and ThunderF722. Actual
+R1/U2 pad identities/nets are recorded as provenance; all electrical models are
+authored hypotheses, not extracted traces. Saved JSON contains V/I, separate
+storage/loss/work traces, original source Resources and port mapping. The shared
+static renderer recognizes these saved mixed cases. See
+[evidence and remaining limits](electrical-mixed-verification.md).

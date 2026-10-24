@@ -2,13 +2,18 @@
 
 ## Unreleased
 
+### Mixed electrical delay and RLC networks
+
+- Assemble exact real-K delays with grounded canonical full RLC and permitted sampled-RC relaxation models through existing connect/SI builders. Preserve mutual matrices, finite sources/RC loads, assembled steady prehistory, shared deadline/memory admission and explicit unsupported terminal-map refusals.
+- Retain inward port currents and separate delay/lumped storage, R/attenuation losses, raw balance, BE dissipation and signed history quadrature diagnostics. Gate the physical balance independently; preserve pure coupled general-incidence behavior and placement F32/GPU.
+
 ### Electrical core completion (bounded model classes)
 
 - Preserve compact hash-linked validity history when computed frequency resources are reused, retaining conditional applicability, producer bands and allowed analyses. Verify installed compiled workers/shared addon, saved-result negative audits and static numeric plots; interactive HTML controls remain unverified.
 
 - Execute existing explicit circuit spectra/sources/loads with complex AC V/I and transfer, finite linear drivers/RC inputs, strict component-description pin mapping and authored/board-nominal/exact-PartUuid precedence.
 - Add conditional passive sampled-RC relaxation fitting with explicit DC/high-frequency closure, independent holdout/order gates and an existing SI-network time boundary. Ordinary frequency resources remain usable without temporal metadata.
-- Add full general-incidence R/L/C interchange with infinity potentials/charge retained, direct frequency evaluation and explicit grounded composition. Add exact real-K causal delay models, reflections and all-delay cascades; preserve separate delay storage and attenuation loss. General resonant fitting, arbitrary infinity terminal joins, mixed delay/RLC cascades and PCB SI remain unsupported. See electrical-core completion semantics and verification under experimental/analyze.
+- Add full general-incidence R/L/C interchange with infinity potentials/charge retained, direct frequency evaluation and explicit grounded composition. Add exact real-K causal delay models, reflections and all-delay cascades; preserve separate delay storage and attenuation loss. General resonant fitting, arbitrary infinity terminal joins and PCB SI remain unsupported. See electrical-core completion semantics and verification under experimental/analyze.
 
 ### Analysis execution plan
 

@@ -120,7 +120,36 @@ Positive delay uses accepted incident-wave history only; h≤τ/4. Zero-delay K
 enters the same algebraic solve, including ideal-through constraints. Pairing
 joins authored positive and common return terminals; all block ports must be
 paired or external. Finite drivers and passive RC receivers load the network.
-All-delay cascades are supported; mixed delay/relaxation/full-RLC cascades reject.
+All-delay and mixed grounded canonical RLC/passive-relaxation cascades use one
+assembled `(v, branch-current, incident-wave)` backend. RLC matrices retain mutual
+terms and each source is validated before merging. Pure coupled general-incidence
+behavior remains separate; infinity/noncanonical joins still require an explicit
+physical terminal map and reject. No Y inversion, Pade approximation or inferred
+return is used. Steady prehistory is solved with every K, source and load present;
+physical nonunique steady states reject rather than silently erasing charge.
+
+`portCurrentsA` is inward to the connected network, including receiver capacitive
+current recovered from accepted BE derivatives; values between accepted endpoints
+are interpolated. `lumpedEnergyJ` includes receiver C and full authored C/L;
+`delayEnergyJ` is the exact rolling integral of accepted linear wave history.
+`sourceWorkJ`, `resistiveLossJ`, `attenuationLossJ` and
+`beNumericalDissipationJ` retain separate cumulative traces. Source and resistor
+work use accepted BE endpoints; attenuation integrates the contraction quadratic
+exactly across all history knots, including mutual K cross terms.
+
+The fixed energy norm is `abs(Wsource)+WR+Watten+abs(DeltaUlumped)+
+abs(DeltaUdelay)+Dbe`. `rawEnergyBalanceJ` is work minus physical loss/storage;
+`energyBalanceJ` additionally subtracts only positive BE storage dissipation
+`Dbe=0.5*delta^T E delta`. Its absolute value must be at most `1e-4*norm`
+(or `1e-20 J` for exactly zero norm). `historyQuadratureDefectJ` is a signed
+diagnostic from endpoint wave work minus exact history storage/attenuation;
+it never corrects acceptance or becomes fictitious numerical dissipation.
+Independent global time/history refinement remains mandatory. Mixed frequency graphs evaluate each grounded
+canonical descriptor directly with positive wave-reference admittances at every
+requested frequency, then reuse the existing wave composition. This avoids
+singular Y/Z conversion for ideal through/shunt constraints; original Resources,
+permissions and producer bands remain in provenance. General/infinity descriptor
+single-block frequency semantics remain separate.
 
 Initial travelling-wave history is solved as constant steady state before t=0;
 it is not zero-filled. Arbitrary incoming histories/continuation are unsupported.

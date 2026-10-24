@@ -148,6 +148,18 @@ steady prehistory, descriptor constraints и первоначальные зар
 - Conditional validity, producer bands и permissions всех блоков сохраняются
   в результате и derived measurements. Не расширять полосу вычисленным ресурсом.
 
+### Обнаруженный frequency стык в рамках implementation
+
+Существующий frequency dispatcher отправлял любой coupled connect в single-block
+refusal. Для требуемого mixed all-port frequency/time сопоставления добавлена
+узкая grounded canonical нормализация в `coupled/frequency.rs` и диспетчеризация
+в `frequency/mod.rs`: descriptor с положительными reference admittances прямо
+вычисляет S на каждой запрошенной частоте, затем использует существующий wave
+composition. Y/Z не обращаются; это не временной fit. Исходные Resource/permissions/
+bands возвращаются в provenance. Общие source/table/workspace reservation и deadline
+передаются в composition. General/infinity single-block маршрут сохранён; mixed
+infinity/noncanonical joins отклоняются. Независимый ABCD проверяет все четыре S.
+
 ## Независимые тесты
 
 1. Matched delay -> RC low-pass: независимая формула задержанного finite-ramp
@@ -190,3 +202,13 @@ steady prehistory, descriptor constraints и первоначальные зар
   Не объявлять весь P6 или P11 закрытым из одного этого блока.
 - Heavy слот общий с P7/Thermal, jobs=1, отдельный target. Не коммитить до
   родительского ревью; не трогать чужие worktrees и пользовательские artifacts.
+
+
+## Implementation handoff — 2026-10-24
+
+Bounded mixed assembly, all-port frequency bridge and verification package are
+ready for parent review: [results](electrical-mixed-verification.md), local
+`debugging/p6-mixed-verification/manifest.json`. Native13/13, touched coupled9/9,
+delayed4/4, three direct9-case contexts, installed compiled worker/addon, saved
+negative audit, typecheck/build and six inspected PNGs pass. No own commit;
+P6/P11 remain open outside this explicit bound. Heavy slot released; no new stage.

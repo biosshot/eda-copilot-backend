@@ -13,9 +13,61 @@ def sampled_reference(t):
         return high*t/rise+(dc-high)*(t-tau*(1-math.exp(-t/tau)))/rise
     return dc-(dc-high)*tau/rise*(1-math.exp(-rise/tau))*math.exp(-(t-rise)/tau)
 
+def render_mixed(path, saved):
+    reports=saved['result']['reports']
+    completed={c['result']['id']:c['result'] for r in reports for c in r['calculations'] if c['phase']=='completed'}
+    cases={l['data']['name']:completed[l['data']['resultId']]['solution'] for r in reports for l in r['logs'] if l['message']=='mixed.case'}
+    audit=json.loads((path.parent/'audit.json').read_text(encoding='utf-8'))
+    fig,axs=plt.subplots(4,2,figsize=(16,17),layout='constrained')
+    fig.suptitle(f"{saved['metadata']['fixture']} - authored mixed delay + RLC\nBoard contacts are provenance; no trace extraction. Static saved-number QA.",fontsize=16)
+    for ax,name in zip(axs.flat,['rc','rlc','reflections']):
+        v=cases[name];fine=cases[name+' refined'];t=[x*1e9 for x in v['axis']]
+        ax.plot(t,[r[0] for r in v['portVoltages']],label='input')
+        ax.plot(t,[r[1] for r in v['portVoltages']],label='output')
+        ax.plot(t,audit['cases'][name]['reference'],'k--',label='independent analytic reference')
+        ax.set(title=name+' finite-ramp response',xlabel='Time [ns]',ylabel='Voltage [V]')
+    ax=axs[1,1]
+    for name in ['rc','rlc','reflections']:
+        v=cases[name];ax.plot([x*1e9 for x in v['axis']],[r[0]*1e3 for r in v['driverCurrentsA']],label=name+' driver')
+        ax.plot([x*1e9 for x in v['axis']],[r[1]*1e3 for r in v['portCurrentsA']],linestyle=':',label=name+' output inward')
+    ax.set(title='Physical current signs: into network',xlabel='Time [ns]',ylabel='Current [mA]')
+    v=cases['rlc'];t=[x*1e9 for x in v['axis']]
+    for key,label in [('lumpedEnergyJ','C/L storage'),('delayEnergyJ','delay storage')]:axs[2,0].plot(t,[x*1e12 for x in v[key]],label=label)
+    axs[2,0].set(title='Separate physical stored energy (RLC coupon)',xlabel='Time [ns]',ylabel='Energy [pJ]')
+    for key,label in [('sourceWorkJ','source work'),('resistiveLossJ','R/driver/load loss'),('attenuationLossJ','delay attenuation'),('beNumericalDissipationJ','BE numerical')]:axs[2,1].plot(t,[x*1e12 for x in v[key]],label=label)
+    axs[2,1].set(title='Independent work/loss ledger',xlabel='Time [ns]',ylabel='Energy [pJ]')
+    for name in ['rc','rlc','reflections']:
+        x=[x*1e9 for x in cases[name]['axis']];a=audit['cases'][name+' refined']
+        axs[3,0].plot(x,[v*1e3 for v in a['error']],label=name+' reference error')
+        axs[3,0].plot(x,[v*1e3 for v in a['refinement']],linestyle=':',label=name+' global refinement')
+    axs[3,0].axhline(1.001,color='k',linestyle='--',label='reference bound 1.001mV');axs[3,0].axhline(.5,color='gray',linestyle='--',label='refinement bound .5mV')
+    axs[3,0].set(title='Independent reference and time/history refinement',xlabel='Time [ns]',ylabel='Absolute error [mV]')
+    names=['rc','rlc','reflections'];ax=axs[3,1]
+    for offset,suffix,label in [(-.18,'','coarse'),(.18,' refined','refined')]:ax.bar([i+offset for i in range(3)],[audit['cases'][n+suffix]['normalizedEnergyBalance'] for n in names],width=.35,label=label)
+    ax.axhline(1e-4,color='k',linestyle='--',label='fixed physical balance bound');ax.set_xticks(range(3),names);ax.set(title='Physical balance after separate BE dissipation',ylabel='Absolute balance / fixed energy norm')
+    for ax in axs.flat:ax.grid(alpha=.25);ax.legend(fontsize=8)
+    fig.savefig(path.parent/'electrical-mixed.png',dpi=150);plt.close(fig)
+    fig,axes=plt.subplots(3,2,figsize=(15,12),layout='constrained')
+    fig.suptitle(f"{saved['metadata']['fixture']} - all mixed two-port transmissions/reflections\nActual saved complex S at21 frequencies; independently audited against ABCD")
+    for row,name in enumerate(['rc','rlc','reflections']):
+        v=cases[name+' frequency'];frequencies=[f/1e6 for f in v['frequenciesHz']]
+        for out in range(2):
+            for incoming in range(2):
+                z=[complex(m[out][incoming]['real'],m[out][incoming]['imaginary']) for m in v['parameters']]
+                label=f'S{out+1}{incoming+1}'
+                axes[row,0].plot(frequencies,[abs(x) for x in z],label=label)
+                axes[row,1].plot(frequencies,[math.degrees(math.atan2(x.imag,x.real)) for x in z],label=label)
+        axes[row,0].set(title=name+' amplitudes',xlabel='Frequency [MHz]',ylabel='S magnitude [1]')
+        axes[row,1].set(title=name+' phases',xlabel='Frequency [MHz]',ylabel='Wrapped phase [deg]')
+    for ax in axes.flat:ax.grid(alpha=.25);ax.legend()
+    fig.savefig(path.parent/'electrical-mixed-frequency.png',dpi=150);plt.close(fig)
+
 for filename in sys.argv[1:]:
     path=Path(filename)
     saved=json.loads(path.read_text(encoding='utf-8'))
+    if any(l['message']=='mixed.case' for r in saved['result']['reports'] for l in r['logs']):
+        render_mixed(path,saved)
+        continue
     reports=saved['result']['reports']
     completed={c['result']['id']:c['result'] for r in reports for c in r['calculations'] if c['phase']=='completed'}
     cases={l['data']['name']:completed[l['data']['resultId']]['solution'] for r in reports for l in r['logs'] if l['message']=='core.case'}

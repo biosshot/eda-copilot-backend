@@ -5,9 +5,11 @@ import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
 import {runAnalysisDsl} from '../../src/analyze/run-analysis-dsl.ts';
 import {auditElectricalCore} from './electrical-core-audit.ts';
-const output=resolve(process.argv[2]??'debugging/p6-verification/direct-dsl');
-const fixtures=process.argv.slice(3);if(!fixtures.length)fixtures.push('standalone','STM32G0_CAN_RS485','ThunderF722');
-const script=await readFile('tests/fixtures/analysis-electrical-core/scenario.js','utf8');
+import {auditElectricalMixed} from './electrical-mixed-audit.ts';
+const mixed=process.argv.includes('--mixed'),args=process.argv.slice(2).filter(a=>a!=='--mixed');
+const output=resolve(args[0]??(mixed?'debugging/p6-mixed-verification/direct-dsl':'debugging/p6-verification/direct-dsl'));
+const fixtures=args.slice(1);if(!fixtures.length)fixtures.push('standalone','STM32G0_CAN_RS485','ThunderF722');
+const script=await readFile(`tests/fixtures/analysis-electrical-${mixed?'mixed':'core'}/scenario.js`,'utf8');
 const hash=(v:string|Buffer)=>createHash('sha256').update(v).digest('hex');
 const {nativeFilename}=createRequire(import.meta.url)('../../native/node-addon/platform.cjs');
 const implementation:Record<string,string>={};
@@ -20,7 +22,7 @@ for(const name of fixtures){
  if(board&&(!board.components.some((c:any)=>c.designator==='R1')||board.pads.filter((p:any)=>p.component==='R1').length!==2||!board.pads.some((p:any)=>p.component==='U2')))throw Error('Frozen board binding R1/U2 is missing');
  const start=performance.now();const result=await runAnalysisDsl({code:script,...(board?{board}:{})},{filename:'electrical-core-'+name+'.js',timeoutMs:120000,maxOutputBytes:32*1024*1024,maxEntries:3000});
  const metadata={fixture:name,scriptSha256:hash(script),boardSha256:bytes?hash(bytes):null,nativeSha256,implementationSha256:hash(JSON.stringify(implementation)),head:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8',windowsHide:true}).trim(),wallMs:performance.now()-start,interactiveControlsVerified:false};
- let audit:unknown;try{audit=auditElectricalCore(result);}catch(error){audit={status:'fail',reason:String(error)};process.exitCode=1;}
+ let audit:unknown;try{audit=(mixed?auditElectricalMixed:auditElectricalCore)(result);}catch(error){audit={status:'fail',reason:String(error)};process.exitCode=1;}
  await writeFile(join(dir,'scenario.js'),script);await writeFile(join(dir,'implementation.json'),JSON.stringify(implementation,null,2));await writeFile(join(dir,'result.json'),JSON.stringify({metadata,result}));await writeFile(join(dir,'audit.json'),JSON.stringify(audit,null,2));
  console.log(JSON.stringify({metadata,audit}));
 }

@@ -131,3 +131,176 @@ pub fn calculate(request: &Request) -> Result<Value> {
     result["validityLimitations"]=json!("Exact evaluation of supplied full RLC model inside declared validity band; no PCB extraction accuracy inferred. Physical terminal mapping retained, no implicit common return.");
     Ok(result)
 }
+/// Convert only explicit grounded canonical descriptors at the requested points.
+/// Their reference loads define S, not additional physical loads in composition.
+/// All subsequent pair joins use the existing passive wave composition backend.
+pub(crate) fn common_tables(request: &Request, start: Instant) -> Result<(Request, usize, f64)> {
+    let p = request
+        .instances
+        .iter()
+        .map(|i| i.ports.len())
+        .sum::<usize>();
+    let f = request.frequencies.len();
+    let n = request.ports.len();
+    if request.instances.is_empty()
+        || request.instances.len() > 32
+        || p > 128
+        || n == 0
+        || n > 16
+        || f == 0
+        || f > 100000
+        || f.saturating_mul(n * n) > 131072
+        || f.saturating_mul(p * p * p) > 100000000
+        || request.instances.iter().any(|i| {
+            i.model.ports.is_empty()
+                || i.model.ports.len() > 16
+                || f.saturating_mul(i.model.ports.len().pow(2)) > 262144
+        })
+        || request
+            .frequencies
+            .iter()
+            .enumerate()
+            .any(|(i, x)| !x.is_finite() || *x < 0. || i > 0 && *x <= request.frequencies[i - 1])
+    {
+        return Err(fail(
+            "NETWORK_BUDGET",
+            "Mixed analytic frequency output/work limits",
+        ));
+    }
+    let elements = request
+        .instances
+        .iter()
+        .map(|i| f * i.model.ports.len().pow(2))
+        .sum::<usize>();
+    if elements > 524288 {
+        return Err(fail(
+            "NETWORK_BUDGET",
+            "Mixed frequency aggregate source elements",
+        ));
+    }
+    let reserved = request
+        .instances
+        .iter()
+        .map(|i| composition::source_plan(&i.model))
+        .sum::<usize>()
+        .saturating_add(elements.saturating_mul(576));
+    let mut budget = composition::remaining_budget(request.budget.as_ref(), reserved)?;
+    budget.max_seconds = Some(
+        request
+            .budget
+            .as_ref()
+            .and_then(|b| b.max_seconds)
+            .unwrap_or(60.),
+    );
+    let mut normalized = request.clone();
+    normalized.budget = Some(budget.clone());
+    let mut residual = 0_f64;
+    for instance in &mut normalized.instances {
+        super::super::deadline(start, Some(&budget), "Mixed descriptor frequency admission")?;
+        let resource = &mut instance.model;
+        if resource.data["format"] != "coupled-rlc" {
+            continue;
+        }
+        if resource.kind != "network"
+            || resource
+                .analyses
+                .as_ref()
+                .is_some_and(|a| !a.iter().any(|s| s == "networkParameters"))
+        {
+            return Err(fail(
+                "COUPLED_RESOURCE",
+                "Descriptor does not authorize frequency calculation",
+            ));
+        }
+        match resource
+            .validity
+            .as_ref()
+            .and_then(|v| v["status"].as_str())
+        {
+            None | Some("valid") | Some("conditional") => {}
+            _ => return Err(fail("COUPLED_VALIDITY", "Unavailable descriptor")),
+        }
+        let band = crate::electrical::frequency::declared_band(resource)?;
+        if request
+            .frequencies
+            .iter()
+            .any(|f| *f < band[0] || *f > band[1])
+        {
+            return Err(fail(
+                "COUPLED_BAND",
+                "Frequency outside producer applicability",
+            ));
+        }
+        let model: Model =
+            serde_json::from_value(resource.data.clone()).map_err(|e| fail("COUPLED_INPUT", e))?;
+        if model.reference_topology != "grounded" {
+            return Err(fail(
+                "COUPLED_TERMINAL_MAP",
+                "Mixed infinity descriptor joins require explicit physical terminal mapping",
+            ));
+        }
+        let ports = resource.ports.len();
+        let mut system = System::compile(&model, ports, Some(&budget))?;
+        for port in 0..ports {
+            let entries: Vec<_> = model
+                .port_incidence
+                .iter()
+                .filter(|(_, j, v)| *j == port && *v != 0.)
+                .collect();
+            if entries.len() != 1 || entries[0].2 != 1. {
+                return Err(fail(
+                    "COUPLED_TERMINAL_MAP",
+                    "Mixed frequency requires canonical positive-potential ports",
+                ));
+            }
+            system.add_port_admittance(port, 1. / 50., 0.)?;
+        }
+        let states = system.linear.n;
+        let mut parameters = Vec::with_capacity(f);
+        let mut counters = Counters::default();
+        for &frequency in &request.frequencies {
+            super::super::deadline(
+                start,
+                Some(&budget),
+                "Mixed descriptor frequency evaluation",
+            )?;
+            let complex = frequency > 0.;
+            let mut matrix = vec![vec![math::C::default(); ports]; ports];
+            for input in 0..ports {
+                let mut incident = vec![0.; ports];
+                incident[input] = 2. / 50_f64.sqrt();
+                let mut rhs = system.port_rhs(&incident);
+                if complex {
+                    rhs.resize(states * 2, 0.);
+                }
+                let x = system.solve(
+                    2. * std::f64::consts::PI * frequency,
+                    rhs,
+                    &vec![0.; states],
+                    &mut counters,
+                )?;
+                let re = system.port_voltages(&x[..states], ports);
+                let im = if complex {
+                    system.port_voltages(&x[states..], ports)
+                } else {
+                    vec![0.; ports]
+                };
+                for output in 0..ports {
+                    matrix[output][input] = math::C::new(
+                        re[output] / 50_f64.sqrt() - if output == input { 1. } else { 0. },
+                        im[output] / 50_f64.sqrt(),
+                    );
+                }
+            }
+            parameters.push(matrix);
+        }
+        residual = residual.max(system.residual);
+        resource.data = json!({"format":"network-parameters","representation":"S","referenceTopology":"common","nature":"passive","referenceOhm":50.,"frequenciesHz":request.frequencies,"parameters":parameters});
+    }
+    super::super::deadline(
+        start,
+        Some(&budget),
+        "Mixed descriptor frequency normalization",
+    )?;
+    Ok((normalized, reserved, residual))
+}

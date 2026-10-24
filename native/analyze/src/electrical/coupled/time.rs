@@ -61,11 +61,93 @@ pub(crate) fn fastest_front(waveform: &Waveform) -> f64 {
     }
 }
 fn source(system: &System, drivers: &[Driver], ports: usize, t: f64) -> Vec<f64> {
-    let mut ip = vec![0.; ports];
-    for d in drivers {
-        ip[d.port] += d.waveform.sample(t) / d.resistance_ohm;
-    }
+    let ip = terminal_source(drivers, &(0..ports).collect::<Vec<_>>(), ports, t);
     system.port_rhs(&ip)
+}
+pub(crate) fn terminal_source(
+    drivers: &[Driver],
+    nodes: &[usize],
+    size: usize,
+    t: f64,
+) -> Vec<f64> {
+    let mut ip = vec![0.; size];
+    for d in drivers {
+        ip[nodes[d.port]] += d.waveform.sample(t) / d.resistance_ohm;
+    }
+    ip
+}
+/// The same finite source/load contract and power convention serves descriptor
+/// and delay-containing graphs. Port voltages are always positive to return.
+pub(crate) fn validate_bindings(
+    drivers: &[Driver],
+    receivers: &[Receiver],
+    ports: usize,
+    prefix: &str,
+) -> Result<()> {
+    if drivers.is_empty()
+        || drivers.len() > 16
+        || receivers.len() > 32
+        || drivers
+            .iter()
+            .any(|d| d.port >= ports || !d.resistance_ohm.is_finite() || d.resistance_ohm <= 0.)
+        || receivers.iter().any(|r| {
+            r.port >= ports
+                || !r.capacitance_f.is_finite()
+                || r.capacitance_f < 0.
+                || r.resistance_ohm.is_some_and(|v| !v.is_finite() || v <= 0.)
+        })
+    {
+        return Err(fail(
+            &format!("{prefix}_BINDING"),
+            "Finite Thevenin drivers and passive RC receivers required",
+        ));
+    }
+    for d in drivers {
+        d.waveform.validate()?;
+        if d.waveform.discontinuous() {
+            return Err(fail(
+                &format!("{prefix}_FINITE_FRONT"),
+                "Continuous finite fronts required; impulses/jump projection unsupported",
+            ));
+        }
+    }
+    Ok(())
+}
+pub(crate) fn terminal_admittances(
+    drivers: &[Driver],
+    receivers: &[Receiver],
+) -> Vec<(usize, f64, f64)> {
+    drivers
+        .iter()
+        .map(|d| (d.port, 1. / d.resistance_ohm, 0.))
+        .chain(receivers.iter().map(|r| {
+            (
+                r.port,
+                r.resistance_ohm.map(|v| 1. / v).unwrap_or(0.),
+                r.capacitance_f,
+            )
+        }))
+        .collect()
+}
+pub(crate) fn terminal_power(
+    drivers: &[Driver],
+    receivers: &[Receiver],
+    voltage: &[f64],
+    at: f64,
+) -> (f64, f64) {
+    let (mut work, mut loss) = (0., 0.);
+    for d in drivers {
+        let source = d.waveform.sample(at);
+        let current = (source - voltage[d.port]) / d.resistance_ohm;
+        work += source * current;
+        loss += d.resistance_ohm * current * current;
+    }
+    for r in receivers {
+        if let Some(resistance) = r.resistance_ohm {
+            loss += voltage[r.port] * voltage[r.port] / resistance;
+        }
+    }
+    (work, loss)
 }
 impl System {
     /// Preserve every stored charge/flux coordinate while satisfying algebraic
@@ -199,19 +281,6 @@ impl System {
 pub fn solve(request: Request) -> Result<Value> {
     let start = Instant::now();
     deadline(start, request.budget.as_ref())?;
-    if request.topology.as_ref().is_some_and(|t| {
-        t.instances
-            .iter()
-            .any(|i| i.model.data["format"] == "delayed-scattering")
-            && t.instances
-                .iter()
-                .any(|i| i.model.data["format"] != "delayed-scattering")
-    }) {
-        return Err(fail(
-            "TEMPORAL_MIXED_COMPOSITION",
-            "Mixed delay/relaxation/full-RLC composition is unsupported; no source block omitted",
-        ));
-    }
     if request
         .resource
         .as_ref()
@@ -246,31 +315,7 @@ pub fn solve(request: Request) -> Result<Value> {
     let identity =
         serde_json::to_string(&(&model, &port_names, &request.drivers, &request.receivers))
             .map_err(|e| fail("COUPLED_INPUT", e))?;
-    if request.drivers.is_empty()
-        || request.drivers.len() > 16
-        || request.receivers.len() > 32
-        || request
-            .drivers
-            .iter()
-            .any(|d| d.port >= ports || !d.resistance_ohm.is_finite() || d.resistance_ohm <= 0.)
-        || request.receivers.iter().any(|r| {
-            r.port >= ports
-                || !r.capacitance_f.is_finite()
-                || r.capacitance_f < 0.
-                || r.resistance_ohm.is_some_and(|v| !v.is_finite() || v <= 0.)
-        })
-    {
-        return Err(fail(
-            "COUPLED_BINDING",
-            "Invalid finite linear drivers/RC receivers",
-        ));
-    }
-    for d in &request.drivers {
-        d.waveform.validate()?;
-        if d.waveform.discontinuous() {
-            return Err(fail("COUPLED_FINITE_FRONT","Descriptor input requires continuous finite fronts; impulses/jump projection unsupported"));
-        }
-    }
+    validate_bindings(&request.drivers, &request.receivers, ports, "COUPLED")?;
     let fit_max = if let Some(report) = &fit {
         Some(
             report["frequenciesHz"]
@@ -313,15 +358,10 @@ pub fn solve(request: Request) -> Result<Value> {
     let matrix_budget = composition::remaining_budget(request.budget.as_ref(), source_memory)?;
     let mut system = System::compile(&model, ports, Some(&matrix_budget))?;
     deadline(start, request.budget.as_ref())?;
-    for d in &request.drivers {
-        system.add_port_admittance(d.port, 1. / d.resistance_ohm, 0.)?;
-    }
-    for r in &request.receivers {
-        system.add_port_admittance(
-            r.port,
-            r.resistance_ohm.map(|v| 1. / v).unwrap_or(0.),
-            r.capacitance_f,
-        )?;
+    for (port, conductance, capacitance) in
+        terminal_admittances(&request.drivers, &request.receivers)
+    {
+        system.add_port_admittance(port, conductance, capacitance)?;
     }
     let n = system.linear.n;
     let mut stats = Counters::default();
@@ -493,18 +533,9 @@ pub fn solve(request: Request) -> Result<Value> {
         let mut previous = &x;
         for (y, at) in [(&half, t + h / 2.), (&fine, t + h)] {
             let voltage = system.port_voltages(y, ports);
-            let mut p = 0.;
-            let mut dissipated = system.joule_loss(y);
-            for d in &request.drivers {
-                let current = (d.waveform.sample(at) - voltage[d.port]) / d.resistance_ohm;
-                p += d.waveform.sample(at) * current;
-                dissipated += d.resistance_ohm * current * current;
-            }
-            for r in &request.receivers {
-                if let Some(resistance) = r.resistance_ohm {
-                    dissipated += voltage[r.port] * voltage[r.port] / resistance;
-                }
-            }
+            let (p, external_loss) =
+                terminal_power(&request.drivers, &request.receivers, &voltage, at);
+            let dissipated = system.joule_loss(y) + external_loss;
             work += p * h / 2.;
             loss += dissipated * h / 2.;
             let delta: Vec<_> = y.iter().zip(previous).map(|(a, b)| a - b).collect();

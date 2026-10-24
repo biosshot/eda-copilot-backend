@@ -27,7 +27,7 @@ pub struct Resource {
     pub validity: Option<Value>,
     pub analyses: Option<Vec<String>>,
 }
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Instance {
     pub id: String,
@@ -35,7 +35,7 @@ pub struct Instance {
     /// Names in exact resource order, independent of object key enumeration.
     pub ports: Vec<String>,
 }
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Request {
     pub instances: Vec<Instance>,
@@ -46,7 +46,7 @@ pub struct Request {
     pub reference_ohm: Option<Vec<f64>>,
     pub budget: Option<Budget>,
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct OutputPort {
     pub name: String,
@@ -395,6 +395,26 @@ fn calculate(r: &Request, start: Instant) -> Result<Value> {
         .iter()
         .any(|i| i.model.data["format"] == "coupled-rlc")
     {
+        if r.instances
+            .iter()
+            .any(|i| i.model.data["format"] == "delayed-scattering")
+        {
+            let (normalized, reserved, residual) =
+                super::coupled::frequency_response::common_tables(r, start)?;
+            let mut result = calculate(&normalized, start)?;
+            for (i, source) in r.instances.iter().enumerate() {
+                if source.model.data["format"] == "coupled-rlc" {
+                    result["provenance"][i]["resource"] = json!(source.model);
+                    result["provenance"][i]["sourceRepresentation"] = json!("coupled-rlc");
+                    result["provenance"][i]["sourceReferenceOhm"] = Value::Null;
+                    result["provenance"][i]["normalization"] = json!({"physicalDescriptor":true,"referenceTopology":"grounded","evaluationReferenceOhm":50.,"evaluation":"Direct loaded descriptor S at every requested frequency; no Y/Z inversion or interpolation"});
+                }
+            }
+            result["quality"]["descriptorRelativeResidual"] = json!(residual);
+            result["memoryPlanBytes"] =
+                json!(result["memoryPlanBytes"].as_u64().unwrap_or(0) + reserved as u64);
+            return Ok(result);
+        }
         return super::coupled::frequency_response::calculate(r);
     }
     let p = r
