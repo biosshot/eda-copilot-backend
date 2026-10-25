@@ -678,6 +678,7 @@ pub struct Solution {
     known: Vec<Option<usize>>,
     trace_weights: Vec<Vec<(usize, f64)>>,
     far: Vec<bool>,
+    insulated: bool,
     active: Vec<bool>,
 }
 
@@ -1219,6 +1220,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -
         known,
         trace_weights,
         far,
+        insulated: input.exterior == Exterior::InsulatedAnalyticCoupon,
         active,
     };
     // Recover each independent voltage once before admission; same whole deadline.
@@ -1232,6 +1234,13 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -
     Ok(result)
 }
 impl Solution {
+    /// One connected product field domain with natural insulated boundaries.
+    /// Partition-of-unity traces make a uniform shift exactly field-free.
+    /// InfinityBox has a prescribed physical exterior and supplies no gauge.
+    pub fn structural_gauge_modes(&self) -> Vec<Vec<f64>> {
+        if self.insulated { vec![vec![1.; self.source_ids.len()]] } else { vec![] }
+    }
+
     /// The prescribed physical surface map, including finite foil sidewalls.
     pub fn surface_traces(&self) -> Vec<TraceNode> {
         let mut out = Vec::new();

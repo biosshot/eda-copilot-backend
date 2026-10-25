@@ -1,37 +1,27 @@
 # Spatial foil current checkpoint
 
-This is a partial P7 implementation and a reproducible refusal packet.
-It does not admit a PCB, via, PDN, complete AC band or transient model.
+The source-bound foil geometry/trace/current fixture remains a bounded internal
+P7 coupon. The structural-gauge follow-up now checks its complete original
+17-point 1 kHz..100 kHz axis. It does not admit arbitrary PCB/via extraction or
+close P7. Historical failures, independent references and old refusal scenario
+remain unchanged under `debugging/p7-completion/`.
 
-`fixture.rs` constructs exact finite source geometry and shared spatial
-potential traces. The native example uses actual production field/magnetic
-primitives and the existing P6 solver. `audit.py` independently checks tensor
-C, frozen box self L, smooth box mutual L, rectangular DC and a handwritten
-six-state complex reference. Nine diagnostic points pass; eight required
-points fail unchanged P6 power/residual/singularity guards. They stay visible.
-`test-audit.py` corrupts saved values without replaying native solves.
-AC diagnostic losses use peak-phasor `I* R I` normalization (twice cycle mean);
-the1A DC loss is actual steady watts.
+`fixture.rs` contains the unchanged geometry and frozen original axis. The native
+example calls production field/magnetic primitives and P6, retaining full raw C.
+`run.py` writes only new `debugging/p6-p7-structural-gauges/` output, refuses to
+replace existing coupon evidence and supervises 120 s / 512 MiB numerics.
+Code/binary/compiler, historical evidence and all eight board hashes are saved.
 
-`scenario.js` is the direct existing DSL. `dsl.ts` only injects the saved native
-candidate and runs that script through the disposable process/compiled worker.
-It verifies whole-band refusal and that an intentionally failed `a.check`
-does not stop execution. No SavedScenario or second electrical runtime exists.
+`scenario.js` is direct existing DSL. `dsl.ts` injects saved extracted full and
+reduced physical two-port models and uses the real disposable process/compiled
+worker/shared addon. It plots admitted longitudinal responses and verifies
+continuation after an intentionally false `a.check`.
 
-From repository root, with `CARGO_BUILD_JOBS=1`:
+See [the follow-up runner instructions](../structural-gauges/README.md) for the
+current independent audit and static plots. The old `audit.py`, `test-audit.py`
+and `plot.py` in this directory intentionally remain historical refusal-audit
+utilities and operate on the old p7-completion packet.
 
-```powershell
-cargo test --manifest-path native/analyze/Cargo.toml --release --test current_space
-cargo build --manifest-path native/analyze/Cargo.toml --release --example current_space
-python tests/fixtures/analysis-local-extraction/current-space/run.py
-python tests/fixtures/analysis-local-extraction/current-space/audit.py
-python tests/fixtures/analysis-local-extraction/current-space/test-audit.py
-python tests/fixtures/analysis-local-extraction/current-space/plot.py
-node --import tsx tests/fixtures/analysis-local-extraction/current-space/dsl.ts
-```
-
-`run.py` refuses to overwrite evidence and enforces120s/512MiB externally.
-Its output includes code/binary/compiler hashes and before/after hashes of all
-eight captured boards. Static figures require visual inspection; interactive
-browser controls are not claimed. See the full original-obligation/readiness
-matrix in `docs/experimental/analyze/p7-completion-verification.md`.
+AC losses use peak-phasor `I* R I` normalization (twice cycle mean); DC loss is
+actual steady watts. Static images must be visually inspected; interactive
+browser controls are not claimed.

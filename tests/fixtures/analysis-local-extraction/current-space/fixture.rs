@@ -113,3 +113,6 @@ pub fn loop_model(input:&pcb_analyze::electrical::coupled::Model)->pcb_analyze::
     model.port_incidence=b.into_iter().filter(|(_,v)|*v!=0.).map(|(i,v)|(i,0,v)).collect();
     model.port_terminals=None;model
 }
+
+/// Frozen axis from the original parent-coupon failure evidence.
+pub const FREQUENCIES_HZ: [f64; 17] = [1000.0, 1333.5214321633239, 1778.2794100389228, 2371.373705661655, 3162.2776601683795, 4216.965034285822, 5623.413251903491, 7498.942093324558, 10000.0, 13335.21432163324, 17782.79410038923, 23713.737056616552, 31622.776601683792, 42169.65034285823, 56234.13251903491, 74989.42093324558, 100000.0];

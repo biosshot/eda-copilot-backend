@@ -339,6 +339,7 @@ pub fn fit_started(
         resistance_ohm: vec![],
         inductance_h: vec![],
         capacitance_f: vec![],
+        structural_gauge_modes: vec![],
         conserved_potential_modes: vec![],
         port_terminals: None,
     };

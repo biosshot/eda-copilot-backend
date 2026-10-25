@@ -4,7 +4,7 @@ Compilation is separate; never modifies captured boards or native/analyze/debugg
 from pathlib import Path
 import subprocess,time,json,hashlib,psutil,sys
 ROOT=Path(__file__).resolve().parents[4]
-OUT=ROOT/'debugging/p7-completion'
+OUT=ROOT/'debugging/p6-p7-structural-gauges'
 OUT.mkdir(parents=True,exist_ok=True)
 result=OUT/'coupon.json';assert not result.exists(),'preserve existing evidence; choose a fresh packet'
 exe=ROOT/'native/analyze/target/release/examples/current_space.exe'
@@ -13,6 +13,9 @@ boards={str(p.relative_to(ROOT)):sha(p) for d in (ROOT/'tests/pcb-analyze').iter
 assert len(boards)==8
 sources={str(p.relative_to(ROOT)):sha(p) for d in ['native/analyze/src/extraction/local','native/analyze/src/electrical'] for p in (ROOT/d).rglob('*.rs')}
 sources['native/analyze/examples/current_space.rs']=sha(ROOT/'native/analyze/examples/current_space.rs')
+history={str(p.relative_to(ROOT)):sha(p) for p in (ROOT/'debugging/p7-completion').rglob('*') if p.is_file()}
+for name in ['src/analyze/analysis-dsl/frequency-model.ts','src/analyze/analysis-dsl/spec-doc.d.ts','tests/fixtures/analysis-local-extraction/current-space/fixture.rs','tests/fixtures/analysis-local-extraction/structural-gauges/audit.py','tests/fixtures/analysis-local-extraction/structural-gauges/plot.py','tests/fixtures/analysis-local-extraction/structural-gauges/test-audit.py','tests/fixtures/analysis-local-extraction/current-space/scenario.js','tests/fixtures/analysis-local-extraction/current-space/dsl.ts','tests/fixtures/analysis-local-extraction/current-space/run.py','native/analyze/tests/current_space.rs','native/analyze/tests/structural_gauges.rs']:
+ sources[name]=sha(ROOT/name)
 start=time.perf_counter();peak=0;refusal=None
 with result.open('wb') as out,(OUT/'coupon.stderr.log').open('wb') as err:
  p=subprocess.Popen([str(exe)],cwd=ROOT,stdout=out,stderr=err,creationflags=subprocess.CREATE_NO_WINDOW)
@@ -27,7 +30,8 @@ with result.open('wb') as out,(OUT/'coupon.stderr.log').open('wb') as err:
  code=p.wait()
 wall=time.perf_counter()-start
 assert boards=={path:sha(ROOT/path) for path in boards},'captured board mutation'
-run={'command':[str(exe)],'binarySha256':sha(exe),'sources':sources,'boardsBeforeAfter':boards,'wallSeconds':wall,'observedPeakWorkingSetBytes':peak,'capSeconds':120,'capBytes':512*1024*1024,'exitCode':code,'refusal':refusal,'outputSha256':sha(result),'rustc':subprocess.check_output(['rustc','-Vv'],text=True,creationflags=subprocess.CREATE_NO_WINDOW)}
+assert history=={path:sha(ROOT/path) for path in history},'historical evidence mutation'
+run={'historyBeforeAfter':history,'command':[str(exe)],'binarySha256':sha(exe),'sources':sources,'boardsBeforeAfter':boards,'wallSeconds':wall,'observedPeakWorkingSetBytes':peak,'capSeconds':120,'capBytes':512*1024*1024,'exitCode':code,'refusal':refusal,'outputSha256':sha(result),'rustc':subprocess.check_output(['rustc','-Vv'],text=True,creationflags=subprocess.CREATE_NO_WINDOW)}
 (OUT/'run.json').write_text(json.dumps(run,indent=2))
 assert code==0 and refusal is None,run
 print(json.dumps({k:run[k] for k in ['wallSeconds','observedPeakWorkingSetBytes','exitCode','outputSha256']}))

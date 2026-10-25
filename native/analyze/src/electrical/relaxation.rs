@@ -334,6 +334,7 @@ fn model(modes: &[Mode], u: &[Vec<f64>], ports: &[String]) -> coupled::Model {
             .into_iter()
             .map(|((i, j), v)| (i, j, v))
             .collect(),
+        structural_gauge_modes: vec![],
         conserved_potential_modes: candidates,
         port_terminals: None,
     }

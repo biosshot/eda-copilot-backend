@@ -463,6 +463,7 @@ pub(super) fn build_for(
     let mut current_dofs = vec![];
     let (mut vo, mut io) = (0, 0);
     let mut candidates = vec![];
+    let mut structural_candidates = vec![];
     let mut fits = vec![];
     let mut conditional = false;
     let mut common_max = f64::INFINITY;
@@ -485,6 +486,11 @@ pub(super) fn build_for(
                     .ok_or_else(|| fail("TEMPORAL_BAND", "Missing fit band"))?,
             );
             fits.push(fit);
+        }
+        for mode in independent(m.structural_gauge_modes.clone(), m.potential_nodes.len())? {
+            let mut v = vec![0.; total_v];
+            v[vo..vo + mode.len()].copy_from_slice(&mode);
+            structural_candidates.push(v);
         }
         // Supplied columns are a full candidate nullspace contract. Pure C defaults I.
         let modes = if m.current_dofs.is_empty() && m.conserved_potential_modes.is_empty() {
@@ -529,62 +535,67 @@ pub(super) fn build_for(
     }
     // Intersection of original nullspaces with the node-identification constraints.
     // This derives assembly invariants rather than imposing each block's charges.
-    let k = candidates.len();
-    let mut modes = vec![];
-    if k > 0 {
-        let differences: Vec<Vec<f64>> = (0..total_v)
-            .filter_map(|i| {
-                let r = root(&parent, i);
-                if r == i {
-                    return None;
-                }
-                Some(
-                    candidates
-                        .iter()
-                        .map(|v| v[i] - if r == ground { 0. } else { v[r] })
-                        .collect(),
-                )
-            })
-            .chain(
-                (0..total_v)
-                    .filter(|&i| root(&parent, i) == root(&parent, ground))
-                    .map(|i| candidates.iter().map(|v| v[i]).collect()),
-            )
-            .collect();
-        let gram = Mat::from_fn(k, k, |i, j| {
-            differences.iter().map(|v| v[i] * v[j]).sum::<f64>()
-        });
-        let scale = (0..k).map(|i| gram[(i, i)]).fold(0., f64::max);
-        let eig = Mat::from_fn(
-            k,
-            k,
-            |i, j| if scale > 0. { gram[(i, j)] / scale } else { 0. },
-        )
-        .self_adjoint_eigen(Side::Lower)
-        .map_err(|e| fail("COUPLED_GAUGE", format!("{e:?}")))?;
-        for col in 0..k {
-            if eig.S()[col].abs() <= 1e-12 {
-                let full: Vec<_> = (0..total_v)
-                    .map(|i| {
-                        (0..k)
-                            .map(|j| candidates[j][i] * eig.U()[(j, col)])
-                            .sum::<f64>()
-                    })
-                    .collect();
-                let mut reduced = vec![0.; potential_nodes.len()];
-                let mut seen = vec![false; potential_nodes.len()];
-                for (i, &v) in full.iter().enumerate() {
-                    let Some(j) = indices[i] else { continue };
-                    if seen[j] && (reduced[j] - v).abs() > 1e-10 {
-                        return Err(fail("COUPLED_GAUGE", "Unresolved assembly nullspace"));
+    let intersect = |candidates: Vec<Vec<f64>>| -> Result<Vec<Vec<f64>>> {
+        let k = candidates.len();
+        let mut modes = vec![];
+        if k > 0 {
+            let differences: Vec<Vec<f64>> = (0..total_v)
+                .filter_map(|i| {
+                    let r = root(&parent, i);
+                    if r == i {
+                        return None;
                     }
-                    reduced[j] = v;
-                    seen[j] = true;
+                    Some(
+                        candidates
+                            .iter()
+                            .map(|v| v[i] - if r == ground { 0. } else { v[r] })
+                            .collect(),
+                    )
+                })
+                .chain(
+                    (0..total_v)
+                        .filter(|&i| root(&parent, i) == root(&parent, ground))
+                        .map(|i| candidates.iter().map(|v| v[i]).collect()),
+                )
+                .collect();
+            let gram = Mat::from_fn(k, k, |i, j| {
+                differences.iter().map(|v| v[i] * v[j]).sum::<f64>()
+            });
+            let scale = (0..k).map(|i| gram[(i, i)]).fold(0., f64::max);
+            let eig = Mat::from_fn(
+                k,
+                k,
+                |i, j| if scale > 0. { gram[(i, j)] / scale } else { 0. },
+            )
+            .self_adjoint_eigen(Side::Lower)
+            .map_err(|e| fail("COUPLED_GAUGE", format!("{e:?}")))?;
+            for col in 0..k {
+                if eig.S()[col].abs() <= 1e-12 {
+                    let full: Vec<_> = (0..total_v)
+                        .map(|i| {
+                            (0..k)
+                                .map(|j| candidates[j][i] * eig.U()[(j, col)])
+                                .sum::<f64>()
+                        })
+                        .collect();
+                    let mut reduced = vec![0.; potential_nodes.len()];
+                    let mut seen = vec![false; potential_nodes.len()];
+                    for (i, &v) in full.iter().enumerate() {
+                        let Some(j) = indices[i] else { continue };
+                        if seen[j] && (reduced[j] - v).abs() > 1e-10 {
+                            return Err(fail("COUPLED_GAUGE", "Unresolved assembly nullspace"));
+                        }
+                        reduced[j] = v;
+                        seen[j] = true;
+                    }
+                    modes.push(reduced);
                 }
-                modes.push(reduced);
             }
         }
-    }
+        Ok(modes)
+    };
+    let modes = intersect(candidates)?;
+    let structural_modes = intersect(structural_candidates)?;
     let entries = |m: Matrix| {
         m.into_iter()
             .filter_map(|((i, j), v)| (v != 0.).then_some((i, j, v)))
@@ -601,6 +612,7 @@ pub(super) fn build_for(
         resistance_ohm: entries(r),
         inductance_h: entries(l),
         capacitance_f: entries(c),
+        structural_gauge_modes: structural_modes,
         conserved_potential_modes: modes,
     };
     let fit = if fits.is_empty() {

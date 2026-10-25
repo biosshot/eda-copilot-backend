@@ -361,6 +361,7 @@ pub fn assemble(
         resistance_ohm: vec![],
         inductance_h: vec![],
         capacitance_f: entries(&electric.energy_capacitance_f()?),
+        structural_gauge_modes: electric.structural_gauge_modes(),
         conserved_potential_modes: vec![],
         port_terminals: Some(vec![]),
     };

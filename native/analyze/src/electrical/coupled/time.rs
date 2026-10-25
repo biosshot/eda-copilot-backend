@@ -168,22 +168,73 @@ impl System {
     ) -> Result<Vec<f64>> {
         let n = self.linear.n;
         let scale = self.linear.e.values().map(|v| v.abs()).fold(0., f64::max);
-        let eigen = Mat::from_fn(n, n, |i, j| {
-            if scale > 0. {
-                self.linear.e.get(&(i, j)).copied().unwrap_or(0.) / scale
-            } else {
-                0.
+        self.compatible_structural_rhs(rhs)?;
+        // Separate certified gauges before the storage rank calculation. Raw E
+        // stays intact for energy, charge and the original-equation checks.
+        let mut complement: Vec<Vec<f64>> = vec![];
+        for axis in 0..n {
+            let mut v = vec![0.; n];
+            v[axis] = 1.;
+            for _ in 0..2 {
+                for q in &self.structural {
+                    let dot = v.iter().zip(q).map(|(a, b)| a * b).sum::<f64>();
+                    for (a, b) in v.iter_mut().zip(q) {
+                        *a -= dot * b;
+                    }
+                }
+                for q in &complement {
+                    let dot = v.iter().zip(q).map(|(a, b)| a * b).sum::<f64>();
+                    for (a, b) in v.iter_mut().zip(q) {
+                        *a -= dot * b;
+                    }
+                }
             }
+            let norm = v.iter().map(|a| a * a).sum::<f64>().sqrt();
+            if norm > 1e-12 {
+                for a in &mut v {
+                    *a /= norm;
+                }
+                complement.push(v);
+            }
+        }
+        let m = complement.len();
+        let mut action = Mat::<f64>::zeros(n, m);
+        if scale != 0. {
+            for (&(a, b), v) in &self.linear.e {
+                for j in 0..m {
+                    action[(a, j)] += (v / scale) * complement[j][b];
+                }
+            }
+        }
+        let storage = Mat::from_fn(m, m, |i, j| {
+            (0..n)
+                .map(|a| complement[i][a] * action[(a, j)])
+                .sum::<f64>()
         })
         .self_adjoint_eigen(Side::Lower)
         .map_err(|e| fail("COUPLED_INITIAL", format!("{e:?}")))?;
-        if (0..n).all(|i| eigen.S()[i] >= 1e-14) {
+        let mut values = vec![0.; n];
+        let mut vectors = Mat::zeros(n, n);
+        for col in 0..m {
+            values[col] = storage.S()[col];
+            for row in 0..n {
+                vectors[(row, col)] = (0..m)
+                    .map(|j| complement[j][row] * storage.U()[(j, col)])
+                    .sum::<f64>();
+            }
+        }
+        for (col, q) in self.structural.iter().enumerate() {
+            for row in 0..self.nv {
+                vectors[(row, m + col)] = q[row];
+            }
+        }
+        if (0..n).all(|i| values[i] >= 1e-14) {
             return Ok(initial.to_vec());
         }
         let mut matrix = Matrix::new();
         let mut b = vec![0.; n];
         for row in 0..n {
-            let value = eigen.S()[row];
+            let value = values[row];
             if value < -1e-12 {
                 return Err(fail("COUPLED_INITIAL", "Indefinite storage matrix"));
             }
@@ -193,7 +244,7 @@ impl System {
             }
             if value > 0. {
                 for j in 0..n {
-                    let q = eigen.U()[(j, row)];
+                    let q = vectors[(j, row)];
                     if q != 0. {
                         matrix.insert((row, j), q);
                     }
@@ -201,9 +252,9 @@ impl System {
                 }
             } else {
                 for (&(i, j), g) in &self.linear.g {
-                    *matrix.entry((row, j)).or_default() += eigen.U()[(i, row)] * g;
+                    *matrix.entry((row, j)).or_default() += vectors[(i, row)] * g;
                 }
-                b[row] = (0..n).map(|i| eigen.U()[(i, row)] * rhs[i]).sum();
+                b[row] = (0..n).map(|i| vectors[(i, row)] * rhs[i]).sum();
             }
         }
         let gauges = self.constraints(false, initial)?;
@@ -211,9 +262,9 @@ impl System {
         b.resize(n + k, 0.);
         for (g, (mode, constraint, _)) in gauges.iter().enumerate() {
             for row in 0..n {
-                if eigen.S()[row] <= 0. {
+                if values[row] <= 0. {
                     let coefficient = (0..self.nv)
-                        .map(|i| eigen.U()[(i, row)] * mode[i])
+                        .map(|i| vectors[(i, row)] * mode[i])
                         .sum::<f64>();
                     if coefficient != 0. {
                         matrix.insert((row, n + g), coefficient);
@@ -252,6 +303,7 @@ impl System {
         stats: &mut Counters,
     ) -> Result<Vec<f64>> {
         let n = self.linear.n;
+        self.compatible_structural_rhs(&rhs)?;
         let gx = multiply(&self.linear.g, old, n);
         let mut b: Vec<_> = rhs.iter().zip(gx).map(|(a, b)| a - b).collect();
         let mut matrix = self.linear.matrix(1. / h, None);

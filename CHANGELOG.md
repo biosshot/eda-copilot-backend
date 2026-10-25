@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Carry validated structural zero-energy modes from insulated foil extraction through coupled AC/DC/time, reduction and physical composition. Preserve raw C, real exterior charge and strict guards; all 17 saved full/reduced coupon frequencies and physical ports now pass independent checks. Whole P7 and PCB PI/SI remain open.
+
+- Authorize explicit structural-gauge handling across P6/P7, with validated physical charge preservation and full 17-frequency acceptance; whole P7 remains open.
+
 - Add internal source-bound spatial capacitance traces, conforming finite-foil R/L/C assembly and passive current congruence/recovery. Verify tensor/DC/energy limits and preserve extracted-C null-mode AC refusals; real via/PDN/ROI extraction and whole P7/P8/P11 remain blocked.
 
 - Authorize the P7 completion task: end-to-end PCB extraction, physical ports/vias, validated compact models and direct DSL scenarios, with explicit whole-stage and P8/P11 readiness gates.

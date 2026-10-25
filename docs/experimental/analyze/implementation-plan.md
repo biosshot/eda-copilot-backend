@@ -330,3 +330,16 @@ no next analyzer started.
 ### Parent acceptance of partial P7 checkpoint — 2026-10-25
 
 [Review](p7-completion-verification.md#parent-review--2026-10-25) accepts internal spatial traces, bounded foil assembly and supplied-basis recovery only. 116 optimized regression tests and a fresh independent coupon audit passed their stated positive/negative gates; the whole AC band remains rejected. P7 is open; extracted-board P8 and full-channel P11 remain blocked. No new assignments.
+
+
+### P6/P7 structural-gauge repair — 2026-10-25
+
+User authorized [the focused implementation task](next-task-p6-p7-structural-gauges.md): explicit structural modes, validated constraints and charge/initial-state preservation through composition and reduction. Require all 17 original frequencies on full/reduced physical models, independent references and direct DSL verification. This authorizes the necessary minimal P6/P7 contract changes; via/ROI scaling and whole P7 remain separate, and P8/P11 are not started.
+
+
+Structural-gauge implementation checkpoint: [verification](p6-p7-structural-gauges-verification.md) confirms 17/17 saved full/reduced coupon points, physical longitudinal and original cross-foil AC, validated charge/gauge separation, RC/RLC transient controls, composition/reduction/negatives and direct compiled-worker DSL graphs. Raw operators and guards remain intact. This focused interface repair does not close whole P7, vias/ROI scaling or PCB P8/P11 readiness; parent review is required.
+
+
+### Accepted structural-gauge interface — 2026-10-25
+
+Parent accepted [P6/P7 repair](p6-p7-structural-gauges-verification.md#parent-acceptance--2026-10-25): all 17 original coupon frequencies pass full/reduced and physical-port independent checks, with physical charge and strict guards preserved. This removes the diagnosed numerical interface blocker; real via/ROI extraction, scaling, automatic reduction and wider validated physical applicability still block whole P7. No P8/P11 task is started.

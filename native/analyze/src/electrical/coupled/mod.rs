@@ -24,6 +24,9 @@ pub struct Model {
     pub capacitance_f: Vec<Entry>,
     #[serde(default)]
     pub conserved_potential_modes: Vec<Vec<f64>>,
+    /// Exact structural zero-energy freedom, supplied by the field formulation.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub structural_gauge_modes: Vec<Vec<f64>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub port_terminals: Option<Vec<physical::PortTerminals>>,
 }
@@ -34,6 +37,7 @@ pub struct System {
     pub(super) b: Matrix,
     pub(super) r: Matrix,
     pub(super) candidates: Vec<Vec<f64>>,
+    pub(super) structural: Vec<Vec<f64>>,
     pub(super) memory_plan: usize,
     pub(super) residual: f64,
     pub(super) kcl: f64,
@@ -104,6 +108,16 @@ fn independent(mut modes: Vec<Vec<f64>>, nv: usize) -> Result<Vec<Vec<f64>>> {
     // Reorthogonalization preserves the supplied subspace. No physical matrix changes.
     let mut out: Vec<Vec<f64>> = vec![];
     for v in &mut modes {
+        let maximum = v.iter().map(|x| x.abs()).fold(0., f64::max);
+        if maximum == 0. {
+            return Err(fail(
+                "COUPLED_GAUGE",
+                "Dependent/zero/unresolved candidate modes",
+            ));
+        }
+        for x in v.iter_mut() {
+            *x /= maximum;
+        }
         let original = v.iter().map(|x| x * x).sum::<f64>().sqrt();
         for _ in 0..2 {
             for q in &out {
@@ -126,6 +140,39 @@ fn independent(mut modes: Vec<Vec<f64>>, nv: usize) -> Result<Vec<Vec<f64>>> {
         out.push(v.clone());
     }
     Ok(out)
+}
+// A componentwise dot-product backward-error bound. Dimensionless, scales
+// with each operator's coefficients and the supplied mode, never with farads.
+fn validate_null(
+    matrix: &Matrix,
+    q: &[f64],
+    rows: usize,
+    transpose: bool,
+    label: &str,
+) -> Result<()> {
+    let mut residual = vec![0.; rows];
+    let mut magnitude = vec![0.; rows];
+    for (&(i, j), v) in matrix {
+        let (row, term) = if transpose {
+            (j, v * q[i])
+        } else {
+            (i, v * q[j])
+        };
+        residual[row] += term;
+        magnitude[row] += term.abs();
+    }
+    let tolerance = 64. * f64::EPSILON * (q.len() + 1) as f64;
+    if residual
+        .iter()
+        .zip(magnitude)
+        .any(|(r, s)| !r.is_finite() || r.abs() > tolerance * s)
+    {
+        return Err(fail(
+            "COUPLED_STRUCTURAL_GAUGE",
+            format!("Structural certificate incompatible with {label}"),
+        ));
+    }
+    Ok(())
 }
 impl System {
     pub fn compile(model: &Model, ports: usize, budget: Option<&Budget>) -> Result<Self> {
@@ -213,7 +260,47 @@ impl System {
         } else {
             model.conserved_potential_modes.clone()
         };
-        let candidates = independent(raw, nv)?;
+        let structural = independent(model.structural_gauge_modes.clone(), nv)?;
+        for q in &structural {
+            validate_null(&c, q, nv, false, "C")?;
+            validate_null(&a, q, ni, true, "A^T")?;
+        }
+        // Physical charge candidates live in the complement of the certified
+        // gauge. Never diagonalize the nearly-zero gauge charge metric.
+        let mut physical = vec![];
+        for mut v in independent(raw, nv)? {
+            for _ in 0..2 {
+                for q in &structural {
+                    let dot = v.iter().zip(q).map(|(a, b)| a * b).sum::<f64>();
+                    for (a, b) in v.iter_mut().zip(q) {
+                        *a -= dot * b;
+                    }
+                }
+            }
+            let norm = v.iter().map(|a| a * a).sum::<f64>().sqrt();
+            if norm > 1e-12 {
+                physical.push(v);
+            }
+        }
+        // Projection can make different original candidates dependent.
+        let mut candidates: Vec<Vec<f64>> = vec![];
+        for mut v in physical {
+            for _ in 0..2 {
+                for q in &candidates {
+                    let dot = v.iter().zip(q).map(|(a, b)| a * b).sum::<f64>();
+                    for (a, b) in v.iter_mut().zip(q) {
+                        *a -= dot * b;
+                    }
+                }
+            }
+            let norm = v.iter().map(|a| a * a).sum::<f64>().sqrt();
+            if norm > 1e-12 {
+                for a in &mut v {
+                    *a /= norm;
+                }
+                candidates.push(v);
+            }
+        }
         for mode in &candidates {
             let mut residual = vec![0.; ni];
             let mut scale = vec![0.; ni];
@@ -251,6 +338,7 @@ impl System {
             b,
             r,
             candidates,
+            structural,
             memory_plan: planned,
             residual: 0.,
             kcl: 0.,
@@ -278,6 +366,78 @@ impl System {
         if weights.is_empty() {
             return Err(fail("COUPLED_PORT", "Unknown port"));
         }
+        // The intended added storage is known here. Refuse an addition whose
+        // individual coefficients lose more than the coupon's 1% physical
+        // accuracy gate in F64 accumulation; never call it a gauge instead.
+        // Check before mutating either the matrices or the invariant spaces.
+        if capacitance != 0. {
+            for &(i, a) in &weights {
+                for &(j, b) in &weights {
+                    let increment = capacitance * a * b;
+                    let old = self.linear.e.get(&(i, j)).copied().unwrap_or(0.);
+                    let new = old + increment;
+                    if !new.is_finite()
+                        || (increment == 0. && a != 0. && b != 0.)
+                        || (increment != 0.
+                            && (new - old - increment).abs() > 0.01 * increment.abs())
+                    {
+                        return Err(fail(
+                            "COUPLED_LOAD_RANGE",
+                            "Physical added capacitance is unresolved in F64 storage accumulation",
+                        ));
+                    }
+                }
+            }
+        }
+        if conductance != 0. || capacitance != 0. {
+            // A physical port element can turn a formerly free reference into
+            // a charged/anchored coordinate. Split out that direction before
+            // discovering the complete assembled system's invariants.
+            let mut coefficients = Vec::new();
+            for q in &self.structural {
+                let dot = weights.iter().map(|&(i, b)| q[i] * b).sum::<f64>();
+                let magnitude = weights.iter().map(|&(i, b)| (q[i] * b).abs()).sum::<f64>();
+                coefficients.push(
+                    if dot.abs() <= 64. * f64::EPSILON * (self.nv + 1) as f64 * magnitude {
+                        0.
+                    } else {
+                        dot
+                    },
+                );
+            }
+            let norm = coefficients.iter().map(|v| v * v).sum::<f64>().sqrt();
+            if norm > 0. {
+                let promoted: Vec<f64> = (0..self.nv)
+                    .map(|i| {
+                        self.structural
+                            .iter()
+                            .zip(&coefficients)
+                            .map(|(q, h)| q[i] * h / norm)
+                            .sum()
+                    })
+                    .collect();
+                let mut retained: Vec<Vec<f64>> = vec![];
+                for mut q in self.structural.drain(..) {
+                    for _ in 0..2 {
+                        for v in std::iter::once(&promoted).chain(retained.iter()) {
+                            let dot = q.iter().zip(v).map(|(a, b)| a * b).sum::<f64>();
+                            for (a, b) in q.iter_mut().zip(v) {
+                                *a -= dot * b;
+                            }
+                        }
+                    }
+                    let norm = q.iter().map(|a| a * a).sum::<f64>().sqrt();
+                    if norm > 1e-12 {
+                        for a in &mut q {
+                            *a /= norm;
+                        }
+                        retained.push(q);
+                    }
+                }
+                self.structural = retained;
+                self.candidates.push(promoted);
+            }
+        }
         for &(i, a) in &weights {
             for &(j, b) in &weights {
                 if conductance != 0. {
@@ -285,6 +445,21 @@ impl System {
                 }
                 if capacitance != 0. {
                     *self.linear.e.entry((i, j)).or_default() += capacitance * a * b;
+                }
+            }
+        }
+        Ok(())
+    }
+    pub(super) fn compatible_structural_rhs(&self, rhs: &[f64]) -> Result<()> {
+        for part in rhs.chunks(self.linear.n) {
+            for q in &self.structural {
+                let residual = q.iter().zip(part).map(|(a, b)| a * b).sum::<f64>();
+                let magnitude = q.iter().zip(part).map(|(a, b)| (a * b).abs()).sum::<f64>();
+                if residual.abs() > 64. * f64::EPSILON * (self.nv + 1) as f64 * magnitude {
+                    return Err(fail(
+                        "COUPLED_GAUGE_INCOMPATIBLE",
+                        "Source injects net charge into a structural zero-energy mode",
+                    ));
                 }
             }
         }
@@ -350,10 +525,19 @@ impl System {
         Ok(modes)
     }
     fn constraints(&self, steady: bool, initial: &[f64]) -> Result<Vec<(Vec<f64>, Vec<f64>, f64)>> {
+        let mut out: Vec<_> = self
+            .structural
+            .iter()
+            .map(|q| {
+                let mut row = vec![0.; self.linear.n];
+                row[..self.nv].copy_from_slice(q);
+                (q.clone(), row, 0.)
+            })
+            .collect();
         let modes = self.null_modes()?;
         let k = modes.len();
         if k == 0 {
-            return Ok(vec![]);
+            return Ok(out);
         }
         let weights: Vec<Vec<f64>> = modes
             .iter()
@@ -380,7 +564,6 @@ impl System {
         })
         .self_adjoint_eigen(Side::Lower)
         .map_err(|e| fail("COUPLED_GAUGE", format!("{e:?}")))?;
-        let mut out = vec![];
         for col in 0..k {
             let eigenvalue = eigen.S()[col];
             if eigenvalue < -1e-12 {
@@ -440,6 +623,7 @@ impl System {
             return Err(fail("COUPLED_INPUT", "Invalid solve dimensions/frequency"));
         }
         let n = self.linear.n;
+        self.compatible_structural_rhs(&rhs)?;
         let complex = omega != 0.;
         let constraints = self.constraints(!complex, initial)?;
         if !complex {

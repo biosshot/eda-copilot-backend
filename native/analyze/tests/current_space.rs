@@ -143,7 +143,7 @@ fn trace_missing_duplicate_nonconservative_unknown_and_unmatched_nodes_refuse() 
         .contains("MEMORY_LIMIT"));
 }
 #[test]
-fn spatial_foil_model_recovers_dc_energy_projection_and_preserves_ac_refusals() {
+fn spatial_foil_model_recovers_dc_energy_projection_and_structural_ac_gauge() {
     let (input, trace, foils) = quotient();
     let electric = extract_traced(&input, &trace, budget()).unwrap();
     let space = current_space::assemble(
@@ -311,19 +311,17 @@ fn spatial_foil_model_recovers_dc_energy_projection_and_preserves_ac_refusals() 
             .unwrap()
             .contains("MEMORY_LIMIT")
     );
-    // Preserve the failed physically different charge-injecting source case.
-    // P6's real-power guard must reject it; no tolerance or C repair is applied.
-    let mut charge_injecting=model.clone();
-    charge_injecting.port_incidence=vec![(0,0,1.),(2,0,-1.),(1,1,1.),(3,1,-1.)];
-    charge_injecting.port_terminals=None;
-    assert!(coupled::impedance(&charge_injecting,2,&[1e3,1e4,1e5],None).unwrap_err().contains("COUPLED_POWER"));
-    assert!(coupled::impedance(model,2,&[1e3,1e4,1e5],None).unwrap_err().contains("COUPLED_POWER"));
-    let axis:Vec<_>=(0..17).map(|i|1e3*10f64.powf(i as f64/8.)).collect();
-    // A band is unavailable if any required point fails the unchanged power
-    // gate. Neither current projection nor neutral port modes repair the
-    // missing structural-null representation of numerically extracted C.
-    assert!(coupled::impedance(&loop_model(model),1,&axis,None).unwrap_err().contains("COUPLED_POWER"));
-    let _reduced_candidate=coupled::impedance(&loop_model(&reduced.model),1,&axis,None);
+    // Cross-foil injection conserves global charge. It excites the physical
+    // interfoil capacitor (large reactive Z), not the global structural gauge.
+    let mut cross=model.clone();
+    cross.port_incidence=vec![(0,0,1.),(2,0,-1.),(1,1,1.),(3,1,-1.)];
+    cross.port_terminals=None;
+    assert!(coupled::impedance(&cross,2,&[0.],None).unwrap_err().contains("COUPLED_DC_INCOMPATIBLE"));
+    let axis=FREQUENCIES_HZ;
+    for (candidate,ports) in [(&cross,2),(model,2),(&reduced.model,2),(&loop_model(model),1),(&loop_model(&reduced.model),1)] {
+        let response=coupled::impedance(candidate,ports,&axis,None).unwrap();
+        assert_eq!(response["parameters"].as_array().unwrap().len(),17);
+    }
 
 }
 
