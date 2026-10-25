@@ -1,0 +1,18 @@
+import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import {resolve,join} from 'node:path';
+import {createHash} from 'node:crypto';
+import {runAnalysisDsl} from '../../../../src/analyze/run-analysis-dsl.ts';
+const out=resolve('debugging/p7-completion');await mkdir(out,{recursive:true});
+const saved=JSON.parse(await readFile(join(out,'coupon.json'),'utf8'));
+if(saved.acBandAdmission!=='rejected')throw Error('Refusal evidence expected');
+const scenario=await readFile('tests/fixtures/analysis-local-extraction/current-space/scenario.js','utf8');
+const code='const candidate='+JSON.stringify(saved.runs[0])+';\n'+scenario;
+const start=performance.now();
+const result=await runAnalysisDsl({code},{filename:'p7-spatial-current-refusals.js',timeoutMs:120000,maxOutputBytes:8*1024*1024,maxEntries:2000});
+await writeFile(join(out,'scenario.js'),code);
+await writeFile(join(out,'dsl-result.json'),JSON.stringify({codeSha256:createHash('sha256').update(code).digest('hex'),wallMs:performance.now()-start,result}));
+if(result.status!=='complete')throw Error(JSON.stringify(result.error));
+const logs=result.reports.flatMap(r=>r.logs);
+if(logs.filter(l=>l.message==='p7.current-space.refusal').length!==2||!logs.some(l=>l.message==='p7.current-space.completed-refusal-audit'))throw Error('Missing native/worker refusals or continuation');
+const checks=result.reports.flatMap(r=>r.checks);
+console.log(JSON.stringify({status:result.status,refusals:logs.filter(l=>l.message==='p7.current-space.refusal'),checks,wallMs:performance.now()-start}));

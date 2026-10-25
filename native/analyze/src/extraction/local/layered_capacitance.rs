@@ -66,6 +66,25 @@ pub struct Input {
     pub dielectrics: Vec<Dielectric>,
     pub exterior: Exterior,
 }
+/// Explicit spatial Dirichlet trace on a finite metal surface. Coordinates are
+/// exact SI coordinates of the existing field mesh, not nearest-node matches.
+#[derive(Clone, Debug, Serialize)]
+pub struct TraceNode {
+    pub metal_source_id: String,
+    pub position_m: [f64; 3],
+    pub weights: Vec<(usize, f64)>,
+}
+/// Potential coordinates shared with a current mesh. Every metal boundary node
+/// must be covered; nonnegative partition-of-unity weights preserve common charge.
+#[derive(Clone, Debug, Serialize)]
+pub struct PotentialTrace {
+    pub potential_nodes: Vec<String>,
+    pub nodes: Vec<TraceNode>,
+}
+fn trace_key(metal: usize, p: [f64; 3]) -> (usize, [u64; 3]) {
+    (metal, p.map(|x| if x == 0. { 0 } else { x.to_bits() }))
+}
+
 /// Explicit request budget; no production defaults are changed.
 #[derive(Clone, Copy, Debug)]
 pub struct Budget {
@@ -655,12 +674,22 @@ pub struct Solution {
     matrix: Csc,
     started: Instant,
     budget: Budget,
+    metals: Vec<Metal>,
     known: Vec<Option<usize>>,
+    trace_weights: Vec<Vec<(usize, f64)>>,
     far: Vec<bool>,
     active: Vec<bool>,
 }
 
 pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
+    extract_impl(input, None, budget)
+}
+/// Same field solver with spatial potential coordinates. This internal path
+/// does not establish PCB accuracy or create a physical-terminal mapping.
+pub fn extract_traced(input: &Input, trace: &PotentialTrace, budget: Budget) -> Result<Solution> {
+    extract_impl(input, Some(trace), budget)
+}
+fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -> Result<Solution> {
     let guard = Guard {
         started: Instant::now(),
         budget,
@@ -683,6 +712,70 @@ pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
             "finite increasing planes and1..16 full conductors required",
         ));
     }
+    let source_ids = trace.map_or_else(
+        || {
+            input
+                .metals
+                .iter()
+                .map(|m| m.source_id.clone())
+                .collect::<Vec<_>>()
+        },
+        |t| t.potential_nodes.clone(),
+    );
+    let modes = source_ids.len();
+    if modes == 0
+        || modes > 64
+        || source_ids.iter().any(|s| s.is_empty())
+        || source_ids.iter().collect::<BTreeSet<_>>().len() != modes
+    {
+        return Err(error(
+            "FIELD_TRACE",
+            "1..64 distinct named potential coordinates required",
+        ));
+    }
+    let mut supplied = BTreeMap::new();
+    let mut trace_bytes = 0;
+    if let Some(trace) = trace {
+        trace_bytes = add(mul(trace.nodes.len(), 256)?, mul(modes, 128)?)?;
+        for node in &trace.nodes {
+            trace_bytes = add(
+                trace_bytes,
+                add(
+                    node.metal_source_id.capacity(),
+                    mul(node.weights.capacity(), 32)?,
+                )?,
+            )?;
+        }
+        g.memory(trace_bytes)?;
+        for node in &trace.nodes {
+            g.time()?;
+            let metal = input
+                .metals
+                .iter()
+                .position(|m| m.source_id == node.metal_source_id)
+                .ok_or_else(|| error("FIELD_TRACE", "unknown metal source in trace"))?;
+            let mut seen = BTreeSet::new();
+            if node.position_m.iter().any(|x| !x.is_finite())
+                || node.weights.is_empty()
+                || node.weights.len() > modes
+                || node.weights.iter().any(|&(i, w)| {
+                    i >= modes || !w.is_finite() || w <= 0. || w > 1. || !seen.insert(i)
+                })
+                || (node.weights.iter().map(|x| x.1).sum::<f64>() - 1.).abs() > 1e-12
+            {
+                return Err(error(
+                    "FIELD_TRACE",
+                    "finite positive partition-of-unity trace weights required",
+                ));
+            }
+            if supplied
+                .insert(trace_key(metal, node.position_m), node.weights.clone())
+                .is_some()
+            {
+                return Err(error("FIELD_TRACE", "duplicate surface node trace"));
+            }
+        }
+    }
     let bounds = input.xy_bounds_m;
     if bounds.iter().flatten().any(|x| !x.is_finite())
         || bounds[1][0] <= bounds[0][0]
@@ -697,7 +790,15 @@ pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
             PlaneInput::Exact { xy_m, .. } | PlaneInput::Cdt { xy_m, .. } => xy_m.len(),
         })
         .sum();
-    let owned_input_bytes = input_bytes(input)?;
+    // The retained physical surface metadata coexists with the borrowed input
+    // and prepared polygons. Admit its clone explicitly, even for very large
+    // source contours with a small field mesh.
+    let mut retained_metal_bytes = mul(input.metals.len(), std::mem::size_of::<Metal>())?;
+    for metal in &input.metals {
+        retained_metal_bytes = add(retained_metal_bytes,
+            add(metal.source_id.len(), mul(metal.polygon_m.len(), 16)?)?)?;
+    }
+    let owned_input_bytes = add(add(input_bytes(input)?, trace_bytes)?, retained_metal_bytes)?;
     g.memory(add(owned_input_bytes, mul(input_nodes, 4096)?)?)?;
     let mut meshes = Vec::new();
     for m in &input.meshes {
@@ -852,6 +953,9 @@ pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
         }
     }
     let mut known = vec![None; nodes];
+    let mut trace_weights = vec![vec![]; nodes];
+    let mut used_traces = BTreeSet::new();
+    let mut used_modes = vec![false; modes];
     let mut far = vec![false; nodes];
     let mut represented = vec![false; input.metals.len()];
     for (k, &m) in input.planes.iter().enumerate() {
@@ -869,6 +973,20 @@ pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
                         ));
                     }
                     known[n] = Some(c);
+                    let weights = if trace.is_some() {
+                        let key = trace_key(c, [p[0], p[1], input.z_m[k]]);
+                        let weights = supplied.get(&key).ok_or_else(|| {
+                            error("FIELD_TRACE", "missing exact metal surface node trace")
+                        })?;
+                        used_traces.insert(key);
+                        weights.clone()
+                    } else {
+                        vec![(c, 1.)]
+                    };
+                    for &(mode, _) in &weights {
+                        used_modes[mode] |= active[n];
+                    }
+                    trace_weights[n] = weights;
                     represented[c] |= active[n];
                 }
             }
@@ -887,6 +1005,12 @@ pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
             }
         }
     }
+    if used_modes.iter().any(|x| !*x) || used_traces.len() != supplied.len() {
+        return Err(error(
+            "FIELD_TRACE",
+            "unused potential coordinate or unmatched supplied trace node",
+        ));
+    }
     if represented.iter().any(|x| !*x) {
         return Err(error("COPPER_TRACE", "conductor missing full trace"));
     }
@@ -902,10 +1026,7 @@ pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
     // Simultaneous COO+worst CSC and RHS/output before allocation, not dense fill.
     let assembly_bytes = add(
         base_bytes,
-        add(
-            mul(terms, 32)?,
-            mul(nodes, add(128, mul(input.metals.len(), 24)?)?)?,
-        )?,
+        add(mul(terms, 32)?, mul(nodes, add(128, mul(modes, 24)?)?)?)?,
     )?;
     g.memory(assembly_bytes)?;
     let mut coo = Vec::with_capacity(terms);
@@ -949,13 +1070,13 @@ pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
     let mut fp = vec![0; free + 1];
     let mut fi = Vec::with_capacity(matrix.values.len());
     let mut fv = Vec::with_capacity(matrix.values.len());
-    let mut rhs = Mat::<f64>::zeros(free, input.metals.len());
+    let mut rhs = Mat::<f64>::zeros(free, modes);
     for col in 0..nodes {
         for k in matrix.ptr[col]..matrix.ptr[col + 1] {
             let row = matrix.indices[k];
             if mapping[row] != usize::MAX {
-                if let Some(c) = known[col] {
-                    rhs[(mapping[row], c)] -= matrix.values[k];
+                for &(c, w) in &trace_weights[col] {
+                    rhs[(mapping[row], c)] -= matrix.values[k] * w;
                 }
                 if mapping[col] != usize::MAX {
                     fi.push(mapping[row]);
@@ -977,7 +1098,7 @@ pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
             matrix.bytes(),
             add(
                 mul(fp.capacity() + fi.capacity() + fv.capacity(), 8)?,
-                mul(nodes, add(128, mul(input.metals.len(), 24)?)?)?,
+                mul(nodes, add(128, mul(modes, 24)?)?)?,
             )?,
         )?,
     )?;
@@ -995,7 +1116,7 @@ pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
     let factor_bytes = mul(symbolic.len_val(), 8)?;
     let factor_scratch =
         symbolic.factorize_numeric_llt_scratch::<f64>(Par::Seq, Default::default());
-    let solve_scratch = symbolic.solve_in_place_scratch::<f64>(input.metals.len(), Par::Seq);
+    let solve_scratch = symbolic.solve_in_place_scratch::<f64>(modes, Par::Seq);
     let scratch_bytes = factor_scratch
         .unaligned_bytes_required()
         .max(solve_scratch.unaligned_bytes_required());
@@ -1030,16 +1151,16 @@ pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
         );
     }
     g.time()?;
-    let mut basis = vec![vec![0.; nodes]; input.metals.len()];
-    let mut cap = vec![vec![0.; input.metals.len()]; input.metals.len()];
-    for c in 0..input.metals.len() {
+    let mut basis = vec![vec![0.; nodes]; modes];
+    let mut cap = vec![vec![0.; modes]; modes];
+    for c in 0..modes {
         for i in 0..nodes {
-            basis[c][i] = if let Some(k) = known[i] {
-                if c == k {
-                    1.
-                } else {
-                    0.
-                }
+            basis[c][i] = if known[i].is_some() {
+                trace_weights[i]
+                    .iter()
+                    .filter(|&&(k, _)| k == c)
+                    .map(|&(_, w)| w)
+                    .sum()
             } else if mapping[i] != usize::MAX {
                 rhs[(mapping[i], c)]
             } else {
@@ -1048,8 +1169,8 @@ pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
         }
         let (reaction, _) = matrix.apply(&basis[c]);
         for i in 0..nodes {
-            if let Some(k) = known[i] {
-                cap[k][c] += reaction[i];
+            for &(k, w) in &trace_weights[i] {
+                cap[k][c] += w * reaction[i];
             }
         }
     }
@@ -1081,7 +1202,7 @@ pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
     };
     let mut result = Solution {
         capacitance_f: cap,
-        source_ids: input.metals.iter().map(|m| m.source_id.clone()).collect(),
+        source_ids,
         mesh_source_ids: meshes.iter().map(|m| m.source_id.clone()).collect(),
         plan,
         basis_potentials_v: basis,
@@ -1094,13 +1215,15 @@ pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
         matrix,
         started: g.started,
         budget,
+        metals: input.metals.clone(),
         known,
+        trace_weights,
         far,
         active,
     };
     // Recover each independent voltage once before admission; same whole deadline.
-    for c in 0..input.metals.len() {
-        let mut volts = vec![0.; input.metals.len()];
+    for c in 0..modes {
+        let mut volts = vec![0.; modes];
         volts[c] = 1.;
         result.recover_checked(&volts, Some(g))?;
     }
@@ -1109,6 +1232,71 @@ pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
     Ok(result)
 }
 impl Solution {
+    /// The prescribed physical surface map, including finite foil sidewalls.
+    pub fn surface_traces(&self) -> Vec<TraceNode> {
+        let mut out = Vec::new();
+        let mut offset = 0;
+        for (plane, &mesh_id) in self.planes.iter().enumerate() {
+            let mesh = &self.meshes[mesh_id];
+            for (i, p) in mesh.xy.iter().enumerate() {
+                if let Some(m) = self.known[offset + i] {
+                    out.push(TraceNode {
+                        metal_source_id: self.metals[m].source_id.clone(),
+                        position_m: [p[0], p[1], self.z[plane]],
+                        weights: self.trace_weights[offset + i].clone(),
+                    });
+                }
+            }
+            offset += mesh.xy.len();
+        }
+        out
+    }
+    pub fn metals(&self) -> &[Metal] {
+        &self.metals
+    }
+    pub fn max_epsilon_r(&self) -> f64 {
+        self.materials
+            .iter()
+            .map(|m| m.epsilon_r)
+            .fold(1., f64::max)
+    }
+    /// Galerkin energy matrix, evaluated once per unordered pair and mirrored.
+    /// This is B^T K B, not averaging the independently retained reaction C.
+    pub fn energy_capacitance_f(&self) -> Result<Vec<Vec<f64>>> {
+        let guard = Guard {
+            started: self.started,
+            budget: self.budget,
+        };
+        guard.time()?;
+        let n = self.source_ids.len();
+        let mut out = vec![vec![0.; n]; n];
+        let scale = self
+            .capacitance_f
+            .iter()
+            .flatten()
+            .map(|v| v.abs())
+            .fold(0., f64::max);
+        for j in 0..n {
+            guard.time()?;
+            let (q, _) = self.matrix.apply(&self.basis_potentials_v[j]);
+            for i in 0..=j {
+                let v = self.basis_potentials_v[i]
+                    .iter()
+                    .zip(&q)
+                    .map(|(p, q)| p * q)
+                    .sum::<f64>();
+                if !v.is_finite() || (v - self.capacitance_f[i][j]).abs() > 1e-9 * scale {
+                    return Err(error(
+                        "FIELD_BALANCE",
+                        "energy/reaction matrix disagreement",
+                    ));
+                }
+                out[i][j] = v;
+                out[j][i] = v;
+            }
+        }
+        Ok(out)
+    }
     pub fn recover(&self, volts: &[f64]) -> Result<Recovery> {
         self.recover_checked(
             volts,
@@ -1144,8 +1332,10 @@ impl Solution {
         let mut far_charge = 0.;
         let mut residual: f64 = 0.;
         for i in 0..phi.len() {
-            if let Some(c) = self.known[i] {
-                charges[c] += reaction[i];
+            if self.known[i].is_some() {
+                for &(c, w) in &self.trace_weights[i] {
+                    charges[c] += w * reaction[i];
+                }
             } else if self.far[i] {
                 far_charge += reaction[i];
             } else if self.active[i] {

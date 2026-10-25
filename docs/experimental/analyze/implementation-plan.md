@@ -306,3 +306,27 @@ Physical terminals/R1 и внутреннее layered C приняты в огр
 ### Unified geometry and immediate acceleration
 
 Обновлено [единое задание P7](next-task-copper-geometry-and-pairs.md): пользователь согласовал общий координатный контекст, реализацию existing individual near checks в той же поставке и обязательные раздельные G0/G1/G2 performance measurements. Это заменяет прежнюю остановку на выборе представления; новые geometry tolerances/FMM не разрешаются. Выдача/запуск агентов этим изменением документации не производится.
+
+
+### P7 completion assignment — 2026-10-24
+
+Shared copper coordinates and individual near-pair classification accepted in a9d5c5c; see [verification](copper-context-and-pairs-verification.md). User authorized [P7 completion](next-task-p7-completion.md): implement the end-to-end extraction path and remaining original P7 obligations with explicit evidence. A local low-frequency ROI alone does not close P7. P8/P11 implementation remains outside this assignment; assess their dependency readiness separately. Supersedes earlier implementation-start holds within this task's supported physical scope; new physical contracts/methods still require architect review.
+
+
+### P7 spatial-current checkpoint — 2026-10-24
+
+[Completion verification](p7-completion-verification.md): implemented source-bound
+spatial field traces, bounded conforming foil current assembly and current
+congruence/recovery; exact tensor/DC/energy checks pass. Whole AC band refuses
+because numerically extracted zero-energy C modes lose structural identity in
+the existing P6 representation. No guard, physical matrix or return was repaired
+to force admission. Ordinary via/junctions, real ROI extraction, automatic compact
+reduction and board extraction DSL remain open; original P7 checkboxes and PCB
+P8/P11 readiness are unchanged. Requires architect review of the concrete
+structural-null/physical-recovery contract and ROI resource/current-space blockers;
+no next analyzer started.
+
+
+### Parent acceptance of partial P7 checkpoint — 2026-10-25
+
+[Review](p7-completion-verification.md#parent-review--2026-10-25) accepts internal spatial traces, bounded foil assembly and supplied-basis recovery only. 116 optimized regression tests and a fresh independent coupon audit passed their stated positive/negative gates; the whole AC band remains rejected. P7 is open; extracted-board P8 and full-channel P11 remain blocked. No new assignments.

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add internal source-bound spatial capacitance traces, conforming finite-foil R/L/C assembly and passive current congruence/recovery. Verify tensor/DC/energy limits and preserve extracted-C null-mode AC refusals; real via/PDN/ROI extraction and whole P7/P8/P11 remain blocked.
+
+- Authorize the P7 completion task: end-to-end PCB extraction, physical ports/vias, validated compact models and direct DSL scenarios, with explicit whole-stage and P8/P11 readiness gates.
+
 - Use one board-scoped dyadic copper overlay context and cache admissible individual far pairs inside coarse near blocks. Preserve real narrow bridges/gaps and reliable connectivity on eight boards; measure 1.915x coupon acceleration, with geometry-preparation regressions reported separately. Full real-ROI extraction remains unaccepted.
 
 - Consolidate P7 shared-coordinate geometry repair and individual near-pair reclassification into one implementation task, with separate correctness and end-to-end performance comparisons; no production code change.

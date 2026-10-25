@@ -3,6 +3,8 @@
 //! SI units throughout. The geometry is finite copper, not an inferred return.
 //! Full board extraction remains gated on independent quadrature/field evidence.
 pub mod capacitance;
+pub mod current_space;
+pub mod reduction;
 pub mod layered_capacitance;
 pub mod far;
 pub mod near_far;
