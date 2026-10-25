@@ -269,7 +269,8 @@ pub fn assemble(
                 ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])) / 2.
             })
             .sum();
-        let polygon = Polygon::new(LineString::from(metal.polygon_m.clone()), vec![]);
+        let polygon = Polygon::new(LineString::from(metal.polygon_m.clone()),
+            metal.holes_m.iter().cloned().map(LineString::from).collect());
         let mut referenced = vec![false; f.xy_m.len()];
         for t in &f.triangles {
             let triangle = Polygon::new(LineString::from(t.map(|i| f.xy_m[i]).to_vec()), vec![]);
@@ -287,13 +288,8 @@ pub fn assemble(
         if referenced.iter().any(|x| !*x) {
             return Err(error("CURRENT_INPUT", "unused geometric current node"));
         }
-        let mut poly = 0.;
-        for i in 0..metal.polygon_m.len() {
-            let a = metal.polygon_m[i];
-            let b = metal.polygon_m[(i + 1) % metal.polygon_m.len()];
-            poly += a[0] * b[1] - a[1] * b[0];
-        }
-        if area <= 0. || (area - poly.abs() / 2.).abs() > 1e-10 * area {
+        use geo::Area;
+        if area <= 0. || (area - polygon.unsigned_area()).abs() > 1e-10 * area {
             return Err(error(
                 "CURRENT_TRACE",
                 "foil coverage area differs from electric metal",

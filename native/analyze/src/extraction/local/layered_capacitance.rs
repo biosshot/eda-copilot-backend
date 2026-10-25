@@ -39,6 +39,10 @@ pub enum PlaneInput {
 pub struct Metal {
     pub source_id: String,
     pub polygon_m: Vec<[f64; 2]>,
+    /// Actual finite void contours; omitted only for a simply connected metal.
+    /// Field meshes must carry every contour as exact constraints.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub holes_m: Vec<Vec<[f64; 2]>>,
     pub z0_m: f64,
     pub z1_m: f64,
 }
@@ -162,6 +166,8 @@ fn input_bytes(input: &Input) -> Result<usize> {
             n,
             add(m.source_id.capacity(), mul(m.polygon_m.capacity(), 16)?)?,
         )?;
+        n = add(n, mul(m.holes_m.capacity(), std::mem::size_of::<Vec<[f64;2]>>())?)?;
+        for ring in &m.holes_m { n = add(n, mul(ring.capacity(), 16)?)?; }
     }
     n = add(
         n,
@@ -676,6 +682,7 @@ pub struct Solution {
     budget: Budget,
     metals: Vec<Metal>,
     known: Vec<Option<usize>>,
+    contact_owners: Vec<Vec<usize>>,
     trace_weights: Vec<Vec<(usize, f64)>>,
     far: Vec<bool>,
     insulated: bool,
@@ -798,15 +805,27 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -
     for metal in &input.metals {
         retained_metal_bytes = add(retained_metal_bytes,
             add(metal.source_id.len(), mul(metal.polygon_m.len(), 16)?)?)?;
+        retained_metal_bytes = add(retained_metal_bytes,
+            mul(metal.holes_m.len(), std::mem::size_of::<Vec<[f64;2]>>())?)?;
+        for ring in &metal.holes_m {
+            retained_metal_bytes = add(retained_metal_bytes,mul(ring.len(),16)?)?;
+        }
     }
-    let owned_input_bytes = add(add(input_bytes(input)?, trace_bytes)?, retained_metal_bytes)?;
+    // Prepared geo rings can grow from n to 2*n coordinates while closing an
+    // unclosed contour; the retained Solution metadata coexists with them and
+    // the borrowed input. Reserve all three additional buffers before making
+    // any polygons, including the temporary old ring during reallocation.
+    let owned_input_bytes = add(add(input_bytes(input)?, trace_bytes)?, mul(retained_metal_bytes,3)?)?;
     g.memory(add(owned_input_bytes, mul(input_nodes, 4096)?)?)?;
     let mut meshes = Vec::new();
     for m in &input.meshes {
         meshes.push(prepare(m, bounds, g)?);
     }
     let mut ids = BTreeSet::new();
-    let metal_polygons: Vec<_> = input.metals.iter().map(|m| polygon(&m.polygon_m)).collect();
+    let metal_polygons: Vec<_> = input.metals.iter().map(|m|
+        Polygon::new(LineString::from(m.polygon_m.clone()),
+            m.holes_m.iter().cloned().map(LineString::from).collect())).collect();
+    let mut finite_contacts=BTreeSet::new();
     for (i, m) in input.metals.iter().enumerate() {
         if m.source_id.is_empty()
             || !ids.insert(&m.source_id)
@@ -816,8 +835,9 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -
             || !input.z_m.contains(&m.z0_m)
             || !input.z_m.contains(&m.z1_m)
             || m.polygon_m.len() < 3
-            || m.polygon_m.iter().flatten().any(|x| !x.is_finite())
-            || m.polygon_m.iter().any(|p| {
+            || m.holes_m.iter().any(|ring| ring.len() < 3)
+            || std::iter::once(&m.polygon_m).chain(&m.holes_m).flatten().flatten().any(|x| !x.is_finite())
+            || std::iter::once(&m.polygon_m).chain(&m.holes_m).flatten().any(|p| {
                 p[0] < bounds[0][0]
                     || p[0] > bounds[1][0]
                     || p[1] < bounds[0][1]
@@ -832,14 +852,18 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -
             ));
         }
         for j in 0..i {
+            let relation=metal_polygons[i].relate(&metal_polygons[j]);
+            let overlap_z=m.z1_m.min(input.metals[j].z1_m)-m.z0_m.max(input.metals[j].z0_m);
             if m.z0_m < input.metals[j].z1_m
                 && m.z1_m > input.metals[j].z0_m
-                && metal_polygons[i]
-                    .relate(&metal_polygons[j])
-                    .get(CoordPos::Inside, CoordPos::Inside)
+                && relation.get(CoordPos::Inside, CoordPos::Inside)
                     == Dimensions::TwoDimensional
             {
                 return Err(error("COPPER_OVERLAP", "ambiguous conductor ownership"));
+            }
+            if overlap_z>0. && relation.get(CoordPos::OnBoundary,CoordPos::OnBoundary)==Dimensions::OneDimensional
+                || overlap_z==0. && relation.get(CoordPos::Inside,CoordPos::Inside)==Dimensions::TwoDimensional {
+                finite_contacts.insert((j,i));
             }
         }
     }
@@ -876,7 +900,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -
     }
     let geometry_bytes = add(
         owned_input_bytes,
-        add(mul(input_nodes, 4096)?, mul(nodes, 128)?)?,
+        add(mul(input_nodes, 4096)?, mul(nodes, add(160, mul(input.metals.len(),8)?)?)?)?,
     )?;
     g.memory(geometry_bytes)?;
     let mut pair_ids = BTreeMap::new();
@@ -954,6 +978,8 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -
         }
     }
     let mut known = vec![None; nodes];
+    let mut contact_owners:Vec<Vec<usize>> = (0..nodes)
+        .map(|_|Vec::with_capacity(input.metals.len())).collect();
     let mut trace_weights = vec![vec![]; nodes];
     let mut used_traces = BTreeSet::new();
     let mut used_modes = vec![false; modes];
@@ -967,13 +993,6 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -
                     && input.z_m[k] <= metal.z1_m
                     && metal_polygons[c].intersects(&Point::from(p))
                 {
-                    if known[n].is_some() {
-                        return Err(error(
-                            "COPPER_TRACE",
-                            "one trace node owned by multiple conductors",
-                        ));
-                    }
-                    known[n] = Some(c);
                     let weights = if trace.is_some() {
                         let key = trace_key(c, [p[0], p[1], input.z_m[k]]);
                         let weights = supplied.get(&key).ok_or_else(|| {
@@ -984,10 +1003,26 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -
                     } else {
                         vec![(c, 1.)]
                     };
+                    if known[n].is_some() {
+                        if contact_owners[n].iter().any(|&old| !finite_contacts.contains(&(old,c))) {
+                            return Err(error("COPPER_TRACE", "point/edge-only metal contact has no finite surface area"));
+                        }
+                        let existing:BTreeMap<_,_> = trace_weights[n].iter().copied().collect();
+                        let incoming:BTreeMap<_,_> = weights.iter().copied().collect();
+                        // A shared geometric surface is a contact only when the
+                        // explicitly authored potential traces agree exactly.
+                        // No net-name weld, nearest-point match or tolerance join.
+                        if trace.is_none() || existing != incoming {
+                            return Err(error("COPPER_TRACE", "touching metal pieces require identical explicit potential traces"));
+                        }
+                    } else {
+                        known[n] = Some(c);
+                        trace_weights[n] = weights.clone();
+                    }
+                    contact_owners[n].push(c);
                     for &(mode, _) in &weights {
                         used_modes[mode] |= active[n];
                     }
-                    trace_weights[n] = weights;
                     represented[c] |= active[n];
                 }
             }
@@ -1218,6 +1253,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -
         budget,
         metals: input.metals.clone(),
         known,
+        contact_owners,
         trace_weights,
         far,
         insulated: input.exterior == Exterior::InsulatedAnalyticCoupon,
@@ -1248,7 +1284,7 @@ impl Solution {
         for (plane, &mesh_id) in self.planes.iter().enumerate() {
             let mesh = &self.meshes[mesh_id];
             for (i, p) in mesh.xy.iter().enumerate() {
-                if let Some(m) = self.known[offset + i] {
+                for &m in &self.contact_owners[offset + i] {
                     out.push(TraceNode {
                         metal_source_id: self.metals[m].source_id.clone(),
                         position_m: [p[0], p[1], self.z[plane]],

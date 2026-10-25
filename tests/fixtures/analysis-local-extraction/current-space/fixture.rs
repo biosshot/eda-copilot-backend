@@ -29,6 +29,7 @@ pub fn patch(split: bool) -> (Input, PotentialTrace, Vec<Foil>) {
         .map(|(i, z)| Metal {
             source_id: format!("foil{i}"),
             polygon_m: xy.clone(),
+            holes_m: vec![],
             z0_m: z[0],
             z1_m: z[1],
         })

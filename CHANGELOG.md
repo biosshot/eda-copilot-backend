@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add bounded automatic current Krylov congruence with all-port/internal-current/local-loss order gates, actual finite foil-source contacts and retained electric/current void contours. Preserve physical guards and legacy serialized inputs. P7 remains open: no actual AC via/return, scalable board reduction, complete loss coverage or successful board extraction DSL is delivered; see final-integration verification.
+
+- Assign final P7 integration after structural-gauge acceptance: real via/return geometry, scalable extraction/reduction, complete line/PDN paths and direct board DSL acceptance before P8/P11.
+
 - Carry validated structural zero-energy modes from insulated foil extraction through coupled AC/DC/time, reduction and physical composition. Preserve raw C, real exterior charge and strict guards; all 17 saved full/reduced coupon frequencies and physical ports now pass independent checks. Whole P7 and PCB PI/SI remain open.
 
 - Authorize explicit structural-gauge handling across P6/P7, with validated physical charge preservation and full 17-frequency acceptance; whole P7 remains open.

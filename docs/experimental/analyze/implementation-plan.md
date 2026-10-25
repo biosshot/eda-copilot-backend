@@ -343,3 +343,17 @@ Structural-gauge implementation checkpoint: [verification](p6-p7-structural-gaug
 ### Accepted structural-gauge interface — 2026-10-25
 
 Parent accepted [P6/P7 repair](p6-p7-structural-gauges-verification.md#parent-acceptance--2026-10-25): all 17 original coupon frequencies pass full/reduced and physical-port independent checks, with physical charge and strict guards preserved. This removes the diagnosed numerical interface blocker; real via/ROI extraction, scaling, automatic reduction and wider validated physical applicability still block whole P7. No P8/P11 task is started.
+
+
+### Final P7 integration assignment — 2026-10-25
+
+User authorized [full remaining P7 implementation](next-task-p7-final-integration.md) from accepted 6f639db. Structural-gauge repair is complete for its tested scope; continue real foil/barrel contacts, scalable operators/automatic reduction, line/via/PDN extraction and direct real-board DSL. All original P7 obligations require evidence; a partial kernel checkpoint cannot close the stage. P8/P11 are not started until dependency acceptance.
+
+### Final-integration partial result — 2026-10-25
+
+[Verification and complete obligation matrix](p7-final-integration-verification.md): bounded automatic current Krylov/congruence selects order from all unit-port drives, physical states and local losses; finite shared foil-source contacts and actual void contours are retained. The saved foil control requires four rather than two current coordinates for weak internal-response admission. These are limited positive controls, not completion of the final-integration assignment. Actual axial via/return traces, sparse assembly and potential reduction before P6, validated intermediate-frequency losses, full path selection and three successful real-board extraction DSL scenarios remain absent. P7 stays open; original checkboxes and extracted-board P8/arbitrary-channel P11 readiness are unchanged.
+
+
+### Parent review of final-integration attempt — 2026-10-25
+
+[Review](p7-final-integration-verification.md#parent-review--2026-10-25) accepts bounded automatic current reduction and finite foil contacts/voids only. Final P7 assignment is not completed: 0/3 successful real-board extraction scenarios, no AC via/return or scalable ROI path, and intermediate loss coverage remains absent. Whole P7 and extracted-board P8/arbitrary-channel P11 gates remain open. No new task issued.

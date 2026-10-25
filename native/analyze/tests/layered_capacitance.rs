@@ -46,6 +46,7 @@ fn small() -> Input {
             .map(|(i, (a, b))| Metal {
                 source_id: format!("physical-foil-{i}"),
                 polygon_m: xy.clone(),
+                holes_m: vec![],
                 z0_m: a,
                 z1_m: b,
             })
