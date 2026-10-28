@@ -42,6 +42,12 @@ export function createAnalysisApi(input: DslInput, limits: Limits, changed: (upd
       function visit(v: T.Json): void {
         if (Array.isArray(v)) { v.forEach(visit); return; }
         if (!object(v)) return;
+        if(v.kind==='viaId'){
+          const s=S.parse(S.viaSelector,v);
+          if(!b)S.invalid('viaId selector requires an explicit board');
+          const selected=[...b.copper.fixed.vias,...b.copper.editable.vias].filter(v=>v.id===s.id);
+          if(selected.length!==1)S.invalid(`viaId ${s.id} resolves to ${selected.length} physical vias`);
+        }
         if ('contextId' in v) {
           if (typeof v.contextId !== 'string' || !acceptedContexts.has(v.contextId)) S.invalid('Handle/result belongs to another analysis snapshot');
           if (['scalar', 'series', 'map', 'table', 'eye', 'polar', 'bar', 'finalState'].includes(String(v.kind)) && v.contextId !== id) S.invalid('Result data/final state cannot be reused across incompatible snapshots');
@@ -128,8 +134,10 @@ export function createAnalysisApi(input: DslInput, limits: Limits, changed: (upd
       electrothermal: () => build('electrothermal'), impedance: () => build('impedance'), tdr: () => build('tdr'), si: () => build('si'), eye: () => build('eye'), emi: () => build('emi'), em: () => build('em'), networkParameters: () => build('networkParameters'),
       port(v: Parameters<T.AnalysisContext['port']>[0]) {
         const pad = S.selector.refine(s => s.kind === 'pad' || s.kind === 'padId');
-        const parsed = S.parse(z.strictObject({ positive: z.union([pad, z.array(pad).min(1)]), negative: z.union([pad, z.array(pad).min(1)]), layer:S.text.optional() }), json(v));
-        if(parsed.layer!==undefined&&b&&!b.layers.some(l=>l.name===parsed.layer))S.invalid('Unknown physical port layer');
+        const electrode=z.union([pad,S.viaSelector]);
+        const parsed = S.parse(z.strictObject({ positive: z.union([electrode, z.array(electrode).min(1)]), negative: z.union([electrode, z.array(electrode).min(1)]), layer:S.text.optional(),positiveLayer:S.text.optional(),negativeLayer:S.text.optional() }), json(v));
+        if(parsed.layer!==undefined&&(parsed.positiveLayer!==undefined||parsed.negativeLayer!==undefined))S.invalid('Use layer or separate positiveLayer/negativeLayer');
+        for(const layer of [parsed.layer,parsed.positiveLayer,parsed.negativeLayer])if(layer!==undefined&&b&&!b.layers.some(l=>l.name===layer))S.invalid('Unknown physical port layer');
         return descriptor('port', parsed) as T.Port;
       },
       channel(v: Parameters<T.AnalysisContext['channel']>[0]) { return descriptor('channel', S.parse(z.strictObject({ from: S.port, to: S.port, via: z.array(S.selector).optional(), scope: z.array(S.selector).optional() }), json(v))) as T.Channel; },
@@ -236,6 +244,7 @@ export function createAnalysisApi(input: DslInput, limits: Limits, changed: (upd
     globals: freeze({ board, profiles, models, analysis,
       pad: (designator: string, number: string | number) => { if (typeof number !== 'string' && !(typeof number === 'number' && Number.isFinite(number))) S.invalid('Invalid pad number'); return globalSelector({ kind: 'pad', designator, number: String(number) }); },
       padId: (id: string) => globalSelector({ kind: 'padId', id }), component: (designator: string) => globalSelector({ kind: 'component', designator }), net: (name: string) => globalSelector({ kind: 'net', name }),
+      viaId:(id:string)=>freeze(S.parse(S.viaSelector,json({kind:'viaId',id}))),
       region: (v: Omit<Extract<T.Selector, { kind: 'region' }>, 'kind'>) => globalSelector({ ...v, kind: 'region' }),
       stackup, ic: (v: T.ComponentInput) => componentDescription('ic', v), resistor: (v: T.ComponentInput) => componentDescription('resistor', v), capacitor: (v: T.ComponentInput) => componentDescription('capacitor', v), inductor: (v: T.ComponentInput) => componentDescription('inductor', v), device: (v: T.ComponentInput) => componentDescription('device', v),
     }), snapshot,

@@ -38,6 +38,10 @@ export type Selector = { kind: 'pad'; designator: string; number: string }
   | { kind: 'padId'; id: string } | { kind: 'component'; designator: string }
   | { kind: 'net'; name: string } | { kind: 'region'; layers: readonly string[]; polygon: PolygonMm };
 export type PadSelector = Extract<Selector, { kind: 'pad' | 'padId' }>;
+/** A captured via object, never an ideal net connection. Layered extraction
+ * requires a layer and a confirmed finite pad/barrel contact. */
+export type ViaSelector = {kind:'viaId';id:string};
+export type ElectrodeSelector = PadSelector | ViaSelector;
 export interface Handle { readonly kind: string; readonly id: string; readonly contextId: string }
 export interface Port extends Handle { readonly kind: 'port' }
 export interface Channel extends Handle { readonly kind: 'channel' }
@@ -334,7 +338,7 @@ export interface AnalysisContext {
   eye(): Builder<'eye'>; emi(): Builder<'emi'>; em(): Builder<'em'>; networkParameters(): Builder<'networkParameters'>;
   /** Optional extraction surface for both contacts. Existing DC rejects active
    * surface-specific contacts; passive DC observations remain unavailable. */
-  port(input: { positive: PadSelector | readonly PadSelector[]; negative: PadSelector | readonly PadSelector[]; layer?: string }): Port;
+  port(input: { positive: ElectrodeSelector | readonly ElectrodeSelector[]; negative: ElectrodeSelector | readonly ElectrodeSelector[]; layer?: string; positiveLayer?: string; negativeLayer?: string }): Port;
   channel(input: { from: Port; to: Port; via?: readonly Selector[]; scope?: readonly Selector[] }): Channel;
   differential(input: { positive: Channel; negative: Channel }): Differential;
   conductor(input: { lengthMm: number; widthMm: number; thicknessMm: number; material: Material }): Conductor;
@@ -379,6 +383,7 @@ declare global {
   function analysis(options?: { board: RoutingBoardV2 }): AnalysisContext;
   function pad(designator: string, number: string | number): Extract<Selector, { kind: 'pad' }>;
   function padId(id: string): Extract<Selector, { kind: 'padId' }>;
+  function viaId(id:string):ViaSelector;
   function component(designator: string): Extract<Selector, { kind: 'component' }>;
   function net(name: string): Extract<Selector, { kind: 'net' }>;
   function region(input: { layers: readonly string[]; polygon: PolygonMm }): Extract<Selector, { kind: 'region' }>;

@@ -27,6 +27,22 @@ function context(b?: RoutingBoardV2) {
 }
 const wire = `const a=analysis(); const c=a.conductor({lengthMm:10,widthMm:1,thicknessMm:.035,material:{conductivitySM:58e6,state:'constant isotropic coupon'}});`;
 
+test('via electrodes bind one captured object on the explicit board',()=>{
+  const base=board();
+  const vias=['signal','return'].map((id)=>({id,net:id==='signal'?'P':'GND',at:{x:id==='signal'?1:2,y:0},diameterMm:.6,drillMm:.3,type:'through' as const,fromLayer:'TOP',toLayer:'BOTTOM'}));
+  const b:RoutingBoardV2={...base,copper:{fixed:{...base.copper.fixed,vias},editable:{...base.copper.editable,vias:[]}}};
+  const {api,a}=context(b);const positive=api.globals.viaId('signal'),negative=api.globals.viaId('return');
+  assert.ok(Object.isFrozen(positive));
+  assert.doesNotThrow(()=>a.port({positive,negative,layer:'TOP'}));
+  assert.doesNotThrow(()=>a.port({positive,negative,positiveLayer:'BOTTOM',negativeLayer:'TOP'}));
+  assert.throws(()=>a.port({positive,negative,layer:'TOP',positiveLayer:'BOTTOM'}),/Use layer or separate/);
+  assert.throws(()=>a.port({positive,negative,positiveLayer:'BOTTOM',negativeLayer:'INNER_UNKNOWN'}),/Unknown physical port layer/);
+  assert.throws(()=>a.port({positive:api.globals.viaId('absent'),negative,layer:'TOP'}),/resolves to 0 physical vias/);
+  assert.throws(()=>api.globals.analysis().port({positive,negative,layer:'TOP'}),/requires an explicit board/);
+  const duplicate:RoutingBoardV2={...b,copper:{...b.copper,editable:{...b.copper.editable,vias:[vias[0]]}}};
+  assert.throws(()=>context(duplicate).a.port({positive,negative,layer:'TOP'}),/resolves to 2 physical vias/);
+});
+
 const tabulated = {format:'network-parameters' as const,representation:'S' as const,referenceTopology:'common' as const,nature:'unspecified' as const,referenceOhm:50,frequenciesHz:[1e6,1e9],parameters:[[[{real:0,imaginary:0},{real:.5,imaginary:0}],[{real:.5,imaginary:0},{real:0,imaginary:0}]],[[{real:0,imaginary:0},{real:.5,imaginary:0}],[{real:.5,imaginary:0},{real:0,imaginary:0}]]]};
 test('production runner awaits JS, retains failed/unknown checks and computes conductor DC', async () => {
   const result = await runAnalysisDsl({ code: `${wire}

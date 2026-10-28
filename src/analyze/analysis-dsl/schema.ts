@@ -19,6 +19,7 @@ export const selector = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('net'), name: text }),
   z.strictObject({ kind: z.literal('region'), layers: z.array(text).min(1), polygon }),
 ]);
+export const viaSelector=z.strictObject({kind:z.literal('viaId'),id:text});
 export const handle = z.strictObject({ kind: text, id: text, contextId: text });
 export const port = handle.refine(v => v.kind === 'port', 'Expected a port');
 const hs = (kinds: string[]) => handle.refine(v => kinds.includes(v.kind), `Expected ${kinds.join('/')}`);
