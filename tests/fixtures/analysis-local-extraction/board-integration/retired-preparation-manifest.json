@@ -1,0 +1,367 @@
+[
+  {
+    "path": "native/analyze/examples/field_factor_server.rs",
+    "sha256": "2fdedff1a3563e43eb6264815fa2e45a1f09642db8110c66bcdbdecac7d17bc2",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/actual-nine-source-qmc.py",
+    "sha256": "55621ac5a9830038e1ff24c11c2e48da354002f183ef499a40f1e8f6b4f9b1b3",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/adaptive-field-mesh.py",
+    "sha256": "1bfb8d92a595b808fcf2728fcd15dea335c98d07a797c59e1e5c3f9f2711eb9c",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/board-dc-reference.py",
+    "sha256": "1726f73d790d921b2c1da0ecdf4832e8a21b09c5818b6f2c93a43b2b083ea663",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/board-field-indicators.py",
+    "sha256": "54798186a8ce7de57b7cbd82408c59acbbe4216cb83f182892c9134998e91aab",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/board-field-reference.py",
+    "sha256": "c4babcc074587154251d9c2ca61d29d2925f7d6187b4803e1c61e63e2b2b1284",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/board-native-field.py",
+    "sha256": "53b96d8af16573bfbf5c5ebf0929d71682629c6f86a2291b17be6c744bfb139a",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/board-pair-reference.py",
+    "sha256": "7a7c7a8b758d171c26205c59c3e1a75a256a36498f98d02b433d27767e1fc364",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/compare-field-traces.py",
+    "sha256": "f704b09adfa99fde65d4b971a53c86ccde5f840b042f7834c872d4c33f854110",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/compare-native-field.py",
+    "sha256": "d14c08828087e6a53c87725b1a959ca3efa84b8d0cb4bfa4d2e465218962f69f",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/compare-source-matrix.py",
+    "sha256": "aaddf807e5ddec8fe71e6a691cb4e50c661e7dc2cae5517a6db102fb8342d1e1",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/compensated-table-reference.py",
+    "sha256": "cdef828cfc547cf469bad25ac5275386a2bdb4b975dffd2d8300e6e5856ca38b",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/cube-reference.json",
+    "sha256": "6998643d129323a4fa26e51b25e9a77a61abc7da0a21d7c34a56321d0fe64cae",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/cube-reference.py",
+    "sha256": "7f36fd05a0dadd600f5270ac61c32938b0c1b6e46ac0226a57d73a5b02adec1f",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/execute-real-via-step.py",
+    "sha256": "2df140febb7b46848075bdf130fe2b5fe706ea6d6f2bf0d1b2c7092f21f1cda1",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field-amg-requirements.txt",
+    "sha256": "a7e3e516943bfa5acc64eb64451dec41941a4f226cf7659da09fedc0306793e6",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field-boundary-audit.py",
+    "sha256": "1143995fe855eccc72bf4d86bf9dd3b9d6d63ce60e6f83dc352a2c3b8d240329",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field-column-cache-controls.py",
+    "sha256": "51c4c9d34dad3f7ddc384e90994f03b458bac9ef46e1edcde6548df9c5ea03bd",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field-cone-controls.py",
+    "sha256": "ce50b58eb6e709f485c1d918d3b196f9f07a838531a470752dbb38a478897762",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field-dyadic-controls.py",
+    "sha256": "59f16352187a4dc65599103abf02364f06c49b7af666c642b50957a2b9b6257a",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field-edge-parameter-audit.py",
+    "sha256": "08d70ce478c12da97e536e47c969e91e9258103b185b306dfe59075aed10e726",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field-metric-control.py",
+    "sha256": "be3943b5333c9a12400471dd0239ad4cafc9ed7e3ebdf396a137092fa7fb97ad",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field-quarter-controls.py",
+    "sha256": "fde77d02c44054e6bab56b57bc7fcfbb121cfa73800eb28b7edfd6113bf1fb05",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field-variational-controls.py",
+    "sha256": "6a5e9d6b3e6a3e8913764272df268ff3c99361532ae9bbd6deb2107270d5da50",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field_adapt.py",
+    "sha256": "f9b61b6ab113db2dbdf11de1dffda24ec95eeea00b5e087bae5b29d2d35ef02b",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field_amg.py",
+    "sha256": "1a7e1e16c856ba6eed7c147d201ba4e350fe4b9592480f504e010fed899292aa",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field_column_cache.py",
+    "sha256": "509c2ed6b7b0c7c6a9c049c450297f7f0b192f2e3fd205ea8fe489298f40d5e0",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field_dyadic.py",
+    "sha256": "e9ec507206b3a75f16aeb1637df367d9a0552f19bd88855b5865bf009b13c7dc",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field_faer.py",
+    "sha256": "067d6ffefebeb36297b696ea84bdd0db40283b81cc1741d856ad63cd2f6db93e",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field_metric.py",
+    "sha256": "9c72d0b5efbfcea183aee7b71d2e5817e2a77dcf3e031acfa2975ea2201b2bfd",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/field_variational.py",
+    "sha256": "a8b6a7188412b9df707a569c9e67390d96d9aba99581280a56e3901c16c558ed",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/freeze-compensated-table.py",
+    "sha256": "82da5cf4e263d56c95b3d227762524bd1751d96abf477ac4b98b6653698fc49c",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/import-field-column.py",
+    "sha256": "78c048bbeeb17c764c76cbce5d4e0d7c5565e4ba027b9d353f4393a75406afd8",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/import-reference-pair.py",
+    "sha256": "d2ee05ad4400f9d4e68e647616aa5817d915fccf7038bdb4ecd44b5db6364916",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/magnetic-null-reference.json",
+    "sha256": "da3e683a0259a9cb658f829d314d0a319b9015a69f5fdc108363043961b9dd7e",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/magnetic-null-reference.py",
+    "sha256": "fa80bf8a5a38ac67faff33ad1dffae646a4bc71b8c25652d0a1d3b7668b7bc10",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/make-compensated-probe.py",
+    "sha256": "58b0b0163883436fa02f1f82a000f7b3ae9085c7cdea8d6886b721cf721a3849",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/merge-field-columns.py",
+    "sha256": "f1531a3a36b0b439ce435152434a0733d70084b491eb133d7172429ea74abcb4",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/parallel-pair-reference.py",
+    "sha256": "2ad8f93c3333a0a5768ddde23c8d5701261111c91ea71a9c4067494644614aaa",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/parallel-preparation-step.py",
+    "sha256": "710060b2b1b9908ac7550e73668e2c148cd981729ced1af699fd714a0b76a6c7",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/parallel-reference-control.py",
+    "sha256": "30e955c92a3d7e14583cf87bc504f40cda9744093eeafc83427a8386a0ed8341",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/plan-real-via-step.py",
+    "sha256": "0f7599bc2f76e74bbd1ab903f15230cd3d0b75130ef24d1047ddd98a9590269e",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/plot-actual-source-control.py",
+    "sha256": "55acd2c81a8145a2b20960961bcdda2eb48a45292ad8f6ddc97be16e79d5cb12",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/plot-field-convergence.py",
+    "sha256": "3c2f037835b9ef35b74309d5365610ef46723280839ecc6a7c3fe5b050823274",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/plot-kernel-controls.py",
+    "sha256": "447a2531dec0e3be01d548662ae2a2a1ab727c22e7c342ab2110a8719bea7924",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/plot-native-real-field.py",
+    "sha256": "69cdf0379a3f09a348621eddb6109f1a0ab0c4422f89979282e15591c83118b6",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/plot-real-via-progress.py",
+    "sha256": "cecad59ad028ed9086ee5e1d73195ffea1d26ff8fdfe265f3672dad8fea64ac8",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/plot.py",
+    "sha256": "5df334d8eb579f2965c1c22aae5b8c36e402abc5e7e04ebb9393e45ea4fcc31f",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/prepare-adaptive-field.py",
+    "sha256": "2db58c60413acee448de818fa054d0a1bc7a51847ec75fe00a236e8521972ac2",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/prepare-field-checkpoint.py",
+    "sha256": "23aa067452ade8aaa525b52a911e93761cdfdea5c19c98ecc05d8c33192e53ab",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/prepare-field-columns.py",
+    "sha256": "3442005ca4d0cbf7f02d7f3ea71c7183a3a4893cab79ab5d1430b0150d563769",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/prepare-hybrid-reference-pairs.py",
+    "sha256": "c58d03fb483680c1dc86d0ba5e84c8e1e502853df7f199386cb1d5e706b498ca",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/prepare-integral-checkpoints.py",
+    "sha256": "c690020cdb8cbdb8b1798b23b478a030b71c4abd3e87d86e620ba1d693d806c4",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/prepare-integral-columns.py",
+    "sha256": "7e8912947e0d433a50007ab3c5b938d63d5d9526164aa8b1f5d248d24a59abad",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/prepare-outward-field.py",
+    "sha256": "43692aafc5af9229a67a0aa3a2a45701f6dba47b9a68ccaf8d347e00dcb678eb",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/prepare-pdn.py",
+    "sha256": "150f00e3540a2131c975597e47225ce98b71f5cc0f4a628e6393efe9db4d23fb",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/prepare-real-kernels.py",
+    "sha256": "5ef91d1c3065f6e205e9274657e487b75f44e3f874ec98a1a60bbcb0e57ffc21",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/prepare-real-via.py",
+    "sha256": "cc2e7b6dcf8ee55d6c76b90de34ac159eff0dacf272330b22a802cb4e83c2ebf",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/prepare-reference-pairs.py",
+    "sha256": "cd8e228c423d432fa4f8b8f633e67e96e5cd8a8565a25168bb89ad18ba5268b4",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/prepare-source-columns.py",
+    "sha256": "8fcd8ef475b8d7da08f7caf9616b675d0af6ae264da4dfb4eb47d98c11f88c11",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/prepare.py",
+    "sha256": "c6069ce7de17ce15961f7d9caebcae0cc30fd8cf658ce6e8681806c4d39974b0",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/rebase-near-checkpoints.py",
+    "sha256": "2c85921a6e7539109af8448cdef26646900eb9170863da160f4f0ce603d922f7",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/rebind-reference-state.py",
+    "sha256": "300d0a61c374f615a3d1941140b692c13809fdccf0cff6abce1a950e15f42026",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/recover-direct-preparation.py",
+    "sha256": "f68a8a1776c9abc7b8f59c97f077975fc1e22b20d8efd5f061f58ca16a6990b1",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/reference-hybrid-control.py",
+    "sha256": "c6421103a654c717e71e60f0a1dbf418caa38109ea816b21d9effd98bb6be9e0",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/run-compensated-probe.py",
+    "sha256": "82ab05c2140edb4d68d8d10e3b8ad8ca5866829cc75ac35481b8d56ea471130e",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/run-node-check.py",
+    "sha256": "d7de173fc0e0f9b884a3aa7bfcba07b14cd1cc433d22c7d917ce638957b8772e",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/run.py",
+    "sha256": "98652548e7903024a9a5b026006d78782127e397fcfdf048fbb6472065672ce6",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/self-arithmetic-reference.py",
+    "sha256": "9cdb738261d0d7b817fff227f98f432f548588775cfd562d05030cf26fa8365a",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/surface-newton-control.py",
+    "sha256": "1b569c61841562681449a6a57c5dffa8293ae2768880530b46c577571087c584",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/tetra-coefficient-reference.py",
+    "sha256": "0c2a09d13a9cee7909001791ca706b35db42997f46672a2aa02e77cc340c56e4",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/thin-prism-source-reference.json",
+    "sha256": "539ac0d04c2e9f511ead6407ae9e7a5081bae4d702886842854a59a32343ba67",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/board-integration/thin-prism-source-reference.py",
+    "sha256": "4afe3d46ec66364139c30736561e8227e5708b7c5749e12f3341f61fd192cbc3",
+    "action": "retire unused preparation/reference experiment source; exact bytes preserved in ignored archive"
+  }
+]

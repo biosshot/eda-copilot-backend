@@ -357,3 +357,16 @@ User authorized [full remaining P7 implementation](next-task-p7-final-integratio
 ### Parent review of final-integration attempt — 2026-10-25
 
 [Review](p7-final-integration-verification.md#parent-review--2026-10-25) accepts bounded automatic current reduction and finite foil contacts/voids only. Final P7 assignment is not completed: 0/3 successful real-board extraction scenarios, no AC via/return or scalable ROI path, and intermediate loss coverage remains absent. Whole P7 and extracted-board P8/arbitrary-channel P11 gates remain open. No new task issued.
+
+
+### P7 continuation from partial acceptance — 2026-10-25
+
+User confirmed continuation of [the existing final-integration assignment](next-task-p7-final-integration.md) from c3b436e. First demonstrate a real-board via/return extraction through the existing DSL, then continue remaining scale/loss/path/PDN acceptance. Necessary internal material/barrel/contact/mapping extensions are authorized; absence of their old implementation is not a new approval blocker. Whole P7 remains open.
+
+### P7 board-volume continuation ledger — 2026-10-25
+
+[Live implementation, methods and reproducible refusals](p7-board-integration-verification.md) preserve the common copper/material/electrode arrangement, finite foil/barrel volume space and split sparse-to-P6 candidates on all three boards. The first same-mesh magnetic approximation fails an exact nonuniform-current lower bound and is not admitted. Its hierarchical finite-volume replacement passes independent eight-prism and complete24-tetra controls with a retained empirical reference uncertainty; the original STM32 ROI still refuses near-pair reciprocity at q16 and reaches its construction deadline at q32. All4731 actual-board self integrals now pass unchanged refinement after geometric transition splitting. This is internal progress, **not** a successful board→P6→DSL result or resolution of original scaling. Reduction/recovery, intermediate losses, full channels, accepted PDN multiports, three-board direct DSL and extracted-board P8/P11 readiness remain open. No permission/contract blocker or whole-P7 closure is claimed.
+
+### P7 current single-method checkpoint — 2026-10-28
+
+The active [contract](next-task-p7-single-method-v1.md) supersedes earlier method searches and uses300s/2GiB/5%, with speed optimization deferred. Production local alternatives have been removed; independent references are test-only. The full unchanged direct-FEM attempt exits1 at220.237s/978.06MiB on the original KVL guard, not the wall cap. [Current matrix](p7-single-method-checkpoint.md) records the missing physical admission, worker/direct DSL, regional losses and0/3 real boards. P7 remains open and extracted-board P8/P11 dependencies remain unready. The older board integration ledger is historical.
