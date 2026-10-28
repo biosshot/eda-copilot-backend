@@ -1,0 +1,29 @@
+{
+  "kind": "unaccepted-real-roi-300s-audit-v1",
+  "stderrSha256": "5bb99a46bcba31003324acda22438776feb4d0bc38cbac79598e42b6134ea511",
+  "completedTrainingSolves": 4,
+  "candidateModes": {
+    "voltage": 28,
+    "current": 35
+  },
+  "completedP6FrequencyCall": 17,
+  "completedFullHoldouts": 2,
+  "refusedDrive": [
+    1,
+    -1
+  ],
+  "refusedFrequencyHz": 1000,
+  "failure": "LOCAL_VOLUME_RESIDUAL",
+  "normalizedKcl": 1.1087457960519757e-16,
+  "normalizedKvl": 1.2482831421062513e-07,
+  "unchangedKvlLimit": 1e-08,
+  "observableErrors": {
+    "portComplexVoltage": null,
+    "portComplexImpedance": null,
+    "integralConductorCurrent": null,
+    "totalPower": null,
+    "selectedRegionPower": null
+  },
+  "reason": "Hard equation guard refused before final artifact export; no spatial/domain/reference 5 percent admission",
+  "physicalAdmission": false
+}

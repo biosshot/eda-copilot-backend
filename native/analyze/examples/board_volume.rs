@@ -7,7 +7,7 @@ use pcb_analyze::extraction::local::volume_magnetic::MagneticApply;
 const FREQUENCIES_HZ: [f64; 17] = [1000.0, 1333.5214321633239, 1778.2794100389228, 2371.373705661655, 3162.2776601683795, 4216.965034285822, 5623.413251903491, 7498.942093324558, 10000.0, 13335.21432163324, 17782.79410038923, 23713.737056616552, 31622.776601683792, 42169.65034285823, 56234.13251903491, 74989.42093324558, 100000.0];
 fn main()->Result<(),String> {
     let started=std::time::Instant::now();
-    let remaining=||std::time::Duration::from_secs(120).checked_sub(started.elapsed())
+    let remaining=||std::time::Duration::from_secs(300).checked_sub(started.elapsed())
         .filter(|t|!t.is_zero()).ok_or("LOCAL_DEADLINE: shared cold calculation deadline");
     let args:Vec<_>=std::env::args().collect();
     if !(3..=6).contains(&args.len()) {return Err("board_volume <board.json> <request.json> [magnetic-config] [geometry|full|train] [field-request.json]".into());}
@@ -84,7 +84,7 @@ fn main()->Result<(),String> {
         if args.get(4).is_some_and(|s|s=="train") {
             for frequency in [1e4,1e5] {for input in 0..ports.len() {
                 let mut injection=vec![0.;currents.potential_count()];let[a,b]=ports[input];injection[contacts[a].1]=1.;injection[contacts[b].1]=-1.;
-                let full=solver.as_ref().unwrap().solve(frequency,&injection,&vec![0.;injection.len()],remaining()?.min(std::time::Duration::from_secs(30)))?;
+                let full=solver.as_ref().unwrap().solve(frequency,&injection,&vec![0.;injection.len()],remaining()?)?;
                 let added=basis.include_solution(&currents,&full,budget)?;eprintln!("training port {input}: added {added:?}, {:?}",full.audit);
                 training.push(serde_json::json!({"frequencyHz":frequency,"port":input,"addedVoltageCurrent":added,"audit":full.audit}));training_solutions.push((frequency,input,full));
             }}
@@ -113,7 +113,7 @@ fn main()->Result<(),String> {
                 let mut injection=vec![0.;currents.potential_count()];
                 for(p,&[a,b])in ports.iter().enumerate(){injection[contacts[a].1]+=drive[p];injection[contacts[b].1]-=drive[p];}
                 let full=if drive==[1.,0.] {training_solutions.iter().find(|(f,p,_)|*f==frequency&&*p==0).map(|(_,_,s)|s.clone())}else{None};
-                let full=match full {Some(v)=>v,None=>solver.solve(frequency,&injection,&vec![0.;injection.len()],remaining()?.min(std::time::Duration::from_secs(30)))?};
+                let full=match full {Some(v)=>v,None=>solver.solve(frequency,&injection,&vec![0.;injection.len()],remaining()?)?};
                 eprintln!("full drive {drive:?}: {:?}",full.audit);
                 let mut rhs=reduced.port_rhs(&drive);rhs.resize(2*reduced_n,0.);
                 let x=reduced.solve(2.*std::f64::consts::PI*frequency,rhs,&vec![0.;reduced_n],&mut Counters::default())?;
