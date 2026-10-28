@@ -27,7 +27,7 @@ function context(b?: RoutingBoardV2) {
 }
 const wire = `const a=analysis(); const c=a.conductor({lengthMm:10,widthMm:1,thicknessMm:.035,material:{conductivitySM:58e6,state:'constant isotropic coupon'}});`;
 
-test('via electrodes bind one captured object on the explicit board',()=>{
+test('via electrodes bind one captured object on the explicit board',async()=>{
   const base=board();
   const vias=['signal','return'].map((id)=>({id,net:id==='signal'?'P':'GND',at:{x:id==='signal'?1:2,y:0},diameterMm:.6,drillMm:.3,type:'through' as const,fromLayer:'TOP',toLayer:'BOTTOM'}));
   const b:RoutingBoardV2={...base,copper:{fixed:{...base.copper.fixed,vias},editable:{...base.copper.editable,vias:[]}}};
@@ -41,6 +41,11 @@ test('via electrodes bind one captured object on the explicit board',()=>{
   assert.throws(()=>api.globals.analysis().port({positive,negative,layer:'TOP'}),/requires an explicit board/);
   const duplicate:RoutingBoardV2={...b,copper:{...b.copper,editable:{...b.copper.editable,vias:[vias[0]]}}};
   assert.throws(()=>context(duplicate).a.port({positive,negative,layer:'TOP'}),/resolves to 2 physical vias/);
+  const compiled=await runAnalysisDsl({board:b,code:`const a=analysis({board});a.port({positive:viaId('signal'),negative:viaId('return'),positiveLayer:'BOTTOM',negativeLayer:'TOP'});a.log({level:'info',message:'physical via contacts bound'});`});
+  assert.equal(compiled.status,'complete',JSON.stringify(compiled.error));
+  assert.equal((compiled.reports[0].logs[0] as {message:string}).message,'physical via contacts bound');
+  const refused=await runAnalysisDsl({board:b,code:`analysis({board}).port({positive:viaId('absent'),negative:viaId('return'),layer:'TOP'});`});
+  assert.equal(refused.status,'failed');assert.match(refused.error?.message??'',/resolves to 0 physical vias/);
 });
 
 const tabulated = {format:'network-parameters' as const,representation:'S' as const,referenceTopology:'common' as const,nature:'unspecified' as const,referenceOhm:50,frequenciesHz:[1e6,1e9],parameters:[[[{real:0,imaginary:0},{real:.5,imaginary:0}],[{real:.5,imaginary:0},{real:0,imaginary:0}]],[[{real:0,imaginary:0},{real:.5,imaginary:0}],[{real:.5,imaginary:0},{real:0,imaginary:0}]]]};
