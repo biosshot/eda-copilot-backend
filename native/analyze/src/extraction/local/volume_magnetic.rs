@@ -19,7 +19,7 @@ struct Enrichment {
     source_integrals:Vec<[f64;9]>,
 }
 pub struct Operator<'a> {
-    mesh:&'a LayeredMesh,
+    mesh:&'a LayeredMesh,parallelism:Par,
     free:usize,
     cell_dofs:Vec<Vec<usize>>,cell_basis:Vec<Vec<usize>>,degree:usize,partition_count:usize,indices:Vec<[usize;4]>,
     terms:SparseColMat<usize,f64>,
@@ -55,15 +55,15 @@ impl<'a> Operator<'a> {
         let matrix=SparseColMat::<usize,f64>::try_new_from_triplets(free,free,&trips).map_err(|e|error("MAGNETIC_MATRIX",&e.to_string()))?;
         drop(trips);
         let symbolic=cholesky::factorize_symbolic_cholesky(matrix.symbolic(),Side::Lower,Default::default(),Default::default()).map_err(|e|error("MAGNETIC_MATRIX",&e.to_string()))?;
-        let scratch=symbolic.factorize_numeric_llt_scratch::<f64>(Par::Seq,Default::default());
-        let solve=symbolic.solve_in_place_scratch::<f64>(3,Par::Seq);
+        let scratch=symbolic.factorize_numeric_llt_scratch::<f64>(super::parallel::current(),Default::default());
+        let solve=symbolic.solve_in_place_scratch::<f64>(3,super::parallel::current());
         let plan=assembled.checked_add(symbolic.len_val().checked_mul(16).ok_or_else(||error("MEMORY_LIMIT","magnetic fill overflow"))?).and_then(|v|v.checked_add(scratch.unaligned_bytes_required().max(solve.unaligned_bytes_required()))).ok_or_else(||error("MEMORY_LIMIT","magnetic workspace overflow"))?.max(base);
         budget.check(plan)?;
         let mut values=vec![0.;symbolic.len_val()];let mut workspace=MemBuffer::try_new(scratch).map_err(|_|error("MEMORY_LIMIT","magnetic factor workspace"))?;
-        symbolic.factorize_numeric_llt(&mut values,matrix.as_ref(),Side::Lower,Default::default(),Par::Seq,MemStack::new(&mut workspace),Default::default()).map_err(|_|error("MAGNETIC_SINGULAR","finite-box Laplacian not positive definite; no regularization"))?;
+        symbolic.factorize_numeric_llt(&mut values,matrix.as_ref(),Side::Lower,Default::default(),super::parallel::current(),MemStack::new(&mut workspace),Default::default()).map_err(|_|error("MAGNETIC_SINGULAR","finite-box Laplacian not positive definite; no regularization"))?;
         let cell_dofs:Vec<Vec<usize>>=mesh.tetrahedra.iter().map(|t|t.nodes).chain(mesh.copper_tetrahedra.iter().map(|t|t.nodes)).map(|nodes|nodes.into_iter().map(|i|map[i]).collect()).collect();
         let cell_basis=cell_dofs.iter().map(|_|vec![0,1,2,3]).collect();
-        Ok(Self{mesh,free,cell_dofs,cell_basis,degree:1,partition_count:4,indices:vec![[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]],terms:matrix,triangular:false,symbolic:Some(symbolic),values,planned_bytes:plan,enrichment:None,enrichment_radius_m:None})
+        Ok(Self{mesh,parallelism:super::parallel::current(),free,cell_dofs,cell_basis,degree:1,partition_count:4,indices:vec![[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]],terms:matrix,triangular:false,symbolic:Some(symbolic),values,planned_bytes:plan,enrichment:None,enrichment_radius_m:None})
     }
     pub fn new_enriched(mesh:&'a LayeredMesh,budget:AllocationBudget,interface_order:usize)->Result<Self> {
         Self::new_enriched_degree(mesh,budget,interface_order,1)
@@ -139,7 +139,7 @@ impl<'a> Operator<'a> {
         let symbolic=Some(factor);
         drop(private);
         let runtime=persistent.checked_add(free.checked_mul(512).ok_or_else(||error("MEMORY_LIMIT","potential action workspace overflow"))?).and_then(|n|n.checked_add(mesh.copper_tetrahedra.len().checked_mul(512)?)).ok_or_else(||error("MEMORY_LIMIT","potential runtime plan overflow"))?;budget.check(runtime)?;
-        Ok(Self{mesh,free,cell_dofs,cell_basis,degree:body_degree.max(trace_degree),partition_count,indices,terms:matrix,triangular:true,symbolic,values,planned_bytes:plan.max(graph_plan).max(runtime),enrichment:None,enrichment_radius_m:None})
+        Ok(Self{mesh,parallelism:super::parallel::current(),free,cell_dofs,cell_basis,degree:body_degree.max(trace_degree),partition_count,indices,terms:matrix,triangular:true,symbolic,values,planned_bytes:plan.max(graph_plan).max(runtime),enrichment:None,enrichment_radius_m:None})
     }
     pub fn new_enriched_degree(mesh:&'a LayeredMesh,budget:AllocationBudget,interface_order:usize,degree:usize)->Result<Self> {
         if ![4,8,16].contains(&interface_order) {return Err(error("MAGNETIC_QUADRATURE","enrichment interface orders4/8/16 required"));}
@@ -158,12 +158,12 @@ impl<'a> Operator<'a> {
         Self::enrich(Self::new_polynomials(mesh,budget,3,Some((trace_degree,bubble_degree,stars)))?,budget,interface_order)
     }
     fn solve(&self,rhs:&mut Mat<f64>)->Result<()> {
-        if let Some(symbolic)=&self.symbolic {let mut workspace=MemBuffer::try_new(symbolic.solve_in_place_scratch::<f64>(rhs.ncols(),Par::Seq)).map_err(|_|error("MEMORY_LIMIT","magnetic solve workspace"))?;cholesky::LltRef::new(symbolic,&self.values).solve_in_place_with_conj(Conj::No,rhs.as_mut(),Par::Seq,MemStack::new(&mut workspace));Ok(())}
+        if let Some(symbolic)=&self.symbolic {let mut workspace=MemBuffer::try_new(symbolic.solve_in_place_scratch::<f64>(rhs.ncols(),self.parallelism)).map_err(|_|error("MEMORY_LIMIT","magnetic solve workspace"))?;cholesky::LltRef::new(symbolic,&self.values).solve_in_place_with_conj(Conj::No,rhs.as_mut(),self.parallelism,MemStack::new(&mut workspace));Ok(())}
         else {Err(error("MAGNETIC_MATRIX","missing direct factor"))}
     }
     fn enrich(mut out:Self,budget:AllocationBudget,interface_order:usize)->Result<Self> {
         let mesh=out.mesh;
-        let scratch=out.symbolic.as_ref().map_or(faer::dyn_stack::StackReq::empty(),|s|s.solve_in_place_scratch::<f64>(9,Par::Seq));
+        let scratch=out.symbolic.as_ref().map_or(faer::dyn_stack::StackReq::empty(),|s|s.solve_in_place_scratch::<f64>(9,out.parallelism));
         let plan=out.planned_bytes.checked_add(out.free.checked_mul(9*24).ok_or_else(||error("MEMORY_LIMIT","exterior basis plan overflow"))?).and_then(|v|v.checked_add(mesh.copper_tetrahedra.len().checked_mul(9*8)?)).and_then(|v|v.checked_add(scratch.unaligned_bytes_required())).ok_or_else(||error("MEMORY_LIMIT","exterior plan overflow"))?;
         budget.check(plan)?;
         let mut lo=[f64::INFINITY;3];let mut hi=[f64::NEG_INFINITY;3];

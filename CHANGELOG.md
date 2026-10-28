@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Correct the direct-FEM opposite-drive defect-correction stopping rule without weakening KCL/KVL or power guards. Separate diagnostic preparation from the full developer verification, add stage timings and bounded opt-in faer threads; retain serial defaults after the same-binary comparison. Record the actual ROI's failed field/domain sensitivity check (88.8% port change), so no extracted-board model, worker cache or P8/P11 readiness is admitted.
+
 - Retain the certified physical charge-coordinate P6 conditioning fallback with load-cache invalidation. Verify the exact original17-frequency sweep for both ports/opposite drive, repeated loads, corrupt-coordinate refusal and existing structural/energy negatives without loosening physical guards.
 
 - Apply the revised shared300s/2GiB P7 diagnostic budget without changing direct FEM or physical guards. Preserve its220.237s KVL refusal, retire unused preparation sources with local hash-bound archives, and extend focused P6/selector regressions; real-board physical and worker/DSL admission remain open.

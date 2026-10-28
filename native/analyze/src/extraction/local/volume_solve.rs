@@ -42,7 +42,8 @@ impl<'a> Solver<'a> {
     fn shape(&self,x:&[f64])->Vec<f64> {let mut u=vec![0.;self.space.potential_count()];for(i,&node)in self.free_nodes.iter().enumerate(){u[node]=x[i];}u}
     fn charge(&self,u:&[f64],z:&[f64])->Result<Vec<f64>> {let mut q=if u.iter().all(|&v|v==0.) {vec![0.;u.len()]}else{self.field.apply(u)?};for(j,h)in self.component_charge.iter().enumerate(){for(i,&v)in h.iter().enumerate(){q[i]+=v*z[j];}}Ok(q)}
     fn magnetic(&self,i:&[f64])->Result<Vec<f64>> {if i.iter().all(|&v|v==0.) {Ok(vec![0.;i.len()])}else{self.magnetic.apply(self.space,i)}}
-    fn apply(&self,x:&[f64],omega:f64)->Result<Vec<f64>> {
+    fn apply(&self,x:&[f64],omega:f64)->Result<Vec<f64>> {Ok(self.apply_with_kvl_scale(x,omega)?.0)}
+    fn apply_with_kvl_scale(&self,x:&[f64],omega:f64)->Result<(Vec<f64>,Vec<f64>)> {
         let nv=self.space.potential_count();let ni=self.space.current_count();let n=nv+ni;let nf=self.free_nodes.len();
         let ur=self.shape(&x[..nv]);let ui=self.shape(&x[n..n+nv]);
         let cr=self.charge(&ur,&x[nf..nv])?;let ci=self.charge(&ui,&x[n+nf..n+nv])?;
@@ -51,9 +52,16 @@ impl<'a> Solver<'a> {
         let mut out=vec![0.;2*n];
         for(i,&node)in self.free_nodes.iter().enumerate(){out[i]=dr[node]-omega*ci[node];out[n+i]=di[node]+omega*cr[node];}
         for(j,component)in self.space.components.iter().enumerate(){out[nf+j]=-omega*component.iter().map(|&i|ci[i]).sum::<f64>();out[n+nf+j]=omega*component.iter().map(|&i|cr[i]).sum::<f64>();}
-        for(i,c)in self.space.cells.iter().enumerate(){for k in 0..3{let j=3*i+k;out[nv+j]=c.resistance_ohm*ir[j]-gr[j]-omega*li[j];out[n+nv+j]=c.resistance_ohm*ii[j]-gi[j]+omega*lr[j];}}
+        let mut kvl_scale=vec![0.;ni];
+        for(i,c)in self.space.cells.iter().enumerate(){for k in 0..3{
+            let j=3*i+k;
+            out[nv+j]=Sum::from(ir[j]).mul(c.resistance_ohm).sub(Sum::from(gr[j])).sub(Sum::from(li[j]).mul(omega)).value();
+            out[n+nv+j]=Sum::from(ii[j]).mul(c.resistance_ohm).sub(Sum::from(gi[j])).add(Sum::from(lr[j]).mul(omega)).value();
+            let gradient_scale=(1..4).map(|a|c.incidence[a][k].abs()*((ur[c.potentials[a]]-ur[c.potentials[0]]).abs()+(ui[c.potentials[a]]-ui[c.potentials[0]]).abs())).sum::<f64>();
+            kvl_scale[j]=c.resistance_ohm*(ir[j].abs()+ii[j].abs())+gradient_scale+omega*(lr[j].abs()+li[j].abs());
+        }}
         for part in 0..2 {for j in 0..n {out[part*n+j]*=self.scale[j];}}
-        if out.iter().any(|v|!v.is_finite()){return Err(error("VOLUME_SOLVE","nonfinite descriptor action"));}Ok(out)
+        if out.iter().any(|v|!v.is_finite()){return Err(error("VOLUME_SOLVE","nonfinite descriptor action"));}Ok((out,kvl_scale))
     }
     fn precondition(&self,input:&[f64],omega:f64)->Result<Vec<f64>> {
         let nv=self.space.potential_count();let ni=self.space.current_count();let n=nv+ni;let nf=self.free_nodes.len();let nc=self.space.components.len();
@@ -99,25 +107,52 @@ impl<'a> Solver<'a> {
             }
             let mut y=vec![0.;used];for i in (0..used).rev(){y[i]=(g[i]-(i+1..used).map(|j|h[i][j]*y[j]).sum::<f64>())/h[i][i];}
             for j in 0..used {for i in 0..2*n {let next=Sum{hi:x[i],lo:xlow[i]}.add(Sum::from(z[j][i]).mul(y[j]));x[i]=next.hi;xlow[i]=next.lo;}}
-            let action=self.apply(&x,omega)?;let low_action=self.apply(&xlow,omega)?;
+            let (action,kvl_scale)=self.apply_with_kvl_scale(&x,omega)?;let (low_action,low_kvl_scale)=self.apply_with_kvl_scale(&xlow,omega)?;
             residual=b.iter().zip(action.iter().zip(&low_action)).map(|(b,(a,l))|Sum::from(*b).sub(Sum::from(*a)).sub(Sum::from(*l)).value()).collect();relative=norm(&residual)/scale;
-            if relative<=1e-14 {break;}
+            // A small global norm does not resolve weak constitutive rows.
+            // Continue the existing defect correction until the original local
+            // KVL metric is resolved too; final physical guards stay unchanged.
+            let local_scale=kvl_scale.iter().zip(&low_kvl_scale).map(|(a,b)|a+b).collect::<Vec<_>>();
+            let reference=local_scale.iter().copied().fold(0.,f64::max);
+            let local=(0..ni).map(|j|residual[nv+j].hypot(residual[n+nv+j])/self.scale[nv+j]/local_scale[j].max(1e-12*reference).max(f64::MIN_POSITIVE)).fold(0.,f64::max);
+            eprintln!("full refinement restart={_restart} global={relative:e} localKVL={local:e}");
+            if relative<=1e-14&&local<=1e-9 {break;}
         }
         if relative>1e-12||!relative.is_finite(){
             let worst=(0..residual.len()).max_by(|&a,&b|residual[a].abs().total_cmp(&residual[b].abs())).unwrap();
             return Err(error("VOLUME_CONVERGENCE",&format!("GMRES iterations={iterations} relative={relative:e}, worst scaled row={worst}, residual={:e}, rhs={:e}",residual[worst],b[worst])));
         }
-        let ur=self.shape(&x[..nv]);let ui=self.shape(&x[n..n+nv]);let ir=x[nv..n].to_vec();let ii=x[n+nv..].to_vec();
+        let ur=self.shape(&x[..nv]);let ui=self.shape(&x[n..n+nv]);let ir_hi=x[nv..n].to_vec();let ii_hi=x[n+nv..].to_vec();
+        let ir_low=xlow[nv..n].to_vec();let ii_low=xlow[n+nv..].to_vec();
         let urlow=self.shape(&xlow[..nv]);let uilow=self.shape(&xlow[n..n+nv]);
         let combine=|a:Vec<f64>,b:Vec<f64>|->Vec<f64>{a.iter().zip(b).map(|(a,b)|Sum::from(*a).add(Sum::from(b)).value()).collect()};
-        let cr=combine(self.charge(&ur,&x[nf..nv])?,self.charge(&urlow,&xlow[nf..nv])?);let ci=combine(self.charge(&ui,&x[n+nf..n+nv])?,self.charge(&uilow,&xlow[n+nf..n+nv])?);let dr=self.space.divergence(&ir)?;let di=self.space.divergence(&ii)?;
+        // Keep the current correction as well as the potential correction.
+        // Auditing only the high current against the corrected gradient is a
+        // different state, especially in weak transverse current coordinates.
+        let ir=combine(ir_hi.clone(),ir_low.clone());let ii=combine(ii_hi.clone(),ii_low.clone());
+        let cr=combine(self.charge(&ur,&x[nf..nv])?,self.charge(&urlow,&xlow[nf..nv])?);let ci=combine(self.charge(&ui,&x[n+nf..n+nv])?,self.charge(&uilow,&xlow[n+nf..n+nv])?);let dr=combine(self.space.divergence(&ir_hi)?,self.space.divergence(&ir_low)?);let di=combine(self.space.divergence(&ii_hi)?,self.space.divergence(&ii_low)?);
         let mut scale_i=vec![0.;nv];for(i,cell)in self.space.cells.iter().enumerate(){for k in 0..4 {for axis in 0..3 {scale_i[cell.potentials[k]]+=cell.incidence[k][axis].abs()*(ir[3*i+axis].abs()+ii[3*i+axis].abs());}}}
         let reference=scale_i.iter().copied().fold(0.,f64::max);let mut kcl:f64=0.;
         for i in 0..nv {let denominator=scale_i[i]+omega*(cr[i].abs()+ci[i].abs())+real_injection[i].abs()+imaginary_injection[i].abs();kcl=kcl.max((dr[i]-omega*ci[i]-real_injection[i]).hypot(di[i]+omega*cr[i]-imaginary_injection[i])/denominator.max(1e-12*reference).max(f64::MIN_POSITIVE));}
-        let lr=self.magnetic(&ir)?;let li=self.magnetic(&ii)?;let gr=combine(self.space.gradient(&ur)?,self.space.gradient(&urlow)?);let gi=combine(self.space.gradient(&ui)?,self.space.gradient(&uilow)?);let mut residual_v=vec![];let mut denominator_v=vec![];
-        for(i,cell)in self.space.cells.iter().enumerate(){for axis in 0..3 {let j=3*i+axis;residual_v.push((cell.resistance_ohm*ir[j]-gr[j]-omega*li[j]).hypot(cell.resistance_ohm*ii[j]-gi[j]+omega*lr[j]));let gradient_scale=(1..4).map(|k|cell.incidence[k][axis].abs()*((ur[cell.potentials[k]]-ur[cell.potentials[0]]).abs()+(ui[cell.potentials[k]]-ui[cell.potentials[0]]).abs())).sum::<f64>();denominator_v.push(cell.resistance_ohm*(ir[j].abs()+ii[j].abs())+gradient_scale+omega*(lr[j].abs()+li[j].abs()));}}
+        let lr_hi=self.magnetic(&ir_hi)?;let li_hi=self.magnetic(&ii_hi)?;
+        let lr_low=self.magnetic(&ir_low)?;let li_low=self.magnetic(&ii_low)?;
+        let lr=combine(lr_hi.clone(),lr_low.clone());let li=combine(li_hi.clone(),li_low.clone());
+        let gr_hi=self.space.gradient(&ur)?;let gi_hi=self.space.gradient(&ui)?;
+        let gr_low=self.space.gradient(&urlow)?;let gi_low=self.space.gradient(&uilow)?;
+        let mut residual_v=vec![];let mut denominator_v=vec![];
+        for(i,cell)in self.space.cells.iter().enumerate(){for axis in 0..3 {
+            let j=3*i+axis;
+            let real=Sum{hi:ir_hi[j],lo:ir_low[j]}.mul(cell.resistance_ohm)
+                .sub(Sum{hi:gr_hi[j],lo:gr_low[j]}).sub(Sum{hi:li_hi[j],lo:li_low[j]}.mul(omega));
+            let imaginary=Sum{hi:ii_hi[j],lo:ii_low[j]}.mul(cell.resistance_ohm)
+                .sub(Sum{hi:gi_hi[j],lo:gi_low[j]}).add(Sum{hi:lr_hi[j],lo:lr_low[j]}.mul(omega));
+            residual_v.push(real.value().hypot(imaginary.value()));
+            let gradient_scale=(1..4).map(|k|cell.incidence[k][axis].abs()*((ur[cell.potentials[k]]-ur[cell.potentials[0]]).abs()+(ui[cell.potentials[k]]-ui[cell.potentials[0]]).abs())).sum::<f64>();
+            denominator_v.push(cell.resistance_ohm*(ir[j].abs()+ii[j].abs())+gradient_scale+omega*(lr[j].abs()+li[j].abs()));
+        }}
         let reference=denominator_v.iter().copied().fold(0.,f64::max);let kvl=residual_v.iter().zip(&denominator_v).map(|(r,s)|r/s.max(1e-12*reference).max(f64::MIN_POSITIVE)).fold(0.,f64::max);
-        if kcl>1e-8||kvl>1e-8||!kcl.is_finite()||!kvl.is_finite(){return Err(error("VOLUME_RESIDUAL",&format!("full KCL={kcl:e} KVL={kvl:e}")));}
+        if kcl>1e-8||kvl>1e-8||!kcl.is_finite()||!kvl.is_finite(){let worst=(0..residual_v.len()).max_by(|&a,&b|(residual_v[a]/denominator_v[a].max(1e-12*reference)).total_cmp(&(residual_v[b]/denominator_v[b].max(1e-12*reference)))).unwrap();
+            return Err(error("VOLUME_RESIDUAL",&format!("full KCL={kcl:e} KVL={kvl:e}; row={worst} residual={:e} denominator={:e} reference={reference:e} currentHi={:e} currentLow={:e} gradientHi={:e} gradientLow={:e}",residual_v[worst],denominator_v[worst],ir_hi[worst],ir_low[worst],gr_hi[worst],gr_low[worst])));}
         let mut input_real=dot(&ur,real_injection)+dot(&ui,imaginary_injection);let mut input_imaginary=dot(&ui,real_injection)-dot(&ur,imaginary_injection);
         let mut electric=dot(&ur,&cr)+dot(&ui,&ci);
         for(j,component)in self.space.components.iter().enumerate(){let qr=component.iter().map(|&i|real_injection[i]).sum::<f64>();let qi=component.iter().map(|&i|imaginary_injection[i]).sum::<f64>();let zr=x[nf+j];let zi=x[n+nf+j];input_real+=zr*qr+zi*qi;input_imaginary+=zi*qr-zr*qi;electric+=zr*component.iter().map(|&i|cr[i]).sum::<f64>()+zi*component.iter().map(|&i|ci[i]).sum::<f64>();}

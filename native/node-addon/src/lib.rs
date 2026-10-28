@@ -267,7 +267,11 @@ pub struct AnalysisDcSession { inner: pcb_analyze::dc::Session }
 #[napi]
 impl AnalysisDcSession {
     #[napi(constructor)]
-    pub fn new() -> Self { Self { inner: Default::default() } }
+    pub fn new() -> Self {
+        // Preserve pre-Rayon serial defaults; this allocates no pool or fields.
+        pcb_analyze::extraction::local::parallel::initialize();
+        Self { inner: Default::default() }
+    }
     #[napi]
     pub fn solve(&mut self, request: Value) -> Result<Value> {
         let request=serde_json::from_value::<pcb_analyze::dc::Request>(request)
@@ -284,7 +288,11 @@ pub struct AnalysisElectricalSession { inner: pcb_analyze::electrical::Session }
 #[napi]
 impl AnalysisElectricalSession {
     #[napi(constructor)]
-    pub fn new() -> Self { Self { inner: Default::default() } }
+    pub fn new() -> Self {
+        // Local sparse FEM opts into its own bounded pool explicitly.
+        pcb_analyze::extraction::local::parallel::initialize();
+        Self { inner: Default::default() }
+    }
     #[napi]
     pub fn solve(&mut self, request: Value) -> Result<Value> {
         let request=serde_json::from_value::<pcb_analyze::electrical::Request>(request)

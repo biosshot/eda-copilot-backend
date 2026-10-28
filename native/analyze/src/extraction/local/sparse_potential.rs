@@ -6,6 +6,7 @@ use faer::{dyn_stack::{MemBuffer,MemStack,StackReq},sparse::{linalg::{amd,choles
 fn add(base:usize,count:usize,width:usize)->Result<usize>{base.checked_add(count.checked_mul(width).ok_or_else(||error("MEMORY_LIMIT","sparse phase plan overflow"))?).ok_or_else(||error("MEMORY_LIMIT","sparse phase plan overflow"))}
 fn admit(budget:AllocationBudget,plan:usize,phase:&str)->Result<()> {budget.check(plan).map_err(|e|format!("{e}; sparse {phase}: requestedBytes={plan}, admittedBytes={}",budget.max_bytes))}
 pub(crate) fn factor(matrix:&SparseColMat<usize,f64>,base:usize,budget:AllocationBudget,private:&[usize])->Result<(cholesky::SymbolicCholesky<usize>,Vec<f64>,usize,usize)> {
+ let factor_started=std::time::Instant::now();
  let n=matrix.nrows();let nnz=matrix.compute_nnz();let live=add(base,nnz,16)?;let mut peak=live;
  let order_req=amd::order_scratch::<usize>(n,nnz);
  let order_plan=add(add(live,n,16)?,order_req.unaligned_bytes_required(),1)?;admit(budget,order_plan,"ordering")?;peak=peak.max(order_plan);
@@ -44,13 +45,18 @@ pub(crate) fn factor(matrix:&SparseColMat<usize,f64>,base:usize,budget:Allocatio
  let analysis_req=StackReq::all_of(&[StackReq::new::<usize>(n+1),StackReq::new::<usize>(nnz),n_req,n_req,n_req,StackReq::or(cholesky::supernodal::factorize_supernodal_symbolic_cholesky_scratch::<usize>(n),cholesky::simplicial::factorize_simplicial_symbolic_cholesky_scratch::<usize>(n))]);
  let symbolic_plan=add(add(add(live,fill,8)?,n,288)?,analysis_req.unaligned_bytes_required(),1)?;admit(budget,symbolic_plan,"symbolic-pattern")?;peak=peak.max(symbolic_plan);
  let parameters=cholesky::CholeskySymbolicParams{supernodal_params:SymbolicSupernodalParams{relax:None},..Default::default()};
+ let symbolic_started=std::time::Instant::now();
+ let ordering_seconds=factor_started.elapsed().as_secs_f64();
  let symbolic=cholesky::factorize_symbolic_cholesky(matrix.symbolic(),Side::Upper,cholesky::SymmetricOrdering::Custom(faer::perm::PermRef::new_checked(&perm,&inverse,n)),parameters).map_err(|e|error("MAGNETIC_MATRIX",&e.to_string()))?;
  drop(perm);drop(inverse);
  if symbolic.len_val()>fill.checked_mul(2).ok_or_else(||error("MEMORY_LIMIT","sparse fill bound overflow"))? {return Err(error("MEMORY_LIMIT","unamalgamated panel fill exceeded predeclared symbolic bound"));}
- let scratch=symbolic.factorize_numeric_llt_scratch::<f64>(Par::Seq,Default::default());let solve=symbolic.solve_in_place_scratch::<f64>(9,Par::Seq);
+ let scratch=symbolic.factorize_numeric_llt_scratch::<f64>(super::parallel::current(),Default::default());let solve=symbolic.solve_in_place_scratch::<f64>(9,super::parallel::current());
  let numeric_plan=add(add(add(add(live,fill,8)?,n,256)?,symbolic.len_val(),8)?,scratch.unaligned_bytes_required().max(solve.unaligned_bytes_required()),1)?;admit(budget,numeric_plan,"numeric-factor")?;peak=peak.max(numeric_plan);
+ let symbolic_seconds=symbolic_started.elapsed().as_secs_f64();
+ let numeric_started=std::time::Instant::now();
  let mut values=vec![0.;symbolic.len_val()];let mut workspace=MemBuffer::try_new(scratch).map_err(|_|error("MEMORY_LIMIT","sparse numeric workspace"))?;
- symbolic.factorize_numeric_llt(&mut values,matrix.as_ref(),Side::Upper,Default::default(),Par::Seq,MemStack::new(&mut workspace),Default::default()).map_err(|_|error("MAGNETIC_SINGULAR","potential Laplacian unresolved; no regularization"))?;
+ symbolic.factorize_numeric_llt(&mut values,matrix.as_ref(),Side::Upper,Default::default(),super::parallel::current(),MemStack::new(&mut workspace),Default::default()).map_err(|_|error("MAGNETIC_SINGULAR","potential Laplacian unresolved; no regularization"))?;
+ eprintln!("P7_FACTOR n={n} orderingAndPrefill={ordering_seconds:.6}s symbolic={symbolic_seconds:.6}s numeric={:.6}s parallelism={:?} kind={}",numeric_started.elapsed().as_secs_f64(),super::parallel::current(),if matches!(symbolic.raw(),cholesky::SymbolicCholeskyRaw::Supernodal(_)){"supernodal"}else{"simplicial"});
  let persistent=add(add(add(live,fill,8)?,n,256)?,symbolic.len_val(),8)?;
  Ok((symbolic,values,peak,persistent))
 }

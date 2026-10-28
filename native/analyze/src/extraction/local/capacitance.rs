@@ -31,6 +31,7 @@ pub struct Boundary {
 
 pub struct CapacitanceOperator<'a> {
     mesh: &'a LayeredMesh,
+    parallelism:Par,
     trace: BTreeMap<usize, Vec<(usize, f64)>>,
     far: BTreeSet<usize>,
     free_map: Vec<usize>,
@@ -67,7 +68,7 @@ impl<'a> CapacitanceOperator<'a> {
         add(self.terms.capacity(),std::mem::size_of::<(usize,usize,f64)>())?;add(self.rhs_terms.capacity(),std::mem::size_of::<(usize,usize,f64)>())?;add(self.factor_values.capacity(),16)?;add(self.free_map.capacity(),8)?;add(self.free,128)?;add(self.far.len(),64)?;add(self.trace.len(),128)?;for row in self.trace.values(){add(row.capacity(),std::mem::size_of::<(usize,f64)>())?;}Ok(bytes.max(self.retained_storage_bytes))
     }
     pub fn action_workspace_bytes(&self)->Result<usize>{
-        let scratch=self.symbolic.as_ref().map_or(0,|s|s.solve_in_place_scratch::<f64>(1,Par::Seq).unaligned_bytes_required());self.mesh.nodes_m.len().checked_mul(128).and_then(|v|v.checked_add(self.mesh.tetrahedra.len().checked_mul(32)?)).and_then(|v|v.checked_add(scratch)).and_then(|v|v.checked_add(524288)).ok_or_else(||error("MEMORY_LIMIT","field action workspace overflow"))
+        let scratch=self.symbolic.as_ref().map_or(0,|s|s.solve_in_place_scratch::<f64>(1,self.parallelism).unaligned_bytes_required());self.mesh.nodes_m.len().checked_mul(128).and_then(|v|v.checked_add(self.mesh.tetrahedra.len().checked_mul(32)?)).and_then(|v|v.checked_add(scratch)).and_then(|v|v.checked_add(524288)).ok_or_else(||error("MEMORY_LIMIT","field action workspace overflow"))
     }
     pub fn new(
         mesh: &'a LayeredMesh,
@@ -185,6 +186,7 @@ impl<'a> CapacitanceOperator<'a> {
         drop(matrix);
         let factor_value_count = factor_values.len();
         Ok(Self {
+            parallelism:super::parallel::current(),
             mesh,
             trace,
             far,
@@ -224,13 +226,13 @@ impl<'a> CapacitanceOperator<'a> {
                 }
             }
             let s = self.symbolic.as_ref().unwrap();
-            let scratch = s.solve_in_place_scratch::<f64>(1, Par::Seq);
+            let scratch = s.solve_in_place_scratch::<f64>(1, self.parallelism);
             let mut workspace = MemBuffer::try_new(scratch)
                 .map_err(|_| error("MEMORY_LIMIT", "solve scratch allocation"))?;
             cholesky::LltRef::new(s, &self.factor_values).solve_in_place_with_conj(
                 Conj::No,
                 rhs.as_mut(),
-                Par::Seq,
+                self.parallelism,
                 MemStack::new(&mut workspace),
             );
             for (i, &map) in self.free_map.iter().enumerate() {
@@ -252,8 +254,8 @@ impl<'a> CapacitanceOperator<'a> {
             let mut correction = Mat::<f64>::zeros(self.free,1);
             for (i,&m) in self.free_map.iter().enumerate() { if m != usize::MAX { correction[(m,0)] = -reaction[i]/super::super::EPS0; }}
             let s=self.symbolic.as_ref().unwrap();
-            let mut workspace=MemBuffer::try_new(s.solve_in_place_scratch::<f64>(1,Par::Seq)).map_err(|_|error("MEMORY_LIMIT","refinement scratch"))?;
-            cholesky::LltRef::new(s,&self.factor_values).solve_in_place_with_conj(Conj::No,correction.as_mut(),Par::Seq,MemStack::new(&mut workspace));
+            let mut workspace=MemBuffer::try_new(s.solve_in_place_scratch::<f64>(1,self.parallelism)).map_err(|_|error("MEMORY_LIMIT","refinement scratch"))?;
+            cholesky::LltRef::new(s,&self.factor_values).solve_in_place_with_conj(Conj::No,correction.as_mut(),self.parallelism,MemStack::new(&mut workspace));
             for (i,&m) in self.free_map.iter().enumerate() { if m != usize::MAX {
                 let next=Sum{hi:phi[i],lo:phi_low[i]}.add(Sum::from(correction[(m,0)]));phi[i]=next.hi;phi_low[i]=next.lo;
             }}
