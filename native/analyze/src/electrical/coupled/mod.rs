@@ -6,6 +6,7 @@ pub mod composition;
 #[path = "frequency.rs"]
 pub mod frequency_response;
 pub mod physical;
+mod coordinates;
 pub mod time;
 
 pub type Entry = (usize, usize, f64);
@@ -41,6 +42,7 @@ pub struct System {
     pub(super) memory_plan: usize,
     pub(super) residual: f64,
     pub(super) kcl: f64,
+    charge_coordinates: Option<coordinates::Coordinates>,
 }
 fn entries(input: &[Entry], rows: usize, columns: usize) -> Result<Matrix> {
     let mut out = Matrix::new();
@@ -342,6 +344,7 @@ impl System {
             memory_plan: planned,
             residual: 0.,
             kcl: 0.,
+            charge_coordinates: None,
         })
     }
     /// Positive semidefinite port load / finite Thevenin driver. Call before gauge discovery.
@@ -448,6 +451,7 @@ impl System {
                 }
             }
         }
+        if conductance != 0. || capacitance != 0. {self.charge_coordinates=None;}
         Ok(())
     }
     pub(super) fn compatible_structural_rhs(&self, rhs: &[f64]) -> Result<()> {
@@ -645,7 +649,21 @@ impl System {
         let base = self.linear.matrix(0., complex.then_some(omega));
         let k = constraints.len();
         if k == 0 {
-            let (x, res, kcl) = self.linear.solve(base, rhs, stats)?;
+            if complex && self.charge_coordinates.is_some() {return self.solve_charge_coordinates(omega,&rhs,stats);}
+            let eligible=complex&&self.structural.is_empty()&&!self.candidates.is_empty();
+            let direct=self.linear.solve(base, rhs.clone(), stats);
+            let (x, res, kcl) = match direct {
+                Ok(v)=>v,
+                Err(e) if eligible&&e.starts_with("NETWORK_RESIDUAL:")=>return self.solve_charge_coordinates(omega,&rhs,stats),
+                Err(e)=>return Err(e),
+            };
+            if eligible {
+                let source=x.iter().zip(&rhs).map(|(a,b)|a*b).sum::<f64>();
+                let loss=self.linear.g.iter().filter(|&(&(i,j),_)|(i<self.nv)==(j<self.nv)).map(|(&(i,j),g)|g*(x[i]*x[j]+x[n+i]*x[n+j])).sum::<f64>();
+                if (source-loss).abs()>1e-12+1e-8*(source.abs()+loss.abs()) {
+                    return self.solve_charge_coordinates(omega,&rhs,stats);
+                }
+            }
             self.residual = self.residual.max(res);
             self.kcl = self.kcl.max(kcl);
             return Ok(x);

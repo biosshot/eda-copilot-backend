@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Retain the certified physical charge-coordinate P6 conditioning fallback with load-cache invalidation. Verify the exact original17-frequency sweep for both ports/opposite drive, repeated loads, corrupt-coordinate refusal and existing structural/energy negatives without loosening physical guards.
+
+- Apply the revised shared300s/2GiB P7 diagnostic budget without changing direct FEM or physical guards. Preserve its220.237s KVL refusal, retire unused preparation sources with local hash-bound archives, and extend focused P6/selector regressions; real-board physical and worker/DSL admission remain open.
+
 - Restrict the board-volume diagnostic to direct sparse FEM, remove tensor and iterative magnetic candidates, and move independent integral/surface reference operators into the test/reference tree. Real-board physical observable acceptance, shared lifetime budgeting and worker/DSL integration remain pending; P7 stays open.
 
 - Review accumulated P7 extraction candidates under the user-approved 2 GiB/120 s budget and up-to-5% observable accuracy policy. Both fixed real-ROI diagnostic candidates remain unaccepted; record measurements and a bounded single-method integration assignment without further solver exploration.
