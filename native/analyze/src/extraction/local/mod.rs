@@ -13,6 +13,7 @@ pub mod polyhedron;
 pub mod mesh;
 pub mod volume_current;
 pub mod board_mesh;
+pub mod board_prepare;
 pub mod volume_field;
 pub mod field_refinement;
 pub mod volume_magnetic;

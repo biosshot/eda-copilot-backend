@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Move local direct-FEM board preparation, training, reduction and recovery orchestration from the diagnostic executable into the Rust library; select the accepted refined electric configuration by default while retaining original physical contacts/current mesh. Separate requested P6 frequencies from the opt-in developer sweep. Worker/DSL/cache and complete P6/P7 acceptance remain pending.
+
 - Verify bounded P7 electric convergence with the saved magnetic subspace: vertical/domain Z changes 1.58814%/0.000264572%, exact checked near-region preservation, and a production direct-FEM coax charge/energy reference below 0.57% error. Retain coarse evidence and laboratory/full-model validation limits; P7 remains open.
 
 - Correct the direct-FEM opposite-drive defect-correction stopping rule without weakening KCL/KVL or power guards. Separate diagnostic preparation from the full developer verification, add stage timings and bounded opt-in faer threads; retain serial defaults after the same-binary comparison. Record the actual ROI's failed field/domain sensitivity check (88.8% port change), so no extracted-board model, worker cache or P8/P11 readiness is admitted.
