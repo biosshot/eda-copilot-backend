@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Verify bounded P7 electric convergence with the saved magnetic subspace: vertical/domain Z changes 1.58814%/0.000264572%, exact checked near-region preservation, and a production direct-FEM coax charge/energy reference below 0.57% error. Retain coarse evidence and laboratory/full-model validation limits; P7 remains open.
+
 - Correct the direct-FEM opposite-drive defect-correction stopping rule without weakening KCL/KVL or power guards. Separate diagnostic preparation from the full developer verification, add stage timings and bounded opt-in faer threads; retain serial defaults after the same-binary comparison. Record the actual ROI's failed field/domain sensitivity check (88.8% port change), so no extracted-board model, worker cache or P8/P11 readiness is admitted.
 
 - Retain the certified physical charge-coordinate P6 conditioning fallback with load-cache invalidation. Verify the exact original17-frequency sweep for both ports/opposite drive, repeated loads, corrupt-coordinate refusal and existing structural/energy negatives without loosening physical guards.

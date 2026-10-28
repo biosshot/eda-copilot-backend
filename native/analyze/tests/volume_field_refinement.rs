@@ -84,3 +84,29 @@ fn complete_extracted_trace_checkpoint_replays_charge_and_refuses_wrong_source_o
  let mut wrong=original.clone();wrong["capacitanceF"][0][0]=serde_json::json!(-1.);write(&wrong);assert!(volume_field::DenseField::load_checkpoint(&mesh,&space,&physical,&path,budget()).err().unwrap().contains("diagonal"));
  std::fs::remove_file(path).unwrap();
 }
+
+/// Infinite-coax formula applies exactly with insulated ends; polygon walls
+/// converge to the stated physical cylinders, not an open finite capacitor.
+#[test]
+fn coax_nonuniform_field_matches_charge_and_energy_on_two_declared_meshes(){
+ use pcb_analyze::extraction::{EPS0,local::capacitance::{Boundary,CapacitanceOperator,TraceRow}};
+ let (a,b,length,epsilon)=(0.001_f64,0.004_f64,0.002_f64,2.5_f64);
+ let exact=2.*std::f64::consts::PI*EPS0*epsilon*length/(b/a).ln();
+ for (angular,radial) in [(32,8),(64,16)] {
+  let mut xy_m=vec![];
+  for j in 0..=radial {let radius=a*(b/a).powf(j as f64/radial as f64);for i in 0..angular {let theta=2.*std::f64::consts::PI*i as f64/angular as f64;xy_m.push([radius*theta.cos(),radius*theta.sin()]);}}
+  let mut triangles=vec![];let mut boundary_edges=vec![];
+  for j in 0..radial {for i in 0..angular {let k=(i+1)%angular;let x=j*angular+i;let y=j*angular+k;triangles.extend([[x,y,y+angular],[x,y+angular,x+angular]]);}}
+  for i in 0..angular {let k=(i+1)%angular;boundary_edges.extend([[i,k],[radial*angular+i,radial*angular+k]]);}
+  let materials=vec![vec![Material::Dielectric{label:"homogeneous coax".into(),epsilon_r:epsilon};triangles.len()]];
+  let limit=AllocationBudget{max_bytes:128*1024*1024,max_nodes:10000,max_tetrahedra:20000};
+  let mesh=mesh::extrude(&LayeredInput{xy_m,triangles,boundary_edges,z_m:vec![0.,length],materials},limit).unwrap();
+  let plane=(radial+1)*angular;let mut trace=vec![];
+  for z in 0..2 {for i in 0..angular {trace.push(TraceRow{node:z*plane+i,weights:vec![(0,1.)]});trace.push(TraceRow{node:z*plane+radial*angular+i,weights:vec![(1,1.)]});}}
+  let op=CapacitanceOperator::new(&mesh,Boundary{potential_count:2,metal_trace:trace,far_zero_nodes:vec![],insulated_external:true},limit).unwrap();
+  let result=op.apply(&[1.,0.]).unwrap();let charge=result.charges_c[0];let energy=2.*result.energy_j;
+  assert!((charge/exact-1.).abs()<=0.05);assert!((energy/exact-1.).abs()<=0.05);
+  assert!(result.normalized_charge_balance<1e-8&&result.normalized_energy_reaction_error<1e-8&&result.normalized_free_residual<1e-8);
+  println!("COAX angular={angular} radial={radial} exact={exact:e} charge={charge:e} energy={energy:e} error={:e} balance={:e} reaction={:e}",(charge/exact-1.).abs(),result.normalized_charge_balance,result.normalized_energy_reaction_error);
+ }
+}

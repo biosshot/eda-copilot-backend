@@ -1,0 +1,347 @@
+{
+  "kind": "predeclared-electric-convergence-v1",
+  "comparisons": [
+    {
+      "name": "vertical-grid",
+      "candidate": {
+        "roiMm": [
+          [
+            23.1983,
+            3.7709
+          ],
+          [
+            23.9243,
+            4.1229
+          ]
+        ],
+        "stack": [
+          {
+            "name": "TOP",
+            "copper": true,
+            "thicknessM": 3.5e-05,
+            "conductivitySM": 58000000.0,
+            "epsilonR": null
+          },
+          {
+            "name": "authored-FR4",
+            "copper": false,
+            "thicknessM": 0.00153,
+            "conductivitySM": null,
+            "epsilonR": 4.2
+          },
+          {
+            "name": "BOTTOM",
+            "copper": true,
+            "thicknessM": 3.5e-05,
+            "conductivitySM": 58000000.0,
+            "epsilonR": null
+          }
+        ],
+        "finishedHolePlatingM": 2.5e-05,
+        "barrelConductivitySM": 58000000.0,
+        "airMarginM": 0.008,
+        "maxTriangleAreaM2": 1e-06,
+        "maxVerticalStepM": 0.0005,
+        "curveDeviationMm": 0.001,
+        "electrodes": [
+          {
+            "name": "signal-TOP",
+            "sourcePath": "copper.fixed.vias[0]",
+            "layer": "TOP",
+            "upper": false
+          },
+          {
+            "name": "signal-BOTTOM",
+            "sourcePath": "copper.fixed.vias[0]",
+            "layer": "BOTTOM",
+            "upper": true
+          },
+          {
+            "name": "return-TOP",
+            "sourcePath": "copper.fixed.vias[65]",
+            "layer": "TOP",
+            "upper": false
+          }
+        ],
+        "ports": [
+          [
+            "signal-TOP",
+            "return-TOP"
+          ],
+          [
+            "signal-BOTTOM",
+            "return-TOP"
+          ]
+        ],
+        "acceptUnknownFillFreshness": true,
+        "allowInsulatedCopperCuts": true,
+        "minTriangleAngleDeg": 0.0,
+        "airEdgeDivisions": 1,
+        "interfaceStepM": 2.5e-05,
+        "interfaceGrowth": 2.0
+      },
+      "request": {
+        "roiMm": [
+          [
+            23.1983,
+            3.7709
+          ],
+          [
+            23.9243,
+            4.1229
+          ]
+        ],
+        "stack": [
+          {
+            "name": "TOP",
+            "copper": true,
+            "thicknessM": 3.5e-05,
+            "conductivitySM": 58000000.0,
+            "epsilonR": null
+          },
+          {
+            "name": "authored-FR4",
+            "copper": false,
+            "thicknessM": 0.00153,
+            "conductivitySM": null,
+            "epsilonR": 4.2
+          },
+          {
+            "name": "BOTTOM",
+            "copper": true,
+            "thicknessM": 3.5e-05,
+            "conductivitySM": 58000000.0,
+            "epsilonR": null
+          }
+        ],
+        "finishedHolePlatingM": 2.5e-05,
+        "barrelConductivitySM": 58000000.0,
+        "airMarginM": 0.008,
+        "maxTriangleAreaM2": 1e-06,
+        "maxVerticalStepM": 0.00025,
+        "curveDeviationMm": 0.001,
+        "electrodes": [
+          {
+            "name": "signal-TOP",
+            "sourcePath": "copper.fixed.vias[0]",
+            "layer": "TOP",
+            "upper": false
+          },
+          {
+            "name": "signal-BOTTOM",
+            "sourcePath": "copper.fixed.vias[0]",
+            "layer": "BOTTOM",
+            "upper": true
+          },
+          {
+            "name": "return-TOP",
+            "sourcePath": "copper.fixed.vias[65]",
+            "layer": "TOP",
+            "upper": false
+          }
+        ],
+        "ports": [
+          [
+            "signal-TOP",
+            "return-TOP"
+          ],
+          [
+            "signal-BOTTOM",
+            "return-TOP"
+          ]
+        ],
+        "acceptUnknownFillFreshness": true,
+        "allowInsulatedCopperCuts": true,
+        "minTriangleAngleDeg": 0.0,
+        "airEdgeDivisions": 1,
+        "interfaceStepM": 1.25e-05,
+        "interfaceGrowth": 2.0
+      }
+    },
+    {
+      "name": "boundary-mixed-until-proven",
+      "candidate": {
+        "roiMm": [
+          [
+            23.1983,
+            3.7709
+          ],
+          [
+            23.9243,
+            4.1229
+          ]
+        ],
+        "stack": [
+          {
+            "name": "TOP",
+            "copper": true,
+            "thicknessM": 3.5e-05,
+            "conductivitySM": 58000000.0,
+            "epsilonR": null
+          },
+          {
+            "name": "authored-FR4",
+            "copper": false,
+            "thicknessM": 0.00153,
+            "conductivitySM": null,
+            "epsilonR": 4.2
+          },
+          {
+            "name": "BOTTOM",
+            "copper": true,
+            "thicknessM": 3.5e-05,
+            "conductivitySM": 58000000.0,
+            "epsilonR": null
+          }
+        ],
+        "finishedHolePlatingM": 2.5e-05,
+        "barrelConductivitySM": 58000000.0,
+        "airMarginM": 0.008,
+        "maxTriangleAreaM2": 1e-06,
+        "maxVerticalStepM": 0.0005,
+        "curveDeviationMm": 0.001,
+        "electrodes": [
+          {
+            "name": "signal-TOP",
+            "sourcePath": "copper.fixed.vias[0]",
+            "layer": "TOP",
+            "upper": false
+          },
+          {
+            "name": "signal-BOTTOM",
+            "sourcePath": "copper.fixed.vias[0]",
+            "layer": "BOTTOM",
+            "upper": true
+          },
+          {
+            "name": "return-TOP",
+            "sourcePath": "copper.fixed.vias[65]",
+            "layer": "TOP",
+            "upper": false
+          }
+        ],
+        "ports": [
+          [
+            "signal-TOP",
+            "return-TOP"
+          ],
+          [
+            "signal-BOTTOM",
+            "return-TOP"
+          ]
+        ],
+        "acceptUnknownFillFreshness": true,
+        "allowInsulatedCopperCuts": true,
+        "minTriangleAngleDeg": 0.0,
+        "airEdgeDivisions": 1,
+        "interfaceStepM": 2.5e-05,
+        "interfaceGrowth": 2.0
+      },
+      "request": {
+        "roiMm": [
+          [
+            23.1983,
+            3.7709
+          ],
+          [
+            23.9243,
+            4.1229
+          ]
+        ],
+        "stack": [
+          {
+            "name": "TOP",
+            "copper": true,
+            "thicknessM": 3.5e-05,
+            "conductivitySM": 58000000.0,
+            "epsilonR": null
+          },
+          {
+            "name": "authored-FR4",
+            "copper": false,
+            "thicknessM": 0.00153,
+            "conductivitySM": null,
+            "epsilonR": 4.2
+          },
+          {
+            "name": "BOTTOM",
+            "copper": true,
+            "thicknessM": 3.5e-05,
+            "conductivitySM": 58000000.0,
+            "epsilonR": null
+          }
+        ],
+        "finishedHolePlatingM": 2.5e-05,
+        "barrelConductivitySM": 58000000.0,
+        "airMarginM": 0.016,
+        "maxTriangleAreaM2": 1e-06,
+        "maxVerticalStepM": 0.0005,
+        "curveDeviationMm": 0.001,
+        "electrodes": [
+          {
+            "name": "signal-TOP",
+            "sourcePath": "copper.fixed.vias[0]",
+            "layer": "TOP",
+            "upper": false
+          },
+          {
+            "name": "signal-BOTTOM",
+            "sourcePath": "copper.fixed.vias[0]",
+            "layer": "BOTTOM",
+            "upper": true
+          },
+          {
+            "name": "return-TOP",
+            "sourcePath": "copper.fixed.vias[65]",
+            "layer": "TOP",
+            "upper": false
+          }
+        ],
+        "ports": [
+          [
+            "signal-TOP",
+            "return-TOP"
+          ],
+          [
+            "signal-BOTTOM",
+            "return-TOP"
+          ]
+        ],
+        "acceptUnknownFillFreshness": true,
+        "allowInsulatedCopperCuts": true,
+        "minTriangleAngleDeg": 0.0,
+        "airEdgeDivisions": 1,
+        "interfaceStepM": 2.5e-05,
+        "interfaceGrowth": 2.0
+      }
+    }
+  ],
+  "frequencies": "all original17",
+  "entries": "all four complex Z",
+  "floorOhm": 1e-06,
+  "normalization": "max(abs(reference entry),1e-6); reference is candidate for new comparisons",
+  "maxSeconds": 300,
+  "maxBytes": 2147483648,
+  "scope": "fixed magnetic voltage basis; no continuum certification",
+  "analytic": {
+    "kind": "coax",
+    "radiiM": [
+      0.001,
+      0.004
+    ],
+    "lengthM": 0.002,
+    "epsilonR": 2.5,
+    "meshes": [
+      [
+        32,
+        8
+      ],
+      [
+        64,
+        16
+      ]
+    ],
+    "ends": "natural zero normal flux",
+    "outer": "physical grounded polygon cylinder"
+  }
+}

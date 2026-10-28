@@ -264,3 +264,111 @@ the recorded300s run used its same fixed configuration and cap.
 The viewed diagnostic `debugging/p7-single-method-audit/direct-300s-refusal.png`
 shows actual wall/RSS and the unchanged KVL guard, explicitly without physical
 acceptance. Its plot does not substitute for missing current/loss/frequency maps.
+
+## Bounded electric convergence follow-up — 2026-10-28
+
+**The 8 mm candidate is stable under the two declared checks.** The earlier
+88.816966% change does not establish that the refined candidate is wrong; the
+coarse result is much less stable than the candidate in these tested directions.
+This is not a continuum error certificate or whole-P7 admission. No ports,
+contacts, copper, ROI, materials, solver family or guards changed. Magnetic
+training was reused, never repeated; the saved 28-mode voltage subspace limits
+all STM32 Z conclusions. P7 and P8/P11 readiness remain open.
+
+`electric-convergence-plan-v1.json` declares exactly two additional comparisons
+before execution: vertical max step 0.5 to 0.25 mm and interface step 25 to
+12.5 um at 8 mm; boundary 8 to 16 mm at candidate resolution, growth unchanged.
+The coarse and candidate runs below only replay existing results with added
+component/geometry diagnostics. All runs used the existing direct sparse FEM,
+CPU/F64, serial, supervised process family 300 s / 2 GiB, with builds separate.
+All 17 original frequencies and all four complex Z elements are retained in
+`electric-convergence-result-v1.json`. Normalization for every new comparison
+is |Z-Zcandidate|/max(|Zcandidate|,1e-6 Ohm), including historical coarse replay.
+
+| Case | C diagonal (fF) | Im Z00 at 1 kHz (GOhm) | max Z difference vs candidate | wall s / peak RSS MiB |
+| --- | --- | --- | --- | --- |
+| coarse | 250.368928, 234.535645, 387.159827 | -0.727624210 | 88.816966141% | 2.387896 / 24.160 |
+| candidate | 24.770100, 24.076928, 108.630909 | -6.506501002 | 0.000000000% | 2.488034 / 43.105 |
+| grid | 24.381680, 23.818474, 108.169484 | -6.609833073 | 1.588135789% | 2.675259 / 47.566 |
+| boundary | 24.762459, 24.069302, 107.096107 | -6.506518216 | 0.000264572% | 2.682167 / 45.750 |
+
+Component-matrix max-entry norm changes are 0.424763% (grid) and 1.412859%
+(boundary). Independent unit-conductor excitation energies change at most
+1.568102% and 1.412859%. For all conductors at 1 V, energy is respectively
+39.845896, 39.828567 and 38.848045 fJ for candidate/grid/boundary; common charge
+capacitance is twice that energy at this unit voltage. Common excitation energy
+changes 0.043491% and 2.504275%, also below 5%. Full matrices and energies are
+retained, including coarse 69.093966 fJ. This common capacitive response dominates
+the huge Z entries; subtracting them does not establish accurate through-mode or
+opposite-drive impedance. No such subtraction is presented as a measurement.
+
+Boundary near-region audit uses local [-1,-1,-1] to [1.726,1.352,2.6] mm:
+all 2842 vertices and 12981 tetrahedra match exactly by coordinates/connectivity,
+with no added/removed near cells. This comparison preserves the checked near
+region, rather than silently assigning retriangulation changes to the boundary.
+Outer mesh necessarily changes. Vertical refinement only probes z resolution;
+no independent XY convergence or complete-model subspace error is established.
+
+Analytic reference: the production `CapacitanceOperator` assembly, direct sparse
+factor, charge reactions and integrated field energy solve a coax annulus with
+inner radius 1 mm, outer radius 4 mm, length 2 mm, epsilon_r=2.5. Inner trace is
+1 V, physical outer conductor trace is 0 V; end faces have natural zero normal
+flux, exactly matching the z-invariant analytic problem. Straight polygons with
+32/64 sides and 8/16 logarithmic radial intervals approximate the circular walls;
+one axial interval is sufficient for this invariant problem. Nonzero radial
+field varies with radius. Analytic C=200.651839655 fF. Charge/2-energy results
+201.794800018/201.794800018 fF (0.569624%) and
+200.937682334/200.937682334 fF (0.142457%) pass 5%. Charge balances are
+1.25e-16/2.51e-16; reaction-energy errors 1.00e-15/6.28e-16. No guard was
+relaxed. This is a homogeneous reference, not an independent multilayer or
+laboratory STM32 validation. `electric-analytic-result-v1.json` retains numbers,
+boundaries and the supervised 8-test result (0.145146 s, 11.274 MiB).
+
+A short primary-source search used one query plus the two assigned URLs.
+[NIST SP 250-76](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication250-76.pdf)
+provides 3-terminal calibration procedures, reference values, frequency response
+and uncertainty budgets; its four-rod calculable standard transfers the unit to
+the Farad Bank at approximately 1592 Hz. It does not supply a complete simple
+CAD/material/contact dataset for reproducing a particular measured capacitor.
+[NIST geometrical-imperfection model tests](https://www.nist.gov/publications/model-tests-investigate-effects-geometrical-imperfections-nist-calculable-capacitor)
+report relative standard uncertainty 2e-8 and sensitivity to blocking electrodes
+and bar taper: the real geometry/guards matter. The assigned
+[historical NIST overview](https://pmc.ncbi.nlm.nih.gov/articles/PMC4865284/)
+was browser-challenged; the search excerpt confirms the four-bar geometry but
+is not used as a measured numerical reference here. No full geometry, epsilon,
+frequency, contact/guard model, measured value and uncertainty tuple suitable for
+a simple reproducible laboratory comparison was found in this bounded search.
+Analytic verification passes; laboratory validation remains separate.
+
+Visuals (generated and viewed) under ignored
+`debugging/p7-board-integration/electric-convergence-v1-visuals/`:
+`geometry-boundary.png`, `capacitance-z.png`. Labels explicitly describe
+convergence in the fixed subspace, not a true 88.8% physical error estimate.
+Raw geometry, stdout, stderr and process/hash records remain in
+`electric-convergence-v1-{coarse,candidate,grid,boundary,tests}/direct-fem/`.
+User `native/analyze/debugging/` was untouched.
+
+Checks: release focused test build 3m22s, example build 3m09s including lock wait;
+8 field integration tests pass in supervised replay (initial single-test run was
+replayed to add process RSS supervision). `npm run native:build` passes (8.58 s
+Cargo phase); no library or addon behavior changed. Python AST/JSON validation
+and report generation pass. Existing compiler warnings remain. No expensive
+magnetic/full-board sweep, worker/cache, P8 or P11 run was started.
+
+Reproduce after the separate release builds:
+
+```powershell
+python tests/fixtures/analysis-local-extraction/board-integration/single-method-run.py unique-coarse field-coarse
+python tests/fixtures/analysis-local-extraction/board-integration/single-method-run.py unique-candidate field-candidate
+python tests/fixtures/analysis-local-extraction/board-integration/single-method-run.py unique-grid field-grid
+python tests/fixtures/analysis-local-extraction/board-integration/single-method-run.py unique-boundary field-boundary
+python tests/fixtures/analysis-local-extraction/board-integration/single-method-run.py unique-tests electric-tests
+```
+
+Actual packet prefix was `electric-convergence-v1-`; the solver-free report script
+uses that prefix. Binary SHA256 is recorded per run; electric example:
+`632375f85bde90b650c50cf97ee48b8d86879e8052a15a59134670a4be72fd36`.
+The remaining gap is independent real-ROI/full-model accuracy: these limited
+vertical/domain checks plus homogeneous analytic validation cannot certify all
+spatial directions, magnetic reduction, multilayer physical inputs or laboratory
+agreement. Stop here; full P7 is not closed.

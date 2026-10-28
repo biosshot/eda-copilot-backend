@@ -22,6 +22,10 @@ fn execute()->Result<(),String>{
     let electrodes=r.electrodes.iter().map(|e|b.electrode_nodes(e)).collect::<Result<Vec<_>,_>>()?;
     let space=volume_current::assemble(&b.mesh,&b.conductivity_s_m,&electrodes,budget)?;
     let field=volume_field::Field::new_vertical_refined(&field_geometry.mesh,&b.mesh,&space,budget)?;
+    let component_vectors=space.components.iter().map(|indices|{let mut v=vec![0.;space.potential_count()];for &i in indices {v[i]=1.;}v}).collect::<Vec<_>>();
+    let component_capacitance=field.energy_gram(&component_vectors)?;
+    let component_energies=component_vectors.iter().map(|v|field.energy_gram(&[v.clone()]).map(|g|0.5*g[0].2)).collect::<Result<Vec<_>,_>>()?;
+    let geometry_xy=field_geometry.mesh.nodes_m.iter().map(|p|[p[0],p[1]]).collect::<Vec<_>>();
     let saved:serde_json::Value=serde_json::from_str(&read(&args[3])?).map_err(|e|e.to_string())?;
     let basis:Vec<Vec<f64>>=serde_json::from_value(saved["candidate"]["voltageBasis"].clone()).map_err(|e|e.to_string())?;
     let base:coupled::Model=serde_json::from_value(saved["candidate"]["model"].clone()).map_err(|e|e.to_string())?;
@@ -36,5 +40,5 @@ fn execute()->Result<(),String>{
     let limit=pcb_analyze::electrical::Budget{max_memory_mi_b:Some(p6_bytes as f64/1048576.),max_seconds:Some(remaining()?.as_secs_f64())};
     let coarse=coupled::impedance(&base,r.ports.len(),&fixture::FREQUENCIES_HZ,Some(&limit))?;
     let fine=coupled::impedance(&candidate,r.ports.len(),&fixture::FREQUENCIES_HZ,Some(&limit))?;
-    println!("{}",serde_json::json!({"kind":"unaccepted-real-field-observable-refinement-v1","physicalAdmission":false,"elapsedSeconds":started.elapsed().as_secs_f64(),"fieldNodes":field_geometry.mesh.nodes_m.len(),"fieldTetrahedra":field_geometry.mesh.tetrahedra.len(),"copperVolumeM3":b.mesh.copper_volume_m3,"refinedCopperVolumeM3":field_geometry.mesh.copper_volume_m3,"base":coarse,"refined":fine,"refinedCapacitanceF":candidate.capacitance_f,"limitations":"same direct FEM, fixed existing reduction subspace; h/domain sensitivity check, not independent continuum oracle"}));Ok(())
+    println!("{}",serde_json::json!({"kind":"unaccepted-real-field-observable-refinement-v1","physicalAdmission":false,"elapsedSeconds":started.elapsed().as_secs_f64(),"fieldNodes":field_geometry.mesh.nodes_m.len(),"fieldTetrahedra":field_geometry.mesh.tetrahedra.len(),"copperVolumeM3":b.mesh.copper_volume_m3,"refinedCopperVolumeM3":field_geometry.mesh.copper_volume_m3,"componentCapacitanceF":component_capacitance,"componentEnergiesJ":component_energies,"geometryXyM":geometry_xy,"geometryNodesM":field_geometry.mesh.nodes_m,"geometryTetrahedra":field_geometry.mesh.tetrahedra.iter().map(|t|t.nodes).collect::<Vec<_>>(),"base":coarse,"refined":fine,"refinedCapacitanceF":candidate.capacitance_f,"limitations":"same direct FEM, fixed existing reduction subspace; h/domain sensitivity check, not independent continuum oracle"}));Ok(())
 }
