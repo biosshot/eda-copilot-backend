@@ -1,4 +1,146 @@
-# P7 direct-FEM status — 2026-10-28
+# P7 direct-FEM checkpoint — 2026-10-28
+
+Active scope: [agreed route](p7-to-p8-p11-plan.md), one existing direct sparse FEM,
+CPU/F64, shared300s cold user/2GiB, physical observables<=5%.
+**P7 remains open; this delivery does not complete the agreed route.**
+
+## Current result after phase separation and numerical correction
+
+The actual STM32 opposite-drive1kHz regression now passes without weakening the
+original1e-8 KCL/KVL guards. Previously global defect correction stopped at
+6.31e-16 while the weak constitutive row still had KVL1.24828e-7. The same solver
+now continues until global and local metrics resolve, retaining low current
+corrections in compensated residual evaluation. Final KVL2.5472799779320795e-10,
+KCL3.952773021587171e-21, complex-power error1.6398113985374103e-15,
+Joule error1.6462750610268465e-15,5 iterations. No modes or drives were removed.
+Corrected replay37.666s; final feature replay112.429s under different host load;
+these are correctness checks, not a speedup claim.
+
+`board_volume prepare` separates geometry/operators, four necessary training
+solves and reduction from user P6 queries/full verification. It skips those last
+two phases. `verify` preserves the original17-frequency response and51 full
+holdout cases, both ports/opposite drive, reusing all four training solutions.
+Cold preparation remains capped300s; the subsequent developer phase has its own
+1800s clock within a2100s family supervisor. The full developer sweep was **not
+completed** after the physical refusal below. This is still an internal example,
+not the production worker factory. Stages include geometry, current assembly,
+harmonic basis, electric/magnetic assembly and factor, initial basis, full-solve
+preparation, training, reduction, user P6 and developer verification.
+
+| Same binary/request, cold prepare only | Wall seconds | Peak family RSS bytes | Magnetic numeric factor seconds |
+| --- | ---: | ---: | ---: |
+| 1 thread |189.0486232|1026469888|6.058012|
+| 4 threads |195.1336933|1030148096|2.144253|
+
+Binary SHA256 `24094af9b68589a38d0edb537b3a02c083a781354b95e29867ef6f53a975e9a8`.
+Serial stages: geometry1.3524s, magnetic assembly/factor20.5885s, initial basis
+6.7205s, training125.9259s, reduction34.0136s. Four threads improve factorization
+but not total preparation; default remains1. One pool is bounded by available
+CPUs and4, with2MiB stacks and a conservative8MiB reservation even while idle.
+Sparse workspaces follow the selected policy; implicit dense defaults stay
+serial. Operators retain that policy: future cached parallel use must re-enter
+the bounded execution scope. Existing direct factors/requested RHS are reused;
+no new solver or persistent worker factor cache is introduced. Further CPU work
+stopped at the physical refusal, not claimed complete.
+
+An earlier pre-Rayon split prepare took159.878782s/1025777664bytes; it is not an
+equal-binary comparison. All measurements above include training but **skip user
+solve and developer verification**; they are not end-to-end user success. Older
+packets contain microsecond bookkeeping durations for skipped phases; the final
+source emits null for skipped user P6. Warm/restart times are N/A: no worker/disk
+model cache is implemented.
+
+## Physical rejection witness
+
+Before changing the field grid, one refinement was declared: air margin2→8mm,
+vertical maximum2→0.5mm,25µm interface step/growth2. All copper/current sources,
+finite contacts, materials and the saved28-mode voltage subspace remain fixed;
+selected electric RHS are re-evaluated by the existing FEM, without repeating
+magnetic training. Refined field4218nodes/20997 dielectric tetrahedra; measured
+diagnostic2.6054258s, without a supervised RSS measurement for this small check.
+
+Maximum complex-port Z change across17 original frequencies/all four entries is
+**88.816966%** (normalized to refined response with predeclared1µOhm floor),
+exceeding5%. At1kHz Z00 changes from about0.000130-j727624210Ohm to
+0.0000739-j6506501002Ohm. Component-charge projection reproduces this capacitive
+pole sensitivity; it is not a near-zero tetra-current metric. Exterior charge
+and the declared isolated finite Cu ROI affect this observable.
+
+This is a **same-method, fixed-subspace h/domain rejection witness**, not an
+independent continuum oracle or an88.8% estimate of true physical error.
+Huge common-mode Z entries cannot establish opposite-drive accuracy by
+subtraction. Only the direct1kHz opposite numerical control above passed.
+No independent physical admission, integrated-current/regional-loss error table
+or combined<=5% accuracy is claimed. Neither grid is certified. The contract
+limits this study to one baseline/one refinement and says to stop on non-admission
+with concrete numbers; no new grid/method search or board campaign followed.
+
+Committed small fixtures under `tests/fixtures/analysis-local-extraction/board-integration/`:
+`prepared-stage-profile-v1.json`, `opposite-residual-regression-v1.json`,
+`field-port-refinement-refusal-v1.json` (predeclared plan,68 Z comparisons and
+component diagnostic), `field-refinement-request-v1.json`, and
+`saved-real-field-basis-v1.json`. The latter retains the actual unaccepted model,
+voltage basis and producer hash for cheap replay, omitting bulky current recovery;
+it is not a trusted production cache. Raw packets remain in ignored debugging.
+
+## Current completion/readiness matrix
+
+| Obligation | Actual state |
+| --- | --- |
+| P7a/P7b sections/RLGC and accepted P6 classes | Preserved; regressions pass |
+| One existing local direct sparse FEM | Alternatives retired previously; no new solver |
+| Phase timings / prepare vs full developer verification | Internal example implemented; full verification not completed |
+| Cold300s/2GiB | Supervised prepare passes; successful worker user flow absent |
+| Opposite1kHz KVL | PASS with unchanged guards |
+| Physical observables<=5% | NOT ADMITTED:88.8% port h/domain sensitivity |
+| Full17freq/both/opposite physical acceptance | Missing; reduced sensitivity sweep and1kHz numerical control only |
+| Independent continuum / integrated currents / regional loss errors | Missing |
+| Real board→fresh compiled worker→direct DSL | Refuses SECTION_UNSUPPORTED in0.5585104s |
+| Worker geometry/operator/factor cache | Not implemented |
+| Atomic/checksummed reduced-P6 disk model/recovery/invalidation | Not implemented; no accepted entry |
+| End-to-end user cold/warm/restart | No successful cold user result; warm/restart N/A |
+| STM32 / TPS63060DSCR / BandAmp accepted extraction DSL | 0/3; no additional board runs after refusal |
+| Geometry/ports and frequency diagnostic visuals | Produced/viewed; explicitly unaccepted |
+| Accepted current/loss maps | Missing |
+| P8 extracted PDN dependency | Not ready: no admitted multiport/range/time model |
+| P11 actual coupled-channel dependency | Not ready: no admitted delays/losses/returns/coverage |
+
+Real DSL refusal comes from actual execution, not a substitute circuit. Contact
+selectors pass worker tests, but cross-section only supports explicit `a.line`;
+the real layered/channel extraction factory remains absent. Existing accepted
+line/RLGC/P6 behavior does not establish these extracted-board gates. No cache
+behavior or warm/restart benchmark is invented from the refusal. P8/P11 remain
+unimplemented. Remaining agreed work is explicitly unfinished.
+
+Checks passed:11 local unit tests,18 current/field integration tests,4 P6 unit
+tests,26 P6 integration tests, bounded-pool regression and explicit ignored actual
+opposite-drive regression. Typecheck passed. Final ordinary addon build passed
+in17m39s after all library/addon edits;31 fresh compiled-worker DSL tests passed.
+Later example-only replay/budget edits were checked separately. No full physical
+PASS follows from these checks. Python supervisor AST and fixture JSON validation
+are part of the evidence checks.
+
+Reproduction (build separately, CARGO_BUILD_JOBS=1):
+
+```powershell
+cargo build --release --manifest-path native/analyze/Cargo.toml --example board_volume --example field_observable_check
+python tests/fixtures/analysis-local-extraction/board-integration/single-method-run.py unique-packet prepare
+cargo test --release --manifest-path native/analyze/Cargo.toml --test real_via_residual -- --ignored --nocapture
+```
+
+Cheap `field_observable_check` arguments: STM32 board JSON, committed
+`single-method-via-request.json`, `saved-real-field-basis-v1.json`, and
+`field-refinement-request-v1.json`. The supervisor never overwrites packets;
+prepare caps300s/2GiB, verify2100s/2GiB including the separate developer phase.
+Viewed visuals: `debugging/p7-single-method-audit/real-via-geometry-ports.png`
+and `field-port-sensitivity.png`. No accepted current/loss maps exist.
+User `native/analyze/debugging/` is untouched; no ignore rule masks it.
+
+## Historical checkpoint before the correction above
+
+The following original220s refusal,120s packets, cleanup record and checks are
+retained as history. Their claims of an unresolved KVL refusal and deferred
+optimization are superseded by the current sections above.
 
 Current contract: [single-method v1](next-task-p7-single-method-v1.md).
 One existing direct sparse FEM local candidate, CPU/F64, shared **300 s / 2 GiB**,
