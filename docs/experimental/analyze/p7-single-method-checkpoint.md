@@ -372,3 +372,8 @@ The remaining gap is independent real-ROI/full-model accuracy: these limited
 vertical/domain checks plus homogeneous analytic validation cannot certify all
 spatial directions, magnetic reduction, multilayer physical inputs or laboratory
 agreement. Stop here; full P7 is not closed.
+
+
+## Accepted electric v1 and library integration - 2026-10-28
+
+The user accepted the refined electric v1 configuration after `2366190`; earlier coarse 88.8% wording above is historical and does not prohibit integration. [The active assignment](next-task-p6-p7-integration-cache.md) requires complete library/worker/direct DSL/cache delivery and three real boards. [The integration ledger](p6-p7-integration-acceptance.md) distinguishes the library orchestration checkpoint from the outstanding integration/physical/recovery gates. Original current geometry and ports are preserved. No method/port change or renewed electric-convergence campaign is introduced.
