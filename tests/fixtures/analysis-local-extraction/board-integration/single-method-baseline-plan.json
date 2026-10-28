@@ -1,0 +1,46 @@
+{
+  "kind": "single-method-baseline-before-run-v1",
+  "method": "existing direct sparse FEM entity:6:8:16:3",
+  "purpose": "bounded cold diagnostic after removing forced full C, not automatic physical admission",
+  "boardSha256": "0159c43d43b59df4f59fb943d59f0d841d17ca38d6d5a7d5576920a4aee3cce3",
+  "requestSha256": "a00da08408f35bdf4ca0eb7ff174e51699238010f9fd8510522c36943a97be6b",
+  "meshChanges": false,
+  "maximumBaselineRuns": 1,
+  "maximumRefinedRuns": 1,
+  "onResourceOrPhysicalFailure": "stop; no further configuration search",
+  "capSeconds": 120,
+  "capBytes": 2147483648,
+  "observables": [
+    "both complex port voltages/impedances",
+    "integrated signal and actual return current",
+    "total Joule power",
+    "barrel Joule power",
+    "signal foil Joule power",
+    "return foil Joule power"
+  ],
+  "relativeLimit": 0.05,
+  "predeclaredAbsoluteFloors": {
+    "voltageV": 1e-06,
+    "impedanceOhm": 1e-06,
+    "currentA": 1e-06,
+    "powerW": 1e-09
+  },
+  "excitationA": [
+    [
+      1,
+      0
+    ],
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      -1
+    ]
+  ],
+  "frequencySource": "original17 from tests/fixtures/analysis-local-extraction/current-space/fixture.rs",
+  "refinementRequirement": "use preserved exact Cu/contact identities and independent frozen references; no expensive successful reference regeneration",
+  "physicalAdmission": false,
+  "limitation": "current example does not yet integrate conductor/region observable reporting; no 5 percent acceptance without those and independent spatial/domain checks"
+}

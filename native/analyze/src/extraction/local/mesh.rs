@@ -132,11 +132,41 @@ pub struct InterfaceFace {
 pub struct LayeredMesh {
     pub nodes_m: Vec<[f64; 3]>,
     pub tetrahedra: Vec<Tetrahedron>,
+    /// Conductor cells use the identical global face diagonals and vertices.
+    pub copper_tetrahedra: Vec<CopperTetrahedron>,
     pub copper_interfaces: Vec<InterfaceFace>,
     pub external_faces: Vec<[usize; 3]>,
     pub dielectric_volume_m3: f64,
     pub copper_volume_m3: f64,
     pub planned_peak_bytes: usize,
+}
+
+#[derive(Clone, Debug)]
+pub struct CopperTetrahedron {
+    pub nodes: [usize;4],
+    pub slab: usize,
+    pub planar_triangle: usize,
+    pub source_ids: Vec<String>,
+    pub volume_m3: f64,
+    pub gradients_per_m: [[f64;3];4],
+}
+impl LayeredMesh {
+    /// Retained owned buffers after extrusion face maps/input have been dropped.
+    /// Distinct from the extrusion peak, which must not be counted as live mesh
+    /// storage in every subsequent sparse factorization phase.
+    pub fn retained_bytes(&self)->Result<usize> {
+        let mut bytes=0usize;
+        let mut add=|n:usize,size:usize|->Result<()> {bytes=bytes.checked_add(n.checked_mul(size).ok_or_else(||error("MEMORY_LIMIT","retained mesh size overflow"))?).ok_or_else(||error("MEMORY_LIMIT","retained mesh size overflow"))?;Ok(())};
+        add(self.nodes_m.capacity(),std::mem::size_of::<[f64;3]>())?;
+        add(self.tetrahedra.capacity(),std::mem::size_of::<Tetrahedron>())?;
+        add(self.copper_tetrahedra.capacity(),std::mem::size_of::<CopperTetrahedron>())?;
+        add(self.copper_interfaces.capacity(),std::mem::size_of::<InterfaceFace>())?;
+        add(self.external_faces.capacity(),std::mem::size_of::<[usize;3]>())?;
+        for t in &self.tetrahedra {add(t.material_label.capacity(),1)?;}
+        for t in &self.copper_tetrahedra {add(t.source_ids.capacity(),std::mem::size_of::<String>())?;for s in &t.source_ids {add(s.capacity(),1)?;}}
+        for f in &self.copper_interfaces {add(f.copper_source_ids.capacity(),std::mem::size_of::<String>())?;for s in &f.copper_source_ids {add(s.capacity(),1)?;}}
+        Ok(bytes)
+    }
 }
 
 fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
@@ -158,25 +188,30 @@ pub fn tetra_coefficients(points: [[f64; 3]; 4]) -> Result<(f64, [[f64; 3]; 4])>
     if !points.iter().flatten().all(|x| x.is_finite()) {
         return Err(error("TETRA_INPUT", "nonfinite coordinates"));
     }
-    let u = sub(points[1], points[0]);
-    let v = sub(points[2], points[0]);
-    let w = sub(points[3], points[0]);
-    let determinant = dot(u, cross(v, w));
-    let volume = determinant.abs() / 6.;
+    // Preserve the exact authored F64 vertices through determinant cancellation.
+    // In a thin prism, naive cofactors made the three equal-volume splits differ.
+    use super::compensated::W;
+    tetra_coefficients_w(points.map(|p|p.map(W::f)))
+}
+/// Conceptual dyadic field vertices before their display-F64 projection.
+pub(super) fn tetra_coefficients_w(p:[[super::compensated::W;3];4])->Result<(f64,[[f64;3];4])>{
+    use super::compensated::W;
+    let difference=|a:[W;3],b:[W;3]|std::array::from_fn(|k|a[k]-b[k]);
+    let cofactor=|a:[W;3],b:[W;3]|[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+    let u=difference(p[1],p[0]);let v=difference(p[2],p[0]);let w=difference(p[3],p[0]);
+    let c1=cofactor(v,w);let c2=cofactor(w,u);let c3=cofactor(u,v);
+    let determinant=(0..3).fold(W::ZERO,|sum,k|sum+u[k]*c1[k]);
+    let volume=(determinant.abs()/W::f(6.)).value();
     if !volume.is_finite() || volume <= 0. {
         return Err(error(
             "TETRA_DEGENERATE",
             "zero/nonfinite tetra volume; no removal applied",
         ));
     }
-    let g1 = cross(v, w).map(|x| x / determinant);
-    let g2 = cross(w, u).map(|x| x / determinant);
-    let g3 = cross(u, v).map(|x| x / determinant);
-    let g0 = [
-        -g1[0] - g2[0] - g3[0],
-        -g1[1] - g2[1] - g3[1],
-        -g1[2] - g2[2] - g3[2],
-    ];
+    let g1=c1.map(|x|(x/determinant).value());
+    let g2=c2.map(|x|(x/determinant).value());
+    let g3=c3.map(|x|(x/determinant).value());
+    let g0=cofactor(difference(p[2],p[1]),difference(p[3],p[1])).map(|x|(-x/determinant).value());
     let gradients = [g0, g1, g2, g3];
     if !gradients.iter().flatten().all(|x| x.is_finite()) {
         return Err(error("TETRA_RANGE", "gradient overflow"));
@@ -321,6 +356,7 @@ pub fn extrude(input: &LayeredInput, budget: AllocationBudget) -> Result<Layered
         .flat_map(|&z| input.xy_m.iter().map(move |p| [p[0], p[1], z]))
         .collect();
     let mut tetrahedra = Vec::new();
+    let mut copper_tetrahedra = Vec::new();
     let mut all_faces = BTreeMap::<[usize; 3], usize>::new();
     let mut dielectric_faces = BTreeMap::<[usize; 3], usize>::new();
     let mut copper_faces = BTreeMap::<[usize; 3], BTreeSet<String>>::new();
@@ -343,6 +379,10 @@ pub fn extrude(input: &LayeredInput, budget: AllocationBudget) -> Result<Layered
                 match &input.materials[slab][index] {
                     Material::Copper { source_ids } => {
                         copper_volume_m3 += volume;
+                        copper_tetrahedra.push(CopperTetrahedron {
+                            nodes,slab,planar_triangle:index,source_ids:source_ids.clone(),
+                            volume_m3:volume,gradients_per_m:gradients,
+                        });
                         for face in ff {
                             copper_faces
                                 .entry(face)
@@ -398,6 +438,7 @@ pub fn extrude(input: &LayeredInput, budget: AllocationBudget) -> Result<Layered
     Ok(LayeredMesh {
         nodes_m,
         tetrahedra,
+        copper_tetrahedra,
         copper_interfaces,
         external_faces,
         dielectric_volume_m3,
@@ -408,9 +449,20 @@ pub fn extrude(input: &LayeredInput, budget: AllocationBudget) -> Result<Layered
 
 pub fn stiffness(tet: &Tetrahedron) -> Result<[[f64; 4]; 4]> {
     let scale = super::super::EPS0 * tet.epsilon_r * tet.volume_m3;
-    let matrix = std::array::from_fn(|i| {
-        std::array::from_fn(|j| scale * dot(tet.gradients_per_m[i], tet.gradients_per_m[j]))
-    });
+    // Form the Gram matrix in difference coordinates. The constant shape
+    // function is represented algebraically, rather than by subtracting large
+    // independently rounded gradient products on thin tetrahedra.
+    let mut matrix = [[0.; 4]; 4];
+    for i in 1..4 { for j in i..4 {
+        let value = scale * dot(tet.gradients_per_m[i], tet.gradients_per_m[j]);
+        matrix[i][j] = value;
+        matrix[j][i] = value;
+    }}
+    for i in 1..4 {
+        matrix[i][0] = -(1..4).map(|j| matrix[i][j]).sum::<f64>();
+        matrix[0][i] = matrix[i][0];
+    }
+    matrix[0][0] = -(1..4).map(|i| matrix[0][i]).sum::<f64>();
     if matrix.iter().flatten().all(|x| x.is_finite()) {
         Ok(matrix)
     } else {

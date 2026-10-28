@@ -42,6 +42,93 @@ feature. No claim of a single production dispatch is made at this checkpoint.
 `board_volume` remains a diagnostic example; its comment about production callers
 does not establish a board-to-worker route.
 
+### Subsequent cleanup
+
+The initial inventory above is superseded for the following paths: tensor
+potential/operator and sparse iterative modules have now been removed. Their
+pre-cleanup sources remain in ignored audit evidence. The direct FEM operator
+retains direct factorization only. Tensor candidate controls were removed;
+independent frozen data and the direct FEM comparison remain.
+
+Integral/surface/cache operators moved to `native/analyze/tests/reference/local`;
+the production library no longer exports or compiles them. Reference examples and
+tests load them explicitly from that tree. Shared arithmetic and geometry remain
+in place, with read-only quadrature access and the existing tetra walker exposed
+for reference reuse. The board diagnostic now accepts only direct FEM entity
+configuration and geometry/field/full/train modes, rejecting removed dispatch
+options before reading/building the board. This still does not provide a worker
+entry point.
+
+`cargo check --manifest-path native/analyze/Cargo.toml --examples --test volume_integral --test volume_galerkin`
+passes after these edits. The unchanged frozen three-tetra direct FEM screen
+passes in 61.83 s (debug test): numerical energy error 0.0030946518528586044 plus
+inherited empirical reference uncertainty 0.006780636440064506, total
+0.00987528829292311. This is a primitive reference check, not real-board 5%
+acceptance or cold production performance.
+
+The full-cell matrix cache is now reference-only too. The diagnostic uses the
+existing sparse `Field`/`ElectricApply` directly and requests only needed RHS;
+it no longer materializes full C as a prerequisite. Complete checkpoint loading
+remains an explicit diagnostic option. The original exact 17 frequencies are
+copied from the accepted current-space fixture; full diagnostic checks now
+schedule both ports individually and opposite drive on each frequency.
+
+The nested P6 512 MiB/110 s request has been replaced by remaining shared bytes
+after conservative live-operator/basis/training reservations and remaining time
+from one 120 s start. Builder/solve calls receive remaining time. Sparse factor
+assembly itself still needs cooperative deadline propagation; this change alone
+does not certify the entire lifetime cap. A supervised actual cold run is still
+required.
+
+Final `cargo check` of examples/reference tests passes after the reference moves.
+The original-pair checkpoint identity/corruption regression passes (0.11 s).
+Ordinary `npm run native:build` passed in 9m00s, separately from calculation
+timing, before the final matrix-cache export removal; a final runtime acceptance
+build and DSL matrix remain required.
+
+### Bounded actual-ROI baseline: refused
+
+The one post-cleanup baseline used the unchanged real STM32 board/request and
+`entity:6:8:16:3 train`, after a normal standalone release build (3m45s, no
+opt-level override). It refused the supervisor wall cap at **120.0989665 s**,
+peak family RSS **1025327104 bytes** (977.83 MiB), exit 1. The executable SHA256
+is `55abba4ea173e5e0d41bd228d523fda11d423cf129d1cd8aaa3159cfc330c984`.
+Details are preserved in
+`debugging/p7-board-integration/single-method-requested-rhs-v1/direct-fem/`.
+
+Three training solves completed (7, 7, 12 iterations); maximum observed KCL was
+2.11077e-16, KVL 3.93711e-12, complex-power error 2.55990e-16 and Joule-power
+error 2.08486e-15. These are equation audits, not physical observable accuracy.
+No completed model/holdout output, warm run, regional-power table or physical
+5% acceptance exists. Requested-RHS storage alone did not resolve the cold-time
+failure. No refined run or parameter search followed this refusal, in accordance
+with the bounded assignment's stopping rule.
+
+The immutable request and predeclared observable/floor plan are saved as
+`tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json`
+and `single-method-baseline-plan.json`. Their source request hash is unchanged.
+Reproduction command (run under one 120s/2GiB family supervisor, not bare for
+resource acceptance):
+
+```powershell
+$env:CARGO_BUILD_JOBS='1'
+cargo build --release --manifest-path native/analyze/Cargo.toml --example board_volume
+native/analyze/target/release/examples/board_volume.exe tests/pcb-analyze/STM32G0_CAN_RS485/STM32G0_CAN_RS485.json tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json entity:6:8:16:3 train
+```
+
+The first real worker/direct DSL result and the remaining P7 board/loss/PDN
+matrix are therefore still unimplemented, not accepted or silently skipped.
+
+Post-cleanup focused validation passed: 10 local-library unit tests, 3 exact
+field-refinement tests, 8 current/geometry tests and 7 field/replay tests, in
+addition to the direct frozen screen and reference-cache test above. Together
+with the initial 26 P6 integration tests this is 56 passing focused tests.
+The cold-run JSON is also retained as the small
+`single-method-cold-run.json` fixture; no binaries/build outputs were staged.
+Viewed the generated diagnostic comparison
+`debugging/p7-single-method-audit/cold-run-comparison.png`; it labels both cold
+timeouts explicitly and makes no accepted current/loss/frequency claim.
+
 ## Completion matrix
 
 | Obligation | State |

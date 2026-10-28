@@ -53,6 +53,9 @@ pub struct GaussRule {
 }
 
 impl GaussRule {
+    /// Read-only quadrature data shared with independent test references.
+    pub fn nodes(&self)->&[f64] {&self.nodes}
+    pub fn weights(&self)->&[f64] {&self.weights}
     pub fn new(order: usize) -> Result<Self> {
         if !(2..=64).contains(&order) {
             return Err(error("QUADRATURE_ORDER", "supported Gauss orders 2..64"));
@@ -95,6 +98,17 @@ impl GaussRule {
         Ok(Self { nodes, weights })
     }
 }
+
+#[doc(hidden)]
+pub fn cached_rule(order:usize)->Result<&'static GaussRule>{
+    use std::sync::OnceLock;
+    static RULES:[OnceLock<GaussRule>;65]=[const{OnceLock::new()};65];
+    if !(2..=64).contains(&order){return Err(error("QUADRATURE_ORDER","supported Gauss orders2..64"));}
+    if let Some(rule)=RULES[order].get(){return Ok(rule);}
+    let rule=GaussRule::new(order)?;Ok(RULES[order].get_or_init(||rule))
+}
+#[test]
+fn cached_gauss_nodes_and_weights_are_bit_identical(){for q in [2,7,15,31,63]{let a=GaussRule::new(q).unwrap();let b=cached_rule(q).unwrap();assert_eq!(a.nodes,b.nodes);assert_eq!(a.weights,b.weights);}}
 
 pub(super) fn radial(k: f64) -> f64 {
     // ∫_0^1 r asinh(k/r) dr; this form avoids subtracting k*|k|.

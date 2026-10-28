@@ -25,6 +25,17 @@ impl Context {
     }
     pub fn error_bound(&self) -> f64 {16. * 2_f64.sqrt() * self.adapter.inv_scale}
     pub fn metadata(&self) -> ([f64;2],f64,f64) {(self.adapter.offset,self.adapter.inv_scale,self.error_bound())}
+    /// Nested local grid for already clipped polygons. Prepared board vertices
+    /// remain exactly representable; only newly noded intersections gain bits.
+    pub fn refined_for_bounds(&self,bounds:[[f64;2];2])->Result<Self,String> {
+        let span=(bounds[1][0]-bounds[0][0]).max(bounds[1][1]-bounds[0][1]);
+        if !span.is_finite()||span<=0. {return Err("Invalid local overlay extent".into());}
+        let scale=2_f64.powf(((1u64<<28)as f64/(span*0.625)).log2().floor()).max(1./self.adapter.inv_scale);
+        let origin=std::array::from_fn::<_,2,_>(|k|((bounds[0][k]+(bounds[1][k]-bounds[0][k])/2.)*scale).round()/scale);
+        let radius=(1u64<<29)as f64/scale;
+        let rect=FloatRect{min_x:origin[0]-radius,max_x:origin[0]+radius,min_y:origin[1]-radius,max_y:origin[1]+radius};
+        Ok(Self{adapter:FloatPointAdapter::with_scale(rect,scale),frame:None})
+    }
     pub fn for_board(b: &Board, options: GeometryOptions) -> Result<Self,String> {
         let mut lo=[f64::INFINITY;2];let mut hi=[f64::NEG_INFINITY;2];
         let mut add=|p:Point,r:f64| {

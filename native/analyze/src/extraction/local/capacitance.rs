@@ -7,10 +7,11 @@ use super::{
 };
 use faer::{
     dyn_stack::{MemBuffer, MemStack},
-    sparse::{linalg::cholesky, SparseColMat, Triplet},
-    Conj, Mat, Par, Side,
+    sparse::linalg::cholesky,
+    Conj, Mat, Par,
 };
 use std::collections::{BTreeMap, BTreeSet};
+use super::accurate::Sum;
 
 #[derive(Clone, Debug)]
 pub struct TraceRow {
@@ -36,16 +37,19 @@ pub struct CapacitanceOperator<'a> {
     potential_count: usize,
     free: usize,
     terms: Vec<(usize, usize, f64)>,
+    rhs_terms: Vec<(usize, usize, f64)>,
     symbolic: Option<cholesky::SymbolicCholesky<usize>>,
     factor_values: Vec<f64>,
     pub planned_peak_bytes: usize,
     pub factor_value_count: usize,
+    retained_storage_bytes: usize,
 }
 
 #[derive(Debug)]
 pub struct CapacitanceAction {
     pub charges_c: Vec<f64>,
     pub nodal_potentials_v: Vec<f64>,
+    pub nodal_potential_corrections_v: Vec<f64>,
     pub electric_fields_v_per_m: Vec<[f64; 3]>,
     pub energy_j: f64,
     pub far_charge_c: f64,
@@ -55,6 +59,16 @@ pub struct CapacitanceAction {
 }
 
 impl<'a> CapacitanceOperator<'a> {
+    /// Live operator buffers after ordering/assembly/factor scratch is dropped.
+    /// The pinned faer symbolic indices are conservatively charged alongside
+    /// every factor value plus128 bytes per free coordinate for headers/maps.
+    pub fn retained_bytes(&self)->Result<usize>{
+        let mut bytes=self.mesh.retained_bytes()?;let mut add=|count:usize,width:usize|->Result<()>{bytes=bytes.checked_add(count.checked_mul(width).ok_or_else(||error("MEMORY_LIMIT","retained field count overflow"))?).ok_or_else(||error("MEMORY_LIMIT","retained field storage overflow"))?;Ok(())};
+        add(self.terms.capacity(),std::mem::size_of::<(usize,usize,f64)>())?;add(self.rhs_terms.capacity(),std::mem::size_of::<(usize,usize,f64)>())?;add(self.factor_values.capacity(),16)?;add(self.free_map.capacity(),8)?;add(self.free,128)?;add(self.far.len(),64)?;add(self.trace.len(),128)?;for row in self.trace.values(){add(row.capacity(),std::mem::size_of::<(usize,f64)>())?;}Ok(bytes.max(self.retained_storage_bytes))
+    }
+    pub fn action_workspace_bytes(&self)->Result<usize>{
+        let scratch=self.symbolic.as_ref().map_or(0,|s|s.solve_in_place_scratch::<f64>(1,Par::Seq).unaligned_bytes_required());self.mesh.nodes_m.len().checked_mul(128).and_then(|v|v.checked_add(self.mesh.tetrahedra.len().checked_mul(32)?)).and_then(|v|v.checked_add(scratch)).and_then(|v|v.checked_add(524288)).ok_or_else(||error("MEMORY_LIMIT","field action workspace overflow"))
+    }
     pub fn new(
         mesh: &'a LayeredMesh,
         boundary: Boundary,
@@ -62,10 +76,13 @@ impl<'a> CapacitanceOperator<'a> {
     ) -> Result<Self> {
         let n = mesh.nodes_m.len();
         let t = mesh.tetrahedra.len();
+        // Extrusion/replay temporaries have been released by this phase. Count
+        // actual retained mesh buffers, independently of their historical peak.
+        let trace_weights=boundary.metal_trace.iter().try_fold(0usize,|sum,row|sum.checked_add(row.weights.capacity())).ok_or_else(||error("MEMORY_LIMIT","field trace count overflow"))?;
         let base = n
-            .checked_mul(2048)
-            .and_then(|v| v.checked_add(t.checked_mul(1024)?))
-            .and_then(|v| v.checked_add(mesh.planned_peak_bytes))
+            .checked_mul(768)
+            .and_then(|v|v.checked_add(trace_weights.checked_mul(16)?))
+            .and_then(|v| v.checked_add(mesh.retained_bytes().ok()?))
             .ok_or_else(|| error("MEMORY_LIMIT", "dielectric plan overflow"))?;
         budget.check(base)?;
         if n > budget.max_nodes || t > budget.max_tetrahedra || boundary.potential_count == 0 {
@@ -160,70 +177,12 @@ impl<'a> CapacitanceOperator<'a> {
                 free += 1;
             }
         }
-        let mut triplets = Vec::new();
-        let mut terms = Vec::with_capacity(t * 16);
-        for tet in &mesh.tetrahedra {
-            let k = mesh::stiffness(tet)?;
-            for i in 0..4 {
-                for j in 0..4 {
-                    let (a, b) = (tet.nodes[i], tet.nodes[j]);
-                    let value = k[i][j] / super::super::EPS0;
-                    terms.push((a, b, value));
-                    if free_map[a] != usize::MAX && free_map[b] != usize::MAX {
-                        triplets.push(Triplet::new(free_map[a], free_map[b], value));
-                    }
-                }
-            }
-        }
-        let (mut symbolic, mut factor_values, mut plan) = (None, Vec::new(), base);
-        if free > 0 {
-            let matrix = SparseColMat::<usize, f64>::try_new_from_triplets(free, free, &triplets)
-                .map_err(|e| error("FIELD_MATRIX", &e.to_string()))?;
-            drop(triplets);
-            let s = cholesky::factorize_symbolic_cholesky(
-                matrix.symbolic(),
-                Side::Lower,
-                Default::default(),
-                Default::default(),
-            )
-            .map_err(|e| error("FIELD_MATRIX", &e.to_string()))?;
-            let scratch = s.factorize_numeric_llt_scratch::<f64>(Par::Seq, Default::default());
-            let solve = s.solve_in_place_scratch::<f64>(1, Par::Seq);
-            plan = base
-                .checked_add(
-                    s.len_val()
-                        .checked_mul(8)
-                        .ok_or_else(|| error("MEMORY_LIMIT", "factor plan overflow"))?,
-                )
-                .and_then(|v| {
-                    v.checked_add(
-                        scratch
-                            .unaligned_bytes_required()
-                            .max(solve.unaligned_bytes_required()),
-                    )
-                })
-                .ok_or_else(|| error("MEMORY_LIMIT", "factor plan overflow"))?;
-            budget.check(plan)?;
-            factor_values = vec![0.; s.len_val()];
-            let mut workspace = MemBuffer::try_new(scratch)
-                .map_err(|_| error("MEMORY_LIMIT", "factor scratch allocation"))?;
-            s.factorize_numeric_llt(
-                &mut factor_values,
-                matrix.as_ref(),
-                Side::Lower,
-                Default::default(),
-                Par::Seq,
-                MemStack::new(&mut workspace),
-                Default::default(),
-            )
-            .map_err(|_| {
-                error(
-                    "FIELD_SINGULAR",
-                    "dielectric free matrix is not positive definite; no gmin/ground added",
-                )
-            })?;
-            symbolic = Some(s);
-        }
+        drop(external);drop(copper);drop(active);drop(represented);
+        let(terms,rhs_terms,matrix,mut plan)=super::field_assembly::assemble(mesh,&free_map,free,base,budget)?;
+        let mut retained_storage_bytes=mesh.retained_bytes()?.checked_add(free_map.capacity()*8).and_then(|v|v.checked_add(terms.capacity().checked_mul(24)?)).and_then(|v|v.checked_add(rhs_terms.capacity().checked_mul(24)?)).and_then(|v|v.checked_add(trace.len().checked_mul(128)?)).and_then(|v|v.checked_add(far.len().checked_mul(64)?)).and_then(|v|v.checked_add(trace_weights.checked_mul(16)?)).ok_or_else(||error("MEMORY_LIMIT","retained sparse field overflow"))?;
+        let(mut symbolic,mut factor_values)=(None,Vec::new());
+        if free>0{let(s,values,peak,persistent)=super::sparse_potential::factor(&matrix,retained_storage_bytes,budget,&[]).map_err(|e|format!("{e}; dielectric Kff, no regularization"))?;plan=plan.max(peak);retained_storage_bytes=persistent.checked_sub(matrix.compute_nnz()*16).ok_or_else(||error("MEMORY_LIMIT","retained sparse field underflow"))?;symbolic=Some(s);factor_values=values;}
+        drop(matrix);
         let factor_value_count = factor_values.len();
         Ok(Self {
             mesh,
@@ -233,10 +192,12 @@ impl<'a> CapacitanceOperator<'a> {
             potential_count: boundary.potential_count,
             free,
             terms,
+            rhs_terms,
             symbolic,
             factor_values,
             planned_peak_bytes: plan,
             factor_value_count,
+            retained_storage_bytes,
         })
     }
 
@@ -257,7 +218,7 @@ impl<'a> CapacitanceOperator<'a> {
         }
         if self.free > 0 {
             let mut rhs = Mat::<f64>::zeros(self.free, 1);
-            for &(a, b, k) in &self.terms {
+            for &(a, b, k) in &self.rhs_terms {
                 if self.free_map[a] != usize::MAX && self.free_map[b] == usize::MAX {
                     rhs[(self.free_map[a], 0)] -= k * phi[b];
                 }
@@ -278,16 +239,28 @@ impl<'a> CapacitanceOperator<'a> {
                 }
             }
         }
-        let eps0 = super::super::EPS0;
-        let mut reaction = vec![0.; phi.len()];
-        let mut scale = vec![0.; phi.len()];
-        let mut twice_energy = 0.;
-        for &(a, b, k) in &self.terms {
-            let q = k * phi[b] * eps0;
-            reaction[a] += q;
-            scale[a] += q.abs();
-            twice_energy += phi[a] * q;
+        // Refine against the variational action evaluated in nodal differences.
+        // This is the same P1 operator; it avoids cancellation of common-mode
+        // stiffness terms on thin, exact material/contact intersections.
+        let mut phi_low=vec![0.;phi.len()];
+        for _ in 0..8 {
+            if self.free == 0 { break; }
+            let (reaction, _, _) = self.variational_action(&phi,&phi_low);
+            let free_error=self.free_map.iter().enumerate().filter(|(_,m)| **m!=usize::MAX).map(|(i,_)|reaction[i].abs()).sum::<f64>();
+            let physical_scale=reaction.iter().map(|q|q.abs()).sum::<f64>();
+            if free_error <= 1e-14*physical_scale { break; }
+            let mut correction = Mat::<f64>::zeros(self.free,1);
+            for (i,&m) in self.free_map.iter().enumerate() { if m != usize::MAX { correction[(m,0)] = -reaction[i]/super::super::EPS0; }}
+            let s=self.symbolic.as_ref().unwrap();
+            let mut workspace=MemBuffer::try_new(s.solve_in_place_scratch::<f64>(1,Par::Seq)).map_err(|_|error("MEMORY_LIMIT","refinement scratch"))?;
+            cholesky::LltRef::new(s,&self.factor_values).solve_in_place_with_conj(Conj::No,correction.as_mut(),Par::Seq,MemStack::new(&mut workspace));
+            for (i,&m) in self.free_map.iter().enumerate() { if m != usize::MAX {
+                let next=Sum{hi:phi[i],lo:phi_low[i]}.add(Sum::from(correction[(m,0)]));phi[i]=next.hi;phi_low[i]=next.lo;
+            }}
         }
+        let eps0 = super::super::EPS0;
+        let (reaction, scale, fields) = self.variational_action(&phi,&phi_low);
+        let twice_energy = phi.iter().zip(&reaction).map(|(v,q)|v*q).sum::<f64>();
         let mut charges = vec![0.; volts.len()];
         for (&node, row) in &self.trace {
             for &(col, w) in row {
@@ -310,14 +283,6 @@ impl<'a> CapacitanceOperator<'a> {
             .zip(&charges)
             .map(|(v, q)| v * q)
             .sum::<f64>();
-        let mut fields = Vec::with_capacity(self.mesh.tetrahedra.len());
-        for tet in &self.mesh.tetrahedra {
-            fields.push(std::array::from_fn(|axis| {
-                -(0..4)
-                    .map(|i| phi[tet.nodes[i]] * tet.gradients_per_m[i][axis])
-                    .sum::<f64>()
-            }));
-        }
         let field_energy_twice = self
             .mesh
             .tetrahedra
@@ -351,12 +316,12 @@ impl<'a> CapacitanceOperator<'a> {
         {
             return Err(error(
                 "FIELD_BALANCE",
-                "free KCL, full charge or energy/reaction gate failed",
+                &format!("free KCL={residual:e}, charge={balance:e}, energy/reaction={energy_error:e}, field2E={field_energy_twice:e}, work={boundary_work:e}; unchanged1e-8 gates"),
             ));
         }
         for (i, p) in phi.iter_mut().enumerate() {
             if self.free_map[i] != usize::MAX || self.trace.contains_key(&i) {
-                *p += gauge;
+                let restored=Sum{hi:*p,lo:phi_low[i]}.add(Sum::from(gauge));*p=restored.hi;phi_low[i]=restored.lo;
             }
         }
         if phi.iter().any(|x| !x.is_finite()) {
@@ -365,6 +330,7 @@ impl<'a> CapacitanceOperator<'a> {
         Ok(CapacitanceAction {
             charges_c: charges,
             nodal_potentials_v: phi,
+            nodal_potential_corrections_v: phi_low,
             electric_fields_v_per_m: fields,
             energy_j: field_energy_twice / 2.,
             far_charge_c,
@@ -372,5 +338,28 @@ impl<'a> CapacitanceOperator<'a> {
             normalized_charge_balance: balance,
             normalized_energy_reaction_error: energy_error,
         })
+    }
+
+    fn variational_action(&self, phi: &[f64], low:&[f64]) -> (Vec<f64>, Vec<f64>, Vec<[f64;3]>) {
+        let mut reaction=vec![Sum::default();phi.len()];
+        // Retain the inherited assembled-equation backward-error scale. The
+        // sum of element reaction magnitudes alone vanishes for a constant
+        // field, and would turn roundoff at zero-field nodes into O(1) error.
+        let mut scale=vec![0.;phi.len()];
+        for &(a,b,k) in &self.terms {scale[a]+=(super::super::EPS0*k*phi[b]).abs();}
+        let mut fields=Vec::with_capacity(self.mesh.tetrahedra.len());
+        for t in &self.mesh.tetrahedra {
+            let gradient:[Sum;3]=std::array::from_fn(|a|(1..4).fold(Sum::default(),|sum,i| {
+                let node=t.nodes[i];let anchor=t.nodes[0];
+                sum.add(Sum{hi:phi[node],lo:low[node]}.sub(Sum{hi:phi[anchor],lo:low[anchor]}).mul(t.gradients_per_m[i][a]))
+            }));
+            let weight=super::super::EPS0*t.epsilon_r*t.volume_m3;
+            let mut q=[Sum::default();4];
+            for i in 1..4 {q[i]=(0..3).fold(Sum::default(),|sum,a|sum.add(gradient[a].mul(t.gradients_per_m[i][a]))).mul(weight);}
+            q[0]=q[1].add(q[2]).add(q[3]).neg();
+            for i in 0..4 {reaction[t.nodes[i]]=reaction[t.nodes[i]].add(q[i]);}
+            fields.push(gradient.map(|x|-x.value()));
+        }
+        (reaction.into_iter().map(Sum::value).collect(),scale,fields)
     }
 }

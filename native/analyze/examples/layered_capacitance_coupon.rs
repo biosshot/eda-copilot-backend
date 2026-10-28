@@ -1,12 +1,6 @@
-//! Internal offline evidence harness; source inclusion permits an optimized
-//! bounded probe against frozen cached deps without changing crate profiles.
+//! Internal offline evidence harness using the actual shared crate primitives.
 #![allow(dead_code)]
-const EPS0: f64 = 8.8541878128e-12;
-mod extraction {
-    pub const EPS0: f64 = 8.8541878128e-12;
-}
-#[path = "../src/extraction/local/mod.rs"]
-mod local;
+use pcb_analyze::extraction::local;
 use local::layered_capacitance::*;
 use std::{
     collections::BTreeSet,

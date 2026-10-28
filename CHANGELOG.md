@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- Restrict the board-volume diagnostic to direct sparse FEM, remove tensor and iterative magnetic candidates, and move independent integral/surface reference operators into the test/reference tree. Real-board physical observable acceptance, shared lifetime budgeting and worker/DSL integration remain pending; P7 stays open.
+
+- Review accumulated P7 extraction candidates under the user-approved 2 GiB/120 s budget and up-to-5% observable accuracy policy. Both fixed real-ROI diagnostic candidates remain unaccepted; record measurements and a bounded single-method integration assignment without further solver exploration.
+
+- Rebuild and verify the actual PCB field mesh natively against independent full-source SciPy assembly, preserving exact dyadic refinement ancestry before F64 display projection. Retain failed face-only grading and extend work selection to interior dielectric edge stars. Physical C convergence, real-board P6/direct DSL and full P7 remain unaccepted.
+
+- Retain complete actual-ROI field states before bounded refinement work, verify full-rank indicator metrics, and add checked reference deadlines without changing physical accuracy gates. The real-board P6/direct-DSL result and complete P7 remain unaccepted.
+
+- Compute finite-tetra volumes and P1 gradients with compensated determinants/cofactors on unchanged vertices; all 1656 saved actual-ROI volumes match independent exact rational values. Revalidate immutable near checkpoints after the coefficient correction. Reference-only positive-volume work can resume bounded adaptive trees; full actual-board magnetic/P6/DSL admission remains pending.
+
+- Continue actual via/return field verification with an independent, source-P1-conforming adaptive tetrahedral route and bounded sparse Cholesky, retaining original Cu cells and all failed uniform-bore/LU/AMG controls. No converged full-field PCB/P6/DSL result is admitted yet.
+
+- Add opt-in compensated finite-tetra near integration and exact geometry-bound checkpoint replay, retaining all current supports and strict directed/refinement gates. Actual thin-cell controls pass; whole-ROI, P6 and direct DSL admission remain pending.
+
+- Continue internal P7 with full-coordinate electric Schur materialization, coherent native-bore/barrel curves, exact source-bit references and byte-admitted magnetic trial spaces. Independent actual-source checks reject the passing primitive's board candidate; bore refinement exposes unresolved full-field convergence. Preserve all failures and cached successes. No real-board P6/DSL result or complete P7 admission yet.
+
+- Continue internal P7 board-volume candidates with common material/contact arrangements, finite foil/barrel currents, compensated field/solver arithmetic and source-resolving hierarchical Newton integration. Resolve actual-board tetra self refinement without filtering copper; preserve an independent complete24-tetra reference and all failed board/reduction evidence. Full PCB extraction, original ROI scaling and P7 remain unaccepted; see the board-integration verification ledger.
+
+- Resume the existing P7 final-integration assignment from c3b436e, prioritizing a real-board via/return extraction path and authorizing necessary internal material/barrel/mapping extensions within the agreed scope.
+
 - Add bounded automatic current Krylov congruence with all-port/internal-current/local-loss order gates, actual finite foil-source contacts and retained electric/current void contours. Preserve physical guards and legacy serialized inputs. P7 remains open: no actual AC via/return, scalable board reduction, complete loss coverage or successful board extraction DSL is delivered; see final-integration verification.
 
 - Assign final P7 integration after structural-gauge acceptance: real via/return geometry, scalable extraction/reduction, complete line/PDN paths and direct board DSL acceptance before P8/P11.

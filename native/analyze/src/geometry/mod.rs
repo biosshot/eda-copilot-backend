@@ -1,7 +1,7 @@
 //! Physical copper preparation; consumes validated model::Board only.
-mod areas;
-mod context;
-mod primitives;
+pub(crate) mod areas;
+pub(crate) mod context;
+pub(crate) mod primitives;
 mod spatial;
 mod topology;
 use crate::{

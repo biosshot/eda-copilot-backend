@@ -1,13 +1,6 @@
 //! Offline bounded magnetic primitive/coupon probe. Actual kernel sources only.
 #![allow(dead_code)]
-#[path = "../src/extraction/local/polyhedron.rs"]
-mod polyhedron;
-#[path = "../src/extraction/local/prism.rs"]
-mod prism;
-type Result<T> = std::result::Result<T, String>;
-fn error(code: &str, text: &str) -> String {
-    format!("LOCAL_{code}: {text}")
-}
+use pcb_analyze::extraction::local::{polyhedron,prism};
 use polyhedron::PointPotential;
 use prism::{GaussRule, Prism};
 use serde_json::{json, Value};

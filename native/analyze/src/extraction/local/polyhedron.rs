@@ -40,11 +40,23 @@ struct Edge {
     incident: usize,
 }
 
+#[derive(Debug)]
+struct FarSamples {
+    center: [f64; 3],
+    radius: f64,
+    volume: f64,
+    points: Vec<[f64; 3]>,
+    weights: Vec<f64>,
+    mass_error: f64,
+}
 #[derive(Clone, Debug)]
 pub struct PointPotential {
     origin: [f64; 3],
-    prism: Prism,
-    vertices: [[f64; 3]; 6],
+    prism: Option<Prism>,
+    tetra: Option<[[f64; 3]; 4]>,
+    tetra_tolerance: f64,
+    far_samples: std::sync::Arc<std::sync::OnceLock<FarSamples>>,
+    vertices: Vec<[f64; 3]>,
     faces: Vec<Face>,
     edges: Vec<Edge>,
 }
@@ -62,20 +74,52 @@ pub struct PotentialEvaluation {
 impl PointPotential {
     pub fn new(prism: &Prism) -> Result<Self> {
         let origin = [prism.triangle_m[0][0], prism.triangle_m[0][1], prism.z_m[0]];
-        let vertices = std::array::from_fn(|i| {
-            [
-                prism.triangle_m[i % 3][0] - origin[0],
-                prism.triangle_m[i % 3][1] - origin[1],
-                prism.z_m[i / 3] - origin[2],
-            ]
-        });
-        let polygons = [
+        let vertices = (0..6)
+            .map(|i| {
+                [
+                    prism.triangle_m[i % 3][0] - origin[0],
+                    prism.triangle_m[i % 3][1] - origin[1],
+                    prism.z_m[i / 3] - origin[2],
+                ]
+            })
+            .collect();
+        let polygons = vec![
             vec![0, 2, 1],
             vec![3, 4, 5],
             vec![0, 1, 4, 3],
             vec![1, 2, 5, 4],
             vec![2, 0, 3, 5],
         ];
+        Self::from_faces(origin, vertices, polygons, Some(prism.clone()), None)
+    }
+
+    /// The same finite convex-polyhedron source formula, now on a tetrahedron.
+    /// No prism surrogate, changed support, or centroid distance is introduced.
+    pub fn tetrahedron(points: [[f64; 3]; 4]) -> Result<Self> {
+        super::mesh::tetra_coefficients(points)?;
+        let origin = points[0];
+        let vertices: Vec<_> = points.iter().map(|&p| sub(p, origin)).collect();
+        let mut polygons = vec![];
+        for opposite in 0..4 {
+            let mut face: Vec<_> = (0..4).filter(|&i| i != opposite).collect();
+            let normal = cross(
+                sub(vertices[face[1]], vertices[face[0]]),
+                sub(vertices[face[2]], vertices[face[0]]),
+            );
+            if dot(normal, sub(vertices[opposite], vertices[face[0]])) > 0. {
+                face.reverse();
+            }
+            polygons.push(face);
+        }
+        Self::from_faces(origin, vertices, polygons, None, Some(points))
+    }
+    fn from_faces(
+        origin: [f64; 3],
+        vertices: Vec<[f64; 3]>,
+        polygons: Vec<Vec<usize>>,
+        prism: Option<Prism>,
+        tetra: Option<[[f64; 3]; 4]>,
+    ) -> Result<Self> {
         let mut faces = Vec::new();
         let mut edges = BTreeMap::<[usize; 2], Edge>::new();
         for polygon in polygons {
@@ -131,7 +175,10 @@ impl PointPotential {
         }
         Ok(Self {
             origin,
-            prism: prism.clone(),
+            prism,
+            tetra,
+            tetra_tolerance: 1e-10,
+            far_samples: std::sync::Arc::new(std::sync::OnceLock::new()),
             vertices,
             faces,
             edges: edges.into_values().collect(),
@@ -144,6 +191,18 @@ impl PointPotential {
         self.at_diagnostic(point).map(|v| v.value_m2)
     }
 
+    /// Tighten the internal source/roundoff budget for an independent reference.
+    /// Existing production defaults and all target/reciprocity guards remain.
+    pub fn with_tighter_tetra_tolerance(mut self, tolerance: f64) -> Result<Self> {
+        if self.tetra.is_none() || !tolerance.is_finite() || !(1e-14..=1e-10).contains(&tolerance) {
+            return Err(error(
+                "POINT_INPUT",
+                "tetra source tolerance must tighten1e-10 within1e-14..1e-10",
+            ));
+        }
+        self.tetra_tolerance = tolerance;
+        Ok(self)
+    }
     /// Analytic faces/edges are used only when their summation condition is
     /// resolved. Otherwise use positive source-XY quadrature with exact source-z
     /// integration, explicit order control and refusal on failed refinement.
@@ -153,7 +212,13 @@ impl PointPotential {
             return Err(error("POINT_INPUT", "nonfinite evaluation point"));
         }
         let local = sub(point, self.origin);
-        let r = self.vertices.map(|p| sub(p, local));
+        let r: [[f64; 3]; 6] = std::array::from_fn(|i| {
+            if i < self.vertices.len() {
+                sub(self.vertices[i], local)
+            } else {
+                [0.; 3]
+            }
+        });
         let lengths = r.map(norm);
         let mut value = 0.;
         let mut magnitude = 0.;
@@ -204,7 +269,12 @@ impl PointPotential {
         }
         value *= 0.5;
         let cancellation_ratio = magnitude * 0.5 / value.abs();
-        if value.is_finite() && value > 0. && cancellation_ratio * 64. * f64::EPSILON <= 1e-7 {
+        let tolerance = if self.tetra.is_some() {
+            self.tetra_tolerance
+        } else {
+            1e-7
+        };
+        if value.is_finite() && value > 0. && cancellation_ratio * 64. * f64::EPSILON <= tolerance {
             Ok(PotentialEvaluation {
                 value_m2: value,
                 cancellation_ratio,
@@ -216,16 +286,106 @@ impl PointPotential {
         }
     }
 
+    fn bounded_far_tetra(&self, point: [f64; 3], tolerance: f64) -> Result<Option<(f64, f64)>> {
+        let Some(tetra) = self.tetra else {
+            return Ok(None);
+        };
+        let center = std::array::from_fn(|k| tetra.iter().map(|p| p[k]).sum::<f64>() / 4.);
+        let radius = tetra
+            .iter()
+            .map(|&v| norm(sub(v, center)))
+            .fold(0., f64::max)
+            * (1. + 16. * f64::EPSILON);
+        let r = sub(point, center);
+        let distance = norm(r);
+        let q = radius / distance * (1. + 32. * f64::EPSILON);
+        if !q.is_finite() || q >= 1. {
+            return Ok(None);
+        }
+        let remainder = 2. * (1. + q) / (1. - q) * q.powi(18);
+        let rounding = 1024. * f64::EPSILON * (1. + q) / (1. - q).powi(2);
+        if remainder + rounding > tolerance {
+            return Ok(None);
+        }
+        if self.far_samples.get().is_none() {
+            let volume = super::mesh::tetra_coefficients(tetra)?.0;
+            let mut points = Vec::with_capacity(1000);
+            let mut weights = Vec::with_capacity(1000);
+            tetra_integrate(tetra, volume, super::prism::cached_rule(10)?, |p, w| {
+                if w <= 0. || !w.is_finite() {
+                    return Err(error("TETRA_FAR_RANGE", "positive far cubature required"));
+                }
+                points.push(sub(p, center));
+                weights.push(w);
+                Ok(())
+            })?;
+            let mass = weights
+                .iter()
+                .fold(super::accurate::Sum::default(), |s, &w| {
+                    s.add(super::accurate::Sum::from(w))
+                })
+                .value();
+            let samples = FarSamples {
+                center,
+                radius,
+                volume,
+                points,
+                weights,
+                mass_error: (mass - volume).abs() / volume,
+            };
+            let _ = self.far_samples.set(samples);
+        }
+        let samples = self.far_samples.get().unwrap();
+        let bound = remainder + rounding + samples.mass_error * (1. + q) / (1. - q);
+        if bound > tolerance {
+            return Ok(None);
+        }
+        let r = sub(point, samples.center);
+        let mut sum = super::accurate::Sum::default();
+        for (&p, &w) in samples.points.iter().zip(&samples.weights) {
+            let d = norm(sub(r, p));
+            if d <= 0. || !d.is_finite() {
+                return Err(error(
+                    "TETRA_FAR_RANGE",
+                    "strict far source separation required",
+                ));
+            }
+            sum = sum.add(super::accurate::Sum::from(1. / d).mul(w));
+        }
+        let value = sum.value();
+        if value <= 0. || !value.is_finite() || samples.radius <= 0. || samples.volume <= 0. {
+            return Err(error(
+                "TETRA_FAR_RANGE",
+                "positive finite bounded far source required",
+            ));
+        }
+        Ok(Some((value, bound)))
+    }
     fn positive_source(
         &self,
         point: [f64; 3],
         cancellation_ratio: f64,
     ) -> Result<PotentialEvaluation> {
+        let tolerance = if self.tetra.is_some() {
+            self.tetra_tolerance
+        } else {
+            1e-5
+        };
+        if let Some((value, bound)) = self.bounded_far_tetra(point, tolerance)? {
+            return Ok(PotentialEvaluation {
+                value_m2: value,
+                cancellation_ratio,
+                source_order: 10,
+                source_relative_change: bound,
+            });
+        }
         let mut previous = self.positive_rule(point, 7)?;
+        let mut samples = vec![(7, previous)];
         for order in [15, 31, 63] {
             let value = self.positive_rule(point, order)?;
             let change = (value - previous).abs() / value;
-            if change <= 1e-5 {
+            samples.push((order, value));
+            if change <= tolerance {
                 return Ok(PotentialEvaluation {
                     value_m2: value,
                     cancellation_ratio,
@@ -235,11 +395,15 @@ impl PointPotential {
             }
             previous = value;
         }
-        Err(error("POLYHEDRON_SOURCE_QUADRATURE", "positive source rule did not meet explicit1e-5 refinement estimate through order63; no unchecked fallback"))
+        Err(error("POLYHEDRON_SOURCE_QUADRATURE", &format!("positive source rule did not meet explicit{tolerance:e} refinement estimate through order63; point={point:?}, tetra={:?}, samples={samples:?}; no unchecked fallback",self.tetra)))
     }
 
     fn positive_rule(&self, point: [f64; 3], order: usize) -> Result<f64> {
-        let rule = GaussRule::new(order)?;
+        if let Some(tetra) = self.tetra {
+            return positive_tetra_potential(tetra, point, order);
+        }
+        let prism = self.prism.as_ref().unwrap();
+        let rule = super::prism::cached_rule(order)?;
         // Query-relative coordinates retain the authored narrow support. Choose
         // the query as fan apex only inside XY; outside use an original vertex,
         // so all fan weights remain nonnegative without geometric clipping.
@@ -256,8 +420,8 @@ impl PointPotential {
             })
             .unwrap();
         let apex = if inside { [0., 0.] } else { tri[apex_index] };
-        let z0 = self.prism.z_m[0] - point[2];
-        let z1 = self.prism.z_m[1] - point[2];
+        let z0 = prism.z_m[0] - point[2];
+        let z1 = prism.z_m[1] - point[2];
         let mut total = 0.;
         for edge in 0..3 {
             let relative = |i: usize| {
@@ -346,6 +510,584 @@ fn stable_z_integral(rho: f64, z0: f64, z1: f64) -> f64 {
     let ra = a.hypot(rho);
     let rb = b.hypot(rho);
     (((b - a) * (1. + (a + b) / (ra + rb))) / (a + ra)).ln_1p()
+}
+
+/// Positive Duffy cubature. For an interior query the radial integral is exact
+/// after splitting into four query-to-face tetrahedra. This independent source
+/// construction also supplies a fallback when face/edge summation is unresolved.
+pub fn positive_tetra_potential_duffy(
+    tetra: [[f64; 3]; 4],
+    point: [f64; 3],
+    order: usize,
+) -> Result<f64> {
+    let (volume, gradients) = super::mesh::tetra_coefficients(tetra)?;
+    let delta = sub(point, tetra[0]);
+    let mut weights = [0.; 4];
+    for k in 1..4 {
+        weights[k] = dot(gradients[k], delta);
+    }
+    weights[0] = 1. - weights[1] - weights[2] - weights[3];
+    let rule = super::prism::cached_rule(order)?;
+    if weights.iter().all(|&x| x >= 0.) {
+        let mut value = 0.;
+        for skip in 0..4 {
+            let face: Vec<_> = (0..4)
+                .filter(|&i| i != skip)
+                .map(|i| sub(tetra[i], point))
+                .collect();
+            let determinant = dot(face[0], cross(face[1], face[2])).abs();
+            if determinant == 0. {
+                continue;
+            }
+            for (&u, &wu) in rule.nodes.iter().zip(&rule.weights) {
+                for (&v, &wv) in rule.nodes.iter().zip(&rule.weights) {
+                    let direction = std::array::from_fn(|i| {
+                        u * face[0][i]
+                            + (1. - u) * v * face[1][i]
+                            + (1. - u) * (1. - v) * face[2][i]
+                    });
+                    value += determinant * 0.5 * wu * wv * (1. - u) / norm(direction);
+                }
+            }
+        }
+        if value > 0. && value.is_finite() {
+            return Ok(value);
+        }
+        return Err(error(
+            "TETRA_SOURCE_RANGE",
+            "positive interior tetra potential overflow",
+        ));
+    }
+    let mut value = 0.;
+    tetra_integrate(tetra, volume, &rule, |p, w| {
+        let distance = norm(sub(p, point));
+        if distance == 0. {
+            return Err(error(
+                "TETRA_SOURCE_LIMIT",
+                "quadrature hit an exterior singularity",
+            ));
+        }
+        value += w / distance;
+        Ok(())
+    })?;
+    if value > 0. && value.is_finite() {
+        Ok(value)
+    } else {
+        Err(error(
+            "TETRA_SOURCE_RANGE",
+            "positive exterior tetra potential overflow",
+        ))
+    }
+}
+
+/// Positive finite tetra source rule with the longest segment integrated
+/// analytically. The remaining simplex fan has a fixed positive Jacobian;
+/// fourth-power grading resolves logarithmic angular/radial endpoint limits.
+pub fn positive_tetra_potential(
+    tetra: [[f64; 3]; 4],
+    point: [f64; 3],
+    order: usize,
+) -> Result<f64> {
+    let (volume, _) = super::mesh::tetra_coefficients(tetra)?;
+    let (ia, ib) = (0..4)
+        .flat_map(|i| (i + 1..4).map(move |j| (i, j)))
+        .max_by(|&(i, j), &(k, l)| {
+            norm(sub(tetra[i], tetra[j])).total_cmp(&norm(sub(tetra[k], tetra[l])))
+        })
+        .unwrap();
+    let other: Vec<_> = (0..4).filter(|&i| i != ia && i != ib).collect();
+    let a = tetra[ia];
+    let edge = sub(tetra[ib], a);
+    let length = norm(edge);
+    let e = edge.map(|x| x / length);
+    let c = sub(tetra[other[0]], a);
+    let d = sub(tetra[other[1]], a);
+    let query = sub(point, a);
+    let v = cross(e, c);
+    let w = cross(e, d);
+    let q = cross(e, query);
+    let determinant = dot(e, cross(v, w));
+    if determinant == 0. || !determinant.is_finite() {
+        return Err(error(
+            "TETRA_SOURCE_RANGE",
+            "projected source simplex is unresolved; no volume removed",
+        ));
+    }
+    let projected = [
+        dot(e, cross(q, w)) / determinant,
+        dot(e, cross(v, q)) / determinant,
+    ];
+    let vertices = [[0., 0.], [1., 0.], [0., 1.]];
+    let physical = |p: [f64; 2]| std::array::from_fn::<_, 3, _>(|k| p[0] * v[k] + p[1] * w[k]);
+    let barycentric_vertices = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
+    let apex_full = if projected[0] >= 0. && projected[1] >= 0. && projected[0] + projected[1] <= 1.
+    {
+        [
+            1. - (projected[0] + projected[1]),
+            projected[0],
+            projected[1],
+        ]
+    } else {
+        let mut best = ([1., 0., 0.], f64::INFINITY);
+        for i in 0..3 {
+            let start = physical(vertices[i]);
+            let finish = physical(vertices[(i + 1) % 3]);
+            let delta = sub(finish, start);
+            let squared = dot(delta, delta);
+            if squared == 0. {
+                return Err(error("TETRA_SOURCE_RANGE", "projected edge is unresolved"));
+            }
+            let t = (dot(sub(q, start), delta) / squared).clamp(0., 1.);
+            let candidate = std::array::from_fn(|k| {
+                (1. - t) * barycentric_vertices[i][k] + t * barycentric_vertices[(i + 1) % 3][k]
+            });
+            let distance = norm(sub(physical([candidate[1], candidate[2]]), q));
+            if distance < best.1 {
+                best = (candidate, distance);
+            }
+        }
+        best.0
+    };
+    let apex = [apex_full[1], apex_full[2]];
+    let ray = |lambda: [f64; 3]| -> Result<f64> {
+        let fraction = lambda[0];
+        if fraction <= 0. {
+            return Err(error(
+                "TETRA_SOURCE_RANGE",
+                "source quadrature left positive barycentric simplex",
+            ));
+        }
+        let start = std::array::from_fn(|k| -query[k] + lambda[1] * c[k] + lambda[2] * d[k]);
+        let t = dot(start, e);
+        let rho = norm(cross(e, start));
+        let line_length = fraction * length;
+        let end = t + line_length;
+        let ratio = line_length / (rho.hypot(t) + rho.hypot(end));
+        let value = if ratio <= 0.5 {
+            2. * ratio.atanh()
+        } else if rho > 0. {
+            if t >= 0. {
+                (end / rho).asinh() - (t / rho).asinh()
+            } else if end <= 0. {
+                (-t / rho).asinh() - (-end / rho).asinh()
+            } else {
+                (end / rho).asinh() + (-t / rho).asinh()
+            }
+        } else if t * end > 0. {
+            (end.abs() / t.abs()).ln().abs()
+        } else {
+            f64::INFINITY
+        };
+        if value > 0. && value.is_finite() {
+            Ok(value)
+        } else {
+            Err(error(
+                "TETRA_SOURCE_LIMIT",
+                "unresolved positive analytic source segment",
+            ))
+        }
+    };
+    let rule = super::prism::cached_rule(order)?;
+    let mut value = super::accurate::Sum::default();
+    let endpoints = |lambda: [f64; 3]| {
+        let start = -dot(query, e) + lambda[1] * dot(c, e) + lambda[2] * dot(d, e);
+        [start, start + lambda[0] * length]
+    };
+    let graded = |mut cuts: Vec<f64>| {
+        cuts.retain(|x| x.is_finite() && *x >= 0. && *x <= 1.);
+        cuts.sort_by(f64::total_cmp);
+        cuts.dedup();
+        let mut result = vec![];
+        for interval in cuts.windows(2) {
+            let half = (interval[1] - interval[0]) / 2.;
+            if half > 0. {
+                result.extend([(interval[0], half), (interval[1], -half)]);
+            }
+        }
+        result
+    };
+    for edge in 0..3 {
+        let first = vertices[edge];
+        let second = vertices[(edge + 1) % 3];
+        let da = [first[0] - apex[0], first[1] - apex[1]];
+        let db = [second[0] - apex[0], second[1] - apex[1]];
+        // On the unit simplex this determinant is exactly the opposite
+        // barycentric coordinate, including a truly zero boundary fan.
+        let jacobian = apex_full[(edge + 2) % 3];
+        if jacobian == 0. {
+            continue;
+        }
+        let pa = physical(da);
+        let pb = physical(db);
+        let delta = sub(pb, pa);
+        let squared = dot(delta, delta);
+        let minimum = (-dot(pa, delta) / squared).clamp(0., 1.);
+        let mut cuts = vec![0., 1., minimum];
+        let first_endpoint = endpoints(barycentric_vertices[edge]);
+        let second_endpoint = endpoints(barycentric_vertices[(edge + 1) % 3]);
+        for k in 0..2 {
+            let delta = second_endpoint[k] - first_endpoint[k];
+            if delta != 0. {
+                cuts.push(-first_endpoint[k] / delta);
+            }
+        }
+        for (begin, delta) in graded(cuts) {
+            for (&u, &wu) in rule.nodes.iter().zip(&rule.weights) {
+                let displacement = delta * u.powi(4);
+                let s = begin + displacement;
+                let one_minus_s = (1. - begin) - displacement;
+                let ds = 4. * delta.abs() * u.powi(3);
+                let edge_barycentric: [f64; 3] = std::array::from_fn(|k| {
+                    one_minus_s * barycentric_vertices[edge][k]
+                        + s * barycentric_vertices[(edge + 1) % 3][k]
+                });
+                // The analytic segment also changes rapidly where either
+                // endpoint crosses the query's axial coordinate. Split there
+                // independently of the perpendicular distance minimum.
+                let apex_endpoints = endpoints(apex_full);
+                let edge_endpoints = endpoints(edge_barycentric);
+                let mut radial_cuts = vec![0., 1.];
+                for k in 0..2 {
+                    let delta = edge_endpoints[k] - apex_endpoints[k];
+                    if delta != 0. {
+                        radial_cuts.push(-apex_endpoints[k] / delta);
+                    }
+                }
+                for (radial_begin, radial_delta) in graded(radial_cuts) {
+                    for (&t, &wt) in rule.nodes.iter().zip(&rule.weights) {
+                        // Evaluate every barycentric coordinate positively. Computing
+                        // lambdaA=1-lambdaC-lambdaD erases thin boundary rays.
+                        let displacement = radial_delta * t.powi(4);
+                        let radius = radial_begin + displacement;
+                        let one_minus_radius = (1. - radial_begin) - displacement;
+                        let lambda = std::array::from_fn(|k| {
+                            one_minus_radius * apex_full[k] + radius * edge_barycentric[k]
+                        });
+                        value = value.add(super::accurate::Sum::from(ray(lambda)?).mul(
+                            wu * wt * jacobian * ds * radius * 4. * radial_delta.abs() * t.powi(3),
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    let result = value.mul(6. * volume / length).value();
+    if result > 0. && result.is_finite() {
+        Ok(result)
+    } else {
+        Err(error(
+            "TETRA_SOURCE_RANGE",
+            "positive line-integrated tetra source overflow",
+        ))
+    }
+}
+
+#[doc(hidden)]
+pub fn tetra_integrate(
+    t: [[f64; 3]; 4],
+    volume: f64,
+    rule: &GaussRule,
+    mut f: impl FnMut([f64; 3], f64) -> Result<()>,
+) -> Result<()> {
+    for (&u, &wu) in rule.nodes.iter().zip(&rule.weights) {
+        for (&v, &wv) in rule.nodes.iter().zip(&rule.weights) {
+            for (&w, &ww) in rule.nodes.iter().zip(&rule.weights) {
+                let p = std::array::from_fn(|i| {
+                    t[0][i]
+                        + u * (t[1][i] - t[0][i])
+                        + (1. - u) * v * (t[2][i] - t[0][i])
+                        + (1. - u) * (1. - v) * w * (t[3][i] - t[0][i])
+                });
+                f(p, 6. * volume * wu * wv * ww * (1. - u).powi(2) * (1. - v))?;
+            }
+        }
+    }
+    Ok(())
+}
+pub fn tetra_integral(target: [[f64; 3]; 4], source: &PointPotential, order: usize) -> Result<f64> {
+    let (volume, _) = super::mesh::tetra_coefficients(target)?;
+    let rule = super::prism::cached_rule(order)?;
+    let mut result = 0.;
+    tetra_integrate(target, volume, &rule, |p, w| {
+        result += w * source.at(p)?;
+        Ok(())
+    })?;
+    if result > 0. && result.is_finite() {
+        Ok(result)
+    } else {
+        Err(error(
+            "TETRA_INTEGRAL_RANGE",
+            "finite positive tetra integral required",
+        ))
+    }
+}
+
+/// Positive two-ended Z grading on an unchanged original layered tetrahedron.
+/// The exact section fan and t=u^4/2 mappings retain volume and first moments.
+pub fn tetra_integral_z_graded(
+    target: [[f64; 3]; 4],
+    source: &PointPotential,
+    order: usize,
+    start: std::time::Instant,
+    limit: std::time::Duration,
+) -> Result<f64> {
+    let (volume, _) = super::mesh::tetra_coefficients(target)?;
+    let z0 = target.iter().map(|p| p[2]).fold(f64::INFINITY, f64::min);
+    let z1 = target
+        .iter()
+        .map(|p| p[2])
+        .fold(f64::NEG_INFINITY, f64::max);
+    if z1 <= z0 || target.iter().any(|p| p[2] != z0 && p[2] != z1) {
+        return Err(error(
+            "TETRA_GRADED_INPUT",
+            "two original layered Z planes required",
+        ));
+    }
+    let lower = target.iter().filter(|p| p[2] == z0).collect::<Vec<_>>();
+    let upper = target.iter().filter(|p| p[2] == z1).collect::<Vec<_>>();
+    let rule = super::prism::cached_rule(order)?;
+    let mut total = super::accurate::Sum::default();
+    let mut mass = super::accurate::Sum::default();
+    let mut moments = [super::accurate::Sum::default(); 3];
+    let mut samples = 0usize;
+    for side in 0..2 {
+        for (&u, &wu) in rule.nodes.iter().zip(&rule.weights) {
+            let t = if side == 0 {
+                0.5 * u.powi(4)
+            } else {
+                1. - 0.5 * u.powi(4)
+            };
+            let jac = 2. * u.powi(3) * (z1 - z0);
+            let z = z0 + (z1 - z0) * t;
+            let mut section = Vec::with_capacity(4);
+            for a in &lower {
+                for b in &upper {
+                    section.push([a[0] * (1. - t) + b[0] * t, a[1] * (1. - t) + b[1] * t, z]);
+                }
+            }
+            let centre = [
+                section.iter().map(|p| p[0]).sum::<f64>() / section.len() as f64,
+                section.iter().map(|p| p[1]).sum::<f64>() / section.len() as f64,
+            ];
+            section.sort_by(|a, b| {
+                (a[1] - centre[1])
+                    .atan2(a[0] - centre[0])
+                    .total_cmp(&(b[1] - centre[1]).atan2(b[0] - centre[0]))
+            });
+            for k in 1..section.len() - 1 {
+                let triangle = [section[0], section[k], section[k + 1]];
+                // Exact affine section Jacobian; computing it by subtracting
+                // nearly coincident endpoint-section vertices loses tiny weights.
+                let det = 6. * volume / (z1 - z0)
+                    * match lower.len() {
+                        3 => (1. - t).powi(2),
+                        1 => t * t,
+                        2 => t * (1. - t),
+                        _ => {
+                            return Err(error("TETRA_GRADED_INPUT", "unsupported layered section"))
+                        }
+                    };
+                if det <= 0. || !det.is_finite() {
+                    return Err(error(
+                        "TETRA_GRADED_RANGE",
+                        "positive exact section required",
+                    ));
+                }
+                for (&v, &wv) in rule.nodes.iter().zip(&rule.weights) {
+                    for (&w, &ww) in rule.nodes.iter().zip(&rule.weights) {
+                        samples += 1;
+                        if samples % 128 == 0 && start.elapsed() > limit {
+                            return Err(error(
+                                "DEADLINE",
+                                "positive layered target grading deadline",
+                            ));
+                        }
+                        let lambda = [1. - v, v * (1. - w), v * w];
+                        let point = std::array::from_fn(|axis| {
+                            (0..3).map(|i| lambda[i] * triangle[i][axis]).sum::<f64>()
+                        });
+                        let weight = jac * wu * det * v * wv * ww;
+                        if weight <= 0. || !weight.is_finite() {
+                            return Err(error(
+                                "TETRA_GRADED_RANGE",
+                                "positive target weight required",
+                            ));
+                        }
+                        mass = mass.add(super::accurate::Sum::from(weight));
+                        for axis in 0..3 {
+                            moments[axis] = moments[axis]
+                                .add(super::accurate::Sum::from(point[axis]).mul(weight));
+                        }
+                        total =
+                            total.add(super::accurate::Sum::from(source.at(point)?).mul(weight));
+                    }
+                }
+            }
+        }
+    }
+    if (mass.value() - volume).abs() > 1e-10 * volume {
+        return Err(error("TETRA_GRADED_PARTITION", "target volume changed"));
+    }
+    for axis in 0..3 {
+        let expected = target.iter().map(|p| p[axis]).sum::<f64>() * volume / 4.;
+        let scale = target.iter().map(|p| p[axis].abs()).fold(0., f64::max) * volume;
+        if (moments[axis].value() - expected).abs() > 1e-10 * scale.max(f64::MIN_POSITIVE) {
+            return Err(error(
+                "TETRA_GRADED_PARTITION",
+                "target first moment changed",
+            ));
+        }
+    }
+    let value = total.value();
+    if value <= 0. || !value.is_finite() {
+        return Err(error(
+            "TETRA_GRADED_RANGE",
+            "positive finite graded integral required",
+        ));
+    }
+    Ok(value)
+}
+/// Exact radial/segment reductions of the constant-density tetrahedron self
+/// integral. Only one smooth, graded facet coordinate remains numerical.
+pub fn tetra_self_integral(tetra: [[f64; 3]; 4], order: usize) -> Result<f64> {
+    let (volume, _) = super::mesh::tetra_coefficients(tetra)?;
+    let columns = [
+        sub(tetra[1], tetra[0]),
+        sub(tetra[2], tetra[0]),
+        sub(tetra[3], tetra[0]),
+    ];
+    let mut facets = vec![(columns[2], columns[0], sub(columns[1], columns[2]), true)];
+    for i in 0..3 {
+        let others: Vec<_> = (0..3).filter(|&j| j != i).collect();
+        facets.push((
+            columns[i],
+            sub(columns[i], columns[others[0]]),
+            columns[others[1]].map(|x| -x),
+            true,
+        ));
+        facets.push((
+            columns[others[1]],
+            columns[others[0]],
+            columns[i].map(|x| -x),
+            false,
+        ));
+    }
+    let rule = super::prism::cached_rule(order)?;
+    let mut total = super::accurate::Sum::default();
+    for (start0, start1, direction, triangle) in facets {
+        let length = norm(direction);
+        let e = direction.map(|x| x / length);
+        let perpendicular0 = cross(e, start0);
+        let perpendicular1 = cross(e, start1);
+        let delta = sub(perpendicular1, perpendicular0);
+        let squared = dot(delta, delta);
+        let mut cuts = vec![0., 1.];
+        if squared > 0. {
+            let minimum = (-dot(perpendicular0, delta) / squared).clamp(0., 1.);
+            cuts.push(minimum);
+            // A nearly planar physical tetrahedron has a logarithmic layer
+            // much narrower than the facet interval. Its width is geometric:
+            // rho(s)^2 = rho_min^2 + |delta|^2 (s-s_min)^2.
+            // Resolve every dyadic scale rather than discard the thin volume
+            // or infer convergence from a single fixed power grading.
+            let nearest = std::array::from_fn(|k| {
+                super::accurate::Sum::from(perpendicular0[k])
+                    .add(super::accurate::Sum::from(delta[k]).mul(minimum))
+                    .value()
+            });
+            let mut width = norm(nearest) / squared.sqrt();
+            if width > 0. && width.is_finite() {
+                for _ in 0..1075 {
+                    let left = minimum - width;
+                    let right = minimum + width;
+                    if left > 0. && left < 1. {
+                        cuts.push(left);
+                    }
+                    if right > 0. && right < 1. {
+                        cuts.push(right);
+                    }
+                    if left <= 0. && right >= 1. {
+                        break;
+                    }
+                    width *= 2.;
+                }
+            }
+        }
+        let first = dot(start0, e);
+        let last = dot(start1, e);
+        for (a, b) in [
+            (first, last),
+            (first + length, last + if triangle { 0. } else { length }),
+        ] {
+            if b != a {
+                let root = -a / (b - a);
+                if root > 0. && root < 1. {
+                    cuts.push(root);
+                }
+            }
+        }
+        cuts.sort_by(f64::total_cmp);
+        cuts.dedup();
+        for interval in cuts.windows(2) {
+            let half = (interval[1] - interval[0]) / 2.;
+            for (begin, delta) in [(interval[0], half), (interval[1], -half)] {
+                for (&u, &weight) in rule.nodes.iter().zip(&rule.weights) {
+                    let displacement = delta * u.powi(4);
+                    let s = begin + displacement;
+                    let complement = (1. - begin) - displacement;
+                    let start = std::array::from_fn(|k| {
+                        super::accurate::Sum::from(start0[k])
+                            .mul(complement)
+                            .add(super::accurate::Sum::from(start1[k]).mul(s))
+                            .value()
+                    });
+                    let axial = dot(start, e);
+                    let rho = norm(cross(e, start));
+                    let segment = if triangle {
+                        complement * length
+                    } else {
+                        length
+                    };
+                    let end = axial + segment;
+                    let ratio = segment / (rho.hypot(axial) + rho.hypot(end));
+                    let log = if ratio <= 0.5 {
+                        2. * ratio.atanh()
+                    } else if rho > 0. {
+                        if axial >= 0. {
+                            (end / rho).asinh() - (axial / rho).asinh()
+                        } else if end <= 0. {
+                            (-axial / rho).asinh() - (-end / rho).asinh()
+                        } else {
+                            (end / rho).asinh() + (-axial / rho).asinh()
+                        }
+                    } else if axial * end > 0. {
+                        (end.abs() / axial.abs()).ln().abs()
+                    } else {
+                        f64::INFINITY
+                    };
+                    if log < 0. || !log.is_finite() {
+                        return Err(error(
+                            "TETRA_SELF_RANGE",
+                            "finite positive self facet integral required",
+                        ));
+                    }
+                    total = total.add(
+                        super::accurate::Sum::from(log / length)
+                            .mul(weight * 4. * delta.abs() * u.powi(3)),
+                    );
+                }
+            }
+        }
+    }
+    let value = total.mul(0.6 * volume * volume).value();
+    if value > 0. && value.is_finite() {
+        Ok(value)
+    } else {
+        Err(error(
+            "TETRA_SELF_RANGE",
+            "finite positive self integral required",
+        ))
+    }
 }
 
 pub fn volume_integral(target: &Prism, source: &PointPotential, rule: &GaussRule) -> Result<f64> {
