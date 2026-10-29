@@ -6,6 +6,13 @@ use super::volume_field::ElectricApply;
 use super::volume_magnetic::MagneticApply;
 // Original accepted current-space coupon sweep; keep the exact saved values.
 pub const FREQUENCIES_HZ: [f64; 17] = [1000.0, 1333.5214321633239, 1778.2794100389228, 2371.373705661655, 3162.2776601683795, 4216.965034285822, 5623.413251903491, 7498.942093324558, 10000.0, 13335.21432163324, 17782.79410038923, 23713.737056616552, 31622.776601683792, 42169.65034285823, 56234.13251903491, 74989.42093324558, 100000.0];
+/// Explicit developer holdouts take priority; retain the exact historical axis
+/// only when no frequencies were supplied. DC uses its separate compatible solve.
+pub fn verification_axis(requested:&[f64])->Result<&[f64],String>{
+    let axis=if requested.is_empty(){&FREQUENCIES_HZ[..]}else{requested};
+    if axis.len()>8192||axis.iter().any(|f|!f.is_finite()||*f<=0.)||axis.windows(2).any(|a|a[1]<=a[0]){return Err("LOCAL_VERIFY_AXIS: ordered positive finite AC holdouts required".into());}
+    Ok(axis)
+}
 fn record_stage(stages:&mut serde_json::Map<String,serde_json::Value>,name:&str,start:std::time::Instant) {
     let seconds=start.elapsed().as_secs_f64();eprintln!("P7_STAGE {name} {seconds:.6}s");
     stages.insert(name.into(),serde_json::json!(seconds));
@@ -178,7 +185,7 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
         if let Some(solver)=solver.filter(|_|mode=="verify"||mode=="full") {
             let mut reduced=coupled::System::compile(&candidate,ports.len(),Some(&p6_budget))?;
             let reduced_n=candidate.potential_nodes.len()+candidate.current_dofs.len();
-            let drives=FREQUENCIES_HZ.iter().flat_map(|&f|
+            let drives=verification_axis(frequencies_hz)?.iter().flat_map(|&f|
                 [vec![1.,0.],vec![0.,1.],vec![1.,-1.]].into_iter().map(move|drive|(f,drive))).collect::<Vec<_>>();
             for (point,(frequency,drive)) in drives.into_iter().enumerate() {
                 let name=format!("point-{point:02}.json");

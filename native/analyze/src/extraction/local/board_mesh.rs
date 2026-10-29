@@ -242,6 +242,10 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
         let contact=&electrode_polygons[&e.name];let expected=original_contact_areas[&e.name];
         let covered=areas::intersection(contact,&physical_shapes[layer].0).unsigned_area();
         if (expected-covered).max(0.)<=1e-8*expected {continue;}
+        for piece in &contact.0 {
+            let owners=physical_shapes[layer].0.0.iter().filter(|parent|areas::intersection(&areas::one(piece.clone()),&areas::one((*parent).clone())).unsigned_area()>0.).count();
+            if owners!=1 {return Err(error("BOARD_SOURCE_UNION",&format!("{} source piece overlaps {owners} material components; no new island or connection inferred",e.name)));}
+        }
         let missing=areas::difference(contact,&physical_shapes[layer].0);
         let bore_overlap=areas::intersection(&missing,&bores).unsigned_area();
         if bore_overlap>0. {return Err(error("BOARD_SOURCE_UNION",&format!("{} missing source copper intersects a real bore by {bore_overlap:e}mm2; no hole filled",e.name)));}

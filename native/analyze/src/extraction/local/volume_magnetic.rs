@@ -11,7 +11,9 @@ pub trait MagneticApply: Sync {
     fn scratch_bytes(&self)->usize {self.planned_bytes()}
 }
 impl MagneticApply for Operator<'_> {
-    fn scratch_bytes(&self)->usize {self.free.saturating_mul(256).saturating_add(self.mesh.copper_tetrahedra.len().saturating_mul(96)).saturating_add(self.symbolic.as_ref().map_or(0,|s|s.solve_in_place_scratch::<f64>(3,self.parallelism).unaligned_bytes_required())).saturating_add(65536)}
+    // Full per-job reserve, including compensated load/field/residual/correction
+    // vectors and their simultaneous live temporaries, plus queried faer scratch.
+    fn scratch_bytes(&self)->usize {self.free.saturating_mul(512).saturating_add(self.mesh.copper_tetrahedra.len().saturating_mul(96)).saturating_add(self.symbolic.as_ref().map_or(0,|s|s.solve_in_place_scratch::<f64>(3,self.parallelism).unaligned_bytes_required())).saturating_add(65536)}
     fn apply(&self,space:&Space,current:&[f64])->Result<Vec<f64>> {Operator::apply(self,space,current)}
     fn planned_bytes(&self)->usize {self.planned_bytes}
 }
@@ -227,6 +229,7 @@ impl<'a> Operator<'a> {
         let (initial,initial_exterior)=block_solve(&load,&exterior_load)?;
         let mut field:Vec<_>=(0..self.free*3).map(|i|Sum::from(initial[(i/3,i%3)])).collect();
         let mut exterior:Vec<_>=(0..27).map(|i|Sum::from(initial_exterior[(i/3,i%3)])).collect();
+        drop(initial);drop(initial_exterior);
         let rhs_norm=load.iter().chain(exterior_load.iter()).map(|x|x.value().powi(2)).sum::<f64>().sqrt();
         let mut global_error=0.;let mut row_error:f64=0.;
         for step in 0..=8 {

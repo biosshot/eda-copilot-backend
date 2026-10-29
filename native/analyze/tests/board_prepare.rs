@@ -1,5 +1,9 @@
 use pcb_analyze::extraction::local::{board_mesh,board_prepare};
 #[test]
+fn explicit_verification_holdouts_are_not_replaced_with_the_legacy_axis(){
+ let requested=[1.,10.,100.,316.22776601683796,1000.];assert_eq!(board_prepare::verification_axis(&requested).unwrap(),&requested);assert_eq!(board_prepare::verification_axis(&[]).unwrap(),&board_prepare::FREQUENCIES_HZ);for invalid in [vec![0.],vec![100.,10.],vec![1.,1.],vec![f64::NAN]]{assert!(board_prepare::verification_axis(&invalid).is_err());}
+}
+#[test]
 fn accepted_electric_defaults_match_frozen_candidate_and_preserve_physical_inputs() {
     let current:board_mesh::Request=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json")).unwrap();
     let expected:board_mesh::Request=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/board-integration/field-refinement-request-v1.json")).unwrap();
