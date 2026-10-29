@@ -2,7 +2,7 @@
 No difference of huge unit-port Z is used as a through impedance.
 """
 from pathlib import Path
-import json,sys
+import json,sys,hashlib
 import numpy as np
 TOL=.05;V_FLOOR=1e-6;LOSS_FLOOR=1e-18;WEAK_REL=1e-12
 folder=Path(sys.argv[1]);result=json.loads((folder/'stdout.json').read_text());candidate=result['candidate'];basis=np.array(candidate['currentBasis']);nv=len(candidate['model']['potentialNodes']);ni=len(candidate['model']['currentDofs']);n=nv+ni;resistance=np.array(result['cellResistanceOhm'])
@@ -19,4 +19,9 @@ for k,row in enumerate(candidate['fullChecks']):
  rows.append(dict(frequencyHz=row['frequencyHz'],drive=row['drive'],voltageError=v_error,currentError=current_error,totalLossError=float(total_error),cellLossError=float(cell_error),regionalLossError=regional))
 maxima={key:max((r[key] for r in rows),default=0) for key in ['voltageError','currentError','totalLossError','cellLossError']};maxima['regionalLossError']=max((v for r in rows for v in r['regionalLossError'].values()),default=0)
 summary=dict(status='complete' if len(rows)==51 and candidate['verificationStatus']=='complete' else 'incomplete',points=len(rows),missing=51-len(rows),voltageFloorV=V_FLOOR,lossFloorW=LOSS_FLOOR,weakCoordinateAndCellRelativeFloor=WEAK_REL,tolerance=TOL,maxima=maxima,completedPointsPass=all(np.isfinite(v) and v<=TOL for v in maxima.values()),rows=rows,verificationFailure=candidate['verificationFailure'])
+if len(sys.argv)>2:
+ cache_path=Path(sys.argv[2]);envelope=json.loads(cache_path.read_text());assert hashlib.sha256(envelope['payload'].encode()).hexdigest()==envelope['checksum']
+ production=json.loads(envelope['payload']);same_model=production['candidate']['model']==candidate['model'];same_current=production['candidate']['currentBasis']==candidate['currentBasis'];same_voltage=production['candidate']['voltageBasis']==candidate['voltageBasis']
+ assert same_model and same_current and same_voltage,'developer model must exactly match the actual worker/cache model'
+ summary['productionIdentity']=dict(path=str(cache_path),sha256=hashlib.sha256(cache_path.read_bytes()).hexdigest(),nativeCore=production['extraction']['coreIdentity'],sameModel=same_model,sameCurrentBasis=same_current,sameVoltageBasis=same_voltage)
 (folder/'integration-audit.json').write_text(json.dumps(summary,indent=2));print(json.dumps({k:v for k,v in summary.items() if k!='rows'},indent=2));sys.exit(0 if summary['status']=='complete' and summary['completedPointsPass'] else 1)

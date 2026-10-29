@@ -47,3 +47,17 @@ for name in names:
   summary[name]=dict(cold=run,warmCache=warm['cache'],restart=restart,checks=checks,localVolumeStatus='rejected-2GiB',localDiagnostic=failure['diagnostic'],rfBandHz=[500000000,1000000000],rfTransmissionMin=min(curve['values']))
  fig.suptitle(name+' — direct DSL / CPU F64 / conditional applicability',fontsize=14);path=folder/'integration-report.png';fig.savefig(path,dpi=150);plt.close(fig);summary[name]['visual']=str(path.relative_to(root))
 (base/'integration-summary.json').write_text(json.dumps(summary,indent=2));print(json.dumps({n:{'wall':s['cold']['wallSeconds'],'rssMiB':s['cold']['peakRssBytes']/1048576,'warm':s['warmCache']['status'],'volume':s['localVolumeStatus']} for n,s in summary.items()},indent=2))
+temporal=base/'model-reuse/temporal-dc-hypothesis.json'
+if temporal.exists():
+ result=json.loads(temporal.read_text());assert result['status']=='complete'
+ plots=[p for r in result['reports'] for p in r['plots']];curve=plots[0]['data'];solution=plots[1]['data'];quality=solution['quality']
+ fig,axes=plt.subplots(1,2,figsize=(12,5),layout='constrained');t=np.array(curve['axis']['values'])
+ axes[0].plot(t*1000,np.array(curve['values'])*1000,'o-',label='actual extracted RLC / P6 time')
+ axes[0].plot(t*1000,.5*np.minimum(t/1e-4,1),'--',label='loaded quasi-static DC target')
+ axes[0].set(xlabel='ms',ylabel='output mV',title='Finite 100 us ramp; explicit physical zero initial state');axes[0].legend(fontsize=8)
+ text='NUMERICAL COMPATIBILITY ONLY\nAuthored developer DC-extension hypothesis.\nProduction band remains 1 kHz..100 kHz.\nNo physical transient-band certification.\n\n'
+ for name in ['STM32G0_CAN_RS485','TPS63060DSCR']:
+  dc=json.loads((base/'model-reuse'/(name+'-dc.json')).read_text());text+=name+' full conductive DC: '+dc['status']+'\nmax coordinate error: '+format(dc['maxCurrentCoordinateError']*100,'.6g')+'%\n'
+ text+='\nP6 time normalized energy balance: '+format(quality['normalizedEnergyBalance'],'.6g')+'\nP6 time relative residual: '+format(quality['relativeResidual'],'.6g')+'\nSource band and initial-charge refusals saved separately.'
+ axes[1].axis('off');axes[1].text(0,1,'\n'.join(textwrap.fill(line,58) for line in text.split('\n')),va='top',fontsize=10)
+ fig.suptitle('Actual STM32 condensed RLC — bounded developer compatibility probe');fig.savefig(base/'model-reuse/temporal-compatibility.png',dpi=150);plt.close(fig)
