@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Allow local channel descriptions without an authored scope through a conservative native copper-island extraction plan. Preserve complete branches/return islands, include surrounding captured copper, reject unresolved topology and forbid insulated cuts in this path. Cache immutable board preparation within its lifetime and expose the plan in channel results. This initial domain closure is not spatial convergence or whole P7 acceptance; large return planes and real-board topology remain gaps. Record the HF surface/volume operator prerequisite without changing certified bands.
+
 - Preserve every IEEE-F64 bit in schema2 developer checkpoints; refuse legacy/incompatible snapshots and verify an explicit source/model/geometry-bound migration of the completed51-drive evidence. Keep this journal separate from the production JSON cache and retain failed cold attempts alongside bounded retest measurements.
 
 - Integrate conditional local direct-FEM board extraction with the existing layered channel DSL, addon/session and disposable workers. Restore reduced RLC models in SI units and current recovery through bounded memory/disk caches with native coefficient validation, binary/board/physics identities, checksums and atomic writes; preserve unsupported geometry/band/resource refusals. Add resumable developer model/per-point checkpoints, distinct from production cache, and direct captured-board scenarios. Complete acceptance evidence is tracked in `p6-p7-integration-acceptance.md`; whole P6/P7 closure is not implied.
