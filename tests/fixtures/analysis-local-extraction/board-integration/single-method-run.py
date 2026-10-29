@@ -42,3 +42,4 @@ for label,config in [('direct-fem','entity:6:8:16:3')]:
   code=p.wait()
  result=dict(developerCheckpoint=str(checkpoint) if checkpoint else None,completedPointsBefore=points_before,completedPointsAfter=len(list(checkpoint.glob('point-*.json'))) if checkpoint and checkpoint.exists() else 0,preparedCheckpointSha256=hashlib.sha256((checkpoint/'prepared.json').read_bytes()).hexdigest() if checkpoint and (checkpoint/'prepared.json').exists() else None,methodThreads=int(os.environ.get("P7_FEM_THREADS","1")),command=cmd,wallSeconds=time.perf_counter()-start,peakRssBytes=peak,exitCode=code,refusal=reason,capSeconds=cap_seconds,capBytes=2*1024**3,hashes=hashes,inputsChangedDuringRun=any(hashlib.sha256(x.read_bytes()).hexdigest()!=hashes[str(x.relative_to(r))] for x in paths))
  (d/'run.json').write_text(json.dumps(result,indent=2));print(json.dumps(result),flush=True)
+ if code!=0 or reason is not None or result['inputsChangedDuringRun']:sys.exit(1)

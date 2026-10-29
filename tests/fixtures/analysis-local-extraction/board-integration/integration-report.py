@@ -63,6 +63,10 @@ for name in names:
  title=name+' — direct DSL / CPU F64 / conditional applicability'
  if cold_folder.name=='cold-retry':
   prior=json.loads((folder/'cold/run.json').read_text());summary[name]['priorFailedCold']=prior;title+='\nOne cold retest; original '+format(prior['wallSeconds'],'.3f')+'s refusal retained'
+ completed=[c['result'] for r in reports for c in r['calculations'] if c['phase']=='completed' and c['kind']=='impedance']
+ if len(completed)>1:summary[name]['warmWorkerPeakRssBytes']=completed[1]['solution']['resources']['peakRssBytes']
+ measurement=folder/'warm-measurement/measurement.json'
+ if measurement.exists():summary[name]['warmMeasurement']=json.loads(measurement.read_text())
  fig.suptitle(title,fontsize=14);path=folder/'integration-report.png';fig.savefig(path,dpi=150);plt.close(fig);summary[name]['visual']=str(path.relative_to(root))
 (base/'integration-summary.json').write_text(json.dumps(summary,indent=2));print(json.dumps({n:{'wall':s['cold']['wallSeconds'],'rssMiB':s['cold']['peakRssBytes']/1048576,'warm':s['warmCache']['status'],'volume':s['localVolumeStatus']} for n,s in summary.items()},indent=2))
 temporal=base/'model-reuse/temporal-dc-hypothesis.json'
