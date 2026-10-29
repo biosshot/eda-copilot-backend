@@ -284,20 +284,33 @@ impl AnalysisDcSession {
 
 /// Explicit linear RLC network, CPU/F64, scenario-owned sparse factors.
 #[napi]
-pub struct AnalysisElectricalSession { inner: pcb_analyze::electrical::Session }
+pub struct AnalysisElectricalSession { inner: pcb_analyze::electrical::Session,local_response:pcb_analyze::extraction::local::board_response::Session }
 #[napi]
 impl AnalysisElectricalSession {
     #[napi(constructor)]
     pub fn new() -> Self {
         // Local sparse FEM opts into its own bounded pool explicitly.
         pcb_analyze::extraction::local::parallel::initialize();
-        Self { inner: Default::default() }
+        Self { inner: Default::default(),local_response:Default::default() }
     }
     #[napi]
     pub fn solve(&mut self, request: Value) -> Result<Value> {
         let request=serde_json::from_value::<pcb_analyze::electrical::Request>(request)
             .map_err(|e| napi::Error::from_reason(format!("Invalid electrical request: {e}")))?;
         Ok(self.inner.solve(request))
+    }
+    #[napi]
+    pub fn prepare_local(&mut self, board_json:String, request:Value)->Result<Value> {
+        self.local_response.clear();
+        use pcb_analyze::extraction::local::{board_mesh,board_prepare};
+        let board=pcb_analyze::import_json(&board_json).board.ok_or_else(||napi::Error::from_reason("Local board import rejected"))?;
+        let request:board_mesh::Request=serde_json::from_value(request).map_err(|e|napi::Error::from_reason(e.to_string()))?;
+        board_prepare::run(&board,&request,board_prepare::Options{developer_checkpoint:None,mode:"prepare",magnetic_config:[6,8,16,3],field_request:None,cached_field:None,frequencies_hz:&[]}).map_err(napi::Error::from_reason)
+    }
+    #[napi]
+    pub fn solve_local(&mut self, request:Value)->Result<Value> {
+        let request=serde_json::from_value(request).map_err(|e|napi::Error::from_reason(e.to_string()))?;
+        self.local_response.solve(request).map_err(napi::Error::from_reason)
     }
     #[napi]
     pub fn solve_frequency(&mut self, request: Value) -> Result<Value> {
@@ -318,5 +331,5 @@ impl AnalysisElectricalSession {
         Ok(pcb_analyze::extraction::run(request))
     }
     #[napi]
-    pub fn clear(&mut self) { self.inner=Default::default(); }
+    pub fn clear(&mut self) { self.inner=Default::default();self.local_response.clear(); }
 }

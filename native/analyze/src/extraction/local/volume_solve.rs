@@ -7,9 +7,9 @@ use std::time::{Duration,Instant};
 use super::accurate::Sum;
 fn dot(a:&[f64],b:&[f64])->f64 {a.iter().zip(b).map(|(a,b)|a*b).sum()}
 fn norm(a:&[f64])->f64 {dot(a,a).sqrt()}
-#[derive(Clone,Debug,serde::Serialize)]
+#[derive(Clone,Debug,serde::Serialize,serde::Deserialize)]
 pub struct Audit {pub iterations:usize,pub scaled_relative_residual:f64,pub normalized_kcl:f64,pub normalized_kvl:f64,pub relative_complex_power_error:f64,pub relative_joule_power_error:f64}
-#[derive(Clone)]
+#[derive(Clone,serde::Serialize,serde::Deserialize)]
 pub struct Solution {
     pub real_shape_v:Vec<f64>,pub imaginary_shape_v:Vec<f64>,
     pub real_shape_correction_v:Vec<f64>,pub imaginary_shape_correction_v:Vec<f64>,

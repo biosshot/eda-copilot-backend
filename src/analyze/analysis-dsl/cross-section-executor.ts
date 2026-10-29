@@ -19,7 +19,7 @@ export function createCrossSectionExecutor(){const execute=createProblemExecutor
  const refs=String(line.kind).includes('microstrip')?1:2;
  if(hasLoss&&points*((2*n)**2+n*n*(6+n+refs+4)+n*32)>131072)throw new AnalysisDslError('SECTION_BUDGET','Loss coefficient/mode/contribution output cap before frequency axis allocation');
  const frequencies=c.frequencyHz!==undefined?[c.frequencyHz]:Array.from({length:points},(_,i)=>{const f=c.frequency!,t=points===1?0:i/(points-1);return f.scale==='log'?f.startHz*(f.stopHz/f.startHz)**t:f.startHz+(f.stopHz-f.startHz)*t;});
- const report=execute({kind:'cross-section',request:{line,frequencies,mesh:c.mesh,budget:c.budget}});
+ const report=execute({kind:'cross-section',request:{boardIdentity:task.boardIdentity,line,frequencies,mesh:c.mesh,budget:c.budget}});
  if(report.status!=='complete')throw new AnalysisDslError(report.diagnostics[0]?.code??'SECTION_REJECTED',report.diagnostics.map(d=>d.message).join('; '),report.diagnostics);
  report.resources={peakRssBytes:process.resourceUsage().maxRSS*1024,metric:'OS process high-water RSS including Node and earlier solves'};
  const p=report.parameters!,modes=p.modes;

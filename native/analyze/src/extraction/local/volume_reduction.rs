@@ -3,6 +3,7 @@
 use super::{error,volume_current::Space,volume_field::ElectricApply,volume_magnetic::MagneticApply,AllocationBudget,Result};
 use crate::electrical::coupled::{Model,Entry,physical::{Node,PortTerminals,Terminal}};
 use std::collections::BTreeSet;
+#[derive(serde::Serialize,serde::Deserialize)]
 pub struct Basis {
     /// Partition of unity, cardinal at the authored electrodes. This retains
     /// P6's physical total-charge coordinate without changing its contract.

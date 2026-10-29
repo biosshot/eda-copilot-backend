@@ -1,3 +1,4 @@
+import {createLocalExecutor,isLocalTarget} from './local-executor.ts';
 import {createGeometryExecutor} from './geometry-executor.ts';
 import {createCrossSectionExecutor} from './cross-section-executor.ts';
 import {createFrequencyExecutor} from './frequency-executor.ts';
@@ -36,6 +37,7 @@ export interface ExecutionResult {
 }
 export type AnalysisExecutor = (task: AnalysisTask) => Promise<ExecutionResult>;
 export function createAnalysisExecutor(): AnalysisExecutor {
+  const local=createLocalExecutor();
   const geometry = createGeometryExecutor();
   const frequency = createFrequencyExecutor();
   const crossSection = createCrossSectionExecutor();
@@ -43,6 +45,7 @@ export function createAnalysisExecutor(): AnalysisExecutor {
   const electrical=createElectricalExecutor();
   const transient=createTransientExecutor();
   return async task => {
+    if(isLocalTarget(task))return local(task as AnalysisTask<'impedance'>);
     if (task.kind==='geometry') return geometry(task as AnalysisTask<'geometry'>);
     if (task.kind==='impedance') return crossSection(task as AnalysisTask<'impedance'>);
     if (task.kind==='networkParameters') return frequency(task as AnalysisTask<'networkParameters'>);

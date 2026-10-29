@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Integrate conditional local direct-FEM board extraction with the existing layered channel DSL, addon/session and disposable workers. Restore reduced RLC models in SI units and current recovery through bounded memory/disk caches with native coefficient validation, binary/board/physics identities, checksums and atomic writes; preserve unsupported geometry/band/resource refusals. Add resumable developer model/per-point checkpoints, distinct from production cache, and direct captured-board scenarios. Complete acceptance evidence is tracked in `p6-p7-integration-acceptance.md`; whole P6/P7 closure is not implied.
+
 - Move local direct-FEM board preparation, training, reduction and recovery orchestration from the diagnostic executable into the Rust library; select the accepted refined electric configuration by default while retaining original physical contacts/current mesh. Separate requested P6 frequencies from the opt-in developer sweep. Worker/DSL/cache and complete P6/P7 acceptance remain pending.
 
 - Verify bounded P7 electric convergence with the saved magnetic subspace: vertical/domain Z changes 1.58814%/0.000264572%, exact checked near-region preservation, and a production direct-FEM coax charge/energy reference below 0.57% error. Retain coarse evidence and laboratory/full-model validation limits; P7 remains open.

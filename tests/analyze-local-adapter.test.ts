@@ -1,0 +1,6 @@
+import test from'node:test';import assert from'node:assert/strict';import{readFileSync}from'node:fs';import{executeScenario}from'../src/analyze/analysis-dsl/scenario.ts';import{localRequest}from'../src/analyze/analysis-dsl/local-request.ts';import type{AnalysisTask}from'../src/analyze/analysis-dsl/executor.ts';
+test('existing direct channel DSL preserves exact original STM32 request and physical return TOP',async()=>{
+ const folder='tests/pcb-analyze/STM32G0_CAN_RS485/';const board=JSON.parse(readFileSync(folder+'STM32G0_CAN_RS485.json','utf8'));const script=readFileSync(folder+'local-extraction.js','utf8');const code=script.slice(0,script.indexOf('const cold='))+'await run();';let captured:unknown;
+ const result=await executeScenario({board,code},{filename:'local.js',maxEntries:1000,maxOutputBytes:4*1024*1024},()=>{},async task=>{captured=localRequest(task as AnalysisTask<'impedance'>);return{id:'test',status:'complete',method:'transport test only',diagnostics:[],assumptions:[],metrics:{}};});
+ assert.equal(result.status,'complete',JSON.stringify(result.error));const expected=JSON.parse(readFileSync('tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json','utf8'));assert.deepEqual(captured,expected);
+});

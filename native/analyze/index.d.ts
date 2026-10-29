@@ -175,7 +175,7 @@ export interface AnalysisTransientReport {
  physicalRecovery?:unknown;assembledModel?:unknown;conductorPotentialsV?:number[][];conductorChargesC?:number[][];initialConductorChargesC?:number[];finalConductorChargesC?:number[];zeroEnergyGauges?:number;finalState?:unknown;assumptions?:string[];elapsedMs?:number;memoryPlanBytes?:number;
  resources?:{peakRssBytes:number;metric:string};
 }
-export declare class AnalysisElectricalSession {constructor();solve(request:AnalysisElectricalRequest):AnalysisElectricalReport; solveFrequency(request:AnalysisFrequencyRequest):AnalysisFrequencyReport; solveTransient(request:AnalysisTransientRequest):AnalysisTransientReport; solveCrossSection(request:AnalysisCrossSectionRequest):AnalysisCrossSectionReport;clear():void}
+export declare class AnalysisElectricalSession {constructor();prepareLocal(boardJson:string,request:unknown):any;solveLocal(request:{prepared:unknown;frequenciesHz:number[];drive?:number[];loadsOhm?:(number|null)[]}):any;solve(request:AnalysisElectricalRequest):AnalysisElectricalReport; solveFrequency(request:AnalysisFrequencyRequest):AnalysisFrequencyReport; solveTransient(request:AnalysisTransientRequest):AnalysisTransientReport; solveCrossSection(request:AnalysisCrossSectionRequest):AnalysisCrossSectionReport;clear():void}
 
 /** Bounded common-return frequency multiports. Internal addon transport. */
 export interface AnalysisFrequencyResource {id:string;kind:string;ports:string[];data:unknown;source?:string;validity?:unknown;analyses?:string[]}
@@ -193,7 +193,7 @@ export interface AnalysisFrequencyReport {
 }
 
 /** Internal one-shot PEC or bounded weak-loss extraction; existing process/session. */
-export interface AnalysisCrossSectionRequest {line:unknown;frequencies:number[];mesh?:{maxNodes?:number;maxTriangles?:number;maxRefinements?:number;maxEdgeMm?:number;domainScale?:number};budget?:AnalysisElectricalRequest['budget']}
+export interface AnalysisCrossSectionRequest {boardIdentity?:string;line:unknown;frequencies:number[];mesh?:{maxNodes?:number;maxTriangles?:number;maxRefinements?:number;maxEdgeMm?:number;domainScale?:number};budget?:AnalysisElectricalRequest['budget']}
 export interface AnalysisCrossSectionReport {
  status:'complete'|'rejected';diagnostics:{code:string;message:string;severity:'error'|'warning'|'info'}[];elapsedMs:number;
  assumptions?:string[];parameters?:{modes:{name:string;impedanceOhm:number;delaySPerM:number}[];differentialOhm?:number|null;commonOhm?:number|null;[key:string]:unknown};
