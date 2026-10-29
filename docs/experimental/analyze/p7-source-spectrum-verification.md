@@ -12,4 +12,6 @@ The public transient adapter retains source/resource hashes, plans and absolute 
 
 The independent actual requested low-frequency full/reduced TPS15/15 journal is documented in `p7-channel-plan-checkpoint.md`. Neither it nor this source-spectrum case alone excludes untested intersample poles or supplies a complete physical5% transient certificate.
 
-Focused tests: six source-spectrum tests and two existing transient-adapter tests; TypeScript typecheck/build passed. Numerical thresholds and production extraction band remain unchanged.
+Focused tests: seven source-spectrum tests and two existing transient-adapter tests; TypeScript typecheck/build passed. Numerical thresholds and production extraction band remain unchanged.
+
+Repeated PWL bounds conservatively include the end-to-zero and zero-to-start slope jumps for every cycle, including a held gap. A dedicated same-sign end/start-slope regression verifies that the gap is not treated as a smooth cycle boundary.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Include both slope changes across held repeated-PWL cycle gaps in the conservative source spectral-tail bound.
+
 - Retain analytic finite-front/event-train spectral requirements and conditional passive absolute output-tail bounds in transient provenance. Require explicit DC/state/resistive-load coverage; preserve native admission and conditional physical-model status. Add a direct TPS source-spectrum compatibility scenario and viewed response/band evidence.
 
 - Honor explicit developer full-verification axes while preserving the exact legacy default. Tighten source-copper ownership and independent-solve scratch admission; retain old numerical guards. Verify15 new TPS low-frequency holdouts through a lossless resumable journal under separate300s/2GiB supervised runs, without extending production bands.

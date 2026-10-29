@@ -36,7 +36,7 @@ export function sourceBandPlan(w:Waveform,time:Time,tailFraction=0.01){
    if(count===1&&a>=time.stopS)break;
    slopes.push((y-x)/(b-a));characteristicHz.push(1/(b-a));
   }
-  if(slopes.length){const first=slopes[0],last=slopes.at(-1)!;variation=Math.abs(first)+Math.abs(last)+(count-1)*Math.abs(first-last);for(let i=1;i<slopes.length;i++)variation+=count*Math.abs(slopes[i]-slopes[i-1]);events=count*(slopes.length+1);}
+  if(slopes.length){const first=slopes[0],last=slopes.at(-1)!;variation=count*(Math.abs(first)+Math.abs(last));for(let i=1;i<slopes.length;i++)variation+=count*Math.abs(slopes[i]-slopes[i-1]);events=count*(slopes.length+1);}
   if(w.repeat)characteristicHz.push(1/w.repeat.periodS);
  }
  if(!Number.isFinite(excursion)||!Number.isFinite(variation)||characteristicHz.some(f=>!Number.isFinite(f)||f<=0))bad('Source spectral bound exceeds finite numerical range');
