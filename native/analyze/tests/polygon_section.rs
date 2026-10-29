@@ -2,6 +2,7 @@ use pcb_analyze::extraction::{
     polygon_section::{self, Contour, MaterialRegion, Metal, Request},
     EPS0,
 };
+fn save_evidence(name:&str,value:&serde_json::Value){if let Some(directory)=std::env::var_os("P7_TEST_EVIDENCE_DIR"){std::fs::create_dir_all(&directory).unwrap();std::fs::write(std::path::Path::new(&directory).join(name),serde_json::to_vec_pretty(value).unwrap()).unwrap();}}
 fn rectangle(a: f64, b: f64, c: f64, d: f64) -> Contour {
     Contour {
         outer_m: vec![[a, b], [c, b], [c, d], [a, d]],
@@ -129,6 +130,7 @@ fn polygon_coax_matches_independent_analytic_capacitance_and_delay() {
             .unwrap()
             < 1e-8
     );
+    save_evidence("polygon-coax-reference.json",&serde_json::json!({"capacitance":{"actual":c,"analytic":reference,"relativeError":c/reference-1.},"delay":{"actual":delay,"analytic":2./299792458.,"relativeError":delay/(2./299792458.)-1.},"surfaceResistanceAt1GHz":{"actual":resistance,"analytic":expected,"relativeError":resistance/expected-1.},"gammaAt1GHz":{"actual":gamma,"analytic":{"real":alpha,"imaginary":beta},"alphaRelativeError":gamma["real"].as_f64().unwrap()/alpha-1.,"betaRelativeError":gamma["imaginary"].as_f64().unwrap()/beta-1.},"electricallySmall10GHzControl":hf,"scope":"independent coax controls; polygon and skin/asymptotic assumptions, no whole-board accuracy certificate"}));
 }
 #[test]
 fn unequal_three_conductor_modes_preserve_full_matrices() {
@@ -221,6 +223,7 @@ fn radial_multilayer_coax_matches_independent_series_capacitance() {
         (actual / expected - 1.).abs() < 0.02,
         "C={actual:e}, analytic={expected:e}"
     );
+    save_evidence("polygon-radial-multilayer-reference.json",&serde_json::json!({"actualFPerM":actual,"analyticFPerM":expected,"relativeError":actual/expected-1.,"quality":v["quality"],"scope":"independent series-dielectric coax capacitance control"}));
 }
 #[test]
 fn finite_coplanar_and_cross_layer_unequal_three_signal_section() {

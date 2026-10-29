@@ -1,7 +1,9 @@
+import {createHash} from 'node:crypto';
+import {freeze} from './data.ts';
 import {channelPlan} from './channel-plan.ts';
 import {createProblemExecutor} from '../execute-problem.ts';
 import type {AnalysisTask} from './executor.ts';import type * as T from './spec-doc.js';import {object} from './descriptions.ts';import {AnalysisDslError} from './schema.ts';import {dcMaterial} from './profile-adapter.ts';
-const preparedBoards=new WeakMap<object,import('../../../native/analyze/index.js').AnalysisGeometryReport>();
+let preparedBoard:{identity:string;report:import('../../../native/analyze/index.js').AnalysisGeometryReport}|undefined;
 const decimalScale=(v:number,power:number)=>{const [m,e='0']=String(v).split('e');return Number(m+'e'+(Number(e)+power));};
 const fail=(s:string):never=>{throw new AnalysisDslError('LOCAL_INPUT',s);};
 /** Existing channel/port/scope/stackup descriptions -> internal volume transport. */
@@ -23,10 +25,11 @@ export function localRequest(task:AnalysisTask<'impedance'>,onPlan?:(plan:Return
  const plating=c.materials![stackup.input.platingMaterial!];if(!plating)fail('Plating material unavailable');
  const endpoints=[input(channel.from),input(channel.to)];
  const source=(selector:any)=>{if(Array.isArray(selector))return fail('One finite contact per electrode supported');if(selector.kind==='viaId'){const i=b.copper?.fixed?.vias?.findIndex(v=>v.id===selector.id)??-1;if(i<0)fail('Unknown captured via');return `copper.fixed.vias[${i}]`;}const i=b.pads.findIndex(p=>selector.kind==='padId'?p.id===selector.id:selector.kind==='pad'&&p.component===selector.designator&&p.number===selector.number);if(i<0)fail('Unknown/ambiguous captured pad');return `pads[${i}]`;};
- const electrodes:any[]=[],pairs:string[][]=[[],[]],seen=new Map<string,string>();
+ const planningContacts:{sourcePath:string;layer:string}[]=[];const electrodes:any[]=[],pairs:string[][]=[[],[]],seen=new Map<string,string>();
  // Signal contacts first, then returns, preserving the original STM32 ordering.
- for(const role of ['positive','negative'] as const)for(let p=0;p<endpoints.length;p++){const e=endpoints[p],layer=e[role+'Layer']??e.layer;if(!layer)fail('Contact layer required');const sourcePath=source(e[role]),key=sourcePath+':'+layer;
- let name=seen.get(key);if(!name){name=(role==='positive'?'signal':'return')+'-'+layer;if(electrodes.some(x=>x.name===name))name+='-'+p;seen.set(key,name);const index=stack.findIndex(l=>l.copper&&l.name===layer);if(index<0)fail('Contact layer absent in stack');const copperIndices=stack.flatMap((l,i)=>l.copper?[i]:[]);if(index!==copperIndices[0]&&index!==copperIndices.at(-1))fail('Interior-layer contact face selection is not defined by this DSL adapter');electrodes.push({name,sourcePath,layer,upper:index===copperIndices.at(-1)});}pairs[p][role==='positive'?0:1]=name;}
- if(!roi){const execute=createProblemExecutor();let prepared=preparedBoards.get(b);if(!prepared){prepared=execute({kind:'prepare-geometry',boardJson:JSON.stringify(b)});preparedBoards.set(b,prepared);}const plan=channelPlan(prepared,electrodes.map(e=>({sourcePath:e.sourcePath,layer:e.layer})));roi=plan.roiMm;onPlan?.(plan);}
- return {roiMm:roi,stack,finishedHolePlatingM:decimalScale(stackup.routing.viaPlatingThicknessUm!,-6),barrelConductivitySM:dcMaterial(plating,c.temperatureC).conductivity_s_m,airMarginM:.002,maxTriangleAreaM2:1e-6,maxVerticalStepM:.002,curveDeviationMm:.001,electrodes,ports:pairs,acceptUnknownFillFreshness:true,allowInsulatedCopperCuts:!!scope,minTriangleAngleDeg:0,airEdgeDivisions:1};
+ for(const role of ['positive','negative'] as const)for(let p=0;p<endpoints.length;p++){const e=endpoints[p],layer=e[role+'Layer']??e.layer;if(!layer)fail('Contact layer required');const sourcePath=source(e[role]),key=sourcePath+':'+layer;planningContacts.push({sourcePath,layer});
+ let name=seen.get(key);if(!name){name=(role==='positive'?'signal':'return')+'-'+layer;if(electrodes.some(x=>x.name===name))name+='-'+p;seen.set(key,name);const index=stack.findIndex(l=>l.copper&&l.name===layer);if(index<0)fail('Contact layer absent in stack');const copperIndices=stack.flatMap((l,i)=>l.copper?[i]:[]);// Physical terminal convention is stable across channel direction: bottom uses its exterior upper face; top/interior use the first Cu face in stack order.
+ electrodes.push({name,sourcePath,layer,upper:index===copperIndices.at(-1)});}pairs[p][role==='positive'?0:1]=name;}
+ if(!roi){const execute=createProblemExecutor();const boardJson=JSON.stringify(b),identity=createHash('sha256').update(boardJson).digest('hex');let prepared=preparedBoard?.identity===identity?preparedBoard.report:undefined;if(!prepared){prepared=freeze(execute({kind:'prepare-geometry',boardJson}));preparedBoard={identity,report:prepared};}const plan=channelPlan(prepared,planningContacts);roi=plan.candidateDomainsMm[0];onPlan?.(plan);}
+ return {roiMm:roi,stack,finishedHolePlatingM:decimalScale(stackup.routing.viaPlatingThicknessUm!,-6),barrelConductivitySM:dcMaterial(plating,c.temperatureC).conductivity_s_m,airMarginM:.002,maxTriangleAreaM2:1e-6,maxVerticalStepM:.002,curveDeviationMm:.001,electrodes,ports:pairs,acceptUnknownFillFreshness:true,allowInsulatedCopperCuts:true,minTriangleAngleDeg:0,airEdgeDivisions:1};
 }

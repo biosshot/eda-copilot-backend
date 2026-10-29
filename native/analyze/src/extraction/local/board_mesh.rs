@@ -85,6 +85,7 @@ pub struct BoardMesh {
     pub arrangement_atoms:usize,
     pub max_copper_area_change:f64,
     pub max_contact_area_change:f64,
+    pub source_copper_restorations:Vec<serde_json::Value>,
     certified_electrodes:BTreeMap<String,(Electrode,Vec<usize>)>,
 }
 struct Shape {poly:MultiPolygon<f64>,id:String,sigma:f64,span:[f64;2]}
@@ -211,7 +212,13 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
     let mut electrode_polygons=BTreeMap::new();
     for e in &r.electrodes {
         if e.name.trim().is_empty()||electrode_polygons.contains_key(&e.name)||!spans.contains_key(&e.layer) {return Err(error("BOARD_ELECTRODE","unique named electrodes on known copper layers required"));}
-        let poly=areas::intersection(&areas::union(geometry.regions.iter().filter(|v|v.source.path==e.source_path&&v.layer==e.layer).map(|v|polygon(&v.polygon))),&roi);
+        let mut poly=areas::intersection(&areas::union(geometry.regions.iter().filter(|v|v.source.path==e.source_path&&v.layer==e.layer).map(|v|polygon(&v.polygon))),&roi);
+        // An interior foil face can be occupied by a barrel continuing into the
+        // adjacent dielectric. Only its actually exposed source-copper annulus
+        // is a finite terminal; never cut the barrel or charge a buried face.
+        let face=spans[&e.layer][usize::from(e.upper)];
+        let adjacent_copper=areas::union(physical_shapes.iter().filter(|s|if e.upper {s.1[0]<=face&&s.1[1]>face}else{s.1[0]<face&&s.1[1]>=face}).flat_map(|s|s.0.0.iter().cloned()));
+        if adjacent_copper.unsigned_area()>0. {poly=areas::difference(&poly,&adjacent_copper);}
         if poly.unsigned_area()==0. {return Err(error("BOARD_ELECTRODE","contact source absent from retained layer copper"));}
         // A finite electrode is a material boundary condition even when its
         // outline lies inside continuous same-material copper. Keep that exact
@@ -223,6 +230,28 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
     // otherwise create sub-grid cells between equivalent prepared contours.
     let original_contact_areas:BTreeMap<_,_>=electrode_polygons.iter().map(|(name,p)|(name.clone(),p.unsigned_area())).collect();
     let _local_scope=Context::install(Some(context.refined_for_bounds(roi_bounds)?));
+    // A prepared source polygon is physical copper. The coarser derived layer
+    // union can lose a sub-grid boundary sliver when sources are overlaid. Only
+    // reconcile a contact that would otherwise fail the unchanged coverage gate;
+    // preserve every actual bore, component and hole and the original1e-8 metal
+    // area bound. This is source consistency, never a net-name/topology repair.
+    let original_physical_stats=physical_shapes.iter().map(|s|(s.0.unsigned_area(),s.0.0.len(),s.0.0.iter().map(|p|p.interiors().len()).sum::<usize>())).collect::<Vec<_>>();
+    let mut source_copper_restorations=vec![];
+    for e in &r.electrodes {
+        let layer=geometry.layers.iter().position(|l|l.layer==e.layer).ok_or("contact layer absent")?;
+        let contact=&electrode_polygons[&e.name];let expected=original_contact_areas[&e.name];
+        let covered=areas::intersection(contact,&physical_shapes[layer].0).unsigned_area();
+        if (expected-covered).max(0.)<=1e-8*expected {continue;}
+        let missing=areas::difference(contact,&physical_shapes[layer].0);
+        let bore_overlap=areas::intersection(&missing,&bores).unsigned_area();
+        if bore_overlap>0. {return Err(error("BOARD_SOURCE_UNION",&format!("{} missing source copper intersects a real bore by {bore_overlap:e}mm2; no hole filled",e.name)));}
+        let restored=areas::union(physical_shapes[layer].0.0.iter().chain(contact.0.iter()).cloned());
+        let (area,components,holes)=original_physical_stats[layer];let change=(restored.unsigned_area()-area).abs()/area;
+        let restored_holes=restored.0.iter().map(|p|p.interiors().len()).sum::<usize>();
+        if change>1e-8||restored.0.len()!=components||restored_holes!=holes {return Err(error("BOARD_SOURCE_UNION",&format!("{} source reconciliation would change material area/topology: relative={change:e}, components={}/{components}, holes={restored_holes}/{holes}; no copper repaired",e.name,restored.0.len())));}
+        source_copper_restorations.push(serde_json::json!({"contact":e.name,"sourcePath":e.source_path,"layer":e.layer,"decision":"resolved","reason":"retain exact prepared source copper lost by the derived layer union; component/hole counts and original1e-8 copper-area/contact guards preserved","missingAreaMm2":missing.unsigned_area(),"relativeContactGap":(expected-covered)/expected,"relativeMetalAreaChange":change,"boreOverlapAreaMm2":bore_overlap}));
+        arrangement_sets[layer]=restored.clone();physical_shapes[layer].0=restored;
+    }
     let physical_count=physical_shapes.len();
     if arrangement_sets.len()!=physical_count+r.electrodes.len() {return Err(error("BOARD_ARRANGEMENT","material/contact cut ordering mismatch"));}
     let cuts=std::iter::once(substrate.clone()).chain(std::iter::once(bores.clone())).chain(arrangement_sets).collect::<Vec<_>>();
@@ -231,10 +260,10 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
     substrate=member_set(0);bores=member_set(1);
     let mut max_copper_area_change:f64=0.;
     for(i,shape)in physical_shapes.iter_mut().enumerate() {
-        let canonical=member_set(i+2);let original_area=shape.0.unsigned_area();let area=canonical.unsigned_area();
+        let canonical=member_set(i+2);let (original_area,original_components,original_holes)=original_physical_stats[i];let area=canonical.unsigned_area();
         let change=if original_area==0. {if area==0.{0.}else{f64::INFINITY}}else{(area-original_area).abs()/original_area};
         let holes=|p:&MultiPolygon<f64>|p.0.iter().map(|p|p.interiors().len()).sum::<usize>();
-        if change>1e-8||canonical.0.len()!=shape.0.0.len()||holes(&canonical)!=holes(&shape.0) {return Err(error("BOARD_ARRANGEMENT",&format!("physical copper set{i} changed area/topology: relative area={change:e}, components={}/{}, holes={}/{}; no filtering permitted",canonical.0.len(),shape.0.0.len(),holes(&canonical),holes(&shape.0))));}
+        if change>1e-8||canonical.0.len()!=original_components||holes(&canonical)!=original_holes {return Err(error("BOARD_ARRANGEMENT",&format!("physical copper set{i} changed area/topology: relative area={change:e}, components={}/{}, holes={}/{}; no filtering permitted",canonical.0.len(),original_components,holes(&canonical),original_holes)));}
         max_copper_area_change=max_copper_area_change.max(change);shape.0=canonical;
     }
     for(i,e)in r.electrodes.iter().enumerate(){electrode_polygons.insert(e.name.clone(),member_set(2+physical_count+i));}
@@ -341,12 +370,12 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
             }
         }
         let expected=original_contact_areas[&e.name]*1e-6;
-        if nodes.len()<3||(area-expected).abs()>1e-8*expected {return Err(error("BOARD_ELECTRODE",&format!("finite exposed contact area mismatch: {} mesh={area:e} source={expected:e}",e.name)));}
+        if nodes.len()<3||(area-expected).abs()>1e-8*expected {return Err(error("BOARD_ELECTRODE",&format!("finite exposed contact area mismatch: {} mesh={area:e} source={expected:e} canonical={:e}",e.name,poly.unsigned_area()*1e-6)));}
         max_contact_area_change=max_contact_area_change.max((area-expected).abs()/expected);
         electrode_areas_m2.insert(e.name.clone(),area);certified_electrodes.insert(e.name.clone(),(e.clone(),nodes.into_iter().collect()));
     }
     check(start,max_wall)?;
-    Ok(BoardMesh{mesh,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,certified_electrodes})
+    Ok(BoardMesh{mesh,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,certified_electrodes})
 }
 impl BoardMesh {
     /// End geometry preparation before a separately budgeted field phase.

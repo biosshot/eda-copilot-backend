@@ -300,17 +300,18 @@ impl AnalysisElectricalSession {
         Ok(self.inner.solve(request))
     }
     #[napi]
-    pub fn prepare_local(&mut self, board_json:String, request:Value)->Result<Value> {
-        self.local_response.clear();
+    pub fn prepare_local(&mut self, board_json:String, request:Value, remaining_seconds:Option<f64>,magnetic_patch_level:Option<u32>)->Result<Value> {
+        let magnetic_config=match magnetic_patch_level{None=>[6,8,16,3],Some(1)=>[4,6,16,1],Some(2)=>[6,8,16,1],_=>return Err(napi::Error::from_reason("LOCAL_SPATIAL_INPUT: unsupported bounded patch level"))};
+        let started=std::time::Instant::now();self.local_response.clear();
         use pcb_analyze::extraction::local::{board_mesh,board_prepare};
         let board=pcb_analyze::import_json(&board_json).board.ok_or_else(||napi::Error::from_reason("Local board import rejected"))?;
         let request:board_mesh::Request=serde_json::from_value(request).map_err(|e|napi::Error::from_reason(e.to_string()))?;
-        board_prepare::run(&board,&request,board_prepare::Options{developer_checkpoint:None,mode:"prepare",magnetic_config:[6,8,16,3],field_request:None,cached_field:None,frequencies_hz:&[]}).map_err(napi::Error::from_reason)
+        board_prepare::run_with_budget(&board,&request,board_prepare::Options{developer_checkpoint:None,mode:"prepare",magnetic_config,field_request:None,cached_field:None,frequencies_hz:&[]},remaining_seconds.unwrap_or(300.)-started.elapsed().as_secs_f64()).map_err(napi::Error::from_reason)
     }
     #[napi]
-    pub fn solve_local(&mut self, request:Value)->Result<Value> {
+    pub fn solve_local(&mut self, request:Value,remaining_seconds:Option<f64>,observables_only:Option<bool>)->Result<Value> {
         let request=serde_json::from_value(request).map_err(|e|napi::Error::from_reason(e.to_string()))?;
-        self.local_response.solve(request).map_err(napi::Error::from_reason)
+        self.local_response.solve_with_options(request,remaining_seconds.unwrap_or(30.),observables_only.unwrap_or(false)).map_err(napi::Error::from_reason)
     }
     #[napi]
     pub fn solve_frequency(&mut self, request: Value) -> Result<Value> {

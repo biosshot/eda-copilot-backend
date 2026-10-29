@@ -141,6 +141,7 @@ impl Space {
     }
 }
 impl DcFactor {
+    pub fn solve_scratch_bytes(&self,space:&Space)->usize {self.symbolic.as_ref().map_or(0,|s|s.solve_in_place_scratch::<f64>(1,Par::Seq).unaligned_bytes_required()).saturating_add(space.potential_count().saturating_mul(64)).saturating_add(space.current_count().saturating_mul(24)).saturating_add(65536)}
     /// Solve free K v = injection with prescribed authored electrode values.
     /// Residual includes every free coordinate, including fixed-gauge reaction.
     pub fn solve(&self,space:&Space,boundary:&[f64],injection:&[f64])->Result<Vec<f64>> {

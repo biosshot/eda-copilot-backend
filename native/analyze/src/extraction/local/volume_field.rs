@@ -3,10 +3,11 @@
 use super::{capacitance::{self,CapacitanceOperator},error,mesh::LayeredMesh,volume_current::Space,AllocationBudget,Result};
 use std::collections::{BTreeMap,BTreeSet};
 use faer::Mat;
-pub trait ElectricApply {
+pub trait ElectricApply: Sync {
     fn apply(&self,volts:&[f64])->Result<Vec<f64>>;
     fn energy_gram(&self,basis:&[Vec<f64>])->Result<Vec<(usize,usize,f64)>>;
     fn planned_bytes(&self)->usize;
+    fn scratch_bytes(&self)->usize {self.planned_bytes()}
 }
 impl ElectricApply for Field<'_> {
     fn apply(&self,volts:&[f64])->Result<Vec<f64>> {Field::apply(self,volts)}
@@ -84,6 +85,7 @@ impl<'a> DenseField<'a> {
     pub fn mesh(&self)->&LayeredMesh {self.mesh}
 }
 impl ElectricApply for DenseField<'_> {
+    fn scratch_bytes(&self)->usize {self.potential_count.saturating_mul(8)}
     fn planned_bytes(&self)->usize {self.retained_bytes}
     fn apply(&self,volts:&[f64])->Result<Vec<f64>> {if volts.len()!=self.potential_count||volts.iter().any(|v|!v.is_finite()){return Err(error("VOLUME_FIELD","finite full potential vector required"));}let mut charge=vec![0.;self.potential_count];for(i,&dof)in self.potential_dofs.iter().enumerate(){let mut sum=super::accurate::Sum::default();for(j,&source)in self.potential_dofs.iter().enumerate(){sum=sum.add(super::accurate::Sum::from(volts[source]).mul(self.capacitance[(i,j)]));}charge[dof]=sum.value();}Ok(charge)}
     fn energy_gram(&self,basis:&[Vec<f64>])->Result<Vec<(usize,usize,f64)>> {if basis.iter().any(|v|v.len()!=self.potential_count||v.iter().any(|v|!v.is_finite())){return Err(error("VOLUME_FIELD","finite full field basis required"));}let mut out=Vec::new();for a in 0..basis.len(){for b in a..basis.len(){let mut sum=super::accurate::Sum::default();for(i,&di)in self.potential_dofs.iter().enumerate(){for(j,&dj)in self.potential_dofs.iter().enumerate(){sum=sum.add(super::accurate::Sum::from(self.capacitance[(i,j)]).mul(basis[a][di]).mul(basis[b][dj]));}}let v=sum.value();if !v.is_finite(){return Err(error("VOLUME_FIELD","full C congruence overflow"));}if v!=0.{out.push((a,b,v));if a!=b{out.push((b,a,v));}}}}Ok(out)}

@@ -5,11 +5,13 @@ use faer::{dyn_stack::{MemBuffer,MemStack},sparse::{linalg::cholesky,SparseColMa
 use std::collections::{BTreeMap,BTreeSet};
 use faer::prelude::Solve;
 use super::accurate::Sum;
-pub trait MagneticApply {
+pub trait MagneticApply: Sync {
     fn apply(&self,space:&Space,current:&[f64])->Result<Vec<f64>>;
     fn planned_bytes(&self)->usize;
+    fn scratch_bytes(&self)->usize {self.planned_bytes()}
 }
 impl MagneticApply for Operator<'_> {
+    fn scratch_bytes(&self)->usize {self.free.saturating_mul(256).saturating_add(self.mesh.copper_tetrahedra.len().saturating_mul(96)).saturating_add(self.symbolic.as_ref().map_or(0,|s|s.solve_in_place_scratch::<f64>(3,self.parallelism).unaligned_bytes_required())).saturating_add(65536)}
     fn apply(&self,space:&Space,current:&[f64])->Result<Vec<f64>> {Operator::apply(self,space,current)}
     fn planned_bytes(&self)->usize {self.planned_bytes}
 }

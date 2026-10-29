@@ -23,9 +23,11 @@ pub struct Solver<'a> {
     scale:Vec<f64>,pub planned_bytes:usize,
 }
 impl<'a> Solver<'a> {
+    /// Independent GMRES/RHS/action buffers only; all factors/operators remain shared.
+    pub fn additional_solve_bytes(&self)->Result<usize> {(self.space.potential_count()+self.space.current_count()).checked_mul(2*80*8).and_then(|n|n.checked_add(self.field.scratch_bytes())).and_then(|n|n.checked_add(self.magnetic.scratch_bytes())).and_then(|n|n.checked_add(self.dc.solve_scratch_bytes(self.space))).ok_or_else(||error("MEMORY_LIMIT","parallel solve scratch overflow"))}
     pub fn new(space:&'a Space,field:&'a dyn ElectricApply,magnetic:&'a dyn MagneticApply,budget:AllocationBudget)->Result<Self> {
         let nv=space.potential_count();let ni=space.current_count();let nc=space.components.len();let n=nv+ni;
-        let plan=space.planned_bytes.checked_add(field.planned_bytes()).and_then(|v|v.checked_add(magnetic.planned_bytes())).and_then(|v|v.checked_add(n.checked_mul(2*72*8)?)).and_then(|v|v.checked_add(nv.checked_mul(nc)?.checked_mul(32)?)).ok_or_else(||error("MEMORY_LIMIT","operator GMRES plan overflow"))?;
+        let plan=space.planned_bytes.checked_add(field.planned_bytes()).and_then(|v|v.checked_add(magnetic.planned_bytes())).and_then(|v|v.checked_add(n.checked_mul(2*80*8)?)).and_then(|v|v.checked_add(nv.checked_mul(nc)?.checked_mul(32)?)).ok_or_else(||error("MEMORY_LIMIT","operator GMRES plan overflow"))?;
         budget.check(plan)?;
         let mut component_of=vec![usize::MAX;nv];let mut constants=vec![];
         for (j,component) in space.components.iter().enumerate() {let mut h=vec![0.;nv];for&i in component {h[i]=1.;component_of[i]=j;}constants.push(h);}

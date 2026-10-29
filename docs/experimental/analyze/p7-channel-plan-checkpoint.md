@@ -1,42 +1,61 @@
-# P7 closure implementation checkpoint — 2026-10-29
+# P7 real-channel implementation evidence — 2026-10-29
 
-This is a partial implementation of A from `p7-real-channel-closure-plan.md`.
-P7 closure is **not achieved**. Existing accepted P6/P7/cache work is retained.
+The closure plan is still active. The accepted P6/P7 integration and saved 51-drive evidence are retained; none of the additions below certifies every real PCB channel within 5%. The original `761b1a9` planning checkpoint has been superseded by these implementation changes.
 
-| Obligation | Implemented/verified here | Remaining |
+| Checkpoint | Implemented and checked | Remaining acceptance |
 |---|---|---|
-| A: no mandatory authored scope | `channel(from,to)` reaches automatic native-geometry/island planning; direct DSL TOP/BOTTOM finite-via coupon passes adapter test | Full numerical no-scope real-board acceptance |
-| A: physical branches/returns/environment | complete confirmed islands; all branches retained; surrounding intersecting copper added to domain closure; no net-name joins or shortest-path substitution; automatic requests forbid insulated cuts | homogeneous path segmentation, small relevant environment with expansion convergence; internal contact faces; authored path constraints; arbitrary optional scope shape |
-| A: inspectability/cache | plan includes region IDs, contacts, ROI, island, closure iterations, geometry diagnostics and explicit unverified spatial status; attached to channel segments/solution; immutable native board snapshot reused by WeakMap lifetime | process-restart preparation cache; tested broader-band model reuse |
-| B | existing templates and fast path preserved | polygon meshing/material regions, arbitrary conductor/mode matrices, board slicer and independent accuracy matrix |
-| C | existing finite direct-FEM and P6 integration preserved | section/local composition, arbitrary discontinuities, internal contacts, return-slot acceptance |
-| D | [HF operator prerequisite](p7-hf-operator-design.md) identifies the missing conforming surface-current operator and transition/causality checks | DC extension, diffusion overlap, HF local physics, dielectric dispersion, request-dependent certified band, positive real RF/time channels |
-| E | existing factor ownership/pool/cache unmodified | 1/2/4-job end-to-end measurements; segmented model reuse and 300s/2GiB cold acceptance |
+| A | Ordinary channel without authored scope; confirmed physical endpoints, branches and surrounding captured copper; finite candidate domains instead of mandatory whole-plane volumes; shared planning/preparation/solve deadline; complex-voltage and total-loss expansion gate | Positive full real-board automatic domain admission; long homogeneous route segmentation; explicit path constraints |
+| B | General constrained polygon P1 FEM, holes, regional dielectrics, finite physical reference, up to16 independent signals; full C/C0/L and generalized modes; smooth-surface R/internal L, regional G, exact coupled complex waves; physical board slicer | Floating/electrically connected multiple references; automatic longitudinal change detection and production channel integration; independent full accuracy matrix for all supported geometries |
+| C | Source-preserving finite contact consistency; stable interior Cu-face terminal convention; interior-via continuity, separate return and Joule/KCL test; original STM32 request unchanged | Automatic section/local composition, ownership and common-band return continuity; positive complete slot/pad/bend/RF channel matrix |
+| D | Conditional arbitrary-section loss physics, skin/material/wavelength screens and passive/reciprocal network checks; independent 1GHz coax loss/propagation and electrically small10GHz control | Local 3D HF tangential-current trial space, skin-transition overlap, continuous DC/low-frequency admission and causal transient spectral admission; positive real TPS time and BandAmp complete RF channel |
+| E | One bounded1..4 pool; immutable factors shared between independent RHS; serial inner kernels, per-job scratch and retained-state admission; immutable geometry snapshot and board-independent explicit-section cache identity | End-to-end1/2/4-job cold measurements; segmented field/model reuse, length/axis-independent section-factor reuse; complete real cold/warm/restart matrix |
 
-Conservative complete-island domain closure can include a large return plane and
-therefore most of a board. This is not the requested final path-local extractor.
-It avoids cutting a real return plane and lets the native budget reject an
-oversized problem. Bounding envelopes are intentionally conservative, not a
-physical distance/convergence criterion. The planner caps 100000 regions and
-256 closure iterations. Existing native geometry and FEM caps remain in force.
-The automatic preparation occurs before the native cold deadline starts; wall
-reporting now includes it, but one shared end-to-end deadline remains work.
+## STM32 diagnostic decisions
 
-Verification: `npm run typecheck`, `npm run build`; combined
-`node --import tsx --test tests/analyze-local-adapter.test.ts tests/analyze-local-cache.test.ts`
-passes 8 tests. Original STM32 explicit request is deep-equal to its unchanged
-reference. Added positive no-scope test uses a finite coupon derived by retaining
-the two real captured vias, not the complete real board. Added branch/floating
-neighbour/disconnected-endpoint tests verify planning only. Cache tests cover
-cold/memory/disk restore and corruption/invalidation mechanisms, not new numerical
-model timings. No Rust operator was changed; no numerical native rebuild or
-expensive full sweep was necessary for this checkpoint.
+The native diagnostic origin is explicit: `geometry/mod.rs` emits `drill_topology_uncertain` when enclosing drill approximation changes component count; it retains enclosing drills rather than declaring a confirmed open. `geometry/topology.rs` emits `contact_uncertain` for an overlap below reliable representation accuracy and does not join that pair.
 
-One complete STM32 board planning probe was attempted, without a native field
-solve. It refused unresolved `drill_topology_uncertain` at tracks 415/418/460 and
-`contact_uncertain` at pads in the conservative selected domain. Saved evidence:
-`debugging/p7-channel-plan/real-stm32-plan.json`; wall 0.97318s, process high-water
-RSS 113238016 bytes. These are **planning refusal** measurements, not cold model
-acceptance. No warm/restart full solve, five-percent observable accuracy, new
-current/loss maps or reviewed visual result report is claimed. Original
-`native/analyze/debugging/` and the user-authored closure plan remain untouched.
+The actual selected endpoints are signal via `da3574692d072a0d` at(23.7483,3.9469)mm, TOP/BOTTOM, and return via `aa8ff23739620a07` at(22.9483,3.9469)mm. Their source polygons, confirmed plated span and reliable area/barrel witnesses are retained. Default-tolerance evidence has6 reliable contacts incident on these selected source regions; they do not rely on any uncertain contact. An earlier v2 witness query accidentally selected the first region's island rather than the positive source's island; use corrected v3 provenance, not that historical witness count.
+
+| Diagnostic/source | Actual objects | Decision and impact |
+|---|---|---|
+| Drill uncertainty at pads0..3 | MH1..MH4 mounting-hole pads at board corners | Ignored for this local request: outside all three candidate domains; physical holes remain in source geometry |
+| Drill uncertainty at tracks415/418/460 | GND tracks `9e2aa177b8a3fedf`, `8f4f29c75196f3ba`, `209faac2ef5e5a2c`, away from selected vias | Ignored for the bounded candidate domains; no inferred GND join or removed drill |
+| Contact uncertainty at pads158/160/191 | U3.14 RS485_RX, U3.16 GPIO_PA5, U3.47 CAN_RX | Ignored outside candidate domains; uncertain pair never creates connectivity |
+| Contact uncertainty at pads193/202/204/142 | U4.5 +3V3, U5.6 RS485_A, U5.8 +3V3, U2.1 +5V | Same decision; none is a selected physical port |
+| Contact uncertainty at track163 | `e4d1d910f857270d`, RS485_TX | Same decision; native source gap/contact geometry preserved |
+| Unknown CAD fill freshness | Captured filled polygons, including selected surrounding plane | Explicit snapshot assumption; conditional result, no claim of current CAD fill or certified5% |
+
+The bounded curve-sensitivity inspection changes20 topology warnings at1um to6 at0.1um, without changing selected physical port sources. This resolves neither every remote contact nor the final observable accuracy. Raw source objects and per-diagnostic reasons are saved in `debugging/p7-channel-plan/stm32-diagnostic-sensitivity-v3.json` (default source snapshot) and historical v2 (two tolerances).
+
+The first native automatic domain is[[22.2987501025,3.2973501086],[24.3978500962,4.5964499116]]mm;11 captured region bounding boxes intersect it. Three finite environment candidates are shown in the inspected `stm32-automatic-domains.png`. The whole connected plane envelope is audit metadata, not the required volume domain.
+
+Full contacts exposed a source-union discrepancy: derived BOTTOM copper omitted2.2979511627e-9mm² of already prepared source copper, a1.0780239339e-8 relative contact gap. The bounded reconciliation restores that exact source polygon only if bore overlap is zero, component/hole counts are unchanged and original1e-8 material/contact guards remain satisfied. Measured resulting contact error5.04e-16 and material area error4.46e-10; no hole or topology repair. Original explicit STM32 geometry requires no reconciliation. An interior Cu face excludes barrel metal continuing through that face from its exposed terminal; the barrel remains connected and its DC KCL/Joule checks pass.
+
+## Numerical evidence
+
+`polygon-coax-reference.json` records independent analytic references: capacitance error0.15137%, delay relative error2.15e-14, surface resistance at1GHz error0.01044%, attenuation error0.05179%, phase constant error0.0003784%. Radial two-material coax capacitance error0.15972%. These are declared controls, not a5% whole-channel claim. The electrically small10GHz control includes the actual mesh-convergence and network passivity report.
+
+The actual BandAmp RF_OUT_PORT track `d334a42d8fb15d25` is sliced at its midpoint. Four finite physical conductor pieces remain independent: the signal, two coplanar pieces and the explicit bottom reference. They are not replaced with a nearest microstrip. Full3x3 C/L, physical source mapping, P1 fields and a conditional1GHz R/G solve with explicit58MS/m copper and0.02 dielectric tangent are saved in `bandamp-captured-section*.json`. Those material values are authored hypotheses. One local slice does not establish uniform geometry along the track or model its end-pad/bend. The field/matrix PNG was visually inspected.
+
+A full no-scope STM32 worker run with the unchanged legacy high-order magnetic configuration reached electric assembly and then refused magnetic symbolic storage:2,764,410,585 requested bytes versus2,075,843,048 available. Wall34.9176621s; the136,278,016-byte supervisor RSS is not worker RSS. Saved `automatic-run-1793278365782.json`. No1/2/4-job repetitions of the same pre-training failure are counted. The automatic path now requires two bounded polynomial patch levels of the same direct-FEM operator and retains the old configuration for authored ROI regression; the new full run completed the coarse candidate and refused the finer level at2,517,682,953 requested bytes. That attempt took113.6915744s and recorded980,312,064-byte worker high-water RSS, saved as `automatic-run-1793279648174.json`; no channel is admitted.
+
+Focused checks: TypeScript typecheck/build and13 adapter/cache/domain tests pass. Native contact geometry3/3, response7/7, actual BandAmp section1/1, polygon4/4, legacy cross-section9/9 and legacy line-loss3/3 pass. Three larger `line_losses_review` debug cases timed out under concurrent compilation, with unchanged120s per-case caps; these retained failures were rerun in isolation with optimization:3/3 PASS in20.71s, with unchanged budgets/thresholds. Final ordinary native build PASS7m43s; addon SHA256 `cbaa78657f85b1ef0aa745afb0d49a7a2fc13ae63c8bbde4851829b80ba09424`.
+
+Source commit `dbb6cdc` contains the polygon/physical-loss/slicer implementation. No push. User-owned closure-plan input and `native/analyze/debugging/` remain untouched. Missing positive real time/HF channel classes mean whole P7 remains open.
+
+
+## Bounded training and cache measurements
+
+One fixed level1 real STM32 candidate was measured in isolated sequential1/2/4-job runs, all on that same addon. These include native board geometry, electric/magnetic assembly, training, reduction, worker startup and response; they do not include the higher-level automatic environment/spatial admission. The candidate is not certified within5%.
+
+| Jobs | Cold s | Training s | Worker peak MiB | Warm s | Restart s |
+|---|---:|---:|---:|---:|---:|
+|1|83.0791|50.5832|710.79|0.3458|0.6362|
+|2|61.7352|30.4706|729.04|0.3666|0.6199|
+|4|57.4534|22.7097|785.65|0.3405|0.6187|
+
+All three produce bit-identical complex port responses and total losses; all memory/disk hits report zero assembly and zero training. Independent solves share the same immutable factors, each owns work buffers;4 jobs reserve236,920,386 extra bytes and report factorCopies0. The default remains serial. Artifacts: `training-jobs-{1,2,4}-*/evidence.json`, with raw inputs/results. The source-bound recovered TOP current/Joule PNG was generated from a verified disk hit and visually inspected; it labels the unadmitted candidate explicitly.
+
+Public direct DSL also verifies identical explicit section reuse across STM32 and BandAmp attribution contexts: cold/memory/disk statuses, one cache key and assembly1/0/0, saved in `section-reuse-1793279818133`. This does not yet provide length/axis-independent field-factor reuse or automatic segmentation.
+
+The independent low-frequency TPS continuation is active under a strict300s/2GiB external supervisor. Its first attempt saved the prepared state and7 new low-frequency points before the300.076s wall refusal; a second attempt resumes them instead of repeating completed solves. Production band/transient admission is unchanged until its audit and applicability work pass.

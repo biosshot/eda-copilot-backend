@@ -1,0 +1,15 @@
+import {readFileSync,mkdirSync,writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {runAnalysisDsl} from '../src/analyze/run-analysis-dsl.ts';
+import {localCoreIdentity} from '../src/analyze/local-model-cache.ts';
+const folder='tests/pcb-analyze/STM32G0_CAN_RS485/';
+const boardText=readFileSync(folder+'STM32G0_CAN_RS485.json','utf8');
+const script=readFileSync(folder+'local-extraction-automatic.js','utf8');
+const code=script;
+const started=performance.now();const directory='debugging/p7-channel-plan';mkdirSync(directory,{recursive:true});
+const identity={boardSha256:createHash('sha256').update(boardText).digest('hex'),coreIdentity:localCoreIdentity(),trainingJobs:process.env.PCB_ANALYSIS_TRAINING_JOBS??'1',code};
+writeFileSync(directory+'/automatic-run-start.json',JSON.stringify(identity,null,2));
+const result=await runAnalysisDsl({board:JSON.parse(boardText),code},{filename:'automatic-stm32.js',timeoutMs:300000,maxEntries:1000,maxOutputBytes:64*1024*1024});
+const evidence={...identity,wallSeconds:(performance.now()-started)/1000,supervisorPeakRssBytes:process.resourceUsage().maxRSS*1024,workerRssEvidence:'Per-native-call OS high-water RSS is contained in solution.resources; supervisor RSS is not worker RSS',result};
+const name='automatic-run-'+Date.now();writeFileSync(directory+'/'+name+'.json',JSON.stringify(evidence,null,2));
+console.log(JSON.stringify({evidence:name,status:result.status,error:result.error,wallSeconds:evidence.wallSeconds,supervisorPeakRssBytes:evidence.supervisorPeakRssBytes}));

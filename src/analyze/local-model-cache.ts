@@ -40,4 +40,4 @@ export class LocalModelCache {
 }
 
 /** Single producer identity boundary; excitation, loads, plots and checks are results. */
-export function localExtractionKey(cache:LocalModelCache,core:string,r:{boardJson:string;geometry:unknown;bandHz:readonly number[];temperatureC?:number}){return cache.key({core,board:digest(r.boardJson),geometry:r.geometry,bandHz:r.bandHz,temperatureC:r.temperatureC,producer:'local-recovery-v1'});}
+export function localExtractionKey(cache:LocalModelCache,core:string,r:{boardJson:string;geometry:unknown;bandHz:readonly number[];temperatureC?:number;magneticPatchLevel?:1|2}){return cache.key({core,board:digest(r.boardJson),geometry:r.geometry,bandHz:r.bandHz,temperatureC:r.temperatureC,magneticPatchLevel:r.magneticPatchLevel,producer:'local-recovery-v1'});}

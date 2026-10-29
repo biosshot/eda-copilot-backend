@@ -6,7 +6,7 @@ import type { AnalysisElectricalRequest, AnalysisElectricalReport, AnalysisFrequ
 
 export type { AnalysisImportReport, AnalysisGeometryReport, AnalysisGeometryOptions };
 export type { AnalysisConductionOptions, AnalysisConductionReport };
-export interface LocalExtractionRequest {boardJson:string;geometry:unknown;frequenciesHz:number[];drive?:number[];loadsOhm?:(number|null)[];bandHz:[number,number];temperatureC?:number}
+export interface LocalExtractionRequest {boardJson:string;geometry:unknown;remainingSeconds?:number;magneticPatchLevel?:1|2;observablesOnly?:boolean;frequenciesHz:number[];drive?:number[];loadsOhm?:(number|null)[];bandHz:[number,number];temperatureC?:number}
 export type AnalysisProblem = Readonly<{kind:'local-extraction';request:LocalExtractionRequest}> | Readonly<{ kind: 'import-board'; boardJson: string }>
     | Readonly<{kind:'geometry-validation';request:AnalysisValidationRequest}>
     | Readonly<{ kind: 'prepare-geometry'; boardJson: string; geometry?: Readonly<AnalysisGeometryOptions> }>

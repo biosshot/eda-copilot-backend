@@ -31,9 +31,17 @@ pub fn accepted_electric_request(r:&board_mesh::Request)->board_mesh::Request {
     field
 }
 pub fn run(board:&crate::model::Board,r:&board_mesh::Request,options:Options<'_>)->Result<serde_json::Value,String> {
+    run_with_budget(board,r,options,300.)
+}
+/// Shared cold budget remaining after planning/cache work.
+pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options:Options<'_>,seconds:f64)->Result<serde_json::Value,String> {
+    if !seconds.is_finite()||seconds<=0.||seconds>300. {return Err("LOCAL_DEADLINE: invalid remaining cold budget".into());}
     let started=std::time::Instant::now();
+    let requested_jobs=std::env::var("PCB_ANALYSIS_TRAINING_JOBS").ok().map(|v|v.parse::<usize>().map_err(|_|"LOCAL_THREADS: training jobs must be integer1..4".to_string())).transpose()?.unwrap_or(1);
+    if requested_jobs>1&&super::parallel::current()!=faer::Par::Seq{return Err("LOCAL_THREADS: select outer training jobs or native kernel parallelism; nested levels are not admitted".into());}
+    super::parallel::map_jobs(requested_jobs,0,|_|Ok(()))?;
     let mut stages=serde_json::Map::new();
-    let remaining=||std::time::Duration::from_secs(300).checked_sub(started.elapsed())
+    let remaining=||std::time::Duration::from_secs_f64(seconds).checked_sub(started.elapsed())
         .filter(|t|!t.is_zero()).ok_or("LOCAL_DEADLINE: shared cold calculation deadline");
     let Options{mode,magnetic_config,field_request,cached_field,frequencies_hz,developer_checkpoint}=options;
     #[derive(serde::Serialize,serde::Deserialize)]
@@ -119,12 +127,24 @@ pub fn run(board:&crate::model::Board,r:&board_mesh::Request,options:Options<'_>
         let mut training=restored.as_ref().map(|p|p.training.clone()).unwrap_or_default();let mut training_solutions=restored.as_ref().map(|p|p.training_solutions.clone()).unwrap_or_default();
         let stage=std::time::Instant::now();
         if !resumed&&(mode=="train"||mode=="prepare"||mode=="verify"||mode=="solve") {
-            for frequency in [1e4,1e5] {for input in 0..ports.len() {
-                let mut injection=vec![0.;currents.potential_count()];let[a,b]=ports[input];injection[contacts[a].1]=1.;injection[contacts[b].1]=-1.;
-                let full=solver.as_ref().unwrap().solve(frequency,&injection,&vec![0.;injection.len()],remaining()?)?;
+            let full_solver=solver.as_ref().unwrap();
+            let tasks=[1e4,1e5].into_iter().flat_map(|f|(0..ports.len()).map(move|input|(f,input))).collect::<Vec<_>>();
+            let retained_training_bytes=currents.potential_count().checked_mul(6).and_then(|n|n.checked_add(currents.current_count().checked_mul(2)?)).and_then(|n|n.checked_mul(8*tasks.len())).ok_or("training states byte plan overflow")?;
+            let live=full_solver.planned_bytes.checked_add(retained_training_bytes).ok_or("training live byte plan overflow")?;
+            let workspace=full_solver.additional_solve_bytes()?;
+            let spare=budget.max_bytes.checked_sub(live).ok_or("training live budget exhausted")?;
+            let jobs=requested_jobs.min(1+spare/workspace.max(1));
+            budget.check(live+(jobs-1)*workspace)?;
+            stages.insert("trainingJobs".into(),serde_json::json!({"requested":requested_jobs,"effective":jobs,"retainedTrainingStatesBytes":retained_training_bytes,"extraWorkspaceBytes":(jobs-1)*workspace,"factorCopies":0,"scratchBound":"audited GMRES/RHS/apply scratch; immutable factors shared","innerKernels":format!("{:?}",super::parallel::current())}));
+            let solutions=super::parallel::map_jobs(jobs,tasks.len(),|index|{
+                let (frequency,input)=tasks[index];let mut injection=vec![0.;currents.potential_count()];let[a,b]=ports[input];injection[contacts[a].1]=1.;injection[contacts[b].1]=-1.;
+                full_solver.solve(frequency,&injection,&vec![0.;injection.len()],remaining()?)
+            })?;
+            for ((frequency,input),full) in tasks.into_iter().zip(solutions){
                 let added=basis.include_solution(&currents,&full,budget)?;eprintln!("training port {input}: added {added:?}, {:?}",full.audit);
                 training.push(serde_json::json!({"frequencyHz":frequency,"port":input,"addedVoltageCurrent":added,"audit":full.audit}));training_solutions.push((frequency,input,full));
-            }}
+            }
+
         }
         record_stage(&mut stages,"basisTraining",stage);
         let stage=std::time::Instant::now();
@@ -192,7 +212,7 @@ pub fn run(board:&crate::model::Board,r:&board_mesh::Request,options:Options<'_>
     }
     let source_ids:Vec<_>=b.mesh.copper_tetrahedra.iter().map(|c|&c.source_ids).collect();
     let nodes:Vec<_>=b.mesh.copper_tetrahedra.iter().map(|c|c.nodes).collect();
-    let mut output=serde_json::json!({"request":r,"cellResistanceOhm":currents.cells.iter().map(|c|c.resistance_ohm).collect::<Vec<_>>(),"cellDensityPerAmpM2":currents.cells.iter().map(|c|c.density_per_amp_m2).collect::<Vec<_>>(),"candidate":model,"arrangement":{"atoms":b.arrangement_atoms,"maxCopperAreaChange":b.max_copper_area_change,"maxContactAreaChange":b.max_contact_area_change},"electrodeAreasM2":b.electrode_areas_m2,"electrodeNodes":electrodes,"nodesM":b.mesh.nodes_m,"copperCells":nodes,"sourceIds":source_ids,"barrels":b.barrel_ids,"mapping":b.source_mapping,"originMm":b.origin_mm,"potentialCount":currents.potential_count(),"currentCount":currents.current_count(),"potentialMeshNodes":currents.mesh_nodes,"components":currents.components,"magneticMeshTetrahedra":b.mesh.tetrahedra.len()+b.mesh.copper_tetrahedra.len(),"fieldNodesM":field_mesh.nodes_m,"fieldCopperCells":field_mesh.copper_tetrahedra.iter().map(|t|t.nodes).collect::<Vec<_>>(),"fieldTetrahedra":field_mesh.tetrahedra.len(),"fieldCells":field_mesh.tetrahedra.iter().map(|t|t.nodes).collect::<Vec<_>>(),"fieldEpsilonR":field_mesh.tetrahedra.iter().map(|t|t.epsilon_r).collect::<Vec<_>>(),"externalFaces":field_mesh.external_faces,"copperVolumeM3":b.mesh.copper_volume_m3,"fieldVolumeM3":field_mesh.dielectric_volume_m3,"plannedBytes":currents.planned_bytes,"elapsedSeconds":b.elapsed_seconds});
+    let mut output=serde_json::json!({"request":r,"cellResistanceOhm":currents.cells.iter().map(|c|c.resistance_ohm).collect::<Vec<_>>(),"cellDensityPerAmpM2":currents.cells.iter().map(|c|c.density_per_amp_m2).collect::<Vec<_>>(),"candidate":model,"arrangement":{"atoms":b.arrangement_atoms,"maxCopperAreaChange":b.max_copper_area_change,"maxContactAreaChange":b.max_contact_area_change,"sourceCopperRestorations":b.source_copper_restorations},"electrodeAreasM2":b.electrode_areas_m2,"electrodeNodes":electrodes,"nodesM":b.mesh.nodes_m,"copperCells":nodes,"sourceIds":source_ids,"barrels":b.barrel_ids,"mapping":b.source_mapping,"originMm":b.origin_mm,"potentialCount":currents.potential_count(),"currentCount":currents.current_count(),"potentialMeshNodes":currents.mesh_nodes,"components":currents.components,"magneticMeshTetrahedra":b.mesh.tetrahedra.len()+b.mesh.copper_tetrahedra.len(),"fieldNodesM":field_mesh.nodes_m,"fieldCopperCells":field_mesh.copper_tetrahedra.iter().map(|t|t.nodes).collect::<Vec<_>>(),"fieldTetrahedra":field_mesh.tetrahedra.len(),"fieldCells":field_mesh.tetrahedra.iter().map(|t|t.nodes).collect::<Vec<_>>(),"fieldEpsilonR":field_mesh.tetrahedra.iter().map(|t|t.epsilon_r).collect::<Vec<_>>(),"externalFaces":field_mesh.external_faces,"copperVolumeM3":b.mesh.copper_volume_m3,"fieldVolumeM3":field_mesh.dielectric_volume_m3,"plannedBytes":currents.planned_bytes,"elapsedSeconds":b.elapsed_seconds});
     if let Some(path)=cached_field {for key in ["fieldNodesM","fieldCopperCells","fieldTetrahedra","fieldCells","fieldEpsilonR","fieldVolumeM3"]{output.as_object_mut().unwrap().remove(key);}output["fieldDataSource"]=serde_json::json!({"kind":"complete-source-P1-Schur-checkpoint","path":path,"geometry":"stored producer evidence; no fabricated field grid in this output","physicalAdmission":false});}
     if !(mode=="verify") {remaining()?;}
     output["stageSeconds"]=serde_json::Value::Object(stages);
