@@ -13,3 +13,9 @@ fn accepted_electric_defaults_match_frozen_candidate_and_preserve_physical_input
     assert_ne!(current.air_margin_m,actual.air_margin_m);
     assert_eq!(current.max_vertical_step_m,0.002);
 }
+
+#[test]
+fn electric_refinement_retains_finer_current_vertical_boundaries(){
+ let mut current:board_mesh::Request=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json")).unwrap();current.max_vertical_step_m=0.00153/3.9;
+ let field=board_prepare::accepted_electric_request(&current);assert_eq!(field.max_vertical_step_m,current.max_vertical_step_m);assert_eq!(board_mesh::physical_signature(&current),board_mesh::physical_signature(&field));
+}

@@ -32,7 +32,7 @@ pub struct Options<'a> {
 pub fn accepted_electric_request(r:&board_mesh::Request)->board_mesh::Request {
     let mut field=r.clone();
     field.air_margin_m=0.008;
-    field.max_vertical_step_m=0.0005;
+    field.max_vertical_step_m=r.max_vertical_step_m.min(0.0005);
     field.interface_step_m=Some(0.000025);
     field.interface_growth=Some(2.);
     field

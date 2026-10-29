@@ -41,13 +41,13 @@ fn screen() {
  let reference:Vec<Vec<f64>>=serde_json::from_value(frozen["matrix"].clone()).unwrap();let reference=reference[..3].iter().map(|r|r[..3].to_vec()).collect::<Vec<_>>();
  let uncertainty=frozen["empiricalWhitenedReferenceScreen"].as_f64().unwrap();
  let space=volume_current::assemble(&mesh,&vec![58e6;3],&[],profile()).unwrap();
- for (trace,degree) in [(6,8)] {
+ for (trace,degree) in [(5,7),(6,8)] {
   let operator=volume_magnetic::Operator::new_enriched_patch(&mesh,profile(),8,trace,degree,3).unwrap();
   let mut actual=vec![vec![0.;3];3];
   for j in 0..3 {let mut q=vec![0.;9];q[3*j+2]=1./space.cells[j].density_per_amp_m2;let image=operator.apply(&space,&q).unwrap();for i in 0..3 {actual[i][j]=image[3*i+2]/space.cells[i].density_per_amp_m2;}}
   let error=full_space_error(&actual,&reference);
   eprintln!("Entity airP3/Cu-trace{trace}/bubble{degree}; source3-space error={error:e}, inherited empirical reference screen={uncertainty:e}; plan={} bytes; matrix={actual:?}",operator.planned_bytes);
-  if degree==8 {assert!(error+uncertainty<0.01,"complete three-cell energy screen failed");}
+  if degree==7 {assert!(error+uncertainty>=0.01,"lower profile unexpectedly meets the frozen1% screen; review applicability evidence");}else{assert!(error+uncertainty<0.01,"complete three-cell energy screen failed");}
  }
  assert!(volume_magnetic::Operator::new_enriched_degree(&mesh,profile(),8,usize::MAX).err().unwrap().contains("MAGNETIC_DEGREE"));
 }

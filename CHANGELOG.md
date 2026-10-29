@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Account pinned-faer shared supernode patterns/panels before allocation, with strict actual-layout checks. Retain explicit50Ohm power-wave/Cu-loss automatic sensitivity scope and four physical signal/return contacts. Preserve failed refinement/resource evidence; reject a cheaper magnetic profile that fails the original independent1% guard instead of weakening accuracy or budget limits.
+
 - Include both slope changes across held repeated-PWL cycle gaps in the conservative source spectral-tail bound.
 
 - Retain analytic finite-front/event-train spectral requirements and conditional passive absolute output-tail bounds in transient provenance. Require explicit DC/state/resistive-load coverage; preserve native admission and conditional physical-model status. Add a direct TPS source-spectrum compatibility scenario and viewed response/band evidence.

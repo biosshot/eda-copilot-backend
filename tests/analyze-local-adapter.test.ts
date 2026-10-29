@@ -9,7 +9,7 @@ test('direct channel without scope plans a layer-changing finite-via coupon with
  const folder='tests/pcb-analyze/STM32G0_CAN_RS485/';const board=JSON.parse(readFileSync(folder+'STM32G0_CAN_RS485.json','utf8'));const script=readFileSync(folder+'local-extraction.js','utf8');const code=script.slice(0,script.indexOf('const cold=')).replace('scope:[scope]','')+'await run();';let captured:any,plan:any;
  board.pads=[];board.copper.fixed.tracks=[];board.copper.fixed.zones=[];board.copper.fixed.vias=board.copper.fixed.vias.filter((v:any)=>['da3574692d072a0d','aa8ff23739620a07'].includes(v.id));
  const result=await executeScenario({board,code},{filename:'automatic-local.js',maxEntries:1000,maxOutputBytes:4*1024*1024},()=>{},async task=>{captured=localRequest(task as AnalysisTask<'impedance'>,p=>{plan=p;});return{id:'test',status:'complete',method:'transport test only',diagnostics:[],assumptions:[],metrics:{}};});
- assert.equal(result.status,'complete',JSON.stringify(result.error));assert.equal(plan.automaticConvergenceRequired,true);assert.equal(plan.candidateDomainsMm.length,3);assert.ok(plan.selectedRegionIds.length>0);assert.equal(captured.electrodes[0].layer,'TOP');assert.equal(captured.electrodes[1].layer,'BOTTOM');assert.match(plan.spatialValidation,/unverified/);
+ assert.equal(result.status,'complete',JSON.stringify(result.error));assert.equal(plan.automaticConvergenceRequired,true);assert.equal(plan.candidateDomainsMm.length,3);assert.ok(plan.selectedRegionIds.length>0);assert.equal(captured.electrodes[0].layer,'TOP');assert.equal(captured.electrodes[1].layer,'BOTTOM');assert.match(plan.spatialValidation,/unverified/);assert.equal(captured.maxVerticalStepM,.002);
 });
 
 test('automatic plan retains signal branches and floating neighbours, without net-name joins',async()=>{
@@ -39,4 +39,10 @@ test('interior via terminal uses a stable physical copper face in either channel
  let captured:any;const run=async(source:string)=>executeScenario({board,code:source},{filename:'interior.js',maxEntries:1000,maxOutputBytes:4*1024*1024},()=>{},async task=>{captured=localRequest(task as AnalysisTask<'impedance'>);return{id:'test',status:'complete',method:'transport only',diagnostics:[],assumptions:[],metrics:{}};});
  const forward=await run(code);assert.equal(forward.status,'complete',JSON.stringify(forward.error));assert.equal(captured.electrodes.find((e:any)=>e.layer==='INNER1').upper,false);
  const backward=await run(code.replace('from:input,to:output','from:output,to:input'));assert.equal(backward.status,'complete',JSON.stringify(backward.error));assert.equal(captured.electrodes.find((e:any)=>e.layer==='INNER1').upper,false);
+});
+
+test('captured four-terminal no-scope channel preserves separate return contacts through the board',async()=>{
+ const folder='tests/pcb-analyze/STM32G0_CAN_RS485/',board=JSON.parse(readFileSync(folder+'STM32G0_CAN_RS485.json','utf8'));const code=readFileSync(folder+'local-extraction-automatic-return.js','utf8').split('const result=')[0]+'await run();';let captured:any;
+ const result=await executeScenario({board,code},{filename:'captured-return.js',maxEntries:1000,maxOutputBytes:4*1024*1024},()=>{},async task=>{captured=localRequest(task as AnalysisTask<'impedance'>);return{id:'test',status:'complete',method:'transport only',diagnostics:[],assumptions:[],metrics:{}};});
+ assert.equal(result.status,'complete',JSON.stringify(result.error));assert.equal(captured.electrodes.length,4);assert.deepEqual(captured.ports,[['signal-TOP','return-TOP'],['signal-BOTTOM','return-BOTTOM']]);assert.equal(captured.maxVerticalStepM,.002);
 });
