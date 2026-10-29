@@ -3,11 +3,12 @@ import type {AnalysisTransientRequest} from '../../../native/analyze/index.js';
 import type {AnalysisTask,ExecutionResult} from './executor.ts';
 import type * as T from './spec-doc.js';
 import {AnalysisDslError} from './schema.ts';
-import {object} from './descriptions.ts';
+import {object,sampleWaveform} from './descriptions.ts';
 import {electricalModel} from './electrical-models.ts';
 import {createProblemExecutor} from '../execute-problem.ts';
 import {json} from './data.ts';
 import {frequencyTopology} from './frequency-executor.ts';
+import {sourceBandPlan,passiveOutputTailBounds} from './source-band.ts';
 import {declaredNetworkBand} from './frequency-model.ts';
 function fail(message:string):never{throw new AnalysisDslError('UNSUPPORTED_TEMPORAL_MODEL',message);}
 /** Digital stimulus adapter only; differential equations and fitting stay Rust.
@@ -69,13 +70,18 @@ export function transientRequest(task:AnalysisTask<'si'>){
  const request:AnalysisTransientRequest={...(descriptor.kind==='network'&&c.initial===undefined?{resource:graph.instances[0].model}:{topology:graph}),drivers,receivers,time:c.time!,initial:c.initial,numerics:c.numerics,budget:c.budget};
  const sourceResources=graph.instances.map(i=>({instanceId:i.id,resource:i.model,sourceValidity:i.model.validity??null,allowedAnalyses:i.model.analyses??null,sha256:createHash('sha256').update(JSON.stringify(json(i.model))).digest('hex')}));
  const portMapping={outputs:graph.ports,connections:graph.connections,connectionContacts:graph.connectionContacts??graph.connections.map(()=>'both'),instances:graph.instances.map(i=>({instanceId:i.id,sourcePorts:i.model.ports,logicalPorts:i.ports}))};
- return{request,names,conditional,resolvedModels,sourceResources,portMapping};
+ const sourcePlans=drivers.map(d=>({port:names[d.port],...sourceBandPlan(d.waveform,c.time!,0.01)}));
+ const sourceBands=graph.instances.map(i=>({instanceId:i.id,bandHz:declaredNetworkBand(i.model)??null}));
+ const commonSourceBand=sourceBands.every(s=>s.bandHz!==null)?[Math.max(...sourceBands.map(s=>s.bandHz![0])),Math.min(...sourceBands.map(s=>s.bandHz![1]))]:null;
+ const sourceSpectrumEvidence={status:'input bounds only; no output-band admission',inputTailFraction:0.01,drivers:sourcePlans,declaredResourceBands:sourceBands,commonDeclaredBandHz:commonSourceBand,coverageStatus:sourcePlans.some(p=>p.status==='unavailable')?'source-bound-unavailable':!commonSourceBand?'resource-band-not-declared':commonSourceBand[0]>0?'DC-coverage-not-declared':sourcePlans.some(p=>p.status==='bounded-input'&&p.requiredUpperHz>commonSourceBand[1])?'input-tail-not-covered':'input-tail-covered; output applicability still unverified'};
+ return{request,names,conditional,resolvedModels,sourceResources,portMapping,sourceSpectrumEvidence,zeroSourcePrehistory:drivers.every(d=>sampleWaveform(d.waveform,0)===0)};
 }
 export function createTransientExecutor(){const execute=createProblemExecutor(true);return async(task:AnalysisTask<'si'>):Promise<ExecutionResult>=>{
  const adapted=transientRequest(task),report=execute({kind:'transient-network',request:adapted.request});
  if(report.status!=='complete')throw new AnalysisDslError(report.diagnostics[0]?.code??'NETWORK_REJECTED',report.diagnostics.map(d=>d.message).join('; '),report.diagnostics);
  report.resources={peakRssBytes:process.resourceUsage().maxRSS*1024,metric:'OS process high-water RSS; includes Node and earlier scenario calculations'};
  const conditional=adapted.conditional||report.conditional;
+ const sourceOutputTailBounds=passiveOutputTailBounds({plans:adapted.sourceSpectrumEvidence.drivers,sourceResistanceOhm:adapted.request.drivers.map(d=>d.resistanceOhm),outputs:adapted.request.receivers.map(r=>({port:adapted.names[r.port],resistanceOhm:r.resistanceOhm??undefined})),bandHz:adapted.sourceSpectrumEvidence.commonDeclaredBandHz,zeroInitialState:report.energyJ?.[0]===0&&adapted.zeroSourcePrehistory});
  const resonant=adapted.sourceResources.some(s=>object(s.resource.data)&&object(s.resource.data.temporal)&&s.resource.data.temporal.method==='passive-resonant-y');
  const fitReports=Array.isArray(report.fit)?report.fit:[report.fit];
  const fitUpper=Math.min(...fitReports.map(fit=>object(fit)&&Array.isArray(fit.frequenciesHz)?Number(fit.frequenciesHz.at(-1)):Number.MAX_VALUE));
@@ -83,7 +89,7 @@ export function createTransientExecutor(){const execute=createProblemExecutor(tr
  const applicability=bandHz?{domain:{bandHz,sourceResourceHashes:adapted.sourceResources.map(s=>s.sha256),temporalClass:'passive-resonant-y',assumption:'Authored modal RLC class and closure; unknown intersample/extraband resonances remain unexcluded'}}:{};
  const metrics:Record<string,T.DataDescription>={};
  for(let i=0;i<adapted.names.length;i++)metrics[`network-voltage:${adapted.names[i]}`]={kind:'series',unit:'V',values:report.portVoltages!.map(v=>v[i]),axis:{name:'timeS',unit:'s',values:report.axis!},validity:{status:conditional?'conditional':'valid',...applicability,...(conditional?{reason:'Conditional source/model band/finite-sample closure; see solution provenance. A finite-front screen does not prove a bandlimited source.'}:{})},diagnostics:[]};
- return{id:`${task.contextId}:time-${randomUUID()}`,status:'complete',method:'Passive supplied temporal model CPU/F64, finite drivers, adaptive backward Euler',diagnostics:report.diagnostics,assumptions:report.assumptions??[],metrics,solution:json({...report,...(bandHz?{bandHz}:{}),physicalInitial:task.config.initial??null,resolvedModels:adapted.resolvedModels,sourceResources:adapted.sourceResources,portMapping:adapted.portMapping,conditional})};
+ return{id:`${task.contextId}:time-${randomUUID()}`,status:'complete',method:'Passive supplied temporal model CPU/F64, finite drivers, adaptive backward Euler',diagnostics:report.diagnostics,assumptions:report.assumptions??[],metrics,solution:json({...report,...(bandHz?{bandHz}:{}),physicalInitial:task.config.initial??null,sourceSpectrumEvidence:{...adapted.sourceSpectrumEvidence,outputTailBounds:sourceOutputTailBounds},resolvedModels:adapted.resolvedModels,sourceResources:adapted.sourceResources,portMapping:adapted.portMapping,conditional})};
  };}
 export function transientObservedVoltage(task:AnalysisTask,descriptor:unknown,metrics:Readonly<Record<string,T.DataDescription>>):T.DataDescription|undefined{
  if(task.kind!=='si'||!object(descriptor)||!object(descriptor.input)||descriptor.input.owner!==(task.config as T.Configurations['si']).network?.id)return;

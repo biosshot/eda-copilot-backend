@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Retain analytic finite-front/event-train spectral requirements and conditional passive absolute output-tail bounds in transient provenance. Require explicit DC/state/resistive-load coverage; preserve native admission and conditional physical-model status. Add a direct TPS source-spectrum compatibility scenario and viewed response/band evidence.
+
 - Honor explicit developer full-verification axes while preserving the exact legacy default. Tighten source-copper ownership and independent-solve scratch admission; retain old numerical guards. Verify15 new TPS low-frequency holdouts through a lossless resumable journal under separate300s/2GiB supervised runs, without extending production bands.
 
 - Add a general polygon cross-section FEM with finite reference copper, regional dielectrics, full multiconductor C/L/R/G matrices, coupled modes and smooth-surface/dielectric HF losses. Preserve template fast paths and physical applicability guards. Add a captured-board transverse slicer and independent coax/multilayer controls, including an electrically small 10 GHz control; these results do not certify complete RF board channels.
