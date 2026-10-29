@@ -404,67 +404,8 @@ pub fn integrals(f: &Field) -> Result<Integrals> {
             }
         }
     }
-    let mut surfaces = vec![];
-    let mut totals = vec![0.; n];
-    let mut normalization_error: f64 = 0.;
-    for (g, es) in edges.into_iter().enumerate() {
-        let mut mass = BTreeMap::<usize, f64>::new();
-        for [a, b] in &es {
-            let len = (f.nodes[*a][0] - f.nodes[*b][0]).hypot(f.nodes[*a][1] - f.nodes[*b][1]);
-            *mass.entry(*a).or_default() += len / 2.;
-            *mass.entry(*b).or_default() += len / 2.;
-        }
-        let ids: Vec<_> = mass.keys().copied().collect();
-        let lookup: BTreeMap<_, _> = ids.iter().enumerate().map(|(i, k)| (*k, i)).collect();
-        let mut currents = vec![vec![0.; ids.len()]; n];
-        let mut integrated = vec![0.; n];
-        for k in 0..n {
-            for (i, node) in ids.iter().enumerate() {
-                let q: f64 = (0..n)
-                    .map(|j| f.vacuum_reaction_c_per_m[j][*node] * inv[j][k])
-                    .sum();
-                currents[k][i] = q / mass[node];
-                integrated[k] += q;
-            }
-        }
-        let mut gram = vec![vec![0.; n]; n];
-        for [a, b] in &es {
-            let len = (f.nodes[*a][0] - f.nodes[*b][0]).hypot(f.nodes[*a][1] - f.nodes[*b][1]);
-            let ia = lookup[a];
-            let ib = lookup[b];
-            for i in 0..n {
-                for j in 0..n {
-                    gram[i][j] += len / 6.
-                        * (2. * currents[i][ia] * currents[j][ia]
-                            + currents[i][ia] * currents[j][ib]
-                            + currents[i][ib] * currents[j][ia]
-                            + 2. * currents[i][ib] * currents[j][ib]);
-                }
-            }
-        }
-        for k in 0..n {
-            totals[k] += integrated[k];
-            if g < n {
-                normalization_error =
-                    normalization_error.max((integrated[k] - if g == k { 1. } else { 0. }).abs());
-            }
-        }
-        surfaces.push(Surface {
-            id: if g < n {
-                f.geometry.conductors[g].id.clone()
-            } else {
-                if g == n { "bottom" } else { "top" }.into()
-            },
-            edges: es,
-            node_indices: ids,
-            current_a_per_m_per_a: currents,
-            integrated_current_a_per_a: integrated,
-            gram_per_m: gram,
-        });
-    }
-    for q in totals {
-        normalization_error = normalization_error.max(q.abs());
-    }
+    let ids=(0..count).map(|g|if g<n{f.geometry.conductors[g].id.clone()}else{if g==n{"bottom"}else{"top"}.into()}).collect::<Vec<_>>();
+    let (surfaces,normalization_error)=surface_grams(&f.nodes,&f.vacuum_reaction_c_per_m,&inv,edges,&ids)?;
     let mut regions: Vec<Region> = f
         .geometry
         .dielectrics
@@ -508,6 +449,72 @@ pub fn integrals(f: &Field) -> Result<Integrals> {
         ));
     }
     Ok(Integrals{surfaces,regions,normalization:"K = vacuum FE boundary charge moments times C0^-1 divided by lumped surface mass; longitudinal 1 A signal basis with oriented reference return; peak phasors, average dissipated power = 0.5 I* R I",max_current_normalization_error:normalization_error,max_regional_capacitance_error:regional_error})
+}
+
+/// Shared charge-conserving boundary mass recovery for finite polygon and
+/// template sections. The same weak reaction moments and Gram integration are
+/// used; no rectangular/symmetric-pair current formula is introduced.
+pub(super) fn surface_grams(nodes:&[[f64;2]],reactions:&[Vec<f64>],inv:&[Vec<f64>],edges:Vec<Vec<[usize;2]>>,surface_ids:&[String])->Result<(Vec<Surface>,f64)>{
+    let n=inv.len();
+    let mut surfaces = vec![];
+    let mut totals = vec![0.; n];
+    let mut normalization_error: f64 = 0.;
+    for (g, es) in edges.into_iter().enumerate() {
+        let mut mass = BTreeMap::<usize, f64>::new();
+        for [a, b] in &es {
+            let len = (nodes[*a][0] - nodes[*b][0]).hypot(nodes[*a][1] - nodes[*b][1]);
+            *mass.entry(*a).or_default() += len / 2.;
+            *mass.entry(*b).or_default() += len / 2.;
+        }
+        let ids: Vec<_> = mass.keys().copied().collect();
+        let lookup: BTreeMap<_, _> = ids.iter().enumerate().map(|(i, k)| (*k, i)).collect();
+        let mut currents = vec![vec![0.; ids.len()]; n];
+        let mut integrated = vec![0.; n];
+        for k in 0..n {
+            for (i, node) in ids.iter().enumerate() {
+                let q: f64 = (0..n)
+                    .map(|j| reactions[j][*node] * inv[j][k])
+                    .sum();
+                currents[k][i] = q / mass[node];
+                integrated[k] += q;
+            }
+        }
+        let mut gram = vec![vec![0.; n]; n];
+        for [a, b] in &es {
+            let len = (nodes[*a][0] - nodes[*b][0]).hypot(nodes[*a][1] - nodes[*b][1]);
+            let ia = lookup[a];
+            let ib = lookup[b];
+            for i in 0..n {
+                for j in 0..n {
+                    gram[i][j] += len / 6.
+                        * (2. * currents[i][ia] * currents[j][ia]
+                            + currents[i][ia] * currents[j][ib]
+                            + currents[i][ib] * currents[j][ia]
+                            + 2. * currents[i][ib] * currents[j][ib]);
+                }
+            }
+        }
+        for k in 0..n {
+            totals[k] += integrated[k];
+            if g < n {
+                normalization_error =
+                    normalization_error.max((integrated[k] - if g == k { 1. } else { 0. }).abs());
+            }
+        }
+        surfaces.push(Surface {
+            id: surface_ids[g].clone(),
+            edges: es,
+            node_indices: ids,
+            current_a_per_m_per_a: currents,
+            integrated_current_a_per_a: integrated,
+            gram_per_m: gram,
+        });
+    }
+    for q in totals {
+        normalization_error = normalization_error.max(q.abs());
+    }
+    if normalization_error>1e-8{return Err(error("SECTION_LOSS_NORMALIZATION",format!("surface current {normalization_error:e}")));}
+    Ok((surfaces,normalization_error))
 }
 
 #[cfg(test)]

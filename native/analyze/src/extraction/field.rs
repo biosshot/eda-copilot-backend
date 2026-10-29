@@ -179,14 +179,14 @@ fn element(nodes: &[[f64; 2]], t: [usize; 3]) -> Result<(f64, [[f64; 2]; 3])> {
         ],
     ))
 }
-struct Solution {
-    c: Vec<Vec<f64>>,
-    phi: Vec<Vec<f64>>,
-    e: Vec<Vec<[f64; 2]>>,
-    quality: Value,
-    reaction: Vec<Vec<f64>>,
+pub(super) struct Solution {
+    pub(super) c: Vec<Vec<f64>>,
+    pub(super) phi: Vec<Vec<f64>>,
+    pub(super) e: Vec<Vec<[f64; 2]>>,
+    pub(super) quality: Value,
+    pub(super) reaction: Vec<Vec<f64>>,
 }
-fn solve_basis(
+pub(super) fn solve_basis(
     nodes: &[[f64; 2]],
     ts: &[[usize; 3]],
     eps: &[f64],
@@ -293,7 +293,7 @@ fn solve_basis(
     {
         return Err(error(
             "SECTION_ENERGY",
-            "nonfinite potential or discrete maximum principle violation",
+            format!("nonfinite potential or discrete maximum principle violation; range [{:e}, {:e}]",phi.iter().flatten().copied().fold(f64::INFINITY,f64::min),phi.iter().flatten().copied().fold(f64::NEG_INFINITY,f64::max)),
         ));
     }
     let mut reaction = vec![vec![0.; nodes.len()]; n];

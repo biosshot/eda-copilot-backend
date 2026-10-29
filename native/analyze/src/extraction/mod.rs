@@ -1,5 +1,7 @@
 //! CPU/F64 PEC quasi-TEM cross sections. Geometry, FEM and propagation are separate.
 mod field;
+pub mod polygon_section;
+pub mod board_section;
 mod geometry;
 pub mod local;
 pub mod losses;
@@ -87,6 +89,7 @@ fn change(a: &Value, b: &Value) -> f64 {
     max
 }
 pub fn run(request: Request) -> Value {
+    if request.line["kind"]=="polygon-section" {return polygon_section::run_transport(request);}
     let start = Instant::now();
     let mut convergence = vec![];
     let result = (|| -> Result<Value> {

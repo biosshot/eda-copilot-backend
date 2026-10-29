@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a general polygon cross-section FEM with finite reference copper, regional dielectrics, full multiconductor C/L/R/G matrices, coupled modes and smooth-surface/dielectric HF losses. Preserve template fast paths and physical applicability guards. Add a captured-board transverse slicer and independent coax/multilayer controls, including an electrically small 10 GHz control; these results do not certify complete RF board channels.
+
 - Allow local channel descriptions without an authored scope through a conservative native copper-island extraction plan. Preserve complete branches/return islands, include surrounding captured copper, reject unresolved topology and forbid insulated cuts in this path. Cache immutable board preparation within its lifetime and expose the plan in channel results. This initial domain closure is not spatial convergence or whole P7 acceptance; large return planes and real-board topology remain gaps. Record the HF surface/volume operator prerequisite without changing certified bands.
 
 - Preserve every IEEE-F64 bit in schema2 developer checkpoints; refuse legacy/incompatible snapshots and verify an explicit source/model/geometry-bound migration of the completed51-drive evidence. Keep this journal separate from the production JSON cache and retain failed cold attempts alongside bounded retest measurements.
