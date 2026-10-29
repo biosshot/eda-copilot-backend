@@ -377,3 +377,12 @@ agreement. Stop here; full P7 is not closed.
 ## Accepted electric v1 and library integration - 2026-10-28
 
 The user accepted the refined electric v1 configuration after `2366190`; earlier coarse 88.8% wording above is historical and does not prohibit integration. [The active assignment](next-task-p6-p7-integration-cache.md) requires complete library/worker/direct DSL/cache delivery and three real boards. [The integration ledger](p6-p7-integration-acceptance.md) distinguishes the library orchestration checkpoint from the outstanding integration/physical/recovery gates. Original current geometry and ports are preserved. No method/port change or renewed electric-convergence campaign is introduced.
+
+
+## Final conditional integration supply — 2026-10-29
+
+The [current obligation matrix](p6-p7-integration-acceptance.md#final-obligation-matrix) replaces the earlier0/3/library-only status. Original STM32's17 frequencies/51 direct excitations and independent full/reduced voltage/current/cell/region-loss comparisons now PASS5%; numerical guards remain unchanged. Final production model and both bases exactly match the developer packet. No renewed electric convergence or alternative solver search was used.
+
+Existing channel DSL, addon/session and compiled workers now perform finite board extraction and P6 recovery; bounded memory/disk cache and fresh-process restore are measured on real boards. Three actual reports were run and viewed (two successful local volumes plus one supported BandAmp RF section with an explicitly refused local class). Final successful cold families147.806/198.620/8.544s/<2GiB; the same-binary300.055s STM32 refusal remains visible. Schema2 developer persistence round-trips every IEEE bit and actual restore skips all51 completed points/training, with checksum/identity/migration lineage preserved.
+
+Whole P7 remains open for larger/arbitrary PDN, the actual BandAmp ground-via factor-plan refusal and common-band full line/discontinuity channels. Compatible DC endpoints and numerical dynamic RLC compatibility do not silently extend production1kHz..100kHz to a physically validated transient band. P8/P11 scope/gaps are explicit in the final matrix; their implementation is not started.

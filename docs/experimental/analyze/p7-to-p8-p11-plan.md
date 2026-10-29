@@ -35,3 +35,15 @@
 P8 gate: проверенный multiport PDN resource, units/references/port mapping, валидный DC/AC диапазон и пригодная пассивная временная модель для заявленного transient. P11 gate: проверенные coupled lines/channels, delays/losses/returns, frequency coverage для сигнала, композиция с drivers/receivers. Low-frequency via PASS не разрешает произвольные USB/DDR/RF случаи. Составить отдельную матрицу supported/rejected/gap; не скрывать исходные обязательстваP7.
 
 Как только соответствующие gates выполнены, можно переходить кP8/P11 в подтверждённой области, без дальнейшего улучшения точности сверх5% и без новой кампании оптимизации. ВесьP7 объявлять закрытым только по исходной матрице, иначе назвать принятую поставку и конкретные оставшиеся расширения. План сам не запускает агентов и не разрешает выполнять P8/P11 сейчас.
+
+
+## 5. Поставка интеграции и конечные границы — 2026-10-29
+
+По [единому заданию](next-task-p6-p7-integration-cache.md) реализованы библиотека → addon/session → compiled worker → существующий прямой DSL, память/диск v1 с реальным restore и recovery токов/потерь. [Финальная матрица и измерения](p6-p7-integration-acceptance.md#final-obligation-matrix): исходные17частот/51возбуждение STM32 PASS; реальные STM32/TPS local PDN и BandAmp RF section исполнены, отчёты просмотрены, ожидаемый failing check не прерывает сценарии. Есть конкретные failed результаты и сохранённые manifest/checkpoint; они не заменены успешными.
+
+| Зависимость | Готовая область | Остающийся пробел |
+|---|---|---|
+| P8 | пассивный finite-ROI multiport1кГц..100кГц, SI units/references/source mapping, recovery, совместимый DC endpoint; существующий P6 time работает с фактическим RLC и явным physical initial state в developer hypothesis | физическая continuous DC..1кГц/transient область не расширена молча; whole-board PDN/произвольный масштаб не принят |
+| P11 | поддержанные явные coupled/straight sections, losses/delays/returns,500МГц..1ГГц на captured BandAmp section, прежние driver/receiver ресурсы | полный канал с local discontinuity не подтверждён: нет общей полосы с local1кГц..100кГц; ground-via factor plan3,868,749,435>2,084,945,980bytes |
+
+Холодные успешные family runs147.806/198.620/8.544с и peak<2ГиБ измерены отдельно от developer validation; прежний STM32 same-binary300.055с отказ сохранён. Это не гарантия времени при произвольной загрузке host. Developer schema2 сохраняет все IEEE биты и проверенный restore51точки без новых full solves; сумма отдельных developer запусков явно приведена в ledger, не выдана за один cold request. Whole P6/P7 не закрыт по перечисленным первоначальным обязательствам; P8/P11 здесь не реализованы. Новых solver/сходимостных/оптимизационных кампаний не назначено.
