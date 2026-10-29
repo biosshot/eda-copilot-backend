@@ -6,7 +6,8 @@ base=root/'debugging/p6-p7-integration'/sys.argv[1]
 exe=root/'native/analyze/target/release/examples/board_dc_limit.exe'
 out=base/'model-reuse';out.mkdir(exist_ok=True)
 for name in ['STM32G0_CAN_RS485','TPS63060DSCR']:
- result=json.loads((base/name/'cold/result.json').read_text())
+ cold_folder=base/name/('cold-retry' if (base/name/'cold-retry/result.json').exists() else 'cold')
+ result=json.loads((cold_folder/'result.json').read_text())
  cold=next(p['data'] for r in result['reports'] for p in r['plots'] if p['title'].startswith('Cold stage'))
  cache=base/'cache'/(cold['cache']['key']+'.json')
  board=root/'tests/pcb-analyze'/name/(name+'.json')

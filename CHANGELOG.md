@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Preserve every IEEE-F64 bit in schema2 developer checkpoints; refuse legacy/incompatible snapshots and verify an explicit source/model/geometry-bound migration of the completed51-drive evidence. Keep this journal separate from the production JSON cache and retain failed cold attempts alongside bounded retest measurements.
+
 - Integrate conditional local direct-FEM board extraction with the existing layered channel DSL, addon/session and disposable workers. Restore reduced RLC models in SI units and current recovery through bounded memory/disk caches with native coefficient validation, binary/board/physics identities, checksums and atomic writes; preserve unsupported geometry/band/resource refusals. Add resumable developer model/per-point checkpoints, distinct from production cache, and direct captured-board scenarios. Complete acceptance evidence is tracked in `p6-p7-integration-acceptance.md`; whole P6/P7 closure is not implied.
 
 - Move local direct-FEM board preparation, training, reduction and recovery orchestration from the diagnostic executable into the Rust library; select the accepted refined electric configuration by default while retaining original physical contacts/current mesh. Separate requested P6 frequencies from the opt-in developer sweep. Worker/DSL/cache and complete P6/P7 acceptance remain pending.

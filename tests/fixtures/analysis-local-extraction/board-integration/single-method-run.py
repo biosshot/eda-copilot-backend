@@ -21,6 +21,8 @@ checkpoint=Path(os.environ['P7_DEVELOPER_CHECKPOINT_DIR']) if os.environ.get('P7
 points_before=len(list(checkpoint.glob('point-*.json'))) if checkpoint and checkpoint.exists() else 0
 for label,config in [('direct-fem','entity:6:8:16:3')]:
  d=out/label;d.mkdir(); start=time.perf_counter();peak=0;reason=None
+ paths=([exe,board,req,saved,field_request] if field_mode else [exe,board,req])
+ hashes={str(x.relative_to(r)):hashlib.sha256(x.read_bytes()).hexdigest() for x in paths}
  with (d/'stdout.json').open('wb') as so,(d/'stderr.txt').open('wb') as se:
   cmd=([str(exe),str(board),str(req),str(saved),str(field_request)] if field_mode else [str(exe),str(board),str(req),config,mode]); cmd=[str(exe),'--nocapture'] if mode=='electric-tests' else cmd; p=subprocess.Popen(cmd,stdout=so,stderr=se);proc=psutil.Process(p.pid)
   while p.poll() is None:
@@ -38,5 +40,5 @@ for label,config in [('direct-fem','entity:6:8:16:3')]:
     break
    time.sleep(.02)
   code=p.wait()
- result=dict(developerCheckpoint=str(checkpoint) if checkpoint else None,completedPointsBefore=points_before,completedPointsAfter=len(list(checkpoint.glob('point-*.json'))) if checkpoint and checkpoint.exists() else 0,preparedCheckpointSha256=hashlib.sha256((checkpoint/'prepared.json').read_bytes()).hexdigest() if checkpoint and (checkpoint/'prepared.json').exists() else None,methodThreads=int(os.environ.get("P7_FEM_THREADS","1")),command=cmd,wallSeconds=time.perf_counter()-start,peakRssBytes=peak,exitCode=code,refusal=reason,capSeconds=cap_seconds,capBytes=2*1024**3,hashes={str(x.relative_to(r)):hashlib.sha256(x.read_bytes()).hexdigest() for x in ([exe,board,req,saved,field_request] if field_mode else [exe,board,req])})
+ result=dict(developerCheckpoint=str(checkpoint) if checkpoint else None,completedPointsBefore=points_before,completedPointsAfter=len(list(checkpoint.glob('point-*.json'))) if checkpoint and checkpoint.exists() else 0,preparedCheckpointSha256=hashlib.sha256((checkpoint/'prepared.json').read_bytes()).hexdigest() if checkpoint and (checkpoint/'prepared.json').exists() else None,methodThreads=int(os.environ.get("P7_FEM_THREADS","1")),command=cmd,wallSeconds=time.perf_counter()-start,peakRssBytes=peak,exitCode=code,refusal=reason,capSeconds=cap_seconds,capBytes=2*1024**3,hashes=hashes,inputsChangedDuringRun=any(hashlib.sha256(x.read_bytes()).hexdigest()!=hashes[str(x.relative_to(r))] for x in paths))
  (d/'run.json').write_text(json.dumps(result,indent=2));print(json.dumps(result),flush=True)

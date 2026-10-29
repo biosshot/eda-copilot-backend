@@ -8,10 +8,25 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from matplotlib.patches import Rectangle
 root=Path(__file__).resolve().parents[4];base=root/'debugging/p6-p7-integration'/sys.argv[1]
-names=sys.argv[2:] or ['STM32G0_CAN_RS485','TPS63060DSCR','BandAmpV5']
+refusal_only='--refusal' in sys.argv[2:]
+names=[v for v in sys.argv[2:] if v!='--refusal'] or ['STM32G0_CAN_RS485','TPS63060DSCR','BandAmpV5']
 summary={}
 for name in names:
- folder=base/name;run=json.loads((folder/'cold/run.json').read_text());result=json.loads((folder/'cold/result.json').read_text());assert result['status']=='complete';assert not run.get('inputsChangedDuringRun',False)
+ folder=base/name;cold_folder=folder/('cold-retry' if not refusal_only and (folder/'cold-retry/run.json').exists() else 'cold');run=json.loads((cold_folder/'run.json').read_text());assert not run.get('inputsChangedDuringRun',False)
+ if run['exitCode']!=0 or run['refusal']:
+  # A stopped preparation has no field/current/loss result. Show only the real
+  # frozen selection and completed stage timings, never a zero or prior map.
+  assert name=='STM32G0_CAN_RS485','no frozen failure selection for this fixture'
+  request=json.loads(Path(__file__).with_name('single-method-via-request.json').read_text());board=json.loads((root/'tests/pcb-analyze'/name/(name+'.json')).read_text())
+  fig,axes=plt.subplots(1,2,figsize=(12,5),layout='constrained');roi=request['roiMm'];axes[0].add_patch(Rectangle(roi[0],roi[1][0]-roi[0][0],roi[1][1]-roi[0][1],fill=False,label='unchanged original insulated ROI'))
+  for electrode in request['electrodes']:
+   index=int(electrode['sourcePath'].split('[')[1].split(']')[0]);via=board['copper']['fixed']['vias'][index];axes[0].scatter(via['at']['x'],via['at']['y'],marker='x',label=electrode['name'])
+  axes[0].set(xlabel='board x (mm)',ylabel='board y (mm)',title='Actual requested contacts; no recovered field result');axes[0].autoscale();axes[0].invert_yaxis();axes[0].legend(fontsize=8)
+  text=f"FAILED cold preparation: {run['refusal']}\nWall {run['wallSeconds']:.6f}s / peak {run['peakRssBytes']/1048576:.3f}MiB\nCap300s /2048MiB retained.\nNo successful cache entry or current/loss map.\nCompleted native stages:\n"
+  text+='\n'.join(line for line in (cold_folder/'stderr.txt').read_text().splitlines() if line.startswith('P7_STAGE'))
+  axes[1].axis('off');axes[1].text(0,1,'\n'.join(textwrap.fill(line,58) for line in text.split('\n')),va='top',fontsize=10);fig.suptitle(name+' — actual bounded cold refusal');fig.savefig(folder/'integration-refusal.png',dpi=150);plt.close(fig)
+  summary[name]=dict(cold=run,warmCache=dict(status='none-failed-preparation'),localVolumeStatus='failed-cold-runtime',visual=str((folder/'integration-refusal.png').relative_to(root)));continue
+ result=json.loads((cold_folder/'result.json').read_text());assert result['status']=='complete'
  reports=result['reports'];plots=[p for r in reports for p in r['plots']];checks=[c for r in reports for c in r['checks']]
  plot=lambda title:next(p['data'] for p in plots if p['title'].startswith(title))
  restart=json.loads((folder/'restart/run.json').read_text()) if (folder/'restart/run.json').exists() else None
@@ -45,7 +60,10 @@ for name in names:
   frequencies=np.array(rlgc['frequenciesHz'])/1e9;mode=[s['modes'][0] for s in rlgc['samples']];ax[2].plot(frequencies,[m['resistanceOhmPerM'] for m in mode],'o-',label='conductor R');ax[2].set(xlabel='GHz',ylabel='Ohm/m',title='Conductor and regional dielectric losses');twin=ax[2].twinx();twin.plot(frequencies,[m['conductanceSPerM'] for m in mode],'s-',c='orange',label='dielectric G');twin.set_ylabel('S/m');ax[2].legend(loc='upper left');twin.legend(loc='lower right')
   ax[3].axis('off');text='Local ground-via model: REJECTED\n'+failure['diagnostic']+'\n\nRF model cache: cold='+cold['cache']['status']+', warm='+warm['cache']['status']+'\nRF warm assembly/training: '+str(warm['cache']['assembly'])+'/'+str(warm['cache']['training'])+'\nFamily cold: '+format(run['wallSeconds'],'.4f')+' s / '+format(run['peakRssBytes']/1048576,'.2f')+' MiB\n'+failure['fullRfChannel'];text='\n'.join(textwrap.fill(line,76) for line in text.split('\n'));ax[3].text(0,1,text,va='top',fontsize=9)
   summary[name]=dict(cold=run,warmCache=warm['cache'],restart=restart,checks=checks,localVolumeStatus='rejected-2GiB',localDiagnostic=failure['diagnostic'],rfBandHz=[500000000,1000000000],rfTransmissionMin=min(curve['values']))
- fig.suptitle(name+' — direct DSL / CPU F64 / conditional applicability',fontsize=14);path=folder/'integration-report.png';fig.savefig(path,dpi=150);plt.close(fig);summary[name]['visual']=str(path.relative_to(root))
+ title=name+' — direct DSL / CPU F64 / conditional applicability'
+ if cold_folder.name=='cold-retry':
+  prior=json.loads((folder/'cold/run.json').read_text());summary[name]['priorFailedCold']=prior;title+='\nOne cold retest; original '+format(prior['wallSeconds'],'.3f')+'s refusal retained'
+ fig.suptitle(title,fontsize=14);path=folder/'integration-report.png';fig.savefig(path,dpi=150);plt.close(fig);summary[name]['visual']=str(path.relative_to(root))
 (base/'integration-summary.json').write_text(json.dumps(summary,indent=2));print(json.dumps({n:{'wall':s['cold']['wallSeconds'],'rssMiB':s['cold']['peakRssBytes']/1048576,'warm':s['warmCache']['status'],'volume':s['localVolumeStatus']} for n,s in summary.items()},indent=2))
 temporal=base/'model-reuse/temporal-dc-hypothesis.json'
 if temporal.exists():
