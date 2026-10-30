@@ -55,14 +55,20 @@ pub struct Request {
     pub allow_insulated_copper_cuts:bool,
     #[serde(default)]
     pub electrodes:Vec<Electrode>,
+    #[serde(default,skip_serializing_if="BTreeMap::is_empty")]
+    pub cut_planes:BTreeMap<String,CutPlane>,
     #[serde(default)]
     pub ports:Vec<[String;2]>,
 }
 /// Geometry-bound coefficient identity excludes only independent field/current
 /// discretization controls. It retains every authored physical assumption.
 pub fn physical_signature(r:&Request)->serde_json::Value {
-    serde_json::json!({"roiMm":r.roi_mm,"stack":r.stack,"finishedHolePlatingM":r.finished_hole_plating_m,"barrelConductivitySM":r.barrel_conductivity_s_m,"curveDeviationMm":r.curve_deviation_mm,"electrodes":r.electrodes,"ports":r.ports,"acceptUnknownFillFreshness":r.accept_unknown_fill_freshness,"allowInsulatedCopperCuts":r.allow_insulated_copper_cuts})
+    serde_json::json!({"roiMm":r.roi_mm,"stack":r.stack,"finishedHolePlatingM":r.finished_hole_plating_m,"barrelConductivitySM":r.barrel_conductivity_s_m,"curveDeviationMm":r.curve_deviation_mm,"electrodes":r.electrodes,"ports":r.ports,"cutPlanes":r.cut_planes,"acceptUnknownFillFreshness":r.accept_unknown_fill_freshness,"allowInsulatedCopperCuts":r.allow_insulated_copper_cuts})
 }
+/// Internal section/local interface on a genuine axis-aligned ROI boundary.
+#[derive(Clone,Debug,PartialEq,serde::Deserialize,serde::Serialize)]
+#[serde(deny_unknown_fields,rename_all="camelCase")]
+pub struct CutPlane {pub axis:usize,pub at_mm:f64}
 #[derive(Clone,Debug,PartialEq,serde::Deserialize,serde::Serialize)]
 #[serde(deny_unknown_fields,rename_all="camelCase")]
 pub struct Electrode {
@@ -134,6 +140,7 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
     if r.roi_mm.iter().flatten().any(|v|!v.is_finite()) || (0..2).any(|k|r.roi_mm[1][k]<=r.roi_mm[0][k]) || r.stack.len()<3 || r.finished_hole_plating_m.is_some_and(|v|!v.is_finite()||v<=0.) || r.barrel_conductivity_s_m.is_some_and(|v|!v.is_finite()||v<=0.) || !r.air_margin_m.is_finite() || r.air_margin_m<=0. || !r.max_triangle_area_m2.is_finite() || r.max_triangle_area_m2<=0. || !r.max_vertical_step_m.is_finite() || r.max_vertical_step_m<=0. {
         return Err(error("BOARD_PROFILE","finite ROI, full stack, finished-hole plating, material, air and mesh profile required"));
     }
+    if r.cut_planes.keys().any(|name|!r.electrodes.iter().any(|e|&e.name==name)){return Err(error("BOARD_CUT","cut plane has no physical electrode"));}
     let options=GeometryOptions{max_deviation_mm:r.curve_deviation_mm,..Default::default()}; options.validate()?;
     let context=Context::for_board(board,options)?;
     let _scope=Context::install(Some(context.clone()));
@@ -218,7 +225,7 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
         // is a finite terminal; never cut the barrel or charge a buried face.
         let face=spans[&e.layer][usize::from(e.upper)];
         let adjacent_copper=areas::union(physical_shapes.iter().filter(|s|if e.upper {s.1[0]<=face&&s.1[1]>face}else{s.1[0]<face&&s.1[1]>=face}).flat_map(|s|s.0.0.iter().cloned()));
-        if adjacent_copper.unsigned_area()>0. {poly=areas::difference(&poly,&adjacent_copper);}
+        if !r.cut_planes.contains_key(&e.name)&&adjacent_copper.unsigned_area()>0. {poly=areas::difference(&poly,&adjacent_copper);}
         if poly.unsigned_area()==0. {return Err(error("BOARD_ELECTRODE","contact source absent from retained layer copper"));}
         // A finite electrode is a material boundary condition even when its
         // outline lies inside continuous same-material copper. Keep that exact
@@ -364,16 +371,30 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
     let mut certified_electrodes=BTreeMap::new();let mut electrode_areas_m2=BTreeMap::new();let mut max_contact_area_change:f64=0.;
     for e in &r.electrodes {
         let poly=&electrode_polygons[&e.name];let z=spans[&e.layer][if e.upper {1}else{0}];
+        let cut=r.cut_planes.get(&e.name);
+        if let Some(cut)=cut {if cut.axis>1||!cut.at_mm.is_finite()||![r.roi_mm[0][cut.axis],r.roi_mm[1][cut.axis]].contains(&cut.at_mm){return Err(error("BOARD_CUT","interface must be on an actual axis-aligned copper domain boundary"));}}
+
+        // The ROI is already transported onto the board's accepted dyadic
+        // overlay grid. Use that actual boundary, not the pre-transport decimal.
+        let cut_at=cut.map(|c|roi_bounds[usize::from(c.at_mm==r.roi_mm[1][c.axis])][c.axis]);
         let mut nodes=std::collections::BTreeSet::new();let mut area=0.;
         for face in &mesh.copper_interfaces {
-            if !face.nodes.iter().all(|&i|mesh.nodes_m[i][2]==z) {continue;}
+            if let Some(cut)=cut {
+                let at=(cut_at.unwrap()-origin_mm[cut.axis])*1e-3;
+                if !face.nodes.iter().all(|&i|mesh.nodes_m[i][cut.axis]==at&&mesh.nodes_m[i][2]>=spans[&e.layer][0]&&mesh.nodes_m[i][2]<=spans[&e.layer][1]){continue;}
+            }else if !face.nodes.iter().all(|&i|mesh.nodes_m[i][2]==z) {continue;}
             let xy=face.nodes.map(|i|[mesh.nodes_m[i][0],mesh.nodes_m[i][1]]);
             let centre=Point::new(origin_mm[0]+1e3*xy.iter().map(|p|p[0]).sum::<f64>()/3.,origin_mm[1]+1e3*xy.iter().map(|p|p[1]).sum::<f64>()/3.);
-            if poly.contains(&centre) {
-                let [[ax,ay],[bx,by],[cx,cy]]=xy;area+=((bx-ax)*(cy-ay)-(by-ay)*(cx-ax)).abs()/2.;nodes.extend(face.nodes);
+            let centre=if let Some(cut)=cut{if cut.axis==0{Point::new(cut_at.unwrap(),centre.y())}else{Point::new(centre.x(),cut_at.unwrap())}}else{centre};
+            if if cut.is_some(){poly.intersects(&centre)}else{poly.contains(&centre)} {
+                let [a,b,c]=face.nodes.map(|i|mesh.nodes_m[i]);let u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]];let v=[c[0]-a[0],c[1]-a[1],c[2]-a[2]];
+                area+=((u[1]*v[2]-u[2]*v[1]).powi(2)+(u[2]*v[0]-u[0]*v[2]).powi(2)+(u[0]*v[1]-u[1]*v[0]).powi(2)).sqrt()/2.;nodes.extend(face.nodes);
             }
         }
-        let expected=original_contact_areas[&e.name]*1e-6;
+        let expected=if let Some(cut)=cut {
+            let mut length=0.;for p in &poly.0 {for ring in std::iter::once(p.exterior()).chain(p.interiors()) {for edge in ring.0.windows(2){let a=[edge[0].x,edge[0].y];let b=[edge[1].x,edge[1].y];if a[cut.axis]==cut_at.unwrap()&&b[cut.axis]==cut_at.unwrap(){length+=(a[1-cut.axis]-b[1-cut.axis]).abs();}}}}
+            length*1e-3*(spans[&e.layer][1]-spans[&e.layer][0])
+        }else{original_contact_areas[&e.name]*1e-6};
         if nodes.len()<3||(area-expected).abs()>1e-8*expected {return Err(error("BOARD_ELECTRODE",&format!("finite exposed contact area mismatch: {} mesh={area:e} source={expected:e} canonical={:e}",e.name,poly.unsigned_area()*1e-6)));}
         max_contact_area_change=max_contact_area_change.max((area-expected).abs()/expected);
         electrode_areas_m2.insert(e.name.clone(),area);certified_electrodes.insert(e.name.clone(),(e.clone(),nodes.into_iter().collect()));

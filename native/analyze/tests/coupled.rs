@@ -317,3 +317,11 @@ fn finite_band_coupled_time_requires_dc_front_and_operation_permission() {
     let result = coupled::time::solve(serde_json::from_value(input).unwrap()).unwrap();
     assert_eq!(result["conditional"], true);
 }
+#[test]
+fn lossless_inductive_coordinates_are_admitted_without_artificial_resistance(){
+ use pcb_analyze::electrical::coupled::{Model,System};
+ let base=serde_json::json!({"format":"coupled-rlc","referenceTopology":"grounded","potentialNodes":["p"],"currentDofs":["i"],"incidence":[[0,0,1.]],"portIncidence":[[0,0,1.]],"resistanceOhm":[],"inductanceH":[[0,0,1e-6]],"capacitanceF":[[0,0,1e-9]]});
+ let m:Model=serde_json::from_value(base.clone()).unwrap();assert!(System::compile(&m,1,None).is_ok());
+ let mut unresolved=base.clone();unresolved["inductanceH"]=serde_json::json!([]);assert!(System::compile(&serde_json::from_value(unresolved).unwrap(),1,None).is_err());
+ let mut active=base;active["resistanceOhm"]=serde_json::json!([[0,0,-1.]]);assert!(System::compile(&serde_json::from_value(active).unwrap(),1,None).is_err());
+}

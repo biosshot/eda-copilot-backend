@@ -413,3 +413,9 @@ fn only_an_authored_ground_return_can_ground_an_infinity_conductor() {
     let r = solve(q);
     assert!(r["physicalRecovery"]["potentials"][1]["index"].is_number());
 }
+#[test]
+fn mapped_three_way_junction_preserves_all_parallel_current_coordinates(){
+ let mut top=topology("both");let third=top["instances"][0].clone();top["instances"].as_array_mut().unwrap().push(third);top["instances"][2]["id"]=json!("third");top["instances"][2]["model"]["id"]=json!("third-model");
+ top["connections"]=json!([[0,2],[0,4]]);top["connectionContacts"]=json!(["both","both"]);top["ports"]=json!([{"name":"a","index":1},{"name":"b","index":3},{"name":"c","index":5}]);
+ let built=composition::build(&serde_json::from_value(top).unwrap(),None,Instant::now()).unwrap();assert_eq!(built.model.current_dofs.len(),3);assert_eq!(built.model.potential_nodes.len(),2);assert_eq!(built.ports.len(),3);
+}

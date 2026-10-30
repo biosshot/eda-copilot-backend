@@ -234,9 +234,11 @@ pub(super) fn build_for(
             "connectionContacts must match pairs",
         ));
     }
+    let mapped_junctions=topology.instances.iter().all(|i|i.model.data["format"]=="coupled-rlc"&&i.model.data["portTerminals"].is_array());
+    if mapped_junctions&&topology.connections.len()>2*p{return Err(fail("COUPLED_TOPOLOGY","Physical junction connection budget exceeded"));}
     let mut assigned = vec![false; p];
     for &[a, b] in &topology.connections {
-        if a >= p || b >= p || a == b || assigned[a] || assigned[b] {
+        if a >= p || b >= p || a == b || !mapped_junctions&&(assigned[a] || assigned[b]) {
             return Err(fail(
                 "COUPLED_TOPOLOGY",
                 "Ports pair once; no self or junction connection",
@@ -245,8 +247,9 @@ pub(super) fn build_for(
         assigned[a] = true;
         assigned[b] = true;
     }
+    let mut external_indices=BTreeSet::new();
     for port in &topology.ports {
-        if port.index >= p || assigned[port.index] || port.name.trim().is_empty() {
+        if port.index >= p || !external_indices.insert(port.index) || !mapped_junctions&&assigned[port.index] || port.name.trim().is_empty() {
             return Err(fail(
                 "COUPLED_TOPOLOGY",
                 "Invalid output alias or externally connected port",

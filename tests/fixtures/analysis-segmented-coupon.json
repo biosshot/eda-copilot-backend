@@ -1,0 +1,201 @@
+{
+  "outline": [
+    {
+      "x": -0.3,
+      "y": -0.6
+    },
+    {
+      "x": 10.3,
+      "y": -0.6
+    },
+    {
+      "x": 10.3,
+      "y": 0.6
+    },
+    {
+      "x": -0.3,
+      "y": 0.6
+    }
+  ],
+  "cutouts": [],
+  "layers": [
+    {
+      "name": "TOP",
+      "index": 0,
+      "side": "top"
+    },
+    {
+      "name": "BOTTOM",
+      "index": 1,
+      "side": "bottom"
+    }
+  ],
+  "nets": [
+    {
+      "name": "SIGNAL"
+    },
+    {
+      "name": "RETURN"
+    }
+  ],
+  "components": [
+    {
+      "designator": "J0",
+      "at": {
+        "x": 0,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "side": "top"
+    },
+    {
+      "designator": "J1",
+      "at": {
+        "x": 10,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "side": "top"
+    }
+  ],
+  "keepouts": [],
+  "holes": [],
+  "pads": [
+    {
+      "id": "s0",
+      "component": "J0",
+      "number": "1",
+      "net": "SIGNAL",
+      "at": {
+        "x": 0,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "layers": [
+        "TOP"
+      ],
+      "shape": {
+        "kind": "rect",
+        "widthMm": 0.2,
+        "heightMm": 0.1
+      }
+    },
+    {
+      "id": "s1",
+      "component": "J1",
+      "number": "1",
+      "net": "SIGNAL",
+      "at": {
+        "x": 10,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "layers": [
+        "TOP"
+      ],
+      "shape": {
+        "kind": "rect",
+        "widthMm": 0.2,
+        "heightMm": 0.1
+      }
+    },
+    {
+      "id": "r0",
+      "component": "J0",
+      "number": "2",
+      "net": "RETURN",
+      "at": {
+        "x": 0,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "layers": [
+        "BOTTOM"
+      ],
+      "shape": {
+        "kind": "rect",
+        "widthMm": 0.2,
+        "heightMm": 0.5
+      }
+    },
+    {
+      "id": "r1",
+      "component": "J1",
+      "number": "2",
+      "net": "RETURN",
+      "at": {
+        "x": 10,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "layers": [
+        "BOTTOM"
+      ],
+      "shape": {
+        "kind": "rect",
+        "widthMm": 0.2,
+        "heightMm": 0.5
+      }
+    }
+  ],
+  "copper": {
+    "fixed": {
+      "tracks": [
+        {
+          "id": "signal",
+          "net": "SIGNAL",
+          "layer": "TOP",
+          "widthMm": 0.1,
+          "points": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 10,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "id": "return",
+          "net": "RETURN",
+          "layer": "BOTTOM",
+          "widthMm": 0.5,
+          "points": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 10,
+              "y": 0
+            }
+          ]
+        }
+      ],
+      "vias": [],
+      "zones": []
+    },
+    "editable": {
+      "tracks": [],
+      "vias": [],
+      "zones": []
+    }
+  },
+  "rules": {
+    "default": {
+      "clearanceMm": 0.2,
+      "edgeClearanceMm": 0.3,
+      "minTrackWidthMm": 0.1,
+      "preferredTrackWidthMm": 0.2,
+      "via": {
+        "minDiameterMm": 0.5,
+        "preferredDiameterMm": 0.6,
+        "minDrillMm": 0.2,
+        "preferredDrillMm": 0.3
+      }
+    },
+    "nets": []
+  }
+}

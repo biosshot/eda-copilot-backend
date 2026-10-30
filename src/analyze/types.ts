@@ -7,7 +7,7 @@ import type { AnalysisElectricalRequest, AnalysisElectricalReport, AnalysisFrequ
 export type { AnalysisImportReport, AnalysisGeometryReport, AnalysisGeometryOptions };
 export type { AnalysisConductionOptions, AnalysisConductionReport };
 export interface LocalExtractionRequest {boardJson:string;geometry:unknown;remainingSeconds?:number;magneticPatchLevel?:1|2;observablesOnly?:boolean;frequenciesHz:number[];drive?:number[];loadsOhm?:(number|null)[];bandHz:[number,number];temperatureC?:number}
-export type AnalysisProblem = Readonly<{kind:'local-extraction';request:LocalExtractionRequest}> | Readonly<{ kind: 'import-board'; boardJson: string }>
+export type AnalysisProblem = Readonly<{kind:'board-section';boardJson:string;stack:unknown;slice:unknown}> | Readonly<{kind:'local-extraction';request:LocalExtractionRequest}> | Readonly<{ kind: 'import-board'; boardJson: string }>
     | Readonly<{kind:'geometry-validation';request:AnalysisValidationRequest}>
     | Readonly<{ kind: 'prepare-geometry'; boardJson: string; geometry?: Readonly<AnalysisGeometryOptions> }>
     | Readonly<{ kind: 'prepare-conduction'; boardJson: string } & AnalysisConductionOptions>
@@ -16,7 +16,7 @@ export type AnalysisProblem = Readonly<{kind:'local-extraction';request:LocalExt
     | Readonly<{ kind: 'transient-network'; request: AnalysisTransientRequest }>
     | Readonly<{ kind: 'cross-section'; request:AnalysisCrossSectionRequest }>
     | Readonly<{ kind: 'frequency-network'; request: AnalysisFrequencyRequest }>;
-export type AnalysisResult<P extends AnalysisProblem = AnalysisProblem> = P extends {kind:'local-extraction'} ? any : P extends {kind:'transient-network'} ? AnalysisTransientReport : P extends {kind:'geometry-validation'} ? AnalysisValidationReport : P extends {kind:'cross-section'} ? AnalysisCrossSectionReport : P extends {kind:'frequency-network'} ? AnalysisFrequencyReport : P extends {kind:'electrical-network'} ? AnalysisElectricalReport : P extends { kind: 'dc' } ? AnalysisDcReport : P extends { kind: 'import-board' } ? AnalysisImportReport : P extends { kind: 'prepare-conduction' } ? AnalysisConductionReport : AnalysisGeometryReport;
+export type AnalysisResult<P extends AnalysisProblem = AnalysisProblem> = P extends {kind:'local-extraction'|'board-section'} ? any : P extends {kind:'transient-network'} ? AnalysisTransientReport : P extends {kind:'geometry-validation'} ? AnalysisValidationReport : P extends {kind:'cross-section'} ? AnalysisCrossSectionReport : P extends {kind:'frequency-network'} ? AnalysisFrequencyReport : P extends {kind:'electrical-network'} ? AnalysisElectricalReport : P extends { kind: 'dc' } ? AnalysisDcReport : P extends { kind: 'import-board' } ? AnalysisImportReport : P extends { kind: 'prepare-conduction' } ? AnalysisConductionReport : AnalysisGeometryReport;
 export type AnalysisProgress = {
     jobId: string;
     phase: 'queued' | 'started' | 'completed' | 'failed' | 'cancelled';
@@ -40,6 +40,7 @@ export function isAnalysisProblem(value: unknown): value is AnalysisProblem {
     if(record(value)&&value.kind==='transient-network')return keys(value,['kind','request'])&&record(value.request)&&(record(value.request.resource)!==record(value.request.topology))&&Array.isArray(value.request.drivers)&&Array.isArray(value.request.receivers)&&record(value.request.time)&&finiteJson(value.request);
     if (record(value) && value.kind === 'geometry-validation') return keys(value,['kind','request']) && record(value.request) && typeof value.request.board_json==='string' && Array.isArray(value.request.rules) && finiteJson(value.request);
     if (record(value) && value.kind === 'cross-section') return keys(value,['kind','request']) && record(value.request) && record(value.request.line) && Array.isArray(value.request.frequencies) && finiteJson(value.request);
+    if(record(value)&&value.kind==='board-section')return keys(value,['kind','boardJson','stack','slice'])&&typeof value.boardJson==='string'&&finiteJson(value.stack)&&finiteJson(value.slice);
     if (record(value) && value.kind === 'frequency-network') return keys(value,['kind','request']) && record(value.request) && Array.isArray(value.request.instances) && Array.isArray(value.request.frequencies) && finiteJson(value.request);
     if (record(value) && value.kind === 'electrical-network') return keys(value,['kind','request']) && record(value.request) && typeof value.request.contextId==='string' && ['dc','frequency','time'].includes(String(value.request.mode)) && record(value.request.circuit) && finiteJson(value.request);
     if (record(value) && value.kind === 'dc') return keys(value, ['kind','request']) && validDcRequest(value.request);

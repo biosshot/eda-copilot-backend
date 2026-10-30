@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Support physically mapped multiway conductor junctions in P6 without implicit reference joins; retain legacy pair-only rules for unmapped models. Admit passive lossless current coordinates only when magnetic storage resolves the common R/L kernel. Add actual transverse copper side contacts for section/local interfaces and expose the existing captured polygon slicer internally.
+
 - Audit every automatic-channel copper region with physical island/source/layer, inclusion and exclusion reasons. Add a real remote STM32 U5-to-J5 no-scope planning regression preserving D5/JP2 branches and layer-changing copper; distinguish it from earlier same-via local transitions. Record the actual3.33GB process-tree guarded attempt without admitting a complete channel.
 
 - Allow explicitly bounded P7 developer verification memory/time limits through DSL, native preparation and response admission while retaining production defaults. Preflight available host RAM, supervise process-tree memory and preserve attempt manifests, including preflight/scenario failures.

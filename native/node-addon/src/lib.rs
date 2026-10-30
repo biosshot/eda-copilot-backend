@@ -300,6 +300,14 @@ impl AnalysisElectricalSession {
         Ok(self.inner.solve(request))
     }
     #[napi]
+    pub fn slice_board_section(&mut self,board_json:String,stack:Value,slice:Value)->Result<Value>{
+        let board=pcb_analyze::import_json(&board_json).board.ok_or_else(||napi::Error::from_reason("Section board import rejected"))?;
+        let g=pcb_analyze::geometry::prepare(&board,Default::default());
+        let stack=serde_json::from_value::<Vec<pcb_analyze::extraction::local::board_mesh::Layer>>(stack).map_err(|e|napi::Error::from_reason(e.to_string()))?;
+        let slice=serde_json::from_value(slice).map_err(|e|napi::Error::from_reason(e.to_string()))?;
+        pcb_analyze::extraction::board_section::slice(&g,&stack,&slice).map_err(napi::Error::from_reason)
+    }
+    #[napi]
     pub fn prepare_local(&mut self, board_json:String, request:Value, remaining_seconds:Option<f64>,magnetic_patch_level:Option<u32>)->Result<Value> {
         let magnetic_config=match magnetic_patch_level{None=>[6,8,16,3],Some(1)=>[4,6,16,1],Some(2)=>[6,8,16,1],_=>return Err(napi::Error::from_reason("LOCAL_SPATIAL_INPUT: unsupported bounded patch level"))};
         let started=std::time::Instant::now();self.local_response.clear();

@@ -252,8 +252,16 @@ impl System {
                 }
             }
         }
-        let r = symmetric(&model.resistance_ohm, ni, true)?;
+        let r = symmetric(&model.resistance_ohm, ni, false)?;
         let l = symmetric(&model.inductance_h, ni, false)?;
+        // Lossless current coordinates are physical when magnetic storage resolves
+        // them. Reject the common R/L kernel; never insert artificial damping.
+        if ni>0 {
+            let rs=r.values().copied().fold(0_f64,|a,b|a.max(b.abs()));
+            let ls=l.values().copied().fold(0_f64,|a,b|a.max(b.abs()));
+            let combined:Vec<_>=(0..ni).flat_map(|i|{let r=&r;let l=&l;(0..ni).map(move|j|(i,j,if rs>0.{r.get(&(i,j)).copied().unwrap_or(0.)/rs}else{0.}+if ls>0.{l.get(&(i,j)).copied().unwrap_or(0.)/ls}else{0.}))}).collect();
+            symmetric(&combined,ni,true)?;
+        }
         let c = symmetric(&model.capacitance_f, nv, false)?;
         let raw = if ni == 0 && model.conserved_potential_modes.is_empty() {
             (0..nv)
