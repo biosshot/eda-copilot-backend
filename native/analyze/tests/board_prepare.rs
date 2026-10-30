@@ -23,3 +23,8 @@ fn electric_refinement_retains_finer_current_vertical_boundaries(){
 fn absent_internal_cut_transport_preserves_the_historical_physical_signature(){
  let request:board_mesh::Request=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json")).unwrap();let signature=board_mesh::physical_signature(&request);assert!(signature.get("cutPlanes").is_none());assert!(signature.get("electricMaxEdgeM").is_none());
 }
+#[test]
+fn increased_explicit_developer_memory_admits_geometry_by_the_same_byte_plan(){
+ let default=pcb_analyze::extraction::local::board_prepare::allocation_budget(2048);assert_eq!(default.max_nodes,100000);assert_eq!(default.max_tetrahedra,262144);
+ let large=pcb_analyze::extraction::local::board_prepare::allocation_budget(3100);assert!(large.max_nodes>=139601);assert!(large.max_tetrahedra>=814320);assert!(large.check(814320*2048).is_ok());assert!(large.check(large.max_bytes+1).is_err());
+}

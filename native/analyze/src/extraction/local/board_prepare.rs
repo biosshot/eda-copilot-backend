@@ -17,6 +17,13 @@ fn record_stage(stages:&mut serde_json::Map<String,serde_json::Value>,name:&str,
     let seconds=start.elapsed().as_secs_f64();eprintln!("P7_STAGE {name} {seconds:.6}s");
     stages.insert(name.into(),serde_json::json!(seconds));
 }
+/// Explicit increased developer memory also admits its byte-bounded geometry;
+/// the original production/default count caps remain bit-for-bit unchanged.
+pub fn allocation_budget(memory_mib:usize)->AllocationBudget{
+    let max_bytes=memory_mib*1024*1024-crate::extraction::local::parallel::stack_reservation();
+    if memory_mib>2048{AllocationBudget{max_bytes,max_nodes:max_bytes/4096,max_tetrahedra:max_bytes/2048}}
+    else{AllocationBudget{max_bytes,max_nodes:100000,max_tetrahedra:512*1024*1024/2048}}
+}
 
 /// Internal orchestration options. Developer verification is explicitly opt-in.
 pub struct Options<'a> {
@@ -61,7 +68,7 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
     // The board builder independently reserves2048 bytes/tetra before extrusion.
     // Keep the pre-existing geometry count cap independent of the 2 GiB cap;
     // sparse field/factor/current work must still fit the remaining live bytes.
-    let budget=AllocationBudget{max_bytes:memory_mib*1024*1024-crate::extraction::local::parallel::stack_reservation(),max_nodes:100000,max_tetrahedra:512*1024*1024/2048};
+    let budget=allocation_budget(memory_mib);
     // Explicit independent field refinement uses the same byte preflight as
     // extrusion. Legacy count caps still bound every production/default mesh.
     let field_limits=if r.electric_max_edge_m.is_some(){AllocationBudget{max_nodes:budget.max_bytes/4096,max_tetrahedra:budget.max_bytes/2048,..budget}}else{budget};
