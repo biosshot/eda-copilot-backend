@@ -15,7 +15,7 @@ export function createProblemExecutor(retainDcForScenario = false) {
     const addon = createRequire(import.meta.url)(backendResource('native', 'node-addon', 'index.cjs')) as typeof import('../../native/node-addon/index.cjs');
     let result: AnalysisResult;
     if(problem.kind==='local-extraction'){
-      electrical ??= new addon.AnalysisElectricalSession();try{const r=problem.request;const requestStart=performance.now();const remaining=()=>{const seconds=(r.remainingSeconds??300)-(performance.now()-requestStart)/1000;if(!Number.isFinite(seconds)||seconds<=0||seconds>300)throw new Error('LOCAL_DEADLINE: shared planning/cache/prepare/solve deadline');return seconds;};
+      electrical ??= new addon.AnalysisElectricalSession();try{const r=problem.request;const requestStart=performance.now();const remaining=()=>{const seconds=(r.remainingSeconds??300)-(performance.now()-requestStart)/1000;if(!Number.isFinite(seconds)||seconds<=0||seconds>Number(process.env.P7_VERIFY_SECONDS??300))throw new Error('LOCAL_DEADLINE: shared planning/cache/prepare/solve deadline');return seconds;};
       if(r.bandHz[0]!==1000||r.bandHz[1]!==100000||r.frequenciesHz.some(f=>f<r.bandHz[0]||f>r.bandHz[1]))throw new Error('LOCAL_BAND: unsupported band; explicit validation/rebuild required');
       coreIdentity ??= localCoreIdentity();
       const key=localExtractionKey(localCache,coreIdentity,r);

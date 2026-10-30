@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Audit every automatic-channel copper region with physical island/source/layer, inclusion and exclusion reasons. Add a real remote STM32 U5-to-J5 no-scope planning regression preserving D5/JP2 branches and layer-changing copper; distinguish it from earlier same-via local transitions. Record the actual3.33GB process-tree guarded attempt without admitting a complete channel.
+
+- Allow explicitly bounded P7 developer verification memory/time limits through DSL, native preparation and response admission while retaining production defaults. Preflight available host RAM, supervise process-tree memory and preserve attempt manifests, including preflight/scenario failures.
+
 - Separate immutable transverse section coefficients from propagation length/frequency results; revalidate native energy/material/skin/passivity on reuse, including process restart and changed axes. Add polygon-only consistent boundary flux projection, bounded corner refinement and physical loss-energy convergence with explicit weak floors; preserve template paths and refuse unresolved real-section losses.
 
 - Account pinned-faer shared supernode patterns/panels before allocation, with strict actual-layout checks. Retain explicit50Ohm power-wave/Cu-loss automatic sensitivity scope and four physical signal/return contacts. Preserve failed refinement/resource evidence; reject a cheaper magnetic profile that fails the original independent1% guard instead of weakening accuracy or budget limits.

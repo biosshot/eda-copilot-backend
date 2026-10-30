@@ -46,3 +46,13 @@ test('captured four-terminal no-scope channel preserves separate return contacts
  const result=await executeScenario({board,code},{filename:'captured-return.js',maxEntries:1000,maxOutputBytes:4*1024*1024},()=>{},async task=>{captured=localRequest(task as AnalysisTask<'impedance'>);return{id:'test',status:'complete',method:'transport only',diagnostics:[],assumptions:[],metrics:{}};});
  assert.equal(result.status,'complete',JSON.stringify(result.error));assert.equal(captured.electrodes.length,4);assert.deepEqual(captured.ports,[['signal-TOP','return-TOP'],['signal-BOTTOM','return-BOTTOM']]);assert.equal(captured.maxVerticalStepM,.002);
 });
+
+test('real remote STM32 channel plans U5 to J5 with explicit branch/source audit',async()=>{
+ const folder='tests/pcb-analyze/STM32G0_CAN_RS485/';const board=JSON.parse(readFileSync(folder+'STM32G0_CAN_RS485.json','utf8'));const code=readFileSync(folder+'local-extraction-complete-channel.js','utf8').split('a.plot(')[0];let plan:any;
+ const result=await executeScenario({board,code},{filename:'remote-plan.js',maxEntries:1000,maxOutputBytes:4*1024*1024},()=>{},async task=>{localRequest(task as AnalysisTask<'impedance'>,p=>{plan=p;});return{id:'plan-only',status:'complete',method:'Planning only',diagnostics:[],assumptions:[],metrics:{}};});
+ assert.equal(result.status,'complete',JSON.stringify(result.error));assert.equal(plan.confirmedLocalBarrel,false);
+ for(const [ref,num]of [['U5','7'],['J5','2'],['D5','2'],['JP2','2']]){const i=board.pads.findIndex((p:any)=>p.component===ref&&p.number===num);assert.ok(plan.copperDecisions.some((d:any)=>d.sourcePath===`pads[${i}]`&&d.role==='signal'),`${ref}.${num} must remain a signal branch`);}
+ assert.ok(plan.copperDecisions.some((d:any)=>d.role==='signal'&&d.layer==='BOTTOM'));
+ assert.equal(new Set(plan.copperDecisions.map((d:any)=>d.regionId)).size,plan.copperDecisions.length);
+ assert.ok(plan.copperDecisions.every((d:any)=>d.reason));
+});

@@ -14,7 +14,7 @@ pub fn solve(&mut self,r:Request)->Result<serde_json::Value> {
 }
 pub fn solve_with_budget(&mut self,r:Request,seconds:f64)->Result<serde_json::Value> {self.solve_with_options(r,seconds,false)}
 pub fn solve_with_options(&mut self,r:Request,seconds:f64,observables_only:bool)->Result<serde_json::Value> {
- if !seconds.is_finite()||seconds<=0.||seconds>300.{return Err("LOCAL_DEADLINE: invalid remaining response budget".into());}
+ if !seconds.is_finite()||seconds<=0.||seconds>super::board_prepare::verification_limit("P7_VERIFY_SECONDS",300,1,3600)? as f64{return Err("LOCAL_DEADLINE: invalid remaining response budget".into());}
  let seconds=seconds.min(30.);let started=std::time::Instant::now();
  let get=|v:&serde_json::Value|serde_json::from_value::<Vec<Vec<f64>>>(v.clone()).map_err(|e|e.to_string());
  let model:coupled::Model=serde_json::from_value(r.prepared["candidate"]["model"].clone()).map_err(|e|e.to_string())?;

@@ -42,7 +42,9 @@ pub fn run(board:&crate::model::Board,r:&board_mesh::Request,options:Options<'_>
 }
 /// Shared cold budget remaining after planning/cache work.
 pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options:Options<'_>,seconds:f64)->Result<serde_json::Value,String> {
-    if !seconds.is_finite()||seconds<=0.||seconds>300. {return Err("LOCAL_DEADLINE: invalid remaining cold budget".into());}
+    let seconds_cap=verification_limit("P7_VERIFY_SECONDS",300,1,3600)? as f64;
+    let memory_mib=verification_limit("P7_VERIFY_MEMORY_MIB",2048,256,8192)?;
+    if !seconds.is_finite()||seconds<=0.||seconds>seconds_cap {return Err("LOCAL_DEADLINE: invalid remaining cold budget".into());}
     let started=std::time::Instant::now();
     let requested_jobs=std::env::var("PCB_ANALYSIS_TRAINING_JOBS").ok().map(|v|v.parse::<usize>().map_err(|_|"LOCAL_THREADS: training jobs must be integer1..4".to_string())).transpose()?.unwrap_or(1);
     if requested_jobs>1&&super::parallel::current()!=faer::Par::Seq{return Err("LOCAL_THREADS: select outer training jobs or native kernel parallelism; nested levels are not admitted".into());}
@@ -59,7 +61,7 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
     // The board builder independently reserves2048 bytes/tetra before extrusion.
     // Keep the pre-existing geometry count cap independent of the 2 GiB cap;
     // sparse field/factor/current work must still fit the remaining live bytes.
-    let budget=AllocationBudget{max_bytes:2*1024*1024*1024-crate::extraction::local::parallel::stack_reservation(),max_nodes:100000,max_tetrahedra:512*1024*1024/2048};
+    let budget=AllocationBudget{max_bytes:memory_mib*1024*1024-crate::extraction::local::parallel::stack_reservation(),max_nodes:100000,max_tetrahedra:512*1024*1024/2048};
     let stage=std::time::Instant::now();
     let b=board_mesh::build(&board,&r,budget,remaining()?)?;
     record_stage(&mut stages,"geometry",stage);
@@ -225,4 +227,10 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
     output["stageSeconds"]=serde_json::Value::Object(stages);
     output["wallSeconds"]=serde_json::json!(started.elapsed().as_secs_f64());
     Ok(output)
+}
+
+/// Explicit developer-only limits; production defaults remain unchanged.
+pub(super) fn verification_limit(name:&str,default:usize,min:usize,max:usize)->Result<usize,String>{
+    let value=std::env::var(name).ok().map(|s|s.parse::<usize>().map_err(|_|format!("LOCAL_BUDGET: invalid {name}"))).transpose()?.unwrap_or(default);
+    if value<min||value>max{return Err(format!("LOCAL_BUDGET: {name} outside {min}..{max}"));}Ok(value)
 }

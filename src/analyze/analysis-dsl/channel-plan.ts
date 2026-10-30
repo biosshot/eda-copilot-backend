@@ -34,6 +34,17 @@ export function channelPlan(g:AnalysisGeometryReport,contacts:Contact[]) {
  const selectedIds=g.regions.filter(r=>inBox(boxes.get(r.id)!,candidateDomainsMm[0])).map(r=>r.id);
  const selectedPaths=new Set(g.regions.filter(r=>inBox(boxes.get(r.id)!,retainedCandidate)).map(r=>r.source.path));
  const contactPaths=new Set(contacts.map(c=>c.sourcePath));
+ const signalIslandId=islandFor(selected[0][0]).id;
+ const copperDecisions=g.regions.map(r=>{
+  const island=regionIslands.get(r.id)?.id;
+  const insideCandidate=inBox(boxes.get(r.id)!,retainedCandidate);
+  const role=island===signalIslandId?'signal':chosen.has(r.id)?'return':'environment';
+  return {regionId:r.id,sourcePath:r.source.path,layer:r.layer,islandId:island,role,
+   numericalDomain:insideCandidate?'candidate':'outside-candidates',
+   reason:insideCandidate?'Captured physical copper intersects the final candidate; retained without net-name joins':
+    chosen.has(r.id)?'Connected branch/return copper retained in the source audit, outside finite numerical candidates; truncation requires observable sensitivity verification':
+    'Outside all candidate domains; excluded from numerical extraction, preserved in the board snapshot'};
+ });
  const parents=new Set<string>();for(const path of selectedPaths){let p=path;while(p.includes('.')){p=p.slice(0,p.lastIndexOf('.'));parents.add(p);}}
  const relevant=(path:string)=>{if(parents.has(path))return true;let p=path;for(;;){if(selectedPaths.has(p))return true;const dot=p.lastIndexOf('.');if(dot<0)return false;p=p.slice(0,dot);}};
  const diagnosticDecisions=g.diagnostics.map(d=>({diagnostic:d,
@@ -44,7 +55,7 @@ export function channelPlan(g:AnalysisGeometryReport,contacts:Contact[]) {
    d.code==='drill_topology_uncertain'?'Native geometry retains enclosing drill contours and does not assert uncertain fragments as a confirmed open. Preserve this conservative geometry; observable sensitivity remains unverified':
    'Retain native captured geometry and its reported limitation; no topology repair or ideal net-name connection',
   validityImpact:relevant(d.path)?'conditional; no 5% spatial/topology certification':'conditional on domain sensitivity; no topology repair or net-name joins'}));
- return {roiMm:candidateDomainsMm[0],conservativeConnectedEnvelopeMm:roi,candidateDomainsMm,automaticConvergenceRequired:true,selectedRegionIds:selectedIds.sort(),connectedIslandRegionIds:[...chosen].sort(),contacts,signalIsland:islandFor(selected[0][0]).id,
+ return {roiMm:candidateDomainsMm[0],conservativeConnectedEnvelopeMm:roi,candidateDomainsMm,automaticConvergenceRequired:true,selectedRegionIds:selectedIds.sort(),connectedIslandRegionIds:[...chosen].sort(),copperDecisions,contacts,signalIsland:signalIslandId,
   policy:confirmedLocalBarrel?'confirmed plated-barrel seed; captured intersecting branches and surrounding copper retained; external branch cuts require observable domain sensitivity; no net-name joins':'full confirmed signal-island envelope seeds paths/branches; surrounding domains require observable convergence; no shortest-path substitution or user-authored cuts',
   spatialVerification:{operator:'same direct-FEM polynomial magnetic operator; two bounded local patch levels',levels:[{traceDegree:4,bodyDegree:6,stars:1,exteriorOrder:16},{traceDegree:6,bodyDegree:8,stars:1,exteriorOrder:16}],gate:'2% canonical50Ohm power-wave change with0.01 amplitude floor and intrinsic Cu total loss change; unloaded reactive Z and regional losses unverified'},geometryDiagnostics:g.diagnostics,diagnosticDecisions,spatialValidation:'unverified; environment expansion/observable accuracy not certified',confirmedLocalBarrel};
 }
