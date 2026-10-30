@@ -48,3 +48,13 @@ test('one executor refuses magnetic profile changes before accessing a different
  try{process.env.P7_MAGNETIC_PROFILE='baseline';assert.throws(()=>run(request));process.env.P7_MAGNETIC_PROFILE='compact-v1';assert.throws(()=>run(request),/magnetic profile changed during executor lifetime/);}
  finally{if(old===undefined)delete process.env.P7_MAGNETIC_PROFILE;else process.env.P7_MAGNETIC_PROFILE=old;}
 });
+
+
+test('rejected experimental precision cannot silently restore an F64 model',async()=>{
+ const {localCoreIdentity}=await import('../src/analyze/local-model-cache.ts');const {createProblemExecutor}=await import('../src/analyze/execute-problem.ts');
+ const old=process.env.P7_MAGNETIC_PRECISION;try{
+ delete process.env.P7_MAGNETIC_PRECISION;const baseline=localCoreIdentity();process.env.P7_MAGNETIC_PRECISION='f64';assert.equal(localCoreIdentity(),baseline);
+ const run=createProblemExecutor();const request:any={kind:'local-extraction',request:{boardJson:'{}',geometry:{},bandHz:[1000,100000],frequenciesHz:[1000],magneticPatchLevel:1}};assert.throws(()=>run(request));
+ for(const unsupported of ['f32','auto']){process.env.P7_MAGNETIC_PRECISION=unsupported;assert.throws(()=>localCoreIdentity(),/unsupported P7_MAGNETIC_PRECISION/);assert.throws(()=>run(request),/unsupported P7_MAGNETIC_PRECISION/);}
+ }finally{if(old===undefined)delete process.env.P7_MAGNETIC_PRECISION;else process.env.P7_MAGNETIC_PRECISION=old;}
+});

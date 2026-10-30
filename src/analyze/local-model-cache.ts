@@ -12,7 +12,8 @@ export function canonical(value:unknown):string {
  throw new Error('Cache identity must contain finite JSON');
 }
 export const digest=(text:string|Buffer)=>createHash('sha256').update(text).digest('hex');
-export function localCoreIdentity(){const require=createRequire(import.meta.url);const {nativeFilename}=require(backendResource('native','node-addon','platform.cjs'));const binary=digest(readFileSync(backendResource('native','node-addon',nativeFilename())));const profile=process.env.P7_MAGNETIC_PROFILE??'baseline';if(!['baseline','compact-v1'].includes(profile))throw new Error('LOCAL_SPATIAL_INPUT: unsupported P7_MAGNETIC_PROFILE');return digest(canonical({binary,magneticProfile:profile}));}
+export function magneticPrecision(){const value=process.env.P7_MAGNETIC_PRECISION??'f64';if(!['f64'].includes(value))throw new Error('LOCAL_SPATIAL_INPUT: unsupported P7_MAGNETIC_PRECISION');return value;}
+export function localCoreIdentity(){const require=createRequire(import.meta.url);const {nativeFilename}=require(backendResource('native','node-addon','platform.cjs'));const binary=digest(readFileSync(backendResource('native','node-addon',nativeFilename())));const profile=process.env.P7_MAGNETIC_PROFILE??'baseline';if(!['baseline','compact-v1'].includes(profile))throw new Error('LOCAL_SPATIAL_INPUT: unsupported P7_MAGNETIC_PROFILE');return digest(canonical({binary,magneticProfile:profile,magneticPrecision:magneticPrecision()}));}
 export interface CacheEvidence {status:'cold'|'memory'|'disk';key:string;schema:1;assembly:number;training:number;restoreSeconds:number;writeFailed:boolean}
 /** Reduced model/recovery only. Native FEM factors never cross this boundary.
  * Validate restored coefficients through the same P6 compiler before reuse. */

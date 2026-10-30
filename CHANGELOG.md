@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a read-only magnetic coordinate ownership audit and bounded remote warm/cache verification with selectable existing RHS concurrency. Record implemented corrected-F32 and conforming far-air experiments, reject the real LLT/whole-delay failures and remove both numeric runtime branches; explicitly refuse the retired F32 selector. Production remains F64 and P7 remains open.
+
 - Record the rejected magnetic-only mixed-F32 factor/solve experiment: unchanged compact control fails the existing exterior Schur reciprocity guard. Preserve F64 production and independent references; archive memory/unknown-count evidence and remove the failed runtime branch. P7 remains open.
 
 - Reuse one captured native board geometry across automatic-channel domain and mesh refinements. Preserve independent-plan results and snapshot isolation; record the rejected graph-ordering memory experiment without changing the production magnetic solver. Full P7 resource and physical acceptance remains open.

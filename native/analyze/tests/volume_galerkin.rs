@@ -97,3 +97,11 @@ fn p7_memory_profiles_frozen_energy() {
  }
  assert!(measured>0,"unknown P7_ENERGY_PROFILE");
 }
+
+#[test]
+fn coordinate_only_audit_matches_frozen_compact_profile_without_factors(){
+ let mesh=control_mesh();let audit=volume_magnetic::Operator::audit_patch_coordinates(&mesh,profile(),2,4,4,1).unwrap();
+ assert_eq!(audit["unknowns"],3644);assert_eq!(audit["air"],3037);assert_eq!(audit["nearCopperTrace"],546);assert_eq!(audit["cellPrivate"],61);
+ assert_eq!(audit["phase"],"coordinates-only; no sparse matrix or factor");
+ assert!(volume_magnetic::Operator::audit_patch_coordinates(&mesh,profile(),usize::MAX,4,4,1).is_err());
+}

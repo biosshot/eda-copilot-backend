@@ -33,6 +33,11 @@ pub struct Operator<'a> {
     enrichment:Option<Enrichment>,
     pub enrichment_radius_m:Option<f64>,
 }
+struct PolynomialSpace {
+ indices:Vec<[usize;4]>,cell_basis:Vec<Vec<usize>>,cell_dofs:Vec<Vec<usize>>,free:usize,
+ trace_degree:usize,body_degree:usize,partition_count:usize,size:usize,count:usize,retained:usize,template_bytes:usize,coordinate_plan:usize,
+ weights:Vec<[f64;16]>,cells:Vec<([usize;4],f64,[[f64;3];4])>,
+}
 impl<'a> Operator<'a> {
     pub fn new(mesh:&'a LayeredMesh,budget:AllocationBudget)->Result<Self> {
         let n=mesh.nodes_m.len();let nt=mesh.tetrahedra.len()+mesh.copper_tetrahedra.len();
@@ -75,7 +80,7 @@ impl<'a> Operator<'a> {
     fn new_degree(mesh:&'a LayeredMesh,budget:AllocationBudget,degree:usize)->Result<Self> {
         Self::new_polynomials(mesh,budget,degree,None)
     }
-    fn new_polynomials(mesh:&'a LayeredMesh,budget:AllocationBudget,degree:usize,bubbles:Option<(usize,usize,usize)>)->Result<Self> {
+    fn polynomial_space(mesh:&LayeredMesh,budget:AllocationBudget,degree:usize,bubbles:Option<(usize,usize,usize)>)->Result<PolynomialSpace>{
         if mesh.nodes_m.len()>budget.max_nodes||mesh.tetrahedra.len()+mesh.copper_tetrahedra.len()>budget.max_tetrahedra{return Err(error("MEMORY_LIMIT","physical mesh exceeds potential budget"));}
         if ![2,3,4].contains(&degree){return Err(error("MAGNETIC_DEGREE","source-resolving Bernstein degrees2/3/4 required"));}
         if bubbles.is_some_and(|(t,p,l)|![2,3].contains(&degree)||!(3..=6).contains(&t)||!(4..=8).contains(&p)||!(1..=3).contains(&l)){return Err(error("MAGNETIC_DEGREE","P3 air, Cu traces3..6, interior bubbles4..8 and1..3 vertex stars required"));}
@@ -118,6 +123,19 @@ impl<'a> Operator<'a> {
         if free==0 {return Err(error("MAGNETIC_MESH","no free polynomial potential coordinates"));}
         drop(ids);
         drop(entity_degrees);drop(copper_vertices);drop(cell_degrees);
+        Ok(PolynomialSpace{indices,cell_basis,cell_dofs,free,trace_degree,body_degree,partition_count,size,count,retained,template_bytes,coordinate_plan,weights,cells})
+    }
+    /// Read-only developer audit. Uses exactly the production coordinate map,
+    /// stopping before sparse graph assembly, ordering or factorization.
+    pub fn audit_patch_coordinates(mesh:&LayeredMesh,budget:AllocationBudget,air:usize,trace:usize,body:usize,stars:usize)->Result<serde_json::Value>{
+        let space=Self::polynomial_space(mesh,budget,air,Some((trace,body,stars)))?;
+        let private=space.cell_dofs.iter().zip(&space.cell_basis).flat_map(|(d,b)|d.iter().zip(b).filter_map(|(&i,&a)|(i!=usize::MAX&&space.indices[a].iter().all(|&v|v>0)).then_some(i))).collect::<BTreeSet<_>>();
+        let copper=mesh.copper_tetrahedra.iter().flat_map(|t|t.nodes).collect::<BTreeSet<_>>();
+        let near=space.cells.iter().zip(&space.cell_dofs).filter(|(c,_)|c.0.iter().any(|i|copper.contains(i))).flat_map(|(_,d)|d.iter().copied()).filter(|&i|i!=usize::MAX&&!private.contains(&i)).collect::<BTreeSet<_>>();
+        Ok(serde_json::json!({"unknowns":space.free,"air":space.free-near.len()-private.len(),"nearCopperTrace":near.len(),"cellPrivate":private.len(),"tetrahedra":space.count,"nodes":mesh.nodes_m.len(),"phase":"coordinates-only; no sparse matrix or factor"}))
+    }
+    fn new_polynomials(mesh:&'a LayeredMesh,budget:AllocationBudget,degree:usize,bubbles:Option<(usize,usize,usize)>)->Result<Self> {
+        let PolynomialSpace{indices,cell_basis,cell_dofs,free,trace_degree,body_degree,partition_count,size,count,retained,template_bytes,coordinate_plan,weights,cells}=Self::polynomial_space(mesh,budget,degree,bubbles)?;
         let slots=cell_dofs.iter().try_fold(0usize,|n,d|n.checked_add(d.len())).ok_or_else(||error("MEMORY_LIMIT","potential incidence count overflow"))?;
         let owned=retained.checked_add(slots.checked_mul(32).ok_or_else(||error("MEMORY_LIMIT","potential trace storage overflow"))?).and_then(|n|n.checked_add(count.checked_mul(256)?)).and_then(|n|n.checked_add(size.checked_mul(64)?)).ok_or_else(||error("MEMORY_LIMIT","potential retained plan overflow"))?;
         let incidence_plan=owned.checked_add(template_bytes).and_then(|n|n.checked_add(slots.checked_mul(16)?)).and_then(|n|n.checked_add(free.checked_mul(40)?)).ok_or_else(||error("MEMORY_LIMIT","potential adjacency plan overflow"))?;budget.check(incidence_plan)?;

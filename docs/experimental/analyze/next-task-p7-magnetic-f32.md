@@ -1,6 +1,6 @@
 # P7: bounded magnetic F32 experiment and unknown-count audit
 
-Status: assigned, not accepted. Preserve production F64 default until evidence is reviewed.
+Status: initial experiment finished and rejected; see p7-magnetic-f32-results.md. Follow-up implementation is assigned in next-task-p7-magnetic-refinement-and-reduction.md. Preserve production F64 default until evidence is reviewed.
 
 ## Scope
 

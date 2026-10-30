@@ -309,6 +309,7 @@ impl AnalysisElectricalSession {
     }
     #[napi]
     pub fn prepare_local(&mut self, board_json:String, request:Value, remaining_seconds:Option<f64>,magnetic_patch_level:Option<u32>)->Result<Value> {
+        match std::env::var("P7_MAGNETIC_PRECISION").as_deref(){Err(std::env::VarError::NotPresent)|Ok("f64")=>{},_=>return Err(napi::Error::from_reason("LOCAL_SPATIAL_INPUT: unsupported P7_MAGNETIC_PRECISION; rejected F32 experiment is not a runtime option"))};
         let compact=match std::env::var("P7_MAGNETIC_PROFILE").as_deref(){Err(std::env::VarError::NotPresent)|Ok("baseline")=>false,Ok("compact-v1")=>true,_=>return Err(napi::Error::from_reason("LOCAL_SPATIAL_INPUT: unsupported P7_MAGNETIC_PROFILE"))};
         let magnetic_config=match (compact,magnetic_patch_level){(_,None)=>[6,8,16,3],(false,Some(1))=>[4,6,16,1],(false,Some(2))=>[6,8,16,1],(true,Some(1))=>[4,4,16,1],(true,Some(2))=>[4,5,16,1],_=>return Err(napi::Error::from_reason("LOCAL_SPATIAL_INPUT: unsupported bounded patch level"))};
         let magnetic_air_degree=if compact&&magnetic_patch_level.is_some(){2}else{3};
