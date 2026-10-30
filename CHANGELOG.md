@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Record the rejected magnetic-only mixed-F32 factor/solve experiment: unchanged compact control fails the existing exterior Schur reciprocity guard. Preserve F64 production and independent references; archive memory/unknown-count evidence and remove the failed runtime branch. P7 remains open.
+
 - Reuse one captured native board geometry across automatic-channel domain and mesh refinements. Preserve independent-plan results and snapshot isolation; record the rejected graph-ordering memory experiment without changing the production magnetic solver. Full P7 resource and physical acceptance remains open.
 
 - Add opt-in Windows OS-paging supervision using system commit headroom and process-tree private commit, with cancellation and reproducible policy tests. Report sparse factor memory components before admission and project magnetic basis actions incrementally to avoid retaining every full-space image simultaneously.
