@@ -112,12 +112,18 @@ impl Basis {
         }
         for a in 0..nv {for b in 0..ni {if incidence[a][b]!=0. {model.incidence.push((a,b,incidence[a][b]));}}}
         let mut r=vec![vec![0.;ni];ni];let mut l=vec![vec![0.;ni];ni];
-        let images=self.current.iter().map(|q|magnetic.apply(space,q)).collect::<Result<Vec<_>>>()?;
-        let scale=(0..ni).map(|i|dot(&self.current[i],&images[i]).abs()).fold(0.,f64::max);
+        // Project each full-space action immediately. Retain only the small
+        // directed Gram matrix, including both directions for reciprocity.
+        let mut directed=vec![vec![0.;ni];ni];
+        for b in 0..ni {
+            let image=magnetic.apply(space,&self.current[b])?;
+            for a in 0..ni {directed[a][b]=dot(&self.current[a],&image);}
+        }
+        let scale=(0..ni).map(|i|directed[i][i].abs()).fold(0.,f64::max);
         for a in 0..ni {for b in a..ni {
             r[a][b]=space.cells.iter().enumerate().map(|(i,c)|c.resistance_ohm*(0..3).map(|k|self.current[a][3*i+k]*self.current[b][3*i+k]).sum::<f64>()).sum();
-            l[a][b]=dot(&self.current[a],&images[b]);
-            if (l[a][b]-dot(&self.current[b],&images[a])).abs()>1e-9*scale {return Err(error("MAGNETIC_RECIPROCITY","directed projected Newton actions disagree"));}
+            l[a][b]=directed[a][b];
+            if (l[a][b]-directed[b][a]).abs()>1e-9*scale {return Err(error("MAGNETIC_RECIPROCITY","directed projected Newton actions disagree"));}
         }}
         model.resistance_ohm=symmetric(&r);model.inductance_h=symmetric(&l);
         model.capacitance_f=field.energy_gram(&self.voltage)?;

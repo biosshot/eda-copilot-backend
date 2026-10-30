@@ -78,7 +78,7 @@ impl<'a> Operator<'a> {
     fn new_polynomials(mesh:&'a LayeredMesh,budget:AllocationBudget,degree:usize,bubbles:Option<(usize,usize,usize)>)->Result<Self> {
         if mesh.nodes_m.len()>budget.max_nodes||mesh.tetrahedra.len()+mesh.copper_tetrahedra.len()>budget.max_tetrahedra{return Err(error("MEMORY_LIMIT","physical mesh exceeds potential budget"));}
         if ![2,3,4].contains(&degree){return Err(error("MAGNETIC_DEGREE","source-resolving Bernstein degrees2/3/4 required"));}
-        if bubbles.is_some_and(|(t,p,l)|degree!=3||!(3..=6).contains(&t)||!(4..=8).contains(&p)||!(1..=3).contains(&l)){return Err(error("MAGNETIC_DEGREE","P3 air, Cu traces3..6, interior bubbles4..8 and1..3 vertex stars required"));}
+        if bubbles.is_some_and(|(t,p,l)|![2,3].contains(&degree)||!(3..=6).contains(&t)||!(4..=8).contains(&p)||!(1..=3).contains(&l)){return Err(error("MAGNETIC_DEGREE","P3 air, Cu traces3..6, interior bubbles4..8 and1..3 vertex stars required"));}
         let (trace_degree,body_degree,stars)=bubbles.unwrap_or((degree,degree,0));
         let mut indices=vec![[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]];let partition_count=4;
         indices.extend(super::bernstein::indices(degree).into_iter().filter(|a|a.iter().filter(|&&i|i>0).count()>1));
@@ -156,6 +156,11 @@ impl<'a> Operator<'a> {
     }
     pub fn new_enriched_trace_bubbles(mesh:&'a LayeredMesh,budget:AllocationBudget,interface_order:usize,trace_degree:usize,bubble_degree:usize)->Result<Self> {
         Self::new_enriched_patch(mesh,budget,interface_order,trace_degree,bubble_degree,1)
+    }
+    /// Explicit developer air-degree experiment; geometry and source trace are unchanged.
+    pub fn new_enriched_patch_air(mesh:&'a LayeredMesh,budget:AllocationBudget,interface_order:usize,trace_degree:usize,bubble_degree:usize,stars:usize,air_degree:usize)->Result<Self>{
+        if ![4,8,16].contains(&interface_order){return Err(error("MAGNETIC_QUADRATURE","enrichment interface orders4/8/16 required"));}
+        Self::enrich(Self::new_polynomials(mesh,budget,air_degree,Some((trace_degree,bubble_degree,stars)))?,budget,interface_order)
     }
     pub fn new_enriched_patch(mesh:&'a LayeredMesh,budget:AllocationBudget,interface_order:usize,trace_degree:usize,bubble_degree:usize,stars:usize)->Result<Self> {
         if ![4,8,16].contains(&interface_order){return Err(error("MAGNETIC_QUADRATURE","enrichment interface orders4/8/16 required"));}

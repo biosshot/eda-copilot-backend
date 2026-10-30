@@ -34,3 +34,17 @@ test('failed prepare/validation/write, bounded memory/disk eviction, concurrent 
 });
 
 test('actual extraction producer identity binds captured board, contacts, stack, materials, band, temperature and binary, while solve/report changes reuse',()=>{const d=dir();try{const c=new LocalModelCache(d);const geometry=JSON.parse(readFileSync('tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json','utf8'));const request={boardJson:'{"captured":"board"}',geometry,bandHz:[1000,100000],temperatureC:25};const key=localExtractionKey(c,'binary-v1',request);const changes=[{...request,boardJson:'{"captured":"edited"}'},{...request,geometry:{...geometry,ports:[['signal-TOP','signal-BOTTOM']]}},{...request,geometry:{...geometry,stack:geometry.stack.map((l:any,i:number)=>i===1?{...l,thicknessM:.0016}:l)}},{...request,geometry:{...geometry,barrelConductivitySM:5e7}},{...request,bandHz:[1000,200000]},{...request,temperatureC:40},{...request,magneticPatchLevel:1 as const},{...request,magneticPatchLevel:2 as const}];for(const r of changes)assert.notEqual(localExtractionKey(c,'binary-v1',r),key);assert.notEqual(localExtractionKey(c,'binary-v2',request),key);const changedSolve={...request,drive:[1,-1],loadsOhm:[100,100],plot:{color:'red'},check:{max:1}};assert.equal(localExtractionKey(c,'binary-v1',changedSolve),key);}finally{rmSync(d,{recursive:true,force:true});}});
+
+test('explicit magnetic profile separates binary cache identities and rejects unknown choices',async()=>{
+ const {localCoreIdentity}=await import('../src/analyze/local-model-cache.ts');
+ const before=process.env.P7_MAGNETIC_PROFILE;
+ try{delete process.env.P7_MAGNETIC_PROFILE;const baseline=localCoreIdentity();process.env.P7_MAGNETIC_PROFILE='baseline';assert.equal(localCoreIdentity(),baseline);process.env.P7_MAGNETIC_PROFILE='compact-v1';assert.notEqual(localCoreIdentity(),baseline);process.env.P7_MAGNETIC_PROFILE='auto';assert.throws(()=>localCoreIdentity(),/unsupported P7_MAGNETIC_PROFILE/);}
+ finally{if(before===undefined)delete process.env.P7_MAGNETIC_PROFILE;else process.env.P7_MAGNETIC_PROFILE=before;}
+});
+
+test('one executor refuses magnetic profile changes before accessing a differently configured native model',async()=>{
+ const {createProblemExecutor}=await import('../src/analyze/execute-problem.ts');const run=createProblemExecutor();const old=process.env.P7_MAGNETIC_PROFILE;
+ const request:any={kind:'local-extraction',request:{boardJson:'{}',geometry:{},bandHz:[1000,100000],frequenciesHz:[1000],magneticPatchLevel:1}};
+ try{process.env.P7_MAGNETIC_PROFILE='baseline';assert.throws(()=>run(request));process.env.P7_MAGNETIC_PROFILE='compact-v1';assert.throws(()=>run(request),/magnetic profile changed during executor lifetime/);}
+ finally{if(old===undefined)delete process.env.P7_MAGNETIC_PROFILE;else process.env.P7_MAGNETIC_PROFILE=old;}
+});

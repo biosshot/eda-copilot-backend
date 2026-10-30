@@ -27,6 +27,6 @@ fn execute()->Result<(),String> {
         use pcb_analyze::extraction::local::developer_checkpoint::{Journal,identity};
         Journal::new(std::path::Path::new(&directory),identity(&text,&serde_json::json!({"request":r,"fieldRequest":field_request,"config":config}))?)
     }).transpose()?;
-    let output=board_prepare::run(&board,&r,board_prepare::Options{developer_checkpoint:journal.as_ref(),mode:args.get(4).map(String::as_str).unwrap_or("prepare"),magnetic_config:config,field_request:field_request.as_ref(),cached_field,frequencies_hz:if args.get(4).is_some_and(|m|m=="verify"||m=="full"){&board_prepare::FREQUENCIES_HZ}else{&[]}})?;
+    let output=board_prepare::run(&board,&r,board_prepare::Options{developer_checkpoint:journal.as_ref(),mode:args.get(4).map(String::as_str).unwrap_or("prepare"),magnetic_config:config,magnetic_air_degree:3,field_request:field_request.as_ref(),cached_field,frequencies_hz:if args.get(4).is_some_and(|m|m=="verify"||m=="full"){&board_prepare::FREQUENCIES_HZ}else{&[]}})?;
     println!("{output}");if output["candidate"]["verificationStatus"]=="incomplete"{return Err("developer verification incomplete; saved partial result/checkpoints".into());}Ok(())
 }

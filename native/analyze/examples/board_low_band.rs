@@ -10,6 +10,6 @@ fn main()->Result<(),String>{
  let field=board_prepare::accepted_electric_request(&request);let config=[6,8,16,3];
  let frequencies=[1.,10.,100.,316.22776601683796,1000.];
  let journal=Journal::new(std::path::Path::new(&args[3]),identity(&text,&serde_json::json!({"request":request,"fieldRequest":field,"config":config,"lowBandHoldoutsHz":frequencies}))?)?;
- let output=board_prepare::run(&board,&request,board_prepare::Options{mode:"verify",developer_checkpoint:Some(&journal),magnetic_config:config,field_request:Some(&field),cached_field:None,frequencies_hz:&frequencies})?;
+ let output=board_prepare::run(&board,&request,board_prepare::Options{mode:"verify",developer_checkpoint:Some(&journal),magnetic_config:config,magnetic_air_degree:3,field_request:Some(&field),cached_field:None,frequencies_hz:&frequencies})?;
  println!("{output}");if output["candidate"]["verificationStatus"]!="complete"{return Err("low-frequency verification incomplete; resume the same journal under the external300s/2GiB supervisor".into());}Ok(())
 }

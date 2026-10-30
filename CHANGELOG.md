@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add opt-in Windows OS-paging supervision using system commit headroom and process-tree private commit, with cancellation and reproducible policy tests. Report sparse factor memory components before admission and project magnetic basis actions incrementally to avoid retaining every full-space image simultaneously.
+
+- Add explicit experimental P7 compact-v1 airP2 / retained near-copper trace4 magnetic profiles with unchanged CPU/F64 direct FEM and baseline defaults; reject failed lower-trace candidates using independent magnetic energy evidence. Separate numerical profiles in cache identity/provenance and refuse changes within one executor. Record measured memory/fill/accuracy and resource limitations in p7-memory-results.md; whole P7 remains open.
+
 - Add internal physical slab ownership and actual polygon-section/local FEM composition through P6 for ordinary no-scope channels, including branches, finite returns, multiconductor interfaces and common-band refusal. Preserve loss/wave gates and add a delay sensitivity gate; independent mixed-coupon delay remains unaccepted. Add opt-in independent XY dielectric refinement with positive original-surface nodal trace and unchanged current copper. Support explicit round through-pad offsets/rotations and NPTH voids without net-name joins or slot substitution. Admit increased developer geometry counts through the same byte plan while retaining exact production caps.
 
 - Support physically mapped multiway conductor junctions in P6 without implicit reference joins; retain legacy pair-only rules for unmapped models. Admit passive lossless current coordinates only when magnetic storage resolves the common R/L kernel. Add actual transverse copper side contacts for section/local interfaces and expose the existing captured polygon slicer internally.

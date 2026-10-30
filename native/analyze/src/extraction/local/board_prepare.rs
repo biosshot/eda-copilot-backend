@@ -30,6 +30,7 @@ pub struct Options<'a> {
     pub mode: &'a str,
     pub developer_checkpoint:Option<&'a super::developer_checkpoint::Journal>,
     pub magnetic_config: [usize;4],
+    pub magnetic_air_degree:usize,
     pub field_request: Option<&'a board_mesh::Request>,
     pub cached_field: Option<&'a str>,
     pub frequencies_hz: &'a [f64],
@@ -59,7 +60,8 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
     let mut stages=serde_json::Map::new();
     let remaining=||std::time::Duration::from_secs_f64(seconds).checked_sub(started.elapsed())
         .filter(|t|!t.is_zero()).ok_or("LOCAL_DEADLINE: shared cold calculation deadline");
-    let Options{mode,magnetic_config,field_request,cached_field,frequencies_hz,developer_checkpoint}=options;
+    let Options{mode,magnetic_config,magnetic_air_degree,field_request,cached_field,frequencies_hz,developer_checkpoint}=options;
+    if ![2,3].contains(&magnetic_air_degree){return Err("MAGNETIC_DEGREE: explicit air2/3 required".into());}
     #[derive(serde::Serialize,serde::Deserialize)]
     struct Prepared {basis:volume_reduction::Basis,model:coupled::Model,training:Vec<serde_json::Value>,training_solutions:Vec<(f64,usize,volume_solve::Solution)>}
     let mut restored=match developer_checkpoint {Some(j)=>j.load::<Prepared>("prepared.json")?,None=>None};
@@ -119,9 +121,9 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
         let action_bytes=16*1024*1024;
         let magnetic_budget=AllocationBudget{max_bytes:budget.max_bytes.checked_sub(live).and_then(|n|n.checked_sub(super::magnetic_actions::Reuse::reservation(&currents,action_bytes).ok()?)).ok_or("magnetic live budget exhausted")?,..budget};
         let stage=std::time::Instant::now();
-        let magnetic_operator=volume_magnetic::Operator::new_enriched_patch(
+        let magnetic_operator=volume_magnetic::Operator::new_enriched_patch_air(
             &b.mesh,magnetic_budget,magnetic_config[2],magnetic_config[0],
-            magnetic_config[1],magnetic_config[3])?;
+            magnetic_config[1],magnetic_config[3],magnetic_air_degree)?;
         let magnetic=super::magnetic_actions::Reuse::new(&magnetic_operator,&currents,action_bytes)?;
         record_stage(&mut stages,"magneticAssemblyAndFactor",stage);
         eprintln!("magnetic factor plan {} bytes",magnetic.planned_bytes());

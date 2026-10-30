@@ -71,3 +71,29 @@ fn immutable_action_reuse_preserves_every_bit_and_scope_budget_guards(){use pcb_
 
 #[test]
 fn action_reuse_evicts_and_does_not_cache_failed_operator_actions(){use pcb_analyze::extraction::local::{magnetic_actions::Reuse,volume_magnetic::MagneticApply};let mesh=control_mesh();let space=volume_current::assemble(&mesh,&vec![58e6;mesh.copper_tetrahedra.len()],&[],profile()).unwrap();let operator=volume_magnetic::Operator::new(&mesh,profile()).unwrap();let memo=Reuse::new(&operator,&space,512).unwrap();let a=vec![1.;space.current_count()];let b=vec![2.;space.current_count()];memo.apply(&space,&a).unwrap();memo.apply(&space,&b).unwrap();memo.apply(&space,&a).unwrap();assert_eq!(memo.stats()["misses"],3);assert!(memo.stats()["retainedBytes"].as_u64().unwrap()<=512);let failed=Reuse::new(&operator,&space,4096).unwrap();for _ in 0..2{assert!(failed.apply(&space,&vec![1e308;space.current_count()]).is_err());}assert_eq!(failed.stats()["misses"],2);assert_eq!(failed.stats()["retainedBytes"],0);}
+
+/// P7 memory experiment: unchanged frozen geometry and complete source energy norm.
+#[test]
+#[ignore = "bounded sequential P7 profile measurement"]
+fn p7_memory_profiles_frozen_energy() {
+ let frozen:serde_json::Value=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/board-integration/tetra-space-reference.json")).unwrap();
+ let mesh=control_mesh();
+ let reference:Vec<Vec<f64>>=serde_json::from_value(frozen["matrix"].clone()).unwrap();
+ let reference=reference[..3].iter().map(|r|r[..3].to_vec()).collect::<Vec<_>>();
+ let uncertainty=frozen["empiricalWhitenedReferenceScreen"].as_f64().unwrap();
+ let space=volume_current::assemble(&mesh,&vec![58e6;3],&[],profile()).unwrap();
+ let mut measured=0;
+ for (trace,body) in [(4,6),(3,5),(3,4),(4,4),(4,5),(3,6)] {
+  if std::env::var("P7_ENERGY_PROFILE").ok().is_some_and(|s|s!=format!("{trace}:{body}")){continue;}
+  let start=std::time::Instant::now();
+  measured+=1;
+  let air=std::env::var("P7_ENERGY_AIR").ok().map(|v|v.parse::<usize>().unwrap()).unwrap_or(3);
+  let operator=volume_magnetic::Operator::new_enriched_patch_air(&mesh,profile(),16,trace,body,1,air).unwrap();
+  let mut actual=vec![vec![0.;3];3];
+  for j in 0..3 {let mut q=vec![0.;9];q[3*j+2]=1./space.cells[j].density_per_amp_m2;let image=operator.apply(&space,&q).unwrap();for i in 0..3 {actual[i][j]=image[3*i+2]/space.cells[i].density_per_amp_m2;}}
+  let screened_error=full_space_error(&actual,&reference)+uncertainty;
+  if trace==4 {assert!(screened_error<0.08,"candidate failed independent energy screen: {screened_error:e}");}else{assert!(screened_error>0.08,"rejected trace candidate needs evidence review");}
+  eprintln!("P7_PROFILE {}",serde_json::json!({"config":[trace,body,16,1],"airDegree":air,"seconds":start.elapsed().as_secs_f64(),"plannedBytes":operator.planned_bytes,"energyError":full_space_error(&actual,&reference),"referenceUncertainty":uncertainty,"matrix":actual}));
+ }
+ assert!(measured>0,"unknown P7_ENERGY_PROFILE");
+}

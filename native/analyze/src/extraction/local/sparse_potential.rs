@@ -77,7 +77,12 @@ pub(crate) fn factor(matrix:&SparseColMat<usize,f64>,base:usize,budget:Allocatio
  let symbolic_bytes=add(1024,layout.pattern,if layout.supernodal{16}else{8})?;
  if symbolic.len_val()>fill.checked_mul(2).ok_or_else(||error("MEMORY_LIMIT","sparse fill bound overflow"))? {return Err(error("MEMORY_LIMIT","unamalgamated panel fill exceeded predeclared symbolic bound"));}
  let scratch=symbolic.factorize_numeric_llt_scratch::<f64>(super::parallel::current(),Default::default());let solve=symbolic.solve_in_place_scratch::<f64>(9,super::parallel::current());
- let numeric_plan=add(add(add(add(live,symbolic_bytes,1)?,n,256)?,symbolic.len_val(),8)?,scratch.unaligned_bytes_required().max(solve.unaligned_bytes_required()),1)?;admit(budget,numeric_plan,"numeric-factor")?;peak=peak.max(numeric_plan);
+ let workspace_bytes=scratch.unaligned_bytes_required().max(solve.unaligned_bytes_required());
+ let numeric_plan=add(add(add(add(live,symbolic_bytes,1)?,n,256)?,symbolic.len_val(),8)?,workspace_bytes,1)?;
+ // Emit before admission: failed large runs must still explain the estimate.
+ // These are conservative stage bounds, not measured process RSS.
+ eprintln!("P7_MEMORY_PLAN n={n} inputNnz={nnz} private={} exactFill={fill} baseBytes={base} inputCscBoundBytes={} symbolicBoundBytes={symbolic_bytes} nodeReserveBytes={} factorValuesBytes={} workspaceBytes={workspace_bytes} numericStageBytes={numeric_plan} budgetBytes={} kind={}",private.len(),nnz*16,n*256,symbolic.len_val()*8,budget.max_bytes,if layout.supernodal{"supernodal"}else{"simplicial"});
+ admit(budget,numeric_plan,"numeric-factor")?;peak=peak.max(numeric_plan);
  let symbolic_seconds=symbolic_started.elapsed().as_secs_f64();
  let numeric_started=std::time::Instant::now();
  let mut values=vec![0.;symbolic.len_val()];let mut workspace=MemBuffer::try_new(scratch).map_err(|_|error("MEMORY_LIMIT","sparse numeric workspace"))?;
