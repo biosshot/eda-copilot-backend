@@ -21,7 +21,7 @@ pub mod volume_field;
 pub mod field_refinement;
 pub mod volume_magnetic;
 mod bernstein;
-mod sparse_potential;
+pub(crate) mod sparse_potential;
 mod field_assembly;
 pub mod volume_reduction;
 mod spherical;

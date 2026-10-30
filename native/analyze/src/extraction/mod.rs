@@ -2,6 +2,7 @@
 mod field;
 pub mod polygon_section;
 pub mod board_section;
+pub mod section_cache;
 mod geometry;
 pub mod local;
 pub mod losses;
@@ -269,7 +270,7 @@ pub fn run(request: Request) -> Value {
             vec!["PEC, zero internal L/conductor loss/roughness; R=0 and G=0 are explicit ideal assumptions, not real copper/dielectric losses","Isotropic positive nondispersive nonmagnetic dielectrics, lossTangent=0; no mask","Infinite ideal reference plane(s); finite artificial outer boundary has natural zero normal displacement, not a grounded screen","Mesh and outer-domain convergence do not prove quasi-TEM applicability"]
         };
         Ok(
-            json!({"status":"complete","diagnostics":[],"input":request.line,"geometry":field.geometry,"parameters":p,"field":field,"lossIntegrals":loss_integrals,"convergence":convergence,"network":network,"frequenciesHz":f,
+            json!({"status":"complete","diagnostics":[],"input":request.line,"fieldRequestMesh":request.mesh,"geometry":field.geometry,"parameters":p,"field":field,"lossIntegrals":loss_integrals,"convergence":convergence,"network":network,"frequenciesHz":f,
    "applicability":{"maxFrequencyHz":max_frequency,"rule":"max transverse physical dimension * sqrt(max epsilon) <= wavelength0/20; conservative heuristic only","fullWaveValidated":false},
    "assumptions":assumptions,
    "limits":{"maxNodes":nodes,"maxTriangles":triangles,"maxRefinements":refinements,"maxDomainScale":64,"maxOutputCoefficients":131072,"memoryPlanCapBytes":limits.memory,"memoryMetric":"conservative admission plan, not hard OS RSS cap; disposable process enforces deadline"},"convergenceTolerance":0.01,"mutualAbsoluteFloorRelativeToSelf":0.001}),

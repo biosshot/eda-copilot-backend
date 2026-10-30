@@ -8,6 +8,7 @@ fn main() {
         .unwrap();
     assert!(input.len() <= 8 * 1024 * 1024);
     let report = pcb_analyze::extraction::run(serde_json::from_str(&input).unwrap());
+    if std::env::var("P7_SECTION_FULL_REPORT").as_deref()==Ok("1"){println!("{report}");return;}
     println!(
         "{}",
         serde_json::json!({"status":report["status"],"diagnostics":report["diagnostics"],"parameters":report["parameters"],"quality":report["field"]["quality"],"nodes":report["field"]["nodes"].as_array().map(Vec::len),"triangles":report["field"]["triangles"].as_array().map(Vec::len)})

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Separate immutable transverse section coefficients from propagation length/frequency results; revalidate native energy/material/skin/passivity on reuse, including process restart and changed axes. Add polygon-only consistent boundary flux projection, bounded corner refinement and physical loss-energy convergence with explicit weak floors; preserve template paths and refuse unresolved real-section losses.
+
 - Account pinned-faer shared supernode patterns/panels before allocation, with strict actual-layout checks. Retain explicit50Ohm power-wave/Cu-loss automatic sensitivity scope and four physical signal/return contacts. Preserve failed refinement/resource evidence; reject a cheaper magnetic profile that fails the original independent1% guard instead of weakening accuracy or budget limits.
 
 - Include both slope changes across held repeated-PWL cycle gaps in the conservative source spectral-tail bound.

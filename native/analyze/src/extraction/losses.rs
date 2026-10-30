@@ -137,7 +137,7 @@ impl Configuration {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize,Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Surface {
     pub id: String,
@@ -147,7 +147,7 @@ pub struct Surface {
     pub integrated_current_a_per_a: Vec<f64>,
     pub gram_per_m: Vec<Vec<f64>>,
 }
-#[derive(Serialize)]
+#[derive(Serialize,Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Region {
     pub id: String,
@@ -455,6 +455,9 @@ pub fn integrals(f: &Field) -> Result<Integrals> {
 /// template sections. The same weak reaction moments and Gram integration are
 /// used; no rectangular/symmetric-pair current formula is introduced.
 pub(super) fn surface_grams(nodes:&[[f64;2]],reactions:&[Vec<f64>],inv:&[Vec<f64>],edges:Vec<Vec<[usize;2]>>,surface_ids:&[String])->Result<(Vec<Surface>,f64)>{
+    surface_grams_projected(nodes,reactions,inv,edges,surface_ids,None)
+}
+pub(super) fn surface_grams_projected(nodes:&[[f64;2]],reactions:&[Vec<f64>],inv:&[Vec<f64>],edges:Vec<Vec<[usize;2]>>,surface_ids:&[String],budget:Option<local::AllocationBudget>)->Result<(Vec<Surface>,f64)>{
     let n=inv.len();
     let mut surfaces = vec![];
     let mut totals = vec![0.; n];
@@ -478,6 +481,19 @@ pub(super) fn surface_grams(nodes:&[[f64;2]],reactions:&[Vec<f64>],inv:&[Vec<f64
                 currents[k][i] = q / mass[node];
                 integrated[k] += q;
             }
+        }
+        if let Some(budget)=budget {
+            use faer::{sparse::{SparseColMat,Triplet},dyn_stack::{MemBuffer,MemStack}};
+            let count=ids.len();let reserved=count.checked_mul(4096).ok_or_else(||error("SECTION_MEMORY_LIMIT","surface projection plan overflow"))?;budget.check(reserved)?;
+            let mut entries=Vec::with_capacity(es.len()*3);
+            for &[a,b] in &es {let length=(nodes[a][0]-nodes[b][0]).hypot(nodes[a][1]-nodes[b][1]);let i=lookup[&a];let j=lookup[&b];entries.push(Triplet::new(i,i,length/3.));entries.push(Triplet::new(j,j,length/3.));entries.push(Triplet::new(i.min(j),i.max(j),length/6.));}
+            let matrix=SparseColMat::<usize,f64>::try_new_from_triplets(count,count,&entries).map_err(|e|error("SECTION_SURFACE_MASS",e))?;drop(entries);
+            let (symbolic,values,_,persistent)=local::sparse_potential::factor(&matrix,reserved,budget,&[])?;
+            let mut rhs=faer::Mat::from_fn(count,n,|i,k|currents[k][i]*mass[&ids[i]]);
+            let scratch=symbolic.solve_in_place_scratch::<f64>(n,faer::Par::Seq);budget.check(persistent.checked_add(scratch.unaligned_bytes_required()).ok_or_else(||error("SECTION_MEMORY_LIMIT","surface solve plan overflow"))?)?;
+            let mut memory=MemBuffer::try_new(scratch).map_err(|_|error("SECTION_MEMORY_LIMIT","surface solve scratch"))?;
+            faer::sparse::linalg::cholesky::LltRef::new(&symbolic,&values).solve_in_place_with_conj(faer::Conj::No,rhs.as_mut(),faer::Par::Seq,MemStack::new(&mut memory));
+            for k in 0..n {let q=(0..count).map(|i|currents[k][i]*mass[&ids[i]]).collect::<Vec<_>>();let mut action=vec![0.;count];for &[a,b]in &es{let length=(nodes[a][0]-nodes[b][0]).hypot(nodes[a][1]-nodes[b][1]);let i=lookup[&a];let j=lookup[&b];action[i]+=length*(2.*rhs[(i,k)]+rhs[(j,k)])/6.;action[j]+=length*(rhs[(i,k)]+2.*rhs[(j,k)])/6.;}let scale=q.iter().map(|v|v*v).sum::<f64>().sqrt();let residual=action.iter().zip(&q).map(|(a,b)|(a-b).powi(2)).sum::<f64>().sqrt()/scale.max(f64::MIN_POSITIVE);if !residual.is_finite()||residual>1e-10{return Err(error("SECTION_SURFACE_MASS","consistent weak flux projection residual"));}for i in 0..count{currents[k][i]=rhs[(i,k)];}integrated[k]=(0..count).map(|i|currents[k][i]*mass[&ids[i]]).sum();}
         }
         let mut gram = vec![vec![0.; n]; n];
         for [a, b] in &es {

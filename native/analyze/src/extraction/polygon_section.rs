@@ -16,7 +16,7 @@ pub struct Contour {
     pub holes_m: Vec<Vec<[f64; 2]>>,
 }
 impl Contour {
-    fn polygon(&self) -> Result<Polygon<f64>> {
+    pub(super) fn polygon(&self) -> Result<Polygon<f64>> {
         if self.outer_m.len() < 3
             || self
                 .outer_m
@@ -96,10 +96,19 @@ fn insert(cdt: &mut ConstrainedDelaunayTriangulation<Point2<f64>>, p: &Contour) 
     }
     Ok(())
 }
+/// Geometric corner grading splits existing straight edges without changing
+/// physical copper. Step halves with sqrt(cell area), so loss convergence also
+/// refines the current singularity instead of only the distant dielectric.
+fn corner_graded(p:&Contour,step:f64,cap:usize)->Result<Contour>{
+ let mut total=0usize;let mut rings=vec![];
+ for ring in std::iter::once(&p.outer_m).chain(&p.holes_m){let sharp=(0..ring.len()).map(|i|{let a=ring[(i+ring.len()-1)%ring.len()];let b=ring[i];let c=ring[(i+1)%ring.len()];let u=[b[0]-a[0],b[1]-a[1]];let v=[c[0]-b[0],c[1]-b[1]];(u[0]*v[0]+u[1]*v[1])<30_f64.to_radians().cos()*u[0].hypot(u[1])*v[0].hypot(v[1])}).collect::<Vec<_>>();let mut out=vec![];for i in 0..ring.len(){let a=ring[i];let b=ring[(i+1)%ring.len()];let length=(b[0]-a[0]).hypot(b[1]-a[1]);let mut cuts=vec![0.];let mut d=step;while d<length/2.{if sharp[i]{cuts.push(d/length);}if sharp[(i+1)%ring.len()]{cuts.push(1.-d/length);}d*=2.;if cuts.len()>256{return Err(error("SECTION_MESH_LIMIT","corner grading depth cap"));}}cuts.sort_by(f64::total_cmp);cuts.dedup();for t in cuts{total+=1;if total>cap{return Err(error("SECTION_MESH_LIMIT","corner vertex budget"));}out.push(if t==0.{a}else{[a[0]+t*(b[0]-a[0]),a[1]+t*(b[1]-a[1])]});}}rings.push(out);}
+ Ok(Contour{outer_m:rings.remove(0),holes_m:rings})
+}
 /// All signal conductors get an independent unit-potential basis. One physical
 /// reference polygon is required; detached reference pieces cannot be joined
 /// merely by equal net labels. Floating conductors require a separate condition.
-pub fn solve(r: &Request) -> Result<serde_json::Value> {
+pub fn solve(r: &Request) -> Result<serde_json::Value> {solve_with_corner_scale(r,1.)}
+fn solve_with_corner_scale(r:&Request,corner_scale:f64)->Result<serde_json::Value>{
     let start = Instant::now();
     if !(16..=200000).contains(&r.max_nodes)
         || !r.max_triangle_area_m2.is_finite()
@@ -191,7 +200,14 @@ pub fn solve(r: &Request) -> Result<serde_json::Value> {
     let mut cdt = ConstrainedDelaunayTriangulation::<Point2<f64>>::new();
     insert(&mut cdt, &r.domain)?;
     for c in &r.conductors {
-        insert(&mut cdt, &c.contour)?;
+        if let Some(loss)=&r.loss{
+            let ordered=r.conductors.iter().filter(|c|c.role=="signal").chain(r.conductors.iter().filter(|c|c.role=="reference")).collect::<Vec<_>>();
+            let index=ordered.iter().position(|m|m.id==c.id).unwrap();
+            let dim=*loss.minimum_skin_dimensions_m.get(index).ok_or_else(||error("SECTION_LOSS_INPUT","complete physical skin dimensions required"))?;
+            let bounds=geo::BoundingRect::bounding_rect(&domain).unwrap();let scale=bounds.width().max(bounds.height());let step=corner_scale*dim*r.max_triangle_area_m2.sqrt()/scale;
+            if !step.is_finite()||step<=64.*f64::EPSILON*scale{return Err(error("SECTION_MESH_PRECISION","unresolved physical corner step"));}
+            let graded=corner_graded(&c.contour,step,r.max_nodes.saturating_sub(cdt.num_vertices()))?;insert(&mut cdt,&graded)?;
+        }else{insert(&mut cdt,&c.contour)?;}
     }
     for d in &r.dielectrics {
         insert(&mut cdt, &d.contour)?;
@@ -409,7 +425,7 @@ fn loss_coefficients(
         .map(|c| c.id.clone())
         .collect::<Vec<_>>();
     let (surfaces, current_error) =
-        super::losses::surface_grams(nodes, &vacuum.reaction, &inverse, edges, &ids)?;
+        super::losses::surface_grams_projected(nodes, &vacuum.reaction, &inverse, edges, &ids,Some(super::local::AllocationBudget{max_bytes:r.max_memory_mib.checked_mul(1024*1024).and_then(|v|v.checked_sub(r.max_nodes*2048)).ok_or_else(||error("SECTION_MEMORY_LIMIT","surface projection remaining budget"))?,max_nodes:r.max_nodes,max_tetrahedra:2*r.max_nodes}))?;
     let mut regional = vec![vec![vec![0.; n]; n]; r.dielectrics.len()];
     for (k, t) in triangles.iter().enumerate() {
         let [a, b, c] = t.map(|i| nodes[i]);
@@ -439,6 +455,16 @@ fn loss_coefficients(
             format!("regional charge energy {regional_error:e}"),
         ));
     }
+    let samples=loss_samples(loss,p,&surfaces,&regional,&ids)?;
+    Ok(
+        serde_json::json!({"samples":samples,"surfaceIntegrals":surfaces,"regionalCapacitanceFPerM":regional,"currentNormalizationError":current_error,"regionalEnergyError":regional_error,"model":"vacuum unit-current surface impedance/regional dielectric energy perturbation; full coupled complex telegrapher modes","validBandHz":loss.band_hz}),
+    )
+}
+
+/// Reuse immutable frequency-independent surface/region energies. No field solve.
+pub(super) fn loss_samples(loss:&LossInput,p:&serde_json::Value,surfaces:&[super::losses::Surface],regional:&[Vec<Vec<f64>>],ids:&[String])->Result<Vec<serde_json::Value>> {
+ let capacitance:Vec<Vec<f64>>=serde_json::from_value(p["capacitanceFPerM"].clone()).map_err(|e|error("SECTION_CACHE",e))?;let n=capacitance.len();
+ if loss.conductivity_s_m.len()!=n+1||loss.minimum_skin_dimensions_m.len()!=n+1||surfaces.len()!=n+1||ids.len()!=n+1||loss.dielectric_loss_tangents.len()!=regional.len()||loss.conductivity_s_m.iter().chain(&loss.minimum_skin_dimensions_m).any(|v|!v.is_finite()||*v<=0.)||loss.dielectric_loss_tangents.iter().any(|v|!v.is_finite()||*v<0.||*v>0.05)||loss.band_hz.iter().any(|v|!v.is_finite())||loss.band_hz[0]<=0.||loss.band_hz[1]<loss.band_hz[0]||loss.frequencies_hz.is_empty()||loss.frequencies_hz.len()>8192||loss.frequencies_hz.len()*n*n*6>131072{return Err(error("SECTION_LOSS_INPUT","invalid restored loss/material dimensions or band"));}
     let mut samples = vec![];
     for (index, &f) in loss.frequencies_hz.iter().enumerate() {
         if !f.is_finite()
@@ -514,16 +540,14 @@ fn loss_coefficients(
             })
             .collect::<Vec<_>>();
         let conductor_bound = energy_bound(&resistance, &external)? / w;
-        let dielectric_bound = energy_bound(&conductance, &actual.c)? / w;
+        let dielectric_bound = energy_bound(&conductance, &capacitance)? / w;
         if conductor_bound > 0.05 || dielectric_bound > 0.05 {
             return Err(error("SECTION_WEAK_LOSS",format!("full matrix perturbation bounds {conductor_bound:e}/{dielectric_bound:e} exceed0.05")));
         }
-        let modes = lossy_modes(&resistance, &total, &conductance, &actual.c, w)?;
-        samples.push(serde_json::json!({"frequencyHz":f,"modes":modes,"conductorPerturbationBound":conductor_bound,"dielectricPerturbationBound":dielectric_bound,"capacitanceFPerM":actual.c,"resistanceOhmPerM":resistance,"internalInductanceHPerM":internal,"totalInductanceHPerM":total,"conductanceSPerM":conductance,"skinDepthM":skin}));
+        let modes = lossy_modes(&resistance, &total, &conductance, &capacitance, w)?;
+        samples.push(serde_json::json!({"frequencyHz":f,"modes":modes,"conductorPerturbationBound":conductor_bound,"dielectricPerturbationBound":dielectric_bound,"capacitanceFPerM":capacitance,"resistanceOhmPerM":resistance,"internalInductanceHPerM":internal,"totalInductanceHPerM":total,"conductanceSPerM":conductance,"skinDepthM":skin}));
     }
-    Ok(
-        serde_json::json!({"samples":samples,"surfaceIntegrals":surfaces,"regionalCapacitanceFPerM":regional,"currentNormalizationError":current_error,"regionalEnergyError":regional_error,"model":"vacuum unit-current surface impedance/regional dielectric energy perturbation; full coupled complex telegrapher modes","validBandHz":loss.band_hz}),
-    )
+ Ok(samples)
 }
 
 /// Exact uniform multiconductor telegrapher modes for the assembled complex
@@ -599,7 +623,8 @@ fn lossy_modes(
     Ok(out)
 }
 
-fn energy_bound(a: &[Vec<f64>], b: &[Vec<f64>]) -> Result<f64> {
+fn energy_bound(a:&[Vec<f64>],b:&[Vec<f64>])->Result<f64>{energy_metric_bound(a,b,false)}
+fn energy_metric_bound(a: &[Vec<f64>], b: &[Vec<f64>],signed:bool) -> Result<f64> {
     use faer::{Mat, Side};
     let n = a.len();
     let scale = b.iter().flatten().map(|x| x.abs()).fold(0., f64::max);
@@ -626,8 +651,8 @@ fn energy_bound(a: &[Vec<f64>], b: &[Vec<f64>]) -> Result<f64> {
     let values = relative
         .self_adjoint_eigenvalues(Side::Lower)
         .map_err(|e| error("SECTION_ENERGY", format!("{e:?}")))?;
-    let bound = values.iter().copied().fold(0., f64::max);
-    if !bound.is_finite() || values.iter().any(|v| *v < -1e-10 * bound.max(1.)) {
+    let bound = values.iter().map(|v|if signed{v.abs()}else{*v}).fold(0., f64::max);
+    if !bound.is_finite() || !signed&&values.iter().any(|v| *v < -1e-10 * bound.max(1.)) {
         return Err(error(
             "SECTION_ENERGY",
             "nonpassive loss coefficient matrix",
@@ -636,7 +661,7 @@ fn energy_bound(a: &[Vec<f64>], b: &[Vec<f64>]) -> Result<f64> {
     Ok(bound)
 }
 
-fn loss_change(a: &serde_json::Value, b: &serde_json::Value) -> f64 {
+fn loss_change_raw(a: &serde_json::Value, b: &serde_json::Value) -> f64 {
     let compare = |x: &serde_json::Value, y: &serde_json::Value| -> f64 {
         let Some(rows) = x.as_array() else {
             return f64::INFINITY;
@@ -687,6 +712,25 @@ fn loss_change(a: &serde_json::Value, b: &serde_json::Value) -> f64 {
         }
     }
     bound
+}
+
+fn loss_error_metric(y:&[Vec<f64>],floor:f64)->Result<Vec<Vec<f64>>>{
+ use faer::{Mat,Side};let n=y.len();let scale=(0..n).map(|i|y[i][i].abs()).fold(0.,f64::max);
+ if scale==0.{return Ok((0..n).map(|i|(0..n).map(|j|if i==j{floor}else{0.}).collect()).collect());}
+ let e=Mat::from_fn(n,n,|i,j|y[i][j]/scale).self_adjoint_eigen(Side::Lower).map_err(|e|error("SECTION_ENERGY",format!("{e:?}")))?;
+ Ok((0..n).map(|i|(0..n).map(|j|(0..n).map(|k|e.U()[(i,k)]*e.U()[(j,k)]*(scale*e.S()[k]).max(floor)).sum()).collect()).collect())
+}
+/// Physical total/component loss energies, with an explicit weak-energy floor.
+/// The floor belongs only to error normalization, never to physical R or G.
+fn loss_change(a:&serde_json::Value,b:&serde_json::Value,loss:&LossInput)->f64{
+ let read=|v:&serde_json::Value|serde_json::from_value::<Vec<Vec<f64>>>(v.clone()).ok();
+ let Some(ar)=read(&a["samples"][0]["resistanceOhmPerM"])else{return f64::INFINITY};let Some(br)=read(&b["samples"][0]["resistanceOhmPerM"])else{return f64::INFINITY};let Some(ag)=read(&a["samples"][0]["conductanceSPerM"])else{return f64::INFINITY};let Some(bg)=read(&b["samples"][0]["conductanceSPerM"])else{return f64::INFINITY};let n=ar.len();let frequency=a["samples"][0]["frequencyHz"].as_f64().unwrap();let omega=std::f64::consts::TAU*frequency;
+ let compare=|x:&[Vec<f64>],y:&[Vec<f64>],scale:f64|{let difference=(0..n).map(|i|(0..n).map(|j|x[i][j]-y[i][j]).collect::<Vec<_>>()).collect::<Vec<_>>();if scale==0.{return if difference.iter().flatten().all(|v|*v==0.){0.}else{f64::INFINITY};}let Ok(metric)=loss_error_metric(y,1e-3*scale)else{return f64::INFINITY};energy_metric_bound(&difference,&metric,true).unwrap_or(f64::INFINITY)};
+ let rs=(0..n).map(|i|ar[i][i].max(br[i][i])).fold(0.,f64::max);let gs=(0..n).map(|i|ag[i][i].max(bg[i][i])).fold(0.,f64::max);let mut bound=compare(&ar,&br,rs).max(compare(&ag,&bg,gs));
+ for (key,weights,scale) in [("surfaceIntegrals",loss.conductivity_s_m.iter().map(|s|(omega*super::MU0/(2.*s)).sqrt()).collect::<Vec<_>>(),rs),("regionalCapacitanceFPerM",loss.dielectric_loss_tangents.iter().map(|t|omega*t).collect::<Vec<_>>(),gs)]{
+  for(k,weight)in weights.into_iter().enumerate(){let (x,y)=if key=="surfaceIntegrals"{(&a[key][k]["gramPerM"],&b[key][k]["gramPerM"])}else{(&a[key][k],&b[key][k])};let Some(mut x)=read(x)else{return f64::INFINITY};let Some(mut y)=read(y)else{return f64::INFINITY};for row in &mut x{for v in row{*v*=weight;}}for row in &mut y{for v in row{*v*=weight;}}bound=bound.max(compare(&x,&y,scale));}
+ }
+ bound
 }
 
 fn component(mode: &serde_json::Value, key: &str, index: usize) -> Result<super::propagation::Z> {
@@ -828,10 +872,10 @@ pub(super) fn run_transport(input: super::Request) -> serde_json::Value {
             .transpose()?;
         let mut last: Option<serde_json::Value> = None;
         let mut last_loss: Option<serde_json::Value> = None;
-        let mut accepted = None;
+        let mut accepted = None;let mut corner_scale=1.;
         for level in 0..=max_refinements {
             r.max_seconds = seconds - started.elapsed().as_secs_f64();
-            let mut report = solve(&r)?;
+            let mut report = solve_with_corner_scale(&r,corner_scale)?;
             let p = report["parameters"].clone();
             let mut delta: f64 = 0.;
             if let Some(old) = &last {
@@ -856,8 +900,8 @@ pub(super) fn run_transport(input: super::Request) -> serde_json::Value {
             }
             let loss_delta = last_loss
                 .as_ref()
-                .map(|old| loss_change(&report["frequencyDependent"], old));
-            convergence.push(serde_json::json!({"lossPowerRelativeChangeBound":loss_delta,"level":level,"maxTriangleAreaM2":r.max_triangle_area_m2,"nodes":report["nodesM"].as_array().unwrap().len(),"triangles":report["triangles"].as_array().unwrap().len(),"maxMatrixRelativeChange":if last.is_some(){Some(delta)}else{None}}));
+                .map(|old| loss_change(&report["frequencyDependent"], old,r.loss.as_ref().unwrap()));
+            convergence.push(serde_json::json!({"cornerStepScale":corner_scale,"lossEnergyAbsoluteFloorRelativeToLargestTotalSelf":0.001,"unweightedIntegralChangeDiagnostic":last_loss.as_ref().map(|old|loss_change_raw(&report["frequencyDependent"],old)),"lossPowerRelativeChangeBound":loss_delta,"level":level,"maxTriangleAreaM2":r.max_triangle_area_m2,"nodes":report["nodesM"].as_array().unwrap().len(),"triangles":report["triangles"].as_array().unwrap().len(),"maxMatrixRelativeChange":if last.is_some(){Some(delta)}else{None}}));
             if last.is_some()
                 && delta <= 0.01
                 && (r.loss.is_none() || loss_delta.is_some_and(|v| v <= 0.02))
@@ -895,7 +939,11 @@ pub(super) fn run_transport(input: super::Request) -> serde_json::Value {
             if r.loss.is_some() {
                 last_loss = Some(report["frequencyDependent"].clone());
             }
-            r.max_triangle_area_m2 *= 0.25;
+            if last.is_some()&&delta<=0.01&&r.loss.is_some()&&loss_delta.is_some_and(|v|v>0.02){
+                // C/L bulk already converged: continue refining it, while
+                // focusing the next loss refinement on Cu corners.
+                r.max_triangle_area_m2*=0.5;corner_scale*=0.5;
+            }else{r.max_triangle_area_m2*=0.25;}
         }
         let mut report = accepted.ok_or_else(|| {
             error(
@@ -905,6 +953,7 @@ pub(super) fn run_transport(input: super::Request) -> serde_json::Value {
         })?;
         report["status"] = serde_json::json!("complete");
         report["diagnostics"] = serde_json::json!([]);
+        report["fieldRequestMesh"]=serde_json::json!(input.mesh);
         report["input"] = input.line;
         report["convergence"] = serde_json::json!(convergence);
         report["frequenciesHz"] = serde_json::json!(input.frequencies);
@@ -1179,4 +1228,14 @@ pub fn network(
     Ok(
         serde_json::json!({"representation":"S","referenceOhm":reference,"frequenciesHz":frequencies,"ports":(0..m).map(|i|format!("{}-{}",if i<n{"input"}else{"output"},i%n)).collect::<Vec<_>>(),"parameters":parameters,"quality":{"unitarityResidual":if lossy{None}else{Some(unitary)},"maxPassivityExcess":max_passivity_excess,"reciprocityResidual":reciprocity},"phaseConvention":"exp(+j omega t), physical currents enter both ends"}),
     )
+}
+
+#[cfg(test)]mod loss_energy_floor_tests{
+ use super::*;use serde_json::json;
+ #[test]fn signed_energy_changes_are_bounded_in_both_directions(){let m=vec![vec![1.,0.],vec![0.,0.001]];let d=vec![vec![-0.01,0.],vec![0.,0.00001]];assert!((energy_metric_bound(&d,&m,true).unwrap()-0.01).abs()<1e-12);let opposite=d.iter().map(|r|r.iter().map(|x|-x).collect()).collect::<Vec<_>>();assert!((energy_metric_bound(&opposite,&m,true).unwrap()-0.01).abs()<1e-12);assert!(energy_bound(&d,&m).is_err());}
+ #[test]fn weak_loss_floor_does_not_hide_a_strong_total_loss_change(){
+  let f=1e9;let loss=LossInput{frequencies_hz:vec![f],conductivity_s_m:vec![std::f64::consts::TAU*f*super::super::MU0/2.;2],minimum_skin_dimensions_m:vec![1.;2],dielectric_loss_tangents:vec![0.],band_hz:[f,f]};
+  let response=|strong:f64,weak:f64|json!({"samples":[{"frequencyHz":f,"resistanceOhmPerM":[[strong+weak]],"conductanceSPerM":[[0.]]}],"surfaceIntegrals":[{"gramPerM":[[strong]]},{"gramPerM":[[weak]]}],"regionalCapacitanceFPerM":[[[1.]]]});
+  let original=response(1.,0.);let weak=response(1.,1e-6);assert!(loss_change_raw(&weak,&original)>0.02);assert!(loss_change(&weak,&original,&loss)<0.002);assert!(loss_change(&response(1.03,0.),&original,&loss)>0.02);assert!(loss_change(&response(1.02001,0.),&original,&loss)>0.02);assert!(loss_change(&response(0.97,0.),&original,&loss)>0.02);
+ }
 }
