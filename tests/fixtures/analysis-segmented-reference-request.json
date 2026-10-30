@@ -1,0 +1,87 @@
+{
+  "acceptUnknownFillFreshness": true,
+  "airEdgeDivisions": 1,
+  "airFarEdgeDivisions": null,
+  "airFirstStepM": null,
+  "airMarginM": 0.002,
+  "airNearDistanceM": null,
+  "allowInsulatedCopperCuts": true,
+  "barrelConductivitySM": 58000000,
+  "boreRefinementRings": null,
+  "curveDeviationMm": 0.001,
+  "electrodes": [
+    {
+      "layer": "TOP",
+      "name": "signal-TOP",
+      "sourcePath": "pads[0]",
+      "upper": false
+    },
+    {
+      "layer": "TOP",
+      "name": "signal-TOP-1",
+      "sourcePath": "pads[1]",
+      "upper": false
+    },
+    {
+      "layer": "BOTTOM",
+      "name": "return-BOTTOM",
+      "sourcePath": "pads[2]",
+      "upper": true
+    },
+    {
+      "layer": "BOTTOM",
+      "name": "return-BOTTOM-1",
+      "sourcePath": "pads[3]",
+      "upper": true
+    }
+  ],
+  "finishedHolePlatingM": 2.5e-05,
+  "interfaceGrowth": null,
+  "interfaceStepM": null,
+  "maxTriangleAreaM2": 1e-06,
+  "maxVerticalStepM": 0.002,
+  "minTriangleAngleDeg": 0,
+  "ports": [
+    [
+      "signal-TOP",
+      "return-BOTTOM"
+    ],
+    [
+      "signal-TOP-1",
+      "return-BOTTOM-1"
+    ]
+  ],
+  "roiMm": [
+    [
+      -0.1,
+      -0.530000011920929
+    ],
+    [
+      10.1,
+      0.530000011920929
+    ]
+  ],
+  "stack": [
+    {
+      "conductivitySM": 58000000,
+      "copper": true,
+      "epsilonR": null,
+      "name": "TOP",
+      "thicknessM": 1e-05
+    },
+    {
+      "conductivitySM": null,
+      "copper": false,
+      "epsilonR": 4,
+      "name": "substrate",
+      "thicknessM": 0.0001
+    },
+    {
+      "conductivitySM": 58000000,
+      "copper": true,
+      "epsilonR": null,
+      "name": "BOTTOM",
+      "thicknessM": 1e-05
+    }
+  ]
+}

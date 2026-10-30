@@ -283,3 +283,6 @@ Final focused release command covering board_prepare, board_response, developer_
 Source commits: `81ce6e6` library, `74f12d1` initial checkpoint docs, `a9f23dc` integration/cache/scenarios, `e312e3c` DC/dynamic compatibility, `157a8c2` lossless developer journal, `7e87bf8` complete section warm measurement. No push. User-owned `native/analyze/debugging/` and other pre-existing inputs are preserved. Review the final matrix and raw manifests rather than interpreting historical0/3/88.8% paragraphs as current vetoes.
 
 Final-binary user supervisor records contain four cold attempts (including the retained failed STM32 attempt), cumulative **655.025870s**, and three fresh-process restores, cumulative **7.859828s**. These are separate bounded requests, not one300s cold request or free prefilling. All field work in each cold is included.
+
+
+**Actual section/local continuation:** [implementation and independent evidence](p7-segmented-channel-evidence.md) records the real no-scope numerical slab/P6 path and retained delay failure. Historical statements that no assembler exists are superseded; complete P7 and P8/P11 physical admission remain open.

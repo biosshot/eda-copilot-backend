@@ -101,3 +101,6 @@ Whole P7 remains unclosed. Required positive no-scope STM32 admission is blocked
 ## Complete-channel continuation,2026-10-30
 
 See [the continuation report](p7-complete-channel-continuation.md). Added an actual remote U5.7→J5.2 no-scope planning regression retaining D5/JP2 branches and BOTTOM copper, plus per-region inclusion/exclusion audit. Earlier same-via TOP/BOTTOM examples remain local transitions, not full remote channels. Explicit bounded developer memory/time verification no longer stops at the historical2GiB/300s guards; production defaults and physical band remain unchanged. Longitudinal electrical segmentation/composition and local3D HF operators remain absent; P7 stays open.
+
+
+**Actual section/local continuation:** [implementation and independent evidence](p7-segmented-channel-evidence.md) records the real no-scope numerical slab/P6 path and retained delay failure. Historical statements that no assembler exists are superseded; complete P7 and P8/P11 physical admission remain open.
