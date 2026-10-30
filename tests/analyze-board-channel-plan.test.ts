@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {executeScenario} from '../src/analyze/analysis-dsl/scenario.ts';
 import {localRequest} from '../src/analyze/analysis-dsl/local-request.ts';
-import {boardChannelPlan} from '../src/analyze/board-channel-plan.ts';
+import {boardChannelPlan,createBoardChannelPlanner} from '../src/analyze/board-channel-plan.ts';
 import {validateChannelOwnership} from '../src/analyze/segmented-channel.ts';
 import {segmentedCoupon,segmentedCouponDsl} from './helpers/pcb-analysis-segmented-coupon.ts';
 async function extract(board:any,code:string){let plan:any;
@@ -26,4 +26,18 @@ test('actual remote slab plan retains branches, layer changes and both physical 
  // Close geometric changes deliberately merge into one joint solve; a short
  // electrical path must never erase the remote branch or surrounding coupling.
  assert.ok(p.blocks.every((b:any)=>b.kind==='local'));
+});
+
+test('channel refinement reuses one captured board and preserves independent plan results',async()=>{
+ const board=segmentedCoupon();
+ const output=await executeScenario({board,code:segmentedCouponDsl.split('a.plot(')[0]},{filename:'reuse-plan.js',maxEntries:1000,maxOutputBytes:4*1024*1024},()=>{},async task=>{
+  let contacts:any;const base=localRequest(task as any,p=>contacts=p.contacts);
+  const plan=createBoardChannelPlanner(board,base,contacts);
+  const initial=plan();
+  assert.deepEqual(plan({domainScale:2,magneticPatchLevel:2}),boardChannelPlan(board,base,contacts,{domainScale:2,magneticPatchLevel:2}));
+  // A caller edit cannot change the board already captured for this calculation.
+  board.pads=[];
+  assert.deepEqual(plan(),initial);
+  return {id:'plan',status:'complete',method:'geometry reuse control',diagnostics:[],assumptions:[],metrics:{}};
+ });assert.equal(output.status,'complete',JSON.stringify(output.error));
 });

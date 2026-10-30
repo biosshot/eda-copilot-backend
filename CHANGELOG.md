@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reuse one captured native board geometry across automatic-channel domain and mesh refinements. Preserve independent-plan results and snapshot isolation; record the rejected graph-ordering memory experiment without changing the production magnetic solver. Full P7 resource and physical acceptance remains open.
+
 - Add opt-in Windows OS-paging supervision using system commit headroom and process-tree private commit, with cancellation and reproducible policy tests. Report sparse factor memory components before admission and project magnetic basis actions incrementally to avoid retaining every full-space image simultaneously.
 
 - Add explicit experimental P7 compact-v1 airP2 / retained near-copper trace4 magnetic profiles with unchanged CPU/F64 direct FEM and baseline defaults; reject failed lower-trace candidates using independent magnetic energy evidence. Separate numerical profiles in cache identity/provenance and refuse changes within one executor. Record measured memory/fill/accuracy and resource limitations in p7-memory-results.md; whole P7 remains open.

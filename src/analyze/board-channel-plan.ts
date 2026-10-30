@@ -6,8 +6,14 @@ const fail=(s:string):never=>{throw new Error('CHANNEL_SEGMENTATION: '+s);};
  * branches. All nonuniform/coupled copper in each local slab is solved jointly.
  * Numerical sections use captured finite copper, never a closest template. */
 export function boardChannelPlan(board:any,base:any,contacts:{sourcePath:string;layer:string}[],options:{domainScale?:number;magneticPatchLevel?:1|2}={}):SegmentedChannel & {audit:unknown}{
+ return createBoardChannelPlanner(board,base,contacts)(options);
+}
+/** One captured geometry and native section session per synchronous channel
+ * request. Domain/mesh checks reuse this preparation, never a global board cache. */
+export function createBoardChannelPlanner(board:any,base:any,contacts:{sourcePath:string;layer:string}[]){
  const execute=createProblemExecutor(true),boardJson=JSON.stringify(board);
  const g:AnalysisGeometryReport=execute({kind:'prepare-geometry',boardJson});
+ return (options:{domainScale?:number;magneticPatchLevel?:1|2}={}):SegmentedChannel & {audit:unknown}=>{
  const island=(c:{sourcePath:string;layer:string})=>{const region=g.regions.filter(r=>r.source.path===c.sourcePath&&r.layer===c.layer);if(region.length!==1)fail('Ambiguous physical endpoint');return g.islands.find(i=>i.region_ids.includes(region[0].id))??fail('Unconfirmed endpoint');};
  const signal=island(contacts[0]);if(signal.id!==island(contacts[1]).id)fail('Disconnected signal endpoints');
  const signalRegions=g.regions.filter(r=>signal.region_ids.includes(r.id));
@@ -97,4 +103,5 @@ export function boardChannelPlan(board:any,base:any,contacts:{sourcePath:string;
  if(ports.length!==2)fail('Physical endpoints must belong to complete local source regions');
  ports.sort((a,b)=>a.name==='input'?-1:b.name==='input'?1:0);
  return {blocks,ports,coverage:ownership(span[0],span[1]),audit:{axis,slabs,ownershipConvention:'Original source polygon clipped by longitudinal coordinate interval, with layer/barrel ownership; not an arclength approximation',copperDecisions:g.regions.map(r=>({regionId:r.id,sourcePath:r.source.path,layer:r.layer,islandId:g.islands.find(i=>i.region_ids.includes(r.id))?.id,role:signal.region_ids.includes(r.id)?'signal':returnRegionIds.has(r.id)?'return':'neighbour',included:relevant.includes(r),reason:relevant.includes(r)?'Captured physical copper intersects the full signal/port environmental domain; disjoint slab ownership retains its branches and joint in-slab coupling':'Outside current numerical domain; snapshot retained and expansion checked'})),selectedRegionIds:relevant.map(r=>r.id),excludedRegionIds:g.regions.filter(r=>!relevant.includes(r)).map(r=>({id:r.id,reason:'Outside current numerical domain; source snapshot preserved and domain expansion required'})),geometryDiagnostics:g.diagnostics,geometryFindings:g.findings,transverseMm:transverse,signalIsland:signal.id,returnIslands:returnIslands.map(i=>i.id),policy:'whole confirmed signal island; all branches and neighbouring slab copper retained; no shortest path',lossApproximation:'Uniform-current DC ribbon R/internal L in sections; no verified proximity/skin-transition or complete5% certificate',accuracy:'conditional; joint-local/section interaction and domain refinement remain required'}};
+ };
 }

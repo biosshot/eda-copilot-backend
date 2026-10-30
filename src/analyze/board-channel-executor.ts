@@ -1,4 +1,4 @@
-import {boardChannelPlan} from './board-channel-plan.ts';
+import {createBoardChannelPlanner} from './board-channel-plan.ts';
 import {solveSegmentedChannel} from './segmented-channel.ts';
 export function channelResponseChange(a:any,b:any){
  if(JSON.stringify(a.ports)!==JSON.stringify(b.ports)||JSON.stringify(a.frequenciesHz)!==JSON.stringify(b.frequenciesHz))throw new Error('CHANNEL_CONVERGENCE: physical output mapping/axis changed');
@@ -23,10 +23,11 @@ export function channelResponseChange(a:any,b:any){
  * assembled response, with fixed unit/opposite power-wave drives and floors. */
 export function solveBoardChannel(board:any,base:any,contacts:{sourcePath:string;layer:string}[],frequencies:number[],budget:{maxSeconds:number;maxMemoryMiB:number}){
  const start=performance.now(),left=()=>({...budget,maxSeconds:budget.maxSeconds-(performance.now()-start)/1000});
+ const planChannel=createBoardChannelPlanner(board,base,contacts);
  const axis=[...frequencies];for(const f of [1000,Math.sqrt(1e7),10000])if(!axis.some(x=>Math.abs(x-f)<=64*Number.EPSILON*Math.max(x,f)))axis.push(f);axis.sort((a,b)=>a-b);let previous:any;const verification:any[]=[];
  for(const domainScale of [1,2,4]){
   let coarse:any,fine:any,plan:any;const runs:any[]=[];
-  for(const level of [1,2]as const){plan=boardChannelPlan(board,base,contacts,{domainScale,magneticPatchLevel:level});const r=solveSegmentedChannel(plan,axis,left());runs.push({level,evidence:r.evidence,wallSeconds:r.wallSeconds});if(level===1)coarse=r;else fine=r;}
+  for(const level of [1,2]as const){plan=planChannel({domainScale,magneticPatchLevel:level});const r=solveSegmentedChannel(plan,axis,left());runs.push({level,evidence:r.evidence,wallSeconds:r.wallSeconds});if(level===1)coarse=r;else fine=r;}
   const spatial=channelResponseChange(coarse.result,fine.result);verification.push({domainScale,spatial,runs,wallSeconds:(performance.now()-start)/1000});
   if(spatial.maxRelativeChange>.02)throw new Error('CHANNEL_SPATIAL_CONVERGENCE: '+JSON.stringify(verification));
   if(previous){const domain=channelResponseChange(previous.result,fine.result);verification.at(-1).domain=domain;if(domain.maxRelativeChange<=.02){const output=JSON.stringify(axis)===JSON.stringify(frequencies)?fine:solveSegmentedChannel(plan,frequencies,left());return {...output,audit:plan.audit,verification,blocks:plan.blocks.map((b:any)=>({id:b.id,kind:b.kind,cuts:b.cuts})),wallSeconds:(performance.now()-start)/1000};}}
