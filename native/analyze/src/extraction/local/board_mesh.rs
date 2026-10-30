@@ -39,6 +39,8 @@ pub struct Request {
     #[serde(default)]
     pub bore_refinement_rings:Option<usize>,
     pub max_triangle_area_m2:f64,
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    pub electric_max_edge_m:Option<f64>,
     pub max_vertical_step_m:f64,
     /// Optional geometric z grading into dielectric/air from every metal face.
     #[serde(default)]
@@ -63,12 +65,14 @@ pub struct Request {
 /// Geometry-bound coefficient identity excludes only independent field/current
 /// discretization controls. It retains every authored physical assumption.
 pub fn physical_signature(r:&Request)->serde_json::Value {
-    serde_json::json!({"roiMm":r.roi_mm,"stack":r.stack,"finishedHolePlatingM":r.finished_hole_plating_m,"barrelConductivitySM":r.barrel_conductivity_s_m,"curveDeviationMm":r.curve_deviation_mm,"electrodes":r.electrodes,"ports":r.ports,"cutPlanes":r.cut_planes,"acceptUnknownFillFreshness":r.accept_unknown_fill_freshness,"allowInsulatedCopperCuts":r.allow_insulated_copper_cuts})
+    let mut value=serde_json::json!({"roiMm":r.roi_mm,"stack":r.stack,"finishedHolePlatingM":r.finished_hole_plating_m,"barrelConductivitySM":r.barrel_conductivity_s_m,"curveDeviationMm":r.curve_deviation_mm,"electrodes":r.electrodes,"ports":r.ports,"acceptUnknownFillFreshness":r.accept_unknown_fill_freshness,"allowInsulatedCopperCuts":r.allow_insulated_copper_cuts});
+    if !r.cut_planes.is_empty(){value["cutPlanes"]=serde_json::json!(r.cut_planes);}
+    value
 }
 /// Internal section/local interface on a genuine axis-aligned ROI boundary.
 #[derive(Clone,Debug,PartialEq,serde::Deserialize,serde::Serialize)]
 #[serde(deny_unknown_fields,rename_all="camelCase")]
-pub struct CutPlane {pub axis:usize,pub at_mm:f64}
+pub struct CutPlane {pub axis:usize,pub at_mm:f64,#[serde(default,skip_serializing_if="Option::is_none")]pub span_mm:Option<[f64;2]>}
 #[derive(Clone,Debug,PartialEq,serde::Deserialize,serde::Serialize)]
 #[serde(deny_unknown_fields,rename_all="camelCase")]
 pub struct Electrode {
@@ -80,6 +84,8 @@ pub struct Electrode {
 }
 pub struct BoardMesh {
     pub mesh:LayeredMesh,
+    pub planar_nodes_mm:Vec<[f64;2]>,
+    pub planar_triangles:Vec<[usize;3]>,
     pub conductivity_s_m:Vec<f64>,
     pub geometry:PreparationReport,
     pub origin_mm:[f64;2],
@@ -131,7 +137,11 @@ fn barrel_outer(bore:&MultiPolygon<f64>,center:[f64;2],radius:f64,plating:f64,to
     Ok(outer)
 }
 pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)->Result<BoardMesh> {
+    build_supported(board,r,budget,max_wall,None)
+}
+pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration,support:Option<(&[[f64;2]],&[[usize;3]])>)->Result<BoardMesh> {
     let start=Instant::now();
+    if r.electric_max_edge_m.is_some_and(|v|!v.is_finite()||v<=0.||v>0.1){return Err(error("BOARD_PROFILE","positive finite electric refinement spacing required"));}
     if r.interface_step_m.is_some_and(|s|!s.is_finite()||s<=0.) {return Err(error("BOARD_PROFILE","positive finite interface step required"));}
     if r.interface_growth.is_some_and(|s|!s.is_finite()||!(1.1..=2.).contains(&s))||r.interface_growth.is_some()&&r.interface_step_m.is_none() {return Err(error("BOARD_PROFILE","interface growth1.1..2 requires an interface step"));}
     if r.air_far_edge_divisions.is_some_and(|n|!(1..=32).contains(&n))||r.air_first_step_m.is_some_and(|v|!v.is_finite()||v<=0.||v>r.air_margin_m)||r.air_near_distance_m.is_some_and(|v|!v.is_finite()||v<=0.||v>r.air_margin_m)||r.air_far_edge_divisions.is_some()&&r.air_near_distance_m.is_none()||r.bore_refinement_rings.is_some_and(|n|n>4){return Err(error("BOARD_PROFILE","finite positive air grading, near/far divisions1..32 and bore rings0..4 required"));}
@@ -146,7 +156,7 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
     let _scope=Context::install(Some(context.clone()));
     let geometry=geometry::prepare(board,options);
     check(start,max_wall)?;
-    if geometry.outline.is_none() || !geometry.findings.is_empty() || !geometry.excluded.is_empty() || geometry.fills.iter().any(|f|f.status!="available") {
+    if geometry.outline.is_none() || geometry.findings.iter().any(|f|f.code!="net_islands") || !geometry.excluded.is_empty() || geometry.fills.iter().any(|f|f.status!="available") {
         return Err(error("BOARD_GEOMETRY","complete trustworthy copper, outline and native fills required"));
     }
     if !r.accept_unknown_fill_freshness&&geometry.fills.iter().any(|f|f.freshness.as_deref()!=Some("current")) {return Err(error("BOARD_FILL_POLICY","CAD fill freshness is not confirmed; an explicit captured-snapshot policy is required"));}
@@ -188,17 +198,26 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
     for hole in &geometry.holes {
         let bore=areas::union(hole.polygons.iter().map(polygon));
         if !bore.intersects(&roi) {continue;}
-        if !hole.plated || !hole.span_confirmed {return Err(error("BOARD_PADSTACK","ROI hole requires confirmed ordinary plated through-via"));}
-        let via=board.vias.iter().find(|v|v.source.path==hole.source.path).ok_or_else(||error("BOARD_PADSTACK","only explicit ordinary round vias supported; pad drills require their own padstack"))?;
-        if via.kind!=crate::model::ViaKind::Through || via.first_layer!=0 || via.last_layer+1!=board.layers.len() {return Err(error("BOARD_PADSTACK","only confirmed ordinary through-via span supported"));}
+        if !hole.span_confirmed {return Err(error("BOARD_PADSTACK","ROI hole requires a confirmed physical span"));}
+        if !hole.plated{bores=areas::union(bores.0.into_iter().chain(bore.0));continue;}
+        let (center,radius,first,last)=if let Some(via)=board.vias.iter().find(|v|v.source.path==hole.source.path){
+            if via.kind!=crate::model::ViaKind::Through||via.first_layer!=0||via.last_layer+1!=board.layers.len(){return Err(error("BOARD_PADSTACK","only confirmed ordinary through-via span supported"));}
+            ([via.at.x,via.at.y],via.drill_mm/2.,via.first_layer,via.last_layer)
+        }else if let Some(pad)=board.pads.iter().find(|p|p.source.path==hole.source.path){
+            let drill=pad.drill.as_ref().ok_or_else(||error("BOARD_PADSTACK","prepared pad bore has no authored drill"))?;
+            if drill.shape!=crate::model::DrillShape::Round{return Err(error("BOARD_PADSTACK","plated slot requires its explicit capsule-wall support; no round substitution"));}
+            if !drill.plated||pad.layers.len()!=board.layers.len()||(0..board.layers.len()).any(|l|!pad.layers.contains(&l)){return Err(error("BOARD_PADSTACK","confirmed round through-pad stack required"));}
+            let center=geometry::primitives::transform_point(drill.offset.unwrap_or(crate::model::Point{x:0.,y:0.}),pad.at,pad.rotation_deg);
+            ([center.x,center.y],drill.diameter_mm/2.,0,board.layers.len()-1)
+        }else{return Err(error("BOARD_PADSTACK","plated bore has no explicit supported source padstack"));};
         let plating=r.finished_hole_plating_m.ok_or_else(||error("BOARD_PADSTACK","finished-hole plating thickness is missing"))?;
         let sigma=r.barrel_conductivity_s_m.ok_or_else(||error("BOARD_PADSTACK","barrel conductivity is missing"))?;
-        let outer=barrel_outer(&bore,[via.at.x,via.at.y],via.drill_mm/2.,plating*1e3,options.max_deviation_mm+2.*geometry.boolean_error_bound_mm)?;
+        let outer=barrel_outer(&bore,center,radius,plating*1e3,options.max_deviation_mm+2.*geometry.boolean_error_bound_mm)?;
         let outer=areas::one(outer);
         if areas::difference(&outer,&roi).unsigned_area()>0. {return Err(error("BOARD_ROI","ROI cuts through via barrel; choose a complete via"));}
         let annulus=areas::difference(&outer,&bore);
         if annulus.unsigned_area()<=0. {return Err(error("BOARD_PADSTACK","plating annulus disappeared"));}
-        let span=[spans[&board.layers[via.first_layer].name][0],spans[&board.layers[via.last_layer].name][1]];
+        let span=[spans[&board.layers[first].name][0],spans[&board.layers[last].name][1]];
         shapes.push(Shape{poly:annulus,id:hole.id.clone(),sigma,span});
         bores=areas::union(bores.0.into_iter().chain(bore.0));barrel_ids.push(hole.id.clone());
     }
@@ -220,6 +239,10 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
     for e in &r.electrodes {
         if e.name.trim().is_empty()||electrode_polygons.contains_key(&e.name)||!spans.contains_key(&e.layer) {return Err(error("BOARD_ELECTRODE","unique named electrodes on known copper layers required"));}
         let mut poly=areas::intersection(&areas::union(geometry.regions.iter().filter(|v|v.source.path==e.source_path&&v.layer==e.layer).map(|v|polygon(&v.polygon))),&roi);
+        if let Some(cut)=r.cut_planes.get(&e.name){
+            if cut.axis>1||cut.span_mm.is_some_and(|s|s.iter().any(|v|!v.is_finite())||s[0]>=s[1]){return Err(error("BOARD_CUT","finite positive transverse contact interval required"));}
+            if let Some(span)=cut.span_mm {let mut bounds=r.roi_mm;bounds[0][1-cut.axis]=span[0];bounds[1][1-cut.axis]=span[1];poly=areas::intersection(&poly,&areas::one(rect(bounds)));}
+        }
         // An interior foil face can be occupied by a barrel continuing into the
         // adjacent dielectric. Only its actually exposed source-copper annulus
         // is a finite terminal; never cut the barrel or charge a buried face.
@@ -283,14 +306,20 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
     // Every ring, including all overlapping source boundaries, constrains the
     // one XY arrangement. Split intersections rather than centroid ownership on
     // an unconstrained triangulation. No feature/area threshold is applied.
-    for poly in atoms.iter().map(|a|&a.poly) {for ring in std::iter::once(poly.exterior()).chain(poly.interiors()) {for line in ring.lines() {
-        check(start,max_wall)?;
-        if cdt.num_vertices()+cdt.num_undirected_edges()+2>budget.max_nodes {return Err(error("MEMORY_LIMIT","board constraint intersection preflight"));}
-        budget.check((cdt.num_vertices()+cdt.num_undirected_edges()+2).checked_mul(4096).ok_or_else(||error("MEMORY_LIMIT","arrangement overflow"))?)?;
-        let a=cdt.insert(Point2::new(line.start.x,line.start.y)).map_err(|e|error("BOARD_MESH",&e.to_string()))?;
-        let b=cdt.insert(Point2::new(line.end.x,line.end.y)).map_err(|e|error("BOARD_MESH",&e.to_string()))?;
-        if a!=b {cdt.add_constraint_and_split(a,b,|p|p);}
-    }}}
+    let field_spacing=if support.is_some(){r.electric_max_edge_m.map(|v|v*1e3)}else{None};
+    let near=r.stack.iter().map(|l|l.thickness_m).sum::<f64>()*4e3;
+    let near_box=[[roi_bounds[0][0]-near,roi_bounds[0][1]-near],[roi_bounds[1][0]+near,roi_bounds[1][1]+near]];
+    let mut segment=|a:[f64;2],b:[f64;2]|->Result<()>{
+        let refine=field_spacing.filter(|_|(0..2).all(|k|a[k].min(b[k])<=near_box[1][k]&&a[k].max(b[k])>=near_box[0][k]));
+        let mut divisions=1usize;if let Some(spacing)=refine{let length=(b[0]-a[0]).hypot(b[1]-a[1]);while length/divisions as f64>spacing{divisions=divisions.checked_mul(2).ok_or("field edge subdivision overflow")?;if divisions>budget.max_nodes{return Err(error("MEMORY_LIMIT","field edge subdivision node cap"));}}}
+        let mut previous=None;for i in 0..=divisions{check(start,max_wall)?;if cdt.num_vertices()+cdt.num_undirected_edges()+2>budget.max_nodes{return Err(error("MEMORY_LIMIT","board constraint subdivision preflight"));}budget.check((cdt.num_vertices()+cdt.num_undirected_edges()+2).checked_mul(4096).ok_or("arrangement overflow")?)?;
+            let fraction=i as f64/divisions as f64;let p=if i==0{a}else if i==divisions{b}else{std::array::from_fn(|k|a[k]*(1.-fraction)+b[k]*fraction)};
+            let node=cdt.insert(Point2::new(p[0],p[1])).map_err(|e|error("BOARD_MESH",&e.to_string()))?;if let Some(old)=previous{if old!=node{cdt.add_constraint_and_split(old,node,|p|p);}}previous=Some(node);
+        }Ok(())
+    };
+    for poly in atoms.iter().map(|a|&a.poly){for ring in std::iter::once(poly.exterior()).chain(poly.interiors()){for line in ring.lines(){segment([line.start.x,line.start.y],[line.end.x,line.end.y])?;}}}
+    if let Some((nodes,triangles))=support{let mut edges=std::collections::BTreeSet::new();for t in triangles{for k in 0..3{let mut e=[t[k],t[(k+1)%3]];e.sort();edges.insert(e);}}for [a,b]in edges{segment(nodes[a],nodes[b])?;}}
+    drop(segment);
     let max_xy=budget.max_nodes.min(budget.max_bytes/4096);
     let refinement=cdt.refine(RefinementParameters::new().keep_constraint_edges().with_angle_limit(AngleLimit::from_deg(r.min_triangle_angle_deg.unwrap_or(30.))).with_max_allowed_area(r.max_triangle_area_m2*1e6).with_max_additional_vertices(max_xy.saturating_sub(cdt.num_vertices())));
     if !refinement.refinement_complete {return Err(error("MEMORY_LIMIT","board XY mesh refinement incomplete within budget"));}
@@ -316,7 +345,8 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
         for edge in 0..4 {for i in 0..divisions {let t=i as f64/divisions as f64;let a=corners[edge];let b=corners[(edge+1)%4];cdt.insert(Point2::new(a[0]+t*(b[0]-a[0]),a[1]+t*(b[1]-a[1]))).map_err(|e|error("BOARD_MESH",&e.to_string()))?;}}
         if distance==margin {break;}distance=(2.*distance).min(margin);
     }
-    let xy_m:Vec<_>=cdt.vertices().map(|v|[(v.position().x-origin_mm[0])*1e-3,(v.position().y-origin_mm[1])*1e-3]).collect();
+    let planar_nodes_mm:Vec<_>=cdt.vertices().map(|v|[v.position().x,v.position().y]).collect();
+    let xy_m:Vec<_>=planar_nodes_mm.iter().map(|p|[(p[0]-origin_mm[0])*1e-3,(p[1]-origin_mm[1])*1e-3]).collect();
     let mut triangles=vec![];let mut centres=vec![];let mut overlaps=vec![];
     for face in cdt.inner_faces() {
         let v=face.vertices();let centre=Point::new(v.iter().map(|p|p.position().x).sum::<f64>()/3.,v.iter().map(|p|p.position().y).sum::<f64>()/3.);
@@ -340,7 +370,7 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
     z_m.sort_unstable_by(f64::total_cmp);z_m.dedup();
     let count=triangles.len().checked_mul(z_m.len()-1).and_then(|v|v.checked_mul(3)).ok_or_else(||error("MEMORY_LIMIT","board tetra count overflow"))?;
     budget.check(count.checked_mul(2048).ok_or_else(||error("MEMORY_LIMIT","board tetra memory overflow"))?)?;
-    if count>budget.max_tetrahedra || xy_m.len().checked_mul(z_m.len()).is_none_or(|n|n>budget.max_nodes) {return Err(error("MEMORY_LIMIT","board extrusion exceeds budget"));}
+    if count>budget.max_tetrahedra || xy_m.len().checked_mul(z_m.len()).is_none_or(|n|n>budget.max_nodes) {return Err(error("MEMORY_LIMIT",&format!("board extrusion nodes={} (cap{}), tetrahedra={count} (cap{}) exceed explicit count budget",xy_m.len().saturating_mul(z_m.len()),budget.max_nodes,budget.max_tetrahedra)));}
     let mut materials=vec![];let mut sigma_per_triangle=vec![];
     for slab in z_m.windows(2) {
         let middle=(slab[0]+slab[1])/2.;let layer=r.stack.iter().zip(&stack_spans).find(|(_,s)|middle>s[0]&&middle<s[1]).map(|(l,_)|l);
@@ -366,6 +396,7 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
         }
         materials.push(row);sigma_per_triangle.push(sigma);
     }
+    let planar_triangles=triangles.clone();
     let mesh=mesh::extrude(&LayeredInput{xy_m,triangles,boundary_edges,z_m,materials},budget)?;
     let conductivity_s_m=mesh.copper_tetrahedra.iter().map(|t|sigma_per_triangle[t.slab][t.planar_triangle]).collect();
     let mut certified_electrodes=BTreeMap::new();let mut electrode_areas_m2=BTreeMap::new();let mut max_contact_area_change:f64=0.;
@@ -400,7 +431,7 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
         electrode_areas_m2.insert(e.name.clone(),area);certified_electrodes.insert(e.name.clone(),(e.clone(),nodes.into_iter().collect()));
     }
     check(start,max_wall)?;
-    Ok(BoardMesh{mesh,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,certified_electrodes})
+    Ok(BoardMesh{mesh,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,certified_electrodes})
 }
 impl BoardMesh {
     /// End geometry preparation before a separately budgeted field phase.

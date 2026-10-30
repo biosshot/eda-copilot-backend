@@ -37,6 +37,19 @@ fn cube(z:Vec<f64>,gap:bool,shift:bool)->LayeredMesh {
  mesh::extrude(&LayeredInput{xy_m,triangles,boundary_edges,z_m:z,materials},budget()).unwrap()
 }
 #[test]
+fn independent_xy_surface_sampling_preserves_affine_energy_and_refuses_changed_copper(){
+ let coarse=cube(vec![-0.001,0.,0.001,0.002],false,false);
+ let g=[-0.001,0.,0.0005,0.001,0.002];let mut triangles=vec![];let mut inside=vec![];
+ for j in 0..4{for i in 0..4{let a=j*5+i;triangles.extend([[a,a+1,a+6],[a,a+6,a+5]]);inside.extend([(1..=2).contains(&i)&&(1..=2).contains(&j);2]);}}
+ let mut boundary_edges=vec![];for i in 0..4{boundary_edges.extend([[i,i+1],[20+i,21+i],[5*i,5*(i+1)],[5*i+4,5*(i+1)+4]]);}
+ let z=vec![-0.001,0.,0.0005,0.001,0.002];let materials=z.windows(2).map(|s|inside.iter().map(|&cu|if cu&&s[0]>=0.&&s[1]<=0.001{Material::Copper{source_ids:vec!["actual-cube".into()]}}else{Material::Dielectric{label:"air".into(),epsilon_r:1.}}).collect()).collect();
+ let fine=mesh::extrude(&LayeredInput{xy_m:g.iter().flat_map(|&y|g.iter().map(move|&x|[x,y])).collect(),triangles,boundary_edges,z_m:z,materials},budget()).unwrap();
+ let cs=volume_current::assemble(&coarse,&vec![58e6;coarse.copper_tetrahedra.len()],&[],budget()).unwrap();let fs=volume_current::assemble(&fine,&vec![58e6;fine.copper_tetrahedra.len()],&[],budget()).unwrap();
+ let lifted=volume_field::Field::new_surface_refined(&fine,&coarse,&cs,budget(),std::time::Duration::from_secs(10)).unwrap();let direct=volume_field::Field::new(&fine,&fs,budget()).unwrap();
+ for slopes in [[0.,0.,0.],[700.,-1100.,2300.]]{let volts=|mesh:&LayeredMesh,s:&volume_current::Space|s.mesh_nodes.iter().map(|ns|1.+(0..3).map(|k|slopes[k]*mesh.nodes_m[ns[0]][k]).sum::<f64>()).collect::<Vec<_>>();let vc=volts(&coarse,&cs);let vf=volts(&fine,&fs);let qc=lifted.apply(&vc).unwrap();let qf=direct.apply(&vf).unwrap();let ec=vc.iter().zip(qc).map(|(v,q)|v*q).sum::<f64>();let ef=vf.iter().zip(qf).map(|(v,q)|v*q).sum::<f64>();assert!((ec/ef-1.).abs()<1e-10,"affine energy {ec:e}/{ef:e}");}
+ let shifted=cube(vec![-0.001,0.,0.0005,0.001,0.002],false,true);assert!(volume_field::Field::new_surface_refined(&shifted,&coarse,&cs,budget(),std::time::Duration::from_secs(10)).err().unwrap().contains("changed original copper volume"));
+}
+#[test]
 fn vertical_field_trace_preserves_affine_voltage_energy_charge_and_finite_contacts() {
  let coarse=cube(vec![-0.001,0.,0.001,0.002],false,false);let fine=cube(vec![-0.001,0.,0.0005,0.001,0.002],false,false);
  let cs=volume_current::assemble(&coarse,&vec![58e6;coarse.copper_tetrahedra.len()],&[],budget()).unwrap();let fs=volume_current::assemble(&fine,&vec![58e6;fine.copper_tetrahedra.len()],&[],budget()).unwrap();

@@ -97,6 +97,45 @@ pub struct Field<'a> {
     pub potential_count:usize,
 }
 impl<'a> Field<'a> {
+    /// Independent XY/z dielectric refinement on the unchanged physical Cu
+    /// surface. This is positive nodal sampling of the source surface P1 trace,
+    /// followed by B^T C B; nonnested surface diagonals are not claimed exact.
+    pub fn new_surface_refined(mesh:&'a LayeredMesh,current:&LayeredMesh,space:&Space,budget:AllocationBudget,wall:std::time::Duration)->Result<Self>{
+        let started=std::time::Instant::now();
+        if (mesh.copper_volume_m3-current.copper_volume_m3).abs()>1e-12*current.copper_volume_m3{return Err(error("VOLUME_FIELD_TRACE","refinement changed original copper volume"));}
+        let plan=mesh.retained_bytes()?.checked_add(mesh.nodes_m.len().checked_mul(512).ok_or_else(||error("MEMORY_LIMIT","surface trace node plan overflow"))?).and_then(|v|v.checked_add(current.copper_interfaces.len().checked_mul(512)?)).ok_or_else(||error("MEMORY_LIMIT","surface trace plan overflow"))?;budget.check(plan)?;
+        let exact=space.node_potential.iter().map(|(&n,&d)|(current.nodes_m[n].map(f64::to_bits),d)).collect::<BTreeMap<_,_>>();
+        let exposed=current.copper_interfaces.iter().flat_map(|f|f.nodes).filter_map(|n|space.node_potential.get(&n).copied()).collect::<BTreeSet<_>>();
+        let mut metal=BTreeMap::<usize,BTreeSet<&str>>::new();
+        for f in &mesh.copper_interfaces{for n in f.nodes{metal.entry(n).or_default().extend(f.copper_source_ids.iter().map(String::as_str));}}
+        let mut rows=Vec::with_capacity(metal.len());let mut represented=BTreeSet::new();
+        for (index,(&node,ids)) in metal.iter().enumerate(){
+            if index%256==0&&started.elapsed()>wall{return Err(error("TIME_LIMIT","source-surface trace deadline exceeded"));}
+            let p=mesh.nodes_m[node];let mut weights=BTreeMap::new();
+            if let Some(&d)=exact.get(&p.map(f64::to_bits)){weights.insert(d,1.);}else{
+                for face in &current.copper_interfaces{
+                    if !face.copper_source_ids.iter().any(|s|ids.contains(s.as_str())){continue;}
+                    let q=face.nodes.map(|n|current.nodes_m[n]);
+                    let scale=p.iter().chain(q.iter().flatten()).map(|x|x.abs()).fold(f64::MIN_POSITIVE,f64::max);
+                    let tol=64.*f64::EPSILON*scale;
+                    if (0..3).any(|k|p[k]<q.iter().map(|v|v[k]).fold(f64::INFINITY,f64::min)-tol||p[k]>q.iter().map(|v|v[k]).fold(f64::NEG_INFINITY,f64::max)+tol){continue;}
+                    let a=std::array::from_fn::<_,3,_>(|k|q[1][k]-q[0][k]);let b=std::array::from_fn::<_,3,_>(|k|q[2][k]-q[0][k]);
+                    let normal=[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+                    let drop=(0..3).max_by(|&i,&j|normal[i].abs().total_cmp(&normal[j].abs())).unwrap();let u=(drop+1)%3;let v=(drop+2)%3;
+                    let det=a[u]*b[v]-a[v]*b[u];if det==0.{continue;}
+                    let x=p[u]-q[0][u];let y=p[v]-q[0][v];let w1=(x*b[v]-y*b[u])/det;let w2=(a[u]*y-a[v]*x)/det;let mut w=[1.-w1-w2,w1,w2];
+                    if w.iter().any(|&x|x< -64.*f64::EPSILON||x>1.+64.*f64::EPSILON){continue;}
+                    for x in &mut w{if *x<0.{*x=0.;}}let sum=w.iter().sum::<f64>();for x in &mut w{*x/=sum;}
+                    if (0..3).any(|k|((0..3).map(|j|w[j]*q[j][k]).sum::<f64>()-p[k]).abs()>tol){continue;}
+                    for j in 0..3{if w[j]>0.{*weights.entry(*space.node_potential.get(&face.nodes[j]).ok_or_else(||error("VOLUME_FIELD_TRACE","surface vertex has no source potential"))?).or_insert(0.)+=w[j];}}break;
+                }
+                if weights.is_empty(){return Err(error("VOLUME_FIELD_TRACE",&format!("fine Cu surface node {node} is outside unchanged original surface; no proximity repair")));}
+            }
+            represented.extend(weights.keys().copied());rows.push(capacitance::TraceRow{node,weights:weights.into_iter().collect()});
+        }
+        if !exposed.is_subset(&represented){return Err(error("VOLUME_FIELD_TRACE","refinement lost an exposed source coordinate"));}
+        Self::new_conforming_trace(mesh,space.potential_count(),rows,budget)
+    }
     /// Caller supplies a geometry-certified conforming trace. Keep every exposed
     /// source coordinate and exact zeros on genuinely buried source potentials.
     pub fn new_conforming_trace(mesh:&'a LayeredMesh,potential_count:usize,mut trace:Vec<capacitance::TraceRow>,budget:AllocationBudget)->Result<Self>{

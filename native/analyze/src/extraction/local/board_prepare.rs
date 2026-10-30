@@ -62,6 +62,9 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
     // Keep the pre-existing geometry count cap independent of the 2 GiB cap;
     // sparse field/factor/current work must still fit the remaining live bytes.
     let budget=AllocationBudget{max_bytes:memory_mib*1024*1024-crate::extraction::local::parallel::stack_reservation(),max_nodes:100000,max_tetrahedra:512*1024*1024/2048};
+    // Explicit independent field refinement uses the same byte preflight as
+    // extrusion. Legacy count caps still bound every production/default mesh.
+    let field_limits=if r.electric_max_edge_m.is_some(){AllocationBudget{max_nodes:budget.max_bytes/4096,max_tetrahedra:budget.max_bytes/2048,..budget}}else{budget};
     let stage=std::time::Instant::now();
     let b=board_mesh::build(&board,&r,budget,remaining()?)?;
     record_stage(&mut stages,"geometry",stage);
@@ -69,7 +72,7 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
     let field_request=field_request.or(Some(&accepted));
     let field_b=if let Some(fr)=field_request.filter(|_|cached_field.is_none()) {
         if board_mesh::physical_signature(fr)!=board_mesh::physical_signature(r) {return Err("field refinement must preserve physical ROI, copper, bore, materials and finite contacts".into());}
-        let fb=board_mesh::build(&board,&fr,AllocationBudget{max_bytes:budget.max_bytes.checked_sub(b.mesh.retained_bytes()?).ok_or("field mesh live budget exhausted")?,..budget},remaining()?)?;
+        let fb=board_mesh::build_supported(&board,&fr,AllocationBudget{max_bytes:budget.max_bytes.checked_sub(b.mesh.retained_bytes()?).ok_or("field mesh live budget exhausted")?,..field_limits},remaining()?,if r.electric_max_edge_m.is_some(){Some((&b.planar_nodes_mm,&b.planar_triangles))}else{None})?;
         if (fb.mesh.copper_volume_m3-b.mesh.copper_volume_m3).abs()>1e-8*b.mesh.copper_volume_m3||fb.barrel_ids!=b.barrel_ids||fb.source_mapping!=b.source_mapping {return Err("independent field mesh changed physical copper volume or source mapping".into());}Some(fb)
     }else{None};
     let field_mesh=&field_b.as_ref().unwrap_or(&b).mesh;
@@ -87,7 +90,7 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
         if basis.voltage.iter().any(|v|v.len()!=currents.potential_count()||v.iter().any(|x|!x.is_finite()))||basis.current.iter().any(|v|v.len()!=currents.current_count()||v.iter().any(|x|!x.is_finite())) {return Err("developer restored basis shape/nonfinite refusal".into());}
         record_stage(&mut stages,"harmonicBasis",stage);
         eprintln!("harmonic {} voltage / {} current modes",basis.voltage.len(),basis.current.len());
-        let field_budget=AllocationBudget{max_bytes:budget.max_bytes.checked_sub(currents.planned_bytes).ok_or("field live budget exhausted")?,..budget};
+        let field_budget=AllocationBudget{max_bytes:budget.max_bytes.checked_sub(currents.planned_bytes).ok_or("field live budget exhausted")?,..field_limits};
         // Keep the existing sparse FEM factor and solve only requested RHS.
         // ElectricApply still accepts the full original potential space.
         let stage=std::time::Instant::now();
@@ -96,8 +99,8 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
             let metadata=serde_json::json!({"kind":"complete-original-P1-checkpoint","assemblyPeakBytes":field.assembly_peak_bytes,"retainedBytes":field.planned_bytes(),"maxChargeEnergyColumnError":field.max_charge_energy_column_error,"maxDirectedReciprocity":field.max_directed_reciprocity});
             (Box::new(field),metadata)
         }else{
-            let field=if field_b.is_some(){volume_field::Field::new_vertical_refined(field_mesh,&b.mesh,&currents,field_budget)?}else{volume_field::Field::new(&b.mesh,&currents,field_budget)?};
-            let metadata=serde_json::json!({"kind":"sparse-original-P1-requested-RHS","plannedBytes":field.planned_bytes(),"fullSchurMaterialized":false});
+            let field=if r.electric_max_edge_m.is_some(){volume_field::Field::new_surface_refined(field_mesh,&b.mesh,&currents,field_budget,remaining()?)?}else if field_b.is_some(){volume_field::Field::new_vertical_refined(field_mesh,&b.mesh,&currents,field_budget)?}else{volume_field::Field::new(&b.mesh,&currents,field_budget)?};
+            let metadata=serde_json::json!({"kind":"sparse-original-P1-requested-RHS","plannedBytes":field.planned_bytes(),"fullSchurMaterialized":false,"surfaceRefinement":r.electric_max_edge_m.map(|h|serde_json::json!({"maximumConstraintEdgeM":h,"trace":"positive source-surface barycentric sampling; nodal charge/energy congruence; current mesh unchanged","nestedCurrentTrace":false}))});
             (Box::new(field),metadata)
         };
         record_stage(&mut stages,"electricAssemblyAndFactor",stage);

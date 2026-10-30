@@ -19,3 +19,7 @@ fn electric_refinement_retains_finer_current_vertical_boundaries(){
  let mut current:board_mesh::Request=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json")).unwrap();current.max_vertical_step_m=0.00153/3.9;
  let field=board_prepare::accepted_electric_request(&current);assert_eq!(field.max_vertical_step_m,current.max_vertical_step_m);assert_eq!(board_mesh::physical_signature(&current),board_mesh::physical_signature(&field));
 }
+#[test]
+fn absent_internal_cut_transport_preserves_the_historical_physical_signature(){
+ let request:board_mesh::Request=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json")).unwrap();let signature=board_mesh::physical_signature(&request);assert!(signature.get("cutPlanes").is_none());assert!(signature.get("electricMaxEdgeM").is_none());
+}
