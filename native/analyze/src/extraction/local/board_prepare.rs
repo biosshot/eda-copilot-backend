@@ -42,37 +42,62 @@ fn complex_fields(checks:&[&serde_json::Value],real_key:&str,imaginary_key:&str,
     if rr.len()!=ri.len()||ir.len()!=ii.len()||rr.len()!=ir.len(){return Err("LOCAL_LOADED_STATE: real/imaginary state size mismatch".into());}
     Ok((rr.iter().zip(&ri).map(|(a,b)|a-b).collect(),ir.iter().zip(&ii).map(|(a,b)|a+b).collect()))
 }
+/// Remove exactly one global voltage nullspace from the connected loaded DC
+/// network. The anchor is numerical only: every original row and Norton port
+/// balance is checked after reconstruction, without adding a physical ground.
+pub fn anchored_loaded_dc(conductance:&[Vec<f64>],incidence:&[Vec<f64>],drive:&[f64],loads:&[f64],anchor:usize)->Result<(Vec<f64>,f64,Vec<f64>),String>{
+    use crate::electrical::frequency::{Quality,math::{C,Matrix,solve}};
+    let ne=conductance.len();let np=loads.len();if ne<2||np==0||anchor>=ne||drive.len()!=np||incidence.len()!=ne||drive.iter().any(|v|!v.is_finite())||loads.iter().any(|r|!r.is_finite()||*r<=0.)||conductance.iter().any(|row|row.len()!=ne||row.iter().any(|v|!v.is_finite()))||incidence.iter().any(|row|row.len()!=np||row.iter().any(|v|!v.is_finite())){return Err("LOCAL_LOADED_STATE: valid connected loaded network and anchor required".into());}
+    let mut matrix=conductance.to_vec();for i in 0..ne{for j in 0..ne{for p in 0..np{matrix[i][j]+=incidence[i][p]*incidence[j][p]/loads[p];}}}
+    let rhs:Vec<_>=(0..ne).map(|i|(0..np).map(|p|incidence[i][p]*drive[p]).sum()).collect();
+    let free:Vec<_>=(0..ne).filter(|&i|i!=anchor).collect();
+    let a:Matrix=free.iter().map(|&i|free.iter().map(|&j|C::new(matrix[i][j],0.)).collect()).collect();let mut b=vec![vec![C::default()];2*free.len()];for(row,&i)in free.iter().enumerate(){b[row][0]=C::new(rhs[i],0.);}
+    let solved=solve(&a,&b,&mut Quality::default())?;let mut electrode_voltage=vec![0.;ne];for(i,&row)in free.iter().enumerate(){electrode_voltage[row]=solved[i][0].real;}
+    let mut residual:f64=0.;for i in 0..ne{let value=(0..ne).map(|j|matrix[i][j]*electrode_voltage[j]).sum::<f64>()-rhs[i];let scale=rhs[i].abs()+(0..ne).map(|j|(matrix[i][j]*electrode_voltage[j]).abs()).sum::<f64>();residual=residual.max(value.abs()/scale.max(1e-30));}
+    let norton:Vec<_>=(0..np).map(|p|{let port=(0..ne).map(|i|incidence[i][p]*electrode_voltage[i]).sum::<f64>();let conduction=(0..ne).map(|i|incidence[i][p].max(0.)*(0..ne).map(|j|conductance[i][j]*electrode_voltage[j]).sum::<f64>()).sum::<f64>();drive[p]-port/loads[p]-conduction}).collect();
+    Ok((electrode_voltage,residual,norton))
+}
 /// Fixed Norton loads act on the existing full harmonic and reduced states.
 /// No auxiliary current column is required to be an insulated DC field.
 fn loaded_dc(currents:&volume_current::Space,basis:&volume_reduction::Basis,candidate:&coupled::Model,ports:&[[usize;2]],contacts:&[(String,usize)],conservative:&ConservativeSpace,drive:&[f64],loads:&[f64],budget:&crate::electrical::Budget)->Result<serde_json::Value,String>{
-    use crate::electrical::frequency::{Quality,math::{C,Matrix,solve}};
     let ne=contacts.len();let np=ports.len();if ne==0||np==0||drive.len()!=np||loads.len()!=np||loads.iter().any(|r|!r.is_finite()||*r<=0.){return Err("LOCAL_LOADED_STATE: complete finite loaded port mapping required".into());}
-    let electrode_currents=basis.voltage.iter().take(ne).map(|v|{let mut current=currents.gradient(v)?;for cell in 0..currents.cells.len(){for axis in 0..3{current[3*cell+axis]/=currents.cells[cell].resistance_ohm;}}Ok(current)}).collect::<Result<Vec<_>,String>>()?;
-    if electrode_currents.len()!=ne{return Err("LOCAL_LOADED_STATE: harmonic electrode states missing".into());}
+    let harmonic=basis.harmonic_electrodes()?;if harmonic.len()!=ne{return Err("LOCAL_LOADED_STATE: harmonic electrode states missing".into());}
+    let electrode_currents=harmonic.iter().map(|v|{let mut current=currents.gradient(v)?;for cell in 0..currents.cells.len(){for axis in 0..3{current[3*cell+axis]/=currents.cells[cell].resistance_ohm;}}Ok(current)}).collect::<Result<Vec<_>,String>>()?;
     let reactions=electrode_currents.iter().map(|current|currents.divergence(current)).collect::<Result<Vec<_>,_>>()?;
     let mut incidence=vec![vec![0.;np];ne];for(p,&[a,b])in ports.iter().enumerate(){if a>=ne||b>=ne||a==b{return Err("LOCAL_LOADED_STATE: invalid electrode incidence".into());}incidence[a][p]=1.;incidence[b][p]=-1.;}
-    let mut matrix=vec![vec![0.;ne];ne];for i in 0..ne{for j in 0..ne{matrix[i][j]=reactions[j][contacts[i].1];for p in 0..np{matrix[i][j]+=incidence[i][p]*incidence[j][p]/loads[p];}}}
-    let rhs:Vec<_>=(0..ne).map(|i|(0..np).map(|p|incidence[i][p]*drive[p]).sum()).collect();
-    let a:Matrix=matrix.iter().map(|row|row.iter().map(|&v|C::new(v,0.)).collect()).collect();let b=vec![rhs.iter().map(|&v|C::new(v,0.)).collect()];
-    let solved=solve(&a,&b,&mut Quality::default())?;let electrode_voltage:Vec<_>=solved.into_iter().map(|row|row[0].real).collect();
-    let full_potential=weighted(&basis.voltage[..ne],&electrode_voltage)?;let full_current=weighted(&electrode_currents,&electrode_voltage)?;
-    let full_ports:Vec<_>=ports.iter().map(|&[a,b]|electrode_voltage[a]-electrode_voltage[b]).collect();
-    let mut residual:f64=0.;for i in 0..ne{let value=(0..ne).map(|j|matrix[i][j]*electrode_voltage[j]).sum::<f64>()-rhs[i];let scale=rhs[i].abs()+(0..ne).map(|j|(matrix[i][j]*electrode_voltage[j]).abs()).sum::<f64>();residual=residual.max(value.abs()/scale.max(1e-30));}
-    let norton:Vec<_>=(0..np).map(|p|{let conduction=(0..ne).map(|i|incidence[i][p]*(0..ne).map(|j|reactions[j][contacts[i].1]*electrode_voltage[j]).sum::<f64>()).sum::<f64>();drive[p]-full_ports[p]/loads[p]-conduction}).collect();
+    let mut conductance=vec![vec![0.;ne];ne];for i in 0..ne{for j in 0..ne{conductance[i][j]=reactions[j][contacts[i].1];}}
+    let (electrode_voltage,residual,norton)=anchored_loaded_dc(&conductance,&incidence,drive,loads,0)?;
+    let (alternate_voltage,alternate_residual,alternate_norton)=anchored_loaded_dc(&conductance,&incidence,drive,loads,1)?;
+    let full_potential=weighted(harmonic,&electrode_voltage)?;let full_current=weighted(&electrode_currents,&electrode_voltage)?;let alternate_current=weighted(&electrode_currents,&alternate_voltage)?;
+    let full_ports:Vec<_>=ports.iter().map(|&[a,b]|electrode_voltage[a]-electrode_voltage[b]).collect();let alternate_ports:Vec<_>=ports.iter().map(|&[a,b]|alternate_voltage[a]-alternate_voltage[b]).collect();
+    let drive_scale=drive.iter().map(|v|v.abs()).fold(1e-30,f64::max);let normalized_norton=|values:&[f64]|values.iter().map(|v|v.abs()).fold(0.,f64::max)/drive_scale;
+    let norton_residual=normalized_norton(&norton);let alternate_norton_residual=normalized_norton(&alternate_norton);
+    let port_scale=full_ports.iter().map(|v|v.abs()).fold(1e-30,f64::max);let port_error=full_ports.iter().zip(&alternate_ports).map(|(a,b)|(a-b).abs()).fold(0.,f64::max)/port_scale;
+    let current_scale=full_current.iter().map(|v|v.abs()).fold(0.,f64::max).max(drive_scale);let current_error=full_current.iter().zip(&alternate_current).map(|(a,b)|(a-b).abs()).fold(0.,f64::max)/current_scale;
+    if residual>1e-8||alternate_residual>1e-8||norton_residual>1e-8||alternate_norton_residual>1e-8||port_error>1e-8||current_error>1e-8{return Err(format!("LOCAL_LOADED_STATE: anchored full residual/Norton/gauge invariance exceeds 1e-8: residual={residual:e} alternateResidual={alternate_residual:e} norton={norton_residual:e} alternateNorton={alternate_norton_residual:e} ports={port_error:e} current={current_error:e}"));}
     let mut reduced=coupled::System::compile(candidate,np,Some(budget))?;for(p,&load)in loads.iter().enumerate(){reduced.add_port_admittance(p,1./load,0.)?;}
     let nvr=candidate.potential_nodes.len();let n=nvr+candidate.current_dofs.len();let mut rhs_reduced=reduced.port_rhs(drive);rhs_reduced.resize(n,0.);let x=reduced.solve(0.,rhs_reduced,&vec![0.;n],&mut Counters::default())?;
     let reduced_potential=weighted(&basis.voltage,&x[..nvr])?;let reduced_current=weighted(&basis.current,&x[nvr..])?;
-    let full_faces=conservative.recover(currents,&full_current,true)?;let reduced_faces=conservative.recover(currents,&reduced_current,true)?;
-    Ok(serde_json::json!({"frequencyHz":0.,"driveA":drive,"loadsOhm":loads,"electrodeVoltageV":electrode_voltage,"fullPortVoltages":full_ports.iter().map(|&v|[v,0.]).collect::<Vec<_>>(),"reducedPortReal":reduced.port_voltages(&x,np),"reducedPortImaginary":vec![0.;np],"fullPotentialRealV":full_potential,"fullPotentialImaginaryV":vec![0.;currents.potential_count()],"reducedPotentialRealV":reduced_potential,"reducedPotentialImaginaryV":vec![0.;currents.potential_count()],"fullCurrentReal":full_current,"fullCurrentImaginary":vec![0.;currents.current_count()],"reducedCurrentReal":reduced_current,"reducedCurrentImaginary":vec![0.;currents.current_count()],"fullConservativeFaceReal":full_faces,"fullConservativeFaceImaginary":vec![0.;conservative.faces.len()],"reducedConservativeFaceReal":reduced_faces,"reducedConservativeFaceImaginary":vec![0.;conservative.faces.len()],"reducedState":x,"harmonicElectrodeNormalizedResidual":residual,"nortonResidualA":norton}))
+    let full_faces=conservative.recover(currents,&full_current,true).map_err(|e|format!("full loaded DC: {e}"))?;let reduced_faces=conservative.recover(currents,&reduced_current,true).map_err(|e|format!("reduced loaded DC: {e}"))?;
+    Ok(serde_json::json!({"frequencyHz":0.,"driveA":drive,"loadsOhm":loads,"electrodeVoltageV":electrode_voltage,"fullPortVoltages":full_ports.iter().map(|&v|[v,0.]).collect::<Vec<_>>(),"reducedPortReal":reduced.port_voltages(&x,np),"reducedPortImaginary":vec![0.;np],"fullPotentialRealV":full_potential,"fullPotentialImaginaryV":vec![0.;currents.potential_count()],"reducedPotentialRealV":reduced_potential,"reducedPotentialImaginaryV":vec![0.;currents.potential_count()],"fullCurrentReal":full_current,"fullCurrentImaginary":vec![0.;currents.current_count()],"reducedCurrentReal":reduced_current,"reducedCurrentImaginary":vec![0.;currents.current_count()],"fullConservativeFaceReal":full_faces,"fullConservativeFaceImaginary":vec![0.;conservative.faces.len()],"reducedConservativeFaceReal":reduced_faces,"reducedConservativeFaceImaginary":vec![0.;conservative.faces.len()],"reducedState":x,"harmonicElectrodeNormalizedResidual":residual,"nortonResidualA":norton,"dcVoltageGauge":{"anchorElectrode":0,"comparisonAnchorElectrode":1,"comparisonNormalizedResidual":alternate_residual,"comparisonNortonNormalizedResidual":alternate_norton_residual,"portNormalizedError":port_error,"currentNormalizedError":current_error}}))
+}
+/// Solve the fixed Norton-load superposition with one complex RHS column.
+pub(crate) fn loaded_ac_coefficients(full_u:&[Vec<crate::electrical::frequency::math::C>],drive:&[f64],loads:&[f64])->Result<Vec<crate::electrical::frequency::math::C>,String>{
+    use crate::electrical::frequency::{Quality,math::{C,Matrix,solve}};
+    let np=ports_len(drive,loads)?;
+    if full_u.len()!=np||full_u.iter().any(|row|row.len()!=np||row.iter().any(|v|!v.real.is_finite()||!v.imaginary.is_finite())){return Err("LOCAL_LOADED_STATE: finite square full-port matrix required".into());}
+    let a:Matrix=(0..np).map(|q|(0..np).map(|p|C::new(if q==p{1.}else{0.},0.)+full_u[q][p].scale(1./loads[q])).collect()).collect();
+    let b:Matrix=drive.iter().map(|&v|vec![C::new(v,0.)]).collect();
+    let solved=solve(&a,&b,&mut Quality::default())?;Ok(solved.into_iter().map(|row|row[0]).collect())
 }
 /// Combine exact unit-port states first, then recover the one physical loaded state.
 fn loaded_ac(currents:&volume_current::Space,basis:&volume_reduction::Basis,candidate:&coupled::Model,conservative:&ConservativeSpace,checks:&[serde_json::Value],drive:&[f64],loads:&[f64])->Result<serde_json::Value,String>{
-    use crate::electrical::frequency::{Quality,math::{C,Matrix,solve}};
+    use crate::electrical::frequency::math::C;
     let np=ports_len(drive,loads)?;let mut selected=vec![None;np];
     for check in checks{if check["frequencyHz"].as_f64()!=Some(1000.){continue;}let d=loaded_values(&check["drive"])?;if d.len()!=np{continue;}for p in 0..np{if d.iter().enumerate().all(|(j,v)|*v==if j==p{1.}else{0.}){if selected[p].replace(check).is_some(){return Err("LOCAL_LOADED_STATE: duplicate 1 kHz unit-port state".into());}}}}
     let checks:Vec<_>=selected.into_iter().enumerate().map(|(p,check)|check.ok_or_else(||format!("LOCAL_LOADED_STATE: missing 1 kHz unit-port state {p}"))).collect::<Result<_,_>>()?;
     let full_u:Vec<Vec<C>>=(0..np).map(|q|(0..np).map(|p|{let values=serde_json::from_value::<Vec<[f64;2]>>(checks[p]["fullPortVoltages"].clone()).map_err(|e|format!("LOCAL_LOADED_STATE: {e}"))?;if values.len()!=np{return Err("LOCAL_LOADED_STATE: full port size mismatch".into());}Ok(C::new(values[q][0],values[q][1]))}).collect::<Result<Vec<_>,String>>()).collect::<Result<_,_>>()?;
-    let a:Matrix=(0..np).map(|q|(0..np).map(|p|C::new(if q==p{1.}else{0.},0.)+full_u[q][p].scale(1./loads[q])).collect()).collect();let b=vec![drive.iter().map(|&v|C::new(v,0.)).collect()];let solved=solve(&a,&b,&mut Quality::default())?;let coefficients:Vec<_>=solved.into_iter().map(|row|row[0]).collect();
+    let coefficients=loaded_ac_coefficients(&full_u,drive,loads)?;
     let full_ports:Vec<_>=(0..np).map(|q|(0..np).map(|p|full_u[q][p]*coefficients[p]).fold(C::default(),|a,b|a+b)).collect();
     let (reduced_port_real,reduced_port_imaginary)=complex_fields(&checks,"reducedPortReal","reducedPortImaginary",&coefficients)?;
     let (full_potential_real,full_potential_imaginary)=complex_fields(&checks,"fullPotentialRealV","fullPotentialImaginaryV",&coefficients)?;
@@ -81,7 +106,10 @@ fn loaded_ac(currents:&volume_current::Space,basis:&volume_reduction::Basis,cand
     let n=candidate.potential_nodes.len()+candidate.current_dofs.len();if xr.len()!=2*n{return Err("LOCAL_LOADED_STATE: reduced real/imaginary block size mismatch".into());}
     let mut x=vec![0.;2*n];for j in 0..n{x[j]=xr[j]-xi[n+j];x[n+j]=xr[n+j]+xi[j];}
     let nvr=candidate.potential_nodes.len();let reduced_potential_real=weighted(&basis.voltage,&x[..nvr])?;let reduced_potential_imaginary=weighted(&basis.voltage,&x[n..n+nvr])?;let reduced_current_real=weighted(&basis.current,&x[nvr..n])?;let reduced_current_imaginary=weighted(&basis.current,&x[n+nvr..])?;
-    let full_face_real=conservative.recover(currents,&full_current_real,false)?;let full_face_imaginary=conservative.recover(currents,&full_current_imaginary,false)?;let reduced_face_real=conservative.recover(currents,&reduced_current_real,false)?;let reduced_face_imaginary=conservative.recover(currents,&reduced_current_imaginary,false)?;
+    let full_face_real=conservative.recover(currents,&full_current_real,false).map_err(|e|format!("full loaded AC real: {e}"))?;
+    let full_face_imaginary=conservative.recover(currents,&full_current_imaginary,false).map_err(|e|format!("full loaded AC imaginary: {e}"))?;
+    let reduced_face_real=conservative.recover(currents,&reduced_current_real,false).map_err(|e|format!("reduced loaded AC real: {e}"))?;
+    let reduced_face_imaginary=conservative.recover(currents,&reduced_current_imaginary,false).map_err(|e|format!("reduced loaded AC imaginary: {e}"))?;
     let norton:Vec<_>=(0..np).map(|p|coefficients[p]-(C::new(drive[p],0.)-full_ports[p].scale(1./loads[p]))).collect();let residual=norton.iter().map(|v|v.abs()).fold(0.,f64::max)/drive.iter().map(|v|v.abs()).fold(1e-30,f64::max);
     Ok(serde_json::json!({"frequencyHz":1000.,"driveA":drive,"loadsOhm":loads,"superpositionCoefficientsA":coefficients.iter().map(|a|[a.real,a.imaginary]).collect::<Vec<_>>(),"fullPortVoltages":full_ports.iter().map(|v|[v.real,v.imaginary]).collect::<Vec<_>>(),"reducedPortReal":reduced_port_real,"reducedPortImaginary":reduced_port_imaginary,"fullPotentialRealV":full_potential_real,"fullPotentialImaginaryV":full_potential_imaginary,"reducedPotentialRealV":reduced_potential_real,"reducedPotentialImaginaryV":reduced_potential_imaginary,"fullCurrentReal":full_current_real,"fullCurrentImaginary":full_current_imaginary,"reducedCurrentReal":reduced_current_real,"reducedCurrentImaginary":reduced_current_imaginary,"fullConservativeFaceReal":full_face_real,"fullConservativeFaceImaginary":full_face_imaginary,"reducedConservativeFaceReal":reduced_face_real,"reducedConservativeFaceImaginary":reduced_face_imaginary,"reducedState":x,"superpositionNormalizedResidual":residual,"nortonResidualA":norton.iter().map(|v|[v.real,v.imaginary]).collect::<Vec<_>>() }))
 }
@@ -251,7 +279,7 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
             let available=budget.max_bytes.checked_sub(reserved).filter(|&n|n>0).ok_or("conservative current live budget exhausted")?;
             let c=ConservativeSpace::new(&b.mesh,&currents,&electrodes,AllocationBudget{max_bytes:available,..budget})?;
             reserved=reserved.checked_add(c.planned_bytes).ok_or("conservative reserved byte overflow")?;
-            conservative_current=Some(serde_json::json!({"kind":"rt0-loaded-state-v2","fluxUnits":"A","potentialUnits":"V","phasorConvention":"RMS","nodalReactionPerOutwardFaceFlux":1./3.,"faces":&c.faces,"driveA":[1.,0.,-1.,0.],"loadsOhm":[50.,50.,50.,50.],"states":[],"plannedBytes":c.planned_bytes}));
+            conservative_current=Some(serde_json::json!({"kind":"rt0-loaded-state-v2","fluxUnits":"A","potentialUnits":"V","phasorConvention":"RMS","nodalReactionPerOutwardFaceFlux":1./3.,"faces":&c.faces,"cardinalHarmonicVoltageBasis":basis.harmonic_electrodes()?,"driveA":[1.,0.,-1.,0.],"loadsOhm":[50.,50.,50.,50.],"states":[],"plannedBytes":c.planned_bytes}));
             Some(c)
         }else{None};
         if conservative.is_some(){record_stage(&mut stages,"conservativeCurrentTopology",conservative_stage);}
@@ -331,4 +359,17 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
 pub(super) fn verification_limit(name:&str,default:usize,min:usize,max:usize)->Result<usize,String>{
     let value=std::env::var(name).ok().map(|s|s.parse::<usize>().map_err(|_|format!("LOCAL_BUDGET: invalid {name}"))).transpose()?.unwrap_or(default);
     if value<min||value>max{return Err(format!("LOCAL_BUDGET: {name} outside {min}..{max}"));}Ok(value)
+}
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+    use crate::electrical::frequency::math::C;
+    #[test]
+    fn loaded_ac_coefficients_use_one_complex_rhs_column_without_panic(){
+        let u=vec![vec![C::new(1.,0.2),C::new(0.2,-0.1)],vec![C::new(-0.1,0.05),C::new(0.8,0.3)]];let drive=[1.,-0.4];let loads=[50.,75.];
+        let a=loaded_ac_coefficients(&u,&drive,&loads).unwrap();assert_eq!(a.len(),2);assert!(a.iter().any(|v|v.imaginary.abs()>1e-6));
+        for q in 0..2{let port=(0..2).map(|p|u[q][p]*a[p]).fold(C::default(),|x,y|x+y);let actual=a[q]+port.scale(1./loads[q]);assert!((actual.real-drive[q]).abs()<1e-12&&actual.imaginary.abs()<1e-12);}
+        assert!(loaded_ac_coefficients(&u[..1],&drive,&loads).is_err());
+    }
 }

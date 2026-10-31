@@ -56,6 +56,13 @@ pub fn harmonic(space:&Space,electrodes:&[(String,usize)],budget:AllocationBudge
 }
 fn symmetric(values:&[Vec<f64>])->Vec<Entry> {let mut out=vec![];for i in 0..values.len(){for j in i..values.len(){let v=values[i][j];if v!=0.{out.push((i,j,v));if i!=j{out.push((j,i,v));}}}}out}
 impl Basis {
+    /// Immutable cardinal electrode lifts. Trained bubbles modify `voltage`
+    /// coordinates, never these original physical DC source states.
+    pub fn harmonic_electrodes(&self)->Result<&[Vec<f64>]>{
+        let count=self.electrode_dofs.len();
+        if count==0||self.harmonic.len()<count{return Err(error("VOLUME_REDUCTION","cardinal harmonic electrode states missing"));}
+        Ok(&self.harmonic[..count])
+    }
     /// Expand both physical spaces from a full operator solution. Subtract the
     /// harmonic lift using the small shape voltage only; the separately stored
     /// conductor constants cancel analytically through partition of unity.

@@ -42,6 +42,13 @@ def dense_state(prepared, frequency_hz):
     rhs = np.zeros(n, dtype=complex)
     rhs[:nv] = b @ drive
     matrix = g.astype(complex) if frequency_hz == 0 else g + 2j * np.pi * frequency_hz * e
+    if frequency_hz == 0:
+        # Remove only the common loaded-network voltage gauge. Returning the
+        # unanchored NumPy solve can produce enormous, nonphysical offsets.
+        free = np.arange(1, n)
+        state = np.zeros(n, dtype=complex)
+        state[free] = np.linalg.solve(matrix[np.ix_(free, free)], rhs[free])
+        return state, nv, ni
     return np.linalg.solve(matrix, rhs), nv, ni
 
 

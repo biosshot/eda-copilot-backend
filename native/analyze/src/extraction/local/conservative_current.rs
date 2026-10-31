@@ -252,8 +252,12 @@ impl ConservativeSpace {
                 divergence_scale[incidence.cell] += value.abs();
             }
         }
-        let reaction_error = (0..nv).map(|node| (reactions[node]-target[node]).abs()/(reaction_scale[node]+target[node].abs()).max(f64::MIN_POSITIVE)).fold(0.,f64::max);
-        let divergence_error = (0..nt).map(|cell| divergence[cell].abs()/divergence_scale[cell].max(f64::MIN_POSITIVE)).fold(0.,f64::max);
+        // Each row may pass either its local relative test or the absolute
+        // component of the same 1e-8 test at this state's current scale.
+        // This distinguishes zero-row roundoff from finite incompatibility.
+        let target_scale=target.iter().map(|v|v.abs()).fold(0.,f64::max).max(f64::MIN_POSITIVE);
+        let reaction_error = (0..nv).map(|node| (reactions[node]-target[node]).abs()/(reaction_scale[node]+target[node].abs()).max(target_scale)).fold(0.,f64::max);
+        let divergence_error = (0..nt).map(|cell| divergence[cell].abs()/divergence_scale[cell].max(target_scale)).fold(0.,f64::max);
         if !reaction_error.is_finite() || !divergence_error.is_finite() || reaction_error > 1e-8 || divergence_error > 1e-8 {
             return Err(error("CONSERVATIVE_RESIDUAL", &format!("nodal={reaction_error:e} cell={divergence_error:e}")));
         }

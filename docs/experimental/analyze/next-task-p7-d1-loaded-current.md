@@ -73,3 +73,27 @@ Fixed sections `x=0.500123/1.000123/1.500123 mm`, normal `+x`. Для full/reduc
 Создать `docs/experimental/analyze/p7-d1-loaded-current-results.md`: родительская коррекция, equations, diff, tests/build/hashes/resources, loaded-state provenance, complex flux tables, full/reduced errors, PASS/NO-GO по каждому gate. Обновить `CHANGELOG.md` при реальном изменении verification workflow. Построить и открыть plots при появлении numerical audits.
 
 Остановиться для родительского ревью. Не коммитить и не начинать hybrid автоматически.
+
+## Parent addendum после checkpoint `e06a752`
+
+Холодный отказ `condition=1.110456874602177e14` не принят как физический blocker. Родитель нашёл конкретный defect: `loaded_dc` использует `basis.voltage`, хотя `include_solution` вычитает trained bubbles из component base columns. Для electrode conductance и full loaded DC potential необходимо использовать неизменные cardinal `basis.harmonic`.
+
+Исправить только этот source-of-state selection, добавить focused regression против post-training harmonic/voltage divergence либо эквивалентную непосредственную проверку в loaded DC. Не менять LU guard и не добавлять equilibration ради прохождения неправильной матрицы.
+
+После focused checks разрешён один новый cold slot и при current PASS один continuous в том же `debugging/p7-d1-loaded-current/` с новыми clearly named attempts. Обновить существующий results report фактическим before/after, не стирая историю прежнего отказа. Остальные границы задания сохраняются.
+
+## Parent addendum: global DC voltage gauge
+
+После harmonic correction тот же condition guard снова сработал. Родитель независимо восстановил cardinal harmonic states из saved basis. Полученная loaded matrix имеет положительные диагонали, symmetric conductance и один near-zero eigenvalue; `harmonic_contact_cardinality=0`. Это глобальный potential gauge: adding one constant to all six electrodes preserves every port difference, current and loss.
+
+Исправить loaded DC solve через явный единственный gauge для всей connected loaded network: зафиксировать один electrode potential на нуле, исключить его row/column из малого solve, затем проверить полный исходный residual, Norton balance и инвариантность к выбору gauge. Это численный reference, не physical ground, не новый resistor и не ослабление guard.
+
+Добавить manufactured regression с ненулевым drive и отличающимися component conductances: raw matrix имеет gauge, anchored solve даёт тот же port/current result при другом выбранном anchor. После tests разрешён один новый cold slot и при current PASS один continuous. Новые clearly named attempts; прежние failures сохранить в report. Не запускать никакие дополнительные кампании.
+
+## Parent addendum: итог loaded-state recovery
+
+Сохранённый `slot-ac-rhs-full.json` впервые содержит фактические full/reduced loaded DC и 1 kHz states. Ложный DC residual `1e0` устранён смешанной absolute/relative нормировкой без изменения порога `1e-8`; неправильная AC RHS `1×np` заменена на `np×1`. DC, algebraic continuity, gauge и DC section/electrode gates проходят независимый аудит.
+
+D1 не закрыт: exact 1 kHz replay имеет normalized error `0.045126035759688383 > 1e-8`, а локальные full/reduced cell/face observables не проходят. Максимальная section error при этом `0.007288560550462076` (`0.728856%`), но она не отменяет локальный gate. Continuous не запускался; magnetic patch `10.2046289% > 2%` остаётся отдельным blocker.
+
+Следующий bounded шаг — локализовать AC imaginary replay/full-reduced mismatch только по сохранённому state и независимому replay, без нового FEM и без ослабления gate.

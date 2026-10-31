@@ -125,3 +125,22 @@ fn incompatible_auxiliary_dc_modes_have_a_compatible_loaded_full_reduced_combina
         assert!(conservative.cell_divergence(&space,&flux).unwrap().iter().all(|value|value.abs()<1e-12));
     }
 }
+
+#[test]
+fn dc_roundoff_at_zero_reaction_and_divergence_is_not_a_false_residual(){
+    let mesh=mesh::extrude(&LayeredInput{
+        xy_m:vec![[0.,0.],[1e-3,0.],[1e-3,0.5e-3],[0.,0.5e-3],[0.5e-3,0.25e-3]],
+        triangles:vec![[0,1,4],[1,2,4],[2,3,4],[3,0,4]],boundary_edges:vec![[0,1],[1,2],[2,3],[3,0]],z_m:vec![0.,0.2e-3],
+        materials:vec![vec![Material::Copper{source_ids:vec!["zero-roundoff-regression".into()]};4]],
+    },budget()).unwrap();
+    let electrodes:Vec<_>=[0.,1e-3].map(|x|mesh.nodes_m.iter().enumerate().filter_map(|(i,p)|(p[0]==x).then_some(i)).collect::<Vec<_>>()).into();
+    let space=volume_current::assemble(&mesh,&vec![58e6;mesh.copper_tetrahedra.len()],&electrodes,budget()).unwrap();
+    let fixed:Vec<_>=electrodes.iter().map(|nodes|space.node_potential[&nodes[0]]).collect();
+    let mut boundary=vec![0.;space.potential_count()];boundary[fixed[0]]=0.17321;boundary[fixed[1]]=-0.23789;
+    let factor=space.dc_factor(&fixed,budget()).unwrap();let voltage=factor.solve(&space,&boundary,&vec![0.;space.potential_count()]).unwrap();
+    let mut current=space.gradient(&voltage).unwrap();for(cell,c)in space.cells.iter().enumerate(){for axis in 0..3{current[3*cell+axis]/=c.resistance_ohm;}}
+    let target=space.divergence(&current).unwrap();let non_electrode_max=(0..space.potential_count()).filter(|node|!fixed.contains(node)).map(|node|target[node].abs()).fold(0.,f64::max);
+    assert!(non_electrode_max>0.&&non_electrode_max<1e-12,"manufactured roundoff={non_electrode_max:e}");
+    let conservative=ConservativeSpace::new(&mesh,&space,&electrodes,budget()).unwrap();
+    conservative.recover(&space,&current,true).unwrap();
+}
