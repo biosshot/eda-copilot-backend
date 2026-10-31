@@ -90,37 +90,48 @@ impl ConservativeSpace {
         if owned_faces.is_empty() || cell_faces.iter().any(|faces| faces.len() != 4) {
             return Err(error("CONSERVATIVE_FACE", "complete four-face tetrahedral ownership required"));
         }
-        // The all-node plus all-cell constraints have one exact dependency per
-        // connected component. Remove only that cell row; audit it after recovery.
         let mut component_of_node = vec![usize::MAX; nv];
         for (component, nodes) in space.components.iter().enumerate() {
             for &node in nodes { component_of_node[node] = component; }
         }
         let mut gauged_cells = vec![false; nt];
+        let mut dc_gauged_cells = vec![false; nt];
         for component in 0..space.components.len() {
             let cell = (0..nt).rev().find(|&cell| component_of_node[space.cells[cell].potentials[0]] == component)
                 .ok_or_else(|| error("CONSERVATIVE_COMPONENT", "component has no current cell"))?;
             gauged_cells[cell] = true;
+            // With insulated non-electrode boundaries, 3 r_v = sum_{T containing v} div_T.
+            // Eliminating those exact star dependencies leaves one component relation
+            // 3 sum_electrode r + sum_T (k_T-1) div_T = 0, where k_T counts distinct
+            // non-electrode potential DOFs in T. Gauge only a nonzero coefficient.
+            let dc_cell = (0..nt).rev().find(|&cell| {
+                if component_of_node[space.cells[cell].potentials[0]] != component { return false; }
+                let non_electrode = space.cells[cell].potentials.iter().filter(|node| !electrode_dofs.contains(node)).collect::<BTreeSet<_>>().len();
+                non_electrode != 1
+            });
+            if let Some(cell) = dc_cell { dc_gauged_cells[cell] = true; }
         }
         let topology_bytes = owned_faces.len().checked_mul(256)
             .and_then(|n| n.checked_add(nt.checked_mul(128)?))
             .and_then(|n| n.checked_add(space.planned_bytes))
             .ok_or_else(|| error("MEMORY_LIMIT", "conservative topology plan overflow"))?;
         budget.check(topology_bytes)?;
-        let dc = Self::projector(space, &owned_faces, &gauged_cells, true, topology_bytes, budget)?;
-        let ac = Self::projector(space, &owned_faces, &gauged_cells, false, dc.planned_bytes, budget)?;
+        let dc = Self::projector(space, &owned_faces, &electrode_dofs, &dc_gauged_cells, true, topology_bytes, budget)?;
+        let ac = Self::projector(space, &owned_faces, &electrode_dofs, &gauged_cells, false, dc.planned_bytes, budget)?;
         let planned_bytes = dc.planned_bytes.max(ac.planned_bytes);
         budget.check(planned_bytes)?;
         Ok(Self { faces: owned_faces, cell_faces, dc, ac, planned_bytes })
     }
 
-    fn projector(space: &Space, faces: &[Face], gauged_cells: &[bool], insulated: bool, base: usize, budget: AllocationBudget) -> Result<Projector> {
+    fn projector(space: &Space, faces: &[Face], electrode_dofs: &BTreeSet<usize>, gauged_cells: &[bool], insulated: bool, base: usize, budget: AllocationBudget) -> Result<Projector> {
         let nv = space.potential_count();
         let nt = space.cells.len();
         let raw_rows = nv + nt;
         let mut row_map = vec![usize::MAX; raw_rows];
         let mut row_count = 0;
-        for node in 0..nv { row_map[node] = row_count; row_count += 1; }
+        // DC non-electrode reactions follow from cell divergence and insulation;
+        // recover_with still audits every omitted raw row against the full residual.
+        for node in 0..nv { if !insulated || electrode_dofs.contains(&node) { row_map[node] = row_count; row_count += 1; } }
         for cell in 0..nt { if !gauged_cells[cell] { row_map[nv+cell] = row_count; row_count += 1; } }
         let free_faces: Vec<usize> = faces.iter().enumerate().filter_map(|(index, face)| {
             (face.cells.len() == 2 || face.electrode || !insulated).then_some(index)

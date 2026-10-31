@@ -69,6 +69,30 @@ fn shared_faces_complex_states_and_determinism_preserve_original_nodal_reactions
 }
 
 #[test]
+fn dc_omits_only_cell_star_implied_non_electrode_reactions(){
+    let mesh=mesh::extrude(&LayeredInput{
+        xy_m:vec![[0.,0.],[1e-3,0.],[1e-3,0.5e-3],[0.,0.5e-3],[0.5e-3,0.25e-3]],
+        triangles:vec![[0,1,4],[1,2,4],[2,3,4],[3,0,4]],
+        boundary_edges:vec![[0,1],[1,2],[2,3],[3,0]],
+        z_m:vec![0.,0.2e-3],
+        materials:vec![vec![Material::Copper{source_ids:vec!["cell-star-regression".into()]};4]],
+    },budget()).unwrap();
+    let electrodes=[0.,1e-3].map(|x|mesh.nodes_m.iter().enumerate().filter_map(|(i,p)|(p[0]==x).then_some(i)).collect::<Vec<_>>());
+    let electrodes:Vec<_>=electrodes.into_iter().collect();
+    let space=volume_current::assemble(&mesh,&vec![58e6;mesh.copper_tetrahedra.len()],&electrodes,budget()).unwrap();
+    let electrode_dofs:std::collections::BTreeSet<_>=electrodes.iter().map(|nodes|space.node_potential[&nodes[0]]).collect();
+    let omitted:Vec<_>=(0..space.potential_count()).filter(|dof|!electrode_dofs.contains(dof)).collect();
+    assert_eq!(omitted.len(),2);
+    let conservative=ConservativeSpace::new(&mesh,&space,&electrodes,budget()).unwrap();
+    let current=currents(&space,&mesh,[1e-6,0.,0.],58e6);let target=space.divergence(&current).unwrap();
+    let flux=conservative.recover(&space,&current,true).unwrap();
+    let mut actual=vec![0.;space.potential_count()];
+    for(face_index,face)in conservative.faces.iter().enumerate(){for incidence in &face.cells{actual[space.cells[incidence.cell].potentials[incidence.opposite]]+=incidence.sign*flux[face_index]/3.;}}
+    for dof in omitted{close(actual[dof],target[dof]);}
+    assert!(conservative.cell_divergence(&space,&flux).unwrap().iter().all(|value|value.abs()<1e-12));
+}
+
+#[test]
 fn recovery_refuses_nonfinite_range_and_never_changes_mesh_identity(){
     let (mesh,electrodes)=fixture();let nodes:Vec<_>=mesh.nodes_m.iter().map(|p|p.map(f64::to_bits)).collect();let cells:Vec<_>=mesh.copper_tetrahedra.iter().map(|c|c.nodes).collect();let space=volume_current::assemble(&mesh,&vec![58e6;6],&electrodes,budget()).unwrap();let conservative=ConservativeSpace::new(&mesh,&space,&electrodes,budget()).unwrap();
     assert!(conservative.recover(&space,&vec![f64::NAN;space.current_count()],true).unwrap_err().contains("CONSERVATIVE_INPUT"));
