@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a saved-model joint current audit with complex multi-section flux, electrode balance, source coverage, current-basis and sigma-E checks. Localize the slot's 0.41628 A return flux to the original non-conservative mixed P1/constant-vector reconstruction rather than reduction or mapping; retain NO-GO and unchanged field solver/guards pending conservative current recovery and full-space verification.
+
 - Add a chat handoff with accepted analyzer milestones, pending P7 gates, evidence paths and workspace preservation rules. Record the completed D1 agent's reported NO-GO as awaiting parent review; its native/energy changes and tests are not accepted by this documentation update. Clarify current versus historical tasks in both implementation plans.
 
 - Correct wide-section board-adapter length transport and require real width/air/mesh comparisons against one final configuration. Verify a coupled PEC section selected automatically from original STM32 copper (49 focused tests); retain full-channel/distributed-return guards and open multilayer/finite-R acceptance. Begin the bounded D1 joint-versus-segmented EM integration task.
