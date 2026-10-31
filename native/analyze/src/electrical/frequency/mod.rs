@@ -1,5 +1,5 @@
 //! Explicit tabulated multiports, common return, power waves, CPU/F64.
-pub(super) mod math;
+pub(crate) mod math;
 mod touchstone;
 use super::{fail, Budget, Result};
 use math::*;

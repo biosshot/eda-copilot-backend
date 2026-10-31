@@ -19,3 +19,9 @@ fn request()->Request{Request{prepared:prepared(),frequencies_hz:vec![1000.,1000
  for (sample,weights) in result["samples"].as_array().unwrap().iter().zip([[2.,3.],[4.,5.]]){let current=&sample["currentRealImaginaryA"][0];let faces=sample["conservativeFaceRealImaginaryA"].as_array().unwrap();for face in 0..2{for part in 0..2{let expected=current[part].as_f64().unwrap()*weights[face];assert!((faces[face][part].as_f64().unwrap()-expected).abs()<1e-12);}}}
  let mut invalid=request();invalid.prepared["candidate"]["conservativeCurrent"]=serde_json::json!({"faces":[{}],"dcBasis":[[1.,2.]],"acBasis":[[1.]]});assert!(solve(invalid).unwrap_err().contains("conservative face basis"));
 }
+
+#[test]fn loaded_state_packet_preserves_legacy_response_without_reinterpreting_it_as_a_basis(){
+ let expected=solve(request()).unwrap();let mut r=request();r.prepared["candidate"]["conservativeCurrent"]=serde_json::json!({"kind":"rt0-loaded-state-v2","faces":[{}],"states":[{"frequencyHz":0.},{"frequencyHz":1000.}]});let actual=solve(r).unwrap();
+ for (a,b) in expected["samples"].as_array().unwrap().iter().zip(actual["samples"].as_array().unwrap()){for key in ["portRealV","portImaginaryV","totalLossW","currentRealImaginaryA","cellLossW"]{assert_eq!(a[key],b[key]);}assert!(b["conservativeFaceRealImaginaryA"].is_null());}
+ let mut invalid=request();invalid.prepared["candidate"]["conservativeCurrent"]=serde_json::json!({"kind":"rt0-loaded-state-v2","faces":[{}],"states":[]});assert!(solve(invalid).unwrap_err().contains("loaded DC/1kHz"));
+}

@@ -100,3 +100,28 @@ fn recovery_refuses_nonfinite_range_and_never_changes_mesh_identity(){
     assert!(conservative.recover(&space,&vec![0.;space.current_count()-1],true).is_err());
     assert_eq!(nodes,mesh.nodes_m.iter().map(|p|p.map(f64::to_bits)).collect::<Vec<_>>());assert_eq!(cells,mesh.copper_tetrahedra.iter().map(|c|c.nodes).collect::<Vec<_>>());
 }
+
+#[test]
+fn incompatible_auxiliary_dc_modes_have_a_compatible_loaded_full_reduced_combination(){
+    let mesh=mesh::extrude(&LayeredInput{
+        xy_m:vec![[0.,0.],[1e-3,0.],[1e-3,0.5e-3],[0.,0.5e-3],[0.5e-3,0.25e-3]],
+        triangles:vec![[0,1,4],[1,2,4],[2,3,4],[3,0,4]],boundary_edges:vec![[0,1],[1,2],[2,3],[3,0]],z_m:vec![0.,0.2e-3],
+        materials:vec![vec![Material::Copper{source_ids:vec!["loaded-state-regression".into()]};4]],
+    },budget()).unwrap();
+    let electrodes:Vec<_>=[0.,1e-3].map(|x|mesh.nodes_m.iter().enumerate().filter_map(|(i,p)|(p[0]==x).then_some(i)).collect::<Vec<_>>()).into();
+    let space=volume_current::assemble(&mesh,&vec![58e6;mesh.copper_tetrahedra.len()],&electrodes,budget()).unwrap();let conservative=ConservativeSpace::new(&mesh,&space,&electrodes,budget()).unwrap();
+    let longitudinal=currents(&space,&mesh,[1e-6,0.,0.],58e6);let transverse=currents(&space,&mesh,[0.,1e-6,0.],58e6);
+    let auxiliary=[longitudinal.iter().zip(&transverse).map(|(a,b)|a+b).collect::<Vec<_>>(),longitudinal.iter().zip(&transverse).map(|(a,b)|a-b).collect::<Vec<_>>()];
+    for mode in &auxiliary{assert!(conservative.recover(&space,mode,true).is_err());}
+    let loaded=auxiliary[0].iter().zip(&auxiliary[1]).map(|(a,b)|0.5*a+0.5*b).collect::<Vec<_>>();
+    // The full and independently reconstructed reduced loaded states use the
+    // same physical coefficients; neither is an all-mode DC projection.
+    for state in [loaded.clone(),loaded]{
+        let target=space.divergence(&state).unwrap();let flux=conservative.recover(&space,&state,true).unwrap();let again=conservative.recover(&space,&state,true).unwrap();assert_eq!(flux,again);
+        let mut reaction=vec![0.;space.potential_count()];
+        for(index,face)in conservative.faces.iter().enumerate(){if face.cells.len()==1&&!face.electrode{assert_eq!(flux[index],0.);}for incidence in &face.cells{reaction[space.cells[incidence.cell].potentials[incidence.opposite]]+=incidence.sign*flux[index]/3.;if face.cells.len()==2{let other=face.cells.iter().find(|c|c.cell!=incidence.cell).unwrap();close(incidence.sign*flux[index],-other.sign*flux[index]);}}}
+        let electrode_dofs:std::collections::BTreeSet<_>=electrodes.iter().map(|nodes|space.node_potential[&nodes[0]]).collect();let omitted:Vec<_>=(0..space.potential_count()).filter(|dof|!electrode_dofs.contains(dof)).collect();assert_eq!(omitted.len(),2);
+        for dof in omitted.iter().copied().chain(electrode_dofs){close(reaction[dof],target[dof]);}
+        assert!(conservative.cell_divergence(&space,&flux).unwrap().iter().all(|value|value.abs()<1e-12));
+    }
+}

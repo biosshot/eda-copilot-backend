@@ -25,6 +25,68 @@ pub fn allocation_budget(memory_mib:usize)->AllocationBudget{
     else{AllocationBudget{max_bytes,max_nodes:100000,max_tetrahedra:512*1024*1024/2048}}
 }
 
+fn loaded_values(value:&serde_json::Value)->Result<Vec<f64>,String>{
+    serde_json::from_value(value.clone()).map_err(|e|format!("LOCAL_LOADED_STATE: {e}"))
+}
+fn weighted(columns:&[Vec<f64>],weights:&[f64])->Result<Vec<f64>,String>{
+    if columns.len()!=weights.len()||columns.is_empty()||columns[0].is_empty()||columns.iter().any(|v|v.len()!=columns[0].len()||v.iter().any(|x|!x.is_finite()))||weights.iter().any(|x|!x.is_finite()){return Err("LOCAL_LOADED_STATE: finite equally sized state columns required".into());}
+    Ok((0..columns[0].len()).map(|j|columns.iter().zip(weights).map(|(v,w)|v[j]*w).sum()).collect())
+}
+fn weighted_checks(checks:&[&serde_json::Value],key:&str,weights:&[f64])->Result<Vec<f64>,String>{
+    let columns=checks.iter().map(|check|loaded_values(&check[key])).collect::<Result<Vec<_>,_>>()?;weighted(&columns,weights)
+}
+fn complex_fields(checks:&[&serde_json::Value],real_key:&str,imaginary_key:&str,coefficients:&[crate::electrical::frequency::math::C])->Result<(Vec<f64>,Vec<f64>),String>{
+    let real:Vec<_>=coefficients.iter().map(|a|a.real).collect();let imaginary:Vec<_>=coefficients.iter().map(|a|a.imaginary).collect();
+    let rr=weighted_checks(checks,real_key,&real)?;let ri=weighted_checks(checks,imaginary_key,&imaginary)?;
+    let ir=weighted_checks(checks,real_key,&imaginary)?;let ii=weighted_checks(checks,imaginary_key,&real)?;
+    if rr.len()!=ri.len()||ir.len()!=ii.len()||rr.len()!=ir.len(){return Err("LOCAL_LOADED_STATE: real/imaginary state size mismatch".into());}
+    Ok((rr.iter().zip(&ri).map(|(a,b)|a-b).collect(),ir.iter().zip(&ii).map(|(a,b)|a+b).collect()))
+}
+/// Fixed Norton loads act on the existing full harmonic and reduced states.
+/// No auxiliary current column is required to be an insulated DC field.
+fn loaded_dc(currents:&volume_current::Space,basis:&volume_reduction::Basis,candidate:&coupled::Model,ports:&[[usize;2]],contacts:&[(String,usize)],conservative:&ConservativeSpace,drive:&[f64],loads:&[f64],budget:&crate::electrical::Budget)->Result<serde_json::Value,String>{
+    use crate::electrical::frequency::{Quality,math::{C,Matrix,solve}};
+    let ne=contacts.len();let np=ports.len();if ne==0||np==0||drive.len()!=np||loads.len()!=np||loads.iter().any(|r|!r.is_finite()||*r<=0.){return Err("LOCAL_LOADED_STATE: complete finite loaded port mapping required".into());}
+    let electrode_currents=basis.voltage.iter().take(ne).map(|v|{let mut current=currents.gradient(v)?;for cell in 0..currents.cells.len(){for axis in 0..3{current[3*cell+axis]/=currents.cells[cell].resistance_ohm;}}Ok(current)}).collect::<Result<Vec<_>,String>>()?;
+    if electrode_currents.len()!=ne{return Err("LOCAL_LOADED_STATE: harmonic electrode states missing".into());}
+    let reactions=electrode_currents.iter().map(|current|currents.divergence(current)).collect::<Result<Vec<_>,_>>()?;
+    let mut incidence=vec![vec![0.;np];ne];for(p,&[a,b])in ports.iter().enumerate(){if a>=ne||b>=ne||a==b{return Err("LOCAL_LOADED_STATE: invalid electrode incidence".into());}incidence[a][p]=1.;incidence[b][p]=-1.;}
+    let mut matrix=vec![vec![0.;ne];ne];for i in 0..ne{for j in 0..ne{matrix[i][j]=reactions[j][contacts[i].1];for p in 0..np{matrix[i][j]+=incidence[i][p]*incidence[j][p]/loads[p];}}}
+    let rhs:Vec<_>=(0..ne).map(|i|(0..np).map(|p|incidence[i][p]*drive[p]).sum()).collect();
+    let a:Matrix=matrix.iter().map(|row|row.iter().map(|&v|C::new(v,0.)).collect()).collect();let b=vec![rhs.iter().map(|&v|C::new(v,0.)).collect()];
+    let solved=solve(&a,&b,&mut Quality::default())?;let electrode_voltage:Vec<_>=solved.into_iter().map(|row|row[0].real).collect();
+    let full_potential=weighted(&basis.voltage[..ne],&electrode_voltage)?;let full_current=weighted(&electrode_currents,&electrode_voltage)?;
+    let full_ports:Vec<_>=ports.iter().map(|&[a,b]|electrode_voltage[a]-electrode_voltage[b]).collect();
+    let mut residual:f64=0.;for i in 0..ne{let value=(0..ne).map(|j|matrix[i][j]*electrode_voltage[j]).sum::<f64>()-rhs[i];let scale=rhs[i].abs()+(0..ne).map(|j|(matrix[i][j]*electrode_voltage[j]).abs()).sum::<f64>();residual=residual.max(value.abs()/scale.max(1e-30));}
+    let norton:Vec<_>=(0..np).map(|p|{let conduction=(0..ne).map(|i|incidence[i][p]*(0..ne).map(|j|reactions[j][contacts[i].1]*electrode_voltage[j]).sum::<f64>()).sum::<f64>();drive[p]-full_ports[p]/loads[p]-conduction}).collect();
+    let mut reduced=coupled::System::compile(candidate,np,Some(budget))?;for(p,&load)in loads.iter().enumerate(){reduced.add_port_admittance(p,1./load,0.)?;}
+    let nvr=candidate.potential_nodes.len();let n=nvr+candidate.current_dofs.len();let mut rhs_reduced=reduced.port_rhs(drive);rhs_reduced.resize(n,0.);let x=reduced.solve(0.,rhs_reduced,&vec![0.;n],&mut Counters::default())?;
+    let reduced_potential=weighted(&basis.voltage,&x[..nvr])?;let reduced_current=weighted(&basis.current,&x[nvr..])?;
+    let full_faces=conservative.recover(currents,&full_current,true)?;let reduced_faces=conservative.recover(currents,&reduced_current,true)?;
+    Ok(serde_json::json!({"frequencyHz":0.,"driveA":drive,"loadsOhm":loads,"electrodeVoltageV":electrode_voltage,"fullPortVoltages":full_ports.iter().map(|&v|[v,0.]).collect::<Vec<_>>(),"reducedPortReal":reduced.port_voltages(&x,np),"reducedPortImaginary":vec![0.;np],"fullPotentialRealV":full_potential,"fullPotentialImaginaryV":vec![0.;currents.potential_count()],"reducedPotentialRealV":reduced_potential,"reducedPotentialImaginaryV":vec![0.;currents.potential_count()],"fullCurrentReal":full_current,"fullCurrentImaginary":vec![0.;currents.current_count()],"reducedCurrentReal":reduced_current,"reducedCurrentImaginary":vec![0.;currents.current_count()],"fullConservativeFaceReal":full_faces,"fullConservativeFaceImaginary":vec![0.;conservative.faces.len()],"reducedConservativeFaceReal":reduced_faces,"reducedConservativeFaceImaginary":vec![0.;conservative.faces.len()],"reducedState":x,"harmonicElectrodeNormalizedResidual":residual,"nortonResidualA":norton}))
+}
+/// Combine exact unit-port states first, then recover the one physical loaded state.
+fn loaded_ac(currents:&volume_current::Space,basis:&volume_reduction::Basis,candidate:&coupled::Model,conservative:&ConservativeSpace,checks:&[serde_json::Value],drive:&[f64],loads:&[f64])->Result<serde_json::Value,String>{
+    use crate::electrical::frequency::{Quality,math::{C,Matrix,solve}};
+    let np=ports_len(drive,loads)?;let mut selected=vec![None;np];
+    for check in checks{if check["frequencyHz"].as_f64()!=Some(1000.){continue;}let d=loaded_values(&check["drive"])?;if d.len()!=np{continue;}for p in 0..np{if d.iter().enumerate().all(|(j,v)|*v==if j==p{1.}else{0.}){if selected[p].replace(check).is_some(){return Err("LOCAL_LOADED_STATE: duplicate 1 kHz unit-port state".into());}}}}
+    let checks:Vec<_>=selected.into_iter().enumerate().map(|(p,check)|check.ok_or_else(||format!("LOCAL_LOADED_STATE: missing 1 kHz unit-port state {p}"))).collect::<Result<_,_>>()?;
+    let full_u:Vec<Vec<C>>=(0..np).map(|q|(0..np).map(|p|{let values=serde_json::from_value::<Vec<[f64;2]>>(checks[p]["fullPortVoltages"].clone()).map_err(|e|format!("LOCAL_LOADED_STATE: {e}"))?;if values.len()!=np{return Err("LOCAL_LOADED_STATE: full port size mismatch".into());}Ok(C::new(values[q][0],values[q][1]))}).collect::<Result<Vec<_>,String>>()).collect::<Result<_,_>>()?;
+    let a:Matrix=(0..np).map(|q|(0..np).map(|p|C::new(if q==p{1.}else{0.},0.)+full_u[q][p].scale(1./loads[q])).collect()).collect();let b=vec![drive.iter().map(|&v|C::new(v,0.)).collect()];let solved=solve(&a,&b,&mut Quality::default())?;let coefficients:Vec<_>=solved.into_iter().map(|row|row[0]).collect();
+    let full_ports:Vec<_>=(0..np).map(|q|(0..np).map(|p|full_u[q][p]*coefficients[p]).fold(C::default(),|a,b|a+b)).collect();
+    let (reduced_port_real,reduced_port_imaginary)=complex_fields(&checks,"reducedPortReal","reducedPortImaginary",&coefficients)?;
+    let (full_potential_real,full_potential_imaginary)=complex_fields(&checks,"fullPotentialRealV","fullPotentialImaginaryV",&coefficients)?;
+    let (full_current_real,full_current_imaginary)=complex_fields(&checks,"fullCurrentReal","fullCurrentImaginary",&coefficients)?;
+    let real:Vec<_>=coefficients.iter().map(|a|a.real).collect();let imaginary:Vec<_>=coefficients.iter().map(|a|a.imaginary).collect();let xr=weighted_checks(&checks,"reducedState",&real)?;let xi=weighted_checks(&checks,"reducedState",&imaginary)?;
+    let n=candidate.potential_nodes.len()+candidate.current_dofs.len();if xr.len()!=2*n{return Err("LOCAL_LOADED_STATE: reduced real/imaginary block size mismatch".into());}
+    let mut x=vec![0.;2*n];for j in 0..n{x[j]=xr[j]-xi[n+j];x[n+j]=xr[n+j]+xi[j];}
+    let nvr=candidate.potential_nodes.len();let reduced_potential_real=weighted(&basis.voltage,&x[..nvr])?;let reduced_potential_imaginary=weighted(&basis.voltage,&x[n..n+nvr])?;let reduced_current_real=weighted(&basis.current,&x[nvr..n])?;let reduced_current_imaginary=weighted(&basis.current,&x[n+nvr..])?;
+    let full_face_real=conservative.recover(currents,&full_current_real,false)?;let full_face_imaginary=conservative.recover(currents,&full_current_imaginary,false)?;let reduced_face_real=conservative.recover(currents,&reduced_current_real,false)?;let reduced_face_imaginary=conservative.recover(currents,&reduced_current_imaginary,false)?;
+    let norton:Vec<_>=(0..np).map(|p|coefficients[p]-(C::new(drive[p],0.)-full_ports[p].scale(1./loads[p]))).collect();let residual=norton.iter().map(|v|v.abs()).fold(0.,f64::max)/drive.iter().map(|v|v.abs()).fold(1e-30,f64::max);
+    Ok(serde_json::json!({"frequencyHz":1000.,"driveA":drive,"loadsOhm":loads,"superpositionCoefficientsA":coefficients.iter().map(|a|[a.real,a.imaginary]).collect::<Vec<_>>(),"fullPortVoltages":full_ports.iter().map(|v|[v.real,v.imaginary]).collect::<Vec<_>>(),"reducedPortReal":reduced_port_real,"reducedPortImaginary":reduced_port_imaginary,"fullPotentialRealV":full_potential_real,"fullPotentialImaginaryV":full_potential_imaginary,"reducedPotentialRealV":reduced_potential_real,"reducedPotentialImaginaryV":reduced_potential_imaginary,"fullCurrentReal":full_current_real,"fullCurrentImaginary":full_current_imaginary,"reducedCurrentReal":reduced_current_real,"reducedCurrentImaginary":reduced_current_imaginary,"fullConservativeFaceReal":full_face_real,"fullConservativeFaceImaginary":full_face_imaginary,"reducedConservativeFaceReal":reduced_face_real,"reducedConservativeFaceImaginary":reduced_face_imaginary,"reducedState":x,"superpositionNormalizedResidual":residual,"nortonResidualA":norton.iter().map(|v|[v.real,v.imaginary]).collect::<Vec<_>>() }))
+}
+fn ports_len(drive:&[f64],loads:&[f64])->Result<usize,String>{if drive.is_empty()||drive.len()!=loads.len()||drive.iter().chain(loads).any(|v|!v.is_finite())||loads.iter().any(|r|*r<=0.){Err("LOCAL_LOADED_STATE: complete finite loaded port mapping required".into())}else{Ok(drive.len())}}
+
 /// Internal orchestration options. Developer verification is explicitly opt-in.
 pub struct Options<'a> {
     pub mode: &'a str,
@@ -185,21 +247,14 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
             .and_then(|n|n.checked_add(1024*1024)).ok_or("P6 live overflow")?;
         let conservative_stage=std::time::Instant::now();
         let mut conservative_current=None;
-        let conservative=if mode=="full" {
+        let conservative=if mode=="full"&&ports.len()==4&&frequencies_hz.contains(&1000.) {
             let available=budget.max_bytes.checked_sub(reserved).filter(|&n|n>0).ok_or("conservative current live budget exhausted")?;
             let c=ConservativeSpace::new(&b.mesh,&currents,&electrodes,AllocationBudget{max_bytes:available,..budget})?;
-            let dc_basis=c.project_basis(&currents,&basis.current,true)?;
-            let ac_basis=c.project_basis(&currents,&basis.current,false)?;
-            let electrode_currents=basis.voltage.iter().take(contacts.len()).map(|v|{let mut current=currents.gradient(v)?;for cell in 0..currents.cells.len(){for axis in 0..3{current[3*cell+axis]/=currents.cells[cell].resistance_ohm;}}Ok(current)}).collect::<Result<Vec<_>,String>>()?;
-            let dc_electrode_basis=c.project_basis(&currents,&electrode_currents,true)?;
-            let columns=basis.current.len().checked_mul(2).and_then(|n|n.checked_add(contacts.len())).ok_or("conservative basis column overflow")?;
-            let projected_bytes=columns.checked_mul(c.faces.len()).and_then(|n|n.checked_mul(8)).ok_or("conservative basis byte overflow")?;
-            let planned_bytes=c.planned_bytes.checked_add(projected_bytes).ok_or("conservative live byte overflow")?;
-            reserved=reserved.checked_add(planned_bytes).ok_or("conservative reserved byte overflow")?;
-            conservative_current=Some(serde_json::json!({"kind":"rt0-minimum-correction-v1","fluxUnits":"A","nodalReactionPerOutwardFaceFlux":1./3.,"faces":&c.faces,"dcBasis":dc_basis,"acBasis":ac_basis,"dcElectrodeBasis":dc_electrode_basis,"plannedBytes":planned_bytes}));
+            reserved=reserved.checked_add(c.planned_bytes).ok_or("conservative reserved byte overflow")?;
+            conservative_current=Some(serde_json::json!({"kind":"rt0-loaded-state-v2","fluxUnits":"A","potentialUnits":"V","phasorConvention":"RMS","nodalReactionPerOutwardFaceFlux":1./3.,"faces":&c.faces,"driveA":[1.,0.,-1.,0.],"loadsOhm":[50.,50.,50.,50.],"states":[],"plannedBytes":c.planned_bytes}));
             Some(c)
         }else{None};
-        if conservative.is_some(){record_stage(&mut stages,"conservativeCurrentRecovery",conservative_stage);}
+        if conservative.is_some(){record_stage(&mut stages,"conservativeCurrentTopology",conservative_stage);}
         let p6_bytes=budget.max_bytes.checked_sub(reserved).filter(|&n|n>0).ok_or("P6 remaining shared memory budget exhausted")?;
         let p6_budget=crate::electrical::Budget{max_memory_mi_b:Some(p6_bytes as f64/1048576.),max_seconds:Some(remaining()?.as_secs_f64())};
         let stage=std::time::Instant::now();
@@ -245,14 +300,20 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
                 let potential=|shape:&[f64],correction:&[f64],constants:&[f64]|{let mut v:Vec<f64>=shape.iter().zip(correction).map(|(a,b)|a+b).collect();for(component,nodes)in currents.components.iter().enumerate(){for&node in nodes{v[node]+=constants[component];}}v};
                 let full_potential_real=potential(&full.real_shape_v,&full.real_shape_correction_v,&full.real_constants_v);
                 let full_potential_imaginary=potential(&full.imaginary_shape_v,&full.imaginary_shape_correction_v,&full.imaginary_constants_v);
-                let face_states=if let Some(c)=conservative.as_ref(){Some((c.recover(&currents,&full.real_currents_a,false)?,c.recover(&currents,&full.imaginary_currents_a,false)?,c.recover(&currents,&rr,false)?,c.recover(&currents,&ri,false)?))}else{None};
-                let mut check=serde_json::json!({"drive":drive,"frequencyHz":frequency,"audit":&full.audit,"fullPortVoltages":full_ports,"reducedPortReal":reduced.port_voltages(&x,ports.len()),"reducedPortImaginary":reduced.port_voltages(&x[reduced_n..],ports.len()),"maxCurrentCoordinateError":state_error,"maxCellLossError":cell_loss_error,"fullLossW":full_loss,"reducedLossW":reduced_loss,"worstCurrent":{"index":worst,"axis":worst%3,"full":[full.real_currents_a[worst],full.imaginary_currents_a[worst]],"recovered":[rr[worst],ri[worst]],"weakFloor":1e-12*scale},"fullPotentialRealV":full_potential_real,"fullPotentialImaginaryV":full_potential_imaginary,"fullCurrentReal":&full.real_currents_a,"fullCurrentImaginary":&full.imaginary_currents_a,"reducedCurrentReal":&rr,"reducedCurrentImaginary":&ri,"reducedState":x});
-                if let Some((full_real,full_imaginary,reduced_real,reduced_imaginary))=face_states{check["fullConservativeFaceReal"]=serde_json::json!(full_real);check["fullConservativeFaceImaginary"]=serde_json::json!(full_imaginary);check["reducedConservativeFaceReal"]=serde_json::json!(reduced_real);check["reducedConservativeFaceImaginary"]=serde_json::json!(reduced_imaginary);}
+                let check=serde_json::json!({"drive":drive,"frequencyHz":frequency,"audit":&full.audit,"fullPortVoltages":full_ports,"reducedPortReal":reduced.port_voltages(&x,ports.len()),"reducedPortImaginary":reduced.port_voltages(&x[reduced_n..],ports.len()),"maxCurrentCoordinateError":state_error,"maxCellLossError":cell_loss_error,"fullLossW":full_loss,"reducedLossW":reduced_loss,"worstCurrent":{"index":worst,"axis":worst%3,"full":[full.real_currents_a[worst],full.imaginary_currents_a[worst]],"recovered":[rr[worst],ri[worst]],"weakFloor":1e-12*scale},"fullPotentialRealV":full_potential_real,"fullPotentialImaginaryV":full_potential_imaginary,"fullCurrentReal":&full.real_currents_a,"fullCurrentImaginary":&full.imaginary_currents_a,"reducedCurrentReal":&rr,"reducedCurrentImaginary":&ri,"reducedState":x});
                 full_checks.push(check);
                 if let Some(j)=developer_checkpoint {j.save(&name,full_checks.last().unwrap())?;}
             }
         }
         record_stage(&mut stages,"developerVerification",stage);
+        if let (Some(c),Some(packet))=(conservative.as_ref(),conservative_current.as_mut()){
+            if verification_failure.is_none(){
+                let stage=std::time::Instant::now();let drive=[1.,0.,-1.,0.];let loads=[50.;4];
+                let dc=loaded_dc(&currents,&basis,&candidate,&ports,&contacts,c,&drive,&loads,&p6_budget)?;
+                let ac=loaded_ac(&currents,&basis,&candidate,c,&full_checks,&drive,&loads)?;
+                packet["states"]=serde_json::json!([dc,ac]);record_stage(&mut stages,"conservativeLoadedStateRecovery",stage);
+            }
+        }
         model=serde_json::json!({"admission":"accepted-electric-v1-full-model-verification-pending","coldPrepareSeconds":cold_prepare_seconds,"fieldOperator":field_metadata,"magneticActionReuse":magnetic.stats(),"magneticNumericalLinearity":magnetic_linearity,"model":candidate,"response":response,"training":training,"fullChecks":full_checks,"verificationStatus":if verification_failure.is_some(){"incomplete"}else if mode=="verify"||mode=="full"{"complete"}else{"not-run"},"verificationFailure":verification_failure,"resumedPrepared":resumed,"voltageBasis":basis.voltage,"currentBasis":basis.current});
         if let Some(current)=conservative_current{model["conservativeCurrent"]=current;}
     }

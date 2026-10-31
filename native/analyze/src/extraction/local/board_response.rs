@@ -25,13 +25,21 @@ pub fn solve_with_options(&mut self,r:Request,seconds:f64,observables_only:bool)
  if ports==0||ports>16||basis.len()!=ni||resistances.is_empty()||resistances.len()>262144||resistances.iter().any(|v|!v.is_finite()||*v<=0.)||basis.iter().any(|v|v.len()!=3*resistances.len()||v.iter().any(|x|!x.is_finite())) {return Err("LOCAL_RECOVERY: invalid physical current recovery".into());}
  let conservative=if r.prepared["candidate"]["conservativeCurrent"].is_null(){None}else{
   let packet=&r.prepared["candidate"]["conservativeCurrent"];let faces=packet["faces"].as_array().ok_or("LOCAL_RECOVERY: conservative face topology required")?.len();
-  let dc=get(&packet["dcBasis"])?;let ac=get(&packet["acBasis"])?;
-  if faces==0||dc.len()!=ni||ac.len()!=ni||dc.iter().chain(&ac).any(|v|v.len()!=faces||v.iter().any(|x|!x.is_finite())){return Err("LOCAL_RECOVERY: invalid conservative face basis".into());}
-  Some((dc,ac,faces))
+  if faces==0{return Err("LOCAL_RECOVERY: invalid conservative face topology".into());}
+  if packet["kind"].as_str()==Some("rt0-loaded-state-v2"){
+   let states=packet["states"].as_array().ok_or("LOCAL_RECOVERY: loaded-state records required")?;
+   if states.len()!=2||states[0]["frequencyHz"].as_f64()!=Some(0.)||states[1]["frequencyHz"].as_f64()!=Some(1000.){return Err("LOCAL_RECOVERY: complete loaded DC/1kHz records required".into());}
+   // v2 is exact diagnostic evidence, not an arbitrary-drive reduced basis.
+   Some((None,faces))
+  }else{
+   let dc=get(&packet["dcBasis"])?;let ac=get(&packet["acBasis"])?;
+   if dc.len()!=ni||ac.len()!=ni||dc.iter().chain(&ac).any(|v|v.len()!=faces||v.iter().any(|x|!x.is_finite())){return Err("LOCAL_RECOVERY: invalid conservative face basis".into());}
+   Some((Some((dc,ac)),faces))
+  }
  };
  if r.frequencies_hz.len()>8192||r.frequencies_hz.iter().any(|f|!f.is_finite()||(*f!=0.&&*f<1000.)||*f>100000.) {return Err("LOCAL_BAND: supported AC extraction band is 1kHz..100kHz; DC requires charge-compatible excitation; rebuild/validation required outside band".into());}
  let output_plan=if observables_only{resistances.len().checked_mul(64).and_then(|n|n.checked_add(r.frequencies_hz.len().checked_mul(ports)?.checked_mul(64)?))}else{resistances.len().checked_mul(448).and_then(|n|n.checked_mul(r.frequencies_hz.len()))}.ok_or("LOCAL_OUTPUT_BUDGET: recovery output plan overflow")?;
- let output_plan=if !observables_only{conservative.as_ref().map_or(Some(output_plan),|(_,_,faces)|faces.checked_mul(r.frequencies_hz.len())?.checked_mul(16)?.checked_add(output_plan))}else{Some(output_plan)}.ok_or("LOCAL_OUTPUT_BUDGET: conservative output plan overflow")?;
+ let output_plan=if !observables_only{match conservative.as_ref(){Some((Some(_),faces))=>faces.checked_mul(r.frequencies_hz.len()).and_then(|n|n.checked_mul(16)).and_then(|n|n.checked_add(output_plan)),_=>Some(output_plan)}}else{Some(output_plan)}.ok_or("LOCAL_OUTPUT_BUDGET: conservative output plan overflow")?;
  if output_plan>64*1024*1024{return Err("LOCAL_OUTPUT_BUDGET: recovered samples exceed bounded output plan; request fewer frequencies".into());}
  let drive=if r.drive.is_empty(){let mut d=vec![0.;ports];d[0]=1.;d}else{r.drive};
  if drive.len()!=ports||drive.iter().any(|v|!v.is_finite())||(!r.loads_ohm.is_empty()&&r.loads_ohm.len()!=ports){return Err("LOCAL_DRIVE: complete finite port drive/load mapping required".into());}
@@ -47,7 +55,7 @@ pub fn solve_with_options(&mut self,r:Request,seconds:f64,observables_only:bool)
   let mut rhs=system.port_rhs(&drive);rhs.resize(if frequency==0.{n}else{2*n},0.);
   let x=system.solve(2.*std::f64::consts::PI*frequency,rhs,&vec![0.;n],&mut stats)?;
   let currents=(0..3*resistances.len()).map(|j|[(0..ni).map(|k|basis[k][j]*x[nv+k]).sum::<f64>(),if frequency==0.{0.}else{(0..ni).map(|k|basis[k][j]*x[n+nv+k]).sum::<f64>()}]).collect::<Vec<_>>();
-  let conservative_faces=conservative.as_ref().map(|(dc,ac,faces)|{let basis=if frequency==0.{dc}else{ac};(0..*faces).map(|j|[(0..ni).map(|k|basis[k][j]*x[nv+k]).sum::<f64>(),if frequency==0.{0.}else{(0..ni).map(|k|basis[k][j]*x[n+nv+k]).sum::<f64>()}]).collect::<Vec<_>>()});
+  let conservative_faces=conservative.as_ref().and_then(|(bases,faces)|bases.as_ref().map(|(dc,ac)|{let basis=if frequency==0.{dc}else{ac};(0..*faces).map(|j|[(0..ni).map(|k|basis[k][j]*x[nv+k]).sum::<f64>(),if frequency==0.{0.}else{(0..ni).map(|k|basis[k][j]*x[n+nv+k]).sum::<f64>()}]).collect::<Vec<_>>()}));
   let losses=resistances.iter().enumerate().map(|(i,r)|r*(0..3).map(|k|currents[3*i+k][0].powi(2)+currents[3*i+k][1].powi(2)).sum::<f64>()).collect::<Vec<_>>();
   let total_loss=losses.iter().sum::<f64>();let mut sample=serde_json::json!({"frequencyHz":frequency,"portRealV":system.port_voltages(&x,ports),"portImaginaryV":if frequency==0.{vec![0.;ports]}else{system.port_voltages(&x[n..],ports)},"totalLossW":total_loss});
   if !observables_only{sample["currentRealImaginaryA"]=serde_json::json!(currents);sample["cellLossW"]=serde_json::json!(losses);if let Some(faces)=conservative_faces{sample["conservativeFaceRealImaginaryA"]=serde_json::json!(faces);}}samples.push(sample);
