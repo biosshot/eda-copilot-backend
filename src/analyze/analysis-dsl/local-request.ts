@@ -1,9 +1,6 @@
-import {createHash} from 'node:crypto';
-import {freeze} from './data.ts';
 import {channelPlan} from './channel-plan.ts';
-import {createProblemExecutor} from '../execute-problem.ts';
+import {capturedBoardGeometry} from '../geometry-snapshot.ts';
 import type {AnalysisTask} from './executor.ts';import type * as T from './spec-doc.js';import {object} from './descriptions.ts';import {AnalysisDslError} from './schema.ts';import {dcMaterial} from './profile-adapter.ts';
-let preparedBoard:{identity:string;report:import('../../../native/analyze/index.js').AnalysisGeometryReport}|undefined;
 const decimalScale=(v:number,power:number)=>{const [m,e='0']=String(v).split('e');return Number(m+'e'+(Number(e)+power));};
 const fail=(s:string):never=>{throw new AnalysisDslError('LOCAL_INPUT',s);};
 /** Existing channel/port/scope/stackup descriptions -> internal volume transport. */
@@ -30,6 +27,6 @@ export function localRequest(task:AnalysisTask<'impedance'>,onPlan?:(plan:Return
  for(const role of ['positive','negative'] as const)for(let p=0;p<endpoints.length;p++){const e=endpoints[p],layer=e[role+'Layer']??e.layer;if(!layer)fail('Contact layer required');const sourcePath=source(e[role]),key=sourcePath+':'+layer;planningContacts.push({sourcePath,layer});
  let name=seen.get(key);if(!name){name=(role==='positive'?'signal':'return')+'-'+layer;if(electrodes.some(x=>x.name===name))name+='-'+p;seen.set(key,name);const index=stack.findIndex(l=>l.copper&&l.name===layer);if(index<0)fail('Contact layer absent in stack');const copperIndices=stack.flatMap((l,i)=>l.copper?[i]:[]);// Physical terminal convention is stable across channel direction: bottom uses its exterior upper face; top/interior use the first Cu face in stack order.
  electrodes.push({name,sourcePath,layer,upper:index===copperIndices.at(-1)});}pairs[p][role==='positive'?0:1]=name;}
- if(!roi){const execute=createProblemExecutor();const boardJson=JSON.stringify(b),identity=createHash('sha256').update(boardJson).digest('hex');let prepared=preparedBoard?.identity===identity?preparedBoard.report:undefined;if(!prepared){prepared=freeze(execute({kind:'prepare-geometry',boardJson}));preparedBoard={identity,report:prepared};}const plan=channelPlan(prepared,planningContacts);roi=plan.candidateDomainsMm[0];onPlan?.(plan);}
+ if(!roi){const prepared=capturedBoardGeometry(JSON.stringify(b));const plan=channelPlan(prepared,planningContacts);roi=plan.candidateDomainsMm[0];onPlan?.(plan);}
  return {roiMm:roi,stack,finishedHolePlatingM:decimalScale(stackup.routing.viaPlatingThicknessUm!,-6),barrelConductivitySM:dcMaterial(plating,c.temperatureC).conductivity_s_m,airMarginM:.002,maxTriangleAreaM2:1e-6,maxVerticalStepM:.002,curveDeviationMm:.001,electrodes,ports:pairs,acceptUnknownFillFreshness:true,allowInsulatedCopperCuts:true,minTriangleAngleDeg:0,airEdgeDivisions:1};
 }

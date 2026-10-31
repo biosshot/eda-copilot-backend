@@ -1,0 +1,945 @@
+{
+  "verification": {
+    "schema": "p7-shared-return-verification-v1",
+    "rows": [
+      {
+        "id": "wide",
+        "family": "wide-plane",
+        "metric": "DC port Z",
+        "frequency_hz": 0,
+        "status": "pass",
+        "maxNormalizedError": 2.7513831233318333e-15,
+        "maxAbsoluteErrorOhm": 1.0842021724855044e-19
+      },
+      {
+        "id": "edge",
+        "family": "finite-edge",
+        "metric": "DC port Z",
+        "frequency_hz": 0,
+        "status": "pass",
+        "maxNormalizedError": 2.7513831233318333e-15,
+        "maxAbsoluteErrorOhm": 2.168404344971009e-19
+      },
+      {
+        "id": "slot-detour",
+        "family": "slot",
+        "metric": "DC port Z",
+        "frequency_hz": 0,
+        "status": "pass",
+        "maxNormalizedError": 5.502766246663666e-15,
+        "maxAbsoluteErrorOhm": 6.505213034913027e-19
+      },
+      {
+        "id": "two-planes",
+        "family": "multiple-planes",
+        "metric": "DC port Z",
+        "frequency_hz": 0,
+        "status": "pass",
+        "maxNormalizedError": 2.7513831233318333e-15,
+        "maxAbsoluteErrorOhm": 5.421010862427522e-20
+      },
+      {
+        "id": "via-near",
+        "family": "return-transition",
+        "metric": "DC port Z",
+        "frequency_hz": 0,
+        "status": "pass",
+        "maxNormalizedError": 1.2506286924235605e-14,
+        "maxAbsoluteErrorOhm": 5.421010862427522e-19
+      },
+      {
+        "id": "via-remote",
+        "family": "return-transition",
+        "metric": "DC port Z",
+        "frequency_hz": 0,
+        "status": "pass",
+        "maxNormalizedError": 9.230446607306794e-14,
+        "maxAbsoluteErrorOhm": 1.1275702593849246e-17
+      },
+      {
+        "id": "shared-narrow",
+        "family": "coupled-common-return",
+        "metric": "DC port Z",
+        "frequency_hz": 0,
+        "status": "pass",
+        "maxNormalizedError": 2.201106498665467e-15,
+        "maxAbsoluteErrorOhm": 4.336808689942018e-19
+      },
+      {
+        "id": "shared-split",
+        "family": "partition-invariance",
+        "metric": "DC port Z",
+        "frequency_hz": 0,
+        "status": "pass",
+        "maxNormalizedError": 5.502766246663666e-15,
+        "maxAbsoluteErrorOhm": 1.3010426069826053e-18
+      },
+      {
+        "family": "wide-plane",
+        "metric": "propagation-delay",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "wide-plane",
+        "metric": "S21",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "wide-plane",
+        "metric": "crosstalk-HF",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "wide-plane",
+        "metric": "distributed-return-current",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "finite-edge",
+        "metric": "propagation-delay",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "finite-edge",
+        "metric": "S21",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "finite-edge",
+        "metric": "crosstalk-HF",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "finite-edge",
+        "metric": "distributed-return-current",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "slot",
+        "metric": "propagation-delay",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "slot",
+        "metric": "S21",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "slot",
+        "metric": "crosstalk-HF",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "slot",
+        "metric": "distributed-return-current",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "multiple-planes",
+        "metric": "propagation-delay",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "multiple-planes",
+        "metric": "S21",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "multiple-planes",
+        "metric": "crosstalk-HF",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "multiple-planes",
+        "metric": "distributed-return-current",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "return-transition",
+        "metric": "propagation-delay",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "return-transition",
+        "metric": "S21",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "return-transition",
+        "metric": "crosstalk-HF",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "return-transition",
+        "metric": "distributed-return-current",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "coupled-common-return",
+        "metric": "propagation-delay",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "coupled-common-return",
+        "metric": "S21",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "coupled-common-return",
+        "metric": "crosstalk-HF",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      },
+      {
+        "family": "coupled-common-return",
+        "metric": "distributed-return-current",
+        "frequencies_hz": [
+          1,
+          100,
+          10000,
+          1000000,
+          100000000,
+          1000000000
+        ],
+        "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence.",
+        "status": "unavailable"
+      }
+    ],
+    "counts": {
+      "pass": 8,
+      "fail": 0,
+      "unavailable": 24
+    },
+    "resources": "unavailable: process tree measurements not supplied",
+    "scope": "DC ideal graph controls only; EM and P7 remain unaccepted"
+  },
+  "process_resources": {
+    "sampled_peak_rss_bytes": 4112384,
+    "wall_ms": 130.8021,
+    "scope": "single prototype process; rapid exit may evade sampling",
+    "sampling_ms": 5,
+    "exit_code": 0,
+    "sampled_peak_private_bytes": 557056
+  },
+  "max_abs_error_ohm": 1.1275702593849246e-17,
+  "prototype_output": {
+    "cases": [
+      {
+        "band_hz": [
+          0,
+          0
+        ],
+        "edge_currents_a_per_port_amp": [
+          [
+            0.9999999999999998
+          ]
+        ],
+        "id": "wide",
+        "impedance_ohm": [
+          [
+            0.0004925714285714286
+          ]
+        ],
+        "node_voltages_v_per_port_amp": [
+          [
+            0.0,
+            -0.0004925714285714286
+          ]
+        ],
+        "ports": [
+          {
+            "negative": "g",
+            "positive": "p"
+          }
+        ],
+        "quality": {
+          "kcl_abs_a": 2.220446049250313e-16,
+          "reciprocity_abs_ohm": 0.0,
+          "relative_power_error": 2.2011064986654672e-16
+        },
+        "resources": {
+          "assembly_ms": 0.1757,
+          "dense_payload_estimate_bytes": 88,
+          "estimate_excludes": "allocator/faer scratch/process runtime; not RSS or commit",
+          "factor_ms": 0.7494999999999999,
+          "full_potential_nodes": 2,
+          "gauge_reduced_unknowns": 1,
+          "nnz_full_gauged": 1,
+          "port_reduced_size": 1,
+          "solve_and_certify_ms": 0.1017,
+          "stored_factor_entries": 1,
+          "total_ms": 1.0275
+        },
+        "status": "ok",
+        "units": "ohm",
+        "unsupported_effects": [
+          "L/C/G",
+          "propagation",
+          "skin/proximity",
+          "inductive/capacitive crosstalk",
+          "arbitrary polygon extraction"
+        ]
+      },
+      {
+        "band_hz": [
+          0,
+          0
+        ],
+        "edge_currents_a_per_port_amp": [
+          [
+            0.9999999999999998
+          ]
+        ],
+        "id": "edge",
+        "impedance_ohm": [
+          [
+            0.0009851428571428572
+          ]
+        ],
+        "node_voltages_v_per_port_amp": [
+          [
+            0.0,
+            -0.0009851428571428572
+          ]
+        ],
+        "ports": [
+          {
+            "negative": "g",
+            "positive": "p"
+          }
+        ],
+        "quality": {
+          "kcl_abs_a": 2.220446049250313e-16,
+          "reciprocity_abs_ohm": 0.0,
+          "relative_power_error": 2.2011064986654672e-16
+        },
+        "resources": {
+          "assembly_ms": 0.0138,
+          "dense_payload_estimate_bytes": 88,
+          "estimate_excludes": "allocator/faer scratch/process runtime; not RSS or commit",
+          "factor_ms": 0.012799999999999999,
+          "full_potential_nodes": 2,
+          "gauge_reduced_unknowns": 1,
+          "nnz_full_gauged": 1,
+          "port_reduced_size": 1,
+          "solve_and_certify_ms": 0.0259,
+          "stored_factor_entries": 1,
+          "total_ms": 0.0532
+        },
+        "status": "ok",
+        "units": "ohm",
+        "unsupported_effects": [
+          "L/C/G",
+          "propagation",
+          "skin/proximity",
+          "inductive/capacitive crosstalk",
+          "arbitrary polygon extraction"
+        ]
+      },
+      {
+        "band_hz": [
+          0,
+          0
+        ],
+        "edge_currents_a_per_port_amp": [
+          [
+            0.9999999999999996,
+            0.9999999999999998
+          ]
+        ],
+        "id": "slot-detour",
+        "impedance_ohm": [
+          [
+            0.0014777142857142855
+          ]
+        ],
+        "node_voltages_v_per_port_amp": [
+          [
+            0.0,
+            -0.0004925714285714285,
+            -0.0014777142857142855
+          ]
+        ],
+        "ports": [
+          {
+            "negative": "g",
+            "positive": "p"
+          }
+        ],
+        "quality": {
+          "kcl_abs_a": 4.440892098500626e-16,
+          "reciprocity_abs_ohm": 0.0,
+          "relative_power_error": 1.467404332443645e-16
+        },
+        "resources": {
+          "assembly_ms": 0.013900000000000001,
+          "dense_payload_estimate_bytes": 208,
+          "estimate_excludes": "allocator/faer scratch/process runtime; not RSS or commit",
+          "factor_ms": 0.0223,
+          "full_potential_nodes": 3,
+          "gauge_reduced_unknowns": 2,
+          "nnz_full_gauged": 4,
+          "port_reduced_size": 1,
+          "solve_and_certify_ms": 0.0414,
+          "stored_factor_entries": 4,
+          "total_ms": 0.07830000000000001
+        },
+        "status": "ok",
+        "units": "ohm",
+        "unsupported_effects": [
+          "L/C/G",
+          "propagation",
+          "skin/proximity",
+          "inductive/capacitive crosstalk",
+          "arbitrary polygon extraction"
+        ]
+      },
+      {
+        "band_hz": [
+          0,
+          0
+        ],
+        "edge_currents_a_per_port_amp": [
+          [
+            0.4999999999999999,
+            0.4999999999999999
+          ]
+        ],
+        "id": "two-planes",
+        "impedance_ohm": [
+          [
+            0.0002462857142857143
+          ]
+        ],
+        "node_voltages_v_per_port_amp": [
+          [
+            0.0,
+            -0.0002462857142857143
+          ]
+        ],
+        "ports": [
+          {
+            "negative": "g",
+            "positive": "p"
+          }
+        ],
+        "quality": {
+          "kcl_abs_a": 2.220446049250313e-16,
+          "reciprocity_abs_ohm": 0.0,
+          "relative_power_error": 2.2011064986654672e-16
+        },
+        "resources": {
+          "assembly_ms": 0.0126,
+          "dense_payload_estimate_bytes": 96,
+          "estimate_excludes": "allocator/faer scratch/process runtime; not RSS or commit",
+          "factor_ms": 0.0122,
+          "full_potential_nodes": 2,
+          "gauge_reduced_unknowns": 1,
+          "nnz_full_gauged": 1,
+          "port_reduced_size": 1,
+          "solve_and_certify_ms": 0.025,
+          "stored_factor_entries": 1,
+          "total_ms": 0.0506
+        },
+        "status": "ok",
+        "units": "ohm",
+        "unsupported_effects": [
+          "L/C/G",
+          "propagation",
+          "skin/proximity",
+          "inductive/capacitive crosstalk",
+          "arbitrary polygon extraction"
+        ]
+      },
+      {
+        "band_hz": [
+          0,
+          0
+        ],
+        "edge_currents_a_per_port_amp": [
+          [
+            0.9999999999999991,
+            0.9999999999999989
+          ]
+        ],
+        "id": "via-near",
+        "impedance_ohm": [
+          [
+            0.0005418285714285711
+          ]
+        ],
+        "node_voltages_v_per_port_amp": [
+          [
+            0.0,
+            -0.0004925714285714283,
+            -0.0005418285714285711
+          ]
+        ],
+        "ports": [
+          {
+            "negative": "g",
+            "positive": "p"
+          }
+        ],
+        "quality": {
+          "kcl_abs_a": 1.1102230246251565e-15,
+          "reciprocity_abs_ohm": 0.0,
+          "relative_power_error": 1.0005029539388494e-15
+        },
+        "resources": {
+          "assembly_ms": 0.0218,
+          "dense_payload_estimate_bytes": 208,
+          "estimate_excludes": "allocator/faer scratch/process runtime; not RSS or commit",
+          "factor_ms": 0.015400000000000002,
+          "full_potential_nodes": 3,
+          "gauge_reduced_unknowns": 2,
+          "nnz_full_gauged": 4,
+          "port_reduced_size": 1,
+          "solve_and_certify_ms": 0.0297,
+          "stored_factor_entries": 4,
+          "total_ms": 0.06760000000000001
+        },
+        "status": "ok",
+        "units": "ohm",
+        "unsupported_effects": [
+          "L/C/G",
+          "propagation",
+          "skin/proximity",
+          "inductive/capacitive crosstalk",
+          "arbitrary polygon extraction"
+        ]
+      },
+      {
+        "band_hz": [
+          0,
+          0
+        ],
+        "edge_currents_a_per_port_amp": [
+          [
+            1.0000000000000073,
+            1.0000000000000078
+          ]
+        ],
+        "id": "via-remote",
+        "impedance_ohm": [
+          [
+            0.0015269714285714403
+          ]
+        ],
+        "node_voltages_v_per_port_amp": [
+          [
+            0.0,
+            -0.001477714285714297,
+            -0.0015269714285714403
+          ]
+        ],
+        "ports": [
+          {
+            "negative": "g",
+            "positive": "p"
+          }
+        ],
+        "quality": {
+          "kcl_abs_a": 7.771561172376096e-15,
+          "reciprocity_abs_ohm": 0.0,
+          "relative_power_error": 7.384357285845382e-15
+        },
+        "resources": {
+          "assembly_ms": 0.0131,
+          "dense_payload_estimate_bytes": 208,
+          "estimate_excludes": "allocator/faer scratch/process runtime; not RSS or commit",
+          "factor_ms": 0.0144,
+          "full_potential_nodes": 3,
+          "gauge_reduced_unknowns": 2,
+          "nnz_full_gauged": 4,
+          "port_reduced_size": 1,
+          "solve_and_certify_ms": 0.0288,
+          "stored_factor_entries": 4,
+          "total_ms": 0.0569
+        },
+        "status": "ok",
+        "units": "ohm",
+        "unsupported_effects": [
+          "L/C/G",
+          "propagation",
+          "skin/proximity",
+          "inductive/capacitive crosstalk",
+          "arbitrary polygon extraction"
+        ]
+      },
+      {
+        "band_hz": [
+          0,
+          0
+        ],
+        "edge_currents_a_per_port_amp": [
+          [
+            1.0000000000000004,
+            -2.2011064986654667e-16,
+            1.0000000000000002
+          ],
+          [
+            1.1005532493327334e-16,
+            0.9999999999999998,
+            1.0
+          ]
+        ],
+        "id": "shared-narrow",
+        "impedance_ohm": [
+          [
+            0.002955428571428573,
+            0.0024628571428571434
+          ],
+          [
+            0.002462857142857144,
+            0.0034480000000000005
+          ]
+        ],
+        "node_voltages_v_per_port_amp": [
+          [
+            0.0,
+            -0.0004925714285714289,
+            -0.0004925714285714291,
+            -0.002955428571428573
+          ],
+          [
+            0.0,
+            -5.421010862427522e-20,
+            0.0009851428571428572,
+            -0.0024628571428571434
+          ]
+        ],
+        "ports": [
+          {
+            "negative": "g",
+            "positive": "p1"
+          },
+          {
+            "negative": "g",
+            "positive": "p2"
+          }
+        ],
+        "quality": {
+          "kcl_abs_a": 4.440892098500626e-16,
+          "reciprocity_abs_ohm": 4.336808689942018e-19,
+          "relative_power_error": 1.467404332443644e-16
+        },
+        "resources": {
+          "assembly_ms": 0.020999999999999998,
+          "dense_payload_estimate_bytes": 536,
+          "estimate_excludes": "allocator/faer scratch/process runtime; not RSS or commit",
+          "factor_ms": 0.0187,
+          "full_potential_nodes": 4,
+          "gauge_reduced_unknowns": 3,
+          "nnz_full_gauged": 7,
+          "port_reduced_size": 2,
+          "solve_and_certify_ms": 0.0771,
+          "stored_factor_entries": 9,
+          "total_ms": 0.1173
+        },
+        "status": "ok",
+        "units": "ohm",
+        "unsupported_effects": [
+          "L/C/G",
+          "propagation",
+          "skin/proximity",
+          "inductive/capacitive crosstalk",
+          "arbitrary polygon extraction"
+        ]
+      },
+      {
+        "band_hz": [
+          0,
+          0
+        ],
+        "edge_currents_a_per_port_amp": [
+          [
+            0.9999999999999998,
+            0.9999999999999998,
+            1.1005532493327334e-16,
+            0.9999999999999997
+          ],
+          [
+            -3.3016597479982e-16,
+            -3.3016597479982e-16,
+            1.0,
+            0.9999999999999997
+          ]
+        ],
+        "id": "shared-split",
+        "impedance_ohm": [
+          [
+            0.002955428571428571,
+            0.0024628571428571425
+          ],
+          [
+            0.0024628571428571425,
+            0.003448
+          ]
+        ],
+        "node_voltages_v_per_port_amp": [
+          [
+            0.0,
+            -0.0002462857142857143,
+            -0.0004925714285714286,
+            -0.0004925714285714285,
+            -0.002955428571428571
+          ],
+          [
+            0.0,
+            8.131516293641283e-20,
+            1.6263032587282567e-19,
+            0.0009851428571428576,
+            -0.0024628571428571425
+          ]
+        ],
+        "ports": [
+          {
+            "negative": "g",
+            "positive": "p1"
+          },
+          {
+            "negative": "g",
+            "positive": "p2"
+          }
+        ],
+        "quality": {
+          "kcl_abs_a": 3.3306690738754696e-16,
+          "reciprocity_abs_ohm": 0.0,
+          "relative_power_error": 3.773325426283658e-16
+        },
+        "resources": {
+          "assembly_ms": 0.025,
+          "dense_payload_estimate_bytes": 800,
+          "estimate_excludes": "allocator/faer scratch/process runtime; not RSS or commit",
+          "factor_ms": 0.0262,
+          "full_potential_nodes": 5,
+          "gauge_reduced_unknowns": 4,
+          "nnz_full_gauged": 10,
+          "port_reduced_size": 2,
+          "solve_and_certify_ms": 0.06830000000000001,
+          "stored_factor_entries": 16,
+          "total_ms": 0.12000000000000001
+        },
+        "status": "ok",
+        "units": "ohm",
+        "unsupported_effects": [
+          "L/C/G",
+          "propagation",
+          "skin/proximity",
+          "inductive/capacitive crosstalk",
+          "arbitrary polygon extraction"
+        ]
+      }
+    ],
+    "integration_decision": "no-go",
+    "physics": "DC finite resistor graph only",
+    "schema": "p7-shared-return-output-v1"
+  }
+}

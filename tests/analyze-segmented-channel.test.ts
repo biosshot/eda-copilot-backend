@@ -11,7 +11,7 @@ test('actual FEM sections compose through physical P6 terminals and match unpart
  assert.equal(r.result.status,'complete',JSON.stringify(r.result.diagnostics));assert.equal(reference.status,'complete');
  let error=0;for(let f=0;f<3;f++)for(let i=0;i<2;i++)for(let j=0;j<2;j++){const a=r.result.parameters![f][i][j],b=reference.network!.parameters[f][i][j];error=Math.max(error,Math.hypot(a.real-b.real,a.imaginary-b.imaginary));}assert.ok(error<1e-7,String(error));assert.equal(r.evidence.length,2);record('uniform-composition',{maxAbsoluteSError:error,composed:r.result.parameters,reference:reference.network!.parameters,frequencies,evidence:r.evidence,wallSeconds:r.wallSeconds});
 });
-test('source ownership refuses overlaps, gaps and nonlocal coupling split before solving',()=>{for(const delta of [-1,1]){const p=plan();p.blocks[1].ownership[0].startMm+=delta;assert.throws(()=>validateChannelOwnership(p),/overlap|gap|Uncovered/);}const p=plan();for(const b of p.blocks)b.couplingGroup='shared-field';assert.throws(()=>validateChannelOwnership(p),/jointly/);});
+test('source ownership refuses overlaps, gaps and nonlocal coupling split before solving',()=>{for(const delta of [-1,1]){const p=plan();const own=p.blocks[1].ownership[0];assert.ok(own.kind!=='fragment');own.startMm+=delta;assert.throws(()=>validateChannelOwnership(p),/overlap|gap|Uncovered/);}const p=plan();for(const b of p.blocks)b.couplingGroup='shared-field';assert.throws(()=>validateChannelOwnership(p),/jointly/);});
 
 test('branched numerical sections retain the third port and match independent star-line modes',()=>{
  const p=plan();p.blocks=[];p.coverage=[];p.ports=[];

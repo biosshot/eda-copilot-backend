@@ -1,0 +1,341 @@
+{
+  "outline": [
+    {
+      "x": -1,
+      "y": -1
+    },
+    {
+      "x": 11,
+      "y": -1
+    },
+    {
+      "x": 11,
+      "y": 1
+    },
+    {
+      "x": -1,
+      "y": 1
+    }
+  ],
+  "cutouts": [],
+  "layers": [
+    {
+      "name": "TOP",
+      "index": 0,
+      "side": "top"
+    },
+    {
+      "name": "BOTTOM",
+      "index": 1,
+      "side": "bottom"
+    }
+  ],
+  "nets": [
+    {
+      "name": "SIGNAL"
+    },
+    {
+      "name": "RETURN"
+    },
+    {
+      "name": "VICTIM"
+    }
+  ],
+  "components": [
+    {
+      "designator": "J0",
+      "at": {
+        "x": 0,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "side": "top"
+    },
+    {
+      "designator": "J1",
+      "at": {
+        "x": 10,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "side": "top"
+    }
+  ],
+  "keepouts": [],
+  "holes": [],
+  "pads": [
+    {
+      "id": "s0",
+      "component": "J0",
+      "number": "1",
+      "net": "SIGNAL",
+      "at": {
+        "x": 0,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "layers": [
+        "TOP"
+      ],
+      "shape": {
+        "kind": "rect",
+        "widthMm": 0.2,
+        "heightMm": 0.1
+      }
+    },
+    {
+      "id": "s1",
+      "component": "J1",
+      "number": "1",
+      "net": "SIGNAL",
+      "at": {
+        "x": 10,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "layers": [
+        "TOP"
+      ],
+      "shape": {
+        "kind": "rect",
+        "widthMm": 0.2,
+        "heightMm": 0.1
+      }
+    },
+    {
+      "id": "r0",
+      "component": "J0",
+      "number": "2",
+      "net": "RETURN",
+      "at": {
+        "x": 0,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "layers": [
+        "BOTTOM"
+      ],
+      "shape": {
+        "kind": "rect",
+        "widthMm": 0.2,
+        "heightMm": 0.5
+      }
+    },
+    {
+      "id": "r1",
+      "component": "J1",
+      "number": "2",
+      "net": "RETURN",
+      "at": {
+        "x": 10,
+        "y": 0
+      },
+      "rotationDeg": 0,
+      "layers": [
+        "BOTTOM"
+      ],
+      "shape": {
+        "kind": "rect",
+        "widthMm": 0.2,
+        "heightMm": 0.5
+      }
+    }
+  ],
+  "copper": {
+    "fixed": {
+      "tracks": [
+        {
+          "id": "signal",
+          "net": "SIGNAL",
+          "layer": "TOP",
+          "widthMm": 0.1,
+          "points": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 10,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "id": "return",
+          "net": "RETURN",
+          "layer": "BOTTOM",
+          "widthMm": 1.5,
+          "points": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 10,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "id": "victim",
+          "net": "VICTIM",
+          "layer": "TOP",
+          "widthMm": 0.1,
+          "points": [
+            {
+              "x": 0,
+              "y": 0.3
+            },
+            {
+              "x": 10,
+              "y": 0.3
+            }
+          ]
+        },
+        {
+          "id": "fence-rail",
+          "net": "RETURN",
+          "layer": "TOP",
+          "widthMm": 0.15,
+          "points": [
+            {
+              "x": 0,
+              "y": -0.55
+            },
+            {
+              "x": 10,
+              "y": -0.55
+            }
+          ]
+        }
+      ],
+      "vias": [
+        {
+          "id": "fence-0",
+          "net": "RETURN",
+          "at": {
+            "x": 0,
+            "y": -0.55
+          },
+          "diameterMm": 0.25,
+          "drillMm": 0.1,
+          "type": "through",
+          "fromLayer": "TOP",
+          "toLayer": "BOTTOM"
+        },
+        {
+          "id": "fence-1",
+          "net": "RETURN",
+          "at": {
+            "x": 1,
+            "y": -0.55
+          },
+          "diameterMm": 0.25,
+          "drillMm": 0.1,
+          "type": "through",
+          "fromLayer": "TOP",
+          "toLayer": "BOTTOM"
+        },
+        {
+          "id": "fence-2",
+          "net": "RETURN",
+          "at": {
+            "x": 2,
+            "y": -0.55
+          },
+          "diameterMm": 0.25,
+          "drillMm": 0.1,
+          "type": "through",
+          "fromLayer": "TOP",
+          "toLayer": "BOTTOM"
+        },
+        {
+          "id": "fence-3",
+          "net": "RETURN",
+          "at": {
+            "x": 3,
+            "y": -0.55
+          },
+          "diameterMm": 0.25,
+          "drillMm": 0.1,
+          "type": "through",
+          "fromLayer": "TOP",
+          "toLayer": "BOTTOM"
+        },
+        {
+          "id": "fence-7",
+          "net": "RETURN",
+          "at": {
+            "x": 7,
+            "y": -0.55
+          },
+          "diameterMm": 0.25,
+          "drillMm": 0.1,
+          "type": "through",
+          "fromLayer": "TOP",
+          "toLayer": "BOTTOM"
+        },
+        {
+          "id": "fence-8",
+          "net": "RETURN",
+          "at": {
+            "x": 8,
+            "y": -0.55
+          },
+          "diameterMm": 0.25,
+          "drillMm": 0.1,
+          "type": "through",
+          "fromLayer": "TOP",
+          "toLayer": "BOTTOM"
+        },
+        {
+          "id": "fence-9",
+          "net": "RETURN",
+          "at": {
+            "x": 9,
+            "y": -0.55
+          },
+          "diameterMm": 0.25,
+          "drillMm": 0.1,
+          "type": "through",
+          "fromLayer": "TOP",
+          "toLayer": "BOTTOM"
+        },
+        {
+          "id": "fence-10",
+          "net": "RETURN",
+          "at": {
+            "x": 10,
+            "y": -0.55
+          },
+          "diameterMm": 0.25,
+          "drillMm": 0.1,
+          "type": "through",
+          "fromLayer": "TOP",
+          "toLayer": "BOTTOM"
+        }
+      ],
+      "zones": []
+    },
+    "editable": {
+      "tracks": [],
+      "vias": [],
+      "zones": []
+    }
+  },
+  "rules": {
+    "default": {
+      "clearanceMm": 0.2,
+      "edgeClearanceMm": 0.3,
+      "minTrackWidthMm": 0.1,
+      "preferredTrackWidthMm": 0.2,
+      "via": {
+        "minDiameterMm": 0.5,
+        "preferredDiameterMm": 0.6,
+        "minDrillMm": 0.2,
+        "preferredDrillMm": 0.3
+      }
+    },
+    "nets": []
+  }
+}

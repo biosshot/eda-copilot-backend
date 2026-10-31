@@ -28,11 +28,32 @@ impl Context {
     /// Nested local grid for already clipped polygons. Prepared board vertices
     /// remain exactly representable; only newly noded intersections gain bits.
     pub fn refined_for_bounds(&self,bounds:[[f64;2];2])->Result<Self,String> {
+        self.refined_grid(bounds,28)
+    }
+    /// Final arrangements contain bounded, already clipped inputs. Use the
+    /// pinned kernel range (abs coordinate <2^30; cross_solver.rs), preserving
+    /// inherited dyadic vertices exactly. This improves intersection precision
+    /// without changing copper/contact conservation tolerances.
+    pub fn refined_for_arrangement(&self,bounds:[[f64;2];2])->Result<Self,String> {
+        self.refined_grid(bounds,30)
+    }
+    fn refined_grid(&self,bounds:[[f64;2];2],bits:u32)->Result<Self,String> {
         let span=(bounds[1][0]-bounds[0][0]).max(bounds[1][1]-bounds[0][1]);
         if !span.is_finite()||span<=0. {return Err("Invalid local overlay extent".into());}
-        let scale=2_f64.powf(((1u64<<28)as f64/(span*0.625)).log2().floor()).max(1./self.adapter.inv_scale);
+        let inherited=1./self.adapter.inv_scale;
+        let padded=2_f64.powf(((1u64<<bits.min(29))as f64/(span*0.625)).log2().floor()).max(inherited);
+        // Keep already fine accepted local lattices stable. For broad final
+        // arrangements request a 2^-25 mm step, bounded by the pinned kernel's
+        // actual range; this is one grid selection, never a retry after failure.
+        // Two integer units reserve origin/end-point rounding at tight bounds.
+        let safe=2_f64.powf((((1u64<<30)-2)as f64/(span*0.5)).log2().floor());
+        let scale=if bits==30 {padded.max(2_f64.powi(25).min(safe))}else{padded};
         let origin=std::array::from_fn::<_,2,_>(|k|((bounds[0][k]+(bounds[1][k]-bounds[0][k])/2.)*scale).round()/scale);
-        let radius=(1u64<<29)as f64/scale;
+        if !scale.is_finite() || (0..2).any(|k|
+            (bounds[0][k]-origin[k]).abs().max((bounds[1][k]-origin[k]).abs())*scale+1. >= (1u64<<30)as f64) {
+            return Err("Local overlay extent exceeds the pinned kernel integer range".into());
+        }
+        let radius=(1u64<<30)as f64/scale;
         let rect=FloatRect{min_x:origin[0]-radius,max_x:origin[0]+radius,min_y:origin[1]-radius,max_y:origin[1]+radius};
         Ok(Self{adapter:FloatPointAdapter::with_scale(rect,scale),frame:None})
     }
@@ -93,4 +114,54 @@ pub(crate) fn overlay(a:&areas::AreaSet,b:&areas::AreaSet,rule:OverlayRule)->Opt
             geo::Polygon::new(rings.next().unwrap(),rings.collect())
         }).collect()))
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use geo::{Area, LineString, Polygon};
+    fn context() -> Context {
+        let rect=FloatRect{min_x:-128.,max_x:128.,min_y:-128.,max_y:128.};
+        Context{adapter:FloatPointAdapter::with_scale(rect,2_f64.powi(20)),frame:None}
+    }
+    fn box_at(x:f64,y:f64,w:f64,h:f64)->areas::AreaSet {
+        areas::one(Polygon::new(LineString::from(vec![[x,y],[x+w,y],[x+w,y+h],[x,y+h],[x,y]]),vec![]))
+    }
+    #[test]
+    fn arrangement_uses_checked_kernel_range_and_preserves_inherited_vertices() {
+        for shift in [0.,10000.,-10000.] {
+            let c=context().refined_for_arrangement([[shift,shift],[shift+60.1,shift+40.1]]).unwrap();
+            assert_eq!(c.adapter.dir_scale,2_f64.powi(25));
+            for p in [[shift,shift],[shift+60.1,shift+40.1]] {
+                let q=c.adapter.float_to_int(&p);
+                assert!(i64::from(q.x).abs()<1<<30 && i64::from(q.y).abs()<1<<30);
+            }
+            let p=[shift+12.25,shift+7.5];
+            assert_eq!(c.adapter.int_to_float(&c.adapter.float_to_int(&p)),p);
+        }
+    }
+    #[test]
+    fn wide_arrangement_retains_thin_ring_real_gap_bridge_and_source_subdivision() {
+        for (shift,angle) in [(0.,0_f64),(1000.,37.),(-1000.,90.)] {
+            let c=context().refined_for_arrangement([[shift-40.,shift-40.],[shift+40.,shift+40.]]).unwrap();
+            let _scope=Context::install(Some(c));
+            let transform=|set:areas::AreaSet| {use geo::MapCoords;set.map_coords(|p| {
+                let(s,c)=angle.to_radians().sin_cos();Coord{x:shift+p.x*c-p.y*s,y:shift+p.x*s+p.y*c}
+            })};
+            let outer=transform(box_at(-0.3,-0.3,0.6,0.6));
+            let inner=transform(box_at(-0.299,-0.299,0.598,0.598));
+            let ring=areas::difference(&outer,&inner);
+            assert_eq!(ring.0.len(),1);assert_eq!(ring.0[0].interiors().len(),1);
+            assert!((ring.unsigned_area()/(0.36-0.598_f64.powi(2))-1.).abs()<1e-4);
+            let left=transform(box_at(1.,0.,1.,1.));
+            let right=transform(box_at(2.0002,0.,1.,1.));
+            assert_eq!(areas::union(left.0.iter().chain(&right.0).cloned()).0.len(),2);
+            let bridge=transform(box_at(1.9,0.4,0.2,0.0002));
+            assert_eq!(areas::union(left.0.iter().chain(&right.0).chain(&bridge.0).cloned()).0.len(),1);
+            let whole=transform(box_at(4.,0.,2.,1.));
+            let a=transform(box_at(4.,0.,1.,1.));let b=transform(box_at(5.,0.,1.,1.));
+            let joined=areas::union(a.0.into_iter().chain(b.0));
+            assert!((joined.unsigned_area()-whole.unsigned_area()).abs()<1e-7);
+        }
+    }
 }

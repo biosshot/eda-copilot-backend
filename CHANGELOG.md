@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Add a chat handoff with accepted analyzer milestones, pending P7 gates, evidence paths and workspace preservation rules. Record the completed D1 agent's reported NO-GO as awaiting parent review; its native/energy changes and tests are not accepted by this documentation update. Clarify current versus historical tasks in both implementation plans.
+
+- Correct wide-section board-adapter length transport and require real width/air/mesh comparisons against one final configuration. Verify a coupled PEC section selected automatically from original STM32 copper (49 focused tests); retain full-channel/distributed-return guards and open multilayer/finite-R acceptance. Begin the bounded D1 joint-versus-segmented EM integration task.
+
+- Validate the P7 small coupled-stripline benchmark against an independent finite-thickness numerical reference and the actual DSL path; correct reference-placement checks and subprocess tolerance-failure tests (15 focused tests pass). Record bounded B1 geometry acceptance and authorize B2/C1 wide-return work; whole-channel accuracy and magnetic-memory acceptance remain open.
+
+- Consolidate the P7 closure plan around geometry, shared returns, coupled channel assembly, magnetic memory, frequency/loss validity, real DSL evidence and separate P8/P11 handoffs. Replace obsolete planning assumptions; no solver implementation or new acceptance is claimed.
+
+- Add exact oriented multi-source physical contacts, route run corridors, complete material-boundary event checks and source-polygon ownership validation for conditional P7 extraction. Preserve finite return and mutual matrices; reject unsupported lateral shared-plane interfaces instead of the retired all-local slab/BSP fallback. Record completed low-band straight/bend references and cache evidence, targeted constraint-nullspace fixes, and strict rotated/via convergence rejections; diagnose the STM32 lateral-plane and whole-reference geometry-range blockers. Complete STM32, total physical/resource and all-DSL acceptance remain open.
+
 - Add a read-only magnetic coordinate ownership audit and bounded remote warm/cache verification with selectable existing RHS concurrency. Record implemented corrected-F32 and conforming far-air experiments, reject the real LLT/whole-delay failures and remove both numeric runtime branches; explicitly refuse the retired F32 selector. Production remains F64 and P7 remains open.
 
 - Record the rejected magnetic-only mixed-F32 factor/solve experiment: unchanged compact control fails the existing exterior Schur reciprocity guard. Preserve F64 production and independent references; archive memory/unknown-count evidence and remove the failed runtime branch. P7 remains open.

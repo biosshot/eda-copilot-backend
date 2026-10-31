@@ -1,20 +1,25 @@
+import {canonical} from './local-model-cache.ts';
+import {selectSectionDomain} from './section-domain.ts';
 import type {AnalysisCrossSectionRequest,AnalysisFrequencyResource} from '../../native/analyze/index.js';
 import {createProblemExecutor} from './execute-problem.ts';
+import {area,triangles,clipHalfPlane,type Point} from './route-partition.ts';
 
 /** Internal physical cut identity, never a net label. Positive and negative
  * terminals retain orientation; a reference change requires a local block. */
 export interface ChannelCut {positive:string;negative:string}
-export interface CopperInterval {sourcePath:string;startMm:number;stopMm:number}
-interface Base {id:string;cuts:ChannelCut[];ownership:CopperInterval[];bandHz:[number,number];couplingGroup?:string}
+export interface CopperInterval {kind?:'interval';sourcePath:string;startMm:number;stopMm:number}
+export interface CopperFragment {kind:'fragment';sourcePath:string;regionId:string;layer:string;domainPolygonMm:Point[];sourcePolygonMm:{outer:Point[];holes:Point[][]};areaMm2:number}
+export type CopperOwnership=CopperInterval|CopperFragment;
+interface Base {id:string;cuts:ChannelCut[];ownership:CopperOwnership[];bandHz:[number,number];couplingGroup?:string}
 export type ChannelBlock = Base & (
  {kind:'section';line:AnalysisCrossSectionRequest['line'];mesh?:AnalysisCrossSectionRequest['mesh'];dcConductors?:{resistanceOhmPerM:number[][];internalInductanceHPerM:number[][]}}|
  {kind:'local';boardJson:string;geometry:unknown;magneticPatchLevel?:1|2}
 );
-export interface SegmentedChannel {blocks:ChannelBlock[];ports:{name:string;cut:ChannelCut}[];coverage:CopperInterval[]}
+export interface SegmentedChannel {blocks:ChannelBlock[];ports:{name:string;cut:ChannelCut}[];coverage:CopperOwnership[]}
 const fail=(s:string):never=>{throw new Error('CHANNEL_COMPOSITION: '+s);};
 const cutKey=(c:ChannelCut)=>JSON.stringify([c.positive,c.negative]);
-/** Validate before any FEM work: every owned longitudinal copper interval is
- * covered exactly once. Sharing an endpoint is allowed; overlap is not. */
+/** Before FEM, validate original source fragments geometrically and legacy
+ * authored route intervals in length units. No area is encoded as a length. */
 export function validateChannelOwnership(plan:SegmentedChannel){
  if(!plan.blocks.length||plan.blocks.length>32||new Set(plan.blocks.map(b=>b.id)).size!==plan.blocks.length)fail('1..32 unique blocks required');
  const groups=new Map<string,string>();
@@ -24,7 +29,29 @@ export function validateChannelOwnership(plan:SegmentedChannel){
   if(b.couplingGroup){if(groups.has(b.couplingGroup))fail('Nonlocal coupling group must be extracted jointly: '+b.couplingGroup);groups.set(b.couplingGroup,b.id);}
  }
  const bySource=(xs:CopperInterval[])=>{const m=new Map<string,CopperInterval[]>();for(const x of xs){if(!x.sourcePath||!Number.isFinite(x.startMm)||!Number.isFinite(x.stopMm)||x.startMm>=x.stopMm)fail('Invalid SI-boundary copper interval');const a=m.get(x.sourcePath)??[];a.push(x);m.set(x.sourcePath,a);}for(const a of m.values())a.sort((x,y)=>x.startMm-y.startMm);return m;};
- const owned=bySource(plan.blocks.flatMap(b=>b.ownership)),expected=bySource(plan.coverage);
+ const isFragment=(x:CopperOwnership):x is CopperFragment=>x.kind==='fragment';
+ const fragments=plan.blocks.flatMap(b=>b.ownership.filter(isFragment)),coverage=plan.coverage.filter(isFragment);
+ const key=(f:CopperFragment)=>JSON.stringify([f.sourcePath,f.regionId,f.layer]);
+ const clipped=(ring:Point[],domain:Point[])=>{let p=ring;for(let i=0;i<domain.length;i++){const a=domain[i],b=domain[(i+1)%domain.length],n:Point=[b[1]-a[1],a[0]-b[0]];p=clipHalfPlane(p,n,a[0]*n[0]+a[1]*n[1]);}return p;};
+ const sourceArea=(f:CopperFragment,other?:Point[])=>triangles(f.domainPolygonMm).reduce((sum,t)=>{
+  const regions=other?triangles(other).map(u=>clipped(t,u)):[t];
+  return sum+regions.reduce((s,r)=>s+(r.length<3?0:Math.max(0,area(clipped(f.sourcePolygonMm.outer,r))-f.sourcePolygonMm.holes.reduce((a,h)=>a+area(clipped(h,r)),0))),0);
+ },0);
+ for(const f of [...fragments,...coverage]){
+  if(!f.sourcePath||!f.regionId||!f.layer||!Number.isFinite(f.areaMm2)||f.areaMm2<=0||!f.sourcePolygonMm||!f.domainPolygonMm.length)fail('Invalid physical source fragment');
+  if(Math.abs(sourceArea(f)-f.areaMm2)>1e-8)fail('Physical source fragment area does not match original polygon');
+ }
+ for(const set of [fragments,coverage])for(let i=0;i<set.length;i++)for(let j=0;j<i;j++){
+  if(key(set[i])===key(set[j])&&sourceArea(set[i],set[j].domainPolygonMm)>1e-8)fail('Overlapping physical source fragments: '+set[i].sourcePath);
+ }
+ const expectedFragments=new Map<string,CopperFragment[]>();for(const f of coverage){const a=expectedFragments.get(key(f))??[];a.push(f);expectedFragments.set(key(f),a);}
+ const actualFragments=new Map<string,CopperFragment[]>();for(const f of fragments){const a=actualFragments.get(key(f))??[];a.push(f);actualFragments.set(key(f),a);}
+ if(expectedFragments.size!==actualFragments.size)fail('Physical fragment/source coverage mismatch');
+ for(const [id,expectedSet]of expectedFragments){const actual=actualFragments.get(id)??fail('Missing physical source '+id),expectedArea=expectedSet.reduce((s,f)=>s+f.areaMm2,0);
+  for(const f of actual){if(expectedSet.some(e=>JSON.stringify(e.sourcePolygonMm)!==JSON.stringify(f.sourcePolygonMm)))fail('Original source polygon changed across ownership fragments');const covered=expectedSet.reduce((s,e)=>s+sourceArea(f,e.domainPolygonMm),0);if(Math.abs(covered-f.areaMm2)>1e-8)fail('Out-of-domain physical source fragment');}
+  if(Math.abs(actual.reduce((s,f)=>s+f.areaMm2,0)-expectedArea)>1e-8)fail('Uncovered physical copper: '+id);
+ }
+ const owned=bySource(plan.blocks.flatMap(b=>b.ownership.filter((x):x is CopperInterval=>!isFragment(x)))),expected=bySource(plan.coverage.filter((x):x is CopperInterval=>!isFragment(x)));
  if(owned.size!==expected.size)fail('Owned/source coverage mismatch');
  for(const [source,spans]of expected){const actual=owned.get(source)??fail('Missing source '+source);let j=0;
   for(const span of spans){let x=span.startMm;while(j<actual.length&&actual[j].startMm<span.stopMm){const a=actual[j++];if(Math.abs(a.startMm-x)>1e-9||a.stopMm>span.stopMm+1e-9)fail('Copper overlap, gap or out-of-domain ownership: '+source);x=a.stopMm;}if(Math.abs(x-span.stopMm)>1e-9)fail('Uncovered copper: '+source);}
@@ -38,8 +65,8 @@ export function solveSegmentedChannel(plan:SegmentedChannel,frequencies:number[]
  const band=validateChannelOwnership(plan);if(!frequencies.length||frequencies.some(f=>!Number.isFinite(f)||f<band[0]||f>band[1]))fail('Requested axis outside common physical band');
  const execute=createProblemExecutor(true),started=performance.now();const remaining=()=>{const s=budget.maxSeconds-(performance.now()-started)/1000;if(s<=0)fail('Shared channel deadline');return s;};
  const instances:{id:string;model:AnalysisFrequencyResource;ports:string[]}[]=[],evidence:unknown[]=[];
- const cuts=new Map<string,number[]>();let count=0;
- for(const block of plan.blocks){let model:AnalysisFrequencyResource;
+ for(const block of plan.blocks){const memoryBefore=process.memoryUsage(),blockStarted=performance.now();let model:AnalysisFrequencyResource;
+  if(process.env.P7_BLOCK_LIFECYCLE==='1')process.stderr.write(JSON.stringify({event:'P7_BLOCK_BEGIN',id:block.id,kind:block.kind,memory:memoryBefore})+'\n');
   if(block.kind==='section'){
    const r=execute({kind:'cross-section',request:{line:block.line,mesh:block.mesh,frequencies,budget:{...budget,maxSeconds:remaining()}}});
    if(r.status!=='complete'||!r.network)fail('Section '+block.id+' refused: '+JSON.stringify(r.diagnostics));
@@ -48,23 +75,32 @@ export function solveSegmentedChannel(plan:SegmentedChannel,frequencies:number[]
   }else{
    const r=execute({kind:'local-extraction',request:{boardJson:block.boardJson,geometry:block.geometry,remainingSeconds:remaining(),bandHz:[1000,100000],frequenciesHz:frequencies,magneticPatchLevel:block.magneticPatchLevel,observablesOnly:true}});
    const ports=(r.prepared as any).request.ports.map((_:unknown,i:number)=>'port-'+i);
-   model={id:block.id,kind:'network',ports,data:r.model};evidence.push({id:block.id,kind:block.kind,cache:r.cache,stageCounts:r.stageCounts,resources:r.resources});
+   model={id:block.id,kind:'network',ports,data:r.model};evidence.push({id:block.id,kind:block.kind,cache:r.cache,stageCounts:r.stageCounts,resources:r.resources,nativePreparation:{stageSeconds:(r.prepared as any).stageSeconds,potentialCount:(r.prepared as any).potentialCount,currentCount:(r.prepared as any).currentCount,plannedBytes:(r.prepared as any).plannedBytes,fieldOperator:(r.prepared as any).candidate?.fieldOperator,trainingJobs:(r.prepared as any).stageSeconds?.trainingJobs}});
   }
+  const latest=evidence.at(-1) as any;latest.lifecycle={activeHeavyBlocks:1,concurrency:'synchronous sequential extraction',memoryBefore,memoryAfter:process.memoryUsage(),processHighWaterRssBytes:process.resourceUsage().maxRSS*1024,wallSeconds:(performance.now()-blockStarted)/1000,releaseEvidence:'Native full factors have preparation-scope ownership; returned reduced DTO/cache may retain field/material/training data. RSS includes allocator retention and is not live factor bytes.'};
+  if(process.env.P7_BLOCK_LIFECYCLE==='1')process.stderr.write(JSON.stringify({event:'P7_BLOCK_END',id:block.id,kind:block.kind,lifecycle:latest.lifecycle})+'\n');
   if(model.ports.length!==block.cuts.length)fail('Model/cut port count mismatch: '+block.id);
   instances.push({id:block.id,model,ports:model.ports});
-  for(const cut of block.cuts){const k=cutKey(cut),a=cuts.get(k)??[];a.push(count++);cuts.set(k,a);}
  }
+ const {connections,connectionContacts,ports}=channelTopology(plan);
+ // Every descriptor retains distinct physical signal and return cut terminals.
+ // P6 handles the complete branched multiport matrix, including local RLC.
+ const result=execute({kind:'frequency-network',request:{instances,connections,connectionContacts,ports,frequencies,representation:'S',referenceOhm:ports.map(()=>50),budget:{...budget,maxSeconds:remaining()}}});
+ if(result.status!=='complete')fail('P6 assembly refused: '+JSON.stringify(result.diagnostics));
+ return {result,evidence,bandHz:band,ownership:plan.blocks.map(b=>({id:b.id,ownership:b.ownership})),wallSeconds:(performance.now()-started)/1000};
+}
+
+/** Physical face topology shared by extraction and diagnostic replay. */
+export function channelTopology(plan:SegmentedChannel){
+ const cuts=new Map<string,number[]>();let count=0;
+ for(const block of plan.blocks)for(const cut of block.cuts){const k=cutKey(cut),a=cuts.get(k)??[];a.push(count++);cuts.set(k,a);}
  const connections:[number,number][]=[],connectionContacts:('both'|'positive'|'negative')[]=[],welds=new Map<string,number>();
  const terminalGroups=new Map<string,{port:number;contact:'positive'|'negative'}[]>();let offset=0;
  for(const block of plan.blocks)for(const cut of block.cuts){for(const contact of ['positive','negative'] as const){const id=cut[contact],a=terminalGroups.get(id)??[];a.push({port:offset,contact});terminalGroups.set(id,a);}offset++;}
  for(const a of terminalGroups.values())for(let i=1;i<a.length;i++){if(a[i].contact!==a[0].contact)fail('A physical terminal changed signal/return orientation across cuts');const pair=[a[0].port,a[i].port].sort((x,y)=>x-y),key=pair.join(',');welds.set(key,(welds.get(key)??0)|(a[0].contact==='positive'?1:2));}
  for(const [key,mask]of welds){connections.push(key.split(',').map(Number) as [number,number]);connectionContacts.push(mask===3?'both':mask===1?'positive':'negative');}
  const ports=plan.ports.map(p=>({name:p.name,index:cuts.get(cutKey(p.cut))?.[0]??fail('External cut absent: '+p.name)}));
- // Every descriptor retains distinct physical signal and return cut terminals.
- // P6 handles the complete branched multiport matrix, including local RLC.
- const result=execute({kind:'frequency-network',request:{instances,connections,connectionContacts,ports,frequencies,representation:'S',referenceOhm:ports.map(()=>50),budget:{...budget,maxSeconds:remaining()}}});
- if(result.status!=='complete')fail('P6 assembly refused: '+JSON.stringify(result.diagnostics));
- return {result,evidence,bandHz:band,ownership:plan.blocks.map(b=>({id:b.id,ownership:b.ownership})),wallSeconds:(performance.now()-started)/1000};
+ return {connections,connectionContacts,ports};
 }
 
 /** Passive Pi discretization of the actual FEM coefficients. Independent
@@ -103,3 +139,28 @@ export function reciprocalTransport(a:number[][]){
  const scale=Math.max(...a.map((row,i)=>Math.abs(row[i])));
  return a.map((row,i)=>row.map((v,j)=>{if(!Number.isFinite(v)||!Number.isFinite(a[j][i])||Math.abs(v-a[j][i])>64*Number.EPSILON*scale)fail('Producer reciprocity exceeds roundoff-only coefficient transport');return a[Math.min(i,j)][Math.max(i,j)];}));
 }
+
+/** Coefficients-only board path for B2 candidates. Deliberately separate from
+ * sectionDescriptor: no cropped-width DC resistance enters channel assembly. */
+export function extractWideBoardSectionCoefficients(input:{boardJson:string;stack:unknown;slices:{axis:import('./section-domain.ts').SectionDomainStep['axis'];slice:unknown;maxTriangleAreaM2:number}[];frequencies:number[];lengthMm:number},budget={maxSeconds:120,maxMemoryMiB:1024}){
+ if(!Number.isFinite(input.lengthMm)||input.lengthMm<=0)fail('Positive finite section length required');
+ if(input.slices.length<4||input.slices.length>10)fail('Bounded board-section refinement plan required');
+ const execute=createProblemExecutor(true),started=performance.now();
+ const anchor=(slice:any)=>canonical([slice.atMm,slice.transverseUnit,slice.referenceLayer,slice.referenceSourcePath,slice.referenceXMm]);
+ const physicalSlice=anchor(input.slices[0].slice);if(input.slices.some(s=>anchor(s.slice)!==physicalSlice))fail('Section position/reference contact changed');
+ const sliceCache=new Map<string,any>();let boardSliceCalls=0;
+ const slices=input.slices.map(s=>{
+  if((performance.now()-started)/1000>=budget.maxSeconds)fail('Board adapter shared deadline');
+  const key=canonical(s.slice);let r:any=sliceCache.get(key);
+  if(!r){r=execute({kind:'board-section',boardJson:input.boardJson,stack:input.stack,slice:s.slice});sliceCache.set(key,r);boardSliceCalls++;}
+  if(!r.geometry||!r.sourceMapping)fail('Incomplete authoritative board section');
+  const conductorIdentity=r.sourceMapping.map((m:any)=>({id:m.conductorId,role:m.role,layer:m.layer,sourcePaths:m.sourcePaths,sourceRegionIds:m.sourceRegionIds}));
+  return {mapping:r.sourceMapping,axis:s.axis,physicalIdentity:{boardJson:input.boardJson,stack:input.stack,frequencies:input.frequencies,lengthMm:input.lengthMm,boundary:'native natural exterior; one physical reference'},conductorIdentity,request:{line:{kind:'polygon-section' as const,geometry:{...r.geometry,maxTriangleAreaM2:s.maxTriangleAreaM2},lengthMm:input.lengthMm},frequencies:input.frequencies}};
+ });
+ // Width holdout uses the same full field/material domain as its final partner.
+ for(let i=1;i<slices.length;i++)if(slices[i].axis==='physical-width'){const a=slices[i-1].request.line.geometry as any,b=slices[i].request.line.geometry as any;a.domain=structuredClone(b.domain);a.dielectrics=structuredClone(b.dielectrics);}
+ const result=selectSectionDomain(slices,{...budget,maxSeconds:budget.maxSeconds-(performance.now()-started)/1000},execute);
+ return {...result,sourceMapping:slices.at(-1)?.mapping,boardSliceCalls,boardAdapterWallSeconds:(performance.now()-started)/1000};
+}
+
+

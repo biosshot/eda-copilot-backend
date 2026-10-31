@@ -21,6 +21,8 @@ pub struct Layer {
 #[serde(deny_unknown_fields,rename_all="camelCase")]
 pub struct Request {
     pub roi_mm:[[f64;2];2],
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    pub domain_polygon_mm:Option<Vec<[f64;2]>>,
     pub stack:Vec<Layer>,
     /// Explicit finished-hole convention; unknown bore conventions are refused.
     pub finished_hole_plating_m:Option<f64>,
@@ -66,21 +68,76 @@ pub struct Request {
 /// discretization controls. It retains every authored physical assumption.
 pub fn physical_signature(r:&Request)->serde_json::Value {
     let mut value=serde_json::json!({"roiMm":r.roi_mm,"stack":r.stack,"finishedHolePlatingM":r.finished_hole_plating_m,"barrelConductivitySM":r.barrel_conductivity_s_m,"curveDeviationMm":r.curve_deviation_mm,"electrodes":r.electrodes,"ports":r.ports,"acceptUnknownFillFreshness":r.accept_unknown_fill_freshness,"allowInsulatedCopperCuts":r.allow_insulated_copper_cuts});
+    value["electrodes"]=serde_json::Value::Array(r.electrodes.iter().map(|e|serde_json::json!({"name":e.name,"sourcePaths":e.canonical_paths().unwrap_or_default(),"layer":e.layer,"upper":e.upper})).collect());
+    if let Some(p)=&r.domain_polygon_mm {value["domainPolygonMm"]=serde_json::json!(p);}
     if !r.cut_planes.is_empty(){value["cutPlanes"]=serde_json::json!(r.cut_planes);}
     value
 }
-/// Internal section/local interface on a genuine axis-aligned ROI boundary.
+/// Internal physical section/local interface. Tangent is (-ny,nx).
 #[derive(Clone,Debug,PartialEq,serde::Deserialize,serde::Serialize)]
 #[serde(deny_unknown_fields,rename_all="camelCase")]
-pub struct CutPlane {pub axis:usize,pub at_mm:f64,#[serde(default,skip_serializing_if="Option::is_none")]pub span_mm:Option<[f64;2]>}
+#[serde(untagged,rename_all_fields="camelCase")]
+pub enum CutPlane {
+    Axis {axis:usize,at_mm:f64,#[serde(default,skip_serializing_if="Option::is_none")]span_mm:Option<[f64;2]>},
+    Oriented {origin_mm:[f64;2],#[serde(rename="normalXY")]normal_xy:[f64;2],#[serde(default,skip_serializing_if="Option::is_none")]span_mm:Option<[f64;2]>},
+}
+impl CutPlane {
+    fn frame(&self)->Result<([f64;2],[f64;2],Option<[f64;2]>)> {
+        let (o,n,span)=match *self {
+            Self::Axis{axis,at_mm,span_mm}=>{if axis>1{return Err(error("BOARD_CUT","axis must be0 or1"));}let mut o=[0.;2];o[axis]=at_mm;let mut n=[0.;2];n[axis]=1.;
+                // Legacy transverse coordinate increases with the other axis.
+                if axis==1 {n[axis]=-1.;} (o,n,span_mm)},
+            Self::Oriented{origin_mm,normal_xy,span_mm}=>(origin_mm,normal_xy,span_mm),
+        };
+        let norm=n[0].hypot(n[1]);
+        if o.iter().chain(n.iter()).any(|v|!v.is_finite())||!norm.is_finite()||(norm-1.).abs()>1e-8||span.is_some_and(|s|s.iter().any(|v|!v.is_finite())||s[0]>=s[1]) {return Err(error("BOARD_CUT","finite origin, unit normal and increasing finite span required"));}
+        Ok((o,[n[0]/norm,n[1]/norm],span))
+    }
+}
+fn signed(p:[f64;2],o:[f64;2],n:[f64;2])->f64 {(p[0]-o[0])*n[0]+(p[1]-o[1])*n[1]}
+/// Match only the requested physical domain edge; tolerance is the existing
+/// board overlay error bound, never a connectivity/welding distance.
+fn cut_edges(c:&CutPlane,roi:&MultiPolygon<f64>,tolerance:f64)->Result<Vec<[[f64;2];2]>> {
+    let(o,n,_)=c.frame()?;let mut edges=vec![];
+    for p in &roi.0 {for e in p.exterior().lines(){let a=[e.start.x,e.start.y];let b=[e.end.x,e.end.y];if signed(a,o,n).abs()<=tolerance&&signed(b,o,n).abs()<=tolerance {edges.push([a,b]);}}}
+    if edges.is_empty(){return Err(error("BOARD_CUT","interface must coincide with a physical polygon domain boundary"));}Ok(edges)
+}
+fn on_edges(p:[f64;2],edges:&[[[f64;2];2]],tol:f64)->bool {
+    edges.iter().any(|[a,b]|{let d=[b[0]-a[0],b[1]-a[1]];let length=d[0].hypot(d[1]);let t=((p[0]-a[0])*d[0]+(p[1]-a[1])*d[1])/length;let cross=((p[0]-a[0])*d[1]-(p[1]-a[1])*d[0])/length;cross.abs()<=tol&&t>=-tol&&t<=length+tol})
+}
+
 #[derive(Clone,Debug,PartialEq,serde::Deserialize,serde::Serialize)]
 #[serde(deny_unknown_fields,rename_all="camelCase")]
 pub struct Electrode {
     pub name:String,
-    pub source_path:String,
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    pub source_path:Option<String>,
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    pub source_paths:Option<Vec<String>>,
     pub layer:String,
     /// Lower or upper face of the physical copper layer, in the stack z axis.
     pub upper:bool,
+}
+impl Electrode {
+    pub fn canonical_paths(&self)->Result<Vec<String>> {
+        let mut paths=match (&self.source_path,&self.source_paths) {
+            (Some(p),None)=>vec![p.clone()],(None,Some(p))=>p.clone(),
+            _=>return Err(error("BOARD_ELECTRODE","exactly one sourcePath or sourcePaths required")),
+        };
+        if paths.is_empty()||paths.iter().any(|p|p.trim().is_empty()){return Err(error("BOARD_ELECTRODE","nonempty source identities required"));}
+        paths.sort();paths.dedup();Ok(paths)
+    }
+    fn same_contact(&self,other:&Self)->bool {self.name==other.name&&self.layer==other.layer&&self.upper==other.upper&&self.canonical_paths().ok()==other.canonical_paths().ok()}
+}
+fn face_intervals(poly:&MultiPolygon<f64>,edges:&[[[f64;2];2]],origin:[f64;2],normal:[f64;2],tol:f64)->Vec<[f64;2]> {
+    let tangent=[-normal[1],normal[0]];
+    let mut spans=poly.0.iter().flat_map(|p|std::iter::once(p.exterior()).chain(p.interiors())).flat_map(|r|r.lines()).filter_map(|e|{
+        let a=[e.start.x,e.start.y];let b=[e.end.x,e.end.y];
+        if !on_edges(a,edges,tol)||!on_edges(b,edges,tol){return None;}
+        let a=signed(a,origin,tangent);let b=signed(b,origin,tangent);(a!=b).then_some([a.min(b),a.max(b)])
+    }).collect::<Vec<_>>();
+    spans.sort_by(|a,b|a[0].total_cmp(&b[0]));let mut union:Vec<[f64;2]>=vec![];
+    for span in spans {if let Some(last)=union.last_mut(){if span[0]<=last[1]{last[1]=last[1].max(span[1]);continue;}}union.push(span);}union
 }
 pub struct BoardMesh {
     pub mesh:LayeredMesh,
@@ -163,13 +220,33 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
     // The clipping contour itself must use the already accepted board overlay
     // grid, just like the clipped result. Mixing the raw ROI coordinates with
     // their overlay image creates artificial sub-nanometre air strips.
-    let roi=areas::union([rect(r.roi_mm)]);
+    let domain=if let Some(points)=&r.domain_polygon_mm {
+        if points.len()<3||points.iter().flatten().any(|v|!v.is_finite()) {return Err(error("BOARD_ROI","finite simple polygon required"));}
+        let p=Polygon::new(LineString::from(points.clone()),vec![]);
+        use geo::Validation;
+        if !p.is_valid()||p.unsigned_area()<=0. {return Err(error("BOARD_ROI","valid positive-area simple polygon required"));}p
+    }else{rect(r.roi_mm)};
+    let roi=areas::union([domain]);
+    let cut_tolerance=context.error_bound();
+    let contact_boundary_edges=r.cut_planes.iter().map(|(name,c)|Ok((name.clone(),cut_edges(c,&roi,cut_tolerance)?))).collect::<Result<BTreeMap<_,_>>>()?;
     let bounds=roi.bounding_rect().ok_or_else(||error("BOARD_ROI","ROI disappeared on the shared board grid"))?;
     let roi_bounds=[[bounds.min().x,bounds.min().y],[bounds.max().x,bounds.max().y]];
     let margin=r.air_margin_m*1e3;
     let field_domain=areas::one(rect([[roi_bounds[0][0]-margin,roi_bounds[0][1]-margin],[roi_bounds[1][0]+margin,roi_bounds[1][1]+margin]]));
+    let local_context=context.refined_for_bounds(roi_bounds)?;
+    let clip_domain=|set:&MultiPolygon<f64>|->MultiPolygon<f64>{
+        if r.domain_polygon_mm.is_none(){return areas::intersection(set,&roi);}
+        // Crop on the board grid before entering the finer bounded adapter.
+        // This crop lies strictly outside the physical domain; only the second
+        // intersection defines the copper boundary, shared by every source.
+        let pad=(roi_bounds[1][0]-roi_bounds[0][0]).max(roi_bounds[1][1]-roi_bounds[0][1])*0.1;
+        let crop=areas::one(rect([[roi_bounds[0][0]-pad,roi_bounds[0][1]-pad],[roi_bounds[1][0]+pad,roi_bounds[1][1]+pad]]));
+        let cropped=areas::intersection(set,&crop);
+        let _scope=Context::install(Some(local_context.clone()));
+        areas::intersection(&cropped,&roi)
+    };
     let outline=areas::one(polygon(geometry.outline.as_ref().unwrap()));
-    let mut substrate=areas::intersection(&outline,&roi);
+    let mut substrate=clip_domain(&outline);
     if substrate.unsigned_area()<=0. {return Err(error("BOARD_ROI","ROI misses board"));}
     let mut z=0.;let mut spans=BTreeMap::new();let mut stack_spans=vec![];let mut copper_names=vec![];
     for layer in &r.stack {
@@ -184,7 +261,7 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
     if copper_names!=board.layers.iter().map(|l|l.name.clone()).collect::<Vec<_>>() || !r.stack[0].copper || !r.stack.last().unwrap().copper || r.stack.windows(2).any(|a|a[0].copper&&a[1].copper) {return Err(error("BOARD_PROFILE","complete ordered alternating copper stack required"));}
     let mut shapes=vec![];let mut source_mapping=vec![];
     for region in &geometry.regions {
-        let poly=areas::intersection(&areas::one(polygon(&region.polygon)),&roi);
+        let poly=clip_domain(&areas::one(polygon(&region.polygon)));
         if poly.unsigned_area()==0. {continue;}
         if !r.allow_insulated_copper_cuts&&areas::difference(&areas::one(polygon(&region.polygon)),&roi).unsigned_area()>0. {return Err(error("BOARD_CUT_POLICY","ROI cuts copper; explicit insulated-cut boundary policy required"));}
         let layer=r.stack.iter().find(|l|l.copper&&l.name==region.layer).ok_or_else(||error("BOARD_PROFILE","region layer absent from stack"))?;
@@ -215,7 +292,13 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
         let outer=barrel_outer(&bore,center,radius,plating*1e3,options.max_deviation_mm+2.*geometry.boolean_error_bound_mm)?;
         let outer=areas::one(outer);
         if areas::difference(&outer,&roi).unsigned_area()>0. {return Err(error("BOARD_ROI","ROI cuts through via barrel; choose a complete via"));}
-        let annulus=areas::difference(&outer,&bore);
+        let annulus=if r.domain_polygon_mm.is_some() {
+            // The complete barrel is bounded by the physical ROI. Form its
+            // annulus on the final arrangement grid, not the coarser global
+            // board grid; the inherited bore/source vertices stay exact.
+            let _barrel_scope=Context::install(Some(context.refined_for_arrangement(roi_bounds)?));
+            areas::difference(&outer,&bore)
+        }else{areas::difference(&outer,&bore)};
         if annulus.unsigned_area()<=0. {return Err(error("BOARD_PADSTACK","plating annulus disappeared"));}
         let span=[spans[&board.layers[first].name][0],spans[&board.layers[last].name][1]];
         shapes.push(Shape{poly:annulus,id:hole.id.clone(),sigma,span});
@@ -227,21 +310,38 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
     // track/pad contour creates artificial near-collinear slivers. Constrain
     // the exact prepared physical union instead; attribute every positive-area
     // source overlap below without duplicating its resistance or metal volume.
-    let mut arrangement_sets=geometry.layers.iter().map(|layer|areas::intersection(&areas::union(layer.copper.iter().map(polygon)),&roi)).collect::<Vec<_>>();
+    let mut arrangement_sets=geometry.layers.iter().map(|layer|clip_domain(&areas::union(layer.copper.iter().map(polygon)))).collect::<Vec<_>>();
     arrangement_sets.extend(shapes.iter().filter(|s|barrel_ids.contains(&s.id)).map(|s|s.poly.clone()));
     let mut physical_shapes=vec![];
     for layer in &geometry.layers {
         let material=r.stack.iter().find(|m|m.copper&&m.name==layer.layer).ok_or_else(||error("BOARD_PROFILE","prepared copper layer absent from profile"))?;
-        physical_shapes.push((areas::intersection(&areas::union(layer.copper.iter().map(polygon)),&roi),spans[&layer.layer],material.conductivity_s_m.unwrap(),false));
+        physical_shapes.push((clip_domain(&areas::union(layer.copper.iter().map(polygon))),spans[&layer.layer],material.conductivity_s_m.unwrap(),false));
     }
     physical_shapes.extend(shapes.iter().filter(|s|barrel_ids.contains(&s.id)).map(|s|(s.poly.clone(),s.span,s.sigma,true)));
     let mut electrode_polygons=BTreeMap::new();
     for e in &r.electrodes {
         if e.name.trim().is_empty()||electrode_polygons.contains_key(&e.name)||!spans.contains_key(&e.layer) {return Err(error("BOARD_ELECTRODE","unique named electrodes on known copper layers required"));}
-        let mut poly=areas::intersection(&areas::union(geometry.regions.iter().filter(|v|v.source.path==e.source_path&&v.layer==e.layer).map(|v|polygon(&v.polygon))),&roi);
+        let paths=e.canonical_paths()?;
+        for path in &paths {if !geometry.regions.iter().any(|v|&v.source.path==path&&v.layer==e.layer){return Err(error("BOARD_ELECTRODE",&format!("source {path} absent on requested layer {}",e.layer)));}}
+        let mut poly=clip_domain(&areas::union(geometry.regions.iter().filter(|v|paths.contains(&v.source.path)&&v.layer==e.layer).map(|v|polygon(&v.polygon))));
+        if paths.len()>1 {
+            let fragments=shapes.iter().filter(|shape|source_mapping.iter().any(|m|m.0==shape.id&&m.3==e.layer&&paths.contains(&m.1))).flat_map(|shape|shape.poly.0.iter().cloned()).collect::<Vec<_>>();
+            let _union_scope=Context::install(Some(local_context.clone()));poly=areas::union(fragments);
+        }
         if let Some(cut)=r.cut_planes.get(&e.name){
-            if cut.axis>1||cut.span_mm.is_some_and(|s|s.iter().any(|v|!v.is_finite())||s[0]>=s[1]){return Err(error("BOARD_CUT","finite positive transverse contact interval required"));}
-            if let Some(span)=cut.span_mm {let mut bounds=r.roi_mm;bounds[0][1-cut.axis]=span[0];bounds[1][1-cut.axis]=span[1];poly=areas::intersection(&poly,&areas::one(rect(bounds)));}
+            let (origin,n,span)=cut.frame()?;
+            if let Some(span)=span {
+                let tangent=[-n[1],n[0]];
+                let corners=[roi_bounds[0],[roi_bounds[1][0],roi_bounds[0][1]],roi_bounds[1],[roi_bounds[0][0],roi_bounds[1][1]]];
+                let low=corners.iter().map(|p|signed(*p,origin,n)).fold(f64::INFINITY,f64::min)-cut_tolerance;
+                let high=corners.iter().map(|p|signed(*p,origin,n)).fold(f64::NEG_INFINITY,f64::max)+cut_tolerance;
+                let t_low=corners.iter().map(|p|signed(*p,origin,tangent)).fold(f64::INFINITY,f64::min).max(span[0]);
+                let t_high=corners.iter().map(|p|signed(*p,origin,tangent)).fold(f64::NEG_INFINITY,f64::max).min(span[1]);
+                if t_low>=t_high{return Err(error("BOARD_ELECTRODE","finite contact span misses domain"));}
+                let points=[(t_low,low),(t_high,low),(t_high,high),(t_low,high)].map(|(t,d)|[origin[0]+t*tangent[0]+d*n[0],origin[1]+t*tangent[1]+d*n[1]]);
+                let _span_scope=Context::install(Some(local_context.clone()));
+                poly=areas::intersection(&poly,&areas::one(Polygon::new(LineString::from(points.to_vec()),vec![])));
+            }
         }
         // An interior foil face can be occupied by a barrel continuing into the
         // adjacent dielectric. Only its actually exposed source-copper annulus
@@ -250,6 +350,24 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
         let adjacent_copper=areas::union(physical_shapes.iter().filter(|s|if e.upper {s.1[0]<=face&&s.1[1]>face}else{s.1[0]<face&&s.1[1]>=face}).flat_map(|s|s.0.0.iter().cloned()));
         if !r.cut_planes.contains_key(&e.name)&&adjacent_copper.unsigned_area()>0. {poly=areas::difference(&poly,&adjacent_copper);}
         if poly.unsigned_area()==0. {return Err(error("BOARD_ELECTRODE","contact source absent from retained layer copper"));}
+        if paths.len()>1 {
+            if let Some(cut)=r.cut_planes.get(&e.name) {
+                let(o,n,_)=cut.frame()?;let edges=&contact_boundary_edges[&e.name];
+                if face_intervals(&poly,edges,o,n,cut_tolerance).len()!=1 {return Err(error("BOARD_ELECTRODE","multi-source face must be one connected interval; split disconnected contacts"));}
+                for path in &paths {
+                    let part=clip_domain(&areas::union(geometry.regions.iter().filter(|v|&v.source.path==path&&v.layer==e.layer).map(|v|polygon(&v.polygon))));
+                    let _part_scope=Context::install(Some(local_context.clone()));
+                    let part=areas::intersection(&part,&poly);
+                    if face_intervals(&part,edges,o,n,cut_tolerance).is_empty(){return Err(error("BOARD_ELECTRODE",&format!("source {path} does not contribute to finite contact face")));}
+                }
+            }else {
+                if poly.0.len()!=1 {return Err(error("BOARD_ELECTRODE","multi-source exposed face disconnected; split contacts"));}
+                for path in &paths {
+                    let part=clip_domain(&areas::union(geometry.regions.iter().filter(|v|&v.source.path==path&&v.layer==e.layer).map(|v|polygon(&v.polygon))));
+                    if areas::intersection(&part,&poly).unsigned_area()==0. {return Err(error("BOARD_ELECTRODE","source does not contribute exposed contact area"));}
+                }
+            }
+        }
         // A finite electrode is a material boundary condition even when its
         // outline lies inside continuous same-material copper. Keep that exact
         // contour; partial provenance overlap must never enlarge the contact.
@@ -259,12 +377,31 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
     // grid before triangulation. Independent F64 constraint intersections can
     // otherwise create sub-grid cells between equivalent prepared contours.
     let original_contact_areas:BTreeMap<_,_>=electrode_polygons.iter().map(|(name,p)|(name.clone(),p.unsigned_area())).collect();
-    let _local_scope=Context::install(Some(context.refined_for_bounds(roi_bounds)?));
+    let arrangement_context=if r.domain_polygon_mm.is_some() {
+        // Bounds include every Boolean input (not only Cu), so tightening the
+        // integer-grid padding cannot put a real bore outside its adapter.
+        let mut bounds=roi_bounds;
+        for set in std::iter::once(&bores).chain(arrangement_sets.iter()) {
+            if let Some(b)=set.bounding_rect(){for k in 0..2 {bounds[0][k]=bounds[0][k].min(if k==0{b.min().x}else{b.min().y});bounds[1][k]=bounds[1][k].max(if k==0{b.max().x}else{b.max().y});}}
+        }
+        context.refined_for_arrangement(bounds)?
+    }else{context.refined_for_bounds(roi_bounds)?};
+    let _local_scope=Context::install(Some(arrangement_context));
     // A prepared source polygon is physical copper. The coarser derived layer
     // union can lose a sub-grid boundary sliver when sources are overlaid. Only
     // reconcile a contact that would otherwise fail the unchanged coverage gate;
     // preserve every actual bore, component and hole and the original1e-8 metal
     // area bound. This is source consistency, never a net-name/topology repair.
+    if r.domain_polygon_mm.is_some() {
+        // Source polygons are the copper authority. Union their clipped local
+        // images on this same grid, avoiding a second coarse global union
+        // whose rounding can produce unattributed material at rotated edges.
+        for (i,layer) in geometry.layers.iter().enumerate() {
+            let ids=source_mapping.iter().filter(|m|m.3==layer.layer).map(|m|&m.0).collect::<Vec<_>>();
+            let copper=areas::union(shapes.iter().filter(|s|ids.contains(&&s.id)).flat_map(|s|s.poly.0.iter().cloned()));
+            physical_shapes[i].0=copper.clone();arrangement_sets[i]=copper;
+        }
+    }
     let original_physical_stats=physical_shapes.iter().map(|s|(s.0.unsigned_area(),s.0.0.len(),s.0.0.iter().map(|p|p.interiors().len()).sum::<usize>())).collect::<Vec<_>>();
     let mut source_copper_restorations=vec![];
     for e in &r.electrodes {
@@ -283,7 +420,7 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
         let (area,components,holes)=original_physical_stats[layer];let change=(restored.unsigned_area()-area).abs()/area;
         let restored_holes=restored.0.iter().map(|p|p.interiors().len()).sum::<usize>();
         if change>1e-8||restored.0.len()!=components||restored_holes!=holes {return Err(error("BOARD_SOURCE_UNION",&format!("{} source reconciliation would change material area/topology: relative={change:e}, components={}/{components}, holes={restored_holes}/{holes}; no copper repaired",e.name,restored.0.len())));}
-        source_copper_restorations.push(serde_json::json!({"contact":e.name,"sourcePath":e.source_path,"layer":e.layer,"decision":"resolved","reason":"retain exact prepared source copper lost by the derived layer union; component/hole counts and original1e-8 copper-area/contact guards preserved","missingAreaMm2":missing.unsigned_area(),"relativeContactGap":(expected-covered)/expected,"relativeMetalAreaChange":change,"boreOverlapAreaMm2":bore_overlap}));
+        source_copper_restorations.push(serde_json::json!({"contact":e.name,"sourcePaths":e.canonical_paths()?,"layer":e.layer,"decision":"resolved","reason":"retain exact prepared source copper lost by the derived layer union; component/hole counts and original1e-8 copper-area/contact guards preserved","missingAreaMm2":missing.unsigned_area(),"relativeContactGap":(expected-covered)/expected,"relativeMetalAreaChange":change,"boreOverlapAreaMm2":bore_overlap}));
         arrangement_sets[layer]=restored.clone();physical_shapes[layer].0=restored;
     }
     let physical_count=physical_shapes.len();
@@ -403,27 +540,32 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
     for e in &r.electrodes {
         let poly=&electrode_polygons[&e.name];let z=spans[&e.layer][if e.upper {1}else{0}];
         let cut=r.cut_planes.get(&e.name);
-        if let Some(cut)=cut {if cut.axis>1||!cut.at_mm.is_finite()||![r.roi_mm[0][cut.axis],r.roi_mm[1][cut.axis]].contains(&cut.at_mm){return Err(error("BOARD_CUT","interface must be on an actual axis-aligned copper domain boundary"));}}
-
-        // The ROI is already transported onto the board's accepted dyadic
-        // overlay grid. Use that actual boundary, not the pre-transport decimal.
-        let cut_at=cut.map(|c|roi_bounds[usize::from(c.at_mm==r.roi_mm[1][c.axis])][c.axis]);
+        let edges=contact_boundary_edges.get(&e.name);
         let mut nodes=std::collections::BTreeSet::new();let mut area=0.;
         for face in &mesh.copper_interfaces {
             if let Some(cut)=cut {
-                let at=(cut_at.unwrap()-origin_mm[cut.axis])*1e-3;
-                if !face.nodes.iter().all(|&i|mesh.nodes_m[i][cut.axis]==at&&mesh.nodes_m[i][2]>=spans[&e.layer][0]&&mesh.nodes_m[i][2]<=spans[&e.layer][1]){continue;}
+                let _=cut;
+                if !face.nodes.iter().all(|&i|on_edges([origin_mm[0]+mesh.nodes_m[i][0]*1e3,origin_mm[1]+mesh.nodes_m[i][1]*1e3],edges.unwrap(),cut_tolerance)&&mesh.nodes_m[i][2]>=spans[&e.layer][0]&&mesh.nodes_m[i][2]<=spans[&e.layer][1]){continue;}
             }else if !face.nodes.iter().all(|&i|mesh.nodes_m[i][2]==z) {continue;}
             let xy=face.nodes.map(|i|[mesh.nodes_m[i][0],mesh.nodes_m[i][1]]);
             let centre=Point::new(origin_mm[0]+1e3*xy.iter().map(|p|p[0]).sum::<f64>()/3.,origin_mm[1]+1e3*xy.iter().map(|p|p[1]).sum::<f64>()/3.);
-            let centre=if let Some(cut)=cut{if cut.axis==0{Point::new(cut_at.unwrap(),centre.y())}else{Point::new(centre.x(),cut_at.unwrap())}}else{centre};
-            if if cut.is_some(){poly.intersects(&centre)}else{poly.contains(&centre)} {
+
+            let owns_contact=if cut.is_some(){
+                // A mean of three rotated boundary nodes need not lie exactly
+                // on a polygon edge. Test its physical one-dimensional contact
+                // intervals, retaining the original source identity.
+                let contact_edges=poly.0.iter().flat_map(|p|std::iter::once(p.exterior()).chain(p.interiors())).flat_map(|r|r.lines()).map(|e|[[e.start.x,e.start.y],[e.end.x,e.end.y]]).filter(|[a,b]|on_edges(*a,edges.unwrap(),cut_tolerance)&&on_edges(*b,edges.unwrap(),cut_tolerance)).collect::<Vec<_>>();
+                let source=source_mapping.iter().filter(|m|e.canonical_paths().is_ok_and(|paths|paths.contains(&m.1))&&m.3==e.layer).any(|m|face.copper_source_ids.contains(&m.0));
+                source&&on_edges([centre.x(),centre.y()],&contact_edges,cut_tolerance)
+            }else{poly.contains(&centre)};
+            if owns_contact {
                 let [a,b,c]=face.nodes.map(|i|mesh.nodes_m[i]);let u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]];let v=[c[0]-a[0],c[1]-a[1],c[2]-a[2]];
                 area+=((u[1]*v[2]-u[2]*v[1]).powi(2)+(u[2]*v[0]-u[0]*v[2]).powi(2)+(u[0]*v[1]-u[1]*v[0]).powi(2)).sqrt()/2.;nodes.extend(face.nodes);
             }
         }
         let expected=if let Some(cut)=cut {
-            let mut length=0.;for p in &poly.0 {for ring in std::iter::once(p.exterior()).chain(p.interiors()) {for edge in ring.0.windows(2){let a=[edge[0].x,edge[0].y];let b=[edge[1].x,edge[1].y];if a[cut.axis]==cut_at.unwrap()&&b[cut.axis]==cut_at.unwrap(){length+=(a[1-cut.axis]-b[1-cut.axis]).abs();}}}}
+            let _=cut;
+            let mut length=0.;for p in &poly.0 {for ring in std::iter::once(p.exterior()).chain(p.interiors()) {for edge in ring.0.windows(2){let a=[edge[0].x,edge[0].y];let b=[edge[1].x,edge[1].y];if on_edges(a,edges.unwrap(),cut_tolerance)&&on_edges(b,edges.unwrap(),cut_tolerance){length+=(a[0]-b[0]).hypot(a[1]-b[1]);}}}}
             length*1e-3*(spans[&e.layer][1]-spans[&e.layer][0])
         }else{original_contact_areas[&e.name]*1e-6};
         if nodes.len()<3||(area-expected).abs()>1e-8*expected {return Err(error("BOARD_ELECTRODE",&format!("finite exposed contact area mismatch: {} mesh={area:e} source={expected:e} canonical={:e}",e.name,poly.unsigned_area()*1e-6)));}
@@ -438,6 +580,7 @@ impl BoardMesh {
     pub fn into_mesh(self)->LayeredMesh{self.mesh}
     pub fn electrode_nodes(&self,e:&Electrode)->Result<Vec<usize>> {
         let (descriptor,nodes)=self.certified_electrodes.get(&e.name).ok_or_else(||error("BOARD_ELECTRODE","electrode was not part of the conforming mesh request"))?;
-        if descriptor!=e {return Err(error("BOARD_ELECTRODE","electrode descriptor differs from its certified mesh contour"));}Ok(nodes.clone())
+        if !descriptor.same_contact(e) {return Err(error("BOARD_ELECTRODE","electrode descriptor differs from its certified mesh contour"));}Ok(nodes.clone())
     }
 }
+

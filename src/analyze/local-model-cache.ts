@@ -41,7 +41,7 @@ export class LocalModelCache {
 }
 
 /** Single producer identity boundary; excitation, loads, plots and checks are results. */
-export function localExtractionKey(cache:LocalModelCache,core:string,r:{boardJson:string;geometry:unknown;bandHz:readonly number[];temperatureC?:number;magneticPatchLevel?:1|2}){return cache.key({core,board:digest(r.boardJson),geometry:r.geometry,bandHz:r.bandHz,temperatureC:r.temperatureC,magneticPatchLevel:r.magneticPatchLevel,producer:'local-recovery-v1'});}
+export function localExtractionKey(cache:LocalModelCache,core:string,r:{boardJson:string;geometry:unknown;bandHz:readonly number[];temperatureC?:number;magneticPatchLevel?:1|2}){return cache.key({core,board:digest(r.boardJson),geometry:canonicalLocalGeometry(r.geometry),bandHz:r.bandHz,temperatureC:r.temperatureC,magneticPatchLevel:r.magneticPatchLevel,producer:'local-recovery-v1'});}
 
 /** Field coefficients depend on physical transverse geometry/materials/mesh.
  * Propagation length and requested samples do not alter that operator. */
@@ -49,4 +49,16 @@ export function sectionFieldIdentity(request:{line:unknown;mesh?:unknown}){
  const line:any=structuredClone(request.line);if(line&&typeof line==='object'){delete line.lengthMm;if(line.geometry?.loss)delete line.geometry.loss.frequenciesHz;}
  const mesh=request.mesh&&typeof request.mesh==='object'?Object.fromEntries(Object.entries(request.mesh).filter(([,v])=>v!==null&&v!==undefined)):request.mesh;
  return {producer:'section-field-integrals-v1',line,mesh};
+}
+
+/** Match native physical electrode identity without repairing invalid requests. */
+export function canonicalLocalGeometry(geometry:unknown){
+ if(!geometry||typeof geometry!=='object')return geometry;
+ const value=structuredClone(geometry) as any;
+ if(Array.isArray(value.electrodes))value.electrodes=value.electrodes.map((electrode:any)=>{
+  const e={...electrode};const hasSingle=typeof e.sourcePath==='string',hasUnion=Array.isArray(e.sourcePaths);
+  if(hasSingle!==hasUnion){const paths=hasSingle?[e.sourcePath]:e.sourcePaths;if(paths.every((p:unknown)=>typeof p==='string')){e.sourcePaths=[...new Set(paths)].sort();delete e.sourcePath;}}
+  return e;
+ });
+ return value;
 }

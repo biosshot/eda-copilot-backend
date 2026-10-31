@@ -1,11 +1,11 @@
 import {mkdirSync,writeFileSync} from 'node:fs';
-import {segmentedCoupon,segmentedCouponDsl} from '../tests/helpers/pcb-analysis-segmented-coupon.ts';
+import {segmentedCouponVariant,segmentedCouponDslFor} from '../tests/helpers/pcb-analysis-segmented-coupon.ts';
 import {createHash} from 'node:crypto';
 import {localCoreIdentity} from '../src/analyze/local-model-cache.ts';
 import {runAnalysisDsl} from '../src/analyze/run-analysis-dsl.ts';
 const folder=process.env.P7_OUTPUT_DIR??('debugging/p7-segmented/'+Date.now());mkdirSync(folder,{recursive:true});writeFileSync(folder+'/resume.json',JSON.stringify({status:'running',scenario:'automatic mixed section/local coupon',folder}));
 const maxSeconds=Number(process.env.P7_VERIFY_SECONDS??300),maxMemoryMiB=Number(process.env.P7_VERIFY_MEMORY_MIB??2048),warm=process.argv.includes('--warm'),reference=process.argv.includes('--reference');
-const board=segmentedCoupon(),source=reference?segmentedCouponDsl.replace('a.channel({from,to})',`a.channel({from,to,scope:[region({layers:['TOP','BOTTOM'],polygon:{outer:[{x:-.1,y:-.530000011920929},{x:10.1,y:-.530000011920929},{x:10.1,y:.530000011920929},{x:-.1,y:.530000011920929}],holes:[]}})]})`):segmentedCouponDsl,code=source.replace('maxSeconds:300,maxMemoryMiB:2048',`maxSeconds:${maxSeconds},maxMemoryMiB:${maxMemoryMiB}`).replace('const result=await run();',warm?'const cold=await run();const result=await run();':'const result=await run();');
-writeFileSync(folder+'/identity.json',JSON.stringify({core:localCoreIdentity(),boardSha256:createHash('sha256').update(JSON.stringify(board)).digest('hex'),code,maxSeconds,maxMemoryMiB,warm,reference},null,2));
+const variant=process.env.P7_COUPON_VARIANT??'straight';const board=segmentedCouponVariant(variant),scenarioDsl=segmentedCouponDslFor(variant),source=reference?scenarioDsl.replace('a.channel({from,to})',`a.channel({from,to,scope:[region({layers:['TOP','BOTTOM'],polygon:{outer:[{x:-.1,y:-.530000011920929},{x:10.1,y:-.530000011920929},{x:10.1,y:.530000011920929},{x:-.1,y:.530000011920929}],holes:[]}})]})`):scenarioDsl,code=source.replace('maxSeconds:300,maxMemoryMiB:2048',`maxSeconds:${maxSeconds},maxMemoryMiB:${maxMemoryMiB}`).replace('const result=await run();',warm?'const cold=await run();const result=await run();':'const result=await run();');
+writeFileSync(folder+'/identity.json',JSON.stringify({core:localCoreIdentity(),boardSha256:createHash('sha256').update(JSON.stringify(board)).digest('hex'),code,maxSeconds,maxMemoryMiB,warm,reference,variant},null,2));
 const result=await runAnalysisDsl({board,code},{filename:'automatic-section-local-coupon.js',timeoutMs:maxSeconds*1000*(warm?2:1)+10000,maxEntries:1000,maxOutputBytes:64*1024*1024});
 writeFileSync(folder+'/result.json',JSON.stringify(result,null,2));writeFileSync(folder+'/resume.json',JSON.stringify({status:result.status,error:result.error,folder}));console.log(JSON.stringify({folder,status:result.status,error:result.error}));

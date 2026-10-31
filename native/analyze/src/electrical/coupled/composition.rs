@@ -539,6 +539,7 @@ pub(super) fn build_for(
     // Intersection of original nullspaces with the node-identification constraints.
     // This derives assembly invariants rather than imposing each block's charges.
     let intersect = |candidates: Vec<Vec<f64>>| -> Result<Vec<Vec<f64>>> {
+        let candidates = independent(candidates, total_v)?;
         let k = candidates.len();
         let mut modes = vec![];
         if k > 0 {
@@ -561,23 +562,51 @@ pub(super) fn build_for(
                         .map(|i| candidates.iter().map(|v| v[i]).collect()),
                 )
                 .collect();
-            let gram = Mat::from_fn(k, k, |i, j| {
-                differences.iter().map(|v| v[i] * v[j]).sum::<f64>()
-            });
-            let scale = (0..k).map(|i| gram[(i, i)]).fold(0., f64::max);
-            let eig = Mat::from_fn(
-                k,
-                k,
-                |i, j| if scale > 0. { gram[(i, j)] / scale } else { 0. },
-            )
-            .self_adjoint_eigen(Side::Lower)
-            .map_err(|e| fail("COUPLED_GAUGE", format!("{e:?}")))?;
-            for col in 0..k {
-                if eig.S()[col].abs() <= 1e-12 {
+            // Work on the constraint operator itself. Eigenvalues of D^T D
+            // square small singular values and can admit non-null combinations
+            // at a 1e-6 operator residual under a 1e-12 eigenvalue cutoff.
+            // Exact support components prevent machine-epsilon SVD leakage
+            // into an unrelated conductor constraint. No nonzero coefficient
+            // is filtered and every original row is still certified below.
+            let mut support: Vec<_> = (0..k).collect();
+            for row in &differences {
+                if let Some(first) = row.iter().position(|v| *v != 0.) {
+                    for (j, v) in row.iter().enumerate() {
+                        if *v != 0. { merge(&mut support, first, j); }
+                    }
+                }
+            }
+            let mut components = BTreeMap::<usize, Vec<usize>>::new();
+            for j in 0..k { components.entry(root(&support, j)).or_default().push(j); }
+            // Nonsingular row equilibration leaves the exact kernel intact.
+            let row_scales: Vec<_> = differences.iter().map(|row| {
+                row.iter().map(|v| v.abs()).fold(0., f64::max)
+            }).collect();
+            for columns in components.values() {
+                let width = columns.len();
+                // Pad short operators so thin SVD retains all right-null vectors.
+                let operator = Mat::from_fn(differences.len().max(width), width, |i, j| {
+                    if i < differences.len() && row_scales[i] > 0. { differences[i][columns[j]] / row_scales[i] } else { 0. }
+                });
+                let svd = operator.thin_svd()
+                    .map_err(|e| fail("COUPLED_GAUGE", format!("{e:?}")))?;
+                let maximum = (0..width).map(|i| svd.S()[i]).fold(0., f64::max);
+                for col in 0..width {
+                    if svd.S()[col] > 1e-12 * maximum { continue; }
+                    let mut coefficients = vec![0.; k];
+                    for (j, &original) in columns.iter().enumerate() { coefficients[original] = svd.V()[(j, col)]; }
+                    // Certify original, unsquared identifications and grounding.
+                    for row in &differences {
+                        let residual = (0..k).map(|j| row[j] * coefficients[j]).sum::<f64>();
+                        let bound = (0..k).map(|j| (row[j] * coefficients[j]).abs()).sum::<f64>();
+                        if residual.abs() > 1e-12 * bound.max(1e-300) {
+                            return Err(fail("COUPLED_GAUGE", "Unresolved assembly constraint nullspace"));
+                        }
+                    }
                     let full: Vec<_> = (0..total_v)
                         .map(|i| {
                             (0..k)
-                                .map(|j| candidates[j][i] * eig.U()[(j, col)])
+                                .map(|j| candidates[j][i] * coefficients[j])
                                 .sum::<f64>()
                         })
                         .collect();

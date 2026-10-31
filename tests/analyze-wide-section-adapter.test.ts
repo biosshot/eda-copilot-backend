@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {segmentedCoupon} from './helpers/pcb-analysis-segmented-coupon.ts';
+import {extractWideBoardSectionCoefficients} from '../src/analyze/segmented-channel.ts';
+const stack=[{name:'TOP',copper:true,thicknessM:1e-5,conductivitySM:58e6},{name:'substrate',copper:false,thicknessM:1e-4,epsilonR:4},{name:'BOTTOM',copper:true,thicknessM:1e-5,conductivitySM:58e6}];
+const make=(axis:any,w:number,air:number,area:number)=>({axis,slice:{atMm:[5,0],transverseUnit:[0,1],halfWidthMm:w,airMarginMm:air,referenceLayer:'BOTTOM',referenceSourcePath:'copper.fixed.tracks[1]',referenceXMm:0},maxTriangleAreaM2:area});
+const input=()=>({boardJson:JSON.stringify(segmentedCoupon()),stack,slices:[make('baseline',.249,1.5,2e-9),make('physical-width',.3,1.5,2e-9),make('baseline',.3,1,2e-9),make('air-boundary',.3,1.5,2e-9),make('baseline',.3,1.5,4e-9),make('mesh',.3,1.5,2e-9)],frequencies:[1e6,1e7,1e8],lengthMm:1});
+test('board adapter propagates length, preserves coefficients and reuses immutable fields',()=>{const a=extractWideBoardSectionCoefficients(input());assert.equal(a.status,'coefficients-only');const b=extractWideBoardSectionCoefficients({...input(),lengthMm:2});assert.equal(b.status,'coefficients-only');assert.deepEqual(a.report.parameters,b.report.parameters);assert.deepEqual(b.report.frequenciesHz,[1e6,1e7,1e8]);assert.ok(b.report.network);assert.notDeepEqual(a.report.network.parameters,b.report.network.parameters);assert.ok(b.audit.every(x=>x.cache.field?.assembly===0));});
+test('invalid lengths and missing board section data refuse admission',()=>{for(const lengthMm of [0,-1,NaN,Infinity,undefined])assert.throws(()=>extractWideBoardSectionCoefficients({...input(),lengthMm} as any),/length/);assert.throws(()=>extractWideBoardSectionCoefficients({...input(),stack:[]}),/SECTION_SLICE|stack/);});
+

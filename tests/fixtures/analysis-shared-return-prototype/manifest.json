@@ -1,0 +1,839 @@
+{
+  "schema": "p7-shared-return-benchmark-v1",
+  "units": {
+    "length": "m",
+    "impedance": "ohm"
+  },
+  "tolerances": {
+    "relative": 0.08,
+    "absolute_ohm": 1e-12,
+    "rationale": "8% declared primary target; 1 pOhm floor for mathematical zero mutual entries; DC network only, no 15% certificate"
+  },
+  "cases": [
+    {
+      "id": "wide",
+      "family": "wide-plane",
+      "description": "10x10 mm rectangle, 35 um thickness; full-width electrodes. R=rho L/(wt).",
+      "model": {
+        "nodes": [
+          {
+            "id": "p",
+            "x_m": 0.0,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "g",
+            "x_m": 0.001,
+            "y_m": 0,
+            "layer": 0
+          }
+        ],
+        "edges": [
+          {
+            "a": "p",
+            "b": "g",
+            "resistance_ohm": 0.0004925714285714287
+          }
+        ],
+        "ports": [
+          {
+            "positive": "p",
+            "negative": "g"
+          }
+        ]
+      },
+      "reference": {
+        "kind": "analytic-DC-network",
+        "source": "https://www.grc.nasa.gov/www/k-12/airplane/ohms.html",
+        "impedance_ohm": [
+          [
+            0.0004925714285714287
+          ]
+        ],
+        "uncertainty": "Exact ideal network arithmetic; physical model discrepancy unbounded outside declared assumptions"
+      },
+      "frequency_hz": [
+        0
+      ],
+      "boundary": "Insulated sides; full end electrodes; other port currents zero; 1 A differential excitation",
+      "materials": "Authored ideal isotropic conductor rho=1.724e-8 ohm m; no dielectric dynamics",
+      "limitations": "Topology control only; no measured PCB, skin effect, L/C, propagation or radiation"
+    },
+    {
+      "id": "edge",
+      "family": "finite-edge",
+      "description": "10x5 mm rectangle, same thickness; width halved. No edge current crowding asserted.",
+      "model": {
+        "nodes": [
+          {
+            "id": "p",
+            "x_m": 0.0,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "g",
+            "x_m": 0.001,
+            "y_m": 0,
+            "layer": 0
+          }
+        ],
+        "edges": [
+          {
+            "a": "p",
+            "b": "g",
+            "resistance_ohm": 0.0009851428571428574
+          }
+        ],
+        "ports": [
+          {
+            "positive": "p",
+            "negative": "g"
+          }
+        ]
+      },
+      "reference": {
+        "kind": "analytic-DC-network",
+        "source": "https://www.grc.nasa.gov/www/k-12/airplane/ohms.html",
+        "impedance_ohm": [
+          [
+            0.0009851428571428574
+          ]
+        ],
+        "uncertainty": "Exact ideal network arithmetic; physical model discrepancy unbounded outside declared assumptions"
+      },
+      "frequency_hz": [
+        0
+      ],
+      "boundary": "Insulated sides; full end electrodes; other port currents zero; 1 A differential excitation",
+      "materials": "Authored ideal isotropic conductor rho=1.724e-8 ohm m; no dielectric dynamics",
+      "limitations": "Topology control only; no measured PCB, skin effect, L/C, propagation or radiation"
+    },
+    {
+      "id": "slot-detour",
+      "family": "slot",
+      "description": "Authored ideal series detour, not a continuum slotted sheet; contact spreading absent.",
+      "model": {
+        "nodes": [
+          {
+            "id": "p",
+            "x_m": 0.0,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "b",
+            "x_m": 0.001,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "g",
+            "x_m": 0.002,
+            "y_m": 0,
+            "layer": 0
+          }
+        ],
+        "edges": [
+          {
+            "a": "p",
+            "b": "b",
+            "resistance_ohm": 0.0004925714285714287
+          },
+          {
+            "a": "b",
+            "b": "g",
+            "resistance_ohm": 0.0009851428571428574
+          }
+        ],
+        "ports": [
+          {
+            "positive": "p",
+            "negative": "g"
+          }
+        ]
+      },
+      "reference": {
+        "kind": "analytic-DC-network",
+        "source": "https://www.grc.nasa.gov/www/k-12/airplane/ohms.html",
+        "impedance_ohm": [
+          [
+            0.0014777142857142862
+          ]
+        ],
+        "uncertainty": "Exact ideal network arithmetic; physical model discrepancy unbounded outside declared assumptions"
+      },
+      "frequency_hz": [
+        0
+      ],
+      "boundary": "Insulated sides; full end electrodes; other port currents zero; 1 A differential excitation",
+      "materials": "Authored ideal isotropic conductor rho=1.724e-8 ohm m; no dielectric dynamics",
+      "limitations": "Topology control only; no measured PCB, skin effect, L/C, propagation or radiation"
+    },
+    {
+      "id": "two-planes",
+      "family": "multiple-planes",
+      "description": "Two equal isolated strips joined by ideal end electrodes; I1/I=I2/I=0.5.",
+      "model": {
+        "nodes": [
+          {
+            "id": "p",
+            "x_m": 0.0,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "g",
+            "x_m": 0.001,
+            "y_m": 0,
+            "layer": 0
+          }
+        ],
+        "edges": [
+          {
+            "a": "p",
+            "b": "g",
+            "resistance_ohm": 0.0004925714285714287
+          },
+          {
+            "a": "p",
+            "b": "g",
+            "resistance_ohm": 0.0004925714285714287
+          }
+        ],
+        "ports": [
+          {
+            "positive": "p",
+            "negative": "g"
+          }
+        ]
+      },
+      "reference": {
+        "kind": "analytic-DC-network",
+        "source": "https://www.grc.nasa.gov/www/k-12/airplane/ohms.html",
+        "impedance_ohm": [
+          [
+            0.00024628571428571435
+          ]
+        ],
+        "uncertainty": "Exact ideal network arithmetic; physical model discrepancy unbounded outside declared assumptions"
+      },
+      "frequency_hz": [
+        0
+      ],
+      "boundary": "Insulated sides; full end electrodes; other port currents zero; 1 A differential excitation",
+      "materials": "Authored ideal isotropic conductor rho=1.724e-8 ohm m; no dielectric dynamics",
+      "limitations": "Topology control only; no measured PCB, skin effect, L/C, propagation or radiation"
+    },
+    {
+      "id": "via-near",
+      "family": "return-transition",
+      "description": "Ideal lumped return transition resistor r/10; no physical via model.",
+      "model": {
+        "nodes": [
+          {
+            "id": "p",
+            "x_m": 0.0,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "v",
+            "x_m": 0.001,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "g",
+            "x_m": 0.002,
+            "y_m": 0,
+            "layer": 0
+          }
+        ],
+        "edges": [
+          {
+            "a": "p",
+            "b": "v",
+            "resistance_ohm": 0.0004925714285714287
+          },
+          {
+            "a": "v",
+            "b": "g",
+            "resistance_ohm": 4.925714285714287e-05
+          }
+        ],
+        "ports": [
+          {
+            "positive": "p",
+            "negative": "g"
+          }
+        ]
+      },
+      "reference": {
+        "kind": "analytic-DC-network",
+        "source": "https://www.grc.nasa.gov/www/k-12/airplane/ohms.html",
+        "impedance_ohm": [
+          [
+            0.0005418285714285716
+          ]
+        ],
+        "uncertainty": "Exact ideal network arithmetic; physical model discrepancy unbounded outside declared assumptions"
+      },
+      "frequency_hz": [
+        0
+      ],
+      "boundary": "Insulated sides; full end electrodes; other port currents zero; 1 A differential excitation",
+      "materials": "Authored ideal isotropic conductor rho=1.724e-8 ohm m; no dielectric dynamics",
+      "limitations": "Topology control only; no measured PCB, skin effect, L/C, propagation or radiation"
+    },
+    {
+      "id": "via-remote",
+      "family": "return-transition",
+      "description": "Same lumped transition with three times the route resistance; no HF proximity claim.",
+      "model": {
+        "nodes": [
+          {
+            "id": "p",
+            "x_m": 0.0,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "v",
+            "x_m": 0.001,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "g",
+            "x_m": 0.002,
+            "y_m": 0,
+            "layer": 0
+          }
+        ],
+        "edges": [
+          {
+            "a": "p",
+            "b": "v",
+            "resistance_ohm": 0.0014777142857142862
+          },
+          {
+            "a": "v",
+            "b": "g",
+            "resistance_ohm": 4.925714285714287e-05
+          }
+        ],
+        "ports": [
+          {
+            "positive": "p",
+            "negative": "g"
+          }
+        ]
+      },
+      "reference": {
+        "kind": "analytic-DC-network",
+        "source": "https://www.grc.nasa.gov/www/k-12/airplane/ohms.html",
+        "impedance_ohm": [
+          [
+            0.001526971428571429
+          ]
+        ],
+        "uncertainty": "Exact ideal network arithmetic; physical model discrepancy unbounded outside declared assumptions"
+      },
+      "frequency_hz": [
+        0
+      ],
+      "boundary": "Insulated sides; full end electrodes; other port currents zero; 1 A differential excitation",
+      "materials": "Authored ideal isotropic conductor rho=1.724e-8 ohm m; no dielectric dynamics",
+      "limitations": "Topology control only; no measured PCB, skin effect, L/C, propagation or radiation"
+    },
+    {
+      "id": "shared-narrow",
+      "family": "coupled-common-return",
+      "description": "Tree path overlap gives Z12=bridge R=5r; diagonal includes each branch.",
+      "model": {
+        "nodes": [
+          {
+            "id": "p1",
+            "x_m": 0.0,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "c",
+            "x_m": 0.001,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "p2",
+            "x_m": 0.002,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "g",
+            "x_m": 0.003,
+            "y_m": 0,
+            "layer": 0
+          }
+        ],
+        "edges": [
+          {
+            "a": "p1",
+            "b": "c",
+            "resistance_ohm": 0.0004925714285714287
+          },
+          {
+            "a": "p2",
+            "b": "c",
+            "resistance_ohm": 0.0009851428571428574
+          },
+          {
+            "a": "c",
+            "b": "g",
+            "resistance_ohm": 0.0024628571428571434
+          }
+        ],
+        "ports": [
+          {
+            "positive": "p1",
+            "negative": "g"
+          },
+          {
+            "positive": "p2",
+            "negative": "g"
+          }
+        ]
+      },
+      "reference": {
+        "kind": "analytic-DC-network",
+        "source": "https://www.grc.nasa.gov/www/k-12/airplane/ohms.html",
+        "impedance_ohm": [
+          [
+            0.0029554285714285724,
+            0.0024628571428571434
+          ],
+          [
+            0.0024628571428571434,
+            0.003448000000000001
+          ]
+        ],
+        "uncertainty": "Exact ideal network arithmetic; physical model discrepancy unbounded outside declared assumptions"
+      },
+      "frequency_hz": [
+        0
+      ],
+      "boundary": "Insulated sides; full end electrodes; other port currents zero; 1 A differential excitation",
+      "materials": "Authored ideal isotropic conductor rho=1.724e-8 ohm m; no dielectric dynamics",
+      "limitations": "Topology control only; no measured PCB, skin effect, L/C, propagation or radiation"
+    },
+    {
+      "id": "shared-split",
+      "family": "partition-invariance",
+      "description": "Same physical ideal tree with branch subdivision.",
+      "model": {
+        "nodes": [
+          {
+            "id": "p1",
+            "x_m": 0.0,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "x",
+            "x_m": 0.001,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "c",
+            "x_m": 0.002,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "p2",
+            "x_m": 0.003,
+            "y_m": 0,
+            "layer": 0
+          },
+          {
+            "id": "g",
+            "x_m": 0.004,
+            "y_m": 0,
+            "layer": 0
+          }
+        ],
+        "edges": [
+          {
+            "a": "p1",
+            "b": "x",
+            "resistance_ohm": 0.00024628571428571435
+          },
+          {
+            "a": "x",
+            "b": "c",
+            "resistance_ohm": 0.00024628571428571435
+          },
+          {
+            "a": "p2",
+            "b": "c",
+            "resistance_ohm": 0.0009851428571428574
+          },
+          {
+            "a": "c",
+            "b": "g",
+            "resistance_ohm": 0.0024628571428571434
+          }
+        ],
+        "ports": [
+          {
+            "positive": "p1",
+            "negative": "g"
+          },
+          {
+            "positive": "p2",
+            "negative": "g"
+          }
+        ]
+      },
+      "reference": {
+        "kind": "analytic-DC-network",
+        "source": "https://www.grc.nasa.gov/www/k-12/airplane/ohms.html",
+        "impedance_ohm": [
+          [
+            0.0029554285714285724,
+            0.0024628571428571434
+          ],
+          [
+            0.0024628571428571434,
+            0.003448000000000001
+          ]
+        ],
+        "uncertainty": "Exact ideal network arithmetic; physical model discrepancy unbounded outside declared assumptions"
+      },
+      "frequency_hz": [
+        0
+      ],
+      "boundary": "Insulated sides; full end electrodes; other port currents zero; 1 A differential excitation",
+      "materials": "Authored ideal isotropic conductor rho=1.724e-8 ohm m; no dielectric dynamics",
+      "limitations": "Topology control only; no measured PCB, skin effect, L/C, propagation or radiation"
+    }
+  ],
+  "unavailable": [
+    {
+      "family": "wide-plane",
+      "metric": "propagation-delay",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "wide-plane",
+      "metric": "S21",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "wide-plane",
+      "metric": "crosstalk-HF",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "wide-plane",
+      "metric": "distributed-return-current",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "finite-edge",
+      "metric": "propagation-delay",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "finite-edge",
+      "metric": "S21",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "finite-edge",
+      "metric": "crosstalk-HF",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "finite-edge",
+      "metric": "distributed-return-current",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "slot",
+      "metric": "propagation-delay",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "slot",
+      "metric": "S21",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "slot",
+      "metric": "crosstalk-HF",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "slot",
+      "metric": "distributed-return-current",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "multiple-planes",
+      "metric": "propagation-delay",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "multiple-planes",
+      "metric": "S21",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "multiple-planes",
+      "metric": "crosstalk-HF",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "multiple-planes",
+      "metric": "distributed-return-current",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "return-transition",
+      "metric": "propagation-delay",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "return-transition",
+      "metric": "S21",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "return-transition",
+      "metric": "crosstalk-HF",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "return-transition",
+      "metric": "distributed-return-current",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "coupled-common-return",
+      "metric": "propagation-delay",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "coupled-common-return",
+      "metric": "S21",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "coupled-common-return",
+      "metric": "crosstalk-HF",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    },
+    {
+      "family": "coupled-common-return",
+      "metric": "distributed-return-current",
+      "frequencies_hz": [
+        1,
+        100,
+        10000,
+        1000000,
+        100000000,
+        1000000000
+      ],
+      "reason": "DC prototype and analytic graph controls cannot validate distributed EM. Need matching whole-volume reference with identical ports/materials and mesh/domain convergence."
+    }
+  ]
+}

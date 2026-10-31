@@ -64,7 +64,7 @@ def tree_memory(process, children, paging):
 
 def main():
  parser=argparse.ArgumentParser()
- parser.add_argument('--scenario',choices=['via','segmented-coupon','segmented-reference','current-reference','remote-channel'],default='via')
+ parser.add_argument('--scenario',choices=['via','segmented-coupon','segmented-reference','current-reference','real-reference','remote-channel'],default='via')
  parser.add_argument('--electric-edge-mm',type=float,default=0)
  parser.add_argument('--reference-area-mm2',type=float,default=.1)
  parser.add_argument('--warm',action='store_true')
@@ -104,8 +104,8 @@ def main():
  if args.cache_dir and (not cache.is_dir() or not any(cache.glob('*.json'))):
   manifest.update(status='refused-preflight',reason='Restart cache must already contain model JSON entries');save();print(json.dumps(manifest));sys.exit(2)
  manifest.update(cacheMode='restart-existing-directory' if args.cache_dir else ('cold+same-worker-warm' if args.warm else 'cold-empty-directory'),cacheDirectory=str(cache),scenario=args.scenario)
- env=os.environ.copy();env.update(PCB_ANALYSIS_TRAINING_JOBS=str(args.training_jobs),PCB_ANALYSIS_CACHE_DIR=str(cache),P7_OUTPUT_DIR=str(folder),P7_REFERENCE_AREA_MM2=str(args.reference_area_mm2),P7_REFERENCE_ELECTRIC_EDGE_MM=str(args.electric_edge_mm),P7_VERIFY_SECONDS=str(args.seconds),P7_VERIFY_MEMORY_MIB=str(args.native_memory_mib))
- command=['node','--import','tsx',{'via':'scripts/verify-p7-automatic-channel.ts','segmented-coupon':'scripts/verify-p7-segmented-coupon.ts','remote-channel':'scripts/verify-p7-full-channel.ts','segmented-reference':'scripts/verify-p7-segmented-coupon.ts','current-reference':'scripts/verify-p7-full-coupon-reference.ts'}[args.scenario]]
+ env=os.environ.copy();env.update(P7_BLOCK_LIFECYCLE='1',PCB_ANALYSIS_TRAINING_JOBS=str(args.training_jobs),PCB_ANALYSIS_CACHE_DIR=str(cache),P7_OUTPUT_DIR=str(folder),P7_REFERENCE_AREA_MM2=str(args.reference_area_mm2),P7_REFERENCE_ELECTRIC_EDGE_MM=str(args.electric_edge_mm),P7_VERIFY_SECONDS=str(args.seconds),P7_VERIFY_MEMORY_MIB=str(args.native_memory_mib))
+ command=['node','--import','tsx',{'via':'scripts/verify-p7-automatic-channel.ts','segmented-coupon':'scripts/verify-p7-segmented-coupon.ts','remote-channel':'scripts/verify-p7-full-channel.ts','segmented-reference':'scripts/verify-p7-segmented-coupon.ts','current-reference':'scripts/verify-p7-full-coupon-reference.ts','real-reference':'scripts/verify-p7-real-reference.ts'}[args.scenario]]
  if args.scenario=='via':command.append('--four-terminal')
  if args.scenario=='segmented-reference':command.append('--reference')
  if args.warm:command.append('--warm')
@@ -150,7 +150,7 @@ def main():
    item=json.loads(line)
    if isinstance(item,dict) and 'status'in item:scenario=item;break
   except json.JSONDecodeError:pass
- manifest.update(status='finished',wallSeconds=time.perf_counter()-started,processTreePeakRssBytes=peak,processTreePeakPrivateCommitBytes=private_peak if args.allow_os_paging else None,minAvailableRamBytes=min_available,minAvailableCommitBytes=min_headroom,maxSingleChildRssBytes=worker_peak,exitCode=code,refusal=refusal,scenario=scenario,scope=args.scenario+'; conditional physical result, no complete5percent certificate')
+ manifest.update(status='finished',wallSeconds=time.perf_counter()-started,processTreePeakRssBytes=peak,processTreePeakPrivateCommitBytes=private_peak if args.allow_os_paging else None,minAvailableRamBytes=min_available,minAvailableCommitBytes=min_headroom,maxSingleChildRssBytes=worker_peak,exitCode=code,refusal=refusal,scenario=scenario,scope=args.scenario+'; conditional physical result, no complete physical-error certificate')
  save();(folder/'evidence.json').write_text(json.dumps(manifest,indent=2));print(json.dumps(manifest),flush=True)
  return 1 if code or refusal or not scenario or scenario.get('status')!='complete' else 0
 

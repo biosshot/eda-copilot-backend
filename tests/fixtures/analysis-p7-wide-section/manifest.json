@@ -1,0 +1,39 @@
+{
+  "scope": "PEC homogeneous er=1 two round signals above one finite rectangular return; 10mm uniform extrusion at 1/10/100MHz, 50ohm ports",
+  "signals": {
+    "radiusMm": 0.01,
+    "centerYMm": 0.3,
+    "centerXMm": [
+      -0.15,
+      0.15
+    ],
+    "polygonSides": 64
+  },
+  "return": {
+    "topYMm": 0,
+    "thicknessMm": 0.035,
+    "halfWidthsMm": [
+      1,
+      2,
+      4
+    ]
+  },
+  "boundary": "natural Neumann outer rectangle; physical width separate from exterior and mesh refinements",
+  "tolerances": {
+    "numericalRelative": 0.02,
+    "physicalPlusUncertaintyRelative": 0.08,
+    "referenceEngineeringUncertainty": 0.03,
+    "Cfloor": 1E-15,
+    "Lfloor": 1E-12,
+    "Zfloor": 0.01,
+    "complexFloor": 0.0001
+  },
+  "reference": "Independent circular-wire image Green-function collocation over infinite PEC plane, 24/32/48 interior-source refinements; absolute C, homogeneous Maxwell L, independent matrix-exponential complex four-port response. Preassigned 3% engineering allowance, not rigorous bound. Native 64-sided circle and finite-plane differences separately checked.",
+  "resources": {
+    "seconds": 120,
+    "memoryMiB": 1024,
+    "maxSteps": 7,
+    "maxNodes": 100000,
+    "oneHeavyRun": true
+  }
+}

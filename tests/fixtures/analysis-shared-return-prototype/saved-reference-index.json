@@ -1,0 +1,26 @@
+[
+  {
+    "path": "debugging/p7-channel-plan/automatic-supervised-1793363430965924500/identity.json",
+    "sha256": "f0832778a1496e96cdf44c8fe3e8888f18a8aec71476ef095c3b71144baece7f",
+    "use": "Saved separate numerical path, NOT matching graph benchmark; unavailable for accuracy acceptance",
+    "portable": false
+  },
+  {
+    "path": "debugging/p7-channel-plan/automatic-supervised-1793363430965924500/result.json",
+    "sha256": "0d7930029fbca6809e3806cb58af6337ea6a126b069cc3fafe108f173b3bd90f",
+    "use": "Saved separate numerical path, NOT matching graph benchmark; unavailable for accuracy acceptance",
+    "portable": false
+  },
+  {
+    "path": "debugging/p7-channel-plan/automatic-supervised-1793393382999381200/whole-reference-comparison.json",
+    "sha256": "6ad96c42810827e47d67513c0b1db1067f9d2475a4627540f28bec3aea242fc0",
+    "use": "Saved separate numerical path, NOT matching graph benchmark; unavailable for accuracy acceptance",
+    "portable": false
+  },
+  {
+    "path": "tests/fixtures/analysis-local-extraction/layered-native/references/manifest.json",
+    "sha256": "107a7ce2f3b4049c0284a405980fdc23dc9304fd306aa284084fc09eea119168",
+    "use": "Saved separate numerical path, NOT matching graph benchmark; unavailable for accuracy acceptance",
+    "portable": false
+  }
+]

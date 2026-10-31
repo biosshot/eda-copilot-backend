@@ -1,0 +1,22 @@
+[
+  {
+    "variant": "straight",
+    "category": "reused numerical whole-volume cross-reference; not independent physical truth",
+    "path": "tests/fixtures/analysis-p7-closure/straight-reused-comparison.json",
+    "sha256": "6ad96c42810827e47d67513c0b1db1067f9d2475a4627540f28bec3aea242fc0",
+    "origin": "debugging/p7-channel-plan/automatic-supervised-1793393382999381200/whole-reference-comparison.json",
+    "units": "complex dimensionless50 Ohm S; delay seconds; copper loss W under stored drive",
+    "ports": "Exact stored physical port convention retained inside packet",
+    "newRun": false
+  },
+  {
+    "variant": "bend",
+    "category": "reused numerical whole-volume cross-reference; not independent physical truth",
+    "path": "tests/fixtures/analysis-p7-closure/bend-reused-comparison.json",
+    "sha256": "3192bc4d4398099a55df7dc2f4e876bfd95bc232683780aee32c01d29f85cd7e",
+    "origin": "debugging/p7-channel-plan/automatic-supervised-1793388988025203100/whole-reference-comparison.json",
+    "units": "complex dimensionless50 Ohm S; delay seconds; copper loss W under stored drive",
+    "ports": "Exact stored physical port convention retained inside packet",
+    "newRun": false
+  }
+]

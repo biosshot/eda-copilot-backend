@@ -97,9 +97,11 @@ pub fn calculate(request: &Request) -> Result<Value> {
         }
         vec![]
     };
-    let mut result = impedance(&model, ports, &request.frequencies, request.budget.as_ref())?;
+    let mut result = if request.representation == "S" {
+        matched_waves(&model, &refs, &request.frequencies, request.budget.as_ref())?
+    } else { impedance(&model, ports, &request.frequencies, request.budget.as_ref())? };
     let mut quality = crate::electrical::frequency::Quality::default();
-    if request.representation != "Z" {
+    if request.representation == "Y" {
         let z: Vec<math::Matrix> = serde_json::from_value(result["parameters"].clone())
             .map_err(|e| fail("COUPLED_NONFINITE", e))?;
         let converted = z
@@ -365,7 +367,6 @@ pub(crate) fn common_tables(request: &Request, start: Instant) -> Result<(Reques
             ));
         }
         let ports = resource.ports.len();
-        let mut system = System::compile(&model, ports, Some(&budget))?;
         for port in 0..ports {
             let entries: Vec<_> = model
                 .port_incidence
@@ -378,48 +379,12 @@ pub(crate) fn common_tables(request: &Request, start: Instant) -> Result<(Reques
                     "Mixed frequency requires canonical positive-potential ports",
                 ));
             }
-            system.add_port_admittance(port, 1. / 50., 0.)?;
         }
-        let states = system.linear.n;
-        let mut parameters = Vec::with_capacity(f);
-        let mut counters = Counters::default();
-        for &frequency in &request.frequencies {
-            super::super::deadline(
-                start,
-                Some(&budget),
-                "Mixed descriptor frequency evaluation",
-            )?;
-            let complex = frequency > 0.;
-            let mut matrix = vec![vec![math::C::default(); ports]; ports];
-            for input in 0..ports {
-                let mut incident = vec![0.; ports];
-                incident[input] = 2. / 50_f64.sqrt();
-                let mut rhs = system.port_rhs(&incident);
-                if complex {
-                    rhs.resize(states * 2, 0.);
-                }
-                let x = system.solve(
-                    2. * std::f64::consts::PI * frequency,
-                    rhs,
-                    &vec![0.; states],
-                    &mut counters,
-                )?;
-                let re = system.port_voltages(&x[..states], ports);
-                let im = if complex {
-                    system.port_voltages(&x[states..], ports)
-                } else {
-                    vec![0.; ports]
-                };
-                for output in 0..ports {
-                    matrix[output][input] = math::C::new(
-                        re[output] / 50_f64.sqrt() - if output == input { 1. } else { 0. },
-                        im[output] / 50_f64.sqrt(),
-                    );
-                }
-            }
-            parameters.push(matrix);
-        }
-        residual = residual.max(system.residual);
+        let mut remaining=budget.clone();remaining.max_seconds=Some(budget.max_seconds.unwrap_or(60.)-start.elapsed().as_secs_f64());
+        if remaining.max_seconds.unwrap()<=0.{return Err(fail("NETWORK_DEADLINE","Mixed matched wave deadline"));}
+        let waves=matched_waves(&model,&vec![50.;ports],&request.frequencies,Some(&remaining))?;
+        residual=residual.max(waves["quality"]["relativeResidual"].as_f64().unwrap_or(0.));
+        let parameters=&waves["parameters"];
         resource.data = json!({"format":"network-parameters","representation":"S","referenceTopology":"common","nature":"passive","referenceOhm":50.,"frequenciesHz":request.frequencies,"parameters":parameters});
     }
     super::super::deadline(
@@ -429,3 +394,54 @@ pub(crate) fn common_tables(request: &Request, start: Instant) -> Result<(Reques
     )?;
     Ok((normalized, reserved, residual))
 }
+
+/// Evaluate the same S boundary condition directly, without an ill-conditioned
+/// unloaded monopole Z intermediate. The intrinsic model is never modified.
+fn matched_waves(model:&Model,refs:&[f64],frequencies:&[f64],budget:Option<&Budget>)->Result<Value>{
+ let started=Instant::now();let ports=refs.len();
+ if ports==0||ports>16||frequencies.is_empty()||frequencies.len()>131072/ports/ports||frequencies.iter().enumerate().any(|(i,f)|!f.is_finite()||*f<0.||i>0&&*f<=frequencies[i-1]){return Err(fail("COUPLED_INPUT","Invalid or oversized frequency axis"));}
+ let mut system=System::compile(model,ports,budget)?;
+ let output=frequencies.len()*ports*ports*128;
+ let load_bound=(0..ports).map(|p|system.b.keys().filter(|(_,j)|*j==p).count().saturating_pow(2)).sum::<usize>().saturating_mul(64);
+ let plan=system.memory_plan.saturating_add(output).saturating_add(load_bound).saturating_add(system.linear.n.saturating_mul(ports).saturating_mul(16));
+ if plan as f64>budget.and_then(|b|b.max_memory_mi_b).unwrap_or(256.)*1048576.{return Err(fail("COUPLED_BUDGET","Matched load/output plan exceeds request budget"));}
+ for (port,r) in refs.iter().enumerate(){system.add_port_admittance(port,1./r,0.)?;}
+ let n=system.linear.n;let mut stats=Counters::default();let mut samples=vec![];let mut energy=vec![];let mut power_error:f64=0.;
+ for &f in frequencies {
+  if started.elapsed().as_secs_f64()>budget.and_then(|b|b.max_seconds).unwrap_or(120.){return Err(fail("NETWORK_DEADLINE","Matched wave deadline"));}
+  let mut sample=vec![vec![json!({"real":0.,"imaginary":0.});ports];ports];let mut states=vec![];
+  for input in 0..ports {
+   let mut drive=vec![0.;ports];drive[input]=1.;let mut rhs=system.port_rhs(&drive);if f!=0.{rhs.resize(2*n,0.);}
+   let x=system.solve(2.*std::f64::consts::PI*f,rhs,&vec![0.;n],&mut stats)?;
+   let re=system.port_voltages(&x,ports);let im=if f==0.{vec![0.;ports]}else{system.port_voltages(&x[n..],ports)};
+   let mut out=0.;for output in 0..ports {let a=2.*(re[output]/refs[input].sqrt()/refs[output].sqrt())-if output==input {1.}else{0.};let b=2.*(im[output]/refs[input].sqrt()/refs[output].sqrt());if !a.is_finite()||!b.is_finite(){return Err(fail("COUPLED_NONFINITE","Matched coefficient overflow"));}sample[output][input]=json!({"real":a,"imaginary":b});out+=a*a+b*b;}
+   let incident=refs[input]/4.;let loss=system.joule_loss(&x[..n])+if f==0.{0.}else{system.joule_loss(&x[n..])};let error=(incident*(1.-out)-loss).abs();
+   if !error.is_finite()||!loss.is_finite(){return Err(fail("COUPLED_NONFINITE","Matched power overflow"));}let source=incident*(1.-out);power_error=power_error.max(error/(1e-12+source.abs()+loss));if error>1e-12+1e-8*(source.abs()+loss){return Err(fail("COUPLED_POWER","Matched wave power differs from intrinsic R loss"));}
+   states.push(x);
+  }
+  let gram=|entries:&[Entry],offset:usize|{(0..ports).map(|a|(0..ports).map(|b|entries.iter().map(|&(i,j,v)|0.5*v*(states[a][offset+i]*states[b][offset+j]+if f==0.{0.}else{states[a][n+offset+i]*states[b][n+offset+j]})).sum::<f64>()).collect::<Vec<_>>()).collect::<Vec<_>>()};
+  let magnetic=gram(&model.inductance_h,system.nv);let electric=gram(&model.capacitance_f,0);if magnetic.iter().chain(&electric).flatten().any(|v|!v.is_finite()){return Err(fail("COUPLED_NONFINITE","Matched intrinsic energy overflow"));}energy.push(json!({"magneticJPerA2":magnetic,"electricJPerA2":electric}));
+  samples.push(sample);
+ }
+ Ok(json!({"status":"complete","parameters":samples,"frequenciesHz":frequencies,"counters":stats,"memoryPlanBytes":plan,"elapsedMs":started.elapsed().as_secs_f64()*1000.,"referenceTopology":model.reference_topology,"quality":{"relativeResidual":system.residual,"kclAbsA":system.kcl,"relativeRealPowerError":power_error},"loadedEnergyGram":energy,"energyConvention":"Mean RMS intrinsic .5*(Re(xa)^T E Re(xb)+Im(xa)^T E Im(xb)), unit1A Norton port drives with explicit real reference shunts; shunts store no energy","waveEvaluation":"Direct matched real-reference Norton solve of unchanged intrinsic full RLC"}))
+}
+
+#[cfg(test)]
+mod matched_tests {
+ use super::*;
+ fn model()->Model {Model{format:"coupled-rlc".into(),reference_topology:"grounded".into(),potential_nodes:vec!["a".into(),"b".into()],current_dofs:vec!["ia".into(),"ib".into()],incidence:vec![(0,0,1.),(1,1,1.)],port_incidence:vec![(0,0,1.),(1,1,1.)],resistance_ohm:vec![(0,0,2.),(1,1,3.)],inductance_h:vec![(0,0,2e-6),(1,1,3e-6),(0,1,5e-7),(1,0,5e-7)],capacitance_f:vec![(0,0,1e-9),(1,1,2e-9)],conserved_potential_modes:vec![],structural_gauge_modes:vec![],port_terminals:None}}
+ #[test]fn matched_wave_equals_well_conditioned_impedance_conversion_with_unequal_references(){
+  let model=model();let refs=[37.,83.];let axis=[0.,1000.,10000.];let a=matched_waves(&model,&refs,&axis,None).unwrap();let z=impedance(&model,2,&axis,None).unwrap();let values:Vec<math::Matrix>=serde_json::from_value(z["parameters"].clone()).unwrap();
+  for(f,value)in values.iter().enumerate(){let mut quality=crate::electrical::frequency::Quality::default();let at50=math::to_s(value,"Z",&[50.,50.],&mut quality).unwrap();let expected=math::renormalize(&at50,&[50.,50.],&refs,&mut quality).unwrap();let actual:math::Matrix=serde_json::from_value(a["parameters"][f].clone()).unwrap();for i in 0..2{for j in 0..2{assert!((actual[i][j]-expected[i][j]).abs()<1e-10);}}}
+  assert!(a["quality"]["relativeRealPowerError"].as_f64().unwrap()<1e-8);
+  let current=37./39.;let other=83./86.;
+  assert!((a["loadedEnergyGram"][0]["magneticJPerA2"][0][0].as_f64().unwrap()-0.5*2e-6*current*current).abs()<1e-18);
+  assert!((a["loadedEnergyGram"][0]["magneticJPerA2"][0][1].as_f64().unwrap()-0.5*5e-7*current*other).abs()<1e-18);
+ }
+ #[test]fn matched_wave_preserves_axis_and_memory_guards(){for axis in [vec![],vec![-1.],vec![1000.,1000.],vec![f64::NAN]]{assert!(matched_waves(&model(),&[50.,50.],&axis,None).is_err());}}
+ #[test]fn extreme_references_never_complete_with_null_wave_or_energy_coefficients(){
+  for refs in [[1e-200,2e-200],[1e200,2e200]] {if let Ok(v)=matched_waves(&model(),&refs,&[0.,1000.],None){let text=serde_json::to_string(&v).unwrap();assert!(!text.contains("null"));}}
+ }
+
+}
+

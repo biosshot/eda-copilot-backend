@@ -1,0 +1,129 @@
+{
+  "roiMm": [
+    [
+      2.164163056034261,
+      5.9821233688381925
+    ],
+    [
+      7.763616151824865,
+      11.581576464628796
+    ]
+  ],
+  "stack": [
+    {
+      "name": "TOP",
+      "copper": true,
+      "thicknessM": 1e-05,
+      "conductivitySM": 58000000,
+      "epsilonR": null
+    },
+    {
+      "name": "substrate",
+      "copper": false,
+      "thicknessM": 0.0001,
+      "conductivitySM": null,
+      "epsilonR": 4
+    },
+    {
+      "name": "BOTTOM",
+      "copper": true,
+      "thicknessM": 1e-05,
+      "conductivitySM": 58000000,
+      "epsilonR": null
+    }
+  ],
+  "finishedHolePlatingM": 2.5e-05,
+  "barrelConductivitySM": 58000000,
+  "airMarginM": 0.002,
+  "maxTriangleAreaM2": 1e-06,
+  "maxVerticalStepM": 0.002,
+  "curveDeviationMm": 0.001,
+  "electrodes": [
+    {
+      "name": "terminal-0",
+      "sourcePath": "copper.fixed.tracks[0]",
+      "layer": "TOP",
+      "upper": false
+    },
+    {
+      "name": "terminal-1",
+      "sourcePath": "copper.fixed.tracks[1]",
+      "layer": "BOTTOM",
+      "upper": true
+    },
+    {
+      "name": "terminal-2",
+      "sourcePath": "pads[1]",
+      "layer": "TOP",
+      "upper": false
+    },
+    {
+      "name": "terminal-3",
+      "sourcePath": "pads[3]",
+      "layer": "BOTTOM",
+      "upper": true
+    }
+  ],
+  "ports": [
+    [
+      "terminal-0",
+      "terminal-1"
+    ],
+    [
+      "terminal-2",
+      "terminal-3"
+    ]
+  ],
+  "acceptUnknownFillFreshness": true,
+  "allowInsulatedCopperCuts": true,
+  "minTriangleAngleDeg": 0,
+  "airEdgeDivisions": 1,
+  "domainPolygonMm": [
+    [
+      7.763616151824865,
+      7.353494218736667
+    ],
+    [
+      3.5355339059327386,
+      11.581576464628796
+    ],
+    [
+      2.164163056034261,
+      10.210205614730318
+    ],
+    [
+      6.392245301926389,
+      5.9821233688381925
+    ]
+  ],
+  "cutPlanes": {
+    "terminal-0": {
+      "originMm": [
+        6.187184335382291,
+        6.18718433538229
+      ],
+      "normalXY": [
+        -0.7071067811865475,
+        -0.7071067811865478
+      ],
+      "spanMm": [
+        -0.04999998650023253,
+        0.04999998650023128
+      ]
+    },
+    "terminal-1": {
+      "originMm": [
+        6.187184335382291,
+        6.18718433538229
+      ],
+      "normalXY": [
+        -0.7071067811865475,
+        -0.7071067811865478
+      ],
+      "spanMm": [
+        -0.25000001679485717,
+        0.250000016794856
+      ]
+    }
+  }
+}
