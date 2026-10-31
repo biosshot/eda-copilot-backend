@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an opt-in full-diagnostic RT0 minimum-correction current observable with explicit face ownership, DC/AC bases, exact full-state serialization and backward-compatible reduced face replay. Seventeen focused Rust tests, native build and typecheck pass, but the sole cold slot control refuses the unregularized `C C^T` factor as singular before producing loaded states; record current-recovery NO-GO, leave continuous unrun, and preserve all old solver/loss/magnetic paths and the independent magnetic failure.
+
 - Add a saved-model joint current audit with complex multi-section flux, electrode balance, source coverage, current-basis and sigma-E checks. Localize the slot's 0.41628 A return flux to the original non-conservative mixed P1/constant-vector reconstruction rather than reduction or mapping; retain NO-GO and unchanged field solver/guards pending conservative current recovery and full-space verification.
 
 - Add a chat handoff with accepted analyzer milestones, pending P7 gates, evidence paths and workspace preservation rules. Record the completed D1 agent's reported NO-GO as awaiting parent review; its native/energy changes and tests are not accepted by this documentation update. Clarify current versus historical tasks in both implementation plans.

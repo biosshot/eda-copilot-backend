@@ -1,6 +1,6 @@
 //! Shared local direct-FEM preparation and developer verification.
 //! CPU/F64, explicit physical requests, no external diagnostic process.
-use super::{board_mesh,volume_current,volume_field,volume_magnetic,volume_reduction,volume_solve,AllocationBudget};
+use super::{board_mesh,conservative_current::ConservativeSpace,volume_current,volume_field,volume_magnetic,volume_reduction,volume_solve,AllocationBudget};
 use crate::electrical::{coupled,Counters};
 use super::volume_field::ElectricApply;
 use super::volume_magnetic::MagneticApply;
@@ -179,10 +179,27 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
         // P6's descriptor plan independently covers its model, factor and workspace.
         let basis_live=(basis.voltage.len()*currents.potential_count()+basis.current.len()*currents.current_count()).checked_mul(32).ok_or("basis byte overflow")?;
         let operator_live=currents.planned_bytes.checked_add(field.planned_bytes()).and_then(|n|n.checked_add(magnetic.planned_bytes())).ok_or("operator live overflow")?;
-        let reserved=solver.as_ref().map_or(operator_live,|s|s.planned_bytes).checked_add(basis_live)
+        let mut reserved=solver.as_ref().map_or(operator_live,|s|s.planned_bytes).checked_add(basis_live)
             .and_then(|n|n.checked_add(training_solutions.len().checked_mul(4*currents.potential_count()+2*currents.current_count())?.checked_mul(16)?))
             .and_then(|n|n.checked_add(currents.current_count().checked_mul(64)?))
             .and_then(|n|n.checked_add(1024*1024)).ok_or("P6 live overflow")?;
+        let conservative_stage=std::time::Instant::now();
+        let mut conservative_current=None;
+        let conservative=if mode=="full" {
+            let available=budget.max_bytes.checked_sub(reserved).filter(|&n|n>0).ok_or("conservative current live budget exhausted")?;
+            let c=ConservativeSpace::new(&b.mesh,&currents,&electrodes,AllocationBudget{max_bytes:available,..budget})?;
+            let dc_basis=c.project_basis(&currents,&basis.current,true)?;
+            let ac_basis=c.project_basis(&currents,&basis.current,false)?;
+            let electrode_currents=basis.voltage.iter().take(contacts.len()).map(|v|{let mut current=currents.gradient(v)?;for cell in 0..currents.cells.len(){for axis in 0..3{current[3*cell+axis]/=currents.cells[cell].resistance_ohm;}}Ok(current)}).collect::<Result<Vec<_>,String>>()?;
+            let dc_electrode_basis=c.project_basis(&currents,&electrode_currents,true)?;
+            let columns=basis.current.len().checked_mul(2).and_then(|n|n.checked_add(contacts.len())).ok_or("conservative basis column overflow")?;
+            let projected_bytes=columns.checked_mul(c.faces.len()).and_then(|n|n.checked_mul(8)).ok_or("conservative basis byte overflow")?;
+            let planned_bytes=c.planned_bytes.checked_add(projected_bytes).ok_or("conservative live byte overflow")?;
+            reserved=reserved.checked_add(planned_bytes).ok_or("conservative reserved byte overflow")?;
+            conservative_current=Some(serde_json::json!({"kind":"rt0-minimum-correction-v1","fluxUnits":"A","nodalReactionPerOutwardFaceFlux":1./3.,"faces":&c.faces,"dcBasis":dc_basis,"acBasis":ac_basis,"dcElectrodeBasis":dc_electrode_basis,"plannedBytes":planned_bytes}));
+            Some(c)
+        }else{None};
+        if conservative.is_some(){record_stage(&mut stages,"conservativeCurrentRecovery",conservative_stage);}
         let p6_bytes=budget.max_bytes.checked_sub(reserved).filter(|&n|n>0).ok_or("P6 remaining shared memory budget exhausted")?;
         let p6_budget=crate::electrical::Budget{max_memory_mi_b:Some(p6_bytes as f64/1048576.),max_seconds:Some(remaining()?.as_secs_f64())};
         let stage=std::time::Instant::now();
@@ -199,12 +216,13 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
         if let Some(solver)=solver.filter(|_|mode=="verify"||mode=="full") {
             let mut reduced=coupled::System::compile(&candidate,ports.len(),Some(&p6_budget))?;
             let reduced_n=candidate.potential_nodes.len()+candidate.current_dofs.len();
+            let drive_templates=if ports.len()==2 {vec![vec![1.,0.],vec![0.,1.],vec![1.,-1.]]}else{(0..ports.len()).map(|p|{let mut d=vec![0.;ports.len()];d[p]=1.;d}).collect::<Vec<_>>()};
+            if drive_templates.is_empty(){return Err("full diagnostic requires physical ports".into());}
             let drives=verification_axis(frequencies_hz)?.iter().flat_map(|&f|
-                [vec![1.,0.],vec![0.,1.],vec![1.,-1.]].into_iter().map(move|drive|(f,drive))).collect::<Vec<_>>();
+                drive_templates.iter().cloned().map(move|drive|(f,drive))).collect::<Vec<_>>();
             for (point,(frequency,drive)) in drives.into_iter().enumerate() {
                 let name=format!("point-{point:02}.json");
                 if let Some(j)=developer_checkpoint {if let Some(saved)=j.load::<serde_json::Value>(&name)?{if saved["frequencyHz"]!=serde_json::json!(frequency)||saved["drive"]!=serde_json::json!(drive){return Err("developer point mapping mismatch".into());}full_checks.push(saved);continue;}}
-                if drive.len()!=ports.len(){return Err("full diagnostic currently requires two physical ports".into());}
                 let mut injection=vec![0.;currents.potential_count()];
                 for(p,&[a,b])in ports.iter().enumerate(){injection[contacts[a].1]+=drive[p];injection[contacts[b].1]-=drive[p];}
                 let training_port=if drive==[1.,0.] {Some(0)}else if drive==[0.,1.] {Some(1)}else{None};
@@ -224,12 +242,19 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
                 let full_loss=full_cells.iter().sum::<f64>();let reduced_loss=reduced_cells.iter().sum::<f64>();
                 let loss_scale=full_cells.iter().copied().fold(0.,f64::max);let cell_loss_error=full_cells.iter().zip(&reduced_cells).map(|(a,b)|(a-b).abs()/a.max(1e-12*loss_scale)).fold(0.,f64::max);
                 let full_ports:Vec<_>=ports.iter().map(|&[a,b]|solver.port_voltage(&full,contacts[a].1,contacts[b].1)).collect();
-                full_checks.push(serde_json::json!({"drive":drive,"frequencyHz":frequency,"audit":full.audit,"fullPortVoltages":full_ports,"reducedPortReal":reduced.port_voltages(&x,ports.len()),"reducedPortImaginary":reduced.port_voltages(&x[reduced_n..],ports.len()),"maxCurrentCoordinateError":state_error,"maxCellLossError":cell_loss_error,"fullLossW":full_loss,"reducedLossW":reduced_loss,"worstCurrent":{"index":worst,"axis":worst%3,"full":[full.real_currents_a[worst],full.imaginary_currents_a[worst]],"recovered":[rr[worst],ri[worst]],"weakFloor":1e-12*scale},"fullCurrentReal":full.real_currents_a,"fullCurrentImaginary":full.imaginary_currents_a,"reducedState":x}));
+                let potential=|shape:&[f64],correction:&[f64],constants:&[f64]|{let mut v:Vec<f64>=shape.iter().zip(correction).map(|(a,b)|a+b).collect();for(component,nodes)in currents.components.iter().enumerate(){for&node in nodes{v[node]+=constants[component];}}v};
+                let full_potential_real=potential(&full.real_shape_v,&full.real_shape_correction_v,&full.real_constants_v);
+                let full_potential_imaginary=potential(&full.imaginary_shape_v,&full.imaginary_shape_correction_v,&full.imaginary_constants_v);
+                let face_states=if let Some(c)=conservative.as_ref(){Some((c.recover(&currents,&full.real_currents_a,false)?,c.recover(&currents,&full.imaginary_currents_a,false)?,c.recover(&currents,&rr,false)?,c.recover(&currents,&ri,false)?))}else{None};
+                let mut check=serde_json::json!({"drive":drive,"frequencyHz":frequency,"audit":&full.audit,"fullPortVoltages":full_ports,"reducedPortReal":reduced.port_voltages(&x,ports.len()),"reducedPortImaginary":reduced.port_voltages(&x[reduced_n..],ports.len()),"maxCurrentCoordinateError":state_error,"maxCellLossError":cell_loss_error,"fullLossW":full_loss,"reducedLossW":reduced_loss,"worstCurrent":{"index":worst,"axis":worst%3,"full":[full.real_currents_a[worst],full.imaginary_currents_a[worst]],"recovered":[rr[worst],ri[worst]],"weakFloor":1e-12*scale},"fullPotentialRealV":full_potential_real,"fullPotentialImaginaryV":full_potential_imaginary,"fullCurrentReal":&full.real_currents_a,"fullCurrentImaginary":&full.imaginary_currents_a,"reducedCurrentReal":&rr,"reducedCurrentImaginary":&ri,"reducedState":x});
+                if let Some((full_real,full_imaginary,reduced_real,reduced_imaginary))=face_states{check["fullConservativeFaceReal"]=serde_json::json!(full_real);check["fullConservativeFaceImaginary"]=serde_json::json!(full_imaginary);check["reducedConservativeFaceReal"]=serde_json::json!(reduced_real);check["reducedConservativeFaceImaginary"]=serde_json::json!(reduced_imaginary);}
+                full_checks.push(check);
                 if let Some(j)=developer_checkpoint {j.save(&name,full_checks.last().unwrap())?;}
             }
         }
         record_stage(&mut stages,"developerVerification",stage);
         model=serde_json::json!({"admission":"accepted-electric-v1-full-model-verification-pending","coldPrepareSeconds":cold_prepare_seconds,"fieldOperator":field_metadata,"magneticActionReuse":magnetic.stats(),"magneticNumericalLinearity":magnetic_linearity,"model":candidate,"response":response,"training":training,"fullChecks":full_checks,"verificationStatus":if verification_failure.is_some(){"incomplete"}else if mode=="verify"||mode=="full"{"complete"}else{"not-run"},"verificationFailure":verification_failure,"resumedPrepared":resumed,"voltageBasis":basis.voltage,"currentBasis":basis.current});
+        if let Some(current)=conservative_current{model["conservativeCurrent"]=current;}
     }
     let source_ids:Vec<_>=b.mesh.copper_tetrahedra.iter().map(|c|&c.source_ids).collect();
     let nodes:Vec<_>=b.mesh.copper_tetrahedra.iter().map(|c|c.nodes).collect();

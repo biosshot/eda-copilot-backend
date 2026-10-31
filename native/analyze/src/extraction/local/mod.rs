@@ -12,6 +12,7 @@ pub mod near_far;
 pub mod polyhedron;
 pub mod mesh;
 pub mod volume_current;
+pub mod conservative_current;
 pub mod board_mesh;
 pub mod board_prepare;
 pub mod board_response;
