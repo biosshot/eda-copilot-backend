@@ -68,6 +68,14 @@ fn transpose(a: &Matrix) -> Matrix {
 /// Infinity-norm condition number from LU unit-vector solves (not an inverse
 /// matrix). Absolute scales cancel; no gmin, pivot replacement or repair.
 pub fn solve(a: &Matrix, b: &Matrix, q: &mut Quality) -> Result<Matrix> {
+    solve_with_refinement(a, b, q, true)
+}
+/// Same bounded LU admission for an outer compensated-refinement correction.
+/// Ordinary callers retain the two historical F64 refinement steps above.
+pub(crate) fn solve_without_refinement(a: &Matrix, b: &Matrix, q: &mut Quality) -> Result<Matrix> {
+    solve_with_refinement(a, b, q, false)
+}
+fn solve_with_refinement(a: &Matrix, b: &Matrix, q: &mut Quality, refine: bool) -> Result<Matrix> {
     let n = a.len();
     let m = b[0].len();
     let dim = 2 * n;
@@ -130,7 +138,7 @@ pub fn solve(a: &Matrix, b: &Matrix, q: &mut Quality) -> Result<Matrix> {
     });
     let mut x = lu.solve(&rhs);
     // Fixed iterative refinement, same F64 solver family as P6a.
-    for _ in 0..2 {
+    for _ in 0..if refine { 2 } else { 0 } {
         let r = Mat::from_fn(dim, m, |i, j| {
             rhs[(i, j)] - (0..dim).map(|k| real(i, k) * x[(k, j)]).sum::<f64>()
         });

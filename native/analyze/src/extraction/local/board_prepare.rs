@@ -29,18 +29,25 @@ fn loaded_values(value:&serde_json::Value)->Result<Vec<f64>,String>{
     serde_json::from_value(value.clone()).map_err(|e|format!("LOCAL_LOADED_STATE: {e}"))
 }
 fn weighted(columns:&[Vec<f64>],weights:&[f64])->Result<Vec<f64>,String>{
+    use super::accurate::Sum;
     if columns.len()!=weights.len()||columns.is_empty()||columns[0].is_empty()||columns.iter().any(|v|v.len()!=columns[0].len()||v.iter().any(|x|!x.is_finite()))||weights.iter().any(|x|!x.is_finite()){return Err("LOCAL_LOADED_STATE: finite equally sized state columns required".into());}
-    Ok((0..columns[0].len()).map(|j|columns.iter().zip(weights).map(|(v,w)|v[j]*w).sum()).collect())
-}
-fn weighted_checks(checks:&[&serde_json::Value],key:&str,weights:&[f64])->Result<Vec<f64>,String>{
-    let columns=checks.iter().map(|check|loaded_values(&check[key])).collect::<Result<Vec<_>,_>>()?;weighted(&columns,weights)
+    Ok((0..columns[0].len()).map(|j|columns.iter().zip(weights).fold(Sum::default(),|sum,(v,w)|sum.add(Sum::from(v[j]).mul(*w))).value()).collect())
 }
 fn complex_fields(checks:&[&serde_json::Value],real_key:&str,imaginary_key:&str,coefficients:&[crate::electrical::frequency::math::C])->Result<(Vec<f64>,Vec<f64>),String>{
-    let real:Vec<_>=coefficients.iter().map(|a|a.real).collect();let imaginary:Vec<_>=coefficients.iter().map(|a|a.imaginary).collect();
-    let rr=weighted_checks(checks,real_key,&real)?;let ri=weighted_checks(checks,imaginary_key,&imaginary)?;
-    let ir=weighted_checks(checks,real_key,&imaginary)?;let ii=weighted_checks(checks,imaginary_key,&real)?;
-    if rr.len()!=ri.len()||ir.len()!=ii.len()||rr.len()!=ir.len(){return Err("LOCAL_LOADED_STATE: real/imaginary state size mismatch".into());}
-    Ok((rr.iter().zip(&ri).map(|(a,b)|a-b).collect(),ir.iter().zip(&ii).map(|(a,b)|a+b).collect()))
+    use super::accurate::Sum;
+    if checks.len()!=coefficients.len()||checks.is_empty(){return Err("LOCAL_LOADED_STATE: complex state/coefficient count mismatch".into());}
+    let real=checks.iter().map(|check|loaded_values(&check[real_key])).collect::<Result<Vec<_>,_>>()?;
+    let imaginary=checks.iter().map(|check|loaded_values(&check[imaginary_key])).collect::<Result<Vec<_>,_>>()?;
+    let n=real[0].len();if n==0||real.iter().chain(&imaginary).any(|v|v.len()!=n){return Err("LOCAL_LOADED_STATE: real/imaginary state size mismatch".into());}
+    let mut output=(vec![0.;n],vec![0.;n]);
+    for j in 0..n{let(mut rr,mut ii)=(Sum::default(),Sum::default());for p in 0..checks.len(){let a=coefficients[p];rr=rr.add(Sum::from(real[p][j]).mul(a.real)).sub(Sum::from(imaginary[p][j]).mul(a.imaginary));ii=ii.add(Sum::from(real[p][j]).mul(a.imaginary)).add(Sum::from(imaginary[p][j]).mul(a.real));}output.0[j]=rr.value();output.1[j]=ii.value();}
+    Ok(output)
+}
+fn accurate_complex_dot(row:&[crate::electrical::frequency::math::C],weights:&[crate::electrical::frequency::math::C])->Result<crate::electrical::frequency::math::C,String>{
+    use super::accurate::Sum;use crate::electrical::frequency::math::C;
+    if row.len()!=weights.len()||row.is_empty(){return Err("LOCAL_LOADED_STATE: complex dot size mismatch".into());}
+    let(mut real,mut imaginary)=(Sum::default(),Sum::default());for(&a,&b)in row.iter().zip(weights){real=real.add(Sum::from(a.real).mul(b.real)).sub(Sum::from(a.imaginary).mul(b.imaginary));imaginary=imaginary.add(Sum::from(a.real).mul(b.imaginary)).add(Sum::from(a.imaginary).mul(b.real));}
+    Ok(C::new(real.value(),imaginary.value()))
 }
 /// Remove exactly one global voltage nullspace from the connected loaded DC
 /// network. The anchor is numerical only: every original row and Norton port
@@ -83,28 +90,44 @@ fn loaded_dc(currents:&volume_current::Space,basis:&volume_reduction::Basis,cand
 }
 /// Solve the fixed Norton-load superposition with one complex RHS column.
 pub(crate) fn loaded_ac_coefficients(full_u:&[Vec<crate::electrical::frequency::math::C>],drive:&[f64],loads:&[f64])->Result<Vec<crate::electrical::frequency::math::C>,String>{
-    use crate::electrical::frequency::{Quality,math::{C,Matrix,solve}};
+    use super::accurate::Sum;
+    use crate::electrical::frequency::{Quality,math::{C,Matrix,solve,solve_without_refinement}};
     let np=ports_len(drive,loads)?;
     if full_u.len()!=np||full_u.iter().any(|row|row.len()!=np||row.iter().any(|v|!v.real.is_finite()||!v.imaginary.is_finite())){return Err("LOCAL_LOADED_STATE: finite square full-port matrix required".into());}
-    let a:Matrix=(0..np).map(|q|(0..np).map(|p|C::new(if q==p{1.}else{0.},0.)+full_u[q][p].scale(1./loads[q])).collect()).collect();
+    let a:Matrix=(0..np).map(|q|(0..np).map(|p|C::new(if q==p{1.}else{0.},0.)+C::new(full_u[q][p].real/loads[q],full_u[q][p].imaginary/loads[q])).collect()).collect();
     let b:Matrix=drive.iter().map(|&v|vec![C::new(v,0.)]).collect();
-    let solved=solve(&a,&b,&mut Quality::default())?;Ok(solved.into_iter().map(|row|row[0]).collect())
+    let mut coefficients:Vec<_>=solve(&a,&b,&mut Quality::default())?.into_iter().map(|row|row[0]).collect();
+    let residual=|x:&[C]|->Result<(Matrix,f64),String>{
+        let mut r=vec![vec![C::default()];np];let mut normalized:f64=0.;
+        for q in 0..np{
+            let(mut rr,mut ii)=(Sum::from(drive[q]),Sum::default());let mut scale=drive[q].abs();
+            for p in 0..np{let v=a[q][p];let y=x[p];let pr=Sum::from(v.real).mul(y.real).sub(Sum::from(v.imaginary).mul(y.imaginary));let pi=Sum::from(v.real).mul(y.imaginary).add(Sum::from(v.imaginary).mul(y.real));rr=rr.sub(pr);ii=ii.sub(pi);scale+=v.abs()*y.abs();}
+            let value=C::new(rr.value(),ii.value());normalized=normalized.max(value.abs()/scale.max(1e-30));r[q][0]=value;
+        }
+        Ok((r,normalized))
+    };
+    // The unit-port response can contain large physical displacement voltages.
+    // Compensated residuals prevent their cancellation from defeating refinement.
+    for _ in 0..4{let(r,_)=residual(&coefficients)?;let correction=solve_without_refinement(&a,&r,&mut Quality::default())?;for q in 0..np{coefficients[q]=coefficients[q]+correction[q][0];}}
+    let(_,normalized)=residual(&coefficients)?;if !normalized.is_finite()||normalized>1e-8{return Err(format!("LOCAL_LOADED_STATE: compensated AC coefficient residual={normalized:e}"));}
+    Ok(coefficients)
 }
 /// Combine exact unit-port states first, then recover the one physical loaded state.
-fn loaded_ac(currents:&volume_current::Space,basis:&volume_reduction::Basis,candidate:&coupled::Model,conservative:&ConservativeSpace,checks:&[serde_json::Value],drive:&[f64],loads:&[f64])->Result<serde_json::Value,String>{
+fn loaded_ac(currents:&volume_current::Space,basis:&volume_reduction::Basis,candidate:&coupled::Model,conservative:&ConservativeSpace,checks:&[serde_json::Value],drive:&[f64],loads:&[f64],budget:&crate::electrical::Budget)->Result<serde_json::Value,String>{
     use crate::electrical::frequency::math::C;
     let np=ports_len(drive,loads)?;let mut selected=vec![None;np];
     for check in checks{if check["frequencyHz"].as_f64()!=Some(1000.){continue;}let d=loaded_values(&check["drive"])?;if d.len()!=np{continue;}for p in 0..np{if d.iter().enumerate().all(|(j,v)|*v==if j==p{1.}else{0.}){if selected[p].replace(check).is_some(){return Err("LOCAL_LOADED_STATE: duplicate 1 kHz unit-port state".into());}}}}
     let checks:Vec<_>=selected.into_iter().enumerate().map(|(p,check)|check.ok_or_else(||format!("LOCAL_LOADED_STATE: missing 1 kHz unit-port state {p}"))).collect::<Result<_,_>>()?;
     let full_u:Vec<Vec<C>>=(0..np).map(|q|(0..np).map(|p|{let values=serde_json::from_value::<Vec<[f64;2]>>(checks[p]["fullPortVoltages"].clone()).map_err(|e|format!("LOCAL_LOADED_STATE: {e}"))?;if values.len()!=np{return Err("LOCAL_LOADED_STATE: full port size mismatch".into());}Ok(C::new(values[q][0],values[q][1]))}).collect::<Result<Vec<_>,String>>()).collect::<Result<_,_>>()?;
     let coefficients=loaded_ac_coefficients(&full_u,drive,loads)?;
-    let full_ports:Vec<_>=(0..np).map(|q|(0..np).map(|p|full_u[q][p]*coefficients[p]).fold(C::default(),|a,b|a+b)).collect();
-    let (reduced_port_real,reduced_port_imaginary)=complex_fields(&checks,"reducedPortReal","reducedPortImaginary",&coefficients)?;
+    let full_ports=(0..np).map(|q|accurate_complex_dot(&full_u[q],&coefficients)).collect::<Result<Vec<_>,_>>()?;
     let (full_potential_real,full_potential_imaginary)=complex_fields(&checks,"fullPotentialRealV","fullPotentialImaginaryV",&coefficients)?;
     let (full_current_real,full_current_imaginary)=complex_fields(&checks,"fullCurrentReal","fullCurrentImaginary",&coefficients)?;
-    let real:Vec<_>=coefficients.iter().map(|a|a.real).collect();let imaginary:Vec<_>=coefficients.iter().map(|a|a.imaginary).collect();let xr=weighted_checks(&checks,"reducedState",&real)?;let xi=weighted_checks(&checks,"reducedState",&imaginary)?;
-    let n=candidate.potential_nodes.len()+candidate.current_dofs.len();if xr.len()!=2*n{return Err("LOCAL_LOADED_STATE: reduced real/imaginary block size mismatch".into());}
-    let mut x=vec![0.;2*n];for j in 0..n{x[j]=xr[j]-xi[n+j];x[n+j]=xr[n+j]+xi[j];}
+    // Solve the small reduced loaded network directly. Combining four separately
+    // rounded unit solves amplifies their errors through the large capacitive modes.
+    let mut reduced=coupled::System::compile(candidate,np,Some(budget))?;for(p,&load)in loads.iter().enumerate(){reduced.add_port_admittance(p,1./load,0.)?;}
+    let n=candidate.potential_nodes.len()+candidate.current_dofs.len();let mut rhs=reduced.port_rhs(drive);rhs.resize(2*n,0.);let x=reduced.solve(2.*std::f64::consts::PI*1000.,rhs,&vec![0.;n],&mut Counters::default())?;
+    let reduced_port_real=reduced.port_voltages(&x,np);let reduced_port_imaginary=reduced.port_voltages(&x[n..],np);
     let nvr=candidate.potential_nodes.len();let reduced_potential_real=weighted(&basis.voltage,&x[..nvr])?;let reduced_potential_imaginary=weighted(&basis.voltage,&x[n..n+nvr])?;let reduced_current_real=weighted(&basis.current,&x[nvr..n])?;let reduced_current_imaginary=weighted(&basis.current,&x[n+nvr..])?;
     let full_face_real=conservative.recover(currents,&full_current_real,false).map_err(|e|format!("full loaded AC real: {e}"))?;
     let full_face_imaginary=conservative.recover(currents,&full_current_imaginary,false).map_err(|e|format!("full loaded AC imaginary: {e}"))?;
@@ -338,7 +361,7 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
             if verification_failure.is_none(){
                 let stage=std::time::Instant::now();let drive=[1.,0.,-1.,0.];let loads=[50.;4];
                 let dc=loaded_dc(&currents,&basis,&candidate,&ports,&contacts,c,&drive,&loads,&p6_budget)?;
-                let ac=loaded_ac(&currents,&basis,&candidate,c,&full_checks,&drive,&loads)?;
+                let ac=loaded_ac(&currents,&basis,&candidate,c,&full_checks,&drive,&loads,&p6_budget)?;
                 packet["states"]=serde_json::json!([dc,ac]);record_stage(&mut stages,"conservativeLoadedStateRecovery",stage);
             }
         }
@@ -371,5 +394,39 @@ mod tests{
         let a=loaded_ac_coefficients(&u,&drive,&loads).unwrap();assert_eq!(a.len(),2);assert!(a.iter().any(|v|v.imaginary.abs()>1e-6));
         for q in 0..2{let port=(0..2).map(|p|u[q][p]*a[p]).fold(C::default(),|x,y|x+y);let actual=a[q]+port.scale(1./loads[q]);assert!((actual.real-drive[q]).abs()<1e-12&&actual.imaginary.abs()<1e-12);}
         assert!(loaded_ac_coefficients(&u[..1],&drive,&loads).is_err());
+    }
+    #[test]
+    fn loaded_ac_coefficients_retain_small_displacement_solution(){
+        // Exact saved F64 unit-port response: large physical displacement
+        // voltages make naive residual refinement lose the small loaded answer.
+        let u=vec![
+            vec![C::new(0.010379297598521475,-531407926.6536519),C::new(0.001966568193960444,-142288239.6626979),C::new(-0.00866400602448398,-531407926.65365434),C::new(-0.0016010056684434358,-142288239.66269863)],
+            vec![C::new(0.0019665681939604416,-142288239.6626979),C::new(0.011257380073307798,-605657485.0379196),C::new(-0.0015872420435947868,-142288239.66269866),C::new(-0.008381316362861099,-605657485.0379227)],
+            vec![C::new(-0.008664006024483986,-531407926.65365434),C::new(-0.001587242043594787,-142288239.66269863),C::new(0.010099166491953734,-531407926.6536519),C::new(0.0016154210340939693,-142288239.66269797)],
+            vec![C::new(-0.0016010056684434364,-142288239.66269863),C::new(-0.008381316362861093,-605657485.0379226),C::new(0.0016154210340939697,-142288239.662698),C::new(0.009786463494481831,-605657485.03792)],
+        ];
+        let expected=[C::new(0.9996220826959654,-4.839041977216181e-8),C::new(-6.76512069678867e-5,-1.3719562713476452e-8),C::new(-0.9996220826959654,4.8390218165881955e-8),C::new(6.765120696798914e-5,1.3719331737946338e-8)];
+        let actual=loaded_ac_coefficients(&u,&[1.,0.,-1.,0.],&[50.;4]).unwrap();
+        for(a,e)in actual.iter().zip(expected){assert!((a.real-e.real).abs()<1e-12&&(a.imaginary-e.imaginary).abs()<1e-12,"actual={a:?} expected={e:?}");}
+    }
+    #[test]
+    fn loaded_complex_fields_compensate_cancellation_before_rounding(){
+        let checks=vec![serde_json::json!({"r":[1e16],"i":[0.]}),serde_json::json!({"r":[1.],"i":[0.]}),serde_json::json!({"r":[-1e16],"i":[0.]}),serde_json::json!({"r":[0.],"i":[0.]})];let refs=checks.iter().collect::<Vec<_>>();
+        let(real,imaginary)=complex_fields(&refs,"r","i",&[C::new(1.,0.);4]).unwrap();assert_eq!(real,[1.]);assert_eq!(imaginary,[0.]);
+    }
+    #[test]
+    fn loaded_complex_fields_retain_saved_displacement_cancellation(){
+        let checks=vec![
+            serde_json::json!({"r":[-0.007130298083237795],"i":[-437067492.8601971]}),
+            serde_json::json!({"r":[-9.526983875073045e-05],"i":[-32077456.540122166]}),
+            serde_json::json!({"r":[0.00854696349329805],"i":[-437067492.8601941]}),
+            serde_json::json!({"r":[0.0002064724162030045],"i":[-32077456.540122345]}),
+        ];let refs=checks.iter().collect::<Vec<_>>();
+        let coefficients=[C::new(0.9996220826959655,-4.8390419772161816e-8),C::new(-6.765120696788671e-5,-1.3719562713476454e-8),C::new(-0.9996220826959655,4.839021816588197e-8),C::new(6.765120696798915e-5,1.371933173794634e-8)];
+        let(real,imaginary)=complex_fields(&refs,"r","i",&coefficients).unwrap();
+        // Decimal replay of these exact saved F64 coefficients, not a solve with
+        // unrepresentable higher-precision coefficients, gives these values.
+        assert_eq!(real,[-0.01576684111382995]);
+        assert_eq!(imaginary,[-3.0412235349060057e-6]);
     }
 }

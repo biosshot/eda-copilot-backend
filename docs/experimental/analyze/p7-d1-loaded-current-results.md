@@ -443,3 +443,81 @@ The maximum normalized DC section balance error is `5.181499122726202e-13`. The 
 | D1/P7/P8/P11 acceptance | Not claimed |
 
 The next bounded diagnostic should localize the AC imaginary replay and local full/reduced mismatch using `slot-ac-rhs-full.json` and the independent replay, without a new FEM run. This is not yet a general-purpose extractor result and does not close P7.
+
+## 10. Compensated loaded AC and direct reduced solve: remaining model error
+
+This addendum starts after commit `f90e949` and preserves all earlier NO-GO history. One new cold slot was run after focused tests and builds. No continuous, magnetic/domain campaign, hybrid, STM32, direct DSL, gate relaxation, or empirical current scaling was started.
+
+### 10.1 Numerical corrections and independent replay
+
+The old NumPy replay was not a sufficiently accurate reference for this cancellation-dominated AC state: its dense solution differs from a 90-digit Decimal solve of the same saved F64 matrix by `1.51789006492762e-6`. `diagnose_ac_replay.py` therefore replays the exact serialized F64 matrix entries and rounded load/angular-frequency coefficients with Decimal precision 90. The audit now gates both the high-precision reference residual and the saved native reduced-state residual at the unchanged `1e-8` threshold.
+
+The production changes are limited to loaded-state arithmetic and the small reduced loaded solve:
+
+- loaded AC matrix entries use direct component division by load; four outer corrections use compensated complex residuals and the existing bounded LU without nested F64 refinement;
+- full loaded complex fields and basis reconstruction use the existing compensated `accurate::Sum`, including FMA product error retention;
+- the reduced loaded AC state is solved directly with the same four Norton ports and loads instead of superposing four separately rounded reduced unit solves;
+- ordinary `frequency::math::solve` retains its previous two F64 refinement steps; only the outer loaded-coefficient correction uses the new no-nested-refinement helper;
+- regressions cover the saved ill-conditioned four-port response, cancellation before rounding, and exact Decimal replay of the saved F64 coefficients at one large-displacement potential node.
+
+The compensated coefficients differ from the high-precision solve by only `1.1106427557411585e-16` normalized error. Their high-precision residual is `5.0282747347287194e-90`. Saved native reduced loaded state has high-precision residual `1.5302917003472915e-16`; its reconstructed physical current matches the high-precision direct reduced solve to `8.510417854341026e-17` normalized error.
+
+A remaining full-potential replay difference is caused by rounding the coefficients themselves to F64 before multiplication by physical unit displacement potentials around `4.37e8 V`. At the worst inspected node, the exact-coefficient imaginary result is `-3.0292203891549447e-6 V`, while the result for the saved F64 coefficients is `-3.0412235349060057e-6 V`. Native compensated summation matches Decimal using those same saved F64 coefficients exactly; compensated summation cannot recover coefficient bits absent from the F64 state format. This observation does not relax or replace the failed exact replay gate.
+
+### 10.2 Checks and sole cold control
+
+| Check | Result |
+| --- | --- |
+| Old-slot audit with high-precision replay | NO-GO as expected; no exception |
+| Loaded AC unit tests | PASS: 2/2 |
+| Loaded complex-field unit tests | PASS: 2/2 |
+| Focused integration tests | PASS: 24/24 = 7 conservative + 9 response + 6 prepare + 2 volume projection |
+| Native addon build | PASS incrementally after one 300 s tool timeout during addon compilation |
+| Release cold-runner build | PASS |
+| TypeScript typecheck | PASS |
+| Python syntax and `git diff --check` | PASS; LF-to-CRLF warning only |
+
+`python debugging/p7-d1-loaded-current/run_cold.py slot ac-compensated` started at `2026-10-31T19:34:51Z`, with the unchanged board/request, no cache/checkpoint, one thread, a 300 s deadline, a 2 GiB private cap and a 1 GiB host commit reserve.
+
+| Quantity | Observed |
+| --- | ---: |
+| Native status / exit | PASS / 0 |
+| Wall time | `30.625 s` |
+| Peak sampled RSS | `414478336 B` |
+| Peak private commit | `411262976 B` |
+| Initial commit headroom | `20402245632 B` |
+| Initial available physical memory | `6506459136 B` |
+| Cold runner SHA256 | `0353dbc4a274c9c02c30d9911819b3e34e349037da3d6f7bb5d597bed2861d7a` |
+| Full output SHA256 | `7d06c84751ee8754b9037068465f967a02243a27f36784c6c214f912673ce5b4` |
+| Request SHA256 | `fdbc0bcc1152ed859025ef4044ea6d14c30dc7cb9c68105751122a7632885840` |
+
+### 10.3 Actual audit and localization of the remaining blocker
+
+The new independent audit remains **NO-GO**. DC replay, algebraic continuity, two-anchor gauge/Norton invariance, DC section/electrode balance and DC full/reduced observables pass. AC algebraic continuity also remains at machine precision.
+
+| Observable / check | New `slot-ac-compensated` result |
+| --- | ---: |
+| Maximum AC exact loaded-state replay error | `0.04162124073794352` |
+| AC reduced direct-state normalized error versus high precision | `4.814375549780321e-7` |
+| AC full/reduced cell error | `3.5724972074078023` |
+| AC full/reduced face error | `12.670476909468485` |
+| AC full/reduced section error | `0.00728856016321841` (`0.728856 %`) |
+| AC full/reduced port error | `2.8129552144605733e-6` |
+| Continuous | NOT RUN after slot audit NO-GO |
+
+`inspect_ac_mismatch.py` proves that the local current discrepancy is not introduced by loaded-superposition arithmetic. The maximum full/reduced cell error is `3.572497207407802` for native direct loaded solve, `3.572497207407801` for the high-precision direct loaded solve, and `3.5724972066572467` for high-precision unit-state superposition. At worst cell coordinate 163 (`y`), full current is `(4.668143487655372e-10, 3.3664718996970035e-8) A`, whereas both high-precision reduced methods give approximately `(-5.4509321694294e-10, -3.53883234509974e-6) A`.
+
+The mismatch already exists independently in each saved unit-port verification before the 50-ohm loaded composition: maximum current-coordinate errors are `176.61882164358545`, `84.11445633080983`, `17.632637287665588`, and `25.163191133729047`. Thus the remaining dominant blocker is the reduced model/basis approximation for local AC current, not DC, RT0 conservation, Norton loading, direct-versus-superposition choice, or compensated summation. No new solver/reduction campaign is inferred or authorized by this diagnostic.
+
+| Gate | Result |
+| --- | --- |
+| Compensated loaded coefficients and physical full-current replay | PASS by high-precision diagnostics |
+| Direct reduced loaded residual `1e-8` | PASS: `1.5302917003472915e-16` |
+| Exact loaded-state replay `1e-8` | **NO-GO: `0.04162124073794352`** |
+| Full/reduced local AC current `2%`, floor `1e-6 A` | **NO-GO; inherent in saved reduced unit states** |
+| AC section flux `2%` | PASS: `0.728856 %`, but does not override local failure |
+| Continuous control | NOT RUN |
+| D1/P7/P8/P11 acceptance | Not claimed |
+| Separate magnetic patch `10.2046289% > 2%` | Unchanged independent blocker |
+
+Artifacts are retained under `debugging/p7-d1-loaded-current/`: the cold log/supervision, full output, high-precision diagnosis, mismatch diagnosis, audit JSON and opened `conservative-current-slot-ac-compensated-audit.png`. Stop here for parent review; no continuous run or new numerical attempt is justified by an unchanged reduced-model failure.
