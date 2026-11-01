@@ -80,8 +80,13 @@ impl ConservativeSpace {
             if cells.len() > 2 || cells.iter().any(|c| c.cell >= nt || c.opposite >= 4) {
                 return Err(error("CONSERVATIVE_FACE", "nonmanifold copper face"));
             }
-            let electrode = cells.len() == 1 && nodes.iter().all(|node| {
-                space.node_potential.get(node).is_some_and(|dof| electrode_dofs.contains(dof))
+            // A long exterior face can contain vertices from different terminal
+            // quotients (or a terminal and an interior DOF). It is not a physical
+            // contact patch: only a face wholly owned by one electrode may carry
+            // DC terminal current; every mixed exterior face remains insulated.
+            let electrode = cells.len() == 1 && nodes.first().is_some_and(|first| {
+                space.node_potential.get(first).is_some_and(|dof| electrode_dofs.contains(dof))
+                    && nodes.iter().all(|node| space.node_potential.get(node) == space.node_potential.get(first))
             });
             let index = owned_faces.len();
             for cell in &cells { cell_faces[cell.cell].push(index); }

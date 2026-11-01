@@ -415,6 +415,23 @@ impl Network {
         b: Vec<f64>,
         stats: &mut Counters,
     ) -> Result<(Vec<f64>, f64, f64)> {
+        self.solve_with_policy(m,b,stats,false)
+    }
+    pub fn solve_compensated(
+        &mut self,
+        m: BTreeMap<(usize, usize), f64>,
+        b: Vec<f64>,
+        stats: &mut Counters,
+    ) -> Result<(Vec<f64>, f64, f64)> {
+        self.solve_with_policy(m,b,stats,true)
+    }
+    fn solve_with_policy(
+        &mut self,
+        m: BTreeMap<(usize, usize), f64>,
+        b: Vec<f64>,
+        stats: &mut Counters,
+        compensated: bool,
+    ) -> Result<(Vec<f64>, f64, f64)> {
         if b.is_empty() || b.iter().chain(m.values()).any(|x| !x.is_finite()) {
             return Err(fail("NETWORK_NONFINITE", "Matrix/RHS"));
         }
@@ -457,10 +474,15 @@ impl Network {
         let f = &self.factor.as_ref().unwrap().1;
         let mut x = f.solve(&rhs);
         stats.solves += 1;
-        for _ in 0..2 {
+        for _ in 0..if compensated{4}else{2} {
             let mut residual = b.clone();
-            for (&(i, j), &v) in &m {
-                residual[i] -= v * x[(j, 0)];
+            if compensated {
+                use crate::extraction::local::accurate::Sum;
+                let mut accurate=residual.iter().map(|&v|Sum::from(v)).collect::<Vec<_>>();
+                for (&(i,j),&v) in &m {accurate[i]=accurate[i].sub(Sum::from(v).mul(x[(j,0)]));}
+                residual=accurate.into_iter().map(|v|v.value()).collect();
+            }else{
+                for (&(i, j), &v) in &m {residual[i] -= v * x[(j, 0)];}
             }
             let delta = f.solve(Mat::from_fn(b.len(), 1, |i, _| residual[i]));
             for i in 0..b.len() {
@@ -474,12 +496,15 @@ impl Network {
                 "Nonunique/inconsistent ideal constraints or floating nodes",
             ));
         }
-        let mut residual = b.iter().map(|v| -v).collect::<Vec<_>>();
+        let mut residual = if compensated {
+            use crate::extraction::local::accurate::Sum;
+            let mut residual=b.iter().map(|&v|Sum::from(-v)).collect::<Vec<_>>();
+            for(&(i,j),&v)in&m{residual[i]=residual[i].add(Sum::from(v).mul(x[j]));}
+            residual.into_iter().map(|v|v.value()).collect()
+        }else{b.iter().map(|v| -v).collect::<Vec<_>>()};
         let mut scale = b.iter().map(|v| v.abs()).collect::<Vec<_>>();
-        for (&(i, j), &v) in &m {
-            residual[i] += v * x[j];
-            scale[i] += (v * x[j]).abs();
-        }
+        if ! compensated {for (&(i, j), &v) in &m {residual[i] += v * x[j];}}
+        for (&(i, j), &v) in &m {scale[i] += (v * x[j]).abs();}
         let normalized = residual
             .iter()
             .zip(&scale)

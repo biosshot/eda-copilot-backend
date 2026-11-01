@@ -521,3 +521,57 @@ The mismatch already exists independently in each saved unit-port verification b
 | Separate magnetic patch `10.2046289% > 2%` | Unchanged independent blocker |
 
 Artifacts are retained under `debugging/p7-d1-loaded-current/`: the cold log/supervision, full output, high-precision diagnosis, mismatch diagnosis, audit JSON and opened `conservative-current-slot-ac-compensated-audit.png`. Stop here for parent review; no continuous run or new numerical attempt is justified by an unchanged reduced-model failure.
+
+## 11. Final loaded-state and single-electrode recovery: both channels PASS
+
+This continuation preserves all previous failed attempts and their NO-GO evidence. It closes only the conservative-current/reference prerequisite; it does not by itself close magnetic/domain, hybrid, D1 or P7 acceptance.
+
+### 11.1 Corrections
+
+- `full` board preparation now trains the reduced AC basis instead of silently using only the harmonic and initial magnetic columns.
+- Loaded AC coefficients retain high/low F64 parts in `superpositionCoefficientTailsA`; complex superposition and basis reconstruction include both parts. The reduced loaded network uses compensated residual refinement. Loaded DC anchoring likewise retains low bits until final rounding.
+- The DC packet stores the actual solved `dcConductanceS`. The independent audit replays that exact matrix with a 90-digit Decimal solve; it does not compare residuals from differently rounded reconstructed matrices. `dcDiagnosticReplayAbsoluteError <= 1e-10` remains unchanged.
+- The independent contact check sums actual RT0 nodal-reaction contributions instead of assigning an entire boundary face to one quotient DOF. No algebraic, electrode or section gate was disabled.
+- The final continuous section failure exposed a native boundary-ownership defect: a face was marked as an electrode whenever every vertex belonged to some electrode, even if one long exterior face joined opposite terminals. Now a DC terminal face must be wholly owned by one electrode; mixed-electrode and electrode/interior exterior faces remain insulated. A manufactured regression requires such a mixed face and verifies zero insulated flux.
+
+Rejected diagnostics remain recorded: fixing every contact face to its raw sigma-E flux was incompatible (maximum residual `0.3113781027 A` on continuous), and broad contact-group unions were not a valid physical terminal partition. Neither was added to production.
+
+### 11.2 Verification
+
+| Check | Result |
+| --- | --- |
+| Loaded-state unit regressions | PASS: 5/5 |
+| Full-mode reduced-basis regression | PASS: 1/1 |
+| Integration tests | PASS: 24/24 = 7 conservative + 9 response + 6 prepare + 2 volume projection |
+| Native addon build | PASS incrementally after one 300 s tool timeout during final compilation |
+| Release runner build | PASS |
+| TypeScript typecheck / `git diff --check` | PASS |
+| Native addon SHA256 | `c2d152ca241dccb76336d7b2cf343a48ab57c44b19c96306b1b9a12d25728952` |
+| Shared cold runner SHA256 | `ae86b07ec013b102d7c357d6603ef3590b1d4413cb8df12a02361a27fd265832` |
+| Board/request identity | Unchanged; request SHA256 `fdbc0bcc1152ed859025ef4044ea6d14c30dc7cb9c68105751122a7632885840` for both |
+
+Both cold runs used one thread, no cache/checkpoint, a 300 s deadline, a 2 GiB private cap and a 1 GiB host reserve.
+
+| Quantity | Slot `single-electrode` | Continuous `single-electrode` |
+| --- | ---: | ---: |
+| Native status / exit | PASS / 0 | PASS / 0 |
+| Wall time | `114.781 s` | `112.672 s` |
+| Peak sampled RSS | `414474240 B` | `288796672 B` |
+| Peak private commit | `411127808 B` | `283627520 B` |
+| Full output SHA256 | `1ae28f4567fe25d2c37c85ce7e384d552523d48fe1972af58c9c40497b7b58c3` | `32f7f9e90865ece3a97b1c3efe3bc904f097c295ecb46474adf2c3be948e2c02` |
+| Independent audit | **PASS: all five gates** | **PASS: all five gates** |
+
+| Observable | Slot DC | Slot 1 kHz | Continuous DC | Continuous 1 kHz |
+| --- | ---: | ---: | ---: | ---: |
+| Full/reduced cell maximum | `4.4936319e-8` | `2.4850722e-6` | `1.1396771e-8` | `1.0599548e-6` |
+| Full/reduced face maximum | `1.7263245e-8` | `2.4851786e-6` | `4.4402815e-8` | `1.0598329e-6` |
+| Full/reduced section maximum | `1.0865475e-6` | `3.8728516e-10` | `1.7149776e-6` | `3.6507032e-10` |
+| Full/reduced port maximum | `1.0751336e-9` | `2.4864231e-6` | `2.3590216e-9` | `3.4620855e-6` |
+| DC section balance | `5.1814991e-13` | — | `1.6529388e-12` | — |
+| Exact loaded-state replay | `1.8583218e-9` | `2.0574400e-14` | `2.3066974e-9` | `1.3290524e-13` |
+| Dense reduced replay | — | `3.9402145e-17` | — | `5.9103333e-17` |
+| Saved reduced high-precision residual | — | `7.0420361e-17` | — | `5.2154224e-17` |
+
+Artifacts: `slot-single-electrode-{full,supervision,audit}.json`, `continuous-single-electrode-{full,supervision,audit}.json`, cold logs, and both `conservative-current-*-single-electrode-audit.png` plots under `debugging/p7-d1-loaded-current/`.
+
+**Result: current-conservation PASS; joint reference remains conditional.** The next required D1 evidence is magnetic patch/domain convergence, joint-versus-hybrid energy, cut-shift and continuous hybrid agreement, followed by the actual direct DSL. Those gates are not inferred from this current PASS.

@@ -42,6 +42,9 @@ fn constant_current_preserves_reactions_electrodes_insulation_and_known_section_
     let expected=sigma*1e-6*0.5e-3*0.2e-3;
     let left=space.node_potential[&electrodes[0][0]];let right=space.node_potential[&electrodes[1][0]];
     close(reactions[left],expected);close(reactions[right],-expected);
+    let mixed:Vec<_>=conservative.faces.iter().filter(|face|face.cells.len()==1&&face.nodes.iter().map(|node|space.node_potential[node]).collect::<std::collections::BTreeSet<_>>().len()>1).collect();
+    assert!(!mixed.is_empty(),"regression requires an exterior face spanning both terminal quotients");
+    assert!(mixed.iter().all(|face|!face.electrode),"mixed terminal/interior exterior faces must stay insulated");
     for (index,face) in conservative.faces.iter().enumerate(){if face.cells.len()==1&&!face.electrode{assert_eq!(flux[index],0.);}}
     for cell in 0..6{let point=[0.371e-3,0.173e-3,0.09e-3];let density=density_at(&mesh,&space,&conservative,&flux,cell,point);for axis in 0..3{close(density[axis],sigma*[1e-6,0.,0.][axis]);}}
     assert!(conservative.cell_divergence(&space,&flux).unwrap().iter().all(|v|v.abs()<1e-15));

@@ -26,7 +26,7 @@ pub(crate) mod sparse_potential;
 mod field_assembly;
 pub mod volume_reduction;
 mod spherical;
-mod accurate;
+pub(crate) mod accurate;
 mod compensated;
 pub mod volume_solve;
 pub mod prism;

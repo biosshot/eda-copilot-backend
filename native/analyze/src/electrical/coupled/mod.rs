@@ -627,6 +627,25 @@ impl System {
         initial: &[f64],
         stats: &mut Counters,
     ) -> Result<Vec<f64>> {
+        self.solve_with_policy(omega,rhs,initial,stats,false)
+    }
+    pub fn solve_compensated(
+        &mut self,
+        omega: f64,
+        rhs: Vec<f64>,
+        initial: &[f64],
+        stats: &mut Counters,
+    ) -> Result<Vec<f64>> {
+        self.solve_with_policy(omega,rhs,initial,stats,true)
+    }
+    fn solve_with_policy(
+        &mut self,
+        omega: f64,
+        rhs: Vec<f64>,
+        initial: &[f64],
+        stats: &mut Counters,
+        compensated: bool,
+    ) -> Result<Vec<f64>> {
         if omega < 0.
             || !omega.is_finite()
             || rhs.len() != self.linear.n * (if omega == 0. { 1 } else { 2 })
@@ -659,7 +678,7 @@ impl System {
         if k == 0 {
             if complex && self.charge_coordinates.is_some() {return self.solve_charge_coordinates(omega,&rhs,stats);}
             let eligible=complex&&self.structural.is_empty()&&!self.candidates.is_empty();
-            let direct=self.linear.solve(base, rhs.clone(), stats);
+            let direct=if compensated{self.linear.solve_compensated(base,rhs.clone(),stats)}else{self.linear.solve(base, rhs.clone(), stats)};
             let (x, res, kcl) = match direct {
                 Ok(v)=>v,
                 Err(e) if eligible&&e.starts_with("NETWORK_RESIDUAL:")=>return self.solve_charge_coordinates(omega,&rhs,stats),
@@ -702,7 +721,7 @@ impl System {
                 b[offset + n + g] = if complex { 0. } else { *value };
             }
         }
-        let (solved, res, kcl) = self.linear.solve(matrix, b, stats)?;
+        let (solved, res, kcl) = if compensated{self.linear.solve_compensated(matrix,b,stats)?}else{self.linear.solve(matrix, b, stats)?};
         self.residual = self.residual.max(res);
         self.kcl = self.kcl.max(kcl);
         let mut x = solved[..n].to_vec();

@@ -1,6 +1,6 @@
 //! Local compensated F64 residual arithmetic. No public state/type changes.
 #[derive(Clone, Copy, Default)]
-pub(super) struct Sum { pub hi:f64, pub lo:f64 }
+pub(crate) struct Sum { pub hi:f64, pub lo:f64 }
 impl Sum {
     pub fn from(value:f64)->Self {Self{hi:value,lo:0.}}
     pub fn add(self,other:Self)->Self {
