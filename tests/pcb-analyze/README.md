@@ -106,14 +106,14 @@ require four successful physical results. NanoScope, NanoSpec and TPS63060DSCR V
 JSONs were replayed from the unchanged captures through Copilot c7b40f2; per-fixture
 reexport metadata, inventories and hashes record the 12 omitted API phantom holes.
 The original native captures, source text and project archives remain unchanged. See the complete
-[DC verification](../../docs/experimental/analyze/dc-analysis-verification.md).
+[DC verification](../../docs/analyze/evidence/dc-analysis-verification.md).
 
 Mesh runs save compact detailed `mesh.json` once, a small `report.json` with readiness,
 counts, missing/uncertain data and measurements, and per-layer SVG overlays. Gold is
 mesh, cyan is constraints and pink is pad terminal boundaries. These eight runs supply
 no demonstration material profile; missing physics stays missing. Explicit complete
 physical coupons and independent checks are documented in
-[mesh verification](../../docs/experimental/analyze/conduction-mesh-verification.md).
+[mesh verification](../../docs/analyze/evidence/conduction-mesh-verification.md).
 
 Each selected analysis runs sequentially in its own Node process with `tsx`, with
 the Backend root as its working directory and a 10-minute timeout, as in the PCB
@@ -165,7 +165,7 @@ attributes/tooltips, red copper for shorts and blue outlines for nets occurring
 in separate physical islands. It is debug evidence, not the product PCB Preview.
 `invalid` exits nonzero; `partial` is printed explicitly and retains limitations;
 short findings do not discard the snapshot. Cleanup runs in `finally`.
-See [geometry acceptance evidence](../../docs/experimental/analyze/copper-geometry-verification.md).
+See [geometry acceptance evidence](../../docs/analyze/evidence/copper-geometry-verification.md).
 
 ```bash
 node --test scripts/test-pcb-analyze.test.mjs

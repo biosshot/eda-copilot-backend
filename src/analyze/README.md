@@ -38,7 +38,7 @@ on every log/check. Context/report payloads remain bounded across the scenario.
 Checks never throw for a failed/unknown condition. Report output-limit errors and
 program errors are distinct. Plot stores a typed description/data, never a fake file.
 
-See [coverage, tests and limits](../../docs/experimental/analyze/analysis-dsl-verification.md).
+See [coverage, tests and limits](../../docs/analyze/archive/design/analysis-dsl-verification.md).
 `createAnalysisApi` and `executeScenario` are internal: tests explicitly inject a
 test executor; the public runner has no executor/module-path override. Physical
 timing and search algorithms are not implemented. Explicit-value
@@ -97,7 +97,7 @@ values. J is A/mm², triangle loss W; barrel loss is separate. Real scalar trans
 and min/max reducers preserve units/validity; partial maps stay conditional and
 potentials from independent references cannot be reduced together.
 
-See [DC verification](../../docs/experimental/analyze/dc-analysis-verification.md):
+See [DC verification](../../docs/analyze/evidence/dc-analysis-verification.md):
 all eight selected real PDNs solve at two loads/two meshes with convergence below 2%,
 after re-exporting three fixtures and preserving small F64 refinement corrections. Coupon physics and real-board eligibility are separate acceptance criteria.
 
@@ -120,7 +120,7 @@ local `drill_topology_uncertain` / `drill_topology_unresolved` diagnostics flag
 ambiguous cuts without retaining additional geometries or a second graph.
 Separate islands are not a confirmed open; consult geometry diagnostics.
 The optional geometry settings are validated and copied on admission. See
-[geometry policy and evidence](../../docs/experimental/analyze/copper-geometry-verification.md).
+[geometry policy and evidence](../../docs/analyze/evidence/copper-geometry-verification.md).
 The built `dist/analysis-runtime.js` is an internal package smoke-test entry.
 `runAnalysisProblem({ kind: 'prepare-conduction', boardJson, geometry?, mesh?, profile? }, options)`
 uses the same admission/deadline/abort/shutdown path and returns `AnalysisConductionReport`.
@@ -128,7 +128,7 @@ Its nested profile/options are validated and snapshotted at admission. There is 
 new queue or session. Detailed nodes/elements live once in this report; geometry
 snapshots are not embedded. Native compact Rust JSON byte count and stage timers
 are reported; fixture runs separately measure actual Node JSON bytes and wall time.
-See [conduction preparation and limits](../../docs/experimental/analyze/conduction-mesh-verification.md).
+See [conduction preparation and limits](../../docs/analyze/evidence/conduction-mesh-verification.md).
 Only the serializable task (JSON string, optional geometry/mesh settings and physical profile)
 and job ID cross IPC; callbacks and AbortSignal stay in
 the parent. Importing the runtime does not load the addon. The ready process
@@ -207,7 +207,7 @@ timeouts, queue limits, crashes, two-process isolation and lifecycle races. Nati
 integration tests fail with rebuild guidance when the addon is missing/stale.
 The installed-package smoke uses compiled JS without repository source or tsx.
 See [fixture runs](../../tests/pcb-analyze/README.md) and the
-[verification record](../../docs/experimental/analyze/analysis-runtime-verification.md).
+[verification record](../../docs/analyze/evidence/analysis-runtime-verification.md).
 
 ## DC observations and saved examples
 
@@ -239,8 +239,8 @@ in the repository and do not invoke FEM. See the fixture README and DC verificat
 The existing dc/pi builders now accept explicitly authored R/C/L circuits for DC,
 complex driving-point Z(f), and adaptive transient/state continuation. CPU/F64
 Rust sparse MNA uses the same shared addon and disposable process. Board FEM DC
-remains independent. See [semantics](../../docs/experimental/analyze/electrical-network-semantics.md)
-and [verification](../../docs/experimental/analyze/electrical-network-verification.md)
+remains independent. See [semantics](../../docs/analyze/reference/electrical-network-semantics.md)
+and [verification](../../docs/analyze/evidence/electrical-network-verification.md)
 for signs, p/n model mapping, numerics, state/resource limits and direct RLC examples.
 No PCB frequency extraction or spatial circuit maps are produced.
 
@@ -250,8 +250,8 @@ No PCB frequency extraction or spatial circuit maps are produced.
 inputs share early validation; `a.network` creates mapped instances and `a.connect`
 pairs their ports. `networkParameters` dispatches through the existing process and
 shared addon to Rust, returning S/Z/Y complex DataValues and reusable result.network.
-See [semantics](../../docs/experimental/analyze/frequency-network-semantics.md) and
-[verification](../../docs/experimental/analyze/frequency-networks-verification.md).
+See [semantics](../../docs/analyze/reference/frequency-network-semantics.md) and
+[verification](../../docs/analyze/evidence/frequency-networks-verification.md).
 No PCB frequency extraction or imported-network transient is implemented.
 
 
@@ -259,7 +259,7 @@ P7a cross sections: explicit `a.line()` geometries use dielectric P1 FEM (not th
 DC copper mesh), C/C0/external L and lossless modal distributed propagation in
 `native/analyze/src/extraction/`. `z.network` reuses P6b, the existing process and
 single addon; no GPU or additional dependencies. See
-[semantics](../../docs/experimental/analyze/line-cross-sections-semantics.md).
+[semantics](../../docs/analyze/reference/line-cross-sections-semantics.md).
 Explicit PEC/lossless inputs retain their result forms. Optional `conductors`
 provides fixed-temperature smooth signal conductivity and complete reference
 thickness/materials; explicit 0..0.05 dielectric tangents use regional energy
@@ -272,8 +272,8 @@ hypotheses, not measured/extracted complete PCB channels.
 Lossy RLGC additionally retains per-frequency full matrices, all physical
 surface/region contributions, unit-current surface fields and complex modal
 alpha/beta/Zc/phase delay. Stable full 2/4-port S and a longitudinal dissipation
-balance feed existing P6b. See [loss semantics](../../docs/experimental/analyze/line-losses-semantics.md)
-and [verification and limitations](../../docs/experimental/analyze/line-losses-verification.md).
+balance feed existing P6b. See [loss semantics](../../docs/analyze/reference/line-losses-semantics.md)
+and [verification and limitations](../../docs/analyze/evidence/line-losses-verification.md).
 
 
 ## Geometry validation
@@ -298,6 +298,6 @@ candidates, 5 million segment checks, 100000 measurements, 2 million report
 vertices and 96 MiB report JSON. The existing worker deadline is the hard execution
 boundary; allocation estimates are not an OS RSS guarantee. Scope/rule processing
 and report construction are bounded. Base preparation retains its existing limits.
-See [semantics](../../docs/experimental/analyze/geometry-validation-semantics.md)
-and [verification](../../docs/experimental/analyze/geometry-validation-verification.md).
+See [semantics](../../docs/analyze/reference/geometry-validation-semantics.md)
+and [verification](../../docs/analyze/evidence/geometry-validation-verification.md).
 Run all eight direct scenarios with `npm run test:pcb-analyze -- --all --name validation`.

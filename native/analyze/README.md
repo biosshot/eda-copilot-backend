@@ -11,7 +11,7 @@ Production steady DC is implemented in `src/dc/` using that mesh and pinned
 The addon `AnalysisDcSession` owns at most one preparation/factorization; `clear()`
 releases it deterministically. No Node dependency is added to this Rust library.
 The public entry remains `runAnalysisDsl`, with explicit source/load/material
-adapters. [DC verification](../../docs/experimental/analyze/dc-analysis-verification.md)
+adapters. [DC verification](../../docs/analyze/evidence/dc-analysis-verification.md)
 records numerical tests and eight converged real-board scenarios. F64 refinement
 retains sub-ULP corrections for stable small voltage differences on a nonzero rail.
 The importer retains its original semantics. `geometry::prepare` consumes its
@@ -28,7 +28,7 @@ are not confirmed opens. No alternative board snapshots or second graph are
 retained. Invalid drill generation stops preparation instead of using an
 unconfirmed hole. Finite approximation limits still apply.
 This is a geometric part of P4, not completion of P4 or a physical solver.
-See [geometry precision, tests and artifacts](../../docs/experimental/analyze/copper-geometry-verification.md).
+See [geometry precision, tests and artifacts](../../docs/analyze/evidence/copper-geometry-verification.md).
 
 ## Conduction preparation
 
@@ -54,7 +54,7 @@ then kept fixed during bounded refinement. Unachievable quality/budgets remain p
 `mesh_complete`, `topology_confirmed`, `copper_complete`, `physics_complete` and
 `dc_ready` are separate for every domain. Known drill/contact uncertainty and missing
 fill freshness are not erased by successful meshing. There is no electrical solution
-or electrical convergence claim. See [representation, checks and limits](../../docs/experimental/analyze/conduction-mesh-verification.md).
+or electrical convergence claim. See [representation, checks and limits](../../docs/analyze/evidence/conduction-mesh-verification.md).
 
 ## API and data boundary
 
@@ -167,23 +167,23 @@ analysis launcher or write into fixtures. Generated reports belong in ignored
 into sparse G/E, using faer CPU/F64 sparse LU for DC, real-block complex driving-point
 impedance and adaptive BE time integration. One bounded compiled model/factor/latest
 state per session; no PCB extraction, placement/GPU or global cache. N-API remains
-in the single node-addon host. See [semantics](../../docs/experimental/analyze/electrical-network-semantics.md)
-and [verification](../../docs/experimental/analyze/electrical-network-verification.md).
+in the single node-addon host. See [semantics](../../docs/analyze/reference/electrical-network-semantics.md)
+and [verification](../../docs/analyze/evidence/electrical-network-verification.md).
 
 ## Tabulated frequency blocks (P6b)
 
 `electrical::frequency` normalizes bounded S/Z/Y or Touchstone resources, solves
 common-return multiport wave connections and renormalization with CPU/F64 faer LU.
 It shares the existing addon/session boundary; no PCB extraction, temporal fitting
-or GPU. See [subset and equations](../../docs/experimental/analyze/frequency-network-semantics.md)
-and [verification](../../docs/experimental/analyze/frequency-networks-verification.md).
+or GPU. See [subset and equations](../../docs/analyze/reference/frequency-network-semantics.md)
+and [verification](../../docs/analyze/evidence/frequency-networks-verification.md).
 
 
 P7a cross sections: explicit `a.line()` geometries use dielectric P1 FEM (not the
 DC copper mesh), C/C0/external L and lossless modal distributed propagation in
 `native/analyze/src/extraction/`. `z.network` reuses P6b, the existing process and
 single addon; no GPU or additional dependencies. See
-[semantics](../../docs/experimental/analyze/line-cross-sections-semantics.md).
+[semantics](../../docs/analyze/reference/line-cross-sections-semantics.md).
 Only explicit PEC/nondispersive lossless materials; other losses/mask/targets
 reject. Field reports retain mesh/phi/E, quality, independent mesh/domain
 convergence and exact-frequency matrices. Large reports require an explicit
