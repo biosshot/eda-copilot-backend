@@ -822,6 +822,149 @@ pub fn tetra_integral(target: [[f64; 3]; 4], source: &PointPotential, order: usi
     }
 }
 
+struct TetraFarMoments {
+    center: [f64; 3],
+    radius: f64,
+}
+
+fn tetra_far_moments(tetra: [[f64; 3]; 4]) -> Result<TetraFarMoments> {
+    super::mesh::tetra_coefficients(tetra)?;
+    let center = std::array::from_fn(|axis| tetra.iter().map(|p| p[axis]).sum::<f64>() / 4.);
+    let centered = tetra.map(|p| sub(p, center));
+    let radius = centered.iter().map(|&p| norm(p)).fold(0., f64::max) * (1. + 32. * f64::EPSILON);
+    Ok(TetraFarMoments { center, radius })
+}
+
+/// Reused positive tensor cubature on one unchanged tetrahedron.
+pub struct TetraCubature {
+    center: [f64; 3],
+    radius: f64,
+    points: Vec<[f64; 3]>,
+    weights: Vec<f64>,
+}
+impl TetraCubature {
+    pub fn new(tetra: [[f64; 3]; 4], order: usize) -> Result<Self> {
+        let moments = tetra_far_moments(tetra)?;
+        let (volume, _) = super::mesh::tetra_coefficients(tetra)?;
+        let rule = super::prism::cached_rule(order)?;
+        let mut points = Vec::with_capacity(order.pow(3));
+        let mut weights = Vec::with_capacity(order.pow(3));
+        tetra_integrate(tetra, volume, rule, |point, weight| {
+            points.push(point);
+            weights.push(weight);
+            Ok(())
+        })?;
+        Ok(Self { center: moments.center, radius: moments.radius, points, weights })
+    }
+    pub fn separation_q(&self, other: &Self) -> f64 {
+        (self.radius + other.radius) / norm(sub(self.center, other.center)) * (1. + 64. * f64::EPSILON)
+    }
+    pub fn direct_integral(&self, other: &Self) -> Result<f64> {
+        if self.points.len() != other.points.len() {
+            return Err(error("TETRA_INTEGRAL_ORDER", "direct pair cubature orders must match"));
+        }
+        let mut total = super::accurate::Sum::default();
+        for (p, &wp) in self.points.iter().zip(&self.weights) {
+            // All terms are positive. Accumulate one target row directly, then
+            // compensate only the outer sum instead of an error-free transform
+            // for every point pair in the hot kernel.
+            let mut row = 0.;
+            for (s, &ws) in other.points.iter().zip(&other.weights) {
+                let delta = sub(*p, *s);
+                let distance = norm(delta);
+                if distance <= 0. || !distance.is_finite() {
+                    return Err(error("TETRA_INTEGRAL_RANGE", "separated direct cubature intersects or overflows"));
+                }
+                row += ws / distance;
+            }
+            total = total.add(super::accurate::Sum::from(wp * row));
+        }
+        let value = total.value();
+        if value > 0. && value.is_finite() { Ok(value) } else { Err(error("TETRA_INTEGRAL_RANGE", "finite positive direct pair integral required")) }
+    }
+}
+pub(crate) fn separated_order(q: f64, maximum: usize) -> Option<usize> {
+    let order = if q.is_finite() && q < 0.12 { 4 } else if q < 0.6 { 6 } else if q < 1. { 8 } else { return None };
+    (order <= maximum).then_some(order)
+}
+
+/// Smooth separated pairs use direct positive double cubature of 1/|r-r'|.
+/// The order grows with the geometric separation ratio; near pairs retain the
+/// analytic source path. Independent fixed-order audits remain mandatory.
+fn tetra_far_integral(target: [[f64; 3]; 4], source: &PointPotential, maximum: usize) -> Result<Option<f64>> {
+    let Some(source_tetra) = source.tetra else { return Ok(None); };
+    let a = tetra_far_moments(target)?;
+    let b = tetra_far_moments(source_tetra)?;
+    let q = (a.radius + b.radius) / norm(sub(a.center, b.center)) * (1. + 64. * f64::EPSILON);
+    let Some(order) = separated_order(q, maximum) else { return Ok(None); };
+    Ok(Some(TetraCubature::new(target, order)?.direct_integral(&TetraCubature::new(source_tetra, order)?)?))
+}
+
+#[cfg(test)]
+mod far_pair_tests {
+    use super::*;
+    fn tetra(offset: f64) -> [[f64; 3]; 4] {
+        [[offset, 0., 0.], [offset + 0.001, 0., 0.], [offset, 0.001, 0.], [offset, 0., 0.001]]
+    }
+    #[test]
+    fn separated_double_cubature_converges_and_preserves_reciprocity() {
+        let a = tetra(0.);
+        for offset in [0.1, 0.01, 0.005, 0.004, 0.0036] {
+            let b = tetra(offset);
+            let source_b = PointPotential::tetrahedron(b).unwrap();
+            let source_a = PointPotential::tetrahedron(a).unwrap();
+            let ab = tetra_far_integral(a, &source_b, 16).unwrap().unwrap();
+            let ba = tetra_far_integral(b, &source_a, 16).unwrap().unwrap();
+            let reference = tetra_integral(a, &source_b, 16).unwrap();
+            assert!((ab - ba).abs() / ab < 1e-12);
+            assert!((ab - reference).abs() / reference < 1e-10, "offset {offset}: {ab} vs {reference}");
+        }
+        assert!(tetra_far_integral(a, &PointPotential::tetrahedron(tetra(0.001)).unwrap(), 12).unwrap().is_none());
+    }
+    #[test]
+    fn measure_direct_order_errors_near_separation_limit() {
+        let a = tetra(0.);
+        let ca = TetraCubature::new(a, 16).unwrap();
+        for offset in [0.005, 0.004, 0.0036, 0.003, 0.0025, 0.0022] {
+            let b = tetra(offset);
+            let cb = TetraCubature::new(b, 16).unwrap();
+            let reference = tetra_integral(a, &PointPotential::tetrahedron(b).unwrap(), 16).unwrap();
+            let q = ca.separation_q(&cb);
+            let order = separated_order(q, 16).unwrap();
+            let direct = TetraCubature::new(a, order).unwrap().direct_integral(&TetraCubature::new(b, order).unwrap()).unwrap();
+            let relative_error = (direct - reference).abs() / reference;
+            eprintln!("offset={offset} q={q} order={order} relativeError={relative_error:e}");
+            assert!(relative_error < 1e-10, "offset={offset} order={order} relativeError={relative_error:e}");
+        }
+    }
+}
+
+/// Adapt only the outer target cubature; the source potential retains its own
+/// analytic/positive near-field guards. Cross-block reduced modes use 1e-12;
+/// local blocks may use 1e-10 only with independent fixed-order/physical gates.
+pub fn tetra_integral_adaptive(target: [[f64; 3]; 4], source: &PointPotential, maximum: usize, tolerance: f64) -> Result<f64> {
+    if !(8..=16).contains(&maximum) || !tolerance.is_finite() || !(1e-12..=1e-10).contains(&tolerance) {
+        return Err(error("TETRA_INTEGRAL_ORDER", "maximum target order 8..16 and tolerance 1e-12..1e-10 required"));
+    }
+    if let Some(value) = tetra_far_integral(target, source, maximum)? {
+        return Ok(value);
+    }
+    let mut previous: Option<f64> = None;
+    for step in [2, 4, 8, 12, 16] {
+        let order = step.min(maximum);
+        let value = tetra_integral(target, source, order)?;
+        if let Some(old) = previous {
+            let change = (value - old).abs() / value;
+            if change.is_finite() && change <= tolerance {
+                return Ok(value);
+            }
+        }
+        previous = Some(value);
+        if order == maximum { break; }
+    }
+    previous.ok_or_else(|| error("TETRA_INTEGRAL_ORDER", "target cubature produced no value"))
+}
+
 /// Positive two-ended Z grading on an unchanged original layered tetrahedron.
 /// The exact section fan and t=u^4/2 mappings retain volume and first moments.
 pub fn tetra_integral_z_graded(

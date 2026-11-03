@@ -21,6 +21,8 @@ pub mod developer_checkpoint;
 pub mod volume_field;
 pub mod field_refinement;
 pub mod volume_magnetic;
+pub mod volume_integral_magnetic;
+pub mod magnetic_kernel_cache;
 mod bernstein;
 pub(crate) mod sparse_potential;
 mod field_assembly;

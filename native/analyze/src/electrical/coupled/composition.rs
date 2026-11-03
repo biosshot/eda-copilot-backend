@@ -1,4 +1,4 @@
-//! Congruence assembly of authored full conductor models; no intermodel EM extraction.
+//! Congruence assembly of full conductor models with explicitly extracted mutuals.
 use super::*;
 #[derive(Deserialize, Clone)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
@@ -7,6 +7,8 @@ pub struct Topology {
     pub connections: Vec<[usize; 2]>,
     pub connection_contacts: Option<Vec<physical::Contacts>>,
     pub ports: Vec<crate::electrical::frequency::OutputPort>,
+    #[serde(default)]
+    pub instance_inductance_h: Vec<crate::electrical::frequency::InstanceInductance>,
 }
 pub struct Built {
     pub model: Model,
@@ -195,6 +197,9 @@ pub(super) fn build_for(
             .saturating_add(topology.ports.iter().map(|p| p.name.len()).sum::<usize>())
             .saturating_mul(16),
     );
+    let source_memory = source_memory.saturating_add(
+        topology.instance_inductance_h.len().saturating_mul(128),
+    );
     let matrix_budget = remaining_budget(budget, source_memory)?;
     let p = topology
         .instances
@@ -286,7 +291,11 @@ pub(super) fn build_for(
         ));
     }
     let mut built = vec![];
-    let (mut total_v, mut total_i, mut coefficients) = (0usize, 0usize, 0usize);
+    let (mut total_v, mut total_i, mut coefficients) = (
+        0usize,
+        0usize,
+        topology.instance_inductance_h.len().saturating_mul(2),
+    );
     for instance in &topology.instances {
         if instance.ports.len() != instance.model.ports.len()
             || instance.ports.iter().any(|v| v.trim().is_empty())
@@ -459,6 +468,36 @@ pub(super) fn build_for(
         vbase += block.model.potential_nodes.len();
         ibase += block.model.current_dofs.len();
     }
+    let mut current_offsets = BTreeMap::new();
+    let mut offset = 0usize;
+    for (index, block) in built.iter().enumerate() {
+        current_offsets.insert(index, (offset, block.model.current_dofs.len()));
+        offset += block.model.current_dofs.len();
+    }
+    let instance_indices: BTreeMap<_, _> = topology.instances.iter().enumerate().map(|(i, v)| (v.id.as_str(), i)).collect();
+    let mut mutuals = vec![];
+    let mut mutual_keys = BTreeSet::new();
+    for coupling in &topology.instance_inductance_h {
+        let Some(&a) = instance_indices.get(coupling.a.as_str()) else { return Err(fail("COUPLED_MUTUAL_INPUT", "Unknown mutual instance a")); };
+        let Some(&b) = instance_indices.get(coupling.b.as_str()) else { return Err(fail("COUPLED_MUTUAL_INPUT", "Unknown mutual instance b")); };
+        if a == b || !coupling.value_h.is_finite() {
+            return Err(fail("COUPLED_MUTUAL_INPUT", "Only finite mutuals between distinct physical instances are admitted"));
+        }
+        let (ao, an) = current_offsets[&a];
+        let (bo, bn) = current_offsets[&b];
+        if coupling.local_a >= an || coupling.local_b >= bn {
+            return Err(fail("COUPLED_MUTUAL_INPUT", "Mutual local current index outside source block"));
+        }
+        let canonical = if (a, coupling.local_a) <= (b, coupling.local_b) {
+            (a, coupling.local_a, b, coupling.local_b)
+        } else {
+            (b, coupling.local_b, a, coupling.local_a)
+        };
+        if !mutual_keys.insert(canonical) {
+            return Err(fail("COUPLED_MUTUAL_INPUT", "Duplicate directed/reciprocal mutual entry"));
+        }
+        mutuals.push((ao + coupling.local_a, bo + coupling.local_b, coupling.value_h));
+    }
     let mut a = Matrix::new();
     let mut r = Matrix::new();
     let mut l = Matrix::new();
@@ -535,6 +574,11 @@ pub(super) fn build_for(
         );
         vo += m.potential_nodes.len();
         io += m.current_dofs.len();
+    }
+    for (a, b, value) in mutuals {
+        if l.insert((a, b), value).is_some() || l.insert((b, a), value).is_some() {
+            return Err(fail("COUPLED_MUTUAL_INPUT", "Mutual overlaps an existing/self coefficient; no double counting"));
+        }
     }
     // Intersection of original nullspaces with the node-identification constraints.
     // This derives assembly invariants rather than imposing each block's charges.
@@ -647,6 +691,9 @@ pub(super) fn build_for(
         structural_gauge_modes: structural_modes,
         conserved_potential_modes: modes,
     };
+    // Cross-block mutuals participate in the same exact symmetry/PSD and
+    // descriptor checks as every source block before any frequency/time solve.
+    System::compile(&model, topology.ports.len(), Some(&matrix_budget))?;
     let fit = if fits.is_empty() {
         None
     } else {
@@ -669,4 +716,59 @@ pub(super) fn build_for(
         band,
         source_memory,
     })
+}
+
+#[cfg(test)]
+mod mutual_tests {
+    use super::*;
+    fn topology(instance_inductance_h: Value) -> Topology {
+        let model = |id: &str| json!({
+            "id":id,"kind":"network","ports":["in","out"],
+            "data":{
+                "format":"coupled-rlc","referenceTopology":"grounded",
+                "potentialNodes":[format!("{id}:a"),format!("{id}:b")],"currentDofs":["i"],
+                "incidence":[[0,0,1.],[1,0,-1.]],"portIncidence":[[0,0,1.],[1,1,1.]],
+                "resistanceOhm":[[0,0,1.]],"inductanceH":[[0,0,if id=="a" {4e-6} else {9e-6}]],
+                "capacitanceF":[[0,0,1e-12],[1,1,1e-12]],
+                "conservedPotentialModes":[],"structuralGaugeModes":[]
+            }
+        });
+        serde_json::from_value(json!({
+            "instances":[{"id":"a","model":model("a"),"ports":["in","out"]},{"id":"b","model":model("b"),"ports":["in","out"]}],
+            "connections":[[1,2]],"connectionContacts":null,
+            "ports":[{"name":"in","index":0},{"name":"out","index":3}],
+            "instanceInductanceH":instance_inductance_h
+        })).unwrap()
+    }
+    fn mutual(a: &str, b: &str, local_a: usize, local_b: usize, value_h: f64) -> Value {
+        json!({"a":a,"b":b,"localA":local_a,"localB":local_b,"valueH":value_h})
+    }
+    #[test]
+    fn cross_block_mutual_is_symmetric_once_and_preserves_positive_energy() {
+        let plain = build(&topology(json!([])), None, Instant::now()).unwrap();
+        assert_eq!(plain.model.inductance_h, vec![(0,0,4e-6),(1,1,9e-6)]);
+        for value in [1e-6, -1e-6] {
+            let built = build(&topology(json!([mutual("a","b",0,0,value)])), None, Instant::now()).unwrap();
+            assert_eq!(built.model.inductance_h, vec![(0,0,4e-6),(0,1,value),(1,0,value),(1,1,9e-6)]);
+            for currents in [[1.,1.],[1.,-2.],[-2.,1.]] {
+                let energy = 0.5*(4e-6*currents[0]*currents[0]+9e-6*currents[1]*currents[1]+2.*value*currents[0]*currents[1]);
+                assert!(energy > 0. && energy.is_finite());
+            }
+        }
+    }
+    #[test]
+    fn invalid_duplicate_reciprocal_and_indefinite_mutuals_are_refused() {
+        let cases = [
+            vec![mutual("a","b",0,0,1e-6),mutual("a","b",0,0,1e-6)],
+            vec![mutual("a","b",0,0,1e-6),mutual("b","a",0,0,1e-6)],
+            vec![mutual("a","a",0,0,1e-6)],
+            vec![mutual("a","missing",0,0,1e-6)],
+            vec![mutual("a","b",1,0,1e-6)],
+            vec![mutual("a","b",0,0,7e-6)],
+        ];
+        for mutuals in cases {
+            let error = build(&topology(json!(mutuals)), None, Instant::now()).err().unwrap();
+            assert!(error.starts_with("COUPLED_MUTUAL_INPUT") || error.starts_with("COUPLED_PSD"), "{error}");
+        }
+    }
 }

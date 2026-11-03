@@ -37,6 +37,15 @@ pub struct Instance {
 }
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct InstanceInductance {
+    pub a: String,
+    pub b: String,
+    pub local_a: usize,
+    pub local_b: usize,
+    pub value_h: f64,
+}
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Request {
     pub instances: Vec<Instance>,
     pub connections: Vec<[usize; 2]>,
@@ -46,6 +55,8 @@ pub struct Request {
     pub representation: String,
     pub reference_ohm: Option<Vec<f64>>,
     pub budget: Option<Budget>,
+    #[serde(default)]
+    pub instance_inductance_h: Vec<InstanceInductance>,
 }
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -392,6 +403,12 @@ pub fn run(r: Request) -> Value {
     }
 }
 fn calculate(r: &Request, start: Instant) -> Result<Value> {
+    if !r.instance_inductance_h.is_empty()
+        && (r.instances.iter().any(|i| i.model.data["format"] == "delayed-scattering")
+            || r.instances.iter().all(|i| i.model.data["format"] != "coupled-rlc"))
+    {
+        return Err(fail("COUPLED_MUTUAL_INPUT", "Explicit instance mutuals require coupled-RLC physical assembly; delayed/tabulated-only composition cannot retain them"));
+    }
     if r.connection_contacts.is_some()
         && (r.connection_contacts.as_ref().unwrap().len() != r.connections.len()
             || r.instances.iter().any(|i| {

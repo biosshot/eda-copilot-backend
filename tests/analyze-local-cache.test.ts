@@ -58,3 +58,14 @@ test('rejected experimental precision cannot silently restore an F64 model',asyn
  for(const unsupported of ['f32','auto']){process.env.P7_MAGNETIC_PRECISION=unsupported;assert.throws(()=>localCoreIdentity(),/unsupported P7_MAGNETIC_PRECISION/);assert.throws(()=>run(request),/unsupported P7_MAGNETIC_PRECISION/);}
  }finally{if(old===undefined)delete process.env.P7_MAGNETIC_PRECISION;else process.env.P7_MAGNETIC_PRECISION=old;}
 });
+
+test('channel magnetic cache survives executor restart and excludes changing resource budgets from identity',()=>{
+ const d=dir();try{
+  const request={blocks:[{id:'a',dofs:1,cells:[{verticesM:[[0,0,0],[.001,0,0],[0,.001,0],[0,0,.001]],currentsPerAmpM2:[[0,0,1e6]]}]},{id:'b',dofs:1,cells:[{verticesM:[[.01,0,0],[.011,0,0],[.01,.001,0],[.01,0,.001]],currentsPerAmpM2:[[0,0,1e6]]}]}],order:8,budget:{maxSeconds:30,maxMemoryMiB:64}};
+  const launch=(code:string)=>{const p=spawnSync(process.execPath,['--import','tsx','--input-type=module','-e',code],{cwd:process.cwd(),env:{...process.env,PCB_ANALYSIS_CACHE_DIR:d},encoding:'utf8'});assert.equal(p.status,0,p.stderr);return JSON.parse(p.stdout);};
+  const initial=launch(`import{createProblemExecutor}from'./src/analyze/execute-problem.ts';const request=${JSON.stringify(request)};const run=()=>createProblemExecutor()({kind:'channel-magnetic',request});const cold=run(),memory=run();request.budget.maxSeconds=20;const budget=run();console.log(JSON.stringify({cold,memory,budget}));`);
+  assert.equal(initial.cold.cache.status,'cold');assert.equal(initial.cold.cache.assembly,1);assert.equal(initial.memory.cache.status,'memory');assert.equal(initial.memory.cache.assembly,0);assert.equal(initial.budget.cache.status,'memory');assert.deepEqual(initial.memory.couplings,initial.cold.couplings);
+  const restored=launch(`import{createProblemExecutor}from'./src/analyze/execute-problem.ts';const r=createProblemExecutor()({kind:'channel-magnetic',request:${JSON.stringify(request)}});console.log(JSON.stringify(r));`);
+  assert.equal(restored.cache.status,'disk');assert.equal(restored.cache.assembly,0);assert.deepEqual(restored.couplings,initial.cold.couplings);
+ }finally{rmSync(d,{recursive:true,force:true});}
+});

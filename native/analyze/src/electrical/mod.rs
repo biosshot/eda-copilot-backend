@@ -228,6 +228,7 @@ mod deadline_tests {
                 .collect(),
             connection_contacts: None,
             connections: vec![],
+            instance_inductance_h: vec![],
             ports: vec![frequency::OutputPort {
                 name: "p".into(),
                 index: 0,
@@ -263,6 +264,7 @@ mod deadline_tests {
             instances: vec![],
             connection_contacts: None,
             connections: vec![],
+            instance_inductance_h: vec![],
             ports: vec![],
         };
         for error in [

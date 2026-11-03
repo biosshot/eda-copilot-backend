@@ -56,7 +56,7 @@ fn entries(input: &[Entry], rows: usize, columns: usize) -> Result<Matrix> {
     }
     Ok(out)
 }
-fn symmetric(input: &[Entry], size: usize, positive: bool) -> Result<Matrix> {
+fn symmetric(input: &[Entry], size: usize, positive: bool, label: &str) -> Result<Matrix> {
     let out = entries(input, size, size)?;
     let scale = out.values().map(|v| v.abs()).fold(0., f64::max);
     if out
@@ -65,7 +65,7 @@ fn symmetric(input: &[Entry], size: usize, positive: bool) -> Result<Matrix> {
     {
         return Err(fail(
             "COUPLED_SYMMETRY",
-            "Full exact symmetric entries required; no averaging or dropped mutual terms",
+            format!("{label}: full exact symmetric entries required; no averaging or dropped mutual terms"),
         ));
     }
     if size > 0 && scale > 0. {
@@ -74,17 +74,18 @@ fn symmetric(input: &[Entry], size: usize, positive: bool) -> Result<Matrix> {
         });
         let eigen = dense
             .self_adjoint_eigenvalues(Side::Lower)
-            .map_err(|e| fail("COUPLED_PSD", format!("{e:?}")))?;
+            .map_err(|e| fail("COUPLED_PSD", format!("{label}: {e:?}")))?;
+        let minimum = eigen.iter().copied().fold(f64::INFINITY, f64::min);
         if eigen.iter().any(|v| !v.is_finite() || *v < -1e-12) || positive && eigen[0] <= 1e-14 {
             return Err(fail(
                 "COUPLED_PSD",
-                "Nonpassive/indefinite or unresolved positive resistance matrix",
+                format!("{label}: nonpassive/indefinite or unresolved positive matrix; size={size}, minimumNormalizedEigenvalue={minimum:e}, coefficientScale={scale:e}"),
             ));
         }
     } else if positive && size > 0 {
         return Err(fail(
             "COUPLED_PSD",
-            "Current-basis resistance must be positive definite",
+            format!("{label}: current-basis matrix must be positive definite"),
         ));
     }
     Ok(out)
@@ -252,17 +253,17 @@ impl System {
                 }
             }
         }
-        let r = symmetric(&model.resistance_ohm, ni, false)?;
-        let l = symmetric(&model.inductance_h, ni, false)?;
+        let r = symmetric(&model.resistance_ohm, ni, false, "R")?;
+        let l = symmetric(&model.inductance_h, ni, false, "L")?;
         // Lossless current coordinates are physical when magnetic storage resolves
         // them. Reject the common R/L kernel; never insert artificial damping.
         if ni>0 {
             let rs=r.values().copied().fold(0_f64,|a,b|a.max(b.abs()));
             let ls=l.values().copied().fold(0_f64,|a,b|a.max(b.abs()));
             let combined:Vec<_>=(0..ni).flat_map(|i|{let r=&r;let l=&l;(0..ni).map(move|j|(i,j,if rs>0.{r.get(&(i,j)).copied().unwrap_or(0.)/rs}else{0.}+if ls>0.{l.get(&(i,j)).copied().unwrap_or(0.)/ls}else{0.}))}).collect();
-            symmetric(&combined,ni,true)?;
+            symmetric(&combined,ni,true,"normalized R+L")?;
         }
-        let c = symmetric(&model.capacitance_f, nv, false)?;
+        let c = symmetric(&model.capacitance_f, nv, false, "C")?;
         let raw = if ni == 0 && model.conserved_potential_modes.is_empty() {
             (0..nv)
                 .map(|i| (0..nv).map(|j| if i == j { 1. } else { 0. }).collect())

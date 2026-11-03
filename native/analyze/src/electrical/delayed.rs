@@ -392,6 +392,7 @@ pub fn time(request: coupled::time::Request, start: Instant) -> Result<Value> {
                 }],
                 connection_contacts: None,
                 connections: vec![],
+                instance_inductance_h: vec![],
                 ports: resource
                     .ports
                     .iter()

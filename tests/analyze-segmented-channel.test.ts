@@ -1,6 +1,6 @@
 import {mkdirSync,writeFileSync}from'node:fs';
 import test from 'node:test';import assert from 'node:assert/strict';
-import {solveSegmentedChannel,validateChannelOwnership,type SegmentedChannel} from '../src/analyze/segmented-channel.ts';
+import {solveSegmentedChannel,sectionMagneticBlock,validateChannelOwnership,type SegmentedChannel} from '../src/analyze/segmented-channel.ts';
 import {createProblemExecutor} from '../src/analyze/execute-problem.ts';
 const record=(name:string,data:unknown)=>{const dir=process.env.P7_EVIDENCE_DIR;if(dir){mkdirSync(dir,{recursive:true});writeFileSync(dir+'/'+name+'.json',JSON.stringify(data,null,2));}};
 const line=(lengthMm:number)=>({kind:'microstrip',widthMm:1,copperThicknessMm:.035,dielectricHeightMm:1,lengthMm,material:{relativePermittivity:4,lossTangent:0,state:'Explicit ideal numerical coupon'}});
@@ -12,6 +12,15 @@ test('actual FEM sections compose through physical P6 terminals and match unpart
  let error=0;for(let f=0;f<3;f++)for(let i=0;i<2;i++)for(let j=0;j<2;j++){const a=r.result.parameters![f][i][j],b=reference.network!.parameters[f][i][j];error=Math.max(error,Math.hypot(a.real-b.real,a.imaginary-b.imaginary));}assert.ok(error<1e-7,String(error));assert.equal(r.evidence.length,2);record('uniform-composition',{maxAbsoluteSError:error,composed:r.result.parameters,reference:reference.network!.parameters,frequencies,evidence:r.evidence,wallSeconds:r.wallSeconds});
 });
 test('source ownership refuses overlaps, gaps and nonlocal coupling split before solving',()=>{for(const delta of [-1,1]){const p=plan();const own=p.blocks[1].ownership[0];assert.ok(own.kind!=='fragment');own.startMm+=delta;assert.throws(()=>validateChannelOwnership(p),/overlap|gap|Uncovered/);}const p=plan();for(const b of p.blocks)b.couplingGroup='shared-field';assert.throws(()=>validateChannelOwnership(p),/jointly/);});
+
+test('section magnetic frame converts mm origin/length but preserves SI outerM geometry',()=>{
+ const metal=(role:string,y:number)=>({role,contour:{outerM:[[0,y],[.001,y],[.001,y+.0001],[0,y+.0001]],holesM:[]}});
+ const block=sectionMagneticBlock('frame',{kind:'polygon-section',lengthMm:2,geometry:{conductors:[metal('signal',0),metal('reference',.0002)]}},{frequencyDependent:false,capacitanceFPerM:[[1e-12]],modes:[{delaySPerM:1e-6}]},[1000],{originMm:[100,200],direction:[1,0]});
+ assert.equal(block.dofs,1);assert.equal(block.directSelf,true);const vertices=block.cells.flatMap((c:any)=>c.verticesM);
+ assert.ok(vertices.every((v:number[])=>v[0]>=.099-1e-15&&v[0]<=.101+1e-15&&v[1]>=.2-1e-15&&v[1]<=.201+1e-15),JSON.stringify(vertices[0]));
+ assert.ok(vertices.some((v:number[])=>Math.abs(v[1]-.201)<1e-15),'outerM width must not be multiplied by 1e-3');
+ for(const cell of block.cells)for(const current of cell.currentsPerAmpM2)assert.ok(Math.abs(Math.abs(current[0])-1e7)<1e-5,'one-amp section DOF requires J=I/conductorArea, without another length divisor');
+});
 
 test('branched numerical sections retain the third port and match independent star-line modes',()=>{
  const p=plan();p.blocks=[];p.coverage=[];p.ports=[];

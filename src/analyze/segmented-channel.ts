@@ -12,7 +12,7 @@ export interface CopperFragment {kind:'fragment';sourcePath:string;regionId:stri
 export type CopperOwnership=CopperInterval|CopperFragment;
 interface Base {id:string;cuts:ChannelCut[];ownership:CopperOwnership[];bandHz:[number,number];couplingGroup?:string}
 export type ChannelBlock = Base & (
- {kind:'section';line:AnalysisCrossSectionRequest['line'];mesh?:AnalysisCrossSectionRequest['mesh'];dcConductors?:{resistanceOhmPerM:number[][];internalInductanceHPerM:number[][]}}|
+ {kind:'section';line:AnalysisCrossSectionRequest['line'];mesh?:AnalysisCrossSectionRequest['mesh'];spatial?:{originMm:Point;direction:Point};dcConductors?:{resistanceOhmPerM:number[][];internalInductanceHPerM:number[][]}}|
  {kind:'local';boardJson:string;geometry:unknown;magneticPatchLevel?:1|2}
 );
 export interface SegmentedChannel {blocks:ChannelBlock[];ports:{name:string;cut:ChannelCut}[];coverage:CopperOwnership[]}
@@ -59,35 +59,51 @@ export function validateChannelOwnership(plan:SegmentedChannel){
  }
  const band:[number,number]=[Math.max(...plan.blocks.map(b=>b.bandHz[0])),Math.min(...plan.blocks.map(b=>b.bandHz[1]))];if(band[0]>band[1])fail('No common physical band');return band;
 }
-/** Real existing section/local producers and P6 assembly. No independent
- * two-port cascade: branch cuts connect all incident matrix ports together. */
+/** Real section/local producers, direct cross-block magnetostatics and P6.
+ * Legacy authored plans without spatial coordinates retain block-only assembly;
+ * an automatic plan with incomplete coordinates is never silently demoted. */
 export function solveSegmentedChannel(plan:SegmentedChannel,frequencies:number[],budget={maxSeconds:300,maxMemoryMiB:2048}){
  const band=validateChannelOwnership(plan);if(!frequencies.length||frequencies.some(f=>!Number.isFinite(f)||f<band[0]||f>band[1]))fail('Requested axis outside common physical band');
  const execute=createProblemExecutor(true),started=performance.now();const remaining=()=>{const s=budget.maxSeconds-(performance.now()-started)/1000;if(s<=0)fail('Shared channel deadline');return s;};
- const instances:{id:string;model:AnalysisFrequencyResource;ports:string[]}[]=[],evidence:unknown[]=[];
+ const instances:{id:string;model:AnalysisFrequencyResource;ports:string[]}[]=[],evidence:unknown[]=[],magneticBlocks:any[]=[];
  for(const block of plan.blocks){const memoryBefore=process.memoryUsage(),blockStarted=performance.now();let model:AnalysisFrequencyResource;
   if(process.env.P7_BLOCK_LIFECYCLE==='1')process.stderr.write(JSON.stringify({event:'P7_BLOCK_BEGIN',id:block.id,kind:block.kind,memory:memoryBefore})+'\n');
   if(block.kind==='section'){
    const r=execute({kind:'cross-section',request:{line:block.line,mesh:block.mesh,frequencies,budget:{...budget,maxSeconds:remaining()}}});
    if(r.status!=='complete'||!r.network)fail('Section '+block.id+' refused: '+JSON.stringify(r.diagnostics));
    model={id:block.id,kind:'network',ports:Array.from({length:block.cuts.length},(_,i)=>'port-'+i),data:sectionDescriptor(r.parameters!,block.line,frequencies,block.dcConductors)};
+   if(block.spatial)magneticBlocks.push(sectionMagneticBlock(block.id,block.line,r.parameters,frequencies,block.spatial));
    evidence.push({id:block.id,kind:block.kind,parameters:r.parameters,sectionRealization:{type:'physical RLC Pi',cellPhaseLimitRad:.01,dcConductors:block.dcConductors??null,units:{length:'mm to m at boundary',R:'Ohm/m',L:'H/m',C:'F/m'}},cache:r.cache,resources:r.resources});
   }else{
    const r=execute({kind:'local-extraction',request:{boardJson:block.boardJson,geometry:block.geometry,remainingSeconds:remaining(),bandHz:[1000,100000],frequenciesHz:frequencies,magneticPatchLevel:block.magneticPatchLevel,observablesOnly:true}});
    const ports=(r.prepared as any).request.ports.map((_:unknown,i:number)=>'port-'+i);
-   model={id:block.id,kind:'network',ports,data:r.model};evidence.push({id:block.id,kind:block.kind,cache:r.cache,stageCounts:r.stageCounts,resources:r.resources,nativePreparation:{stageSeconds:(r.prepared as any).stageSeconds,potentialCount:(r.prepared as any).potentialCount,currentCount:(r.prepared as any).currentCount,plannedBytes:(r.prepared as any).plannedBytes,fieldOperator:(r.prepared as any).candidate?.fieldOperator,trainingJobs:(r.prepared as any).stageSeconds?.trainingJobs}});
+   model={id:block.id,kind:'network',ports,data:r.model};magneticBlocks.push(localMagneticBlock(block.id,r.prepared));evidence.push({id:block.id,kind:block.kind,cache:r.cache,stageCounts:r.stageCounts,resources:r.resources,nativePreparation:{stageSeconds:(r.prepared as any).stageSeconds,potentialCount:(r.prepared as any).potentialCount,currentCount:(r.prepared as any).currentCount,plannedBytes:(r.prepared as any).plannedBytes,fieldOperator:(r.prepared as any).candidate?.fieldOperator,trainingJobs:(r.prepared as any).stageSeconds?.trainingJobs}});
   }
   const latest=evidence.at(-1) as any;latest.lifecycle={activeHeavyBlocks:1,concurrency:'synchronous sequential extraction',memoryBefore,memoryAfter:process.memoryUsage(),processHighWaterRssBytes:process.resourceUsage().maxRSS*1024,wallSeconds:(performance.now()-blockStarted)/1000,releaseEvidence:'Native full factors have preparation-scope ownership; returned reduced DTO/cache may retain field/material/training data. RSS includes allocator retention and is not live factor bytes.'};
   if(process.env.P7_BLOCK_LIFECYCLE==='1')process.stderr.write(JSON.stringify({event:'P7_BLOCK_END',id:block.id,kind:block.kind,lifecycle:latest.lifecycle})+'\n');
   if(model.ports.length!==block.cuts.length)fail('Model/cut port count mismatch: '+block.id);
   instances.push({id:block.id,model,ports:model.ports});
  }
+ if(magneticBlocks.length&&magneticBlocks.length!==plan.blocks.length)fail('Incomplete spatial metadata for automatic mutual-inductance assembly');
+ const instanceInductanceH:{a:string;b:string;localA:number;localB:number;valueH:number}[]=[];let magneticCoupling:any=null;
+ if(magneticBlocks.length>1||magneticBlocks.some(b=>b.directSelf)){
+  magneticCoupling=execute({kind:'channel-magnetic',request:{blocks:magneticBlocks,order:16,budget:{...budget,maxSeconds:remaining()}}});
+  for(const c of magneticCoupling.couplings)for(let i=0;i<c.matrixH.length;i++)for(let j=0;j<c.matrixH[i].length;j++)instanceInductanceH.push({a:c.a,b:c.b,localA:i,localB:j,valueH:c.matrixH[i][j]});
+  // A finite section needs the same free-space volume operator for self and
+  // mutual terms. Its uniform-current volume integral also includes the DC
+  // internal contribution, so replace rather than append the 2D/DC entries.
+  for(const self of magneticCoupling.selfMatrices??[]){
+   const instance=instances.find(v=>v.id===self.id)??fail('Direct self references an unknown block: '+self.id),data=instance.model.data as any,n=data.currentDofs?.length;
+   if(data.format!=='coupled-rlc'||!Number.isInteger(n)||self.matrixH.length!==n||self.matrixH.some((row:any)=>!Array.isArray(row)||row.length!==n||row.some((v:any)=>!Number.isFinite(v))))fail('Invalid direct section self matrix: '+self.id);
+   data.inductanceH=self.matrixH.flatMap((row:number[],i:number)=>row.map((value,j)=>[i,j,value]));
+  }
+ }
  const {connections,connectionContacts,ports}=channelTopology(plan);
  // Every descriptor retains distinct physical signal and return cut terminals.
  // P6 handles the complete branched multiport matrix, including local RLC.
- const result=execute({kind:'frequency-network',request:{instances,connections,connectionContacts,ports,frequencies,representation:'S',referenceOhm:ports.map(()=>50),budget:{...budget,maxSeconds:remaining()}}});
+ const result=execute({kind:'frequency-network',request:{instances,connections,connectionContacts,ports,frequencies,representation:'S',referenceOhm:ports.map(()=>50),instanceInductanceH,budget:{...budget,maxSeconds:remaining()}}});
  if(result.status!=='complete')fail('P6 assembly refused: '+JSON.stringify(result.diagnostics));
- return {result,evidence,bandHz:band,ownership:plan.blocks.map(b=>({id:b.id,ownership:b.ownership})),wallSeconds:(performance.now()-started)/1000};
+ return {result,evidence,bandHz:band,magneticCoupling,ownership:plan.blocks.map(b=>({id:b.id,ownership:b.ownership})),wallSeconds:(performance.now()-started)/1000};
 }
 
 /** Physical face topology shared by extraction and diagnostic replay. */
@@ -103,15 +119,61 @@ export function channelTopology(plan:SegmentedChannel){
  return {connections,connectionContacts,ports};
 }
 
+function sectionLayout(p:any,line:any,frequencies:number[]){
+ if(p.frequencyDependent)fail('Dispersive descriptor requires verified causal realization');
+ const n=p.capacitanceFPerM.length,length=line.lengthMm*1e-3;
+ if(!(length>0)||!Number.isFinite(length)||n<1||n>16)fail('Positive finite propagation length and conductor count required');
+ const delay=Math.max(...p.modes.map((m:any)=>m.delaySPerM));
+ const cells=Math.max(1,Math.ceil(2*Math.PI*Math.max(...frequencies)*length*delay/.01));if(cells>256||(n+1)*(cells+1)>1024||n*cells>1536)fail('Distributed descriptor cell budget');
+ return {n,length,cells,cellLength:length/cells};
+}
+/** Native local current basis in board coordinates. The mesh XY origin is ROI
+ * relative; Z is already relative to the common board stack datum. */
+export function localMagneticBlock(id:string,p:any){
+ const candidate=p?.candidate,dofs=candidate?.model?.currentDofs?.length,basis=candidate?.currentBasis,nodes=p?.nodesM,cells=p?.copperCells,density=p?.cellDensityPerAmpM2,origin=p?.originMm;
+ if(!Number.isInteger(dofs)||dofs<1||!Array.isArray(basis)||basis.length!==dofs||!Array.isArray(nodes)||!Array.isArray(cells)||!cells.length||!Array.isArray(density)||density.length!==cells.length||!Array.isArray(origin)||origin.length!==2||origin.some((v:number)=>!Number.isFinite(v)))fail('Incomplete local magnetic current basis: '+id);
+ return {id,dofs,cells:cells.map((t:number[],c:number)=>{
+  if(t.length!==4||t.some(i=>!Number.isInteger(i)||i<0||i>=nodes.length)||!Number.isFinite(density[c]))fail('Invalid local magnetic cell: '+id);
+  const verticesM=t.map(i=>{const q=nodes[i];if(!Array.isArray(q)||q.length!==3||q.some((v:number)=>!Number.isFinite(v)))fail('Invalid local magnetic vertex: '+id);return [q[0]+origin[0]*1e-3,q[1]+origin[1]*1e-3,q[2]];});
+  const currentsPerAmpM2=basis.map((row:number[],d:number)=>{if(!Array.isArray(row)||row.length!==3*cells.length)fail('Local current basis shape mismatch: '+id);return [0,1,2].map(axis=>{const v=density[c]*row[3*c+axis];if(!Number.isFinite(v))fail('Nonfinite local magnetic basis: '+id);return v;});});
+  return {verticesM,currentsPerAmpM2};
+ })};
+}
+/** Constant longitudinal J on the exact triangular-prism decomposition of each
+ * section conductor/cell. Signal +I and reference -I are both transported. */
+export function sectionMagneticBlock(id:string,line:any,p:any,frequencies:number[],spatial:{originMm:Point;direction:Point}){
+ const {n,length,cells,cellLength}=sectionLayout(p,line,frequencies);
+ if(line.kind!=='polygon-section')fail('Spatial mutuals require an exact polygon section: '+id);
+ const norm=Math.hypot(...spatial.direction),origin=spatial.originMm,d=spatial.direction;
+ if(origin.length!==2||d.length!==2||[...origin,...d].some(v=>!Number.isFinite(v))||Math.abs(norm-1)>1e-12)fail('Invalid section spatial frame: '+id);
+ const tangent:Point=[-d[1],d[0]],all=line.geometry?.conductors,signals=all?.filter((m:any)=>m.role!=='reference')??[],references=all?.filter((m:any)=>m.role==='reference')??[];
+ if(!Array.isArray(all)||signals.length!==n||references.length!==1)fail('Section signal/reference magnetic basis mismatch: '+id);
+ const out:any[]=[];
+ for(const [conductorIndex,metal]of [...signals,references[0]].entries()){
+  const contour=metal.contour,ring=contour?.outerM;
+  if(!Array.isArray(ring)||ring.length<3||contour.holesM?.length)fail('Section magnetic support requires a simple contour without holes: '+id);
+  const mesh=triangles(ring),conductorArea=mesh.reduce((s,t)=>s+area(t),0);if(!(conductorArea>0)||!Number.isFinite(conductorArea))fail('Nonpositive section magnetic area: '+id);
+  for(let k=0;k<cells;k++)for(const triangle of mesh){
+   const longitudinal=[-length/2+k*cellLength,-length/2+(k+1)*cellLength];
+   // sectionLayout and outerM are already SI; only the authored origin is mm.
+   const prism=triangle.map(q=>[0,1].map(z=>{const xy=[origin[0]*1e-3+d[0]*longitudinal[z]+tangent[0]*q[0],origin[1]*1e-3+d[1]*longitudinal[z]+tangent[1]*q[0]];return [xy[0],xy[1],q[1]];}));
+   const b=[prism[0][0],prism[1][0],prism[2][0]],t=[prism[0][1],prism[1][1],prism[2][1]];
+   for(const verticesM of [[b[0],b[1],b[2],t[0]],[b[1],b[2],t[0],t[1]],[b[2],t[0],t[1],t[2]]]){
+    const currentsPerAmpM2=Array.from({length:n*cells},(_,dof)=>{
+     const active=Math.floor(dof/n)===k&&(conductorIndex===n||dof%n===conductorIndex),sign=conductorIndex===n?-1:1;
+     const scale=active?sign/conductorArea:0;return [d[0]*scale,d[1]*scale,0];
+    });out.push({verticesM,currentsPerAmpM2});
+   }
+  }
+ }
+ return {id,dofs:n*cells,directSelf:true,cells:out};
+}
+
 /** Passive Pi discretization of the actual FEM coefficients. Independent
  * signal/return terminals and structural common-potential gauges survive P6.
  * Each cell phase <=0.01rad; this is a discretization guard, not PCB accuracy. */
 export function sectionDescriptor(p:any,line:any,frequencies:number[],dc?:{resistanceOhmPerM:number[][];internalInductanceHPerM:number[][]}){
- if(p.frequencyDependent)fail('Dispersive descriptor requires verified causal realization');
- const n=p.capacitanceFPerM.length,length=line.lengthMm*1e-3,C=reciprocalTransport(p.capacitanceFPerM),L=reciprocalTransport(p.inductanceHPerM);
- if(!(length>0)||!Number.isFinite(length)||n<1||n>16)fail('Positive finite propagation length and conductor count required');
- const delay=Math.max(...p.modes.map((m:any)=>m.delaySPerM));
- const cells=Math.max(1,Math.ceil(2*Math.PI*Math.max(...frequencies)*length*delay/.01));if(cells>256||(n+1)*(cells+1)>1024||n*cells>1536)fail('Distributed descriptor cell budget');
+ const {n,length,cells}=sectionLayout(p,line,frequencies),C=reciprocalTransport(p.capacitanceFPerM),L=reciprocalTransport(p.inductanceHPerM);
  const potentialNodes=Array.from({length:(n+1)*(cells+1)},(_,i)=>String(i));
  const incidence:number[][]=[],inductanceH:number[][]=[],resistanceOhm:number[][]=[];
  const cap=new Map<string,number>();const stamp=(i:number,j:number,v:number)=>{const k=i+','+j;cap.set(k,(cap.get(k)??0)+v);};

@@ -2,6 +2,7 @@
 mod field;
 pub mod polygon_section;
 pub mod board_section;
+pub mod channel_magnetic;
 pub mod section_cache;
 mod geometry;
 pub mod local;

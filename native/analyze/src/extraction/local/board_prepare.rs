@@ -1,6 +1,6 @@
 //! Shared local direct-FEM preparation and developer verification.
 //! CPU/F64, explicit physical requests, no external diagnostic process.
-use super::{board_mesh,conservative_current::ConservativeSpace,volume_current,volume_field,volume_magnetic,volume_reduction,volume_solve,AllocationBudget};
+use super::{board_mesh,conservative_current::ConservativeSpace,volume_current,volume_field,volume_integral_magnetic,volume_reduction,volume_solve,AllocationBudget};
 use crate::electrical::{coupled,Counters};
 use super::volume_field::ElectricApply;
 use super::volume_magnetic::MagneticApply;
@@ -169,7 +169,7 @@ pub struct Options<'a> {
 /// This is a v1 configuration, not a complete spatial accuracy certificate.
 pub fn accepted_electric_request(r:&board_mesh::Request)->board_mesh::Request {
     let mut field=r.clone();
-    field.air_margin_m=0.008;
+    field.air_margin_m=r.electric_air_margin_m.unwrap_or(0.008);
     field.max_vertical_step_m=r.max_vertical_step_m.min(0.0005);
     field.interface_step_m=Some(0.000025);
     field.interface_growth=Some(2.);
@@ -251,9 +251,7 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
         let action_bytes=16*1024*1024;
         let magnetic_budget=AllocationBudget{max_bytes:budget.max_bytes.checked_sub(live).and_then(|n|n.checked_sub(super::magnetic_actions::Reuse::reservation(&currents,action_bytes).ok()?)).ok_or("magnetic live budget exhausted")?,..budget};
         let stage=std::time::Instant::now();
-        let magnetic_operator=volume_magnetic::Operator::new_enriched_patch_air(
-            &b.mesh,magnetic_budget,magnetic_config[2],magnetic_config[0],
-            magnetic_config[1],magnetic_config[3],magnetic_air_degree)?;
+        let magnetic_operator=volume_integral_magnetic::Operator::new(&b.mesh,magnetic_budget,12)?;
         let magnetic=super::magnetic_actions::Reuse::new(&magnetic_operator,&currents,action_bytes)?;
         record_stage(&mut stages,"magneticAssemblyAndFactor",stage);
         eprintln!("magnetic factor plan {} bytes",magnetic.planned_bytes());

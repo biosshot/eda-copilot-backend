@@ -3,7 +3,7 @@
 use super::*;
 use crate::electrical::frequency::{math, Request};
 pub fn calculate(request: &Request) -> Result<Value> {
-    if request.instances.len() != 1 || !request.connections.is_empty() {
+    if request.instances.len() != 1 || !request.connections.is_empty() || !request.instance_inductance_h.is_empty() {
         return assembled(request);
     }
     let instance = &request.instances[0];
@@ -170,6 +170,7 @@ fn assembled(request: &Request) -> Result<Value> {
         connections: request.connections.clone(),
         connection_contacts: request.connection_contacts.clone(),
         ports: request.ports.clone(),
+        instance_inductance_h: request.instance_inductance_h.clone(),
     };
     let built = composition::build_for(
         &topology,
@@ -205,6 +206,7 @@ fn assembled(request: &Request) -> Result<Value> {
     }];
     inner.connections.clear();
     inner.connection_contacts = None;
+    inner.instance_inductance_h.clear(); // Already inserted into the assembled descriptor exactly once.
     inner.ports = inner
         .ports
         .iter()

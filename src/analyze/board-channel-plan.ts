@@ -34,6 +34,10 @@ export function createBoardChannelPlanner(board: any, base2: any, contacts: {
     sourcePath: string;
     layer: string;
 }[]) {
+    // The generic local default is too coarse to refine the already constrained
+    // coupon mesh. Automatic channels start from the verified current grid;
+    // level 2 then performs a real fourfold area refinement instead of a no-op.
+    base2 = { ...base2, maxTriangleAreaM2: Math.min(base2.maxTriangleAreaM2, 5e-8) };
     const execute = createProblemExecutor(true), boardJson = JSON.stringify(board), snapshot = JSON.parse(boardJson);
     const g = capturedBoardGeometry(boardJson);
     return (options: Options = {}): SegmentedChannel & {
@@ -326,7 +330,8 @@ export function createBoardChannelPlanner(board: any, base2: any, contacts: {
                     internal.push(4e-7 * Math.PI * th / (12 * w));
                 }
                 const n = resistance.length - 1, matrix2 = (v: any) => Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_2, j) => v[n] + (i === j ? v[i] : 0)));
-                blocks.push({ id: cell.id, kind: "section", line: { kind: "polygon-section", lengthMm: long[1] - long[0], geometry: mid.geometry }, dcConductors: { resistanceOhmPerM: matrix2(resistance), internalInductanceHPerM: matrix2(internal) }, cuts: ends.flatMap(orderedCuts), ownership: own, bandHz: [1e3, 1e4] });
+                const sectionMeshFactor = options.magneticPatchLevel === 1 ? 1 : 0.5;
+                blocks.push({ id: cell.id, kind: "section", line: { kind: "polygon-section", lengthMm: long[1] - long[0], geometry: { ...mid.geometry, maxTriangleAreaM2: mid.geometry.maxTriangleAreaM2 * sectionMeshFactor } }, spatial: { originMm: midOrigin, direction: d }, dcConductors: { resistanceOhmPerM: matrix2(resistance), internalInductanceHPerM: matrix2(internal) }, cuts: ends.flatMap(orderedCuts), ownership: own, bandHz: [1e3, 1e4] });
             }
             else {
                 const electrodes: any[] = [], pairs: string[][] = [], cuts: ChannelCut[] = [], cutPlanes: Record<string, unknown> = {}, names = new Map<string, string>();
@@ -361,7 +366,10 @@ export function createBoardChannelPlanner(board: any, base2: any, contacts: {
                 if (!pairs.length)
                     fail("Unconnected explicit local cell; a joint domain is required");
                 const x = range(cell.polygonMm, [1, 0]), y = range(cell.polygonMm, [0, 1]);
-                blocks.push({ id: cell.id, kind: "local", boardJson, geometry: { ...base2, roiMm: [[x[0], y[0]], [x[1], y[1]]], domainPolygonMm: cell.polygonMm, electrodes, ports: pairs, cutPlanes }, magneticPatchLevel: options.magneticPatchLevel ?? 1, cuts, ownership: own, bandHz: [1e3, 1e4] });
+                // The magnetic volume integral has no patch/domain mesh of its own.
+                // Spatial levels therefore refine the actual current/electric mesh.
+                const meshFactor = options.magneticPatchLevel === 1 ? 1 : 0.25;
+                blocks.push({ id: cell.id, kind: "local", boardJson, geometry: { ...base2, maxTriangleAreaM2: base2.maxTriangleAreaM2 * meshFactor, roiMm: [[x[0], y[0]], [x[1], y[1]]], coordinateOriginMm: base2.roiMm[0], electricAirMarginM: 0.008 * (options.domainScale ?? 1), domainPolygonMm: cell.polygonMm, electrodes, ports: pairs, cutPlanes }, magneticPatchLevel: options.magneticPatchLevel ?? 1, cuts, ownership: own, bandHz: [1e3, 1e4] });
             }
         }
         const barrelOwnership=g.holes.filter(h=>h.plated&&h.span_confirmed).flatMap(h=>{

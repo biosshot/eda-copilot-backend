@@ -21,6 +21,9 @@ pub struct Layer {
 #[serde(deny_unknown_fields,rename_all="camelCase")]
 pub struct Request {
     pub roi_mm:[[f64;2];2],
+    /// Numerical local-coordinate datum, independent of domain expansion.
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    pub coordinate_origin_mm:Option<[f64;2]>,
     #[serde(default,skip_serializing_if="Option::is_none")]
     pub domain_polygon_mm:Option<Vec<[f64;2]>>,
     pub stack:Vec<Layer>,
@@ -28,6 +31,10 @@ pub struct Request {
     pub finished_hole_plating_m:Option<f64>,
     pub barrel_conductivity_s_m:Option<f64>,
     pub air_margin_m:f64,
+    /// Optional exterior boundary for the independently admitted electric field.
+    /// The current/magnetic ROI and its air mesh remain unchanged.
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    pub electric_air_margin_m:Option<f64>,
     #[serde(default)]
     pub air_edge_divisions:Option<usize>,
     /// Field-only air refinement. Far rings can remain coarse independently.
@@ -199,12 +206,13 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
 pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration,support:Option<(&[[f64;2]],&[[usize;3]])>)->Result<BoardMesh> {
     let start=Instant::now();
     if r.electric_max_edge_m.is_some_and(|v|!v.is_finite()||v<=0.||v>0.1){return Err(error("BOARD_PROFILE","positive finite electric refinement spacing required"));}
+    if r.electric_air_margin_m.is_some_and(|v|!v.is_finite()||v<=0.){return Err(error("BOARD_PROFILE","positive finite electric air margin required"));}
     if r.interface_step_m.is_some_and(|s|!s.is_finite()||s<=0.) {return Err(error("BOARD_PROFILE","positive finite interface step required"));}
     if r.interface_growth.is_some_and(|s|!s.is_finite()||!(1.1..=2.).contains(&s))||r.interface_growth.is_some()&&r.interface_step_m.is_none() {return Err(error("BOARD_PROFILE","interface growth1.1..2 requires an interface step"));}
     if r.air_far_edge_divisions.is_some_and(|n|!(1..=32).contains(&n))||r.air_first_step_m.is_some_and(|v|!v.is_finite()||v<=0.||v>r.air_margin_m)||r.air_near_distance_m.is_some_and(|v|!v.is_finite()||v<=0.||v>r.air_margin_m)||r.air_far_edge_divisions.is_some()&&r.air_near_distance_m.is_none()||r.bore_refinement_rings.is_some_and(|n|n>4){return Err(error("BOARD_PROFILE","finite positive air grading, near/far divisions1..32 and bore rings0..4 required"));}
     if r.air_edge_divisions.is_some_and(|n|!(1..=32).contains(&n)){return Err(error("BOARD_PROFILE","air edge divisions must lie in1..32"));}
     if r.min_triangle_angle_deg.is_some_and(|a|!a.is_finite()||!(0.0..=30.0).contains(&a)) {return Err(error("BOARD_PROFILE","minimum triangle angle must lie in0..30 degrees"));}
-    if r.roi_mm.iter().flatten().any(|v|!v.is_finite()) || (0..2).any(|k|r.roi_mm[1][k]<=r.roi_mm[0][k]) || r.stack.len()<3 || r.finished_hole_plating_m.is_some_and(|v|!v.is_finite()||v<=0.) || r.barrel_conductivity_s_m.is_some_and(|v|!v.is_finite()||v<=0.) || !r.air_margin_m.is_finite() || r.air_margin_m<=0. || !r.max_triangle_area_m2.is_finite() || r.max_triangle_area_m2<=0. || !r.max_vertical_step_m.is_finite() || r.max_vertical_step_m<=0. {
+    if r.coordinate_origin_mm.is_some_and(|p|p.iter().any(|v|!v.is_finite())) || r.roi_mm.iter().flatten().any(|v|!v.is_finite()) || (0..2).any(|k|r.roi_mm[1][k]<=r.roi_mm[0][k]) || r.stack.len()<3 || r.finished_hole_plating_m.is_some_and(|v|!v.is_finite()||v<=0.) || r.barrel_conductivity_s_m.is_some_and(|v|!v.is_finite()||v<=0.) || !r.air_margin_m.is_finite() || r.air_margin_m<=0. || !r.max_triangle_area_m2.is_finite() || r.max_triangle_area_m2<=0. || !r.max_vertical_step_m.is_finite() || r.max_vertical_step_m<=0. {
         return Err(error("BOARD_PROFILE","finite ROI, full stack, finished-hole plating, material, air and mesh profile required"));
     }
     if r.cut_planes.keys().any(|name|!r.electrodes.iter().any(|e|&e.name==name)){return Err(error("BOARD_CUT","cut plane has no physical electrode"));}
@@ -438,7 +446,9 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
         max_copper_area_change=max_copper_area_change.max(change);shape.0=canonical;
     }
     for(i,e)in r.electrodes.iter().enumerate(){electrode_polygons.insert(e.name.clone(),member_set(2+physical_count+i));}
-    let origin_mm=roi_bounds[0];
+    // Keep an explicit stable numerical datum. Domain expansion changes the
+    // physical air/ROI request but must not retranslate identical copper.
+    let origin_mm=r.coordinate_origin_mm.unwrap_or(r.roi_mm[0]);
     let mut cdt=ConstrainedDelaunayTriangulation::<Point2<f64>>::new();
     // Every ring, including all overlapping source boundaries, constrains the
     // one XY arrangement. Split intersections rather than centroid ownership on

@@ -5,6 +5,18 @@ import type { AnalysisProblem, AnalysisResult } from './types.ts';
 
 let workerModelCache:LocalModelCache|undefined;
 
+function validateChannelMagneticCache(value:any,physical:any,budget:any){
+ const memory=budget?.maxMemoryMiB??1024,seconds=budget?.maxSeconds??300;
+ if(!Number.isFinite(seconds)||seconds<=0||!Number.isFinite(memory)||memory<=0||memory>4096)throw new Error('CHANNEL_MAGNETIC_BUDGET: finite positive bounded budgets required');
+ if(value?.status!=='complete'||value.quadratureOrder!==(physical.order??12)||!Number.isFinite(value.plannedBytes)||value.plannedBytes<0||value.plannedBytes>memory*1048576||!Array.isArray(value.couplings)||!Array.isArray(value.selfMatrices))throw new Error('CHANNEL_MAGNETIC_CACHE: complete admitted result required');
+ const blocks=physical.blocks,couplings=value.couplings,self=value.selfMatrices;
+ if(couplings.length!==blocks.length*(blocks.length-1)/2||self.length!==blocks.filter((b:any)=>b.directSelf).length)throw new Error('CHANNEL_MAGNETIC_CACHE: block coverage changed');
+ let ci=0,si=0;for(let a=0;a<blocks.length;a++){
+  if(blocks[a].directSelf){const m=self[si++];if(m.id!==blocks[a].id||m.matrixH.length!==blocks[a].dofs||m.matrixH.some((r:any)=>!Array.isArray(r)||r.length!==blocks[a].dofs||r.some((v:any)=>!Number.isFinite(v))))throw new Error('CHANNEL_MAGNETIC_CACHE: invalid self matrix');}
+  for(let b=0;b<a;b++){const m=couplings[ci++];if(m.a!==blocks[a].id||m.b!==blocks[b].id||m.matrixH.length!==blocks[a].dofs||m.matrixH.some((r:any)=>!Array.isArray(r)||r.length!==blocks[b].dofs||r.some((v:any)=>!Number.isFinite(v))))throw new Error('CHANNEL_MAGNETIC_CACHE: invalid coupling matrix');}
+ }
+}
+
 /** Used only inside the existing process workers. DSL calls native in its own
  * disposable process, so cancellation cannot orphan a nested native worker. */
 export function createProblemExecutor(retainDcForScenario = false) {
@@ -21,6 +33,7 @@ export function createProblemExecutor(retainDcForScenario = false) {
       const activeProfile=process.env.P7_MAGNETIC_PROFILE??'baseline';if(magneticProfile!==undefined&&magneticProfile!==activeProfile)throw new Error('LOCAL_CACHE: magnetic profile changed during executor lifetime');const activePrecision=selectedMagneticPrecision();if(magneticPrecision!==undefined&&magneticPrecision!==activePrecision)throw new Error("LOCAL_CACHE: magnetic precision changed during executor lifetime");coreIdentity ??= localCoreIdentity();magneticProfile=activeProfile;magneticPrecision=activePrecision;
       const key=localExtractionKey(localCache,coreIdentity,r);
       const cached=localCache.obtain(key,()=>({...electrical!.prepareLocal(r.boardJson,r.geometry,remaining(),r.magneticPatchLevel),extraction:{schema:1,coreIdentity,magneticProfile,magneticPrecision,magneticPatchLevel:r.magneticPatchLevel??null,bandHz:r.bandHz,units:{position:'m',C:'F',L:'H',R:'Ohm',current:'A',loss:'W'},references:'physical finite differential ports; exterior capacitance retained',validation:{status:'conditional',electric:'accepted-v1',fullReduced:'incomplete'},assumptions:[(r.geometry as {allowInsulatedCopperCuts?:boolean}).allowInsulatedCopperCuts?'insulated ROI cuts':'complete copper islands; no insulated cuts','explicit materials/plating','finite exterior domain','no dielectric loss or arbitrary RF applicability']}}),prepared=>{const p=prepared as any;if(p.extraction?.schema!==1||p.extraction.coreIdentity!==coreIdentity||p.extraction.magneticProfile!==magneticProfile||p.extraction.magneticPrecision!==magneticPrecision||p.extraction.validation?.status!=='conditional'||p.extraction.magneticPatchLevel!==(r.magneticPatchLevel??null)||JSON.stringify(p.extraction.bandHz)!==JSON.stringify(r.bandHz))throw new Error('LOCAL_CACHE: metadata/version/band refusal');electrical!.solveLocal({prepared,frequenciesHz:[]},remaining());});
+      if(process.env.P7_CACHE_DEBUG==='1')process.stderr.write('P7_CACHE '+JSON.stringify({dir:localCache.dir,key,status:cached.evidence.status,writeFailed:cached.evidence.writeFailed})+'\n');
       remaining();const response=electrical.solveLocal({prepared:cached.value,frequenciesHz:r.frequenciesHz,drive:r.drive,loadsOhm:r.loadsOhm},remaining(),r.observablesOnly);
       remaining();result={...response,prepared:cached.value,cache:{...cached.evidence,training:cached.evidence.status==='cold'?cached.value.candidate.training.length:0},resources:{peakRssBytes:process.resourceUsage().maxRSS*1024}};
       }catch(error){if(error&&typeof error==='object')Object.assign(error,{localResources:{peakRssBytes:process.resourceUsage().maxRSS*1024,metric:'OS worker process high-water RSS including Node and preceding native work'}});throw error;}finally{if(!retainDcForScenario){electrical.clear();electrical=undefined;}}
@@ -50,6 +63,16 @@ export function createProblemExecutor(retainDcForScenario = false) {
     else if (problem.kind === 'frequency-network') {
       electrical ??= new addon.AnalysisElectricalSession();
       try { result=electrical.solveFrequency(problem.request); }
+      finally {if(!retainDcForScenario){electrical.clear();electrical=undefined;}}
+    }
+    else if (problem.kind === 'channel-magnetic') {
+      electrical ??= new addon.AnalysisElectricalSession();
+      try {
+        const {budget,...physical}=problem.request as any;coreIdentity??=localCoreIdentity();
+        const key=localCache.key({core:coreIdentity,kind:'channel-magnetic-v1',request:physical});
+        const cached=localCache.obtain(key,()=>electrical!.solveChannelMagnetic(problem.request),value=>validateChannelMagneticCache(value,physical,budget));
+        result={...cached.value,elapsedMs:cached.evidence.status==='cold'?cached.value.elapsedMs:cached.evidence.restoreSeconds*1000,cache:cached.evidence};
+      }
       finally {if(!retainDcForScenario){electrical.clear();electrical=undefined;}}
     }
     else if (problem.kind === 'electrical-network') {

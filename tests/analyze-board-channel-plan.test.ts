@@ -34,6 +34,19 @@ test('channel refinement reuses one captured board and preserves independent pla
   const plan=createBoardChannelPlanner(board,base,contacts);
   const initial=plan();
   assert.deepEqual(plan({domainScale:2,magneticPatchLevel:2}),boardChannelPlan(board,base,contacts,{domainScale:2,magneticPatchLevel:2}));
+  const coarse=plan({magneticPatchLevel:1}),fine=plan({magneticPatchLevel:2}),expanded=plan({domainScale:2,magneticPatchLevel:1});
+  assert.ok(coarse.blocks.filter((b:any)=>b.kind==='local').every((b:any)=>b.geometry.maxTriangleAreaM2===5e-8));
+  for(const [index,block]of coarse.blocks.entries())if(block.kind==='local'){
+   assert.deepEqual(block.geometry.coordinateOriginMm,base.roiMm[0]);
+   assert.deepEqual((fine.blocks[index]as any).geometry.coordinateOriginMm,block.geometry.coordinateOriginMm);
+   assert.deepEqual((expanded.blocks[index]as any).geometry.coordinateOriginMm,block.geometry.coordinateOriginMm);
+   assert.equal(block.geometry.electricAirMarginM,.008);
+   assert.equal((expanded.blocks[index]as any).geometry.electricAirMarginM,.016);
+  }
+  for(const [a,b]of coarse.blocks.map((block:any,i:number)=>[block,fine.blocks[i]])){
+   if(a.kind==='local')assert.equal(a.geometry.maxTriangleAreaM2,4*b.geometry.maxTriangleAreaM2);
+   else assert.equal(a.line.geometry.maxTriangleAreaM2,2*b.line.geometry.maxTriangleAreaM2);
+  }
   // A caller edit cannot change the board already captured for this calculation.
   board.pads=[];
   assert.deepEqual(plan(),initial);

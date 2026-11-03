@@ -331,6 +331,12 @@ impl AnalysisElectricalSession {
         Ok(pcb_analyze::electrical::frequency::run(request))
     }
     #[napi]
+    pub fn solve_channel_magnetic(&mut self, request: Value) -> Result<Value> {
+        let request=serde_json::from_value::<pcb_analyze::extraction::channel_magnetic::Request>(request)
+            .map_err(|e| napi::Error::from_reason(format!("Invalid channel magnetic request: {e}")))?;
+        pcb_analyze::extraction::channel_magnetic::run(request).map_err(napi::Error::from_reason)
+    }
+    #[napi]
     pub fn solve_transient(&mut self, request: Value) -> Result<Value> {
         let request=serde_json::from_value::<pcb_analyze::electrical::coupled::time::Request>(request)
             .map_err(|e| napi::Error::from_reason(format!("Invalid transient request: {e}")))?;
