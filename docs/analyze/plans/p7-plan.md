@@ -48,6 +48,8 @@ P7 не заменяет весь DSL: P8 строит PI, P11 — SI/TDR/eye/ti
 
 Режим выбирается явно. Fast не подменяет precise молча: результат fast всегда идёт с warning и validity. Precise — по умолчанию для приёмки; fast — для быстрых оценок и больших плат.
 
+**Термины.** «2.5D» здесь означает слоистый подход: 2D-сечения по слоям, физические связи между слоями и эквивалентные модели переходов. Это не планарный MoM и не full-wave; планарный MoM — P13. Локальный 3D-блок — это модель перехода внутри 2.5D-подхода, а не отказ от него.
+
 ## 2. Проверенный исходный статус
 
 Источники: [route results](../evidence/p7-route-partition-results.md), [oriented contacts](../evidence/p7-oriented-boundaries-results.md), [memory audit](../evidence/p7-memory-architecture-audit.md), [integration/cache](../evidence/p6-p7-integration-acceptance.md), [HF prerequisite](../reference/p7-extraction/p7-hf-operator-design.md), [последний прототип](../evidence/p7-shared-return-prototype-results.md).
