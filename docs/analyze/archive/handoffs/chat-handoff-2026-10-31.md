@@ -17,11 +17,11 @@ Backend: `D:/MyProject/NN/projects/Agents/easyeda-copilot/eda-copilot-backend`. 
 ## Основные документы
 
 - [Общий план P0–P15](../../plans/implementation-plan.md): состав/зависимости. Нижние датированные статусы исторические, не текущие сертификаты.
-- [Единый план закрытия P7](../../plans/p7-real-channel-closure-plan.md): главный текущий архитектурный план, A–H. Прежние `next-task-*` не являются одновременно активными.
-- [Архитектура модулей](../../reference/implementation-structure.md), [математические методы](../../reference/numerical-architecture.md).
-- [DSL reference](../../reference/dsl-reference.md), [рабочий контракт](../../reference/dsl-working-contract.md), [решения сценариев](../../reference/dsl-scenario-decisions.md), [примеры плат](../../reference/dsl-board-scenarios.md).
-- [RoutingBoardV2 TypeScript](../../reference/routing-board-v2-shape.md), [аудит достаточности](../../reference/routing-board-v2-sufficiency.md), [корпус/валидация](../../reference/validation-corpus.md).
-- [Аудит магнитной памяти](../../evidence/p7-memory-architecture-audit.md), [HF prerequisite](../../reference/p7-hf-operator-design.md), [P6/P7 интеграция и кэш](../../evidence/p6-p7-integration-acceptance.md).
+- [Единый план закрытия P7](../../plans/p7-plan.md): главный текущий архитектурный план, A–H. Прежние `next-task-*` не являются одновременно активными.
+- [Архитектура модулей](../../reference/architecture/implementation-structure.md), [математические методы](../../reference/architecture/numerical-architecture.md).
+- [DSL reference](../../reference/dsl/dsl-reference.md), [рабочий контракт](../../reference/dsl/dsl-working-contract.md), [решения сценариев](../../reference/dsl/dsl-scenario-decisions.md), [примеры плат](../../reference/dsl/dsl-board-scenarios.md).
+- [RoutingBoardV2 TypeScript](../../reference/input/routing-board-v2-shape.md), [аудит достаточности](../../reference/input/routing-board-v2-sufficiency.md), [корпус/валидация](../../reference/architecture/validation-corpus.md).
+- [Аудит магнитной памяти](../../evidence/p7-memory-architecture-audit.md), [HF prerequisite](../../reference/p7-extraction/p7-hf-operator-design.md), [P6/P7 интеграция и кэш](../../evidence/p6-p7-integration-acceptance.md).
 - [Текущее задание D1](../tasks/next-task-p7-d1-coupled-assembly.md) и **[его новый отчёт, ожидающий ревью](../../evidence/p7-d1-coupled-assembly-results.md)**.
 
 DSL согласован ранее, заново его не проектировать. JS-код выполняется последовательно, builders запускают расчёты через `.run()`, результаты используются в `a.check/a.plot` и следующих вычислениях. `a.check` записывает провал и не прерывает сценарий. Контексты физических параметров принадлежат конкретному анализу; используются globals board/profiles/models, компоненты — массив с designator. При отсутствии ручных токов по пинам ток выбранной сети/возврат распределяются поровну, допущения в отчёте; ручные значения приоритетны. SI: `.channels()`, drivers/receivers, `.timing()` результата; `a.differential()` — описание пары. EMI использует `.excitations()`. `a.model()` принимает универсальные модели, включая network parameters; Attenuator Pad — конкретная модель. Обычный PCB DSL не должен требовать пользовательского прямоугольного scope.
@@ -30,7 +30,7 @@ DSL согласован ранее, заново его не проектиро
 
 Ранее созданы V2 exporter/fixtures, Node addon/worker, executable DSL, геометрия/связность/mesh, PCB DC, P6 электрические сети и часть extraction. Существуют реальные тесты плат/графики. Импорт и прохождение DC не означают EM-точность. Корпус начинался с восьми плат; исходная цель ≥20/полный аудит не объявляется выполненной этим чатом. P4 fallback refill и многие поздние возможности остаются открытыми.
 
-Thermal развивался независимо; пользователь попросил остановить дальнейшую оптимизацию при базовой приемлемой работе. Принята политика допуска `max(0.1 °C, 1% от нагрева)`: [thermal policy](../../reference/thermal-convergence-policy.md), [сокращение уточнений](../../evidence/thermal-refinement-stopping-verification.md), [extended transient](../../evidence/thermal-extended-transient-verification.md). Не возобновлять Thermal автоматически и не объявлять весь P9 завершённым по этой краткой сводке.
+Thermal развивался независимо; пользователь попросил остановить дальнейшую оптимизацию при базовой приемлемой работе. Принята политика допуска `max(0.1 °C, 1% от нагрева)`: [thermal policy](../../reference/p9-thermal/thermal-convergence-policy.md), [сокращение уточнений](../../evidence/thermal-refinement-stopping-verification.md), [extended transient](../../evidence/thermal-extended-transient-verification.md). Не возобновлять Thermal автоматически и не объявлять весь P9 завершённым по этой краткой сводке.
 
 Основная текущая блокировка — P7. P8 (PI) и P11 (SI) зависят от соответствующей модели, полосы и проверенного P6 представления. Нельзя объявить их готовность по одному MHz-сечению или low-band graph.
 

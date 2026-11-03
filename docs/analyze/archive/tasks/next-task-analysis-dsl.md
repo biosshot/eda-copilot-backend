@@ -14,11 +14,11 @@
 
 Обязательны:
 
-- [dsl-reference.md](../../reference/dsl-reference.md) — полный перечень форм и результатов;
-- [dsl-working-contract.md](../../reference/dsl-working-contract.md) — модели, ports, SI timing, данные;
-- [dsl-scenario-decisions.md](../../reference/dsl-scenario-decisions.md) — принятые сокращения/сценарии;
-- [dsl-components-simple.md](../../reference/dsl-components-simple.md) — распределение нагрузки/возврата и ручные значения;
-- [dsl-board-scenarios.md](../../reference/dsl-board-scenarios.md), [dsl-data-matrix.md](../../reference/dsl-data-matrix.md) — примеры и покрытие.
+- [dsl-reference.md](../../reference/dsl/dsl-reference.md) — полный перечень форм и результатов;
+- [dsl-working-contract.md](../../reference/dsl/dsl-working-contract.md) — модели, ports, SI timing, данные;
+- [dsl-scenario-decisions.md](../../reference/dsl/dsl-scenario-decisions.md) — принятые сокращения/сценарии;
+- [dsl-components-simple.md](../../reference/dsl/dsl-components-simple.md) — распределение нагрузки/возврата и ручные значения;
+- [dsl-board-scenarios.md](../../reference/dsl/dsl-board-scenarios.md), [dsl-data-matrix.md](../../reference/dsl/dsl-data-matrix.md) — примеры и покрытие.
 
 Сохранить вариант B: `analysis({ board })` содержит snapshot и отчёт; физические параметры и режимы принадлежат конкретному builder. Не возвращать `a.assign`, обязательный converters, `.solver("openems")`, отдельный DDR solver, старые `transmitter/receiver/aggressors` или `.channel()` вместо `.channels()` в SI. `a.differential()` — описание пары; `timing()` — метод результата SI. Не добавлять ранее отклонённый механизм проверки двойного учёта моделей.
 

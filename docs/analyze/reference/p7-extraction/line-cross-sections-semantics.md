@@ -135,7 +135,7 @@ hypothesis; никто не объявляет их измеренным PCB cha
 
 ## Независимые эталоны и примеры
 
-Versioned [references.json](../../../tests/fixtures/analysis-cross-section/references.json)
+Versioned [references.json](../../../../tests/fixtures/analysis-cross-section/references.json)
 содержит геометрию, единицы, диапазоны/метод воспроизведения и численные значения.
 Qucs formulas используются **только как независимые инженерные test references**,
 не production solver. Thin-limit отделён от finite-thickness сравнения.

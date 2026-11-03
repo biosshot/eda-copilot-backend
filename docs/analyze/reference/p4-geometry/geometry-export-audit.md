@@ -2,23 +2,23 @@
 
 Дата: **2026-10-19**. Проверены локальный код, локальная копия SDK-документации и три сохранённых autoroute JSON. Новый экспорт из запущенного CAD не выполнялся. Это аудит текущих путей, а не гарантия поведения всех версий EasyEDA.
 
-HEAD при проверке: EasyEDA Copilot `12b265a051c6977d5b308329a105aa2c4876b6e2`, router `eacb66ea46723e9b779de9ba0ee72fd21c086971`. Описывается прочитанное состояние рабочих файлов. [Черновик V2](../archive/design/routing-board-v2-draft.md), [предыдущий аудит](routing-board-audit.md).
+HEAD при проверке: EasyEDA Copilot `12b265a051c6977d5b308329a105aa2c4876b6e2`, router `eacb66ea46723e9b779de9ba0ee72fd21c086971`. Описывается прочитанное состояние рабочих файлов. [Черновик V2](../../archive/design/routing-board-v2-draft.md), [предыдущий аудит](../input/routing-board-audit.md).
 
 ## Источники
 
-- [Контракты router](../../../../copilot-router/src/core/contracts.ts).
-- [Autoroute adapter](../../../../easyeda-copilot/mcp/src/routing/easyeda-autoroute-adapter.ts): `decodePath`, `decodePolygon`, `importedPadShape`, `importedZones`, `importEasyEdaAutorouteJson`.
-- [Экспорт из расширения](../../../../easyeda-copilot/extension/src/mcp-client.ts): `exportRoutingInput`; [вызов адаптера](../../../../easyeda-copilot/mcp/src/routing/routing-operation.ts).
-- [Прямое чтение PCB](../../../../easyeda-copilot/extension/src/eda/pcb.ts): `getPcbRaw`, `readBoardPolygon`, `polygonSourceToPoints`, `convertSourceArray`; [RawPcb](../../../../easyeda-copilot/shared/types/pcb/raw.ts).
-- [Native DRC](../../../../easyeda-copilot/shared/types/pcb/drc.ts), [DRC adapter](../../../../easyeda-copilot/mcp/src/routing/easyeda-drc-adapter.ts).
+- [Контракты router](../../../../../copilot-router/src/core/contracts.ts).
+- [Autoroute adapter](../../../../../easyeda-copilot/mcp/src/routing/easyeda-autoroute-adapter.ts): `decodePath`, `decodePolygon`, `importedPadShape`, `importedZones`, `importEasyEdaAutorouteJson`.
+- [Экспорт из расширения](../../../../../easyeda-copilot/extension/src/mcp-client.ts): `exportRoutingInput`; [вызов адаптера](../../../../../easyeda-copilot/mcp/src/routing/routing-operation.ts).
+- [Прямое чтение PCB](../../../../../easyeda-copilot/extension/src/eda/pcb.ts): `getPcbRaw`, `readBoardPolygon`, `polygonSourceToPoints`, `convertSourceArray`; [RawPcb](../../../../../easyeda-copilot/shared/types/pcb/raw.ts).
+- [Native DRC](../../../../../easyeda-copilot/shared/types/pcb/drc.ts), [DRC adapter](../../../../../easyeda-copilot/mcp/src/routing/easyeda-drc-adapter.ts).
 
 ## Что действительно есть в сохранённых JSON
 
 | Файл | Наблюдение |
 | --- | --- |
-| [ESC G431](../../../../copilot-router/tests/pcb-routing/esc_g431_easyeda/easyeda-routing-input.json) | 6 tracks, 3 vias, 0 fillRegions. У круглых площадок есть `diameter` и путь из двух полуокружностей: `[x,y,-180]`. |
-| [STM32G0 CAN/RS485](../../../../copilot-router/tests/pcb-routing/stm32g0_can_rs485_easyeda/easyeda-routing-input.json) | 3 fillRegions с `path`, `layer`, `net`; нет явного признака Pour/Fill в рассмотренных записях. Круглые площадки также представлены дугами. |
-| [Maverick H743](../../../../copilot-router/tests/pcb-routing/maverick_h743_easyeda/autoroute.json) | Есть дуги около −90° в `boardOutline.path`. Две prohibitedRegions; рассмотренная круглая область задана двумя дугами +180°. |
+| [ESC G431](../../../../../copilot-router/tests/pcb-routing/esc_g431_easyeda/easyeda-routing-input.json) | 6 tracks, 3 vias, 0 fillRegions. У круглых площадок есть `diameter` и путь из двух полуокружностей: `[x,y,-180]`. |
+| [STM32G0 CAN/RS485](../../../../../copilot-router/tests/pcb-routing/stm32g0_can_rs485_easyeda/easyeda-routing-input.json) | 3 fillRegions с `path`, `layer`, `net`; нет явного признака Pour/Fill в рассмотренных записях. Круглые площадки также представлены дугами. |
+| [Maverick H743](../../../../../copilot-router/tests/pcb-routing/maverick_h743_easyeda/autoroute.json) | Есть дуги около −90° в `boardOutline.path`. Две prohibitedRegions; рассмотренная круглая область задана двумя дугами +180°. |
 
 Во всех трёх файлах есть `constraintRegions`; отдельных корневых `circles`, `arcs`, `holes` нет. Это **не означает отсутствия окружностей или отверстий на платах**: окружности уже видны внутри путей; смысл каждой prohibitedRegion и соответствие исходным отверстиям без CAD-сопоставления не доказаны. Дуги в дорожках этих примеров не подтверждены: поддержка таких путей видна по коду адаптера, но отдельный реальный пример ещё нужен.
 
@@ -59,11 +59,11 @@ Autoroute adapter читает `[x,y]` как точку, а третий эле
 
 В локальных справочниках есть:
 
-- [Pour](../../../../easyeda-copilot/mcp/docs/execution/easyeda-api/references/classes/IPCB_PrimitivePour.md): complex polygon, layer, net, line width, fill method, priority, preserve silos.
-- [Poured](../../../../easyeda-copilot/mcp/docs/execution/easyeda-api/references/classes/IPCB_PrimitivePoured.md) и [его фрагмент](../../../../easyeda-copilot/mcp/docs/execution/easyeda-api/references/interfaces/IPCB_PrimitivePouredPourFill.md): ссылка на Pour, ID фрагмента, path/fill/lineWidth.
-- [Fill](../../../../easyeda-copilot/mcp/docs/execution/easyeda-api/references/classes/IPCB_PrimitiveFill.md): complex polygon, fill mode, line width, layer/net/ID.
-- [Pad thermal overrides](../../../../easyeda-copilot/mcp/docs/execution/easyeda-api/references/interfaces/IPCB_PrimitivePadHeatWelding.md): connection method, divergence spacing/width/angle.
-- [Via](../../../../easyeda-copilot/mcp/docs/execution/easyeda-api/references/classes/IPCB_PrimitiveVia.md): via type, blind-via rule name, диаметры и ID.
+- [Pour](../../../../../easyeda-copilot/mcp/docs/execution/easyeda-api/references/classes/IPCB_PrimitivePour.md): complex polygon, layer, net, line width, fill method, priority, preserve silos.
+- [Poured](../../../../../easyeda-copilot/mcp/docs/execution/easyeda-api/references/classes/IPCB_PrimitivePoured.md) и [его фрагмент](../../../../../easyeda-copilot/mcp/docs/execution/easyeda-api/references/interfaces/IPCB_PrimitivePouredPourFill.md): ссылка на Pour, ID фрагмента, path/fill/lineWidth.
+- [Fill](../../../../../easyeda-copilot/mcp/docs/execution/easyeda-api/references/classes/IPCB_PrimitiveFill.md): complex polygon, fill mode, line width, layer/net/ID.
+- [Pad thermal overrides](../../../../../easyeda-copilot/mcp/docs/execution/easyeda-api/references/interfaces/IPCB_PrimitivePadHeatWelding.md): connection method, divergence spacing/width/angle.
+- [Via](../../../../../easyeda-copilot/mcp/docs/execution/easyeda-api/references/classes/IPCB_PrimitiveVia.md): via type, blind-via rule name, диаметры и ID.
 
 `PcbDrcBundle` сохраняет сырые presets и назначения, включая Copper Safe Spacing, Plane Safe Spacing, Copper Zone, Plane Zone, Blind/Buried Via. Нынешний `mergeEasyEdaDrcIntoRoutingRules` не превращает это в полные effective refill rules. Обратный код `assignCopperZonePreset` знает часть полей тепловых подключений, но он не является полноценным импортёром правил и не доказывает все значения и приоритеты EasyEDA.
 

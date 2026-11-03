@@ -4,7 +4,7 @@
 
 ## Контекст
 
-Прочитать `AGENTS.md`, `CHANGELOG.md`, `p7-d1-reference-recovery-results.md`, `p7-d1-conservative-current-results.md`, `p7-d1-current-constraints-results.md` и актуальный `p7-real-channel-closure-plan.md`.
+Прочитать `AGENTS.md`, `CHANGELOG.md`, `p7-d1-reference-recovery-results.md`, `p7-d1-conservative-current-results.md`, `p7-d1-current-constraints-results.md` и актуальный `p7-plan.md`.
 
 Checkpoint: `8ecb3d8`. Exact rank repair принят родителем: DC repaired matrix имеет 189 rows/rank 189, AC gauged 265/265; 18 focused tests и typecheck повторены. Не reset/clean, не удалять `debugging/`, не создавать субагентов, не коммитить и не пушить.
 

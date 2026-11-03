@@ -4,7 +4,7 @@ Worktree `analyze-p6-completion`, branch `codex/analyze-p6-completion`, base
 `c8b6617`,2026-10-24. No commit is created by the executor. Numerical algorithms
 are Rust CPU/F64. The shared addon retains the normal placement GPU features.
 [Task/design](../archive/tasks/next-task-electrical-core-completion.md) and
-[exact semantics](../reference/electrical-core-completion-semantics.md) define the supported
+[exact semantics](../reference/p5-p6-electrical/electrical-core-completion-semantics.md) define the supported
 classes; neither this document nor a successful narrow test closes arbitrary SI.
 
 ## Current evidence

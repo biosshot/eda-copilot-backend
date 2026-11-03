@@ -1,6 +1,6 @@
 # Analysis DSL: полный рабочий справочник
 
-**Реализация языка, 2026-10-22:** см. [актуальные декларации](../../../src/analyze/analysis-dsl/spec-doc.d.ts), [проверки DSL](../archive/design/analysis-dsl-verification.md) и [DC](../evidence/dc-analysis-verification.md). Реализован постоянный линейный DC для полосы и пригодной меди платы; остальные физические run, timing, комплексные преобразования и solve/optimize недоступны. Все восемь выбранных PDN-постановок рассчитаны с проверкой сходимости после обновления трёх V2-фикстур и исправления накопления малых F64-поправок. Ниже сохранены предметные сценарии полного плана; они не обещают поддержку всех моделей. Каталоги ресурсов задаются явно.
+**Реализация языка, 2026-10-22:** см. [актуальные декларации](../../../../src/analyze/analysis-dsl/spec-doc.d.ts), [проверки DSL](../../archive/design/analysis-dsl-verification.md) и [DC](../../evidence/dc-analysis-verification.md). Реализован постоянный линейный DC для полосы и пригодной меди платы; остальные физические run, timing, комплексные преобразования и solve/optimize недоступны. Все восемь выбранных PDN-постановок рассчитаны с проверкой сходимости после обновления трёх V2-фикстур и исправления накопления малых F64-поправок. Ниже сохранены предметные сценарии полного плана; они не обещают поддержку всех моделей. Каталоги ресурсов задаются явно.
 
 **Базовый DSL согласован:** [решения по сценариям](dsl-scenario-decisions.md), [рабочий контракт](dsl-working-contract.md). Приняты channels([...]), drivers/receivers, port/ports, timing(options) у результата, a.model и операции измерений. Отдельный механизм контроля границ/двойного учёта моделей отклонён. Языковой слой реализован; статусы вычислений перечислены в отчёте проверки, изменения допускаются по обнаруженным ограничениям.
 
@@ -29,7 +29,7 @@ Circuit, power loads, динамическая точка atS, сложные р
 
 [Связанные сценарии на плате компьютера и реальном CAD-экспорте](dsl-board-scenarios.md) показывают совместное использование источников, нагрузок, моделей и результатов.
 
-При расхождении этот документ уточняет ранний [эскиз синтаксиса](../archive/design/dsl-syntax-draft.md). [Матрица данных](dsl-data-matrix.md), [профили среды](dsl-environment-profiles.md), [состав анализов](working-analysis-scope.md).
+При расхождении этот документ уточняет ранний [эскиз синтаксиса](../../archive/design/dsl-syntax-draft.md). [Матрица данных](dsl-data-matrix.md), [профили среды](dsl-environment-profiles.md), [состав анализов](../scope/working-analysis-scope.md).
 
 ## 1. Общая форма программы и глобальные входы
 
@@ -157,7 +157,7 @@ type Waveform =
 | `method?` | Именованный физический метод из таблицы ниже |
 | Расчётное ядро | Собственная реализация; внешний backend через DSL не выбирается |
 
-Профиль numerics задаёт ошибки/сходимость, а не формат хранения. Для нового анализатора принята F64 по умолчанию без ранней кампании F32; прежние правила F32 packer сохраняются. Это не изменение DSL, а уточнение принятой [численной политики](implementation-structure.md).
+Профиль numerics задаёт ошибки/сходимость, а не формат хранения. Для нового анализатора принята F64 по умолчанию без ранней кампании F32; прежние правила F32 packer сохраняются. Это не изменение DSL, а уточнение принятой [численной политики](../architecture/implementation-structure.md).
 
 ## 3. Проверки, журнал и графики
 
@@ -905,11 +905,11 @@ BER, механика, CFD, корпус устройства/кабели, ун
 
 ## 15. Что осталось после предварительного согласования DSL
 
-Порядок реализации и проверки этих вопросов теперь определён в [плане P0–P15](../plans/implementation-plan.md). Достаточность входного board проверена статически в [аудите V2](routing-board-v2-sufficiency.md); выявленные пробелы закрываются до соответствующих расчётных этапов. Это не повторное открытие уже согласованного DSL.
+Порядок реализации и проверки этих вопросов теперь определён в [плане P0–P15](../../plans/implementation-plan.md). Достаточность входного board проверена статически в [аудите V2](../input/routing-board-v2-sufficiency.md); выявленные пробелы закрываются до соответствующих расчётных этапов. Это не повторное открытие уже согласованного DSL.
 
 Состав анализов и общая форма сценария уже выбраны. Не требуется заново выбирать язык, репозиторий или переделывать DSL целиком.
 
-Пользовательские вопросы из [аудита DSL](../archive/design/dsl-readiness-review.md) закрыты принятой рабочей редакцией либо явно исключены пользователем. Таблица ниже относится к дальнейшей формализации и реализации, а не к необходимости заново согласовывать базовый DSL.
+Пользовательские вопросы из [аудита DSL](../../archive/design/dsl-readiness-review.md) закрыты принятой рабочей редакцией либо явно исключены пользователем. Таблица ниже относится к дальнейшей формализации и реализации, а не к необходимости заново согласовывать базовый DSL.
 
 | Порядок обсуждения | Открытое решение | Конкретный результат обсуждения |
 | --- | --- | --- |
@@ -953,8 +953,8 @@ their original solution and field. Eight real-board examples live directly in
 `a.pi().circuit(c).domain("frequency").frequency(...).run()` returns complex
 driving-point `impedance(port)`; `.domain("time").initial("steady").time(...).run()`
 returns V/A/loss series and checked `finalState`. Continuation uses absolute stopS.
-See [complete semantics and limits](electrical-network-semantics.md) and the
-[executed task example](../../../tests/fixtures/analysis-electrical.js).
+See [complete semantics and limits](../p5-p6-electrical/electrical-network-semantics.md) and the
+[executed task example](../../../../tests/fixtures/analysis-electrical.js).
 R/C/L local model contacts are p/n. I(first→second), source power is negative.
 Waveforms are absolute; passive ports never stamp loads. Complex transformations
 include real/imaginary/magnitude/phaseDeg, phase range [-180,180] and undefined zero.
@@ -968,9 +968,9 @@ without registering a device or solving; LocalModel overloads are preserved.
 Factory/direct/catalog paths share checks. `a.connect` supports nested explicit
 pairwise networks and one-port loads. `networkParameters` implements S/Z/Y with
 separate S output references and complex DataValues; result.network is reusable
-on its saved band. See [exact subset, equations and limits](frequency-network-semantics.md),
-[verification](../evidence/frequency-networks-verification.md) and the executable example in
-[next task section 7](../archive/tasks/next-task-frequency-networks.md#7-пример-целевого-dsl).
+on its saved band. See [exact subset, equations and limits](../p5-p6-electrical/frequency-network-semantics.md),
+[verification](../../evidence/frequency-networks-verification.md) and the executable example in
+[next task section 7](../../archive/tasks/next-task-frequency-networks.md#7-пример-целевого-dsl).
 The catalog example is `models.electrical.attenuatorPad` / Attenuator Pad.
 No automatic matched loads, extrapolation, PCB extraction or temporal fitting.
 
@@ -983,7 +983,7 @@ Materials must explicitly declare epsilon, `lossTangent:0`, state; conductors ar
 PEC, no mask. Clear dielectric heights are measured to the adjacent conductor
 face. Pair gap is edge-to-edge. `mesh` controls initial edge size, node/triangle
 caps, refinement count and artificial domain scale; acceptance guards remain fixed.
-See [exact conventions, units, limits and tables](line-cross-sections-semantics.md).
+See [exact conventions, units, limits and tables](../p7-extraction/line-cross-sections-semantics.md).
 `characteristicImpedance` is scalar Ohm or modal table; `rlgc` is unit-1 structured
 mixed-unit C/L matrices plus assumed-zero R/G; `delay` is full-length s or modal s
 table. No length means delay/network unavailable, not a conditional metre.
@@ -991,10 +991,10 @@ table. No length means delay/network unavailable, not a conditional metre.
 with conditional geometry/material/provenance and geometric quasi-TEM screening.
 Inter-point P6b phase is interpolated, not a new field/propagation solve.
 
-[Direct task example](../../../tests/fixtures/analysis-cross-section/example.js),
-[board single/cascade](../../../tests/pcb-analyze/BandAmpV5/impedance.js),
-[real parallel pair](../../../tests/pcb-analyze/STM32G0_CAN_RS485/impedance.js),
-[third section](../../../tests/pcb-analyze/ThunderF722/impedance.js).
+[Direct task example](../../../../tests/fixtures/analysis-cross-section/example.js),
+[board single/cascade](../../../../tests/pcb-analyze/BandAmpV5/impedance.js),
+[real parallel pair](../../../../tests/pcb-analyze/STM32G0_CAN_RS485/impedance.js),
+[third section](../../../../tests/pcb-analyze/ThunderF722/impedance.js).
 Mask, raw board/channel/differential targets and future layered methods remain
 unsupported; R/G zero above only describe the ideal PEC/lossless model.
 
@@ -1040,9 +1040,9 @@ per-metre coefficients remain available. Surface currents are normalized basis
 functions and do not describe a real PCB excitation. All results/networks remain
 conditional; P6b interpolation stays conditional and extrapolation is forbidden.
 
-[Runnable standalone](../../../tests/fixtures/analysis-line-losses/example.js),
-[normalizations/limits](line-losses-semantics.md),
-[verification and unresolved acceptance requirements](../evidence/line-losses-verification.md).
+[Runnable standalone](../../../../tests/fixtures/analysis-line-losses/example.js),
+[normalizations/limits](../p7-extraction/line-losses-semantics.md),
+[verification and unresolved acceptance requirements](../../evidence/line-losses-verification.md).
 
 ## P6 completion: explicit AC and supplied temporal models
 
@@ -1060,7 +1060,7 @@ resources; active/resonant/general tables are not silently converted to time.
 Direct coupled frequency results retain actual differential reference topology;
 arbitrary terminal joins and mixed delay/RLC cascades remain explicit limits.
 
-See [exact mathematics, units, validity and limits](electrical-core-completion-semantics.md),
-[runnable AC and sampled-to-time examples](electrical-core-examples.md),
-[direct authored scenario](../../../tests/fixtures/analysis-electrical-core/scenario.js),
-and [verification/remaining P6 matrix](../evidence/electrical-core-completion-verification.md).
+See [exact mathematics, units, validity and limits](../p5-p6-electrical/electrical-core-completion-semantics.md),
+[runnable AC and sampled-to-time examples](../p5-p6-electrical/electrical-core-examples.md),
+[direct authored scenario](../../../../tests/fixtures/analysis-electrical-core/scenario.js),
+and [verification/remaining P6 matrix](../../evidence/electrical-core-completion-verification.md).

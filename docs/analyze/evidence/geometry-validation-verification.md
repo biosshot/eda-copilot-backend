@@ -1,7 +1,7 @@
 # Geometry validation verification
 
 Implementation worktree: `codex/analyze-geometry-validation`, base `f648956`.
-CPU/F64 only. See [semantics](../reference/geometry-validation-semantics.md). Review pending;
+CPU/F64 only. See [semantics](../reference/p4-geometry/geometry-validation-semantics.md). Review pending;
 no commit or merge is made by the implementation agent.
 
 ## Implementation boundary

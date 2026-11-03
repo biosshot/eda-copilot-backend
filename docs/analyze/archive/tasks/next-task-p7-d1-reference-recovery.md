@@ -4,7 +4,7 @@
 
 ## Контекст и исходные факты
 
-Прочитать `AGENTS.md`, `CHANGELOG.md`, `chat-handoff-2026-10-31.md`, `next-task-p7-d1-coupled-assembly.md`, `p7-d1-coupled-assembly-results.md` и актуальный план `p7-real-channel-closure-plan.md`.
+Прочитать `AGENTS.md`, `CHANGELOG.md`, `chat-handoff-2026-10-31.md`, `next-task-p7-d1-coupled-assembly.md`, `p7-d1-coupled-assembly-results.md` и актуальный план `p7-plan.md`.
 
 Checkpoint всей предыдущей работы: `db535f0`. Не reset/clean и не удалять пользовательские/сохранённые данные, особенно `native/analyze/debugging/` и `debugging/`. Не создавать субагентов, не коммитить и не пушить.
 

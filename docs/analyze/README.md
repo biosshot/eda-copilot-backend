@@ -11,11 +11,12 @@
 | Задача | Начать с |
 |---|---|
 | Понять общий план P0–P15 | [plans/implementation-plan.md](plans/implementation-plan.md) |
-| Понять, как закрывается P7 | [plans/p7-real-channel-closure-plan.md](plans/p7-real-channel-closure-plan.md) |
+| Понять, как закрывается P7 | [plans/p7-plan.md](plans/p7-plan.md) |
+| Узнать, какие случаи поддержаны | [reference/p7-extraction/p7-case-matrix.md](reference/p7-extraction/p7-case-matrix.md) |
 | Продолжить текущую работу | [plans/chat-handoff-2026-11-02.md](plans/chat-handoff-2026-11-02.md) |
-| Узнать, что реально работает в DSL | [reference/dsl-implementation-status.md](reference/dsl-implementation-status.md) |
-| Писать сценарии DSL | [reference/dsl-reference.md](reference/dsl-reference.md) |
-| Понять принятый электрический интерфейс | [reference/electrical-core-completion-semantics.md](reference/electrical-core-completion-semantics.md) |
+| Узнать, что реально работает в DSL | [reference/dsl/dsl-implementation-status.md](reference/dsl/dsl-implementation-status.md) |
+| Писать сценарии DSL | [reference/dsl/dsl-reference.md](reference/dsl/dsl-reference.md) |
+| Понять принятый электрический интерфейс | [reference/p5-p6-electrical/electrical-core-completion-semantics.md](reference/p5-p6-electrical/electrical-core-completion-semantics.md) |
 | Проверить, что уже принято | [evidence/p6-p7-integration-acceptance.md](evidence/p6-p7-integration-acceptance.md) |
 
 ## Структура
@@ -24,7 +25,15 @@
 docs/analyze/
   README.md                  этот индекс
   plans/                     живые планы и handoff
-  reference/                 справочники, спецификация DSL, семантические заметки
+  reference/                 справочники и семантика
+    dsl/                     контракт, справочник, матрица реализации, сценарии
+    input/                   RoutingBoardV2, аудит входа
+    p4-geometry/             геометрия, экспорт, валидация
+    p5-p6-electrical/        электрическое ядро и частотные многопорты
+    p7-extraction/           сечения, потери, HF-оператор, paging
+    p9-thermal/              тепловая политика
+    architecture/            численная архитектура, структура, корпус, библиотеки
+    scope/                   каталог анализов, глубина, границы
   evidence/                  приёмки, результаты, ревью, контрольные точки (датированные)
   archive/tasks/             выполненные задания next-task-*
   archive/design/            черновики периода 2026-10-19…10-23, заменённые решения
@@ -36,8 +45,8 @@ docs/analyze/
 - **Живой документ один на тему.** Остальное — датированный evidence, он не переписывается.
 - `plans/` обновляется по статусу; `evidence/` — только добавляется.
 - У живого документа в шапке должны быть: статус, дата обновления, что он заменяет.
-- `reference/dsl-reference.md` — спецификация, а не статус. Фактическая реализация — только в
-  `reference/dsl-implementation-status.md`.
+- `reference/dsl/dsl-reference.md` — спецификация, а не статус. Фактическая реализация — только в
+  `reference/dsl/dsl-implementation-status.md`.
 
 ## Фактический статус на 2026-11-02
 
@@ -48,7 +57,7 @@ docs/analyze/
 - Импорт RoutingBoardV2, физическая геометрия меди, связность, conduction mesh.
 - DC по реальной меди и явные электрические сети (P6a), частотные многопорты (P6b).
 - Численные сечения линий: microstrip, coupled, stripline, coupled-stripline; C/C0/L, Z0,
-  задержка, S; слабопотерный режим в подтверждённой полосе (P7a/P7b).
+  задержка, S; слабопотерный режим в подтверждённой полосе (P7a; P7b реализован, приёмка открыта).
 - Локальный direct-FEM экстрактор (3D): электрика, ток, восстановление токов/потерь;
   интеграция в worker/addon/DSL и диск-кэш; полный аудит 51/51 возбуждений на исходном ROI.
 - Реальные STM32/TPS PDN-куски в полосе 1–100 кГц (conditional), BandAmp RF-сечение 500 МГц–1 ГГц.
@@ -72,11 +81,12 @@ docs/analyze/
 
 ### Что нельзя обещать по документам
 
-- `p7-real-channel-closure-plan.md` и `implementation-plan.md` по тексту отстают от 2026-11-02:
-  читать их вместе с handoff и этим индексом.
-- `p7-to-p8-p11-plan.md` описывает поставку 2026-10-29.
+- `implementation-plan.md` по тексту отстаёт от 2026-11-02:
+  читать его вместе с handoff и этим индексом.
+- Маршрут P8/P11 и поставка 2026-10-29 слиты в `p7-plan.md` §7.2; старый файл —
+  `archive/design/p7-to-p8-p11-plan.md`.
 - `dsl-reference.md` документирует и нереализованное (`method: "formula"`, `a.em`).
-  Статус — в `reference/dsl-implementation-status.md`.
+  Статус — в `reference/dsl/dsl-implementation-status.md`.
 - `plans/chat-handoff-2026-11-02.md` и `evidence/p7-d1-magnetic-closure-results.md`
   до переноса не были в git; сейчас добавлены.
 

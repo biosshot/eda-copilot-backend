@@ -14,7 +14,7 @@ S/Z/Y Resource, ограниченный Touchstone, преобразовани�
 пассивность, полоса, сингулярности, immutable/reusable results и их бюджет проверены.
 Один связный common-return граф; одинаковая нормировка не соединяет отдельные возвраты.
 
-Подробные [формулы, контракт, поддержанный поднабор и caps](../reference/frequency-network-semantics.md).
+Подробные [формулы, контракт, поддержанный поднабор и caps](../reference/p5-p6-electrical/frequency-network-semantics.md).
 Перенормировка не заменяет reference metadata. Идеальный thru не обязан проходить
 через сингулярную Z. Нет gmin, экстраполяции, matched-заглушек или проекции пассивности.
 

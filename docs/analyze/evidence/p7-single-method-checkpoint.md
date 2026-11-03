@@ -1,6 +1,6 @@
 # P7 direct-FEM checkpoint — 2026-10-28
 
-Active scope: [agreed route](../plans/p7-to-p8-p11-plan.md), one existing direct sparse FEM,
+Active scope: [agreed route](../archive/design/p7-to-p8-p11-plan.md), one existing direct sparse FEM,
 CPU/F64, shared300s cold user/2GiB, physical observables<=5%.
 **P7 remains open; this delivery does not complete the agreed route.**
 

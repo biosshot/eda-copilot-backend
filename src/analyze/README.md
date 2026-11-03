@@ -239,7 +239,7 @@ in the repository and do not invoke FEM. See the fixture README and DC verificat
 The existing dc/pi builders now accept explicitly authored R/C/L circuits for DC,
 complex driving-point Z(f), and adaptive transient/state continuation. CPU/F64
 Rust sparse MNA uses the same shared addon and disposable process. Board FEM DC
-remains independent. See [semantics](../../docs/analyze/reference/electrical-network-semantics.md)
+remains independent. See [semantics](../../docs/analyze/reference/p5-p6-electrical/electrical-network-semantics.md)
 and [verification](../../docs/analyze/evidence/electrical-network-verification.md)
 for signs, p/n model mapping, numerics, state/resource limits and direct RLC examples.
 No PCB frequency extraction or spatial circuit maps are produced.
@@ -250,7 +250,7 @@ No PCB frequency extraction or spatial circuit maps are produced.
 inputs share early validation; `a.network` creates mapped instances and `a.connect`
 pairs their ports. `networkParameters` dispatches through the existing process and
 shared addon to Rust, returning S/Z/Y complex DataValues and reusable result.network.
-See [semantics](../../docs/analyze/reference/frequency-network-semantics.md) and
+See [semantics](../../docs/analyze/reference/p5-p6-electrical/frequency-network-semantics.md) and
 [verification](../../docs/analyze/evidence/frequency-networks-verification.md).
 No PCB frequency extraction or imported-network transient is implemented.
 
@@ -259,7 +259,7 @@ P7a cross sections: explicit `a.line()` geometries use dielectric P1 FEM (not th
 DC copper mesh), C/C0/external L and lossless modal distributed propagation in
 `native/analyze/src/extraction/`. `z.network` reuses P6b, the existing process and
 single addon; no GPU or additional dependencies. See
-[semantics](../../docs/analyze/reference/line-cross-sections-semantics.md).
+[semantics](../../docs/analyze/reference/p7-extraction/line-cross-sections-semantics.md).
 Explicit PEC/lossless inputs retain their result forms. Optional `conductors`
 provides fixed-temperature smooth signal conductivity and complete reference
 thickness/materials; explicit 0..0.05 dielectric tangents use regional energy
@@ -272,7 +272,7 @@ hypotheses, not measured/extracted complete PCB channels.
 Lossy RLGC additionally retains per-frequency full matrices, all physical
 surface/region contributions, unit-current surface fields and complex modal
 alpha/beta/Zc/phase delay. Stable full 2/4-port S and a longitudinal dissipation
-balance feed existing P6b. See [loss semantics](../../docs/analyze/reference/line-losses-semantics.md)
+balance feed existing P6b. See [loss semantics](../../docs/analyze/reference/p7-extraction/line-losses-semantics.md)
 and [verification and limitations](../../docs/analyze/evidence/line-losses-verification.md).
 
 
@@ -298,6 +298,6 @@ candidates, 5 million segment checks, 100000 measurements, 2 million report
 vertices and 96 MiB report JSON. The existing worker deadline is the hard execution
 boundary; allocation estimates are not an OS RSS guarantee. Scope/rule processing
 and report construction are bounded. Base preparation retains its existing limits.
-See [semantics](../../docs/analyze/reference/geometry-validation-semantics.md)
+See [semantics](../../docs/analyze/reference/p4-geometry/geometry-validation-semantics.md)
 and [verification](../../docs/analyze/evidence/geometry-validation-verification.md).
 Run all eight direct scenarios with `npm run test:pcb-analyze -- --all --name validation`.

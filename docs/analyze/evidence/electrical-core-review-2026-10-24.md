@@ -49,4 +49,4 @@ sampled fitting пока отсутствуют. Нельзя молча зам�
 
 Подробные команды, сохранённые неудачные попытки, эталоны и ограничения:
 [verification](electrical-core-completion-verification.md),
-[semantics](../reference/electrical-core-completion-semantics.md).
+[semantics](../reference/p5-p6-electrical/electrical-core-completion-semantics.md).

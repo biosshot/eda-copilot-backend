@@ -1,7 +1,7 @@
 # Electrical core: supported completion scope
 
 P6 implementation, CPU/F64; numerical/package acceptance is recorded separately
-in [verification](../evidence/electrical-core-completion-verification.md). Existing PCB DC,
+in [verification](../../evidence/electrical-core-completion-verification.md). Existing PCB DC,
 P6b frequency tables, P7 cross sections and placement/GPU retain their contracts.
 Using the existing `si().network(...)` configuration exposes supplied temporal
 models only. It does not implement PCB channels, TDR, eye or timing.

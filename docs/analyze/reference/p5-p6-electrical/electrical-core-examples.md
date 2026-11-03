@@ -109,11 +109,11 @@ not prove the source has no spectrum outside the band. General resonant/active
 fitting and finite-band lossy P7b tables to time are unsupported. This example
 makes no BER, eye-mask, timing or TDR claim.
 
-The [complete verified scenario](../../../tests/fixtures/analysis-electrical-core/scenario.js)
+The [complete verified scenario](../../../../tests/fixtures/analysis-electrical-core/scenario.js)
 also includes exact real-K delay models, matched/reflected port traces, a passive
 pad/line frequency cascade and an expected failed check followed by a successful
 check. Its standalone and two board-context artifacts are described in
-[verification](../evidence/electrical-core-completion-verification.md).
+[verification](../../evidence/electrical-core-completion-verification.md).
 
 
 ## Mixed distributed delay and discrete filters
@@ -132,4 +132,4 @@ R1/U2 pad identities/nets are recorded as provenance; all electrical models are
 authored hypotheses, not extracted traces. Saved JSON contains V/I, separate
 storage/loss/work traces, original source Resources and port mapping. The shared
 static renderer recognizes these saved mixed cases. See
-[evidence and remaining limits](../evidence/electrical-mixed-verification.md).
+[evidence and remaining limits](../../evidence/electrical-mixed-verification.md).

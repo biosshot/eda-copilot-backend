@@ -3,7 +3,7 @@
 Реализация [задания](../archive/tasks/next-task-line-cross-sections.md) передана на ревью,
 **без коммита**. База `2c7d31882cc12ab9290427f1f5592cea8b53b58b`, ветка
 `feat/analyze`. Все четыре LineInput рассчитываются собственным CPU/F64 P1 FEM;
-[семантика, таблицы, caps и границы](../reference/line-cross-sections-semantics.md).
+[семантика, таблицы, caps и границы](../reference/p7-extraction/line-cross-sections-semantics.md).
 
 ## Исправление R1: полнота графиков — 2026-10-23
 

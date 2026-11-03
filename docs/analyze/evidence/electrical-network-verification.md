@@ -2,7 +2,7 @@
 
 Review delivery, 2026-10-22/23, Windows x64. Working branch `feat/analyze`, base
 `466463a5634b8e8c4f8aaeebea101728a2efbf59`. No commit or next-stage work.
-See [physical/numerical semantics](../reference/electrical-network-semantics.md) and
+See [physical/numerical semantics](../reference/p5-p6-electrical/electrical-network-semantics.md) and
 [the task](../archive/tasks/next-task-electrical-network.md). Remaining P6, PCB extraction P7 and
 extracted-board PI P8 are not declared implemented.
 

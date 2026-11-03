@@ -10,7 +10,7 @@
 
 ## Исходное состояние и документы
 
-Прочитать AGENTS.md, CHANGELOG.md, implementation-plan.md, numerical-architecture.md, dsl-reference.md, dsl-working-contract.md, p7-channel-plan-checkpoint.md, p7-hf-operator-design.md, p7-section-field-cache.md и p6-p7-integration-acceptance.md. Использовать p7-real-channel-closure-plan.md как подробную матрицу требований; его описание исходного состояния историческое. Настоящее задание имеет приоритет в ресурсных ограничениях и порядке работ.
+Прочитать AGENTS.md, CHANGELOG.md, implementation-plan.md, numerical-architecture.md, dsl-reference.md, dsl-working-contract.md, p7-channel-plan-checkpoint.md, p7-hf-operator-design.md, p7-section-field-cache.md и p6-p7-integration-acceptance.md. Использовать p7-plan.md как подробную матрицу требований; его описание исходного состояния историческое. Настоящее задание имеет приоритет в ресурсных ограничениях и порядке работ.
 
 Уже есть polygon-section FEM с C/C0/L/R/G, срезы платы, шаблонные быстрые пути, локальный direct FEM, физические контакты, необязательный scope, P6-композиция, проверяемые кэши и разделяемые факторы с ограниченным параллелизмом. Не переписывать их заново. Последний checkpoint прямо оставляет продольную сегментацию, section/local композицию, multiple/floating references, локальную HF-постановку, переходные режимы и общую временную/частотную применимость незавершёнными.
 

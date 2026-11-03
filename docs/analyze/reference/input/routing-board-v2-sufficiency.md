@@ -8,7 +8,7 @@
 
 Проверяется сочетание **RoutingBoardV2 + физические модели/материалы + сценарий DSL**, а не автономная достаточность файла платы. Внешние источники, мощности, охлаждение, стимулы, параметры драйверов и пространственные модели внешних объектов не должны становиться обязательными полями платы. Входной адаптер преобразует внешний DTO во внутренние данные; новые физические возможности иногда требуют расширять и внутреннюю модель.
 
-Этот аудит не меняет базовый DSL и не утверждает новый расширенный Board-тип. Перечисленные ниже исправления становятся задачами [плана реализации](../plans/implementation-plan.md); рабочая [форма V2](routing-board-v2-shape.md) остаётся предварительной до этапов P0–P2.
+Этот аудит не меняет базовый DSL и не утверждает новый расширенный Board-тип. Перечисленные ниже исправления становятся задачами [плана реализации](../../plans/implementation-plan.md); рабочая [форма V2](routing-board-v2-shape.md) остаётся предварительной до этапов P0–P2.
 
 **Уточнение после обсуждения G1–G7:** предложенная [TypeScript-редакция](routing-board-v2-shape.md) добавляет optional partUuid/value, уточняет via/type/span/послойные формы и optional окна маски. Номиналы всех R/C не требуются каждому анализу: параметры разрешаются только для участвующих элементов, из библиотеки/снимка либо ручного DSL. Без UUID импорт допустим; отсутствие необходимой электрической модели обнаруживается в prepare. Наличие новых optional полей не означает, что экспорт уже исправлен.
 
@@ -16,20 +16,20 @@
 
 | Источник | Подтверждение по текущему коду |
 | --- | --- |
-| [router contracts](../../../../copilot-router/src/core/contracts.ts) | `RoutingComponent` содержит designator/положение/контуры, но не номинал и тип компонента. `RoutingPad.hole` уже допускает round/slot, offset/rotation и plated. Via содержит общий диаметр/drill/from/to/type. Stackup содержит толщины и ограниченные электрические параметры |
+| [router contracts](../../../../../copilot-router/src/core/contracts.ts) | `RoutingComponent` содержит designator/положение/контуры, но не номинал и тип компонента. `RoutingPad.hole` уже допускает round/slot, offset/rotation и plated. Via содержит общий диаметр/drill/from/to/type. Stackup содержит толщины и ограниченные электрические параметры |
 | [рабочая форма V2](routing-board-v2-shape.md) | Текущая сокращённая форма: Pour/Fill/native filledPolygons, optional PartUuid/value/footprint, согласованные тела из каталога/DSL, standalone pads/holes, формы площадок по слоям. Маска, специальные via и полный refill вынесены в будущее; экспорт не реализован |
-| [autoroute adapter](../../../../easyeda-copilot/mcp/src/routing/easyeda-autoroute-adapter.ts) | Компоненты импортируются без номиналов/footprint name; pads без hole; `cutouts: []`; via всегда top→bottom/through; track/via без net пропускаются; fillRegions не различает Pour/Fill и получает connection solid |
-| [export-routing-input](../../../../easyeda-copilot/extension/src/mcp-client.ts) | Возвращает autoroute JSON и DRC; отдельного обогащения native poured copper в этом ответе сейчас нет |
-| [getPcbRaw / readComponents / readVias](../../../../easyeda-copilot/extension/src/eda/pcb.ts) | Есть чтение `getState_PourFills()` с fill/lineWidth/path, отверстий pads и footprint name. `readComponents` читает значение из свойств/имени; готовый RoutingBoard эти данные не получает. `readVias` не переносит span/type. RawPcb Fill жёстко задаёт fill=true и lineWidth=0; API-ошибки нескольких списков заменяются пустыми массивами, orphan Poured получает TOP |
-| [Preview parser](../../../../easyeda-copilot/mcp/src/pcb-preview/parser.ts), [geometry](../../../../easyeda-copilot/mcp/src/pcb-preview/geometry.ts) | Preview не является проверенным физическим нормализатором: в quadratic x используется p2.y; есть упрощения скруглений/окружностей и удаление малых cutouts. Эти пути нельзя копировать без проверки |
+| [autoroute adapter](../../../../../easyeda-copilot/mcp/src/routing/easyeda-autoroute-adapter.ts) | Компоненты импортируются без номиналов/footprint name; pads без hole; `cutouts: []`; via всегда top→bottom/through; track/via без net пропускаются; fillRegions не различает Pour/Fill и получает connection solid |
+| [export-routing-input](../../../../../easyeda-copilot/extension/src/mcp-client.ts) | Возвращает autoroute JSON и DRC; отдельного обогащения native poured copper в этом ответе сейчас нет |
+| [getPcbRaw / readComponents / readVias](../../../../../easyeda-copilot/extension/src/eda/pcb.ts) | Есть чтение `getState_PourFills()` с fill/lineWidth/path, отверстий pads и footprint name. `readComponents` читает значение из свойств/имени; готовый RoutingBoard эти данные не получает. `readVias` не переносит span/type. RawPcb Fill жёстко задаёт fill=true и lineWidth=0; API-ошибки нескольких списков заменяются пустыми массивами, orphan Poured получает TOP |
+| [Preview parser](../../../../../easyeda-copilot/mcp/src/pcb-preview/parser.ts), [geometry](../../../../../easyeda-copilot/mcp/src/pcb-preview/geometry.ts) | Preview не является проверенным физическим нормализатором: в quadratic x используется p2.y; есть упрощения скруглений/окружностей и удаление малых cutouts. Эти пути нельзя копировать без проверки |
 
 Три сохранённых входа повторно прочитаны как JSON:
 
 | Снимок | Компоненты | Tracks | Vias | Fill regions | Prohibited regions |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| [ESC G431](../../../../copilot-router/tests/pcb-routing/esc_g431_easyeda/easyeda-routing-input.json) | 127 | 6 | 3 | 0 | 0 |
-| [STM32G0 CAN/RS485](../../../../copilot-router/tests/pcb-routing/stm32g0_can_rs485_easyeda/easyeda-routing-input.json) | 68 | 0 | 0 | 3 | 0 |
-| [Maverick H743](../../../../copilot-router/tests/pcb-routing/maverick_h743_easyeda/autoroute.json) | 133 | 0 | 0 | 0 | 2 |
+| [ESC G431](../../../../../copilot-router/tests/pcb-routing/esc_g431_easyeda/easyeda-routing-input.json) | 127 | 6 | 3 | 0 | 0 |
+| [STM32G0 CAN/RS485](../../../../../copilot-router/tests/pcb-routing/stm32g0_can_rs485_easyeda/easyeda-routing-input.json) | 68 | 0 | 0 | 3 | 0 |
+| [Maverick H743](../../../../../copilot-router/tests/pcb-routing/maverick_h743_easyeda/autoroute.json) | 133 | 0 | 0 | 0 | 2 |
 
 Это количество объектов в сохранённых файлах, не доказательство количества объектов в исходном CAD. Нули не позволяют отличить нетрассированную плату от неполного снимка. Эти три файла не заменяют корпус полноценных трассированных плат. У записей компонентов есть name/footprint/nets/pinName, но нет отдельного value; name не следует безусловно считать нормализованным номиналом.
 

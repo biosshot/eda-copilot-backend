@@ -19,7 +19,7 @@
 
 ## 2. Переиспользовать существующее
 
-Прочитать [план](../../plans/implementation-plan.md), [математическую основу](../../reference/numerical-architecture.md), [задачу сетки](next-task-conduction-mesh.md), [приёмку контактов](../../evidence/conduction-mesh-review-2026-10-22.md), актуальные декларации `src/analyze/analysis-dsl/spec-doc.d.ts` и код:
+Прочитать [план](../../plans/implementation-plan.md), [математическую основу](../../reference/architecture/numerical-architecture.md), [задачу сетки](next-task-conduction-mesh.md), [приёмку контактов](../../evidence/conduction-mesh-review-2026-10-22.md), актуальные декларации `src/analyze/analysis-dsl/spec-doc.d.ts` и код:
 
 - `native/analyze/src/conduction/`: domains, triangles, terminals, barrel segments, readiness и provenance;
 - `src/analyze/run-analysis.ts` и существующий problem/runtime/общий addon;

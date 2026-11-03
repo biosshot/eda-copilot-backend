@@ -1,8 +1,8 @@
 # RoutingBoard: текущий экспорт и обсуждаемые расширения
 
-Дата: **2026-10-19**. Основание: чтение локального кода, без запуска CAD и без проверки нового экспорта на живой плате. [Общий контекст](../archive/design/README-legacy-2026-10-23.md).
+Дата: **2026-10-19**. Основание: чтение локального кода, без запуска CAD и без проверки нового экспорта на живой плате. [Общий контекст](../../archive/design/README-legacy-2026-10-23.md).
 
-Продолжение обсуждения: [проверка геометрии и сохранённых JSON](geometry-export-audit.md), [конкретный черновик RoutingBoardV2](../archive/design/routing-board-v2-draft.md). Они уточняют предложения ниже, но не утверждают окончательную схему.
+Продолжение обсуждения: [проверка геометрии и сохранённых JSON](../p4-geometry/geometry-export-audit.md), [конкретный черновик RoutingBoardV2](../../archive/design/routing-board-v2-draft.md). Они уточняют предложения ниже, но не утверждают окончательную схему.
 
 ## Выбранная основа и открытые предложения
 
@@ -12,7 +12,7 @@
 
 ## Что делает RawPcb
 
-Источник: [getPcbRaw](../../../../easyeda-copilot/extension/src/eda/pcb.ts), функция начинается около строки 686; [типы RawPcb](../../../../easyeda-copilot/shared/types/pcb/raw.ts).
+Источник: [getPcbRaw](../../../../../easyeda-copilot/extension/src/eda/pcb.ts), функция начинается около строки 686; [типы RawPcb](../../../../../easyeda-copilot/shared/types/pcb/raw.ts).
 
 | Объект EasyEDA | Действие текущего кода | Что попадает в RawPcb |
 | --- | --- | --- |
@@ -35,7 +35,7 @@
 
 ## Что делает путь RoutingBoard
 
-Источники: [exportRoutingInput](../../../../easyeda-copilot/extension/src/mcp-client.ts), [importedZones и importEasyEdaAutorouteJson](../../../../easyeda-copilot/mcp/src/routing/easyeda-autoroute-adapter.ts), [routing-operation](../../../../easyeda-copilot/mcp/src/routing/routing-operation.ts), [DRC merge](../../../../easyeda-copilot/mcp/src/routing/easyeda-drc-adapter.ts).
+Источники: [exportRoutingInput](../../../../../easyeda-copilot/extension/src/mcp-client.ts), [importedZones и importEasyEdaAutorouteJson](../../../../../easyeda-copilot/mcp/src/routing/easyeda-autoroute-adapter.ts), [routing-operation](../../../../../easyeda-copilot/mcp/src/routing/routing-operation.ts), [DRC merge](../../../../../easyeda-copilot/mcp/src/routing/easyeda-drc-adapter.ts).
 
 - Экспорт получает `getAutoRouteJsonFile()` и отдельно native DRC.
 - `importedZones()` читает `root.fillRegions`, преобразует контур/отверстия и слои, переносит net/id при наличии и выставляет `connection: 'solid'`.
@@ -63,7 +63,7 @@
 
 ## Уточнения по остальным существующим типам
 
-Источник: [contracts.ts router](../../../../copilot-router/src/core/contracts.ts).
+Источник: [contracts.ts router](../../../../../copilot-router/src/core/contracts.ts).
 
 - **Площадки:** `RoutingPad` — площадки выводов компонентов. Сейчас `shape` один на список `layers`. Обычные SMD и одинаковые площадки по слоям уже выражаются; послойные различия padstack — возможное расширение для конкретных будущих случаев, не обязательное усложнение V1. Наличие поля `hole` в типе не означает, что каждый существующий импортёр его заполняет.
 - **Дорожки:** у одного `RoutedTrack` одна `widthMm`, путь — `points[]`; две точки уже описывают обычный сегмент. Разные объекты одной сети могут иметь разные ширины. Это не ограничение всей сети одной шириной. Предыдущая формулировка ассистента была слишком общей. Дуги и точность их аппроксимации — отдельный вопрос.

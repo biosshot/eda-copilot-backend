@@ -4,8 +4,8 @@ Status: implemented for review. Reviewer-approved independent BEM references
 close R1 and the explicitly substituted R2 criterion; historical Qucs, scalar
 mutual and Johnson endpoint discrepancies remain documented. Interactive HTML
 controls remain unverified due browser policy. This document does not declare
-P7b accepted. See [verification](../evidence/line-losses-verification.md) and
-[review decisions and reference errors](../archive/design/line-losses-review-response-2026-10-23.md).
+P7b accepted. See [verification](../../evidence/line-losses-verification.md) and
+[review decisions and reference errors](../../archive/design/line-losses-review-response-2026-10-23.md).
 
 The convention is exp(+jωt), peak phasors. For the vacuum electrostatic basis
 φ_j with signal j at 1 V, let q_sj be boundary charge density, including the

@@ -167,7 +167,7 @@ analysis launcher or write into fixtures. Generated reports belong in ignored
 into sparse G/E, using faer CPU/F64 sparse LU for DC, real-block complex driving-point
 impedance and adaptive BE time integration. One bounded compiled model/factor/latest
 state per session; no PCB extraction, placement/GPU or global cache. N-API remains
-in the single node-addon host. See [semantics](../../docs/analyze/reference/electrical-network-semantics.md)
+in the single node-addon host. See [semantics](../../docs/analyze/reference/p5-p6-electrical/electrical-network-semantics.md)
 and [verification](../../docs/analyze/evidence/electrical-network-verification.md).
 
 ## Tabulated frequency blocks (P6b)
@@ -175,7 +175,7 @@ and [verification](../../docs/analyze/evidence/electrical-network-verification.m
 `electrical::frequency` normalizes bounded S/Z/Y or Touchstone resources, solves
 common-return multiport wave connections and renormalization with CPU/F64 faer LU.
 It shares the existing addon/session boundary; no PCB extraction, temporal fitting
-or GPU. See [subset and equations](../../docs/analyze/reference/frequency-network-semantics.md)
+or GPU. See [subset and equations](../../docs/analyze/reference/p5-p6-electrical/frequency-network-semantics.md)
 and [verification](../../docs/analyze/evidence/frequency-networks-verification.md).
 
 
@@ -183,7 +183,7 @@ P7a cross sections: explicit `a.line()` geometries use dielectric P1 FEM (not th
 DC copper mesh), C/C0/external L and lossless modal distributed propagation in
 `native/analyze/src/extraction/`. `z.network` reuses P6b, the existing process and
 single addon; no GPU or additional dependencies. See
-[semantics](../../docs/analyze/reference/line-cross-sections-semantics.md).
+[semantics](../../docs/analyze/reference/p7-extraction/line-cross-sections-semantics.md).
 Only explicit PEC/nondispersive lossless materials; other losses/mask/targets
 reject. Field reports retain mesh/phi/E, quality, independent mesh/domain
 convergence and exact-frequency matrices. Large reports require an explicit

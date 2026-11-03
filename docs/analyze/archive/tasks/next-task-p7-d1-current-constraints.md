@@ -10,7 +10,7 @@
 
 ## Прочитать
 
-`AGENTS.md`, `CHANGELOG.md`, `p7-real-channel-closure-plan.md`, `p7-d1-reference-recovery-results.md`, `next-task-p7-d1-conservative-current.md`, `p7-d1-conservative-current-results.md`.
+`AGENTS.md`, `CHANGELOG.md`, `p7-plan.md`, `p7-d1-reference-recovery-results.md`, `next-task-p7-d1-conservative-current.md`, `p7-d1-conservative-current-results.md`.
 
 Checkpoint D1C: `a483f10`. Не reset/clean, не удалять `debugging/`, не создавать субагентов, не коммитить и не пушить. Новые локальные artifacts — `debugging/p7-d1-current-constraints/`.
 

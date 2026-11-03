@@ -7,7 +7,7 @@
 Прочитать `AGENTS.md`, `CHANGELOG.md`, затем:
 
 - `docs/experimental/analyze/chat-handoff-2026-10-31.md`;
-- `docs/experimental/analyze/p7-real-channel-closure-plan.md`;
+- `docs/experimental/analyze/p7-plan.md`;
 - `docs/experimental/analyze/next-task-p7-d1-coupled-assembly.md`;
 - `docs/experimental/analyze/p7-d1-coupled-assembly-results.md`;
 - `docs/experimental/analyze/next-task-p7-d1-reference-recovery.md`;

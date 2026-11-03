@@ -73,7 +73,7 @@ transport differences, are in ignored
 
 ## Implementation and mathematical evidence
 
-See [derivation and decisions](../reference/line-losses-semantics.md). Vacuum FE boundary reactions
+See [derivation and decisions](../reference/p7-extraction/line-losses-semantics.md). Vacuum FE boundary reactions
 are transformed with C0 inverse into unit-current bases. Every physical signal face
 and every reference surface participates, including both stripline returns. Raw
 current arrays, complete boundary edges, signed current integrals, Gram matrices,
