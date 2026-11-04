@@ -472,8 +472,208 @@ fn profiled_joint_exact_sample_checks_the_existing_thick_coupon_at_100khz() {
         assert!(column["kvlRelative"].as_f64().unwrap() <= 1e-8);
         assert!(column["copperLossW"].as_f64().unwrap() > 0.);
     }
-    println!("profiled joint evidence: {}", json!({
-        "quality":report["quality"], "provenance":report["provenance"],
-        "samples":report["samples"], "enrichment":report["enrichment"]
-    }));
+    println!(
+        "profiled joint evidence: {}",
+        json!({
+            "quality":report["quality"], "provenance":report["provenance"],
+            "samples":report["samples"], "enrichment":report["enrichment"]
+        })
+    );
+}
+
+#[test]
+fn shared_return_split_weld_matches_unsplit_exact_grid_and_retains_trace() {
+    use pcb_analyze::extraction::local::mixed_conductor::{
+        solve_checked_spatial_partition, CheckedGrid,
+    };
+    use std::time::Instant;
+    let started = Instant::now();
+    let wall = Duration::from_secs(1800);
+    let remaining = || {
+        wall.checked_sub(started.elapsed())
+            .expect("shared fixture deadline")
+    };
+    let (board, mut geometry) = fixture();
+    geometry.stack.last_mut().unwrap().thickness_m = 0.1e-3;
+    let budget = AllocationBudget {
+        max_bytes: 3072 * 1024 * 1024,
+        ..budget()
+    };
+    // These two internal CDT edges resolve both legs of the quadrant cut
+    // without changing copper ownership, materials or finite pad contacts.
+    let traces = [[[0., 0.], [1., 0.]], [[0., 0.], [0., 0.25]]];
+    let mesh = board_mesh::build_conforming(&board, &geometry, budget, remaining(), None, &traces)
+        .unwrap();
+    let bottom = mesh.layer_spans["BOTTOM"];
+    let owners = mesh
+        .mesh
+        .copper_tetrahedra
+        .iter()
+        .map(|tet| {
+            let points = tet.nodes.map(|node| mesh.mesh.nodes_m[node]);
+            let in_bottom = points
+                .iter()
+                .all(|p| p[2] >= bottom[0] && p[2] <= bottom[1]);
+            // Preserve ownership through the whole copper thickness. The
+            // planar triangle centroid is shared by all of its tetrahedra.
+            let planar =
+                mesh.planar_triangles[tet.planar_triangle].map(|node| mesh.planar_nodes_mm[node]);
+            let x_mm = planar.iter().map(|p| p[0]).sum::<f64>() / 3.;
+            let y_mm = planar.iter().map(|p| p[1]).sum::<f64>() / 3.;
+            usize::from(in_bottom && x_mm > 0. && y_mm > 0.)
+        })
+        .collect::<Vec<_>>();
+    assert!(owners.contains(&0) && owners.contains(&1));
+
+    // Geometry-only preflight: verify the actual conforming face set and
+    // both planar normal directions before running either matched solve.
+    let direction = |nodes: [usize; 3]| {
+        let [a, b, c] = nodes.map(|i| mesh.mesh.nodes_m[i]);
+        let u: [f64; 3] = std::array::from_fn(|i| b[i] - a[i]);
+        let v: [f64; 3] = std::array::from_fn(|i| c[i] - a[i]);
+        let normal = [
+            u[1] * v[2] - u[2] * v[1],
+            u[2] * v[0] - u[0] * v[2],
+            u[0] * v[1] - u[1] * v[0],
+        ];
+        (0..3)
+            .max_by(|&i, &j| normal[i].abs().total_cmp(&normal[j].abs()))
+            .unwrap()
+    };
+    let mut seen = std::collections::BTreeMap::new();
+    let mut expected_faces = std::collections::BTreeSet::new();
+    for (tet, &owner) in mesh.mesh.copper_tetrahedra.iter().zip(&owners) {
+        for opposite in 0..4 {
+            let mut face = [
+                tet.nodes[(opposite + 1) % 4],
+                tet.nodes[(opposite + 2) % 4],
+                tet.nodes[(opposite + 3) % 4],
+            ];
+            face.sort_unstable();
+            if seen.insert(face, owner).is_some_and(|other| other != owner) {
+                expected_faces.insert(face);
+            }
+        }
+    }
+    let normal_mask = expected_faces
+        .iter()
+        .fold(0u8, |mask, &face| mask | (1 << direction(face)));
+    assert_eq!(
+        normal_mask, 0b011,
+        "return partition must retain both x- and y-directed vertical faces before solving"
+    );
+    let grid = CheckedGrid {
+        frequencies_hz: &[1000.],
+        reference_ohm: &[50., 50.],
+        max_iterations: 16,
+    };
+    let cap = 1024 * 1024;
+    let missing = solve_checked_spatial_partition(
+        &mesh,
+        &geometry,
+        grid,
+        Some(&owners[..owners.len() - 1]),
+        cap,
+        budget,
+        remaining(),
+    );
+    assert!(missing.unwrap_err().contains("SHARED_RETURN_OWNERSHIP"));
+    let split = solve_checked_spatial_partition(
+        &mesh,
+        &geometry,
+        grid,
+        Some(&owners),
+        cap,
+        budget,
+        remaining(),
+    )
+    .unwrap();
+    let unsplit =
+        solve_checked_spatial_partition(&mesh, &geometry, grid, None, 0, budget, remaining())
+            .unwrap();
+    assert_eq!(split["ports"], unsplit["ports"]);
+    assert_eq!(
+        split["provenance"]["sourceMapping"],
+        unsplit["provenance"]["sourceMapping"]
+    );
+    for (actual, expected) in split["parameters"][0]
+        .as_array()
+        .unwrap()
+        .iter()
+        .zip(unsplit["parameters"][0].as_array().unwrap())
+    {
+        for (a, b) in actual
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(expected.as_array().unwrap())
+        {
+            let re = a["real"].as_f64().unwrap() - b["real"].as_f64().unwrap();
+            let im = a["imaginary"].as_f64().unwrap() - b["imaginary"].as_f64().unwrap();
+            assert!(re.hypot(im) <= 1e-10);
+        }
+    }
+    assert_eq!(split["coverage"], "unverified");
+    assert_eq!(unsplit["coverage"], "unverified");
+    let topology = &split["spatialPartition"];
+    assert_eq!(topology["owners"], 2);
+    assert!(topology["tracePotentialDofs"].as_array().unwrap().len() > 1);
+    let faces = topology["orientedCrossOwnerFaces"].as_array().unwrap();
+    assert!(faces
+        .iter()
+        .all(|face| face["outwardPositiveOwner"] != face["outwardNegativeOwner"]));
+    let reported_faces = faces
+        .iter()
+        .map(|face| serde_json::from_value::<[usize; 3]>(face["nodes"].clone()).unwrap())
+        .collect::<std::collections::BTreeSet<_>>();
+    assert_eq!(reported_faces, expected_faces);
+    let mut owner_flow = 0_f64;
+    let mut common_displacement = 0_f64;
+    for (col, base) in split["samples"][0]["columns"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .zip(unsplit["samples"][0]["columns"].as_array().unwrap())
+    {
+        let loss = col["copperLossW"].as_f64().unwrap();
+        let control = base["copperLossW"].as_f64().unwrap();
+        assert!((loss - control).abs() <= 1e-10 * loss.abs().max(control.abs()).max(1e-18));
+        let trace = &col["spatialTrace"];
+        assert!(trace["maxWeldRelative"].as_f64().unwrap() <= 1e-8);
+        assert!(trace["maxKclRelative"].as_f64().unwrap() <= 1e-8);
+        let owner_loss = trace["ownerJouleLossW"].as_array().unwrap();
+        assert_eq!(owner_loss.len(), 2);
+        assert!(owner_loss.iter().all(|value| value.as_f64().unwrap() > 0.));
+        assert!(
+            (owner_loss
+                .iter()
+                .map(|value| value.as_f64().unwrap())
+                .sum::<f64>()
+                - loss)
+                .abs()
+                <= 1e-8 * loss.max(1e-18)
+        );
+        for row in trace["traces"].as_array().unwrap() {
+            let [re, im] =
+                serde_json::from_value::<[f64; 2]>(row["commonDisplacementA"].clone()).unwrap();
+            common_displacement = common_displacement.max(re.hypot(im));
+            for owner in row["ownerDuals"].as_array().unwrap() {
+                let [re, im] =
+                    serde_json::from_value::<[f64; 2]>(owner["weakConductionA"].clone()).unwrap();
+                owner_flow = owner_flow.max(re.hypot(im));
+            }
+        }
+    }
+    assert!(owner_flow > 1e-4 && common_displacement > 0.);
+    println!(
+        "P7_SHARED_RETURN_INTERFACE {}",
+        json!({
+            "schema":"p7-shared-return-interface-v1","frequencyHz":1000.,
+            "ports":split["ports"],"sourceMapping":split["provenance"]["sourceMapping"],
+            "topology":topology,"splitParameters":split["parameters"],"unsplitParameters":unsplit["parameters"],
+            "splitColumns":split["samples"][0]["columns"],"unsplitColumns":unsplit["samples"][0]["columns"],
+            "maxOwnerWeakConductionA":owner_flow,"maxCommonDisplacementA":common_displacement,
+            "faceDirectionMask":normal_mask,"coverage":"unverified",
+        })
+    );
 }

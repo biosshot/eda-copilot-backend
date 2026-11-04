@@ -633,6 +633,7 @@ pub(super) fn solve_mixed_grid(
     ports: &[[usize; 2]],
     packages: &[super::checked_packages::Validated],
     field: &Field<'_>,
+    partition: Option<&super::spatial_partition::Partition>,
     budget: AllocationBudget,
     start: Instant,
     wall: Duration,
@@ -697,11 +698,11 @@ pub(super) fn solve_mixed_grid(
         .map(|v| map.lift_potentials(v))
         .collect::<Result<Vec<_>>>()?;
     let mut cells = Vec::with_capacity(ni);
-    for cell in &map.full.cells {
+    for (index, cell) in map.full.cells.iter().enumerate() {
         check_time(start, wall)?;
+        let potentials = partition.map_or(cell.potentials, |partition| partition.weld(index));
         for axis in 0..3 {
-            let terms = cell
-                .potentials
+            let terms = potentials
                 .iter()
                 .enumerate()
                 .map(|(k, &i)| (i, cell.incidence[k][axis]))
@@ -795,6 +796,7 @@ pub(super) fn solve_mixed_grid(
         wall,
         true,
         packages,
+        partition.map(|partition| (partition, &map.full)),
     )?;
     Ok((checked, space.planned_bytes))
 }
@@ -948,6 +950,7 @@ fn assemble_impl(
             wall,
             false,
             &[],
+            None,
         )?),
         _ => unreachable!("preparation resources match their scope"),
     };
@@ -1144,6 +1147,14 @@ impl ReducedSpace {
         budget.max_memory_mi_b = Some(available);
         Ok(budget)
     }
+    fn physical_injection(&self, drive: &[f64]) -> Vec<f64> {
+        let mut injected = vec![Sum::default(); self.full_potentials];
+        for (&[a, b], &i) in self.ports.iter().zip(drive) {
+            injected[a] = injected[a].add(Sum::from(i));
+            injected[b] = injected[b].sub(Sum::from(i));
+        }
+        injected.into_iter().map(Sum::value).collect()
+    }
     fn full_residual(
         &self,
         w: f64,
@@ -1184,17 +1195,9 @@ impl ReducedSpace {
             ));
         }
 
-        let injection = |drive: &[f64]| {
-            let mut injected = vec![Sum::default(); nr];
-            for (&[a, b], &i) in self.ports.iter().zip(drive) {
-                injected[a] = injected[a].add(Sum::from(i));
-                injected[b] = injected[b].sub(Sum::from(i));
-            }
-            injected.into_iter().map(Sum::value).collect::<Vec<_>>()
-        };
         let injected = [
-            injection(drive),
-            drive_im.map_or_else(|| vec![0.; nr], injection),
+            self.physical_injection(drive),
+            drive_im.map_or_else(|| vec![0.; nr], |drive| self.physical_injection(drive)),
         ];
         let (mut kcl, mut kcl_scale, mut kvl, mut kvl_scale) = (0_f64, 0_f64, 0_f64, 0_f64);
         let mut kcl_rows = [vec![0.; nr], vec![0.; nr]];
@@ -1546,6 +1549,10 @@ impl ReducedSpace {
         wall: Duration,
         pair_gradient: bool,
         packages: &[super::checked_packages::Validated],
+        partition: Option<(
+            &super::spatial_partition::Partition,
+            &super::volume_current::Space,
+        )>,
     ) -> Result<serde_json::Value> {
         use super::checked_packages;
         use serde_json::{json, Value};
@@ -1704,6 +1711,31 @@ impl ReducedSpace {
                             "kvlRelative":norm.kvl_relative,"copperLossW":copper,"powerBalanceErrorW":power_error});
                         if !package_samples.is_empty() {
                             column["packages"] = json!(package_samples);
+                        }
+                        if let Some((partition, space)) = partition {
+                            let nv = self.basis.voltage.len();
+                            let state = [copper_re, copper_im];
+                            let v = state
+                                .map(|s| lift(&self.basis.voltage, &s[..nv], self.full_potentials));
+                            let q = state
+                                .map(|s| lift(&self.basis.current, &s[nv..], self.cells.len()));
+                            let c =
+                                state.map(|s| lift(&self.charges, &s[..nv], self.full_potentials));
+                            let injection = [
+                                self.physical_injection(&net_real),
+                                self.physical_injection(&net_imaginary),
+                            ];
+                            column["spatialTrace"] = partition.observe(
+                                space,
+                                v.each_ref().map(Vec::as_slice),
+                                q.each_ref().map(Vec::as_slice),
+                                c.each_ref().map(Vec::as_slice),
+                                injection.each_ref().map(Vec::as_slice),
+                                w,
+                                copper,
+                                start,
+                                wall,
+                            )?;
                         }
                         columns.push(column);
                     }

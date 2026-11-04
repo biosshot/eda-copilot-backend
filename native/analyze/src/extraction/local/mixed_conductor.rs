@@ -8,6 +8,7 @@ use super::{
     capacitance::TraceRow,
     copper_skin_profile, error,
     foil_reduced::{self, MatchedGrid},
+    spatial_partition::Partition,
     volume_current,
     volume_field::Field,
     AllocationBudget, Result,
@@ -688,6 +689,61 @@ pub(super) fn solve_checked_mesh(
     grid: CheckedGrid<'_>,
     skin: Option<copper_skin_profile::Profile>,
     packages: &[super::checked_packages::Validated],
+    budget: AllocationBudget,
+    start: Instant,
+    wall: Duration,
+) -> Result<serde_json::Value> {
+    solve_checked_mesh_impl(
+        &mesh, request, grid, skin, packages, None, budget, start, wall,
+    )
+}
+
+/// Developer-only native interface proof on one already-built common mesh.
+/// The unpartitioned control uses the same coordinates, terminals and fields.
+#[doc(hidden)]
+pub fn solve_checked_spatial_partition(
+    mesh: &BoardMesh,
+    request: &board_mesh::Request,
+    grid: CheckedGrid<'_>,
+    owners: Option<&[usize]>,
+    max_trace_output_bytes: usize,
+    mut budget: AllocationBudget,
+    wall: Duration,
+) -> Result<serde_json::Value> {
+    let start = Instant::now();
+    if owners.is_some_and(|ids| ids.len() != mesh.mesh.copper_tetrahedra.len()) {
+        return Err(error(
+            "SHARED_RETURN_OWNERSHIP",
+            "exact original Cu tetrahedron ownership required",
+        ));
+    }
+    let reserve = checked_reserve(request, grid, None)?;
+    budget.max_bytes = budget.max_bytes.checked_sub(reserve).ok_or_else(|| {
+        error(
+            "MEMORY_LIMIT",
+            "shared return exact-grid output exceeds budget",
+        )
+    })?;
+    solve_checked_mesh_impl(
+        mesh,
+        request,
+        grid,
+        None,
+        &[],
+        owners.map(|ids| (ids, max_trace_output_bytes)),
+        budget,
+        start,
+        wall,
+    )
+}
+
+fn solve_checked_mesh_impl(
+    mesh: &BoardMesh,
+    request: &board_mesh::Request,
+    grid: CheckedGrid<'_>,
+    skin: Option<copper_skin_profile::Profile>,
+    packages: &[super::checked_packages::Validated],
+    partition_request: Option<(&[usize], usize)>,
     mut budget: AllocationBudget,
     start: Instant,
     wall: Duration,
@@ -752,12 +808,50 @@ pub(super) fn solve_checked_mesh(
         .ok_or_else(|| error("MEMORY_LIMIT", "mixed provenance exceeds budget"))?;
 
     let map = prepare(
-        &mesh,
+        mesh,
         &request.electrodes,
         effective_upper,
         budget,
         wall.saturating_sub(start.elapsed()),
     )?;
+    let partition = partition_request
+        .map(|(owners, max_output)| {
+            let available = budget
+                .max_bytes
+                .checked_sub(map.planned_bytes)
+                .ok_or_else(|| {
+                    error(
+                        "MEMORY_LIMIT",
+                        "mixed map exhausts shared return topology budget",
+                    )
+                })?;
+            Partition::new(
+                &mesh.mesh,
+                &map.full,
+                owners,
+                frequencies_hz.len() * reference_ohm.len(),
+                max_output,
+                AllocationBudget {
+                    max_bytes: available,
+                    ..budget
+                },
+                start,
+                wall,
+            )
+        })
+        .transpose()?;
+    let partition_bytes = partition
+        .as_ref()
+        .map_or(0, |partition| partition.planned_bytes);
+    budget.max_bytes = budget
+        .max_bytes
+        .checked_sub(partition_bytes)
+        .ok_or_else(|| {
+            error(
+                "MEMORY_LIMIT",
+                "shared return topology exceeds mixed budget",
+            )
+        })?;
     let n = map.full.potential_count();
     let names: Vec<_> = (0..n).map(|i| format!("native-potential-{i}")).collect();
     let mut electrodes = BTreeMap::new();
@@ -797,6 +891,7 @@ pub(super) fn solve_checked_mesh(
         &ports,
         packages,
         &field,
+        partition.as_ref(),
         budget,
         start,
         wall,
@@ -835,11 +930,14 @@ pub(super) fn solve_checked_mesh(
         "volumeTetrahedra":map.owners.iter().filter(|&&o| o == Owner::Volume).count(),
         "fullPotentialCount":n, "fullCurrentCount":map.full.current_count(),
         "retainedPotentials":retained_potentials, "currentModes":current_modes,
-        "plannedBytes":planned + reserve + provenance,
+        "plannedBytes":planned + reserve + provenance + partition_bytes,
         "spatialCoverage":"unverified", "bandCoverage":"unverified",
         "magneticQuadratureCoverage":"unverified",
         "driveConvention":"1 A RMS matched Norton basis columns, checked only at listed frequencies",
     });
+    if let Some(partition) = partition {
+        checked["spatialPartition"] = partition.topology();
+    }
     if let Some(skin) = skin_evidence {
         checked["provenance"]["operatorPolicy"] = json!("skin-volume-v3");
         checked["provenance"]["copperSkinMesh"] = skin;
