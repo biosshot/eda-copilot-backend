@@ -4,6 +4,8 @@ pub mod polygon_section;
 pub mod board_section;
 pub mod channel_magnetic;
 pub mod section_cache;
+mod section_transition;
+mod section_transition_grid;
 mod geometry;
 pub mod local;
 pub mod losses;

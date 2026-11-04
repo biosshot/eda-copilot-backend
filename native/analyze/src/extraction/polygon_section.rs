@@ -108,8 +108,16 @@ fn corner_graded(p:&Contour,step:f64,cap:usize)->Result<Contour>{
 /// other conductor has its own unit-potential coordinate under role "signal",
 /// including conductors used as physical returns by the assembled network.
 pub fn solve(r: &Request) -> Result<serde_json::Value> {solve_with_corner_scale(r,1.)}
-fn solve_with_corner_scale(r:&Request,corner_scale:f64)->Result<serde_json::Value>{
-    let start = Instant::now();
+struct SectionGeometry {
+    limits: Limits,
+    domain: Polygon<f64>,
+    metal: Vec<Polygon<f64>>,
+    materials: Vec<Polygon<f64>>,
+    signals: Vec<usize>,
+    cdt: ConstrainedDelaunayTriangulation<Point2<f64>>,
+}
+
+fn section_geometry(r: &Request, corner_scale: f64, start: Instant) -> Result<SectionGeometry> {
     if !(16..=200000).contains(&r.max_nodes)
         || !r.max_triangle_area_m2.is_finite()
         || r.max_triangle_area_m2 <= 0.
@@ -225,6 +233,13 @@ fn solve_with_corner_scale(r:&Request,corner_scale:f64)->Result<serde_json::Valu
         return Err(error("SECTION_MESH_LIMIT", "polygon refinement cap"));
     }
     limits.check(cdt.num_vertices() * 2048)?;
+    Ok(SectionGeometry { limits, domain, metal, materials, signals, cdt })
+}
+
+fn solve_with_corner_scale(r:&Request,corner_scale:f64)->Result<serde_json::Value>{
+    let start = Instant::now();
+    let SectionGeometry { limits, domain, metal, materials, signals, cdt } =
+        section_geometry(r, corner_scale, start)?;
     let all_nodes = cdt
         .vertices()
         .map(|v| [v.position().x, v.position().y])
@@ -354,6 +369,286 @@ fn solve_with_corner_scale(r:&Request,corner_scale:f64)->Result<serde_json::Valu
         serde_json::json!({"conductorOrder":signals.iter().map(|&i|&r.conductors[i].id).collect::<Vec<_>>(),"reference":r.conductors.iter().find(|c|c.role=="reference").unwrap().id,"parameters":parameters,"frequencyDependent":loss,"capacitanceFPerM":actual.c,"vacuumCapacitanceFPerM":vacuum.c,"nodesM":nodes,"triangles":triangles,"epsilonR":epsilon,"potentialsV":actual.phi,"electricFieldsVPerM":actual.e,"quality":actual.quality,"vacuumQuality":vacuum.quality,"elapsedSeconds":start.elapsed().as_secs_f64(),"assumptions":[if loss.is_some(){"Weak-loss smooth surface impedance and regional dielectric energy; explicit conductivity, dimensions and material band"}else{"PEC electrostatics, explicit finite physical reference and polygon materials; natural outer boundary"},"One mesh is not spatial/domain convergence or a 5% accuracy certificate","No roughness, radiation or DC skin-transition admission; transient requires a separately verified causal model"]}),
     )
 }
+/// The magnetic handoff owns a distinct full-domain mesh and borrows original
+/// conductor names. Its budget excludes mesh storage already retained here.
+pub(super) struct TransitionMesh<'a> {
+    nodes_m: Vec<[f64; 2]>,
+    triangles: Vec<super::section_transition::Triangle>,
+    conductors: Vec<super::section_transition::Conductor<'a>>,
+    pub budget: super::section_transition::Budget,
+    pub retained_bytes: usize,
+    pub meshing_plan_bytes: usize,
+}
+
+impl TransitionMesh<'_> {
+    pub(super) fn as_mesh(&self) -> super::section_transition::Mesh<'_> {
+        super::section_transition::Mesh {
+            nodes_m: &self.nodes_m,
+            triangles: &self.triangles,
+            conductors: &self.conductors,
+            reference: self.conductors.len() - 1,
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum FullOwner {
+    Outside,
+    Dielectric,
+    Metal(usize),
+}
+
+fn transition_ownership(detail: &str) -> String {
+    error("SECTION_TRANSITION_OWNERSHIP", detail)
+}
+
+/// Materials use the existing signal order followed by the physical reference.
+/// Conductivity is explicit and is independent of the weak-loss transport input.
+pub(super) fn transition_mesh<'a>(
+    request: &'a Request,
+    conductivities: &[(&str, f64)],
+    start: Instant,
+) -> Result<TransitionMesh<'a>> {
+    use super::{
+        local::accurate::Sum,
+        section_transition::{Budget, Conductor, Triangle},
+    };
+    use std::{mem::size_of, time::Duration};
+
+    if !(2..=17).contains(&request.conductors.len())
+        || conductivities.len() != request.conductors.len()
+    {
+        return Err(error(
+            "SECTION_TRANSITION_MATERIAL",
+            "one explicit conductivity for each of 2..17 original conductors required",
+        ));
+    }
+    let order: Vec<_> = ["signal", "reference"]
+        .into_iter()
+        .flat_map(|role| {
+            request
+                .conductors
+                .iter()
+                .enumerate()
+                .filter(move |(_, conductor)| conductor.role == role)
+        })
+        .collect();
+    if order.len() != request.conductors.len()
+        || order
+            .iter()
+            .zip(conductivities)
+            .any(|((_, conductor), &(id, sigma))| {
+                conductor.id != id || !sigma.is_finite() || sigma <= 0.
+            })
+    {
+        return Err(error("SECTION_TRANSITION_MATERIAL",
+            "explicit positive finite conductivity for each original conductor in signal/reference order required"));
+    }
+
+    let SectionGeometry {
+        cdt,
+        limits,
+        domain,
+        metal,
+        ..
+    } = section_geometry(request, 1., start)?;
+    let count = cdt.num_vertices();
+    let faces = cdt.num_all_faces();
+    let meshing_plan_bytes = count
+        .checked_mul(
+            2048 + 2 * size_of::<[f64; 2]>()
+                + size_of::<usize>()
+                + size_of::<Option<usize>>()
+                + size_of::<bool>(),
+        )
+        .and_then(|n| {
+            n.checked_add(faces.checked_mul(size_of::<Triangle>() + size_of::<FullOwner>())?)
+        })
+        .and_then(|n| n.checked_add(4096))
+        .ok_or_else(|| {
+            error(
+                "SECTION_TRANSITION_MEMORY",
+                "full CDT handoff byte plan overflow",
+            )
+        })?
+        .max(request.max_nodes * 2048);
+    limits.check(meshing_plan_bytes)?;
+
+    let coordinate_scale = request
+        .domain
+        .outer_m
+        .iter()
+        .flatten()
+        .map(|x| x.abs())
+        .fold(0., f64::max);
+    let roundoff = 64. * f64::EPSILON * coordinate_scale;
+    for (i, polygon) in metal.iter().enumerate() {
+        if std::iter::once(domain.exterior())
+            .chain(domain.interiors())
+            .any(|ring| Euclidean.distance(ring, polygon) <= roundoff)
+            || metal[..i]
+                .iter()
+                .any(|other| Euclidean.distance(other, polygon) <= roundoff)
+        {
+            return Err(transition_ownership(
+                "conductor clearance is unresolved at a metal or domain boundary",
+            ));
+        }
+    }
+
+    let all_nodes: Vec<_> = cdt
+        .vertices()
+        .map(|v| [v.position().x, v.position().y])
+        .collect();
+    let mut canonical = vec![0; metal.len()];
+    for (index, &(original, _)) in order.iter().enumerate() {
+        canonical[original] = index;
+    }
+    let mut used = vec![false; count];
+    let mut vertex_metal = vec![None; count];
+    let mut owners = vec![FullOwner::Outside; faces];
+    let mut triangles = Vec::with_capacity(cdt.num_inner_faces());
+    let mut domain_area = Sum::default();
+    let mut conductor_areas = vec![Sum::default(); metal.len()];
+    for face in cdt.inner_faces() {
+        limits.check(meshing_plan_bytes)?;
+        let nodes = face.vertices().map(|v| v.fix().index());
+        let [a, b, c] = nodes.map(|i| all_nodes[i]);
+        let centre = Point::new((a[0] + b[0] + c[0]) / 3., (a[1] + b[1] + c[1]) / 3.);
+        if !domain.contains(&centre) {
+            continue;
+        }
+        let mut conductor = None;
+        for (original, polygon) in metal.iter().enumerate() {
+            if polygon.contains(&centre) && conductor.replace(canonical[original]).is_some() {
+                return Err(transition_ownership(
+                    "triangle belongs to multiple physical conductors",
+                ));
+            }
+        }
+        let (area, _) = field::element(&all_nodes, nodes)?;
+        domain_area = domain_area.add(Sum::from(area));
+        for node in nodes {
+            used[node] = true;
+        }
+        let owner = if let Some(i) = conductor {
+            conductor_areas[i] = conductor_areas[i].add(Sum::from(area));
+            for node in nodes {
+                if vertex_metal[node].replace(i).is_some_and(|old| old != i) {
+                    return Err(transition_ownership(
+                        "distinct conductors share a triangulated vertex",
+                    ));
+                }
+            }
+            FullOwner::Metal(i)
+        } else {
+            FullOwner::Dielectric
+        };
+        owners[face.fix().index()] = owner;
+        triangles.push(Triangle { nodes, conductor });
+    }
+
+    // Verify that every change of ownership is on an original constrained
+    // polygon edge. The domain and every conductor can contain holes.
+    for edge in cdt.undirected_edges() {
+        limits.check(meshing_plan_bytes)?;
+        let directed = edge.as_directed();
+        let a = owners[directed.face().fix().index()];
+        let b = owners[directed.rev().face().fix().index()];
+        if a == b {
+            continue;
+        }
+        let contour = match (a, b) {
+            (FullOwner::Metal(i), FullOwner::Dielectric)
+            | (FullOwner::Dielectric, FullOwner::Metal(i)) => &metal[order[i].0],
+            (FullOwner::Outside, FullOwner::Dielectric)
+            | (FullOwner::Dielectric, FullOwner::Outside) => &domain,
+            _ => {
+                return Err(transition_ownership(
+                    "metal touches another conductor or the exterior boundary",
+                ))
+            }
+        };
+        let [a, b] = edge.vertices().map(|v| [v.position().x, v.position().y]);
+        let checks = [
+            Point::from(a),
+            Point::from(b),
+            Point::new((a[0] + b[0]) / 2., (a[1] + b[1]) / 2.),
+        ];
+        if !edge.is_constraint_edge()
+            || !std::iter::once(contour.exterior())
+                .chain(contour.interiors())
+                .any(|ring| {
+                    checks
+                        .iter()
+                        .all(|p| Euclidean.distance(p, ring) <= roundoff)
+                })
+        {
+            return Err(transition_ownership(
+                "mesh ownership interface is outside the original polygon constraints",
+            ));
+        }
+    }
+
+    let area_matches = |actual: Sum, expected: f64| {
+        let actual = actual.value();
+        actual.is_finite()
+            && expected.is_finite()
+            && actual > 0.
+            && (actual - expected).abs() <= 1e-8 * expected
+    };
+    if !area_matches(domain_area, domain.unsigned_area())
+        || order.iter().enumerate().any(|(i, &(original, _))| {
+            !area_matches(conductor_areas[i], metal[original].unsigned_area())
+        })
+    {
+        return Err(transition_ownership(
+            "full-domain or conductor mesh area disagrees with the original polygon",
+        ));
+    }
+
+    let mut remap = vec![usize::MAX; count];
+    let mut nodes_m = Vec::with_capacity(used.iter().filter(|&&active| active).count());
+    for (i, node) in all_nodes.into_iter().enumerate() {
+        if used[i] {
+            remap[i] = nodes_m.len();
+            nodes_m.push(node);
+        }
+    }
+    for triangle in &mut triangles {
+        triangle.nodes = triangle.nodes.map(|i| remap[i]);
+    }
+    let conductors: Vec<_> = order
+        .into_iter()
+        .zip(conductivities)
+        .map(|((_, conductor), &(_, conductivity_s_m))| Conductor {
+            id: &conductor.id,
+            conductivity_s_m,
+        })
+        .collect();
+    let retained_bytes = nodes_m.capacity() * size_of::<[f64; 2]>()
+        + triangles.capacity() * size_of::<Triangle>()
+        + conductors.capacity() * size_of::<Conductor<'_>>();
+    let max_bytes = limits.memory.checked_sub(retained_bytes).ok_or_else(|| {
+        error(
+            "SECTION_TRANSITION_MEMORY",
+            "retained full-domain mesh exceeds budget",
+        )
+    })?;
+    limits.check(meshing_plan_bytes)?;
+    Ok(TransitionMesh {
+        nodes_m,
+        triangles,
+        conductors,
+        budget: Budget {
+            max_bytes,
+            deadline: start + Duration::from_secs_f64(limits.seconds),
+        },
+        retained_bytes,
+        meshing_plan_bytes,
+    })
+}
+
 use geo::BooleanOps;
 
 fn loss_coefficients(
@@ -1238,4 +1533,105 @@ pub fn network(
   let response=|strong:f64,weak:f64|json!({"samples":[{"frequencyHz":f,"resistanceOhmPerM":[[strong+weak]],"conductanceSPerM":[[0.]]}],"surfaceIntegrals":[{"gramPerM":[[strong]]},{"gramPerM":[[weak]]}],"regionalCapacitanceFPerM":[[[1.]]]});
   let original=response(1.,0.);let weak=response(1.,1e-6);assert!(loss_change_raw(&weak,&original)>0.02);assert!(loss_change(&weak,&original,&loss)<0.002);assert!(loss_change(&response(1.03,0.),&original,&loss)>0.02);assert!(loss_change(&response(1.02001,0.),&original,&loss)>0.02);assert!(loss_change(&response(0.97,0.),&original,&loss)>0.02);
  }
+}
+
+#[cfg(test)]
+mod transition_handoff_tests {
+    use super::*;
+
+    fn rect(x0: f64, y0: f64, x1: f64, y1: f64) -> Vec<[f64; 2]> {
+        vec![[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
+    }
+
+    #[test]
+    fn full_transition_mesh_keeps_original_copper_and_holes() {
+        let domain = Contour {
+            outer_m: vec![[0., 0.], [4., 0.], [4., 2.], [2., 2.], [2., 4.], [0., 4.]],
+            holes_m: vec![],
+        };
+        let mut request = Request {
+            loss: None,
+            domain: domain.clone(),
+            conductors: vec![
+                Metal {
+                    id: "return".into(),
+                    role: "reference".into(),
+                    contour: Contour {
+                        outer_m: rect(0.25, 0.25, 1.25, 1.25),
+                        holes_m: vec![rect(0.5, 0.5, 1., 1.)],
+                    },
+                },
+                Metal {
+                    id: "signal".into(),
+                    role: "signal".into(),
+                    contour: Contour {
+                        outer_m: rect(2.5, 0.25, 3.5, 1.25),
+                        holes_m: vec![],
+                    },
+                },
+            ],
+            dielectrics: vec![MaterialRegion {
+                id: "air".into(),
+                relative_permittivity: 1.,
+                contour: domain,
+            }],
+            max_triangle_area_m2: 0.2,
+            max_nodes: 2048,
+            max_seconds: 10.,
+            max_memory_mib: 16,
+        };
+        let conductivities = [("signal", 58e6), ("return", 49e6)];
+        let start = Instant::now();
+        assert!(transition_mesh(&request, &conductivities[..1], start)
+            .err()
+            .unwrap()
+            .contains("SECTION_TRANSITION_MATERIAL"));
+        {
+            let prepared = transition_mesh(&request, &conductivities, start).unwrap();
+            let mesh = prepared.as_mesh();
+            assert_eq!(mesh.reference, 1);
+            assert_eq!(
+                mesh.conductors
+                    .iter()
+                    .map(|c| (c.id, c.conductivity_s_m))
+                    .collect::<Vec<_>>(),
+                conductivities
+            );
+            let mut areas = [0.; 3];
+            let mut used = BTreeSet::new();
+            let mut hole_faces = 0;
+            for triangle in mesh.triangles {
+                let (area, _) = field::element(mesh.nodes_m, triangle.nodes).unwrap();
+                areas[triangle.conductor.unwrap_or(2)] += area;
+                used.extend(triangle.nodes);
+                let [a, b, c] = triangle.nodes.map(|i| mesh.nodes_m[i]);
+                let x = (a[0] + b[0] + c[0]) / 3.;
+                let y = (a[1] + b[1] + c[1]) / 3.;
+                assert!(x < 2. || y < 2.);
+                if x > 0.5 && x < 1. && y > 0.5 && y < 1. {
+                    assert_eq!(triangle.conductor, None);
+                    hole_faces += 1;
+                }
+            }
+            assert!(hole_faces > 0);
+            assert_eq!(used.len(), mesh.nodes_m.len());
+            for (actual, expected) in areas.into_iter().zip([1., 0.75, 10.25]) {
+                assert!((actual - expected).abs() < 1e-10);
+            }
+            assert_eq!(
+                prepared.budget.max_bytes + prepared.retained_bytes,
+                16 << 20
+            );
+            assert!(prepared.meshing_plan_bytes >= prepared.retained_bytes);
+            assert_eq!(
+                prepared.budget.deadline,
+                start + std::time::Duration::from_secs(10)
+            );
+        }
+        request.conductors[1].contour.outer_m = rect(1.25, 0.25, 2.25, 1.25);
+        assert!(transition_mesh(&request, &conductivities, Instant::now())
+            .err()
+            .unwrap()
+            .contains("SECTION_GEOMETRY"));
+    }
 }

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Integrate an internal F64 section skin-transition operator with polygon mesh handoff, a bounded frequency grid, optional P1 axial-current recovery and singleton TypeScript handling. Four focused release library tests and five TypeScript regressions pass. The addon build, PEC radial multilayer coax regression, typecheck and package build pass. Public extraction bands and physical P7 acceptance remain unchanged.
+
 - Verify the original automatic mixed bend and exact-grid memory/disk replay: cold 1764.485 s at 196.57 MiB process-tree private peak, fresh-process reuse 1.906 s with zero native solves. Verify actual private-pad package extraction in 2.100 s native time, four DC runtime tests, four focused release algebra/profile tests, cache tests, typecheck and builds. Keep independent physical and broad-band acceptance open.
 
 - Attach explicit floating R/C/L package models to original private pad pairs in automatic joint extraction. Recover copper and package states through physical P6 mappings, check separate loss/current evidence and include full models in exact-grid cache identity. Add balanced DC port modes without grounding disconnected islands, and opt-in bounded mesh/exterior sensitivity with a 2% gate and 3.5% review boundary. Physical accuracy and broad-band acceptance remain unverified; see `docs/analyze/evidence/p7-joint-packages-2026-11-04.md`.

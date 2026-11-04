@@ -1,6 +1,7 @@
 import { channelLossGrams } from './channel-loss.ts';
 import {validateChannelAttachments, type ChannelAttachment} from './channel-components.ts';
 import {canonical} from './local-model-cache.ts';
+import {freeze} from './analysis-dsl/data.ts';
 import {selectSectionDomain} from './section-domain.ts';
 import type {AnalysisCrossSectionReport,AnalysisCrossSectionRequest,AnalysisFrequencyRequest,AnalysisFrequencyResource} from '../../native/analyze/index.js';
 import {createProblemExecutor} from './execute-problem.ts';
@@ -201,12 +202,12 @@ export function channelTopology(plan:SegmentedChannel){
  return {connections,connectionContacts,ports};
 }
 
-function sectionLayout(p:any,line:any,frequencies:number[]){
+function sectionLayout(p:any,line:any,frequencies:number[],minimumCells=1){
  if(p.frequencyDependent||line.geometry?.loss)fail('Dispersive descriptor requires verified causal realization');
  const n=p.capacitanceFPerM.length,length=line.lengthMm*1e-3;
  if(!(length>0)||!Number.isFinite(length)||n<1||n>16)fail('Positive finite propagation length and conductor count required');
  const delay=Math.max(...p.modes.map((m:any)=>m.delaySPerM));
- const cells=Math.max(1,Math.ceil(2*Math.PI*Math.max(...frequencies)*length*delay/.01));if(cells>256||(n+1)*(cells+1)>1024||n*cells>1536)fail('Distributed descriptor cell budget');
+ const cells=Math.max(1,minimumCells,Math.ceil(2*Math.PI*Math.max(...frequencies)*length*delay/.01));if(cells>256||(n+1)*(cells+1)>1024||n*cells>1536)fail('Distributed descriptor cell budget');
  return {n,length,cells,cellLength:length/cells};
 }
 
@@ -297,8 +298,17 @@ export function sectionMagneticBlock(id:string,line:any,p:any,frequencies:number
  * signal/return terminals and structural common-potential gauges survive P6.
  * Each cell phase <=0.01rad; this is a discretization guard, not PCB accuracy. */
 export function sectionDescriptor(p:any,line:any,frequencies:number[],dc?:{resistanceOhmPerM:number[][];internalInductanceHPerM:number[][]},terminals?:{ends:SectionEnds;cuts:readonly ChannelCut[]}){
- const {n,length,cells}=sectionLayout(p,line,frequencies),C=reciprocalTransport(p.capacitanceFPerM),L=reciprocalTransport(p.inductanceHPerM);
- const conductors=line.kind==='polygon-section'?sectionConductors(line):undefined,basis=sectionCurrentBasis(n);
+ const layout=sectionLayout(p,line,frequencies),C=reciprocalTransport(p.capacitanceFPerM),L=reciprocalTransport(p.inductanceHPerM);
+ const conductors=line.kind==='polygon-section'?sectionConductors(line):undefined;
+ const totalL=dc?L.map((row,i)=>row.map((v,j)=>v+(dc.internalInductanceHPerM[i][j]??0))):L;
+ return stampSectionDescriptor(layout,C,totalL,dc?.resistanceOhmPerM,conductors,terminals);
+}
+
+function stampSectionDescriptor(
+ {n,length,cells}:ReturnType<typeof sectionLayout>,C:number[][],L:number[][],R:number[][]|undefined,
+ conductors:SectionConductor[]|undefined,terminals?:{ends:SectionEnds;cuts:readonly ChannelCut[]},
+){
+ const basis=sectionCurrentBasis(n);
  if(conductors&&conductors.length!==n+1)fail('Section electric basis dimension mismatch');
  const potentialNodes=Array.from({length:(n+1)*(cells+1)},(_,i)=>String(i));
  const incidence:number[][]=[],inductanceH:number[][]=[],resistanceOhm:number[][]=[];
@@ -311,8 +321,8 @@ export function sectionDescriptor(p:any,line:any,frequencies:number[],dc?:{resis
   if(k<cells){for(let i=0;i<n;i++){
    const dof=k*n+i;for(const [conductor,sign] of basis[i])incidence.push([base+conductor,dof,sign],[base+n+1+conductor,dof,-sign]);
    for(let j=0;j<n;j++){
-    const l=(L[i][j]+(dc?.internalInductanceHPerM[i][j]??0))*length/cells;if(l!==0)inductanceH.push([dof,k*n+j,l]);
-    const r=(dc?.resistanceOhmPerM[i][j]??0)*length/cells;if(r!==0)resistanceOhm.push([dof,k*n+j,r]);
+    const l=L[i][j]*length/cells;if(l!==0)inductanceH.push([dof,k*n+j,l]);
+    const r=(R?.[i][j]??0)*length/cells;if(r!==0)resistanceOhm.push([dof,k*n+j,r]);
    }
   }}
  }
@@ -321,6 +331,88 @@ export function sectionDescriptor(p:any,line:any,frequencies:number[],dc?:{resis
  const portIncidence=ports.flatMap(([positive,negative],i)=>[[positive,i,1],[negative,i,-1]]);
  return {format:'coupled-rlc',referenceTopology:'infinity',potentialNodes,currentDofs:Array.from({length:cells*n},(_,i)=>'loop'+i),incidence,portIncidence,resistanceOhm,inductanceH,capacitanceF:[...cap].filter(([,v])=>v!==0).map(([key,v])=>[...key.split(',').map(Number),v]),conservedPotentialModes:modes,structuralGaugeModes:modes,portTerminals:ports.map(([positive,negative])=>({positive:{node:String(positive)},negative:{node:String(negative)}}))};
 }
+
+type PolygonSectionLine = {
+ kind:'polygon-section'; lengthMm:number; geometry:{conductors:SectionConductor[];loss?:unknown};
+};
+type TransitionSample = {
+ frequencyHz:number;
+ conductorOrder:readonly string[];
+ signalIds:readonly string[];
+ referenceId:string;
+ resistanceOhmPerM:readonly (readonly number[])[];
+ totalInductanceHPerM:readonly (readonly number[])[];
+};
+type TransitionElectric = {
+ conductorOrder:readonly string[];
+ reference:string;
+ capacitanceFPerM:readonly (readonly number[])[];
+ modes:readonly {delaySPerM:number}[];
+ frequencyDependent?:boolean;
+};
+
+function checkedLoopMatrix(matrix:readonly (readonly number[])[], n:number, name:string){
+ if(!Array.isArray(matrix)||matrix.length!==n||matrix.some(row=>!Array.isArray(row)||row.length!==n))
+  fail('Transition '+name+' must match the physical loop basis');
+ return reciprocalTransport(matrix.map(row=>[...row]));
+}
+
+/** Internal proof for one isolated section and one checked frequency. The
+ * variational L already owns the complete 2D self field. Spatial assemblies
+ * need a different basis and common self/mutual operator. */
+export function sectionTransitionFrequencyRequest(input:{
+ id:string; line:PolygonSectionLine; electric:TransitionElectric; sample:TransitionSample;
+ terminals:{ends:SectionEnds;cuts:readonly ChannelCut[]};
+ budget?:AnalysisFrequencyRequest['budget'];
+ spatial?:never; directSelf?:never; instanceInductanceH?:never; channelMagnetic?:never;
+}):AnalysisFrequencyRequest{
+ if('spatial' in input||'directSelf' in input||'instanceInductanceH' in input||'channelMagnetic' in input)
+  fail('Isolated transition rejects channel magnetic, direct self and mutual terms');
+ const {id,line,electric,sample,terminals,budget}=input;
+ const {frequencyHz}=sample,omega=2*Math.PI*frequencyHz;
+ if(!id.trim()||!Number.isFinite(omega)||omega<=0)
+  fail('Isolated transition requires an ID and one positive finite exact frequency');
+ if(terminals.cuts.length<1||terminals.cuts.length>16||new Set(terminals.cuts.map(cutKey)).size!==terminals.cuts.length)
+  fail('Isolated transition requires 1..16 distinct oriented physical cuts');
+ const conductors=sectionConductors(line);
+ const physicalIds=new Set(line.geometry.conductors.map(m=>m.id));
+ const signalIds=conductors.slice(0,-1).map(m=>m.id),referenceId=conductors.at(-1)!.id;
+ const same=(a:readonly string[],b:readonly string[])=>a.length===b.length&&a.every((v,i)=>v===b[i]);
+ // The full producer order labels per-conductor loss. Only signalIds
+ // determines the axes of the loop R/L Grams.
+ const declaredIds=new Set(sample.conductorOrder);
+ if(physicalIds.size!==conductors.length||sample.conductorOrder.length!==physicalIds.size||
+    declaredIds.size!==physicalIds.size||[...declaredIds].some(id=>!physicalIds.has(id)))
+  fail('Transition conductor IDs must be a unique bijection with the physical polygon');
+ if(!same(sample.signalIds,signalIds)||sample.referenceId!==referenceId||
+    !same(electric.conductorOrder,signalIds)||electric.reference!==referenceId)
+  fail('Transition electric and magnetic coefficients must share exact physical conductor and reference order');
+ const n=signalIds.length;
+ if(electric.modes.length!==n||electric.modes.some(({delaySPerM})=>!Number.isFinite(delaySPerM)||delaySPerM<=0))
+  fail('Transition requires valid electric mode delays for the physical loop basis');
+ const C=checkedLoopMatrix(electric.capacitanceFPerM,n,'capacitance');
+ const R=checkedLoopMatrix(sample.resistanceOhmPerM,n,'resistance');
+ const L=checkedLoopMatrix(sample.totalInductanceHPerM,n,'total inductance');
+ // For a general coupled line γ² is an eigenvalue of ZY. The infinity
+ // norm product bounds |γ| and thus also phase per cell. Keep the legacy
+ // electric delay guard as an independent lower bound on cell count.
+ const zNorm=Math.max(...R.map((row,i)=>row.reduce((sum,v,j)=>sum+Math.hypot(v,omega*L[i][j]),0)));
+ const yNorm=omega*Math.max(...C.map(row=>row.reduce((sum,v)=>sum+Math.abs(v),0)));
+ const complexCells=Math.ceil(Math.sqrt(zNorm)*Math.sqrt(yNorm)*(line.lengthMm*1e-3)/.01);
+ if(!Number.isFinite(complexCells))fail('Nonfinite transition propagation bound');
+ const layout=sectionLayout(electric,line,[frequencyHz],complexCells);
+ const data=stampSectionDescriptor(layout,C,L,R,conductors,terminals);
+ const ports=data.portTerminals.map((_,i)=>'port-'+i);
+ const model:AnalysisFrequencyResource={
+  id,kind:'network',ports,data,analyses:['networkParameters'],
+  source:'Isolated finite-conductivity 2D section at one checked frequency',
+  validity:{status:'conditional',reason:'Exact-frequency section proof; physical and band accuracy remain unverified',
+   domain:{bandHz:[frequencyHz,frequencyHz],sectionTransition:'isolated-exact-frequency',conductorLossOrder:[...sample.conductorOrder]}},
+ };
+ return freeze({instances:[{id,model,ports}],connections:[],ports:ports.map((name,index)=>({name,index})),
+  frequencies:[frequencyHz],representation:'S',referenceOhm:ports.map(()=>50),...(budget&&{budget:{...budget}})});
+}
+
 
 /** One stored coefficient per reciprocal pair. Only IEEE-roundoff-sized
  * differences from the already audited FEM producer may be transported;

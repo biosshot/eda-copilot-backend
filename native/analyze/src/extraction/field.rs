@@ -164,7 +164,7 @@ fn mesh(
     }
     Ok((nodes, triangles, eps, boundary))
 }
-fn element(nodes: &[[f64; 2]], t: [usize; 3]) -> Result<(f64, [[f64; 2]; 3])> {
+pub(super) fn element(nodes: &[[f64; 2]], t: [usize; 3]) -> Result<(f64, [[f64; 2]; 3])> {
     let [a, b, c] = t.map(|i| nodes[i]);
     let det = (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1]);
     if !det.is_finite() || det <= 0. {
