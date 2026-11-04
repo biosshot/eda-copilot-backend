@@ -1,7 +1,6 @@
-# P7b review evidence — acceptance pending
+# P7b line-loss acceptance
 
-This is a review bundle, not a declaration that P7b is complete. The four section
-geometries/material modes and three numerical board audits are implemented.
+Formal acceptance was recorded on 2026-11-04 from the [2026-10-23 repeat review](line-losses-review-2026-10-23.md). It covers the four reviewed uniform section geometries/material modes in their weak-loss quasi-TEM applicability band. The three numerical board audits retain their documented scope. No new numerical results were used. Skin transition, local high-frequency extraction, via/PDN and complete-channel acceptance remain open.
 Reviewer decision on 2026-10-23 accepts R1 against the independent numerical
 reference at unchanged 5%, retaining Qucs as an approximate comparison. The reviewer closed the R2
 replacement criterion on 2026-10-23 using: two-gap BEM

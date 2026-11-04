@@ -13,7 +13,7 @@
 | Понять общий план P0–P15 | [plans/implementation-plan.md](plans/implementation-plan.md) |
 | Понять, как закрывается P7 | [plans/p7-plan.md](plans/p7-plan.md) |
 | Узнать, какие случаи поддержаны | [reference/p7-extraction/p7-case-matrix.md](reference/p7-extraction/p7-case-matrix.md) |
-| Продолжить текущую работу | [plans/chat-handoff-2026-11-02.md](plans/chat-handoff-2026-11-02.md) |
+| Продолжить текущую работу | [plans/chat-handoff-2026-11-04.md](plans/chat-handoff-2026-11-04.md) |
 | Узнать, что реально работает в DSL | [reference/dsl/dsl-implementation-status.md](reference/dsl/dsl-implementation-status.md) |
 | Писать сценарии DSL | [reference/dsl/dsl-reference.md](reference/dsl/dsl-reference.md) |
 | Понять принятый электрический интерфейс | [reference/p5-p6-electrical/electrical-core-completion-semantics.md](reference/p5-p6-electrical/electrical-core-completion-semantics.md) |
@@ -48,9 +48,15 @@ docs/analyze/
 - `reference/dsl/dsl-reference.md` — спецификация, а не статус. Фактическая реализация — только в
   `reference/dsl/dsl-implementation-status.md`.
 
-## Фактический статус на 2026-11-02
+## Статус документации на 2026-11-04
 
-Ветка `feat/analyze`, HEAD `c2fef93`. **P7 не закрыт.** P8/P11 не реализованы.
+Исходный HEAD документационной редакции — `771f8c9`. **P7 не закрыт.** Новых численных приёмок нет. Приоритет — универсальный CPU/F64 экстрактор с экономией памяти и всей case-matrix; fast/F32, P8/P11 и глубокая оптимизация отложены. Нормативный контракт — `plans/p7-plan.md` §1.
+
+### Реализация 2026-11-04 (не полная приёмка)
+
+Добавлены явные многопроводниковые section ports, mixed-polarity physical welds, N-port planner, совместное извлечение layered differential и адаптер согласованного `.si().channels([...])`; для split-return сохраняется bounded joint event. Геометрия и небольшой gauge control проверены; board-level accuracy не заявлена. Частотный audit helper готов, production adaptive physical evaluator/HF ещё отсутствуют. Детали — [integration evidence](evidence/p7-universal-integration-2026-11-04.md).
+
+Свежий D1: cold300s timeout, один разрешённый resume600s завершён за87.8s, **DSL failed** по delay13.74%/16.80%. Расширение electric margin не устранило дрейф. Исторический список ниже описывает прежние частные приёмки, не отменяет текущий отказ.
 
 ### Что принято и работает
 
@@ -66,11 +72,11 @@ docs/analyze/
 
 - **D1 (текущий фокус).** Slot/continuous: conservative current прошёл current-gates,
   магнитная энергия стабилизирована, но последний холодный DSL упал на
-  `CHANNEL_DOMAIN_CONVERGENCE` (group delay 13.7%/16.8% при пороге 2%). Незакоммиченный
+  `CHANNEL_DOMAIN_CONVERGENCE` (group delay 13.7%/16.8% при пороге 2%). На момент исторического handoff
   патч (direct volume-integral magnetic operator, cross-block mutuals, `electricAirMarginM`)
-  собран не полностью: addon и `dist` отстают от исходников.
+  был собран не полностью; актуальность addon/`dist` сейчас необходимо проверить, новый PASS не заявлен.
 - **Композиция канала.** Coupon: 7.79% по задержке при 0.0006% по S; rotated45 2.17%,
-  via 2.76% (порог 2%). Независимый эталон есть не для всех классов.
+  via 2.76% (условные решения 2026-11-03 при 3%; не новая физическая приёмка). Независимый эталон есть не для всех классов.
 - **Реальный STM32-канал.** Planner отказывает на distributed lateral finite-plane interface;
   магнитный фактор 8.7 ГБ при цели 2 ГиБ.
 - **Возвратные пути.** Одна опора на сечение; несколько опор, удалённый возврат и via fence
@@ -87,8 +93,7 @@ docs/analyze/
   `archive/design/p7-to-p8-p11-plan.md`.
 - `dsl-reference.md` документирует и нереализованное (`method: "formula"`, `a.em`).
   Статус — в `reference/dsl/dsl-implementation-status.md`.
-- `plans/chat-handoff-2026-11-02.md` и `evidence/p7-d1-magnetic-closure-results.md`
-  до переноса не были в git; сейчас добавлены.
+- Исторический `plans/chat-handoff-2026-11-02.md` сохранён; текущие указания — в handoff 2026-11-04.
 
 ## Как добавить документ
 

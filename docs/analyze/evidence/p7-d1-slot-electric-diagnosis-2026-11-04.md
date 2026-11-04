@@ -1,0 +1,52 @@
+# D1 slot field-only delay diagnosis, 2026-11-04
+
+D1 remains open. The 2026-11-04 saved automatic channel verification reports 13.739950% and 16.795620% matched transmission delay changes as domain scale increases from 1 to 2 to 4. The bounded diagnostic below isolates the dominant electric discretization error using the middle local event. It does not measure an updated full-channel acceptance result. [Integration evidence](p7-universal-integration-2026-11-04.md)
+
+## Saved channel and mesh evidence
+
+Project each local capacitance matrix onto the DC conserved conductor modes, in the order driven track, floating neighbour, return. Lift the two section capacitance matrices to the same conductor order and multiply by the respective section lengths before summing. Minimize the resulting quadratic form with the driven track one volt above the return, leaving the neighbour potential and common shift free. This gives a first-order matched through capacitance of 287.6879, 386.0330, and 530.5872 fF for the three domains. At 50 Ω the shunt contributions to the transmission delay are 7.1922, 9.6508, and 13.2647 ps. Applying the reported delay ratios to those differences implies a stable series contribution of approximately 8.25 ps in both comparisons. The historical November 2 diagnostic independently reports approximately 15.4369, 17.8958, and 21.5082 ps in both adjacent frequency intervals, with transmission magnitude approximately 0.999619.
+
+In the middle event, the 76 copper nodes and 102 copper tetrahedra have the same coordinates across all three scales to 1 pm. Its dielectric volume rises from 0.046400 to 0.084800 to 0.096000 mm³ as the clipped substrate grows. The projected XY area of air tetrahedra incident to copper on either longitudinal cut increases from 0.61225 to 1.95400 to 5.08201 mm². The longest air edge from the top tracks at those cuts grows from 0.5062 to 1.0585 to 2.0247 mm. The default planar air rings start at one-quarter of the shortest ROI side and use one point per ring edge for this DSL input. The far margin also genuinely expands from 8 to 16 to 32 mm. Its historical fixed-8-mm counterpart at the same ROIs changes the middle event's projected driven-track self capacitance by at most 0.047% relative to the corresponding new descriptor. [Mesh construction](../../../native/analyze/src/extraction/local/board_mesh.rs)
+
+## Bounded electric control
+
+Use the existing release `board_volume` executable in `field` mode with explicit field requests and the saved current requests for the same middle event. Board SHA-256 is `f6d066e474f70e9f68388abe08c2f54606148b6792377c7748630869664613f5`. Executable SHA-256 is `9e704868eaf449dcc7e2ca93cb6489ae618b993d6b7b5b5f21774c1496e2c88f`. The executable predates the two optional request fields for numerical origin and electric margin. The adapter drops them, uses the default translation for both meshes, and passes the actual air margin in the explicit field request. The default 32 mm control reproduces the current cache's projected 3×3 matrix to displayed precision. The 1,024 MiB native cap and single field thread were common to all four cases. Each process had an external 14 s limit, with a 55 s batch ceiling. An initial launcher preflight used a lower internal cap and returned before assembly. The four numerical cases ran once and took approximately 0.78 s in aggregate. The field path returns before magnetic work.
+
+Near grading uses a 25 µm first planar step, eight subdivisions per edge through a 0.4 mm ring distance, then one subdivision per edge in the far air. The three wide cases share identical current request bytes, physical dielectric and copper. All four cases use identical accepted vertical grading. `Ceff` here is the local differential capacitance from the same floating-potential minimization described above.
+
+| Case | ROI transverse width | Far air | Driven-track self C (fF) | Ceff (fF) | Field planned bytes | Wall (s) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Wide, default near mesh | 2.02 mm | 32 mm | 258.358057 | 230.855123 | 7,961,950 | 0.094 |
+| Wide, graded near mesh | 2.02 mm | 32 mm | 92.728339 | 88.037832 | 28,547,662 | 0.262 |
+| Wide, graded near mesh | 2.02 mm | 8 mm | 92.741350 | 88.037873 | 19,800,902 | 0.216 |
+| Narrow, graded near mesh | 0.58 mm | 8 mm | 90.020464 | 84.509292 | 19,514,046 | 0.203 |
+
+Near grading at fixed physical geometry and outer box removes 61.86% of local differential capacitance. The far-box change after grading changes local differential capacitance by 0.000046%. The narrow-to-wide comparison after grading leaves a 4.008% change relative to the wide local value and still changes substrate coverage and near mesh simultaneously.
+
+Exact requests, raw native output, full projected matrices and SHA-256 values are saved in `debugging/p7-d1-cross-coupling/electric-field-ab-20261104/`. The source run is `slot-universal-20261104-1` and full channel verification is under `slot-universal-20261104-resume600`. The November 2 data cited above are from `slot-real-dsl-kernel-cache-3`.
+
+A production correction needs near-field resolution controlled independently of the current ROI extent and far padding. This diagnostic establishes sensitivity to the coarse near mesh but does not establish mesh convergence of the graded candidate or isolated substrate-width convergence. The isolated local electric models retain artificial cut faces and have no inter-block capacitance operator. Those are separate accuracy questions for any full-channel acceptance. [Electric trace construction](../../../native/analyze/src/extraction/local/volume_field.rs) [Channel assembly](../../../src/analyze/segmented-channel.ts)
+
+## Geometry-derived grading policy
+
+The automatic local field uses the resolved vertical interface step, dielectric thickness and target planar spacing to bound its first air step. The near extent covers four stack heights, matching the board mesh neighbourhood. The longest ring side and square root of the target triangle area set the minimum number of near divisions. Before each ring insertion, the mesher checks the required vertex count against the existing node and byte budget with overflow-safe arithmetic. The extrusion retains its independent tetrahedron and byte limits. Explicitly finer near grading is retained, and the legacy accepted profile applies when the automatic electric margin is absent. The policy acts on the cloned field request, which preserves the current mesh and physical signature.
+
+Before applying the policy to the shared preparation path, the field-only runner used those exact derived settings on the same middle event. The policy selected 14 near divisions for the wide ROI and eight for the narrow ROI. The wide 32 and 8 mm cases yielded 87.330151 and 87.330188 fF. The narrow 8 mm case yielded 84.509292 fF. The far-box change is 0.000043% and the combined wide/narrow ROI change is 3.230% relative to the wide value. Relative to a 2% criterion, the local change is requires-review under the allowed +1.5 percentage-point review band and remains unverified. All three field-only cases completed in approximately 0.95 s aggregate process wall time. Exact requests, raw output and projected matrices are in the diagnostic's `geometry-derived/` subdirectory. The isolated local comparison and near-mesh rule do not establish full-channel delay convergence or independent physical dielectric coverage.
+
+All nine focused board preparation tests passed. They cover the frozen legacy profile, unchanged current request and physical signature, near-mesh refinement, independence from far margin, finer authored grading, division count conversion, and air-ring allocation guards. A geometry-only test builds with 48 near and 40 far divisions, then checks that excessive near counts and an overflowing far count produce the native memory-limit diagnostic.
+
+A separate geometry-only planner audit found that a provisional 32-division limit would have blocked mandatory scale-1 refinement on the straight, rotated90, coupled, meander, branch, split-return and bend coupons. The rotated45 and via coupons exceeded the limit already at scale-1 coarse resolution. The slot and continuous coupons remained within 18 divisions for that refinement. Replacing the provisional limit with the existing allocation budget preserves the previously measured field settings. Thick stacks can still exceed the actual tetrahedron limit because every near ring uses the same subdivision count. For a 1.6 mm stack at the automatic coarse area target and 8 mm far margin, the air rings alone imply roughly 450,000 extruded tetrahedra, above the 262,144 cap of the standard preparation budget. Broader physical coverage remains open.
+
+Final standard native build after the allocation-budget correction passed in 4m46s. Addon SHA-256: 4e083d3ce1f13134546ce1aa6116651c9c9cffa530ea149a61084e34a1466695. The cold verification with the updated addon is recorded below. Earlier cache-resume evidence applies to its recorded producer.
+## Cold D1 verification after electric grading
+
+The single authorized cold attempt, `slot-graded-electric-cold600-20261104`, completed under the supervisor in 569.391 s. The DSL completed with a conditional 1–10 kHz result. The supervisor sampled the launcher process only (`run_cold.py` passes the root handle to `process_memory`). Launcher RSS was 126,140,416 B and private memory was 135,016,448 B. The nested DSL lifecycle records worker high-water RSS of 424,189,952 B (about 404.54 MiB). Process-tree memory and the 2 GiB tree limit remain unverified.
+
+| Delay comparison | Change | Gate outcome |
+| --- | ---: | --- |
+| Spatial refinement, domain 1 | 0.07908538% | Pass |
+| Domain 1 → 2 | 5.467882% | Fail, above 3.5% |
+| Domain 2 → 4 | 1.291154% | Pass |
+| Boundary shift, domain 1 | 1.09686269% | Pass |
+
+All five returned keys exactly matched domain 1 fine despite the passing domain 2 → 4 comparison. D1 acceptance remains open. The corrected executor selects the larger member of the converged domain pair and requires fine spatial and shifted-boundary controls for that same domain. Returned model, requested frequency-axis replay, audit and blocks use that selected fine plan. All five targeted tests with substituted responses, TypeScript typechecking and the package build passed (JS 130 ms, declarations 8.086 s). The corrected orchestration has not had another physical D1 run. The authorization covered the completed cold attempt. No further full run is scheduled.
