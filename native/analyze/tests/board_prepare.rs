@@ -7,7 +7,7 @@ fn explicit_verification_holdouts_are_not_replaced_with_the_legacy_axis(){
 fn accepted_electric_defaults_match_frozen_candidate_and_preserve_physical_inputs() {
     let current:board_mesh::Request=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json")).unwrap();
     let expected:board_mesh::Request=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/board-integration/field-refinement-request-v1.json")).unwrap();
-    let actual=board_prepare::accepted_electric_request(&current);
+    let actual=board_prepare::accepted_electric_request(&current).unwrap();
     assert_eq!(serde_json::to_value(&actual).unwrap(),serde_json::to_value(&expected).unwrap());
     assert_eq!(board_mesh::physical_signature(&current),board_mesh::physical_signature(&actual));
     assert_ne!(current.air_margin_m,actual.air_margin_m);
@@ -17,9 +17,101 @@ fn accepted_electric_defaults_match_frozen_candidate_and_preserve_physical_input
 #[test]
 fn electric_refinement_retains_finer_current_vertical_boundaries(){
  let mut current:board_mesh::Request=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json")).unwrap();current.max_vertical_step_m=0.00153/3.9;
- let field=board_prepare::accepted_electric_request(&current);assert_eq!(field.max_vertical_step_m,current.max_vertical_step_m);assert_eq!(board_mesh::physical_signature(&current),board_mesh::physical_signature(&field));
- current.electric_air_margin_m=Some(0.016);let expanded=board_prepare::accepted_electric_request(&current);assert_eq!(expanded.air_margin_m,0.016);assert_eq!(expanded.roi_mm,current.roi_mm);assert_eq!(board_mesh::physical_signature(&current),board_mesh::physical_signature(&expanded));
+ let field=board_prepare::accepted_electric_request(&current).unwrap();assert_eq!(field.max_vertical_step_m,current.max_vertical_step_m);assert_eq!(board_mesh::physical_signature(&current),board_mesh::physical_signature(&field));
+ current.electric_air_margin_m=Some(0.016);let expanded=board_prepare::accepted_electric_request(&current).unwrap();assert_eq!(expanded.air_margin_m,0.016);assert_eq!(expanded.roi_mm,current.roi_mm);assert_eq!(board_mesh::physical_signature(&current),board_mesh::physical_signature(&expanded));
 }
+#[test]
+fn automatic_electric_near_air_tracks_resolution_and_preserves_current_request() {
+    let mut current:board_mesh::Request=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json")).unwrap();
+    current.roi_mm=[[0.,-1.01],[0.8,1.01]];
+    for (layer,thickness) in current.stack.iter_mut().zip([1e-5,1e-4,1e-5]) {
+        layer.thickness_m=thickness;
+    }
+    current.max_triangle_area_m2=5e-8;
+    current.air_edge_divisions=Some(1);
+    current.electric_air_margin_m=Some(0.008);
+    let original=serde_json::to_value(&current).unwrap();
+    let field=board_prepare::accepted_electric_request(&current).unwrap();
+    assert_eq!(serde_json::to_value(&current).unwrap(),original);
+    assert_eq!(board_mesh::physical_signature(&field),board_mesh::physical_signature(&current));
+    assert_eq!(field.air_first_step_m,Some(2.5e-5));
+    assert!((field.air_near_distance_m.unwrap()-4.8e-4).abs()<1e-18);
+    assert_eq!(field.air_edge_divisions,Some(14));
+    assert_eq!(field.air_far_edge_divisions,Some(1));
+
+    current.electric_air_margin_m=Some(0.032);
+    let wider=board_prepare::accepted_electric_request(&current).unwrap();
+    assert_eq!(wider.air_margin_m,0.032);
+    assert_eq!(wider.air_first_step_m,field.air_first_step_m);
+    assert_eq!(wider.air_near_distance_m,field.air_near_distance_m);
+    assert_eq!(wider.air_edge_divisions,field.air_edge_divisions);
+    assert_eq!(wider.air_far_edge_divisions,field.air_far_edge_divisions);
+
+    current.max_triangle_area_m2*=0.25;
+    let refined=board_prepare::accepted_electric_request(&current).unwrap();
+    assert_eq!(refined.air_edge_divisions,Some(27));
+}
+
+#[test]
+fn automatic_electric_grading_preserves_finer_controls_and_checks_count_conversion() {
+    let mut current:board_mesh::Request=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json")).unwrap();
+    current.electric_air_margin_m=Some(0.016);
+    current.air_first_step_m=Some(5e-6);
+    current.air_edge_divisions=Some(24);
+    current.air_margin_m=0.01;
+    current.air_near_distance_m=Some(0.008);
+    current.air_far_edge_divisions=Some(2);
+    current.interface_step_m=Some(1e-5);
+    current.interface_growth=Some(1.5);
+    let field=board_prepare::accepted_electric_request(&current).unwrap();
+    assert_eq!(field.air_first_step_m,current.air_first_step_m);
+    assert_eq!(field.air_edge_divisions,current.air_edge_divisions);
+    assert_eq!(field.air_near_distance_m,current.air_near_distance_m);
+    assert_eq!(field.air_far_edge_divisions,current.air_far_edge_divisions);
+    assert_eq!(field.interface_step_m,current.interface_step_m);
+    assert_eq!(field.interface_growth,current.interface_growth);
+
+    current.roi_mm[1][0]+=32.;
+    let wide=board_prepare::accepted_electric_request(&current).unwrap();
+    assert_eq!(wide.air_edge_divisions,Some(49));
+
+    current.roi_mm[1][0]=f64::MAX;
+    let error=board_prepare::accepted_electric_request(&current).unwrap_err();
+    assert!(error.starts_with("LOCAL_ELECTRIC_GRADING:")&&error.contains("not representable"),"{error}");
+}
+
+#[test]
+fn board_mesh_air_ring_divisions_are_bounded_by_allocation_budget() {
+    let board=pcb_analyze::import_json(include_str!("../../../tests/fixtures/analysis-segmented-coupon.json")).board.unwrap();
+    let mut request:board_mesh::Request=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json")).unwrap();
+    request.roi_mm=[[4.,-0.3],[6.,0.3]];
+    for (layer,thickness) in request.stack.iter_mut().zip([1e-5,1e-4,1e-5]) {
+        layer.thickness_m=thickness;
+    }
+    request.electrodes.clear();
+    request.ports.clear();
+    request.allow_insulated_copper_cuts=true;
+    request.air_margin_m=2e-4;
+    request.air_first_step_m=Some(5e-5);
+    request.air_near_distance_m=Some(1e-4);
+    request.air_edge_divisions=Some(48);
+    request.air_far_edge_divisions=Some(40);
+    let budget=board_prepare::allocation_budget(512);
+    let wall=std::time::Duration::from_secs(5);
+
+    let mesh=board_mesh::build(&board,&request,budget,wall).unwrap();
+    assert!(mesh.mesh.copper_volume_m3>0.);
+
+    request.air_edge_divisions=Some(budget.max_nodes);
+    let error=board_mesh::build(&board,&request,budget,wall).err().unwrap();
+    assert!(error.starts_with("LOCAL_MEMORY_LIMIT:")&&error.contains("graded air ring"),"{error}");
+
+    request.air_edge_divisions=Some(48);
+    request.air_far_edge_divisions=Some(usize::MAX);
+    let error=board_mesh::build(&board,&request,budget,wall).err().unwrap();
+    assert!(error.starts_with("LOCAL_MEMORY_LIMIT:")&&error.contains("graded air ring"),"{error}");
+}
+
 #[test]
 fn absent_internal_cut_transport_preserves_the_historical_physical_signature(){
  let request:board_mesh::Request=serde_json::from_str(include_str!("../../../tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json")).unwrap();let signature=board_mesh::physical_signature(&request);assert!(signature.get("cutPlanes").is_none());assert!(signature.get("electricMaxEdgeM").is_none());

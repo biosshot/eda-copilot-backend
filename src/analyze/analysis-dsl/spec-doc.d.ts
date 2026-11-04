@@ -302,7 +302,9 @@ export interface GeometryResult extends ResultBase { violations: { count(): Data
  * rlgc contains frequenciesHz and samples of R, Lexternal, Linternal, Ltotal, G, C,
  * modal alpha/beta/complex Zc, regional and physical surface contributions and units.
  * Lossy delay is phase delay beta*length/omega [s], not group delay.
- * network is the immutable exact-grid P6b resource; interpolation stays conditional. */
+ * network is the immutable exact-grid P6b resource; interpolation stays conditional.
+ * Layered frequencyHz(0) reports electrode conductance and a compatible loop probe
+ * in segments. Characteristic impedance, delay and network are unavailable there. */
 export interface ImpedanceResult extends ResultBase { characteristicImpedance: DataValue; rlgc: DataValue; delay: DataValue; segments: DataValue; network: Network }
 export interface TdrResult extends ResultBase { reflection: DataValue; impedance: DataValue; distance: DataValue }
 export interface EyeResult extends ResultBase { diagram: DataValue; height: DataValue; width: DataValue; timingMargin: DataValue; voltageMargin: DataValue }

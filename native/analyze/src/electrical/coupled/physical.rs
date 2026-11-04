@@ -28,12 +28,16 @@ pub struct PortTerminals {
     pub negative: Terminal,
 }
 #[derive(Clone, Copy, Default, Deserialize, Serialize, PartialEq)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 pub enum Contacts {
     #[default]
     Both,
     Positive,
     Negative,
+    /// Positive of the first port and negative of the second.
+    PositiveNegative,
+    /// Negative of the first port and positive of the second.
+    NegativePositive,
 }
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

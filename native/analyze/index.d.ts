@@ -175,17 +175,60 @@ export interface AnalysisTransientReport {
  physicalRecovery?:unknown;assembledModel?:unknown;conductorPotentialsV?:number[][];conductorChargesC?:number[][];initialConductorChargesC?:number[];finalConductorChargesC?:number[];zeroEnergyGauges?:number;finalState?:unknown;assumptions?:string[];elapsedMs?:number;memoryPlanBytes?:number;
  resources?:{peakRssBytes:number;metric:string};
 }
-export declare class AnalysisElectricalSession {constructor();sliceBoardSection(boardJson:string,stack:unknown,slice:unknown):any;prepareLocal(boardJson:string,request:unknown,remainingSeconds?:number,magneticPatchLevel?:1|2):any;solveLocal(request:{prepared:unknown;frequenciesHz:number[];drive?:number[];loadsOhm?:(number|null)[]},remainingSeconds?:number,observablesOnly?:boolean):any;solve(request:AnalysisElectricalRequest):AnalysisElectricalReport; solveFrequency(request:AnalysisFrequencyRequest):AnalysisFrequencyReport; solveChannelMagnetic(request:unknown):any; solveTransient(request:AnalysisTransientRequest):AnalysisTransientReport; solveCrossSection(request:AnalysisCrossSectionRequest):AnalysisCrossSectionReport;propagateCrossSection(request:AnalysisCrossSectionRequest,prepared:unknown):AnalysisCrossSectionReport;clear():void}
+export interface AnalysisLocalDcRequest {
+  geometry: unknown;
+  drive?: number[];
+  loadsOhm?: (number | null)[];
+  observablesOnly?: boolean;
+}
+export interface AnalysisLocalDcReport {
+  status: 'complete';
+  frequencyHz: 0;
+  ports: [string,string][];
+  driveA: number[];
+  loadsOhm: (number | null)[];
+  portRealV: (number | null)[];
+  floatingPortIndices: number[];
+  electrodeNames: string[];
+  electrodeVoltagesV: number[];
+  electrodeGalvanicComponents: number[];
+  electrodeLoadedComponents: number[];
+  dcConductanceS: number[][];
+  totalLossW: number;
+  loadLossW: number;
+  drivePowerW: number;
+  normalizedElectrodeResidual: number;
+  roiMm: [[number,number],[number,number]];
+  domainPolygonMm: [number,number][] | null;
+  allowInsulatedCopperCuts: boolean;
+  sourceMapping: [string,string,string | null,string][];
+  cellCurrentA?: number[];
+  cellLossW?: number[];
+  nodesM?: [number,number,number][];
+  copperCells?: [number,number,number,number][];
+  sourceIds?: string[][];
+  originMm?: [number,number];
+  validity: {status:'conditional';domain:{frequencyHz:0};reason:string};
+}
+export declare class AnalysisElectricalSession {constructor();sliceBoardSection(boardJson:string,stack:unknown,slice:unknown):any;prepareLocal(boardJson:string,request:unknown,remainingSeconds?:number,magneticPatchLevel?:1|2,frequencyAudit?:unknown):any;solveLocalDc(boardJson:string,request:AnalysisLocalDcRequest,remainingSeconds?:number):AnalysisLocalDcReport;solveLocal(request:{prepared:unknown;frequenciesHz:number[];drive?:number[];loadsOhm?:(number|null)[]},remainingSeconds?:number,observablesOnly?:boolean):any;solve(request:AnalysisElectricalRequest):AnalysisElectricalReport; solveFrequency(request:AnalysisFrequencyRequest):AnalysisFrequencyReport; solveChannelMagnetic(request:unknown):any; solveTransient(request:AnalysisTransientRequest):AnalysisTransientReport; solveCrossSection(request:AnalysisCrossSectionRequest):AnalysisCrossSectionReport;propagateCrossSection(request:AnalysisCrossSectionRequest,prepared:unknown):AnalysisCrossSectionReport;clear():void}
 
 /** Bounded common-return frequency multiports. Internal addon transport. */
 export interface AnalysisFrequencyResource {id:string;kind:string;ports:string[];data:unknown;source?:string;validity?:unknown;analyses?:string[]}
 export interface AnalysisFrequencyRequest {
  instances:{id:string;model:AnalysisFrequencyResource;ports:string[]}[];
- connectionContacts?:('both'|'positive'|'negative')[];connections:[number,number][];ports:{name:string;index:number}[];frequencies:number[];
+ connectionContacts?:('both'|'positive'|'negative'|'positive-negative'|'negative-positive')[];connections:[number,number][];ports:{name:string;index:number}[];frequencies:number[];
  representation:'S'|'Z'|'Y';referenceOhm?:number[];budget?:AnalysisElectricalRequest['budget'];
  instanceInductanceH?:{a:string;b:string;localA:number;localB:number;valueH:number}[];
+ /** Matched S only, with physical coupled-RLC instance mappings. */
+ recoverInstanceLoss?:boolean;
+}
+export interface AnalysisLoadedInstanceLoss {
+ instanceIds:string[];
+ samples:{frequencyHz:number;jouleWPerA2:number[][][];oppositeDriveW:number[]}[];
+ convention:string;
 }
 export interface AnalysisFrequencyReport {
+ loadedInstanceLoss?:AnalysisLoadedInstanceLoss;
  status:'complete'|'rejected';diagnostics:{code:string;message:string;severity:'error'|'warning'|'info'}[];elapsedMs:number;
  frequenciesHz?:number[];ports?:{name:string;index:number}[];representation?:'S'|'Z'|'Y';referenceOhm?:number[]|null;
  physicalRecovery?:unknown;assembledModel?:unknown;validityLimitations?:string;parameters?:{real:number;imaginary:number}[][][];nature?:'passive'|'active'|'unspecified';conditional?:boolean;

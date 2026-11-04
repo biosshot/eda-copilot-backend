@@ -3,9 +3,13 @@
 use super::*;
 use crate::electrical::frequency::{math, Request};
 pub fn calculate(request: &Request) -> Result<Value> {
-    if request.instances.len() != 1 || !request.connections.is_empty() || !request.instance_inductance_h.is_empty() {
+    if request.recover_instance_loss || request.instances.len() != 1 || !request.connections.is_empty() || !request.instance_inductance_h.is_empty() {
         return assembled(request);
     }
+    calculate_direct(request, None)
+}
+
+fn calculate_direct(request: &Request, owner_loss: Option<&LossPartition>) -> Result<Value> {
     let instance = &request.instances[0];
     let resource = &instance.model;
     let ports = resource.ports.len();
@@ -98,7 +102,7 @@ pub fn calculate(request: &Request) -> Result<Value> {
         vec![]
     };
     let mut result = if request.representation == "S" {
-        matched_waves(&model, &refs, &request.frequencies, request.budget.as_ref())?
+        matched_waves(&model, &refs, &request.frequencies, request.budget.as_ref(), owner_loss)?
     } else { impedance(&model, ports, &request.frequencies, request.budget.as_ref())? };
     let mut quality = crate::electrical::frequency::Quality::default();
     if request.representation == "Y" {
@@ -183,13 +187,20 @@ fn assembled(request: &Request) -> Result<Value> {
         .len()
         .saturating_mul(built.ports.len().saturating_pow(2))
         .saturating_mul(256);
+    let (loss_mapping_bytes, loss_output_bytes) = if request.recover_instance_loss {
+        (
+            LossPartition::mapping_bytes(request, &built),
+            LossPartition::output_bytes(request.instances.len(), built.ports.len(), request.frequencies.len()),
+        )
+    } else {
+        (0, 0)
+    };
+    let retained = built.source_memory.saturating_add(loss_mapping_bytes);
     composition::remaining_budget(
         request.budget.as_ref(),
-        built
-            .source_memory
-            .saturating_add(built.assembly_plan)
-            .saturating_add(outputs),
+        retained.saturating_add(built.assembly_plan).saturating_add(outputs).saturating_add(loss_output_bytes),
     )?;
+    let owner_loss = request.recover_instance_loss.then(|| LossPartition::from_assembly(request, &built)).transpose()?;
     let mut inner = request.clone();
     inner.instances = vec![crate::electrical::frequency::Instance {
         id: "assembled".into(),
@@ -216,7 +227,7 @@ fn assembled(request: &Request) -> Result<Value> {
             index: i,
         })
         .collect();
-    let mut budget = composition::remaining_budget(request.budget.as_ref(), built.source_memory)?;
+    let mut budget = composition::remaining_budget(request.budget.as_ref(), retained)?;
     budget.max_seconds = Some(
         request
             .budget
@@ -232,7 +243,7 @@ fn assembled(request: &Request) -> Result<Value> {
         ));
     }
     inner.budget = Some(budget);
-    let mut result = calculate(&inner)?;
+    let mut result = calculate_direct(&inner, owner_loss.as_ref())?;
     result["physicalRecovery"] = json!(built.recovery);
     result["assembledModel"] = json!(built.model);
     result["conditional"] = json!(built.conditional);
@@ -243,7 +254,7 @@ fn assembled(request: &Request) -> Result<Value> {
             .as_u64()
             .unwrap_or(0)
             .max(built.assembly_plan as u64)
-            + built.source_memory as u64
+            + retained as u64
             + outputs as u64
     );
     result["validityLimitations"]=json!("Physical conductor weld of block-diagonal supplied models; absent intermodel mutual C/L is not extracted. Close coupled objects require a jointly extracted model. AC increments do not determine initial common charge.");
@@ -384,7 +395,7 @@ pub(crate) fn common_tables(request: &Request, start: Instant) -> Result<(Reques
         }
         let mut remaining=budget.clone();remaining.max_seconds=Some(budget.max_seconds.unwrap_or(60.)-start.elapsed().as_secs_f64());
         if remaining.max_seconds.unwrap()<=0.{return Err(fail("NETWORK_DEADLINE","Mixed matched wave deadline"));}
-        let waves=matched_waves(&model,&vec![50.;ports],&request.frequencies,Some(&remaining))?;
+        let waves=matched_waves(&model,&vec![50.;ports],&request.frequencies,Some(&remaining),None)?;
         residual=residual.max(waves["quality"]["relativeResidual"].as_f64().unwrap_or(0.));
         let parameters=&waves["parameters"];
         resource.data = json!({"format":"network-parameters","representation":"S","referenceTopology":"common","nature":"passive","referenceOhm":50.,"frequenciesHz":request.frequencies,"parameters":parameters});
@@ -397,21 +408,97 @@ pub(crate) fn common_tables(request: &Request, start: Instant) -> Result<(Reques
     Ok((normalized, reserved, residual))
 }
 
+/// Potential coordinates weld during assembly. Current coordinates stay in
+/// their source blocks, including both endpoints of every intrinsic R entry.
+struct LossPartition {
+    instance_ids: Vec<String>,
+    owner_by_dof: Vec<usize>,
+}
+
+impl LossPartition {
+    fn mapping_bytes(request: &Request, built: &composition::Built) -> usize {
+        // Fixed-capacity Vecs, cloned map/report IDs and conservative allocator
+        // overhead. Reserve this while the assembled descriptor remains live.
+        request.instances.iter().fold(
+            std::mem::size_of::<Self>().saturating_add(128).saturating_add(
+                built.model.current_dofs.len().saturating_mul(std::mem::size_of::<usize>()),
+            ),
+            |bytes, instance| bytes
+                .saturating_add(std::mem::size_of::<String>())
+                .saturating_add(instance.id.len().saturating_mul(2))
+                .saturating_add(64),
+        )
+    }
+
+    fn from_assembly(request: &Request, built: &composition::Built) -> Result<Self> {
+        let invalid = || fail("COUPLED_LOSS_MAP", "Missing or overlapping physical resistance ownership");
+        let instance_ids: Vec<_> = request.instances.iter().map(|instance| instance.id.clone()).collect();
+        let nv = built.model.potential_nodes.len();
+        let mut owner_by_dof = vec![usize::MAX; built.model.current_dofs.len()];
+        for current in &built.recovery.currents {
+            let slot = current.index.checked_sub(nv)
+                .and_then(|index| owner_by_dof.get_mut(index)).ok_or_else(invalid)?;
+            if *slot != usize::MAX { return Err(invalid()); }
+            *slot = instance_ids.iter().position(|id| id == &current.instance_id).ok_or_else(invalid)?;
+        }
+        if owner_by_dof.contains(&usize::MAX)
+            || built.model.resistance_ohm.iter().any(|&(i, j, _)| owner_by_dof.get(i).is_none_or(|owner| owner_by_dof.get(j) != Some(owner)))
+        {
+            return Err(invalid());
+        }
+        Ok(Self { instance_ids, owner_by_dof })
+    }
+
+    fn output_bytes(owners: usize, ports: usize, points: usize) -> usize {
+        // Matrix numbers plus row/container allocation and JSON construction.
+        owners.saturating_mul(points).saturating_mul(ports.saturating_pow(2).saturating_add(1)).saturating_mul(128)
+    }
+
+    fn grams(&self, model: &Model, states: &[Vec<f64>], frequency: f64, start: Instant, budget: Option<&Budget>) -> Result<Vec<Vec<Vec<f64>>>> {
+        let ports = states.len();
+        let nv = model.potential_nodes.len();
+        let n = nv + model.current_dofs.len();
+        let mut grams = vec![vec![vec![0.; ports]; ports]; self.instance_ids.len()];
+        let mut sums = vec![0.; self.instance_ids.len()];
+        for a in 0..ports {
+            for b in a..ports {
+                super::super::deadline(start, budget, "Matched resistance loss recovery")?;
+                sums.fill(0.);
+                for &(i, j, r) in &model.resistance_ohm {
+                    let re = states[a][nv+i] * states[b][nv+j];
+                    let im = if frequency == 0. { 0. } else { states[a][n+nv+i] * states[b][n+nv+j] };
+                    sums[self.owner_by_dof[i]] += r * (re + im);
+                }
+                if sums.iter().any(|v| !v.is_finite()) {
+                    return Err(fail("COUPLED_NONFINITE", "Matched per-instance intrinsic loss overflow"));
+                }
+                for (matrix, &value) in grams.iter_mut().zip(&sums) {
+                    matrix[a][b] = value;
+                    matrix[b][a] = value;
+                }
+            }
+        }
+        Ok(grams)
+    }
+}
+
 /// Evaluate the same S boundary condition directly, without an ill-conditioned
 /// unloaded monopole Z intermediate. The intrinsic model is never modified.
-fn matched_waves(model:&Model,refs:&[f64],frequencies:&[f64],budget:Option<&Budget>)->Result<Value>{
+fn matched_waves(model:&Model,refs:&[f64],frequencies:&[f64],budget:Option<&Budget>,owner_loss:Option<&LossPartition>)->Result<Value>{
  let started=Instant::now();let ports=refs.len();
  if ports==0||ports>16||frequencies.is_empty()||frequencies.len()>131072/ports/ports||frequencies.iter().enumerate().any(|(i,f)|!f.is_finite()||*f<0.||i>0&&*f<=frequencies[i-1]){return Err(fail("COUPLED_INPUT","Invalid or oversized frequency axis"));}
  let mut system=System::compile(model,ports,budget)?;
  let output=frequencies.len()*ports*ports*128;
+ let loss_output=owner_loss.map_or(0,|partition|LossPartition::output_bytes(partition.instance_ids.len(),ports,frequencies.len()));
  let load_bound=(0..ports).map(|p|system.b.keys().filter(|(_,j)|*j==p).count().saturating_pow(2)).sum::<usize>().saturating_mul(64);
- let plan=system.memory_plan.saturating_add(output).saturating_add(load_bound).saturating_add(system.linear.n.saturating_mul(ports).saturating_mul(16));
+ let opposite_state=if owner_loss.is_some(){system.linear.n.saturating_mul(16)}else{0};
+ let plan=system.memory_plan.saturating_add(output).saturating_add(loss_output).saturating_add(opposite_state).saturating_add(load_bound).saturating_add(system.linear.n.saturating_mul(ports).saturating_mul(16));
  if plan as f64>budget.and_then(|b|b.max_memory_mi_b).unwrap_or(256.)*1048576.{return Err(fail("COUPLED_BUDGET","Matched load/output plan exceeds request budget"));}
  for (port,r) in refs.iter().enumerate(){system.add_port_admittance(port,1./r,0.)?;}
- let n=system.linear.n;let mut stats=Counters::default();let mut samples=vec![];let mut energy=vec![];let mut power_error:f64=0.;
+ let n=system.linear.n;let mut stats=Counters::default();let mut samples=vec![];let mut energy=vec![];let mut instance_loss=vec![];let mut power_error:f64=0.;
  for &f in frequencies {
   if started.elapsed().as_secs_f64()>budget.and_then(|b|b.max_seconds).unwrap_or(120.){return Err(fail("NETWORK_DEADLINE","Matched wave deadline"));}
-  let mut sample=vec![vec![json!({"real":0.,"imaginary":0.});ports];ports];let mut states=vec![];
+  let mut sample=vec![vec![json!({"real":0.,"imaginary":0.});ports];ports];let mut states=vec![];let mut diagonal_loss=vec![];
   for input in 0..ports {
    let mut drive=vec![0.;ports];drive[input]=1.;let mut rhs=system.port_rhs(&drive);if f!=0.{rhs.resize(2*n,0.);}
    let x=system.solve(2.*std::f64::consts::PI*f,rhs,&vec![0.;n],&mut stats)?;
@@ -420,12 +507,48 @@ fn matched_waves(model:&Model,refs:&[f64],frequencies:&[f64],budget:Option<&Budg
    let incident=refs[input]/4.;let loss=system.joule_loss(&x[..n])+if f==0.{0.}else{system.joule_loss(&x[n..])};let error=(incident*(1.-out)-loss).abs();
    if !error.is_finite()||!loss.is_finite(){return Err(fail("COUPLED_NONFINITE","Matched power overflow"));}let source=incident*(1.-out);power_error=power_error.max(error/(1e-12+source.abs()+loss));if error>1e-12+1e-8*(source.abs()+loss){return Err(fail("COUPLED_POWER","Matched wave power differs from intrinsic R loss"));}
    states.push(x);
+   if owner_loss.is_some(){diagonal_loss.push(loss);}
   }
   let gram=|entries:&[Entry],offset:usize|{(0..ports).map(|a|(0..ports).map(|b|entries.iter().map(|&(i,j,v)|0.5*v*(states[a][offset+i]*states[b][offset+j]+if f==0.{0.}else{states[a][n+offset+i]*states[b][n+offset+j]})).sum::<f64>()).collect::<Vec<_>>()).collect::<Vec<_>>()};
   let magnetic=gram(&model.inductance_h,system.nv);let electric=gram(&model.capacitance_f,0);if magnetic.iter().chain(&electric).flatten().any(|v|!v.is_finite()){return Err(fail("COUPLED_NONFINITE","Matched intrinsic energy overflow"));}energy.push(json!({"magneticJPerA2":magnetic,"electricJPerA2":electric}));
+  if let Some(partition)=owner_loss {
+   let grams=partition.grams(model,&states,f,started,budget)?;
+   for (port,&expected) in diagonal_loss.iter().enumerate(){
+    let actual=grams.iter().map(|g|g[port][port]).sum::<f64>();
+    if !actual.is_finite()||(actual-expected).abs()>1e-12+1e-8*(actual.abs()+expected.abs()){
+     return Err(fail("COUPLED_POWER","Sum of instance resistance losses differs from intrinsic R loss"));
+    }
+   }
+   // Form the cancellation-prone convergence drive in current coordinates
+   // before squaring it. Do not subtract large Gram terms for a weak loss.
+   let mut opposite=states[0].clone();
+   for state in &states[1..]{
+    for (a,b) in opposite.iter_mut().zip(state){*a-=b;}
+   }
+   let mut opposite_powers=vec![0.;partition.instance_ids.len()];
+   for &(i,j,r) in &model.resistance_ohm{
+    let i_state=system.nv+i;
+    let j_state=system.nv+j;
+    let re=opposite[i_state]*opposite[j_state];
+    let im=if f==0.{0.}else{opposite[n+i_state]*opposite[n+j_state]};
+    opposite_powers[partition.owner_by_dof[i]]+=r*(re+im);
+   }
+   let opposite_total=opposite_powers.iter().sum::<f64>();
+   let expected=system.joule_loss(&opposite[..n])+if f==0.{0.}else{system.joule_loss(&opposite[n..])};
+   if !opposite_total.is_finite()||!expected.is_finite()||
+      (opposite_total-expected).abs()>1e-12+1e-8*(opposite_total.abs()+expected.abs()){
+    return Err(fail("COUPLED_POWER","Sum of opposite-drive instance losses differs from intrinsic R loss"));
+   }
+   instance_loss.push(json!({"frequencyHz":f,"jouleWPerA2":grams,"oppositeDriveW":opposite_powers}));
+  }
   samples.push(sample);
  }
- Ok(json!({"status":"complete","parameters":samples,"frequenciesHz":frequencies,"counters":stats,"memoryPlanBytes":plan,"elapsedMs":started.elapsed().as_secs_f64()*1000.,"referenceTopology":model.reference_topology,"quality":{"relativeResidual":system.residual,"kclAbsA":system.kcl,"relativeRealPowerError":power_error},"loadedEnergyGram":energy,"energyConvention":"Mean RMS intrinsic .5*(Re(xa)^T E Re(xb)+Im(xa)^T E Im(xb)), unit1A Norton port drives with explicit real reference shunts; shunts store no energy","waveEvaluation":"Direct matched real-reference Norton solve of unchanged intrinsic full RLC"}))
+ let mut result=json!({"status":"complete","parameters":samples,"frequenciesHz":frequencies,"counters":stats,"memoryPlanBytes":plan,"elapsedMs":started.elapsed().as_secs_f64()*1000.,"referenceTopology":model.reference_topology,"quality":{"relativeResidual":system.residual,"kclAbsA":system.kcl,"relativeRealPowerError":power_error},"loadedEnergyGram":energy,"energyConvention":"Mean RMS intrinsic .5*(Re(xa)^T E Re(xb)+Im(xa)^T E Im(xb)), unit1A Norton port drives with explicit real reference shunts; shunts store no energy","waveEvaluation":"Direct matched real-reference Norton solve of unchanged intrinsic full RLC"});
+ if let Some(partition)=owner_loss {
+  result["loadedInstanceLoss"]=json!({"instanceIds":partition.instance_ids,"samples":instance_loss,
+   "convention":"RMS mean intrinsic I^H R I; real Gram of unit Norton port drives with explicit reference shunts; reference shunts excluded; opposite drive is [+1,-1,...] A RMS"});
+ }
+ Ok(result)
 }
 
 #[cfg(test)]
@@ -433,17 +556,107 @@ mod matched_tests {
  use super::*;
  fn model()->Model {Model{format:"coupled-rlc".into(),reference_topology:"grounded".into(),potential_nodes:vec!["a".into(),"b".into()],current_dofs:vec!["ia".into(),"ib".into()],incidence:vec![(0,0,1.),(1,1,1.)],port_incidence:vec![(0,0,1.),(1,1,1.)],resistance_ohm:vec![(0,0,2.),(1,1,3.)],inductance_h:vec![(0,0,2e-6),(1,1,3e-6),(0,1,5e-7),(1,0,5e-7)],capacitance_f:vec![(0,0,1e-9),(1,1,2e-9)],conserved_potential_modes:vec![],structural_gauge_modes:vec![],port_terminals:None}}
  #[test]fn matched_wave_equals_well_conditioned_impedance_conversion_with_unequal_references(){
-  let model=model();let refs=[37.,83.];let axis=[0.,1000.,10000.];let a=matched_waves(&model,&refs,&axis,None).unwrap();let z=impedance(&model,2,&axis,None).unwrap();let values:Vec<math::Matrix>=serde_json::from_value(z["parameters"].clone()).unwrap();
+  let model=model();let refs=[37.,83.];let axis=[0.,1000.,10000.];let a=matched_waves(&model,&refs,&axis,None,None).unwrap();let z=impedance(&model,2,&axis,None).unwrap();let values:Vec<math::Matrix>=serde_json::from_value(z["parameters"].clone()).unwrap();
   for(f,value)in values.iter().enumerate(){let mut quality=crate::electrical::frequency::Quality::default();let at50=math::to_s(value,"Z",&[50.,50.],&mut quality).unwrap();let expected=math::renormalize(&at50,&[50.,50.],&refs,&mut quality).unwrap();let actual:math::Matrix=serde_json::from_value(a["parameters"][f].clone()).unwrap();for i in 0..2{for j in 0..2{assert!((actual[i][j]-expected[i][j]).abs()<1e-10);}}}
   assert!(a["quality"]["relativeRealPowerError"].as_f64().unwrap()<1e-8);
   let current=37./39.;let other=83./86.;
   assert!((a["loadedEnergyGram"][0]["magneticJPerA2"][0][0].as_f64().unwrap()-0.5*2e-6*current*current).abs()<1e-18);
   assert!((a["loadedEnergyGram"][0]["magneticJPerA2"][0][1].as_f64().unwrap()-0.5*5e-7*current*other).abs()<1e-18);
  }
- #[test]fn matched_wave_preserves_axis_and_memory_guards(){for axis in [vec![],vec![-1.],vec![1000.,1000.],vec![f64::NAN]]{assert!(matched_waves(&model(),&[50.,50.],&axis,None).is_err());}}
+ #[test]fn matched_wave_preserves_axis_and_memory_guards(){for axis in [vec![],vec![-1.],vec![1000.,1000.],vec![f64::NAN]]{assert!(matched_waves(&model(),&[50.,50.],&axis,None,None).is_err());}}
  #[test]fn extreme_references_never_complete_with_null_wave_or_energy_coefficients(){
-  for refs in [[1e-200,2e-200],[1e200,2e200]] {if let Ok(v)=matched_waves(&model(),&refs,&[0.,1000.],None){let text=serde_json::to_string(&v).unwrap();assert!(!text.contains("null"));}}
+  for refs in [[1e-200,2e-200],[1e200,2e200]] {if let Ok(v)=matched_waves(&model(),&refs,&[0.,1000.],None,None){let text=serde_json::to_string(&v).unwrap();assert!(!text.contains("null"));}}
  }
+
+    #[test]
+    fn matched_resistance_loss_partitions_two_copper_owners_and_series_capacitor() {
+        let copper = |id: &str, r: f64| json!({
+            "id":id,"ports":["outer","pad"],"model":{
+                "id":id,"kind":"network","ports":["outer","pad"],"data":{
+                    "format":"coupled-rlc","referenceTopology":"infinity",
+                    "potentialNodes":["outer","pad","return"],"currentDofs":["trace"],
+                    "incidence":[[0,0,1.],[1,0,-1.]],
+                    "portIncidence":[[0,0,1.],[2,0,-1.],[1,1,1.],[2,1,-1.]],
+                    "resistanceOhm":[[0,0,r]],"inductanceH":[],
+                    "capacitanceF":[[0,0,5e-9],[2,2,5e-9],[0,2,-5e-9],[2,0,-5e-9]],
+                    "conservedPotentialModes":[[0.,0.,1.]],"structuralGaugeModes":[[1.,1.,1.]],
+                    "portTerminals":[
+                        {"positive":{"node":"outer"},"negative":{"node":"return"}},
+                        {"positive":{"node":"pad"},"negative":{"node":"return"}}
+                    ]
+                }
+            }
+        });
+        let capacitor = json!({
+            "id":"package","ports":["pins"],"model":{
+                "id":"package","kind":"network","ports":["pins"],"data":{
+                    "format":"coupled-rlc","referenceTopology":"infinity",
+                    "potentialNodes":["positive","negative","internal"],"currentDofs":["series"],
+                    "incidence":[[0,0,1.],[2,0,-1.]],"portIncidence":[[0,0,1.],[1,0,-1.]],
+                    "resistanceOhm":[[0,0,0.4]],"inductanceH":[[0,0,2e-6]],
+                    "capacitanceF":[[2,2,2e-6],[1,1,2e-6],[2,1,-2e-6],[1,2,-2e-6]],
+                    "conservedPotentialModes":[[0.,1.,0.]],"structuralGaugeModes":[[1.,1.,1.]],
+                    "portTerminals":[{"positive":{"node":"positive"},"negative":{"node":"negative"}}]
+                }
+            }
+        });
+        let frequencies = [1000., 4000.];
+        let refs = [37_f64, 83_f64];
+        let request: Request = serde_json::from_value(json!({
+            "instances":[copper("left",2.),copper("right",3.),capacitor],
+            "connections":[[0,1],[0,2],[0,3],[1,4],[3,4]],
+            "connectionContacts":["negative","negative","negative","positive","positive-negative"],
+            "ports":[{"name":"left","index":0},{"name":"right","index":2}],
+            "frequencies":frequencies,"representation":"S","referenceOhm":refs,
+            "recoverInstanceLoss":true
+        })).unwrap();
+        let result = crate::electrical::frequency::run(request.clone());
+        assert_eq!(result["status"],"complete","{result}");
+        let report = &result["loadedInstanceLoss"];
+        assert_eq!(report["instanceIds"],json!(["left","right","package"]));
+        let reciprocal = |v: math::C| v.conj().scale(1. / (v.real*v.real + v.imaginary*v.imaginary));
+        for (k, frequency) in frequencies.iter().copied().enumerate() {
+            let omega = 2. * std::f64::consts::PI * frequency;
+            let y = reciprocal(math::C::new(5.4, omega*2e-6 - 1./(omega*2e-6)));
+            let g0 = math::C::new(1./refs[0], omega*5e-9);
+            let g1 = math::C::new(1./refs[1], omega*5e-9);
+            let determinant = (g0+y)*(g1+y)-y*y;
+            let currents = [y*g1*reciprocal(determinant), (y*g0*reciprocal(determinant)).scale(-1.)];
+            let sample = &report["samples"][k];
+            assert_eq!(sample["frequencyHz"],json!(frequency));
+            let opposite = currents[0]-currents[1];
+            for (owner, r) in [2.,3.,0.4].into_iter().enumerate() {
+                let value = sample["oppositeDriveW"][owner].as_f64().unwrap();
+                assert!((value-r*opposite.abs().powi(2)).abs()<1e-10);
+            }
+            let s: math::Matrix = serde_json::from_value(result["parameters"][k].clone()).unwrap();
+            for a in 0..2 {
+                for b in 0..2 {
+                    let mut sum = 0.;
+                    for (owner, r) in [2.,3.,0.4].into_iter().enumerate() {
+                        let value = sample["jouleWPerA2"][owner][a][b].as_f64().unwrap();
+                        assert!((value-r*(currents[a].conj()*currents[b]).real).abs()<1e-10);
+                        sum += value;
+                    }
+                    let incident = if a==b { refs[a]/4. } else { 0. };
+                    let outgoing = (refs[a]*refs[b]).sqrt()/4. * (0..2)
+                        .map(|p| (s[p][a].conj()*s[p][b]).real).sum::<f64>();
+                    assert!((sum-(incident-outgoing)).abs()<1e-10);
+                }
+            }
+        }
+        let mut legacy = request.clone();
+        legacy.recover_instance_loss = false;
+        let ordinary = crate::electrical::frequency::run(legacy);
+        assert_eq!(ordinary["parameters"], result["parameters"]);
+        assert!(ordinary.get("loadedInstanceLoss").is_none());
+        assert!(result["memoryPlanBytes"].as_u64().unwrap()>ordinary["memoryPlanBytes"].as_u64().unwrap());
+
+        let mut incompatible = request;
+        incompatible.representation = "Y".into();
+        let rejected = crate::electrical::frequency::run(incompatible);
+        assert_eq!(rejected["diagnostics"][0]["code"], "COUPLED_LOSS_INPUT");
+    }
 
 }
 

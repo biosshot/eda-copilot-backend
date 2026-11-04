@@ -392,11 +392,16 @@ pub(super) fn build_for(
             .as_ref()
             .map(|v| v[i])
             .unwrap_or_default();
-        if contacts != physical::Contacts::Negative {
-            merge(&mut parent, port_nodes[a][0], port_nodes[b][0]);
-        }
-        if contacts != physical::Contacts::Positive {
-            merge(&mut parent, port_nodes[a][1], port_nodes[b][1]);
+        use physical::Contacts::{Both, Negative, NegativePositive, Positive, PositiveNegative};
+        let pairs: &[(usize, usize)] = match contacts {
+            Both => &[(0, 0), (1, 1)],
+            Positive => &[(0, 0)],
+            Negative => &[(1, 1)],
+            PositiveNegative => &[(0, 1)],
+            NegativePositive => &[(1, 0)],
+        };
+        for &(from, to) in pairs {
+            merge(&mut parent, port_nodes[a][from], port_nodes[b][to]);
         }
     }
     let mut nodes = BTreeMap::new();

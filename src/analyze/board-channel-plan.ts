@@ -1,3 +1,5 @@
+import { componentReachableIslands, MAX_CHANNEL_COMPONENTS, validateChannelAttachments, type BoardChannelRequest } from './channel-components.ts';
+import { normalizePlannerTerminals, type LegacyChannelContact } from './channel-terminals.ts';
 import type { AnalysisGeometryReport } from '../../native/analyze/index.js';
 import type { ChannelBlock, ChannelCut, CopperFragment, SegmentedChannel } from './segmented-channel.ts';
 import { createProblemExecutor } from './execute-problem.ts';
@@ -21,19 +23,18 @@ type Face = {
     ];
     slice?: any;
 };
-export function boardChannelPlan(board: any, base: any, contacts: {
-    sourcePath: string;
-    layer: string;
-}[], options: Options = {}) { return createBoardChannelPlanner(board, base, contacts)(options); }
+export function boardChannelPlan(board: any, base: any, contacts: LegacyChannelContact[] | BoardChannelRequest, options: Options = {}) { return createBoardChannelPlanner(board, base, contacts)(options); }
 const fail = (s: string): never => {
     throw new Error("CHANNEL_SEGMENTATION: " + s);
 };
 const add = (a: Point, b: Point, s = 1): Point => [a[0] + s * b[0], a[1] + s * b[1]];
 const range = (ps: Point[], d: Point) => [Math.min(...ps.map((p) => project(p, d))), Math.max(...ps.map((p) => project(p, d)))];
-export function createBoardChannelPlanner(board: any, base2: any, contacts: {
-    sourcePath: string;
-    layer: string;
-}[]) {
+export function createBoardChannelPlanner(board: any, base2: any, input: LegacyChannelContact[] | BoardChannelRequest) {
+    const { contacts, signalIds, ports: externalPorts } = normalizePlannerTerminals(input);
+    const legacy = Array.isArray(input);
+    if (!legacy && (input.components?.length ?? 0) > MAX_CHANNEL_COMPONENTS)
+        fail("Component bridge count exceeds " + MAX_CHANNEL_COMPONENTS);
+    const components = legacy ? [] : structuredClone(input.components ?? []);
     // The generic local default is too coarse to refine the already constrained
     // coupon mesh. Automatic channels start from the verified current grid;
     // level 2 then performs a real fourfold area refinement instead of a no-op.
@@ -43,20 +44,48 @@ export function createBoardChannelPlanner(board: any, base2: any, contacts: {
     return (options: Options = {}): SegmentedChannel & {
         audit: any;
     } => {
-        const island = (c: {
-            sourcePath: string;
-            layer: string;
-        }) => {
-            const r = g.regions.filter((r2) => r2.source.path === c.sourcePath && r2.layer === c.layer);
-            if (r.length !== 1)
-                fail("Ambiguous physical endpoint");
-            return g.islands.find((i) => i.region_ids.includes(r[0].id)) ?? fail("Unconfirmed endpoint");
+        const islandByRegion = new Map(g.islands.flatMap(i => i.region_ids.map(id => [id, i] as const)));
+        const resolveTerminal = (contact: typeof contacts[number]) => {
+            const regions = g.regions.filter(r => r.source.path === contact.sourcePath && r.layer === contact.layer);
+            if (regions.length !== 1)
+                fail("Missing or ambiguous physical terminal " + contact.id);
+            const region = regions[0];
+            const island = islandByRegion.get(region.id) ?? fail("Unconfirmed physical terminal " + contact.id);
+            return { contact, region, island };
         };
-        const signal = island(contacts[0]);
-        if (signal.id !== island(contacts[1]).id)
-            fail("Disconnected signal endpoints");
-        const returns = [...new Map([island(contacts[2]), island(contacts[3])].map((i) => [i.id, i])).values()], returnIds = new Set(returns.flatMap((i) => i.region_ids));
-        const selected = g.regions.filter((r) => signal.region_ids.includes(r.id) || contacts.some((c) => c.sourcePath === r.source.path && c.layer === r.layer));
+        const terminals = new Map(contacts.map(contact => [contact.id, resolveTerminal(contact)] as const));
+        const islands = (signal: boolean) => [...new Map([...terminals.values()]
+            .filter(({ contact }) => signalIds.has(contact.id) === signal)
+            .map(({ island }) => [island.id, island])).values()];
+        const signals = islands(true), returns = islands(false);
+        if (legacy && signals.length > 1)
+            fail("Disconnected legacy signal endpoints; capacitive or component bridge continuity requires a verified model");
+        const terminalSourceKey = (contact: typeof contacts[number]) => JSON.stringify([contact.sourcePath, contact.layer]);
+        const terminalsBySource = new Map([...terminals.values()].map(t => [terminalSourceKey(t.contact), t] as const));
+        const componentPlans = components.map(({ id, designator, pins, model }) => {
+            const resolvePin = (pin: typeof contacts[number]) => {
+                const key = terminalSourceKey(pin);
+                const known = terminalsBySource.get(key);
+                if (known)
+                    return known;
+                if (terminals.has(pin.id))
+                    fail("Component pin ID collides with a separate copper terminal: " + pin.id);
+                const resolved = resolveTerminal(pin);
+                terminals.set(pin.id, resolved);
+                terminalsBySource.set(key, resolved);
+                return resolved;
+            };
+            return { id, designator, model, pins: [resolvePin(pins[0]), resolvePin(pins[1])] as const };
+        });
+        const componentEdges = componentPlans.map(({ pins: [a, b] }) => [a.island.id, b.island.id] as const);
+        const reachable = componentReachableIslands([...signals, ...returns].map(i => i.id), componentEdges);
+        if (componentEdges.some(([a, b]) => !reachable.has(a) || !reachable.has(b)))
+            fail("Component bridge is detached from all declared channel contacts");
+        const signalIslandIds = componentReachableIslands(signals.map(i => i.id), componentEdges, new Set(returns.map(i => i.id)));
+        const signalRegions = new Set(g.islands.filter(i => signalIslandIds.has(i.id)).flatMap(i => i.region_ids));
+        const returnIds = new Set(returns.flatMap(i => i.region_ids));
+        const contactRegions = new Set([...terminals.values()].map(({ region }) => region.id));
+        const selected = g.regions.filter(r => signalRegions.has(r.id) || contactRegions.has(r.id));
         const height = base2.stack.reduce((s: number, l: any) => s + l.thicknessM * 1e3, 0), margin = Math.max(0.05, 2 * height) * (options.domainScale ?? 1);
         const points = selected.flatMap((r) => r.polygon.outer), xr = range(points, [1, 0]), yr = range(points, [0, 1]);
         const bounds = [[xr[0] - margin, yr[0] - margin], [xr[1] + margin, yr[1] + margin]];
@@ -84,7 +113,7 @@ export function createBoardChannelPlanner(board: any, base2: any, contacts: {
                 fail("Barrel domain closure did not stabilize");
         }
         let domain: Point[] = [[bounds[0][0], bounds[0][1]], [bounds[1][0], bounds[0][1]], [bounds[1][0], bounds[1][1]], [bounds[0][0], bounds[1][1]]];
-        const seed = buildRouteGraph(snapshot, g, new Set(signal.region_ids), 0).runs.sort((a, b) => b.lengthMm - a.lengthMm)[0];
+        const seed = buildRouteGraph(snapshot, g, signalRegions, 0).runs.sort((a, b) => b.lengthMm - a.lengthMm)[0];
         if (seed) {
             const d = seed.direction, t = tangent(d), x = range(domain, d), y = range(domain, t);
             domain = [[x[0], y[0]], [x[1], y[0]], [x[1], y[1]], [x[0], y[1]]].map(([a, b]) => [a * d[0] + b * t[0], a * d[1] + b * t[1]]);
@@ -98,23 +127,122 @@ export function createBoardChannelPlanner(board: any, base2: any, contacts: {
             return area(p);
         };
         const regionArea = (r: AnalysisGeometryReport['regions'][number], p: Point[]) => triangles(p).reduce((sum, triangle) => sum + Math.max(0, clippedArea(r.polygon.outer, triangle) - r.polygon.holes.reduce((s, h) => s + clippedArea(h, triangle), 0)), 0);
-        const relevant = g.regions.filter((r) => regionArea(r, domain) > 1e-12), graph = buildRouteGraph(snapshot, g, new Set(relevant.map((r) => r.id)), Math.max(0.05, 2 * height));
-        const signalRuns = graph.runs.filter((r) => r.regionIds.some((id) => signal.region_ids.includes(id)));
-        // Physical run envelopes include mutual conductors; complete material events and lateral continuation decide admission.
-        const corridors = coupledRunCorridors(g, signalRuns, margin + Math.max(...signalRuns.map((r) => r.widthMm / 2), 0));
-        // A longitudinally uniform slice through an internal return hole is
-        // still part of a connected bypass event. Its detached transverse return
-        // pieces cannot become independent ribbons with an implied remote join.
-        // Use the physical layer union, so CAD source seams do not create events.
-        for(const c of corridors){const d=c.direction,t=tangent(d);const gaps=g.layers.flatMap(l=>l.copper.flatMap(p=>p.holes)).flatMap(h=>{
-            const x=range(h as Point[],d),y=range(h as Point[],t);
-            return y[1]>c.transverseMm[0]&&y[0]<c.transverseMm[1]?[x]:[];
-        });
-            c.admissibleIntervalsMm=c.admissibleIntervalsMm.filter(([a,b])=>!gaps.some(([x,y])=>Math.min(b,y)-Math.max(a,x)>1e-8));
+        const regionSelection = (polygon: Point[]) => g.regions.filter(r => regionArea(r, polygon) > 1e-12);
+        const routeGraph = (regions: AnalysisGeometryReport['regions']) =>
+            buildRouteGraph(snapshot, g, new Set(regions.map(r => r.id)), Math.max(0.05, 2 * height));
+        let relevant = regionSelection(domain), graph = routeGraph(relevant);
+        const returnRegions = g.regions.filter(r => returnIds.has(r.id));
+        const signalRuns = graph.runs.filter((r) => r.regionIds.some(id => signalRegions.has(id)));
+        const inRing2 = (ring: number[][], p: Point) => {
+            let yes = false;
+            for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+                const a = ring[i], b = ring[j];
+                if (a[1] > p[1] !== b[1] > p[1] && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0])
+                    yes = !yes;
+            }
+            return yes;
+        };
+        function polygonIntervals(polygon: AnalysisGeometryReport['regions'][number]['polygon'], origin: Point, normal: Point, span: [number, number]) {
+            const t = tangent(normal), cuts = [...span], intervals: [number, number][] = [];
+            for (const ring of [polygon.outer, ...polygon.holes])
+                for (let i = 0; i < ring.length; i++) {
+                    const a = add(ring[i], origin, -1), b = add(ring[(i + 1) % ring.length], origin, -1);
+                    const x = project(a, normal), y = project(b, normal);
+                    if (x <= 0 && y > 0 || y <= 0 && x > 0) {
+                        const at = project(a, t) + (project(b, t) - project(a, t)) * -x / (y - x);
+                        if (at > span[0] && at < span[1])
+                            cuts.push(at);
+                    }
+                }
+            cuts.sort((a, b) => a - b);
+            for (let i = 1; i < cuts.length; i++) {
+                const a = cuts[i - 1], b = cuts[i], p = add(origin, t, (a + b) / 2);
+                if (b - a > 1e-9 && inRing2(polygon.outer, p) && !polygon.holes.some(h => inRing2(h, p)))
+                    intervals.push([a, b]);
+            }
+            return intervals;
         }
-        const usable = corridors.filter((c) => c.admissibleIntervalsMm.length);
+        const baseHalfWidth = margin + Math.max(...signalRuns.map(r => r.widthMm / 2), 0);
+        function sweptCorridors(halfWidth: number) {
+            const corridors = coupledRunCorridors(g, signalRuns, halfWidth);
+            for (const c of corridors) {
+                const d = c.direction, t = tangent(d), [low, high] = c.transverseMm;
+                // A section through a longitudinal hole still belongs to the
+                // connected bypass. Inspect the physical union across the width.
+                const gaps = g.layers.flatMap(l => l.copper.flatMap(p => p.holes)).flatMap(h => {
+                    const x = range(h, d), y = range(h, t);
+                    return y[1] > low && y[0] < high ? [x] : [];
+                });
+                c.admissibleIntervalsMm = c.admissibleIntervalsMm.filter(([a, b]) => {
+                    if (gaps.some(([x, y]) => Math.min(b, y) - Math.max(a, x) > 1e-8))
+                        return false;
+                    const origin = add(add([0, 0], d, (a + b) / 2), t, (low + high) / 2);
+                    const halfWidth = (high - low) / 2;
+                    return returnRegions.some(r => polygonIntervals(r.polygon, origin, d, [-halfWidth, halfWidth]).length > 0);
+                });
+            }
+            return corridors;
+        }
+
+        let corridors = sweptCorridors(baseHalfWidth);
+        let usable = corridors.filter(c => c.admissibleIntervalsMm.length);
+        let returnClosure: {
+            reason: string;
+            polygonMm?: Point[];
+            areaMm2?: number;
+            transverseMm?: [number, number];
+        } | undefined;
+        function refuseCorridor(reason: string): never {
+            throw Object.assign(new Error("CHANNEL_CORRIDOR: " + reason), {
+                code: "CHANNEL_CORRIDOR_UNSUPPORTED",
+                corridorAudit: { corridors, returnClosure, contacts, sourceCopper: g.regions, physicalIslands: g.islands, physicalContacts: g.contacts, bores: g.holes, signalIsland: signalIslandIds.size === 1 ? [...signalIslandIds][0] : undefined, signalIslands: [...signalIslandIds], returnIslands: returns.map(i => i.id), geometryFindings: g.findings, signalRegions: g.regions.filter(r => signalRegions.has(r.id)).map(r => ({ regionId: r.id, sourcePath: r.source.path, layer: r.layer, areaMm2: r.area_mm2 })) }
+            });
+        }
+        if (corridors.length) {
+            const d = seed?.direction ?? corridors[0].direction, t = tangent(d);
+            const originalLong = range(domain, d), originalCross = range(domain, t);
+            const closedLong = [...originalLong], closedCross = [...originalCross];
+            // Inspect every source of the confirmed terminal islands. This
+            // rectangle is invariant to CAD subdivision and excludes islands
+            // connected only by their net name.
+            for (const r of returnRegions)
+                for (const p of r.polygon.outer) {
+                    const x = project(p, d), y = project(p, t);
+                    closedLong[0] = Math.min(closedLong[0], x);
+                    closedLong[1] = Math.max(closedLong[1], x);
+                    closedCross[0] = Math.min(closedCross[0], y);
+                    closedCross[1] = Math.max(closedCross[1], y);
+                }
+            const clipped = closedLong.some((v, i) => Math.abs(v - originalLong[i]) > 1e-8)
+                || closedCross.some((v, i) => Math.abs(v - originalCross[i]) > 1e-8);
+            const lateralReturn = corridors.some(c => c.lateralContinuations.some(v => returnIds.has(v.regionId)));
+            if (clipped || (!usable.length && lateralReturn)) {
+                if (corridors.length !== 1) {
+                    returnClosure = { reason: "Finite return closure needs distributed interface coordinates across multiple corridors" };
+                    refuseCorridor(returnClosure.reason);
+                }
+                const [low, high] = corridors[0].transverseMm, centre = (low + high) / 2;
+                const halfWidth = Math.max(baseHalfWidth, centre - closedCross[0], closedCross[1] - centre) + margin;
+                const transverseMm: [number, number] = [centre - halfWidth, centre + halfWidth];
+                const [a, b] = [closedLong[0] - margin, closedLong[1] + margin];
+                const polygon = [[a, transverseMm[0]], [b, transverseMm[0]], [b, transverseMm[1]], [a, transverseMm[1]]]
+                    .map(([x, y]) => add(add([0, 0], d, x), t, y));
+                const expanded = sweptCorridors(halfWidth);
+                returnClosure = { reason: "Complete finite terminal return islands inside the re-swept physical envelope", polygonMm: polygon, transverseMm, areaMm2: area(polygon) };
+                if (expanded.length !== 1 || expanded[0].lateralContinuations.length || !expanded[0].admissibleIntervalsMm.length) {
+                    corridors = expanded;
+                    returnClosure.reason = "Expanded finite return envelope still needs a distributed lateral or joint interface";
+                    refuseCorridor(returnClosure.reason);
+                }
+                domain = polygon;
+                corridors = expanded;
+                usable = expanded;
+                relevant = regionSelection(domain);
+                graph = routeGraph(relevant);
+            }
+        }
         if (signalRuns.length && !usable.length)
-            throw Object.assign(new Error("CHANNEL_CORRIDOR: No admissible finite-return uniform corridor; distributed lateral copper/material events require a joint domain"), { code: "CHANNEL_CORRIDOR_UNSUPPORTED", corridorAudit: { corridors, contacts, sourceCopper: g.regions, physicalIslands: g.islands, physicalContacts: g.contacts, bores: g.holes, signalIsland: signal.id, returnIslands: returns.map((i) => i.id), geometryFindings: g.findings, signalRegions: g.regions.filter((r) => signal.region_ids.includes(r.id)).map((r) => ({ regionId: r.id, sourcePath: r.source.path, layer: r.layer, areaMm2: r.area_mm2 })) } });
+            refuseCorridor("No admissible finite-return uniform corridor; distributed lateral copper/material events require a joint domain");
         const cells = (signalRuns.length ? corridorCells(domain, usable, options.boundaryFraction) : [{ id: "event-0", polygonMm: domain, direction: [1, 0] as Point, routeIds: [] }]).filter((c) => relevant.some((r) => regionArea(r, c.polygonMm) > 1e-12));
         for (let pass = 0; pass < 32; pass++) {
             let merged = false;
@@ -137,8 +265,7 @@ export function createBoardChannelPlanner(board: any, base2: any, contacts: {
             if (!merged)
                 break;
         }
-        for (const contact of contacts) {
-            const region = g.regions.find((r) => r.source.path === contact.sourcePath && r.layer === contact.layer)!;
+        for (const { region } of terminals.values()) {
             for (let pass = 0; pass < 32; pass++) {
                 const occupied = cells.flatMap((c, i) => regionArea(region, c.polygonMm) > 1e-10 ? [i] : []);
                 if (occupied.length < 2)
@@ -180,68 +307,38 @@ export function createBoardChannelPlanner(board: any, base2: any, contacts: {
                         }
         }
         buildFaces();
-        const inRing2 = (ring: number[][], p: Point) => {
-            let yes = false;
-            for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-                const a = ring[i], b = ring[j];
-                if (a[1] > p[1] !== b[1] > p[1] && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0])
-                    yes = !yes;
-            }
-            return yes;
-        };
         function slice(origin: Point, n: Point, span: [
             number,
             number
         ], id: string) {
-            const t = tangent(n), cuts = [span[0], span[1]];
-            for (const r of relevant.filter((r2) => returnIds.has(r2.id)))
-                for (const ring of [r.polygon.outer, ...r.polygon.holes])
-                    for (let i = 0; i < ring.length; i++) {
-                        const a = add(ring[i], origin, -1), b = add(ring[(i + 1) % ring.length], origin, -1), x = project(a, n), y = project(b, n);
-                        if (x <= 0 && y > 0 || y <= 0 && x > 0) {
-                            const v = project(a, t) + (project(b, t) - project(a, t)) * -x / (y - x);
-                            if (v > span[0] && v < span[1])
-                                cuts.push(v);
-                        }
-                    }
-            cuts.sort((a, b) => a - b);
-            let reference2: any, offset: number | undefined;
-            for (let i = 1; i < cuts.length && !reference2; i++) {
-                const y = (cuts[i - 1] + cuts[i]) / 2, p = add(origin, t, y);
-                for (const r of relevant.filter((r2) => returnIds.has(r2.id)))
-                    if (inRing2(r.polygon.outer, p) && !r.polygon.holes.some((h) => inRing2(h, p))) {
-                        reference2 = r;
-                        offset = y;
-                        break;
-                    }
-            }
-            if (!reference2)
-                fail("No finite return at " + id + "; partition requires a joint/nonlocal return model");
+            const t = tangent(n);
+            const intervals = g.layers.flatMap(layer => layer.copper.flatMap(polygon =>
+                polygonIntervals(polygon, origin, n, span).map(([low, high]) => ({ layer: layer.layer, low, high }))));
+            intervals.sort((a, b) => a.low - b.low);
+            // Native source attribution uses the physical union interval's
+            // centre. A CAD seam can give an off-centre point another owner.
+            const reference = intervals.map(({ layer, low, high }) => {
+                const offset = low + (high - low) / 2, point = add(origin, t, offset);
+                const region = returnRegions.find(r => r.layer === layer && inRing2(r.polygon.outer, point)
+                    && !r.polygon.holes.some(h => inRing2(h, point)));
+                return { region, offset };
+            }).find(candidate => candidate.region);
+            if (!reference?.region)
+                return fail("No finite return at " + id + "; partition requires a joint/nonlocal return model");
+            const { region: reference2, offset } = reference;
             const value2 = execute({ kind: "board-section", boardJson, stack: base2.stack, slice: { atMm: origin, transverseUnit: t, halfWidthMm: (span[1] - span[0]) / 2, airMarginMm: Math.max(1, 4 * height) * (options.domainScale ?? 1), referenceLayer: reference2.layer, referenceSourcePath: reference2.source.path, referenceXMm: offset } });
             const mapping = value2.sourceMapping, ref = mapping.find((m: any) => m.role === "reference"), signals = mapping.filter((m: any) => m.role !== "reference");
             const key = (m: any) => JSON.stringify({ face: id, layer: m.layer, sources: m.sourcePaths, interval: m.intervalMm });
             return { ...value2, reference: ref, signals, cuts: signals.map((m: any) => ({ positive: key(m), negative: key(ref) })) };
         }
+        const faceKey = (f: Face, m: { layer: string; island: string; intervalMm: number[] }) =>
+            JSON.stringify({ face: f.id, layer: m.layer, island: m.island, interval: m.intervalMm });
         // Match actual source intervals on one finite face, preserving disconnected returns and floating neighbours.
         function localFace(f: Face) {
-            const t = tangent(f.normal), intervals = [];
+            const intervals = [];
             for (const r of relevant) {
-                const points2 = [f.span[0], f.span[1]];
-                for (const ring of [r.polygon.outer, ...r.polygon.holes])
-                    for (let i = 0; i < ring.length; i++) {
-                        const a = add(ring[i], f.origin, -1), b = add(ring[(i + 1) % ring.length], f.origin, -1), x = project(a, f.normal), y = project(b, f.normal);
-                        if (x <= 0 && y > 0 || y <= 0 && x > 0) {
-                            const at = project(a, t) + (project(b, t) - project(a, t)) * -x / (y - x);
-                            if (at > f.span[0] && at < f.span[1])
-                                points2.push(at);
-                        }
-                    }
-                points2.sort((a, b) => a - b);
-                for (let i = 1; i < points2.length; i++) {
-                    const a = points2[i - 1], b = points2[i], p = add(f.origin, t, (a + b) / 2);
-                    if (b - a > 1e-9 && inRing2(r.polygon.outer, p) && !r.polygon.holes.some((h) => inRing2(h, p)))
-                        intervals.push({ layer: r.layer, sourcePaths: [r.source.path], regionIds: [r.id], island: g.islands.find((v: any) => v.region_ids.includes(r.id))?.id, intervalMm: [a, b] });
-                }
+                for (const intervalMm of polygonIntervals(r.polygon, f.origin, f.normal, f.span))
+                    intervals.push({ layer: r.layer, sourcePaths: [r.source.path], regionIds: [r.id], island: islandByRegion.get(r.id)?.id, intervalMm });
             }
             intervals.sort((a, b) => a.layer.localeCompare(b.layer) || a.intervalMm[0] - b.intervalMm[0]);
             const mapping: any[] = [];
@@ -258,7 +355,7 @@ export function createBoardChannelPlanner(board: any, base2: any, contacts: {
             if (!mapping.length)
                 return void 0;
             const reference2 = mapping.find((m: any) => m.regionIds.some((id: string) => returnIds.has(id))) ?? fail("No finite return contact at " + f.id + "; requires joint local domain");
-            const signals = mapping.filter((m: any) => m !== reference2), key = (m: any) => JSON.stringify({ face: f.id, layer: m.layer, island: m.island, interval: m.intervalMm });
+            const signals = mapping.filter((m: any) => m !== reference2), key = (m: any) => faceKey(f, m);
             if (!signals.length)
                 fail("Return-only shared face " + f.id + " requires a joint local domain; no fictitious differential reference");
             return { reference: reference2, signals, sourceMapping: mapping, cuts: signals.map((m: any) => ({ positive: key(m), negative: key(reference2) })) };
@@ -289,7 +386,31 @@ export function createBoardChannelPlanner(board: any, base2: any, contacts: {
                 fail("Local return-domain merge did not stabilize");
         }
         faces = faces.filter((f) => f.slice);
-        const coverage: CopperFragment[] = [], blocks: ChannelBlock[] = [], ports: SegmentedChannel['ports'] = [];
+        if (cells.length > 32)
+            fail("Physical block count exceeds the composition budget of 32");
+        const terminalOwners = new Map<string, number>();
+        for (const [id, { region }] of terminals) {
+            const owners = cells.flatMap((cell, index) => {
+                const overlap = regionArea(region, cell.polygonMm);
+                return overlap > 1e-12 ? [{ index, overlap }] : [];
+            });
+            if (owners.length !== 1 || Math.abs(owners[0].overlap - region.area_mm2) > 1e-7)
+                fail("Physical terminal lacks unique complete source ownership: " + id);
+            terminalOwners.set(id, owners[0].index);
+        }
+        const externalKey = (id: string) => "external:" + id;
+        const cellPorts = externalPorts.map(({ name, positive, negative }) => {
+            const owner = terminalOwners.get(positive)!;
+            if (terminalOwners.get(negative) !== owner)
+                fail("External port spans separate physical blocks: " + name);
+            return { name, positive, negative, owner, cut: { positive: externalKey(positive), negative: externalKey(negative) } };
+        });
+        const componentPins = new Set(componentPlans.flatMap(component => component.pins.map(pin => pin.contact.id)));
+        const attachments = componentPlans.map(({ id, model, pins: [positive, negative] }) => ({
+            id, model, cut: { positive: externalKey(positive.contact.id), negative: externalKey(negative.contact.id) },
+        }));
+        const coverage: CopperFragment[] = [], blocks: ChannelBlock[] = [];
+        const ports: SegmentedChannel['ports'] = cellPorts.map(({ name, cut }) => ({ name, cut }));
         for (const [index, cell] of cells.entries()) {
             const own: CopperFragment[] = [];
             for (const r of relevant) {
@@ -300,26 +421,40 @@ export function createBoardChannelPlanner(board: any, base2: any, contacts: {
             }
             const incident = faces.filter((f) => f.a === index || f.b === index), d = cell.direction, t = tangent(d), long = range(cell.polygonMm, d), cross = range(cell.polygonMm, t), centre = (cross[0] + cross[1]) / 2;
             const rectangle = Math.abs(area(cell.polygonMm) - (long[1] - long[0]) * (cross[1] - cross[0])) < 1e-8;
-            const external = contacts.some((c) => g.regions.some((r) => r.source.path === c.sourcePath && r.layer === c.layer && regionArea(r, cell.polygonMm) > 1e-12));
+            const external = cellPorts.filter(port => port.owner === index);
+            const localPins = [...componentPins].filter(id => terminalOwners.get(id) === index);
             const ends = incident.filter((f) => Math.abs(Math.abs(project(f.normal, d)) - 1) < 1e-8);
             // A rectangular remainder cannot borrow invariance from another transverse corridor.
-            let uniform = /^run-[0-9]+$/.test(cell.id) && rectangle && !external && incident.length === 2 && ends.length === 2;
+            let uniform = /^run-[0-9]+$/.test(cell.id) && rectangle && !external.length && !localPins.length && incident.length === 2 && ends.length === 2;
             uniform &&= usable.some((c) => Math.abs(Math.abs(project(c.direction, d)) - 1) < 1e-8 && Math.abs(c.transverseMm[0] - cross[0]) < 1e-8 && Math.abs(c.transverseMm[1] - cross[1]) < 1e-8 && c.admissibleIntervalsMm.some(([a, b]) => long[0] > a && long[1] < b));
             if (uniform) {
                 ends.sort((a, b) => project(a.origin, d) - project(b.origin, d));
                 const mid = slice(add([d[0] * (long[0] + long[1]) / 2, d[1] * (long[0] + long[1]) / 2], t, centre), d, [-(cross[1] - cross[0]) / 2, (cross[1] - cross[0]) / 2], cell.id + "-mid");
                 const midOrigin = add([d[0] * (long[0] + long[1]) / 2, d[1] * (long[0] + long[1]) / 2], t, centre);
-                // Source subdivision may change at the two ends; match physical island and face span, never a net label.
-                const orderedCuts = (f: Face) => mid.signals.map((m: any) => {
-                    const witness = add(midOrigin, t, (m.intervalMm[0] + m.intervalMm[1]) / 2);
-                    const region = g.regions.find((r) => r.layer === m.layer && m.sourcePaths.includes(r.source.path) && inRing2(r.polygon.outer, witness) && !r.polygon.holes.some((h) => inRing2(h, witness)));
-                    const island2 = g.islands.find((i) => region && i.region_ids.includes(region.id));
-                    const match = f.slice.signals.findIndex((v: any) => v.layer === m.layer && v.island === island2?.id && Math.abs(project(add(f.origin, tangent(f.normal), (v.intervalMm[0] + v.intervalMm[1]) / 2), t) - centre - (m.intervalMm[0] + m.intervalMm[1]) / 2) < 1e-7);
-                    if (match < 0)
-                        fail("Shared physical conductor mapping mismatch");
-                    return f.slice.cuts[match];
-                });
-                const metal = [...mid.geometry.conductors.filter((m: any) => m.role !== "reference"), mid.geometry.conductors.find((m: any) => m.role === "reference")], maps = [...mid.signals, mid.reference], resistance = [], internal = [];
+                // Match every metal at each end, including the native voltage gauge.
+                // The face basis can choose a different gauge while preserving physical incidence.
+                const maps = [...mid.signals, mid.reference];
+                const sectionEnd = (f: Face) => {
+                    if (f.slice.sourceMapping.length !== maps.length)
+                        fail("Shared physical conductor count mismatch");
+                    const entries = maps.map((m: any) => {
+                        const centreMm = (m.intervalMm[0] + m.intervalMm[1]) / 2;
+                        const witness = add(midOrigin, t, centreMm);
+                        const region = g.regions.find(r => r.layer === m.layer && m.sourcePaths.includes(r.source.path)
+                            && inRing2(r.polygon.outer, witness) && !r.polygon.holes.some(h => inRing2(h, witness)));
+                        const island = region && islandByRegion.get(region.id);
+                        const matches = f.slice.sourceMapping.filter((v: any) => v.layer === m.layer && v.island === island?.id
+                            && Math.abs(project(add(f.origin, tangent(f.normal), (v.intervalMm[0] + v.intervalMm[1]) / 2), t) - centre - centreMm) < 1e-7);
+                        if (!island || matches.length !== 1)
+                            fail("Shared physical conductor mapping mismatch");
+                        return [m.conductorId, faceKey(f, matches[0])] as const;
+                    });
+                    if (new Set(entries.map(([, key]) => key)).size !== maps.length)
+                        fail("Shared physical conductor mapping is not one-to-one");
+                    return Object.fromEntries(entries);
+                };
+                const sectionEnds = [sectionEnd(ends[0]), sectionEnd(ends[1])] as const;
+                const metal = [...mid.geometry.conductors.filter((m: any) => m.role !== "reference"), mid.geometry.conductors.find((m: any) => m.role === "reference")], resistance = [], internal = [];
                 for (let i = 0; i < metal.length; i++) {
                     const p = metal[i].contour.outerM ?? metal[i].contour.outer_m ?? metal[i].contour.outer, x = p.map((v: any) => v[0]), z4 = p.map((v: any) => v[1]), w = Math.max(...x) - Math.min(...x), th = Math.max(...z4) - Math.min(...z4), sigma = base2.stack.find((l: any) => l.name === maps[i].layer).conductivitySM;
                     if (th / w > 0.25)
@@ -331,7 +466,7 @@ export function createBoardChannelPlanner(board: any, base2: any, contacts: {
                 }
                 const n = resistance.length - 1, matrix2 = (v: any) => Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_2, j) => v[n] + (i === j ? v[i] : 0)));
                 const sectionMeshFactor = options.magneticPatchLevel === 1 ? 1 : 0.5;
-                blocks.push({ id: cell.id, kind: "section", line: { kind: "polygon-section", lengthMm: long[1] - long[0], geometry: { ...mid.geometry, maxTriangleAreaM2: mid.geometry.maxTriangleAreaM2 * sectionMeshFactor } }, spatial: { originMm: midOrigin, direction: d }, dcConductors: { resistanceOhmPerM: matrix2(resistance), internalInductanceHPerM: matrix2(internal) }, cuts: ends.flatMap(orderedCuts), ownership: own, bandHz: [1e3, 1e4] });
+                blocks.push({ id: cell.id, kind: "section", line: { kind: "polygon-section", lengthMm: long[1] - long[0], geometry: { ...mid.geometry, maxTriangleAreaM2: mid.geometry.maxTriangleAreaM2 * sectionMeshFactor } }, spatial: { originMm: midOrigin, direction: d }, dcConductors: { resistanceOhmPerM: matrix2(resistance), internalInductanceHPerM: matrix2(internal) }, sectionEnds, cuts: ends.flatMap(f => f.slice.cuts), ownership: own, bandHz: [1e3, 1e4] });
             }
             else {
                 const electrodes: any[] = [], pairs: string[][] = [], cuts: ChannelCut[] = [], cutPlanes: Record<string, unknown> = {}, names = new Map<string, string>();
@@ -352,16 +487,29 @@ export function createBoardChannelPlanner(board: any, base2: any, contacts: {
                         pairs.push([electrode(c.positive, f.slice.signals[k], f), electrode(c.negative, f.slice.reference, f)]);
                         cuts.push(c);
                     }
-                for (let p = 0; p < 2; p++) {
-                    const contact = contacts[p], r = g.regions.find((r2) => r2.source.path === contact.sourcePath && r2.layer === contact.layer)!;
-                    if (regionArea(r, cell.polygonMm) <= 1e-12)
-                        continue;
-                    if (Math.abs(regionArea(r, cell.polygonMm) - r.area_mm2) > 1e-7)
-                        fail("A route cut split an external electrode");
-                    const c = { positive: "external-" + p + "-signal", negative: "external-" + p + "-return" };
-                    pairs.push([electrode(c.positive, contact), electrode(c.negative, contacts[p + 2])]);
-                    cuts.push(c);
-                    ports.push({ name: p === 0 ? "input" : "output", cut: c });
+                for (const port of external) {
+                    const a = terminals.get(port.positive)!.contact, b = terminals.get(port.negative)!.contact;
+                    pairs.push([electrode(port.cut.positive, a), electrode(port.cut.negative, b)]);
+                    cuts.push(port.cut);
+                }
+                const unexposedPins = localPins.filter(id => !names.has(externalKey(id)));
+                if (unexposedPins.length) {
+                    // A private pair exposes the pin to P6. Its other electrode
+                    // is a physical contact already present in this local cell.
+                    let anchor = cuts[0]?.negative;
+                    if (!anchor && unexposedPins.length > 1) {
+                        const id = unexposedPins.shift()!;
+                        anchor = externalKey(id);
+                        electrode(anchor, terminals.get(id)!.contact);
+                    }
+                    if (!anchor)
+                        fail("Component pin lacks a second physical electrode in its local block: " + unexposedPins[0]);
+                    const anchorKey = anchor;
+                    for (const id of unexposedPins) {
+                        const key = externalKey(id);
+                        pairs.push([electrode(key, terminals.get(id)!.contact), names.get(anchorKey)!]);
+                        cuts.push({ positive: key, negative: anchorKey });
+                    }
                 }
                 if (!pairs.length)
                     fail("Unconnected explicit local cell; a joint domain is required");
@@ -382,10 +530,16 @@ export function createBoardChannelPlanner(board: any, base2: any, contacts: {
         });
         for (const r of relevant)
             coverage.push({ kind: 'fragment', sourcePath: r.source.path, regionId: r.id, layer: r.layer, domainPolygonMm: domain, areaMm2: regionArea(r, domain), sourcePolygonMm: r.polygon as CopperFragment['sourcePolygonMm'] });
-        if (ports.length !== 2)
-            fail("External ports must have unique complete source ownership");
-        ports.sort((a, b) => a.name === "input" ? -1 : b.name === "input" ? 1 : 0);
-        return { blocks, ports, coverage, audit: { graph, corridors, cells, barrelOwnership, faces: faces.map(({ slice: slice2, ...f }) => ({ ...f, sourceMapping: slice2.sourceMapping })), ownershipConvention: "Explicit original-source fragments clipped by route/event domains, with region/layer identity and areaMm2; interval fixtures retain length units", signalIsland: signal.id, returnIslands: returns.map((i) => i.id), copperDecisions: g.regions.map((r) => ({ regionId: r.id, sourcePath: r.source.path, layer: r.layer, role: signal.region_ids.includes(r.id) ? "signal" : returnIds.has(r.id) ? "return" : "neighbour", included: relevant.includes(r), reason: relevant.includes(r) ? "Actual source fragment retained in joint route cell" : "Outside finite numerical domain; expansion remains required" })), policy: "All branches, finite return and spatial neighbours retained; local/section coupling requires numerical acceptance; nonlocal plane coupling not certified" } };
+        if (blocks.some(block => block.cuts.length > 16) || blocks.reduce((n, block) => n + block.cuts.length, attachments.length) > 128)
+            fail("Physical cut count exceeds the composition budget (16 per block, 128 total)");
+        validateChannelAttachments(blocks, attachments);
+        const componentAudit = componentPlans.map(({ id, designator, pins, model }) => ({
+            id, designator, modelId: model.id, modelValidity: model.validity, pins: pins.map(({contact,island}) => ({
+                ...contact, island: island.id, owner: cells[terminalOwners.get(contact.id)!].id,
+            })),
+            continuity: "Supplied model dependency; physical copper islands and DC connectivity remain separate",
+        }));
+        return { blocks, ports, coverage, ...(attachments.length && { attachments }), audit: { ...(attachments.length && { components: componentAudit }), graph, corridors, returnClosure, cells, barrelOwnership, physicalTerminals: [...terminals.values()].map(({ contact, island }) => ({ ...contact, island: island.id, owner: cells[terminalOwners.get(contact.id)!].id })), faces: faces.map(({ slice: slice2, ...f }) => ({ ...f, sourceMapping: slice2.sourceMapping })), ownershipConvention: "Explicit original-source fragments clipped by route/event domains, with region/layer identity and areaMm2; interval fixtures retain length units", signalIsland: signalIslandIds.size === 1 ? [...signalIslandIds][0] : undefined, signalIslands: [...signalIslandIds], returnIslands: returns.map((i) => i.id), copperDecisions: g.regions.map((r) => ({ regionId: r.id, sourcePath: r.source.path, layer: r.layer, role: signalRegions.has(r.id) ? "signal" : returnIds.has(r.id) ? "return" : "neighbour", included: relevant.includes(r), reason: relevant.includes(r) ? "Actual source fragment retained in joint route cell" : "Outside finite numerical domain; expansion remains required" })), policy: "All branches, finite return and spatial neighbours retained; local/section coupling requires numerical acceptance; nonlocal plane coupling not certified" } };
     };
 }
 /** B2 finite-domain candidates for C1 only; full-channel admission is unchanged.

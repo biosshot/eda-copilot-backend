@@ -21,6 +21,7 @@ test('captured coupon automatically separates constant section from physical fin
 test('actual STM32 refuses distributed lateral return interfaces while preserving branch witnesses',async()=>{
  const base='tests/pcb-analyze/STM32G0_CAN_RS485/',board=JSON.parse(readFileSync(base+'STM32G0_CAN_RS485.json','utf8')),code=readFileSync(base+'local-extraction-complete-channel.js','utf8').split('a.plot(')[0],p=await extract(board,code,true);
  assert.equal(p.refusal,'CHANNEL_CORRIDOR_UNSUPPORTED');
+ assert.match(p.returnClosure.reason,/distributed interface coordinates/);
  assert.equal(p.contacts.length,4);assert.ok(p.sourceCopper.length>800);assert.ok(p.physicalIslands.length);assert.ok(p.bores.length);assert.ok(p.corridors.every((c:any)=>Array.isArray(c.geometricIntervalsMm)&&Array.isArray(c.wideReturnDomains)&&Array.isArray(c.geometricEvents)));
  for(const [ref,num]of [['U5','7'],['J5','2'],['D5','2'],['JP2','2']]){const i=board.pads.findIndex((v:any)=>v.component===ref&&v.number===num);assert.ok(p.signalRegions.some((d:any)=>d.sourcePath===`pads[${i}]`));}
  assert.ok(p.signalRegions.some((d:any)=>d.layer==='BOTTOM'));assert.equal(p.corridors.reduce((n:number,c:any)=>n+c.runId.split('+').length,0),16);
@@ -65,9 +66,58 @@ test('coupled corridor retains neighbouring conductor and off-diagonal section c
  const board=segmentedCoupon();board.nets.push({name:'VICTIM'});board.copper.fixed.tracks.push({id:'victim',net:'VICTIM',layer:'TOP',widthMm:.1,points:[{x:0,y:.18},{x:10,y:.18}]});
  const p=await extract(board,segmentedCouponDsl);validateChannelOwnership(p);const sections=p.blocks.filter((b:any)=>b.kind==='section');assert.ok(sections.length);assert.ok(sections.every((b:any)=>b.line.geometry.conductors.length===3&&b.cuts.length===4&&b.dcConductors.resistanceOhmPerM[0][1]>0));
 });
-test('broken finite return refuses unsupported reference-free corridor instead of joining a net name',async()=>{
+test('split finite return keeps its gap in one joint event and distinct copper contacts',async()=>{
  const board=segmentedCoupon();board.copper.fixed.tracks[1].points=[{x:0,y:0},{x:4.5,y:0}];board.copper.fixed.tracks.push({id:'right-return',net:'RETURN',layer:'BOTTOM',widthMm:.5,points:[{x:5.5,y:0},{x:10,y:0}]});
- await assert.rejects(()=>extract(board,segmentedCouponDsl),/No finite return/);
+ const plan=await extract(board,segmentedCouponDsl);
+ validateChannelOwnership(plan);
+ assert.deepEqual(plan.blocks.map((block:any)=>block.kind),['local','section','local','section','local']);
+ const joint=plan.blocks[2];
+ assert.equal(joint.cuts.length,2);
+ const returns=plan.audit.faces.flatMap((face:any)=>face.sourceMapping)
+  .filter((mapping:any)=>mapping.layer==='BOTTOM').map((mapping:any)=>mapping.island);
+ assert.equal(new Set(returns).size,2);
+ assert.equal(plan.audit.returnIslands.length,2);
+ assert.equal(joint.geometry.electrodes.filter((electrode:any)=>electrode.layer==='BOTTOM').length,2);
+ assert.ok(!plan.audit.corridors.some((corridor:any)=>corridor.admissibleIntervalsMm.some(([lo,hi]:[number,number])=>lo<5&&hi>5)));
+});
+test('finite wide return closes on its physical edge independent of CAD subdivision or a detached same-net island',async()=>{
+ const board=segmentedCoupon();
+ board.outline=[{x:-1,y:-1.6},{x:11,y:-1.6},{x:11,y:1.6},{x:-1,y:1.6}];
+ const tracks=board.copper.fixed.tracks;
+ tracks[1].widthMm=1;
+ tracks.push({id:'unconnected-return',net:'RETURN',layer:'BOTTOM',widthMm:.15,points:[{x:0,y:1.2},{x:10,y:1.2}]});
+ const before=await extract(board,segmentedCouponDsl);
+ tracks[1].points=[{x:0,y:0},{x:5,y:0}];
+ tracks.push({...tracks[1],id:'split-return',points:[{x:5,y:0},{x:10,y:0}]});
+ const after=await extract(board,segmentedCouponDsl);
+ for(const plan of [before,after]){
+  validateChannelOwnership(plan);
+  assert.deepEqual(plan.blocks.map((block:any)=>block.kind),['local','section','local']);
+  assert.ok(plan.audit.returnClosure.transverseMm[0]<-.5);
+  assert.ok(plan.audit.returnClosure.transverseMm[1]>.5);
+  assert.deepEqual(plan.audit.corridors[0].lateralContinuations,[]);
+  assert.equal(plan.audit.returnIslands.length,1);
+  assert.ok(plan.audit.copperDecisions.some((d:any)=>d.sourcePath==='copper.fixed.tracks[2]'&&d.role==='neighbour'&&!d.included));
+  const metal=plan.blocks[1].line.geometry.conductors.find((m:any)=>m.role==='reference');
+  const xy=metal.contour.outerM??metal.contour.outer_m??metal.contour.outer;
+  const x=xy.map((p:number[])=>p[0]);
+  assert.ok(Math.abs(Math.max(...x)-Math.min(...x)-.001)<1e-10);
+ }
+ assert.deepEqual(before.audit.returnClosure,after.audit.returnClosure);
+ assert.equal(before.blocks[1].line.lengthMm,after.blocks[1].line.lengthMm);
+});
+test('finite remote copper bypass beyond the original ROI stays inside a joint event',async()=>{
+ const board=segmentedCoupon();
+ board.outline=[{x:-1,y:-1.8},{x:11,y:-1.8},{x:11,y:1.8},{x:-1,y:1.8}];
+ board.copper.fixed.tracks[1].points=[{x:0,y:0},{x:3.5,y:0},{x:5,y:1.2},{x:6.5,y:0},{x:10,y:0}];
+ const plan=await extract(board,segmentedCouponDsl);
+ validateChannelOwnership(plan);
+ assert.equal(plan.audit.returnIslands.length,1);
+ assert.ok(plan.audit.returnClosure.transverseMm[1]>1.2);
+ assert.deepEqual(plan.blocks.map((block:any)=>block.kind),['local','section','local','section','local']);
+ const joint=plan.blocks[2];
+ assert.ok(joint.geometry.domainPolygonMm.some((p:number[])=>p[1]>1.2));
+ assert.ok(joint.ownership.some((source:any)=>source.sourcePath==='copper.fixed.tracks[1]'&&source.layer==='BOTTOM'));
 });
 test('source subdivision preserves one physical run and conductor interface across source identities',async()=>{
  const board=segmentedCoupon(),before=await extract(board,segmentedCouponDsl);board.copper.fixed.tracks[0].points=[{x:0,y:0},{x:5,y:0}];board.copper.fixed.tracks.push({id:'signal-b',net:'SIGNAL',layer:'TOP',widthMm:.1,points:[{x:5,y:0},{x:10,y:0}]});

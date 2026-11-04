@@ -89,6 +89,8 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
     }
   }
   if (kind === 'impedance') { required(['method']); frequencyRequired();
+    if(config.frequencyHz===0&&(config.method!=='layered'||!object(config.target)||!['channel','differential'].includes(String(config.target.kind))))
+      issue('LOCAL_DC_TARGET','Exact DC impedance requires method layered and a physical board channel or differential target');
     if(config.method==='cross-section'){
       const input=descriptionInput(state,config.target);
       if(input){

@@ -104,9 +104,9 @@ fn corner_graded(p:&Contour,step:f64,cap:usize)->Result<Contour>{
  for ring in std::iter::once(&p.outer_m).chain(&p.holes_m){let sharp=(0..ring.len()).map(|i|{let a=ring[(i+ring.len()-1)%ring.len()];let b=ring[i];let c=ring[(i+1)%ring.len()];let u=[b[0]-a[0],b[1]-a[1]];let v=[c[0]-b[0],c[1]-b[1]];(u[0]*v[0]+u[1]*v[1])<30_f64.to_radians().cos()*u[0].hypot(u[1])*v[0].hypot(v[1])}).collect::<Vec<_>>();let mut out=vec![];for i in 0..ring.len(){let a=ring[i];let b=ring[(i+1)%ring.len()];let length=(b[0]-a[0]).hypot(b[1]-a[1]);let mut cuts=vec![0.];let mut d=step;while d<length/2.{if sharp[i]{cuts.push(d/length);}if sharp[(i+1)%ring.len()]{cuts.push(1.-d/length);}d*=2.;if cuts.len()>256{return Err(error("SECTION_MESH_LIMIT","corner grading depth cap"));}}cuts.sort_by(f64::total_cmp);cuts.dedup();for t in cuts{total+=1;if total>cap{return Err(error("SECTION_MESH_LIMIT","corner vertex budget"));}out.push(if t==0.{a}else{[a[0]+t*(b[0]-a[0]),a[1]+t*(b[1]-a[1])]});}}rings.push(out);}
  Ok(Contour{outer_m:rings.remove(0),holes_m:rings})
 }
-/// All signal conductors get an independent unit-potential basis. One physical
-/// reference polygon is required; detached reference pieces cannot be joined
-/// merely by equal net labels. Floating conductors require a separate condition.
+/// The transport role "reference" fixes one conductor's voltage gauge. Every
+/// other conductor has its own unit-potential coordinate under role "signal",
+/// including conductors used as physical returns by the assembled network.
 pub fn solve(r: &Request) -> Result<serde_json::Value> {solve_with_corner_scale(r,1.)}
 fn solve_with_corner_scale(r:&Request,corner_scale:f64)->Result<serde_json::Value>{
     let start = Instant::now();

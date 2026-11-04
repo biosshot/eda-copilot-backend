@@ -204,13 +204,19 @@ pub fn build(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration)-
     build_supported(board,r,budget,max_wall,None)
 }
 pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration,support:Option<(&[[f64;2]],&[[usize;3]])>)->Result<BoardMesh> {
+    build_conforming(board,r,budget,max_wall,support,&[])
+}
+/// Internal trace-line constraints in absolute millimetres. These subdivide
+/// the common arrangement only; they add no contact, material or cut.
+#[doc(hidden)]
+pub fn build_conforming(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration,support:Option<(&[[f64;2]],&[[usize;3]])>,trace_lines:&[[[f64;2];2]])->Result<BoardMesh> {
     let start=Instant::now();
     if r.electric_max_edge_m.is_some_and(|v|!v.is_finite()||v<=0.||v>0.1){return Err(error("BOARD_PROFILE","positive finite electric refinement spacing required"));}
     if r.electric_air_margin_m.is_some_and(|v|!v.is_finite()||v<=0.){return Err(error("BOARD_PROFILE","positive finite electric air margin required"));}
     if r.interface_step_m.is_some_and(|s|!s.is_finite()||s<=0.) {return Err(error("BOARD_PROFILE","positive finite interface step required"));}
     if r.interface_growth.is_some_and(|s|!s.is_finite()||!(1.1..=2.).contains(&s))||r.interface_growth.is_some()&&r.interface_step_m.is_none() {return Err(error("BOARD_PROFILE","interface growth1.1..2 requires an interface step"));}
-    if r.air_far_edge_divisions.is_some_and(|n|!(1..=32).contains(&n))||r.air_first_step_m.is_some_and(|v|!v.is_finite()||v<=0.||v>r.air_margin_m)||r.air_near_distance_m.is_some_and(|v|!v.is_finite()||v<=0.||v>r.air_margin_m)||r.air_far_edge_divisions.is_some()&&r.air_near_distance_m.is_none()||r.bore_refinement_rings.is_some_and(|n|n>4){return Err(error("BOARD_PROFILE","finite positive air grading, near/far divisions1..32 and bore rings0..4 required"));}
-    if r.air_edge_divisions.is_some_and(|n|!(1..=32).contains(&n)){return Err(error("BOARD_PROFILE","air edge divisions must lie in1..32"));}
+    if r.air_far_edge_divisions==Some(0)||r.air_first_step_m.is_some_and(|v|!v.is_finite()||v<=0.||v>r.air_margin_m)||r.air_near_distance_m.is_some_and(|v|!v.is_finite()||v<=0.||v>r.air_margin_m)||r.air_far_edge_divisions.is_some()&&r.air_near_distance_m.is_none()||r.bore_refinement_rings.is_some_and(|n|n>4){return Err(error("BOARD_PROFILE","finite positive air grading, positive far divisions and bore rings0..4 required"));}
+    if r.air_edge_divisions==Some(0){return Err(error("BOARD_PROFILE","positive air edge divisions required"));}
     if r.min_triangle_angle_deg.is_some_and(|a|!a.is_finite()||!(0.0..=30.0).contains(&a)) {return Err(error("BOARD_PROFILE","minimum triangle angle must lie in0..30 degrees"));}
     if r.coordinate_origin_mm.is_some_and(|p|p.iter().any(|v|!v.is_finite())) || r.roi_mm.iter().flatten().any(|v|!v.is_finite()) || (0..2).any(|k|r.roi_mm[1][k]<=r.roi_mm[0][k]) || r.stack.len()<3 || r.finished_hole_plating_m.is_some_and(|v|!v.is_finite()||v<=0.) || r.barrel_conductivity_s_m.is_some_and(|v|!v.is_finite()||v<=0.) || !r.air_margin_m.is_finite() || r.air_margin_m<=0. || !r.max_triangle_area_m2.is_finite() || r.max_triangle_area_m2<=0. || !r.max_vertical_step_m.is_finite() || r.max_vertical_step_m<=0. {
         return Err(error("BOARD_PROFILE","finite ROI, full stack, finished-hole plating, material, air and mesh profile required"));
@@ -277,6 +283,9 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
         shapes.push(Shape{poly,id:region.id.clone(),sigma:layer.conductivity_s_m.unwrap(),span:spans[&region.layer]});
     }
     let mut bores=MultiPolygon(vec![]);let mut barrel_ids=vec![];
+    // Keep one planar cut per partial bore span. XY ownership is shared by
+    // the whole extrusion, but a drill only displaces material in its span.
+    let mut partial_bores=BTreeMap::<(usize,usize),MultiPolygon<f64>>::new();
     // Retain the conservative native bore and use its same angular phase for
     // the nominal outer radius. Independent inward/outward curve errors must
     // not be amplified across the thin plating annulus.
@@ -286,7 +295,6 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
         if !hole.span_confirmed {return Err(error("BOARD_PADSTACK","ROI hole requires a confirmed physical span"));}
         if !hole.plated{bores=areas::union(bores.0.into_iter().chain(bore.0));continue;}
         let (center,radius,first,last)=if let Some(via)=board.vias.iter().find(|v|v.source.path==hole.source.path){
-            if via.kind!=crate::model::ViaKind::Through||via.first_layer!=0||via.last_layer+1!=board.layers.len(){return Err(error("BOARD_PADSTACK","only confirmed ordinary through-via span supported"));}
             ([via.at.x,via.at.y],via.drill_mm/2.,via.first_layer,via.last_layer)
         }else if let Some(pad)=board.pads.iter().find(|p|p.source.path==hole.source.path){
             let drill=pad.drill.as_ref().ok_or_else(||error("BOARD_PADSTACK","prepared pad bore has no authored drill"))?;
@@ -310,8 +318,18 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
         if annulus.unsigned_area()<=0. {return Err(error("BOARD_PADSTACK","plating annulus disappeared"));}
         let span=[spans[&board.layers[first].name][0],spans[&board.layers[last].name][1]];
         shapes.push(Shape{poly:annulus,id:hole.id.clone(),sigma,span});
-        bores=areas::union(bores.0.into_iter().chain(bore.0));barrel_ids.push(hole.id.clone());
+        if first==0&&last+1==board.layers.len() {
+            bores=areas::union(bores.0.into_iter().chain(bore.0));
+        }else{
+            let set=partial_bores.entry((first,last)).or_insert_with(||MultiPolygon(vec![]));
+            *set=areas::union(set.0.drain(..).chain(bore.0));
+        }
+        barrel_ids.push(hole.id.clone());
     }
+    let mut partial_bores=partial_bores.into_iter().map(|((first,last),poly)| {
+        let span=[spans[&board.layers[first].name][0],spans[&board.layers[last].name][1]];
+        (span,poly)
+    }).collect::<Vec<_>>();
     if shapes.is_empty() {return Err(error("BOARD_ROI","no retained copper"));}
     // Source boundaries inside an already continuous equal-material conductor
     // are provenance, not dielectric interfaces. Meshing every overlapping
@@ -389,7 +407,7 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
         // Bounds include every Boolean input (not only Cu), so tightening the
         // integer-grid padding cannot put a real bore outside its adapter.
         let mut bounds=roi_bounds;
-        for set in std::iter::once(&bores).chain(arrangement_sets.iter()) {
+        for set in std::iter::once(&bores).chain(arrangement_sets.iter()).chain(partial_bores.iter().map(|(_,poly)|poly)) {
             if let Some(b)=set.bounding_rect(){for k in 0..2 {bounds[0][k]=bounds[0][k].min(if k==0{b.min().x}else{b.min().y});bounds[1][k]=bounds[1][k].max(if k==0{b.max().x}else{b.max().y});}}
         }
         context.refined_for_arrangement(bounds)?
@@ -422,7 +440,11 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
             if owners!=1 {return Err(error("BOARD_SOURCE_UNION",&format!("{} source piece overlaps {owners} material components; no new island or connection inferred",e.name)));}
         }
         let missing=areas::difference(contact,&physical_shapes[layer].0);
-        let bore_overlap=areas::intersection(&missing,&bores).unsigned_area();
+        let [start,end]=spans[&e.layer];
+        let bore_overlap=std::iter::once(&bores)
+            .chain(partial_bores.iter().filter(|(span,_)|span[0]<=start&&end<=span[1]).map(|(_,poly)|poly))
+            .map(|poly|areas::intersection(&missing,poly).unsigned_area())
+            .fold(0.,f64::max);
         if bore_overlap>0. {return Err(error("BOARD_SOURCE_UNION",&format!("{} missing source copper intersects a real bore by {bore_overlap:e}mm2; no hole filled",e.name)));}
         let restored=areas::union(physical_shapes[layer].0.0.iter().chain(contact.0.iter()).cloned());
         let (area,components,holes)=original_physical_stats[layer];let change=(restored.unsigned_area()-area).abs()/area;
@@ -433,10 +455,15 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
     }
     let physical_count=physical_shapes.len();
     if arrangement_sets.len()!=physical_count+r.electrodes.len() {return Err(error("BOARD_ARRANGEMENT","material/contact cut ordering mismatch"));}
-    let cuts=std::iter::once(substrate.clone()).chain(std::iter::once(bores.clone())).chain(arrangement_sets).collect::<Vec<_>>();
+    let cuts=std::iter::once(substrate.clone()).chain(std::iter::once(bores.clone()))
+        .chain(arrangement_sets).chain(partial_bores.iter_mut().map(|(_,poly)|std::mem::replace(poly,MultiPolygon(vec![]))))
+        .collect::<Vec<_>>();
     let atoms=common_partition(&roi,&cuts,budget,start,max_wall)?;
     let member_set=|index:usize|areas::union(atoms.iter().filter(|a|a.membership[index]).map(|a|a.poly.clone()));
     substrate=member_set(0);bores=member_set(1);
+    for (i,(_,poly)) in partial_bores.iter_mut().enumerate() {
+        *poly=member_set(2+physical_count+r.electrodes.len()+i);
+    }
     let mut max_copper_area_change:f64=0.;
     for(i,shape)in physical_shapes.iter_mut().enumerate() {
         let canonical=member_set(i+2);let (original_area,original_components,original_holes)=original_physical_stats[i];let area=canonical.unsigned_area();
@@ -466,16 +493,17 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
     };
     for poly in atoms.iter().map(|a|&a.poly){for ring in std::iter::once(poly.exterior()).chain(poly.interiors()){for line in ring.lines(){segment([line.start.x,line.start.y],[line.end.x,line.end.y])?;}}}
     if let Some((nodes,triangles))=support{let mut edges=std::collections::BTreeSet::new();for t in triangles{for k in 0..3{let mut e=[t[k],t[(k+1)%3]];e.sort();edges.insert(e);}}for [a,b]in edges{segment(nodes[a],nodes[b])?;}}
+    for [a,b] in trace_lines {segment(*a,*b)?;}
     drop(segment);
     let max_xy=budget.max_nodes.min(budget.max_bytes/4096);
     let refinement=cdt.refine(RefinementParameters::new().keep_constraint_edges().with_angle_limit(AngleLimit::from_deg(r.min_triangle_angle_deg.unwrap_or(30.))).with_max_allowed_area(r.max_triangle_area_m2*1e6).with_max_additional_vertices(max_xy.saturating_sub(cdt.num_vertices())));
     if !refinement.refinement_complete {return Err(error("MEMORY_LIMIT","board XY mesh refinement incomplete within budget"));}
     check(start,max_wall)?;
-    // Insert only air points strictly inside retained native bore polygons.
-    // Existing constrained Cu/bore/contact vertices and all source faces stay.
+    // Refine XY only inside retained native bore contours. The material there
+    // still depends on z. Existing Cu/bore/contact constraints stay fixed.
     if let Some(rings)=r.bore_refinement_rings {
         use geo::Centroid;
-        for bore in &bores.0 {
+        for bore in bores.0.iter().chain(partial_bores.iter().flat_map(|(_,poly)|&poly.0)) {
             let centre=bore.centroid().ok_or_else(||error("BOARD_PROFILE","bore centroid unavailable"))?;
             let mut points=vec![[centre.x(),centre.y()]];
             for ring in 1..=rings {let fraction=ring as f64/(rings+1)as f64;for p in &bore.exterior().0[..bore.exterior().0.len()-1]{points.push([centre.x()+fraction*(p.x-centre.x()),centre.y()+fraction*(p.y-centre.y())]);}}
@@ -488,8 +516,19 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
     loop {
         let corners=[[roi_bounds[0][0]-distance,roi_bounds[0][1]-distance],[roi_bounds[1][0]+distance,roi_bounds[0][1]-distance],[roi_bounds[1][0]+distance,roi_bounds[1][1]+distance],[roi_bounds[0][0]-distance,roi_bounds[1][1]+distance]];
         let divisions=if r.air_near_distance_m.is_some_and(|near|distance>near*1e3*(1.+1e-12)){r.air_far_edge_divisions.unwrap_or(r.air_edge_divisions.unwrap_or(4))}else{r.air_edge_divisions.unwrap_or(4)};
-        if cdt.num_vertices()+4*divisions>max_xy {return Err(error("MEMORY_LIMIT","graded air ring exceeds node budget"));}
-        for edge in 0..4 {for i in 0..divisions {let t=i as f64/divisions as f64;let a=corners[edge];let b=corners[(edge+1)%4];cdt.insert(Point2::new(a[0]+t*(b[0]-a[0]),a[1]+t*(b[1]-a[1]))).map_err(|e|error("BOARD_MESH",&e.to_string()))?;}}
+        check(start,max_wall)?;
+        let planned_vertices=divisions.checked_mul(4).and_then(|count|cdt.num_vertices().checked_add(count));
+        if planned_vertices.is_none_or(|count|count>max_xy) {
+            return Err(error("MEMORY_LIMIT","graded air ring exceeds node budget"));
+        }
+        for edge in 0..4 {
+            let a=corners[edge];let b=corners[(edge+1)%4];
+            for i in 0..divisions {
+                if i%256==0 {check(start,max_wall)?;}
+                let t=i as f64/divisions as f64;
+                cdt.insert(Point2::new(a[0]+t*(b[0]-a[0]),a[1]+t*(b[1]-a[1]))).map_err(|e|error("BOARD_MESH",&e.to_string()))?;
+            }
+        }
         if distance==margin {break;}distance=(2.*distance).min(margin);
     }
     let planar_nodes_mm:Vec<_>=cdt.vertices().map(|v|[v.position().x,v.position().y]).collect();
@@ -521,6 +560,8 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
     let mut materials=vec![];let mut sigma_per_triangle=vec![];
     for slab in z_m.windows(2) {
         let middle=(slab[0]+slab[1])/2.;let layer=r.stack.iter().zip(&stack_spans).find(|(_,s)|middle>s[0]&&middle<s[1]).map(|(l,_)|l);
+        let active_bores=partial_bores.iter().filter(|(span,_)|span[0]<middle&&middle<span[1])
+            .map(|(_,poly)|poly).collect::<Vec<_>>();
         let mut row=vec![];let mut sigma=vec![];
         for (ti,p) in centres.iter().enumerate() {
             // Physical ownership is constant inside each constrained material
@@ -530,7 +571,8 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
             let owners:Vec<_>=if copper {overlaps[ti].iter().map(|&i|&shapes[i]).filter(|s|middle>s.span[0]&&middle<s.span[1]).collect()}else{vec![]};
             if copper&&owners.is_empty() {return Err(error("BOARD_OWNERSHIP",&format!("canonical copper face{ti} at {p:?}, z={middle:e} has no positive-area source attribution; no copper removed")));}
             if !copper {
-                let dielectric=layer.filter(|l|!l.copper&&substrate.contains(p)&&!bores.contains(p));
+                let dielectric=layer.filter(|l|!l.copper&&substrate.contains(p)&&!bores.contains(p)
+                    &&!active_bores.iter().any(|poly|poly.contains(p)));
                 row.push(Material::Dielectric{label:dielectric.map_or("air",|l|l.name.as_str()).into(),epsilon_r:dielectric.and_then(|l|l.epsilon_r).unwrap_or(1.)});sigma.push(0.);
             }else{
                 // Finished-hole wall material owns its actual annulus also

@@ -1,6 +1,6 @@
 //! Shared local direct-FEM preparation and developer verification.
 //! CPU/F64, explicit physical requests, no external diagnostic process.
-use super::{board_mesh,conservative_current::ConservativeSpace,volume_current,volume_field,volume_integral_magnetic,volume_reduction,volume_solve,AllocationBudget};
+use super::{board_mesh,conservative_current::ConservativeSpace,frequency_audit,volume_current,volume_field,volume_integral_magnetic,volume_reduction,volume_solve,AllocationBudget};
 use crate::electrical::{coupled,Counters};
 use super::volume_field::ElectricApply;
 use super::volume_magnetic::MagneticApply;
@@ -117,9 +117,27 @@ fn loaded_ac_coefficients_extended(full_u:&[Vec<crate::electrical::frequency::ma
     let residual=|x:&[ExtendedC]|->Result<(Matrix,f64),String>{
         let mut r=vec![vec![C::default()];np];let mut normalized:f64=0.;
         for q in 0..np{
-            let(mut rr,mut ii)=(Sum::from(drive[q]),Sum::default());let mut scale=drive[q].abs();
-            for p in 0..np{let v=a[q][p];for y in [x[p].hi,x[p].lo]{let pr=Sum::from(v.real).mul(y.real).sub(Sum::from(v.imaginary).mul(y.imaginary));let pi=Sum::from(v.real).mul(y.imaginary).add(Sum::from(v.imaginary).mul(y.real));rr=rr.sub(pr);ii=ii.sub(pi);}scale+=v.abs()*x[p].value().abs();}
-            let value=C::new(rr.value(),ii.value());normalized=normalized.max(value.abs()/scale.max(1e-30));r[q][0]=value;
+            // Evaluate d - x - Zx/load using the original coefficients.
+            // Scale the row by its load before accumulation so rounding Z/load
+            // or adding the diagonal to it cannot perturb the residual.
+            let load=loads[q];
+            let mut rr=Sum::from(drive[q]).sub(Sum::from(x[q].hi.real)).sub(Sum::from(x[q].lo.real)).mul(load);
+            let mut ii=Sum::from(-x[q].hi.imaginary).sub(Sum::from(x[q].lo.imaginary)).mul(load);
+            let mut scale=drive[q].abs();
+            for p in 0..np {
+                let v=full_u[q][p];
+                for y in [x[p].hi,x[p].lo] {
+                    let pr=Sum::from(v.real).mul(y.real).sub(Sum::from(v.imaginary).mul(y.imaginary));
+                    let pi=Sum::from(v.real).mul(y.imaginary).add(Sum::from(v.imaginary).mul(y.real));
+                    rr=rr.sub(pr);
+                    ii=ii.sub(pi);
+                }
+                scale+=a[q][p].abs()*x[p].value().abs();
+            }
+            let value=C::new(rr.value()/load,ii.value()/load);
+            if !value.real.is_finite()||!value.imaginary.is_finite(){return Err("LOCAL_LOADED_STATE: nonfinite compensated AC residual".into());}
+            normalized=normalized.max(value.abs()/scale.max(1e-30));
+            r[q][0]=value;
         }
         Ok((r,normalized))
     };
@@ -167,19 +185,58 @@ pub struct Options<'a> {
 }
 /// Accepted electric discretization; original current mesh and contacts survive.
 /// This is a v1 configuration, not a complete spatial accuracy certificate.
-pub fn accepted_electric_request(r:&board_mesh::Request)->board_mesh::Request {
+pub fn accepted_electric_request(r:&board_mesh::Request)->Result<board_mesh::Request,String> {
     let mut field=r.clone();
     field.air_margin_m=r.electric_air_margin_m.unwrap_or(0.008);
     field.max_vertical_step_m=r.max_vertical_step_m.min(0.0005);
     field.interface_step_m=Some(0.000025);
     field.interface_growth=Some(2.);
-    field
+    let Some(margin)=r.electric_air_margin_m else {return Ok(field);};
+
+    // Automatic channel cuts need air resolution near metal that is independent
+    // of the far box and does not alter the current mesh or its metal trace.
+    let xy_step=r.max_triangle_area_m2.sqrt();
+    let longest_span=(0..2).map(|axis|(r.roi_mm[1][axis]-r.roi_mm[0][axis])*1e-3).fold(0.,f64::max);
+    let stack_height=r.stack.iter().map(|layer|layer.thickness_m).sum::<f64>();
+    let dielectric_step=r.stack.iter().filter(|layer|!layer.copper).map(|layer|layer.thickness_m).reduce(f64::min)
+        .ok_or("LOCAL_ELECTRIC_GRADING: a dielectric layer is required")?;
+    if [margin,xy_step,longest_span,stack_height,dielectric_step].into_iter().any(|v|!v.is_finite()||v<=0.) {
+        return Err("LOCAL_ELECTRIC_GRADING: finite positive field margin, ROI, mesh and stack dimensions required".into());
+    }
+    let interface_step=r.interface_step_m.unwrap_or(0.000025).min(0.000025);
+    field.interface_step_m=Some(interface_step);
+    field.interface_growth=Some(r.interface_growth.unwrap_or(2.));
+    let first_step=interface_step.min(field.max_vertical_step_m).min(dielectric_step).min(xy_step).min(margin);
+    field.air_first_step_m=Some(first_step.min(r.air_first_step_m.unwrap_or(first_step)));
+
+    // Use the same four-stack-height neighbourhood as the board field mesh.
+    let near_distance=(4.*stack_height).max(r.air_near_distance_m.unwrap_or(0.)).min(margin);
+    let divisions=((longest_span+2.*near_distance)/xy_step).ceil();
+    if !(1. ..usize::MAX as f64).contains(&divisions) {
+        return Err("LOCAL_ELECTRIC_GRADING: near-air division count is not representable".into());
+    }
+    field.air_near_distance_m=Some(near_distance);
+    field.air_edge_divisions=Some((divisions as usize).max(r.air_edge_divisions.unwrap_or(1)));
+    field.air_far_edge_divisions=r.air_far_edge_divisions.or(r.air_edge_divisions).or(Some(4));
+    Ok(field)
 }
 pub fn run(board:&crate::model::Board,r:&board_mesh::Request,options:Options<'_>)->Result<serde_json::Value,String> {
     run_with_budget(board,r,options,300.)
 }
 /// Shared cold budget remaining after planning/cache work.
 pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options:Options<'_>,seconds:f64)->Result<serde_json::Value,String> {
+    run_with_frequency_audit(board,r,options,seconds,None)
+}
+
+/// An audited production preparation keeps the independent FEM operator live
+/// for the adaptive loop. The returned evidence is not a reusable FEM cache.
+pub fn run_with_frequency_audit(board:&crate::model::Board,r:&board_mesh::Request,options:Options<'_>,seconds:f64,audit:Option<&frequency_audit::Request>)->Result<serde_json::Value,String> {
+    if let Some(request)=audit {
+        request.validate()?;
+        if options.mode!="prepare"||options.developer_checkpoint.is_some()||r.ports.is_empty()||r.ports.len()>16 {
+            return Err("LOCAL_FREQUENCY_AUDIT: production preparation and 1..16 physical ports required".into());
+        }
+    }
     let seconds_cap=verification_limit("P7_VERIFY_SECONDS",300,1,3600)? as f64;
     let memory_mib=verification_limit("P7_VERIFY_MEMORY_MIB",2048,256,8192)?;
     if !seconds.is_finite()||seconds<=0.||seconds>seconds_cap {return Err("LOCAL_DEADLINE: invalid remaining cold budget".into());}
@@ -204,11 +261,11 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
     // Explicit independent field refinement uses the same byte preflight as
     // extrusion. Legacy count caps still bound every production/default mesh.
     let field_limits=if r.electric_max_edge_m.is_some(){AllocationBudget{max_nodes:budget.max_bytes/4096,max_tetrahedra:budget.max_bytes/2048,..budget}}else{budget};
+    let accepted=if field_request.is_none()&&cached_field.is_none(){Some(accepted_electric_request(r)?)}else{None};
+    let field_request=field_request.or(accepted.as_ref());
     let stage=std::time::Instant::now();
     let b=board_mesh::build(&board,&r,budget,remaining()?)?;
     record_stage(&mut stages,"geometry",stage);
-    let accepted=accepted_electric_request(r);
-    let field_request=field_request.or(Some(&accepted));
     let field_b=if let Some(fr)=field_request.filter(|_|cached_field.is_none()) {
         if board_mesh::physical_signature(fr)!=board_mesh::physical_signature(r) {return Err("field refinement must preserve physical ROI, copper, bore, materials and finite contacts".into());}
         let fb=board_mesh::build_supported(&board,&fr,AllocationBudget{max_bytes:budget.max_bytes.checked_sub(b.mesh.retained_bytes()?).ok_or("field mesh live budget exhausted")?,..field_limits},remaining()?,if r.electric_max_edge_m.is_some(){Some((&b.planar_nodes_mm,&b.planar_triangles))}else{None})?;
@@ -221,6 +278,7 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
     let currents=volume_current::assemble(&b.mesh,&b.conductivity_s_m,&electrodes,budget)?;
     record_stage(&mut stages,"currentAssembly",stage);
     let mut model=serde_json::Value::Null;
+    let mut frequency_evidence=None;
     if !electrodes.is_empty()&&!(mode=="geometry") {
         eprintln!("material/current mesh complete: {} potentials, {} currents",currents.potential_count(),currents.current_count());
         let contacts=r.electrodes.iter().zip(&electrodes).map(|(e,n)|(e.name.clone(),currents.node_potential[&n[0]])).collect::<Vec<_>>();
@@ -321,12 +379,74 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
             Some(c)
         }else{None};
         if conservative.is_some(){record_stage(&mut stages,"conservativeCurrentTopology",conservative_stage);}
-        let p6_bytes=budget.max_bytes.checked_sub(reserved).filter(|&n|n>0).ok_or("P6 remaining shared memory budget exhausted")?;
+        let audit_bytes=audit.map_or(0,|request|request.retained_bytes(ports.len()));
+        let p6_bytes=budget.max_bytes.checked_sub(reserved).and_then(|n|n.checked_sub(audit_bytes)).filter(|&n|n>0).ok_or("P6 remaining shared memory budget exhausted")?;
         let p6_budget=crate::electrical::Budget{max_memory_mi_b:Some(p6_bytes as f64/1048576.),max_seconds:Some(remaining()?.as_secs_f64())};
         let stage=std::time::Instant::now();
         let response=if frequencies_hz.is_empty() {None}else{Some(coupled::impedance(&candidate,ports.len(),frequencies_hz,Some(&p6_budget))?)};
         if mode=="prepare" {stages.insert("userP6Solve".into(),serde_json::Value::Null);}else{record_stage(&mut stages,"userP6Solve",stage);}
         let cold_prepare_seconds=started.elapsed().as_secs_f64();
+        if let Some(request)=audit {
+            let stage=std::time::Instant::now();
+            // Leave the remainder of the scenario's deadline available to serialize
+            // the prepared model and solve the caller's unchanged fixed output grid.
+            let audit_time=remaining()?.mul_f64(0.75);
+            let audit_remaining=||audit_time.checked_sub(stage.elapsed())
+                .filter(|t|!t.is_zero()).ok_or("LOCAL_FREQUENCY_AUDIT_DEADLINE");
+            let full=solver.as_ref().ok_or("LOCAL_FREQUENCY_AUDIT: full operator absent")?;
+            let mut reduced=coupled::System::compile(&candidate,ports.len(),Some(&p6_budget))?;
+            let nv=candidate.potential_nodes.len();
+            let n=nv+candidate.current_dofs.len();
+            let mut counters=Counters::default();
+            let mut injection=vec![0.;currents.potential_count()];
+            let zero=vec![0.;injection.len()];
+            let mut drive=vec![0.;ports.len()];
+            let mut evidence=frequency_audit::run(request,ports.len(),|frequency| {
+                let mut exact=frequency_audit::Observables {
+                    impedance_ohm:Vec::with_capacity(ports.len()*ports.len()),
+                    total_copper_loss_w:Vec::with_capacity(ports.len()),
+                };
+                let mut approximate=frequency_audit::Observables {
+                    impedance_ohm:Vec::with_capacity(ports.len()*ports.len()),
+                    total_copper_loss_w:Vec::with_capacity(ports.len()),
+                };
+                for (input,&[a,b]) in ports.iter().enumerate() {
+                    injection.fill(0.);
+                    injection[contacts[a].1]+=1.;
+                    injection[contacts[b].1]-=1.;
+                    let state=full.solve(frequency,&injection,&zero,audit_remaining()?)?;
+                    exact.impedance_ohm.extend(ports.iter().map(|&[a,b]|
+                        full.port_voltage(&state,contacts[a].1,contacts[b].1)));
+                    exact.total_copper_loss_w.push(currents.losses(&state.real_currents_a)?.into_iter()
+                        .chain(currents.losses(&state.imaginary_currents_a)?).sum());
+                    drop(state);
+                    audit_remaining()?;
+                    drive.fill(0.);
+                    drive[input]=1.;
+                    let mut rhs=reduced.port_rhs(&drive);
+                    rhs.resize(2*n,0.);
+                    let state=reduced.solve(2.*std::f64::consts::PI*frequency,rhs,&vec![0.;n],&mut counters)?;
+                    approximate.impedance_ohm.extend(reduced.port_voltages(&state,ports.len()).into_iter()
+                        .zip(reduced.port_voltages(&state[n..],ports.len())).map(|(real,imaginary)|[real,imaginary]));
+                    let recovered_loss=|offset:usize|->Result<f64,String>{
+                        let recovered:Vec<_>=(0..currents.current_count()).map(|j|basis.current.iter().enumerate()
+                            .map(|(k,v)|v[j]*state[offset+nv+k]).sum()).collect();
+                        Ok(currents.losses(&recovered)?.into_iter().sum())
+                    };
+                    approximate.total_copper_loss_w.push(recovered_loss(0)?+recovered_loss(n)?);
+                    audit_remaining()?;
+                }
+                if [&exact,&approximate].into_iter().any(|sample|sample.impedance_ohm.iter().flatten()
+                    .chain(&sample.total_copper_loss_w).any(|v|!v.is_finite())) {
+                    return Err("LOCAL_FREQUENCY_AUDIT: nonfinite physical observable".into());
+                }
+                Ok(frequency_audit::Sample {full:exact,reduced:approximate})
+            });
+            evidence["reducedNumericalFactorizations"]=serde_json::json!(counters.numerical_factorizations);
+            evidence["reservedAuditBytes"]=serde_json::json!(audit_bytes);
+            frequency_evidence=Some(evidence);
+            record_stage(&mut stages,"adaptiveFrequencyAudit",stage);
+        }
         let stage=std::time::Instant::now();
         let verification_started=std::time::Instant::now();
         let verification_remaining=||if mode=="verify" {
@@ -388,6 +508,7 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
     let mut output=serde_json::json!({"request":r,"cellResistanceOhm":currents.cells.iter().map(|c|c.resistance_ohm).collect::<Vec<_>>(),"cellDensityPerAmpM2":currents.cells.iter().map(|c|c.density_per_amp_m2).collect::<Vec<_>>(),"candidate":model,"arrangement":{"atoms":b.arrangement_atoms,"maxCopperAreaChange":b.max_copper_area_change,"maxContactAreaChange":b.max_contact_area_change,"sourceCopperRestorations":b.source_copper_restorations},"electrodeAreasM2":b.electrode_areas_m2,"electrodeNodes":electrodes,"nodesM":b.mesh.nodes_m,"copperCells":nodes,"sourceIds":source_ids,"barrels":b.barrel_ids,"mapping":b.source_mapping,"originMm":b.origin_mm,"potentialCount":currents.potential_count(),"currentCount":currents.current_count(),"potentialMeshNodes":currents.mesh_nodes,"components":currents.components,"magneticMeshTetrahedra":b.mesh.tetrahedra.len()+b.mesh.copper_tetrahedra.len(),"fieldNodesM":field_mesh.nodes_m,"fieldCopperCells":field_mesh.copper_tetrahedra.iter().map(|t|t.nodes).collect::<Vec<_>>(),"fieldTetrahedra":field_mesh.tetrahedra.len(),"fieldCells":field_mesh.tetrahedra.iter().map(|t|t.nodes).collect::<Vec<_>>(),"fieldEpsilonR":field_mesh.tetrahedra.iter().map(|t|t.epsilon_r).collect::<Vec<_>>(),"externalFaces":field_mesh.external_faces,"copperVolumeM3":b.mesh.copper_volume_m3,"fieldVolumeM3":field_mesh.dielectric_volume_m3,"plannedBytes":currents.planned_bytes,"elapsedSeconds":b.elapsed_seconds});
     if let Some(path)=cached_field {for key in ["fieldNodesM","fieldCopperCells","fieldTetrahedra","fieldCells","fieldEpsilonR","fieldVolumeM3"]{output.as_object_mut().unwrap().remove(key);}output["fieldDataSource"]=serde_json::json!({"kind":"complete-source-P1-Schur-checkpoint","path":path,"geometry":"stored producer evidence; no fabricated field grid in this output","physicalAdmission":false});}
     if !(mode=="verify") {remaining()?;}
+    if let Some(evidence)=frequency_evidence {output["frequencyAudit"]=evidence;}
     output["stageSeconds"]=serde_json::Value::Object(stages);
     output["wallSeconds"]=serde_json::json!(started.elapsed().as_secs_f64());
     Ok(output)
@@ -445,10 +566,36 @@ mod tests{
             vec![C::new(-0.008664006024483986,-531407926.65365434),C::new(-0.001587242043594787,-142288239.66269863),C::new(0.010099166491953734,-531407926.6536519),C::new(0.0016154210340939693,-142288239.66269797)],
             vec![C::new(-0.0016010056684434364,-142288239.66269863),C::new(-0.008381316362861093,-605657485.0379226),C::new(0.0016154210340939697,-142288239.662698),C::new(0.009786463494481831,-605657485.03792)],
         ];
-        let expected=[C::new(0.9996220826959654,-4.839041977216181e-8),C::new(-6.76512069678867e-5,-1.3719562713476452e-8),C::new(-0.9996220826959654,4.8390218165881955e-8),C::new(6.765120696798914e-5,1.3719331737946338e-8)];
+        // 90-digit reference with the exact physical load on these F64 columns.
+        let expected=[C::new(0.9996220826959653,-4.88371205639137e-8),C::new(-6.765120696788148e-5,-1.369164918839761e-8),C::new(-0.9996220826959654,4.883691895763385e-8),C::new(6.765120696798639e-5,1.3691418212867497e-8)];
         let actual=loaded_ac_coefficients_extended(&u,&[1.,0.,-1.,0.],&[50.;4]).unwrap();
         assert!(actual.iter().any(|a|a.lo.real!=0.||a.lo.imaginary!=0.));
         for(a,e)in actual.iter().zip(expected){let a=a.value();assert!((a.real-e.real).abs()<1e-12&&(a.imaginary-e.imaginary).abs()<1e-12,"actual={a:?} expected={e:?}");}
+    }
+    #[test]
+    fn loaded_ac_port_voltages_match_exact_load_on_saved_joint_columns(){
+        // D1 slot joint full-space 1 kHz columns in physical port order.
+        // Reference is a 90-digit solve of (I + Z/50) i = d from these
+        // exact F64 columns, followed by V = Z i.
+        let z=vec![
+            vec![C::new(0.010378877787982686,-531480920.15353894), C::new(0.0019648847445566543,-142340205.24015158), C::new(-0.008663961887874156,-531480920.1535417), C::new(-0.0016016548413945605,-142340205.24015224)],
+            vec![C::new(0.001964884744556654,-142340205.24015158), C::new(0.011261309690860739,-606356182.7796291), C::new(-0.001586852435774449,-142340205.24015233), C::new(-0.00838062688611846,-606356182.7796322)],
+            vec![C::new(-0.008663961887874154,-531480920.15354156), C::new(-0.0015868524357744466,-142340205.2401523), C::new(0.010099674576460129,-531480920.1535391), C::new(0.0016168449149091054,-142340205.24015158)],
+            vec![C::new(-0.0016016548413945587,-142340205.2401523), C::new(-0.00838062688611846,-606356182.7796322), C::new(0.001616844914909106,-142340205.24015167), C::new(0.009783912829791401,-606356182.7796293)],
+        ];
+        let expected=[
+            C::new(0.018895865202113404,2.590755035657824e-06),
+            C::new(0.00338256034667187,6.845642278473417e-07),
+            C::new(-0.018895865202126952,-2.5907449516863768e-06),
+            C::new(-0.0033825603466736,-6.845528649980224e-07),
+        ];
+        let coefficients=loaded_ac_coefficients_extended(&z,&[1.,0.,-1.,0.],&[50.;4]).unwrap();
+        assert!(coefficients.iter().any(|x|x.lo.real!=0.||x.lo.imaginary!=0.));
+        for (port,(row,expected)) in z.iter().zip(expected).enumerate(){
+            let actual=accurate_complex_dot(row,&coefficients).unwrap();
+            let relative=(actual-expected).abs()/expected.abs().max(1e-12);
+            assert!(relative<=1e-8,"port={port} relative={relative:e} actual={actual:?} expected={expected:?}");
+        }
     }
     #[test]
     fn loaded_complex_fields_compensate_cancellation_before_rounding(){

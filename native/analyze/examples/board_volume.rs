@@ -21,7 +21,7 @@ fn execute()->Result<(),String> {
     let cached_field=args.get(5).and_then(|s|s.strip_prefix("field-cache:"));
     let field_request=if let Some(path)=args.get(5).filter(|_|cached_field.is_none()) {
         Some(serde_json::from_str(&std::fs::read_to_string(path).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?)
-    }else if cached_field.is_none(){Some(board_prepare::accepted_electric_request(&r))}else{None};
+    }else if cached_field.is_none(){Some(board_prepare::accepted_electric_request(&r)?)}else{None};
     let config:[usize;4]=magnetic_config.try_into().map_err(|_|"four magnetic parameters required")?;
     let journal=std::env::var_os("P7_DEVELOPER_CHECKPOINT_DIR").map(|directory|{
         use pcb_analyze::extraction::local::developer_checkpoint::{Journal,identity};

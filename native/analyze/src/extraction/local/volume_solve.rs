@@ -88,13 +88,19 @@ impl<'a> Solver<'a> {
     /// Full original coordinate solve. No dense full R/L/C matrix or full P6
     /// compilation occurs. Input is an actual nodal current injection phasor.
     pub fn solve(&self,frequency_hz:f64,real_injection:&[f64],imaginary_injection:&[f64],max_wall:Duration)->Result<Solution> {
+        self.solve_with_restart_limit(frequency_hz,real_injection,imaginary_injection,max_wall,8)
+    }
+    /// Bounded developer allowance for more restarts with the same 30-vector
+    /// Krylov window, deadline and convergence checks.
+    pub fn solve_with_restart_limit(&self,frequency_hz:f64,real_injection:&[f64],imaginary_injection:&[f64],max_wall:Duration,restart_limit:usize)->Result<Solution> {
+        if !(8..=16).contains(&restart_limit) {return Err(error("VOLUME_SOLVE","restart limit must be in 8..16"));}
         let start=Instant::now();let nv=self.space.potential_count();let ni=self.space.current_count();let n=nv+ni;let nf=self.free_nodes.len();
         if !frequency_hz.is_finite()||frequency_hz<=0.||real_injection.len()!=nv||imaginary_injection.len()!=nv||real_injection.iter().chain(imaginary_injection).any(|v|!v.is_finite()) {return Err(error("VOLUME_SOLVE","positive frequency and finite full nodal injection required"));}
         let omega=2.*std::f64::consts::PI*frequency_hz;let mut b=vec![0.;2*n];
         for(part,input)in [real_injection,imaginary_injection].into_iter().enumerate(){for(i,&node)in self.free_nodes.iter().enumerate(){b[part*n+i]=input[node];}for(j,component)in self.space.components.iter().enumerate(){b[part*n+nf+j]=component.iter().map(|&i|input[i]).sum();}}
         let scale=norm(&b);if scale==0. {return Err(error("VOLUME_SOLVE","nonzero excitation required"));}
         let mut x=vec![0.;2*n];let mut xlow=vec![0.;2*n];let mut residual=b.clone();let mut iterations=0;let mut relative=1.;
-        for _restart in 0..8 {
+        for _restart in 0..restart_limit {
             let beta=norm(&residual);let mut v=vec![residual.iter().map(|x|x/beta).collect::<Vec<_>>()];let mut z=vec![];let mut h=vec![vec![0.;30];31];let mut c=[0.;30];let mut s=[0.;30];let mut g=[0.;31];g[0]=beta;let mut used=0;
             for j in 0..30 {
                 if start.elapsed()>max_wall {return Err(error("DEADLINE","full operator GMRES deadline"));}

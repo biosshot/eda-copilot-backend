@@ -44,6 +44,7 @@ pub struct CurrentSpace {
     pub directed_kernel_m5: Vec<Vec<f64>>,
     pub max_quadrature_change: f64,
     pub max_reciprocity_error: f64,
+    pub reciprocity_refined_pairs: usize,
     pub planned_bytes: usize,
     pub elapsed_seconds: f64,
     pub band_hz: [f64; 2],
@@ -114,13 +115,16 @@ fn interpolation(foil: &Foil, p: [f64; 2]) -> Result<BTreeMap<usize, f64>> {
 /// Allocation/scope admission before either field factorization or dense
 /// magnetic integration. Count-only PCB meshes can be rejected here; passing
 /// counts never establishes mesh conformity, ports, contacts or applicability.
+pub const MAX_FOIL_SUPPORTS: usize = 64;
+pub const MAX_FOIL_POTENTIALS: usize = 64;
+
 pub fn preflight_counts(
     supports: usize,
     potentials: usize,
     field_plan_bytes: usize,
     budget: Budget,
 ) -> Result<usize> {
-    if supports == 0 || supports > 64 || potentials == 0 || potentials > 64 {
+    if supports == 0 || supports > MAX_FOIL_SUPPORTS || potentials == 0 || potentials > MAX_FOIL_POTENTIALS {
         return Err(error(
             "CURRENT_SCOPE",
             "experimental all-foil limit64 supports/64 potentials; PCB/via space not admitted",
@@ -170,9 +174,9 @@ pub fn assemble(
         .ok_or_else(|| error("MEMORY_LIMIT", "current support count overflow"))?;
     if foils.is_empty()
         || supports == 0
-        || supports > 64
+        || supports > MAX_FOIL_SUPPORTS
         || nv == 0
-        || nv > 64
+        || nv > MAX_FOIL_POTENTIALS
         || ports.is_empty()
         || ports.len() > 16
     {
@@ -181,7 +185,7 @@ pub fn assemble(
             "bounded conforming all-foil space required; no barrel admission",
         ));
     }
-    let plan = preflight_counts(
+    preflight_counts(
         supports,
         nv,
         electric.plan.planned_simultaneous_bytes,
@@ -214,40 +218,6 @@ pub fn assemble(
             ));
         }
         validate_planar_embedding_xy(&f.xy_m, &f.triangles)?;
-        let thickness = f.z_m[1] - f.z_m[0];
-        let delta = (2.
-            / (2.
-                * std::f64::consts::PI
-                * max_frequency_hz
-                * crate::extraction::MU0
-                * f.conductivity_s_per_m))
-            .sqrt();
-        if !thickness.is_finite()
-            || thickness <= 0.
-            || !f.conductivity_s_per_m.is_finite()
-            || f.conductivity_s_per_m <= 0.
-            || !delta.is_finite()
-            || delta < 3. * thickness
-        {
-            return Err(error(
-                "CURRENT_BAND",
-                "finite fixed copper material and delta>=3*thickness required",
-            ));
-        }
-        for t in &f.triangles {
-            let [a, b, c] = t.map(|i| f.xy_m[i]);
-            let twice = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
-            let longest = (a[0] - b[0])
-                .hypot(a[1] - b[1])
-                .max((b[0] - c[0]).hypot(b[1] - c[1]))
-                .max((c[0] - a[0]).hypot(c[1] - a[1]));
-            if !twice.is_finite() || twice <= 0. || thickness > twice / longest / 4. {
-                return Err(error(
-                    "CURRENT_BAND",
-                    "thin foil requires positive cell altitude>=4*thickness; no sliver removal",
-                ));
-            }
-        }
         let metal = electric
             .metals()
             .iter()
@@ -324,6 +294,74 @@ pub fn assemble(
             ));
         }
     }
+    assemble_verified_trace(
+        foils,
+        VerifiedTrace {
+            potential_nodes: electric.source_ids.clone(),
+            capacitance_f: entries(&electric.energy_capacitance_f()?),
+            structural_gauge_modes: electric.structural_gauge_modes(),
+            max_epsilon_r: electric.max_epsilon_r(),
+            planned_bytes: electric.plan.planned_simultaneous_bytes,
+            refine_reciprocity: false,
+        },
+        ports,
+        max_frequency_hz,
+        budget,
+        start,
+    )
+}
+
+/// Internal bridge for callers that certify a common electric trace against
+/// the very same foil mesh. No authored or fitted C enters this boundary.
+pub(super) struct VerifiedTrace {
+    pub potential_nodes: Vec<String>,
+    pub capacitance_f: Vec<(usize, usize, f64)>,
+    pub structural_gauge_modes: Vec<Vec<f64>>,
+    pub max_epsilon_r: f64,
+    pub planned_bytes: usize,
+    pub refine_reciprocity: bool,
+}
+
+pub(super) fn verify_foil_band(foils: &[Foil], max_frequency_hz: f64, max_epsilon_r: f64) -> Result<()> {
+    if !max_frequency_hz.is_finite() || max_frequency_hz <= 0. || max_frequency_hz > 1e5 || !max_epsilon_r.is_finite() || max_epsilon_r < 1. {
+        return Err(error("CURRENT_BAND", "explicit thin-volume screening band0..fmax<=100kHz required"));
+    }
+    for f in foils {
+        let thickness = f.z_m[1] - f.z_m[0];
+        let delta = (2.
+            / (2.
+                * std::f64::consts::PI
+                * max_frequency_hz
+                * crate::extraction::MU0
+                * f.conductivity_s_per_m))
+            .sqrt();
+        if !thickness.is_finite()
+            || thickness <= 0.
+            || !f.conductivity_s_per_m.is_finite()
+            || f.conductivity_s_per_m <= 0.
+            || !delta.is_finite()
+            || delta < 3. * thickness
+        {
+            return Err(error(
+                "CURRENT_BAND",
+                "finite fixed copper material and delta>=3*thickness required",
+            ));
+        }
+        for t in &f.triangles {
+            let [a, b, c] = t.map(|i| f.xy_m[i]);
+            let twice = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+            let longest = (a[0] - b[0])
+                .hypot(a[1] - b[1])
+                .max((b[0] - c[0]).hypot(b[1] - c[1]))
+                .max((c[0] - a[0]).hypot(c[1] - a[1]));
+            if !twice.is_finite() || twice <= 0. || thickness > twice / longest / 4. {
+                return Err(error(
+                    "CURRENT_BAND",
+                    "thin foil requires positive cell altitude>=4*thickness; no sliver removal",
+                ));
+            }
+        }
+    }
     let mut lo = [f64::INFINITY; 3];
     let mut hi = [f64::NEG_INFINITY; 3];
     for f in foils {
@@ -339,7 +377,7 @@ pub fn assemble(
     let d = (hi[0] - lo[0]).hypot(hi[1] - lo[1]).hypot(hi[2] - lo[2]);
     if 2. * std::f64::consts::PI * max_frequency_hz / 299792458.
         * d
-        * electric.max_epsilon_r().sqrt()
+        * max_epsilon_r.sqrt()
         > 0.1
     {
         return Err(error(
@@ -347,17 +385,38 @@ pub fn assemble(
             "quasistatic k0*D*sqrt(epsilon)<=0.1 screening failed",
         ));
     }
+    Ok(())
+}
+pub(super) fn assemble_verified_trace(
+    foils: &[Foil],
+    electric: VerifiedTrace,
+    ports: &[[usize; 2]],
+    max_frequency_hz: f64,
+    budget: Budget,
+    start: Instant,
+) -> Result<CurrentSpace> {
+    if !max_frequency_hz.is_finite() || max_frequency_hz <= 0. || max_frequency_hz > 1e5 {
+        return Err(error("CURRENT_BAND", "explicit thin-volume screening band0..fmax<=100kHz required"));
+    }
+    if ports.is_empty() || ports.len() > 16 {
+        return Err(error("CURRENT_SCOPE", "1..16 finite ports required"));
+    }
+    let nv = electric.potential_nodes.len();
+    let supports = foils.iter().try_fold(0usize, |n, f| n.checked_add(f.triangles.len()))
+        .ok_or_else(|| error("MEMORY_LIMIT", "current support count overflow"))?;
+    let plan = preflight_counts(supports, nv, electric.planned_bytes, budget)?;
+    verify_foil_band(foils,max_frequency_hz,electric.max_epsilon_r)?;
     let mut model = Model {
         format: "coupled-rlc".into(),
         reference_topology: "infinity".into(),
-        potential_nodes: electric.source_ids.clone(),
+        potential_nodes: electric.potential_nodes,
         current_dofs: vec![],
         incidence: vec![],
         port_incidence: vec![],
         resistance_ohm: vec![],
         inductance_h: vec![],
-        capacitance_f: entries(&electric.energy_capacitance_f()?),
-        structural_gauge_modes: electric.structural_gauge_modes(),
+        capacitance_f: electric.capacitance_f,
+        structural_gauge_modes: electric.structural_gauge_modes,
         conserved_potential_modes: vec![],
         port_terminals: Some(vec![]),
     };
@@ -462,13 +521,39 @@ pub fn assemble(
         }
         matrices.push(m);
     }
-    let final_m = matrices.pop().unwrap();
+    let mut final_m = matrices.pop().unwrap();
     let coarse = matrices.pop().unwrap();
     let mut quad: f64 = 0.;
     let mut reciprocity: f64 = 0.;
     let self_scale = (0..supports)
         .map(|i| final_m[i][i] * cells[i].current_density_per_amp_m2.powi(2))
         .fold(0., f64::max);
+    let mut reciprocity_refined_pairs = 0;
+    if electric.refine_reciprocity {
+        let orders = [
+            (GaussRule::new(48)?, GaussRule::new(24)?),
+            (GaussRule::new(64)?, GaussRule::new(32)?),
+        ];
+        for i in 0..supports {
+            for j in 0..i {
+                let weight = cells[i].current_density_per_amp_m2 * cells[j].current_density_per_amp_m2
+                    / self_scale;
+                if (final_m[i][j] - final_m[j][i]).abs() * weight <= 1e-9 {
+                    continue;
+                }
+                reciprocity_refined_pairs += 1;
+                for (xy, z) in &orders {
+                    check(start, budget)?;
+                    final_m[i][j] = polyhedron::volume_integral_anisotropic(&prisms[i], &sources[j], xy, z)?;
+                    check(start, budget)?;
+                    final_m[j][i] = polyhedron::volume_integral_anisotropic(&prisms[j], &sources[i], xy, z)?;
+                    if (final_m[i][j] - final_m[j][i]).abs() * weight <= 1e-9 {
+                        break;
+                    }
+                }
+            }
+        }
+    }
     for i in 0..supports {
         for j in 0..supports {
             let v = final_m[i][j];
@@ -510,6 +595,7 @@ pub fn assemble(
         directed_kernel_m5: final_m,
         max_quadrature_change: quad,
         max_reciprocity_error: reciprocity,
+        reciprocity_refined_pairs,
         planned_bytes: plan,
         elapsed_seconds: start.elapsed().as_secs_f64(),
         band_hz: [0., max_frequency_hz],

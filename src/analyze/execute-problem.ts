@@ -27,15 +27,34 @@ export function createProblemExecutor(retainDcForScenario = false) {
     const addon = createRequire(import.meta.url)(backendResource('native', 'node-addon', 'index.cjs')) as typeof import('../../native/node-addon/index.cjs');
     let result: AnalysisResult;
     if(problem.kind==='board-section'){electrical ??=new addon.AnalysisElectricalSession();result=electrical.sliceBoardSection(problem.boardJson,problem.stack,problem.slice);}
+    else if(problem.kind==='local-dc-extraction'){
+      electrical ??= new addon.AnalysisElectricalSession();
+      try { result=electrical.solveLocalDc(problem.boardJson,problem.request,problem.remainingSeconds); }
+      finally{if(!retainDcForScenario){electrical.clear();electrical=undefined;}}
+    }
     else if(problem.kind==='local-extraction'){
       electrical ??= new addon.AnalysisElectricalSession();try{const r=problem.request;const requestStart=performance.now();const remaining=()=>{const seconds=(r.remainingSeconds??300)-(performance.now()-requestStart)/1000;if(!Number.isFinite(seconds)||seconds<=0||seconds>Number(process.env.P7_VERIFY_SECONDS??300))throw new Error('LOCAL_DEADLINE: shared planning/cache/prepare/solve deadline');return seconds;};
       if(r.bandHz[0]!==1000||r.bandHz[1]!==100000||r.frequenciesHz.some(f=>f<r.bandHz[0]||f>r.bandHz[1]))throw new Error('LOCAL_BAND: unsupported band; explicit validation/rebuild required');
       const activeProfile=process.env.P7_MAGNETIC_PROFILE??'baseline';if(magneticProfile!==undefined&&magneticProfile!==activeProfile)throw new Error('LOCAL_CACHE: magnetic profile changed during executor lifetime');const activePrecision=selectedMagneticPrecision();if(magneticPrecision!==undefined&&magneticPrecision!==activePrecision)throw new Error("LOCAL_CACHE: magnetic precision changed during executor lifetime");coreIdentity ??= localCoreIdentity();magneticProfile=activeProfile;magneticPrecision=activePrecision;
       const key=localExtractionKey(localCache,coreIdentity,r);
-      const cached=localCache.obtain(key,()=>({...electrical!.prepareLocal(r.boardJson,r.geometry,remaining(),r.magneticPatchLevel),extraction:{schema:1,coreIdentity,magneticProfile,magneticPrecision,magneticPatchLevel:r.magneticPatchLevel??null,bandHz:r.bandHz,units:{position:'m',C:'F',L:'H',R:'Ohm',current:'A',loss:'W'},references:'physical finite differential ports; exterior capacitance retained',validation:{status:'conditional',electric:'accepted-v1',fullReduced:'incomplete'},assumptions:[(r.geometry as {allowInsulatedCopperCuts?:boolean}).allowInsulatedCopperCuts?'insulated ROI cuts':'complete copper islands; no insulated cuts','explicit materials/plating','finite exterior domain','no dielectric loss or arbitrary RF applicability']}}),prepared=>{const p=prepared as any;if(p.extraction?.schema!==1||p.extraction.coreIdentity!==coreIdentity||p.extraction.magneticProfile!==magneticProfile||p.extraction.magneticPrecision!==magneticPrecision||p.extraction.validation?.status!=='conditional'||p.extraction.magneticPatchLevel!==(r.magneticPatchLevel??null)||JSON.stringify(p.extraction.bandHz)!==JSON.stringify(r.bandHz))throw new Error('LOCAL_CACHE: metadata/version/band refusal');electrical!.solveLocal({prepared,frequenciesHz:[]},remaining());});
+      const prepare=()=>({...electrical!.prepareLocal(r.boardJson,r.geometry,remaining(),r.magneticPatchLevel,r.frequencyAudit),extraction:{schema:1,coreIdentity,magneticProfile,magneticPrecision,magneticPatchLevel:r.magneticPatchLevel??null,bandHz:r.bandHz,units:{position:'m',C:'F',L:'H',R:'Ohm',current:'A',loss:'W'},references:'physical finite differential ports; exterior capacitance retained',validation:{status:'conditional',electric:'accepted-v1',fullReduced:'incomplete'},assumptions:[(r.geometry as {allowInsulatedCopperCuts?:boolean}).allowInsulatedCopperCuts?'insulated ROI cuts':'complete copper islands; no insulated cuts','explicit materials/plating','finite exterior domain','no dielectric loss or arbitrary RF applicability']}});
+      const validate=(prepared:unknown)=>{const p=prepared as any;if(p.extraction?.schema!==1||p.extraction.coreIdentity!==coreIdentity||p.extraction.magneticProfile!==magneticProfile||p.extraction.magneticPrecision!==magneticPrecision||p.extraction.validation?.status!=='conditional'||p.extraction.magneticPatchLevel!==(r.magneticPatchLevel??null)||JSON.stringify(p.extraction.bandHz)!==JSON.stringify(r.bandHz))throw new Error('LOCAL_CACHE: metadata/version/band refusal');electrical!.solveLocal({prepared,frequenciesHz:[]},remaining());};
+      // Independent holdouts need the live full operator. This request-scoped
+      // evidence is deliberately separate from the reusable reduced cache.
+      const cached=r.frequencyAudit?{
+        value:prepare(),evidence:{status:'cold' as const,key,schema:1,assembly:1,training:1,restoreSeconds:0,writeFailed:false}
+      }:localCache.obtain(key,prepare,validate);
+      if(r.frequencyAudit&&!cached.value.frequencyAudit)throw new Error('LOCAL_FREQUENCY_AUDIT: independent native evidence missing');
       if(process.env.P7_CACHE_DEBUG==='1')process.stderr.write('P7_CACHE '+JSON.stringify({dir:localCache.dir,key,status:cached.evidence.status,writeFailed:cached.evidence.writeFailed})+'\n');
-      remaining();const response=electrical.solveLocal({prepared:cached.value,frequenciesHz:r.frequenciesHz,drive:r.drive,loadsOhm:r.loadsOhm},remaining(),r.observablesOnly);
-      remaining();result={...response,prepared:cached.value,cache:{...cached.evidence,training:cached.evidence.status==='cold'?cached.value.candidate.training.length:0},resources:{peakRssBytes:process.resourceUsage().maxRSS*1024}};
+      const {frequencyAudit,...prepared}=cached.value;
+      remaining();const response=electrical.solveLocal({prepared,frequenciesHz:r.frequenciesHz,drive:r.drive,loadsOhm:r.loadsOhm},remaining(),r.observablesOnly);
+      remaining();
+      const auditEvidence=frequencyAudit?{...frequencyAudit,
+        key:localCache.key({producer:'local-frequency-audit-v1',extractionKey:key,policy:r.frequencyAudit,
+          intrinsic:true,drive:'all physical unit-port drives',loads:[],outputDrive:r.drive,outputLoads:r.loadsOhm}),
+        storage:'request-result'
+      }:undefined;
+      result={...response,prepared,...(auditEvidence?{frequencyAudit:auditEvidence}:{}),cache:{...cached.evidence,training:cached.evidence.status==='cold'?cached.value.candidate.training.length:0},resources:{peakRssBytes:process.resourceUsage().maxRSS*1024}};
       }catch(error){if(error&&typeof error==='object')Object.assign(error,{localResources:{peakRssBytes:process.resourceUsage().maxRSS*1024,metric:'OS worker process high-water RSS including Node and preceding native work'}});throw error;}finally{if(!retainDcForScenario){electrical.clear();electrical=undefined;}}
     }
     else if(problem.kind==='transient-network'){

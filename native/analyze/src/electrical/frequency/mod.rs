@@ -57,6 +57,8 @@ pub struct Request {
     pub budget: Option<Budget>,
     #[serde(default)]
     pub instance_inductance_h: Vec<InstanceInductance>,
+    #[serde(default)]
+    pub recover_instance_loss: bool,
 }
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -403,6 +405,13 @@ pub fn run(r: Request) -> Value {
     }
 }
 fn calculate(r: &Request, start: Instant) -> Result<Value> {
+    if r.recover_instance_loss
+        && (r.representation != "S" || r.instances.is_empty() || r.instances.iter().any(|i| {
+            i.model.data["format"] != "coupled-rlc" || !i.model.data["portTerminals"].is_array()
+        }))
+    {
+        return Err(fail("COUPLED_LOSS_INPUT", "Instance loss recovery requires matched S and explicit physical RLC port mappings"));
+    }
     if !r.instance_inductance_h.is_empty()
         && (r.instances.iter().any(|i| i.model.data["format"] == "delayed-scattering")
             || r.instances.iter().all(|i| i.model.data["format"] != "coupled-rlc"))
