@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Extend automatic plane extraction with a common foil/volume operator, retaining original finite pads, barrel cells, capacitive islands and all mutual field actions. Pair voltage enrichment with compatible currents and check every column in the original full space. Add exact-grid memory/disk caching with physical evidence revalidation, and route explicit missing-return geometry to the joint operator. Focused native, DSL and cache checks pass; automatic bend validation is in progress and case-matrix physical acceptance remains open.
+
+- Make audited local copper thickness meshes depend on material skin depth and the effective upper frequency, including existing training points. Preserve F64, dielectric spacing and pre-allocation memory refusal; this mesh screen does not extend high-frequency applicability. See the mixed-conductor and copper-mesh-profile evidence dated 2026-11-04.
+
 - Connect the checked finite-plane operator to automatic channel extraction using physical lateral-return geometry, and admit alternating 2–8 copper layers. Preserve exact paired-port samples, source hashes and strict full-space residual/power guards; limit replay to original points/references. Native grid and four-layer controls, focused DSL tests, typecheck and builds pass. A manufactured automatic foil control and actual P6 replay pass in 162.219 s at 206.37 MiB sampled private peak. The first automatic bend refuses near-contact cells outside the thin-foil scope; mixed-volume support and physical acceptance remain open. See `docs/analyze/evidence/p7-automatic-foil-2026-11-04.md`.
 
 - Route the existing SI channel list through one joint P7 group extraction. Derive demand from authored sources/time, retain all uncovered DC/high-frequency intervals and physical handle mappings, and expose a conditional frequency artifact with explicit unavailable waveform/timing output. Focused actual-DSL/mock-numerics checks pass; full DDR/group acceptance remains open. See `docs/analyze/evidence/p7-group-runtime-2026-11-04.md`.

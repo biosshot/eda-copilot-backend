@@ -31,10 +31,22 @@ use std::{
 
 #[derive(Clone)]
 struct Cell {
-    nodes: [usize; 3],
-    incidence: [[f64; 2]; 3],
+    /// Sparse incidence for one Cartesian current coordinate.
+    terms: Vec<(usize, f64)>,
     resistance: f64,
 }
+
+impl Cell {
+    fn new(mut terms: Vec<(usize, f64)>, resistance: f64) -> Self {
+        // Set the anchor by partition of unity, in every physical space.
+        if let Some((anchor, remaining)) = terms.split_first_mut() {
+            anchor.1 = -remaining.iter().map(|&(_, a)| a).sum::<f64>();
+        }
+        Self { terms, resistance }
+    }
+}
+
+type MagneticBatch<'a> = dyn Fn(&[Vec<f64>], Instant, Duration) -> Result<Magnetic> + 'a;
 struct Basis {
     voltage: Vec<Vec<f64>>,
     current: Vec<Vec<f64>>,
@@ -133,16 +145,10 @@ fn check_time(start: Instant, wall: Duration) -> Result<()> {
 }
 fn sizes(n: usize, m: usize, r: usize, field_bytes: usize) -> Result<usize> {
     // Conservative simultaneous bounds for coefficient buffers, sparse input,
-    // lift/action slabs and the downstream reduced descriptor. No N² term.
+    // Lift/action slabs and the downstream reduced descriptor have no N-squared term.
     n.checked_mul(1024)
-        .and_then(|x| x.checked_add(m.checked_mul(32768)?))
-        .and_then(|x| {
-            x.checked_add(
-                n.checked_add(2usize.checked_mul(m)?)?
-                    .checked_mul(r)?
-                    .checked_mul(64)?,
-            )
-        })
+        .and_then(|x| x.checked_add(m.checked_mul(16384)?))
+        .and_then(|x| x.checked_add(n.checked_add(m)?.checked_mul(r)?.checked_mul(64)?))
         .and_then(|x| x.checked_add(r.checked_mul(2)?.checked_pow(2)?.checked_mul(2048)?))
         .and_then(|x| x.checked_add(field_bytes))
         .ok_or_else(|| error("MEMORY_LIMIT", "reduced foil plan overflow"))
@@ -150,35 +156,31 @@ fn sizes(n: usize, m: usize, r: usize, field_bytes: usize) -> Result<usize> {
 fn gradient(cells: &[Cell], v: &[f64]) -> Vec<f64> {
     cells
         .iter()
-        .flat_map(|c| {
-            (0..2).map(move |k| {
-                (1..3)
-                    .map(|i| c.incidence[i][k] * (v[c.nodes[i]] - v[c.nodes[0]]))
-                    .sum::<f64>()
-            })
+        .map(|c| {
+            let Some((&(anchor, _), remaining)) = c.terms.split_first() else {
+                return 0.;
+            };
+            remaining.iter().map(|&(i, a)| a * (v[i] - v[anchor])).sum()
         })
         .collect()
 }
 fn divergence(cells: &[Cell], j: &[f64], n: usize) -> Vec<f64> {
     let mut out = vec![Sum::default(); n];
-    for (i, c) in cells.iter().enumerate() {
-        for k in 0..3 {
-            for axis in 0..2 {
-                let node = c.nodes[k];
-                out[node] = out[node].add(Sum::from(c.incidence[k][axis]).mul(j[2 * i + axis]));
-            }
+    for (cell, &current) in cells.iter().zip(j) {
+        for &(node, a) in &cell.terms {
+            out[node] = out[node].add(Sum::from(a).mul(current));
         }
     }
     out.into_iter().map(Sum::value).collect()
 }
 fn conductive(cells: &[Cell], v: &[f64]) -> Vec<f64> {
-    let mut j = gradient(cells, v);
-    for (i, c) in cells.iter().enumerate() {
-        j[2 * i] /= c.resistance;
-        j[2 * i + 1] /= c.resistance;
-    }
-    j
+    gradient(cells, v)
+        .into_iter()
+        .zip(cells)
+        .map(|(a, c)| a / c.resistance)
+        .collect()
 }
+
 struct DcCorrection {
     free_map: Vec<Option<usize>>,
     free: usize,
@@ -214,21 +216,12 @@ impl DcCorrection {
     }
 }
 
-fn harmonic(
-    cells: &[Cell],
-    n: usize,
-    contacts: &BTreeSet<usize>,
-    budget: AllocationBudget,
-    base: usize,
-    start: Instant,
-    wall: Duration,
-    extra_modes: usize,
-) -> Result<(Basis, usize, DcCorrection)> {
+fn infer_islands(cells: &[Cell], n: usize) -> Result<Vec<Vec<usize>>> {
     let mut parents: Vec<_> = (0..n).collect();
     let mut used = vec![false; n];
     for c in cells {
-        let a = root(&parents, c.nodes[0]);
-        for node in c.nodes {
+        let a = root(&parents, c.terms[0].0);
+        for &(node, _) in &c.terms {
             used[node] = true;
             let b = root(&parents, node);
             parents[b] = a;
@@ -244,10 +237,30 @@ fn harmonic(
     for i in 0..n {
         islands.entry(root(&parents, i)).or_default().push(i);
     }
-    let islands: Vec<_> = islands.into_values().collect();
+    Ok(islands.into_values().collect())
+}
+
+fn harmonic(
+    cells: &[Cell],
+    n: usize,
+    contacts: &BTreeSet<usize>,
+    known_islands: Option<&[Vec<usize>]>,
+    budget: AllocationBudget,
+    base: usize,
+    start: Instant,
+    wall: Duration,
+    extra_modes: usize,
+) -> Result<(Basis, usize, DcCorrection)> {
+    let inferred;
+    let islands = if let Some(physical) = known_islands {
+        physical
+    } else {
+        inferred = infer_islands(cells, n)?;
+        &inferred
+    };
     let mut retained = contacts.clone();
     // A floating island keeps a finite C coordinate. This is not grounding.
-    for island in &islands {
+    for island in islands {
         if !island.iter().any(|i| retained.contains(i)) {
             retained.insert(island[0]);
         }
@@ -261,6 +274,110 @@ fn harmonic(
     }
     let plan = sizes(n, cells.len(), r, base)?;
     budget.check(plan)?;
+    let (peak, dc) = correction(cells, n, &retained, plan, budget, start, wall)?;
+    let retained: Vec<_> = retained.into_iter().collect();
+    let mut voltage = vec![vec![0.; n]; retained.len()];
+    let mut current = Vec::new();
+    let mut components = Vec::new();
+    let mut dc_residual: f64 = 0.;
+    for island in islands {
+        let modes: Vec<_> = retained
+            .iter()
+            .enumerate()
+            .filter_map(|(j, i)| island.contains(i).then_some(j))
+            .collect();
+        let (&anchor, others) = modes.split_last().unwrap();
+        for &j in others {
+            check_time(start, wall)?;
+            let v = &mut voltage[j];
+            v[retained[j]] = 1.;
+            let (q, residual) = complete_harmonic_current(cells, v, &dc)?;
+            dc_residual = dc_residual.max(residual);
+            current.push(q);
+        }
+        for &i in island {
+            voltage[anchor][i] = 1. - others.iter().map(|&j| voltage[j][i]).sum::<f64>();
+        }
+        components.push(modes);
+    }
+    if current.is_empty() && known_islands.is_none() {
+        return Err(error(
+            "FOIL_REDUCTION",
+            "physical contacts excite no conductive harmonic mode",
+        ));
+    }
+    Ok((
+        Basis {
+            voltage,
+            current,
+            retained,
+            components,
+            dc_residual,
+        },
+        peak,
+        dc,
+    ))
+}
+
+/// Remove any free-coordinate conductive reaction while keeping the finite
+/// electrode values. The input may already contain a mixed sheet lift.
+fn complete_harmonic_current(
+    cells: &[Cell],
+    voltage: &mut [f64],
+    dc: &DcCorrection,
+) -> Result<(Vec<f64>, f64)> {
+    if dc.free > 0 {
+        let rhs: Vec<_> = divergence(cells, &conductive(cells, voltage), voltage.len())
+            .into_iter()
+            .map(|x| -x)
+            .collect();
+        for (value, correction) in voltage.iter_mut().zip(dc.solve(&rhs)?) {
+            *value += correction;
+        }
+    }
+    let mut q = conductive(cells, voltage);
+    let norm = q
+        .iter()
+        .zip(cells)
+        .map(|(&j, c)| c.resistance * j * j)
+        .sum::<f64>()
+        .sqrt();
+    if !norm.is_finite() || norm <= 0. {
+        return Err(error(
+            "FOIL_REDUCTION",
+            "independent finite harmonic current required",
+        ));
+    }
+    let reaction = divergence(cells, &q, voltage.len());
+    let scale = reaction.iter().map(|v| v.abs()).fold(0., f64::max);
+    let residual = reaction
+        .iter()
+        .zip(&dc.free_map)
+        .filter(|(_, free)| free.is_some())
+        .map(|(v, _)| v.abs())
+        .fold(0., f64::max)
+        / scale.max(f64::MIN_POSITIVE);
+    if !residual.is_finite() || residual > 1e-8 {
+        return Err(error(
+            "FOIL_REDUCTION",
+            &format!("harmonic free residual {residual:e}"),
+        ));
+    }
+    for v in &mut q {
+        *v /= norm;
+    }
+    Ok((q, residual))
+}
+
+fn correction(
+    cells: &[Cell],
+    n: usize,
+    retained: &BTreeSet<usize>,
+    plan: usize,
+    budget: AllocationBudget,
+    start: Instant,
+    wall: Duration,
+) -> Result<(usize, DcCorrection)> {
     let mut next = 0;
     let free_map: Vec<_> = (0..n)
         .map(|i| {
@@ -274,16 +391,14 @@ fn harmonic(
         })
         .collect();
     let factor = if next > 0 {
-        let mut terms = Vec::with_capacity(cells.len() * 9);
+        let mut terms = Vec::with_capacity(cells.len() * 16);
         for c in cells {
-            for a in 0..3 {
-                for b in 0..3 {
-                    if let (Some(i), Some(j)) = (free_map[c.nodes[a]], free_map[c.nodes[b]]) {
+            check_time(start, wall)?;
+            for &(a, av) in &c.terms {
+                for &(b, bv) in &c.terms {
+                    if let (Some(i), Some(j)) = (free_map[a], free_map[b]) {
                         if i <= j {
-                            let val = (0..2)
-                                .map(|k| c.incidence[a][k] * c.incidence[b][k] / c.resistance)
-                                .sum();
-                            terms.push(Triplet::new(i, j, val));
+                            terms.push(Triplet::new(i, j, av * bv / c.resistance));
                         }
                     }
                 }
@@ -296,98 +411,8 @@ fn harmonic(
     } else {
         None
     };
-    let retained: Vec<_> = retained.into_iter().collect();
-    let mut voltage = vec![vec![0.; n]; retained.len()];
-    let mut current = Vec::new();
-    let mut components = Vec::new();
-    let mut dc_residual: f64 = 0.;
-    for island in &islands {
-        let modes: Vec<_> = retained
-            .iter()
-            .enumerate()
-            .filter_map(|(j, i)| island.contains(i).then_some(j))
-            .collect();
-        let (&anchor, others) = modes.split_last().unwrap();
-        for &j in others {
-            check_time(start, wall)?;
-            let v = &mut voltage[j];
-            v[retained[j]] = 1.;
-            if let Some((symbolic, values, _, _)) = &factor {
-                let action = divergence(cells, &conductive(cells, v), n);
-                let mut rhs = Mat::zeros(next, 1);
-                for i in 0..n {
-                    if let Some(k) = free_map[i] {
-                        rhs[(k, 0)] = -action[i];
-                    }
-                }
-                let par = super::parallel::current();
-                let mut scratch =
-                    MemBuffer::try_new(symbolic.solve_in_place_scratch::<f64>(1, par))
-                        .map_err(|_| error("MEMORY_LIMIT", "foil sparse solve scratch"))?;
-                cholesky::LltRef::new(symbolic, values).solve_in_place_with_conj(
-                    Conj::No,
-                    rhs.as_mut(),
-                    par,
-                    MemStack::new(&mut scratch),
-                );
-                for i in 0..n {
-                    if let Some(k) = free_map[i] {
-                        v[i] = rhs[(k, 0)];
-                    }
-                }
-            }
-            let mut q = conductive(cells, v);
-            let norm = q
-                .chunks_exact(2)
-                .zip(cells)
-                .map(|(j, c)| c.resistance * (j[0] * j[0] + j[1] * j[1]))
-                .sum::<f64>()
-                .sqrt();
-            if !norm.is_finite() || norm <= 0. {
-                return Err(error(
-                    "FOIL_REDUCTION",
-                    "independent finite harmonic current required",
-                ));
-            }
-            let reaction = divergence(cells, &q, n);
-            let scale = reaction.iter().map(|v| v.abs()).fold(0., f64::max);
-            let residual = (0..n)
-                .filter(|&i| free_map[i].is_some())
-                .map(|i| reaction[i].abs())
-                .fold(0., f64::max)
-                / scale.max(f64::MIN_POSITIVE);
-            dc_residual = dc_residual.max(residual);
-            if !residual.is_finite() || residual > 1e-8 {
-                return Err(error(
-                    "FOIL_REDUCTION",
-                    &format!("harmonic free residual {residual:e}"),
-                ));
-            }
-            for v in &mut q {
-                *v /= norm;
-            }
-            current.push(q);
-        }
-        for &i in island {
-            voltage[anchor][i] = 1. - others.iter().map(|&j| voltage[j][i]).sum::<f64>();
-        }
-        components.push(modes);
-    }
-    if current.is_empty() {
-        return Err(error(
-            "FOIL_REDUCTION",
-            "physical contacts excite no conductive harmonic mode",
-        ));
-    }
     let peak = factor.as_ref().map_or(plan, |x| x.2);
     Ok((
-        Basis {
-            voltage,
-            current,
-            retained,
-            components,
-            dc_residual,
-        },
         peak,
         DcCorrection {
             free_map,
@@ -599,6 +624,179 @@ pub(super) fn solve_matched_grid(
         checked.ok_or_else(|| error("BOARD_FOIL_GRID", "checked output missing"))?,
     ))
 }
+/// Use the mixed projection only to construct the initial sparse harmonic
+/// basis. Every action and correction thereafter is on original native cells.
+pub(super) fn solve_mixed_grid(
+    map: &super::mixed_conductor::MixedMap<'_>,
+    mesh: &super::mesh::LayeredMesh,
+    names: &[String],
+    ports: &[[usize; 2]],
+    field: &Field<'_>,
+    budget: AllocationBudget,
+    start: Instant,
+    wall: Duration,
+    grid: MatchedGrid<'_>,
+) -> Result<(serde_json::Value, usize)> {
+    let n = map.full.potential_count();
+    let ni = map.full.current_count();
+    // Each phase can supply a voltage shape and its conductive current,
+    // plus one independent induced-current correction.
+    let reserve = 4 * grid.max_iterations;
+    let field_base = map
+        .planned_bytes
+        .checked_add(field.planned_bytes())
+        .ok_or_else(|| error("MEMORY_LIMIT", "mixed field plan overflow"))?;
+    let magnetic = super::volume_integral_magnetic::Streamed::new(
+        mesh, &map.full, 12, field_base, budget, start, wall,
+    )?;
+    let base = field_base
+        .checked_add(magnetic.owned_bytes)
+        .ok_or_else(|| error("MEMORY_LIMIT", "mixed operator plan overflow"))?;
+    let resident = sizes(n, ni, 0, base)?;
+    budget.check(resident)?;
+
+    let mut terms = vec![Vec::new(); map.current_count()];
+    for &(i, j, a) in &map.incidence {
+        terms[j].push((i, a));
+    }
+    if terms.iter().any(|col| col.len() > 4) {
+        return Err(error(
+            "MIXED_FOIL_CONTACT",
+            "mixed current needs original conservative stencil",
+        ));
+    }
+    let mixed_cells: Vec<_> = terms
+        .into_iter()
+        .zip(&map.resistance_ohm)
+        .map(|(t, &r)| Cell::new(t, r))
+        .collect();
+    let (mut basis, mixed_peak, mixed_dc) = harmonic(
+        &mixed_cells,
+        map.potential_count(),
+        &map.electrodes.iter().copied().collect(),
+        Some(&map.potential_components),
+        budget,
+        resident,
+        start,
+        wall,
+        reserve,
+    )?;
+    drop(mixed_dc);
+    drop(mixed_cells);
+
+    let full_plan = sizes(n, ni, basis.retained.len() + reserve, base)?;
+    budget.check(full_plan)?;
+    let originals = map.original_representatives();
+    for i in &mut basis.retained {
+        *i = originals[*i];
+    }
+    basis.voltage = basis
+        .voltage
+        .iter()
+        .map(|v| map.lift_potentials(v))
+        .collect::<Result<Vec<_>>>()?;
+    let mut cells = Vec::with_capacity(ni);
+    for cell in &map.full.cells {
+        check_time(start, wall)?;
+        for axis in 0..3 {
+            let terms = cell
+                .potentials
+                .iter()
+                .enumerate()
+                .map(|(k, &i)| (i, cell.incidence[k][axis]))
+                .collect();
+            cells.push(Cell::new(terms, cell.resistance_ohm));
+        }
+    }
+    let (full_peak, dc) = correction(
+        &cells,
+        n,
+        &basis.retained.iter().copied().collect(),
+        full_plan,
+        budget,
+        start,
+        wall,
+    )?;
+    // A uniform-depth lift changes the native reaction at a surface pad.
+    // Restore the exact full DC cardinal states before spending any AC mode
+    // budget on charge or induction. No authored electrode value is changed.
+    basis.current.clear();
+    for (coordinates, modes) in map.full.components.iter().zip(&basis.components) {
+        let (&anchor, other) = modes.split_last().unwrap();
+        for &mode in other {
+            check_time(start, wall)?;
+            let (q, residual) = complete_harmonic_current(&cells, &mut basis.voltage[mode], &dc)?;
+            basis.current.push(q);
+            basis.dc_residual = basis.dc_residual.max(residual);
+        }
+        for &i in coordinates {
+            basis.voltage[anchor][i] = 1. - other.iter().map(|&m| basis.voltage[m][i]).sum::<f64>();
+        }
+    }
+    let charges = basis
+        .voltage
+        .iter()
+        .map(|v| {
+            check_time(start, wall)?;
+            field.apply(v)
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let batch = |q: &[Vec<f64>], _, _| -> Result<Magnetic> {
+        Ok(Magnetic {
+            actions: magnetic.actions(q)?,
+            reciprocity: 0.,
+            refinement: 0.,
+        })
+    };
+    let actions = magnetic.actions(&basis.current)?;
+    let (model, max_electric_reciprocity) =
+        make_model(&cells, n, &basis, names, &charges, &actions, ports)?;
+    let mut space = ReducedSpace {
+        model,
+        cells,
+        dc_harmonic_residual: basis.dc_residual,
+        basis,
+        charges,
+        magnetic_actions: actions,
+        ports: ports.to_vec(),
+        full_potentials: n,
+        max_frequency_hz: *grid
+            .frequencies
+            .last()
+            .ok_or_else(|| error("MIXED_FOIL_GRID", "empty frequency axis"))?,
+        planned_bytes: full_peak.max(mixed_peak),
+        // Pair reciprocity is structural. Quadrature and spatial coverage are
+        // independently unverified; these fields are not exposed for mixed.
+        max_magnetic_reciprocity: 0.,
+        max_magnetic_refinement: 0.,
+        max_electric_reciprocity,
+        enrichment: None,
+    };
+    let retained_bytes = map
+        .planned_bytes
+        .checked_add(magnetic.owned_bytes)
+        .ok_or_else(|| error("MEMORY_LIMIT", "mixed retained plan overflow"))?;
+    let training_budget = AllocationBudget {
+        max_bytes: budget
+            .max_bytes
+            .checked_sub(retained_bytes)
+            .ok_or_else(|| error("MEMORY_LIMIT", "mixed retained plan exceeds budget"))?,
+        ..budget
+    };
+    let checked = space.train_grid(
+        &grid,
+        names,
+        &dc,
+        field,
+        &batch,
+        training_budget,
+        start,
+        wall,
+        true,
+    )?;
+    Ok((checked, space.planned_bytes))
+}
+
 fn assemble_impl(
     foils: &[Foil],
     names: Vec<String>,
@@ -636,9 +834,9 @@ fn assemble_impl(
             "finite bounded physical foil, retained traces and ports required",
         ));
     }
-    budget.check(sizes(n, supports, 0, field.planned_bytes())?)?;
+    budget.check(sizes(n, 2 * supports, 0, field.planned_bytes())?)?;
     super::current_space::verify_foil_band(foils, max_frequency_hz, epsilon)?;
-    let mut cells = Vec::with_capacity(supports);
+    let mut cells = Vec::with_capacity(2 * supports);
     let mut prisms = Vec::with_capacity(supports);
     let mut density = Vec::with_capacity(supports);
     for foil in foils {
@@ -651,16 +849,14 @@ fn assemble_impl(
                 foil.z_m[1] - foil.z_m[0],
                 foil.conductivity_s_per_m,
             )?;
-            let mut a = sheet.incidence;
-            // Construct the first P1 gradient by exact partition of unity.
-            for k in 0..2 {
-                a[0][k] = -(a[1][k] + a[2][k]);
+            for axis in 0..2 {
+                let terms = triangle
+                    .iter()
+                    .enumerate()
+                    .map(|(k, &i)| (foil.potential_dofs[i], sheet.incidence[k][axis]))
+                    .collect();
+                cells.push(Cell::new(terms, sheet.resistance_ohm));
             }
-            cells.push(Cell {
-                nodes: triangle.map(|i| foil.potential_dofs[i]),
-                incidence: a,
-                resistance: sheet.resistance_ohm,
-            });
             prisms.push(Prism::new(foil.source_id.clone(), xy, foil.z_m)?);
             density.push(sheet.current_density_per_amp_m2);
         }
@@ -674,6 +870,7 @@ fn assemble_impl(
         &cells,
         n,
         &contacts,
+        None,
         budget,
         field.planned_bytes(),
         start,
@@ -699,11 +896,12 @@ fn assemble_impl(
     } else {
         Some((field, dc))
     };
+    let batch = |q: &[Vec<f64>], start, wall| magnetic(&prisms, &density, q, start, wall);
     let Magnetic {
         actions: magnetic_actions,
         reciprocity: max_magnetic_reciprocity,
         refinement: max_magnetic_refinement,
-    } = magnetic(&prisms, &density, &basis.current, start, wall)?;
+    } = batch(&basis.current, start, wall)?;
     let (model, max_electric_reciprocity) = make_model(
         &cells,
         n,
@@ -734,13 +932,11 @@ fn assemble_impl(
     let checked = match (preparation, training_resources) {
         (Preparation::Harmonic, None) => None,
         (Preparation::Single(training), Some((field, dc))) => {
-            space.train(
-                training, &names, &dc, &field, &prisms, &density, budget, start, wall,
-            )?;
+            space.train(training, &names, &dc, &field, &batch, budget, start, wall)?;
             None
         }
         (Preparation::Matched(grid), Some((field, dc))) => Some(space.train_grid(
-            &grid, &names, &dc, &field, &prisms, &density, budget, start, wall,
+            &grid, &names, &dc, &field, &batch, budget, start, wall, false,
         )?),
         _ => unreachable!("preparation resources match their scope"),
     };
@@ -764,12 +960,7 @@ fn make_model(
     let resistance_actions = basis
         .current
         .iter()
-        .map(|q| {
-            q.chunks_exact(2)
-                .zip(cells)
-                .flat_map(|(v, c)| [v[0] * c.resistance, v[1] * c.resistance])
-                .collect()
-        })
+        .map(|q| resistive_action(cells, q))
         .collect::<Vec<Vec<f64>>>();
     let (resistance_ohm, _) = congruence(&basis.current, &resistance_actions, 1e-9, "R")?;
     // Differentiate the exact component partition analytically, as in
@@ -822,8 +1013,14 @@ fn make_model(
         model.conserved_potential_modes.push(mode);
     }
     for (p, &[a, b]) in ports.iter().enumerate() {
-        let a = basis.retained.binary_search(&a).unwrap();
-        let b = basis.retained.binary_search(&b).unwrap();
+        let a =
+            basis.retained.iter().position(|&i| i == a).ok_or_else(|| {
+                error("BOARD_PORT", "positive electrode missing in retained trace")
+            })?;
+        let b =
+            basis.retained.iter().position(|&i| i == b).ok_or_else(|| {
+                error("BOARD_PORT", "negative electrode missing in retained trace")
+            })?;
         model.port_incidence.extend([(a, p, 1.), (b, p, -1.)]);
         model.port_terminals.as_mut().unwrap().push(PortTerminals {
             positive: Terminal::Node(Node {
@@ -837,8 +1034,8 @@ fn make_model(
     Ok((model, max_electric_reciprocity))
 }
 
-fn lift(basis: &[Vec<f64>], x: &[f64]) -> Vec<f64> {
-    (0..basis[0].len())
+fn lift(basis: &[Vec<f64>], x: &[f64], dimension: usize) -> Vec<f64> {
+    (0..dimension)
         .map(|i| {
             basis
                 .iter()
@@ -916,10 +1113,10 @@ impl ReducedSpace {
         let resident = self
             .full_potentials
             .saturating_mul(1024)
-            .saturating_add(self.cells.len().saturating_mul(32768))
+            .saturating_add(self.cells.len().saturating_mul(16384))
             .saturating_add(
                 self.full_potentials
-                    .saturating_add(2 * self.cells.len())
+                    .saturating_add(self.cells.len())
                     .saturating_mul(self.basis.voltage.len())
                     .saturating_mul(64),
             );
@@ -944,20 +1141,20 @@ impl ReducedSpace {
         let nv = self.basis.voltage.len();
         let nr = self.full_potentials;
         let v = [
-            lift(&self.basis.voltage, &re[..nv]),
-            lift(&self.basis.voltage, &im[..nv]),
+            lift(&self.basis.voltage, &re[..nv], nr),
+            lift(&self.basis.voltage, &im[..nv], nr),
         ];
         let q = [
-            lift(&self.basis.current, &re[nv..]),
-            lift(&self.basis.current, &im[nv..]),
+            lift(&self.basis.current, &re[nv..], self.cells.len()),
+            lift(&self.basis.current, &im[nv..], self.cells.len()),
         ];
         let c = [
-            lift(&self.charges, &re[..nv]),
-            lift(&self.charges, &im[..nv]),
+            lift(&self.charges, &re[..nv], nr),
+            lift(&self.charges, &im[..nv], nr),
         ];
         let l = [
-            lift(&self.magnetic_actions, &re[nv..]),
-            lift(&self.magnetic_actions, &im[nv..]),
+            lift(&self.magnetic_actions, &re[nv..], self.cells.len()),
+            lift(&self.magnetic_actions, &im[nv..], self.cells.len()),
         ];
         let d = q.each_ref().map(|x| divergence(&self.cells, x, nr));
         let g = v.each_ref().map(|x| gradient(&self.cells, x));
@@ -987,10 +1184,7 @@ impl ReducedSpace {
         ];
         let (mut kcl, mut kcl_scale, mut kvl, mut kvl_scale) = (0_f64, 0_f64, 0_f64, 0_f64);
         let mut kcl_rows = [vec![0.; nr], vec![0.; nr]];
-        let mut kvl_rows = [
-            vec![0.; 2 * self.cells.len()],
-            vec![0.; 2 * self.cells.len()],
-        ];
+        let mut kvl_rows = [vec![0.; self.cells.len()], vec![0.; self.cells.len()]];
         for k in 0..2 {
             let s = if k == 0 { -1. } else { 1. };
             for i in 0..nr {
@@ -1001,16 +1195,13 @@ impl ReducedSpace {
                 kcl = kcl.max(kcl_rows[k][i].abs());
                 kcl_scale = kcl_scale.max(a.abs() + b.abs() + z.abs());
             }
-            for (i, cell) in self.cells.iter().enumerate() {
-                for axis in 0..2 {
-                    let j = 2 * i + axis;
-                    let a = cell.resistance * q[k][j];
-                    let b = -g[k][j];
-                    let z = s * w * l[1 - k][j];
-                    kvl_rows[k][j] = a + b + z;
-                    kvl = kvl.max(kvl_rows[k][j].abs());
-                    kvl_scale = kvl_scale.max(a.abs() + b.abs() + z.abs());
-                }
+            for (j, cell) in self.cells.iter().enumerate() {
+                let a = cell.resistance * q[k][j];
+                let b = -g[k][j];
+                let z = s * w * l[1 - k][j];
+                kvl_rows[k][j] = a + b + z;
+                kvl = kvl.max(kvl_rows[k][j].abs());
+                kvl_scale = kvl_scale.max(a.abs() + b.abs() + z.abs());
             }
         }
         let kcl_relative = kcl / kcl_scale.max(f64::MIN_POSITIVE);
@@ -1052,10 +1243,30 @@ impl FullResidual {
     }
 }
 
+fn append_current_mode(
+    cells: &[Cell],
+    basis: &mut Vec<Vec<f64>>,
+    candidate: Vec<f64>,
+) -> Result<()> {
+    if basis.len() < cells.len() {
+        let actions: Vec<_> = basis.iter().map(|q| resistive_action(cells, q)).collect();
+        if let Some((q, _)) = metric_mode(
+            candidate,
+            basis,
+            &actions,
+            |q| Ok(resistive_action(cells, q)),
+            true,
+        )? {
+            basis.push(q);
+        }
+    }
+    Ok(())
+}
+
 fn resistive_action(cells: &[Cell], q: &[f64]) -> Vec<f64> {
-    q.chunks_exact(2)
+    q.iter()
         .zip(cells)
-        .flat_map(|(v, c)| [v[0] * c.resistance, v[1] * c.resistance])
+        .map(|(&v, c)| v * c.resistance)
         .collect()
 }
 fn metric_mode(
@@ -1143,8 +1354,7 @@ impl ReducedSpace {
         names: &[String],
         dc: &DcCorrection,
         field: &Field<'_>,
-        prisms: &[Prism],
-        density: &[f64],
+        magnetic: &MagneticBatch<'_>,
         budget: AllocationBudget,
         start: Instant,
         wall: Duration,
@@ -1198,7 +1408,7 @@ impl ReducedSpace {
                     return full.checked().map(|_| ());
                 }
                 self.grow(
-                    &full, initial_nv, names, dc, field, prisms, density, start, wall,
+                    &full, initial_nv, names, dc, field, magnetic, start, wall, false,
                 )?;
             }
             unreachable!("bounded enrichment always returns at its final residual")
@@ -1214,14 +1424,14 @@ impl ReducedSpace {
         names: &[String],
         dc: &DcCorrection,
         field: &Field<'_>,
-        prisms: &[Prism],
-        density: &[f64],
+        magnetic: &MagneticBatch<'_>,
         start: Instant,
         wall: Duration,
+        pair_gradient: bool,
     ) -> Result<()> {
         let ni = self.basis.current.len();
         let nv = self.basis.voltage.len();
-        if nv == self.full_potentials && ni == 2 * self.cells.len() {
+        if nv == self.full_potentials && ni == self.cells.len() {
             return Err(error(
                 "FOIL_ENRICHMENT",
                 "physical basis rank exhausted; coverage unverified",
@@ -1230,13 +1440,13 @@ impl ReducedSpace {
 
         for (kcl, kvl) in full.kcl.iter().zip(&full.kvl) {
             check_time(start, wall)?;
-            // A δi = -r_KCL on free nodes. The zero trace Dirichlet
+            // A delta_i = -r_KCL on free nodes. The zero trace Dirichlet
             // correction supplies a voltage bubble, while -R^-1 r_KVL
             // retains the divergence-free induced current contribution.
             let drop: Vec<_> = kvl
-                .chunks_exact(2)
+                .iter()
                 .zip(&self.cells)
-                .flat_map(|(v, c)| [v[0] / c.resistance, v[1] / c.resistance])
+                .map(|(&v, c)| v / c.resistance)
                 .collect();
             let rhs: Vec<_> = divergence(&self.cells, &drop, self.full_potentials)
                 .into_iter()
@@ -1257,6 +1467,13 @@ impl ReducedSpace {
                     |v| field.apply(v),
                     false,
                 )? {
+                    if pair_gradient {
+                        // Keep the R^-1 A^T image of the final C-orthogonal
+                        // shape in the current space. The residual current
+                        // may mostly be a divergence-free inductive loop.
+                        let gradient = conductive(&self.cells, &v);
+                        append_current_mode(&self.cells, &mut self.basis.current, gradient)?;
+                    }
                     // Preserve the original constant lift by adding and
                     // subtracting the same zero-contact shape. The anchor
                     // is a coordinate transformation, not an electrical tie.
@@ -1270,23 +1487,7 @@ impl ReducedSpace {
                     self.charges.push(c);
                 }
             }
-            if self.basis.current.len() < 2 * self.cells.len() {
-                let actions: Vec<_> = self
-                    .basis
-                    .current
-                    .iter()
-                    .map(|q| resistive_action(&self.cells, q))
-                    .collect();
-                if let Some((q, _)) = metric_mode(
-                    candidate,
-                    &self.basis.current,
-                    &actions,
-                    |q| Ok(resistive_action(&self.cells, q)),
-                    true,
-                )? {
-                    self.basis.current.push(q);
-                }
-            }
+            append_current_mode(&self.cells, &mut self.basis.current, candidate)?;
         }
         if self.basis.voltage.len() == nv && self.basis.current.len() == ni {
             return Err(error(
@@ -1298,7 +1499,7 @@ impl ReducedSpace {
             ));
         }
         if self.basis.current.len() > ni {
-            let added = magnetic(prisms, density, &self.basis.current[ni..], start, wall)?;
+            let added = magnetic(&self.basis.current[ni..], start, wall)?;
             self.max_magnetic_reciprocity = self.max_magnetic_reciprocity.max(added.reciprocity);
             self.max_magnetic_refinement = self.max_magnetic_refinement.max(added.refinement);
             self.magnetic_actions.extend(added.actions);
@@ -1325,11 +1526,11 @@ impl ReducedSpace {
         names: &[String],
         dc: &DcCorrection,
         field: &Field<'_>,
-        prisms: &[Prism],
-        density: &[f64],
+        magnetic: &MagneticBatch<'_>,
         budget: AllocationBudget,
         start: Instant,
         wall: Duration,
+        pair_gradient: bool,
     ) -> Result<serde_json::Value> {
         use serde_json::{json, Value};
         let initial_nv = self.basis.voltage.len();
@@ -1467,11 +1668,91 @@ impl ReducedSpace {
                 drop(parameters);
                 drop(samples);
                 self.grow(
-                    &worst, initial_nv, names, dc, field, prisms, density, start, wall,
+                    &worst,
+                    initial_nv,
+                    names,
+                    dc,
+                    field,
+                    magnetic,
+                    start,
+                    wall,
+                    pair_gradient,
                 )?;
             }
             unreachable!("bounded matched grid reaches a final residual")
         })();
         outcome.map_err(|failure| format!("{failure}; checked-grid history={history:?}"))
+    }
+}
+
+#[cfg(test)]
+mod mixed_basis_tests {
+    use super::*;
+
+    #[test]
+    fn compatible_gradient_spans_and_capacitive_seed_keeps_zero_incidence_modes() {
+        let start = Instant::now();
+        let wall = Duration::from_secs(10);
+        let budget = AllocationBudget {
+            max_bytes: 8 * 1024 * 1024,
+            max_nodes: 32,
+            max_tetrahedra: 32,
+        };
+        let cells = [Cell::new(vec![], 2.), Cell::new(vec![], 3.)];
+        let contacts = BTreeSet::from([0, 1]);
+        let islands = [vec![0], vec![1]];
+        let (seed, _, _) = harmonic(
+            &cells,
+            2,
+            &contacts,
+            Some(&islands),
+            budget,
+            0,
+            start,
+            wall,
+            0,
+        )
+        .unwrap();
+        assert!(seed.current.is_empty());
+        assert_eq!(seed.voltage, vec![vec![1., 0.], vec![0., 1.]]);
+        assert_eq!(lift(&seed.current, &[], cells.len()), vec![0., 0.]);
+
+        // Manufactured positive electric Gram for two isolated electrodes.
+        // The algebraic seed has no conductive path and still compiles.
+        let charges = [vec![2e-12, -1e-12], vec![-1e-12, 2e-12]];
+        let (model, _) = make_model(
+            &cells,
+            2,
+            &seed,
+            &["a".into(), "b".into()],
+            &charges,
+            &[],
+            &[[0, 1]],
+        )
+        .unwrap();
+        assert!(model.current_dofs.is_empty());
+        assert!(System::compile(&model, 1, None).is_ok());
+
+        let cells = [
+            Cell::new(vec![], 2.),
+            Cell::new(vec![(0, -1.), (2, 1.)], 3.),
+        ];
+        let mut basis = Vec::new();
+        // A physical current with zero incidence can carry magnetic energy.
+        append_current_mode(&cells, &mut basis, vec![1., 0.]).unwrap();
+        let bubble = [0., 0., 0.25];
+        let gradient = conductive(&cells, &bubble);
+        append_current_mode(&cells, &mut basis, gradient.clone()).unwrap();
+        assert_eq!(basis.len(), 2);
+        let weights: Vec<_> = basis
+            .iter()
+            .map(|q| sum(q, &resistive_action(&cells, &gradient)))
+            .collect();
+        let recovered = lift(&basis, &weights, cells.len());
+        let error: Vec<_> = gradient.iter().zip(recovered).map(|(a, b)| a - b).collect();
+        assert!(
+            sum(&error, &resistive_action(&cells, &error))
+                <= 1e-24 * sum(&gradient, &resistive_action(&cells, &gradient))
+        );
     }
 }

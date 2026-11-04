@@ -322,10 +322,7 @@ pub(super) struct VerifiedTrace {
     pub refine_reciprocity: bool,
 }
 
-pub(super) fn verify_foil_band(foils: &[Foil], max_frequency_hz: f64, max_epsilon_r: f64) -> Result<()> {
-    if !max_frequency_hz.is_finite() || max_frequency_hz <= 0. || max_frequency_hz > 1e5 || !max_epsilon_r.is_finite() || max_epsilon_r < 1. {
-        return Err(error("CURRENT_BAND", "explicit thin-volume screening band0..fmax<=100kHz required"));
-    }
+pub(super) fn verify_local_thin_scope(foils: &[Foil], max_frequency_hz: f64) -> Result<()> {
     for f in foils {
         let thickness = f.z_m[1] - f.z_m[0];
         let delta = (2.
@@ -362,6 +359,14 @@ pub(super) fn verify_foil_band(foils: &[Foil], max_frequency_hz: f64, max_epsilo
             }
         }
     }
+    Ok(())
+}
+
+pub(super) fn verify_foil_band(foils: &[Foil], max_frequency_hz: f64, max_epsilon_r: f64) -> Result<()> {
+    if !max_frequency_hz.is_finite() || max_frequency_hz <= 0. || max_frequency_hz > 1e5 || !max_epsilon_r.is_finite() || max_epsilon_r < 1. {
+        return Err(error("CURRENT_BAND", "explicit thin-volume screening band0..fmax<=100kHz required"));
+    }
+    verify_local_thin_scope(foils, max_frequency_hz)?;
     let mut lo = [f64::INFINITY; 3];
     let mut hi = [f64::NEG_INFINITY; 3];
     for f in foils {

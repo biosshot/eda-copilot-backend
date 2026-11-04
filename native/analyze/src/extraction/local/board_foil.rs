@@ -291,8 +291,11 @@ fn prepare_geometry(
     // Board mesh validation additionally checks exact names/order and materials.
     if !(3..=15).contains(&request.stack.len())
         || request.stack.len() % 2 == 0
-        || request.stack.iter().enumerate().any(|(i, layer)| layer.copper != (i % 2 == 0))
-        || !board.vias.is_empty()
+        || request
+            .stack
+            .iter()
+            .enumerate()
+            .any(|(i, layer)| layer.copper != (i % 2 == 0))
         || !request.cut_planes.is_empty()
         || request.allow_insulated_copper_cuts
     {
@@ -345,6 +348,19 @@ fn prepare_geometry(
         None,
         &lines,
     )?;
+    prepare_geometry_from_mesh(mesh, request, cuts, budget, start, max_wall, dense)
+}
+
+fn prepare_geometry_from_mesh(
+    mesh: board_mesh::BoardMesh,
+    request: &board_mesh::Request,
+    cuts: &[TraceCut],
+    budget: AllocationBudget,
+    start: Instant,
+    max_wall: Duration,
+    dense: bool,
+) -> Result<Geometry> {
+    remaining(start, max_wall)?;
     if !mesh.barrel_ids.is_empty() {
         return Err(error(
             "BOARD_FOIL_SCOPE",
@@ -370,6 +386,7 @@ fn prepare_geometry(
         .iter()
         .zip(&mesh.conductivity_s_m)
     {
+        remaining(start, max_wall)?;
         let z = tet.nodes.map(|n| mesh.mesh.nodes_m[n][2]);
         let lo = z.into_iter().fold(f64::INFINITY, f64::min);
         let hi = z.into_iter().fold(f64::NEG_INFINITY, f64::max);
@@ -401,6 +418,7 @@ fn prepare_geometry(
     let mut node_dofs = BTreeMap::<(usize, usize), usize>::new();
     let mut electrode_dofs = BTreeMap::new();
     for electrode in &request.electrodes {
+        remaining(start, max_wall)?;
         let layer = layers
             .iter()
             .position(|l| l.name == electrode.layer)
@@ -442,6 +460,7 @@ fn prepare_geometry(
             conductivity_s_per_m: material.conductivity_s_m.unwrap(),
         };
         for (&(_, index), cell) in cells.range((layer, 0)..=(layer, usize::MAX)) {
+            remaining(start, max_wall)?;
             let mut triangle = mesh.planar_triangles[index];
             let [a, b, c] = triangle.map(|i| xy[i]);
             let twice = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
@@ -739,7 +758,44 @@ pub fn solve_checked(
     let wall = Duration::from_secs_f64(admitted_seconds);
     remaining(started, wall)?;
     let maximum = *axis.last().unwrap();
-    let prepared = prepare_geometry(board, geometry, &[], maximum, budget, started, wall, false)?;
+    let mixed_grid = super::mixed_conductor::CheckedGrid {
+        frequencies_hz: &axis,
+        reference_ohm: &refs,
+        max_iterations: iterations,
+    };
+    if !geometry.cut_planes.is_empty() || geometry.allow_insulated_copper_cuts {
+        return Err(error(
+            "BOARD_FOIL_SCOPE",
+            "complete copper and original finite pads required",
+        ));
+    }
+    let mesh = board_mesh::build(board, geometry, budget, remaining(started, wall)?)?;
+    let planar_stack = (3..=15).contains(&geometry.stack.len())
+        && geometry.stack.len() % 2 == 1
+        && geometry
+            .stack
+            .iter()
+            .enumerate()
+            .all(|(i, layer)| layer.copper == (i % 2 == 0));
+    let mixed = |mesh| {
+        let mut checked = super::mixed_conductor::solve_checked_mesh(
+            mesh, geometry, mixed_grid, budget, started, wall,
+        )?;
+        checked["provenance"]["maxSeconds"] = json!(admitted_seconds);
+        checked["provenance"]["maxMemoryMiB"] = json!(admitted_memory);
+        Ok(checked)
+    };
+    if !planar_stack
+        || !mesh.barrel_ids.is_empty()
+        || super::mixed_conductor::has_projected_pad_collision(&mesh, &geometry.electrodes)?
+    {
+        return mixed(mesh);
+    }
+    let prepared = prepare_geometry_from_mesh(mesh, geometry, &[], budget, started, wall, false)?;
+    if current_space::verify_local_thin_scope(&prepared.foils, maximum).is_err() {
+        let Geometry { mesh, .. } = prepared;
+        return mixed(mesh);
+    }
     let Geometry {
         mesh,
         foils,
@@ -808,6 +864,7 @@ pub fn solve_checked(
     checked["ports"] = json!(geometry.ports);
     checked["provenance"] = json!({
         "method":"board-derived conforming foil, checked matched exact grid",
+        "modelKind":"foil","barrelIds":[],
         "sourceMapping":mesh.source_mapping,"electrodeAreasM2":mesh.electrode_areas_m2,
         "maxCopperVolumeChange":max_copper_volume_change,"prisms":supports.len(),
         "retainedPotentials":space.diagnostic_model().potential_nodes.len(),

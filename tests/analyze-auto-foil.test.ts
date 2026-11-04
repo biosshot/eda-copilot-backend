@@ -11,6 +11,28 @@ import { isAnalysisProblem, type BoardFoilProblem } from '../src/analyze/types.t
 import { finitePlaneBend, finitePlaneBendDsl as source } from './helpers/pcb-analysis-finite-plane-bend.ts';
 import { createHash } from 'node:crypto';
 
+type Geometry={allowInsulatedCopperCuts:boolean;roiMm:[[number,number],[number,number]];ports:[string,string][];cutPlanes:unknown;electrodes:{name:string;sourcePath:string}[]};
+
+function checkedMock(problem:BoardFoilProblem, sourceMapping:AnalysisBoardFoilCheckedReport['provenance']['sourceMapping'],
+ barrelIds:string[]=[]):AnalysisBoardFoilCheckedReport{
+ const g=problem.geometry as Geometry;
+ const {frequenciesHz,referenceOhm,budget}=problem.request;
+ const s=[[{real:.2,imaginary:0},{real:.5,imaginary:0}],[{real:.5,imaginary:0},{real:.2,imaginary:0}]];
+ const provenanceModel=barrelIds.length?{
+  modelKind:'mixed' as const,nativeCopperTetrahedra:28,volumeTetrahedra:28,
+  fullPotentialCount:4,fullCurrentCount:84,magneticQuadratureCoverage:'unverified' as const,
+ }:{modelKind:'foil' as const,maxMagneticReciprocity:0,maxMagneticRefinement:0,maxElectricReciprocity:0};
+ return {status:'complete',coverage:'unverified',representation:'S',frequenciesHz,referenceOhm:referenceOhm!,ports:g.ports,
+   parameters:frequenciesHz.map(()=>s),enrichment:[],
+   samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[0,1].map(input=>({input,kclRelative:0,kvlRelative:0,copperLossW:8.875,powerBalanceErrorW:0}))})),
+   quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0},
+   provenance:{method:barrelIds.length?'Mock mixed foil and volume':'Mock checked foil',...provenanceModel,barrelIds,sourceMapping,
+    electrodeAreasM2:Object.fromEntries(g.electrodes.map(e=>[e.name,1e-8])),maxCopperVolumeChange:0,prisms:barrelIds.length?0:28,
+    retainedPotentials:4,currentModes:6,plannedBytes:1024,maxSeconds:budget.maxSeconds,maxMemoryMiB:budget.maxMemoryMiB,
+    spatialCoverage:'unverified',bandCoverage:'unverified',driveConvention:'1A RMS Norton'},
+  };
+}
+
 test('finite lateral return triggers the joint foil producer and exact physical S replay',async()=>{
  const board=finitePlaneBend();
  const foilCalls:BoardFoilProblem[]=[];
@@ -20,25 +42,16 @@ test('finite lateral return triggers the joint foil producer and exact physical 
   assert.equal(problem.kind,'board-foil-checked');
   assert.ok(isAnalysisProblem(problem));
   foilCalls.push(problem);
-  const g=problem.geometry as {allowInsulatedCopperCuts:boolean;ports:[string,string][];cutPlanes:unknown;electrodes:{name:string;sourcePath:string}[]};
+  const g=problem.geometry as Geometry;
   assert.equal(g.allowInsulatedCopperCuts,false);
   assert.deepEqual(g.cutPlanes,{});
   assert.deepEqual(g.ports.map(pair=>pair.map(name=>g.electrodes.find(e=>e.name===name)?.sourcePath)),[['pads[0]','pads[2]'],['pads[1]','pads[3]']]);
-  const {frequenciesHz,referenceOhm,budget}=problem.request;
+  const {frequenciesHz,referenceOhm}=problem.request;
   assert.deepEqual(frequenciesHz,[1000,3000]);
   assert.deepEqual(referenceOhm,[50,50]);
   const captured=capturedBoardGeometry(problem.boardJson);
   assert.ok(captured.regions.some(region=>region.source.path.includes('zones[0]')));
-  const s=[[{real:.2,imaginary:0},{real:.5,imaginary:0}],[{real:.5,imaginary:0},{real:.2,imaginary:0}]];
-  const report:AnalysisBoardFoilCheckedReport={status:'complete',coverage:'unverified',representation:'S',frequenciesHz,referenceOhm:referenceOhm!,ports:g.ports,
-   parameters:frequenciesHz.map(()=>s),enrichment:[],
-   samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[0,1].map(input=>({input,kclRelative:0,kvlRelative:0,copperLossW:8.875,powerBalanceErrorW:0}))})),
-   quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0},
-   provenance:{method:'Mock checked foil',sourceMapping:captured.regions.map(region=>[region.id,region.source.path,region.source.net,region.layer]),
-    electrodeAreasM2:Object.fromEntries(g.electrodes.map(e=>[e.name,1e-8])),maxCopperVolumeChange:0,prisms:28,
-    retainedPotentials:4,currentModes:6,plannedBytes:1024,maxSeconds:budget.maxSeconds,maxMemoryMiB:budget.maxMemoryMiB,
-    maxMagneticReciprocity:0,maxMagneticRefinement:0,maxElectricReciprocity:0,spatialCoverage:'unverified',bandCoverage:'unverified',driveConvention:'1A RMS Norton'},
-  };
+  const report=checkedMock(problem,captured.regions.map(region=>[region.id,region.source.path,region.source.net,region.layer]));
   mutateReport?.(report);
   return report;
  }) as NonNullable<Parameters<typeof createLocalExecutor>[0]>);
@@ -107,4 +120,57 @@ test('finite lateral return triggers the joint foil producer and exact physical 
   const rejected=await run(source);
   assert.match(rejected.error?.message??'',/CHANNEL_FOIL_EVIDENCE/);
  }
+});
+test('closed lateral candidate retains local barrel provenance and ignores a distant via',async()=>{
+ const board=finitePlaneBend();
+ for(const point of board.outline)if(point.x>1)point.x=5;
+ const via=(id:string,x:number)=>({id,net:'RETURN',at:{x,y:.55},diameterMm:.3,drillMm:.15,type:'through',fromLayer:'TOP',toLayer:'BOTTOM'});
+ board.copper.fixed.vias=[via('local-return-via',.55),via('remote-return-via',4)];
+ let calls=0,omitBarrel=false,mislabelModel=false;
+ const local=createLocalExecutor(((problem:BoardFoilProblem):AnalysisBoardFoilCheckedReport=>{
+  assert.equal(problem.kind,'board-foil-checked');
+  calls++;
+  const geometry=problem.geometry as Geometry;
+  assert.equal(geometry.allowInsulatedCopperCuts,false);
+  assert.deepEqual(geometry.cutPlanes,{});
+  assert.ok(geometry.roiMm[1][0]<3);
+  const captured=capturedBoardGeometry(problem.boardJson);
+  const [near,far]=captured.holes;
+  assert.deepEqual(captured.holes.map(hole=>hole.source.source_id),['local-return-via','remote-return-via']);
+  assert.ok(near.plated&&near.span_confirmed&&far.plated&&far.span_confirmed);
+  const sourceMapping:AnalysisBoardFoilCheckedReport['provenance']['sourceMapping']=captured.regions
+   .filter(region=>region.source.source_id!=='remote-return-via')
+   .map(region=>[region.id,region.source.path,region.source.net,region.layer]);
+  const report=checkedMock(problem,sourceMapping,[near.id]);
+  if(omitBarrel)report.provenance.barrelIds=[];
+  if(mislabelModel)Object.assign(report.provenance,{modelKind:'foil',prisms:28});
+  return report;
+ }) as NonNullable<Parameters<typeof createLocalExecutor>[0]>);
+ const run=()=>executeScenario({board,code:source},
+  {filename:'automatic-mixed.js',maxEntries:1000,maxOutputBytes:4*1024*1024},()=>{},
+  async task=>{
+   const result=await local(task as AnalysisTask<'impedance'>);
+   const solution=result.solution as any;
+   const near=capturedBoardGeometry(JSON.stringify(board)).holes[0];
+   assert.equal(result.status,'partial');
+   assert.match(result.method,/mixed foil and volume/);
+   assert.equal(result.network?.validity?.status,'conditional');
+   assert.match(result.network?.validity?.reason??'',/volumetric copper/);
+   assert.deepEqual(solution.foilPlan.sourceBarrels,[{barrelId:near.id,sourcePath:near.source.path,layers:near.layers}]);
+   assert.equal(solution.provenance.modelKind,'mixed');
+   return result;
+  });
+ const accepted=await run();
+ assert.equal(accepted.status,'complete',JSON.stringify(accepted.error));
+ omitBarrel=true;
+ assert.equal((await run()).error?.code,'CHANNEL_FOIL_EVIDENCE');
+ omitBarrel=false;
+ mislabelModel=true;
+ assert.equal((await run()).error?.code,'CHANNEL_FOIL_EVIDENCE');
+ assert.equal(calls,3);
+ board.holes.push({id:'unconfirmed-span',at:{x:.8,y:.8},hole:{shape:'round',diameterMm:.15,plated:true}});
+ const captured=capturedBoardGeometry(JSON.stringify(board));
+ assert.ok(captured.holes.some(hole=>hole.source.source_id==='unconfirmed-span'&&hole.plated&&!hole.span_confirmed));
+ assert.equal((await run()).error?.code,'CHANNEL_FOIL_PADSTACK');
+ assert.equal(calls,3);
 });

@@ -1,4 +1,5 @@
 import {LocalModelCache,localCoreIdentity,magneticPrecision as selectedMagneticPrecision,localExtractionKey,sectionFieldIdentity} from './local-model-cache.ts';
+import { cachedBoardFoilReport } from './board-foil-cache.ts';
 import { createRequire } from 'node:module';
 import { backendResource } from '../runtime/resources.ts';
 import type { AnalysisProblem, AnalysisResult } from './types.ts';
@@ -23,15 +24,29 @@ export function createProblemExecutor(retainDcForScenario = false) {
   const localCache=workerModelCache??=new LocalModelCache();let coreIdentity:string|undefined;let magneticProfile:string|undefined;let magneticPrecision:string|undefined;
   let session: import('../../native/analyze/index.js').AnalysisDcSession | undefined;
   let electrical: import('../../native/analyze/index.js').AnalysisElectricalSession | undefined;
+  const checkedCoreIdentity = () => {
+    const activeProfile=process.env.P7_MAGNETIC_PROFILE??'baseline';
+    if(magneticProfile!==undefined&&magneticProfile!==activeProfile)throw new Error('LOCAL_CACHE: magnetic profile changed during executor lifetime');
+    const activePrecision=selectedMagneticPrecision();
+    if(magneticPrecision!==undefined&&magneticPrecision!==activePrecision)throw new Error('LOCAL_CACHE: magnetic precision changed during executor lifetime');
+    coreIdentity ??= localCoreIdentity();magneticProfile=activeProfile;magneticPrecision=activePrecision;
+    return coreIdentity;
+  };
   return <P extends AnalysisProblem>(problem: P): AnalysisResult<P> => {
-    const addon = createRequire(import.meta.url)(backendResource('native', 'node-addon', 'index.cjs')) as typeof import('../../native/node-addon/index.cjs');
+    const loadAddon = () => createRequire(import.meta.url)(backendResource('native', 'node-addon', 'index.cjs')) as typeof import('../../native/node-addon/index.cjs');
+    if(problem.kind==='board-foil-checked'){
+      const started=performance.now();
+      try {
+        return cachedBoardFoilReport(localCache,checkedCoreIdentity(),problem,request=>{
+          electrical ??= new (loadAddon().AnalysisElectricalSession)();
+          return electrical.solveBoardFoilChecked(problem.boardJson,problem.geometry,request);
+        },started) as AnalysisResult<P>;
+      }
+      finally{if(!retainDcForScenario&&electrical){electrical.clear();electrical=undefined;}}
+    }
+    const addon = loadAddon();
     let result: AnalysisResult;
     if(problem.kind==='board-section'){electrical ??=new addon.AnalysisElectricalSession();result=electrical.sliceBoardSection(problem.boardJson,problem.stack,problem.slice);}
-    else if(problem.kind==='board-foil-checked'){
-      electrical ??= new addon.AnalysisElectricalSession();
-      try { result=electrical.solveBoardFoilChecked(problem.boardJson,problem.geometry,problem.request); }
-      finally{if(!retainDcForScenario){electrical.clear();electrical=undefined;}}
-    }
     else if(problem.kind==='local-dc-extraction'){
       electrical ??= new addon.AnalysisElectricalSession();
       try { result=electrical.solveLocalDc(problem.boardJson,problem.request,problem.remainingSeconds); }
@@ -40,8 +55,8 @@ export function createProblemExecutor(retainDcForScenario = false) {
     else if(problem.kind==='local-extraction'){
       electrical ??= new addon.AnalysisElectricalSession();try{const r=problem.request;const requestStart=performance.now();const remaining=()=>{const seconds=(r.remainingSeconds??300)-(performance.now()-requestStart)/1000;if(!Number.isFinite(seconds)||seconds<=0||seconds>Number(process.env.P7_VERIFY_SECONDS??300))throw new Error('LOCAL_DEADLINE: shared planning/cache/prepare/solve deadline');return seconds;};
       if(r.bandHz[0]!==1000||r.bandHz[1]!==100000||r.frequenciesHz.some(f=>f<r.bandHz[0]||f>r.bandHz[1]))throw new Error('LOCAL_BAND: unsupported band; explicit validation/rebuild required');
-      const activeProfile=process.env.P7_MAGNETIC_PROFILE??'baseline';if(magneticProfile!==undefined&&magneticProfile!==activeProfile)throw new Error('LOCAL_CACHE: magnetic profile changed during executor lifetime');const activePrecision=selectedMagneticPrecision();if(magneticPrecision!==undefined&&magneticPrecision!==activePrecision)throw new Error("LOCAL_CACHE: magnetic precision changed during executor lifetime");coreIdentity ??= localCoreIdentity();magneticProfile=activeProfile;magneticPrecision=activePrecision;
-      const key=localExtractionKey(localCache,coreIdentity,r);
+      const core=checkedCoreIdentity();
+      const key=localExtractionKey(localCache,core,r);
       const prepare=()=>({...electrical!.prepareLocal(r.boardJson,r.geometry,remaining(),r.magneticPatchLevel,r.frequencyAudit),extraction:{schema:1,coreIdentity,magneticProfile,magneticPrecision,magneticPatchLevel:r.magneticPatchLevel??null,bandHz:r.bandHz,units:{position:'m',C:'F',L:'H',R:'Ohm',current:'A',loss:'W'},references:'physical finite differential ports; exterior capacitance retained',validation:{status:'conditional',electric:'accepted-v1',fullReduced:'incomplete'},assumptions:[(r.geometry as {allowInsulatedCopperCuts?:boolean}).allowInsulatedCopperCuts?'insulated ROI cuts':'complete copper islands; no insulated cuts','explicit materials/plating','finite exterior domain','no dielectric loss or arbitrary RF applicability']}});
       const validate=(prepared:unknown)=>{const p=prepared as any;if(p.extraction?.schema!==1||p.extraction.coreIdentity!==coreIdentity||p.extraction.magneticProfile!==magneticProfile||p.extraction.magneticPrecision!==magneticPrecision||p.extraction.validation?.status!=='conditional'||p.extraction.magneticPatchLevel!==(r.magneticPatchLevel??null)||JSON.stringify(p.extraction.bandHz)!==JSON.stringify(r.bandHz))throw new Error('LOCAL_CACHE: metadata/version/band refusal');electrical!.solveLocal({prepared,frequenciesHz:[]},remaining());};
       // Independent holdouts need the live full operator. This request-scoped
@@ -71,11 +86,11 @@ export function createProblemExecutor(retainDcForScenario = false) {
     else if (problem.kind === 'cross-section') {
       electrical ??= new addon.AnalysisElectricalSession();
       try {
-        const activeProfile=process.env.P7_MAGNETIC_PROFILE??'baseline';if(magneticProfile!==undefined&&magneticProfile!==activeProfile)throw new Error('LOCAL_CACHE: magnetic profile changed during executor lifetime');const activePrecision=selectedMagneticPrecision();if(magneticPrecision!==undefined&&magneticPrecision!==activePrecision)throw new Error("LOCAL_CACHE: magnetic precision changed during executor lifetime");coreIdentity ??= localCoreIdentity();magneticProfile=activeProfile;magneticPrecision=activePrecision;const {boardIdentity,budget,...physical}=problem.request;
-        const key=localCache.key({core:coreIdentity,kind:'section-v3',request:physical});
+        const core=checkedCoreIdentity();const {boardIdentity,budget,...physical}=problem.request;
+        const key=localCache.key({core,kind:'section-v3',request:physical});
         const sectionStart=performance.now(),seconds=budget?.maxSeconds??Number((physical.line as any)?.geometry?.maxSeconds??120);const sectionBudget=()=>{const left=seconds-(performance.now()-sectionStart)/1000;if(!Number.isFinite(left)||left<=0)throw new Error('SECTION_TIMEOUT: shared cache/field/propagation deadline');return {...budget,maxSeconds:left};};
-        try {let validatedSection:any;const cached=localCache.obtain(key,()=>{const fieldKey=localCache.key({core:coreIdentity,kind:'section-field-v1',request:sectionFieldIdentity(physical)});
-          const field=localCache.obtain(fieldKey,()=>{const value=electrical!.solveCrossSection({...physical,budget:sectionBudget()});if(value.status!=='complete')throw Object.assign(new Error('section rejected'),{sectionReport:value});return {...value,fieldCacheMetadata:{schema:1,coreIdentity,key:fieldKey}};},value=>{const v=value as any;if(v.fieldCacheMetadata?.schema!==1||v.fieldCacheMetadata.coreIdentity!==coreIdentity||v.fieldCacheMetadata.key!==fieldKey||localCache.key({core:coreIdentity,kind:'section-field-v1',request:sectionFieldIdentity({line:v.input,mesh:v.fieldRequestMesh??undefined})})!==fieldKey)throw new Error('Section field cache identity refusal');const checked=electrical!.propagateCrossSection({line:v.input,frequencies:v.frequenciesHz,mesh:v.fieldRequestMesh??undefined,budget:sectionBudget()},value);if(checked.status!=='complete')throw new Error('Stored section coefficients failed native validation');});
+        try {let validatedSection:any;const cached=localCache.obtain(key,()=>{const fieldKey=localCache.key({core,kind:'section-field-v1',request:sectionFieldIdentity(physical)});
+          const field=localCache.obtain(fieldKey,()=>{const value=electrical!.solveCrossSection({...physical,budget:sectionBudget()});if(value.status!=='complete')throw Object.assign(new Error('section rejected'),{sectionReport:value});return {...value,fieldCacheMetadata:{schema:1,coreIdentity,key:fieldKey}};},value=>{const v=value as any;if(v.fieldCacheMetadata?.schema!==1||v.fieldCacheMetadata.coreIdentity!==coreIdentity||v.fieldCacheMetadata.key!==fieldKey||localCache.key({core,kind:'section-field-v1',request:sectionFieldIdentity({line:v.input,mesh:v.fieldRequestMesh??undefined})})!==fieldKey)throw new Error('Section field cache identity refusal');const checked=electrical!.propagateCrossSection({line:v.input,frequencies:v.frequenciesHz,mesh:v.fieldRequestMesh??undefined,budget:sectionBudget()},value);if(checked.status!=='complete')throw new Error('Stored section coefficients failed native validation');});
           const report=electrical!.propagateCrossSection({...physical,budget:sectionBudget()},field.value);if(report.status!=='complete')throw Object.assign(new Error('section replay rejected'),{sectionReport:report});
           return {...report,fieldCache:field.evidence,cacheMetadata:{schema:1,coreIdentity,units:{C:'F/m',L:'H/m',R:'Ohm/m',G:'S/m'},validation:'conditional',bandHz:[physical.frequencies[0],physical.frequencies.at(-1)]}};},value=>{
           const v=value as any;if(v.status!=='complete'||v.cacheMetadata?.coreIdentity!==coreIdentity||v.cacheMetadata?.schema!==1||!v.parameters)throw new Error('Section cache shape/version refusal');
@@ -92,8 +107,8 @@ export function createProblemExecutor(retainDcForScenario = false) {
     else if (problem.kind === 'channel-magnetic') {
       electrical ??= new addon.AnalysisElectricalSession();
       try {
-        const {budget,...physical}=problem.request as any;coreIdentity??=localCoreIdentity();
-        const key=localCache.key({core:coreIdentity,kind:'channel-magnetic-v1',request:physical});
+        const {budget,...physical}=problem.request as any;const core=checkedCoreIdentity();
+        const key=localCache.key({core,kind:'channel-magnetic-v1',request:physical});
         const cached=localCache.obtain(key,()=>electrical!.solveChannelMagnetic(problem.request),value=>validateChannelMagneticCache(value,physical,budget));
         result={...cached.value,elapsedMs:cached.evidence.status==='cold'?cached.value.elapsedMs:cached.evidence.restoreSeconds*1000,cache:cached.evidence};
       }

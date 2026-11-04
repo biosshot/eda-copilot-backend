@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
-const TRAINING_HZ: [f64; 2] = [10_000., 100_000.];
+pub(super) const TRAINING_HZ: [f64; 2] = [10_000., 100_000.];
 const MAX_SAMPLES: usize = 33;
 
 #[derive(Deserialize, Serialize)]

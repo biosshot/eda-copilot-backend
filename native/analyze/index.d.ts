@@ -235,6 +235,7 @@ export interface AnalysisBoardFoilCheckedReport {
     quality: { maxKclRelative: number; maxKvlRelative: number; maxColumnPowerBalanceErrorW: number };
     provenance: {
         method: string;
+        barrelIds: string[];
         sourceMapping: [regionId: string, sourcePath: string, net: string | null, layer: string][];
         electrodeAreasM2: Record<string, number>;
         maxCopperVolumeChange: number;
@@ -244,13 +245,16 @@ export interface AnalysisBoardFoilCheckedReport {
         plannedBytes: number;
         maxSeconds: number;
         maxMemoryMiB: number;
-        maxMagneticReciprocity: number;
-        maxMagneticRefinement: number;
-        maxElectricReciprocity: number;
         spatialCoverage: 'unverified';
         bandCoverage: 'unverified';
         driveConvention: string;
-    };
+    } & (
+        | { modelKind: 'foil'; maxMagneticReciprocity: number; maxMagneticRefinement: number; maxElectricReciprocity: number }
+        | {
+            modelKind: 'mixed'; nativeCopperTetrahedra: number; volumeTetrahedra: number;
+            fullPotentialCount: number; fullCurrentCount: number; magneticQuadratureCoverage: 'unverified';
+        }
+    );
 }
 export declare class AnalysisElectricalSession {constructor();sliceBoardSection(boardJson:string,stack:unknown,slice:unknown):any;solveBoardFoilChecked(boardJson:string,geometry:unknown,request:AnalysisBoardFoilCheckedRequest):AnalysisBoardFoilCheckedReport;prepareLocal(boardJson:string,request:unknown,remainingSeconds?:number,magneticPatchLevel?:1|2,frequencyAudit?:unknown):any;solveLocalDc(boardJson:string,request:AnalysisLocalDcRequest,remainingSeconds?:number):AnalysisLocalDcReport;solveLocal(request:{prepared:unknown;frequenciesHz:number[];drive?:number[];loadsOhm?:(number|null)[]},remainingSeconds?:number,observablesOnly?:boolean):any;solve(request:AnalysisElectricalRequest):AnalysisElectricalReport; solveFrequency(request:AnalysisFrequencyRequest):AnalysisFrequencyReport; solveChannelMagnetic(request:unknown):any; solveTransient(request:AnalysisTransientRequest):AnalysisTransientReport; solveCrossSection(request:AnalysisCrossSectionRequest):AnalysisCrossSectionReport;propagateCrossSection(request:AnalysisCrossSectionRequest,prepared:unknown):AnalysisCrossSectionReport;clear():void}
 

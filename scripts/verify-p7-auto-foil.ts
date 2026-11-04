@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
+import {createRequire} from 'node:module';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
-import type {AnalysisBoardFoilCheckedReport} from '../native/analyze/index.js';
+import type {BoardFoilReport} from '../src/analyze/types.ts';
 import {createAnalysisExecutor,type ExecutionResult} from '../src/analyze/analysis-dsl/executor.ts';
 import {executeScenario} from '../src/analyze/analysis-dsl/scenario.ts';
 import type {PhysicalPortSampleData} from '../src/analyze/analysis-dsl/spec-doc.js';
@@ -20,6 +21,10 @@ const shaPattern=/^[a-f0-9]{64}$/;
 const budget={maxSeconds:1800,maxMemoryMiB:3072};
 process.env.P7_VERIFY_SECONDS=String(budget.maxSeconds);
 process.env.P7_VERIFY_MEMORY_MIB=String(budget.maxMemoryMiB);
+const cacheCheck=process.env.P7_AUTO_FOIL_CACHE_CHECK;
+assert.ok(cacheCheck===undefined||cacheCheck==='cold'||cacheCheck==='restart','Unknown P7_AUTO_FOIL_CACHE_CHECK');
+if(cacheCheck)assert.ok(process.env.PCB_ANALYSIS_CACHE_DIR,'Cache smoke requires a dedicated PCB_ANALYSIS_CACHE_DIR');
+let nativeCalls=0;
 const coupon=process.env.P7_AUTO_FOIL_COUPON??'finite-plane-bend';
 assert.ok(coupon==='finite-plane-bend'||coupon==='finite-foil-witness','Unknown foil smoke coupon '+coupon);
 const witness=coupon==='finite-foil-witness';
@@ -42,8 +47,21 @@ let executorError:unknown;
 let solverBoardSha256:string|undefined;
 try{
  write('config.json',{...config,coreIdentity:localCoreIdentity()});
+ if(cacheCheck){
+  // Bound this smoke to one native extraction. A warm/restart miss must fail
+  // before entering native geometry or FEM even if a cache file is corrupt.
+  const addon=createRequire(import.meta.url)('../native/node-addon/index.cjs') as typeof import('../native/node-addon/index.cjs');
+  const session=addon.AnalysisElectricalSession.prototype;
+  const solve=session.solveBoardFoilChecked;
+  session.solveBoardFoilChecked=function(...args:Parameters<typeof solve>){
+   assert.ok(cacheCheck==='cold'&&nativeCalls===0,'Unexpected native foil solve during cache replay');
+   nativeCalls++;
+   return solve.apply(this,args);
+  };
+ }
  const execute=createAnalysisExecutor();
- const scenario=await executeScenario({board,code:source},{filename:'automatic-foil-smoke.js',maxEntries:1000,maxOutputBytes:32*1024*1024},()=>{},
+ const options={filename:'automatic-foil-smoke.js',maxEntries:1000,maxOutputBytes:32*1024*1024};
+ const scenario=await executeScenario({board,code:source},options,()=>{},
   async task=>{
    if(task.kind==='impedance'&&task.board){
     const exact=JSON.stringify(task.board);
@@ -91,7 +109,7 @@ try{
   const expected=sample[out][input],actual=replayed.parameters[0][out][input];
   assert.ok(Math.hypot(actual.real-expected.real,actual.imaginary-expected.imaginary)<=1e-12,'Exact-grid P6 replay changed S');
  }
- const solution=producer.solution as unknown as AnalysisBoardFoilCheckedReport & {
+ const solution=producer.solution as unknown as BoardFoilReport & {
   foilPlan:{producer:{boardSha256:string;geometrySha256:string};physicalPorts:unknown};
  };
  const producerDomain=producer.network?.validity?.domain as Record<string,unknown>;
@@ -132,6 +150,32 @@ try{
    assert.ok(column.copperLossW>=0&&column.powerBalanceErrorW>=0&&column.powerBalanceErrorW<=limit);
    assert.ok(Math.abs(net-column.copperLossW)<=limit);
   }
+ }
+ if(cacheCheck){
+  assert.equal(solution.cache?.status,cacheCheck==='cold'?'cold':'disk');
+  assert.equal(nativeCalls,cacheCheck==='cold'?1:0);
+  let warm:BoardFoilReport|undefined;
+  if(cacheCheck==='cold'){
+   const second=await executeScenario({board,code:source},options,()=>{},async task=>{
+    const result=await execute(task);
+    if(task.kind==='impedance')warm=result.solution as unknown as BoardFoilReport;
+    return result;
+   });
+   write('warm-report.json',second);
+   assert.equal(second.status,'complete',JSON.stringify(second.error));
+   assert.equal(warm?.cache?.status,'memory');
+   assert.equal(warm.cache.key,solution.cache?.key);
+   assert.equal(warm.cache.assembly,0);
+   assert.equal(warm.cache.training,0);
+   assert.deepEqual(warm.parameters,solution.parameters);
+   assert.deepEqual(warm.provenance,solution.provenance);
+   assert.deepEqual(warm.samples,solution.samples);
+   assert.equal(nativeCalls,1);
+  }else{
+   assert.equal(solution.cache?.assembly,0);
+   assert.equal(solution.cache?.training,0);
+  }
+  write('cache-comparison.json',{nativeCalls,initial:solution.cache,warm:warm?.cache});
  }
  write('error.json',null);
  write('comparison.json',{status:'pass',coupon,elapsedSeconds:(performance.now()-start)/1000,

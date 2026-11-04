@@ -4,6 +4,17 @@ import {LocalModelCache,canonical,digest,localExtractionKey} from '../src/analyz
 const fixture={status:'complete',model:{R:1},validity:{status:'conditional',reason:'finite band'},recovery:[1,2]};
 const validate=(v:any)=>{assert.equal(v.status,'complete');assert.equal(v.model.R,1);assert.equal(v.validity.status,'conditional');assert.deepEqual(v.recovery,[1,2]);};
 const dir=()=>mkdtempSync(join(tmpdir(),'analyze-model-cache-'));
+test('audited copper mesh identity follows its upper frequency without invalidating ordinary extraction',()=>{
+ const d=dir();try{
+  const cache=new LocalModelCache(d),base={boardJson:'{}',geometry:{},bandHz:[1000,100000]};
+  const plain=localExtractionKey(cache,'core',base);
+  const key=(low:number,high:number)=>localExtractionKey(cache,'core',{...base,frequencyAudit:{intervalHz:[low,high]}});
+  assert.notEqual(key(1000,10000),plain);
+  assert.notEqual(key(1000,10000),key(1000,100000));
+  assert.equal(key(1000,10000),key(2000,10000));
+  assert.equal(plain,localExtractionKey(cache,'core',{...base,frequencyAudit:undefined}));
+ }finally{rmSync(d,{recursive:true,force:true});}
+});
 test('cold, isolated memory hit, cleared/fresh-process disk restore and no assembly/training on hit',()=>{
  const d=dir();try{let calls=0;const cache=new LocalModelCache(d),key=cache.key({board:'B',port:'p',band:[1,2],core:'v'});
  const run=()=>{calls++;return structuredClone(fixture);};const cold=cache.obtain(key,run,validate);assert.equal(cold.evidence.status,'cold');assert.equal(calls,1);

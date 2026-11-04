@@ -398,3 +398,44 @@ fn asymmetric_four_foil_stack_preserves_floating_planes_and_physical_response() 
     assert!(ac.residual.kcl_relative <= 1e-8 && ac.residual.kvl_relative <= 1e-8);
     assert_eq!(ac.coverage, "unverified");
 }
+
+#[test]
+fn mixed_thickness_board_checks_shared_matched_response_in_original_coordinates() {
+    use pcb_analyze::extraction::local::mixed_conductor::{solve_checked, CheckedGrid};
+    let (board, mut request) = fixture();
+    // Use the same finite pads and dielectric. The bottom copper exceeds the
+    // thin screen on its narrow cells, while the top retains sheet modes.
+    request.stack.last_mut().unwrap().thickness_m = 0.1e-3;
+    let checked = solve_checked(
+        &board,
+        &request,
+        CheckedGrid {
+            frequencies_hz: &[1_000.],
+            reference_ohm: &[50., 50.],
+            max_iterations: 16,
+        },
+        AllocationBudget {
+            max_bytes: 512 * 1024 * 1024,
+            ..budget()
+        },
+        Duration::from_secs(300),
+    )
+    .unwrap();
+    assert_eq!(checked["coverage"], "unverified");
+    assert_eq!(checked["ports"], json!(request.ports));
+    assert!(checked["provenance"]["volumeTetrahedra"].as_u64().unwrap() > 0);
+    assert!(checked["provenance"]["prisms"].as_u64().unwrap() > 0);
+    let columns = checked["samples"][0]["columns"].as_array().unwrap();
+    assert_eq!(columns.len(), 2);
+    for column in columns {
+        assert!(column["kclRelative"].as_f64().unwrap() <= 1e-8);
+        assert!(column["kvlRelative"].as_f64().unwrap() <= 1e-8);
+        assert!(column["copperLossW"].as_f64().unwrap() > 0.);
+    }
+    let s21 = &checked["parameters"][0][1][0];
+    assert!(s21["real"].as_f64().unwrap().abs() > 0.9);
+    eprintln!(
+        "mixed quality={} provenance={} enrichment={}",
+        checked["quality"], checked["provenance"], checked["enrichment"]
+    );
+}

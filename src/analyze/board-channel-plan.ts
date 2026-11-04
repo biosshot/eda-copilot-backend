@@ -14,6 +14,7 @@ type Options = {
     boundaryFraction?: number;
     autoFoilDeadlineMs?: number;
 };
+type JointGeometryReason = "finite-return-closure" | "no-finite-return-corridor" | "no-finite-return-interface";
 type Face = {
     id: string;
     a: number;
@@ -196,13 +197,13 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
             areaMm2?: number;
             transverseMm?: [number, number];
         } | undefined;
-        function refuseCorridor(reason: string, lateralReturn=false): never {
-            const foilCandidate=lateralReturn&&!components.length&&options.autoFoilDeadlineMs!==undefined?
+        function refuseCorridor(geometryReason: JointGeometryReason, reason: string): never {
+            const foilCandidate=!components.length&&options.autoFoilDeadlineMs!==undefined?
                 autoFoilPlan({boardJson,geometry:foilGeometry,captured:g,terminals:contacts,ports:externalPorts,
-                    seedRegions:new Set([...signalRegions,...returnIds,...contactRegions]),marginMm:margin,deadlineMs:options.autoFoilDeadlineMs,
-                    hasVias:Boolean(snapshot.copper?.fixed?.vias?.length||snapshot.copper?.editable?.vias?.length)}):undefined;
+                    seedRegions:new Set([...signalRegions,...returnIds,...contactRegions]),marginMm:margin,deadlineMs:options.autoFoilDeadlineMs}):undefined;
             throw Object.assign(new Error("CHANNEL_CORRIDOR: " + reason), {
                 code: "CHANNEL_CORRIDOR_UNSUPPORTED",
+                geometryReason,
                 ...(foilCandidate && { foilCandidate }),
                 corridorAudit: { corridors, returnClosure, contacts, sourceCopper: g.regions, physicalIslands: g.islands, physicalContacts: g.contacts, bores: g.holes, signalIsland: signalIslandIds.size === 1 ? [...signalIslandIds][0] : undefined, signalIslands: [...signalIslandIds], returnIslands: returns.map(i => i.id), geometryFindings: g.findings, signalRegions: g.regions.filter(r => signalRegions.has(r.id)).map(r => ({ regionId: r.id, sourcePath: r.source.path, layer: r.layer, areaMm2: r.area_mm2 })) }
             });
@@ -228,7 +229,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
             if (clipped || (!usable.length && lateralReturn)) {
                 if (corridors.length !== 1) {
                     returnClosure = { reason: "Finite return closure needs distributed interface coordinates across multiple corridors" };
-                    refuseCorridor(returnClosure.reason,lateralReturn);
+                    refuseCorridor("finite-return-closure", returnClosure.reason);
                 }
                 const [low, high] = corridors[0].transverseMm, centre = (low + high) / 2;
                 const halfWidth = Math.max(baseHalfWidth, centre - closedCross[0], closedCross[1] - centre) + margin;
@@ -241,7 +242,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
                 if (expanded.length !== 1 || expanded[0].lateralContinuations.length || !expanded[0].admissibleIntervalsMm.length) {
                     corridors = expanded;
                     returnClosure.reason = "Expanded finite return envelope still needs a distributed lateral or joint interface";
-                    refuseCorridor(returnClosure.reason,lateralReturn||expanded.some(c=>c.lateralContinuations.some(v=>returnIds.has(v.regionId))));
+                    refuseCorridor("finite-return-closure", returnClosure.reason);
                 }
                 domain = polygon;
                 corridors = expanded;
@@ -251,7 +252,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
             }
         }
         if (signalRuns.length && !usable.length)
-            refuseCorridor("No admissible finite-return uniform corridor; distributed lateral copper/material events require a joint domain");
+            refuseCorridor("no-finite-return-corridor", "No admissible finite-return uniform corridor; distributed lateral copper/material events require a joint domain");
         const cells = (signalRuns.length ? corridorCells(domain, usable, options.boundaryFraction) : [{ id: "event-0", polygonMm: domain, direction: [1, 0] as Point, routeIds: [] }]).filter((c) => relevant.some((r) => regionArea(r, c.polygonMm) > 1e-12));
         for (let pass = 0; pass < 32; pass++) {
             let merged = false;
@@ -333,7 +334,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
                 return { region, offset };
             }).find(candidate => candidate.region);
             if (!reference?.region)
-                return fail("No finite return at " + id + "; partition requires a joint/nonlocal return model");
+                return refuseCorridor("no-finite-return-interface", "No finite return at " + id + "; partition requires a joint/nonlocal return model");
             const { region: reference2, offset } = reference;
             const value2 = execute({ kind: "board-section", boardJson, stack: base2.stack, slice: { atMm: origin, transverseUnit: t, halfWidthMm: (span[1] - span[0]) / 2, airMarginMm: Math.max(1, 4 * height) * (options.domainScale ?? 1), referenceLayer: reference2.layer, referenceSourcePath: reference2.source.path, referenceXMm: offset } });
             const mapping = value2.sourceMapping, ref = mapping.find((m: any) => m.role === "reference"), signals = mapping.filter((m: any) => m.role !== "reference");
@@ -363,7 +364,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
             }
             if (!mapping.length)
                 return void 0;
-            const reference2 = mapping.find((m: any) => m.regionIds.some((id: string) => returnIds.has(id))) ?? fail("No finite return contact at " + f.id + "; requires joint local domain");
+            const reference2 = mapping.find((m: any) => m.regionIds.some((id: string) => returnIds.has(id))) ?? refuseCorridor("no-finite-return-interface", "No finite return contact at " + f.id + "; requires joint local domain");
             const signals = mapping.filter((m: any) => m !== reference2), key = (m: any) => faceKey(f, m);
             if (!signals.length)
                 fail("Return-only shared face " + f.id + " requires a joint local domain; no fictitious differential reference");

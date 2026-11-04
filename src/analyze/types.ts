@@ -1,4 +1,6 @@
 import type { AnalysisBoardFoilCheckedRequest, AnalysisBoardFoilCheckedReport } from '../../native/analyze/index.js';
+import type { AutoFoilPlan } from './auto-foil-plan.ts';
+import type { CacheEvidence } from './local-model-cache.ts';
 import type { AnalysisLocalDcRequest, AnalysisLocalDcReport } from '../../native/analyze/index.js';
 import type {AnalysisValidationRequest,AnalysisValidationReport} from '../../native/analyze/index.js';
 import type { AnalysisImportReport, AnalysisGeometryReport, AnalysisGeometryOptions } from '../../native/analyze/index.js';
@@ -11,7 +13,15 @@ export type { AnalysisConductionOptions, AnalysisConductionReport };
 import type {LocalFrequencyAuditRequest} from './local-frequency-audit.ts';
 export interface LocalExtractionRequest {boardJson:string;geometry:unknown;remainingSeconds?:number;magneticPatchLevel?:1|2;observablesOnly?:boolean;frequencyAudit?:LocalFrequencyAuditRequest;frequenciesHz:number[];drive?:number[];loadsOhm?:(number|null)[];bandHz:[number,number];temperatureC?:number}
 export type LocalDcExtractionProblem = Readonly<{kind:'local-dc-extraction';boardJson:string;request:AnalysisLocalDcRequest;remainingSeconds:number}>;
-export type BoardFoilProblem = Readonly<{kind:'board-foil-checked';boardJson:string;geometry:unknown;request:AnalysisBoardFoilCheckedRequest}>;
+export type BoardFoilProblem = Readonly<{
+    kind: 'board-foil-checked'; boardJson: string; geometry: unknown;
+    expected: Pick<AutoFoilPlan, 'electrodePairs' | 'sourceCopper' | 'sourceBarrels'>;
+    request: AnalysisBoardFoilCheckedRequest;
+}>;
+export type BoardFoilReport = AnalysisBoardFoilCheckedReport & {cache?: CacheEvidence & {
+    policy: 'exact-grid-result'; producerBudget: AnalysisBoardFoilCheckedRequest['budget'];
+    replayBudget: AnalysisBoardFoilCheckedRequest['budget']; elapsedSeconds: number;
+}};
 export type AnalysisProblem = BoardFoilProblem | LocalDcExtractionProblem | Readonly<{kind:'board-section';boardJson:string;stack:unknown;slice:unknown}> | Readonly<{kind:'local-extraction';request:LocalExtractionRequest}> | Readonly<{ kind: 'import-board'; boardJson: string }>
     | Readonly<{kind:'geometry-validation';request:AnalysisValidationRequest}>
     | Readonly<{ kind: 'prepare-geometry'; boardJson: string; geometry?: Readonly<AnalysisGeometryOptions> }>
@@ -22,7 +32,7 @@ export type AnalysisProblem = BoardFoilProblem | LocalDcExtractionProblem | Read
     | Readonly<{ kind: 'cross-section'; request:AnalysisCrossSectionRequest }>
     | Readonly<{ kind: 'frequency-network'; request: AnalysisFrequencyRequest }>
     | Readonly<{ kind: 'channel-magnetic'; request: unknown }>;
-export type AnalysisResult<P extends AnalysisProblem = AnalysisProblem> = P extends BoardFoilProblem ? AnalysisBoardFoilCheckedReport : P extends LocalDcExtractionProblem ? AnalysisLocalDcReport : P extends {kind:'local-extraction'|'board-section'|'channel-magnetic'} ? any : P extends {kind:'transient-network'} ? AnalysisTransientReport : P extends {kind:'geometry-validation'} ? AnalysisValidationReport : P extends {kind:'cross-section'} ? AnalysisCrossSectionReport : P extends {kind:'frequency-network'} ? AnalysisFrequencyReport : P extends {kind:'electrical-network'} ? AnalysisElectricalReport : P extends { kind: 'dc' } ? AnalysisDcReport : P extends { kind: 'import-board' } ? AnalysisImportReport : P extends { kind: 'prepare-conduction' } ? AnalysisConductionReport : AnalysisGeometryReport;
+export type AnalysisResult<P extends AnalysisProblem = AnalysisProblem> = P extends BoardFoilProblem ? BoardFoilReport : P extends LocalDcExtractionProblem ? AnalysisLocalDcReport : P extends {kind:'local-extraction'|'board-section'|'channel-magnetic'} ? any : P extends {kind:'transient-network'} ? AnalysisTransientReport : P extends {kind:'geometry-validation'} ? AnalysisValidationReport : P extends {kind:'cross-section'} ? AnalysisCrossSectionReport : P extends {kind:'frequency-network'} ? AnalysisFrequencyReport : P extends {kind:'electrical-network'} ? AnalysisElectricalReport : P extends { kind: 'dc' } ? AnalysisDcReport : P extends { kind: 'import-board' } ? AnalysisImportReport : P extends { kind: 'prepare-conduction' } ? AnalysisConductionReport : AnalysisGeometryReport;
 export type AnalysisProgress = {
     jobId: string;
     phase: 'queued' | 'started' | 'completed' | 'failed' | 'cancelled';
@@ -42,7 +52,16 @@ export class AnalysisExecutionError extends Error {
 
 // Validate both the parent boundary and the worker boundary before native calls.
 export function isAnalysisProblem(value: unknown): value is AnalysisProblem {
-    if(record(value)&&value.kind==='board-foil-checked')return keys(value,['kind','boardJson','geometry','request'])&&typeof value.boardJson==='string'&&record(value.geometry)&&record(value.request)&&Array.isArray(value.request.frequenciesHz)&&record(value.request.budget)&&finiteJson(value.geometry)&&finiteJson(value.request);
+    if(record(value)&&value.kind==='board-foil-checked'){
+        const e=value.expected;
+        return keys(value,['kind','boardJson','geometry','expected','request'])&&typeof value.boardJson==='string'&&
+            record(value.geometry)&&record(value.request)&&Array.isArray(value.request.frequenciesHz)&&record(value.request.budget)&&
+            record(e)&&keys(e,['electrodePairs','sourceCopper','sourceBarrels'])&&
+            Array.isArray(e.electrodePairs)&&e.electrodePairs.every(p=>Array.isArray(p)&&p.length===2&&p.every(s=>typeof s==='string'))&&
+            Array.isArray(e.sourceCopper)&&e.sourceCopper.every(s=>record(s)&&typeof s.regionId==='string'&&typeof s.sourcePath==='string'&&typeof s.layer==='string')&&
+            Array.isArray(e.sourceBarrels)&&e.sourceBarrels.every(s=>record(s)&&typeof s.barrelId==='string'&&typeof s.sourcePath==='string'&&
+                Array.isArray(s.layers)&&s.layers.every(l=>typeof l==='string'))&&finiteJson(e)&&finiteJson(value.geometry)&&finiteJson(value.request);
+    }
     if(record(value)&&value.kind==='local-dc-extraction')return keys(value,['kind','boardJson','request','remainingSeconds'])&&typeof value.boardJson==='string'&&positive(value.remainingSeconds,3600)&&record(value.request)&&record(value.request.geometry)&&finiteJson(value.request);
     if(record(value)&&value.kind==='local-extraction')return keys(value,['kind','request'])&&record(value.request)&&typeof value.request.boardJson==='string'&&record(value.request.geometry)&&Array.isArray(value.request.frequenciesHz)&&Array.isArray(value.request.bandHz)&&finiteJson(value.request);
     if(record(value)&&value.kind==='transient-network')return keys(value,['kind','request'])&&record(value.request)&&(record(value.request.resource)!==record(value.request.topology))&&Array.isArray(value.request.drivers)&&Array.isArray(value.request.receivers)&&record(value.request.time)&&finiteJson(value.request);

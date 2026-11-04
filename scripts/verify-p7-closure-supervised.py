@@ -4,6 +4,9 @@ root=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('p7_supervisor',root/'scripts/verify-p7-automatic-supervised.py')
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
 out=pathlib.Path(os.environ.get('P7_SUPERVISOR_OUTPUT',str(root/'debugging/p7-closure'/str(time.time_ns()))));out.mkdir(parents=True,exist_ok=True)
+shared_cache=os.environ.get('P7_SUPERVISOR_CACHE_DIR')
+cache_dir=(root/pathlib.Path(shared_cache)).resolve() if shared_cache else (out/'cache').resolve()
+cache_mode='explicit shared directory' if shared_cache else 'cold isolated directory'
 parser=argparse.ArgumentParser()
 parser.add_argument('--memory-mib',type=int,default=1536)
 args=parser.parse_args()
@@ -13,8 +16,8 @@ if not math.isfinite(timeout) or timeout<=0:parser.error('supervisor timeout mus
 cap=args.memory_mib*1024**2;reserve=1024**3;head=s.windows_commit_headroom()
 reason=s.memory_refusal(True,psutil.virtual_memory().available,head,0,cap,reserve,True)
 if reason:
- (out/'supervision.json').write_text(json.dumps(dict(status='resource-failure',reason=reason)));raise SystemExit(1)
-env={**os.environ,'P7_OUTPUT_DIR':str(out),'PCB_ANALYSIS_CACHE_DIR':str(out/'cache')}
+ (out/'supervision.json').write_text(json.dumps(dict(status='resource-failure',reason=reason,cache=cache_mode,cachePath=str(cache_dir))));raise SystemExit(1)
+env={**os.environ,'P7_OUTPUT_DIR':str(out),'PCB_ANALYSIS_CACHE_DIR':str(cache_dir)}
 start=time.monotonic();rss=private=0
 with (out/'stdout.txt').open('w') as log:
  runner='scripts/verify-p7-closure-stripline.ts' if os.environ.get('P7_CLOSURE_CONTROL')=='stripline' else 'scripts/verify-p7-closure-baseline.ts'
@@ -40,6 +43,6 @@ if resultpath.exists():
 if reason:status='timeout' if 'deadline' in reason else 'resource-failure'
 elif p.returncode!=0 and status=='pass':status='child-failure'
 elif p.returncode!=0 and status=='missing-evidence':status='child-failure'
-e=dict(exitCode=p.returncode,status=status,reason=reason,wallSeconds=time.monotonic()-start,peakTreeRssBytes=rss,peakTreePrivateBytes=private,peakConvention='20ms sampled lower bound',initialCommitHeadroomBytes=head,capBytes=cap,reserveBytes=reserve,threads=env.get('RAYON_NUM_THREADS','default'),cache='cold isolated directory')
+e=dict(exitCode=p.returncode,status=status,reason=reason,wallSeconds=time.monotonic()-start,peakTreeRssBytes=rss,peakTreePrivateBytes=private,peakConvention='20ms sampled lower bound',initialCommitHeadroomBytes=head,capBytes=cap,reserveBytes=reserve,threads=env.get('RAYON_NUM_THREADS','default'),cache=cache_mode,cachePath=str(cache_dir))
 (out/'supervision.json').write_text(json.dumps(e,indent=2));print(json.dumps(dict(folder=str(out),**e)))
 raise SystemExit(0 if status=='pass' and p.returncode==0 else 1)

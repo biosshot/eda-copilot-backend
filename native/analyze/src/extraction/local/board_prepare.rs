@@ -1,6 +1,6 @@
 //! Shared local direct-FEM preparation and developer verification.
 //! CPU/F64, explicit physical requests, no external diagnostic process.
-use super::{board_mesh,conservative_current::ConservativeSpace,frequency_audit,volume_current,volume_field,volume_integral_magnetic,volume_reduction,volume_solve,AllocationBudget};
+use super::{board_mesh,conservative_current::ConservativeSpace,copper_skin_profile,frequency_audit,volume_current,volume_field,volume_integral_magnetic,volume_reduction,volume_solve,AllocationBudget};
 use crate::electrical::{coupled,Counters};
 use super::volume_field::ElectricApply;
 use super::volume_magnetic::MagneticApply;
@@ -233,7 +233,7 @@ pub fn run_with_budget(board:&crate::model::Board,r:&board_mesh::Request,options
 pub fn run_with_frequency_audit(board:&crate::model::Board,r:&board_mesh::Request,options:Options<'_>,seconds:f64,audit:Option<&frequency_audit::Request>)->Result<serde_json::Value,String> {
     if let Some(request)=audit {
         request.validate()?;
-        if options.mode!="prepare"||options.developer_checkpoint.is_some()||r.ports.is_empty()||r.ports.len()>16 {
+        if options.mode!="prepare"||options.developer_checkpoint.is_some()||options.cached_field.is_some()||r.ports.is_empty()||r.ports.len()>16 {
             return Err("LOCAL_FREQUENCY_AUDIT: production preparation and 1..16 physical ports required".into());
         }
     }
@@ -264,11 +264,16 @@ pub fn run_with_frequency_audit(board:&crate::model::Board,r:&board_mesh::Reques
     let accepted=if field_request.is_none()&&cached_field.is_none(){Some(accepted_electric_request(r)?)}else{None};
     let field_request=field_request.or(accepted.as_ref());
     let stage=std::time::Instant::now();
-    let b=board_mesh::build(&board,&r,budget,remaining()?)?;
+    let skin=audit.map(|request|copper_skin_profile::Profile{
+        upper_hz:frequency_audit::TRAINING_HZ.into_iter().fold(request.interval_hz[1],f64::max),
+        current_step_m:r.max_vertical_step_m,
+        field_step_m:field_request.map_or(r.max_vertical_step_m,|field|field.max_vertical_step_m),
+    });
+    let b=board_mesh::build_profiled(board,r,budget,remaining()?,None,&[],skin)?;
     record_stage(&mut stages,"geometry",stage);
     let field_b=if let Some(fr)=field_request.filter(|_|cached_field.is_none()) {
         if board_mesh::physical_signature(fr)!=board_mesh::physical_signature(r) {return Err("field refinement must preserve physical ROI, copper, bore, materials and finite contacts".into());}
-        let fb=board_mesh::build_supported(&board,&fr,AllocationBudget{max_bytes:budget.max_bytes.checked_sub(b.mesh.retained_bytes()?).ok_or("field mesh live budget exhausted")?,..field_limits},remaining()?,if r.electric_max_edge_m.is_some(){Some((&b.planar_nodes_mm,&b.planar_triangles))}else{None})?;
+        let fb=board_mesh::build_profiled(board,fr,AllocationBudget{max_bytes:budget.max_bytes.checked_sub(b.mesh.retained_bytes()?).ok_or("field mesh live budget exhausted")?,..field_limits},remaining()?,if r.electric_max_edge_m.is_some(){Some((&b.planar_nodes_mm,&b.planar_triangles))}else{None},&[],skin)?;
         if (fb.mesh.copper_volume_m3-b.mesh.copper_volume_m3).abs()>1e-8*b.mesh.copper_volume_m3||fb.barrel_ids!=b.barrel_ids||fb.source_mapping!=b.source_mapping {return Err("independent field mesh changed physical copper volume or source mapping".into());}Some(fb)
     }else{None};
     let field_mesh=&field_b.as_ref().unwrap_or(&b).mesh;
@@ -335,7 +340,7 @@ pub fn run_with_frequency_audit(board:&crate::model::Board,r:&board_mesh::Reques
         let stage=std::time::Instant::now();
         if !resumed&&full_mode {
             let full_solver=solver.as_ref().unwrap();
-            let tasks=[1e4,1e5].into_iter().flat_map(|f|(0..ports.len()).map(move|input|(f,input))).collect::<Vec<_>>();
+            let tasks=frequency_audit::TRAINING_HZ.into_iter().flat_map(|f|(0..ports.len()).map(move|input|(f,input))).collect::<Vec<_>>();
             let retained_training_bytes=currents.potential_count().checked_mul(6).and_then(|n|n.checked_add(currents.current_count().checked_mul(2)?)).and_then(|n|n.checked_mul(8*tasks.len())).ok_or("training states byte plan overflow")?;
             let live=full_solver.planned_bytes.checked_add(retained_training_bytes).ok_or("training live byte plan overflow")?;
             let workspace=full_solver.additional_solve_bytes()?;
@@ -509,6 +514,14 @@ pub fn run_with_frequency_audit(board:&crate::model::Board,r:&board_mesh::Reques
     if let Some(path)=cached_field {for key in ["fieldNodesM","fieldCopperCells","fieldTetrahedra","fieldCells","fieldEpsilonR","fieldVolumeM3"]{output.as_object_mut().unwrap().remove(key);}output["fieldDataSource"]=serde_json::json!({"kind":"complete-source-P1-Schur-checkpoint","path":path,"geometry":"stored producer evidence; no fabricated field grid in this output","physicalAdmission":false});}
     if !(mode=="verify") {remaining()?;}
     if let Some(evidence)=frequency_evidence {output["frequencyAudit"]=evidence;}
+    if let (Some(profile),Some(request))=(skin,audit) {
+        output["copperSkinMesh"]=serde_json::json!({
+            "version":copper_skin_profile::VERSION,"requestedUpperHz":request.interval_hz[1],
+            "effectiveUpperHz":profile.upper_hz,"skinDepthDivisor":3,
+            "current":b.copper_skin_layers,"electric":field_b.as_ref().unwrap_or(&b).copper_skin_layers,
+            "scope":"Planar copper through-thickness mesh screening only; lateral, barrel radial and spatial accuracy remain unverified"
+        });
+    }
     output["stageSeconds"]=serde_json::Value::Object(stages);
     output["wallSeconds"]=serde_json::json!(started.elapsed().as_secs_f64());
     Ok(output)

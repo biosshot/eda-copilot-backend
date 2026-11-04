@@ -1,6 +1,6 @@
 //! Board-owned, shared-overlay-grid material arrangement for volume extraction.
 //! Every intersecting source is retained, including floating neighbouring copper.
-use super::{error,mesh::{self,LayeredInput,LayeredMesh,Material},AllocationBudget,Result};
+use super::{copper_skin_profile,error,mesh::{self,LayeredInput,LayeredMesh,Material},AllocationBudget,Result};
 use crate::{geometry::{self,areas,context::Context,GeometryOptions,PreparationReport},model::Board};
 use geo::{algorithm::{coordinate_position::CoordPos,dimensions::Dimensions},Area,BoundingRect,Contains,Intersects,LineString,MultiPolygon,Point,Polygon,Relate};
 use spade::{AngleLimit,ConstrainedDelaunayTriangulation,Point2,RefinementParameters,Triangulation};
@@ -147,6 +147,7 @@ fn face_intervals(poly:&MultiPolygon<f64>,edges:&[[[f64;2];2]],origin:[f64;2],no
     for span in spans {if let Some(last)=union.last_mut(){if span[0]<=last[1]{last[1]=last[1].max(span[1]);continue;}}union.push(span);}union
 }
 pub struct BoardMesh {
+    pub(super) copper_skin_layers:Vec<CopperSkinLayer>,
     pub mesh:LayeredMesh,
     pub planar_nodes_mm:Vec<[f64;2]>,
     pub planar_triangles:Vec<[usize;3]>,
@@ -210,6 +211,20 @@ pub(super) fn build_supported(board:&Board,r:&Request,budget:AllocationBudget,ma
 /// the common arrangement only; they add no contact, material or cut.
 #[doc(hidden)]
 pub fn build_conforming(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration,support:Option<(&[[f64;2]],&[[usize;3]])>,trace_lines:&[[[f64;2];2]])->Result<BoardMesh> {
+    build_profiled(board,r,budget,max_wall,support,trace_lines,None)
+}
+
+#[derive(Debug,serde::Serialize)]
+#[serde(rename_all="camelCase")]
+pub(super) struct CopperSkinLayer {
+    layer:String,
+    skin_depth_m:f64,
+    maximum_step_m:f64,
+    slabs:usize,
+}
+
+pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration,
+    support:Option<(&[[f64;2]],&[[usize;3]])>,trace_lines:&[[[f64;2];2]],skin:Option<copper_skin_profile::Profile>)->Result<BoardMesh> {
     let start=Instant::now();
     if r.electric_max_edge_m.is_some_and(|v|!v.is_finite()||v<=0.||v>0.1){return Err(error("BOARD_PROFILE","positive finite electric refinement spacing required"));}
     if r.electric_air_margin_m.is_some_and(|v|!v.is_finite()||v<=0.){return Err(error("BOARD_PROFILE","positive finite electric air margin required"));}
@@ -549,9 +564,41 @@ pub fn build_conforming(board:&Board,r:&Request,budget:AllocationBudget,max_wall
     let boundary_edges=edges.into_iter().filter(|(_,n)|*n==1).map(|(e,_)|e).collect();
     let mut air_distances=vec![];let mut distance=r.interface_step_m.unwrap_or(r.max_vertical_step_m).min(r.max_vertical_step_m).min(r.air_margin_m);
     loop {air_distances.push(distance);if distance==r.air_margin_m {break;}distance=(2.*distance).min(r.air_margin_m);}
+    let mut copper_skin_layers=Vec::new();
+    let max_planes=if skin.is_some() {
+        copper_skin_profile::max_extrusion_planes(xy_m.len(),triangles.len(),budget.max_nodes,budget.max_tetrahedra,budget.max_bytes)
+            .ok_or_else(||error("MEMORY_LIMIT","skin-profile extrusion plane cap overflow"))?
+    }else{usize::MAX};
+    if skin.is_some() {copper_skin_profile::require_plane_room(air_distances.len(),1,air_distances.len(),max_planes)?;}
     let mut z_m:Vec<_>=air_distances.iter().rev().map(|v|-v).collect();z_m.push(0.);
-    for span in &stack_spans {let pieces=((span[1]-span[0])/r.max_vertical_step_m).ceil() as usize;for i in 1..=pieces {z_m.push(if i==pieces {span[1]}else{span[0]+(span[1]-span[0])*i as f64/pieces as f64});}}
-    if let Some(step)=r.interface_step_m {for (layer,span) in r.stack.iter().zip(&stack_spans) {if !layer.copper {let mut distance=step;while distance<(span[1]-span[0])/2. {let lo=span[0]+distance;let hi=span[1]-distance;if lo==span[0]||hi==span[1] {return Err(error("BOARD_PROFILE","interface step below representable vertical resolution"));}z_m.extend([lo,hi]);distance*=r.interface_growth.unwrap_or(2.);}}}}
+    for (layer,span) in r.stack.iter().zip(&stack_spans) {
+        let thickness=span[1]-span[0];
+        if let Some(profile)=skin {
+            let sigma=layer.conductivity_s_m.filter(|_|layer.copper);
+            let pieces=profile.pieces(thickness,sigma,r.max_vertical_step_m)
+                .ok_or_else(||error("BOARD_PROFILE","skin-profile slab count is not representable"))?;
+            let max_step=copper_skin_profile::append_layer_planes(&mut z_m,*span,pieces,air_distances.len(),max_planes,||check(start,max_wall))?;
+            if let Some(sigma)=sigma {
+                copper_skin_layers.push(CopperSkinLayer{layer:layer.name.clone(),skin_depth_m:profile.skin_depth_m(sigma),maximum_step_m:max_step,slabs:pieces});
+            }
+        }else{
+            let pieces=(thickness/r.max_vertical_step_m).ceil() as usize;
+            for i in 1..=pieces {z_m.push(if i==pieces {span[1]}else{span[0]+thickness*i as f64/pieces as f64});}
+        }
+    }
+    if let Some(step)=r.interface_step_m {
+        for (layer,span) in r.stack.iter().zip(&stack_spans) {
+            if !layer.copper {
+                let mut distance=step;
+                while distance<(span[1]-span[0])/2. {
+                    let lo=span[0]+distance;let hi=span[1]-distance;
+                    if lo==span[0]||hi==span[1] {return Err(error("BOARD_PROFILE","interface step below representable vertical resolution"));}
+                    if skin.is_some() {copper_skin_profile::require_plane_room(z_m.len(),2,air_distances.len(),max_planes)?;}
+                    z_m.extend([lo,hi]);distance*=r.interface_growth.unwrap_or(2.);
+                }
+            }
+        }
+    }
     z_m.extend(air_distances.iter().map(|d|z+d));
     z_m.sort_unstable_by(f64::total_cmp);z_m.dedup();
     let count=triangles.len().checked_mul(z_m.len()-1).and_then(|v|v.checked_mul(3)).ok_or_else(||error("MEMORY_LIMIT","board tetra count overflow"))?;
@@ -625,7 +672,7 @@ pub fn build_conforming(board:&Board,r:&Request,budget:AllocationBudget,max_wall
         electrode_areas_m2.insert(e.name.clone(),area);certified_electrodes.insert(e.name.clone(),(e.clone(),nodes.into_iter().collect()));
     }
     check(start,max_wall)?;
-    Ok(BoardMesh{mesh,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,certified_electrodes})
+    Ok(BoardMesh{mesh,copper_skin_layers,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,certified_electrodes})
 }
 impl BoardMesh {
     /// End geometry preparation before a separately budgeted field phase.
