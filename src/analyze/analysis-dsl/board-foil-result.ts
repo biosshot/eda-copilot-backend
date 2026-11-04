@@ -26,8 +26,18 @@ export function boardFoilResult(
   code:status==='requires-review'?'CHANNEL_FOIL_SENSITIVITY_REVIEW':'CHANNEL_FOIL_SENSITIVITY_UNVERIFIED',
   severity:'warning',message:'Joint '+kind+' sensitivity is '+status+'. See jointSensitivity evidence.',
  }]);
+ const frequency=report.frequencyAudit?.interpolation;
+ const frequencyDiagnostics:Diagnostic[]=[];
+ if(frequency?.unverified.length)frequencyDiagnostics.push({
+  code:'CHANNEL_FOIL_FREQUENCY_UNVERIFIED',severity:'warning',
+  message:'Joint frequency audit left requested intervals unverified. See frequencyAudit evidence.',
+ });
+ if(frequency?.holdouts.some(holdout=>holdout.status==='requires-review'))frequencyDiagnostics.push({
+  code:'CHANNEL_FOIL_FREQUENCY_REVIEW',severity:'warning',
+  message:'At least one frequency holdout exceeds the 2% sensitivity gate and requires review.',
+ });
  const validity:Validity={status:'conditional',reason:'Native residual and power checks cover the exact grid in one bounded '+model+' model. Independent spatial, domain and between-point coverage remain unverified.',
-  domain:json({producer,modelKind,samplePolicy:'exact',evaluatedFrequenciesHz:report.frequenciesHz,spatialCoverage:'unverified',domainCoverage:'unverified',bandCoverage:'unverified',energyVerification:'unverified',jointSensitivity})};
+  domain:json({producer,modelKind,samplePolicy:'exact',evaluatedFrequenciesHz:report.frequenciesHz,spatialCoverage:'unverified',domainCoverage:'unverified',bandCoverage:'unverified',energyVerification:'unverified',jointSensitivity,frequencyAudit:frequency&&{requestedIntervalHz:frequency.requestedIntervalHz,status:frequency.status}})};
  const network:NetworkResource={id,kind:'network',ports:plan.ports.map(port=>port.name),
   source:'Bounded conforming '+model+'; exact checked S50 samples of original finite contact pairs',
   analyses:['networkParameters'],validity,data:{format:'physical-port-samples',samplePolicy:'exact',
@@ -39,7 +49,7 @@ export function boardFoilResult(
  }));
  const evidence={...(packages.length&&{packages}),producer,roiMm:plan.roiMm,sourceCopper:plan.sourceCopper,sourceBarrels:plan.sourceBarrels,ports:plan.ports,physicalPorts,native:report.provenance};
  return {id,status:'partial',method:report.provenance.method+'; checked matched S samples',
-  diagnostics:[...diagnostics,...sensitivityDiagnostics,{code:'CHANNEL_FOIL_PHYSICAL_UNVERIFIED',severity:'warning',message:validity.reason!}],
+  diagnostics:[...diagnostics,...frequencyDiagnostics,...sensitivityDiagnostics,{code:'CHANNEL_FOIL_PHYSICAL_UNVERIFIED',severity:'warning',message:validity.reason!}],
   assumptions:['One finite joint '+model+' domain. Original physical contacts and retained barrel spans are preserved without equipotential corridor cuts or implicit reference connections.',
    ...(packages.length?['Explicit package R/C/L models connect their original finite pads. Copper and package dissipation are reported separately.']:[]),
    'Exact-grid standalone frequency replay uses the original paired contacts and S50 references.'],

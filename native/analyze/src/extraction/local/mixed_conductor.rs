@@ -6,7 +6,7 @@ use super::{
     accurate::Sum,
     board_mesh::{self, BoardMesh, Electrode},
     capacitance::TraceRow,
-    error,
+    copper_skin_profile, error,
     foil_reduced::{self, MatchedGrid},
     volume_current,
     volume_field::Field,
@@ -14,6 +14,78 @@ use super::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::{Duration, Instant};
+
+const MIXED_PREPARE_MAX_HZ: f64 = 100_000.;
+
+#[derive(Clone, Copy, Default, PartialEq, Eq, serde::Deserialize)]
+pub enum CheckedOperator {
+    #[default]
+    #[serde(skip)]
+    Legacy,
+    #[serde(rename = "skin-volume-v3")]
+    SkinVolumeV3,
+}
+
+impl CheckedOperator {
+    pub(super) fn admits(self, frequency_hz: f64) -> bool {
+        let upper = match self {
+            Self::Legacy => 10_000.,
+            Self::SkinVolumeV3 => MIXED_PREPARE_MAX_HZ,
+        };
+        frequency_hz.is_finite() && (1000. ..=upper).contains(&frequency_hz)
+    }
+
+    pub(super) fn axis_scope(self) -> &'static str {
+        match self {
+            Self::Legacy => "1..10 kHz",
+            Self::SkinVolumeV3 => "1..100 kHz profiled implementation limit",
+        }
+    }
+
+    pub(super) fn skin_profile(
+        self,
+        requested_upper_hz: f64,
+        profile_upper_hz: Option<f64>,
+        vertical_step_m: f64,
+    ) -> Result<Option<copper_skin_profile::Profile>> {
+        if self == Self::Legacy {
+            if profile_upper_hz.is_some() {
+                return Err(error(
+                    "BOARD_FOIL_GRID",
+                    "profileUpperHz requires skin-volume-v3",
+                ));
+            }
+            return Ok(None);
+        }
+        // Training/enrichment uses only requested exact-grid points. A
+        // declared upper bound lets supplemental points reuse the same mesh
+        // and thin/volume ownership even when their grid has a lower maximum.
+        let upper_hz = profile_upper_hz.unwrap_or(requested_upper_hz);
+        if !self.admits(upper_hz) || upper_hz < requested_upper_hz {
+            return Err(error("BOARD_FOIL_GRID", "profileUpperHz must cover the exact grid and stay within the 100 kHz implementation limit"));
+        }
+        Ok(Some(copper_skin_profile::Profile {
+            upper_hz,
+            current_step_m: vertical_step_m,
+            field_step_m: vertical_step_m,
+        }))
+    }
+}
+
+pub(super) fn skin_profile_evidence(
+    mesh: &BoardMesh,
+    requested_upper_hz: f64,
+    effective_upper_hz: f64,
+) -> serde_json::Value {
+    serde_json::json!({
+        "version": copper_skin_profile::VERSION,
+        "requestedUpperHz": requested_upper_hz, "trainingUpperBoundHz": requested_upper_hz,
+        "effectiveUpperHz": effective_upper_hz, "skinDepthDivisor": 3,
+        "currentAndElectricShareMesh": true,
+        "layers": mesh.copper_skin_layers, "roundBarrels": mesh.copper_skin_barrels,
+        "scope": "Planar copper thickness and round barrel radial resolution screen; lateral, proximity, domain and band accuracy unverified",
+    })
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Owner {
@@ -118,7 +190,7 @@ pub fn prepare<'a>(
     wall: Duration,
 ) -> Result<MixedMap<'a>> {
     let start = Instant::now();
-    if !max_frequency_hz.is_finite() || !(0. ..=1e5).contains(&max_frequency_hz) {
+    if !max_frequency_hz.is_finite() || !(0. ..=MIXED_PREPARE_MAX_HZ).contains(&max_frequency_hz) {
         return Err(error(
             "MIXED_FOIL_BAND",
             "finite explicit thin-foil screen within 0..100 kHz required",
@@ -526,28 +598,35 @@ pub fn solve_checked(
     wall: Duration,
 ) -> Result<serde_json::Value> {
     let start = Instant::now();
-    let reserve = checked_reserve(request, grid)?;
+    let reserve = checked_reserve(request, grid, None)?;
     budget.max_bytes = budget
         .max_bytes
         .checked_sub(reserve)
         .ok_or_else(|| error("MEMORY_LIMIT", "mixed checked response exceeds budget"))?;
     let mesh = board_mesh::build(board, request, budget, wall.saturating_sub(start.elapsed()))?;
-    solve_checked_mesh(mesh, request, grid, &[], budget, start, wall)
+    solve_checked_mesh(mesh, request, grid, None, &[], budget, start, wall)
 }
 
-fn checked_reserve(request: &board_mesh::Request, grid: CheckedGrid<'_>) -> Result<usize> {
+pub(super) fn checked_reserve(
+    request: &board_mesh::Request,
+    grid: CheckedGrid<'_>,
+    skin: Option<copper_skin_profile::Profile>,
+) -> Result<usize> {
     let CheckedGrid {
         frequencies_hz,
         reference_ohm,
         max_iterations,
     } = grid;
+    let operator = if skin.is_some() {
+        CheckedOperator::SkinVolumeV3
+    } else {
+        CheckedOperator::Legacy
+    };
     let port_count = request.ports.len();
     if !(1..=16).contains(&port_count)
         || frequencies_hz.is_empty()
         || frequencies_hz.len().saturating_mul(port_count) > 256
-        || frequencies_hz
-            .iter()
-            .any(|f| !f.is_finite() || !(1e3..=1e4).contains(f))
+        || frequencies_hz.iter().any(|&f| !operator.admits(f))
         || frequencies_hz.windows(2).any(|f| f[0] >= f[1])
         || reference_ohm.len() != port_count
         || reference_ohm
@@ -557,7 +636,10 @@ fn checked_reserve(request: &board_mesh::Request, grid: CheckedGrid<'_>) -> Resu
     {
         return Err(error(
             "MIXED_FOIL_GRID",
-            "bounded 1..10 kHz exact grid, finite matched ports and enrichment budget required",
+            &format!(
+                "bounded {} exact grid, finite matched ports and enrichment budget required",
+                operator.axis_scope()
+            ),
         ));
     }
     if !request.cut_planes.is_empty() || request.allow_insulated_copper_cuts {
@@ -578,7 +660,7 @@ fn checked_reserve(request: &board_mesh::Request, grid: CheckedGrid<'_>) -> Resu
             ));
         }
     }
-    let maximum = *frequencies_hz.last().unwrap();
+    let maximum = skin.map_or(*frequencies_hz.last().unwrap(), |profile| profile.upper_hz);
     let dx = 1e-3 * (request.roi_mm[1][0] - request.roi_mm[0][0]);
     let dy = 1e-3 * (request.roi_mm[1][1] - request.roi_mm[0][1]);
     let dz: f64 = request.stack.iter().map(|l| l.thickness_m).sum();
@@ -604,13 +686,14 @@ pub(super) fn solve_checked_mesh(
     mesh: BoardMesh,
     request: &board_mesh::Request,
     grid: CheckedGrid<'_>,
+    skin: Option<copper_skin_profile::Profile>,
     packages: &[super::checked_packages::Validated],
     mut budget: AllocationBudget,
     start: Instant,
     wall: Duration,
 ) -> Result<serde_json::Value> {
     use serde_json::json;
-    let reserve = checked_reserve(request, grid)?
+    let reserve = checked_reserve(request, grid, skin)?
         + super::checked_packages::output_reserve(
             packages,
             grid.frequencies_hz.len() * request.ports.len(),
@@ -620,7 +703,8 @@ pub(super) fn solve_checked_mesh(
         reference_ohm,
         max_iterations,
     } = grid;
-    let maximum = *frequencies_hz.last().unwrap();
+    let requested_upper = *frequencies_hz.last().unwrap();
+    let effective_upper = skin.map_or(requested_upper, |profile| profile.upper_hz);
     let provenance = mesh
         .source_mapping
         .iter()
@@ -644,6 +728,23 @@ pub(super) fn solve_checked_mesh(
                 n.checked_add(256)?.checked_add(id.len().checked_mul(6)?)
             })
         })
+        .and_then(|n| {
+            if skin.is_none() {
+                return Some(n);
+            }
+            let layer_bytes = request.stack.iter().filter(|layer| layer.copper).try_fold(
+                1024usize,
+                |sum, layer| {
+                    sum.checked_add(512)?
+                        .checked_add(layer.name.len().checked_mul(6)?)
+                },
+            )?;
+            mesh.barrel_ids
+                .iter()
+                .try_fold(n.checked_add(layer_bytes)?, |sum, id| {
+                    sum.checked_add(512)?.checked_add(id.len().checked_mul(6)?)
+                })
+        })
         .ok_or_else(|| error("MEMORY_LIMIT", "mixed provenance plan overflow"))?;
     budget.max_bytes = budget
         .max_bytes
@@ -653,7 +754,7 @@ pub(super) fn solve_checked_mesh(
     let map = prepare(
         &mesh,
         &request.electrodes,
-        maximum,
+        effective_upper,
         budget,
         wall.saturating_sub(start.elapsed()),
     )?;
@@ -723,6 +824,8 @@ pub(super) fn solve_checked_mesh(
     } else {
         "mixed physical foil and volume, checked matched exact grid"
     };
+    let skin_evidence =
+        skin.map(|profile| skin_profile_evidence(&mesh, requested_upper, profile.upper_hz));
     checked["provenance"] = json!({
         "method":method, "modelKind":"mixed",
         "sourceMapping":mesh.source_mapping, "barrelIds":mesh.barrel_ids,
@@ -737,6 +840,10 @@ pub(super) fn solve_checked_mesh(
         "magneticQuadratureCoverage":"unverified",
         "driveConvention":"1 A RMS matched Norton basis columns, checked only at listed frequencies",
     });
+    if let Some(skin) = skin_evidence {
+        checked["provenance"]["operatorPolicy"] = json!("skin-volume-v3");
+        checked["provenance"]["copperSkinMesh"] = skin;
+    }
     if !packages.is_empty() {
         checked["provenance"]["attachments"] = json!(packages
             .iter()
@@ -744,4 +851,99 @@ pub(super) fn solve_checked_mesh(
             .collect::<Vec<_>>());
     }
     Ok(checked)
+}
+
+#[cfg(test)]
+mod profile_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn profiled_checked_grid_builds_one_shared_mesh_and_preserves_finite_pad_ownership() {
+        let board = crate::import_json(include_str!(
+            "../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-board.json"
+        )).board.unwrap();
+        let mut geometry: board_mesh::Request = serde_json::from_str(include_str!(
+            "../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-request-d1-m1.json"
+        )).unwrap();
+        geometry.cut_planes.clear();
+        geometry.allow_insulated_copper_cuts = false;
+        geometry.domain_polygon_mm = None;
+        geometry.max_vertical_step_m = 0.00025;
+        geometry.stack[0].thickness_m = 0.0001;
+        geometry.electrodes = ["s0", "s1", "r0", "r1"]
+            .into_iter()
+            .enumerate()
+            .map(|(i, name)| Electrode {
+                name: name.into(),
+                source_path: Some(format!("pads[{i}]")),
+                source_paths: None,
+                layer: if i == 0 { "TOP" } else { "BOTTOM" }.into(),
+                upper: i != 0,
+            })
+            .collect();
+        geometry.ports = vec![["s0".into(), "r0".into()], ["s1".into(), "r1".into()]];
+        let before = serde_json::to_value(&geometry).unwrap();
+        let frequency = 100_000.;
+        let grid = CheckedGrid {
+            frequencies_hz: &[frequency],
+            reference_ohm: &[50., 50.],
+            max_iterations: 1,
+        };
+        assert!(checked_reserve(&geometry, grid, None).is_err());
+        let operator = CheckedOperator::SkinVolumeV3;
+        assert!(!operator.admits(frequency + 1.));
+        assert!(operator
+            .skin_profile(
+                frequency,
+                Some(frequency - 1.),
+                geometry.max_vertical_step_m
+            )
+            .is_err());
+        assert!(CheckedOperator::Legacy
+            .skin_profile(1000., Some(frequency), geometry.max_vertical_step_m)
+            .is_err());
+        let profile = operator
+            .skin_profile(frequency, None, geometry.max_vertical_step_m)
+            .unwrap();
+        assert!(checked_reserve(&geometry, grid, profile).is_ok());
+        let supplemental = operator
+            .skin_profile(20_000., Some(frequency), geometry.max_vertical_step_m)
+            .unwrap();
+        assert_eq!(supplemental.unwrap().upper_hz, profile.unwrap().upper_hz);
+        let budget = AllocationBudget {
+            max_bytes: 512 * 1024 * 1024,
+            max_nodes: 100_000,
+            max_tetrahedra: 200_000,
+        };
+        let mesh = board_mesh::build_profiled(
+            &board,
+            &geometry,
+            budget,
+            Duration::from_secs(20),
+            None,
+            &[],
+            profile,
+        )
+        .unwrap();
+        let evidence = skin_profile_evidence(&mesh, 20_000., frequency);
+        assert_eq!(evidence["requestedUpperHz"], json!(20_000.));
+        assert_eq!(evidence["trainingUpperBoundHz"], json!(20_000.));
+        assert_eq!(evidence["effectiveUpperHz"], json!(frequency));
+        assert_eq!(evidence["currentAndElectricShareMesh"], true);
+        let top = evidence["layers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|layer| layer["layer"] == "TOP")
+            .unwrap();
+        assert_eq!(top["slabs"], 2);
+        assert!(top["maximumStepM"].as_f64().unwrap() <= top["skinDepthM"].as_f64().unwrap() / 3.);
+        assert!(geometry
+            .electrodes
+            .iter()
+            .all(|electrode| !mesh.electrode_nodes(electrode).unwrap().is_empty()));
+        assert_eq!(mesh.barrel_ids.len(), 1);
+        assert_eq!(serde_json::to_value(&geometry).unwrap(), before);
+    }
 }

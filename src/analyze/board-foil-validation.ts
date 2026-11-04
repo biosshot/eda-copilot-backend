@@ -4,6 +4,43 @@ import type { CoupledRlcData } from './analysis-dsl/spec-doc.js';
 
 const fail=(message:string):never=>{throw new Error('CHANNEL_FOIL_EVIDENCE: '+message);};
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
+const positive=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value)&&value>0;
+
+function validateSkinMesh(provenance:AnalysisBoardFoilCheckedReport['provenance'],problem:BoardFoilProblem):void {
+ const {request,expected}=problem;
+ const mesh=provenance.copperSkinMesh;
+ if(request.operatorPolicy===undefined){
+  if(provenance.operatorPolicy!==undefined||mesh!==undefined)fail('unexpected skin mesh policy evidence');
+  return;
+ }
+ const requestedUpperHz=request.frequenciesHz.at(-1);
+ const effectiveUpperHz=request.profileUpperHz??requestedUpperHz;
+ if(request.operatorPolicy!=='skin-volume-v3'||provenance.operatorPolicy!==request.operatorPolicy||
+    provenance.modelKind!=='mixed'||!mesh||mesh.version!==3||mesh.requestedUpperHz!==requestedUpperHz||
+    mesh.trainingUpperBoundHz!==requestedUpperHz||mesh.effectiveUpperHz!==effectiveUpperHz||
+    mesh.skinDepthDivisor!==3||mesh.currentAndElectricShareMesh!==true||
+    typeof mesh.scope!=='string'||!mesh.scope.trim())
+  return fail('missing or inconsistent shared copper skin mesh provenance');
+ const geometry=problem.geometry as {
+  stack?: {name:string;copper:boolean;conductivitySM?:number}[];
+  barrelConductivitySM?:number;
+ };
+ const layers=Array.isArray(geometry.stack)?geometry.stack.filter(layer=>layer?.copper===true):[];
+ const barrels=expected.sourceBarrels.map(barrel=>barrel.barrelId).sort();
+ const validSpacing=(skinDepthM:number,stepM:number,pieces:number,conductivity:unknown)=>{
+  if(!positive(skinDepthM)||!positive(stepM)||!Number.isSafeInteger(pieces)||pieces<1||!positive(conductivity))return false;
+  const depth=1/(Math.sqrt(Math.PI*(4e-7*Math.PI)*mesh.effectiveUpperHz)*Math.sqrt(conductivity));
+  return positive(depth)&&Math.abs(skinDepthM/depth-1)<=1e-8&&stepM<=skinDepthM/3*(1+1e-8);
+ };
+ if(!layers.length||!Array.isArray(mesh.layers)||mesh.layers.length!==layers.length||
+    mesh.layers.some((row,i)=>!row||row.layer!==layers[i].name||
+     !validSpacing(row.skinDepthM,row.maximumStepM,row.slabs,layers[i].conductivitySM))||
+    !Array.isArray(mesh.roundBarrels)||mesh.roundBarrels.length!==barrels.length||
+    mesh.roundBarrels.some(row=>!row||typeof row.id!=='string'||
+     !validSpacing(row.skinDepthM,row.maximumRadialStepM,row.shells,geometry.barrelConductivitySM))||
+    !same(mesh.roundBarrels.map(row=>row.id).sort(),barrels))
+  fail('copper skin mesh rows or physical spacing do not match the candidate geometry');
+}
 
 export function validateBoardFoilReport(
  report: AnalysisBoardFoilCheckedReport, problem: BoardFoilProblem,
@@ -72,13 +109,15 @@ export function validateBoardFoilReport(
     !Number.isFinite(evidence.maxMemoryMiB)||evidence.maxMemoryMiB<1||evidence.maxMemoryMiB>producerBudget.maxMemoryMiB||
     evidence.plannedBytes>evidence.maxMemoryMiB*1048576)
   fail('native producer limits or ownership evidence missing or inconsistent');
+ validateSkinMesh(evidence,problem);
  const expectedCopper=expected.sourceCopper.map(r=>JSON.stringify([r.regionId,r.sourcePath,r.layer])).sort();
  const actual=evidence.sourceMapping.map(([id,path,,layer])=>JSON.stringify([id,path,layer])).sort();
  const expectedBarrels=expected.sourceBarrels.map(barrel=>barrel.barrelId).sort();
  const validModel=evidence.modelKind==='foil'
   ? !expectedBarrels.length&&!attachments.length&&evidence.prisms>=1
   : evidence.modelKind==='mixed'&&Number.isSafeInteger(evidence.volumeTetrahedra)&&
-    (evidence.volumeTetrahedra>0||evidence.volumeTetrahedra===0&&attachments.length>0&&!expectedBarrels.length&&evidence.prisms>0)&&
+    (evidence.volumeTetrahedra>0||evidence.volumeTetrahedra===0&&
+     (attachments.length>0||request.operatorPolicy==='skin-volume-v3')&&!expectedBarrels.length&&evidence.prisms>0)&&
     Number.isSafeInteger(evidence.nativeCopperTetrahedra)&&
     Number.isSafeInteger(evidence.fullPotentialCount)&&evidence.fullPotentialCount>0&&
     evidence.fullCurrentCount===3*evidence.nativeCopperTetrahedra&&

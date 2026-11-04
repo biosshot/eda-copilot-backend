@@ -6,6 +6,7 @@ use super::{
     capacitance::TraceRow,
     current_space::{self, Foil, VerifiedTrace},
     error,
+    mixed_conductor::{self, CheckedOperator},
     volume_field::{DenseField, ElectricApply, Field},
     AllocationBudget, Result,
 };
@@ -677,6 +678,9 @@ pub struct CheckedRequest {
     pub budget: crate::electrical::Budget,
     pub max_iterations: Option<usize>,
     #[serde(default)]
+    pub operator_policy: CheckedOperator,
+    pub profile_upper_hz: Option<f64>,
+    #[serde(default)]
     pub attachments: Vec<super::checked_packages::Attachment>,
 }
 
@@ -691,16 +695,17 @@ pub fn solve_checked(
     use serde_json::json;
     let port_count = geometry.ports.len();
     let axis = request.frequencies_hz;
+    let operator = request.operator_policy;
     if !(1..=16).contains(&port_count)
         || axis.is_empty()
         || axis.len().saturating_mul(port_count) > MAX_CHECKED_COLUMNS
         || axis
             .iter()
             .enumerate()
-            .any(|(i, f)| !f.is_finite() || !(1e3..=1e4).contains(f) || i > 0 && axis[i - 1] >= *f)
+            .any(|(i, &f)| !operator.admits(f) || i > 0 && axis[i - 1] >= f)
     {
         return Err(error("BOARD_FOIL_GRID",
-            "1..16 physical ports and strictly increasing 1..10 kHz axis within 256 checked columns required"));
+            &format!("1..16 physical ports and strictly increasing {} axis within 256 checked columns required", operator.axis_scope())));
     }
     let refs = request
         .reference_ohm
@@ -763,7 +768,7 @@ pub fn solve_checked(
     let wall = Duration::from_secs_f64(admitted_seconds);
     remaining(started, wall)?;
     let maximum = *axis.last().unwrap();
-    let mixed_grid = super::mixed_conductor::CheckedGrid {
+    let mixed_grid = mixed_conductor::CheckedGrid {
         frequencies_hz: &axis,
         reference_ohm: &refs,
         max_iterations: iterations,
@@ -774,7 +779,25 @@ pub fn solve_checked(
             "complete copper and original finite pads required",
         ));
     }
-    let mesh = board_mesh::build(board, geometry, budget, remaining(started, wall)?)?;
+    let skin = operator.skin_profile(
+        maximum,
+        request.profile_upper_hz,
+        geometry.max_vertical_step_m,
+    )?;
+    if skin.is_some() {
+        // Apply the existing physical pad/closed copper and electrical-size
+        // guard before paying for a larger profiled mesh.
+        mixed_conductor::checked_reserve(geometry, mixed_grid, skin)?;
+    }
+    let mesh = board_mesh::build_profiled(
+        board,
+        geometry,
+        budget,
+        remaining(started, wall)?,
+        None,
+        &[],
+        skin,
+    )?;
     let planar_stack = (3..=15).contains(&geometry.stack.len())
         && geometry.stack.len() % 2 == 1
         && geometry
@@ -783,14 +806,15 @@ pub fn solve_checked(
             .enumerate()
             .all(|(i, layer)| layer.copper == (i % 2 == 0));
     let mixed = |mesh| {
-        let mut checked = super::mixed_conductor::solve_checked_mesh(
-            mesh, geometry, mixed_grid, &packages, budget, started, wall,
+        let mut checked = mixed_conductor::solve_checked_mesh(
+            mesh, geometry, mixed_grid, skin, &packages, budget, started, wall,
         )?;
         checked["provenance"]["maxSeconds"] = json!(admitted_seconds);
         checked["provenance"]["maxMemoryMiB"] = json!(admitted_memory);
         Ok(checked)
     };
-    if !packages.is_empty()
+    if skin.is_some()
+        || !packages.is_empty()
         || !planar_stack
         || !mesh.barrel_ids.is_empty()
         || super::mixed_conductor::has_projected_pad_collision(&mesh, &geometry.electrodes)?

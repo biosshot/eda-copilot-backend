@@ -67,7 +67,9 @@ export function auditFrequencyCoverage(options: {
     supportedIntervalsHz: readonly FrequencyInterval[];
     transitionFrequenciesHz?: readonly number[];
     policy: Policy;
-    evaluatePhysical: PhysicalFrequencyEvaluator;
+    evaluatePhysical?: PhysicalFrequencyEvaluator;
+    evaluatePhysicalBatch?: (frequenciesHz: number[]) => ReadonlyMap<number, Sample>;
+    initialSamples?: ReadonlyMap<number, Sample>;
     deadlineMs?: number;
     nowMs?: () => number;
     signal?: AbortSignal;
@@ -79,7 +81,8 @@ export function auditFrequencyCoverage(options: {
     }
     const requestedIntervalHz = requestedFrequencyInterval(demand);
     const gates = Object.entries(policy.gates);
-    if (!Number.isSafeInteger(policy.maxSamples) || policy.maxSamples < 1 ||
+    if (Boolean(evaluatePhysical) === Boolean(options.evaluatePhysicalBatch) ||
+        !Number.isSafeInteger(policy.maxSamples) || policy.maxSamples < 1 ||
         !Number.isFinite(policy.maxStepHz) || policy.maxStepHz <= 0 ||
         !policy.modelVersion || gates.length === 0 ||
         gates.some(([, gate]) => !Number.isFinite(gate.absoluteFloor) || gate.absoluteFloor <= 0 ||
@@ -99,29 +102,35 @@ export function auditFrequencyCoverage(options: {
     const evaluationFailures: { frequencyHz: number; message: string }[] = [];
     const sampled = new Map<number, Sample | null>();
 
-    function exhausted(): 'sample-budget' | 'deadline' | 'cancelled' | undefined {
+    function interrupted(): 'deadline' | 'cancelled' | undefined {
         if (signal?.aborted) return 'cancelled';
         if (deadlineMs !== undefined && nowMs() >= deadlineMs) return 'deadline';
-        if (sampled.size >= policy.maxSamples) return 'sample-budget';
     }
-
+    function exhausted(): 'sample-budget' | 'deadline' | 'cancelled' | undefined {
+        return interrupted() ?? (options.evaluatePhysicalBatch || sampled.size >= policy.maxSamples ? 'sample-budget' : undefined);
+    }
+    function checked(raw: Sample): Sample {
+        return Object.fromEntries(gates.map(([name]) => {
+            const pair = raw[name];
+            if (!pair || pair.length !== 2 || !pair.every(Number.isFinite)) {
+                throw new Error(`Missing or nonfinite observable ${name}`);
+            }
+            return [name, [pair[0], pair[1]] as const];
+        }));
+    }
+    function reject(frequencyHz: number, error: unknown) {
+        sampled.set(frequencyHz, null);
+        evaluationFailures.push({ frequencyHz, message: error instanceof Error ? error.message : String(error) });
+    }
     function sample(frequencyHz: number) {
         if (sampled.has(frequencyHz)) return sampled.get(frequencyHz)!;
         if (exhausted()) return undefined;
         try {
-            const raw = evaluatePhysical(frequencyHz);
-            const value = Object.fromEntries(gates.map(([name]) => {
-                const pair = raw[name];
-                if (!pair || pair.length !== 2 || !pair.every(Number.isFinite)) {
-                    throw new Error(`Missing or nonfinite observable ${name}`);
-                }
-                return [name, [pair[0], pair[1]] as const];
-            }));
+            const value = checked(evaluatePhysical!(frequencyHz));
             sampled.set(frequencyHz, value);
             return value;
         } catch (error) {
-            sampled.set(frequencyHz, null);
-            evaluationFailures.push({ frequencyHz, message: error instanceof Error ? error.message : String(error) });
+            reject(frequencyHz, error);
             return null;
         }
     }
@@ -136,6 +145,53 @@ export function auditFrequencyCoverage(options: {
         }
     }
     segments.unshift(...Array.from(isolated, (point): FrequencyInterval => [point, point]));
+
+    for (const [f, value] of options.initialSamples ?? []) {
+        if (f < requestedIntervalHz[0] || f > requestedIntervalHz[1] || !supported([f, f]) ||
+            sampled.size >= policy.maxSamples) {
+            throw new Error('FREQUENCY_POLICY: checked seed outside demand/applicability or budget');
+        }
+        sampled.set(f, checked(value));
+    }
+    const evaluateBatch = options.evaluatePhysicalBatch;
+    if (evaluateBatch && !interrupted() && sampled.size < policy.maxSamples) {
+        const points = new Set<number>();
+        const capacity = policy.maxSamples - sampled.size;
+        const schedule = (f: number) => {
+            if (points.size < capacity && !sampled.has(f)) points.add(f);
+        };
+        const candidates = segments.filter(supported);
+        for (const [start, stop] of candidates) {
+            schedule(start);
+            schedule(stop);
+        }
+        // Width-driven promotions are known before observing the response.
+        // Additional refinement triggered by errors remains unverified after
+        // this one producer batch unless its points were already available.
+        for (let i = 0; i < candidates.length && points.size < capacity; i++) {
+            const [start, stop] = candidates[i];
+            const width = stop - start;
+            const mid = start + width / 2;
+            if (start < mid && mid < stop) {
+                schedule(mid);
+                if (width > policy.maxStepHz) candidates.push([start, mid], [mid, stop]);
+            }
+        }
+        const axis = [...points].sort((a, b) => a - b);
+        if (axis.length) {
+            let batch: ReadonlyMap<number, Sample> | undefined;
+            try { batch = evaluateBatch(axis); }
+            catch (error) { for (const f of axis) reject(f, error); }
+            if (batch) for (const f of axis) {
+                try {
+                    const value = batch.get(f);
+                    if (!value) throw new Error('Missing checked batch sample');
+                    sampled.set(f, checked(value));
+                } catch (error) { reject(f, error); }
+            }
+        }
+    }
+
 
     const pending: FrequencyInterval[] = [];
     for (const intervalHz of segments) {

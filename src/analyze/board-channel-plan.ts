@@ -1,4 +1,4 @@
-import { autoFoilPlan } from './auto-foil-plan.ts';
+import { autoFoilPlan, type AutoFoilPlan } from './auto-foil-plan.ts';
 import { componentReachableIslands, MAX_CHANNEL_COMPONENTS, validateChannelAttachments, type BoardChannelRequest } from './channel-components.ts';
 import { normalizePlannerTerminals, type LegacyChannelContact } from './channel-terminals.ts';
 import type { AnalysisGeometryReport } from '../../native/analyze/index.js';
@@ -8,12 +8,15 @@ import { capturedBoardGeometry } from './geometry-snapshot.ts';
 import { buildRouteGraph, project, tangent, area, clipHalfPlane, triangles, joinDomains, type Point } from './route-partition.ts';
 import { coupledRunCorridors, corridorCells } from './run-corridors.ts';
 export const boardChannelBlockBandHz = [1e3, 1e4] as const;
+export const boardChannelJointSkinBandHz = [1e3, 1e5] as const;
 type Options = {
     domainScale?: number;
     magneticPatchLevel?: 1 | 2;
     boundaryFraction?: number;
     autoFoilDeadlineMs?: number;
 };
+type ClosedJointOptions = Options & { closedJointDeadlineMs: number };
+type SegmentedGeometryPlan = SegmentedChannel & { audit: any };
 type JointGeometryReason = "finite-return-closure" | "no-finite-return-corridor" | "no-finite-return-interface";
 type Face = {
     id: string;
@@ -46,9 +49,9 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
     base2 = { ...base2, maxTriangleAreaM2: Math.min(base2.maxTriangleAreaM2, 5e-8) };
     const execute = createProblemExecutor(true), boardJson = JSON.stringify(board), snapshot = JSON.parse(boardJson);
     const g = capturedBoardGeometry(boardJson);
-    return (options: Options = {}): SegmentedChannel & {
-        audit: any;
-    } => {
+    function plan(options: ClosedJointOptions): AutoFoilPlan;
+    function plan(options?: Options): SegmentedGeometryPlan;
+    function plan(options: Options | ClosedJointOptions = {}): SegmentedGeometryPlan | AutoFoilPlan {
         const islandByRegion = new Map(g.islands.flatMap(i => i.region_ids.map(id => [id, i] as const)));
         const resolveTerminal = (contact: typeof contacts[number]) => {
             const regions = g.regions.filter(r => r.source.path === contact.sourcePath && r.layer === contact.layer);
@@ -91,7 +94,19 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
         const returnIds = new Set(returns.flatMap(i => i.region_ids));
         const contactRegions = new Set([...terminals.values()].map(({ region }) => region.id));
         const selected = g.regions.filter(r => signalRegions.has(r.id) || contactRegions.has(r.id));
-        const height = base2.stack.reduce((s: number, l: any) => s + l.thicknessM * 1e3, 0), margin = Math.max(0.05, 2 * height) * (options.domainScale ?? 1);
+        const height = base2.stack.reduce((s: number, l: any) => s + l.thicknessM * 1e3, 0);
+        const margin = Math.max(0.05, 2 * height) * (options.domainScale ?? 1);
+        const closedJoint = (deadlineMs: number) =>
+            autoFoilPlan({boardJson,geometry:foilGeometry,captured:g,terminals:[...terminals.values()].map(entry=>entry.contact),ports:externalPorts,
+                components:componentPlans.map(({pins:[a,b],...model})=>({...model,pins:[a.contact,b.contact]})),
+                seedRegions:new Set([...signalRegions,...returnIds,...contactRegions,
+                    ...componentPlans.flatMap(({pins})=>pins.flatMap(({island})=>island.region_ids))]),
+                marginMm:margin,deadlineMs});
+        if ('closedJointDeadlineMs' in options) {
+            const joint = closedJoint(options.closedJointDeadlineMs);
+            if (!joint) throw new Error('CHANNEL_JOINT_CLOSURE: frequency demand requires a bounded closed physical copper candidate');
+            return joint;
+        }
         const points = selected.flatMap((r) => r.polygon.outer), xr = range(points, [1, 0]), yr = range(points, [0, 1]);
         const bounds = [[xr[0] - margin, yr[0] - margin], [xr[1] + margin, yr[1] + margin]];
         const wall = base2.finishedHolePlatingM * 1e3 + (base2.curveDeviationMm ?? 1e-3) + 2 * g.boolean_error_bound_mm;
@@ -198,12 +213,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
             transverseMm?: [number, number];
         } | undefined;
         function refuseCorridor(geometryReason: JointGeometryReason, reason: string): never {
-            const foilCandidate=options.autoFoilDeadlineMs!==undefined?
-                autoFoilPlan({boardJson,geometry:foilGeometry,captured:g,terminals:[...terminals.values()].map(entry=>entry.contact),ports:externalPorts,
-                    components:componentPlans.map(({pins:[a,b],...model})=>({...model,pins:[a.contact,b.contact]})),
-                    seedRegions:new Set([...signalRegions,...returnIds,...contactRegions,
-                        ...componentPlans.flatMap(({pins})=>pins.flatMap(({island})=>island.region_ids))]),
-                    marginMm:margin,deadlineMs:options.autoFoilDeadlineMs}):undefined;
+            const foilCandidate=options.autoFoilDeadlineMs!==undefined?closedJoint(options.autoFoilDeadlineMs):undefined;
             throw Object.assign(new Error("CHANNEL_CORRIDOR: " + reason), {
                 code: "CHANNEL_CORRIDOR_UNSUPPORTED",
                 geometryReason,
@@ -553,7 +563,8 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
             continuity: "Supplied model dependency; physical copper islands and DC connectivity remain separate",
         }));
         return { blocks, ports, coverage, ...(attachments.length && { attachments }), audit: { ...(attachments.length && { components: componentAudit }), graph, corridors, returnClosure, cells, barrelOwnership, physicalTerminals: [...terminals.values()].map(({ contact, island }) => ({ ...contact, island: island.id, owner: cells[terminalOwners.get(contact.id)!].id })), faces: faces.map(({ slice: slice2, ...f }) => ({ ...f, sourceMapping: slice2.sourceMapping })), ownershipConvention: "Explicit original-source fragments clipped by route/event domains, with region/layer identity and areaMm2; interval fixtures retain length units", signalIsland: signalIslandIds.size === 1 ? [...signalIslandIds][0] : undefined, signalIslands: [...signalIslandIds], returnIslands: returns.map((i) => i.id), copperDecisions: g.regions.map((r) => ({ regionId: r.id, sourcePath: r.source.path, layer: r.layer, role: signalRegions.has(r.id) ? "signal" : returnIds.has(r.id) ? "return" : "neighbour", included: relevant.includes(r), reason: relevant.includes(r) ? "Actual source fragment retained in joint route cell" : "Outside finite numerical domain; expansion remains required" })), policy: "All branches, finite return and spatial neighbours retained; local/section coupling requires numerical acceptance; nonlocal plane coupling not certified" } };
-    };
+    }
+    return plan;
 }
 /** B2 finite-domain candidates for C1 only; full-channel admission is unchanged.
  * All contour events inside each tested width are checked again. */

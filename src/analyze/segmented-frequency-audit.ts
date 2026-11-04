@@ -1,6 +1,8 @@
 import type { AnalysisFrequencyReport } from '../../native/analyze/index.js';
 import { auditFrequencyCoverage, type FrequencyInterval } from './p7-frequency-planning.ts';
 
+export const p7LowBandAuditPolicy = {maxStepHz: 2250, relativeTolerance: 0.02, waveFloor: 0.01, lossFloorW: 1e-18} as const;
+
 export type ChannelFrequencyReplay = (frequencyHz: number, remainingSeconds: number) => AnalysisFrequencyReport;
 
 export function auditSegmentedResponse(options: {
@@ -20,15 +22,15 @@ export function auditSegmentedResponse(options: {
     const waves = keys('S:', count * count);
     const losses = keys('totalPassiveLossW:', count);
     const gates = Object.fromEntries([
-        ...waves.map(key => [key, { absoluteFloor: 0.01, relativeTolerance: 0.02 }]),
-        ...losses.map(key => [key, { absoluteFloor: 1e-18, relativeTolerance: 0.02 }]),
+        ...waves.map(key => [key, { absoluteFloor: p7LowBandAuditPolicy.waveFloor, relativeTolerance: p7LowBandAuditPolicy.relativeTolerance }]),
+        ...losses.map(key => [key, { absoluteFloor: p7LowBandAuditPolicy.lossFloorW, relativeTolerance: p7LowBandAuditPolicy.relativeTolerance }]),
     ]);
     const interpolation = auditFrequencyCoverage({
         demand: { frequency: { startHz: requestedIntervalHz[0], stopHz: requestedIntervalHz[1] } },
         supportedIntervalsHz: [applicabilityBandHz],
         policy: {
             maxSamples: 17,
-            maxStepHz: 2250,
+            maxStepHz: p7LowBandAuditPolicy.maxStepHz,
             gates,
             modelVersion: 'segmented-p6-interpolation-v1',
         },

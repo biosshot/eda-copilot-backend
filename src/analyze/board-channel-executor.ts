@@ -3,7 +3,7 @@ import type { ChannelLossGram } from './channel-loss.ts';
 import type { BoardChannelRequest } from './channel-components.ts';
 import { declaredNetworkBand } from './analysis-dsl/frequency-model.ts';
 import type { LegacyChannelContact } from './channel-terminals.ts';
-import {boardChannelBlockBandHz,createBoardChannelPlanner} from './board-channel-plan.ts';
+import {boardChannelBlockBandHz,boardChannelJointSkinBandHz,createBoardChannelPlanner} from './board-channel-plan.ts';
 import {solveSegmentedChannel} from './segmented-channel.ts';
 import {auditSegmentedResponse,type ChannelFrequencyReplay} from './segmented-frequency-audit.ts';
 import type {FrequencyInterval} from './p7-frequency-planning.ts';
@@ -42,13 +42,14 @@ export function channelResponseChange(a:any,b:any,includesComponentLoss=false){
  }
  return {maxRelativeChange:Math.max(wave,loss,copperLoss,delay,magnetic??0),magneticEnergyRelativeChange:magnetic,magneticEnergyAbsoluteFloorJ:5e-12,magneticEnergyConvention:'Native matched-reference mean intrinsic magnetic energy Gram for1A RMS Norton drives; references store no magnetic energy',waveRelativeChange:wave,copperLossRelativeChange:includesComponentLoss?(separated?copperLoss:undefined):loss,totalPassiveLossRelativeChange:includesComponentLoss?loss:undefined,groupDelayRelativeChange:delay,groupDelayAbsoluteFloorS:1e-12,waveAbsoluteAmplitudeFloor:.01,lossAbsoluteFloorW:1e-18,referenceOhm:50,driveConvention:'Unit/opposite1A Norton with50Ohm mathematical reference; incident power50/4*norm(d)^2',lossRecovery:includesComponentLoss?(separated?'Cu-only convergence uses native copper instance R loss; regional recovery remains unverified':'Passive power balance includes supplied package losses; Cu-only and regional convergence remain unverified'):'Passive power balance; only Cu R dissipates; no regional loss certificate'};
 }
-export function boardChannelApplicability(request: BoardChannelRequest): FrequencyInterval {
+export function boardChannelApplicability(request: BoardChannelRequest, requestedUpperHz:number=boardChannelBlockBandHz[1]): FrequencyInterval {
  const bands=(request.components??[]).flatMap(component=>{
   const band=declaredNetworkBand(component.model);
   return band?[band]:[];
  });
- return [Math.max(boardChannelBlockBandHz[0],...bands.map(band=>band[0])),
-  Math.min(boardChannelBlockBandHz[1],...bands.map(band=>band[1]))];
+ const band=requestedUpperHz>boardChannelBlockBandHz[1]?boardChannelJointSkinBandHz:boardChannelBlockBandHz;
+ return [Math.max(band[0],...bands.map(component=>component[0])),
+  Math.min(band[1],...bands.map(component=>component[1]))];
 }
 type VerificationRun = {
  level: 1 | 2;
@@ -75,6 +76,11 @@ export function createBoardChannelExecutor<FoilResult=never>(
   const start=performance.now(),elapsed=()=>(performance.now()-start)/1000;
   const left=()=>({...budget,maxSeconds:budget.maxSeconds-elapsed()});
   const planChannel=createPlanner(board,base,contacts);
+  const demandUpper=frequencies.reduce((upper,f)=>Math.max(upper,f),requestedIntervalHz?.[1]??0);
+  if(solveFoil&&demandUpper>boardChannelBlockBandHz[1]){
+   const foil=planChannel({closedJointDeadlineMs:start+budget.maxSeconds*1000});
+   return solveFoil(foil,frequencies,left(),requestedIntervalHz);
+  }
   const sectionOptions={expandAutomaticSectionMesh:true};
   const axis=[...frequencies];
   const components=Array.isArray(contacts)?[]:contacts.components??[];

@@ -236,7 +236,7 @@ a.network({model,ports:Object.fromEntries(model.ports.map(port => [port,port]))}
     assert.equal(request.ports[0].negative, request.ports[2].negative);
     assert.notEqual(request.ports[0].negative, request.ports[1].negative);
     assert.ok(demand && demand[0] === 0 && demand[1] > 1e9);
-    assert.deepEqual(axis, [1000, 2500, 1 / (8e-4 - (4e-4 + 2e-10)), 10000]);
+    assert.deepEqual(axis, [1000, 2500, 1 / (8e-4 - (4e-4 + 2e-10)), 100000]);
     assert.ok(budget.maxSeconds > 0);
     const ports = request.ports.map(({ name }, index) => ({ name, index }));
     const parameters = axis.map(() => ports.map(() => ports.map(() => ({ real: 0, imaginary: 0 }))));
@@ -246,7 +246,7 @@ a.network({model,ports:Object.fromEntries(model.ports.map(port => [port,port]))}
         assembledModel: { format: 'network-parameters', representation: 'S', nature: 'passive',
           referenceTopology: 'common', referenceOhm: 50, frequenciesHz: axis, parameters },
       },
-      bandHz: [1000, 10000], audit: {}, blocks: [], evidence: [], verification: [], ownership: [],
+      bandHz: [1000, 100000], audit: {}, blocks: [], evidence: [], verification: [], ownership: [],
       wallSeconds: 0, magneticCoupling: null,
     };
   });
@@ -263,9 +263,9 @@ a.network({model,ports:Object.fromEntries(model.ports.map(port => [port,port]))}
   assert.equal(result.solution.status, 'unverified');
   assert.equal(result.solution.requestedIntervalHz[0], 0);
   assert.equal(result.solution.requestedIntervalHz[1], result.solution.drivers[0].spectrum.requiredUpperHz);
-  assert.deepEqual(result.solution.applicabilityBandHz, [1000, 10000]);
+  assert.deepEqual(result.solution.applicabilityBandHz, [1000, 100000]);
   assert.deepEqual(result.solution.uncovered.map((gap: any) => gap.intervalHz), [
-    [0, 1000], [10000, result.solution.requestedIntervalHz[1]],
+    [0, 1000], [100000, result.solution.requestedIntervalHz[1]],
   ]);
   assert.equal(result.solution.portHandles.length, 6);
   assert.equal(new Set(result.solution.portHandles.map((p: any) => p.portName)).size, 4);

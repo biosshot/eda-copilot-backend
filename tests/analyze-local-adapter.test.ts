@@ -5,6 +5,35 @@ test('existing direct channel DSL preserves exact original STM32 request and phy
  assert.equal(result.status,'complete',JSON.stringify(result.error));const expected=JSON.parse(readFileSync('tests/fixtures/analysis-local-extraction/board-integration/single-method-via-request.json','utf8'));assert.deepEqual(captured,expected);
 });
 
+test('layered AC validates the authored plating before forwarding its conductivity',async()=>{
+ const folder='tests/pcb-analyze/STM32G0_CAN_RS485/';
+ const board=JSON.parse(readFileSync(folder+'STM32G0_CAN_RS485.json','utf8'));
+ const script=readFileSync(folder+'local-extraction.js','utf8');
+ const base=script.slice(0,script.indexOf('const cold=')).replace("platingMaterial:'copper'","platingMaterial:'plating'")+'await run();';
+ const calls:number[]=[];
+ const run=(properties:string)=>executeScenario({
+  board,code:base.replace('.materials({copper,fr4})',
+   ".materials({copper,fr4,plating:{conductivitySM:42e6,state:'Explicit plating',"+properties+"}})"),
+ },{filename:'ac-plating.js',maxEntries:1000,maxOutputBytes:4*1024*1024},()=>{},async task=>{
+  calls.push(localRequest(task as AnalysisTask<'impedance'>).barrelConductivitySM);
+  return {id:'test',status:'complete',method:'transport test only',diagnostics:[],assumptions:[],metrics:{}};
+ });
+ for(const [properties,error] of [
+  ["validity:{status:'conditional',domain:{bandHz:[1000,10000]}}",/Plating material band/],
+  ["validity:{status:'unavailable'}",/Plating material is unavailable/],
+  ["analyses:['dc']",/Plating material is unavailable/],
+  ["lossTangent:0.01",/plating loss tangent is unsupported/],
+ ] as const){
+  const result=await run(properties);
+  assert.equal(result.status,'failed');
+  assert.match(JSON.stringify(result.error),error);
+ }
+ assert.deepEqual(calls,[]);
+ const valid=await run("analyses:['impedance'],validity:{status:'conditional',domain:{bandHz:[1000,100000]}}");
+ assert.equal(valid.status,'complete',JSON.stringify(valid.error));
+ assert.deepEqual(calls,[42e6]);
+});
+
 test('direct channel without scope plans a layer-changing finite-via coupon with mandatory numerical domain verification',async()=>{
  const folder='tests/pcb-analyze/STM32G0_CAN_RS485/';const board=JSON.parse(readFileSync(folder+'STM32G0_CAN_RS485.json','utf8'));const script=readFileSync(folder+'local-extraction.js','utf8');const code=script.slice(0,script.indexOf('const cold=')).replace('scope:[scope]','')+'await run();';let captured:any,plan:any;
  board.pads=[];board.copper.fixed.tracks=[];board.copper.fixed.zones=[];board.copper.fixed.vias=board.copper.fixed.vias.filter((v:any)=>['da3574692d072a0d','aa8ff23739620a07'].includes(v.id));

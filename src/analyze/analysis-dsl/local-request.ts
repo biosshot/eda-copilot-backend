@@ -14,6 +14,18 @@ export type LocalExtractionPlan = ReturnType<typeof channelPlan> & {
 type PlanSink = (plan: LocalExtractionPlan) => void;
 type BoardTarget = T.Channel | T.Differential;
 
+function checkAcMaterial(material:T.Material,kind:'Layer'|'Plating'):void {
+ if(material.validity?.status==='unavailable'||material.analyses&&!material.analyses.includes('impedance'))
+  fail(kind+' material is unavailable for impedance extraction');
+ const domain=material.validity?.domain;
+ if(object(domain)&&domain.bandHz!==undefined){
+  const band=domain.bandHz;
+  if(!Array.isArray(band)||band.length!==2||typeof band[0]!=='number'||typeof band[1]!=='number'||
+     !Number.isFinite(band[0])||!Number.isFinite(band[1])||band[0]>1000||band[1]<100000)
+   fail(kind+' material band does not cover local v1 training/applicability band');
+ }
+}
+
 /** Existing layered impedance target -> internal volume transport. */
 export function localRequest(task:AnalysisTask<'impedance'>,onPlan?:PlanSink){
  const target=task.config.target;
@@ -67,11 +79,15 @@ function prepareLocalRequest(task:AnalysisTask<'impedance'|'si'>,targets:readonl
     fail('Material band does not include exact DC');
   }
  };
- const stack=stackup.input.layers.map((layer,i)=>{const routing=stackup.routing.layers[i];if(!layer.material||!c.materials?.[layer.material])fail('Every layer needs explicit material');const m=c.materials![layer.material!];if(dcEndpoint)checkDcMaterial(m);else {if(m.validity?.status==='unavailable'||m.analyses&&!m.analyses.includes('impedance'))fail('Layer material is unavailable for impedance extraction');const domain=m.validity?.domain;if(object(domain)&&domain.bandHz!==undefined){const band=domain.bandHz;if(!Array.isArray(band)||band.length!==2||typeof band[0]!=='number'||typeof band[1]!=='number'||band[0]>1000||band[1]<100000)fail('Material band does not cover local v1 training/applicability band');}}if(layer.kind==='dielectric'&&(m.conductivitySM!==undefined||layer.lossTangent!==undefined&&layer.lossTangent!==0))fail('Local v1 dielectric conductivity/loss is unsupported');if(layer.kind==='dielectric'&&layer.relativePermittivity!==undefined&&layer.relativePermittivity!==m.relativePermittivity)fail('Layer and material epsilon disagree');if(m.lossTangent!==undefined&&m.lossTangent!==0)fail('Local v1 dielectric loss tangent is unsupported; it must not be ignored');return layer.kind==='copper'?{name:layer.name,copper:true,thicknessM:decimalScale(routing.thicknessMm,-3),conductivitySM:dcMaterial(m,c.temperatureC).conductivity_s_m,epsilonR:null}:{name:layer.name,copper:false,thicknessM:decimalScale(routing.thicknessMm,-3),conductivitySM:null,epsilonR:m.relativePermittivity??fail('Explicit dielectric epsilon required')};});
+ const stack=stackup.input.layers.map((layer,i)=>{const routing=stackup.routing.layers[i];if(!layer.material||!c.materials?.[layer.material])fail('Every layer needs explicit material');const m=c.materials![layer.material!];if(dcEndpoint)checkDcMaterial(m);else checkAcMaterial(m,'Layer');if(layer.kind==='dielectric'&&(m.conductivitySM!==undefined||layer.lossTangent!==undefined&&layer.lossTangent!==0))fail('Local v1 dielectric conductivity/loss is unsupported');if(layer.kind==='dielectric'&&layer.relativePermittivity!==undefined&&layer.relativePermittivity!==m.relativePermittivity)fail('Layer and material epsilon disagree');if(m.lossTangent!==undefined&&m.lossTangent!==0)fail('Local v1 dielectric loss tangent is unsupported; it must not be ignored');return layer.kind==='copper'?{name:layer.name,copper:true,thicknessM:decimalScale(routing.thicknessMm,-3),conductivitySM:dcMaterial(m,c.temperatureC).conductivity_s_m,epsilonR:null}:{name:layer.name,copper:false,thicknessM:decimalScale(routing.thicknessMm,-3),conductivitySM:null,epsilonR:m.relativePermittivity??fail('Explicit dielectric epsilon required')};});
  if(scope&&JSON.stringify([...scope.layers].sort())!==JSON.stringify(stack.filter(l=>l.copper).map(l=>l.name).sort()))fail('3D ROI scope must include every copper stack layer; partial layer scopes are unsupported');
  if(stackup.input.diameterConvention!=='finished_hole'||stackup.routing.viaPlatingThicknessUm===undefined||!stackup.input.platingMaterial)fail('Explicit finished-hole plating convention/material required');
  const plating=c.materials![stackup.input.platingMaterial!];if(!plating)fail('Plating material unavailable');
  if(dcEndpoint)checkDcMaterial(plating);
+ else {
+  checkAcMaterial(plating,'Plating');
+  if(plating.lossTangent!==undefined&&plating.lossTangent!==0)fail('Local v1 plating loss tangent is unsupported');
+ }
  const portsByLeg=legs.flatMap(({channel,prefix})=>[
   { handle:channel.from, name:prefix+'input' },
   { handle:channel.to, name:prefix+'output' },

@@ -228,6 +228,9 @@ export interface AnalysisLocalDcReport {
 }
 export interface AnalysisBoardFoilCheckedRequest {
     frequenciesHz: number[];
+    operatorPolicy?: 'skin-volume-v3';
+    /** Freeze the profiled mesh at this upper frequency for supplemental samples. */
+    profileUpperHz?: number;
     referenceOhm?: number[];
     budget: { maxSeconds: number; maxMemoryMiB: number };
     maxIterations?: number;
@@ -252,6 +255,18 @@ export interface AnalysisBoardFoilCheckedReport {
     quality: { maxKclRelative: number; maxKvlRelative: number; maxColumnPowerBalanceErrorW: number };
     provenance: {
         method: string;
+        operatorPolicy?: 'skin-volume-v3';
+        copperSkinMesh?: {
+            version: 3;
+            requestedUpperHz: number;
+            trainingUpperBoundHz: number;
+            effectiveUpperHz: number;
+            skinDepthDivisor: 3;
+            currentAndElectricShareMesh: true;
+            layers: { layer: string; skinDepthM: number; maximumStepM: number; slabs: number }[];
+            roundBarrels: { id: string; skinDepthM: number; maximumRadialStepM: number; shells: number }[];
+            scope: string;
+        };
         barrelIds: string[];
         attachments?: { id: string; electrodes: [string, string] }[];
         sourceMapping: [regionId: string, sourcePath: string, net: string | null, layer: string][];

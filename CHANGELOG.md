@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Route higher-frequency automatic DSL demand to the closed physical joint operator with the skin-volume-v3 profile. Return conditional exact points up to 100 kHz and audit a bounded supplemental batch on the same mesh and ownership. Preserve package coverage gaps, exact-grid replay and cache provenance checks; validate AC plating applicability alongside layer materials. Focused TypeScript tests, typecheck, both builds and supervised native geometry and thick-copper 100 kHz controls pass. Independent physical broad-band acceptance remains open.
+
 - Integrate an internal F64 section skin-transition operator with polygon mesh handoff, a bounded frequency grid, optional P1 axial-current recovery and singleton TypeScript handling. Four focused release library tests and five TypeScript regressions pass. The addon build, PEC radial multilayer coax regression, typecheck and package build pass. Public extraction bands and physical P7 acceptance remain unchanged.
 
 - Verify the original automatic mixed bend and exact-grid memory/disk replay: cold 1764.485 s at 196.57 MiB process-tree private peak, fresh-process reuse 1.906 s with zero native solves. Verify actual private-pad package extraction in 2.100 s native time, four DC runtime tests, four focused release algebra/profile tests, cache tests, typecheck and builds. Keep independent physical and broad-band acceptance open.

@@ -54,7 +54,7 @@ test('finite lateral return triggers the joint foil producer and exact physical 
   assert.deepEqual(g.cutPlanes,{});
   assert.deepEqual(g.ports.map(pair=>pair.map(name=>g.electrodes.find(e=>e.name===name)?.sourcePath)),[['pads[0]','pads[2]'],['pads[1]','pads[3]']]);
   const {frequenciesHz,referenceOhm}=problem.request;
-  assert.deepEqual(frequenciesHz,[1000,3000]);
+  assert.deepEqual(frequenciesHz,frequenciesHz.length===1?[2000]:[1000,3000]);
   assert.deepEqual(referenceOhm,[50,50]);
   const captured=capturedBoardGeometry(problem.boardJson);
   assert.ok(captured.regions.some(region=>region.source.path.includes('zones[0]')));
@@ -104,7 +104,7 @@ test('finite lateral return triggers the joint foil producer and exact physical 
  const replay="await a.networkParameters().network(result.network).representation('S').referenceOhm(50).frequencyHz(1000).run();";
  const accepted=await run(source+replay);
  assert.equal(accepted.status,'complete',JSON.stringify(accepted.error));
- assert.equal(foilCalls.length,1);
+ assert.deepEqual(foilCalls.map(call=>call.request.frequenciesHz),[[1000,3000],[2000]]);
  const offGrid=await run(source+replay.replace('frequencyHz(1000)','frequencyHz(2000)'));
  assert.equal(offGrid.error?.code,'NETWORK_EXACT_GRID');
  const joined="const joined=a.connect({networks:[result.network],connections:[],ports:{input:result.network.port('input'),output:result.network.port('output')}});";
@@ -174,12 +174,12 @@ test('closed lateral candidate retains local barrel provenance and ignores a dis
  omitBarrel=false;
  mislabelModel=true;
  assert.equal((await run()).error?.code,'CHANNEL_FOIL_EVIDENCE');
- assert.equal(calls,3);
+ assert.equal(calls,4);
  board.holes.push({id:'unconfirmed-span',at:{x:.8,y:.8},hole:{shape:'round',diameterMm:.15,plated:true}});
  const captured=capturedBoardGeometry(JSON.stringify(board));
  assert.ok(captured.holes.some(hole=>hole.source.source_id==='unconfirmed-span'&&hole.plated&&!hole.span_confirmed));
  assert.equal((await run()).error?.code,'CHANNEL_FOIL_PADSTACK');
- assert.equal(calls,3);
+ assert.equal(calls,4);
 });
 
 test('joint mixed candidate welds an explicit two-pin package to its retained finite pads',async t=>{
@@ -244,7 +244,7 @@ test('joint mixed candidate welds an explicit two-pin package to its retained fi
   const output=await run(resistance);
   assert.equal(output.status,'complete',JSON.stringify(output.error));
  }
- assert.equal(calls,2);
+ assert.equal(calls,4);
  omitPackageLoss=true;
  assert.equal((await run(10)).error?.code,'CHANNEL_FOIL_EVIDENCE');
  omitPackageLoss=false;

@@ -121,3 +121,53 @@ test('exact foil cache keys the physical request and bounds replay size', () => 
     assert.equal(cachedBoardFoilReport(cache,'core-1',verbose,noSolve).cache?.key,large.cache?.key);
   } finally { rmSync(dir,{recursive:true,force:true}); }
 });
+
+test('skin-volume cache isolates frozen profiles and revalidates their mesh evidence', () => {
+  const dir = mkdtempSync(join(tmpdir(),'p7-foil-skin-cache-'));
+  try {
+    const conductivitySM = 58e6;
+    const input: BoardFoilProblem = {
+      ...problem,
+      geometry: { stack: ['TOP','BOTTOM'].map(name=>({name,copper:true,conductivitySM})), barrelConductivitySM:conductivitySM },
+      request: { ...problem.request, frequenciesHz:[1000,20_000], operatorPolicy:'skin-volume-v3', profileUpperHz:100_000 },
+    };
+    const cache = new LocalModelCache(dir);
+    let calls = 0;
+    const produce = (request: AnalysisBoardFoilCheckedRequest) => {
+      calls++;
+      const report = mock(request,input);
+      const requestedUpperHz = request.frequenciesHz.at(-1)!;
+      const effectiveUpperHz = request.profileUpperHz ?? requestedUpperHz;
+      const skinDepthM = 1/Math.sqrt(Math.PI*(4e-7*Math.PI)*effectiveUpperHz*conductivitySM);
+      report.provenance.operatorPolicy = request.operatorPolicy;
+      report.provenance.copperSkinMesh = {
+        version:3, requestedUpperHz, trainingUpperBoundHz:requestedUpperHz, effectiveUpperHz, skinDepthDivisor:3,
+        currentAndElectricShareMesh:true, scope:'Copper thickness and round barrel radial resolution',
+        layers:['TOP','BOTTOM'].map(layer=>({layer,skinDepthM,maximumStepM:skinDepthM/4,slabs:2})),
+        roundBarrels:[{id:'barrel-0',skinDepthM,maximumRadialStepM:skinDepthM/4,shells:2}],
+      };
+      return report;
+    };
+    const run = (request = input.request) => cachedBoardFoilReport(cache,'core-1',{...input,request},produce);
+    const frozen = run();
+    assert.equal(run().cache?.status,'memory');
+    assert.notEqual(run({...input.request,profileUpperHz:undefined}).cache?.key,frozen.cache?.key);
+    assert.equal(frozen.coverage,'unverified');
+    for (const request of [
+      {...input.request,operatorPolicy:undefined,profileUpperHz:undefined},
+      {...input.request,profileUpperHz:19_999},
+      {...input.request,profileUpperHz:100_001},
+    ]) assert.throws(()=>run(request),/BOARD_FOIL_GRID/);
+
+    cache.clear();
+    const path = join(dir,frozen.cache!.key+'.json');
+    const envelope = JSON.parse(readFileSync(path,'utf8'));
+    const entry = JSON.parse(envelope.payload);
+    entry.report.provenance.copperSkinMesh.roundBarrels[0].maximumRadialStepM *= 2;
+    envelope.payload = JSON.stringify(entry);
+    envelope.checksum = digest(envelope.payload);
+    writeFileSync(path,JSON.stringify(envelope));
+    assert.equal(run().cache?.status,'cold');
+    assert.equal(calls,3);
+  } finally { rmSync(dir,{recursive:true,force:true}); }
+});

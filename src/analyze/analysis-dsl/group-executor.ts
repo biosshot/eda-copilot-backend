@@ -66,8 +66,8 @@ function outsideApplicability([start, stop]: FrequencyInterval, [low, high]: Fre
 }
 
 const executeFoil = createProblemExecutor(true);
-const solveGroup = createBoardChannelExecutor(undefined, undefined, (foil, frequencies, budget) => ({
-  foil, report: runAutoFoil(foil, frequencies, budget, undefined, executeFoil),
+const solveGroup = createBoardChannelExecutor(undefined, undefined, (foil, frequencies, budget, interval) => ({
+  foil, report: runAutoFoil(foil, frequencies, budget, interval, executeFoil),
 }));
 
 export function createGroupExecutor(solve = solveGroup) {
@@ -109,7 +109,7 @@ export function createGroupExecutor(solve = solveGroup) {
     const physicalPorts = terminalRequest.ports.map(({ name, positive, negative }) => ({
       name, positive: terminals.get(positive)!, negative: terminals.get(negative)!,
     }));
-    const applicabilityBandHz = boardChannelApplicability(terminalRequest);
+    const applicabilityBandHz = boardChannelApplicability(terminalRequest, requestedIntervalHz[1]);
     const seeds = extractionAxis(requestedIntervalHz, applicabilityBandHz,
       sources.flatMap(source => source.status === 'bounded-input' ? source.characteristicHz : []));
     const uncovered = outsideApplicability(requestedIntervalHz, applicabilityBandHz);

@@ -439,3 +439,41 @@ fn mixed_thickness_board_checks_shared_matched_response_in_original_coordinates(
         checked["quality"], checked["provenance"], checked["enrichment"]
     );
 }
+
+#[test]
+fn profiled_joint_exact_sample_checks_the_existing_thick_coupon_at_100khz() {
+    let (board, mut geometry) = fixture();
+    // Same geometry as mixed_thickness_board_checks_shared_matched_response_in_original_coordinates.
+    geometry.stack.last_mut().unwrap().thickness_m = 0.1e-3;
+    let request = serde_json::from_value(json!({
+        "frequenciesHz":[100000.],"referenceOhm":[50.,50.],"operatorPolicy":"skin-volume-v3",
+        "budget":{"maxSeconds":1800.,"maxMemoryMiB":3072.}
+    }))
+    .unwrap();
+    let report =
+        board_foil::solve_checked(&board, &geometry, request, std::time::Instant::now()).unwrap();
+    assert_eq!(report["frequenciesHz"], json!([100000.]));
+    assert_eq!(report["ports"], json!(geometry.ports));
+    assert_eq!(report["coverage"], "unverified");
+    assert_eq!(report["provenance"]["operatorPolicy"], "skin-volume-v3");
+    assert_eq!(report["provenance"]["bandCoverage"], "unverified");
+    assert!(report["provenance"]["volumeTetrahedra"].as_u64().unwrap() > 0);
+    let skin = &report["provenance"]["copperSkinMesh"];
+    assert_eq!(skin["effectiveUpperHz"], json!(100000.));
+    let bottom = skin["layers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|layer| layer["layer"] == "BOTTOM")
+        .unwrap();
+    assert_eq!(bottom["slabs"], 2);
+    for column in report["samples"][0]["columns"].as_array().unwrap() {
+        assert!(column["kclRelative"].as_f64().unwrap() <= 1e-8);
+        assert!(column["kvlRelative"].as_f64().unwrap() <= 1e-8);
+        assert!(column["copperLossW"].as_f64().unwrap() > 0.);
+    }
+    println!("profiled joint evidence: {}", json!({
+        "quality":report["quality"], "provenance":report["provenance"],
+        "samples":report["samples"], "enrichment":report["enrichment"]
+    }));
+}

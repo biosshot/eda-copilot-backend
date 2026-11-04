@@ -28,15 +28,21 @@ export function cachedBoardFoilReport(
   started = performance.now(),
 ): BoardFoilReport {
   const { request, expected } = problem;
-  const { frequenciesHz, maxIterations = 16 } = request;
+  const { frequenciesHz, maxIterations = 16, operatorPolicy, profileUpperHz } = request;
+  const profiled = operatorPolicy === 'skin-volume-v3';
+  const limitHz = profiled ? 100_000 : 10_000;
+  const upperHz = profileUpperHz ?? frequenciesHz.at(-1);
   const portCount = expected.electrodePairs.length;
   const referenceOhm = request.referenceOhm ?? expected.electrodePairs.map(() => 50);
   if (!validBudget(request.budget)) throw new Error('BOARD_FOIL_BUDGET: finite positive time and 1..4096 MiB required');
-  if (portCount < 1 || portCount > 16 || !frequenciesHz.length || frequenciesHz.length * portCount > 256 ||
-      frequenciesHz.some((f, i) => !Number.isFinite(f) || f < 1000 || f > 10000 || i > 0 && f <= frequenciesHz[i - 1]) ||
+  if ((operatorPolicy !== undefined && !profiled) ||
+      (profileUpperHz !== undefined && (!profiled || !Number.isFinite(profileUpperHz) ||
+        profileUpperHz < frequenciesHz[frequenciesHz.length - 1] || profileUpperHz > limitHz)) ||
+      portCount < 1 || portCount > 16 || !frequenciesHz.length || frequenciesHz.length * portCount > 256 ||
+      frequenciesHz.some((f, i) => !Number.isFinite(f) || f < 1000 || f > limitHz || i > 0 && f <= frequenciesHz[i - 1]) ||
       referenceOhm.length !== portCount || referenceOhm.some(r => !Number.isFinite(r) || r <= 0 || !Number.isFinite(1 / r)) ||
       !Number.isSafeInteger(maxIterations) || maxIterations < 1 || maxIterations > 16) {
-    throw new Error('BOARD_FOIL_GRID: bounded ordered 1..10 kHz exact grid and positive references required');
+    throw new Error(`BOARD_FOIL_GRID: bounded ordered 1..${limitHz / 1000} kHz exact grid, valid policy/profile and positive references required`);
   }
   const deadlineSeconds = Math.min(request.budget.maxSeconds, verificationLimit('P7_VERIFY_SECONDS', 300, 1, 3600));
   const maxMemoryMiB = Math.min(Math.floor(request.budget.maxMemoryMiB), verificationLimit('P7_VERIFY_MEMORY_MIB', 2048, 256, 8192));
@@ -53,6 +59,7 @@ export function cachedBoardFoilReport(
   const key = cache.key({
     core, producer: 'automatic-board-foil-or-mixed-exact-grid-v1', board: digest(problem.boardJson),
     geometry: problem.geometry, expected, frequenciesHz, referenceOhm, maxIterations,
+    ...(profiled && { operatorPolicy, profileUpperHz: upperHz }),
     ...(request.attachments?.length&&{attachments:request.attachments}),
   });
   remaining();
