@@ -287,13 +287,16 @@ fn prepare_geometry(
     max_wall: Duration,
     dense: bool,
 ) -> Result<Geometry> {
-    if request.stack.len() != 3
-        || request.stack.iter().filter(|l| l.copper).count() != 2
+    // Keep the planar-only path bounded to the declared 2–8 copper layers.
+    // Board mesh validation additionally checks exact names/order and materials.
+    if !(3..=15).contains(&request.stack.len())
+        || request.stack.len() % 2 == 0
+        || request.stack.iter().enumerate().any(|(i, layer)| layer.copper != (i % 2 == 0))
         || !board.vias.is_empty()
         || !request.cut_planes.is_empty()
         || request.allow_insulated_copper_cuts
     {
-        return Err(error("BOARD_FOIL_SCOPE", "two-foil board, complete copper, finite pads and no barrels or equipotential cuts required"));
+        return Err(error("BOARD_FOIL_SCOPE", "2..8 alternating copper foils, complete copper, finite pads and no barrels or equipotential cuts required"));
     }
     if !max_frequency_hz.is_finite() || max_frequency_hz <= 0. || max_frequency_hz > 1e5 {
         return Err(error(
@@ -642,4 +645,180 @@ fn extract_knots(
             potential: node_dofs[&(layer, node)],
         })
         .collect())
+}
+
+// Bound the exact-grid output and the number of checked drives in each pass.
+const MAX_CHECKED_COLUMNS: usize = 256;
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CheckedRequest {
+    pub frequencies_hz: Vec<f64>,
+    pub reference_ohm: Option<Vec<f64>>,
+    pub budget: crate::electrical::Budget,
+    pub max_iterations: Option<usize>,
+}
+
+/// The checked automatic endpoint deliberately returns only the exact-grid
+/// response and evidence. Its shared reduced model is never a public resource.
+pub fn solve_checked(
+    board: &Board,
+    geometry: &board_mesh::Request,
+    request: CheckedRequest,
+    started: Instant,
+) -> Result<serde_json::Value> {
+    use serde_json::json;
+    let port_count = geometry.ports.len();
+    let axis = request.frequencies_hz;
+    if !(1..=16).contains(&port_count)
+        || axis.is_empty()
+        || axis.len().saturating_mul(port_count) > MAX_CHECKED_COLUMNS
+        || axis
+            .iter()
+            .enumerate()
+            .any(|(i, f)| !f.is_finite() || !(1e3..=1e4).contains(f) || i > 0 && axis[i - 1] >= *f)
+    {
+        return Err(error("BOARD_FOIL_GRID",
+            "1..16 physical ports and strictly increasing 1..10 kHz axis within 256 checked columns required"));
+    }
+    let refs = request
+        .reference_ohm
+        .unwrap_or_else(|| vec![50.; port_count]);
+    if refs.len() != port_count
+        || refs
+            .iter()
+            .any(|r| !r.is_finite() || *r <= 0. || !(1. / r).is_finite())
+    {
+        return Err(error(
+            "BOARD_FOIL_GRID",
+            "positive finite matched reference per physical port required",
+        ));
+    }
+    let iterations = request.max_iterations.unwrap_or(16);
+    if !(1..=16).contains(&iterations) {
+        return Err(error(
+            "BOARD_FOIL_GRID",
+            "total enrichment budget must be in 1..=16",
+        ));
+    }
+    let seconds = request
+        .budget
+        .max_seconds
+        .filter(|s| s.is_finite() && *s > 0. && *s <= 3600.)
+        .ok_or_else(|| {
+            error(
+                "BOARD_FOIL_BUDGET",
+                "finite positive maxSeconds <= 3600 required",
+            )
+        })?;
+    let memory = request
+        .budget
+        .max_memory_mi_b
+        .filter(|m| m.is_finite() && *m >= 1. && *m <= 4096.)
+        .ok_or_else(|| {
+            error(
+                "BOARD_FOIL_BUDGET",
+                "finite maxMemoryMiB in 1..=4096 required",
+            )
+        })?;
+    let seconds_cap =
+        super::board_prepare::verification_limit("P7_VERIFY_SECONDS", 300, 1, 3600)? as f64;
+    let memory_cap =
+        super::board_prepare::verification_limit("P7_VERIFY_MEMORY_MIB", 2048, 256, 8192)?;
+    let admitted_seconds = seconds.min(seconds_cap);
+    let admitted_memory = (memory.floor() as usize).min(memory_cap);
+    let reserve = axis.len() * port_count * (port_count * 256 + 512) + 256 * 1024;
+    if admitted_memory * 1024 * 1024 <= super::parallel::stack_reservation() + reserve {
+        return Err(error(
+            "MEMORY_LIMIT",
+            "checked foil output and native stacks exhaust budget",
+        ));
+    }
+    let mut budget = super::board_prepare::allocation_budget(admitted_memory);
+    budget.max_bytes -= reserve;
+    let wall = Duration::from_secs_f64(admitted_seconds);
+    remaining(started, wall)?;
+    let maximum = *axis.last().unwrap();
+    let prepared = prepare_geometry(board, geometry, &[], maximum, budget, started, wall, false)?;
+    let Geometry {
+        mesh,
+        foils,
+        potential_nodes,
+        ports,
+        rows,
+        supports,
+        max_copper_volume_change,
+        ..
+    } = prepared;
+    // Source audit storage scales with captured provenance. Budget it from
+    // the actual names and row count before constructing the JSON response.
+    let provenance_bytes = mesh
+        .source_mapping
+        .iter()
+        .try_fold(0usize, |n, (id, path, net, layer)| {
+            n.checked_add(256)?.checked_add(
+                id.len()
+                    .checked_add(path.len())?
+                    .checked_add(net.as_ref().map_or(0, String::len))?
+                    .checked_add(layer.len())?
+                    .checked_mul(6)?,
+            )
+        })
+        .and_then(|n| {
+            geometry.electrodes.iter().try_fold(n, |sum, e| {
+                sum.checked_add(256)?
+                    .checked_add(e.name.len().checked_mul(24)?)
+            })
+        })
+        .ok_or_else(|| error("MEMORY_LIMIT", "checked foil provenance plan overflow"))?;
+    budget.max_bytes = budget
+        .max_bytes
+        .checked_sub(provenance_bytes)
+        .ok_or_else(|| error("MEMORY_LIMIT", "checked foil provenance exceeds budget"))?;
+    budget.check(mesh.mesh.retained_bytes()?)?;
+    let retained: Vec<_> = (0..geometry.electrodes.len()).collect();
+    let epsilon = geometry
+        .stack
+        .iter()
+        .filter_map(|l| l.epsilon_r)
+        .fold(1., f64::max);
+    let field = Field::new_conforming_trace(&mesh.mesh, potential_nodes.len(), rows, budget)?;
+    let (space, mut checked) = super::foil_reduced::solve_matched_grid(
+        &foils,
+        potential_nodes,
+        &retained,
+        &ports,
+        field,
+        epsilon,
+        budget,
+        started,
+        wall,
+        super::foil_reduced::MatchedGrid {
+            frequencies: &axis,
+            references: &refs,
+            max_iterations: iterations,
+        },
+    )?;
+    remaining(started, wall)?;
+    checked["status"] = json!("complete");
+    checked["representation"] = json!("S");
+    checked["coverage"] = json!("unverified");
+    checked["frequenciesHz"] = json!(axis);
+    checked["referenceOhm"] = json!(refs);
+    checked["ports"] = json!(geometry.ports);
+    checked["provenance"] = json!({
+        "method":"board-derived conforming foil, checked matched exact grid",
+        "sourceMapping":mesh.source_mapping,"electrodeAreasM2":mesh.electrode_areas_m2,
+        "maxCopperVolumeChange":max_copper_volume_change,"prisms":supports.len(),
+        "retainedPotentials":space.diagnostic_model().potential_nodes.len(),
+        "currentModes":space.diagnostic_model().current_dofs.len(),
+        "plannedBytes":space.planned_bytes+reserve+provenance_bytes,
+        "maxSeconds":admitted_seconds,"maxMemoryMiB":admitted_memory,
+        "maxMagneticReciprocity":space.max_magnetic_reciprocity,
+        "maxMagneticRefinement":space.max_magnetic_refinement,
+        "maxElectricReciprocity":space.max_electric_reciprocity,
+        "spatialCoverage":"unverified","bandCoverage":"unverified",
+        "driveConvention":"1 A RMS matched Norton basis columns, checked only at listed frequencies",
+    });
+    Ok(checked)
 }

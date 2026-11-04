@@ -26,6 +26,8 @@ export function frequencyTopology(task:AnalysisTask<'networkParameters'|'si'>){
   if(d.kind==='network'){
    if(seen.has(id))invalid('Repeated instance handle / overlapping nested topology');seen.add(id);
    const model=networkResource(d.input.model),mapping=d.input.ports;
+   if(model.data.format==='physical-port-samples'&&(depth!==0||task.kind!=='networkParameters'))
+    throw new AnalysisDslError('NETWORK_PHYSICAL_SAMPLE_TOPOLOGY','Physical exact-grid samples require standalone frequency replay; a physical model is required for connections or SI');
    if(!object(mapping)||Object.values(mapping).length!==model.ports.length||new Set(Object.values(mapping)).size!==model.ports.length||Object.values(mapping).some(p=>!model.ports.includes(p as string)))invalid('Incomplete/unknown port mapping');
    const names=model.ports.map(p=>Object.keys(mapping).find(k=>mapping[k]===p)!);
    const start=count;count+=names.length;if(count>128||instances.length>=32)throw new AnalysisDslError('NETWORK_BUDGET','Composition exceeds 128 ports or 32 blocks');
@@ -53,13 +55,57 @@ export function createFrequencyExecutor(){const execute=createProblemExecutor(tr
  const frequencies=c.frequencyHz!==undefined?[c.frequencyHz]:Array.from({length:points},(_,i)=>{const f=c.frequency!,t=points===1?0:i/(points-1);return f.scale==='log'?f.startHz*(f.stopHz/f.startHz)**t:f.startHz+(f.stopHz-f.startHz)*t;});
  const sourceBands=graph.instances.map(i=>declaredNetworkBand(i.model));
  for(const band of sourceBands)if(band&&frequencies.some(f=>f<band[0]||f>band[1]))throw new AnalysisDslError('NETWORK_BAND','Requested frequency lies outside producer applicability');
- const report=execute({kind:'frequency-network',request:{...graph,frequencies,representation:c.representation!,referenceOhm:references,budget:c.budget}});
+ const input=graph.instances[0]?.model.data;
+ const exact=object(input)&&input.format==='physical-port-samples'?input as unknown as T.PhysicalPortSampleData:undefined;
+ let instances=graph.instances;
+ if(exact){
+  const instance=instances[0];
+  if(instances.length!==1||graph.connections.length||graph.ports.length!==instance.model.ports.length||
+     graph.ports.some((port,i)=>port.index!==i))
+   throw new AnalysisDslError('NETWORK_PHYSICAL_SAMPLE_TOPOLOGY','Standalone replay requires all physical pairs in producer order');
+  if(c.representation!=='S'||references?.some((value,i)=>value!==exact.referenceOhm[i]))
+   throw new AnalysisDslError('NETWORK_PHYSICAL_SAMPLE_REFERENCE','Exact physical S samples retain their original mathematical references');
+  const allowed=new Set(exact.frequenciesHz);
+  if(frequencies.some(f=>!allowed.has(f)))
+   throw new AnalysisDslError('NETWORK_EXACT_GRID','Requested frequency is absent from the physical producer grid');
+  // P6 checks a single matrix table algebraically. No network joins or
+  // interpolation are possible after the guards above.
+  const table={format:'network-parameters',representation:'S',referenceTopology:'common',nature:'passive',
+   frequenciesHz:exact.frequenciesHz,parameters:exact.parameters,
+   referenceOhm:Object.fromEntries(instance.model.ports.map((name,i)=>[name,exact.referenceOhm[i]]))};
+  instances=[{...instance,model:{...instance.model,data:table}}];
+ }
+ const report=execute({kind:'frequency-network',request:{...graph,instances,frequencies,representation:c.representation!,referenceOhm:references,budget:c.budget}});
  if(report.status!=='complete')throw new AnalysisDslError(report.diagnostics[0]?.code??'NETWORK_REJECTED',report.diagnostics.map(d=>d.message).join('; '),report.diagnostics);
  report.resources={peakRssBytes:process.resourceUsage().maxRSS*1024,metric:'OS process high-water RSS through native call; includes Node/earlier solves'};
- const validity:T.Validity={status:report.conditional?'conditional':'valid',...(report.conditional?{reason:'Interpolated source coefficients or conditional input validity; see solution provenance/intervals'}:{})};
+ const sourceValidity=graph.instances[0].model.validity;
+ const sourceDomain=object(sourceValidity)&&object(sourceValidity.domain)?sourceValidity.domain:undefined;
+ const validity:T.Validity=exact?{
+  status:'conditional',reason:'Standalone replay of native-checked physical S samples at exact producer points',
+  domain:json({samplePolicy:'exact',evaluatedFrequenciesHz:report.frequenciesHz,
+   ...(sourceDomain?.producer?{producer:sourceDomain.producer}:{}),
+   sourceValiditySha256:createHash('sha256').update(JSON.stringify(json(compactValidity(sourceValidity)??null))).digest('hex'),
+  }),
+ }:{status:report.conditional?'conditional':'valid',...(report.conditional?{reason:'Interpolated source coefficients or conditional input validity; see solution provenance/intervals'}:{})};
  const unit=c.representation==='S'?'1':c.representation==='Z'?'Ohm':'S';
  const metrics:Record<string,T.DataDescription>={};for(let i=0;i<n;i++)for(let j=0;j<n;j++)metrics[`parameter:${JSON.stringify({out:graph.ports[i].name,in:graph.ports[j].name})}`]={kind:'series',unit,values:report.parameters!.map(m=>m[i][j]),axis:{name:'frequencyHz',unit:'Hz',values:report.frequenciesHz!},validity,diagnostics:[]};
  const sourceHashes=graph.instances.map(i=>({instanceId:i.id,resourceId:i.model.id,sha256:createHash('sha256').update(JSON.stringify(json(i.model))).digest('hex')}));
+ if(exact){
+  if(JSON.stringify(report.frequenciesHz)!==JSON.stringify(frequencies)||
+     JSON.stringify(report.referenceOhm)!==JSON.stringify(exact.referenceOhm)||
+     report.ports?.length!==graph.ports.length||
+     report.ports.some((port,i)=>port.name!==graph.ports[i].name||port.index!==graph.ports[i].index))
+   throw new AnalysisDslError('NETWORK_EXACT_GRID','Native replay changed physical sample coordinates');
+  const network:T.NetworkResource={id:'physical-replay-'+randomUUID(),kind:'network',ports:graph.ports.map(p=>p.name),
+   source:'Exact native-checked physical-port samples',analyses:['networkParameters'],validity,
+   data:{...exact,frequenciesHz:report.frequenciesHz!,parameters:report.parameters!}};
+  const {provenance,bandHz,interpolation,topology,validityLimitations,...response}=report as typeof report & {topology?:unknown};
+  return {id:task.contextId+':physical-replay-'+randomUUID(),status:'complete',method:'Exact-grid physical S sample replay',
+   diagnostics:report.diagnostics,assumptions:['Only original physical port pairs, references and sampled frequencies are supported.'],
+   metrics,network,solution:json({...response,
+    topology:{referenceTopology:'physical-pairs',connections:[]},
+    physicalPorts:exact.physicalPorts,samplePolicy:'exact',validity,sourceHashes})};
+ }
  const compactProvenance=report.provenance!.map((p:any,i)=>({instanceId:p.instanceId,resourceId:p.resource.id,sha256:sourceHashes[i].sha256,source:p.resource.source,sourcePorts:p.sourcePorts,mapping:p.mapping,sourceRepresentation:p.sourceRepresentation,sourceReferenceOhm:p.sourceReferenceOhm,bandHz:p.bandHz,nature:p.nature,sourceValidity:compactValidity(p.resource.validity)??null,allowedAnalyses:p.resource.analyses??null}));
  const physical=object(report.assembledModel);
  const descriptor=physical||graph.instances.length===1&&object(graph.instances[0].model.data)&&graph.instances[0].model.data.format==='coupled-rlc';

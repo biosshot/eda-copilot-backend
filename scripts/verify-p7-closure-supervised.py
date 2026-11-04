@@ -1,10 +1,16 @@
 """Reuse existing supervisor memory policy for the small coupled AC runner."""
-import importlib.util,pathlib,psutil,subprocess,time,os,json
+import argparse,importlib.util,pathlib,psutil,subprocess,time,os,json,math
 root=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('p7_supervisor',root/'scripts/verify-p7-automatic-supervised.py')
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
 out=pathlib.Path(os.environ.get('P7_SUPERVISOR_OUTPUT',str(root/'debugging/p7-closure'/str(time.time_ns()))));out.mkdir(parents=True,exist_ok=True)
-cap=1536*1024**2;reserve=1024**3;head=s.windows_commit_headroom()
+parser=argparse.ArgumentParser()
+parser.add_argument('--memory-mib',type=int,default=1536)
+args=parser.parse_args()
+if not 256<=args.memory_mib<=8192:parser.error('--memory-mib must be in 256..8192')
+timeout=float(os.environ.get('P7_SUPERVISOR_TEST_TIMEOUT','145'))
+if not math.isfinite(timeout) or timeout<=0:parser.error('supervisor timeout must be finite and positive')
+cap=args.memory_mib*1024**2;reserve=1024**3;head=s.windows_commit_headroom()
 reason=s.memory_refusal(True,psutil.virtual_memory().available,head,0,cap,reserve,True)
 if reason:
  (out/'supervision.json').write_text(json.dumps(dict(status='resource-failure',reason=reason)));raise SystemExit(1)
@@ -18,7 +24,7 @@ with (out/'stdout.txt').open('w') as log:
   children=proc.children(recursive=True)
   r,_,v=s.tree_memory(proc,children,True);rss=max(rss,r);private=max(private,v)
   reason=s.memory_refusal(True,psutil.virtual_memory().available,s.windows_commit_headroom(),v,cap,reserve)
-  if time.monotonic()-start>float(os.environ.get('P7_SUPERVISOR_TEST_TIMEOUT','145')):reason='145s supervisor deadline'
+  if time.monotonic()-start>timeout:reason=f'{timeout:g}s supervisor deadline'
   if reason:
    for child in reversed(children):
     try:child.kill()

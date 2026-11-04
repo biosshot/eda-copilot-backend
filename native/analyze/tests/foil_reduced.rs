@@ -190,3 +190,211 @@ fn bounded_foil_enrichment_passes_full_ac_residual_on_the_same_coupon() {
         space.planned_bytes, point.residual
     );
 }
+
+#[test]
+fn board_foil_checks_every_matched_column_on_one_shared_exact_grid() {
+    let (board, geometry) = fixture();
+    let request = serde_json::from_value(json!({
+        "frequenciesHz":[1000.,10000.],"referenceOhm":[50.,50.],
+        "budget":{"maxSeconds":300.,"maxMemoryMiB":128.}
+    }))
+    .unwrap();
+    let result =
+        board_foil::solve_checked(&board, &geometry, request, std::time::Instant::now()).unwrap();
+    assert_eq!(result["status"], "complete");
+    assert_eq!(result["coverage"], "unverified");
+    assert_eq!(result["representation"], "S");
+    assert_eq!(result["frequenciesHz"], json!([1000., 10000.]));
+    assert_eq!(result["referenceOhm"], json!([50., 50.]));
+    assert_eq!(result["ports"], json!(geometry.ports));
+    assert!(result.get("model").is_none());
+    assert_eq!(
+        result["provenance"]["electrodeAreasM2"]
+            .as_object()
+            .unwrap()
+            .len(),
+        4
+    );
+    assert!(
+        result["provenance"]["sourceMapping"]
+            .as_array()
+            .unwrap()
+            .len()
+            >= 4
+    );
+    assert_eq!(result["provenance"]["spatialCoverage"], "unverified");
+    assert_eq!(result["provenance"]["bandCoverage"], "unverified");
+    for (i, &f) in [1000., 10000.].iter().enumerate() {
+        let sample = &result["samples"][i];
+        assert_eq!(sample["frequencyHz"], f);
+        assert_eq!(sample["columns"].as_array().unwrap().len(), 2);
+        for input in 0..2 {
+            let c = &sample["columns"][input];
+            assert_eq!(c["input"], input);
+            assert!(c["kclRelative"].as_f64().unwrap() <= 1e-8);
+            assert!(c["kvlRelative"].as_f64().unwrap() <= 1e-8);
+            let copper = c["copperLossW"].as_f64().unwrap();
+            assert!(copper >= 0.);
+            let outgoing = (0..2)
+                .map(|output| {
+                    let wave = &result["parameters"][i][output][input];
+                    wave["real"].as_f64().unwrap().powi(2)
+                        + wave["imaginary"].as_f64().unwrap().powi(2)
+                })
+                .sum::<f64>();
+            let net = 12.5 * (1. - outgoing);
+            assert!((net - copper).abs() <= 1e-12 + 1e-8 * (net.abs() + copper));
+        }
+        assert!(
+            result["parameters"][i][0][1]["imaginary"]
+                .as_f64()
+                .unwrap()
+                .abs()
+                > 0.
+        );
+    }
+    assert!(result["enrichment"].as_array().unwrap().len() <= 17);
+    eprintln!(
+        "checked native grid quality={} history={} provenance={}",
+        result["quality"], result["enrichment"], result["provenance"]
+    );
+}
+
+#[test]
+fn asymmetric_four_foil_stack_preserves_floating_planes_and_physical_response() {
+    use pcb_analyze::{
+        extraction::local::foil_reduced::TrainingPoint,
+        model::{Layer, Side},
+    };
+    let (mut board, mut request) = fixture();
+    let mut bottom = board.layers.pop().unwrap();
+    bottom.physical_index = 3;
+    for (index, name) in [(1, "IN1"), (2, "IN2")] {
+        board.layers.push(Layer {
+            name: name.into(),
+            physical_index: index,
+            side: Side::Inner,
+            disable_routing: None,
+        });
+    }
+    board.layers.push(bottom);
+    for pad in &mut board.pads {
+        if pad.layers == [1] {
+            pad.layers[0] = 3;
+        }
+    }
+    let return_foil = board.zones[1].clone();
+    board.zones[1].layers = vec![3];
+    board.zones[1].fills[0].layer = 3;
+    for (layer, id) in [(1, "inner-one"), (2, "inner-two")] {
+        let mut plane = return_foil.clone();
+        plane.layers = vec![layer];
+        plane.source.path = format!("test.{id}");
+        plane.source.id = Some(id.into());
+        plane.fills[0].layer = layer;
+        plane.fills[0].source.path = format!("test.{id}.fill");
+        plane.fills[0].source.id = Some(format!("{id}-fill"));
+        plane.fills[0].native_ids = None;
+        board.zones.push(plane);
+    }
+
+    let top_sigma = 58e6;
+    let bottom_sigma = 41e6;
+    let top_thickness = 5e-6;
+    let bottom_thickness = 7e-6;
+    let foil = |name: &str, thickness_m, conductivity| board_mesh::Layer {
+        name: name.into(),
+        copper: true,
+        thickness_m,
+        epsilon_r: None,
+        conductivity_s_m: Some(conductivity),
+    };
+    let dielectric = |name: &str, thickness_m, epsilon| board_mesh::Layer {
+        name: name.into(),
+        copper: false,
+        thickness_m,
+        epsilon_r: Some(epsilon),
+        conductivity_s_m: None,
+    };
+    request.stack = vec![
+        foil("TOP", top_thickness, top_sigma),
+        dielectric("d1", 35e-6, 2.7),
+        foil("IN1", 6e-6, 51e6),
+        dielectric("d2", 80e-6, 4.2),
+        foil("IN2", 8e-6, 48e6),
+        dielectric("d3", 120e-6, 3.3),
+        foil("BOTTOM", bottom_thickness, bottom_sigma),
+    ];
+    let frequency = 1000.;
+    let drive = [1., -1.];
+    let training = TrainingPoint {
+        frequency_hz: frequency,
+        drive: drive.to_vec(),
+        max_iterations: Some(12),
+    };
+    let prepared = board_foil::prepare_reduced_enriched(
+        &board,
+        &request,
+        &[],
+        frequency,
+        budget(),
+        Duration::from_secs(300),
+        &training,
+    )
+    .unwrap();
+    let space = &prepared.space;
+    let model = space.diagnostic_model();
+    for layer in ["TOP", "IN1", "IN2", "BOTTOM"] {
+        assert!(prepared.supports.iter().any(|s| s.layer == layer));
+    }
+    for (path, layer) in [
+        ("test.inner-one.fill.polygons[0]", "IN1"),
+        ("test.inner-two.fill.polygons[0]", "IN2"),
+    ] {
+        let entry = prepared
+            .source_mapping
+            .iter()
+            .find(|entry| entry.1 == path && entry.3 == layer)
+            .unwrap_or_else(|| panic!("missing physical fill polygon {path} on {layer}"));
+        assert!(
+            prepared.supports.iter().any(|support| {
+                support.layer == layer && support.source_region_ids.contains(&entry.0)
+            }),
+            "mapped fill polygon {path} is not retained in any {layer} prism"
+        );
+    }
+    assert_eq!(model.conserved_potential_modes.len(), 5);
+    assert!(space.max_electric_reciprocity <= 1e-9);
+
+    let modes = &model.conserved_potential_modes;
+    let electric = faer::Mat::from_fn(modes.len(), modes.len(), |i, j| {
+        model
+            .capacitance_f
+            .iter()
+            .map(|&(a, b, c)| modes[i][a] * c * modes[j][b])
+            .sum::<f64>()
+    });
+    assert!(
+        electric.llt(faer::Side::Lower).is_ok(),
+        "floating plane charge metric must be positive definite"
+    );
+    let solve_budget = Budget {
+        max_memory_mi_b: Some(128.),
+        max_seconds: Some(3.),
+    };
+    let dc = space
+        .solve_checked(0., &drive, solve_budget.clone())
+        .unwrap();
+    let drop = dc.voltage_real[0] - dc.voltage_real[1];
+    let exact = 1.5e-3 / 0.5e-3
+        * (1. / (top_sigma * top_thickness) + 1. / (bottom_sigma * bottom_thickness));
+    assert!(
+        (drop / exact - 1.).abs() < 1e-9,
+        "DC drop {drop:e} vs {exact:e}"
+    );
+    let ac = space
+        .solve_checked(frequency, &drive, solve_budget)
+        .unwrap();
+    assert!(ac.residual.kcl_relative <= 1e-8 && ac.residual.kvl_relative <= 1e-8);
+    assert_eq!(ac.coverage, "unverified");
+}

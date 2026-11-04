@@ -62,7 +62,7 @@ export class AnalysisPool {
         const snapshot = { ...options };
         return new Promise((resolve, reject) => {
             const job: Job = {
-                id: randomUUID(), problem: problem.kind === 'prepare-conduction' || problem.kind === 'dc' || problem.kind==='electrical-network'||problem.kind==='frequency-network'||problem.kind==='cross-section'||problem.kind==='geometry-validation'||problem.kind==='local-extraction'||problem.kind==='local-dc-extraction'||problem.kind==='transient-network'||problem.kind==='board-section'||problem.kind==='channel-magnetic'
+                id: randomUUID(), problem: problem.kind === 'prepare-conduction' || problem.kind === 'dc' || problem.kind==='electrical-network'||problem.kind==='frequency-network'||problem.kind==='cross-section'||problem.kind==='geometry-validation'||problem.kind==='local-extraction'||problem.kind==='local-dc-extraction'||problem.kind==='board-foil-checked'||problem.kind==='transient-network'||problem.kind==='board-section'||problem.kind==='channel-magnetic'
                     ? structuredClone(problem)
                     : problem.kind === 'prepare-geometry'
                     ? { kind: problem.kind, boardJson: problem.boardJson, ...(problem.geometry ? { geometry: { ...problem.geometry } } : {}) }

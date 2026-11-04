@@ -1,4 +1,5 @@
 import {createLocalExecutor,isLocalTarget} from './local-executor.ts';
+import {createGroupExecutor} from './group-executor.ts';
 import {createGeometryExecutor} from './geometry-executor.ts';
 import {createCrossSectionExecutor} from './cross-section-executor.ts';
 import {createFrequencyExecutor} from './frequency-executor.ts';
@@ -36,7 +37,7 @@ export interface ExecutionResult {
   solution?: Json;
 }
 export type AnalysisExecutor = (task: AnalysisTask) => Promise<ExecutionResult>;
-export function createAnalysisExecutor(): AnalysisExecutor {
+export function createAnalysisExecutor(group = createGroupExecutor()): AnalysisExecutor {
   const local=createLocalExecutor();
   const geometry = createGeometryExecutor();
   const frequency = createFrequencyExecutor();
@@ -49,7 +50,10 @@ export function createAnalysisExecutor(): AnalysisExecutor {
     if (task.kind==='geometry') return geometry(task as AnalysisTask<'geometry'>);
     if (task.kind==='impedance') return crossSection(task as AnalysisTask<'impedance'>);
     if (task.kind==='networkParameters') return frequency(task as AnalysisTask<'networkParameters'>);
-    if(task.kind==='si')return transient(task as AnalysisTask<'si'>);
+    if (task.kind === 'si') {
+      const si = task as AnalysisTask<'si'>;
+      return si.config.channels ? group(si) : transient(si);
+    }
     if ((task.kind==='dc'||task.kind==='pi')&&'circuit'in task.config&&task.config.circuit) return electrical(task as AnalysisTask<'dc'|'pi'>);
     if (task.kind === 'dc') return dc(task as AnalysisTask<'dc'>);
     throw new AnalysisDslError('ANALYZER_NOT_IMPLEMENTED', `Analysis executor '${task.kind}' is not implemented`, [{ code: 'ANALYZER_NOT_IMPLEMENTED', severity: 'error', message: `No production ${task.kind} solver is installed` }]);

@@ -27,6 +27,11 @@ export function createProblemExecutor(retainDcForScenario = false) {
     const addon = createRequire(import.meta.url)(backendResource('native', 'node-addon', 'index.cjs')) as typeof import('../../native/node-addon/index.cjs');
     let result: AnalysisResult;
     if(problem.kind==='board-section'){electrical ??=new addon.AnalysisElectricalSession();result=electrical.sliceBoardSection(problem.boardJson,problem.stack,problem.slice);}
+    else if(problem.kind==='board-foil-checked'){
+      electrical ??= new addon.AnalysisElectricalSession();
+      try { result=electrical.solveBoardFoilChecked(problem.boardJson,problem.geometry,problem.request); }
+      finally{if(!retainDcForScenario){electrical.clear();electrical=undefined;}}
+    }
     else if(problem.kind==='local-dc-extraction'){
       electrical ??= new addon.AnalysisElectricalSession();
       try { result=electrical.solveLocalDc(problem.boardJson,problem.request,problem.remainingSeconds); }

@@ -538,11 +538,85 @@ pub(super) fn assemble(
     wall: Duration,
     training: Option<&TrainingPoint>,
 ) -> Result<ReducedSpace> {
-    let mode_reserve = training
-        .map(TrainingPoint::iteration_limit)
-        .transpose()?
-        .unwrap_or(0)
-        * 2;
+    let preparation = training.map_or(Preparation::Harmonic, Preparation::Single);
+    Ok(assemble_impl(
+        foils,
+        names,
+        retained,
+        ports,
+        field,
+        max_frequency_hz,
+        epsilon,
+        budget,
+        start,
+        wall,
+        preparation,
+    )?
+    .0)
+}
+
+pub(super) struct MatchedGrid<'a> {
+    pub frequencies: &'a [f64],
+    pub references: &'a [f64],
+    pub max_iterations: usize,
+}
+enum Preparation<'a> {
+    Harmonic,
+    Single(&'a TrainingPoint),
+    Matched(MatchedGrid<'a>),
+}
+pub(super) fn solve_matched_grid(
+    foils: &[Foil],
+    names: Vec<String>,
+    retained: &[usize],
+    ports: &[[usize; 2]],
+    field: Field<'_>,
+    epsilon: f64,
+    budget: AllocationBudget,
+    start: Instant,
+    wall: Duration,
+    grid: MatchedGrid<'_>,
+) -> Result<(ReducedSpace, serde_json::Value)> {
+    let max_frequency_hz = *grid
+        .frequencies
+        .last()
+        .ok_or_else(|| error("BOARD_FOIL_GRID", "empty frequency axis"))?;
+    let (space, checked) = assemble_impl(
+        foils,
+        names,
+        retained,
+        ports,
+        field,
+        max_frequency_hz,
+        epsilon,
+        budget,
+        start,
+        wall,
+        Preparation::Matched(grid),
+    )?;
+    Ok((
+        space,
+        checked.ok_or_else(|| error("BOARD_FOIL_GRID", "checked output missing"))?,
+    ))
+}
+fn assemble_impl(
+    foils: &[Foil],
+    names: Vec<String>,
+    retained: &[usize],
+    ports: &[[usize; 2]],
+    field: Field<'_>,
+    max_frequency_hz: f64,
+    epsilon: f64,
+    budget: AllocationBudget,
+    start: Instant,
+    wall: Duration,
+    preparation: Preparation<'_>,
+) -> Result<(ReducedSpace, Option<serde_json::Value>)> {
+    let mode_reserve = 2 * match &preparation {
+        Preparation::Harmonic => 0,
+        Preparation::Single(training) => training.iteration_limit()?,
+        Preparation::Matched(grid) => grid.max_iterations,
+    };
     let n = names.len();
     let supports = foils
         .iter()
@@ -620,7 +694,11 @@ pub(super) fn assemble(
             "common C action does not match physical trace",
         ));
     }
-    let training_resources = training.map(|point| (point, field, dc));
+    let training_resources = if matches!(preparation, Preparation::Harmonic) {
+        None
+    } else {
+        Some((field, dc))
+    };
     let Magnetic {
         actions: magnetic_actions,
         reciprocity: max_magnetic_reciprocity,
@@ -653,13 +731,22 @@ pub(super) fn assemble(
         dc_harmonic_residual,
         enrichment: None,
     };
-    if let Some((training, field, dc)) = training_resources {
-        space.train(
-            training, &names, &dc, &field, &prisms, &density, budget, start, wall,
-        )?;
-    }
-    Ok(space)
+    let checked = match (preparation, training_resources) {
+        (Preparation::Harmonic, None) => None,
+        (Preparation::Single(training), Some((field, dc))) => {
+            space.train(
+                training, &names, &dc, &field, &prisms, &density, budget, start, wall,
+            )?;
+            None
+        }
+        (Preparation::Matched(grid), Some((field, dc))) => Some(space.train_grid(
+            &grid, &names, &dc, &field, &prisms, &density, budget, start, wall,
+        )?),
+        _ => unreachable!("preparation resources match their scope"),
+    };
+    Ok((space, checked))
 }
+
 fn make_model(
     cells: &[Cell],
     n: usize,
@@ -785,7 +872,9 @@ impl ReducedSpace {
             &zero
         };
         let w = 2. * std::f64::consts::PI * frequency_hz;
-        let residual = self.full_residual(w, &state[..n], im, drive)?.checked()?;
+        let residual = self
+            .full_residual(w, &state[..n], im, drive, None)?
+            .checked()?;
         Ok(CheckedPoint {
             voltage_real: system.port_voltages(&state, self.ports.len()),
             voltage_imaginary: system.port_voltages(im, self.ports.len()),
@@ -810,6 +899,18 @@ impl ReducedSpace {
                 "finite screened frequency and complete drive required",
             ));
         }
+        let mut system = self.compile_system(budget)?;
+        let nv = self.basis.voltage.len();
+        let n = nv + self.basis.current.len();
+        let mut rhs = system.port_rhs(drive);
+        if frequency_hz > 0. {
+            rhs.resize(2 * n, 0.);
+        }
+        let w = 2. * std::f64::consts::PI * frequency_hz;
+        let state = system.solve(w, rhs, &vec![0.; n], &mut Counters::default())?;
+        Ok((system, state))
+    }
+    fn compile_system(&self, budget: Budget) -> Result<System> {
         let mut budget = budget;
         let requested = budget.max_memory_mi_b.unwrap_or(256.);
         let resident = self
@@ -830,18 +931,16 @@ impl ReducedSpace {
             ));
         }
         budget.max_memory_mi_b = Some(available);
-        let mut system = System::compile(&self.model, self.ports.len(), Some(&budget))?;
-        let nv = self.basis.voltage.len();
-        let n = nv + self.basis.current.len();
-        let mut rhs = system.port_rhs(drive);
-        if frequency_hz > 0. {
-            rhs.resize(2 * n, 0.);
-        }
-        let w = 2. * std::f64::consts::PI * frequency_hz;
-        let state = system.solve(w, rhs, &vec![0.; n], &mut Counters::default())?;
-        Ok((system, state))
+        System::compile(&self.model, self.ports.len(), Some(&budget))
     }
-    fn full_residual(&self, w: f64, re: &[f64], im: &[f64], drive: &[f64]) -> Result<FullResidual> {
+    fn full_residual(
+        &self,
+        w: f64,
+        re: &[f64],
+        im: &[f64],
+        drive: &[f64],
+        drive_im: Option<&[f64]>,
+    ) -> Result<FullResidual> {
         let nv = self.basis.voltage.len();
         let nr = self.full_potentials;
         let v = [
@@ -873,11 +972,19 @@ impl ReducedSpace {
                 "nonfinite unreduced action",
             ));
         }
-        let mut injected = vec![0.; nr];
-        for (&[a, b], &i) in self.ports.iter().zip(drive) {
-            injected[a] += i;
-            injected[b] -= i;
-        }
+
+        let injection = |drive: &[f64]| {
+            let mut injected = vec![Sum::default(); nr];
+            for (&[a, b], &i) in self.ports.iter().zip(drive) {
+                injected[a] = injected[a].add(Sum::from(i));
+                injected[b] = injected[b].sub(Sum::from(i));
+            }
+            injected.into_iter().map(Sum::value).collect::<Vec<_>>()
+        };
+        let injected = [
+            injection(drive),
+            drive_im.map_or_else(|| vec![0.; nr], injection),
+        ];
         let (mut kcl, mut kcl_scale, mut kvl, mut kvl_scale) = (0_f64, 0_f64, 0_f64, 0_f64);
         let mut kcl_rows = [vec![0.; nr], vec![0.; nr]];
         let mut kvl_rows = [
@@ -889,7 +996,7 @@ impl ReducedSpace {
             for i in 0..nr {
                 let a = d[k][i];
                 let b = s * w * c[1 - k][i];
-                let z = if k == 0 { injected[i] } else { 0. };
+                let z = injected[k][i];
                 kcl_rows[k][i] = a + b - z;
                 kcl = kcl.max(kcl_rows[k][i].abs());
                 kcl_scale = kcl_scale.max(a.abs() + b.abs() + z.abs());
@@ -1067,7 +1174,8 @@ impl ReducedSpace {
                     self.solve_state(training.frequency_hz, &training.drive, solve_budget)?;
                 let n = self.basis.voltage.len() + self.basis.current.len();
                 let w = 2. * std::f64::consts::PI * training.frequency_hz;
-                let full = self.full_residual(w, &state[..n], &state[n..], &training.drive)?;
+                let full =
+                    self.full_residual(w, &state[..n], &state[n..], &training.drive, None)?;
                 history.push(EnrichmentStep {
                     iteration,
                     potential_modes: self.basis.voltage.len(),
@@ -1089,106 +1197,281 @@ impl ReducedSpace {
                 if iteration == limit {
                     return full.checked().map(|_| ());
                 }
-                let ni = self.basis.current.len();
-                let nv = self.basis.voltage.len();
-                if nv == self.full_potentials && ni == 2 * self.cells.len() {
-                    return Err(error(
-                        "FOIL_ENRICHMENT",
-                        "physical basis rank exhausted; coverage unverified",
-                    ));
-                }
-
-                for (kcl, kvl) in full.kcl.iter().zip(&full.kvl) {
-                    check_time(start, wall)?;
-                    // A δi = -r_KCL on free nodes. The zero trace Dirichlet
-                    // correction supplies a voltage bubble, while -R^-1 r_KVL
-                    // retains the divergence-free induced current contribution.
-                    let drop: Vec<_> = kvl
-                        .chunks_exact(2)
-                        .zip(&self.cells)
-                        .flat_map(|(v, c)| [v[0] / c.resistance, v[1] / c.resistance])
-                        .collect();
-                    let rhs: Vec<_> = divergence(&self.cells, &drop, self.full_potentials)
-                        .into_iter()
-                        .zip(kcl)
-                        .map(|(a, b)| a - b)
-                        .collect();
-                    let bubble = dc.solve(&rhs)?;
-                    let candidate: Vec<_> = conductive(&self.cells, &bubble)
-                        .into_iter()
-                        .zip(drop)
-                        .map(|(a, b)| a - b)
-                        .collect();
-                    if self.basis.voltage.len() < self.full_potentials {
-                        if let Some((v, c)) = metric_mode(
-                            bubble,
-                            &self.basis.voltage[initial_nv..],
-                            &self.charges[initial_nv..],
-                            |v| field.apply(v),
-                            false,
-                        )? {
-                            // Preserve the original constant lift by adding and
-                            // subtracting the same zero-contact shape. The anchor
-                            // is a coordinate transformation, not an electrical tie.
-                            let anchor = self.basis.components[0][0];
-                            for (x, b) in self.basis.voltage[anchor].iter_mut().zip(&v) {
-                                *x -= b;
-                            }
-                            self.charges[anchor] = field.apply(&self.basis.voltage[anchor])?;
-                            self.basis.components[0].push(self.basis.voltage.len());
-                            self.basis.voltage.push(v);
-                            self.charges.push(c);
-                        }
-                    }
-                    if self.basis.current.len() < 2 * self.cells.len() {
-                        let actions: Vec<_> = self
-                            .basis
-                            .current
-                            .iter()
-                            .map(|q| resistive_action(&self.cells, q))
-                            .collect();
-                        if let Some((q, _)) = metric_mode(
-                            candidate,
-                            &self.basis.current,
-                            &actions,
-                            |q| Ok(resistive_action(&self.cells, q)),
-                            true,
-                        )? {
-                            self.basis.current.push(q);
-                        }
-                    }
-                }
-                if self.basis.voltage.len() == nv && self.basis.current.len() == ni {
-                    return Err(error(
-                        "FOIL_ENRICHMENT",
-                        &format!(
-                    "no independent correction; unreduced KCL={:e}, KVL={:e}; coverage unverified",
-                    full.norm.kcl_relative,full.norm.kvl_relative),
-                    ));
-                }
-                if self.basis.current.len() > ni {
-                    let added = magnetic(prisms, density, &self.basis.current[ni..], start, wall)?;
-                    self.max_magnetic_reciprocity =
-                        self.max_magnetic_reciprocity.max(added.reciprocity);
-                    self.max_magnetic_refinement =
-                        self.max_magnetic_refinement.max(added.refinement);
-                    self.magnetic_actions.extend(added.actions);
-                }
-                let (model, reciprocity) = make_model(
-                    &self.cells,
-                    self.full_potentials,
-                    &self.basis,
-                    names,
-                    &self.charges,
-                    &self.magnetic_actions,
-                    &self.ports,
+                self.grow(
+                    &full, initial_nv, names, dc, field, prisms, density, start, wall,
                 )?;
-                self.model = model;
-                self.max_electric_reciprocity = reciprocity;
             }
             unreachable!("bounded enrichment always returns at its final residual")
         })();
         outcome
             .map_err(|failure| format!("{failure}; enrichment limit={limit}; history={history:?}"))
+    }
+
+    fn grow(
+        &mut self,
+        full: &FullResidual,
+        initial_nv: usize,
+        names: &[String],
+        dc: &DcCorrection,
+        field: &Field<'_>,
+        prisms: &[Prism],
+        density: &[f64],
+        start: Instant,
+        wall: Duration,
+    ) -> Result<()> {
+        let ni = self.basis.current.len();
+        let nv = self.basis.voltage.len();
+        if nv == self.full_potentials && ni == 2 * self.cells.len() {
+            return Err(error(
+                "FOIL_ENRICHMENT",
+                "physical basis rank exhausted; coverage unverified",
+            ));
+        }
+
+        for (kcl, kvl) in full.kcl.iter().zip(&full.kvl) {
+            check_time(start, wall)?;
+            // A δi = -r_KCL on free nodes. The zero trace Dirichlet
+            // correction supplies a voltage bubble, while -R^-1 r_KVL
+            // retains the divergence-free induced current contribution.
+            let drop: Vec<_> = kvl
+                .chunks_exact(2)
+                .zip(&self.cells)
+                .flat_map(|(v, c)| [v[0] / c.resistance, v[1] / c.resistance])
+                .collect();
+            let rhs: Vec<_> = divergence(&self.cells, &drop, self.full_potentials)
+                .into_iter()
+                .zip(kcl)
+                .map(|(a, b)| a - b)
+                .collect();
+            let bubble = dc.solve(&rhs)?;
+            let candidate: Vec<_> = conductive(&self.cells, &bubble)
+                .into_iter()
+                .zip(drop)
+                .map(|(a, b)| a - b)
+                .collect();
+            if self.basis.voltage.len() < self.full_potentials {
+                if let Some((v, c)) = metric_mode(
+                    bubble,
+                    &self.basis.voltage[initial_nv..],
+                    &self.charges[initial_nv..],
+                    |v| field.apply(v),
+                    false,
+                )? {
+                    // Preserve the original constant lift by adding and
+                    // subtracting the same zero-contact shape. The anchor
+                    // is a coordinate transformation, not an electrical tie.
+                    let anchor = self.basis.components[0][0];
+                    for (x, b) in self.basis.voltage[anchor].iter_mut().zip(&v) {
+                        *x -= b;
+                    }
+                    self.charges[anchor] = field.apply(&self.basis.voltage[anchor])?;
+                    self.basis.components[0].push(self.basis.voltage.len());
+                    self.basis.voltage.push(v);
+                    self.charges.push(c);
+                }
+            }
+            if self.basis.current.len() < 2 * self.cells.len() {
+                let actions: Vec<_> = self
+                    .basis
+                    .current
+                    .iter()
+                    .map(|q| resistive_action(&self.cells, q))
+                    .collect();
+                if let Some((q, _)) = metric_mode(
+                    candidate,
+                    &self.basis.current,
+                    &actions,
+                    |q| Ok(resistive_action(&self.cells, q)),
+                    true,
+                )? {
+                    self.basis.current.push(q);
+                }
+            }
+        }
+        if self.basis.voltage.len() == nv && self.basis.current.len() == ni {
+            return Err(error(
+                "FOIL_ENRICHMENT",
+                &format!(
+                    "no independent correction; unreduced KCL={:e}, KVL={:e}; coverage unverified",
+                    full.norm.kcl_relative, full.norm.kvl_relative
+                ),
+            ));
+        }
+        if self.basis.current.len() > ni {
+            let added = magnetic(prisms, density, &self.basis.current[ni..], start, wall)?;
+            self.max_magnetic_reciprocity = self.max_magnetic_reciprocity.max(added.reciprocity);
+            self.max_magnetic_refinement = self.max_magnetic_refinement.max(added.refinement);
+            self.magnetic_actions.extend(added.actions);
+        }
+        let (model, reciprocity) = make_model(
+            &self.cells,
+            self.full_potentials,
+            &self.basis,
+            names,
+            &self.charges,
+            &self.magnetic_actions,
+            &self.ports,
+        )?;
+        self.model = model;
+        self.max_electric_reciprocity = reciprocity;
+        Ok(())
+    }
+}
+
+impl ReducedSpace {
+    fn train_grid(
+        &mut self,
+        grid: &MatchedGrid<'_>,
+        names: &[String],
+        dc: &DcCorrection,
+        field: &Field<'_>,
+        prisms: &[Prism],
+        density: &[f64],
+        budget: AllocationBudget,
+        start: Instant,
+        wall: Duration,
+    ) -> Result<serde_json::Value> {
+        use serde_json::{json, Value};
+        let initial_nv = self.basis.voltage.len();
+        let ports = self.ports.len();
+        let conductances: Vec<_> = grid.references.iter().map(|r| 1. / r).collect();
+        let mut history = Vec::<Value>::with_capacity(grid.max_iterations + 1);
+        let outcome = (|| {
+            for iteration in 0..=grid.max_iterations {
+                check_time(start, wall)?;
+                let available = budget
+                    .max_bytes
+                    .saturating_sub(field.planned_bytes())
+                    .saturating_sub(dc.owned_bytes);
+                let solve_budget = Budget {
+                    max_memory_mi_b: Some((available as f64 / 1048576.).min(4096.)),
+                    max_seconds: Some(wall.saturating_sub(start.elapsed()).as_secs_f64()),
+                };
+                let mut system = self.compile_system(solve_budget)?;
+                for (p, &g) in conductances.iter().enumerate() {
+                    system.add_port_admittance(p, g, 0.)?;
+                }
+                let n = self.basis.voltage.len() + self.basis.current.len();
+                let initial = vec![0.; n];
+                let mut stats = Counters::default();
+                let mut worst: Option<(f64, usize, FullResidual)> = None;
+                let mut parameters = Vec::with_capacity(grid.frequencies.len());
+                let mut samples = Vec::with_capacity(grid.frequencies.len());
+                let (mut max_kcl, mut max_kvl, mut max_power) = (0_f64, 0_f64, 0_f64);
+                for &frequency in grid.frequencies {
+                    let w = 2. * std::f64::consts::PI * frequency;
+                    let mut matrix = vec![vec![Value::Null; ports]; ports];
+                    let mut columns = Vec::with_capacity(ports);
+                    for input in 0..ports {
+                        check_time(start, wall)?;
+                        // Same 1 A RMS Norton and diagonal matched loads as
+                        // P6 matched_waves. Native open Z is not formed.
+                        let mut drive = vec![0.; ports];
+                        drive[input] = 1.;
+                        let mut rhs = system.port_rhs(&drive);
+                        rhs.resize(2 * n, 0.);
+                        let state = system.solve(w, rhs, &initial, &mut stats)?;
+                        let real = system.port_voltages(&state[..n], ports);
+                        let imaginary = system.port_voltages(&state[n..], ports);
+                        let net_real: Vec<_> = drive
+                            .iter()
+                            .zip(&real)
+                            .zip(&conductances)
+                            .map(|((&source, &voltage), &g)| {
+                                Sum::from(source).sub(Sum::from(voltage).mul(g)).value()
+                            })
+                            .collect();
+                        let net_imaginary: Vec<_> = imaginary
+                            .iter()
+                            .zip(&conductances)
+                            .map(|(&voltage, &g)| -voltage * g)
+                            .collect();
+                        let residual = self.full_residual(
+                            w,
+                            &state[..n],
+                            &state[n..],
+                            &net_real,
+                            Some(&net_imaginary),
+                        )?;
+                        let norm = residual.norm;
+                        max_kcl = max_kcl.max(norm.kcl_relative);
+                        max_kvl = max_kvl.max(norm.kvl_relative);
+                        let score = norm.kcl_relative.max(norm.kvl_relative);
+                        if worst.as_ref().is_none_or(|(_, _, old)| {
+                            score > old.norm.kcl_relative.max(old.norm.kvl_relative)
+                        }) {
+                            worst = Some((frequency, input, residual));
+                        }
+                        if score > RESIDUAL_LIMIT {
+                            continue;
+                        }
+                        let mut outgoing = Sum::default();
+                        for output in 0..ports {
+                            let re = 2.
+                                * (real[output]
+                                    / grid.references[input].sqrt()
+                                    / grid.references[output].sqrt())
+                                - if output == input { 1. } else { 0. };
+                            let im = 2.
+                                * (imaginary[output]
+                                    / grid.references[input].sqrt()
+                                    / grid.references[output].sqrt());
+                            if !re.is_finite() || !im.is_finite() {
+                                return Err(error(
+                                    "BOARD_FOIL_GRID",
+                                    "nonfinite matched wave coefficient",
+                                ));
+                            }
+                            outgoing = outgoing
+                                .add(Sum::from(re).mul(re))
+                                .add(Sum::from(im).mul(im));
+                            matrix[output][input] = json!({"real":re,"imaginary":im});
+                        }
+                        let incident = grid.references[input] / 4.;
+                        let net_power = Sum::from(1.).sub(outgoing).mul(incident).value();
+                        let copper =
+                            system.joule_loss(&state[..n]) + system.joule_loss(&state[n..]);
+                        let power_error = (net_power - copper).abs();
+                        if !power_error.is_finite()
+                            || !copper.is_finite()
+                            || copper < 0.
+                            || power_error > 1e-12 + 1e-8 * (net_power.abs() + copper.abs())
+                        {
+                            return Err(error("BOARD_FOIL_POWER",&format!(
+                                "f={frequency}, input={input}, wavePower={net_power:e}, copper={copper:e}, error={power_error:e}")));
+                        }
+                        max_power = max_power.max(power_error);
+                        columns.push(json!({"input":input,"kclRelative":norm.kcl_relative,
+                            "kvlRelative":norm.kvl_relative,"copperLossW":copper,"powerBalanceErrorW":power_error}));
+                    }
+                    parameters.push(matrix);
+                    samples.push(json!({"frequencyHz":frequency,"columns":columns}));
+                }
+                drop(system);
+                let (frequency, input, worst) =
+                    worst.ok_or_else(|| error("BOARD_FOIL_GRID", "empty checked grid"))?;
+                history.push(json!({"iteration":iteration,"frequencyHz":frequency,"input":input,
+                    "potentialModes":self.basis.voltage.len(),"currentModes":self.basis.current.len(),
+                    "maxKclRelative":max_kcl,"maxKvlRelative":max_kvl}));
+                if worst.checked().is_ok() {
+                    check_time(start, wall)?;
+                    return Ok(json!({
+                        "parameters":parameters,"samples":samples,"enrichment":history,
+                        "quality":{"maxKclRelative":max_kcl,"maxKvlRelative":max_kvl,
+                                   "maxColumnPowerBalanceErrorW":max_power},
+                    }));
+                }
+                if iteration == grid.max_iterations {
+                    return Err(worst.checked().unwrap_err());
+                }
+                drop(parameters);
+                drop(samples);
+                self.grow(
+                    &worst, initial_nv, names, dc, field, prisms, density, start, wall,
+                )?;
+            }
+            unreachable!("bounded matched grid reaches a final residual")
+        })();
+        outcome.map_err(|failure| format!("{failure}; checked-grid history={history:?}"))
     }
 }

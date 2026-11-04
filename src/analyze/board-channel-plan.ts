@@ -1,3 +1,4 @@
+import { autoFoilPlan } from './auto-foil-plan.ts';
 import { componentReachableIslands, MAX_CHANNEL_COMPONENTS, validateChannelAttachments, type BoardChannelRequest } from './channel-components.ts';
 import { normalizePlannerTerminals, type LegacyChannelContact } from './channel-terminals.ts';
 import type { AnalysisGeometryReport } from '../../native/analyze/index.js';
@@ -6,10 +7,12 @@ import { createProblemExecutor } from './execute-problem.ts';
 import { capturedBoardGeometry } from './geometry-snapshot.ts';
 import { buildRouteGraph, project, tangent, area, clipHalfPlane, triangles, joinDomains, type Point } from './route-partition.ts';
 import { coupledRunCorridors, corridorCells } from './run-corridors.ts';
+export const boardChannelBlockBandHz = [1e3, 1e4] as const;
 type Options = {
     domainScale?: number;
     magneticPatchLevel?: 1 | 2;
     boundaryFraction?: number;
+    autoFoilDeadlineMs?: number;
 };
 type Face = {
     id: string;
@@ -38,6 +41,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
     // The generic local default is too coarse to refine the already constrained
     // coupon mesh. Automatic channels start from the verified current grid;
     // level 2 then performs a real fourfold area refinement instead of a no-op.
+    const foilGeometry=structuredClone(base2);
     base2 = { ...base2, maxTriangleAreaM2: Math.min(base2.maxTriangleAreaM2, 5e-8) };
     const execute = createProblemExecutor(true), boardJson = JSON.stringify(board), snapshot = JSON.parse(boardJson);
     const g = capturedBoardGeometry(boardJson);
@@ -192,9 +196,14 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
             areaMm2?: number;
             transverseMm?: [number, number];
         } | undefined;
-        function refuseCorridor(reason: string): never {
+        function refuseCorridor(reason: string, lateralReturn=false): never {
+            const foilCandidate=lateralReturn&&!components.length&&options.autoFoilDeadlineMs!==undefined?
+                autoFoilPlan({boardJson,geometry:foilGeometry,captured:g,terminals:contacts,ports:externalPorts,
+                    seedRegions:new Set([...signalRegions,...returnIds,...contactRegions]),marginMm:margin,deadlineMs:options.autoFoilDeadlineMs,
+                    hasVias:Boolean(snapshot.copper?.fixed?.vias?.length||snapshot.copper?.editable?.vias?.length)}):undefined;
             throw Object.assign(new Error("CHANNEL_CORRIDOR: " + reason), {
                 code: "CHANNEL_CORRIDOR_UNSUPPORTED",
+                ...(foilCandidate && { foilCandidate }),
                 corridorAudit: { corridors, returnClosure, contacts, sourceCopper: g.regions, physicalIslands: g.islands, physicalContacts: g.contacts, bores: g.holes, signalIsland: signalIslandIds.size === 1 ? [...signalIslandIds][0] : undefined, signalIslands: [...signalIslandIds], returnIslands: returns.map(i => i.id), geometryFindings: g.findings, signalRegions: g.regions.filter(r => signalRegions.has(r.id)).map(r => ({ regionId: r.id, sourcePath: r.source.path, layer: r.layer, areaMm2: r.area_mm2 })) }
             });
         }
@@ -219,7 +228,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
             if (clipped || (!usable.length && lateralReturn)) {
                 if (corridors.length !== 1) {
                     returnClosure = { reason: "Finite return closure needs distributed interface coordinates across multiple corridors" };
-                    refuseCorridor(returnClosure.reason);
+                    refuseCorridor(returnClosure.reason,lateralReturn);
                 }
                 const [low, high] = corridors[0].transverseMm, centre = (low + high) / 2;
                 const halfWidth = Math.max(baseHalfWidth, centre - closedCross[0], closedCross[1] - centre) + margin;
@@ -232,7 +241,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
                 if (expanded.length !== 1 || expanded[0].lateralContinuations.length || !expanded[0].admissibleIntervalsMm.length) {
                     corridors = expanded;
                     returnClosure.reason = "Expanded finite return envelope still needs a distributed lateral or joint interface";
-                    refuseCorridor(returnClosure.reason);
+                    refuseCorridor(returnClosure.reason,lateralReturn||expanded.some(c=>c.lateralContinuations.some(v=>returnIds.has(v.regionId))));
                 }
                 domain = polygon;
                 corridors = expanded;
@@ -466,7 +475,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
                 }
                 const n = resistance.length - 1, matrix2 = (v: any) => Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_2, j) => v[n] + (i === j ? v[i] : 0)));
                 const sectionMeshFactor = options.magneticPatchLevel === 1 ? 1 : 0.5;
-                blocks.push({ id: cell.id, kind: "section", line: { kind: "polygon-section", lengthMm: long[1] - long[0], geometry: { ...mid.geometry, maxTriangleAreaM2: mid.geometry.maxTriangleAreaM2 * sectionMeshFactor } }, spatial: { originMm: midOrigin, direction: d }, dcConductors: { resistanceOhmPerM: matrix2(resistance), internalInductanceHPerM: matrix2(internal) }, sectionEnds, cuts: ends.flatMap(f => f.slice.cuts), ownership: own, bandHz: [1e3, 1e4] });
+                blocks.push({ id: cell.id, kind: "section", line: { kind: "polygon-section", lengthMm: long[1] - long[0], geometry: { ...mid.geometry, maxTriangleAreaM2: mid.geometry.maxTriangleAreaM2 * sectionMeshFactor } }, spatial: { originMm: midOrigin, direction: d }, dcConductors: { resistanceOhmPerM: matrix2(resistance), internalInductanceHPerM: matrix2(internal) }, sectionEnds, cuts: ends.flatMap(f => f.slice.cuts), ownership: own, bandHz: [...boardChannelBlockBandHz] });
             }
             else {
                 const electrodes: any[] = [], pairs: string[][] = [], cuts: ChannelCut[] = [], cutPlanes: Record<string, unknown> = {}, names = new Map<string, string>();
@@ -517,7 +526,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
                 // The magnetic volume integral has no patch/domain mesh of its own.
                 // Spatial levels therefore refine the actual current/electric mesh.
                 const meshFactor = options.magneticPatchLevel === 1 ? 1 : 0.25;
-                blocks.push({ id: cell.id, kind: "local", boardJson, geometry: { ...base2, maxTriangleAreaM2: base2.maxTriangleAreaM2 * meshFactor, roiMm: [[x[0], y[0]], [x[1], y[1]]], coordinateOriginMm: base2.roiMm[0], electricAirMarginM: 0.008 * (options.domainScale ?? 1), domainPolygonMm: cell.polygonMm, electrodes, ports: pairs, cutPlanes }, magneticPatchLevel: options.magneticPatchLevel ?? 1, cuts, ownership: own, bandHz: [1e3, 1e4] });
+                blocks.push({ id: cell.id, kind: "local", boardJson, geometry: { ...base2, maxTriangleAreaM2: base2.maxTriangleAreaM2 * meshFactor, roiMm: [[x[0], y[0]], [x[1], y[1]]], coordinateOriginMm: base2.roiMm[0], electricAirMarginM: 0.008 * (options.domainScale ?? 1), domainPolygonMm: cell.polygonMm, electrodes, ports: pairs, cutPlanes }, magneticPatchLevel: options.magneticPatchLevel ?? 1, cuts, ownership: own, bandHz: [...boardChannelBlockBandHz] });
             }
         }
         const barrelOwnership=g.holes.filter(h=>h.plated&&h.span_confirmed).flatMap(h=>{

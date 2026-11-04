@@ -1,5 +1,7 @@
+import {runAutoFoil} from '../auto-foil-response.ts';
 import {localDcEndpoint} from './local-dc-endpoint.ts';
-import {solveBoardChannel} from '../board-channel-executor.ts';
+import {createBoardChannelExecutor} from '../board-channel-executor.ts';
+import {boardFoilResult} from './board-foil-result.ts';
 import {referenceDomainChange} from './local-domain.ts';
 import {localRequest, type LocalExtractionPlan} from './local-request.ts';
 import {randomUUID} from 'node:crypto';
@@ -14,7 +16,7 @@ import {json} from './data.ts';
 /** Existing channel/port/scope target carries physical inputs, never a circuit.
  * No diagnostic process, new builder, SavedScenario wrapper or net inference. */
 export function isLocalTarget(task:AnalysisTask){const c=task.config as T.Configurations['impedance'];return task.kind==='impedance'&&c.method==='layered'&&(c.target?.kind==='channel'||c.target?.kind==='differential');}
-export function createLocalExecutor(execute=createProblemExecutor(true)){return async(task:AnalysisTask<'impedance'>):Promise<ExecutionResult>=>{
+export function createLocalExecutor(execute=createProblemExecutor(true)){const solveBoardChannel=createBoardChannelExecutor(undefined,undefined,(foil,frequencies,budget,interval)=>({foil,report:runAutoFoil(foil,frequencies,budget,interval,execute)}));return async(task:AnalysisTask<'impedance'>):Promise<ExecutionResult>=>{
  const start=performance.now();const c=task.config;let extractionPlan:LocalExtractionPlan|undefined;const geometry=localRequest(task,plan=>{extractionPlan=plan;});
  if(task.variantChanges.length||c.numerics||c.mesh)throw new AnalysisDslError('LOCAL_INPUT','Variants/numerics require explicit supported geometry reconstruction');
  const band:[number,number]=[1000,100000];
@@ -29,6 +31,7 @@ export function createLocalExecutor(execute=createProblemExecutor(true)){return 
   return localDcEndpoint(task,geometry,warningDiagnostics(),maxSeconds-(performance.now()-start)/1000,execute,extractionPlan?.dcComponents);
  if(extractionPlan&&!extractionPlan.confirmedLocalBarrel){
   const solved=(()=>{try{return solveBoardChannel(task.board,geometry,extractionPlan!.terminalRequest??extractionPlan!.contacts,frequencies,{maxSeconds:maxSeconds-(performance.now()-start)/1000,maxMemoryMiB},[startHz,stopHz]);}catch(error){if(error instanceof AnalysisDslError)throw error;const message=error instanceof Error?error.message:String(error);throw new AnalysisDslError(message.match(/^([A-Z][A-Z0-9_]+):/)?.[1]??'CHANNEL_REJECTED',message,warningDiagnostics());}})();
+  if('foil' in solved)return boardFoilResult(task.contextId,solved.foil,solved.report,warningDiagnostics());
   const componentLoss=solved.lossRecovery;
   const frequencyAudit=solved.frequencyAudit;
   const interpolation=frequencyAudit?.interpolation;

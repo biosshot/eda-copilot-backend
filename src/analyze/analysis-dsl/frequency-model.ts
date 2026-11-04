@@ -13,7 +13,15 @@ const base={referenceTopology:z.literal('common'),nature:z.enum(['passive','acti
 const entry=z.tuple([z.number().int().nonnegative(),z.number().int().nonnegative(),z.number().finite()]);
 const matrix=z.array(entry).max(4_000_000);
 const terminal=z.union([z.strictObject({node:S.text}),z.strictObject({reference:z.literal('ground')})]);
+const contact=z.strictObject({sourcePath:S.text,layer:S.text});
+const physicalPort=z.strictObject({positive:contact,negative:contact}).refine(p=>
+ p.positive.sourcePath!==p.negative.sourcePath||p.positive.layer!==p.negative.layer);
+const sampleAxis=z.array(positive).min(1);
+const samples=z.array(z.array(z.array(z.strictObject({real:z.number().finite(),imaginary:z.number().finite()}))));
 const data=z.discriminatedUnion('format',[
+ z.strictObject({format:z.literal('physical-port-samples'),samplePolicy:z.literal('exact'),representation:z.literal('S'),
+  referenceTopology:z.literal('physical-pairs'),nature:z.literal('passive'),frequenciesHz:sampleAxis,parameters:samples,
+  referenceOhm:z.array(positive).min(1).max(16),physicalPorts:z.array(physicalPort).min(1).max(16)}),
  z.strictObject({format:z.literal('delayed-scattering'),referenceTopology:z.literal('common'),nature:z.literal('passive'),referenceOhm:reference,scattering:z.array(z.array(z.number().finite()).max(16)).min(1).max(16),delayS:z.number().finite().nonnegative()}),
  z.strictObject({format:z.literal('coupled-rlc'),referenceTopology:z.enum(['grounded','infinity']),potentialNodes:z.array(S.text).min(1).max(1024),currentDofs:z.array(S.text).max(1536),incidence:matrix,portIncidence:matrix,resistanceOhm:matrix,inductanceH:matrix,capacitanceF:matrix,structuralGaugeModes:z.array(z.array(z.number().finite()).max(1024)).max(1024).optional(),conservedPotentialModes:z.array(z.array(z.number().finite()).max(1024)).max(1024).optional(),portTerminals:z.array(z.strictObject({positive:terminal,negative:terminal})).min(1).max(16).optional()}),
  z.strictObject({...base,format:z.literal('touchstone'),content:z.string().min(1)}),
@@ -57,6 +65,13 @@ export function networkResource(input:unknown):NetworkResource{
   }else if(t.highFrequency.conductanceS.length!==n||t.highFrequency.capacitanceF.length!==n)S.invalid('Temporal closure dimensions must match Resource.ports');
   if(t.modeTransform?.some(row=>row.length!==n)||t.modeTransform&&t.modeTransform.length!==n)S.invalid('Temporal mode dimensions must match Resource.ports');
   const refs=v.temporal.normalizationOhm;if(object(refs)&&(Object.keys(refs).length!==n||ports.some(p=>!(p in refs))))S.invalid('Temporal normalization keys must match Resource.ports');
+ }
+ if(v.format==='physical-port-samples'){
+  if(v.frequenciesHz.length!==v.parameters.length||v.frequenciesHz.some((f,i)=>i>0&&f<=v.frequenciesHz[i-1])||
+     v.referenceOhm.length!==n||v.physicalPorts.length!==n)
+   S.invalid('Exact physical samples require a strictly ordered axis, matching matrices, pairs and references');
+  if(r.analyses?.some(analysis=>analysis!=='networkParameters'))
+   S.invalid('Physical exact-grid samples authorize standalone networkParameters only');
  }
  if(v.format==='network-parameters'){
   if(v.frequenciesHz.length!==v.parameters.length||v.frequenciesHz.some((f,i)=>i>0&&f<=v.frequenciesHz[i-1]))S.invalid('Frequency axis must strictly increase and match parameters');

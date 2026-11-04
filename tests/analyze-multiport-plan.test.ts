@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { executeScenario } from '../src/analyze/analysis-dsl/scenario.ts';
-import type { AnalysisTask } from '../src/analyze/analysis-dsl/executor.ts';
+import { createAnalysisExecutor, type AnalysisTask } from '../src/analyze/analysis-dsl/executor.ts';
+import { createGroupExecutor } from '../src/analyze/analysis-dsl/group-executor.ts';
 import { isLocalTarget } from '../src/analyze/analysis-dsl/local-executor.ts';
 import { localChannelGroupRequest, localRequest, type LocalExtractionPlan } from '../src/analyze/analysis-dsl/local-request.ts';
 import { boardChannelPlan } from '../src/analyze/board-channel-plan.ts';
@@ -208,4 +209,76 @@ await a.si().channels(${members}).stackup(layers)
     );
     assert.equal(output.status, 'complete', JSON.stringify(output.error));
   }
+});
+test('SI board-group run keeps full DDR demand and one joint passive extraction', async () => {
+  const { board, code } = differentialCoupon();
+  const source = code.slice(0, code.indexOf('const run=')) + `
+const driver = a.model({kind:'linear-driver',lowV:0,highV:1,outputResistanceOhm:50});
+const receiver = a.model({kind:'rc-input',capacitanceF:1e-12});
+const stimulus = {kind:'bits',bits:'01',bitRateBps:2.5e3,riseS:2e-10,fallS:2e-10,repeatCount:1};
+const builder = a.si().channels([channel,positive]).stackup(layers)
+  .materials({cu:{conductivitySM:58e6,state:'Explicit copper'},d:{relativePermittivity:4,state:'Explicit dielectric'}})
+  .receivers([{port:to,model:receiver}]);
+const result = await builder.drivers([{port:from,model:driver,stimulus}])
+  .time({stopS:8e-4,sampleStepS:1e-11}).run();
+if (result.voltage(to).validity.status !== 'unavailable') throw Error('unexpected waveform');
+const model = result.solution.network;
+if (model.analyses.join(',') !== 'networkParameters') throw Error('unexpected network admission');
+a.network({model,ports:Object.fromEntries(model.ports.map(port => [port,port]))});
+`;
+  let calls = 0;
+  const group = createGroupExecutor((captured, geometry, request, axis, budget, demand) => {
+    calls++;
+    assert.deepEqual(captured, board);
+    assert.ok(!Array.isArray(request));
+    assert.equal(request.ports.length, 4);
+    assert.equal(geometry.ports.length, 4);
+    assert.equal(request.ports[0].negative, request.ports[2].negative);
+    assert.notEqual(request.ports[0].negative, request.ports[1].negative);
+    assert.ok(demand && demand[0] === 0 && demand[1] > 1e9);
+    assert.deepEqual(axis, [1000, 2500, 1 / (8e-4 - (4e-4 + 2e-10)), 10000]);
+    assert.ok(budget.maxSeconds > 0);
+    const ports = request.ports.map(({ name }, index) => ({ name, index }));
+    const parameters = axis.map(() => ports.map(() => ports.map(() => ({ real: 0, imaginary: 0 }))));
+    return {
+      result: {
+        status: 'complete', diagnostics: [], elapsedMs: 0, ports,
+        assembledModel: { format: 'network-parameters', representation: 'S', nature: 'passive',
+          referenceTopology: 'common', referenceOhm: 50, frequenciesHz: axis, parameters },
+      },
+      bandHz: [1000, 10000], audit: {}, blocks: [], evidence: [], verification: [], ownership: [],
+      wallSeconds: 0, magneticCoupling: null,
+    };
+  });
+  const options = { filename: 'channel-group-runtime.js', maxEntries: 1000, maxOutputBytes: 4 * 1024 * 1024 };
+  const executor = createAnalysisExecutor(group);
+  const output = await executeScenario({ board, code: source }, options, () => {}, executor);
+  assert.equal(output.status, 'complete', JSON.stringify(output.error));
+  assert.equal(calls, 1);
+  const records = output.reports[0].calculations as any[];
+  assert.equal(records[0].preparation.executorAvailable, true);
+  const result = records[1].result;
+  assert.equal(result.status, 'partial');
+  assert.equal(result.solution.temporal.status, 'unavailable');
+  assert.equal(result.solution.status, 'unverified');
+  assert.equal(result.solution.requestedIntervalHz[0], 0);
+  assert.equal(result.solution.requestedIntervalHz[1], result.solution.drivers[0].spectrum.requiredUpperHz);
+  assert.deepEqual(result.solution.applicabilityBandHz, [1000, 10000]);
+  assert.deepEqual(result.solution.uncovered.map((gap: any) => gap.intervalHz), [
+    [0, 1000], [10000, result.solution.requestedIntervalHz[1]],
+  ]);
+  assert.equal(result.solution.portHandles.length, 6);
+  assert.equal(new Set(result.solution.portHandles.map((p: any) => p.portName)).size, 4);
+  assert.equal(result.solution.drivers[0].ports.port.portName, 'channel-1-positive-input');
+  assert.equal(result.solution.receivers[0].ports.port.portName, 'channel-1-positive-output');
+  assert.equal(result.solution.network.kind, 'network');
+  assert.equal(result.solution.network.resourceId, result.id);
+  assert.match(result.solution.network.sha256, /^[0-9a-f]{64}$/);
+
+  const missing = await executeScenario({
+    board, code: source.slice(0, source.indexOf('const result =')) + 'await builder.run();',
+  }, options, () => {}, executor);
+  assert.equal(missing.status, 'failed');
+  assert.equal(calls, 1);
+  assert.deepEqual(missing.error?.diagnostics.filter(d => d.code === 'MISSING_FIELD').map(d => d.path), ['drivers', 'time']);
 });

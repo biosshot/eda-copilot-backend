@@ -308,6 +308,18 @@ impl AnalysisElectricalSession {
         pcb_analyze::extraction::board_section::slice(&g,&stack,&slice).map_err(napi::Error::from_reason)
     }
     #[napi]
+    pub fn solve_board_foil_checked(&mut self, board_json:String, geometry:Value, request:Value)->Result<Value> {
+        let started=std::time::Instant::now();
+        use pcb_analyze::extraction::local::{board_foil,board_mesh};
+        let geometry:board_mesh::Request=serde_json::from_value(geometry)
+            .map_err(|e|napi::Error::from_reason(format!("LOCAL_BOARD_FOIL_INPUT: {e}")))?;
+        let request:board_foil::CheckedRequest=serde_json::from_value(request)
+            .map_err(|e|napi::Error::from_reason(format!("LOCAL_BOARD_FOIL_INPUT: {e}")))?;
+        let board=pcb_analyze::import_json(&board_json).board
+            .ok_or_else(||napi::Error::from_reason("LOCAL_BOARD_FOIL_INPUT: board import rejected"))?;
+        board_foil::solve_checked(&board,&geometry,request,started).map_err(napi::Error::from_reason)
+    }
+    #[napi]
     pub fn prepare_local(&mut self, board_json:String, request:Value, remaining_seconds:Option<f64>,magnetic_patch_level:Option<u32>,frequency_audit:Option<Value>)->Result<Value> {
         match std::env::var("P7_MAGNETIC_PRECISION").as_deref(){Err(std::env::VarError::NotPresent)|Ok("f64")=>{},_=>return Err(napi::Error::from_reason("LOCAL_SPATIAL_INPUT: unsupported P7_MAGNETIC_PRECISION; rejected F32 experiment is not a runtime option"))};
         let compact=match std::env::var("P7_MAGNETIC_PROFILE").as_deref(){Err(std::env::VarError::NotPresent)|Ok("baseline")=>false,Ok("compact-v1")=>true,_=>return Err(napi::Error::from_reason("LOCAL_SPATIAL_INPUT: unsupported P7_MAGNETIC_PROFILE"))};

@@ -210,7 +210,49 @@ export interface AnalysisLocalDcReport {
   originMm?: [number,number];
   validity: {status:'conditional';domain:{frequencyHz:0};reason:string};
 }
-export declare class AnalysisElectricalSession {constructor();sliceBoardSection(boardJson:string,stack:unknown,slice:unknown):any;prepareLocal(boardJson:string,request:unknown,remainingSeconds?:number,magneticPatchLevel?:1|2,frequencyAudit?:unknown):any;solveLocalDc(boardJson:string,request:AnalysisLocalDcRequest,remainingSeconds?:number):AnalysisLocalDcReport;solveLocal(request:{prepared:unknown;frequenciesHz:number[];drive?:number[];loadsOhm?:(number|null)[]},remainingSeconds?:number,observablesOnly?:boolean):any;solve(request:AnalysisElectricalRequest):AnalysisElectricalReport; solveFrequency(request:AnalysisFrequencyRequest):AnalysisFrequencyReport; solveChannelMagnetic(request:unknown):any; solveTransient(request:AnalysisTransientRequest):AnalysisTransientReport; solveCrossSection(request:AnalysisCrossSectionRequest):AnalysisCrossSectionReport;propagateCrossSection(request:AnalysisCrossSectionRequest,prepared:unknown):AnalysisCrossSectionReport;clear():void}
+export interface AnalysisBoardFoilCheckedRequest {
+    frequenciesHz: number[];
+    referenceOhm?: number[];
+    budget: { maxSeconds: number; maxMemoryMiB: number };
+    maxIterations?: number;
+}
+export interface AnalysisBoardFoilCheckedReport {
+    status: 'complete';
+    coverage: 'unverified';
+    representation: 'S';
+    frequenciesHz: number[];
+    referenceOhm: number[];
+    ports: [string, string][];
+    parameters: { real: number; imaginary: number }[][][];
+    samples: {
+        frequencyHz: number;
+        columns: { input: number; kclRelative: number; kvlRelative: number; copperLossW: number; powerBalanceErrorW: number }[];
+    }[];
+    enrichment: {
+        iteration: number; frequencyHz: number; input: number; potentialModes: number; currentModes: number;
+        maxKclRelative: number; maxKvlRelative: number;
+    }[];
+    quality: { maxKclRelative: number; maxKvlRelative: number; maxColumnPowerBalanceErrorW: number };
+    provenance: {
+        method: string;
+        sourceMapping: [regionId: string, sourcePath: string, net: string | null, layer: string][];
+        electrodeAreasM2: Record<string, number>;
+        maxCopperVolumeChange: number;
+        prisms: number;
+        retainedPotentials: number;
+        currentModes: number;
+        plannedBytes: number;
+        maxSeconds: number;
+        maxMemoryMiB: number;
+        maxMagneticReciprocity: number;
+        maxMagneticRefinement: number;
+        maxElectricReciprocity: number;
+        spatialCoverage: 'unverified';
+        bandCoverage: 'unverified';
+        driveConvention: string;
+    };
+}
+export declare class AnalysisElectricalSession {constructor();sliceBoardSection(boardJson:string,stack:unknown,slice:unknown):any;solveBoardFoilChecked(boardJson:string,geometry:unknown,request:AnalysisBoardFoilCheckedRequest):AnalysisBoardFoilCheckedReport;prepareLocal(boardJson:string,request:unknown,remainingSeconds?:number,magneticPatchLevel?:1|2,frequencyAudit?:unknown):any;solveLocalDc(boardJson:string,request:AnalysisLocalDcRequest,remainingSeconds?:number):AnalysisLocalDcReport;solveLocal(request:{prepared:unknown;frequenciesHz:number[];drive?:number[];loadsOhm?:(number|null)[]},remainingSeconds?:number,observablesOnly?:boolean):any;solve(request:AnalysisElectricalRequest):AnalysisElectricalReport; solveFrequency(request:AnalysisFrequencyRequest):AnalysisFrequencyReport; solveChannelMagnetic(request:unknown):any; solveTransient(request:AnalysisTransientRequest):AnalysisTransientReport; solveCrossSection(request:AnalysisCrossSectionRequest):AnalysisCrossSectionReport;propagateCrossSection(request:AnalysisCrossSectionRequest,prepared:unknown):AnalysisCrossSectionReport;clear():void}
 
 /** Bounded common-return frequency multiports. Internal addon transport. */
 export interface AnalysisFrequencyResource {id:string;kind:string;ports:string[];data:unknown;source?:string;validity?:unknown;analyses?:string[]}

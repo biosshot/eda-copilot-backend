@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Connect the checked finite-plane operator to automatic channel extraction using physical lateral-return geometry, and admit alternating 2–8 copper layers. Preserve exact paired-port samples, source hashes and strict full-space residual/power guards; limit replay to original points/references. Native grid and four-layer controls, focused DSL tests, typecheck and builds pass. A manufactured automatic foil control and actual P6 replay pass in 162.219 s at 206.37 MiB sampled private peak. The first automatic bend refuses near-contact cells outside the thin-foil scope; mixed-volume support and physical acceptance remain open. See `docs/analyze/evidence/p7-automatic-foil-2026-11-04.md`.
+
+- Route the existing SI channel list through one joint P7 group extraction. Derive demand from authored sources/time, retain all uncovered DC/high-frequency intervals and physical handle mappings, and expose a conditional frequency artifact with explicit unavailable waveform/timing output. Focused actual-DSL/mock-numerics checks pass; full DDR/group acceptance remains open. See `docs/analyze/evidence/p7-group-runtime-2026-11-04.md`.
+
 - Reject contradictory P7 preparation readiness and incomplete observable/reference metadata in the case manifest. Resolve evidence paths before checking repository ownership and handle malformed review inputs as failures. The +1.5 percentage-point review policy and all physical acceptance statuses are unchanged.
 
 - Integrate an internal board-derived foil operator with sparse harmonic reduction, streamed common electric/magnetic actions and bounded residual-driven AC enrichment. Preserve finite pads, exact trace knots and floating islands; reject each response that fails the unreduced KCL/KVL gates. Four focused native integration tests pass, including the same 10 kHz coupon after five enrichment steps. The automatic planner, multilayer/mixed-volume interfaces and physical spatial/band acceptance remain open; see `docs/analyze/evidence/p7-foil-reduction-2026-11-04.md`.

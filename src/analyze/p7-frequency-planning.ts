@@ -7,7 +7,7 @@ type FrequencyDemand = {
 };
 
 export const p7FrequencyPlanningVersion = 1;
-const controlFrequencies = [0, 1e3, 1e5, 1e6, 1e9, 1e10] as const;
+export const p7FrequencyBoundariesHz = [0, 1e3, 1e5, 1e6, 1e9, 1e10] as const;
 
 function checkInterval([start, stop]: FrequencyInterval): void {
     if (!Number.isFinite(start) || !Number.isFinite(stop) || start < 0 || start > stop) {
@@ -88,7 +88,7 @@ export function auditFrequencyCoverage(options: {
     }
     supportedIntervalsHz.forEach(checkInterval);
     transitionFrequenciesHz.forEach(f => checkInterval([f, f]));
-    const requestedIntervalsHz = split(requestedIntervalHz, controlFrequencies);
+    const requestedIntervalsHz = split(requestedIntervalHz, p7FrequencyBoundariesHz);
     const segments = requestedIntervalsHz.flatMap(interval => split(interval, [
         ...transitionFrequenciesHz, ...supportedIntervalsHz.flat(),
     ]));
@@ -126,7 +126,7 @@ export function auditFrequencyCoverage(options: {
         }
     }
 
-    const supported = ([start, stop]: FrequencyInterval) => stop <= controlFrequencies.at(-1)! &&
+    const supported = ([start, stop]: FrequencyInterval) => stop <= p7FrequencyBoundariesHz.at(-1)! &&
         supportedIntervalsHz.some(([min, max]) => min <= start && stop <= max);
     const isolated = new Set<number>();
     for (const [point, end] of supportedIntervalsHz) {

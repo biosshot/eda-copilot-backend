@@ -1,8 +1,9 @@
+import type { AutoFoilPlan } from './auto-foil-plan.ts';
 import type { ChannelLossGram } from './channel-loss.ts';
 import type { BoardChannelRequest } from './channel-components.ts';
 import { declaredNetworkBand } from './analysis-dsl/frequency-model.ts';
 import type { LegacyChannelContact } from './channel-terminals.ts';
-import {createBoardChannelPlanner} from './board-channel-plan.ts';
+import {boardChannelBlockBandHz,createBoardChannelPlanner} from './board-channel-plan.ts';
 import {solveSegmentedChannel} from './segmented-channel.ts';
 import {auditSegmentedResponse,type ChannelFrequencyReplay} from './segmented-frequency-audit.ts';
 import type {FrequencyInterval} from './p7-frequency-planning.ts';
@@ -41,6 +42,14 @@ export function channelResponseChange(a:any,b:any,includesComponentLoss=false){
  }
  return {maxRelativeChange:Math.max(wave,loss,copperLoss,delay,magnetic??0),magneticEnergyRelativeChange:magnetic,magneticEnergyAbsoluteFloorJ:5e-12,magneticEnergyConvention:'Native matched-reference mean intrinsic magnetic energy Gram for1A RMS Norton drives; references store no magnetic energy',waveRelativeChange:wave,copperLossRelativeChange:includesComponentLoss?(separated?copperLoss:undefined):loss,totalPassiveLossRelativeChange:includesComponentLoss?loss:undefined,groupDelayRelativeChange:delay,groupDelayAbsoluteFloorS:1e-12,waveAbsoluteAmplitudeFloor:.01,lossAbsoluteFloorW:1e-18,referenceOhm:50,driveConvention:'Unit/opposite1A Norton with50Ohm mathematical reference; incident power50/4*norm(d)^2',lossRecovery:includesComponentLoss?(separated?'Cu-only convergence uses native copper instance R loss; regional recovery remains unverified':'Passive power balance includes supplied package losses; Cu-only and regional convergence remain unverified'):'Passive power balance; only Cu R dissipates; no regional loss certificate'};
 }
+export function boardChannelApplicability(request: BoardChannelRequest): FrequencyInterval {
+ const bands=(request.components??[]).flatMap(component=>{
+  const band=declaredNetworkBand(component.model);
+  return band?[band]:[];
+ });
+ return [Math.max(boardChannelBlockBandHz[0],...bands.map(band=>band[0])),
+  Math.min(boardChannelBlockBandHz[1],...bands.map(band=>band[1]))];
+}
 type VerificationRun = {
  level: 1 | 2;
  evidence: ReturnType<typeof solveSegmentedChannel>['evidence'];
@@ -58,7 +67,10 @@ type DomainVerification = {
 
 /** Use the same coarse discretization to select a domain. Then independently
  * verify mesh and cut placement on the domain whose fine result will be returned. */
-export function createBoardChannelExecutor(createPlanner = createBoardChannelPlanner, solve = solveSegmentedChannel){
+export function createBoardChannelExecutor<FoilResult=never>(
+ createPlanner = createBoardChannelPlanner, solve = solveSegmentedChannel,
+ solveFoil?:(plan:AutoFoilPlan,frequencies:number[],budget:{maxSeconds:number;maxMemoryMiB:number},interval?:FrequencyInterval)=>FoilResult,
+){
  return (board:any,base:any,contacts:LegacyChannelContact[]|BoardChannelRequest,frequencies:number[],budget:{maxSeconds:number;maxMemoryMiB:number},requestedIntervalHz?:FrequencyInterval)=>{
   const start=performance.now(),elapsed=()=>(performance.now()-start)/1000;
   const left=()=>({...budget,maxSeconds:budget.maxSeconds-elapsed()});
@@ -66,11 +78,7 @@ export function createBoardChannelExecutor(createPlanner = createBoardChannelPla
   const sectionOptions={expandAutomaticSectionMesh:true};
   const axis=[...frequencies];
   const components=Array.isArray(contacts)?[]:contacts.components??[];
-  const bands=components.flatMap(component=>{
-   const band=declaredNetworkBand(component.model);
-   return band?[band]:[];
-  });
-  const low=Math.max(1000,...bands.map(band=>band[0])), high=Math.min(10000,...bands.map(band=>band[1]));
+  const [low,high]=Array.isArray(contacts)?boardChannelBlockBandHz:boardChannelApplicability(contacts);
   if(components.length&&(!axis.length||low>high||axis.some(f=>!Number.isFinite(f)||f<low||f>high)))
    throw new Error('CHANNEL_COMPONENT_BAND: requested axis exceeds common board and supplied component AC band');
   for(const f of [low,Math.sqrt(low*high),high])if(!axis.some(x=>Math.abs(x-f)<=64*Number.EPSILON*Math.max(x,f)))axis.push(f);
@@ -82,7 +90,14 @@ export function createBoardChannelExecutor(createPlanner = createBoardChannelPla
   const verification: DomainVerification[]=[];
   for(const domainScale of [1,2,4]){
    const boundaryFraction=1/3;
-   const coarsePlan=planChannel({domainScale,magneticPatchLevel:1,boundaryFraction});
+   let coarsePlan:ReturnType<typeof planChannel>;
+   try{coarsePlan=planChannel({domainScale,magneticPatchLevel:1,boundaryFraction,
+     ...(solveFoil&&domainScale===1&&{autoFoilDeadlineMs:start+budget.maxSeconds*1000})});}
+   catch(error){
+    const candidate=error as {code?:string;foilCandidate?:AutoFoilPlan};
+    if(!solveFoil||domainScale!==1||candidate?.code!=='CHANNEL_CORRIDOR_UNSUPPORTED'||!candidate.foilCandidate)throw error;
+    return solveFoil(candidate.foilCandidate,frequencies,left(),requestedIntervalHz);
+   }
    const coarse=solve(coarsePlan,axis,left(),sectionOptions);
    const runs: VerificationRun[]=[{level:1,evidence:coarse.evidence,wallSeconds:coarse.wallSeconds}];
    const entry: DomainVerification={domainScale,runs,wallSeconds:elapsed()};

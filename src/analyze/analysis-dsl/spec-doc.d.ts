@@ -97,6 +97,11 @@ export type FrequencyNetworkData = {
  referenceOhm?:number|Readonly<Record<string,number>>;referenceTopology:'common';nature:'passive'|'active'|'unspecified';
  temporal?:PassiveRelaxationTemporal|PassiveResonantYTemporal;
 };
+export type PhysicalPortSampleData = {
+ format:'physical-port-samples';samplePolicy:'exact';representation:'S';referenceTopology:'physical-pairs';nature:'passive';
+ frequenciesHz:readonly number[]; parameters:FrequencyNetworkData['parameters']; referenceOhm:readonly number[];
+ physicalPorts:readonly {positive:{sourcePath:string;layer:string};negative:{sourcePath:string;layer:string}}[];
+};
 export type TouchstoneNetworkData = {format:'touchstone';content:string;referenceTopology:'common';nature:'passive'|'active'|'unspecified';temporal?:PassiveRelaxationTemporal};
 /** Full entries, no automatic symmetrization or discarded mutual coefficients.
  * Infinity keeps all metal potentials; candidate null modes are not a neutrality
@@ -105,7 +110,7 @@ export type PhysicalTerminal={node:string}|{reference:'ground'};
 export interface PhysicalState {kind:'physical-state';steady:boolean;potentialsV:readonly {instanceId:string;node:string;value:number}[];currentsA:readonly {instanceId:string;dof:string;value:number}[]}
 export type CoupledRlcData={format:'coupled-rlc';referenceTopology:'grounded'|'infinity';potentialNodes:readonly string[];currentDofs:readonly string[];incidence:readonly(readonly[number,number,number])[];portIncidence:readonly(readonly[number,number,number])[];resistanceOhm:readonly(readonly[number,number,number])[];inductanceH:readonly(readonly[number,number,number])[];capacitanceF:readonly(readonly[number,number,number])[];structuralGaugeModes?:readonly(readonly number[])[];conservedPotentialModes?:readonly(readonly number[])[];portTerminals?:readonly {positive:PhysicalTerminal;negative:PhysicalTerminal}[]};
 export type DelayedScatteringData={format:'delayed-scattering';referenceTopology:'common';nature:'passive';referenceOhm:number|Readonly<Record<string,number>>;scattering:readonly(readonly number[])[];delayS:number};
-export type NetworkResource = Omit<Resource,'kind'|'ports'|'data'|'parameters'> & {kind:'network';ports:readonly string[];data:FrequencyNetworkData|TouchstoneNetworkData|CoupledRlcData|DelayedScatteringData};
+export type NetworkResource = Omit<Resource,'kind'|'ports'|'data'|'parameters'> & {kind:'network';ports:readonly string[];data:FrequencyNetworkData|PhysicalPortSampleData|TouchstoneNetworkData|CoupledRlcData|DelayedScatteringData};
 export interface Material {
   id?: string; conductivitySM?: number; relativePermittivity?: number; lossTangent?: number;
   thermalConductivityWPerMK?: number; densityKgM3?: number; specificHeatJPerKgK?: number;
