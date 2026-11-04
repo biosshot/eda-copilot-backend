@@ -180,10 +180,26 @@ export interface AnalysisLocalDcRequest {
   drive?: number[];
   loadsOhm?: (number | null)[];
   observablesOnly?: boolean;
+  externalPortCount?: number;
 }
 export interface AnalysisLocalDcReport {
   status: 'complete';
   frequencyHz: 0;
+  balancedPortResponse?: {
+    basisDrivesA: number[][];
+    modalImpedanceOhm: number[][];
+    portVoltagesVByDrive: (number | null)[][];
+    normalizedElectrodeResidualByDrive: number[];
+    independentPortDrives: boolean;
+    powerScope: string;
+    powerByDrive: {
+      terminalInputW: number;
+      copperSchurLossW: number;
+      externalLoadLossW: number;
+      packageLossW: number;
+      totalLossW: number;
+    }[];
+  };
   ports: [string,string][];
   driveA: number[];
   loadsOhm: (number | null)[];
@@ -215,6 +231,7 @@ export interface AnalysisBoardFoilCheckedRequest {
     referenceOhm?: number[];
     budget: { maxSeconds: number; maxMemoryMiB: number };
     maxIterations?: number;
+    attachments?: { id: string; electrodes: [string, string]; model: AnalysisFrequencyResource }[];
 }
 export interface AnalysisBoardFoilCheckedReport {
     status: 'complete';
@@ -226,7 +243,7 @@ export interface AnalysisBoardFoilCheckedReport {
     parameters: { real: number; imaginary: number }[][][];
     samples: {
         frequencyHz: number;
-        columns: { input: number; kclRelative: number; kvlRelative: number; copperLossW: number; powerBalanceErrorW: number }[];
+        columns: { input: number; kclRelative: number; kvlRelative: number; copperLossW: number; powerBalanceErrorW: number; packages?: { id: string; currentA: { real: number; imaginary: number }; lossW: number }[] }[];
     }[];
     enrichment: {
         iteration: number; frequencyHz: number; input: number; potentialModes: number; currentModes: number;
@@ -236,6 +253,7 @@ export interface AnalysisBoardFoilCheckedReport {
     provenance: {
         method: string;
         barrelIds: string[];
+        attachments?: { id: string; electrodes: [string, string] }[];
         sourceMapping: [regionId: string, sourcePath: string, net: string | null, layer: string][];
         electrodeAreasM2: Record<string, number>;
         maxCopperVolumeChange: number;

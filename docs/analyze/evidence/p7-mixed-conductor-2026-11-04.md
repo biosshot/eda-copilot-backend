@@ -48,6 +48,37 @@ Combined focused DSL/cache checks and typecheck passed. Initial disk-cache tests
 hit Windows sandbox `EPERM` for atomic rename in system TEMP; rerunning with a
 writable workspace TEMP passed, without changing atomic production writes.
 
-Actual-addon automatic mixed extraction, independent physical accuracy and
-real-board/case-matrix acceptance remain pending. Reported byte plans are not
-OS memory measurements.
+The original automatic finite-plane bend then passed on this addon, retaining
+the geometry that previously failed the foil-only thin-cell screen. Two ports
+at 1 and 3 kHz passed automatic extraction and exact 1 kHz P6 replay. Maximum
+full KCL was 1.05709e-10, KVL 4.77827e-11 and wave/Joule discrepancy
+5.65867e-15 W. The report plans 75,170,887 B and retains 12 foil prisms.
+
+The supervised cold run took 1764.485 s, with sampled process-tree private peak
+206,114,816 B (196.57 MiB), RSS 169,906,176 B, one solver thread and no limit
+relaxation. An addon compilation overlapped the final portion of the run;
+wall time is an observation, not an isolated performance benchmark. The native
+budget was 1800 s / 3072 MiB; process-tree cap 4096 MiB plus 1 GiB host reserve.
+This confirms low memory on this coupon but a costly first calculation.
+
+The same process then restored the exact response from memory with no new
+native call. A fresh-process disk replay passed in 1.906 s total (0.245 s in
+the extraction/cache wrapper), with **zero native solves**, identical producer
+evidence, exact samples and original strict gates. Its private peak was
+204,652,544 B. Producer core identity is
+`4174ec5f9e3d11a6941eba1f47f07e702be5a0dab3c2176172c0fda2f07cef72`;
+cache key `b7b4ced1086e2abe8cd9b9e9e44e9222653a4fc84c5decc31d7360bd3f8b04b0`.
+Artifacts: `debugging/p7-mixed-20261104/bend-cold`, `bend-restart`, `exact-cache`.
+
+The actual mesh contains 168 copper tetrahedra (132 explicit-volume cells),
+62 full potentials and 504 full current coordinates. Two enrichment rounds
+grow the model from 4/2 to 8/10 potential/current modes. Thus three streamed
+magnetic sweeps each evaluate 14,196 pairs; the elapsed time is not exhaustion
+of the 16-round allowance. The current log cannot isolate costly near-pair
+quadrature from repeated sweeps. Native deadline checks occur between pairs;
+inner adaptive/self quadrature is not individually interruptible. The process
+supervisor enforces the hard outer limit. No timing optimization or repeat
+calculation was performed after this pass.
+
+Independent physical accuracy, actual barrel AC response and real-board/case-
+matrix acceptance remain pending. The response stays partial/unverified.

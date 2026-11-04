@@ -42,12 +42,18 @@ test('native DC preserves a series R/DCR chain and an open capacitive bridge',as
   assert.equal(cap.currentA,0);
   assert.equal(cap.lossW,0);
   if(withResistor){
+   const modal=solution.balancedPortResponse;
+   assert.deepEqual(modal.basisDrivesA,[[-1,1]]);
+   assert.equal(modal.powerByDrive[0].externalLoadLossW,0);
+   assert.ok(Math.abs(modal.powerByDrive[0].packageLossW-5)<5e-8);
+   assert.ok(Math.abs(modal.modalImpedanceOhm[0][0]/solution.drivePowerW-1)<1e-8);
    assert.ok(Math.abs(solution.packageLossW-5)<5e-8);
    assert.ok(solution.copperLossW>0);
    assert.ok(Math.abs((solution.packageLossW+solution.copperLossW)/solution.drivePowerW-1)<1e-8);
    assert.equal(new Set(solution.electrodeGalvanicComponents).size,4);
    assert.equal(new Set(solution.electrodeLoadedComponents).size,2);
   }else{
+   assert.deepEqual(solution.balancedPortResponse.basisDrivesA,[]);
    assert.equal(solution.loopProbe,undefined);
    assert.equal(solution.packageLossW,0);
    assert.equal(solution.copperLossW,0);

@@ -631,6 +631,7 @@ pub(super) fn solve_mixed_grid(
     mesh: &super::mesh::LayeredMesh,
     names: &[String],
     ports: &[[usize; 2]],
+    packages: &[super::checked_packages::Validated],
     field: &Field<'_>,
     budget: AllocationBudget,
     start: Instant,
@@ -793,6 +794,7 @@ pub(super) fn solve_mixed_grid(
         start,
         wall,
         true,
+        packages,
     )?;
     Ok((checked, space.planned_bytes))
 }
@@ -936,7 +938,16 @@ fn assemble_impl(
             None
         }
         (Preparation::Matched(grid), Some((field, dc))) => Some(space.train_grid(
-            &grid, &names, &dc, &field, &batch, budget, start, wall, false,
+            &grid,
+            &names,
+            &dc,
+            &field,
+            &batch,
+            budget,
+            start,
+            wall,
+            false,
+            &[],
         )?),
         _ => unreachable!("preparation resources match their scope"),
     };
@@ -1108,7 +1119,10 @@ impl ReducedSpace {
         Ok((system, state))
     }
     fn compile_system(&self, budget: Budget) -> Result<System> {
-        let mut budget = budget;
+        let budget = self.system_budget(budget)?;
+        System::compile(&self.model, self.ports.len(), Some(&budget))
+    }
+    fn system_budget(&self, mut budget: Budget) -> Result<Budget> {
         let requested = budget.max_memory_mi_b.unwrap_or(256.);
         let resident = self
             .full_potentials
@@ -1117,7 +1131,7 @@ impl ReducedSpace {
             .saturating_add(
                 self.full_potentials
                     .saturating_add(self.cells.len())
-                    .saturating_mul(self.basis.voltage.len())
+                    .saturating_mul(self.basis.voltage.len().max(self.basis.current.len()))
                     .saturating_mul(64),
             );
         let available = requested - resident as f64 / 1048576.;
@@ -1128,7 +1142,7 @@ impl ReducedSpace {
             ));
         }
         budget.max_memory_mi_b = Some(available);
-        System::compile(&self.model, self.ports.len(), Some(&budget))
+        Ok(budget)
     }
     fn full_residual(
         &self,
@@ -1531,10 +1545,12 @@ impl ReducedSpace {
         start: Instant,
         wall: Duration,
         pair_gradient: bool,
+        packages: &[super::checked_packages::Validated],
     ) -> Result<serde_json::Value> {
+        use super::checked_packages;
         use serde_json::{json, Value};
         let initial_nv = self.basis.voltage.len();
-        let ports = self.ports.len();
+        let ports = grid.references.len();
         let conductances: Vec<_> = grid.references.iter().map(|r| 1. / r).collect();
         let mut history = Vec::<Value>::with_capacity(grid.max_iterations + 1);
         let outcome = (|| {
@@ -1548,11 +1564,24 @@ impl ReducedSpace {
                     max_memory_mi_b: Some((available as f64 / 1048576.).min(4096.)),
                     max_seconds: Some(wall.saturating_sub(start.elapsed()).as_secs_f64()),
                 };
-                let mut system = self.compile_system(solve_budget)?;
+                let (mut system, n, recovery) = if packages.is_empty() {
+                    (
+                        self.compile_system(solve_budget)?,
+                        self.basis.voltage.len() + self.basis.current.len(),
+                        None,
+                    )
+                } else {
+                    let joint = checked_packages::compile(
+                        &self.model,
+                        packages,
+                        ports,
+                        &self.system_budget(solve_budget)?,
+                    )?;
+                    (joint.system, joint.size, Some(joint.recovery))
+                };
                 for (p, &g) in conductances.iter().enumerate() {
                     system.add_port_admittance(p, g, 0.)?;
                 }
-                let n = self.basis.voltage.len() + self.basis.current.len();
                 let initial = vec![0.; n];
                 let mut stats = Counters::default();
                 let mut worst: Option<(f64, usize, FullResidual)> = None;
@@ -1574,7 +1603,7 @@ impl ReducedSpace {
                         let state = system.solve(w, rhs, &initial, &mut stats)?;
                         let real = system.port_voltages(&state[..n], ports);
                         let imaginary = system.port_voltages(&state[n..], ports);
-                        let net_real: Vec<_> = drive
+                        let mut net_real: Vec<_> = drive
                             .iter()
                             .zip(&real)
                             .zip(&conductances)
@@ -1582,15 +1611,30 @@ impl ReducedSpace {
                                 Sum::from(source).sub(Sum::from(voltage).mul(g)).value()
                             })
                             .collect();
-                        let net_imaginary: Vec<_> = imaginary
+                        let mut net_imaginary: Vec<_> = imaginary
                             .iter()
                             .zip(&conductances)
                             .map(|(&voltage, &g)| -voltage * g)
                             .collect();
+                        let (re, im) = state.split_at(n);
+                        let recovered = recovery.as_ref().map(|r| r.copper_state(re, im));
+                        let package_samples = recovery
+                            .as_ref()
+                            .map(|r| r.package_states(w, re, im))
+                            .transpose()?
+                            .unwrap_or_default();
+                        for package in &package_samples {
+                            let [real, imaginary] = package.current();
+                            net_real.push(-real);
+                            net_imaginary.push(-imaginary);
+                        }
+                        let (copper_re, copper_im) = recovered
+                            .as_ref()
+                            .map_or((re, im), |s| (s[0].as_slice(), s[1].as_slice()));
                         let residual = self.full_residual(
                             w,
-                            &state[..n],
-                            &state[n..],
+                            copper_re,
+                            copper_im,
                             &net_real,
                             Some(&net_imaginary),
                         )?;
@@ -1630,20 +1674,38 @@ impl ReducedSpace {
                         }
                         let incident = grid.references[input] / 4.;
                         let net_power = Sum::from(1.).sub(outgoing).mul(incident).value();
-                        let copper =
-                            system.joule_loss(&state[..n]) + system.joule_loss(&state[n..]);
-                        let power_error = (net_power - copper).abs();
+                        let copper = recovered.as_ref().map_or_else(
+                            || system.joule_loss(re) + system.joule_loss(im),
+                            |s| checked_packages::copper_loss(&self.model, s),
+                        );
+                        if let Some(copper_state) = &recovered {
+                            checked_packages::check_copper_power(
+                                &self.model,
+                                copper_state,
+                                [&net_real, &net_imaginary],
+                                copper,
+                            )?;
+                        }
+                        let dissipated = package_samples
+                            .iter()
+                            .fold(Sum::from(copper), |p, s| p.add(Sum::from(s.loss_w)))
+                            .value();
+                        let power_error = (net_power - dissipated).abs();
                         if !power_error.is_finite()
                             || !copper.is_finite()
                             || copper < 0.
-                            || power_error > 1e-12 + 1e-8 * (net_power.abs() + copper.abs())
+                            || power_error > 1e-12 + 1e-8 * (net_power.abs() + dissipated.abs())
                         {
                             return Err(error("BOARD_FOIL_POWER",&format!(
-                                "f={frequency}, input={input}, wavePower={net_power:e}, copper={copper:e}, error={power_error:e}")));
+                                "f={frequency}, input={input}, wavePower={net_power:e}, dissipated={dissipated:e}, error={power_error:e}")));
                         }
                         max_power = max_power.max(power_error);
-                        columns.push(json!({"input":input,"kclRelative":norm.kcl_relative,
-                            "kvlRelative":norm.kvl_relative,"copperLossW":copper,"powerBalanceErrorW":power_error}));
+                        let mut column = json!({"input":input,"kclRelative":norm.kcl_relative,
+                            "kvlRelative":norm.kvl_relative,"copperLossW":copper,"powerBalanceErrorW":power_error});
+                        if !package_samples.is_empty() {
+                            column["packages"] = json!(package_samples);
+                        }
+                        columns.push(column);
                     }
                     parameters.push(matrix);
                     samples.push(json!({"frequencyHz":frequency,"columns":columns}));

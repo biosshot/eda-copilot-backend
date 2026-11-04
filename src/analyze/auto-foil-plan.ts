@@ -1,17 +1,20 @@
-import type { AnalysisGeometryReport } from '../../native/analyze/index.js';
+import type { AnalysisBoardFoilCheckedRequest, AnalysisGeometryReport } from '../../native/analyze/index.js';
 import type { PhysicalPort, PhysicalTerminal } from './channel-terminals.ts';
+import {MAX_CHANNEL_COMPONENTS,type PhysicalComponentRequest} from './channel-components.ts';
 
 type Bounds = [[number,number],[number,number]];
 type Source = {regionId:string;sourcePath:string;layer:string};
 type BarrelSource = {barrelId:string;sourcePath:string;layers:string[]};
+type Electrode = {name:string;sourcePath:string;layer:string;upper:boolean};
 export interface AutoFoilPlan {
  boardJson:string;
- geometry:Record<string,unknown>;
+ geometry:Record<string,unknown>&{electrodes:Electrode[]};
  ports:readonly PhysicalPort[];
  terminals:readonly PhysicalTerminal[];
  electrodePairs:[string,string][];
  sourceCopper:Source[];
  sourceBarrels:BarrelSource[];
+ attachments:NonNullable<AnalysisBoardFoilCheckedRequest["attachments"]>;
  roiMm:Bounds;
 }
 
@@ -21,6 +24,7 @@ type Options = {
  captured:AnalysisGeometryReport;
  terminals:PhysicalTerminal[];
  ports:PhysicalPort[];
+ components:readonly PhysicalComponentRequest[];
  seedRegions:Set<string>;
  marginMm:number;
  deadlineMs:number;
@@ -41,11 +45,22 @@ function expand(box:Bounds, distanceMm:number):Bounds {
 /** Close a bounded candidate over physical islands and complete intersecting
  * neighbours. Rectangle tests are conservative. Native source checks decide
  * actual admission and guard against every clipped conductor. */
-export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,seedRegions,marginMm,deadlineMs}:Options):AutoFoilPlan|undefined {
+export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,components,seedRegions,marginMm,deadlineMs}:Options):AutoFoilPlan|undefined {
  const stack=geometry.stack,copper=stack.filter(layer=>layer.copper);
  if(copper.length<2||copper.length>8||stack.length!==2*copper.length-1||stack.some((layer,i)=>layer.copper!==(i%2===0))||
     captured.status==='invalid'||captured.excluded.length||captured.fills.some(fill=>fill.status!=='available'))return;
  if(!(geometry.maxTriangleAreaM2>0)||!Number.isFinite(geometry.maxTriangleAreaM2))return;
+ if(components.length>MAX_CHANNEL_COMPONENTS||ports.length+components.length>16||terminals.length>32)
+  throw new Error('CHANNEL_FOIL_COMPONENT: at most 8 package branches, 16 total port pairs and 32 electrodes required');
+ if(components.some(component=>!component.equivalentKind))
+  throw new Error('CHANNEL_FOIL_COMPONENT: joint extraction requires an explicit two-terminal R/C/L equivalent for each package');
+ const names=new Map(terminals.map((terminal,i)=>[terminal.id,'foil-terminal-'+i]));
+ const attachments=components.map(({id,model,pins:[a,b]})=>{
+  const positive=names.get(a.id),negative=names.get(b.id);
+  if(!positive||!negative||positive===negative)
+   throw new Error('CHANNEL_FOIL_COMPONENT: distinct retained physical pads required for '+id);
+  return {id,model,electrodes:[positive,negative] as [string,string]};
+ });
  const groups=new Map(captured.islands.flatMap(island=>island.region_ids.map(id=>[id,island.region_ids] as const)));
  const regions=captured.regions.map(region=>({region,box:bounds(region.polygon.outer)}));
  const platingMm=Number(geometry.finishedHolePlatingM)*1000;
@@ -85,13 +100,12 @@ export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,seedRe
    }
    continue;
   }
-  const names=new Map(terminals.map((terminal,i)=>[terminal.id,'foil-terminal-'+i]));
   const electrodePairs=ports.map(({positive,negative}):[string,string]=>[names.get(positive)!,names.get(negative)!]);
   const electrodes=terminals.map(({id,sourcePath,layer})=>({name:names.get(id)!,sourcePath,layer,upper:layer===copper.at(-1)!.name}));
   if(electrodes.some(electrode=>!copper.some(layer=>layer.name===electrode.layer)))return;
   const sourceCopper=owned.map(({region})=>({regionId:region.id,sourcePath:region.source.path,layer:region.layer}));
   const sourceBarrels=[...barrels.values()].map(({hole})=>({barrelId:hole.id,sourcePath:hole.source.path,layers:hole.layers}));
-  return {boardJson,ports,terminals,electrodePairs,sourceCopper,sourceBarrels,roiMm,
+  return {boardJson,ports,terminals,electrodePairs,sourceCopper,sourceBarrels,attachments,roiMm,
    geometry:{...geometry,roiMm,domainPolygonMm:undefined,cutPlanes:{},allowInsulatedCopperCuts:false,electrodes,ports:electrodePairs}};
  }
 }

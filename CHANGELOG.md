@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Verify the original automatic mixed bend and exact-grid memory/disk replay: cold 1764.485 s at 196.57 MiB process-tree private peak, fresh-process reuse 1.906 s with zero native solves. Verify actual private-pad package extraction in 2.100 s native time, four DC runtime tests, four focused release algebra/profile tests, cache tests, typecheck and builds. Keep independent physical and broad-band acceptance open.
+
+- Attach explicit floating R/C/L package models to original private pad pairs in automatic joint extraction. Recover copper and package states through physical P6 mappings, check separate loss/current evidence and include full models in exact-grid cache identity. Add balanced DC port modes without grounding disconnected islands, and opt-in bounded mesh/exterior sensitivity with a 2% gate and 3.5% review boundary. Physical accuracy and broad-band acceptance remain unverified; see `docs/analyze/evidence/p7-joint-packages-2026-11-04.md`.
+
 - Extend automatic plane extraction with a common foil/volume operator, retaining original finite pads, barrel cells, capacitive islands and all mutual field actions. Pair voltage enrichment with compatible currents and check every column in the original full space. Add exact-grid memory/disk caching with physical evidence revalidation, and route explicit missing-return geometry to the joint operator. Focused native, DSL and cache checks pass; automatic bend validation is in progress and case-matrix physical acceptance remains open.
 
 - Make audited local copper thickness meshes depend on material skin depth and the effective upper frequency, including existing training points. Preserve F64, dielectric spacing and pre-allocation memory refusal; this mesh screen does not extend high-frequency applicability. See the mixed-conductor and copper-mesh-profile evidence dated 2026-11-04.

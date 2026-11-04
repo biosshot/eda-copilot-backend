@@ -53,6 +53,7 @@ export function cachedBoardFoilReport(
   const key = cache.key({
     core, producer: 'automatic-board-foil-or-mixed-exact-grid-v1', board: digest(problem.boardJson),
     geometry: problem.geometry, expected, frequenciesHz, referenceOhm, maxIterations,
+    ...(request.attachments?.length&&{attachments:request.attachments}),
   });
   remaining();
   const cached = cache.obtain<Entry>(key, () => {

@@ -21,6 +21,7 @@ pub mod board_response;
 pub mod board_dc;
 mod volume_dc;
 pub mod board_foil;
+mod checked_packages;
 pub mod foil_reduced;
 pub mod frequency_audit;
 pub mod magnetic_actions;

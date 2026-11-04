@@ -148,6 +148,7 @@ fn face_intervals(poly:&MultiPolygon<f64>,edges:&[[[f64;2];2]],origin:[f64;2],no
 }
 pub struct BoardMesh {
     pub(super) copper_skin_layers:Vec<CopperSkinLayer>,
+    pub(super) copper_skin_barrels:Vec<CopperSkinBarrel>,
     pub mesh:LayeredMesh,
     pub planar_nodes_mm:Vec<[f64;2]>,
     pub planar_triangles:Vec<[usize;3]>,
@@ -221,6 +222,15 @@ pub(super) struct CopperSkinLayer {
     skin_depth_m:f64,
     maximum_step_m:f64,
     slabs:usize,
+}
+
+#[derive(Debug,serde::Serialize)]
+#[serde(rename_all="camelCase")]
+pub(super) struct CopperSkinBarrel {
+    id:String,
+    skin_depth_m:f64,
+    maximum_radial_step_m:f64,
+    shells:usize,
 }
 
 pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration,
@@ -298,6 +308,9 @@ pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max
         shapes.push(Shape{poly,id:region.id.clone(),sigma:layer.conductivity_s_m.unwrap(),span:spans[&region.layer]});
     }
     let mut bores=MultiPolygon(vec![]);let mut barrel_ids=vec![];
+    let mut copper_skin_barrels=Vec::new();
+    let mut barrel_shell_constraints=Vec::new();
+    let mut barrel_constraint_work=0usize;
     // Keep one planar cut per partial bore span. XY ownership is shared by
     // the whole extrusion, but a drill only displaces material in its span.
     let mut partial_bores=BTreeMap::<(usize,usize),MultiPolygon<f64>>::new();
@@ -321,6 +334,27 @@ pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max
         let plating=r.finished_hole_plating_m.ok_or_else(||error("BOARD_PADSTACK","finished-hole plating thickness is missing"))?;
         let sigma=r.barrel_conductivity_s_m.ok_or_else(||error("BOARD_PADSTACK","barrel conductivity is missing"))?;
         let outer=barrel_outer(&bore,center,radius,plating*1e3,options.max_deviation_mm+2.*geometry.boolean_error_bound_mm)?;
+        if let Some(profile)=skin {
+            let inner_ring=&bore.0[0].exterior().0;
+            let outer_ring=&outer.exterior().0;
+            if inner_ring.len()!=outer_ring.len()||inner_ring.len()<4 {
+                return Err(error("BOARD_PROFILE","matching round barrel contours required for skin refinement"));
+            }
+            let vertices=inner_ring.len()-1;
+            let thickness_m=inner_ring[..vertices].iter().zip(&outer_ring[..vertices])
+                .map(|(a,b)|(a.x-b.x).hypot(a.y-b.y)*1e-3).fold(0.,f64::max);
+            let plan=copper_skin_profile::radial_plan(profile,sigma,thickness_m,vertices)
+                .ok_or_else(||error("BOARD_PROFILE","radial copper mesh spacing or constraint count is not representable"))?;
+            barrel_constraint_work=copper_skin_profile::radial_constraint_room(
+                barrel_constraint_work,plan.constraint_work,budget.max_nodes,budget.max_bytes)?;
+            copper_skin_barrels.push(CopperSkinBarrel{id:hole.id.clone(),skin_depth_m:profile.skin_depth_m(sigma),
+                maximum_radial_step_m:plan.maximum_step_m,shells:plan.pieces});
+            if plan.pieces>1 {
+                let vertices=inner_ring[..vertices].iter().zip(&outer_ring[..vertices])
+                    .map(|(a,b)|([a.x,a.y],[b.x,b.y])).collect::<Vec<_>>();
+                barrel_shell_constraints.push((vertices,plan.pieces));
+            }
+        }
         let outer=areas::one(outer);
         if areas::difference(&outer,&roi).unsigned_area()>0. {return Err(error("BOARD_ROI","ROI cuts through via barrel; choose a complete via"));}
         let annulus=if r.domain_polygon_mm.is_some() {
@@ -506,6 +540,11 @@ pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max
             let node=cdt.insert(Point2::new(p[0],p[1])).map_err(|e|error("BOARD_MESH",&e.to_string()))?;if let Some(old)=previous{if old!=node{cdt.add_constraint_and_split(old,node,|p|p);}}previous=Some(node);
         }Ok(())
     };
+    // These are mesh constraints only; canonical material and contact atoms
+    // still come from the original authored inner and outer barrel contours.
+    for (vertices,pieces) in barrel_shell_constraints {
+        copper_skin_profile::visit_radial_constraints(&vertices,pieces,&mut segment)?;
+    }
     for poly in atoms.iter().map(|a|&a.poly){for ring in std::iter::once(poly.exterior()).chain(poly.interiors()){for line in ring.lines(){segment([line.start.x,line.start.y],[line.end.x,line.end.y])?;}}}
     if let Some((nodes,triangles))=support{let mut edges=std::collections::BTreeSet::new();for t in triangles{for k in 0..3{let mut e=[t[k],t[(k+1)%3]];e.sort();edges.insert(e);}}for [a,b]in edges{segment(nodes[a],nodes[b])?;}}
     for [a,b] in trace_lines {segment(*a,*b)?;}
@@ -672,7 +711,7 @@ pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max
         electrode_areas_m2.insert(e.name.clone(),area);certified_electrodes.insert(e.name.clone(),(e.clone(),nodes.into_iter().collect()));
     }
     check(start,max_wall)?;
-    Ok(BoardMesh{mesh,copper_skin_layers,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,certified_electrodes})
+    Ok(BoardMesh{mesh,copper_skin_layers,copper_skin_barrels,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,certified_electrodes})
 }
 impl BoardMesh {
     /// End geometry preparation before a separately budgeted field phase.

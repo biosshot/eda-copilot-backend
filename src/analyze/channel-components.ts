@@ -8,6 +8,7 @@ export interface PhysicalComponentRequest {
  id: string;
  designator: string;
  pins: readonly [PhysicalTerminal, PhysicalTerminal];
+ equivalentKind?: PassiveElement["kind"];
  model: AnalysisFrequencyResource;
 }
 

@@ -67,7 +67,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
             fail("Disconnected legacy signal endpoints; capacitive or component bridge continuity requires a verified model");
         const terminalSourceKey = (contact: typeof contacts[number]) => JSON.stringify([contact.sourcePath, contact.layer]);
         const terminalsBySource = new Map([...terminals.values()].map(t => [terminalSourceKey(t.contact), t] as const));
-        const componentPlans = components.map(({ id, designator, pins, model }) => {
+        const componentPlans = components.map(({ id, designator, pins, model, equivalentKind }) => {
             const resolvePin = (pin: typeof contacts[number]) => {
                 const key = terminalSourceKey(pin);
                 const known = terminalsBySource.get(key);
@@ -80,7 +80,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
                 terminalsBySource.set(key, resolved);
                 return resolved;
             };
-            return { id, designator, model, pins: [resolvePin(pins[0]), resolvePin(pins[1])] as const };
+            return { id, designator, model, equivalentKind, pins: [resolvePin(pins[0]), resolvePin(pins[1])] as const };
         });
         const componentEdges = componentPlans.map(({ pins: [a, b] }) => [a.island.id, b.island.id] as const);
         const reachable = componentReachableIslands([...signals, ...returns].map(i => i.id), componentEdges);
@@ -198,9 +198,12 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
             transverseMm?: [number, number];
         } | undefined;
         function refuseCorridor(geometryReason: JointGeometryReason, reason: string): never {
-            const foilCandidate=!components.length&&options.autoFoilDeadlineMs!==undefined?
-                autoFoilPlan({boardJson,geometry:foilGeometry,captured:g,terminals:contacts,ports:externalPorts,
-                    seedRegions:new Set([...signalRegions,...returnIds,...contactRegions]),marginMm:margin,deadlineMs:options.autoFoilDeadlineMs}):undefined;
+            const foilCandidate=options.autoFoilDeadlineMs!==undefined?
+                autoFoilPlan({boardJson,geometry:foilGeometry,captured:g,terminals:[...terminals.values()].map(entry=>entry.contact),ports:externalPorts,
+                    components:componentPlans.map(({pins:[a,b],...model})=>({...model,pins:[a.contact,b.contact]})),
+                    seedRegions:new Set([...signalRegions,...returnIds,...contactRegions,
+                        ...componentPlans.flatMap(({pins})=>pins.flatMap(({island})=>island.region_ids))]),
+                    marginMm:margin,deadlineMs:options.autoFoilDeadlineMs}):undefined;
             throw Object.assign(new Error("CHANNEL_CORRIDOR: " + reason), {
                 code: "CHANNEL_CORRIDOR_UNSUPPORTED",
                 geometryReason,

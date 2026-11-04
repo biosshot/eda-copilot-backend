@@ -25,6 +25,12 @@ test('layered DC reaches the native copper endpoint without preparing an AC mode
  assert.deepEqual(solution.portRealV,[null,null]);
  assert.deepEqual(solution.electrodeGalvanicComponents,solution.electrodeLoadedComponents);
  assert.ok(solution.loopProbe.resistanceOhm>0);
+ const modal=solution.balancedPortResponse;
+ assert.deepEqual(modal.basisDrivesA,[[-1,1]]);
+ assert.equal(modal.independentPortDrives,false);
+ assert.deepEqual(modal.portVoltagesVByDrive,[[null,null]]);
+ assert.ok(Math.abs(modal.modalImpedanceOhm[0][0]/solution.loopProbe.resistanceOhm-1)<1e-8);
+ assert.ok(Math.abs(modal.powerByDrive[0].copperSchurLossW/solution.totalLossW-1)<1e-8);
  assert.ok(Math.abs(solution.totalLossW/solution.drivePowerW-1)<1e-8);
  assert.equal(solution.validity.domain.continuousFrequencyCoverage,false);
 });

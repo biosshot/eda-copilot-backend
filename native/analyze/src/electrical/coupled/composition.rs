@@ -177,6 +177,14 @@ fn resource_for(
 pub fn build(topology: &Topology, budget: Option<&Budget>, start: Instant) -> Result<Built> {
     build_for(topology, budget, start, "si")
 }
+pub(crate) fn build_network_parameters(
+    topology: &Topology,
+    budget: Option<&Budget>,
+    start: Instant,
+) -> Result<Built> {
+    build_for(topology, budget, start, "networkParameters")
+}
+
 pub(super) fn build_for(
     topology: &Topology,
     budget: Option<&Budget>,

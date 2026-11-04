@@ -61,7 +61,7 @@ export class LocalModelCache {
 }
 
 /** Single producer identity boundary; excitation, loads, plots and checks are results. */
-export function localExtractionKey(cache:LocalModelCache,core:string,r:{boardJson:string;geometry:unknown;bandHz:readonly number[];temperatureC?:number;magneticPatchLevel?:1|2;frequencyAudit?:{intervalHz:readonly [number,number]}}){return cache.key({core,board:digest(r.boardJson),geometry:canonicalLocalGeometry(r.geometry),bandHz:r.bandHz,temperatureC:r.temperatureC,magneticPatchLevel:r.magneticPatchLevel,copperSkinMesh:r.frequencyAudit&&{version:2,requestedUpperHz:r.frequencyAudit.intervalHz[1],upperPolicy:'max-requested-and-native-training-v1'},producer:'local-recovery-v1'});}
+export function localExtractionKey(cache:LocalModelCache,core:string,r:{boardJson:string;geometry:unknown;bandHz:readonly number[];temperatureC?:number;magneticPatchLevel?:1|2;frequencyAudit?:{intervalHz:readonly [number,number]}}){return cache.key({core,board:digest(r.boardJson),geometry:canonicalLocalGeometry(r.geometry),bandHz:r.bandHz,temperatureC:r.temperatureC,magneticPatchLevel:r.magneticPatchLevel,copperSkinMesh:r.frequencyAudit&&{version:3,requestedUpperHz:r.frequencyAudit.intervalHz[1],upperPolicy:'max-requested-and-native-training-v1'},producer:'local-recovery-v1'});}
 
 /** Field coefficients depend on physical transverse geometry/materials/mesh.
  * Propagation length and requested samples do not alter that operator. */

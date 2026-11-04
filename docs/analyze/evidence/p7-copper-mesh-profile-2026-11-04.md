@@ -30,3 +30,16 @@ training-frequency correction compiled in the integrated release addon build
 (5m09s), along with the mixed conductor changes. Addon SHA-256:
 `2ef413381454d868c01649d68360cd24ad371c2a63544c06914409001fc246a7`.
 This build is not a physical skin-transition comparison.
+
+Subsequent profile v3 also subdivides round barrel metal radially. It uses
+interpolated constrained rings and spokes between the existing canonical inner
+and outer contours, with target spacing delta/3 at the same effective upper
+frequency. Material and contact ownership still use the original contours.
+Constraint work is bounded before insertion; ordinary CDT/extrusion memory
+checks remain in force. The profile records shell counts and maximum spoke
+spacing separately for current and electric meshes. Non-audited requests are
+unchanged. One geometry-only test passed for two shells, preserved contours,
+frequency scaling and budget refusal. The integrated native build passed in 10m12s. Addon SHA-256: `5967213e65a6b535112c9e6aa57d89550898fec3ae2fabda4e384753e59d919b`.
+Both focused profile tests passed in the actual release crate (0.00 s test
+runtime after 2m54s compilation).
+Tangential/proximity resolution and physical barrel AC accuracy remain unverified.

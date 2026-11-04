@@ -97,6 +97,6 @@ export function physicalChannelComponents(
    return {id,designator,kind:equivalent.kind,pins:[terminal(pinA),terminal(pinB)],resistanceOhm};
   }
   model=channelPassiveElement(id,equivalent,band);
-  return {id,designator,pins:[terminal(pinA),terminal(pinB)],model};
+  return {id,designator,pins:[terminal(pinA),terminal(pinB)],equivalentKind:equivalent.kind,model};
  });
 }

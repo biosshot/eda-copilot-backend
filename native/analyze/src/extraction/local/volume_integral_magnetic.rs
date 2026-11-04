@@ -1,6 +1,7 @@
 //! Direct constant-vector finite-volume magnetostatic action on the unchanged
-//! copper cells. The dense kernel is intended for bounded local blocks; its
-//! quadratic storage is admitted explicitly instead of hidden behind a mesh solve.
+//! copper cells. Bounded local blocks may use an explicitly budgeted dense
+//! kernel; the mixed operator streams the same pair quadrature without retaining
+//! quadratic kernel storage.
 use super::{
     accurate::Sum,
     error, magnetic_kernel_cache,

@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 
 const MU0: f64 = 4e-7 * PI;
-pub const VERSION: u32 = 2;
+pub const VERSION: u32 = 3;
 
 #[derive(Clone, Copy)]
 pub(super) struct Profile {
@@ -12,7 +12,7 @@ pub(super) struct Profile {
 
 impl Profile {
     // This is a through-thickness screening target for planar nonmagnetic Cu.
-    // It says nothing about lateral edges, proximity, or barrel radial resolution.
+    // It says nothing about lateral edges or proximity.
     pub fn skin_depth_m(self, conductivity_s_m: f64) -> f64 {
         ((PI * MU0 * self.upper_hz).sqrt() * conductivity_s_m.sqrt()).recip()
     }
@@ -110,6 +110,95 @@ pub(super) fn append_layer_planes(
     Ok(max_step)
 }
 
+/// Bounding spacing along the spokes between the authored round barrel contours.
+pub(super) struct RadialPlan {
+    pub pieces: usize,
+    pub maximum_step_m: f64,
+    pub constraint_work: usize,
+}
+
+pub(super) fn radial_plan(
+    profile: Profile,
+    conductivity_s_m: f64,
+    thickness_m: f64,
+    contour_vertices: usize,
+) -> Option<RadialPlan> {
+    let target_m = profile.skin_depth_m(conductivity_s_m) / 3.;
+    let pieces = (thickness_m / target_m).ceil();
+    if contour_vertices < 3 || !(1. ..usize::MAX as f64).contains(&pieces) {
+        return None;
+    }
+    let pieces = pieces as usize;
+    // Unique ring/spoke nodes plus the ring and spoke segments. Intersections
+    // with the common arrangement are still preflighted by the CDT inserter.
+    let segments_per_spoke = pieces.checked_mul(2)?.checked_sub(1)?;
+    let constraint_work = if pieces == 1 {
+        0
+    } else {
+        contour_vertices.checked_mul(pieces.checked_add(1)?.checked_add(segments_per_spoke)?)?
+    };
+    Some(RadialPlan {
+        pieces,
+        maximum_step_m: thickness_m / pieces as f64,
+        constraint_work,
+    })
+}
+
+pub(super) fn radial_point(
+    inner: [f64; 2],
+    outer: [f64; 2],
+    index: usize,
+    pieces: usize,
+) -> [f64; 2] {
+    if index == 0 {
+        return inner;
+    }
+    if index == pieces {
+        return outer;
+    }
+    let fraction = index as f64 / pieces as f64;
+    std::array::from_fn(|axis| inner[axis] + (outer[axis] - inner[axis]) * fraction)
+}
+
+pub(super) fn visit_radial_constraints(
+    vertices: &[([f64; 2], [f64; 2])],
+    pieces: usize,
+    mut emit: impl FnMut([f64; 2], [f64; 2]) -> Result<(), String>,
+) -> Result<(), String> {
+    let point = |vertex: usize, shell: usize| {
+        let (inner, outer) = vertices[vertex];
+        radial_point(inner, outer, shell, pieces)
+    };
+    for vertex in 0..vertices.len() {
+        let next = (vertex + 1) % vertices.len();
+        for shell in 1..pieces {
+            emit(point(vertex, shell), point(next, shell))?;
+        }
+        for shell in 0..pieces {
+            let (inner, outer) = (point(vertex, shell), point(vertex, shell + 1));
+            if inner == outer {
+                return Err(
+                    "BOARD_PROFILE: radial copper shell below representable resolution".into(),
+                );
+            }
+            emit(inner, outer)?;
+        }
+    }
+    Ok(())
+}
+
+pub(super) fn radial_constraint_room(
+    existing_work: usize,
+    added_work: usize,
+    max_nodes: usize,
+    max_bytes: usize,
+) -> Result<usize, String> {
+    existing_work
+        .checked_add(added_work)
+        .filter(|&n| n <= max_nodes.min(max_bytes / 4096))
+        .ok_or_else(|| "MEMORY_LIMIT: radial copper mesh constraints exceed XY budget".into())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -181,6 +270,65 @@ mod tests {
         assert_eq!(
             max_extrusion_planes(4, usize::MAX, 100, 100, usize::MAX),
             None
+        );
+    }
+
+    #[test]
+    fn round_barrel_radial_grid_keeps_both_contours_and_refuses_oversized_plan() {
+        let profile = Profile {
+            upper_hz: 100_000.,
+            current_step_m: 0.001,
+            field_step_m: 0.0005,
+        };
+        let plan = radial_plan(profile, 58e6, 100e-6, 8).unwrap();
+        assert_eq!(plan.pieces, 2);
+        assert!(plan.maximum_step_m <= profile.skin_depth_m(58e6) / 3.);
+        assert_eq!(
+            radial_plan(
+                Profile {
+                    upper_hz: 25_000.,
+                    ..profile
+                },
+                58e6,
+                100e-6,
+                8
+            )
+            .unwrap()
+            .pieces,
+            1
+        );
+        assert_eq!(
+            radial_plan(profile, 58e6, 25e-6, 8)
+                .unwrap()
+                .constraint_work,
+            0
+        );
+        let inner = [0.2, 0.];
+        let outer = [0.3, 0.];
+        assert_eq!(radial_point(inner, outer, 0, plan.pieces), inner);
+        assert_eq!(radial_point(inner, outer, 1, plan.pieces), [0.25, 0.]);
+        assert_eq!(radial_point(inner, outer, 2, plan.pieces), outer);
+        let vertices = [
+            (inner, outer),
+            ([0., 0.2], [0., 0.3]),
+            ([-0.2, 0.], [-0.3, 0.]),
+            ([0., -0.2], [0., -0.3]),
+        ];
+        let mut constraints = Vec::new();
+        visit_radial_constraints(&vertices, plan.pieces, |a, b| {
+            constraints.push((a, b));
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(constraints.len(), vertices.len() * 3);
+        assert!(constraints.contains(&(inner, [0.25, 0.])));
+        assert!(constraints.contains(&([0.25, 0.], outer)));
+        assert!(constraints.contains(&([0., -0.25], [0.25, 0.])));
+
+        assert!(radial_constraint_room(0, plan.constraint_work, 100, 32 * 4096).is_err());
+        assert_eq!(
+            radial_constraint_room(0, plan.constraint_work, 100, 64 * 4096).unwrap(),
+            48
         );
     }
 }

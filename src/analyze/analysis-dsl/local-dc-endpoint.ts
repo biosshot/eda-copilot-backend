@@ -80,7 +80,7 @@ export function localDcEndpoint(
   const left=remainingSeconds-(performance.now()-start)/1000;
   if(left<=0)throw new Error('LOCAL_DC_DEADLINE: shared DC planning deadline exhausted');
   report=solve({kind:'local-dc-extraction',boardJson,request:{
-   geometry:{...geometry,electrodes,ports:nativePorts,allowInsulatedCopperCuts:false},observablesOnly:true,
+   geometry:{...geometry,electrodes,ports:nativePorts,allowInsulatedCopperCuts:false},observablesOnly:true,externalPortCount:ports.length,
    ...(drive&&{drive}),...(nativePorts.length>ports.length&&{loadsOhm:nativeLoads}),
   },remainingSeconds:left});
  }catch(error){
@@ -123,10 +123,11 @@ export function localDcEndpoint(
   diagnostics,assumptions:[
    'Original source contacts and copper galvanic islands are preserved. Floating port voltages are unavailable.',
    ...(components.length?['Resistive package stamps contribute separately to loaded connectivity and dissipation. Capacitors are open at DC.']:[]),
-   ...(loopProbe?['A galvanically balanced 1 A Norton probe gives the loop resistance from drive power, including any supplied resistive package loss.']:['No compatible channel-loop probe was selected. The response reports electrode conductance with zero drive.']),
+   ...(loopProbe?['A galvanically balanced 1 A Norton probe gives the loop resistance from drive power, including any supplied resistive package loss.']:['No primary channel-loop probe was selected. The primary electrode response uses zero drive. The separate modal response reports any admissible balanced probes.']),
   ],
   metrics:{segments:{kind:'table',unit:'1',data:json({frequencyHz:0,ports,loopProbe,
    electrodeNames:report.electrodeNames,electrodeGalvanicComponents:report.electrodeGalvanicComponents,
+   balancedPortResponse:report.balancedPortResponse,
    dcConductanceS:report.dcConductanceS,portRealV:externalResult.portRealV,floatingPortIndices:externalResult.floatingPortIndices,...packageEvidence}),validity,diagnostics:[]}},
   solution:json({...report,...externalResult,physicalPorts:ports,loopProbe,validity,...packageEvidence}),
  };

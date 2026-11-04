@@ -532,7 +532,7 @@ pub fn solve_checked(
         .checked_sub(reserve)
         .ok_or_else(|| error("MEMORY_LIMIT", "mixed checked response exceeds budget"))?;
     let mesh = board_mesh::build(board, request, budget, wall.saturating_sub(start.elapsed()))?;
-    solve_checked_mesh(mesh, request, grid, budget, start, wall)
+    solve_checked_mesh(mesh, request, grid, &[], budget, start, wall)
 }
 
 fn checked_reserve(request: &board_mesh::Request, grid: CheckedGrid<'_>) -> Result<usize> {
@@ -604,12 +604,17 @@ pub(super) fn solve_checked_mesh(
     mesh: BoardMesh,
     request: &board_mesh::Request,
     grid: CheckedGrid<'_>,
+    packages: &[super::checked_packages::Validated],
     mut budget: AllocationBudget,
     start: Instant,
     wall: Duration,
 ) -> Result<serde_json::Value> {
     use serde_json::json;
-    let reserve = checked_reserve(request, grid)?;
+    let reserve = checked_reserve(request, grid)?
+        + super::checked_packages::output_reserve(
+            packages,
+            grid.frequencies_hz.len() * request.ports.len(),
+        );
     let CheckedGrid {
         frequencies_hz,
         reference_ohm,
@@ -661,6 +666,7 @@ pub(super) fn solve_checked_mesh(
     let ports = request
         .ports
         .iter()
+        .chain(packages.iter().map(|p| &p.electrodes))
         .map(|p| {
             let a = electrodes.get(p[0].as_str()).copied();
             let b = electrodes.get(p[1].as_str()).copied();
@@ -688,6 +694,7 @@ pub(super) fn solve_checked_mesh(
         &mesh.mesh,
         &names,
         &ports,
+        packages,
         &field,
         budget,
         start,
@@ -730,5 +737,11 @@ pub(super) fn solve_checked_mesh(
         "magneticQuadratureCoverage":"unverified",
         "driveConvention":"1 A RMS matched Norton basis columns, checked only at listed frequencies",
     });
+    if !packages.is_empty() {
+        checked["provenance"]["attachments"] = json!(packages
+            .iter()
+            .map(|p| { json!({"id":p.id,"electrodes":p.electrodes}) })
+            .collect::<Vec<_>>());
+    }
     Ok(checked)
 }

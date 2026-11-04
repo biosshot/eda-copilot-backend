@@ -676,6 +676,8 @@ pub struct CheckedRequest {
     pub reference_ohm: Option<Vec<f64>>,
     pub budget: crate::electrical::Budget,
     pub max_iterations: Option<usize>,
+    #[serde(default)]
+    pub attachments: Vec<super::checked_packages::Attachment>,
 }
 
 /// The checked automatic endpoint deliberately returns only the exact-grid
@@ -746,7 +748,10 @@ pub fn solve_checked(
         super::board_prepare::verification_limit("P7_VERIFY_MEMORY_MIB", 2048, 256, 8192)?;
     let admitted_seconds = seconds.min(seconds_cap);
     let admitted_memory = (memory.floor() as usize).min(memory_cap);
-    let reserve = axis.len() * port_count * (port_count * 256 + 512) + 256 * 1024;
+    let packages = super::checked_packages::validate(request.attachments, geometry, &axis)?;
+    let reserve = axis.len() * port_count * (port_count * 256 + 512)
+        + 256 * 1024
+        + super::checked_packages::output_reserve(&packages, axis.len() * port_count);
     if admitted_memory * 1024 * 1024 <= super::parallel::stack_reservation() + reserve {
         return Err(error(
             "MEMORY_LIMIT",
@@ -779,13 +784,14 @@ pub fn solve_checked(
             .all(|(i, layer)| layer.copper == (i % 2 == 0));
     let mixed = |mesh| {
         let mut checked = super::mixed_conductor::solve_checked_mesh(
-            mesh, geometry, mixed_grid, budget, started, wall,
+            mesh, geometry, mixed_grid, &packages, budget, started, wall,
         )?;
         checked["provenance"]["maxSeconds"] = json!(admitted_seconds);
         checked["provenance"]["maxMemoryMiB"] = json!(admitted_memory);
         Ok(checked)
     };
-    if !planar_stack
+    if !packages.is_empty()
+        || !planar_stack
         || !mesh.barrel_ids.is_empty()
         || super::mixed_conductor::has_projected_pad_collision(&mesh, &geometry.electrodes)?
     {

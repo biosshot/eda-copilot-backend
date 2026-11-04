@@ -1,5 +1,6 @@
 import type { AnalysisBoardFoilCheckedReport, AnalysisBoardFoilCheckedRequest } from '../../native/analyze/index.js';
 import type { BoardFoilProblem } from './types.ts';
+import type { CoupledRlcData } from './analysis-dsl/spec-doc.js';
 
 const fail=(message:string):never=>{throw new Error('CHANNEL_FOIL_EVIDENCE: '+message);};
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
@@ -10,6 +11,14 @@ export function validateBoardFoilReport(
 ): void {
  const { expected, request } = problem;
  const { frequenciesHz } = request;
+ const attachments=(request.attachments??[]).map(({id,electrodes,model})=>{
+  const entries=(model.data as CoupledRlcData|undefined)?.resistanceOhm;
+  if(!Array.isArray(entries)||entries.length>1||entries.some(entry=>
+   !Array.isArray(entry)||entry.length!==3||entry[0]!==0||entry[1]!==0||!Number.isFinite(entry[2])||entry[2]<=0))
+   return fail('invalid authored series package resistance evidence');
+  return {id,electrodes,resistanceOhm:entries[0]?.[2]??0};
+ });
+ const electrodeNames=new Set([...expected.electrodePairs.flat(),...attachments.flatMap(a=>a.electrodes)]);
  const n = expected.electrodePairs.length;
  const referenceOhm = request.referenceOhm ?? expected.electrodePairs.map(() => 50);
  if(report?.status!=='complete'||report.coverage!=='unverified'||report.representation!=='S'||
@@ -27,16 +36,30 @@ export function validateBoardFoilReport(
   [copperLossW,powerBalanceErrorW].some(x=>!Number.isFinite(x)||x<0)))
   fail('native foil residual or power evidence is outside its accepted limits');
  for(const [i,sample] of report.samples.entries())for(const column of sample.columns){
+  const packages=column.packages??[];
+  if(!Array.isArray(packages)||packages.length!==attachments.length||packages.some((value,j)=>
+   !value||value.id!==attachments[j].id||!value.currentA||!Number.isFinite(value.currentA.real)||
+   !Number.isFinite(value.currentA.imaginary)||!Number.isFinite(value.lossW)||value.lossW<0))
+   fail('missing or invalid ordered private package current and loss evidence');
+  for(const [j,{currentA,lossW}] of packages.entries()){
+   const resistance=attachments[j].resistanceOhm;
+   const weight=Math.sqrt(resistance);
+   const lossFromCurrent=Math.hypot(weight*currentA.real,weight*currentA.imaginary)**2;
+   const tolerance=1e-12+1e-8*(lossFromCurrent+lossW);
+   if(!Number.isFinite(tolerance)||(resistance===0?lossW!==0:Math.abs(lossFromCurrent-lossW)>tolerance))
+    fail('package dissipation does not match authored series resistance and reported current');
+  }
+  const passiveLoss=packages.reduce((total,value)=>total+value.lossW,column.copperLossW);
   const outgoing=report.parameters[i].reduce((sum,row)=>{
    const {real,imaginary}=row[column.input];
    return sum+real*real+imaginary*imaginary;
   },0);
   // A matched 1 A RMS Norton drive has incident power R/4.
   const wavePower=(referenceOhm[column.input]/4)*(1-outgoing);
-  const threshold=1e-12+1e-8*(Math.abs(wavePower)+column.copperLossW);
+  const threshold=1e-12+1e-8*(Math.abs(wavePower)+passiveLoss);
   if(!Number.isFinite(threshold)||column.powerBalanceErrorW>threshold||
-     Math.abs(wavePower-column.copperLossW)>threshold)
-   fail('native foil wave power and copper loss do not pass the matched power gate');
+     Math.abs(wavePower-passiveLoss)>threshold)
+   fail('native foil wave power and separate copper/package losses do not pass the matched power gate');
  }
  const {quality}=report;
  if(!quality||quality.maxKclRelative!==Math.max(...columns.map(column=>column.kclRelative))||
@@ -53,20 +76,25 @@ export function validateBoardFoilReport(
  const actual=evidence.sourceMapping.map(([id,path,,layer])=>JSON.stringify([id,path,layer])).sort();
  const expectedBarrels=expected.sourceBarrels.map(barrel=>barrel.barrelId).sort();
  const validModel=evidence.modelKind==='foil'
-  ? !expectedBarrels.length&&evidence.prisms>=1
+  ? !expectedBarrels.length&&!attachments.length&&evidence.prisms>=1
   : evidence.modelKind==='mixed'&&Number.isSafeInteger(evidence.volumeTetrahedra)&&
-    evidence.volumeTetrahedra>0&&Number.isSafeInteger(evidence.nativeCopperTetrahedra)&&
+    (evidence.volumeTetrahedra>0||evidence.volumeTetrahedra===0&&attachments.length>0&&!expectedBarrels.length&&evidence.prisms>0)&&
+    Number.isSafeInteger(evidence.nativeCopperTetrahedra)&&
     Number.isSafeInteger(evidence.fullPotentialCount)&&evidence.fullPotentialCount>0&&
     evidence.fullCurrentCount===3*evidence.nativeCopperTetrahedra&&
     (evidence.prisms===0?evidence.nativeCopperTetrahedra===evidence.volumeTetrahedra:
      evidence.nativeCopperTetrahedra-evidence.volumeTetrahedra>=evidence.prisms)&&
     evidence.magneticQuadratureCoverage==='unverified';
- if(!same(expectedCopper,actual)||!validModel||!Number.isSafeInteger(evidence.prisms)||evidence.prisms<0||
+ const reportedAttachments=evidence.attachments??[];
+ const validAttachments=Array.isArray(reportedAttachments)&&reportedAttachments.length===attachments.length&&
+  attachments.every(({id,electrodes},i)=>reportedAttachments[i]?.id===id&&same(reportedAttachments[i].electrodes,electrodes));
+ if(!same(expectedCopper,actual)||!validAttachments||!validModel||
+    !Number.isSafeInteger(evidence.prisms)||evidence.prisms<0||
     !Array.isArray(evidence.barrelIds)||!same(expectedBarrels,[...evidence.barrelIds].sort())||
     !Number.isFinite(evidence.plannedBytes)||evidence.plannedBytes<=0||evidence.plannedBytes>producerBudget.maxMemoryMiB*1048576||
     !Number.isFinite(evidence.maxCopperVolumeChange)||evidence.maxCopperVolumeChange<0||evidence.maxCopperVolumeChange>1e-8||
     evidence.spatialCoverage!=='unverified'||evidence.bandCoverage!=='unverified'||
-    new Set(expected.electrodePairs.flat()).size!==Object.keys(evidence.electrodeAreasM2).length||
-    expected.electrodePairs.flat().some(name=>!Number.isFinite(evidence.electrodeAreasM2[name])||evidence.electrodeAreasM2[name]<=0))
+    electrodeNames.size!==Object.keys(evidence.electrodeAreasM2).length||
+    [...electrodeNames].some(name=>!Number.isFinite(evidence.electrodeAreasM2[name])||evidence.electrodeAreasM2[name]<=0))
   fail('native copper and barrel ownership, pad areas or scope do not match the closed candidate');
 }

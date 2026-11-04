@@ -101,7 +101,7 @@ struct Model {
     delayed: Option<super::delayed::Model>,
 }
 /// Producer applicability is independent of the mathematical resource class.
-pub(super) fn declared_band(resource: &Resource) -> Result<[f64; 2]> {
+pub(crate) fn declared_band(resource: &Resource) -> Result<[f64; 2]> {
     let Some(v) = resource
         .validity
         .as_ref()

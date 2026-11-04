@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import type { AnalysisBoardFoilCheckedReport } from '../native/analyze/index.js';
+import type { AnalysisBoardFoilCheckedReport, AnalysisBoardFoilCheckedRequest } from '../native/analyze/index.js';
 import type { AnalysisTask } from '../src/analyze/analysis-dsl/executor.ts';
+import type { CoupledRlcData } from '../src/analyze/analysis-dsl/spec-doc.js';
 import { createFrequencyExecutor } from '../src/analyze/analysis-dsl/frequency-executor.ts';
 import { createTransientExecutor } from '../src/analyze/analysis-dsl/transient-executor.ts';
 import { createLocalExecutor } from '../src/analyze/analysis-dsl/local-executor.ts';
@@ -10,6 +11,11 @@ import { capturedBoardGeometry } from '../src/analyze/geometry-snapshot.ts';
 import { isAnalysisProblem, type BoardFoilProblem } from '../src/analyze/types.ts';
 import { finitePlaneBend, finitePlaneBendDsl as source } from './helpers/pcb-analysis-finite-plane-bend.ts';
 import { createHash } from 'node:crypto';
+import { mkdtempSync,rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { cachedBoardFoilReport } from '../src/analyze/board-foil-cache.ts';
+import { LocalModelCache } from '../src/analyze/local-model-cache.ts';
 
 type Geometry={allowInsulatedCopperCuts:boolean;roiMm:[[number,number],[number,number]];ports:[string,string][];cutPlanes:unknown;electrodes:{name:string;sourcePath:string}[]};
 
@@ -18,7 +24,8 @@ function checkedMock(problem:BoardFoilProblem, sourceMapping:AnalysisBoardFoilCh
  const g=problem.geometry as Geometry;
  const {frequenciesHz,referenceOhm,budget}=problem.request;
  const s=[[{real:.2,imaginary:0},{real:.5,imaginary:0}],[{real:.5,imaginary:0},{real:.2,imaginary:0}]];
- const provenanceModel=barrelIds.length?{
+ const mixed=Boolean(barrelIds.length||problem.request.attachments?.length);
+ const provenanceModel=mixed?{
   modelKind:'mixed' as const,nativeCopperTetrahedra:28,volumeTetrahedra:28,
   fullPotentialCount:4,fullCurrentCount:84,magneticQuadratureCoverage:'unverified' as const,
  }:{modelKind:'foil' as const,maxMagneticReciprocity:0,maxMagneticRefinement:0,maxElectricReciprocity:0};
@@ -26,8 +33,8 @@ function checkedMock(problem:BoardFoilProblem, sourceMapping:AnalysisBoardFoilCh
    parameters:frequenciesHz.map(()=>s),enrichment:[],
    samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[0,1].map(input=>({input,kclRelative:0,kvlRelative:0,copperLossW:8.875,powerBalanceErrorW:0}))})),
    quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0},
-   provenance:{method:barrelIds.length?'Mock mixed foil and volume':'Mock checked foil',...provenanceModel,barrelIds,sourceMapping,
-    electrodeAreasM2:Object.fromEntries(g.electrodes.map(e=>[e.name,1e-8])),maxCopperVolumeChange:0,prisms:barrelIds.length?0:28,
+   provenance:{method:mixed?'Mock mixed foil and volume':'Mock checked foil',...provenanceModel,barrelIds,sourceMapping,
+    electrodeAreasM2:Object.fromEntries(g.electrodes.map(e=>[e.name,1e-8])),maxCopperVolumeChange:0,prisms:mixed?0:28,
     retainedPotentials:4,currentModes:6,plannedBytes:1024,maxSeconds:budget.maxSeconds,maxMemoryMiB:budget.maxMemoryMiB,
     spatialCoverage:'unverified',bandCoverage:'unverified',driveConvention:'1A RMS Norton'},
   };
@@ -173,4 +180,76 @@ test('closed lateral candidate retains local barrel provenance and ignores a dis
  assert.ok(captured.holes.some(hole=>hole.source.source_id==='unconfirmed-span'&&hole.plated&&!hole.span_confirmed));
  assert.equal((await run()).error?.code,'CHANNEL_FOIL_PADSTACK');
  assert.equal(calls,3);
+});
+
+test('joint mixed candidate welds an explicit two-pin package to its retained finite pads',async t=>{
+ const board=finitePlaneBend();
+ const track=board.copper.fixed.tracks[0];
+ track.points=[{x:0,y:0},{x:.55,y:0}];
+ board.copper.fixed.tracks.push({...track,id:'signal-after-gap',points:[{x:.95,y:0},{x:1.5,y:0},{x:1.5,y:1.5}]});
+ board.components.push({...board.components[0],designator:'R1',at:{x:.75,y:0}});
+ for(const [i,x] of [.55,.95].entries())board.pads.push({...board.pads[0],id:'R1-'+i,component:'R1',number:String(i+1),at:{x,y:0}});
+ const folder=mkdtempSync(join(tmpdir(),'p7-package-cache-'));
+ t.after(()=>rmSync(folder,{recursive:true,force:true}));
+ const cache=new LocalModelCache(folder);
+ let calls=0,omitPackageLoss=false,mismatchPackageLoss=false;
+ const local=createLocalExecutor(((problem:BoardFoilProblem):AnalysisBoardFoilCheckedReport=>{
+  assert.ok(isAnalysisProblem(problem));
+  const geometry=problem.geometry as Geometry;
+  const [attachment]=problem.request.attachments!;
+  assert.equal(problem.request.attachments!.length,1);
+  assert.equal(attachment.id,'component:R1');
+  assert.deepEqual(attachment.electrodes.map(name=>geometry.electrodes.find(e=>e.name===name)?.sourcePath),['pads[4]','pads[5]']);
+  assert.deepEqual(geometry.ports.map(pair=>pair.map(name=>geometry.electrodes.find(e=>e.name===name)?.sourcePath)),[['pads[0]','pads[2]'],['pads[1]','pads[3]']]);
+  assert.equal(geometry.electrodes.length,6);
+  assert.equal(geometry.allowInsulatedCopperCuts,false);
+  const captured=capturedBoardGeometry(problem.boardJson);
+  const pinIslands=attachment.electrodes.map(name=>{
+   const path=geometry.electrodes.find(e=>e.name===name)!.sourcePath;
+   const region=captured.regions.find(r=>r.source.path===path)!;
+   return captured.islands.find(island=>island.region_ids.includes(region.id))!.id;
+  });
+  assert.notEqual(pinIslands[0],pinIslands[1]);
+  const solve=(request:AnalysisBoardFoilCheckedRequest):AnalysisBoardFoilCheckedReport=>{
+   calls++;
+   const report=checkedMock({...problem,request},captured.regions.map(r=>[r.id,r.source.path,r.source.net,r.layer]));
+   // Serde emits object fields in sorted order.
+   report.provenance.attachments=[{electrodes:attachment.electrodes,id:attachment.id}];
+   const resistance=(attachment.model.data as CoupledRlcData).resistanceOhm[0][2];
+   for(const {columns} of report.samples)for(const column of columns){
+    column.copperLossW=8.375;
+    if(!omitPackageLoss)column.packages=[{id:attachment.id,
+     currentA:{real:mismatchPackageLoss?0:Math.sqrt(.5/resistance),imaginary:0},lossW:.5}];
+   }
+   return report;
+  };
+  return omitPackageLoss||mismatchPackageLoss?solve(problem.request):cachedBoardFoilReport(cache,'mock-physical-packages',problem,solve);
+ }) as NonNullable<Parameters<typeof createLocalExecutor>[0]>);
+ const run=(resistanceOhm:number)=>executeScenario({board,code:source.replace('.frequency(',
+  ".components([resistor({designator:'R1',pins:{positive:'1',negative:'2'},resistanceOhm:"+resistanceOhm+"})]).frequency(")},
+  {filename:'automatic-package.js',maxEntries:1000,maxOutputBytes:4*1024*1024},()=>{},
+  async task=>{
+   const result=await local(task as AnalysisTask<'impedance'>);
+   assert.equal(result.status,'partial');
+   assert.deepEqual(result.network?.ports,['input','output']);
+   const solution=result.solution as any;
+   assert.match(solution.foilPlan.producer.attachmentsSha256,/^[a-f0-9]{64}$/);
+   assert.deepEqual(solution.foilPlan.packages[0].physicalContacts,
+    [{sourcePath:'pads[4]',layer:'TOP'},{sourcePath:'pads[5]',layer:'TOP'}]);
+   assert.equal(solution.samples[0].columns[0].copperLossW,8.375);
+   assert.equal(solution.samples[0].columns[0].packages[0].lossW,.5);
+   return result;
+  });
+ for(const resistance of [10,10,20]){
+  const output=await run(resistance);
+  assert.equal(output.status,'complete',JSON.stringify(output.error));
+ }
+ assert.equal(calls,2);
+ omitPackageLoss=true;
+ assert.equal((await run(10)).error?.code,'CHANNEL_FOIL_EVIDENCE');
+ omitPackageLoss=false;
+ mismatchPackageLoss=true;
+ const mismatch=await run(10);
+ assert.equal(mismatch.error?.code,'CHANNEL_FOIL_EVIDENCE');
+ assert.match(mismatch.error?.message??'',/dissipation does not match/);
 });

@@ -519,7 +519,9 @@ pub fn run_with_frequency_audit(board:&crate::model::Board,r:&board_mesh::Reques
             "version":copper_skin_profile::VERSION,"requestedUpperHz":request.interval_hz[1],
             "effectiveUpperHz":profile.upper_hz,"skinDepthDivisor":3,
             "current":b.copper_skin_layers,"electric":field_b.as_ref().unwrap_or(&b).copper_skin_layers,
-            "scope":"Planar copper through-thickness mesh screening only; lateral, barrel radial and spatial accuracy remain unverified"
+            "currentRoundBarrels":b.copper_skin_barrels,
+            "electricRoundBarrels":field_b.as_ref().unwrap_or(&b).copper_skin_barrels,
+            "scope":"Planar copper through-thickness and round-barrel radial mesh screening only; lateral, proximity and spatial accuracy remain unverified"
         });
     }
     output["stageSeconds"]=serde_json::Value::Object(stages);
