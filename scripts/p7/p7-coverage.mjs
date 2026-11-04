@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { readFileSync, statSync } from 'node:fs';
+import { readFileSync, realpathSync, statSync } from 'node:fs';
 import { resolve, isAbsolute, relative, sep } from 'node:path';
 
 const matrix = [
@@ -9,30 +9,71 @@ const matrix = [
   'short-wide-reference-bridge','long-narrow-reference-bridge','board-edge-reference-connection'
 ];
 export const manifest = JSON.parse(readFileSync(new URL('./coverage-manifest.json', import.meta.url), 'utf8'));
+
+function isOutside(root, path) {
+  const rel = relative(root, path);
+  return isAbsolute(rel) || rel === '..' || rel.startsWith('..' + sep);
+}
+
+function isNonemptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
 export function validateManifest(data, root = new URL('../../', import.meta.url)) {
   root = root instanceof URL ? fileURLToPath(root) : resolve(root);
   if (data?.schemaVersion !== 1 || !Array.isArray(data?.cases)) return ['manifest must have schemaVersion 1 and cases array'];
+  let resolvedRoot;
+  try {
+    resolvedRoot = realpathSync(root);
+  } catch {
+    return ['manifest root is unavailable'];
+  }
   const errors=[], seen=new Set();
   for(const c of data.cases){
-    if(!c || typeof c !== 'object'){errors.push('invalid case');continue;}
-    if(typeof c.id!=='string'||!matrix.includes(c.id)) errors.push('unknown case id: '+c.id);
+    if(!c || typeof c !== 'object' || Array.isArray(c)){errors.push('invalid case');continue;}
+    if(typeof c.id!=='string'||!matrix.includes(c.id)) {
+      errors.push(typeof c.id === 'string' ? 'unknown case id: '+c.id : 'invalid case id');
+      continue;
+    }
     if(seen.has(c.id)) errors.push('duplicate id: '+c.id); seen.add(c.id);
     if(!['todo','ready'].includes(c.status)) errors.push(c.id+': invalid preparation status');
     if(c.acceptance!==null) errors.push(c.id+': acceptance requires a separate reviewed evidence workflow');
     for(const k of ['scenario','test','evidence']) {
       const v=c[k]; if(v===null)continue;
-      if(typeof v!=='string'||!v){errors.push(c.id+': invalid '+k);continue;}
-      const rel=relative(root,resolve(root,v));
-      if(isAbsolute(v)||rel==='..'||rel.startsWith('..'+sep))errors.push(c.id+': nonlocal path');
-      else {try{if(!statSync(resolve(root,v)).isFile())errors.push(c.id+': not a file');}catch{errors.push(c.id+': missing '+k);}}
+      if(!isNonemptyString(v)){errors.push(c.id+': invalid '+k);continue;}
+      const path = resolve(root, v);
+      if(isAbsolute(v)||isOutside(root,path)) {
+        errors.push(c.id+': nonlocal '+k+' path');
+        continue;
+      }
+      try {
+        const resolvedPath = realpathSync(path);
+        if (isOutside(resolvedRoot, resolvedPath)) errors.push(c.id+': nonlocal '+k+' path');
+        else if (!statSync(resolvedPath).isFile()) errors.push(c.id+': '+k+' is not a file');
+      } catch {
+        errors.push(c.id+': missing '+k);
+      }
     }
-    if(c.status==='ready'&&(!c.scenario||!c.test)) errors.push(c.id+': ready requires scenario and test');
+    for (const key of ['observables', 'missingPrerequisites']) {
+      const values = c[key];
+      if (!Array.isArray(values) || !values.every(isNonemptyString)
+        || (key === 'observables' && values.length === 0)) {
+        errors.push(c.id+': invalid '+key);
+      }
+    }
+    if (!isNonemptyString(c.proposedReference)) errors.push(c.id+': invalid proposedReference');
+    if (c.status === 'ready') {
+      if (!c.scenario || !c.test) errors.push(c.id+': ready requires scenario and test');
+      if (c.missingPrerequisites?.length) errors.push(c.id+': ready has missing prerequisites');
+    }
   }
   for(const id of matrix)if(!seen.has(id))errors.push('missing case: '+id);
   return errors;
 }
 /** A gate result only; pass does not establish model acceptance. Inputs are percent units. */
-export function classifyReview({errorPercent,upperThresholdPercent,kind='sensitivity',failure=null}) {
+export function classifyReview(input) {
+  if (input === null || typeof input !== 'object') return 'fail';
+  const {errorPercent,upperThresholdPercent,kind='sensitivity',failure=null} = input;
   if(failure!==null || !Number.isFinite(errorPercent)||errorPercent<0||!Number.isFinite(upperThresholdPercent)||upperThresholdPercent<0) return 'fail';
   if(!['sensitivity','physical-error','invariant'].includes(kind))return 'fail';
   if(errorPercent<=upperThresholdPercent)return 'pass';

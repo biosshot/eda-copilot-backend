@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reject contradictory P7 preparation readiness and incomplete observable/reference metadata in the case manifest. Resolve evidence paths before checking repository ownership and handle malformed review inputs as failures. The +1.5 percentage-point review policy and all physical acceptance statuses are unchanged.
+
 - Integrate an internal board-derived foil operator with sparse harmonic reduction, streamed common electric/magnetic actions and bounded residual-driven AC enrichment. Preserve finite pads, exact trace knots and floating islands; reject each response that fails the unreduced KCL/KVL gates. Four focused native integration tests pass, including the same 10 kHz coupon after five enrichment steps. The automatic planner, multilayer/mixed-volume interfaces and physical spatial/band acceptance remain open; see `docs/analyze/evidence/p7-foil-reduction-2026-11-04.md`.
 
 - Add a separate physical DC endpoint through the existing layered impedance request at 0 Hz. Retain finite electrode conductance, galvanic islands and unavailable floating-port voltages; report a balanced 1 A loop probe only when physical connectivity supports it. Compose explicit positive R/DCR and DC-open capacitors through their original physical pads, retain the private package-port mapping, and separate copper/package losses. Keep AC coverage separate, reject ambiguous contacts and unsupported ideal shorts, and preserve strict KCL/power guards. Native DC unit/coupon, focused DSL/multiport and actual-addon R/DCR/open-C checks pass; see `docs/analyze/evidence/p7-dc-endpoint-2026-11-04.md` for build and boundary validation.
