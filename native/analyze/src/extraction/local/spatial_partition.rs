@@ -242,6 +242,18 @@ impl Partition {
         })
     }
 
+    pub fn owner_count(&self) -> usize {
+        self.owners.len()
+    }
+
+    pub fn current_owner(&self, original_current: usize) -> Option<usize> {
+        self.cells.get(original_current / 3).map(|cell| cell.owner)
+    }
+
+    pub fn trace_dofs(&self) -> &[usize] {
+        &self.traces
+    }
+
     pub fn weld(&self, cell: usize) -> [usize; 4] {
         let c = &self.cells[cell];
         c.local.map(|index| self.owners[c.owner].global[index])

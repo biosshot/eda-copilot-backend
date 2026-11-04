@@ -615,6 +615,16 @@ fn shared_return_split_weld_matches_unsplit_exact_grid_and_retains_trace() {
     }
     assert_eq!(split["coverage"], "unverified");
     assert_eq!(unsplit["coverage"], "unverified");
+    let schur = &split["conductiveCorrection"];
+    assert!(unsplit.get("conductiveCorrection").is_none());
+    assert!(schur["freeSharedTraceDofs"].as_u64().unwrap() > 0);
+    assert!(schur["ownerInteriorDofs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|n| n.as_u64().unwrap() > 0));
+    assert!(schur["traceUpperEntries"].as_u64().unwrap() > 0);
+    assert!(schur["maxOriginalFreeResidualRelative"].as_f64().unwrap() <= 1e-8);
     let topology = &split["spatialPartition"];
     assert_eq!(topology["owners"], 2);
     assert!(topology["tracePotentialDofs"].as_array().unwrap().len() > 1);
@@ -670,7 +680,7 @@ fn shared_return_split_weld_matches_unsplit_exact_grid_and_retains_trace() {
         json!({
             "schema":"p7-shared-return-interface-v1","frequencyHz":1000.,
             "ports":split["ports"],"sourceMapping":split["provenance"]["sourceMapping"],
-            "topology":topology,"splitParameters":split["parameters"],"unsplitParameters":unsplit["parameters"],
+            "topology":topology,"conductiveCorrection":schur,"splitParameters":split["parameters"],"unsplitParameters":unsplit["parameters"],
             "splitColumns":split["samples"][0]["columns"],"unsplitColumns":unsplit["samples"][0]["columns"],
             "maxOwnerWeakConductionA":owner_flow,"maxCommonDisplacementA":common_displacement,
             "faceDirectionMask":normal_mask,"coverage":"unverified",

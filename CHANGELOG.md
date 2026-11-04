@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Condense each copper owner's free conductive interior onto the shared trace in the private mixed solver, then recover and check the original coordinates during harmonic and AC correction. Keep common electric and magnetic actions. The focused algebra and supervised 1 kHz controls pass against the monolithic correction with the existing residual and power gates. Physical and board-scale acceptance remain open.
+
 - Add a private shared-return partition to the checked mixed operator. Assemble owner-local copper incidence on the original coordinates, retain the common electric and magnetic fields, and verify shared nodal reactions and exclusive owner Joule loss. The supervised two-direction 1 kHz control and saved-result verifier pass with identical split and unsplit S and copper loss. Independent physical accuracy and scalable section/local assembly remain open.
 
 - Route higher-frequency automatic DSL demand to the closed physical joint operator with the skin-volume-v3 profile. Return conditional exact points up to 100 kHz and audit a bounded supplemental batch on the same mesh and ownership. Preserve package coverage gaps, exact-grid replay and cache provenance checks; validate AC plating applicability alongside layer materials. Focused TypeScript tests, typecheck, both builds and supervised native geometry and thick-copper 100 kHz controls pass. Independent physical broad-band acceptance remains open.

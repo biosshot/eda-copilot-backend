@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 
 const marker = 'P7_SHARED_RETURN_INTERFACE ';
 const residualLimit = 1e-8;
+const splitEquivalenceLimit = 1e-10;
 const ports = [['p0', 'p2'], ['p1', 'p3']];
 
 function count(value, minimum = 0) {
@@ -59,13 +60,35 @@ export function verifySharedReturnInterface(log) {
   const mask = count(packet.faceDirectionMask, 1);
   assert.equal(mask, 0b011, 'Expected both in-plane cut directions');
 
-  assert.deepEqual(packet.splitParameters, packet.unsplitParameters);
+  // Earlier v1 logs predate the independent conductive solve.
+  const correction = packet.conductiveCorrection;
+  if (correction !== undefined) {
+    assert.equal(correction.method, 'sparse owner interiors and shared conductive trace Schur');
+    const interiors = correction.ownerInteriorDofs;
+    assert.ok(Array.isArray(interiors) && interiors.length === topology.owners);
+    assert.ok(interiors.map(dofs => count(dofs)).some(dofs => dofs > 0));
+    assert.ok(count(correction.freeSharedTraceDofs, 1) <= traceDofs.length);
+    count(correction.traceUpperEntries, 1);
+    count(correction.ownedPlannedBytes, 1);
+    residual(correction.maxOriginalFreeResidualRelative);
+  }
+
+  for (const parameters of [packet.splitParameters, packet.unsplitParameters]) {
+    assert.equal(parameters.length, 1);
+    assert.equal(parameters[0].length, ports.length);
+    for (const row of parameters[0]) {
+      assert.equal(row.length, ports.length);
+      for (const { real, imaginary } of row) complex([real, imaginary]);
+    }
+  }
   const [matrix] = packet.splitParameters;
-  assert.equal(packet.splitParameters.length, 1);
-  assert.equal(matrix.length, ports.length);
-  for (const row of matrix) {
-    assert.equal(row.length, ports.length);
-    for (const { real, imaginary } of row) complex([real, imaginary]);
+  const [controlMatrix] = packet.unsplitParameters;
+  for (const [output, row] of matrix.entries()) {
+    for (const [input, { real, imaginary }] of row.entries()) {
+      const control = controlMatrix[output][input];
+      assert.ok(Math.hypot(real - control.real, imaginary - control.imaginary) <= splitEquivalenceLimit,
+        `Split/unsplit S[${output},${input}] differs beyond the native tolerance`);
+    }
   }
   assert.ok(Math.hypot(matrix[0][1].real, matrix[0][1].imaginary) > 0, 'Expected cross-port response');
 
@@ -76,12 +99,11 @@ export function verifySharedReturnInterface(log) {
   let maxTraceBalanceErrorA = 0;
   for (const [input, split] of packet.splitColumns.entries()) {
     const unsplit = packet.unsplitColumns[input];
-    assert.equal(split.copperLossW, unsplit.copperLossW);
-    const netPowerW = 50 / 4 * (1 - matrix.reduce((sum, row) => {
-      const { real, imaginary } = row[input];
-      return sum + real ** 2 + imaginary ** 2;
-    }, 0));
-    for (const column of [split, unsplit]) {
+    for (const [column, waves] of [[split, matrix], [unsplit, controlMatrix]]) {
+      const netPowerW = 50 / 4 * (1 - waves.reduce((sum, row) => {
+        const { real, imaginary } = row[input];
+        return sum + real ** 2 + imaginary ** 2;
+      }, 0));
       assert.equal(column.input, input);
       residual(column.kclRelative);
       residual(column.kvlRelative);
@@ -92,6 +114,9 @@ export function verifySharedReturnInterface(log) {
         column.powerBalanceErrorW <= toleranceW);
       assert.ok(Math.abs(netPowerW - lossW) <= toleranceW);
     }
+    const lossScaleW = Math.max(Math.abs(split.copperLossW), Math.abs(unsplit.copperLossW), 1e-18);
+    assert.ok(Math.abs(split.copperLossW - unsplit.copperLossW) <= splitEquivalenceLimit * lossScaleW,
+      `Split/unsplit copper loss for input ${input} differs beyond the native tolerance`);
     assert.equal(unsplit.spatialTrace, undefined);
 
     const { maxWeldRelative, maxKclRelative, ownerJouleLossW, traces } = split.spatialTrace;
@@ -131,7 +156,7 @@ export function verifySharedReturnInterface(log) {
     fixture: 'Compact continuous-return native control', coverage: packet.coverage,
     frequencyHz: packet.frequencyHz, ports, owners: topology.owners, traceDofs: traceDofs.length,
     crossOwnerFaces: faces.length, faceDirectionMask: mask, maxOwnerA, maxDisplacementA,
-    maxTraceBalanceErrorA,
+    maxTraceBalanceErrorA, ...(correction && { conductiveCorrection: correction }),
   };
 }
 

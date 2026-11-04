@@ -29,6 +29,9 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[path = "partitioned_conduction.rs"]
+mod partitioned_conduction;
+
 #[derive(Clone)]
 struct Cell {
     /// Sparse incidence for one Cartesian current coordinate.
@@ -186,9 +189,13 @@ struct DcCorrection {
     free: usize,
     owned_bytes: usize,
     factor: Option<(cholesky::SymbolicCholesky<usize>, Vec<f64>, usize, usize)>,
+    partitioned: Option<partitioned_conduction::Backend>,
 }
 impl DcCorrection {
-    fn solve(&self, rhs: &[f64]) -> Result<Vec<f64>> {
+    fn solve(&self, cells: &[Cell], rhs: &[f64]) -> Result<Vec<f64>> {
+        if let Some(backend) = &self.partitioned {
+            return backend.solve(cells, &self.free_map, rhs);
+        }
         let mut solution = vec![0.; rhs.len()];
         if let Some((symbolic, values, _, _)) = &self.factor {
             let mut free_rhs = Mat::zeros(self.free, 1);
@@ -274,7 +281,7 @@ fn harmonic(
     }
     let plan = sizes(n, cells.len(), r, base)?;
     budget.check(plan)?;
-    let (peak, dc) = correction(cells, n, &retained, plan, budget, start, wall)?;
+    let (peak, dc) = correction(cells, n, &retained, plan, budget, start, wall, None)?;
     let retained: Vec<_> = retained.into_iter().collect();
     let mut voltage = vec![vec![0.; n]; retained.len()];
     let mut current = Vec::new();
@@ -331,7 +338,7 @@ fn complete_harmonic_current(
             .into_iter()
             .map(|x| -x)
             .collect();
-        for (value, correction) in voltage.iter_mut().zip(dc.solve(&rhs)?) {
+        for (value, correction) in voltage.iter_mut().zip(dc.solve(cells, &rhs)?) {
             *value += correction;
         }
     }
@@ -377,6 +384,7 @@ fn correction(
     budget: AllocationBudget,
     start: Instant,
     wall: Duration,
+    partition: Option<&super::spatial_partition::Partition>,
 ) -> Result<(usize, DcCorrection)> {
     let mut next = 0;
     let free_map: Vec<_> = (0..n)
@@ -390,6 +398,29 @@ fn correction(
             }
         })
         .collect();
+    if let Some(partition) = partition {
+        let (peak, backend) = partitioned_conduction::Backend::factor(
+            cells,
+            &free_map,
+            partition.owner_count(),
+            |i| partition.current_owner(i),
+            partition.trace_dofs(),
+            plan,
+            budget,
+            start,
+            wall,
+        )?;
+        return Ok((
+            peak,
+            DcCorrection {
+                free_map,
+                free: next,
+                owned_bytes: backend.owned_bytes,
+                factor: None,
+                partitioned: Some(backend),
+            },
+        ));
+    }
     let factor = if next > 0 {
         let mut terms = Vec::with_capacity(cells.len() * 16);
         for c in cells {
@@ -419,6 +450,7 @@ fn correction(
             free: next,
             owned_bytes: factor.as_ref().map_or(0, |x| x.3.saturating_sub(plan)),
             factor,
+            partitioned: None,
         },
     ))
 }
@@ -718,6 +750,7 @@ pub(super) fn solve_mixed_grid(
         budget,
         start,
         wall,
+        partition,
     )?;
     // A uniform-depth lift changes the native reaction at a surface pad.
     // Restore the exact full DC cardinal states before spending any AC mode
@@ -785,7 +818,7 @@ pub(super) fn solve_mixed_grid(
             .ok_or_else(|| error("MEMORY_LIMIT", "mixed retained plan exceeds budget"))?,
         ..budget
     };
-    let checked = space.train_grid(
+    let mut checked = space.train_grid(
         &grid,
         names,
         &dc,
@@ -798,6 +831,9 @@ pub(super) fn solve_mixed_grid(
         packages,
         partition.map(|partition| (partition, &map.full)),
     )?;
+    if let Some(backend) = &dc.partitioned {
+        checked["conductiveCorrection"] = backend.evidence();
+    }
     Ok((checked, space.planned_bytes))
 }
 
@@ -1470,7 +1506,7 @@ impl ReducedSpace {
                 .zip(kcl)
                 .map(|(a, b)| a - b)
                 .collect();
-            let bubble = dc.solve(&rhs)?;
+            let bubble = dc.solve(&self.cells, &rhs)?;
             let candidate: Vec<_> = conductive(&self.cells, &bubble)
                 .into_iter()
                 .zip(drop)
