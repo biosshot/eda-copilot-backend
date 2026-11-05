@@ -1,5 +1,7 @@
 # P7 acceleration: first implementation batch, 2026-11-05
 
+Subsequent implementation, commits, bounded full-path failures and final A–F disposition are recorded in the [attempt ledger](p7-acceleration-attempts-2026-11-05.md). The <=600-second target remains unmet.
+
 Scope: stage A diagnostics and coverage inventory from the [acceleration plan](../plans/p7-acceleration-plan.md). No numerical operator, routing decision, physical geometry or frequency applicability was changed. Stage A remains incomplete; stages B–F are not implemented by this batch.
 
 ## Implemented

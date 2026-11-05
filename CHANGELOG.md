@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Record bounded P7 acceleration outcomes and unresolved stages A–F: the final STM32 run refuses preparation memory after 88.437 s, before a magnetic action or electrical result. The <=600 s target and 42-case physical acceptance remain unmet; no accuracy gates or physical geometry were relaxed.
+
 - Remove unused global triplet/CSC assembly reservation only when the full conductive correction uses the separately budgeted partitioned backend (475,849,728 B for the STM32 fixture). Preserve cell, mode, vector, descriptor and backend factor guards. Six focused native tests and release addon build pass; full extraction acceptance remains pending.
 
 - Refine harmonic DC preparation with up to eight same-factor residual corrections, preserving retained contacts and the original 1e-8 gate. Check the deadline at each step and include residual history on failure. Five focused native controls and release addon build pass; the full STM32 verification is separately bounded and not yet accepted.
