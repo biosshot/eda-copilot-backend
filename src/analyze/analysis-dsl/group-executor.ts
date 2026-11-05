@@ -81,7 +81,7 @@ export function createGroupExecutor(solve = solveGroup) {
     const ceilingSeconds = Number(process.env.P7_VERIFY_SECONDS ?? 300);
     const ceilingMiB = Number(process.env.P7_VERIFY_MEMORY_MIB ?? 2048);
     if (!Number.isSafeInteger(ceilingSeconds) || ceilingSeconds <= 0 || ceilingSeconds > 3600 ||
-        !Number.isSafeInteger(ceilingMiB) || ceilingMiB < 256 || ceilingMiB > 8192) {
+        !Number.isSafeInteger(ceilingMiB) || ceilingMiB < 256 || ceilingMiB > 65536) {
       throw new AnalysisDslError('LOCAL_BUDGET', 'Invalid bounded developer verification limits');
     }
     let plan: LocalExtractionPlan | undefined;

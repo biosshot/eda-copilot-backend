@@ -100,7 +100,26 @@ struct PairCell {
     source: PointPotential,
     cubatures: Vec<TetraCubature>,
 }
+// Diagnostic counters exist only when explicitly requested.
+struct PairTrace {
+    counts: [u64; 3],
+    seconds: [f64; 3],
+    last: Instant,
+}
+impl PairTrace {
+    fn emit(&self, final_record: bool) {
+        use std::io::Write;
+        let record = serde_json::json!({"phase":"near-kernels","final":final_record,"countsIncludeFailed":true,
+            "selfCalls":self.counts[0],"separatedCalls":self.counts[1],"adaptiveCalls":self.counts[2],
+            "selfSeconds":self.seconds[0],"separatedSeconds":self.seconds[1],"adaptiveSeconds":self.seconds[2]});
+        let _ = writeln!(std::io::stderr().lock(), "P7_MAGNETIC_TRACE {record}");
+    }
+}
+impl Drop for PairTrace {
+    fn drop(&mut self) { self.emit(true); }
+}
 struct BoundedPairs {
+    trace: Option<std::cell::RefCell<PairTrace>>,
     tetra: Vec<[[f64; 3]; 4]>,
     cells: std::cell::RefCell<Vec<PairCell>>,
     slots: usize,
@@ -156,6 +175,8 @@ impl BoundedPairs {
     ) -> Result<Self> {
         check_deadline(start, wall)?;
         Ok(Self {
+            trace: (std::env::var_os("P7_MAGNETIC_TRACE").as_deref() == Some(std::ffi::OsStr::new("1")))
+                .then(|| std::cell::RefCell::new(PairTrace { counts: [0; 3], seconds: [0.; 3], last: Instant::now() })),
             tetra,
             cells: std::cell::RefCell::new(Vec::with_capacity(slots)),
             slots,
@@ -209,10 +230,26 @@ impl BoundedPairs {
         Ok(())
     }
     fn pair(&self, i: usize, j: usize) -> Result<f64> {
+        let started = self.trace.as_ref().map(|_| Instant::now());
+        let mut kind = if i == j { 0 } else { 2 };
+        let result = self.pair_inner(i, j, &mut kind);
+        if let (Some(trace), Some(started)) = (&self.trace, started) {
+            let mut trace = trace.borrow_mut();
+            trace.counts[kind] += 1;
+            trace.seconds[kind] += started.elapsed().as_secs_f64();
+            if trace.counts.iter().sum::<u64>() % 64 == 0 && trace.last.elapsed() >= Duration::from_secs(1) {
+                trace.emit(false);
+                trace.last = Instant::now();
+            }
+        }
+        result
+    }
+    fn pair_inner(&self, i: usize, j: usize, kind: &mut usize) -> Result<f64> {
         check_deadline(self.start, self.wall)?;
         if i == j {
             return tetra_self_integral(self.tetra[i], self.order);
         }
+        *kind = 2;
         let mut cells = self.cells.borrow_mut();
         self.ensure(&mut cells, i, None)?;
         self.ensure(&mut cells, j, Some(i))?;
@@ -222,6 +259,7 @@ impl BoundedPairs {
         if let Some(k) = separated_order(q, self.order)
             .and_then(|o| [4, 6, 8].iter().position(|&candidate| candidate == o))
         {
+            *kind = 1;
             return target.cubatures[k].direct_integral(&source.cubatures[k]);
         }
         tetra_integral_adaptive(self.tetra[i], &source.source, self.order, 1e-10)

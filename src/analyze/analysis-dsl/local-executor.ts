@@ -21,7 +21,7 @@ export function createLocalExecutor(execute=createProblemExecutor(true)){const s
  if(task.variantChanges.length||c.numerics||c.mesh)throw new AnalysisDslError('LOCAL_INPUT','Variants/numerics require explicit supported geometry reconstruction');
  const band:[number,number]=[1000,100000];
  const maxSeconds=Number(process.env.P7_VERIFY_SECONDS??300),maxMemoryMiB=Number(process.env.P7_VERIFY_MEMORY_MIB??2048);
- if(!Number.isSafeInteger(maxSeconds)||maxSeconds<=0||maxSeconds>3600||!Number.isSafeInteger(maxMemoryMiB)||maxMemoryMiB<256||maxMemoryMiB>8192)throw new AnalysisDslError('LOCAL_BUDGET','Invalid bounded developer verification limits');
+ if(!Number.isSafeInteger(maxSeconds)||maxSeconds<=0||maxSeconds>3600||!Number.isSafeInteger(maxMemoryMiB)||maxMemoryMiB<256||maxMemoryMiB>65536)throw new AnalysisDslError('LOCAL_BUDGET','Invalid bounded developer verification limits');
  if(c.budget&&(c.budget.maxSeconds!==undefined&&c.budget.maxSeconds!==maxSeconds||c.budget.maxMemoryMiB!==undefined&&c.budget.maxMemoryMiB!==maxMemoryMiB))throw new AnalysisDslError('LOCAL_BUDGET','Budget must match the active default or explicit developer verification limits');
  const points=c.frequencyHz===undefined?c.frequency?.points??0:1;if(points<1||points>8192)throw new AnalysisDslError('LOCAL_BUDGET','1..8192 frequencies required');
  const [startHz,stopHz]=requestedFrequencyInterval(c);

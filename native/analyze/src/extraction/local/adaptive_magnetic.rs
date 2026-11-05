@@ -415,19 +415,16 @@ impl<'a> Plan<'a> {
             .mul(Interval::point(self.mass[b].lo))
             .div(Interval::point(self.mass[0].hi))
             .lo;
+        let inverse_r = Interval::one().div(r);
+        let one_minus_q = Interval::one().sub(q);
+        let weight_a = Interval::point(1e-7).mul(Interval::point(self.max_weight[a]));
+        let weight_b = Interval::point(1e-7).mul(Interval::point(self.max_weight[b]));
+        let mut q_power = Interval::one();
         for p in 0..=self.tree.powers.order {
-            let tail = Interval::one()
-                .div(r)
-                .mul(q.pow(p + 1))
-                .div(Interval::one().sub(q));
-            let a_error = Interval::point(1e-7)
-                .mul(Interval::point(self.max_weight[a]))
-                .mul(tail)
-                .mul(self.tv[b]);
-            let b_error = Interval::point(1e-7)
-                .mul(Interval::point(self.max_weight[b]))
-                .mul(tail)
-                .mul(self.tv[a]);
+            q_power = q_power.mul(q);
+            let tail = inverse_r.mul(q_power).div(one_minus_q);
+            let a_error = weight_a.mul(tail).mul(self.tv[b]);
+            let b_error = weight_b.mul(tail).mul(self.tv[a]);
             if tail.finite()
                 && a_error.finite()
                 && b_error.finite()
@@ -876,4 +873,24 @@ pub fn resistive_goals(
             Ok(goal)
         })
         .collect()
+}
+
+#[cfg(test)]
+mod classification_power_tests {
+    use super::*;
+
+    #[test]
+    fn incremental_classification_power_matches_fold_bits() {
+        for (lo, hi) in [(0., 0.), (0., 1e-12), (0.01, 0.02), (0.19, 0.21),
+            (0.49, 0.51), (0.99, 0.999999999999)] {
+            let q = Interval { lo, hi };
+            let mut power = Interval::one();
+            for degree in 1..=13 {
+                power = power.mul(q);
+                let reference = q.pow(degree);
+                assert_eq!(power.lo.to_bits(), reference.lo.to_bits());
+                assert_eq!(power.hi.to_bits(), reference.hi.to_bits());
+            }
+        }
+    }
 }
