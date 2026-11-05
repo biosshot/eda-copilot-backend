@@ -2277,9 +2277,25 @@ fn compact_magnetic_certificate(cover: &serde_json::Value) -> serde_json::Value 
         "activeEnvelopeTerminals",
         "actionWallSeconds",
     ] {
-        value[key] = cover[key].clone();
+        if let Some(item) = cover.get(key) { value[key] = item.clone(); }
     }
     value
+}
+#[test]
+fn compact_cover_keeps_optional_partition_metadata_absent_or_complete() {
+    let common=serde_json::json!({"coverSignature":"fnv1a64:0123456789abcdef"});
+    let compact=compact_magnetic_certificate(&common);
+    assert!(compact.get("batchColumns").is_none());
+    assert!(compact.get("chunkCertificates").is_none());
+    let mut chunked=common;
+    chunked["batchColumns"]=serde_json::json!(1);
+    chunked["chunkCount"]=serde_json::json!(2);
+    chunked["coverAggregation"]=serde_json::json!("sum-of-sequential-chunk-covers");
+    chunked["chunkCertificates"]=serde_json::json!([{"rhsColumns":1},{"rhsColumns":1}]);
+    let compact=compact_magnetic_certificate(&chunked);
+    for key in ["batchColumns","chunkCount","coverAggregation","chunkCertificates"] {
+        assert_eq!(compact[key],chunked[key]);
+    }
 }
 #[cfg(test)]
 #[path = "adaptive_magnetic_bench.rs"]

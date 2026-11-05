@@ -98,7 +98,7 @@ impl System {
         for(&(i,j),&v)in &self.linear.e {if i>=nv&&j>=nv {e.insert((i,j),v);}}
         Ok(Coordinates{potential,g,e})
     }
-    pub(super) fn solve_charge_coordinates(&mut self,omega:f64,rhs:&[f64],stats:&mut Counters)->Result<Vec<f64>> {
+    pub(crate) fn solve_charge_coordinates(&mut self,omega:f64,rhs:&[f64],stats:&mut Counters)->Result<Vec<f64>> {
         if self.charge_coordinates.is_none() {self.charge_coordinates=Some(self.build_charge_coordinates()?);}
         let coordinates=self.charge_coordinates.as_ref().unwrap();let n=self.linear.n;let nv=self.nv;
         let mut matrix=coordinates.g.clone();

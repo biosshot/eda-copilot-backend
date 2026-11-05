@@ -7,6 +7,63 @@ use super::{error, mesh::LayeredMesh, volume_current::Space, AllocationBudget, R
 use crate::extraction::section_transition::{Mesh, Recovery};
 use std::collections::BTreeMap;
 
+/// Candidate only: retain individual cut potentials and enrich physical currents.
+/// Admission still requires the original-space residual at each requested drive.
+pub(in crate::extraction) fn candidate(
+    space:&Space, endpoints:&[(String,usize)], cut_dofs:&[usize], profiles:&[Vec<f64>],
+    magnetic:&dyn super::volume_magnetic::MagneticApply, rounds:usize, budget:AllocationBudget,
+) -> Result<super::volume_reduction::Basis> {
+    if rounds>3 {return Err(error("SECTION_RETURN_MAP","at most three magnetic enrichment rounds"));}
+    let mut contacts=endpoints.to_vec();
+    for &dof in cut_dofs {
+        if dof>=space.potential_count() {return Err(error("SECTION_RETURN_MAP","unknown cut potential"));}
+        if !contacts.iter().any(|(_,i)|*i==dof) {contacts.push((format!("cut-{dof}"),dof));}
+    }
+    let mut basis=super::volume_reduction::harmonic(space,&contacts,budget)?;
+    basis.include_current_profiles(space,profiles,budget)?;
+    for _ in 0..rounds {
+        let bytes=space.current_count().checked_mul(basis.current.len()).and_then(|n|n.checked_mul(24)).and_then(|n|n.checked_add(space.planned_bytes)).and_then(|n|n.checked_add(magnetic.planned_bytes())).and_then(|n|n.checked_add(magnetic.scratch_bytes())).ok_or_else(||error("MEMORY_LIMIT","magnetic enrichment plan overflow"))?;
+        budget.check(bytes)?;
+        basis.extend_magnetic(space,magnetic)?;
+    }
+    Ok(basis)
+}
+
+/// Solve in charge coordinates and verify each island's physical charge balance.
+/// Verify original-space KCL/KVL as well as island charge before returning.
+pub(in crate::extraction) fn solve_candidate(
+    basis:&super::volume_reduction::Basis, space:&Space, field:&dyn super::volume_field::ElectricApply,
+    magnetic:&dyn super::volume_magnetic::MagneticApply,
+    system:&mut crate::electrical::coupled::System, omega:f64, rhs:&[f64],
+    real_injection:&[f64], imaginary_injection:&[f64], stats:&mut crate::electrical::Counters,
+) -> Result<Vec<f64>> {
+    let nv=basis.voltage.len();let n=nv+basis.current.len();
+    if omega<=0.||!omega.is_finite()||rhs.len()!=2*n||real_injection.len()!=space.potential_count()||imaginary_injection.len()!=space.potential_count()||rhs.iter().chain(real_injection).chain(imaginary_injection).any(|v|!v.is_finite()) {return Err(error("SECTION_RETURN_MAP","invalid candidate solve dimensions or values"));}
+    let x=system.solve_charge_coordinates(omega,rhs,stats)?;
+    if x.len()!=2*n||x.iter().any(|v|!v.is_finite()) {return Err(error("SECTION_RETURN_RESIDUAL","nonfinite candidate solution"));}
+    let potential=|offset:usize|->Vec<f64> {(0..space.potential_count()).map(|j|basis.voltage.iter().enumerate().map(|(k,v)|v[j]*x[offset+k]).sum()).collect()};
+    let vr=potential(0);let vi=potential(n);let qr=field.apply(&vr)?;let qi=field.apply(&vi)?;
+    for nodes in &space.components {
+        let sr=nodes.iter().map(|&i|real_injection[i]).sum::<f64>();let si=nodes.iter().map(|&i|imaginary_injection[i]).sum::<f64>();
+        let r=nodes.iter().map(|&i|qr[i]).sum::<f64>()-si/omega;
+        let im=nodes.iter().map(|&i|qi[i]).sum::<f64>()+sr/omega;
+        let scale=nodes.iter().map(|&i|qr[i].abs()+qi[i].abs()).sum::<f64>()+(sr.abs()+si.abs())/omega;
+        if !r.is_finite()||!im.is_finite()||!scale.is_finite()||r.hypot(im)>1e-8*scale.max(f64::MIN_POSITIVE) {return Err(error("SECTION_RETURN_CHARGE","island charge balance unresolved"));}
+    }
+    let current=|offset:usize|->Vec<f64> {(0..space.current_count()).map(|j|basis.current.iter().enumerate().map(|(k,v)|v[j]*x[offset+nv+k]).sum()).collect()};
+    let ir=current(0);let ii=current(n);let dr=space.divergence(&ir)?;let di=space.divergence(&ii)?;
+    let gr=space.gradient(&vr)?;let gi=space.gradient(&vi)?;let lr=magnetic.apply(space,&ir)?;let li=magnetic.apply(space,&ii)?;
+    let source=real_injection.iter().chain(imaginary_injection).map(|v|v.abs()).fold(0.,f64::max);
+    let kcl=(0..dr.len()).map(|j|(dr[j]-omega*qi[j]-real_injection[j]).hypot(di[j]+omega*qr[j]-imaginary_injection[j])).fold(0.,f64::max);
+    let mut kvl:f64=0.;let mut scale:f64=0.;
+    for j in 0..ir.len() {let r=space.cells[j/3].resistance_ohm;
+        kvl=kvl.max((r*ir[j]-gr[j]-omega*li[j]).hypot(r*ii[j]-gi[j]+omega*lr[j]));
+        scale=scale.max(r*ir[j].hypot(ii[j])+gr[j].hypot(gi[j])+omega*lr[j].hypot(li[j]));
+    }
+    if !kcl.is_finite()||!kvl.is_finite()||!scale.is_finite()||kcl>1e-8*source.max(f64::MIN_POSITIVE)||kvl>1e-8*scale.max(f64::MIN_POSITIVE) {return Err(error("SECTION_RETURN_RESIDUAL",&format!("original KCL={kcl:e} KVL={kvl:e} scale={scale:e}")));}
+    Ok(x)
+}
+
 /// Lift one section through a contiguous set of native extrusion slabs, along
 /// the mesh Z axis. Exact authored XY vertex correspondence is required.
 /// The P1 profile is integrated exactly on each tetrahedron and represented
@@ -14,7 +71,7 @@ use std::collections::BTreeMap;
 /// Joule energy must come from the physical cell R operator after projection.
 pub(in crate::extraction) fn lift(
     section:&Mesh<'_>, recovery:&Recovery, mesh:&LayeredMesh, space:&Space,
-    slabs:std::ops::Range<usize>, budget:AllocationBudget,
+    slabs:std::ops::Range<usize>, source_owners:&BTreeMap<String,usize>, budget:AllocationBudget,
 ) -> Result<Vec<Vec<f64>>> {
     if slabs.is_empty() {return Err(error("SECTION_RETURN_MAP","nonempty section extent required"));}
     let loops=section.conductors.len().checked_sub(1).ok_or_else(||error("SECTION_RETURN_MAP","conductors required"))?;
@@ -33,6 +90,9 @@ pub(in crate::extraction) fn lift(
         let tet=mesh.copper_tetrahedra.get(cell.mesh_cell).ok_or_else(||error("SECTION_RETURN_MAP","unknown physical cell"))?;
         if !slabs.contains(&tet.slab) {continue;}
         let row=rows.get(&tet.planar_triangle).ok_or_else(||error("SECTION_RETURN_MAP","copper cell lacks exclusive section owner"))?;
+        if tet.source_ids.is_empty() || tet.source_ids.iter().any(|id|source_owners.get(id)!=Some(&row.conductor)) {
+            return Err(error("SECTION_RETURN_MAP","physical source owner missing or mismatched"));
+        }
         let mut weights=[0.;3];
         for &node in &tet.nodes {
             let p=mesh.nodes_m.get(node).ok_or_else(||error("SECTION_RETURN_MAP","unknown physical vertex"))?;
@@ -55,9 +115,10 @@ pub(in crate::extraction) fn lift(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::{mesh::{self,LayeredInput,Material},volume_current,volume_reduction};
+    use super::super::{mesh::{self,LayeredInput,Material},volume_current,volume_reduction,volume_field,volume_magnetic,volume_solve};
     use crate::extraction::section_transition::{self,Conductor,Triangle};
     use std::time::{Instant,Duration};
+    use crate::electrical::{coupled,Counters};
 
     #[test]
     fn actual_section_profiles_share_return_and_conserve_slab_current() {
@@ -74,17 +135,19 @@ mod tests {
         let material:Vec<_>=triangles.iter().map(|t|match t.conductor {Some(c)=>Material::Copper{source_ids:vec![conductors[c].id.into()]},None=>Material::Dielectric{label:"gap".into(),epsilon_r:1.}}).collect();
         let mut edges=vec![[0,1],[1,2],[21,22],[22,23]];
         for y in 0..7 {edges.extend([[3*y,3*y+3],[3*y+2,3*y+5]]);}
-        let physical=mesh::extrude(&LayeredInput{xy_m:nodes.clone(),triangles:triangles.iter().map(|t|t.nodes).collect(),boundary_edges:edges,z_m:vec![0.,1e-3,2e-3],materials:vec![material;2]},budget).unwrap();
+        for cut in [1e-3,0.7e-3] {
+        let physical=mesh::extrude(&LayeredInput{xy_m:nodes.clone(),triangles:triangles.iter().map(|t|t.nodes).collect(),boundary_edges:edges.clone(),z_m:vec![0.,cut,2e-3],materials:vec![material.clone();2]},budget).unwrap();
         let electrodes:Vec<Vec<usize>>=(0..3).flat_map(|c|[0.,2e-3].map(|z|physical.nodes_m.iter().enumerate().filter_map(|(i,p)|(p[2]==z&&p[1]>=(2*c+1)as f64*1e-3&&p[1]<=(2*c+2)as f64*1e-3).then_some(i)).collect())).collect();
         let space=volume_current::assemble(&physical,&vec![58e6;physical.copper_tetrahedra.len()],&electrodes,budget).unwrap();
         let contacts:Vec<_>=electrodes.iter().enumerate().map(|(i,n)|(format!("contact-{i}"),space.node_potential[&n[0]])).collect();
         let mut basis=volume_reduction::harmonic(&space,&contacts,budget).unwrap();
         let original_voltage=basis.voltage.clone();let original_components=basis.component_columns.clone();
+        let owners:BTreeMap<_,_>=conductors.iter().enumerate().map(|(i,c)|(c.id.to_string(),i)).collect();
         let mut both=vec![];
         for slab in 0..2 {
-            let profiles=lift(&section,&recovery,&physical,&space,slab..slab+1,budget).unwrap();
+            let profiles=lift(&section,&recovery,&physical,&space,slab..slab+1,&owners,budget).unwrap();
             for p in 0..2 {for c in 0..3 {
-                let total:f64=space.cells.iter().enumerate().filter(|(_,cell)|{let t=&physical.copper_tetrahedra[cell.mesh_cell];t.slab==slab&&triangles[t.planar_triangle].conductor==Some(c)}).map(|(i,cell)|profiles[2*p][3*i+2]*cell.density_per_amp_m2*physical.copper_tetrahedra[cell.mesh_cell].volume_m3/1e-3).sum();
+                let total:f64=space.cells.iter().enumerate().filter(|(_,cell)|{let t=&physical.copper_tetrahedra[cell.mesh_cell];t.slab==slab&&triangles[t.planar_triangle].conductor==Some(c)}).map(|(i,cell)|profiles[2*p][3*i+2]*cell.density_per_amp_m2*physical.copper_tetrahedra[cell.mesh_cell].volume_m3/if slab==0 {cut}else{2e-3-cut}).sum();
                 let expected=if c==p {1.}else if c==2 {-1.}else{0.};
                 assert!((total-expected).abs()<1e-8,"slab={slab}, conductor={c}: {total}");
             }}
@@ -93,12 +156,80 @@ mod tests {
             both.extend(profiles);
         }
         basis.include_current_profiles(&space,&both,budget).unwrap();
+        let field=volume_field::Field::new(&physical,&space,budget).unwrap();
+        let magnetic=volume_magnetic::Operator::new(&physical,budget).unwrap();
+        let solver=volume_solve::Solver::new(&space,&field,&magnetic,budget).unwrap();
+        let cut_dofs:Vec<_>=physical.nodes_m.iter().enumerate().filter_map(|(node,p)|if p[2]==cut {space.node_potential.get(&node).copied()}else{None}).collect();
+        let trace=candidate(&space,&contacts,&cut_dofs,&both,&magnetic,0,budget).unwrap();
+        let enriched=candidate(&space,&contacts,&cut_dofs,&both,&magnetic,1,budget).unwrap();
+        for (label,basis) in [("section",&basis),("trace",&trace),("trace+magnetic",&enriched)] {
+        let model=basis.model(&space,&field,&magnetic,&[[0,4],[1,5],[2,4],[3,5]],budget).unwrap();
+        let mut system=coupled::System::compile(&model,4,None).unwrap();
+        let n=model.potential_nodes.len()+model.current_dofs.len();
+        eprintln!("{label} dimensions full=({}, {}) reduced=({}, {})",space.potential_count(),space.current_count(),model.potential_nodes.len(),model.current_dofs.len());
+        for drive in 0..2 {
+        let mut injection=vec![0.;space.potential_count()];
+        injection[contacts[2*drive].1]=1.;injection[contacts[2*drive+1].1]=-1.;injection[contacts[4].1]=-1.;injection[contacts[5].1]=1.;
+        let solution=solver.solve(1000.,&injection,&vec![0.;injection.len()],Duration::from_secs(30)).unwrap();
+        let mut amplitudes=[0.,0.,0.,0.];amplitudes[2*drive]=1.;amplitudes[2*drive+1]=-1.;
+        let mut rhs=system.port_rhs(&amplitudes);rhs.resize(2*n,0.);
+        let omega=2.*std::f64::consts::PI*1000.;
+        if label=="section" {let mut negative=coupled::System::compile(&model,4,None).unwrap();assert!(solve_candidate(basis,&space,&field,&magnetic,&mut negative,omega,&rhs,&injection,&vec![0.;injection.len()],&mut Counters::default()).is_err());}
+        assert!(solve_candidate(basis,&space,&field,&magnetic,&mut system,omega,&rhs,&[],&[],&mut Counters::default()).is_err());
+        let x=if label=="trace+magnetic" {solve_candidate(basis,&space,&field,&magnetic,&mut system,omega,&rhs,&injection,&vec![0.;injection.len()],&mut Counters::default()).unwrap()} else {system.solve(omega,rhs,&vec![0.;n],&mut Counters::default()).unwrap()};
+        let nv=model.potential_nodes.len();
+        let recover=|offset:usize,columns:&Vec<Vec<f64>>| -> Vec<f64> {(0..columns[0].len()).map(|j|columns.iter().enumerate().map(|(k,v)|v[j]*x[offset+k]).sum()).collect()};
+        let vr=recover(0,&basis.voltage);let vi=recover(n,&basis.voltage);
+        let ir=recover(nv,&basis.current);let ii=recover(n+nv,&basis.current);
+        let dr=space.divergence(&ir).unwrap();let di=space.divergence(&ii).unwrap();
+        let qr=field.apply(&vr).unwrap();let qi=field.apply(&vi).unwrap();
+        let full_potential=|shape:&[f64],correction:&[f64],constants:&[f64]| {let mut v:Vec<_>=shape.iter().zip(correction).map(|(a,b)|a+b).collect();for (c,nodes) in space.components.iter().enumerate(){for &i in nodes {v[i]+=constants[c];}}v};
+        let full_qr=field.apply(&full_potential(&solution.real_shape_v,&solution.real_shape_correction_v,&solution.real_constants_v)).unwrap();
+        let full_qi=field.apply(&full_potential(&solution.imaginary_shape_v,&solution.imaginary_shape_correction_v,&solution.imaginary_constants_v)).unwrap();
+        if label=="trace+magnetic" {for (c,nodes) in space.components.iter().enumerate() {
+            let sum=|v:&[f64]|nodes.iter().map(|&i|v[i]).sum::<f64>();
+            let scale=nodes.iter().map(|&i|qr[i].abs()+qi[i].abs()).sum::<f64>();
+            eprintln!("island={c} reduced Q=({:e},{:e}) full Q=({:e},{:e}) scale={scale:e}",sum(&qr),sum(&qi),sum(&full_qr),sum(&full_qi));
+        }}
+        let gr=space.gradient(&vr).unwrap();let gi=space.gradient(&vi).unwrap();
+        let lr=magnetic.apply(&space,&ir).unwrap();let li=magnetic.apply(&space,&ii).unwrap();
+        let w=2.*std::f64::consts::PI*1000.;
+        let kcl=(0..dr.len()).map(|j|(dr[j]-w*qi[j]-injection[j]).hypot(di[j]+w*qr[j])).fold(0.,f64::max);
+        let kvl=(0..ir.len()).map(|j|(space.cells[j/3].resistance_ohm*ir[j]-gr[j]-w*li[j]).hypot(space.cells[j/3].resistance_ohm*ii[j]-gi[j]+w*lr[j])).fold(0.,f64::max);
+        let residual_energy=(0..ir.len()).map(|j|{let r=space.cells[j/3].resistance_ohm;((r*ir[j]-gr[j]-w*li[j]).powi(2)+(r*ii[j]-gi[j]+w*lr[j]).powi(2))/r}).sum::<f64>();
+        let loss=space.losses(&ir).unwrap().iter().sum::<f64>()+space.losses(&ii).unwrap().iter().sum::<f64>();
+        let full_loss=space.losses(&solution.real_currents_a).unwrap().iter().sum::<f64>()+space.losses(&solution.imaginary_currents_a).unwrap().iter().sum::<f64>();
+        let reduced_r=system.port_voltages(&x,4);let reduced_i=system.port_voltages(&x[n..],4);
+        let mut max_port_error:f64=0.;let mut full_ports=vec![];
+        for port in 0..4 {
+            let full=solver.port_voltage(&solution,contacts[port].1,contacts[4+port%2].1);
+            full_ports.push(full);
+            let err=(reduced_r[port]-full[0]).hypot(reduced_i[port]-full[1]);
+            max_port_error=max_port_error.max(err/full[0].hypot(full[1]).max(1e-30));
+        }
+        let a=2*drive;let loop_full=[full_ports[a][0]-full_ports[a+1][0],full_ports[a][1]-full_ports[a+1][1]];
+        let loop_error=((reduced_r[a]-reduced_r[a+1]-loop_full[0]).hypot(reduced_i[a]-reduced_i[a+1]-loop_full[1]))/loop_full[0].hypot(loop_full[1]);
+        if label=="trace+magnetic" {
+            assert!(kcl<1e-10 && kvl<1e-14 && residual_energy/full_loss<1e-18 && loop_error<1e-8 && max_port_error<1e-8,"port_error={max_port_error:e}");
+            for slab in 0..2 {
+                let return_current:f64=space.cells.iter().enumerate().filter(|(_,cell)|{let t=&physical.copper_tetrahedra[cell.mesh_cell];t.slab==slab&&triangles[t.planar_triangle].conductor==Some(2)}).map(|(i,cell)|ir[3*i+2]*cell.density_per_amp_m2*physical.copper_tetrahedra[cell.mesh_cell].volume_m3/if slab==0 {cut}else{2e-3-cut}).sum();
+                assert!((return_current+1.).abs()<1e-8,"return current {return_current}");
+            }
+        }
+        eprintln!("cut={cut} drive={drive} {label} port_error={max_port_error:e} loop_error={loop_error:e} KCL={kcl:e} KVL={kvl:e} residual_energy={residual_energy:e} loss={loss:e} full_loss={full_loss:e}");
+        }
+        }
         assert_eq!(basis.voltage,original_voltage);assert_eq!(basis.component_columns,original_components);assert_eq!(basis.component_columns.len(),3);
         let before=basis.current.clone();
         assert!(basis.include_current_profiles(&space,&[vec![f64::NAN;space.current_count()]],budget).is_err());
         assert_eq!(basis.current,before);
         let mut bad=physical.clone();bad.nodes_m[3][0]+=1e-9;
-        assert!(lift(&section,&recovery,&bad,&space,0..1,budget).unwrap_err().contains("nonconforming"));
-        assert!(lift(&section,&recovery,&physical,&space,2..3,budget).unwrap_err().contains("incomplete"));
+        assert!(lift(&section,&recovery,&bad,&space,0..1,&owners,budget).unwrap_err().contains("nonconforming"));
+        assert!(lift(&section,&recovery,&physical,&space,2..3,&owners,budget).unwrap_err().contains("incomplete"));
+        let mut wrong=owners.clone();wrong.insert("signal-a".into(),1);
+        assert!(lift(&section,&recovery,&physical,&space,0..1,&wrong,budget).unwrap_err().contains("source owner"));
+        wrong.remove("signal-a");
+        assert!(lift(&section,&recovery,&physical,&space,0..1,&wrong,budget).unwrap_err().contains("source owner"));
+        }
     }
 }

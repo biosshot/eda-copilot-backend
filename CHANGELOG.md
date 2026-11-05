@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Extend the section/shared-return control to physical source ownership, distributed cut potentials and bounded magnetic enrichment. Use conditioned charge coordinates and original-space charge/KCL/KVL checks for candidate admission; ordinary 1 A-scale residual checks missed small island-charge errors. Fix compact magnetic certificates to omit absent optional chunk metadata. Full production shared-return routing and complete case-matrix acceptance remain pending.
+
 - Add opt-in sequential magnetic covers by RHS chunk (`P7_MAGNETIC_BATCH_COLUMNS`, default common), retaining original action goals, chunk certificates and isolated cache identity. Thin-foil controls reduce weighted near work for localized currents (124 to 34) but show no benefit for overlapping currents; no board-level speedup is claimed. Add a conforming lift of actual 2D section current recovery into shared physical copper and bounded current-basis augmentation. This mapping primitive preserves shared return cells and island potentials; distributed trace closure and full shared-return EM admission remain incomplete.
 
 - Measure P7 magnetic cover construction at 297.503 s versus 477.943 s (1.61x) with identical interaction counts after incremental-power reuse. Raised-memory full-path runs reach magnetic application but still time out near 594 s; adaptive near integration consumes 96.6% of the measured near-kernel prefix. No full extraction, accuracy relaxation or case-matrix acceptance is claimed.
