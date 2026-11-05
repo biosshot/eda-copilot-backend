@@ -319,6 +319,7 @@ pub(super) struct Operator {
     coupling_prefix: Vec<usize>,
     shift_prefix: [Vec<usize>; 3],
     geometry_cache: std::cell::RefCell<Option<adaptive::Geometry>>,
+    adaptive_cover_cache_bytes: usize,
     pub planned_bytes: usize,
     pub exact_pairs: usize,
     signature: String,
@@ -464,6 +465,20 @@ impl Operator {
             }
             coupling_prefix.push(couplings.len());
         }
+        let requested_cover_cache_bytes = std::env::var("P7_MAGNETIC_COVER_CACHE_MIB")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .and_then(|mib| mib.checked_mul(1024 * 1024))
+            .unwrap_or(0);
+        let available_cover_cache_bytes = budget.max_bytes.saturating_sub(base.saturating_add(work));
+        // During geometric Vec growth old and replacement buffers coexist;
+        // admit twice the retained-capacity limit for that transient peak.
+        let requested_cover_cache_peak = requested_cover_cache_bytes.checked_mul(2).unwrap_or(usize::MAX);
+        let adaptive_cover_cache_bytes = if requested_cover_cache_peak <= available_cover_cache_bytes {
+            requested_cover_cache_bytes
+        } else {
+            0
+        };
         let mut result = Self {
             nodes: Vec::with_capacity(node_bound),
             permutation: (0..n).collect(),
@@ -480,7 +495,9 @@ impl Operator {
             coupling_prefix,
             shift_prefix,
             geometry_cache: std::cell::RefCell::new(None),
-            planned_bytes: work,
+            adaptive_cover_cache_bytes,
+            planned_bytes: work.checked_add(adaptive_cover_cache_bytes.saturating_mul(2))
+                .ok_or_else(|| error("MEMORY_LIMIT", "adaptive cover cache plan overflow"))?,
             exact_pairs: 0,
             signature: String::new(),
             leaf,
@@ -1331,6 +1348,33 @@ mod tests {
             wall,
         };
         let tree = streamed.hierarchical.as_ref().unwrap();
+        // The optional ordered adaptive-cover replay must be numerically
+        // identical to the recomputed traversal and to its memory fallback.
+        let mut adaptive_tree = Operator::new(&geometry, 12, 1, 0.2, 0, budget, start, wall).unwrap();
+        let cover_columns = vec![vec![1.; 3 * geometry.len()], vec![-0.5; 3 * geometry.len()]];
+        let cover_goals = vec![1e-12; cover_columns.len()];
+        adaptive_tree.adaptive_cover_cache_bytes = 0;
+        let (uncached_actions, uncached_bounds, uncached_cert) = adaptive_tree.batch(
+            &streamed.pair, &space, &cover_columns, &cover_goals,
+        ).unwrap();
+        adaptive_tree.adaptive_cover_cache_bytes = 1024 * 1024;
+        let (cached_actions, cached_bounds, cached_cert) = adaptive_tree.batch(
+            &streamed.pair, &space, &cover_columns, &cover_goals,
+        ).unwrap();
+        assert_eq!(cached_actions, uncached_actions);
+        assert_eq!(cached_bounds, uncached_bounds);
+        assert_eq!(cached_cert["coverSignature"], uncached_cert["coverSignature"]);
+        assert_eq!(cached_cert["envelopeSignature"], uncached_cert["envelopeSignature"]);
+        assert!(cached_cert["coverCacheEnabled"].as_bool().unwrap());
+        assert!(cached_cert["coverCacheBytes"].as_u64().unwrap() <= 1024 * 1024);
+        adaptive_tree.adaptive_cover_cache_bytes = 1;
+        let (fallback_actions, fallback_bounds, fallback_cert) = adaptive_tree.batch(
+            &streamed.pair, &space, &cover_columns, &cover_goals,
+        ).unwrap();
+        assert_eq!(fallback_actions, uncached_actions);
+        assert_eq!(fallback_bounds, uncached_bounds);
+        assert_eq!(fallback_cert["coverSignature"], uncached_cert["coverSignature"]);
+        assert!(!fallback_cert["coverCacheEnabled"].as_bool().unwrap());
         for (node, shape) in tree.nodes.iter().enumerate() {
             if shape.children.is_none() {
                 let original = tree.permutation[shape.range[0]];

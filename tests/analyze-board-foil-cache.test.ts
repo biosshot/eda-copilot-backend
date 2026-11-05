@@ -302,3 +302,30 @@ test('skin-volume cache isolates frozen profiles and revalidates their mesh evid
     assert.equal(calls,3);
   } finally { rmSync(dir,{recursive:true,force:true}); }
 });
+
+test('explicit high-memory board foil budget reaches producer without raising defaults',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'p7-high-memory-'));
+ const before=process.env.P7_VERIFY_MEMORY_MIB;
+ const stop=new Error('captured-budget');
+ const input=structuredClone(problem);input.request.budget.maxMemoryMiB=16384;
+ try{
+  const cache=new LocalModelCache(dir);
+  process.env.P7_VERIFY_MEMORY_MIB='20480';
+  assert.throws(()=>cachedBoardFoilReport(cache,'high-budget',input,r=>{
+   assert.equal(r.budget.maxMemoryMiB,16384);throw stop;
+  }),e=>e===stop);
+  delete process.env.P7_VERIFY_MEMORY_MIB;
+  assert.throws(()=>cachedBoardFoilReport(cache,'default-budget',input,r=>{
+   assert.equal(r.budget.maxMemoryMiB,2048);throw stop;
+  }),e=>e===stop);
+  for(const value of [NaN,Infinity,0,65537]){
+   input.request.budget.maxMemoryMiB=value;
+   assert.throws(()=>cachedBoardFoilReport(cache,'bad-budget',input,()=>assert.fail('producer')),/BOARD_FOIL_BUDGET/);
+  }
+  input.request.budget.maxMemoryMiB=16384;process.env.P7_VERIFY_MEMORY_MIB='65537';
+  assert.throws(()=>cachedBoardFoilReport(cache,'bad-ceiling',input,()=>assert.fail('producer')),/LOCAL_BUDGET/);
+ }finally{
+  if(before===undefined)delete process.env.P7_VERIFY_MEMORY_MIB;else process.env.P7_VERIFY_MEMORY_MIB=before;
+  rmSync(dir,{recursive:true,force:true});
+ }
+});

@@ -8,7 +8,7 @@ type Entry = { report: AnalysisBoardFoilCheckedReport; producerBudget: Budget };
 
 function validBudget(budget: Budget) {
   return Number.isFinite(budget?.maxSeconds) && budget.maxSeconds > 0 && budget.maxSeconds <= 3600 &&
-    Number.isFinite(budget?.maxMemoryMiB) && budget.maxMemoryMiB >= 1 && budget.maxMemoryMiB <= 4096;
+    Number.isFinite(budget?.maxMemoryMiB) && budget.maxMemoryMiB >= 1 && budget.maxMemoryMiB <= 65536;
 }
 
 function verificationLimit(name: string, fallback: number, min: number, max: number) {
@@ -34,7 +34,7 @@ export function cachedBoardFoilReport(
   const upperHz = profileUpperHz ?? frequenciesHz.at(-1);
   const portCount = expected.electrodePairs.length;
   const referenceOhm = request.referenceOhm ?? expected.electrodePairs.map(() => 50);
-  if (!validBudget(request.budget)) throw new Error('BOARD_FOIL_BUDGET: finite positive time and 1..4096 MiB required');
+  if (!validBudget(request.budget)) throw new Error('BOARD_FOIL_BUDGET: finite positive time and 1..65536 MiB required');
   if ((partitionPolicy !== undefined && partitionPolicy !== 'automatic-conductive-schur-v1') ||
       (operatorPolicy !== undefined && !profiled) ||
       (profileUpperHz !== undefined && (!profiled || !Number.isFinite(profileUpperHz) ||
@@ -46,7 +46,7 @@ export function cachedBoardFoilReport(
     throw new Error(`BOARD_FOIL_GRID: bounded ordered 1..${limitHz / 1000} kHz exact grid, valid policy/profile and positive references required`);
   }
   const deadlineSeconds = Math.min(request.budget.maxSeconds, verificationLimit('P7_VERIFY_SECONDS', 300, 1, 3600));
-  const maxMemoryMiB = Math.min(Math.floor(request.budget.maxMemoryMiB), verificationLimit('P7_VERIFY_MEMORY_MIB', 2048, 256, 8192));
+  const maxMemoryMiB = Math.min(Math.floor(request.budget.maxMemoryMiB), verificationLimit('P7_VERIFY_MEMORY_MIB', 2048, 256, 65536));
   const remaining = () => {
     const seconds = deadlineSeconds - (performance.now() - started) / 1000;
     if (seconds <= 0) throw new Error('CHANNEL_FOIL_DEADLINE: shared cache/solve budget exhausted');

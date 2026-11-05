@@ -742,17 +742,17 @@ pub fn solve_checked(
     let memory = request
         .budget
         .max_memory_mi_b
-        .filter(|m| m.is_finite() && *m >= 1. && *m <= 4096.)
+        .filter(|m| m.is_finite() && *m >= 1. && *m <= 65536.)
         .ok_or_else(|| {
             error(
                 "BOARD_FOIL_BUDGET",
-                "finite maxMemoryMiB in 1..=4096 required",
+                "finite maxMemoryMiB in 1..=65536 required",
             )
         })?;
     let seconds_cap =
         super::board_prepare::verification_limit("P7_VERIFY_SECONDS", 300, 1, 3600)? as f64;
     let memory_cap =
-        super::board_prepare::verification_limit("P7_VERIFY_MEMORY_MIB", 2048, 256, 8192)?;
+        super::board_prepare::verification_limit("P7_VERIFY_MEMORY_MIB", 2048, 256, 65536)?;
     let admitted_seconds = seconds.min(seconds_cap);
     let admitted_memory = (memory.floor() as usize).min(memory_cap);
     let packages = super::checked_packages::validate(request.attachments, geometry, &axis)?;

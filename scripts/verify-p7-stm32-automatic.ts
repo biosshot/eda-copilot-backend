@@ -26,9 +26,9 @@ const boardText=readFileSync(entry.board,'utf8'),original=readFileSync(sourcePat
 assert.equal(sha(boardText),entry.boardSha256);
 const budget={maxSeconds:Number(process.env.P7_VERIFY_SECONDS??1800),maxMemoryMiB:Number(process.env.P7_VERIFY_MEMORY_MIB??3072)};
 assert.ok(Number.isFinite(budget.maxSeconds)&&budget.maxSeconds>0&&budget.maxSeconds<=1800,'P7_VERIFY_SECONDS must be in (0,1800]');
-assert.ok(Number.isFinite(budget.maxMemoryMiB)&&budget.maxMemoryMiB>=256&&budget.maxMemoryMiB<=4096,'P7_VERIFY_MEMORY_MIB must be in [256,4096]');
+assert.ok(Number.isFinite(budget.maxMemoryMiB)&&budget.maxMemoryMiB>=256&&budget.maxMemoryMiB<=65536,'P7_VERIFY_MEMORY_MIB must be in [256,65536]');
 const treePrivateCapMiB=Number(process.env.P7_TREE_CAP_MIB??4096);
-assert.ok(Number.isFinite(treePrivateCapMiB)&&treePrivateCapMiB>=budget.maxMemoryMiB&&treePrivateCapMiB<=8192,'P7_TREE_CAP_MIB must cover native memory and be <=8192; enforce this cap with the supervisor');
+assert.ok(Number.isFinite(treePrivateCapMiB)&&treePrivateCapMiB>=budget.maxMemoryMiB&&treePrivateCapMiB<=65536,'P7_TREE_CAP_MIB must cover native memory and be <=65536; enforce this cap with the supervisor');
 const maxIterations=process.env.P7_VERIFY_MAX_ITERATIONS===undefined?undefined:Number(process.env.P7_VERIFY_MAX_ITERATIONS);
 assert.ok(maxIterations===undefined||(Number.isInteger(maxIterations)&&maxIterations>=1&&maxIterations<=16),'P7_VERIFY_MAX_ITERATIONS must be in 1..16');
 process.env.P7_VERIFY_SECONDS=String(budget.maxSeconds);

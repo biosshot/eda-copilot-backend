@@ -243,6 +243,8 @@ struct Plan<'a> {
     cover_signature: String,
     envelope_signature: String,
     active_terminals: usize,
+    cover: Vec<(Pair, Decision)>,
+    cover_cached: bool,
 }
 impl<'a> Plan<'a> {
     fn new(
@@ -275,6 +277,8 @@ impl<'a> Plan<'a> {
             cover_signature: String::new(),
             envelope_signature: String::new(),
             active_terminals: 0,
+            cover: Vec::new(),
+            cover_cached: tree.adaptive_cover_cache_bytes > 0,
         };
         for (q, &goal) in columns.iter().zip(goals) {
             for i in 0..n {
@@ -331,7 +335,25 @@ impl<'a> Plan<'a> {
         let mut moment = vec![usize::MAX; nodes];
         let mut local = moment.clone();
         let mut hash = 0xcbf29ce484222325u64;
+        let mut cover = Vec::new();
+        let cache_cap = tree.adaptive_cover_cache_bytes;
+        let mut cache_enabled = cache_cap > 0;
         let counts = result.walk(None, |pair, decision| {
+            if cache_enabled {
+                if cover.len() == cover.capacity() {
+                    let entry_bytes = std::mem::size_of::<(Pair, Decision)>();
+                    let max_entries = cache_cap / entry_bytes;
+                    let desired = cover.capacity().saturating_mul(2).max(1024).min(max_entries);
+                    let reserve_failed = desired <= cover.capacity()
+                        || cover.try_reserve_exact(desired.saturating_sub(cover.len())).is_err();
+                    let bytes_over_cap = cover.capacity().checked_mul(entry_bytes).map_or(true, |b| b > cache_cap);
+                    if reserve_failed || bytes_over_cap {
+                        cover = Vec::new();
+                        cache_enabled = false;
+                    }
+                }
+                if cache_enabled { cover.push((pair, decision)); }
+            }
             add_hash(&mut hash, pair.a as u64);
             add_hash(&mut hash, pair.b as u64);
             match decision {
@@ -368,6 +390,8 @@ impl<'a> Plan<'a> {
         result.moment_order = moment;
         result.local_order = local;
         result.counts = counts;
+        result.cover = cover;
+        result.cover_cached = cache_enabled;
         result.cover_signature = format!("fnv1a64:{hash:016x}");
         Ok(result)
     }
@@ -598,7 +622,7 @@ impl<'a> Plan<'a> {
             let mut pb = Vec::<Interval>::new();
             let mut la = vec![Interval::zero(); rank];
             let mut lb = vec![Interval::zero(); rank];
-            self.walk(Some(axis), |block, decision| {
+            let mut apply_block = |block: Pair, decision: Decision| {
                 match decision {
                     Decision::Zero => {}
                     Decision::Near => {
@@ -687,7 +711,36 @@ impl<'a> Plan<'a> {
                     }
                 }
                 Ok(())
-            })?;
+            };
+            if self.cover_cached {
+                let mut profile = Profile::new("apply-cover-replay", Some(axis));
+                let mut counts = Counts { orders: vec![0; t.powers.order + 1], ..Default::default() };
+                for &(block, decision) in &self.cover {
+                    check_deadline(t.start, t.wall)?;
+                    counts.visited += 1;
+                    match decision {
+                        Decision::Zero => counts.zero += 1,
+                        Decision::Near => {
+                            counts.near += 1;
+                            let a=&t.nodes[block.a]; let b=&t.nodes[block.b];
+                            let na=a.range[1]-a.range[0]; let nb=b.range[1]-b.range[0];
+                            let exact=if block.a==block.b {na.checked_mul(na+1).map(|v|v/2)} else {na.checked_mul(nb)}
+                                .ok_or_else(||error("MEMORY_LIMIT","adaptive exact count overflow"))?;
+                            counts.exact=counts.exact.checked_add(exact).ok_or_else(||error("MEMORY_LIMIT","adaptive exact count overflow"))?;
+                        },
+                        Decision::Far(p) => { counts.far += 1; counts.orders[p] += 1; }
+                    }
+                    profile.checkpoint(&counts);
+                    let callback_started = profile.timer();
+                    let result = apply_block(block, decision);
+                    match decision { Decision::Far(_) => profile.add_time(1, callback_started), Decision::Near => profile.add_time(2, callback_started), Decision::Zero => {} }
+                    result?;
+                }
+                profile.checkpoint(&counts);
+                profile.finish();
+            } else {
+                self.walk(Some(axis), apply_block)?;
+            }
             let mut downward_profile = Profile::new("downward", Some(axis));
             for parent in 0..t.nodes.len() {
                 if let Some(children) = t.nodes[parent].children {
@@ -774,7 +827,7 @@ impl<'a> Plan<'a> {
                 }
             }
         }
-        serde_json::json!({"coverSignature":self.cover_signature,"envelopeSignature":self.envelope_signature,"modelRevision":1,"rhsColumns":goals.len(),"absoluteActionGoals":goals,"chosenOrderHistogram":self.counts.orders,"visitedNodePairs":self.counts.visited,"farClusterPairs":self.counts.far,"nearTiles":self.counts.near,"exactPairs":self.counts.exact,"zeroBlocks":self.counts.zero,"activeEnvelopeTerminals":self.active_terminals,"maximumMomentDegreeHistogram":mh,"maximumLocalDegreeHistogram":lh,"m2lScalarContractionsPerAction":self.counts.m2l,"shiftStencilApplicationsPerAction":shifts})
+        serde_json::json!({"coverSignature":self.cover_signature,"coverCacheEnabled":self.cover_cached,"coverCacheEntries":self.cover.len(),"coverCacheBytes":self.cover.capacity()*std::mem::size_of::<(Pair,Decision)>(),"envelopeSignature":self.envelope_signature,"modelRevision":1,"rhsColumns":goals.len(),"absoluteActionGoals":goals,"chosenOrderHistogram":self.counts.orders,"visitedNodePairs":self.counts.visited,"farClusterPairs":self.counts.far,"nearTiles":self.counts.near,"exactPairs":self.counts.exact,"zeroBlocks":self.counts.zero,"activeEnvelopeTerminals":self.active_terminals,"maximumMomentDegreeHistogram":mh,"maximumLocalDegreeHistogram":lh,"m2lScalarContractionsPerAction":self.counts.m2l,"shiftStencilApplicationsPerAction":shifts})
     }
 }
 

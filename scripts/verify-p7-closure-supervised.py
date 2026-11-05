@@ -10,14 +10,14 @@ cache_mode='explicit shared directory' if shared_cache else 'cold isolated direc
 parser=argparse.ArgumentParser()
 parser.add_argument('--memory-mib',type=int,default=1536)
 args=parser.parse_args()
-if not 256<=args.memory_mib<=8192:parser.error('--memory-mib must be in 256..8192')
+if not 256<=args.memory_mib<=65536:parser.error('--memory-mib must be in 256..65536')
 timeout=float(os.environ.get('P7_SUPERVISOR_TEST_TIMEOUT','145'))
 if not math.isfinite(timeout) or timeout<=0:parser.error('supervisor timeout must be finite and positive')
 cap=args.memory_mib*1024**2;reserve=1024**3;head=s.windows_commit_headroom()
 reason=s.memory_refusal(True,psutil.virtual_memory().available,head,0,cap,reserve,True)
 if reason:
  (out/'supervision.json').write_text(json.dumps(dict(status='resource-failure',reason=reason,cache=cache_mode,cachePath=str(cache_dir))));raise SystemExit(1)
-env={**os.environ,'P7_OUTPUT_DIR':str(out),'PCB_ANALYSIS_CACHE_DIR':str(cache_dir)}
+env={**os.environ,'P7_OUTPUT_DIR':str(out),'PCB_ANALYSIS_CACHE_DIR':str(cache_dir),'P7_TREE_CAP_MIB':str(args.memory_mib)}
 start=time.monotonic();rss=private=0
 with (out/'stdout.txt').open('w') as log:
  runner='scripts/verify-p7-closure-stripline.ts' if os.environ.get('P7_CLOSURE_CONTROL')=='stripline' else 'scripts/verify-p7-closure-baseline.ts'

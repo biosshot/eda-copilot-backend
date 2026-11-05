@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Allow explicitly requested joint board-foil memory budgets up to 65536 MiB through native/TS validation and the bounded STM32 supervisor, preserving defaults and commit-headroom safeguards. Add opt-in `P7_MAGNETIC_COVER_CACHE_MIB` ordered cover replay with bounded storage, transient growth reservation and recompute fallback. Tiny cached/uncached/fallback controls match actions, bounds and signatures exactly; full-board runtime comparison is pending.
+
 - Record bounded P7 acceleration outcomes and unresolved stages A–F: the final STM32 run refuses preparation memory after 88.437 s, before a magnetic action or electrical result. The <=600 s target and 42-case physical acceptance remain unmet; no accuracy gates or physical geometry were relaxed.
 
 - Remove unused global triplet/CSC assembly reservation only when the full conductive correction uses the separately budgeted partitioned backend (475,849,728 B for the STM32 fixture). Preserve cell, mode, vector, descriptor and backend factor guards. Six focused native tests and release addon build pass; full extraction acceptance remains pending.
