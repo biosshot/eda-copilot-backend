@@ -83,6 +83,148 @@ impl PairQuadrature {
     }
 }
 
+// Fixed exact working set, not a spatial approximation or retained all-pairs
+// kernel. One slot includes 25,344 B separated cubature at orders4/6/8,
+// 32,000 B lazy far-source samples, tetra faces/edges/headers, and allocator
+// capacity padding. Two additional slots cover construction and near/self
+// graded integration scratch; no cache-owned reference escapes pair().
+const STREAMED_PAIR_SLOT_BYTES: usize = 128 * 1024;
+const STREAMED_PAIR_MAX_SLOTS: usize = 64;
+
+struct PairCell {
+    index: usize,
+    touched: u64,
+    source: PointPotential,
+    cubatures: Vec<TetraCubature>,
+}
+struct BoundedPairs {
+    tetra: Vec<[[f64; 3]; 4]>,
+    cells: std::cell::RefCell<Vec<PairCell>>,
+    slots: usize,
+    tick: std::cell::Cell<u64>,
+    order: usize,
+    start: Instant,
+    wall: Duration,
+}
+impl BoundedPairs {
+    fn plan(
+        n: usize,
+        order: usize,
+        base: usize,
+        budget: AllocationBudget,
+    ) -> Result<(usize, usize)> {
+        PairQuadrature::extra_bytes(0, order)?; // unchanged supported order contract
+        let fixed = n
+            .checked_mul(std::mem::size_of::<[[f64; 3]; 4]>())
+            .and_then(|v| v.checked_add(2 * STREAMED_PAIR_SLOT_BYTES))
+            .ok_or_else(|| error("MEMORY_LIMIT", "bounded magnetic geometry plan overflow"))?;
+        let available = budget
+            .max_bytes
+            .checked_sub(base)
+            .and_then(|v| v.checked_sub(fixed))
+            .ok_or_else(|| {
+                error(
+                    "MEMORY_LIMIT",
+                    "bounded exact magnetic working set exceeds budget",
+                )
+            })?;
+        let slots = (available / STREAMED_PAIR_SLOT_BYTES).min(STREAMED_PAIR_MAX_SLOTS);
+        if slots < 2 {
+            return Err(error(
+                "MEMORY_LIMIT",
+                "two exact magnetic cache slots and scratch required",
+            ));
+        }
+        let owned = fixed
+            .checked_add(slots * STREAMED_PAIR_SLOT_BYTES)
+            .ok_or_else(|| error("MEMORY_LIMIT", "bounded magnetic cache overflow"))?;
+        budget.check(
+            base.checked_add(owned)
+                .ok_or_else(|| error("MEMORY_LIMIT", "bounded magnetic total overflow"))?,
+        )?;
+        Ok((owned, slots))
+    }
+    fn new(
+        tetra: Vec<[[f64; 3]; 4]>,
+        order: usize,
+        slots: usize,
+        start: Instant,
+        wall: Duration,
+    ) -> Result<Self> {
+        check_deadline(start, wall)?;
+        Ok(Self {
+            tetra,
+            cells: std::cell::RefCell::new(Vec::with_capacity(slots)),
+            slots,
+            tick: std::cell::Cell::new(0),
+            order,
+            start,
+            wall,
+        })
+    }
+    fn ensure(&self, cells: &mut Vec<PairCell>, index: usize, pin: Option<usize>) -> Result<()> {
+        check_deadline(self.start, self.wall)?;
+        let tick = self.tick.get().saturating_add(1);
+        self.tick.set(tick);
+        if let Some(cell) = cells.iter_mut().find(|cell| cell.index == index) {
+            cell.touched = tick;
+            return Ok(());
+        }
+        // Evict before constructing the replacement. The current target stays
+        // pinned for every source of its original upper-triangle row.
+        if cells.len() == self.slots {
+            let remove = cells
+                .iter()
+                .enumerate()
+                .filter(|(_, cell)| Some(cell.index) != pin)
+                .min_by_key(|(_, cell)| cell.touched)
+                .map(|(i, _)| i)
+                .ok_or_else(|| {
+                    error(
+                        "MEMORY_LIMIT",
+                        "bounded magnetic cache has no evictable slot",
+                    )
+                })?;
+            cells.remove(remove);
+        }
+        let tetra = self.tetra[index];
+        let source = PointPotential::tetrahedron(tetra)?;
+        let mut cubatures = Vec::with_capacity(3);
+        // separated_order selects only4,6,8; near/self keep maximum=self.order.
+        for order in [4, 6, 8] {
+            check_deadline(self.start, self.wall)?;
+            if order <= self.order {
+                cubatures.push(TetraCubature::new(tetra, order)?);
+            }
+        }
+        cells.push(PairCell {
+            index,
+            touched: tick,
+            source,
+            cubatures,
+        });
+        Ok(())
+    }
+    fn pair(&self, i: usize, j: usize) -> Result<f64> {
+        check_deadline(self.start, self.wall)?;
+        if i == j {
+            return tetra_self_integral(self.tetra[i], self.order);
+        }
+        let mut cells = self.cells.borrow_mut();
+        self.ensure(&mut cells, i, None)?;
+        self.ensure(&mut cells, j, Some(i))?;
+        let target = cells.iter().find(|cell| cell.index == i).unwrap();
+        let source = cells.iter().find(|cell| cell.index == j).unwrap();
+        let q = target.cubatures[0].separation_q(&source.cubatures[0]);
+        if let Some(k) = separated_order(q, self.order)
+            .and_then(|o| [4, 6, 8].iter().position(|&candidate| candidate == o))
+        {
+            return target.cubatures[k].direct_integral(&source.cubatures[k]);
+        }
+        tetra_integral_adaptive(self.tetra[i], &source.source, self.order, 1e-10)
+    }
+}
+
 fn geometry(mesh: &LayeredMesh) -> Vec<[[f64; 3]; 4]> {
     mesh.copper_tetrahedra
         .iter()
@@ -94,7 +236,7 @@ fn geometry(mesh: &LayeredMesh) -> Vec<[[f64; 3]; 4]> {
 /// Pair quadrature is reused across columns; no all-pairs array is retained.
 pub(super) struct Streamed<'a> {
     space: &'a Space,
-    pair: PairQuadrature,
+    pair: BoundedPairs,
     pub owned_bytes: usize,
     start: Instant,
     wall: Duration,
@@ -124,13 +266,10 @@ impl<'a> Streamed<'a> {
                 "unchanged native copper cell order required",
             ));
         }
-        let owned_bytes = PairQuadrature::extra_bytes(n, order)?;
-        budget.check(
-            base_bytes
-                .checked_add(owned_bytes)
-                .ok_or_else(|| error("MEMORY_LIMIT", "streamed tetra quadrature plan overflow"))?,
-        )?;
-        let pair = PairQuadrature::new(&geometry(mesh), order, || check_deadline(start, wall))?;
+        let (owned_bytes, slots) = BoundedPairs::plan(n, order, base_bytes, budget)?;
+        eprintln!("P7_STREAMED_MEMORY_PLAN tetrahedra={n} geometryBytes={} exactCacheSlots={slots} slotBytes={STREAMED_PAIR_SLOT_BYTES} constructionScratchSlots=2 ownedBytes={owned_bytes} baseBytes={base_bytes} budgetBytes={} operator=unchanged-direct-pairs complexity=quadratic", n*std::mem::size_of::<[[f64;3];4]>(),budget.max_bytes);
+        // Move the original geometry into the cache; do not duplicate its Vec.
+        let pair = BoundedPairs::new(geometry(mesh), order, slots, start, wall)?;
         Ok(Self {
             space,
             pair,
@@ -283,5 +422,50 @@ impl MagneticApply for Operator<'_> {
     }
     fn scratch_bytes(&self) -> usize {
         self.planned_bytes
+    }
+}
+
+#[cfg(test)]
+mod bounded_pair_tests {
+    use super::*;
+    #[test]
+    fn bounded_pair_cache_eviction_preserves_exact_coefficients_and_preflights_memory() {
+        let tetra = |x: f64| {
+            [
+                [x, 0., 0.],
+                [x + 0.001, 0., 0.],
+                [x, 0.001, 0.],
+                [x, 0., 0.001],
+            ]
+        };
+        let cells = vec![tetra(0.), tetra(0.001), tetra(0.1)];
+        let reference = PairQuadrature::new(&cells, 12, || Ok(())).unwrap();
+        let bounded =
+            BoundedPairs::new(cells, 12, 2, Instant::now(), Duration::from_secs(30)).unwrap();
+        for (i, j) in [(2, 0), (1, 0), (2, 1), (1, 1), (2, 0)] {
+            let expected = reference.pair(i, j).unwrap();
+            let actual = bounded.pair(i, j).unwrap();
+            assert_eq!(actual.to_bits(), expected.to_bits(), "pair({i},{j})");
+            assert!(bounded.cells.borrow().len() <= 2);
+        }
+        let budget = AllocationBudget {
+            max_bytes: 32 * 1024 * 1024,
+            max_nodes: 1000000,
+            max_tetrahedra: 1000000,
+        };
+        let (owned, slots) = BoundedPairs::plan(154899, 12, 0, budget).unwrap();
+        assert_eq!(slots, 64);
+        assert!(owned < 24 * 1024 * 1024);
+        assert!(BoundedPairs::plan(
+            154899,
+            12,
+            0,
+            AllocationBudget {
+                max_bytes: 1,
+                ..budget
+            }
+        )
+        .is_err());
+        assert!(BoundedPairs::new(vec![tetra(0.)], 12, 2, Instant::now(), Duration::ZERO).is_err());
     }
 }

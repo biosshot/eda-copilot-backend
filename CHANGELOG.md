@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bound exact streamed magnetic quadrature storage with eviction before construction and a pinned target, retaining the original pair kernel and accumulation. Replace the native mixed current-buffer blanket estimate with an audited request-derived plan while keeping sparse factor guards. Two focused library controls and the existing compact endpoint pass. Pair work remains quadratic, and no STM32 field solve or physical acceptance is claimed.
+
 - Preserve exact Boolean no-op atoms and use the checked final arrangement grid for rectangular domains. The annulus control and one preparation of the saved full STM32 geometry pass the original copper/contact conservation guards, retaining all 844 sources and 89 barrels. Electrical extraction and its remaining resource admission are still open.
 
 - Add a source-preserving full STM32 automatic runner and record one supervised cold attempt. Planning retains 844 copper regions, 65 islands and 89 barrels. Native arrangement refuses the RS485_B via annulus on the original area guard before field preparation. The separate manifest DSL still requires explicit contact layers. Complete-channel admission remains open.
