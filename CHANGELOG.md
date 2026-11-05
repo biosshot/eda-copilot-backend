@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Extend the private section/shared-return candidate with bounded residual-driven potential enrichment that preserves physical island constants and contact cardinality. Four-cell longitudinal controls reduce both voltage and current coordinates; a physical remote return bridge passes original charge/KCL/KVL admission after two further residual corrections. Preserve the earlier rejection and broken-bridge topology controls. No production dispatch, tolerance relaxation or full-board speedup is claimed.
+
 - Extend the section/shared-return control to physical source ownership, distributed cut potentials and bounded magnetic enrichment. Use conditioned charge coordinates and original-space charge/KCL/KVL checks for candidate admission; ordinary 1 A-scale residual checks missed small island-charge errors. Fix compact magnetic certificates to omit absent optional chunk metadata. Full production shared-return routing and complete case-matrix acceptance remain pending.
 
 - Add opt-in sequential magnetic covers by RHS chunk (`P7_MAGNETIC_BATCH_COLUMNS`, default common), retaining original action goals, chunk certificates and isolated cache identity. Thin-foil controls reduce weighted near work for localized currents (124 to 34) but show no benefit for overlapping currents; no board-level speedup is claimed. Add a conforming lift of actual 2D section current recovery into shared physical copper and bounded current-basis augmentation. This mapping primitive preserves shared return cells and island potentials; distributed trace closure and full shared-return EM admission remain incomplete.

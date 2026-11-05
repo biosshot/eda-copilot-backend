@@ -15,6 +15,7 @@ pub struct Basis {
     harmonic:Vec<Vec<f64>>,
     electrode_dofs:Vec<usize>,
     bubbles:Vec<Vec<Vec<f64>>>,
+    #[serde(default)] global_bubbles:Vec<Vec<f64>>,
 }
 fn dot(a:&[f64],b:&[f64])->f64 {a.iter().zip(b).map(|(a,b)|a*b).sum()}
 fn append_current(space:&Space,basis:&mut Vec<Vec<f64>>,mut v:Vec<f64>,reference:f64)->Result<bool> {
@@ -52,7 +53,7 @@ pub fn harmonic(space:&Space,electrodes:&[(String,usize)],budget:AllocationBudge
         let norm=space.losses(&g)?.iter().sum::<f64>().sqrt();scale=scale.max(norm);append_current(space,&mut current,g,scale)?;
     }
     if current.is_empty() {return Err(error("VOLUME_REDUCTION","electrodes do not excite a finite conductive path"));}
-    Ok(Basis{harmonic:voltage.clone(),electrode_dofs:electrodes.iter().map(|(_,i)|*i).collect(),bubbles:vec![vec![];space.components.len()],voltage,current,names,component_columns})
+    Ok(Basis{harmonic:voltage.clone(),electrode_dofs:electrodes.iter().map(|(_,i)|*i).collect(),bubbles:vec![vec![];space.components.len()],global_bubbles:vec![],voltage,current,names,component_columns})
 }
 fn symmetric(values:&[Vec<f64>])->Vec<Entry> {let mut out=vec![];for i in 0..values.len(){for j in i..values.len(){let v=values[i][j];if v!=0.{out.push((i,j,v));if i!=j{out.push((j,i,v));}}}}out}
 impl Basis {
@@ -75,6 +76,7 @@ impl Basis {
     }
     /// Immutable cardinal electrode lifts. Trained bubbles modify `voltage`
     /// coordinates, never these original physical DC source states.
+    pub fn retained_dofs(&self)->&[usize] {&self.electrode_dofs}
     pub fn harmonic_electrodes(&self)->Result<&[Vec<f64>]>{
         let count=self.electrode_dofs.len();
         if count==0||self.harmonic.len()<count{return Err(error("VOLUME_REDUCTION","cardinal harmonic electrode states missing"));}
@@ -84,10 +86,22 @@ impl Basis {
     /// harmonic lift using the small shape voltage only; the separately stored
     /// conductor constants cancel analytically through partition of unity.
     pub fn include_solution(&mut self,space:&Space,solution:&super::volume_solve::Solution,budget:AllocationBudget)->Result<(usize,usize)> {
-        let nv=space.potential_count();let mut added_v=0;let old_i=self.current.len();
+        let nv=space.potential_count();let old_i=self.current.len();
         let plan=(nv+space.current_count()).checked_mul(self.voltage.len()+self.current.len()+16).and_then(|v|v.checked_mul(64)).and_then(|v|v.checked_add(space.planned_bytes)).ok_or_else(||error("MEMORY_LIMIT","snapshot basis plan overflow"))?;budget.check(plan)?;
-        for shape in [&solution.real_shape_v,&solution.imaginary_shape_v] {
-            if shape.len()!=nv {return Err(error("VOLUME_REDUCTION","full shape voltage required"));}
+        let (added_v,_)=self.include_potential_profiles(space,&[solution.real_shape_v.clone(),solution.imaginary_shape_v.clone()],budget)?;
+        append_current(space,&mut self.current,solution.real_currents_a.clone(),0.)?;
+        append_current(space,&mut self.current,solution.imaginary_currents_a.clone(),0.)?;
+        Ok((added_v,self.current.len()-old_i))
+    }
+    /// Add bounded physical potential profiles while preserving cardinality and island partitions.
+    pub fn include_potential_profiles(&mut self,space:&Space,profiles:&[Vec<f64>],budget:AllocationBudget)->Result<(usize,usize)> {
+        if !self.global_bubbles.is_empty() {return Err(error("VOLUME_REDUCTION","cannot mix global and component potential bubbles"));}
+        let nv=space.potential_count();let mut added_v=0;let old_i=self.current.len();
+        let count=profiles.len().checked_mul(space.components.len()).and_then(|n|n.checked_add(self.voltage.len())).and_then(|n|n.checked_add(self.current.len())).and_then(|n|n.checked_add(16)).ok_or_else(||error("MEMORY_LIMIT","potential profile count overflow"))?;
+        let plan=nv.checked_add(space.current_count()).and_then(|n|n.checked_mul(count)).and_then(|v|v.checked_mul(64)).and_then(|v|v.checked_add(space.planned_bytes)).ok_or_else(||error("MEMORY_LIMIT","potential profile plan overflow"))?;budget.check(plan)?;
+        if profiles.iter().any(|v|v.len()!=nv||v.iter().any(|x|!x.is_finite())) {return Err(error("VOLUME_REDUCTION","full finite potential profiles required"));}
+        for shape in profiles {
+            if shape.len()!=nv || shape.iter().any(|v|!v.is_finite()) {return Err(error("VOLUME_REDUCTION","full finite potential profile required"));}
             for(ci,component)in space.components.iter().enumerate() {
                 let mut bubble=vec![0.;nv];
                 for&i in component {bubble[i]=shape[i]-self.electrode_dofs.iter().enumerate().map(|(p,&node)|self.harmonic[p][i]*shape[node]).sum::<f64>();}
@@ -105,9 +119,23 @@ impl Basis {
                 append_current(space,&mut self.current,g,0.)?;
             }
         }
-        append_current(space,&mut self.current,solution.real_currents_a.clone(),0.)?;
-        append_current(space,&mut self.current,solution.imaginary_currents_a.clone(),0.)?;
         Ok((added_v,self.current.len()-old_i))
+    }
+    /// Add zero-contact global residual modes while preserving each island constant.
+    pub fn include_global_potential_profiles(&mut self,space:&Space,profiles:&[Vec<f64>],budget:AllocationBudget)->Result<usize> {
+        if self.bubbles.iter().any(|b|!b.is_empty()) {return Err(error("VOLUME_REDUCTION","cannot mix global and component potential bubbles"));}
+        let count=self.voltage.len().checked_add(self.current.len()).and_then(|n|n.checked_add(profiles.len())).and_then(|n|n.checked_add(16)).ok_or_else(||error("MEMORY_LIMIT","global profile count overflow"))?;
+        budget.check(space.potential_count().checked_add(space.current_count()).and_then(|n|n.checked_mul(count)).and_then(|n|n.checked_mul(64)).and_then(|n|n.checked_add(space.planned_bytes)).ok_or_else(||error("MEMORY_LIMIT","global profile plan overflow"))?)?;
+        if profiles.iter().any(|p|p.len()!=space.potential_count()||p.iter().any(|v|!v.is_finite())||self.electrode_dofs.iter().any(|&i|p[i]!=0.)) {return Err(error("VOLUME_REDUCTION","finite zero-contact profiles required"));}
+        let mut added=0;
+        for p in profiles {
+            let mut v=p.clone();let scale=v.iter().map(|x|x.abs()).fold(0.,f64::max);if scale==0. {continue;}for x in &mut v {*x/=scale;}
+            let original=dot(&v,&v).sqrt();for _ in 0..2 {for q in &self.global_bubbles {let a=dot(q,&v);for(x,y) in v.iter_mut().zip(q) {*x-=a*y;}}}
+            let norm=dot(&v,&v).sqrt();if norm<=1e-12*original {continue;}for x in &mut v {*x/=norm;}
+            let mut g=space.gradient(&v)?;for(i,c)in space.cells.iter().enumerate(){for k in 0..3{g[3*i+k]/=c.resistance_ohm;}}
+            append_current(space,&mut self.current,g,0.)?;let base=self.component_columns[0][0];for i in 0..v.len(){self.voltage[base][i]-=v[i];}
+            self.component_columns[0].push(self.voltage.len());self.names.push(format!("global-interior-mode-{}",self.voltage.len()));self.voltage.push(v.clone());self.global_bubbles.push(v);added+=1;
+        }Ok(added)
     }
     pub fn extend_magnetic(&mut self,space:&Space,magnetic:&dyn MagneticApply)->Result<usize> {
         let old=self.current.clone();let mut added=0;
