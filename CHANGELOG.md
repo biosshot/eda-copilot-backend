@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Measure P7 magnetic cover construction at 297.503 s versus 477.943 s (1.61x) with identical interaction counts after incremental-power reuse. Raised-memory full-path runs reach magnetic application but still time out near 594 s; adaptive near integration consumes 96.6% of the measured near-kernel prefix. No full extraction, accuracy relaxation or case-matrix acceptance is claimed.
+
 - Extend the local/group DSL verification ceilings to match the explicit high-memory board-foil path. Reuse incremental interval powers and loop-invariant expressions in adaptive magnetic classification, preserving the original arithmetic sequence and goals. Bitwise power-equivalence and signed-action/KVL controls pass; measured full-board comparison follows the release build.
 
 - Allow explicitly requested joint board-foil memory budgets up to 65536 MiB through native/TS validation and the bounded STM32 supervisor, preserving defaults and commit-headroom safeguards. Add opt-in `P7_MAGNETIC_COVER_CACHE_MIB` ordered cover replay with bounded storage, transient growth reservation and recompute fallback. Tiny cached/uncached/fallback controls match actions, bounds and signatures exactly; full-board runtime comparison is pending.
