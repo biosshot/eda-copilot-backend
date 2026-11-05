@@ -347,7 +347,7 @@ fn harmonic(
             check_time(start, wall)?;
             let v = &mut voltage[j];
             v[retained[j]] = 1.;
-            let (q, residual) = complete_harmonic_current(cells, v, &dc)?;
+            let (q, residual) = complete_harmonic_current(cells, v, &dc, start, wall)?;
             dc_residual = dc_residual.max(residual);
             current.push(q);
         }
@@ -381,48 +381,45 @@ fn complete_harmonic_current(
     cells: &[Cell],
     voltage: &mut [f64],
     dc: &DcCorrection,
+    start: Instant,
+    wall: Duration,
 ) -> Result<(Vec<f64>, f64)> {
-    if dc.free > 0 {
-        let rhs: Vec<_> = divergence(cells, &conductive(cells, voltage), voltage.len())
-            .into_iter()
-            .map(|x| -x)
-            .collect();
-        for (value, correction) in voltage.iter_mut().zip(dc.solve(cells, &rhs)?) {
-            *value += correction;
+    // Reuse the admitted factor, never perturb retained physical contacts.
+    // Accumulate corrections before rounding back to the actual stored F64
+    // voltage. Acceptance is always measured on that stored voltage, not an
+    // unrepresented compensated state.
+    let mut accumulated: Vec<_> = voltage.iter().copied().map(Sum::from).collect();
+    let mut history = Vec::with_capacity(9);
+    for iteration in 0..=8 {
+        check_time(start, wall)?;
+        let mut q = conductive(cells, voltage);
+        let reaction = divergence(cells, &q, voltage.len());
+        let scale = reaction.iter().map(|v| v.abs()).fold(0., f64::max);
+        let residual = reaction.iter().zip(&dc.free_map)
+            .filter(|(_, free)| free.is_some()).map(|(v, _)| v.abs())
+            .fold(0., f64::max) / scale.max(f64::MIN_POSITIVE);
+        history.push(residual);
+        if residual.is_finite() && residual <= RESIDUAL_LIMIT {
+            let norm = q.iter().zip(cells).map(|(&j,c)| c.resistance*j*j).sum::<f64>().sqrt();
+            if !norm.is_finite() || norm <= 0. {
+                return Err(error("FOIL_REDUCTION", "independent finite harmonic current required"));
+            }
+            for v in &mut q { *v /= norm; }
+            if iteration > 1 { eprintln!("P7_HARMONIC_REFINEMENT iterations={iteration} residual={residual:e}"); }
+            return Ok((q,residual));
+        }
+        if iteration == 8 || dc.free == 0 || !residual.is_finite() { break; }
+        let rhs: Vec<_> = reaction.into_iter().map(|v| -v).collect();
+        let delta=dc.solve(cells,&rhs)?;
+        for (i,correction) in delta.into_iter().enumerate() {
+            if dc.free_map[i].is_some() {
+                accumulated[i]=accumulated[i].add(Sum::from(correction));
+                voltage[i]=accumulated[i].value();
+                if !voltage[i].is_finite() { return Err(error("FOIL_REDUCTION","nonfinite harmonic residual correction")); }
+            }
         }
     }
-    let mut q = conductive(cells, voltage);
-    let norm = q
-        .iter()
-        .zip(cells)
-        .map(|(&j, c)| c.resistance * j * j)
-        .sum::<f64>()
-        .sqrt();
-    if !norm.is_finite() || norm <= 0. {
-        return Err(error(
-            "FOIL_REDUCTION",
-            "independent finite harmonic current required",
-        ));
-    }
-    let reaction = divergence(cells, &q, voltage.len());
-    let scale = reaction.iter().map(|v| v.abs()).fold(0., f64::max);
-    let residual = reaction
-        .iter()
-        .zip(&dc.free_map)
-        .filter(|(_, free)| free.is_some())
-        .map(|(v, _)| v.abs())
-        .fold(0., f64::max)
-        / scale.max(f64::MIN_POSITIVE);
-    if !residual.is_finite() || residual > 1e-8 {
-        return Err(error(
-            "FOIL_REDUCTION",
-            &format!("harmonic free residual {residual:e}"),
-        ));
-    }
-    for v in &mut q {
-        *v /= norm;
-    }
-    Ok((q, residual))
+    Err(error("FOIL_REDUCTION", &format!("harmonic free residual failed after bounded refinement; history={history:?}")))
 }
 
 fn correction(
@@ -844,7 +841,7 @@ pub(super) fn solve_mixed_grid(
         let (&anchor, other) = modes.split_last().unwrap();
         for &mode in other {
             check_time(start, wall)?;
-            let (q, residual) = complete_harmonic_current(&cells, &mut basis.voltage[mode], &dc)?;
+            let (q, residual) = complete_harmonic_current(&cells, &mut basis.voltage[mode], &dc, start, wall)?;
             basis.current.push(q);
             basis.dc_residual = basis.dc_residual.max(residual);
         }
@@ -2098,6 +2095,28 @@ impl ReducedSpace {
 #[cfg(test)]
 mod mixed_basis_tests {
     use super::*;
+
+    #[test]
+    fn harmonic_refinement_preserves_contacts_on_high_contrast_series_network() {
+        let resistance=[1.,1e-6,1e-6,1.];
+        let cells: Vec<_> = resistance.iter().enumerate()
+            .map(|(i,&r)|Cell::new(vec![(i,-1.),(i+1,1.)],r)).collect();
+        let start=Instant::now();let wall=Duration::from_secs(10);
+        let budget=AllocationBudget{max_bytes:8*1024*1024,max_nodes:32,max_tetrahedra:32};
+        let (_,dc)=correction(&cells,5,&BTreeSet::from([0,4]),0,budget,start,wall,None).unwrap();
+        let mut voltage=vec![1.,0.17,0.91,0.07,0.];
+        let (current,residual)=complete_harmonic_current(&cells,&mut voltage,&dc,start,wall).unwrap();
+        assert!(residual<=RESIDUAL_LIMIT);
+        assert_eq!(voltage[0].to_bits(),1f64.to_bits());
+        assert_eq!(voltage[4].to_bits(),0f64.to_bits());
+        let total=resistance.iter().sum::<f64>();
+        for i in 1..4 {
+            let expected=1.-resistance[..i].iter().sum::<f64>()/total;
+            assert!((voltage[i]-expected).abs()<1e-9);
+        }
+        assert!((current.iter().zip(&resistance).map(|(q,r)|q*q*r).sum::<f64>()-1.).abs()<1e-12);
+        assert!(complete_harmonic_current(&cells,&mut voltage,&dc,start,Duration::ZERO).is_err());
+    }
 
     #[test]
     fn compatible_gradient_spans_and_capacitive_seed_keeps_zero_incidence_modes() {

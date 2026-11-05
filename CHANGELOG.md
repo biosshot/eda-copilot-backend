@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Refine harmonic DC preparation with up to eight same-factor residual corrections, preserving retained contacts and the original 1e-8 gate. Check the deadline at each step and include residual history on failure. Five focused native controls and release addon build pass; the full STM32 verification is separately bounded and not yet accepted.
+
 - Correct mixed extraction memory accounting: separate sequential mixed/full work phases, use live mixed-map capacities after construction, and distinguish potential from current modes so floating constant potentials do not reserve fictitious current vectors. Preserve all islands, conservative full-space bounds and enrichment guards. Two focused memory tests and release addon build pass; full extraction resource/runtime admission remains under measurement.
 
 - Reuse four bounded far-interaction scratch vectors without changing interval arithmetic order; the signed/reference action and KVL control matches prior numerical evidence exactly. Add mixed/hierarchy memory-admission context and configurable bounded STM32 verification budgets. Release addon build passes; full-board speedup and <=600-second extraction remain unverified.

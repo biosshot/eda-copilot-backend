@@ -124,7 +124,10 @@ if(process.argv.includes('--solve')){
    if(problem.kind!=='board-foil-checked')return native(problem);
    const bounded={...problem,request:{...problem.request,maxIterations}};
    save('executed-native-request.json',bounded);
-   return native(bounded);
+   try{return native(bounded);}catch(error){
+    save('native-error.json',{message:String(error),stack:error instanceof Error?error.stack:undefined});
+    throw error;
+   }
   });
  }
  const artifacts:any[]=[];
