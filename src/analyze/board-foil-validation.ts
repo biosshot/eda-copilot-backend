@@ -21,6 +21,18 @@ function validateMagneticCover(cover:Omit<AnalysisMagneticCertificate,'policy'>|
     cover.activeEnvelopeTerminals>originals||(rhs===0&&cover.activeEnvelopeTerminals!==0)||
     !Number.isFinite(cover.actionWallSeconds)||cover.actionWallSeconds<0)
   fail('missing or inconsistent adaptive common-cover action certificate');
+ const batch=cover as import('../../native/analyze/index.js').AnalysisMagneticBasisCover;
+ if(batch.chunkCertificates!==undefined || batch.chunkCount!==undefined || batch.batchColumns!==undefined || batch.coverAggregation!==undefined) {
+  if(!Array.isArray(batch.chunkCertificates)||!count(batch.batchColumns)||batch.batchColumns<1||batch.batchColumns>64||batch.coverAggregation!=='sum-of-sequential-chunk-covers'||batch.chunkCount!==batch.chunkCertificates.length||batch.chunkCount<2) fail('invalid magnetic chunk provenance');
+  let offset=0;
+  for(const chunk of batch.chunkCertificates) {
+   if(!count(chunk.rhsColumns)||chunk.rhsColumns<1||chunk.rhsColumns>batch.batchColumns||chunk.chunkCertificates!==undefined) fail('invalid magnetic chunk size');
+   validateMagneticCover(chunk,chunk.rhsColumns,originals);
+   if(!same(chunk.absoluteActionGoals,cover.absoluteActionGoals.slice(offset,offset+chunk.rhsColumns))||!same(chunk.maximumAbsoluteErrorBounds,cover.maximumAbsoluteErrorBounds.slice(offset,offset+chunk.rhsColumns))) fail('inconsistent magnetic chunk values');
+   offset+=chunk.rhsColumns;
+  }
+  if(offset!==rhs||(['farClusterPairs','exactPairs','zeroBlocks'] as const).some(key=>batch.chunkCertificates!.reduce((sum,c)=>sum+c[key],0)!==cover[key])) fail('inconsistent magnetic chunk totals');
+ }
 }
 
 function validateMagneticOperator(report:AnalysisBoardFoilCheckedReport):void {

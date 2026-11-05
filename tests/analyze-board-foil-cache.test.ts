@@ -50,6 +50,30 @@ function mock(request: AnalysisBoardFoilCheckedRequest, input = problem): Analys
   };
 }
 
+test('magnetic batch partition policy separates cached numerical certificates', () => {
+  const dir=mkdtempSync(join(tmpdir(),'p7-magnetic-batches-'));
+  const before=process.env.P7_MAGNETIC_BATCH_COLUMNS;
+  try {
+    const cache=new LocalModelCache(dir);
+    const run=()=>cachedBoardFoilReport(cache,'batch-control',problem,r=>mock(r));
+    delete process.env.P7_MAGNETIC_BATCH_COLUMNS;
+    const common=run();
+    process.env.P7_MAGNETIC_BATCH_COLUMNS='1';
+    const single=run();
+    assert.notEqual(single.cache?.key,common.cache?.key);
+    assert.equal(run().cache?.status,'memory');
+    process.env.P7_MAGNETIC_BATCH_COLUMNS='0';
+    assert.equal(run().cache?.key,common.cache?.key);
+    for(const invalid of ['-1','65','1.5','NaN']) {
+      process.env.P7_MAGNETIC_BATCH_COLUMNS=invalid;
+      assert.throws(run,/LOCAL_BUDGET/);
+    }
+  } finally {
+    if(before===undefined)delete process.env.P7_MAGNETIC_BATCH_COLUMNS;else process.env.P7_MAGNETIC_BATCH_COLUMNS=before;
+    rmSync(dir,{recursive:true,force:true});
+  }
+});
+
 test('automatic partition policy reaches native preparation and exact cache with checked evidence', () => {
   const dir=mkdtempSync(join(tmpdir(),'p7-automatic-partition-'));
   try {
@@ -102,6 +126,20 @@ test('automatic partition policy reaches native preparation and exact cache with
     };
     assert.equal(runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,tree)
       .provenance.magneticOperator?.policy,'certified-adaptive-harmonic-v1');
+    const chunked=(input:BoardFoilProblem,corrupt=false)=>{
+      const value=tree(input),operator=value.provenance.magneticOperator!;
+      if(operator.policy==='certified-adaptive-harmonic-v1') {
+        const cover=operator.basisCover;
+        const chunks=[0,1].map(i=>({...structuredClone(cover),rhsColumns:1,
+          absoluteActionGoals:[cover.absoluteActionGoals[i]],maximumAbsoluteErrorBounds:[cover.maximumAbsoluteErrorBounds[i]]}));
+        Object.assign(cover,{batchColumns:1,chunkCount:2,coverAggregation:'sum-of-sequential-chunk-covers',chunkCertificates:chunks,
+          chosenOrderHistogram:cover.chosenOrderHistogram.map(n=>2*n),farClusterPairs:2,exactPairs:36});
+        if(corrupt)chunks[1].maximumAbsoluteErrorBounds[0]=2e-12;
+      }
+      return value;
+    };
+    assert.doesNotThrow(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>chunked(input)));
+    assert.throws(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>chunked(input,true)),/CHANNEL_FOIL_EVIDENCE/);
     assert.doesNotThrow(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>{
       const value=tree(input),operator=value.provenance.magneticOperator!;
       if(operator.policy==='certified-adaptive-harmonic-v1')Object.assign(operator.basisCover,{

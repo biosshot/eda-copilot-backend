@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add opt-in sequential magnetic covers by RHS chunk (`P7_MAGNETIC_BATCH_COLUMNS`, default common), retaining original action goals, chunk certificates and isolated cache identity. Thin-foil controls reduce weighted near work for localized currents (124 to 34) but show no benefit for overlapping currents; no board-level speedup is claimed. Add a conforming lift of actual 2D section current recovery into shared physical copper and bounded current-basis augmentation. This mapping primitive preserves shared return cells and island potentials; distributed trace closure and full shared-return EM admission remain incomplete.
+
 - Measure P7 magnetic cover construction at 297.503 s versus 477.943 s (1.61x) with identical interaction counts after incremental-power reuse. Raised-memory full-path runs reach magnetic application but still time out near 594 s; adaptive near integration consumes 96.6% of the measured near-kernel prefix. No full extraction, accuracy relaxation or case-matrix acceptance is claimed.
 
 - Extend the local/group DSL verification ceilings to match the explicit high-memory board-foil path. Reuse incremental interval powers and loop-invariant expressions in adaptive magnetic classification, preserving the original arithmetic sequence and goals. Bitwise power-equivalence and signed-action/KVL controls pass; measured full-board comparison follows the release build.

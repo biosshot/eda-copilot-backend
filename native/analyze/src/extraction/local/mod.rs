@@ -36,6 +36,7 @@ mod bernstein;
 pub(crate) mod sparse_potential;
 mod field_assembly;
 pub mod volume_reduction;
+pub(crate) mod section_return;
 mod spherical;
 pub(crate) mod accurate;
 mod compensated;

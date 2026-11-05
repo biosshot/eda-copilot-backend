@@ -56,6 +56,23 @@ pub fn harmonic(space:&Space,electrodes:&[(String,usize)],budget:AllocationBudge
 }
 fn symmetric(values:&[Vec<f64>])->Vec<Entry> {let mut out=vec![];for i in 0..values.len(){for j in i..values.len(){let v=values[i][j];if v!=0.{out.push((i,j,v));if i!=j{out.push((j,i,v));}}}}out}
 impl Basis {
+    /// Add physical current profiles without changing potentials, contacts or
+    /// independent island constants. This is candidate construction only;
+    /// original-space AC residual admission remains mandatory.
+    pub fn include_current_profiles(&mut self, space:&Space, profiles:&[Vec<f64>], budget:AllocationBudget)->Result<usize> {
+        let count=self.current.len().checked_add(profiles.len()).ok_or_else(||error("MEMORY_LIMIT","profile count overflow"))?;
+        let bytes=space.current_count().checked_mul(count).and_then(|n|n.checked_mul(16)).and_then(|n|n.checked_add(space.planned_bytes)).ok_or_else(||error("MEMORY_LIMIT","profile basis overflow"))?;
+        budget.check(bytes)?;
+        if profiles.iter().any(|v|v.len()!=space.current_count()||v.iter().any(|x|!x.is_finite())) {
+            return Err(error("SECTION_RETURN_MAP","finite full physical current columns required"));
+        }
+        let old=self.current.len();
+        // Work on a candidate so a rejected profile cannot partly mutate Basis.
+        let mut current=self.current.clone();
+        for v in profiles {append_current(space,&mut current,v.clone(),0.)?;}
+        self.current=current;
+        Ok(self.current.len()-old)
+    }
     /// Immutable cardinal electrode lifts. Trained bubbles modify `voltage`
     /// coordinates, never these original physical DC source states.
     pub fn harmonic_electrodes(&self)->Result<&[Vec<f64>]>{

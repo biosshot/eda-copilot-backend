@@ -246,6 +246,7 @@ export interface AnalysisMagneticCertificate {
 }
 export interface AnalysisMagneticBasisCover extends Omit<AnalysisMagneticCertificate, 'policy'> {
     modelRevision: number; rhsColumns: number; visitedNodePairs: number; nearTiles: number;
+    batchColumns?: number; chunkCount?: number; coverAggregation?: string; chunkCertificates?: AnalysisMagneticBasisCover[];
     maximumMomentDegreeHistogram: number[]; maximumLocalDegreeHistogram: number[];
     m2lScalarContractionsPerAction?: number; shiftStencilApplicationsPerAction?: number;
 }

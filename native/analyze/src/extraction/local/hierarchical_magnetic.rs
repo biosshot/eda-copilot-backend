@@ -1240,6 +1240,50 @@ mod tests {
         (mid, error)
     }
     #[test]
+    fn bounded_thin_foil_partition_cover_control() {
+        let start = Instant::now();
+        let wall = Duration::from_secs(60);
+        // Disjoint thin foil tetrahedra: 16 mm long, 0.2 mm wide,
+        // 35 um copper, separated by 0.2 mm gaps along the long axis.
+        let geometry: Vec<_> = (0..16).map(|i| {
+            let x = i as f64 * 0.001;
+            [[x,0.,0.],[x+0.0008,0.,0.],[x,0.0002,0.],[x,0.,0.000035]]
+        }).collect();
+        let cells = geometry.iter().enumerate().map(|(i,&t)| {
+            let length = mesh::tetra_coefficients(t).unwrap().0.cbrt();
+            volume_current::Cell { mesh_cell:i, potentials:[0,1,2,3], incidence:[[0.;3];4],
+                density_per_amp_m2:1./length.powi(2), resistance_ohm:1./(58e6*length) }
+        }).collect();
+        let space = Space { mesh_nodes:vec![vec![];4], node_potential:BTreeMap::new(), cells,
+            components:vec![vec![0,1,2,3]], planned_bytes:0 };
+        let budget = AllocationBudget { max_bytes:64*1024*1024,max_nodes:1000,max_tetrahedra:1000 };
+        let tree = Operator::new(&geometry,12,1,0.2,0,budget,start,wall).unwrap();
+        let mut records = vec![];
+        for localized in [true,false] {
+            let columns: Vec<Vec<f64>> = (0..4).map(|c| (0..48).map(|r| {
+                if localized && r/3/4 != c {0.} else { if (r+c)%2==0 {1.} else {-0.75} }
+            }).collect()).collect();
+            let goals = vec![1e-12;4];
+            for batch_size in [4,2,1] {
+                let mut covers = vec![];
+                for offset in (0..4).step_by(batch_size) {
+                    covers.push(tree.cover_control(&geometry,&space,&columns[offset..offset+batch_size],&goals[offset..offset+batch_size]).unwrap());
+                }
+                let summed = |key: &str| covers.iter().map(|v|v[key].as_u64().unwrap()).sum::<u64>();
+                // Action work repeats a cover once per RHS (and axis).
+                records.push(serde_json::json!({"localized":localized,"batchSize":batch_size,
+                    "summedCoverVisits":summed("visitedNodePairs"),"summedCoverNear":summed("nearTiles"),
+                    "weightedActionExactPairs":summed("exactPairs")*batch_size as u64,
+                    "weightedActionM2l":summed("m2lScalarContractionsPerAction")*batch_size as u64,"covers":covers}));
+            }
+        }
+        assert!(start.elapsed()<wall);
+        let evidence=serde_json::json!({"scope":"bounded cover diagnostic; unchanged goals and original disjoint thin tetrahedra; no physical acceptance", "records":records});
+        let output=std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../debugging/p7-near-partition-control.json");
+        std::fs::create_dir_all(output.parent().unwrap()).unwrap();
+        std::fs::write(output,serde_json::to_vec_pretty(&evidence).unwrap()).unwrap();
+    }
+    #[test]
     fn hierarchical_signed_original_actions_and_full_kvl_enclosures_match_bounded_reference() {
         let start = Instant::now();
         let wall = Duration::from_secs(1800);
@@ -1479,6 +1523,20 @@ mod tests {
             common_cover["rhsColumns"].as_u64().unwrap() as usize,
             currents.len()
         );
+        let (partition_actions,partition_bounds,partition_certificate)=tree.batch_chunked(&streamed.pair,&space,&currents,&goals,1).unwrap();
+        assert_eq!(partition_certificate["rhsColumns"].as_u64().unwrap() as usize,currents.len());
+        assert_eq!(partition_certificate["chunkCertificates"].as_array().unwrap().len(),currents.len());
+        let mut singleton_results = vec![];
+        for (index, (column, &goal)) in currents.iter().zip(&goals).enumerate() {
+            let (actions,bounds,_) = tree.batch(&streamed.pair,&space,std::slice::from_ref(column),&[goal]).unwrap();
+            for row in 0..column.len() {
+                assert!((actions[0][row]-batch_actions[index][row]).abs() <= bounds[0][row]+batch_bounds[index][row]);
+                assert!(bounds[0][row]<=goal);
+            }
+            assert_eq!(partition_actions[index],actions[0]);
+            assert_eq!(partition_bounds[index],bounds[0]);
+            singleton_results.push((actions[0].clone(),bounds[0].clone()));
+        }
         let mut cases = vec![];
         let mut observed = vec![];
         for (case, current) in currents.iter().enumerate() {
@@ -1514,6 +1572,7 @@ mod tests {
                 .map(|(i, v)| up(v.radius(reference[i]) + reference_bound[i].hi))
                 .collect();
             for row in 0..count {
+                assert!((reference[row]-singleton_results[case].0[row]).abs() <= singleton_results[case].1[row]+reference_error[row], "singleton case{case} row{row}");
                 assert!(
                     (reference[row] - approximate[row]).abs() <= error[row] + reference_error[row],
                     "case{case} row{row}"

@@ -2262,6 +2262,10 @@ mod native_memory_tests {
 fn compact_magnetic_certificate(cover: &serde_json::Value) -> serde_json::Value {
     let mut value = serde_json::json!({"policy":"certified-adaptive-harmonic-v1"});
     for key in [
+        "batchColumns",
+        "chunkCount",
+        "coverAggregation",
+        "chunkCertificates",
         "coverSignature",
         "envelopeSignature",
         "absoluteActionGoals",

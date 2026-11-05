@@ -176,7 +176,101 @@ impl Operator {
             started.elapsed().as_secs_f64(),
         ))
     }
+    #[cfg(test)]
+    pub(super) fn cover_control(
+        &self, tetra: &[[[f64; 3]; 4]], space: &Space,
+        columns: &[Vec<f64>], goals: &[f64],
+    ) -> Result<serde_json::Value> {
+        let started = Instant::now();
+        let (geometry, _) = self.ensure_geometry(tetra)?;
+        let plan = Plan::new(self, &geometry, space, columns, goals)?;
+        let mut self_near = 0usize;
+        let mut shape_near = 0usize;
+        let mut tail_near = 0usize;
+        plan.walk(None, |pair, decision| {
+            if matches!(decision, Decision::Near) {
+                if pair.a == pair.b { self_near += 1; }
+                else {
+                    let (r, q) = self.separation(pair.a, pair.b);
+                    if !q.finite() || q.hi >= 1. || r.lo <= 0. { shape_near += 1; }
+                    else { tail_near += 1; }
+                }
+            }
+            Ok(())
+        })?;
+        let mut evidence = plan.evidence(goals);
+        evidence["nearRejections"] = serde_json::json!({"self":self_near,"overlappingBalls":shape_near,"tailOrderExhausted":tail_near});
+        evidence["controlSeconds"] = serde_json::json!(started.elapsed().as_secs_f64());
+        Ok(evidence)
+    }
+    // Experimental caller-controlled partitioning. Geometry is reused and each
+    // plan is dropped before constructing the next; original goals are sliced
+    // unchanged. Default production dispatch continues to call batch directly.
+    pub(super) fn batch_chunked(
+        &self, pair: &BoundedPairs, space: &Space,
+        columns: &[Vec<f64>], goals: &[f64], chunk_columns: usize,
+    ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
+        if !(1..=64).contains(&chunk_columns) || columns.len()!=goals.len() {
+            return Err(error("HIERARCHICAL_MAGNETIC_GOAL", "chunk columns must be 1..64 with one original goal per column"));
+        }
+        if columns.len()<=chunk_columns { return self.batch_common(pair,space,columns,goals); }
+        let started=Instant::now();
+        let mut actions=Vec::with_capacity(columns.len());
+        let mut bounds=Vec::with_capacity(columns.len());
+        let mut certificates=vec![];
+        for offset in (0..columns.len()).step_by(chunk_columns) {
+            let end=(offset+chunk_columns).min(columns.len());
+            let (mut action,mut bound,certificate)=self.batch_common(pair,space,&columns[offset..end],&goals[offset..end])?;
+            actions.append(&mut action);
+            bounds.append(&mut bound);
+            certificates.push(certificate);
+        }
+        let signature=|key: &str| fnv(std::iter::once(chunk_columns as u64).chain(certificates.iter()
+            .flat_map(|v| v[key].as_str().unwrap().bytes().map(u64::from))));
+        let mut certificate=serde_json::json!({
+            "coverSignature":signature("coverSignature"),
+            "envelopeSignature":signature("envelopeSignature"),
+            "modelRevision":1,"rhsColumns":columns.len(),"absoluteActionGoals":goals,
+            "batchColumns":chunk_columns,"chunkCount":certificates.len(),"coverAggregation":"sum-of-sequential-chunk-covers",
+            "maximumAbsoluteErrorBounds":bounds.iter().map(|b| b.iter().copied().fold(0f64,f64::max)).collect::<Vec<_>>(),
+            "actionWallSeconds":started.elapsed().as_secs_f64()
+        });
+        for key in ["visitedNodePairs","farClusterPairs","nearTiles","exactPairs","zeroBlocks",
+            "m2lScalarContractionsPerAction","shiftStencilApplicationsPerAction"] {
+            certificate[key]=serde_json::json!(certificates.iter().map(|v|v[key].as_u64().unwrap()).sum::<u64>());
+        }
+        certificate["activeEnvelopeTerminals"]=serde_json::json!((0..space.cells.len()).filter(|&i| columns.iter().any(|q| (0..3).any(|axis| q[3*i+axis]!=0.))).count());
+        for (target, source) in [("weightedActionExactPairs","exactPairs"),("weightedActionM2l","m2lScalarContractionsPerAction")] {
+            certificate[target]=serde_json::json!(certificates.iter().map(|v|v[source].as_u64().unwrap()*v["rhsColumns"].as_u64().unwrap()).sum::<u64>());
+        }
+        for key in ["chosenOrderHistogram","maximumMomentDegreeHistogram","maximumLocalDegreeHistogram"] {
+            let n=certificates[0][key].as_array().unwrap().len();
+            certificate[key]=serde_json::json!((0..n).map(|i|certificates.iter().map(|v|v[key][i].as_u64().unwrap()).sum::<u64>()).collect::<Vec<_>>());
+        }
+        for key in ["planPreparationSeconds","geometryMomentPreparationSeconds"] {
+            certificate[key]=serde_json::json!(certificates.iter().map(|v|v[key].as_f64().unwrap()).sum::<f64>());
+        }
+        // These are peak retained cover storage, never simultaneous chunk sums.
+        for key in ["coverCacheEntries","coverCacheBytes"] {
+            certificate[key]=serde_json::json!(certificates.iter().map(|v|v[key].as_u64().unwrap()).max().unwrap());
+        }
+        certificate["coverCacheEnabled"]=serde_json::json!(certificates.iter().all(|v|v["coverCacheEnabled"]==true));
+        certificate["chunkCertificates"]=serde_json::json!(certificates);
+        Ok((actions,bounds,certificate))
+    }
     pub fn batch(
+        &self, pair: &BoundedPairs, space: &Space,
+        columns: &[Vec<f64>], goals: &[f64],
+    ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
+        let chunk = match std::env::var("P7_MAGNETIC_BATCH_COLUMNS") {
+            Err(std::env::VarError::NotPresent) => 0,
+            Ok(raw) => raw.parse::<usize>().ok().filter(|v|*v<=64).ok_or_else(||error("HIERARCHICAL_MAGNETIC_GOAL","P7_MAGNETIC_BATCH_COLUMNS must be an integer 0..64"))?,
+            Err(_) => return Err(error("HIERARCHICAL_MAGNETIC_GOAL","P7_MAGNETIC_BATCH_COLUMNS must be an integer 0..64")),
+        };
+        if chunk==0 {self.batch_common(pair,space,columns,goals)}
+        else {self.batch_chunked(pair,space,columns,goals,chunk)}
+    }
+    fn batch_common(
         &self,
         pair: &BoundedPairs,
         space: &Space,
