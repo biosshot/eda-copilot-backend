@@ -699,7 +699,7 @@ pub(super) fn checked_reserve(
         ));
     }
 
-    let reserve = frequencies_hz.len() * port_count * (port_count * 256 + 512) + 256 * 1024;
+    let reserve = frequencies_hz.len() * port_count * (port_count * 256 + 4096) + 256 * 1024;
     Ok(reserve)
 }
 

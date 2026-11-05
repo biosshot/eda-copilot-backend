@@ -49,7 +49,8 @@ impl Cell {
     }
 }
 
-type MagneticBatch<'a> = dyn Fn(&[Vec<f64>], Instant, Duration) -> Result<Magnetic> + 'a;
+type MagneticBatch<'a> =
+    dyn Fn(&[Vec<f64>], Option<&[f64]>, Instant, Duration) -> Result<Magnetic> + 'a;
 struct Basis {
     voltage: Vec<Vec<f64>>,
     current: Vec<Vec<f64>>,
@@ -116,6 +117,7 @@ pub struct ReducedSpace {
     basis: Basis,
     charges: Vec<Vec<f64>>,
     magnetic_actions: Vec<Vec<f64>>,
+    magnetic_basis_certificate: Option<serde_json::Value>,
     ports: Vec<[usize; 2]>,
     full_potentials: usize,
     max_frequency_hz: f64,
@@ -494,6 +496,7 @@ fn correction(
 struct Magnetic {
     actions: Vec<Vec<f64>>,
     error_bounds: Option<Vec<Vec<f64>>>,
+    certificate: Option<serde_json::Value>,
     reciprocity: f64,
     refinement: f64,
 }
@@ -580,6 +583,7 @@ fn magnetic(
     Ok(Magnetic {
         actions,
         error_bounds: None,
+        certificate: None,
         reciprocity,
         refinement,
     })
@@ -832,16 +836,33 @@ pub(super) fn solve_mixed_grid(
             field.apply(v)
         })
         .collect::<Result<Vec<_>>>()?;
-    let batch = |q: &[Vec<f64>], _, _| -> Result<Magnetic> {
-        let (actions, error_bounds) = magnetic.actions_certified(q)?;
+    let angular_max = 2.
+        * std::f64::consts::PI
+        * grid
+            .frequencies
+            .last()
+            .copied()
+            .ok_or_else(|| error("MIXED_FOIL_GRID", "frequency grid required"))?;
+    let batch = |q: &[Vec<f64>], goals: Option<&[f64]>, _, _| -> Result<Magnetic> {
+        let derived;
+        let goals = if let Some(goals) = goals {
+            goals
+        } else {
+            derived = magnetic.resistive_goals(q, angular_max)?;
+            &derived
+        };
+        let (actions, bounds, certificate) = magnetic.actions_certified(q, goals)?;
         Ok(Magnetic {
             actions,
-            error_bounds,
+            error_bounds: Some(bounds),
+            certificate: Some(certificate),
             reciprocity: 0.,
             refinement: 0.,
         })
     };
-    let (actions, _) = magnetic.actions_certified(&basis.current)?;
+    let initial_magnetic = batch(&basis.current, None, start, wall)?;
+    let actions = initial_magnetic.actions;
+    let basis_certificate = initial_magnetic.certificate;
     let (model, max_electric_reciprocity) =
         make_model(&cells, n, &basis, names, &charges, &actions, ports)?;
     let mut space = ReducedSpace {
@@ -851,6 +872,7 @@ pub(super) fn solve_mixed_grid(
         basis,
         charges,
         magnetic_actions: actions,
+        magnetic_basis_certificate: basis_certificate,
         ports: ports.to_vec(),
         full_potentials: n,
         max_frequency_hz: *grid
@@ -893,6 +915,13 @@ pub(super) fn solve_mixed_grid(
             .map(|partition| (partition, &map.full)),
     )?;
     checked["magneticOperator"] = magnetic.evidence();
+    checked["magneticOperator"]["basisCover"] =
+        space.magnetic_basis_certificate.clone().ok_or_else(|| {
+            error(
+                "HIERARCHICAL_MAGNETIC_POLICY",
+                "common basis cover certificate required",
+            )
+        })?;
     checked["magneticOperator"]["maxFullKvlUncertaintyRelative"] =
         checked["quality"]["maxFullKvlUncertaintyRelative"].clone();
     if let Some(backend) = &dc.partitioned {
@@ -1001,13 +1030,15 @@ fn assemble_impl(
     } else {
         Some((field, dc))
     };
-    let batch = |q: &[Vec<f64>], start, wall| magnetic(&prisms, &density, q, start, wall);
+    let batch = |q: &[Vec<f64>], _goals: Option<&[f64]>, start, wall| {
+        magnetic(&prisms, &density, q, start, wall)
+    };
     let Magnetic {
         actions: magnetic_actions,
         reciprocity: max_magnetic_reciprocity,
         refinement: max_magnetic_refinement,
         ..
-    } = batch(&basis.current, start, wall)?;
+    } = batch(&basis.current, None, start, wall)?;
     let (model, max_electric_reciprocity) = make_model(
         &cells,
         n,
@@ -1025,6 +1056,7 @@ fn assemble_impl(
         basis,
         charges,
         magnetic_actions,
+        magnetic_basis_certificate: None,
         ports: ports.to_vec(),
         full_potentials: n,
         max_frequency_hz,
@@ -1288,7 +1320,7 @@ impl ReducedSpace {
             lift(&self.charges, &re[..nv], nr),
             lift(&self.charges, &im[..nv], nr),
         ];
-        let (l, magnetic_bounds) = if self.native_allocation {
+        let (l, magnetic_bounds, magnetic_certificate) = if self.native_allocation {
             // Certify the original recovered current, not a reduced matrix's
             // own residual or a rounded lift of precomputed basis images.
             let (action, start, wall) = magnetic.ok_or_else(|| {
@@ -1297,7 +1329,38 @@ impl ReducedSpace {
                     "original-state magnetic action callback required",
                 )
             })?;
-            let result = action(&[q[0].clone(), q[1].clone()], start, wall)?;
+            let mut denominator_lower = 0f64;
+            for phase in 0..2 {
+                for (j, cell) in self.cells.iter().enumerate() {
+                    let (_, lower, _) =
+                        super::volume_integral_magnetic::hierarchical_magnetic::kvl_cell(
+                            cell.resistance,
+                            q[phase][j],
+                            &cell.terms,
+                            &v[phase],
+                            0.,
+                            0.,
+                            0.,
+                        )?;
+                    denominator_lower = denominator_lower.max(lower);
+                }
+            }
+            let zero = q.iter().all(|row| row.iter().all(|v| *v == 0.));
+            let goal = if zero {
+                1.
+            } else {
+                super::volume_integral_magnetic::hierarchical_magnetic::action_goal(
+                    denominator_lower,
+                    w,
+                )?
+            };
+            let result = action(
+                &[q[0].clone(), q[1].clone()],
+                Some(&[goal, goal]),
+                start,
+                wall,
+            )?;
+            let certificate = result.certificate;
             let actions: [Vec<f64>; 2] = result.actions.try_into().map_err(|_| {
                 error(
                     "HIERARCHICAL_MAGNETIC_INTERVAL",
@@ -1329,13 +1392,14 @@ impl ReducedSpace {
                     "original action/error shape mismatch",
                 ));
             }
-            (actions, Some(bounds))
+            (actions, Some(bounds), certificate)
         } else {
             (
                 [
                     lift(&self.magnetic_actions, &re[nv..], self.cells.len()),
                     lift(&self.magnetic_actions, &im[nv..], self.cells.len()),
                 ],
+                None,
                 None,
             )
         };
@@ -1424,6 +1488,7 @@ impl ReducedSpace {
             kcl: kcl_rows,
             kvl: kvl_rows,
             kvl_uncertainty_relative,
+            magnetic_certificate,
         })
     }
 }
@@ -1433,6 +1498,7 @@ struct FullResidual {
     kcl: [Vec<f64>; 2],
     kvl: [Vec<f64>; 2],
     kvl_uncertainty_relative: f64,
+    magnetic_certificate: Option<serde_json::Value>,
 }
 impl FullResidual {
     fn checked(&self) -> Result<Residual> {
@@ -1711,10 +1777,29 @@ impl ReducedSpace {
             ));
         }
         if self.basis.current.len() > ni {
-            let added = magnetic(&self.basis.current[ni..], start, wall)?;
+            let common = if self.native_allocation {
+                &self.basis.current[..]
+            } else {
+                &self.basis.current[ni..]
+            };
+            let added = magnetic(common, None, start, wall)?;
             self.max_magnetic_reciprocity = self.max_magnetic_reciprocity.max(added.reciprocity);
             self.max_magnetic_refinement = self.max_magnetic_refinement.max(added.refinement);
-            self.magnetic_actions.extend(added.actions);
+            if self.native_allocation {
+                let revision = self
+                    .magnetic_basis_certificate
+                    .as_ref()
+                    .and_then(|v| v["modelRevision"].as_u64())
+                    .unwrap_or(0)
+                    + 1;
+                self.magnetic_actions = added.actions;
+                self.magnetic_basis_certificate = added.certificate;
+                if let Some(certificate) = &mut self.magnetic_basis_certificate {
+                    certificate["modelRevision"] = serde_json::json!(revision);
+                }
+            } else {
+                self.magnetic_actions.extend(added.actions);
+            }
         }
         let (model, reciprocity) = make_model(
             &self.cells,
@@ -1844,6 +1929,7 @@ impl ReducedSpace {
                         )?;
                         let norm = residual.norm;
                         let kvl_uncertainty_relative = residual.kvl_uncertainty_relative;
+                        let magnetic_certificate = residual.magnetic_certificate.clone();
                         max_kcl = max_kcl.max(norm.kcl_relative);
                         max_kvl = max_kvl.max(norm.kvl_relative);
                         max_kvl_uncertainty = max_kvl_uncertainty.max(kvl_uncertainty_relative);
@@ -1908,6 +1994,10 @@ impl ReducedSpace {
                         max_power = max_power.max(power_error);
                         let mut column = json!({"input":input,"kclRelative":norm.kcl_relative,
                             "kvlRelative":norm.kvl_relative,"kvlUncertaintyRelative":kvl_uncertainty_relative,"copperLossW":copper,"powerBalanceErrorW":power_error});
+                        if let Some(certificate) = magnetic_certificate {
+                            column["magneticCertificate"] =
+                                compact_magnetic_certificate(&certificate);
+                        }
                         if !package_samples.is_empty() {
                             column["packages"] = json!(package_samples);
                         }
@@ -2078,3 +2168,25 @@ mod native_memory_tests {
         .is_err());
     }
 }
+
+fn compact_magnetic_certificate(cover: &serde_json::Value) -> serde_json::Value {
+    let mut value = serde_json::json!({"policy":"certified-adaptive-harmonic-v1"});
+    for key in [
+        "coverSignature",
+        "envelopeSignature",
+        "absoluteActionGoals",
+        "maximumAbsoluteErrorBounds",
+        "chosenOrderHistogram",
+        "farClusterPairs",
+        "exactPairs",
+        "zeroBlocks",
+        "activeEnvelopeTerminals",
+        "actionWallSeconds",
+    ] {
+        value[key] = cover[key].clone();
+    }
+    value
+}
+#[cfg(test)]
+#[path = "adaptive_magnetic_bench.rs"]
+mod adaptive_magnetic_bench;

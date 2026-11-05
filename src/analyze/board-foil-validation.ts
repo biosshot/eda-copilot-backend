@@ -1,4 +1,4 @@
-import type { AnalysisBoardFoilCheckedReport, AnalysisBoardFoilCheckedRequest } from '../../native/analyze/index.js';
+import type { AnalysisBoardFoilCheckedReport, AnalysisBoardFoilCheckedRequest, AnalysisMagneticCertificate } from '../../native/analyze/index.js';
 import type { BoardFoilProblem } from './types.ts';
 import type { CoupledRlcData } from './analysis-dsl/spec-doc.js';
 
@@ -6,12 +6,29 @@ const fail=(message:string):never=>{throw new Error('CHANNEL_FOIL_EVIDENCE: '+me
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
 const positive=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value)&&value>0;
 
+function validateMagneticCover(cover:Omit<AnalysisMagneticCertificate,'policy'>|undefined,rhs:number,originals:number,minimumColumns=1):void {
+ const count=(value:unknown):value is number=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0;
+ if(!cover||!/^fnv1a64:[0-9a-f]{16}$/.test(cover.coverSignature)||
+    !/^fnv1a64:[0-9a-f]{16}$/.test(cover.envelopeSignature)||!count(rhs)||rhs<minimumColumns||
+    !Array.isArray(cover.absoluteActionGoals)||cover.absoluteActionGoals.length!==rhs||
+    !cover.absoluteActionGoals.every(positive)||
+    !Array.isArray(cover.maximumAbsoluteErrorBounds)||cover.maximumAbsoluteErrorBounds.length!==rhs||
+    cover.maximumAbsoluteErrorBounds.some((value,i)=>!Number.isFinite(value)||value<0||value>cover.absoluteActionGoals[i])||
+    !Array.isArray(cover.chosenOrderHistogram)||cover.chosenOrderHistogram.length!==13||
+    !cover.chosenOrderHistogram.every(count)||
+    ![cover.farClusterPairs,cover.exactPairs,cover.zeroBlocks,cover.activeEnvelopeTerminals].every(count)||
+    cover.chosenOrderHistogram.reduce((sum,n)=>sum+n,0)!==cover.farClusterPairs||
+    cover.activeEnvelopeTerminals>originals||(rhs===0&&cover.activeEnvelopeTerminals!==0)||
+    !Number.isFinite(cover.actionWallSeconds)||cover.actionWallSeconds<0)
+  fail('missing or inconsistent adaptive common-cover action certificate');
+}
+
 function validateMagneticOperator(report:AnalysisBoardFoilCheckedReport):void {
  const p=report.provenance,operator=p.magneticOperator;
  const columns=report.samples.flatMap(sample=>sample.columns);
  if(p.modelKind==='foil'){
   if(operator!==undefined||report.quality.maxFullKvlUncertaintyRelative!==undefined||
-     columns.some(column=>column.kvlUncertaintyRelative!==undefined))
+     columns.some(column=>column.kvlUncertaintyRelative!==undefined||column.magneticCertificate!==undefined))
    fail('unexpected mixed magnetic operator certificate on a foil result');
   return;
  }
@@ -25,7 +42,8 @@ function validateMagneticOperator(report:AnalysisBoardFoilCheckedReport):void {
     Math.max(...columns.map(column=>column.kvlUncertaintyRelative!))!==uncertainty)
   return fail('missing or inconsistent original-coordinate magnetic KVL uncertainty');
  if(operator.policy==='exact-streamed-v1'){
-  if(operator.method!=='unchanged direct tetrahedral pairs'||uncertainty!==0)
+  if(operator.method!=='unchanged direct tetrahedral pairs'||uncertainty!==0||
+     columns.some(column=>column.magneticCertificate!==undefined))
    fail('exact magnetic operator unexpectedly reports truncation uncertainty');
   return;
  }
@@ -33,29 +51,33 @@ function validateMagneticOperator(report:AnalysisBoardFoilCheckedReport):void {
  const levels=Math.ceil(Math.log2(p.nativeCopperTetrahedra))+1;
  const stackSlots=4*levels;
  const traversalBytes=16*stackSlots+6*levels*8+512;
- if(operator.policy!=='certified-cartesian-tree-v1'||operator.method!=='symmetric dual-tree Newton expansion'||
-    operator.expansionOrder!==10||operator.separationRatioMaximum!==0.2||
-    operator.representationVersion!==2||operator.harmonicBasis!=='laplace-quotient-z01'||
-    operator.momentCoefficientCount!==121||operator.m2lCouplings!==2926||operator.shiftStencilTerms!==2108||
+ if(operator.policy!=='certified-adaptive-harmonic-v1'||operator.method!=='symmetric adaptive Newton expansion'||
+    operator.expansionOrder!==12||operator.minimumExpansionOrder!==0||operator.separationRatioMaximum!==1||
+    operator.admissibility!=='strict-disjoint-balls-certified-tail'||
+    operator.representationVersion!==3||operator.harmonicBasis!=='laplace-quotient-z01'||
+    operator.momentCoefficientCount!==169||operator.m2lCouplings!==5551||operator.shiftStencilTerms!==3619||
     operator.axisSerial!==true||operator.leafTetrahedra!==1||
-    operator.interactionStorage!=='immutable-dual-tree-v1'||
+    operator.interactionStorage!=='immutable-adaptive-dual-tree-v1'||
     operator.interactionLevels!==levels||operator.interactionStackSlots!==stackSlots||
     operator.interactionReplaysPerAction!==3||
     operator.traversalStorageBytes!==traversalBytes||traversalBytes>operator.plannedBytes||
-    !count(operator.visitedNodePairs)||operator.visitedNodePairs<1||
     !count(operator.treeNodes)||operator.treeNodes<1||
-    !count(operator.exactPairs)||operator.exactPairs<1||!count(operator.farClusterPairs)||
     !count(operator.plannedBytes)||operator.plannedBytes<1||operator.plannedBytes>p.plannedBytes||
-    !/^fnv1a64:[0-9a-f]{16}$/.test(operator.treeSignature))
+    !/^fnv1a64:[0-9a-f]{16}$/.test(operator.geometrySignature)||operator.treeSignature!==operator.geometrySignature)
   fail('unsupported or incomplete certified magnetic tree identity');
- const costs=[
-  [operator.m2lScalarContractionsPerAxis,2926*operator.farClusterPairs],
-  [operator.m2lScalarContractionsPerAction,8778*operator.farClusterPairs],
-  [operator.shiftStencilApplicationsPerAction,6*(operator.treeNodes-1)*2108],
-  [operator.visitedNodePairsPerAction,3*operator.visitedNodePairs],
- ];
- if(costs.some(([value,expected])=>value!==undefined&&(!count(value)||!count(expected)||value!==expected)))
+ const cover=operator.basisCover;
+ validateMagneticCover(cover,cover?.rhsColumns,p.nativeCopperTetrahedra,0);
+ if(!count(cover.modelRevision)||cover.modelRevision<1||!count(cover.visitedNodePairs)||cover.visitedNodePairs<1||
+    !count(cover.nearTiles)||
+    [cover.maximumMomentDegreeHistogram,cover.maximumLocalDegreeHistogram].some(hist=>
+     !Array.isArray(hist)||hist.length!==13||!hist.every(count))||
+    [cover.m2lScalarContractionsPerAction,cover.shiftStencilApplicationsPerAction].some(value=>value!==undefined&&!count(value)))
   fail('inconsistent immutable magnetic interaction cost evidence');
+ for(const column of columns){
+  if(column.magneticCertificate?.policy!==operator.policy)
+   fail('fresh original-current adaptive magnetic certificate missing');
+  validateMagneticCover(column.magneticCertificate,2,p.nativeCopperTetrahedra);
+ }
 }
 
 function validatePartition(report:AnalysisBoardFoilCheckedReport,problem:BoardFoilProblem):void {

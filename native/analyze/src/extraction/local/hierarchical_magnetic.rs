@@ -3,6 +3,9 @@
 use super::{check_deadline, error, AllocationBudget, BoundedPairs, Result, Space};
 use std::time::{Duration, Instant};
 
+#[path = "adaptive_magnetic.rs"]
+pub(super) mod adaptive;
+
 #[derive(Clone, Copy, Debug)]
 pub(super) struct Interval {
     pub lo: f64,
@@ -313,6 +316,9 @@ pub(super) struct Operator {
     harmonic: Harmonic,
     shifts: [Vec<Shift>; 3],
     couplings: Vec<Coupling>,
+    coupling_prefix: Vec<usize>,
+    shift_prefix: [Vec<usize>; 3],
+    geometry_cache: std::cell::RefCell<Option<adaptive::Geometry>>,
     pub planned_bytes: usize,
     pub exact_pairs: usize,
     signature: String,
@@ -412,9 +418,17 @@ impl Operator {
         let harmonic = Harmonic::new(&powers);
         let mut shifts: [Vec<Shift>; 3] =
             std::array::from_fn(|axis| Vec::with_capacity(shift_counts[axis]));
-        for (source, &g) in harmonic.list.iter().enumerate() {
-            for axis in 0..3 {
-                for k in 0..=order - degree(g) {
+        let mut shift_prefix: [Vec<usize>; 3] =
+            std::array::from_fn(|_| Vec::with_capacity(order + 1));
+        let mut couplings = Vec::with_capacity(coupling_count);
+        let mut coupling_prefix = Vec::with_capacity(order + 1);
+        for d in 0..=order {
+            for (source, &g) in harmonic.list.iter().enumerate() {
+                if degree(g) > d {
+                    continue;
+                }
+                let k = d - degree(g);
+                for axis in 0..3 {
                     let mut raw = g;
                     raw[axis] += k;
                     let half = raw[2] / 2;
@@ -433,19 +447,22 @@ impl Operator {
                     }
                 }
             }
-        }
-        let mut couplings = Vec::with_capacity(coupling_count);
-        for (target, &h) in harmonic.list.iter().enumerate() {
-            for (source, &g) in harmonic.list.iter().enumerate() {
-                if degree(h) + degree(g) <= order {
-                    couplings.push(Coupling {
-                        target,
-                        source,
-                        jet: powers.at(plus(h, g)),
-                        source_degree: degree(g),
-                    });
+            for axis in 0..3 {
+                shift_prefix[axis].push(shifts[axis].len());
+            }
+            for (target, &h) in harmonic.list.iter().enumerate() {
+                for (source, &g) in harmonic.list.iter().enumerate() {
+                    if degree(h) + degree(g) == d {
+                        couplings.push(Coupling {
+                            target,
+                            source,
+                            jet: powers.at(plus(h, g)),
+                            source_degree: degree(g),
+                        });
+                    }
                 }
             }
+            coupling_prefix.push(couplings.len());
         }
         let mut result = Self {
             nodes: Vec::with_capacity(node_bound),
@@ -460,6 +477,9 @@ impl Operator {
             harmonic,
             shifts,
             couplings,
+            coupling_prefix,
+            shift_prefix,
+            geometry_cache: std::cell::RefCell::new(None),
             planned_bytes: work,
             exact_pairs: 0,
             signature: String::new(),
@@ -484,7 +504,7 @@ impl Operator {
                 hash = hash.wrapping_mul(0x100000001b3);
             }
         };
-        stamp(3); // immutable streamed interaction representation; harmonic basis remains2
+        stamp(4); // adaptive harmonic geometry identity; RHS covers are separate
         stamp(order as u64);
         stamp(leaf as u64);
         stamp(qmax.to_bits());
@@ -506,16 +526,8 @@ impl Operator {
             stamp(node.range[0] as u64);
             stamp(node.range[1] as u64);
         }
-        // A rolling stream stamp binds the immutable pair cover without
-        // retaining or serializing millions of descriptors.
-        let counts = result.walk(|pair, far| {
-            stamp(u64::from(far));
-            stamp(pair.a as u64);
-            stamp(pair.b as u64);
-            Ok(())
-        })?;
-        result.exact_pairs = counts.exact;
-        result.interactions = counts;
+        // Staticgeometry signature. Adaptivecovers/envelopes are separately
+        // identified on every common-batch model revision and physicaloracle.
         result.signature = format!("fnv1a64:{hash:016x}");
         budget.check(
             base.checked_add(result.planned_bytes)
@@ -860,28 +872,31 @@ impl Operator {
         }
         Ok(result)
     }
-    fn shifted(
+    fn shifted_required(
         &self,
         input: &[Interval],
         parent: usize,
         child: usize,
         transpose: bool,
+        cap: usize,
     ) -> Vec<Interval> {
         let (offset, scale) = self.offset(parent, child);
         let mut values = input.to_vec();
-        let scales: Vec<_> = (0..=self.powers.order).map(|d| scale.pow(d)).collect();
+        let scales: Vec<_> = (0..=cap).map(|d| scale.pow(d)).collect();
         if !transpose {
-            for (v, &a) in values.iter_mut().zip(&self.harmonic.list) {
+            for (v, &a) in values
+                .iter_mut()
+                .zip(&self.harmonic.list)
+                .take_while(|(_, a)| degree(**a) <= cap)
+            {
                 *v = v.mul(scales[degree(a)]);
             }
         }
         let axes = if transpose { [2, 1, 0] } else { [0, 1, 2] };
         for axis in axes {
-            let powers: Vec<_> = (0..=self.powers.order)
-                .map(|d| offset[axis].pow(d))
-                .collect();
+            let powers: Vec<_> = (0..=cap).map(|d| offset[axis].pow(d)).collect();
             let mut next = vec![Interval::zero(); values.len()];
-            for term in &self.shifts[axis] {
+            for term in self.shifts[axis].iter().take(self.shift_prefix[axis][cap]) {
                 let factor = term.weight.mul(powers[term.power]);
                 let (target, source) = if transpose {
                     (term.source, term.target)
@@ -893,204 +908,78 @@ impl Operator {
             values = next;
         }
         if transpose {
-            for (v, &a) in values.iter_mut().zip(&self.harmonic.list) {
+            for (v, &a) in values
+                .iter_mut()
+                .zip(&self.harmonic.list)
+                .take_while(|(_, a)| degree(**a) <= cap)
+            {
                 *v = v.mul(scales[degree(a)]);
             }
         }
         values
     }
-    pub fn evidence(&self) -> serde_json::Value {
-        let c = &self.interactions;
-        let radii:Vec<_>=self.radius_histogram.iter().enumerate().filter(|(_,n)|**n>0).map(|(i,&n)|serde_json::json!({"log2RadiusMetersFloor":i as i32-48,"terminalNodes":n,"clamped":i==0||i==63})).collect();
-        serde_json::json!({"policy":"certified-cartesian-tree-v1","method":"symmetric dual-tree Newton expansion","expansionOrder":self.powers.order,"separationRatioMaximum":self.qmax,"treeNodes":self.nodes.len(),"representationVersion":2,"harmonicBasis":"laplace-quotient-z01","momentCoefficientCount":self.harmonic.list.len(),"m2lCouplings":self.couplings.len(),"shiftStencilTerms":self.shifts.iter().map(Vec::len).sum::<usize>(),"axisSerial":true,"leafTetrahedra":self.leaf,"treeSignature":self.signature,
-            "interactionStorage":"immutable-dual-tree-v1","interactionStackSlots":self.traversal_capacity,"interactionLevels":self.traversal_levels,"traversalStorageBytes":self.traversal_capacity*std::mem::size_of::<Pair>()+6*self.traversal_levels*std::mem::size_of::<usize>()+64*std::mem::size_of::<usize>(),"interactionReplaysPerAction":3,
-            "visitedNodePairs":c.visited,"exactPairs":self.exact_pairs,"nearTiles":c.near,"farClusterPairs":c.far,
-            "m2lScalarContractionsPerAxis":c.far as u128*self.couplings.len()as u128,
-            "m2lScalarContractionsPerAction":3*c.far as u128*self.couplings.len()as u128,
-            "shiftStencilApplicationsPerAction":6*(self.nodes.len()-1)as u128*self.shifts.iter().map(Vec::len).sum::<usize>()as u128,
-            "visitedNodePairsPerAction":3*c.visited as u128,"pairDepthConvention":"maximum of source and target node depth",
-            "farBlocksByDepth":c.far_by_depth,"nearTilesByDepth":c.near_by_depth,"exactPairsByDepth":c.exact_by_depth,
-            "terminalRadiusMinimumM":self.minimum_radius,"terminalRadiusMaximumM":self.maximum_radius,"terminalRadiusLog2MetersHistogram":radii,
-            "plannedBytes":self.planned_bytes,"scope":"far truncation and arithmetic enclosure; existing near/self quadrature, mesh and physical coverage remain unverified; streamed traversal storage does not certify action runtime"})
-    }
-    pub fn apply(
+    fn jet_required(
         &self,
-        pair: &BoundedPairs,
-        space: &Space,
-        current: &[f64],
-    ) -> Result<(Vec<f64>, Vec<f64>)> {
-        check_deadline(self.start, self.wall)?;
-        let action_started = Instant::now();
-        let n = pair.tetra.len();
-        let rank = self.harmonic.list.len();
-        if current.len() != 3 * n || current.iter().any(|v| !v.is_finite()) {
+        a: usize,
+        b: usize,
+        p: usize,
+    ) -> Result<(Vec<Interval>, Interval, Interval, Interval)> {
+        let (r, q) = self.separation(a, b);
+        if !q.finite() || q.hi >= 1. || r.lo <= 0. {
             return Err(error(
-                "MAGNETIC_INPUT",
-                "finite original three-axis current column required",
+                "HIERARCHICAL_MAGNETIC_INTERVAL",
+                "strictly disjoint source balls required",
             ));
         }
-        let mut action = vec![0.; 3 * n];
-        let mut action_error = vec![0.; 3 * n];
-        let mut near = vec![Interval::zero(); 3 * n];
-        // Each Cartesian axis is an independent Newton action. Packed state is
-        // released between axes; no3axis*allnodes interval slab is retained.
-        for axis in 0..3 {
-            let mut moments = Packed::new(self.nodes.len(), &self.harmonic);
-            let mut local = Packed::new(self.nodes.len(), &self.harmonic);
-            let mut tv = vec![Interval::zero(); self.nodes.len()];
-            let mut tails = tv.clone();
-            for (node, geometry) in self.nodes.iter().enumerate() {
-                if geometry.children.is_some() {
-                    continue;
+        let direction: [Interval; 3] = std::array::from_fn(|k| {
+            Interval::point(self.nodes[a].center[k])
+                .sub(Interval::point(self.nodes[b].center[k]))
+                .div(r)
+        });
+        let rank = (p + 1) * (p + 2) * (p + 3) / 6;
+        let mut result = vec![Interval::zero(); rank];
+        result[0] = Interval::one();
+        for (i, &alpha) in self.powers.list.iter().take(rank).enumerate().skip(1) {
+            let n = degree(alpha);
+            let mut linear = Interval::zero();
+            let mut quadratic = Interval::zero();
+            for axis in 0..3 {
+                if alpha[axis] > 0 {
+                    let mut lower = alpha;
+                    lower[axis] -= 1;
+                    linear = linear.add(direction[axis].mul(result[self.powers.at(lower)]));
                 }
-                let mut values = vec![Interval::zero(); rank];
-                for &i in &self.permutation[geometry.range[0]..geometry.range[1]] {
-                    check_deadline(self.start, self.wall)?;
-                    let q = self.quotient(pair.tetra[i], node)?;
-                    let density = Interval::point(space.cells[i].density_per_amp_m2);
-                    let source = density.mul(Interval::point(current[3 * i + axis]));
-                    tv[node] = tv[node].add(
-                        density
-                            .mul(Interval::point(current[3 * i + axis].abs()))
-                            .mul(q[0]),
-                    );
-                    for k in 0..rank {
-                        values[k] = values[k].add(source.mul(q[k]));
-                    }
-                }
-                moments.write(node, &self.harmonic, &values)?;
-            }
-            for parent in (0..self.nodes.len()).rev() {
-                if let Some(children) = self.nodes[parent].children {
-                    for child in children {
-                        check_deadline(self.start, self.wall)?;
-                        tv[parent] = tv[parent].add(tv[child]);
-                        let shifted = self.shifted(
-                            &moments.read(child, &self.harmonic),
-                            parent,
-                            child,
-                            false,
-                        );
-                        moments.add(parent, &self.harmonic, &shifted)?;
-                    }
+                if alpha[axis] > 1 {
+                    let mut lower = alpha;
+                    lower[axis] -= 2;
+                    quadratic = quadratic.add(result[self.powers.at(lower)]);
                 }
             }
-            self.walk(|block, far| {
-                if !far {
-                    if axis == 0 {
-                        let a = &self.nodes[block.a];
-                        let b = &self.nodes[block.b];
-                        for x in a.range[0]..a.range[1] {
-                            for y in b.range[0]..b.range[1] {
-                                if block.a == block.b && y > x {
-                                    continue;
-                                }
-                                check_deadline(self.start, self.wall)?;
-                                let i = self.permutation[x];
-                                let j = self.permutation[y];
-                                let value = pair.pair(i.max(j), i.min(j))?;
-                                let coefficient = Interval::point(1e-7)
-                                    .mul(Interval::point(space.cells[i].density_per_amp_m2))
-                                    .mul(Interval::point(space.cells[j].density_per_amp_m2))
-                                    .mul(Interval::point(value));
-                                for axis in 0..3 {
-                                    near[3 * i + axis] = near[3 * i + axis].add(
-                                        coefficient.mul(Interval::point(current[3 * j + axis])),
-                                    );
-                                    if i != j {
-                                        near[3 * j + axis] = near[3 * j + axis].add(
-                                            coefficient.mul(Interval::point(current[3 * i + axis])),
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    return Ok(());
-                }
-
-                check_deadline(self.start, self.wall)?;
-                let (mut derivatives, tail, sa, sb) = self.jet(block.a, block.b)?;
-                let (r, _) = self.separation(block.a, block.b);
-                for (value, &a) in derivatives.iter_mut().zip(&self.powers.list) {
-                    *value = value
-                        .mul(Interval::point(
-                            (factorial(a[0]) * factorial(a[1]) * factorial(a[2])) as f64,
-                        ))
-                        .div(r);
-                }
-                tails[block.a] = tails[block.a].add(tail.mul(tv[block.b]));
-                tails[block.b] = tails[block.b].add(tail.mul(tv[block.a]));
-                let pa: Vec<_> = (0..=self.powers.order).map(|d| sa.pow(d)).collect();
-                let pb: Vec<_> = (0..=self.powers.order).map(|d| sb.pow(d)).collect();
-                let mut ma = moments.read(block.a, &self.harmonic);
-                let mut mb = moments.read(block.b, &self.harmonic);
-                for (i, &a) in self.harmonic.list.iter().enumerate() {
-                    ma[i] = ma[i].mul(pa[degree(a)]);
-                    mb[i] = mb[i].mul(pb[degree(a)]);
-                }
-                let mut la = vec![Interval::zero(); rank];
-                let mut lb = la.clone();
-                for term in &self.couplings {
-                    let mut value = derivatives[term.jet];
-                    if term.source_degree % 2 == 1 {
-                        value = value.neg();
-                    }
-                    la[term.target] = la[term.target].add(value.mul(mb[term.source]));
-                    lb[term.source] = lb[term.source].add(value.mul(ma[term.target]));
-                }
-                for (i, &a) in self.harmonic.list.iter().enumerate() {
-                    la[i] = la[i].mul(pa[degree(a)]);
-                    lb[i] = lb[i].mul(pb[degree(a)]);
-                }
-                local.add(block.a, &self.harmonic, &la)?;
-                local.add(block.b, &self.harmonic, &lb)?;
-
-                Ok(())
-            })?;
-            for parent in 0..self.nodes.len() {
-                if let Some(children) = self.nodes[parent].children {
-                    for child in children {
-                        check_deadline(self.start, self.wall)?;
-                        tails[child] = tails[child].add(tails[parent]);
-                        let shifted =
-                            self.shifted(&local.read(parent, &self.harmonic), parent, child, true);
-                        local.add(child, &self.harmonic, &shifted)?;
-                    }
-                }
-            }
-            let mut out = vec![Interval::zero(); n];
-            let mut truncation = vec![0f64; n];
-            for (node, geometry) in self.nodes.iter().enumerate() {
-                if geometry.children.is_some() {
-                    continue;
-                }
-                let values = local.read(node, &self.harmonic);
-                for &i in &self.permutation[geometry.range[0]..geometry.range[1]] {
-                    check_deadline(self.start, self.wall)?;
-                    let target = self.quotient(pair.tetra[i], node)?;
-                    let density = Interval::point(1e-7)
-                        .mul(Interval::point(space.cells[i].density_per_amp_m2));
-                    out[i] = sum((0..rank).map(|k| values[k].mul(target[k]))).mul(density);
-                    truncation[i] = density.mul(target[0]).mul(tails[node]).hi.max(0.);
-                }
-            }
-            for (i, far_value) in out.into_iter().enumerate() {
-                let value = far_value.add(near[3 * i + axis]);
-                let mid = value.mid();
-                let uncertainty = up(value.radius(mid) + truncation[i]);
-                if !value.finite() || !mid.is_finite() || !uncertainty.is_finite() {
-                    return Err(error(
-                        "HIERARCHICAL_MAGNETIC_INTERVAL",
-                        "original harmonic action enclosure overflow",
-                    ));
-                }
-                action[3 * i + axis] = mid;
-                action_error[3 * i + axis] = uncertainty;
-            }
+            result[i] = linear
+                .mul(Interval::point((2 * n - 1) as f64))
+                .add(quadratic.mul(Interval::point((n - 1) as f64)))
+                .neg()
+                .div(Interval::point(n as f64));
         }
-        eprintln!("P7_HIERARCHICAL_ACTION originalCurrents={} harmonicCoefficients={} m2lCouplings={} farClusterPairs={} exactPairs={} elapsedSeconds={:.6}",3*n,rank,self.couplings.len(),self.interactions.far,self.exact_pairs,action_started.elapsed().as_secs_f64());
-        Ok((action, action_error))
+        let remainder = Interval::one()
+            .div(r)
+            .mul(q.pow(p + 1))
+            .div(Interval::one().sub(q));
+        if result.iter().any(|v| !v.finite()) || !remainder.finite() {
+            return Err(error(
+                "HIERARCHICAL_MAGNETIC_INTERVAL",
+                "adaptive Taylor interval overflow",
+            ));
+        }
+        Ok((
+            result,
+            remainder,
+            Interval::point(self.nodes[a].radius).div(r),
+            Interval::point(self.nodes[b].radius).div(r),
+        ))
+    }
+    pub fn evidence(&self) -> serde_json::Value {
+        serde_json::json!({"policy":"certified-adaptive-harmonic-v1","method":"symmetric adaptive Newton expansion","representationVersion":3,"harmonicBasis":"laplace-quotient-z01","expansionOrder":self.powers.order,"minimumExpansionOrder":0,"momentCoefficientCount":self.harmonic.list.len(),"m2lCouplings":self.couplings.len(),"shiftStencilTerms":self.shifts.iter().map(Vec::len).sum::<usize>(),"axisSerial":true,"leafTetrahedra":self.leaf,"geometrySignature":self.signature,"treeSignature":self.signature,"treeNodes":self.nodes.len(),"separationRatioMaximum":1.,"admissibility":"strict-disjoint-balls-certified-tail","interactionStorage":"immutable-adaptive-dual-tree-v1","interactionLevels":self.traversal_levels,"interactionStackSlots":self.traversal_capacity,"interactionReplaysPerAction":3,"traversalStorageBytes":self.traversal_capacity*std::mem::size_of::<Pair>()+6*self.traversal_levels*std::mem::size_of::<usize>()+512,"plannedBytes":self.planned_bytes,"scope":"common-batch goal-controlled far Newton error plus arithmetic enclosure; original near/self quadrature, spatial/physical accuracy unverified"})
     }
 }
 fn volume(t: [[f64; 3]; 4]) -> Result<Interval> {
@@ -1373,14 +1262,13 @@ mod tests {
             max_nodes: 1000,
             max_tetrahedra: 1000,
         };
-        let tree = Operator::new(&geometry, 10, 1, 0.2, 0, budget, start, wall).unwrap();
-        assert_eq!(tree.harmonic.list.len(), 121);
-        assert_eq!(tree.couplings.len(), 2926);
+        let tree = Operator::new(&geometry, 12, 1, 0.2, 0, budget, start, wall).unwrap();
+        assert_eq!(tree.harmonic.list.len(), 169);
+        assert_eq!(tree.couplings.len(), 5551);
         assert_eq!(
             tree.shifts.iter().map(Vec::len).collect::<Vec<_>>(),
-            vec![506, 506, 1096]
+            vec![819, 819, 1981]
         );
-        assert!(tree.interactions.far > 0);
         let mut tiny_near = vec![];
         let mut tiny_far = vec![];
         let replay = tree
@@ -1393,8 +1281,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-        assert_eq!(replay.visited, tree.interactions.visited);
-        assert!(tree.exact_pairs > 0);
+        assert!(replay.visited > 0 && replay.far > 0);
         let tile_pairs: usize = tiny_near
             .iter()
             .map(|pair| {
@@ -1417,7 +1304,7 @@ mod tests {
                 (a[1] - a[0]) * (b[1] - b[0])
             })
             .sum();
-        assert_eq!(tile_pairs, tree.exact_pairs);
+        assert_eq!(tile_pairs, replay.exact);
         assert_eq!(
             tile_pairs + far_pairs,
             geometry.len() * (geometry.len() + 1) / 2
@@ -1426,9 +1313,10 @@ mod tests {
         // mesh or an additional electromagnetic acceptance case.
         let colocated = vec![geometry[0]; 4];
         let tiles = Operator::new(&colocated, 10, 1, 0.2, 0, budget, start, wall).unwrap();
-        assert_eq!(tiles.interactions.far, 0);
-        assert_eq!(tiles.interactions.near, 1);
-        assert_eq!(tiles.exact_pairs, 10);
+        let tile_counts = tiles.walk(|_, _| Ok(())).unwrap();
+        assert_eq!(tile_counts.far, 0);
+        assert_eq!(tile_counts.near, 1);
+        assert_eq!(tile_counts.exact, 10);
 
         let (owned, slots) = BoundedPairs::plan(geometry.len(), 12, 0, budget).unwrap();
         let pair = BoundedPairs::new(geometry.clone(), 12, slots, start, wall).unwrap();
@@ -1443,6 +1331,20 @@ mod tests {
             wall,
         };
         let tree = streamed.hierarchical.as_ref().unwrap();
+        for (node, shape) in tree.nodes.iter().enumerate() {
+            if shape.children.is_none() {
+                let original = tree.permutation[shape.range[0]];
+                let old = tree.quotient(geometry[original], node).unwrap();
+                let fast = tree.fast_quotient(geometry[original], node).unwrap();
+                for (a, b) in old.iter().zip(&fast) {
+                    assert!(
+                        a.lo <= b.hi && b.lo <= a.hi,
+                        "independent quotient recurrence mismatch"
+                    );
+                }
+            }
+        }
+
         let points: Vec<_> = geometry.iter().copied().map(samples).collect();
         let mut reference_tree =
             Operator::new(&geometry, 12, 1, 0.49, 0, budget, start, wall).unwrap();
@@ -1501,14 +1403,44 @@ mod tests {
             .collect();
         currents.push(signed.clone());
         currents.push(signed.iter().map(|v| -v).collect());
+        currents.push(signed.iter().map(|v| v * 1e8).collect());
+        currents.push(vec![0.; count]);
+        let goals: Vec<_> = currents
+            .iter()
+            .map(|q| {
+                let mut scale = 0f64;
+                for i in 0..geometry.len() {
+                    for axis in 0..3 {
+                        let row = (0..geometry.len())
+                            .map(|j| {
+                                1e-7 * space.cells[i].density_per_amp_m2
+                                    * space.cells[j].density_per_amp_m2
+                                    * kernel[i][j].0
+                                    * q[3 * j + axis]
+                            })
+                            .sum::<f64>();
+                        scale = scale.max(row.abs());
+                    }
+                }
+                if scale == 0. {
+                    1.
+                } else {
+                    scale * 1e-11
+                }
+            })
+            .collect();
+        let (batch_actions, batch_bounds, common_cover) =
+            streamed.actions_certified(&currents, &goals).unwrap();
+        assert_eq!(
+            common_cover["rhsColumns"].as_u64().unwrap() as usize,
+            currents.len()
+        );
         let mut cases = vec![];
         let mut observed = vec![];
         for (case, current) in currents.iter().enumerate() {
             check_deadline(start, wall).unwrap();
-            let (mut action, mut enclosure) =
-                streamed.actions_certified(&[current.clone()]).unwrap();
-            let approximate = action.remove(0);
-            let error = enclosure.as_mut().unwrap().remove(0);
+            let approximate = batch_actions[case].clone();
+            let error = batch_bounds[case].clone();
             let mut exact = vec![Interval::zero(); count];
             let mut reference_bound = vec![Interval::zero(); count];
             for i in 0..geometry.len() {
@@ -1547,7 +1479,7 @@ mod tests {
                 observed.push(approximate.clone());
             }
             let mut packet = serde_json::json!({"current":current,"exactAction":reference,"approximateAction":approximate,"absoluteErrorBound":error,"referenceErrorBound":reference_error,"frequencyHz":1000.});
-            if case >= count {
+            if case >= count && current.iter().any(|v| *v != 0.) {
                 let w = 2. * std::f64::consts::PI * 1000.;
                 let mut approximation_residual = vec![];
                 let mut reference_residual = vec![];
@@ -1629,12 +1561,30 @@ mod tests {
         assert!(Operator::new(&geometry, 10, 1, 0.2, 0, budget, start, Duration::ZERO).is_err());
         let mut invalid = currents[0].clone();
         invalid[0] = f64::NAN;
-        assert!(streamed.actions_certified(&[invalid]).is_err());
+        assert!(streamed.actions_certified(&[invalid], &[1.]).is_err());
         let mut packet = tree.evidence();
+        packet["basisCover"] = common_cover;
         packet["schema"] = serde_json::json!("p7-hierarchical-magnetic-v1");
         packet["originalCellCount"] = serde_json::json!(geometry.len());
         packet["cases"] = serde_json::json!(cases);
         packet["coverage"] = serde_json::json!("unverified");
         println!("P7_HIERARCHICAL_MAGNETIC {packet}");
     }
+}
+
+pub(crate) fn action_goal(denominator_lower: f64, w: f64) -> Result<f64> {
+    if !denominator_lower.is_finite() || denominator_lower <= 0. || !w.is_finite() || w == 0. {
+        return Err(error("HIERARCHICAL_MAGNETIC_GOAL","positive original KVL normalization lower bound and nonzero angular frequency required"));
+    }
+    let goal = Interval::point(1e-9)
+        .mul(Interval::point(denominator_lower))
+        .div(Interval::point(w.abs()))
+        .lo;
+    if !goal.is_finite() || goal <= 0. {
+        return Err(error(
+            "HIERARCHICAL_MAGNETIC_GOAL",
+            "absolute action accuracy goal underflow",
+        ));
+    }
+    Ok(goal)
 }

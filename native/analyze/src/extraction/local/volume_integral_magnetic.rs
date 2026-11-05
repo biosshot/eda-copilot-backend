@@ -277,7 +277,7 @@ impl<'a> Streamed<'a> {
         let hierarchical = {
             let tree = hierarchical_magnetic::Operator::new(
                 &pair.tetra,
-                10,
+                12,
                 1,
                 0.2,
                 base_bytes
@@ -306,23 +306,27 @@ impl<'a> Streamed<'a> {
         self.hierarchical.as_ref().map_or_else(||serde_json::json!({"policy":"exact-streamed-v1",
             "method":"unchanged direct tetrahedral pairs","scope":"existing near/far quadrature, mesh and physical coverage remain unverified"}),|tree|tree.evidence())
     }
+    pub fn resistive_goals(
+        &self,
+        columns: &[Vec<f64>],
+        angular_frequency: f64,
+    ) -> Result<Vec<f64>> {
+        hierarchical_magnetic::adaptive::resistive_goals(self.space, columns, angular_frequency)
+    }
     pub fn actions_certified(
         &self,
         columns: &[Vec<f64>],
-    ) -> Result<(Vec<Vec<f64>>, Option<Vec<Vec<f64>>>)> {
-        if let Some(tree) = &self.hierarchical {
-            let mut actions = Vec::with_capacity(columns.len());
-            let mut errors = Vec::with_capacity(columns.len());
-            for column in columns {
-                check_deadline(self.start, self.wall)?;
-                let (action, error) = tree.apply(&self.pair, self.space, column)?;
-                actions.push(action);
-                errors.push(error);
-            }
-            Ok((actions, Some(errors)))
-        } else {
-            Ok((self.actions(columns)?, None))
-        }
+        absolute_goals: &[f64],
+    ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
+        self.hierarchical
+            .as_ref()
+            .ok_or_else(|| {
+                error(
+                    "HIERARCHICAL_MAGNETIC_POLICY",
+                    "adaptive common-batch tree required",
+                )
+            })?
+            .batch(&self.pair, self.space, columns, absolute_goals)
     }
 
     /// Upper triangle visited once per batch. Both action rows receive the
@@ -527,30 +531,41 @@ mod actual_tree_planning {
         let output = PathBuf::from(env::var("P7_TEST_EVIDENCE_DIR").expect("evidence directory"));
         let raw = fs::read_to_string(request_path).unwrap();
         let problem: serde_json::Value = serde_json::from_str(&raw).unwrap();
-        let board = crate::import_json(problem["boardJson"].as_str().unwrap()).board.unwrap();
+        let board = crate::import_json(problem["boardJson"].as_str().unwrap())
+            .board
+            .unwrap();
         let request: super::super::board_mesh::Request =
             serde_json::from_value(problem["geometry"].clone()).unwrap();
         let started = Instant::now();
         let wall = Duration::from_secs(1800);
         let mut budget = super::super::board_prepare::allocation_budget(3072);
         let ports = request.ports.len();
-        let samples = problem["request"]["frequenciesHz"].as_array().unwrap().len();
+        let samples = problem["request"]["frequenciesHz"]
+            .as_array()
+            .unwrap()
+            .len();
         budget.max_bytes -= samples * ports * (ports * 256 + 512) + 256 * 1024;
         let mesh = super::super::board_mesh::build(&board, &request, budget, wall).unwrap();
         let mesh_retained = mesh.mesh.retained_bytes().unwrap();
         // Preserve the larger geometry preparation bound and reserve decoded
         // saved-input storage, rather than allocating a second whole budget.
-        let geometry_base = mesh.mesh.planned_peak_bytes.max(mesh_retained)
-            .checked_add(raw.len().checked_mul(8).unwrap()).unwrap();
-        let tetra_bytes = mesh.mesh.copper_tetrahedra.len().checked_mul(
-            std::mem::size_of::<[[f64; 3]; 4]>()
-        ).unwrap();
+        let geometry_base = mesh
+            .mesh
+            .planned_peak_bytes
+            .max(mesh_retained)
+            .checked_add(raw.len().checked_mul(8).unwrap())
+            .unwrap();
+        let tetra_bytes = mesh
+            .mesh
+            .copper_tetrahedra
+            .len()
+            .checked_mul(std::mem::size_of::<[[f64; 3]; 4]>())
+            .unwrap();
         let base = geometry_base.checked_add(tetra_bytes).unwrap();
         budget.check(base).unwrap();
         let tetra = geometry(&mesh.mesh);
-        let tree = hierarchical_magnetic::Operator::new(
-            &tetra, 10, 1, 0.2, base, budget, started, wall
-        );
+        let tree =
+            hierarchical_magnetic::Operator::new(&tetra, 12, 1, 0.2, base, budget, started, wall);
         let report = match tree {
             Ok(tree) => serde_json::json!({
                 "status":"pass", "phase":"geometry and hierarchy plan only",
@@ -567,10 +582,14 @@ mod actual_tree_planning {
                 "seconds":started.elapsed().as_secs_f64(), "geometryAndInputBaseBytes":geometry_base,
                 "tetraGeometryBytes":tetra_bytes, "admittedBudgetBytes":budget.max_bytes,
                 "fieldSolves":0, "magneticActions":0
-            })
+            }),
         };
         fs::create_dir_all(&output).unwrap();
-        fs::write(output.join("comparison.json"), serde_json::to_vec_pretty(&report).unwrap()).unwrap();
+        fs::write(
+            output.join("comparison.json"),
+            serde_json::to_vec_pretty(&report).unwrap(),
+        )
+        .unwrap();
         println!("P7_ACTUAL_TREE_PREFLIGHT {report}");
         assert_eq!(report["status"], "pass", "{report}");
     }

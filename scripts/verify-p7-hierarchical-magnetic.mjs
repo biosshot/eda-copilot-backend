@@ -18,46 +18,62 @@ export function verifyHierarchicalMagnetic(log){
  assert.equal(lines.length,1,'Expected one hierarchical magnetic control packet');
  const p=JSON.parse(lines[0].slice(marker.length));
  assert.equal(p.schema,'p7-hierarchical-magnetic-v1');
- assert.equal(p.policy,'certified-cartesian-tree-v1');
- assert.equal(p.representationVersion,2);
+ assert.equal(p.policy,'certified-adaptive-harmonic-v1');
+ assert.equal(p.representationVersion,3);
  assert.equal(p.harmonicBasis,'laplace-quotient-z01');
- assert.equal(p.momentCoefficientCount,121);
- assert.equal(p.m2lCouplings,2926);
- assert.equal(p.shiftStencilTerms,2108);
+ assert.equal(p.momentCoefficientCount,169);
+ assert.equal(p.m2lCouplings,5551);
+ assert.equal(p.shiftStencilTerms,3619);
+ assert.equal(p.minimumExpansionOrder,0);
+ assert.equal(p.separationRatioMaximum,1);
+ assert.equal(p.admissibility,'strict-disjoint-balls-certified-tail');
+ assert.match(p.geometrySignature,/^fnv1a64:[0-9a-f]{16}$/);
+ assert.equal(p.treeSignature,p.geometrySignature);
  assert.equal(p.axisSerial,true);
  assert.equal(p.leafTetrahedra,1);
  assert.equal(p.coverage,'unverified');
  assert.ok(Number.isSafeInteger(p.originalCellCount)&&p.originalCellCount>0&&p.originalCellCount<=32);
  const n=3*p.originalCellCount;
  const levels=Math.ceil(Math.log2(p.originalCellCount))+1;
- assert.equal(p.interactionStorage,'immutable-dual-tree-v1');
+ assert.equal(p.interactionStorage,'immutable-adaptive-dual-tree-v1');
  assert.equal(p.interactionLevels,levels);
  assert.equal(p.interactionStackSlots,4*levels);
  assert.equal(p.interactionReplaysPerAction,3);
  assert.equal(p.traversalStorageBytes,4*levels*16+6*levels*8+512);
- assert.ok(Number.isSafeInteger(p.visitedNodePairs)&&p.visitedNodePairs>0);
  assert.ok(Number.isSafeInteger(p.treeNodes)&&p.treeNodes>0);
- for(const [value,expected] of [
-  [p.m2lScalarContractionsPerAxis,2926*p.farClusterPairs],
-  [p.m2lScalarContractionsPerAction,8778*p.farClusterPairs],
-  [p.shiftStencilApplicationsPerAction,6*(p.treeNodes-1)*2108],
-  [p.visitedNodePairsPerAction,3*p.visitedNodePairs],
- ]){
-  if(value!==undefined)assert.ok(Number.isSafeInteger(value)&&value>=0&&
-   Number.isSafeInteger(expected)&&value===expected,'Inconsistent interaction cost evidence');
- }
- assert.equal(p.expansionOrder,10);
- assert.ok(Number.isSafeInteger(p.exactPairs)&&p.exactPairs>0);
- assert.ok(Number.isSafeInteger(p.farClusterPairs)&&p.farClusterPairs>0);
+ assert.equal(p.expansionOrder,12);
  assert.ok(Array.isArray(p.cases)&&p.cases.length>=n+2);
+ const cover=p.basisCover;
+ const count=value=>Number.isSafeInteger(value)&&value>=0;
+ assert.ok(cover);
+ assert.match(cover.coverSignature,/^fnv1a64:[0-9a-f]{16}$/);
+ assert.match(cover.envelopeSignature,/^fnv1a64:[0-9a-f]{16}$/);
+ assert.ok(count(cover.modelRevision)&&cover.modelRevision>=1);
+ assert.equal(cover.rhsColumns,p.cases.length);
+ vector(cover.absoluteActionGoals,cover.rhsColumns);
+ vector(cover.maximumAbsoluteErrorBounds,cover.rhsColumns);
+ assert.ok(cover.absoluteActionGoals.every(value=>value>0));
+ assert.ok(cover.maximumAbsoluteErrorBounds.every((value,i)=>value>=0&&value<=cover.absoluteActionGoals[i]));
+ assert.ok(count(cover.visitedNodePairs)&&cover.visitedNodePairs>0);
+ assert.ok(count(cover.farClusterPairs)&&cover.farClusterPairs>0);
+ assert.ok([cover.exactPairs,cover.nearTiles,cover.zeroBlocks,cover.activeEnvelopeTerminals].every(count));
+ assert.ok(cover.activeEnvelopeTerminals<=p.originalCellCount);
+ for(const hist of [cover.chosenOrderHistogram,cover.maximumMomentDegreeHistogram,cover.maximumLocalDegreeHistogram])
+  assert.ok(Array.isArray(hist)&&hist.length===13&&hist.every(count));
+ assert.equal(cover.chosenOrderHistogram.reduce((sum,value)=>sum+value,0),cover.farClusterPairs);
+ for(const value of [cover.m2lScalarContractionsPerAction,cover.shiftStencilApplicationsPerAction])
+  if(value!==undefined)assert.ok(count(value));
+ assert.ok(Number.isFinite(cover.actionWallSeconds)&&cover.actionWallSeconds>=0);
  const basis=new Set();
  let maxActionError=0,maxActionBound=0,maxFullKvlUpper=0,fullChecks=0;
- for(const c of p.cases){
+ for(const [index,c] of p.cases.entries()){
   vector(c.current,n);
   vector(c.exactAction,n);
   vector(c.approximateAction,n);
   vector(c.absoluteErrorBound,n);
   vector(c.referenceErrorBound,n);
+  assert.ok(Math.max(...c.absoluteErrorBound)<=cover.maximumAbsoluteErrorBounds[index],
+   'Common batch certificate must include each original-current action bound');
   const active=c.current.flatMap((v,i)=>v===0?[]:[i]);
   if(active.length===1&&c.current[active[0]]===1)basis.add(active[0]);
   for(let i=0;i<n;i++){
@@ -108,7 +124,7 @@ export function verifyHierarchicalMagnetic(log){
   'Expected opposite signed dense excitations in all three axes');
  assert.ok(fullChecks>0,'Original full KVL direct-reference certificate is required');
  return {policy:p.policy,originalCellCount:p.originalCellCount,expansionOrder:p.expansionOrder,
-  exactPairs:p.exactPairs,farClusterPairs:p.farClusterPairs,basisChecks:basis.size,
+  exactPairs:cover.exactPairs,farClusterPairs:cover.farClusterPairs,basisChecks:basis.size,
   fullChecks,fullKvlScope:'manufactured original-current row guard control',
   maxActionError,maxActionBound,maxFullKvlUpper,coverage:p.coverage};
 }

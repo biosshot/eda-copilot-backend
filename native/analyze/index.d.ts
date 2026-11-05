@@ -237,6 +237,18 @@ export interface AnalysisBoardFoilCheckedRequest {
     maxIterations?: number;
     attachments?: { id: string; electrodes: [string, string]; model: AnalysisFrequencyResource }[];
 }
+export interface AnalysisMagneticCertificate {
+    policy: 'certified-adaptive-harmonic-v1';
+    coverSignature: string; envelopeSignature: string;
+    absoluteActionGoals: number[]; maximumAbsoluteErrorBounds: number[];
+    chosenOrderHistogram: number[]; farClusterPairs: number; exactPairs: number;
+    zeroBlocks: number; activeEnvelopeTerminals: number; actionWallSeconds: number;
+}
+export interface AnalysisMagneticBasisCover extends Omit<AnalysisMagneticCertificate, 'policy'> {
+    modelRevision: number; rhsColumns: number; visitedNodePairs: number; nearTiles: number;
+    maximumMomentDegreeHistogram: number[]; maximumLocalDegreeHistogram: number[];
+    m2lScalarContractionsPerAction?: number; shiftStencilApplicationsPerAction?: number;
+}
 export interface AnalysisBoardFoilCheckedReport {
     status: 'complete';
     coverage: 'unverified';
@@ -247,7 +259,7 @@ export interface AnalysisBoardFoilCheckedReport {
     parameters: { real: number; imaginary: number }[][][];
     samples: {
         frequencyHz: number;
-        columns: { input: number; kclRelative: number; kvlRelative: number; kvlUncertaintyRelative?: number; copperLossW: number; powerBalanceErrorW: number; packages?: { id: string; currentA: { real: number; imaginary: number }; lossW: number }[] }[];
+        columns: { input: number; kclRelative: number; kvlRelative: number; kvlUncertaintyRelative?: number; magneticCertificate?: AnalysisMagneticCertificate; copperLossW: number; powerBalanceErrorW: number; packages?: { id: string; currentA: { real: number; imaginary: number }; lossW: number }[] }[];
     }[];
     enrichment: {
         iteration: number; frequencyHz: number; input: number; potentialModes: number; currentModes: number;
@@ -265,17 +277,16 @@ export interface AnalysisBoardFoilCheckedReport {
             scope: string; maxFullKvlUncertaintyRelative: number;
         } & (
             | { policy: 'exact-streamed-v1'; method: 'unchanged direct tetrahedral pairs' }
-            | { policy: 'certified-cartesian-tree-v1'; method: 'symmetric dual-tree Newton expansion';
-                representationVersion: 2; harmonicBasis: 'laplace-quotient-z01';
+            | { policy: 'certified-adaptive-harmonic-v1'; method: 'symmetric adaptive Newton expansion';
+                representationVersion: 3; harmonicBasis: 'laplace-quotient-z01';
+                minimumExpansionOrder: 0; admissibility: 'strict-disjoint-balls-certified-tail';
                 momentCoefficientCount: number; m2lCouplings: number; shiftStencilTerms: number;
                 axisSerial: true; leafTetrahedra: number;
-                interactionStorage: 'immutable-dual-tree-v1'; traversalStorageBytes: number;
+                interactionStorage: 'immutable-adaptive-dual-tree-v1'; traversalStorageBytes: number;
                 interactionStackSlots: number; interactionLevels: number; interactionReplaysPerAction: 3;
-                visitedNodePairs: number;
-                m2lScalarContractionsPerAxis?: number; m2lScalarContractionsPerAction?: number;
-                shiftStencilApplicationsPerAction?: number; visitedNodePairsPerAction?: number;
                 expansionOrder: number; separationRatioMaximum: number; treeNodes: number;
-                exactPairs: number; farClusterPairs: number; plannedBytes: number; treeSignature: string }
+                plannedBytes: number; treeSignature: string; geometrySignature: string;
+                basisCover: AnalysisMagneticBasisCover }
         );
         partitionPolicy?: 'automatic-conductive-schur-v1';
         automaticPartition?: {
