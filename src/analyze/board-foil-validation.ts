@@ -6,6 +6,39 @@ const fail=(message:string):never=>{throw new Error('CHANNEL_FOIL_EVIDENCE: '+me
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
 const positive=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value)&&value>0;
 
+function validateMagneticOperator(report:AnalysisBoardFoilCheckedReport):void {
+ const p=report.provenance,operator=p.magneticOperator;
+ const columns=report.samples.flatMap(sample=>sample.columns);
+ if(p.modelKind==='foil'){
+  if(operator!==undefined||report.quality.maxFullKvlUncertaintyRelative!==undefined||
+     columns.some(column=>column.kvlUncertaintyRelative!==undefined))
+   fail('unexpected mixed magnetic operator certificate on a foil result');
+  return;
+ }
+ const uncertainty=operator?.maxFullKvlUncertaintyRelative;
+ if(!operator||typeof operator.scope!=='string'||!operator.scope.trim()||
+    typeof uncertainty!=='number'||!Number.isFinite(uncertainty)||uncertainty<0||uncertainty>1e-8||
+    columns.some(column=>typeof column.kvlUncertaintyRelative!=='number'||
+     !Number.isFinite(column.kvlUncertaintyRelative)||column.kvlUncertaintyRelative<0||
+     column.kvlUncertaintyRelative>column.kvlRelative)||
+    report.quality.maxFullKvlUncertaintyRelative!==uncertainty||
+    Math.max(...columns.map(column=>column.kvlUncertaintyRelative!))!==uncertainty)
+  return fail('missing or inconsistent original-coordinate magnetic KVL uncertainty');
+ if(operator.policy==='exact-streamed-v1'){
+  if(operator.method!=='unchanged direct tetrahedral pairs'||uncertainty!==0)
+   fail('exact magnetic operator unexpectedly reports truncation uncertainty');
+  return;
+ }
+ const count=(value:unknown):value is number=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0;
+ if(operator.policy!=='certified-cartesian-tree-v1'||operator.method!=='symmetric dual-tree Newton expansion'||
+    operator.expansionOrder!==10||operator.separationRatioMaximum!==0.2||
+    !count(operator.treeNodes)||operator.treeNodes<1||
+    !count(operator.exactPairs)||operator.exactPairs<1||!count(operator.farClusterPairs)||
+    !count(operator.plannedBytes)||operator.plannedBytes<1||operator.plannedBytes>p.plannedBytes||
+    !/^fnv1a64:[0-9a-f]{16}$/.test(operator.treeSignature))
+  fail('unsupported or incomplete certified magnetic tree identity');
+}
+
 function validatePartition(report:AnalysisBoardFoilCheckedReport,problem:BoardFoilProblem):void {
  const p=report.provenance,partition=p.automaticPartition,correction=report.conductiveCorrection;
  const policy=problem.request.partitionPolicy;
@@ -152,6 +185,7 @@ export function validateBoardFoilReport(
   fail('native producer limits or ownership evidence missing or inconsistent');
  validateSkinMesh(evidence,problem);
  validatePartition(report,problem);
+ validateMagneticOperator(report);
  const expectedCopper=expected.sourceCopper.map(r=>JSON.stringify([r.regionId,r.sourcePath,r.layer])).sort();
  const actual=evidence.sourceMapping.map(([id,path,,layer])=>JSON.stringify([id,path,layer])).sort();
  const expectedBarrels=expected.sourceBarrels.map(barrel=>barrel.barrelId).sort();
@@ -159,7 +193,7 @@ export function validateBoardFoilReport(
   ? !expectedBarrels.length&&!attachments.length&&evidence.prisms>=1
   : evidence.modelKind==='mixed'&&Number.isSafeInteger(evidence.volumeTetrahedra)&&
     (evidence.volumeTetrahedra>0||evidence.volumeTetrahedra===0&&
-     (attachments.length>0||request.operatorPolicy==='skin-volume-v3')&&!expectedBarrels.length&&evidence.prisms>0)&&
+     (attachments.length>0||request.operatorPolicy==='skin-volume-v3'||request.partitionPolicy==='automatic-conductive-schur-v1')&&!expectedBarrels.length&&evidence.prisms>0)&&
     Number.isSafeInteger(evidence.nativeCopperTetrahedra)&&
     Number.isSafeInteger(evidence.fullPotentialCount)&&evidence.fullPotentialCount>0&&
     evidence.fullCurrentCount===3*evidence.nativeCopperTetrahedra&&

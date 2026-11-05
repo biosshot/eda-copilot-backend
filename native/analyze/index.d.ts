@@ -247,13 +247,13 @@ export interface AnalysisBoardFoilCheckedReport {
     parameters: { real: number; imaginary: number }[][][];
     samples: {
         frequencyHz: number;
-        columns: { input: number; kclRelative: number; kvlRelative: number; copperLossW: number; powerBalanceErrorW: number; packages?: { id: string; currentA: { real: number; imaginary: number }; lossW: number }[] }[];
+        columns: { input: number; kclRelative: number; kvlRelative: number; kvlUncertaintyRelative?: number; copperLossW: number; powerBalanceErrorW: number; packages?: { id: string; currentA: { real: number; imaginary: number }; lossW: number }[] }[];
     }[];
     enrichment: {
         iteration: number; frequencyHz: number; input: number; potentialModes: number; currentModes: number;
         maxKclRelative: number; maxKvlRelative: number;
     }[];
-    quality: { maxKclRelative: number; maxKvlRelative: number; maxColumnPowerBalanceErrorW: number };
+    quality: { maxKclRelative: number; maxKvlRelative: number; maxColumnPowerBalanceErrorW: number; maxFullKvlUncertaintyRelative?: number };
     conductiveCorrection?: {
         method: 'sparse owner interiors and shared conductive trace Schur';
         ownerInteriorDofs: number[]; freeSharedTraceDofs: number; traceUpperEntries: number;
@@ -261,6 +261,14 @@ export interface AnalysisBoardFoilCheckedReport {
     };
     provenance: {
         method: string;
+        magneticOperator?: {
+            scope: string; maxFullKvlUncertaintyRelative: number;
+        } & (
+            | { policy: 'exact-streamed-v1'; method: 'unchanged direct tetrahedral pairs' }
+            | { policy: 'certified-cartesian-tree-v1'; method: 'symmetric dual-tree Newton expansion';
+                expansionOrder: number; separationRatioMaximum: number; treeNodes: number;
+                exactPairs: number; farClusterPairs: number; plannedBytes: number; treeSignature: string }
+        );
         partitionPolicy?: 'automatic-conductive-schur-v1';
         automaticPartition?: {
             policy: 'automatic-conductive-schur-v1'; status: 'selected' | 'not-applicable';

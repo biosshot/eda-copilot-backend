@@ -25,15 +25,16 @@ function mock(request: AnalysisBoardFoilCheckedRequest, input = problem): Analys
   return {
     status:'complete', coverage:'unverified', representation:'S', frequenciesHz, referenceOhm:referenceOhm!,
     ports:input.expected.electrodePairs, parameters:frequenciesHz.map(()=>[[{real:0,imaginary:0}]]), enrichment:[],
-    samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[{input:0,kclRelative:0,kvlRelative:0,
+    samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[{input:0,kclRelative:0,kvlRelative:0,kvlUncertaintyRelative:0,
       copperLossW:referenceOhm![0]/4,powerBalanceErrorW:0}]})),
-    quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0},
+    quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0,maxFullKvlUncertaintyRelative:0},
     ...(request.partitionPolicy&&{conductiveCorrection:{
       method:'sparse owner interiors and shared conductive trace Schur' as const,
       ownerInteriorDofs:[3,3],freeSharedTraceDofs:2,traceUpperEntries:3,ownedPlannedBytes:1024,
       maxOriginalFreeResidualRelative:0,scope:'Original-coordinate conductive correction',
     }}),
     provenance:{
+    magneticOperator:{policy:'exact-streamed-v1',method:'unchanged direct tetrahedral pairs',scope:'Exact numerical pair action; physical accuracy unverified',maxFullKvlUncertaintyRelative:0},
       modelKind:'mixed',method:'mock mixed',barrelIds:['barrel-0'],
       ...(request.partitionPolicy&&{partitionPolicy:request.partitionPolicy,automaticPartition:{
         policy:request.partitionPolicy,status:'selected' as const,reason:'Original mesh partition',
@@ -68,6 +69,41 @@ test('automatic partition policy reaches native preparation and exact cache with
     assert.equal(warm.cache?.key,cold.cache?.key);
     assert.equal(warm.coverage,'unverified');
     assert.equal(warm.provenance.automaticPartition?.status,'selected');
+    const tree=(input:BoardFoilProblem)=>{
+      const value=mock(input.request,input);
+      value.provenance.magneticOperator={
+        policy:'certified-cartesian-tree-v1',method:'symmetric dual-tree Newton expansion',
+        scope:'Far truncation and arithmetic only; physical and near quadrature unverified',
+        expansionOrder:10,separationRatioMaximum:0.2,treeNodes:3,exactPairs:18,farClusterPairs:1,
+        plannedBytes:1024,treeSignature:'fnv1a64:0123456789abcdef',maxFullKvlUncertaintyRelative:5e-10,
+      };
+      for(const sample of value.samples)for(const column of sample.columns){
+        column.kvlRelative=1e-9;column.kvlUncertaintyRelative=5e-10;
+      }
+      value.quality.maxKvlRelative=1e-9;
+      value.quality.maxFullKvlUncertaintyRelative=5e-10;
+      return value;
+    };
+    assert.equal(runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,tree)
+      .provenance.magneticOperator?.policy,'certified-cartesian-tree-v1');
+    const changedTree=runAutoFoil(plan,[1000,2000],problem.request.budget,[1000,2000],input=>{
+      const value=tree(input);
+      if(input.request.frequenciesHz.length===1&&value.provenance.magneticOperator?.policy==='certified-cartesian-tree-v1')
+        value.provenance.magneticOperator.treeSignature='fnv1a64:fedcba9876543210';
+      return value;
+    });
+    assert.ok(changedTree.frequencyAudit?.batch.status==='refused');
+    assert.match(changedTree.frequencyAudit.batch.message??'',/CHANNEL_FOIL_FREQUENCY_MESH/);
+    for(const corrupt of [
+      (value:AnalysisBoardFoilCheckedReport)=>{delete value.provenance.magneticOperator;},
+      (value:AnalysisBoardFoilCheckedReport)=>{value.quality.maxFullKvlUncertaintyRelative=0;},
+      (value:AnalysisBoardFoilCheckedReport)=>{value.samples[0].columns[0].kvlUncertaintyRelative=2e-9;},
+      (value:AnalysisBoardFoilCheckedReport)=>{value.samples[0].columns[0].kvlRelative=2e-8;},
+    ]){
+      assert.throws(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>{
+        const value=tree(input);corrupt(value);return value;
+      }),/CHANNEL_FOIL_EVIDENCE/);
+    }
     const audited=runAutoFoil(plan,[1000,2000],problem.request.budget,[1000,2000],input=>{
       const report=mock(input.request,input);
       if(input.request.frequenciesHz.length===1)

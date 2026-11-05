@@ -59,6 +59,7 @@ export function cachedBoardFoilReport(
   remaining();
   const key = cache.key({
     core, producer: 'automatic-board-foil-or-mixed-exact-grid-v1', board: digest(problem.boardJson),
+    magneticProducerPolicy:'exact-or-certified-cartesian-tree-v1',
     geometry: problem.geometry, expected, frequenciesHz, referenceOhm, maxIterations,
     ...(profiled && { operatorPolicy, profileUpperHz: upperHz }),
     ...(partitionPolicy && { partitionPolicy }),

@@ -22,6 +22,7 @@ const plan:AutoFoilPlan={
 
 function report(problem:BoardFoilProblem):BoardFoilReport{
  const {frequenciesHz,referenceOhm,budget}=problem.request;
+ const partitionPolicy=problem.request.partitionPolicy;
  return {
   status:'complete',coverage:'unverified',representation:'S',frequenciesHz,referenceOhm:referenceOhm!,
   ports:problem.expected.electrodePairs,
@@ -29,10 +30,15 @@ function report(problem:BoardFoilProblem):BoardFoilReport{
    const phase=f===2250?.025:0;
    return [[{real:.5*Math.cos(phase),imaginary:.5*Math.sin(phase)}]];
   }),enrichment:[],
-  samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[{input:0,kclRelative:0,kvlRelative:0,
+  samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[{input:0,kclRelative:0,kvlRelative:0,kvlUncertaintyRelative:0,
    copperLossW:8.875,powerBalanceErrorW:0,packages:[{id:'load',currentA:{real:Math.sqrt(.05),imaginary:0},lossW:.5}]}]})),
-  quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0},
+  quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0,maxFullKvlUncertaintyRelative:0},
   provenance:{
+   ...(partitionPolicy&&{partitionPolicy,automaticPartition:{policy:partitionPolicy,status:'not-applicable' as const,
+    reason:'Tiny mock has no private owner interiors',algorithm:'longest-extent-midpoint-v1' as const,
+    meshOwnershipSignature:'fnv1a64:0123456789abcdef',owners:2,originalCopperTetrahedra:3,
+    crossOwnerFaces:1,freeSharedTraceDofs:0,ownerInteriorDofs:[0,0]}}),
+    magneticOperator:{policy:'exact-streamed-v1',method:'unchanged direct tetrahedral pairs',scope:'Exact numerical pair action; physical accuracy unverified',maxFullKvlUncertaintyRelative:0},
    method:'mock',modelKind:'mixed',barrelIds:[],sourceMapping:[['top','pads[0]',null,'TOP']],electrodeAreasM2:{a:1e-8,b:1e-8},
    maxCopperVolumeChange:0,prisms:0,nativeCopperTetrahedra:3,volumeTetrahedra:3,fullPotentialCount:4,fullCurrentCount:9,
    retainedPotentials:2,currentModes:2,plannedBytes:1024,...budget,magneticQuadratureCoverage:'unverified',
@@ -120,6 +126,7 @@ test('high board demand requires closed joint geometry and freezes the admitted 
    },
    ...(changedMesh&&calls.length>1&&{nativeCopperTetrahedra:4,volumeTetrahedra:4,fullCurrentCount:12}),
   });
+  if(changedMesh&&calls.length>1)baseline.provenance.automaticPartition!.originalCopperTetrahedra=4;
   return baseline;
  };
  const createPlanner=(()=>(options:unknown)=>{

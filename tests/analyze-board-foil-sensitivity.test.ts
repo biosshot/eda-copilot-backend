@@ -18,13 +18,20 @@ const budget = {maxSeconds:20,maxMemoryMiB:256};
 
 function report(problem: BoardFoilProblem, phase = 0, mixed = false): BoardFoilReport {
   const { frequenciesHz, referenceOhm, budget } = problem.request;
+  const partitionPolicy=problem.request.partitionPolicy;
+  mixed=mixed||Boolean(partitionPolicy);
   return {
     status:'complete', coverage:'unverified', representation:'S', frequenciesHz, referenceOhm:referenceOhm!,
     ports:problem.expected.electrodePairs, parameters:frequenciesHz.map(()=>[[{real:.5*Math.cos(phase),imaginary:.5*Math.sin(phase)}]]),
     enrichment:[],
-    samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[{input:0,kclRelative:0,kvlRelative:0,copperLossW:9.375,powerBalanceErrorW:0}]})),
-    quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0},
+    samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[{input:0,kclRelative:0,kvlRelative:0,...(mixed&&{kvlUncertaintyRelative:0}),copperLossW:9.375,powerBalanceErrorW:0}]})),
+    quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0,...(mixed&&{maxFullKvlUncertaintyRelative:0})},
     provenance:{
+      ...(partitionPolicy&&{partitionPolicy,automaticPartition:{policy:partitionPolicy,status:'not-applicable' as const,
+        reason:'Tiny mock has no private owner interiors',algorithm:'longest-extent-midpoint-v1' as const,
+        meshOwnershipSignature:'fnv1a64:0123456789abcdef',owners:2,originalCopperTetrahedra:3,
+        crossOwnerFaces:1,freeSharedTraceDofs:0,ownerInteriorDofs:[0,0]}}),
+    ...(mixed&&{magneticOperator:{policy:'exact-streamed-v1' as const,method:'unchanged direct tetrahedral pairs' as const,scope:'Exact numerical pair action; physical accuracy unverified',maxFullKvlUncertaintyRelative:0}}),
       method:'mock', barrelIds:[], sourceMapping:[['top','pads[0]',null,'TOP']], electrodeAreasM2:{a:1e-8,b:1e-8},
       maxCopperVolumeChange:0, retainedPotentials:2, currentModes:2, plannedBytes:1024, ...budget,
       spatialCoverage:'unverified',bandCoverage:'unverified',driveConvention:'1 A RMS Norton',

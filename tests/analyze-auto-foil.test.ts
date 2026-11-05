@@ -32,14 +32,15 @@ function checkedMock(problem:BoardFoilProblem, sourceMapping:AnalysisBoardFoilCh
  }:{modelKind:'foil' as const,maxMagneticReciprocity:0,maxMagneticRefinement:0,maxElectricReciprocity:0};
  return {status:'complete',coverage:'unverified',representation:'S',frequenciesHz,referenceOhm:referenceOhm!,ports:g.ports,
    parameters:frequenciesHz.map(()=>s),enrichment:[],
-   samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[0,1].map(input=>({input,kclRelative:0,kvlRelative:0,copperLossW:8.875,powerBalanceErrorW:0}))})),
-   quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0},
+   samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[0,1].map(input=>({input,kclRelative:0,kvlRelative:0,...(mixed&&{kvlUncertaintyRelative:0}),copperLossW:8.875,powerBalanceErrorW:0}))})),
+   quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0,...(mixed&&{maxFullKvlUncertaintyRelative:0})},
    ...(partitionPolicy&&{conductiveCorrection:{
     method:'sparse owner interiors and shared conductive trace Schur' as const,
     ownerInteriorDofs:[1,1],freeSharedTraceDofs:1,traceUpperEntries:1,ownedPlannedBytes:128,
     maxOriginalFreeResidualRelative:0,scope:'Original-coordinate conductive correction',
    }}),
-   provenance:{method:mixed?'Mock mixed foil and volume':'Mock checked foil',...provenanceModel,barrelIds,sourceMapping,
+   provenance:{
+    ...(mixed&&{magneticOperator:{policy:'exact-streamed-v1' as const,method:'unchanged direct tetrahedral pairs' as const,scope:'Exact numerical pair action; physical accuracy unverified',maxFullKvlUncertaintyRelative:0}}),method:mixed?'Mock mixed foil and volume':'Mock checked foil',...provenanceModel,barrelIds,sourceMapping,
     ...(partitionPolicy&&{partitionPolicy,automaticPartition:{
      policy:partitionPolicy,status:'selected' as const,reason:'Original mesh partition',
      algorithm:'longest-extent-midpoint-v1' as const,meshOwnershipSignature:'fnv1a64:0123456789abcdef',

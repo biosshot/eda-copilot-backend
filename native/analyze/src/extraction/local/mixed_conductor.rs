@@ -1012,6 +1012,8 @@ fn solve_checked_mesh_impl(
         "magneticQuadratureCoverage":"unverified",
         "driveConvention":"1 A RMS matched Norton basis columns, checked only at listed frequencies",
     });
+    checked["provenance"]["magneticOperator"] = checked["magneticOperator"].take();
+    checked.as_object_mut().unwrap().remove("magneticOperator");
     if let Some(partition) = partition {
         if !partition.compact {
             checked["spatialPartition"] = partition.topology();

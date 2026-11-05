@@ -23,9 +23,15 @@ function observations(report: BoardFoilReport, index: number): Value {
 
 function physicalMesh(report: BoardFoilReport) {
   const p=report.provenance,skin=p.copperSkinMesh;
+  const magnetic=p.magneticOperator;
   return canonical({
     modelKind:p.modelKind,operatorPolicy:p.operatorPolicy,prisms:p.prisms,
     partitionPolicy:p.partitionPolicy,automaticPartition:p.automaticPartition,
+    ...(magnetic&&{magneticOperator:magnetic.policy==='exact-streamed-v1'
+      ?{policy:magnetic.policy,method:magnetic.method}
+      :{policy:magnetic.policy,method:magnetic.method,expansionOrder:magnetic.expansionOrder,
+        separationRatioMaximum:magnetic.separationRatioMaximum,treeNodes:magnetic.treeNodes,
+        exactPairs:magnetic.exactPairs,farClusterPairs:magnetic.farClusterPairs,treeSignature:magnetic.treeSignature}}),
     sourceMapping:p.sourceMapping,barrelIds:p.barrelIds,electrodeAreasM2:p.electrodeAreasM2,
     ...(p.modelKind==='mixed'&&{volumeTetrahedra:p.volumeTetrahedra,nativeCopperTetrahedra:p.nativeCopperTetrahedra,
       fullPotentialCount:p.fullPotentialCount,fullCurrentCount:p.fullCurrentCount}),

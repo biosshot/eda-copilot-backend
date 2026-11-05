@@ -493,6 +493,7 @@ fn correction(
 
 struct Magnetic {
     actions: Vec<Vec<f64>>,
+    error_bounds: Option<Vec<Vec<f64>>>,
     reciprocity: f64,
     refinement: f64,
 }
@@ -578,6 +579,7 @@ fn magnetic(
         .collect();
     Ok(Magnetic {
         actions,
+        error_bounds: None,
         reciprocity,
         refinement,
     })
@@ -831,13 +833,15 @@ pub(super) fn solve_mixed_grid(
         })
         .collect::<Result<Vec<_>>>()?;
     let batch = |q: &[Vec<f64>], _, _| -> Result<Magnetic> {
+        let (actions, error_bounds) = magnetic.actions_certified(q)?;
         Ok(Magnetic {
-            actions: magnetic.actions(q)?,
+            actions,
+            error_bounds,
             reciprocity: 0.,
             refinement: 0.,
         })
     };
-    let actions = magnetic.actions(&basis.current)?;
+    let (actions, _) = magnetic.actions_certified(&basis.current)?;
     let (model, max_electric_reciprocity) =
         make_model(&cells, n, &basis, names, &charges, &actions, ports)?;
     let mut space = ReducedSpace {
@@ -888,6 +892,9 @@ pub(super) fn solve_mixed_grid(
             .filter(|partition| !partition.compact)
             .map(|partition| (partition, &map.full)),
     )?;
+    checked["magneticOperator"] = magnetic.evidence();
+    checked["magneticOperator"]["maxFullKvlUncertaintyRelative"] =
+        checked["quality"]["maxFullKvlUncertaintyRelative"].clone();
     if let Some(backend) = &dc.partitioned {
         checked["conductiveCorrection"] = backend.evidence();
     }
@@ -999,6 +1006,7 @@ fn assemble_impl(
         actions: magnetic_actions,
         reciprocity: max_magnetic_reciprocity,
         refinement: max_magnetic_refinement,
+        ..
     } = batch(&basis.current, start, wall)?;
     let (model, max_electric_reciprocity) = make_model(
         &cells,
@@ -1179,7 +1187,7 @@ impl ReducedSpace {
         };
         let w = 2. * std::f64::consts::PI * frequency_hz;
         let residual = self
-            .full_residual(w, &state[..n], im, drive, None)?
+            .full_residual(w, &state[..n], im, drive, None, None)?
             .checked()?;
         Ok(CheckedPoint {
             voltage_real: system.port_voltages(&state, self.ports.len()),
@@ -1264,6 +1272,7 @@ impl ReducedSpace {
         im: &[f64],
         drive: &[f64],
         drive_im: Option<&[f64]>,
+        magnetic: Option<(&MagneticBatch<'_>, Instant, Duration)>,
     ) -> Result<FullResidual> {
         let nv = self.basis.voltage.len();
         let nr = self.full_potentials;
@@ -1279,10 +1288,57 @@ impl ReducedSpace {
             lift(&self.charges, &re[..nv], nr),
             lift(&self.charges, &im[..nv], nr),
         ];
-        let l = [
-            lift(&self.magnetic_actions, &re[nv..], self.cells.len()),
-            lift(&self.magnetic_actions, &im[nv..], self.cells.len()),
-        ];
+        let (l, magnetic_bounds) = if self.native_allocation {
+            // Certify the original recovered current, not a reduced matrix's
+            // own residual or a rounded lift of precomputed basis images.
+            let (action, start, wall) = magnetic.ok_or_else(|| {
+                error(
+                    "HIERARCHICAL_MAGNETIC_UNCERTIFIED",
+                    "original-state magnetic action callback required",
+                )
+            })?;
+            let result = action(&[q[0].clone(), q[1].clone()], start, wall)?;
+            let actions: [Vec<f64>; 2] = result.actions.try_into().map_err(|_| {
+                error(
+                    "HIERARCHICAL_MAGNETIC_INTERVAL",
+                    "two complete original actions required",
+                )
+            })?;
+            let bounds: [Vec<f64>; 2] = result
+                .error_bounds
+                .ok_or_else(|| {
+                    error(
+                        "HIERARCHICAL_MAGNETIC_UNCERTIFIED",
+                        "original-state action error enclosure required",
+                    )
+                })?
+                .try_into()
+                .map_err(|_| {
+                    error(
+                        "HIERARCHICAL_MAGNETIC_INTERVAL",
+                        "two original action enclosures required",
+                    )
+                })?;
+            if actions.iter().any(|row| row.len() != self.cells.len())
+                || bounds.iter().any(|row| {
+                    row.len() != self.cells.len() || row.iter().any(|v| !v.is_finite() || *v < 0.)
+                })
+            {
+                return Err(error(
+                    "HIERARCHICAL_MAGNETIC_INTERVAL",
+                    "original action/error shape mismatch",
+                ));
+            }
+            (actions, Some(bounds))
+        } else {
+            (
+                [
+                    lift(&self.magnetic_actions, &re[nv..], self.cells.len()),
+                    lift(&self.magnetic_actions, &im[nv..], self.cells.len()),
+                ],
+                None,
+            )
+        };
         let d = q.each_ref().map(|x| divergence(&self.cells, x, nr));
         let g = v.each_ref().map(|x| gradient(&self.cells, x));
         if [&v, &q, &c, &l, &d, &g]
@@ -1302,6 +1358,7 @@ impl ReducedSpace {
             drive_im.map_or_else(|| vec![0.; nr], |drive| self.physical_injection(drive)),
         ];
         let (mut kcl, mut kcl_scale, mut kvl, mut kvl_scale) = (0_f64, 0_f64, 0_f64, 0_f64);
+        let mut kvl_uncertainty = 0f64;
         let mut kcl_rows = [vec![0.; nr], vec![0.; nr]];
         let mut kvl_rows = [vec![0.; self.cells.len()], vec![0.; self.cells.len()]];
         for k in 0..2 {
@@ -1319,12 +1376,40 @@ impl ReducedSpace {
                 let b = -g[k][j];
                 let z = s * w * l[1 - k][j];
                 kvl_rows[k][j] = a + b + z;
-                kvl = kvl.max(kvl_rows[k][j].abs());
-                kvl_scale = kvl_scale.max(a.abs() + b.abs() + z.abs());
+                if let Some(bounds) = &magnetic_bounds {
+                    let (numerator, denominator, uncertainty) =
+                        super::volume_integral_magnetic::hierarchical_magnetic::kvl_cell(
+                            cell.resistance,
+                            q[k][j],
+                            &cell.terms,
+                            &v[k],
+                            l[1 - k][j],
+                            s * w,
+                            bounds[1 - k][j],
+                        )?;
+                    kvl = kvl.max(numerator);
+                    kvl_scale = kvl_scale.max(denominator);
+                    kvl_uncertainty = kvl_uncertainty.max(uncertainty);
+                } else {
+                    kvl = kvl.max(kvl_rows[k][j].abs());
+                    kvl_scale = kvl_scale.max(a.abs() + b.abs() + z.abs());
+                }
             }
         }
         let kcl_relative = kcl / kcl_scale.max(f64::MIN_POSITIVE);
-        let kvl_relative = kvl / kvl_scale.max(f64::MIN_POSITIVE);
+        let kvl_relative = if magnetic_bounds.is_some() {
+            super::volume_integral_magnetic::hierarchical_magnetic::ratio(kvl, kvl_scale)?
+        } else {
+            kvl / kvl_scale.max(f64::MIN_POSITIVE)
+        };
+        let kvl_uncertainty_relative = if magnetic_bounds.is_some() {
+            super::volume_integral_magnetic::hierarchical_magnetic::ratio(
+                kvl_uncertainty,
+                kvl_scale,
+            )?
+        } else {
+            0.
+        };
         if !kcl_relative.is_finite() || !kvl_relative.is_finite() {
             return Err(error(
                 "FOIL_REDUCTION_RESIDUAL",
@@ -1338,6 +1423,7 @@ impl ReducedSpace {
             },
             kcl: kcl_rows,
             kvl: kvl_rows,
+            kvl_uncertainty_relative,
         })
     }
 }
@@ -1346,6 +1432,7 @@ struct FullResidual {
     norm: Residual,
     kcl: [Vec<f64>; 2],
     kvl: [Vec<f64>; 2],
+    kvl_uncertainty_relative: f64,
 }
 impl FullResidual {
     fn checked(&self) -> Result<Residual> {
@@ -1503,8 +1590,14 @@ impl ReducedSpace {
                     self.solve_state(training.frequency_hz, &training.drive, solve_budget)?;
                 let n = self.basis.voltage.len() + self.basis.current.len();
                 let w = 2. * std::f64::consts::PI * training.frequency_hz;
-                let full =
-                    self.full_residual(w, &state[..n], &state[n..], &training.drive, None)?;
+                let full = self.full_residual(
+                    w,
+                    &state[..n],
+                    &state[n..],
+                    &training.drive,
+                    None,
+                    Some((magnetic, start, wall)),
+                )?;
                 history.push(EnrichmentStep {
                     iteration,
                     potential_modes: self.basis.voltage.len(),
@@ -1697,6 +1790,7 @@ impl ReducedSpace {
                 let mut parameters = Vec::with_capacity(grid.frequencies.len());
                 let mut samples = Vec::with_capacity(grid.frequencies.len());
                 let (mut max_kcl, mut max_kvl, mut max_power) = (0_f64, 0_f64, 0_f64);
+                let mut max_kvl_uncertainty = 0f64;
                 for &frequency in grid.frequencies {
                     let w = 2. * std::f64::consts::PI * frequency;
                     let mut matrix = vec![vec![Value::Null; ports]; ports];
@@ -1746,10 +1840,13 @@ impl ReducedSpace {
                             copper_im,
                             &net_real,
                             Some(&net_imaginary),
+                            Some((magnetic, start, wall)),
                         )?;
                         let norm = residual.norm;
+                        let kvl_uncertainty_relative = residual.kvl_uncertainty_relative;
                         max_kcl = max_kcl.max(norm.kcl_relative);
                         max_kvl = max_kvl.max(norm.kvl_relative);
+                        max_kvl_uncertainty = max_kvl_uncertainty.max(kvl_uncertainty_relative);
                         let score = norm.kcl_relative.max(norm.kvl_relative);
                         if worst.as_ref().is_none_or(|(_, _, old)| {
                             score > old.norm.kcl_relative.max(old.norm.kvl_relative)
@@ -1810,7 +1907,7 @@ impl ReducedSpace {
                         }
                         max_power = max_power.max(power_error);
                         let mut column = json!({"input":input,"kclRelative":norm.kcl_relative,
-                            "kvlRelative":norm.kvl_relative,"copperLossW":copper,"powerBalanceErrorW":power_error});
+                            "kvlRelative":norm.kvl_relative,"kvlUncertaintyRelative":kvl_uncertainty_relative,"copperLossW":copper,"powerBalanceErrorW":power_error});
                         if !package_samples.is_empty() {
                             column["packages"] = json!(package_samples);
                         }
@@ -1855,8 +1952,11 @@ impl ReducedSpace {
                     return Ok(json!({
                         "parameters":parameters,"samples":samples,"enrichment":history,
                         "quality":{"maxKclRelative":max_kcl,"maxKvlRelative":max_kvl,
-                                   "maxColumnPowerBalanceErrorW":max_power},
+                                   "maxFullKvlUncertaintyRelative":max_kvl_uncertainty,"maxColumnPowerBalanceErrorW":max_power},
                     }));
+                }
+                if worst.kvl_uncertainty_relative > RESIDUAL_LIMIT {
+                    return Err(error("HIERARCHICAL_MAGNETIC_UNCERTIFIED","fixed geometry/order far-field enclosure exceeds original full KVL gate; no physical response admitted"));
                 }
                 if iteration == grid.max_iterations {
                     return Err(worst.checked().unwrap_err());

@@ -17,6 +17,9 @@ use super::{
 
 use std::time::{Duration, Instant};
 
+#[path = "hierarchical_magnetic.rs"]
+pub(super) mod hierarchical_magnetic;
+
 const CUBATURE_ORDERS: [usize; 5] = [4, 6, 8, 12, 16];
 
 struct PairQuadrature {
@@ -237,6 +240,7 @@ fn geometry(mesh: &LayeredMesh) -> Vec<[[f64; 3]; 4]> {
 pub(super) struct Streamed<'a> {
     space: &'a Space,
     pair: BoundedPairs,
+    hierarchical: Option<hierarchical_magnetic::Operator>,
     pub owned_bytes: usize,
     start: Instant,
     wall: Duration,
@@ -266,17 +270,59 @@ impl<'a> Streamed<'a> {
                 "unchanged native copper cell order required",
             ));
         }
-        let (owned_bytes, slots) = BoundedPairs::plan(n, order, base_bytes, budget)?;
+        let (mut owned_bytes, slots) = BoundedPairs::plan(n, order, base_bytes, budget)?;
         eprintln!("P7_STREAMED_MEMORY_PLAN tetrahedra={n} geometryBytes={} exactCacheSlots={slots} slotBytes={STREAMED_PAIR_SLOT_BYTES} constructionScratchSlots=2 ownedBytes={owned_bytes} baseBytes={base_bytes} budgetBytes={} operator=unchanged-direct-pairs complexity=quadratic", n*std::mem::size_of::<[[f64;3];4]>(),budget.max_bytes);
         // Move the original geometry into the cache; do not duplicate its Vec.
         let pair = BoundedPairs::new(geometry(mesh), order, slots, start, wall)?;
+        let hierarchical = {
+            let tree = hierarchical_magnetic::Operator::new(
+                &pair.tetra,
+                10,
+                32,
+                0.2,
+                base_bytes
+                    .checked_add(owned_bytes)
+                    .ok_or_else(|| error("MEMORY_LIMIT", "magnetic hierarchy base overflow"))?,
+                budget,
+                start,
+                wall,
+            )?;
+            owned_bytes = owned_bytes
+                .checked_add(tree.planned_bytes)
+                .ok_or_else(|| error("MEMORY_LIMIT", "magnetic hierarchy plan overflow"))?;
+            Some(tree)
+        };
         Ok(Self {
             space,
             pair,
+            hierarchical,
             owned_bytes,
             start,
             wall,
         })
+    }
+
+    pub fn evidence(&self) -> serde_json::Value {
+        self.hierarchical.as_ref().map_or_else(||serde_json::json!({"policy":"exact-streamed-v1",
+            "method":"unchanged direct tetrahedral pairs","scope":"existing near/far quadrature, mesh and physical coverage remain unverified"}),|tree|tree.evidence())
+    }
+    pub fn actions_certified(
+        &self,
+        columns: &[Vec<f64>],
+    ) -> Result<(Vec<Vec<f64>>, Option<Vec<Vec<f64>>>)> {
+        if let Some(tree) = &self.hierarchical {
+            let mut actions = Vec::with_capacity(columns.len());
+            let mut errors = Vec::with_capacity(columns.len());
+            for column in columns {
+                check_deadline(self.start, self.wall)?;
+                let (action, error) = tree.apply(&self.pair, self.space, column)?;
+                actions.push(action);
+                errors.push(error);
+            }
+            Ok((actions, Some(errors)))
+        } else {
+            Ok((self.actions(columns)?, None))
+        }
     }
 
     /// Upper triangle visited once per batch. Both action rows receive the
