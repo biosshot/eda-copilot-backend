@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Correct mixed extraction memory accounting: separate sequential mixed/full work phases, use live mixed-map capacities after construction, and distinguish potential from current modes so floating constant potentials do not reserve fictitious current vectors. Preserve all islands, conservative full-space bounds and enrichment guards. Two focused memory tests and release addon build pass; full extraction resource/runtime admission remains under measurement.
+
 - Reuse four bounded far-interaction scratch vectors without changing interval arithmetic order; the signed/reference action and KVL control matches prior numerical evidence exactly. Add mixed/hierarchy memory-admission context and configurable bounded STM32 verification budgets. Release addon build passes; full-board speedup and <=600-second extraction remain unverified.
 
 - Replace the fixed 10 kHz executor switch with declared segmented-producer capabilities and actual block/component bands. Reuse the initial geometry plan, reject malformed demand early, preserve joint interval-gap auditing and avoid unsupported segmentation preparation. Current producer bands and physical acceptance are unchanged; 19 focused dispatch/frequency/return tests pass.

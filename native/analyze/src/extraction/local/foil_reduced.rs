@@ -163,6 +163,9 @@ fn sizes(n: usize, m: usize, r: usize, field_bytes: usize) -> Result<usize> {
 /// Sparse symbolic fill, factor residency and queried solve scratch are added
 /// by sparse_potential/partitioned_conduction before their own allocations.
 fn native_work_bytes(n: usize, m: usize, r: usize) -> Result<usize> {
+    native_work_modes(n, m, r, r)
+}
+fn native_work_modes(n: usize, m: usize, potential_modes: usize, current_modes: usize) -> Result<usize> {
     // Per four-term current column: Cell+coefficient storage; up to16 triplets
     // plus pinned faer0.24.4 argsort/row-index/CSC construction (four index
     // slabs+one value slab conservatively bound csc/mod.rs1163,2373). The32
@@ -180,13 +183,17 @@ fn native_work_bytes(n: usize, m: usize, r: usize) -> Result<usize> {
     // physical injections, complex residuals and compensated accumulators.
     n.checked_mul(1024)
         .and_then(|v| v.checked_add(m.checked_mul(current)?))
-        .and_then(|v| v.checked_add(n.checked_add(m)?.checked_mul(r)?.checked_mul(64)?))
+        .and_then(|v| v.checked_add(n.checked_mul(potential_modes)?.checked_mul(64)?))
+        .and_then(|v| v.checked_add(m.checked_mul(current_modes)?.checked_mul(64)?))
         .ok_or_else(|| error("MEMORY_LIMIT", "native mixed buffer plan overflow"))
 }
 fn native_sizes(n: usize, m: usize, r: usize, base: usize) -> Result<usize> {
-    native_work_bytes(n, m, r)?
+    native_mode_sizes(n, m, r, r, base)
+}
+fn native_mode_sizes(n: usize, m: usize, potential_modes: usize, current_modes: usize, base: usize) -> Result<usize> {
+    native_work_modes(n, m, potential_modes, current_modes)?
         .checked_add(base)
-        .and_then(|v| v.checked_add(r.checked_mul(2)?.checked_pow(2)?.checked_mul(2048)?))
+        .and_then(|v| v.checked_add(potential_modes.checked_add(current_modes)?.checked_pow(2)?.checked_mul(2048)?))
         .ok_or_else(|| error("MEMORY_LIMIT", "native mixed descriptor plan overflow"))
 }
 fn gradient(cells: &[Cell], v: &[f64]) -> Vec<f64> {
@@ -314,11 +321,15 @@ fn harmonic(
         ));
     }
     let plan = if native_allocation {
-        native_sizes(n, cells.len(), r, base)?
+        native_mode_sizes(n, cells.len(), r, retained.len().checked_sub(islands.len())
+            .and_then(|v|v.checked_add(extra_modes)).ok_or_else(||error("MEMORY_LIMIT","harmonic current mode bound overflow"))?, base)?
     } else {
         sizes(n, cells.len(), r, base)?
     };
-    budget.check(plan)?;
+    if native_allocation {
+        eprintln!("P7_MIXED_MEMORY_STAGE stage=harmonic-admission potentials={n} currents={} retained={} reservedModes={extra_modes} modeCap={r} baseBytes={base} plannedBytes={plan} budgetBytes={}", cells.len(), retained.len(), budget.max_bytes);
+    }
+    budget.check(plan).map_err(|failure|format!("{failure}; stage=harmonic-admission potentials={n} currents={} modeCap={r} plannedBytes={plan} budgetBytes={}",cells.len(),budget.max_bytes))?;
     let (peak, dc) = correction(cells, n, &retained, plan, budget, start, wall, None)?;
     let retained: Vec<_> = retained.into_iter().collect();
     let mut voltage = vec![vec![0.; n]; retained.len()];
@@ -718,15 +729,15 @@ pub(super) fn solve_mixed_grid(
     // Each phase can supply a voltage shape and its conductive current,
     // plus one independent induced-current correction.
     let reserve = 4 * grid.max_iterations;
-    let field_base = map
-        .planned_bytes
+    let map_retained = map.retained_bytes()?;
+    let field_base = map_retained
         .checked_add(field.planned_bytes())
         .ok_or_else(|| error("MEMORY_LIMIT", "mixed field plan overflow"))?;
     // Admit all non-modal full-space buffers before constructing the bounded
     // exact magnetic cache. Later factor plans add their actual fill/scratch.
     let buffer_base = native_sizes(n, ni, 0, field_base)?;
     eprintln!("P7_MIXED_MEMORY_STAGE stage=magnetic-admission fullPotentials={n} fullCurrents={ni} mapBytes={} electricPlanBytes={} nativeWorkBytes={} totalBaseBytes={buffer_base} budgetBytes={}",
-        map.planned_bytes, field.planned_bytes(), native_work_bytes(n, ni, 0)?, budget.max_bytes);
+        map_retained, field.planned_bytes(), native_work_bytes(n, ni, 0)?, budget.max_bytes);
     budget.check(buffer_base)?;
     let magnetic = super::volume_integral_magnetic::Streamed::new(
         mesh,
@@ -741,7 +752,7 @@ pub(super) fn solve_mixed_grid(
         .checked_add(magnetic.owned_bytes)
         .ok_or_else(|| error("MEMORY_LIMIT", "mixed operator plan overflow"))?;
     let resident = native_sizes(n, ni, 0, base)?;
-    budget.check(resident)?;
+    budget.check(resident).map_err(|failure|format!("{failure}; stage=mixed-resident-admission plannedBytes={resident} budgetBytes={}",budget.max_bytes))?;
 
     let mut terms = vec![Vec::new(); map.current_count()];
     for &(i, j, a) in &map.incidence {
@@ -764,7 +775,11 @@ pub(super) fn solve_mixed_grid(
         &map.electrodes.iter().copied().collect(),
         Some(&map.potential_components),
         budget,
-        resident,
+        // Full native Cell/triplet/work buffers are constructed only after
+        // mixed_cells and mixed_dc below are dropped. harmonic() accounts
+        // its own mixed-coordinate work; do not add the future full work a
+        // second time. The shared map/field/magnetic storage stays in base.
+        base,
         start,
         wall,
         reserve,
@@ -778,10 +793,17 @@ pub(super) fn solve_mixed_grid(
         .len()
         .checked_add(reserve)
         .ok_or_else(|| error("MEMORY_LIMIT", "native mixed mode cap overflow"))?;
-    let full_plan = native_sizes(n, ni, mode_cap, base)?;
+    // Each physical component has one constant-potential anchor and no
+    // corresponding DC current. Retain all voltage/charge modes; do not
+    // reserve a full current/action vector for a floating constant mode.
+    // grow() adds at most four currents and two voltages per iteration;
+    // the existing four-per-kind reserve remains conservative.
+    let current_mode_cap = basis.retained.len().checked_sub(map.full.components.len())
+        .and_then(|v|v.checked_add(reserve)).ok_or_else(||error("MEMORY_LIMIT","native current mode bound overflow"))?;
+    let full_plan = native_mode_sizes(n, ni, mode_cap, current_mode_cap, base)?;
     eprintln!("P7_REDUCED_MEMORY_PLAN fullPotentials={n} fullCurrents={ni} retained={} enrichmentIterations={} modeCap={mode_cap} workBytes={} descriptorBytes={} baseBytes={base} plannedBytes={full_plan} budgetBytes={}",
-        basis.retained.len(),grid.max_iterations,native_work_bytes(n,ni,mode_cap)?,mode_cap*mode_cap*8192,budget.max_bytes);
-    budget.check(full_plan)?;
+        basis.retained.len(),grid.max_iterations,native_work_modes(n,ni,mode_cap,current_mode_cap)?,(mode_cap+current_mode_cap)*(mode_cap+current_mode_cap)*2048,budget.max_bytes);
+    budget.check(full_plan).map_err(|failure|format!("{failure}; stage=full-mode-admission modeCap={mode_cap} plannedBytes={full_plan} budgetBytes={}",budget.max_bytes))?;
     let originals = map.original_representatives();
     for i in &mut basis.retained {
         *i = originals[*i];
@@ -890,8 +912,7 @@ pub(super) fn solve_mixed_grid(
         enrichment: None,
         native_allocation: true,
     };
-    let retained_bytes = map
-        .planned_bytes
+    let retained_bytes = map_retained
         .checked_add(magnetic.owned_bytes)
         .ok_or_else(|| error("MEMORY_LIMIT", "mixed retained plan overflow"))?;
     let training_budget = AllocationBudget {
@@ -1265,10 +1286,11 @@ impl ReducedSpace {
     fn system_budget(&self, mut budget: Budget) -> Result<Budget> {
         let requested = budget.max_memory_mi_b.unwrap_or(256.);
         let resident = if self.native_allocation {
-            native_work_bytes(
+            native_work_modes(
                 self.full_potentials,
                 self.cells.len(),
-                self.basis.voltage.len().max(self.basis.current.len()),
+                self.basis.voltage.len(),
+                self.basis.current.len(),
             )?
         } else {
             self.full_potentials
@@ -2149,6 +2171,22 @@ mod mixed_basis_tests {
 #[cfg(test)]
 mod native_memory_tests {
     use super::*;
+    #[test]
+    fn floating_constant_modes_keep_voltage_without_reserving_fictitious_currents() {
+        let cells=[Cell::new(vec![],2.),Cell::new(vec![],3.)];
+        let contacts=BTreeSet::from([0,1]);
+        let islands=[vec![0],vec![1]];
+        let admitted=native_mode_sizes(2,2,2,0,0).unwrap();
+        assert!(admitted<native_sizes(2,2,2,0).unwrap());
+        let budget=AllocationBudget{max_bytes:admitted,max_nodes:32,max_tetrahedra:32};
+        let (basis,_,_)=harmonic(&cells,2,&contacts,Some(&islands),budget,0,
+            Instant::now(),Duration::from_secs(10),0,true).unwrap();
+        assert_eq!(basis.voltage,vec![vec![1.,0.],vec![0.,1.]]);
+        assert!(basis.current.is_empty());
+        assert!(harmonic(&cells,2,&contacts,Some(&islands),budget,0,
+            Instant::now(),Duration::from_secs(10),4,true).is_err());
+        assert!(native_mode_sizes(2,2,usize::MAX,1,0).is_err());
+    }
     #[test]
     fn native_request_buffer_plan_tracks_mode_cap_and_preserves_overflow_refusal() {
         let n = 1000;

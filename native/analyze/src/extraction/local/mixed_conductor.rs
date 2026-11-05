@@ -503,6 +503,29 @@ pub fn prepare<'a>(
     })
 }
 impl MixedMap<'_> {
+    /// Post-assembly mixed storage. Keep the full-space/mesh conservative
+    /// bound, but replace mixed ownership construction scratch with the live
+    /// capacities of every owned field. Candidate maps and projected sums
+    /// have been dropped when assemble() returns.
+    pub fn retained_bytes(&self) -> Result<usize> {
+        let mut bytes=self.full.planned_bytes;
+        let mut add=|count:usize,width:usize| -> Result<()> {
+            bytes=bytes.checked_add(count.checked_mul(width).ok_or_else(||error("MEMORY_LIMIT","mixed retained count overflow"))?)
+                .ok_or_else(||error("MEMORY_LIMIT","mixed retained storage overflow"))?;
+            Ok(())
+        };
+        add(1,std::mem::size_of::<Self>())?;
+        add(self.owners.capacity(),std::mem::size_of::<Owner>())?;
+        add(self.foils.capacity(),std::mem::size_of::<FoilPrism>())?;
+        for foil in &self.foils {add(foil.layer.capacity(),1)?;add(foil.tetrahedra.capacity(),std::mem::size_of::<usize>())?;}
+        for values in [&self.electrodes,&self.potential_map,&self.full_electrodes] {add(values.capacity(),std::mem::size_of::<usize>())?;}
+        add(self.potential_components.capacity(),std::mem::size_of::<Vec<usize>>())?;
+        for component in &self.potential_components {add(component.capacity(),std::mem::size_of::<usize>())?;}
+        add(self.incidence.capacity(),std::mem::size_of::<(usize,usize,f64)>())?;
+        add(self.resistance_ohm.capacity(),std::mem::size_of::<f64>())?;
+        add(self.current_map.capacity(),std::mem::size_of::<Option<CurrentEntry>>())?;
+        Ok(bytes)
+    }
     pub fn potential_count(&self) -> usize {
         self.potential_components.iter().map(Vec::len).sum()
     }

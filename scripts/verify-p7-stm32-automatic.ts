@@ -29,6 +29,8 @@ assert.ok(Number.isFinite(budget.maxSeconds)&&budget.maxSeconds>0&&budget.maxSec
 assert.ok(Number.isFinite(budget.maxMemoryMiB)&&budget.maxMemoryMiB>=256&&budget.maxMemoryMiB<=4096,'P7_VERIFY_MEMORY_MIB must be in [256,4096]');
 const treePrivateCapMiB=Number(process.env.P7_TREE_CAP_MIB??4096);
 assert.ok(Number.isFinite(treePrivateCapMiB)&&treePrivateCapMiB>=budget.maxMemoryMiB&&treePrivateCapMiB<=8192,'P7_TREE_CAP_MIB must cover native memory and be <=8192; enforce this cap with the supervisor');
+const maxIterations=process.env.P7_VERIFY_MAX_ITERATIONS===undefined?undefined:Number(process.env.P7_VERIFY_MAX_ITERATIONS);
+assert.ok(maxIterations===undefined||(Number.isInteger(maxIterations)&&maxIterations>=1&&maxIterations<=16),'P7_VERIFY_MAX_ITERATIONS must be in 1..16');
 process.env.P7_VERIFY_SECONDS=String(budget.maxSeconds);
 process.env.P7_VERIFY_MEMORY_MIB=String(budget.maxMemoryMiB);
 const marker='maxSeconds:300,maxMemoryMiB:2048';
@@ -38,7 +40,7 @@ writeFileSync(join(out,'source.js'),code);
 writeFileSync(join(out,'board.json'),boardText);
 const core=localCoreIdentity();
 const identity={board:entry.board,dsl:sourcePath,boardSha256:sha(boardText),originalDslSha256:sha(original),
- executedDslSha256:sha(code),coreIdentity:core,budget,treePrivateCapMiB,
+ executedDslSha256:sha(code),coreIdentity:core,budget,treePrivateCapMiB,maxIterations:maxIterations??16,
  assumptions:entry.missingFields,physicalCoverage:'unverified'};
 save('identity.json',identity);
 let request:any,segmented:any,extraction:any,baseGeometry:any,taskBoardJson:string|undefined;
@@ -113,7 +115,19 @@ if(process.argv.includes('--solve')){
  try{
  assert.equal(preflight.status,'pass','Automatic joint request must pass planning first');
  const {createAnalysisExecutor}=await moduleAt('src/analyze/analysis-dsl/executor.ts');
- const execute=createAnalysisExecutor(),artifacts:any[]=[];
+ let execute=createAnalysisExecutor();
+ if(maxIterations!==undefined){
+  const {createLocalExecutor}=await moduleAt('src/analyze/analysis-dsl/local-executor.ts');
+  const {createProblemExecutor}=await moduleAt('src/analyze/execute-problem.ts');
+  const native=createProblemExecutor(true);
+  execute=createLocalExecutor((problem:any)=>{
+   if(problem.kind!=='board-foil-checked')return native(problem);
+   const bounded={...problem,request:{...problem.request,maxIterations}};
+   save('executed-native-request.json',bounded);
+   return native(bounded);
+  });
+ }
+ const artifacts:any[]=[];
  const result=await executeScenario({board:JSON.parse(boardText),code},
   {filename:sourcePath,maxEntries:1000,maxOutputBytes:64*1024*1024},()=>{},async(task:any)=>{
    const artifact=await execute(task);
