@@ -12,6 +12,7 @@
 |---|---|
 | Понять общий план P0–P15 | [plans/implementation-plan.md](plans/implementation-plan.md) |
 | Понять, как закрывается P7 | [plans/p7-plan.md](plans/p7-plan.md) |
+| Ускорять P7 и ограничивать область без потери возвратных путей | [plans/p7-acceleration-plan.md](plans/p7-acceleration-plan.md) |
 | Узнать, какие случаи поддержаны | [reference/p7-extraction/p7-case-matrix.md](reference/p7-extraction/p7-case-matrix.md) |
 | Продолжить текущую работу | [plans/chat-handoff-2026-11-04.md](plans/chat-handoff-2026-11-04.md) |
 | Узнать, что реально работает в DSL | [reference/dsl/dsl-implementation-status.md](reference/dsl/dsl-implementation-status.md) |

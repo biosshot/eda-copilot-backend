@@ -4,6 +4,54 @@
 use super::*;
 use std::cell::Ref;
 
+// Opt-in diagnostic only. Never changes certificates, tolerances or traversal.
+// stderr is streamed so completed checkpoints survive an external process kill.
+struct Profile {
+    id: u64,
+    clock: Option<(Instant, Instant)>,
+    phase: &'static str,
+    axis: Option<usize>,
+    counts: [usize; 5], // visited, far, near, exact (planned), zero
+    seconds: [f64; 3], // classification, far callback, near callback
+    complete: bool,
+}
+impl Profile {
+    fn new(phase: &'static str, axis: Option<usize>) -> Self {
+        let enabled = std::env::var_os("P7_MAGNETIC_TRACE").as_deref() == Some(std::ffi::OsStr::new("1"));
+        static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        let result = Self { id: if enabled {NEXT_ID.fetch_add(1,std::sync::atomic::Ordering::Relaxed)} else {0},
+            clock: enabled.then(|| {let now=Instant::now(); (now,now)}), phase, axis,
+            counts: [0;5], seconds: [0.;3], complete:false };
+        result.emit("start");
+        result
+    }
+    fn timer(&self) -> Option<Instant> { self.clock.map(|_| Instant::now()) }
+    fn add_time(&mut self, slot: usize, start: Option<Instant>) {
+        if let Some(start)=start { self.seconds[slot]+=start.elapsed().as_secs_f64(); }
+    }
+    fn emit(&self, status: &str) {
+        if let Some((start,_))=self.clock {
+            use std::io::Write;
+            let record=serde_json::json!({"id":self.id,"thread":format!("{:?}",std::thread::current().id()),"phase":self.phase,"axis":self.axis,"status":status,
+                "wallSeconds":start.elapsed().as_secs_f64(),"visited":self.counts[0],
+                "far":self.counts[1],"near":self.counts[2],"plannedExactPairs":self.counts[3],"zero":self.counts[4],
+                "classificationSeconds":self.seconds[0],"farCallbackSeconds":self.seconds[1],"nearCallbackSeconds":self.seconds[2]});
+            let _=writeln!(std::io::stderr().lock(),"P7_MAGNETIC_TRACE {record}");
+        }
+    }
+    fn checkpoint(&mut self, counts: &Counts) {
+        if self.clock.is_none() {return;}
+        self.counts=[counts.visited,counts.far,counts.near,counts.exact,counts.zero];
+        if counts.visited % 4096 == 0 && self.clock.unwrap().1.elapsed().as_secs_f64()>=1. {
+            self.emit("progress"); self.clock.as_mut().unwrap().1=Instant::now();
+        }
+    }
+    fn finish(&mut self) {self.complete=true;self.emit("complete");}
+}
+impl Drop for Profile {
+    fn drop(&mut self) {if !self.complete {self.emit("unfinished");}}
+}
+
 pub(super) struct Geometry {
     leaf: Packed,
     leaf_index: Vec<usize>,
@@ -136,15 +184,22 @@ impl Operator {
         goals: &[f64],
     ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
         let started = Instant::now();
+        let mut batch_profile = Profile::new("batch", None);
+        let mut geometry_profile = Profile::new("geometry", None);
         let (geometry, geometry_seconds) = self.ensure_geometry(&pair.tetra)?;
+        geometry_profile.finish();
         let plan_started = Instant::now();
+        let mut plan_profile = Profile::new("plan", None);
         let plan = Plan::new(self, &geometry, space, columns, goals)?;
+        plan_profile.finish();
         let plan_seconds = plan_started.elapsed().as_secs_f64();
         let mut actions = Vec::with_capacity(columns.len());
         let mut bounds = Vec::with_capacity(columns.len());
         let mut maxima = Vec::with_capacity(columns.len());
         for (column, &goal) in columns.iter().zip(goals) {
+            let mut column_profile = Profile::new("rhs-column", None);
             let (action, bound) = plan.apply(pair, space, column, goal)?;
+            column_profile.finish();
             maxima.push(bound.iter().copied().fold(0f64, f64::max));
             actions.push(action);
             bounds.push(bound);
@@ -154,6 +209,7 @@ impl Operator {
         certificate["actionWallSeconds"] = serde_json::json!(started.elapsed().as_secs_f64());
         certificate["geometryMomentPreparationSeconds"] = serde_json::json!(geometry_seconds);
         certificate["planPreparationSeconds"] = serde_json::json!(plan_seconds);
+        batch_profile.finish();
         Ok((actions, bounds, certificate))
     }
 }
@@ -275,7 +331,7 @@ impl<'a> Plan<'a> {
         let mut moment = vec![usize::MAX; nodes];
         let mut local = moment.clone();
         let mut hash = 0xcbf29ce484222325u64;
-        let counts = result.walk(|pair, decision| {
+        let counts = result.walk(None, |pair, decision| {
             add_hash(&mut hash, pair.a as u64);
             add_hash(&mut hash, pair.b as u64);
             match decision {
@@ -359,7 +415,8 @@ impl<'a> Plan<'a> {
         }
         None
     }
-    fn walk(&self, mut emit: impl FnMut(Pair, Decision) -> Result<()>) -> Result<Counts> {
+    fn walk(&self, axis: Option<usize>, mut emit: impl FnMut(Pair, Decision) -> Result<()>) -> Result<Counts> {
+        let mut profile = Profile::new(if axis.is_some() {"apply-walk"} else {"cover-walk"}, axis);
         let t = self.tree;
         let mut counts = Counts {
             orders: vec![0; t.powers.order + 1],
@@ -380,6 +437,7 @@ impl<'a> Plan<'a> {
                 .ok_or_else(|| error("MEMORY_LIMIT", "adaptive visited count overflow"))?;
             let a = t.nodes[pair.a].children;
             let b = t.nodes[pair.b].children;
+            let decision_started = profile.timer();
             let decision = self.decide(pair).or_else(|| {
                 if a.is_none() && b.is_none() {
                     Some(Decision::Near)
@@ -387,6 +445,7 @@ impl<'a> Plan<'a> {
                     None
                 }
             });
+            profile.add_time(0, decision_started);
             if let Some(decision) = decision {
                 match decision {
                     Decision::Zero => counts.zero += 1,
@@ -413,7 +472,15 @@ impl<'a> Plan<'a> {
                         })?;
                     }
                 }
-                emit(pair, decision)?;
+                profile.checkpoint(&counts);
+                let callback_started = profile.timer();
+                let emitted = emit(pair, decision);
+                match decision {
+                    Decision::Far(_) => profile.add_time(1, callback_started),
+                    Decision::Near => profile.add_time(2, callback_started),
+                    Decision::Zero => {}
+                }
+                emitted?;
                 continue;
             }
             if pair.a == pair.b {
@@ -441,7 +508,10 @@ impl<'a> Plan<'a> {
                 }
                 pending.extend_from_slice(&[Pair { a: pair.a, b: r }, Pair { a: pair.a, b: l }]);
             }
+            profile.checkpoint(&counts);
         }
+        profile.checkpoint(&counts);
+        profile.finish();
         Ok(counts)
     }
     fn moment(
@@ -486,6 +556,8 @@ impl<'a> Plan<'a> {
         let mut bounds = vec![0.; 3 * n];
         let mut near = vec![Interval::zero(); 3 * n];
         for axis in 0..3 {
+            let mut axis_profile = Profile::new("axis", Some(axis));
+            let mut upward_profile = Profile::new("source-and-upward", Some(axis));
             let mut moments = Packed::new(self.geometry.internal_count, &t.harmonic);
             let mut local = Packed::new(t.nodes.len(), &t.harmonic);
             let mut tv = vec![Interval::zero(); t.nodes.len()];
@@ -519,7 +591,8 @@ impl<'a> Plan<'a> {
                     }
                 }
             }
-            self.walk(|block, decision| {
+            upward_profile.finish();
+            self.walk(Some(axis), |block, decision| {
                 match decision {
                     Decision::Zero => {}
                     Decision::Near => {
@@ -605,6 +678,7 @@ impl<'a> Plan<'a> {
                 }
                 Ok(())
             })?;
+            let mut downward_profile = Profile::new("downward", Some(axis));
             for parent in 0..t.nodes.len() {
                 if let Some(children) = t.nodes[parent].children {
                     for child in children {
@@ -622,6 +696,8 @@ impl<'a> Plan<'a> {
                     }
                 }
             }
+            downward_profile.finish();
+            let mut recovery_profile = Profile::new("leaf-recovery", Some(axis));
             for (node, shape) in t.nodes.iter().enumerate() {
                 if shape.children.is_some() {
                     continue;
@@ -657,6 +733,8 @@ impl<'a> Plan<'a> {
                 action[3 * i + axis] = mid;
                 bounds[3 * i + axis] = bound.max(0.);
             }
+            recovery_profile.finish();
+            axis_profile.finish();
         }
         Ok((action, bounds))
     }

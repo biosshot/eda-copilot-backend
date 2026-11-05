@@ -1,4 +1,4 @@
-import { autoFoilPlan, type AutoFoilPlan } from './auto-foil-plan.ts';
+import { autoFoilPlan, type AutoFoilPlan, type FoilClosureStep } from './auto-foil-plan.ts';
 import { componentReachableIslands, MAX_CHANNEL_COMPONENTS, validateChannelAttachments, type BoardChannelRequest } from './channel-components.ts';
 import { normalizePlannerTerminals, type LegacyChannelContact } from './channel-terminals.ts';
 import type { AnalysisGeometryReport } from '../../native/analyze/index.js';
@@ -14,6 +14,7 @@ type Options = {
     magneticPatchLevel?: 1 | 2;
     boundaryFraction?: number;
     autoFoilDeadlineMs?: number;
+    onClosureStep?: (step:FoilClosureStep)=>void;
 };
 type ClosedJointOptions = Options & { closedJointDeadlineMs: number };
 type SegmentedGeometryPlan = SegmentedChannel & { audit: any };
@@ -101,7 +102,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
                 components:componentPlans.map(({pins:[a,b],...model})=>({...model,pins:[a.contact,b.contact]})),
                 seedRegions:new Set([...signalRegions,...returnIds,...contactRegions,
                     ...componentPlans.flatMap(({pins})=>pins.flatMap(({island})=>island.region_ids))]),
-                marginMm:margin,deadlineMs});
+                marginMm:margin,deadlineMs,onClosureStep:options.onClosureStep});
         if ('closedJointDeadlineMs' in options) {
             const joint = closedJoint(options.closedJointDeadlineMs);
             if (!joint) throw new Error('CHANNEL_JOINT_CLOSURE: frequency demand requires a bounded closed physical copper candidate');

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add opt-in `P7_MAGNETIC_TRACE=1` stderr checkpoints for adaptive magnetic preparation, cover/replay walks, per-axis stages and classification/far/near callback costs. Keep numerical traversal and certificates unchanged; profile logs distinguish planned pair counts from executed near kernels. Full-board profiling remains pending.
+
+- Add optional P7 physical-island closure tracing and a planning-only route diagnostic with input/source hashes. The STM32 trace identifies growth from 214 seed regions to 844 regions after retaining 89 barrels; traced/untraced candidates match. Record the 42-case coverage inventory without changing physical acceptance, numerical operators or route selection.
+
+- Record the P7 acceleration plan: case-matrix-driven domain selection and shared return, adaptive magnetic profiling/reuse, memory-bounded CPU parallelism, and replacement of the fixed 10 kHz joint-route switch. Preserve remote return paths and existing acceptance gates; GPU and via 2.5D remain out of scope. No numerical behavior or acceptance status changes.
+
 - Refresh P7 status documentation: distinguish corridor hybrid assembly from the joint mixed route, retain incomplete case coverage and record the full STM32 magnetic deadline failure with its limited memory measurement scope. Keep via 2.5D changes deferred.
 
 - Add adaptive common-batch magnetic covers with absolute action error goals, full basis rebuilds and fresh original-current KVL certificates. The tiny signed/reference proof, saved verifier, eight focused TS checks, typecheck and package build pass. After an initial DC source refusal, benchmark-only same-factor corrections pass both physical source columns. The full STM32 magnetic batch then exceeds the 1,800 s deadline at 1,800.047 s, with a measured native-subtree private peak of 1,328,381,952 B and no completed action or error certificate. The operator time goal is unmet; completed-action memory, physical accuracy and P7 closure remain unverified.

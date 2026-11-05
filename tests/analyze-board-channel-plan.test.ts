@@ -28,6 +28,34 @@ test('actual STM32 refuses distributed lateral return interfaces while preservin
  assert.ok(p.corridors.every((c:any)=>c.lateralContinuations.some((v:any)=>v.sourcePath.includes('zones[0]'))));
 });
 
+test('STM32 closure trace accounts for growth without changing the candidate',async()=>{
+ const root='tests/pcb-analyze/STM32G0_CAN_RS485/';
+ const board=JSON.parse(readFileSync(root+'STM32G0_CAN_RS485.json','utf8'));
+ const code=readFileSync(root+'local-extraction-complete-channel.js','utf8').split('a.plot(')[0];
+ const output=await executeScenario({board,code},{filename:'closure-trace.js',maxEntries:1000,maxOutputBytes:4*1024*1024},()=>{},async task=>{
+  let extraction:any;const base=localRequest(task as any,p=>extraction=p);
+  const planner=createBoardChannelPlanner(task.board,base,extraction.terminalRequest??extraction.contacts);
+  const capture=(onClosureStep?:any)=>{
+   try{planner({autoFoilDeadlineMs:performance.now()+10000,onClosureStep});assert.fail('Expected finite-return refusal');}
+   catch(e:any){assert.equal(e.code,'CHANNEL_CORRIDOR_UNSUPPORTED');assert.equal(e.geometryReason,'finite-return-closure');assert.ok(e.foilCandidate);return e.foilCandidate;}
+  };
+  const plain=capture(),steps:any[]=[];const traced=capture((s:any)=>steps.push(s));
+  assert.deepEqual(traced,plain);
+  assert.equal(steps[0].reason,'seed');assert.equal(steps.at(-1).reason,'complete');
+  const regions=new Set<string>(),barrels=new Set<string>();
+  for(const step of steps){
+   for(const id of step.addedRegionIds){assert.ok(!regions.has(id));regions.add(id);}
+   for(const id of step.addedBarrelIds){assert.ok(!barrels.has(id));barrels.add(id);}
+   assert.equal(regions.size,step.selectedRegions);assert.equal(barrels.size,step.selectedBarrels);
+  }
+  assert.deepEqual([...regions].sort(),traced.sourceCopper.map((r:any)=>r.regionId).sort());
+  assert.deepEqual([...barrels].sort(),traced.sourceBarrels.map((r:any)=>r.barrelId).sort());
+  assert.ok(steps.some(s=>s.reason==='intersecting-islands'&&s.addedRegionIds.length>0));
+  assert.equal(traced.geometry.allowInsulatedCopperCuts,false);
+  return {id:'trace',status:'complete',diagnostics:[],assumptions:[],metrics:{}};
+ });assert.equal(output.status,'complete',JSON.stringify(output.error));
+});
+
 test('channel refinement reuses one captured board and preserves independent plan results',async()=>{
  const board=segmentedCoupon();
  const output=await executeScenario({board,code:segmentedCouponDsl.split('a.plot(')[0]},{filename:'reuse-plan.js',maxEntries:1000,maxOutputBytes:4*1024*1024},()=>{},async task=>{
