@@ -105,12 +105,14 @@ struct PairTrace {
     counts: [u64; 3],
     seconds: [f64; 3],
     last: Instant,
+    hits:u64, misses:u64, evictions:u64,
 }
 impl PairTrace {
     fn emit(&self, final_record: bool) {
         use std::io::Write;
         let record = serde_json::json!({"phase":"near-kernels","final":final_record,"countsIncludeFailed":true,
             "selfCalls":self.counts[0],"separatedCalls":self.counts[1],"adaptiveCalls":self.counts[2],
+            "pairCacheHits":self.hits,"pairCacheMisses":self.misses,"pairCacheEvictions":self.evictions,
             "selfSeconds":self.seconds[0],"separatedSeconds":self.seconds[1],"adaptiveSeconds":self.seconds[2]});
         let _ = writeln!(std::io::stderr().lock(), "P7_MAGNETIC_TRACE {record}");
     }
@@ -118,7 +120,21 @@ impl PairTrace {
 impl Drop for PairTrace {
     fn drop(&mut self) { self.emit(true); }
 }
+#[derive(Clone,Copy)]
+struct ScalarSlot { i:usize, j:usize, value:f64 }
+fn scalar_plan(value:Option<&str>,n:usize,order:usize,base:usize,budget:AllocationBudget)->Result<(usize,usize,usize,usize)> {
+    let text=value.unwrap_or("0");
+    if text.is_empty()||!text.bytes().all(|b|b.is_ascii_digit()) {return Err(error("MAGNETIC_CONFIG","P7_MAGNETIC_PAIR_CACHE_MIB must be an integer from 0 to 4096"));}
+    let mib=text.parse::<usize>().map_err(|_|error("MAGNETIC_CONFIG","invalid scalar cache size"))?;
+    if mib>4096 {return Err(error("MAGNETIC_CONFIG","P7_MAGNETIC_PAIR_CACHE_MIB exceeds 4096"));}
+    let requested=mib.checked_mul(1024*1024).ok_or_else(||error("MEMORY_LIMIT","scalar pair cache overflow"))?;
+    let count=requested/std::mem::size_of::<Option<ScalarSlot>>();let bytes=count.checked_mul(std::mem::size_of::<Option<ScalarSlot>>()).ok_or_else(||error("MEMORY_LIMIT","scalar pair cache overflow"))?;
+    let reserved=base.checked_add(bytes).ok_or_else(||error("MEMORY_LIMIT","scalar pair cache plan overflow"))?;
+    let (pair,slots)=BoundedPairs::plan(n,order,reserved,budget)?;
+    Ok((count,bytes,pair.checked_add(bytes).ok_or_else(||error("MEMORY_LIMIT","scalar pair cache plan overflow"))?,slots))
+}
 struct BoundedPairs {
+    scalar:std::cell::RefCell<Vec<Option<ScalarSlot>>>,
     trace: Option<std::cell::RefCell<PairTrace>>,
     tetra: Vec<[[f64; 3]; 4]>,
     cells: std::cell::RefCell<Vec<PairCell>>,
@@ -173,10 +189,16 @@ impl BoundedPairs {
         start: Instant,
         wall: Duration,
     ) -> Result<Self> {
+        Self::new_with_scalar(tetra,order,slots,0,start,wall)
+    }
+    fn new_with_scalar(tetra:Vec<[[f64;3];4]>,order:usize,slots:usize,scalar_slots:usize,start:Instant,wall:Duration)->Result<Self> {
         check_deadline(start, wall)?;
+        let mut scalar=Vec::new();scalar.try_reserve_exact(scalar_slots).map_err(|_|error("MEMORY_LIMIT","scalar pair cache allocation failed"))?;
+        scalar.resize(scalar_slots,None);
         Ok(Self {
+            scalar:std::cell::RefCell::new(scalar),
             trace: (std::env::var_os("P7_MAGNETIC_TRACE").as_deref() == Some(std::ffi::OsStr::new("1")))
-                .then(|| std::cell::RefCell::new(PairTrace { counts: [0; 3], seconds: [0.; 3], last: Instant::now() })),
+                .then(|| std::cell::RefCell::new(PairTrace { counts: [0; 3], seconds: [0.; 3], last: Instant::now(), hits:0, misses:0, evictions:0 })),
             tetra,
             cells: std::cell::RefCell::new(Vec::with_capacity(slots)),
             slots,
@@ -230,9 +252,13 @@ impl BoundedPairs {
         Ok(())
     }
     fn pair(&self, i: usize, j: usize) -> Result<f64> {
+        check_deadline(self.start,self.wall)?;
+        let slot={let cache=self.scalar.borrow();if cache.is_empty(){None}else{Some((i.wrapping_mul(0x9e3779b1).wrapping_add(j.wrapping_mul(0x85ebca6b)))%cache.len())}};
+        if let Some(k)=slot {if let Some(entry)=self.scalar.borrow()[k] {if entry.i==i && entry.j==j {if let Some(t)=&self.trace {t.borrow_mut().hits+=1;}return Ok(entry.value);}} if let Some(t)=&self.trace {t.borrow_mut().misses+=1;}}
         let started = self.trace.as_ref().map(|_| Instant::now());
         let mut kind = if i == j { 0 } else { 2 };
         let result = self.pair_inner(i, j, &mut kind);
+        if let (Some(k),Ok(value))=(slot,&result) {let mut cache=self.scalar.borrow_mut();if cache[k].is_some() {if let Some(t)=&self.trace {t.borrow_mut().evictions+=1;}}cache[k]=Some(ScalarSlot{i,j,value:*value});}
         if let (Some(trace), Some(started)) = (&self.trace, started) {
             let mut trace = trace.borrow_mut();
             trace.counts[kind] += 1;
@@ -308,10 +334,11 @@ impl<'a> Streamed<'a> {
                 "unchanged native copper cell order required",
             ));
         }
-        let (mut owned_bytes, slots) = BoundedPairs::plan(n, order, base_bytes, budget)?;
-        eprintln!("P7_STREAMED_MEMORY_PLAN tetrahedra={n} geometryBytes={} exactCacheSlots={slots} slotBytes={STREAMED_PAIR_SLOT_BYTES} constructionScratchSlots=2 ownedBytes={owned_bytes} baseBytes={base_bytes} budgetBytes={} operator=unchanged-direct-pairs complexity=quadratic", n*std::mem::size_of::<[[f64;3];4]>(),budget.max_bytes);
+        let config=match std::env::var("P7_MAGNETIC_PAIR_CACHE_MIB") {Ok(v)=>Some(v),Err(std::env::VarError::NotPresent)=>None,Err(_)=>return Err(error("MAGNETIC_CONFIG","P7_MAGNETIC_PAIR_CACHE_MIB must be valid UTF-8"))};
+        let (scalar_slots,scalar_bytes,mut owned_bytes,slots)=scalar_plan(config.as_deref(),n,order,base_bytes,budget)?;
+        eprintln!("P7_STREAMED_MEMORY_PLAN tetrahedra={n} geometryBytes={} exactCacheSlots={slots} slotBytes={STREAMED_PAIR_SLOT_BYTES} constructionScratchSlots=2 scalarCacheBytes={scalar_bytes} scalarCacheSlots={scalar_slots} ownedBytes={owned_bytes} baseBytes={base_bytes} budgetBytes={} operator=unchanged-direct-pairs complexity=quadratic", n*std::mem::size_of::<[[f64;3];4]>(),budget.max_bytes);
         // Move the original geometry into the cache; do not duplicate its Vec.
-        let pair = BoundedPairs::new(geometry(mesh), order, slots, start, wall)?;
+        let pair = BoundedPairs::new_with_scalar(geometry(mesh), order, slots, scalar_slots, start, wall)?;
         let hierarchical = {
             let tree = hierarchical_magnetic::Operator::new(
                 &pair.tetra,
@@ -516,6 +543,28 @@ impl MagneticApply for Operator<'_> {
 #[cfg(test)]
 mod bounded_pair_tests {
     use super::*;
+    #[test]
+    fn scalar_cache_preserves_order_eviction_and_deadlines() {
+        let tetra=|x:f64|[[x,0.,0.],[x+0.001,0.,0.],[x,0.001,0.],[x,0.,0.001]];
+        let cells=vec![tetra(0.),tetra(0.001),tetra(0.1)];
+        let plain=BoundedPairs::new_with_scalar(cells.clone(),12,2,0,Instant::now(),Duration::from_secs(30)).unwrap();
+        let mut cache=BoundedPairs::new_with_scalar(cells,12,2,1,Instant::now(),Duration::from_secs(30)).unwrap();
+        cache.trace=Some(std::cell::RefCell::new(PairTrace{counts:[0;3],seconds:[0.;3],last:Instant::now(),hits:0,misses:0,evictions:0}));
+        for (i,j) in [(0,0),(0,1),(1,0),(2,0),(2,0),(0,1)] {let a=plain.pair(i,j).unwrap();let b=cache.pair(i,j).unwrap();assert_eq!(a.to_bits(),b.to_bits());}
+        assert_eq!((cache.scalar.borrow()[0].unwrap().i,cache.scalar.borrow()[0].unwrap().j),(0,1));
+        {let t=cache.trace.as_ref().unwrap().borrow();assert_eq!((t.hits,t.misses,t.evictions),(1,5,4));}
+        let budget=AllocationBudget{max_bytes:4*1024*1024,max_nodes:100,max_tetrahedra:100};
+        let (count,bytes,owned,_)=scalar_plan(Some("1"),3,12,0,budget).unwrap();assert_eq!(bytes,count*std::mem::size_of::<Option<ScalarSlot>>());assert!(owned>=bytes);
+        assert!(scalar_plan(Some("4"),3,12,0,budget).is_err());assert_eq!(scalar_plan(None,3,12,0,budget).unwrap().0,0);
+        assert!(scalar_plan(Some("4096"),3,12,0,AllocationBudget{max_bytes:5usize*1024*1024*1024,..budget}).is_ok());
+        for bad in ["", "-1", "1.5", "NaN", "4097"] {assert!(scalar_plan(Some(bad),3,12,0,budget).is_err());}
+        let start=Instant::now();for _ in 0..1000 {cache.pair(0,1).unwrap();}let elapsed=start.elapsed();
+        eprintln!("scalar cache repeated hits=1000 elapsed={elapsed:?}");
+        let mut expired=BoundedPairs::new_with_scalar(vec![tetra(0.)],12,2,1,Instant::now(),Duration::from_secs(1)).unwrap();expired.pair(0,0).unwrap();
+        expired.wall=Duration::ZERO;assert!(expired.pair(0,0).is_err());assert!(expired.scalar.borrow()[0].is_some());
+        let budget=AllocationBudget{max_bytes:1024*1024,max_nodes:100,max_tetrahedra:100};
+        assert!(BoundedPairs::plan(3,12,1024*1024,budget).is_err());
+    }
     #[test]
     fn bounded_pair_cache_eviction_preserves_exact_coefficients_and_preflights_memory() {
         let tetra = |x: f64| {

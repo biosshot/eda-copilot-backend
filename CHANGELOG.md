@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Preserve unmixed potential shapes from charge-coordinate solves when admitting shared-return candidates. The disconnected remote-return AC control now passes original charge/KCL/KVL and full-model port comparisons without welding islands or relaxing tolerances. Add opt-in, budgeted exact ordered-pair magnetic memoization (`P7_MAGNETIC_PAIR_CACHE_MIB`, default off) to reuse successful quadrature values across actions; no full-board speedup is yet established.
+
 - Extend the private section/shared-return candidate with bounded residual-driven potential enrichment that preserves physical island constants and contact cardinality. Four-cell longitudinal controls reduce both voltage and current coordinates; a physical remote return bridge passes original charge/KCL/KVL admission after two further residual corrections. Preserve the earlier rejection and broken-bridge topology controls. No production dispatch, tolerance relaxation or full-board speedup is claimed.
 
 - Extend the section/shared-return control to physical source ownership, distributed cut potentials and bounded magnetic enrichment. Use conditioned charge coordinates and original-space charge/KCL/KVL checks for candidate admission; ordinary 1 A-scale residual checks missed small island-charge errors. Fix compact magnetic certificates to omit absent optional chunk metadata. Full production shared-return routing and complete case-matrix acceptance remain pending.

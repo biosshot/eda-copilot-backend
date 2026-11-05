@@ -51,4 +51,14 @@ Verification: all three `section_return` library tests pass in 13.56 s (`debuggi
 
 Both `volume_projection` integration tests also pass (`debugging/p7-long-return-projection.log`); the release addon build passes (`debugging/p7-long-return-native-build.log`).
 
-Remote vias and disconnected-return AC, floating uncontacted islands, slots and multiple reference planes, layer/width/via events, arbitrary orientations and mesh mappings, frequency validation and automatic planner integration remain unverified for this new candidate. Existing production paths remain in place. The 42-case acceptance inventory is not promoted. Next implementation must address these through real geometry and original-space admission, not inferred net connections or ROI clipping.
+### Disconnected return AC and split potential recovery
+
+The three-slab fixture now also compares the disconnected-return AC response against the full volume solve at 1 kHz. Four physical conductor islands remain independent; transfer between return strips closes capacitively. Full 76/432 potential/current coordinates reduce to 38/89. Both tested complex-port differences are below 2.4e-15 relative, with unchanged charge/KCL/KVL gates. The connected-bridge positive and intermediate negative controls remain.
+
+Initially, reconstructing large capacitive island constants together with the small conductive potential shape lost the shape before differentiation. Subtracting already rounded coordinates did not fix it. The charge-coordinate solver now optionally returns the unmixed shape; candidate admission differentiates this shape with exact island-partition cancellation. The existing vector API retains its original physical residual check and avoids allocating the optional shape. Candidate admission additionally checks physical-space KVL using the split recovery. Gradients are streamed one basis column at a time to avoid another dense basis-sized allocation.
+
+This extends the finite-domain numerical evidence only; it does not validate disconnected-return behavior across the requested band or an automatic board-level route.
+
+Final rerun: three shared-return tests pass in 22.64 s (`debugging/p7-broken-return-control.log`), and both existing charge-coordinate tests pass (`debugging/p7-split-charge-control.log`). Release addon build passes; shared build evidence is recorded with [the exact pair memoization package](p7-magnetic-pair-memo-2026-11-05.md).
+
+Remote vias, floating uncontacted islands, slots and multiple reference planes, layer/width/via events, arbitrary orientations and mesh mappings, frequency validation and automatic planner integration remain unverified for this new candidate. Existing production paths remain in place. The 42-case acceptance inventory is not promoted. Next implementation must address these through real geometry and original-space admission, not inferred net connections or ROI clipping.

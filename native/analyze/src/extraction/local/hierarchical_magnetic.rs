@@ -1379,8 +1379,10 @@ mod tests {
         assert_eq!(tile_counts.near, 1);
         assert_eq!(tile_counts.exact, 10);
 
-        let (owned, slots) = BoundedPairs::plan(geometry.len(), 12, 0, budget).unwrap();
-        let pair = BoundedPairs::new(geometry.clone(), 12, slots, start, wall).unwrap();
+        let config=std::env::var("P7_MAGNETIC_PAIR_CACHE_MIB").ok();
+        let (scalar_slots,_,owned,slots)=super::super::scalar_plan(config.as_deref(),geometry.len(),12,0,budget).unwrap();
+        let pair = BoundedPairs::new_with_scalar(geometry.clone(), 12, slots, scalar_slots, start, wall).unwrap();
+        if config.as_deref()==Some("1") {assert!(scalar_slots>0);}
         // Same production dispatch, fineleaf policy and fixed operator for
         // every basis and independently recovered full-state action.
         let streamed = Streamed {

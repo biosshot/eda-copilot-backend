@@ -39,7 +39,7 @@ pub(in crate::extraction) fn solve_candidate(
 ) -> Result<Vec<f64>> {
     let nv=basis.voltage.len();let n=nv+basis.current.len();
     if omega<=0.||!omega.is_finite()||rhs.len()!=2*n||real_injection.len()!=space.potential_count()||imaginary_injection.len()!=space.potential_count()||rhs.iter().chain(real_injection).chain(imaginary_injection).any(|v|!v.is_finite()) {return Err(error("SECTION_RETURN_MAP","invalid candidate solve dimensions or values"));}
-    let x=system.solve_charge_coordinates(omega,rhs,stats)?;
+    let (x,shape)=system.solve_charge_coordinates_split(omega,rhs,stats)?;
     if x.len()!=2*n||x.iter().any(|v|!v.is_finite()) {return Err(error("SECTION_RETURN_RESIDUAL","nonfinite candidate solution"));}
     let potential=|offset:usize|->Vec<f64> {(0..space.potential_count()).map(|j|basis.voltage.iter().enumerate().map(|(k,v)|v[j]*x[offset+k]).sum()).collect()};
     let vr=potential(0);let vi=potential(n);let qr=field.apply(&vr)?;let qi=field.apply(&vi)?;
@@ -52,7 +52,14 @@ pub(in crate::extraction) fn solve_candidate(
     }
     let current=|offset:usize|->Vec<f64> {(0..space.current_count()).map(|j|basis.current.iter().enumerate().map(|(k,v)|v[j]*x[offset+nv+k]).sum()).collect()};
     let ir=current(0);let ii=current(n);let dr=space.divergence(&ir)?;let di=space.divergence(&ii)?;
-    let gr=space.gradient(&vr)?;let gi=space.gradient(&vi)?;let lr=magnetic.apply(space,&ir)?;let li=magnetic.apply(space,&ii)?;
+    // Differentiate the island partition using coefficient differences: large
+    // capacitive island constants must cancel before floating-point gradients.
+    let mut gr=vec![0.;space.current_count()];let mut gi=gr.clone();
+    for columns in &basis.component_columns {let last=*columns.last().unwrap();for &a in &columns[..columns.len()-1] {
+        let gradient=space.gradient(&basis.voltage[a])?;let cr=shape[a]-shape[last];let ci=shape[n+a]-shape[n+last];
+        for j in 0..gr.len() {gr[j]+=cr*gradient[j];gi[j]+=ci*gradient[j];}
+    }}
+    let lr=magnetic.apply(space,&ir)?;let li=magnetic.apply(space,&ii)?;
     let source=real_injection.iter().chain(imaginary_injection).map(|v|v.abs()).fold(0.,f64::max);
     let kcl=(0..dr.len()).map(|j|(dr[j]-omega*qi[j]-real_injection[j]).hypot(di[j]+omega*qr[j]-imaginary_injection[j])).fold(0.,f64::max);
     let mut kvl:f64=0.;let mut scale:f64=0.;
@@ -313,7 +320,7 @@ mod tests {
             }
             let profiles=lift(&section,&recovery,&physical,&space,0..slabs-1,&owners,budget).unwrap();
             assert_eq!(profiles.len(),6);
-            if bridge && slabs==3 {
+            if slabs==3 {
                 let contacts:Vec<_>=electrodes.iter().enumerate().map(|(i,n)|(format!("remote-{i}"),space.node_potential[&n[0]])).collect();
                 let cuts:Vec<_>=physical.nodes_m.iter().enumerate().filter_map(|(i,p)|if p[2]==2e-3 {space.node_potential.get(&i).copied()}else{None}).collect();
                 let field=volume_field::Field::new(&physical,&space,budget).unwrap();let magnetic=volume_magnetic::Operator::new(&physical,budget).unwrap();
@@ -325,15 +332,15 @@ mod tests {
                 let model=basis.model(&space,&field,&magnetic,&ports,budget).unwrap();let mut system=coupled::System::compile(&model,2,None).unwrap();
                 let n=basis.voltage.len()+basis.current.len();let mut rhs=system.port_rhs(&drives[0]);rhs.resize(2*n,0.);
                 let mut injection=vec![0.;space.potential_count()];injection[contacts[2].1]=1.;injection[contacts[3].1]=-1.;
-                let rejected=solve_candidate(&basis,&space,&field,&magnetic,&mut system,omega,&rhs,&injection,&vec![0.;injection.len()],&mut Counters::default()).unwrap_err();assert!(rejected.contains("SECTION_RETURN_RESIDUAL"));eprintln!("remote candidate rejected: {rejected}");
+                if bridge {let rejected=solve_candidate(&basis,&space,&field,&magnetic,&mut system,omega,&rhs,&injection,&vec![0.;injection.len()],&mut Counters::default()).unwrap_err();assert!(rejected.contains("SECTION_RETURN_RESIDUAL"));eprintln!("remote candidate rejected: {rejected}");}
                 enrich_kcl(&mut basis,&space,&field,&magnetic,&fixed,&ports,&drives,omega,2,0,budget).unwrap();
                 let model=basis.model(&space,&field,&magnetic,&ports,budget).unwrap();let mut system=coupled::System::compile(&model,2,None).unwrap();let n=basis.voltage.len()+basis.current.len();let mut rhs=system.port_rhs(&drives[0]);rhs.resize(2*n,0.);
                 assert!(basis.voltage.len()<space.potential_count() && basis.current.len()<space.current_count());
                 let x=solve_candidate(&basis,&space,&field,&magnetic,&mut system,omega,&rhs,&injection,&vec![0.;injection.len()],&mut Counters::default()).unwrap();
                 let solver=volume_solve::Solver::new(&space,&field,&magnetic,budget).unwrap();let full=solver.solve(1000.,&injection,&vec![0.;injection.len()],Duration::from_secs(30)).unwrap();
                 let pr=system.port_voltages(&x,2);let pi=system.port_voltages(&x[n..],2);
-                for port in 0..2 {let f=solver.port_voltage(&full,contacts[ports[port][0]].1,contacts[ports[port][1]].1);let err=(pr[port]-f[0]).hypot(pi[port]-f[1])/f[0].hypot(f[1]).max(1e-30);eprintln!("remote admitted port={port} error={err:e}");assert!(err<1e-8);}
-                eprintln!("remote AC full={}/{} reduced={}/{}",space.potential_count(),space.current_count(),basis.voltage.len(),basis.current.len());
+                for port in 0..2 {let f=solver.port_voltage(&full,contacts[ports[port][0]].1,contacts[ports[port][1]].1);let err=(pr[port]-f[0]).hypot(pi[port]-f[1])/f[0].hypot(f[1]).max(1e-30);eprintln!("remote bridge={bridge} admitted port={port} error={err:e}");assert!(err<1e-8);}
+                eprintln!("remote bridge={bridge} AC full={}/{} reduced={}/{}",space.potential_count(),space.current_count(),basis.voltage.len(),basis.current.len());
             }
             eprintln!("remote bridge slabs={slabs} bridge={bridge} components={} potential={} current={}",space.components.len(),space.potential_count(),space.current_count());
         }}

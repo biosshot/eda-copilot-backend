@@ -2,7 +2,7 @@
 //! coordinates. The model and physical admission tolerances are unchanged.
 use super::*;
 pub(super) struct Coordinates {
-    potential:Vec<Vec<f64>>,
+    potential:Vec<Vec<f64>>, shape:usize,
     g:Matrix,e:Matrix,
 }
 #[cfg(test)]
@@ -96,9 +96,17 @@ impl System {
         for a in 0..nv {for b in a..nv {let value=dot(&potential[a],&load_images[b]);if value!=0. {g.insert((a,b),value);if a!=b {g.insert((b,a),value);}}}}
         for(&(i,j),&v)in &self.linear.g {if i>=nv&&j>=nv {g.insert((i,j),v);}}
         for(&(i,j),&v)in &self.linear.e {if i>=nv&&j>=nv {e.insert((i,j),v);}}
-        Ok(Coordinates{potential,g,e})
+        Ok(Coordinates{potential,shape,g,e})
     }
     pub(crate) fn solve_charge_coordinates(&mut self,omega:f64,rhs:&[f64],stats:&mut Counters)->Result<Vec<f64>> {
+        Ok(self.solve_charge_coordinates_impl(omega,rhs,stats,false)?.0)
+    }
+    /// Return physical coordinates and the potential shape before adding island constants.
+    /// The shape has the same real/imaginary layout; its current entries are zero.
+    pub(crate) fn solve_charge_coordinates_split(&mut self,omega:f64,rhs:&[f64],stats:&mut Counters)->Result<(Vec<f64>,Vec<f64>)> {
+        self.solve_charge_coordinates_impl(omega,rhs,stats,true)
+    }
+    fn solve_charge_coordinates_impl(&mut self,omega:f64,rhs:&[f64],stats:&mut Counters,retain_shape:bool)->Result<(Vec<f64>,Vec<f64>)> {
         if self.charge_coordinates.is_none() {self.charge_coordinates=Some(self.build_charge_coordinates()?);}
         let coordinates=self.charge_coordinates.as_ref().unwrap();let n=self.linear.n;let nv=self.nv;
         let mut matrix=coordinates.g.clone();
@@ -123,6 +131,7 @@ impl System {
         if normalized>1e-8||x.iter().any(|v|!v.is_finite()){return Err(fail("COUPLED_COORDINATES",format!("original physical residual={normalized:e}")));}
         self.residual=self.residual.max(res).max(normalized);
         self.kcl=self.kcl.max(residual[..nv].iter().chain(&residual[n..n+nv]).map(|v|v.abs()).fold(0.,f64::max));
-        Ok(x)
+        let mut shape=vec![];if retain_shape {shape.resize(2*n,0.);for part in 0..2 {for i in 0..nv {shape[part*n+i]=(0..coordinates.shape).map(|a|coordinates.potential[a][i]*coordinate[part*n+a]).sum();}}}
+        Ok((x,shape))
     }
 }
