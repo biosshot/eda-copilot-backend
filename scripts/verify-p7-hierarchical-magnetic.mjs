@@ -19,10 +19,17 @@ export function verifyHierarchicalMagnetic(log){
  const p=JSON.parse(lines[0].slice(marker.length));
  assert.equal(p.schema,'p7-hierarchical-magnetic-v1');
  assert.equal(p.policy,'certified-cartesian-tree-v1');
+ assert.equal(p.representationVersion,2);
+ assert.equal(p.harmonicBasis,'laplace-quotient-z01');
+ assert.equal(p.momentCoefficientCount,121);
+ assert.equal(p.m2lCouplings,2926);
+ assert.equal(p.shiftStencilTerms,2108);
+ assert.equal(p.axisSerial,true);
+ assert.equal(p.leafTetrahedra,1);
  assert.equal(p.coverage,'unverified');
  assert.ok(Number.isSafeInteger(p.originalCellCount)&&p.originalCellCount>0&&p.originalCellCount<=32);
  const n=3*p.originalCellCount;
- assert.ok(Number.isSafeInteger(p.expansionOrder)&&p.expansionOrder>0);
+ assert.equal(p.expansionOrder,10);
  assert.ok(Number.isSafeInteger(p.exactPairs)&&p.exactPairs>0);
  assert.ok(Number.isSafeInteger(p.farClusterPairs)&&p.farClusterPairs>0);
  assert.ok(Array.isArray(p.cases)&&p.cases.length>=n+2);

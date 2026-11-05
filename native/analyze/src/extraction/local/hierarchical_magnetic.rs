@@ -132,20 +132,15 @@ fn factorial(n: usize) -> u64 {
 fn choose(n: usize, k: usize) -> f64 {
     (factorial(n) / (factorial(k) * factorial(n - k))) as f64
 }
+#[cfg(test)]
 fn choose3(a: [usize; 3], b: [usize; 3]) -> f64 {
     (0..3).map(|k| choose(a[k], b[k])).product()
 }
 fn degree(a: [usize; 3]) -> usize {
     a.into_iter().sum()
 }
-fn included(a: [usize; 3], b: [usize; 3]) -> bool {
-    (0..3).all(|k| a[k] <= b[k])
-}
 fn plus(a: [usize; 3], b: [usize; 3]) -> [usize; 3] {
     std::array::from_fn(|k| a[k] + b[k])
-}
-fn minus(a: [usize; 3], b: [usize; 3]) -> [usize; 3] {
-    std::array::from_fn(|k| a[k] - b[k])
 }
 #[derive(Clone)]
 struct Powers {
@@ -172,12 +167,122 @@ impl Powers {
         self.index[(a[0] * (self.order + 1) + a[1]) * (self.order + 1) + a[2]]
     }
 }
+/// Canonical differential polynomials modulo Laplace: Dz^2=-Dx^2-Dy^2.
+/// Each homogeneous degree has2*l+1 real coefficients, (p+1)^2 in total.
+struct Harmonic {
+    list: Vec<[usize; 3]>,
+    index: Vec<usize>,
+    order: usize,
+}
+impl Harmonic {
+    fn new(powers: &Powers) -> Self {
+        let list: Vec<_> = powers.list.iter().copied().filter(|a| a[2] <= 1).collect();
+        let mut index = vec![usize::MAX; (powers.order + 1).pow(3)];
+        for (i, &a) in list.iter().enumerate() {
+            index[(a[0] * (powers.order + 1) + a[1]) * (powers.order + 1) + a[2]] = i;
+        }
+        Self {
+            list,
+            index,
+            order: powers.order,
+        }
+    }
+    fn at(&self, a: [usize; 3]) -> usize {
+        self.index[(a[0] * (self.order + 1) + a[1]) * (self.order + 1) + a[2]]
+    }
+}
+#[derive(Clone, Copy)]
+struct Shift {
+    source: usize,
+    target: usize,
+    power: usize,
+    weight: Interval,
+}
+#[derive(Clone, Copy)]
+struct Coupling {
+    target: usize,
+    source: usize,
+    jet: usize,
+    source_degree: usize,
+}
+/// Centers with a common outward error radius per homogeneous shell. Reads
+/// reconstruct intervals; all coefficients of an update are frozen before
+/// writing any shell radius, avoiding in-place uncertainty amplification.
+struct Packed {
+    centers: Vec<f64>,
+    radii: Vec<f64>,
+    rank: usize,
+    shells: usize,
+}
+impl Packed {
+    fn new(nodes: usize, basis: &Harmonic) -> Self {
+        Self {
+            centers: vec![0.; nodes * basis.list.len()],
+            radii: vec![0.; nodes * (basis.order + 1)],
+            rank: basis.list.len(),
+            shells: basis.order + 1,
+        }
+    }
+    fn read(&self, node: usize, basis: &Harmonic) -> Vec<Interval> {
+        basis
+            .list
+            .iter()
+            .enumerate()
+            .map(|(i, &a)| {
+                let c = self.centers[node * self.rank + i];
+                let r = self.radii[node * self.shells + degree(a)];
+                if r == 0. {
+                    Interval::point(c)
+                } else {
+                    Interval {
+                        lo: down(c - r),
+                        hi: up(c + r),
+                    }
+                }
+            })
+            .collect()
+    }
+    fn write(&mut self, node: usize, basis: &Harmonic, values: &[Interval]) -> Result<()> {
+        let mut radius = vec![0f64; self.shells];
+        for (i, (&a, &value)) in basis.list.iter().zip(values).enumerate() {
+            if !value.finite() {
+                return Err(error(
+                    "HIERARCHICAL_MAGNETIC_INTERVAL",
+                    "packed harmonic shell overflow",
+                ));
+            }
+            let center = value.mid();
+            if !center.is_finite() {
+                return Err(error(
+                    "HIERARCHICAL_MAGNETIC_INTERVAL",
+                    "packed harmonic center overflow",
+                ));
+            }
+            self.centers[node * self.rank + i] = center;
+            radius[degree(a)] = radius[degree(a)].max(if value.exact_zero() {
+                0.
+            } else {
+                value.radius(center)
+            });
+        }
+        self.radii[node * self.shells..(node + 1) * self.shells].copy_from_slice(&radius);
+        Ok(())
+    }
+    fn add(&mut self, node: usize, basis: &Harmonic, delta: &[Interval]) -> Result<()> {
+        let old = self.read(node, basis);
+        let values: Vec<_> = old.into_iter().zip(delta).map(|(v, &d)| v.add(d)).collect();
+        self.write(node, basis, &values)
+    }
+}
+
 #[derive(Clone)]
 struct Node {
     center: [f64; 3],
     radius: f64,
     range: [usize; 2],
     children: Option<[usize; 2]>,
+    terminal_bounds: [[f64; 3]; 2],
+    minimum_terminal_radius: f64,
 }
 #[derive(Clone, Copy)]
 struct Pair {
@@ -189,7 +294,12 @@ pub(super) struct Operator {
     permutation: Vec<usize>,
     far: Vec<Pair>,
     near: Vec<Pair>,
+    pair_budget: usize,
+    pair_high_water: usize,
     powers: Powers,
+    harmonic: Harmonic,
+    shifts: [Vec<Shift>; 3],
+    couplings: Vec<Coupling>,
     pub planned_bytes: usize,
     pub exact_pairs: usize,
     signature: String,
@@ -233,23 +343,50 @@ impl Operator {
         }
         let n = tetra.len();
         let rank = (order + 1) * (order + 2) * (order + 3) / 6;
-        // Median splitting makes every non-root leaf at least floor(leaf/2)
-        // cells. Moment+local slabs are sequential per RHS, never per all RHS.
+        let harmonic_rank = (order + 1) * (order + 1);
         let minimum = (leaf / 2).max(1);
         let node_bound = n
             .div_ceil(minimum)
             .checked_mul(2)
             .ok_or_else(|| error("MEMORY_LIMIT", "magnetic node bound overflow"))?;
+        let mut shift_counts = [0usize; 3];
+        let mut coupling_count = 0usize;
+        for degree_g in 0..=order {
+            for gx in 0..=degree_g {
+                for gy in 0..=degree_g - gx {
+                    let g = [gx, gy, degree_g - gx - gy];
+                    if g[2] > 1 {
+                        continue;
+                    }
+                    for k in 0..=order - degree_g {
+                        shift_counts[0] += 1;
+                        shift_counts[1] += 1;
+                        shift_counts[2] += (g[2] + k) / 2 + 1;
+                    }
+                    for degree_h in 0..=order - degree_g {
+                        coupling_count += 2 * degree_h + 1;
+                    }
+                }
+            }
+        }
+        let stencil_bytes = shift_counts
+            .into_iter()
+            .sum::<usize>()
+            .checked_mul(std::mem::size_of::<Shift>())
+            .and_then(|v| {
+                v.checked_add(coupling_count.checked_mul(std::mem::size_of::<Coupling>())?)
+            })
+            .ok_or_else(|| error("MEMORY_LIMIT", "harmonic stencil count overflow"))?;
         let work = node_bound
-            .checked_mul(rank)
-            .and_then(|v| v.checked_mul(6 * std::mem::size_of::<Interval>()))
+            .checked_mul(2 * (harmonic_rank + order + 1) * std::mem::size_of::<f64>())
             .and_then(|v| v.checked_add(node_bound.checked_mul(256)?))
             .and_then(|v| v.checked_add(n.checked_mul(128)?))
-            .and_then(|v| v.checked_add(rank.checked_mul(256)?))
-            .ok_or_else(|| error("MEMORY_LIMIT", "hierarchical magnetic work plan overflow"))?;
+            .and_then(|v| v.checked_add(rank.checked_mul(512)?))
+            .and_then(|v| v.checked_add(stencil_bytes))
+            .ok_or_else(|| error("MEMORY_LIMIT", "packed harmonic work plan overflow"))?;
         budget.check(
             base.checked_add(work)
-                .ok_or_else(|| error("MEMORY_LIMIT", "hierarchical magnetic base overflow"))?,
+                .ok_or_else(|| error("MEMORY_LIMIT", "harmonic base overflow"))?,
         )?;
         let pair_limit = (budget.max_bytes - base - work) / 64;
         if pair_limit < 8 {
@@ -260,12 +397,55 @@ impl Operator {
         }
         let pair_limit = (pair_limit - 4).min(n.saturating_mul(128).max(4));
         let powers = Powers::new(order);
+        let harmonic = Harmonic::new(&powers);
+        let mut shifts: [Vec<Shift>; 3] =
+            std::array::from_fn(|axis| Vec::with_capacity(shift_counts[axis]));
+        for (source, &g) in harmonic.list.iter().enumerate() {
+            for axis in 0..3 {
+                for k in 0..=order - degree(g) {
+                    let mut raw = g;
+                    raw[axis] += k;
+                    let half = raw[2] / 2;
+                    for j in 0..=half {
+                        let target =
+                            harmonic.at([raw[0] + 2 * j, raw[1] + 2 * (half - j), raw[2] % 2]);
+                        let sign = if half % 2 == 0 { 1. } else { -1. };
+                        let weight = Interval::point(sign * choose(half, j))
+                            .div(Interval::point(factorial(k) as f64));
+                        shifts[axis].push(Shift {
+                            source,
+                            target,
+                            power: k,
+                            weight,
+                        });
+                    }
+                }
+            }
+        }
+        let mut couplings = Vec::with_capacity(coupling_count);
+        for (target, &h) in harmonic.list.iter().enumerate() {
+            for (source, &g) in harmonic.list.iter().enumerate() {
+                if degree(h) + degree(g) <= order {
+                    couplings.push(Coupling {
+                        target,
+                        source,
+                        jet: powers.at(plus(h, g)),
+                        source_degree: degree(g),
+                    });
+                }
+            }
+        }
         let mut result = Self {
             nodes: Vec::with_capacity(node_bound),
             permutation: (0..n).collect(),
             far: vec![],
             near: vec![],
+            pair_budget: budget.max_bytes - base - work,
+            pair_high_water: 0,
             powers,
+            harmonic,
+            shifts,
+            couplings,
             planned_bytes: work,
             exact_pairs: 0,
             signature: String::new(),
@@ -276,9 +456,9 @@ impl Operator {
         };
         result.build(tetra, 0, n)?;
         result.partition(0, 0, pair_limit)?;
-        let pair_bytes = (result.far.len() + result.near.len() + 4)
-            .checked_mul(64)
-            .ok_or_else(|| error("MEMORY_LIMIT", "hierarchical pair capacity overflow"))?;
+        // Truncating compacted near tiles never releases Vec capacity.
+        // Charge the actual reserved/high-water buffer sizes, not final lengths.
+        let pair_bytes = result.pair_high_water;
         let mut hash = 0xcbf29ce484222325u64;
         let mut stamp = |v: u64| {
             for b in v.to_le_bytes() {
@@ -286,6 +466,7 @@ impl Operator {
                 hash = hash.wrapping_mul(0x100000001b3);
             }
         };
+        stamp(2); // harmonic quotient/packed-shell representation version
         stamp(order as u64);
         stamp(leaf as u64);
         stamp(qmax.to_bits());
@@ -355,6 +536,8 @@ impl Operator {
             radius,
             range: [begin, end],
             children: None,
+            terminal_bounds: [center, center],
+            minimum_terminal_radius: radius,
         });
         if end - begin > self.leaf {
             let mut axis = 0;
@@ -371,6 +554,20 @@ impl Operator {
             let left = self.build(tetra, begin, middle)?;
             let right = self.build(tetra, middle, end)?;
             self.nodes[index].children = Some([left, right]);
+            self.nodes[index].terminal_bounds = std::array::from_fn(|side| {
+                std::array::from_fn(|k| {
+                    let a = self.nodes[left].terminal_bounds[side][k];
+                    let b = self.nodes[right].terminal_bounds[side][k];
+                    if side == 0 {
+                        a.min(b)
+                    } else {
+                        a.max(b)
+                    }
+                })
+            });
+            self.nodes[index].minimum_terminal_radius = self.nodes[left]
+                .minimum_terminal_radius
+                .min(self.nodes[right].minimum_terminal_radius);
         }
         Ok(index)
     }
@@ -383,6 +580,91 @@ impl Operator {
             .div(r);
         (r, q)
     }
+    fn push_pair(&mut self, far: bool, pair: Pair) -> Result<()> {
+        let (target, other) = if far {
+            (&mut self.far, &self.near)
+        } else {
+            (&mut self.near, &self.far)
+        };
+        let element = std::mem::size_of::<Pair>();
+        if target.len() == target.capacity() {
+            let capacity = target
+                .capacity()
+                .checked_mul(2)
+                .map(|v| v.max(4))
+                .ok_or_else(|| error("MEMORY_LIMIT", "interaction capacity overflow"))?;
+            let peak = other
+                .capacity()
+                .checked_add(target.capacity())
+                .and_then(|v| v.checked_add(capacity))
+                .and_then(|v| v.checked_mul(element))
+                .ok_or_else(|| error("MEMORY_LIMIT", "interaction growth peak overflow"))?;
+            if peak > self.pair_budget {
+                return Err(error(
+                    "MEMORY_LIMIT",
+                    "interaction old/new buffer growth exceeds reserved budget",
+                ));
+            }
+            self.pair_high_water = self.pair_high_water.max(peak);
+            target
+                .try_reserve_exact(capacity - target.len())
+                .map_err(|_| error("MEMORY_LIMIT", "interaction tile allocation refused"))?;
+        }
+        let live = other
+            .capacity()
+            .checked_add(target.capacity())
+            .and_then(|v| v.checked_mul(element))
+            .ok_or_else(|| error("MEMORY_LIMIT", "interaction retained capacity overflow"))?;
+        if live > self.pair_budget {
+            return Err(error(
+                "MEMORY_LIMIT",
+                "interaction retained capacity exceeds reserved budget",
+            ));
+        }
+        self.pair_high_water = self.pair_high_water.max(live);
+        target.push(pair);
+        Ok(())
+    }
+    fn all_terminal_near(&self, a: usize, b: usize) -> bool {
+        let a = &self.nodes[a];
+        let b = &self.nodes[b];
+        let mut squared = Interval::zero();
+        for axis in 0..3 {
+            let first = Interval::point(a.terminal_bounds[1][axis])
+                .sub(Interval::point(b.terminal_bounds[0][axis]));
+            let second = Interval::point(b.terminal_bounds[1][axis])
+                .sub(Interval::point(a.terminal_bounds[0][axis]));
+            let maximum = first
+                .lo
+                .abs()
+                .max(first.hi.abs())
+                .max(second.lo.abs())
+                .max(second.hi.abs());
+            squared = squared.add(Interval::point(maximum).pow(2));
+        }
+        let maximum_distance = squared.sqrt();
+        let minimum_radii = Interval::point(a.minimum_terminal_radius)
+            .add(Interval::point(b.minimum_terminal_radius));
+        // This only chooses exact integration. No descendantterminal pair can
+        // pass qmax under this conservative separation lower bound; even a
+        // missed coarser far opportunity would add cost, never physical error.
+        minimum_radii.lo > Interval::point(self.qmax).mul(maximum_distance).hi
+    }
+    fn near_tile(&mut self, a: usize, b: usize) -> Result<()> {
+        let na = self.nodes[a].range[1] - self.nodes[a].range[0];
+        let nb = self.nodes[b].range[1] - self.nodes[b].range[0];
+        let count = if a == b {
+            na.checked_mul(na + 1).map(|v| v / 2)
+        } else {
+            na.checked_mul(nb)
+        }
+        .ok_or_else(|| error("MEMORY_LIMIT", "near pair count overflow"))?;
+        self.exact_pairs = self
+            .exact_pairs
+            .checked_add(count)
+            .ok_or_else(|| error("MEMORY_LIMIT", "near pair count overflow"))?;
+        self.push_pair(false, Pair { a, b })
+    }
     fn partition(&mut self, a: usize, b: usize, limit: usize) -> Result<()> {
         check_deadline(self.start, self.wall)?;
         if self.far.len() + self.near.len() >= limit {
@@ -394,44 +676,37 @@ impl Operator {
         if a != b {
             let (_, q) = self.separation(a, b);
             if q.finite() && q.hi <= self.qmax {
-                self.far.push(Pair { a, b });
-                return Ok(());
+                return self.push_pair(true, Pair { a, b });
             }
         }
         let ac = self.nodes[a].children;
         let bc = self.nodes[b].children;
+        if ac.is_none() && bc.is_none() || self.all_terminal_near(a, b) {
+            return self.near_tile(a, b);
+        }
+        let far_start = self.far.len();
+        let near_start = self.near.len();
         if a == b {
-            if let Some([l, r]) = ac {
-                self.partition(l, l, limit)?;
-                self.partition(l, r, limit)?;
-                return self.partition(r, r, limit);
-            }
-        }
-        if ac.is_none() && bc.is_none() {
-            let na = self.nodes[a].range[1] - self.nodes[a].range[0];
-            let nb = self.nodes[b].range[1] - self.nodes[b].range[0];
-            let count = if a == b {
-                na.checked_mul(na + 1).map(|v| v / 2)
-            } else {
-                na.checked_mul(nb)
-            }
-            .ok_or_else(|| error("MEMORY_LIMIT", "near pair count overflow"))?;
-            self.exact_pairs = self
-                .exact_pairs
-                .checked_add(count)
-                .ok_or_else(|| error("MEMORY_LIMIT", "near pair count overflow"))?;
-            self.near.push(Pair { a, b });
-            return Ok(());
-        }
-        if ac.is_some() && (bc.is_none() || self.nodes[a].radius >= self.nodes[b].radius) {
+            let [l, r] = ac.unwrap();
+            self.partition(l, l, limit)?;
+            self.partition(l, r, limit)?;
+            self.partition(r, r, limit)?;
+        } else if ac.is_some() && (bc.is_none() || self.nodes[a].radius >= self.nodes[b].radius) {
             let [l, r] = ac.unwrap();
             self.partition(l, b, limit)?;
-            self.partition(r, b, limit)
+            self.partition(r, b, limit)?;
         } else {
             let [l, r] = bc.unwrap();
             self.partition(a, l, limit)?;
-            self.partition(a, r, limit)
+            self.partition(a, r, limit)?;
         }
+        if self.far.len() == far_start {
+            // All originalpairs were counted by the children. Retain one
+            // streamed exact tile rather than an individualpair Vec.
+            self.near.truncate(near_start);
+            self.push_pair(false, Pair { a, b })?;
+        }
+        Ok(())
     }
     fn offset(&self, parent: usize, child: usize) -> ([Interval; 3], Interval) {
         let p = &self.nodes[parent];
@@ -443,19 +718,6 @@ impl Operator {
                     .div(Interval::point(p.radius))
             }),
             Interval::point(c.radius).div(Interval::point(p.radius)),
-        )
-    }
-    fn transfer(
-        &self,
-        a: [usize; 3],
-        b: [usize; 3],
-        offset: [Interval; 3],
-        scale: Interval,
-    ) -> Interval {
-        let difference = minus(a, b);
-        (0..3).fold(
-            Interval::point(choose3(a, b)).mul(scale.pow(degree(b))),
-            |v, k| v.mul(offset[k].pow(difference[k])),
         )
     }
     fn moment(&self, tetra: [[f64; 3]; 4], node: usize) -> Result<Vec<Interval>> {
@@ -517,36 +779,27 @@ impl Operator {
         });
         let mut result = vec![Interval::zero(); rank];
         result[0] = Interval::one();
-        let mut power = result.clone();
-        let mut binomial = Interval::one();
-        for k in 1..=p {
-            let mut next = vec![Interval::zero(); rank];
-            for (i, &alpha) in self.powers.list.iter().enumerate() {
-                if power[i].exact_zero() {
-                    continue;
+        for (i, &alpha) in self.powers.list.iter().enumerate().skip(1) {
+            let n = degree(alpha);
+            let mut linear = Interval::zero();
+            let mut quadratic = Interval::zero();
+            for axis in 0..3 {
+                if alpha[axis] > 0 {
+                    let mut lower = alpha;
+                    lower[axis] -= 1;
+                    linear = linear.add(direction[axis].mul(result[self.powers.at(lower)]));
                 }
-                for axis in 0..3 {
-                    let mut term = alpha;
-                    term[axis] += 1;
-                    if degree(term) <= p {
-                        let index = self.powers.at(term);
-                        next[index] =
-                            next[index].add(power[i].mul(direction[axis]).mul(Interval::point(2.)));
-                    }
-                    term[axis] += 1;
-                    if degree(term) <= p {
-                        let index = self.powers.at(term);
-                        next[index] = next[index].add(power[i]);
-                    }
+                if alpha[axis] > 1 {
+                    let mut lower = alpha;
+                    lower[axis] -= 2;
+                    quadratic = quadratic.add(result[self.powers.at(lower)]);
                 }
             }
-            power = next;
-            binomial = binomial
-                .mul(Interval::point(-((2 * k - 1) as f64)))
-                .div(Interval::point((2 * k) as f64));
-            for i in 0..rank {
-                result[i] = result[i].add(power[i].mul(binomial));
-            }
+            result[i] = linear
+                .mul(Interval::point((2 * n - 1) as f64))
+                .add(quadratic.mul(Interval::point((n - 1) as f64)))
+                .neg()
+                .div(Interval::point(n as f64));
         }
         let remainder = Interval::one()
             .div(r)
@@ -565,8 +818,66 @@ impl Operator {
             Interval::point(self.nodes[b].radius).div(r),
         ))
     }
+    fn quotient(&self, tetra: [[f64; 3]; 4], node: usize) -> Result<Vec<Interval>> {
+        let full = self.moment(tetra, node)?;
+        let mut result = vec![Interval::zero(); self.harmonic.list.len()];
+        for (&a, value) in self.powers.list.iter().zip(full) {
+            let normalized = value.div(Interval::point(
+                (factorial(a[0]) * factorial(a[1]) * factorial(a[2])) as f64,
+            ));
+            let half = a[2] / 2;
+            let sign = if half % 2 == 0 { 1. } else { -1. };
+            for j in 0..=half {
+                let target = self
+                    .harmonic
+                    .at([a[0] + 2 * j, a[1] + 2 * (half - j), a[2] % 2]);
+                result[target] =
+                    result[target].add(normalized.mul(Interval::point(sign * choose(half, j))));
+            }
+        }
+        Ok(result)
+    }
+    fn shifted(
+        &self,
+        input: &[Interval],
+        parent: usize,
+        child: usize,
+        transpose: bool,
+    ) -> Vec<Interval> {
+        let (offset, scale) = self.offset(parent, child);
+        let mut values = input.to_vec();
+        let scales: Vec<_> = (0..=self.powers.order).map(|d| scale.pow(d)).collect();
+        if !transpose {
+            for (v, &a) in values.iter_mut().zip(&self.harmonic.list) {
+                *v = v.mul(scales[degree(a)]);
+            }
+        }
+        let axes = if transpose { [2, 1, 0] } else { [0, 1, 2] };
+        for axis in axes {
+            let powers: Vec<_> = (0..=self.powers.order)
+                .map(|d| offset[axis].pow(d))
+                .collect();
+            let mut next = vec![Interval::zero(); values.len()];
+            for term in &self.shifts[axis] {
+                let factor = term.weight.mul(powers[term.power]);
+                let (target, source) = if transpose {
+                    (term.source, term.target)
+                } else {
+                    (term.target, term.source)
+                };
+                next[target] = next[target].add(factor.mul(values[source]));
+            }
+            values = next;
+        }
+        if transpose {
+            for (v, &a) in values.iter_mut().zip(&self.harmonic.list) {
+                *v = v.mul(scales[degree(a)]);
+            }
+        }
+        values
+    }
     pub fn evidence(&self) -> serde_json::Value {
-        serde_json::json!({"policy":"certified-cartesian-tree-v1","method":"symmetric dual-tree Newton expansion","expansionOrder":self.powers.order,"separationRatioMaximum":self.qmax,"treeNodes":self.nodes.len(),"treeSignature":self.signature,"exactPairs":self.exact_pairs,"farClusterPairs":self.far.len(),"plannedBytes":self.planned_bytes,"scope":"far truncation and arithmetic enclosure; existing near/self quadrature, mesh and physical coverage remain unverified"})
+        serde_json::json!({"policy":"certified-cartesian-tree-v1","method":"symmetric dual-tree Newton expansion","expansionOrder":self.powers.order,"separationRatioMaximum":self.qmax,"treeNodes":self.nodes.len(),"representationVersion":2,"harmonicBasis":"laplace-quotient-z01","momentCoefficientCount":self.harmonic.list.len(),"m2lCouplings":self.couplings.len(),"shiftStencilTerms":self.shifts.iter().map(Vec::len).sum::<usize>(),"axisSerial":true,"leafTetrahedra":self.leaf,"treeSignature":self.signature,"exactPairs":self.exact_pairs,"nearTiles":self.near.len(),"farClusterPairs":self.far.len(),"m2lScalarContractionsPerAxis":self.far.len()*self.couplings.len(),"plannedBytes":self.planned_bytes,"scope":"far truncation and arithmetic enclosure; existing near/self quadrature, mesh and physical coverage remain unverified"})
     }
     pub fn apply(
         &self,
@@ -577,141 +888,16 @@ impl Operator {
         check_deadline(self.start, self.wall)?;
         let action_started = Instant::now();
         let n = pair.tetra.len();
-        let rank = self.powers.list.len();
-        let stride = 3 * rank;
+        let rank = self.harmonic.list.len();
         if current.len() != 3 * n || current.iter().any(|v| !v.is_finite()) {
             return Err(error(
                 "MAGNETIC_INPUT",
                 "finite original three-axis current column required",
             ));
         }
-        let mut moments = vec![Interval::zero(); self.nodes.len() * stride];
-        let mut local = moments.clone();
-        let mut tv = vec![[Interval::zero(); 3]; self.nodes.len()];
-        let mut tails = tv.clone();
-        for (node, geometry) in self.nodes.iter().enumerate() {
-            if geometry.children.is_some() {
-                continue;
-            }
-            for &i in &self.permutation[geometry.range[0]..geometry.range[1]] {
-                check_deadline(self.start, self.wall)?;
-                let values = self.moment(pair.tetra[i], node)?;
-                for axis in 0..3 {
-                    let density = Interval::point(space.cells[i].density_per_amp_m2);
-                    let source = density.mul(Interval::point(current[3 * i + axis]));
-                    tv[node][axis] = tv[node][axis].add(
-                        density
-                            .mul(Interval::point(current[3 * i + axis].abs()))
-                            .mul(values[0]),
-                    );
-                    for k in 0..rank {
-                        let index = node * stride + axis * rank + k;
-                        moments[index] = moments[index].add(source.mul(values[k]));
-                    }
-                }
-            }
-        }
-        for parent in (0..self.nodes.len()).rev() {
-            if let Some(children) = self.nodes[parent].children {
-                for child in children {
-                    check_deadline(self.start, self.wall)?;
-                    let (offset, scale) = self.offset(parent, child);
-                    for axis in 0..3 {
-                        tv[parent][axis] = tv[parent][axis].add(tv[child][axis]);
-                    }
-                    for (i, &a) in self.powers.list.iter().enumerate() {
-                        for (j, &b) in self.powers.list.iter().enumerate() {
-                            if !included(b, a) {
-                                continue;
-                            }
-                            let factor = self.transfer(a, b, offset, scale);
-                            for axis in 0..3 {
-                                let dest = parent * stride + axis * rank + i;
-                                moments[dest] = moments[dest]
-                                    .add(factor.mul(moments[child * stride + axis * rank + j]));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        for block in &self.far {
-            check_deadline(self.start, self.wall)?;
-            let (jet, tail, sa, sb) = self.jet(block.a, block.b)?;
-            let (r, _) = self.separation(block.a, block.b);
-            for axis in 0..3 {
-                tails[block.a][axis] = tails[block.a][axis].add(tail.mul(tv[block.b][axis]));
-                tails[block.b][axis] = tails[block.b][axis].add(tail.mul(tv[block.a][axis]));
-            }
-            for (i, &a) in self.powers.list.iter().enumerate() {
-                for (j, &b) in self.powers.list.iter().enumerate() {
-                    let combined = plus(a, b);
-                    if degree(combined) > self.powers.order {
-                        continue;
-                    }
-                    let mut factor = jet[self.powers.at(combined)]
-                        .mul(Interval::point(choose3(combined, a)))
-                        .mul(sa.pow(degree(a)))
-                        .mul(sb.pow(degree(b)))
-                        .div(r);
-                    if degree(b) % 2 == 1 {
-                        factor = factor.neg();
-                    }
-                    // One block, ordinary transpose on the other cluster; no
-                    // source-dependent/adaptive approximation changes this matrix.
-                    for axis in 0..3 {
-                        let ia = block.a * stride + axis * rank + i;
-                        let ib = block.b * stride + axis * rank + j;
-                        local[ia] = local[ia].add(factor.mul(moments[ib]));
-                        local[ib] = local[ib].add(factor.mul(moments[ia]));
-                    }
-                }
-            }
-        }
-        for parent in 0..self.nodes.len() {
-            if let Some(children) = self.nodes[parent].children {
-                for child in children {
-                    check_deadline(self.start, self.wall)?;
-                    let (offset, scale) = self.offset(parent, child);
-                    for axis in 0..3 {
-                        tails[child][axis] = tails[child][axis].add(tails[parent][axis]);
-                    }
-                    for (i, &a) in self.powers.list.iter().enumerate() {
-                        for (j, &b) in self.powers.list.iter().enumerate() {
-                            if !included(b, a) {
-                                continue;
-                            }
-                            let factor = self.transfer(a, b, offset, scale);
-                            for axis in 0..3 {
-                                let dest = child * stride + axis * rank + j;
-                                local[dest] = local[dest]
-                                    .add(factor.mul(local[parent * stride + axis * rank + i]));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        let mut out = vec![Interval::zero(); 3 * n];
-        let mut bound = vec![0f64; 3 * n];
-        for (node, geometry) in self.nodes.iter().enumerate() {
-            if geometry.children.is_some() {
-                continue;
-            }
-            for &i in &self.permutation[geometry.range[0]..geometry.range[1]] {
-                check_deadline(self.start, self.wall)?;
-                let values = self.moment(pair.tetra[i], node)?;
-                let target =
-                    Interval::point(1e-7).mul(Interval::point(space.cells[i].density_per_amp_m2));
-                for axis in 0..3 {
-                    out[3 * i + axis] =
-                        sum((0..rank)
-                            .map(|k| local[node * stride + axis * rank + k].mul(values[k])))
-                        .mul(target);
-                    bound[3 * i + axis] = target.mul(values[0]).mul(tails[node][axis]).hi.max(0.);
-                }
-            }
-        }
+        let mut action = vec![0.; 3 * n];
+        let mut action_error = vec![0.; 3 * n];
+        let mut near = vec![Interval::zero(); 3 * n];
         for block in &self.near {
             let a = &self.nodes[block.a];
             let b = &self.nodes[block.b];
@@ -729,31 +915,140 @@ impl Operator {
                         .mul(Interval::point(space.cells[j].density_per_amp_m2))
                         .mul(Interval::point(value));
                     for axis in 0..3 {
-                        out[3 * i + axis] = out[3 * i + axis]
+                        near[3 * i + axis] = near[3 * i + axis]
                             .add(coefficient.mul(Interval::point(current[3 * j + axis])));
                         if i != j {
-                            out[3 * j + axis] = out[3 * j + axis]
+                            near[3 * j + axis] = near[3 * j + axis]
                                 .add(coefficient.mul(Interval::point(current[3 * i + axis])));
                         }
                     }
                 }
             }
         }
-        let mut action = Vec::with_capacity(3 * n);
-        for (i, value) in out.into_iter().enumerate() {
-            let mid = value.mid();
-            let uncertainty = up(value.radius(mid) + bound[i]);
-            if !value.finite() || !mid.is_finite() || !uncertainty.is_finite() {
-                return Err(error(
-                    "HIERARCHICAL_MAGNETIC_INTERVAL",
-                    "original action enclosure overflow",
-                ));
+        // Each Cartesian axis is an independent Newton action. Packed state is
+        // released between axes; no3axis*allnodes interval slab is retained.
+        for axis in 0..3 {
+            let mut moments = Packed::new(self.nodes.len(), &self.harmonic);
+            let mut local = Packed::new(self.nodes.len(), &self.harmonic);
+            let mut tv = vec![Interval::zero(); self.nodes.len()];
+            let mut tails = tv.clone();
+            for (node, geometry) in self.nodes.iter().enumerate() {
+                if geometry.children.is_some() {
+                    continue;
+                }
+                let mut values = vec![Interval::zero(); rank];
+                for &i in &self.permutation[geometry.range[0]..geometry.range[1]] {
+                    check_deadline(self.start, self.wall)?;
+                    let q = self.quotient(pair.tetra[i], node)?;
+                    let density = Interval::point(space.cells[i].density_per_amp_m2);
+                    let source = density.mul(Interval::point(current[3 * i + axis]));
+                    tv[node] = tv[node].add(
+                        density
+                            .mul(Interval::point(current[3 * i + axis].abs()))
+                            .mul(q[0]),
+                    );
+                    for k in 0..rank {
+                        values[k] = values[k].add(source.mul(q[k]));
+                    }
+                }
+                moments.write(node, &self.harmonic, &values)?;
             }
-            action.push(mid);
-            bound[i] = uncertainty;
+            for parent in (0..self.nodes.len()).rev() {
+                if let Some(children) = self.nodes[parent].children {
+                    for child in children {
+                        check_deadline(self.start, self.wall)?;
+                        tv[parent] = tv[parent].add(tv[child]);
+                        let shifted = self.shifted(
+                            &moments.read(child, &self.harmonic),
+                            parent,
+                            child,
+                            false,
+                        );
+                        moments.add(parent, &self.harmonic, &shifted)?;
+                    }
+                }
+            }
+            for block in &self.far {
+                check_deadline(self.start, self.wall)?;
+                let (mut derivatives, tail, sa, sb) = self.jet(block.a, block.b)?;
+                let (r, _) = self.separation(block.a, block.b);
+                for (value, &a) in derivatives.iter_mut().zip(&self.powers.list) {
+                    *value = value
+                        .mul(Interval::point(
+                            (factorial(a[0]) * factorial(a[1]) * factorial(a[2])) as f64,
+                        ))
+                        .div(r);
+                }
+                tails[block.a] = tails[block.a].add(tail.mul(tv[block.b]));
+                tails[block.b] = tails[block.b].add(tail.mul(tv[block.a]));
+                let pa: Vec<_> = (0..=self.powers.order).map(|d| sa.pow(d)).collect();
+                let pb: Vec<_> = (0..=self.powers.order).map(|d| sb.pow(d)).collect();
+                let mut ma = moments.read(block.a, &self.harmonic);
+                let mut mb = moments.read(block.b, &self.harmonic);
+                for (i, &a) in self.harmonic.list.iter().enumerate() {
+                    ma[i] = ma[i].mul(pa[degree(a)]);
+                    mb[i] = mb[i].mul(pb[degree(a)]);
+                }
+                let mut la = vec![Interval::zero(); rank];
+                let mut lb = la.clone();
+                for term in &self.couplings {
+                    let mut value = derivatives[term.jet];
+                    if term.source_degree % 2 == 1 {
+                        value = value.neg();
+                    }
+                    la[term.target] = la[term.target].add(value.mul(mb[term.source]));
+                    lb[term.source] = lb[term.source].add(value.mul(ma[term.target]));
+                }
+                for (i, &a) in self.harmonic.list.iter().enumerate() {
+                    la[i] = la[i].mul(pa[degree(a)]);
+                    lb[i] = lb[i].mul(pb[degree(a)]);
+                }
+                local.add(block.a, &self.harmonic, &la)?;
+                local.add(block.b, &self.harmonic, &lb)?;
+            }
+            for parent in 0..self.nodes.len() {
+                if let Some(children) = self.nodes[parent].children {
+                    for child in children {
+                        check_deadline(self.start, self.wall)?;
+                        tails[child] = tails[child].add(tails[parent]);
+                        let shifted =
+                            self.shifted(&local.read(parent, &self.harmonic), parent, child, true);
+                        local.add(child, &self.harmonic, &shifted)?;
+                    }
+                }
+            }
+            let mut out = vec![Interval::zero(); n];
+            let mut truncation = vec![0f64; n];
+            for (node, geometry) in self.nodes.iter().enumerate() {
+                if geometry.children.is_some() {
+                    continue;
+                }
+                let values = local.read(node, &self.harmonic);
+                for &i in &self.permutation[geometry.range[0]..geometry.range[1]] {
+                    check_deadline(self.start, self.wall)?;
+                    let target = self.quotient(pair.tetra[i], node)?;
+                    let density = Interval::point(1e-7)
+                        .mul(Interval::point(space.cells[i].density_per_amp_m2));
+                    out[i] = sum((0..rank).map(|k| values[k].mul(target[k]))).mul(density);
+                    truncation[i] = density.mul(target[0]).mul(tails[node]).hi.max(0.);
+                }
+            }
+            for (i, far_value) in out.into_iter().enumerate() {
+                let value = far_value.add(near[3 * i + axis]);
+                let mid = value.mid();
+                let uncertainty = up(value.radius(mid) + truncation[i]);
+                if !value.finite() || !mid.is_finite() || !uncertainty.is_finite() {
+                    return Err(error(
+                        "HIERARCHICAL_MAGNETIC_INTERVAL",
+                        "original harmonic action enclosure overflow",
+                    ));
+                }
+                action[3 * i + axis] = mid;
+                action_error[3 * i + axis] = uncertainty;
+            }
         }
-        eprintln!("P7_HIERARCHICAL_ACTION originalCurrents={} farClusterPairs={} exactPairs={} elapsedSeconds={:.6}",3*n,self.far.len(),self.exact_pairs,action_started.elapsed().as_secs_f64());
-        Ok((action, bound))
+        eprintln!("P7_HIERARCHICAL_ACTION originalCurrents={} harmonicCoefficients={} m2lCouplings={} farClusterPairs={} exactPairs={} elapsedSeconds={:.6}",3*n,rank,self.couplings.len(),self.far.len(),self.exact_pairs,action_started.elapsed().as_secs_f64());
+        Ok((action, action_error))
     }
 }
 fn volume(t: [[f64; 3]; 4]) -> Result<Interval> {
@@ -1037,13 +1332,55 @@ mod tests {
             max_tetrahedra: 1000,
         };
         let tree = Operator::new(&geometry, 10, 1, 0.2, 0, budget, start, wall).unwrap();
+        assert_eq!(tree.harmonic.list.len(), 121);
+        assert_eq!(tree.couplings.len(), 2926);
+        assert_eq!(
+            tree.shifts.iter().map(Vec::len).collect::<Vec<_>>(),
+            vec![506, 506, 1096]
+        );
         assert!(!tree.far.is_empty());
         assert!(tree.exact_pairs > 0);
+        let tile_pairs: usize = tree
+            .near
+            .iter()
+            .map(|pair| {
+                let a = tree.nodes[pair.a].range;
+                let b = tree.nodes[pair.b].range;
+                let na = a[1] - a[0];
+                let nb = b[1] - b[0];
+                if pair.a == pair.b {
+                    na * (na + 1) / 2
+                } else {
+                    na * nb
+                }
+            })
+            .sum();
+        let far_pairs: usize = tree
+            .far
+            .iter()
+            .map(|pair| {
+                let a = tree.nodes[pair.a].range;
+                let b = tree.nodes[pair.b].range;
+                (a[1] - a[0]) * (b[1] - b[0])
+            })
+            .sum();
+        assert_eq!(tile_pairs, tree.exact_pairs);
+        assert_eq!(
+            tile_pairs + far_pairs,
+            geometry.len() * (geometry.len() + 1) / 2
+        );
+        // Geometry-only exacttile cover control, not a physical overlapping
+        // mesh or an additional electromagnetic acceptance case.
+        let colocated = vec![geometry[0]; 4];
+        let tiles = Operator::new(&colocated, 10, 1, 0.2, 0, budget, start, wall).unwrap();
+        assert!(tiles.far.is_empty());
+        assert_eq!(tiles.near.len(), 1);
+        assert_eq!(tiles.exact_pairs, 10);
+
         let (owned, slots) = BoundedPairs::plan(geometry.len(), 12, 0, budget).unwrap();
         let pair = BoundedPairs::new(geometry.clone(), 12, slots, start, wall).unwrap();
-        // Same production dispatch and fixed operator used for every column
-        // and independently recovered full-state action; only the tiny tree
-        // leaf count is chosen to exercise accepted far blocks in3tetrahedra.
+        // Same production dispatch, fineleaf policy and fixed operator for
+        // every basis and independently recovered full-state action.
         let streamed = Streamed {
             space: &space,
             pair,

@@ -75,6 +75,8 @@ test('automatic partition policy reaches native preparation and exact cache with
         policy:'certified-cartesian-tree-v1',method:'symmetric dual-tree Newton expansion',
         scope:'Far truncation and arithmetic only; physical and near quadrature unverified',
         expansionOrder:10,separationRatioMaximum:0.2,treeNodes:3,exactPairs:18,farClusterPairs:1,
+        representationVersion:2,harmonicBasis:'laplace-quotient-z01',momentCoefficientCount:121,
+        m2lCouplings:2926,shiftStencilTerms:2108,axisSerial:true,leafTetrahedra:1,
         plannedBytes:1024,treeSignature:'fnv1a64:0123456789abcdef',maxFullKvlUncertaintyRelative:5e-10,
       };
       for(const sample of value.samples)for(const column of sample.columns){
@@ -96,6 +98,8 @@ test('automatic partition policy reaches native preparation and exact cache with
     assert.match(changedTree.frequencyAudit.batch.message??'',/CHANNEL_FOIL_FREQUENCY_MESH/);
     for(const corrupt of [
       (value:AnalysisBoardFoilCheckedReport)=>{delete value.provenance.magneticOperator;},
+      (value:AnalysisBoardFoilCheckedReport)=>{Object.assign(value.provenance.magneticOperator!,{representationVersion:1});},
+      (value:AnalysisBoardFoilCheckedReport)=>{Object.assign(value.provenance.magneticOperator!,{momentCoefficientCount:286});},
       (value:AnalysisBoardFoilCheckedReport)=>{value.quality.maxFullKvlUncertaintyRelative=0;},
       (value:AnalysisBoardFoilCheckedReport)=>{value.samples[0].columns[0].kvlUncertaintyRelative=2e-9;},
       (value:AnalysisBoardFoilCheckedReport)=>{value.samples[0].columns[0].kvlRelative=2e-8;},

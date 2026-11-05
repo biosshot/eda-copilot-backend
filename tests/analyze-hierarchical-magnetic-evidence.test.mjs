@@ -14,13 +14,18 @@ function packet(){
   approximateResidual:Array(n).fill(0),uncertaintyBound:Array(n).fill(1e-11),
   referenceUncertaintyBound:Array(n).fill(1e-12),scale:1,upperRelative:1e-11}});
  return {schema:'p7-hierarchical-magnetic-v1',policy:'certified-cartesian-tree-v1',coverage:'unverified',
-  originalCellCount:3,expansionOrder:4,exactPairs:3,farClusterPairs:1,cases};
+  originalCellCount:3,expansionOrder:10,exactPairs:3,farClusterPairs:1,
+  representationVersion:2,harmonicBasis:'laplace-quotient-z01',momentCoefficientCount:121,
+  m2lCouplings:2926,shiftStencilTerms:2108,axisSerial:true,leafTetrahedra:1,cases};
 }
 const verify=p=>verifyHierarchicalMagnetic('P7_HIERARCHICAL_MAGNETIC '+JSON.stringify(p));
 
 test('saved magnetic proof requires independent action intervals and original row uncertainty',()=>{
  assert.equal(verify(packet()).basisChecks,9);
  const corruptions=[
+  p=>{delete p.representationVersion;},
+  p=>{p.representationVersion=1;},
+  p=>{p.momentCoefficientCount=286;},
   p=>{p.cases[0].exactAction[0]+=1e-6;},
   p=>{p.cases.at(-1).fullKvl.exactResidual[0]=1e-6;},
   p=>{p.cases.at(-1).fullKvl.uncertaintyBound[0]=0;},

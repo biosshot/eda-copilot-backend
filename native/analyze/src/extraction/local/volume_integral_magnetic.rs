@@ -278,7 +278,7 @@ impl<'a> Streamed<'a> {
             let tree = hierarchical_magnetic::Operator::new(
                 &pair.tetra,
                 10,
-                32,
+                1,
                 0.2,
                 base_bytes
                     .checked_add(owned_bytes)
@@ -549,7 +549,7 @@ mod actual_tree_planning {
         budget.check(base).unwrap();
         let tetra = geometry(&mesh.mesh);
         let tree = hierarchical_magnetic::Operator::new(
-            &tetra, 10, 32, 0.2, base, budget, started, wall
+            &tetra, 10, 1, 0.2, base, budget, started, wall
         );
         let report = match tree {
             Ok(tree) => serde_json::json!({

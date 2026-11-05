@@ -32,6 +32,9 @@ function validateMagneticOperator(report:AnalysisBoardFoilCheckedReport):void {
  const count=(value:unknown):value is number=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0;
  if(operator.policy!=='certified-cartesian-tree-v1'||operator.method!=='symmetric dual-tree Newton expansion'||
     operator.expansionOrder!==10||operator.separationRatioMaximum!==0.2||
+    operator.representationVersion!==2||operator.harmonicBasis!=='laplace-quotient-z01'||
+    operator.momentCoefficientCount!==121||operator.m2lCouplings!==2926||operator.shiftStencilTerms!==2108||
+    operator.axisSerial!==true||operator.leafTetrahedra!==1||
     !count(operator.treeNodes)||operator.treeNodes<1||
     !count(operator.exactPairs)||operator.exactPairs<1||!count(operator.farClusterPairs)||
     !count(operator.plannedBytes)||operator.plannedBytes<1||operator.plannedBytes>p.plannedBytes||

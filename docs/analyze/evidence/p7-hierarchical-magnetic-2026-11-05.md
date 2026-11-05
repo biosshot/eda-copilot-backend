@@ -104,3 +104,65 @@ The test ran once under the same 1,800 s / 3,072 MiB native and
 Results are under `debugging/p7-hierarchical-magnetic-20261105/actual-plan/`.
 Only the library test target was rebuilt for this ignored test. The production
 addon from the preceding batch is unchanged.
+
+## Harmonic quotient and fine-tree control
+
+The next representation retains degree10, qmax0.2 and the original full-KVL
+gate. It uses121 real Laplace-quotient coefficients,2926 valid M2L couplings,
+and2108 separable shift terms. Packed shell error bounds and sequential
+Cartesian axes bound memory while the original near/self kernel is unchanged.
+Production and planning use one-original-tetrahedron terminal leaves. These
+are structural changes; the count reduction alone does not admit board runtime.
+
+The first proof compilation failed with E0618 because a local action-error
+vector shadowed the `error` function. The local was renamed `action_error`.
+The preserved attempt is `debugging/p7-harmonic-proof-20261105/` (exit101,
+12.484s supervised). After that source correction, the existing signed/reference
+proof passed in0.16s with9 original Cartesian unit-current cases and2 signed
+manufactured original-current KVL controls. The saved JS verifier passed:
+
+| Proof quantity | Value |
+| --- | ---: |
+| Maximum observed action difference |5.169878828456423e-26|
+| Maximum reported action enclosure |1.9387048534047071e-25|
+| Maximum manufactured KVL upper ratio |6.623301405901401e-16|
+
+The proof's cargo launcher exited0, but its supervisor recorded `launcher
+exited before its descendants`. Its184.969s wall time includes compilation;
+peak tree private/RSS were1512869888B/1420623872B. This supervision result
+is not a clean supervised pass. The numerical test and saved verifier results
+are recorded separately under `debugging/p7-harmonic-proof-fixed-20261105/`.
+No numerical proof was repeated to repair the launcher status. A receipt binds
+the prebuilt unit-test executable SHA256
+`4265aef371976924c81ec3e67355b5fcd2a0659cd4a8bdc11da4e267789ebc4f`
+to the successful proof's native source hashes.
+
+One subsequent saved STM32 planning attempt launched that executable directly
+with unchanged supervision gates. It refused before any field or magnetic
+action, under `debugging/p7-harmonic-fine-tree-plan-20261105/`:
+
+| Fine planning quantity | Value |
+| --- | ---: |
+| Supervised wall/native phase time |90.093s/89.9569762s|
+| Exit/supervisor reason |101/null|
+| Peak tree private/RSS |788045824B/619048960B|
+| Geometry/input base |586344648B|
+| Separate tetrahedron geometry buffer |14870304B|
+| Native admitted budget |3220961280B|
+| Field solves/magnetic actions |0/0|
+
+The exact refusal was `LOCAL_MEMORY_LIMIT: hierarchical magnetic interaction
+budget exhausted`. Source inspection identifies the retained-descriptor
+length cap:154899*128=19827072 active entries. It was not an allocator failure
+or proof that the admitted3GiB was consumed. The error report does not preserve
+a far/near breakdown or the full remaining pair counts; none is inferred.
+The planning result does not admit field preparation or electrical extraction.
+No parameter sweep, cap increase or STM32 electromagnetic retry was performed.
+
+The separate streaming-interaction followup remains staged and untested; its
+purpose is bounded descriptor storage. It must expose full traversal/cost
+counts before any electrical run, and cannot itself establish runtime or
+physical acceptance.
+
+The harmonic representation batch also passes eight focused TypeScript tests,
+typecheck, package build and the native addon build (5m20s).

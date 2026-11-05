@@ -30,6 +30,9 @@ function physicalMesh(report: BoardFoilReport) {
     ...(magnetic&&{magneticOperator:magnetic.policy==='exact-streamed-v1'
       ?{policy:magnetic.policy,method:magnetic.method}
       :{policy:magnetic.policy,method:magnetic.method,expansionOrder:magnetic.expansionOrder,
+        representationVersion:magnetic.representationVersion,harmonicBasis:magnetic.harmonicBasis,
+        momentCoefficientCount:magnetic.momentCoefficientCount,m2lCouplings:magnetic.m2lCouplings,
+        shiftStencilTerms:magnetic.shiftStencilTerms,axisSerial:magnetic.axisSerial,leafTetrahedra:magnetic.leafTetrahedra,
         separationRatioMaximum:magnetic.separationRatioMaximum,treeNodes:magnetic.treeNodes,
         exactPairs:magnetic.exactPairs,farClusterPairs:magnetic.farClusterPairs,treeSignature:magnetic.treeSignature}}),
     sourceMapping:p.sourceMapping,barrelIds:p.barrelIds,electrodeAreasM2:p.electrodeAreasM2,

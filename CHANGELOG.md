@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reduce hierarchical magnetic storage and contractions with a real harmonic quotient and fine original-tetrahedron traversal. The signed reference proof and saved verifier pass after a compile-only naming fix; its cargo supervision separately reports a descendant-launcher failure. One direct-executable STM32 planning attempt refuses the interaction descriptor cap before field or action work. Full-board electrical runtime and physical accuracy remain unverified.
+
 - Add an ignored planning-only check of the exact saved STM32 mesh and magnetic tree. Geometry and tree admission pass, but 2.28 billion exact pairs remain per action. Field preparation and action runtime remain unverified.
 
 - Add a reciprocal hierarchical magnetic action on original tetrahedron currents with outward far-field error enclosures and fresh original-state KVL certification. Preserve the near/self kernel and bind operator evidence to caching and frequency audits. The accepted-far proof, saved verifier, compact endpoint, 11 TypeScript controls, typecheck and package build pass. The compact certificate path costs 48.062 s versus 5.656 s previously. Full-board runtime and physical accuracy remain unverified.

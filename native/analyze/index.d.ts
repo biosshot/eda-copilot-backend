@@ -266,6 +266,9 @@ export interface AnalysisBoardFoilCheckedReport {
         } & (
             | { policy: 'exact-streamed-v1'; method: 'unchanged direct tetrahedral pairs' }
             | { policy: 'certified-cartesian-tree-v1'; method: 'symmetric dual-tree Newton expansion';
+                representationVersion: 2; harmonicBasis: 'laplace-quotient-z01';
+                momentCoefficientCount: number; m2lCouplings: number; shiftStencilTerms: number;
+                axisSerial: true; leafTetrahedra: number;
                 expansionOrder: number; separationRatioMaximum: number; treeNodes: number;
                 exactPairs: number; farClusterPairs: number; plannedBytes: number; treeSignature: string }
         );
