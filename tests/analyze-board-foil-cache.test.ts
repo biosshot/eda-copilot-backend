@@ -8,6 +8,8 @@ import type { AnalysisBoardFoilCheckedReport, AnalysisBoardFoilCheckedRequest } 
 import { cachedBoardFoilReport } from '../src/analyze/board-foil-cache.ts';
 import { digest, LocalModelCache } from '../src/analyze/local-model-cache.ts';
 import { isAnalysisProblem, type BoardFoilProblem } from '../src/analyze/types.ts';
+import { runAutoFoil } from '../src/analyze/auto-foil-response.ts';
+import type { AutoFoilPlan } from '../src/analyze/auto-foil-plan.ts';
 
 const problem: BoardFoilProblem = {
   kind: 'board-foil-checked', boardJson: '{"board":"captured"}', geometry: { ports: [['a','b']] },
@@ -26,8 +28,18 @@ function mock(request: AnalysisBoardFoilCheckedRequest, input = problem): Analys
     samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[{input:0,kclRelative:0,kvlRelative:0,
       copperLossW:referenceOhm![0]/4,powerBalanceErrorW:0}]})),
     quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0},
+    ...(request.partitionPolicy&&{conductiveCorrection:{
+      method:'sparse owner interiors and shared conductive trace Schur' as const,
+      ownerInteriorDofs:[3,3],freeSharedTraceDofs:2,traceUpperEntries:3,ownedPlannedBytes:1024,
+      maxOriginalFreeResidualRelative:0,scope:'Original-coordinate conductive correction',
+    }}),
     provenance:{
       modelKind:'mixed',method:'mock mixed',barrelIds:['barrel-0'],
+      ...(request.partitionPolicy&&{partitionPolicy:request.partitionPolicy,automaticPartition:{
+        policy:request.partitionPolicy,status:'selected' as const,reason:'Original mesh partition',
+        algorithm:'longest-extent-midpoint-v1' as const,meshOwnershipSignature:'fnv1a64:0123456789abcdef',
+        owners:2,originalCopperTetrahedra:18,crossOwnerFaces:1,freeSharedTraceDofs:2,ownerInteriorDofs:[3,3],
+      }}),
       sourceMapping:input.expected.sourceCopper.map(({regionId,sourcePath,layer})=>[regionId,sourcePath,null,layer]),
       electrodeAreasM2:{a:1e-8,b:1e-8},maxCopperVolumeChange:0,prisms:3,retainedPotentials:4,currentModes:5,
       nativeCopperTetrahedra:18,volumeTetrahedra:9,fullPotentialCount:12,fullCurrentCount:54,
@@ -36,6 +48,46 @@ function mock(request: AnalysisBoardFoilCheckedRequest, input = problem): Analys
     },
   };
 }
+
+test('automatic partition policy reaches native preparation and exact cache with checked evidence', () => {
+  const dir=mkdtempSync(join(tmpdir(),'p7-automatic-partition-'));
+  try {
+    const cache=new LocalModelCache(dir);
+    const plan={...problem.expected,boardJson:problem.boardJson,geometry:problem.geometry,
+      ports:[{name:'original-port'}],attachments:[]} as unknown as AutoFoilPlan;
+    let calls=0;
+    const execute=(input:BoardFoilProblem)=>cachedBoardFoilReport(cache,'core-partition',input,request=>{
+      calls++;
+      assert.equal(request.partitionPolicy,'automatic-conductive-schur-v1');
+      return mock(request,input);
+    });
+    const run=()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,execute);
+    const cold=run(),warm=run();
+    assert.equal(calls,1);
+    assert.equal(warm.cache?.status,'memory');
+    assert.equal(warm.cache?.key,cold.cache?.key);
+    assert.equal(warm.coverage,'unverified');
+    assert.equal(warm.provenance.automaticPartition?.status,'selected');
+    const audited=runAutoFoil(plan,[1000,2000],problem.request.budget,[1000,2000],input=>{
+      const report=mock(input.request,input);
+      if(input.request.frequenciesHz.length===1)
+        report.provenance.automaticPartition!.meshOwnershipSignature='fnv1a64:fedcba9876543210';
+      return report;
+    });
+    assert.ok(audited.frequencyAudit?.batch.status==='refused');
+    assert.match(audited.frequencyAudit.batch.message??'',/changed the original physical mesh or ownership/);
+    for(const corrupt of [
+      (report:AnalysisBoardFoilCheckedReport)=>{delete report.provenance.automaticPartition;},
+      (report:AnalysisBoardFoilCheckedReport)=>{report.conductiveCorrection!.maxOriginalFreeResidualRelative=2e-8;},
+      (report:AnalysisBoardFoilCheckedReport)=>{report.conductiveCorrection!.ownerInteriorDofs=[0,6];},
+      (report:AnalysisBoardFoilCheckedReport)=>{report.provenance.automaticPartition!.status='not-applicable';delete report.conductiveCorrection;},
+    ]){
+      assert.throws(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>{
+        const report=mock(input.request,input);corrupt(report);return report;
+      }),/CHANNEL_FOIL_EVIDENCE/);
+    }
+  } finally {rmSync(dir,{recursive:true,force:true});}
+});
 
 test('exact grid cache preserves immutable producer evidence through warm and process restart', () => {
   const dir = mkdtempSync(join(tmpdir(),'p7-foil-cache-'));
@@ -103,6 +155,7 @@ test('exact foil cache keys the physical request and bounds replay size', () => 
       { ...problem, request:{...problem.request,frequenciesHz:[1000,3000]} },
       { ...problem, request:{...problem.request,referenceOhm:[75]} },
       { ...problem, request:{...problem.request,maxIterations:4} },
+      { ...problem, request:{...problem.request,partitionPolicy:'automatic-conductive-schur-v1' as const} },
       { ...problem, expected:{...problem.expected,sourceBarrels:[{...problem.expected.sourceBarrels[0],layers:['TOP']}]} },
     ];
     for (const changed of variants) assert.notEqual(run('core-1',changed).cache?.key,cold.cache?.key);

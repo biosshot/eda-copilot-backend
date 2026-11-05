@@ -27,6 +27,16 @@ pub enum CheckedOperator {
     SkinVolumeV3,
 }
 
+/// Internal production automatic routing policy; no public DSL syntax.
+#[derive(Clone, Copy, Default, PartialEq, Eq, serde::Deserialize)]
+pub enum PartitionPolicy {
+    #[default]
+    #[serde(skip)]
+    Legacy,
+    #[serde(rename = "automatic-conductive-schur-v1")]
+    AutomaticConductiveSchurV1,
+}
+
 impl CheckedOperator {
     pub(super) fn admits(self, frequency_hz: f64) -> bool {
         let upper = match self {
@@ -605,7 +615,17 @@ pub fn solve_checked(
         .checked_sub(reserve)
         .ok_or_else(|| error("MEMORY_LIMIT", "mixed checked response exceeds budget"))?;
     let mesh = board_mesh::build(board, request, budget, wall.saturating_sub(start.elapsed()))?;
-    solve_checked_mesh(mesh, request, grid, None, &[], budget, start, wall)
+    solve_checked_mesh(
+        mesh,
+        request,
+        grid,
+        None,
+        &[],
+        PartitionPolicy::Legacy,
+        budget,
+        start,
+        wall,
+    )
 }
 
 pub(super) fn checked_reserve(
@@ -689,12 +709,22 @@ pub(super) fn solve_checked_mesh(
     grid: CheckedGrid<'_>,
     skin: Option<copper_skin_profile::Profile>,
     packages: &[super::checked_packages::Validated],
+    partition_policy: PartitionPolicy,
     budget: AllocationBudget,
     start: Instant,
     wall: Duration,
 ) -> Result<serde_json::Value> {
     solve_checked_mesh_impl(
-        &mesh, request, grid, skin, packages, None, budget, start, wall,
+        &mesh,
+        request,
+        grid,
+        skin,
+        packages,
+        None,
+        partition_policy,
+        budget,
+        start,
+        wall,
     )
 }
 
@@ -731,6 +761,7 @@ pub fn solve_checked_spatial_partition(
         None,
         &[],
         owners.map(|ids| (ids, max_trace_output_bytes)),
+        PartitionPolicy::Legacy,
         budget,
         start,
         wall,
@@ -744,6 +775,7 @@ fn solve_checked_mesh_impl(
     skin: Option<copper_skin_profile::Profile>,
     packages: &[super::checked_packages::Validated],
     partition_request: Option<(&[usize], usize)>,
+    partition_policy: PartitionPolicy,
     mut budget: AllocationBudget,
     start: Instant,
     wall: Duration,
@@ -802,6 +834,15 @@ fn solve_checked_mesh_impl(
                 })
         })
         .ok_or_else(|| error("MEMORY_LIMIT", "mixed provenance plan overflow"))?;
+    let provenance = provenance
+        .checked_add(
+            if partition_policy == PartitionPolicy::AutomaticConductiveSchurV1 {
+                4096
+            } else {
+                0
+            },
+        )
+        .ok_or_else(|| error("MEMORY_LIMIT", "automatic partition metadata overflow"))?;
     budget.max_bytes = budget
         .max_bytes
         .checked_sub(provenance)
@@ -814,6 +855,41 @@ fn solve_checked_mesh_impl(
         budget,
         wall.saturating_sub(start.elapsed()),
     )?;
+    let (automatic_partition, automatic_evidence) =
+        if partition_policy == PartitionPolicy::AutomaticConductiveSchurV1 {
+            check_time(start, wall)?;
+            let originals = map.original_representatives();
+            let mut retained: BTreeSet<_> = map.electrodes.iter().copied().collect();
+            for component in &map.potential_components {
+                if !component.iter().any(|i| retained.contains(i)) {
+                    retained.insert(component[0]);
+                }
+            }
+            let retained = retained.into_iter().map(|i| originals[i]).collect();
+            let available = budget
+                .max_bytes
+                .checked_sub(map.planned_bytes)
+                .ok_or_else(|| {
+                    error(
+                        "MEMORY_LIMIT",
+                        "mixed map exhausts automatic topology budget",
+                    )
+                })?;
+            let (partition, evidence) = Partition::automatic(
+                &mesh.mesh,
+                &map.full,
+                &retained,
+                AllocationBudget {
+                    max_bytes: available,
+                    ..budget
+                },
+                start,
+                wall,
+            )?;
+            (partition, Some(evidence))
+        } else {
+            (None, None)
+        };
     let partition = partition_request
         .map(|(owners, max_output)| {
             let available = budget
@@ -839,7 +915,8 @@ fn solve_checked_mesh_impl(
                 wall,
             )
         })
-        .transpose()?;
+        .transpose()?
+        .or(automatic_partition);
     let partition_bytes = partition
         .as_ref()
         .map_or(0, |partition| partition.planned_bytes);
@@ -936,7 +1013,13 @@ fn solve_checked_mesh_impl(
         "driveConvention":"1 A RMS matched Norton basis columns, checked only at listed frequencies",
     });
     if let Some(partition) = partition {
-        checked["spatialPartition"] = partition.topology();
+        if !partition.compact {
+            checked["spatialPartition"] = partition.topology();
+        }
+    }
+    if let Some(evidence) = automatic_evidence {
+        checked["provenance"]["partitionPolicy"] = json!("automatic-conductive-schur-v1");
+        checked["provenance"]["automaticPartition"] = evidence;
     }
     if let Some(skin) = skin_evidence {
         checked["provenance"]["operatorPolicy"] = json!("skin-volume-v3");

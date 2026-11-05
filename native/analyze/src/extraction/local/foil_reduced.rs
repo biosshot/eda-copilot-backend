@@ -829,7 +829,9 @@ pub(super) fn solve_mixed_grid(
         wall,
         true,
         packages,
-        partition.map(|partition| (partition, &map.full)),
+        partition
+            .filter(|partition| !partition.compact)
+            .map(|partition| (partition, &map.full)),
     )?;
     if let Some(backend) = &dc.partitioned {
         checked["conductiveCorrection"] = backend.evidence();

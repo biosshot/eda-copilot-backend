@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Activate deterministic conductive partitioning in automatic joint extraction. Derive owner interiors and shared traces from the original copper mesh, preserve the common fields and physical terminals, and bind checked partition evidence to exact-grid caching and frequency audits. Seven TypeScript controls and the geometry and 1 kHz native endpoint comparisons pass. Typecheck, package build and native addon build pass. The mixed route can increase planar preparation cost, and physical and large-board acceptance remain unverified.
+
 - Condense each copper owner's free conductive interior onto the shared trace in the private mixed solver, then recover and check the original coordinates during harmonic and AC correction. Keep common electric and magnetic actions. The focused algebra and supervised 1 kHz controls pass against the monolithic correction with the existing residual and power gates. Physical and board-scale acceptance remain open.
 
 - Add a private shared-return partition to the checked mixed operator. Assemble owner-local copper incidence on the original coordinates, retain the common electric and magnetic fields, and verify shared nodal reactions and exclusive owner Joule loss. The supervised two-direction 1 kHz control and saved-result verifier pass with identical split and unsplit S and copper loss. Independent physical accuracy and scalable section/local assembly remain open.

@@ -28,14 +28,15 @@ export function cachedBoardFoilReport(
   started = performance.now(),
 ): BoardFoilReport {
   const { request, expected } = problem;
-  const { frequenciesHz, maxIterations = 16, operatorPolicy, profileUpperHz } = request;
+  const { frequenciesHz, maxIterations = 16, operatorPolicy, profileUpperHz, partitionPolicy } = request;
   const profiled = operatorPolicy === 'skin-volume-v3';
   const limitHz = profiled ? 100_000 : 10_000;
   const upperHz = profileUpperHz ?? frequenciesHz.at(-1);
   const portCount = expected.electrodePairs.length;
   const referenceOhm = request.referenceOhm ?? expected.electrodePairs.map(() => 50);
   if (!validBudget(request.budget)) throw new Error('BOARD_FOIL_BUDGET: finite positive time and 1..4096 MiB required');
-  if ((operatorPolicy !== undefined && !profiled) ||
+  if ((partitionPolicy !== undefined && partitionPolicy !== 'automatic-conductive-schur-v1') ||
+      (operatorPolicy !== undefined && !profiled) ||
       (profileUpperHz !== undefined && (!profiled || !Number.isFinite(profileUpperHz) ||
         profileUpperHz < frequenciesHz[frequenciesHz.length - 1] || profileUpperHz > limitHz)) ||
       portCount < 1 || portCount > 16 || !frequenciesHz.length || frequenciesHz.length * portCount > 256 ||
@@ -60,6 +61,7 @@ export function cachedBoardFoilReport(
     core, producer: 'automatic-board-foil-or-mixed-exact-grid-v1', board: digest(problem.boardJson),
     geometry: problem.geometry, expected, frequenciesHz, referenceOhm, maxIterations,
     ...(profiled && { operatorPolicy, profileUpperHz: upperHz }),
+    ...(partitionPolicy && { partitionPolicy }),
     ...(request.attachments?.length&&{attachments:request.attachments}),
   });
   remaining();

@@ -25,6 +25,7 @@ function physicalMesh(report: BoardFoilReport) {
   const p=report.provenance,skin=p.copperSkinMesh;
   return canonical({
     modelKind:p.modelKind,operatorPolicy:p.operatorPolicy,prisms:p.prisms,
+    partitionPolicy:p.partitionPolicy,automaticPartition:p.automaticPartition,
     sourceMapping:p.sourceMapping,barrelIds:p.barrelIds,electrodeAreasM2:p.electrodeAreasM2,
     ...(p.modelKind==='mixed'&&{volumeTetrahedra:p.volumeTetrahedra,nativeCopperTetrahedra:p.nativeCopperTetrahedra,
       fullPotentialCount:p.fullPotentialCount,fullCurrentCount:p.fullCurrentCount}),

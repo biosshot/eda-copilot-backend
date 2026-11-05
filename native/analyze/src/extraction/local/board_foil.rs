@@ -681,6 +681,8 @@ pub struct CheckedRequest {
     pub operator_policy: CheckedOperator,
     pub profile_upper_hz: Option<f64>,
     #[serde(default)]
+    pub partition_policy: mixed_conductor::PartitionPolicy,
+    #[serde(default)]
     pub attachments: Vec<super::checked_packages::Attachment>,
 }
 
@@ -807,13 +809,22 @@ pub fn solve_checked(
             .all(|(i, layer)| layer.copper == (i % 2 == 0));
     let mixed = |mesh| {
         let mut checked = mixed_conductor::solve_checked_mesh(
-            mesh, geometry, mixed_grid, skin, &packages, budget, started, wall,
+            mesh,
+            geometry,
+            mixed_grid,
+            skin,
+            &packages,
+            request.partition_policy,
+            budget,
+            started,
+            wall,
         )?;
         checked["provenance"]["maxSeconds"] = json!(admitted_seconds);
         checked["provenance"]["maxMemoryMiB"] = json!(admitted_memory);
         Ok(checked)
     };
     if skin.is_some()
+        || request.partition_policy != mixed_conductor::PartitionPolicy::Legacy
         || !packages.is_empty()
         || !planar_stack
         || !mesh.barrel_ids.is_empty()

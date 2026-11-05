@@ -34,6 +34,7 @@ pub(super) struct Partition {
     trace_owner_masks: Vec<u16>,
     faces: Vec<Face>,
     pub planned_bytes: usize,
+    pub compact: bool,
 }
 
 fn deadline(start: Instant, wall: Duration) -> Result<()> {
@@ -75,6 +76,30 @@ impl Partition {
         budget: AllocationBudget,
         start: Instant,
         wall: Duration,
+    ) -> Result<Self> {
+        Self::new_impl(
+            mesh,
+            space,
+            owner_by_tet,
+            columns,
+            max_output_bytes,
+            budget,
+            start,
+            wall,
+            false,
+        )
+    }
+
+    fn new_impl(
+        mesh: &LayeredMesh,
+        space: &Space,
+        owner_by_tet: &[usize],
+        columns: usize,
+        max_output_bytes: usize,
+        budget: AllocationBudget,
+        start: Instant,
+        wall: Duration,
+        compact: bool,
     ) -> Result<Self> {
         let cells_count = mesh.copper_tetrahedra.len();
         let potentials = space.potential_count();
@@ -159,7 +184,7 @@ impl Partition {
             }
         }
         drop(occurrences);
-        if faces.is_empty() || local_maps.iter().any(BTreeMap::is_empty) {
+        if !compact && (faces.is_empty() || local_maps.iter().any(BTreeMap::is_empty)) {
             return Err(error(
                 "SHARED_RETURN_OWNERSHIP",
                 "nonempty contiguous owners and conforming shared copper faces required",
@@ -193,20 +218,24 @@ impl Partition {
             })
             .collect();
 
-        let output_bytes = traces
-            .len()
-            .checked_mul(512)
-            .and_then(|n| n.checked_add(memberships.checked_mul(192)?))
-            .and_then(|n| n.checked_mul(columns))
-            .and_then(|n| n.checked_add(faces.len().checked_mul(384)?))
-            .and_then(|n| n.checked_add(4096))
-            .filter(|&n| n <= max_output_bytes)
-            .ok_or_else(|| {
-                error(
-                    "SHARED_RETURN_OUTPUT",
-                    "distributed trace output exceeds budget",
-                )
-            })?;
+        let output_bytes = if compact {
+            4096
+        } else {
+            traces
+                .len()
+                .checked_mul(512)
+                .and_then(|n| n.checked_add(memberships.checked_mul(192)?))
+                .and_then(|n| n.checked_mul(columns))
+                .and_then(|n| n.checked_add(faces.len().checked_mul(384)?))
+                .and_then(|n| n.checked_add(4096))
+                .filter(|&n| n <= max_output_bytes)
+                .ok_or_else(|| {
+                    error(
+                        "SHARED_RETURN_OUTPUT",
+                        "distributed trace output exceeds budget",
+                    )
+                })?
+        };
         let planned_bytes = topology_bytes
             .checked_add(output_bytes)
             .and_then(|n| n.checked_add(traces.len().checked_mul(owners_count)?.checked_mul(128)?))
@@ -239,7 +268,127 @@ impl Partition {
             trace_owner_masks,
             faces,
             planned_bytes,
+            compact,
         })
+    }
+
+    /// Geometry-only binary candidate; eligibility uses the solver's unchanged
+    /// retained physical electrodes and floating component coordinates.
+    pub fn automatic(
+        mesh: &LayeredMesh,
+        space: &Space,
+        retained: &std::collections::BTreeSet<usize>,
+        budget: AllocationBudget,
+        start: Instant,
+        wall: Duration,
+    ) -> Result<(Option<Self>, Value)> {
+        let count = mesh.copper_tetrahedra.len();
+        let bytes = count
+            .checked_mul(2048)
+            .and_then(|v| v.checked_add(space.potential_count().checked_mul(128)?))
+            .ok_or_else(|| error("MEMORY_LIMIT", "automatic partition topology overflow"))?;
+        budget.check(bytes)?;
+        let mut low = [f64::INFINITY; 3];
+        let mut high = [f64::NEG_INFINITY; 3];
+        for tet in &mesh.copper_tetrahedra {
+            deadline(start, wall)?;
+            for &node in &tet.nodes {
+                for k in 0..3 {
+                    let v = mesh.nodes_m[node][k];
+                    if !v.is_finite() {
+                        return Err(error(
+                            "SHARED_RETURN_OWNERSHIP",
+                            "finite original coordinates required",
+                        ));
+                    }
+                    low[k] = low[k].min(v);
+                    high[k] = high[k].max(v);
+                }
+            }
+        }
+        let mut axis = 0;
+        for k in 1..3 {
+            if high[k] - low[k] > high[axis] - low[axis] {
+                axis = k;
+            }
+        }
+        let middle = low[axis] * 0.5 + high[axis] * 0.5;
+        let mut ids = Vec::with_capacity(count);
+        for tet in &mesh.copper_tetrahedra {
+            deadline(start, wall)?;
+            let center = tet
+                .nodes
+                .iter()
+                .map(|&i| mesh.nodes_m[i][axis] * 0.25)
+                .sum::<f64>();
+            ids.push(usize::from(center > middle));
+        }
+        // Noncryptographic topology stamp. Cache producer and geometry hashes
+        // remain authoritative; include the actual finite electrode quotient.
+        let mut hash = 0xcbf29ce484222325u64;
+        let mut stamp = |v: u64| {
+            for byte in v.to_le_bytes() {
+                hash ^= byte as u64;
+                hash = hash.wrapping_mul(0x100000001b3);
+            }
+        };
+        stamp(mesh.nodes_m.len() as u64);
+        stamp(count as u64);
+        for xyz in &mesh.nodes_m {
+            deadline(start, wall)?;
+            for v in xyz {
+                stamp(v.to_bits());
+            }
+        }
+        for (i, tet) in mesh.copper_tetrahedra.iter().enumerate() {
+            deadline(start, wall)?;
+            for &node in &tet.nodes {
+                stamp(node as u64);
+            }
+            stamp(ids[i] as u64);
+            for &potential in &space.cells[i].potentials {
+                stamp(potential as u64);
+            }
+        }
+        stamp(retained.len() as u64);
+        for &i in retained {
+            stamp(i as u64);
+        }
+        let mut evidence = json!({"policy":"automatic-conductive-schur-v1", "status":"not-applicable",
+            "algorithm":"longest-extent-midpoint-v1", "meshOwnershipSignature":format!("fnv1a64:{hash:016x}"),
+            "owners":if count == 0 {0} else {2}, "originalCopperTetrahedra":count,
+            "crossOwnerFaces":0, "freeSharedTraceDofs":0, "ownerInteriorDofs":if count == 0 {vec![]} else {vec![0usize;2]},
+            "reason":"binary spatial candidate has no finite interface and free interiors on both owners"});
+        if !ids.contains(&0) || !ids.contains(&1) {
+            return Ok((None, evidence));
+        }
+        let partition =
+            Self::new_impl(mesh, space, &ids, 1, usize::MAX, budget, start, wall, true)?;
+        let free_trace = partition
+            .traces
+            .iter()
+            .filter(|i| !retained.contains(i))
+            .count();
+        let interiors: Vec<_> = partition
+            .owners
+            .iter()
+            .map(|owner| {
+                owner
+                    .global
+                    .iter()
+                    .filter(|i| !retained.contains(i) && partition.traces.binary_search(i).is_err())
+                    .count()
+            })
+            .collect();
+        evidence["crossOwnerFaces"] = json!(partition.faces.len());
+        evidence["freeSharedTraceDofs"] = json!(free_trace);
+        evidence["ownerInteriorDofs"] = json!(interiors);
+        if partition.faces.is_empty() || free_trace == 0 || interiors.iter().any(|&n| n == 0) {
+            return Ok((None, evidence));
+        }
+        evidence["status"] = json!("selected");
+        evidence["reason"] = json!("finite original shared faces, free shared trace and free interiors on both spatial owners");
+        Ok((Some(partition), evidence))
     }
 
     pub fn owner_count(&self) -> usize {
@@ -388,5 +537,117 @@ impl Partition {
         }
         Ok(json!({"maxWeldRelative":max_weld,"maxKclRelative":max_kcl,
             "ownerJouleLossW":owner_loss,"traces":rows}))
+    }
+}
+
+#[cfg(test)]
+mod automatic_tests {
+    use super::*;
+    #[test]
+    fn automatic_partition_is_geometry_based_frozen_and_refuses_unusable_free_sets() {
+        use super::super::mesh::{extrude, LayeredInput, Material};
+        let budget = AllocationBudget {
+            max_bytes: 8 * 1024 * 1024,
+            max_nodes: 1000,
+            max_tetrahedra: 1000,
+        };
+        let xy_m = (0..=4)
+            .flat_map(|i| [[i as f64 * 0.5 - 1., 0.], [i as f64 * 0.5 - 1., 0.25]])
+            .collect();
+        let triangles: Vec<_> = (0..4)
+            .flat_map(|i| {
+                [
+                    [2 * i, 2 * i + 2, 2 * i + 1],
+                    [2 * i + 2, 2 * i + 3, 2 * i + 1],
+                ]
+            })
+            .collect();
+        let boundary_edges = vec![
+            [0, 2],
+            [2, 4],
+            [4, 6],
+            [6, 8],
+            [8, 9],
+            [9, 7],
+            [7, 5],
+            [5, 3],
+            [3, 1],
+            [1, 0],
+        ];
+        let mesh = extrude(
+            &LayeredInput {
+                xy_m,
+                materials: vec![vec![
+                    Material::Copper {
+                        source_ids: vec!["authored".into()]
+                    };
+                    triangles.len()
+                ]],
+                triangles,
+                boundary_edges,
+                z_m: vec![0., 0.1],
+            },
+            budget,
+        )
+        .unwrap();
+        let space = super::super::volume_current::assemble(
+            &mesh,
+            &vec![58e6; mesh.copper_tetrahedra.len()],
+            &[],
+            budget,
+        )
+        .unwrap();
+        let retained = std::collections::BTreeSet::from([space.components[0][0]]);
+        let start = Instant::now();
+        let wall = Duration::from_secs(5);
+        let (chosen, evidence) =
+            Partition::automatic(&mesh, &space, &retained, budget, start, wall).unwrap();
+        let partition = chosen.unwrap();
+        assert!(partition.compact);
+        assert_eq!(evidence["status"], "selected");
+        assert_eq!(evidence["owners"], 2);
+        assert!(evidence["crossOwnerFaces"].as_u64().unwrap() > 0);
+        assert!(evidence["ownerInteriorDofs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|v| v.as_u64().unwrap() > 0));
+        assert_eq!(
+            space
+                .cells
+                .iter()
+                .enumerate()
+                .map(|(i, c)| (partition.weld(i), c.potentials))
+                .filter(|(a, b)| a != b)
+                .count(),
+            0
+        );
+        let (_, repeat) =
+            Partition::automatic(&mesh, &space, &retained, budget, start, wall).unwrap();
+        assert_eq!(repeat, evidence);
+        let all = (0..space.potential_count()).collect();
+        let (chosen, unavailable) =
+            Partition::automatic(&mesh, &space, &all, budget, start, wall).unwrap();
+        assert!(chosen.is_none());
+        assert_eq!(unavailable["status"], "not-applicable");
+        assert_ne!(
+            unavailable["meshOwnershipSignature"],
+            evidence["meshOwnershipSignature"]
+        );
+        assert!(Partition::automatic(
+            &mesh,
+            &space,
+            &retained,
+            AllocationBudget {
+                max_bytes: 1,
+                ..budget
+            },
+            start,
+            wall
+        )
+        .is_err());
+        assert!(
+            Partition::automatic(&mesh, &space, &retained, budget, start, Duration::ZERO).is_err()
+        );
     }
 }

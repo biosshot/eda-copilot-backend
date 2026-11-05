@@ -24,7 +24,8 @@ function checkedMock(problem:BoardFoilProblem, sourceMapping:AnalysisBoardFoilCh
  const g=problem.geometry as Geometry;
  const {frequenciesHz,referenceOhm,budget}=problem.request;
  const s=[[{real:.2,imaginary:0},{real:.5,imaginary:0}],[{real:.5,imaginary:0},{real:.2,imaginary:0}]];
- const mixed=Boolean(barrelIds.length||problem.request.attachments?.length);
+ const mixed=Boolean(barrelIds.length||problem.request.attachments?.length||problem.request.partitionPolicy);
+ const partitionPolicy=problem.request.partitionPolicy;
  const provenanceModel=mixed?{
   modelKind:'mixed' as const,nativeCopperTetrahedra:28,volumeTetrahedra:28,
   fullPotentialCount:4,fullCurrentCount:84,magneticQuadratureCoverage:'unverified' as const,
@@ -33,7 +34,17 @@ function checkedMock(problem:BoardFoilProblem, sourceMapping:AnalysisBoardFoilCh
    parameters:frequenciesHz.map(()=>s),enrichment:[],
    samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[0,1].map(input=>({input,kclRelative:0,kvlRelative:0,copperLossW:8.875,powerBalanceErrorW:0}))})),
    quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0},
+   ...(partitionPolicy&&{conductiveCorrection:{
+    method:'sparse owner interiors and shared conductive trace Schur' as const,
+    ownerInteriorDofs:[1,1],freeSharedTraceDofs:1,traceUpperEntries:1,ownedPlannedBytes:128,
+    maxOriginalFreeResidualRelative:0,scope:'Original-coordinate conductive correction',
+   }}),
    provenance:{method:mixed?'Mock mixed foil and volume':'Mock checked foil',...provenanceModel,barrelIds,sourceMapping,
+    ...(partitionPolicy&&{partitionPolicy,automaticPartition:{
+     policy:partitionPolicy,status:'selected' as const,reason:'Original mesh partition',
+     algorithm:'longest-extent-midpoint-v1' as const,meshOwnershipSignature:'fnv1a64:0123456789abcdef',
+     owners:2,originalCopperTetrahedra:28,crossOwnerFaces:1,freeSharedTraceDofs:1,ownerInteriorDofs:[1,1],
+    }}),
     electrodeAreasM2:Object.fromEntries(g.electrodes.map(e=>[e.name,1e-8])),maxCopperVolumeChange:0,prisms:mixed?0:28,
     retainedPotentials:4,currentModes:6,plannedBytes:1024,maxSeconds:budget.maxSeconds,maxMemoryMiB:budget.maxMemoryMiB,
     spatialCoverage:'unverified',bandCoverage:'unverified',driveConvention:'1A RMS Norton'},
@@ -47,6 +58,7 @@ test('finite lateral return triggers the joint foil producer and exact physical 
  let producer:{boardSha256:string;geometrySha256:string}|undefined;
  const local=createLocalExecutor(((problem:BoardFoilProblem):AnalysisBoardFoilCheckedReport=>{
   assert.equal(problem.kind,'board-foil-checked');
+  assert.equal(problem.request.partitionPolicy,'automatic-conductive-schur-v1');
   assert.ok(isAnalysisProblem(problem));
   foilCalls.push(problem);
   const g=problem.geometry as Geometry;
@@ -115,6 +127,10 @@ test('finite lateral return triggers the joint foil producer and exact physical 
  const temporal=await run(source+"await a.si().network(result.network).initial('steady').time({stopS:1e-3,sampleStepS:1e-4}).run();");
  assert.equal(temporal.error?.code,'NETWORK_PHYSICAL_SAMPLE_TOPOLOGY');
  const invalidEvidence:((report:AnalysisBoardFoilCheckedReport)=>void)[]=[
+  report=>{delete report.provenance.automaticPartition;},
+  report=>{report.provenance.automaticPartition!.originalCopperTetrahedra++;},
+  report=>{report.conductiveCorrection!.maxOriginalFreeResidualRelative=2e-8;},
+  report=>{report.conductiveCorrection!.ownerInteriorDofs=[0,0];},
   report=>{report.samples[0].columns[0].kclRelative=2e-8;},
   report=>{report.samples[0].columns[0].kvlRelative=2e-8;},
   report=>{report.samples[0].columns[0].powerBalanceErrorW=-1e-15;},

@@ -228,6 +228,7 @@ export interface AnalysisLocalDcReport {
 }
 export interface AnalysisBoardFoilCheckedRequest {
     frequenciesHz: number[];
+    partitionPolicy?: 'automatic-conductive-schur-v1';
     operatorPolicy?: 'skin-volume-v3';
     /** Freeze the profiled mesh at this upper frequency for supplemental samples. */
     profileUpperHz?: number;
@@ -253,8 +254,20 @@ export interface AnalysisBoardFoilCheckedReport {
         maxKclRelative: number; maxKvlRelative: number;
     }[];
     quality: { maxKclRelative: number; maxKvlRelative: number; maxColumnPowerBalanceErrorW: number };
+    conductiveCorrection?: {
+        method: 'sparse owner interiors and shared conductive trace Schur';
+        ownerInteriorDofs: number[]; freeSharedTraceDofs: number; traceUpperEntries: number;
+        ownedPlannedBytes: number; maxOriginalFreeResidualRelative: number; scope: string;
+    };
     provenance: {
         method: string;
+        partitionPolicy?: 'automatic-conductive-schur-v1';
+        automaticPartition?: {
+            policy: 'automatic-conductive-schur-v1'; status: 'selected' | 'not-applicable';
+            reason: string; algorithm: 'longest-extent-midpoint-v1'; meshOwnershipSignature: string;
+            owners: number; originalCopperTetrahedra: number; crossOwnerFaces: number;
+            freeSharedTraceDofs: number; ownerInteriorDofs: number[];
+        };
         operatorPolicy?: 'skin-volume-v3';
         copperSkinMesh?: {
             version: 3;

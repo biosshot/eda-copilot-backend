@@ -6,6 +6,47 @@ const fail=(message:string):never=>{throw new Error('CHANNEL_FOIL_EVIDENCE: '+me
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
 const positive=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value)&&value>0;
 
+function validatePartition(report:AnalysisBoardFoilCheckedReport,problem:BoardFoilProblem):void {
+ const p=report.provenance,partition=p.automaticPartition,correction=report.conductiveCorrection;
+ const policy=problem.request.partitionPolicy;
+ if(policy===undefined){
+  if(p.partitionPolicy!==undefined||partition!==undefined||correction!==undefined)
+   fail('unexpected conductive partition evidence');
+  return;
+ }
+ const count=(value:unknown):value is number=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0;
+ if(policy!=='automatic-conductive-schur-v1'||p.partitionPolicy!==policy||p.modelKind!=='mixed'||
+    !partition||partition.policy!==policy||partition.algorithm!=='longest-extent-midpoint-v1'||
+    !['selected','not-applicable'].includes(partition.status)||typeof partition.reason!=='string'||!partition.reason.trim()||
+    !/^fnv1a64:[0-9a-f]{16}$/.test(partition.meshOwnershipSignature)||
+    partition.originalCopperTetrahedra!==p.nativeCopperTetrahedra||
+    ![partition.owners,partition.originalCopperTetrahedra,partition.crossOwnerFaces,partition.freeSharedTraceDofs].every(count)||
+    ![0,2].includes(partition.owners)||!Array.isArray(partition.ownerInteriorDofs)||
+    partition.ownerInteriorDofs.length!==partition.owners||!partition.ownerInteriorDofs.every(count)||
+    partition.freeSharedTraceDofs>p.fullPotentialCount||
+    partition.ownerInteriorDofs.reduce((sum,n)=>sum+n,partition.freeSharedTraceDofs)>p.fullPotentialCount)
+  return fail('missing or inconsistent original-mesh automatic partition evidence');
+ if(partition.status==='not-applicable'){
+  if(correction!==undefined)fail('inapplicable partition unexpectedly reports a Schur solve');
+  if(partition.owners===2&&partition.crossOwnerFaces>0&&partition.freeSharedTraceDofs>0&&
+     partition.ownerInteriorDofs.every(n=>n>0))
+   fail('inapplicable partition contradicts native eligibility');
+  return;
+ }
+ if(partition.owners!==2||partition.crossOwnerFaces<1||partition.freeSharedTraceDofs<1||
+    !partition.ownerInteriorDofs.every(n=>n>0)||!correction||
+    correction.method!=='sparse owner interiors and shared conductive trace Schur'||
+    !same(correction.ownerInteriorDofs,partition.ownerInteriorDofs)||
+    correction.freeSharedTraceDofs!==partition.freeSharedTraceDofs||
+    !count(correction.traceUpperEntries)||correction.traceUpperEntries<1||
+    !count(correction.ownedPlannedBytes)||correction.ownedPlannedBytes<1||
+    correction.ownedPlannedBytes>p.plannedBytes||
+    !Number.isFinite(correction.maxOriginalFreeResidualRelative)||
+    correction.maxOriginalFreeResidualRelative<0||correction.maxOriginalFreeResidualRelative>1e-8||
+    typeof correction.scope!=='string'||!correction.scope.trim())
+  fail('selected automatic partition lacks checked original-coordinate Schur evidence');
+}
+
 function validateSkinMesh(provenance:AnalysisBoardFoilCheckedReport['provenance'],problem:BoardFoilProblem):void {
  const {request,expected}=problem;
  const mesh=provenance.copperSkinMesh;
@@ -110,6 +151,7 @@ export function validateBoardFoilReport(
     evidence.plannedBytes>evidence.maxMemoryMiB*1048576)
   fail('native producer limits or ownership evidence missing or inconsistent');
  validateSkinMesh(evidence,problem);
+ validatePartition(report,problem);
  const expectedCopper=expected.sourceCopper.map(r=>JSON.stringify([r.regionId,r.sourcePath,r.layer])).sort();
  const actual=evidence.sourceMapping.map(([id,path,,layer])=>JSON.stringify([id,path,layer])).sort();
  const expectedBarrels=expected.sourceBarrels.map(barrel=>barrel.barrelId).sort();

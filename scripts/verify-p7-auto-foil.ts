@@ -133,6 +133,15 @@ try{
  assert.equal(replaySolution.sourceHashes[0].resourceId,producer.network?.id);
  assert.match(replaySolution.sourceHashes[0].sha256,shaPattern);
  assert.equal(solution.coverage,'unverified');
+ assert.equal(solution.provenance.partitionPolicy,'automatic-conductive-schur-v1');
+ const partition=solution.provenance.automaticPartition;
+ assert.ok(partition);
+ assert.equal(partition.policy,'automatic-conductive-schur-v1');
+ assert.equal(partition.status,'selected','Automatic coupon must exercise the native partition');
+ assert.match(partition.meshOwnershipSignature,/^fnv1a64:[0-9a-f]{16}$/);
+ assert.ok(partition.crossOwnerFaces>0&&partition.freeSharedTraceDofs>0);
+ assert.ok(solution.conductiveCorrection);
+ assert.ok(solution.conductiveCorrection.maxOriginalFreeResidualRelative<=1e-8);
  const returnSource=witness?'zones[1]':'zones[0]';
  assert.ok(solution.provenance.sourceMapping.some(([,path,,layer])=>layer==='BOTTOM'&&path.includes(returnSource)));
  assert.deepEqual(solution.foilPlan.physicalPorts,expectedPairs);
@@ -180,7 +189,8 @@ try{
  write('error.json',null);
  write('comparison.json',{status:'pass',coupon,elapsedSeconds:(performance.now()-start)/1000,
   extractionStatus:producer.status,replayStatus:replay.status,producer:identity,quality:solution.quality,
-  plannedBytes:solution.provenance.plannedBytes,prisms:solution.provenance.prisms,physicalCoverage:'unverified'});
+  plannedBytes:solution.provenance.plannedBytes,prisms:solution.provenance.prisms,
+  automaticPartition:partition,conductiveCorrection:solution.conductiveCorrection,physicalCoverage:'unverified'});
 }catch(error){
  const detail=error instanceof Error?{name:error.name,message:error.message,stack:error.stack}:String(error);
  write('error.json',{error:detail,executorError});

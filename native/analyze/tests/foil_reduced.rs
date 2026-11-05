@@ -687,3 +687,81 @@ fn shared_return_split_weld_matches_unsplit_exact_grid_and_retains_trace() {
         })
     );
 }
+
+#[test]
+fn automatic_checked_partition_matches_monolithic_without_manual_owners() {
+    let (board, mut geometry) = fixture();
+    geometry.stack.last_mut().unwrap().thickness_m = 0.1e-3;
+    let started = std::time::Instant::now();
+    let solve = |automatic: bool| {
+        let mut request = json!({"frequenciesHz":[1000.],"referenceOhm":[50.,50.],
+            "budget":{"maxSeconds":1800.,"maxMemoryMiB":3072.}});
+        if automatic {
+            request["partitionPolicy"] = json!("automatic-conductive-schur-v1");
+        }
+        board_foil::solve_checked(
+            &board,
+            &geometry,
+            serde_json::from_value(request).unwrap(),
+            started,
+        )
+        .unwrap()
+    };
+    let split = solve(true);
+    let unsplit = solve(false);
+    let evidence = &split["provenance"]["automaticPartition"];
+    assert_eq!(evidence["status"], "selected");
+    assert_eq!(
+        evidence["originalCopperTetrahedra"],
+        split["provenance"]["nativeCopperTetrahedra"]
+    );
+    assert!(split.get("spatialPartition").is_none());
+    assert!(unsplit.get("conductiveCorrection").is_none());
+    assert_eq!(split["coverage"], "unverified");
+    assert_eq!(
+        split["provenance"]["sourceMapping"],
+        unsplit["provenance"]["sourceMapping"]
+    );
+    for (a, b) in split["parameters"][0]
+        .as_array()
+        .unwrap()
+        .iter()
+        .zip(unsplit["parameters"][0].as_array().unwrap())
+    {
+        for (a, b) in a.as_array().unwrap().iter().zip(b.as_array().unwrap()) {
+            let re = a["real"].as_f64().unwrap() - b["real"].as_f64().unwrap();
+            let im = a["imaginary"].as_f64().unwrap() - b["imaginary"].as_f64().unwrap();
+            assert!(re.hypot(im) <= 1e-10);
+        }
+    }
+    for (a, b) in split["samples"][0]["columns"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .zip(unsplit["samples"][0]["columns"].as_array().unwrap())
+    {
+        assert!(a.get("spatialTrace").is_none());
+        for key in ["kclRelative", "kvlRelative"] {
+            assert!(a[key].as_f64().unwrap() <= 1e-8);
+        }
+        let [a, b] = [a, b].map(|c| c["copperLossW"].as_f64().unwrap());
+        assert!((a - b).abs() <= 1e-10 * a.abs().max(b.abs()).max(1e-18));
+    }
+    let correction = &split["conductiveCorrection"];
+    assert!(
+        correction["maxOriginalFreeResidualRelative"]
+            .as_f64()
+            .unwrap()
+            <= 1e-8
+    );
+    assert_eq!(
+        correction["ownerInteriorDofs"],
+        evidence["ownerInteriorDofs"]
+    );
+    println!(
+        "P7_AUTOMATIC_PARTITION {}",
+        json!({"provenance":split["provenance"],"conductiveCorrection":correction,
+        "splitParameters":split["parameters"],"unsplitParameters":unsplit["parameters"],
+        "splitSamples":split["samples"],"unsplitSamples":unsplit["samples"],"coverage":"unverified"})
+    );
+}
