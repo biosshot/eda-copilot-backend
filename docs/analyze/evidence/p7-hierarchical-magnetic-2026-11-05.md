@@ -71,3 +71,36 @@ solve was performed for this increment.
 
 The native addon build passed in 5m 59s. SHA-256
 `a2668d1ba38b2f111c436cedbfbcc4c3bad90a1a925c1904328c2b62a29484bf`.
+
+## Actual STM32 planning control
+
+An ignored test loads the exact saved STM32 solver board and request, builds
+the original mesh, and constructs the production tree once. It creates no
+potential/current space, electric field or magnetic action. The memory base
+uses the larger mesh retained/preparation bound, an explicit decoded-input
+reserve and the separate original tetrahedron geometry buffer. Tree work is
+admitted against the remaining part of the same 3,072 MiB budget.
+
+| Planning-only result | Value |
+| --- | ---: |
+| Supervised wall time | 88.859 s |
+| Original copper tetrahedra / sources / barrels | 154,899 / 844 / 89 |
+| Tree nodes | 16,383 |
+| Far cluster interactions | 2,012,017 |
+| Remaining exact tetrahedron pairs per action | 2,283,342,452 |
+| Retained mesh bytes | 180,928,643 B |
+| Planned hierarchy bytes, including action scratch | 1,094,595,968 B |
+| Total geometry/input/tree plan | 1,695,810,920 B |
+| Peak tree private / RSS, 20 ms sampling | 529,580,032 B / 472,162,304 B |
+
+The tree reduces the original 11,996,927,550 pair count, but approximately
+19% remain exact. With 286 expansion terms, the current far contraction code
+also loops over 286² term combinations for each far interaction. These counts
+leave action runtime admission open. No field or magnetic action was run,
+and no new parameter or geometry sweep was performed.
+
+The test ran once under the same 1,800 s / 3,072 MiB native and
+4,096 MiB tree private commit limits, with one thread and 1 GiB host reserve.
+Results are under `debugging/p7-hierarchical-magnetic-20261105/actual-plan/`.
+Only the library test target was rebuilt for this ignored test. The production
+addon from the preceding batch is unchanged.

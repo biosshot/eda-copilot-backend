@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an ignored planning-only check of the exact saved STM32 mesh and magnetic tree. Geometry and tree admission pass, but 2.28 billion exact pairs remain per action. Field preparation and action runtime remain unverified.
+
 - Add a reciprocal hierarchical magnetic action on original tetrahedron currents with outward far-field error enclosures and fresh original-state KVL certification. Preserve the near/self kernel and bind operator evidence to caching and frequency audits. The accepted-far proof, saved verifier, compact endpoint, 11 TypeScript controls, typecheck and package build pass. The compact certificate path costs 48.062 s versus 5.656 s previously. Full-board runtime and physical accuracy remain unverified.
 
 - Bound exact streamed magnetic quadrature storage with eviction before construction and a pinned target, retaining the original pair kernel and accumulation. Replace the native mixed current-buffer blanket estimate with an audited request-derived plan while keeping sparse factor guards. Two focused library controls and the existing compact endpoint pass. Pair work remains quadratic, and no STM32 field solve or physical acceptance is claimed.

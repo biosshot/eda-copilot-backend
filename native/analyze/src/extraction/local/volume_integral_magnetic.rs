@@ -515,3 +515,63 @@ mod bounded_pair_tests {
         assert!(BoundedPairs::new(vec![tetra(0.)], 12, 2, Instant::now(), Duration::ZERO).is_err());
     }
 }
+
+#[cfg(test)]
+mod actual_tree_planning {
+    use super::*;
+    #[test]
+    #[ignore = "requires an explicitly supplied saved actual-board request and supervisor"]
+    fn saved_stm32_geometry_and_hierarchy_plan_only() {
+        use std::{env, fs, path::PathBuf};
+        let request_path = env::var("P7_SAVED_PROBLEM").expect("explicit saved problem path");
+        let output = PathBuf::from(env::var("P7_TEST_EVIDENCE_DIR").expect("evidence directory"));
+        let raw = fs::read_to_string(request_path).unwrap();
+        let problem: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        let board = crate::import_json(problem["boardJson"].as_str().unwrap()).board.unwrap();
+        let request: super::super::board_mesh::Request =
+            serde_json::from_value(problem["geometry"].clone()).unwrap();
+        let started = Instant::now();
+        let wall = Duration::from_secs(1800);
+        let mut budget = super::super::board_prepare::allocation_budget(3072);
+        let ports = request.ports.len();
+        let samples = problem["request"]["frequenciesHz"].as_array().unwrap().len();
+        budget.max_bytes -= samples * ports * (ports * 256 + 512) + 256 * 1024;
+        let mesh = super::super::board_mesh::build(&board, &request, budget, wall).unwrap();
+        let mesh_retained = mesh.mesh.retained_bytes().unwrap();
+        // Preserve the larger geometry preparation bound and reserve decoded
+        // saved-input storage, rather than allocating a second whole budget.
+        let geometry_base = mesh.mesh.planned_peak_bytes.max(mesh_retained)
+            .checked_add(raw.len().checked_mul(8).unwrap()).unwrap();
+        let tetra_bytes = mesh.mesh.copper_tetrahedra.len().checked_mul(
+            std::mem::size_of::<[[f64; 3]; 4]>()
+        ).unwrap();
+        let base = geometry_base.checked_add(tetra_bytes).unwrap();
+        budget.check(base).unwrap();
+        let tetra = geometry(&mesh.mesh);
+        let tree = hierarchical_magnetic::Operator::new(
+            &tetra, 10, 32, 0.2, base, budget, started, wall
+        );
+        let report = match tree {
+            Ok(tree) => serde_json::json!({
+                "status":"pass", "phase":"geometry and hierarchy plan only",
+                "seconds":started.elapsed().as_secs_f64(), "operator":tree.evidence(),
+                "meshRetainedBytes":mesh_retained, "meshPreparationBoundBytes":mesh.mesh.planned_peak_bytes,
+                "geometryAndInputBaseBytes":geometry_base, "tetraGeometryBytes":tetra_bytes,
+                "totalPlannedBytes":base.checked_add(tree.planned_bytes).unwrap(),
+                "admittedBudgetBytes":budget.max_bytes, "fieldSolves":0, "magneticActions":0,
+                "originalCopperTetrahedra":tetra.len(), "sourceMappings":mesh.source_mapping.len(),
+                "barrels":mesh.barrel_ids.len(), "physicalCoverage":"unverified"
+            }),
+            Err(error) => serde_json::json!({
+                "status":"refused", "phase":"hierarchy planning", "error":error,
+                "seconds":started.elapsed().as_secs_f64(), "geometryAndInputBaseBytes":geometry_base,
+                "tetraGeometryBytes":tetra_bytes, "admittedBudgetBytes":budget.max_bytes,
+                "fieldSolves":0, "magneticActions":0
+            })
+        };
+        fs::create_dir_all(&output).unwrap();
+        fs::write(output.join("comparison.json"), serde_json::to_vec_pretty(&report).unwrap()).unwrap();
+        println!("P7_ACTUAL_TREE_PREFLIGHT {report}");
+        assert_eq!(report["status"], "pass", "{report}");
+    }
+}
