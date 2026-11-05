@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a source-preserving full STM32 automatic runner and record one supervised cold attempt. Planning retains 844 copper regions, 65 islands and 89 barrels. Native arrangement refuses the RS485_B via annulus on the original area guard before field preparation. The separate manifest DSL still requires explicit contact layers. Complete-channel admission remains open.
+
 - Activate deterministic conductive partitioning in automatic joint extraction. Derive owner interiors and shared traces from the original copper mesh, preserve the common fields and physical terminals, and bind checked partition evidence to exact-grid caching and frequency audits. Seven TypeScript controls and the geometry and 1 kHz native endpoint comparisons pass. Typecheck, package build and native addon build pass. The mixed route can increase planar preparation cost, and physical and large-board acceptance remain unverified.
 
 - Condense each copper owner's free conductive interior onto the shared trace in the private mixed solver, then recover and check the original coordinates during harmonic and AC correction. Keep common electric and magnetic actions. The focused algebra and supervised 1 kHz controls pass against the monolithic correction with the existing residual and power gates. Physical and board-scale acceptance remain open.
