@@ -12,6 +12,16 @@ The scalar array is reserved in the operator allocation plan before construction
 
 Final focused runs: pair controls 2/2 (0.04 s), cached action/KVL 1/1 (6.43 s), coupled charge coordinates 2/2 (0.05 s), shared-return controls 3/3 (22.64 s). The release addon build passed in 5m45s (`debugging/p7-split-pair-memo-native-build.log`). This build duration is not extraction time.
 
-The small repeated-action control establishes exact reuse, not board-level speed. The first occurrence of each pair still pays the original integration cost. A working set larger than the configured cache can evict values before later axes/columns use them. The cache remains off by default pending a representative bounded measurement; no <=600-second STM32 extraction or case-matrix acceptance is claimed.
+The small repeated-action control establishes exact reuse, not board-level speed. The first occurrence of each pair still pays the original integration cost. A working set larger than the configured cache can evict values before later axes/columns use them. The cache remains off by default; no <=600-second STM32 extraction or case-matrix acceptance is claimed.
+
+## Actual STM32 bounded measurement
+
+Release `c699d33`, unchanged RS485_B geometry/physical ports, cold isolated response cache, `P7_MAGNETIC_BATCH_COLUMNS=1`, `P7_MAGNETIC_PAIR_CACHE_MIB=1024`, cover replay off, one diagnostic iteration, 590 s native / 600 s supervisor, 12 GiB native / 14 GiB process-tree budget, one Rayon thread. No concurrent builds or numerical tests ran. Artifacts: `debugging/p7-pair-cache-singleton-600s-20261105/`.
+
+The native operator reserved exactly 1,073,741,824 scalar-cache bytes (33,554,432 slots). All 844 copper regions, 65 islands and 89 barrels remained. First-column cover: 28.1088344 s, 39,743,535 visits, 3,531,639 far, 15,604,494 near and 739,382 zero blocks. This is not a common-batch cover or a full action.
+
+The process ended after 593.25 s with `LOCAL_DEADLINE: streamed tetra magnetic action`; the supervisor labels this native refusal `validation-failure`, not a supervisor kill. First action reached 379,063 visits, 58,680 far and 106,918 near callbacks. Scalar cache: **0 hits, 106,918 misses, 182 replacements**. Kernel time: 358.2583671 s adaptive (8,285 calls) and 94.7564653 s separated (98,633 calls); counts include the failed final call. No completed magnetic action or electrical response.
+
+Sampled process-tree private/RSS peaks: 2,951,393,280 / 2,153,713,664 B (20 ms sampled lower bounds). The configured cache therefore consumed memory without eliminating any computation in this prefix. It is not an effective first-pass acceleration for this STM32 run and stays disabled by default. Next acceleration must reduce unique near work or its integration cost; larger memoization cannot fix a prefix with no repeated pairs. The earlier shorter singleton run has a different prefix, so its wall time is not a paired speed comparison.
 
 The parallel change to disconnected shared-return AC is documented in [the finite-domain EM controls](p7-shared-return-em-2026-11-05.md). Production automatic selection of that new candidate remains incomplete.

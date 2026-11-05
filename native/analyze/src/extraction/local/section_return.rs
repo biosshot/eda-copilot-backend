@@ -108,15 +108,37 @@ pub(in crate::extraction) fn enrich_kcl(
     Ok(())
 }
 
-/// Lift one section through a contiguous set of native extrusion slabs, along
-/// the mesh Z axis. Exact authored XY vertex correspondence is required.
-/// The P1 profile is integrated exactly on each tetrahedron and represented
-/// by its P0 mean. This conserves its integrated current, not its P1 loss;
-/// Joule energy must come from the physical cell R operator after projection.
+/// Rigid right-handed mapping from section coordinates into physical space.
+#[derive(Clone, Copy)]
+pub(in crate::extraction) struct SectionFrame {
+    pub origin:[f64;3], pub transverse_x:[f64;3], pub transverse_y:[f64;3], pub longitudinal:[f64;3],
+}
+impl SectionFrame {
+    fn validate(&self)->Result<()> {
+        let axes=[self.transverse_x,self.transverse_y,self.longitudinal];
+        if self.origin.iter().chain(axes.iter().flatten()).any(|x|!x.is_finite()) {return Err(error("SECTION_RETURN_MAP","finite frame required"));}
+        let dot=|a:[f64;3],b:[f64;3]|(0..3).map(|i|a[i]*b[i]).sum::<f64>();
+        let tol=128.*f64::EPSILON;
+        for i in 0..3 {for j in 0..3 {if (dot(axes[i],axes[j])-if i==j {1.} else {0.}).abs()>tol {return Err(error("SECTION_RETURN_MAP","orthonormal frame required"));}}}
+        let a=axes[0];let b=axes[1];let cross=[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+        if (dot(cross,axes[2])-1.).abs()>tol {return Err(error("SECTION_RETURN_MAP","right-handed frame required"));}Ok(())
+    }
+}
+/// Identity-frame compatibility wrapper for native Z extrusions.
 pub(in crate::extraction) fn lift(
     section:&Mesh<'_>, recovery:&Recovery, mesh:&LayeredMesh, space:&Space,
     slabs:std::ops::Range<usize>, source_owners:&BTreeMap<String,usize>, budget:AllocationBudget,
 ) -> Result<Vec<Vec<f64>>> {
+    lift_in_frame(section,recovery,mesh,space,slabs,source_owners,budget,SectionFrame{origin:[0.;3],transverse_x:[1.,0.,0.],transverse_y:[0.,1.,0.],longitudinal:[0.,0.,1.]})
+}
+/// Integrate the P1 physical section profile over each owned tetrahedron and
+/// represent it by its P0 mean. This preserves integrated current, not P1
+/// Joule loss; use the physical cell resistance operator for projected loss.
+pub(in crate::extraction) fn lift_in_frame(
+    section:&Mesh<'_>, recovery:&Recovery, mesh:&LayeredMesh, space:&Space,
+    slabs:std::ops::Range<usize>, source_owners:&BTreeMap<String,usize>, budget:AllocationBudget, frame:SectionFrame,
+) -> Result<Vec<Vec<f64>>> {
+    frame.validate()?;
     if slabs.is_empty() {return Err(error("SECTION_RETURN_MAP","nonempty section extent required"));}
     let loops=section.conductors.len().checked_sub(1).ok_or_else(||error("SECTION_RETURN_MAP","conductors required"))?;
     let bytes=space.current_count().checked_mul(loops).and_then(|n|n.checked_mul(16)).and_then(|n|n.checked_add(space.planned_bytes)).ok_or_else(||error("MEMORY_LIMIT","section lift overflow"))?;
@@ -140,7 +162,12 @@ pub(in crate::extraction) fn lift(
         let mut weights=[0.;3];
         for &node in &tet.nodes {
             let p=mesh.nodes_m.get(node).ok_or_else(||error("SECTION_RETURN_MAP","unknown physical vertex"))?;
-            let local=row.nodes.iter().position(|&n|section.nodes_m.get(n).is_some_and(|q|q[0]==p[0]&&q[1]==p[1])).ok_or_else(||error("SECTION_RETURN_MAP","nonconforming section vertex"))?;
+            let delta=[p[0]-frame.origin[0],p[1]-frame.origin[1],p[2]-frame.origin[2]];
+            let local_xy=[(0..3).map(|i|delta[i]*frame.transverse_x[i]).sum::<f64>(),(0..3).map(|i|delta[i]*frame.transverse_y[i]).sum::<f64>()];
+            let scale=p.iter().chain(frame.origin.iter()).chain(local_xy.iter()).map(|v|v.abs()).fold(f64::MIN_POSITIVE,f64::max);
+            let mut matches=row.nodes.iter().enumerate().filter_map(|(i,&n)|section.nodes_m.get(n).and_then(|q|{if q.iter().any(|v|!v.is_finite()){return None;}let tolerance=64.*f64::EPSILON*scale.max(q[0].abs()).max(q[1].abs());((q[0]-local_xy[0]).abs()<=tolerance&&(q[1]-local_xy[1]).abs()<=tolerance).then_some(i)}));
+            let local=matches.next().ok_or_else(||error("SECTION_RETURN_MAP","nonconforming section vertex"))?;
+            if matches.next().is_some() {return Err(error("SECTION_RETURN_MAP","ambiguous section vertex"));}
             weights[local]+=0.25;
         }
         if !cell.density_per_amp_m2.is_finite()||cell.density_per_amp_m2<=0. {return Err(error("SECTION_RETURN_MAP","invalid physical density scale"));}
@@ -148,7 +175,7 @@ pub(in crate::extraction) fn lift(
             let real=(0..3).map(|k|weights[k]*row.jz_a_per_m2[p][k].real).sum::<f64>()/cell.density_per_amp_m2;
             let imag=(0..3).map(|k|weights[k]*row.jz_a_per_m2[p][k].imaginary).sum::<f64>()/cell.density_per_amp_m2;
             if !real.is_finite()||!imag.is_finite() {return Err(error("SECTION_RETURN_MAP","nonfinite profile"));}
-            out[2*p][3*ci+2]=real;out[2*p+1][3*ci+2]=imag;
+            for k in 0..3 {out[2*p][3*ci+k]=real*frame.longitudinal[k];out[2*p+1][3*ci+k]=imag*frame.longitudinal[k];}
         }
         covered[tet.planar_triangle]=true;
     }
@@ -195,6 +222,31 @@ mod tests {
         let mut both=vec![];
         for slab in 0..slabs {
             let profiles=lift(&section,&recovery,&physical,&space,slab..slab+1,&owners,budget).unwrap();
+            if slab==0 && !long && cut==1e-3 {
+                let s2=2_f64.sqrt();let s3=3_f64.sqrt();let s6=6_f64.sqrt();
+                let frames=[SectionFrame{origin:[0.2,-0.1,0.3],transverse_x:[0.,1.,0.],transverse_y:[0.,0.,1.],longitudinal:[1.,0.,0.]},SectionFrame{origin:[0.2,-0.1,0.3],transverse_x:[1./s2,-1./s2,0.],transverse_y:[1./s6,1./s6,-2./s6],longitudinal:[1./s3,1./s3,1./s3]}];
+                for frame in frames {
+                    let rotate=|v:[f64;3]|-> [f64;3] {std::array::from_fn(|k|v[0]*frame.transverse_x[k]+v[1]*frame.transverse_y[k]+v[2]*frame.longitudinal[k])};
+                    let mut transformed=physical.clone();
+                    for p in &mut transformed.nodes_m {let r=rotate(*p);for k in 0..3 {p[k]=frame.origin[k]+r[k];}}
+                    for t in &mut transformed.tetrahedra {for g in &mut t.gradients_per_m {*g=rotate(*g);}}
+                    for t in &mut transformed.copper_tetrahedra {for g in &mut t.gradients_per_m {*g=rotate(*g);}}
+                    let rotated_space=volume_current::assemble(&transformed,&vec![58e6;transformed.copper_tetrahedra.len()],&electrodes,budget).unwrap();
+                    let rotated=lift_in_frame(&section,&recovery,&transformed,&rotated_space,0..1,&owners,budget,frame).unwrap();
+                    for p in 0..4 {for c in 0..3 {
+                        let flow=|mesh:&LayeredMesh,sp:&Space,v:&[f64],axis:[f64;3]|->f64 {sp.cells.iter().enumerate().filter(|(_,cell)|{let t=&mesh.copper_tetrahedra[cell.mesh_cell];t.slab==0&&triangles[t.planar_triangle].conductor==Some(c)}).map(|(i,cell)|(0..3).map(|k|v[3*i+k]*axis[k]).sum::<f64>()*cell.density_per_amp_m2*mesh.copper_tetrahedra[cell.mesh_cell].volume_m3/cut).sum()};
+                        let a=flow(&physical,&space,&profiles[p],[0.,0.,1.]);let b=flow(&transformed,&rotated_space,&rotated[p],frame.longitudinal);assert!((a-b).abs()<1e-10);
+                    }
+                    let a=space.losses(&profiles[p]).unwrap().iter().sum::<f64>();let b=rotated_space.losses(&rotated[p]).unwrap().iter().sum::<f64>();assert!((a-b).abs()<1e-10*a.max(1e-30));}
+                    let mut bad=frame;bad.transverse_x=frame.transverse_y;assert!(lift_in_frame(&section,&recovery,&transformed,&rotated_space,0..1,&owners,budget,bad).is_err());
+                    bad=frame;bad.longitudinal=bad.longitudinal.map(|x|-x);assert!(lift_in_frame(&section,&recovery,&transformed,&rotated_space,0..1,&owners,budget,bad).is_err());
+                    let mut bad_mesh=transformed.clone();let node=bad_mesh.copper_tetrahedra.iter().find(|t|t.slab==0).unwrap().nodes[0];for k in 0..3 {bad_mesh.nodes_m[node][k]+=1e-9*frame.transverse_x[k];}assert!(lift_in_frame(&section,&recovery,&bad_mesh,&rotated_space,0..1,&owners,budget,frame).is_err());
+                    bad=frame;bad.origin[0]=f64::NAN;assert!(lift_in_frame(&section,&recovery,&transformed,&rotated_space,0..1,&owners,budget,bad).is_err());
+                    let row=&recovery.triangles[0];let mut ambiguous_nodes=nodes.clone();ambiguous_nodes[row.nodes[1]]=ambiguous_nodes[row.nodes[0]];
+                    let ambiguous=Mesh{nodes_m:&ambiguous_nodes,triangles:&triangles,conductors:&conductors,reference:2};
+                    assert!(lift_in_frame(&ambiguous,&recovery,&transformed,&rotated_space,0..1,&owners,budget,frame).is_err());
+                }
+            }
             for p in 0..2 {for c in 0..3 {
                 let total:f64=space.cells.iter().enumerate().filter(|(_,cell)|{let t=&physical.copper_tetrahedra[cell.mesh_cell];t.slab==slab&&triangles[t.planar_triangle].conductor==Some(c)}).map(|(i,cell)|profiles[2*p][3*i+2]*cell.density_per_amp_m2*physical.copper_tetrahedra[cell.mesh_cell].volume_m3/(z_m[slab+1]-z_m[slab])).sum();
                 let expected=if c==p {1.}else if c==2 {-1.}else{0.};
