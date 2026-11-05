@@ -51,6 +51,8 @@ The final cold full-path diagnostic (`debugging/p7-acceleration-partition-fixed-
 
 ## Final disposition of this implementation attempt
 
+Independent code/log review further localizes the final refusal to second-owner assembly admission (an inference, not a directly labelled checkpoint): of 464,697 current coordinates across two owners, the second must own at least 290,078, reserving at least 594,079,744 B of assembly scratch. Initial live storage plus the first retained factor brings the next phase to at least 3,973,190,449 B, exceeding the 3,900,764,018 B budget by at least 72,426,431 B even before additional trace/coupling allowances. Reducing that reservation requires a justified assembly/lifetime change, not disabling the guard.
+
 | Plan stage | Delivered | Not achieved / failed candidate |
 |---|---|---|
 | A: region selection | Reproducible closure trace, physical ID/count invariance, matrix-family inventory | Smaller physically equivalent automatic region; conservative closure still captures the whole fixture |
