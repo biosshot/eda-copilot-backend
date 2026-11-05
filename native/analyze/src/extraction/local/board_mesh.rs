@@ -177,6 +177,26 @@ fn common_partition(roi:&MultiPolygon<f64>,cuts:&[MultiPolygon<f64>],budget:Allo
             let vertices=std::iter::once(&atom.poly).chain(cut.0.iter()).map(|p|std::iter::once(p.exterior()).chain(p.interiors()).map(|r|r.0.len()).sum::<usize>()).sum::<usize>();
             budget.check(vertices.checked_mul(4096).and_then(|v|v.checked_add((atoms.len()+next.len()).checked_mul(4096)?)).ok_or_else(||error("MEMORY_LIMIT","common arrangement plan overflow"))?)?;
             let cell=areas::one(atom.poly.clone());
+            // Exact geometric no-ops must not repeatedly renode an accepted
+            // boundary. Bbox disjointness and full DE-9IM coverage concern the
+            // complete polygon including holes, never a centroid or area test.
+            let disjoint=match (cell.bounding_rect(),cut.bounding_rect()) {
+                (_,None)=>true,
+                (Some(a),Some(b))=>a.max().x<b.min().x||b.max().x<a.min().x||a.max().y<b.min().y||b.max().y<a.min().y,
+                _=>false,
+            };
+            let unchanged=if disjoint {Some(false)} else {
+                let relation=cut.relate(&cell);
+                if relation.is_covers() {Some(true)}
+                else if relation.get(CoordPos::Inside,CoordPos::Inside)==Dimensions::Empty {Some(false)}
+                else {None}
+            };
+            if let Some(inside)=unchanged {
+                let mut membership=atom.membership.clone();membership.push(inside);
+                next.push(Atom{poly:atom.poly.clone(),membership});
+                if next.len()>budget.max_nodes {return Err(error("MEMORY_LIMIT","common arrangement polygon budget"));}
+                continue;
+            }
             for (set,inside) in [(areas::intersection(&cell,cut),true),(areas::difference(&cell,cut),false)] {
                 for poly in set.0 {
                     // Native overlay has no positive-area cutoff. Every output
@@ -452,7 +472,10 @@ pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max
     // grid before triangulation. Independent F64 constraint intersections can
     // otherwise create sub-grid cells between equivalent prepared contours.
     let original_contact_areas:BTreeMap<_,_>=electrode_polygons.iter().map(|(name,p)|(name.clone(),p.unsigned_area())).collect();
-    let arrangement_context=if r.domain_polygon_mm.is_some() {
+    let arrangement_context={
+        // The final shared arrangement uses the same checked kernel range for
+        // rectangular and polygonal domains. Neither inherits the coarser
+        // clipping-only grid merely because its contour is rectangular.
         // Bounds include every Boolean input (not only Cu), so tightening the
         // integer-grid padding cannot put a real bore outside its adapter.
         let mut bounds=roi_bounds;
@@ -460,7 +483,7 @@ pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max
             if let Some(b)=set.bounding_rect(){for k in 0..2 {bounds[0][k]=bounds[0][k].min(if k==0{b.min().x}else{b.min().y});bounds[1][k]=bounds[1][k].max(if k==0{b.max().x}else{b.max().y});}}
         }
         context.refined_for_arrangement(bounds)?
-    }else{context.refined_for_bounds(roi_bounds)?};
+    };
     let _local_scope=Context::install(Some(arrangement_context));
     // A prepared source polygon is physical copper. The coarser derived layer
     // union can lose a sub-grid boundary sliver when sources are overlaid. Only
@@ -722,3 +745,43 @@ impl BoardMesh {
     }
 }
 
+
+#[cfg(test)]
+mod annulus_arrangement_tests {
+    use super::*;
+    #[test]
+    fn broad_arrangement_retains_actual_offset_annulus_through_exact_noop_cuts() {
+        let mut board=crate::import_json(include_str!(
+            "../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-board.json"
+        )).board.unwrap();
+        board.outline=[[-32.89589996337891,-22.895899963378906],
+            [32.89589996337891,-22.895899963378906],[32.89589996337891,22.895899963378906],
+            [-32.89589996337891,22.895899963378906]].map(|[x,y]|crate::model::Point{x,y}).to_vec();
+        let context=Context::for_board(&board,GeometryOptions{max_deviation_mm:0.001,..Default::default()}).unwrap();
+        let bounds=[[-32.89589996337891,-22.895899963378906],[32.89589996337891,22.895899963378906]];
+        let _scope=Context::install(Some(context.refined_for_arrangement(bounds).unwrap()));
+        // Source witness: same physical center, conservative 28-gon bore and
+        // 25 um authored wall as the failed full-board via. No input rounding.
+        let center=[19.8617,6.2463];
+        let radius=0.14985/(std::f64::consts::PI/28.).cos();
+        let bore=areas::union([Polygon::new(LineString::from((0..28).map(|i| {
+            let a=2.*std::f64::consts::PI*i as f64/28.;
+            [center[0]+radius*a.cos(),center[1]+radius*a.sin()]
+        }).collect::<Vec<_>>()),vec![])]);
+        let outer=barrel_outer(&bore,center,0.14985,0.025,0.001).unwrap();
+        let annulus=areas::difference(&areas::one(outer),&bore);
+        let cover=areas::one(rect([[19.,5.],[21.,7.]]));
+        let away=areas::one(rect([[-20.,-10.],[-19.,-9.]]));
+        let budget=AllocationBudget{max_bytes:32*1024*1024,max_nodes:10000,max_tetrahedra:10000};
+        let atoms=common_partition(&annulus,&[away,cover,bore.clone()],budget,Instant::now(),Duration::from_secs(10)).unwrap();
+        assert_eq!(atoms.len(),1);
+        assert_eq!(atoms[0].membership,vec![false,true,false]);
+        assert_eq!(atoms[0].poly,annulus.0[0]);
+        let recovered=areas::union(atoms.into_iter().map(|a|a.poly));
+        assert_eq!(recovered.0.len(),1);assert_eq!(recovered.0[0].interiors().len(),1);
+        assert!((recovered.unsigned_area()-annulus.unsigned_area()).abs()<=1e-8*annulus.unsigned_area());
+        // A cut's hole must not be mistaken for containing copper.
+        let atoms=common_partition(&bore,&[annulus],budget,Instant::now(),Duration::from_secs(10)).unwrap();
+        assert!(atoms.iter().all(|a|!a.membership[0]));
+    }
+}
