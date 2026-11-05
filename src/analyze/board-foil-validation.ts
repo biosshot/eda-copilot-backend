@@ -30,16 +30,32 @@ function validateMagneticOperator(report:AnalysisBoardFoilCheckedReport):void {
   return;
  }
  const count=(value:unknown):value is number=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0;
+ const levels=Math.ceil(Math.log2(p.nativeCopperTetrahedra))+1;
+ const stackSlots=4*levels;
+ const traversalBytes=16*stackSlots+6*levels*8+512;
  if(operator.policy!=='certified-cartesian-tree-v1'||operator.method!=='symmetric dual-tree Newton expansion'||
     operator.expansionOrder!==10||operator.separationRatioMaximum!==0.2||
     operator.representationVersion!==2||operator.harmonicBasis!=='laplace-quotient-z01'||
     operator.momentCoefficientCount!==121||operator.m2lCouplings!==2926||operator.shiftStencilTerms!==2108||
     operator.axisSerial!==true||operator.leafTetrahedra!==1||
+    operator.interactionStorage!=='immutable-dual-tree-v1'||
+    operator.interactionLevels!==levels||operator.interactionStackSlots!==stackSlots||
+    operator.interactionReplaysPerAction!==3||
+    operator.traversalStorageBytes!==traversalBytes||traversalBytes>operator.plannedBytes||
+    !count(operator.visitedNodePairs)||operator.visitedNodePairs<1||
     !count(operator.treeNodes)||operator.treeNodes<1||
     !count(operator.exactPairs)||operator.exactPairs<1||!count(operator.farClusterPairs)||
     !count(operator.plannedBytes)||operator.plannedBytes<1||operator.plannedBytes>p.plannedBytes||
     !/^fnv1a64:[0-9a-f]{16}$/.test(operator.treeSignature))
   fail('unsupported or incomplete certified magnetic tree identity');
+ const costs=[
+  [operator.m2lScalarContractionsPerAxis,2926*operator.farClusterPairs],
+  [operator.m2lScalarContractionsPerAction,8778*operator.farClusterPairs],
+  [operator.shiftStencilApplicationsPerAction,6*(operator.treeNodes-1)*2108],
+  [operator.visitedNodePairsPerAction,3*operator.visitedNodePairs],
+ ];
+ if(costs.some(([value,expected])=>value!==undefined&&(!count(value)||!count(expected)||value!==expected)))
+  fail('inconsistent immutable magnetic interaction cost evidence');
 }
 
 function validatePartition(report:AnalysisBoardFoilCheckedReport,problem:BoardFoilProblem):void {

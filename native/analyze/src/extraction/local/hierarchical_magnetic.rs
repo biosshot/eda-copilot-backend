@@ -283,19 +283,32 @@ struct Node {
     children: Option<[usize; 2]>,
     terminal_bounds: [[f64; 3]; 2],
     minimum_terminal_radius: f64,
+    depth: usize,
 }
 #[derive(Clone, Copy)]
 struct Pair {
     a: usize,
     b: usize,
 }
+#[derive(Default)]
+struct InteractionCounts {
+    visited: usize,
+    far: usize,
+    near: usize,
+    exact: usize,
+    far_by_depth: Vec<usize>,
+    near_by_depth: Vec<usize>,
+    exact_by_depth: Vec<usize>,
+}
 pub(super) struct Operator {
     nodes: Vec<Node>,
     permutation: Vec<usize>,
-    far: Vec<Pair>,
-    near: Vec<Pair>,
-    pair_budget: usize,
-    pair_high_water: usize,
+    interactions: InteractionCounts,
+    traversal_capacity: usize,
+    traversal_levels: usize,
+    radius_histogram: [usize; 64],
+    minimum_radius: f64,
+    maximum_radius: f64,
     powers: Powers,
     harmonic: Harmonic,
     shifts: [Vec<Shift>; 3],
@@ -377,25 +390,24 @@ impl Operator {
                 v.checked_add(coupling_count.checked_mul(std::mem::size_of::<Coupling>())?)
             })
             .ok_or_else(|| error("MEMORY_LIMIT", "harmonic stencil count overflow"))?;
+        let depth = (usize::BITS - (n - 1).leading_zeros()) as usize;
+        let traversal_levels = depth + 1;
+        let traversal_capacity = 4 * depth + 4;
+        let traversal_bytes = traversal_capacity * std::mem::size_of::<Pair>()
+            + 6 * traversal_levels * std::mem::size_of::<usize>()
+            + 64 * std::mem::size_of::<usize>();
         let work = node_bound
             .checked_mul(2 * (harmonic_rank + order + 1) * std::mem::size_of::<f64>())
             .and_then(|v| v.checked_add(node_bound.checked_mul(256)?))
             .and_then(|v| v.checked_add(n.checked_mul(128)?))
             .and_then(|v| v.checked_add(rank.checked_mul(512)?))
             .and_then(|v| v.checked_add(stencil_bytes))
+            .and_then(|v| v.checked_add(traversal_bytes))
             .ok_or_else(|| error("MEMORY_LIMIT", "packed harmonic work plan overflow"))?;
         budget.check(
             base.checked_add(work)
                 .ok_or_else(|| error("MEMORY_LIMIT", "harmonic base overflow"))?,
         )?;
-        let pair_limit = (budget.max_bytes - base - work) / 64;
-        if pair_limit < 8 {
-            return Err(error(
-                "MEMORY_LIMIT",
-                "hierarchical interaction vector reserve exhausted",
-            ));
-        }
-        let pair_limit = (pair_limit - 4).min(n.saturating_mul(128).max(4));
         let powers = Powers::new(order);
         let harmonic = Harmonic::new(&powers);
         let mut shifts: [Vec<Shift>; 3] =
@@ -438,10 +450,12 @@ impl Operator {
         let mut result = Self {
             nodes: Vec::with_capacity(node_bound),
             permutation: (0..n).collect(),
-            far: vec![],
-            near: vec![],
-            pair_budget: budget.max_bytes - base - work,
-            pair_high_water: 0,
+            interactions: InteractionCounts::default(),
+            traversal_capacity,
+            traversal_levels,
+            radius_histogram: [0; 64],
+            minimum_radius: f64::INFINITY,
+            maximum_radius: 0.,
             powers,
             harmonic,
             shifts,
@@ -454,11 +468,15 @@ impl Operator {
             start,
             wall,
         };
-        result.build(tetra, 0, n)?;
-        result.partition(0, 0, pair_limit)?;
-        // Truncating compacted near tiles never releases Vec capacity.
-        // Charge the actual reserved/high-water buffer sizes, not final lengths.
-        let pair_bytes = result.pair_high_water;
+        result.build(tetra, 0, n, 0)?;
+        for node in &result.nodes {
+            if node.children.is_none() {
+                result.minimum_radius = result.minimum_radius.min(node.radius);
+                result.maximum_radius = result.maximum_radius.max(node.radius);
+                let bin = (node.radius.log2().floor() as i32 + 48).clamp(0, 63) as usize;
+                result.radius_histogram[bin] += 1;
+            }
+        }
         let mut hash = 0xcbf29ce484222325u64;
         let mut stamp = |v: u64| {
             for b in v.to_le_bytes() {
@@ -466,7 +484,7 @@ impl Operator {
                 hash = hash.wrapping_mul(0x100000001b3);
             }
         };
-        stamp(2); // harmonic quotient/packed-shell representation version
+        stamp(3); // immutable streamed interaction representation; harmonic basis remains2
         stamp(order as u64);
         stamp(leaf as u64);
         stamp(qmax.to_bits());
@@ -488,24 +506,30 @@ impl Operator {
             stamp(node.range[0] as u64);
             stamp(node.range[1] as u64);
         }
-        stamp(result.far.len() as u64);
-        stamp(result.near.len() as u64);
-        for pair in result.far.iter().chain(&result.near) {
+        // A rolling stream stamp binds the immutable pair cover without
+        // retaining or serializing millions of descriptors.
+        let counts = result.walk(|pair, far| {
+            stamp(u64::from(far));
             stamp(pair.a as u64);
             stamp(pair.b as u64);
-        }
+            Ok(())
+        })?;
+        result.exact_pairs = counts.exact;
+        result.interactions = counts;
         result.signature = format!("fnv1a64:{hash:016x}");
-        result.planned_bytes = result
-            .planned_bytes
-            .checked_add(pair_bytes)
-            .ok_or_else(|| error("MEMORY_LIMIT", "hierarchical magnetic total overflow"))?;
         budget.check(
             base.checked_add(result.planned_bytes)
                 .ok_or_else(|| error("MEMORY_LIMIT", "hierarchical magnetic total overflow"))?,
         )?;
         Ok(result)
     }
-    fn build(&mut self, tetra: &[[[f64; 3]; 4]], begin: usize, end: usize) -> Result<usize> {
+    fn build(
+        &mut self,
+        tetra: &[[[f64; 3]; 4]],
+        begin: usize,
+        end: usize,
+        depth: usize,
+    ) -> Result<usize> {
         check_deadline(self.start, self.wall)?;
         let mut low = [f64::INFINITY; 3];
         let mut high = [f64::NEG_INFINITY; 3];
@@ -538,6 +562,7 @@ impl Operator {
             children: None,
             terminal_bounds: [center, center],
             minimum_terminal_radius: radius,
+            depth,
         });
         if end - begin > self.leaf {
             let mut axis = 0;
@@ -551,8 +576,8 @@ impl Operator {
                 center(i).total_cmp(&center(j)).then(i.cmp(&j))
             });
             let middle = begin + (end - begin) / 2;
-            let left = self.build(tetra, begin, middle)?;
-            let right = self.build(tetra, middle, end)?;
+            let left = self.build(tetra, begin, middle, depth + 1)?;
+            let right = self.build(tetra, middle, end, depth + 1)?;
             self.nodes[index].children = Some([left, right]);
             self.nodes[index].terminal_bounds = std::array::from_fn(|side| {
                 std::array::from_fn(|k| {
@@ -580,51 +605,6 @@ impl Operator {
             .div(r);
         (r, q)
     }
-    fn push_pair(&mut self, far: bool, pair: Pair) -> Result<()> {
-        let (target, other) = if far {
-            (&mut self.far, &self.near)
-        } else {
-            (&mut self.near, &self.far)
-        };
-        let element = std::mem::size_of::<Pair>();
-        if target.len() == target.capacity() {
-            let capacity = target
-                .capacity()
-                .checked_mul(2)
-                .map(|v| v.max(4))
-                .ok_or_else(|| error("MEMORY_LIMIT", "interaction capacity overflow"))?;
-            let peak = other
-                .capacity()
-                .checked_add(target.capacity())
-                .and_then(|v| v.checked_add(capacity))
-                .and_then(|v| v.checked_mul(element))
-                .ok_or_else(|| error("MEMORY_LIMIT", "interaction growth peak overflow"))?;
-            if peak > self.pair_budget {
-                return Err(error(
-                    "MEMORY_LIMIT",
-                    "interaction old/new buffer growth exceeds reserved budget",
-                ));
-            }
-            self.pair_high_water = self.pair_high_water.max(peak);
-            target
-                .try_reserve_exact(capacity - target.len())
-                .map_err(|_| error("MEMORY_LIMIT", "interaction tile allocation refused"))?;
-        }
-        let live = other
-            .capacity()
-            .checked_add(target.capacity())
-            .and_then(|v| v.checked_mul(element))
-            .ok_or_else(|| error("MEMORY_LIMIT", "interaction retained capacity overflow"))?;
-        if live > self.pair_budget {
-            return Err(error(
-                "MEMORY_LIMIT",
-                "interaction retained capacity exceeds reserved budget",
-            ));
-        }
-        self.pair_high_water = self.pair_high_water.max(live);
-        target.push(pair);
-        Ok(())
-    }
     fn all_terminal_near(&self, a: usize, b: usize) -> bool {
         let a = &self.nodes[a];
         let b = &self.nodes[b];
@@ -650,63 +630,106 @@ impl Operator {
         // missed coarser far opportunity would add cost, never physical error.
         minimum_radii.lo > Interval::point(self.qmax).mul(maximum_distance).hi
     }
-    fn near_tile(&mut self, a: usize, b: usize) -> Result<()> {
-        let na = self.nodes[a].range[1] - self.nodes[a].range[0];
-        let nb = self.nodes[b].range[1] - self.nodes[b].range[0];
-        let count = if a == b {
-            na.checked_mul(na + 1).map(|v| v / 2)
-        } else {
-            na.checked_mul(nb)
-        }
-        .ok_or_else(|| error("MEMORY_LIMIT", "near pair count overflow"))?;
-        self.exact_pairs = self
-            .exact_pairs
-            .checked_add(count)
-            .ok_or_else(|| error("MEMORY_LIMIT", "near pair count overflow"))?;
-        self.push_pair(false, Pair { a, b })
-    }
-    fn partition(&mut self, a: usize, b: usize, limit: usize) -> Result<()> {
-        check_deadline(self.start, self.wall)?;
-        if self.far.len() + self.near.len() >= limit {
-            return Err(error(
-                "MEMORY_LIMIT",
-                "hierarchical magnetic interaction budget exhausted",
-            ));
-        }
-        if a != b {
-            let (_, q) = self.separation(a, b);
-            if q.finite() && q.hi <= self.qmax {
-                return self.push_pair(true, Pair { a, b });
+    /// Deterministic DFS on immutable geometry. No interaction descriptor is
+    /// retained. All originalpairs remain covered exactly once; each action
+    /// replays this same geometry-only decision stream for each Cartesianaxis.
+    fn walk(&self, mut emit: impl FnMut(Pair, bool) -> Result<()>) -> Result<InteractionCounts> {
+        let mut counts = InteractionCounts {
+            far_by_depth: vec![0; self.traversal_levels],
+            near_by_depth: vec![0; self.traversal_levels],
+            exact_by_depth: vec![0; self.traversal_levels],
+            ..Default::default()
+        };
+        let mut pending = Vec::with_capacity(self.traversal_capacity);
+        pending.push(Pair { a: 0, b: 0 });
+        while let Some(pair) = pending.pop() {
+            if let Err(failure) = check_deadline(self.start, self.wall) {
+                return Err(format!("{failure}; streamed counts visitedNodePairs={}, farClusterPairs={}, nearTiles={}, exactPairs={}",counts.visited,counts.far,counts.near,counts.exact));
+            }
+            counts.visited = counts
+                .visited
+                .checked_add(1)
+                .ok_or_else(|| error("MEMORY_LIMIT", "visited interaction count overflow"))?;
+            let Pair { a, b } = pair;
+            let ac = self.nodes[a].children;
+            let bc = self.nodes[b].children;
+            let depth = self.nodes[a].depth.max(self.nodes[b].depth);
+            let far = if a != b {
+                let (_, q) = self.separation(a, b);
+                q.finite() && q.hi <= self.qmax
+            } else {
+                false
+            };
+            if far {
+                counts.far = counts
+                    .far
+                    .checked_add(1)
+                    .ok_or_else(|| error("MEMORY_LIMIT", "far interaction count overflow"))?;
+                counts.far_by_depth[depth] += 1;
+                emit(pair, true)?;
+                continue;
+            }
+            if ac.is_none() && bc.is_none() || self.all_terminal_near(a, b) {
+                let na = self.nodes[a].range[1] - self.nodes[a].range[0];
+                let nb = self.nodes[b].range[1] - self.nodes[b].range[0];
+                let exact = if a == b {
+                    na.checked_mul(na + 1).map(|v| v / 2)
+                } else {
+                    na.checked_mul(nb)
+                }
+                .ok_or_else(|| error("MEMORY_LIMIT", "exact pair count overflow"))?;
+                counts.near = counts
+                    .near
+                    .checked_add(1)
+                    .ok_or_else(|| error("MEMORY_LIMIT", "near tile count overflow"))?;
+                counts.exact = counts
+                    .exact
+                    .checked_add(exact)
+                    .ok_or_else(|| error("MEMORY_LIMIT", "exact pair count overflow"))?;
+                counts.near_by_depth[depth] += 1;
+                counts.exact_by_depth[depth] = counts.exact_by_depth[depth]
+                    .checked_add(exact)
+                    .ok_or_else(|| error("MEMORY_LIMIT", "depth exact pair count overflow"))?;
+                emit(pair, false)?;
+                continue;
+            }
+            // Push in reverse original DFS order. A diagonal split adds2live
+            // frames while advancing both depths; 4D+4 slots bound all paths.
+            if a == b {
+                let [l, r] = ac.unwrap();
+                if pending.len() + 3 > self.traversal_capacity {
+                    return Err(error(
+                        "MEMORY_LIMIT",
+                        "immutable interaction stack capacity exhausted",
+                    ));
+                }
+                pending.extend_from_slice(&[
+                    Pair { a: r, b: r },
+                    Pair { a: l, b: r },
+                    Pair { a: l, b: l },
+                ]);
+            } else if ac.is_some() && (bc.is_none() || self.nodes[a].radius >= self.nodes[b].radius)
+            {
+                let [l, r] = ac.unwrap();
+                if pending.len() + 2 > self.traversal_capacity {
+                    return Err(error(
+                        "MEMORY_LIMIT",
+                        "immutable interaction stack capacity exhausted",
+                    ));
+                }
+                pending.extend_from_slice(&[Pair { a: r, b }, Pair { a: l, b }]);
+            } else {
+                let [l, r] = bc.unwrap();
+                if pending.len() + 2 > self.traversal_capacity {
+                    return Err(error(
+                        "MEMORY_LIMIT",
+                        "immutable interaction stack capacity exhausted",
+                    ));
+                }
+                pending.extend_from_slice(&[Pair { a, b: r }, Pair { a, b: l }]);
             }
         }
-        let ac = self.nodes[a].children;
-        let bc = self.nodes[b].children;
-        if ac.is_none() && bc.is_none() || self.all_terminal_near(a, b) {
-            return self.near_tile(a, b);
-        }
-        let far_start = self.far.len();
-        let near_start = self.near.len();
-        if a == b {
-            let [l, r] = ac.unwrap();
-            self.partition(l, l, limit)?;
-            self.partition(l, r, limit)?;
-            self.partition(r, r, limit)?;
-        } else if ac.is_some() && (bc.is_none() || self.nodes[a].radius >= self.nodes[b].radius) {
-            let [l, r] = ac.unwrap();
-            self.partition(l, b, limit)?;
-            self.partition(r, b, limit)?;
-        } else {
-            let [l, r] = bc.unwrap();
-            self.partition(a, l, limit)?;
-            self.partition(a, r, limit)?;
-        }
-        if self.far.len() == far_start {
-            // All originalpairs were counted by the children. Retain one
-            // streamed exact tile rather than an individualpair Vec.
-            self.near.truncate(near_start);
-            self.push_pair(false, Pair { a, b })?;
-        }
-        Ok(())
+        Ok(counts)
     }
     fn offset(&self, parent: usize, child: usize) -> ([Interval; 3], Interval) {
         let p = &self.nodes[parent];
@@ -877,7 +900,18 @@ impl Operator {
         values
     }
     pub fn evidence(&self) -> serde_json::Value {
-        serde_json::json!({"policy":"certified-cartesian-tree-v1","method":"symmetric dual-tree Newton expansion","expansionOrder":self.powers.order,"separationRatioMaximum":self.qmax,"treeNodes":self.nodes.len(),"representationVersion":2,"harmonicBasis":"laplace-quotient-z01","momentCoefficientCount":self.harmonic.list.len(),"m2lCouplings":self.couplings.len(),"shiftStencilTerms":self.shifts.iter().map(Vec::len).sum::<usize>(),"axisSerial":true,"leafTetrahedra":self.leaf,"treeSignature":self.signature,"exactPairs":self.exact_pairs,"nearTiles":self.near.len(),"farClusterPairs":self.far.len(),"m2lScalarContractionsPerAxis":self.far.len()*self.couplings.len(),"plannedBytes":self.planned_bytes,"scope":"far truncation and arithmetic enclosure; existing near/self quadrature, mesh and physical coverage remain unverified"})
+        let c = &self.interactions;
+        let radii:Vec<_>=self.radius_histogram.iter().enumerate().filter(|(_,n)|**n>0).map(|(i,&n)|serde_json::json!({"log2RadiusMetersFloor":i as i32-48,"terminalNodes":n,"clamped":i==0||i==63})).collect();
+        serde_json::json!({"policy":"certified-cartesian-tree-v1","method":"symmetric dual-tree Newton expansion","expansionOrder":self.powers.order,"separationRatioMaximum":self.qmax,"treeNodes":self.nodes.len(),"representationVersion":2,"harmonicBasis":"laplace-quotient-z01","momentCoefficientCount":self.harmonic.list.len(),"m2lCouplings":self.couplings.len(),"shiftStencilTerms":self.shifts.iter().map(Vec::len).sum::<usize>(),"axisSerial":true,"leafTetrahedra":self.leaf,"treeSignature":self.signature,
+            "interactionStorage":"immutable-dual-tree-v1","interactionStackSlots":self.traversal_capacity,"interactionLevels":self.traversal_levels,"traversalStorageBytes":self.traversal_capacity*std::mem::size_of::<Pair>()+6*self.traversal_levels*std::mem::size_of::<usize>()+64*std::mem::size_of::<usize>(),"interactionReplaysPerAction":3,
+            "visitedNodePairs":c.visited,"exactPairs":self.exact_pairs,"nearTiles":c.near,"farClusterPairs":c.far,
+            "m2lScalarContractionsPerAxis":c.far as u128*self.couplings.len()as u128,
+            "m2lScalarContractionsPerAction":3*c.far as u128*self.couplings.len()as u128,
+            "shiftStencilApplicationsPerAction":6*(self.nodes.len()-1)as u128*self.shifts.iter().map(Vec::len).sum::<usize>()as u128,
+            "visitedNodePairsPerAction":3*c.visited as u128,"pairDepthConvention":"maximum of source and target node depth",
+            "farBlocksByDepth":c.far_by_depth,"nearTilesByDepth":c.near_by_depth,"exactPairsByDepth":c.exact_by_depth,
+            "terminalRadiusMinimumM":self.minimum_radius,"terminalRadiusMaximumM":self.maximum_radius,"terminalRadiusLog2MetersHistogram":radii,
+            "plannedBytes":self.planned_bytes,"scope":"far truncation and arithmetic enclosure; existing near/self quadrature, mesh and physical coverage remain unverified; streamed traversal storage does not certify action runtime"})
     }
     pub fn apply(
         &self,
@@ -898,33 +932,6 @@ impl Operator {
         let mut action = vec![0.; 3 * n];
         let mut action_error = vec![0.; 3 * n];
         let mut near = vec![Interval::zero(); 3 * n];
-        for block in &self.near {
-            let a = &self.nodes[block.a];
-            let b = &self.nodes[block.b];
-            for x in a.range[0]..a.range[1] {
-                for y in b.range[0]..b.range[1] {
-                    if block.a == block.b && y > x {
-                        continue;
-                    }
-                    check_deadline(self.start, self.wall)?;
-                    let i = self.permutation[x];
-                    let j = self.permutation[y];
-                    let value = pair.pair(i.max(j), i.min(j))?;
-                    let coefficient = Interval::point(1e-7)
-                        .mul(Interval::point(space.cells[i].density_per_amp_m2))
-                        .mul(Interval::point(space.cells[j].density_per_amp_m2))
-                        .mul(Interval::point(value));
-                    for axis in 0..3 {
-                        near[3 * i + axis] = near[3 * i + axis]
-                            .add(coefficient.mul(Interval::point(current[3 * j + axis])));
-                        if i != j {
-                            near[3 * j + axis] = near[3 * j + axis]
-                                .add(coefficient.mul(Interval::point(current[3 * i + axis])));
-                        }
-                    }
-                }
-            }
-        }
         // Each Cartesian axis is an independent Newton action. Packed state is
         // released between axes; no3axis*allnodes interval slab is retained.
         for axis in 0..3 {
@@ -968,7 +975,40 @@ impl Operator {
                     }
                 }
             }
-            for block in &self.far {
+            self.walk(|block, far| {
+                if !far {
+                    if axis == 0 {
+                        let a = &self.nodes[block.a];
+                        let b = &self.nodes[block.b];
+                        for x in a.range[0]..a.range[1] {
+                            for y in b.range[0]..b.range[1] {
+                                if block.a == block.b && y > x {
+                                    continue;
+                                }
+                                check_deadline(self.start, self.wall)?;
+                                let i = self.permutation[x];
+                                let j = self.permutation[y];
+                                let value = pair.pair(i.max(j), i.min(j))?;
+                                let coefficient = Interval::point(1e-7)
+                                    .mul(Interval::point(space.cells[i].density_per_amp_m2))
+                                    .mul(Interval::point(space.cells[j].density_per_amp_m2))
+                                    .mul(Interval::point(value));
+                                for axis in 0..3 {
+                                    near[3 * i + axis] = near[3 * i + axis].add(
+                                        coefficient.mul(Interval::point(current[3 * j + axis])),
+                                    );
+                                    if i != j {
+                                        near[3 * j + axis] = near[3 * j + axis].add(
+                                            coefficient.mul(Interval::point(current[3 * i + axis])),
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return Ok(());
+                }
+
                 check_deadline(self.start, self.wall)?;
                 let (mut derivatives, tail, sa, sb) = self.jet(block.a, block.b)?;
                 let (r, _) = self.separation(block.a, block.b);
@@ -1005,7 +1045,9 @@ impl Operator {
                 }
                 local.add(block.a, &self.harmonic, &la)?;
                 local.add(block.b, &self.harmonic, &lb)?;
-            }
+
+                Ok(())
+            })?;
             for parent in 0..self.nodes.len() {
                 if let Some(children) = self.nodes[parent].children {
                     for child in children {
@@ -1047,7 +1089,7 @@ impl Operator {
                 action_error[3 * i + axis] = uncertainty;
             }
         }
-        eprintln!("P7_HIERARCHICAL_ACTION originalCurrents={} harmonicCoefficients={} m2lCouplings={} farClusterPairs={} exactPairs={} elapsedSeconds={:.6}",3*n,rank,self.couplings.len(),self.far.len(),self.exact_pairs,action_started.elapsed().as_secs_f64());
+        eprintln!("P7_HIERARCHICAL_ACTION originalCurrents={} harmonicCoefficients={} m2lCouplings={} farClusterPairs={} exactPairs={} elapsedSeconds={:.6}",3*n,rank,self.couplings.len(),self.interactions.far,self.exact_pairs,action_started.elapsed().as_secs_f64());
         Ok((action, action_error))
     }
 }
@@ -1338,10 +1380,22 @@ mod tests {
             tree.shifts.iter().map(Vec::len).collect::<Vec<_>>(),
             vec![506, 506, 1096]
         );
-        assert!(!tree.far.is_empty());
+        assert!(tree.interactions.far > 0);
+        let mut tiny_near = vec![];
+        let mut tiny_far = vec![];
+        let replay = tree
+            .walk(|pair, far| {
+                if far {
+                    tiny_far.push(pair)
+                } else {
+                    tiny_near.push(pair)
+                }
+                Ok(())
+            })
+            .unwrap();
+        assert_eq!(replay.visited, tree.interactions.visited);
         assert!(tree.exact_pairs > 0);
-        let tile_pairs: usize = tree
-            .near
+        let tile_pairs: usize = tiny_near
             .iter()
             .map(|pair| {
                 let a = tree.nodes[pair.a].range;
@@ -1355,8 +1409,7 @@ mod tests {
                 }
             })
             .sum();
-        let far_pairs: usize = tree
-            .far
+        let far_pairs: usize = tiny_far
             .iter()
             .map(|pair| {
                 let a = tree.nodes[pair.a].range;
@@ -1373,8 +1426,8 @@ mod tests {
         // mesh or an additional electromagnetic acceptance case.
         let colocated = vec![geometry[0]; 4];
         let tiles = Operator::new(&colocated, 10, 1, 0.2, 0, budget, start, wall).unwrap();
-        assert!(tiles.far.is_empty());
-        assert_eq!(tiles.near.len(), 1);
+        assert_eq!(tiles.interactions.far, 0);
+        assert_eq!(tiles.interactions.near, 1);
         assert_eq!(tiles.exact_pairs, 10);
 
         let (owned, slots) = BoundedPairs::plan(geometry.len(), 12, 0, budget).unwrap();

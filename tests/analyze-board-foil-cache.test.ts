@@ -77,7 +77,11 @@ test('automatic partition policy reaches native preparation and exact cache with
         expansionOrder:10,separationRatioMaximum:0.2,treeNodes:3,exactPairs:18,farClusterPairs:1,
         representationVersion:2,harmonicBasis:'laplace-quotient-z01',momentCoefficientCount:121,
         m2lCouplings:2926,shiftStencilTerms:2108,axisSerial:true,leafTetrahedra:1,
-        plannedBytes:1024,treeSignature:'fnv1a64:0123456789abcdef',maxFullKvlUncertaintyRelative:5e-10,
+        interactionStorage:'immutable-dual-tree-v1',interactionLevels:6,interactionStackSlots:24,
+        interactionReplaysPerAction:3,traversalStorageBytes:1184,visitedNodePairs:4,
+        m2lScalarContractionsPerAxis:2926,m2lScalarContractionsPerAction:8778,
+        shiftStencilApplicationsPerAction:25296,visitedNodePairsPerAction:12,
+        plannedBytes:2048,treeSignature:'fnv1a64:0123456789abcdef',maxFullKvlUncertaintyRelative:5e-10,
       };
       for(const sample of value.samples)for(const column of sample.columns){
         column.kvlRelative=1e-9;column.kvlUncertaintyRelative=5e-10;
@@ -100,6 +104,9 @@ test('automatic partition policy reaches native preparation and exact cache with
       (value:AnalysisBoardFoilCheckedReport)=>{delete value.provenance.magneticOperator;},
       (value:AnalysisBoardFoilCheckedReport)=>{Object.assign(value.provenance.magneticOperator!,{representationVersion:1});},
       (value:AnalysisBoardFoilCheckedReport)=>{Object.assign(value.provenance.magneticOperator!,{momentCoefficientCount:286});},
+      (value:AnalysisBoardFoilCheckedReport)=>{Object.assign(value.provenance.magneticOperator!,{interactionStorage:'stored-pairs'});},
+      (value:AnalysisBoardFoilCheckedReport)=>{Object.assign(value.provenance.magneticOperator!,{traversalStorageBytes:0});},
+      (value:AnalysisBoardFoilCheckedReport)=>{Object.assign(value.provenance.magneticOperator!,{m2lScalarContractionsPerAction:1});},
       (value:AnalysisBoardFoilCheckedReport)=>{value.quality.maxFullKvlUncertaintyRelative=0;},
       (value:AnalysisBoardFoilCheckedReport)=>{value.samples[0].columns[0].kvlUncertaintyRelative=2e-9;},
       (value:AnalysisBoardFoilCheckedReport)=>{value.samples[0].columns[0].kvlRelative=2e-8;},

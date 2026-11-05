@@ -166,3 +166,64 @@ physical acceptance.
 
 The harmonic representation batch also passes eight focused TypeScript tests,
 typecheck, package build and the native addon build (5m20s).
+
+## Immutable visitor: measured planning memory and unresolved action time
+
+The interaction visitor replaces retained pair descriptors with a fixed
+76-slot stack on this board. It preserves the fixed harmonic representation,
+far/near criteria and original KVL guard. It streams the same geometry-only
+interaction decisions for each Cartesian axis; near kernels are evaluated
+once across all three axes. Work counts are explicit rather than bounded
+indirectly by the size of a retained list.
+
+A focused compile-only invocation succeeded with zero compile errors in
+199.25 s, but its strict supervisor again recorded `launcher exited before
+its descendants` (cargo exit 0, peak tree private 1,512,689,664 B). This record
+is preserved under `debugging/p7-visitor-proof-20261105/compile/` and is not a
+clean supervision pass. The compiled executable was then launched directly,
+without recompilation or a proof retry. That proof passed under clean strict
+supervision in 0.218 s, peak tree private 3,457,024 B. Its saved JS verifier
+passed all nine original basis cases and both manufactured original-current
+KVL row controls; maximum action difference/bound were
+5.169878828456423e-26 / 1.9387048534047071e-25, and maximum KVL upper ratio was
+6.623301405901401e-16. This is a tiny operator/arithmetic control, not a full
+STM32 electrical or independent physical-accuracy result.
+
+One actual saved STM32 geometry-and-tree planning pass then completed, using
+the same prebuilt executable with unchanged 1,800 s / 3,072 MiB native and
+4,096 MiB process-tree limits. It performed zero field solves and zero magnetic
+actions. Evidence is `debugging/p7-visitor-stm32-plan-20261105/`.
+
+| Visitor planning result | Value |
+| --- | ---: |
+| Supervised/native wall time | 125.938 s / 125.7096589 s |
+| Exit / supervisor reason | 0 / null |
+| Peak tree private / RSS | 530,800,640 B / 479,215,616 B |
+| Original copper tetrahedra / sources / barrels | 154,899 / 844 / 89 |
+| Fine tree nodes | 309,797 |
+| Operator work reservation | 753,755,760 B |
+| Geometry/input/operator total plan | 1,354,970,712 B |
+| Traversal/counter storage reservation | 2,640 B |
+| Visited node pairs | 227,538,839 |
+| Far cluster blocks | 83,468,259 |
+| Exact tetrahedron pairs / near tiles | 339,238,293 / 30,316,020 |
+| Planned M2L scalar contractions per action | 732,684,377,502 |
+| Shift stencil applications per action | 3,918,299,808 |
+| Geometry decisions per action (three replays) | 682,616,517 |
+
+The action-work memory reservation fits the budget; only planning memory was
+measured. No full-action peak or full STM32 electrical time is established.
+The remaining work counts make the current implementation unsuitable for a
+blind electromagnetic attempt. Eliminating descriptor storage does not admit
+runtime, and the operator's full-board memory-and-time objective remains open.
+No additional sweep, full action or field solve was started.
+
+The radius and depth diagnostics are preserved in the comparison JSON.
+Terminal support radii span 17.5166 micrometres to 25.7527 mm. The majority of
+far blocks appear at maximum source/target depths 17 and 18 (44,245,016 and
+22,741,090), so the fine traversal is dominated by small interactions rather
+than a few large reusable blocks. These measurements guide the next structural
+operator change; they do not justify changing a physical gate.
+
+The visitor batch also passes eight focused TypeScript tests, typecheck,
+package build and the native addon build (6m14s).

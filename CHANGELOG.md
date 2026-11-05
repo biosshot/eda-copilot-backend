@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Stream immutable magnetic interactions without retaining pair lists. The direct-executable proof and saved verifier pass, and one full STM32 geometry/tree plan fits the memory budget in 125.938 s. Its 732.7 billion planned far contractions and 339.2 million exact pairs per action leave electrical runtime unadmitted. Compile-only cargo supervision separately reports a descendant-launcher failure; no STM32 field solve or magnetic action was run.
+
 - Reduce hierarchical magnetic storage and contractions with a real harmonic quotient and fine original-tetrahedron traversal. The signed reference proof and saved verifier pass after a compile-only naming fix; its cargo supervision separately reports a descendant-launcher failure. One direct-executable STM32 planning attempt refuses the interaction descriptor cap before field or action work. Full-board electrical runtime and physical accuracy remain unverified.
 
 - Add an ignored planning-only check of the exact saved STM32 mesh and magnetic tree. Geometry and tree admission pass, but 2.28 billion exact pairs remain per action. Field preparation and action runtime remain unverified.

@@ -29,6 +29,23 @@ export function verifyHierarchicalMagnetic(log){
  assert.equal(p.coverage,'unverified');
  assert.ok(Number.isSafeInteger(p.originalCellCount)&&p.originalCellCount>0&&p.originalCellCount<=32);
  const n=3*p.originalCellCount;
+ const levels=Math.ceil(Math.log2(p.originalCellCount))+1;
+ assert.equal(p.interactionStorage,'immutable-dual-tree-v1');
+ assert.equal(p.interactionLevels,levels);
+ assert.equal(p.interactionStackSlots,4*levels);
+ assert.equal(p.interactionReplaysPerAction,3);
+ assert.equal(p.traversalStorageBytes,4*levels*16+6*levels*8+512);
+ assert.ok(Number.isSafeInteger(p.visitedNodePairs)&&p.visitedNodePairs>0);
+ assert.ok(Number.isSafeInteger(p.treeNodes)&&p.treeNodes>0);
+ for(const [value,expected] of [
+  [p.m2lScalarContractionsPerAxis,2926*p.farClusterPairs],
+  [p.m2lScalarContractionsPerAction,8778*p.farClusterPairs],
+  [p.shiftStencilApplicationsPerAction,6*(p.treeNodes-1)*2108],
+  [p.visitedNodePairsPerAction,3*p.visitedNodePairs],
+ ]){
+  if(value!==undefined)assert.ok(Number.isSafeInteger(value)&&value>=0&&
+   Number.isSafeInteger(expected)&&value===expected,'Inconsistent interaction cost evidence');
+ }
  assert.equal(p.expansionOrder,10);
  assert.ok(Number.isSafeInteger(p.exactPairs)&&p.exactPairs>0);
  assert.ok(Number.isSafeInteger(p.farClusterPairs)&&p.farClusterPairs>0);

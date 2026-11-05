@@ -31,6 +31,9 @@ function physicalMesh(report: BoardFoilReport) {
       ?{policy:magnetic.policy,method:magnetic.method}
       :{policy:magnetic.policy,method:magnetic.method,expansionOrder:magnetic.expansionOrder,
         representationVersion:magnetic.representationVersion,harmonicBasis:magnetic.harmonicBasis,
+        interactionStorage:magnetic.interactionStorage,visitedNodePairs:magnetic.visitedNodePairs,
+        interactionStackSlots:magnetic.interactionStackSlots,interactionLevels:magnetic.interactionLevels,
+        interactionReplaysPerAction:magnetic.interactionReplaysPerAction,
         momentCoefficientCount:magnetic.momentCoefficientCount,m2lCouplings:magnetic.m2lCouplings,
         shiftStencilTerms:magnetic.shiftStencilTerms,axisSerial:magnetic.axisSerial,leafTetrahedra:magnetic.leafTetrahedra,
         separationRatioMaximum:magnetic.separationRatioMaximum,treeNodes:magnetic.treeNodes,

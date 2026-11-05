@@ -269,6 +269,11 @@ export interface AnalysisBoardFoilCheckedReport {
                 representationVersion: 2; harmonicBasis: 'laplace-quotient-z01';
                 momentCoefficientCount: number; m2lCouplings: number; shiftStencilTerms: number;
                 axisSerial: true; leafTetrahedra: number;
+                interactionStorage: 'immutable-dual-tree-v1'; traversalStorageBytes: number;
+                interactionStackSlots: number; interactionLevels: number; interactionReplaysPerAction: 3;
+                visitedNodePairs: number;
+                m2lScalarContractionsPerAxis?: number; m2lScalarContractionsPerAction?: number;
+                shiftStencilApplicationsPerAction?: number; visitedNodePairsPerAction?: number;
                 expansionOrder: number; separationRatioMaximum: number; treeNodes: number;
                 exactPairs: number; farClusterPairs: number; plannedBytes: number; treeSignature: string }
         );

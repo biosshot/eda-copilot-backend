@@ -16,7 +16,9 @@ function packet(){
  return {schema:'p7-hierarchical-magnetic-v1',policy:'certified-cartesian-tree-v1',coverage:'unverified',
   originalCellCount:3,expansionOrder:10,exactPairs:3,farClusterPairs:1,
   representationVersion:2,harmonicBasis:'laplace-quotient-z01',momentCoefficientCount:121,
-  m2lCouplings:2926,shiftStencilTerms:2108,axisSerial:true,leafTetrahedra:1,cases};
+  m2lCouplings:2926,shiftStencilTerms:2108,axisSerial:true,leafTetrahedra:1,
+  interactionStorage:'immutable-dual-tree-v1',interactionLevels:3,interactionStackSlots:12,
+  interactionReplaysPerAction:3,traversalStorageBytes:848,visitedNodePairs:5,treeNodes:5,cases};
 }
 const verify=p=>verifyHierarchicalMagnetic('P7_HIERARCHICAL_MAGNETIC '+JSON.stringify(p));
 
@@ -26,6 +28,9 @@ test('saved magnetic proof requires independent action intervals and original ro
   p=>{delete p.representationVersion;},
   p=>{p.representationVersion=1;},
   p=>{p.momentCoefficientCount=286;},
+  p=>{delete p.interactionStorage;},
+  p=>{p.traversalStorageBytes=0;},
+  p=>{p.m2lScalarContractionsPerAction=1;},
   p=>{p.cases[0].exactAction[0]+=1e-6;},
   p=>{p.cases.at(-1).fullKvl.exactResidual[0]=1e-6;},
   p=>{p.cases.at(-1).fullKvl.uncertaintyBound[0]=0;},
