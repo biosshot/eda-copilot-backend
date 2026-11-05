@@ -592,6 +592,12 @@ impl<'a> Plan<'a> {
                 }
             }
             upward_profile.finish();
+            // Reuse bounded order/rank scratch across far blocks. The block
+            // traversal and every interval addition retain their original order.
+            let mut pa = Vec::<Interval>::new();
+            let mut pb = Vec::<Interval>::new();
+            let mut la = vec![Interval::zero(); rank];
+            let mut lb = vec![Interval::zero(); rank];
             self.walk(Some(axis), |block, decision| {
                 match decision {
                     Decision::Zero => {}
@@ -634,8 +640,12 @@ impl<'a> Plan<'a> {
                         }
                         tails[block.a] = tails[block.a].add(tail.mul(tv[block.b]));
                         tails[block.b] = tails[block.b].add(tail.mul(tv[block.a]));
-                        let pa: Vec<_> = (0..=p).map(|d| sa.pow(d)).collect();
-                        let pb: Vec<_> = (0..=p).map(|d| sb.pow(d)).collect();
+                        pa.resize(p + 1, Interval::zero());
+                        pb.resize(p + 1, Interval::zero());
+                        for d in 0..=p {
+                            pa[d] = sa.pow(d);
+                            pb[d] = sb.pow(d);
+                        }
                         let mut ma = self.moment(block.a, &moments, space, q, axis);
                         let mut mb = self.moment(block.b, &moments, space, q, axis);
                         for (i, &a) in t
@@ -648,8 +658,8 @@ impl<'a> Plan<'a> {
                             ma[i] = ma[i].mul(pa[degree(a)]);
                             mb[i] = mb[i].mul(pb[degree(a)]);
                         }
-                        let mut la = vec![Interval::zero(); rank];
-                        let mut lb = la.clone();
+                        la.fill(Interval::zero());
+                        lb.fill(Interval::zero());
                         for term in t.couplings.iter().take(t.coupling_prefix[p]) {
                             let mut value = derivatives[term.jet];
                             if term.source_degree % 2 == 1 {

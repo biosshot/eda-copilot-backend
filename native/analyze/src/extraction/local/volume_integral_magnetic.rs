@@ -286,7 +286,7 @@ impl<'a> Streamed<'a> {
                 budget,
                 start,
                 wall,
-            )?;
+            ).map_err(|failure| format!("{failure}; stage=adaptive-magnetic-hierarchy-admission originalTetrahedra={n} callerBaseBytes={base_bytes} exactCacheBytes={owned_bytes} availableBudgetBytes={}", budget.max_bytes))?;
             owned_bytes = owned_bytes
                 .checked_add(tree.planned_bytes)
                 .ok_or_else(|| error("MEMORY_LIMIT", "magnetic hierarchy plan overflow"))?;

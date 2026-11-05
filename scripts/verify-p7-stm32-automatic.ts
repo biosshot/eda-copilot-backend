@@ -24,17 +24,21 @@ assert.ok(entry);
 const sourcePath='tests/pcb-analyze/STM32G0_CAN_RS485/local-extraction-complete-channel.js';
 const boardText=readFileSync(entry.board,'utf8'),original=readFileSync(sourcePath,'utf8');
 assert.equal(sha(boardText),entry.boardSha256);
-const budget={maxSeconds:1800,maxMemoryMiB:3072};
+const budget={maxSeconds:Number(process.env.P7_VERIFY_SECONDS??1800),maxMemoryMiB:Number(process.env.P7_VERIFY_MEMORY_MIB??3072)};
+assert.ok(Number.isFinite(budget.maxSeconds)&&budget.maxSeconds>0&&budget.maxSeconds<=1800,'P7_VERIFY_SECONDS must be in (0,1800]');
+assert.ok(Number.isFinite(budget.maxMemoryMiB)&&budget.maxMemoryMiB>=256&&budget.maxMemoryMiB<=4096,'P7_VERIFY_MEMORY_MIB must be in [256,4096]');
+const treePrivateCapMiB=Number(process.env.P7_TREE_CAP_MIB??4096);
+assert.ok(Number.isFinite(treePrivateCapMiB)&&treePrivateCapMiB>=budget.maxMemoryMiB&&treePrivateCapMiB<=8192,'P7_TREE_CAP_MIB must cover native memory and be <=8192; enforce this cap with the supervisor');
 process.env.P7_VERIFY_SECONDS=String(budget.maxSeconds);
 process.env.P7_VERIFY_MEMORY_MIB=String(budget.maxMemoryMiB);
 const marker='maxSeconds:300,maxMemoryMiB:2048';
 assert.equal(original.split(marker).length,2);
-const code=original.replace(marker,'maxSeconds:1800,maxMemoryMiB:3072');
+const code=original.replace(marker,`maxSeconds:${budget.maxSeconds},maxMemoryMiB:${budget.maxMemoryMiB}`);
 writeFileSync(join(out,'source.js'),code);
 writeFileSync(join(out,'board.json'),boardText);
 const core=localCoreIdentity();
 const identity={board:entry.board,dsl:sourcePath,boardSha256:sha(boardText),originalDslSha256:sha(original),
- executedDslSha256:sha(code),coreIdentity:core,budget,treePrivateCapMiB:4096,
+ executedDslSha256:sha(code),coreIdentity:core,budget,treePrivateCapMiB,
  assumptions:entry.missingFields,physicalCoverage:'unverified'};
 save('identity.json',identity);
 let request:any,segmented:any,extraction:any,baseGeometry:any,taskBoardJson:string|undefined;
@@ -78,7 +82,7 @@ save('ownership.json',ownership??null);
 const preflight:any={status:scenario.status==='complete'&&request?'pass':'unsupported',
  phase:'geometry planning only',numericalSolves:0,route:request?'automatic joint':segmented?'segmented':'refused',
  error:scenario.error,elapsedSeconds:(performance.now()-started)/1000,
- resources:{budget,treePrivateCapMiB:4096,meshAndFactorAdmission:'unverified',
+ resources:{budget,treePrivateCapMiB,meshAndFactorAdmission:'unverified',
   reason:'Actual constrained mesh counts and common field/factor plans are checked inside the bounded native producer.',
   baselineRssBytes:process.memoryUsage().rss},
  roiMm:request?.geometry.roiMm,sourceCopperCount:request?.expected.sourceCopper.length,

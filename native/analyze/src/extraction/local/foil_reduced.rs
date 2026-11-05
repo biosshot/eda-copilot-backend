@@ -725,6 +725,8 @@ pub(super) fn solve_mixed_grid(
     // Admit all non-modal full-space buffers before constructing the bounded
     // exact magnetic cache. Later factor plans add their actual fill/scratch.
     let buffer_base = native_sizes(n, ni, 0, field_base)?;
+    eprintln!("P7_MIXED_MEMORY_STAGE stage=magnetic-admission fullPotentials={n} fullCurrents={ni} mapBytes={} electricPlanBytes={} nativeWorkBytes={} totalBaseBytes={buffer_base} budgetBytes={}",
+        map.planned_bytes, field.planned_bytes(), native_work_bytes(n, ni, 0)?, budget.max_bytes);
     budget.check(buffer_base)?;
     let magnetic = super::volume_integral_magnetic::Streamed::new(
         mesh,

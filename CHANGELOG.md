@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reuse four bounded far-interaction scratch vectors without changing interval arithmetic order; the signed/reference action and KVL control matches prior numerical evidence exactly. Add mixed/hierarchy memory-admission context and configurable bounded STM32 verification budgets. Release addon build passes; full-board speedup and <=600-second extraction remain unverified.
+
 - Replace the fixed 10 kHz executor switch with declared segmented-producer capabilities and actual block/component bands. Reuse the initial geometry plan, reject malformed demand early, preserve joint interval-gap auditing and avoid unsupported segmentation preparation. Current producer bands and physical acceptance are unchanged; 19 focused dispatch/frequency/return tests pass.
 
 - Add opt-in `P7_MAGNETIC_TRACE=1` stderr checkpoints for adaptive magnetic preparation, cover/replay walks, per-axis stages and classification/far/near callback costs. Keep numerical traversal and certificates unchanged; profile logs distinguish planned pair counts from executed near kernels. Full-board profiling remains pending.

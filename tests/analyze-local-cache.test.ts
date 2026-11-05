@@ -53,6 +53,13 @@ test('explicit magnetic profile separates binary cache identities and rejects un
  finally{if(before===undefined)delete process.env.P7_MAGNETIC_PROFILE;else process.env.P7_MAGNETIC_PROFILE=before;}
 });
 
+test('diagnostic magnetic trace does not select a numerical model or alter cache identity',async()=>{
+ const {localCoreIdentity}=await import('../src/analyze/local-model-cache.ts');
+ const before=process.env.P7_MAGNETIC_TRACE;
+ try{delete process.env.P7_MAGNETIC_TRACE;const baseline=localCoreIdentity();process.env.P7_MAGNETIC_TRACE='1';assert.equal(localCoreIdentity(),baseline);}
+ finally{if(before===undefined)delete process.env.P7_MAGNETIC_TRACE;else process.env.P7_MAGNETIC_TRACE=before;}
+});
+
 test('one executor refuses magnetic profile changes before accessing a differently configured native model',async()=>{
  const {createProblemExecutor}=await import('../src/analyze/execute-problem.ts');const run=createProblemExecutor();const old=process.env.P7_MAGNETIC_PROFILE;
  const request:any={kind:'local-extraction',request:{boardJson:'{}',geometry:{},bandHz:[1000,100000],frequenciesHz:[1000],magneticPatchLevel:1}};
