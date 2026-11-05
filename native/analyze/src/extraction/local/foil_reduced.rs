@@ -165,6 +165,11 @@ fn sizes(n: usize, m: usize, r: usize, field_bytes: usize) -> Result<usize> {
 fn native_work_bytes(n: usize, m: usize, r: usize) -> Result<usize> {
     native_work_modes(n, m, r, r)
 }
+fn native_global_sparse_bytes(m: usize) -> Result<usize> {
+    m.checked_mul(16 * (std::mem::size_of::<Triplet<usize,usize,f64>>()
+        +4*std::mem::size_of::<usize>()+std::mem::size_of::<f64>()))
+        .ok_or_else(||error("MEMORY_LIMIT","native global sparse buffer overflow"))
+}
 fn native_work_modes(n: usize, m: usize, potential_modes: usize, current_modes: usize) -> Result<usize> {
     // Per four-term current column: Cell+coefficient storage; up to16 triplets
     // plus pinned faer0.24.4 argsort/row-index/CSC construction (four index
@@ -195,6 +200,15 @@ fn native_mode_sizes(n: usize, m: usize, potential_modes: usize, current_modes: 
         .checked_add(base)
         .and_then(|v| v.checked_add(potential_modes.checked_add(current_modes)?.checked_pow(2)?.checked_mul(2048)?))
         .ok_or_else(|| error("MEMORY_LIMIT", "native mixed descriptor plan overflow"))
+}
+fn native_partitioned_sizes(n: usize, m: usize, potential_modes: usize, current_modes: usize, base: usize) -> Result<usize> {
+    // correction(partition=Some) returns before constructing global triplets
+    // or CSC. Its backend separately admits owner assembly, Schur assembly,
+    // metadata, factor residency and solve scratch. Keep every Cell, vector,
+    // mode and descriptor allowance; remove only absent global assembly.
+    native_mode_sizes(n,m,potential_modes,current_modes,base)?
+        .checked_sub(native_global_sparse_bytes(m)?)
+        .ok_or_else(||error("MEMORY_LIMIT","partitioned buffer accounting underflow"))
 }
 fn gradient(cells: &[Cell], v: &[f64]) -> Vec<f64> {
     cells
@@ -797,7 +811,12 @@ pub(super) fn solve_mixed_grid(
     // the existing four-per-kind reserve remains conservative.
     let current_mode_cap = basis.retained.len().checked_sub(map.full.components.len())
         .and_then(|v|v.checked_add(reserve)).ok_or_else(||error("MEMORY_LIMIT","native current mode bound overflow"))?;
-    let full_plan = native_mode_sizes(n, ni, mode_cap, current_mode_cap, base)?;
+    let full_plan = if partition.is_some() {
+        native_partitioned_sizes(n, ni, mode_cap, current_mode_cap, base)?
+    } else {
+        native_mode_sizes(n, ni, mode_cap, current_mode_cap, base)?
+    };
+    if partition.is_some() {eprintln!("P7_MIXED_MEMORY_STAGE stage=partitioned-global-scratch-omission omittedBytes={} reason=global-triplets-and-CSC-not-constructed",native_global_sparse_bytes(ni)?);}
     eprintln!("P7_REDUCED_MEMORY_PLAN fullPotentials={n} fullCurrents={ni} retained={} enrichmentIterations={} modeCap={mode_cap} workBytes={} descriptorBytes={} baseBytes={base} plannedBytes={full_plan} budgetBytes={}",
         basis.retained.len(),grid.max_iterations,native_work_modes(n,ni,mode_cap,current_mode_cap)?,(mode_cap+current_mode_cap)*(mode_cap+current_mode_cap)*2048,budget.max_bytes);
     budget.check(full_plan).map_err(|failure|format!("{failure}; stage=full-mode-admission modeCap={mode_cap} plannedBytes={full_plan} budgetBytes={}",budget.max_bytes))?;
@@ -2190,6 +2209,18 @@ mod mixed_basis_tests {
 #[cfg(test)]
 mod native_memory_tests {
     use super::*;
+    #[test]
+    fn partitioned_plan_omits_only_unused_global_sparse_assembly() {
+        let (n,m,v,i,base)=(1000,12000,70,8,12345);
+        let global=native_mode_sizes(n,m,v,i,base).unwrap();
+        let partitioned=native_partitioned_sizes(n,m,v,i,base).unwrap();
+        assert_eq!(global-partitioned,native_global_sparse_bytes(m).unwrap());
+        let cell=std::mem::size_of::<Cell>()+4*std::mem::size_of::<(usize,f64)>();
+        assert_eq!(partitioned,base+n*1024+m*(cell+32*std::mem::size_of::<f64>())
+            +(n*v+m*i)*64+(v+i)*(v+i)*2048);
+        assert!(AllocationBudget{max_bytes:partitioned-1,max_nodes:n,max_tetrahedra:m}.check(partitioned).is_err());
+        assert!(native_partitioned_sizes(n,usize::MAX,v,i,base).is_err());
+    }
     #[test]
     fn floating_constant_modes_keep_voltage_without_reserving_fictitious_currents() {
         let cells=[Cell::new(vec![],2.),Cell::new(vec![],3.)];

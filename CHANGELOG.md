@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Remove unused global triplet/CSC assembly reservation only when the full conductive correction uses the separately budgeted partitioned backend (475,849,728 B for the STM32 fixture). Preserve cell, mode, vector, descriptor and backend factor guards. Six focused native tests and release addon build pass; full extraction acceptance remains pending.
+
 - Refine harmonic DC preparation with up to eight same-factor residual corrections, preserving retained contacts and the original 1e-8 gate. Check the deadline at each step and include residual history on failure. Five focused native controls and release addon build pass; the full STM32 verification is separately bounded and not yet accepted.
 
 - Correct mixed extraction memory accounting: separate sequential mixed/full work phases, use live mixed-map capacities after construction, and distinguish potential from current modes so floating constant potentials do not reserve fictitious current vectors. Preserve all islands, conservative full-space bounds and enrichment guards. Two focused memory tests and release addon build pass; full extraction resource/runtime admission remains under measurement.

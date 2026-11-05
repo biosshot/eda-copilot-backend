@@ -110,7 +110,8 @@ impl Backend {
         // divergence accumulator plus result. All coexist with the factors.
         let solve_vectors = plan(plan(0, free.len(), 128)?, cells.len(), 16)?;
         let mut live = plan(plan(base, metadata, 1)?, solve_vectors, 1)?;
-        budget.check(live)?;
+        eprintln!("P7_MIXED_MEMORY_STAGE stage=partitioned-factor-admission owners={owner_count} baseBytes={base} metadataBytes={metadata} solveVectorBytes={solve_vectors} plannedBytes={live} budgetBytes={}",budget.max_bytes);
+        budget.check(live).map_err(|failure|format!("{failure}; stage=partitioned-factor-admission baseBytes={base} metadataBytes={metadata} solveVectorBytes={solve_vectors} plannedBytes={live} budgetBytes={}",budget.max_bytes))?;
 
         let mut trace_index = vec![None; free.len()];
         let mut trace_dofs = Vec::new();
