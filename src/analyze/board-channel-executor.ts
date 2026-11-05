@@ -73,18 +73,46 @@ export function createBoardChannelExecutor<FoilResult=never>(
  solveFoil?:(plan:AutoFoilPlan,frequencies:number[],budget:{maxSeconds:number;maxMemoryMiB:number},interval?:FrequencyInterval)=>FoilResult,
 ){
  return (board:any,base:any,contacts:LegacyChannelContact[]|BoardChannelRequest,frequencies:number[],budget:{maxSeconds:number;maxMemoryMiB:number},requestedIntervalHz?:FrequencyInterval)=>{
+  if(frequencies.some(f=>!Number.isFinite(f)||f<0)||
+   (requestedIntervalHz&&(requestedIntervalHz.length!==2||requestedIntervalHz.some(f=>!Number.isFinite(f)||f<0)||requestedIntervalHz[0]>requestedIntervalHz[1])))
+   throw new Error('CHANNEL_FREQUENCY_INPUT: finite nonnegative frequencies and ordered interval required');
   const start=performance.now(),elapsed=()=>(performance.now()-start)/1000;
   const left=()=>({...budget,maxSeconds:budget.maxSeconds-elapsed()});
+  const components=Array.isArray(contacts)?[]:contacts.components??[];
+  const componentBands=components.flatMap(component=>{const band=declaredNetworkBand(component.model);return band?[band]:[];});
+  if(componentBands.some(b=>frequencies.some(f=>!Number.isFinite(f)||f<b[0]||f>b[1])))
+   throw new Error('CHANNEL_COMPONENT_BAND: requested axis exceeds supplied component AC band');
   const planChannel=createPlanner(board,base,contacts);
-  const demandUpper=frequencies.reduce((upper,f)=>Math.max(upper,f),requestedIntervalHz?.[1]??0);
-  if(solveFoil&&demandUpper>boardChannelBlockBandHz[1]){
+  const demand=[...frequencies,...(requestedIntervalHz??[])];
+  // Skip unsupported producer construction, not arbitrary frequencies: geometry-only
+  // segmentation can itself refuse cases that the joint producer can represent.
+  const capability=planChannel.segmentedCapabilityBandHz;
+  if(capability&&(capability.length!==2||capability.some(f=>!Number.isFinite(f)||f<=0)||capability[0]>capability[1]))
+   throw new Error('CHANNEL_MODEL_BAND: invalid segmented producer capability');
+  if(capability&&demand.some(f=>f<capability[0]||f>capability[1])){
+   if(!solveFoil)throw new Error('CHANNEL_MODEL_BAND: request exceeds segmented producer capability');
+   return solveFoil(planChannel({closedJointDeadlineMs:start+budget.maxSeconds*1000}),frequencies,left(),requestedIntervalHz);
+  }
+  // Otherwise inspect actual geometry-specific block capabilities.
+  let initialPlan:ReturnType<typeof planChannel>;
+  try{initialPlan=planChannel({domainScale:1,magneticPatchLevel:1,boundaryFraction:1/3,
+   ...(solveFoil&&{autoFoilDeadlineMs:start+budget.maxSeconds*1000})});}
+  catch(error){
+   const candidate=error as {code?:string;foilCandidate?:AutoFoilPlan};
+   if(!solveFoil||candidate?.code!=='CHANNEL_CORRIDOR_UNSUPPORTED'||!candidate.foilCandidate)throw error;
+   return solveFoil(candidate.foilCandidate,frequencies,left(),requestedIntervalHz);
+  }
+  const bands=[...initialPlan.blocks.map(block=>block.bandHz),...componentBands];
+  if(!initialPlan.blocks.length||bands.some(b=>b.length!==2||b.some(f=>!Number.isFinite(f)||f<=0)||b[0]>b[1]))
+   throw new Error('CHANNEL_MODEL_BAND: invalid declared block capability');
+  const low=Math.max(...bands.map(b=>b[0])),high=Math.min(...bands.map(b=>b[1]));
+  if(low>high||demand.some(f=>!Number.isFinite(f)||f<low||f>high)){
+   if(!solveFoil)throw new Error('CHANNEL_MODEL_BAND: request exceeds common segmented model band');
    const foil=planChannel({closedJointDeadlineMs:start+budget.maxSeconds*1000});
    return solveFoil(foil,frequencies,left(),requestedIntervalHz);
   }
   const sectionOptions={expandAutomaticSectionMesh:true};
   const axis=[...frequencies];
-  const components=Array.isArray(contacts)?[]:contacts.components??[];
-  const [low,high]=Array.isArray(contacts)?boardChannelBlockBandHz:boardChannelApplicability(contacts);
   if(components.length&&(!axis.length||low>high||axis.some(f=>!Number.isFinite(f)||f<low||f>high)))
    throw new Error('CHANNEL_COMPONENT_BAND: requested axis exceeds common board and supplied component AC band');
   for(const f of [low,Math.sqrt(low*high),high])if(!axis.some(x=>Math.abs(x-f)<=64*Number.EPSILON*Math.max(x,f)))axis.push(f);
@@ -97,7 +125,7 @@ export function createBoardChannelExecutor<FoilResult=never>(
   for(const domainScale of [1,2,4]){
    const boundaryFraction=1/3;
    let coarsePlan:ReturnType<typeof planChannel>;
-   try{coarsePlan=planChannel({domainScale,magneticPatchLevel:1,boundaryFraction,
+   try{coarsePlan=domainScale===1?initialPlan:planChannel({domainScale,magneticPatchLevel:1,boundaryFraction,
      ...(solveFoil&&domainScale===1&&{autoFoilDeadlineMs:start+budget.maxSeconds*1000})});}
    catch(error){
     const candidate=error as {code?:string;foilCandidate?:AutoFoilPlan};

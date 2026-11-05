@@ -565,7 +565,11 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
         }));
         return { blocks, ports, coverage, ...(attachments.length && { attachments }), audit: { ...(attachments.length && { components: componentAudit }), graph, corridors, returnClosure, cells, barrelOwnership, physicalTerminals: [...terminals.values()].map(({ contact, island }) => ({ ...contact, island: island.id, owner: cells[terminalOwners.get(contact.id)!].id })), faces: faces.map(({ slice: slice2, ...f }) => ({ ...f, sourceMapping: slice2.sourceMapping })), ownershipConvention: "Explicit original-source fragments clipped by route/event domains, with region/layer identity and areaMm2; interval fixtures retain length units", signalIsland: signalIslandIds.size === 1 ? [...signalIslandIds][0] : undefined, signalIslands: [...signalIslandIds], returnIslands: returns.map((i) => i.id), copperDecisions: g.regions.map((r) => ({ regionId: r.id, sourcePath: r.source.path, layer: r.layer, role: signalRegions.has(r.id) ? "signal" : returnIds.has(r.id) ? "return" : "neighbour", included: relevant.includes(r), reason: relevant.includes(r) ? "Actual source fragment retained in joint route cell" : "Outside finite numerical domain; expansion remains required" })), policy: "All branches, finite return and spatial neighbours retained; local/section coupling requires numerical acceptance; nonlocal plane coupling not certified" } };
     }
-    return plan;
+    // Producer-wide upper capability envelope, not physical acceptance of every geometry.
+    const capability: {readonly segmentedCapabilityBandHz?: readonly [number,number]} = {
+        segmentedCapabilityBandHz: Object.freeze([...boardChannelBlockBandHz] as [number,number]),
+    };
+    return Object.assign(plan, capability);
 }
 /** B2 finite-domain candidates for C1 only; full-channel admission is unchanged.
  * All contour events inside each tested width are checked again. */

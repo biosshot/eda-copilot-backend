@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Replace the fixed 10 kHz executor switch with declared segmented-producer capabilities and actual block/component bands. Reuse the initial geometry plan, reject malformed demand early, preserve joint interval-gap auditing and avoid unsupported segmentation preparation. Current producer bands and physical acceptance are unchanged; 19 focused dispatch/frequency/return tests pass.
+
 - Add opt-in `P7_MAGNETIC_TRACE=1` stderr checkpoints for adaptive magnetic preparation, cover/replay walks, per-axis stages and classification/far/near callback costs. Keep numerical traversal and certificates unchanged; profile logs distinguish planned pair counts from executed near kernels. Full-board profiling remains pending.
 
 - Add optional P7 physical-island closure tracing and a planning-only route diagnostic with input/source hashes. The STM32 trace identifies growth from 214 seed regions to 844 regions after retaining 89 barrels; traced/untraced candidates match. Record the 42-case coverage inventory without changing physical acceptance, numerical operators or route selection.

@@ -130,6 +130,7 @@ test('high board demand requires closed joint geometry and freezes the admitted 
   return baseline;
  };
  const createPlanner=(()=>(options:unknown)=>{
+  if(options&&typeof options==='object'&&!('closedJointDeadlineMs' in options))return {blocks:[{bandHz:[1000,10000]}]};
   assert.ok(options&&typeof options==='object'&&'closedJointDeadlineMs' in options);
   closedCalls++;
   if(refuseClosure)throw Error('CHANNEL_JOINT_CLOSURE: unsupported physical closure');
