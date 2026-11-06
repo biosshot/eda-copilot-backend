@@ -356,6 +356,8 @@ impl System {
             charge_coordinates: None,
         })
     }
+    #[cfg(test)]
+    pub(crate) fn test_relative_residual(&self) -> f64 { self.residual }
     /// Positive semidefinite port load / finite Thevenin driver. Call before gauge discovery.
     pub fn add_port_admittance(
         &mut self,

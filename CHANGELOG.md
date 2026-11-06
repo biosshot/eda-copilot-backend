@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Connect the private mixed section/tetrahedron magnetic Gram to the existing reduced R/L/C assembly, preserving resistance, charge, contacts and physical copper coverage. Corrected dielectric-halo controls compare 50-ohm loaded responses at 1/10 kHz within 1.68e-5; original-space KVL still refuses the candidate. No production dispatch, full-board speedup or case-matrix acceptance is claimed.
+
 - Add opt-in goal-bounded near/self omission (`P7_MAGNETIC_NEAR_BOUND=1`) using summed per-tetrahedron volume-potential bounds, including overlapping sources. Propagate omitted contributions into action uncertainty, distinguish them from exact zeros in certificates, and isolate response-cache identity. STM32 coverage drops planned near pairs by only about 1.55%; keep the mode disabled by default. No completed extraction or case-matrix acceptance is claimed.
 
 - Add a private budgeted mixed magnetic Gram for uniform section cells and local tetrahedra, retaining section/event mutuals and one physical shared return. Release controls cover independent volume comparison, reciprocal cross integration, axial partitions, duplicate geometry, energy and resource admission. This is magnetic coupling infrastructure, not a connected channel model or production dispatch.

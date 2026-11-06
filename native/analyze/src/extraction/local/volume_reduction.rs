@@ -144,8 +144,17 @@ impl Basis {
         }Ok(added)
     }
     pub fn model(&self,space:&Space,field:&dyn ElectricApply,magnetic:&dyn MagneticApply,ports:&[[usize;2]],budget:AllocationBudget)->Result<Model> {
+        self.model_inner(space,field,Some(magnetic),None,ports,budget)
+    }
+    pub fn model_with_inductance(&self,space:&Space,field:&dyn ElectricApply,inductance:&[Vec<f64>],ports:&[[usize;2]],budget:AllocationBudget)->Result<Model> {
+        let ni=self.current.len();
+        if inductance.len()!=ni || inductance.iter().any(|row|row.len()!=ni || row.iter().any(|x|!x.is_finite())) {return Err(error("MAGNETIC_MATRIX","invalid inductance matrix dimensions or values"));}
+        for a in 0..ni {for b in 0..a {if inductance[a][b]!=inductance[b][a] {return Err(error("MAGNETIC_MATRIX","inductance matrix must be symmetric"));}}}
+        self.model_inner(space,field,None,Some(inductance),ports,budget)
+    }
+    fn model_inner(&self,space:&Space,field:&dyn ElectricApply,magnetic:Option<&dyn MagneticApply>,inductance:Option<&[Vec<f64>]>,ports:&[[usize;2]],budget:AllocationBudget)->Result<Model> {
         let nv=self.voltage.len();let ni=self.current.len();
-        budget.check((nv+ni).checked_pow(2).and_then(|n|n.checked_mul(1600)).and_then(|n|n.checked_add(magnetic.planned_bytes())).and_then(|n|n.checked_add(field.planned_bytes())).and_then(|n|n.checked_add(space.planned_bytes)).ok_or_else(||error("MEMORY_LIMIT","reduced model plan overflow"))?)?;
+        budget.check((nv+ni).checked_pow(2).and_then(|n|n.checked_mul(1600)).and_then(|n|n.checked_add(magnetic.map_or(0,|m|m.planned_bytes()))).and_then(|n|n.checked_add(field.planned_bytes())).and_then(|n|n.checked_add(space.planned_bytes)).ok_or_else(||error("MEMORY_LIMIT","reduced model plan overflow"))?)?;
         let mut model=Model{format:"coupled-rlc".into(),reference_topology:"infinity".into(),potential_nodes:self.names.clone(),current_dofs:(0..ni).map(|i|format!("current-mode-{i}")).collect(),incidence:vec![],port_incidence:vec![],resistance_ohm:vec![],inductance_h:vec![],capacitance_f:vec![],conserved_potential_modes:vec![],structural_gauge_modes:vec![],port_terminals:Some(vec![])};
         let mut gradient=self.voltage.iter().map(|q|space.gradient(q)).collect::<Result<Vec<_>>>()?;
         // Differentiate the partition analytically: its last shape is exactly
@@ -167,9 +176,11 @@ impl Basis {
         // Project each full-space action immediately. Retain only the small
         // directed Gram matrix, including both directions for reciprocity.
         let mut directed=vec![vec![0.;ni];ni];
-        for b in 0..ni {
-            let image=magnetic.apply(space,&self.current[b])?;
-            for a in 0..ni {directed[a][b]=dot(&self.current[a],&image);}
+        if let Some(matrix)=inductance {directed=matrix.to_vec();} else if let Some(magnetic)=magnetic {
+            for b in 0..ni {
+                let image=magnetic.apply(space,&self.current[b])?;
+                for a in 0..ni {directed[a][b]=dot(&self.current[a],&image);}
+            }
         }
         let scale=(0..ni).map(|i|directed[i][i].abs()).fold(0.,f64::max);
         for a in 0..ni {for b in a..ni {

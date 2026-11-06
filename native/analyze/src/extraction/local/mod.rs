@@ -85,3 +85,5 @@ pub fn packed_kernel_bytes(foil_volumes: usize, axial_volumes: usize) -> Result<
 
 mod axial_magnetic;
 mod hybrid_section_magnetic;
+
+mod hybrid_section_model;
