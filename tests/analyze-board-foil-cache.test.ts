@@ -50,6 +50,25 @@ function mock(request: AnalysisBoardFoilCheckedRequest, input = problem): Analys
   };
 }
 
+test('section current hints have isolated response cache identity', () => {
+  const dir=mkdtempSync(join(tmpdir(),'p7-section-hints-'));
+  const before=process.env.P7_SECTION_HINTS;
+  try {
+    const cache=new LocalModelCache(dir);
+    const run=()=>cachedBoardFoilReport(cache,'section-control',problem,r=>mock(r));
+    delete process.env.P7_SECTION_HINTS;
+    const baseline=run();
+    process.env.P7_SECTION_HINTS='1';
+    assert.notEqual(run().cache?.key,baseline.cache?.key);
+    assert.equal(run().cache?.status,'memory');
+    process.env.P7_SECTION_HINTS='0';
+    assert.equal(run().cache?.key,baseline.cache?.key);
+  } finally {
+    if(before===undefined)delete process.env.P7_SECTION_HINTS;else process.env.P7_SECTION_HINTS=before;
+    rmSync(dir,{recursive:true,force:true});
+  }
+});
+
 test('magnetic batch partition policy separates cached numerical certificates', () => {
   const dir=mkdtempSync(join(tmpdir(),'p7-magnetic-batches-'));
   const before=process.env.P7_MAGNETIC_BATCH_COLUMNS;

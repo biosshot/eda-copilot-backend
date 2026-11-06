@@ -48,6 +48,7 @@ export function cachedBoardFoilReport(
   const deadlineSeconds = Math.min(request.budget.maxSeconds, verificationLimit('P7_VERIFY_SECONDS', 300, 1, 3600));
   const maxMemoryMiB = Math.min(Math.floor(request.budget.maxMemoryMiB), verificationLimit('P7_VERIFY_MEMORY_MIB', 2048, 256, 65536));
   const magneticBatchColumns = verificationLimit('P7_MAGNETIC_BATCH_COLUMNS', 0, 0, 64);
+  const sectionHints = process.env.P7_SECTION_HINTS === '1';
   const remaining = () => {
     const seconds = deadlineSeconds - (performance.now() - started) / 1000;
     if (seconds <= 0) throw new Error('CHANNEL_FOIL_DEADLINE: shared cache/solve budget exhausted');
@@ -64,6 +65,7 @@ export function cachedBoardFoilReport(
     magneticRepresentationVersion:3,
     magneticInteractionStorage:'immutable-adaptive-dual-tree-v1',
     ...(magneticBatchColumns > 0 && { magneticBatchColumns }),
+    ...(sectionHints && { sectionHintPolicy: 'uniform-axial-current-seeds-v1' }),
     geometry: problem.geometry, expected, frequenciesHz, referenceOhm, maxIterations,
     ...(profiled && { operatorPolicy, profileUpperHz: upperHz }),
     ...(partitionPolicy && { partitionPolicy }),

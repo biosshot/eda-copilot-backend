@@ -10,7 +10,7 @@ use super::{
     foil_reduced::{self, MatchedGrid},
     spatial_partition::Partition,
     volume_current,
-    volume_field::Field,
+    volume_field::{Field,ElectricApply},
     AllocationBudget, Result,
 };
 use std::collections::{BTreeMap, BTreeSet};
@@ -791,6 +791,56 @@ pub fn solve_checked_spatial_partition(
     )
 }
 
+/// Strictly conforming Z-axis straight extrusion only; all other geometries use
+/// the existing mixed path. Components and return are physical, never nets.
+fn uniform_section_profiles(mesh:&BoardMesh,map:&MixedMap<'_>,ports:&[[usize;2]],frequency:f64,budget:AllocationBudget,start:Instant,wall:Duration)->Result<Option<Vec<Vec<f64>>>> {
+    use crate::extraction::section_transition::{self,Conductor,Triangle,Mesh};
+    let nt=mesh.planar_triangles.len();let np=mesh.planar_nodes_mm.len();let nc=map.full.components.len();
+    if nt==0||np==0||!(2..=17).contains(&nc)||ports.len()<2 {return Ok(None);}
+    check_time(start,wall)?;let seed_start=Instant::now();let seed_wall=wall.saturating_sub(start.elapsed())/8;
+    let work_limit=budget.max_bytes/8;
+    let source_bytes=mesh.mesh.copper_tetrahedra.iter().try_fold(0usize,|n,t|t.source_ids.iter().try_fold(n,|n,id|n.checked_add(id.len().checked_add(128)?)));
+    let preflight=source_bytes.and_then(|bytes|map.full.potential_count().checked_mul(16).and_then(|n|n.checked_add(bytes))).and_then(|n|n.checked_add(map.full.cells.len().checked_mul(256)?)).and_then(|n|n.checked_add(np.checked_mul(128)?)).and_then(|n|n.checked_add(nt.checked_mul(128)?)).and_then(|n|n.checked_add(map.full.current_count().checked_mul(2*(nc-1))?.checked_mul(8)?));
+    if preflight.is_none_or(|n|n>work_limit) {return Ok(None);}
+    let mut component=vec![usize::MAX;map.full.potential_count()];for (c,nodes) in map.full.components.iter().enumerate(){for &i in nodes {component[i]=c;}}
+    let reference=component[ports[0][1]];if reference==usize::MAX||ports.iter().any(|p|component[p[1]]!=reference||component[p[0]]==reference) {return Ok(None);}
+    let first_slab=match mesh.mesh.copper_tetrahedra.iter().map(|t|t.slab).min(){Some(v)=>v,None=>return Ok(None)};
+    let last_slab=mesh.mesh.copper_tetrahedra.iter().map(|t|t.slab).max().unwrap();let slab_count=last_slab-first_slab+1;
+    let mut zs:Vec<f64>=mesh.mesh.copper_tetrahedra.iter().flat_map(|t|t.nodes.iter().map(|&i|mesh.mesh.nodes_m[i][2])).collect();zs.sort_by(f64::total_cmp);zs.dedup();
+    if zs.len()!=slab_count+1 {return Ok(None);}
+    if ports.iter().any(|p|p.iter().any(|&d|{let nodes=&map.full.mesh_nodes[d];nodes.is_empty()||!nodes.iter().all(|&i|mesh.mesh.nodes_m[i][2]==zs[0]||mesh.mesh.nodes_m[i][2]==zs[slab_count])})) {return Ok(None);}
+    let ends=|d:usize|->Option<usize>{let nodes=&map.full.mesh_nodes[d];let z=mesh.mesh.nodes_m[*nodes.first()?][2];if nodes.iter().any(|&i|mesh.mesh.nodes_m[i][2]!=z){None}else if z==zs[0]{Some(0)}else if z==zs[slab_count]{Some(1)}else{None}};
+    if ports.iter().any(|p|ends(p[0])!=ends(p[1])||ends(p[0]).is_none()) || !(0..2).all(|end|ports.iter().any(|p|ends(p[0])==Some(end)&&ends(p[1])==Some(end))) {return Ok(None);}
+    let estimated=nt.checked_mul(slab_count).and_then(|n|n.checked_mul(128)).and_then(|n|n.checked_add(np.checked_mul(128)?)).and_then(|n|n.checked_add(map.full.current_count().checked_mul(2*(nc-1))?.checked_mul(8)?));
+    if estimated.and_then(|n|n.checked_add(preflight.unwrap())).is_none_or(|n|n>work_limit) {return Ok(None);}
+    let mut owner=vec![vec![None;nt];slab_count];let mut counts=vec![vec![0usize;nt];slab_count];let mut source=BTreeMap::new();let mut sigma=vec![None;nc];
+    for (i,cell) in map.full.cells.iter().enumerate(){
+        if i%256==0 {check_time(start,wall)?;if seed_start.elapsed()>=seed_wall{return Ok(None);}}
+        let tet=&mesh.mesh.copper_tetrahedra[cell.mesh_cell];if tet.slab<first_slab||tet.slab>last_slab||tet.planar_triangle>=nt{return Ok(None);}let slab=tet.slab-first_slab;counts[slab][tet.planar_triangle]+=1;let c=component[cell.potentials[0]];
+        if c==usize::MAX||cell.potentials.iter().any(|&p|component[p]!=c)||tet.source_ids.is_empty() {return Ok(None);}
+        for id in &tet.source_ids {if source.insert(id.clone(),c).is_some_and(|old|old!=c){return Ok(None);}}
+        if owner[slab][tet.planar_triangle].replace(c).is_some_and(|old|old!=c){return Ok(None);}
+        let conductivity=mesh.conductivity_s_m[i];if !conductivity.is_finite()||conductivity<=0.||sigma[c].replace(conductivity).is_some_and(|old|old!=conductivity){return Ok(None);}
+    }
+    if owner.iter().any(|row|row!=&owner[0])||counts.iter().zip(&owner).any(|(counts,row)|counts.iter().zip(row).any(|(&n,c)|n!=if c.is_some(){3}else{0}))||sigma.iter().any(Option::is_none) {return Ok(None);}
+    let mut dielectric=vec![vec![None;nt];slab_count];
+    for t in &mesh.mesh.tetrahedra {if t.slab>=first_slab && t.slab<=last_slab {let slab=t.slab-first_slab;if t.planar_triangle>=nt||!t.epsilon_r.is_finite()||t.epsilon_r<=0. {return Ok(None);}if dielectric[slab][t.planar_triangle].replace(t.epsilon_r).is_some_and(|old|old!=t.epsilon_r) {return Ok(None);}}}
+    if dielectric.iter().any(|row|row!=&dielectric[0]) {return Ok(None);}
+    let names:Vec<_>=(0..nc).map(|c|source.iter().find(|(_,v)|**v==c).unwrap().0.as_str()).collect();
+    let conductors:Vec<_>=names.iter().enumerate().map(|(i,id)|Conductor{id,conductivity_s_m:sigma[i].unwrap()}).collect();
+    let nodes:Vec<_>=mesh.mesh.nodes_m[..np].iter().map(|p|[p[0],p[1]]).collect();
+    let triangles:Vec<_>=mesh.planar_triangles.iter().enumerate().map(|(i,&nodes)|Triangle{nodes,conductor:owner[0][i]}).collect();
+    let section=Mesh{nodes_m:&nodes,triangles:&triangles,conductors:&conductors,reference};
+    let remaining=wall.saturating_sub(start.elapsed());if remaining.is_zero(){return Err(error("DEADLINE","section producer deadline"));}
+    let deadline=seed_start.checked_add(seed_wall).ok_or_else(||error("DEADLINE","section producer deadline overflow"))?;
+    let transient=preflight.unwrap().checked_add(estimated.unwrap()).ok_or_else(||error("MEMORY_LIMIT","section producer plan overflow"))?;
+    let work_budget=AllocationBudget{max_bytes:work_limit.saturating_sub(transient),..budget};
+    let result=section_transition::solve_with_recovery(&section,frequency,0,&section_transition::Budget{max_bytes:work_budget.max_bytes,deadline},work_budget.max_bytes)
+        .and_then(|(_,recovery)|super::section_return::lift(&section,&recovery,&mesh.mesh,&map.full,first_slab..last_slab+1,&source,work_budget));
+    let profiles=match result {Ok(v)=>v,Err(e)=>{check_time(start,wall)?;eprintln!("P7_SECTION_HINT_FALLBACK reason={e}");return Ok(None);}};
+    Ok(Some(profiles))
+}
+
 fn solve_checked_mesh_impl(
     mesh: &BoardMesh,
     request: &board_mesh::Request,
@@ -984,6 +1034,10 @@ fn solve_checked_mesh_impl(
     // A single original surface field serves reduced congruences and full
     // residuals, including charge on every exposed barrel and foil surface.
     let field = Field::new_conforming_trace(&mesh.mesh, n, map.trace(None)?, field_budget)?;
+    let profiles=if std::env::var_os("P7_SECTION_HINTS").as_deref()==Some(std::ffi::OsStr::new("1")) {
+        if let Some(max_bytes)=budget.max_bytes.checked_sub(map.retained_bytes()?).and_then(|n|n.checked_sub(field.planned_bytes())) {uniform_section_profiles(mesh,&map,&ports,frequencies_hz[0],AllocationBudget{max_bytes,..budget},start,wall)?} else {None}
+    } else {None};
+    let section_profile_count=profiles.as_ref().map_or(0,Vec::len);
     let (mut checked, planned) = foil_reduced::solve_mixed_grid(
         &map,
         &mesh.mesh,
@@ -1000,8 +1054,10 @@ fn solve_checked_mesh_impl(
             references: reference_ohm,
             max_iterations,
         },
+        profiles.as_deref(),
     )?;
     check_time(start, wall)?;
+    checked["sectionProfileCount"]=serde_json::json!(section_profile_count);
     checked["status"] = json!("complete");
     checked["representation"] = json!("S");
     checked["coverage"] = json!("unverified");
@@ -1151,5 +1207,45 @@ mod profile_tests {
             .all(|electrode| !mesh.electrode_nodes(electrode).unwrap().is_empty()));
         assert_eq!(mesh.barrel_ids.len(), 1);
         assert_eq!(serde_json::to_value(&geometry).unwrap(), before);
+    }
+}
+
+
+#[cfg(test)]
+mod uniform_section_seed_tests {
+    use super::*;
+    #[test]
+    fn board_mesh_two_axial_pads_produces_real_section_profiles() {
+        use serde_json::{json,Value};
+        let mut value:Value=serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-segmented-coupon.json")).unwrap();
+        value["outline"]=json!([{"x":-1.,"y":-1.},{"x":1.,"y":-1.},{"x":1.,"y":1.},{"x":-1.,"y":1.}]);
+        value["copper"]["fixed"]["tracks"]=json!([]);value["copper"]["fixed"]["zones"]=json!([]);
+        value["pads"].as_array_mut().unwrap().truncate(2);
+        for (i,p) in value["pads"].as_array_mut().unwrap().iter_mut().enumerate(){p["at"]=json!({"x":if i==0 {-0.4}else{0.4},"y":0.});p["shape"]=json!({"kind":"rect","widthMm":0.25,"heightMm":0.25});}
+        let board=crate::import_json(&value.to_string()).board.unwrap();
+        let request:board_mesh::Request=serde_json::from_value(json!({"roiMm":[[-1.,-1.],[1.,1.]],"stack":[{"name":"TOP","thicknessM":0.0001,"copper":true,"epsilonR":null,"conductivitySM":58000000.},{"name":"dielectric","thicknessM":0.0001,"copper":false,"epsilonR":4.,"conductivitySM":null},{"name":"BOTTOM","thicknessM":0.000005,"copper":true,"epsilonR":null,"conductivitySM":58000000.}],"airMarginM":0.0002,"maxTriangleAreaM2":0.000002,"maxVerticalStepM":0.0001,"airEdgeDivisions":1,"minTriangleAngleDeg":0.,"curveDeviationMm":0.001,"acceptUnknownFillFreshness":true,"allowInsulatedCopperCuts":false,"electrodes":[{"name":"a0","sourcePath":"pads[0]","layer":"TOP","upper":false},{"name":"b0","sourcePath":"pads[1]","layer":"TOP","upper":false},{"name":"a1","sourcePath":"pads[0]","layer":"TOP","upper":true},{"name":"b1","sourcePath":"pads[1]","layer":"TOP","upper":true}],"ports":[["a0","b0"],["a1","b1"]]})).unwrap();
+        let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:10000,max_tetrahedra:10000};let start=Instant::now();let wall=Duration::from_secs(30);
+        let mesh=board_mesh::build(&board,&request,budget,wall).unwrap();let map=prepare(&mesh,&request.electrodes,1000.,budget,wall).unwrap();
+        let ports=[[map.full_electrodes[0],map.full_electrodes[1]],[map.full_electrodes[2],map.full_electrodes[3]]];
+        let profiles=uniform_section_profiles(&mesh,&map,&ports,1000.,budget,start,wall).unwrap();assert!(profiles.as_ref().is_some_and(|p|!p.is_empty()),"valid extrusion was refused");
+        let mut nonuniform=board_mesh::build(&board,&request,budget,wall).unwrap();nonuniform.conductivity_s_m[0]*=0.5;
+        let nonmap=prepare(&nonuniform,&request.electrodes,1000.,budget,wall).unwrap();let nonports=[[nonmap.full_electrodes[0],nonmap.full_electrodes[1]],[nonmap.full_electrodes[2],nonmap.full_electrodes[3]]];
+        assert!(uniform_section_profiles(&nonuniform,&nonmap,&nonports,1000.,budget,Instant::now(),wall).unwrap().is_none());
+        let make_grid=||MatchedGrid{frequencies:&[1000.],references:&[50.,50.],max_iterations:4};
+        let names:Vec<_>=(0..map.full.potential_count()).map(|i|format!("p{i}")).collect();
+        let field=Field::new_conforming_trace(&mesh.mesh,map.full.potential_count(),map.trace(None).unwrap(),budget).unwrap();
+        let run=|hints:Option<&[Vec<f64>]>|foil_reduced::solve_mixed_grid(&map,&mesh.mesh,&names,&ports,&[],&field,None,budget,Instant::now(),Duration::from_secs(30),make_grid(),hints);
+        let t=Instant::now();let (seeded,_)=run(profiles.as_deref()).unwrap();let seeded_wall=t.elapsed();let t=Instant::now();let (plain,_)=run(None).unwrap();let plain_wall=t.elapsed();eprintln!("section timings seeded={seeded_wall:?} plain={plain_wall:?}");
+        for row in 0..2 {for col in 0..2 {for part in ["real","imaginary"] {let a=seeded["parameters"][0][row][col][part].as_f64().unwrap();let b=plain["parameters"][0][row][col][part].as_f64().unwrap();assert!((a-b).abs()<1e-8,"seeded={a:e} plain={b:e}");}}}
+        for result in [&seeded,&plain] {assert!(result["quality"]["maxKclRelative"].as_f64().unwrap()<1e-8);assert!(result["quality"]["maxKvlRelative"].as_f64().unwrap()<1e-8);}
+        let bad_ref=[[ports[0][0],ports[0][1]],[ports[1][1],ports[1][0]]];assert!(uniform_section_profiles(&mesh,&map,&bad_ref,1000.,budget,start,wall).unwrap().is_none());
+        let side=[[ports[0][0],ports[1][1]],[ports[1][0],ports[0][1]]];assert!(uniform_section_profiles(&mesh,&map,&side,1000.,budget,start,wall).unwrap().is_none());
+        assert!(seeded["sectionHints"]["submitted"].as_u64().unwrap()>0);assert!(seeded["sectionHints"]["addedCurrentModes"].as_u64().unwrap()>0);
+        if std::env::var_os("P7_SECTION_HINTS").as_deref()==Some(std::ffi::OsStr::new("1")) {
+            let result=solve_checked_mesh_impl(&mesh,&request,CheckedGrid{frequencies_hz:&[1000.],reference_ohm:&[50.,50.],max_iterations:4},None,&[],None,PartitionPolicy::Legacy,budget,Instant::now(),Duration::from_secs(30)).unwrap();
+            assert!(result["sectionProfileCount"].as_u64().unwrap()>0);assert!(result["sectionHints"]["addedCurrentModes"].as_u64().unwrap()>0);
+            for row in 0..2 {for col in 0..2 {for part in ["real","imaginary"] {assert!((result["parameters"][0][row][col][part].as_f64().unwrap()-plain["parameters"][0][row][col][part].as_f64().unwrap()).abs()<1e-8);}}}
+        }
+        eprintln!("seeded hints={} quality={} plain quality={}",seeded["sectionHints"],seeded["quality"],plain["quality"]);
     }
 }

@@ -1290,3 +1290,40 @@ pub fn volume_integral_anisotropic(
         ))
     }
 }
+
+#[cfg(test)]
+mod synthetic_near_profile {
+    use super::*;
+    /// Debug-only synthetic geometry; not an STM32 measurement or speedup claim.
+    /// cargo test --manifest-path native/analyze/Cargo.toml --lib synthetic_near_profile::profile -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn profile() {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+        for offset in [0.00001, 0.0001, 0.001] {
+            let a = [[0., 0., 0.], [0.002, 0., 0.], [0., 0.001, 0.], [0., 0., 0.000035]];
+            let b = a.map(|p| [p[0] + offset, p[1], p[2] + 0.000035]);
+            let src = PointPotential::tetrahedron(b).unwrap();
+            let (volume, _) = super::super::mesh::tetra_coefficients(a).unwrap();
+            for order in [2, 4, 8, 12, 16] {
+                assert!(std::time::Instant::now() < deadline, "30-second profile deadline exceeded");
+                let rule = super::super::prism::cached_rule(order).unwrap();
+                let mut counts = [0usize; 2];
+                let mut times = [std::time::Duration::ZERO; 2];
+                let start = std::time::Instant::now();
+                let mut value = 0.;
+                tetra_integrate(a, volume, rule, |p, w| {
+                    if std::time::Instant::now() >= deadline { panic!("30-second profile deadline exceeded"); }
+                    let now = std::time::Instant::now();
+                    let v = src.at_diagnostic(p)?;
+                    let k = usize::from(v.source_order > 0);
+                    counts[k] += 1;
+                    times[k] += now.elapsed();
+                    value += w * v.value_m2;
+                    Ok(())
+                }).unwrap();
+                eprintln!("offset={offset} order={order} counts={counts:?} times={times:?} total={:?} value={value:e}", start.elapsed());
+            }
+        }
+    }
+}

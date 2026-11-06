@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Connect opt-in `P7_SECTION_HINTS=1` uniform axial section-current seeds to the actual mixed solver, with physical-component ownership, bounded producer effort, fallback and full-space current-mode admission. Separate its response-cache identity. Seeded/plain controls pass original KCL/KVL and response comparisons but show no speedup; keep the mode disabled by default. Fix TypeScript control-flow narrowing in magnetic certificate validation and preserve an ignored synthetic near-kernel diagnostic.
+
 - Generalize the private section-current lift to validated rigid right-handed frames, preserving shared physical ownership and real/imaginary flow and loss under horizontal/oblique rotations. The bounded STM32 exact-pair-cache experiment timed out after 593.25 s with zero hits in 106,918 pair requests; keep memoization off by default and prioritize unique near-work reduction. No full-board response or case-matrix acceptance is claimed.
 
 - Preserve unmixed potential shapes from charge-coordinate solves when admitting shared-return candidates. The disconnected remote-return AC control now passes original charge/KCL/KVL and full-model port comparisons without welding islands or relaxing tolerances. Add opt-in, budgeted exact ordered-pair magnetic memoization (`P7_MAGNETIC_PAIR_CACHE_MIB`, default off) to reuse successful quadrature values across actions; no full-board speedup is yet established.

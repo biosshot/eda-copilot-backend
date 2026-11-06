@@ -2,7 +2,7 @@ import type { AnalysisBoardFoilCheckedReport, AnalysisBoardFoilCheckedRequest, A
 import type { BoardFoilProblem } from './types.ts';
 import type { CoupledRlcData } from './analysis-dsl/spec-doc.js';
 
-const fail=(message:string):never=>{throw new Error('CHANNEL_FOIL_EVIDENCE: '+message);};
+function fail(message:string):never {throw new Error('CHANNEL_FOIL_EVIDENCE: '+message);}
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
 const positive=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value)&&value>0;
 

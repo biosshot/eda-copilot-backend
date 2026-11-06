@@ -734,15 +734,19 @@ pub(super) fn solve_mixed_grid(
     start: Instant,
     wall: Duration,
     grid: MatchedGrid<'_>,
+    current_profiles: Option<&[Vec<f64>]>,
 ) -> Result<(serde_json::Value, usize)> {
     let n = map.full.potential_count();
     let ni = map.full.current_count();
+    let profiles=current_profiles.unwrap_or(&[]);
+    if profiles.len()>32 || profiles.iter().any(|v|v.len()!=ni||v.iter().any(|x|!x.is_finite())) {return Err(error("MIXED_FOIL_PROFILE","at most 32 finite full-space current profiles required"));}
+    let profile_bytes=profiles.len().checked_mul(ni).and_then(|n|n.checked_mul(std::mem::size_of::<f64>())).and_then(|n|n.checked_add(profiles.len().checked_mul(std::mem::size_of::<Vec<f64>>())?)).ok_or_else(||error("MEMORY_LIMIT","mixed profile plan overflow"))?;
     // Each phase can supply a voltage shape and its conductive current,
     // plus one independent induced-current correction.
     let reserve = 4 * grid.max_iterations;
     let map_retained = map.retained_bytes()?;
     let field_base = map_retained
-        .checked_add(field.planned_bytes())
+        .checked_add(profile_bytes).and_then(|n|n.checked_add(field.planned_bytes()))
         .ok_or_else(|| error("MEMORY_LIMIT", "mixed field plan overflow"))?;
     // Admit all non-modal full-space buffers before constructing the bounded
     // exact magnetic cache. Later factor plans add their actual fill/scratch.
@@ -810,7 +814,7 @@ pub(super) fn solve_mixed_grid(
     // grow() adds at most four currents and two voltages per iteration;
     // the existing four-per-kind reserve remains conservative.
     let current_mode_cap = basis.retained.len().checked_sub(map.full.components.len())
-        .and_then(|v|v.checked_add(reserve)).ok_or_else(||error("MEMORY_LIMIT","native current mode bound overflow"))?;
+        .and_then(|v|v.checked_add(reserve)).and_then(|v|v.checked_add(profiles.len())).ok_or_else(||error("MEMORY_LIMIT","native current mode bound overflow"))?;
     let full_plan = if partition.is_some() {
         native_partitioned_sizes(n, ni, mode_cap, current_mode_cap, base)?
     } else {
@@ -868,6 +872,11 @@ pub(super) fn solve_mixed_grid(
             basis.voltage[anchor][i] = 1. - other.iter().map(|&m| basis.voltage[m][i]).sum::<f64>();
         }
     }
+    // Hints live in original physical current coordinates. Admit them only
+    // after the full DC reset, using the same R metric as residual enrichment.
+    let before_profiles=basis.current.len();
+    for profile in profiles {check_time(start,wall)?;append_current_mode(&cells,&mut basis.current,profile.clone())?;}
+    let added_profiles=basis.current.len()-before_profiles;
     let charges = basis
         .voltage
         .iter()
@@ -929,7 +938,7 @@ pub(super) fn solve_mixed_grid(
         native_allocation: true,
     };
     let retained_bytes = map_retained
-        .checked_add(magnetic.owned_bytes)
+        .checked_add(profile_bytes).and_then(|n|n.checked_add(magnetic.owned_bytes))
         .ok_or_else(|| error("MEMORY_LIMIT", "mixed retained plan overflow"))?;
     let training_budget = AllocationBudget {
         max_bytes: budget
@@ -953,6 +962,7 @@ pub(super) fn solve_mixed_grid(
             .filter(|partition| !partition.compact)
             .map(|partition| (partition, &map.full)),
     )?;
+    checked["sectionHints"]=serde_json::json!({"submitted":profiles.len(),"addedCurrentModes":added_profiles});
     checked["magneticOperator"] = magnetic.evidence();
     checked["magneticOperator"]["basisCover"] =
         space.magnetic_basis_certificate.clone().ok_or_else(|| {
