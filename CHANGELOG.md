@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Measure instrumented persistent-cache STM32 prefix: native deadline at 243.203 s, 134,528 successful near pairs, 83.711 s kernel-window wall. Separated direct cubature accounts for about 70.3% of summed worker kernel time; no completed channel or full-board speedup is established. Prioritize arithmetic reduction in that kernel while retaining original tetrahedra.
+
 - Record a bounded test-only island-constant refinement: unchanged physical checks converge for one previously refused 10 kHz drive, but the 1 kHz passive-charge case stagnates. No production correction or gate change is made; full coupled-system admission and scalable cost remain unresolved.
 
 - Retain bounded 64-cell near-kernel caches per worker and schedule eight-job chunks, preserving ordered interval replay. Add parallel-compatible partial progress, kernel-kind timings, geometry-cache counters and sticky window-failure reporting. Fifteen supervised controls and the native build pass; an incremental full-board speedup is not yet established.
