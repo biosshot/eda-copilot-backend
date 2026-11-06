@@ -80,3 +80,55 @@ Output: `debugging/p7-adaptive-orientation-captured-controls/`, wall 25.265 s,
 sampled peak private/RSS 11,509,760 / 27,418,624 B (20 ms lower bounds).
 No production orientation change is selected. The result rules out this simple
 shortcut on these captured pairs, not every possible geometry.
+
+## Actual parallel STM32 phase profile
+
+Corrected code `bc9e0e5`, output
+`debugging/p7-phase-profile-cover-cache-stm32-250s-8g-renamed/`: native 240 s /
+8192 MiB, external 250 s / 8192 MiB tree cap; compute profile `baseline`,
+phase profile enabled, four near workers, axial mode, one RHS per cover,
+four reduction iterations, cover cache 1024 MiB. Trace, scalar cache and
+near-bound omission are unset. The identity records all flags. Planning retains
+844 authored copper regions, 65 islands and 89 barrels; full physical acceptance
+remains unverified. The initial refusal and configuration failure above did not
+perform this calculation.
+
+The native deadline occurs inside streamed magnetic action at external wall
+243.719 s. Sampled peak private/RSS is 2,959,130,624 / 2,045,042,688 B (20 ms
+lower bounds); memory is not the stopping condition. Native core identity is
+`364eadd7580d8e2ed2060259d6d896387539ed045d9eaa95e3f72f6c2a7ca251`;
+executed DSL SHA256 is
+`817e427e109f58e50b21267a98cec5b4ac4322c2b37c1445e9e1b471bc967b61`.
+Board SHA256 remains
+`0159c43d43b59df4f59fb943d59f0d841d17ca38d6d5a7d5576920a4aee3cce3`.
+
+The first magnetic batch lasts 124.231 s before refusal: geometry 5.214 s,
+planning 31.076 s and the unfinished first RHS 87.896 s. Approximately 119 s
+of external wall precedes this batch; this profile does not subdivide that
+earlier work. Phase times are inclusive: do not add nested batch/axis/replay
+durations. The plan performs 39,743,535 node-pair visits and yields 15,604,494
+near tiles, 3,531,639 far blocks and 739,382 zero blocks. Classification alone
+takes 25.069 s inside the 30.875 s cover walk.
+
+**The cache is actually admitted and used:** 19,875,515 terminal entries,
+capacity 33,554,432, retained allocation 1,073,741,824 B. First-axis replay has
+zero classification time. Its unfinished 86.591 s contains 77.990 s near
+callbacks and 8.539 s far callbacks, with 138,820 near tiles and 85,185 far
+blocks visited. Fewer than 1% of the planned near tiles of the first axis are
+reached; no complete first axis, RHS, magnetic action or channel is produced.
+
+Committed kernel windows contain 138,752 pairs; summed worker separated and
+adaptive elapsed are 163.064 / 74.337 s, not OS CPU seconds. Geometry builds
+are 132,258; lazy preparation builds only 4,572 direct rules / 2,191,976 points.
+Outer retries accept 54,100 of 58,645 attempts. Partial kernel reports can say
+`failed:false` because their windows completed before the enclosing traversal
+deadline; they do not establish action success.
+
+The cache removes repeated classification during replay, but no overall
+speedup or <=600 s completion is established. Profile timers, cache settings,
+host conditions and code differ from earlier prefixes. The dominant observed
+replay cost is the near integrals themselves, not repeated tree classification.
+Next structural work must reduce costly near work while retaining all physical
+sources and original current coordinates; virtual geometric refinement is a
+candidate to measure before any production representation change. All automatic
+shared-return and case-matrix completion requirements remain open.

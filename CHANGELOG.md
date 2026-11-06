@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Measure actual parallel STM32 phases with a retained 1 GiB cover cache: planning 31.076 s, 15.604 million near tiles, and an unfinished first-axis replay dominated by 77.990 s near callbacks. Deadline remains at 243.719 s with no channel. The cache removes replay classification; the ten-minute target requires structural reduction of near work, not a claimed full-board speedup.
+
 - Name the diagnostic switch `P7_MAGNETIC_PHASE_PROFILE` to preserve the existing `P7_MAGNETIC_PROFILE=baseline/compact-v1` compute-policy contract. Planning-only configuration and isolated four-worker profile controls pass; preserve the rejected preflight/configuration attempts separately from actual numerical runs.
 
 - Add a parallel-compatible adaptive magnetic profile and plan/cache summaries, verified with identical four-worker action/bound bits and equivalent certificates. Expose a source-only compensated candidate API with original assembled and physical audits; four shared-return cases pass, altered/stamped-state controls refuse. Captured adaptive orientation reversal is about 357x slower and is not selected. Automatic shared-return routing and all-family acceptance remain open.
