@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Validate a test-only compensated island-constant representation against unchanged charge/KCL/KVL gates for four drive/frequency cases. Require convergence and physical port ownership; retain a perturbation negative control. This does not admit the rounded Field evaluation, hybrid magnetic model or automatic shared-return route.
+
 - Precompute node-only adaptive magnetic allowances and source weights with unchanged interval arithmetic, accounting for 24 additional bytes per node. Bitwise classification and 31 regression controls pass; board speedup remains unmeasured. Diagnose real axial fallbacks as outer-quadrature convergence in the measured prefix, preserving incomplete runs and source coverage.
 
 - Classify axial quadrature fallbacks and retain bounded exact-geometry examples in nonfatal parallel logs. Add a standalone guarded general segment-pair primitive for future longest-edge integration, with explicit estimated-error scope. Thirty supervised controls and the native addon build pass; no new board speedup or case acceptance is claimed.

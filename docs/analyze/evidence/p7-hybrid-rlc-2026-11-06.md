@@ -94,3 +94,33 @@ Next implementation: select representation per mode, retaining Sections for
 uniform modes and exact original tetrahedra for nonuniform corrections. Physical
 ownership and all mutual terms must remain intact. This diagnosis does not
 establish complete admission, speedup or case-matrix acceptance.
+
+## Compensated island representation experiment
+
+The ignored `compensated_island_refinement_diagnostic` retains the complete
+source Field and independent volume magnetic operator. It evaluates charge as
+the linear composition of the original field response and full-space island
+indicator responses. Constant-potential corrections and their charge sums retain
+compensated low parts instead of rounding the corrected potential back to one
+f64. The same three-island fixture uses two drives at 1/10 kHz, at most eight
+corrections and the unchanged 1e-8 component-relative charge gate, without an
+absolute charge floor. Convergence is mandatory; port ownership is checked
+against retained electrode DOFs and physical islands.
+
+The initial diagnostic passed all four cases. The previously failing passive
+island ratios fell from 0.235 to 5.41e-17 at 1 kHz and from 5.98e-4 to 4.40e-19
+at 10 kHz in one correction. Original volume KCL/KVL maxima were 2.23e-16 and
+7.46e-19, respectively. The maximum relative port correction was 3.19e-16;
+this is computed from the compensated island corrections, not unchanged rounded
+port values. A deliberate 1 microvolt island shift is detected (2.125e-19 C).
+
+This establishes only the compensated linear-composition representation. The
+rounded direct Field response differs by up to 1.93e-34 C; it is not asserted to
+pass the same charge gate. This does not admit the q60 hybrid magnetic model,
+provide a rigorous field error bound, or connect a production shared-return
+route. The indicator actions and low-part state need budgeted transport before
+production use; all case-matrix acceptance remains pending.
+
+The final mandatory-convergence/ownership control passes under a 120 s / 2048 MiB
+external supervisor in 0.594 s (`debugging/p7-compensated-island-final/`), with
+sampled peak private/RSS 12,632,064 / 29,462,528 B (20 ms lower bounds).
