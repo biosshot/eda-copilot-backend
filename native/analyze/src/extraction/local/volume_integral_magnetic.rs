@@ -93,6 +93,8 @@ impl PairQuadrature {
 // graded integration scratch; no cache-owned reference escapes pair().
 const STREAMED_PAIR_SLOT_BYTES: usize = 192 * 1024;
 const STREAMED_PAIR_MAX_SLOTS: usize = 64;
+// Both original orders 6/8 can retain n, n+2 and a lazy n+4 line rule.
+const AXIAL_CELL_EXTRA_BYTES: usize = 40 * 1024;
 
 struct PairCell {
     index: usize,
@@ -159,7 +161,7 @@ impl SlowCapture {
 #[serde(rename_all="camelCase")]
 struct AxialFallbackSample { i:usize, j:usize, order:usize, reason:usize, target_bits:[[u64;3];4], source_bits:[[u64;3];4], coarse:Option<f64>, fine:Option<f64>, change:Option<f64>, limit:Option<f64> }
 #[derive(Default)]
-struct ParallelCounts { counts: [u64; 3], seconds: [f64; 3], geometry_hits:u64, geometry_builds:u64, axial_accepted:u64, axial_fallback:u64, axial_max_relative:f64, orders:[u64;3], axial_reasons:[u64;4], samples:[Option<AxialFallbackSample>;4] }
+struct ParallelCounts { counts: [u64; 3], seconds: [f64; 3], geometry_hits:u64, geometry_builds:u64, axial_accepted:u64, axial_fallback:u64, axial_outer_retries:u64, axial_outer_retry_accepted:u64, axial_max_relative:f64, orders:[u64;3], axial_reasons:[u64;4], samples:[Option<AxialFallbackSample>;4] }
 struct ParallelProgress { windows: u64, pairs: u64, wall: f64, last: Instant, failed:bool, seen:u8 }
 struct ParallelState {
     pool: rayon::ThreadPool,
@@ -170,12 +172,13 @@ impl ParallelState {
     fn report(&self, final_record: bool, failed: bool) {
         use std::io::Write;
         let mut p = self.progress.borrow_mut();
-        let mut counts = [0u64; 3]; let mut seconds = [0f64; 3]; let mut accepted=0; let mut fallback=0; let mut max_relative=0f64; let mut orders=[0u64;3];let mut geometry_hits=0;let mut geometry_builds=0; let mut reasons=[0u64;4];
+        let mut counts = [0u64; 3]; let mut seconds = [0f64; 3]; let mut accepted=0; let mut fallback=0; let mut retries=0; let mut retry_accepted=0; let mut max_relative=0f64; let mut orders=[0u64;3];let mut geometry_hits=0;let mut geometry_builds=0; let mut reasons=[0u64;4];
         for worker in &self.workers {
             let worker = worker.lock().unwrap_or_else(|e| e.into_inner());
             let c = worker.parallel_counts.as_ref().unwrap().borrow();
             for k in 0..3 { counts[k] += c.counts[k]; seconds[k] += c.seconds[k]; orders[k]+=c.orders[k]; } accepted+=c.axial_accepted; fallback+=c.axial_fallback; max_relative=max_relative.max(c.axial_max_relative);
             geometry_hits+=c.geometry_hits;geometry_builds+=c.geometry_builds;
+            retries+=c.axial_outer_retries;retry_accepted+=c.axial_outer_retry_accepted;
             for k in 0..4 { reasons[k]+=c.axial_reasons[k]; if p.seen & (1<<k)==0 { if let Some(sample)=c.samples[k] { let _=writeln!(std::io::stderr().lock(),"P7_MAGNETIC_AXIAL_FALLBACK {}",serde_json::json!({"category":(["unsupported","inner_q_cap","inner_range_allowance","outer_convergence"][k]),"sample":sample})); p.seen|=1<<k; } } }
         }
         let _=writeln!(std::io::stderr().lock(),"P7_MAGNETIC_PARALLEL_PROGRESS {}", serde_json::json!({
@@ -183,6 +186,7 @@ impl ParallelState {
             "selfCalls":counts[0],"separatedCalls":counts[1],"adaptiveCalls":counts[2],
             "selfSeconds":seconds[0],"separatedSeconds":seconds[1],"adaptiveSeconds":seconds[2],
             "geometryCacheHits":geometry_hits,"geometryCacheBuilds":geometry_builds,
+            "axialOuterRetries":retries,"axialOuterRetryAccepted":retry_accepted,
             "axialAccepted":accepted,"axialFallbacks":fallback,"axialFallbackUnsupported":reasons[0],"axialFallbackInnerQCap":reasons[1],"axialFallbackRangeAllowance":reasons[2],"axialFallbackOuterConvergence":reasons[3],"axialMaxSeriesRoundoffEstimate":max_relative,"selectedOrder4":orders[0],"selectedOrder6":orders[1],"selectedOrder8":orders[2],
             "countsIncludeFailed":true,"partial":true,"final":final_record,"failed":p.failed || failed
         }));
@@ -284,7 +288,7 @@ impl BoundedPairs {
     fn parallel_bytes(workers: usize) -> Result<usize> { Self::parallel_bytes_for(workers, false) }
     fn parallel_bytes_for(workers: usize, axial: bool) -> Result<usize> {
         if !(2..=32).contains(&workers) { return Err(error("MAGNETIC_CONFIG", "parallel worker count must be 2..32")); }
-        workers.checked_mul(66 * STREAMED_PAIR_SLOT_BYTES + 2 * 1024 * 1024 + 8192 + if axial { 64 * 24 * 1024 + 64 * 1024 } else { 0 })
+        workers.checked_mul(66 * STREAMED_PAIR_SLOT_BYTES + 2 * 1024 * 1024 + 8192 + if axial { 64 * AXIAL_CELL_EXTRA_BYTES + 64 * 1024 } else { 0 })
             .and_then(|v| v.checked_add(8192))
             .ok_or_else(|| error("MEMORY_LIMIT", "parallel magnetic window plan overflow"))
     }
@@ -443,15 +447,25 @@ impl BoundedPairs {
                         cells[cell_index].axial_prepared[k]=true;
                     }
                 }
-                let detail = cells[ti].cubatures[k].try_axial_detailed(&cells[si].cubatures[k])?;
+                let mut detail = cells[ti].cubatures[k].try_axial_detailed(&cells[si].cubatures[k])?;
+                let retried=detail.reason==Some(3);
+                if retried {
+                    check_deadline(self.start,self.wall)?;
+                    if let Some(c)=&self.parallel_counts {c.borrow_mut().axial_outer_retries+=1;}
+                    for (cell_index,tetra_index) in [(ti,i),(si,j)] {
+                        cells[cell_index].cubatures[k].prepare_axial_retry(self.tetra[tetra_index],[4,6,8][k])?;
+                    }
+                    detail=cells[ti].cubatures[k].try_axial_retry(&cells[si].cubatures[k],&detail)?;
+                }
                 if let Some((value, error_estimate)) = detail.value {
                     if let Some(c) = &self.parallel_counts { let mut c=c.borrow_mut(); c.axial_accepted+=1; c.axial_max_relative=c.axial_max_relative.max(error_estimate/value.abs()); }
+                    if retried {if let Some(c)=&self.parallel_counts {c.borrow_mut().axial_outer_retry_accepted+=1;}}
                     return Ok(value);
                 }
                 if let Some(c) = &self.parallel_counts {
                     let mut c=c.borrow_mut(); c.axial_fallback+=1;
                     let reason=detail.reason.expect("fallback reason"); c.axial_reasons[reason]+=1;
-                    if c.samples[reason].is_none() { c.samples[reason]=Some(AxialFallbackSample { i,j,order:[4,6,8][k],reason,
+                    if c.samples[reason].is_none() { c.samples[reason]=Some(AxialFallbackSample { i,j,order:[4,6,8][k]+if retried {2}else{0},reason,
                         target_bits:self.tetra[i].map(|p|p.map(f64::to_bits)), source_bits:self.tetra[j].map(|p|p.map(f64::to_bits)),
                         coarse:detail.coarse,fine:detail.fine,change:detail.coarse.zip(detail.fine).map(|(a,b)|(a-b).abs()),limit:detail.fine.map(|v|1e-10*v) }); }
                 }
@@ -519,7 +533,7 @@ impl<'a> Streamed<'a> {
         let workers = if diagnostics { if requested > 1 { eprintln!("P7_MAGNETIC_NEAR_THREADS serial fallback: diagnostics or scalar cache enabled"); } 1 } else { requested };
         let parallel_bytes = if workers > 1 { BoundedPairs::parallel_bytes_for(workers, axial)? } else { 0 };
         eprintln!("P7_MAGNETIC_PARALLEL_PLAN nearWorkers={workers} requestedNearWorkers={requested} nearParallelBytes={parallel_bytes} nearWindowPairs=128");
-        let axial_bytes = if axial { 64 * 24 * 1024 + 64 * 1024 } else { 0 };
+        let axial_bytes = if axial { 64 * AXIAL_CELL_EXTRA_BYTES + 64 * 1024 } else { 0 };
         eprintln!("P7_MAGNETIC_AXIAL_PLAN enabled={axial} serialExtraBytes={axial_bytes}");
         let planned_base = base_bytes.checked_add(axial_bytes).and_then(|v| v.checked_add(parallel_bytes)).ok_or_else(|| error("MEMORY_LIMIT", "parallel magnetic base overflow"))?;
         let (scalar_slots,scalar_bytes,mut owned_bytes,slots)=scalar_plan(config.as_deref(),n,order,planned_base,budget)?;
@@ -742,6 +756,22 @@ impl MagneticApply for Operator<'_> {
 #[cfg(test)]
 mod bounded_pair_tests {
     use super::*;
+    #[test]
+    fn axial_outer_retry_routes_and_reuses_geometry() {
+        let (a,b)=super::super::polyhedron::axial_retry_fixture();
+        let start=Instant::now();let wall=Duration::from_secs(30);
+        let plain=BoundedPairs::new_with_axial(vec![a,b],12,8,start,wall,false).unwrap();
+        let axial=BoundedPairs::new_with_axial(vec![a,b],12,8,start,wall,true).unwrap();
+        let reference=plain.pair(0,1).unwrap();let value=axial.pair(0,1).unwrap();
+        assert!((value-reference).abs()<1e-8*reference);
+        assert_eq!(value.to_bits(),axial.pair(0,1).unwrap().to_bits());
+        let mut parallel=BoundedPairs::new_with_axial(vec![a,b],12,8,start,wall,true).unwrap();
+        parallel.configure_parallel(2).unwrap();
+        assert_eq!(value.to_bits(),parallel.pair_window(&[(0,1)]).unwrap()[0].to_bits());
+        let state=parallel.pool.as_ref().unwrap();let mut retries=0;let mut accepted=0;let mut fallbacks=0;
+        for worker in &state.workers {let worker=worker.lock().unwrap();let c=worker.parallel_counts.as_ref().unwrap().borrow();retries+=c.axial_outer_retries;accepted+=c.axial_outer_retry_accepted;fallbacks+=c.axial_fallback;}
+        assert_eq!((retries,accepted,fallbacks),(1,1,0));
+    }
     #[test]
     fn axial_fallback_sample_is_bounded_and_emitted_once() {
         let t=[[0.,0.,0.],[0.1,0.,0.],[0.,0.1,0.],[0.,0.,2.]];

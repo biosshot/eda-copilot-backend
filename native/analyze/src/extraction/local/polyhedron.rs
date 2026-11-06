@@ -850,6 +850,7 @@ pub struct TetraCubature {
     weights: Vec<f64>,
     axial_lines: Option<Vec<AxialLine>>,
     axial_refined: Option<Vec<AxialLine>>,
+    axial_retry: Option<Vec<AxialLine>>,
 }
 
 #[derive(Clone, Copy)]
@@ -869,7 +870,7 @@ impl TetraCubature {
             weights.push(weight);
             Ok(())
         })?;
-        Ok(Self { center: moments.center, radius: moments.radius, points, weights, axial_lines: None, axial_refined: None })
+        Ok(Self { center: moments.center, radius: moments.radius, points, weights, axial_lines: None, axial_refined: None, axial_retry: None })
     }
     /// Opt-in exact vertical-edge line cubature. Original points remain available for fallback.
     pub fn new_axial(tetra: [[f64; 3]; 4], order: usize) -> Result<Self> {
@@ -885,7 +886,24 @@ impl TetraCubature {
         } else {None};
         self.axial_lines=coarse;
         self.axial_refined=fine;
+        self.axial_retry=None;
         Ok(())
+    }
+    /// Lazily prepare the n+4 line rule for the same tetrahedron and original order.
+    pub(super) fn prepare_axial_retry(&mut self, tetra:[[f64;3];4], order:usize)->Result<()> {
+        if self.axial_retry.is_none() && self.axial_refined.is_some() {
+            self.axial_retry=Self::axial_line_rule(tetra,order.checked_add(4).ok_or_else(||error("QUADRATURE_ORDER","order overflow"))?)?;
+        }
+        Ok(())
+    }
+    /// Retry only an outer-convergence refusal, reusing its already evaluated n+2 result.
+    pub(super) fn try_axial_retry(&self, other:&Self, previous:&AxialDetail)->Result<AxialDetail> {
+        if previous.reason!=Some(3) {return Ok(AxialDetail::fallback(0,None,None));}
+        let Some(coarse)=previous.fine else {return Ok(AxialDetail::fallback(0,None,None))};
+        let (Some(a),Some(b))=(&self.axial_retry,&other.axial_retry) else {return Ok(AxialDetail::fallback(0,Some(coarse),None))};
+        let (fine,err)=match Self::axial_lines_integral(a,b) {Ok(v)=>v,Err(reason)=>return Ok(AxialDetail::fallback(reason,Some(coarse),None))};
+        if (coarse-fine).abs()>1e-10*fine {return Ok(AxialDetail::fallback(3,Some(coarse),Some(fine)))}
+        Ok(AxialDetail{value:Some((fine,err)),reason:None,coarse:Some(coarse),fine:Some(fine)})
     }
     fn axial_line_rule(tetra: [[f64; 3]; 4], order: usize) -> Result<Option<Vec<AxialLine>>> {
         let mut edge = None;
@@ -1490,7 +1508,7 @@ mod axial_tetra_tests {
 #[cfg(test)]
 mod axial_line_more_tests {
     use super::*;
-    fn one(z:f64,half:f64)->TetraCubature { TetraCubature {center:[0.,0.,z],radius:half,points:vec![],weights:vec![],axial_lines:Some(vec![AxialLine{origin:[0.,0.,z],center:[0.;3],half,weight:1.}]),axial_refined:Some(vec![AxialLine{origin:[0.,0.,z],center:[0.;3],half,weight:1.}])} }
+    fn one(z:f64,half:f64)->TetraCubature { TetraCubature {center:[0.,0.,z],radius:half,points:vec![],weights:vec![],axial_lines:Some(vec![AxialLine{origin:[0.,0.,z],center:[0.;3],half,weight:1.}]),axial_refined:Some(vec![AxialLine{origin:[0.,0.,z],center:[0.;3],half,weight:1.}]),axial_retry:None} }
     #[test] fn detailed_reasons_and_wrapper_equivalence() {
         let a=one(0.,0.2); let b=one(3.,0.1);
         let normal=a.try_axial_detailed(&b).unwrap();
@@ -1531,5 +1549,37 @@ mod axial_line_more_tests {
         let v=evaluate(8); let refined=evaluate(10); let reference=tetra_integral(a,&PointPotential::tetrahedron(b).unwrap(),16).unwrap();
         println!("thick outer 8/10 rel {}, analytic source rel {}",(v-refined).abs()/refined,(refined-reference).abs()/reference);
         assert!((v-refined).abs()<1e-8*refined); assert!((refined-reference).abs()<1e-9*reference);
+    }
+}
+
+#[cfg(test)]
+pub(super) fn axial_retry_fixture()->([[f64;3];4],[[f64;3];4]) {
+    let a: [[u64;3];4]=[[4570759899201579418, 4581854491553607503, 4564860111517780814], [4569525120155796275, 4585730642473594022, 4564860111517780814], [4569525120155796275, 4574885801521499550, 4564860111517780814], [4569525120155796275, 4574885801521499550, 4565021520528425773]];
+    let b: [[u64;3];4]=[[4586981900965294533, 4583256213504285003, 0], [4587066828033697933, 4583256213504285003, 0], [4587066828033697933, 4583256213504285003, 4540289913102728146], [4587066828033697933, 4583537308668447739, 4540289913102728146]];
+    let a=a.map(|p|p.map(f64::from_bits)); let b=b.map(|p|p.map(f64::from_bits));
+    (a,b)
+}
+
+#[cfg(test)]
+mod axial_outer_retry_tests {
+    use super::*;
+    #[test] fn captured_outer_retry_and_limits() {
+        let (a,b)=axial_retry_fixture();
+        let mut x=TetraCubature::new_axial(a,6).unwrap(); let mut y=TetraCubature::new_axial(b,6).unwrap();
+        let detail=x.try_axial_detailed(&y).unwrap(); assert_eq!(detail.reason,Some(3));
+        x.prepare_axial_retry(a,6).unwrap(); y.prepare_axial_retry(b,6).unwrap();
+        let retry=x.try_axial_retry(&y,&detail).unwrap(); let value=retry.value.expect("captured retry must converge").0;
+        let direct=|n|TetraCubature::new(a,n).unwrap().direct_integral(&TetraCubature::new(b,n).unwrap()).unwrap();
+        let d8=direct(8); let d10=direct(10);
+        println!("direct8/10={}, retry/direct10={}",(d8-d10).abs()/d10,(value-d10).abs()/d10);
+        assert!((d8-d10).abs()<=1e-10*d10 && (value-d10).abs()<=1e-10*d10);
+        let reference=tetra_integral(a,&PointPotential::tetrahedron(b).unwrap(),16).unwrap();
+        println!("retry={value:.16e} source_reference={reference:.16e} difference={}",(value-reference).abs()/reference);
+        assert!((value-reference).abs()<1e-7*reference);
+        let reverse=y.try_axial_detailed(&x).unwrap(); assert_eq!(reverse.reason,Some(3));
+        let reverse=y.try_axial_retry(&x,&reverse).unwrap().value.unwrap().0; assert!((value-reverse).abs()<1e-12*value);
+        let fake=AxialDetail::fallback(3,None,Some(value)); assert!(x.try_axial_retry(&x,&fake).unwrap().value.is_none());
+        let line=std::mem::size_of::<AxialLine>(); let headers=6*std::mem::size_of::<Option<Vec<AxialLine>>>();
+        assert!(line*(6*6+8*8+10*10+8*8+10*10+12*12)+headers <=40*1024);
     }
 }

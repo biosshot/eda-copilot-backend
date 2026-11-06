@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Retry outer-only axial tetrahedron refusals once at n+2/n+4, reusing the prior fine result and preserving the 1e-10 gate, default-off policy and full direct fallback. Admit 40 KiB per cached cell and report retry counters. Extract a budgeted full-source compensated island-response helper, including inert-island, complex-injection and overflow controls; automatic shared-return dispatch remains pending. Thirty-four focused release controls pass; complete-board timing remains unverified.
+
 - Record a refused longest-edge tetrahedron experiment and remove its unaccepted test module. Both analytic-only and guarded numerical segment fallback refuse the required positive control. A separate single-sample replay supports testing outer-order escalation in the existing axial kernel; no production kernel change or speedup is claimed.
 
 - Validate a test-only compensated island-constant representation against unchanged charge/KCL/KVL gates for four drive/frequency cases. Require convergence and physical port ownership; retain a perturbation negative control. This does not admit the rounded Field evaluation, hybrid magnetic model or automatic shared-return route.
