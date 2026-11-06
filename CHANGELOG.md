@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Defer direct volume cubatures in the opt-in axial path until their selected fallback needs them; eager/lazy direct bits agree and preparation-only replay improves 3.067x, without a board speedup claim. Use original tetrahedra for local grouped section interactions and retain separated prism interactions. A six-prism shared-return control passes unchanged physical gates at 1/10 kHz against volume order 16; order-8 refusal and all-case/automatic-route limitations remain explicit.
+
 - Measure axial outer retry on STM32: 54,100 of 58,645 retries accepted, 4,545 final fallbacks. The 244.359 s deadline still yields no channel; 143,104 completed pairs do not establish a speedup over the earlier 150,528-pair prefix. Preserve hashes, settings, partial-counter semantics and the remaining adaptive/preparation costs.
 
 - Retry outer-only axial tetrahedron refusals once at n+2/n+4, reusing the prior fine result and preserving the 1e-10 gate, default-off policy and full direct fallback. Admit 40 KiB per cached cell and report retry counters. Extract a budgeted full-source compensated island-response helper, including inert-island, complex-injection and overflow controls; automatic shared-return dispatch remains pending. Thirty-four focused release controls pass; complete-board timing remains unverified.

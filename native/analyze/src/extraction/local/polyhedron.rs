@@ -860,7 +860,22 @@ pub(super) struct AxialDetail { pub value:Option<(f64,f64)>, pub reason:Option<u
 impl AxialDetail { fn fallback(reason:usize,coarse:Option<f64>,fine:Option<f64>)->Self { Self { value:None,reason:Some(reason),coarse,fine } } }
 impl TetraCubature {
     pub fn new(tetra: [[f64; 3]; 4], order: usize) -> Result<Self> {
+        let mut result = Self::geometry_only(tetra)?;
+        result.prepare_direct(tetra, order)?;
+        Ok(result)
+    }
+    /// Geometry required for separation and axial rules, without direct samples.
+    pub(super) fn geometry_only(tetra: [[f64; 3]; 4]) -> Result<Self> {
         let moments = tetra_far_moments(tetra)?;
+        Ok(Self { center: moments.center, radius: moments.radius, points: Vec::new(), weights: Vec::new(), axial_lines: None, axial_refined: None, axial_retry: None })
+    }
+    /// Prepare the original positive direct rule once, committing only on success.
+    pub(super) fn prepare_direct(&mut self, tetra: [[f64; 3]; 4], order: usize) -> Result<bool> {
+        if !self.points.is_empty() {
+            return if order.checked_pow(3) == Some(self.points.len()) { Ok(false) } else {
+                Err(error("TETRA_INTEGRAL_ORDER", "direct cubature already prepared at another order"))
+            };
+        }
         let (volume, _) = super::mesh::tetra_coefficients(tetra)?;
         let rule = super::prism::cached_rule(order)?;
         let mut points = Vec::with_capacity(order.pow(3));
@@ -870,8 +885,12 @@ impl TetraCubature {
             weights.push(weight);
             Ok(())
         })?;
-        Ok(Self { center: moments.center, radius: moments.radius, points, weights, axial_lines: None, axial_refined: None, axial_retry: None })
+        self.points = points;
+        self.weights = weights;
+        Ok(true)
     }
+    #[cfg(test)]
+    pub(super) fn direct_point_count(&self) -> usize { self.points.len() }
     /// Opt-in exact vertical-edge line cubature. Original points remain available for fallback.
     pub fn new_axial(tetra: [[f64; 3]; 4], order: usize) -> Result<Self> {
         let mut result=Self::new(tetra,order)?;
@@ -962,6 +981,9 @@ impl TetraCubature {
         (self.radius + other.radius) / norm(sub(self.center, other.center)) * (1. + 64. * f64::EPSILON)
     }
     pub fn direct_integral(&self, other: &Self) -> Result<f64> {
+        if self.points.is_empty() || other.points.is_empty() {
+            return Err(error("TETRA_INTEGRAL_ORDER", "direct pair cubature is not prepared"));
+        }
         if self.points.len() != other.points.len() {
             return Err(error("TETRA_INTEGRAL_ORDER", "direct pair cubature orders must match"));
         }
@@ -1581,5 +1603,42 @@ mod axial_outer_retry_tests {
         let fake=AxialDetail::fallback(3,None,Some(value)); assert!(x.try_axial_retry(&x,&fake).unwrap().value.is_none());
         let line=std::mem::size_of::<AxialLine>(); let headers=6*std::mem::size_of::<Option<Vec<AxialLine>>>();
         assert!(line*(6*6+8*8+10*10+8*8+10*10+12*12)+headers <=40*1024);
+    }
+}
+
+#[cfg(test)]
+mod lazy_direct_tests {
+    use super::*;
+    #[test]
+    fn lazy_direct_matches_eager_and_preserves_axial_laziness() {
+        let a = [[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];
+        let b = a.map(|p| [p[0]+0.1,p[1],p[2]]);
+        for order in [4,6,8] {
+            let eager_a = TetraCubature::new(a,order).unwrap();
+            let eager_b = TetraCubature::new(b,order).unwrap();
+            let mut lazy_a = TetraCubature::geometry_only(a).unwrap();
+            let mut lazy_b = TetraCubature::geometry_only(b).unwrap();
+            assert!(lazy_a.direct_integral(&lazy_b).is_err());
+            assert!(lazy_a.prepare_direct(a,order).unwrap());
+            lazy_b.prepare_direct(b,order).unwrap();
+            assert_eq!(lazy_a.direct_integral(&lazy_b).unwrap().to_bits(), eager_a.direct_integral(&eager_b).unwrap().to_bits());
+            let saved = lazy_a.points.clone();
+            assert!(!lazy_a.prepare_direct(a,order).unwrap());
+            assert_eq!(lazy_a.points, saved);
+        }
+        let mut unprepared = TetraCubature::geometry_only(a).unwrap();
+        assert!(unprepared.prepare_direct(a, 1).is_err());
+        assert!(unprepared.points.is_empty() && unprepared.weights.is_empty());
+        let invalid = [[0.;3];4];
+        assert!(TetraCubature::geometry_only(invalid).is_err());
+        let (a,b) = axial_retry_fixture();
+        let mut x = TetraCubature::geometry_only(a).unwrap();
+        let mut y = TetraCubature::geometry_only(b).unwrap();
+        x.prepare_axial(a,6).unwrap(); y.prepare_axial(b,6).unwrap();
+        let detail = x.try_axial_detailed(&y).unwrap();
+        assert_eq!(detail.reason, Some(3));
+        x.prepare_axial_retry(a,6).unwrap(); y.prepare_axial_retry(b,6).unwrap();
+        assert!(x.try_axial_retry(&y,&detail).unwrap().value.is_some());
+        assert!(x.points.is_empty() && y.points.is_empty());
     }
 }

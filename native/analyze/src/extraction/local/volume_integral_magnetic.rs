@@ -161,7 +161,7 @@ impl SlowCapture {
 #[serde(rename_all="camelCase")]
 struct AxialFallbackSample { i:usize, j:usize, order:usize, reason:usize, target_bits:[[u64;3];4], source_bits:[[u64;3];4], coarse:Option<f64>, fine:Option<f64>, change:Option<f64>, limit:Option<f64> }
 #[derive(Default)]
-struct ParallelCounts { counts: [u64; 3], seconds: [f64; 3], geometry_hits:u64, geometry_builds:u64, axial_accepted:u64, axial_fallback:u64, axial_outer_retries:u64, axial_outer_retry_accepted:u64, axial_max_relative:f64, orders:[u64;3], axial_reasons:[u64;4], samples:[Option<AxialFallbackSample>;4] }
+struct ParallelCounts { counts: [u64; 3], seconds: [f64; 3], geometry_hits:u64, geometry_builds:u64, lazy_direct_rules:u64, lazy_direct_points:u64, axial_accepted:u64, axial_fallback:u64, axial_outer_retries:u64, axial_outer_retry_accepted:u64, axial_max_relative:f64, orders:[u64;3], axial_reasons:[u64;4], samples:[Option<AxialFallbackSample>;4] }
 struct ParallelProgress { windows: u64, pairs: u64, wall: f64, last: Instant, failed:bool, seen:u8 }
 struct ParallelState {
     pool: rayon::ThreadPool,
@@ -172,12 +172,13 @@ impl ParallelState {
     fn report(&self, final_record: bool, failed: bool) {
         use std::io::Write;
         let mut p = self.progress.borrow_mut();
-        let mut counts = [0u64; 3]; let mut seconds = [0f64; 3]; let mut accepted=0; let mut fallback=0; let mut retries=0; let mut retry_accepted=0; let mut max_relative=0f64; let mut orders=[0u64;3];let mut geometry_hits=0;let mut geometry_builds=0; let mut reasons=[0u64;4];
+        let mut counts = [0u64; 3]; let mut seconds = [0f64; 3]; let mut accepted=0; let mut fallback=0; let mut retries=0; let mut retry_accepted=0; let mut max_relative=0f64; let mut orders=[0u64;3];let mut geometry_hits=0;let mut geometry_builds=0;let mut lazy_rules=0;let mut lazy_points=0; let mut reasons=[0u64;4];
         for worker in &self.workers {
             let worker = worker.lock().unwrap_or_else(|e| e.into_inner());
             let c = worker.parallel_counts.as_ref().unwrap().borrow();
             for k in 0..3 { counts[k] += c.counts[k]; seconds[k] += c.seconds[k]; orders[k]+=c.orders[k]; } accepted+=c.axial_accepted; fallback+=c.axial_fallback; max_relative=max_relative.max(c.axial_max_relative);
             geometry_hits+=c.geometry_hits;geometry_builds+=c.geometry_builds;
+            lazy_rules+=c.lazy_direct_rules;lazy_points+=c.lazy_direct_points;
             retries+=c.axial_outer_retries;retry_accepted+=c.axial_outer_retry_accepted;
             for k in 0..4 { reasons[k]+=c.axial_reasons[k]; if p.seen & (1<<k)==0 { if let Some(sample)=c.samples[k] { let _=writeln!(std::io::stderr().lock(),"P7_MAGNETIC_AXIAL_FALLBACK {}",serde_json::json!({"category":(["unsupported","inner_q_cap","inner_range_allowance","outer_convergence"][k]),"sample":sample})); p.seen|=1<<k; } } }
         }
@@ -186,6 +187,7 @@ impl ParallelState {
             "selfCalls":counts[0],"separatedCalls":counts[1],"adaptiveCalls":counts[2],
             "selfSeconds":seconds[0],"separatedSeconds":seconds[1],"adaptiveSeconds":seconds[2],
             "geometryCacheHits":geometry_hits,"geometryCacheBuilds":geometry_builds,
+            "lazyDirectRuleBuilds":lazy_rules,"lazyDirectPointsBuilt":lazy_points,
             "axialOuterRetries":retries,"axialOuterRetryAccepted":retry_accepted,
             "axialAccepted":accepted,"axialFallbacks":fallback,"axialFallbackUnsupported":reasons[0],"axialFallbackInnerQCap":reasons[1],"axialFallbackRangeAllowance":reasons[2],"axialFallbackOuterConvergence":reasons[3],"axialMaxSeriesRoundoffEstimate":max_relative,"selectedOrder4":orders[0],"selectedOrder6":orders[1],"selectedOrder8":orders[2],
             "countsIncludeFailed":true,"partial":true,"final":final_record,"failed":p.failed || failed
@@ -378,7 +380,7 @@ impl BoundedPairs {
         for order in [4, 6, 8] {
             check_deadline(self.start, self.wall)?;
             if order <= self.order {
-                cubatures.push(TetraCubature::new(tetra, order)?);
+                cubatures.push(if self.axial {TetraCubature::geometry_only(tetra)?} else {TetraCubature::new(tetra, order)?});
             }
         }
         cells.push(PairCell {
@@ -468,6 +470,14 @@ impl BoundedPairs {
                     if c.samples[reason].is_none() { c.samples[reason]=Some(AxialFallbackSample { i,j,order:[4,6,8][k]+if retried {2}else{0},reason,
                         target_bits:self.tetra[i].map(|p|p.map(f64::to_bits)), source_bits:self.tetra[j].map(|p|p.map(f64::to_bits)),
                         coarse:detail.coarse,fine:detail.fine,change:detail.coarse.zip(detail.fine).map(|(a,b)|(a-b).abs()),limit:detail.fine.map(|v|1e-10*v) }); }
+                }
+            }
+            if self.axial {
+                for (cell_index,tetra_index) in [(ti,i),(si,j)] {
+                    check_deadline(self.start,self.wall)?;
+                    if cells[cell_index].cubatures[k].prepare_direct(self.tetra[tetra_index],[4,6,8][k])? {
+                        if let Some(c)=&self.parallel_counts {let mut c=c.borrow_mut();c.lazy_direct_rules+=1;c.lazy_direct_points+=[4u64,6,8][k].pow(3);}
+                    }
                 }
             }
             return cells[ti].cubatures[k].direct_integral(&cells[si].cubatures[k]);
@@ -756,6 +766,45 @@ impl MagneticApply for Operator<'_> {
 #[cfg(test)]
 mod bounded_pair_tests {
     use super::*;
+    #[test]
+    fn axial_lazy_direct_preparation_selected_only() {
+        let start=Instant::now();let wall=Duration::from_secs(30);
+        let (a,b)=super::super::polyhedron::axial_retry_fixture();
+        let pairs=BoundedPairs::new_with_axial(vec![a,b],12,8,start,wall,true).unwrap();
+        let value=pairs.pair(0,1).unwrap();
+        assert!(pairs.cells.borrow().iter().flat_map(|c|&c.cubatures).all(|q|q.direct_point_count()==0));
+        let eager=BoundedPairs::new_with_axial(vec![a,b],12,8,start,wall,true).unwrap();
+        {let mut cells=eager.cells.borrow_mut();for i in 0..2 {eager.ensure(&mut cells,i,None).unwrap();}
+         for cell in &mut *cells {for (k,q) in cell.cubatures.iter_mut().enumerate() {q.prepare_direct(eager.tetra[cell.index],[4,6,8][k]).unwrap();}}}
+        assert_eq!(value.to_bits(),eager.pair(0,1).unwrap().to_bits());
+        let unsupported=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.0002,0.0003,0.001]];
+        for distance in [0.002,0.02] {
+            let b=unsupported.map(|p|[p[0]+distance,p[1],p[2]]);
+            let lazy=BoundedPairs::new_with_axial(vec![unsupported,b],12,8,start,wall,true).unwrap();
+            let plain=BoundedPairs::new_with_axial(vec![unsupported,b],12,8,start,wall,false).unwrap();
+            assert_eq!(lazy.pair(0,1).unwrap().to_bits(),plain.pair(0,1).unwrap().to_bits());
+            let cells=lazy.cells.borrow();
+            let q=cells[0].cubatures[0].separation_q(&cells[1].cubatures[0]);
+            let order=separated_order(q,12).expect("separated fallback");
+            for cell in &*cells {for (k,rule) in cell.cubatures.iter().enumerate() {assert_eq!(rule.direct_point_count(),if [4usize,6,8][k]==order {order.pow(3)}else{0});}}
+        }
+    }
+    #[test]
+    #[ignore = "bounded captured geometry preparation diagnostic"]
+    fn axial_lazy_preparation_captured_benchmark() {
+        use std::io::Read;
+        let mut text=String::new();std::fs::File::open(std::env::var("P7_PAIR_OUTPUT").unwrap()).unwrap().take(65537).read_to_string(&mut text).unwrap();
+        assert!(text.len()<=65536);let rows:Vec<CaptureRecord>=text.lines().map(|s|serde_json::from_str(s).unwrap()).collect();assert_eq!(rows.len(),16);
+        let geometry:Vec<_>=rows.iter().flat_map(|r|[r.source_bits.map(|p|p.map(f64::from_bits)),r.target_bits.map(|p|p.map(f64::from_bits))]).collect();
+        let start=Instant::now();let wall=Duration::from_secs(30);let mut elapsed=[Duration::ZERO;2];
+        for pass in 0..4 {for axial in if pass%2==0 {[false,true]}else{[true,false]} {
+            let now=Instant::now();
+            for _ in 0..32 {let pairs=BoundedPairs::new_with_axial(geometry.clone(),12,64,start,wall,axial).unwrap();let mut cells=pairs.cells.borrow_mut();for i in 0..geometry.len(){pairs.ensure(&mut cells,i,None).unwrap();}
+                let points:usize=cells.iter().flat_map(|c|&c.cubatures).map(TetraCubature::direct_point_count).sum();assert_eq!(points,if axial {0}else{geometry.len()*792});}
+            elapsed[usize::from(axial)]+=now.elapsed();
+        }}
+        eprintln!("P7_LAZY_PREPARATION cells={} eager_seconds={} lazy_seconds={} ratio={}",geometry.len()*32*4,elapsed[0].as_secs_f64(),elapsed[1].as_secs_f64(),elapsed[0].as_secs_f64()/elapsed[1].as_secs_f64());
+    }
     #[test]
     fn axial_outer_retry_routes_and_reuses_geometry() {
         let (a,b)=super::super::polyhedron::axial_retry_fixture();

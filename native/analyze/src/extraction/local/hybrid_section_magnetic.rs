@@ -76,7 +76,16 @@ fn kernel(a:&Geometry,b:&Geometry,same:bool,order:usize,q:&GaussRule,start:Insta
 }
 /// Mode-specific representations of unique physical groups. The adapter owns
 /// the topology proof; mixed Section/Tet pairs use the original tetrahedra.
+#[derive(Default, Debug)]
+pub(super) struct GroupKernelCounts {
+ pub local_section_tetra_pairs: usize,
+ pub far_section_pairs: usize,
+ pub mixed_tetra_pairs: usize,
+}
 pub(super) fn grouped_gram(groups:&[PhysicalGroup],modes:usize,order:usize,budget:AllocationBudget,limit:Duration)->Result<Vec<Vec<f64>>> {
+ Ok(grouped_gram_counted(groups,modes,order,budget,limit)?.0)
+}
+pub(super) fn grouped_gram_counted(groups:&[PhysicalGroup],modes:usize,order:usize,budget:AllocationBudget,limit:Duration)->Result<(Vec<Vec<f64>>,GroupKernelCounts)> {
  let start=Instant::now();check(start,limit)?;
  if groups.is_empty() || modes==0 || modes>budget.max_nodes || !(8..=60).contains(&order) {return Err(error("HYBRID_INPUT","invalid grouped Gram dimensions"));}
  let count=groups.iter().try_fold(0usize,|n,g|n.checked_add(g.tetrahedra.len())?.checked_add(usize::from(g.prism.is_some()))).ok_or_else(||error("MEMORY_LIMIT","group support overflow"))?;
@@ -85,23 +94,30 @@ pub(super) fn grouped_gram(groups:&[PhysicalGroup],modes:usize,order:usize,budge
  let mut geom=Vec::with_capacity(count);let mut owners=Vec::with_capacity(count);let mut starts=Vec::with_capacity(groups.len());let mut ids=HashSet::new();
  for (gi,g) in groups.iter().enumerate() {check(start,limit)?;starts.push(geom.len());for t in &g.tetrahedra {if t.currents.len()!=modes || !ids.insert(&t.id) {return Err(error("HYBRID_INPUT","invalid group modes or duplicate physical ID"));}geom.push(t.geometry.clone());owners.push(gi);}if let Some(p)=&g.prism {geom.push(Geometry::Section(p.clone()));owners.push(gi);}}
  for i in 0..count {for j in 0..i {check(start,limit)?;if owners[i]!=owners[j] {if duplicate(&geom[i],&geom[j]) {return Err(error("HYBRID_UNSUPPORTED","duplicate physical geometry"));}}}}
- let q=GaussRule::new(order)?;let mut out=vec![vec![0.;modes];modes];
+ let q=GaussRule::new(order)?;let mut out=vec![vec![0.;modes];modes]; let mut counts=GroupKernelCounts::default();
  for (gi,g) in groups.iter().enumerate() {for (hj,h) in groups[..=gi].iter().enumerate() {let mut cache=[[f64::NAN;4];4];for m in 0..modes {for n in 0..modes {
   check(start,limit)?;
   let select=|group:&PhysicalGroup,base:usize,mode:usize|->Result<Vec<(usize,[f64;3])>> {Ok(match group.support(mode)? {ModeSupport::Section(_,v)=>vec![(base+group.tetrahedra.len(),v)],ModeSupport::Tetrahedra(ts)=>ts.iter().enumerate().map(|(i,t)|(base+i,t.currents[mode])).collect()})};
   for (a,va) in select(g,starts[gi],m)? {for (b,vb) in select(h,starts[hj],n)? {
    let coefficient=(0..3).map(|d|va[d]*vb[d]).sum::<f64>();if coefficient==0. {continue;}
    let mut pairs=Vec::new();
-   if matches!((&geom[a],&geom[b]),(Geometry::Section(_),Geometry::LocalTetra(_))) {for t in 0..g.tetrahedra.len(){pairs.push((starts[gi]+t,b));}}
+   let section_pair=matches!((&geom[a],&geom[b]),(Geometry::Section(_),Geometry::Section(_)));
+   // Strict bounding-box separation is sufficient for the axial far path;
+   // overlap or boundary contact is conservatively treated as local.
+   let strict_separation=|| {let (al,ah)=bounds(&geom[a]);let (bl,bh)=bounds(&geom[b]);(0..3).any(|d|ah[d]<bl[d] || bh[d]<al[d])};
+   let local_section=section_pair && (gi==hj || !strict_separation());
+   let mixed=matches!((&geom[a],&geom[b]),(Geometry::Section(_),Geometry::LocalTetra(_)) | (Geometry::LocalTetra(_),Geometry::Section(_)));
+   if local_section {for x in 0..g.tetrahedra.len(){for y in 0..h.tetrahedra.len(){pairs.push((starts[gi]+x,starts[hj]+y));}}}
+   else if matches!((&geom[a],&geom[b]),(Geometry::Section(_),Geometry::LocalTetra(_))) {for t in 0..g.tetrahedra.len(){pairs.push((starts[gi]+t,b));}}
    else if matches!((&geom[a],&geom[b]),(Geometry::LocalTetra(_),Geometry::Section(_))) {for t in 0..h.tetrahedra.len(){pairs.push((a,starts[hj]+t));}}
    else {pairs.push((a,b));}
-   let mut k=0.;for (x,y) in pairs {let slotx=x-starts[gi];let sloty=y-starts[hj];if cache[slotx][sloty].is_nan(){let (u,v)=if x>=y {(x,y)}else{(y,x)};cache[slotx][sloty]=kernel(&geom[u],&geom[v],u==v,order,&q,start,limit)?;}k+=cache[slotx][sloty];}
+   let mut k=0.;for (x,y) in pairs {let slotx=x-starts[gi];let sloty=y-starts[hj];if cache[slotx][sloty].is_nan(){let (u,v)=if x>=y {(x,y)}else{(y,x)};cache[slotx][sloty]=kernel(&geom[u],&geom[v],u==v,order,&q,start,limit)?;if local_section {counts.local_section_tetra_pairs+=1;} else if section_pair {counts.far_section_pairs+=1;} else if mixed {counts.mixed_tetra_pairs+=1;}}k+=cache[slotx][sloty];}
    let contribution=k*coefficient;out[m][n]+=contribution;
    if gi!=hj {out[n][m]+=contribution;}
    if !out[m][n].is_finite() || !out[n][m].is_finite(){return Err(error("HYBRID_RANGE","nonfinite Gram"));}
   }}
  }}}}
- Ok(out)
+ Ok((out,counts))
 }
 /// Raw density-weighted kernel Gram: multiply by 1e-7 for inductance in henries. IDs represent unique physical supports, so a shared return is supplied once.
 pub(super) fn gram(cells: &[Cell], modes: usize, order: usize, budget: AllocationBudget, limit: Duration) -> Result<Vec<Vec<f64>>> {
@@ -150,7 +166,10 @@ mod tests {
   assert!(matches!(group.support(1).unwrap(),ModeSupport::Tetrahedra(_)));
   assert!(group.support(2).is_err());
   let ret=Cell{id:"return".into(),geometry:Geometry::LocalTetra([[3.,0.,0.],[4.,0.,0.],[3.,1.,0.],[3.,0.,1.]]),currents:vec![[0.,0.,-1.],[0.,0.,-1.]]};
-  let mut all=group.tetrahedra.clone();all.push(ret.clone());
+  let far_prism=Prism::new("far".into(),[[6.,0.],[7.,0.],[6.,1.]],[0.,1.]).unwrap();
+  let far_cells:Vec<_>=ts.iter().enumerate().map(|(i,t)| Cell{id:format!("far{i}"),geometry:Geometry::LocalTetra(t.map(|mut p| {p[0]+=6.;p})),currents:vec![[0.,0.,1.],[0.,0.,1.]]}).collect();
+  let far=PhysicalGroup::from_validated_adapter(Some(far_prism),far_cells.clone(),2,budget,Instant::now(),Duration::from_secs(1)).unwrap();
+  let mut all=group.tetrahedra.clone();all.extend(far_cells);all.push(ret.clone());
   let reference=gram(&all,2,12,budget,Duration::from_secs(30)).unwrap();
   let other=PhysicalGroup::from_validated_adapter(None,vec![ret],2,budget,Instant::now(),Duration::from_secs(1)).unwrap();
   let duplicate=PhysicalGroup::from_validated_adapter(None,vec![all[0].clone()],2,budget,Instant::now(),Duration::from_secs(1)).unwrap();
@@ -158,7 +177,9 @@ mod tests {
   let duplicate=PhysicalGroup::from_validated_adapter(None,vec![all[0].clone()],2,budget,Instant::now(),Duration::from_secs(1)).unwrap();
   let duplicate2=PhysicalGroup::from_validated_adapter(None,vec![all[0].clone()],2,budget,Instant::now(),Duration::from_secs(1)).unwrap();
   assert!(grouped_gram(&[duplicate,duplicate2],2,12,budget,Duration::from_secs(30)).is_err());
-  let got=grouped_gram(&[group,other],2,12,budget,Duration::from_secs(30)).unwrap();
+  let (got,counts)=grouped_gram_counted(&[group,far,other],2,12,budget,Duration::from_secs(30)).unwrap();
+  assert!(counts.local_section_tetra_pairs>0 && counts.far_section_pairs>0 && counts.mixed_tetra_pairs>0, "{counts:?}");
+  assert!((got[0][1]-got[1][0]).abs()<1e-10*got[0][0].abs() && got[0][0]>0. && got[1][1]>0. && got[0][0]*got[1][1]>=got[0][1]*got[1][0]);
   for i in 0..2 {for j in 0..2 {assert!((got[i][j]-reference[i][j]).abs()<0.001*reference[0][0].abs(),"{i} {j}: {} {}",got[i][j],reference[i][j]);}}
  }
  #[test] fn shared_return_and_event() {
@@ -214,13 +235,3 @@ mod tests {
   assert!(gram(&[c],1,4,budget,Duration::ZERO).unwrap_err().contains("DEADLINE"));
  }
 }
-
-
-
-
-
-
-
-
-
-
