@@ -25,3 +25,13 @@ All 16 saved fixed-order-10 integrals pass a relative 1e-10 comparison against t
 Original signed-action/full-KVL reference control, bounded-cache eviction/bitwise controls and two polyhedron controls pass. Logs: `debugging/p7-adaptive-source-action.log`, `p7-adaptive-bounded-tests.log`, `p7-adaptive-polyhedron-tests.log`, `p7-adaptive-captured-comparison.log`. Full shared-return automatic integration and case-matrix physical acceptance remain incomplete.
 
 Final immutable-cache release comparison passes in 0.052685 s for all 16 pairs. Release addon build passes (`debugging/p7-adaptive-source-native-build.log`). The existing cache identity hashes the native binary, so previous cached responses cannot silently substitute for this changed implementation.
+
+## Bounded full-path attempt after the change
+
+Artifacts: `debugging/p7-adaptive-source-stm32-600s/`. Same original STM32 geometry/ports, cold response cache, one Rayon thread, singleton covers, no scalar/cover cache and no section hints; 590/600 s native/supervisor, 12/14 GiB native/process-tree memory. This attempt allows four enrichment iterations rather than the earlier diagnostic one; it still stops during the first action, before enrichment can run.
+
+The native deadline ends the run after 594.672 s outer wall. Sampled private/RSS peaks: 1,874,513,920 / 1,083,195,392 B. The first action reaches 812,447 visits, 131,865 far, 207,430 near and 66,922 zero callbacks. Final kernel prefix: 17,607 adaptive calls / 278.423083 s; 189,823 separated calls / 167.426783 s. No complete magnetic action or electrical result.
+
+For a roughly matched prefix, the new trace at 107,008 callbacks has 8,375 adaptive calls / 71.187441 s and 98,633 separated calls / 96.290486 s. The earlier fixed-order run ended at 106,918 callbacks with 8,285 adaptive calls / 358.258367 s and 98,633 separated calls / 94.756465 s. This is about 167.5 versus 453.0 s of near-kernel time, with 90 more adaptive calls in the new prefix. It is an approximate prefix comparison, not a paired full-extraction speedup. The earlier run also had a scalar cache enabled with zero hits and one allowed enrichment iteration.
+
+The new run processes about 1.94 times as many near callbacks before its deadline, but later adaptive pairs are substantially more expensive than the captured 16. Both remaining adaptive work and separated interactions still matter. The full <=600-second goal remains unmet; the 42-case physical acceptance inventory is unchanged. Follow-up must profile the later expensive pairs and reduce primary/global interaction work; increasing result memoization has not been shown to help this first action.
