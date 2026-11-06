@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reduce far-source sample-distance cost with a guarded squared-distance square root, retaining `hypot` for extreme ranges and the existing rounding allowance. Escalate Gauss order when the actual mass-error check rejects the first candidate. Captured-pair and physical action/KVL controls pass; local timing improves further without relaxing tolerances.
+
 - Add opt-in bounded capture of successful slow adaptive magnetic callbacks (`P7_MAGNETIC_SLOW_PAIR_PATH`), preserving exact geometry/result bits for replay. Capture uses an exclusive new file, fixed serialization buffers, a 16-record/64 KiB bound and nonfatal I/O handling. Production quadrature and acceptance tolerances are unchanged.
 
 - Select positive far-source Gauss orders 4–10 from the existing remainder, rounding and mass-error checks instead of always using order 10. Cache each order independently for deterministic evaluation and reserve its bounded storage. Captured expensive STM32 pair controls match the former fixed-order values within the unchanged 1e-10 comparison tolerance; full-board timing follows the release build.

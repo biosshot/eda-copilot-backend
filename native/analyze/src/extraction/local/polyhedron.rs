@@ -313,6 +313,7 @@ impl PointPotential {
         let Some(required) = (4..=10).find(|&n| remainder_for(n) + rounding <= tolerance) else {
             return Ok(None);
         };
+        for required in required..=10 {
         let cache = &self.far_samples[required - 4];
         if cache.get().is_none() {
             let volume = super::mesh::tetra_coefficients(tetra)?.0;
@@ -337,12 +338,17 @@ impl PointPotential {
         let samples = cache.get().unwrap();
         let bound = remainder_for(samples.order) + rounding + samples.mass_error * (1. + q) / (1. - q);
         if bound > tolerance {
-            return Ok(None);
+            continue;
         }
         let r = sub(point, samples.center);
         let mut sum = super::accurate::Sum::default();
         for (&p, &w) in samples.points.iter().zip(&samples.weights) {
-            let d = norm(sub(r, p));
+            let delta = sub(r, p);
+            // Three squares, two additions and sqrt add only a few epsilons
+            // for a normal finite sum, within the 1024-epsilon allowance.
+            // Preserve hypot for underflow and overflow.
+            let squared = delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2];
+            let d = if squared.is_normal() { squared.sqrt() } else { norm(delta) };
             if d <= 0. || !d.is_finite() {
                 return Err(error(
                     "TETRA_FAR_RANGE",
@@ -358,7 +364,9 @@ impl PointPotential {
                 "positive finite bounded far source required",
             ));
         }
-        Ok(Some((value, bound, samples.order)))
+        return Ok(Some((value, bound, samples.order)));
+        }
+        Ok(None)
     }
     fn positive_source(
         &self,
@@ -1336,6 +1344,7 @@ mod captured_adaptive_comparison {
         let text = std::fs::read_to_string(path).unwrap();
         let started = std::time::Instant::now();
         let mut count = 0;
+        let mut max_relative = 0_f64;
         for line in text.lines() {
             let row: serde_json::Value = serde_json::from_str(line).unwrap();
             let target: [[u64; 3]; 4] = serde_json::from_value(row["targetBits"].clone()).unwrap();
@@ -1344,10 +1353,34 @@ mod captured_adaptive_comparison {
             let value = tetra_integral_adaptive(target.map(|p| p.map(f64::from_bits)), &source, 12, 1e-10).unwrap();
             let reference = f64::from_bits(row["valueBits"].as_u64().unwrap());
             let relative = (value - reference).abs() / reference.abs();
+            max_relative = max_relative.max(relative);
             assert!(relative <= 1e-10, "pair {count}: relative {relative:e}");
             count += 1;
         }
         assert_eq!(count, 16);
-        eprintln!("{count} captured pairs in {:.6}s", started.elapsed().as_secs_f64());
+        eprintln!("{count} captured pairs in {:.6}s; max relative {max_relative:e}", started.elapsed().as_secs_f64());
+    }
+}
+
+#[cfg(test)]
+mod far_source_guards {
+    use super::*;
+    #[test]
+    fn rejected_mass_bound_tries_next_order_and_extreme_distance_stays_finite() {
+        let tetra=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];
+        let ordinary=PointPotential::tetrahedron(tetra).unwrap();
+        let point=[1.,1.,1.];
+        let reference=ordinary.bounded_far_tetra(point,1e-10).unwrap().unwrap();
+        assert_eq!(reference.2,4);
+        let samples=ordinary.far_samples[0].get().unwrap();
+        let source=PointPotential::tetrahedron(tetra).unwrap();
+        source.far_samples[0].set(FarSamples{order:4,center:samples.center,radius:samples.radius,
+            volume:samples.volume,points:samples.points.clone(),weights:samples.weights.clone(),mass_error:1.}).unwrap();
+        let recovered=source.bounded_far_tetra(point,1e-10).unwrap().unwrap();
+        assert!(recovered.2>4&&recovered.1<=1e-10);
+        assert!((recovered.0-reference.0).abs()/reference.0<1e-10);
+        let extreme=ordinary.bounded_far_tetra([1e200,0.,0.],1e-10).unwrap().unwrap();
+        assert!(extreme.0.is_finite()&&extreme.0>0.);
+        assert!((extreme.0/(samples.volume/1e200)-1.).abs()<1e-12);
     }
 }
