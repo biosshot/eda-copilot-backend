@@ -106,6 +106,49 @@ Local evidence is under `debugging/p7-axial-tetra-ts-controls/`,
 `p7-axial-tetra-ts-focused-final/`, `p7-axial-tetra-compact-control/` and
 `p7-axial-integration-typecheck-final.log`.
 
-The next bounded board run must measure actual acceptance/fallback coverage,
-prefix kernel time and original physical residuals. No full-extraction,
-<=600-second result or case-matrix acceptance is established here.
+## Bounded STM32 result
+
+Commit `587faf4` was exercised at 10 kHz, native 240 s/12 GiB, four near workers,
+global Rayon one, RHS chunks one, maxIterations=4, cold isolated cache. All 844
+copper regions, 65 islands and 89 barrels remain, with the same executed DSL
+hash `fc8343d11f674ae24e39875294b689aab2cbf983eb6b62b0262552ce3a9c2c9d`.
+The first launch was refused before computation because Windows commit headroom
+could not cover a 14 GiB tree cap plus reserve. The actual run used a 12 GiB
+tree cap, preserving the 12 GiB native request. It ended on `LOCAL_DEADLINE:
+streamed tetra magnetic action` after 243.093 s, before the 250-second external
+cap; memory did not trigger the exit.
+
+| Partial operator counters | New axial run | Previous persistent-cache run |
+|---|---:|---:|
+| Successful pairs | 150,528 | 134,528 |
+| Separated calls / summed elapsed | 136,702 / 155.478 s | 125,647 / 186.050 s |
+| Adaptive calls / summed elapsed | 13,917 / 148.096 s | 8,885 / 78.526 s |
+| Kernel-window wall | 111.644 s | 83.711 s |
+| Axial accepted / fallback | 77,876 / 58,826 | not applicable |
+| Selected order 4 / 6 / 8 | 0 / 110,094 / 26,608 | not recorded |
+
+The new path accepts approximately 57% of separated calls; the remainder
+retains original cubature. At the same nominal wall limit, about 11.9% more
+pairs complete. This is a partial throughput observation, not full-board
+speedup: later work contains more expensive adaptive calls. In particular the
+new trace reaches 142,336 successful pairs at 71.661 s kernel-window wall versus
+the old 134,528 at 83.711 s, but exact per-pair identities were not captured for
+a controlled common-prefix benchmark. Do not infer a precise speedup factor.
+
+Sampled peak private/RSS were 1,883,979,776 / 1,097,822,208 B (20 ms lower bounds),
+far below the actual tree cap. The last estimated series allowance is at most
+2.693e-13 relative; this excludes outer/coordinate/summation error and is not a
+physical error certificate. The final progress record remains partial with a
+window failure. No completed action/channel or board physical-gate admission
+is established by these counters.
+
+Local evidence: `debugging/p7-axial-tetra-stm32-250s-12g-tree/`, including stdout,
+comparison, supervision and identity. Native core identity:
+`b1f4aef88fc15de2f862ee4c9c3512c3c8b9c5735d68dfbaeb839b8502367e89`.
+The refused preflight is preserved under `debugging/p7-axial-tetra-stm32-250s/`.
+
+The <=600-second goal and case-matrix acceptance remain unmet. Before another
+heavy attempt, classify axial fallback reasons and retain bounded exact geometry
+samples for offline reproduction. Vertical integration alone leaves long-XY
+anisotropy; general longest-edge integration is a candidate requiring separate
+mathematical and numerical validation, not an accepted implementation.
