@@ -611,6 +611,34 @@ mod bounded_pair_tests {
 mod actual_tree_planning {
     use super::*;
     #[test]
+    #[ignore = "explicit saved board diagnostic"]
+    fn capture_actual_neighbor_pairs() {
+        use std::{env,fs};
+        let raw=fs::read_to_string(env::var("P7_SAVED_PROBLEM").unwrap()).unwrap();let problem:serde_json::Value=serde_json::from_str(&raw).unwrap();
+        let board_text=problem["boardJson"].as_str().unwrap();let board=crate::import_json(board_text).board.unwrap();
+        let geometry_value=problem["geometry"].clone();let request:super::super::board_mesh::Request=serde_json::from_value(geometry_value.clone()).unwrap();
+        let hash=|bytes:&[u8]| {let mut h=14695981039346656037u64;for &b in bytes {h=(h^b as u64).wrapping_mul(1099511628211);}format!("fnv1a64:{h:016x}")};
+        let start=Instant::now();let wall=Duration::from_secs(120);let budget=super::super::board_prepare::allocation_budget(4096);
+        let mesh=super::super::board_mesh::build(&board,&request,budget,wall).unwrap();
+        let base=mesh.mesh.planned_peak_bytes.checked_add(raw.len()*8).unwrap();let (owned,slots)=BoundedPairs::plan(mesh.mesh.copper_tetrahedra.len(),12,base,budget).unwrap();budget.check(base+owned).unwrap();
+        let pairs=BoundedPairs::new_with_scalar(geometry(&mesh.mesh),12,slots,0,start,wall).unwrap();let mut records=vec![];let mut attempted=0;let mut failed=0;let mut skipped=0;let pair_start=Instant::now();
+        for i in 0..128.min(pairs.tetra.len().saturating_sub(1)) {if pair_start.elapsed()>=Duration::from_secs(30)||start.elapsed()>=wall {break;}let j=i+1;attempted+=1;let mut kind=2;let t=Instant::now();let value=pairs.pair_inner(i,j,&mut kind);let seconds=t.elapsed().as_secs_f64();
+            if kind==2 {if let Ok(value)=value {records.push(serde_json::json!({"i":i,"j":j,"target":pairs.tetra[i],"source":pairs.tetra[j],"order":12,"tolerance":1e-10,"value":value,"valueBits":value.to_bits(),"targetBits":pairs.tetra[i].map(|p|p.map(f64::to_bits)),"sourceBits":pairs.tetra[j].map(|p|p.map(f64::to_bits)),"seconds":seconds}));records.sort_by(|a,b|b["seconds"].as_f64().unwrap().total_cmp(&a["seconds"].as_f64().unwrap()));records.truncate(16);}else{failed+=1;}}else{skipped+=1;}
+        }
+        let report=serde_json::json!({"boardDigest":hash(board_text.as_bytes()),"geometryDigest":hash(serde_json::to_string(&geometry_value).unwrap().as_bytes()),"status":if records.is_empty(){"refused"}else{"pass"},"scope":"diagnostic pair capture only, no electrical solve; first 128 adjacent-index pairs, bounded 30 seconds", "attempted":attempted,"failed":failed,"skippedNonAdaptive":skipped,"stopReason":if attempted<128 {"time or mesh limit"}else{"sample limit"},"meshTetrahedra":pairs.tetra.len(),"elapsedSeconds":start.elapsed().as_secs_f64(),"pairs":records});
+        let output=env::var("P7_PAIR_OUTPUT").unwrap();fs::write(output,serde_json::to_vec_pretty(&report).unwrap()).unwrap();println!("P7_ACTUAL_PAIRS count={} elapsed={}",report["pairs"].as_array().unwrap().len(),report["elapsedSeconds"]);assert!(!report["pairs"].as_array().unwrap().is_empty());
+    }
+    #[test]
+    #[ignore = "replay captured actual pairs"]
+    fn replay_actual_neighbor_pairs() {
+        use std::{env,fs};let start=Instant::now();let report:serde_json::Value=serde_json::from_slice(&fs::read(env::var("P7_PAIR_OUTPUT").unwrap()).unwrap()).unwrap();
+        for row in report["pairs"].as_array().unwrap().iter().take(4) {assert!(start.elapsed()<Duration::from_secs(30));let target:[[u64;3];4]=serde_json::from_value(row["targetBits"].clone()).unwrap();let source:[[u64;3];4]=serde_json::from_value(row["sourceBits"].clone()).unwrap();let target=target.map(|p|p.map(f64::from_bits));let source=source.map(|p|p.map(f64::from_bits));let src=PointPotential::tetrahedron(source).unwrap();let t=Instant::now();let value=tetra_integral_adaptive(target,&src,12,1e-10).unwrap();let actual_seconds=t.elapsed().as_secs_f64();assert_eq!(value.to_bits(),row["valueBits"].as_u64().unwrap());
+            let volume=super::super::mesh::tetra_coefficients(target).unwrap().0;let mut counts=std::collections::BTreeMap::new();let profile_start=Instant::now();
+            for order in [2,4,8,12] {let rule=super::super::prism::cached_rule(order).unwrap();super::super::polyhedron::tetra_integrate(target,volume,rule,|point,_|{if start.elapsed()>=Duration::from_secs(30) {return Err(error("DEADLINE","pair replay"));}let d=src.at_diagnostic(point)?;*counts.entry(d.source_order).or_insert(0usize)+=1;Ok(())}).unwrap();}
+            println!("P7_PAIR_REPLAY i={} j={} productionSeconds={actual_seconds} fixedAllOrderDiagnosticSeconds={} sourceOrders={counts:?}",row["i"],row["j"],profile_start.elapsed().as_secs_f64());}
+
+    }
+    #[test]
     #[ignore = "requires an explicitly supplied saved actual-board request and supervisor"]
     fn saved_stm32_geometry_and_hierarchy_plan_only() {
         use std::{env, fs, path::PathBuf};
