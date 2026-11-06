@@ -1,6 +1,6 @@
 //! Goal-controlled common-batch Newton cover. Geometry and native current DOFs
 //! are immutable; every omitted Taylor tail is allocated a positive source-mass
-//! share. Numerical near/self kernels are never weak-pruned.
+//! share. Optional near/self omission carries a conservative potential bound.
 use super::*;
 use std::cell::Ref;
 
@@ -11,7 +11,7 @@ struct Profile {
     clock: Option<(Instant, Instant)>,
     phase: &'static str,
     axis: Option<usize>,
-    counts: [usize; 5], // visited, far, near, exact (planned), zero
+    counts: [usize; 6], // visited, far, near, exact (planned), zero, bounded omissions
     seconds: [f64; 3], // classification, far callback, near callback
     complete: bool,
 }
@@ -21,7 +21,7 @@ impl Profile {
         static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         let result = Self { id: if enabled {NEXT_ID.fetch_add(1,std::sync::atomic::Ordering::Relaxed)} else {0},
             clock: enabled.then(|| {let now=Instant::now(); (now,now)}), phase, axis,
-            counts: [0;5], seconds: [0.;3], complete:false };
+            counts: [0;6], seconds: [0.;3], complete:false };
         result.emit("start");
         result
     }
@@ -34,14 +34,14 @@ impl Profile {
             use std::io::Write;
             let record=serde_json::json!({"id":self.id,"thread":format!("{:?}",std::thread::current().id()),"phase":self.phase,"axis":self.axis,"status":status,
                 "wallSeconds":start.elapsed().as_secs_f64(),"visited":self.counts[0],
-                "far":self.counts[1],"near":self.counts[2],"plannedExactPairs":self.counts[3],"zero":self.counts[4],
+                "far":self.counts[1],"near":self.counts[2],"plannedExactPairs":self.counts[3],"zero":self.counts[4],"boundedOmittedBlocks":self.counts[5],
                 "classificationSeconds":self.seconds[0],"farCallbackSeconds":self.seconds[1],"nearCallbackSeconds":self.seconds[2]});
             let _=writeln!(std::io::stderr().lock(),"P7_MAGNETIC_TRACE {record}");
         }
     }
     fn checkpoint(&mut self, counts: &Counts) {
         if self.clock.is_none() {return;}
-        self.counts=[counts.visited,counts.far,counts.near,counts.exact,counts.zero];
+        self.counts=[counts.visited,counts.far,counts.near,counts.exact,counts.zero,counts.negligible];
         if counts.visited % 4096 == 0 && self.clock.unwrap().1.elapsed().as_secs_f64()>=1. {
             self.emit("progress"); self.clock.as_mut().unwrap().1=Instant::now();
         }
@@ -236,9 +236,14 @@ impl Operator {
             "actionWallSeconds":started.elapsed().as_secs_f64()
         });
         for key in ["visitedNodePairs","farClusterPairs","nearTiles","exactPairs","zeroBlocks",
+            "boundedOmittedBlocks",
             "m2lScalarContractionsPerAction","shiftStencilApplicationsPerAction"] {
             certificate[key]=serde_json::json!(certificates.iter().map(|v|v[key].as_u64().unwrap()).sum::<u64>());
         }
+        let enabled=certificates[0]["nearBoundEnabled"].clone();
+        if certificates.iter().any(|c|c["nearBoundEnabled"]!=enabled) {return Err(error("HIERARCHICAL_MAGNETIC_GOAL","near-bound policy changed between chunks"));}
+        certificate["nearBoundEnabled"]=enabled;
+        certificate["nearBoundPolicy"]=serde_json::json!("summed-per-tetra-volume-v1");
         certificate["activeEnvelopeTerminals"]=serde_json::json!((0..space.cells.len()).filter(|&i| columns.iter().any(|q| (0..3).any(|axis| q[3*i+axis]!=0.))).count());
         for (target, source) in [("weightedActionExactPairs","exactPairs"),("weightedActionM2l","m2lScalarContractionsPerAction")] {
             certificate[target]=serde_json::json!(certificates.iter().map(|v|v[source].as_u64().unwrap()*v["rhsColumns"].as_u64().unwrap()).sum::<u64>());
@@ -311,6 +316,7 @@ impl Operator {
 #[derive(Clone, Copy)]
 enum Decision {
     Zero,
+    Negligible,
     Near,
     Far(usize),
 }
@@ -321,6 +327,7 @@ struct Counts {
     near: usize,
     exact: usize,
     zero: usize,
+    negligible: usize,
     orders: Vec<usize>,
     m2l: usize,
 }
@@ -331,6 +338,8 @@ struct Plan<'a> {
     max_weight: Vec<f64>,
     envelope: Vec<f64>,
     tv: Vec<Interval>,
+    phi: Vec<Interval>,
+    near_bound: bool,
     moment_order: Vec<usize>,
     local_order: Vec<usize>,
     counts: Counts,
@@ -348,6 +357,11 @@ impl<'a> Plan<'a> {
         columns: &[Vec<f64>],
         goals: &[f64],
     ) -> Result<Self> {
+        Self::new_with_policy(tree, geometry, space, columns, goals,
+            std::env::var_os("P7_MAGNETIC_NEAR_BOUND").as_deref() == Some(std::ffi::OsStr::new("1")))
+    }
+    fn new_with_policy(tree: &'a Operator, geometry: &'a Geometry, space: &Space,
+        columns: &[Vec<f64>], goals: &[f64], near_bound: bool) -> Result<Self> {
         let n = space.cells.len();
         let nodes = tree.nodes.len();
         if columns.len() != goals.len()
@@ -365,6 +379,8 @@ impl<'a> Plan<'a> {
             max_weight: vec![0.; nodes],
             envelope: vec![0.; n],
             tv: vec![Interval::zero(); nodes],
+            phi: if near_bound { vec![Interval::zero(); nodes] } else { Vec::new() },
+            near_bound,
             moment_order: vec![usize::MAX; nodes],
             local_order: vec![usize::MAX; nodes],
             counts: Counts::default(),
@@ -397,6 +413,7 @@ impl<'a> Plan<'a> {
                 result.mass[node] = result.mass[left].add(result.mass[right]);
                 result.max_weight[node] = result.max_weight[left].max(result.max_weight[right]);
                 result.tv[node] = result.tv[left].add(result.tv[right]);
+                if near_bound { result.phi[node] = result.phi[left].add(result.phi[right]); }
             } else {
                 let i = tree.permutation[tree.nodes[node].range[0]];
                 let volume = geometry
@@ -412,6 +429,23 @@ impl<'a> Plan<'a> {
                 result.mass[node] = mass;
                 result.max_weight[node] = mass.hi;
                 result.tv[node] = mass.mul(Interval::point(result.envelope[i]));
+                // Layer-cake rearrangement bounds a uniform source of volume V by
+                // its equal-volume ball: 2*pi*(3/(4*pi))^(2/3)*sigma*V^(2/3)
+                // < 3*sigma*V^(2/3). Summing tetrahedron bounds remains valid
+                // for duplicate or overlapping tetrahedra and self interactions.
+                if near_bound {
+                let mut root = volume.hi.cbrt();
+                let mut certified = false;
+                for _ in 0..16 {
+                    let cube = Interval::point(root).mul(Interval::point(root)).mul(Interval::point(root));
+                    if cube.finite() && cube.lo >= volume.hi { certified = true; break; }
+                    root = up(root);
+                }
+                result.phi[node] = if certified && root.is_finite() {
+                    Interval::point(3.).mul(Interval::point(space.cells[i].density_per_amp_m2))
+                        .mul(Interval::point(result.envelope[i])).mul(Interval::point(root)).mul(Interval::point(root))
+                } else { Interval { lo: 0., hi: f64::INFINITY } };
+                }
                 if result.envelope[i] > 0. {
                     result.active_terminals += 1;
                 }
@@ -429,6 +463,7 @@ impl<'a> Plan<'a> {
         let mut moment = vec![usize::MAX; nodes];
         let mut local = moment.clone();
         let mut hash = 0xcbf29ce484222325u64;
+        if result.near_bound { add_hash(&mut hash, 1); }
         let mut cover = Vec::new();
         let cache_cap = tree.adaptive_cover_cache_bytes;
         let mut cache_enabled = cache_cap > 0;
@@ -452,6 +487,7 @@ impl<'a> Plan<'a> {
             add_hash(&mut hash, pair.b as u64);
             match decision {
                 Decision::Zero => add_hash(&mut hash, 0),
+                Decision::Negligible => add_hash(&mut hash, u64::MAX),
                 Decision::Near => add_hash(&mut hash, 1),
                 Decision::Far(p) => {
                     add_hash(&mut hash, (p + 2) as u64);
@@ -494,21 +530,24 @@ impl<'a> Plan<'a> {
         if self.tv[a].hi == 0. && self.tv[b].hi == 0. {
             return Some(Decision::Zero);
         }
-        if a == b {
-            return None;
-        }
+        let budgets = || {
+            let a = Interval::point(0.25).mul(Interval::point(self.mass[a].lo)).div(Interval::point(self.mass[0].hi)).lo;
+            let b = Interval::point(0.25).mul(Interval::point(self.mass[b].lo)).div(Interval::point(self.mass[0].hi)).lo;
+            (a, b)
+        };
+        let near_budgets = if self.near_bound {
+            let (budget_a, budget_b) = budgets();
+            let ea = Interval::point(1e-7).mul(Interval::point(self.max_weight[a])).mul(self.phi[b]);
+            let eb = Interval::point(1e-7).mul(Interval::point(self.max_weight[b])).mul(self.phi[a]);
+            if ea.finite() && eb.finite() && ea.hi <= budget_b && eb.hi <= budget_a {
+                return Some(Decision::Negligible);
+            }
+            Some((budget_a, budget_b))
+        } else { None };
+        if a == b { return None; }
         let (r, q) = self.tree.separation(a, b);
-        if !q.finite() || q.hi >= 1. || r.lo <= 0. {
-            return None;
-        }
-        let budget_a = Interval::point(0.25)
-            .mul(Interval::point(self.mass[a].lo))
-            .div(Interval::point(self.mass[0].hi))
-            .lo;
-        let budget_b = Interval::point(0.25)
-            .mul(Interval::point(self.mass[b].lo))
-            .div(Interval::point(self.mass[0].hi))
-            .lo;
+        if !q.finite() || q.hi >= 1. || r.lo <= 0. { return None; }
+        let (budget_a, budget_b) = near_budgets.unwrap_or_else(budgets);
         let inverse_r = Interval::one().div(r);
         let one_minus_q = Interval::one().sub(q);
         let weight_a = Interval::point(1e-7).mul(Interval::point(self.max_weight[a]));
@@ -564,6 +603,7 @@ impl<'a> Plan<'a> {
             if let Some(decision) = decision {
                 match decision {
                     Decision::Zero => counts.zero += 1,
+                    Decision::Negligible => counts.negligible += 1,
                     Decision::Far(p) => {
                         counts.far += 1;
                         counts.orders[p] += 1;
@@ -593,7 +633,7 @@ impl<'a> Plan<'a> {
                 match decision {
                     Decision::Far(_) => profile.add_time(1, callback_started),
                     Decision::Near => profile.add_time(2, callback_started),
-                    Decision::Zero => {}
+                    Decision::Zero | Decision::Negligible => {}
                 }
                 emitted?;
                 continue;
@@ -716,6 +756,12 @@ impl<'a> Plan<'a> {
             let mut apply_block = |block: Pair, decision: Decision| {
                 match decision {
                     Decision::Zero => {}
+                    Decision::Negligible => {
+                        tails[block.a] = tails[block.a].add(self.phi[block.b].mul(Interval::point(goal)));
+                        if block.a != block.b {
+                            tails[block.b] = tails[block.b].add(self.phi[block.a].mul(Interval::point(goal)));
+                        }
+                    }
                     Decision::Near => {
                         if axis == 0 {
                             let a = &t.nodes[block.a];
@@ -811,6 +857,7 @@ impl<'a> Plan<'a> {
                     counts.visited += 1;
                     match decision {
                         Decision::Zero => counts.zero += 1,
+                    Decision::Negligible => counts.negligible += 1,
                         Decision::Near => {
                             counts.near += 1;
                             let a=&t.nodes[block.a]; let b=&t.nodes[block.b];
@@ -824,7 +871,7 @@ impl<'a> Plan<'a> {
                     profile.checkpoint(&counts);
                     let callback_started = profile.timer();
                     let result = apply_block(block, decision);
-                    match decision { Decision::Far(_) => profile.add_time(1, callback_started), Decision::Near => profile.add_time(2, callback_started), Decision::Zero => {} }
+                    match decision { Decision::Far(_) => profile.add_time(1, callback_started), Decision::Near => profile.add_time(2, callback_started), Decision::Zero | Decision::Negligible => {} }
                     result?;
                 }
                 profile.checkpoint(&counts);
@@ -918,7 +965,7 @@ impl<'a> Plan<'a> {
                 }
             }
         }
-        serde_json::json!({"coverSignature":self.cover_signature,"coverCacheEnabled":self.cover_cached,"coverCacheEntries":self.cover.len(),"coverCacheBytes":self.cover.capacity()*std::mem::size_of::<(Pair,Decision)>(),"envelopeSignature":self.envelope_signature,"modelRevision":1,"rhsColumns":goals.len(),"absoluteActionGoals":goals,"chosenOrderHistogram":self.counts.orders,"visitedNodePairs":self.counts.visited,"farClusterPairs":self.counts.far,"nearTiles":self.counts.near,"exactPairs":self.counts.exact,"zeroBlocks":self.counts.zero,"activeEnvelopeTerminals":self.active_terminals,"maximumMomentDegreeHistogram":mh,"maximumLocalDegreeHistogram":lh,"m2lScalarContractionsPerAction":self.counts.m2l,"shiftStencilApplicationsPerAction":shifts})
+        serde_json::json!({"coverSignature":self.cover_signature,"coverCacheEnabled":self.cover_cached,"coverCacheEntries":self.cover.len(),"coverCacheBytes":self.cover.capacity()*std::mem::size_of::<(Pair,Decision)>(),"envelopeSignature":self.envelope_signature,"modelRevision":1,"rhsColumns":goals.len(),"absoluteActionGoals":goals,"chosenOrderHistogram":self.counts.orders,"visitedNodePairs":self.counts.visited,"farClusterPairs":self.counts.far,"nearTiles":self.counts.near,"exactPairs":self.counts.exact,"zeroBlocks":self.counts.zero,"boundedOmittedBlocks":self.counts.negligible,"nearBoundEnabled":self.near_bound,"nearBoundPolicy":"summed-per-tetra-volume-v1","activeEnvelopeTerminals":self.active_terminals,"maximumMomentDegreeHistogram":mh,"maximumLocalDegreeHistogram":lh,"m2lScalarContractionsPerAction":self.counts.m2l,"shiftStencilApplicationsPerAction":shifts})
     }
 }
 
@@ -972,6 +1019,67 @@ pub fn resistive_goals(
 #[cfg(test)]
 mod classification_power_tests {
     use super::*;
+    use crate::extraction::local::volume_current;
+
+    #[test]
+    fn negligible_duplicate_tetra_bounds_enclose_unpruned_actions() {
+        use std::collections::BTreeMap;
+        let start = Instant::now();
+        let wall = Duration::from_secs(120);
+        let tetra = [[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];
+        let geometry = vec![tetra, tetra];
+        let cell = |i| volume_current::Cell { mesh_cell: i, potentials: [0,1,2,3], incidence: [[0.;3];4], density_per_amp_m2: 1e6, resistance_ohm: 1. };
+        let space = Space { mesh_nodes: vec![vec![];4], node_potential: BTreeMap::new(), cells: vec![cell(0),cell(1)], components: vec![vec![0,1,2,3]], planned_bytes: 0 };
+        let budget = AllocationBudget { max_bytes: 64*1024*1024, max_nodes: 1000, max_tetrahedra: 1000 };
+        let tree = Operator::new(&geometry, 4, 1, 0.2, 0, budget, start, wall).unwrap();
+        let pair = BoundedPairs::new_with_scalar(geometry.clone(), 12, 4, 4, start, wall).unwrap();
+        let (shape, _) = tree.ensure_geometry(&geometry).unwrap();
+        let columns = vec![vec![1.,-0.5,0.25,0.5,0.25,-0.125]];
+        let goal = 1.;
+        let mut plan = Plan::new_with_policy(&tree, &shape, &space, &columns, &[goal], true).unwrap();
+        plan.cover_cached = false;
+        plan.near_bound = false;
+        let (reference, _) = plan.apply(&pair, &space, &columns[0], goal).unwrap();
+        assert!(reference.iter().any(|v|v.abs()>0.));
+        plan.near_bound = true;
+        assert!(matches!(plan.decide(Pair { a: 0, b: 0 }), Some(Decision::Negligible)));
+        let (action, bounds) = plan.apply(&pair, &space, &columns[0], goal).unwrap();
+        for i in 0..action.len() { assert!((action[i]-reference[i]).abs() <= bounds[i]); }
+        let mut cover = Vec::new();
+        plan.walk(None, |pair, decision| { cover.push((pair, decision)); Ok(()) }).unwrap();
+        plan.cover = cover;
+        plan.cover_cached = true;
+        let (cached_action, cached_bounds) = plan.apply(&pair, &space, &columns[0], goal).unwrap();
+        assert_eq!(cached_action, action);
+        assert_eq!(cached_bounds, bounds);
+        plan.phi[0] = Interval { lo: 0., hi: f64::INFINITY };
+        assert!(!matches!(plan.decide(Pair { a: 0, b: 0 }), Some(Decision::Negligible)));
+        let mut strong = Plan::new_with_policy(&tree, &shape, &space, &columns, &[1e-30], true).unwrap();
+        strong.near_bound = true;
+        assert!(!matches!(strong.decide(Pair { a: 0, b: 0 }), Some(Decision::Negligible)));
+    }
+
+    #[test]
+    #[ignore = "requires P7_MAGNETIC_NEAR_BOUND=1 in an isolated process"]
+    fn optin_chunked_omission_provenance() {
+        use std::collections::BTreeMap;
+        assert_eq!(std::env::var("P7_MAGNETIC_NEAR_BOUND").unwrap(),"1");
+        let tetra=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];
+        let geometry=vec![tetra,tetra];let start=Instant::now();let wall=Duration::from_secs(30);
+        let cell=|i|volume_current::Cell{mesh_cell:i,potentials:[0,1,2,3],incidence:[[0.;3];4],density_per_amp_m2:1e6,resistance_ohm:1.};
+        let space=Space{mesh_nodes:vec![vec![];4],node_potential:BTreeMap::new(),cells:vec![cell(0),cell(1)],components:vec![vec![0,1,2,3]],planned_bytes:0};
+        let budget=AllocationBudget{max_bytes:64*1024*1024,max_nodes:1000,max_tetrahedra:1000};
+        let tree=Operator::new(&geometry,4,1,0.2,0,budget,start,wall).unwrap();
+        let pair=BoundedPairs::new_with_scalar(geometry,12,4,0,start,wall).unwrap();
+        let columns=vec![vec![1.,0.,0.,0.5,0.,0.],vec![0.1,0.,0.,0.05,0.,0.]];
+        let (actions,bounds,certificate)=tree.batch_chunked(&pair,&space,&columns,&[1.,1.],1).unwrap();
+        assert!(actions.iter().flatten().all(|v|*v==0.));
+        assert!(bounds.iter().flatten().all(|v|*v>0.&&*v<=1.));
+        assert_eq!(certificate["boundedOmittedBlocks"],2);
+        assert_eq!(certificate["nearBoundEnabled"],true);
+        assert_eq!(certificate["nearBoundPolicy"],"summed-per-tetra-volume-v1");
+        assert_eq!(certificate["zeroBlocks"],0);
+    }
 
     #[test]
     fn incremental_classification_power_matches_fold_bits() {

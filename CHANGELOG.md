@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add opt-in goal-bounded near/self omission (`P7_MAGNETIC_NEAR_BOUND=1`) using summed per-tetrahedron volume-potential bounds, including overlapping sources. Propagate omitted contributions into action uncertainty, distinguish them from exact zeros in certificates, and isolate response-cache identity. STM32 coverage drops planned near pairs by only about 1.55%; keep the mode disabled by default. No completed extraction or case-matrix acceptance is claimed.
+
 - Add a private budgeted mixed magnetic Gram for uniform section cells and local tetrahedra, retaining section/event mutuals and one physical shared return. Release controls cover independent volume comparison, reciprocal cross integration, axial partitions, duplicate geometry, energy and resource admission. This is magnetic coupling infrastructure, not a connected channel model or production dispatch.
 
 - Add a private finite-axial magnetic primitive integrating both longitudinal coordinates analytically, plus a constant-profile signed-fan self/cross rule. Two signals share one physical return in the Gram control; refined prism comparisons and axial split invariance pass. This is an experimental operator foundation with convergence estimates, not production dispatch or full-board acceptance.

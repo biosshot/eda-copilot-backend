@@ -69,6 +69,22 @@ test('section current hints have isolated response cache identity', () => {
   }
 });
 
+test('bounded near omission has isolated response cache identity', () => {
+  const dir=mkdtempSync(join(tmpdir(),'p7-near-bound-'));
+  const before=process.env.P7_MAGNETIC_NEAR_BOUND;
+  try {
+    const cache=new LocalModelCache(dir);
+    const run=()=>cachedBoardFoilReport(cache,'near-control',problem,r=>mock(r));
+    delete process.env.P7_MAGNETIC_NEAR_BOUND;const baseline=run();
+    process.env.P7_MAGNETIC_NEAR_BOUND='1';assert.notEqual(run().cache?.key,baseline.cache?.key);
+    assert.equal(run().cache?.status,'memory');
+    process.env.P7_MAGNETIC_NEAR_BOUND='0';assert.equal(run().cache?.key,baseline.cache?.key);
+  } finally {
+    if(before===undefined)delete process.env.P7_MAGNETIC_NEAR_BOUND;else process.env.P7_MAGNETIC_NEAR_BOUND=before;
+    rmSync(dir,{recursive:true,force:true});
+  }
+});
+
 test('magnetic batch partition policy separates cached numerical certificates', () => {
   const dir=mkdtempSync(join(tmpdir(),'p7-magnetic-batches-'));
   const before=process.env.P7_MAGNETIC_BATCH_COLUMNS;
@@ -159,6 +175,17 @@ test('automatic partition policy reaches native preparation and exact cache with
     };
     assert.doesNotThrow(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>chunked(input)));
     assert.throws(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>chunked(input,true)),/CHANNEL_FOIL_EVIDENCE/);
+    const bounded=(input:BoardFoilProblem,bad?:'disabled'|'sum'|'policy')=>{
+      const value=chunked(input);const cover=(value.provenance.magneticOperator as any).basisCover;
+      Object.assign(cover,{nearBoundEnabled:true,boundedOmittedBlocks:3,nearBoundPolicy:'summed-per-tetra-volume-v1'});
+      cover.chunkCertificates.forEach((c:any,i:number)=>Object.assign(c,{nearBoundEnabled:true,boundedOmittedBlocks:i+1,nearBoundPolicy:'summed-per-tetra-volume-v1'}));
+      if(bad==='disabled')cover.nearBoundEnabled=false;
+      if(bad==='sum')cover.boundedOmittedBlocks=4;
+      if(bad==='policy')cover.nearBoundPolicy='unknown';
+      return value;
+    };
+    assert.doesNotThrow(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,bounded));
+    for(const bad of ['disabled','sum','policy'] as const) assert.throws(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>bounded(input,bad)),/CHANNEL_FOIL_EVIDENCE/);
     assert.doesNotThrow(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>{
       const value=tree(input),operator=value.provenance.magneticOperator!;
       if(operator.policy==='certified-adaptive-harmonic-v1')Object.assign(operator.basisCover,{

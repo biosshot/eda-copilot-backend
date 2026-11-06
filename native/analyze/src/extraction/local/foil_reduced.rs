@@ -2284,6 +2284,9 @@ fn compact_magnetic_certificate(cover: &serde_json::Value) -> serde_json::Value 
         "farClusterPairs",
         "exactPairs",
         "zeroBlocks",
+        "boundedOmittedBlocks",
+        "nearBoundEnabled",
+        "nearBoundPolicy",
         "activeEnvelopeTerminals",
         "actionWallSeconds",
     ] {
@@ -2297,13 +2300,17 @@ fn compact_cover_keeps_optional_partition_metadata_absent_or_complete() {
     let compact=compact_magnetic_certificate(&common);
     assert!(compact.get("batchColumns").is_none());
     assert!(compact.get("chunkCertificates").is_none());
+    assert!(compact.get("nearBoundPolicy").is_none());
     let mut chunked=common;
     chunked["batchColumns"]=serde_json::json!(1);
     chunked["chunkCount"]=serde_json::json!(2);
     chunked["coverAggregation"]=serde_json::json!("sum-of-sequential-chunk-covers");
     chunked["chunkCertificates"]=serde_json::json!([{"rhsColumns":1},{"rhsColumns":1}]);
+    chunked["nearBoundEnabled"]=serde_json::json!(true);
+    chunked["nearBoundPolicy"]=serde_json::json!("summed-per-tetra-volume-v1");
+    chunked["boundedOmittedBlocks"]=serde_json::json!(2);
     let compact=compact_magnetic_certificate(&chunked);
-    for key in ["batchColumns","chunkCount","coverAggregation","chunkCertificates"] {
+    for key in ["batchColumns","chunkCount","coverAggregation","chunkCertificates","nearBoundEnabled","nearBoundPolicy","boundedOmittedBlocks"] {
         assert_eq!(compact[key],chunked[key]);
     }
 }

@@ -22,6 +22,11 @@ function validateMagneticCover(cover:Omit<AnalysisMagneticCertificate,'policy'>|
     !Number.isFinite(cover.actionWallSeconds)||cover.actionWallSeconds<0)
   fail('missing or inconsistent adaptive common-cover action certificate');
  const batch=cover as import('../../native/analyze/index.js').AnalysisMagneticBasisCover;
+ if(cover.nearBoundEnabled!==undefined||cover.boundedOmittedBlocks!==undefined||cover.nearBoundPolicy!==undefined) {
+  if(typeof cover.nearBoundEnabled!=='boolean'||!count(cover.boundedOmittedBlocks)||
+     cover.nearBoundPolicy!=='summed-per-tetra-volume-v1'||(!cover.nearBoundEnabled&&cover.boundedOmittedBlocks!==0))
+   fail('invalid bounded near-omission provenance');
+ }
  if(batch.chunkCertificates!==undefined || batch.chunkCount!==undefined || batch.batchColumns!==undefined || batch.coverAggregation!==undefined) {
   if(!Array.isArray(batch.chunkCertificates)||!count(batch.batchColumns)||batch.batchColumns<1||batch.batchColumns>64||batch.coverAggregation!=='sum-of-sequential-chunk-covers'||batch.chunkCount!==batch.chunkCertificates.length||batch.chunkCount<2) fail('invalid magnetic chunk provenance');
   let offset=0;
@@ -32,6 +37,8 @@ function validateMagneticCover(cover:Omit<AnalysisMagneticCertificate,'policy'>|
    offset+=chunk.rhsColumns;
   }
   if(offset!==rhs||(['farClusterPairs','exactPairs','zeroBlocks'] as const).some(key=>batch.chunkCertificates!.reduce((sum,c)=>sum+c[key],0)!==cover[key])) fail('inconsistent magnetic chunk totals');
+  if(cover.nearBoundEnabled!==undefined&&(batch.chunkCertificates.some(c=>c.nearBoundEnabled!==cover.nearBoundEnabled||c.nearBoundPolicy!==cover.nearBoundPolicy)||
+     batch.chunkCertificates.reduce((sum,c)=>sum+(c.boundedOmittedBlocks??0),0)!==cover.boundedOmittedBlocks)) fail('inconsistent near-omission chunk totals');
  }
 }
 

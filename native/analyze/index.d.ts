@@ -243,6 +243,8 @@ export interface AnalysisMagneticCertificate {
     absoluteActionGoals: number[]; maximumAbsoluteErrorBounds: number[];
     chosenOrderHistogram: number[]; farClusterPairs: number; exactPairs: number;
     zeroBlocks: number; activeEnvelopeTerminals: number; actionWallSeconds: number;
+    nearBoundEnabled?: boolean; boundedOmittedBlocks?: number;
+    nearBoundPolicy?: 'summed-per-tetra-volume-v1';
 }
 export interface AnalysisMagneticBasisCover extends Omit<AnalysisMagneticCertificate, 'policy'> {
     modelRevision: number; rhsColumns: number; visitedNodePairs: number; nearTiles: number;
