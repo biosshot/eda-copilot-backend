@@ -22,7 +22,7 @@ struct Profile {
 impl Profile {
     fn new(phase: &'static str, axis: Option<usize>) -> Self {
         let trace = std::env::var_os("P7_MAGNETIC_TRACE");
-        let profile = std::env::var_os("P7_MAGNETIC_PROFILE");
+        let profile = std::env::var_os("P7_MAGNETIC_PHASE_PROFILE");
         let enabled = profile_enabled(trace.as_deref(), profile.as_deref());
         static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         let result = Self { id: if enabled {NEXT_ID.fetch_add(1,std::sync::atomic::Ordering::Relaxed)} else {0},

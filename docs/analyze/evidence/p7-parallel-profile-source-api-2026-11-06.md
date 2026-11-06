@@ -1,6 +1,6 @@
 # Parallel profile and explicit source candidate state
 
-`P7_MAGNETIC_PROFILE=1` independently enables the existing adaptive phase
+`P7_MAGNETIC_PHASE_PROFILE=1` independently enables the existing adaptive phase
 profile, retaining the historical `P7_MAGNETIC_TRACE` record prefix. Unlike
 `TRACE=1`, it does not enable serial near-kernel diagnostics. Completed plan
 summaries record traversal counts, elapsed planning time, cache enabled state,
@@ -15,6 +15,19 @@ certificates after removing only timing fields, and an actually configured
 four-worker pool with profile enabled. It passes under an external 30 s /
 2048 MiB supervisor in 0.250 s in
 `debugging/p7-parallel-profile-isolation-controls/`.
+
+The first proposed diagnostic name conflicted with the existing TypeScript
+`P7_MAGNETIC_PROFILE=baseline/compact-v1` compute policy. The 10 GiB attempt
+was refused before launch by commit-headroom admission; the 8 GiB attempt
+stopped in configuration validation before any numeric solve. These artifacts
+remain in `debugging/p7-phase-profile-cover-cache-stm32-250s-10g/` and `...-8g/`.
+The diagnostic is renamed `P7_MAGNETIC_PHASE_PROFILE`; the compute-policy
+contract is unchanged. The planning-only configuration preflight passes with
+zero solves in `debugging/p7-phase-profile-config-preflight/`. Renamed isolated
+off/on controls again pass in 0.250 s in
+`debugging/p7-phase-profile-renamed-isolation/`.
+The corrected native addon build passes in
+`debugging/p7-phase-profile-renamed-native-build.log` (`BUILD_EXIT=0`).
 
 ## Callable source-only shared-return candidate
 

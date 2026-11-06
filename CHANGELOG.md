@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Name the diagnostic switch `P7_MAGNETIC_PHASE_PROFILE` to preserve the existing `P7_MAGNETIC_PROFILE=baseline/compact-v1` compute-policy contract. Planning-only configuration and isolated four-worker profile controls pass; preserve the rejected preflight/configuration attempts separately from actual numerical runs.
+
 - Add a parallel-compatible adaptive magnetic profile and plan/cache summaries, verified with identical four-worker action/bound bits and equivalent certificates. Expose a source-only compensated candidate API with original assembled and physical audits; four shared-return cases pass, altered/stamped-state controls refuse. Captured adaptive orientation reversal is about 357x slower and is not selected. Automatic shared-return routing and all-family acceptance remain open.
 
 - Defer direct volume cubatures in the opt-in axial path until their selected fallback needs them; eager/lazy direct bits agree and preparation-only replay improves 3.067x, without a board speedup claim. Use original tetrahedra for local grouped section interactions and retain separated prism interactions. A six-prism shared-return control passes unchanged physical gates at 1/10 kHz against volume order 16; order-8 refusal and all-case/automatic-route limitations remain explicit.

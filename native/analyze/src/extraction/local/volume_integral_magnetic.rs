@@ -971,7 +971,7 @@ mod bounded_pair_tests {
         let space=Space {mesh_nodes:vec![vec![];4],node_potential:BTreeMap::new(),cells:(0..2).map(|i|volume_current::Cell {mesh_cell:i,potentials:[0,1,2,3],incidence:[[0.;3];4],density_per_amp_m2:1e6,resistance_ohm:1.}).collect(),components:vec![vec![0,1,2,3]],planned_bytes:0};
         let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:1000,max_tetrahedra:1000};
         let op=Streamed::new(&mesh,&space,12,0,budget,Instant::now(),Duration::from_secs(60)).unwrap();
-        if std::env::var_os("P7_MAGNETIC_PROFILE").as_deref()==Some(std::ffi::OsStr::new("1")) {
+        if std::env::var_os("P7_MAGNETIC_PHASE_PROFILE").as_deref()==Some(std::ffi::OsStr::new("1")) {
             assert!(std::env::var_os("P7_MAGNETIC_TRACE").is_none());
             assert_eq!(op.pair.pool.as_ref().expect("profile must preserve parallel workers").workers.len(),4);
         }
