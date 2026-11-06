@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Preserve uniform section representations per current mode when magnetic enrichment adds nonuniform modes. Reuse scalar interactions in a fixed per-group-pair cache, evaluate symmetric pairs once, and reduce mixed terms to original tetrahedra. Ten release controls pass, including physical adapter section retention; original charge/KVL admission and production routing remain incomplete.
+
 - Diagnose mixed-model KVL refusal against the independent original volume operator: the same basis also fails there. Magnetic enrichment reduces a measured residual but removes every section under the current all-mode uniformity rule; preserve this negative control and prioritize per-mode representation. Original admission gates remain unchanged.
 
 - Connect the private mixed section/tetrahedron magnetic Gram to the existing reduced R/L/C assembly, preserving resistance, charge, contacts and physical copper coverage. Corrected dielectric-halo controls compare 50-ohm loaded responses at 1/10 kHz within 1.68e-5; original-space KVL still refuses the candidate. No production dispatch, full-board speedup or case-matrix acceptance is claimed.

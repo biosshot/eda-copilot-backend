@@ -46,15 +46,28 @@ fn cells(mesh:&LayeredMesh,space:&Space,modes:&[Vec<f64>],groups:&[Group],budget
  for (i,covered) in used.iter().enumerate() {check()?;if !covered {out.push(local(i)?);}}
  Ok(out)
 }
+fn physical_groups(mesh:&LayeredMesh,space:&Space,modes:&[Vec<f64>],groups:&[Group],budget:AllocationBudget,start:Instant,limit:Duration)->Result<Vec<hybrid_section_magnetic::PhysicalGroup>> {
+ // Reuse the existing complete-coverage, slab topology and ownership admission.
+ // Discard its all-mode representation choice, retaining the original cells.
+ drop(cells(mesh,space,modes,groups,budget,start,limit)?);
+ let mut original:Vec<_>=cells(mesh,space,modes,&[],budget,start,limit)?.into_iter().map(Some).collect();
+ let mut out=Vec::new();
+ for g in groups {
+  let tetrahedra=g.cells.iter().map(|&i|original.get_mut(i).and_then(Option::take).ok_or_else(||error("HYBRID_INPUT","duplicate or invalid physical group"))).collect::<Result<Vec<_>>>()?;
+  out.push(hybrid_section_magnetic::PhysicalGroup::from_validated_adapter(Some(g.prism.clone()),tetrahedra,modes.len(),budget,start,limit)?);
+ }
+ for c in original.into_iter().flatten() {out.push(hybrid_section_magnetic::PhysicalGroup::from_validated_adapter(None,vec![c],modes.len(),budget,start,limit)?);}
+ Ok(out)
+}
 pub(super) fn model(mesh:&LayeredMesh,space:&Space,basis:&Basis,groups:&[Group],field:&dyn ElectricApply,ports:&[[usize;2]],order:usize,budget:AllocationBudget,limit:Duration)->Result<Model> {
  let start=Instant::now(); let ni=basis.current.len(); let nv=basis.voltage.len(); let n=space.cells.len();
  // Reserve persistent basis, adapter cells, matrix copies and full-space gradients
  // before asking either downstream stage to admit its own working set.
  let reserve=ni.checked_mul(n).and_then(|x|x.checked_mul(24)).and_then(|x|x.checked_add(nv.checked_mul(space.potential_count())?.checked_mul(8)?)).and_then(|x|x.checked_add(nv.checked_mul(space.current_count())?.checked_mul(8)?)).and_then(|x|x.checked_add(n.checked_mul(512)?)).and_then(|x|x.checked_add(n.checked_mul(ni)?.checked_mul(24)?)).and_then(|x|x.checked_add(ni.checked_mul(ni)?.checked_mul(24)?)).ok_or_else(||error("MEMORY_LIMIT","hybrid model plan overflow"))?;
  budget.check(reserve)?; let remaining=AllocationBudget{max_bytes:budget.max_bytes-reserve,..budget};
- let cells=cells(mesh,space,&basis.current,groups,remaining,start,limit)?;
+ let groups=physical_groups(mesh,space,&basis.current,groups,remaining,start,limit)?;
  let left=limit.checked_sub(start.elapsed()).ok_or_else(||error("DEADLINE","hybrid adapter deadline exceeded"))?;
- let mut gram=hybrid_section_magnetic::gram(&cells,ni,order,remaining,left)?;
+ let mut gram=hybrid_section_magnetic::grouped_gram(&groups,ni,order,remaining,left)?;
  scale_henries(&mut gram);
  basis.model_with_inductance(space,field,&gram,ports,remaining)
 }
@@ -147,6 +160,9 @@ fn scale_henries(gram:&mut [Vec<f64>]) {
    let supports=cells(&mesh,&space,&basis.current,&groups,b,Instant::now(),Duration::from_secs(30)).unwrap();
    let sections=supports.iter().filter(|c|matches!(c.geometry,Geometry::Section(_))).count();let locals=supports.len()-sections;
    eprintln!("round={round} current_modes={} sections={sections} locals={locals}",basis.current.len());
+   let modal_groups=physical_groups(&mesh,&space,&basis.current,&groups,b,Instant::now(),Duration::from_secs(30)).unwrap();
+   let retained=modal_groups.iter().filter(|g|matches!(g.support(0).unwrap(),hybrid_section_magnetic::ModeSupport::Section(_, _))).count();
+   eprintln!("round={round} mode0 sections retained={retained}");assert_eq!(retained,2);
    let old=basis.model(&space,&field,&magnetic,&ports,b).unwrap();let n=old.potential_nodes.len()+old.current_dofs.len();
    for hz in [1000.,10000.] {for drive in 0..2 {
     let mut sys=coupled::System::compile(&old,4,None).unwrap();let mut amps=[0.;4];amps[2*drive]=1.;amps[2*drive+1]=-1.;let mut rhs=sys.port_rhs(&amps);rhs.resize(2*n,0.);
