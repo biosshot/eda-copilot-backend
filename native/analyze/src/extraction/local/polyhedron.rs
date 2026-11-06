@@ -855,6 +855,8 @@ pub struct TetraCubature {
 #[derive(Clone, Copy)]
 struct AxialLine { origin: [f64; 3], center: [f64; 3], half: f64, weight: f64 }
 
+pub(super) struct AxialDetail { pub value:Option<(f64,f64)>, pub reason:Option<usize>, pub coarse:Option<f64>, pub fine:Option<f64> }
+impl AxialDetail { fn fallback(reason:usize,coarse:Option<f64>,fine:Option<f64>)->Self { Self { value:None,reason:Some(reason),coarse,fine } } }
 impl TetraCubature {
     pub fn new(tetra: [[f64; 3]; 4], order: usize) -> Result<Self> {
         let moments = tetra_far_moments(tetra)?;
@@ -908,18 +910,21 @@ impl TetraCubature {
     }
     /// Experimental estimate; outer refinement and roundoff are not certified error bounds.
     pub fn try_axial_integral(&self, other: &Self) -> Result<Option<(f64,f64)>> {
-        let (Some(a),Some(b),Some(ar),Some(br))=(&self.axial_lines,&other.axial_lines,&self.axial_refined,&other.axial_refined) else {return Ok(None)};
-        let Some((coarse,_))=Self::axial_lines_integral(a,b)? else {return Ok(None)};
-        let Some((fine,err))=Self::axial_lines_integral(ar,br)? else {return Ok(None)};
-        if (coarse-fine).abs()>1e-10*fine {return Ok(None)}
-        Ok(Some((fine,err)))
+        Ok(self.try_axial_detailed(other)?.value)
     }
-    fn axial_lines_integral(a: &[AxialLine], b: &[AxialLine]) -> Result<Option<(f64,f64)>> {
-        if a.len()!=b.len() {return Ok(None)}
+    pub(super) fn try_axial_detailed(&self, other: &Self) -> Result<AxialDetail> {
+        let (Some(a),Some(b),Some(ar),Some(br))=(&self.axial_lines,&other.axial_lines,&self.axial_refined,&other.axial_refined) else {return Ok(AxialDetail::fallback(0,None,None))};
+        let coarse=match Self::axial_lines_integral(a,b) { Ok(v)=>v, Err(reason)=>return Ok(AxialDetail::fallback(reason,None,None)) };
+        let (fine,err)=match Self::axial_lines_integral(ar,br) { Ok(v)=>v, Err(reason)=>return Ok(AxialDetail::fallback(reason,Some(coarse.0),None)) };
+        if (coarse.0-fine).abs()>1e-10*fine {return Ok(AxialDetail::fallback(3,Some(coarse.0),Some(fine)))}
+        Ok(AxialDetail { value:Some((fine,err)), reason:None, coarse:Some(coarse.0), fine:Some(fine) })
+    }
+    fn axial_lines_integral(a: &[AxialLine], b: &[AxialLine]) -> std::result::Result<(f64,f64),usize> {
+        if a.len()!=b.len() {return Err(2)}
         let mut total=super::accurate::Sum::default(); let mut error_sum=0.;
         for x in a { let mut row=0.; for y in b {
             let d: [f64;3]=std::array::from_fn(|i| super::accurate::Sum::from(x.origin[i]).sub(super::accurate::Sum::from(y.origin[i])).add(super::accurate::Sum::from(x.center[i])).sub(super::accurate::Sum::from(y.center[i])).value()); let r=norm(d); let q=(x.half+y.half)/r*(1.+16.*f64::EPSILON);
-            if !r.is_finite() || r<=0. || !q.is_finite() || q>0.25 {return Ok(None)}
+            if !r.is_finite() || r<=0. || !q.is_finite() {return Err(2)} if q>0.25 {return Err(1)}
             let aa=x.half/r; let bb=y.half/r; let z=d[2]/r;
             let mut p0=1.; let mut p1=z; let mut sum=1.; let mut abs_sum=1.; let mut tail=q*q/(1.-q*q); let mut degree=0usize;
             let u=(aa+bb).powi(2); let v=(aa-bb).powi(2); let mut moment_poly=1.; let mut vpower=1.; let mut qpower=q*q;
@@ -930,10 +935,10 @@ impl TetraCubature {
                 }
             }
             let allowance=(tail+128.*f64::EPSILON*(degree+1) as f64*abs_sum)/r;
-            let avg=sum/r; if !avg.is_finite() || avg<=0. || !allowance.is_finite() || allowance>1e-12*avg {return Ok(None)}
+            let avg=sum/r; if !avg.is_finite() || avg<=0. || !allowance.is_finite() || allowance>1e-12*avg {return Err(2)}
             row+=y.weight*avg; error_sum+=x.weight*y.weight*allowance;
         } total=total.add(super::accurate::Sum::from(x.weight*row)); }
-        let value=total.value(); if !value.is_finite() || value<=0. || !error_sum.is_finite() {return Ok(None)} Ok(Some((value,error_sum)))
+        let value=total.value(); if !value.is_finite() || value<=0. || !error_sum.is_finite() {return Err(2)} Ok((value,error_sum))
     }
     pub fn separation_q(&self, other: &Self) -> f64 {
         (self.radius + other.radius) / norm(sub(self.center, other.center)) * (1. + 64. * f64::EPSILON)
@@ -1486,6 +1491,18 @@ mod axial_tetra_tests {
 mod axial_line_more_tests {
     use super::*;
     fn one(z:f64,half:f64)->TetraCubature { TetraCubature {center:[0.,0.,z],radius:half,points:vec![],weights:vec![],axial_lines:Some(vec![AxialLine{origin:[0.,0.,z],center:[0.;3],half,weight:1.}]),axial_refined:Some(vec![AxialLine{origin:[0.,0.,z],center:[0.;3],half,weight:1.}])} }
+    #[test] fn detailed_reasons_and_wrapper_equivalence() {
+        let a=one(0.,0.2); let b=one(3.,0.1);
+        let normal=a.try_axial_detailed(&b).unwrap();
+        assert_eq!(normal.value.unwrap().0.to_bits(),a.try_axial_integral(&b).unwrap().unwrap().0.to_bits());
+        let mut unsupported=one(3.,0.1); unsupported.axial_lines=None;
+        let mut invalid=one(3.,0.1); invalid.axial_lines.as_mut().unwrap()[0].origin[0]=f64::NAN;
+        let mut outer=one(3.,0.1); outer.axial_refined.as_mut().unwrap()[0].origin[2]+=0.1;
+        for (other,reason) in [(&unsupported,0),(&one(0.1,0.2),1),(&invalid,2),(&outer,3)] {
+            let detail=a.try_axial_detailed(other).unwrap(); assert_eq!(detail.reason,Some(reason));
+            assert!(detail.value.is_none()); assert!(a.try_axial_integral(other).unwrap().is_none());
+        }
+    }
     #[test] fn axial_line_disjoint_and_extremes() {
         let a=one(0.,0.2); let b=one(3.,0.1); let (v,e)=a.try_axial_integral(&b).unwrap().unwrap();
         let f=|s:f64| s*s.abs().ln()-s.abs();

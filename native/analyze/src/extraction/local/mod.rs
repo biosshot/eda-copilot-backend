@@ -87,3 +87,5 @@ mod axial_magnetic;
 mod hybrid_section_magnetic;
 
 mod hybrid_section_model;
+
+mod line_pair;

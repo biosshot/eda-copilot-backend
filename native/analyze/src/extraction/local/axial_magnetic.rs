@@ -4,6 +4,10 @@ use super::{error, Result};
 use super::prism::{GaussRule, Prism};
 
 pub(super) fn axial_kernel(rho: f64, a: [f64; 2], b: [f64; 2]) -> Result<f64> {
+    axial_kernel_with_scale(rho,a,b).map(|(value,_)|value)
+}
+
+pub(super) fn axial_kernel_with_scale(rho: f64, a: [f64; 2], b: [f64; 2]) -> Result<(f64,f64)> {
     if !rho.is_finite() || rho <= 0. || !a.iter().chain(b.iter()).all(|x| x.is_finite()) || a[1] <= a[0] || b[1] <= b[0] {
         return Err(error("AXIAL_INPUT", "positive separation and finite ordered endpoints required; rho=0 requires singular outer integration"));
     }
@@ -14,7 +18,7 @@ pub(super) fn axial_kernel(rho: f64, a: [f64; 2], b: [f64; 2]) -> Result<f64> {
     if !value.is_finite() || value <= 0. || value <= 1e-10 * scale {
         return Err(error("AXIAL_UNRESOLVED", "endpoint cancellation or range; use full solver"));
     }
-    Ok(value)
+    Ok((value,scale))
 }
 
 /// P1 nodal densities, with two axial dimensions integrated analytically.

@@ -152,3 +152,31 @@ heavy attempt, classify axial fallback reasons and retain bounded exact geometry
 samples for offline reproduction. Vertical integration alone leaves long-XY
 anisotropy; general longest-edge integration is a candidate requiring separate
 mathematical and numerical validation, not an accepted implementation.
+
+## Fallback diagnostics
+
+The detailed API preserves the existing candidate/wrapper result and records
+four refusal categories: unsupported geometry, inner-series q cap,
+range/roundoff-allowance refusal, and outer n/n+2 convergence. Parallel workers
+retain at most one exact-geometry sample per category. The parent emits at most
+four `P7_MAGNETIC_AXIAL_FALLBACK` records per operator, selecting representative
+workers rather than guaranteeing the earliest traversal pair. Repeated reports
+do not duplicate a category. Geometry is transported as original f64 bits with
+indices, order and available coarse/fine/change/limit values.
+
+Metadata reservation increases conservatively to 8192 bytes per worker; a size
+control checks the bound. Logging is best effort and cannot fail the numerical
+calculation on an output error. Samples and counters require the parallel path;
+they do not alter tolerance, cached response identity policy, or physical input.
+
+The combined external 120-second/2048 MiB supervisor passed thirty focused
+controls in 9.188 s, including forced categories, unchanged wrapper values,
+single-emission latch, axial and original actions, parallel bits, KVL, full R/L/C
+controls and isolated chunk metadata. Sampled peak private/RSS were
+21,688,320 / 34,222,080 B (20 ms lower bounds). Local output:
+`debugging/p7-axial-reasons-line-final-controls/`. The native addon build also
+passed in `debugging/p7-axial-reasons-line-native-build.log`.
+
+The actual board fallback distribution remains to be measured. The next board
+attempt is diagnostic and shorter than a full acceptance run; it must not be
+reported as progress toward the ten-minute target merely because its timer ends.

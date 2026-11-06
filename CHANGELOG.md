@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Classify axial quadrature fallbacks and retain bounded exact-geometry examples in nonfatal parallel logs. Add a standalone guarded general segment-pair primitive for future longest-edge integration, with explicit estimated-error scope. Thirty supervised controls and the native addon build pass; no new board speedup or case acceptance is claimed.
+
 - Measure the axial STM32 prefix: 150,528 successful pairs by the 243.093 s native-deadline exit, versus 134,528 previously. About 57% of separated calls use the new kernel; no complete channel or precise full-board speedup is established. Preserve the initial commit-headroom refusal and the actual 12 GiB tree-cap run; all physical source geometry remains.
 
 - Add opt-in `P7_MAGNETIC_AXIAL_TETS=1` vertical-edge tetrahedron quadrature for streamed order-6/8 separated pairs, with lazy bounded preparation, generic fallback and isolated cache identity. Preserve explicit non-certified near-quadrature metadata through reports and validation. A native channel control exercises the new path and passes original KVL gates; full-board speedup and case-matrix acceptance remain unverified.
