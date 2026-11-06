@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Diagnose mixed-model KVL refusal against the independent original volume operator: the same basis also fails there. Magnetic enrichment reduces a measured residual but removes every section under the current all-mode uniformity rule; preserve this negative control and prioritize per-mode representation. Original admission gates remain unchanged.
+
 - Connect the private mixed section/tetrahedron magnetic Gram to the existing reduced R/L/C assembly, preserving resistance, charge, contacts and physical copper coverage. Corrected dielectric-halo controls compare 50-ohm loaded responses at 1/10 kHz within 1.68e-5; original-space KVL still refuses the candidate. No production dispatch, full-board speedup or case-matrix acceptance is claimed.
 
 - Add opt-in goal-bounded near/self omission (`P7_MAGNETIC_NEAR_BOUND=1`) using summed per-tetrahedron volume-potential bounds, including overlapping sources. Propagate omitted contributions into action uncertainty, distinguish them from exact zeros in certificates, and isolate response-cache identity. STM32 coverage drops planned near pairs by only about 1.55%; keep the mode disabled by default. No completed extraction or case-matrix acceptance is claimed.

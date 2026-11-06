@@ -117,6 +117,48 @@ fn scale_henries(gram:&mut [Vec<f64>]) {
 
  }
 
+ #[test]
+ #[ignore = "bounded diagnostic: original-space basis enrichment"]
+ fn physical_basis_enrichment_diagnostic() {
+  use super::super::{volume_field,volume_reduction,volume_integral_magnetic,section_return};
+  use crate::electrical::{coupled,Counters};
+  let b=AllocationBudget{max_bytes:256*1024*1024,max_nodes:1000,max_tetrahedra:1000};
+  let xs=[-0.001,0.,0.001,0.002];let ys=[-0.001,0.,0.001,0.002,0.003,0.004,0.005,0.006];
+  let xy:Vec<_>=ys.iter().flat_map(|&y|xs.iter().map(move |&x|[x,y])).collect();
+  let triangles:Vec<_>=(0..7).flat_map(|y|(0..3).flat_map(move |x|{let a=4*y+x;[[a,a+1,a+5],[a,a+5,a+4]]})).collect();
+  let mut edges=vec![];for x in 0..3 {edges.extend([[x,x+1],[28+x,29+x]]);}for y in 0..7 {edges.extend([[4*y,4*y+4],[4*y+3,4*y+7]]);}
+  let dielectric=||Material::Dielectric{label:"air".into(),epsilon_r:1.};
+  let mat:Vec<_>=(0..7).flat_map(|y|(0..3).flat_map(move |x|{let m=if x==1 && [1,3,5].contains(&y) {Material::Copper{source_ids:vec![format!("c{}",(y-1)/2)]}}else{dielectric()};[m.clone(),m]})).collect();
+  let mesh=mesh::extrude(&LayeredInput{xy_m:xy.clone(),triangles:triangles.clone(),boundary_edges:edges,z_m:vec![-0.001,0.,0.001,0.002],materials:vec![vec![dielectric();triangles.len()],mat,vec![dielectric();triangles.len()]]},b).unwrap();
+  let electrodes:Vec<Vec<usize>>=(0..3).flat_map(|c|[0.,0.001].map(|z|mesh.nodes_m.iter().enumerate().filter_map(|(i,p)|(p[2]==z && p[0]>=0. && p[0]<=0.001 && p[1]>=2.*c as f64*0.001 && p[1]<=(2*c+1) as f64*0.001).then_some(i)).collect())).collect();
+  let space=volume_current::assemble(&mesh,&vec![58e6;mesh.copper_tetrahedra.len()],&electrodes,b).unwrap();
+  let contacts:Vec<_>=electrodes.iter().enumerate().map(|(i,n)|(format!("p{i}"),space.node_potential[&n[0]])).collect();
+  let mut basis=volume_reduction::harmonic(&space,&contacts,b).unwrap();
+  let field=volume_field::Field::new(&mesh,&space,b).unwrap();
+  let magnetic=volume_integral_magnetic::Operator::new(&mesh,b,8).unwrap();
+  let groups:Vec<_>=space.cells.iter().filter_map(|c|{let t=&mesh.copper_tetrahedra[c.mesh_cell];(t.source_ids==["c0"]).then_some(t.planar_triangle)}).collect::<BTreeSet<_>>().into_iter().map(|t|Group{prism:Prism::new("c0".into(),triangles[t].map(|i|xy[i]),[0.,0.001]).unwrap(),cells:space.cells.iter().enumerate().filter_map(|(i,c)|(mesh.copper_tetrahedra[c.mesh_cell].planar_triangle==t).then_some(i)).collect()}).collect();
+  let ports=[[0,4],[1,5],[2,4],[3,5]];
+  for round in 0..=3 {
+   if round>0 {
+    use super::super::volume_magnetic::MagneticApply;
+    let bytes=space.current_count().checked_mul(basis.current.len()).and_then(|n|n.checked_mul(24)).and_then(|n|n.checked_add(space.planned_bytes)).and_then(|n|n.checked_add(magnetic.planned_bytes())).and_then(|n|n.checked_add(magnetic.scratch_bytes())).unwrap();b.check(bytes).unwrap();
+    let start=Instant::now();let added=basis.extend_magnetic(&space,&magnetic).unwrap();assert!(start.elapsed()<Duration::from_secs(30));eprintln!("magnetic enrichment round={round} added={added}");
+   }
+   let supports=cells(&mesh,&space,&basis.current,&groups,b,Instant::now(),Duration::from_secs(30)).unwrap();
+   let sections=supports.iter().filter(|c|matches!(c.geometry,Geometry::Section(_))).count();let locals=supports.len()-sections;
+   eprintln!("round={round} current_modes={} sections={sections} locals={locals}",basis.current.len());
+   let old=basis.model(&space,&field,&magnetic,&ports,b).unwrap();let n=old.potential_nodes.len()+old.current_dofs.len();
+   for hz in [1000.,10000.] {for drive in 0..2 {
+    let mut sys=coupled::System::compile(&old,4,None).unwrap();let mut amps=[0.;4];amps[2*drive]=1.;amps[2*drive+1]=-1.;let mut rhs=sys.port_rhs(&amps);rhs.resize(2*n,0.);
+    let mut injection=vec![0.;space.potential_count()];injection[contacts[2*drive].1]=1.;injection[contacts[2*drive+1].1]=-1.;injection[contacts[4].1]=-1.;injection[contacts[5].1]=1.;
+    let start=Instant::now();let result=section_return::solve_candidate(&basis,&space,&field,&magnetic,&mut sys,2.*std::f64::consts::PI*hz,&rhs,&injection,&vec![0.;injection.len()],&mut Counters::default());assert!(start.elapsed()<Duration::from_secs(30));
+    eprintln!("independent original round={round} hz={hz} drive={drive} result={:?}",result.as_ref().err());
+    if round==0 {let e=result.unwrap_err();assert!(e.starts_with("LOCAL_SECTION_RETURN_RESIDUAL:")||e.starts_with("LOCAL_SECTION_RETURN_CHARGE:"));}
+   }}
+   if sections==0 {eprintln!("no sections remain; stopping enrichment");break;}
+  }
+ }
+
 }
 
 

@@ -68,3 +68,29 @@ case-matrix acceptance is established. All case-matrix families remain pending;
 remote returns and unsupported group geometries must retain physical coverage.
 Next: identify intrinsic-basis versus operator contribution to KVL and enrich
 the representation without weakening original-space admission.
+
+## Independent-basis diagnostic
+
+The ignored release control `physical_basis_enrichment_diagnostic` subsequently
+ran in 0.187 s under a 120-second external limit. Local output is
+`debugging/hybrid_basis_enrichment.log`. It uses the independent original
+volume-integral magnetic operator, not the mixed Gram.
+
+With the original three current modes, the adapter keeps two Sections and twelve
+local tetrahedra. Original-space admission still refuses: at 1 kHz the two KVL
+residuals are 4.2437623e-8 and 2.2267506e-8, essentially the same as the mixed
+model. At 10 kHz drive 0 refuses island charge, while drive 1 refuses KVL at
+2.2267506e-7. Thus the original basis itself is insufficient; the mixed operator
+is not the sole cause of refusal.
+
+One existing magnetic enrichment round adds three current modes. For drive 1,
+KVL drops to 1.8258273e-11 at 1 kHz (scale 1.9486853e-5), and 1.8075257e-9 at
+10 kHz; both remain above the unchanged relative gate. Drive 0 refuses island
+charge at both frequencies. More importantly, all-mode uniformity makes both
+section groups fall back: zero Sections, eighteen local tetrahedra. The control
+stops there rather than declaring an all-volume enrichment a hybrid success.
+
+Next implementation: select representation per mode, retaining Sections for
+uniform modes and exact original tetrahedra for nonuniform corrections. Physical
+ownership and all mutual terms must remain intact. This diagnosis does not
+establish complete admission, speedup or case-matrix acceptance.
