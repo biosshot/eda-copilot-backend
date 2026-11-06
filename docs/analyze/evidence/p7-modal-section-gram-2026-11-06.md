@@ -83,3 +83,26 @@ full-space magnetic actions for enrichment and KVL. A fast Gram alone cannot
 remove that runtime. The next production work must accelerate those actions,
 retain complete original current/return coverage and carry the same error
 certificates, before a full STM32 comparison is meaningful.
+
+## Complete trace-field experiment
+
+The existing `DenseField::new` was tested on all six source potential coordinates
+of the same corrected-halo mesh. Its matrix has 288 bytes; general storage is
+quadratic and this experiment does not justify dense materialization for large
+PCBs. The full trace charge/energy discrepancy is 1.296e-15 and directed
+reciprocity discrepancy is zero.
+
+Materializing the complete trace does not cure passive-island charge refusal:
+both raw and dense field operators refuse drive 0 at 1/10 kHz through the
+unchanged gate. Both admit drive 1 with the independent volume magnetic operator.
+An intentional +1 microvolt passive-island constant shift produces
+2.125005e-19 C and is detected by the charge check. Thus neither a different
+storage representation nor a hidden charge floor is a demonstrated solution.
+
+The order-60 mixed magnetic model with the dense field admits 1 kHz drive 1;
+the other measured gates still refuse. The ignored diagnostic passed as an
+expected negative experiment in 0.687 s; local log
+`debugging/hybrid_dense_trace.log`. A subsequent combined external 120-second
+control run also passed all eleven hybrid tests, including this diagnostic;
+see `debugging/p7-persistent-near-final-controls/stdout.txt`. No production
+electric operator, physical gate or case-matrix status changed.

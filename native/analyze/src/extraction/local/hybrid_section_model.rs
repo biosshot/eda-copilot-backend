@@ -183,6 +183,44 @@ fn scale_henries(gram:&mut [Vec<f64>]) {
 
  }
 
+ #[test]
+ #[ignore = "bounded full-trace charge representation diagnostic"]
+ fn dense_trace_admission_diagnostic() {
+  use super::super::{volume_field,volume_reduction,volume_integral_magnetic,section_return};
+  use crate::electrical::{coupled,Counters};
+  let b=AllocationBudget{max_bytes:256*1024*1024,max_nodes:1000,max_tetrahedra:1000};
+  let xs=[-0.001,0.,0.001,0.002];let ys=[-0.001,0.,0.001,0.002,0.003,0.004,0.005,0.006];
+  let xy:Vec<_>=ys.iter().flat_map(|&y|xs.iter().map(move |&x|[x,y])).collect();
+  let triangles:Vec<_>=(0..7).flat_map(|y|(0..3).flat_map(move |x|{let a=4*y+x;[[a,a+1,a+5],[a,a+5,a+4]]})).collect();
+  let mut edges=vec![];for x in 0..3 {edges.extend([[x,x+1],[28+x,29+x]]);}for y in 0..7 {edges.extend([[4*y,4*y+4],[4*y+3,4*y+7]]);}
+  let dielectric=||Material::Dielectric{label:"air".into(),epsilon_r:1.};
+  let mat:Vec<_>=(0..7).flat_map(|y|(0..3).flat_map(move |x|{let m=if x==1 && [1,3,5].contains(&y) {Material::Copper{source_ids:vec![format!("c{}",(y-1)/2)]}}else{dielectric()};[m.clone(),m]})).collect();
+  let mesh=mesh::extrude(&LayeredInput{xy_m:xy.clone(),triangles:triangles.clone(),boundary_edges:edges,z_m:vec![-0.001,0.,0.001,0.002],materials:vec![vec![dielectric();triangles.len()],mat,vec![dielectric();triangles.len()]]},b).unwrap();
+  let electrodes:Vec<Vec<usize>>=(0..3).flat_map(|c|[0.,0.001].map(|z|mesh.nodes_m.iter().enumerate().filter_map(|(i,p)|(p[2]==z && p[0]>=0. && p[0]<=0.001 && p[1]>=2.*c as f64*0.001 && p[1]<=(2*c+1) as f64*0.001).then_some(i)).collect())).collect();
+  let space=volume_current::assemble(&mesh,&vec![58e6;mesh.copper_tetrahedra.len()],&electrodes,b).unwrap();
+  let contacts:Vec<_>=electrodes.iter().enumerate().map(|(i,n)|(format!("p{i}"),space.node_potential[&n[0]])).collect();
+  let mut basis=volume_reduction::harmonic(&space,&contacts,b).unwrap();
+  let field=volume_field::Field::new(&mesh,&space,b).unwrap();
+  let magnetic=volume_integral_magnetic::Operator::new(&mesh,b,8).unwrap();
+  let groups:Vec<_>=space.cells.iter().filter_map(|c|{let t=&mesh.copper_tetrahedra[c.mesh_cell];(t.source_ids==["c0"]).then_some(t.planar_triangle)}).collect::<BTreeSet<_>>().into_iter().map(|t|Group{prism:Prism::new("c0".into(),triangles[t].map(|i|xy[i]),[0.,0.001]).unwrap(),cells:space.cells.iter().enumerate().filter_map(|(i,c)|(mesh.copper_tetrahedra[c.mesh_cell].planar_triangle==t).then_some(i)).collect()}).collect();
+  use super::super::volume_field::ElectricApply;
+  use super::super::volume_magnetic::MagneticApply;
+  let ports=[[0,4],[1,5],[2,4],[3,5]];let fixed=basis.retained_dofs().to_vec();let drives=vec![vec![1.,-1.,0.,0.],vec![0.,0.,1.,-1.]];
+  for round in 0..3 {let bytes=space.current_count().checked_mul(basis.current.len()).and_then(|n|n.checked_mul(24)).and_then(|n|n.checked_add(space.planned_bytes)).and_then(|n|n.checked_add(magnetic.planned_bytes())).and_then(|n|n.checked_add(magnetic.scratch_bytes())).unwrap();b.check(bytes).unwrap();basis.extend_magnetic(&space,&magnetic).unwrap();for hz in [1000.,10000.] {section_return::enrich_kcl(&mut basis,&space,&field,&magnetic,&fixed,&ports,&drives,2.*std::f64::consts::PI*hz,1,0,b).unwrap();}eprintln!("round={round} currents={}",basis.current.len());}
+  let started=Instant::now();let dense=volume_field::DenseField::new(&field,b).unwrap();eprintln!("full-trace field assembly elapsed={:?} charge-energy={} reciprocity={} full_potentials={} matrix_bytes~{}",started.elapsed(),dense.max_charge_energy_column_error,dense.max_directed_reciprocity,space.potential_count(),8*space.potential_count().pow(2));assert!(started.elapsed()<Duration::from_secs(30));
+  let supports=physical_groups(&mesh,&space,&basis.current,&groups,b,Instant::now(),Duration::from_secs(30)).unwrap();for m in 0..basis.current.len() {let count=supports.iter().filter(|g|matches!(g.support(m).unwrap(),hybrid_section_magnetic::ModeSupport::Section(_, _))).count();eprintln!("mode={m} section_groups={count} local_groups={}",supports.len()-count);}
+  for (label,f) in [("raw",&field as &dyn ElectricApply),("dense",&dense as &dyn ElectricApply)] {
+   let old=basis.model(&space,f,&magnetic,&ports,b).unwrap();let n=old.potential_nodes.len()+old.current_dofs.len();
+   for hz in [1000.,10000.] {for drive in 0..2 {let mut sys=coupled::System::compile(&old,4,None).unwrap();let mut rhs=sys.port_rhs(&drives[drive]);rhs.resize(2*n,0.);let mut injection=vec![0.;space.potential_count()];for (p,&a) in ports.iter().zip(&drives[drive]) {injection[fixed[p[0]]]+=a;injection[fixed[p[1]]]-=a;}let w=2.*std::f64::consts::PI*hz;
+    let x=sys.solve_charge_coordinates(w,&rhs,&mut Counters::default()).unwrap();let v:Vec<_>=(0..space.potential_count()).map(|i|basis.voltage.iter().enumerate().map(|(k,q)|q[i]*x[k]).sum()).collect();
+    if label=="dense" && drive==0 {let mut perturbed=v.clone();for &i in &space.components[1] {perturbed[i]+=1e-6;}let q=f.apply(&perturbed).unwrap();let total=space.components[1].iter().map(|&i|q[i]).sum::<f64>();let scale=space.components[1].iter().map(|&i|q[i].abs()).sum::<f64>();eprintln!("deliberate passive island constant +1e-6 V: Q={total:e} scale={scale:e}");assert!(total.abs()>1e-8*scale.max(f64::MIN_POSITIVE));}
+    let start=Instant::now();let result=section_return::solve_candidate(&basis,&space,f,&magnetic,&mut sys,w,&rhs,&injection,&vec![0.;injection.len()],&mut Counters::default());assert!(start.elapsed()<Duration::from_secs(30));eprintln!("field={label} original gate hz={hz} drive={drive} result={:?}",result.as_ref().err());if label=="raw" && drive==0 {assert!(result.unwrap_err().starts_with("LOCAL_SECTION_RETURN_CHARGE:"));}
+   }}
+  }
+  let start=Instant::now();let hybrid=model(&mesh,&space,&basis,&groups,&dense,&ports,60,b,Duration::from_secs(60));eprintln!("dense q60 hybrid build elapsed={:?} error={:?}",start.elapsed(),hybrid.as_ref().err());
+  if let Ok(hybrid)=hybrid {let n=hybrid.potential_nodes.len()+hybrid.current_dofs.len();for hz in [1000.,10000.] {for drive in 0..2 {let mut sys=coupled::System::compile(&hybrid,4,None).unwrap();let mut rhs=sys.port_rhs(&drives[drive]);rhs.resize(2*n,0.);let mut injection=vec![0.;space.potential_count()];for (p,&a) in ports.iter().zip(&drives[drive]) {injection[fixed[p[0]]]+=a;injection[fixed[p[1]]]-=a;}let start=Instant::now();let result=section_return::solve_candidate(&basis,&space,&dense,&magnetic,&mut sys,2.*std::f64::consts::PI*hz,&rhs,&injection,&vec![0.;injection.len()],&mut Counters::default());assert!(start.elapsed()<Duration::from_secs(30));eprintln!("dense q60 original gate hz={hz} drive={drive}: {:?}",result.as_ref().err());}}}
+ }
+
 }
 
 
