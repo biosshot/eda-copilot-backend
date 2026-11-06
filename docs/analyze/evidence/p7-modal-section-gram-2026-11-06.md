@@ -106,3 +106,25 @@ expected negative experiment in 0.687 s; local log
 control run also passed all eleven hybrid tests, including this diagnostic;
 see `debugging/p7-persistent-near-final-controls/stdout.txt`. No production
 electric operator, physical gate or case-matrix status changed.
+
+## Bounded island-constant refinement experiment
+
+A test-only experiment builds the complete three-island constant-potential
+Jacobian from the original field operator and iteratively corrects only island
+constants, preserving current modes and potential differences. The 1 kHz drive-0
+charge check stagnates after eight corrections and remains unresolved. At 10 kHz
+drive 0, the manual unchanged charge/KCL/KVL checks converge; maximum relative
+complex port change is 2.39e-16. The already accepted drive 1 remains converged
+at both frequencies. This is partial numerical evidence, not a general fix.
+
+Two preliminary test runs stopped on an incorrectly normalized new projected
+field-residual assertion. That quantity is not the assembled coupled solver's
+matrix residual. The final diagnostic retains its values for inspection and
+does not treat it as an algebraic acceptance test. Existing physical charge,
+KCL and KVL limits are unchanged. The final experiment passed under the external
+120-second/2048 MiB supervisor in 0.375 s; local output is
+`debugging/p7-island-refinement-final-control/stdout.txt`.
+
+No production correction is installed. A full-island Jacobian can require many
+electric actions on a PCB, the 1 kHz case still fails, and assembled-system
+validation after a successful correction remains necessary before admission.

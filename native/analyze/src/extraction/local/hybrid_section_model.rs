@@ -221,6 +221,49 @@ fn scale_henries(gram:&mut [Vec<f64>]) {
   if let Ok(hybrid)=hybrid {let n=hybrid.potential_nodes.len()+hybrid.current_dofs.len();for hz in [1000.,10000.] {for drive in 0..2 {let mut sys=coupled::System::compile(&hybrid,4,None).unwrap();let mut rhs=sys.port_rhs(&drives[drive]);rhs.resize(2*n,0.);let mut injection=vec![0.;space.potential_count()];for (p,&a) in ports.iter().zip(&drives[drive]) {injection[fixed[p[0]]]+=a;injection[fixed[p[1]]]-=a;}let start=Instant::now();let result=section_return::solve_candidate(&basis,&space,&dense,&magnetic,&mut sys,2.*std::f64::consts::PI*hz,&rhs,&injection,&vec![0.;injection.len()],&mut Counters::default());assert!(start.elapsed()<Duration::from_secs(30));eprintln!("dense q60 original gate hz={hz} drive={drive}: {:?}",result.as_ref().err());}}}
  }
 
+ #[test]
+ #[ignore = "physical island-constant refinement experiment"]
+ fn island_constant_refinement_diagnostic() {
+  use super::super::{volume_field,volume_reduction,volume_integral_magnetic,section_return};
+  use crate::electrical::{coupled,Counters};
+  let b=AllocationBudget{max_bytes:256*1024*1024,max_nodes:1000,max_tetrahedra:1000};
+  let xs=[-0.001,0.,0.001,0.002];let ys=[-0.001,0.,0.001,0.002,0.003,0.004,0.005,0.006];
+  let xy:Vec<_>=ys.iter().flat_map(|&y|xs.iter().map(move |&x|[x,y])).collect();
+  let triangles:Vec<_>=(0..7).flat_map(|y|(0..3).flat_map(move |x|{let a=4*y+x;[[a,a+1,a+5],[a,a+5,a+4]]})).collect();
+  let mut edges=vec![];for x in 0..3 {edges.extend([[x,x+1],[28+x,29+x]]);}for y in 0..7 {edges.extend([[4*y,4*y+4],[4*y+3,4*y+7]]);}
+  let dielectric=||Material::Dielectric{label:"air".into(),epsilon_r:1.};
+  let mat:Vec<_>=(0..7).flat_map(|y|(0..3).flat_map(move |x|{let m=if x==1 && [1,3,5].contains(&y) {Material::Copper{source_ids:vec![format!("c{}",(y-1)/2)]}}else{dielectric()};[m.clone(),m]})).collect();
+  let mesh=mesh::extrude(&LayeredInput{xy_m:xy.clone(),triangles:triangles.clone(),boundary_edges:edges,z_m:vec![-0.001,0.,0.001,0.002],materials:vec![vec![dielectric();triangles.len()],mat,vec![dielectric();triangles.len()]]},b).unwrap();
+  let electrodes:Vec<Vec<usize>>=(0..3).flat_map(|c|[0.,0.001].map(|z|mesh.nodes_m.iter().enumerate().filter_map(|(i,p)|(p[2]==z && p[0]>=0. && p[0]<=0.001 && p[1]>=2.*c as f64*0.001 && p[1]<=(2*c+1) as f64*0.001).then_some(i)).collect())).collect();
+  let space=volume_current::assemble(&mesh,&vec![58e6;mesh.copper_tetrahedra.len()],&electrodes,b).unwrap();
+  let contacts:Vec<_>=electrodes.iter().enumerate().map(|(i,n)|(format!("p{i}"),space.node_potential[&n[0]])).collect();
+  let mut basis=volume_reduction::harmonic(&space,&contacts,b).unwrap();
+  let field=volume_field::Field::new(&mesh,&space,b).unwrap();
+  let magnetic=volume_integral_magnetic::Operator::new(&mesh,b,8).unwrap();
+  let groups:Vec<_>=space.cells.iter().filter_map(|c|{let t=&mesh.copper_tetrahedra[c.mesh_cell];(t.source_ids==["c0"]).then_some(t.planar_triangle)}).collect::<BTreeSet<_>>().into_iter().map(|t|Group{prism:Prism::new("c0".into(),triangles[t].map(|i|xy[i]),[0.,0.001]).unwrap(),cells:space.cells.iter().enumerate().filter_map(|(i,c)|(mesh.copper_tetrahedra[c.mesh_cell].planar_triangle==t).then_some(i)).collect()}).collect();
+  use super::super::volume_magnetic::MagneticApply;
+  let ports=[[0,4],[1,5],[2,4],[3,5]];let fixed=basis.retained_dofs().to_vec();let drives=vec![vec![1.,-1.,0.,0.],vec![0.,0.,1.,-1.]];
+  for round in 0..3 {let bytes=space.current_count().checked_mul(basis.current.len()).and_then(|n|n.checked_mul(24)).and_then(|n|n.checked_add(space.planned_bytes)).and_then(|n|n.checked_add(magnetic.planned_bytes())).and_then(|n|n.checked_add(magnetic.scratch_bytes())).unwrap();b.check(bytes).unwrap();basis.extend_magnetic(&space,&magnetic).unwrap();for hz in [1000.,10000.] {section_return::enrich_kcl(&mut basis,&space,&field,&magnetic,&fixed,&ports,&drives,2.*std::f64::consts::PI*hz,1,0,b).unwrap();}eprintln!("round={round} currents={}",basis.current.len());}
+  let old=basis.model(&space,&field,&magnetic,&ports,b).unwrap();let nv=basis.voltage.len();let n=nv+basis.current.len();let nc=space.components.len();assert_eq!(nc,3);
+  let mut jac=vec![vec![0.;nc];nc];for j in 0..nc {let mut indicator=vec![0.;space.potential_count()];for &i in &space.components[j] {indicator[i]=1.;}let q=field.apply(&indicator).unwrap();for i in 0..nc {jac[i][j]=space.components[i].iter().map(|&k|q[k]).sum();}}
+  let solve=|rhs:&[f64]| {let mut a=jac.clone();let mut y=rhs.to_vec();for k in 0..nc {let p=(k..nc).max_by(|&i,&j|a[i][k].abs().total_cmp(&a[j][k].abs())).unwrap();a.swap(k,p);y.swap(k,p);assert!(a[k][k]!=0.);for i in k+1..nc {let t=a[i][k]/a[k][k];for j in k..nc {a[i][j]-=t*a[k][j];}y[i]-=t*y[k];}}let mut x=vec![0.;nc];for i in (0..nc).rev(){x[i]=(y[i]-(i+1..nc).map(|j|a[i][j]*x[j]).sum::<f64>())/a[i][i];}x};
+  for hz in [1000.,10000.] {for drive in 0..2 {let w=2.*std::f64::consts::PI*hz;let mut system=coupled::System::compile(&old,4,None).unwrap();let mut rhs=system.port_rhs(&drives[drive]);rhs.resize(2*n,0.);let mut injection=vec![0.;space.potential_count()];for (p,&a) in ports.iter().zip(&drives[drive]){injection[fixed[p[0]]]+=a;injection[fixed[p[1]]]-=a;}let start=Instant::now();let (mut x,shape)=system.solve_charge_coordinates_split(w,&rhs,&mut Counters::default()).unwrap();let before=x.clone();
+   let potential=|x:&Vec<f64>,off:usize|->Vec<f64>{(0..space.potential_count()).map(|i|basis.voltage.iter().enumerate().map(|(k,q)|q[i]*x[off+k]).sum()).collect()};
+   let mut previous=f64::INFINITY;let mut converged=false;
+   for iteration in 0..32 {let vr=potential(&x,0);let vi=potential(&x,n);let qr=field.apply(&vr).unwrap();let qi=field.apply(&vi).unwrap();let mut rr=vec![0.;nc];let mut ri=vec![0.;nc];let mut worst=0f64;
+    for (c,nodes) in space.components.iter().enumerate(){rr[c]=-nodes.iter().map(|&i|qr[i]).sum::<f64>();ri[c]=-nodes.iter().map(|&i|qi[i]).sum::<f64>()-nodes.iter().map(|&i|injection[i]).sum::<f64>()/w;let scale=nodes.iter().map(|&i|qr[i].abs()+qi[i].abs()).sum::<f64>()+nodes.iter().map(|&i|injection[i]).sum::<f64>().abs()/w;let ratio=rr[c].hypot(ri[c])/scale.max(f64::MIN_POSITIVE);worst=worst.max(ratio);eprintln!("constant refine hz={hz} drive={drive} iter={iteration} island={c} residual=({:e},{:e}) scale={scale:e} ratio={ratio:e}",rr[c],ri[c]);}
+    if worst<=1e-8 {converged=true;break;}if iteration>=8 && worst>=previous {eprintln!("constant refinement stagnated");break;}previous=worst;let dr=solve(&rr);let di=solve(&ri);let old=x.clone();for c in 0..nc {for &j in &basis.component_columns[c] {x[j]+=dr[c];x[n+j]+=di[c];}}if x==old {eprintln!("constant refinement correction below representable state");break;}
+   }
+   let vr=potential(&x,0);let vi=potential(&x,n);let qr=field.apply(&vr).unwrap();let qi=field.apply(&vi).unwrap();let current=|off:usize|->Vec<f64>{(0..space.current_count()).map(|i|basis.current.iter().enumerate().map(|(k,q)|q[i]*x[off+nv+k]).sum()).collect()};let ir=current(0);let ii=current(n);let dr=space.divergence(&ir).unwrap();let di=space.divergence(&ii).unwrap();let mut gr=vec![0.;space.current_count()];let mut gi=gr.clone();for cols in &basis.component_columns {let last=*cols.last().unwrap();for &a in &cols[..cols.len()-1]{let g=space.gradient(&basis.voltage[a]).unwrap();for j in 0..gr.len(){gr[j]+=(shape[a]-shape[last])*g[j];gi[j]+=(shape[n+a]-shape[n+last])*g[j];}}}let lr=magnetic.apply(&space,&ir).unwrap();let li=magnetic.apply(&space,&ii).unwrap();let mut kvl=0f64;let mut scale=0f64;for j in 0..ir.len(){let r=space.cells[j/3].resistance_ohm;kvl=kvl.max((r*ir[j]-gr[j]-w*li[j]).hypot(r*ii[j]-gi[j]+w*lr[j]));scale=scale.max(r*ir[j].hypot(ii[j])+gr[j].hypot(gi[j])+w*lr[j].hypot(li[j]));}let kcl=(0..dr.len()).map(|j|(dr[j]-w*qi[j]-injection[j]).hypot(di[j]+w*qr[j])).fold(0.,f64::max);
+   let pr=system.port_voltages(&x,4);let pi=system.port_voltages(&x[n..],4);let ar=system.port_voltages(&before,4);let ai=system.port_voltages(&before[n..],4);let diff=(0..4).map(|i|(pr[i]-ar[i]).hypot(pi[i]-ai[i])).fold(0.,f64::max);let mag=(0..4).map(|i|ar[i].hypot(ai[i])).fold(0.,f64::max);
+   // This independently projected field residual is diagnostic; it is not the
+   // coupled solver's assembled-matrix residual or its row normalization.
+   let mut algebraic=0f64;let mut projected_relative=0f64;for v in &basis.voltage {let r=(0..dr.len()).map(|j|v[j]*(dr[j]-w*qi[j]-injection[j])).sum::<f64>();let i=(0..di.len()).map(|j|v[j]*(di[j]+w*qr[j])).sum::<f64>();algebraic=algebraic.max(r.hypot(i));let scale=(0..dr.len()).map(|j|v[j].abs()*(dr[j].abs()+w*qi[j].abs()+injection[j].abs()+di[j].abs()+w*qr[j].abs())).sum::<f64>();projected_relative=projected_relative.max(r.hypot(i)/scale.max(1e-15));}for q in &basis.current {let r=(0..ir.len()).map(|j|q[j]*(space.cells[j/3].resistance_ohm*ir[j]-gr[j]-w*li[j])).sum::<f64>();let i=(0..ir.len()).map(|j|q[j]*(space.cells[j/3].resistance_ohm*ii[j]-gi[j]+w*lr[j])).sum::<f64>();algebraic=algebraic.max(r.hypot(i));let scale=(0..ir.len()).map(|j|q[j].abs()*(space.cells[j/3].resistance_ohm*(ir[j].abs()+ii[j].abs())+gr[j].abs()+gi[j].abs()+w*(lr[j].abs()+li[j].abs()))).sum::<f64>();projected_relative=projected_relative.max(r.hypot(i)/scale.max(1e-15));}
+   eprintln!("refine result hz={hz} drive={drive} converged={converged} KCL={kcl:e} KVL={kvl:e} kvl_scale={scale:e} projected_residual={algebraic:e} projected_relative={projected_relative:e} port_relative={:e} elapsed={:?}",diff/mag,start.elapsed());assert!(start.elapsed()<Duration::from_secs(30));
+   if converged {assert!(kcl<=1e-8 && kvl<=1e-8*scale);}
+  }}
+ }
+
 }
 
 

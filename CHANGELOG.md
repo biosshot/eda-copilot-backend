@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Record a bounded test-only island-constant refinement: unchanged physical checks converge for one previously refused 10 kHz drive, but the 1 kHz passive-charge case stagnates. No production correction or gate change is made; full coupled-system admission and scalable cost remain unresolved.
+
 - Retain bounded 64-cell near-kernel caches per worker and schedule eight-job chunks, preserving ordered interval replay. Add parallel-compatible partial progress, kernel-kind timings, geometry-cache counters and sticky window-failure reporting. Fifteen supervised controls and the native build pass; an incremental full-board speedup is not yet established.
 
 - Preserve a complete trace-field negative control: dense full-source capacitance materialization does not resolve passive-island charge refusal. Raw/dense source operators agree to their numerical audit, and an intentional island-potential perturbation is detected. No electric gate or production representation is changed.
