@@ -83,6 +83,24 @@ fn factorial3(a: [usize; 3]) -> f64 {
     (factorial(a[0]) * factorial(a[1]) * factorial(a[2])) as f64
 }
 
+// Pure kernels may run concurrently; interval additions retain traversal order.
+fn replay_near_window(pair:&BoundedPairs,space:&Space,q:&[f64],near:&mut [Interval],pending:&mut Vec<(usize,usize)>)->Result<()> {
+    if pending.is_empty() {return Ok(());}
+    let values=pair.pair_window(pending)?;
+    for (&(i,j),value) in pending.iter().zip(values) {
+        check_deadline(pair.start,pair.wall)?;
+        let coefficient=Interval::point(1e-7)
+            .mul(Interval::point(space.cells[i].density_per_amp_m2))
+            .mul(Interval::point(space.cells[j].density_per_amp_m2))
+            .mul(Interval::point(value));
+        for k in 0..3 {
+            near[3*i+k]=near[3*i+k].add(coefficient.mul(Interval::point(q[3*j+k])));
+            if i!=j {near[3*j+k]=near[3*j+k].add(coefficient.mul(Interval::point(q[3*i+k])));}
+        }
+    }
+    pending.clear();Ok(())
+}
+
 impl Operator {
     // Direct quotient generating function: reduction commutes with homogeneous
     // degree, so q_alpha=6V*H_alpha/(degree+3)! without Cartesian alpha! factors.
@@ -710,6 +728,8 @@ impl<'a> Plan<'a> {
         let mut action = vec![0.; 3 * n];
         let mut bounds = vec![0.; 3 * n];
         let mut near = vec![Interval::zero(); 3 * n];
+        let parallel_near=pair.parallel_enabled();
+        let mut pending=if parallel_near {Vec::with_capacity(128)}else{Vec::new()};
         for axis in 0..3 {
             let mut axis_profile = Profile::new("axis", Some(axis));
             let mut upward_profile = Profile::new("source-and-upward", Some(axis));
@@ -774,6 +794,11 @@ impl<'a> Plan<'a> {
                                     check_deadline(t.start, t.wall)?;
                                     let i = t.permutation[x];
                                     let j = t.permutation[y];
+                                    if parallel_near {
+                                        pending.push((i,j));
+                                        if pending.len()==128 {replay_near_window(pair,space,q,&mut near,&mut pending)?;}
+                                        continue;
+                                    }
                                     let value = pair.pair(i.max(j), i.min(j))?;
                                     let coefficient = Interval::point(1e-7)
                                         .mul(Interval::point(space.cells[i].density_per_amp_m2))
@@ -879,6 +904,7 @@ impl<'a> Plan<'a> {
             } else {
                 self.walk(Some(axis), apply_block)?;
             }
+            replay_near_window(pair,space,q,&mut near,&mut pending)?;
             let mut downward_profile = Profile::new("downward", Some(axis));
             for parent in 0..t.nodes.len() {
                 if let Some(children) = t.nodes[parent].children {
@@ -1020,6 +1046,32 @@ pub fn resistive_goals(
 mod classification_power_tests {
     use super::*;
     use crate::extraction::local::volume_current;
+
+    #[test]
+    fn parallel_near_replay_preserves_actions_bounds_and_cover_bits() {
+        use std::collections::BTreeMap;
+        let start=Instant::now();let wall=Duration::from_secs(60);
+        let tetra=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];
+        // Overlap forces >128 near pairs; the distant cell also exercises far work.
+        let mut geometry=vec![tetra;16];geometry.push(tetra.map(|p|[p[0]+1.,p[1],p[2]]));
+        let space=Space {mesh_nodes:vec![vec![];4],node_potential:BTreeMap::new(),cells:(0..geometry.len()).map(|i|volume_current::Cell {mesh_cell:i,potentials:[0,1,2,3],incidence:[[0.;3];4],density_per_amp_m2:1e6+i as f64*1e4,resistance_ohm:1.}).collect(),components:vec![vec![0,1,2,3]],planned_bytes:0};
+        let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:1000,max_tetrahedra:1000};
+        let tree=Operator::new(&geometry,4,1,0.2,0,budget,start,wall).unwrap();
+        let columns:Vec<Vec<f64>>=(0..2).map(|s|(0..3*geometry.len()).map(|k|if (k+s)%2==0 {1.+k as f64*0.01}else{-0.3-k as f64*0.005}).collect()).collect();
+        let goals=[1e-20;2];
+        let mut pair=BoundedPairs::new(geometry,12,8,start,wall).unwrap();
+        let (expected,expected_bounds,mut expected_cert)=tree.batch_common(&pair,&space,&columns,&goals).unwrap();
+        assert!(expected_cert["exactPairs"].as_u64().unwrap()>=128);
+        for key in ["actionWallSeconds","geometryMomentPreparationSeconds","planPreparationSeconds"] {expected_cert.as_object_mut().unwrap().remove(key);}
+        for workers in [2,4] {
+            budget.check(BoundedPairs::parallel_bytes(workers).unwrap()).unwrap();pair.configure_parallel(workers).unwrap();
+            let (actual,bounds,mut cert)=tree.batch_common(&pair,&space,&columns,&goals).unwrap();
+            assert_eq!(expected.iter().flatten().map(|x|x.to_bits()).collect::<Vec<_>>(),actual.iter().flatten().map(|x|x.to_bits()).collect::<Vec<_>>());
+            assert_eq!(expected_bounds.iter().flatten().map(|x|x.to_bits()).collect::<Vec<_>>(),bounds.iter().flatten().map(|x|x.to_bits()).collect::<Vec<_>>());
+            for key in ["actionWallSeconds","geometryMomentPreparationSeconds","planPreparationSeconds"] {cert.as_object_mut().unwrap().remove(key);}
+            assert_eq!(expected_cert,cert);
+        }
+    }
 
     #[test]
     fn negligible_duplicate_tetra_bounds_enclose_unpruned_actions() {

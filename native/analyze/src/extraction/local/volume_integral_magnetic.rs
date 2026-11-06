@@ -158,7 +158,8 @@ struct BoundedPairs {
     scalar:std::cell::RefCell<Vec<Option<ScalarSlot>>>,
     trace: Option<std::cell::RefCell<PairTrace>>,
     capture: Option<std::cell::RefCell<Option<SlowCapture>>>,
-    tetra: Vec<[[f64; 3]; 4]>,
+    tetra: std::sync::Arc<Vec<[[f64; 3]; 4]>>,
+    pool: Option<rayon::ThreadPool>,
     cells: std::cell::RefCell<Vec<PairCell>>,
     slots: usize,
     tick: std::cell::Cell<u64>,
@@ -227,7 +228,8 @@ impl BoundedPairs {
             scalar:std::cell::RefCell::new(scalar),
             trace: (std::env::var_os("P7_MAGNETIC_TRACE").as_deref() == Some(std::ffi::OsStr::new("1")))
                 .then(|| std::cell::RefCell::new(PairTrace { counts: [0; 3], seconds: [0.; 3], last: Instant::now(), hits:0, misses:0, evictions:0 })),
-            tetra,
+            tetra: std::sync::Arc::new(tetra),
+            pool: None,
             cells: std::cell::RefCell::new(Vec::with_capacity(slots)),
             slots,
             tick: std::cell::Cell::new(0),
@@ -235,6 +237,43 @@ impl BoundedPairs {
             start,
             wall,
         })
+    }
+    fn parallel_bytes(workers: usize) -> Result<usize> {
+        if !(2..=32).contains(&workers) { return Err(error("MAGNETIC_CONFIG", "parallel worker count must be 2..32")); }
+        workers.checked_mul(10 * STREAMED_PAIR_SLOT_BYTES + 2 * 1024 * 1024)
+            .and_then(|v| v.checked_add(8192))
+            .ok_or_else(|| error("MEMORY_LIMIT", "parallel magnetic window plan overflow"))
+    }
+    fn configure_parallel(&mut self, workers: usize) -> Result<()> {
+        Self::parallel_bytes(workers)?;
+        self.pool = Some(rayon::ThreadPoolBuilder::new().num_threads(workers)
+            .stack_size(2 * 1024 * 1024).build()
+            .map_err(|_| error("MEMORY_LIMIT", "parallel magnetic pool creation failed"))?);
+        Ok(())
+    }
+    fn parallel_enabled(&self) -> bool { self.pool.is_some() }
+    fn pair_window(&self, indices: &[(usize, usize)]) -> Result<Vec<f64>> {
+        use rayon::prelude::*;
+        if indices.len() > 128 { return Err(error("MEMORY_LIMIT", "parallel magnetic window exceeds 128 pairs")); }
+        check_deadline(self.start, self.wall)?;
+        let Some(pool) = &self.pool else {
+            return indices.iter().map(|&(i,j)| self.pair(i.max(j),i.min(j))).collect();
+        };
+        if indices.is_empty() { return Ok(Vec::new()); }
+        let workers = pool.current_num_threads().min(indices.len());
+        let slots = self.slots.min(8);
+        let tetra = self.tetra.clone();
+        let order = self.order;
+        let start = self.start;
+        let wall = self.wall;
+        let chunk = indices.len().div_ceil(workers);
+        let results: Vec<Vec<Result<f64>>> = pool.install(|| indices.par_chunks(chunk).map(|part| {
+            let local = BoundedPairs { tetra: tetra.clone(), pool: None, scalar: std::cell::RefCell::new(Vec::new()),
+                trace: None, capture: None, cells: std::cell::RefCell::new(Vec::with_capacity(slots)),
+                slots, tick: std::cell::Cell::new(0), order, start, wall };
+            part.iter().map(|&(i,j)| local.pair(i.max(j),i.min(j))).collect()
+        }).collect());
+        results.into_iter().flatten().collect()
     }
     fn ensure(&self, cells: &mut Vec<PairCell>, index: usize, pin: Option<usize>) -> Result<()> {
         check_deadline(self.start, self.wall)?;
@@ -374,10 +413,25 @@ impl<'a> Streamed<'a> {
             ));
         }
         let config=match std::env::var("P7_MAGNETIC_PAIR_CACHE_MIB") {Ok(v)=>Some(v),Err(std::env::VarError::NotPresent)=>None,Err(_)=>return Err(error("MAGNETIC_CONFIG","P7_MAGNETIC_PAIR_CACHE_MIB must be valid UTF-8"))};
-        let (scalar_slots,scalar_bytes,mut owned_bytes,slots)=scalar_plan(config.as_deref(),n,order,base_bytes,budget)?;
+        let requested = match std::env::var("P7_MAGNETIC_NEAR_THREADS") {
+            Ok(v) => v.parse::<usize>().ok().filter(|&n| (1..=32).contains(&n))
+                .ok_or_else(|| error("MAGNETIC_CONFIG", "P7_MAGNETIC_NEAR_THREADS must be an integer 1..32"))?,
+            Err(std::env::VarError::NotPresent) => 1,
+            Err(_) => return Err(error("MAGNETIC_CONFIG", "P7_MAGNETIC_NEAR_THREADS must be valid UTF-8")),
+        };
+        let diagnostics = std::env::var_os("P7_MAGNETIC_TRACE").as_deref() == Some(std::ffi::OsStr::new("1"))
+            || std::env::var_os("P7_MAGNETIC_SLOW_PAIR_PATH").is_some()
+            || config.as_deref().is_some_and(|v| v != "0");
+        let workers = if diagnostics { if requested > 1 { eprintln!("P7_MAGNETIC_NEAR_THREADS serial fallback: diagnostics or scalar cache enabled"); } 1 } else { requested };
+        let parallel_bytes = if workers > 1 { BoundedPairs::parallel_bytes(workers)? } else { 0 };
+        eprintln!("P7_MAGNETIC_PARALLEL_PLAN nearWorkers={workers} requestedNearWorkers={requested} nearParallelBytes={parallel_bytes} nearWindowPairs=128");
+        let planned_base = base_bytes.checked_add(parallel_bytes).ok_or_else(|| error("MEMORY_LIMIT", "parallel magnetic base overflow"))?;
+        let (scalar_slots,scalar_bytes,mut owned_bytes,slots)=scalar_plan(config.as_deref(),n,order,planned_base,budget)?;
+        owned_bytes = owned_bytes.checked_add(parallel_bytes).ok_or_else(|| error("MEMORY_LIMIT", "parallel magnetic owned overflow"))?;
         eprintln!("P7_STREAMED_MEMORY_PLAN tetrahedra={n} geometryBytes={} exactCacheSlots={slots} slotBytes={STREAMED_PAIR_SLOT_BYTES} constructionScratchSlots=2 scalarCacheBytes={scalar_bytes} scalarCacheSlots={scalar_slots} ownedBytes={owned_bytes} baseBytes={base_bytes} budgetBytes={} operator=unchanged-direct-pairs complexity=quadratic", n*std::mem::size_of::<[[f64;3];4]>(),budget.max_bytes);
         // Move the original geometry into the cache; do not duplicate its Vec.
-        let pair = BoundedPairs::new_with_scalar(geometry(mesh), order, slots, scalar_slots, start, wall)?;
+        let mut pair = BoundedPairs::new_with_scalar(geometry(mesh), order, slots, scalar_slots, start, wall)?;
+        if workers > 1 { pair.configure_parallel(workers)?; }
         let hierarchical = {
             let tree = hierarchical_magnetic::Operator::new(
                 &pair.tetra,
@@ -582,6 +636,60 @@ impl MagneticApply for Operator<'_> {
 #[cfg(test)]
 mod bounded_pair_tests {
     use super::*;
+    #[test]
+    #[ignore = "explicit bounded captured-pair performance diagnostic"]
+    fn captured_pair_window_parallel_benchmark() {
+        use std::io::Read;
+        assert!(std::env::var_os("P7_MAGNETIC_TRACE").is_none());
+        assert!(std::env::var_os("P7_MAGNETIC_SLOW_PAIR_PATH").is_none());
+        assert!(std::env::var_os("P7_MAGNETIC_PAIR_CACHE_MIB").is_none());
+        let path = std::env::var("P7_PAIR_OUTPUT").unwrap();
+        let mut text = String::new();
+        std::fs::File::open(path).unwrap().take(65537).read_to_string(&mut text).unwrap();
+        assert!(text.len() <= 65536);
+        let rows: Vec<CaptureRecord> = text.lines().map(|line| serde_json::from_str(line).unwrap()).collect();
+        assert_eq!(rows.len(), 16);
+        let mut geometry = Vec::with_capacity(32);
+        let mut indices = Vec::with_capacity(128);
+        for row in &rows {
+            geometry.push(row.source_bits.map(|p| p.map(f64::from_bits)));
+            geometry.push(row.target_bits.map(|p| p.map(f64::from_bits)));
+        }
+        for _ in 0..8 { for i in 0..16 { indices.push((2*i+1, 2*i)); } }
+        let budget=AllocationBudget{max_bytes:64*1024*1024,max_nodes:100,max_tetrahedra:100};
+        let mut expected = Vec::new();
+        for workers in [1,2,4] {
+            let mut pairs=BoundedPairs::new(geometry.clone(),12,8,Instant::now(),Duration::from_secs(115)).unwrap();
+            if workers > 1 {
+                budget.check(BoundedPairs::parallel_bytes(workers).unwrap()).unwrap();
+                pairs.configure_parallel(workers).unwrap();
+            }
+            let started=Instant::now();
+            let values=pairs.pair_window(&indices).unwrap();
+            let bits: Vec<u64> = values.iter().map(|v|v.to_bits()).collect();
+            assert_eq!(bits.len(),128);
+            if workers == 1 { expected=bits; } else { assert_eq!(expected,bits); }
+            eprintln!("P7_CAPTURED_PAIR_BENCH workers={workers} valid={} seconds={:.6}",values.len(),started.elapsed().as_secs_f64());
+        }
+    }
+    #[test]
+    fn parallel_pair_window_preserves_bits_and_checks_resources() {
+        let tetra=|x:f64| [[x,0.,0.],[x+0.001,0.,0.],[x,0.001,0.],[x,0.,0.001]];
+        let mut pairs=BoundedPairs::new(vec![tetra(0.),tetra(0.001),tetra(0.1)],12,2,Instant::now(),Duration::from_secs(60)).unwrap();
+        let indices=[(0,0),(1,0),(2,0),(2,1),(1,1),(2,2)];
+        let budget=AllocationBudget{max_bytes:64*1024*1024,max_nodes:100,max_tetrahedra:100};
+        for bad in [0,33] { assert!(BoundedPairs::parallel_bytes(bad).is_err()); assert!(pairs.configure_parallel(bad).is_err()); }
+        let expected=pairs.pair_window(&indices).unwrap();
+        for workers in [2,4] {
+            budget.check(BoundedPairs::parallel_bytes(workers).unwrap()).unwrap();
+            pairs.configure_parallel(workers).unwrap();
+            let actual=pairs.pair_window(&indices).unwrap();
+            assert_eq!(expected.iter().map(|v|v.to_bits()).collect::<Vec<_>>(),actual.iter().map(|v|v.to_bits()).collect::<Vec<_>>());
+        }
+        assert!(AllocationBudget{max_bytes:1,..budget}.check(BoundedPairs::parallel_bytes(2).unwrap()).is_err());
+        pairs.wall=Duration::ZERO;
+        assert!(pairs.pair_window(&indices).is_err());
+    }
     #[test]
     fn scalar_cache_preserves_order_eviction_and_deadlines() {
         let tetra=|x:f64|[[x,0.,0.],[x+0.001,0.,0.],[x,0.001,0.],[x,0.,0.001]];
