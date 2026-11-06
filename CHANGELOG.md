@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Measure the four-worker full STM32 attempt: native magnetic-action deadline after 593.672 s, sampled peak private memory 1.872 GB, no completed channel result. Preserve all source geometry and gates; the <=600 s target remains unmet despite the captured-kernel speedup. Keep parallel near work opt-in and document missing full-run progress observability.
+
 - Add opt-in bounded parallel near-pair quadrature (`P7_MAGNETIC_NEAR_THREADS=2..32`) with worker-local caches, pre-admitted memory and ordered interval replay. Signed actions, bounds and certificates match bitwise at 2/4 workers; captured-kernel replay measures 3.18x at four workers. Diagnostics/scalar cache explicitly fall back to serial. Full-board performance remains unverified.
 
 - Extend the enriched shared-return control with unchanged original-space positive admission for one drive (hybrid at 1 kHz, volume reference at 1/10 kHz). Localize remaining passive-island charge cancellation and magnetic-projection/KVL refusal; order-60 convergence does not resolve all gates. Keep all case-matrix acceptance pending.

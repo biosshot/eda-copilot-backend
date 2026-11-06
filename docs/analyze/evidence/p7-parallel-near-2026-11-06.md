@@ -63,9 +63,44 @@ establish full-board speedup or physical case-matrix acceptance.
 ## Full-path validation
 
 Native addon build passed (`BUILD_EXIT=0`, release 5m29s; local log
-`debugging/p7-parallel-near-native-build.log`). The bounded four-worker STM32
-attempt remains pending. The planned run retains the same board/channel, all source geometry, 10 kHz,
-maxIterations=4, native 590-second deadline, external 600-second cap, native
-12 GiB/tree 14 GiB budgets. Trace/capture/scalar cache and other experimental
-switches must be off to exercise parallel near work. No complete extraction or
-<=600-second result is claimed before that evidence exists.
+`debugging/p7-parallel-near-native-build.log`). The four-worker STM32 run ended
+with `LOCAL_DEADLINE: streamed tetra magnetic action`, external wall
+593.672 s. The native deadline fired before the 600-second supervisor cap; this
+was not an external kill or memory refusal. No channel result was completed.
+
+The run used commit `e1d36bc`, RS485_B U5.7/U5.5 → J5.2/J5.3, 10 kHz,
+maxIterations=4, native deadline 590 s, native 12 GiB/tree 14 GiB budgets and a
+cold isolated cache. All 844 copper regions, 65 islands and 89 barrels remain;
+the full space still has 65,206 potentials and 464,697 current coordinates
+(154,899 copper tetrahedra). Trace/capture/scalar cache, cover cache, section
+hints and near-bound omission were off; RHS chunks remained one column.
+
+The native log confirms `nearWorkers=4 requestedNearWorkers=4`, with
+16,261,120 extra planned bytes. Global `RAYON_NUM_THREADS=1` keeps other stages
+comparable; the supervisor's `threads: "1"` field reports this global setting,
+not the dedicated near pool. Sampled peak private memory was 1,871,863,808 B,
+RSS 1,117,921,280 B (20 ms sampled lower bounds). Actual peak is not proven by
+sampling.
+
+Two observations of the same Node PID show CPU increasing from 429.34375 to
+758.03125 s over approximately 171.399 wall seconds, about 1.92 cores on average
+over that interval. This does not isolate the cause: serial traversal, work
+imbalance and available host CPU may all matter. It is not a full-run speedup.
+Trace is incompatible with the current parallel path, so no completed-pair or
+completed-action count is available; do not claim first-action completion or
+infer a board-level acceleration factor from two deadline exits.
+
+Local evidence is under `debugging/p7-parallel-near-stm32-600s/`: `stdout.txt`,
+`comparison.json`, `result.json`, `supervision.json`, `identity.json` and the two
+`cpu-sample-*.json` observations. The native core identity is
+`6cfa6fb540eb53ec49e5d7aceb23c262a9adaa582a6dfe72701ff8bb88708702`.
+
+The <=600-second complete-extraction target remains unmet. No accuracy gate,
+physical geometry or case-matrix acceptance changed. The opt-in implementation
+is retained for controlled use; it is not enabled by default.
+
+Before another heavy run, add parallel-compatible progress/timing measurements
+and test persistent worker caches (currently recreated each window) with finer
+job scheduling. Compare before enabling any policy. Structural work reduction
+and a production shared-return route remain required; another uninstrumented
+deadline run would not resolve the remaining uncertainty.
