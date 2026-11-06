@@ -82,3 +82,5 @@ pub fn packed_kernel_bytes(foil_volumes: usize, axial_volumes: usize) -> Result<
         .and_then(|n| n.checked_mul(std::mem::size_of::<f64>()))
         .ok_or_else(|| error("MEMORY_LIMIT", "packed scalar kernel size overflow"))
 }
+
+mod axial_magnetic;

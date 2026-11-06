@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a private finite-axial magnetic primitive integrating both longitudinal coordinates analytically, plus a constant-profile signed-fan self/cross rule. Two signals share one physical return in the Gram control; refined prism comparisons and axial split invariance pass. This is an experimental operator foundation with convergence estimates, not production dispatch or full-board acceptance.
+
 - Reduce far-source sample-distance cost with a guarded squared-distance square root, retaining `hypot` for extreme ranges and the existing rounding allowance. Escalate Gauss order when the actual mass-error check rejects the first candidate. Captured-pair and physical action/KVL controls pass; local timing improves further without relaxing tolerances.
 
 - Add opt-in bounded capture of successful slow adaptive magnetic callbacks (`P7_MAGNETIC_SLOW_PAIR_PATH`), preserving exact geometry/result bits for replay. Capture uses an exclusive new file, fixed serialization buffers, a 16-record/64 KiB bound and nonfatal I/O handling. Production quadrature and acceptance tolerances are unchanged.
