@@ -1,5 +1,5 @@
 import type { AnalysisBoardFoilCheckedReport, AnalysisBoardFoilCheckedRequest } from '../../native/analyze/index.js';
-import { digest, type LocalModelCache } from './local-model-cache.ts';
+import { digest, magneticAxialTetPolicy, type LocalModelCache } from './local-model-cache.ts';
 import { validateBoardFoilReport } from './board-foil-validation.ts';
 import type { BoardFoilProblem, BoardFoilReport } from './types.ts';
 
@@ -50,6 +50,7 @@ export function cachedBoardFoilReport(
   const magneticBatchColumns = verificationLimit('P7_MAGNETIC_BATCH_COLUMNS', 0, 0, 64);
   const sectionHints = process.env.P7_SECTION_HINTS === '1';
   const nearBound = process.env.P7_MAGNETIC_NEAR_BOUND === '1';
+  const axialTetPolicy = magneticAxialTetPolicy();
   const remaining = () => {
     const seconds = deadlineSeconds - (performance.now() - started) / 1000;
     if (seconds <= 0) throw new Error('CHANNEL_FOIL_DEADLINE: shared cache/solve budget exhausted');
@@ -68,6 +69,7 @@ export function cachedBoardFoilReport(
     ...(magneticBatchColumns > 0 && { magneticBatchColumns }),
     ...(sectionHints && { sectionHintPolicy: 'uniform-axial-current-seeds-v1' }),
     ...(nearBound && { nearBoundPolicy: 'summed-per-tetra-volume-v1' }),
+    ...(axialTetPolicy && { nearQuadraturePolicy: axialTetPolicy }),
     geometry: problem.geometry, expected, frequenciesHz, referenceOhm, maxIterations,
     ...(profiled && { operatorPolicy, profileUpperHz: upperHz }),
     ...(partitionPolicy && { partitionPolicy }),

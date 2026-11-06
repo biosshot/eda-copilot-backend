@@ -22,6 +22,10 @@ function validateMagneticCover(cover:Omit<AnalysisMagneticCertificate,'policy'>|
     !Number.isFinite(cover.actionWallSeconds)||cover.actionWallSeconds<0)
   fail('missing or inconsistent adaptive common-cover action certificate');
  const batch=cover as import('../../native/analyze/index.js').AnalysisMagneticBasisCover;
+ if(cover.nearQuadraturePolicy!==undefined||cover.nearQuadratureErrorCertified!==undefined) {
+  if(cover.nearQuadraturePolicy!=='axial-tetra-estimated-v1'||cover.nearQuadratureErrorCertified!==false)
+   fail('invalid estimated near-quadrature provenance');
+ }
  if(cover.nearBoundEnabled!==undefined||cover.boundedOmittedBlocks!==undefined||cover.nearBoundPolicy!==undefined) {
   if(typeof cover.nearBoundEnabled!=='boolean'||!count(cover.boundedOmittedBlocks)||
      cover.nearBoundPolicy!=='summed-per-tetra-volume-v1'||(!cover.nearBoundEnabled&&cover.boundedOmittedBlocks!==0))
@@ -37,6 +41,8 @@ function validateMagneticCover(cover:Omit<AnalysisMagneticCertificate,'policy'>|
    offset+=chunk.rhsColumns;
   }
   if(offset!==rhs||(['farClusterPairs','exactPairs','zeroBlocks'] as const).some(key=>batch.chunkCertificates!.reduce((sum,c)=>sum+c[key],0)!==cover[key])) fail('inconsistent magnetic chunk totals');
+  if(batch.chunkCertificates.some(c=>c.nearQuadraturePolicy!==cover.nearQuadraturePolicy||c.nearQuadratureErrorCertified!==cover.nearQuadratureErrorCertified))
+   fail('inconsistent estimated near-quadrature chunk provenance');
   if(cover.nearBoundEnabled!==undefined&&(batch.chunkCertificates.some(c=>c.nearBoundEnabled!==cover.nearBoundEnabled||c.nearBoundPolicy!==cover.nearBoundPolicy)||
      batch.chunkCertificates.reduce((sum,c)=>sum+(c.boundedOmittedBlocks??0),0)!==cover.boundedOmittedBlocks)) fail('inconsistent near-omission chunk totals');
  }
@@ -96,6 +102,8 @@ function validateMagneticOperator(report:AnalysisBoardFoilCheckedReport):void {
   if(column.magneticCertificate?.policy!==operator.policy)
    fail('fresh original-current adaptive magnetic certificate missing');
   validateMagneticCover(column.magneticCertificate,2,p.nativeCopperTetrahedra);
+  if(column.magneticCertificate!.nearQuadraturePolicy!==cover.nearQuadraturePolicy||column.magneticCertificate!.nearQuadratureErrorCertified!==cover.nearQuadratureErrorCertified)
+   fail('inconsistent basis and fresh-current near-quadrature provenance');
  }
 }
 

@@ -848,7 +848,13 @@ pub struct TetraCubature {
     radius: f64,
     points: Vec<[f64; 3]>,
     weights: Vec<f64>,
+    axial_lines: Option<Vec<AxialLine>>,
+    axial_refined: Option<Vec<AxialLine>>,
 }
+
+#[derive(Clone, Copy)]
+struct AxialLine { origin: [f64; 3], center: [f64; 3], half: f64, weight: f64 }
+
 impl TetraCubature {
     pub fn new(tetra: [[f64; 3]; 4], order: usize) -> Result<Self> {
         let moments = tetra_far_moments(tetra)?;
@@ -861,7 +867,73 @@ impl TetraCubature {
             weights.push(weight);
             Ok(())
         })?;
-        Ok(Self { center: moments.center, radius: moments.radius, points, weights })
+        Ok(Self { center: moments.center, radius: moments.radius, points, weights, axial_lines: None, axial_refined: None })
+    }
+    /// Opt-in exact vertical-edge line cubature. Original points remain available for fallback.
+    pub fn new_axial(tetra: [[f64; 3]; 4], order: usize) -> Result<Self> {
+        let mut result=Self::new(tetra,order)?;
+        result.prepare_axial(tetra,order)?;
+        Ok(result)
+    }
+    /// Attach line rules for the same tetrahedron and order used by `new`.
+    pub fn prepare_axial(&mut self, tetra: [[f64; 3]; 4], order: usize) -> Result<()> {
+        let coarse=Self::axial_line_rule(tetra,order)?;
+        let fine=if coarse.is_some() {
+            Self::axial_line_rule(tetra,order.checked_add(2).ok_or_else(||error("QUADRATURE_ORDER","order overflow"))?)?
+        } else {None};
+        self.axial_lines=coarse;
+        self.axial_refined=fine;
+        Ok(())
+    }
+    fn axial_line_rule(tetra: [[f64; 3]; 4], order: usize) -> Result<Option<Vec<AxialLine>>> {
+        let mut edge = None;
+        for i in 0..4 { for j in i+1..4 {
+            if tetra[i][0] == tetra[j][0] && tetra[i][1] == tetra[j][1] && tetra[i][2] != tetra[j][2] { edge=Some((i,j)); break; }
+        } if edge.is_some() { break; } }
+        let Some((i,j))=edge else { return Ok(None); };
+        let rest: Vec<_>=(0..4).filter(|&k| k!=i && k!=j).collect();
+        let t=[tetra[i],tetra[rest[0]],tetra[rest[1]],tetra[j]];
+        let (volume,_)=super::mesh::tetra_coefficients(tetra)?;
+        let rule=super::prism::cached_rule(order)?;
+        let count=order.checked_mul(order).ok_or_else(||error("MEMORY_LIMIT","axial line count overflow"))?;
+        let mut lines=Vec::new(); lines.try_reserve_exact(count).map_err(|_|error("MEMORY_LIMIT","axial line allocation failed"))?;
+        for (&u,&wu) in rule.nodes.iter().zip(&rule.weights) { for (&v,&wv) in rule.nodes.iter().zip(&rule.weights) {
+            let base: [f64;3]=std::array::from_fn(|k| u*(t[1][k]-t[0][k])+(1.-u)*v*(t[2][k]-t[0][k]));
+            let dz=(1.-u)*(1.-v)*(t[3][2]-t[0][2]);
+            let line=AxialLine {origin:t[0],center:[base[0],base[1],base[2]+dz/2.],half:dz.abs()/2.,weight:6.*volume*wu*wv*(1.-u).powi(2)*(1.-v)};
+            if !line.center.iter().chain([&line.half,&line.weight]).all(|x|x.is_finite()) || line.half<=0. || line.weight<=0. { return Ok(None); }
+            lines.push(line);
+        }}
+        Ok(Some(lines))
+    }
+    /// Experimental estimate; outer refinement and roundoff are not certified error bounds.
+    pub fn try_axial_integral(&self, other: &Self) -> Result<Option<(f64,f64)>> {
+        let (Some(a),Some(b),Some(ar),Some(br))=(&self.axial_lines,&other.axial_lines,&self.axial_refined,&other.axial_refined) else {return Ok(None)};
+        let Some((coarse,_))=Self::axial_lines_integral(a,b)? else {return Ok(None)};
+        let Some((fine,err))=Self::axial_lines_integral(ar,br)? else {return Ok(None)};
+        if (coarse-fine).abs()>1e-10*fine {return Ok(None)}
+        Ok(Some((fine,err)))
+    }
+    fn axial_lines_integral(a: &[AxialLine], b: &[AxialLine]) -> Result<Option<(f64,f64)>> {
+        if a.len()!=b.len() {return Ok(None)}
+        let mut total=super::accurate::Sum::default(); let mut error_sum=0.;
+        for x in a { let mut row=0.; for y in b {
+            let d: [f64;3]=std::array::from_fn(|i| super::accurate::Sum::from(x.origin[i]).sub(super::accurate::Sum::from(y.origin[i])).add(super::accurate::Sum::from(x.center[i])).sub(super::accurate::Sum::from(y.center[i])).value()); let r=norm(d); let q=(x.half+y.half)/r*(1.+16.*f64::EPSILON);
+            if !r.is_finite() || r<=0. || !q.is_finite() || q>0.25 {return Ok(None)}
+            let aa=x.half/r; let bb=y.half/r; let z=d[2]/r;
+            let mut p0=1.; let mut p1=z; let mut sum=1.; let mut abs_sum=1.; let mut tail=q*q/(1.-q*q); let mut degree=0usize;
+            let u=(aa+bb).powi(2); let v=(aa-bb).powi(2); let mut moment_poly=1.; let mut vpower=1.; let mut qpower=q*q;
+            for n in 2..=24 { let pn=((2*n-1) as f64*z*p1-(n-1) as f64*p0)/(n as f64); p0=p1; p1=pn;
+                if n%2==0 { let k=n/2; vpower*=v; moment_poly=u*moment_poly+vpower;
+                    let moment=moment_poly/((2*k+1)*(k+1)) as f64;
+                    let term=pn*moment; sum+=term; abs_sum+=term.abs(); degree=n; qpower*=q*q; tail=qpower/(1.-q*q); if tail<1e-14 {break;}
+                }
+            }
+            let allowance=(tail+128.*f64::EPSILON*(degree+1) as f64*abs_sum)/r;
+            let avg=sum/r; if !avg.is_finite() || avg<=0. || !allowance.is_finite() || allowance>1e-12*avg {return Ok(None)}
+            row+=y.weight*avg; error_sum+=x.weight*y.weight*allowance;
+        } total=total.add(super::accurate::Sum::from(x.weight*row)); }
+        let value=total.value(); if !value.is_finite() || value<=0. || !error_sum.is_finite() {return Ok(None)} Ok(Some((value,error_sum)))
     }
     pub fn separation_q(&self, other: &Self) -> f64 {
         (self.radius + other.radius) / norm(sub(self.center, other.center)) * (1. + 64. * f64::EPSILON)
@@ -1382,5 +1454,65 @@ mod far_source_guards {
         let extreme=ordinary.bounded_far_tetra([1e200,0.,0.],1e-10).unwrap().unwrap();
         assert!(extreme.0.is_finite()&&extreme.0>0.);
         assert!((extreme.0/(samples.volume/1e200)-1.).abs()<1e-12);
+    }
+}
+
+
+#[cfg(test)]
+mod axial_tetra_tests {
+    use super::*;
+    #[test]
+    fn axial_tetra_controls() {
+        let a=[[0.,0.,0.],[1.,0.,0.],[0.,1.,0.],[0.,0.,0.01]];
+        let b=[[2.,0.,0.1],[3.,0.,0.1],[2.,1.,0.1],[2.,0.,0.13]];
+        for order in [6,8] {
+            let mut x=TetraCubature::new(a,order).unwrap(); x.prepare_axial(a,order).unwrap(); let y=TetraCubature::new_axial(b,order).unwrap();
+            let now=std::time::Instant::now(); let (v,e)=x.try_axial_integral(&y).unwrap().unwrap(); let axial=now.elapsed();
+            let now=std::time::Instant::now(); let old=x.direct_integral(&y).unwrap(); let direct=now.elapsed();
+            println!("order {order}: axial {axial:?}, direct {direct:?}, line pairs {}, point pairs {}, rel diff {}, bound {}",order.pow(4)+(order+2).pow(4),order.pow(6),(v-old).abs()/old,e/v);
+            assert!((v-old).abs()<1e-10*old); assert!((y.try_axial_integral(&x).unwrap().unwrap().0-v).abs()<1e-12*v);
+            let src=PointPotential::tetrahedron(b).unwrap(); let reference=tetra_integral(a,&src,16).unwrap(); assert!((v-reference).abs()<1e-7*reference);
+            let mut at=a; at.swap(0,2); let perm=TetraCubature::new_axial(at,order).unwrap().try_axial_integral(&y).unwrap().unwrap().0; assert!((v-perm).abs()<1e-7*v);
+            let shift=|mut t:[[f64;3];4]| {for p in &mut t {p[0]+=10.;p[1]-=3.;p[2]+=2.;} t};
+            let shifted=TetraCubature::new_axial(shift(a),order).unwrap().try_axial_integral(&TetraCubature::new_axial(shift(b),order).unwrap()).unwrap().unwrap().0; assert!((v-shifted).abs()<1e-11*v);
+            assert!(x.try_axial_integral(&x).unwrap().is_none());
+        }
+        let unsupported=[[0.,0.,0.],[1.,0.,0.],[0.,1.,0.],[0.2,0.3,0.1]];
+        assert!(TetraCubature::new_axial(unsupported,6).unwrap().axial_lines.is_none());
+    }
+}
+
+#[cfg(test)]
+mod axial_line_more_tests {
+    use super::*;
+    fn one(z:f64,half:f64)->TetraCubature { TetraCubature {center:[0.,0.,z],radius:half,points:vec![],weights:vec![],axial_lines:Some(vec![AxialLine{origin:[0.,0.,z],center:[0.;3],half,weight:1.}]),axial_refined:Some(vec![AxialLine{origin:[0.,0.,z],center:[0.;3],half,weight:1.}])} }
+    #[test] fn axial_line_disjoint_and_extremes() {
+        let a=one(0.,0.2); let b=one(3.,0.1); let (v,e)=a.try_axial_integral(&b).unwrap().unwrap();
+        let f=|s:f64| s*s.abs().ln()-s.abs();
+        let exact=(f(3.3)+f(2.7)-f(3.1)-f(2.9))/0.08;
+        println!("rho-zero axial average {v}, endpoint reference {exact}, bound {e}"); assert!((v-exact).abs()<2e-13*exact);
+        assert!(a.try_axial_integral(&one(0.1,0.2)).unwrap().is_none());
+        assert!(a.try_axial_integral(&one(1.,0.2)).unwrap().is_none());
+    }
+    #[test] fn moment_recurrence_and_endpoint() {
+        for (a,b) in [(0.1_f64,0.07_f64),(0.1,0.1),(0.1,1e-9)] {
+            let u=(a+b).powi(2); let v=(a-b).powi(2); let mut s=1.; let mut vp=1.;
+            for k in 1..=12 {vp*=v; s=u*s+vp; let recurrence=s/((2*k+1)*(k+1)) as f64;
+                let n=2*k; let mut bin=1.; let mut reference=0.; for j in 0..=n {if j%2==0 {reference+=bin*a.powi(j as i32)*b.powi((n-j) as i32)/((j+1)*(n-j+1)) as f64;} if j<n {bin*=(n-j) as f64/(j+1) as f64;}}
+                assert!((recurrence-reference).abs()<2e-14*reference);
+            }
+        }
+        let mut a=one(0.,0.2); let mut b=one(2.,0.1); for lines in [&mut a.axial_lines,&mut a.axial_refined] {lines.as_mut().unwrap()[0].origin[0]=1.;} for lines in [&mut b.axial_lines,&mut b.axial_refined] {lines.as_mut().unwrap()[0].origin[0]=2.;}
+        let value=a.try_axial_integral(&b).unwrap().unwrap().0;
+        let exact=super::super::axial_magnetic::axial_kernel(1.,[-0.2,0.2],[1.9,2.1]).unwrap()/0.08;
+        assert!((value-exact).abs()<1e-12*exact);
+    }
+    #[test] fn thick_tetra_outer_refinement() {
+        let a=[[0.,0.,0.],[1.,0.,0.],[0.,1.,0.],[0.,0.,0.7]];
+        let b=[[4.,0.,0.2],[5.,0.,0.2],[4.,1.,0.2],[4.,0.,1.3]];
+        let evaluate=|n| TetraCubature::new_axial(a,n).unwrap().try_axial_integral(&TetraCubature::new_axial(b,n).unwrap()).unwrap().unwrap().0;
+        let v=evaluate(8); let refined=evaluate(10); let reference=tetra_integral(a,&PointPotential::tetrahedron(b).unwrap(),16).unwrap();
+        println!("thick outer 8/10 rel {}, analytic source rel {}",(v-refined).abs()/refined,(refined-reference).abs()/reference);
+        assert!((v-refined).abs()<1e-8*refined); assert!((refined-reference).abs()<1e-9*reference);
     }
 }

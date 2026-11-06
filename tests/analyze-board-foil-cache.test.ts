@@ -69,6 +69,17 @@ test('section current hints have isolated response cache identity', () => {
   }
 });
 
+test('experimental axial tetrahedra isolate response cache identity', () => {
+  const dir=mkdtempSync(join(tmpdir(),'p7-axial-tetra-'));const before=process.env.P7_MAGNETIC_AXIAL_TETS;
+  try {
+    const cache=new LocalModelCache(dir);const run=()=>cachedBoardFoilReport(cache,'axial-control',problem,r=>mock(r));
+    delete process.env.P7_MAGNETIC_AXIAL_TETS;const baseline=run();
+    process.env.P7_MAGNETIC_AXIAL_TETS='1';assert.notEqual(run().cache?.key,baseline.cache?.key);assert.equal(run().cache?.status,'memory');
+    process.env.P7_MAGNETIC_AXIAL_TETS='0';assert.equal(run().cache?.key,baseline.cache?.key);
+    process.env.P7_MAGNETIC_AXIAL_TETS='auto';assert.throws(run,/unsupported P7_MAGNETIC_AXIAL_TETS/);
+  } finally {if(before===undefined)delete process.env.P7_MAGNETIC_AXIAL_TETS;else process.env.P7_MAGNETIC_AXIAL_TETS=before;rmSync(dir,{recursive:true,force:true});}
+});
+
 test('bounded near omission has isolated response cache identity', () => {
   const dir=mkdtempSync(join(tmpdir(),'p7-near-bound-'));
   const before=process.env.P7_MAGNETIC_NEAR_BOUND;
@@ -186,6 +197,19 @@ test('automatic partition policy reaches native preparation and exact cache with
     };
     assert.doesNotThrow(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,bounded));
     for(const bad of ['disabled','sum','policy'] as const) assert.throws(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>bounded(input,bad)),/CHANNEL_FOIL_EVIDENCE/);
+    const estimated=(input:BoardFoilProblem,bad?:'certified'|'policy'|'chunk'|'column')=>{
+      const value=chunked(input);const cover=(value.provenance.magneticOperator as any).basisCover;
+      const tag={nearQuadraturePolicy:'axial-tetra-estimated-v1',nearQuadratureErrorCertified:false};
+      Object.assign(cover,tag);cover.chunkCertificates.forEach((c:any)=>Object.assign(c,tag));
+      value.samples.forEach(s=>s.columns.forEach(c=>Object.assign(c.magneticCertificate!,tag)));
+      if(bad==='certified')cover.nearQuadratureErrorCertified=true;
+      if(bad==='policy')cover.nearQuadraturePolicy='unknown';
+      if(bad==='chunk')delete cover.chunkCertificates[0].nearQuadraturePolicy;
+      if(bad==='column')delete value.samples[0].columns[0].magneticCertificate!.nearQuadraturePolicy;
+      return value;
+    };
+    assert.doesNotThrow(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,estimated));
+    for(const bad of ['certified','policy','chunk','column'] as const) assert.throws(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>estimated(input,bad)),/CHANNEL_FOIL_EVIDENCE/);
     assert.doesNotThrow(()=>runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>{
       const value=tree(input),operator=value.provenance.magneticOperator!;
       if(operator.policy==='certified-adaptive-harmonic-v1')Object.assign(operator.basisCover,{

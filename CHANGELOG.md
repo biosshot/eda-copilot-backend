@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add opt-in `P7_MAGNETIC_AXIAL_TETS=1` vertical-edge tetrahedron quadrature for streamed order-6/8 separated pairs, with lazy bounded preparation, generic fallback and isolated cache identity. Preserve explicit non-certified near-quadrature metadata through reports and validation. A native channel control exercises the new path and passes original KVL gates; full-board speedup and case-matrix acceptance remain unverified.
+
 - Measure instrumented persistent-cache STM32 prefix: native deadline at 243.203 s, 134,528 successful near pairs, 83.711 s kernel-window wall. Separated direct cubature accounts for about 70.3% of summed worker kernel time; no completed channel or full-board speedup is established. Prioritize arithmetic reduction in that kernel while retaining original tetrahedra.
 
 - Record a bounded test-only island-constant refinement: unchanged physical checks converge for one previously refused 10 kHz drive, but the 1 kHz passive-charge case stagnates. No production correction or gate change is made; full coupled-system admission and scalable cost remain unresolved.

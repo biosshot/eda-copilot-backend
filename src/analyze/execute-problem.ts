@@ -1,4 +1,4 @@
-import {LocalModelCache,localCoreIdentity,magneticPrecision as selectedMagneticPrecision,localExtractionKey,sectionFieldIdentity} from './local-model-cache.ts';
+import {LocalModelCache,localCoreIdentity,magneticAxialTetPolicy,magneticPrecision as selectedMagneticPrecision,localExtractionKey,sectionFieldIdentity} from './local-model-cache.ts';
 import { cachedBoardFoilReport } from './board-foil-cache.ts';
 import { createRequire } from 'node:module';
 import { backendResource } from '../runtime/resources.ts';
@@ -22,6 +22,7 @@ function validateChannelMagneticCache(value:any,physical:any,budget:any){
  * disposable process, so cancellation cannot orphan a nested native worker. */
 export function createProblemExecutor(retainDcForScenario = false) {
   const localCache=workerModelCache??=new LocalModelCache();let coreIdentity:string|undefined;let magneticProfile:string|undefined;let magneticPrecision:string|undefined;
+  let axialTetPolicy:ReturnType<typeof magneticAxialTetPolicy>;
   let session: import('../../native/analyze/index.js').AnalysisDcSession | undefined;
   let electrical: import('../../native/analyze/index.js').AnalysisElectricalSession | undefined;
   const checkedCoreIdentity = () => {
@@ -29,7 +30,9 @@ export function createProblemExecutor(retainDcForScenario = false) {
     if(magneticProfile!==undefined&&magneticProfile!==activeProfile)throw new Error('LOCAL_CACHE: magnetic profile changed during executor lifetime');
     const activePrecision=selectedMagneticPrecision();
     if(magneticPrecision!==undefined&&magneticPrecision!==activePrecision)throw new Error('LOCAL_CACHE: magnetic precision changed during executor lifetime');
-    coreIdentity ??= localCoreIdentity();magneticProfile=activeProfile;magneticPrecision=activePrecision;
+    const activeAxial=magneticAxialTetPolicy();
+    if(coreIdentity!==undefined&&axialTetPolicy!==activeAxial)throw new Error('LOCAL_CACHE: axial tetrahedron policy changed during executor lifetime');
+    coreIdentity ??= localCoreIdentity();magneticProfile=activeProfile;magneticPrecision=activePrecision;axialTetPolicy=activeAxial;
     return coreIdentity;
   };
   return <P extends AnalysisProblem>(problem: P): AnalysisResult<P> => {

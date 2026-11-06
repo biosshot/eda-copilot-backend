@@ -2287,6 +2287,8 @@ fn compact_magnetic_certificate(cover: &serde_json::Value) -> serde_json::Value 
         "boundedOmittedBlocks",
         "nearBoundEnabled",
         "nearBoundPolicy",
+        "nearQuadraturePolicy",
+        "nearQuadratureErrorCertified",
         "activeEnvelopeTerminals",
         "actionWallSeconds",
     ] {
@@ -2301,6 +2303,7 @@ fn compact_cover_keeps_optional_partition_metadata_absent_or_complete() {
     assert!(compact.get("batchColumns").is_none());
     assert!(compact.get("chunkCertificates").is_none());
     assert!(compact.get("nearBoundPolicy").is_none());
+    assert!(compact.get("nearQuadraturePolicy").is_none());
     let mut chunked=common;
     chunked["batchColumns"]=serde_json::json!(1);
     chunked["chunkCount"]=serde_json::json!(2);
@@ -2309,10 +2312,13 @@ fn compact_cover_keeps_optional_partition_metadata_absent_or_complete() {
     chunked["nearBoundEnabled"]=serde_json::json!(true);
     chunked["nearBoundPolicy"]=serde_json::json!("summed-per-tetra-volume-v1");
     chunked["boundedOmittedBlocks"]=serde_json::json!(2);
+    chunked["nearQuadraturePolicy"]=serde_json::json!("axial-tetra-estimated-v1");
+    chunked["nearQuadratureErrorCertified"]=serde_json::json!(false);
     let compact=compact_magnetic_certificate(&chunked);
     for key in ["batchColumns","chunkCount","coverAggregation","chunkCertificates","nearBoundEnabled","nearBoundPolicy","boundedOmittedBlocks"] {
         assert_eq!(compact[key],chunked[key]);
     }
+    for key in ["nearQuadraturePolicy","nearQuadratureErrorCertified"] {assert_eq!(compact[key],chunked[key]);}
 }
 #[cfg(test)]
 #[path = "adaptive_magnetic_bench.rs"]

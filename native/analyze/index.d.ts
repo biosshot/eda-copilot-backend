@@ -245,6 +245,9 @@ export interface AnalysisMagneticCertificate {
     zeroBlocks: number; activeEnvelopeTerminals: number; actionWallSeconds: number;
     nearBoundEnabled?: boolean; boundedOmittedBlocks?: number;
     nearBoundPolicy?: 'summed-per-tetra-volume-v1';
+    /** Experimental quadrature estimates are separate from the interval/far-tail bounds. */
+    nearQuadraturePolicy?: 'axial-tetra-estimated-v1';
+    nearQuadratureErrorCertified?: false;
 }
 export interface AnalysisMagneticBasisCover extends Omit<AnalysisMagneticCertificate, 'policy'> {
     modelRevision: number; rhsColumns: number; visitedNodePairs: number; nearTiles: number;

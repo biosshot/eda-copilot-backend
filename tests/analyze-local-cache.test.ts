@@ -4,6 +4,12 @@ import {LocalModelCache,canonical,digest,localExtractionKey} from '../src/analyz
 const fixture={status:'complete',model:{R:1},validity:{status:'conditional',reason:'finite band'},recovery:[1,2]};
 const validate=(v:any)=>{assert.equal(v.status,'complete');assert.equal(v.model.R,1);assert.equal(v.validity.status,'conditional');assert.deepEqual(v.recovery,[1,2]);};
 const dir=()=>mkdtempSync(join(tmpdir(),'analyze-model-cache-'));
+test('experimental axial tetrahedra isolate core identity without changing the off key',async()=>{
+ const {localCoreIdentity}=await import('../src/analyze/local-model-cache.ts');
+ const before=process.env.P7_MAGNETIC_AXIAL_TETS;
+ try{delete process.env.P7_MAGNETIC_AXIAL_TETS;const baseline=localCoreIdentity();process.env.P7_MAGNETIC_AXIAL_TETS='0';assert.equal(localCoreIdentity(),baseline);process.env.P7_MAGNETIC_AXIAL_TETS='1';assert.notEqual(localCoreIdentity(),baseline);process.env.P7_MAGNETIC_AXIAL_TETS='auto';assert.throws(()=>localCoreIdentity(),/unsupported P7_MAGNETIC_AXIAL_TETS/);}
+ finally{if(before===undefined)delete process.env.P7_MAGNETIC_AXIAL_TETS;else process.env.P7_MAGNETIC_AXIAL_TETS=before;}
+});
 test('audited copper mesh identity follows its upper frequency without invalidating ordinary extraction',()=>{
  const d=dir();try{
   const cache=new LocalModelCache(d),base={boardJson:'{}',geometry:{},bandHz:[1000,100000]};
@@ -58,6 +64,13 @@ test('diagnostic magnetic trace does not select a numerical model or alter cache
  const before=process.env.P7_MAGNETIC_TRACE;
  try{delete process.env.P7_MAGNETIC_TRACE;const baseline=localCoreIdentity();process.env.P7_MAGNETIC_TRACE='1';assert.equal(localCoreIdentity(),baseline);}
  finally{if(before===undefined)delete process.env.P7_MAGNETIC_TRACE;else process.env.P7_MAGNETIC_TRACE=before;}
+});
+
+test('one executor refuses axial tetrahedron policy changes',async()=>{
+ const {createProblemExecutor}=await import('../src/analyze/execute-problem.ts');const run=createProblemExecutor();const before=process.env.P7_MAGNETIC_AXIAL_TETS;
+ const request:any={kind:'local-extraction',request:{boardJson:'{}',geometry:{},bandHz:[1000,100000],frequenciesHz:[1000],magneticPatchLevel:1}};
+ try{delete process.env.P7_MAGNETIC_AXIAL_TETS;assert.throws(()=>run(request));process.env.P7_MAGNETIC_AXIAL_TETS='1';assert.throws(()=>run(request),/axial tetrahedron policy changed during executor lifetime/);}
+ finally{if(before===undefined)delete process.env.P7_MAGNETIC_AXIAL_TETS;else process.env.P7_MAGNETIC_AXIAL_TETS=before;}
 });
 
 test('one executor refuses magnetic profile changes before accessing a differently configured native model',async()=>{

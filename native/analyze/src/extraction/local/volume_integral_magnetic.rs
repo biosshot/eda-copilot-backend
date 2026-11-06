@@ -99,6 +99,7 @@ struct PairCell {
     touched: u64,
     source: PointPotential,
     cubatures: Vec<TetraCubature>,
+    axial_prepared: [bool; 3],
 }
 // Diagnostic counters exist only when explicitly requested.
 struct PairTrace {
@@ -155,7 +156,7 @@ impl SlowCapture {
     }
 }
 #[derive(Default)]
-struct ParallelCounts { counts: [u64; 3], seconds: [f64; 3], geometry_hits:u64, geometry_builds:u64 }
+struct ParallelCounts { counts: [u64; 3], seconds: [f64; 3], geometry_hits:u64, geometry_builds:u64, axial_accepted:u64, axial_fallback:u64, axial_max_relative:f64, orders:[u64;3] }
 struct ParallelProgress { windows: u64, pairs: u64, wall: f64, last: Instant, failed:bool }
 struct ParallelState {
     pool: rayon::ThreadPool,
@@ -165,11 +166,11 @@ struct ParallelState {
 impl ParallelState {
     fn report(&self, final_record: bool, failed: bool) {
         let p = self.progress.borrow();
-        let mut counts = [0u64; 3]; let mut seconds = [0f64; 3];let mut geometry_hits=0;let mut geometry_builds=0;
+        let mut counts = [0u64; 3]; let mut seconds = [0f64; 3]; let mut accepted=0; let mut fallback=0; let mut max_relative=0f64; let mut orders=[0u64;3];let mut geometry_hits=0;let mut geometry_builds=0;
         for worker in &self.workers {
             let worker = worker.lock().unwrap_or_else(|e| e.into_inner());
             let c = worker.parallel_counts.as_ref().unwrap().borrow();
-            for k in 0..3 { counts[k] += c.counts[k]; seconds[k] += c.seconds[k]; }
+            for k in 0..3 { counts[k] += c.counts[k]; seconds[k] += c.seconds[k]; orders[k]+=c.orders[k]; } accepted+=c.axial_accepted; fallback+=c.axial_fallback; max_relative=max_relative.max(c.axial_max_relative);
             geometry_hits+=c.geometry_hits;geometry_builds+=c.geometry_builds;
         }
         eprintln!("P7_MAGNETIC_PARALLEL_PROGRESS {}", serde_json::json!({
@@ -177,6 +178,7 @@ impl ParallelState {
             "selfCalls":counts[0],"separatedCalls":counts[1],"adaptiveCalls":counts[2],
             "selfSeconds":seconds[0],"separatedSeconds":seconds[1],"adaptiveSeconds":seconds[2],
             "geometryCacheHits":geometry_hits,"geometryCacheBuilds":geometry_builds,
+            "axialAccepted":accepted,"axialFallbacks":fallback,"axialMaxSeriesRoundoffEstimate":max_relative,"selectedOrder4":orders[0],"selectedOrder6":orders[1],"selectedOrder8":orders[2],
             "countsIncludeFailed":true,"partial":true,"final":final_record,"failed":p.failed || failed
         }));
     }
@@ -189,6 +191,7 @@ struct BoundedPairs {
     tetra: std::sync::Arc<Vec<[[f64; 3]; 4]>>,
     pool: Option<ParallelState>,
     parallel_counts: Option<std::cell::RefCell<ParallelCounts>>,
+    axial: bool,
     cells: std::cell::RefCell<Vec<PairCell>>,
     slots: usize,
     tick: std::cell::Cell<u64>,
@@ -244,6 +247,10 @@ impl BoundedPairs {
     ) -> Result<Self> {
         Self::new_with_scalar(tetra,order,slots,0,start,wall)
     }
+    #[cfg(test)]
+    fn new_with_axial(tetra:Vec<[[f64;3];4]>,order:usize,slots:usize,start:Instant,wall:Duration,axial:bool)->Result<Self> {
+        let mut pair=Self::new(tetra,order,slots,start,wall)?; pair.axial=axial; Ok(pair)
+    }
     fn new_with_scalar(tetra:Vec<[[f64;3];4]>,order:usize,slots:usize,scalar_slots:usize,start:Instant,wall:Duration)->Result<Self> {
         check_deadline(start, wall)?;
         let mut scalar=Vec::new();scalar.try_reserve_exact(scalar_slots).map_err(|_|error("MEMORY_LIMIT","scalar pair cache allocation failed"))?;
@@ -260,6 +267,7 @@ impl BoundedPairs {
             tetra: std::sync::Arc::new(tetra),
             pool: None,
             parallel_counts: None,
+            axial: false,
             cells: std::cell::RefCell::new(Vec::with_capacity(slots)),
             slots,
             tick: std::cell::Cell::new(0),
@@ -268,14 +276,15 @@ impl BoundedPairs {
             wall,
         })
     }
-    fn parallel_bytes(workers: usize) -> Result<usize> {
+    fn parallel_bytes(workers: usize) -> Result<usize> { Self::parallel_bytes_for(workers, false) }
+    fn parallel_bytes_for(workers: usize, axial: bool) -> Result<usize> {
         if !(2..=32).contains(&workers) { return Err(error("MAGNETIC_CONFIG", "parallel worker count must be 2..32")); }
-        workers.checked_mul(66 * STREAMED_PAIR_SLOT_BYTES + 2 * 1024 * 1024 + 4096)
+        workers.checked_mul(66 * STREAMED_PAIR_SLOT_BYTES + 2 * 1024 * 1024 + 4096 + if axial { 64 * 24 * 1024 + 64 * 1024 } else { 0 })
             .and_then(|v| v.checked_add(8192))
             .ok_or_else(|| error("MEMORY_LIMIT", "parallel magnetic window plan overflow"))
     }
     fn configure_parallel(&mut self, workers: usize) -> Result<()> {
-        Self::parallel_bytes(workers)?;
+        Self::parallel_bytes_for(workers, self.axial)?;
         let pool = rayon::ThreadPoolBuilder::new().num_threads(workers)
             .stack_size(2 * 1024 * 1024).build()
             .map_err(|_| error("MEMORY_LIMIT", "parallel magnetic pool creation failed"))?;
@@ -285,7 +294,7 @@ impl BoundedPairs {
             let mut cells = Vec::new();
             cells.try_reserve_exact(64).map_err(|_| error("MEMORY_LIMIT", "parallel cache allocation failed"))?;
             caches.push(std::sync::Mutex::new(BoundedPairs {
-                tetra:self.tetra.clone(), pool:None, parallel_counts:Some(std::cell::RefCell::new(ParallelCounts::default())),
+                tetra:self.tetra.clone(), pool:None, axial:self.axial, parallel_counts:Some(std::cell::RefCell::new(ParallelCounts::default())),
                 scalar:std::cell::RefCell::new(Vec::new()), trace:None, capture:None,
                 cells:std::cell::RefCell::new(cells), slots:64, tick:std::cell::Cell::new(0),
                 order:self.order, start:self.start, wall:self.wall,
@@ -368,6 +377,7 @@ impl BoundedPairs {
             touched: tick,
             source,
             cubatures,
+            axial_prepared: [false;3],
         });
         Ok(())
     }
@@ -413,15 +423,31 @@ impl BoundedPairs {
         let mut cells = self.cells.borrow_mut();
         self.ensure(&mut cells, i, None)?;
         self.ensure(&mut cells, j, Some(i))?;
-        let target = cells.iter().find(|cell| cell.index == i).unwrap();
-        let source = cells.iter().find(|cell| cell.index == j).unwrap();
-        let q = target.cubatures[0].separation_q(&source.cubatures[0]);
+        let ti = cells.iter().position(|cell| cell.index == i).unwrap();
+        let si = cells.iter().position(|cell| cell.index == j).unwrap();
+        let q = cells[ti].cubatures[0].separation_q(&cells[si].cubatures[0]);
         if let Some(k) = separated_order(q, self.order)
             .and_then(|o| [4, 6, 8].iter().position(|&candidate| candidate == o))
         {
             *kind = 1;
-            return target.cubatures[k].direct_integral(&source.cubatures[k]);
+            if let Some(c) = &self.parallel_counts { c.borrow_mut().orders[k] += 1; }
+            if self.axial && k > 0 {
+                for (cell_index, tetra_index) in [(ti,i),(si,j)] {
+                    if !cells[cell_index].axial_prepared[k] {
+                        cells[cell_index].cubatures[k].prepare_axial(self.tetra[tetra_index], [4,6,8][k])?;
+                        cells[cell_index].axial_prepared[k]=true;
+                    }
+                }
+                let estimate = cells[ti].cubatures[k].try_axial_integral(&cells[si].cubatures[k])?;
+                if let Some((value, error_estimate)) = estimate {
+                    if let Some(c) = &self.parallel_counts { let mut c=c.borrow_mut(); c.axial_accepted+=1; c.axial_max_relative=c.axial_max_relative.max(error_estimate/value.abs()); }
+                    return Ok(value);
+                }
+                if let Some(c) = &self.parallel_counts { c.borrow_mut().axial_fallback+=1; }
+            }
+            return cells[ti].cubatures[k].direct_integral(&cells[si].cubatures[k]);
         }
+        let source = &cells[si];
         tetra_integral_adaptive(self.tetra[i], &source.source, self.order, 1e-10)
     }
 }
@@ -469,6 +495,7 @@ impl<'a> Streamed<'a> {
             ));
         }
         let config=match std::env::var("P7_MAGNETIC_PAIR_CACHE_MIB") {Ok(v)=>Some(v),Err(std::env::VarError::NotPresent)=>None,Err(_)=>return Err(error("MAGNETIC_CONFIG","P7_MAGNETIC_PAIR_CACHE_MIB must be valid UTF-8"))};
+        let axial = match std::env::var("P7_MAGNETIC_AXIAL_TETS") { Ok(v) if v=="1" => true, Ok(v) if v=="0" => false, Err(std::env::VarError::NotPresent) => false, _ => return Err(error("MAGNETIC_CONFIG", "P7_MAGNETIC_AXIAL_TETS must be 0 or 1")) };
         let requested = match std::env::var("P7_MAGNETIC_NEAR_THREADS") {
             Ok(v) => v.parse::<usize>().ok().filter(|&n| (1..=32).contains(&n))
                 .ok_or_else(|| error("MAGNETIC_CONFIG", "P7_MAGNETIC_NEAR_THREADS must be an integer 1..32"))?,
@@ -479,14 +506,17 @@ impl<'a> Streamed<'a> {
             || std::env::var_os("P7_MAGNETIC_SLOW_PAIR_PATH").is_some()
             || config.as_deref().is_some_and(|v| v != "0");
         let workers = if diagnostics { if requested > 1 { eprintln!("P7_MAGNETIC_NEAR_THREADS serial fallback: diagnostics or scalar cache enabled"); } 1 } else { requested };
-        let parallel_bytes = if workers > 1 { BoundedPairs::parallel_bytes(workers)? } else { 0 };
+        let parallel_bytes = if workers > 1 { BoundedPairs::parallel_bytes_for(workers, axial)? } else { 0 };
         eprintln!("P7_MAGNETIC_PARALLEL_PLAN nearWorkers={workers} requestedNearWorkers={requested} nearParallelBytes={parallel_bytes} nearWindowPairs=128");
-        let planned_base = base_bytes.checked_add(parallel_bytes).ok_or_else(|| error("MEMORY_LIMIT", "parallel magnetic base overflow"))?;
+        let axial_bytes = if axial { 64 * 24 * 1024 + 64 * 1024 } else { 0 };
+        eprintln!("P7_MAGNETIC_AXIAL_PLAN enabled={axial} serialExtraBytes={axial_bytes}");
+        let planned_base = base_bytes.checked_add(axial_bytes).and_then(|v| v.checked_add(parallel_bytes)).ok_or_else(|| error("MEMORY_LIMIT", "parallel magnetic base overflow"))?;
         let (scalar_slots,scalar_bytes,mut owned_bytes,slots)=scalar_plan(config.as_deref(),n,order,planned_base,budget)?;
-        owned_bytes = owned_bytes.checked_add(parallel_bytes).ok_or_else(|| error("MEMORY_LIMIT", "parallel magnetic owned overflow"))?;
+        owned_bytes = owned_bytes.checked_add(axial_bytes).and_then(|v| v.checked_add(parallel_bytes)).ok_or_else(|| error("MEMORY_LIMIT", "parallel magnetic owned overflow"))?;
         eprintln!("P7_STREAMED_MEMORY_PLAN tetrahedra={n} geometryBytes={} exactCacheSlots={slots} slotBytes={STREAMED_PAIR_SLOT_BYTES} constructionScratchSlots=2 scalarCacheBytes={scalar_bytes} scalarCacheSlots={scalar_slots} ownedBytes={owned_bytes} baseBytes={base_bytes} budgetBytes={} operator=unchanged-direct-pairs complexity=quadratic", n*std::mem::size_of::<[[f64;3];4]>(),budget.max_bytes);
         // Move the original geometry into the cache; do not duplicate its Vec.
         let mut pair = BoundedPairs::new_with_scalar(geometry(mesh), order, slots, scalar_slots, start, wall)?;
+        pair.axial = axial;
         if workers > 1 { pair.configure_parallel(workers)?; }
         let hierarchical = {
             let tree = hierarchical_magnetic::Operator::new(
@@ -532,7 +562,7 @@ impl<'a> Streamed<'a> {
         columns: &[Vec<f64>],
         absolute_goals: &[f64],
     ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
-        self.hierarchical
+        let (actions, bounds, mut certificate) = self.hierarchical
             .as_ref()
             .ok_or_else(|| {
                 error(
@@ -540,7 +570,16 @@ impl<'a> Streamed<'a> {
                     "adaptive common-batch tree required",
                 )
             })?
-            .batch(&self.pair, self.space, columns, absolute_goals)
+            .batch(&self.pair, self.space, columns, absolute_goals)?;
+        if self.pair.axial {
+            fn mark(value: &mut serde_json::Value) {
+                value["nearQuadraturePolicy"] = serde_json::json!("axial-tetra-estimated-v1");
+                value["nearQuadratureErrorCertified"] = serde_json::json!(false);
+                if let Some(chunks)=value.get_mut("chunkCertificates").and_then(|v|v.as_array_mut()) { for chunk in chunks { mark(chunk); } }
+            }
+            mark(&mut certificate);
+        }
+        Ok((actions,bounds,certificate))
     }
 
     /// Upper triangle visited once per batch. Both action rows receive the
@@ -728,6 +767,75 @@ mod bounded_pair_tests {
                 if workers == 1 && window == 0 { expected=bits; } else { assert_eq!(expected,bits); }
                 eprintln!("P7_CAPTURED_PAIR_BENCH workers={workers} window={window} valid={} seconds={:.6}",values.len(),started.elapsed().as_secs_f64());
             }
+        }
+    }
+    #[test]
+    fn axial_opt_in_preserves_full_action_and_parallel_bits() {
+        use std::collections::BTreeMap;
+        use super::super::volume_current;
+        let start=Instant::now(); let wall=Duration::from_secs(60);
+        let a=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];
+        let geometry:Vec<_>=(0..5).map(|i| a.map(|p|[p[0]+i as f64*0.004,p[1],p[2]])).collect();
+        let space=Space {mesh_nodes:vec![vec![];4],node_potential:BTreeMap::new(),cells:(0..geometry.len()).map(|i|volume_current::Cell {mesh_cell:i,potentials:[0,1,2,3],incidence:[[0.;3];4],density_per_amp_m2:1e6,resistance_ohm:1.}).collect(),components:vec![vec![0,1,2,3]],planned_bytes:0};
+        let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:1000,max_tetrahedra:1000};
+        let tree=hierarchical_magnetic::Operator::new(&geometry,4,1,0.2,0,budget,start,wall).unwrap();
+        let columns=vec![(0..15).map(|i|if i%2==0 {1.} else {-0.5}).collect::<Vec<_>>()];
+        let original=BoundedPairs::new_with_axial(geometry.clone(),12,64,start,wall,false).unwrap();
+        let mut axial=BoundedPairs::new_with_axial(geometry,12,64,start,wall,true).unwrap();
+        let reference=tree.batch(&original,&space,&columns,&[1e-20]).unwrap().0;
+        let serial=tree.batch(&axial,&space,&columns,&[1e-20]).unwrap().0;
+        for (a,b) in reference.iter().flatten().zip(serial.iter().flatten()) { assert!((a-b).abs() <= 1e-8 * a.abs().max(1e-30)); }
+        axial.configure_parallel(2).unwrap();
+        let parallel=tree.batch(&axial,&space,&columns,&[1e-20]).unwrap().0;
+        assert_eq!(serial.iter().flatten().map(|x|x.to_bits()).collect::<Vec<_>>(),parallel.iter().flatten().map(|x|x.to_bits()).collect::<Vec<_>>());
+        assert!(BoundedPairs::parallel_bytes_for(2,true).unwrap()>BoundedPairs::parallel_bytes(2).unwrap());
+        let unsupported=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.0002,0.0003,0.001]];
+        let other=unsupported.map(|p|[p[0]+0.02,p[1],p[2]]);
+        let plain=BoundedPairs::new_with_axial(vec![unsupported,other],12,4,start,wall,false).unwrap();
+        let fallback=BoundedPairs::new_with_axial(vec![unsupported,other],12,4,start,wall,true).unwrap();
+        assert_eq!(plain.pair(1,0).unwrap().to_bits(),fallback.pair(1,0).unwrap().to_bits());
+    }
+    #[test]
+    fn axial_accepted_near_pair_and_action() {
+        use std::collections::BTreeMap;
+        use super::super::volume_current;
+        let start=Instant::now(); let wall=Duration::from_secs(60);
+        let a=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.00001]];
+        let b=a.map(|p|[p[0]+0.002,p[1],p[2]]); let geometry=vec![a,b];
+        let space=Space {mesh_nodes:vec![vec![];4],node_potential:BTreeMap::new(),cells:(0..2).map(|i|volume_current::Cell {mesh_cell:i,potentials:[0,1,2,3],incidence:[[0.;3];4],density_per_amp_m2:1e6,resistance_ohm:1.}).collect(),components:vec![vec![0,1,2,3]],planned_bytes:0};
+        let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:1000,max_tetrahedra:1000};
+        let tree=hierarchical_magnetic::Operator::new(&geometry,4,1,0.2,0,budget,start,wall).unwrap();
+        let original=BoundedPairs::new_with_axial(geometry.clone(),12,64,start,wall,false).unwrap();
+        let mut axial=BoundedPairs::new_with_axial(geometry,12,64,start,wall,true).unwrap();
+        let reference=original.pair(1,0).unwrap(); axial.configure_parallel(2).unwrap();
+        let actual=axial.pair_window(&[(1,0)]).unwrap()[0];
+        assert!((reference-actual).abs() <= 1e-8*reference.abs());
+        let state=axial.pool.as_ref().unwrap();
+        let accepted:u64=state.workers.iter().map(|w|w.lock().unwrap().parallel_counts.as_ref().unwrap().borrow().axial_accepted).sum();
+        assert!(accepted>0,"axial acceptance path must run");
+        let columns=vec![vec![1.,-0.5,0.25,-0.4,0.2,0.1]];
+        let (reference,_,cert)=tree.batch(&original,&space,&columns,&[1e-25]).unwrap();
+        assert!(cert["exactPairs"].as_u64().unwrap()>=3);
+        let (actual,_,_)=tree.batch(&axial,&space,&columns,&[1e-25]).unwrap();
+        for (a,b) in reference.iter().flatten().zip(actual.iter().flatten()) { assert!((a-b).abs() <= 1e-8*a.abs().max(1e-30)); }
+    }
+    #[test]
+    #[ignore = "requires isolated P7_MAGNETIC_AXIAL_TETS=1 and P7_MAGNETIC_BATCH_COLUMNS=1"]
+    fn axial_streamed_certificate_metadata() {
+        use std::collections::BTreeMap;
+        use super::super::{mesh::{LayeredMesh,CopperTetrahedron},volume_current};
+        assert_eq!(std::env::var("P7_MAGNETIC_AXIAL_TETS").unwrap(),"1");
+        assert_eq!(std::env::var("P7_MAGNETIC_BATCH_COLUMNS").unwrap(),"1");
+        let a=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.00001]];
+        let b=a.map(|p|[p[0]+0.002,p[1],p[2]]);
+        let mesh=LayeredMesh { nodes_m:a.into_iter().chain(b).collect(), tetrahedra:vec![], copper_tetrahedra:(0..2).map(|i|CopperTetrahedron {nodes:[4*i,4*i+1,4*i+2,4*i+3],slab:0,planar_triangle:i,source_ids:vec![],volume_m3:1e-11/6.,gradients_per_m:[[0.;3];4]}).collect(), copper_interfaces:vec![],external_faces:vec![],dielectric_volume_m3:0.,copper_volume_m3:0.,planned_peak_bytes:0 };
+        let space=Space {mesh_nodes:vec![vec![];4],node_potential:BTreeMap::new(),cells:(0..2).map(|i|volume_current::Cell {mesh_cell:i,potentials:[0,1,2,3],incidence:[[0.;3];4],density_per_amp_m2:1e6,resistance_ohm:1.}).collect(),components:vec![vec![0,1,2,3]],planned_bytes:0};
+        let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:1000,max_tetrahedra:1000};
+        let op=Streamed::new(&mesh,&space,12,0,budget,Instant::now(),Duration::from_secs(60)).unwrap();
+        let columns=vec![vec![1.;6],vec![-0.5;6]];
+        let (_,_,cert)=op.actions_certified(&columns,&[1e-25;2]).unwrap();
+        for c in std::iter::once(&cert).chain(cert["chunkCertificates"].as_array().unwrap().iter()) {
+            assert_eq!(c["nearQuadraturePolicy"],"axial-tetra-estimated-v1"); assert_eq!(c["nearQuadratureErrorCertified"],false);
         }
     }
     #[test]
