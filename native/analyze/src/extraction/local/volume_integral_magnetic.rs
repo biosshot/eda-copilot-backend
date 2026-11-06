@@ -42,7 +42,7 @@ impl PairQuadrature {
             .filter(|&o| o <= order)
             .map(|o| o.pow(3) * 32)
             .sum::<usize>();
-        n.checked_mul(per_cell + 16384)
+        n.checked_mul(per_cell + 128 * 1024)
             .ok_or_else(|| error("MEMORY_LIMIT", "direct magnetic cubature overflow"))
     }
 
@@ -91,7 +91,7 @@ impl PairQuadrature {
 // 32,000 B lazy far-source samples, tetra faces/edges/headers, and allocator
 // capacity padding. Two additional slots cover construction and near/self
 // graded integration scratch; no cache-owned reference escapes pair().
-const STREAMED_PAIR_SLOT_BYTES: usize = 128 * 1024;
+const STREAMED_PAIR_SLOT_BYTES: usize = 192 * 1024;
 const STREAMED_PAIR_MAX_SLOTS: usize = 64;
 
 struct PairCell {
@@ -133,9 +133,31 @@ fn scalar_plan(value:Option<&str>,n:usize,order:usize,base:usize,budget:Allocati
     let (pair,slots)=BoundedPairs::plan(n,order,reserved,budget)?;
     Ok((count,bytes,pair.checked_add(bytes).ok_or_else(||error("MEMORY_LIMIT","scalar pair cache plan overflow"))?,slots))
 }
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CaptureRecord { i: usize, j: usize, target_bits: [[u64; 3]; 4], source_bits: [[u64; 3]; 4], value_bits: u64, order: usize, tolerance: f64, seconds: f64, geometry_hash: u64 }
+struct SlowCapture { writer: std::io::BufWriter<std::fs::File>, count: usize, geometry_hash: u64 }
+impl SlowCapture {
+    fn open(path: &std::ffi::OsStr, tetra: &[[[f64;3];4]]) -> std::io::Result<Self> {
+        let mut hash=14695981039346656037u64;
+        for t in tetra { for p in t { for x in p { for b in x.to_bits().to_le_bytes() { hash=(hash ^ u64::from(b)).wrapping_mul(1099511628211); } } } }
+        let file=std::fs::OpenOptions::new().write(true).create_new(true).open(path)?;
+        Ok(Self { writer: std::io::BufWriter::with_capacity(8192,file), count:0, geometry_hash:hash })
+    }
+    fn record(&mut self, row: &CaptureRecord) -> std::io::Result<()> {
+        use std::io::Write;
+        if self.writer.get_ref().metadata()?.len() > 65536 - 4096 { return Err(std::io::Error::new(std::io::ErrorKind::Other, "capture file limit reached")); }
+        serde_json::to_writer(&mut self.writer,row)?;
+        self.writer.write_all(b"\n")?;
+        self.writer.flush()?;
+        self.count+=1;
+        Ok(())
+    }
+}
 struct BoundedPairs {
     scalar:std::cell::RefCell<Vec<Option<ScalarSlot>>>,
     trace: Option<std::cell::RefCell<PairTrace>>,
+    capture: Option<std::cell::RefCell<Option<SlowCapture>>>,
     tetra: Vec<[[f64; 3]; 4]>,
     cells: std::cell::RefCell<Vec<PairCell>>,
     slots: usize,
@@ -155,6 +177,7 @@ impl BoundedPairs {
         let fixed = n
             .checked_mul(std::mem::size_of::<[[f64; 3]; 4]>())
             .and_then(|v| v.checked_add(2 * STREAMED_PAIR_SLOT_BYTES))
+            .and_then(|v| v.checked_add(if std::env::var_os("P7_MAGNETIC_SLOW_PAIR_PATH").is_some() { 16384 } else { 0 }))
             .ok_or_else(|| error("MEMORY_LIMIT", "bounded magnetic geometry plan overflow"))?;
         let available = budget
             .max_bytes
@@ -195,7 +218,12 @@ impl BoundedPairs {
         check_deadline(start, wall)?;
         let mut scalar=Vec::new();scalar.try_reserve_exact(scalar_slots).map_err(|_|error("MEMORY_LIMIT","scalar pair cache allocation failed"))?;
         scalar.resize(scalar_slots,None);
+        let capture=std::env::var_os("P7_MAGNETIC_SLOW_PAIR_PATH").and_then(|path| match SlowCapture::open(&path,&tetra) {
+            Ok(c) => Some(std::cell::RefCell::new(Some(c))),
+            Err(e) => { eprintln!("P7_MAGNETIC_SLOW_PAIR capture disabled: {e}"); None }
+        });
         Ok(Self {
+            capture,
             scalar:std::cell::RefCell::new(scalar),
             trace: (std::env::var_os("P7_MAGNETIC_TRACE").as_deref() == Some(std::ffi::OsStr::new("1")))
                 .then(|| std::cell::RefCell::new(PairTrace { counts: [0; 3], seconds: [0.; 3], last: Instant::now(), hits:0, misses:0, evictions:0 })),
@@ -255,14 +283,25 @@ impl BoundedPairs {
         check_deadline(self.start,self.wall)?;
         let slot={let cache=self.scalar.borrow();if cache.is_empty(){None}else{Some((i.wrapping_mul(0x9e3779b1).wrapping_add(j.wrapping_mul(0x85ebca6b)))%cache.len())}};
         if let Some(k)=slot {if let Some(entry)=self.scalar.borrow()[k] {if entry.i==i && entry.j==j {if let Some(t)=&self.trace {t.borrow_mut().hits+=1;}return Ok(entry.value);}} if let Some(t)=&self.trace {t.borrow_mut().misses+=1;}}
-        let started = self.trace.as_ref().map(|_| Instant::now());
+        let started = (self.trace.is_some() || self.capture.as_ref().is_some_and(|c| c.borrow().is_some())).then(Instant::now);
         let mut kind = if i == j { 0 } else { 2 };
         let result = self.pair_inner(i, j, &mut kind);
         if let (Some(k),Ok(value))=(slot,&result) {let mut cache=self.scalar.borrow_mut();if cache[k].is_some() {if let Some(t)=&self.trace {t.borrow_mut().evictions+=1;}}cache[k]=Some(ScalarSlot{i,j,value:*value});}
-        if let (Some(trace), Some(started)) = (&self.trace, started) {
+        let elapsed=started.map(|t| t.elapsed());
+        if let (Some(capture), Some(elapsed), Ok(value)) = (&self.capture, elapsed, &result) {
+            if kind == 2 && self.order == 12 && elapsed >= Duration::from_millis(10) {
+                let mut guard=capture.borrow_mut();
+                if let Some(c)=guard.as_mut() {
+                    let row=CaptureRecord { i,j,target_bits:self.tetra[i].map(|p|p.map(f64::to_bits)),source_bits:self.tetra[j].map(|p|p.map(f64::to_bits)),value_bits:value.to_bits(),order:self.order,tolerance:1e-10,seconds:elapsed.as_secs_f64(),geometry_hash:c.geometry_hash };
+                    if let Err(e)=c.record(&row) { eprintln!("P7_MAGNETIC_SLOW_PAIR capture disabled: {e}"); *guard=None; }
+                    else if c.count >= 16 { *guard=None; }
+                }
+            }
+        }
+        if let (Some(trace), Some(elapsed)) = (&self.trace, elapsed) {
             let mut trace = trace.borrow_mut();
             trace.counts[kind] += 1;
-            trace.seconds[kind] += started.elapsed().as_secs_f64();
+            trace.seconds[kind] += elapsed.as_secs_f64();
             if trace.counts.iter().sum::<u64>() % 64 == 0 && trace.last.elapsed() >= Duration::from_secs(1) {
                 trace.emit(false);
                 trace.last = Instant::now();
@@ -592,7 +631,8 @@ mod bounded_pair_tests {
         };
         let (owned, slots) = BoundedPairs::plan(154899, 12, 0, budget).unwrap();
         assert_eq!(slots, 64);
-        assert!(owned < 24 * 1024 * 1024);
+        // Original geometry plus 64 enlarged per-order caches and two scratch slots.
+        assert!(owned < 28 * 1024 * 1024);
         assert!(BoundedPairs::plan(
             154899,
             12,
@@ -610,6 +650,19 @@ mod bounded_pair_tests {
 #[cfg(test)]
 mod actual_tree_planning {
     use super::*;
+    #[test]
+    fn capture_file_bound_and_io_failure() {
+        let path=std::env::temp_dir().join(format!("p7-capture-{}",std::process::id()));
+        let mut c=SlowCapture::open(path.as_os_str(), &[]).unwrap();
+        assert!(SlowCapture::open(path.as_os_str(), &[]).is_err());
+        c.writer.get_ref().set_len(65536-4096+1).unwrap();
+        let row=CaptureRecord{i:0,j:1,target_bits:[[0;3];4],source_bits:[[0;3];4],value_bits:0,order:12,tolerance:1e-10,seconds:0.01,geometry_hash:0};
+        assert!(c.record(&row).is_err());
+        assert_eq!(c.writer.get_ref().metadata().unwrap().len(),65536-4096+1);
+        drop(c); std::fs::remove_file(&path).unwrap();
+        assert!(SlowCapture::open(path.join("missing").as_os_str(), &[]).is_err());
+    }
+
     #[test]
     #[ignore = "explicit saved board diagnostic"]
     fn capture_actual_neighbor_pairs() {
@@ -631,8 +684,9 @@ mod actual_tree_planning {
     #[test]
     #[ignore = "replay captured actual pairs"]
     fn replay_actual_neighbor_pairs() {
-        use std::{env,fs};let start=Instant::now();let report:serde_json::Value=serde_json::from_slice(&fs::read(env::var("P7_PAIR_OUTPUT").unwrap()).unwrap()).unwrap();
-        for row in report["pairs"].as_array().unwrap().iter().take(4) {assert!(start.elapsed()<Duration::from_secs(30));let target:[[u64;3];4]=serde_json::from_value(row["targetBits"].clone()).unwrap();let source:[[u64;3];4]=serde_json::from_value(row["sourceBits"].clone()).unwrap();let target=target.map(|p|p.map(f64::from_bits));let source=source.map(|p|p.map(f64::from_bits));let src=PointPotential::tetrahedron(source).unwrap();let t=Instant::now();let value=tetra_integral_adaptive(target,&src,12,1e-10).unwrap();let actual_seconds=t.elapsed().as_secs_f64();assert_eq!(value.to_bits(),row["valueBits"].as_u64().unwrap());
+        use std::{env,fs,io::Read};let start=Instant::now();let mut bytes=Vec::new();fs::File::open(env::var("P7_PAIR_OUTPUT").unwrap()).unwrap().take(65537).read_to_end(&mut bytes).unwrap();assert!(bytes.len()<=65536);
+        let rows:Vec<serde_json::Value>=if let Ok(report)=serde_json::from_slice::<serde_json::Value>(&bytes) { report["pairs"].as_array().cloned().unwrap_or_else(||vec![report]) } else { bytes.split(|&b|b==b'\n').filter(|line|!line.is_empty()).take(16).map(|line|serde_json::from_slice(line).unwrap()).collect() };
+        for row in rows.iter().take(16) {assert!(start.elapsed()<Duration::from_secs(30));let target:[[u64;3];4]=serde_json::from_value(row["targetBits"].clone()).unwrap();let source:[[u64;3];4]=serde_json::from_value(row["sourceBits"].clone()).unwrap();let target=target.map(|p|p.map(f64::from_bits));let source=source.map(|p|p.map(f64::from_bits));let src=PointPotential::tetrahedron(source).unwrap();let t=Instant::now();let value=tetra_integral_adaptive(target,&src,12,1e-10).unwrap();let actual_seconds=t.elapsed().as_secs_f64();assert_eq!(value.to_bits(),row["valueBits"].as_u64().unwrap());
             let volume=super::super::mesh::tetra_coefficients(target).unwrap().0;let mut counts=std::collections::BTreeMap::new();let profile_start=Instant::now();
             for order in [2,4,8,12] {let rule=super::super::prism::cached_rule(order).unwrap();super::super::polyhedron::tetra_integrate(target,volume,rule,|point,_|{if start.elapsed()>=Duration::from_secs(30) {return Err(error("DEADLINE","pair replay"));}let d=src.at_diagnostic(point)?;*counts.entry(d.source_order).or_insert(0usize)+=1;Ok(())}).unwrap();}
             println!("P7_PAIR_REPLAY i={} j={} productionSeconds={actual_seconds} fixedAllOrderDiagnosticSeconds={} sourceOrders={counts:?}",row["i"],row["j"],profile_start.elapsed().as_secs_f64());}

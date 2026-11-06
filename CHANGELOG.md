@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add opt-in bounded capture of successful slow adaptive magnetic callbacks (`P7_MAGNETIC_SLOW_PAIR_PATH`), preserving exact geometry/result bits for replay. Capture uses an exclusive new file, fixed serialization buffers, a 16-record/64 KiB bound and nonfatal I/O handling. Production quadrature and acceptance tolerances are unchanged.
+
+- Select positive far-source Gauss orders 4–10 from the existing remainder, rounding and mass-error checks instead of always using order 10. Cache each order independently for deterministic evaluation and reserve its bounded storage. Captured expensive STM32 pair controls match the former fixed-order values within the unchanged 1e-10 comparison tolerance; full-board timing follows the release build.
+
 - Add ignored actual-board magnetic-pair capture/replay diagnostics with board/geometry digests, exact floating-point bit transport and bounded sampling. The release STM32 mesh capture succeeds under an external 120-second supervisor; its first adjacent-index pairs replay exactly but do not reproduce the expensive full-run kernels. No primary-kernel acceleration or physical acceptance is claimed.
 
 - Connect opt-in `P7_SECTION_HINTS=1` uniform axial section-current seeds to the actual mixed solver, with physical-component ownership, bounded producer effort, fallback and full-space current-mode admission. Separate its response-cache identity. Seeded/plain controls pass original KCL/KVL and response comparisons but show no speedup; keep the mode disabled by default. Fix TypeScript control-flow narrowing in magnetic certificate validation and preserve an ignored synthetic near-kernel diagnostic.

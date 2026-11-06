@@ -42,6 +42,7 @@ struct Edge {
 
 #[derive(Debug)]
 struct FarSamples {
+    order: usize,
     center: [f64; 3],
     radius: f64,
     volume: f64,
@@ -55,7 +56,7 @@ pub struct PointPotential {
     prism: Option<Prism>,
     tetra: Option<[[f64; 3]; 4]>,
     tetra_tolerance: f64,
-    far_samples: std::sync::Arc<std::sync::OnceLock<FarSamples>>,
+    far_samples: std::sync::Arc<[std::sync::OnceLock<FarSamples>; 7]>,
     vertices: Vec<[f64; 3]>,
     faces: Vec<Face>,
     edges: Vec<Edge>,
@@ -178,7 +179,7 @@ impl PointPotential {
             prism,
             tetra,
             tetra_tolerance: 1e-10,
-            far_samples: std::sync::Arc::new(std::sync::OnceLock::new()),
+            far_samples: std::sync::Arc::new(std::array::from_fn(|_| std::sync::OnceLock::new())),
             vertices,
             faces,
             edges: edges.into_values().collect(),
@@ -286,7 +287,7 @@ impl PointPotential {
         }
     }
 
-    fn bounded_far_tetra(&self, point: [f64; 3], tolerance: f64) -> Result<Option<(f64, f64)>> {
+    fn bounded_far_tetra(&self, point: [f64; 3], tolerance: f64) -> Result<Option<(f64, f64, usize)>> {
         let Some(tetra) = self.tetra else {
             return Ok(None);
         };
@@ -302,16 +303,22 @@ impl PointPotential {
         if !q.is_finite() || q >= 1. {
             return Ok(None);
         }
-        let remainder = 2. * (1. + q) / (1. - q) * q.powi(18);
+        // A degree-d Cartesian polynomial becomes degree at most d+2
+        // in each Duffy coordinate after including its Jacobian. An n-point
+        // Gauss rule therefore integrates through d=2n-3 exactly.
         let rounding = 1024. * f64::EPSILON * (1. + q) / (1. - q).powi(2);
-        if remainder + rounding > tolerance {
+        let remainder_for = |order: usize| {
+            2. * (1. + q) / (1. - q) * q.powi((2 * order - 2) as i32)
+        };
+        let Some(required) = (4..=10).find(|&n| remainder_for(n) + rounding <= tolerance) else {
             return Ok(None);
-        }
-        if self.far_samples.get().is_none() {
+        };
+        let cache = &self.far_samples[required - 4];
+        if cache.get().is_none() {
             let volume = super::mesh::tetra_coefficients(tetra)?.0;
-            let mut points = Vec::with_capacity(1000);
-            let mut weights = Vec::with_capacity(1000);
-            tetra_integrate(tetra, volume, super::prism::cached_rule(10)?, |p, w| {
+            let mut points = Vec::with_capacity(required.pow(3));
+            let mut weights = Vec::with_capacity(required.pow(3));
+            tetra_integrate(tetra, volume, super::prism::cached_rule(required)?, |p, w| {
                 if w <= 0. || !w.is_finite() {
                     return Err(error("TETRA_FAR_RANGE", "positive far cubature required"));
                 }
@@ -319,24 +326,16 @@ impl PointPotential {
                 weights.push(w);
                 Ok(())
             })?;
-            let mass = weights
-                .iter()
-                .fold(super::accurate::Sum::default(), |s, &w| {
-                    s.add(super::accurate::Sum::from(w))
-                })
-                .value();
-            let samples = FarSamples {
-                center,
-                radius,
-                volume,
-                points,
-                weights,
+            let mass = weights.iter().fold(super::accurate::Sum::default(), |s, &w| {
+                s.add(super::accurate::Sum::from(w))
+            }).value();
+            let _ = cache.set(FarSamples {
+                order: required, center, radius, volume, points, weights,
                 mass_error: (mass - volume).abs() / volume,
-            };
-            let _ = self.far_samples.set(samples);
+            });
         }
-        let samples = self.far_samples.get().unwrap();
-        let bound = remainder + rounding + samples.mass_error * (1. + q) / (1. - q);
+        let samples = cache.get().unwrap();
+        let bound = remainder_for(samples.order) + rounding + samples.mass_error * (1. + q) / (1. - q);
         if bound > tolerance {
             return Ok(None);
         }
@@ -359,7 +358,7 @@ impl PointPotential {
                 "positive finite bounded far source required",
             ));
         }
-        Ok(Some((value, bound)))
+        Ok(Some((value, bound, samples.order)))
     }
     fn positive_source(
         &self,
@@ -371,11 +370,11 @@ impl PointPotential {
         } else {
             1e-5
         };
-        if let Some((value, bound)) = self.bounded_far_tetra(point, tolerance)? {
+        if let Some((value, bound, order)) = self.bounded_far_tetra(point, tolerance)? {
             return Ok(PotentialEvaluation {
                 value_m2: value,
                 cancellation_ratio,
-                source_order: 10,
+                source_order: order,
                 source_relative_change: bound,
             });
         }
@@ -1325,5 +1324,30 @@ mod synthetic_near_profile {
                 eprintln!("offset={offset} order={order} counts={counts:?} times={times:?} total={:?} value={value:e}", start.elapsed());
             }
         }
+    }
+}
+#[cfg(test)]
+mod captured_adaptive_comparison {
+    use super::*;
+    #[test]
+    #[ignore]
+    fn captured_pairs_match_fixed_order_ten() {
+        let path = std::env::var("P7_PAIR_OUTPUT").unwrap();
+        let text = std::fs::read_to_string(path).unwrap();
+        let started = std::time::Instant::now();
+        let mut count = 0;
+        for line in text.lines() {
+            let row: serde_json::Value = serde_json::from_str(line).unwrap();
+            let target: [[u64; 3]; 4] = serde_json::from_value(row["targetBits"].clone()).unwrap();
+            let source: [[u64; 3]; 4] = serde_json::from_value(row["sourceBits"].clone()).unwrap();
+            let source = PointPotential::tetrahedron(source.map(|p| p.map(f64::from_bits))).unwrap();
+            let value = tetra_integral_adaptive(target.map(|p| p.map(f64::from_bits)), &source, 12, 1e-10).unwrap();
+            let reference = f64::from_bits(row["valueBits"].as_u64().unwrap());
+            let relative = (value - reference).abs() / reference.abs();
+            assert!(relative <= 1e-10, "pair {count}: relative {relative:e}");
+            count += 1;
+        }
+        assert_eq!(count, 16);
+        eprintln!("{count} captured pairs in {:.6}s", started.elapsed().as_secs_f64());
     }
 }
