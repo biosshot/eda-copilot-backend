@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a parallel-compatible adaptive magnetic profile and plan/cache summaries, verified with identical four-worker action/bound bits and equivalent certificates. Expose a source-only compensated candidate API with original assembled and physical audits; four shared-return cases pass, altered/stamped-state controls refuse. Captured adaptive orientation reversal is about 357x slower and is not selected. Automatic shared-return routing and all-family acceptance remain open.
+
 - Defer direct volume cubatures in the opt-in axial path until their selected fallback needs them; eager/lazy direct bits agree and preparation-only replay improves 3.067x, without a board speedup claim. Use original tetrahedra for local grouped section interactions and retain separated prism interactions. A six-prism shared-return control passes unchanged physical gates at 1/10 kHz against volume order 16; order-8 refusal and all-case/automatic-route limitations remain explicit.
 
 - Measure axial outer retry on STM32: 54,100 of 58,645 retries accepted, 4,545 final fallbacks. The 244.359 s deadline still yields no channel; 143,104 completed pairs do not establish a speedup over the earlier 150,528-pair prefix. Preserve hashes, settings, partial-counter semantics and the remaining adaptive/preparation costs.

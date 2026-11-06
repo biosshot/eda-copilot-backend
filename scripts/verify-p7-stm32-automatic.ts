@@ -43,7 +43,7 @@ const core=localCoreIdentity();
 const numericalEnvironment=Object.fromEntries([
  'P7_MAGNETIC_AXIAL_TETS','P7_MAGNETIC_NEAR_THREADS','P7_MAGNETIC_BATCH_COLUMNS',
  'P7_MAGNETIC_NEAR_BOUND','P7_MAGNETIC_PAIR_CACHE_MIB','P7_MAGNETIC_COVER_CACHE_MIB',
- 'P7_MAGNETIC_TRACE','P7_MAGNETIC_SLOW_PAIR_PATH','RAYON_NUM_THREADS','PCB_ANALYSIS_TRAINING_JOBS',
+ 'P7_MAGNETIC_TRACE','P7_MAGNETIC_PROFILE','P7_MAGNETIC_SLOW_PAIR_PATH','RAYON_NUM_THREADS','PCB_ANALYSIS_TRAINING_JOBS',
 ].map(key=>[key,process.env[key]??null]));
 const identity={board:entry.board,dsl:sourcePath,boardSha256:sha(boardText),originalDslSha256:sha(original),
  executedDslSha256:sha(code),coreIdentity:core,budget,treePrivateCapMiB,maxIterations:maxIterations??16,numericalEnvironment,

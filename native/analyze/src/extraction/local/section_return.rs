@@ -50,6 +50,12 @@ pub(in crate::extraction) fn solve_candidate(
         let scale=nodes.iter().map(|&i|qr[i].abs()+qi[i].abs()).sum::<f64>()+(sr.abs()+si.abs())/omega;
         if !r.is_finite()||!im.is_finite()||!scale.is_finite()||r.hypot(im)>1e-8*scale.max(f64::MIN_POSITIVE) {return Err(error("SECTION_RETURN_CHARGE","island charge balance unresolved"));}
     }
+    audit_original(basis,space,magnetic,&x,&shape,&qr,&qi,None,omega,real_injection,imaginary_injection)?;
+    Ok(x)
+}
+
+fn audit_original(basis:&super::volume_reduction::Basis,space:&Space,magnetic:&dyn super::volume_magnetic::MagneticApply,x:&[f64],shape:&[f64],qr:&[f64],qi:&[f64],precise:Option<(&[super::accurate::Sum],&[super::accurate::Sum])>,omega:f64,real_injection:&[f64],imaginary_injection:&[f64])->Result<()> {
+    let nv=basis.voltage.len();let n=nv+basis.current.len();
     let current=|offset:usize|->Vec<f64> {(0..space.current_count()).map(|j|basis.current.iter().enumerate().map(|(k,v)|v[j]*x[offset+nv+k]).sum()).collect()};
     let ir=current(0);let ii=current(n);let dr=space.divergence(&ir)?;let di=space.divergence(&ii)?;
     // Differentiate the island partition using coefficient differences: large
@@ -61,14 +67,63 @@ pub(in crate::extraction) fn solve_candidate(
     }}
     let lr=magnetic.apply(space,&ir)?;let li=magnetic.apply(space,&ii)?;
     let source=real_injection.iter().chain(imaginary_injection).map(|v|v.abs()).fold(0.,f64::max);
-    let kcl=(0..dr.len()).map(|j|(dr[j]-omega*qi[j]-real_injection[j]).hypot(di[j]+omega*qr[j]-imaginary_injection[j])).fold(0.,f64::max);
+    let kcl=if let Some((qrd,qid))=precise {if qrd.len()!=dr.len()||qid.len()!=dr.len(){return Err(error("SECTION_RETURN_MAP","invalid compensated charges"));}let mut maximum=0f64;for j in 0..dr.len(){let r=super::accurate::Sum::from(dr[j]).sub(qid[j].mul(omega)).sub(super::accurate::Sum::from(real_injection[j])).value();let i=super::accurate::Sum::from(di[j]).add(qrd[j].mul(omega)).sub(super::accurate::Sum::from(imaginary_injection[j])).value();let value=r.hypot(i);if !value.is_finite(){return Err(error("SECTION_RETURN_RESIDUAL","nonfinite compensated KCL"));}maximum=maximum.max(value);}maximum}else{(0..dr.len()).map(|j|(dr[j]-omega*qi[j]-real_injection[j]).hypot(di[j]+omega*qr[j]-imaginary_injection[j])).fold(0.,f64::max)};
     let mut kvl:f64=0.;let mut scale:f64=0.;
     for j in 0..ir.len() {let r=space.cells[j/3].resistance_ohm;
         kvl=kvl.max((r*ir[j]-gr[j]-omega*li[j]).hypot(r*ii[j]-gi[j]+omega*lr[j]));
         scale=scale.max(r*ir[j].hypot(ii[j])+gr[j].hypot(gi[j])+omega*lr[j].hypot(li[j]));
     }
     if !kcl.is_finite()||!kvl.is_finite()||!scale.is_finite()||kcl>1e-8*source.max(f64::MIN_POSITIVE)||kvl>1e-8*scale.max(f64::MIN_POSITIVE) {return Err(error("SECTION_RETURN_RESIDUAL",&format!("original KCL={kcl:e} KVL={kvl:e} scale={scale:e}")));}
-    Ok(x)
+    Ok(())
+}
+
+/// Source-only compensated state. Island corrections remain separate from the
+/// f64 solver coordinates; port projections retain their low parts.
+pub(in crate::extraction) struct CandidateState {
+    pub high:Vec<f64>,pub correction:Vec<super::accurate::Sum>,
+    pub real_charge:Vec<super::accurate::Sum>,pub imaginary_charge:Vec<super::accurate::Sum>,
+    ports:Vec<[usize;2]>,n:usize,
+}
+impl CandidateState {
+    pub fn port_voltage(&self,port:usize)->Result<[super::accurate::Sum;2]> {
+        let [a,b]=*self.ports.get(port).ok_or_else(||error("SECTION_RETURN_MAP","unknown candidate port"))?;let size=self.n.checked_mul(2).ok_or_else(||error("SECTION_RETURN_MAP","candidate dimensions overflow"))?;
+        if a>=self.n||b>=self.n||self.high.len()!=size||self.correction.len()!=size||self.high.iter().any(|x|!x.is_finite())||self.correction.iter().any(|x|!x.hi.is_finite()||!x.lo.is_finite()){return Err(error("SECTION_RETURN_MAP","invalid candidate port state"));}
+        let out=[0,self.n].map(|off|super::accurate::Sum::from(self.high[off+a]).add(self.correction[off+a]).sub(super::accurate::Sum::from(self.high[off+b]).add(self.correction[off+b])));
+        if out.iter().any(|x|!x.hi.is_finite()||!x.lo.is_finite()){return Err(error("SECTION_RETURN_MAP","nonfinite candidate port"));}Ok(out)
+    }
+}
+/// Compile a fresh source-only model; external devices and stamped systems are
+/// deliberately not accepted. Physical and assembled original gates both apply.
+pub(in crate::extraction) fn solve_source_candidate(
+    basis:&super::volume_reduction::Basis,space:&Space,field:&dyn super::volume_field::ElectricApply,
+    magnetic:&dyn super::volume_magnetic::MagneticApply,inductance:&[Vec<f64>],ports:&[[usize;2]],
+    real_drives:&[f64],imaginary_drives:&[f64],omega:f64,budget:AllocationBudget,limit:std::time::Duration,
+    stats:&mut crate::electrical::Counters,
+)->Result<CandidateState> {
+    use super::{accurate::Sum,island_response::IslandResponse};use std::time::Instant;
+    let start=Instant::now();let check=||if start.elapsed()>=limit {Err(error("DEADLINE","source candidate deadline"))}else{Ok(())};check()?;
+    let nv=basis.voltage.len();let ni=basis.current.len();let n=nv.checked_add(ni).ok_or_else(||error("MEMORY_LIMIT","source candidate size overflow"))?;let nf=space.potential_count();let nc=space.current_count();let fixed=basis.retained_dofs();
+    if !omega.is_finite()||omega<=0.||ports.is_empty()||real_drives.len()!=ports.len()||imaginary_drives.len()!=ports.len()||real_drives.iter().chain(imaginary_drives).any(|v|!v.is_finite())||fixed.len()>nv||ports.iter().any(|p|p[0]>=fixed.len()||p[1]>=fixed.len()||p[0]==p[1])||basis.names.len()!=nv||basis.voltage.iter().any(|v|v.len()!=nf||v.iter().any(|x|!x.is_finite()))||basis.current.iter().any(|v|v.len()!=nc||v.iter().any(|x|!x.is_finite())) {return Err(error("SECTION_RETURN_MAP","invalid source candidate dimensions"));}
+    budget.check(nf.checked_add(nv).and_then(|x|x.checked_mul(std::mem::size_of::<usize>())).ok_or_else(||error("MEMORY_LIMIT","source ownership plan overflow"))?)?;
+    let mut physical_owner=vec![usize::MAX;nf];for (c,nodes) in space.components.iter().enumerate(){check()?;if nodes.is_empty(){return Err(error("SECTION_RETURN_MAP","empty physical component"));}for (j,&dof) in nodes.iter().enumerate(){if j%256==0 {check()?;}if dof>=nf||physical_owner[dof]!=usize::MAX{return Err(error("SECTION_RETURN_MAP","invalid physical component partition"));}physical_owner[dof]=c;}}if physical_owner.iter().any(|&c|c==usize::MAX){return Err(error("SECTION_RETURN_MAP","incomplete physical component partition"));}
+    let mut owners=vec![usize::MAX;nv];if basis.component_columns.len()!=space.components.len(){return Err(error("SECTION_RETURN_MAP","component partition mismatch"));}
+    for (c,cols) in basis.component_columns.iter().enumerate(){check()?;if cols.is_empty(){return Err(error("SECTION_RETURN_MAP","empty component partition"));}for &i in cols {if i>=nv||owners[i]!=usize::MAX{return Err(error("SECTION_RETURN_MAP","duplicate component coordinate"));}owners[i]=c;}for j in 0..nf {if j%256==0 {check()?;}let sum=cols.iter().map(|&i|basis.voltage[i][j]).sum::<f64>();let target=if physical_owner[j]==c {1.}else{0.};if !sum.is_finite()||(sum-target).abs()>16.*f64::EPSILON*(cols.len() as f64).max(1.) {return Err(error("SECTION_RETURN_MAP","invalid component partition"));}}}
+    if owners.iter().any(|&x|x==usize::MAX)||fixed.iter().any(|&i|i>=nf) {return Err(error("SECTION_RETURN_MAP","incomplete coordinate ownership"));}for (i,&dof) in fixed.iter().enumerate(){if physical_owner[dof]!=owners[i]{return Err(error("SECTION_RETURN_MAP","electrode ownership mismatch"));}}
+    // Response live/scratch accounting includes Space and Field. Reserve it
+    // alongside the source model, compiled system, basis and output states.
+    let response=IslandResponse::new(space,field,budget,start,limit)?;check()?;
+    let extra=n.checked_mul(n).and_then(|x|x.checked_mul(4096)).and_then(|x|x.checked_add(nv.checked_mul(nf)?.checked_mul(16)?)).and_then(|x|x.checked_add(ni.checked_mul(nc)?.checked_mul(16)?)).and_then(|x|x.checked_add(nf.checked_mul(512)?)).and_then(|x|x.checked_add(nc.checked_mul(256)?)).and_then(|x|x.checked_add(magnetic.planned_bytes())).and_then(|x|x.checked_add(magnetic.scratch_bytes())).ok_or_else(||error("MEMORY_LIMIT","source candidate plan overflow"))?;
+    let plan=extra.checked_add(space.planned_bytes).and_then(|x|x.checked_add(field.planned_bytes())).and_then(|x|x.checked_add(response.retained_bytes())).and_then(|x|x.checked_add(response.scratch_bytes())).ok_or_else(||error("MEMORY_LIMIT","combined source response plan overflow"))?;budget.check(plan)?;
+    let model=basis.model_with_inductance(space,field,inductance,ports,budget)?;check()?;let network_budget=crate::electrical::Budget{max_seconds:Some(limit.saturating_sub(start.elapsed()).as_secs_f64()),max_memory_mi_b:Some(budget.max_bytes as f64/(1024.*1024.))};let mut system=crate::electrical::coupled::System::compile(&model,ports.len(),Some(&network_budget))?;check()?;
+    let mut rhs=system.port_rhs(real_drives);rhs.resize(2*n,0.);let imag=system.port_rhs(imaginary_drives);rhs[n..].copy_from_slice(&imag[..n]);
+    let mut injection_r=vec![0.;nf];let mut injection_i=vec![0.;nf];for (p,(&r,&i)) in ports.iter().zip(real_drives.iter().zip(imaginary_drives)) {injection_r[fixed[p[0]]]+=r;injection_r[fixed[p[1]]]-=r;injection_i[fixed[p[0]]]+=i;injection_i[fixed[p[1]]]-=i;}
+    let (high,shape)=system.solve_charge_coordinates_split(omega,&rhs,stats)?;check()?;
+    let potential=|off:usize|->Vec<f64>{(0..nf).map(|j|basis.voltage.iter().enumerate().map(|(i,v)|v[j]*high[off+i]).sum()).collect()};let vr=potential(0);let vi=potential(n);
+    let refined=response.refine(&vr,&vi,&injection_r,&injection_i,omega,budget,start,limit)?;check()?;
+    let mut correction=vec![Sum::default();2*n];for (c,cols) in basis.component_columns.iter().enumerate(){for &i in cols {correction[i]=refined.real_constants[c];correction[n+i]=refined.imaginary_constants[c];}}
+    system.audit_compensated_state(omega,&rhs,&high,&correction)?;check()?;
+    let qr:Vec<_>=refined.real_charge.iter().map(|x|x.value()).collect();let qi:Vec<_>=refined.imaginary_charge.iter().map(|x|x.value()).collect();audit_original(basis,space,magnetic,&high,&shape,&qr,&qi,Some((&refined.real_charge,&refined.imaginary_charge)),omega,&injection_r,&injection_i)?;check()?;
+    Ok(CandidateState{high,correction,real_charge:refined.real_charge,imaginary_charge:refined.imaginary_charge,ports:ports.to_vec(),n})
 }
 
 /// Enrich from the reduced model's physical KCL residual, never a full solve.

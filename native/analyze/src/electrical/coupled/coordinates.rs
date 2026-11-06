@@ -98,6 +98,15 @@ impl System {
         for(&(i,j),&v)in &self.linear.e {if i>=nv&&j>=nv {e.insert((i,j),v);}}
         Ok(Coordinates{potential,shape,g,e})
     }
+    /// Audit the original assembled equations for an explicitly compensated state.
+    pub(crate) fn audit_compensated_state(&self, omega:f64, rhs:&[f64], high:&[f64], low:&[crate::extraction::local::accurate::Sum]) -> Result<f64> {
+        use crate::extraction::local::accurate::Sum;
+        let n=self.linear.n; if !omega.is_finite() || omega<=0. || rhs.len()!=2*n || high.len()!=2*n || low.len()!=2*n || rhs.iter().chain(high).any(|x|!x.is_finite()) || low.iter().any(|x|!x.hi.is_finite()||!x.lo.is_finite()) {return Err(fail("COUPLED_COORDINATES","invalid compensated audit state"));}
+        let matrix=self.linear.matrix(0.,Some(omega));let mut residual:Vec<_>=rhs.iter().map(|x|Sum::from(-*x)).collect();let mut magnitude:Vec<_>=rhs.iter().map(|x|x.abs()).collect();
+        for (&(i,j),&v) in &matrix {let state=Sum::from(high[j]).add(low[j]);let term=state.mul(v);residual[i]=residual[i].add(term);magnitude[i]+=term.hi.abs()+term.lo.abs();}
+        let mut worst=0f64;for i in 0..2*n {let r=residual[i].value();if !r.is_finite()||!magnitude[i].is_finite(){return Err(fail("COUPLED_COORDINATES","nonfinite compensated residual"));}worst=worst.max(r.abs()/magnitude[i].max(1e-15));}
+        if worst>1e-8 {return Err(fail("COUPLED_COORDINATES",format!("original compensated physical residual={worst:e}")));}Ok(worst)
+    }
     pub(crate) fn solve_charge_coordinates(&mut self,omega:f64,rhs:&[f64],stats:&mut Counters)->Result<Vec<f64>> {
         Ok(self.solve_charge_coordinates_impl(omega,rhs,stats,false)?.0)
     }

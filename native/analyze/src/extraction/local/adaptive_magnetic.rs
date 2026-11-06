@@ -4,6 +4,10 @@
 use super::*;
 use std::cell::Ref;
 
+fn profile_enabled(trace: Option<&std::ffi::OsStr>, profile: Option<&std::ffi::OsStr>) -> bool {
+    trace == Some(std::ffi::OsStr::new("1")) || profile == Some(std::ffi::OsStr::new("1"))
+}
+
 // Opt-in diagnostic only. Never changes certificates, tolerances or traversal.
 // stderr is streamed so completed checkpoints survive an external process kill.
 struct Profile {
@@ -17,7 +21,9 @@ struct Profile {
 }
 impl Profile {
     fn new(phase: &'static str, axis: Option<usize>) -> Self {
-        let enabled = std::env::var_os("P7_MAGNETIC_TRACE").as_deref() == Some(std::ffi::OsStr::new("1"));
+        let trace = std::env::var_os("P7_MAGNETIC_TRACE");
+        let profile = std::env::var_os("P7_MAGNETIC_PROFILE");
+        let enabled = profile_enabled(trace.as_deref(), profile.as_deref());
         static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         let result = Self { id: if enabled {NEXT_ID.fetch_add(1,std::sync::atomic::Ordering::Relaxed)} else {0},
             clock: enabled.then(|| {let now=Instant::now(); (now,now)}), phase, axis,
@@ -310,6 +316,16 @@ impl Operator {
         let plan = Plan::new(self, &geometry, space, columns, goals)?;
         plan_profile.finish();
         let plan_seconds = plan_started.elapsed().as_secs_f64();
+        if plan_profile.clock.is_some() {
+            use std::io::Write;
+            let record = serde_json::json!({"phase":"plan-summary", "planSeconds":plan_seconds,
+                "coverCacheEnabled":plan.cover_cached, "coverCacheEntries":plan.cover.len(),
+                "coverCacheCapacity":plan.cover.capacity(), "coverCacheCapBytes":self.adaptive_cover_cache_bytes,
+                "coverCacheRetainedBytes":plan.cover.capacity() * std::mem::size_of::<(Pair, Decision)>(),
+                "visited":plan.counts.visited, "far":plan.counts.far, "near":plan.counts.near,
+                "zero":plan.counts.zero});
+            let _ = writeln!(std::io::stderr().lock(), "P7_MAGNETIC_TRACE {record}");
+        }
         let mut actions = Vec::with_capacity(columns.len());
         let mut bounds = Vec::with_capacity(columns.len());
         let mut maxima = Vec::with_capacity(columns.len());
@@ -1096,6 +1112,16 @@ pub fn resistive_goals(
 mod classification_power_tests {
     use super::*;
     use crate::extraction::local::volume_current;
+
+    #[test]
+    fn profile_policy_accepts_only_enabled_switches() {
+        use std::ffi::OsStr;
+        assert!(!profile_enabled(None, None));
+        assert!(!profile_enabled(Some(OsStr::new("0")), Some(OsStr::new("other"))));
+        assert!(profile_enabled(Some(OsStr::new("1")), None));
+        assert!(profile_enabled(None, Some(OsStr::new("1"))));
+        assert!(profile_enabled(Some(OsStr::new("1")), Some(OsStr::new("1"))));
+    }
 
     #[test]
     fn parallel_near_replay_preserves_actions_bounds_and_cover_bits() {

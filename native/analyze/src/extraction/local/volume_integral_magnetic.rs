@@ -767,6 +767,44 @@ impl MagneticApply for Operator<'_> {
 mod bounded_pair_tests {
     use super::*;
     #[test]
+    #[ignore = "bounded captured adaptive-orientation performance diagnostic"]
+    fn captured_adaptive_orientation_benchmark() {
+        use std::io::Read;
+        let start=Instant::now(); let limit=Duration::from_secs(30); let mut bytes=Vec::new();
+        std::fs::File::open(std::env::var("P7_PAIR_OUTPUT").unwrap()).unwrap().take(65537).read_to_end(&mut bytes).unwrap();
+        assert!(bytes.len()<=65536);
+        let rows:Vec<serde_json::Value>=if let Ok(report)=serde_json::from_slice::<serde_json::Value>(&bytes) {
+            report["pairs"].as_array().cloned().unwrap_or_else(||vec![report])
+        } else {bytes.split(|&b|b==b'\n').filter(|line|!line.is_empty()).take(16).map(|line|serde_json::from_slice(line).unwrap()).collect()};
+        assert!(!rows.is_empty()); let mut worst:Option<(f64,[[f64;3];4],[[f64;3];4],f64,f64)>=None; let mut done=0;
+        for row in rows.iter().take(16) {
+            if start.elapsed()>=limit {println!("P7_ORIENTATION deadline before pair {done}"); break}
+            let a:[[u64;3];4]=serde_json::from_value(row["targetBits"].clone()).unwrap();
+            let b:[[u64;3];4]=serde_json::from_value(row["sourceBits"].clone()).unwrap();
+            let a=a.map(|p|p.map(f64::from_bits)); let b=b.map(|p|p.map(f64::from_bits));
+            let source_a=PointPotential::tetrahedron(a).unwrap(); let source_b=PointPotential::tetrahedron(b).unwrap();
+            let mut times=[Duration::ZERO;2]; let mut values=[0.;2]; let mut repetitions=0;
+            for _ in 0..2 {
+                if start.elapsed()>=limit {break}
+                let now=Instant::now(); let ab=tetra_integral_adaptive(a,&source_b,12,1e-10).unwrap(); times[0]+=now.elapsed();
+                if start.elapsed()>=limit {break}
+                let now=Instant::now(); let ba=tetra_integral_adaptive(b,&source_a,12,1e-10).unwrap(); times[1]+=now.elapsed();
+                assert!(ab.is_finite()&&ab>0.&&ba.is_finite()&&ba>0.); values=[ab,ba]; repetitions+=1;
+            }
+            if repetitions==0 {println!("P7_ORIENTATION deadline during pair {done}"); break}
+            let mismatch=(values[0]-values[1]).abs()/values[0].abs().max(values[1].abs());
+            println!("P7_ORIENTATION i={} j={} repetitions={repetitions} forwardSeconds={} reverseSeconds={} ratio={} relativeMismatch={mismatch} status={}",row["i"],row["j"],times[0].as_secs_f64(),times[1].as_secs_f64(),times[0].as_secs_f64()/times[1].as_secs_f64(),if mismatch>1e-8 {"refused"} else {"comparison-only"});
+            if worst.as_ref().map_or(true,|w|mismatch>w.0) {worst=Some((mismatch,a,b,values[0],values[1]));} done+=1;
+        }
+        assert!(done>0,"no complete pair before deadline");
+        if start.elapsed()<Duration::from_secs(20) {if let Some((mismatch,a,b,ab,ba))=worst {
+            let source=PointPotential::tetrahedron(b).unwrap(); let now=Instant::now();
+            let reference=super::super::polyhedron::tetra_integral(a,&source,16).unwrap();
+            println!("P7_ORIENTATION_REFERENCE mismatch={mismatch} seconds={} forwardRelative={} reverseRelative={}",now.elapsed().as_secs_f64(),(ab-reference).abs()/reference,(ba-reference).abs()/reference);
+        }} else {println!("P7_ORIENTATION_REFERENCE skipped: remaining deadline");}
+        assert!(start.elapsed()<limit,"diagnostic exceeded deadline; use external supervisor for hard interruption");
+    }
+    #[test]
     fn axial_lazy_direct_preparation_selected_only() {
         let start=Instant::now();let wall=Duration::from_secs(30);
         let (a,b)=super::super::polyhedron::axial_retry_fixture();
@@ -933,8 +971,13 @@ mod bounded_pair_tests {
         let space=Space {mesh_nodes:vec![vec![];4],node_potential:BTreeMap::new(),cells:(0..2).map(|i|volume_current::Cell {mesh_cell:i,potentials:[0,1,2,3],incidence:[[0.;3];4],density_per_amp_m2:1e6,resistance_ohm:1.}).collect(),components:vec![vec![0,1,2,3]],planned_bytes:0};
         let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:1000,max_tetrahedra:1000};
         let op=Streamed::new(&mesh,&space,12,0,budget,Instant::now(),Duration::from_secs(60)).unwrap();
+        if std::env::var_os("P7_MAGNETIC_PROFILE").as_deref()==Some(std::ffi::OsStr::new("1")) {
+            assert!(std::env::var_os("P7_MAGNETIC_TRACE").is_none());
+            assert_eq!(op.pair.pool.as_ref().expect("profile must preserve parallel workers").workers.len(),4);
+        }
         let columns=vec![vec![1.;6],vec![-0.5;6]];
-        let (_,_,cert)=op.actions_certified(&columns,&[1e-25;2]).unwrap();
+        let (actions,bounds,cert)=op.actions_certified(&columns,&[1e-25;2]).unwrap();
+        eprintln!("P7_PROFILE_CONTROL {}",serde_json::json!({"actions":actions.iter().map(|v|v.iter().map(|x|x.to_bits()).collect::<Vec<_>>()).collect::<Vec<_>>(),"bounds":bounds.iter().map(|v|v.iter().map(|x|x.to_bits()).collect::<Vec<_>>()).collect::<Vec<_>>(),"certificate":cert}));
         for c in std::iter::once(&cert).chain(cert["chunkCertificates"].as_array().unwrap().iter()) {
             assert_eq!(c["nearQuadraturePolicy"],"axial-tetra-estimated-v1"); assert_eq!(c["nearQuadratureErrorCertified"],false);
         }
