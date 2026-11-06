@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Measure axial outer retry on STM32: 54,100 of 58,645 retries accepted, 4,545 final fallbacks. The 244.359 s deadline still yields no channel; 143,104 completed pairs do not establish a speedup over the earlier 150,528-pair prefix. Preserve hashes, settings, partial-counter semantics and the remaining adaptive/preparation costs.
+
 - Retry outer-only axial tetrahedron refusals once at n+2/n+4, reusing the prior fine result and preserving the 1e-10 gate, default-off policy and full direct fallback. Admit 40 KiB per cached cell and report retry counters. Extract a budgeted full-source compensated island-response helper, including inert-island, complex-injection and overflow controls; automatic shared-return dispatch remains pending. Thirty-four focused release controls pass; complete-board timing remains unverified.
 
 - Record a refused longest-edge tetrahedron experiment and remove its unaccepted test module. Both analytic-only and guarded numerical segment fallback refuse the required positive control. A separate single-sample replay supports testing outer-order escalation in the existing axial kernel; no production kernel change or speedup is claimed.

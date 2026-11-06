@@ -42,3 +42,47 @@ Existing `axial-tetra-estimated-v1`/`nearQuadratureErrorCertified:false` provena
 remains mandatory; native core identity isolates changed cached results.
 One captured pair is not all-case admission or full-board speedup evidence.
 The <=600 s complete channel and shared-return automatic route remain unproven.
+
+## Bounded STM32 result
+
+Code commit `d6c8bc3`, cold isolated output
+`debugging/p7-axial-outer-retry-stm32-250s-8g/`: native 240 s / 8192 MiB,
+external 250 s / 8192 MiB tree cap, four near workers, one RHS per cover,
+four native reduction iterations, global Rayon/training jobs one. Trace,
+near-bound omission and pair/cover caches are unset. The identity records these
+effective environment values explicitly. Planning selects all 844 authored
+copper regions, 65 islands and 89 barrels; physical acceptance remains unverified.
+
+Board SHA256:
+`0159c43d43b59df4f59fb943d59f0d841d17ca38d6d5a7d5576920a4aee3cce3`.
+Executed DSL SHA256:
+`817e427e109f58e50b21267a98cec5b4ac4322c2b37c1445e9e1b471bc967b61`.
+Native core identity:
+`33f028f0c19122676ceef3c4eef65b699dbd7dc35063118a4ace167011bb35ec`.
+
+The native deadline occurs inside streamed magnetic action at external wall
+244.359 s. No complete electric/magnetic channel or S matrix is produced.
+Sampled peak private/RSS is 1,885,405,184 / 1,097,347,072 B, a 20 ms lower bound;
+memory admission is not the stop reason.
+
+Final partial counters: 143,104 committed pairs in 1,118 completed windows,
+132,335 separated calls, 10,886 adaptive calls, 127,790 axial acceptances,
+58,645 attempted outer retries, 54,100 accepted retries and 4,545 final
+fallbacks. Approximately 92.25% of attempted retries are accepted. Every final
+fallback in this prefix is still outer convergence; no inner or unsupported
+refusal is recorded. All selected orders are 6/8 (105,826 / 26,509).
+Counters include work in a failed window and must not be equated to committed
+pair totals or complete-action evidence.
+
+Kernel-window wall is 103.076 s; summed worker separated/adaptive elapsed is
+146.891 / 136.491 s, not OS CPU seconds. Geometry cache builds/hits are
+136,622 / 149,820. No speedup is established: the earlier axial prefix completed
+150,528 pairs by its 243.093 s deadline. Budgets, code and host conditions differ,
+and successful prefixes are not whole-channel timing comparisons. Removing most
+fallbacks did not demonstrate the required overall acceleration.
+
+Next concrete preparation candidate: `ensure` still constructs all order-4/6/8
+volume cubatures (792 points per cache miss), including accepted axial pairs and
+analytic near work that do not use those points. A geometry-only/lazy-direct
+path can preserve default behavior and worst-case admission, but needs bitwise
+fallback, cache and parallel controls plus measured benefit before selection.
