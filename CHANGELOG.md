@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Extend the enriched shared-return control with unchanged original-space positive admission for one drive (hybrid at 1 kHz, volume reference at 1/10 kHz). Localize remaining passive-island charge cancellation and magnetic-projection/KVL refusal; order-60 convergence does not resolve all gates. Keep all case-matrix acceptance pending.
+
 - Preserve uniform section representations per current mode when magnetic enrichment adds nonuniform modes. Reuse scalar interactions in a fixed per-group-pair cache, evaluate symmetric pairs once, and reduce mixed terms to original tetrahedra. Ten release controls pass, including physical adapter section retention; original charge/KVL admission and production routing remain incomplete.
 
 - Diagnose mixed-model KVL refusal against the independent original volume operator: the same basis also fails there. Magnetic enrichment reduces a measured residual but removes every section under the current all-mode uniformity rule; preserve this negative control and prioritize per-mode representation. Original admission gates remain unchanged.
