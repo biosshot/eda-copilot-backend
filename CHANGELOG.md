@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Precompute node-only adaptive magnetic allowances and source weights with unchanged interval arithmetic, accounting for 24 additional bytes per node. Bitwise classification and 31 regression controls pass; board speedup remains unmeasured. Diagnose real axial fallbacks as outer-quadrature convergence in the measured prefix, preserving incomplete runs and source coverage.
+
 - Classify axial quadrature fallbacks and retain bounded exact-geometry examples in nonfatal parallel logs. Add a standalone guarded general segment-pair primitive for future longest-edge integration, with explicit estimated-error scope. Thirty supervised controls and the native addon build pass; no new board speedup or case acceptance is claimed.
 
 - Measure the axial STM32 prefix: 150,528 successful pairs by the 243.093 s native-deadline exit, versus 134,528 previously. About 57% of separated calls use the new kernel; no complete channel or precise full-board speedup is established. Preserve the initial commit-headroom refusal and the actual 12 GiB tree-cap run; all physical source geometry remains.

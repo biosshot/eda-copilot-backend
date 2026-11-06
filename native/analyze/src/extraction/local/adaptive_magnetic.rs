@@ -331,7 +331,7 @@ impl Operator {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Decision {
     Zero,
     Negligible,
@@ -354,6 +354,8 @@ struct Plan<'a> {
     geometry: &'a Geometry,
     mass: Vec<Interval>,
     max_weight: Vec<f64>,
+    node_budget: Vec<f64>,
+    node_weight: Vec<Interval>,
     envelope: Vec<f64>,
     tv: Vec<Interval>,
     phi: Vec<Interval>,
@@ -395,6 +397,8 @@ impl<'a> Plan<'a> {
             geometry,
             mass: vec![Interval::zero(); nodes],
             max_weight: vec![0.; nodes],
+            node_budget: vec![0.; nodes],
+            node_weight: vec![Interval::zero(); nodes],
             envelope: vec![0.; n],
             tv: vec![Interval::zero(); nodes],
             phi: if near_bound { vec![Interval::zero(); nodes] } else { Vec::new() },
@@ -478,6 +482,11 @@ impl<'a> Plan<'a> {
                 "aggregate source mass or RHS envelope overflow",
             ));
         }
+        for node in 0..nodes {
+            check_deadline(tree.start, tree.wall)?;
+            result.node_budget[node] = Interval::point(0.25).mul(Interval::point(result.mass[node].lo)).div(Interval::point(result.mass[0].hi)).lo;
+            result.node_weight[node] = Interval::point(1e-7).mul(Interval::point(result.max_weight[node]));
+        }
         let mut moment = vec![usize::MAX; nodes];
         let mut local = moment.clone();
         let mut hash = 0xcbf29ce484222325u64;
@@ -544,6 +553,47 @@ impl<'a> Plan<'a> {
         Ok(result)
     }
     fn decide(&self, pair: Pair) -> Option<Decision> {
+        let Pair { a, b } = pair;
+        if self.tv[a].hi == 0. && self.tv[b].hi == 0. {
+            return Some(Decision::Zero);
+        }
+        let budgets = || (self.node_budget[a], self.node_budget[b]);
+        let near_budgets = if self.near_bound {
+            let (budget_a, budget_b) = budgets();
+            let ea = self.node_weight[a].mul(self.phi[b]);
+            let eb = self.node_weight[b].mul(self.phi[a]);
+            if ea.finite() && eb.finite() && ea.hi <= budget_b && eb.hi <= budget_a {
+                return Some(Decision::Negligible);
+            }
+            Some((budget_a, budget_b))
+        } else { None };
+        if a == b { return None; }
+        let (r, q) = self.tree.separation(a, b);
+        if !q.finite() || q.hi >= 1. || r.lo <= 0. { return None; }
+        let (budget_a, budget_b) = near_budgets.unwrap_or_else(budgets);
+        let inverse_r = Interval::one().div(r);
+        let one_minus_q = Interval::one().sub(q);
+        let weight_a = self.node_weight[a];
+        let weight_b = self.node_weight[b];
+        let mut q_power = Interval::one();
+        for p in 0..=self.tree.powers.order {
+            q_power = q_power.mul(q);
+            let tail = inverse_r.mul(q_power).div(one_minus_q);
+            let a_error = weight_a.mul(tail).mul(self.tv[b]);
+            let b_error = weight_b.mul(tail).mul(self.tv[a]);
+            if tail.finite()
+                && a_error.finite()
+                && b_error.finite()
+                && a_error.hi <= budget_b
+                && b_error.hi <= budget_a
+            {
+                return Some(Decision::Far(p));
+            }
+        }
+        None
+    }
+    #[cfg(test)]
+    fn decide_reference(&self, pair: Pair) -> Option<Decision> {
         let Pair { a, b } = pair;
         if self.tv[a].hi == 0. && self.tv[b].hi == 0. {
             return Some(Decision::Zero);
@@ -1059,6 +1109,24 @@ mod classification_power_tests {
         let tree=Operator::new(&geometry,4,1,0.2,0,budget,start,wall).unwrap();
         let columns:Vec<Vec<f64>>=(0..2).map(|s|(0..3*geometry.len()).map(|k|if (k+s)%2==0 {1.+k as f64*0.01}else{-0.3-k as f64*0.005}).collect()).collect();
         let goals=[1e-20;2];
+        let (shape, _) = tree.ensure_geometry(&geometry).unwrap();
+        let mut saw_far = false;
+        let mut saw_none = false;
+        for near_bound in [false, true] {
+            for goal in [1e-20, 1e20] {
+                let plan = Plan::new_with_policy(&tree, &shape, &space, &columns, &[goal; 2], near_bound).unwrap();
+                for a in 0..tree.nodes.len() {
+                    for b in 0..tree.nodes.len() {
+                        let pair = Pair { a, b };
+                        let actual = plan.decide(pair);
+                        assert_eq!(actual, plan.decide_reference(pair));
+                        saw_far |= matches!(actual, Some(Decision::Far(_)));
+                        saw_none |= actual.is_none();
+                    }
+                }
+            }
+        }
+        assert!(saw_far && saw_none);
         let mut pair=BoundedPairs::new(geometry,12,8,start,wall).unwrap();
         let (expected,expected_bounds,mut expected_cert)=tree.batch_common(&pair,&space,&columns,&goals).unwrap();
         assert!(expected_cert["exactPairs"].as_u64().unwrap()>=128);
@@ -1089,6 +1157,17 @@ mod classification_power_tests {
         let columns = vec![vec![1.,-0.5,0.25,0.5,0.25,-0.125]];
         let goal = 1.;
         let mut plan = Plan::new_with_policy(&tree, &shape, &space, &columns, &[goal], true).unwrap();
+        for a in 0..tree.nodes.len() {
+            let budget = Interval::point(0.25).mul(Interval::point(plan.mass[a].lo)).div(Interval::point(plan.mass[0].hi)).lo;
+            let weight = Interval::point(1e-7).mul(Interval::point(plan.max_weight[a]));
+            assert_eq!(plan.node_budget[a].to_bits(), budget.to_bits());
+            assert_eq!(plan.node_weight[a].lo.to_bits(), weight.lo.to_bits());
+            assert_eq!(plan.node_weight[a].hi.to_bits(), weight.hi.to_bits());
+            for b in a..tree.nodes.len() {
+                let pair = Pair { a, b };
+                assert_eq!(plan.decide(pair), plan.decide_reference(pair));
+            }
+        }
         plan.cover_cached = false;
         plan.near_bound = false;
         let (reference, _) = plan.apply(&pair, &space, &columns[0], goal).unwrap();

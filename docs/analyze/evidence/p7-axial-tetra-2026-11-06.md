@@ -177,6 +177,37 @@ controls and isolated chunk metadata. Sampled peak private/RSS were
 `debugging/p7-axial-reasons-line-final-controls/`. The native addon build also
 passed in `debugging/p7-axial-reasons-line-native-build.log`.
 
-The actual board fallback distribution remains to be measured. The next board
-attempt is diagnostic and shorter than a full acceptance run; it must not be
-reported as progress toward the ten-minute target merely because its timer ends.
+### Actual fallback diagnostic
+
+`debugging/p7-axial-fallback-stm32-250s-10g-chunk1/` records a native 240 s,
+external 250 s run with four near workers, one RHS per cover, axial mode enabled
+and a 10 GiB native/tree ceiling. The tree cap was lowered after a separate
+12 GiB preflight refusal due to insufficient Windows commit headroom; no solve
+ran in the refused folder. All 844 copper regions, 65 islands and 89 barrels
+remain selected. Original board SHA256 is
+`0159c43d43b59df4f59fb943d59f0d841d17ca38d6d5a7d5576920a4aee3cce3`.
+Core identity is
+`3c3b715ba816013cf8d31061313bc16fe50f524b08498fc308137de1b80b8567`;
+executed DSL SHA256 is
+`627422d85d55b6fc298f3ecfd55866303875e4b008fcfac71ae31213439c8665`.
+
+The run stops at `LOCAL_DEADLINE` after 244.312 s externally. Final partial
+counters show 69,248 completed pairs, 65,946 separated calls, 3,428 adaptive
+calls, 46,746 axial acceptances and 19,200 axial fallbacks. **Every recorded
+fallback is outer n/n+2 convergence**, with zero unsupported, inner-q-cap or
+inner-range refusals in this prefix. One representative exact-geometry sample
+is retained; its relative coarse/fine change is about 1.40e-10 versus 1e-10.
+This identifies outer transverse integration as the next kernel experiment;
+it does not justify weakening the gate or assuming all later pairs match.
+
+Kernel-window wall is 26.950 s; summed worker separated/adaptive elapsed is
+83.943/15.420 s (not OS CPU time). Sampled peak private/RSS is
+1,886,101,504 / 1,069,473,792 B, a 20 ms lower bound. No complete channel is
+produced. Different budget, code identity and host conditions prevent a clean
+speed comparison with the earlier 150,528-pair prefix.
+
+A separate 180 s attempt in `debugging/p7-axial-fallback-stm32-190s-10g/`
+accidentally used the default common RHS cover rather than chunk size one.
+It stopped at 183.906 s with 31,080,016 visits and zero kernel calls. Preserve
+this configuration error explicitly; it neither measures axial throughput nor
+establishes a controlled common-versus-chunked speed ratio.

@@ -405,7 +405,7 @@ impl Operator {
             + 64 * std::mem::size_of::<usize>();
         let work = node_bound
             .checked_mul(2 * (harmonic_rank + order + 1) * std::mem::size_of::<f64>())
-            .and_then(|v| v.checked_add(node_bound.checked_mul(256 + if std::env::var_os("P7_MAGNETIC_NEAR_BOUND").as_deref() == Some(std::ffi::OsStr::new("1")) { std::mem::size_of::<Interval>() } else { 0 })?))
+            .and_then(|v| v.checked_add(node_bound.checked_mul(256 + std::mem::size_of::<f64>() + std::mem::size_of::<Interval>() + if std::env::var_os("P7_MAGNETIC_NEAR_BOUND").as_deref() == Some(std::ffi::OsStr::new("1")) { std::mem::size_of::<Interval>() } else { 0 })?))
             .and_then(|v| v.checked_add(n.checked_mul(128)?))
             .and_then(|v| v.checked_add(rank.checked_mul(512)?))
             .and_then(|v| v.checked_add(stencil_bytes))
