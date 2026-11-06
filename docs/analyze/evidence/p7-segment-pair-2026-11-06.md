@@ -38,3 +38,29 @@ geometries, measure conditioning/admission and time, validate outer refinement
 and original-space residuals, and account added storage. This primitive alone
 does not preserve long 2D transmission sections in automatic routing or prove
 the <=600-second complete-extraction target. No case-matrix status is promoted.
+
+## Longest-edge experiment: not selected
+
+A test-only Duffy reduction selected each tetrahedron's longest physical edge,
+kept positive physical volume weights, and compared order 6/8 with original
+volume cubature 8/10. Common coordinate localization preserved relative
+placement. The analytic segment primitive refused both a regular separated
+control and the captured STM32 outer-convergence pair. A second attempt added
+positive segment quadrature 4/6 with an unchanged 1e-12 segment-refinement gate;
+both cases still refused. The required positive control failed. Neither attempt
+is a successful tetrahedron model or speedup measurement.
+
+Logs: `debugging/p7-node-budget-general-edge-controls-fixed/` and
+`debugging/p7-general-edge-numeric-fallback-controls/`. The final experimental
+source is archived as `debugging/general-edge-refused-experiment.rs`; the
+unaccepted test module and its registration were removed from the source tree.
+Production primitive and dispatch are unchanged. Do not interpret the quick
+early refusal as a kernel acceleration. More expensive numeric fallback was not
+selected without evidence that it would beat original direct cubature.
+
+The simpler next candidate is outer-order escalation in the existing vertical
+integrator. A NumPy feasibility replay (`debugging/axial_outer_replay.py`) on the
+one real sample gives relative 6/8 difference 1.39558e-10, 8/10 8.55e-14 and
+10/12 8.30e-16. Replayed order 8 agrees with saved native fine within 2.28e-15
+relative. These are diagnostic arithmetic results, not native admission,
+certified full errors, performance evidence or coverage of other pairs.
