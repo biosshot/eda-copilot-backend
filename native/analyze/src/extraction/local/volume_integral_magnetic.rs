@@ -154,12 +154,41 @@ impl SlowCapture {
         Ok(())
     }
 }
+#[derive(Default)]
+struct ParallelCounts { counts: [u64; 3], seconds: [f64; 3], geometry_hits:u64, geometry_builds:u64 }
+struct ParallelProgress { windows: u64, pairs: u64, wall: f64, last: Instant, failed:bool }
+struct ParallelState {
+    pool: rayon::ThreadPool,
+    workers: Vec<std::sync::Mutex<BoundedPairs>>,
+    progress: std::cell::RefCell<ParallelProgress>,
+}
+impl ParallelState {
+    fn report(&self, final_record: bool, failed: bool) {
+        let p = self.progress.borrow();
+        let mut counts = [0u64; 3]; let mut seconds = [0f64; 3];let mut geometry_hits=0;let mut geometry_builds=0;
+        for worker in &self.workers {
+            let worker = worker.lock().unwrap_or_else(|e| e.into_inner());
+            let c = worker.parallel_counts.as_ref().unwrap().borrow();
+            for k in 0..3 { counts[k] += c.counts[k]; seconds[k] += c.seconds[k]; }
+            geometry_hits+=c.geometry_hits;geometry_builds+=c.geometry_builds;
+        }
+        eprintln!("P7_MAGNETIC_PARALLEL_PROGRESS {}", serde_json::json!({
+            "completedWindows":p.windows,"completedPairs":p.pairs,"kernelWallSeconds":p.wall,
+            "selfCalls":counts[0],"separatedCalls":counts[1],"adaptiveCalls":counts[2],
+            "selfSeconds":seconds[0],"separatedSeconds":seconds[1],"adaptiveSeconds":seconds[2],
+            "geometryCacheHits":geometry_hits,"geometryCacheBuilds":geometry_builds,
+            "countsIncludeFailed":true,"partial":true,"final":final_record,"failed":p.failed || failed
+        }));
+    }
+}
+impl Drop for ParallelState { fn drop(&mut self) { self.report(true, false); } }
 struct BoundedPairs {
     scalar:std::cell::RefCell<Vec<Option<ScalarSlot>>>,
     trace: Option<std::cell::RefCell<PairTrace>>,
     capture: Option<std::cell::RefCell<Option<SlowCapture>>>,
     tetra: std::sync::Arc<Vec<[[f64; 3]; 4]>>,
-    pool: Option<rayon::ThreadPool>,
+    pool: Option<ParallelState>,
+    parallel_counts: Option<std::cell::RefCell<ParallelCounts>>,
     cells: std::cell::RefCell<Vec<PairCell>>,
     slots: usize,
     tick: std::cell::Cell<u64>,
@@ -230,6 +259,7 @@ impl BoundedPairs {
                 .then(|| std::cell::RefCell::new(PairTrace { counts: [0; 3], seconds: [0.; 3], last: Instant::now(), hits:0, misses:0, evictions:0 })),
             tetra: std::sync::Arc::new(tetra),
             pool: None,
+            parallel_counts: None,
             cells: std::cell::RefCell::new(Vec::with_capacity(slots)),
             slots,
             tick: std::cell::Cell::new(0),
@@ -240,46 +270,68 @@ impl BoundedPairs {
     }
     fn parallel_bytes(workers: usize) -> Result<usize> {
         if !(2..=32).contains(&workers) { return Err(error("MAGNETIC_CONFIG", "parallel worker count must be 2..32")); }
-        workers.checked_mul(10 * STREAMED_PAIR_SLOT_BYTES + 2 * 1024 * 1024)
+        workers.checked_mul(66 * STREAMED_PAIR_SLOT_BYTES + 2 * 1024 * 1024 + 4096)
             .and_then(|v| v.checked_add(8192))
             .ok_or_else(|| error("MEMORY_LIMIT", "parallel magnetic window plan overflow"))
     }
     fn configure_parallel(&mut self, workers: usize) -> Result<()> {
         Self::parallel_bytes(workers)?;
-        self.pool = Some(rayon::ThreadPoolBuilder::new().num_threads(workers)
+        let pool = rayon::ThreadPoolBuilder::new().num_threads(workers)
             .stack_size(2 * 1024 * 1024).build()
-            .map_err(|_| error("MEMORY_LIMIT", "parallel magnetic pool creation failed"))?);
+            .map_err(|_| error("MEMORY_LIMIT", "parallel magnetic pool creation failed"))?;
+        let mut caches = Vec::new();
+        caches.try_reserve_exact(workers).map_err(|_| error("MEMORY_LIMIT", "parallel cache allocation failed"))?;
+        for _ in 0..workers {
+            let mut cells = Vec::new();
+            cells.try_reserve_exact(64).map_err(|_| error("MEMORY_LIMIT", "parallel cache allocation failed"))?;
+            caches.push(std::sync::Mutex::new(BoundedPairs {
+                tetra:self.tetra.clone(), pool:None, parallel_counts:Some(std::cell::RefCell::new(ParallelCounts::default())),
+                scalar:std::cell::RefCell::new(Vec::new()), trace:None, capture:None,
+                cells:std::cell::RefCell::new(cells), slots:64, tick:std::cell::Cell::new(0),
+                order:self.order, start:self.start, wall:self.wall,
+            }));
+        }
+        self.pool = Some(ParallelState { pool, workers:caches, progress:std::cell::RefCell::new(ParallelProgress { windows:0, pairs:0, wall:0., last:Instant::now(),failed:false }) });
         Ok(())
     }
     fn parallel_enabled(&self) -> bool { self.pool.is_some() }
     fn pair_window(&self, indices: &[(usize, usize)]) -> Result<Vec<f64>> {
         use rayon::prelude::*;
         if indices.len() > 128 { return Err(error("MEMORY_LIMIT", "parallel magnetic window exceeds 128 pairs")); }
-        check_deadline(self.start, self.wall)?;
-        let Some(pool) = &self.pool else {
+        if let Err(failure)=check_deadline(self.start,self.wall) {
+            if let Some(state)=&self.pool {state.progress.borrow_mut().failed=true;state.report(false,true);}
+            return Err(failure);
+        }
+        let Some(state) = &self.pool else {
             return indices.iter().map(|&(i,j)| self.pair(i.max(j),i.min(j))).collect();
         };
         if indices.is_empty() { return Ok(Vec::new()); }
-        let workers = pool.current_num_threads().min(indices.len());
-        let slots = self.slots.min(8);
-        let tetra = self.tetra.clone();
-        let order = self.order;
-        let start = self.start;
-        let wall = self.wall;
-        let chunk = indices.len().div_ceil(workers);
-        let results: Vec<Vec<Result<f64>>> = pool.install(|| indices.par_chunks(chunk).map(|part| {
-            let local = BoundedPairs { tetra: tetra.clone(), pool: None, scalar: std::cell::RefCell::new(Vec::new()),
-                trace: None, capture: None, cells: std::cell::RefCell::new(Vec::with_capacity(slots)),
-                slots, tick: std::cell::Cell::new(0), order, start, wall };
+        let started = Instant::now();
+        let caches = &state.workers;
+        let results: Vec<Vec<Result<f64>>> = state.pool.install(|| indices.par_chunks(8).map(|part| {
+            let Some(index) = rayon::current_thread_index() else { return vec![Err(error("MAGNETIC_CONFIG", "parallel worker index unavailable"))]; };
+            let local = match caches[index].lock() { Ok(v) => v, Err(_) => return vec![Err(error("MAGNETIC_CONFIG", "parallel worker cache poisoned"))] };
             part.iter().map(|&(i,j)| local.pair(i.max(j),i.min(j))).collect()
         }).collect());
-        results.into_iter().flatten().collect()
+        let result: Result<Vec<f64>> = results.into_iter().flatten().collect();
+        let report = {
+            let mut p = state.progress.borrow_mut();
+            p.wall += started.elapsed().as_secs_f64();
+            p.failed |= result.is_err();
+            if result.is_ok() { p.windows += 1; p.pairs += indices.len() as u64; }
+            let report = result.is_err() || p.last.elapsed() >= Duration::from_secs(5);
+            if report { p.last = Instant::now(); }
+            report
+        };
+        if report { state.report(false, result.is_err()); }
+        result
     }
     fn ensure(&self, cells: &mut Vec<PairCell>, index: usize, pin: Option<usize>) -> Result<()> {
         check_deadline(self.start, self.wall)?;
         let tick = self.tick.get().saturating_add(1);
         self.tick.set(tick);
         if let Some(cell) = cells.iter_mut().find(|cell| cell.index == index) {
+            if let Some(counts)=&self.parallel_counts {counts.borrow_mut().geometry_hits+=1;}
             cell.touched = tick;
             return Ok(());
         }
@@ -301,6 +353,7 @@ impl BoundedPairs {
             cells.remove(remove);
         }
         let tetra = self.tetra[index];
+        if let Some(counts)=&self.parallel_counts {counts.borrow_mut().geometry_builds+=1;}
         let source = PointPotential::tetrahedron(tetra)?;
         let mut cubatures = Vec::with_capacity(3);
         // separated_order selects only4,6,8; near/self keep maximum=self.order.
@@ -322,11 +375,14 @@ impl BoundedPairs {
         check_deadline(self.start,self.wall)?;
         let slot={let cache=self.scalar.borrow();if cache.is_empty(){None}else{Some((i.wrapping_mul(0x9e3779b1).wrapping_add(j.wrapping_mul(0x85ebca6b)))%cache.len())}};
         if let Some(k)=slot {if let Some(entry)=self.scalar.borrow()[k] {if entry.i==i && entry.j==j {if let Some(t)=&self.trace {t.borrow_mut().hits+=1;}return Ok(entry.value);}} if let Some(t)=&self.trace {t.borrow_mut().misses+=1;}}
-        let started = (self.trace.is_some() || self.capture.as_ref().is_some_and(|c| c.borrow().is_some())).then(Instant::now);
+        let started = (self.parallel_counts.is_some() || self.trace.is_some() || self.capture.as_ref().is_some_and(|c| c.borrow().is_some())).then(Instant::now);
         let mut kind = if i == j { 0 } else { 2 };
         let result = self.pair_inner(i, j, &mut kind);
         if let (Some(k),Ok(value))=(slot,&result) {let mut cache=self.scalar.borrow_mut();if cache[k].is_some() {if let Some(t)=&self.trace {t.borrow_mut().evictions+=1;}}cache[k]=Some(ScalarSlot{i,j,value:*value});}
         let elapsed=started.map(|t| t.elapsed());
+        if let (Some(counts), Some(elapsed)) = (&self.parallel_counts, elapsed) {
+            let mut counts = counts.borrow_mut(); counts.counts[kind] += 1; counts.seconds[kind] += elapsed.as_secs_f64();
+        }
         if let (Some(capture), Some(elapsed), Ok(value)) = (&self.capture, elapsed, &result) {
             if kind == 2 && self.order == 12 && elapsed >= Duration::from_millis(10) {
                 let mut guard=capture.borrow_mut();
@@ -659,17 +715,19 @@ mod bounded_pair_tests {
         let budget=AllocationBudget{max_bytes:64*1024*1024,max_nodes:100,max_tetrahedra:100};
         let mut expected = Vec::new();
         for workers in [1,2,4] {
-            let mut pairs=BoundedPairs::new(geometry.clone(),12,8,Instant::now(),Duration::from_secs(115)).unwrap();
+            let mut pairs=BoundedPairs::new(geometry.clone(),12,64,Instant::now(),Duration::from_secs(115)).unwrap();
             if workers > 1 {
                 budget.check(BoundedPairs::parallel_bytes(workers).unwrap()).unwrap();
                 pairs.configure_parallel(workers).unwrap();
             }
-            let started=Instant::now();
-            let values=pairs.pair_window(&indices).unwrap();
-            let bits: Vec<u64> = values.iter().map(|v|v.to_bits()).collect();
-            assert_eq!(bits.len(),128);
-            if workers == 1 { expected=bits; } else { assert_eq!(expected,bits); }
-            eprintln!("P7_CAPTURED_PAIR_BENCH workers={workers} valid={} seconds={:.6}",values.len(),started.elapsed().as_secs_f64());
+            for window in 0..2 {
+                let started=Instant::now();
+                let values=pairs.pair_window(&indices).unwrap();
+                let bits: Vec<u64> = values.iter().map(|v|v.to_bits()).collect();
+                assert_eq!(bits.len(),128);
+                if workers == 1 && window == 0 { expected=bits; } else { assert_eq!(expected,bits); }
+                eprintln!("P7_CAPTURED_PAIR_BENCH workers={workers} window={window} valid={} seconds={:.6}",values.len(),started.elapsed().as_secs_f64());
+            }
         }
     }
     #[test]
@@ -685,10 +743,18 @@ mod bounded_pair_tests {
             pairs.configure_parallel(workers).unwrap();
             let actual=pairs.pair_window(&indices).unwrap();
             assert_eq!(expected.iter().map(|v|v.to_bits()).collect::<Vec<_>>(),actual.iter().map(|v|v.to_bits()).collect::<Vec<_>>());
+            let state=pairs.pool.as_ref().unwrap();
+            assert_eq!((state.progress.borrow().windows,state.progress.borrow().pairs),(1,6));
+            let calls:u64=state.workers.iter().map(|w|w.lock().unwrap().parallel_counts.as_ref().unwrap().borrow().counts.iter().sum::<u64>()).sum();
+            assert_eq!(calls,6);
+            let actual=pairs.pair_window(&indices).unwrap();
+            assert_eq!(expected,actual);
+            assert_eq!((state.progress.borrow().windows,state.progress.borrow().pairs),(2,12));
         }
         assert!(AllocationBudget{max_bytes:1,..budget}.check(BoundedPairs::parallel_bytes(2).unwrap()).is_err());
         pairs.wall=Duration::ZERO;
         assert!(pairs.pair_window(&indices).is_err());
+        assert!(pairs.pool.as_ref().unwrap().progress.borrow().failed);
     }
     #[test]
     fn scalar_cache_preserves_order_eviction_and_deadlines() {
