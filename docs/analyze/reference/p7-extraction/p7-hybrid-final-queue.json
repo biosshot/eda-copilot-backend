@@ -150,5 +150,1134 @@
   "commands": {
     "status": "unresolved",
     "note": "No verified single final campaign invocation; select existing scripts/verify-p7-* per crosswalk task; do not invent command lines."
-  }
+  },
+  "caseTasks": [
+    {
+      "id": "primary-01",
+      "case": "Земля под дорожкой (сплошная)",
+      "sourceSection": "primary",
+      "sourceLine": 78,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-02",
+      "case": "Изгиб 90°",
+      "sourceSection": "primary",
+      "sourceLine": 79,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-03",
+      "case": "Дорожка 45°",
+      "sourceSection": "primary",
+      "sourceLine": 80,
+      "implementationStatus": "unmapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-04",
+      "case": "Связанная пара (два сигнала)",
+      "sourceSection": "primary",
+      "sourceLine": 81,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-05",
+      "case": "Земля с разрывом под дорожкой",
+      "sourceSection": "primary",
+      "sourceLine": 82,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-06",
+      "case": "Земля сверху и снизу — явное идеальное сечение",
+      "sourceSection": "primary",
+      "sourceLine": 83,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-07",
+      "case": "Земля сверху и снизу — авто по реальной плате",
+      "sourceSection": "primary",
+      "sourceLine": 84,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-08",
+      "case": "Сверху+снизу + разрыв на одном/двух слоях",
+      "sourceSection": "primary",
+      "sourceLine": 85,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-09",
+      "case": "Сшивка / via fence",
+      "sourceSection": "primary",
+      "sourceLine": 86,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-10",
+      "case": "Return via рядом с дорожкой",
+      "sourceSection": "primary",
+      "sourceLine": 87,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-11",
+      "case": "Signal via / смена слоя",
+      "sourceSection": "primary",
+      "sourceLine": 88,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-12",
+      "case": "Ветвления",
+      "sourceSection": "primary",
+      "sourceLine": 89,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-13",
+      "case": "Земля подключена на другом конце платы",
+      "sourceSection": "primary",
+      "sourceLine": 90,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-14",
+      "case": "Под дорожкой меди нет совсем",
+      "sourceSection": "primary",
+      "sourceLine": 91,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-15",
+      "case": "Несколько опор / две земли",
+      "sourceSection": "primary",
+      "sourceLine": 92,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-16",
+      "case": "Широкая опора (wide return)",
+      "sourceSection": "primary",
+      "sourceLine": 93,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-17",
+      "case": "Окружающая медь",
+      "sourceSection": "primary",
+      "sourceLine": 94,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-18",
+      "case": "RF-сечение (BandAmp)",
+      "sourceSection": "primary",
+      "sourceLine": 95,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-continuation-97",
+      "case": "Разрывы опоры сверху и снизу одновременно",
+      "sourceSection": "primary",
+      "sourceLine": 97,
+      "implementationStatus": "unmapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-continuation-98",
+      "case": "Blind/buried via",
+      "sourceSection": "primary",
+      "sourceLine": 98,
+      "implementationStatus": "unmapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-continuation-99",
+      "case": "Разъём/пад (connector/pad transition)",
+      "sourceSection": "primary",
+      "sourceLine": 99,
+      "implementationStatus": "unmapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-continuation-100",
+      "case": "Дифференциальная пара",
+      "sourceSection": "primary",
+      "sourceLine": 100,
+      "implementationStatus": "unmapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-continuation-101",
+      "case": "Смена опоры (reference swap)",
+      "sourceSection": "primary",
+      "sourceLine": 101,
+      "implementationStatus": "unmapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-continuation-102",
+      "case": "Нет локальной опоры: поиск возврата по цепи",
+      "sourceSection": "primary",
+      "sourceLine": 102,
+      "implementationStatus": "unmapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-continuation-103",
+      "case": "GND/AGND/PGND с физическим соединением",
+      "sourceSection": "primary",
+      "sourceLine": 103,
+      "implementationStatus": "unmapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "primary-continuation-104",
+      "case": "Несколько переходов опоры (AGND→PGND→GND)",
+      "sourceSection": "primary",
+      "sourceLine": 104,
+      "implementationStatus": "unmapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "supplemental-19",
+      "case": "Ёмкостный/смешанный возврат через разрыв",
+      "sourceSection": "supplemental",
+      "sourceLine": 110,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "supplemental-20",
+      "case": "Component bridge (R/C/ferrite)",
+      "sourceSection": "supplemental",
+      "sourceLine": 111,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "supplemental-21",
+      "case": "PDN multiport",
+      "sourceSection": "supplemental",
+      "sourceLine": 112,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "supplemental-22",
+      "case": "Небольшая связанная группа, branch/meander",
+      "sourceSection": "supplemental",
+      "sourceLine": 113,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "supplemental-23",
+      "case": "2/4/6/8 слоёв, асимметрия и конечные края опор",
+      "sourceSection": "supplemental",
+      "sourceLine": 114,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "supplemental-24",
+      "case": "Адаптивная полоса по DSL",
+      "sourceSection": "supplemental",
+      "sourceLine": 115,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "supplemental-25",
+      "case": "Инварианты универсальности",
+      "sourceSection": "supplemental",
+      "sourceLine": 116,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "return-topology-26",
+      "case": "Тот же net, разрыв с обходом",
+      "sourceSection": "return-topology",
+      "sourceLine": 128,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "return-topology-27",
+      "case": "AGND → GND через разрыв",
+      "sourceSection": "return-topology",
+      "sourceLine": 129,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "return-topology-28",
+      "case": "Несколько переходов (AGND→PGND→GND)",
+      "sourceSection": "return-topology",
+      "sourceLine": 130,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "return-topology-29",
+      "case": "Смена слоя (signal via + return via)",
+      "sourceSection": "return-topology",
+      "sourceLine": 131,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "return-topology-30",
+      "case": "Разрыв без гальванического соединения",
+      "sourceSection": "return-topology",
+      "sourceLine": 132,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    },
+    {
+      "id": "return-topology-31",
+      "case": "Смена опоры без найденного соединения",
+      "sourceSection": "return-topology",
+      "sourceLine": 133,
+      "implementationStatus": "mapped",
+      "acceptanceStatus": "open",
+      "referenceStatus": "missing",
+      "command": null,
+      "commandStatus": "unresolved",
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+    }
+  ],
+  "orchestration": {
+    "crosswalkTaskCount": 39,
+    "mappedImplementationCheckCount": 12,
+    "supplementalCouponCount": 1,
+    "knownRunnableCommand": [
+      "node",
+      "--import",
+      "tsx",
+      "scripts/verify-p7-closure-stripline.ts"
+    ],
+    "knownCommandScope": "specialized coupled-stripline coupon only; performs solver unless validation/reuse env supplied",
+    "remainingCommands": "unresolved per listed script availability; inspect script-specific config before execution",
+    "budgetTotalSeconds": null,
+    "budgetBlocker": "Only stripline verifier has bounded known command; mapped controls may run solver and row-specific independent-reference/sensitivity workloads are not bound. Cannot sum unknown workloads.",
+    "heavyRunPolicy": "Never invoke heavy-final-only command directly. Supervisor wrapper enforces wall/memory/cache policy; only one heavy process at a time. Existing runner writes debugging outputs and may mutate caches."
+  },
+  "implementationChecks": [
+    {
+      "script": "scripts/verify-p7-closure-stripline.ts",
+      "exists": true,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "scripts/verify-p7-closure-stripline.ts"
+      ],
+      "rows": [
+        "primary-01",
+        "primary-04",
+        "primary-06"
+      ],
+      "evidenceLimit": "implementation/control only; never substitutes for independent reference acceptance",
+      "runClass": "development-control",
+      "executionGate": {
+        "allowedNow": false,
+        "requirement": "No execution authorized in this queue preparation; review inputs/side effects first."
+      },
+      "wallLimitSeconds": 120,
+      "memoryLimitMiB": null,
+      "sideEffects": "writes debugging evidence/output; may update cache",
+      "commandStatus": "script entrypoint verified; do not run during queue preparation"
+    },
+    {
+      "script": "scripts/verify-p7-closure-baseline.ts",
+      "exists": true,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "scripts/verify-p7-closure-baseline.ts"
+      ],
+      "rows": [
+        "primary-02"
+      ],
+      "evidenceLimit": "implementation/control only; never substitutes for independent reference acceptance",
+      "runClass": "heavy-final-only",
+      "executionGate": {
+        "allowedNow": false,
+        "requirement": "Run only in final acceptance phase under scripts/verify-p7-closure-supervised.py with explicit memory/deadline/cache controls and one heavy job at a time."
+      },
+      "wallLimitSeconds": 600,
+      "memoryLimitMiB": "must be set via supervisor; script has no self-enforced process memory cap",
+      "sideEffects": "writes debugging evidence/output; may update cache",
+      "commandStatus": "supervisor-required; command template only, not direct invocation"
+    },
+    {
+      "script": "scripts/verify-p7-joint-section.ts",
+      "exists": true,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "scripts/verify-p7-joint-section.ts"
+      ],
+      "rows": [
+        "primary-05",
+        "primary-12",
+        "return-topology-26",
+        "supplemental-22"
+      ],
+      "evidenceLimit": "implementation/control only; never substitutes for independent reference acceptance",
+      "runClass": "heavy-final-only",
+      "executionGate": {
+        "allowedNow": false,
+        "requirement": "Run only in final acceptance phase under scripts/verify-p7-closure-supervised.py with explicit memory/deadline/cache controls and one heavy job at a time."
+      },
+      "wallLimitSeconds": 600,
+      "memoryLimitMiB": "must be set via supervisor; script has no self-enforced process memory cap",
+      "sideEffects": "writes debugging evidence/output; may update cache",
+      "commandStatus": "supervisor-required; command template only, not direct invocation"
+    },
+    {
+      "script": "tests/analyze-auto-foil.test.ts",
+      "exists": true,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "tests/analyze-auto-foil.test.ts"
+      ],
+      "rows": [
+        "primary-09"
+      ],
+      "evidenceLimit": "implementation/control only; never substitutes for independent reference acceptance",
+      "runClass": "unit-test",
+      "executionGate": {
+        "allowedNow": false,
+        "requirement": "No execution authorized in this queue preparation; review inputs/side effects first."
+      },
+      "wallLimitSeconds": null,
+      "memoryLimitMiB": null,
+      "sideEffects": "read-only/check output depends on script",
+      "commandStatus": "script entrypoint verified; do not run during queue preparation"
+    },
+    {
+      "script": "scripts/verify-p7-auto-foil.ts",
+      "exists": true,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "scripts/verify-p7-auto-foil.ts"
+      ],
+      "rows": [
+        "primary-10"
+      ],
+      "evidenceLimit": "implementation/control only; never substitutes for independent reference acceptance",
+      "runClass": "development-control",
+      "executionGate": {
+        "allowedNow": false,
+        "requirement": "No execution authorized in this queue preparation; review inputs/side effects first."
+      },
+      "wallLimitSeconds": null,
+      "memoryLimitMiB": null,
+      "sideEffects": "read-only/check output depends on script",
+      "commandStatus": "script entrypoint verified; do not run during queue preparation"
+    },
+    {
+      "script": "tests/analysis-dsl.test.ts",
+      "exists": true,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "tests/analysis-dsl.test.ts"
+      ],
+      "rows": [
+        "primary-11",
+        "return-topology-29",
+        "supplemental-20"
+      ],
+      "evidenceLimit": "implementation/control only; never substitutes for independent reference acceptance",
+      "runClass": "unit-test",
+      "executionGate": {
+        "allowedNow": false,
+        "requirement": "No execution authorized in this queue preparation; review inputs/side effects first."
+      },
+      "wallLimitSeconds": null,
+      "memoryLimitMiB": null,
+      "sideEffects": "read-only/check output depends on script",
+      "commandStatus": "script entrypoint verified; do not run during queue preparation"
+    },
+    {
+      "script": "scripts/verify-p7-wide-return-domains.ts",
+      "exists": true,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "scripts/verify-p7-wide-return-domains.ts"
+      ],
+      "rows": [
+        "primary-13",
+        "primary-16"
+      ],
+      "evidenceLimit": "implementation/control only; never substitutes for independent reference acceptance",
+      "runClass": "development-control",
+      "executionGate": {
+        "allowedNow": false,
+        "requirement": "No execution authorized in this queue preparation; review inputs/side effects first."
+      },
+      "wallLimitSeconds": null,
+      "memoryLimitMiB": null,
+      "sideEffects": "read-only/check output depends on script",
+      "commandStatus": "script entrypoint verified; do not run during queue preparation"
+    },
+    {
+      "script": "tests/analyze-board-channel-return-selection.test.ts",
+      "exists": true,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "tests/analyze-board-channel-return-selection.test.ts"
+      ],
+      "rows": [
+        "primary-14"
+      ],
+      "evidenceLimit": "implementation/control only; never substitutes for independent reference acceptance",
+      "runClass": "unit-test",
+      "executionGate": {
+        "allowedNow": false,
+        "requirement": "No execution authorized in this queue preparation; review inputs/side effects first."
+      },
+      "wallLimitSeconds": null,
+      "memoryLimitMiB": null,
+      "sideEffects": "read-only/check output depends on script",
+      "commandStatus": "script entrypoint verified; do not run during queue preparation"
+    },
+    {
+      "script": "scripts/verify-p7-shared-return-prototype.ts",
+      "exists": true,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "scripts/verify-p7-shared-return-prototype.ts"
+      ],
+      "rows": [
+        "primary-15",
+        "supplemental-19"
+      ],
+      "evidenceLimit": "implementation/control only; never substitutes for independent reference acceptance",
+      "runClass": "development-control",
+      "executionGate": {
+        "allowedNow": false,
+        "requirement": "No execution authorized in this queue preparation; review inputs/side effects first."
+      },
+      "wallLimitSeconds": null,
+      "memoryLimitMiB": null,
+      "sideEffects": "read-only/check output depends on script",
+      "commandStatus": "script entrypoint verified; do not run during queue preparation"
+    },
+    {
+      "script": "scripts/verify-p7-source-band.ts",
+      "exists": true,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "scripts/verify-p7-source-band.ts"
+      ],
+      "rows": [
+        "primary-18"
+      ],
+      "evidenceLimit": "implementation/control only; never substitutes for independent reference acceptance",
+      "runClass": "development-control",
+      "executionGate": {
+        "allowedNow": false,
+        "requirement": "No execution authorized in this queue preparation; review inputs/side effects first."
+      },
+      "wallLimitSeconds": null,
+      "memoryLimitMiB": null,
+      "sideEffects": "read-only/check output depends on script",
+      "commandStatus": "script entrypoint verified; do not run during queue preparation"
+    },
+    {
+      "script": "scripts/verify-p7-real-reference.ts",
+      "exists": true,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "scripts/verify-p7-real-reference.ts"
+      ],
+      "rows": [
+        "supplemental-21"
+      ],
+      "evidenceLimit": "implementation/control only; never substitutes for independent reference acceptance",
+      "runClass": "heavy-final-only",
+      "executionGate": {
+        "allowedNow": false,
+        "requirement": "Run only in final acceptance phase under scripts/verify-p7-closure-supervised.py with explicit memory/deadline/cache controls and one heavy job at a time."
+      },
+      "wallLimitSeconds": 600,
+      "memoryLimitMiB": "must be set via supervisor; script has no self-enforced process memory cap",
+      "sideEffects": "writes debugging evidence/output; may update cache",
+      "commandStatus": "supervisor-required; command template only, not direct invocation"
+    },
+    {
+      "script": "tests/analyze-board-foil-cache.test.ts",
+      "exists": true,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "tests/analyze-board-foil-cache.test.ts"
+      ],
+      "rows": [
+        "supplemental-24",
+        "supplemental-25"
+      ],
+      "evidenceLimit": "implementation/control only; never substitutes for independent reference acceptance",
+      "runClass": "unit-test",
+      "executionGate": {
+        "allowedNow": false,
+        "requirement": "No execution authorized in this queue preparation; review inputs/side effects first."
+      },
+      "wallLimitSeconds": null,
+      "memoryLimitMiB": null,
+      "sideEffects": "read-only/check output depends on script",
+      "commandStatus": "script entrypoint verified; do not run during queue preparation"
+    }
+  ],
+  "acceptanceTasks": [
+    {
+      "id": "primary-01",
+      "case": "Земля под дорожкой (сплошная)",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-02",
+      "case": "Изгиб 90°",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-03",
+      "case": "Дорожка 45°",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-04",
+      "case": "Связанная пара (два сигнала)",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-05",
+      "case": "Земля с разрывом под дорожкой",
+      "reference": null,
+      "status": "reference-artifact-present-unbound",
+      "candidateArtifacts": [
+        "tests/fixtures/analysis-p7-closure/split-reference.json"
+      ],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-06",
+      "case": "Земля сверху и снизу — явное идеальное сечение",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-07",
+      "case": "Земля сверху и снизу — авто по реальной плате",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-08",
+      "case": "Сверху+снизу + разрыв на одном/двух слоях",
+      "reference": null,
+      "status": "reference-artifact-present-unbound",
+      "candidateArtifacts": [
+        "tests/fixtures/analysis-p7-closure/split-reference.json"
+      ],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-09",
+      "case": "Сшивка / via fence",
+      "reference": null,
+      "status": "reference-artifact-present-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-10",
+      "case": "Return via рядом с дорожкой",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-11",
+      "case": "Signal via / смена слоя",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-12",
+      "case": "Ветвления",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-13",
+      "case": "Земля подключена на другом конце платы",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-14",
+      "case": "Под дорожкой меди нет совсем",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-15",
+      "case": "Несколько опор / две земли",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-16",
+      "case": "Широкая опора (wide return)",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-17",
+      "case": "Окружающая медь",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-18",
+      "case": "RF-сечение (BandAmp)",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-continuation-97",
+      "case": "Разрывы опоры сверху и снизу одновременно",
+      "reference": null,
+      "status": "reference-artifact-present-unbound",
+      "candidateArtifacts": [
+        "tests/fixtures/analysis-p7-closure/split-reference.json"
+      ],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-continuation-98",
+      "case": "Blind/buried via",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-continuation-99",
+      "case": "Разъём/пад (connector/pad transition)",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-continuation-100",
+      "case": "Дифференциальная пара",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-continuation-101",
+      "case": "Смена опоры (reference swap)",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-continuation-102",
+      "case": "Нет локальной опоры: поиск возврата по цепи",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-continuation-103",
+      "case": "GND/AGND/PGND с физическим соединением",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "primary-continuation-104",
+      "case": "Несколько переходов опоры (AGND→PGND→GND)",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "supplemental-19",
+      "case": "Ёмкостный/смешанный возврат через разрыв",
+      "reference": null,
+      "status": "reference-artifact-present-unbound",
+      "candidateArtifacts": [
+        "tests/fixtures/analysis-p7-closure/split-reference.json"
+      ],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "supplemental-20",
+      "case": "Component bridge (R/C/ferrite)",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "supplemental-21",
+      "case": "PDN multiport",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "supplemental-22",
+      "case": "Небольшая связанная группа, branch/meander",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "supplemental-23",
+      "case": "2/4/6/8 слоёв, асимметрия и конечные края опор",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "supplemental-24",
+      "case": "Адаптивная полоса по DSL",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "supplemental-25",
+      "case": "Инварианты универсальности",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "return-topology-26",
+      "case": "Тот же net, разрыв с обходом",
+      "reference": null,
+      "status": "reference-artifact-present-unbound",
+      "candidateArtifacts": [
+        "tests/fixtures/analysis-p7-closure/split-reference.json"
+      ],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "return-topology-27",
+      "case": "AGND → GND через разрыв",
+      "reference": null,
+      "status": "reference-artifact-present-unbound",
+      "candidateArtifacts": [
+        "tests/fixtures/analysis-p7-closure/split-reference.json"
+      ],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "return-topology-28",
+      "case": "Несколько переходов (AGND→PGND→GND)",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "return-topology-29",
+      "case": "Смена слоя (signal via + return via)",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "return-topology-30",
+      "case": "Разрыв без гальванического соединения",
+      "reference": null,
+      "status": "reference-artifact-present-unbound",
+      "candidateArtifacts": [
+        "tests/fixtures/analysis-p7-closure/split-reference.json"
+      ],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "id": "return-topology-31",
+      "case": "Смена опоры без найденного соединения",
+      "reference": null,
+      "status": "reference-unbound",
+      "candidateArtifacts": [],
+      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+    },
+    {
+      "group": "manifest-supplemental-coupons",
+      "tasks": [
+        {
+          "id": "coupled-stripline",
+          "dsl": "tests/fixtures/analysis-p7-closure/coupled-stripline.js",
+          "reference": "tests/fixtures/analysis-p7-closure/stripline-fd-reference.json",
+          "referenceSha256": "217ebc00ac2bca90ab0358c9a66cdf1b3a50bccb7ff2d078b348ab1eb519054f",
+          "dslSha256": "c3aa9f04720f462d1187e5d6d591dc747c3992ac29247a33a63ab690ed20966c",
+          "command": [
+            "node",
+            "--import",
+            "tsx",
+            "scripts/verify-p7-closure-stripline.ts"
+          ],
+          "commandStatus": "verified-script-is-specialized-stripline-only",
+          "scope": "coupon fixture/reference exists; no claim this runner validates other coupons",
+          "runClass": "development-control",
+          "executionGate": "explicit user-approved scheduling required; writes debugging/p7-closure outputs",
+          "wallLimitSeconds": 120
+        }
+      ]
+    }
+  ]
 }
