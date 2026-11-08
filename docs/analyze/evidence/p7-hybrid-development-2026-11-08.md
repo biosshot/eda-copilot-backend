@@ -167,3 +167,5 @@ The shared contract and direct kernels are being integrated. Zero-current capaci
 
 - Release addon build completed in 6m19s. `1794140718051740800`: extended coupled DSL passed in 5.0s, including regime audit, canonical spatial recovery, loss Grams and cold/warm/restart; sampled private tree peak 443101184 bytes under supervisor cap. This is bounded model integration, not physical acceptance.
 - `1794140744067280200`: new in-memory 0/45/90 orientation control hit the unchanged 30s external deadline. No rotation sensitivity acceptance follows. The control preserves physical contacts and compares complex S/loss entries; Y is explicitly omitted. Investigation must identify which orientation/partition causes the cost before rerunning.
+
+Orientation timeout diagnosis from existing log: first (0 degree) solve is pure planar with 36 supports and completes training in 0.443s. The next (45 degree) solve has 66 supports and 1545 planar/cross pairs, implying 36 local tetra supports excluded from that pair domain. Investigate why rigid rotation changes ownership to local volume; do not treat a repeated kernel timeout as sufficient performance evidence.

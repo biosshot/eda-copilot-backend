@@ -30,6 +30,7 @@ const rotate=(board:any,degrees:number)=>{
 const code=segmentedCouponDsl.replace('boardThicknessMm:.12','boardThicknessMm:.17').replaceAll('thicknessMm:.01','thicknessMm:.035').replace('startHz:1000,stopHz:10000,points:3','startHz:1000000,stopHz:1000000,points:1').replace('maxSeconds:300,maxMemoryMiB:2048',`maxSeconds:${seconds},maxMemoryMiB:${memoryMiB}`);
 const execute=createAnalysisExecutor();
 async function run(degrees:number){
+ console.error(`P7_ORIENTATION stage=start degrees=${degrees}`);
  let solution:any;
  const board=rotate(structuredClone(base),degrees);
  const r=await executeScenario({board,code},{filename:`hybrid-orientation-${degrees}.js`,maxEntries:1000,maxOutputBytes:8*1024*1024},()=>{},async task=>{const out=await execute(task);if(task.kind==='impedance')solution=out.solution;return out;});
@@ -38,6 +39,7 @@ async function run(degrees:number){
  assert.equal(solution.provenance.partitionPolicy,'automatic-hybrid-v1');
  assert.equal(solution.portObservations.frequencies.length,1);
  const f=solution.frequenciesHz[0],s=solution.parameters[0];
+ console.error(`P7_ORIENTATION stage=end degrees=${degrees} prisms=${solution.provenance.prisms} localTetrahedra=${solution.provenance.volumeTetrahedra}`);
  const z=s.map((row:any[])=>row.map((x:any)=>({real:x.real,imaginary:x.imaginary})));
  return {degrees,ports:solution.physicalPorts,frequencyHz:f,s:z,loss:solution.samples[0].lossGrams,quality:solution.quality,yStatus:'omitted: no validated physical-reference S-to-Y conversion bound to this compact control'};
 }
