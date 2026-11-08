@@ -137,3 +137,9 @@ The shared contract and direct kernels are being integrated. Zero-current capaci
 - Release addon build completed in 6m29s (build cost, outside numerical test budget).
 - `1794138422401324600`: extended coupled DSL cold/warm/restart smoke passed in 3.672s; sampled process-tree private peak 408834048 bytes under 1536MiB cap. Complex copper loss Grams survive validation and disk replay; numerical KCL 1.11023e-16, KVL 8.36448e-12, power balance 5.04973e-15W. Physical coverage remains unverified.
 - `1794138385189256000`: same smoke with optional regime audit failed in 1.828s at first time integration (`COUPLED_KCL`, drive 0, 128 steps). This is an open integration defect despite passing smaller regime regressions. No acceptance status or numerical gate changed. Heavy final campaign remains pending.
+
+### Spatial recovery consumer integration
+
+- `6464917` adds strict discrete spatial-report validation, canonical sample/column references without duplicated geometry, and hybrid cache version v6.
+- `1794138987309913100`: 14 cache/port-observation tests passed under supervisor in 1.109s; sampled private peak 338796544 bytes. Covers malformed spatial fields, loss consistency and canonical references; does not establish native spatial recovery or physical accuracy.
+- Native `cargo check --tests` completed after spatial integration; numerical recovery and compensated-time controls remain pending. Extended coupled smoke now requires spatial evidence, so the earlier addon smoke is not evidence for this new output.
