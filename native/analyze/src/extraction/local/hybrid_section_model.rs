@@ -77,6 +77,53 @@ fn scale_henries(gram:&mut [Vec<f64>]) {
 #[cfg(test)] mod tests {
  use super::*; use super::super::{mesh::{self,LayeredInput,Material},volume_current};
  #[test] fn units_once() {let mut g=vec![vec![2.,3.],vec![3.,4.]];scale_henries(&mut g);assert_eq!(g,vec![vec![2e-7,3e-7],vec![3e-7,4e-7]]);}
+ #[test]
+ fn disconnected_islands_carry_ac_displacement_current() {
+  use super::super::{volume_field,volume_reduction};
+  use crate::electrical::{coupled,Counters};
+  let started=Instant::now();
+  let b=AllocationBudget{max_bytes:256*1024*1024,max_nodes:1000,max_tetrahedra:1000};
+  // Same finite three-strip fixture as physical_coupled_comparison: separated
+  // copper islands embedded in air, with no conductor spanning either gap.
+  let xs=[-0.001,0.,0.001,0.002];let ys=[-0.001,0.,0.001,0.002,0.003,0.004,0.005,0.006];
+  let xy:Vec<_>=ys.iter().flat_map(|&y|xs.iter().map(move |&x|[x,y])).collect();
+  let triangles:Vec<_>=(0..7).flat_map(|y|(0..3).flat_map(move |x|{let a=4*y+x;[[a,a+1,a+5],[a,a+5,a+4]]})).collect();
+  let mut edges=vec![];for x in 0..3 {edges.extend([[x,x+1],[28+x,29+x]]);}for y in 0..7 {edges.extend([[4*y,4*y+4],[4*y+3,4*y+7]]);}
+  let dielectric=||Material::Dielectric{label:"air".into(),epsilon_r:1.};
+  let mat:Vec<_>=(0..7).flat_map(|y|(0..3).flat_map(move |x|{let m=if x==1 && [1,3,5].contains(&y) {Material::Copper{source_ids:vec![format!("c{}",(y-1)/2)]}}else{dielectric()};[m.clone(),m]})).collect();
+  let mesh=mesh::extrude(&LayeredInput{xy_m:xy.clone(),triangles:triangles.clone(),boundary_edges:edges,z_m:vec![-0.001,0.,0.001,0.002],materials:vec![vec![dielectric();triangles.len()],mat,vec![dielectric();triangles.len()]]},b).unwrap();
+  let electrodes:Vec<Vec<usize>>=(0..3).flat_map(|c|[0.,0.001].map(|z|mesh.nodes_m.iter().enumerate().filter_map(|(i,p)|(p[2]==z && p[0]>=0. && p[0]<=0.001 && p[1]>=2.*c as f64*0.001 && p[1]<=(2*c+1) as f64*0.001).then_some(i)).collect())).collect();
+  let space=volume_current::assemble(&mesh,&vec![58e6;mesh.copper_tetrahedra.len()],&electrodes,b).unwrap();
+  assert_eq!(space.components.len(),3);
+  let contacts:Vec<_>=electrodes.iter().enumerate().map(|(i,n)|(format!("p{i}"),space.node_potential[&n[0]])).collect();
+  let island=|i:usize|space.components.iter().position(|v|v.contains(&contacts[i].1)).unwrap();
+  assert_ne!(island(0),island(4));
+  let basis=volume_reduction::harmonic(&space,&contacts,b).unwrap();
+  let field=volume_field::Field::new(&mesh,&space,b).unwrap();
+  let groups:Vec<_>=space.cells.iter().filter_map(|c|{let t=&mesh.copper_tetrahedra[c.mesh_cell];(t.source_ids==["c0"]).then_some(t.planar_triangle)}).collect::<BTreeSet<_>>().into_iter().map(|t|Group{prism:Prism::new("c0".into(),triangles[t].map(|i|xy[i]),[0.,0.001]).unwrap(),cells:space.cells.iter().enumerate().filter_map(|(i,c)|(mesh.copper_tetrahedra[c.mesh_cell].planar_triangle==t).then_some(i)).collect()}).collect();
+  let ports=[[0,4],[1,5],[2,4],[3,5]];
+  let extracted=model(&mesh,&space,&basis,&groups,&field,&ports,12,b,Duration::from_secs(30)).unwrap();
+  assert_eq!(extracted.reference_topology,"infinity");
+  let nv=extracted.potential_nodes.len();let n=nv+extracted.current_dofs.len();
+  let mut sys=coupled::System::compile(&extracted,4,None).unwrap();
+  let rhs=sys.port_rhs(&[1.,0.,0.,0.]);
+  assert!(sys.solve(0.,rhs.clone(),&vec![0.;n],&mut Counters::default()).unwrap_err().starts_with("COUPLED_DC_INCOMPATIBLE"));
+  for hz in [1000.,10000.] {
+   let w=std::f64::consts::TAU*hz;let mut ac_rhs=rhs.clone();ac_rhs.resize(2*n,0.);
+   let x=sys.solve_charge_coordinates(w,&ac_rhs,&mut Counters::default()).unwrap();
+   let voltage_re=sys.port_voltages(&x,4);let voltage_im=sys.port_voltages(&x[n..],4);
+   assert!(voltage_im[0].abs()>1e-6 && voltage_re[0].is_finite());
+   for (k,cols) in basis.component_columns.iter().enumerate() {
+    let mut qr=0.;let mut qi=0.;
+    for &(i,j,c) in &extracted.capacitance_f {if cols.contains(&i) {qr+=c*x[j];qi+=c*x[n+j];}}
+    let injection=if k==island(0){1.}else if k==island(4){-1.}else{0.};
+    let defect=(-w*qi-injection).hypot(w*qr);
+    assert!(defect<=1e-8*(1.+injection.abs()),"island={k} frequency={hz} defect={defect:e}");
+    if injection!=0. {assert!((w*qi).abs()>0.99);}
+   }
+  }
+  assert!(started.elapsed()<Duration::from_secs(30));
+ }
  #[test] fn coverage_and_uniform_fallback() {
   let b=AllocationBudget{max_bytes:16_000_000,max_nodes:100,max_tetrahedra:100};
   let mesh=mesh::extrude(&LayeredInput{xy_m:vec![[0.,0.],[1.,0.],[0.,1.]],triangles:vec![[0,1,2]],boundary_edges:vec![[0,1],[1,2],[2,0]],z_m:vec![0.,1.,2.],materials:vec![vec![Material::Copper{source_ids:vec!["a".into()]}];2]},b).unwrap();
