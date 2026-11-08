@@ -1934,6 +1934,54 @@ mod hybrid_rf_policy_tests {
 mod aligned_pad_orientation_tests {
     use super::*;
     #[test]
+    fn inner_signal_with_split_top_and_bottom_references_stays_disconnected() {
+        let cases:serde_json::Value=serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-local-extraction/orientation-aligned-pads.json")).unwrap();
+        let mut board_json:serde_json::Value=serde_json::from_str(cases[0][0].as_str().unwrap()).unwrap();
+        board_json["layers"]=serde_json::json!([{ "name":"TOP","index":0,"side":"top" },{ "name":"INNER","index":1,"side":"inner" },{ "name":"BOTTOM","index":2,"side":"bottom" }]);
+        let pads=board_json["pads"].as_array_mut().unwrap();
+        pads[0]["layers"]=serde_json::json!(["INNER"]);pads[1]["layers"]=serde_json::json!(["INNER"]);
+        for i in 2..4 {
+            let mut p=pads[i].clone();p["id"]=serde_json::json!(format!("top-return-{i}"));p["number"]=serde_json::json!("3");p["layers"]=serde_json::json!(["TOP"]);pads.push(p);
+        }
+        let tracks=board_json["copper"]["fixed"]["tracks"].as_array_mut().unwrap();
+        tracks.truncate(1);tracks[0]["layer"]=serde_json::json!("INNER");
+        let board=crate::import_json(&board_json.to_string()).board.unwrap();
+        let mut request_json=cases[0][1].clone();
+        request_json["stack"]=serde_json::json!([
+            {"name":"TOP","copper":true,"thicknessM":3.5e-5,"conductivitySM":58e6},
+            {"name":"upper-dielectric","copper":false,"thicknessM":1e-4,"epsilonR":4.},
+            {"name":"INNER","copper":true,"thicknessM":3.5e-5,"conductivitySM":58e6},
+            {"name":"lower-dielectric","copper":false,"thicknessM":1e-4,"epsilonR":4.},
+            {"name":"BOTTOM","copper":true,"thicknessM":3.5e-5,"conductivitySM":58e6}
+        ]);
+        for i in 0..2 {request_json["electrodes"][i]["layer"]=serde_json::json!("INNER");}
+        let request:board_mesh::Request=serde_json::from_value(request_json).unwrap();
+        let budget=AllocationBudget{max_bytes:512*1024*1024,max_nodes:100_000,max_tetrahedra:200_000};
+        let wall=Duration::from_secs(15);let started=Instant::now();
+        let profile=CheckedOperator::HybridPlanarV3.skin_profile(1e6,Some(1e6),request.max_vertical_step_m).unwrap();
+        let mesh=board_mesh::build_profiled(&board,&request,budget,wall,None,&[],profile).unwrap();
+        let map=prepare(&mesh,&request.electrodes,1e6,budget,wall).unwrap();
+        assert_eq!(map.full.components.len(),5,"one inner signal and four separated references");
+        let mut layers=std::collections::BTreeMap::<&str,std::collections::BTreeSet<usize>>::new();
+        for cell in &map.full.cells {
+            let tet=&mesh.mesh.copper_tetrahedra[cell.mesh_cell];
+            let points=tet.nodes.map(|i|mesh.mesh.nodes_m[i]);
+            let z=points.iter().map(|p|p[2]).sum::<f64>()/4.;
+            let (name,_)=mesh.layer_spans.iter().find(|(_,span)|z>span[0] && z<span[1]).unwrap();
+            let component=map.full.components.iter().position(|c|c.contains(&cell.potentials[0])).unwrap();
+            layers.entry(name.as_str()).or_default().insert(component);
+            if name=="TOP" || name=="BOTTOM" {
+                for p in points {let x=mesh.origin_mm[0]+1000.*p[0];assert!(x.abs()>=0.199,"reference gap filled at x={x}");}
+            }
+        }
+        assert_eq!(layers["INNER"].len(),1);
+        assert_eq!(layers["TOP"].len(),2);
+        assert_eq!(layers["BOTTOM"].len(),2);
+        assert!(layers["TOP"].is_disjoint(&layers["BOTTOM"]));
+        assert!(layers["INNER"].is_disjoint(&layers["TOP"]) && layers["INNER"].is_disjoint(&layers["BOTTOM"]));
+        assert!(started.elapsed()<wall);
+    }
+    #[test]
     fn aligned_rotations_and_reversed_tracks_keep_planar_ownership() {
         let cases:serde_json::Value=serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-local-extraction/orientation-aligned-pads.json")).unwrap();
         let budget=AllocationBudget{max_bytes:512*1024*1024,max_nodes:100_000,max_tetrahedra:200_000};

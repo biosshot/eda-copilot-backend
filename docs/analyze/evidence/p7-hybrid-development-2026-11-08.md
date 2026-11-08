@@ -189,3 +189,8 @@ The captured orientation requests also reveal an applicability limit of this con
 - Addon build completed in 6m22s. `1794142973605115200` completes all three actual hybrid extractions in 2.844s supervisor wall (sampled private peak 215724032 bytes), all without local tetrahedra, but comparison **fails** the existing 45-degree sensitivity gate.
 - At 45 degrees, diagonal S changes by about 1.7918e-5 absolute / 13.48% relative to magnitude 1.3293e-4; transmission changes by 1.7918e-5 relative. Copper loss-Gram changes are below 1.65e-6 relative. At 90 degrees the largest relative diagonal S change is 1.158e-4.
 - The automatic finite dielectric domain changes from the baseline rectangle to a larger rotated bounding square. Its contribution versus mesh sensitivity is unresolved; no tolerance/floor adjustment or physical acceptance follows. The runner now saves completed results on comparison failure for diagnosis.
+
+### Multilayer split structure and finite-domain diagnostic
+
+- `1794143097287789000`: actual HybridPlanarV3 mesh/map structural control for INNER signal between split TOP/BOTTOM references passes in 0.266s under a 5s external cap. It retains five conductor components and both physical gaps; no electromagnetic or physical acceptance is inferred.
+- `1794143149274586100`: diagnostic native replay using the same rigidly rotated finite substrate polygon completes in 1.609s. Relative diagonal S changes become 1.9315% at 45 degrees and 0.01158% at 90 degrees. This supports investigating automatic finite-domain selection as the main source of the preceding 13.48% change; the surrounding rectangular air box still differs, so this is not full domain invariance or physical acceptance. Original sensitivity gates remain unchanged.
