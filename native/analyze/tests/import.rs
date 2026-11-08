@@ -446,7 +446,7 @@ fn rejects_contradictory_or_missing_fill_states() {
 }
 #[test]
 fn stackup_and_materials_are_validated_without_defaults() {
-    let example = include_str!("../../../docs/experimental/analyze/routing-board-v2-example.json");
+    let example = include_str!("../../../docs/analyze/reference/input/routing-board-v2-example.json");
     let r = import_json(example);
     assert!(!r.has_errors(), "{:?}", r.diagnostics);
     let b = r.board.unwrap();

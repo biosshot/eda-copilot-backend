@@ -36,7 +36,7 @@ The tetra comparisons use constant density integrals on the same finite support;
 
 The focused TypeScript cache/compact-report suite passed ten tests, including operator-version/policy isolation and evidence/power/ownership tampering. TypeScript typechecking passed. Temporary directories were placed under workspace `debugging/cache-test-temp` because the sandbox OS temporary path could not support the disk-cache subprocess checks.
 
-An all-target test compilation encountered the existing missing `docs/experimental/analyze/routing-board-v2-example.json` include in `native/analyze/tests/import.rs`; subsequent development builds target the affected library only. This does not establish an all-target build pass.
+An all-target test compilation encountered the stale `docs/experimental/analyze/routing-board-v2-example.json` include in `native/analyze/tests/import.rs`. The test now uses the existing canonical `docs/analyze/reference/input/routing-board-v2-example.json`, without altering the fixture. Targeted import test compilation and `stackup_and_materials_are_validated_without_defaults` pass (0.172 s supervised, `1794122115850943500`). This does not establish an all-target build pass.
 
 ## Outstanding work
 
