@@ -194,3 +194,14 @@ The captured orientation requests also reveal an applicability limit of this con
 
 - `1794143097287789000`: actual HybridPlanarV3 mesh/map structural control for INNER signal between split TOP/BOTTOM references passes in 0.266s under a 5s external cap. It retains five conductor components and both physical gaps; no electromagnetic or physical acceptance is inferred.
 - `1794143149274586100`: diagnostic native replay using the same rigidly rotated finite substrate polygon completes in 1.609s. Relative diagonal S changes become 1.9315% at 45 degrees and 0.01158% at 90 degrees. This supports investigating automatic finite-domain selection as the main source of the preceding 13.48% change; the surrounding rectangular air box still differs, so this is not full domain invariance or physical acceptance. Original sensitivity gates remain unchanged.
+
+### Release via control after bounded pair cache
+
+- Release lib-test build completed in 2m27s. `1794143694577543800` still refuses at the existing native 25s deadline (25.234s supervisor wall; sampled private peak 27107328 bytes). First magnetic action reports visited33947/far34/near17001/exact17001/zero0 for 856 supports and four training modes.
+- The cache does not establish a complete via result or speedup. Next work targets exact-zero work elimination and first-action near-pair cost; neither the physical bounds nor the resource limits are relaxed.
+
+### Automatic oriented substrate closure
+
+- Automatic hybrid candidates with unambiguous aligned physical runs now close source polygon vertices, whole neighbouring islands and complete plated envelopes in that run frame. The final polygon and world-coordinate bounding ROI are reported. Multiple non-collinear/no-run cases retain the axis-aligned fallback with an explicit reason; caller-supplied polygon scopes are not overwritten. The surrounding air box still uses world bounds.
+- Four focused TypeScript controls passed (0.85s reported): rotating closure including remote island/barrel, explicit scope, real planner 0/45/90 frame selection and branched fallback. Typecheck passed (8.8s reported). Full geometry already participates in cache identity and producer geometry hash.
+- `1794143834745935200`: unchanged actual orientation runner passes all S and complex copper loss-Gram comparisons at the original 3%/2% limits and 1e-8 absolute floor, 2.781s supervisor wall, sampled private peak216141824 bytes. This is development sensitivity evidence only; arbitrary-layout domain sensitivity and physical accuracy remain open.

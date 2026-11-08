@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Orient automatic hybrid substrate domains along unambiguous physical track runs and close whole neighbouring islands/barrel envelopes in that frame. Preserve explicit polygon scopes and report the axis-aligned fallback for ambiguous runs. The existing 0/45/90-degree development sensitivity control passes; broad physical/domain accuracy remains unverified.
+
 - Preserve source-defined shared edge breakpoints for exactly aligned, equal-width square pads and straight tracks before polygon quantization. Structural controls retain planar ownership at 0/45/90 degrees and with reversed tracks while preserving a real narrow gap.
 - Reuse a bounded cache of ordered local tetrahedron interactions across hybrid right-hand sides, with admitted memory and unchanged quadrature/deadline checks. First-action and full-via performance remain unverified.
 

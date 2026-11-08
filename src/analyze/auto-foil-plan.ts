@@ -22,6 +22,7 @@ export interface AutoFoilPlan {
  sourceBarrels:BarrelSource[];
  attachments:NonNullable<AnalysisBoardFoilCheckedRequest["attachments"]>;
  roiMm:Bounds;
+ domain:{policy:'oriented-run-v1'|'axis-aligned-fallback-v1';reason:string;polygonMm?:[number,number][]};
 }
 
 type Options = {
@@ -36,6 +37,8 @@ type Options = {
  marginMm:number;
  deadlineMs:number;
  onClosureStep?:(step:FoilClosureStep)=>void;
+ direction?:[number,number];
+ directionReason?:string;
 };
 function bounds(points:readonly [number,number][]):Bounds {
  const box:Bounds=[[Infinity,Infinity],[-Infinity,-Infinity]];
@@ -53,7 +56,11 @@ function expand(box:Bounds, distanceMm:number):Bounds {
 /** Close a bounded candidate over physical islands and complete intersecting
  * neighbours. Rectangle tests are conservative. Native source checks decide
  * actual admission and guard against every clipped conductor. */
-export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,modePairs,components,seedRegions,marginMm,deadlineMs,onClosureStep}:Options):AutoFoilPlan|undefined {
+export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,modePairs,components,seedRegions,marginMm,deadlineMs,onClosureStep,direction,directionReason}:Options):AutoFoilPlan|undefined {
+ // A caller-supplied polygon is an explicit physical scope; do not silently
+ // replace it with an automatic closure.
+ if(geometry.domainPolygonMm!==undefined)return;
+ if(direction&&(!direction.every(Number.isFinite)||Math.abs(Math.hypot(...direction)-1)>1e-12))return;
  const stack=geometry.stack,copper=stack.filter(layer=>layer.copper);
  if(copper.length<2||copper.length>8||stack.length!==2*copper.length-1||stack.some((layer,i)=>layer.copper!==(i%2===0))||
     captured.status==='invalid'||captured.excluded.length||captured.fills.some(fill=>fill.status!=='available'))return;
@@ -70,12 +77,19 @@ export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,modePa
   return {id,model,electrodes:[positive,negative] as [string,string]};
  });
  const groups=new Map(captured.islands.flatMap(island=>island.region_ids.map(id=>[id,island.region_ids] as const)));
- const regions=captured.regions.map(region=>({region,box:bounds(region.polygon.outer)}));
+ // Only automatic hybrid candidates provide a physical run direction. All
+ // bounds, including the closure search, use the same orthonormal frame.
+ const d=direction??[1,0];const t:[number,number]=[-d[1],d[0]];
+ const project=([x,y]:[number,number]):[number,number]=>[x*d[0]+y*d[1],x*t[0]+y*t[1]];
+ const worldCorners=(box:Bounds):[number,number][]=>[[box[0][0],box[0][1]],[box[1][0],box[0][1]],[box[1][0],box[1][1]],[box[0][0],box[1][1]]]
+  .map(([x,y]):[number,number]=>[x*d[0]+y*t[0],x*d[1]+y*t[1]]);
+ const worldBounds=(box:Bounds):Bounds=>direction?bounds(worldCorners(box)):box;
+ const regions=captured.regions.map(region=>({region,box:bounds(region.polygon.outer.map(project))}));
  const platingMm=Number(geometry.finishedHolePlatingM)*1000;
  const platingKnown=Number.isFinite(platingMm)&&platingMm>0;
  const holes=captured.holes.map(hole=>({
   hole,
-  box:expand(bounds(hole.polygons.flatMap(polygon=>polygon.outer)),
+  box:expand(bounds(hole.polygons.flatMap(polygon=>polygon.outer).map(project)),
    hole.plated?(platingKnown?platingMm:0)+2*captured.boolean_error_bound_mm:0),
  }));
  const selected=new Set(seedRegions);
@@ -100,7 +114,7 @@ export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,modePa
    if(!platingKnown||!Number.isFinite(geometry.barrelConductivitySM)||Number(geometry.barrelConductivitySM)<=0)
     throw new Error('CHANNEL_FOIL_PADSTACK: retained barrels require positive plating thickness and conductivity');
    for(const entry of newBarrels)barrels.set(entry.hole.id,entry);
-   onClosureStep?.({iteration,reason:'barrel-envelope',roiMm,selectedRegions:selected.size,selectedBarrels:barrels.size,addedRegionIds:[],addedBarrelIds:newBarrels.map(entry=>entry.hole.id)});
+   onClosureStep?.({iteration,reason:'barrel-envelope',roiMm:worldBounds(roiMm),selectedRegions:selected.size,selectedBarrels:barrels.size,addedRegionIds:[],addedBarrelIds:newBarrels.map(entry=>entry.hole.id)});
    continue;
   }
   const neighbours=regions.filter(({region,box})=>!selected.has(region.id)&&intersects(box,roiMm));
@@ -111,7 +125,7 @@ export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,modePa
     if(!island)return;
     for(const id of island){if(onClosureStep&&!selected.has(id))addedRegionIds.push(id);selected.add(id);}
    }
-   onClosureStep?.({iteration,reason:'intersecting-islands',roiMm,selectedRegions:selected.size,selectedBarrels:barrels.size,addedRegionIds,addedBarrelIds:[],intersectingRegionIds:neighbours.map(entry=>entry.region.id)});
+   onClosureStep?.({iteration,reason:'intersecting-islands',roiMm:worldBounds(roiMm),selectedRegions:selected.size,selectedBarrels:barrels.size,addedRegionIds,addedBarrelIds:[],intersectingRegionIds:neighbours.map(entry=>entry.region.id)});
    continue;
   }
   const electrodePairs=ports.map(({positive,negative}):[string,string]=>[names.get(positive)!,names.get(negative)!]);
@@ -119,8 +133,12 @@ export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,modePa
   if(electrodes.some(electrode=>!copper.some(layer=>layer.name===electrode.layer)))return;
   const sourceCopper=owned.map(({region})=>({regionId:region.id,sourcePath:region.source.path,layer:region.layer}));
   const sourceBarrels=[...barrels.values()].map(({hole})=>({barrelId:hole.id,sourcePath:hole.source.path,layers:hole.layers}));
-  onClosureStep?.({iteration,reason:'complete',roiMm,selectedRegions:selected.size,selectedBarrels:barrels.size,addedRegionIds:[],addedBarrelIds:[]});
-  return {boardJson,ports,...(modePairs?.length&&{modePairs}),terminals,electrodePairs,sourceCopper,sourceBarrels,attachments,roiMm,
-   geometry:{...geometry,roiMm,domainPolygonMm:undefined,cutPlanes:{},allowInsulatedCopperCuts:false,electrodes,ports:electrodePairs}};
+  const polygonMm=worldCorners(roiMm);
+  const physicalRoi=direction?bounds(polygonMm):roiMm;
+  const domain=direction?{policy:'oriented-run-v1' as const,reason:'unambiguous aligned physical runs',polygonMm}:
+   {policy:'axis-aligned-fallback-v1' as const,reason:directionReason??'hybrid direction not requested'};
+  onClosureStep?.({iteration,reason:'complete',roiMm:physicalRoi,selectedRegions:selected.size,selectedBarrels:barrels.size,addedRegionIds:[],addedBarrelIds:[]});
+  return {boardJson,ports,...(modePairs?.length&&{modePairs}),terminals,electrodePairs,sourceCopper,sourceBarrels,attachments,roiMm:physicalRoi,domain,
+   geometry:{...geometry,roiMm:physicalRoi,domainPolygonMm:direction?polygonMm:undefined,cutPlanes:{},allowInsulatedCopperCuts:false,electrodes,ports:electrodePairs}};
  }
 }

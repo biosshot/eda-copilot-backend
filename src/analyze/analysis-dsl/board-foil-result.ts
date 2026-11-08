@@ -50,7 +50,7 @@ export function boardFoilResult(
  const packages=plan.attachments.map(({id,electrodes:pair,model})=>({
   id,electrodes:pair,physicalContacts:pair.map(name=>electrodes.get(name)!),modelId:model.id,
  }));
- const evidence={...(packages.length&&{packages}),producer,roiMm:plan.roiMm,sourceCopper:plan.sourceCopper,sourceBarrels:plan.sourceBarrels,ports:plan.ports,physicalPorts,native:report.provenance};
+ const evidence={...(packages.length&&{packages}),producer,roiMm:plan.roiMm,domain:plan.domain,sourceCopper:plan.sourceCopper,sourceBarrels:plan.sourceBarrels,ports:plan.ports,physicalPorts,native:report.provenance};
  return {id,status:'partial',method:report.provenance.method+'; checked matched S samples',
   diagnostics:[...diagnostics,...frequencyDiagnostics,...sensitivityDiagnostics,{code:'CHANNEL_FOIL_PHYSICAL_UNVERIFIED',severity:'warning',message:validity.reason!}],
   assumptions:['One finite joint '+model+' domain. Original physical contacts and retained barrel spans are preserved without equipotential corridor cuts or implicit reference connections.',

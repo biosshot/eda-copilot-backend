@@ -99,13 +99,28 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
         const selected = g.regions.filter(r => signalRegions.has(r.id) || contactRegions.has(r.id));
         const height = base2.stack.reduce((s: number, l: any) => s + l.thicknessM * 1e3, 0);
         const margin = Math.max(0.05, 2 * height) * (options.domainScale ?? 1);
-        const closedJoint = (deadlineMs: number) =>
-            autoFoilPlan({boardJson,geometry:foilGeometry,captured:g,terminals:[...terminals.values()].map(entry=>entry.contact),ports:externalPorts,
+        const closedJoint = (deadlineMs: number) => {
+            // Compute this only for an actual joint candidate. The run frame is
+            // fixed for the complete closure, including newly found islands.
+            let direction:[number,number]|undefined;
+            let directionReason='hybrid direction not requested';
+            if (process.env.P7_COMPACT_PLANAR==='1') {
+                if (performance.now()>=deadlineMs) throw new Error('CHANNEL_FOIL_DEADLINE: shared geometry closure deadline exhausted');
+                const runs=buildRouteGraph(board,g,signalRegions,margin).runs;
+                if (performance.now()>=deadlineMs) throw new Error('CHANNEL_FOIL_DEADLINE: shared geometry closure deadline exhausted');
+                if (runs.length) {
+                    const d=runs[0].direction;
+                    if (runs.every(r=>Math.abs(d[0]*r.direction[1]-d[1]*r.direction[0])<=1e-12)) direction=d;
+                    else directionReason='multiple non-collinear physical runs';
+                } else directionReason='no physical run direction';
+            }
+            return autoFoilPlan({boardJson,geometry:foilGeometry,captured:g,terminals:[...terminals.values()].map(entry=>entry.contact),ports:externalPorts,
                 modePairs:legacy?undefined:input.modePairs,
                 components:componentPlans.map(({pins:[a,b],...model})=>({...model,pins:[a.contact,b.contact]})),
                 seedRegions:new Set([...signalRegions,...returnIds,...contactRegions,
                     ...componentPlans.flatMap(({pins})=>pins.flatMap(({island})=>island.region_ids))]),
-                marginMm:margin,deadlineMs,onClosureStep:options.onClosureStep});
+                marginMm:margin,deadlineMs,onClosureStep:options.onClosureStep,direction,directionReason});
+        };
         if ('closedJointDeadlineMs' in options) {
             const joint = closedJoint(options.closedJointDeadlineMs);
             if (!joint) throw new Error('CHANNEL_JOINT_CLOSURE: frequency demand requires a bounded closed physical copper candidate');
