@@ -290,3 +290,6 @@ The captured orientation requests also reveal an applicability limit of this con
 - Existing near-bound opt-in via diagnostic1794151855812829600 remains a deadline failure28.343s wall. No complete-via success claim follows.
 
 - Cooperative cancellation test1794152386829013300 passes0.187s. Captured production-via diagnostic1794152387215354300 completes its logging test in24.938s but underlying extraction returns LOCAL_DEADLINE: this is NOT a positive via result. Pair starts/ends and exact coordinates are retained for standalone kernel analysis.
+
+- Two-via exact reference-swap field preparation passes supervised5s/1536MiB in2.29s after canonical product-mesh ownership. Negative controls retain missing/unmatched trace, wrong mesh identity, tiny-budget refusal and no point/edge-only area contacts. This is field preparation, not complete electrical extraction.
+- Independent memory re-review confirms repeated union removed by carrying OriginalGeometry; cumulative retained metadata and trace incidence preflight accounted. Existing union scratch estimate remains conservative heuristic, with external process-tree memory supervision retained.

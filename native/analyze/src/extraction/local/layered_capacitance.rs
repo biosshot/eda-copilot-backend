@@ -85,6 +85,16 @@ pub struct PotentialTrace {
     pub potential_nodes: Vec<String>,
     pub nodes: Vec<TraceNode>,
 }
+/// Exact board-product ownership, constructed only by the native board adapter.
+pub(super) struct CertifiedOverlay<'a> {
+    pub input: &'a Input,
+    pub triangles: usize,
+    pub copper: Vec<Option<usize>>,
+    pub epsilon: Vec<f64>,
+    pub node_owners: Vec<Vec<usize>>,
+    pub finite_contacts: BTreeSet<(usize,usize)>,
+    pub bytes: usize,
+}
 fn trace_key(metal: usize, p: [f64; 3]) -> (usize, [u64; 3]) {
     (metal, p.map(|x| if x == 0. { 0 } else { x.to_bits() }))
 }
@@ -758,20 +768,24 @@ impl SpatialFieldAction {
 }
 
 pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
-    extract_impl(input, None, &[], false, false, budget)
+    extract_impl(input, None, &[], false, false, None, budget)
 }
 /// Same field solver with spatial potential coordinates. This internal path
 /// does not establish PCB accuracy or create a physical-terminal mapping.
 pub fn extract_traced(input: &Input, trace: &PotentialTrace, budget: Budget) -> Result<Solution> {
-    extract_impl(input, Some(trace), &[], false, false, budget)
+    extract_impl(input, Some(trace), &[], false, false, None, budget)
 }
 pub fn extract_traced_spatial(input: &Input, trace: &PotentialTrace, spatial: &[SpatialDielectric], budget: Budget) -> Result<Solution> {
-    extract_impl(input, Some(trace), spatial, true, false, budget)
+    extract_impl(input, Some(trace), spatial, true, false, None, budget)
 }
 pub fn prepare_traced_spatial_action(input: &Input, trace: &PotentialTrace, spatial: &[SpatialDielectric], budget: Budget) -> Result<SpatialFieldAction> {
-    Ok(SpatialFieldAction { solution:extract_impl(input,Some(trace),spatial,true,true,budget)?, calls:std::sync::atomic::AtomicUsize::new(0) })
+    Ok(SpatialFieldAction { solution:extract_impl(input,Some(trace),spatial,true,true,None,budget)?, calls:std::sync::atomic::AtomicUsize::new(0) })
 }
-fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[SpatialDielectric], spatial_route: bool, action_only: bool, budget: Budget) -> Result<Solution> {
+pub(super) fn prepare_certified_action(input: &Input, trace: &PotentialTrace, spatial: &[SpatialDielectric], certified: &CertifiedOverlay<'_>, budget: Budget) -> Result<SpatialFieldAction> {
+    if !std::ptr::eq(input, certified.input) { return Err(error("FIELD_TRACE", "certificate input mismatch")); }
+    Ok(SpatialFieldAction { solution:extract_impl(input,Some(trace),spatial,true,true,Some(certified),budget)?, calls:std::sync::atomic::AtomicUsize::new(0) })
+}
+fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[SpatialDielectric], spatial_route: bool, action_only: bool, certified: Option<&CertifiedOverlay<'_>>, budget: Budget) -> Result<Solution> {
     let guard = Guard {
         started: Instant::now(),
         budget,
@@ -901,7 +915,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
     // unclosed contour; the retained Solution metadata coexists with them and
     // the borrowed input. Reserve all three additional buffers before making
     // any polygons, including the temporary old ring during reallocation.
-    let owned_input_bytes = add(add(input_bytes(input)?, trace_bytes)?, mul(retained_metal_bytes,3)?)?;
+    let owned_input_bytes = add(add(add(input_bytes(input)?, trace_bytes)?, mul(retained_metal_bytes,3)?)?, certified.map_or(0, |c|c.bytes))?;
     g.memory(add(owned_input_bytes, mul(input_nodes, 4096)?)?)?;
     let mut meshes = Vec::new();
     for m in &input.meshes {
@@ -953,6 +967,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
             }
         }
     }
+    if let Some(c) = certified { finite_contacts = c.finite_contacts.clone(); }
     let mut materials = input.dielectrics.clone();
     materials.sort_by(|a, b| a.z0_m.total_cmp(&b.z0_m));
     if materials.is_empty()
@@ -1029,7 +1044,10 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
         };
         for (index, b) in pairs[pair].iter().enumerate() {
             let mut excluded = false;
-            for (metal, p) in input.metals.iter().zip(&metal_polygons) {
+            if let Some(cert) = certified {
+                if ma != mb || b.a != b.b || b.a >= cert.triangles { return Err(error("FIELD_TRACE", "certificate requires identical exact product mesh")); }
+                excluded = cert.copper[slab * cert.triangles + b.a].is_some();
+            } else { for (metal, p) in input.metals.iter().zip(&metal_polygons) {
                 if input.z_m[slab] >= metal.z0_m && input.z_m[slab + 1] <= metal.z1_m {
                     let relation = b.polygon.relate(p);
                     if relation.is_within() || relation.is_equal_topo() {
@@ -1045,7 +1063,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
                         ));
                     }
                 }
-            }
+            }}
             if excluded {
                 continue;
             }
@@ -1069,8 +1087,8 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
             for &n in &ns {
                 active[n] = true;
             }
-            let mut epsilon_override = None;
-            for (region, poly) in spatial.iter().zip(&spatial_polygons) {
+            let mut epsilon_override = certified.map(|cert| cert.epsilon[slab * cert.triangles + b.a]);
+            if certified.is_none() { for (region, poly) in spatial.iter().zip(&spatial_polygons) {
                 if input.z_m[slab] >= region.z0_m && input.z_m[slab+1] <= region.z1_m {
                     let relation = b.polygon.relate(poly);
                     if relation.is_within() || relation.is_equal_topo() {
@@ -1079,7 +1097,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
                         return Err(error("MATERIAL", "dielectric boundary cuts field cell"));
                     }
                 }
-            }
+            }}
             cells.push(Cell {
                 epsilon_override,
                 slab,
@@ -1101,9 +1119,9 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
         for (i, &p) in meshes[m].xy.iter().enumerate() {
             let n = offset[k] + i;
             for (c, metal) in input.metals.iter().enumerate() {
-                if input.z_m[k] >= metal.z0_m
+                if certified.map_or_else(|| input.z_m[k] >= metal.z0_m
                     && input.z_m[k] <= metal.z1_m
-                    && metal_polygons[c].intersects(&Point::from(p))
+                    && metal_polygons[c].intersects(&Point::from(p)), |cert| cert.node_owners[n].contains(&c))
                 {
                     let weights = if trace.is_some() {
                         let key = trace_key(c, [p[0], p[1], input.z_m[k]]);

@@ -718,3 +718,5 @@
 - Reuse geometry-only magnetic interval jets in an opportunistic admitted local cache, retaining the uncached path under tight memory budgets.
 
 - Preserve exact zero projection uncertainty and skip strictly zero Cartesian magnetic axes while retaining nonzero and subnormal current contributions.
+
+- Preserve canonical board-mesh copper/dielectric ownership in the internal electric adapter, with exact mesh identity, finite shared-face contacts, strict trace validation and admitted retained geometry metadata.
