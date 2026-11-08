@@ -143,3 +143,8 @@ The shared contract and direct kernels are being integrated. Zero-current capaci
 - `6464917` adds strict discrete spatial-report validation, canonical sample/column references without duplicated geometry, and hybrid cache version v6.
 - `1794138987309913100`: 14 cache/port-observation tests passed under supervisor in 1.109s; sampled private peak 338796544 bytes. Covers malformed spatial fields, loss consistency and canonical references; does not establish native spatial recovery or physical accuracy.
 - Native `cargo check --tests` completed after spatial integration; numerical recovery and compensated-time controls remain pending. Extended coupled smoke now requires spatial evidence, so the earlier addon smoke is not evidence for this new output.
+
+### Compact pair-domain and spatial algebra controls
+
+- `1794139274658324100`: both mixed near/far plan tests passed in 0.203s under 5s supervisor. Coverage includes prefix/suffix PP/PL uniqueness, excluded TT, zero/full/invalid prefix and memory admission boundaries. This verifies the partition API, not integrated hierarchy accuracy or via speed.
+- `1794139273316190800`: complex spatial-density interference algebra passed in 0.172s under 5s supervisor. Native full recovery balance and actual addon output remain pending.

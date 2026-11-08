@@ -60,6 +60,7 @@ pub struct Node {
     pub children: Option<[usize; 2]>,
     pub center: [f64; 3],
     pub radius: f64,
+    prefix_count: usize,
 }
 #[derive(Clone, Copy, Debug)]
 pub struct Block {
@@ -85,6 +86,7 @@ pub struct Plan {
     started: Instant,
     leaf: usize,
     theta: f64,
+    included_prefix: usize,
 }
 impl Plan {
     pub fn new(prisms: &[Prism], theta: f64, leaf: usize, budget: Budget) -> Result<Self> {
@@ -99,20 +101,27 @@ impl Plan {
         memory(product(prisms.len(),std::mem::size_of::<Moments>())?,budget)?;
         let mut moments=Vec::with_capacity(prisms.len());
         for prism in prisms {clock(started,budget)?;moments.push(Moments::new(prism)?);}
-        Self::from_moments_policy(moments,theta,leaf,budget,individual,started)
+        Self::from_moments_policy(moments,theta,leaf,budget,individual,started,None)
     }
     /// Build the same conservative pair partition for any validated physical
     /// support moments. Geometry ownership and non-overlap remain caller-owned.
     pub fn from_moments(moments: Vec<Moments>, theta:f64, leaf:usize, budget:Budget)->Result<Self> {
-        Self::from_moments_policy(moments,theta,leaf,budget,true,Instant::now())
+        Self::from_moments_policy(moments,theta,leaf,budget,true,Instant::now(),None)
     }
-    fn from_moments_policy(moments:Vec<Moments>,theta:f64,leaf:usize,budget:Budget,individual:bool,started:Instant)->Result<Self> {
+    /// Cover all pairs with at least one support in the prefix. The suffix
+    /// self-domain is owned by a separate operator and is never visited.
+    pub fn from_moments_excluding_suffix_pairs(moments: Vec<Moments>, prefix: usize, theta:f64, leaf:usize, budget:Budget)->Result<Self> {
+        if prefix > moments.len() { return Err(error("NEAR_FAR_INPUT", "prefix exceeds support count")); }
+        Self::from_moments_policy(moments,theta,leaf,budget,true,Instant::now(),Some(prefix))
+    }
+    fn from_moments_policy(moments:Vec<Moments>,theta:f64,leaf:usize,budget:Budget,individual:bool,started:Instant,prefix:Option<usize>)->Result<Self> {
         clock(started,budget)?;
         if moments.is_empty() || !(theta>0. && theta<1.) || !(1..=64).contains(&leaf) || moments.iter().any(|m|m.center_m.iter().any(|x|!x.is_finite()) || !m.radius_m.is_finite() || m.radius_m<=0. || !m.volume_m3.is_finite() || m.volume_m3<=0.) {
             return Err(error("NEAR_FAR_INPUT","nonempty finite moments, 0<theta<1 and leaf1..64 required"));
         }
         let n = moments.len();
-        let total = packed(n)?;
+        let included_prefix = prefix.unwrap_or(n);
+        let total = packed(n)?.checked_sub(packed(n - included_prefix)?).ok_or_else(||error("MEMORY_LIMIT", "near/far domain overflow"))?;
         let node_cap = product(n, 2)?;
         if node_cap > budget.max_nodes || total > budget.max_pairs {
             return Err(error(
@@ -145,6 +154,7 @@ impl Plan {
             started,
             leaf,
             theta,
+            included_prefix,
         };
         let root = p.tree(0, n)?;
         p.interactions(root, root)?;
@@ -213,6 +223,7 @@ impl Plan {
             children: None,
             center,
             radius,
+            prefix_count: (start..end).filter(|&k| self.order[k] < self.included_prefix).count(),
         });
         if end - start > self.leaf {
             let axis = (0..3)
@@ -240,11 +251,14 @@ impl Plan {
         }
         let na = self.nodes[a].end - self.nodes[a].start;
         let nb = self.nodes[b].end - self.nodes[b].start;
+        let suffix_a = na - self.nodes[a].prefix_count;
+        let suffix_b = nb - self.nodes[b].prefix_count;
         let pairs = if a == b {
-            packed(na)?
+            packed(na)?.checked_sub(packed(suffix_a)?)
         } else {
-            product(na, nb)?
-        };
+            product(na, nb)?.checked_sub(product(suffix_a, suffix_b)?)
+        }.ok_or_else(||error("MEMORY_LIMIT", "near/far domain count overflow"))?;
+        if pairs == 0 { return Ok(()); }
         if far {
             self.far_pairs = checked(self.far_pairs, pairs)?
         } else {
@@ -263,6 +277,7 @@ impl Plan {
         clock(self.started, self.budget)?;
         let aa = self.nodes[a].clone();
         let bb = self.nodes[b].clone();
+        if aa.prefix_count == 0 && bb.prefix_count == 0 { return Ok(()); }
         if a == b {
             if let Some([l, r]) = aa.children {
                 self.interactions(l, l)?;
@@ -305,6 +320,7 @@ impl Plan {
                 let first = if block.a == block.b { i } else { b.start };
                 for j in first..b.end {
                     let (ii,jj)=(self.order[i],self.order[j]);
+                    if ii >= self.included_prefix && jj >= self.included_prefix { continue; }
                     let k=self.pair_index(ii,jj);
                     let promoted=!self.promoted.is_empty() && (self.promoted[k/64]>>(k%64))&1!=0;
                     if (block.far || promoted)!=far {continue;}
@@ -616,6 +632,43 @@ fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
 #[cfg(test)]
 mod mixed_moment_plan_tests {
     use super::*;
+    #[test]
+    fn excluded_suffix_covers_prefix_pairs_once() {
+        let prism = |x: f64| Prism::new(format!("p{x}"), [[x,0.],[x+1.,0.],[x,1.]], [0.,1.]).unwrap();
+        let mut moments: Vec<_> = [0., 7.].iter().map(|&x| Moments::new(&prism(x)).unwrap()).collect();
+        for x in [2., 4., 9., 12.] {
+            moments.push(Moments::tetrahedron([[x,0.,0.],[x+1.,0.,0.],[x,1.,0.],[x,0.,1.]]).unwrap());
+        }
+        // Two prefix supports: 3 PP and 8 PL pairs, no 10 TT pairs.
+        let budget = Budget { max_bytes: 4_000_000, max_nodes: 32, max_blocks: 32, max_pairs: 11, max_wall: Duration::from_secs(10) };
+        let full_budget = Budget { max_pairs: 21, ..budget };
+        let empty = Plan::from_moments_excluding_suffix_pairs(moments.clone(), 0, 0.5, 3, full_budget).unwrap();
+        assert_eq!(empty.near_pairs + empty.far_pairs, 0);
+        let mut empty_visits = 0;
+        for far in [false, true] { empty.visit_pairs(far, |_,_| { empty_visits += 1; Ok(()) }).unwrap(); }
+        assert_eq!(empty_visits, 0);
+        let all = Plan::from_moments_excluding_suffix_pairs(moments.clone(), 6, 0.5, 3, full_budget).unwrap();
+        let baseline = Plan::from_moments(moments.clone(), 0.5, 3, full_budget).unwrap();
+        let collect = |plan: &Plan| {
+            let mut pairs = Vec::new();
+            for far in [false, true] { plan.visit_pairs(far, |a,b| { pairs.push((a.min(b),a.max(b),far)); Ok(()) }).unwrap(); }
+            pairs.sort_unstable(); pairs
+        };
+        assert_eq!(collect(&all), collect(&baseline));
+        assert!(Plan::from_moments_excluding_suffix_pairs(moments.clone(), 7, 0.5, 3, full_budget).is_err());
+        let limited = Plan::from_moments_excluding_suffix_pairs(moments.clone(), 2, 0.5, 3, budget).unwrap();
+        assert!(limited.planned_bytes < all.planned_bytes);
+        assert!(Plan::from_moments(moments.clone(), 0.5, 3, budget).is_err());
+        for leaf in [1, 3, 6] {
+            let plan = Plan::from_moments_excluding_suffix_pairs(moments.clone(), 2, 0.5, leaf, budget).unwrap();
+            let mut got = Vec::new();
+            for far in [false, true] { plan.visit_pairs(far, |a,b| { got.push((a.min(b),a.max(b))); Ok(()) }).unwrap(); }
+            got.sort_unstable();
+            let expected: Vec<_> = (0..2).flat_map(|i| (i..6).map(move |j| (i,j))).collect();
+            assert_eq!(got, expected);
+            assert_eq!(plan.near_pairs + plan.far_pairs, 11);
+        }
+    }
     #[test]
     fn prism_tetra_partition_preserves_pairs_and_far_bound() {
         let prism=Prism::new("p".into(),[[0.,0.],[1.,0.],[0.,1.]],[0.,1.]).unwrap();
