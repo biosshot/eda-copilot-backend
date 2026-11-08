@@ -205,3 +205,8 @@ The captured orientation requests also reveal an applicability limit of this con
 - Automatic hybrid candidates with unambiguous aligned physical runs now close source polygon vertices, whole neighbouring islands and complete plated envelopes in that run frame. The final polygon and world-coordinate bounding ROI are reported. Multiple non-collinear/no-run cases retain the axis-aligned fallback with an explicit reason; caller-supplied polygon scopes are not overwritten. The surrounding air box still uses world bounds.
 - Four focused TypeScript controls passed (0.85s reported): rotating closure including remote island/barrel, explicit scope, real planner 0/45/90 frame selection and branched fallback. Typecheck passed (8.8s reported). Full geometry already participates in cache identity and producer geometry hash.
 - `1794143834745935200`: unchanged actual orientation runner passes all S and complex copper loss-Gram comparisons at the original 3%/2% limits and 1e-8 absolute floor, 2.781s supervisor wall, sampled private peak216141824 bytes. This is development sensitivity evidence only; arbitrary-layout domain sensitivity and physical accuracy remain open.
+
+### Exact-zero near interaction elimination
+
+- Skip a near pair for one RHS only when both three-component current vectors equal zero exactly. The certified plan/cover is unchanged; serial and parallel dispatch both retain every nonzero source.
+- `1794143973184578400`: regression passes in 0.375s under a 5s supervisor cap, comparing action/error bounds to the full near computation and checking fewer quadrature calls. A 1e-200 current restores the corresponding work and agrees with the full reference. Full via runtime impact remains unmeasured.

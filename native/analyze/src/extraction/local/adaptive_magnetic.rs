@@ -785,6 +785,16 @@ impl<'a> Plan<'a> {
         q: &[f64],
         goal: f64,
     ) -> Result<(Vec<f64>, Vec<f64>)> {
+        self.apply_with_zero_policy(pair, space, q, goal, true)
+    }
+    fn apply_with_zero_policy(
+        &self,
+        pair: &BoundedPairs,
+        space: &Space,
+        q: &[f64],
+        goal: f64,
+        skip_zero_pairs: bool,
+    ) -> Result<(Vec<f64>, Vec<f64>)> {
         let t = self.tree;
         let n = space.cells.len();
         let rank = t.harmonic.list.len();
@@ -860,6 +870,9 @@ impl<'a> Plan<'a> {
                                     check_deadline(t.start, t.wall)?;
                                     let i = t.permutation[x];
                                     let j = t.permutation[y];
+                                    // Both reciprocal updates are exactly zero for
+                                    // this column; retain the full certified cover.
+                                    if skip_zero_pairs && q[3*i..3*i+3].iter().all(|v| *v == 0.) && q[3*j..3*j+3].iter().all(|v| *v == 0.) { continue; }
                                     if parallel_near {
                                         pending.push((i,j));
                                         if pending.len()==128 {replay_near_window(pair,space,q,&mut near,&mut pending)?;}
@@ -1121,6 +1134,37 @@ mod classification_power_tests {
         assert!(profile_enabled(Some(OsStr::new("1")), None));
         assert!(profile_enabled(None, Some(OsStr::new("1"))));
         assert!(profile_enabled(Some(OsStr::new("1")), Some(OsStr::new("1"))));
+    }
+
+    #[test]
+    fn zero_pair_skip_matches_full_near_action_and_reduces_calls() {
+        use std::collections::BTreeMap;
+        let start=Instant::now();let wall=Duration::from_secs(30);
+        let tetra=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];
+        let geometry:Vec<_>=(0..3).map(|i|tetra.map(|p|[p[0]+i as f64*0.002,p[1],p[2]])).collect();
+        let space=Space {mesh_nodes:vec![vec![];4],node_potential:BTreeMap::new(),cells:(0..3).map(|i|volume_current::Cell {mesh_cell:i,potentials:[0,1,2,3],incidence:[[0.;3];4],density_per_amp_m2:1.,resistance_ohm:1.}).collect(),components:vec![vec![0,1,2,3]],planned_bytes:0};
+        let budget=AllocationBudget{max_bytes:64*1024*1024,max_nodes:100,max_tetrahedra:100};
+        let tree=Operator::new(&geometry,4,1,0.2,0,budget,start,wall).unwrap();
+        let (shape,_)=tree.ensure_geometry(&geometry).unwrap();
+        let columns=vec![vec![1.,0.,0.,0.,0.,0.,0.,0.,0.],vec![1.;9]];
+        let plan=Plan::new_with_policy(&tree,&shape,&space,&columns,&[1e-30;2],false).unwrap();
+        let mut pair=BoundedPairs::new(geometry,12,4,start,wall).unwrap();
+        pair.trace=Some(std::cell::RefCell::new(super::super::super::PairTrace {counts:[0;3],seconds:[0.;3],last:Instant::now(),hits:0,misses:0,evictions:0}));
+        let reference=plan.apply_with_zero_policy(&pair,&space,&columns[0],1e-30,false).unwrap();
+        let count=|p:&BoundedPairs|p.trace.as_ref().unwrap().borrow().counts.iter().sum::<u64>();
+        let before=count(&pair);
+        let actual=plan.apply_with_zero_policy(&pair,&space,&columns[0],1e-30,true).unwrap();
+        let optimized=count(&pair)-before;
+        assert!(optimized < before && optimized > 0, "reference={before} optimized={optimized}");
+        assert_eq!(reference,actual);
+        // Tiny but nonzero current must retain its interactions.
+        let mut tiny=columns[0].clone();tiny[3]=1e-200;
+        let before_tiny=count(&pair);
+        let tiny_action=plan.apply_with_zero_policy(&pair,&space,&tiny,1e-30,true).unwrap();
+        let tiny_count=count(&pair)-before_tiny;
+        let tiny_reference=plan.apply_with_zero_policy(&pair,&space,&tiny,1e-30,false).unwrap();
+        assert!(tiny_count>optimized && tiny_count<=before);
+        assert_eq!(tiny_action,tiny_reference);
     }
 
     #[test]
