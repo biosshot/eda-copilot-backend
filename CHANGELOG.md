@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Recover complex spatial copper current density and Joule losses from the hybrid discrete solution, validate ownership-shaped output and power balance, and expose canonical sample references with cache invalidation. Physical accuracy remains unverified.
+- Preserve compensated transient state through integration and continuation, including charge, port and energy checks, to resolve loss of tiny differential increments on a common potential without relaxing residual gates.
+- Route local tetrahedron magnetic interactions through a bounded hierarchy with projected error bounds and checked self integrals; exclude these pairs from the planar/local plan. Thin-via self-integral convergence remains open.
+
 - Preserve common physical charge when welding a capacitive copper model to a floating component: intersect the union of source charge and structural-gauge spans, retaining the separate certified global gauge. Add optional same-model DC/AC/transient consistency controls without changing physical-band acceptance.
 - Publish complex matched-drive copper/package loss Grams for adaptive hybrid samples, including interference terms, bounded output storage and matrix wave-power checks. Validate ownership, Hermitian positivity and modal loss projection in the consumer; isolate the extended verification cache policy.
 
