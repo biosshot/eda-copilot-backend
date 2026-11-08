@@ -2647,6 +2647,8 @@ mod compact_planar_tests {
     }
     #[test]
     fn unified_mixed_action_covers_prism_tetra_and_bounds() {
+        assert_eq!(compact_bound_product(1e-300,1e-300),f64::from_bits(1));
+        assert_eq!(compact_bound_product(0.,1e-300),0.);
         let budget=AllocationBudget{max_nodes:32,max_tetrahedra:32,max_bytes:16_000_000};
         let prism=super::super::prism::Prism::new("p".into(),[[0.,0.],[1.,0.],[0.,1.]],[0.,1.]).unwrap();
         let tetra=[[8.,0.,0.],[9.,0.,0.],[8.,1.,0.],[8.,0.,1.]];
@@ -2654,14 +2656,30 @@ mod compact_planar_tests {
         let local=vec![super::super::mixed_conductor::LocalCurrentSupport{tetra,densities:vec![(1,[1.,0.,0.])]}];
         let moments=vec![super::super::far::Moments::new(&prism).unwrap(),super::super::far::Moments::tetrahedron(tetra).unwrap()];
         let started=Instant::now();let wall=Duration::from_secs(20);
-        let plan=super::super::near_far::Plan::from_moments(moments,0.5,1,super::super::near_far::Budget{max_bytes:4_000_000,max_nodes:32,max_blocks:32,max_pairs:3,max_wall:wall}).unwrap();
+        let plan=super::super::near_far::Plan::from_moments(moments,0.01,1,super::super::near_far::Budget{max_bytes:4_000_000,max_nodes:32,max_blocks:32,max_pairs:3,max_wall:wall}).unwrap();
         let pairs=super::super::volume_integral_magnetic::CompactLocalPairs::new(vec![tetra],AllocationBudget{max_bytes:4_000_000,..budget},started,wall).unwrap();
-        let op=CompactMixedMagnetic{supports,dimensions:2,planar_max_order:std::cell::Cell::new(0),planar_max_change:std::cell::Cell::new(0.),local,local_pairs:Some(pairs),mixed_plan:plan,cache:std::cell::RefCell::new(BTreeMap::new()),budget,start:started,wall,action_count:std::cell::Cell::new(0),cache_limit:32,batch_limit:1_000_000,pair_count:std::cell::Cell::new(0),mixed_max_change:std::cell::Cell::new(0.),mixed_fallback_count:std::cell::Cell::new(0),self_max_change:std::cell::Cell::new(0.)};
-        let (a,bounds)=op.apply_batch(&[vec![1.,0.],vec![0.,1.]],None).unwrap();
+        let mut op=CompactMixedMagnetic{supports,dimensions:2,planar_max_order:std::cell::Cell::new(0),planar_max_change:std::cell::Cell::new(0.),local,local_pairs:Some(pairs),mixed_plan:plan,cache:std::cell::RefCell::new(BTreeMap::new()),budget,start:started,wall,action_count:std::cell::Cell::new(0),cache_limit:32,batch_limit:1_000_000,pair_count:std::cell::Cell::new(0),promoted_pairs:std::cell::Cell::new(0),mixed_max_change:std::cell::Cell::new(0.),mixed_fallback_count:std::cell::Cell::new(0),self_max_change:std::cell::Cell::new(0.)};
+        assert_eq!(op.mixed_plan.near_pairs,3);
+        let (a,bounds)=op.apply_batch(&[vec![1.,0.],vec![0.,1.]],Some(&[1.,1.])).unwrap();
+        assert!(op.promoted_pairs.get()>0);
+        let promoted=op.promoted_pairs.get();
+        let (exact,exact_bounds)=op.apply_batch(&[vec![1.,0.],vec![0.,1.]],Some(&[1e-300,1e-300])).unwrap();
+        assert_eq!(op.promoted_pairs.get(),promoted);
+        assert!(exact_bounds.iter().flatten().all(|&b|b==0.));
+        for c in 0..2 {for i in 0..2 {assert!((a[c][i]-exact[c][i]).abs()<=bounds[c][i]+1e-12*exact[c][i].abs().max(1e-30));}}
         let q=[1.];let direct=super::super::planar_mixed::cross(&prism,tetra,super::super::planar_mixed::Densities{charge:&q,current:&[]},super::super::planar_mixed::Densities{charge:&q,current:&[]},1./(4.*std::f64::consts::PI),12,budget,wall).unwrap().potential_per_farad[0][0]*1e-7;
         assert!((a[0][1]-direct).abs()<=bounds[0][1]+1e-10*direct.abs());
         assert!((a[1][0]-direct).abs()<=bounds[1][0]+1e-10*direct.abs());
         assert!((a[0][1]-a[1][0]).abs()<=1e-12*direct.abs());
+        // Row 1 is shared by both supports; first column also cancels the
+        // two planar density contributions exactly.
+        op.supports[0].current_density.push((1,[1.,0.,0.]));
+        let columns=[vec![1.,-1.],vec![1.,1.]];
+        let (approx,err)=op.apply_batch(&columns,Some(&[1.,1.])).unwrap();
+        let (exact,exact_err)=op.apply_batch(&columns,Some(&[1e-300,1e-300])).unwrap();
+        assert!(exact_err.iter().flatten().all(|&b|b==0.));
+        for c in 0..2 {for i in 0..2 {assert!((approx[c][i]-exact[c][i]).abs()<=err[c][i]+1e-12*exact[c][i].abs().max(1e-30));}}
+
     }
     #[test]
     fn tetra_vertex_dual_retains_four_coordinates() {
@@ -2909,6 +2927,10 @@ impl CompactChargeAction {
         if out.iter().any(|v|!v.is_finite() || *v<=0.) {return Err(error("HYBRID_CHARGE","invalid charge diagonal"));}Ok(out)
     }
 }
+fn compact_upper(v:f64)->f64 {if v==0. {0.} else if v.is_finite() && v>0. {f64::from_bits(v.to_bits()+1)} else {v}}
+fn compact_bound_product(a:f64,b:f64)->f64 {if a==0. || b==0. {0.} else {let product=a*b;if product==0. {f64::from_bits(1)} else {compact_upper(product)}}}
+fn compact_bound_sum(a:f64,b:f64)->f64 {if a==0. {b} else if b==0. {a} else {compact_upper(a+b)}}
+
 struct CompactMixedMagnetic {
     supports:Vec<super::planar_operator::SparseSupport>,
     dimensions:usize,
@@ -2923,6 +2945,7 @@ struct CompactMixedMagnetic {
     cache_limit:usize,
     batch_limit:usize,
     pair_count:std::cell::Cell<usize>,
+    promoted_pairs:std::cell::Cell<usize>,
     mixed_max_change:std::cell::Cell<f64>,
     mixed_fallback_count:std::cell::Cell<usize>,
     self_max_change:std::cell::Cell<f64>,
@@ -2940,7 +2963,7 @@ impl CompactMixedMagnetic {
         let pairs=moments.len().checked_mul(moments.len().checked_add(1).ok_or_else(||error("MEMORY_LIMIT","mixed pair overflow"))?).and_then(|n|n.checked_div(2)).ok_or_else(||error("MEMORY_LIMIT","mixed pair overflow"))?;
         let mixed_plan=super::near_far::Plan::from_moments(moments,0.2,12,super::near_far::Budget{max_bytes:mixed_budget,max_nodes:budget.max_nodes,max_blocks:mixed_budget/128,max_pairs:pairs,max_wall:wall.saturating_sub(start.elapsed())})?;
         eprintln!("P7_COMPACT_UNIFIED_PLAN supports={} nearPairs={} farPairs={} planBytes={} cacheCapacity={}",mixed_plan.moments.len(),mixed_plan.near_pairs,mixed_plan.far_pairs,mixed_plan.planned_bytes,cache_limit);
-        Ok(Self{supports,dimensions:map.current_count(),planar_max_order:std::cell::Cell::new(0),planar_max_change:std::cell::Cell::new(0.),local,local_pairs,mixed_plan,cache:std::cell::RefCell::new(BTreeMap::new()),budget,start,wall,action_count:std::cell::Cell::new(0),cache_limit,batch_limit,pair_count:std::cell::Cell::new(0),mixed_max_change:std::cell::Cell::new(0.),mixed_fallback_count:std::cell::Cell::new(0),self_max_change:std::cell::Cell::new(0.)})
+        Ok(Self{supports,dimensions:map.current_count(),planar_max_order:std::cell::Cell::new(0),planar_max_change:std::cell::Cell::new(0.),local,local_pairs,mixed_plan,cache:std::cell::RefCell::new(BTreeMap::new()),budget,start,wall,action_count:std::cell::Cell::new(0),cache_limit,batch_limit,pair_count:std::cell::Cell::new(0),promoted_pairs:std::cell::Cell::new(0),mixed_max_change:std::cell::Cell::new(0.),mixed_fallback_count:std::cell::Cell::new(0),self_max_change:std::cell::Cell::new(0.)})
     }
     fn cached(&self,key:(usize,usize),f:impl FnOnce()->Result<f64>)->Result<f64> {
         if let Some(&v)=self.cache.borrow().get(&key){return Ok(v);}
@@ -2971,28 +2994,39 @@ impl CompactMixedMagnetic {
         })
     }
     fn apply_batch(&self,columns:&[Vec<f64>],goals:Option<&[f64]>)->Result<(Vec<Vec<f64>>,Vec<Vec<f64>>)> {
-        let (actions,bounds)=self.apply_batch_once(columns,false)?;
+        if let Some(goals)=goals {if goals.len()!=columns.len() || goals.iter().any(|g|!g.is_finite() || *g<=0.) {return Err(error("HYBRID_INPUT","invalid magnetic action goals"));}}
+        let (actions,bounds)=self.apply_batch_once(columns,false,goals)?;
         if let Some(goals)=goals {
-            if goals.len()!=columns.len() || goals.iter().any(|g|!g.is_finite() || *g<=0.) {return Err(error("HYBRID_INPUT","invalid magnetic action goals"));}
-            if bounds.iter().zip(goals).any(|(row,g)|row.iter().any(|b|*b>*g)) {return self.apply_batch_once(columns,true);}
+            if bounds.iter().zip(goals).any(|(row,g)|row.iter().any(|b|*b>*g)) {return self.apply_batch_once(columns,true,None);}
         }
         Ok((actions,bounds))
     }
-    fn apply_batch_once(&self,columns:&[Vec<f64>],exact_far:bool)->Result<(Vec<Vec<f64>>,Vec<Vec<f64>>)> {
+    fn apply_batch_once(&self,columns:&[Vec<f64>],exact_far:bool,goals:Option<&[f64]>)->Result<(Vec<Vec<f64>>,Vec<Vec<f64>>)> {
         let count=columns.len();if count==0 {return Ok((vec![],vec![]));}let dim=self.dimensions;
         if columns.iter().any(|v|v.len()!=dim || v.iter().any(|x|!x.is_finite())) {return Err(error("HYBRID_INPUT","invalid magnetic columns"));}
         let ns=self.supports.len()+self.local.len();
-        let bytes=count.checked_mul(ns).and_then(|n|n.checked_mul(24)).and_then(|n|n.checked_add(count.checked_mul(dim)?.checked_mul(16)?)).ok_or_else(||error("MEMORY_LIMIT","batch size overflow"))?;
+        let bytes=count.checked_mul(ns).and_then(|n|n.checked_mul(48)).and_then(|n|n.checked_add(count.checked_mul(dim)?.checked_mul(16)?)).ok_or_else(||error("MEMORY_LIMIT","batch size overflow"))?;
         if bytes>self.batch_limit {return Err(error("MEMORY_LIMIT","mixed magnetic batch exceeds reservation"));}
         self.action_count.set(self.action_count.get()+count);
-        let mut density=vec![vec![[0.;3];ns];count];let mut output=vec![vec![0.;dim];count];let mut bounds=output.clone();
-        for (c,x) in columns.iter().enumerate() {for s in 0..ns {for &(i,d) in self.densities(s) {if i>=dim {return Err(error("HYBRID_INPUT","invalid current support"));}for k in 0..3 {density[c][s][k]+=d[k]*x[i];}}}}
-        for far in [false,true] {self.mixed_plan.visit_pairs(far,|a,b| {
+        let mut density=vec![vec![[0.;3];ns];count];let mut envelope=density.clone();let mut output=vec![vec![0.;dim];count];let mut bounds=output.clone();
+        for (c,x) in columns.iter().enumerate() {for s in 0..ns {for &(i,d) in self.densities(s) {if i>=dim {return Err(error("HYBRID_INPUT","invalid current support"));}for k in 0..3 {density[c][s][k]+=d[k]*x[i];envelope[c][s][k]=compact_bound_sum(envelope[c][s][k],compact_bound_product(d[k].abs(),x[i].abs()));}}}}
+        for far in [true,false] {self.mixed_plan.visit_pairs(far,|a,b| {
             check_time(self.start,self.wall)?;if (0..count).all(|c|density[c][a]==[0.;3] && density[c][b]==[0.;3]) {return Ok(());}
-            let (value,error_bound)=if far && !exact_far {let p=self.mixed_plan.moments[a].pair(&self.mixed_plan.moments[b])?;(p.integral_m5,p.absolute_remainder_m5)}else{(self.near_pair(a,b)?,0.)};
+            let candidate=if !exact_far && a!=b {self.mixed_plan.moments[a].pair(&self.mixed_plan.moments[b]).ok()} else {None};
+            let contribution=|c:usize,row:usize,err:f64| {
+                let mut total=0.;
+                for &(i,d) in self.densities(a) {if i==row {for k in 0..3 {total=compact_bound_sum(total,compact_bound_product(d[k].abs(),envelope[c][b][k]));}}}
+                if a!=b {for &(i,d) in self.densities(b) {if i==row {for k in 0..3 {total=compact_bound_sum(total,compact_bound_product(d[k].abs(),envelope[c][a][k]));}}}}
+                compact_bound_product(compact_bound_product(1e-7,err),total)
+            };
+            let accept=if let (Some(p),Some(goals))=(&candidate,goals) {
+                (0..count).all(|c| self.densities(a).iter().chain(if a!=b {self.densities(b)} else {&[]}).all(|(i,_)| compact_bound_sum(bounds[c][*i],contribution(c,*i,p.absolute_remainder_m5))<=goals[c]))
+            } else {false};
+            let (value,error_bound)=if accept {let p=candidate.unwrap();if !far {self.promoted_pairs.set(self.promoted_pairs.get()+1);} (p.integral_m5,p.absolute_remainder_m5)}else{(self.near_pair(a,b)?,0.)};
             for c in 0..count {
-                for &(i,d) in self.densities(a) {output[c][i]+=1e-7*value*(0..3).map(|k|d[k]*density[c][b][k]).sum::<f64>();bounds[c][i]+=1e-7*error_bound*(0..3).map(|k|d[k].abs()*density[c][b][k].abs()).sum::<f64>();}
-                if a!=b {for &(i,d) in self.densities(b) {output[c][i]+=1e-7*value*(0..3).map(|k|d[k]*density[c][a][k]).sum::<f64>();bounds[c][i]+=1e-7*error_bound*(0..3).map(|k|d[k].abs()*density[c][a][k].abs()).sum::<f64>();}}
+                for &(i,d) in self.densities(a) {output[c][i]+=1e-7*value*(0..3).map(|k|d[k]*density[c][b][k]).sum::<f64>();}
+                if a!=b {for &(i,d) in self.densities(b) {output[c][i]+=1e-7*value*(0..3).map(|k|d[k]*density[c][a][k]).sum::<f64>();}}
+                if error_bound>0. {let mut rows=Vec::with_capacity(self.densities(a).len()+self.densities(b).len());rows.extend(self.densities(a).iter().map(|x|x.0));if a!=b {rows.extend(self.densities(b).iter().map(|x|x.0));}rows.sort_unstable();rows.dedup();for i in rows {bounds[c][i]=compact_bound_sum(bounds[c][i],contribution(c,i,error_bound));}}
             } Ok(())
         })?;}
         if output.iter().flatten().chain(bounds.iter().flatten()).any(|v|!v.is_finite()){return Err(error("HYBRID_RANGE","mixed magnetic batch overflow"));}Ok((output,bounds))
@@ -3017,8 +3051,22 @@ pub(super) fn solve_compact_adaptive(
     eprintln!("P7_COMPACT_STAGE stage=charge-actions-start elapsed={:.6} modes={}",start.elapsed().as_secs_f64(),basis.voltage.len());
     let charges=basis.voltage.iter().map(|v|field.apply(v)).collect::<Result<Vec<_>>>()?;
     eprintln!("P7_COMPACT_STAGE stage=charge-actions-end elapsed={:.6} actions={}",start.elapsed().as_secs_f64(),field.action_count());
+    let angular_max=2.*std::f64::consts::PI*grid.frequencies.last().copied().ok_or_else(||error("HYBRID_INPUT","empty frequency grid"))?;
     let batch=|q:&[Vec<f64>],goals:Option<&[f64]>,_:Instant,_:Duration|->Result<Magnetic>{
-        let (actions,bounds)=magnetic.apply_batch(q,goals)?;
+        let derived;
+        let goals=if let Some(goals)=goals {goals} else {
+            derived=q.iter().map(|column| {
+                if column.len()!=map.current_count() || column.iter().any(|v|!v.is_finite()) {return Err(error("HYBRID_INPUT","invalid current column"));}
+                if column.iter().all(|&v|v==0.) {return Ok(1.);}
+                let mut scale=0_f64;
+                for (&resistance,&current) in map.resistance_ohm.iter().zip(column) {
+                    let (_,lower,_)=super::volume_integral_magnetic::hierarchical_magnetic::kvl_cell(resistance,current,&[],&[],0.,0.,0.)?;
+                    scale=scale.max(lower);
+                }
+                super::volume_integral_magnetic::hierarchical_magnetic::action_goal(scale,angular_max)
+            }).collect::<Result<Vec<_>>>()?; &derived
+        };
+        let (actions,bounds)=magnetic.apply_batch(q,Some(goals))?;
         Ok(Magnetic{actions,error_bounds:Some(bounds),certificate:Some(serde_json::json!({"policy":"compact-mixed-near-far","nearQuadratureErrorCertified":false})),reciprocity:0.,refinement:0.})
     };
     eprintln!("P7_COMPACT_STAGE stage=magnetic-actions-start elapsed={:.6}",start.elapsed().as_secs_f64());
@@ -3045,6 +3093,6 @@ pub(super) fn solve_compact_adaptive(
         column["compactMagneticCertificate"]=certificate;
     }}}}
     result["quality"]["scope"]=serde_json::json!("compact-discrete");result["quality"]["physicalError"]=serde_json::json!("unverified");
-    result["compactEvidence"]=serde_json::json!({"basis":"adaptive-mixed-closure","planarMaxOrder":magnetic.planar_max_order.get(),"planarMaxRelativeChange":magnetic.planar_max_change.get(),"mixedMaxRelativeChange":magnetic.mixed_max_change.get(),"mixedTetraFallbackCount":magnetic.mixed_fallback_count.get(),"mixedTetraFallbackTolerance":1e-10,"tetraSelfMaxRelativeChange":magnetic.self_max_change.get(),"tetraPairAdaptiveTolerance":1e-10,"nearQuadratureEstimatedTolerance":1e-8,"originalVolumeActions":0,"scope":"compact-discrete","physicalAccuracy":"unverified","approximationError":"unverified"});
+    result["compactEvidence"]=serde_json::json!({"basis":"adaptive-mixed-closure","planarMaxOrder":magnetic.planar_max_order.get(),"planarMaxRelativeChange":magnetic.planar_max_change.get(),"mixedMaxRelativeChange":magnetic.mixed_max_change.get(),"mixedTetraFallbackCount":magnetic.mixed_fallback_count.get(),"mixedTetraFallbackTolerance":1e-10,"goalAdmittedNearPairs":magnetic.promoted_pairs.get(),"tetraSelfMaxRelativeChange":magnetic.self_max_change.get(),"tetraPairAdaptiveTolerance":1e-10,"nearQuadratureEstimatedTolerance":1e-8,"originalVolumeActions":0,"scope":"compact-discrete","physicalAccuracy":"unverified","approximationError":"unverified"});
     Ok((result,space.model,budget.max_bytes))
 }

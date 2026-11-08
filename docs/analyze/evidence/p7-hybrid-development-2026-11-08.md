@@ -50,6 +50,11 @@ Rows without an explicit release label use debug binaries and do not measure pro
 | Release unified prism/tetra magnetic action and row bounds | pass | 0.172 s | `1794129212056263600` |
 | Release imported via, unified near/far plan | native deadline refusal; no channel | 25.218 s | `1794128258061510700` |
 | Release finite-thickness profile basis: DC, weighted Gram/transport, analytic slab loss convergence, high-thickness and invalid inputs | four pass | 0.172 s | `1794129765182360700` |
+| Release goal-admitted near moments, strict exact fallback, shared rows, cancellation and positive-underflow bound | pass | 0.219 s | `1794129883172122100` |
+| Release adaptive air/component/FR4 after goal admission | pass | 0.171 s | `1794129930738947800` |
+| Release imported via after goal admission | native deadline refusal; no channel | 25.219 s | `1794129883632587900` |
+
+Goal admission does not resolve the via bottleneck in this control. Its initial sparse field/charge preparation completes in 0.074 s, then the magnetic action still reaches the unchanged native deadline. Moment-tail contributions use absolute density envelopes and outward-rounded positive arithmetic; near quadrature and floating-point evaluation of the moment expansion are not certified by the geometric tail. Initial unified admission control (`1794129779219477100`, 0.188 s) passed before root review added positive-underflow protection and the corresponding algebraic assertion; the final control above covers that correction. No full-board speed claim follows from these results.
 
 The profile control reconstructs complex even-profile dissipation from the returned real basis and resistive Gram, then compares thickness refinement against Re[κ coth(κt/2)/(2σ)]. It includes t/δ=1000 to detect upper-surface exponential overflow. This standalone basis is not yet integrated into conservative mixed interface/current coordinates; runtime frequency screening is unchanged. The analytic loss reference's coth argument was corrected during root review before the first numerical invocation. Ten cache tests and TypeScript typechecking pass with the hybrid operator generation bumped to v2; the 39-row structural crosswalk also passes, without promoting physical status.
 

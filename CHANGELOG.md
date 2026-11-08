@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Admit geometrically separated mixed near pairs to moment evaluation only within the existing cumulative per-action row allowance; otherwise retain exact near evaluation. Preserve cancellation-safe outward-rounded envelopes, including positive underflow, and shared-pair reciprocity.
+
 - Add an experimental finite-thickness skin/proximity profile basis with stable exact cell averages, transport integrals and one resistive Gram. This primitive does not yet extend runtime frequency admission. Invalidate the changed hybrid operator cache generation.
 
 - Share a bounded near/far partition across finite prisms and local tetrahedra, with exact degree-four tetrahedral moments and batched mixed magnetic actions. Release primitive controls pass; the imported via still reaches its 25 s deadline, so no channel or board speed acceptance is claimed.
