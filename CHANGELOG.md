@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Allow explicitly requested 1–4 local magnetic near workers with admitted worker/window memory, serial checked self-integrals, ordered reduction and retained bounded pair-cache reuse. Isolate the worker policy in exact-response cache keys; default remains serial.
+
 - Skip local magnetic near-pair quadrature only when both reciprocal current vectors are exactly zero; retain the certified interaction cover and every nonzero current, including tiny values.
 
 - Orient automatic hybrid substrate domains along unambiguous physical track runs and close whole neighbouring islands/barrel envelopes in that frame. Preserve explicit polygon scopes and report the axis-aligned fallback for ambiguous runs. The existing 0/45/90-degree development sensitivity control passes; broad physical/domain accuracy remains unverified.

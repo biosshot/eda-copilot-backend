@@ -349,7 +349,6 @@ impl BoundedPairs {
             .ok_or_else(|| error("MEMORY_LIMIT", "parallel magnetic window plan overflow"))
     }
     fn configure_parallel(&mut self, workers: usize) -> Result<()> {
-        if self.checked_self { return Err(error("MAGNETIC_CONFIG", "checked local self cache requires serial pairs")); }
         Self::parallel_bytes_for(workers, self.axial)?;
         let pool = rayon::ThreadPoolBuilder::new().num_threads(workers)
             .stack_size(2 * 1024 * 1024).build()
@@ -360,7 +359,7 @@ impl BoundedPairs {
             let mut cells = Vec::new();
             cells.try_reserve_exact(64).map_err(|_| error("MEMORY_LIMIT", "parallel cache allocation failed"))?;
             caches.push(std::sync::Mutex::new(BoundedPairs {
-                tetra:self.tetra.clone(), pool:None, axial:self.axial, checked_self:self.checked_self, checked_self_values:std::cell::RefCell::new(Vec::new()), self_max_change:std::cell::Cell::new(0.), parallel_counts:Some(std::cell::RefCell::new(ParallelCounts::default())),
+                tetra:self.tetra.clone(), pool:None, axial:self.axial, checked_self:false, checked_self_values:std::cell::RefCell::new(Vec::new()), self_max_change:std::cell::Cell::new(0.), parallel_counts:Some(std::cell::RefCell::new(ParallelCounts::default())),
                 scalar:std::cell::RefCell::new(Vec::new()), trace:None, capture:None,
                 cells:std::cell::RefCell::new(cells), slots:64, tick:std::cell::Cell::new(0),
                 order:self.order, start:self.start, wall:self.wall,
@@ -382,13 +381,31 @@ impl BoundedPairs {
         };
         if indices.is_empty() { return Ok(Vec::new()); }
         let started = Instant::now();
+        // Checked local self integrals must run on the owning cache. Workers
+        // receive only nonself pairs; the output remains in traversal order.
+        let mut nonself = Vec::with_capacity(indices.len());
+        let mut output = vec![None; indices.len()];
+        let mut misses = vec![false; indices.len()];
+        for (position,&(i,j)) in indices.iter().enumerate() {
+            if self.checked_self && i==j { output[position]=Some(self.pair(i,i)?); }
+            else {
+                let (i,j)=(i.max(j),i.min(j));
+                if let Some(value)=self.scalar_get(i,j) { output[position]=Some(value); }
+                else { misses[position]=true; nonself.push((position,i,j)); }
+            }
+        }
         let caches = &state.workers;
-        let results: Vec<Vec<Result<f64>>> = state.pool.install(|| indices.par_chunks(8).map(|part| {
+        let checked_self = self.checked_self;
+        let results: Vec<Vec<Result<(usize,f64)>>> = state.pool.install(|| nonself.par_chunks(8).map(|part| {
             let Some(index) = rayon::current_thread_index() else { return vec![Err(error("MAGNETIC_CONFIG", "parallel worker index unavailable"))]; };
             let local = match caches[index].lock() { Ok(v) => v, Err(_) => return vec![Err(error("MAGNETIC_CONFIG", "parallel worker cache poisoned"))] };
-            part.iter().map(|&(i,j)| local.pair(i.max(j),i.min(j))).collect()
+            part.iter().map(|&(position,i,j)| {
+                if checked_self && i==j { return Err(error("MAGNETIC_CONFIG", "checked self pair dispatched to worker")); }
+                local.pair(i.max(j),i.min(j)).map(|value|(position,value))
+            }).collect()
         }).collect());
-        let result: Result<Vec<f64>> = results.into_iter().flatten().collect();
+        let result: Result<Vec<f64>> = results.into_iter().flatten().try_for_each(|v| { let (position,value)=v?;output[position]=Some(value);Ok(()) }).and_then(|()|output.into_iter().map(|v|v.ok_or_else(||error("MAGNETIC_CONFIG","missing parallel result"))).collect());
+        if let Ok(values)=&result { for (position,(&(i,j),&value)) in indices.iter().zip(values).enumerate() { if misses[position] { self.scalar_put(i.max(j),i.min(j),value); } } }
         let report = {
             let mut p = state.progress.borrow_mut();
             p.wall += started.elapsed().as_secs_f64();
@@ -447,14 +464,22 @@ impl BoundedPairs {
         });
         Ok(())
     }
+    fn scalar_get(&self, i: usize, j: usize) -> Option<f64> {
+        let slot={let cache=self.scalar.borrow();if cache.is_empty(){None}else{Some((i.wrapping_mul(0x9e3779b1).wrapping_add(j.wrapping_mul(0x85ebca6b)))%cache.len())}};
+        if let Some(k)=slot {if let Some(entry)=self.scalar.borrow()[k] {if entry.i==i && entry.j==j {if let Some(t)=&self.trace {t.borrow_mut().hits+=1;}return Some(entry.value);}} if let Some(t)=&self.trace {t.borrow_mut().misses+=1;}}
+        None
+    }
+    fn scalar_put(&self, i: usize, j: usize, value: f64) {
+        let slot={let cache=self.scalar.borrow();if cache.is_empty(){None}else{Some((i.wrapping_mul(0x9e3779b1).wrapping_add(j.wrapping_mul(0x85ebca6b)))%cache.len())}};
+        if let Some(k)=slot {let mut cache=self.scalar.borrow_mut();if cache[k].is_some() {if let Some(t)=&self.trace {t.borrow_mut().evictions+=1;}}cache[k]=Some(ScalarSlot{i,j,value});}
+    }
     fn pair(&self, i: usize, j: usize) -> Result<f64> {
         check_deadline(self.start,self.wall)?;
-        let slot={let cache=self.scalar.borrow();if cache.is_empty(){None}else{Some((i.wrapping_mul(0x9e3779b1).wrapping_add(j.wrapping_mul(0x85ebca6b)))%cache.len())}};
-        if let Some(k)=slot {if let Some(entry)=self.scalar.borrow()[k] {if entry.i==i && entry.j==j {if let Some(t)=&self.trace {t.borrow_mut().hits+=1;}return Ok(entry.value);}} if let Some(t)=&self.trace {t.borrow_mut().misses+=1;}}
+        if let Some(value)=self.scalar_get(i,j) {return Ok(value);}
         let started = (self.parallel_counts.is_some() || self.trace.is_some() || self.capture.as_ref().is_some_and(|c| c.borrow().is_some())).then(Instant::now);
         let mut kind = if i == j { 0 } else { 2 };
         let result = self.pair_inner(i, j, &mut kind);
-        if let (Some(k),Ok(value))=(slot,&result) {let mut cache=self.scalar.borrow_mut();if cache[k].is_some() {if let Some(t)=&self.trace {t.borrow_mut().evictions+=1;}}cache[k]=Some(ScalarSlot{i,j,value:*value});}
+        if let Ok(value)=result.as_ref() {self.scalar_put(i,j,*value);}
         let elapsed=started.map(|t| t.elapsed());
         if let (Some(counts), Some(elapsed)) = (&self.parallel_counts, elapsed) {
             let mut counts = counts.borrow_mut(); counts.counts[kind] += 1; counts.seconds[kind] += elapsed.as_secs_f64();
@@ -1275,8 +1300,16 @@ pub(super) struct CompactLocalHierarchy {
 }
 impl CompactLocalHierarchy {
     pub(super) fn new(tetra: Vec<[[f64;3];4]>, budget: AllocationBudget, start: Instant, wall: Duration) -> Result<Self> {
+        let workers=match std::env::var("P7_MAGNETIC_NEAR_THREADS") {
+            Err(std::env::VarError::NotPresent)=>1,
+            Ok(v)=>v.parse::<usize>().ok().filter(|v|(1..=4).contains(v)).ok_or_else(||error("MAGNETIC_CONFIG","compact local near threads must be 1..4"))?,
+            Err(_)=>return Err(error("MAGNETIC_CONFIG","compact local near threads must be valid UTF-8")),
+        };
+        Self::new_with_workers(tetra,budget,start,wall,workers)
+    }
+    fn new_with_workers(tetra: Vec<[[f64;3];4]>, budget: AllocationBudget, start: Instant, wall: Duration, workers: usize) -> Result<Self> {
         let n = tetra.len();
-        if n == 0 || n > budget.max_tetrahedra { return Err(error("HYBRID_INPUT", "nonempty bounded local geometry required")); }
+        if n == 0 || n > budget.max_tetrahedra || !(1..=4).contains(&workers) { return Err(error("HYBRID_INPUT", "nonempty bounded local geometry and 1..4 workers required")); }
         let space_bytes = n.checked_mul(std::mem::size_of::<super::volume_current::Cell>()
             + std::mem::size_of::<Option<f64>>() + std::mem::size_of::<bool>())
             .ok_or_else(||error("MEMORY_LIMIT", "local hierarchy space overflow"))?;
@@ -1288,13 +1321,17 @@ impl CompactLocalHierarchy {
         let scalar_slots = scalar_bytes / std::mem::size_of::<Option<ScalarSlot>>();
         let scalar_bytes = scalar_slots * std::mem::size_of::<Option<ScalarSlot>>();
         let (pair_bytes, slots) = BoundedPairs::plan(n, 12, scalar_bytes, pair_budget)?;
-        let base = pair_bytes.checked_add(scalar_bytes).and_then(|v|v.checked_add(space_bytes)).and_then(|v|v.checked_add(2*1024*1024)).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy base overflow"))?;
+        // The workers share immutable geometry by Arc. Account worker caches,
+        // stacks, metadata, and the bounded ordered-result window up front.
+        let parallel_bytes=if workers>1 { BoundedPairs::parallel_bytes_for(workers,false)?.checked_add(16384).ok_or_else(||error("MEMORY_LIMIT","local parallel plan overflow"))? } else { 0 };
+        let base = pair_bytes.checked_add(scalar_bytes).and_then(|v|v.checked_add(space_bytes)).and_then(|v|v.checked_add(parallel_bytes)).and_then(|v|v.checked_add(2*1024*1024)).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy base overflow"))?;
         let tree = hierarchical_magnetic::Operator::new(&tetra, 12, 1, 0.2, base, budget, start, wall)?;
         let planned_bytes = base.checked_add(tree.planned_bytes).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy plan overflow"))?;
         budget.check(planned_bytes)?;
         let mut pair = BoundedPairs::new_with_scalar(tetra, 12, slots, scalar_slots, start, wall)?;
         pair.checked_self = true;
         *pair.checked_self_values.borrow_mut()=vec![None;n];
+        if workers>1 { pair.configure_parallel(workers)?; }
         let cells = (0..n).map(|i| super::volume_current::Cell { mesh_cell:i, potentials:[0;4], incidence:[[0.;3];4], density_per_amp_m2:1., resistance_ohm:1. }).collect();
         let space = Space { mesh_nodes:vec![], node_potential:Default::default(), cells, components:vec![], planned_bytes:space_bytes };
         Ok(Self { pair, tree, space, checked_self: std::cell::RefCell::new(vec![false;n]), planned_bytes })
@@ -1318,6 +1355,34 @@ impl CompactLocalHierarchy {
 #[cfg(test)]
 mod compact_reuse_tests {
     use super::*;
+    #[test]
+    fn checked_self_parallel_matches_serial_and_refuses_insufficient_memory() {
+        let a=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];
+        let b=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,-0.001]];
+        let geometry=vec![a,b];let start=Instant::now();let wall=Duration::from_secs(30);
+        let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:1000,max_tetrahedra:1000};
+        let serial=CompactLocalHierarchy::new_with_workers(geometry.clone(),budget,start,wall,1).unwrap();
+        let limited=AllocationBudget{max_bytes:serial.planned_bytes,..budget};
+        assert!(CompactLocalHierarchy::new_with_workers(geometry.clone(),limited,start,wall,2).is_err());
+        let mut parallel=CompactLocalHierarchy::new_with_workers(geometry,budget,start,wall,2).unwrap();
+        parallel.pair.trace=Some(std::cell::RefCell::new(PairTrace{counts:[0;3],seconds:[0.;3],last:Instant::now(),hits:0,misses:0,evictions:0}));
+        assert!(parallel.planned_bytes>serial.planned_bytes);
+        let columns=vec![vec![1.,0.,0.,-1.,0.,0.],vec![0.,0.5,0.,0.,-0.5,0.]];
+        let (a,ab,_)=serial.actions(&columns,&[1.,1.]).unwrap();
+        let (b,bb,_)=parallel.actions(&columns,&[1.,1.]).unwrap();
+        assert_eq!(a,b);assert_eq!(ab,bb);
+        assert_eq!(*serial.pair.checked_self_values.borrow(),*parallel.pair.checked_self_values.borrow());
+        assert!(parallel.pair.checked_self_values.borrow().iter().all(Option::is_some));
+        assert_eq!(serial.self_max_change().to_bits(),parallel.self_max_change().to_bits());
+        assert!(parallel.pair.scalar.borrow().iter().flatten().any(|entry|entry.i==1 && entry.j==0));
+        let hits=parallel.pair.trace.as_ref().unwrap().borrow().hits;
+        parallel.pair.pair_window(&[(1,0)]).unwrap();
+        assert_eq!(parallel.pair.trace.as_ref().unwrap().borrow().hits,hits+1);
+        let slots=parallel.pair.checked_self_values.borrow().clone();
+        let repeat=parallel.actions(&columns,&[1.,1.]).unwrap();
+        assert_eq!(repeat.0,b);assert_eq!(repeat.1,bb);
+        assert_eq!(*parallel.pair.checked_self_values.borrow(),slots);
+    }
     #[test]
     fn exact_pairs_reuse_across_tighter_goals_without_changing_bounds() {
         let a=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];

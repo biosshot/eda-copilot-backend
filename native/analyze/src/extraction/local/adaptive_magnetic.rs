@@ -90,9 +90,17 @@ fn factorial3(a: [usize; 3]) -> f64 {
 }
 
 // Pure kernels may run concurrently; interval additions retain traversal order.
-fn replay_near_window(pair:&BoundedPairs,space:&Space,q:&[f64],near:&mut [Interval],pending:&mut Vec<(usize,usize)>)->Result<()> {
+struct NearActivity { enabled:bool, submitted:usize, completed:usize, skipped:usize, finished:bool }
+impl NearActivity {
+    fn new() -> Self { Self {enabled:profile_enabled(std::env::var_os("P7_MAGNETIC_TRACE").as_deref(),std::env::var_os("P7_MAGNETIC_PHASE_PROFILE").as_deref()),submitted:0,completed:0,skipped:0,finished:false} }
+}
+impl Drop for NearActivity {
+    fn drop(&mut self) { if self.enabled { eprintln!("P7_MAGNETIC_NEAR_ACTIVITY {}",serde_json::json!({"submittedPairs":self.submitted,"completedPairs":self.completed,"zeroSkippedPairs":self.skipped,"partial":!self.finished,"note":"completed excludes unfinished windows"})); } }
+}
+fn replay_near_window(pair:&BoundedPairs,space:&Space,q:&[f64],near:&mut [Interval],pending:&mut Vec<(usize,usize)>,activity:&mut NearActivity)->Result<()> {
     if pending.is_empty() {return Ok(());}
     let values=pair.pair_window(pending)?;
+    if activity.enabled { activity.completed+=values.len(); }
     for (&(i,j),value) in pending.iter().zip(values) {
         check_deadline(pair.start,pair.wall)?;
         let coefficient=Interval::point(1e-7)
@@ -805,6 +813,7 @@ impl<'a> Plan<'a> {
         let mut bounds = vec![0.; 3 * n];
         let mut near = vec![Interval::zero(); 3 * n];
         let parallel_near=pair.parallel_enabled();
+        let mut activity=NearActivity::new();
         let mut pending=if parallel_near {Vec::with_capacity(128)}else{Vec::new()};
         for axis in 0..3 {
             let mut axis_profile = Profile::new("axis", Some(axis));
@@ -872,13 +881,15 @@ impl<'a> Plan<'a> {
                                     let j = t.permutation[y];
                                     // Both reciprocal updates are exactly zero for
                                     // this column; retain the full certified cover.
-                                    if skip_zero_pairs && q[3*i..3*i+3].iter().all(|v| *v == 0.) && q[3*j..3*j+3].iter().all(|v| *v == 0.) { continue; }
+                                    if skip_zero_pairs && q[3*i..3*i+3].iter().all(|v| *v == 0.) && q[3*j..3*j+3].iter().all(|v| *v == 0.) { if activity.enabled { activity.skipped+=1; } continue; }
+                                    if activity.enabled { activity.submitted+=1; }
                                     if parallel_near {
                                         pending.push((i,j));
-                                        if pending.len()==128 {replay_near_window(pair,space,q,&mut near,&mut pending)?;}
+                                        if pending.len()==128 {replay_near_window(pair,space,q,&mut near,&mut pending,&mut activity)?;}
                                         continue;
                                     }
                                     let value = pair.pair(i.max(j), i.min(j))?;
+                                    if activity.enabled { activity.completed+=1; }
                                     let coefficient = Interval::point(1e-7)
                                         .mul(Interval::point(space.cells[i].density_per_amp_m2))
                                         .mul(Interval::point(space.cells[j].density_per_amp_m2))
@@ -983,7 +994,7 @@ impl<'a> Plan<'a> {
             } else {
                 self.walk(Some(axis), apply_block)?;
             }
-            replay_near_window(pair,space,q,&mut near,&mut pending)?;
+            replay_near_window(pair,space,q,&mut near,&mut pending,&mut activity)?;
             let mut downward_profile = Profile::new("downward", Some(axis));
             for parent in 0..t.nodes.len() {
                 if let Some(children) = t.nodes[parent].children {
@@ -1042,6 +1053,7 @@ impl<'a> Plan<'a> {
             recovery_profile.finish();
             axis_profile.finish();
         }
+        activity.finished=true;
         Ok((action, bounds))
     }
     fn evidence(&self, goals: &[f64]) -> serde_json::Value {

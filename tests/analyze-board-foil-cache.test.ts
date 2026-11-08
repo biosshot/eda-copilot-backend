@@ -122,9 +122,11 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
   const dir=mkdtempSync(join(tmpdir(),'p7-hybrid-policy-'));
   const previous=process.env.P7_COMPACT_PLANAR;
   const previousWorkers=process.env.P7_COMPACT_PL_THREADS;
+  const previousNearWorkers=process.env.P7_MAGNETIC_NEAR_THREADS;
   try {
     process.env.P7_COMPACT_PLANAR='1';
     delete process.env.P7_COMPACT_PL_THREADS;
+    delete process.env.P7_MAGNETIC_NEAR_THREADS;
     const cache=new LocalModelCache(dir);
     const produceHybrid=(r:AnalysisBoardFoilCheckedRequest)=>{const value=hybrid();value.provenance.maxSeconds=r.budget.maxSeconds;value.provenance.maxMemoryMiB=r.budget.maxMemoryMiB;return value;};
     const cached=cachedBoardFoilReport(cache,'hybrid',hybridProblem,produceHybrid);
@@ -142,6 +144,11 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
     assert.throws(()=>cachedBoardFoilReport(cache,'hybrid',hybridProblem,()=>hybrid()),/LOCAL_BUDGET/);
     delete process.env.P7_COMPACT_PL_THREADS;
     const schurProblem={...problem,request:{...problem.request,partitionPolicy:'automatic-conductive-schur-v1' as const}};
+    process.env.P7_MAGNETIC_NEAR_THREADS='2';
+    assert.notEqual(cachedBoardFoilReport(cache,'hybrid',hybridProblem,produceHybrid).cache?.key,cached.cache?.key);
+    process.env.P7_MAGNETIC_NEAR_THREADS='5';
+    assert.throws(()=>cachedBoardFoilReport(cache,'hybrid',hybridProblem,produceHybrid),/LOCAL_BUDGET/);
+    delete process.env.P7_MAGNETIC_NEAR_THREADS;
     assert.notEqual(cachedBoardFoilReport(cache,'hybrid',schurProblem,r=>mock(r)).cache?.key,cached.cache?.key);
     const plan={...problem.expected,boardJson:problem.boardJson,geometry:problem.geometry,ports:[{name:'port'}],attachments:[]} as unknown as AutoFoilPlan;
     runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>{
@@ -172,7 +179,7 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
     assert.throws(()=>cachedBoardFoilReport(cache,'hybrid',{...rfProblem,request:{...rfProblem.request,profileUpperHz:1e10+1}},rfReport),/BOARD_FOIL_GRID/);
     const undersampled=rfReport(rfProblem.request);undersampled.provenance.copperSkinMesh!.layers[0].maximumStepM*=2;
     assert.throws(()=>validateBoardFoilReport(undersampled,rfProblem,rfProblem.request.budget),/CHANNEL_FOIL_EVIDENCE/);
-  } finally {if(previous===undefined)delete process.env.P7_COMPACT_PLANAR;else process.env.P7_COMPACT_PLANAR=previous;if(previousWorkers===undefined)delete process.env.P7_COMPACT_PL_THREADS;else process.env.P7_COMPACT_PL_THREADS=previousWorkers;rmSync(dir,{recursive:true,force:true});}
+  } finally {if(previous===undefined)delete process.env.P7_COMPACT_PLANAR;else process.env.P7_COMPACT_PLANAR=previous;if(previousWorkers===undefined)delete process.env.P7_COMPACT_PL_THREADS;else process.env.P7_COMPACT_PL_THREADS=previousWorkers;if(previousNearWorkers===undefined)delete process.env.P7_MAGNETIC_NEAR_THREADS;else process.env.P7_MAGNETIC_NEAR_THREADS=previousNearWorkers;rmSync(dir,{recursive:true,force:true});}
   for(const change of [
     (v:AnalysisBoardFoilCheckedReport)=>{v.provenance.compactOperator!.nearQuadratureEstimatedTolerance=1e-7;},
     (v:AnalysisBoardFoilCheckedReport)=>{v.quality.maxCompactKvlUncertaintyRelative=1e-9;},

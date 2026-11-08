@@ -221,3 +221,10 @@ The captured orientation requests also reveal an applicability limit of this con
 - Extended the existing blind/buried mesh tests with hybrid ownership, actual barrel z-span, foil-cell mapping, connected start/takeoff contacts and isolated lower pad checks. Original fixtures and existing negative span controls remain unchanged.
 - Initial selection `1794144620788623400` passed the three structural tests but accidentally included the separate existing DC annulus solve, which hit the 5s supervisor cap. Corrected selection explicitly skips that unrelated numerical test.
 - `1794144648048884200`: all three selected structural controls pass in 1.484s under the unchanged 5s cap. This does not establish blind/buried electromagnetic accuracy or final physical coverage.
+
+### Bounded parallel local near interactions
+
+- Compact local TT accepts explicit P7_MAGNETIC_NEAR_THREADS=1..4 (default1). Checked diagonal integrals stay on the owner; workers receive only nonself pairs, share immutable geometry, and return results in traversal order. Owner bounded scalar cache is consulted before worker dispatch and filled in traversal order afterwards. Worker stacks/caches and bounded window scratch are admitted before allocation; generic legacy worker policy is unchanged.
+- TS response cache now validates and keys localNearWorkers. Eleven cache tests and typecheck pass. Trace/profile output distinguishes submitted/completed/strict-zero-skipped pairs; unfinished windows are reported as partial.
+- `1794144728361253900`: two compact reuse/parallel controls pass in 0.641s, including serial/parallel identical actions/bounds, self cache and nonself cache hits, insufficient-memory refusal. `1794144739833316900`: existing parallel cover/reduction regression passes in 3.953s. `1794144754047608700`: ordered scalar-cache eviction/deadline regression passes in 0.328s. All use 5s supervisor caps.
+- Real via performance with the new parallel path remains unmeasured; no complete positive via or speedup is claimed.

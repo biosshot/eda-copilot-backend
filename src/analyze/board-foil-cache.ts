@@ -58,6 +58,7 @@ export function cachedBoardFoilReport(
   const nearBound = process.env.P7_MAGNETIC_NEAR_BOUND === '1';
   const compactPlanar = process.env.P7_COMPACT_PLANAR === '1';
   const compactWorkers = compactPlanar || partitionPolicy==='automatic-hybrid-v1' ? verificationLimit('P7_COMPACT_PL_THREADS',1,1,4) : 1;
+  const localNearWorkers = compactPlanar || partitionPolicy==='automatic-hybrid-v1' ? verificationLimit('P7_MAGNETIC_NEAR_THREADS',1,1,4) : 1;
   const compactFullMixed = process.env.P7_COMPACT_FULL_MIXED === '1';
   const axialTetPolicy = magneticAxialTetPolicy();
   const remaining = () => {
@@ -75,7 +76,7 @@ export function cachedBoardFoilReport(
     hybridPlanarOperatorVersion: HYBRID_PLANAR_OPERATOR_VERSION,
     ...(process.env.P7_HYBRID_REGIME_AUDIT==='1'&&{regimeControlPolicy:'discrete-dc-ac-time-v1'}),
     compactPlanarPolicy: compactPlanar ? 'compact-v1' : 'default-v1',
-    ...((compactPlanar || partitionPolicy==='automatic-hybrid-v1') && { compactWorkers }),
+    ...((compactPlanar || partitionPolicy==='automatic-hybrid-v1') && { compactWorkers, localNearWorkers }),
     ...(compactPlanar && { compactBasisPolicy: compactFullMixed ? 'adaptive-mixed-closure-v1' : 'dc-harmonic-only' }),
     board: digest(problem.boardJson),
     magneticProducerPolicy:'exact-or-certified-adaptive-harmonic-v1',
