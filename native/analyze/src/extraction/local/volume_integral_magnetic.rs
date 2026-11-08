@@ -1265,7 +1265,7 @@ impl CompactLocalPairs {
 /// Hierarchical action on only the supplied local tetrahedra. Columns are
 /// physical Cartesian current densities (three values per tetrahedron).
 /// The existing hierarchy supplies reciprocal interval bounds; self terms
-/// retain the compact mixed 12/16 convergence gate.
+/// retain the checked local self convergence gate.
 pub(super) struct CompactLocalHierarchy {
     pair: BoundedPairs,
     tree: hierarchical_magnetic::Operator,
@@ -1281,12 +1281,18 @@ impl CompactLocalHierarchy {
             + std::mem::size_of::<Option<f64>>() + std::mem::size_of::<bool>())
             .ok_or_else(||error("MEMORY_LIMIT", "local hierarchy space overflow"))?;
         let pair_budget = AllocationBudget { max_bytes: budget.max_bytes / 4, ..budget };
-        let (pair_bytes, slots) = BoundedPairs::plan(n, 12, 0, pair_budget)?;
-        let base = pair_bytes.checked_add(space_bytes).and_then(|v|v.checked_add(2*1024*1024)).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy base overflow"))?;
+        // The exact pair value is independent of RHS and action goal. Keep a
+        // small fixed direct-mapped cache across batches, never an unbounded
+        // all-pairs matrix; a collision only causes the original recomputation.
+        let scalar_bytes = (1024 * 1024).min(pair_budget.max_bytes / 16);
+        let scalar_slots = scalar_bytes / std::mem::size_of::<Option<ScalarSlot>>();
+        let scalar_bytes = scalar_slots * std::mem::size_of::<Option<ScalarSlot>>();
+        let (pair_bytes, slots) = BoundedPairs::plan(n, 12, scalar_bytes, pair_budget)?;
+        let base = pair_bytes.checked_add(scalar_bytes).and_then(|v|v.checked_add(space_bytes)).and_then(|v|v.checked_add(2*1024*1024)).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy base overflow"))?;
         let tree = hierarchical_magnetic::Operator::new(&tetra, 12, 1, 0.2, base, budget, start, wall)?;
         let planned_bytes = base.checked_add(tree.planned_bytes).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy plan overflow"))?;
         budget.check(planned_bytes)?;
-        let mut pair = BoundedPairs::new(tetra, 12, slots, start, wall)?;
+        let mut pair = BoundedPairs::new_with_scalar(tetra, 12, slots, scalar_slots, start, wall)?;
         pair.checked_self = true;
         *pair.checked_self_values.borrow_mut()=vec![None;n];
         let cells = (0..n).map(|i| super::volume_current::Cell { mesh_cell:i, potentials:[0;4], incidence:[[0.;3];4], density_per_amp_m2:1., resistance_ohm:1. }).collect();
@@ -1306,5 +1312,34 @@ impl CompactLocalHierarchy {
             }
         }
         self.tree.batch(&self.pair, &self.space, columns, goals)
+    }
+}
+
+#[cfg(test)]
+mod compact_reuse_tests {
+    use super::*;
+    #[test]
+    fn exact_pairs_reuse_across_tighter_goals_without_changing_bounds() {
+        let a=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];
+        let b=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,-0.001]];
+        let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:1000,max_tetrahedra:1000};
+        let mut hierarchy=CompactLocalHierarchy::new(vec![a,b],budget,Instant::now(),Duration::from_secs(30)).unwrap();
+        hierarchy.pair.trace=Some(std::cell::RefCell::new(PairTrace{counts:[0;3],seconds:[0.;3],last:Instant::now(),hits:0,misses:0,evictions:0}));
+        assert!(!hierarchy.pair.scalar.borrow().is_empty());
+        let columns=vec![vec![1.,0.,0.,-1.,0.,0.]];
+        hierarchy.actions(&columns,&[1.]).unwrap();
+        assert!(hierarchy.pair.checked_self_values.borrow().iter().all(Option::is_some));
+        assert!(hierarchy.pair.scalar.borrow().iter().flatten().any(|entry|entry.i==1 && entry.j==0));
+        let nonself_hits=hierarchy.pair.trace.as_ref().unwrap().borrow().hits;
+        hierarchy.pair.pair(1,0).unwrap();
+        assert_eq!(hierarchy.pair.trace.as_ref().unwrap().borrow().hits,nonself_hits+1);
+        let hits_before=hierarchy.pair.trace.as_ref().unwrap().borrow().hits;
+        let cached=hierarchy.actions(&columns,&[0.1]).unwrap();
+        assert!(hierarchy.pair.trace.as_ref().unwrap().borrow().hits > hits_before);
+        assert!(hierarchy.pair.scalar.borrow().iter().flatten().any(|entry|entry.i==1 && entry.j==0));
+        hierarchy.pair.scalar.borrow_mut().clear();
+        let fresh=hierarchy.actions(&columns,&[0.1]).unwrap();
+        assert_eq!(cached.0,fresh.0);
+        assert_eq!(cached.1,fresh.1);
     }
 }

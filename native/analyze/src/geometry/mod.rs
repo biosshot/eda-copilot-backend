@@ -408,10 +408,46 @@ fn prepare_context(
             }
         }
     }
+    // Source-keyed lookup avoids a board-wide pad scan for every track. A
+    // zero coordinate has a single key even when authored as negative zero.
+    let coordinate_key=|v:f64| if v==0. {0} else {v.to_bits()};
+    let mut pads_by_endpoint=BTreeMap::<(usize,usize,u64,u64),Vec<&model::Pad>>::new();
+    for pad in &board.pads { if let Some(net)=pad.net { for &layer in &pad.layers {
+        pads_by_endpoint.entry((layer,net,coordinate_key(pad.at.x),coordinate_key(pad.at.y))).or_default().push(pad);
+    }}}
     for t in &board.tracks {
         let p = provenance(board, &t.source, "track", t.net, Some(t.ownership));
         r.sources.push(p.clone());
-        match builder.stroke(&t.points, t.width_mm) {
+        // A square pad centred exactly on a straight track endpoint with the
+        // same width and orientation supplies exact shared edge breakpoints.
+        // These are source-defined coincidences, not distance-based merging.
+        let mut splits=Vec::new();
+        if t.points.len()==2 {
+            let a=t.points[0];let b=t.points[1];
+            let dx=b.x-a.x;let dy=b.y-a.y;let length=dx.hypot(dy);
+            let angle=dy.atan2(dx).to_degrees().rem_euclid(90.);
+            if length>t.width_mm/2. {
+                let mut candidates=Vec::new();
+                if let Some(net)=t.net {for point in [a,b] {
+                    if let Some(pads)=pads_by_endpoint.get(&(t.layer,net,coordinate_key(point.x),coordinate_key(point.y))) {candidates.extend(pads.iter().copied());}
+                }}
+                for pad in candidates {
+                    if pad.rotation_deg.rem_euclid(90.)!=angle {continue;}
+                    let shape=pad.layer_shapes.as_ref().and_then(|m|m.get(&t.layer)).unwrap_or(&pad.common_shape);
+                    if !matches!(shape,model::PadShape::Rect{width_mm,height_mm} if *width_mm==t.width_mm && *height_mm==t.width_mm) {continue;}
+                    let half=t.width_mm/2.;
+                    for (x,y) in [(-half,-half),(half,-half),(half,half),(-half,half)] {
+                        let q=primitives::transform_point(model::Point{x,y},pad.at,pad.rotation_deg);
+                        let along=(q.x-pad.at.x)*dx+(q.y-pad.at.y)*dy;
+                        if (pad.at==a && along>0.) || (pad.at==b && along<0.) {splits.push(q);}
+                    }
+                }
+            }
+        }
+        splits.sort_by(|a,b|a.x.total_cmp(&b.x).then(a.y.total_cmp(&b.y)));
+        splits.dedup_by(|a,b|a.x==b.x && a.y==b.y);
+        let shape=if splits.is_empty() {builder.stroke(&t.points,t.width_mm)} else {builder.stroke_with_splits(&t.points,t.width_mm,&splits)};
+        match shape {
             Ok(shape) => raw.push(Raw {
                 shape,
                 source: p,

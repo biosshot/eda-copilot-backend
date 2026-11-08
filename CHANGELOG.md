@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Preserve source-defined shared edge breakpoints for exactly aligned, equal-width square pads and straight tracks before polygon quantization. Structural controls retain planar ownership at 0/45/90 degrees and with reversed tracks while preserving a real narrow gap.
+- Reuse a bounded cache of ordered local tetrahedron interactions across hybrid right-hand sides, with admitted memory and unchanged quadrature/deadline checks. First-action and full-via performance remain unverified.
+
 - Recover complex spatial copper current density and Joule losses from the hybrid discrete solution, validate ownership-shaped output and power balance, and expose canonical sample references with cache invalidation. Physical accuracy remains unverified.
 - Preserve compensated transient state through integration and continuation, including charge, port and energy checks, to resolve loss of tiny differential increments on a common potential without relaxing residual gates.
 - Route local tetrahedron magnetic interactions through a bounded hierarchy with projected error bounds and checked self integrals; exclude these pairs from the planar/local plan. Bounded self-quadrature refinement passes the exercised thin-via geometry at orders 20/24 with the existing convergence gate; complete via extraction remains blocked by the interaction deadline.

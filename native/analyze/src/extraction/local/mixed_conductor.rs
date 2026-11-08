@@ -1929,3 +1929,40 @@ mod hybrid_rf_policy_tests {
         assert!(checked_reserve_policy(&missing,grid,Some(profile),hybrid,PartitionPolicy::AutomaticHybridV1).unwrap_err().contains("MIXED_FOIL_CONTACT"));
     }
 }
+
+#[cfg(test)]
+mod aligned_pad_orientation_tests {
+    use super::*;
+    #[test]
+    fn aligned_rotations_and_reversed_tracks_keep_planar_ownership() {
+        let cases:serde_json::Value=serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-local-extraction/orientation-aligned-pads.json")).unwrap();
+        let budget=AllocationBudget{max_bytes:512*1024*1024,max_nodes:100_000,max_tetrahedra:200_000};
+        let wall=Duration::from_secs(5);
+        for case in cases.as_array().unwrap() {for reversed in [false,true] {
+            let mut board_json:serde_json::Value=serde_json::from_str(case[0].as_str().unwrap()).unwrap();
+            if reversed {for track in board_json["copper"]["fixed"]["tracks"].as_array_mut().unwrap() {track["points"].as_array_mut().unwrap().reverse();}}
+            let board=crate::import_json(&board_json.to_string()).board.unwrap();
+            let request:board_mesh::Request=serde_json::from_value(case[1].clone()).unwrap();
+            let profile=CheckedOperator::HybridPlanarV3.skin_profile(1e6,Some(1e6),request.max_vertical_step_m).unwrap();
+            let mesh=board_mesh::build_profiled(&board,&request,budget,wall,None,&[],profile).unwrap();
+            let map=prepare(&mesh,&request.electrodes,1e6,budget,wall).unwrap();
+            assert!(map.owners.iter().all(|o|matches!(o,Owner::Foil(_))),"aligned pad edges produced local slivers");
+        }}
+    }
+    #[test]
+    fn physical_narrow_pad_gap_remains_open() {
+        let cases:serde_json::Value=serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-local-extraction/orientation-aligned-pads.json")).unwrap();
+        let mut board_json:serde_json::Value=serde_json::from_str(cases[0][0].as_str().unwrap()).unwrap();
+        board_json["copper"]["fixed"]["tracks"]=serde_json::json!([]);
+        for (i,pad) in board_json["pads"].as_array_mut().unwrap().iter_mut().enumerate() {
+            pad["at"]["x"]=serde_json::json!(if i%2==0 {-0.4000001} else {0.4000001});
+        }
+        let board=crate::import_json(&board_json.to_string()).board.unwrap();
+        let request:board_mesh::Request=serde_json::from_value(cases[0][1].clone()).unwrap();
+        let budget=AllocationBudget{max_bytes:512*1024*1024,max_nodes:100_000,max_tetrahedra:200_000};
+        let wall=Duration::from_secs(5);
+        let mesh=board_mesh::build(&board,&request,budget,wall).unwrap();
+        let map=prepare(&mesh,&request.electrodes,1e6,budget,wall).unwrap();
+        assert!(map.full.components.len()>=4,"real pad gaps must not merge conductor islands");
+    }
+}

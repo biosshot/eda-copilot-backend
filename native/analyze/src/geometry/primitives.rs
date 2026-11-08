@@ -91,6 +91,11 @@ impl Builder {
         Ok(Polygon::new(LineString(c), vec![]))
     }
     pub fn stroke(&mut self, points: &[Point], width: f64) -> Result<AreaSet, String> {
+        self.stroke_with_splits(points,width,&[])
+    }
+    /// Splits are proven analytic pad/track edge coincidences supplied by the
+    /// board adapter; they are not an epsilon-based geometric snap.
+    pub(super) fn stroke_with_splits(&mut self, points: &[Point], width: f64, splits: &[Point]) -> Result<AreaSet, String> {
         let mut pieces = Vec::new();
         for p in points {
             pieces.push(self.circle(*p, width / 2.0)?);
@@ -104,28 +109,26 @@ impl Builder {
             }
             let x = -(b.y - a.y) / d * width / 2.0;
             let y = (b.x - a.x) / d * width / 2.0;
-            self.reserve(4)?;
-            pieces.push(areas::polygon(&model::Polygon {
-                outer: vec![
-                    Point {
-                        x: a.x + x,
-                        y: a.y + y,
-                    },
-                    Point {
-                        x: b.x + x,
-                        y: b.y + y,
-                    },
-                    Point {
-                        x: b.x - x,
-                        y: b.y - y,
-                    },
-                    Point {
-                        x: a.x - x,
-                        y: a.y - y,
-                    },
-                ],
-                holes: vec![],
-            })?);
+            let dx=b.x-a.x; let dy=b.y-a.y;
+            let mut positive=Vec::new(); let mut negative=Vec::new();
+            if points.len()==2 {
+                for &q in splits {
+                    let along=(q.x-a.x)*dx+(q.y-a.y)*dy;
+                    let cross=dx*(q.y-a.y)-dy*(q.x-a.x);
+                    if along>0. && along<d*d {
+                        if cross>0. {positive.push((along,q));} else if cross<0. {negative.push((along,q));}
+                    }
+                }
+            }
+            positive.sort_by(|a,b|a.0.total_cmp(&b.0));
+            negative.sort_by(|a,b|b.0.total_cmp(&a.0));
+            self.reserve(4+positive.len()+negative.len())?;
+            let mut outer=vec![Point{x:a.x+x,y:a.y+y}];
+            outer.extend(positive.into_iter().map(|(_,p)|p));
+            outer.push(Point{x:b.x+x,y:b.y+y});outer.push(Point{x:b.x-x,y:b.y-y});
+            outer.extend(negative.into_iter().map(|(_,p)|p));
+            outer.push(Point{x:a.x-x,y:a.y-y});
+            pieces.push(areas::polygon(&model::Polygon {outer,holes:vec![]})?);
         }
         Ok(areas::union(pieces))
     }
