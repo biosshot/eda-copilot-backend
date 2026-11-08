@@ -283,3 +283,5 @@ The captured orientation requests also reveal an applicability limit of this con
 - 1794150069908409900: exact production via harmonic seed passes0.953s, including independent stored-current KCL and retained-contact values. Initial attempt1794149965438894500 found empty incidence rows; corrected to exact zero as before.
 - 1794149968244305300: cached/uncached interval actions and bounds match bitwise in0.328s. 1794150072716124100: tight-budget uncached fallback matches admitted cached action in0.297s. Cache is enabled only when the unchanged budget admits storage.
 - Two-via trace remains open:1794150071063818200 identifies missing owner at slab2 triangle512. No full acceptance run started.
+
+- Latest harmonic/jet addon builds successfully. Production via1794150926488938700 passes prior FIELD_TRACE and harmonic failures but reaches native25s magnetic deadline (26.343s wall, sampled private216674304B). Remote return1794150953063074100 still reaches12s (13.109s wall, private205398016B). Full positive completion remains pending; no resource limits raised.
