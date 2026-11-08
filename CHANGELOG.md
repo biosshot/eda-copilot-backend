@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a budgeted matrix-free charge CG primitive with a freshly evaluated residual before convergence, compensated products, and explicit invalid-operator/deadline refusals. This is adaptive hybrid infrastructure, not full-board acceptance.
+
 - Start the hybrid operator implementation with explicit charge/potential dual coordinates, direct finite-prism P/L kernels, mixed cross-block and layered-trace primitives, and an opt-in compact runtime candidate. Isolate its cache identity and track canonical cases independently of acceptance. Layered/local assembly, independent accuracy and complete-board performance remain unverified; this does not close P7.
 
 - Require a shared mathematical and applicability contract as the first short hybrid implementation step: coordinate conventions, conservation/projections/gauge, ownership of cross-representation and self/near interactions, and explicit enrichment/refusal criteria must be consistent across implementers.

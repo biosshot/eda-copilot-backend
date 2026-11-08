@@ -28,6 +28,9 @@ Native test binaries were compiled with `cargo test --manifest-path native/analy
 | Same full-mixed control after exact constant-support coalescing | pass | 0.375 s | `1794121433391781800` |
 | Four-coordinate tetra vertex dual rank | pass | 0.187 s | `1794121443984777000` |
 | Spatial dielectric energy, cut-cell and count-budget controls | three pass | 0.172 s | `1794121445581689300` |
+| Matrix-free charge CG exact coupled solution and invalid-operator/resource controls | pass | 0.171 s | `1794121915239682700` |
+| Planar action versus small projected Gram | pass | 0.188 s | `1794121916810023800` |
+| Imported via full-mixed prototype | refused by 1024-coordinate prototype guard | 0.719 s | `1794121653755905000` |
 
 The tetra comparisons use constant density integrals on the same finite support; they are independent integration controls, not independent full-channel or broadband EM references. Initial invalid reference-tolerance test invocation (`1794119924965750500`) was corrected before the two successful reference comparisons; no production tolerance was relaxed.
 

@@ -14,6 +14,7 @@ pub mod mesh;
 pub mod volume_current;
 pub mod mixed_conductor;
 mod spatial_partition;
+mod compact_cg;
 pub mod conservative_current;
 pub mod board_mesh;
 mod copper_skin_profile;
