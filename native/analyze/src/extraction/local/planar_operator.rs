@@ -101,6 +101,11 @@ pub(super) fn gram_sparse(supports: &[SparseSupport], charge_modes: usize, curre
 // On each sector overlap area is A*(1-r)^2; xy difference Jacobian
 // is 2*A*r. r=t^4 regularizes the logarithmic axial kernel at zero.
 fn self_integral(p: &Prism, order: usize, start: Instant, limit: Duration) -> Result<f64> {
+    aligned_integral(p,p,order,start,limit)
+}
+// The same XY autocorrelation applies to distinct vertical intervals; the
+// analytic axial kernel carries their separation and individual thicknesses.
+fn aligned_integral(p: &Prism, other: &Prism, order: usize, start: Instant, limit: Duration) -> Result<f64> {
     let q=GaussRule::new(order)?;
     let h=p.z_m[1]-p.z_m[0]; let area=p.volume_m3/h;
     let e1=[p.triangle_m[1][0]-p.triangle_m[0][0],p.triangle_m[1][1]-p.triangle_m[0][1]];
@@ -114,7 +119,7 @@ fn self_integral(p: &Prism, order: usize, start: Instant, limit: Duration) -> Re
             let a=vertices[k]; let b=vertices[(k+1)%6];
             let u=(1.-v)*a[0]+v*b[0]; let w=(1.-v)*a[1]+v*b[1];
             let rho=r*(u*e1[0]+w*e2[0]).hypot(u*e1[1]+w*e2[1]);
-            let axial=axial_magnetic::axial_kernel(rho,[0.,h],[0.,h])?;
+            let axial=axial_magnetic::axial_kernel(rho,[0.,h],[other.z_m[0]-p.z_m[0],other.z_m[1]-p.z_m[0]])?;
             sum += wt*wv*dr*r*(1.-r).powi(2)*axial;
         }
     }}
@@ -186,10 +191,11 @@ fn edge_integral(a:&Prism,b:&Prism,order:usize,start:Instant,limit:Duration) -> 
 // the outer z rule. If cancellation invalidates this primitive, use the
 // independent finite-prism kernel; neither route relaxes the error threshold.
 pub(super) fn pair_integral(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Duration) -> Result<(f64,usize,f64)> {
-    if a.triangle_m == b.triangle_m && a.z_m == b.z_m {
-        let mut prev=self_integral(a,order,start,limit)?; let mut n=order;
+    let canonical=|mut t:[[f64;2];3]|{t.sort_by(|a,b|a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));t};
+    if canonical(a.triangle_m)==canonical(b.triangle_m) {
+        let mut prev=aligned_integral(a,b,order,start,limit)?; let mut n=order;
         while n<64 {
-            n+=4; let next=self_integral(a,n,start,limit)?;
+            n+=4; let next=aligned_integral(a,b,n,start,limit)?;
             let relative=(next-prev).abs()/next.abs();
             if relative<=1e-8 { return Ok((next,n,relative)); }
             prev=next;
@@ -345,6 +351,24 @@ mod tests {
         let (x,n,e)=pair_integral(&a,&b,8,Instant::now(),Duration::from_secs(30)).unwrap();
         println!("thin shared edge {x:e} order={n} estimator={e:e}");
         assert!(x>0. && e<=1e-8);
+    }
+
+    #[test]
+    fn aligned_unequal_slabs_match_tetra_and_reciprocity() {
+        use super::super::polyhedron::{self,PointPotential};
+        let a=Prism::new("a".into(),[[0.,0.],[1.,0.],[0.,1.]],[0.,0.035]).unwrap();
+        let b=Prism::new("b".into(),[[1.,0.],[0.,1.],[0.,0.]],[0.075,0.125]).unwrap();
+        let start=Instant::now();let wall=Duration::from_secs(30);
+        let (x,_,_)=pair_integral(&a,&b,8,start,wall).unwrap();
+        let (reverse,_,_)=pair_integral(&b,&a,8,start,wall).unwrap();
+        assert!((x-reverse).abs()<=1e-8*x);
+        let mut reference=0.;
+        for ta in prism_tets(&a){for tb in prism_tets(&b){
+            assert!(start.elapsed()<wall);
+            reference+=polyhedron::tetra_integral_adaptive(ta,&PointPotential::tetrahedron(tb).unwrap(),16,1e-10).unwrap();
+        }}
+        println!("aligned={x:e} tetra={reference:e}");
+        assert!((x-reference).abs()<1e-5*reference);
     }
 
     #[test]
