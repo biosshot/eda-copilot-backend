@@ -259,6 +259,7 @@ export interface AnalysisBoardFoilCheckedReport {
     status: 'complete';
     coverage: 'unverified';
     representation: 'S';
+    operator?: 'compact-planar-homogeneous-prototype' | 'compact-planar-layered-prototype';
     frequenciesHz: number[];
     referenceOhm: number[];
     ports: [string, string][];
@@ -279,7 +280,7 @@ export interface AnalysisBoardFoilCheckedReport {
     };
     provenance: {
         method: string;
-        compactOperator?: { version: 'compact-planar-v1'; basis: 'full-mixed' | 'dc-harmonic-only'; scope: 'compact-discrete'; originalVolumeActions: 0; foilSupports: number; localTetraSupports: number; potentialCoordinates: number; currentCoordinates: number; planarMaxOrder: number; planarMaxRelativeChange: number; mixedMaxRelativeChange: number; tetraSelfMaxRelativeChange: number; tetraPairAdaptiveTolerance: number; physicalAccuracy: 'unverified' };
+        compactOperator?: { version: 'compact-planar-v1'; basis: 'full-mixed' | 'dc-harmonic-only'; electricOperator: 'homogeneous-charge-gram' | 'layered-spatial-field-mesh'; approximationError: 'unverified'; scope: 'compact-discrete'; originalVolumeActions: 0; foilSupports: number; localTetraSupports: number; potentialCoordinates: number; currentCoordinates: number; planarMaxOrder: number; planarMaxRelativeChange: number; mixedMaxRelativeChange: number; tetraSelfMaxRelativeChange: number; tetraPairAdaptiveTolerance: number; physicalAccuracy: 'unverified' };
         magneticOperator?: {
             scope: string; maxFullKvlUncertaintyRelative: number;
         } & (

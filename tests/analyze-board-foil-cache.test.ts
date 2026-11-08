@@ -55,10 +55,11 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
   const compact=()=>{
     const value=mock(problem.request);
     delete value.provenance.magneticOperator;
+    value.operator='compact-planar-homogeneous-prototype';
     delete value.quality.maxFullKvlUncertaintyRelative;
     Object.assign(value.quality,{scope:'compact-discrete',physicalError:'unverified'});
     value.samples.forEach(s=>s.columns.forEach(c=>delete c.kvlUncertaintyRelative));
-    value.provenance.compactOperator={version:'compact-planar-v1',basis:'dc-harmonic-only',scope:'compact-discrete',originalVolumeActions:0,
+    value.provenance.compactOperator={version:'compact-planar-v1',basis:'dc-harmonic-only',electricOperator:'homogeneous-charge-gram',approximationError:'unverified',scope:'compact-discrete',originalVolumeActions:0,
       foilSupports:3,localTetraSupports:9,potentialCoordinates:8,currentCoordinates:24,planarMaxOrder:8,
       planarMaxRelativeChange:1e-9,mixedMaxRelativeChange:1e-9,tetraSelfMaxRelativeChange:1e-9,
       tetraPairAdaptiveTolerance:1e-10,physicalAccuracy:'unverified'};
@@ -66,10 +67,15 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
   };
   const validate=(value:AnalysisBoardFoilCheckedReport)=>validateBoardFoilReport(value,problem,problem.request.budget);
   validate(compact());
+  const layered=compact();layered.operator='compact-planar-layered-prototype';layered.provenance.compactOperator!.electricOperator='layered-spatial-field-mesh';
+  validate(layered);
+  layered.provenance.currentModes=0;layered.provenance.compactOperator!.planarMaxOrder=0;validate(layered);
   const changes:((value:AnalysisBoardFoilCheckedReport)=>void)[]=[
     v=>{(v.provenance.compactOperator as any).version='other';},
     v=>{(v.provenance.compactOperator as any).scope='physical';},
     v=>{(v.provenance.compactOperator as any).basis='other';},
+    v=>{(v.provenance.compactOperator as any).approximationError='verified';},
+    v=>{v.provenance.compactOperator!.electricOperator='layered-spatial-field-mesh';},
     v=>{(v.quality as any).scope='physical';},
     v=>{(v.quality as any).physicalError='verified';},
     v=>{(v.provenance.compactOperator as any).originalVolumeActions=1;},
