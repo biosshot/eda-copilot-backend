@@ -41,7 +41,7 @@ async function run(degrees:number){
  const f=solution.frequenciesHz[0],s=solution.parameters[0];
  console.error(`P7_ORIENTATION stage=end degrees=${degrees} prisms=${solution.provenance.prisms} localTetrahedra=${solution.provenance.volumeTetrahedra}`);
  const z=s.map((row:any[])=>row.map((x:any)=>({real:x.real,imaginary:x.imaginary})));
- return {degrees,ports:solution.physicalPorts,frequencyHz:f,s:z,loss:solution.samples[0].lossGrams,quality:solution.quality,yStatus:'omitted: no validated physical-reference S-to-Y conversion bound to this compact control'};
+ return {degrees,ports:solution.physicalPorts,roiMm:solution.foilPlan.roiMm,frequencyHz:f,s:z,loss:solution.samples[0].lossGrams,quality:solution.quality,yStatus:'omitted: no validated physical-reference S-to-Y conversion bound to this compact control'};
 }
 const results=[];
 try{
@@ -54,5 +54,5 @@ for(const value of results.slice(1)){
  for(const [i,x] of value.s.entries())for(const [j,z] of x.entries())assert.ok(close(z,ref.s[i][j],1e-8),`S orientation sensitivity exceeds ${tolerance*100}% plus floor`);
  for(const [i,row] of value.loss.copperWPerA2.entries())for(const [j,z] of row.entries())assert.ok(close(z,ref.loss.copperWPerA2[i][j],1e-8),`complex loss-Gram sensitivity exceeds ${tolerance*100}% plus floor`);
 }
-writeFileSync(`${folder}/comparison.json`,JSON.stringify({status:'pass',scope:'in-memory compact two-conductor coupon rigid-rotation invariance; physical accuracy unverified',limits:{maxSeconds:seconds,maxMemoryMiB:memoryMiB},results},null,2));
+writeFileSync(`${folder}/comparison.json`,JSON.stringify({status:'pass',scope:'rotated copper/contact coupon with automatic domain and mesh orientation sensitivity; finite dielectric domains may differ; physical accuracy unverified',limits:{maxSeconds:seconds,maxMemoryMiB:memoryMiB},results},null,2));
 }finally{await terminateAnalysisPool();}
