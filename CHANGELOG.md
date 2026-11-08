@@ -713,3 +713,6 @@
 
 - Initial standalone backend release with component resolution, schematic
   extraction, PCB placement, workers and native binaries for supported hosts.
+
+- Build harmonic current seeds with compensated potential differences, certify normalized stored-current KCL, and retain final original mixed KCL/KVL checks.
+- Reuse geometry-only magnetic interval jets in an opportunistic admitted local cache, retaining the uncached path under tight memory budgets.

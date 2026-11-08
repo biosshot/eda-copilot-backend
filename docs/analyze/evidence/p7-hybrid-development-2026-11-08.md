@@ -277,3 +277,9 @@ The captured orientation requests also reveal an applicability limit of this con
 - 1794149233275164400: remote-return still reaches original12s native limit (13.125s wall) after admitted pair indexing improvement. No positive completion or speedup claim.
 - 1794149556132825400: physical reference-swap control refuses ambiguous/missing copper solid ownership in PLANAR_TRACE,1.438s. Electrical case remains open.
 - Full39-case/five-board campaign remains unexecuted by user direction; readiness is not yet achieved.
+
+### Harmonic seed and geometry-only jet reuse
+
+- 1794150069908409900: exact production via harmonic seed passes0.953s, including independent stored-current KCL and retained-contact values. Initial attempt1794149965438894500 found empty incidence rows; corrected to exact zero as before.
+- 1794149968244305300: cached/uncached interval actions and bounds match bitwise in0.328s. 1794150072716124100: tight-budget uncached fallback matches admitted cached action in0.297s. Cache is enabled only when the unchanged budget admits storage.
+- Two-via trace remains open:1794150071063818200 identifies missing owner at slab2 triangle512. No full acceptance run started.

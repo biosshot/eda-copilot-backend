@@ -424,15 +424,19 @@ fn complete_harmonic_current(
     start: Instant,
     wall: Duration,
 ) -> Result<(Vec<f64>, f64)> {
-    // Reuse the admitted factor, never perturb retained physical contacts.
-    // Accumulate corrections before rounding back to the actual stored F64
-    // voltage. Acceptance is always measured on that stored voltage, not an
-    // unrepresented compensated state.
+    // The current and voltage bases are independent mixed coordinates. Keep
+    // the harmonic correction in a compensated temporary, then certify the
+    // divergence of the actual stored F64 current basis. The rounded voltage
+    // is only an initial field basis; original mixed KCL/KVL still checks its
+    // relationship to the current before any response can be admitted.
     let mut accumulated: Vec<_> = voltage.iter().copied().map(Sum::from).collect();
     let mut history = Vec::with_capacity(9);
     for iteration in 0..=8 {
         check_time(start, wall)?;
-        let mut q = conductive(cells, voltage);
+        let mut q:Vec<_>=cells.iter().map(|c| {
+            let Some((&(anchor,_),rest))=c.terms.split_first() else {return 0.;};
+            rest.iter().fold(Sum::from(0.),|s,&(i,a)|s.add(accumulated[i].sub(accumulated[anchor]).mul(a))).value()/c.resistance
+        }).collect();
         let reaction = divergence(cells, &q, voltage.len());
         let scale = reaction.iter().map(|v| v.abs()).fold(0., f64::max);
         let residual = reaction.iter().zip(&dc.free_map)
@@ -445,8 +449,12 @@ fn complete_harmonic_current(
                 return Err(error("FOIL_REDUCTION", "independent finite harmonic current required"));
             }
             for v in &mut q { *v /= norm; }
+            let stored_reaction=divergence(cells,&q,voltage.len());
+            let stored_scale=stored_reaction.iter().map(|v|v.abs()).fold(0.,f64::max);
+            let stored_residual=stored_reaction.iter().zip(&dc.free_map).filter(|(_,free)|free.is_some()).map(|(v,_)|v.abs()).fold(0.,f64::max)/stored_scale.max(f64::MIN_POSITIVE);
+            if !stored_residual.is_finite() || stored_residual>RESIDUAL_LIMIT {return Err(error("FOIL_REDUCTION", &format!("normalized harmonic current free residual failed: {stored_residual:e}")));}
             if iteration > 1 { eprintln!("P7_HARMONIC_REFINEMENT iterations={iteration} residual={residual:e}"); }
-            return Ok((q,residual));
+            return Ok((q,stored_residual));
         }
         if iteration == 8 || dc.free == 0 || !residual.is_finite() { break; }
         let rhs: Vec<_> = reaction.into_iter().map(|v| -v).collect();
@@ -2271,6 +2279,35 @@ impl ReducedSpace {
 mod mixed_basis_tests {
     use super::*;
 
+    #[test]
+    fn production_profiled_via_harmonic_seed_has_bounded_original_residual() {
+        use super::super::{board_mesh,mixed_conductor};
+        let start=Instant::now(); let wall=Duration::from_secs(20);
+        let board=crate::import_json(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-board.json")).board.unwrap();
+        // Exact geometry captured at the automatic hybrid native boundary.
+        let request:board_mesh::Request=serde_json::from_str(r#"{"roiMm":[[-0.54,-1.07],[10.54,0.6900000000000001]],"stack":[{"name":"TOP","copper":true,"thicknessM":1e-05,"conductivitySM":58000000,"epsilonR":null},{"name":"substrate","copper":false,"thicknessM":0.0002,"conductivitySM":null,"epsilonR":4},{"name":"BOTTOM","copper":true,"thicknessM":1e-05,"conductivitySM":58000000,"epsilonR":null}],"finishedHolePlatingM":2.5e-05,"barrelConductivitySM":58000000,"airMarginM":0.002,"maxTriangleAreaM2":1e-06,"maxVerticalStepM":0.002,"curveDeviationMm":0.001,"electrodes":[{"name":"foil-terminal-0","sourcePath":"pads[0]","layer":"TOP","upper":false},{"name":"foil-terminal-1","sourcePath":"pads[1]","layer":"BOTTOM","upper":true},{"name":"foil-terminal-2","sourcePath":"pads[2]","layer":"BOTTOM","upper":true},{"name":"foil-terminal-3","sourcePath":"pads[3]","layer":"BOTTOM","upper":true}],"ports":[["foil-terminal-0","foil-terminal-2"],["foil-terminal-1","foil-terminal-3"]],"acceptUnknownFillFreshness":true,"allowInsulatedCopperCuts":false,"minTriangleAngleDeg":0,"airEdgeDivisions":1,"domainPolygonMm":[[-0.54,-1.07],[10.54,-1.07],[10.54,0.6900000000000001],[-0.54,0.6900000000000001]],"cutPlanes":{}}"#).unwrap();
+        let budget=AllocationBudget{max_bytes:512*1024*1024,max_nodes:100_000,max_tetrahedra:200_000};
+        let profile=mixed_conductor::CheckedOperator::HybridPlanarV3.skin_profile(1e6,Some(1e6),request.max_vertical_step_m).unwrap().unwrap().with_thickness_screen([58e6]).unwrap();
+        let board_mesh=board_mesh::build_profiled(&board,&request,budget,wall,None,&[],Some(profile)).unwrap();
+        let map=mixed_conductor::prepare(&board_mesh,&request.electrodes,1e6,budget,wall).unwrap();
+        let mut terms=vec![Vec::new();map.current_count()];for &(i,j,a) in &map.incidence {terms[j].push((i,a));}
+        let cells:Vec<_>=terms.into_iter().zip(&map.resistance_ohm).map(|(t,&r)|Cell::new(t,r)).collect();
+        let contacts=map.electrodes.iter().copied().collect();
+        let result=harmonic(&cells,map.potential_count(),&contacts,Some(&map.potential_components),AllocationBudget{max_bytes:budget.max_bytes/3,..budget},0,start,wall,64,true);
+        match result {
+            Ok((basis,_,dc))=>{
+                assert!(basis.dc_residual<=RESIDUAL_LIMIT);
+                for (j,&node) in basis.retained.iter().enumerate() {for (k,v) in basis.voltage.iter().enumerate() {assert_eq!(v[node],if j==k {1.} else {0.});}}
+                for q in &basis.current {
+                    let reaction=divergence(&cells,q,map.potential_count());
+                    let scale=reaction.iter().map(|v|v.abs()).fold(0.,f64::max);
+                    let free=reaction.iter().zip(&dc.free_map).filter(|(_,f)|f.is_some()).map(|(v,_)|v.abs()).fold(0.,f64::max);
+                    assert!(free<=RESIDUAL_LIMIT*scale.max(f64::MIN_POSITIVE));
+                }
+            },
+            Err(e)=>panic!("profiled via harmonic seed: {e}")
+        };
+    }
     #[test]
     fn harmonic_refinement_preserves_contacts_on_high_contrast_series_network() {
         let resistance=[1.,1e-6,1e-6,1.];

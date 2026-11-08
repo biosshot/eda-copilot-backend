@@ -303,6 +303,23 @@ struct InteractionCounts {
     near_by_depth: Vec<usize>,
     exact_by_depth: Vec<usize>,
 }
+// A cached jet is entirely geometry/order-dependent. The compact caller
+// admits its bounded storage separately; ordinary operators keep it disabled.
+struct PreparedJet {
+    derivatives: Vec<Interval>,
+    tail: Interval,
+    source_scale: Interval,
+    target_scale: Interval,
+}
+type JetSlot = Option<((usize,usize,usize),std::rc::Rc<PreparedJet>)>;
+enum JetAccess { Inline(PreparedJet), Shared(std::rc::Rc<PreparedJet>) }
+impl std::ops::Deref for JetAccess {
+    type Target=PreparedJet;
+    fn deref(&self)->&PreparedJet {match self {Self::Inline(v)=>v,Self::Shared(v)=>v}}
+}
+pub(super) const COMPACT_JET_CACHE_BYTES:usize=2*1024*1024;
+const COMPACT_JET_SLOTS:usize=256;
+
 pub(super) struct Operator {
     nodes: Vec<Node>,
     permutation: Vec<usize>,
@@ -319,6 +336,7 @@ pub(super) struct Operator {
     coupling_prefix: Vec<usize>,
     shift_prefix: [Vec<usize>; 3],
     geometry_cache: std::cell::RefCell<Option<adaptive::Geometry>>,
+    prepared_jets: std::cell::RefCell<Vec<JetSlot>>,
     adaptive_cover_cache_bytes: usize,
     pub planned_bytes: usize,
     pub exact_pairs: usize,
@@ -493,6 +511,7 @@ impl Operator {
             coupling_prefix,
             shift_prefix,
             geometry_cache: std::cell::RefCell::new(None),
+            prepared_jets: std::cell::RefCell::new(Vec::new()),
             adaptive_cover_cache_bytes,
             planned_bytes: work.checked_add(adaptive_cover_cache_bytes.saturating_mul(2))
                 .ok_or_else(|| error("MEMORY_LIMIT", "adaptive cover cache plan overflow"))?,
@@ -992,6 +1011,47 @@ impl Operator {
             Interval::point(self.nodes[a].radius).div(r),
             Interval::point(self.nodes[b].radius).div(r),
         ))
+    }
+    /// Caller must pre-admit COMPACT_JET_CACHE_BYTES before enabling this.
+    pub(super) fn enable_compact_jet_cache(&mut self) -> Result<()> {
+        // Include each Vec payload, Rc header, inline slot/key, and one
+        // in-flight replacement while an evicted value can still be live.
+        let entry=self.powers.list.len().checked_mul(std::mem::size_of::<Interval>())
+            .and_then(|v|v.checked_add(std::mem::size_of::<PreparedJet>()))
+            .and_then(|v|v.checked_add(2*std::mem::size_of::<usize>()))
+            .ok_or_else(||error("MEMORY_LIMIT","local jet entry overflow"))?;
+        let worst=entry.checked_add(std::mem::size_of::<JetSlot>())
+            .and_then(|v|v.checked_mul(COMPACT_JET_SLOTS))
+            .and_then(|v|v.checked_add(entry))
+            .ok_or_else(||error("MEMORY_LIMIT","local jet cache plan overflow"))?;
+        if worst>COMPACT_JET_CACHE_BYTES {return Err(error("MEMORY_LIMIT","local jet cache exceeds admitted reservation"));}
+        let mut cache=self.prepared_jets.borrow_mut();
+        cache.try_reserve_exact(COMPACT_JET_SLOTS).map_err(|_|error("MEMORY_LIMIT","local jet cache allocation failed"))?;
+        cache.resize_with(COMPACT_JET_SLOTS,||None);
+        Ok(())
+    }
+    #[cfg(test)]
+    pub(super) fn disable_compact_jet_cache(&mut self) {self.prepared_jets.get_mut().clear();}
+    #[cfg(test)]
+    pub(super) fn compact_jet_cache_entries(&self)->usize {self.prepared_jets.borrow().iter().filter(|v|v.is_some()).count()}
+    #[cfg(test)]
+    pub(super) fn compact_jet_cache_enabled(&self)->bool {!self.prepared_jets.borrow().is_empty()}
+    fn prepared_jet(&self,a:usize,b:usize,p:usize)->Result<JetAccess> {
+        check_deadline(self.start,self.wall)?;
+        let key=(a,b,p);
+        let index={let cache=self.prepared_jets.borrow();if cache.is_empty(){None}else{Some((a.wrapping_mul(0x9e3779b1)^b.wrapping_mul(0x85ebca6b)^p.wrapping_mul(0xc2b2ae35))%cache.len())}};
+        if let Some(i)=index {if let Some((old,value))=&self.prepared_jets.borrow()[i] {if *old==key{return Ok(JetAccess::Shared(value.clone()));}}}
+        let (mut derivatives,tail,source_scale,target_scale)=self.jet_required(a,b,p)?;
+        let (r,_)=self.separation(a,b);
+        for (v,&alpha) in derivatives.iter_mut().zip(&self.powers.list) {
+            *v=v.mul(Interval::point((factorial(alpha[0])*factorial(alpha[1])*factorial(alpha[2])) as f64)).div(r);
+        }
+        let value=PreparedJet{derivatives,tail,source_scale,target_scale};
+        if let Some(i)=index {
+            let value=std::rc::Rc::new(value);
+            self.prepared_jets.borrow_mut()[i]=Some((key,value.clone()));
+            Ok(JetAccess::Shared(value))
+        } else {Ok(JetAccess::Inline(value))}
     }
     pub fn evidence(&self) -> serde_json::Value {
         serde_json::json!({"policy":"certified-adaptive-harmonic-v1","method":"symmetric adaptive Newton expansion","representationVersion":3,"harmonicBasis":"laplace-quotient-z01","expansionOrder":self.powers.order,"minimumExpansionOrder":0,"momentCoefficientCount":self.harmonic.list.len(),"m2lCouplings":self.couplings.len(),"shiftStencilTerms":self.shifts.iter().map(Vec::len).sum::<usize>(),"axisSerial":true,"leafTetrahedra":self.leaf,"geometrySignature":self.signature,"treeSignature":self.signature,"treeNodes":self.nodes.len(),"separationRatioMaximum":1.,"admissibility":"strict-disjoint-balls-certified-tail","interactionStorage":"immutable-adaptive-dual-tree-v1","interactionLevels":self.traversal_levels,"interactionStackSlots":self.traversal_capacity,"interactionReplaysPerAction":3,"traversalStorageBytes":self.traversal_capacity*std::mem::size_of::<Pair>()+6*self.traversal_levels*std::mem::size_of::<usize>()+512,"plannedBytes":self.planned_bytes,"scope":"common-batch goal-controlled far Newton error plus arithmetic enclosure; original near/self quadrature, spatial/physical accuracy unverified"})

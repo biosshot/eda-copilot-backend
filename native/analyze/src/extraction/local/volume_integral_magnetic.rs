@@ -1353,9 +1353,16 @@ impl CompactLocalHierarchy {
         let parallel_bytes=if workers>1 { BoundedPairs::parallel_bytes_for_slots(workers,axial,worker_slots)?.checked_add(16384).ok_or_else(||error("MEMORY_LIMIT","local parallel plan overflow"))? } else { 0 };
         let axial_bytes=if axial {slots.checked_mul(AXIAL_CELL_EXTRA_BYTES).and_then(|v|v.checked_add(64*1024)).ok_or_else(||error("MEMORY_LIMIT","local axial plan overflow"))?} else {0};
         let base = pair_bytes.checked_add(scalar_bytes).and_then(|v|v.checked_add(space_bytes)).and_then(|v|v.checked_add(parallel_bytes)).and_then(|v|v.checked_add(axial_bytes)).and_then(|v|v.checked_add(2*1024*1024)).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy base overflow"))?;
-        let tree = hierarchical_magnetic::Operator::new(&tetra, 12, 1, 0.2, base, budget, start, wall)?;
-        let planned_bytes = base.checked_add(tree.planned_bytes).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy plan overflow"))?;
+        let mut tree = hierarchical_magnetic::Operator::new(&tetra, 12, 1, 0.2, base, budget, start, wall)?;
+        let mut planned_bytes = base.checked_add(tree.planned_bytes).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy plan overflow"))?;
         budget.check(planned_bytes)?;
+        // Optional acceleration must never narrow the previously admitted
+        // budget envelope: retain the original uncached action when full.
+        if let Some(with_cache)=planned_bytes.checked_add(hierarchical_magnetic::COMPACT_JET_CACHE_BYTES) {
+            if with_cache<=budget.max_bytes && tree.enable_compact_jet_cache().is_ok() {
+                planned_bytes=with_cache;
+            }
+        }
         let mut pair = BoundedPairs::new_with_scalar(tetra, 12, slots, scalar_slots, start, wall)?;
         pair.axial=axial;
         pair.checked_self = true;
@@ -1385,6 +1392,44 @@ impl CompactLocalHierarchy {
 #[cfg(test)]
 mod compact_reuse_tests {
     use super::*;
+    #[test]
+    fn local_prepared_jet_cache_preserves_interval_action_bits() {
+        let tetra=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];
+        let geometry:Vec<_>=(0..4).map(|i|tetra.map(|p|[p[0]+i as f64*0.01,p[1],p[2]])).collect();
+        let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:1000,max_tetrahedra:1000};
+        let start=Instant::now();let wall=Duration::from_secs(20);
+        let mut plain=CompactLocalHierarchy::new_with_config(geometry.clone(),budget,start,wall,1,false).unwrap();
+        plain.tree.disable_compact_jet_cache();
+        let cached=CompactLocalHierarchy::new_with_config(geometry,budget,start,wall,1,false).unwrap();
+        let columns=vec![vec![1.,-2.,3., -0.5,1.,0., 0.3,-0.4,0.1, -1.,0.2,0.5],vec![-0.2,0.3,-0.5, 1.,0.1,0.4, -0.1,0.2,-0.9, 0.7,-0.2,0.1]];
+        let goals=[1e-20,1e-20];
+        let (a,ab,_)=plain.actions(&columns,&goals).unwrap();
+        let (b,bb,_)=cached.actions(&columns,&goals).unwrap();
+        for (x,y) in a.iter().flatten().zip(b.iter().flatten()) {assert_eq!(x.to_bits(),y.to_bits());}
+        for (x,y) in ab.iter().flatten().zip(bb.iter().flatten()) {assert_eq!(x.to_bits(),y.to_bits());}
+        assert!(cached.tree.compact_jet_cache_entries()>0,"control must exercise far jets");
+        let (c,cb,_)=cached.actions(&columns,&goals).unwrap();
+        for (x,y) in b.iter().flatten().zip(c.iter().flatten()) {assert_eq!(x.to_bits(),y.to_bits());}
+        for (x,y) in bb.iter().flatten().zip(cb.iter().flatten()) {assert_eq!(x.to_bits(),y.to_bits());}
+        let limited=AllocationBudget{max_bytes:hierarchical_magnetic::COMPACT_JET_CACHE_BYTES-1,..budget};
+        assert!(CompactLocalHierarchy::new_with_config(vec![tetra],limited,start,wall,1,false).is_err());
+    }
+    #[test]
+    fn tight_local_budget_falls_back_to_identical_uncached_action() {
+        let tetra=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];
+        let start=Instant::now();let wall=Duration::from_secs(20);
+        let template=AllocationBudget{max_bytes:0,max_nodes:1000,max_tetrahedra:1000};
+        // Find a real admitted working set, not a fabricated accounting value.
+        let tight=(1..=32).find_map(|mib| CompactLocalHierarchy::new_with_config(vec![tetra],AllocationBudget{max_bytes:mib*1024*1024,..template},start,wall,1,false).ok()).expect("bounded baseline must fit");
+        assert!(!tight.tree.compact_jet_cache_enabled(),"first admitted tight budget must use fallback");
+        let roomy=CompactLocalHierarchy::new_with_config(vec![tetra],AllocationBudget{max_bytes:128*1024*1024,..template},start,wall,1,false).unwrap();
+        assert!(roomy.tree.compact_jet_cache_enabled());
+        let columns=vec![vec![1.,-2.,0.5]];
+        let (a,ab,_)=tight.actions(&columns,&[1e-20]).unwrap();
+        let (b,bb,_)=roomy.actions(&columns,&[1e-20]).unwrap();
+        for (x,y) in a.iter().flatten().zip(b.iter().flatten()) {assert_eq!(x.to_bits(),y.to_bits());}
+        for (x,y) in ab.iter().flatten().zip(bb.iter().flatten()) {assert_eq!(x.to_bits(),y.to_bits());}
+    }
     #[test]
     fn admitted_small_pair_table_does_not_recompute_colliding_pairs() {
         let t=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];

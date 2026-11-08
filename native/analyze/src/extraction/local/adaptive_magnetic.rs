@@ -85,9 +85,6 @@ fn required(slot: &mut usize, p: usize) {
         *slot = p;
     }
 }
-fn factorial3(a: [usize; 3]) -> f64 {
-    (factorial(a[0]) * factorial(a[1]) * factorial(a[2])) as f64
-}
 
 // Pure kernels may run concurrently; interval additions retain traversal order.
 struct NearActivity { enabled:bool, submitted:usize, completed:usize, skipped:usize, finished:bool }
@@ -908,14 +905,11 @@ impl<'a> Plan<'a> {
                         }
                     }
                     Decision::Far(p) => {
-                        let (mut derivatives, tail, sa, sb) =
-                            t.jet_required(block.a, block.b, p)?;
-                        let (r, _) = t.separation(block.a, block.b);
-                        for (v, &a) in derivatives.iter_mut().zip(&t.powers.list) {
-                            *v = v.mul(Interval::point(factorial3(a))).div(r);
-                        }
-                        tails[block.a] = tails[block.a].add(tail.mul(tv[block.b]));
-                        tails[block.b] = tails[block.b].add(tail.mul(tv[block.a]));
+                        let jet=t.prepared_jet(block.a,block.b,p)?;
+                        let derivatives=&jet.derivatives;
+                        let (sa,sb)=(jet.source_scale,jet.target_scale);
+                        tails[block.a] = tails[block.a].add(jet.tail.mul(tv[block.b]));
+                        tails[block.b] = tails[block.b].add(jet.tail.mul(tv[block.a]));
                         pa.resize(p + 1, Interval::zero());
                         pb.resize(p + 1, Interval::zero());
                         for d in 0..=p {
