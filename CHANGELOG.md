@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Integrate shared-edge prism interactions with an exact barycentric/radial reduction to 2D quadrature, and shared-vertex interactions to 3D. Keep the 1e-8 estimator and independent tetrahedral/outer-rule controls; no full-board speed or accuracy acceptance is claimed.
+
 - Validate adaptive mixed-field uncertainty under an explicit compact certificate namespace, preserving matched power, ownership and residual gates; fixed-basis reports cannot claim adaptive evidence.
 
 - Prepare spatial dielectric trace actions with one retained sparse factor instead of an N-port capacitance matrix and N field solutions. Audit free-row residuals on each action; legacy extraction stays on its existing path.

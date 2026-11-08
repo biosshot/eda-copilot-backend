@@ -708,16 +708,21 @@ struct PreparedFactor {
 }
 /// A sparse dielectric factor and trace, without an N-port capacitance matrix
 /// or one field vector per potential coordinate.
-pub struct SpatialFieldAction { solution: Solution }
+pub struct SpatialFieldAction {
+    solution: Solution,
+    calls: std::sync::atomic::AtomicUsize,
+}
 impl SpatialFieldAction {
     pub fn planned_bytes(&self) -> usize { self.solution.plan.planned_simultaneous_bytes }
     pub fn max_epsilon_r(&self) -> f64 { self.solution.max_epsilon_r() }
+    pub fn action_count(&self) -> usize { self.calls.load(std::sync::atomic::Ordering::Relaxed) }
     pub fn apply(&self, voltage: &[f64]) -> Result<Vec<f64>> {
         let s=&self.solution;
         let g=Guard { started:s.started, budget:s.budget }; g.time()?;
         if voltage.len()!=s.source_ids.len() || voltage.iter().any(|v|!v.is_finite()) {
             return Err(error("FIELD_TRACE", "complete finite trace voltage required"));
         }
+        self.calls.fetch_add(1,std::sync::atomic::Ordering::Relaxed);
         let f=s.prepared.as_ref().ok_or_else(||error("FIELD_MATRIX","missing prepared field factor"))?;
         let nodes=s.matrix.ptr.len()-1;
         let mut phi=vec![0.;nodes];
@@ -764,7 +769,7 @@ pub fn extract_traced_spatial(input: &Input, trace: &PotentialTrace, spatial: &[
     extract_impl(input, Some(trace), spatial, true, false, budget)
 }
 pub fn prepare_traced_spatial_action(input: &Input, trace: &PotentialTrace, spatial: &[SpatialDielectric], budget: Budget) -> Result<SpatialFieldAction> {
-    Ok(SpatialFieldAction { solution:extract_impl(input,Some(trace),spatial,true,true,budget)? })
+    Ok(SpatialFieldAction { solution:extract_impl(input,Some(trace),spatial,true,true,budget)?, calls:std::sync::atomic::AtomicUsize::new(0) })
 }
 fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[SpatialDielectric], spatial_route: bool, action_only: bool, budget: Budget) -> Result<Solution> {
     let guard = Guard {

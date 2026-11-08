@@ -158,38 +158,112 @@ fn rectangle_pair(a: &Prism,b: &Prism,order: usize,start: Instant,limit: Duratio
     Ok(Some(cross))
 }
 
-// Shared-edge Duffy transform. Coordinates u,v are distances from the
-// common edge; q is split on either side of t. The singular corner
-// (u,v,|q-t|)=0 is partitioned into three largest-coordinate sectors.
+// Shared-edge barycentric difference coordinates: integrate the common
+// edge position and the remaining radial coordinate before 2D quadrature.
 fn edge_integral(a:&Prism,b:&Prism,order:usize,start:Instant,limit:Duration) -> Result<Option<f64>> {
-    if a.z_m != b.z_m { return Ok(None); }
     let common:Vec<_>=a.triangle_m.iter().copied().filter(|p|b.triangle_m.contains(p)).collect();
-    if common.len()!=2 { return Ok(None); }
+    if common.len()!=2 || triangle_interior_overlap(a.triangle_m,b.triangle_m) { return Ok(None); }
     let ca=*a.triangle_m.iter().find(|p|!common.contains(p)).unwrap();
     let cb=*b.triangle_m.iter().find(|p|!common.contains(p)).unwrap();
-    let q=GaussRule::new(order)?; let h=a.z_m[1]-a.z_m[0];
-    let area_a=a.volume_m3/h; let area_b=b.volume_m3/h; let mut total=0.;
-    for (&t,&wt) in q.nodes().iter().zip(q.weights()) { for (&r0,&wr) in q.nodes().iter().zip(q.weights()) {
+    let q=GaussRule::new(order)?;let ha=a.z_m[1]-a.z_m[0];let hb=b.z_m[1]-b.z_m[0];
+    let e=[common[1][0]-common[0][0],common[1][1]-common[0][1]];
+    let p=[ca[0]-common[0][0],ca[1]-common[0][1]];
+    let z=[cb[0]-common[0][0],cb[1]-common[0][1]];
+    let za=[0.,ha];let zb=[b.z_m[0]-a.z_m[0],b.z_m[1]-a.z_m[0]];
+    let mut total=super::accurate::Sum::default();
+    // In barycentric coordinates, integrate the common-edge position:
+    // its available length is 1-max(v,u+d) for d>=0. Split at v=u+d,
+    // scale by r=max(v,u+d), and use A/B symmetry for d<0.
+    for (&x,&wx) in q.nodes().iter().zip(q.weights()) {
         if start.elapsed()>=limit {return Err(error("DEADLINE","shared edge quadrature deadline exceeded"));}
-        let r=r0*r0; let jac=2.*r0*r*r;
-        for (&x,&wx) in q.nodes().iter().zip(q.weights()) { for (&y,&wy) in q.nodes().iter().zip(q.weights()) {
-            for sector in 0..3 { let (u,v,w)=match sector {0=>(r,r*x,r*y),1=>(r*x,r,r*y),_=>(r*x,r*y,r)};
-                for side in 0..2 { let (qv,qjac)=if side==0 {(t*(1.-w),t)}else{(t+(1.-t)*w,1.-t)};
-                    let p=std::array::from_fn::<_,2,_>(|k|(1.-u)*((1.-t)*common[0][k]+t*common[1][k])+u*ca[k]);
-                    let z=std::array::from_fn::<_,2,_>(|k|(1.-v)*((1.-qv)*common[0][k]+qv*common[1][k])+v*cb[k]);
-                    let rho=(p[0]-z[0]).hypot(p[1]-z[1]);
-                    total+=wt*wr*wx*wy*jac*qjac*(1.-u)*(1.-v)*axial_magnetic::axial_kernel(rho,[0.,h],[0.,h])?;
-                }
+        for (&y,&wy) in q.nodes().iter().zip(q.weights()) {
+            for (p,z) in [(p,z),(z,p)] {
+                let direction=[(1.-x)*e[0]+x*p[0],(1.-x)*e[1]+x*p[1]];
+                let first=(direction[0]-y*z[0]).hypot(direction[1]-y*z[1]);
+                let second=(y*direction[0]-z[0]).hypot(y*direction[1]-z[1]);
+                let value=radial_edge_axial(first,za,zb)?+y*radial_edge_axial(second,za,zb)?;
+                total=total.add(super::accurate::Sum::from(wx*wy*value));
             }
-        }}
-    }}
-    let value=4.*area_a*area_b*total;
+        }
+    }
+    let value=4.*(a.volume_m3/ha)*(b.volume_m3/hb)*total.value();
     if !value.is_finite() || value<=0. {return Err(error("PLANAR_RANGE","invalid shared edge integral"));} Ok(Some(value))
 }
 
 // Analytic z/radial integration avoids resolving thin copper thickness with
 // the outer z rule. If cancellation invalidates this primitive, use the
 // independent finite-prism kernel; neither route relaxes the error threshold.
+// Two triangles sharing only one vertex: split the radial (u,v) square
+// into u>=v and v>=u, then u=r,v=r*s (or its transpose). The complete
+// XY Jacobian is 4*A*B*r^3*s. Both r and z are integrated analytically.
+fn radial_cubic_axial(distance:f64,a:[f64;2],b:[f64;2])->Result<f64> {
+    if !distance.is_finite() || distance<=0. {return Err(error("AXIAL_INPUT","positive radial distance required"));}
+    // Integration by parts: int_0^1 r^3 F(s,r*d) dr =
+    // (s*asinh(s/d)-hypot(s,d) + int_0^1 r^3*hypot(s,r*d)dr)/4.
+    // Factor the latter primitive through hypot(s,d)-abs(s) to avoid
+    // subtracting nearly equal fifth powers.
+    let primitive=|s:f64| {
+        let x=s.abs();let h=x.hypot(distance);let denominator=h+x;
+        let t=x/denominator;let u=(distance/denominator).powi(2);
+        let moment=denominator*(t.powi(3)+(5./3.)*t*t*u+t*u*u+u.powi(3)/5.);
+        (s*(s/distance).asinh()-h+moment)/4.
+    };
+    let terms=[primitive(a[1]-b[0]),primitive(a[0]-b[1]),-primitive(a[1]-b[1]),-primitive(a[0]-b[0])];
+    let sum=terms.iter().fold(super::accurate::Sum::default(),|s,&v|s.add(super::accurate::Sum::from(v))).value();
+    let scale=terms.iter().map(|v|v.abs()).sum::<f64>();
+    if !sum.is_finite() || sum<=0. || sum<=1e-10*scale {return Err(error("AXIAL_UNRESOLVED","radial endpoint cancellation"));}
+    Ok(sum)
+}
+// Integral_0^1 r^2(1-r)*K_z(r*d) dr. Integration by parts reduces it
+// to the second/third moments of hypot(s,r*d), with stable small-d series.
+fn radial_edge_axial(distance:f64,a:[f64;2],b:[f64;2])->Result<f64> {
+    if !distance.is_finite() || distance<=0. {return Err(error("AXIAL_INPUT","positive edge radial distance required"));}
+    let primitive=|s:f64| {
+        let x=s.abs();let h=x.hypot(distance);let denominator=h+x;
+        let t=x/denominator;let u=(distance/denominator).powi(2);
+        let j3=denominator*(t.powi(3)+(5./3.)*t*t*u+t*u*u+u.powi(3)/5.);
+        let j2=if x==0. {distance/4.} else if distance<0.125*x {
+            let ratio=(distance/x).powi(2);let mut coefficient=1.;let mut power=1.;let mut sum=1./3.;
+            for k in 1..=12 {coefficient*=(1.5-k as f64)/k as f64;power*=ratio;sum+=coefficient*power/(2*k+3) as f64;}
+            x*sum
+        }else{
+            let ratio=x/distance;
+            (h*(2.+ratio*ratio)-x*ratio.powi(3)*(distance/x).asinh())/8.
+        };
+        (s*(s/distance).asinh()-h+4.*j2-3.*j3)/12.
+    };
+    let terms=[primitive(a[1]-b[0]),primitive(a[0]-b[1]),-primitive(a[1]-b[1]),-primitive(a[0]-b[0])];
+    let value=terms.iter().fold(super::accurate::Sum::default(),|s,&v|s.add(super::accurate::Sum::from(v))).value();
+    let scale=terms.iter().map(|v|v.abs()).sum::<f64>();
+    if !value.is_finite() || value<=0. || value<=1e-10*scale {return Err(error("AXIAL_UNRESOLVED","edge radial endpoint cancellation"));}
+    Ok(value)
+}
+fn vertex_integral(a:&Prism,b:&Prism,order:usize,start:Instant,limit:Duration)->Result<Option<f64>> {
+    let common:Vec<_>=a.triangle_m.iter().copied().filter(|p|b.triangle_m.contains(p)).collect();
+    if common.len()!=1 || triangle_interior_overlap(a.triangle_m,b.triangle_m) {return Ok(None);}
+    let c=common[0];
+    let edges=|p:&Prism|p.triangle_m.iter().filter(|&&v|v!=c).map(|v|[v[0]-c[0],v[1]-c[1]]).collect::<Vec<_>>();
+    let ea=edges(a);let eb=edges(b);let rule=GaussRule::new(order)?;
+    let area_a=a.volume_m3/(a.z_m[1]-a.z_m[0]);let area_b=b.volume_m3/(b.z_m[1]-b.z_m[0]);
+    let za=[0.,a.z_m[1]-a.z_m[0]];let zb=[b.z_m[0]-a.z_m[0],b.z_m[1]-a.z_m[0]];
+    let mut total=super::accurate::Sum::default();
+    for sector in 0..2 {for (&s,&ws) in rule.nodes().iter().zip(rule.weights()) {
+            for (&u,&wu) in rule.nodes().iter().zip(rule.weights()) {
+                if start.elapsed()>=limit {return Err(error("DEADLINE","shared vertex quadrature deadline exceeded"));}
+                let da=[(1.-u)*ea[0][0]+u*ea[1][0],(1.-u)*ea[0][1]+u*ea[1][1]];
+                for (&v,&wv) in rule.nodes().iter().zip(rule.weights()) {
+                    let db=[(1.-v)*eb[0][0]+v*eb[1][0],(1.-v)*eb[0][1]+v*eb[1][1]];
+                    let delta=if sector==0 {[da[0]-s*db[0],da[1]-s*db[1]]} else {[s*da[0]-db[0],s*da[1]-db[1]]};
+                    let axial=radial_cubic_axial(delta[0].hypot(delta[1]),za,zb)?;
+                    total=total.add(super::accurate::Sum::from(ws*wu*wv*s*axial));
+                }
+            }
+    }}
+    let value=4.*area_a*area_b*total.value();
+    if !value.is_finite() || value<=0. {return Err(error("PLANAR_RANGE","invalid shared vertex integral"));}
+    Ok(Some(value))
+}
+
 pub(super) fn pair_integral(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Duration) -> Result<(f64,usize,f64)> {
     let canonical=|mut t:[[f64;2];3]|{t.sort_by(|a,b|a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));t};
     if canonical(a.triangle_m)==canonical(b.triangle_m) {
@@ -221,6 +295,16 @@ pub(super) fn pair_integral(a: &Prism, b: &Prism, order: usize, start: Instant, 
             previous=next;
         }
         return Err(error("PLANAR_UNRESOLVED","shared edge Duffy quadrature did not converge"));
+    }
+    if let Some(mut previous)=vertex_integral(a,b,order,start,limit)? {
+        let mut n=order;
+        while n<64 {
+            n+=4;let next=vertex_integral(a,b,n,start,limit)?.ok_or_else(||error("PLANAR_RANGE","vertex classification changed"))?;
+            let relative=(next-previous).abs()/next.abs();
+            if relative<=1e-8 {return Ok((next,n,relative));}
+            previous=next;
+        }
+        return Err(error("PLANAR_UNRESOLVED","shared vertex Duffy quadrature did not converge"));
     }
     for axial in [true, false] {
         let evaluate = |n| -> Result<f64> { let q=GaussRule::new(n)?; if axial { axial_magnetic::constant_pair_guarded(a,b,&q,start,limit) } else { prism::volume_integral_guarded(a,b,&q,start,limit) } };
@@ -369,6 +453,64 @@ mod tests {
         }}
         println!("aligned={x:e} tetra={reference:e}");
         assert!((x-reference).abs()<1e-5*reference);
+    }
+
+    #[test]
+    fn cubic_radial_primitive_matches_independent_outer_rule() {
+        let q=GaussRule::new(64).unwrap();
+        for distance in [0.1,1.,10.] {for b in [[0.,0.035],[0.075,0.125]] {
+            let a=[0.,0.035];let exact=radial_cubic_axial(distance,a,b).unwrap();
+            let reference=q.nodes().iter().zip(q.weights()).map(|(&r,&w)|w*r.powi(3)*axial_magnetic::axial_kernel(r*distance,a,b).unwrap()).sum::<f64>();
+            assert!((exact-reference).abs()<1e-8*reference,"{distance} {b:?}: {exact:e} {reference:e}");
+            let edge=radial_edge_axial(distance,a,b).unwrap();
+            // r=t^2 resolves the endpoint logarithm in this independent
+            // numerical reference; confirm its own order sensitivity first.
+            let outer=|rule:&GaussRule|rule.nodes().iter().zip(rule.weights()).map(|(&t,&w)|{
+                let r=t*t;2.*t*w*r*r*(1.-r)*axial_magnetic::axial_kernel(r*distance,a,b).unwrap()
+            }).sum::<f64>();
+            let edge_reference=outer(&q);
+            assert!((outer(&GaussRule::new(32).unwrap())-edge_reference).abs()<1e-9*edge_reference);
+            assert!((edge-edge_reference).abs()<1e-8*edge_reference,"edge {distance} {b:?}: {edge:e} {edge_reference:e}");
+        }}
+    }
+
+    #[test]
+    fn skinny_vertex_pair_matches_high_order_axial_rule() {
+        let a=Prism::new("a".into(),[[0.,0.],[0.2,0.],[0.,0.1]],[0.,0.01]).unwrap();
+        let b=Prism::new("b".into(),[[0.2,0.],[4.85,0.05],[0.2,0.1]],[0.,0.01]).unwrap();
+        let start=Instant::now();let wall=Duration::from_secs(30);
+        let (value,order,error)=pair_integral(&a,&b,8,start,wall).unwrap();
+        let reference=axial_magnetic::constant_pair_guarded(&a,&b,&GaussRule::new(56).unwrap(),start,wall).unwrap();
+        let reverse=pair_integral(&b,&a,8,start,wall).unwrap().0;
+        println!("vertex order={order} estimator={error:e} relative={:e}",(value-reference).abs()/reference);
+        assert!((value-reference).abs()<1e-7*reference);
+        assert!((value-reverse).abs()<1e-8*value);
+    }
+
+    #[test]
+    fn shared_vertex_pair_matches_tetra_reference() {
+        use super::super::polyhedron::{self,PointPotential};
+        let a=Prism::new("a".into(),[[0.,0.],[1.,0.],[0.,1.]],[0.,0.035]).unwrap();
+        let b=Prism::new("b".into(),[[0.,0.],[-1.,0.],[0.,-0.5]],[0.,0.035]).unwrap();
+        let start=Instant::now();let wall=Duration::from_secs(30);
+        let value=pair_integral(&a,&b,8,start,wall).unwrap().0;
+        let mut reference=0.;
+        for ta in prism_tets(&a){for tb in prism_tets(&b){
+            assert!(start.elapsed()<wall);
+            reference+=polyhedron::tetra_integral_adaptive(ta,&PointPotential::tetrahedron(tb).unwrap(),16,1e-10).unwrap();
+        }}
+        assert!((value-reference).abs()<1e-5*reference);
+    }
+
+    #[test]
+    fn skinny_shared_edge_pair_retains_gate_and_reciprocity() {
+        let a=Prism::new("a".into(),[[0.2,0.1],[0.,0.1],[0.2,0.]],[0.,0.01]).unwrap();
+        let b=Prism::new("b".into(),[[0.2,0.],[4.85,0.05],[0.2,0.1]],[0.,0.01]).unwrap();
+        let start=Instant::now();let wall=Duration::from_secs(30);
+        let (v,n,e)=pair_integral(&a,&b,8,start,wall).unwrap();
+        let reverse=pair_integral(&b,&a,8,start,wall).unwrap().0;
+        println!("skinny edge order={n} estimator={e:e}");
+        assert!(e<=1e-8 && (v-reverse).abs()<=1e-8*v);
     }
 
     #[test]

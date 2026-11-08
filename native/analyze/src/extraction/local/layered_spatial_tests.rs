@@ -23,6 +23,7 @@ fn prepared_spatial_action_matches_capacitance_and_preserves_gauge() {
     assert_eq!(action.apply(&[0.,0.]).unwrap(),vec![0.,0.]);
     assert!(action.apply(&[1.]).is_err());
     assert!(action.apply(&[f64::NAN,0.]).is_err());
+    assert_eq!(action.action_count(),5);
     assert!(prepare_traced_spatial_action(&input,&trace,&[region()],Budget{max_wall:Duration::ZERO,..budget()}).is_err());
 }
 
