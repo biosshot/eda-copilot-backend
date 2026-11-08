@@ -2018,3 +2018,7 @@ mod aligned_pad_orientation_tests {
 #[cfg(test)]
 #[path = "hybrid_connector_test.rs"]
 mod hybrid_connector_test;
+
+#[cfg(test)]
+#[path = "hybrid_ground_chain_test.rs"]
+mod hybrid_ground_chain_test;
