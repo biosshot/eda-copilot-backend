@@ -25,6 +25,40 @@ pub struct FarIntegral {
 }
 
 impl Moments {
+    /// Exact degree-four polynomial moments of one finite tetrahedron.
+    /// Positive Duffy weights integrate degrees <=6/5/4 in u/v/w, so a
+    /// four-point rule in each coordinate is sufficient; no source sampling
+    /// approximation is introduced into the existing geometric tail bound.
+    pub fn tetrahedron(vertices: [[f64;3];4]) -> Result<Self> {
+        super::polyhedron::PointPotential::tetrahedron(vertices)?;
+        let edges: [[f64;3];3]=std::array::from_fn(|i|std::array::from_fn(|d|vertices[i+1][d]-vertices[0][d]));
+        let cross: [f64;3]=std::array::from_fn(|d| {
+            let i=(d+1)%3;let j=(d+2)%3;
+            super::accurate::Sum::from(edges[1][i]).mul(edges[2][j]).sub(super::accurate::Sum::from(edges[1][j]).mul(edges[2][i])).value()
+        });
+        let volume=edges[0].iter().zip(cross).fold(super::accurate::Sum::default(),|s,(&x,y)|s.add(super::accurate::Sum::from(x).mul(y))).value().abs()/6.;
+        let center=std::array::from_fn(|d|vertices[0][d]+vertices.iter().skip(1).map(|p|p[d]-vertices[0][d]).sum::<f64>()/4.);
+        let mut out=Self{center_m:center,radius_m:0.,volume_m3:volume,second:[[0.;3];3],third:[[[0.;3];3];3],fourth:[[[[0.;3];3];3];3]};
+        for p in vertices {out.radius_m=out.radius_m.max((p[0]-center[0]).hypot(p[1]-center[1]).hypot(p[2]-center[2]));}
+        out.radius_m*=1.+8.*f64::EPSILON;
+        let q=GaussRule::new(4)?;
+        for (&u,&wu) in q.nodes().iter().zip(q.weights()) {for (&v,&wv) in q.nodes().iter().zip(q.weights()) {for (&w,&ww) in q.nodes().iter().zip(q.weights()) {
+            let bary=[1.-u,u*(1.-v),u*v*(1.-w),u*v*w];
+            let p: [f64;3]=std::array::from_fn(|d|(0..4).map(|i|bary[i]*(vertices[i][d]-center[d])).sum());
+            let weight=6.*wu*wv*ww*u*u*v;
+            for i in 0..3 {for j in 0..3 {
+                out.second[i][j]+=weight*p[i]*p[j];
+                for k in 0..3 {out.third[i][j][k]+=weight*p[i]*p[j]*p[k];
+                    for l in 0..3 {out.fourth[i][j][k][l]+=weight*p[i]*p[j]*p[k]*p[l];}
+                }
+            }}
+        }}}
+        if !volume.is_finite() || volume<=0. || !out.radius_m.is_finite() || out.radius_m<=0. ||
+           out.fourth.iter().flatten().flatten().flatten().any(|x|!x.is_finite()) {
+            return Err(error("FAR_INPUT","invalid finite tetra moments"));
+        }
+        Ok(out)
+    }
     pub fn new(prism: &Prism) -> Result<Self> {
         let [a, b, c] = prism.triangle_m;
         let center = [
@@ -164,5 +198,35 @@ impl Moments {
             absolute_remainder_m5: remainder,
             radius_ratio: q,
         })
+    }
+}
+
+#[cfg(test)]
+mod tetra_tests {
+    use super::*;
+    fn unit() -> [[f64;3];4] {[[0.,0.,0.],[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]}
+    #[test]
+    fn tetra_moments_match_exact_simplex_integrals() {
+        let m=Moments::tetrahedron(unit()).unwrap();
+        assert_eq!(m.center_m,[0.25;3]);
+        assert!((m.volume_m3-1./6.).abs()<1e-15);
+        for i in 0..3 {
+            assert!((m.second[i][i]-3./80.).abs()<1e-14);
+            assert!((m.third[i][i][i]-1./160.).abs()<1e-14);
+            assert!((m.fourth[i][i][i][i]-39./8960.).abs()<1e-14);
+            for j in 0..3 {if i!=j {assert!((m.second[i][j]+1./80.).abs()<1e-14);}}
+        }
+        let mut swapped=unit();swapped.swap(0,1);
+        let other=Moments::tetrahedron(swapped).unwrap();
+        assert!((other.second[0][0]-m.second[0][0]).abs()<1e-14);
+        assert!(Moments::tetrahedron([[0.;3];4]).is_err());
+    }
+    #[test]
+    fn tetra_far_bound_covers_independent_finite_integral() {
+        let a=unit();let b=a.map(|p|[p[0]+10.,p[1],p[2]]);
+        let x=Moments::tetrahedron(a).unwrap().pair(&Moments::tetrahedron(b).unwrap()).unwrap();
+        let source=super::super::polyhedron::PointPotential::tetrahedron(b).unwrap().with_tighter_tetra_tolerance(1e-12).unwrap();
+        let reference=super::super::polyhedron::tetra_integral_adaptive(a,&source,16,1e-10).unwrap();
+        assert!((x.integral_m5-reference).abs()<=x.absolute_remainder_m5);
     }
 }

@@ -95,15 +95,23 @@ impl Plan {
         Self::new_policy(prisms,theta,leaf,budget,false)
     }
     fn new_policy(prisms: &[Prism], theta: f64, leaf: usize, budget: Budget, individual: bool) -> Result<Self> {
-        let started = Instant::now();
-        clock(started, budget)?;
-        if prisms.is_empty() || !(theta > 0. && theta < 1.) || !(1..=64).contains(&leaf) {
-            return Err(error(
-                "NEAR_FAR_INPUT",
-                "nonempty geometry,0<theta<1 and leaf1..64 required",
-            ));
+        let started=Instant::now();
+        memory(product(prisms.len(),std::mem::size_of::<Moments>())?,budget)?;
+        let mut moments=Vec::with_capacity(prisms.len());
+        for prism in prisms {clock(started,budget)?;moments.push(Moments::new(prism)?);}
+        Self::from_moments_policy(moments,theta,leaf,budget,individual,started)
+    }
+    /// Build the same conservative pair partition for any validated physical
+    /// support moments. Geometry ownership and non-overlap remain caller-owned.
+    pub fn from_moments(moments: Vec<Moments>, theta:f64, leaf:usize, budget:Budget)->Result<Self> {
+        Self::from_moments_policy(moments,theta,leaf,budget,true,Instant::now())
+    }
+    fn from_moments_policy(moments:Vec<Moments>,theta:f64,leaf:usize,budget:Budget,individual:bool,started:Instant)->Result<Self> {
+        clock(started,budget)?;
+        if moments.is_empty() || !(theta>0. && theta<1.) || !(1..=64).contains(&leaf) || moments.iter().any(|m|m.center_m.iter().any(|x|!x.is_finite()) || !m.radius_m.is_finite() || m.radius_m<=0. || !m.volume_m3.is_finite() || m.volume_m3<=0.) {
+            return Err(error("NEAR_FAR_INPUT","nonempty finite moments, 0<theta<1 and leaf1..64 required"));
         }
-        let n = prisms.len();
+        let n = moments.len();
         let total = packed(n)?;
         let node_cap = product(n, 2)?;
         if node_cap > budget.max_nodes || total > budget.max_pairs {
@@ -122,11 +130,6 @@ impl Plan {
             )?,
         )?)?;
         memory(bytes, budget)?;
-        let mut moments = Vec::with_capacity(n);
-        for p in prisms {
-            clock(started, budget)?;
-            moments.push(Moments::new(p)?);
-        }
         let mut p = Self {
             moments,
             order: (0..n).collect(),
@@ -609,4 +612,22 @@ impl Operator {
 }
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+#[cfg(test)]
+mod mixed_moment_plan_tests {
+    use super::*;
+    #[test]
+    fn prism_tetra_partition_preserves_pairs_and_far_bound() {
+        let prism=Prism::new("p".into(),[[0.,0.],[1.,0.],[0.,1.]],[0.,1.]).unwrap();
+        let tetra=[[8.,0.,0.],[9.,0.,0.],[8.,1.,0.],[8.,0.,1.]];
+        let moments=vec![Moments::new(&prism).unwrap(),Moments::tetrahedron(tetra).unwrap()];
+        let budget=Budget{max_bytes:4_000_000,max_nodes:32,max_blocks:32,max_pairs:3,max_wall:Duration::from_secs(10)};
+        let plan=Plan::from_moments(moments,0.5,1,budget).unwrap();
+        assert_eq!(plan.near_pairs+plan.far_pairs,3);
+        let mut pairs=Vec::new();for far in [false,true] {plan.visit_pairs(far,|i,j|{pairs.push((i.min(j),i.max(j),far));Ok(())}).unwrap();}
+        pairs.sort_unstable();assert_eq!(pairs.len(),3);assert_eq!(pairs.iter().filter(|p|p.0==0 && p.1==1).count(),1);
+        let far=plan.moments[0].pair(&plan.moments[1]).unwrap();
+        let q=[1.];let direct=super::super::planar_mixed::cross(&prism,tetra,super::super::planar_mixed::Densities{charge:&q,current:&[]},super::super::planar_mixed::Densities{charge:&q,current:&[]},1./(4.*std::f64::consts::PI),12,super::super::AllocationBudget{max_bytes:4_000_000,max_nodes:32,max_tetrahedra:32},Duration::from_secs(10)).unwrap().potential_per_farad[0][0];
+        assert!((far.integral_m5-direct).abs()<=far.absolute_remainder_m5+1e-10*direct.abs());
+    }
 }

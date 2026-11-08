@@ -6,6 +6,8 @@ Implementation in progress under [the accelerated plan](../plans/p7-hybrid-imple
 
 Native test binaries were compiled with `cargo test --manifest-path native/analyze/Cargo.toml --offline --lib --no-run`. Numerical tests run serially under the existing closure supervisor, 1536 MiB tree private cap and 1 GiB commit reserve, using an ignored development wrapper to convert test exit status into supervisor evidence. Times below include supervisor child startup; peaks are 20 ms sampled lower bounds.
 
+Rows without an explicit release label use debug binaries and do not measure production performance. Release builds are separate from numerical budgets; source hashes were unchanged during compilation.
+
 | Control | Result | Supervisor wall | Evidence under `debugging/p7-closure/` |
 |---|---|---|---|
 | Charge P inverse, dependent-mode refusal | pass | 0.188 s | `1794119372808264800` |
@@ -43,6 +45,12 @@ Native test binaries were compiled with `cargo test --manifest-path native/analy
 | Reversed small-tetra observer versus independent three-tetra source partition | pass; relative difference 1.35470036e-16 | 0.172 s | `1794126842014797700` |
 | Compact projected/operator controls after adaptive wiring | pass | 0.219 s | `1794126872232650200` |
 | Imported air/component/FR4, adaptive route | pass | 0.266 s | `1794126873547863400` |
+| Release tetrahedral polynomial moments and independent finite-integral bound | pass | 0.203 s | `1794129209195452400` |
+| Release complete planar primitive suite | nineteen pass | 0.344 s | `1794129210549882500` |
+| Release unified prism/tetra magnetic action and row bounds | pass | 0.172 s | `1794129212056263600` |
+| Release imported via, unified near/far plan | native deadline refusal; no channel | 25.218 s | `1794128258061510700` |
+
+The unified mixed plan retains original finite supports and the existing near kernels; degree-four tetrahedral moments enter the same geometric far remainder as prisms. Pair interactions are shared across training columns. Its partition control passed in debug (`1794127637990320400`, 0.171 s), as did tetra moments (`1794127636585656400`, 0.266 s) and unified actions (`1794127639301473100`, 0.172 s). Both debug (`1794127725717895000`, 25.688 s) and release via attempts remain incomplete at the unchanged native deadline. The plan still expands individual pairs and does not establish scalable block/FMM complexity.
 
 The reversed observer control initially used an unconverged 28-point large-prism observer reference (`1794126358366879500`). Its replacement sums three exact tetrahedral source supports with the same small observer and unchanged 1e-10 adaptive tolerance; the 1e-7 comparison gate is preserved. The via control now retains a 25 s native deadline inside the 30 s supervisor to preserve error context. It still refuses before a complete answer (`1794126360053080300`, 25.672 s, 3136 cached mixed pairs); no complete via performance or physical result is claimed. The adaptive runtime uses sparse dielectric factors and full mixed-coordinate residuals, but its magnetic local/cross interaction cost remains open. No request memory or accuracy gate was increased. The field assembly term cap is converted with checked 12× tetra allowance (36 terms per product prism / 3 tetra per prism), rather than equating unlike counts.
 
