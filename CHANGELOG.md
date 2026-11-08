@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Preserve common physical charge when welding a capacitive copper model to a floating component: intersect the union of source charge and structural-gauge spans, retaining the separate certified global gauge. Add optional same-model DC/AC/transient consistency controls without changing physical-band acceptance.
+- Publish complex matched-drive copper/package loss Grams for adaptive hybrid samples, including interference terms, bounded output storage and matrix wave-power checks. Validate ownership, Hermitian positivity and modal loss projection in the consumer; isolate the extended verification cache policy.
+
 - Carry explicit differential target pairings into joint foil results and publish power-preserving differential/common S observations with physical source-port mapping. Validate driven-column power and passivity; retain original physical-port replay and separate unverified modal loss recovery. Add a bounded real-addon coupled RF DSL/cache smoke control.
 
 - Reserve mixed response/package output before mapping and model allocation, using a separate pre-reserved mesh budget for direct callers. This fixes producer memory evidence exceeding the admitted API budget; consumer validation remains strict.

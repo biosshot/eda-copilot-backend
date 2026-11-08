@@ -81,6 +81,22 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
     return value;
   };
   validate(adaptive());
+  const controlled=adaptive();
+  const timeQuality={relativeResidual:0,maximumLocalErrorRatio:.1,energyBalanceJ:0,energyNormalizationJ:1,maximumAcceptedStepS:.02/256};
+  controlled.modelRegimeAudit={status:'pass',scope:'discrete-model-only',physicalCoverage:'unverified',probeHz:50,
+    dcPortVoltagesV:[[25]],acPortVoltagesV:[{real:[25],imaginary:[0]}],timeDiagnostics:[{relativePeakErrors:[.001,.0005],timeQuality:[timeQuality,timeQuality]}]};
+  const previousRegime=process.env.P7_HYBRID_REGIME_AUDIT;
+  try{
+    process.env.P7_HYBRID_REGIME_AUDIT='1';
+    assert.throws(()=>validate(adaptive()),/requested model regime control/);
+    validate(controlled);
+    for(const change of [
+      (v:AnalysisBoardFoilCheckedReport)=>{v.modelRegimeAudit!.probeHz=101;},
+      (v:AnalysisBoardFoilCheckedReport)=>{v.modelRegimeAudit!.timeDiagnostics[0].relativePeakErrors[1]=.03;},
+      (v:AnalysisBoardFoilCheckedReport)=>{v.modelRegimeAudit!.timeDiagnostics[0].timeQuality[1].energyBalanceJ=.001;},
+      (v:AnalysisBoardFoilCheckedReport)=>{v.modelRegimeAudit!.physicalCoverage='accepted' as any;},
+    ]){const value=structuredClone(controlled);change(value);assert.throws(()=>validate(value),/CHANNEL_FOIL_EVIDENCE/);}
+  }finally{if(previousRegime===undefined)delete process.env.P7_HYBRID_REGIME_AUDIT;else process.env.P7_HYBRID_REGIME_AUDIT=previousRegime;}
   const hybridProblem:BoardFoilProblem={...problem,request:{...problem.request,partitionPolicy:'automatic-hybrid-v1'}};
   const hybrid=()=>{
     const value=adaptive();
@@ -112,6 +128,13 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
     const cache=new LocalModelCache(dir);
     const produceHybrid=(r:AnalysisBoardFoilCheckedRequest)=>{const value=hybrid();value.provenance.maxSeconds=r.budget.maxSeconds;value.provenance.maxMemoryMiB=r.budget.maxMemoryMiB;return value;};
     const cached=cachedBoardFoilReport(cache,'hybrid',hybridProblem,produceHybrid);
+    const regimeBeforeCache=process.env.P7_HYBRID_REGIME_AUDIT;
+    try{
+      process.env.P7_HYBRID_REGIME_AUDIT='1';
+      const audited=cachedBoardFoilReport(cache,'hybrid',hybridProblem,r=>({...produceHybrid(r),modelRegimeAudit:structuredClone(controlled.modelRegimeAudit)}));
+      assert.notEqual(audited.cache?.key,cached.cache?.key);
+      assert.equal(cachedBoardFoilReport(cache,'hybrid',hybridProblem,()=>{throw Error('unexpected audited solve');}).cache?.status,'memory');
+    }finally{if(regimeBeforeCache===undefined)delete process.env.P7_HYBRID_REGIME_AUDIT;else process.env.P7_HYBRID_REGIME_AUDIT=regimeBeforeCache;}
     assert.equal(cachedBoardFoilReport(cache,'hybrid',hybridProblem,()=>{throw Error('unexpected solve');}).cache?.key,cached.cache?.key);
     process.env.P7_COMPACT_PL_THREADS='2';
     assert.notEqual(cachedBoardFoilReport(cache,'hybrid',hybridProblem,produceHybrid).cache?.key,cached.cache?.key);
@@ -464,7 +487,7 @@ test('exact grid cache preserves immutable producer evidence through warm and pr
 });
 
 test('exact foil cache keys the physical request and bounds replay size', () => {
-  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v4');
+  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v5');
   const priorCompactPlanar = process.env.P7_COMPACT_PLANAR;
   const priorFullMixed = process.env.P7_COMPACT_FULL_MIXED;
   const dir = mkdtempSync(join(tmpdir(),'p7-foil-cache-'));

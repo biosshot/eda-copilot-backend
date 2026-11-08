@@ -48,9 +48,11 @@ async function run(){
  assert.equal(solution.provenance.partitionPolicy,'automatic-hybrid-v1');
  assert.ok(solution.provenance.compactOperator.skinHints.added>0);
  assert.ok(solution.portObservations.frequencies.length===2);
+ assert.ok(solution.samples.every((sample:any)=>sample.lossGrams?.copperWPerA2.length===2));
+ if(process.env.P7_HYBRID_REGIME_AUDIT==='1')assert.equal(solution.modelRegimeAudit?.status,'pass');
  assert.equal(solution.frequencyAudit.batch.status,'checked');
  assert.ok(solution.frequencyAudit.adaptiveResponse.points.length>2);
- return {cache:solution.cache.status,key:solution.cache.key,frequenciesHz:solution.frequenciesHz,quality:solution.quality,skinHints:solution.provenance.compactOperator.skinHints};
+ return {cache:solution.cache.status,key:solution.cache.key,frequenciesHz:solution.frequenciesHz,quality:solution.quality,skinHints:solution.provenance.compactOperator.skinHints,lossGrams:solution.samples.map((sample:any)=>({frequencyHz:sample.frequencyHz,...sample.lossGrams})),modelRegimeAudit:solution.modelRegimeAudit};
 }
 if(process.env.P7_SMOKE_MODE==='restart'){
  const restart=await run();assert.equal(restart.cache,'disk');

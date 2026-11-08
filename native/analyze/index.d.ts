@@ -255,17 +255,23 @@ export interface AnalysisMagneticBasisCover extends Omit<AnalysisMagneticCertifi
     maximumMomentDegreeHistogram: number[]; maximumLocalDegreeHistogram: number[];
     m2lScalarContractionsPerAction?: number; shiftStencilApplicationsPerAction?: number;
 }
+export interface AnalysisBoardFoilLossGrams {
+    copperWPerA2: {real:number;imaginary:number}[][];
+    packages: {id:string;powerWPerA2:{real:number;imaginary:number}[][]}[];
+}
 export interface AnalysisBoardFoilCheckedReport {
     status: 'complete';
     coverage: 'unverified';
     representation: 'S';
     operator?: 'compact-planar-homogeneous-prototype' | 'compact-planar-layered-prototype';
+    modelRegimeAudit?: {status:'pass'|'fail';scope:'discrete-model-only';physicalCoverage:'unverified';probeHz:number;dcPortVoltagesV:number[][];acPortVoltagesV:{real:number[];imaginary:number[]}[];timeDiagnostics:{relativePeakErrors:number[];timeQuality:{relativeResidual:number;maximumLocalErrorRatio:number;energyBalanceJ:number;energyNormalizationJ:number;maximumAcceptedStepS:number}[]}[]};
     frequenciesHz: number[];
     referenceOhm: number[];
     ports: [string, string][];
     parameters: { real: number; imaginary: number }[][][];
     samples: {
         frequencyHz: number;
+        lossGrams?: AnalysisBoardFoilLossGrams;
         columns: { input: number; kclRelative: number; kvlRelative: number; kvlUncertaintyRelative?: number; magneticCertificate?: AnalysisMagneticCertificate; compactKvlUncertaintyRelative?: number; compactMagneticCertificate?: { policy: 'compact-mixed-near-far'; nearQuadratureErrorCertified: false }; copperLossW: number; powerBalanceErrorW: number; packages?: { id: string; currentA: { real: number; imaginary: number }; lossW: number }[] }[];
     }[];
     enrichment: {

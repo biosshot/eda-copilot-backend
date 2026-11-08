@@ -1,4 +1,5 @@
 import type { BoardFoilReport } from './types.ts';
+import {projectBoardFoilLossGrams} from './board-foil-loss-grams.ts';
 
 type Complex=Readonly<{real:number;imaginary:number}>;
 export type MixedModePair=Readonly<{positive:string;negative:string;differential:string;common:string}>;
@@ -54,9 +55,17 @@ export function boardFoilMixedMode(report:BoardFoilReport,portNames:readonly str
     throw new Error('CHANNEL_FOIL_MIXED_MODE: materially negative accepted power indicates a non-passive transformed model');
    return {powerW:value<0?0:value,roundingBoundW};
   });
-  return {frequencyHz,parameters:transformed,acceptedPowerW:accepted.map(x=>x.powerW),acceptedPowerRoundingBoundW:accepted.map(x=>x.roundingBoundW)};
+  const grams=report.samples[f]?.lossGrams;
+  const losses=grams&&modes.map((mode,j)=>{
+   const drive=Array.from({length:n},()=>({real:0,imaginary:0}));
+   mode.inputIndices.forEach((i,k)=>{drive[i].real=mode.weights[k]*Math.sqrt(mode.referenceOhm)/Math.sqrt(report.referenceOhm[i]);});
+   const value=projectBoardFoilLossGrams(grams,drive),power=accepted[j].powerW;
+   if(Math.abs(value.totalLossW-power)>1e-12+1e-8*(value.totalLossW+power))throw Error('CHANNEL_FOIL_MIXED_MODE: modal copper/package power mismatch');
+   return value;
+  });
+  return {frequencyHz,parameters:transformed,acceptedPowerW:accepted.map(x=>x.powerW),acceptedPowerRoundingBoundW:accepted.map(x=>x.roundingBoundW),...(losses&&{losses})};
  });
  return {sourcePortNames:[...portNames],modePairs:pairs.map(pair=>({...pair})),portNames:outNames,referenceOhm:modes.map(mode=>mode.referenceOhm),parameters,
-  lossRecovery:{scope:'total accepted boundary power only',separateCopperAndPackages:'unverified' as const},
+  lossRecovery:{scope:report.samples.every(s=>s.lossGrams)?'matched drive loss Grams':'total accepted boundary power only',separateCopperAndPackages:report.samples.every(s=>s.lossGrams)?'computed' as const:'unverified' as const},
   physicalCoverage:{status:'unverified' as const,reason:'Mixed-mode S is a mathematical power-wave transform of checked physical-port samples; it adds no physical acceptance or spatial recovery.'}};
 }

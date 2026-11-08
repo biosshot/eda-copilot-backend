@@ -8,7 +8,7 @@ type Entry = { report: AnalysisBoardFoilCheckedReport; producerBudget: Budget };
 
 /** Bump whenever the shared planar/hybrid operator changes its numerical
  * meaning. Kept in the existing exact-grid identity so old snapshots miss. */
-export const HYBRID_PLANAR_OPERATOR_VERSION = 'hybrid-planar-v4';
+export const HYBRID_PLANAR_OPERATOR_VERSION = 'hybrid-planar-v5';
 
 function validBudget(budget: Budget) {
   return Number.isFinite(budget?.maxSeconds) && budget.maxSeconds > 0 && budget.maxSeconds <= 3600 &&
@@ -73,6 +73,7 @@ export function cachedBoardFoilReport(
   const key = cache.key({
     core, producer: 'automatic-board-foil-or-mixed-exact-grid-v1',
     hybridPlanarOperatorVersion: HYBRID_PLANAR_OPERATOR_VERSION,
+    ...(process.env.P7_HYBRID_REGIME_AUDIT==='1'&&{regimeControlPolicy:'discrete-dc-ac-time-v1'}),
     compactPlanarPolicy: compactPlanar ? 'compact-v1' : 'default-v1',
     ...((compactPlanar || partitionPolicy==='automatic-hybrid-v1') && { compactWorkers }),
     ...(compactPlanar && { compactBasisPolicy: compactFullMixed ? 'adaptive-mixed-closure-v1' : 'dc-harmonic-only' }),

@@ -77,6 +77,14 @@ struct Basis {
     dc_residual: f64,
 }
 const RESIDUAL_LIMIT: f64 = 1e-8;
+fn loss_gram_reservation(ports:usize,modes:usize,packages:&[super::checked_packages::Validated],frequencies:usize)->Result<usize>{
+    // A serde_json object owns a small B-tree leaf even for two fields; include
+    // that allocation, raw complex entries, row vectors and package metadata.
+    let output=ports.checked_mul(ports).and_then(|v|v.checked_mul(packages.len()+1)).and_then(|v|v.checked_mul(frequencies)).and_then(|v|v.checked_mul(2048));
+    let ids=packages.iter().try_fold(0usize,|sum,p|sum.checked_add(p.id.len())).and_then(|v|v.checked_mul(frequencies));
+    let states=ports.checked_mul(modes.checked_add(packages.len()).ok_or_else(||error("MEMORY_LIMIT","loss Gram modes overflow"))?).and_then(|v|v.checked_mul(16)).and_then(|v|v.checked_add(ports.checked_mul(48)?));
+    output.and_then(|v|v.checked_add(ids?)).and_then(|v|v.checked_add(states?)).ok_or_else(||error("MEMORY_LIMIT","loss Gram reservation overflow"))
+}
 const MAX_ENRICHMENT_ITERATIONS: usize = 16;
 
 #[derive(Clone, Debug)]
@@ -979,6 +987,7 @@ pub(super) fn solve_mixed_grid(
         partition
             .filter(|partition| !partition.compact)
             .map(|partition| (partition, &map.full)),
+        false,
     )?;
     checked["sectionHints"]=serde_json::json!({"submitted":profiles.len(),"addedCurrentModes":added_profiles});
     checked["magneticOperator"] = magnetic.evidence();
@@ -1153,6 +1162,7 @@ fn assemble_impl(
             false,
             &[],
             None,
+            false,
         )?),
         _ => unreachable!("preparation resources match their scope"),
     };
@@ -1890,6 +1900,34 @@ impl ReducedSpace {
     }
 }
 
+// Conjugate the first current: this convention makes d^H G d the loss
+// for a complex vector of Norton drive amplitudes.
+fn loss_gram_term(x: [f64; 2], y: [f64; 2], resistance: f64) -> [f64; 2] {
+    [resistance * (x[0]*y[0] + x[1]*y[1]),
+     resistance * (x[0]*y[1] - x[1]*y[0])]
+}
+
+#[cfg(test)]
+mod loss_gram_tests {
+    use super::loss_gram_term;
+
+    #[test]
+    fn complex_drives_include_interference_and_are_hermitian() {
+        let x = [1., 1.];
+        let y = [2., -1.];
+        let xy = loss_gram_term(x, y, 3.);
+        let yx = loss_gram_term(y, x, 3.);
+        assert_eq!(xy, [3., -9.]);
+        assert_eq!(yx, [xy[0], -xy[1]]);
+        let xx = loss_gram_term(x, x, 3.);
+        let yy = loss_gram_term(y, y, 3.);
+        // Drives [1, i] produce current x + i*y = 2 + 3i.
+        let power = xx[0] + yy[0] - 2. * xy[1];
+        assert_eq!(power, 39.);
+        assert_ne!(power, xx[0] + yy[0]);
+    }
+}
+
 impl ReducedSpace {
     fn train_grid(
         &mut self,
@@ -1907,6 +1945,7 @@ impl ReducedSpace {
             &super::spatial_partition::Partition,
             &super::volume_current::Space,
         )>,
+        loss_grams: bool,
     ) -> Result<serde_json::Value> {
         use super::checked_packages;
         use serde_json::{json, Value};
@@ -1917,10 +1956,17 @@ impl ReducedSpace {
         let outcome = (|| {
             for iteration in 0..=grid.max_iterations {
                 check_time(start, wall)?;
+                let gram_reserve = if loss_grams {
+                    if ports > 16 { return Err(error("MEMORY_LIMIT", "loss Gram port limit exceeded")); }
+                    let entries=loss_gram_reservation(ports,self.basis.current.len(),packages,grid.frequencies.len())?;
+                    budget.check(entries)?;
+                    entries
+                } else { 0 };
                 let available = budget
                     .max_bytes
                     .saturating_sub(field.planned_bytes())
-                    .saturating_sub(dc.owned_bytes);
+                    .saturating_sub(dc.owned_bytes)
+                    .checked_sub(gram_reserve).ok_or_else(|| error("MEMORY_LIMIT", "loss Gram reservation exceeds budget"))?;
                 let solve_budget = Budget {
                     max_memory_mi_b: Some((available as f64 / 1048576.).min(4096.)),
                     max_seconds: Some(wall.saturating_sub(start.elapsed()).as_secs_f64()),
@@ -1954,6 +2000,8 @@ impl ReducedSpace {
                     let w = 2. * std::f64::consts::PI * frequency;
                     let mut matrix = vec![vec![Value::Null; ports]; ports];
                     let mut columns = Vec::with_capacity(ports);
+                    let mut gram_copper: Vec<Vec<[f64; 2]>> = Vec::with_capacity(if loss_grams { ports } else { 0 });
+                    let mut gram_packages: Vec<Vec<[f64; 2]>> = Vec::with_capacity(if loss_grams { ports } else { 0 });
                     for input in 0..ports {
                         check_time(start, wall)?;
                         // Same 1 A RMS Norton and diagonal matched loads as
@@ -2100,10 +2148,69 @@ impl ReducedSpace {
                                 wall,
                             )?;
                         }
+                        if loss_grams {
+                            let nv = self.basis.voltage.len();
+                            gram_copper.push(copper_re[nv..].iter().zip(&copper_im[nv..]).map(|(&r,&i)| [r,i]).collect());
+                            gram_packages.push(package_samples.iter().map(|s| s.current()).collect());
+                        }
                         columns.push(column);
                     }
+                    let mut sample = json!({"frequencyHz":frequency,"columns":columns});
+                    if loss_grams && gram_copper.len() == ports {
+                        let mut copper = vec![vec![[0.; 2]; ports]; ports];
+                        let mut package_grams = vec![vec![vec![[0.; 2]; ports]; ports]; packages.len()];
+                        for i in 0..ports { for j in 0..ports {
+                            for &(a,b,r) in &self.model.resistance_ohm {
+                                let x = gram_copper[i][a]; let y = gram_copper[j][b];
+                                let term = loss_gram_term(x, y, r);
+                                copper[i][j][0] += term[0];
+                                copper[i][j][1] += term[1];
+                            }
+                            for (k,p) in packages.iter().enumerate() {
+                                let x=gram_packages[i][k]; let y=gram_packages[j][k];
+                                package_grams[k][i][j] = loss_gram_term(x, y, p.r);
+                            }
+                        }}
+                        let as_json = |g: &Vec<Vec<[f64; 2]>>| -> Value {
+                            Value::Array(g.iter().map(|row| Value::Array(row.iter().map(|v| json!({"real":v[0],"imaginary":v[1]})).collect())).collect())
+                        };
+                        for i in 0..ports { for j in 0..ports {
+                            let mut actual = copper[i][j];
+                            for g in &package_grams { actual[0]+=g[i][j][0]; actual[1]+=g[i][j][1]; }
+                            let mut expected = [if i == j {1.} else {0.}, 0.];
+                            for row in &matrix {
+                                let a=&row[i]; let b=&row[j];
+                                let ar=a["real"].as_f64().unwrap(); let ai=a["imaginary"].as_f64().unwrap();
+                                let br=b["real"].as_f64().unwrap(); let bi=b["imaginary"].as_f64().unwrap();
+                                expected[0]-=ar*br+ai*bi; expected[1]-=ar*bi-ai*br;
+                            }
+                            let scale=(grid.references[i].sqrt()/2.)*(grid.references[j].sqrt()/2.);
+                            for part in 0..2 {
+                                expected[part]*=scale;
+                                if !actual[part].is_finite() || (actual[part]-expected[part]).abs() > 1e-12+1e-8*(actual[part].abs()+expected[part].abs()) {
+                                    return Err(error("BOARD_FOIL_POWER", "loss Gram power balance failed"));
+                                }
+                            }
+                            for g in std::iter::once(&copper).chain(package_grams.iter()) {
+                                if !g[i][j][0].is_finite() || !g[i][j][1].is_finite() ||
+                                    (g[i][j][0]-g[j][i][0]).abs() > 1e-12+1e-8*(g[i][j][0].abs()+g[j][i][0].abs()) ||
+                                    (g[i][j][1]+g[j][i][1]).abs() > 1e-12+1e-8*(g[i][j][1].abs()+g[j][i][1].abs()) {
+                                    return Err(error("BOARD_FOIL_POWER", "invalid Hermitian loss Gram"));
+                                }
+                            }
+                        }}
+                        for i in 0..ports {
+                            let original=sample["columns"][i]["copperLossW"].as_f64().unwrap();
+                            if (copper[i][i][0]-original).abs() > 1e-12+1e-8*(copper[i][i][0].abs()+original.abs()) { return Err(error("BOARD_FOIL_POWER", "copper loss Gram diagonal mismatch")); }
+                            for (k,g) in package_grams.iter().enumerate() {
+                                let original=sample["columns"][i]["packages"][k]["lossW"].as_f64().unwrap();
+                                if (g[i][i][0]-original).abs() > 1e-12+1e-8*(g[i][i][0].abs()+original.abs()) { return Err(error("BOARD_FOIL_POWER", "package loss Gram diagonal mismatch")); }
+                            }
+                        }
+                        sample["lossGrams"] = json!({"copperWPerA2":as_json(&copper),"packages":packages.iter().enumerate().map(|(k,p)| json!({"id":p.id,"powerWPerA2":as_json(&package_grams[k])})).collect::<Vec<_>>()});
+                    }
                     parameters.push(matrix);
-                    samples.push(json!({"frequencyHz":frequency,"columns":columns}));
+                    samples.push(sample);
                 }
                 drop(system);
                 let (frequency, input, worst) =
@@ -3180,9 +3287,24 @@ pub(super) fn solve_compact_adaptive(
     let mut space=ReducedSpace{model,cells,dc_harmonic_residual:basis.dc_residual,basis,charges,magnetic_actions:initial.actions,magnetic_basis_certificate:initial.certificate,ports:ports.to_vec(),full_potentials:n,max_frequency_hz:*grid.frequencies.last().ok_or_else(||error("HYBRID_INPUT","empty frequency grid"))?,planned_bytes:peak,max_magnetic_reciprocity:0.,max_magnetic_refinement:0.,max_electric_reciprocity,enrichment:None,native_allocation:true};
     let training_budget=AllocationBudget{max_bytes:share*2,..budget};
     eprintln!("P7_COMPACT_STAGE stage=training-start elapsed={:.6}",start.elapsed().as_secs_f64());
-    let result=space.train_grid(&grid,names,&dc,field,&batch,training_budget,start,wall,true,packages,None);
+    let result=space.train_grid(&grid,names,&dc,field,&batch,training_budget,start,wall,true,packages,None,true);
     eprintln!("P7_COMPACT_STAGE stage=training-end elapsed={:.6} chargeActions={} magneticActions={}",start.elapsed().as_secs_f64(),field.action_count(),magnetic.action_count.get());
     let mut result=result?;
+    if std::env::var_os("P7_HYBRID_REGIME_AUDIT").as_deref()==Some(std::ffi::OsStr::new("1")) {
+        let report_bytes=loss_gram_reservation(grid.references.len(),0,packages,grid.frequencies.len())?;
+        let available=(share*2).checked_sub(field.planned_bytes()).and_then(|v|v.checked_sub(space.planned_bytes)).and_then(|v|v.checked_sub(dc.owned_bytes)).and_then(|v|v.checked_sub(report_bytes)).ok_or_else(||error("MEMORY_LIMIT","regime audit working set exceeds reservation"))?;
+        let audit_budget=AllocationBudget{max_bytes:if packages.is_empty(){available}else{available/2},..budget};
+        let joint_model=if packages.is_empty(){None}else{
+            let joint=super::checked_packages::compile(&space.model,packages,grid.references.len(),&Budget{max_memory_mi_b:Some(audit_budget.max_bytes as f64/1048576.),max_seconds:Some(wall.saturating_sub(start.elapsed()).as_secs_f64())})?;
+            Some(joint.model)
+        };
+        let upper=*grid.frequencies.last().ok_or_else(||error("HYBRID_INPUT","empty regime grid"))?;
+        let probe=grid.frequencies[0].min(upper/20.);
+        let labels=(0..grid.references.len()).map(|i|format!("physical-port-{i}")).collect::<Vec<_>>();
+        let audit=super::regime_audit::audit(joint_model.as_ref().unwrap_or(&space.model),&labels,grid.references,probe,upper,audit_budget,start,wall)?;
+        if audit["status"]!="pass" {return Err(error("REGIME_MODEL","DC/AC/time consistency control failed"));}
+        result["modelRegimeAudit"]=audit;
+    }
     let full_uncertainty=result["quality"]["maxFullKvlUncertaintyRelative"].take();
     result["quality"].as_object_mut().unwrap().remove("maxFullKvlUncertaintyRelative");
     result["quality"]["maxCompactKvlUncertaintyRelative"]=full_uncertainty;

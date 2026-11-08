@@ -23,7 +23,7 @@ pub(super) struct Validated {
     pub electrodes: [String; 2],
     resource: Resource,
     model: Model,
-    r: f64,
+    pub(super) r: f64,
     l: f64,
     c: f64,
 }
@@ -253,6 +253,7 @@ pub(super) struct Recovery<'a> {
 
 pub(super) struct Joint<'a> {
     pub system: System,
+    pub model: Model,
     pub recovery: Recovery<'a>,
     pub size: usize,
 }
@@ -317,6 +318,7 @@ pub(super) fn compile<'a>(
     let system = System::compile(&built.model, external, Some(&system_budget))?;
     Ok(Joint {
         system,
+        model: built.model,
         recovery,
         size,
     })

@@ -542,10 +542,14 @@ pub(super) fn build_for(
             );
             fits.push(fit);
         }
-        for mode in independent(m.structural_gauge_modes.clone(), m.potential_nodes.len())? {
+        let structural = independent(m.structural_gauge_modes.clone(), m.potential_nodes.len())?;
+        for mode in &structural {
             let mut v = vec![0.; total_v];
             v[vo..vo + mode.len()].copy_from_slice(&mode);
-            structural_candidates.push(v);
+            structural_candidates.push(v.clone());
+            // A structural freedom of one block can become a physical charge
+            // mode after welding to a block with nonzero capacitance.
+            candidates.push(v);
         }
         // Supplied columns are a full candidate nullspace contract. Pure C defaults I.
         let modes = if m.current_dofs.is_empty() && m.conserved_potential_modes.is_empty() {
@@ -559,7 +563,18 @@ pub(super) fn build_for(
         } else {
             m.conserved_potential_modes
         };
-        for mode in modes {
+        let mut physical = Vec::<Vec<f64>>::new();
+        for mut mode in independent(modes, m.potential_nodes.len())? {
+            for _ in 0..2 {
+                for q in structural.iter().chain(&physical) {
+                    let dot = mode.iter().zip(q).map(|(a,b)| a*b).sum::<f64>();
+                    for (a,b) in mode.iter_mut().zip(q) { *a -= dot*b; }
+                }
+            }
+            let norm = mode.iter().map(|x| x*x).sum::<f64>().sqrt();
+            if norm <= 1e-12 { continue; }
+            for x in &mut mode { *x /= norm; }
+            physical.push(mode.clone());
             let mut v = vec![0.; total_v];
             v[vo..vo + mode.len()].copy_from_slice(&mode);
             candidates.push(v);

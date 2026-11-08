@@ -1,6 +1,7 @@
 import type { AnalysisBoardFoilCheckedReport, AnalysisBoardFoilCheckedRequest, AnalysisMagneticCertificate } from '../../native/analyze/index.js';
 import type { BoardFoilProblem } from './types.ts';
 import type { CoupledRlcData } from './analysis-dsl/spec-doc.js';
+import {validateBoardFoilLossGrams} from './board-foil-loss-grams.ts';
 
 function fail(message:string):never {throw new Error('CHANNEL_FOIL_EVIDENCE: '+message);}
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
@@ -184,6 +185,33 @@ function validatePartition(report:AnalysisBoardFoilCheckedReport,problem:BoardFo
   fail('selected automatic partition lacks checked original-coordinate Schur evidence');
 }
 
+function validateRegimeAudit(report:AnalysisBoardFoilCheckedReport):void {
+ const audit=report.modelRegimeAudit,n=report.referenceOhm.length;
+ if(audit===undefined){if(process.env.P7_HYBRID_REGIME_AUDIT==='1'&&report.provenance.compactOperator?.basis==='adaptive-mixed-closure')fail('requested model regime control is missing');return;}
+ if(!audit)fail('malformed model regime control');
+ const finiteVector=(v:unknown):v is number[]=>Array.isArray(v)&&v.length===n&&v.every(x=>typeof x==='number'&&Number.isFinite(x));
+ if(audit.status!=='pass'||audit.scope!=='discrete-model-only'||audit.physicalCoverage!=='unverified'||
+    !positive(audit.probeHz)||audit.probeHz>report.frequenciesHz.at(-1)!/20||
+    !Array.isArray(audit.dcPortVoltagesV)||audit.dcPortVoltagesV.length!==n||!audit.dcPortVoltagesV.every(finiteVector)||
+    !Array.isArray(audit.acPortVoltagesV)||audit.acPortVoltagesV.length!==n||audit.acPortVoltagesV.some(v=>!v||!finiteVector(v.real)||!finiteVector(v.imaginary))||
+    !Array.isArray(audit.timeDiagnostics)||audit.timeDiagnostics.length!==n)
+  fail('invalid model-only DC/AC/time control');
+ for(const row of audit.timeDiagnostics){
+  if(!row||!Array.isArray(row.relativePeakErrors)||row.relativePeakErrors.length!==2||row.relativePeakErrors.some(x=>!Number.isFinite(x)||x<0)||
+     row.relativePeakErrors[1]>.02||row.relativePeakErrors[1]>row.relativePeakErrors[0]*1.25+1e-5||
+     !Array.isArray(row.timeQuality)||row.timeQuality.length!==2)fail('model temporal overlap or refinement failed');
+  for(const [i,q] of row.timeQuality.entries()){
+   if(!q||!Number.isFinite(q.relativeResidual)||q.relativeResidual<0||q.relativeResidual>1e-8||
+      !Number.isFinite(q.maximumLocalErrorRatio)||q.maximumLocalErrorRatio<0||q.maximumLocalErrorRatio>1||
+      !Number.isFinite(q.energyBalanceJ)||!Number.isFinite(q.energyNormalizationJ)||q.energyNormalizationJ<0||
+      Math.abs(q.energyBalanceJ)>1e-14+1e-7*q.energyNormalizationJ||
+      Math.abs(q.energyBalanceJ)>(q.energyNormalizationJ===0?1e-20:1e-4*q.energyNormalizationJ)||
+      !positive(q.maximumAcceptedStepS)||q.maximumAcceptedStepS>(1/audit.probeHz)/(i===0?128:256)*(1+1e-8))
+    fail('model temporal numerical or energy evidence is invalid');
+  }
+ }
+}
+
 function validateSkinMesh(provenance:AnalysisBoardFoilCheckedReport['provenance'],problem:BoardFoilProblem):void {
  const {request,expected}=problem;
  const mesh=provenance.copperSkinMesh;
@@ -293,6 +321,8 @@ export function validateBoardFoilReport(
  validateSkinMesh(evidence,problem);
  validatePartition(report,problem);
  validateMagneticOperator(report);
+ validateBoardFoilLossGrams(report,attachments);
+ validateRegimeAudit(report);
  const expectedCopper=expected.sourceCopper.map(r=>JSON.stringify([r.regionId,r.sourcePath,r.layer])).sort();
  const actual=evidence.sourceMapping.map(([id,path,,layer])=>JSON.stringify([id,path,layer])).sort();
  const expectedBarrels=expected.sourceBarrels.map(barrel=>barrel.barrelId).sort();
