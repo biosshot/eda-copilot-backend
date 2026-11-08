@@ -49,6 +49,9 @@ Rows without an explicit release label use debug binaries and do not measure pro
 | Release complete planar primitive suite | nineteen pass | 0.344 s | `1794129210549882500` |
 | Release unified prism/tetra magnetic action and row bounds | pass | 0.172 s | `1794129212056263600` |
 | Release imported via, unified near/far plan | native deadline refusal; no channel | 25.218 s | `1794128258061510700` |
+| Release finite-thickness profile basis: DC, weighted Gram/transport, analytic slab loss convergence, high-thickness and invalid inputs | four pass | 0.172 s | `1794129765182360700` |
+
+The profile control reconstructs complex even-profile dissipation from the returned real basis and resistive Gram, then compares thickness refinement against Re[κ coth(κt/2)/(2σ)]. It includes t/δ=1000 to detect upper-surface exponential overflow. This standalone basis is not yet integrated into conservative mixed interface/current coordinates; runtime frequency screening is unchanged. The analytic loss reference's coth argument was corrected during root review before the first numerical invocation. Ten cache tests and TypeScript typechecking pass with the hybrid operator generation bumped to v2; the 39-row structural crosswalk also passes, without promoting physical status.
 
 The unified mixed plan retains original finite supports and the existing near kernels; degree-four tetrahedral moments enter the same geometric far remainder as prisms. Pair interactions are shared across training columns. Its partition control passed in debug (`1794127637990320400`, 0.171 s), as did tetra moments (`1794127636585656400`, 0.266 s) and unified actions (`1794127639301473100`, 0.172 s). Both debug (`1794127725717895000`, 25.688 s) and release via attempts remain incomplete at the unchanged native deadline. The plan still expands individual pairs and does not establish scalable block/FMM complexity.
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an experimental finite-thickness skin/proximity profile basis with stable exact cell averages, transport integrals and one resistive Gram. This primitive does not yet extend runtime frequency admission. Invalidate the changed hybrid operator cache generation.
+
 - Share a bounded near/far partition across finite prisms and local tetrahedra, with exact degree-four tetrahedral moments and batched mixed magnetic actions. Release primitive controls pass; the imported via still reaches its 25 s deadline, so no channel or board speed acceptance is claimed.
 
 - Wire compact mixed adaptive training to sparse spatial-field and batched magnetic actions, retaining full mixed-coordinate residual/enrichment checks without the dense full-basis cap. Isolate the changed experimental cache policy. Mixed interactions use validated whole-prism potentials or bounded local tetra kernels; the via control remains unverified and resource-limited.
