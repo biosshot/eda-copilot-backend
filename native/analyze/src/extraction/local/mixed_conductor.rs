@@ -1024,6 +1024,49 @@ fn solve_checked_mesh_impl(
             }
         })
         .collect::<Result<Vec<_>>>()?;
+    if std::env::var_os("P7_COMPACT_PLANAR").as_deref() == Some(std::ffi::OsStr::new("1")) {
+        if partition.is_some() {
+            return Err(error("HYBRID_UNSUPPORTED", "compact planar partition coupling is not implemented"));
+        }
+        let layered = request.stack.iter().filter(|layer| !layer.copper).any(|layer| layer.epsilon_r != Some(1.));
+        for foil in &map.foils {
+            let span = mesh.layer_spans.get(&foil.layer).ok_or_else(|| error("HYBRID_INPUT", "foil layer span missing"))?;
+            let sigma = mesh.conductivity_s_m[foil.tetrahedra[0]];
+            let screen = super::hybrid_applicability::screen(requested_upper, span[1]-span[0], sigma, super::super::MU0).map_err(|reason| error("HYBRID_FREQUENCY", reason))?;
+            if matches!(screen.action(), super::hybrid_applicability::Action::EnrichOrEscalate) {
+                return Err(error("HYBRID_FREQUENCY", "foil thickness requires frequency enrichment or local volume"));
+            }
+        }
+        let mixed_names: Vec<_> = (0..map.potential_count()).map(|i| format!("mixed-potential-{i}")).collect();
+        let mixed_ports: Vec<_> = ports.iter().map(|p| [map.potential_map[p[0]], map.potential_map[p[1]]]).collect();
+        let charge_bytes = if layered { map.potential_count().checked_mul(map.potential_count()).and_then(|n|n.checked_mul(8)).ok_or_else(|| error("MEMORY_LIMIT", "layered compact trace size overflow"))? } else { 0 };
+        let field_available = budget.max_bytes.checked_sub(map.retained_bytes()?).and_then(|n|n.checked_sub(charge_bytes)).ok_or_else(|| error("MEMORY_LIMIT", "layered field resident budget exhausted"))?;
+        let layered_c = if layered {
+            let field_budget = super::layered_capacitance::Budget { max_nodes: budget.max_nodes, max_local_terms: budget.max_tetrahedra, max_bytes: field_available, max_wall: wall.saturating_sub(start.elapsed()) };
+            let (input, spatial) = super::planar_trace::input_from_board(mesh, request, field_budget)?;
+            let trace = super::planar_trace::trace(&input, &map, super::layered_capacitance::Budget { max_wall: wall.saturating_sub(start.elapsed()), ..field_budget })?;
+            let field = super::layered_capacitance::extract_traced_spatial(&input, &trace, &spatial, super::layered_capacitance::Budget { max_wall: wall.saturating_sub(start.elapsed()), ..field_budget })?;
+            Some(field.energy_capacitance_f()?)
+        } else { None };
+        let model_budget = AllocationBudget { max_bytes: budget.max_bytes.checked_sub(charge_bytes).ok_or_else(|| error("MEMORY_LIMIT", "layered trace matrix exceeds budget"))?, ..budget };
+        let (model, mut evidence, planned) = foil_reduced::compact_planar_model(&map, &mixed_names, &mixed_ports, super::super::EPS0, layered_c.as_deref(), model_budget, start, wall)?;
+        evidence["electricOperator"] = json!(if layered {"layered-spatial-field-mesh"} else {"homogeneous-charge-gram"});
+        evidence["version"] = json!("compact-planar-v1");
+        evidence["foilSupports"] = json!(map.foils.len());
+        evidence["localTetraSupports"] = json!(map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count());
+        evidence["potentialCoordinates"] = json!(map.potential_count());
+        evidence["currentCoordinates"] = json!(map.current_count());
+        let mut result = foil_reduced::compact_planar_response(&model, frequencies_hz, reference_ohm, packages, budget, start, wall)?;
+        if layered { result["operator"] = json!("compact-planar-layered-prototype"); }
+        result["ports"] = json!(request.ports);
+        result["sourceMapping"] = json!(mesh.source_mapping);
+        result["compactOperator"] = json!({"version":"compact-planar-v1", "ownership":"one physical owner per copper tetrahedron", "foilSupports":map.foils.len(), "localTetraSupports":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "potentialCoordinates":map.potential_count(), "currentCoordinates":map.current_count(), "dielectric":if layered {"spatial-layered-field"} else {"homogeneous-air"}, "accuracy":"unverified", "limits":"bounded dense charge matrix; no proximity or physical approximation acceptance"});
+        result["provenance"] = json!({"method":"compact mixed foil and local volume", "modelKind":"mixed", "sourceMapping":mesh.source_mapping, "barrelIds":mesh.barrel_ids, "electrodeAreasM2":mesh.electrode_areas_m2, "prisms":map.foils.len(), "nativeCopperTetrahedra":map.owners.len(), "volumeTetrahedra":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "maxCopperVolumeChange":0., "fullPotentialCount":map.full.potential_count(), "fullCurrentCount":map.full.current_count(), "retainedPotentials":model.potential_nodes.len(), "currentModes":model.current_dofs.len(), "plannedBytes":planned + charge_bytes + reserve + provenance + partition_bytes, "maxSeconds":wall.as_secs_f64(), "maxMemoryMiB":budget.max_bytes as f64 / 1048576., "spatialCoverage":"unverified", "bandCoverage":"unverified", "magneticQuadratureCoverage":"unverified", "driveConvention":"1 A RMS matched Norton basis columns", "compactOperator":evidence});
+        if !packages.is_empty() { result["provenance"]["attachments"] = json!(packages.iter().map(|p| json!({"id":p.id,"electrodes":p.electrodes})).collect::<Vec<_>>()); }
+        result["quality"]["scope"] = json!("compact-discrete");
+        result["quality"]["physicalError"] = json!("unverified");
+        return Ok(result);
+    }
     let field_budget = AllocationBudget {
         max_bytes: budget
             .max_bytes
@@ -1247,5 +1290,97 @@ mod uniform_section_seed_tests {
             for row in 0..2 {for col in 0..2 {for part in ["real","imaginary"] {assert!((result["parameters"][0][row][col][part].as_f64().unwrap()-plain["parameters"][0][row][col][part].as_f64().unwrap()).abs()<1e-8);}}}
         }
         eprintln!("seeded hints={} quality={} plain quality={}",seeded["sectionHints"],seeded["quality"],plain["quality"]);
+    }
+}
+
+pub(super) struct LocalSupport { pub tetra: [[f64; 3]; 4], pub volume: f64, pub currents: Vec<[f64;3]> }
+
+impl MixedMap<'_> {
+    /// Build disjoint, constant-volume charge tests and current densities from
+    /// the physical foil ownership. Local volume needs a separate cross kernel.
+    pub(super) fn planar_supports(&self, modes: &[Vec<f64>]) -> Result<(Vec<super::planar_operator::Support>, Vec<LocalSupport>, Vec<Vec<f64>>)> {
+        if self.foils.is_empty() || modes.iter().any(|m| m.len() != self.current_count() || m.iter().any(|x| !x.is_finite())) {
+            return Err(error("HYBRID_INPUT", "invalid compact current basis"));
+        }
+        let local_count = self.owners.iter().filter(|o| matches!(o, Owner::Volume)).count();
+        let nq = self.foils.len() + local_count;
+        let mut supports = Vec::with_capacity(self.foils.len());
+        let mut dual = Vec::with_capacity(nq);
+        for (q, foil) in self.foils.iter().enumerate() {
+            let span = *self.mesh.layer_spans.get(&foil.layer).ok_or_else(|| error("HYBRID_INPUT", "foil layer span missing"))?;
+            let indices = self.mesh.planar_triangles[foil.planar_triangle];
+            let mut xy = indices.map(|i| { let p = self.mesh.mesh.nodes_m[i]; [p[0], p[1]] });
+            let cross = (xy[1][0]-xy[0][0])*(xy[2][1]-xy[0][1])-(xy[1][1]-xy[0][1])*(xy[2][0]-xy[0][0]);
+            if cross < 0. { xy.swap(1, 2); }
+            let prism = super::prism::Prism::new(format!("foil-{q}"), xy, span)?;
+            if (prism.volume_m3 - foil.volume_m3).abs() > 1e-8 * foil.volume_m3 { return Err(error("HYBRID_INPUT", "foil support volume mismatch")); }
+            let mut charge_density = vec![0.; nq];
+            charge_density[q] = 1. / prism.volume_m3;
+            let mut row = vec![0.; self.potential_count()];
+            for &t in &foil.tetrahedra {
+                let tet = &self.mesh.mesh.copper_tetrahedra[t];
+                let cell = &self.full.cells[t];
+                for &p in &cell.potentials { row[self.potential_map[p]] += tet.volume_m3 / (4. * prism.volume_m3); }
+            }
+            let total: f64 = row.iter().sum();
+            if !total.is_finite() || (total-1.).abs() > 1e-10 { return Err(error("HYBRID_CHARGE", "charge dual does not preserve constants")); }
+            let density = self.full.cells[foil.tetrahedra[0]].density_per_amp_m2 * self.current_map[3*foil.tetrahedra[0]].ok_or_else(|| error("HYBRID_INPUT", "foil current mapping missing"))?.weight;
+            let current_density = modes.iter().map(|mode| [density * mode[foil.first_current], density * mode[foil.first_current+1], 0.]).collect();
+            supports.push(super::planar_operator::Support { prism, charge_density, current_density });
+            dual.push(row);
+        }
+        let mut locals = Vec::with_capacity(local_count);
+        for (t, owner) in self.owners.iter().enumerate() {
+            if !matches!(owner, Owner::Volume) { continue; }
+            let tet = &self.mesh.mesh.copper_tetrahedra[t];
+            let cell = &self.full.cells[t];
+            let mut row = vec![0.; self.potential_count()];
+            for &p in &cell.potentials { row[self.potential_map[p]] += 0.25; }
+            let mut currents = vec![[0.;3]; modes.len()];
+            for axis in 0..3 {
+                let entry = self.current_map[3*t+axis].ok_or_else(|| error("HYBRID_INPUT", "local current mapping missing"))?;
+                for (i, mode) in modes.iter().enumerate() { currents[i][axis] = cell.density_per_amp_m2 * entry.weight * mode[entry.mode]; }
+            }
+            locals.push(LocalSupport { tetra: tet.nodes.map(|i| self.mesh.mesh.nodes_m[i]), volume: tet.volume_m3, currents });
+            dual.push(row);
+        }
+        Ok((supports, locals, dual))
+    }
+}
+impl MixedMap<'_> { pub(super) fn mesh(&self) -> &BoardMesh { self.mesh } }
+
+#[cfg(test)]
+mod compact_board_dispatch_test {
+    use super::*;
+    use serde_json::{json, Value};
+    #[test]
+    fn imported_air_board_two_drives_and_missing_contact() {
+        let mut value: Value = serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-segmented-coupon.json")).unwrap();
+        value["outline"] = json!([{"x":-1.,"y":-1.},{"x":1.,"y":-1.},{"x":1.,"y":1.},{"x":-1.,"y":1.}]);
+        value["copper"]["fixed"]["tracks"] = json!([]); value["copper"]["fixed"]["zones"] = json!([]);
+        value["pads"].as_array_mut().unwrap().truncate(2);
+        for (i,p) in value["pads"].as_array_mut().unwrap().iter_mut().enumerate() { p["at"]=json!({"x":if i==0 {-0.4}else{0.4},"y":0.}); p["shape"]=json!({"kind":"rect","widthMm":0.25,"heightMm":0.25}); }
+        let board=crate::import_json(&value.to_string()).board.unwrap();
+        let request: board_mesh::Request=serde_json::from_value(json!({"roiMm":[[-1.,-1.],[1.,1.]],"stack":[{"name":"TOP","thicknessM":0.00001,"copper":true,"epsilonR":null,"conductivitySM":58000000.},{"name":"air","thicknessM":0.0001,"copper":false,"epsilonR":1.,"conductivitySM":null},{"name":"BOTTOM","thicknessM":0.00001,"copper":true,"epsilonR":null,"conductivitySM":58000000.}],"airMarginM":0.0002,"maxTriangleAreaM2":0.000002,"maxVerticalStepM":0.0001,"airEdgeDivisions":1,"minTriangleAngleDeg":0.,"curveDeviationMm":0.001,"acceptUnknownFillFreshness":true,"allowInsulatedCopperCuts":false,"electrodes":[{"name":"a","sourcePath":"pads[0]","layer":"TOP","upper":false},{"name":"b","sourcePath":"pads[1]","layer":"TOP","upper":false}],"ports":[["a","b"],["b","a"]]})).unwrap();
+        let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:10000,max_tetrahedra:10000};
+        let wall=Duration::from_secs(25); let mesh=board_mesh::build(&board,&request,budget,wall).unwrap();
+        // Run this isolated test under a single-test supervisor: environment is process-wide.
+        struct EnvRestore(Option<std::ffi::OsString>);
+        impl Drop for EnvRestore { fn drop(&mut self) { unsafe { if let Some(value)=&self.0 { std::env::set_var("P7_COMPACT_PLANAR", value); } else { std::env::remove_var("P7_COMPACT_PLANAR"); } } } }
+        let _restore = EnvRestore(std::env::var_os("P7_COMPACT_PLANAR"));
+        unsafe { std::env::set_var("P7_COMPACT_PLANAR", "1"); }
+        let run=|r: &board_mesh::Request| solve_checked_mesh_impl(&mesh,r,CheckedGrid{frequencies_hz:&[1000.],reference_ohm:&[50.,50.],max_iterations:1},None,&[],None,PartitionPolicy::Legacy,budget,Instant::now(),wall);
+        let result=run(&request);
+        let mut broken=request.clone(); broken.ports[1][1]="missing".into();
+        let rejected=run(&broken);
+        let result=result.unwrap();
+        assert_eq!(result["coverage"],"unverified");
+        assert_eq!(result["samples"][0]["columns"].as_array().unwrap().len(),2);
+        assert!(rejected.is_err());
+    }
+}
+impl MixedMap<'_> {
+    pub(super) fn electric_node_trace(&self) -> Vec<TraceRow> {
+        self.full.node_potential.iter().map(|(&node,&full)| TraceRow { node, weights: vec![(self.potential_map[full], 1.)] }).collect()
     }
 }

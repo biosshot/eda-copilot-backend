@@ -55,7 +55,7 @@ fn duplicate(a: &Geometry, b: &Geometry) -> bool {
 fn check(start: Instant, limit: Duration) -> Result<()> {
     if start.elapsed() >= limit { Err(error("DEADLINE", "mixed Gram deadline exceeded")) } else { Ok(()) }
 }
-fn cross_integral(p: &Prism, source: &PointPotential, rule: &GaussRule, start: Instant, limit: Duration) -> Result<f64> {
+pub(super) fn cross_integral(p: &Prism, source: &PointPotential, rule: &GaussRule, start: Instant, limit: Duration) -> Result<f64> {
     let [a,b,c]=p.triangle_m; let mut total=0.;
     for (&u,&wu) in rule.nodes().iter().zip(rule.weights()) { for (&v,&wv) in rule.nodes().iter().zip(rule.weights()) { for (&z,&wz) in rule.nodes().iter().zip(rule.weights()) {
         check(start,limit)?;

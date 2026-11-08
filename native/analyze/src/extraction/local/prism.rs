@@ -157,6 +157,12 @@ pub fn point_potential(source: &Prism, point: [f64; 3], rule: &GaussRule) -> Res
 
 /// Directed double volume integral [m^5]; caller checks both directions/refinement.
 pub fn volume_integral(target: &Prism, source: &Prism, rule: &GaussRule) -> Result<f64> {
+    volume_integral_impl(target, source, rule, None)
+}
+pub(super) fn volume_integral_guarded(target: &Prism, source: &Prism, rule: &GaussRule, start: std::time::Instant, limit: std::time::Duration) -> Result<f64> {
+    volume_integral_impl(target, source, rule, Some((start, limit)))
+}
+fn volume_integral_impl(target: &Prism, source: &Prism, rule: &GaussRule, deadline: Option<(std::time::Instant,std::time::Duration)>) -> Result<f64> {
     let [a, b, c] = target.triangle_m;
     let mut integral = 0.;
     for (&u, &wu) in rule.nodes.iter().zip(&rule.weights) {
@@ -166,6 +172,7 @@ pub fn volume_integral(target: &Prism, source: &Prism, rule: &GaussRule) -> Resu
                 a[1] + u * (b[1] - a[1]) + (1. - u) * v * (c[1] - a[1]),
             ];
             for (&z, &wz) in rule.nodes.iter().zip(&rule.weights) {
+                if deadline.is_some_and(|(start,limit)| start.elapsed() >= limit) { return Err(error("DEADLINE", "prism quadrature deadline exceeded")); }
                 integral += wu
                     * wv
                     * wz

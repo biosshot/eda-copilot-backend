@@ -150,6 +150,11 @@ pub struct BoardMesh {
     pub(super) copper_skin_layers:Vec<CopperSkinLayer>,
     pub(super) copper_skin_barrels:Vec<CopperSkinBarrel>,
     pub mesh:LayeredMesh,
+    /// Prepared physical regions retained for independent field adapters.
+    pub(super) field_substrate: MultiPolygon<f64>,
+    pub(super) field_bores: MultiPolygon<f64>,
+    pub(super) field_partial_bores: Vec<([f64;2], MultiPolygon<f64>)>,
+    pub(super) field_copper: Vec<(MultiPolygon<f64>, [f64;2], bool)>,
     pub planar_nodes_mm:Vec<[f64;2]>,
     pub planar_triangles:Vec<[usize;3]>,
     pub conductivity_s_m:Vec<f64>,
@@ -734,7 +739,15 @@ pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max
         electrode_areas_m2.insert(e.name.clone(),area);certified_electrodes.insert(e.name.clone(),(e.clone(),nodes.into_iter().collect()));
     }
     check(start,max_wall)?;
-    Ok(BoardMesh{mesh,copper_skin_layers,copper_skin_barrels,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,certified_electrodes})
+    let geometry_vertices = std::iter::once(&substrate).chain(std::iter::once(&bores))
+        .chain(partial_bores.iter().map(|(_,p)|p))
+        .chain(physical_shapes.iter().map(|(p,_,_,_)|p))
+        .flat_map(|p|p.0.iter()).flat_map(|p|std::iter::once(p.exterior()).chain(p.interiors()))
+        .try_fold(0usize, |n,r| n.checked_add(r.0.len())).ok_or_else(||error("MEMORY_LIMIT","field geometry overflow"))?;
+    let retained_bytes = geometry_vertices.checked_mul(32).ok_or_else(||error("MEMORY_LIMIT","field geometry overflow"))?;
+    if mesh.planned_peak_bytes.checked_add(retained_bytes).is_none_or(|n|n>budget.max_bytes) { return Err(error("MEMORY_LIMIT","retained field geometry exceeds budget")); }
+    let field_copper=physical_shapes.into_iter().map(|(p,span,_,barrel)|(p,span,barrel)).collect();
+    Ok(BoardMesh{field_substrate:substrate,field_bores:bores,field_partial_bores:partial_bores,field_copper,mesh,copper_skin_layers,copper_skin_barrels,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,certified_electrodes})
 }
 impl BoardMesh {
     /// End geometry preparation before a separately budgeted field phase.

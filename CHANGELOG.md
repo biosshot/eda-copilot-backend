@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Start the hybrid operator implementation with explicit charge/potential dual coordinates, direct finite-prism P/L kernels, mixed cross-block and layered-trace primitives, and an opt-in compact runtime candidate. Isolate its cache identity and track canonical cases independently of acceptance. Layered/local assembly, independent accuracy and complete-board performance remain unverified; this does not close P7.
+
+- Require a shared mathematical and applicability contract as the first short hybrid implementation step: coordinate conventions, conservation/projections/gauge, ownership of cross-representation and self/near interactions, and explicit enrichment/refusal criteria must be consistent across implementers.
+
 - Record the accelerated six-day hybrid extraction implementation plan: reuse existing preparation, implement direct planar interactions and coupled local transitions during days 1–5 with bounded small checks, and reserve full case-matrix/real-board acceptance for the final stage. Physical gates and coverage remain unchanged; no new numerical acceptance is claimed.
 
 - Measure actual parallel STM32 phases with a retained 1 GiB cover cache: planning 31.076 s, 15.604 million near tiles, and an unfinished first-axis replay dominated by 77.990 s near callbacks. Deadline remains at 243.719 s with no channel. The cache removes replay classification; the ten-minute target requires structural reduction of near work, not a claimed full-board speedup.

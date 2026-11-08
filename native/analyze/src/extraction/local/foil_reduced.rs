@@ -1161,6 +1161,12 @@ fn make_model(
         .map(|q| resistive_action(cells, q))
         .collect::<Vec<Vec<f64>>>();
     let (resistance_ohm, _) = congruence(&basis.current, &resistance_actions, 1e-9, "R")?;
+    make_model_matrices(cells, n, basis, names, ports, capacitance_f, inductance_h, resistance_ohm).map(|model| (model, max_electric_reciprocity))
+}
+
+fn make_model_matrices(cells: &[Cell], n: usize, basis: &Basis, names: &[String], ports: &[[usize; 2]], capacitance_f: Vec<(usize,usize,f64)>, inductance_h: Vec<(usize,usize,f64)>, resistance_ohm: Vec<(usize,usize,f64)>) -> Result<Model> {
+    let nv = basis.voltage.len();
+    let ni = basis.current.len();
     // Differentiate the exact component partition analytically, as in
     // volume_reduction. A divergence-free loop need not acquire spurious
     // net incidence from independent roundoff in its cancellation rows.
@@ -1229,7 +1235,7 @@ fn make_model(
             }),
         });
     }
-    Ok((model, max_electric_reciprocity))
+    Ok(model)
 }
 
 fn lift(basis: &[Vec<f64>], x: &[f64], dimension: usize) -> Vec<f64> {
@@ -2323,3 +2329,266 @@ fn compact_cover_keeps_optional_partition_metadata_absent_or_complete() {
 #[cfg(test)]
 #[path = "adaptive_magnetic_bench.rs"]
 mod adaptive_magnetic_bench;
+
+/// Convert a compact charge-potential operator into potential-coordinate
+/// capacitance. `dual[a][i]` is the potential test for charge mode a at
+/// potential coordinate i. No artificial gauge is imposed: the free-space
+/// potential matrix must be positive definite on the supplied charge modes.
+pub(super) fn compact_capacitance(p: &[Vec<f64>], dual: &[Vec<f64>], budget: AllocationBudget) -> Result<Vec<Vec<f64>>> {
+    let n = p.len();
+    let m = dual.first().map_or(0, Vec::len);
+    if n == 0 || m == 0 || dual.len() != n || p.iter().any(|r| r.len() != n) || dual.iter().any(|r| r.len() != m) || p.iter().flatten().chain(dual.iter().flatten()).any(|v| !v.is_finite()) {
+        return Err(error("HYBRID_CHARGE", "invalid compact charge operator or dual mapping"));
+    }
+    let bytes = n.checked_mul(n).and_then(|v| v.checked_add(n.checked_mul(m)?)).and_then(|v| v.checked_add(m.checked_mul(m)?)).and_then(|v| v.checked_mul(8)).ok_or_else(|| error("MEMORY_LIMIT", "compact charge factor size overflow"))?;
+    budget.check(bytes)?;
+    let mut l = vec![vec![0.; n]; n];
+    for i in 0..n {
+        for j in 0..=i {
+            let scale = p[i][j].abs().max(p[j][i].abs());
+            if (p[i][j] - p[j][i]).abs() > 1e-10 * scale.max(f64::MIN_POSITIVE) {
+                return Err(error("HYBRID_CHARGE", "potential operator is not reciprocal"));
+            }
+            let mut value = 0.5 * (p[i][j] + p[j][i]);
+            for k in 0..j { value -= l[i][k] * l[j][k]; }
+            if i == j {
+                if !value.is_finite() || value <= 0. { return Err(error("HYBRID_CHARGE", "dependent charge modes or nonpositive potential operator")); }
+                l[i][j] = value.sqrt();
+            } else { l[i][j] = value / l[j][j]; }
+        }
+    }
+    // B^T P^-1 B = (L^-1 B)^T (L^-1 B), preserving reciprocity.
+    let mut x = vec![vec![0.; m]; n];
+    for i in 0..n { for j in 0..m {
+        let mut value = dual[i][j];
+        for k in 0..i { value -= l[i][k] * x[k][j]; }
+        x[i][j] = value / l[i][i];
+        if !x[i][j].is_finite() { return Err(error("HYBRID_CHARGE", "charge solve overflow")); }
+    }}
+    let mut c = vec![vec![0.; m]; m];
+    for i in 0..m { for j in 0..=i {
+        let value = (0..n).fold(Sum::default(), |s,k| s.add(Sum::from(x[k][i]).mul(x[k][j]))).value();
+        if !value.is_finite() { return Err(error("HYBRID_CHARGE", "capacitance overflow")); }
+        c[i][j] = value; c[j][i] = value;
+    }}
+    Ok(c)
+}
+
+/// Construct a compact, homogeneous-dielectric candidate. This uses the
+/// existing conservative mixed incidence and contact-preserving harmonic
+/// modes; physical approximation and frequency coverage remain unverified.
+pub(super) fn compact_planar_model(
+    map: &super::mixed_conductor::MixedMap<'_>, names: &[String], ports: &[[usize; 2]],
+    epsilon: f64, layered_c: Option<&[Vec<f64>]>, budget: AllocationBudget, start: Instant, wall: Duration,
+) -> Result<(Model, serde_json::Value, usize)> {
+    let n = map.potential_count();
+    if names.len() != n { return Err(error("HYBRID_INPUT", "mixed potential names required")); }
+    let mut terms = vec![Vec::new(); map.current_count()];
+    for &(i,j,a) in &map.incidence { terms[j].push((i,a)); }
+    let cells: Vec<_> = terms.into_iter().zip(&map.resistance_ohm).map(|(t,&r)| Cell::new(t,r)).collect();
+    let full_mixed = std::env::var_os("P7_COMPACT_FULL_MIXED").as_deref() == Some(std::ffi::OsStr::new("1"));
+    let basis = if full_mixed {
+        let ni = map.current_count();
+        if n > 1024 || ni > 1024 { return Err(error("HYBRID_FULL_MIXED_LIMIT", "full mixed prototype exceeds coordinate limit")); }
+        let bytes = n.checked_mul(n).and_then(|x| x.checked_add(ni.checked_mul(ni)?)).and_then(|x| x.checked_mul(8)).and_then(|x| x.checked_add(map.retained_bytes().ok()?)).ok_or_else(|| error("MEMORY_LIMIT", "full mixed basis size overflow"))?;
+        budget.check(bytes)?;
+        let voltage = (0..n).map(|i| (0..n).map(|j| if i==j {1.} else {0.}).collect()).collect();
+        let current = (0..ni).map(|i| (0..ni).map(|j| if i==j {1.} else {0.}).collect()).collect();
+        Basis { voltage, current, retained:(0..n).collect(), components:map.potential_components.clone(), dc_residual:0. }
+    } else {
+        harmonic(&cells, n, &map.electrodes.iter().copied().collect(), Some(&map.potential_components), budget, map.retained_bytes()?, start, wall, 0, true)?.0
+    };
+    // Reserve the entire simultaneous dense working set before constructing
+    // support densities or dual rows. No full-board automatic admission.
+    let nq = map.foils.len().checked_add(map.owners.iter().filter(|o| matches!(o, super::mixed_conductor::Owner::Volume)).count()).ok_or_else(|| error("MEMORY_LIMIT", "compact support count overflow"))?;
+    let nc = basis.current.len(); let nv = basis.voltage.len();
+    let resident = map.retained_bytes()?.checked_add(n.checked_mul(nv).and_then(|v| v.checked_mul(8)).ok_or_else(|| error("MEMORY_LIMIT", "compact basis overflow"))?).and_then(|x| x.checked_add(map.current_count().checked_mul(nc)?.checked_mul(8)?)).and_then(|x| x.checked_add(nq.checked_mul(n)?.checked_mul(8)?)).and_then(|x| x.checked_add(nq.checked_mul(nq)?.checked_mul(8)?)).and_then(|x| x.checked_add(nq.checked_mul(nc)?.checked_mul(24)?)).and_then(|x| x.checked_add(nq.checked_mul(1024)?)).ok_or_else(|| error("MEMORY_LIMIT", "compact resident size overflow"))?;
+    let scratch = nq.checked_mul(nq).and_then(|x| x.checked_mul(32)).and_then(|x| x.checked_add(nq.checked_mul(nv)?.checked_mul(24)?)).and_then(|x| x.checked_add(nc.checked_mul(nc)?.checked_mul(32)?)).and_then(|x| x.checked_add(nv.checked_mul(nv)?.checked_mul(32)?)).and_then(|x| x.checked_add(1024*1024)).ok_or_else(|| error("MEMORY_LIMIT", "compact scratch size overflow"))?;
+    budget.check(resident.checked_add(scratch).ok_or_else(|| error("MEMORY_LIMIT", "compact peak overflow"))?)?;
+    let work_budget = AllocationBudget { max_bytes: budget.max_bytes - resident, ..budget };
+    let (supports, locals, dual) = map.planar_supports(&basis.current)?;
+    let remaining = wall.checked_sub(start.elapsed()).ok_or_else(|| error("DEADLINE", "compact planar assembly"))?;
+    let mut gram = super::planar_operator::gram(&supports, dual.len(), basis.current.len(), 8, epsilon, work_budget, remaining)?;
+    let nc = basis.current.len();
+    let mut mixed_change = 0_f64; let mut self_change = 0_f64;
+    for (t, local) in locals.iter().enumerate() {
+        let q = supports.len() + t;
+        for (i, support) in supports.iter().enumerate() {
+            check_time(start, wall)?;
+            let block = super::planar_mixed::cross(&support.prism, local.tetra,
+                super::planar_mixed::Densities { charge: &[1. / support.prism.volume_m3], current: &support.current_density },
+                super::planar_mixed::Densities { charge: &[1. / local.volume], current: &local.currents },
+                epsilon, 8, work_budget, wall.saturating_sub(start.elapsed()))?;
+            mixed_change = mixed_change.max(block.relative_order_change);
+            gram.potential_per_farad[i][q] += block.potential_per_farad[0][0];
+            gram.potential_per_farad[q][i] += block.potential_per_farad[0][0];
+            for a in 0..nc { for b in 0..nc { gram.inductance_h[a][b] += block.inductance_h[a][b] + block.inductance_h[b][a]; }}
+        }
+        for (u, other) in locals[..=t].iter().enumerate() {
+            check_time(start, wall)?;
+            let integral = if t == u {
+                let coarse = polyhedron::tetra_self_integral(local.tetra, 12)?;
+                let fine = polyhedron::tetra_self_integral(local.tetra, 16)?;
+                let change = (fine-coarse).abs()/fine.abs();
+                if !change.is_finite() || change > 1e-8 { return Err(error("HYBRID_UNRESOLVED", "tetra self order estimator exceeds tolerance")); }
+                self_change = self_change.max(change); fine
+            } else {
+                polyhedron::tetra_integral_adaptive(local.tetra, &PointPotential::tetrahedron(other.tetra)?.with_tighter_tetra_tolerance(1e-12)?, 16, 1e-10)?
+            };
+            check_time(start, wall)?;
+            let p = integral / (4. * std::f64::consts::PI * epsilon * local.volume * other.volume);
+            gram.potential_per_farad[q][supports.len()+u] += p;
+            if t != u { gram.potential_per_farad[supports.len()+u][q] += p; }
+            for a in 0..nc { for b in 0..nc {
+                let dot: f64 = (0..3).map(|k| local.currents[a][k]*other.currents[b][k]).sum();
+                let value = 1e-7 * integral * dot;
+                gram.inductance_h[a][b] += value;
+                if t != u { gram.inductance_h[b][a] += value; }
+            }}
+        }
+    }
+    let capacitance_f = if let Some(c) = layered_c {
+        if c.len()!=n || c.iter().any(|row| row.len()!=n || row.iter().any(|x| !x.is_finite())) { return Err(error("HYBRID_CHARGE", "invalid layered trace matrix")); }
+        let actions: Vec<Vec<f64>> = basis.voltage.iter().map(|v| c.iter().map(|row| sum(row,v)).collect()).collect();
+        let (entries, _) = congruence(&basis.voltage, &actions, 1e-9, "layered C")?;
+        let mut matrix=vec![vec![0.;basis.voltage.len()];basis.voltage.len()];
+        for (i,j,x) in entries { matrix[i][j]=x; } matrix
+    } else {
+        let reduced_dual: Vec<Vec<f64>> = dual.iter().map(|row| basis.voltage.iter().map(|v| sum(row, v)).collect()).collect();
+        compact_capacitance(&gram.potential_per_farad, &reduced_dual, work_budget)?
+    };
+    // Every retained voltage mode must be visible to the charge tests.
+    // A singular reduced C means the centroid-like dual lost a mode.
+    let nv = basis.voltage.len();
+    let identity: Vec<Vec<f64>> = (0..nv).map(|i| (0..nv).map(|j| if i == j {1.} else {0.}).collect()).collect();
+    let _ = compact_capacitance(&capacitance_f, &identity, work_budget)?;
+    let resistance_actions: Vec<Vec<f64>> = basis.current.iter().map(|q| resistive_action(&cells, q)).collect();
+    let (resistance_ohm, _) = congruence(&basis.current, &resistance_actions, 1e-9, "R")?;
+    let entries = |matrix: Vec<Vec<f64>>| -> Vec<(usize,usize,f64)> { matrix.into_iter().enumerate().flat_map(|(i,row)| row.into_iter().enumerate().filter_map(move |(j,v)| (v != 0.).then_some((i,j,v)))).collect() };
+    let evidence = serde_json::json!({"scope":"compact-discrete", "originalVolumeActions":0, "planarMaxOrder":gram.max_order, "planarMaxRelativeChange":gram.max_relative_change, "mixedMaxRelativeChange":mixed_change, "tetraSelfMaxRelativeChange":self_change, "tetraPairAdaptiveTolerance":1e-10, "physicalAccuracy":"unverified", "basis":if full_mixed {"full-mixed"} else {"dc-harmonic-only"}, "approximationError":"unverified"});
+    let model = make_model_matrices(&cells, n, &basis, names, ports, entries(capacitance_f), entries(gram.inductance_h), resistance_ohm)?;
+    Ok((model, evidence, resident+scratch))
+}
+
+pub(super) fn compact_planar_response(model: &Model, frequencies: &[f64], references: &[f64], packages: &[super::checked_packages::Validated], budget: AllocationBudget, start: Instant, wall: Duration) -> Result<serde_json::Value> {
+    let b = Budget { max_memory_mi_b: Some(budget.max_bytes as f64 / 1048576.), max_seconds: Some(wall.saturating_sub(start.elapsed()).as_secs_f64()) };
+    let (mut system, n, recovery) = if packages.is_empty() {
+        (System::compile(model, references.len(), Some(&b))?, model.potential_nodes.len()+model.current_dofs.len(), None)
+    } else {
+        let joint = super::checked_packages::compile(model, packages, references.len(), &b)?;
+        (joint.system, joint.size, Some(joint.recovery))
+    };
+    for (p, r) in references.iter().enumerate() { system.add_port_admittance(p, 1. / r, 0.)?; }
+    if frequencies.is_empty() || references.is_empty() || frequencies.iter().any(|f| !f.is_finite() || *f <= 0.) || references.iter().any(|r| !r.is_finite() || *r <= 0.) { return Err(error("HYBRID_INPUT", "positive finite frequencies and references required")); }
+    let mut samples = Vec::new();
+    let mut parameters = Vec::new();
+    let (mut max_kcl, mut max_kvl, mut max_power) = (0_f64, 0_f64, 0_f64);
+    for &frequency in frequencies {
+        check_time(start,wall)?;
+        let mut matrix = vec![vec![serde_json::Value::Null; references.len()]; references.len()];
+        let mut columns = Vec::new();
+        for input in 0..references.len() {
+            let mut drive = vec![0.; references.len()]; drive[input] = 1.;
+            let mut rhs = system.port_rhs(&drive); rhs.resize(2*n, 0.);
+            let state = system.solve(2.*std::f64::consts::PI*frequency, rhs, &vec![0.;n], &mut Counters::default())?;
+            let re = system.port_voltages(&state[..n], references.len());
+            let im = system.port_voltages(&state[n..], references.len());
+            let package_samples = recovery.as_ref().map(|r| r.package_states(2.*std::f64::consts::PI*frequency, &state[..n], &state[n..])).transpose()?.unwrap_or_default();
+            let recovered = recovery.as_ref().map(|r| r.copper_state(&state[..n], &state[n..]));
+            let copper_n = model.potential_nodes.len() + model.current_dofs.len();
+            let mut copper_state = vec![0.; 2*copper_n];
+            if let Some(c) = &recovered { copper_state[..copper_n].copy_from_slice(&c[0]); copper_state[copper_n..].copy_from_slice(&c[1]); } else { copper_state.copy_from_slice(&state); }
+            let mut net_r: Vec<f64> = drive.iter().zip(&re).zip(references).map(|((&d,&v),&r)|d-v/r).collect();
+            let mut net_i: Vec<f64> = im.iter().zip(references).map(|(&v,&r)|-v/r).collect();
+            for package in &package_samples { let [r,i]=package.current(); net_r.push(-r); net_i.push(-i); }
+            // Audit the assembled compact equations for each excitation.
+            let n = copper_n; let state = &copper_state;
+            let nv = model.potential_nodes.len();
+            let mut rr = vec![0.; 2*n];
+            let mut scales = vec![0.; 2*n];
+            let mut add = |row: usize, value: f64| { rr[row] += value; scales[row] += value.abs(); };
+            let w = 2.*std::f64::consts::PI*frequency;
+            for &(i,j,a) in &model.incidence { for part in 0..2 { add(part*n+i, a*state[part*n+nv+j]); add(part*n+nv+j, -a*state[part*n+i]); }}
+            for &(i,j,a) in &model.capacitance_f { add(i,-w*a*state[n+j]); add(n+i,w*a*state[j]); }
+            for &(i,j,a) in &model.resistance_ohm { for part in 0..2 { add(part*n+nv+i,a*state[part*n+nv+j]); }}
+            for &(i,j,a) in &model.inductance_h { add(nv+i,-w*a*state[n+nv+j]); add(n+nv+i,w*a*state[nv+j]); }
+            for &(i,p,a) in &model.port_incidence { add(i,-a*net_r[p]); add(n+i,-a*net_i[p]); }
+            drop(add);
+            let mut column_kcl = 0_f64; let mut column_kvl = 0_f64;
+            for part in 0..2 { for i in 0..n { let v = rr[part*n+i].abs()/scales[part*n+i].max(1e-300); if i<nv {column_kcl=column_kcl.max(v);} else {column_kvl=column_kvl.max(v);} }}
+            if !column_kcl.is_finite() || !column_kvl.is_finite() || column_kcl > 1e-8 || column_kvl > 1e-8 { return Err(error("HYBRID_RESIDUAL", &format!("compact KCL={column_kcl:e} KVL={column_kvl:e}"))); }
+            max_kcl = max_kcl.max(column_kcl); max_kvl = max_kvl.max(column_kvl);
+            let mut outgoing = 0.;
+            for output in 0..references.len() {
+                let scale = 2. / (references[input].sqrt()*references[output].sqrt());
+                let sr = scale*re[output] - if input==output {1.} else {0.};
+                let si = scale*im[output];
+                if !sr.is_finite() || !si.is_finite() { return Err(error("HYBRID_RANGE", "nonfinite wave")); }
+                outgoing += sr*sr + si*si;
+                matrix[output][input] = serde_json::json!({"real":sr, "imaginary":si});
+            }
+            let copper = if let Some(c) = &recovered { super::checked_packages::copper_loss(model,c) } else { system.joule_loss(&state[..n]) + system.joule_loss(&state[n..]) };
+            if let Some(c) = &recovered { super::checked_packages::check_copper_power(model,c,[&net_r,&net_i],copper)?; }
+            let dissipated = copper + package_samples.iter().map(|p|p.loss_w).sum::<f64>();
+            let wave_power = (1. - outgoing) * references[input] / 4.;
+            let power_error = (wave_power-dissipated).abs();
+            if !copper.is_finite() || copper < 0. || !power_error.is_finite() || power_error > 1e-12 + 1e-8*(wave_power.abs()+dissipated.abs()) { return Err(error("HYBRID_POWER", "compact wave and copper powers disagree")); }
+            max_power = max_power.max(power_error);
+            columns.push(serde_json::json!({"input":input,"kclRelative":column_kcl,"kvlRelative":column_kvl,"copperLossW":copper,"powerBalanceErrorW":power_error,"packages":package_samples}));
+        }
+        parameters.push(matrix);
+        samples.push(serde_json::json!({"frequencyHz":frequency,"columns":columns}));
+    }
+    Ok(serde_json::json!({"status":"complete", "coverage":"unverified", "representation":"S", "operator":"compact-planar-homogeneous-prototype", "quality":{"maxKclRelative":max_kcl,"maxKvlRelative":max_kvl,"maxColumnPowerBalanceErrorW":max_power}, "frequenciesHz": frequencies, "referenceOhm": references, "parameters":parameters, "samples":samples, "model":model, "limitations":"No independent physical error, proximity, interface, or frequency-band validation"}))
+}
+
+#[cfg(test)]
+mod compact_planar_tests {
+    use super::*;
+    #[test]
+    fn compact_geometric_two_supports_two_drives() {
+        let budget = AllocationBudget { max_nodes: 100, max_tetrahedra: 100, max_bytes: 32_000_000 };
+        let prism = |id: &str, x: f64| super::super::prism::Prism::new(id.into(), [[x,0.],[x+0.001,0.],[x,0.001]], [0.,0.00001]).unwrap();
+        let p0 = prism("a", 0.); let p1 = prism("b", 0.003);
+        let supports = vec![
+            super::super::planar_operator::Support { charge_density: vec![1./p0.volume_m3,0.], current_density: vec![[1e8,0.,0.]], prism:p0 },
+            super::super::planar_operator::Support { charge_density: vec![0.,1./p1.volume_m3], current_density: vec![[-1e8,0.,0.]], prism:p1 },
+        ];
+        let gram = super::super::planar_operator::gram(&supports, 2, 1, 8, super::super::super::EPS0, budget, Duration::from_secs(25)).unwrap();
+        let c = compact_capacitance(&gram.potential_per_farad, &[vec![1.,0.],vec![0.,1.]], budget).unwrap();
+        let cells = vec![Cell::new(vec![(0,1.),(1,-1.)],1.)];
+        let basis = Basis { voltage:vec![vec![1.,0.],vec![0.,1.]], current:vec![vec![1.]], retained:vec![0,1], components:vec![vec![0,1]], dc_residual:0. };
+        let names = vec!["a".into(),"b".into()];
+        let entries = |m: Vec<Vec<f64>>| m.into_iter().enumerate().flat_map(|(i,r)| r.into_iter().enumerate().map(move |(j,v)|(i,j,v))).collect();
+        let make = |ports: &[[usize;2]]| make_model_matrices(&cells,2,&basis,&names,ports,entries(c.clone()),entries(gram.inductance_h.clone()),vec![(0,0,1.)]);
+        let model = make(&[[0,1],[1,0]]).unwrap();
+        let response = compact_planar_response(&model,&[1000.],&[50.,50.],&[],budget,Instant::now(),Duration::from_secs(5)).unwrap();
+        assert_eq!(response["samples"][0]["columns"].as_array().unwrap().len(),2);
+        assert!(make(&[[0,2]]).is_err());
+    }
+    #[test]
+    fn compact_response_keeps_ports_and_refuses_lost_contact() {
+        let budget = AllocationBudget { max_nodes: 100, max_tetrahedra: 100, max_bytes: 16_000_000 };
+        let cells = vec![Cell::new(vec![(0, 1.), (1, -1.)], 1.)];
+        let basis = Basis { voltage: vec![vec![1.,0.],vec![0.,1.]], current: vec![vec![1.]], retained: vec![0,1], components: vec![vec![0,1]], dc_residual: 0. };
+        let names = vec!["a".into(), "b".into()];
+        let make = |ports: &[[usize;2]]| make_model_matrices(&cells, 2, &basis, &names, ports, vec![(0,0,1e-12),(1,1,1e-12)], vec![(0,0,1e-9)], vec![(0,0,1.)]);
+        let model = make(&[[0,1], [1,0]]).unwrap();
+        let response = compact_planar_response(&model, &[1000.], &[50.,50.], &[], budget, Instant::now(), Duration::from_secs(5)).unwrap();
+        assert_eq!(response["coverage"], "unverified");
+        assert!(response["parameters"][0][0][0]["real"].as_f64().unwrap().is_finite());
+        assert!(response["parameters"][0][1][1]["real"].as_f64().unwrap().is_finite());
+        assert!(make(&[[0,2]]).is_err());
+    }
+    #[test]
+    fn charge_inverse_preserves_dual_and_refuses_dependent_modes() {
+        let budget = AllocationBudget { max_nodes: 100, max_tetrahedra: 100, max_bytes: 1_000_000 };
+        let p = vec![vec![2., 0.], vec![0., 4.]];
+        let dual = vec![vec![1., 0.], vec![0., 1.]];
+        let c = compact_capacitance(&p, &dual, budget).unwrap();
+        assert!((c[0][0] - 0.5).abs() < 1e-12);
+        assert!((c[1][1] - 0.25).abs() < 1e-12);
+        assert_eq!(c[0][1], 0.);
+        assert!(compact_capacitance(&[vec![1.,1.],vec![1.,1.]], &dual, budget).is_err());
+    }
+}

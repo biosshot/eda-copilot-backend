@@ -82,11 +82,18 @@ mod tests {
 
 /// Constant-density section pair; signed source fans analytically integrate radius.
 pub(super) fn constant_pair(a: &Prism, b: &Prism, rule: &GaussRule) -> Result<f64> {
+    constant_pair_impl(a,b,rule,None)
+}
+pub(super) fn constant_pair_guarded(a: &Prism, b: &Prism, rule: &GaussRule, start: std::time::Instant, limit: std::time::Duration) -> Result<f64> {
+    constant_pair_impl(a,b,rule,Some((start,limit)))
+}
+fn constant_pair_impl(a: &Prism, b: &Prism, rule: &GaussRule, deadline: Option<(std::time::Instant,std::time::Duration)>) -> Result<f64> {
     if !a.z_m.iter().chain(b.z_m.iter()).all(|x| x.is_finite()) || a.z_m[1]<=a.z_m[0] || b.z_m[1]<=b.z_m[0] { return Err(error("AXIAL_INPUT", "finite ordered axial endpoints required")); }
     let t=a.triangle_m;
     let jac=((t[1][0]-t[0][0])*(t[2][1]-t[0][1])-(t[1][1]-t[0][1])*(t[2][0]-t[0][0])).abs();
     let mut total=0.; let mut magnitude=0.;
     for (&u,&wu) in rule.nodes().iter().zip(rule.weights()) { for (&v,&wv) in rule.nodes().iter().zip(rule.weights()) {
+        if deadline.is_some_and(|(start,limit)| start.elapsed() >= limit) { return Err(error("DEADLINE", "axial quadrature deadline exceeded")); }
         let l=[1.-u,u*(1.-v),u*v];
         let p=[(0..3).map(|i|l[i]*t[i][0]).sum::<f64>(),(0..3).map(|i|l[i]*t[i][1]).sum::<f64>()];
         for e in 0..3 { let x=[b.triangle_m[e][0]-p[0],b.triangle_m[e][1]-p[1]]; let y=[b.triangle_m[(e+1)%3][0]-p[0],b.triangle_m[(e+1)%3][1]-p[1]];

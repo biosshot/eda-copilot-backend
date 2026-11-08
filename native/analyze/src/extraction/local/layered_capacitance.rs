@@ -626,8 +626,18 @@ impl Csc {
         (self.ptr.capacity() + self.indices.capacity() + self.values.capacity()) * 8
     }
 }
+/// A conforming spatial override of the baseline dielectric in a whole z slab.
+#[derive(Clone, Debug)]
+pub struct SpatialDielectric {
+    pub z0_m: f64,
+    pub z1_m: f64,
+    pub epsilon_r: f64,
+    pub polygon_m: Vec<[f64; 2]>,
+    pub holes_m: Vec<Vec<[f64; 2]>>,
+}
 #[derive(Clone)]
 struct Cell {
+    epsilon_override: Option<f64>,
     slab: usize,
     pair: usize,
     block: usize,
@@ -690,14 +700,17 @@ pub struct Solution {
 }
 
 pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
-    extract_impl(input, None, budget)
+    extract_impl(input, None, &[], budget)
 }
 /// Same field solver with spatial potential coordinates. This internal path
 /// does not establish PCB accuracy or create a physical-terminal mapping.
 pub fn extract_traced(input: &Input, trace: &PotentialTrace, budget: Budget) -> Result<Solution> {
-    extract_impl(input, Some(trace), budget)
+    extract_impl(input, Some(trace), &[], budget)
 }
-fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -> Result<Solution> {
+pub fn extract_traced_spatial(input: &Input, trace: &PotentialTrace, spatial: &[SpatialDielectric], budget: Budget) -> Result<Solution> {
+    extract_impl(input, Some(trace), spatial, budget)
+}
+fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[SpatialDielectric], budget: Budget) -> Result<Solution> {
     let guard = Guard {
         started: Instant::now(),
         budget,
@@ -887,6 +900,20 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -
             "explicit nonoverlapping full z material cover required",
         ));
     }
+    let mut spatial_polygons = Vec::new();
+    let mut spatial_bytes = 0usize;
+    for region in spatial {
+        g.time()?;
+        if !region.z0_m.is_finite() || !region.z1_m.is_finite() || region.z0_m >= region.z1_m || !region.epsilon_r.is_finite() || region.epsilon_r <= 0. || !input.z_m.contains(&region.z0_m) || !input.z_m.contains(&region.z1_m) {
+            return Err(error("MATERIAL", "spatial dielectric requires finite properties and exact z planes"));
+        }
+        let vertices = region.polygon_m.len().checked_add(region.holes_m.iter().map(Vec::len).sum()).ok_or_else(||error("MEMORY_LIMIT", "spatial vertex overflow"))?;
+        spatial_bytes = add(spatial_bytes, mul(vertices, 128)?)?;
+        g.memory(spatial_bytes)?;
+        let poly = Polygon::new(LineString::from(region.polygon_m.clone()), region.holes_m.iter().cloned().map(LineString::from).collect());
+        if !poly.is_valid() || poly.unsigned_area() <= 0. { return Err(error("MATERIAL", "invalid spatial dielectric footprint")); }
+        spatial_polygons.push(poly);
+    }
     let mut offset = vec![0usize];
     for &p in &input.planes {
         offset.push(add(*offset.last().unwrap(), meshes[p].xy.len())?);
@@ -899,7 +926,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -
         ));
     }
     let geometry_bytes = add(
-        owned_input_bytes,
+        add(owned_input_bytes, spatial_bytes)?,
         add(mul(input_nodes, 4096)?, mul(nodes, add(160, mul(input.metals.len(),8)?)?)?)?,
     )?;
     g.memory(geometry_bytes)?;
@@ -969,7 +996,19 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -
             for &n in &ns {
                 active[n] = true;
             }
+            let mut epsilon_override = None;
+            for (region, poly) in spatial.iter().zip(&spatial_polygons) {
+                if input.z_m[slab] >= region.z0_m && input.z_m[slab+1] <= region.z1_m {
+                    let relation = b.polygon.relate(poly);
+                    if relation.is_within() || relation.is_equal_topo() {
+                        if epsilon_override.replace(region.epsilon_r).is_some() { return Err(error("MATERIAL", "overlapping spatial dielectric footprints")); }
+                    } else if relation.get(CoordPos::Inside, CoordPos::Inside) == Dimensions::TwoDimensional {
+                        return Err(error("MATERIAL", "dielectric boundary cuts field cell"));
+                    }
+                }
+            }
             cells.push(Cell {
+                epsilon_override,
                 slab,
                 pair,
                 block: index,
@@ -1078,7 +1117,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, budget: Budget) -
             a,
             c,
             h,
-            z_moments(input.z_m[slab], input.z_m[slab + 1], &materials)?,
+            if let Some(epsilon) = cell.epsilon_override { [h*epsilon, h*epsilon/3., h*epsilon/3., h*epsilon/6.] } else { z_moments(input.z_m[slab], input.z_m[slab + 1], &materials)? },
         );
         for i in 0..6 {
             for j in 0..6 {
@@ -1303,6 +1342,7 @@ impl Solution {
         self.materials
             .iter()
             .map(|m| m.epsilon_r)
+            .chain(self.cells.iter().filter_map(|cell| cell.epsilon_override))
             .fold(1., f64::max)
     }
     /// Galerkin energy matrix, evaluated once per unordered pair and mirrored.
@@ -1464,7 +1504,7 @@ impl Solution {
                         for q in [-1. / 3f64.sqrt(), 1. / 3f64.sqrt()] {
                             let z = (lo + hi) / 2. + q * (hi - lo) / 2.;
                             let field = e(p, (z - self.z[slab]) / h);
-                            recovered += EPS0 * material.epsilon_r * area / 3. * (hi - lo) / 2.
+                            recovered += EPS0 * cell.epsilon_override.unwrap_or(material.epsilon_r) * area / 3. * (hi - lo) / 2.
                                 * field.iter().map(|v| v * v).sum::<f64>()
                                 / 2.;
                         }
@@ -1566,3 +1606,25 @@ mod tests {
         );
     }
 }
+
+
+#[cfg(test)]
+mod spatial_material_tests {
+    use super::*;
+    #[test]
+    fn footprint_preserves_hole_and_detects_cut() {
+        let footprint=Polygon::new(LineString::from(vec![[0.,0.],[4.,0.],[4.,4.],[0.,4.],[0.,0.]]),vec![LineString::from(vec![[1.,1.],[3.,1.],[3.,3.],[1.,3.],[1.,1.]])]);
+        let inside=polygon(&[[0.1,0.1],[0.9,0.1],[0.1,0.9],[0.1,0.1]]);
+        let hole=polygon(&[[1.2,1.2],[1.8,1.2],[1.2,1.8],[1.2,1.2]]);
+        let cut=polygon(&[[0.5,0.5],[1.5,0.5],[1.5,1.5],[0.5,0.5]]);
+        assert!(inside.relate(&footprint).is_within());
+        assert_ne!(hole.relate(&footprint).get(CoordPos::Inside,CoordPos::Inside),Dimensions::TwoDimensional);
+        let relation=cut.relate(&footprint);
+        assert!(!relation.is_within());
+        assert_eq!(relation.get(CoordPos::Inside,CoordPos::Inside),Dimensions::TwoDimensional);
+    }
+}
+
+#[cfg(test)]
+#[path = "layered_spatial_tests.rs"]
+mod layered_spatial_tests;
