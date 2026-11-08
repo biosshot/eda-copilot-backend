@@ -1972,15 +1972,16 @@
         "case": "Сверху+снизу + разрыв на одном/двух слоях",
         "implementation": {
           "status": "mapped",
-          "scope": "partial; structural hybrid mesh/map only",
+          "scope": "partial; structural mesh/map and small hybrid electrical split-reference control",
           "code": [
             "native/analyze/src/extraction/local/hybrid_section_model.rs",
             "native/analyze/src/extraction/local/mixed_conductor.rs"
           ],
           "shortControls": [
-            "native/analyze/src/extraction/local/mixed_conductor.rs#aligned_pad_orientation_tests::inner_signal_with_split_top_and_bottom_references_stays_disconnected"
+            "native/analyze/src/extraction/local/mixed_conductor.rs#aligned_pad_orientation_tests::inner_signal_with_split_top_and_bottom_references_stays_disconnected",
+            "native/analyze/src/extraction/local/hybrid_five_island_test.rs"
           ],
-          "coverageGap": "Combined TOP/BOTTOM split geometry preserves five conductor components around INNER signal (1794143097287789000); joint electrical response, actual inter-plane connections and independent physical reference remain unverified."
+          "coverageGap": "Combined TOP/BOTTOM split geometry preserves five components (1794143097287789000); small five-island hybrid electrical response, displacement current and charge/power balance pass at 1/10 kHz (1794146923747180500). Automatic full-board coupling, actual inter-plane connections and independent physical reference remain unverified."
         },
         "acceptance": {
           "status": "open",
@@ -2288,10 +2289,11 @@
             "native/analyze/src/extraction/local/mixed_conductor.rs"
           ],
           "shortControls": [
-            "native/analyze/src/extraction/local/mixed_conductor.rs#aligned_pad_orientation_tests::inner_signal_with_split_top_and_bottom_references_stays_disconnected"
+            "native/analyze/src/extraction/local/mixed_conductor.rs#aligned_pad_orientation_tests::inner_signal_with_split_top_and_bottom_references_stays_disconnected",
+            "native/analyze/src/extraction/local/hybrid_five_island_test.rs"
           ],
-          "scope": "partial; structural hybrid mesh/map only",
-          "coverageGap": "Combined TOP/BOTTOM split geometry preserves five conductor components around INNER signal (1794143097287789000); joint electrical response, actual inter-plane connections and independent physical reference remain unverified."
+          "scope": "partial; structural mesh/map and small hybrid electrical split-reference control",
+          "coverageGap": "Combined TOP/BOTTOM split geometry preserves five components (1794143097287789000); small five-island hybrid electrical response, displacement current and charge/power balance pass at 1/10 kHz (1794146923747180500). Automatic full-board coupling, actual inter-plane connections and independent physical reference remain unverified."
         },
         "acceptance": {
           "status": "open",
@@ -2333,9 +2335,11 @@
         "sourceSection": "primary",
         "case": "Разъём/пад (connector/pad transition)",
         "implementation": {
-          "status": "unmapped",
-          "code": null,
-          "shortControls": []
+          "status": "mapped",
+          "scope": "partial; finite pad to narrow track hybrid electrical control at 1 MHz",
+          "code": ["native/analyze/src/extraction/local/mixed_conductor.rs"],
+          "shortControls": ["native/analyze/src/extraction/local/hybrid_connector_test.rs"],
+          "coverageGap": "Two-drive positive response, KCL/KVL, copper/wave power and missing-contact refusal pass 1794147307231475200; independent physical connector reference and full connector geometry coverage remain open."
         },
         "acceptance": {
           "status": "open",
