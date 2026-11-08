@@ -2014,3 +2014,7 @@ mod aligned_pad_orientation_tests {
         assert!(map.full.components.len()>=4,"real pad gaps must not merge conductor islands");
     }
 }
+
+#[cfg(test)]
+#[path = "hybrid_connector_test.rs"]
+mod hybrid_connector_test;

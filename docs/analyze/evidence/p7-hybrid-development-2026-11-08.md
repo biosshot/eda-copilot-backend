@@ -251,3 +251,8 @@ The captured orientation requests also reveal an applicability limit of this con
 - Compact local hierarchy now honors the existing P7_MAGNETIC_AXIAL_TETS=1 opt-in (default0), with axial scratch/cache reserved for owner and workers before allocation. It uses the existing separated-order6/8 estimator/retry and direct fallback; checked self and genuinely near kernels remain unchanged.
 - `1794147054784297700`: strengthened focused test passes in 0.563s, checking an actually accepted axial pair against direct integration, serial/parallel action and bound identity, checked self preservation, and a counted real fallback with bitwise direct agreement. Earlier initial test did not prove fallback invocation and was strengthened before this result.
 - Actual via speed/completion and production addon integration remain pending.
+
+### Finite pad-to-track electrical control
+
+- The first connector test attempt (`1794147144869919200`) correctly refused foil applicability because the test omitted the production `with_thickness_screen` mesh preparation. The test was corrected to use the same conductivity-dependent screen as the public AutomaticHybridV1 path; no production gate changed.
+- `1794147307231475200`: 0.8mm finite pads feeding 0.4mm tracks pass the actual HybridPlanarV3/AutomaticHybridV1 solve at 1MHz with two drives in 5.406s supervisor wall. Checks cover finite contact areas, original port identities, KCL/KVL, positive copper loss, reconstructed wave/copper power, nonzero transfer and missing-contact refusal. Original fixtures are unchanged. Independent connector physical accuracy remains open.
