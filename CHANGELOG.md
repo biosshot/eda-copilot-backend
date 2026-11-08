@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Preserve matched conductor-interior potential coordinates with exact zero electric charge while retaining missing/unmatched trace rejection.
+- Avoid scalar pair-cache collisions when all ordered local pairs fit existing admitted storage; memory limits remain unchanged.
+
 - Connect the existing checked axial tetrahedron quadrature to the compact local hierarchy under `P7_MAGNETIC_AXIAL_TETS=1`, including worker memory admission and unchanged direct fallback. It remains opt-in; no complete-via speedup is yet established.
 
 - Cap the mixed planar pair cache by its actual PP/PL pair domain and reuse the unused reserve for local tetrahedron work within the unchanged total budget. Compact parallel workers retain two cubature slots each; legacy worker capacities remain unchanged.

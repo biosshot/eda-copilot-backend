@@ -185,6 +185,37 @@ mod board_adapter_tests {
     use super::super::{board_mesh::{self, Electrode, Request}, mixed_conductor, AllocationBudget};
     use std::time::Duration;
     #[test]
+    fn production_profiled_via_field_trace_covers_mixed_coordinates() {
+        let board=crate::import_json(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-board.json")).board.unwrap();
+        // Exact geometry request captured from automatic-hybrid DSL before native execution.
+        let request:Request=serde_json::from_str(r#"{"roiMm":[[-0.54,-1.07],[10.54,0.6900000000000001]],"stack":[{"name":"TOP","copper":true,"thicknessM":1e-05,"conductivitySM":58000000,"epsilonR":null},{"name":"substrate","copper":false,"thicknessM":0.0002,"conductivitySM":null,"epsilonR":4},{"name":"BOTTOM","copper":true,"thicknessM":1e-05,"conductivitySM":58000000,"epsilonR":null}],"finishedHolePlatingM":2.5e-05,"barrelConductivitySM":58000000,"airMarginM":0.002,"maxTriangleAreaM2":1e-06,"maxVerticalStepM":0.002,"curveDeviationMm":0.001,"electrodes":[{"name":"foil-terminal-0","sourcePath":"pads[0]","layer":"TOP","upper":false},{"name":"foil-terminal-1","sourcePath":"pads[1]","layer":"BOTTOM","upper":true},{"name":"foil-terminal-2","sourcePath":"pads[2]","layer":"BOTTOM","upper":true},{"name":"foil-terminal-3","sourcePath":"pads[3]","layer":"BOTTOM","upper":true}],"ports":[["foil-terminal-0","foil-terminal-2"],["foil-terminal-1","foil-terminal-3"]],"acceptUnknownFillFreshness":true,"allowInsulatedCopperCuts":false,"minTriangleAngleDeg":0,"airEdgeDivisions":1,"domainPolygonMm":[[-0.54,-1.07],[10.54,-1.07],[10.54,0.6900000000000001],[-0.54,0.6900000000000001]],"cutPlanes":{}}"#).unwrap();
+        let allocation=AllocationBudget{max_bytes:512*1024*1024,max_nodes:100_000,max_tetrahedra:200_000};
+        let wall=Duration::from_secs(20);
+        let profile=mixed_conductor::CheckedOperator::HybridPlanarV3.skin_profile(1e6,Some(1e6),request.max_vertical_step_m).unwrap().unwrap().with_thickness_screen([58e6]).unwrap();
+        let board_mesh=board_mesh::build_profiled(&board,&request,allocation,wall,None,&[],Some(profile)).unwrap();
+        let map=mixed_conductor::prepare(&board_mesh,&request.electrodes,1e6,allocation,wall).unwrap();
+        let budget=Budget{max_nodes:100_000,max_local_terms:2_400_000,max_bytes:512*1024*1024,max_wall:wall};
+        let (input,regions)=input_from_board(&board_mesh,&request,budget).unwrap();
+        let trace=trace(&input,&map,budget).unwrap();
+        let referenced:std::collections::BTreeSet<_>=trace.nodes.iter().flat_map(|n|n.weights.iter().map(|&(i,_)|i)).collect();
+        assert_eq!(referenced.len(),map.potential_count(),"every mixed mode must be referenced by a matched physical metal node");
+        assert!(referenced.contains(&139));
+        let action=super::super::layered_capacitance::prepare_traced_spatial_action(&input,&trace,&regions,budget).unwrap();
+        let mut interior=vec![0.;map.potential_count()];interior[139]=1.;
+        let charge=action.apply(&interior).unwrap();
+        assert!(charge.iter().all(|&q|q==0.),"interior-only mode must have exactly zero field charge");
+        drop(action);
+        let mut unused=trace.clone();unused.potential_nodes.push("unreferenced-bogus".into());
+        let failure=super::super::layered_capacitance::prepare_traced_spatial_action(&input,&unused,&regions,budget).err().unwrap();
+        assert!(failure.contains("FIELD_TRACE") && failure.contains("unusedCount=1"),"{failure}");
+        let mut unmatched=trace.clone();let mut extra=unmatched.nodes[0].clone();extra.position_m[0]+=100.;unmatched.nodes.push(extra);
+        let failure=super::super::layered_capacitance::prepare_traced_spatial_action(&input,&unmatched,&regions,budget).err().unwrap();
+        assert!(failure.contains("FIELD_TRACE") && !failure.contains("unmatchedCount=0"),"{failure}");
+        let mut missing=trace.clone();missing.nodes.remove(0);
+        let failure=super::super::layered_capacitance::prepare_traced_spatial_action(&input,&missing,&regions,budget).err().unwrap();
+        assert!(failure.contains("FIELD_TRACE"),"{failure}");
+    }
+    #[test]
     fn prepared_fr4_via_board_builds_owned_spatial_trace() {
         let board=crate::import_json(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-board.json")).board.unwrap();
         let mut request:Request=serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-request-d1-m1.json")).unwrap();

@@ -263,3 +263,9 @@ The captured orientation requests also reveal an applicability limit of this con
 - Fresh addon audited smoke `1794147774835490600` passes cold/warm/restart, same-model regime audit, spatial recovery and loss evidence in 5.047s; sampled private peak444506112 bytes. This does not establish full-board speed or physical accuracy.
 - Production automatic via at 1MHz (`1794147818406695400`) refuses before magnetic calculation at FIELD_TRACE. Focused unchanged-geometry reproduction `1794148260998832700` identifies88 potential modes without active field support and zero unmatched trace nodes. Correct handling of conductor-interior coordinates is under investigation; guards have not been removed.
 - Remote-return development control still reaches its original12s per-case cap: two-frequency run1794147887410473600, single-frequency isolation1794147983319963000, then explicit PL4/TT4/axial1 configuration1794148067829387900. Closed-case training ends around11.77s but complete checked response is not yet obtained. No limit increase or positive coverage claim follows.
+
+### Matched conductor-interior trace and bounded pair cache
+
+- 1794148483445945600: exact production-profile via field action passes in 3.047s. Matched copper-interior coordinate139 has zero charge; missing, unmatched and genuinely unused trace coordinates still refuse.
+- 1794148496667516500: collision-free small admitted pair table passes in0.157s, with two real kernels and two cache hits. No additional allocation.
+- 1794148517786873800: compact reuse test group passes in0.875s under the unchanged5s/1536MiB supervisor. Complete via and remote-return checks await a rebuilt addon.

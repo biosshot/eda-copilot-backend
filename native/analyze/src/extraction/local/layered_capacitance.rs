@@ -1133,7 +1133,13 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
                     }
                     contact_owners[n].push(c);
                     for &(mode, _) in &weights {
-                        used_modes[mode] |= active[n];
+                        // A matched node wholly inside copper has no incident
+                        // dielectric cell and therefore contributes an exact
+                        // zero row/column to the field action. It still names
+                        // a genuine current-mesh coordinate, not a missing
+                        // trace. Only the conductor itself requires an active
+                        // boundary node below; all supplied nodes must match.
+                        used_modes[mode] = true;
                     }
                     represented[c] |= active[n];
                 }
@@ -1154,9 +1160,11 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
         }
     }
     if used_modes.iter().any(|x| !*x) || used_traces.len() != supplied.len() {
+        let unused:Vec<_>=used_modes.iter().enumerate().filter_map(|(i,&used)|(!used).then_some(i)).take(16).collect();
+        let unmatched:Vec<_>=supplied.keys().filter(|key|!used_traces.contains(key)).take(8).collect();
         return Err(error(
             "FIELD_TRACE",
-            "unused potential coordinate or unmatched supplied trace node",
+            &format!("unused potential coordinate or unmatched supplied trace node: unusedCount={} unusedFirst={unused:?} unmatchedCount={} unmatchedFirst={unmatched:?}",used_modes.iter().filter(|&&v|!v).count(),supplied.len()-used_traces.len()),
         ));
     }
     if represented.iter().any(|x| !*x) {

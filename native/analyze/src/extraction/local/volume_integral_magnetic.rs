@@ -471,13 +471,22 @@ impl BoundedPairs {
         });
         Ok(())
     }
+    fn scalar_slot(&self, i:usize, j:usize, capacity:usize)->Option<usize> {
+        if capacity==0 {return None;}
+        let n=self.tetra.len();
+        // If every ordered pair fits in already admitted storage, avoid
+        // hash collisions and repeated exact quadrature. Larger domains keep
+        // the bounded direct-mapped cache without allocating a dense matrix.
+        if n.checked_mul(n).is_some_and(|count|count<=capacity) {Some(i*n+j)}
+        else {Some((i.wrapping_mul(0x9e3779b1).wrapping_add(j.wrapping_mul(0x85ebca6b)))%capacity)}
+    }
     fn scalar_get(&self, i: usize, j: usize) -> Option<f64> {
-        let slot={let cache=self.scalar.borrow();if cache.is_empty(){None}else{Some((i.wrapping_mul(0x9e3779b1).wrapping_add(j.wrapping_mul(0x85ebca6b)))%cache.len())}};
+        let slot=self.scalar_slot(i,j,self.scalar.borrow().len());
         if let Some(k)=slot {if let Some(entry)=self.scalar.borrow()[k] {if entry.i==i && entry.j==j {if let Some(t)=&self.trace {t.borrow_mut().hits+=1;}return Some(entry.value);}} if let Some(t)=&self.trace {t.borrow_mut().misses+=1;}}
         None
     }
     fn scalar_put(&self, i: usize, j: usize, value: f64) {
-        let slot={let cache=self.scalar.borrow();if cache.is_empty(){None}else{Some((i.wrapping_mul(0x9e3779b1).wrapping_add(j.wrapping_mul(0x85ebca6b)))%cache.len())}};
+        let slot=self.scalar_slot(i,j,self.scalar.borrow().len());
         if let Some(k)=slot {let mut cache=self.scalar.borrow_mut();if cache[k].is_some() {if let Some(t)=&self.trace {t.borrow_mut().evictions+=1;}}cache[k]=Some(ScalarSlot{i,j,value});}
     }
     fn pair(&self, i: usize, j: usize) -> Result<f64> {
@@ -1376,6 +1385,19 @@ impl CompactLocalHierarchy {
 #[cfg(test)]
 mod compact_reuse_tests {
     use super::*;
+    #[test]
+    fn admitted_small_pair_table_does_not_recompute_colliding_pairs() {
+        let t=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];
+        let geometry=(0..3).map(|i|t.map(|p|[p[0]+i as f64*0.002,p[1],p[2]])).collect();
+        let mut pair=BoundedPairs::new_with_scalar(geometry,12,2,9,Instant::now(),Duration::from_secs(5)).unwrap();
+        pair.trace=Some(std::cell::RefCell::new(PairTrace{counts:[0;3],seconds:[0.;3],last:Instant::now(),hits:0,misses:0,evictions:0}));
+        let a=pair.pair(0,0).unwrap();let b=pair.pair(1,1).unwrap();
+        assert_eq!(pair.pair(0,0).unwrap().to_bits(),a.to_bits());
+        assert_eq!(pair.pair(1,1).unwrap().to_bits(),b.to_bits());
+        let trace=pair.trace.as_ref().unwrap().borrow();
+        assert_eq!((trace.hits,trace.misses,trace.evictions),(2,2,0));
+        assert_eq!(trace.counts.iter().sum::<u64>(),2);
+    }
     #[test]
     fn compact_axial_opt_in_preserves_checks_and_parallel_actions() {
         let start=Instant::now();let wall=Duration::from_secs(30);
