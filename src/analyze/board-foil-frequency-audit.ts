@@ -21,11 +21,25 @@ function observations(report: BoardFoilReport, index: number): Value {
   return values;
 }
 
-function physicalMesh(report: BoardFoilReport) {
+function physicalMeshIdentity(report: BoardFoilReport) {
   const p=report.provenance,skin=p.copperSkinMesh;
   const magnetic=p.magneticOperator;
+  const extended=p as unknown as Record<string,unknown>;
+  const compact=extended.compactOperator as Record<string,unknown>|undefined;
+  const hybrid=extended.hybridAssembly as Record<string,unknown>|undefined;
   return canonical({
     modelKind:p.modelKind,operatorPolicy:p.operatorPolicy,prisms:p.prisms,
+    // Include only stable representation identity; frequency-specific quadrature
+    // measurements and hints are expected to vary between valid exact batches.
+    compactOperator:compact&&{
+      version:compact.version,basis:compact.basis,electricOperator:compact.electricOperator,
+      foilSupports:compact.foilSupports,localTetraSupports:compact.localTetraSupports,
+      potentialCoordinates:compact.potentialCoordinates,currentCoordinates:compact.currentCoordinates,
+    },
+    hybridAssembly:hybrid&&{
+      policy:hybrid.policy,method:hybrid.method,potentialCoordinates:hybrid.potentialCoordinates,
+      currentCoordinates:hybrid.currentCoordinates,
+    },
     partitionPolicy:p.partitionPolicy,automaticPartition:p.automaticPartition,
     ...(magnetic&&{magneticOperator:magnetic.policy==='exact-streamed-v1'
       ?{policy:magnetic.policy,method:magnetic.method}
@@ -62,6 +76,7 @@ export function auditBoardFoilFrequency(
     relativeTolerance:p7LowBandAuditPolicy.relativeTolerance,
   }]));
   let batch: {status:'checked'|'refused'; frequenciesHz:number[]; cache?:BoardFoilReport['cache']; message?:string} | undefined;
+  let supplementalResponses: Array<{frequencyHz:number;parameters:BoardFoilReport['parameters'][number];samples:BoardFoilReport['samples'][number];referenceOhm:number[]}> = [];
   const interpolation=auditFrequencyCoverage({
     demand:{spectralBandHz:requestedIntervalHz},supportedIntervalsHz:[applicabilityBandHz],
     transitionFrequenciesHz:[...seeded.keys()],initialSamples:seeded,deadlineMs,
@@ -76,9 +91,12 @@ export function auditBoardFoilFrequency(
           budget:{...problem.request.budget,maxSeconds}}};
         const report=execute(changed);
         validateBoardFoilReport(report,changed,report.cache?.producerBudget??changed.request.budget);
-        if(physicalMesh(report)!==physicalMesh(baseline))
+        if(physicalMeshIdentity(report)!==physicalMeshIdentity(baseline))
           throw new Error('CHANNEL_FOIL_FREQUENCY_MESH: supplemental solve changed the original physical mesh or ownership');
         if(performance.now()>=deadlineMs)throw new Error('CHANNEL_FOIL_DEADLINE: batch exceeded shared frequency audit budget');
+        // Retain only the requested exact response payload, not whole reports or provenance trees.
+        supplementalResponses.push(...frequenciesHz.map((frequencyHz,i)=>({frequencyHz,
+          parameters:report.parameters[i],samples:report.samples[i],referenceOhm:report.referenceOhm})));
         batch={status:'checked',frequenciesHz,cache:report.cache};
         return new Map(frequenciesHz.map((f,i)=>[f,observations(report,i)]));
       }catch(error){
@@ -94,10 +112,20 @@ export function auditBoardFoilFrequency(
       : maxRelativeError<=0.035?'requires-review' as const:'unverified' as const;
     return {...holdout,maxRelativeError,status};
   });
+  const baselineResponses=baseline.frequenciesHz.map((frequencyHz,i)=>({frequencyHz,
+    parameters:baseline.parameters[i],samples:baseline.samples[i],referenceOhm:baseline.referenceOhm}));
+  const adaptiveByFrequency=new Map<number,typeof baselineResponses[number]>();
+  for(const point of [...baselineResponses,...supplementalResponses])adaptiveByFrequency.set(point.frequencyHz,point);
+  const adaptiveResponse={
+    points:[...adaptiveByFrequency.values()].sort((a,b)=>a.frequencyHz-b.frequencyHz),
+    independentHoldoutFrequenciesHz:holdouts.map(({frequencyHz,status,maxRelativeError,accepted})=>({frequencyHz,status,maxRelativeError,accepted})),
+    physicalCoverage:{status:'unverified' as const,reason:'Exact evaluated points and interpolation holdouts do not establish continuous-band or independent physical accuracy.'},
+  };
   return {
     applicabilityBandHz, maxFreshSamples,
     batch:batch??{status:'not-attempted' as const},
     interpolation:{...interpolation,holdouts,samples:interpolation.samples.filter(s=>!seeded.has(s.frequencyHz))},
+    adaptiveResponse,
     physicalCoverage:{status:'unverified' as const,reason:'Independent joint board frequency reference unavailable'},
     scope:'Supplemental exact physical points are audit evidence only. The network replays its original exact grid. Interpolation sensitivity does not admit continuous replay or physical-band accuracy.',
   };

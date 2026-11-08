@@ -87,6 +87,10 @@ test('joint range runs one bounded same-geometry batch and preserves exact repla
  assert.equal(held.promoted,true);
  assert.ok(audit.interpolation.unverified.some(gap=>gap.reason==='sample-budget'));
  assert.deepEqual(audit.interpolation.samples.map(s=>s.frequencyHz),batch.request.frequenciesHz);
+ assert.deepEqual(audit.adaptiveResponse.points.map(p=>p.frequencyHz),[1500,...batch.request.frequenciesHz,7500]);
+ assert.equal(audit.adaptiveResponse.physicalCoverage.status,'unverified');
+ assert.ok(audit.adaptiveResponse.points.find(p=>p.frequencyHz===2250)?.samples.columns[0].copperLossW===8.875);
+ assert.ok(audit.adaptiveResponse.independentHoldoutFrequenciesHz.some(h=>h.frequencyHz===2250&&h.status==='requires-review'));
  const result=boardFoilResult('ctx',plan,range,[]);
  assert.deepEqual((result.network?.data as {frequenciesHz:number[]}).frequenciesHz,[1500,7500]);
  assert.equal((result.network?.validity?.domain as {bandCoverage:string}).bandCoverage,'unverified');
@@ -100,6 +104,48 @@ test('joint range runs one bounded same-geometry batch and preserves exact repla
  assert.equal(refused.frequencyAudit?.batch.status,'refused');
  assert.ok(refused.frequencyAudit?.interpolation.unverified.some(gap=>gap.reason==='physical-evaluation'));
  assert.deepEqual(refused.frequenciesHz,range.frequenciesHz);
+ assert.deepEqual(refused.frequencyAudit?.adaptiveResponse.points.map(p=>p.frequencyHz),[1500,7500]);
+});
+
+test('frequency audit rejects valid compact basis changes but permits quadrature statistics changes',()=>{
+ const previous=process.env.P7_COMPACT_PLANAR;
+ process.env.P7_COMPACT_PLANAR='1';
+ const calls:BoardFoilProblem[]=[];
+ const run=(change:'basis'|'quadrature')=>{
+  calls.length=0;
+  const execute=(problem:BoardFoilProblem)=>{
+   calls.push(problem);const value=report(problem) as BoardFoilReport & {operator?:string};
+   const changed=calls.length>1;
+   Object.assign(value,{operator:'compact-planar-layered-prototype'});
+   delete value.quality.maxFullKvlUncertaintyRelative;
+   Object.assign(value.quality,{scope:'compact-discrete',physicalError:'unverified',maxCompactKvlUncertaintyRelative:0});
+   for(const sample of value.samples as unknown as Array<{columns:Array<Record<string,unknown>>}>) for(const column of sample.columns){
+    delete column.kvlUncertaintyRelative;
+    column.compactKvlUncertaintyRelative=0;
+    column.compactMagneticCertificate={policy:'compact-mixed-near-far',nearQuadratureErrorCertified:false};
+   }
+   const potentialCoordinates=changed&&change==='basis'?3:4;
+   Object.assign(value.provenance,{
+    partitionPolicy:'automatic-hybrid-v1',automaticPartition:undefined,magneticOperator:undefined,
+    compactOperator:{version:'compact-planar-v1',basis:'adaptive-mixed-closure',electricOperator:'layered-spatial-field-mesh',
+     foilSupports:0,localTetraSupports:3,potentialCoordinates,currentCoordinates:9,approximationError:'unverified',scope:'compact-discrete',
+     originalVolumeActions:0,physicalAccuracy:'unverified',planarMaxOrder:0,planarMaxRelativeChange:0,
+     mixedMaxRelativeChange:0,tetraSelfMaxRelativeChange:0,tetraPairAdaptiveTolerance:0,nearQuadratureEstimatedTolerance:1e-8,
+     skinHints:{added:changed&&change==='quadrature'?7:1}},
+    hybridAssembly:{policy:'automatic-hybrid-v1',method:'global-compact-mixed',potentialCoordinates,currentCoordinates:9,physicalAccuracy:'unverified'},
+   });
+   return value;
+  };
+  return runAutoFoil(plan,[1500,7500],budget,[1500,7500],execute);
+ };
+ try{
+  const changed=run('basis');
+  assert.equal(changed.frequencyAudit?.batch.status,'refused');
+  assert.deepEqual(changed.frequencyAudit?.adaptiveResponse.points.map(p=>p.frequencyHz),[1500,7500]);
+  const quadrature=run('quadrature');
+  assert.equal(quadrature.frequencyAudit?.batch.status,'checked');
+  assert.ok(quadrature.frequencyAudit?.adaptiveResponse.points.length>2);
+ }finally{if(previous===undefined)delete process.env.P7_COMPACT_PLANAR;else process.env.P7_COMPACT_PLANAR=previous;}
 });
 
 

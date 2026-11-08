@@ -193,7 +193,10 @@ function validateSkinMesh(provenance:AnalysisBoardFoilCheckedReport['provenance'
  }
  const requestedUpperHz=request.frequenciesHz.at(-1);
  const effectiveUpperHz=request.profileUpperHz??requestedUpperHz;
- if(request.operatorPolicy!=='skin-volume-v3'||provenance.operatorPolicy!==request.operatorPolicy||
+ if(!['skin-volume-v3','hybrid-planar-v3'].includes(request.operatorPolicy)||
+    (request.operatorPolicy==='hybrid-planar-v3'&&request.partitionPolicy!=='automatic-hybrid-v1')||
+    !positive(effectiveUpperHz)||effectiveUpperHz>(request.operatorPolicy==='hybrid-planar-v3'?1e10:1e5)||
+    provenance.operatorPolicy!==request.operatorPolicy||
     provenance.modelKind!=='mixed'||!mesh||mesh.version!==3||mesh.requestedUpperHz!==requestedUpperHz||
     mesh.trainingUpperBoundHz!==requestedUpperHz||mesh.effectiveUpperHz!==effectiveUpperHz||
     mesh.skinDepthDivisor!==3||mesh.currentAndElectricShareMesh!==true||
@@ -205,14 +208,14 @@ function validateSkinMesh(provenance:AnalysisBoardFoilCheckedReport['provenance'
  };
  const layers=Array.isArray(geometry.stack)?geometry.stack.filter(layer=>layer?.copper===true):[];
  const barrels=expected.sourceBarrels.map(barrel=>barrel.barrelId).sort();
- const validSpacing=(skinDepthM:number,stepM:number,pieces:number,conductivity:unknown)=>{
+ const validSpacing=(skinDepthM:number,stepM:number,pieces:number,conductivity:unknown,divisor=3)=>{
   if(!positive(skinDepthM)||!positive(stepM)||!Number.isSafeInteger(pieces)||pieces<1||!positive(conductivity))return false;
   const depth=1/(Math.sqrt(Math.PI*(4e-7*Math.PI)*mesh.effectiveUpperHz)*Math.sqrt(conductivity));
-  return positive(depth)&&Math.abs(skinDepthM/depth-1)<=1e-8&&stepM<=skinDepthM/3*(1+1e-8);
+  return positive(depth)&&Math.abs(skinDepthM/depth-1)<=1e-8&&stepM<=skinDepthM/divisor*(1+1e-8);
  };
  if(!layers.length||!Array.isArray(mesh.layers)||mesh.layers.length!==layers.length||
     mesh.layers.some((row,i)=>!row||row.layer!==layers[i].name||
-     !validSpacing(row.skinDepthM,row.maximumStepM,row.slabs,layers[i].conductivitySM))||
+     !validSpacing(row.skinDepthM,row.maximumStepM,row.slabs,layers[i].conductivitySM,request.operatorPolicy==='hybrid-planar-v3'?5:3))||
     !Array.isArray(mesh.roundBarrels)||mesh.roundBarrels.length!==barrels.length||
     mesh.roundBarrels.some(row=>!row||typeof row.id!=='string'||
      !validSpacing(row.skinDepthM,row.maximumRadialStepM,row.shells,geometry.barrelConductivitySM))||

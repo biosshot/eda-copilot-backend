@@ -8,7 +8,7 @@ type Entry = { report: AnalysisBoardFoilCheckedReport; producerBudget: Budget };
 
 /** Bump whenever the shared planar/hybrid operator changes its numerical
  * meaning. Kept in the existing exact-grid identity so old snapshots miss. */
-export const HYBRID_PLANAR_OPERATOR_VERSION = 'hybrid-planar-v3';
+export const HYBRID_PLANAR_OPERATOR_VERSION = 'hybrid-planar-v4';
 
 function validBudget(budget: Budget) {
   return Number.isFinite(budget?.maxSeconds) && budget.maxSeconds > 0 && budget.maxSeconds <= 3600 &&
@@ -33,14 +33,16 @@ export function cachedBoardFoilReport(
 ): BoardFoilReport {
   const { request, expected } = problem;
   const { frequenciesHz, maxIterations = 16, operatorPolicy, profileUpperHz, partitionPolicy } = request;
-  const profiled = operatorPolicy === 'skin-volume-v3';
-  const limitHz = profiled ? 100_000 : 10_000;
+  const hybridProfile = operatorPolicy === 'hybrid-planar-v3';
+  const profiled = operatorPolicy === 'skin-volume-v3' || hybridProfile;
+  const limitHz = hybridProfile ? 1e10 : profiled ? 100_000 : 10_000;
   const upperHz = profileUpperHz ?? frequenciesHz.at(-1);
   const portCount = expected.electrodePairs.length;
   const referenceOhm = request.referenceOhm ?? expected.electrodePairs.map(() => 50);
   if (!validBudget(request.budget)) throw new Error('BOARD_FOIL_BUDGET: finite positive time and 1..65536 MiB required');
   if ((partitionPolicy !== undefined && partitionPolicy !== 'automatic-conductive-schur-v1' && partitionPolicy !== 'automatic-hybrid-v1') ||
       (operatorPolicy !== undefined && !profiled) ||
+      (hybridProfile && partitionPolicy !== 'automatic-hybrid-v1') ||
       (profileUpperHz !== undefined && (!profiled || !Number.isFinite(profileUpperHz) ||
         profileUpperHz < frequenciesHz[frequenciesHz.length - 1] || profileUpperHz > limitHz)) ||
       portCount < 1 || portCount > 16 || !frequenciesHz.length || frequenciesHz.length * portCount > 256 ||

@@ -698,6 +698,7 @@ pub fn solve_checked(
     let port_count = geometry.ports.len();
     let axis = request.frequencies_hz;
     let operator = request.operator_policy;
+    operator.validate_partition(request.partition_policy)?;
     if !(1..=16).contains(&port_count)
         || axis.is_empty()
         || axis.len().saturating_mul(port_count) > MAX_CHECKED_COLUMNS
@@ -792,7 +793,7 @@ pub fn solve_checked(
     if skin.is_some() {
         // Apply the existing physical pad/closed copper and electrical-size
         // guard before paying for a larger profiled mesh.
-        mixed_conductor::checked_reserve(geometry, mixed_grid, skin)?;
+        mixed_conductor::checked_reserve_policy(geometry, mixed_grid, skin, operator, request.partition_policy)?;
     }
     let mesh = board_mesh::build_profiled(
         board,
@@ -811,13 +812,14 @@ pub fn solve_checked(
             .enumerate()
             .all(|(i, layer)| layer.copper == (i % 2 == 0));
     let mixed = |mesh| {
-        let mut checked = mixed_conductor::solve_checked_mesh(
+        let mut checked = mixed_conductor::solve_checked_mesh_policy(
             mesh,
             geometry,
             mixed_grid,
             skin,
             &packages,
             request.partition_policy,
+            operator,
             budget,
             started,
             wall,

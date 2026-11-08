@@ -3,7 +3,7 @@ import type { ChannelLossGram } from './channel-loss.ts';
 import type { BoardChannelRequest } from './channel-components.ts';
 import { declaredNetworkBand } from './analysis-dsl/frequency-model.ts';
 import type { LegacyChannelContact } from './channel-terminals.ts';
-import {boardChannelBlockBandHz,boardChannelJointSkinBandHz,createBoardChannelPlanner} from './board-channel-plan.ts';
+import {boardChannelBlockBandHz,boardChannelJointSkinBandHz,boardChannelHybridBandHz,createBoardChannelPlanner} from './board-channel-plan.ts';
 import {solveSegmentedChannel} from './segmented-channel.ts';
 import {auditSegmentedResponse,type ChannelFrequencyReplay} from './segmented-frequency-audit.ts';
 import type {FrequencyInterval} from './p7-frequency-planning.ts';
@@ -47,7 +47,7 @@ export function boardChannelApplicability(request: BoardChannelRequest, requeste
   const band=declaredNetworkBand(component.model);
   return band?[band]:[];
  });
- const band=requestedUpperHz>boardChannelBlockBandHz[1]?boardChannelJointSkinBandHz:boardChannelBlockBandHz;
+ const band=process.env.P7_COMPACT_PLANAR==='1'?boardChannelHybridBandHz:requestedUpperHz>boardChannelBlockBandHz[1]?boardChannelJointSkinBandHz:boardChannelBlockBandHz;
  return [Math.max(band[0],...bands.map(component=>component[0])),
   Math.min(band[1],...bands.map(component=>component[1]))];
 }

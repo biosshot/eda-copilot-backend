@@ -5,7 +5,7 @@ import { validateBoardFoilReport } from './board-foil-validation.ts';
 import type { BoardFoilProblem, BoardFoilReport } from './types.ts';
 import { requestedFrequencyInterval, type FrequencyInterval } from './p7-frequency-planning.ts';
 import { declaredNetworkBand } from './analysis-dsl/frequency-model.ts';
-import { boardChannelBlockBandHz, boardChannelJointSkinBandHz } from './board-channel-plan.ts';
+import { boardChannelBlockBandHz, boardChannelJointSkinBandHz, boardChannelHybridBandHz } from './board-channel-plan.ts';
 
 export type BoardFoilRunReport = BoardFoilReport & {
  jointSensitivity?: ReturnType<typeof auditBoardFoilGrid>;
@@ -18,11 +18,12 @@ export function runAutoFoil(
 ): BoardFoilRunReport {
  const started=performance.now();
  const n=plan.ports.length;
+ const hybrid=process.env.P7_COMPACT_PLANAR==='1';
  const requested=interval&&requestedFrequencyInterval({spectralBandHz:interval});
  const highestSampleHz=frequenciesHz.at(-1)??0;
  const demandUpperHz=Math.max(requested?.[1]??0,highestSampleHz);
  const extendedDemand=demandUpperHz>boardChannelBlockBandHz[1];
- const foilBandHz:FrequencyInterval=extendedDemand?boardChannelJointSkinBandHz:boardChannelBlockBandHz;
+ const foilBandHz:FrequencyInterval=hybrid?boardChannelHybridBandHz:extendedDemand?boardChannelJointSkinBandHz:boardChannelBlockBandHz;
  if(!Number.isFinite(budget.maxSeconds)||budget.maxSeconds<=0)
   throw new Error('CHANNEL_FOIL_DEADLINE: shared budget exhausted before the foil solve');
  if(!n||n>16||!frequenciesHz.length||frequenciesHz.length*n>256||
@@ -45,9 +46,9 @@ export function runAutoFoil(
  const referenceOhm=plan.ports.map(()=>50);
  const problem: BoardFoilProblem = {kind:'board-foil-checked',boardJson:plan.boardJson,geometry:plan.geometry,
   expected:{electrodePairs:plan.electrodePairs,sourceCopper:plan.sourceCopper,sourceBarrels:plan.sourceBarrels},
-  request:{frequenciesHz,referenceOhm,budget,partitionPolicy:process.env.P7_COMPACT_PLANAR==='1'?'automatic-hybrid-v1':'automatic-conductive-schur-v1',
+  request:{frequenciesHz,referenceOhm,budget,partitionPolicy:hybrid?'automatic-hybrid-v1':'automatic-conductive-schur-v1',
    ...(plan.attachments.length&&{attachments:plan.attachments}),
-   ...(skin&&{operatorPolicy:'skin-volume-v3' as const,profileUpperHz})}};
+   ...(skin&&{operatorPolicy:hybrid?'hybrid-planar-v3' as const:'skin-volume-v3' as const,profileUpperHz})}};
  const report=execute(problem);
  validateBoardFoilReport(report, problem, report.cache?.producerBudget ?? budget);
  const frequencyAudit=requested&&auditBoardFoilFrequency(problem,report,requested,[low,high],started,execute);

@@ -124,6 +124,31 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
     runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>{
       assert.equal(input.request.partitionPolicy,'automatic-hybrid-v1');return hybrid();
     });
+    const rfProblem:BoardFoilProblem={...hybridProblem,geometry:{...hybridProblem.geometry,
+      stack:['TOP','BOTTOM'].map(name=>({name,copper:true,conductivitySM:58e6})),barrelConductivitySM:58e6},
+      request:{...hybridProblem.request,frequenciesHz:[1e6,2e6],operatorPolicy:'hybrid-planar-v3',profileUpperHz:1e8}};
+    const rfReport=(request:AnalysisBoardFoilCheckedRequest)=>{
+      const value=produceHybrid(request),upper=request.profileUpperHz??request.frequenciesHz.at(-1)!;
+      value.frequenciesHz=request.frequenciesHz;
+      value.samples.forEach((sample,i)=>{sample.frequencyHz=request.frequenciesHz[i];});
+      value.provenance.operatorPolicy='hybrid-planar-v3';
+      const depth=1/Math.sqrt(Math.PI*upper*(4e-7*Math.PI)*58e6);
+      value.provenance.copperSkinMesh={version:3,requestedUpperHz:request.frequenciesHz.at(-1)!,trainingUpperBoundHz:request.frequenciesHz.at(-1)!,effectiveUpperHz:upper,skinDepthDivisor:3,currentAndElectricShareMesh:true,scope:'Implementation mesh screening only',
+        layers:['TOP','BOTTOM'].map(layer=>({layer,skinDepthM:depth,maximumStepM:depth/6,slabs:6})),roundBarrels:[{id:'barrel-0',skinDepthM:depth,maximumRadialStepM:depth/4,shells:4}]};
+      return value;
+    };
+    const rf=cachedBoardFoilReport(cache,'hybrid',rfProblem,rfReport);
+    runAutoFoil({...plan,geometry:rfProblem.geometry} as AutoFoilPlan,[1e6,2e6],problem.request.budget,undefined,input=>{
+      assert.equal(input.request.operatorPolicy,'hybrid-planar-v3');
+      assert.equal(input.request.partitionPolicy,'automatic-hybrid-v1');
+      return rfReport(input.request);
+    });
+    assert.notEqual(rf.cache?.key,cached.cache?.key);
+    assert.equal(cachedBoardFoilReport(cache,'hybrid',rfProblem,()=>{throw Error('unexpected RF solve');}).cache?.status,'memory');
+    assert.throws(()=>cachedBoardFoilReport(cache,'hybrid',{...rfProblem,request:{...rfProblem.request,partitionPolicy:'automatic-conductive-schur-v1'}},rfReport),/BOARD_FOIL_GRID/);
+    assert.throws(()=>cachedBoardFoilReport(cache,'hybrid',{...rfProblem,request:{...rfProblem.request,profileUpperHz:1e10+1}},rfReport),/BOARD_FOIL_GRID/);
+    const undersampled=rfReport(rfProblem.request);undersampled.provenance.copperSkinMesh!.layers[0].maximumStepM*=2;
+    assert.throws(()=>validateBoardFoilReport(undersampled,rfProblem,rfProblem.request.budget),/CHANNEL_FOIL_EVIDENCE/);
   } finally {if(previous===undefined)delete process.env.P7_COMPACT_PLANAR;else process.env.P7_COMPACT_PLANAR=previous;if(previousWorkers===undefined)delete process.env.P7_COMPACT_PL_THREADS;else process.env.P7_COMPACT_PL_THREADS=previousWorkers;rmSync(dir,{recursive:true,force:true});}
   for(const change of [
     (v:AnalysisBoardFoilCheckedReport)=>{v.provenance.compactOperator!.nearQuadratureEstimatedTolerance=1e-7;},
@@ -439,7 +464,7 @@ test('exact grid cache preserves immutable producer evidence through warm and pr
 });
 
 test('exact foil cache keys the physical request and bounds replay size', () => {
-  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v3');
+  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v4');
   const priorCompactPlanar = process.env.P7_COMPACT_PLANAR;
   const priorFullMixed = process.env.P7_COMPACT_FULL_MIXED;
   const dir = mkdtempSync(join(tmpdir(),'p7-foil-cache-'));

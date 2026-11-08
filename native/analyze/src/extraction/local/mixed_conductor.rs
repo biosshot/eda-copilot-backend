@@ -16,7 +16,8 @@ use super::{
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::{Duration, Instant};
 
-const MIXED_PREPARE_MAX_HZ: f64 = 100_000.;
+const MIXED_PREPARE_MAX_HZ: f64 = 10_000_000_000.;
+const SKIN_VOLUME_MAX_HZ: f64 = 100_000.;
 
 #[derive(Clone, Copy, Default, PartialEq, Eq, serde::Deserialize)]
 pub enum CheckedOperator {
@@ -25,6 +26,8 @@ pub enum CheckedOperator {
     Legacy,
     #[serde(rename = "skin-volume-v3")]
     SkinVolumeV3,
+    #[serde(rename = "hybrid-planar-v3")]
+    HybridPlanarV3,
 }
 
 /// Internal production automatic routing policy; no public DSL syntax.
@@ -43,7 +46,8 @@ impl CheckedOperator {
     pub(super) fn admits(self, frequency_hz: f64) -> bool {
         let upper = match self {
             Self::Legacy => 10_000.,
-            Self::SkinVolumeV3 => MIXED_PREPARE_MAX_HZ,
+            Self::SkinVolumeV3 => SKIN_VOLUME_MAX_HZ,
+            Self::HybridPlanarV3 => MIXED_PREPARE_MAX_HZ,
         };
         frequency_hz.is_finite() && (1000. ..=upper).contains(&frequency_hz)
     }
@@ -52,7 +56,18 @@ impl CheckedOperator {
         match self {
             Self::Legacy => "1..10 kHz",
             Self::SkinVolumeV3 => "1..100 kHz profiled implementation limit",
+            Self::HybridPlanarV3 => "1 kHz..10 GHz hybrid implementation limit",
         }
+    }
+
+    pub(super) fn validate_partition(self, policy: PartitionPolicy) -> Result<()> {
+        if self==Self::HybridPlanarV3 && policy!=PartitionPolicy::AutomaticHybridV1 {
+            return Err(error("BOARD_FOIL_POLICY", "hybrid-planar-v3 requires automatic-hybrid-v1"));
+        }
+        Ok(())
+    }
+    fn policy_name(self) -> &'static str {
+        match self { Self::Legacy=>"legacy", Self::SkinVolumeV3=>"skin-volume-v3", Self::HybridPlanarV3=>"hybrid-planar-v3" }
     }
 
     pub(super) fn skin_profile(
@@ -75,7 +90,7 @@ impl CheckedOperator {
         // and thin/volume ownership even when their grid has a lower maximum.
         let upper_hz = profile_upper_hz.unwrap_or(requested_upper_hz);
         if !self.admits(upper_hz) || upper_hz < requested_upper_hz {
-            return Err(error("BOARD_FOIL_GRID", "profileUpperHz must cover the exact grid and stay within the 100 kHz implementation limit"));
+            return Err(error("BOARD_FOIL_GRID", &format!("profileUpperHz must cover the exact grid within {}",self.axis_scope())));
         }
         Ok(Some(copper_skin_profile::Profile {
             upper_hz,
@@ -209,7 +224,7 @@ pub fn prepare<'a>(
     if !max_frequency_hz.is_finite() || !(0. ..=MIXED_PREPARE_MAX_HZ).contains(&max_frequency_hz) {
         return Err(error(
             "MIXED_FOIL_BAND",
-            "finite explicit thin-foil screen within 0..100 kHz required",
+            "finite explicit thin-foil screen within 0..10 GHz required",
         ));
     }
     let electrode_nodes = electrodes
@@ -749,16 +764,19 @@ pub(super) fn checked_reserve(
     grid: CheckedGrid<'_>,
     skin: Option<copper_skin_profile::Profile>,
 ) -> Result<usize> {
-    let CheckedGrid {
-        frequencies_hz,
-        reference_ohm,
-        max_iterations,
-    } = grid;
-    let operator = if skin.is_some() {
-        CheckedOperator::SkinVolumeV3
-    } else {
-        CheckedOperator::Legacy
-    };
+    let operator=if skin.is_some() {CheckedOperator::SkinVolumeV3} else {CheckedOperator::Legacy};
+    checked_reserve_policy(request,grid,skin,operator,PartitionPolicy::Legacy)
+}
+
+pub(super) fn checked_reserve_policy(request:&board_mesh::Request,grid:CheckedGrid<'_>,skin:Option<copper_skin_profile::Profile>,operator:CheckedOperator,policy:PartitionPolicy)->Result<usize> {
+    operator.validate_partition(policy)?;
+    if skin.is_some_and(|profile|!operator.admits(profile.upper_hz)) {
+        return Err(error("BOARD_FOIL_POLICY","skin profile exceeds its explicit operator implementation band"));
+    }
+    if operator==CheckedOperator::HybridPlanarV3 && (skin.is_none() || skin.is_some_and(|p|!operator.admits(p.upper_hz) || grid.frequencies_hz.last().is_some_and(|&f|p.upper_hz<f))) {
+        return Err(error("BOARD_FOIL_POLICY","hybrid-planar-v3 requires a covering hybrid skin profile"));
+    }
+    let CheckedGrid { frequencies_hz, reference_ohm, max_iterations }=grid;
     let port_count = request.ports.len();
     if !(1..=16).contains(&port_count)
         || frequencies_hz.is_empty()
@@ -820,28 +838,20 @@ pub(super) fn checked_reserve(
 }
 
 pub(super) fn solve_checked_mesh(
-    mesh: BoardMesh,
-    request: &board_mesh::Request,
-    grid: CheckedGrid<'_>,
-    skin: Option<copper_skin_profile::Profile>,
-    packages: &[super::checked_packages::Validated],
-    partition_policy: PartitionPolicy,
-    budget: AllocationBudget,
-    start: Instant,
-    wall: Duration,
-) -> Result<serde_json::Value> {
-    solve_checked_mesh_impl(
-        &mesh,
-        request,
-        grid,
-        skin,
-        packages,
-        None,
-        partition_policy,
-        budget,
-        start,
-        wall,
-    )
+    mesh: BoardMesh, request:&board_mesh::Request, grid:CheckedGrid<'_>, skin:Option<copper_skin_profile::Profile>,
+    packages:&[super::checked_packages::Validated], partition_policy:PartitionPolicy, budget:AllocationBudget, start:Instant, wall:Duration,
+)->Result<serde_json::Value> {
+    let operator=if skin.is_some(){CheckedOperator::SkinVolumeV3}else{CheckedOperator::Legacy};
+    solve_checked_mesh_policy(mesh,request,grid,skin,packages,partition_policy,operator,budget,start,wall)
+}
+
+pub(super) fn solve_checked_mesh_policy(
+    mesh: BoardMesh, request:&board_mesh::Request, grid:CheckedGrid<'_>, skin:Option<copper_skin_profile::Profile>,
+    packages:&[super::checked_packages::Validated], partition_policy:PartitionPolicy, operator:CheckedOperator,
+    budget:AllocationBudget,start:Instant,wall:Duration,
+)->Result<serde_json::Value> {
+    operator.validate_partition(partition_policy)?;
+    solve_checked_mesh_impl_policy(&mesh,request,grid,skin,packages,None,partition_policy,operator,budget,start,wall)
 }
 
 /// Developer-only native interface proof on one already-built common mesh.
@@ -935,6 +945,15 @@ fn uniform_section_profiles(mesh:&BoardMesh,map:&MixedMap<'_>,ports:&[[usize;2]]
 }
 
 fn solve_checked_mesh_impl(
+    mesh:&BoardMesh,request:&board_mesh::Request,grid:CheckedGrid<'_>,skin:Option<copper_skin_profile::Profile>,
+    packages:&[super::checked_packages::Validated],partition_request:Option<(&[usize],usize)>,partition_policy:PartitionPolicy,
+    budget:AllocationBudget,start:Instant,wall:Duration,
+)->Result<serde_json::Value> {
+    let operator=if skin.is_some(){CheckedOperator::SkinVolumeV3}else{CheckedOperator::Legacy};
+    solve_checked_mesh_impl_policy(mesh,request,grid,skin,packages,partition_request,partition_policy,operator,budget,start,wall)
+}
+
+fn solve_checked_mesh_impl_policy(
     mesh: &BoardMesh,
     request: &board_mesh::Request,
     grid: CheckedGrid<'_>,
@@ -942,12 +961,13 @@ fn solve_checked_mesh_impl(
     packages: &[super::checked_packages::Validated],
     partition_request: Option<(&[usize], usize)>,
     partition_policy: PartitionPolicy,
+    operator: CheckedOperator,
     mut budget: AllocationBudget,
     start: Instant,
     wall: Duration,
 ) -> Result<serde_json::Value> {
     use serde_json::json;
-    let reserve = checked_reserve(request, grid, skin)?
+    let reserve = checked_reserve_policy(request, grid, skin, operator, partition_policy)?
         + super::checked_packages::output_reserve(
             packages,
             grid.frequencies_hz.len() * request.ports.len(),
@@ -1183,7 +1203,7 @@ fn solve_checked_mesh_impl(
             result["provenance"]["hybridAssembly"]=json!({"policy":"automatic-hybrid-v1","method":"global-compact-mixed","potentialCoordinates":map.potential_count(),"currentCoordinates":map.current_count(),"physicalAccuracy":"unverified"});
         }
         if skin.is_some() {
-            result["provenance"]["operatorPolicy"]=json!("skin-volume-v3");
+            result["provenance"]["operatorPolicy"]=json!(operator.policy_name());
             result["provenance"]["copperSkinMesh"]=skin_profile_evidence(mesh,requested_upper,effective_upper);
         }
         result["quality"]["scope"] = json!("compact-discrete");
@@ -1269,7 +1289,7 @@ fn solve_checked_mesh_impl(
         checked["provenance"]["automaticPartition"] = evidence;
     }
     if let Some(skin) = skin_evidence {
-        checked["provenance"]["operatorPolicy"] = json!("skin-volume-v3");
+        checked["provenance"]["operatorPolicy"] = json!(operator.policy_name());
         checked["provenance"]["copperSkinMesh"] = skin;
     }
     if !packages.is_empty() {
@@ -1466,6 +1486,45 @@ mod profile_tests {
         let tiny=AllocationBudget { max_bytes:1, ..budget };
         assert!(map.skin_current_hints(&[vec![1.;map.current_count()]],100_000.,tiny,Instant::now(),wall).is_err());
     }
+    #[test]
+    fn connected_profiled_foil_runs_coupled_skin_hints() {
+        let frequency=1_000_000.;
+        let mut value:serde_json::Value=serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-segmented-coupon.json")).unwrap();
+        value["outline"]=json!([{"x":-1.5,"y":-1.},{"x":1.5,"y":-1.},{"x":1.5,"y":1.},{"x":-1.5,"y":1.}]);
+        value["pads"].as_array_mut().unwrap().truncate(2);
+        for (i,pad) in value["pads"].as_array_mut().unwrap().iter_mut().enumerate() {
+            pad["at"]=json!({"x":if i==0 {-0.6} else {0.6},"y":0.});
+            pad["shape"]=json!({"kind":"rect","widthMm":0.8,"heightMm":0.8});
+        }
+        value["copper"]["fixed"]["tracks"]=json!([{"id":"wide","net":"SIGNAL","layer":"TOP","widthMm":0.8,"points":[{"x":-0.6,"y":0.},{"x":0.6,"y":0.}]}]);
+        value["copper"]["fixed"]["zones"]=json!([]);
+        value["copper"]["fixed"]["vias"]=json!([]);
+        let board=crate::import_json(&value.to_string()).board.unwrap();
+        let request:board_mesh::Request=serde_json::from_value(json!({
+            "roiMm":[[-1.5,-1.],[1.5,1.]],
+            "stack":[{"name":"TOP","thicknessM":0.000035,"copper":true,"epsilonR":null,"conductivitySM":58000000.},
+                     {"name":"dielectric","thicknessM":0.0001,"copper":false,"epsilonR":1.,"conductivitySM":null},
+                     {"name":"BOTTOM","thicknessM":0.000005,"copper":true,"epsilonR":null,"conductivitySM":58000000.}],
+            "airMarginM":0.0002,"maxTriangleAreaM2":0.000001,"maxVerticalStepM":0.0001,
+            "airEdgeDivisions":1,"minTriangleAngleDeg":0.,"curveDeviationMm":0.001,
+            "acceptUnknownFillFreshness":true,"allowInsulatedCopperCuts":false,
+            "electrodes":[{"name":"a","sourcePath":"pads[0]","layer":"TOP","upper":true},{"name":"b","sourcePath":"pads[1]","layer":"TOP","upper":true}],
+            "ports":[["a","b"]]
+        })).unwrap();
+        let budget=AllocationBudget{max_bytes:512*1024*1024,max_nodes:10_000,max_tetrahedra:100_000};
+        let wall=Duration::from_secs(25); let start=Instant::now();
+        let profile=CheckedOperator::HybridPlanarV3.skin_profile(frequency,None,request.max_vertical_step_m).unwrap().unwrap().with_thickness_screen([58e6]).unwrap();
+        let mesh=board_mesh::build_profiled(&board,&request,budget,wall,None,&[],Some(profile)).unwrap();
+        let result=solve_checked_mesh_impl_policy(&mesh,&request,CheckedGrid{frequencies_hz:&[frequency],reference_ohm:&[50.],max_iterations:16},Some(profile),&[],None,PartitionPolicy::AutomaticHybridV1,CheckedOperator::HybridPlanarV3,budget,start,wall).unwrap();
+        assert_eq!(result["status"],"complete");
+        assert_eq!(result["coverage"],"unverified");
+        assert_eq!(result["provenance"]["operatorPolicy"],"hybrid-planar-v3");
+        assert!(result["provenance"]["compactOperator"]["skinHints"]["added"].as_u64().unwrap()>0);
+        assert!(result["quality"]["maxKclRelative"].as_f64().unwrap()<1e-8);
+        assert!(result["quality"]["maxKvlRelative"].as_f64().unwrap()<1e-8);
+        assert!(result["quality"]["maxColumnPowerBalanceErrorW"].as_f64().unwrap()<=1e-12);
+    }
+
 }
 
 
@@ -1842,5 +1901,36 @@ impl MixedMap<'_> {
         }
         for row in &dual { let total:f64=row.values().sum(); if !total.is_finite() || (total-1.).abs()>1e-10 {return Err(error("HYBRID_CHARGE","barycentric dual does not preserve constants"));} }
         Ok((supports,locals,dual.into_iter().map(|row|row.into_iter().collect()).collect()))
+    }
+}
+#[cfg(test)]
+mod hybrid_rf_policy_tests {
+    use super::*;
+    #[test]
+    fn hybrid_band_requires_policy_and_preserves_existing_screens() {
+        let mut request:board_mesh::Request=serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-request-d1-m1.json")).unwrap();
+        request.cut_planes.clear();request.allow_insulated_copper_cuts=false;request.domain_polygon_mm=None;
+        request.roi_mm=[[0.,0.],[0.00001,0.00001]];
+        for layer in &mut request.stack {layer.thickness_m=1e-7;}
+        request.electrodes=vec![Electrode{name:"a".into(),source_path:Some("pads[0]".into()),source_paths:None,layer:"TOP".into(),upper:false},Electrode{name:"b".into(),source_path:Some("pads[1]".into()),source_paths:None,layer:"TOP".into(),upper:false}];
+        request.ports=vec![["a".into(),"b".into()]];
+        let hybrid=CheckedOperator::HybridPlanarV3;
+        assert!(serde_json::from_str::<CheckedOperator>("\"hybrid-planar-v3\"").unwrap()==hybrid);
+        assert!(hybrid.admits(1000.) && hybrid.admits(10_000_000_000.) && !hybrid.admits(10_000_000_001.));
+        assert!(CheckedOperator::Legacy.admits(10_000.) && !CheckedOperator::Legacy.admits(10_001.));
+        assert!(CheckedOperator::SkinVolumeV3.admits(100_000.) && !CheckedOperator::SkinVolumeV3.admits(100_001.));
+        assert!(hybrid.validate_partition(PartitionPolicy::Legacy).is_err());
+        assert!(hybrid.validate_partition(PartitionPolicy::AutomaticConductiveSchurV1).is_err());
+        assert!(hybrid.validate_partition(PartitionPolicy::AutomaticHybridV1).is_ok());
+        let profile=hybrid.skin_profile(10_000_000_000.,None,request.max_vertical_step_m).unwrap().unwrap().with_thickness_screen([58e6]).unwrap();
+        assert!(profile.current_step_m<=profile.skin_depth_m(58e6)/5. && profile.field_step_m<=profile.skin_depth_m(58e6)/5.);
+        let grid=CheckedGrid{frequencies_hz:&[10_000_000_000.],reference_ohm:&[50.],max_iterations:1};
+        assert!(checked_reserve(&request,grid,Some(profile)).is_err());
+        assert!(checked_reserve_policy(&request,grid,Some(profile),hybrid,PartitionPolicy::Legacy).is_err());
+        assert!(checked_reserve_policy(&request,grid,Some(profile),hybrid,PartitionPolicy::AutomaticHybridV1).is_ok());
+        let mut large=request.clone();large.roi_mm=[[0.,0.],[100.,100.]];
+        assert!(checked_reserve_policy(&large,grid,Some(profile),hybrid,PartitionPolicy::AutomaticHybridV1).unwrap_err().contains("MIXED_FOIL_BAND"));
+        let mut missing=request.clone();missing.electrodes[0].source_path=Some("copper.fixed.tracks[0]".into());
+        assert!(checked_reserve_policy(&missing,grid,Some(profile),hybrid,PartitionPolicy::AutomaticHybridV1).unwrap_err().contains("MIXED_FOIL_CONTACT"));
     }
 }

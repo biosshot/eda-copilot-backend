@@ -229,7 +229,7 @@ export interface AnalysisLocalDcReport {
 export interface AnalysisBoardFoilCheckedRequest {
     frequenciesHz: number[];
     partitionPolicy?: 'automatic-conductive-schur-v1' | 'automatic-hybrid-v1';
-    operatorPolicy?: 'skin-volume-v3';
+    operatorPolicy?: 'skin-volume-v3' | 'hybrid-planar-v3';
     /** Freeze the profiled mesh at this upper frequency for supplemental samples. */
     profileUpperHz?: number;
     referenceOhm?: number[];
@@ -304,7 +304,7 @@ export interface AnalysisBoardFoilCheckedReport {
             owners: number; originalCopperTetrahedra: number; crossOwnerFaces: number;
             freeSharedTraceDofs: number; ownerInteriorDofs: number[];
         };
-        operatorPolicy?: 'skin-volume-v3';
+        operatorPolicy?: 'skin-volume-v3' | 'hybrid-planar-v3';
         copperSkinMesh?: {
             version: 3;
             requestedUpperHz: number;

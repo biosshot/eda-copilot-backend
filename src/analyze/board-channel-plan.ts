@@ -9,6 +9,8 @@ import { buildRouteGraph, project, tangent, area, clipHalfPlane, triangles, join
 import { coupledRunCorridors, corridorCells } from './run-corridors.ts';
 export const boardChannelBlockBandHz = [1e3, 1e4] as const;
 export const boardChannelJointSkinBandHz = [1e3, 1e5] as const;
+/** Implementation envelope; native electrical-size, mesh and physical gates still apply. */
+export const boardChannelHybridBandHz = [1e3, 1e10] as const;
 type Options = {
     domainScale?: number;
     magneticPatchLevel?: 1 | 2;
