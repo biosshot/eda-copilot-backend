@@ -71,7 +71,7 @@ export function cachedBoardFoilReport(
     core, producer: 'automatic-board-foil-or-mixed-exact-grid-v1',
     hybridPlanarOperatorVersion: HYBRID_PLANAR_OPERATOR_VERSION,
     compactPlanarPolicy: compactPlanar ? 'compact-v1' : 'default-v1',
-    ...(compactPlanar && { compactBasisPolicy: compactFullMixed ? 'full-mixed' : 'dc-harmonic-only' }),
+    ...(compactPlanar && { compactBasisPolicy: compactFullMixed ? 'adaptive-mixed-closure-v1' : 'dc-harmonic-only' }),
     board: digest(problem.boardJson),
     magneticProducerPolicy:'exact-or-certified-adaptive-harmonic-v1',
     magneticRepresentationVersion:3,

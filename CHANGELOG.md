@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Wire compact mixed adaptive training to sparse spatial-field and batched magnetic actions, retaining full mixed-coordinate residual/enrichment checks without the dense full-basis cap. Isolate the changed experimental cache policy. Mixed interactions use validated whole-prism potentials or bounded local tetra kernels; the via control remains unverified and resource-limited.
+
 - Integrate shared-edge prism interactions with an exact barycentric/radial reduction to 2D quadrature, and shared-vertex interactions to 3D. Keep the 1e-8 estimator and independent tetrahedral/outer-rule controls; no full-board speed or accuracy acceptance is claimed.
 
 - Validate adaptive mixed-field uncertainty under an explicit compact certificate namespace, preserving matched power, ownership and residual gates; fixed-basis reports cannot claim adaptive evidence.

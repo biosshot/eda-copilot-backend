@@ -1039,28 +1039,49 @@ fn solve_checked_mesh_impl(
         }
         let mixed_names: Vec<_> = (0..map.potential_count()).map(|i| format!("mixed-potential-{i}")).collect();
         let mixed_ports: Vec<_> = ports.iter().map(|p| [map.potential_map[p[0]], map.potential_map[p[1]]]).collect();
-        let charge_bytes = if layered { map.potential_count().checked_mul(map.potential_count()).and_then(|n|n.checked_mul(8)).ok_or_else(|| error("MEMORY_LIMIT", "layered compact trace size overflow"))? } else { 0 };
+        let adaptive = std::env::var_os("P7_COMPACT_FULL_MIXED").as_deref() == Some(std::ffi::OsStr::new("1"));
+        let charge_bytes = if layered && !adaptive { map.potential_count().checked_mul(map.potential_count()).and_then(|n|n.checked_mul(8)).ok_or_else(|| error("MEMORY_LIMIT", "layered compact trace size overflow"))? } else { 0 };
         let field_available = budget.max_bytes.checked_sub(map.retained_bytes()?).and_then(|n|n.checked_sub(charge_bytes)).ok_or_else(|| error("MEMORY_LIMIT", "layered field resident budget exhausted"))?;
-        let layered_c = if layered {
-            let field_budget = super::layered_capacitance::Budget { max_nodes: budget.max_nodes, max_local_terms: budget.max_tetrahedra, max_bytes: field_available, max_wall: wall.saturating_sub(start.elapsed()) };
+        // One product-space prism contributes up to 36 local terms while the
+        // source physical budget counts its three tetrahedra.
+        let field_terms=budget.max_tetrahedra.checked_mul(12).ok_or_else(||error("MEMORY_LIMIT","field local-term budget overflow"))?;
+        let prepared_field = if adaptive {
+            let available=(budget.max_bytes/3).checked_sub(map.retained_bytes()?).ok_or_else(||error("MEMORY_LIMIT","adaptive field budget exhausted"))?;
+            let field_budget=super::layered_capacitance::Budget {max_nodes:budget.max_nodes,max_local_terms:field_terms,max_bytes:available,max_wall:wall.saturating_sub(start.elapsed())};
+            eprintln!("P7_COMPACT_STAGE stage=spatial-field-start elapsed={:.6}",start.elapsed().as_secs_f64());
+            let (input,spatial)=super::planar_trace::input_from_board(mesh,request,field_budget)?;
+            let trace=super::planar_trace::trace(&input,&map,super::layered_capacitance::Budget{max_wall:wall.saturating_sub(start.elapsed()),..field_budget})?;
+            let field=super::layered_capacitance::prepare_traced_spatial_action(&input,&trace,&spatial,super::layered_capacitance::Budget{max_wall:wall.saturating_sub(start.elapsed()),..field_budget})?;
+            eprintln!("P7_COMPACT_STAGE stage=spatial-field-end elapsed={:.6} plannedBytes={}",start.elapsed().as_secs_f64(),field.planned_bytes());
+            Some(field)
+        } else {None};
+        let layered_c = if layered && !adaptive {
+            let field_budget = super::layered_capacitance::Budget { max_nodes: budget.max_nodes, max_local_terms: field_terms, max_bytes: field_available, max_wall: wall.saturating_sub(start.elapsed()) };
             let (input, spatial) = super::planar_trace::input_from_board(mesh, request, field_budget)?;
             let trace = super::planar_trace::trace(&input, &map, super::layered_capacitance::Budget { max_wall: wall.saturating_sub(start.elapsed()), ..field_budget })?;
             let field = super::layered_capacitance::extract_traced_spatial(&input, &trace, &spatial, super::layered_capacitance::Budget { max_wall: wall.saturating_sub(start.elapsed()), ..field_budget })?;
             Some(field.energy_capacitance_f()?)
         } else { None };
         let model_budget = AllocationBudget { max_bytes: budget.max_bytes.checked_sub(charge_bytes).ok_or_else(|| error("MEMORY_LIMIT", "layered trace matrix exceeds budget"))?, ..budget };
-        let (model, mut evidence, planned) = foil_reduced::compact_planar_model(&map, &mixed_names, &mixed_ports, super::super::EPS0, layered_c.as_deref(), model_budget, start, wall)?;
-        evidence["electricOperator"] = json!(if layered {"layered-spatial-field-mesh"} else {"homogeneous-charge-gram"});
+        let (model, mut evidence, planned, adaptive_result) = if adaptive {
+            let (mut result,model,planned)=foil_reduced::solve_compact_adaptive(&map,&mixed_names,&mixed_ports,packages,MatchedGrid{frequencies:frequencies_hz,references:reference_ohm,max_iterations},prepared_field.as_ref().ok_or_else(||error("HYBRID_INPUT","missing prepared field"))?,model_budget,start,wall)?;
+            let evidence=result["compactEvidence"].take();(model,evidence,planned,Some(result))
+        } else {
+            let (model,evidence,planned)=foil_reduced::compact_planar_model(&map,&mixed_names,&mixed_ports,super::super::EPS0,layered_c.as_deref(),model_budget,start,wall)?;
+            (model,evidence,planned,None)
+        };
+        evidence["electricOperator"] = json!(if layered || adaptive {"layered-spatial-field-mesh"} else {"homogeneous-charge-gram"});
         evidence["version"] = json!("compact-planar-v1");
         evidence["foilSupports"] = json!(map.foils.len());
         evidence["localTetraSupports"] = json!(map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count());
         evidence["potentialCoordinates"] = json!(map.potential_count());
         evidence["currentCoordinates"] = json!(map.current_count());
-        let mut result = foil_reduced::compact_planar_response(&model, frequencies_hz, reference_ohm, packages, budget, start, wall)?;
-        if layered { result["operator"] = json!("compact-planar-layered-prototype"); }
+        let mut result = if let Some(result)=adaptive_result {result} else {foil_reduced::compact_planar_response(&model, frequencies_hz, reference_ohm, packages, budget, start, wall)?};
+        result["status"]=json!("complete"); result["coverage"]=json!("unverified"); result["representation"]=json!("S"); result["operator"]=json!("compact-planar-homogeneous-prototype"); result["frequenciesHz"]=json!(frequencies_hz); result["referenceOhm"]=json!(reference_ohm);
+        if layered || adaptive { result["operator"] = json!("compact-planar-layered-prototype"); }
         result["ports"] = json!(request.ports);
         result["sourceMapping"] = json!(mesh.source_mapping);
-        result["compactOperator"] = json!({"version":"compact-planar-v1", "ownership":"one physical owner per copper tetrahedron", "foilSupports":map.foils.len(), "localTetraSupports":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "potentialCoordinates":map.potential_count(), "currentCoordinates":map.current_count(), "dielectric":if layered {"spatial-layered-field"} else {"homogeneous-air"}, "accuracy":"unverified", "limits":"bounded dense charge matrix; no proximity or physical approximation acceptance"});
+        result["compactOperator"] = json!({"version":"compact-planar-v1", "ownership":"one physical owner per copper tetrahedron", "foilSupports":map.foils.len(), "localTetraSupports":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "potentialCoordinates":map.potential_count(), "currentCoordinates":map.current_count(), "dielectric":if layered || adaptive {"spatial-layered-field"} else {"homogeneous-air"}, "accuracy":"unverified", "limits":"bounded dense charge matrix; no proximity or physical approximation acceptance"});
         result["provenance"] = json!({"method":"compact mixed foil and local volume", "modelKind":"mixed", "sourceMapping":mesh.source_mapping, "barrelIds":mesh.barrel_ids, "electrodeAreasM2":mesh.electrode_areas_m2, "prisms":map.foils.len(), "nativeCopperTetrahedra":map.owners.len(), "volumeTetrahedra":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "maxCopperVolumeChange":0., "fullPotentialCount":map.full.potential_count(), "fullCurrentCount":map.full.current_count(), "retainedPotentials":model.potential_nodes.len(), "currentModes":model.current_dofs.len(), "plannedBytes":if layered {budget.max_bytes + reserve + provenance + partition_bytes} else {planned + reserve + provenance + partition_bytes}, "maxSeconds":wall.as_secs_f64(), "maxMemoryMiB":(budget.max_bytes + reserve + provenance + partition_bytes) as f64 / 1048576., "spatialCoverage":"unverified", "bandCoverage":"unverified", "magneticQuadratureCoverage":"unverified", "driveConvention":"1 A RMS matched Norton basis columns", "compactOperator":evidence});
         if !packages.is_empty() { result["provenance"]["attachments"] = json!(packages.iter().map(|p| json!({"id":p.id,"electrodes":p.electrodes})).collect::<Vec<_>>()); }
         result["quality"]["scope"] = json!("compact-discrete");
@@ -1492,7 +1513,7 @@ mod compact_via_dispatch_test {
         request.electrodes=["s0","s1","r0","r1"].into_iter().enumerate().map(|(i,name)| Electrode {name:name.into(),source_path:Some(format!("pads[{i}]")),source_paths:None,layer:if i==0 {"TOP"} else {"BOTTOM"}.into(),upper:i!=0}).collect();
         request.ports=vec![["s0".into(),"r0".into()],["s1".into(),"r1".into()]];
         for layer in &mut request.stack {if !layer.copper {layer.epsilon_r=Some(1.);}}
-        let budget=AllocationBudget{max_bytes:512*1024*1024,max_nodes:10000,max_tetrahedra:10000}; let wall=Duration::from_secs(30);
+        let budget=AllocationBudget{max_bytes:512*1024*1024,max_nodes:10000,max_tetrahedra:10000}; let wall=Duration::from_secs(25);
         let mesh=board_mesh::build(&board,&request,budget,wall).unwrap();
         struct Restore(Vec<(&'static str,Option<std::ffi::OsString>)>);
         impl Drop for Restore {fn drop(&mut self){for (key,value) in &self.0 {unsafe {if let Some(v)=value {std::env::set_var(key,v)}else{std::env::remove_var(key)}}}}}

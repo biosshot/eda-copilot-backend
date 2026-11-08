@@ -418,7 +418,8 @@ test('exact foil cache keys the physical request and bounds replay size', () => 
     assert.equal(capturedIdentity.compactBasisPolicy,'dc-harmonic-only');
     process.env.P7_COMPACT_FULL_MIXED='1';
     const fullMixed=run('core-1',problem);
-    assert.equal(capturedIdentity.compactBasisPolicy,'full-mixed');
+    assert.equal(capturedIdentity.compactBasisPolicy,'adaptive-mixed-closure-v1');
+    assert.notEqual(fullMixed.cache?.key,cache.key({...capturedIdentity,compactBasisPolicy:'full-mixed'}));
     assert.notEqual(fullMixed.cache?.key,compact.cache?.key);
     process.env.P7_COMPACT_FULL_MIXED='0';
     assert.equal(run('core-1',problem).cache?.key,compact.cache?.key);

@@ -1190,3 +1190,14 @@ mod actual_tree_planning {
         assert_eq!(report["status"], "pass", "{report}");
     }
 }
+/// Budgeted local tetrahedron pair kernel for compact mixed actions. This owns
+/// only the supplied local geometry and bounded quadrature slots; it does not
+/// assemble a full-board operator. Caller retains self-convergence checks.
+pub(super) struct CompactLocalPairs { inner: BoundedPairs, pub(super) planned_bytes:usize }
+impl CompactLocalPairs {
+    pub(super) fn new(tetra:Vec<[[f64;3];4]>, budget:AllocationBudget, start:Instant, wall:Duration)->Result<Self> {
+        let (planned_bytes,slots)=BoundedPairs::plan(tetra.len(),12,0,budget)?;
+        Ok(Self {inner:BoundedPairs::new(tetra,12,slots,start,wall)?,planned_bytes})
+    }
+    pub(super) fn pair(&self,a:usize,b:usize)->Result<f64> {self.inner.pair(a,b)}
+}
