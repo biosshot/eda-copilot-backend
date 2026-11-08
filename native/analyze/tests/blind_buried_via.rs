@@ -1,5 +1,5 @@
 use pcb_analyze::{
-    extraction::local::{board_mesh, volume_current, AllocationBudget},
+    extraction::local::{board_mesh, mixed_conductor::{self, Owner}, volume_current, AllocationBudget},
     import_json,
 };
 use serde_json::{json, Value};
@@ -198,6 +198,29 @@ fn check_span(first: usize, takeoff: usize, net: &str, antipad_net: &str, polygo
             "the continuing barrel hides part of the takeoff face"
         );
     }
+
+    // Hybrid ownership is checked on this same finite-span copper mesh;
+    // this is a topology control, not an electromagnetic accuracy result.
+    let hybrid = mixed_conductor::prepare(&mesh, &r.electrodes, 1e6, BUDGET, Duration::from_secs(15)).unwrap();
+    assert_eq!(hybrid.owners.len(), mesh.mesh.copper_tetrahedra.len());
+    let mut barrel_cells=0;
+    for (i,tet) in mesh.mesh.copper_tetrahedra.iter().enumerate() {
+        if tet.source_ids.contains(&hole.id) {
+            barrel_cells+=1;
+            assert_eq!(hybrid.owners[i],Owner::Volume,"barrel must retain local volume ownership");
+            for &node in &tet.nodes { let z=mesh.mesh.nodes_m[node][2]; assert!(z>=start_z && z<=end_z); }
+        }
+        if let Owner::Foil(index)=hybrid.owners[i] {
+            assert!(hybrid.foils[index].tetrahedra.contains(&i));
+        }
+    }
+    assert!(barrel_cells>0);
+    for (index,foil) in hybrid.foils.iter().enumerate() {
+        assert!(foil.tetrahedra.iter().all(|&i|hybrid.owners[i]==Owner::Foil(index)));
+    }
+    let [start,end,below]:[usize;3]=hybrid.electrodes.as_slice().try_into().unwrap();
+    assert!(hybrid.potential_components.iter().any(|c|c.contains(&start)&&c.contains(&end)));
+    assert!(!hybrid.potential_components.iter().any(|c|c.contains(&start)&&c.contains(&below)));
 
     let mut invalid = r;
     invalid.electrodes[0].layer = "BOTTOM".into();

@@ -215,3 +215,9 @@ The captured orientation requests also reveal an applicability limit of this con
 
 - Release build completed in 3m49s. `1794144233030248200` still reaches the existing native 25s deadline (25.297s supervisor wall; sampled private peak27250688 bytes), with visited28894/far30/near14465/exact14465. These are traversal/cover counts, not measurements of executed versus skipped quadrature; no speedup conclusion is justified.
 - Next implementation work uses bounded parallel nonself near pairs while keeping checked diagonal self evaluations on the original owner, ordered reduction and full memory admission. Default serial behavior and all convergence/resource gates remain.
+
+### Blind/buried hybrid ownership control
+
+- Extended the existing blind/buried mesh tests with hybrid ownership, actual barrel z-span, foil-cell mapping, connected start/takeoff contacts and isolated lower pad checks. Original fixtures and existing negative span controls remain unchanged.
+- Initial selection `1794144620788623400` passed the three structural tests but accidentally included the separate existing DC annulus solve, which hit the 5s supervisor cap. Corrected selection explicitly skips that unrelated numerical test.
+- `1794144648048884200`: all three selected structural controls pass in 1.484s under the unchanged 5s cap. This does not establish blind/buried electromagnetic accuracy or final physical coverage.
