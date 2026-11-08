@@ -185,7 +185,7 @@ fn edge_integral(a:&Prism,b:&Prism,order:usize,start:Instant,limit:Duration) -> 
 // Analytic z/radial integration avoids resolving thin copper thickness with
 // the outer z rule. If cancellation invalidates this primitive, use the
 // independent finite-prism kernel; neither route relaxes the error threshold.
-fn pair_integral(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Duration) -> Result<(f64,usize,f64)> {
+pub(super) fn pair_integral(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Duration) -> Result<(f64,usize,f64)> {
     if a.triangle_m == b.triangle_m && a.z_m == b.z_m {
         let mut prev=self_integral(a,order,start,limit)?; let mut n=order;
         while n<64 {

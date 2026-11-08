@@ -49,6 +49,20 @@ impl Cell {
     }
 }
 
+trait FoilField {
+    fn apply(&self, v:&[f64]) -> Result<Vec<f64>>;
+    fn planned_bytes(&self) -> usize;
+}
+impl FoilField for Field<'_> {
+    fn apply(&self,v:&[f64])->Result<Vec<f64>> { Field::apply(self,v) }
+    fn planned_bytes(&self)->usize { ElectricApply::planned_bytes(self) }
+}
+struct CompactField<'a> { action:&'a CompactChargeAction, diagonal:Vec<f64>, bytes:usize }
+impl FoilField for CompactField<'_> {
+    fn apply(&self,v:&[f64])->Result<Vec<f64>> {self.action.capacitance_action(v,&self.diagonal,128)}
+    fn planned_bytes(&self)->usize {self.bytes}
+}
+
 type MagneticBatch<'a> =
     dyn Fn(&[Vec<f64>], Option<&[f64]>, Instant, Duration) -> Result<Magnetic> + 'a;
 struct Basis {
@@ -746,13 +760,13 @@ pub(super) fn solve_mixed_grid(
     let reserve = 4 * grid.max_iterations;
     let map_retained = map.retained_bytes()?;
     let field_base = map_retained
-        .checked_add(profile_bytes).and_then(|n|n.checked_add(field.planned_bytes()))
+        .checked_add(profile_bytes).and_then(|n|n.checked_add(ElectricApply::planned_bytes(field)))
         .ok_or_else(|| error("MEMORY_LIMIT", "mixed field plan overflow"))?;
     // Admit all non-modal full-space buffers before constructing the bounded
     // exact magnetic cache. Later factor plans add their actual fill/scratch.
     let buffer_base = native_sizes(n, ni, 0, field_base)?;
     eprintln!("P7_MIXED_MEMORY_STAGE stage=magnetic-admission fullPotentials={n} fullCurrents={ni} mapBytes={} electricPlanBytes={} nativeWorkBytes={} totalBaseBytes={buffer_base} budgetBytes={}",
-        map_retained, field.planned_bytes(), native_work_bytes(n, ni, 0)?, budget.max_bytes);
+        map_retained, ElectricApply::planned_bytes(field), native_work_bytes(n, ni, 0)?, budget.max_bytes);
     budget.check(buffer_base)?;
     let magnetic = super::volume_integral_magnetic::Streamed::new(
         mesh,
@@ -1016,7 +1030,7 @@ fn assemble_impl(
             "finite bounded physical foil, retained traces and ports required",
         ));
     }
-    budget.check(sizes(n, 2 * supports, 0, field.planned_bytes())?)?;
+    budget.check(sizes(n, 2 * supports, 0, ElectricApply::planned_bytes(&field))?)?;
     super::current_space::verify_foil_band(foils, max_frequency_hz, epsilon)?;
     let mut cells = Vec::with_capacity(2 * supports);
     let mut prisms = Vec::with_capacity(supports);
@@ -1054,7 +1068,7 @@ fn assemble_impl(
         &contacts,
         None,
         budget,
-        field.planned_bytes(),
+        ElectricApply::planned_bytes(&field),
         start,
         wall,
         mode_reserve,
@@ -1681,7 +1695,7 @@ impl ReducedSpace {
         training: &TrainingPoint,
         names: &[String],
         dc: &DcCorrection,
-        field: &Field<'_>,
+        field: &dyn FoilField,
         magnetic: &MagneticBatch<'_>,
         budget: AllocationBudget,
         start: Instant,
@@ -1757,7 +1771,7 @@ impl ReducedSpace {
         initial_nv: usize,
         names: &[String],
         dc: &DcCorrection,
-        field: &Field<'_>,
+        field: &dyn FoilField,
         magnetic: &MagneticBatch<'_>,
         start: Instant,
         wall: Duration,
@@ -1878,7 +1892,7 @@ impl ReducedSpace {
         grid: &MatchedGrid<'_>,
         names: &[String],
         dc: &DcCorrection,
-        field: &Field<'_>,
+        field: &dyn FoilField,
         magnetic: &MagneticBatch<'_>,
         budget: AllocationBudget,
         start: Instant,
@@ -2601,6 +2615,31 @@ mod compact_planar_tests {
         assert!(make(&[[0,2]]).is_err());
     }
     #[test]
+    fn compact_action_matches_small_projected_gram() {
+        let budget=AllocationBudget{max_nodes:32,max_tetrahedra:32,max_bytes:4_000_000};
+        let prism=super::super::prism::Prism::new("p".into(),[[0.,0.],[0.001,0.],[0.,0.001]],[0.,0.00001]).unwrap();
+        let supports=vec![super::super::planar_operator::SparseSupport{prism,charge_density:vec![],current_density:vec![(0,[1e8,0.,0.]),(1,[0.,2e8,0.])]}];
+        let gram=super::super::planar_operator::gram_sparse(&supports,0,2,8,super::super::super::EPS0,budget,Duration::from_secs(5)).unwrap();
+        let x=[0.7,-0.2]; let action=compact_planar_magnetic_action(&supports,&x,budget,Instant::now(),Duration::from_secs(5)).unwrap();
+        for i in 0..2 {let expected=gram.inductance_h[i][0]*x[0]+gram.inductance_h[i][1]*x[1];assert!((action[i]-expected).abs()<1e-12*expected.abs().max(1e-30));}
+        let prepared=CompactPlanarAction::new(supports,2,budget,Instant::now(),Duration::from_secs(5)).unwrap();
+        let (accelerated,bound)=prepared.apply(&x).unwrap();
+        for i in 0..2 {assert!((accelerated[i]-action[i]).abs() <= bound[i]+1e-12*action[i].abs().max(1e-30));}
+    }
+    #[test]
+    fn charge_action_and_cg_match_direct_gram() {
+        let budget=AllocationBudget{max_nodes:32,max_tetrahedra:32,max_bytes:8_000_000};
+        let p=super::super::prism::Prism::new("p".into(),[[0.,0.],[0.001,0.],[0.,0.001]],[0.,0.00001]).unwrap();
+        let supports=vec![super::super::planar_operator::SparseSupport{charge_density:vec![(0,1./p.volume_m3)],current_density:vec![],prism:p.clone()}];
+        let gram=super::super::planar_operator::gram_sparse(&supports,1,0,8,super::super::super::EPS0,budget,Duration::from_secs(5)).unwrap();
+        let plan=super::super::near_far::Plan::new(&[p],0.2,12,super::super::near_far::Budget{max_bytes:4_000_000,max_nodes:32,max_blocks:100,max_pairs:1,max_wall:Duration::from_secs(5)}).unwrap();
+        let action=CompactChargeAction{planar:supports,local:vec![],dual:vec![vec![(0,1.)]],plan,epsilon:super::super::super::EPS0,budget,start:Instant::now(),wall:Duration::from_secs(5),pair_cache:std::cell::RefCell::new(BTreeMap::new())};
+        let (y,bound)=action.apply(&[2.]).unwrap();
+        assert!((y[0]-2.*gram.potential_per_farad[0][0]).abs() <= bound[0]+1e-12*y[0].abs());
+        let c=action.capacitance_action(&[1.],&[gram.potential_per_farad[0][0]],4).unwrap();
+        assert!((c[0]*gram.potential_per_farad[0][0]-1.).abs()<1e-8);
+    }
+    #[test]
     fn tetra_vertex_dual_retains_four_coordinates() {
         let budget=AllocationBudget{max_nodes:32,max_tetrahedra:32,max_bytes:1_000_000};
         let p:Vec<Vec<f64>>=(0..4).map(|i|(0..4).map(|j|if i==j {1.} else {0.}).collect()).collect();
@@ -2619,5 +2658,239 @@ mod compact_planar_tests {
         assert!((c[1][1] - 0.25).abs() < 1e-12);
         assert_eq!(c[0][1], 0.);
         assert!(compact_capacitance(&[vec![1.,1.],vec![1.,1.]], &dual, budget).is_err());
+    }
+}
+
+/// Matrix-free planar magnetic action in mixed current coordinates. Supports
+/// must be disjoint physical owners, established by MixedMap. The returned
+/// vector is L*i; no full current-coordinate Gram is materialized.
+pub(super) fn compact_planar_magnetic_action(
+    supports: &[super::planar_operator::SparseSupport], current: &[f64],
+    budget: AllocationBudget, start: Instant, wall: Duration,
+) -> Result<Vec<f64>> {
+    if current.iter().any(|v|!v.is_finite()) || current.len()>budget.max_nodes || supports.len()>budget.max_tetrahedra {
+        return Err(error("HYBRID_INPUT", "invalid compact magnetic action dimensions"));
+    }
+    let bytes=current.len().checked_mul(8).and_then(|v|v.checked_add(supports.len().checked_mul(24)?)).and_then(|v|v.checked_add(1024*1024)).ok_or_else(||error("MEMORY_LIMIT","compact action plan overflow"))?;
+    budget.check(bytes)?;
+    let mut densities=Vec::with_capacity(supports.len());
+    for support in supports {
+        let mut j=[0.;3];
+        for &(i,v) in &support.current_density {
+            if i>=current.len() || v.iter().any(|x|!x.is_finite()) {return Err(error("HYBRID_INPUT","invalid compact current support"));}
+            for d in 0..3 {j[d]+=v[d]*current[i];}
+        }
+        densities.push(j);
+    }
+    let mut out=vec![0.;current.len()];
+    for (a,sa) in supports.iter().enumerate() {for (b,sb) in supports[..=a].iter().enumerate() {
+        check_time(start,wall)?;
+        if densities[a]==[0.;3] && densities[b]==[0.;3] {continue;}
+        let (integral,_,_)=super::planar_operator::pair_integral(&sa.prism,&sb.prism,8,start,wall)?;
+        for &(i,v) in &sa.current_density {out[i]+=1e-7*integral*(0..3).map(|d|v[d]*densities[b][d]).sum::<f64>();}
+        if a!=b {for &(i,v) in &sb.current_density {out[i]+=1e-7*integral*(0..3).map(|d|v[d]*densities[a][d]).sum::<f64>();}}
+    }}
+    if out.iter().any(|v|!v.is_finite()) {return Err(error("HYBRID_RANGE","nonfinite compact magnetic action"));}
+    Ok(out)
+}
+
+/// Reusable bounded near/far action over sparse physical current supports.
+/// Far remainder is propagated per mixed row; near quadrature remains an
+/// order-estimated approximation rather than an independent error certificate.
+pub(super) struct CompactPlanarAction {
+    supports: Vec<super::planar_operator::SparseSupport>,
+    plan: super::near_far::Plan,
+    dimensions: usize,
+    started: Instant,
+    wall: Duration,
+}
+impl CompactPlanarAction {
+    pub(super) fn new(supports: Vec<super::planar_operator::SparseSupport>, dimensions:usize, budget:AllocationBudget, started:Instant, wall:Duration) -> Result<Self> {
+        if supports.is_empty() || dimensions>budget.max_nodes {return Err(error("HYBRID_INPUT","invalid near/far compact dimensions"));}
+        let prisms:Vec<_>=supports.iter().map(|s|s.prism.clone()).collect();
+        let pairs=prisms.len().checked_mul(prisms.len().checked_add(1).ok_or_else(||error("MEMORY_LIMIT","near/far pair overflow"))?).and_then(|n|n.checked_div(2)).ok_or_else(||error("MEMORY_LIMIT","near/far pair overflow"))?;
+        let plan=super::near_far::Plan::new(&prisms,0.2,12,super::near_far::Budget {max_bytes:budget.max_bytes,max_nodes:budget.max_nodes,max_blocks:budget.max_bytes/128,max_pairs:pairs,max_wall:wall.saturating_sub(started.elapsed())})?;
+        Ok(Self{supports,plan,dimensions,started,wall})
+    }
+    pub(super) fn apply(&self, current:&[f64]) -> Result<(Vec<f64>,Vec<f64>)> {
+        if current.len()!=self.dimensions || current.iter().any(|x|!x.is_finite()) {return Err(error("HYBRID_INPUT","invalid near/far current"));}
+        let mut density=vec![[0.;3];self.supports.len()];
+        for (s,j) in self.supports.iter().zip(&mut density) {for &(i,v) in &s.current_density {if i>=current.len(){return Err(error("HYBRID_INPUT","current coordinate outside support"));}for d in 0..3 {j[d]+=v[d]*current[i];}}}
+        let mut out=vec![0.;current.len()];let mut bound=vec![0.;current.len()];
+        for far in [false,true] {self.plan.visit_pairs(far,|a,b| {
+            check_time(self.started,self.wall)?;
+            if density[a]==[0.;3] && density[b]==[0.;3] {return Ok(());}
+            let (value,error_bound)=if far {let p=self.plan.moments[a].pair(&self.plan.moments[b])?;(p.integral_m5,p.absolute_remainder_m5)} else {let (v,_,_)=super::planar_operator::pair_integral(&self.supports[a].prism,&self.supports[b].prism,8,self.started,self.wall)?;(v,0.)};
+            for &(i,v) in &self.supports[a].current_density {let dot=(0..3).map(|d|v[d]*density[b][d]).sum::<f64>();out[i]+=1e-7*value*dot;bound[i]+=1e-7*error_bound*(0..3).map(|d|v[d].abs()*density[b][d].abs()).sum::<f64>();}
+            if a!=b {for &(i,v) in &self.supports[b].current_density {let dot=(0..3).map(|d|v[d]*density[a][d]).sum::<f64>();out[i]+=1e-7*value*dot;bound[i]+=1e-7*error_bound*(0..3).map(|d|v[d].abs()*density[a][d].abs()).sum::<f64>();}}
+            Ok(())
+        })?;}
+        if out.iter().chain(&bound).any(|x|!x.is_finite()) {return Err(error("HYBRID_RANGE","nonfinite near/far action"));}
+        Ok((out,bound))
+    }
+}
+/// Matrix-free potential-coefficient action and exact sparse voltage/charge
+/// dual map. Local and foil sources own disjoint copper; far remainders remain
+/// separate from the algebraic residual.
+pub(super) struct CompactChargeAction {
+    planar:Vec<super::planar_operator::SparseSupport>,
+    local:Vec<super::mixed_conductor::LocalSupport>,
+    dual:Vec<Vec<(usize,f64)>>,
+    plan:super::near_far::Plan,
+    epsilon:f64,
+    budget:AllocationBudget,
+    start:Instant,
+    wall:Duration,
+    pair_cache:std::cell::RefCell<BTreeMap<(usize,usize),f64>>,
+}
+impl CompactChargeAction {
+    pub(super) fn new(map:&super::mixed_conductor::MixedMap<'_>,epsilon:f64,budget:AllocationBudget,start:Instant,wall:Duration)->Result<Self> {
+        if !epsilon.is_finite() || epsilon<=0. {return Err(error("HYBRID_INPUT","positive permittivity required"));}
+        let local=map.owners.iter().filter(|o|matches!(o,super::mixed_conductor::Owner::Volume)).count();
+        let supports=map.foils.len().checked_mul(6).and_then(|n|n.checked_add(local.checked_mul(24)?)).ok_or_else(||error("MEMORY_LIMIT","charge support overflow"))?;
+        let bytes=supports.checked_mul(1536).and_then(|v|v.checked_add(1024*128)).and_then(|v|v.checked_add(map.potential_count().checked_mul(1024)?)).and_then(|v|v.checked_add(map.retained_bytes().ok()?)).ok_or_else(||error("MEMORY_LIMIT","charge support plan overflow"))?;
+        budget.check(bytes)?;
+        let (planar,local,dual)=map.planar_sparse_charge_supports(&[])?;
+        if planar.is_empty() || dual.is_empty() {return Err(error("HYBRID_INPUT","charge action requires foil support"));}
+        let prisms:Vec<_>=planar.iter().map(|s|s.prism.clone()).collect();
+        let pairs=prisms.len().checked_mul(prisms.len()+1).and_then(|n|n.checked_div(2)).ok_or_else(||error("MEMORY_LIMIT","charge pair overflow"))?;
+        let available=budget.max_bytes.checked_sub(bytes).ok_or_else(||error("MEMORY_LIMIT","charge plan budget exhausted"))?;
+        let plan=super::near_far::Plan::new(&prisms,0.2,12,super::near_far::Budget{max_bytes:available,max_nodes:budget.max_nodes,max_blocks:available/128,max_pairs:pairs,max_wall:wall.saturating_sub(start.elapsed())})?;
+        Ok(Self{planar,local,dual,plan,epsilon,budget,start,wall,pair_cache:std::cell::RefCell::new(BTreeMap::new())})
+    }
+    pub(super) fn dual_voltage(&self,v:&[f64])->Result<Vec<f64>> {
+        if v.iter().any(|x|!x.is_finite()) || self.dual.iter().flatten().any(|(i,_)|*i>=v.len()) {return Err(error("HYBRID_INPUT","invalid compact potential vector"));}
+        Ok(self.dual.iter().map(|row|row.iter().fold(Sum::default(),|s,(i,w)|s.add(Sum::from(v[*i]).mul(*w))).value()).collect())
+    }
+    pub(super) fn project_charge(&self,q:&[f64],n:usize)->Result<Vec<f64>> {
+        if q.len()!=self.dual.len() || q.iter().any(|x|!x.is_finite()) {return Err(error("HYBRID_INPUT","invalid compact charge vector"));}
+        let mut out=vec![0.;n];for (row,&x) in self.dual.iter().zip(q) {for &(i,w) in row {if i>=n{return Err(error("HYBRID_INPUT","charge dual coordinate out of range"));}out[i]+=w*x;}} Ok(out)
+    }
+    /// Returns P*q and a conservative far-only row error bound.
+    fn exact_planar_pair(&self,a:usize,b:usize)->Result<f64> {
+        let key=(a.min(b),a.max(b));
+        if let Some(&value)=self.pair_cache.borrow().get(&key) {return Ok(value);}
+        let value=super::planar_operator::pair_integral(&self.planar[a].prism,&self.planar[b].prism,8,self.start,self.wall)?.0;
+        let mut cache=self.pair_cache.borrow_mut();
+        if cache.len()>=1024 {if let Some(&old)=cache.keys().next() {cache.remove(&old);}}
+        cache.insert(key,value); Ok(value)
+    }
+    fn cache_value(&self,key:(usize,usize),f:impl FnOnce()->Result<f64>)->Result<f64> {
+        if let Some(&v)=self.pair_cache.borrow().get(&key) {return Ok(v);}
+        let value=f()?;let mut cache=self.pair_cache.borrow_mut();
+        if cache.len()>=1024 {if let Some(&old)=cache.keys().next(){cache.remove(&old);}}
+        cache.insert(key,value);Ok(value)
+    }
+    fn exact_cross(&self,p:usize,t:usize)->Result<f64> {
+        self.cache_value((p,self.planar.len()+t),||Ok(super::planar_mixed::cross(&self.planar[p].prism,self.local[t].tetra,super::planar_mixed::Densities{charge:&[1.],current:&[]},super::planar_mixed::Densities{charge:&[1.],current:&[]},1./(4.*std::f64::consts::PI),8,self.budget,self.wall.saturating_sub(self.start.elapsed()))?.potential_per_farad[0][0]))
+    }
+    fn exact_local(&self,i:usize,j:usize)->Result<f64> {
+        let a=i.min(j);let b=i.max(j);self.cache_value((self.planar.len()+a,self.planar.len()+b),|| {
+            let x=&self.local[a];let y=&self.local[b];
+            if a==b {let coarse=polyhedron::tetra_self_integral(x.tetra,12)?;let fine=polyhedron::tetra_self_integral(x.tetra,16)?;if (fine-coarse).abs()>1e-8*fine.abs(){return Err(error("HYBRID_UNRESOLVED","tetra self order estimator"));}Ok(fine)} else {polyhedron::tetra_integral_adaptive(x.tetra,&PointPotential::tetrahedron(y.tetra)?.with_tighter_tetra_tolerance(1e-12)?,16,1e-10)}
+        })
+    }
+    pub(super) fn apply(&self,q:&[f64])->Result<(Vec<f64>,Vec<f64>)> {self.apply_policy(q,false)}
+    fn apply_policy(&self,q:&[f64],exact_far:bool)->Result<(Vec<f64>,Vec<f64>)> {
+        if q.len()!=self.dual.len() || q.iter().any(|x|!x.is_finite()) {return Err(error("HYBRID_INPUT","invalid charge action vector"));}
+        if q.iter().all(|&x|x==0.) {return Ok((vec![0.;q.len()],vec![0.;q.len()]));}
+        let mut out=vec![0.;q.len()];let mut bounds=vec![0.;q.len()];let scale=1./(4.*std::f64::consts::PI*self.epsilon);
+        for far in [false,true] {self.plan.visit_pairs(far,|a,b| {
+            check_time(self.start,self.wall)?;
+            let (value,err)=if far && !exact_far {let p=self.plan.moments[a].pair(&self.plan.moments[b])?;(p.integral_m5,p.absolute_remainder_m5)} else {(self.exact_planar_pair(a,b)?,0.)};
+            for &(i,da) in &self.planar[a].charge_density {for &(j,db) in &self.planar[b].charge_density {let k=scale*da*db;out[i]+=k*value*q[j];bounds[i]+=k.abs()*err*q[j].abs();if a!=b {out[j]+=k*value*q[i];bounds[j]+=k.abs()*err*q[i].abs();}}} Ok(())
+        })?;}
+        for (i,a) in self.local.iter().enumerate() {
+            for (pi,p) in self.planar.iter().enumerate() {check_time(self.start,self.wall)?;let cross=self.exact_cross(pi,i)?;
+                for &(j,d) in &p.charge_density {let k=scale*cross*d*a.charge_density;out[j]+=k*q[a.charge_index];out[a.charge_index]+=k*q[j];}}
+            for (j,b) in self.local[..=i].iter().enumerate() {check_time(self.start,self.wall)?;
+                let integral=self.exact_local(i,j)?;
+                let k=scale*integral*a.charge_density*b.charge_density;out[a.charge_index]+=k*q[b.charge_index];if i!=j {out[b.charge_index]+=k*q[a.charge_index];}
+            }
+        }
+        if out.iter().chain(&bounds).any(|x|!x.is_finite()){return Err(error("HYBRID_RANGE","nonfinite charge action"));} Ok((out,bounds))
+    }
+}
+impl CompactChargeAction {
+    /// Apply C = B^T P^-1 B using a caller-supplied positive P diagonal.
+    /// The far remainder is checked separately from the CG true residual.
+    pub(super) fn capacitance_action(&self,voltage:&[f64],diagonal:&[f64],max_iterations:usize)->Result<Vec<f64>> {
+        let rhs=self.dual_voltage(voltage)?;
+        for exact in [false,true] {
+            let solution=super::compact_cg::solve(&rhs,diagonal,1e-9,max_iterations,self.budget,self.start,self.wall,|q,out| {
+                let (p,_)=self.apply_policy(q,exact)?;out.copy_from_slice(&p);Ok(())
+            })?;
+            let (p,bound)=self.apply_policy(&solution.coefficients,exact)?;
+            let norm=rhs.iter().map(|x|x*x).sum::<f64>().sqrt().max(f64::MIN_POSITIVE);
+            let uncertainty=bound.iter().map(|x|x*x).sum::<f64>().sqrt()/norm;
+            let residual=rhs.iter().zip(&p).map(|(a,b)|(a-b)*(a-b)).sum::<f64>().sqrt()/norm;
+            if uncertainty.is_finite() && residual.is_finite() && uncertainty+residual<=1e-8 {return self.project_charge(&solution.coefficients,voltage.len());}
+            if exact {return Err(error("HYBRID_CHARGE_RESIDUAL","compact charge action uncertainty exceeds numeric gate"));}
+        }
+        Err(error("HYBRID_CHARGE_RESIDUAL","compact charge solve did not converge"))
+    }
+}
+impl CompactChargeAction {
+    /// Assemble only diagonal(P), never the dense matrix. Shared-support
+    /// contributions for one physical charge mode are included exactly once.
+    pub(super) fn diagonal(&self)->Result<Vec<f64>> {
+        let mut out=vec![0.;self.dual.len()];let scale=1./(4.*std::f64::consts::PI*self.epsilon);
+        for far in [false,true] {self.plan.visit_pairs(far,|a,b| {
+            for &(i,da) in &self.planar[a].charge_density {for &(j,db) in &self.planar[b].charge_density {if i==j {
+                check_time(self.start,self.wall)?;
+                let value=if far {self.plan.moments[a].pair(&self.plan.moments[b])?.integral_m5} else {super::planar_operator::pair_integral(&self.planar[a].prism,&self.planar[b].prism,8,self.start,self.wall)?.0};
+                out[i]+=scale*value*da*db*if a==b {1.} else {2.};
+            }}} Ok(())
+        })?;}
+        for (i,a) in self.local.iter().enumerate() {
+            for (pi,p) in self.planar.iter().enumerate() {for &(j,d) in &p.charge_density {if j==a.charge_index {
+                check_time(self.start,self.wall)?;
+                let value=self.exact_cross(pi,i)?;
+                out[j]+=2.*scale*value*d*a.charge_density;
+            }}}
+            for (j,b) in self.local[..=i].iter().enumerate() {if a.charge_index==b.charge_index {
+                check_time(self.start,self.wall)?;
+                let value=self.exact_local(i,j)?;
+                out[a.charge_index]+=scale*value*a.charge_density*b.charge_density*if i==j {1.} else {2.};
+            }}
+        }
+        if out.iter().any(|v|!v.is_finite() || *v<=0.) {return Err(error("HYBRID_CHARGE","invalid charge diagonal"));}Ok(out)
+    }
+}
+struct CompactMixedMagnetic {
+    planar:CompactPlanarAction,
+    local:Vec<super::mixed_conductor::LocalCurrentSupport>,
+    cache:std::cell::RefCell<BTreeMap<(usize,usize),f64>>,
+    budget:AllocationBudget,start:Instant,wall:Duration,
+}
+impl CompactMixedMagnetic {
+    fn new(map:&super::mixed_conductor::MixedMap<'_>,budget:AllocationBudget,start:Instant,wall:Duration)->Result<Self> {
+        let n=map.foils.len().checked_add(map.owners.len()).and_then(|n|n.checked_mul(1024)).and_then(|n|n.checked_add(map.retained_bytes().ok()?)).and_then(|n|n.checked_add(1024*128)).ok_or_else(||error("MEMORY_LIMIT","mixed magnetic plan overflow"))?;budget.check(n)?;
+        let planar=CompactPlanarAction::new(map.planar_current_supports()?,map.current_count(),AllocationBudget{max_bytes:budget.max_bytes-n,..budget},start,wall)?;
+        Ok(Self{planar,local:map.local_current_supports()?,cache:std::cell::RefCell::new(BTreeMap::new()),budget,start,wall})
+    }
+    fn cached(&self,key:(usize,usize),f:impl FnOnce()->Result<f64>)->Result<f64> {
+        if let Some(&v)=self.cache.borrow().get(&key){return Ok(v);}
+        let v=f()?;let mut c=self.cache.borrow_mut();if c.len()>=1024 {if let Some(&k)=c.keys().next(){c.remove(&k);}}c.insert(key,v);Ok(v)
+    }
+    fn apply(&self,x:&[f64])->Result<(Vec<f64>,Vec<f64>)> {
+        let (mut out,bound)=self.planar.apply(x)?;
+        if x.iter().all(|&v|v==0.) {return Ok((out,bound));}
+        let mut local_j=vec![[0.;3];self.local.len()];let mut foil_j=vec![[0.;3];self.planar.supports.len()];
+        for (s,j) in self.local.iter().zip(&mut local_j) {for &(i,d) in &s.densities {for k in 0..3 {j[k]+=d[k]*x[i];}}}
+        for (s,j) in self.planar.supports.iter().zip(&mut foil_j) {for &(i,d) in &s.current_density {for k in 0..3 {j[k]+=d[k]*x[i];}}}
+        for (i,a) in self.local.iter().enumerate() {
+            for (p,b) in self.planar.supports.iter().enumerate() {check_time(self.start,self.wall)?; if local_j[i]==[0.;3] && foil_j[p]==[0.;3] {continue;}
+                let value=self.cached((p,self.planar.supports.len()+i),||Ok(super::planar_mixed::cross(&b.prism,a.tetra,super::planar_mixed::Densities{charge:&[1.],current:&[]},super::planar_mixed::Densities{charge:&[1.],current:&[]},1./(4.*std::f64::consts::PI),8,self.budget,self.wall.saturating_sub(self.start.elapsed()))?.potential_per_farad[0][0]))?;
+                for &(k,d) in &b.current_density {out[k]+=1e-7*value*(0..3).map(|z|d[z]*local_j[i][z]).sum::<f64>();}
+                for &(k,d) in &a.densities {out[k]+=1e-7*value*(0..3).map(|z|d[z]*foil_j[p][z]).sum::<f64>();}
+            }
+            for (j,b) in self.local[..=i].iter().enumerate() {check_time(self.start,self.wall)?; if local_j[i]==[0.;3] && local_j[j]==[0.;3] {continue;}
+                let base=self.planar.supports.len();let value=self.cached((base+j,base+i),||if i==j {let c=polyhedron::tetra_self_integral(a.tetra,12)?;let f=polyhedron::tetra_self_integral(a.tetra,16)?;if (f-c).abs()>1e-8*f.abs(){Err(error("HYBRID_UNRESOLVED","tetra self order estimator"))}else{Ok(f)}}else{polyhedron::tetra_integral_adaptive(a.tetra,&PointPotential::tetrahedron(b.tetra)?.with_tighter_tetra_tolerance(1e-12)?,16,1e-10)})?;
+                for &(k,d) in &a.densities {out[k]+=1e-7*value*(0..3).map(|z|d[z]*local_j[j][z]).sum::<f64>();}
+                if i!=j {for &(k,d) in &b.densities {out[k]+=1e-7*value*(0..3).map(|z|d[z]*local_j[i][z]).sum::<f64>();}}
+            }
+        }
+        if out.iter().any(|v|!v.is_finite()){return Err(error("HYBRID_RANGE","mixed magnetic action overflow"));} Ok((out,bound))
     }
 }
