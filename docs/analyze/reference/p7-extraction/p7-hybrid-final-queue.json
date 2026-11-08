@@ -927,6 +927,28 @@
       "memoryLimitMiB": null,
       "sideEffects": "read-only/check output depends on script",
       "commandStatus": "script entrypoint verified; do not run during queue preparation"
+    },
+    {
+      "script": "scripts/verify-p7-hybrid-orientation.ts",
+      "exists": true,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "scripts/verify-p7-hybrid-orientation.ts"
+      ],
+      "rows": [
+        "primary-03"
+      ],
+      "runClass": "bounded-development-control",
+      "executionGate": {
+        "allowedNow": false,
+        "requirement": "Run through scripts/verify-p7-closure-supervised.py with P7_SUPERVISOR_TEST_COMMAND set to JSON command; <=25s, <=512MiB internal cap, one job; supervisor process-tree cap required."
+      },
+      "wallLimitSeconds": 25,
+      "memoryLimitMiB": 512,
+      "sideEffects": "writes comparison.json to P7_OUTPUT_DIR and uses PCB_ANALYSIS_CACHE_DIR",
+      "evidenceLimit": "rigid-rotation invariance of compact two-conductor model only; does not validate independent spatial-delay reference or physical accuracy"
     }
   ],
   "acceptanceTasks": [
@@ -950,9 +972,11 @@
       "id": "primary-03",
       "case": "Дорожка 45°",
       "reference": null,
-      "status": "reference-unbound",
+      "status": "sensitivity-control-available; physical reference still unbound",
       "candidateArtifacts": [],
-      "requiredNext": "bind independently justified reference, observable, frequency range and sensitivity/convergence evidence from the canonical case row; no acceptance inferred"
+      "requiredNext": "bind independent spatial-delay reference and run matrix-required sensitivity/physical checks; no acceptance claim",
+      "implementationCheck": "scripts/verify-p7-hybrid-orientation.ts",
+      "referenceArtifact": "docs/analyze/plans/p7-plan.md records historical 2.174198% rotated45 sensitivity (conditional <=3%); not an independent physical reference"
     },
     {
       "id": "primary-04",

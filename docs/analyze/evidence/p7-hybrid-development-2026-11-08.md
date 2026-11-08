@@ -162,3 +162,8 @@ The shared contract and direct kernels are being integrated. Zero-current capaci
 
 - The shared magnetic/electric self kernel now tries orders 12/16, then increments by four up to 64, retaining relative change <=1e-8, deadline and explicit refusal. The thin-tetra permutation/scaling control passed; it does not exercise every refined geometry.
 - `1794140224499526900`: real via debug control exercises successful orders 20/24, then refuses at native deadline (26.734s supervisor wall), TT traversal visited415/far0/near209/exact209. No full via result or release performance claim. First refined geometry is logged for a subsequent independent bounded check.
+
+### Fresh addon after integrated native changes
+
+- Release addon build completed in 6m19s. `1794140718051740800`: extended coupled DSL passed in 5.0s, including regime audit, canonical spatial recovery, loss Grams and cold/warm/restart; sampled private tree peak 443101184 bytes under supervisor cap. This is bounded model integration, not physical acceptance.
+- `1794140744067280200`: new in-memory 0/45/90 orientation control hit the unchanged 30s external deadline. No rotation sensitivity acceptance follows. The control preserves physical contacts and compares complex S/loss entries; Y is explicitly omitted. Investigation must identify which orientation/partition causes the cost before rerunning.
