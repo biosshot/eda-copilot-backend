@@ -271,7 +271,7 @@ export interface AnalysisBoardFoilCheckedReport {
         iteration: number; frequencyHz: number; input: number; potentialModes: number; currentModes: number;
         maxKclRelative: number; maxKvlRelative: number;
     }[];
-    quality: { maxKclRelative: number; maxKvlRelative: number; maxColumnPowerBalanceErrorW: number; maxFullKvlUncertaintyRelative?: number };
+    quality: { maxKclRelative: number; maxKvlRelative: number; maxColumnPowerBalanceErrorW: number; maxFullKvlUncertaintyRelative?: number; scope?: 'compact-discrete'; physicalError?: 'unverified' };
     conductiveCorrection?: {
         method: 'sparse owner interiors and shared conductive trace Schur';
         ownerInteriorDofs: number[]; freeSharedTraceDofs: number; traceUpperEntries: number;
@@ -279,6 +279,7 @@ export interface AnalysisBoardFoilCheckedReport {
     };
     provenance: {
         method: string;
+        compactOperator?: { version: 'compact-planar-v1'; basis: 'full-mixed' | 'dc-harmonic-only'; scope: 'compact-discrete'; originalVolumeActions: 0; foilSupports: number; localTetraSupports: number; potentialCoordinates: number; currentCoordinates: number; planarMaxOrder: number; planarMaxRelativeChange: number; mixedMaxRelativeChange: number; tetraSelfMaxRelativeChange: number; tetraPairAdaptiveTolerance: number; physicalAccuracy: 'unverified' };
         magneticOperator?: {
             scope: string; maxFullKvlUncertaintyRelative: number;
         } & (

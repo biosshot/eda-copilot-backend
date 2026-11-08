@@ -5,10 +5,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import type { AnalysisBoardFoilCheckedReport, AnalysisBoardFoilCheckedRequest } from '../native/analyze/index.js';
-import { cachedBoardFoilReport } from '../src/analyze/board-foil-cache.ts';
+import { cachedBoardFoilReport, HYBRID_PLANAR_OPERATOR_VERSION } from '../src/analyze/board-foil-cache.ts';
 import { digest, LocalModelCache } from '../src/analyze/local-model-cache.ts';
 import { isAnalysisProblem, type BoardFoilProblem } from '../src/analyze/types.ts';
 import { runAutoFoil } from '../src/analyze/auto-foil-response.ts';
+import { validateBoardFoilReport } from '../src/analyze/board-foil-validation.ts';
 import type { AutoFoilPlan } from '../src/analyze/auto-foil-plan.ts';
 
 const problem: BoardFoilProblem = {
@@ -49,6 +50,43 @@ function mock(request: AnalysisBoardFoilCheckedRequest, input = problem): Analys
     },
   };
 }
+
+test('compact magnetic evidence is checked without bypassing ownership or power gates', () => {
+  const compact=()=>{
+    const value=mock(problem.request);
+    delete value.provenance.magneticOperator;
+    delete value.quality.maxFullKvlUncertaintyRelative;
+    Object.assign(value.quality,{scope:'compact-discrete',physicalError:'unverified'});
+    value.samples.forEach(s=>s.columns.forEach(c=>delete c.kvlUncertaintyRelative));
+    value.provenance.compactOperator={version:'compact-planar-v1',basis:'dc-harmonic-only',scope:'compact-discrete',originalVolumeActions:0,
+      foilSupports:3,localTetraSupports:9,potentialCoordinates:8,currentCoordinates:24,planarMaxOrder:8,
+      planarMaxRelativeChange:1e-9,mixedMaxRelativeChange:1e-9,tetraSelfMaxRelativeChange:1e-9,
+      tetraPairAdaptiveTolerance:1e-10,physicalAccuracy:'unverified'};
+    return value;
+  };
+  const validate=(value:AnalysisBoardFoilCheckedReport)=>validateBoardFoilReport(value,problem,problem.request.budget);
+  validate(compact());
+  const changes:((value:AnalysisBoardFoilCheckedReport)=>void)[]=[
+    v=>{(v.provenance.compactOperator as any).version='other';},
+    v=>{(v.provenance.compactOperator as any).scope='physical';},
+    v=>{(v.provenance.compactOperator as any).basis='other';},
+    v=>{(v.quality as any).scope='physical';},
+    v=>{(v.quality as any).physicalError='verified';},
+    v=>{(v.provenance.compactOperator as any).originalVolumeActions=1;},
+    v=>{v.provenance.compactOperator!.foilSupports++;},
+    v=>{v.provenance.compactOperator!.localTetraSupports++;},
+    v=>{v.provenance.compactOperator!.potentialCoordinates=0;},
+    v=>{v.provenance.compactOperator!.currentCoordinates=55;},
+    v=>{v.provenance.compactOperator!.planarMaxOrder=0;},
+    v=>{v.provenance.compactOperator!.planarMaxOrder=68;},
+    v=>{v.provenance.compactOperator!.planarMaxOrder=9;},
+    ...(['planarMaxRelativeChange','mixedMaxRelativeChange','tetraSelfMaxRelativeChange','tetraPairAdaptiveTolerance'] as const).map(key=>(v:AnalysisBoardFoilCheckedReport)=>{v.provenance.compactOperator![key]=1e-7;}),
+    v=>{v.provenance.compactOperator!.mixedMaxRelativeChange=NaN;},
+    v=>{v.provenance.sourceMapping=[];},
+    v=>{v.samples[0].columns[0].copperLossW=0;},
+  ];
+  for(const change of changes){const value=compact();change(value);assert.throws(()=>validate(value),/CHANNEL_FOIL_EVIDENCE/);}
+});
 
 test('section current hints have isolated response cache identity', () => {
   const dir=mkdtempSync(join(tmpdir(),'p7-section-hints-'));
@@ -330,11 +368,34 @@ test('exact grid cache preserves immutable producer evidence through warm and pr
 });
 
 test('exact foil cache keys the physical request and bounds replay size', () => {
+  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v1');
+  const priorCompactPlanar = process.env.P7_COMPACT_PLANAR;
+  const priorFullMixed = process.env.P7_COMPACT_FULL_MIXED;
   const dir = mkdtempSync(join(tmpdir(),'p7-foil-cache-'));
   try {
+    delete process.env.P7_COMPACT_PLANAR;
+    delete process.env.P7_COMPACT_FULL_MIXED;
     const cache = new LocalModelCache(dir);
+    let capturedIdentity: any;
+    const originalKey = cache.key.bind(cache);
+    cache.key = (identity: unknown) => { capturedIdentity = identity; return originalKey(identity); };
     const run = (core: string, input: BoardFoilProblem) => cachedBoardFoilReport(cache,core,input,request=>mock(request,input));
     const cold = run('core-1',problem);
+    assert.equal(capturedIdentity.hybridPlanarOperatorVersion, HYBRID_PLANAR_OPERATOR_VERSION);
+    assert.notEqual(originalKey({...capturedIdentity,hybridPlanarOperatorVersion:'hybrid-planar-v0'}),cold.cache?.key);
+    assert.equal(capturedIdentity.compactPlanarPolicy,'default-v1');
+    process.env.P7_COMPACT_PLANAR='1';
+    const compact = run('core-1',problem);
+    assert.equal(capturedIdentity.compactPlanarPolicy,'compact-v1');
+    assert.notEqual(compact.cache?.key,cold.cache?.key);
+    assert.equal(capturedIdentity.compactBasisPolicy,'dc-harmonic-only');
+    process.env.P7_COMPACT_FULL_MIXED='1';
+    const fullMixed=run('core-1',problem);
+    assert.equal(capturedIdentity.compactBasisPolicy,'full-mixed');
+    assert.notEqual(fullMixed.cache?.key,compact.cache?.key);
+    process.env.P7_COMPACT_FULL_MIXED='0';
+    assert.equal(run('core-1',problem).cache?.key,compact.cache?.key);
+    delete process.env.P7_COMPACT_PLANAR;
     const variants = [
       { ...problem, boardJson: '{"board":"different"}' },
       { ...problem, geometry: {...problem.geometry as object, airMarginM:0.002} },
@@ -358,7 +419,11 @@ test('exact foil cache keys the physical request and bounds replay size', () => 
     cache.clear();
     assert.throws(()=>cachedBoardFoilReport(cache,'core-1',replay,noSolve),/LOCAL_CACHE_MEMORY_LIMIT/);
     assert.equal(cachedBoardFoilReport(cache,'core-1',verbose,noSolve).cache?.key,large.cache?.key);
-  } finally { rmSync(dir,{recursive:true,force:true}); }
+  } finally {
+    if(priorCompactPlanar===undefined)delete process.env.P7_COMPACT_PLANAR;else process.env.P7_COMPACT_PLANAR=priorCompactPlanar;
+    if(priorFullMixed===undefined)delete process.env.P7_COMPACT_FULL_MIXED;else process.env.P7_COMPACT_FULL_MIXED=priorFullMixed;
+    rmSync(dir,{recursive:true,force:true});
+  }
 });
 
 test('skin-volume cache isolates frozen profiles and revalidates their mesh evidence', () => {

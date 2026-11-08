@@ -6,6 +6,10 @@ import type { BoardFoilProblem, BoardFoilReport } from './types.ts';
 type Budget = AnalysisBoardFoilCheckedRequest['budget'];
 type Entry = { report: AnalysisBoardFoilCheckedReport; producerBudget: Budget };
 
+/** Bump whenever the shared planar/hybrid operator changes its numerical
+ * meaning. Kept in the existing exact-grid identity so old snapshots miss. */
+export const HYBRID_PLANAR_OPERATOR_VERSION = 'hybrid-planar-v1';
+
 function validBudget(budget: Budget) {
   return Number.isFinite(budget?.maxSeconds) && budget.maxSeconds > 0 && budget.maxSeconds <= 3600 &&
     Number.isFinite(budget?.maxMemoryMiB) && budget.maxMemoryMiB >= 1 && budget.maxMemoryMiB <= 65536;
@@ -50,6 +54,8 @@ export function cachedBoardFoilReport(
   const magneticBatchColumns = verificationLimit('P7_MAGNETIC_BATCH_COLUMNS', 0, 0, 64);
   const sectionHints = process.env.P7_SECTION_HINTS === '1';
   const nearBound = process.env.P7_MAGNETIC_NEAR_BOUND === '1';
+  const compactPlanar = process.env.P7_COMPACT_PLANAR === '1';
+  const compactFullMixed = process.env.P7_COMPACT_FULL_MIXED === '1';
   const axialTetPolicy = magneticAxialTetPolicy();
   const remaining = () => {
     const seconds = deadlineSeconds - (performance.now() - started) / 1000;
@@ -62,7 +68,11 @@ export function cachedBoardFoilReport(
   const maxEncodedBytes = Math.floor(maxMemoryMiB * 1048576 / 16);
   remaining();
   const key = cache.key({
-    core, producer: 'automatic-board-foil-or-mixed-exact-grid-v1', board: digest(problem.boardJson),
+    core, producer: 'automatic-board-foil-or-mixed-exact-grid-v1',
+    hybridPlanarOperatorVersion: HYBRID_PLANAR_OPERATOR_VERSION,
+    compactPlanarPolicy: compactPlanar ? 'compact-v1' : 'default-v1',
+    ...(compactPlanar && { compactBasisPolicy: compactFullMixed ? 'full-mixed' : 'dc-harmonic-only' }),
+    board: digest(problem.boardJson),
     magneticProducerPolicy:'exact-or-certified-adaptive-harmonic-v1',
     magneticRepresentationVersion:3,
     magneticInteractionStorage:'immutable-adaptive-dual-tree-v1',

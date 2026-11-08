@@ -51,6 +51,18 @@ function validateMagneticCover(cover:Omit<AnalysisMagneticCertificate,'policy'>|
 function validateMagneticOperator(report:AnalysisBoardFoilCheckedReport):void {
  const p=report.provenance,operator=p.magneticOperator;
  const columns=report.samples.flatMap(sample=>sample.columns);
+ if(p.compactOperator!==undefined){
+  const c=p.compactOperator;
+  if(p.modelKind!=='mixed'||c.version!=='compact-planar-v1'||!['full-mixed','dc-harmonic-only'].includes(c.basis)||c.scope!=='compact-discrete'||c.originalVolumeActions!==0||c.physicalAccuracy!=='unverified'||report.quality.scope!=='compact-discrete'||report.quality.physicalError!=='unverified'||
+     c.foilSupports!==p.prisms||c.localTetraSupports!==p.volumeTetrahedra||
+     !Number.isSafeInteger(c.potentialCoordinates)||c.potentialCoordinates<1||c.potentialCoordinates>p.fullPotentialCount||
+     !Number.isSafeInteger(c.currentCoordinates)||c.currentCoordinates<1||c.currentCoordinates>p.fullCurrentCount||
+     !Number.isSafeInteger(c.planarMaxOrder)||(c.foilSupports>0?(c.planarMaxOrder<8||c.planarMaxOrder>64||c.planarMaxOrder%4!==0):c.planarMaxOrder!==0)||
+     [c.planarMaxRelativeChange,c.mixedMaxRelativeChange,c.tetraSelfMaxRelativeChange,c.tetraPairAdaptiveTolerance].some(x=>typeof x!=='number'||!Number.isFinite(x)||x<0||x>1e-8)||
+     operator!==undefined||report.quality.maxFullKvlUncertaintyRelative!==undefined||columns.some(x=>x.kvlUncertaintyRelative!==undefined||x.magneticCertificate!==undefined))
+   fail('invalid compact magnetic operator evidence');
+  return;
+ }
  if(p.modelKind==='foil'){
   if(operator!==undefined||report.quality.maxFullKvlUncertaintyRelative!==undefined||
      columns.some(column=>column.kvlUncertaintyRelative!==undefined||column.magneticCertificate!==undefined))
