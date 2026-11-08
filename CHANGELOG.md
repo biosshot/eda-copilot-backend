@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Recover physical port-pair RMS voltage/current and aggregate finite-contact currents from checked matched S samples, preserving actual terminal IDs, polarity and layer identity. Keep copper/package losses separate and spatial return-current recovery explicitly unverified.
+
 - Add a distinct hybrid profiled implementation envelope through 10 GHz, guarded by the unchanged electrical-size, physical contact, mesh, memory and residual checks. Legacy 10/100 kHz policies retain their limits; the wider envelope is not RF accuracy acceptance. Publish validated supplemental frequency points and independent holdouts while preserving exact-grid network replay.
 
 - Seed adaptive mixed training with finite-thickness skin/proximity current profiles on complete resolved foil groups, using the existing resistive metric and unchanged coupled residual checks. Admit hint and growth storage before allocation, report actual profile counts, and avoid a full-volume-audit claim in compact result labels.

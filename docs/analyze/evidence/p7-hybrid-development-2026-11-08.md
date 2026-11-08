@@ -66,6 +66,9 @@ Rows without an explicit release label use debug binaries and do not measure pro
 | Release hybrid policy, operator-specific limits, required assembly policy and unchanged electrical/contact refusal | pass | 0.188 s | `1794132678026834700` |
 | Release initial connected 100 kHz skin coupon with narrow pads and exposed rounded track ends | native deadline refusal | 25.172 s | `1794132678427791100` |
 | Release connected rectangular 1 MHz foil coupon, finite pads, nonzero added skin hints, coupled residual/power checks | pass | 0.329 s | `1794133031540159800` |
+| Port/contact observable algebra and automatic DSL/mock replay, with native electrode names distinct from terminal IDs | six pass | 1.750 s | `1794133376038377800` |
+
+The observable controls cover a 100 Ω DUT at a 50 Ω reference (V=33.333 V, I=1/3 A under a 1 A matched Norton drive), unequal references with real port power equal to copper plus package loss, shared-contact aggregation and distinct layers at the same source path. Root review corrected the original mapping through native electrode names; the DSL integration now uses actual physical terminal IDs. These are port observations, not recovered spatial copper currents. TypeScript typechecking passes.
 
 The first connected control retained 516 physical supports (predominantly local tetrahedra) and did not complete its initial magnetic action; it remains an incomplete geometric-control attempt. The new minimal planar positive uses 35 µm copper and pads enclosing the track caps, producing 18 resolved finite-prism supports and 36 mixed current coordinates. It completes at 1 MHz with nonzero admitted profile hints, KCL/KVL below 1e-8 and the unchanged matched-power checks; its native elapsed time is 0.136 s. These are different in-memory coupons, not a before/after speed comparison, and do not prove the refused geometry or RF-board accuracy. All source fixtures remain unchanged.
 

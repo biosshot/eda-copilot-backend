@@ -4,6 +4,7 @@ import type {AutoFoilPlan} from '../auto-foil-plan.ts';
 import type {ExecutionResult} from './executor.ts';
 import type {Diagnostic,NetworkResource,Validity} from './spec-doc.js';
 import {json} from './data.ts';
+import {boardFoilPortObservations} from '../board-foil-port-observations.ts';
 
 export function boardFoilResult(
  contextId:string, plan:AutoFoilPlan, report:BoardFoilRunReport, diagnostics:Diagnostic[],
@@ -55,5 +56,5 @@ export function boardFoilResult(
    ...(packages.length?['Explicit package R/C/L models connect their original finite pads. Copper and package dissipation are reported separately.']:[]),
    'Exact-grid standalone frequency replay uses the original paired contacts and S50 references.'],
   metrics:{segments:{kind:'table',unit:'1',data:json(evidence),validity,diagnostics:[]}},
-  network,solution:json({...report,physicalPorts,portNames:network.ports,foilPlan:evidence,validity})};
+  network,solution:json({...report,physicalPorts,portNames:network.ports,portObservations:boardFoilPortObservations(plan,report),foilPlan:evidence,validity})};
 }

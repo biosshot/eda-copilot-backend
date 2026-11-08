@@ -128,6 +128,10 @@ test('finite lateral return triggers the joint foil producer and exact physical 
     };
     assert.deepEqual(model.validity.domain.producer,producer);
     assert.deepEqual((result.solution as any).foilPlan.producer,producer);
+    const observations=(result.solution as any).portObservations;
+    assert.equal(observations.spatialRecovery.status,'unverified');
+    assert.ok(Math.abs(observations.frequencies[0].drives[0].portObservations[0].currentA.real-.4)<1e-12);
+    assert.equal(observations.frequencies[0].drives[0].portObservations[0].positive.sourcePath,'pads[0]');
     return result;
    }
    if(task.kind==='si')return transient(task as AnalysisTask<'si'>);
