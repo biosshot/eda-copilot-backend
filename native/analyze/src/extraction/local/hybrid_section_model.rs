@@ -359,3 +359,7 @@ fn scale_henries(gram:&mut [Vec<f64>]) {
 }
 
 
+
+#[cfg(test)]
+#[path = "hybrid_five_island_test.rs"]
+mod hybrid_five_island_test;
