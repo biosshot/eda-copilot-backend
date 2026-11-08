@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seed adaptive mixed training with finite-thickness skin/proximity current profiles on complete resolved foil groups, using the existing resistive metric and unchanged coupled residual checks. Admit hint and growth storage before allocation, report actual profile counts, and avoid a full-volume-audit claim in compact result labels.
+
 - Convert standalone exact physical-port S samples to Y/Z through the existing conditioned frequency solver, retaining paired contacts, source wave references and conditional validity. Derived replay uses its actual Y/Z coefficients; joins, interpolation and S reference changes remain refused, and producer-table storage enters the input budget.
 
 - Add the explicit automatic-hybrid assembly policy through planner, cache, native dispatch and strict report validation, keeping its unverified status separate from conductive Schur evidence. Prepare stratified finite-prism current supports on resolved skin meshes and reserve bounded, ordered parallel planar/local kernel work.

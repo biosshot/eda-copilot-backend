@@ -13,7 +13,8 @@ export function boardFoilResult(
  const physicalPorts=plan.ports.map(({positive,negative})=>({positive:contact(positive),negative:contact(negative)}));
  const id=contextId+':foil-'+randomUUID();
  const modelKind=report.provenance.modelKind;
- const model=modelKind==='foil'?'planar foil copper':
+ const model=report.provenance.modelKind==='mixed'&&report.provenance.compactOperator?(report.provenance.prisms===0?'local volumetric copper':
+  report.provenance.volumeTetrahedra===0?'distributed planar copper':'coupled planar and local copper'):modelKind==='foil'?'planar foil copper':
   report.provenance.prisms===0?'volumetric copper':
   report.provenance.modelKind==='mixed'&&report.provenance.volumeTetrahedra===0?'foil copper with full volume audit':'mixed foil and volume copper';
  const producer={

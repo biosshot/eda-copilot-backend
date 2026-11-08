@@ -526,6 +526,76 @@ pub fn prepare<'a>(
     })
 }
 impl MixedMap<'_> {
+    fn eligible_skin_groups(&self, upper_hz: f64, budget: AllocationBudget, start: Instant, wall: Duration) -> Result<Vec<Vec<&FoilPrism>>> {
+        check_time(start, wall)?;
+        if !upper_hz.is_finite() || upper_hz <= 0. { return Err(error("HYBRID_FREQUENCY", "finite positive frequency required")); }
+        budget.check(self.foils.len().checked_mul(512).ok_or_else(||error("MEMORY_LIMIT", "skin group storage overflow"))?)?;
+        let mut groups = BTreeMap::<(&str,usize),Vec<&FoilPrism>>::new();
+        for foil in &self.foils { check_time(start,wall)?; groups.entry((&foil.layer,foil.planar_triangle)).or_default().push(foil); }
+        let mut eligible=Vec::new();
+        for ((layer,_),mut slabs) in groups {
+            check_time(start,wall)?;
+            if slabs.len()<2 {continue;}
+            slabs.sort_by(|a,b|a.z_span_m[0].total_cmp(&b.z_span_m[0]));
+            let Some(&span)=self.mesh.layer_spans.get(layer) else {return Err(error("HYBRID_INPUT", "foil layer span missing"));};
+            if slabs[0].z_span_m[0]!=span[0] || slabs.last().unwrap().z_span_m[1]!=span[1] || slabs.windows(2).any(|w|w[0].z_span_m[1]!=w[1].z_span_m[0]) {continue;}
+            let Some(&first)=slabs[0].tetrahedra.first() else {return Err(error("HYBRID_INPUT", "empty foil"));};
+            let sigma=self.mesh.conductivity_s_m[first];
+            if !sigma.is_finite() || sigma<=0. {return Err(error("HYBRID_INPUT", "invalid conductor material"));}
+            if slabs.iter().any(|foil|foil.tetrahedra.iter().any(|&i|self.mesh.conductivity_s_m[i]!=sigma)) {continue;}
+            let inverse=(std::f64::consts::PI*upper_hz*super::super::MU0*sigma).sqrt();
+            if !inverse.is_finite() {return Err(error("HYBRID_FREQUENCY", "invalid skin depth"));}
+            if (span[1]-span[0])*inverse>0.2 {eligible.push(slabs);}
+        }
+        Ok(eligible)
+    }
+
+    /// Count eligible groups before reserving harmonic vectors. Scratch bound is 512 bytes per foil.
+    pub(super) fn skin_hint_group_count(&self, upper_hz:f64, budget:AllocationBudget, start:Instant, wall:Duration)->Result<usize> {
+        Ok(self.eligible_skin_groups(upper_hz,budget,start,wall)?.len())
+    }
+
+    /// Experimental thickness-profile hints; the caller must train and audit them.
+    /// These hints do not stamp loss or assert continuity or RF accuracy.
+    pub(super) fn skin_current_hints(&self, seeds: &[Vec<f64>], upper_hz: f64, budget: AllocationBudget, start: Instant, wall: Duration) -> Result<Vec<Vec<f64>>> {
+        check_time(start, wall)?;
+        if !upper_hz.is_finite() || upper_hz <= 0. || seeds.iter().any(|s| s.len() != self.current_count() || s.iter().any(|v| !v.is_finite())) {
+            return Err(error("HYBRID_FREQUENCY", "finite frequency and complete current seeds required"));
+        }
+        let hint_count = seeds.len().checked_mul(4).ok_or_else(|| error("MEMORY_LIMIT", "skin hint count overflow"))?;
+        let hint_bytes = hint_count.checked_mul(self.current_count()).and_then(|v|v.checked_mul(8)).and_then(|v|v.checked_add(hint_count.checked_mul(std::mem::size_of::<Vec<f64>>())?)).ok_or_else(|| error("MEMORY_LIMIT", "skin hint storage overflow"))?;
+        let group_bytes = self.foils.len().checked_mul(512).ok_or_else(|| error("MEMORY_LIMIT", "skin group storage overflow"))?;
+        let groups = self.eligible_skin_groups(upper_hz,budget,start,wall)?;
+        if groups.is_empty() { return Ok(Vec::new()); }
+        budget.check(hint_bytes.checked_add(group_bytes).ok_or_else(|| error("MEMORY_LIMIT", "skin hint plan overflow"))?)?;
+        let mut hints = vec![vec![0.; self.current_count()]; hint_count];
+        for slabs in groups {
+            check_time(start, wall)?;
+            let span = self.mesh.layer_spans[&slabs[0].layer];
+            let sigma = self.mesh.conductivity_s_m[slabs[0].tetrahedra[0]];
+            let thickness = span[1] - span[0];
+            let mut z = Vec::with_capacity(slabs.len()+1);
+            z.push(0.);
+            z.extend(slabs.iter().map(|foil|foil.z_span_m[1]-span[0]));
+            let basis = super::planar_skin::build(&z,upper_hz,sigma,super::super::MU0).map_err(|e|error("HYBRID_FREQUENCY",e))?;
+            for (seed_index,seed) in seeds.iter().enumerate() {
+                for (mode_index,profile) in basis.modes.iter().skip(1).take(4).enumerate() {
+                    let out=&mut hints[4*seed_index+mode_index];
+                    for (slab, &weight) in slabs.iter().zip(profile) {
+                        let factor=weight*thickness.sqrt();
+                        for axis in 0..2 {
+                            let value=seed[slab.first_current+axis]*factor;
+                            if !value.is_finite() {return Err(error("HYBRID_FREQUENCY","skin current hint outside finite range"));}
+                            out[slab.first_current+axis]=value;
+                        }
+                    }
+                }
+            }
+        }
+        hints.retain(|hint|hint.iter().any(|&v|v != 0.));
+        Ok(hints)
+    }
+
     /// Post-assembly mixed storage. Keep the full-space/mesh conservative
     /// bound, but replace mixed ownership construction scratch with the live
     /// capacities of every owned field. Candidate maps and projected sums
@@ -1105,7 +1175,7 @@ fn solve_checked_mesh_impl(
         if layered || adaptive { result["operator"] = json!("compact-planar-layered-prototype"); }
         result["ports"] = json!(request.ports);
         result["sourceMapping"] = json!(mesh.source_mapping);
-        result["compactOperator"] = json!({"version":"compact-planar-v1", "ownership":"one physical owner per copper tetrahedron", "foilSupports":map.foils.len(), "localTetraSupports":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "potentialCoordinates":map.potential_count(), "currentCoordinates":map.current_count(), "dielectric":if layered || adaptive {"spatial-layered-field"} else {"homogeneous-air"}, "accuracy":"unverified", "limits":"bounded dense charge matrix; no proximity or physical approximation acceptance"});
+        result["compactOperator"] = json!({"version":"compact-planar-v1", "ownership":"one physical owner per copper tetrahedron", "foilSupports":map.foils.len(), "localTetraSupports":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "potentialCoordinates":map.potential_count(), "currentCoordinates":map.current_count(), "dielectric":if layered || adaptive {"spatial-layered-field"} else {"homogeneous-air"}, "accuracy":"unverified", "limits":if adaptive {"sparse spatial-field and mixed basis limits; no proximity or physical approximation acceptance"} else {"bounded dense charge matrix; no proximity or physical approximation acceptance"}});
         result["provenance"] = json!({"method":"compact mixed foil and local volume", "modelKind":"mixed", "sourceMapping":mesh.source_mapping, "barrelIds":mesh.barrel_ids, "electrodeAreasM2":mesh.electrode_areas_m2, "prisms":map.foils.len(), "nativeCopperTetrahedra":map.owners.len(), "volumeTetrahedra":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "maxCopperVolumeChange":0., "fullPotentialCount":map.full.potential_count(), "fullCurrentCount":map.full.current_count(), "retainedPotentials":model.potential_nodes.len(), "currentModes":model.current_dofs.len(), "plannedBytes":if layered {budget.max_bytes + reserve + provenance + partition_bytes} else {planned + reserve + provenance + partition_bytes}, "maxSeconds":wall.as_secs_f64(), "maxMemoryMiB":(budget.max_bytes + reserve + provenance + partition_bytes) as f64 / 1048576., "spatialCoverage":"unverified", "bandCoverage":"unverified", "magneticQuadratureCoverage":"unverified", "driveConvention":"1 A RMS matched Norton basis columns", "compactOperator":evidence});
         if !packages.is_empty() { result["provenance"]["attachments"] = json!(packages.iter().map(|p| json!({"id":p.id,"electrodes":p.electrodes})).collect::<Vec<_>>()); }
         if hybrid_requested {
@@ -1378,6 +1448,23 @@ mod profile_tests {
         let b:f64=x.iter().zip(map.project_current_action(&y).unwrap()).map(|(a,b)|a*b).sum();
         assert!((a-b).abs()<=1e-10*a.abs().max(b.abs()).max(1.));
         assert_eq!(map.electrodes.len(),2);
+        let mut seed=vec![0.;map.current_count()];
+        for foil in &map.foils { seed[foil.first_current]=foil.z_span_m[1]-foil.z_span_m[0]; }
+        assert!(map.skin_hint_group_count(100_000.,budget,Instant::now(),wall).unwrap()>0);
+        let hints=map.skin_current_hints(&[seed],100_000.,budget,Instant::now(),wall).unwrap();
+        assert!(!hints.is_empty());
+        for hint in &hints {
+            assert!(hint.iter().all(|v|v.is_finite()));
+            let mut transport=BTreeMap::<(&str,usize),f64>::new();
+            for foil in &map.foils {
+                let cell=foil.tetrahedra[0];
+                let density=map.full.cells[cell].density_per_amp_m2 * map.current_map[3*cell].unwrap().weight;
+                *transport.entry((&foil.layer,foil.planar_triangle)).or_default() += hint[foil.first_current]*density*foil.volume_m3;
+            }
+            assert!(transport.values().all(|v|v.abs()<1e-10));
+        }
+        let tiny=AllocationBudget { max_bytes:1, ..budget };
+        assert!(map.skin_current_hints(&[vec![1.;map.current_count()]],100_000.,tiny,Instant::now(),wall).is_err());
     }
 }
 

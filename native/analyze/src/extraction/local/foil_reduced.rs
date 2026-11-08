@@ -3121,7 +3121,37 @@ pub(super) fn solve_compact_adaptive(
     let mut terms=vec![Vec::new();ni];for &(i,j,a) in &map.incidence {terms[j].push((i,a));}
     let cells:Vec<_>=terms.into_iter().zip(&map.resistance_ohm).map(|(t,&r)|Cell::new(t,r)).collect();
     let basis_budget=AllocationBudget{max_bytes:share,..budget};
-    let (basis,peak,dc)=harmonic(&cells,n,&map.electrodes.iter().copied().collect(),Some(&map.potential_components),basis_budget,0,start,wall,4*grid.max_iterations,true)?;
+    let upper_hz=grid.frequencies.last().copied().ok_or_else(||error("HYBRID_INPUT","empty frequency grid"))?;
+    let stratified=map.foils.iter().any(|foil|map.mesh().layer_spans.get(&foil.layer).is_some_and(|span|*span!=foil.z_span_m));
+    let group_bytes=if stratified {map.foils.len().checked_mul(512).ok_or_else(||error("MEMORY_LIMIT","skin group plan overflow"))?} else {0};
+    let eligible_groups=if stratified {
+        basis_budget.check(native_mode_sizes(n,ni,0,0,group_bytes)?)?;
+        map.skin_hint_group_count(upper_hz,AllocationBudget{max_bytes:group_bytes,..basis_budget},start,wall)?
+    } else {0};
+    let mut retained:BTreeSet<usize>=map.electrodes.iter().copied().collect();
+    for island in &map.potential_components {if !island.iter().any(|i|retained.contains(i)) {retained.insert(island[0]);}}
+    let seed_count=retained.len().checked_sub(map.potential_components.len()).ok_or_else(||error("HYBRID_INPUT","invalid physical island anchors"))?;
+    let hint_cap=if eligible_groups>0 {seed_count.checked_mul(4).ok_or_else(||error("MEMORY_LIMIT","skin hint count overflow"))?} else {0};
+    let growth=grid.max_iterations.checked_mul(4).ok_or_else(||error("MEMORY_LIMIT","enrichment mode count overflow"))?;
+    let voltage_cap=retained.len().checked_add(growth).ok_or_else(||error("MEMORY_LIMIT","potential mode count overflow"))?;
+    let current_cap=seed_count.checked_add(growth).and_then(|v|v.checked_add(hint_cap)).ok_or_else(||error("MEMORY_LIMIT","current mode count overflow"))?.min(ni);
+    let hint_bytes=hint_cap.checked_mul(ni).and_then(|v|v.checked_mul(8)).and_then(|v|v.checked_add(hint_cap.checked_mul(std::mem::size_of::<Vec<f64>>())?)).ok_or_else(||error("MEMORY_LIMIT","skin hint buffer overflow"))?;
+    let hinted_plan=if hint_cap>0 {
+        if voltage_cap>1024 || current_cap>1024 || voltage_cap.checked_add(current_cap).is_none_or(|v|v>2048) {return Err(error("FOIL_REDUCTION","skin hint mode cap exceeds P6 coordinate limits"));}
+        let plan=native_mode_sizes(n,ni,voltage_cap,current_cap,hint_bytes.checked_add(group_bytes).ok_or_else(||error("MEMORY_LIMIT","skin hint scratch overflow"))?)?;
+        basis_budget.check(plan)?; Some(plan)
+    } else {None};
+    let (mut basis,harmonic_peak,dc)=harmonic(&cells,n,&map.electrodes.iter().copied().collect(),Some(&map.potential_components),basis_budget,0,start,wall,growth,true)?;
+    let peak=hinted_plan.map_or(harmonic_peak,|plan|plan.max(harmonic_peak));
+    let before_hints=basis.current.len();let mut submitted_hints=0;
+    if hint_cap>0 {
+        if basis.current.len()>seed_count {return Err(error("HYBRID_INPUT","skin seed count exceeds admitted bound"));}
+        let hints=map.skin_current_hints(&basis.current,upper_hz,AllocationBudget{max_bytes:hint_bytes.checked_add(group_bytes).ok_or_else(||error("MEMORY_LIMIT","skin hint budget overflow"))?,..basis_budget},start,wall)?;
+        if hints.len()>hint_cap {return Err(error("HYBRID_INPUT","skin hints exceed admitted bound"));}
+        submitted_hints=hints.len();
+        for hint in hints {check_time(start,wall)?;append_current_mode(&cells,&mut basis.current,hint)?;}
+    }
+    let added_hints=basis.current.len()-before_hints;
     eprintln!("P7_COMPACT_STAGE stage=charge-actions-start elapsed={:.6} modes={}",start.elapsed().as_secs_f64(),basis.voltage.len());
     let charges=basis.voltage.iter().map(|v|field.apply(v)).collect::<Result<Vec<_>>>()?;
     eprintln!("P7_COMPACT_STAGE stage=charge-actions-end elapsed={:.6} actions={}",start.elapsed().as_secs_f64(),field.action_count());
@@ -3167,6 +3197,6 @@ pub(super) fn solve_compact_adaptive(
         column["compactMagneticCertificate"]=certificate;
     }}}}
     result["quality"]["scope"]=serde_json::json!("compact-discrete");result["quality"]["physicalError"]=serde_json::json!("unverified");
-    result["compactEvidence"]=serde_json::json!({"basis":"adaptive-mixed-closure","planarMaxOrder":magnetic.planar_max_order.get(),"planarMaxRelativeChange":magnetic.planar_max_change.get(),"mixedMaxRelativeChange":magnetic.mixed_max_change.get(),"mixedTetraFallbackCount":magnetic.mixed_fallback_count.get(),"mixedTetraFallbackTolerance":1e-10,"goalAdmittedNearPairs":magnetic.promoted_pairs.get(),"parallelPlWorkers":magnetic.pl_workers,"tetraSelfMaxRelativeChange":magnetic.self_max_change.get(),"tetraPairAdaptiveTolerance":1e-10,"nearQuadratureEstimatedTolerance":1e-8,"originalVolumeActions":0,"scope":"compact-discrete","physicalAccuracy":"unverified","approximationError":"unverified"});
+    result["compactEvidence"]=serde_json::json!({"basis":"adaptive-mixed-closure","skinHints":{"eligibleGroups":eligible_groups,"submitted":submitted_hints,"added":added_hints,"upperHz":upper_hz,"coverage":"unverified"},"planarMaxOrder":magnetic.planar_max_order.get(),"planarMaxRelativeChange":magnetic.planar_max_change.get(),"mixedMaxRelativeChange":magnetic.mixed_max_change.get(),"mixedTetraFallbackCount":magnetic.mixed_fallback_count.get(),"mixedTetraFallbackTolerance":1e-10,"goalAdmittedNearPairs":magnetic.promoted_pairs.get(),"parallelPlWorkers":magnetic.pl_workers,"tetraSelfMaxRelativeChange":magnetic.self_max_change.get(),"tetraPairAdaptiveTolerance":1e-10,"nearQuadratureEstimatedTolerance":1e-8,"originalVolumeActions":0,"scope":"compact-discrete","physicalAccuracy":"unverified","approximationError":"unverified"});
     Ok((result,space.model,budget.max_bytes))
 }
