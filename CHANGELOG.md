@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Cap the mixed planar pair cache by its actual PP/PL pair domain and reuse the unused reserve for local tetrahedron work within the unchanged total budget. Compact parallel workers retain two cubature slots each; legacy worker capacities remain unchanged.
+
 - Allow explicitly requested 1–4 local magnetic near workers with admitted worker/window memory, serial checked self-integrals, ordered reduction and retained bounded pair-cache reuse. Isolate the worker policy in exact-response cache keys; default remains serial.
 
 - Skip local magnetic near-pair quadrature only when both reciprocal current vectors are exactly zero; retain the certified interaction cover and every nonzero current, including tiny values.

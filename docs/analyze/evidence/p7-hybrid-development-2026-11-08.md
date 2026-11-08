@@ -233,3 +233,9 @@ The captured orientation requests also reveal an applicability limit of this con
 
 - Release build completed in 3m38s. With explicit four local near workers, `1794145003624988600` refuses before magnetic preparation in 0.297s with LOCAL_MEMORY_LIMIT. This validates refusal rather than performance: the generic 64 cubature slots per worker exceed the compact local sub-budget.
 - Next change reduces only compact worker cache capacity with matching allocation accounting, preserving original total/local budgets and legacy worker policy. No limit is raised and no numerical acceleration is claimed from this refused run.
+
+### Compact worker caches and memory repartition
+
+- `1794145840982439600`: two reuse controls pass but the proposed four-worker 20 MiB constructor correctly refuses. Two slots per worker alone were insufficient; the original local one-eighth share is an allocation policy, not an increased outer resource limit. Hierarchy admission now reports required/base/work/budget on refusal.
+- The PP/PL cache is capped by P(P+1)/2 + P*T, excluding all TT pairs owned by the local hierarchy. Freed reserved bytes move to the local share; mixed-plan and batch shares and the sum of all reservations remain unchanged. Compact parallel owner/worker cubature caches retain two slots; legacy retains 64.
+- `1794146120547060000`: four focused controls pass in 0.579s under a 5s cap, including the honest 20 MiB refusal and successful four-worker constructor with P16/T840 and a conservative 156 MiB remaining parent budget after repartition; serial/parallel action/cache equivalence remains checked. Actual via completion is not yet verified.

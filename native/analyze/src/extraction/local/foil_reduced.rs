@@ -3150,9 +3150,22 @@ impl CompactMixedMagnetic {
         let worker_bytes=compact_pl_worker_bytes(workers,budget)?;
         let n=map.foils.len().checked_add(map.owners.len()).and_then(|n|n.checked_mul(1024)).and_then(|n|n.checked_add(map.retained_bytes().ok()?)).and_then(|n|n.checked_add(worker_bytes)).ok_or_else(||error("MEMORY_LIMIT","mixed magnetic plan overflow"))?;budget.check(n)?;
         let pl_pool=if workers>1 {Some(rayon::ThreadPoolBuilder::new().num_threads(workers).stack_size(2*1024*1024).build().map_err(|_|error("MEMORY_LIMIT","PL worker pool creation failed"))?)} else {None};
-        let remaining=budget.max_bytes-n;let cache_bytes=remaining/4;let cache_limit=cache_bytes/128;let batch_limit=remaining/8;let local_budget=remaining/8;let mixed_budget=remaining-cache_bytes-batch_limit-local_budget;
         let supports=map.planar_current_supports()?;
         let local=map.local_current_supports()?;
+        let remaining=budget.max_bytes-n;
+        // This cache owns only PP/PL pairs; TT has its own hierarchy/cache.
+        // Reserve no slots for impossible suffix pairs and reuse that capacity
+        // for local work without increasing the total admitted memory.
+        let prefix=supports.len();
+        let cache_pairs=prefix.checked_add(1).and_then(|v|prefix.checked_mul(v)).map(|v|v/2)
+            .and_then(|v|prefix.checked_mul(local.len()).and_then(|cross|v.checked_add(cross)))
+            .ok_or_else(||error("MEMORY_LIMIT","mixed cache pair count overflow"))?;
+        let initial_cache_bytes=remaining/4;
+        let cache_limit=(initial_cache_bytes/128).min(cache_pairs);
+        let cache_bytes=cache_limit*128;
+        let batch_limit=remaining/8;
+        let local_budget=remaining/8+(initial_cache_bytes-cache_bytes);
+        let mixed_budget=remaining-cache_bytes-batch_limit-local_budget;
         let local_hierarchy=if local.is_empty(){None}else{Some(super::volume_integral_magnetic::CompactLocalHierarchy::new(local.iter().map(|s|s.tetra).collect(),AllocationBudget{max_bytes:local_budget,..budget},start,wall)?)};
         let local_pairs=None;
         let mut moments=Vec::with_capacity(supports.len()+local.len());

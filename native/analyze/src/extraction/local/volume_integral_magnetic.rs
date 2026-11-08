@@ -343,13 +343,20 @@ impl BoundedPairs {
     }
     fn parallel_bytes(workers: usize) -> Result<usize> { Self::parallel_bytes_for(workers, false) }
     fn parallel_bytes_for(workers: usize, axial: bool) -> Result<usize> {
+        Self::parallel_bytes_for_slots(workers, axial, 64)
+    }
+    fn parallel_bytes_for_slots(workers: usize, axial: bool, slots: usize) -> Result<usize> {
         if !(2..=32).contains(&workers) { return Err(error("MAGNETIC_CONFIG", "parallel worker count must be 2..32")); }
-        workers.checked_mul(66 * STREAMED_PAIR_SLOT_BYTES + 2 * 1024 * 1024 + 8192 + if axial { 64 * AXIAL_CELL_EXTRA_BYTES + 64 * 1024 } else { 0 })
+        if !(2..=64).contains(&slots) { return Err(error("MAGNETIC_CONFIG", "parallel worker cache slots must be 2..64")); }
+        workers.checked_mul((slots+2) * STREAMED_PAIR_SLOT_BYTES + 2 * 1024 * 1024 + 8192 + if axial { slots * AXIAL_CELL_EXTRA_BYTES + 64 * 1024 } else { 0 })
             .and_then(|v| v.checked_add(8192))
             .ok_or_else(|| error("MEMORY_LIMIT", "parallel magnetic window plan overflow"))
     }
     fn configure_parallel(&mut self, workers: usize) -> Result<()> {
-        Self::parallel_bytes_for(workers, self.axial)?;
+        self.configure_parallel_slots(workers,64)
+    }
+    fn configure_parallel_slots(&mut self, workers: usize, slots: usize) -> Result<()> {
+        Self::parallel_bytes_for_slots(workers, self.axial, slots)?;
         let pool = rayon::ThreadPoolBuilder::new().num_threads(workers)
             .stack_size(2 * 1024 * 1024).build()
             .map_err(|_| error("MEMORY_LIMIT", "parallel magnetic pool creation failed"))?;
@@ -357,11 +364,11 @@ impl BoundedPairs {
         caches.try_reserve_exact(workers).map_err(|_| error("MEMORY_LIMIT", "parallel cache allocation failed"))?;
         for _ in 0..workers {
             let mut cells = Vec::new();
-            cells.try_reserve_exact(64).map_err(|_| error("MEMORY_LIMIT", "parallel cache allocation failed"))?;
+            cells.try_reserve_exact(slots).map_err(|_| error("MEMORY_LIMIT", "parallel cache allocation failed"))?;
             caches.push(std::sync::Mutex::new(BoundedPairs {
                 tetra:self.tetra.clone(), pool:None, axial:self.axial, checked_self:false, checked_self_values:std::cell::RefCell::new(Vec::new()), self_max_change:std::cell::Cell::new(0.), parallel_counts:Some(std::cell::RefCell::new(ParallelCounts::default())),
                 scalar:std::cell::RefCell::new(Vec::new()), trace:None, capture:None,
-                cells:std::cell::RefCell::new(cells), slots:64, tick:std::cell::Cell::new(0),
+                cells:std::cell::RefCell::new(cells), slots, tick:std::cell::Cell::new(0),
                 order:self.order, start:self.start, wall:self.wall,
             }));
         }
@@ -1320,10 +1327,12 @@ impl CompactLocalHierarchy {
         let scalar_bytes = (1024 * 1024).min(pair_budget.max_bytes / 16);
         let scalar_slots = scalar_bytes / std::mem::size_of::<Option<ScalarSlot>>();
         let scalar_bytes = scalar_slots * std::mem::size_of::<Option<ScalarSlot>>();
-        let (pair_bytes, slots) = BoundedPairs::plan(n, 12, scalar_bytes, pair_budget)?;
+        let (mut pair_bytes, mut slots) = BoundedPairs::plan(n, 12, scalar_bytes, pair_budget)?;
+        if workers>1 { pair_bytes -= (slots-2)*STREAMED_PAIR_SLOT_BYTES; slots=2; }
         // The workers share immutable geometry by Arc. Account worker caches,
         // stacks, metadata, and the bounded ordered-result window up front.
-        let parallel_bytes=if workers>1 { BoundedPairs::parallel_bytes_for(workers,false)?.checked_add(16384).ok_or_else(||error("MEMORY_LIMIT","local parallel plan overflow"))? } else { 0 };
+        let worker_slots=2;
+        let parallel_bytes=if workers>1 { BoundedPairs::parallel_bytes_for_slots(workers,false,worker_slots)?.checked_add(16384).ok_or_else(||error("MEMORY_LIMIT","local parallel plan overflow"))? } else { 0 };
         let base = pair_bytes.checked_add(scalar_bytes).and_then(|v|v.checked_add(space_bytes)).and_then(|v|v.checked_add(parallel_bytes)).and_then(|v|v.checked_add(2*1024*1024)).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy base overflow"))?;
         let tree = hierarchical_magnetic::Operator::new(&tetra, 12, 1, 0.2, base, budget, start, wall)?;
         let planned_bytes = base.checked_add(tree.planned_bytes).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy plan overflow"))?;
@@ -1331,7 +1340,7 @@ impl CompactLocalHierarchy {
         let mut pair = BoundedPairs::new_with_scalar(tetra, 12, slots, scalar_slots, start, wall)?;
         pair.checked_self = true;
         *pair.checked_self_values.borrow_mut()=vec![None;n];
-        if workers>1 { pair.configure_parallel(workers)?; }
+        if workers>1 { pair.configure_parallel_slots(workers,worker_slots)?; }
         let cells = (0..n).map(|i| super::volume_current::Cell { mesh_cell:i, potentials:[0;4], incidence:[[0.;3];4], density_per_amp_m2:1., resistance_ohm:1. }).collect();
         let space = Space { mesh_nodes:vec![], node_potential:Default::default(), cells, components:vec![], planned_bytes:space_bytes };
         Ok(Self { pair, tree, space, checked_self: std::cell::RefCell::new(vec![false;n]), planned_bytes })
@@ -1362,11 +1371,11 @@ mod compact_reuse_tests {
         let geometry=vec![a,b];let start=Instant::now();let wall=Duration::from_secs(30);
         let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:1000,max_tetrahedra:1000};
         let serial=CompactLocalHierarchy::new_with_workers(geometry.clone(),budget,start,wall,1).unwrap();
-        let limited=AllocationBudget{max_bytes:serial.planned_bytes,..budget};
+        let limited=AllocationBudget{max_bytes:1024*1024,..budget};
         assert!(CompactLocalHierarchy::new_with_workers(geometry.clone(),limited,start,wall,2).is_err());
         let mut parallel=CompactLocalHierarchy::new_with_workers(geometry,budget,start,wall,2).unwrap();
         parallel.pair.trace=Some(std::cell::RefCell::new(PairTrace{counts:[0;3],seconds:[0.;3],last:Instant::now(),hits:0,misses:0,evictions:0}));
-        assert!(parallel.planned_bytes>serial.planned_bytes);
+        assert!(parallel.planned_bytes<=budget.max_bytes);
         let columns=vec![vec![1.,0.,0.,-1.,0.,0.],vec![0.,0.5,0.,0.,-0.5,0.]];
         let (a,ab,_)=serial.actions(&columns,&[1.,1.]).unwrap();
         let (b,bb,_)=parallel.actions(&columns,&[1.,1.]).unwrap();
@@ -1382,6 +1391,49 @@ mod compact_reuse_tests {
         let repeat=parallel.actions(&columns,&[1.,1.]).unwrap();
         assert_eq!(repeat.0,b);assert_eq!(repeat.1,bb);
         assert_eq!(*parallel.pair.checked_self_values.borrow(),slots);
+        // Two geometry slots retain both cells and avoid rebuilding cubature.
+        let worker=parallel.pair.pool.as_ref().unwrap().workers[0].lock().unwrap();
+        assert_eq!(worker.slots,2);
+        let value=worker.pair(1,0).unwrap();
+        let builds=worker.parallel_counts.as_ref().unwrap().borrow().geometry_builds;
+        let hits=worker.parallel_counts.as_ref().unwrap().borrow().geometry_hits;
+        assert_eq!(worker.pair(1,0).unwrap().to_bits(),value.to_bits());
+        let counts=worker.parallel_counts.as_ref().unwrap().borrow();
+        assert_eq!(counts.geometry_builds,builds);
+        assert!(counts.geometry_hits>=hits+2);
+    }
+    #[test]
+    fn compact_four_workers_refuse_insufficient_via_sized_local_budget() {
+        let tetra=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.000035]];
+        let geometry:Vec<_>=(0..856).map(|i|tetra.map(|p|[p[0]+i as f64*0.00001,p[1],p[2]])).collect();
+        // The compact caller reserves one eighth of its remaining third of the
+        // 512 MiB outer budget; this control uses the observed ~20 MiB share.
+        let budget=AllocationBudget{max_bytes:20*1024*1024,max_nodes:10000,max_tetrahedra:10000};
+        let failure=match CompactLocalHierarchy::new_with_workers(geometry,budget,Instant::now(),Duration::from_secs(30),4) {Ok(_)=>panic!("20 MiB must refuse"),Err(e)=>e};
+        assert!(failure.contains("hierarchy required=") && failure.contains("budget="),"{failure}");
+    }
+    #[test]
+    fn compact_four_workers_admit_actual_via_share_after_pair_cache_cap() {
+        let tetra=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.000035]];
+        let geometry:Vec<_>=(0..840).map(|i|tetra.map(|p|[p[0]+i as f64*0.00001,p[1],p[2]])).collect();
+        // Observed via has 16 planar and 840 local supports. Its parent starts
+        // from a third of the 512 MiB outer cap; 156 MiB is a conservative
+        // remaining share after the parent's retained allocations.
+        let remaining=156usize*1024*1024;
+        let (planar,local)=(16usize,840usize);
+        let old_cache=remaining/4;
+        let pair_capacity=planar*(planar+1)/2+planar*local;
+        let cache=old_cache.min(pair_capacity*128);
+        let local_budget=remaining/8+(old_cache-cache);
+        let batch=remaining/8;
+        let mixed=remaining-old_cache-remaining/8-batch;
+        assert_eq!(cache+local_budget+batch+mixed,remaining);
+        let budget=AllocationBudget{max_bytes:local_budget,max_nodes:10000,max_tetrahedra:10000};
+        let h=CompactLocalHierarchy::new_with_workers(geometry,budget,Instant::now(),Duration::from_secs(30),4).unwrap();
+        assert!(h.planned_bytes<=budget.max_bytes);
+        let workers=&h.pair.pool.as_ref().unwrap().workers;
+        assert_eq!(workers.len(),4);
+        assert!(workers.iter().all(|w|w.lock().unwrap().slots==2));
     }
     #[test]
     fn exact_pairs_reuse_across_tighter_goals_without_changing_bounds() {

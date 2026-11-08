@@ -411,10 +411,8 @@ impl Operator {
             .and_then(|v| v.checked_add(stencil_bytes))
             .and_then(|v| v.checked_add(traversal_bytes))
             .ok_or_else(|| error("MEMORY_LIMIT", "packed harmonic work plan overflow"))?;
-        budget.check(
-            base.checked_add(work)
-                .ok_or_else(|| error("MEMORY_LIMIT", "harmonic base overflow"))?,
-        )?;
+        let required=base.checked_add(work).ok_or_else(|| error("MEMORY_LIMIT", "harmonic base overflow"))?;
+        budget.check(required).map_err(|e|format!("{e}; hierarchy required={required} base={base} work={work} budget={}",budget.max_bytes))?;
         let powers = Powers::new(order);
         let harmonic = Harmonic::new(&powers);
         let mut shifts: [Vec<Shift>; 3] =
