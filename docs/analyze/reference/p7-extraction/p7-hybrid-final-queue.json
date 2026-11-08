@@ -653,15 +653,16 @@
         "primary-06"
       ],
       "evidenceLimit": "implementation/control only; never substitutes for independent reference acceptance",
-      "runClass": "development-control",
+      "runClass": "heavy-final-only",
       "executionGate": {
         "allowedNow": false,
-        "requirement": "No execution authorized in this queue preparation; review inputs/side effects first."
+        "requirement": "After implementation completion, run under the external supervisor with explicit process-tree memory and wall limits; include its 120 seconds in the final campaign budget."
       },
       "wallLimitSeconds": 120,
       "memoryLimitMiB": null,
       "sideEffects": "writes debugging evidence/output; may update cache",
-      "commandStatus": "script entrypoint verified; do not run during queue preparation"
+      "commandStatus": "supervisor-required; existing cross-section control only",
+      "scope": "Existing cross-section FEM/TEM control only; does not exercise the hybrid board operator or establish its physical accuracy."
     },
     {
       "script": "scripts/verify-p7-closure-baseline.ts",
@@ -1295,10 +1296,13 @@
             "tsx",
             "scripts/verify-p7-closure-stripline.ts"
           ],
-          "commandStatus": "verified-script-is-specialized-stripline-only",
-          "scope": "coupon fixture/reference exists; no claim this runner validates other coupons",
-          "runClass": "development-control",
-          "executionGate": "explicit user-approved scheduling required; writes debugging/p7-closure outputs",
+          "commandStatus": "supervisor-required; existing cross-section control only",
+          "scope": "Existing cross-section FEM/TEM control only; does not exercise the hybrid board operator or establish its physical accuracy.",
+          "runClass": "heavy-final-only",
+          "executionGate": {
+            "allowedNow": false,
+            "requirement": "After implementation completion, run under the external supervisor with explicit process-tree memory and wall limits; include its 120 seconds in the final campaign budget."
+          },
           "wallLimitSeconds": 120
         }
       ]
