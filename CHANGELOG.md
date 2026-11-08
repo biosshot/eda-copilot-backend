@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Record the accelerated six-day hybrid extraction implementation plan: reuse existing preparation, implement direct planar interactions and coupled local transitions during days 1–5 with bounded small checks, and reserve full case-matrix/real-board acceptance for the final stage. Physical gates and coverage remain unchanged; no new numerical acceptance is claimed.
+
 - Measure actual parallel STM32 phases with a retained 1 GiB cover cache: planning 31.076 s, 15.604 million near tiles, and an unfinished first-axis replay dominated by 77.990 s near callbacks. Deadline remains at 243.719 s with no channel. The cache removes replay classification; the ten-minute target requires structural reduction of near work, not a claimed full-board speedup.
 
 - Name the diagnostic switch `P7_MAGNETIC_PHASE_PROFILE` to preserve the existing `P7_MAGNETIC_PROFILE=baseline/compact-v1` compute-policy contract. Planning-only configuration and isolated four-worker profile controls pass; preserve the rejected preflight/configuration attempts separately from actual numerical runs.
