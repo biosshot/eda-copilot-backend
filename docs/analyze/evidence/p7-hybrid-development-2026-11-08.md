@@ -173,3 +173,5 @@ Orientation timeout diagnosis from existing log: first (0 degree) solve is pure 
 ### Disconnected-island AC model control
 
 `1794140919927286000`: three physically separate copper islands, actual hybrid prism/tetra model, no added shunts or ground; DC inter-island injection refuses and AC island charge balances jωQ against injected current at 1/10 kHz. The single control passed in 1.859s under 30s/1536MiB supervisor. This supports the discrete-model implementation mapping only; independent physical reference and automatic board split acceptance remain open.
+
+The captured orientation requests also reveal an applicability limit of this control: automatic ROI changes from [-1.34,-0.74]..[1.34,0.74] mm at 0 degrees to the axis-aligned square +/-1.3299494936611667 mm at 45 degrees. Thus the control includes automatic-domain/mesh orientation sensitivity, not a rigid rotation of an identical finite dielectric boundary. Copper/contact geometry is rotated, but finite-domain equality must not be claimed.
