@@ -19,13 +19,45 @@ import { LocalModelCache } from '../src/analyze/local-model-cache.ts';
 
 type Geometry={allowInsulatedCopperCuts:boolean;roiMm:[[number,number],[number,number]];ports:[string,string][];cutPlanes:unknown;electrodes:{name:string;sourcePath:string}[]};
 
+test('exact physical sample algebra converts and replays S Y Z',async()=>{
+ const execute=createFrequencyExecutor();
+ const complex=(real:number)=>({real,imaginary:0});
+ const resource=(matrix:number[][])=>({id:'physical',kind:'network',ports:matrix.map((_,i)=>`p${i}`),analyses:['networkParameters'],
+  data:{format:'physical-port-samples',samplePolicy:'exact',representation:'S',referenceTopology:'physical-pairs',nature:'passive',
+   frequenciesHz:[1000],parameters:[matrix.map(row=>row.map(complex))],referenceOhm:matrix.map(()=>50),
+   physicalPorts:matrix.map((_,i)=>({positive:{sourcePath:`pads[${2*i}]`,layer:'TOP'},negative:{sourcePath:`pads[${2*i+1}]`,layer:'TOP'}}))}});
+ const run=(model:any,representation:'S'|'Y'|'Z',reference=50)=>execute({kind:'networkParameters',contextId:'algebra',variantChanges:[],
+  config:{network:{id:'n'},frequencyHz:1000,representation,...(representation==='S'&&{referenceOhm:reference}),budget:{maxSeconds:10,maxMemoryMiB:128}},
+  descriptors:[{id:'n',kind:'network',input:{model,ports:Object.fromEntries(model.ports.map((p:string)=>[p,p]))}}]} as unknown as AnalysisTask<'networkParameters'>);
+ const data=(r:any)=>r.network.data;
+ const one=resource([[1/3]]);
+ for(const [rep,expected] of [['Y',.01],['Z',100]] as const){
+  const converted=await run(one,rep);assert.equal(data(converted).representation,rep);
+  assert.ok(Math.abs(data(converted).parameters[0][0][0].real-expected)<1e-9);
+  const replay=await run(converted.network,'S');assert.ok(Math.abs(data(replay).parameters[0][0][0].real-1/3)<1e-9);
+  const altered=structuredClone(converted.network) as any;
+  altered.data.parameters[0][0][0].real=rep==='Y'?.02:50;
+  const changed=await run(altered,'S');assert.ok(Math.abs(data(changed).parameters[0][0][0].real)<1e-9);
+ }
+ const two=resource([[.2,.5],[.5,.2]]);
+ for(const [rep,diagonal,off] of [['Y',1.21/1.19/50,-1/1.19/50],['Z',50*1.21/.39,50/.39]] as const){
+  const converted=await run(two,rep);assert.ok(Math.abs(data(converted).parameters[0][0][0].real-diagonal)<1e-9);
+  assert.ok(Math.abs(data(converted).parameters[0][0][1].real-off)<1e-9);
+  assert.ok(Math.abs(data(await run(converted.network,'S')).parameters[0][0][1].real-.5)<1e-9);
+ }
+ await assert.rejects(()=>run(resource([[1]]),'Z'));
+ await assert.rejects(()=>run(one,'S',75),/NETWORK_PHYSICAL_SAMPLE_REFERENCE|original mathematical references/);
+ const oversized=resource([[0]]) as any;oversized.data.producerParameters=Array(262145);
+ await assert.rejects(()=>run(oversized,'Y'),/NETWORK_BUDGET|cap exceeded/);
+});
+
 function checkedMock(problem:BoardFoilProblem, sourceMapping:AnalysisBoardFoilCheckedReport['provenance']['sourceMapping'],
  barrelIds:string[]=[]):AnalysisBoardFoilCheckedReport{
  const g=problem.geometry as Geometry;
  const {frequenciesHz,referenceOhm,budget}=problem.request;
  const s=[[{real:.2,imaginary:0},{real:.5,imaginary:0}],[{real:.5,imaginary:0},{real:.2,imaginary:0}]];
  const mixed=Boolean(barrelIds.length||problem.request.attachments?.length||problem.request.partitionPolicy);
- const partitionPolicy=problem.request.partitionPolicy;
+ const partitionPolicy=problem.request.partitionPolicy==='automatic-conductive-schur-v1'?problem.request.partitionPolicy:undefined;
  const provenanceModel=mixed?{
   modelKind:'mixed' as const,nativeCopperTetrahedra:28,volumeTetrahedra:28,
   fullPotentialCount:4,fullCurrentCount:84,magneticQuadratureCoverage:'unverified' as const,

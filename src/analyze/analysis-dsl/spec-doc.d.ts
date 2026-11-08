@@ -98,8 +98,10 @@ export type FrequencyNetworkData = {
  temporal?:PassiveRelaxationTemporal|PassiveResonantYTemporal;
 };
 export type PhysicalPortSampleData = {
- format:'physical-port-samples';samplePolicy:'exact';representation:'S';referenceTopology:'physical-pairs';nature:'passive';
+ format:'physical-port-samples';samplePolicy:'exact';representation:'S'|'Y'|'Z';referenceTopology:'physical-pairs';nature:'passive';
  frequenciesHz:readonly number[]; parameters:FrequencyNetworkData['parameters']; referenceOhm:readonly number[];
+ /** Original S table retained by derived Y/Z; referenceOhm keeps producer wave references. */
+ producerParameters?:FrequencyNetworkData['parameters'];
  physicalPorts:readonly {positive:{sourcePath:string;layer:string};negative:{sourcePath:string;layer:string}}[];
 };
 export type TouchstoneNetworkData = {format:'touchstone';content:string;referenceTopology:'common';nature:'passive'|'active'|'unspecified';temporal?:PassiveRelaxationTemporal};

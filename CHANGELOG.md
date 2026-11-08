@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Convert standalone exact physical-port S samples to Y/Z through the existing conditioned frequency solver, retaining paired contacts, source wave references and conditional validity. Derived replay uses its actual Y/Z coefficients; joins, interpolation and S reference changes remain refused, and producer-table storage enters the input budget.
+
 - Add the explicit automatic-hybrid assembly policy through planner, cache, native dispatch and strict report validation, keeping its unverified status separate from conductive Schur evidence. Prepare stratified finite-prism current supports on resolved skin meshes and reserve bounded, ordered parallel planar/local kernel work.
 
 - Admit geometrically separated mixed near pairs to moment evaluation only within the existing cumulative per-action row allowance; otherwise retain exact near evaluation. Preserve cancellation-safe outward-rounded envelopes, including positive underflow, and shared-pair reciprocity.

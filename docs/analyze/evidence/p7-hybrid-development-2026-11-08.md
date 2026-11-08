@@ -59,6 +59,10 @@ Rows without an explicit release label use debug binaries and do not measure pro
 | Release imported via with four planar/local workers | native deadline refusal; no channel | 25.219 s | `1794130593376590500` |
 | Release original profiled pad/barrel fixture with ownership and lift/projection checks | pass | 0.250 s | `1794130934337610800` |
 | Debug wide isolated stratified foil, δ/5 target, per-support 0.2 screen, ownership/volume/contacts and transpose power | pass | 0.235 s | `1794131079169309300` |
+| Exact physical sample algebra, one/two-port S→Y/Z, actual derived-coefficient roundtrip, singular/reference refusal | pass | 1.484 s | `1794131006426455400` |
+| Automatic foil DSL/physical-sample suite, including producer-table pre-clone cap, off-grid, topology, package/contact and evidence controls | four pass | 1.641 s | `1794131108711896500` |
+
+The algebraic controls use the existing native frequency-network solver; these are matrix and mock-producer integrations, not new EM extraction or board timing. Root review changed derived replay to consume its own Y/Z values rather than silently substituting the retained S provenance. One-port 100 Ω and two-port coupled expected matrices, actual roundtrips, singular conversion and unchanged-reference refusals pass. TypeScript typechecking passes after the schema/resource-budget changes. No physical or temporal acceptance follows.
 
 The first stratification assertion failed on the original via fixture (`1794130553803999700`, 0.234 s), whose local halo leaves no applicable foil in this mesh. That fixture retains its contact/ownership checks; a separate positive wide-foil input is modified only in memory. Its first import failed because the test added an unsupported top-level `vias` field (`1794130934782036100`, 0.156 s). Removing that field and using the canonical nested geometry permits the positive control above. Neither a source fixture nor an applicability threshold was weakened. The production native changes compiled in release; the final fixture correction and stricter positive assertion compiled and ran in debug. No full profiled-channel or RF acceptance is established.
 

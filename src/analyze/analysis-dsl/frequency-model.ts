@@ -19,9 +19,9 @@ const physicalPort=z.strictObject({positive:contact,negative:contact}).refine(p=
 const sampleAxis=z.array(positive).min(1);
 const samples=z.array(z.array(z.array(z.strictObject({real:z.number().finite(),imaginary:z.number().finite()}))));
 const data=z.discriminatedUnion('format',[
- z.strictObject({format:z.literal('physical-port-samples'),samplePolicy:z.literal('exact'),representation:z.literal('S'),
+ z.strictObject({format:z.literal('physical-port-samples'),samplePolicy:z.literal('exact'),representation:z.enum(['S','Y','Z']),
   referenceTopology:z.literal('physical-pairs'),nature:z.literal('passive'),frequenciesHz:sampleAxis,parameters:samples,
-  referenceOhm:z.array(positive).min(1).max(16),physicalPorts:z.array(physicalPort).min(1).max(16)}),
+  referenceOhm:z.array(positive).min(1).max(16),physicalPorts:z.array(physicalPort).min(1).max(16),producerParameters:samples.optional()}),
  z.strictObject({format:z.literal('delayed-scattering'),referenceTopology:z.literal('common'),nature:z.literal('passive'),referenceOhm:reference,scattering:z.array(z.array(z.number().finite()).max(16)).min(1).max(16),delayS:z.number().finite().nonnegative()}),
  z.strictObject({format:z.literal('coupled-rlc'),referenceTopology:z.enum(['grounded','infinity']),potentialNodes:z.array(S.text).min(1).max(1024),currentDofs:z.array(S.text).max(1536),incidence:matrix,portIncidence:matrix,resistanceOhm:matrix,inductanceH:matrix,capacitanceF:matrix,structuralGaugeModes:z.array(z.array(z.number().finite()).max(1024)).max(1024).optional(),conservedPotentialModes:z.array(z.array(z.number().finite()).max(1024)).max(1024).optional(),portTerminals:z.array(z.strictObject({positive:terminal,negative:terminal})).min(1).max(16).optional()}),
  z.strictObject({...base,format:z.literal('touchstone'),content:z.string().min(1)}),
@@ -45,8 +45,10 @@ export function networkResource(input:unknown):NetworkResource{
  if(n<1||n>16)throw new S.AnalysisDslError('NETWORK_BUDGET','Resource requires 1..16 ports');
  if(ports.some(p=>typeof p!=='string'||!p.trim())||new Set(ports).size!==n)S.invalid('Duplicate/empty resource port');
  if(typeof d.content==='string'&&Buffer.byteLength(d.content)>8*1024*1024)throw new S.AnalysisDslError('NETWORK_BUDGET','Touchstone text exceeds 8 MiB');
- for(const axis of [d.frequenciesHz,d.parameters])if(Array.isArray(axis)&&(axis.length>100000||axis.length>262144/n/n))throw new S.AnalysisDslError('NETWORK_BUDGET','Resource frequency/coefficient cap exceeded');
- if(Array.isArray(d.parameters)&&d.parameters.some(m=>!Array.isArray(m)||m.length!==n||m.some(r=>!Array.isArray(r)||r.length!==n)))S.invalid('Matrix dimensions must match Resource.ports');
+ for(const axis of [d.frequenciesHz,d.parameters,d.producerParameters])if(Array.isArray(axis)&&(axis.length>100000||axis.length>262144/n/n))throw new S.AnalysisDslError('NETWORK_BUDGET','Resource frequency/coefficient cap exceeded');
+ const tables=[d.parameters,d.producerParameters].filter(Array.isArray);
+ if(tables.reduce((count,table)=>count+table.length,0)>262144/n/n)throw new S.AnalysisDslError('NETWORK_BUDGET','Resource coefficient and producer provenance cap exceeded');
+ for(const table of tables)if(table.some(m=>!Array.isArray(m)||m.length!==n||m.some(r=>!Array.isArray(r)||r.length!==n)))S.invalid('Matrix dimensions must match Resource.ports');
  if(d.format==='coupled-rlc'){
   if(Array.isArray(d.portTerminals)&&d.portTerminals.length!==n)S.invalid('One physical contact pair per resource port required');
   const arrays=['incidence','portIncidence','resistanceOhm','inductanceH','capacitanceF'];
@@ -68,7 +70,8 @@ export function networkResource(input:unknown):NetworkResource{
  }
  if(v.format==='physical-port-samples'){
   if(v.frequenciesHz.length!==v.parameters.length||v.frequenciesHz.some((f,i)=>i>0&&f<=v.frequenciesHz[i-1])||
-     v.referenceOhm.length!==n||v.physicalPorts.length!==n)
+     v.referenceOhm.length!==n||v.physicalPorts.length!==n||
+     (v.representation==='S'?v.producerParameters!==undefined:!v.producerParameters||v.producerParameters.length!==v.frequenciesHz.length||v.producerParameters.some(m=>m.length!==n||m.some(row=>row.length!==n))))
    S.invalid('Exact physical samples require a strictly ordered axis, matching matrices, pairs and references');
   if(r.analyses?.some(analysis=>analysis!=='networkParameters'))
    S.invalid('Physical exact-grid samples authorize standalone networkParameters only');
