@@ -11,19 +11,18 @@ assert source.is_file(), f"missing canonical source: {source}"
 assert hashlib.sha256(source.read_bytes()).hexdigest()==trace["sourceSha256"], "canonical matrix hash mismatch; refresh crosswalk deliberately"
 lines=source.read_text(encoding="utf-8").splitlines()
 canonical=[]
+section=None
+sections={"## Основные случаи":"primary", "## Дополнительные обязательные приёмки":"supplemental", "### Смена опоры":"return-topology"}
 for i,line in enumerate(lines,1):
-    if line.startswith("| Случай |"):
-        table=True
-        section={1:"primary",2:"supplemental",3:"return-topology"}.get(sum(1 for x in lines[:i] if x.startswith("| Случай |")))
+    if line.startswith("#"):
+        section=sections.get(line.strip())
         continue
-    if "table" in locals() and table:
-        if not line.startswith("|"):
-            table=False
-            continue
-        if line.startswith("|---"):
-            continue
+    # Blank lines may separate headerless continuation rows in the same section.
+    if section and line.startswith("|") and not line.startswith(("| Случай |", "|---")):
         cells=[x.strip() for x in line.strip("|").split("|")]
         if cells and cells[0]: canonical.append((i,cells[0],section))
+for required in ("Blind/buried via", "Разъём/пад (connector/pad transition)", "Дифференциальная пара"):
+    assert any(label==required for _,label,_ in canonical), f"missing required continuation case: {required}"
 assert len(rows)==trace["rowCount"]==len(canonical), f"canonical row count mismatch: rows={len(rows)} declared={trace['rowCount']} parsed={len(canonical)}"
 ids=set(); labels=set()
 for row in rows:

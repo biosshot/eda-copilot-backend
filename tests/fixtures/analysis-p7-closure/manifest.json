@@ -1781,7 +1781,7 @@
   },
   "caseTraceability": {
     "source": "docs/analyze/reference/p7-extraction/p7-case-matrix.md",
-    "rowCount": 31,
+    "rowCount": 39,
     "rows": [
       {
         "id": "primary-01",
@@ -1791,7 +1791,6 @@
           "status": "mapped",
           "code": [
             "native/analyze/src/extraction/local/section_return.rs",
-            "scripts/verify-p7-closure-stripline.ts",
             "scripts/verify-p7-closure-stripline.ts"
           ],
           "shortControls": [
@@ -1868,8 +1867,7 @@
           "status": "mapped",
           "code": [
             "scripts/verify-p7-closure-stripline.ts",
-            "scripts/verify-p7-joint-section.ts",
-            "scripts/verify-p7-closure-stripline.ts"
+            "scripts/verify-p7-joint-section.ts"
           ],
           "shortControls": [
             "scripts/verify-p7-closure-stripline.ts"
@@ -1895,7 +1893,6 @@
           "status": "mapped",
           "code": [
             "native/analyze/src/extraction/local/hybrid_section_model.rs",
-            "scripts/verify-p7-joint-section.ts",
             "scripts/verify-p7-joint-section.ts"
           ],
           "shortControls": [
@@ -1926,7 +1923,6 @@
         "implementation": {
           "status": "mapped",
           "code": [
-            "scripts/verify-p7-closure-stripline.ts",
             "scripts/verify-p7-closure-stripline.ts"
           ],
           "shortControls": [
@@ -2031,7 +2027,6 @@
           "status": "mapped",
           "code": [
             "native/analyze/src/extraction/local/mixed_conductor.rs",
-            "scripts/verify-p7-auto-foil.ts",
             "scripts/verify-p7-auto-foil.ts"
           ],
           "shortControls": [
@@ -2115,7 +2110,6 @@
           "status": "mapped",
           "code": [
             "native/analyze/src/extraction/local/board_foil.rs",
-            "scripts/verify-p7-wide-return-domains.ts",
             "scripts/verify-p7-wide-return-domains.ts"
           ],
           "shortControls": [
@@ -2282,6 +2276,174 @@
         "implementationScope": "**Поддерживается** в узкой полосе"
       },
       {
+        "id": "primary-continuation-97",
+        "sourceSection": "primary",
+        "case": "Разрывы опоры сверху и снизу одновременно",
+        "implementation": {
+          "status": "unmapped",
+          "code": null,
+          "shortControls": []
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Не поддерживается**",
+        "coverageGap": "Требуемый кейс: нужна модель двух опор и их физических соединений",
+        "sourceLine": 97
+      },
+      {
+        "id": "primary-continuation-98",
+        "sourceSection": "primary",
+        "case": "Blind/buried via",
+        "implementation": {
+          "status": "unmapped",
+          "code": null,
+          "shortControls": []
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Моделируется геометрически**",
+        "coverageGap": "Span прошёл три геометрических теста и шесть отдельных DC случаев. Полная EM-проверка signal/return, antipad и stub открыта. Coax skin-transition проверяется отдельно",
+        "sourceLine": 98
+      },
+      {
+        "id": "primary-continuation-99",
+        "sourceSection": "primary",
+        "case": "Разъём/пад (connector/pad transition)",
+        "implementation": {
+          "status": "unmapped",
+          "code": null,
+          "shortControls": []
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Не поддерживается**",
+        "coverageGap": "Переход дорожки в пад/разъём; отдельный класс не реализован",
+        "sourceLine": 99
+      },
+      {
+        "id": "primary-continuation-100",
+        "sourceSection": "primary",
+        "case": "Дифференциальная пара",
+        "implementation": {
+          "status": "unmapped",
+          "code": null,
+          "shortControls": []
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Частично**",
+        "coverageGap": "Явное coupled-сечение принято. Layered differential подключён к joint four-port leg-to-return S50. Физическая приёмка автоматической пары и смены опоры открыта",
+        "sourceLine": 100
+      },
+      {
+        "id": "primary-continuation-101",
+        "sourceSection": "primary",
+        "case": "Смена опоры (reference swap)",
+        "implementation": {
+          "status": "unmapped",
+          "code": null,
+          "shortControls": []
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Не поддерживается**",
+        "coverageGap": "Геометрия и независимые координаты поддерживают раздельные острова. Переход с доказанным физическим путём возврата между слоями/плоскостями ещё не принят",
+        "sourceLine": 101
+      },
+      {
+        "id": "primary-continuation-102",
+        "sourceSection": "primary",
+        "case": "Нет локальной опоры: поиск возврата по цепи",
+        "implementation": {
+          "status": "unmapped",
+          "code": null,
+          "shortControls": []
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Не поддерживается**",
+        "coverageGap": "Правило в плане §4.0; реализация не начата",
+        "sourceLine": 102
+      },
+      {
+        "id": "primary-continuation-103",
+        "sourceSection": "primary",
+        "case": "GND/AGND/PGND с физическим соединением",
+        "implementation": {
+          "status": "unmapped",
+          "code": null,
+          "shortControls": []
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Не поддерживается**",
+        "coverageGap": "Разные острова и ориентированные контакты представимы. Автоматическое извлечение физического соединения и его R/L в этом сценарии требует проверки",
+        "sourceLine": 103
+      },
+      {
+        "id": "primary-continuation-104",
+        "sourceSection": "primary",
+        "case": "Несколько переходов опоры (AGND→PGND→GND)",
+        "implementation": {
+          "status": "unmapped",
+          "code": null,
+          "shortControls": []
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Не поддерживается**",
+        "coverageGap": "v1: до 8 переходов на канал; каждый — событие + физическое соединение; больше — отказ",
+        "sourceLine": 104
+      },
+      {
         "id": "supplemental-19",
         "sourceSection": "supplemental",
         "case": "Ёмкостный/смешанный возврат через разрыв",
@@ -2289,7 +2451,6 @@
           "status": "mapped",
           "code": [
             "native/analyze/src/extraction/local/hybrid_section_model.rs",
-            "scripts/verify-p7-shared-return-prototype.ts",
             "scripts/verify-p7-shared-return-prototype.ts"
           ],
           "shortControls": [
@@ -2344,7 +2505,6 @@
           "status": "mapped",
           "code": [
             "native/analyze/src/extraction/local/partitioned_conduction.rs",
-            "scripts/verify-p7-real-reference.ts",
             "scripts/verify-p7-real-reference.ts"
           ],
           "shortControls": [
@@ -2431,7 +2591,6 @@
           "status": "mapped",
           "code": [
             "src/analyze/local-model-cache.ts",
-            "tests/analyze-board-foil-cache.test.ts",
             "tests/analyze-board-foil-cache.test.ts"
           ],
           "shortControls": [
@@ -2463,7 +2622,6 @@
           "status": "mapped",
           "code": [
             "src/analyze/local-model-cache.ts",
-            "tests/analyze-board-foil-cache.test.ts",
             "tests/analyze-board-foil-cache.test.ts"
           ],
           "shortControls": [
