@@ -148,3 +148,10 @@ The shared contract and direct kernels are being integrated. Zero-current capaci
 
 - `1794139274658324100`: both mixed near/far plan tests passed in 0.203s under 5s supervisor. Coverage includes prefix/suffix PP/PL uniqueness, excluded TT, zero/full/invalid prefix and memory admission boundaries. This verifies the partition API, not integrated hierarchy accuracy or via speed.
 - `1794139273316190800`: complex spatial-density interference algebra passed in 0.172s under 5s supervisor. Native full recovery balance and actual addon output remain pending.
+
+### Integrated native recovery, TT hierarchy and compensated time
+
+- Release tests: `1794139802289735400` passed all four time controls (including tiny differential/common potential and structural-gauge continuation) in 0.235s; `1794139812761435700` passed signed sparse TT action enclosure and admitted bound in 0.219s.
+- `1794139858668356600`: exact captured native arguments of the previously failing coupled DSL passed in 1.25s under 30s/1536MiB supervisor, preserving request 24.7722921s/512MiB. Asserted modelRegimeAudit pass and nonempty discrete spatial recovery for every column. Sampled private peak 22372352 bytes. This is native integration, not fresh-addon/cache acceptance.
+- Time retains low-order state components through increments, continuation, charge, port and energy calculations; original residual/rank/energy gates remain. TT uses only local tetra hierarchy, certified projected bounds and checked cached 12/16 self integrals. Spatial recovery sums complex densities before Joule power and checks aggregate copper loss.
+- Full-board performance, independent physical coverage and fresh-addon extended smoke remain pending.

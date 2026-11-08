@@ -203,6 +203,9 @@ struct BoundedPairs {
     pool: Option<ParallelState>,
     parallel_counts: Option<std::cell::RefCell<ParallelCounts>>,
     axial: bool,
+    checked_self: bool,
+    checked_self_values: std::cell::RefCell<Vec<Option<f64>>>,
+    self_max_change: std::cell::Cell<f64>,
     cells: std::cell::RefCell<Vec<PairCell>>,
     slots: usize,
     tick: std::cell::Cell<u64>,
@@ -279,6 +282,9 @@ impl BoundedPairs {
             pool: None,
             parallel_counts: None,
             axial: false,
+            checked_self: false,
+            checked_self_values: std::cell::RefCell::new(Vec::new()),
+            self_max_change: std::cell::Cell::new(0.),
             cells: std::cell::RefCell::new(Vec::with_capacity(slots)),
             slots,
             tick: std::cell::Cell::new(0),
@@ -295,6 +301,7 @@ impl BoundedPairs {
             .ok_or_else(|| error("MEMORY_LIMIT", "parallel magnetic window plan overflow"))
     }
     fn configure_parallel(&mut self, workers: usize) -> Result<()> {
+        if self.checked_self { return Err(error("MAGNETIC_CONFIG", "checked local self cache requires serial pairs")); }
         Self::parallel_bytes_for(workers, self.axial)?;
         let pool = rayon::ThreadPoolBuilder::new().num_threads(workers)
             .stack_size(2 * 1024 * 1024).build()
@@ -305,7 +312,7 @@ impl BoundedPairs {
             let mut cells = Vec::new();
             cells.try_reserve_exact(64).map_err(|_| error("MEMORY_LIMIT", "parallel cache allocation failed"))?;
             caches.push(std::sync::Mutex::new(BoundedPairs {
-                tetra:self.tetra.clone(), pool:None, axial:self.axial, parallel_counts:Some(std::cell::RefCell::new(ParallelCounts::default())),
+                tetra:self.tetra.clone(), pool:None, axial:self.axial, checked_self:self.checked_self, checked_self_values:std::cell::RefCell::new(Vec::new()), self_max_change:std::cell::Cell::new(0.), parallel_counts:Some(std::cell::RefCell::new(ParallelCounts::default())),
                 scalar:std::cell::RefCell::new(Vec::new()), trace:None, capture:None,
                 cells:std::cell::RefCell::new(cells), slots:64, tick:std::cell::Cell::new(0),
                 order:self.order, start:self.start, wall:self.wall,
@@ -428,7 +435,17 @@ impl BoundedPairs {
     fn pair_inner(&self, i: usize, j: usize, kind: &mut usize) -> Result<f64> {
         check_deadline(self.start, self.wall)?;
         if i == j {
-            return tetra_self_integral(self.tetra[i], self.order);
+            if self.checked_self { if let Some(value)=self.checked_self_values.borrow().get(i).copied().flatten() { return Ok(value); } }
+            let coarse = tetra_self_integral(self.tetra[i], self.order)?;
+            if !self.checked_self { return Ok(coarse); }
+            let fine = tetra_self_integral(self.tetra[i], 16)?;
+            let change = (fine - coarse).abs() / fine.abs();
+            if !change.is_finite() || change > 1e-8 {
+                return Err(error("HYBRID_UNRESOLVED", "tetra self order estimator"));
+            }
+            self.self_max_change.set(self.self_max_change.get().max(change));
+            self.checked_self_values.borrow_mut()[i]=Some(fine);
+            return Ok(fine);
         }
         *kind = 2;
         let mut cells = self.cells.borrow_mut();
@@ -1200,4 +1217,51 @@ impl CompactLocalPairs {
         Ok(Self {inner:BoundedPairs::new(tetra,12,slots,start,wall)?,planned_bytes})
     }
     pub(super) fn pair(&self,a:usize,b:usize)->Result<f64> {self.inner.pair(a,b)}
+}
+
+/// Hierarchical action on only the supplied local tetrahedra. Columns are
+/// physical Cartesian current densities (three values per tetrahedron).
+/// The existing hierarchy supplies reciprocal interval bounds; self terms
+/// retain the compact mixed 12/16 convergence gate.
+pub(super) struct CompactLocalHierarchy {
+    pair: BoundedPairs,
+    tree: hierarchical_magnetic::Operator,
+    space: Space,
+    checked_self: std::cell::RefCell<Vec<bool>>,
+    pub(super) planned_bytes: usize,
+}
+impl CompactLocalHierarchy {
+    pub(super) fn new(tetra: Vec<[[f64;3];4]>, budget: AllocationBudget, start: Instant, wall: Duration) -> Result<Self> {
+        let n = tetra.len();
+        if n == 0 || n > budget.max_tetrahedra { return Err(error("HYBRID_INPUT", "nonempty bounded local geometry required")); }
+        let space_bytes = n.checked_mul(std::mem::size_of::<super::volume_current::Cell>()
+            + std::mem::size_of::<Option<f64>>() + std::mem::size_of::<bool>())
+            .ok_or_else(||error("MEMORY_LIMIT", "local hierarchy space overflow"))?;
+        let pair_budget = AllocationBudget { max_bytes: budget.max_bytes / 4, ..budget };
+        let (pair_bytes, slots) = BoundedPairs::plan(n, 12, 0, pair_budget)?;
+        let base = pair_bytes.checked_add(space_bytes).and_then(|v|v.checked_add(2*1024*1024)).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy base overflow"))?;
+        let tree = hierarchical_magnetic::Operator::new(&tetra, 12, 1, 0.2, base, budget, start, wall)?;
+        let planned_bytes = base.checked_add(tree.planned_bytes).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy plan overflow"))?;
+        budget.check(planned_bytes)?;
+        let mut pair = BoundedPairs::new(tetra, 12, slots, start, wall)?;
+        pair.checked_self = true;
+        *pair.checked_self_values.borrow_mut()=vec![None;n];
+        let cells = (0..n).map(|i| super::volume_current::Cell { mesh_cell:i, potentials:[0;4], incidence:[[0.;3];4], density_per_amp_m2:1., resistance_ohm:1. }).collect();
+        let space = Space { mesh_nodes:vec![], node_potential:Default::default(), cells, components:vec![], planned_bytes:space_bytes };
+        Ok(Self { pair, tree, space, checked_self: std::cell::RefCell::new(vec![false;n]), planned_bytes })
+    }
+    pub(super) fn self_max_change(&self) -> f64 { self.pair.self_max_change.get() }
+    pub(super) fn actions(&self, columns: &[Vec<f64>], goals: &[f64]) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
+        let n=self.space.cells.len();
+        if columns.iter().any(|q|q.len()!=3*n || q.iter().any(|v|!v.is_finite())) {
+            return Err(error("HYBRID_INPUT", "invalid local hierarchy column"));
+        }
+        for i in 0..n {
+            if columns.iter().any(|q|q[3*i..3*i+3].iter().any(|v|*v!=0.)) && !self.checked_self.borrow()[i] {
+                self.pair.pair(i,i)?;
+                self.checked_self.borrow_mut()[i]=true;
+            }
+        }
+        self.tree.batch(&self.pair, &self.space, columns, goals)
+    }
 }

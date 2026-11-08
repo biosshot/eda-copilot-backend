@@ -988,6 +988,7 @@ pub(super) fn solve_mixed_grid(
             .filter(|partition| !partition.compact)
             .map(|partition| (partition, &map.full)),
         false,
+        None,
     )?;
     checked["sectionHints"]=serde_json::json!({"submitted":profiles.len(),"addedCurrentModes":added_profiles});
     checked["magneticOperator"] = magnetic.evidence();
@@ -1163,6 +1164,7 @@ fn assemble_impl(
             &[],
             None,
             false,
+            None,
         )?),
         _ => unreachable!("preparation resources match their scope"),
     };
@@ -1946,6 +1948,7 @@ impl ReducedSpace {
             &super::volume_current::Space,
         )>,
         loss_grams: bool,
+        spatial_map: Option<&super::mixed_conductor::MixedMap<'_>>,
     ) -> Result<serde_json::Value> {
         use super::checked_packages;
         use serde_json::{json, Value};
@@ -1962,11 +1965,17 @@ impl ReducedSpace {
                     budget.check(entries)?;
                     entries
                 } else { 0 };
+                let spatial_reserve = if let Some(map) = spatial_map {
+                    let supports = map.foils.len().checked_add(map.owners.iter().filter(|o|matches!(o,super::mixed_conductor::Owner::Volume)).count()).ok_or_else(||error("MEMORY_LIMIT","spatial support count overflow"))?;
+                    let output=supports.checked_mul(4096).and_then(|v|v.checked_mul(ports)).and_then(|v|v.checked_mul(grid.frequencies.len())).ok_or_else(||error("MEMORY_LIMIT","spatial report overflow"))?;
+                    let scratch=supports.checked_mul(2048).and_then(|v|v.checked_add(map.current_count().checked_mul(32)?)).ok_or_else(||error("MEMORY_LIMIT","spatial scratch overflow"))?;
+                    output.checked_add(scratch).ok_or_else(||error("MEMORY_LIMIT","spatial reservation overflow"))?
+                } else {0};
                 let available = budget
                     .max_bytes
                     .saturating_sub(field.planned_bytes())
                     .saturating_sub(dc.owned_bytes)
-                    .checked_sub(gram_reserve).ok_or_else(|| error("MEMORY_LIMIT", "loss Gram reservation exceeds budget"))?;
+                    .checked_sub(gram_reserve).and_then(|v|v.checked_sub(spatial_reserve)).ok_or_else(|| error("MEMORY_LIMIT", "loss Gram and spatial reservation exceeds budget"))?;
                 let solve_budget = Budget {
                     max_memory_mi_b: Some((available as f64 / 1048576.).min(4096.)),
                     max_seconds: Some(wall.saturating_sub(start.elapsed()).as_secs_f64()),
@@ -2147,6 +2156,12 @@ impl ReducedSpace {
                                 start,
                                 wall,
                             )?;
+                        }
+                        if let Some(map) = spatial_map {
+                            let nv=self.basis.voltage.len();
+                            let re=lift(&self.basis.current,&copper_re[nv..],self.cells.len());
+                            let im=lift(&self.basis.current,&copper_im[nv..],self.cells.len());
+                            column["spatialRecovery"] = super::spatial_recovery::recover(map,&re,&im,copper,AllocationBudget{max_bytes:spatial_reserve,..budget},start,wall)?;
                         }
                         if loss_grams {
                             let nv = self.basis.voltage.len();
@@ -2765,7 +2780,7 @@ mod compact_planar_tests {
         let started=Instant::now();let wall=Duration::from_secs(20);
         let plan=super::super::near_far::Plan::from_moments(moments,0.01,1,super::super::near_far::Budget{max_bytes:4_000_000,max_nodes:32,max_blocks:32,max_pairs:3,max_wall:wall}).unwrap();
         let pairs=super::super::volume_integral_magnetic::CompactLocalPairs::new(vec![tetra],AllocationBudget{max_bytes:4_000_000,..budget},started,wall).unwrap();
-        let mut op=CompactMixedMagnetic{supports,dimensions:2,planar_max_order:std::cell::Cell::new(0),planar_max_change:std::cell::Cell::new(0.),local,local_pairs:Some(pairs),mixed_plan:plan,pl_pool:None,pl_workers:1,cache:std::cell::RefCell::new(BTreeMap::new()),budget,start:started,wall,action_count:std::cell::Cell::new(0),cache_limit:32,batch_limit:1_000_000,pair_count:std::cell::Cell::new(0),promoted_pairs:std::cell::Cell::new(0),mixed_max_change:std::cell::Cell::new(0.),mixed_fallback_count:std::cell::Cell::new(0),self_max_change:std::cell::Cell::new(0.)};
+        let mut op=CompactMixedMagnetic{supports,dimensions:2,planar_max_order:std::cell::Cell::new(0),planar_max_change:std::cell::Cell::new(0.),local,local_pairs:Some(pairs),local_hierarchy:None,mixed_plan:plan,pl_pool:None,pl_workers:1,cache:std::cell::RefCell::new(BTreeMap::new()),budget,start:started,wall,action_count:std::cell::Cell::new(0),cache_limit:32,batch_limit:1_000_000,pair_count:std::cell::Cell::new(0),promoted_pairs:std::cell::Cell::new(0),mixed_max_change:std::cell::Cell::new(0.),mixed_fallback_count:std::cell::Cell::new(0),self_max_change:std::cell::Cell::new(0.)};
         assert_eq!(op.mixed_plan.near_pairs,3);
         let (a,bounds)=op.apply_batch(&[vec![1.,0.],vec![0.,1.]],Some(&[1.,1.])).unwrap();
         assert!(op.promoted_pairs.get()>0);
@@ -2804,7 +2819,7 @@ mod compact_planar_tests {
         let start=Instant::now();let wall=Duration::from_secs(20);
         let plan=super::super::near_far::Plan::from_moments(moments,0.2,1,super::super::near_far::Budget{max_bytes:4_000_000,max_nodes:32,max_blocks:32,max_pairs:6,max_wall:wall}).unwrap();
         let pairs=super::super::volume_integral_magnetic::CompactLocalPairs::new(vec![t0,t1],AllocationBudget{max_bytes:4_000_000,..budget},start,wall).unwrap();
-        let mut op=CompactMixedMagnetic{supports,dimensions:2,planar_max_order:std::cell::Cell::new(0),planar_max_change:std::cell::Cell::new(0.),local,local_pairs:Some(pairs),mixed_plan:plan,pl_pool:None,pl_workers:1,cache:std::cell::RefCell::new(BTreeMap::new()),budget,start,wall,action_count:std::cell::Cell::new(0),cache_limit:32,batch_limit:1_000_000,pair_count:std::cell::Cell::new(0),promoted_pairs:std::cell::Cell::new(0),mixed_max_change:std::cell::Cell::new(0.),mixed_fallback_count:std::cell::Cell::new(0),self_max_change:std::cell::Cell::new(0.)};
+        let mut op=CompactMixedMagnetic{supports,dimensions:2,planar_max_order:std::cell::Cell::new(0),planar_max_change:std::cell::Cell::new(0.),local,local_pairs:Some(pairs),local_hierarchy:None,mixed_plan:plan,pl_pool:None,pl_workers:1,cache:std::cell::RefCell::new(BTreeMap::new()),budget,start,wall,action_count:std::cell::Cell::new(0),cache_limit:32,batch_limit:1_000_000,pair_count:std::cell::Cell::new(0),promoted_pairs:std::cell::Cell::new(0),mixed_max_change:std::cell::Cell::new(0.),mixed_fallback_count:std::cell::Cell::new(0),self_max_change:std::cell::Cell::new(0.)};
         let jobs=[(1,0),(0,2)];let density=vec![vec![[1.,0.,0.],[2.,0.,0.],[-1.,0.,0.]],vec![[-1.,0.,0.],[0.5,0.,0.],[3.,0.,0.]]];
         let mut serial=vec![vec![0.;2];2];
         for &(a,b) in &jobs {let value=op.near_pair(a,b).unwrap();for c in 0..2 {for &(i,d) in op.densities(a) {serial[c][i]+=1e-7*value*(0..3).map(|k|d[k]*density[c][b][k]).sum::<f64>();}for &(i,d) in op.densities(b) {serial[c][i]+=1e-7*value*(0..3).map(|k|d[k]*density[c][a][k]).sum::<f64>();}}}
@@ -2815,6 +2830,33 @@ mod compact_planar_tests {
         assert!(queued.is_empty());assert_eq!(op.pair_count.get(),2);assert_eq!(op.cache.borrow().len(),2);
         for c in 0..2 {for i in 0..2 {assert_eq!(parallel[c][i].to_bits(),serial[c][i].to_bits());}}
         let before=op.pair_count.get();op.near_pair(0,1).unwrap();assert_eq!(op.pair_count.get(),before);
+    }
+    #[test]
+    fn local_hierarchy_encloses_signed_sparse_action() {
+        let budget=AllocationBudget{max_nodes:64,max_tetrahedra:16,max_bytes:128*1024*1024};
+        let t0=[[0.,0.,0.],[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
+        let t1=[[5.,0.,0.],[6.,0.,0.],[5.,1.,0.],[5.,0.,1.]];
+        let local=vec![
+            super::super::mixed_conductor::LocalCurrentSupport{tetra:t0,densities:vec![(0,[1.,-0.25,0.]),(1,[-0.3,0.5,0.2])]},
+            super::super::mixed_conductor::LocalCurrentSupport{tetra:t1,densities:vec![(0,[-0.4,0.2,0.]),(1,[0.7,-0.1,0.3])]},
+        ];
+        let moments=vec![super::super::far::Moments::tetrahedron(t0).unwrap(),super::super::far::Moments::tetrahedron(t1).unwrap()];
+        let start=Instant::now(); let wall=Duration::from_secs(20);
+        let plan_budget=super::super::near_far::Budget{max_bytes:4_000_000,max_nodes:64,max_blocks:16,max_pairs:3,max_wall:wall};
+        let plan=super::super::near_far::Plan::from_moments(moments.clone(),0.2,1,plan_budget).unwrap();
+        let pairs=super::super::volume_integral_magnetic::CompactLocalPairs::new(vec![t0,t1],AllocationBudget{max_bytes:4_000_000,..budget},start,wall).unwrap();
+        let mut op=CompactMixedMagnetic{supports:vec![],dimensions:2,planar_max_order:std::cell::Cell::new(0),planar_max_change:std::cell::Cell::new(0.),local,local_pairs:Some(pairs),local_hierarchy:None,mixed_plan:plan,pl_pool:None,pl_workers:1,cache:std::cell::RefCell::new(BTreeMap::new()),budget,start,wall,action_count:std::cell::Cell::new(0),cache_limit:32,batch_limit:8_000_000,pair_count:std::cell::Cell::new(0),promoted_pairs:std::cell::Cell::new(0),mixed_max_change:std::cell::Cell::new(0.),mixed_fallback_count:std::cell::Cell::new(0),self_max_change:std::cell::Cell::new(0.)};
+        let columns=vec![vec![1.,-2.],vec![-0.7,0.4]];
+        // With goals=None every moment candidate is rejected and each TT
+        // pair uses the direct kernel; this is a numerical arithmetic control.
+        let (direct,_)=op.apply_batch(&columns,None).unwrap();
+        op.mixed_plan=super::super::near_far::Plan::from_moments_excluding_suffix_pairs(moments,0,0.2,1,plan_budget).unwrap();
+        op.local_hierarchy=Some(super::super::volume_integral_magnetic::CompactLocalHierarchy::new(vec![t0,t1],budget,start,wall).unwrap());
+        let (actual,bounds)=op.apply_batch(&columns,Some(&[1e-8,1e-8])).unwrap();
+        for c in 0..columns.len() { for i in 0..2 {
+            assert!(bounds[c][i] <= 1e-8);
+            assert!((actual[c][i]-direct[c][i]).abs() <= bounds[c][i]+1e-12*direct[c][i].abs(), "column={c} row={i} actual={} direct={} bound={}",actual[c][i],direct[c][i],bounds[c][i]);
+        }}
     }
     #[test]
     fn parallel_pl_worker_reservation_refuses_small_budget() {
@@ -3086,6 +3128,7 @@ struct CompactMixedMagnetic {
     planar_max_change:std::cell::Cell<f64>,
     local:Vec<super::mixed_conductor::LocalCurrentSupport>,
     local_pairs:Option<super::volume_integral_magnetic::CompactLocalPairs>,
+    local_hierarchy:Option<super::volume_integral_magnetic::CompactLocalHierarchy>,
     mixed_plan:super::near_far::Plan,
     pl_pool:Option<rayon::ThreadPool>,
     pl_workers:usize,
@@ -3110,14 +3153,15 @@ impl CompactMixedMagnetic {
         let remaining=budget.max_bytes-n;let cache_bytes=remaining/4;let cache_limit=cache_bytes/128;let batch_limit=remaining/8;let local_budget=remaining/8;let mixed_budget=remaining-cache_bytes-batch_limit-local_budget;
         let supports=map.planar_current_supports()?;
         let local=map.local_current_supports()?;
-        let local_pairs=if local.is_empty(){None}else{Some(super::volume_integral_magnetic::CompactLocalPairs::new(local.iter().map(|s|s.tetra).collect(),AllocationBudget{max_bytes:local_budget,..budget},start,wall)?)};
+        let local_hierarchy=if local.is_empty(){None}else{Some(super::volume_integral_magnetic::CompactLocalHierarchy::new(local.iter().map(|s|s.tetra).collect(),AllocationBudget{max_bytes:local_budget,..budget},start,wall)?)};
+        let local_pairs=None;
         let mut moments=Vec::with_capacity(supports.len()+local.len());
         for s in &supports {check_time(start,wall)?;moments.push(super::far::Moments::new(&s.prism)?);}
         for s in &local {check_time(start,wall)?;moments.push(super::far::Moments::tetrahedron(s.tetra)?);}
         let pairs=moments.len().checked_mul(moments.len().checked_add(1).ok_or_else(||error("MEMORY_LIMIT","mixed pair overflow"))?).and_then(|n|n.checked_div(2)).ok_or_else(||error("MEMORY_LIMIT","mixed pair overflow"))?;
-        let mixed_plan=super::near_far::Plan::from_moments(moments,0.2,12,super::near_far::Budget{max_bytes:mixed_budget,max_nodes:budget.max_nodes,max_blocks:mixed_budget/128,max_pairs:pairs,max_wall:wall.saturating_sub(start.elapsed())})?;
+        let mixed_plan=super::near_far::Plan::from_moments_excluding_suffix_pairs(moments,supports.len(),0.2,12,super::near_far::Budget{max_bytes:mixed_budget,max_nodes:budget.max_nodes,max_blocks:mixed_budget/128,max_pairs:pairs,max_wall:wall.saturating_sub(start.elapsed())})?;
         eprintln!("P7_COMPACT_UNIFIED_PLAN supports={} nearPairs={} farPairs={} planBytes={} cacheCapacity={}",mixed_plan.moments.len(),mixed_plan.near_pairs,mixed_plan.far_pairs,mixed_plan.planned_bytes,cache_limit);
-        Ok(Self{supports,dimensions:map.current_count(),planar_max_order:std::cell::Cell::new(0),planar_max_change:std::cell::Cell::new(0.),local,local_pairs,mixed_plan,pl_pool,pl_workers:workers,cache:std::cell::RefCell::new(BTreeMap::new()),budget,start,wall,action_count:std::cell::Cell::new(0),cache_limit,batch_limit,pair_count:std::cell::Cell::new(0),promoted_pairs:std::cell::Cell::new(0),mixed_max_change:std::cell::Cell::new(0.),mixed_fallback_count:std::cell::Cell::new(0),self_max_change:std::cell::Cell::new(0.)})
+        Ok(Self{supports,dimensions:map.current_count(),planar_max_order:std::cell::Cell::new(0),planar_max_change:std::cell::Cell::new(0.),local,local_pairs,local_hierarchy,mixed_plan,pl_pool,pl_workers:workers,cache:std::cell::RefCell::new(BTreeMap::new()),budget,start,wall,action_count:std::cell::Cell::new(0),cache_limit,batch_limit,pair_count:std::cell::Cell::new(0),promoted_pairs:std::cell::Cell::new(0),mixed_max_change:std::cell::Cell::new(0.),mixed_fallback_count:std::cell::Cell::new(0),self_max_change:std::cell::Cell::new(0.)})
     }
     fn cached(&self,key:(usize,usize),f:impl FnOnce()->Result<f64>)->Result<f64> {
         if let Some(&v)=self.cache.borrow().get(&key){return Ok(v);}
@@ -3151,7 +3195,7 @@ impl CompactMixedMagnetic {
         if let Some(goals)=goals {if goals.len()!=columns.len() || goals.iter().any(|g|!g.is_finite() || *g<=0.) {return Err(error("HYBRID_INPUT","invalid magnetic action goals"));}}
         let (actions,bounds)=self.apply_batch_once(columns,false,goals)?;
         if let Some(goals)=goals {
-            if bounds.iter().zip(goals).any(|(row,g)|row.iter().any(|b|*b>*g)) {return self.apply_batch_once(columns,true,None);}
+            if bounds.iter().zip(goals).any(|(row,g)|row.iter().any(|b|*b>*g)) {return self.apply_batch_once(columns,true,Some(goals));}
         }
         Ok((actions,bounds))
     }
@@ -3178,11 +3222,54 @@ impl CompactMixedMagnetic {
         let count=columns.len();if count==0 {return Ok((vec![],vec![]));}let dim=self.dimensions;
         if columns.iter().any(|v|v.len()!=dim || v.iter().any(|x|!x.is_finite())) {return Err(error("HYBRID_INPUT","invalid magnetic columns"));}
         let ns=self.supports.len()+self.local.len();
-        let bytes=count.checked_mul(ns).and_then(|n|n.checked_mul(48)).and_then(|n|n.checked_add(count.checked_mul(dim)?.checked_mul(16)?)).ok_or_else(||error("MEMORY_LIMIT","batch size overflow"))?;
+        let bytes=count.checked_mul(ns).and_then(|n|n.checked_mul(48)).and_then(|n|n.checked_add(count.checked_mul(self.local.len())?.checked_mul(256)?)).and_then(|n|n.checked_add(count.checked_mul(dim)?.checked_mul(32)?)).and_then(|n|n.checked_add(dim.checked_mul(8)?)).and_then(|n|n.checked_add(count.checked_mul(256)?)).ok_or_else(||error("MEMORY_LIMIT","batch size overflow"))?;
         if bytes>self.batch_limit {return Err(error("MEMORY_LIMIT","mixed magnetic batch exceeds reservation"));}
         self.action_count.set(self.action_count.get()+count);
         let mut density=vec![vec![[0.;3];ns];count];let mut envelope=density.clone();let mut output=vec![vec![0.;dim];count];let mut bounds=output.clone();
         for (c,x) in columns.iter().enumerate() {for s in 0..ns {for &(i,d) in self.densities(s) {if i>=dim {return Err(error("HYBRID_INPUT","invalid current support"));}for k in 0..3 {density[c][s][k]+=d[k]*x[i];envelope[c][s][k]=compact_bound_sum(envelope[c][s][k],compact_bound_product(d[k].abs(),x[i].abs()));}}}}
+        if let Some(tree) = &self.local_hierarchy {
+            use super::volume_integral_magnetic::hierarchical_magnetic::Interval;
+            let goals = goals.ok_or_else(||error("HIERARCHICAL_MAGNETIC_GOAL", "local hierarchy requires action goals"))?;
+            let mut row_weights=vec![0.;dim];
+            for support in &self.local { for &(i,d) in &support.densities { for &value in &d {
+                row_weights[i]=compact_bound_sum(row_weights[i],value.abs());
+            }}}
+            let weight=row_weights.into_iter().fold(0_f64,f64::max);
+            if weight > 0. {
+                let local_goals:Vec<_>=goals.iter().map(|&g| {
+                    let v=Interval::point(g).div(Interval::point(weight)).div(Interval::point(8.)).lo;
+                    if v>0. && v.is_finite() { v } else { 0. }
+                }).collect();
+                if local_goals.iter().any(|&g|g<=0.) { return Err(error("HIERARCHICAL_MAGNETIC_GOAL", "local projection goal underflow")); }
+                let mut q=vec![vec![0.;3*self.local.len()];count];
+                let mut qr=q.clone();
+                for (c,column) in columns.iter().enumerate() { for (j,support) in self.local.iter().enumerate() { for k in 0..3 {
+                    let mut v=Interval::point(0.);
+                    for &(i,d) in &support.densities { v=v.add(Interval::point(d[k]).mul(Interval::point(column[i]))); }
+                    let mid=v.mid(); let radius=v.radius(mid);
+                    if !mid.is_finite() || !radius.is_finite() {return Err(error("HYBRID_RANGE","local projection overflow"));}
+                    q[c][3*j+k]=mid; qr[c][3*j+k]=radius;
+                }}}
+                let (action,uncertainty,_)=tree.actions(&q,&local_goals)?;
+                // The Newton scalar kernel is nonnegative, so its action on
+                // componentwise input radii encloses the projection error.
+                let (error_action,error_uncertainty,_)=tree.actions(&qr,&local_goals)?;
+                let mut projected=vec![vec![Interval::point(0.);dim];count];
+                for c in 0..count {for (j,support) in self.local.iter().enumerate() {for &(i,d) in &support.densities {for k in 0..3 {
+                    let at=3*j+k;
+                    let extra=compact_bound_sum(error_action[c][at].abs(),error_uncertainty[c][at]);
+                    let radius=compact_bound_sum(uncertainty[c][at],extra);
+                    let v=Interval::point(action[c][at]).add(Interval{lo:-radius,hi:radius});
+                    projected[c][i]=projected[c][i].add(Interval::point(d[k]).mul(v));
+                }}}}
+                for c in 0..count {for i in 0..dim {
+                    let total=Interval::point(output[c][i]).add(projected[c][i]);
+                    let mid=total.mid(); let radius=total.radius(mid);
+                    if !mid.is_finite() || !radius.is_finite() {return Err(error("HYBRID_RANGE","local projected action overflow"));}
+                    output[c][i]=mid; bounds[c][i]=compact_bound_sum(bounds[c][i],radius);
+                }}
+            }
+        }
         let mut pl_jobs=Vec::with_capacity(32);
         for far in [true,false] {self.mixed_plan.visit_pairs(far,|a,b| {
             check_time(self.start,self.wall)?;if (0..count).all(|c|density[c][a]==[0.;3] && density[c][b]==[0.;3]) {return Ok(());}
@@ -3287,7 +3374,7 @@ pub(super) fn solve_compact_adaptive(
     let mut space=ReducedSpace{model,cells,dc_harmonic_residual:basis.dc_residual,basis,charges,magnetic_actions:initial.actions,magnetic_basis_certificate:initial.certificate,ports:ports.to_vec(),full_potentials:n,max_frequency_hz:*grid.frequencies.last().ok_or_else(||error("HYBRID_INPUT","empty frequency grid"))?,planned_bytes:peak,max_magnetic_reciprocity:0.,max_magnetic_refinement:0.,max_electric_reciprocity,enrichment:None,native_allocation:true};
     let training_budget=AllocationBudget{max_bytes:share*2,..budget};
     eprintln!("P7_COMPACT_STAGE stage=training-start elapsed={:.6}",start.elapsed().as_secs_f64());
-    let result=space.train_grid(&grid,names,&dc,field,&batch,training_budget,start,wall,true,packages,None,true);
+    let result=space.train_grid(&grid,names,&dc,field,&batch,training_budget,start,wall,true,packages,None,true,Some(map));
     eprintln!("P7_COMPACT_STAGE stage=training-end elapsed={:.6} chargeActions={} magneticActions={}",start.elapsed().as_secs_f64(),field.action_count(),magnetic.action_count.get());
     let mut result=result?;
     if std::env::var_os("P7_HYBRID_REGIME_AUDIT").as_deref()==Some(std::ffi::OsStr::new("1")) {
@@ -3319,6 +3406,6 @@ pub(super) fn solve_compact_adaptive(
         column["compactMagneticCertificate"]=certificate;
     }}}}
     result["quality"]["scope"]=serde_json::json!("compact-discrete");result["quality"]["physicalError"]=serde_json::json!("unverified");
-    result["compactEvidence"]=serde_json::json!({"basis":"adaptive-mixed-closure","skinHints":{"eligibleGroups":eligible_groups,"submitted":submitted_hints,"added":added_hints,"upperHz":upper_hz,"coverage":"unverified"},"planarMaxOrder":magnetic.planar_max_order.get(),"planarMaxRelativeChange":magnetic.planar_max_change.get(),"mixedMaxRelativeChange":magnetic.mixed_max_change.get(),"mixedTetraFallbackCount":magnetic.mixed_fallback_count.get(),"mixedTetraFallbackTolerance":1e-10,"goalAdmittedNearPairs":magnetic.promoted_pairs.get(),"parallelPlWorkers":magnetic.pl_workers,"tetraSelfMaxRelativeChange":magnetic.self_max_change.get(),"tetraPairAdaptiveTolerance":1e-10,"nearQuadratureEstimatedTolerance":1e-8,"originalVolumeActions":0,"scope":"compact-discrete","physicalAccuracy":"unverified","approximationError":"unverified"});
+    result["compactEvidence"]=serde_json::json!({"basis":"adaptive-mixed-closure","skinHints":{"eligibleGroups":eligible_groups,"submitted":submitted_hints,"added":added_hints,"upperHz":upper_hz,"coverage":"unverified"},"planarMaxOrder":magnetic.planar_max_order.get(),"planarMaxRelativeChange":magnetic.planar_max_change.get(),"mixedMaxRelativeChange":magnetic.mixed_max_change.get(),"mixedTetraFallbackCount":magnetic.mixed_fallback_count.get(),"mixedTetraFallbackTolerance":1e-10,"goalAdmittedNearPairs":magnetic.promoted_pairs.get(),"parallelPlWorkers":magnetic.pl_workers,"tetraSelfMaxRelativeChange":magnetic.self_max_change.get().max(magnetic.local_hierarchy.as_ref().map_or(0., |h|h.self_max_change())),"tetraPairAdaptiveTolerance":1e-10,"nearQuadratureEstimatedTolerance":1e-8,"originalVolumeActions":0,"scope":"compact-discrete","physicalAccuracy":"unverified","approximationError":"unverified"});
     Ok((result,space.model,budget.max_bytes))
 }

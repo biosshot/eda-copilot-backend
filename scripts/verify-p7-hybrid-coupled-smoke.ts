@@ -49,6 +49,12 @@ async function run(){
  assert.ok(solution.provenance.compactOperator.skinHints.added>0);
  assert.ok(solution.portObservations.frequencies.length===2);
  assert.ok(solution.samples.every((sample:any)=>sample.lossGrams?.copperWPerA2.length===2));
+ assert.equal(solution.portObservations.spatialRecovery.status,'recovered-discrete');
+ for(const [i,sample] of solution.samples.entries())for(const [j,column] of sample.columns.entries()){
+  assert.equal(column.spatialRecovery.status,'recovered-discrete');
+  assert.ok(column.spatialRecovery.supports.length>0);
+  assert.deepEqual(solution.portObservations.frequencies[i].drives[j].spatialRecoveryRef,{sampleIndex:i,columnIndex:j});
+ }
  if(process.env.P7_HYBRID_REGIME_AUDIT==='1')assert.equal(solution.modelRegimeAudit?.status,'pass');
  assert.equal(solution.frequencyAudit.batch.status,'checked');
  assert.ok(solution.frequencyAudit.adaptiveResponse.points.length>2);

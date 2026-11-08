@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 pub(super) mod adaptive;
 
 #[derive(Clone, Copy, Debug)]
-pub(super) struct Interval {
+pub(crate) struct Interval {
     pub lo: f64,
     pub hi: f64,
 }
@@ -85,7 +85,7 @@ impl Interval {
             hi: up(values.into_iter().fold(f64::NEG_INFINITY, f64::max)),
         }
     }
-    fn div(self, b: Self) -> Self {
+    pub(crate) fn div(self, b: Self) -> Self {
         if b.lo <= 0. && b.hi >= 0. {
             return Self {
                 lo: f64::NEG_INFINITY,
