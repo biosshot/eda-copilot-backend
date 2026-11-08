@@ -8,7 +8,7 @@ type Entry = { report: AnalysisBoardFoilCheckedReport; producerBudget: Budget };
 
 /** Bump whenever the shared planar/hybrid operator changes its numerical
  * meaning. Kept in the existing exact-grid identity so old snapshots miss. */
-export const HYBRID_PLANAR_OPERATOR_VERSION = 'hybrid-planar-v2';
+export const HYBRID_PLANAR_OPERATOR_VERSION = 'hybrid-planar-v3';
 
 function validBudget(budget: Budget) {
   return Number.isFinite(budget?.maxSeconds) && budget.maxSeconds > 0 && budget.maxSeconds <= 3600 &&
@@ -39,7 +39,7 @@ export function cachedBoardFoilReport(
   const portCount = expected.electrodePairs.length;
   const referenceOhm = request.referenceOhm ?? expected.electrodePairs.map(() => 50);
   if (!validBudget(request.budget)) throw new Error('BOARD_FOIL_BUDGET: finite positive time and 1..65536 MiB required');
-  if ((partitionPolicy !== undefined && partitionPolicy !== 'automatic-conductive-schur-v1') ||
+  if ((partitionPolicy !== undefined && partitionPolicy !== 'automatic-conductive-schur-v1' && partitionPolicy !== 'automatic-hybrid-v1') ||
       (operatorPolicy !== undefined && !profiled) ||
       (profileUpperHz !== undefined && (!profiled || !Number.isFinite(profileUpperHz) ||
         profileUpperHz < frequenciesHz[frequenciesHz.length - 1] || profileUpperHz > limitHz)) ||
@@ -55,6 +55,7 @@ export function cachedBoardFoilReport(
   const sectionHints = process.env.P7_SECTION_HINTS === '1';
   const nearBound = process.env.P7_MAGNETIC_NEAR_BOUND === '1';
   const compactPlanar = process.env.P7_COMPACT_PLANAR === '1';
+  const compactWorkers = compactPlanar || partitionPolicy==='automatic-hybrid-v1' ? verificationLimit('P7_COMPACT_PL_THREADS',1,1,4) : 1;
   const compactFullMixed = process.env.P7_COMPACT_FULL_MIXED === '1';
   const axialTetPolicy = magneticAxialTetPolicy();
   const remaining = () => {
@@ -71,6 +72,7 @@ export function cachedBoardFoilReport(
     core, producer: 'automatic-board-foil-or-mixed-exact-grid-v1',
     hybridPlanarOperatorVersion: HYBRID_PLANAR_OPERATOR_VERSION,
     compactPlanarPolicy: compactPlanar ? 'compact-v1' : 'default-v1',
+    ...((compactPlanar || partitionPolicy==='automatic-hybrid-v1') && { compactWorkers }),
     ...(compactPlanar && { compactBasisPolicy: compactFullMixed ? 'adaptive-mixed-closure-v1' : 'dc-harmonic-only' }),
     board: digest(problem.boardJson),
     magneticProducerPolicy:'exact-or-certified-adaptive-harmonic-v1',

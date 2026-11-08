@@ -137,10 +137,20 @@ function validatePartition(report:AnalysisBoardFoilCheckedReport,problem:BoardFo
  const p=report.provenance,partition=p.automaticPartition,correction=report.conductiveCorrection;
  const policy=problem.request.partitionPolicy;
  if(policy===undefined){
-  if(p.partitionPolicy!==undefined||partition!==undefined||correction!==undefined)
+  if(p.partitionPolicy!==undefined||p.hybridAssembly!==undefined||partition!==undefined||correction!==undefined)
    fail('unexpected conductive partition evidence');
   return;
  }
+ if(policy==='automatic-hybrid-v1'){
+  const h=p.hybridAssembly,c=p.compactOperator;
+  if(p.partitionPolicy!==policy||partition!==undefined||correction!==undefined||!h||
+     h.policy!==policy||h.method!=='global-compact-mixed'||h.physicalAccuracy!=='unverified'||
+     !c||c.basis!=='adaptive-mixed-closure'||c.electricOperator!=='layered-spatial-field-mesh'||
+     report.operator!=='compact-planar-layered-prototype'||h.potentialCoordinates!==c.potentialCoordinates||h.currentCoordinates!==c.currentCoordinates)
+   fail('missing or inconsistent automatic hybrid assembly evidence');
+  return;
+ }
+ if(p.hybridAssembly!==undefined)fail('unexpected hybrid assembly evidence');
  const count=(value:unknown):value is number=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0;
  if(policy!=='automatic-conductive-schur-v1'||p.partitionPolicy!==policy||p.modelKind!=='mixed'||
     !partition||partition.policy!==policy||partition.algorithm!=='longest-extent-midpoint-v1'||
@@ -287,7 +297,7 @@ export function validateBoardFoilReport(
   ? !expectedBarrels.length&&!attachments.length&&evidence.prisms>=1
   : evidence.modelKind==='mixed'&&Number.isSafeInteger(evidence.volumeTetrahedra)&&
     (evidence.volumeTetrahedra>0||evidence.volumeTetrahedra===0&&
-     (attachments.length>0||request.operatorPolicy==='skin-volume-v3'||request.partitionPolicy==='automatic-conductive-schur-v1')&&!expectedBarrels.length&&evidence.prisms>0)&&
+     (attachments.length>0||request.operatorPolicy==='skin-volume-v3'||request.partitionPolicy==='automatic-conductive-schur-v1'||request.partitionPolicy==='automatic-hybrid-v1')&&!expectedBarrels.length&&evidence.prisms>0)&&
     Number.isSafeInteger(evidence.nativeCopperTetrahedra)&&
     Number.isSafeInteger(evidence.fullPotentialCount)&&evidence.fullPotentialCount>0&&
     evidence.fullCurrentCount===3*evidence.nativeCopperTetrahedra&&

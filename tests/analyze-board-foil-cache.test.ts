@@ -29,7 +29,7 @@ function mock(request: AnalysisBoardFoilCheckedRequest, input = problem): Analys
     samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[{input:0,kclRelative:0,kvlRelative:0,kvlUncertaintyRelative:0,
       copperLossW:referenceOhm![0]/4,powerBalanceErrorW:0}]})),
     quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0,maxFullKvlUncertaintyRelative:0},
-    ...(request.partitionPolicy&&{conductiveCorrection:{
+    ...(request.partitionPolicy==='automatic-conductive-schur-v1'&&{conductiveCorrection:{
       method:'sparse owner interiors and shared conductive trace Schur' as const,
       ownerInteriorDofs:[3,3],freeSharedTraceDofs:2,traceUpperEntries:3,ownedPlannedBytes:1024,
       maxOriginalFreeResidualRelative:0,scope:'Original-coordinate conductive correction',
@@ -37,7 +37,7 @@ function mock(request: AnalysisBoardFoilCheckedRequest, input = problem): Analys
     provenance:{
     magneticOperator:{policy:'exact-streamed-v1',method:'unchanged direct tetrahedral pairs',scope:'Exact numerical pair action; physical accuracy unverified',maxFullKvlUncertaintyRelative:0},
       modelKind:'mixed',method:'mock mixed',barrelIds:['barrel-0'],
-      ...(request.partitionPolicy&&{partitionPolicy:request.partitionPolicy,automaticPartition:{
+      ...(request.partitionPolicy==='automatic-conductive-schur-v1'&&{partitionPolicy:request.partitionPolicy,automaticPartition:{
         policy:request.partitionPolicy,status:'selected' as const,reason:'Original mesh partition',
         algorithm:'longest-extent-midpoint-v1' as const,meshOwnershipSignature:'fnv1a64:0123456789abcdef',
         owners:2,originalCopperTetrahedra:18,crossOwnerFaces:1,freeSharedTraceDofs:2,ownerInteriorDofs:[3,3],
@@ -81,6 +81,50 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
     return value;
   };
   validate(adaptive());
+  const hybridProblem:BoardFoilProblem={...problem,request:{...problem.request,partitionPolicy:'automatic-hybrid-v1'}};
+  const hybrid=()=>{
+    const value=adaptive();
+    value.provenance.partitionPolicy='automatic-hybrid-v1';
+    value.provenance.hybridAssembly={policy:'automatic-hybrid-v1',method:'global-compact-mixed',potentialCoordinates:8,currentCoordinates:24,physicalAccuracy:'unverified'};
+    return value;
+  };
+  const validateHybrid=(v:AnalysisBoardFoilCheckedReport)=>validateBoardFoilReport(v,hybridProblem,problem.request.budget);
+  validateHybrid(hybrid());
+  assert.throws(()=>validate(hybrid()),/CHANNEL_FOIL_EVIDENCE/);
+  for(const change of [
+    (v:AnalysisBoardFoilCheckedReport)=>{delete v.provenance.hybridAssembly;},
+    (v:AnalysisBoardFoilCheckedReport)=>{v.provenance.hybridAssembly!.potentialCoordinates++;},
+    (v:AnalysisBoardFoilCheckedReport)=>{v.provenance.hybridAssembly!.currentCoordinates++;},
+    (v:AnalysisBoardFoilCheckedReport)=>{(v.provenance.hybridAssembly as any).method='schur';},
+    (v:AnalysisBoardFoilCheckedReport)=>{(v.provenance.hybridAssembly as any).physicalAccuracy='verified';},
+    (v:AnalysisBoardFoilCheckedReport)=>{v.provenance.compactOperator!.basis='full-mixed';},
+    (v:AnalysisBoardFoilCheckedReport)=>{v.provenance.automaticPartition=mock({...problem.request,partitionPolicy:'automatic-conductive-schur-v1'}).provenance.automaticPartition;},
+    (v:AnalysisBoardFoilCheckedReport)=>{v.conductiveCorrection=mock({...problem.request,partitionPolicy:'automatic-conductive-schur-v1'}).conductiveCorrection;},
+    (v:AnalysisBoardFoilCheckedReport)=>{v.samples[0].columns[0].copperLossW=0;},
+    (v:AnalysisBoardFoilCheckedReport)=>{v.provenance.sourceMapping=[];},
+  ]){const value=hybrid();change(value);assert.throws(()=>validateHybrid(value),/CHANNEL_FOIL_EVIDENCE/);}
+  const dir=mkdtempSync(join(tmpdir(),'p7-hybrid-policy-'));
+  const previous=process.env.P7_COMPACT_PLANAR;
+  const previousWorkers=process.env.P7_COMPACT_PL_THREADS;
+  try {
+    process.env.P7_COMPACT_PLANAR='1';
+    delete process.env.P7_COMPACT_PL_THREADS;
+    const cache=new LocalModelCache(dir);
+    const produceHybrid=(r:AnalysisBoardFoilCheckedRequest)=>{const value=hybrid();value.provenance.maxSeconds=r.budget.maxSeconds;value.provenance.maxMemoryMiB=r.budget.maxMemoryMiB;return value;};
+    const cached=cachedBoardFoilReport(cache,'hybrid',hybridProblem,produceHybrid);
+    assert.equal(cachedBoardFoilReport(cache,'hybrid',hybridProblem,()=>{throw Error('unexpected solve');}).cache?.key,cached.cache?.key);
+    process.env.P7_COMPACT_PL_THREADS='2';
+    assert.notEqual(cachedBoardFoilReport(cache,'hybrid',hybridProblem,produceHybrid).cache?.key,cached.cache?.key);
+    process.env.P7_COMPACT_PL_THREADS='5';
+    assert.throws(()=>cachedBoardFoilReport(cache,'hybrid',hybridProblem,()=>hybrid()),/LOCAL_BUDGET/);
+    delete process.env.P7_COMPACT_PL_THREADS;
+    const schurProblem={...problem,request:{...problem.request,partitionPolicy:'automatic-conductive-schur-v1' as const}};
+    assert.notEqual(cachedBoardFoilReport(cache,'hybrid',schurProblem,r=>mock(r)).cache?.key,cached.cache?.key);
+    const plan={...problem.expected,boardJson:problem.boardJson,geometry:problem.geometry,ports:[{name:'port'}],attachments:[]} as unknown as AutoFoilPlan;
+    runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>{
+      assert.equal(input.request.partitionPolicy,'automatic-hybrid-v1');return hybrid();
+    });
+  } finally {if(previous===undefined)delete process.env.P7_COMPACT_PLANAR;else process.env.P7_COMPACT_PLANAR=previous;if(previousWorkers===undefined)delete process.env.P7_COMPACT_PL_THREADS;else process.env.P7_COMPACT_PL_THREADS=previousWorkers;rmSync(dir,{recursive:true,force:true});}
   for(const change of [
     (v:AnalysisBoardFoilCheckedReport)=>{v.provenance.compactOperator!.nearQuadratureEstimatedTolerance=1e-7;},
     (v:AnalysisBoardFoilCheckedReport)=>{v.quality.maxCompactKvlUncertaintyRelative=1e-9;},
@@ -395,7 +439,7 @@ test('exact grid cache preserves immutable producer evidence through warm and pr
 });
 
 test('exact foil cache keys the physical request and bounds replay size', () => {
-  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v2');
+  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v3');
   const priorCompactPlanar = process.env.P7_COMPACT_PLANAR;
   const priorFullMixed = process.env.P7_COMPACT_FULL_MIXED;
   const dir = mkdtempSync(join(tmpdir(),'p7-foil-cache-'));

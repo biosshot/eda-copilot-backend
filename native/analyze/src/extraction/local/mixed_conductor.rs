@@ -35,6 +35,8 @@ pub enum PartitionPolicy {
     Legacy,
     #[serde(rename = "automatic-conductive-schur-v1")]
     AutomaticConductiveSchurV1,
+    #[serde(rename = "automatic-hybrid-v1")]
+    AutomaticHybridV1,
 }
 
 impl CheckedOperator {
@@ -107,6 +109,8 @@ pub enum Owner {
 pub struct FoilPrism {
     pub layer: String,
     pub planar_triangle: usize,
+    /// Exact physical extrusion interval represented by this foil support.
+    pub z_span_m: [f64; 2],
     pub tetrahedra: Vec<usize>,
     pub first_current: usize,
     pub volume_m3: f64,
@@ -134,6 +138,7 @@ pub struct MixedMap<'a> {
 struct Candidate {
     layer: usize,
     triangle: usize,
+    span: [f64; 2],
     cells: Vec<usize>,
     volume: f64,
     foil_density: Option<f64>,
@@ -235,7 +240,23 @@ pub fn prepare<'a>(
     let mut layers: Vec<_> = mesh.layer_spans.iter().collect();
     layers.sort_by(|a, b| a.1[0].total_cmp(&b.1[0]));
     let barrels: BTreeSet<_> = mesh.barrel_ids.iter().map(String::as_str).collect();
-    let mut by_key = BTreeMap::<(usize, usize), usize>::new();
+    // Only resolved skin meshes need separate through-thickness current modes.
+    // The existing whole-layer grouping stays bitwise unchanged below the screen.
+    let mut stratified = vec![false; layers.len()];
+    if !mesh.copper_skin_layers.is_empty() && max_frequency_hz > 0. {
+        for (i, tet) in mesh.mesh.copper_tetrahedra.iter().enumerate() {
+            let z = tet.nodes.map(|j| mesh.mesh.nodes_m[j][2]);
+            let lo = z.into_iter().fold(f64::INFINITY, f64::min);
+            let hi = z.into_iter().fold(f64::NEG_INFINITY, f64::max);
+            if let Some(layer) = layers.iter().position(|(_, span)| lo >= span[0] && hi <= span[1]) {
+                let t = layers[layer].1[1] - layers[layer].1[0];
+                let inverse_delta = (std::f64::consts::PI * max_frequency_hz * super::super::MU0 * mesh.conductivity_s_m[i]).sqrt();
+                if !inverse_delta.is_finite() { return Err(error("MIXED_FOIL_RANGE", "invalid skin-depth screen")); }
+                stratified[layer] |= t * inverse_delta > 0.2;
+            }
+        }
+    }
+    let mut by_key = BTreeMap::<(usize, usize, u64, u64), usize>::new();
     let mut candidates = Vec::<Candidate>::new();
     let mut groups = vec![None; nt];
     let mut barrel_cell = vec![false; nt];
@@ -256,10 +277,12 @@ pub fn prepare<'a>(
         };
         let triangle = tet.planar_triangle;
         let next = candidates.len();
-        let group = *by_key.entry((layer, triangle)).or_insert_with(|| {
+        let span = if stratified[layer] { [lo, hi] } else { *layers[layer].1 };
+        let group = *by_key.entry((layer, triangle, span[0].to_bits(), span[1].to_bits())).or_insert_with(|| {
             candidates.push(Candidate {
                 layer,
                 triangle,
+                span,
                 cells: Vec::new(),
                 volume: 0.,
                 foil_density: None,
@@ -270,8 +293,7 @@ pub fn prepare<'a>(
         candidates[group].cells.push(i);
     }
     for group in &mut candidates {
-        let span = layers[group.layer].1;
-        let thickness = span[1] - span[0];
+        let thickness = group.span[1] - group.span[0];
         let triangle = mesh.planar_triangles[group.triangle];
         let [a, b, c] = triangle.map(|i| mesh.mesh.nodes_m[i]);
         let twice = ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])).abs();
@@ -394,6 +416,7 @@ pub fn prepare<'a>(
         foils.push(FoilPrism {
             layer: layers[candidate.layer].0.clone(),
             planar_triangle: candidate.triangle,
+            z_span_m: candidate.span,
             tetrahedra: candidate.cells,
             first_current: nc,
             volume_m3: candidate.volume,
@@ -909,7 +932,7 @@ fn solve_checked_mesh_impl(
         .ok_or_else(|| error("MEMORY_LIMIT", "mixed provenance plan overflow"))?;
     let provenance = provenance
         .checked_add(
-            if partition_policy == PartitionPolicy::AutomaticConductiveSchurV1 {
+            if partition_policy != PartitionPolicy::Legacy {
                 4096
             } else {
                 0
@@ -1024,22 +1047,23 @@ fn solve_checked_mesh_impl(
             }
         })
         .collect::<Result<Vec<_>>>()?;
-    if std::env::var_os("P7_COMPACT_PLANAR").as_deref() == Some(std::ffi::OsStr::new("1")) {
+    let hybrid_requested=partition_policy==PartitionPolicy::AutomaticHybridV1;
+    if hybrid_requested || std::env::var_os("P7_COMPACT_PLANAR").as_deref() == Some(std::ffi::OsStr::new("1")) {
         if partition.is_some() {
             return Err(error("HYBRID_UNSUPPORTED", "compact planar partition coupling is not implemented"));
         }
         let layered = request.stack.iter().filter(|layer| !layer.copper).any(|layer| layer.epsilon_r != Some(1.));
         for foil in &map.foils {
-            let span = mesh.layer_spans.get(&foil.layer).ok_or_else(|| error("HYBRID_INPUT", "foil layer span missing"))?;
+            let span = foil.z_span_m;
             let sigma = mesh.conductivity_s_m[foil.tetrahedra[0]];
-            let screen = super::hybrid_applicability::screen(requested_upper, span[1]-span[0], sigma, super::super::MU0).map_err(|reason| error("HYBRID_FREQUENCY", reason))?;
+            let screen = super::hybrid_applicability::screen(effective_upper, span[1]-span[0], sigma, super::super::MU0).map_err(|reason| error("HYBRID_FREQUENCY", reason))?;
             if matches!(screen.action(), super::hybrid_applicability::Action::EnrichOrEscalate) {
                 return Err(error("HYBRID_FREQUENCY", "foil thickness requires frequency enrichment or local volume"));
             }
         }
         let mixed_names: Vec<_> = (0..map.potential_count()).map(|i| format!("mixed-potential-{i}")).collect();
         let mixed_ports: Vec<_> = ports.iter().map(|p| [map.potential_map[p[0]], map.potential_map[p[1]]]).collect();
-        let adaptive = std::env::var_os("P7_COMPACT_FULL_MIXED").as_deref() == Some(std::ffi::OsStr::new("1"));
+        let adaptive = hybrid_requested || std::env::var_os("P7_COMPACT_FULL_MIXED").as_deref() == Some(std::ffi::OsStr::new("1"));
         let charge_bytes = if layered && !adaptive { map.potential_count().checked_mul(map.potential_count()).and_then(|n|n.checked_mul(8)).ok_or_else(|| error("MEMORY_LIMIT", "layered compact trace size overflow"))? } else { 0 };
         let field_available = budget.max_bytes.checked_sub(map.retained_bytes()?).and_then(|n|n.checked_sub(charge_bytes)).ok_or_else(|| error("MEMORY_LIMIT", "layered field resident budget exhausted"))?;
         // One product-space prism contributes up to 36 local terms while the
@@ -1084,6 +1108,14 @@ fn solve_checked_mesh_impl(
         result["compactOperator"] = json!({"version":"compact-planar-v1", "ownership":"one physical owner per copper tetrahedron", "foilSupports":map.foils.len(), "localTetraSupports":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "potentialCoordinates":map.potential_count(), "currentCoordinates":map.current_count(), "dielectric":if layered || adaptive {"spatial-layered-field"} else {"homogeneous-air"}, "accuracy":"unverified", "limits":"bounded dense charge matrix; no proximity or physical approximation acceptance"});
         result["provenance"] = json!({"method":"compact mixed foil and local volume", "modelKind":"mixed", "sourceMapping":mesh.source_mapping, "barrelIds":mesh.barrel_ids, "electrodeAreasM2":mesh.electrode_areas_m2, "prisms":map.foils.len(), "nativeCopperTetrahedra":map.owners.len(), "volumeTetrahedra":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "maxCopperVolumeChange":0., "fullPotentialCount":map.full.potential_count(), "fullCurrentCount":map.full.current_count(), "retainedPotentials":model.potential_nodes.len(), "currentModes":model.current_dofs.len(), "plannedBytes":if layered {budget.max_bytes + reserve + provenance + partition_bytes} else {planned + reserve + provenance + partition_bytes}, "maxSeconds":wall.as_secs_f64(), "maxMemoryMiB":(budget.max_bytes + reserve + provenance + partition_bytes) as f64 / 1048576., "spatialCoverage":"unverified", "bandCoverage":"unverified", "magneticQuadratureCoverage":"unverified", "driveConvention":"1 A RMS matched Norton basis columns", "compactOperator":evidence});
         if !packages.is_empty() { result["provenance"]["attachments"] = json!(packages.iter().map(|p| json!({"id":p.id,"electrodes":p.electrodes})).collect::<Vec<_>>()); }
+        if hybrid_requested {
+            result["provenance"]["partitionPolicy"]=json!("automatic-hybrid-v1");
+            result["provenance"]["hybridAssembly"]=json!({"policy":"automatic-hybrid-v1","method":"global-compact-mixed","potentialCoordinates":map.potential_count(),"currentCoordinates":map.current_count(),"physicalAccuracy":"unverified"});
+        }
+        if skin.is_some() {
+            result["provenance"]["operatorPolicy"]=json!("skin-volume-v3");
+            result["provenance"]["copperSkinMesh"]=skin_profile_evidence(mesh,requested_upper,effective_upper);
+        }
         result["quality"]["scope"] = json!("compact-discrete");
         result["quality"]["physicalError"] = json!("unverified");
         return Ok(result);
@@ -1270,7 +1302,82 @@ mod profile_tests {
             .iter()
             .all(|electrode| !mesh.electrode_nodes(electrode).unwrap().is_empty()));
         assert_eq!(mesh.barrel_ids.len(), 1);
+        let map = prepare(&mesh, &geometry.electrodes, frequency, budget, Duration::from_secs(20)).unwrap();
+        let mut owned = vec![0usize; mesh.mesh.copper_tetrahedra.len()];
+        for (index, foil) in map.foils.iter().enumerate() {
+            let mut volume = 0.;
+            for &cell in &foil.tetrahedra {
+                assert!(matches!(map.owners[cell], Owner::Foil(i) if i == index));
+                owned[cell] += 1;
+                let tet = &mesh.mesh.copper_tetrahedra[cell];
+                let z = tet.nodes.map(|n| mesh.mesh.nodes_m[n][2]);
+                assert!(z.iter().all(|&v| v >= foil.z_span_m[0] && v <= foil.z_span_m[1]));
+                volume += tet.volume_m3;
+            }
+            assert!((volume-foil.volume_m3).abs() <= 1e-8*foil.volume_m3);
+        }
+        for (i, owner) in map.owners.iter().enumerate() {
+            assert_eq!(owned[i], usize::from(matches!(owner, Owner::Foil(_))));
+        }
+        let x: Vec<_> = (0..map.current_count()).map(|i| ((i%11) as f64-5.)/7.).collect();
+        let y: Vec<_> = (0..map.full.current_count()).map(|i| ((i%13) as f64-6.)/9.).collect();
+        let lifted = map.lift_currents(&x).unwrap();
+        let projected = map.project_current_action(&y).unwrap();
+        let left: f64 = lifted.iter().zip(&y).map(|(a,b)| a*b).sum();
+        let right: f64 = x.iter().zip(&projected).map(|(a,b)| a*b).sum();
+        assert!((left-right).abs() <= 1e-10*left.abs().max(right.abs()).max(1.));
+        assert_eq!(map.electrodes.len(), geometry.electrodes.len());
         assert_eq!(serde_json::to_value(&geometry).unwrap(), before);
+    }
+
+    #[test]
+    fn wide_isolated_foil_retains_stratified_ownership_and_projection() {
+        let mut value: serde_json::Value = serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-segmented-coupon.json")).unwrap();
+        value["outline"] = json!([{"x":-4.,"y":-3.},{"x":4.,"y":-3.},{"x":4.,"y":3.},{"x":-4.,"y":3.}]);
+        value["copper"]["fixed"]["tracks"] = json!([]);
+        value["copper"]["fixed"]["zones"] = json!([]);
+        value["pads"].as_array_mut().unwrap().truncate(2);
+        for (i, pad) in value["pads"].as_array_mut().unwrap().iter_mut().enumerate() {
+            pad["at"] = json!({"x": if i == 0 {-1.5} else {1.5}, "y":0.});
+            pad["shape"] = json!({"kind":"rect","widthMm":2.,"heightMm":2.});
+        }
+        let board = crate::import_json(&value.to_string()).board.unwrap();
+        let geometry: board_mesh::Request = serde_json::from_value(json!({
+            "roiMm":[[-4.,-3.],[4.,3.]],
+            "stack":[{"name":"TOP","thicknessM":0.0001,"copper":true,"epsilonR":null,"conductivitySM":58000000.},
+                     {"name":"dielectric","thicknessM":0.0001,"copper":false,"epsilonR":4.,"conductivitySM":null},
+                     {"name":"BOTTOM","thicknessM":0.000005,"copper":true,"epsilonR":null,"conductivitySM":58000000.}],
+            "airMarginM":0.0002,"maxTriangleAreaM2":0.000001,"maxVerticalStepM":0.0001,
+            "airEdgeDivisions":1,"minTriangleAngleDeg":0.,"curveDeviationMm":0.001,
+            "acceptUnknownFillFreshness":true,"allowInsulatedCopperCuts":false,
+            "electrodes":[{"name":"a","sourcePath":"pads[0]","layer":"TOP","upper":true},
+                          {"name":"b","sourcePath":"pads[1]","layer":"TOP","upper":true}],
+            "ports":[["a","b"]]
+        })).unwrap();
+        let budget = AllocationBudget { max_bytes:512*1024*1024, max_nodes:100_000, max_tetrahedra:200_000 };
+        let wall=Duration::from_secs(20);
+        let profile=CheckedOperator::SkinVolumeV3.skin_profile(100_000.,None,geometry.max_vertical_step_m).unwrap().map(|profile|profile.with_thickness_screen([58e6]).unwrap());
+        let mesh=board_mesh::build_profiled(&board,&geometry,budget,wall,None,&[],profile).unwrap();
+        let map=prepare(&mesh,&geometry.electrodes,100_000.,budget,wall).unwrap();
+        assert!(map.foils.iter().any(|foil| foil.z_span_m != mesh.layer_spans[&foil.layer]), "expected a stratified foil away from the volume halo");
+        let mut counts=vec![0usize;mesh.mesh.copper_tetrahedra.len()];
+        for (i,foil) in map.foils.iter().enumerate() {
+            assert!(super::super::hybrid_applicability::screen(100_000.,foil.z_span_m[1]-foil.z_span_m[0],58e6,super::super::super::MU0).unwrap().thickness_passes);
+            let mut volume=0.;
+            for &cell in &foil.tetrahedra {
+                assert!(matches!(map.owners[cell],Owner::Foil(owner) if owner==i)); counts[cell]+=1;
+                let tet=&mesh.mesh.copper_tetrahedra[cell]; volume+=tet.volume_m3;
+                assert!(tet.nodes.iter().all(|&n|mesh.mesh.nodes_m[n][2]>=foil.z_span_m[0] && mesh.mesh.nodes_m[n][2]<=foil.z_span_m[1]));
+            }
+            assert!((volume-foil.volume_m3).abs()<=1e-8*foil.volume_m3);
+        }
+        for (i,owner) in map.owners.iter().enumerate() {assert_eq!(counts[i],usize::from(matches!(owner,Owner::Foil(_))));}
+        let x:Vec<_>=(0..map.current_count()).map(|i|(i%11) as f64-5.).collect();
+        let y:Vec<_>=(0..map.full.current_count()).map(|i|(i%13) as f64-6.).collect();
+        let a:f64=map.lift_currents(&x).unwrap().iter().zip(&y).map(|(a,b)|a*b).sum();
+        let b:f64=x.iter().zip(map.project_current_action(&y).unwrap()).map(|(a,b)|a*b).sum();
+        assert!((a-b).abs()<=1e-10*a.abs().max(b.abs()).max(1.));
+        assert_eq!(map.electrodes.len(),2);
     }
 }
 
@@ -1328,7 +1435,7 @@ impl MixedMap<'_> {
         let mut supports = Vec::with_capacity(self.foils.len());
         let mut dual = Vec::with_capacity(nq);
         for (q, foil) in self.foils.iter().enumerate() {
-            let span = *self.mesh.layer_spans.get(&foil.layer).ok_or_else(|| error("HYBRID_INPUT", "foil layer span missing"))?;
+            let span = foil.z_span_m;
             let indices = self.mesh.planar_triangles[foil.planar_triangle];
             let mut xy = indices.map(|i| { let p = self.mesh.mesh.nodes_m[i]; [p[0], p[1]] });
             let cross = (xy[1][0]-xy[0][0])*(xy[2][1]-xy[0][1])-(xy[1][1]-xy[0][1])*(xy[2][0]-xy[0][0]);
@@ -1411,6 +1518,14 @@ mod compact_board_dispatch_test {
         assert_eq!(layered["coverage"],"unverified");
         assert_eq!(layered["operator"],"compact-planar-layered-prototype");
         assert_eq!(layered["samples"][0]["columns"].as_array().unwrap().len(),2);
+        unsafe { std::env::remove_var("P7_COMPACT_PLANAR"); }
+        let automatic=solve_checked_mesh_impl(&mesh,&dielectric,CheckedGrid{frequencies_hz:&[1000.],reference_ohm:&[50.,50.],max_iterations:1},None,&[],None,PartitionPolicy::AutomaticHybridV1,budget,Instant::now(),wall).unwrap();
+        assert_eq!(automatic["provenance"]["partitionPolicy"],"automatic-hybrid-v1");
+        assert_eq!(automatic["provenance"]["hybridAssembly"]["method"],"global-compact-mixed");
+        assert_eq!(automatic["provenance"]["compactOperator"]["basis"],"adaptive-mixed-closure");
+        assert!(automatic["provenance"].get("automaticPartition").is_none());
+        assert!(automatic.get("conductiveCorrection").is_none());
+        assert_eq!(automatic["coverage"],"unverified");
     }
 }
 impl MixedMap<'_> {
@@ -1448,7 +1563,7 @@ impl MixedMap<'_> {
             let (ids,nodes)=triangles[fi];
             let xy=ids.map(|i| {let p=self.mesh.mesh.nodes_m[i];[p[0],p[1]]});
             let center=[(xy[0][0]+xy[1][0]+xy[2][0])/3.,(xy[0][1]+xy[1][1]+xy[2][1])/3.];
-            let span=*self.mesh.layer_spans.get(&foil.layer).ok_or_else(||error("HYBRID_INPUT","foil layer span missing"))?;
+            let span=foil.z_span_m;
             let density=self.full.cells[foil.tetrahedra[0]].density_per_amp_m2*self.current_map[3*foil.tetrahedra[0]].ok_or_else(||error("HYBRID_INPUT","foil current mapping missing"))?.weight;
             let current_density:Vec<_>=modes.iter().map(|mode|[density*mode[foil.first_current],density*mode[foil.first_current+1],0.]).collect();
             if nodes[0]==nodes[1] && nodes[1]==nodes[2] {
@@ -1537,7 +1652,7 @@ impl MixedMap<'_> {
             let ids=self.mesh.planar_triangles[foil.planar_triangle];
             let mut xy=ids.map(|id|{let p=self.mesh.mesh.nodes_m[id];[p[0],p[1]]});
             let cross=(xy[1][0]-xy[0][0])*(xy[2][1]-xy[0][1])-(xy[1][1]-xy[0][1])*(xy[2][0]-xy[0][0]); if cross<0. {xy.swap(1,2);}
-            let span=*self.mesh.layer_spans.get(&foil.layer).ok_or_else(||error("HYBRID_INPUT","foil layer span missing"))?;
+            let span=foil.z_span_m;
             let prism=super::prism::Prism::new(format!("foil-current-{i}"),xy,span)?;
             let density=self.full.cells[foil.tetrahedra[0]].density_per_amp_m2*self.current_map[3*foil.tetrahedra[0]].ok_or_else(||error("HYBRID_INPUT","foil current mapping missing"))?.weight;
             out.push(super::planar_operator::SparseSupport {prism,charge_density:vec![],current_density:vec![(foil.first_current,[density,0.,0.]),(foil.first_current+1,[0.,density,0.])]});
@@ -1590,7 +1705,7 @@ impl MixedMap<'_> {
             let (ids,nodes)=triangles[fi];
             let xy=ids.map(|i| {let p=self.mesh.mesh.nodes_m[i];[p[0],p[1]]});
             let center=[(xy[0][0]+xy[1][0]+xy[2][0])/3.,(xy[0][1]+xy[1][1]+xy[2][1])/3.];
-            let span=*self.mesh.layer_spans.get(&foil.layer).ok_or_else(||error("HYBRID_INPUT","foil layer span missing"))?;
+            let span=foil.z_span_m;
             let density=self.full.cells[foil.tetrahedra[0]].density_per_amp_m2*self.current_map[3*foil.tetrahedra[0]].ok_or_else(||error("HYBRID_INPUT","foil current mapping missing"))?.weight;
             let current_density:Vec<_>=modes.iter().map(|mode|[density*mode[foil.first_current],density*mode[foil.first_current+1],0.]).collect();
             if nodes[0]==nodes[1] && nodes[1]==nodes[2] {

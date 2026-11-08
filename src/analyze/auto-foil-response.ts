@@ -45,7 +45,7 @@ export function runAutoFoil(
  const referenceOhm=plan.ports.map(()=>50);
  const problem: BoardFoilProblem = {kind:'board-foil-checked',boardJson:plan.boardJson,geometry:plan.geometry,
   expected:{electrodePairs:plan.electrodePairs,sourceCopper:plan.sourceCopper,sourceBarrels:plan.sourceBarrels},
-  request:{frequenciesHz,referenceOhm,budget,partitionPolicy:'automatic-conductive-schur-v1',
+  request:{frequenciesHz,referenceOhm,budget,partitionPolicy:process.env.P7_COMPACT_PLANAR==='1'?'automatic-hybrid-v1':'automatic-conductive-schur-v1',
    ...(plan.attachments.length&&{attachments:plan.attachments}),
    ...(skin&&{operatorPolicy:'skin-volume-v3' as const,profileUpperHz})}};
  const report=execute(problem);

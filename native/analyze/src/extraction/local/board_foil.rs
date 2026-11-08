@@ -781,11 +781,14 @@ pub fn solve_checked(
             "complete copper and original finite pads required",
         ));
     }
-    let skin = operator.skin_profile(
+    let mut skin = operator.skin_profile(
         maximum,
         request.profile_upper_hz,
         geometry.max_vertical_step_m,
     )?;
+    if request.partition_policy==mixed_conductor::PartitionPolicy::AutomaticHybridV1 {
+        skin=skin.map(|profile|profile.with_thickness_screen(geometry.stack.iter().filter(|layer|layer.copper).filter_map(|layer|layer.conductivity_s_m))).transpose()?;
+    }
     if skin.is_some() {
         // Apply the existing physical pad/closed copper and electrical-size
         // guard before paying for a larger profiled mesh.

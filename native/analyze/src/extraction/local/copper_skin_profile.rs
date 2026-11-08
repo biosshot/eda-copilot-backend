@@ -11,6 +11,26 @@ pub(super) struct Profile {
 }
 
 impl Profile {
+    /// Tighten both shared mesh targets to at most one fifth of every skin depth.
+    pub fn with_thickness_screen(self, conductivities: impl IntoIterator<Item = f64>) -> Result<Self, String> {
+        if !self.upper_hz.is_finite() || self.upper_hz <= 0.
+            || !self.current_step_m.is_finite() || self.current_step_m <= 0.
+            || !self.field_step_m.is_finite() || self.field_step_m <= 0.
+        { return Err("BOARD_PROFILE: invalid frequency or mesh target".into()); }
+        let mut target = self.current_step_m.min(self.field_step_m);
+        let mut any = false;
+        for sigma in conductivities {
+            any = true;
+            if !sigma.is_finite() || sigma <= 0. { return Err("BOARD_PROFILE: invalid conductivity".into()); }
+            let depth = self.skin_depth_m(sigma);
+            let step = depth / 5.;
+            if !step.is_finite() || step <= 0. { return Err("BOARD_PROFILE: invalid skin depth".into()); }
+            target = target.min(step);
+        }
+        if !any { return Err("BOARD_PROFILE: no conductor conductivity".into()); }
+        Ok(Self { current_step_m: target, field_step_m: target, ..self })
+    }
+
     // This is a through-thickness screening target for planar nonmagnetic Cu.
     // It says nothing about lateral edges or proximity.
     pub fn skin_depth_m(self, conductivity_s_m: f64) -> f64 {
@@ -23,16 +43,26 @@ impl Profile {
         conductivity_s_m: Option<f64>,
         authored_step_m: f64,
     ) -> Option<usize> {
+        if !thickness_m.is_finite() || thickness_m <= 0.
+            || !authored_step_m.is_finite() || authored_step_m <= 0.
+        {
+            return None;
+        }
         let mut step = authored_step_m;
         if let Some(sigma) = conductivity_s_m {
+            if !sigma.is_finite() || sigma <= 0.
+                || !self.upper_hz.is_finite() || self.upper_hz <= 0.
+                || !self.current_step_m.is_finite() || self.current_step_m <= 0.
+                || !self.field_step_m.is_finite() || self.field_step_m <= 0.
+            {
+                return None;
+            }
             let skin_step = self.skin_depth_m(sigma) / 3.;
             if !skin_step.is_finite() || skin_step <= 0. {
                 return None;
             }
-            if thickness_m > skin_step && skin_step < self.current_step_m.max(self.field_step_m) {
-                // The refinement uses identical Cu planes in both field/current meshes.
-                step = skin_step.min(self.current_step_m).min(self.field_step_m);
-            }
+            // Current and field share Cu planes; never weaken an authored step.
+            step = step.min(skin_step).min(self.current_step_m).min(self.field_step_m);
         }
         let pieces = (thickness_m / step).ceil();
         (1. ..usize::MAX as f64)
@@ -271,6 +301,23 @@ mod tests {
             max_extrusion_planes(4, usize::MAX, 100, 100, usize::MAX),
             None
         );
+    }
+
+    #[test]
+    fn supplied_refinement_and_authored_limits_both_apply() {
+        let profile = Profile { upper_hz: 100_000., current_step_m: 20e-6, field_step_m: 10e-6 };
+        assert!(profile.skin_depth_m(58e6) / 3. > profile.field_step_m);
+        let screened = Profile { current_step_m: 1e-3, field_step_m: 1e-3, ..profile }.with_thickness_screen([58e6, 29e6]).unwrap();
+        assert!(screened.current_step_m <= profile.skin_depth_m(58e6) / 5.);
+        assert_eq!(screened.current_step_m, screened.field_step_m);
+        assert!(profile.with_thickness_screen([0.]).is_err());
+        assert!(profile.with_thickness_screen([]).is_err());
+        assert_eq!(profile.pieces(100e-6, Some(58e6), 1e-3), Some(10));
+        assert_eq!(profile.pieces(100e-6, Some(58e6), 5e-6), Some(20));
+        assert_eq!(profile.pieces(100e-6, None, 1e-3), Some(1));
+        assert_eq!(profile.pieces(100e-6, Some(f64::NAN), 1e-3), None);
+        assert_eq!(profile.pieces(100e-6, Some(58e6), 0.), None);
+        assert_eq!(Profile { field_step_m: f64::NAN, ..profile }.pieces(100e-6, Some(58e6), 1e-3), None);
     }
 
     #[test]

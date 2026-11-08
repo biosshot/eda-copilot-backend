@@ -53,6 +53,16 @@ Rows without an explicit release label use debug binaries and do not measure pro
 | Release goal-admitted near moments, strict exact fallback, shared rows, cancellation and positive-underflow bound | pass | 0.219 s | `1794129883172122100` |
 | Release adaptive air/component/FR4 after goal admission | pass | 0.171 s | `1794129930738947800` |
 | Release imported via after goal admission | native deadline refusal; no channel | 25.219 s | `1794129883632587900` |
+| Release compact suite including serial/two-worker bit identity on two distinct planar/local jobs and worker-memory refusal | nine pass | 0.187 s | `1794130552987098700` |
+| Release skin mesh target, radial constraints and tighter supplied-step regression | three pass | 0.172 s | `1794130553412407500` |
+| Release explicit automatic-hybrid layered dispatch, two drives and missing contact | pass | 0.203 s | `1794130568907316700` |
+| Release imported via with four planar/local workers | native deadline refusal; no channel | 25.219 s | `1794130593376590500` |
+| Release original profiled pad/barrel fixture with ownership and lift/projection checks | pass | 0.250 s | `1794130934337610800` |
+| Debug wide isolated stratified foil, δ/5 target, per-support 0.2 screen, ownership/volume/contacts and transpose power | pass | 0.235 s | `1794131079169309300` |
+
+The first stratification assertion failed on the original via fixture (`1794130553803999700`, 0.234 s), whose local halo leaves no applicable foil in this mesh. That fixture retains its contact/ownership checks; a separate positive wide-foil input is modified only in memory. Its first import failed because the test added an unsupported top-level `vias` field (`1794130934782036100`, 0.156 s). Removing that field and using the canonical nested geometry permits the positive control above. Neither a source fixture nor an applicability threshold was weakened. The production native changes compiled in release; the final fixture correction and stricter positive assertion compiled and ran in debug. No full profiled-channel or RF acceptance is established.
+
+The automatic-hybrid policy uses explicit global compact assembly rather than misreporting an original-space Schur solve. Ten focused cache/validation tests pass with generation v3, including policy/worker isolation, mismatched evidence and automatic request routing. The initial positive mock incorrectly reported a producer budget different from its supplied budget; correcting the mock restored the pass without changing validation. TypeScript typechecking passes. The four-worker via still does not finish; no parallel full-channel speedup is claimed.
 
 Goal admission does not resolve the via bottleneck in this control. Its initial sparse field/charge preparation completes in 0.074 s, then the magnetic action still reaches the unchanged native deadline. Moment-tail contributions use absolute density envelopes and outward-rounded positive arithmetic; near quadrature and floating-point evaluation of the moment expansion are not certified by the geometric tail. Initial unified admission control (`1794129779219477100`, 0.188 s) passed before root review added positive-underflow protection and the corresponding algebraic assertion; the final control above covers that correction. No full-board speed claim follows from these results.
 

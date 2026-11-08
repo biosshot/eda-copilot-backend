@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add the explicit automatic-hybrid assembly policy through planner, cache, native dispatch and strict report validation, keeping its unverified status separate from conductive Schur evidence. Prepare stratified finite-prism current supports on resolved skin meshes and reserve bounded, ordered parallel planar/local kernel work.
+
 - Admit geometrically separated mixed near pairs to moment evaluation only within the existing cumulative per-action row allowance; otherwise retain exact near evaluation. Preserve cancellation-safe outward-rounded envelopes, including positive underflow, and shared-pair reciprocity.
 
 - Add an experimental finite-thickness skin/proximity profile basis with stable exact cell averages, transport integrals and one resistive Gram. This primitive does not yet extend runtime frequency admission. Invalidate the changed hybrid operator cache generation.

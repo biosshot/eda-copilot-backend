@@ -228,7 +228,7 @@ export interface AnalysisLocalDcReport {
 }
 export interface AnalysisBoardFoilCheckedRequest {
     frequenciesHz: number[];
-    partitionPolicy?: 'automatic-conductive-schur-v1';
+    partitionPolicy?: 'automatic-conductive-schur-v1' | 'automatic-hybrid-v1';
     operatorPolicy?: 'skin-volume-v3';
     /** Freeze the profiled mesh at this upper frequency for supplemental samples. */
     profileUpperHz?: number;
@@ -296,7 +296,8 @@ export interface AnalysisBoardFoilCheckedReport {
                 plannedBytes: number; treeSignature: string; geometrySignature: string;
                 basisCover: AnalysisMagneticBasisCover }
         );
-        partitionPolicy?: 'automatic-conductive-schur-v1';
+        partitionPolicy?: 'automatic-conductive-schur-v1' | 'automatic-hybrid-v1';
+        hybridAssembly?: { policy: 'automatic-hybrid-v1'; method: 'global-compact-mixed'; potentialCoordinates: number; currentCoordinates: number; physicalAccuracy: 'unverified' };
         automaticPartition?: {
             policy: 'automatic-conductive-schur-v1'; status: 'selected' | 'not-applicable';
             reason: string; algorithm: 'longest-extent-midpoint-v1'; meshOwnershipSignature: string;
