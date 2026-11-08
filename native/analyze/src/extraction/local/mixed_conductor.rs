@@ -736,16 +736,13 @@ pub fn solve_checked(
     board: &crate::model::Board,
     request: &board_mesh::Request,
     grid: CheckedGrid<'_>,
-    mut budget: AllocationBudget,
+    budget: AllocationBudget,
     wall: Duration,
 ) -> Result<serde_json::Value> {
     let start = Instant::now();
     let reserve = checked_reserve(request, grid, None)?;
-    budget.max_bytes = budget
-        .max_bytes
-        .checked_sub(reserve)
-        .ok_or_else(|| error("MEMORY_LIMIT", "mixed checked response exceeds budget"))?;
-    let mesh = board_mesh::build(board, request, budget, wall.saturating_sub(start.elapsed()))?;
+    let mesh_budget=AllocationBudget { max_bytes:budget.max_bytes.checked_sub(reserve).ok_or_else(|| error("MEMORY_LIMIT", "mixed checked response exceeds budget"))?, ..budget };
+    let mesh = board_mesh::build(board, request, mesh_budget, wall.saturating_sub(start.elapsed()))?;
     solve_checked_mesh(
         mesh,
         request,
@@ -863,7 +860,7 @@ pub fn solve_checked_spatial_partition(
     grid: CheckedGrid<'_>,
     owners: Option<&[usize]>,
     max_trace_output_bytes: usize,
-    mut budget: AllocationBudget,
+    budget: AllocationBudget,
     wall: Duration,
 ) -> Result<serde_json::Value> {
     let start = Instant::now();
@@ -873,13 +870,6 @@ pub fn solve_checked_spatial_partition(
             "exact original Cu tetrahedron ownership required",
         ));
     }
-    let reserve = checked_reserve(request, grid, None)?;
-    budget.max_bytes = budget.max_bytes.checked_sub(reserve).ok_or_else(|| {
-        error(
-            "MEMORY_LIMIT",
-            "shared return exact-grid output exceeds budget",
-        )
-    })?;
     solve_checked_mesh_impl(
         mesh,
         request,
@@ -968,10 +958,13 @@ fn solve_checked_mesh_impl_policy(
 ) -> Result<serde_json::Value> {
     use serde_json::json;
     let reserve = checked_reserve_policy(request, grid, skin, operator, partition_policy)?
-        + super::checked_packages::output_reserve(
+        .checked_add(super::checked_packages::output_reserve(
             packages,
             grid.frequencies_hz.len() * request.ports.len(),
-        );
+        )).ok_or_else(||error("MEMORY_LIMIT","mixed output reservation overflow"))?;
+    // This reserve belongs to the mixed solver, independently of any outer
+    // serializer reservation. Admit it before map/operator allocation.
+    budget.max_bytes=budget.max_bytes.checked_sub(reserve).ok_or_else(||error("MEMORY_LIMIT","mixed checked output exceeds budget"))?;
     let CheckedGrid {
         frequencies_hz,
         reference_ohm,
@@ -1636,7 +1629,7 @@ mod compact_board_dispatch_test {
         for (i,p) in value["pads"].as_array_mut().unwrap().iter_mut().enumerate() { p["at"]=json!({"x":if i==0 {-0.4}else{0.4},"y":0.}); p["shape"]=json!({"kind":"rect","widthMm":0.25,"heightMm":0.25}); }
         let board=crate::import_json(&value.to_string()).board.unwrap();
         let request: board_mesh::Request=serde_json::from_value(json!({"roiMm":[[-1.,-1.],[1.,1.]],"stack":[{"name":"TOP","thicknessM":0.00001,"copper":true,"epsilonR":null,"conductivitySM":58000000.},{"name":"air","thicknessM":0.0001,"copper":false,"epsilonR":1.,"conductivitySM":null},{"name":"BOTTOM","thicknessM":0.00001,"copper":true,"epsilonR":null,"conductivitySM":58000000.}],"airMarginM":0.0002,"maxTriangleAreaM2":0.000002,"maxVerticalStepM":0.0001,"airEdgeDivisions":1,"minTriangleAngleDeg":0.,"curveDeviationMm":0.001,"acceptUnknownFillFreshness":true,"allowInsulatedCopperCuts":false,"electrodes":[{"name":"a","sourcePath":"pads[0]","layer":"TOP","upper":false},{"name":"b","sourcePath":"pads[1]","layer":"TOP","upper":false}],"ports":[["a","b"],["b","a"]]})).unwrap();
-        let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:10000,max_tetrahedra:10000};
+        let budget=AllocationBudget{max_bytes:512*1024*1024,max_nodes:10000,max_tetrahedra:10000};
         let wall=Duration::from_secs(25); let mesh=board_mesh::build(&board,&request,budget,wall).unwrap();
         // Run this isolated test under a single-test supervisor: environment is process-wide.
         struct EnvRestore(Option<std::ffi::OsString>);
@@ -1654,6 +1647,8 @@ mod compact_board_dispatch_test {
         let attachment: super::super::checked_packages::Attachment = serde_json::from_value(json!({"id":"bridge","electrodes":["a","b"],"model":{"id":"resistor","kind":"network","ports":["terminals"],"data":{"format":"coupled-rlc","referenceTopology":"infinity","potentialNodes":["positive","negative"],"currentDofs":["series"],"incidence":[[0,0,1.],[1,0,-1.]],"portIncidence":[[0,0,1.],[1,0,-1.]],"resistanceOhm":[[0,0,25.]],"inductanceH":[],"capacitanceF":[],"structuralGaugeModes":[[1.,1.]],"conservedPotentialModes":[],"portTerminals":[{"positive":{"node":"positive"},"negative":{"node":"negative"}}]},"validity":{"status":"conditional","domain":{"bandHz":[900.,1100.]}},"analyses":["networkParameters"]}})).unwrap();
         let packages=super::super::checked_packages::validate(vec![attachment],&request,&[1000.]).unwrap();
         let with_package=solve_checked_mesh_impl(&mesh,&request,CheckedGrid{frequencies_hz:&[1000.],reference_ohm:&[50.,50.],max_iterations:1},None,&packages,None,PartitionPolicy::Legacy,budget,Instant::now(),wall).unwrap();
+        assert!(with_package["provenance"]["plannedBytes"].as_u64().unwrap() <= budget.max_bytes as u64);
+        assert!(with_package["provenance"]["maxMemoryMiB"].as_f64().unwrap() <= 512.);
         for column in with_package["samples"][0]["columns"].as_array().unwrap() {
             assert_eq!(column["packages"].as_array().unwrap().len(),1);
             assert!(column["powerBalanceErrorW"].as_f64().unwrap() < 1e-8);

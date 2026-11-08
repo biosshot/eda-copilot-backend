@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reserve mixed response/package output before mapping and model allocation, using a separate pre-reserved mesh budget for direct callers. This fixes producer memory evidence exceeding the admitted API budget; consumer validation remains strict.
+
 - Recover physical port-pair RMS voltage/current and aggregate finite-contact currents from checked matched S samples, preserving actual terminal IDs, polarity and layer identity. Keep copper/package losses separate and spatial return-current recovery explicitly unverified.
 
 - Add a distinct hybrid profiled implementation envelope through 10 GHz, guarded by the unchanged electrical-size, physical contact, mesh, memory and residual checks. Legacy 10/100 kHz policies retain their limits; the wider envelope is not RF accuracy acceptance. Publish validated supplemental frequency points and independent holdouts while preserving exact-grid network replay.
