@@ -55,4 +55,7 @@ for(const value of results.slice(1)){
  for(const [i,row] of value.loss.copperWPerA2.entries())for(const [j,z] of row.entries())assert.ok(close(z,ref.loss.copperWPerA2[i][j],1e-8),`complex loss-Gram sensitivity exceeds ${tolerance*100}% plus floor`);
 }
 writeFileSync(`${folder}/comparison.json`,JSON.stringify({status:'pass',scope:'rotated copper/contact coupon with automatic domain and mesh orientation sensitivity; finite dielectric domains may differ; physical accuracy unverified',limits:{maxSeconds:seconds,maxMemoryMiB:memoryMiB},results},null,2));
+}catch(error){
+ writeFileSync(`${folder}/comparison.json`,JSON.stringify({status:'validation-failure',reason:String(error),scope:'automatic domain and mesh orientation development control; physical accuracy unverified',results},null,2));
+ throw error;
 }finally{await terminateAnalysisPool();}
