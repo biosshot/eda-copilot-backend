@@ -1972,12 +1972,15 @@
         "case": "Сверху+снизу + разрыв на одном/двух слоях",
         "implementation": {
           "status": "mapped",
-          "scope": "partial",
+          "scope": "partial; structural hybrid mesh/map only",
           "code": [
-            "native/analyze/src/extraction/local/hybrid_section_model.rs"
+            "native/analyze/src/extraction/local/hybrid_section_model.rs",
+            "native/analyze/src/extraction/local/mixed_conductor.rs"
           ],
-          "shortControls": [],
-          "coverageGap": "components exist separately; combined two-plane split control missing"
+          "shortControls": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs#aligned_pad_orientation_tests::inner_signal_with_split_top_and_bottom_references_stays_disconnected"
+          ],
+          "coverageGap": "Combined TOP/BOTTOM split geometry preserves five conductor components around INNER signal (1794143097287789000); joint electrical response, actual inter-plane connections and independent physical reference remain unverified."
         },
         "acceptance": {
           "status": "open",
@@ -2280,9 +2283,15 @@
         "sourceSection": "primary",
         "case": "Разрывы опоры сверху и снизу одновременно",
         "implementation": {
-          "status": "unmapped",
-          "code": null,
-          "shortControls": []
+          "status": "mapped",
+          "code": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs"
+          ],
+          "shortControls": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs#aligned_pad_orientation_tests::inner_signal_with_split_top_and_bottom_references_stays_disconnected"
+          ],
+          "scope": "partial; structural hybrid mesh/map only",
+          "coverageGap": "Combined TOP/BOTTOM split geometry preserves five conductor components around INNER signal (1794143097287789000); joint electrical response, actual inter-plane connections and independent physical reference remain unverified."
         },
         "acceptance": {
           "status": "open",
