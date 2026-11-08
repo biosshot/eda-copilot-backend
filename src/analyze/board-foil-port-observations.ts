@@ -4,8 +4,7 @@ import type { BoardFoilReport } from './types.ts';
 type Complex = Readonly<{real:number;imaginary:number}>;
 type ContactCurrent = {sourcePath:string;layer:string;currentA:Complex};
 
-/** Recover only finite physical-port quantities from a checked matched-S report.
- * This does not recover a spatial copper-current map. */
+/** Recover physical-port quantities and forward checked discrete spatial data when present. */
 export function boardFoilPortObservations(plan:AutoFoilPlan,report:BoardFoilReport) {
  const n=plan.ports.length, nf=report.frequenciesHz.length;
  if(!n||n>16||nf===0||nf*n>256||report.parameters.length!==nf||report.samples.length!==nf||
@@ -52,7 +51,7 @@ export function boardFoilPortObservations(plan:AutoFoilPlan,report:BoardFoilRepo
    const packages=(col.packages??[]).map(p=>({id:p.id,lossW:p.lossW}));
    for(const item of packages)totalPowerW+=item.lossW;
    if(!finite(totalPowerW))throw new Error('CHANNEL_FOIL_OBSERVABLES: total power overflow');
-   drives.push({drivePort:plan.ports[j].name,driveCurrentA:1,portObservations:plan.ports.map((port,i)=>{
+   drives.push({...(col.spatialRecovery?{spatialRecoveryRef:{sampleIndex:f,columnIndex:j}}:{}),drivePort:plan.ports[j].name,driveCurrentA:1,portObservations:plan.ports.map((port,i)=>{
     const positive=terminals.get(port.positive),negative=terminals.get(port.negative);
     if(!positive||!negative)throw new Error('CHANNEL_FOIL_OBSERVABLES: named port terminal missing');
     const multiplier=Math.sqrt(references[i])*scale;
@@ -63,5 +62,6 @@ export function boardFoilPortObservations(plan:AutoFoilPlan,report:BoardFoilRepo
   }
   output.push({frequencyHz,drives});
  }
- return {frequencies:output,spatialRecovery:{status:'unverified' as const,reason:'Port-contact currents and voltages are recovered from S only; no spatial copper return-current map is computed.'}};
+ const recovered=report.samples.every(sample=>sample.columns.every(column=>column.spatialRecovery?.status==='recovered-discrete'));
+ return {frequencies:output,spatialRecovery:recovered?{status:'recovered-discrete' as const,reason:'Current densities and losses are recovered from the compact discrete solution; physical accuracy remains unverified.'}:{status:'unverified' as const,reason:'Spatial current recovery is unavailable for at least one drive.'}};
 }

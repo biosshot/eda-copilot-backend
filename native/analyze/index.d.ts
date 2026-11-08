@@ -272,7 +272,7 @@ export interface AnalysisBoardFoilCheckedReport {
     samples: {
         frequencyHz: number;
         lossGrams?: AnalysisBoardFoilLossGrams;
-        columns: { input: number; kclRelative: number; kvlRelative: number; kvlUncertaintyRelative?: number; magneticCertificate?: AnalysisMagneticCertificate; compactKvlUncertaintyRelative?: number; compactMagneticCertificate?: { policy: 'compact-mixed-near-far'; nearQuadratureErrorCertified: false }; copperLossW: number; powerBalanceErrorW: number; packages?: { id: string; currentA: { real: number; imaginary: number }; lossW: number }[] }[];
+        columns: { input: number; kclRelative: number; kvlRelative: number; kvlUncertaintyRelative?: number; magneticCertificate?: AnalysisMagneticCertificate; compactKvlUncertaintyRelative?: number; compactMagneticCertificate?: { policy: 'compact-mixed-near-far'; nearQuadratureErrorCertified: false }; copperLossW: number; powerBalanceErrorW: number; spatialRecovery?: { status: "recovered-discrete"; physicalAccuracy: "unverified"; driveConvention: string; copperLossW: number; supports: (({ kind: "foil"; layer: string; triangle: number; zM: [number, number]; xyM: [[number, number], [number, number], [number, number]] } | { kind: "tetrahedron"; verticesM: [[number, number, number], [number, number, number], [number, number, number], [number, number, number]] }) & { volumeM3: number; currentDensityRealAPerM2: [number, number, number]; currentDensityImaginaryAPerM2: [number, number, number]; lossW: number })[] }; packages?: { id: string; currentA: { real: number; imaginary: number }; lossW: number }[] }[];
     }[];
     enrichment: {
         iteration: number; frequencyHz: number; input: number; potentialModes: number; currentModes: number;

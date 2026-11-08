@@ -34,3 +34,14 @@ test('supports unequal references, sums native copper and package powers, and ag
  assert.ok(Math.abs(networkPower-d.totalCopperAndPackageLossW)<1e-12);
  assert.equal(d.portObservations.length,2);
 });
+
+test('spatial observation references the canonical sample without duplicating supports',()=>{
+ const {plan,report}=fixture([50],[[{real:0,imaginary:0}]]);
+ report.samples[0].columns[0].spatialRecovery={status:'recovered-discrete',physicalAccuracy:'unverified',driveConvention:'1 A RMS matched Norton',copperLossW:0,supports:[{kind:'foil',layer:'TOP',triangle:0,zM:[0,1],xyM:[[0,0],[1,0],[0,1]],volumeM3:1,currentDensityRealAPerM2:[0,0,0],currentDensityImaginaryAPerM2:[0,0,0],lossW:0}]};
+ const out=boardFoilPortObservations(plan,report);
+ const drive=out.frequencies[0].drives[0];
+ assert.deepEqual(drive.spatialRecoveryRef,{sampleIndex:0,columnIndex:0});
+ assert.equal(out.spatialRecovery.status,'recovered-discrete');
+ assert.equal(report.samples[drive.spatialRecoveryRef!.sampleIndex].columns[drive.spatialRecoveryRef!.columnIndex].spatialRecovery!.supports.length,1);
+ assert.equal(JSON.stringify(out).includes('currentDensityRealAPerM2'),false);
+});

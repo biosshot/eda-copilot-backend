@@ -487,7 +487,7 @@ test('exact grid cache preserves immutable producer evidence through warm and pr
 });
 
 test('exact foil cache keys the physical request and bounds replay size', () => {
-  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v5');
+  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v6');
   const priorCompactPlanar = process.env.P7_COMPACT_PLANAR;
   const priorFullMixed = process.env.P7_COMPACT_FULL_MIXED;
   const dir = mkdtempSync(join(tmpdir(),'p7-foil-cache-'));
@@ -621,4 +621,23 @@ test('explicit high-memory board foil budget reaches producer without raising de
   if(before===undefined)delete process.env.P7_VERIFY_MEMORY_MIB;else process.env.P7_VERIFY_MEMORY_MIB=before;
   rmSync(dir,{recursive:true,force:true});
  }
+});
+
+test('spatial recovery validates geometry, drive and loss before publication', () => {
+ const good=()=>{
+  const value=mock(problem.request);
+  for(const sample of value.samples) sample.columns[0].spatialRecovery={status:'recovered-discrete',physicalAccuracy:'unverified',driveConvention:'1 A RMS matched Norton',copperLossW:12.5,supports:[{kind:'foil',layer:'TOP',triangle:0,zM:[0,1],xyM:[[0,0],[1,0],[0,1]],volumeM3:1,currentDensityRealAPerM2:[1,0,0],currentDensityImaginaryAPerM2:[0,1,0],lossW:12.5}]};
+  return value;
+ };
+ const validate=(v:AnalysisBoardFoilCheckedReport)=>validateBoardFoilReport(v,problem,problem.request.budget);
+ validate(good());
+ for(const mutate of [
+  (v:any)=>{v.samples[0].columns[0].spatialRecovery=null},
+  (v:any)=>{v.samples[0].columns[0].spatialRecovery=false},
+  (v:any)=>{v.samples[0].columns[0].spatialRecovery.supports=[]},
+  (v:any)=>{v.samples[0].columns[0].spatialRecovery.driveConvention='unknown'},
+  (v:any)=>{v.samples[0].columns[0].spatialRecovery.supports[0].xyM=[[0,0]]},
+  (v:any)=>{v.samples[0].columns[0].spatialRecovery.supports[0].currentDensityRealAPerM2=null},
+  (v:any)=>{v.samples[0].columns[0].spatialRecovery.supports[0].lossW=1},
+ ]) {const bad=good();mutate(bad);assert.throws(()=>validate(bad),/CHANNEL_FOIL_EVIDENCE/);}
 });

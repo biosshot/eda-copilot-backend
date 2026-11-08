@@ -282,6 +282,21 @@ export function validateBoardFoilReport(
   [copperLossW,powerBalanceErrorW].some(x=>!Number.isFinite(x)||x<0)))
   fail('native foil residual or power evidence is outside its accepted limits');
  for(const [i,sample] of report.samples.entries())for(const column of sample.columns){
+  const spatial=column.spatialRecovery;
+  if(spatial!==undefined){
+   if(!spatial||typeof spatial!=='object'||spatial.status!=="recovered-discrete"||spatial.physicalAccuracy!=="unverified"||spatial.driveConvention!=="1 A RMS matched Norton"||!Array.isArray(spatial.supports)||spatial.supports.length===0||!Number.isFinite(spatial.copperLossW)||spatial.copperLossW<0)
+    fail('invalid discrete spatial recovery');
+   const vector=(v:unknown,n:number):v is number[]=>Array.isArray(v)&&v.length===n&&v.every(x=>typeof x==='number'&&Number.isFinite(x));
+   let sum=0;
+   for(const support of spatial.supports){
+    if(!support||typeof support!=='object') fail('invalid spatial support');
+    const geometry=support.kind==='foil' ? Array.isArray(support.xyM)&&support.xyM.length===3&&support.xyM.every(v=>vector(v,2))&&vector(support.zM,2)&&support.zM[1]>support.zM[0]&&typeof support.layer==='string'&&support.layer.length>0&&Number.isInteger(support.triangle)&&support.triangle>=0
+      : support.kind==='tetrahedron' ? Array.isArray(support.verticesM)&&support.verticesM.length===4&&support.verticesM.every(v=>vector(v,3)) : false;
+    if(!geometry||!Number.isFinite(support.volumeM3)||support.volumeM3<=0||!Number.isFinite(support.lossW)||support.lossW<0||!vector(support.currentDensityRealAPerM2,3)||!vector(support.currentDensityImaginaryAPerM2,3)) fail('invalid spatial support');
+    sum+=support.lossW;
+   }
+   if(!Number.isFinite(sum)||Math.abs(sum-column.copperLossW)>1e-18+1e-8*(sum+column.copperLossW)||Math.abs(sum-spatial.copperLossW)>1e-18+1e-8*(sum+spatial.copperLossW)) fail('spatial losses disagree with copper loss');
+  }
   const packages=column.packages??[];
   if(!Array.isArray(packages)||packages.length!==attachments.length||packages.some((value,j)=>
    !value||value.id!==attachments[j].id||!value.currentA||!Number.isFinite(value.currentA.real)||
