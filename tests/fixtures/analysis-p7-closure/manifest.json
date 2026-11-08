@@ -2310,9 +2310,11 @@
         "sourceSection": "primary",
         "case": "Blind/buried via",
         "implementation": {
-          "status": "unmapped",
-          "code": null,
-          "shortControls": []
+          "status": "mapped",
+          "scope": "partial; hybrid ownership and topology only",
+          "code": ["native/analyze/src/extraction/local/mixed_conductor.rs"],
+          "shortControls": ["native/analyze/tests/blind_buried_via.rs"],
+          "coverageGap": "Hybrid barrel/foil ownership, physical span and contact isolation passed structural control 1794144648048884200; positive joint EM response and independent physical acceptance remain open."
         },
         "acceptance": {
           "status": "open",

@@ -228,3 +228,8 @@ The captured orientation requests also reveal an applicability limit of this con
 - TS response cache now validates and keys localNearWorkers. Eleven cache tests and typecheck pass. Trace/profile output distinguishes submitted/completed/strict-zero-skipped pairs; unfinished windows are reported as partial.
 - `1794144728361253900`: two compact reuse/parallel controls pass in 0.641s, including serial/parallel identical actions/bounds, self cache and nonself cache hits, insufficient-memory refusal. `1794144739833316900`: existing parallel cover/reduction regression passes in 3.953s. `1794144754047608700`: ordered scalar-cache eviction/deadline regression passes in 0.328s. All use 5s supervisor caps.
 - Real via performance with the new parallel path remains unmeasured; no complete positive via or speedup is claimed.
+
+### Four-worker via memory admission
+
+- Release build completed in 3m38s. With explicit four local near workers, `1794145003624988600` refuses before magnetic preparation in 0.297s with LOCAL_MEMORY_LIMIT. This validates refusal rather than performance: the generic 64 cubature slots per worker exceed the compact local sub-budget.
+- Next change reduces only compact worker cache capacity with matching allocation accounting, preserving original total/local budgets and legacy worker policy. No limit is raised and no numerical acceleration is claimed from this refused run.
