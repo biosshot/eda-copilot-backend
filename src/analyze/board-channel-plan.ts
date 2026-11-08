@@ -101,6 +101,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
         const margin = Math.max(0.05, 2 * height) * (options.domainScale ?? 1);
         const closedJoint = (deadlineMs: number) =>
             autoFoilPlan({boardJson,geometry:foilGeometry,captured:g,terminals:[...terminals.values()].map(entry=>entry.contact),ports:externalPorts,
+                modePairs:legacy?undefined:input.modePairs,
                 components:componentPlans.map(({pins:[a,b],...model})=>({...model,pins:[a.contact,b.contact]})),
                 seedRegions:new Set([...signalRegions,...returnIds,...contactRegions,
                     ...componentPlans.flatMap(({pins})=>pins.flatMap(({island})=>island.region_ids))]),

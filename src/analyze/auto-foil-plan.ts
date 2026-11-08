@@ -1,6 +1,6 @@
 import type { AnalysisBoardFoilCheckedRequest, AnalysisGeometryReport } from '../../native/analyze/index.js';
 import type { PhysicalPort, PhysicalTerminal } from './channel-terminals.ts';
-import {MAX_CHANNEL_COMPONENTS,type PhysicalComponentRequest} from './channel-components.ts';
+import {MAX_CHANNEL_COMPONENTS,type PhysicalComponentRequest,type PhysicalModePair} from './channel-components.ts';
 
 type Bounds = [[number,number],[number,number]];
 export type FoilClosureStep = {
@@ -15,6 +15,7 @@ export interface AutoFoilPlan {
  boardJson:string;
  geometry:Record<string,unknown>&{electrodes:Electrode[]};
  ports:readonly PhysicalPort[];
+ modePairs?:readonly PhysicalModePair[];
  terminals:readonly PhysicalTerminal[];
  electrodePairs:[string,string][];
  sourceCopper:Source[];
@@ -29,6 +30,7 @@ type Options = {
  captured:AnalysisGeometryReport;
  terminals:PhysicalTerminal[];
  ports:PhysicalPort[];
+ modePairs?:readonly PhysicalModePair[];
  components:readonly PhysicalComponentRequest[];
  seedRegions:Set<string>;
  marginMm:number;
@@ -51,7 +53,7 @@ function expand(box:Bounds, distanceMm:number):Bounds {
 /** Close a bounded candidate over physical islands and complete intersecting
  * neighbours. Rectangle tests are conservative. Native source checks decide
  * actual admission and guard against every clipped conductor. */
-export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,components,seedRegions,marginMm,deadlineMs,onClosureStep}:Options):AutoFoilPlan|undefined {
+export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,modePairs,components,seedRegions,marginMm,deadlineMs,onClosureStep}:Options):AutoFoilPlan|undefined {
  const stack=geometry.stack,copper=stack.filter(layer=>layer.copper);
  if(copper.length<2||copper.length>8||stack.length!==2*copper.length-1||stack.some((layer,i)=>layer.copper!==(i%2===0))||
     captured.status==='invalid'||captured.excluded.length||captured.fills.some(fill=>fill.status!=='available'))return;
@@ -118,7 +120,7 @@ export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,compon
   const sourceCopper=owned.map(({region})=>({regionId:region.id,sourcePath:region.source.path,layer:region.layer}));
   const sourceBarrels=[...barrels.values()].map(({hole})=>({barrelId:hole.id,sourcePath:hole.source.path,layers:hole.layers}));
   onClosureStep?.({iteration,reason:'complete',roiMm,selectedRegions:selected.size,selectedBarrels:barrels.size,addedRegionIds:[],addedBarrelIds:[]});
-  return {boardJson,ports,terminals,electrodePairs,sourceCopper,sourceBarrels,attachments,roiMm,
+  return {boardJson,ports,...(modePairs?.length&&{modePairs}),terminals,electrodePairs,sourceCopper,sourceBarrels,attachments,roiMm,
    geometry:{...geometry,roiMm,domainPolygonMm:undefined,cutPlanes:{},allowInsulatedCopperCuts:false,electrodes,ports:electrodePairs}};
  }
 }

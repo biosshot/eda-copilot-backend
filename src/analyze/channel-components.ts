@@ -3,6 +3,7 @@ import type { ChannelTerminalRequest, PhysicalTerminal } from './channel-termina
 import type { ChannelCut } from './segmented-channel.ts';
 import { declaredNetworkBand } from './analysis-dsl/frequency-model.ts';
 import type { CoupledRlcData, LocalModel } from './analysis-dsl/spec-doc.js';
+import type { MixedModePair } from './board-foil-mixed-mode.ts';
 
 export interface PhysicalComponentRequest {
  id: string;
@@ -12,7 +13,8 @@ export interface PhysicalComponentRequest {
  model: AnalysisFrequencyResource;
 }
 
-export type BoardChannelRequest = ChannelTerminalRequest & { components?: readonly PhysicalComponentRequest[] };
+export type PhysicalModePair = MixedModePair;
+export type BoardChannelRequest = ChannelTerminalRequest & { components?: readonly PhysicalComponentRequest[];modePairs?:readonly PhysicalModePair[] };
 
 export const MAX_CHANNEL_COMPONENTS = 8;
 

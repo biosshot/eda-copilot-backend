@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Carry explicit differential target pairings into joint foil results and publish power-preserving differential/common S observations with physical source-port mapping. Validate driven-column power and passivity; retain original physical-port replay and separate unverified modal loss recovery. Add a bounded real-addon coupled RF DSL/cache smoke control.
+
 - Reserve mixed response/package output before mapping and model allocation, using a separate pre-reserved mesh budget for direct callers. This fixes producer memory evidence exceeding the admitted API budget; consumer validation remains strict.
 
 - Recover physical port-pair RMS voltage/current and aggregate finite-contact currents from checked matched S samples, preserving actual terminal IDs, polarity and layer identity. Keep copper/package losses separate and spatial return-current recovery explicitly unverified.

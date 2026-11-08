@@ -1,4 +1,4 @@
-import type { BoardChannelRequest } from '../channel-components.ts';
+import type { BoardChannelRequest, PhysicalModePair } from '../channel-components.ts';
 import { physicalChannelComponents, type PhysicalDcComponentRequest } from './channel-component-request.ts';
 import { normalizePlannerTerminals, type PhysicalTerminal } from '../channel-terminals.ts';
 import {channelPlan} from './channel-plan.ts';
@@ -134,7 +134,19 @@ function prepareLocalRequest(task:AnalysisTask<'impedance'|'si'>,targets:readonl
    });
    const ports=[...physicalPorts.values()];
    geometryPairs=ports.map(({positive,negative})=>[positive,negative]);
-   const terminalRequest:BoardChannelRequest={signals,references,ports,...(components.length&&{components})};
+   const modePairs:PhysicalModePair[]=[];
+   let legOffset=0;
+   for(const [i,target] of targets.entries()){
+    if(target.kind==='differential'){
+     const prefix=mode==='group'?'channel-'+(i+1)+'-':'';
+     for(const [end,label] of ['input','output'].entries())modePairs.push({
+      positive:portHandles[2*legOffset+end].portName,negative:portHandles[2*(legOffset+1)+end].portName,
+      differential:prefix+'differential-'+label,common:prefix+'common-'+label,
+     });
+     legOffset+=2;
+    }else legOffset++;
+   }
+   const terminalRequest:BoardChannelRequest={signals,references,ports,...(modePairs.length&&{modePairs}),...(components.length&&{components})};
    normalizePlannerTerminals(terminalRequest);
    const signalLegs=channels.map((_,i)=>[byId.get(pairs[2*i][0])!,byId.get(pairs[2*i+1][0])!] as const);
    plan={...channelPlan(prepared,planningContacts,signalLegs,geometryComponents,dcEndpoint),terminalRequest,portHandles};

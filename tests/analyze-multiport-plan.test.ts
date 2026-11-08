@@ -142,6 +142,10 @@ async function planDifferential(board: any, code: string) {
       const geometry = localRequest(task as AnalysisTask<'impedance'>, plan => {
         terminalRequest = plan.terminalRequest;
         assert.equal(plan.confirmedLocalBarrel, false);
+        assert.deepEqual(plan.terminalRequest?.modePairs,[
+          {positive:'positive-input',negative:'negative-input',differential:'differential-input',common:'common-input'},
+          {positive:'positive-output',negative:'negative-output',differential:'differential-output',common:'common-output'},
+        ]);
       });
       assert.ok(terminalRequest);
       assert.equal(terminalRequest.signals.length, 4);
