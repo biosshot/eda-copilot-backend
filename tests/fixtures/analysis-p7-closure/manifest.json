@@ -1778,5 +1778,867 @@
     "path": "tests/fixtures/analysis-p7-closure/geometry-audit-summary.json",
     "sha256": "5d32671be9535e5e982a697730c731cb8582ea99011aeac317ab49dbf65fdc95",
     "method": "capturedBoardGeometry existing native geometry; common reliable island membership of physical pad sources; partial statuses retain freshness/drill diagnostics"
+  },
+  "caseTraceability": {
+    "source": "docs/analyze/reference/p7-extraction/p7-case-matrix.md",
+    "rowCount": 31,
+    "rows": [
+      {
+        "id": "primary-01",
+        "sourceSection": "primary",
+        "case": "Земля под дорожкой (сплошная)",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "native/analyze/src/extraction/local/section_return.rs",
+            "scripts/verify-p7-closure-stripline.ts",
+            "scripts/verify-p7-closure-stripline.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-closure-stripline.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 78,
+        "coverageGap": "Однородный участок → 2D-сечение; straight/bend приняты в низкой полосе. D1 continuous ещё открыт, переносить на любые длины нельзя",
+        "implementationScope": "**Поддерживается (условно)**"
+      },
+      {
+        "id": "primary-02",
+        "sourceSection": "primary",
+        "case": "Изгиб 90°",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "scripts/verify-p7-closure-baseline.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-closure-baseline.ts"
+          ],
+          "coverageGap": "coupon control only; arbitrary board bend unverified"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 79,
+        "coverageGap": "Принят как coupon; не гарантия для произвольной геометрии",
+        "implementationScope": "**Поддерживается (условно)**"
+      },
+      {
+        "id": "primary-03",
+        "sourceSection": "primary",
+        "case": "Дорожка 45°",
+        "implementation": {
+          "status": "unmapped",
+          "code": null,
+          "shortControls": []
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [
+            "spatial-delay"
+          ],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 80,
+        "coverageGap": "spatial-delay 2.174198% принят при пороге 3% (2026-11-03)",
+        "implementationScope": "**Поддерживается (условно)**"
+      },
+      {
+        "id": "primary-04",
+        "sourceSection": "primary",
+        "case": "Связанная пара (два сигнала)",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "scripts/verify-p7-closure-stripline.ts",
+            "scripts/verify-p7-joint-section.ts",
+            "scripts/verify-p7-closure-stripline.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-closure-stripline.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 81,
+        "coverageGap": "Явное coupled-сечение принято в своей полосе. Автоматический N-port planner и joint four-port differential runtime реализованы, автоматическая пара по плате требует независимой EM-проверки",
+        "implementationScope": "**Поддерживается** только для явного coupled-сечения"
+      },
+      {
+        "id": "primary-05",
+        "sourceSection": "primary",
+        "case": "Земля с разрывом под дорожкой",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "native/analyze/src/extraction/local/hybrid_section_model.rs",
+            "scripts/verify-p7-joint-section.ts",
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-joint-section.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": {
+            "sourceText": [
+              "10 кГц"
+            ],
+            "status": "as-stated-in-matrix; not independently bound"
+          },
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 82,
+        "coverageGap": "Bounded joint event удерживает разрыв и обходы и различает острова. После исправления выбора resume D1 вернул domain 4 с внутренней сходимостью в 1–10 кГц. В исторической проверке domain 1 → 2 был FAIL. Matched full joint и hybrid завершены. Four-port/open сравнения 1.25208%/1.45596%. Strict loaded replay после правки прошёл на обновлённом joint state. Joint spatial loaded-reactance отказал, приёмка открыта",
+        "implementationScope": "**Моделируется / проверяется**"
+      },
+      {
+        "id": "primary-06",
+        "sourceSection": "primary",
+        "case": "Земля сверху и снизу — явное идеальное сечение",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "scripts/verify-p7-closure-stripline.ts",
+            "scripts/verify-p7-closure-stripline.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-closure-stripline.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 83,
+        "coverageGap": "`a.line({kind:\"stripline\"})`; две плоскости сводятся к общему reference",
+        "implementationScope": "**Поддерживается**"
+      },
+      {
+        "id": "primary-07",
+        "sourceSection": "primary",
+        "case": "Земля сверху и снизу — авто по реальной плате",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/section_return.rs"
+          ],
+          "shortControls": [],
+          "coverageGap": "basis representation exists; no board-level physical control identified"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 84,
+        "coverageGap": "Базис сохраняет отдельные координаты плоскостей. Нужен подтверждённый маршрут на реальной плате с фактическими связями между плоскостями",
+        "implementationScope": "**Unverified**"
+      },
+      {
+        "id": "primary-08",
+        "sourceSection": "primary",
+        "case": "Сверху+снизу + разрыв на одном/двух слоях",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/hybrid_section_model.rs"
+          ],
+          "shortControls": [],
+          "coverageGap": "components exist separately; combined two-plane split control missing"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 85,
+        "coverageGap": "Раздельные координаты и bounded split-return реализованы. Совместный сценарий двух плоскостей с разрывами требует своего контроля",
+        "implementationScope": "**Не поддерживается**"
+      },
+      {
+        "id": "primary-09",
+        "sourceSection": "primary",
+        "case": "Сшивка / via fence",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs",
+            "tests/analyze-auto-foil.test.ts"
+          ],
+          "shortControls": [
+            "tests/analyze-auto-foil.test.ts"
+          ],
+          "coverageGap": "geometric barrel/pad handling only; no fence extraction/acceptance"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 86,
+        "coverageGap": "Реальные barrel/pads внутри окна считаются; универсального fence-экстрактора и приёмки нет",
+        "implementationScope": "**Моделируется геометрически**"
+      },
+      {
+        "id": "primary-10",
+        "sourceSection": "primary",
+        "case": "Return via рядом с дорожкой",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs",
+            "scripts/verify-p7-auto-foil.ts",
+            "scripts/verify-p7-auto-foil.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-auto-foil.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [
+            "spatial-delay"
+          ],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 87,
+        "coverageGap": "spatial-delay 2.763860% принят при пороге 3% (2026-11-03)",
+        "implementationScope": "**Поддерживается (условно)**"
+      },
+      {
+        "id": "primary-11",
+        "sourceSection": "primary",
+        "case": "Signal via / смена слоя",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs",
+            "tests/analysis-dsl.test.ts"
+          ],
+          "shortControls": [
+            "tests/analysis-dsl.test.ts"
+          ],
+          "coverageGap": "physical via contact binding tested; channel EM acceptance missing"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 88,
+        "coverageGap": "Via corridor реализован, приёмки канала нет",
+        "implementationScope": "**Моделируется / проверяется**"
+      },
+      {
+        "id": "primary-12",
+        "sourceSection": "primary",
+        "case": "Ветвления",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "coverageGap": "three-port geometry control does not validate all branch currents/loads"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 89,
+        "coverageGap": "Трёхпортовая ветвь проходит геометрический контроль. Электрическая приёмка всех ветвей и нагрузок открыта",
+        "implementationScope": "**Моделируется геометрически**"
+      },
+      {
+        "id": "primary-13",
+        "sourceSection": "primary",
+        "case": "Земля подключена на другом конце платы",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "native/analyze/src/extraction/local/board_foil.rs",
+            "scripts/verify-p7-wide-return-domains.ts",
+            "scripts/verify-p7-wide-return-domains.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-wide-return-domains.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": {
+            "sourceText": [
+              "10 кГц"
+            ],
+            "status": "as-stated-in-matrix; not independently bound"
+          },
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 90,
+        "coverageGap": "Remote physical bypass прошёл геометрическую проверку. Внутренний sparse foil-модуль с потоковым LQ и обогащением прошёл полную невязку малого двухслойного купона на 10 кГц; этот путь не использует прежний dense cap 64. Автоматический planar foil и смешанный foil/volume runtime реализованы для допустимых входов. Многослойный STM32 и пространственная точность открыты. Историческая нижняя оценка fine electric enclosing ROI — 28 513 МиБ; новая редукция не подтверждает устранение этого field-бюджета. [Оператор и ограничения](../../evidence/p7-foil-reduction-2026-11-04.md)",
+        "implementationScope": "**Unverified**"
+      },
+      {
+        "id": "primary-14",
+        "sourceSection": "primary",
+        "case": "Под дорожкой меди нет совсем",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "tests/analyze-board-channel-return-selection.test.ts"
+          ],
+          "shortControls": [
+            "tests/analyze-board-channel-return-selection.test.ts"
+          ],
+          "coverageGap": "remote island geometry selected; capacitive return accuracy open"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 91,
+        "coverageGap": "При разрешимых исходных физических контактах отсутствие локального return-коридора выбирает общую область с независимыми островами. Геометрический контроль прошёл; численная точность ёмкостного/удалённого возврата ещё не принята",
+        "implementationScope": "**Unverified**"
+      },
+      {
+        "id": "primary-15",
+        "sourceSection": "primary",
+        "case": "Несколько опор / две земли",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/section_return.rs",
+            "scripts/verify-p7-shared-return-prototype.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-shared-return-prototype.ts"
+          ],
+          "coverageGap": "limited shared-return prototype only; board-wide physical joins open"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 92,
+        "coverageGap": "Независимые координаты, явные conductor-end mappings и mixed-polarity contacts реализованы. Нужна общая проверка физических соединений и восстановления токов",
+        "implementationScope": "**Unverified**"
+      },
+      {
+        "id": "primary-16",
+        "sourceSection": "primary",
+        "case": "Широкая опора (wide return)",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "scripts/verify-p7-wide-return-domains.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-wide-return-domains.ts"
+          ],
+          "coverageGap": "C1 coefficients only; real channel not accepted"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [
+            "C1"
+          ],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 93,
+        "coverageGap": "Приняты только совместные коэффициенты C1; реальный канал не принят",
+        "implementationScope": "**Проверяется**"
+      },
+      {
+        "id": "primary-17",
+        "sourceSection": "primary",
+        "case": "Окружающая медь",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/spatial_partition.rs"
+          ],
+          "shortControls": [],
+          "coverageGap": "ROI includes copper within stack-plus-margin; outside-window interaction not represented"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 94,
+        "coverageGap": "Внутри окна (~стек + запас) — вся медь всех слоёв; вне окна в оператор не входит",
+        "implementationScope": "**Моделируется геометрически**"
+      },
+      {
+        "id": "primary-18",
+        "sourceSection": "primary",
+        "case": "RF-сечение (BandAmp)",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "scripts/verify-p7-source-band.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-source-band.ts"
+          ],
+          "coverageGap": "section-only narrow band; complete RF board/via not covered"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": {
+            "sourceText": [
+              "500 МГц",
+              "1 ГГц"
+            ],
+            "status": "as-stated-in-matrix; not independently bound"
+          },
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 95,
+        "coverageGap": "500 МГц–1 ГГц, quasi-TEM, только сечение; полный RF-канал и ground-via — нет",
+        "implementationScope": "**Поддерживается** в узкой полосе"
+      },
+      {
+        "id": "supplemental-19",
+        "sourceSection": "supplemental",
+        "case": "Ёмкостный/смешанный возврат через разрыв",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "native/analyze/src/extraction/local/hybrid_section_model.rs",
+            "scripts/verify-p7-shared-return-prototype.ts",
+            "scripts/verify-p7-shared-return-prototype.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-shared-return-prototype.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 110,
+        "coverageGap": "AC multiport, ток смещения/баланс заряда, физические C, отдельная проверка DC-разрыва",
+        "implementationScope": "Bounded joint geometry и manufactured EQS control реализованы. Общий автоматический путь не принят"
+      },
+      {
+        "id": "supplemental-20",
+        "sourceSection": "supplemental",
+        "case": "Component bridge (R/C/ferrite)",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/board_prepare.rs",
+            "tests/analysis-dsl.test.ts"
+          ],
+          "shortControls": [
+            "tests/analysis-dsl.test.ts"
+          ],
+          "coverageGap": "explicit attachment/planner support; physical component contact/common-band validation open"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 111,
+        "coverageGap": "Извлечённые контакты + заданная модель компонента, общая полоса и отсутствие weld",
+        "implementationScope": "Явные R/C/L attachments, captured pins и DSL/planner реализованы. Поиск поддерживает до восьми рёбер и промежуточные острова"
+      },
+      {
+        "id": "supplemental-21",
+        "sourceSection": "supplemental",
+        "case": "PDN multiport",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "native/analyze/src/extraction/local/partitioned_conduction.rs",
+            "scripts/verify-p7-real-reference.ts",
+            "scripts/verify-p7-real-reference.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-real-reference.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": {
+            "sourceText": [
+              "100 кГц"
+            ],
+            "status": "as-stated-in-matrix; not independently bound"
+          },
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 112,
+        "coverageGap": "Полный обязательный сценарий, многопортовая композиция/наблюдения, взаимные связи, DC/AC overlap и recovery; [границы DC-пакета](../../evidence/p7-dc-endpoint-2026-11-04.md)",
+        "implementationScope": "Есть условные finite-ROI 1–100 кГц результаты. Отдельный DC endpoint сохраняет матрицу физических электродов и независимые острова; явные R/DCR и открытый C проверены на ограниченном купоне. Полный PDN-путь не принят"
+      },
+      {
+        "id": "supplemental-22",
+        "sourceSection": "supplemental",
+        "case": "Небольшая связанная группа, branch/meander",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "coverageGap": "joint preparation/geometry only; independent mutual and branch-current checks open"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [
+            "токи",
+            "mutual/crosstalk"
+          ],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 113,
+        "coverageGap": "Подтвердить независимые mutual/crosstalk и токи всех ветвей в общей полосе",
+        "implementationScope": "Реализованы N-port планирование и joint preparation списка каналов, пройдены геометрические контроли"
+      },
+      {
+        "id": "supplemental-23",
+        "sourceSection": "supplemental",
+        "case": "2/4/6/8 слоёв, асимметрия и конечные края опор",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/section_return.rs"
+          ],
+          "shortControls": [],
+          "coverageGap": "mechanisms exist; representative layer/edge matrix is not present"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 114,
+        "coverageGap": "Манифест представительных комбинаций; несколько опор не сводятся к одной без проверки",
+        "implementationScope": "Полное покрытие не подтверждено"
+      },
+      {
+        "id": "supplemental-24",
+        "sourceSection": "supplemental",
+        "case": "Адаптивная полоса по DSL",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "src/analyze/local-model-cache.ts",
+            "tests/analyze-board-foil-cache.test.ts",
+            "tests/analyze-board-foil-cache.test.ts"
+          ],
+          "shortControls": [
+            "tests/analyze-board-foil-cache.test.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": {
+            "sourceText": [
+              "10 кГц"
+            ],
+            "status": "as-stated-in-matrix; not independently bound"
+          },
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 115,
+        "coverageGap": "Все требуемые интервалы §1.1/§F плана, новые holdouts, явные непокрытые интервалы",
+        "implementationScope": "Event 5 подтвердил intrinsic local 1–10 кГц на свежем кэше с независимым replay и 12 интервалами. Segmented W6 и owner loss интегрированы и проверены TS тестами. Физическая общая и широкая полосы открыты"
+      },
+      {
+        "id": "supplemental-25",
+        "sourceSection": "supplemental",
+        "case": "Инварианты универсальности",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "src/analyze/local-model-cache.ts",
+            "tests/analyze-board-foil-cache.test.ts",
+            "tests/analyze-board-foil-cache.test.ts"
+          ],
+          "shortControls": [
+            "tests/analyze-board-foil-cache.test.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 116,
+        "coverageGap": "Перенос/поворот, ID/порядок терминалов, CAD-разбиение меди, gauge и сдвиг разрезов",
+        "implementationScope": "Манифест перечисляет все 42 случая, часть подготовительных артефактов привязана. Полная матрица численных проверок открыта"
+      },
+      {
+        "id": "return-topology-26",
+        "sourceSection": "return-topology",
+        "case": "Тот же net, разрыв с обходом",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/hybrid_section_model.rs",
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "coverageGap": "bounded same-net event controls; remote bypass outside local window not validated"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 128,
+        "coverageGap": "Моделируется / проверяется",
+        "implementationScope": "Возврат меняет путь, но не net"
+      },
+      {
+        "id": "return-topology-27",
+        "sourceSection": "return-topology",
+        "case": "AGND → GND через разрыв",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/board_prepare.rs"
+          ],
+          "shortControls": [],
+          "coverageGap": "physical bridge search/control and out-of-window extension/refusal not evidenced"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 129,
+        "coverageGap": "Не поддерживается",
+        "implementationScope": "Возврат идёт через точку соединения (звезда, перемычка, via)"
+      },
+      {
+        "id": "return-topology-28",
+        "sourceSection": "return-topology",
+        "case": "Несколько переходов (AGND→PGND→GND)",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/board_prepare.rs"
+          ],
+          "shortControls": [],
+          "coverageGap": "planner has bounded transitions; no multi-transition positive control linked"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 130,
+        "coverageGap": "Не поддерживается",
+        "implementationScope": "Несколько смен опоры подряд"
+      },
+      {
+        "id": "return-topology-29",
+        "sourceSection": "return-topology",
+        "case": "Смена слоя (signal via + return via)",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "tests/analysis-dsl.test.ts",
+            "native/analyze/src/extraction/local/mixed_conductor.rs"
+          ],
+          "shortControls": [
+            "tests/analysis-dsl.test.ts"
+          ],
+          "coverageGap": "via contact geometry tested; coupled signal/return transition accuracy open"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 131,
+        "coverageGap": "Моделируется / проверяется",
+        "implementationScope": "Возврат переходит на другую плоскость"
+      },
+      {
+        "id": "return-topology-30",
+        "sourceSection": "return-topology",
+        "case": "Разрыв без гальванического соединения",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/hybrid_section_model.rs"
+          ],
+          "shortControls": [],
+          "coverageGap": "bounded split geometry exists; AC displacement-current/charge-balance test missing"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 132,
+        "coverageGap": "Не поддерживается",
+        "implementationScope": "Возврат только ёмкостный"
+      },
+      {
+        "id": "return-topology-31",
+        "sourceSection": "return-topology",
+        "case": "Смена опоры без найденного соединения",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/board_prepare.rs"
+          ],
+          "shortControls": [],
+          "coverageGap": "refusal/path selection implementation exists; explicit no-virtual-ground negative control not linked"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 133,
+        "coverageGap": "Не поддерживается",
+        "implementationScope": "Проводящий путь не найден; проверить ёмкостный/смешанный AC-путь"
+      }
+    ],
+    "sourceSha256": "7c831234584af336a4dfe1e81b416c2675df1276ccb01e91528100deb73bb09e"
   }
 }

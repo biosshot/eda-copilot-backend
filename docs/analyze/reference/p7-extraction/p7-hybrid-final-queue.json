@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "status": "planned-not-run",
+  "sourceManifest": "tests/fixtures/analysis-p7-closure/manifest.json",
+  "caseTraceabilityCrosswalk": "tests/fixtures/analysis-p7-closure/manifest.json#caseTraceability",
+  "cases": [
+    {
+      "id": "STM32G0_CAN_RS485",
+      "board": {
+        "path": "tests/pcb-analyze/STM32G0_CAN_RS485/STM32G0_CAN_RS485.json",
+        "sha256": "0159c43d43b59df4f59fb943d59f0d841d17ca38d6d5a7d5576920a4aee3cce3",
+        "structurallyAvailable": true
+      },
+      "dsl": {
+        "path": "tests/fixtures/analysis-p7-closure/STM32G0_CAN_RS485.js",
+        "sha256": "5057272b14b44e316b42e59d0a393394716e511f4aa55996c4323f86950b15df",
+        "structurallyAvailable": true
+      },
+      "reference": {
+        "status": "missing",
+        "manifestValue": null,
+        "note": "closure manifest has null reference; resolve independently before final physical acceptance"
+      }
+    },
+    {
+      "id": "NanoScope",
+      "board": {
+        "path": "tests/pcb-analyze/NanoScope/NanoScope.json",
+        "sha256": "8515e761f131df0731c3cc84fa293457f526e0d6ea91eff8fe73aa8a587b65e6",
+        "structurallyAvailable": true
+      },
+      "dsl": {
+        "path": "tests/fixtures/analysis-p7-closure/NanoScope.js",
+        "sha256": "cf1d2b8fec7b32d537b2b56833b6d75df8a90f2274f28168f3760c2f6da6f16f",
+        "structurallyAvailable": true
+      },
+      "reference": {
+        "status": "missing",
+        "manifestValue": null,
+        "note": "closure manifest has null reference; resolve independently before final physical acceptance"
+      }
+    },
+    {
+      "id": "ThunderF722",
+      "board": {
+        "path": "tests/pcb-analyze/ThunderF722/ThunderF722.json",
+        "sha256": "3911d02ef76af2a490c2db055a863a2b336b16d52e112162593865490e88683c",
+        "structurallyAvailable": true
+      },
+      "dsl": {
+        "path": "tests/fixtures/analysis-p7-closure/ThunderF722.js",
+        "sha256": "d483b2fa279369fcb638e42128d3ac604f05b0b62df9c917fb81e63dc7e4a440",
+        "structurallyAvailable": true
+      },
+      "reference": {
+        "status": "missing",
+        "manifestValue": null,
+        "note": "closure manifest has null reference; resolve independently before final physical acceptance"
+      }
+    },
+    {
+      "id": "TPS63060DSCR",
+      "board": {
+        "path": "tests/pcb-analyze/TPS63060DSCR/TPS63060DSCR.json",
+        "sha256": "70be39ae0c55885fd72d283b53c8a605e098c347641c032bbd651d07943dfd39",
+        "structurallyAvailable": true
+      },
+      "dsl": {
+        "path": "tests/fixtures/analysis-p7-closure/TPS63060DSCR.js",
+        "sha256": "7ddb1063eca1c19706d92cef8055a45cad74ea5cf2e299bf7f3f900264cfac20",
+        "structurallyAvailable": true
+      },
+      "reference": {
+        "status": "missing",
+        "manifestValue": null,
+        "note": "closure manifest has null reference; resolve independently before final physical acceptance"
+      }
+    },
+    {
+      "id": "BandAmpV5",
+      "board": {
+        "path": "tests/pcb-analyze/BandAmpV5/BandAmpV5.json",
+        "sha256": "032f0965d31f76474501fe10494b4de5c7c054bd24b4c30df964c4cc5590d1fc",
+        "structurallyAvailable": true
+      },
+      "dsl": {
+        "path": "tests/fixtures/analysis-p7-closure/BandAmpV5.js",
+        "sha256": "2938b3459616a4e4d5c633a6a13785b0fbb74cd1ea0b7cc7dad1aa8132ea1aba",
+        "structurallyAvailable": true
+      },
+      "reference": {
+        "status": "missing",
+        "manifestValue": null,
+        "note": "closure manifest has null reference; resolve independently before final physical acceptance"
+      }
+    }
+  ],
+  "order": [
+    "coupled-stripline coupon",
+    "split-reference coupon",
+    "multiple-reference coupon",
+    "regular-fence coupon",
+    "broken-fence coupon",
+    "independent real reference acquisition for each applicable family (currently missing where manifest reference is null)",
+    "STM32G0_CAN_RS485 full U5→J5 branches/layers",
+    "NanoScope 4-layer channel + PDN multiport",
+    "ThunderF722 6-layer channel + coupled group",
+    "TPS63060DSCR PDN",
+    "BandAmpV5 real RF board under full P7-required applicability/band; narrow-band section-only support does not substitute; record refusal/unverified if unsupported"
+  ],
+  "cacheModes": [
+    "cold",
+    "warm",
+    "restart"
+  ],
+  "wallBudgetSeconds": {
+    "coldPerBoardTarget": 300,
+    "warmPerBoardTarget": 5,
+    "restartPerBoardTarget": 10,
+    "selectedReferenceOrDiagnosticPerRunCap": 600,
+    "baseTargetsAllFiveIncludingAllCacheModes": 1575,
+    "repairRerunReserve": 600,
+    "accounting": "No total cap until reference and coupon tasks are enumerated; each reference/diagnostic run capped at 600 s.",
+    "note": "planning cap, not measured runtime; each expensive run serialized; no heavy run performed in this preparation",
+    "knownBoardCacheSubtotal": 1575,
+    "references": {
+      "count": "at least 5 board-specific references; additional references may be required by observables",
+      "capPerReferenceOrDiagnosticRun": 600,
+      "runCount": null,
+      "subtotalSeconds": null
+    },
+    "coupons": {
+      "count": "unresolved; enumerate exhaustive tasks from manifest.caseTraceability",
+      "capPerCouponTaskSeconds": 600,
+      "taskCount": null,
+      "subtotalSeconds": null
+    },
+    "repairReruns": {
+      "reserveSeconds": 600,
+      "scope": "reserve only; revise after task enumeration"
+    },
+    "totalCampaignWallCap": null
+  },
+  "structuralAvailability": {
+    "allFiveBoardAndDslFilesExist": true,
+    "referencesForFiveBoards": "missing in closure manifest (null); must be acquired/identified, not inferred from board files",
+    "couponReferenceAvailability": "supplementalControls contain coupon fixtures and stripline FD reference; exhaustive coupon task/reference count remains unresolved."
+  },
+  "physicalStatusPolicy": "preserve source manifest/case matrix statuses; this queue makes no acceptance claim",
+  "commands": {
+    "status": "unresolved",
+    "note": "No verified single final campaign invocation; select existing scripts/verify-p7-* per crosswalk task; do not invent command lines."
+  }
+}
