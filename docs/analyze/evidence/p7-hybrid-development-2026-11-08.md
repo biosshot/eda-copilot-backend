@@ -210,3 +210,8 @@ The captured orientation requests also reveal an applicability limit of this con
 
 - Skip a near pair for one RHS only when both three-component current vectors equal zero exactly. The certified plan/cover is unchanged; serial and parallel dispatch both retain every nonzero source.
 - `1794143973184578400`: regression passes in 0.375s under a 5s supervisor cap, comparing action/error bounds to the full near computation and checking fewer quadrature calls. A 1e-200 current restores the corresponding work and agrees with the full reference. Full via runtime impact remains unmeasured.
+
+### Via result with exact-zero skipping
+
+- Release build completed in 3m49s. `1794144233030248200` still reaches the existing native 25s deadline (25.297s supervisor wall; sampled private peak27250688 bytes), with visited28894/far30/near14465/exact14465. These are traversal/cover counts, not measurements of executed versus skipped quadrature; no speedup conclusion is justified.
+- Next implementation work uses bounded parallel nonself near pairs while keeping checked diagonal self evaluations on the original owner, ordered reduction and full memory admission. Default serial behavior and all convergence/resource gates remain.
