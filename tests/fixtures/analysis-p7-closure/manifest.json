@@ -2343,9 +2343,10 @@
         "sourceSection": "primary",
         "case": "Дифференциальная пара",
         "implementation": {
-          "status": "unmapped",
-          "code": null,
-          "shortControls": []
+          "status": "mapped",
+          "scope": "partial: explicit physical pair transform and complex modal loss recovery",
+          "code": ["src/analyze/board-foil-mixed-mode.ts", "src/analyze/board-foil-loss-grams.ts"],
+          "shortControls": ["tests/analyze-board-foil-mixed-mode.test.ts", "tests/analyze-board-foil-loss-grams.test.ts"]
         },
         "acceptance": {
           "status": "open",
@@ -2756,8 +2757,8 @@
           "code": [
             "native/analyze/src/extraction/local/hybrid_section_model.rs"
           ],
-          "shortControls": [],
-          "coverageGap": "bounded split geometry exists; AC displacement-current/charge-balance test missing"
+          "shortControls": ["native/analyze/src/extraction/local/hybrid_section_model.rs#tests::disconnected_islands_carry_ac_displacement_current"],
+          "coverageGap": "three-island discrete-model AC displacement and charge balance verified at 1/10 kHz; independent physical reference and automatic full-board split coverage remain open"
         },
         "acceptance": {
           "status": "open",

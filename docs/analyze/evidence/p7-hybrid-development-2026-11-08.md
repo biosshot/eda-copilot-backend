@@ -169,3 +169,7 @@ The shared contract and direct kernels are being integrated. Zero-current capaci
 - `1794140744067280200`: new in-memory 0/45/90 orientation control hit the unchanged 30s external deadline. No rotation sensitivity acceptance follows. The control preserves physical contacts and compares complex S/loss entries; Y is explicitly omitted. Investigation must identify which orientation/partition causes the cost before rerunning.
 
 Orientation timeout diagnosis from existing log: first (0 degree) solve is pure planar with 36 supports and completes training in 0.443s. The next (45 degree) solve has 66 supports and 1545 planar/cross pairs, implying 36 local tetra supports excluded from that pair domain. Investigate why rigid rotation changes ownership to local volume; do not treat a repeated kernel timeout as sufficient performance evidence.
+
+### Disconnected-island AC model control
+
+`1794140919927286000`: three physically separate copper islands, actual hybrid prism/tetra model, no added shunts or ground; DC inter-island injection refuses and AC island charge balances jωQ against injected current at 1/10 kHz. The single control passed in 1.859s under 30s/1536MiB supervisor. This supports the discrete-model implementation mapping only; independent physical reference and automatic board split acceptance remain open.
