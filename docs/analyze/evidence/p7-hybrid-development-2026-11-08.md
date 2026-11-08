@@ -32,6 +32,8 @@ Native test binaries were compiled with `cargo test --manifest-path native/analy
 | Planar action versus small projected Gram | pass | 0.188 s | `1794121916810023800` |
 | Imported via full-mixed prototype | refused by 1024-coordinate prototype guard | 0.719 s | `1794121653755905000` |
 | Compact field-action/charge-inverse development controls | pass | 0.218 s | `1794122550318700800` |
+| Prepared sparse spatial-field action, two drives and insulated gauge versus dense C | pass | 0.188 s | `1794122961255458600` |
+| Spatial dielectric controls including prepared factor path | four pass | 0.172 s | `1794122974603574000` |
 
 The tetra comparisons use constant density integrals on the same finite support; they are independent integration controls, not independent full-channel or broadband EM references. Initial invalid reference-tolerance test invocation (`1794119924965750500`) was corrected before the two successful reference comparisons; no production tolerance was relaxed.
 

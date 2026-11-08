@@ -697,20 +697,76 @@ pub struct Solution {
     far: Vec<bool>,
     insulated: bool,
     active: Vec<bool>,
+    prepared: Option<PreparedFactor>,
+}
+
+struct PreparedFactor {
+    symbolic: cholesky::SymbolicCholesky<usize>,
+    values: Vec<f64>,
+    mapping: Vec<usize>,
+    free: usize,
+}
+/// A sparse dielectric factor and trace, without an N-port capacitance matrix
+/// or one field vector per potential coordinate.
+pub struct SpatialFieldAction { solution: Solution }
+impl SpatialFieldAction {
+    pub fn planned_bytes(&self) -> usize { self.solution.plan.planned_simultaneous_bytes }
+    pub fn max_epsilon_r(&self) -> f64 { self.solution.max_epsilon_r() }
+    pub fn apply(&self, voltage: &[f64]) -> Result<Vec<f64>> {
+        let s=&self.solution;
+        let g=Guard { started:s.started, budget:s.budget }; g.time()?;
+        if voltage.len()!=s.source_ids.len() || voltage.iter().any(|v|!v.is_finite()) {
+            return Err(error("FIELD_TRACE", "complete finite trace voltage required"));
+        }
+        let f=s.prepared.as_ref().ok_or_else(||error("FIELD_MATRIX","missing prepared field factor"))?;
+        let nodes=s.matrix.ptr.len()-1;
+        let mut phi=vec![0.;nodes];
+        if voltage.iter().all(|&v|v==0.) { return Ok(vec![0.;voltage.len()]); }
+        for i in 0..nodes { for &(j,w) in &s.trace_weights[i] { phi[i]+=w*voltage[j]; } }
+        let mut rhs=Mat::<f64>::zeros(f.free,1);
+        for col in 0..nodes {
+            if col%256==0 { g.time()?; }
+            if phi[col]==0. {continue;}
+            for k in s.matrix.ptr[col]..s.matrix.ptr[col+1] {
+                let row=s.matrix.indices[k];
+                if f.mapping[row]!=usize::MAX { rhs[(f.mapping[row],0)]-=s.matrix.values[k]*phi[col]; }
+            }
+        }
+        let scratch=f.symbolic.solve_in_place_scratch::<f64>(1,Par::Seq);
+        let mut memory=MemBuffer::try_new(scratch).map_err(|_|error("MEMORY_LIMIT","prepared field solve scratch"))?;
+        cholesky::LltRef::new(&f.symbolic,&f.values).solve_in_place_with_conj(Conj::No,rhs.as_mut(),Par::Seq,MemStack::new(&mut memory));
+        g.time()?;
+        for i in 0..nodes {if f.mapping[i]!=usize::MAX {phi[i]=rhs[(f.mapping[i],0)];}}
+        let (reaction,scale)=s.matrix.apply(&phi);
+        let mut charge=vec![0.;voltage.len()];
+        for i in 0..nodes {
+            if f.mapping[i]!=usize::MAX && reaction[i].abs()>1e-8*scale[i].max(f64::MIN_POSITIVE) {
+                return Err(error("FIELD_BALANCE","prepared dielectric free-row residual failed"));
+            }
+            for &(j,w) in &s.trace_weights[i] {charge[j]+=w*reaction[i];}
+        }
+        if phi.iter().chain(&charge).chain(&reaction).any(|v|!v.is_finite()) {
+            return Err(error("FIELD_RANGE","nonfinite prepared field action"));
+        }
+        g.time()?; Ok(charge)
+    }
 }
 
 pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
-    extract_impl(input, None, &[], false, budget)
+    extract_impl(input, None, &[], false, false, budget)
 }
 /// Same field solver with spatial potential coordinates. This internal path
 /// does not establish PCB accuracy or create a physical-terminal mapping.
 pub fn extract_traced(input: &Input, trace: &PotentialTrace, budget: Budget) -> Result<Solution> {
-    extract_impl(input, Some(trace), &[], false, budget)
+    extract_impl(input, Some(trace), &[], false, false, budget)
 }
 pub fn extract_traced_spatial(input: &Input, trace: &PotentialTrace, spatial: &[SpatialDielectric], budget: Budget) -> Result<Solution> {
-    extract_impl(input, Some(trace), spatial, true, budget)
+    extract_impl(input, Some(trace), spatial, true, false, budget)
 }
-fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[SpatialDielectric], spatial_route: bool, budget: Budget) -> Result<Solution> {
+pub fn prepare_traced_spatial_action(input: &Input, trace: &PotentialTrace, spatial: &[SpatialDielectric], budget: Budget) -> Result<SpatialFieldAction> {
+    Ok(SpatialFieldAction { solution:extract_impl(input,Some(trace),spatial,true,true,budget)? })
+}
+fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[SpatialDielectric], spatial_route: bool, action_only: bool, budget: Budget) -> Result<Solution> {
     let guard = Guard {
         started: Instant::now(),
         budget,
@@ -745,6 +801,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
         |t| t.potential_nodes.clone(),
     );
     let modes = source_ids.len();
+    let solve_columns=if action_only {1} else {modes};
     if modes == 0
         || (!spatial_route && modes > 64)
         || (spatial_route && (modes > budget.max_nodes || modes > budget.max_local_terms))
@@ -759,7 +816,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
     // The spatial route admits larger counts only after preflighting dense
     // capacitance and pair/contact metadata against the request limits.
     if spatial_route {
-        let matrix = mul(mul(modes, modes)?, 64)?;
+        let matrix = if action_only {mul(modes,64)?} else {mul(mul(modes, modes)?, 64)?};
         let contacts = mul(mul(input.metals.len(), input.metals.len())?, 16)?;
         let pair_work = mul(input.metals.len(), input.metals.len())?;
         if pair_work > budget.max_local_terms { return Err(error("MESH_LIMIT", "metal pair work exceeds request cap")); }
@@ -1112,7 +1169,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
     // Simultaneous COO+worst CSC and RHS/output before allocation, not dense fill.
     let assembly_bytes = add(
         base_bytes,
-        add(mul(terms, 32)?, mul(nodes, add(128, mul(modes, 24)?)?)?)?,
+        add(mul(terms, 32)?, mul(nodes, add(128, mul(solve_columns, 24)?)?)?)?,
     )?;
     g.memory(assembly_bytes)?;
     let mut coo = Vec::with_capacity(terms);
@@ -1156,14 +1213,14 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
     let mut fp = vec![0; free + 1];
     let mut fi = Vec::with_capacity(matrix.values.len());
     let mut fv = Vec::with_capacity(matrix.values.len());
-    let mut rhs = Mat::<f64>::zeros(free, modes);
+    let mut rhs = Mat::<f64>::zeros(free, if action_only {0} else {modes});
     for col in 0..nodes {
         for k in matrix.ptr[col]..matrix.ptr[col + 1] {
             let row = matrix.indices[k];
             if mapping[row] != usize::MAX {
-                for &(c, w) in &trace_weights[col] {
+                if !action_only {for &(c, w) in &trace_weights[col] {
                     rhs[(mapping[row], c)] -= matrix.values[k] * w;
-                }
+                }}
                 if mapping[col] != usize::MAX {
                     fi.push(mapping[row]);
                     fv.push(matrix.values[k]);
@@ -1184,7 +1241,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
             matrix.bytes(),
             add(
                 mul(fp.capacity() + fi.capacity() + fv.capacity(), 8)?,
-                mul(nodes, add(128, mul(modes, 24)?)?)?,
+                mul(nodes, add(128, mul(solve_columns, 24)?)?)?,
             )?,
         )?,
     )?;
@@ -1202,7 +1259,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
     let factor_bytes = mul(symbolic.len_val(), 8)?;
     let factor_scratch =
         symbolic.factorize_numeric_llt_scratch::<f64>(Par::Seq, Default::default());
-    let solve_scratch = symbolic.solve_in_place_scratch::<f64>(modes, Par::Seq);
+    let solve_scratch = symbolic.solve_in_place_scratch::<f64>(solve_columns, Par::Seq);
     let scratch_bytes = factor_scratch
         .unaligned_bytes_required()
         .max(solve_scratch.unaligned_bytes_required());
@@ -1226,6 +1283,16 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
             .map_err(|_| error("FIELD_SINGULAR", "SPD failure; no hidden ground/gmin"))?;
     }
     g.time()?;
+    if action_only {
+        let plan=Plan {nodes,free_nodes:free,local_terms:terms,full_nnz:matrix.values.len(),free_nnz:fv.len(),factor_bytes,scratch_bytes,planned_simultaneous_bytes:plan_bytes,elapsed_seconds:g.started.elapsed().as_secs_f64()};
+        return Ok(Solution {
+            capacitance_f:vec![],source_ids,mesh_source_ids:meshes.iter().map(|m|m.source_id.clone()).collect(),plan,
+            basis_potentials_v:vec![],meshes,planes:input.planes.clone(),z:input.z_m.clone(),materials,pairs,cells,matrix,
+            started:g.started,budget,metals:input.metals.clone(),known,contact_owners,trace_weights,far,
+            insulated:input.exterior==Exterior::InsulatedAnalyticCoupon,active,
+            prepared:Some(PreparedFactor {symbolic,values:factor,mapping,free}),
+        });
+    }
     {
         let mut scratch = MemBuffer::try_new(solve_scratch)
             .map_err(|_| error("MEMORY_LIMIT", "solve scratch allocation"))?;
@@ -1308,6 +1375,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
         far,
         insulated: input.exterior == Exterior::InsulatedAnalyticCoupon,
         active,
+        prepared:None,
     };
     // Recover each independent voltage once before admission; same whole deadline.
     for c in 0..modes {

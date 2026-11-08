@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Prepare spatial dielectric trace actions with one retained sparse factor instead of an N-port capacitance matrix and N field solutions. Audit free-row residuals on each action; legacy extraction stays on its existing path.
+
 - Add a budgeted matrix-free charge CG primitive with a freshly evaluated residual before convergence, compensated products, and explicit invalid-operator/deadline refusals. This is adaptive hybrid infrastructure, not full-board acceptance.
 
 - Start the hybrid operator implementation with explicit charge/potential dual coordinates, direct finite-prism P/L kernels, mixed cross-block and layered-trace primitives, and an opt-in compact runtime candidate. Isolate its cache identity and track canonical cases independently of acceptance. Layered/local assembly, independent accuracy and complete-board performance remain unverified; this does not close P7.

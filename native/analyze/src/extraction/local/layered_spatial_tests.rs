@@ -1,6 +1,31 @@
 use super::*;
 use std::time::Duration;
 
+#[test]
+fn prepared_spatial_action_matches_capacitance_and_preserves_gauge() {
+    let (mut input, trace)=coupon();
+    input.z_m.insert(2,0.00055);
+    input.planes=vec![0;input.z_m.len()];
+    let reference=extract_traced_spatial(&input,&trace,&[region()],budget()).unwrap();
+    let action=prepare_traced_spatial_action(&input,&trace,&[region()],budget()).unwrap();
+    assert!(action.solution.plan.free_nodes>0);
+    assert!(action.solution.capacitance_f.is_empty());
+    assert!(action.solution.basis_potentials_v.is_empty());
+    assert_eq!(action.max_epsilon_r(),4.);
+    let scale=reference.capacitance_f.iter().flatten().map(|v|v.abs()).fold(0_f64,f64::max);
+    for v in [[1.,0.],[0.,1.],[1.,-2.],[1.,1.]] {
+        let q=action.apply(&v).unwrap();
+        for i in 0..2 {
+            let expected=reference.capacitance_f[i].iter().zip(v).map(|(c,v)|c*v).sum::<f64>();
+            assert!((q[i]-expected).abs()<1e-9*scale);
+        }
+    }
+    assert_eq!(action.apply(&[0.,0.]).unwrap(),vec![0.,0.]);
+    assert!(action.apply(&[1.]).is_err());
+    assert!(action.apply(&[f64::NAN,0.]).is_err());
+    assert!(prepare_traced_spatial_action(&input,&trace,&[region()],Budget{max_wall:Duration::ZERO,..budget()}).is_err());
+}
+
 fn coupon() -> (Input, PotentialTrace) {
     let xy = vec![[0.,0.], [0.001,0.], [0.001,0.001], [0.,0.001]];
     let z = vec![0., 0.0001, 0.001, 0.0011];
