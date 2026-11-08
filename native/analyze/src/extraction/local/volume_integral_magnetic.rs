@@ -1312,9 +1312,18 @@ impl CompactLocalHierarchy {
             Ok(v)=>v.parse::<usize>().ok().filter(|v|(1..=4).contains(v)).ok_or_else(||error("MAGNETIC_CONFIG","compact local near threads must be 1..4"))?,
             Err(_)=>return Err(error("MAGNETIC_CONFIG","compact local near threads must be valid UTF-8")),
         };
-        Self::new_with_workers(tetra,budget,start,wall,workers)
+        let axial=match std::env::var("P7_MAGNETIC_AXIAL_TETS") {
+            Ok(v) if v=="1"=>true, Ok(v) if v=="0"=>false,
+            Err(std::env::VarError::NotPresent)=>false,
+            _=>return Err(error("MAGNETIC_CONFIG","P7_MAGNETIC_AXIAL_TETS must be 0 or 1")),
+        };
+        Self::new_with_config(tetra,budget,start,wall,workers,axial)
     }
+    #[cfg(test)]
     fn new_with_workers(tetra: Vec<[[f64;3];4]>, budget: AllocationBudget, start: Instant, wall: Duration, workers: usize) -> Result<Self> {
+        Self::new_with_config(tetra,budget,start,wall,workers,false)
+    }
+    fn new_with_config(tetra: Vec<[[f64;3];4]>, budget: AllocationBudget, start: Instant, wall: Duration, workers: usize, axial:bool) -> Result<Self> {
         let n = tetra.len();
         if n == 0 || n > budget.max_tetrahedra || !(1..=4).contains(&workers) { return Err(error("HYBRID_INPUT", "nonempty bounded local geometry and 1..4 workers required")); }
         let space_bytes = n.checked_mul(std::mem::size_of::<super::volume_current::Cell>()
@@ -1332,15 +1341,18 @@ impl CompactLocalHierarchy {
         // The workers share immutable geometry by Arc. Account worker caches,
         // stacks, metadata, and the bounded ordered-result window up front.
         let worker_slots=2;
-        let parallel_bytes=if workers>1 { BoundedPairs::parallel_bytes_for_slots(workers,false,worker_slots)?.checked_add(16384).ok_or_else(||error("MEMORY_LIMIT","local parallel plan overflow"))? } else { 0 };
-        let base = pair_bytes.checked_add(scalar_bytes).and_then(|v|v.checked_add(space_bytes)).and_then(|v|v.checked_add(parallel_bytes)).and_then(|v|v.checked_add(2*1024*1024)).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy base overflow"))?;
+        let parallel_bytes=if workers>1 { BoundedPairs::parallel_bytes_for_slots(workers,axial,worker_slots)?.checked_add(16384).ok_or_else(||error("MEMORY_LIMIT","local parallel plan overflow"))? } else { 0 };
+        let axial_bytes=if axial {slots.checked_mul(AXIAL_CELL_EXTRA_BYTES).and_then(|v|v.checked_add(64*1024)).ok_or_else(||error("MEMORY_LIMIT","local axial plan overflow"))?} else {0};
+        let base = pair_bytes.checked_add(scalar_bytes).and_then(|v|v.checked_add(space_bytes)).and_then(|v|v.checked_add(parallel_bytes)).and_then(|v|v.checked_add(axial_bytes)).and_then(|v|v.checked_add(2*1024*1024)).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy base overflow"))?;
         let tree = hierarchical_magnetic::Operator::new(&tetra, 12, 1, 0.2, base, budget, start, wall)?;
         let planned_bytes = base.checked_add(tree.planned_bytes).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy plan overflow"))?;
         budget.check(planned_bytes)?;
         let mut pair = BoundedPairs::new_with_scalar(tetra, 12, slots, scalar_slots, start, wall)?;
+        pair.axial=axial;
         pair.checked_self = true;
         *pair.checked_self_values.borrow_mut()=vec![None;n];
         if workers>1 { pair.configure_parallel_slots(workers,worker_slots)?; }
+        eprintln!("P7_COMPACT_LOCAL_TT_PLAN workers={workers} axial={axial} serialSlots={slots} workerSlots={} axialBytes={axial_bytes} parallelBytes={parallel_bytes} plannedBytes={planned_bytes}",if workers>1 {worker_slots} else {0});
         let cells = (0..n).map(|i| super::volume_current::Cell { mesh_cell:i, potentials:[0;4], incidence:[[0.;3];4], density_per_amp_m2:1., resistance_ohm:1. }).collect();
         let space = Space { mesh_nodes:vec![], node_potential:Default::default(), cells, components:vec![], planned_bytes:space_bytes };
         Ok(Self { pair, tree, space, checked_self: std::cell::RefCell::new(vec![false;n]), planned_bytes })
@@ -1364,6 +1376,38 @@ impl CompactLocalHierarchy {
 #[cfg(test)]
 mod compact_reuse_tests {
     use super::*;
+    #[test]
+    fn compact_axial_opt_in_preserves_checks_and_parallel_actions() {
+        let start=Instant::now();let wall=Duration::from_secs(30);
+        let a=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.00001]];
+        let geometry=vec![a,a.map(|p|[p[0]+0.002,p[1],p[2]])];
+        let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:1000,max_tetrahedra:1000};
+        let plain=CompactLocalHierarchy::new_with_config(geometry.clone(),budget,start,wall,2,false).unwrap();
+        let serial=CompactLocalHierarchy::new_with_config(geometry.clone(),budget,start,wall,1,true).unwrap();
+        let parallel=CompactLocalHierarchy::new_with_config(geometry,budget,start,wall,2,true).unwrap();
+        assert!(parallel.planned_bytes>plain.planned_bytes);
+        let r=plain.pair.pair_window(&[(1,0)]).unwrap()[0];
+        let p=parallel.pair.pair_window(&[(1,0)]).unwrap()[0];
+        assert!((p-r).abs()<=1e-8*r.abs());
+        let state=parallel.pair.pool.as_ref().unwrap();
+        assert!(state.workers.iter().map(|w|w.lock().unwrap().parallel_counts.as_ref().unwrap().borrow().axial_accepted).sum::<u64>()>0);
+        let columns=vec![vec![1.,0.,0.,-1.,0.,0.]];
+        let (baseline,_,_)=plain.actions(&columns,&[1e-20]).unwrap();
+        let (a,ab,_)=serial.actions(&columns,&[1e-20]).unwrap();
+        let (b,bb,_)=parallel.actions(&columns,&[1e-20]).unwrap();
+        for (x,y) in baseline.iter().flatten().zip(a.iter().flatten()) {assert!((x-y).abs()<=1e-8*x.abs().max(1e-30));}
+        assert_eq!(a,b);assert_eq!(ab,bb);
+        assert_eq!(*serial.pair.checked_self_values.borrow(),*parallel.pair.checked_self_values.borrow());
+        assert!(parallel.pair.checked_self_values.borrow().iter().all(Option::is_some));
+        // This known tall pair reaches the separated axial fallback, rather
+        // than bypassing axial selection at the lowest cubature order.
+        let unsupported=[[0.,0.,0.],[0.1,0.,0.],[0.,0.1,0.],[0.,0.,2.]];
+        let geometry=vec![unsupported,unsupported.map(|p|[p[0]+4.,p[1],p[2]])];
+        let plain=CompactLocalHierarchy::new_with_config(geometry.clone(),budget,start,wall,2,false).unwrap();
+        let fallback=CompactLocalHierarchy::new_with_config(geometry,budget,start,wall,2,true).unwrap();
+        assert_eq!(plain.pair.pair_window(&[(1,0)]).unwrap()[0].to_bits(),fallback.pair.pair_window(&[(1,0)]).unwrap()[0].to_bits());
+        assert!(fallback.pair.pool.as_ref().unwrap().workers.iter().map(|w|w.lock().unwrap().parallel_counts.as_ref().unwrap().borrow().axial_fallback).sum::<u64>()>0);
+    }
     #[test]
     fn checked_self_parallel_matches_serial_and_refuses_insufficient_memory() {
         let a=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];

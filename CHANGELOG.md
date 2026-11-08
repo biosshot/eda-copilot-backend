@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Connect the existing checked axial tetrahedron quadrature to the compact local hierarchy under `P7_MAGNETIC_AXIAL_TETS=1`, including worker memory admission and unchanged direct fallback. It remains opt-in; no complete-via speedup is yet established.
+
 - Cap the mixed planar pair cache by its actual PP/PL pair domain and reuse the unused reserve for local tetrahedron work within the unchanged total budget. Compact parallel workers retain two cubature slots each; legacy worker capacities remain unchanged.
 
 - Allow explicitly requested 1–4 local magnetic near workers with admitted worker/window memory, serial checked self-integrals, ordered reduction and retained bounded pair-cache reuse. Isolate the worker policy in exact-response cache keys; default remains serial.
