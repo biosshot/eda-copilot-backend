@@ -2316,9 +2316,7 @@ mod mixed_basis_tests {
                 if std::env::var_os("P7_VIA_COVER_CONTROL").as_deref()==Some(std::ffi::OsStr::new("1")) {
                     use super::super::volume_integral_magnetic::hierarchical_magnetic::{Interval,action_goal,kvl_cell};
                     let local=map.local_current_supports().unwrap();
-                    let mut weights=vec![0.;map.current_count()];
-                    for support in &local {for &(i,d) in &support.densities {for &v in &d {weights[i]=compact_bound_sum(weights[i],v.abs());}}}
-                    let weight=weights.into_iter().fold(0f64,f64::max);assert!(weight>0.);
+                    let weights=local_target_weights(&local,map.current_count()).unwrap();
                     let mut columns=Vec::new();let mut goals=Vec::new();
                     for column in &basis.current {
                         let mut scale=0f64;
@@ -2326,7 +2324,7 @@ mod mixed_basis_tests {
                             let (_,lower,_)=kvl_cell(r,current,&[],&[],0.,0.,0.).unwrap();scale=scale.max(lower);
                         }
                         let goal=if column.iter().all(|&v|v==0.) {1.} else {action_goal(scale,std::f64::consts::TAU*1e6).unwrap()};
-                        goals.push(Interval::point(goal).div(Interval::point(weight)).div(Interval::point(8.)).lo);
+                        goals.push(Interval::point(goal).div(Interval::point(8.)).lo);
                         let mut projected=vec![0.;3*local.len()];
                         for (j,support) in local.iter().enumerate() {for k in 0..3 {
                             let mut v=Interval::point(0.);
@@ -2336,7 +2334,7 @@ mod mixed_basis_tests {
                         columns.push(projected);
                     }
                     let h=super::super::volume_integral_magnetic::CompactLocalHierarchy::new(local.iter().map(|s|s.tetra).collect(),AllocationBudget{max_bytes:64*1024*1024,..budget},start,wall).unwrap();
-                    let evidence=h.cover_control(&columns,&goals).unwrap();
+                    let evidence=h.cover_control(&columns,&goals,&weights).unwrap();
                     eprintln!("P7_VIA_COVER_CONTROL {evidence}");
                 }
             },

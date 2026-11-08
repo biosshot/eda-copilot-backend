@@ -377,7 +377,7 @@ pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max
             if plan.pieces>1 {
                 let vertices=inner_ring[..vertices].iter().zip(&outer_ring[..vertices])
                     .map(|(a,b)|([a.x,a.y],[b.x,b.y])).collect::<Vec<_>>();
-                barrel_shell_constraints.push((vertices,plan.pieces));
+                barrel_shell_constraints.push((hole.id.clone(),vertices,plan.pieces));
             }
         }
         let outer=areas::one(outer);
@@ -489,7 +489,7 @@ pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max
         }
         context.refined_for_arrangement(bounds)?
     };
-    let _local_scope=Context::install(Some(arrangement_context));
+    let _local_scope=Context::install(Some(arrangement_context.clone()));
     // A prepared source polygon is physical copper. The coarser derived layer
     // union can lose a sub-grid boundary sliver when sources are overlaid. Only
     // reconcile a contact that would otherwise fail the unchanged coverage gate;
@@ -570,8 +570,16 @@ pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max
     };
     // These are mesh constraints only; canonical material and contact atoms
     // still come from the original authored inner and outer barrel contours.
-    for (vertices,pieces) in barrel_shell_constraints {
-        copper_skin_profile::visit_radial_constraints(&vertices,pieces,&mut segment)?;
+    for (id,vertices,pieces) in barrel_shell_constraints {
+        let barrel=barrel_ids.iter().position(|x|x==&id).and_then(|i|physical_shapes.get(geometry.layers.len()+i)).ok_or_else(||error("BOARD_PROFILE","canonical barrel source missing"))?;
+        let on_boundary=|p:[f64;2]| barrel.0.0.iter().any(|poly|std::iter::once(poly.exterior()).chain(poly.interiors()).any(|ring|ring.lines().any(|line|line.intersects(&Point::from(p)))));
+        let mut canonical=Vec::with_capacity(vertices.len());
+        for (inner,outer) in vertices {
+            let a=arrangement_context.canonical_point(inner); let b=arrangement_context.canonical_point(outer);
+            if !on_boundary(a)||!on_boundary(b) {return Err(error("BOARD_PROFILE","canonical barrel spoke endpoint absent from its source boundary"));}
+            canonical.push((a,b));
+        }
+        copper_skin_profile::visit_radial_constraints(&canonical,pieces,&mut segment)?;
     }
     for poly in atoms.iter().map(|a|&a.poly){for ring in std::iter::once(poly.exterior()).chain(poly.interiors()){for line in ring.lines(){segment([line.start.x,line.start.y],[line.end.x,line.end.y])?;}}}
     if let Some((nodes,triangles))=support{let mut edges=std::collections::BTreeSet::new();for t in triangles{for k in 0..3{let mut e=[t[k],t[(k+1)%3]];e.sort();edges.insert(e);}}for [a,b]in edges{segment(nodes[a],nodes[b])?;}}

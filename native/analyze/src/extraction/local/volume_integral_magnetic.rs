@@ -1414,8 +1414,8 @@ impl CompactLocalHierarchy {
     }
     pub(super) fn self_max_change(&self) -> f64 { self.pair.self_max_change.get() }
     #[cfg(test)]
-    pub(super) fn cover_control(&self, columns:&[Vec<f64>], goals:&[f64]) -> Result<serde_json::Value> {
-        self.tree.cover_control(&self.pair.tetra,&self.space,columns,goals)
+    pub(super) fn cover_control(&self, columns:&[Vec<f64>], goals:&[f64], weights:&[f64]) -> Result<serde_json::Value> {
+        self.tree.cover_control_weighted(&self.pair.tetra,&self.space,columns,goals,Some(weights))
     }
     pub(super) fn actions(&self, columns: &[Vec<f64>], goals: &[f64]) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
         self.actions_weighted(columns, goals, None)

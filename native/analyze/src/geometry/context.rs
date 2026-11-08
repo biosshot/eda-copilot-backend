@@ -25,6 +25,10 @@ impl Context {
     }
     pub fn error_bound(&self) -> f64 {16. * 2_f64.sqrt() * self.adapter.inv_scale}
     pub fn metadata(&self) -> ([f64;2],f64,f64) {(self.adapter.offset,self.adapter.inv_scale,self.error_bound())}
+    /// Apply exactly the same lattice mapping as this context's overlay input.
+    pub(crate) fn canonical_point(&self, point: [f64;2]) -> [f64;2] {
+        self.adapter.int_to_float(&self.adapter.float_to_int(&point))
+    }
     /// Nested local grid for already clipped polygons. Prepared board vertices
     /// remain exactly representable; only newly noded intersections gain bits.
     pub fn refined_for_bounds(&self,bounds:[[f64;2];2])->Result<Self,String> {

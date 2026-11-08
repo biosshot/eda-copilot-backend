@@ -299,3 +299,6 @@ The captured orientation requests also reveal an applicability limit of this con
 - Weighted magnetic allocation: independent review found final original KVL gate retained. Numerical scalar/weighted comparison1794155081560203700 passes0.188s. Initial analytic proof failed by one outward ULP; production now reserves half the allowance and explicitly validates each projected row sum. Corrected analytic control1794155358504927500 passes0.172s.
 - Latest full captured via1794155358892041800 still returns LOCAL_DEADLINE in24.953s. Its logging harness reports pass only for successful diagnostic capture; positive extraction remains open. Neither weighted allocation nor reciprocal refinement establishes complete-via speed.
 - Full39-case/five-board acceptance remains unexecuted.
+
+- Canonical radial endpoint geometry control passes2.49s under5s/1536MiB; previous captured stale endpoint absent, matching canonical endpoint present. Actual copper-interior zero-charge and missing/unmatched trace checks retained. Copper tetra count becomes1338; min volume4.75394e-22m3 shows other thin elements remain, so no full-via speed/completion claim.
+- Weighted production plan-only diagnostic1794155691849446700 passes3.609s: near pairs1121242 vs1365357, but far contraction count rises; runtime improvement unverified.

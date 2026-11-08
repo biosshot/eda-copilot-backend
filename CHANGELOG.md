@@ -724,3 +724,5 @@
 - Use reciprocal near-tetra orientation for extreme shape imbalance only after the unchanged convergence estimator succeeds, with bounded positive quadrature refinement and original-orientation fallback.
 
 - Allocate local magnetic error by admitted target backprojection weights while retaining original per-row KVL bounds and a separate outward arithmetic reserve.
+
+- Map radial via skin constraints through the exact arrangement lattice and require their endpoints on the same canonical barrel boundary, avoiding stale pre-overlay endpoints.

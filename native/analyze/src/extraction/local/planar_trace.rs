@@ -268,16 +268,28 @@ mod board_adapter_tests {
         let wall=Duration::from_secs(20);
         let profile=mixed_conductor::CheckedOperator::HybridPlanarV3.skin_profile(1e6,Some(1e6),request.max_vertical_step_m).unwrap().unwrap().with_thickness_screen([58e6]).unwrap();
         let board_mesh=board_mesh::build_profiled(&board,&request,allocation,wall,None,&[],Some(profile)).unwrap();
+        // Witness from the formerly duplicated pre/post-overlay outer spoke.
+        let old=[f64::from_bits(4572911535762694515),f64::from_bits(4562287101040354732)];
+        let canonical=[f64::from_bits(4572911535755849934),f64::from_bits(4562287101017622609)];
+        let xy=|p:&[f64;3]| [p[0],p[1]];
+        assert!(board_mesh.mesh.nodes_m.iter().any(|p|xy(p)==canonical));
+        assert!(!board_mesh.mesh.nodes_m.iter().any(|p|xy(p)==old),"pre-overlay spoke endpoint recreated a duplicate boundary");
+        eprintln!("P7_CANONICAL_SPOKE copperTetra={} minCopperVolumeM3={:e}",board_mesh.mesh.copper_tetrahedra.len(),board_mesh.mesh.copper_tetrahedra.iter().map(|t|t.volume_m3).fold(f64::INFINITY,f64::min));
+        let smallest=board_mesh.mesh.copper_tetrahedra.iter().min_by(|a,b|a.volume_m3.total_cmp(&b.volume_m3)).unwrap();
+        eprintln!("P7_CANONICAL_MIN_TET {:?}",smallest.nodes.map(|i|board_mesh.mesh.nodes_m[i]));
         let map=mixed_conductor::prepare(&board_mesh,&request.electrodes,1e6,allocation,wall).unwrap();
         let budget=Budget{max_nodes:100_000,max_local_terms:2_400_000,max_bytes:512*1024*1024,max_wall:wall};
         let (input,regions,_original)=input_from_board(&board_mesh,&request,budget).unwrap();
         let trace=trace(&input,&map,budget).unwrap();
         let referenced:std::collections::BTreeSet<_>=trace.nodes.iter().flat_map(|n|n.weights.iter().map(|&(i,_)|i)).collect();
         assert_eq!(referenced.len(),map.potential_count(),"every mixed mode must be referenced by a matched physical metal node");
-        assert!(referenced.contains(&139));
         let action=super::super::layered_capacitance::prepare_traced_spatial_action(&input,&trace,&regions,budget).unwrap();
-        let mut interior=vec![0.;map.potential_count()];interior[139]=1.;
-        let charge=action.apply(&interior).unwrap();
+        let dielectric_nodes:std::collections::BTreeSet<_>=board_mesh.mesh.tetrahedra.iter().flat_map(|t|t.nodes).collect();
+        let mut interior=vec![true;map.potential_count()];
+        for row in map.electric_node_trace() { if dielectric_nodes.contains(&row.node) { for (i,_) in row.weights {interior[i]=false;} } }
+        let mode=interior.iter().position(|&v|v).expect("physical interior mode");
+        let mut excitation=vec![0.;map.potential_count()];excitation[mode]=1.;
+        let charge=action.apply(&excitation).unwrap();
         assert!(charge.iter().all(|&q|q==0.),"interior-only mode must have exactly zero field charge");
         drop(action);
         let mut unused=trace.clone();unused.potential_nodes.push("unreferenced-bogus".into());

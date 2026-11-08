@@ -210,9 +210,17 @@ impl Operator {
         &self, tetra: &[[[f64; 3]; 4]], space: &Space,
         columns: &[Vec<f64>], goals: &[f64],
     ) -> Result<serde_json::Value> {
+        self.cover_control_weighted(tetra, space, columns, goals, None)
+    }
+    #[cfg(test)]
+    pub(crate) fn cover_control_weighted(
+        &self, tetra: &[[[f64; 3]; 4]], space: &Space,
+        columns: &[Vec<f64>], goals: &[f64], weights: Option<&[f64]>,
+    ) -> Result<serde_json::Value> {
         let started = Instant::now();
         let (geometry, _) = self.ensure_geometry(tetra)?;
-        let plan = Plan::new(self, &geometry, space, columns, goals)?;
+        let plan = Plan::new_with_policy_weighted(self, &geometry, space, columns, goals, weights,
+            std::env::var_os("P7_MAGNETIC_NEAR_BOUND").as_deref() == Some(std::ffi::OsStr::new("1")))?;
         let mut self_near = 0usize;
         let mut shape_near = 0usize;
         let mut tail_near = 0usize;
