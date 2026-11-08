@@ -295,3 +295,7 @@ The captured orientation requests also reveal an applicability limit of this con
 - Independent memory re-review confirms repeated union removed by carrying OriginalGeometry; cumulative retained metadata and trace incidence preflight accounted. Existing union scratch estimate remains conservative heuristic, with external process-tree memory supervision retained.
 
 - Original reciprocal order12 failed convergence1794153710386383600; its apparent millisecond result was not admitted. Bounded positive refinement passes1794154429355815200 in3.781s including expensive original comparison: reciprocal converges at order20 with the unchanged1e-10 criterion and agrees with independent vertex parametrization; original12 comparison takes3.581s. Full via speed remains unverified.
+
+- Weighted magnetic allocation: independent review found final original KVL gate retained. Numerical scalar/weighted comparison1794155081560203700 passes0.188s. Initial analytic proof failed by one outward ULP; production now reserves half the allowance and explicitly validates each projected row sum. Corrected analytic control1794155358504927500 passes0.172s.
+- Latest full captured via1794155358892041800 still returns LOCAL_DEADLINE in24.953s. Its logging harness reports pass only for successful diagnostic capture; positive extraction remains open. Neither weighted allocation nor reciprocal refinement establishes complete-via speed.
+- Full39-case/five-board acceptance remains unexecuted.

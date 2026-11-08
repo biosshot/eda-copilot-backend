@@ -1418,6 +1418,9 @@ impl CompactLocalHierarchy {
         self.tree.cover_control(&self.pair.tetra,&self.space,columns,goals)
     }
     pub(super) fn actions(&self, columns: &[Vec<f64>], goals: &[f64]) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
+        self.actions_weighted(columns, goals, None)
+    }
+    pub(super) fn actions_weighted(&self, columns: &[Vec<f64>], goals: &[f64], weights: Option<&[f64]>) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
         let n=self.space.cells.len();
         if columns.iter().any(|q|q.len()!=3*n || q.iter().any(|v|!v.is_finite())) {
             return Err(error("HYBRID_INPUT", "invalid local hierarchy column"));
@@ -1428,13 +1431,33 @@ impl CompactLocalHierarchy {
                 self.checked_self.borrow_mut()[i]=true;
             }
         }
-        self.tree.batch(&self.pair, &self.space, columns, goals)
+        self.tree.batch_weighted(&self.pair, &self.space, columns, goals, weights)
     }
 }
 
 #[cfg(test)]
 mod compact_reuse_tests {
     use super::*;
+    #[test]
+    fn weighted_local_actions_preserve_scalar_results_and_bounds() {
+        let tetra=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];
+        let geometry=vec![tetra,tetra.map(|p|[p[0]+0.01,p[1],p[2]])];
+        let budget=AllocationBudget{max_bytes:128*1024*1024,max_nodes:1000,max_tetrahedra:1000};
+        let tree=CompactLocalHierarchy::new_with_config(geometry,budget,Instant::now(),Duration::from_secs(20),1,false).unwrap();
+        let columns=vec![vec![1.,-0.5,0.25,0.3,0.,-0.2]];
+        let goals=[1e-8];
+        let (plain,plain_bounds,_)=tree.actions(&columns,&goals).unwrap();
+        let (unit,unit_bounds,_)=tree.actions_weighted(&columns,&goals,Some(&[1.,1.])).unwrap();
+        for i in 0..6 {
+            assert_eq!(plain[0][i].to_bits(),unit[0][i].to_bits());
+            assert_eq!(plain_bounds[0][i].to_bits(),unit_bounds[0][i].to_bits());
+        }
+        let (weighted,bounds,_)=tree.actions_weighted(&columns,&goals,Some(&[1e8,1e2])).unwrap();
+        for i in 0..6 {
+            assert!((plain[0][i]-weighted[0][i]).abs()<=plain_bounds[0][i]+bounds[0][i]);
+            assert!(bounds[0][i]<=goals[0]/if i<3 {1e8} else {1e2});
+        }
+    }
     #[test]
     fn local_prepared_jet_cache_preserves_interval_action_bits() {
         let tetra=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];

@@ -722,3 +722,5 @@
 - Preserve canonical board-mesh copper/dielectric ownership in the internal electric adapter, with exact mesh identity, finite shared-face contacts, strict trace validation and admitted retained geometry metadata.
 
 - Use reciprocal near-tetra orientation for extreme shape imbalance only after the unchanged convergence estimator succeeds, with bounded positive quadrature refinement and original-orientation fallback.
+
+- Allocate local magnetic error by admitted target backprojection weights while retaining original per-row KVL bounds and a separate outward arithmetic reserve.

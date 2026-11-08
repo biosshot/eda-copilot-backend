@@ -206,7 +206,7 @@ impl Operator {
         ))
     }
     #[cfg(test)]
-    pub(super) fn cover_control(
+    pub(crate) fn cover_control(
         &self, tetra: &[[[f64; 3]; 4]], space: &Space,
         columns: &[Vec<f64>], goals: &[f64],
     ) -> Result<serde_json::Value> {
@@ -216,19 +216,39 @@ impl Operator {
         let mut self_near = 0usize;
         let mut shape_near = 0usize;
         let mut tail_near = 0usize;
+        let mut p16 = 0usize;
+        let mut p20 = 0usize;
+        let mut above20 = 0usize;
         plan.walk(None, |pair, decision| {
             if matches!(decision, Decision::Near) {
                 if pair.a == pair.b { self_near += 1; }
                 else {
                     let (r, q) = self.separation(pair.a, pair.b);
                     if !q.finite() || q.hi >= 1. || r.lo <= 0. { shape_near += 1; }
-                    else { tail_near += 1; }
+                    else {
+                        tail_near += 1;
+                        // Hypothetical orders only: identical existing tail and
+                        // per-node budgets; no action or approximation accepted.
+                        let mut power=Interval::one();
+                        let inverse=Interval::one().div(r);
+                        let denominator=Interval::one().sub(q);
+                        let mut first=None;
+                        for p in 0..=20 {
+                            power=power.mul(q);
+                            let tail=inverse.mul(power).div(denominator);
+                            let ea=plan.node_weight[pair.a].mul(tail).mul(plan.tv[pair.b]);
+                            let eb=plan.node_weight[pair.b].mul(tail).mul(plan.tv[pair.a]);
+                            if tail.finite() && ea.finite() && eb.finite() && ea.hi<=plan.node_budget[pair.b] && eb.hi<=plan.node_budget[pair.a] {first=Some(p);break;}
+                        }
+                        match first {Some(p) if p<=16=>p16+=1,Some(p) if p<=20=>p20+=1,_=>above20+=1}
+                    }
                 }
             }
             Ok(())
         })?;
         let mut evidence = plan.evidence(goals);
-        evidence["nearRejections"] = serde_json::json!({"self":self_near,"overlappingBalls":shape_near,"tailOrderExhausted":tail_near});
+        evidence["nearRejections"] = serde_json::json!({"self":self_near,"overlappingBalls":shape_near,"tailOrderExhausted":tail_near,"hypotheticalThrough16":p16,"hypothetical17Through20":p20,"stillNearAfter20":above20});
+        evidence["nonzeroCellsByColumn"] = serde_json::json!(columns.iter().map(|q|q.chunks_exact(3).filter(|v|v.iter().any(|x|*x!=0.)).count()).collect::<Vec<_>>());
         evidence["controlSeconds"] = serde_json::json!(started.elapsed().as_secs_f64());
         Ok(evidence)
     }
@@ -239,17 +259,22 @@ impl Operator {
         &self, pair: &BoundedPairs, space: &Space,
         columns: &[Vec<f64>], goals: &[f64], chunk_columns: usize,
     ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
+        self.batch_chunked_weighted(pair,space,columns,goals,chunk_columns,None)
+    }
+    fn batch_chunked_weighted(
+        &self, pair: &BoundedPairs, space: &Space, columns: &[Vec<f64>], goals: &[f64], chunk_columns: usize, weights: Option<&[f64]>,
+    ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
         if !(1..=64).contains(&chunk_columns) || columns.len()!=goals.len() {
             return Err(error("HIERARCHICAL_MAGNETIC_GOAL", "chunk columns must be 1..64 with one original goal per column"));
         }
-        if columns.len()<=chunk_columns { return self.batch_common(pair,space,columns,goals); }
+        if columns.len()<=chunk_columns { return self.batch_common_weighted(pair,space,columns,goals,weights); }
         let started=Instant::now();
         let mut actions=Vec::with_capacity(columns.len());
         let mut bounds=Vec::with_capacity(columns.len());
         let mut certificates=vec![];
         for offset in (0..columns.len()).step_by(chunk_columns) {
             let end=(offset+chunk_columns).min(columns.len());
-            let (mut action,mut bound,certificate)=self.batch_common(pair,space,&columns[offset..end],&goals[offset..end])?;
+            let (mut action,mut bound,certificate)=self.batch_common_weighted(pair,space,&columns[offset..end],&goals[offset..end],weights)?;
             actions.append(&mut action);
             bounds.append(&mut bound);
             certificates.push(certificate);
@@ -296,13 +321,18 @@ impl Operator {
         &self, pair: &BoundedPairs, space: &Space,
         columns: &[Vec<f64>], goals: &[f64],
     ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
+        self.batch_weighted(pair,space,columns,goals,None)
+    }
+    pub(crate) fn batch_weighted(
+        &self, pair: &BoundedPairs, space: &Space, columns: &[Vec<f64>], goals: &[f64], weights: Option<&[f64]>,
+    ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
         let chunk = match std::env::var("P7_MAGNETIC_BATCH_COLUMNS") {
             Err(std::env::VarError::NotPresent) => 0,
             Ok(raw) => raw.parse::<usize>().ok().filter(|v|*v<=64).ok_or_else(||error("HIERARCHICAL_MAGNETIC_GOAL","P7_MAGNETIC_BATCH_COLUMNS must be an integer 0..64"))?,
             Err(_) => return Err(error("HIERARCHICAL_MAGNETIC_GOAL","P7_MAGNETIC_BATCH_COLUMNS must be an integer 0..64")),
         };
-        if chunk==0 {self.batch_common(pair,space,columns,goals)}
-        else {self.batch_chunked(pair,space,columns,goals,chunk)}
+        if chunk==0 {self.batch_common_weighted(pair,space,columns,goals,weights)}
+        else {self.batch_chunked_weighted(pair,space,columns,goals,chunk,weights)}
     }
     fn batch_common(
         &self,
@@ -311,6 +341,11 @@ impl Operator {
         columns: &[Vec<f64>],
         goals: &[f64],
     ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
+        self.batch_common_weighted(pair, space, columns, goals, None)
+    }
+    pub(super) fn batch_common_weighted(
+        &self, pair: &BoundedPairs, space: &Space, columns: &[Vec<f64>], goals: &[f64], weights: Option<&[f64]>,
+    ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
         let started = Instant::now();
         let mut batch_profile = Profile::new("batch", None);
         let mut geometry_profile = Profile::new("geometry", None);
@@ -318,7 +353,8 @@ impl Operator {
         geometry_profile.finish();
         let plan_started = Instant::now();
         let mut plan_profile = Profile::new("plan", None);
-        let plan = Plan::new(self, &geometry, space, columns, goals)?;
+        let plan = Plan::new_with_policy_weighted(self, &geometry, space, columns, goals, weights,
+            std::env::var_os("P7_MAGNETIC_NEAR_BOUND").as_deref() == Some(std::ffi::OsStr::new("1")))?;
         plan_profile.finish();
         let plan_seconds = plan_started.elapsed().as_secs_f64();
         if plan_profile.clock.is_some() {
@@ -374,6 +410,7 @@ struct Plan<'a> {
     tree: &'a Operator,
     geometry: &'a Geometry,
     mass: Vec<Interval>,
+    target_weights: Vec<f64>,
     max_weight: Vec<f64>,
     node_budget: Vec<f64>,
     node_weight: Vec<Interval>,
@@ -398,14 +435,19 @@ impl<'a> Plan<'a> {
         columns: &[Vec<f64>],
         goals: &[f64],
     ) -> Result<Self> {
-        Self::new_with_policy(tree, geometry, space, columns, goals,
+        Self::new_with_policy_weighted(tree, geometry, space, columns, goals, None,
             std::env::var_os("P7_MAGNETIC_NEAR_BOUND").as_deref() == Some(std::ffi::OsStr::new("1")))
     }
     fn new_with_policy(tree: &'a Operator, geometry: &'a Geometry, space: &Space,
         columns: &[Vec<f64>], goals: &[f64], near_bound: bool) -> Result<Self> {
+        Self::new_with_policy_weighted(tree, geometry, space, columns, goals, None, near_bound)
+    }
+    fn new_with_policy_weighted(tree: &'a Operator, geometry: &'a Geometry, space: &Space,
+        columns: &[Vec<f64>], goals: &[f64], weights: Option<&[f64]>, near_bound: bool) -> Result<Self> {
         let n = space.cells.len();
         let nodes = tree.nodes.len();
-        if columns.len() != goals.len()
+        if weights.is_some_and(|w| w.len()!=n || w.iter().any(|x| !x.is_finite() || *x<=0.))
+            || columns.len() != goals.len()
             || goals.iter().any(|v| !v.is_finite() || *v <= 0.)
             || columns
                 .iter()
@@ -417,6 +459,7 @@ impl<'a> Plan<'a> {
             tree,
             geometry,
             mass: vec![Interval::zero(); nodes],
+            target_weights: weights.map_or_else(|| vec![1.; n], |w| w.to_vec()),
             max_weight: vec![0.; nodes],
             node_budget: vec![0.; nodes],
             node_weight: vec![Interval::zero(); nodes],
@@ -449,6 +492,7 @@ impl<'a> Plan<'a> {
         }
         result.envelope_signature = fnv(std::iter::once(columns.len() as u64)
             .chain(goals.iter().map(|v| v.to_bits()))
+            .chain(weights.into_iter().flatten().map(|v| v.to_bits()))
             .chain(result.envelope.iter().map(|v| v.to_bits())));
         for node in (0..nodes).rev() {
             check_deadline(tree.start, tree.wall)?;
@@ -470,7 +514,7 @@ impl<'a> Plan<'a> {
                     ));
                 }
                 result.mass[node] = mass;
-                result.max_weight[node] = mass.hi;
+                result.max_weight[node] = if weights.is_some() { mass.mul(Interval::point(result.target_weights[i])).hi } else { mass.hi };
                 result.tv[node] = mass.mul(Interval::point(result.envelope[i]));
                 // Layer-cake rearrangement bounds a uniform source of volume V by
                 // its equal-volume ball: 2*pi*(3/(4*pi))^(2/3)*sigma*V^(2/3)
@@ -1047,7 +1091,8 @@ impl<'a> Plan<'a> {
                 let bound = Interval::point(value.radius(mid))
                     .add(factor.mul(target[0]).mul(tails[node]))
                     .hi;
-                if !value.finite() || !mid.is_finite() || !bound.is_finite() || bound > goal {
+                let leaf_goal = if self.target_weights[i] == 1. { goal } else { Interval::point(goal).div(Interval::point(self.target_weights[i])).lo };
+                if !value.finite() || !mid.is_finite() || !bound.is_finite() || leaf_goal <= 0. || bound > leaf_goal {
                     return Err(error("HIERARCHICAL_MAGNETIC_ACCURACY","action interval/roundoff enclosure exceeds requested absolute goal; no response admitted"));
                 }
                 action[3 * i + axis] = mid;

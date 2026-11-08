@@ -2313,6 +2313,32 @@ mod mixed_basis_tests {
                     let free=reaction.iter().zip(&dc.free_map).filter(|(_,f)|f.is_some()).map(|(v,_)|v.abs()).fold(0.,f64::max);
                     assert!(free<=RESIDUAL_LIMIT*scale.max(f64::MIN_POSITIVE));
                 }
+                if std::env::var_os("P7_VIA_COVER_CONTROL").as_deref()==Some(std::ffi::OsStr::new("1")) {
+                    use super::super::volume_integral_magnetic::hierarchical_magnetic::{Interval,action_goal,kvl_cell};
+                    let local=map.local_current_supports().unwrap();
+                    let mut weights=vec![0.;map.current_count()];
+                    for support in &local {for &(i,d) in &support.densities {for &v in &d {weights[i]=compact_bound_sum(weights[i],v.abs());}}}
+                    let weight=weights.into_iter().fold(0f64,f64::max);assert!(weight>0.);
+                    let mut columns=Vec::new();let mut goals=Vec::new();
+                    for column in &basis.current {
+                        let mut scale=0f64;
+                        for (&r,&current) in map.resistance_ohm.iter().zip(column) {
+                            let (_,lower,_)=kvl_cell(r,current,&[],&[],0.,0.,0.).unwrap();scale=scale.max(lower);
+                        }
+                        let goal=if column.iter().all(|&v|v==0.) {1.} else {action_goal(scale,std::f64::consts::TAU*1e6).unwrap()};
+                        goals.push(Interval::point(goal).div(Interval::point(weight)).div(Interval::point(8.)).lo);
+                        let mut projected=vec![0.;3*local.len()];
+                        for (j,support) in local.iter().enumerate() {for k in 0..3 {
+                            let mut v=Interval::point(0.);
+                            for &(i,d) in &support.densities {v=v.add(Interval::point(d[k]).mul(Interval::point(column[i])));}
+                            projected[3*j+k]=v.mid();
+                        }}
+                        columns.push(projected);
+                    }
+                    let h=super::super::volume_integral_magnetic::CompactLocalHierarchy::new(local.iter().map(|s|s.tetra).collect(),AllocationBudget{max_bytes:64*1024*1024,..budget},start,wall).unwrap();
+                    let evidence=h.cover_control(&columns,&goals).unwrap();
+                    eprintln!("P7_VIA_COVER_CONTROL {evidence}");
+                }
             },
             Err(e)=>panic!("profiled via harmonic seed: {e}")
         };
@@ -3170,6 +3196,31 @@ impl CompactChargeAction {
 fn compact_upper(v:f64)->f64 {if v==0. {0.} else if v.is_finite() && v>0. {f64::from_bits(v.to_bits()+1)} else {v}}
 fn compact_bound_product(a:f64,b:f64)->f64 {if a==0. || b==0. {0.} else {let product=a*b;if product==0. {f64::from_bits(1)} else {compact_upper(product)}}}
 fn compact_bound_sum(a:f64,b:f64)->f64 {if a==0. {b} else if b==0. {a} else {compact_upper(a+b)}}
+// Each original row splits its error allowance equally over its nonzero
+// support entries. A leaf uses the strictest of its rows' allocations.
+fn local_target_weights(local: &[super::mixed_conductor::LocalCurrentSupport], dim: usize) -> Result<Vec<f64>> {
+    let mut counts=vec![0usize;dim];
+    for support in local { for &(i,d) in &support.densities {
+        if i>=dim || d.iter().any(|v| !v.is_finite()) { return Err(error("HYBRID_INPUT", "invalid local current support")); }
+        if d.iter().any(|v| *v != 0.) { counts[i]=counts[i].checked_add(1).ok_or_else(||error("HYBRID_RANGE","local support count overflow"))?; }
+    }}
+    if counts.iter().any(|&v| v > (1usize<<53)) { return Err(error("HYBRID_RANGE","local support count cannot be represented exactly")); }
+    let mut weights=vec![0f64;local.len()];
+    for (j,support) in local.iter().enumerate() { for &(i,d) in &support.densities {
+        let magnitude=d.iter().fold(0.,|sum,v| compact_bound_sum(sum,v.abs()));
+        weights[j]=weights[j].max(compact_bound_product(magnitude,counts[i] as f64));
+    }}
+    // Reserve half of each row's budget for outward rounding during division
+    // and accumulation; explicitly certify the computed row sums below.
+    for weight in &mut weights { if *weight == 0. { *weight=1.; } else { *weight=compact_bound_product(*weight,2.); } if !weight.is_finite() { return Err(error("HYBRID_RANGE","local target weight overflow")); } }
+    use super::volume_integral_magnetic::hierarchical_magnetic::Interval;
+    let mut sums=vec![Interval::point(0.);dim];
+    for (j,support) in local.iter().enumerate() { for &(i,d) in &support.densities { for v in d {
+        if v!=0. { sums[i]=sums[i].add(Interval::point(v.abs()).div(Interval::point(weights[j]))); }
+    }}}
+    if sums.iter().any(|v| !v.hi.is_finite() || v.hi>1.) { return Err(error("HIERARCHICAL_MAGNETIC_GOAL","local target budget certification failed")); }
+    Ok(weights)
+}
 fn projection_radius(v:super::volume_integral_magnetic::hierarchical_magnetic::Interval,mid:f64)->f64 {
     // An exactly zero interval has exactly zero uncertainty. Preserve outward
     // rounding, including positive underflow, for every other interval.
@@ -3296,7 +3347,7 @@ impl CompactMixedMagnetic {
         let count=columns.len();if count==0 {return Ok((vec![],vec![]));}let dim=self.dimensions;
         if columns.iter().any(|v|v.len()!=dim || v.iter().any(|x|!x.is_finite())) {return Err(error("HYBRID_INPUT","invalid magnetic columns"));}
         let ns=self.supports.len()+self.local.len();
-        let bytes=count.checked_mul(ns).and_then(|n|n.checked_mul(48)).and_then(|n|n.checked_add(count.checked_mul(self.local.len())?.checked_mul(256)?)).and_then(|n|n.checked_add(count.checked_mul(dim)?.checked_mul(32)?)).and_then(|n|n.checked_add(dim.checked_mul(8)?)).and_then(|n|n.checked_add(count.checked_mul(256)?)).ok_or_else(||error("MEMORY_LIMIT","batch size overflow"))?;
+        let bytes=count.checked_mul(ns).and_then(|n|n.checked_mul(48)).and_then(|n|n.checked_add(count.checked_mul(self.local.len())?.checked_mul(256)?)).and_then(|n|n.checked_add(count.checked_mul(dim)?.checked_mul(32)?)).and_then(|n|n.checked_add(dim.checked_mul(32)?)).and_then(|n|n.checked_add(self.local.len().checked_mul(8)?)).and_then(|n|n.checked_add(count.checked_mul(256)?)).ok_or_else(||error("MEMORY_LIMIT","batch size overflow"))?;
         if bytes>self.batch_limit {return Err(error("MEMORY_LIMIT","mixed magnetic batch exceeds reservation"));}
         self.action_count.set(self.action_count.get()+count);
         let mut density=vec![vec![[0.;3];ns];count];let mut envelope=density.clone();let mut output=vec![vec![0.;dim];count];let mut bounds=output.clone();
@@ -3304,16 +3355,9 @@ impl CompactMixedMagnetic {
         if let Some(tree) = &self.local_hierarchy {
             use super::volume_integral_magnetic::hierarchical_magnetic::Interval;
             let goals = goals.ok_or_else(||error("HIERARCHICAL_MAGNETIC_GOAL", "local hierarchy requires action goals"))?;
-            let mut row_weights=vec![0.;dim];
-            for support in &self.local { for &(i,d) in &support.densities { for &value in &d {
-                row_weights[i]=compact_bound_sum(row_weights[i],value.abs());
-            }}}
-            let weight=row_weights.into_iter().fold(0_f64,f64::max);
-            if weight > 0. {
-                let local_goals:Vec<_>=goals.iter().map(|&g| {
-                    let v=Interval::point(g).div(Interval::point(weight)).div(Interval::point(8.)).lo;
-                    if v>0. && v.is_finite() { v } else { 0. }
-                }).collect();
+            let weights=local_target_weights(&self.local,dim)?;
+            if !weights.is_empty() {
+                let local_goals:Vec<_>=goals.iter().map(|&g| Interval::point(g).div(Interval::point(8.)).lo).collect();
                 if local_goals.iter().any(|&g|g<=0.) { return Err(error("HIERARCHICAL_MAGNETIC_GOAL", "local projection goal underflow")); }
                 let mut q=vec![vec![0.;3*self.local.len()];count];
                 let mut qr=q.clone();
@@ -3324,10 +3368,10 @@ impl CompactMixedMagnetic {
                     if !mid.is_finite() || !radius.is_finite() {return Err(error("HYBRID_RANGE","local projection overflow"));}
                     q[c][3*j+k]=mid; qr[c][3*j+k]=radius;
                 }}}
-                let (action,uncertainty,_)=tree.actions(&q,&local_goals)?;
+                let (action,uncertainty,_)=tree.actions_weighted(&q,&local_goals,Some(&weights))?;
                 // The Newton scalar kernel is nonnegative, so its action on
                 // componentwise input radii encloses the projection error.
-                let (error_action,error_uncertainty,_)=tree.actions(&qr,&local_goals)?;
+                let (error_action,error_uncertainty,_)=tree.actions_weighted(&qr,&local_goals,Some(&weights))?;
                 let mut projected=vec![vec![Interval::point(0.);dim];count];
                 for c in 0..count {for (j,support) in self.local.iter().enumerate() {for &(i,d) in &support.densities {for k in 0..3 {
                     let at=3*j+k;
@@ -3482,4 +3526,36 @@ pub(super) fn solve_compact_adaptive(
     result["quality"]["scope"]=serde_json::json!("compact-discrete");result["quality"]["physicalError"]=serde_json::json!("unverified");
     result["compactEvidence"]=serde_json::json!({"basis":"adaptive-mixed-closure","skinHints":{"eligibleGroups":eligible_groups,"submitted":submitted_hints,"added":added_hints,"upperHz":upper_hz,"coverage":"unverified"},"planarMaxOrder":magnetic.planar_max_order.get(),"planarMaxRelativeChange":magnetic.planar_max_change.get(),"mixedMaxRelativeChange":magnetic.mixed_max_change.get(),"mixedTetraFallbackCount":magnetic.mixed_fallback_count.get(),"mixedTetraFallbackTolerance":1e-10,"goalAdmittedNearPairs":magnetic.promoted_pairs.get(),"parallelPlWorkers":magnetic.pl_workers,"tetraSelfMaxRelativeChange":magnetic.self_max_change.get().max(magnetic.local_hierarchy.as_ref().map_or(0., |h|h.self_max_change())),"tetraPairAdaptiveTolerance":1e-10,"nearQuadratureEstimatedTolerance":1e-8,"originalVolumeActions":0,"scope":"compact-discrete","physicalAccuracy":"unverified","approximationError":"unverified"});
     Ok((result,space.model,budget.max_bytes))
+}
+
+#[cfg(test)]
+mod weighted_local_goal_tests {
+    use super::*;
+    use super::super::mixed_conductor::LocalCurrentSupport;
+    use super::super::volume_integral_magnetic::hierarchical_magnetic::Interval;
+    #[test]
+    fn sliver_and_shared_rows_preserve_original_goal() {
+        let tetra=[[0.,0.,0.],[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
+        let local=vec![
+            LocalCurrentSupport {tetra,densities:vec![(0,[1e15,-2e15,0.]),(1,[0.2,0.,0.])]},
+            LocalCurrentSupport {tetra,densities:vec![(1,[-0.4,0.1,0.]),(2,[1e-5,0.,0.])]},
+            LocalCurrentSupport {tetra,densities:vec![(1,[0.3,0.,0.]),(2,[0.,1e-9,0.])]},
+        ];
+        let weights=local_target_weights(&local,3).unwrap();
+        let goal=1e-12;
+        for i in 0..3 {
+            let mut normalized=Interval::point(0.);
+            let mut bound=Interval::point(0.);
+            for (j,support) in local.iter().enumerate() { for &(row,d) in &support.densities { if row==i { for v in d {
+                let term=Interval::point(v.abs());
+                normalized=normalized.add(term.div(Interval::point(weights[j])));
+                let leaf_goal=Interval::point(goal).div(Interval::point(weights[j])).lo;
+                bound=bound.add(term.mul(Interval::point(leaf_goal)));
+            }}}}
+            assert!(normalized.hi<=1., "row {i}: {normalized:?}");
+            assert!(bound.hi<=goal, "row {i}: {bound:?}");
+        }
+        assert!(weights[0]>weights[1]*1e12);
+        assert!(local_target_weights(&local,2).is_err());
+    }
 }
