@@ -302,3 +302,9 @@ The captured orientation requests also reveal an applicability limit of this con
 
 - Canonical radial endpoint geometry control passes2.49s under5s/1536MiB; previous captured stale endpoint absent, matching canonical endpoint present. Actual copper-interior zero-charge and missing/unmatched trace checks retained. Copper tetra count becomes1338; min volume4.75394e-22m3 shows other thin elements remain, so no full-via speed/completion claim.
 - Weighted production plan-only diagnostic1794155691849446700 passes3.609s: near pairs1121242 vs1365357, but far contraction count rises; runtime improvement unverified.
+
+### Latest complete addon readiness checkpoint
+
+- Fresh addon build from2ce9973 succeeds. Audited coupled smoke1794156532305939600 passes4.906s, sampled private443539456B, covering cold/warm/restart and same-model regime audit.
+- Unchanged production via1794156422031586000: LOCAL_DEADLINE,26.078s wall, private209674240B. Remote return1794156448319877900: LOCAL_DEADLINE,13.125s wall, private204369920B. Reference-swap1794156461665631900: now passes earlier electric geometry refusal but reaches magnetic LOCAL_DEADLINE,26.141s wall, private221081600B.
+- These are unresolved positive electrical controls. Readiness for full acceptance is NOT achieved. Main blocker remains dense expensive checked local tetra magnetic action; limits and physical gates remain unchanged. Full39/five-board campaign not run.
