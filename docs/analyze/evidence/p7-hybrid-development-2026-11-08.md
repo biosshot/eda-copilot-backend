@@ -21,6 +21,9 @@ Native test binaries were compiled with `cargo test --manifest-path native/analy
 | Imported air-board after zero-current fix, two drives and missing contact | pass | 0.265 s | `1794120283622096900` |
 | Spatial dielectric versus uniform-layer analytic capacitor and cut-cell refusal | pass | 0.203 s | `1794120733589767000` |
 | Expanded planar kernel suite | 11 pass, arbitrary shared-edge refinement refuses | 0.532 s | `1794120580710209200` |
+| Arbitrary shared edge after Duffy decomposition | pass | 1.906 s | `1794120894151578800` |
+| Arbitrary edge versus tetra reference and reversed support order | pass; tetra relative difference 1.90125853e-8 | 3.563 s | `1794121131140798500` |
+| Imported air-board plus spatial FR4 solve, two drives and missing contact | pass | 0.250 s | `1794121121658698300` |
 
 The tetra comparisons use constant density integrals on the same finite support; they are independent integration controls, not independent full-channel or broadband EM references. Initial invalid reference-tolerance test invocation (`1794119924965750500`) was corrected before the two successful reference comparisons; no production tolerance was relaxed.
 
@@ -30,4 +33,4 @@ An all-target test compilation encountered the existing missing `docs/experiment
 
 ## Outstanding work
 
-The shared contract and direct kernels are being integrated. Zero-current capacitive dispatch now has a small positive control. Arbitrary near geometry, full mixed AC basis and charge rank, mixed interfaces/components, spatial dielectric board dispatch, planner selection, complete coverage/reference bindings, resource scaling and final five-board/coupon acceptance remain open. Experimental compute completion always retains `coverage: unverified`; no acceptance status is raised by this record. The expanded kernel suite deliberately retains its failing arbitrary-edge positive test; this checkpoint is an experimental implementation, not a fully passing candidate.
+The shared contract and direct kernels are being integrated. Zero-current capacitive dispatch and the small spatial FR4 solve now have positive controls. The former arbitrary-edge failure was corrected by Duffy decomposition; the reference and reciprocity control passed. Other near geometries, full mixed AC basis and charge rank, mixed interfaces/components, representative spatial dielectric boards, planner selection, complete coverage/reference bindings, resource scaling and final five-board/coupon acceptance remain open. Experimental compute completion always retains `coverage: unverified`; no acceptance status is raised by this record. The first native checkpoint recorded the failing arbitrary-edge positive test explicitly; its subsequent correction does not confer complete-family acceptance.

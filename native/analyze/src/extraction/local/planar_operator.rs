@@ -153,29 +153,33 @@ fn rectangle_pair(a: &Prism,b: &Prism,order: usize,start: Instant,limit: Duratio
     Ok(Some(cross))
 }
 
-// Singular-aware shared-edge fallback: partition each finite prism exactly
-// into three tetrahedra and sum the nine volume pairs. This is a local pair
-// action, never a whole-board volume operator. The tetra routine owns its
-// refinement estimate and refuses if the 1e-10 target is not met.
-fn shared_edge_pair(a:&Prism,b:&Prism,start:Instant,limit:Duration) -> Result<Option<(f64,f64)>> {
-    if a.z_m != b.z_m || a.triangle_m.iter().filter(|p|b.triangle_m.contains(p)).count()!=2 { return Ok(None); }
-    let split=|p:&Prism| {
-        let x=p.triangle_m.map(|v|[v[0],v[1],p.z_m[0]]);
-        let y=p.triangle_m.map(|v|[v[0],v[1],p.z_m[1]]);
-        [[x[0],x[1],x[2],y[2]],[x[0],x[1],y[1],y[2]],[x[0],y[0],y[1],y[2]]]
-    };
-    let aa=split(a); let bb=split(b); let mut total=0.; let mut coarse=0.;
-    for ta in aa { for tb in bb {
-        if start.elapsed()>=limit { return Err(error("DEADLINE","shared-edge pair deadline exceeded")); }
-        let source=super::polyhedron::PointPotential::tetrahedron(tb)?;
-        coarse+=super::polyhedron::tetra_integral_adaptive(ta,&source,12,1e-10)?;
-        total+=super::polyhedron::tetra_integral_adaptive(ta,&source,16,1e-10)?;
-        if start.elapsed()>=limit { return Err(error("DEADLINE","shared-edge pair deadline exceeded")); }
+// Shared-edge Duffy transform. Coordinates u,v are distances from the
+// common edge; q is split on either side of t. The singular corner
+// (u,v,|q-t|)=0 is partitioned into three largest-coordinate sectors.
+fn edge_integral(a:&Prism,b:&Prism,order:usize,start:Instant,limit:Duration) -> Result<Option<f64>> {
+    if a.z_m != b.z_m { return Ok(None); }
+    let common:Vec<_>=a.triangle_m.iter().copied().filter(|p|b.triangle_m.contains(p)).collect();
+    if common.len()!=2 { return Ok(None); }
+    let ca=*a.triangle_m.iter().find(|p|!common.contains(p)).unwrap();
+    let cb=*b.triangle_m.iter().find(|p|!common.contains(p)).unwrap();
+    let q=GaussRule::new(order)?; let h=a.z_m[1]-a.z_m[0];
+    let area_a=a.volume_m3/h; let area_b=b.volume_m3/h; let mut total=0.;
+    for (&t,&wt) in q.nodes().iter().zip(q.weights()) { for (&r0,&wr) in q.nodes().iter().zip(q.weights()) {
+        if start.elapsed()>=limit {return Err(error("DEADLINE","shared edge quadrature deadline exceeded"));}
+        let r=r0*r0; let jac=2.*r0*r*r;
+        for (&x,&wx) in q.nodes().iter().zip(q.weights()) { for (&y,&wy) in q.nodes().iter().zip(q.weights()) {
+            for sector in 0..3 { let (u,v,w)=match sector {0=>(r,r*x,r*y),1=>(r*x,r,r*y),_=>(r*x,r*y,r)};
+                for side in 0..2 { let (qv,qjac)=if side==0 {(t*(1.-w),t)}else{(t+(1.-t)*w,1.-t)};
+                    let p=std::array::from_fn::<_,2,_>(|k|(1.-u)*((1.-t)*common[0][k]+t*common[1][k])+u*ca[k]);
+                    let z=std::array::from_fn::<_,2,_>(|k|(1.-v)*((1.-qv)*common[0][k]+qv*common[1][k])+v*cb[k]);
+                    let rho=(p[0]-z[0]).hypot(p[1]-z[1]);
+                    total+=wt*wr*wx*wy*jac*qjac*(1.-u)*(1.-v)*axial_magnetic::axial_kernel(rho,[0.,h],[0.,h])?;
+                }
+            }
+        }}
     }}
-    if !total.is_finite() || total<=0. { return Err(error("PLANAR_RANGE","invalid shared-edge integral")); }
-    let relative=(total-coarse).abs()/total.abs();
-    if relative>1e-8 { return Err(error("PLANAR_UNRESOLVED","shared-edge tetra refinement did not converge")); }
-    Ok(Some((total,relative)))
+    let value=4.*area_a*area_b*total;
+    if !value.is_finite() || value<=0. {return Err(error("PLANAR_RANGE","invalid shared edge integral"));} Ok(Some(value))
 }
 
 // Analytic z/radial integration avoids resolving thin copper thickness with
@@ -202,7 +206,16 @@ fn pair_integral(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Dura
         }
         return Err(error("PLANAR_UNRESOLVED","rectangle cross quadrature did not converge by order 64"));
     }
-    if let Some((value,relative))=shared_edge_pair(a,b,start,limit)? { return Ok((value,16,relative)); }
+    if let Some(mut previous)=edge_integral(a,b,order,start,limit)? {
+        let mut n=order;
+        while n<64 {
+            n+=4; let next=edge_integral(a,b,n,start,limit)?.ok_or_else(||error("PLANAR_RANGE","edge classification changed"))?;
+            let relative=(next-previous).abs()/next.abs();
+            if relative<=1e-8 { return Ok((next,n,relative)); }
+            previous=next;
+        }
+        return Err(error("PLANAR_UNRESOLVED","shared edge Duffy quadrature did not converge"));
+    }
     for axial in [true, false] {
         let evaluate = |n| -> Result<f64> { let q=GaussRule::new(n)?; if axial { axial_magnetic::constant_pair_guarded(a,b,&q,start,limit) } else { prism::volume_integral_guarded(a,b,&q,start,limit) } };
         let mut previous = match evaluate(order) { Ok(x) => x, Err(_) if axial && start.elapsed() < limit => continue, Err(e) => return Err(e) };
@@ -363,6 +376,31 @@ mod tests {
         let b=Prism::new("b".into(),[[1.,0.],[0.,0.],[0.4,-0.6]],[0.,0.035]).unwrap();
         let (x,_,e)=pair_integral(&a,&b,8,Instant::now(),Duration::from_secs(30)).unwrap();
         assert!(x>0. && e<=1e-8);
+    }
+
+    #[test]
+    fn arbitrary_edge_orders_diagnostic() {
+        let a=Prism::new("a".into(),[[0.,0.],[1.,0.],[0.2,0.8]],[0.,0.035]).unwrap();
+        let b=Prism::new("b".into(),[[1.,0.],[0.,0.],[0.4,-0.6]],[0.,0.035]).unwrap();
+        for n in [8,12,16,20,24,28,32] { println!("edge order={n} value={:?}", edge_integral(&a,&b,n,Instant::now(),Duration::from_secs(15))); }
+    }
+
+    #[test]
+    fn arbitrary_edge_matches_tetra_and_reciprocity() {
+        use super::super::polyhedron::{self,PointPotential};
+        let a=Prism::new("a".into(),[[0.,0.],[1.,0.],[0.2,0.8]],[0.,0.035]).unwrap();
+        let b=Prism::new("b".into(),[[1.,0.],[0.,0.],[0.4,-0.6]],[0.,0.035]).unwrap();
+        let start=Instant::now(); let limit=Duration::from_secs(30);
+        let (x,_,_)=pair_integral(&a,&b,8,start,limit).unwrap();
+        let (reverse,_,_)=pair_integral(&b,&a,8,start,limit).unwrap();
+        let mut reference=0.;
+        for ta in prism_tets(&a) { for tb in prism_tets(&b) {
+            assert!(start.elapsed()<limit);
+            reference+=polyhedron::tetra_integral_adaptive(ta,&PointPotential::tetrahedron(tb).unwrap(),16,1e-10).unwrap();
+        }}
+        println!("edge planar={x:e} reverse={reverse:e} tetra={reference:e} relative={:e}",(x-reference).abs()/reference);
+        assert!((x-reverse).abs()<1e-8*x);
+        assert!((x-reference).abs()<1e-5*reference);
     }
 
 }
