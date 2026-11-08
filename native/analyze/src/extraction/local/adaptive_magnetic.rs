@@ -790,7 +790,7 @@ impl<'a> Plan<'a> {
         q: &[f64],
         goal: f64,
     ) -> Result<(Vec<f64>, Vec<f64>)> {
-        self.apply_with_zero_policy(pair, space, q, goal, true)
+        self.apply_with_zero_policy(pair, space, q, goal, true, true)
     }
     fn apply_with_zero_policy(
         &self,
@@ -799,6 +799,7 @@ impl<'a> Plan<'a> {
         q: &[f64],
         goal: f64,
         skip_zero_pairs: bool,
+        skip_zero_axes: bool,
     ) -> Result<(Vec<f64>, Vec<f64>)> {
         let t = self.tree;
         let n = space.cells.len();
@@ -812,7 +813,15 @@ impl<'a> Plan<'a> {
         let parallel_near=pair.parallel_enabled();
         let mut activity=NearActivity::new();
         let mut pending=if parallel_near {Vec::with_capacity(128)}else{Vec::new()};
+        let active_axes:[bool;3]=std::array::from_fn(|axis|q.chunks_exact(3).any(|v|v[axis]!=0.));
+        let first_active=if skip_zero_axes {active_axes.iter().position(|v|*v).unwrap()} else {0};
         for axis in 0..3 {
+            if skip_zero_axes && !active_axes[axis] {
+                // The component is mathematically identically zero. Preserve
+                // the old interval-radius representation bit-for-bit.
+                for i in 0..n {bounds[3*i+axis]=f64::from_bits(1);}
+                continue;
+            }
             let mut axis_profile = Profile::new("axis", Some(axis));
             let mut upward_profile = Profile::new("source-and-upward", Some(axis));
             let mut moments = Packed::new(self.geometry.internal_count, &t.harmonic);
@@ -865,7 +874,7 @@ impl<'a> Plan<'a> {
                         }
                     }
                     Decision::Near => {
-                        if axis == 0 {
+                        if axis == first_active {
                             let a = &t.nodes[block.a];
                             let b = &t.nodes[block.b];
                             for x in a.range[0]..a.range[1] {
@@ -1156,19 +1165,33 @@ mod classification_power_tests {
         let plan=Plan::new_with_policy(&tree,&shape,&space,&columns,&[1e-30;2],false).unwrap();
         let mut pair=BoundedPairs::new(geometry,12,4,start,wall).unwrap();
         pair.trace=Some(std::cell::RefCell::new(super::super::super::PairTrace {counts:[0;3],seconds:[0.;3],last:Instant::now(),hits:0,misses:0,evictions:0}));
-        let reference=plan.apply_with_zero_policy(&pair,&space,&columns[0],1e-30,false).unwrap();
+        // Each absent vector axis must preserve action and error-bound bits,
+        // including when the first active axis is y or z. Tiny nonzero axes
+        // remain active instead of being dropped by a magnitude threshold.
+        for axis in 0..3 {
+            let mut q=vec![0.;9];q[axis]=1.;q[6+axis]=-0.3;
+            let full=plan.apply_with_zero_policy(&pair,&space,&q,1e-30,true,false).unwrap();
+            let optimized=plan.apply_with_zero_policy(&pair,&space,&q,1e-30,true,true).unwrap();
+            for (x,y) in full.0.iter().chain(&full.1).zip(optimized.0.iter().chain(&optimized.1)) {assert_eq!(x.to_bits(),y.to_bits());}
+        }
+        let mut q=vec![0.;9];q[1]=1.;q[2]=1e-300;
+        let full=plan.apply_with_zero_policy(&pair,&space,&q,1e-30,true,false).unwrap();
+        let optimized=plan.apply_with_zero_policy(&pair,&space,&q,1e-30,true,true).unwrap();
+        for (x,y) in full.0.iter().chain(&full.1).zip(optimized.0.iter().chain(&optimized.1)) {assert_eq!(x.to_bits(),y.to_bits());}
+        pair.trace.as_ref().unwrap().borrow_mut().counts=[0;3];
+        let reference=plan.apply_with_zero_policy(&pair,&space,&columns[0],1e-30,false,false).unwrap();
         let count=|p:&BoundedPairs|p.trace.as_ref().unwrap().borrow().counts.iter().sum::<u64>();
         let before=count(&pair);
-        let actual=plan.apply_with_zero_policy(&pair,&space,&columns[0],1e-30,true).unwrap();
+        let actual=plan.apply_with_zero_policy(&pair,&space,&columns[0],1e-30,true,false).unwrap();
         let optimized=count(&pair)-before;
         assert!(optimized < before && optimized > 0, "reference={before} optimized={optimized}");
         assert_eq!(reference,actual);
         // Tiny but nonzero current must retain its interactions.
         let mut tiny=columns[0].clone();tiny[3]=1e-200;
         let before_tiny=count(&pair);
-        let tiny_action=plan.apply_with_zero_policy(&pair,&space,&tiny,1e-30,true).unwrap();
+        let tiny_action=plan.apply_with_zero_policy(&pair,&space,&tiny,1e-30,true,false).unwrap();
         let tiny_count=count(&pair)-before_tiny;
-        let tiny_reference=plan.apply_with_zero_policy(&pair,&space,&tiny,1e-30,false).unwrap();
+        let tiny_reference=plan.apply_with_zero_policy(&pair,&space,&tiny,1e-30,false,false).unwrap();
         assert!(tiny_count>optimized && tiny_count<=before);
         assert_eq!(tiny_action,tiny_reference);
     }

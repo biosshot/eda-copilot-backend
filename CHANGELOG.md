@@ -716,3 +716,5 @@
 
 - Build harmonic current seeds with compensated potential differences, certify normalized stored-current KCL, and retain final original mixed KCL/KVL checks.
 - Reuse geometry-only magnetic interval jets in an opportunistic admitted local cache, retaining the uncached path under tight memory budgets.
+
+- Preserve exact zero projection uncertainty and skip strictly zero Cartesian magnetic axes while retaining nonzero and subnormal current contributions.

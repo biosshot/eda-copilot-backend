@@ -285,3 +285,6 @@ The captured orientation requests also reveal an applicability limit of this con
 - Two-via trace remains open:1794150071063818200 identifies missing owner at slab2 triangle512. No full acceptance run started.
 
 - Latest harmonic/jet addon builds successfully. Production via1794150926488938700 passes prior FIELD_TRACE and harmonic failures but reaches native25s magnetic deadline (26.343s wall, sampled private216674304B). Remote return1794150953063074100 still reaches12s (13.109s wall, private205398016B). Full positive completion remains pending; no resource limits raised.
+
+- 1794151985126740800: exact-zero projection uncertainty control passes0.156s; nonzero/subnormal cases retain outward bounds. 1794151985480343500: zero-axis/first-active-axis and tiny-current control passes0.703s. Each selector executes one test.
+- Existing near-bound opt-in via diagnostic1794151855812829600 remains a deadline failure28.343s wall. No complete-via success claim follows.

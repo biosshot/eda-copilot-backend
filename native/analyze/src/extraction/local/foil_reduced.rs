@@ -2290,6 +2290,15 @@ mod mixed_basis_tests {
         let profile=mixed_conductor::CheckedOperator::HybridPlanarV3.skin_profile(1e6,Some(1e6),request.max_vertical_step_m).unwrap().unwrap().with_thickness_screen([58e6]).unwrap();
         let board_mesh=board_mesh::build_profiled(&board,&request,budget,wall,None,&[],Some(profile)).unwrap();
         let map=mixed_conductor::prepare(&board_mesh,&request.electrodes,1e6,budget,wall).unwrap();
+        let mut ownership=std::collections::BTreeMap::<(&str,&str),usize>::new();
+        for (i,owner) in map.owners.iter().enumerate() {
+            let t=&board_mesh.mesh.copper_tetrahedra[i];
+            let barrel=t.source_ids.iter().any(|id|board_mesh.barrel_ids.contains(id));
+            let z=t.nodes.iter().map(|&j|board_mesh.mesh.nodes_m[j][2]).sum::<f64>()/4.;
+            let layer=board_mesh.layer_spans.iter().find(|(_,span)|z>span[0] && z<span[1]).map_or("interlayer",|(name,_)|name.as_str());
+            *ownership.entry((if barrel {"barrel"} else {"nonbarrel"},layer)).or_default()+=usize::from(matches!(owner,mixed_conductor::Owner::Volume));
+        }
+        eprintln!("P7_VIA_OWNERSHIP foilPrisms={} localBySourceAndLayer={ownership:?}",map.foils.len());
         let mut terms=vec![Vec::new();map.current_count()];for &(i,j,a) in &map.incidence {terms[j].push((i,a));}
         let cells:Vec<_>=terms.into_iter().zip(&map.resistance_ohm).map(|(t,&r)|Cell::new(t,r)).collect();
         let contacts=map.electrodes.iter().copied().collect();
@@ -2743,6 +2752,16 @@ pub(super) fn compact_planar_response(model: &Model, frequencies: &[f64], refere
 mod compact_planar_tests {
     use super::*;
     #[test]
+    fn exact_zero_projection_has_no_phantom_uncertainty() {
+        use super::super::volume_integral_magnetic::hierarchical_magnetic::Interval;
+        let zero=Interval::point(0.);
+        assert_eq!(projection_radius(zero,zero.mid()).to_bits(),0f64.to_bits());
+        let tiny=Interval{lo:0.,hi:f64::from_bits(1)};
+        assert!(projection_radius(tiny,tiny.mid())>0.);
+        let nonzero=Interval::point(1.);
+        assert_eq!(projection_radius(nonzero,nonzero.mid()).to_bits(),nonzero.radius(nonzero.mid()).to_bits());
+    }
+    #[test]
     fn compact_geometric_two_supports_two_drives() {
         let budget = AllocationBudget { max_nodes: 100, max_tetrahedra: 100, max_bytes: 32_000_000 };
         let prism = |id: &str, x: f64| super::super::prism::Prism::new(id.into(), [[x,0.],[x+0.001,0.],[x,0.001]], [0.,0.00001]).unwrap();
@@ -3151,6 +3170,11 @@ impl CompactChargeAction {
 fn compact_upper(v:f64)->f64 {if v==0. {0.} else if v.is_finite() && v>0. {f64::from_bits(v.to_bits()+1)} else {v}}
 fn compact_bound_product(a:f64,b:f64)->f64 {if a==0. || b==0. {0.} else {let product=a*b;if product==0. {f64::from_bits(1)} else {compact_upper(product)}}}
 fn compact_bound_sum(a:f64,b:f64)->f64 {if a==0. {b} else if b==0. {a} else {compact_upper(a+b)}}
+fn projection_radius(v:super::volume_integral_magnetic::hierarchical_magnetic::Interval,mid:f64)->f64 {
+    // An exactly zero interval has exactly zero uncertainty. Preserve outward
+    // rounding, including positive underflow, for every other interval.
+    if v.lo==0. && v.hi==0. && mid==0. {0.} else {v.radius(mid)}
+}
 
 fn compact_pl_worker_bytes(workers:usize,budget:AllocationBudget)->Result<usize> {
     if !(1..=4).contains(&workers) {return Err(error("HYBRID_INPUT","PL thread count must be 1..4"));}
@@ -3296,7 +3320,7 @@ impl CompactMixedMagnetic {
                 for (c,column) in columns.iter().enumerate() { for (j,support) in self.local.iter().enumerate() { for k in 0..3 {
                     let mut v=Interval::point(0.);
                     for &(i,d) in &support.densities { v=v.add(Interval::point(d[k]).mul(Interval::point(column[i]))); }
-                    let mid=v.mid(); let radius=v.radius(mid);
+                    let mid=v.mid(); let radius=projection_radius(v,mid);
                     if !mid.is_finite() || !radius.is_finite() {return Err(error("HYBRID_RANGE","local projection overflow"));}
                     q[c][3*j+k]=mid; qr[c][3*j+k]=radius;
                 }}}
