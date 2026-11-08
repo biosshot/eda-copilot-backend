@@ -3040,7 +3040,7 @@ impl CompactChargeAction {
     fn exact_local(&self,i:usize,j:usize)->Result<f64> {
         let a=i.min(j);let b=i.max(j);self.cache_value((self.planar.len()+a,self.planar.len()+b),|| {
             let x=&self.local[a];let y=&self.local[b];
-            if a==b {let coarse=polyhedron::tetra_self_integral(x.tetra,12)?;let fine=polyhedron::tetra_self_integral(x.tetra,16)?;if (fine-coarse).abs()>1e-8*fine.abs(){return Err(error("HYBRID_UNRESOLVED","tetra self order estimator"));}Ok(fine)} else {polyhedron::tetra_integral_adaptive(x.tetra,&PointPotential::tetrahedron(y.tetra)?.with_tighter_tetra_tolerance(1e-12)?,16,1e-10)}
+            if a==b {Ok(super::volume_integral_magnetic::checked_local_self(x.tetra,self.start,self.wall)?.0)} else {polyhedron::tetra_integral_adaptive(x.tetra,&PointPotential::tetrahedron(y.tetra)?.with_tighter_tetra_tolerance(1e-12)?,16,1e-10)}
         })
     }
     pub(super) fn apply(&self,q:&[f64])->Result<(Vec<f64>,Vec<f64>)> {self.apply_policy(q,false)}

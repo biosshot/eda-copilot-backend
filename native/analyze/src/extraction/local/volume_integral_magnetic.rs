@@ -195,6 +195,54 @@ impl ParallelState {
     }
 }
 impl Drop for ParallelState { fn drop(&mut self) { self.report(true, false); } }
+/// Preserve the compact 1e-8 self estimator while allowing the same
+/// singular-reduced quadrature to refine on poorly conditioned thin cells.
+pub(super) fn checked_local_self(tetra: [[f64;3];4], start: Instant, wall: Duration) -> Result<(f64, f64)> {
+    check_deadline(start, wall)?;
+    let mut previous = tetra_self_integral(tetra, 12)?;
+    let mut initial_change = 0.;
+    for order in (16..=64).step_by(4) {
+        check_deadline(start, wall)?;
+        let value = tetra_self_integral(tetra, order)?;
+        let change = (value - previous).abs() / value.abs();
+        if order == 16 { initial_change = change; }
+        if !change.is_finite() { return Err(error("HYBRID_UNRESOLVED", "nonfinite tetra self estimator")); }
+        if change <= 1e-8 {
+            if order > 16 {
+                static CAPTURED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+                if !CAPTURED.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                    eprintln!("P7_LOCAL_SELF_REFINED order={order} initialChange={initial_change:e} finalChange={change:e} tetra={tetra:?}");
+                } else {
+                    eprintln!("P7_LOCAL_SELF_REFINED order={order} initialChange={initial_change:e} finalChange={change:e}");
+                }
+            }
+            return Ok((value,change));
+        }
+        previous = value;
+    }
+    Err(error("HYBRID_UNRESOLVED", &format!("tetra self order estimator failed through order64; initialChange={initial_change:e}; tetra={tetra:?}")))
+}
+
+#[cfg(test)]
+mod compact_self_refinement_tests {
+    use super::*;
+    #[test]
+    fn thin_tetra_self_refinement_preserves_permutation_and_scaling() {
+        let t=[[0.,0.,0.],[1.,0.,0.],[0.2,0.4,0.],[0.3,0.1,0.00001]];
+        let start=Instant::now(); let wall=Duration::from_secs(15);
+        let (value,change)=checked_local_self(t,start,wall).unwrap();
+        assert!(change<=1e-8);
+        // Permutation changes the facet reductions; scaling tests fifth-power
+        // volume/current geometry independently of the order estimator.
+        let reordered=[t[2],t[0],t[3],t[1]];
+        let (permuted,_)=checked_local_self(reordered,start,wall).unwrap();
+        let scaled=t.map(|p|p.map(|x|x*2.));
+        let (large,_)=checked_local_self(scaled,start,wall).unwrap();
+        assert!((value-permuted).abs()<=1e-8*value.abs());
+        assert!((large-32.*value).abs()<=1e-8*large.abs());
+    }
+}
+
 struct BoundedPairs {
     scalar:std::cell::RefCell<Vec<Option<ScalarSlot>>>,
     trace: Option<std::cell::RefCell<PairTrace>>,
@@ -436,13 +484,8 @@ impl BoundedPairs {
         check_deadline(self.start, self.wall)?;
         if i == j {
             if self.checked_self { if let Some(value)=self.checked_self_values.borrow().get(i).copied().flatten() { return Ok(value); } }
-            let coarse = tetra_self_integral(self.tetra[i], self.order)?;
-            if !self.checked_self { return Ok(coarse); }
-            let fine = tetra_self_integral(self.tetra[i], 16)?;
-            let change = (fine - coarse).abs() / fine.abs();
-            if !change.is_finite() || change > 1e-8 {
-                return Err(error("HYBRID_UNRESOLVED", "tetra self order estimator"));
-            }
+            if !self.checked_self { return tetra_self_integral(self.tetra[i], self.order); }
+            let (fine,change) = checked_local_self(self.tetra[i],self.start,self.wall)?;
             self.self_max_change.set(self.self_max_change.get().max(change));
             self.checked_self_values.borrow_mut()[i]=Some(fine);
             return Ok(fine);

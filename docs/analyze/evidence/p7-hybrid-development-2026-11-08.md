@@ -157,3 +157,8 @@ The shared contract and direct kernels are being integrated. Zero-current capaci
 - Full-board performance, independent physical coverage and fresh-addon extended smoke remain pending.
 
 - `1794139925224931000`: integrated local-hierarchy via control refuses in 0.312s at unchanged tetra self 12/16 estimator, before the previous 25s bottleneck. This is not a successful via result or speedup claim; self-kernel convergence on the actual thin tetrahedra is the next defect to resolve.
+
+### Bounded tetra self refinement
+
+- The shared magnetic/electric self kernel now tries orders 12/16, then increments by four up to 64, retaining relative change <=1e-8, deadline and explicit refusal. The thin-tetra permutation/scaling control passed; it does not exercise every refined geometry.
+- `1794140224499526900`: real via debug control exercises successful orders 20/24, then refuses at native deadline (26.734s supervisor wall), TT traversal visited415/far0/near209/exact209. No full via result or release performance claim. First refined geometry is logged for a subsequent independent bounded check.
