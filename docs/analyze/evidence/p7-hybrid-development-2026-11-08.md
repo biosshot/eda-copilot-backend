@@ -288,3 +288,5 @@ The captured orientation requests also reveal an applicability limit of this con
 
 - 1794151985126740800: exact-zero projection uncertainty control passes0.156s; nonzero/subnormal cases retain outward bounds. 1794151985480343500: zero-axis/first-active-axis and tiny-current control passes0.703s. Each selector executes one test.
 - Existing near-bound opt-in via diagnostic1794151855812829600 remains a deadline failure28.343s wall. No complete-via success claim follows.
+
+- Cooperative cancellation test1794152386829013300 passes0.187s. Captured production-via diagnostic1794152387215354300 completes its logging test in24.938s but underlying extraction returns LOCAL_DEADLINE: this is NOT a positive via result. Pair starts/ends and exact coordinates are retained for standalone kernel analysis.

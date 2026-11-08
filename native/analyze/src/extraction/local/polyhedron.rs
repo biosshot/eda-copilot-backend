@@ -209,6 +209,10 @@ impl PointPotential {
     /// integration, explicit order control and refusal on failed refinement.
     /// No negative value is clipped, no support is widened or removed.
     pub fn at_diagnostic(&self, point: [f64; 3]) -> Result<PotentialEvaluation> {
+        self.at_diagnostic_checked(point, &mut || Ok(()))
+    }
+    fn at_diagnostic_checked(&self, point: [f64; 3], check: &mut dyn FnMut() -> Result<()>) -> Result<PotentialEvaluation> {
+        check()?;
         if point.iter().any(|x| !x.is_finite()) {
             return Err(error("POINT_INPUT", "nonfinite evaluation point"));
         }
@@ -244,7 +248,7 @@ impl PointPotential {
                 + rho2 / (rb + (t + edge.length).abs())
                 + (t.abs() + (t + edge.length).abs() - edge.length).max(0.);
             if denominator <= 0. || !denominator.is_finite() {
-                return self.positive_source(point, f64::INFINITY);
+                return self.positive_source(point, f64::INFINITY, check);
             }
             let logarithm = (2. * edge.length / denominator).ln_1p();
             let term = quadratic * logarithm;
@@ -283,7 +287,7 @@ impl PointPotential {
                 source_relative_change: 0.,
             })
         } else {
-            self.positive_source(point, cancellation_ratio)
+            self.positive_source(point, cancellation_ratio, check)
         }
     }
 
@@ -372,12 +376,14 @@ impl PointPotential {
         &self,
         point: [f64; 3],
         cancellation_ratio: f64,
+        check: &mut dyn FnMut() -> Result<()>,
     ) -> Result<PotentialEvaluation> {
         let tolerance = if self.tetra.is_some() {
             self.tetra_tolerance
         } else {
             1e-5
         };
+        check()?;
         if let Some((value, bound, order)) = self.bounded_far_tetra(point, tolerance)? {
             return Ok(PotentialEvaluation {
                 value_m2: value,
@@ -386,10 +392,11 @@ impl PointPotential {
                 source_relative_change: bound,
             });
         }
-        let mut previous = self.positive_rule(point, 7)?;
+        let mut previous = self.positive_rule(point, 7, check)?;
         let mut samples = vec![(7, previous)];
         for order in [15, 31, 63] {
-            let value = self.positive_rule(point, order)?;
+            check()?;
+            let value = self.positive_rule(point, order, check)?;
             let change = (value - previous).abs() / value;
             samples.push((order, value));
             if change <= tolerance {
@@ -405,10 +412,11 @@ impl PointPotential {
         Err(error("POLYHEDRON_SOURCE_QUADRATURE", &format!("positive source rule did not meet explicit{tolerance:e} refinement estimate through order63; point={point:?}, tetra={:?}, samples={samples:?}; no unchecked fallback",self.tetra)))
     }
 
-    fn positive_rule(&self, point: [f64; 3], order: usize) -> Result<f64> {
+    fn positive_rule(&self, point: [f64; 3], order: usize, check: &mut dyn FnMut() -> Result<()>) -> Result<f64> {
         if let Some(tetra) = self.tetra {
-            return positive_tetra_potential(tetra, point, order);
+            return positive_tetra_potential_checked(tetra, point, order, check);
         }
+        check()?;
         let prism = self.prism.as_ref().unwrap();
         let rule = super::prism::cached_rule(order)?;
         // Query-relative coordinates retain the authored narrow support. Choose
@@ -595,6 +603,12 @@ pub fn positive_tetra_potential(
     point: [f64; 3],
     order: usize,
 ) -> Result<f64> {
+    positive_tetra_potential_checked(tetra, point, order, &mut || Ok(()))
+}
+fn positive_tetra_potential_checked(
+    tetra: [[f64; 3]; 4], point: [f64; 3], order: usize, check: &mut dyn FnMut() -> Result<()>,
+) -> Result<f64> {
+    check()?;
     let (volume, _) = super::mesh::tetra_coefficients(tetra)?;
     let (ia, ib) = (0..4)
         .flat_map(|i| (i + 1..4).map(move |j| (i, j)))
@@ -740,6 +754,7 @@ pub fn positive_tetra_potential(
         }
         for (begin, delta) in graded(cuts) {
             for (&u, &wu) in rule.nodes.iter().zip(&rule.weights) {
+                check()?;
                 let displacement = delta * u.powi(4);
                 let s = begin + displacement;
                 let one_minus_s = (1. - begin) - displacement;
@@ -812,11 +827,16 @@ pub fn tetra_integrate(
     Ok(())
 }
 pub fn tetra_integral(target: [[f64; 3]; 4], source: &PointPotential, order: usize) -> Result<f64> {
+    tetra_integral_checked(target, source, order, &mut || Ok(()))
+}
+fn tetra_integral_checked(target: [[f64; 3]; 4], source: &PointPotential, order: usize, check: &mut dyn FnMut() -> Result<()>) -> Result<f64> {
+    check()?;
     let (volume, _) = super::mesh::tetra_coefficients(target)?;
     let rule = super::prism::cached_rule(order)?;
     let mut result = 0.;
     tetra_integrate(target, volume, &rule, |p, w| {
-        result += w * source.at(p)?;
+        check()?;
+        result += w * source.at_diagnostic_checked(p,check)?.value_m2;
         Ok(())
     })?;
     if result > 0. && result.is_finite() {
@@ -1027,6 +1047,16 @@ fn tetra_far_integral(target: [[f64; 3]; 4], source: &PointPotential, maximum: u
 #[cfg(test)]
 mod far_pair_tests {
     use super::*;
+    #[test]
+    fn checked_tetra_quadrature_propagates_cooperative_cancellation() {
+        let cell=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.00001]];
+        let mut count=0;
+        let err=positive_tetra_potential_checked(cell,[0.0002,0.0002,0.000005],31,&mut || {count+=1;if count>=4 {Err(error("DEADLINE","test cancellation"))}else{Ok(())}}).unwrap_err();
+        assert!(err.starts_with("LOCAL_DEADLINE:"));assert_eq!(count,4);
+        let source=PointPotential::tetrahedron(cell).unwrap();let mut calls=0;
+        let err=tetra_integral_adaptive_checked(cell,&source,12,1e-10,&mut || {calls+=1;if calls>=4 {Err(error("DEADLINE","test cancellation"))}else{Ok(())}}).unwrap_err();
+        assert!(err.starts_with("LOCAL_DEADLINE:"));assert_eq!(calls,4);
+    }
     fn tetra(offset: f64) -> [[f64; 3]; 4] {
         [[offset, 0., 0.], [offset + 0.001, 0., 0.], [offset, 0.001, 0.], [offset, 0., 0.001]]
     }
@@ -1067,16 +1097,21 @@ mod far_pair_tests {
 /// analytic/positive near-field guards. Cross-block reduced modes use 1e-12;
 /// local blocks may use 1e-10 only with independent fixed-order/physical gates.
 pub fn tetra_integral_adaptive(target: [[f64; 3]; 4], source: &PointPotential, maximum: usize, tolerance: f64) -> Result<f64> {
+    tetra_integral_adaptive_checked(target,source,maximum,tolerance,&mut || Ok(()))
+}
+pub(super) fn tetra_integral_adaptive_checked(target: [[f64; 3]; 4], source: &PointPotential, maximum: usize, tolerance: f64, check: &mut dyn FnMut() -> Result<()>) -> Result<f64> {
+    check()?;
     if !(8..=16).contains(&maximum) || !tolerance.is_finite() || !(1e-12..=1e-10).contains(&tolerance) {
         return Err(error("TETRA_INTEGRAL_ORDER", "maximum target order 8..16 and tolerance 1e-12..1e-10 required"));
     }
     if let Some(value) = tetra_far_integral(target, source, maximum)? {
+        check()?;
         return Ok(value);
     }
     let mut previous: Option<f64> = None;
     for step in [2, 4, 8, 12, 16] {
         let order = step.min(maximum);
-        let value = tetra_integral(target, source, order)?;
+        let value = tetra_integral_checked(target, source, order, check)?;
         if let Some(old) = previous {
             let change = (value - old).abs() / value;
             if change.is_finite() && change <= tolerance {

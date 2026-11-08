@@ -403,12 +403,21 @@ impl BoundedPairs {
         }
         let caches = &state.workers;
         let checked_self = self.checked_self;
+        let trace_pair_starts=checked_self && std::env::var_os("P7_COMPACT_TT_PAIR_TRACE").as_deref()==Some(std::ffi::OsStr::new("1"));
         let results: Vec<Vec<Result<(usize,f64)>>> = state.pool.install(|| nonself.par_chunks(8).map(|part| {
             let Some(index) = rayon::current_thread_index() else { return vec![Err(error("MAGNETIC_CONFIG", "parallel worker index unavailable"))]; };
             let local = match caches[index].lock() { Ok(v) => v, Err(_) => return vec![Err(error("MAGNETIC_CONFIG", "parallel worker cache poisoned"))] };
             part.iter().map(|&(position,i,j)| {
                 if checked_self && i==j { return Err(error("MAGNETIC_CONFIG", "checked self pair dispatched to worker")); }
-                local.pair(i.max(j),i.min(j)).map(|value|(position,value))
+                // Diagnostic-only start record also survives an unfinished
+                // quadrature, unlike the completed-pair timing trace.
+                static TRACED:std::sync::atomic::AtomicUsize=std::sync::atomic::AtomicUsize::new(0);
+                let trace=trace_pair_starts && local.start.elapsed()>=Duration::from_secs(5)
+                    && TRACED.fetch_add(1,std::sync::atomic::Ordering::Relaxed)<16384;
+                if trace {eprintln!("P7_COMPACT_TT_PAIR_START i={i} j={j} target={:?} source={:?}",local.tetra[i].map(|p|p.map(f64::to_bits)),local.tetra[j].map(|p|p.map(f64::to_bits)));}
+                let value=local.pair(i.max(j),i.min(j));
+                if trace {eprintln!("P7_COMPACT_TT_PAIR_END i={i} j={j} ok={}",value.is_ok());}
+                value.map(|value|(position,value))
             }).collect()
         }).collect());
         let result: Result<Vec<f64>> = results.into_iter().flatten().try_for_each(|v| { let (position,value)=v?;output[position]=Some(value);Ok(()) }).and_then(|()|output.into_iter().map(|v|v.ok_or_else(||error("MAGNETIC_CONFIG","missing parallel result"))).collect());
@@ -584,7 +593,7 @@ impl BoundedPairs {
             return cells[ti].cubatures[k].direct_integral(&cells[si].cubatures[k]);
         }
         let source = &cells[si];
-        tetra_integral_adaptive(self.tetra[i], &source.source, self.order, 1e-10)
+        super::polyhedron::tetra_integral_adaptive_checked(self.tetra[i], &source.source, self.order, 1e-10, &mut || check_deadline(self.start,self.wall))
     }
 }
 
@@ -1569,5 +1578,23 @@ mod compact_reuse_tests {
         let fresh=hierarchy.actions(&columns,&[0.1]).unwrap();
         assert_eq!(cached.0,fresh.0);
         assert_eq!(cached.1,fresh.1);
+    }
+}
+
+#[cfg(test)]
+mod captured_via_pair_trace {
+    use super::*;
+    /// Diagnostic only: caller provides ignored captured native arguments and
+    /// a process supervisor. Never part of ordinary acceptance tests.
+    #[test]
+    #[ignore = "requires captured production arguments and external supervisor"]
+    fn captured_via_checked_pipeline_pair_trace() {
+        let path=std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../debugging/p7-via-trace/native-args.json");
+        let args:serde_json::Value=serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+        let board=crate::import_json(args[0].as_str().unwrap()).board.unwrap();
+        let geometry:super::super::board_mesh::Request=serde_json::from_value(args[1].clone()).unwrap();
+        let request:super::super::board_foil::CheckedRequest=serde_json::from_value(args[2].clone()).unwrap();
+        let result=super::super::board_foil::solve_checked(&board,&geometry,request,Instant::now());
+        eprintln!("P7_CAPTURED_VIA_RESULT {:?}",result.as_ref().map(|_|"complete").map_err(|e|e.as_str()));
     }
 }
