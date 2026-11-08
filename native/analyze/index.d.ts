@@ -266,13 +266,13 @@ export interface AnalysisBoardFoilCheckedReport {
     parameters: { real: number; imaginary: number }[][][];
     samples: {
         frequencyHz: number;
-        columns: { input: number; kclRelative: number; kvlRelative: number; kvlUncertaintyRelative?: number; magneticCertificate?: AnalysisMagneticCertificate; copperLossW: number; powerBalanceErrorW: number; packages?: { id: string; currentA: { real: number; imaginary: number }; lossW: number }[] }[];
+        columns: { input: number; kclRelative: number; kvlRelative: number; kvlUncertaintyRelative?: number; magneticCertificate?: AnalysisMagneticCertificate; compactKvlUncertaintyRelative?: number; compactMagneticCertificate?: { policy: 'compact-mixed-near-far'; nearQuadratureErrorCertified: false }; copperLossW: number; powerBalanceErrorW: number; packages?: { id: string; currentA: { real: number; imaginary: number }; lossW: number }[] }[];
     }[];
     enrichment: {
         iteration: number; frequencyHz: number; input: number; potentialModes: number; currentModes: number;
         maxKclRelative: number; maxKvlRelative: number;
     }[];
-    quality: { maxKclRelative: number; maxKvlRelative: number; maxColumnPowerBalanceErrorW: number; maxFullKvlUncertaintyRelative?: number; scope?: 'compact-discrete'; physicalError?: 'unverified' };
+    quality: { maxKclRelative: number; maxKvlRelative: number; maxColumnPowerBalanceErrorW: number; maxFullKvlUncertaintyRelative?: number; maxCompactKvlUncertaintyRelative?: number; scope?: 'compact-discrete'; physicalError?: 'unverified' };
     conductiveCorrection?: {
         method: 'sparse owner interiors and shared conductive trace Schur';
         ownerInteriorDofs: number[]; freeSharedTraceDofs: number; traceUpperEntries: number;
@@ -280,7 +280,7 @@ export interface AnalysisBoardFoilCheckedReport {
     };
     provenance: {
         method: string;
-        compactOperator?: { version: 'compact-planar-v1'; basis: 'full-mixed' | 'dc-harmonic-only'; electricOperator: 'homogeneous-charge-gram' | 'layered-spatial-field-mesh'; approximationError: 'unverified'; scope: 'compact-discrete'; originalVolumeActions: 0; foilSupports: number; localTetraSupports: number; potentialCoordinates: number; currentCoordinates: number; planarMaxOrder: number; planarMaxRelativeChange: number; mixedMaxRelativeChange: number; tetraSelfMaxRelativeChange: number; tetraPairAdaptiveTolerance: number; physicalAccuracy: 'unverified' };
+        compactOperator?: { version: 'compact-planar-v1'; basis: 'full-mixed' | 'dc-harmonic-only' | 'adaptive-mixed-closure'; nearQuadratureEstimatedTolerance?: number; electricOperator: 'homogeneous-charge-gram' | 'layered-spatial-field-mesh'; approximationError: 'unverified'; scope: 'compact-discrete'; originalVolumeActions: 0; foilSupports: number; localTetraSupports: number; potentialCoordinates: number; currentCoordinates: number; planarMaxOrder: number; planarMaxRelativeChange: number; mixedMaxRelativeChange: number; tetraSelfMaxRelativeChange: number; tetraPairAdaptiveTolerance: number; physicalAccuracy: 'unverified' };
         magneticOperator?: {
             scope: string; maxFullKvlUncertaintyRelative: number;
         } & (

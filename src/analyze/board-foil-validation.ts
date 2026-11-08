@@ -53,15 +53,28 @@ function validateMagneticOperator(report:AnalysisBoardFoilCheckedReport):void {
  const columns=report.samples.flatMap(sample=>sample.columns);
  if(p.compactOperator!==undefined){
   const c=p.compactOperator;
-  if(p.modelKind!=='mixed'||c.version!=='compact-planar-v1'||!['full-mixed','dc-harmonic-only'].includes(c.basis)||c.approximationError!=='unverified'||c.scope!=='compact-discrete'||c.originalVolumeActions!==0||c.physicalAccuracy!=='unverified'||report.quality.scope!=='compact-discrete'||report.quality.physicalError!=='unverified'||
+  const adaptive=c.basis==='adaptive-mixed-closure';
+  const validOrder=Number.isSafeInteger(c.planarMaxOrder)&&((p.currentModes===0||c.foilSupports===0)?c.planarMaxOrder===0:
+   adaptive&&c.planarMaxOrder===0&&c.planarMaxRelativeChange===0||c.planarMaxOrder>=8&&c.planarMaxOrder<=64&&c.planarMaxOrder%4===0);
+  if(p.modelKind!=='mixed'||c.version!=='compact-planar-v1'||!['full-mixed','dc-harmonic-only','adaptive-mixed-closure'].includes(c.basis)||c.approximationError!=='unverified'||c.scope!=='compact-discrete'||c.originalVolumeActions!==0||c.physicalAccuracy!=='unverified'||report.quality.scope!=='compact-discrete'||report.quality.physicalError!=='unverified'||
      !((c.electricOperator==='homogeneous-charge-gram'&&report.operator==='compact-planar-homogeneous-prototype')||(c.electricOperator==='layered-spatial-field-mesh'&&report.operator==='compact-planar-layered-prototype'))||
      c.foilSupports!==p.prisms||c.localTetraSupports!==p.volumeTetrahedra||
      !Number.isSafeInteger(c.potentialCoordinates)||c.potentialCoordinates<1||c.potentialCoordinates>p.fullPotentialCount||
      !Number.isSafeInteger(c.currentCoordinates)||c.currentCoordinates<1||c.currentCoordinates>p.fullCurrentCount||
-     !Number.isSafeInteger(p.currentModes)||p.currentModes<0||!Number.isSafeInteger(c.planarMaxOrder)||((c.foilSupports>0&&p.currentModes>0)?(c.planarMaxOrder<8||c.planarMaxOrder>64||c.planarMaxOrder%4!==0):c.planarMaxOrder!==0)||
+     !Number.isSafeInteger(p.currentModes)||p.currentModes<0||!validOrder||
      [c.planarMaxRelativeChange,c.mixedMaxRelativeChange,c.tetraSelfMaxRelativeChange,c.tetraPairAdaptiveTolerance].some(x=>typeof x!=='number'||!Number.isFinite(x)||x<0||x>1e-8)||
      operator!==undefined||report.quality.maxFullKvlUncertaintyRelative!==undefined||columns.some(x=>x.kvlUncertaintyRelative!==undefined||x.magneticCertificate!==undefined))
    fail('invalid compact magnetic operator evidence');
+  if(adaptive){
+   if(c.electricOperator!=='layered-spatial-field-mesh'||c.nearQuadratureEstimatedTolerance!==1e-8||
+      !Number.isFinite(report.quality.maxCompactKvlUncertaintyRelative)||
+      report.quality.maxCompactKvlUncertaintyRelative!==Math.max(...columns.map(x=>x.compactKvlUncertaintyRelative!))||
+      columns.some(x=>typeof x.compactKvlUncertaintyRelative!=='number'||!Number.isFinite(x.compactKvlUncertaintyRelative)||x.compactKvlUncertaintyRelative<0||x.compactKvlUncertaintyRelative>x.kvlRelative||
+       x.compactMagneticCertificate?.policy!=='compact-mixed-near-far'||x.compactMagneticCertificate.nearQuadratureErrorCertified!==false))
+    fail('invalid adaptive compact residual or near-quadrature evidence');
+  }else if(report.quality.maxCompactKvlUncertaintyRelative!==undefined||columns.some(x=>x.compactKvlUncertaintyRelative!==undefined||x.compactMagneticCertificate!==undefined)){
+   fail('unexpected adaptive compact evidence on a fixed-basis report');
+  }
   return;
  }
  if(p.modelKind==='foil'){

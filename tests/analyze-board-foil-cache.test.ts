@@ -70,6 +70,27 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
   const layered=compact();layered.operator='compact-planar-layered-prototype';layered.provenance.compactOperator!.electricOperator='layered-spatial-field-mesh';
   validate(layered);
   layered.provenance.currentModes=0;layered.provenance.compactOperator!.planarMaxOrder=0;validate(layered);
+  const adaptive=()=>{
+    const value=compact(); value.operator='compact-planar-layered-prototype';
+    Object.assign(value.provenance.compactOperator!,{basis:'adaptive-mixed-closure',electricOperator:'layered-spatial-field-mesh',nearQuadratureEstimatedTolerance:1e-8});
+    value.quality.maxCompactKvlUncertaintyRelative=0;
+    for(const sample of value.samples)for(const column of sample.columns){
+      column.compactKvlUncertaintyRelative=0;
+      column.compactMagneticCertificate={policy:'compact-mixed-near-far',nearQuadratureErrorCertified:false};
+    }
+    return value;
+  };
+  validate(adaptive());
+  for(const change of [
+    (v:AnalysisBoardFoilCheckedReport)=>{v.provenance.compactOperator!.nearQuadratureEstimatedTolerance=1e-7;},
+    (v:AnalysisBoardFoilCheckedReport)=>{v.quality.maxCompactKvlUncertaintyRelative=1e-9;},
+    (v:AnalysisBoardFoilCheckedReport)=>{delete v.samples[0].columns[0].compactMagneticCertificate;},
+    (v:AnalysisBoardFoilCheckedReport)=>{v.samples[0].columns[0].compactKvlUncertaintyRelative=1;},
+    (v:AnalysisBoardFoilCheckedReport)=>{v.samples[0].columns[0].compactKvlUncertaintyRelative=NaN;},
+    (v:AnalysisBoardFoilCheckedReport)=>{v.provenance.compactOperator!.basis='full-mixed';},
+    (v:AnalysisBoardFoilCheckedReport)=>{v.samples[0].columns[0].copperLossW=100;},
+    (v:AnalysisBoardFoilCheckedReport)=>{v.provenance.sourceMapping=[];},
+  ]){const value=adaptive();change(value);assert.throws(()=>validate(value),/CHANNEL_FOIL_EVIDENCE/);}
   const changes:((value:AnalysisBoardFoilCheckedReport)=>void)[]=[
     v=>{(v.provenance.compactOperator as any).version='other';},
     v=>{(v.provenance.compactOperator as any).scope='physical';},

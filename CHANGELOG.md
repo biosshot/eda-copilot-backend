@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Validate adaptive mixed-field uncertainty under an explicit compact certificate namespace, preserving matched power, ownership and residual gates; fixed-basis reports cannot claim adaptive evidence.
+
 - Prepare spatial dielectric trace actions with one retained sparse factor instead of an N-port capacitance matrix and N field solutions. Audit free-row residuals on each action; legacy extraction stays on its existing path.
 
 - Add a budgeted matrix-free charge CG primitive with a freshly evaluated residual before convergence, compensated products, and explicit invalid-operator/deadline refusals. This is adaptive hybrid infrastructure, not full-board acceptance.
