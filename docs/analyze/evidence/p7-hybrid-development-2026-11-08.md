@@ -269,3 +269,11 @@ The captured orientation requests also reveal an applicability limit of this con
 - 1794148483445945600: exact production-profile via field action passes in 3.047s. Matched copper-interior coordinate139 has zero charge; missing, unmatched and genuinely unused trace coordinates still refuse.
 - 1794148496667516500: collision-free small admitted pair table passes in0.157s, with two real kernels and two cache hits. No additional allocation.
 - 1794148517786873800: compact reuse test group passes in0.875s under the unchanged5s/1536MiB supervisor. Complete via and remote-return checks await a rebuilt addon.
+
+### Fresh-addon readiness controls after interior trace fix
+
+- Fresh addon build completed successfully from production commit761c36a. 1794149578105204400: audited coupled smoke passes in5.000s, sampled private peak445616128 bytes; cold/warm/restart and same-model regime audit retained.
+- 1794149204553031100: unchanged production via passes FIELD_TRACE but refuses harmonic free residual after bounded refinement (plateau roughly5e-7..9e-7),1.438s. This exposes a separate numerical defect; tolerance unchanged.
+- 1794149233275164400: remote-return still reaches original12s native limit (13.125s wall) after admitted pair indexing improvement. No positive completion or speedup claim.
+- 1794149556132825400: physical reference-swap control refuses ambiguous/missing copper solid ownership in PLANAR_TRACE,1.438s. Electrical case remains open.
+- Full39-case/five-board campaign remains unexecuted by user direction; readiness is not yet achieved.
