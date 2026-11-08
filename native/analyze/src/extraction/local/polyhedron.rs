@@ -829,7 +829,7 @@ pub fn tetra_integrate(
 pub fn tetra_integral(target: [[f64; 3]; 4], source: &PointPotential, order: usize) -> Result<f64> {
     tetra_integral_checked(target, source, order, &mut || Ok(()))
 }
-fn tetra_integral_checked(target: [[f64; 3]; 4], source: &PointPotential, order: usize, check: &mut dyn FnMut() -> Result<()>) -> Result<f64> {
+pub(super) fn tetra_integral_checked(target: [[f64; 3]; 4], source: &PointPotential, order: usize, check: &mut dyn FnMut() -> Result<()>) -> Result<f64> {
     check()?;
     let (volume, _) = super::mesh::tetra_coefficients(target)?;
     let rule = super::prism::cached_rule(order)?;
@@ -1100,13 +1100,18 @@ pub fn tetra_integral_adaptive(target: [[f64; 3]; 4], source: &PointPotential, m
     tetra_integral_adaptive_checked(target,source,maximum,tolerance,&mut || Ok(()))
 }
 pub(super) fn tetra_integral_adaptive_checked(target: [[f64; 3]; 4], source: &PointPotential, maximum: usize, tolerance: f64, check: &mut dyn FnMut() -> Result<()>) -> Result<f64> {
+    tetra_integral_adaptive_checked_detail(target,source,maximum,tolerance,check).map(|(value,_)|value)
+}
+/// Preserve the original unchecked-final-order policy for existing callers,
+/// while exposing whether its unchanged tolerance estimator actually passed.
+pub(super) fn tetra_integral_adaptive_checked_detail(target: [[f64; 3]; 4], source: &PointPotential, maximum: usize, tolerance: f64, check: &mut dyn FnMut() -> Result<()>) -> Result<(f64,bool)> {
     check()?;
     if !(8..=16).contains(&maximum) || !tolerance.is_finite() || !(1e-12..=1e-10).contains(&tolerance) {
         return Err(error("TETRA_INTEGRAL_ORDER", "maximum target order 8..16 and tolerance 1e-12..1e-10 required"));
     }
     if let Some(value) = tetra_far_integral(target, source, maximum)? {
         check()?;
-        return Ok(value);
+        return Ok((value,true));
     }
     let mut previous: Option<f64> = None;
     for step in [2, 4, 8, 12, 16] {
@@ -1115,13 +1120,32 @@ pub(super) fn tetra_integral_adaptive_checked(target: [[f64; 3]; 4], source: &Po
         if let Some(old) = previous {
             let change = (value - old).abs() / value;
             if change.is_finite() && change <= tolerance {
-                return Ok(value);
+                return Ok((value,true));
             }
         }
         previous = Some(value);
         if order == maximum { break; }
     }
-    previous.ok_or_else(|| error("TETRA_INTEGRAL_ORDER", "target cubature produced no value"))
+    previous.map(|value|(value,false)).ok_or_else(|| error("TETRA_INTEGRAL_ORDER", "target cubature produced no value"))
+}
+
+/// Continue the identical positive outer rule on the original tetrahedron.
+/// Require two successive unchanged-tolerance refinements; no value is
+/// admitted if the bounded order sequence fails to converge.
+pub(super) fn tetra_integral_refine_checked(target:[[f64;3];4],source:&PointPotential,previous:f64,tolerance:f64,check:&mut dyn FnMut()->Result<()>) -> Result<Option<(f64,usize)>> {
+    if !previous.is_finite() || previous<=0. || !tolerance.is_finite() || !(1e-12..=1e-10).contains(&tolerance) {
+        return Err(error("TETRA_INTEGRAL_ORDER","positive prior value and existing tolerance required"));
+    }
+    let mut old=previous;let mut passes=0;
+    for order in (16..=64).step_by(4) {
+        check()?;
+        let value=tetra_integral_checked(target,source,order,check)?;
+        let change=(value-old).abs()/value;
+        if change.is_finite() && change<=tolerance {passes+=1;} else {passes=0;}
+        if passes==2 {return Ok(Some((value,order)));}
+        old=value;
+    }
+    Ok(None)
 }
 
 /// Positive two-ended Z grading on an unchanged original layered tetrahedron.

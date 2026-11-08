@@ -243,6 +243,25 @@ mod compact_self_refinement_tests {
     }
 }
 
+/// A dimensionless geometry heuristic only chooses which mathematically
+/// reciprocal tetrahedron supplies the point-potential integral. The original
+/// kernel, convergence policy, geometry and physical error gates are unchanged.
+fn tetra_shape_quality(t:[[f64;3];4])->Option<f64> {
+    let edge=|i:usize,j:usize|[t[i][0]-t[j][0],t[i][1]-t[j][1],t[i][2]-t[j][2]];
+    let (a,b,c)=(edge(1,0),edge(2,0),edge(3,0));
+    let determinant=(a[0]*(b[1]*c[2]-b[2]*c[1])+a[1]*(b[2]*c[0]-b[0]*c[2])+a[2]*(b[0]*c[1]-b[1]*c[0])).abs();
+    let mut max_edge=0_f64;
+    for i in 0..4 {for j in 0..i {let e=edge(i,j);max_edge=max_edge.max(e[0].hypot(e[1]).hypot(e[2]));}}
+    let quality=determinant/max_edge.powi(3);
+    (quality.is_finite() && quality>0.).then_some(quality)
+}
+fn prefer_reciprocal_source(target:[[f64;3];4],source:[[f64;3];4])->bool {
+    match (tetra_shape_quality(target),tetra_shape_quality(source)) {
+        (Some(a),Some(b))=>b<a/1024.,
+        _=>false,
+    }
+}
+
 struct BoundedPairs {
     scalar:std::cell::RefCell<Vec<Option<ScalarSlot>>>,
     trace: Option<std::cell::RefCell<PairTrace>>,
@@ -592,8 +611,19 @@ impl BoundedPairs {
             }
             return cells[ti].cubatures[k].direct_integral(&cells[si].cubatures[k]);
         }
-        let source = &cells[si];
-        super::polyhedron::tetra_integral_adaptive_checked(self.tetra[i], &source.source, self.order, 1e-10, &mut || check_deadline(self.start,self.wall))
+        // For a severely flat source, analytic source evaluation can lose
+        // precision and trigger expensive positive rules. Integrating over
+        // that original cell instead leaves the reciprocal integral intact.
+        if prefer_reciprocal_source(self.tetra[i],self.tetra[j]) {
+            let (value,converged)=super::polyhedron::tetra_integral_adaptive_checked_detail(
+                self.tetra[j],&cells[ti].source,self.order,1e-10,&mut ||check_deadline(self.start,self.wall))?;
+            if converged {return Ok(value);}
+            if let Some((refined,_))=super::polyhedron::tetra_integral_refine_checked(
+                self.tetra[j],&cells[ti].source,value,1e-10,&mut ||check_deadline(self.start,self.wall))? {
+                return Ok(refined);
+            }
+        }
+        super::polyhedron::tetra_integral_adaptive_checked(self.tetra[i], &cells[si].source, self.order, 1e-10, &mut || check_deadline(self.start,self.wall))
     }
 }
 
@@ -1383,6 +1413,10 @@ impl CompactLocalHierarchy {
         Ok(Self { pair, tree, space, checked_self: std::cell::RefCell::new(vec![false;n]), planned_bytes })
     }
     pub(super) fn self_max_change(&self) -> f64 { self.pair.self_max_change.get() }
+    #[cfg(test)]
+    pub(super) fn cover_control(&self, columns:&[Vec<f64>], goals:&[f64]) -> Result<serde_json::Value> {
+        self.tree.cover_control(&self.pair.tetra,&self.space,columns,goals)
+    }
     pub(super) fn actions(&self, columns: &[Vec<f64>], goals: &[f64]) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
         let n=self.space.cells.len();
         if columns.iter().any(|q|q.len()!=3*n || q.iter().any(|v|!v.is_finite())) {
@@ -1596,5 +1630,36 @@ mod captured_via_pair_trace {
         let request:super::super::board_foil::CheckedRequest=serde_json::from_value(args[2].clone()).unwrap();
         let result=super::super::board_foil::solve_checked(&board,&geometry,request,Instant::now());
         eprintln!("P7_CAPTURED_VIA_RESULT {:?}",result.as_ref().map(|_|"complete").map_err(|e|e.as_str()));
+    }
+}
+
+#[cfg(test)]
+mod captured_skinny_pair_orientation {
+    use super::*;
+    #[test]
+    fn captured_via_sliver_pair_forward_reverse() {
+        let target=[[4572892094294326814,4562577326938659257,4551879656527788476],[4572753355786830259,4562777529589257502,4551879656527788476],[4572748976913053165,4562577326938659257,4551879656527788476],[4572748976913053165,4562577326938659257,4552248591409262667]].map(|p|p.map(f64::from_bits));
+        let source=[[4572911535762694515,4562287101040354732,4532020583610935537],[4572897038918376007,4562427094823800700,4532020583610935537],[4572897038918376007,4562427094823800700,4551879656527788476],[4572911535755849934,4562287101017622609,4551879656527788476]].map(|p|p.map(f64::from_bits));
+        let start=Instant::now();let wall=Duration::from_secs(25);
+        let a=PointPotential::tetrahedron(target).unwrap();let b=PointPotential::tetrahedron(source).unwrap();
+        assert!(prefer_reciprocal_source(target,source));
+        assert!(!prefer_reciprocal_source(source,target));
+        assert!(!prefer_reciprocal_source(target,target));
+        let now=Instant::now();let (reverse,converged)=super::super::polyhedron::tetra_integral_adaptive_checked_detail(source,&a,12,1e-10,&mut ||check_deadline(start,wall)).unwrap();
+        eprintln!("CAPTURED_REVERSE12 value={reverse:.17e} converged={converged} seconds={:.6}",now.elapsed().as_secs_f64());
+        let refined=if converged {Some((reverse,12))} else {super::super::polyhedron::tetra_integral_refine_checked(source,&a,reverse,1e-10,&mut ||check_deadline(start,wall)).unwrap()};
+        let now=Instant::now();let forward=super::super::polyhedron::tetra_integral_adaptive_checked(target,&b,12,1e-10,&mut ||check_deadline(start,wall)).unwrap();
+        eprintln!("CAPTURED_FORWARD12 value={forward:.17e} seconds={:.6}; refined={refined:?}",now.elapsed().as_secs_f64());
+        let pair=BoundedPairs::new(vec![source,target],12,2,start,wall).unwrap();
+        let optimized=pair.pair(1,0).unwrap();
+        if let Some((value,order))=refined {
+            assert_eq!(optimized.to_bits(),value.to_bits());
+            // Independent vertex order changes the Duffy parametrization.
+            let permuted=[source[2],source[0],source[3],source[1]];
+            let alternative=super::super::polyhedron::tetra_integral_checked(permuted,&a,order,&mut ||check_deadline(start,wall)).unwrap();
+            assert!((alternative-value).abs()<=1e-10*value.abs(),"independent parametrization disagreed");
+        } else {
+            assert_eq!(optimized.to_bits(),forward.to_bits(),"unconverged candidate must use original orientation");
+        }
     }
 }

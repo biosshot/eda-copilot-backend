@@ -720,3 +720,5 @@
 - Preserve exact zero projection uncertainty and skip strictly zero Cartesian magnetic axes while retaining nonzero and subnormal current contributions.
 
 - Preserve canonical board-mesh copper/dielectric ownership in the internal electric adapter, with exact mesh identity, finite shared-face contacts, strict trace validation and admitted retained geometry metadata.
+
+- Use reciprocal near-tetra orientation for extreme shape imbalance only after the unchanged convergence estimator succeeds, with bounded positive quadrature refinement and original-orientation fallback.

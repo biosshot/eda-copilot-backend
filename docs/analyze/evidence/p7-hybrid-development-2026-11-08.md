@@ -293,3 +293,5 @@ The captured orientation requests also reveal an applicability limit of this con
 
 - Two-via exact reference-swap field preparation passes supervised5s/1536MiB in2.29s after canonical product-mesh ownership. Negative controls retain missing/unmatched trace, wrong mesh identity, tiny-budget refusal and no point/edge-only area contacts. This is field preparation, not complete electrical extraction.
 - Independent memory re-review confirms repeated union removed by carrying OriginalGeometry; cumulative retained metadata and trace incidence preflight accounted. Existing union scratch estimate remains conservative heuristic, with external process-tree memory supervision retained.
+
+- Original reciprocal order12 failed convergence1794153710386383600; its apparent millisecond result was not admitted. Bounded positive refinement passes1794154429355815200 in3.781s including expensive original comparison: reciprocal converges at order20 with the unchanged1e-10 criterion and agrees with independent vertex parametrization; original12 comparison takes3.581s. Full via speed remains unverified.
