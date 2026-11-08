@@ -2400,32 +2400,50 @@ pub(super) fn compact_planar_model(
     };
     // Reserve the entire simultaneous dense working set before constructing
     // support densities or dual rows. No full-board automatic admission.
-    let nq = map.foils.len().checked_add(map.owners.iter().filter(|o| matches!(o, super::mixed_conductor::Owner::Volume)).count()).ok_or_else(|| error("MEMORY_LIMIT", "compact support count overflow"))?;
+    let nq = (if full_mixed { n } else { map.foils.len().checked_add(map.owners.iter().filter(|o| matches!(o, super::mixed_conductor::Owner::Volume)).count()).ok_or_else(||error("MEMORY_LIMIT", "support count overflow"))? }).checked_add(0).ok_or_else(|| error("MEMORY_LIMIT", "compact support count overflow"))?;
     let nc = basis.current.len(); let nv = basis.voltage.len();
-    let resident = map.retained_bytes()?.checked_add(n.checked_mul(nv).and_then(|v| v.checked_mul(8)).ok_or_else(|| error("MEMORY_LIMIT", "compact basis overflow"))?).and_then(|x| x.checked_add(map.current_count().checked_mul(nc)?.checked_mul(8)?)).and_then(|x| x.checked_add(nq.checked_mul(n)?.checked_mul(8)?)).and_then(|x| x.checked_add(nq.checked_mul(nq)?.checked_mul(8)?)).and_then(|x| x.checked_add(nq.checked_mul(nc)?.checked_mul(24)?)).and_then(|x| x.checked_add(nq.checked_mul(1024)?)).ok_or_else(|| error("MEMORY_LIMIT", "compact resident size overflow"))?;
+    let resident = map.retained_bytes()?.checked_add(n.checked_mul(nv).and_then(|v| v.checked_mul(8)).ok_or_else(|| error("MEMORY_LIMIT", "compact basis overflow"))?).and_then(|x| x.checked_add(map.current_count().checked_mul(nc)?.checked_mul(8)?)).and_then(|x| x.checked_add(nq.checked_mul(n)?.checked_mul(8)?)).and_then(|x| x.checked_add(nq.checked_mul(if full_mixed {map.foils.len().checked_mul(6)?} else {map.foils.len()})?.checked_mul(8)?)).and_then(|x| x.checked_add((if full_mixed {map.foils.len().checked_mul(6)?} else {map.foils.len()}).checked_mul(nc)?.checked_mul(24)?)).and_then(|x| x.checked_add(nq.checked_add(map.foils.len().checked_mul(if full_mixed {6} else {1})?)?.checked_mul(1024)?)).ok_or_else(|| error("MEMORY_LIMIT", "compact resident size overflow"))?;
     let scratch = nq.checked_mul(nq).and_then(|x| x.checked_mul(32)).and_then(|x| x.checked_add(nq.checked_mul(nv)?.checked_mul(24)?)).and_then(|x| x.checked_add(nc.checked_mul(nc)?.checked_mul(32)?)).and_then(|x| x.checked_add(nv.checked_mul(nv)?.checked_mul(32)?)).and_then(|x| x.checked_add(1024*1024)).ok_or_else(|| error("MEMORY_LIMIT", "compact scratch size overflow"))?;
+    let local_subcells = map.owners.iter().filter(|o|matches!(o,super::mixed_conductor::Owner::Volume)).count().checked_mul(if full_mixed {24} else {1}).ok_or_else(||error("MEMORY_LIMIT","local support count overflow"))?;
+    let local_reserve = local_subcells.checked_mul(nc.checked_mul(24).and_then(|n|n.checked_add(512)).ok_or_else(||error("MEMORY_LIMIT","local support size overflow"))?).ok_or_else(||error("MEMORY_LIMIT","local support size overflow"))?;
+    let scratch = scratch.checked_add(local_reserve).ok_or_else(||error("MEMORY_LIMIT","local scratch overflow"))?;
+    let sparse_reserve = (if full_mixed {map.foils.len().checked_mul(6)} else {Some(map.foils.len())}).and_then(|x| x.checked_mul(nc.checked_mul(32)?.checked_add(16)?)).ok_or_else(|| error("MEMORY_LIMIT", "sparse support size overflow"))?;
+    let scratch = scratch.checked_add(sparse_reserve).ok_or_else(|| error("MEMORY_LIMIT", "compact scratch overflow"))?;
     budget.check(resident.checked_add(scratch).ok_or_else(|| error("MEMORY_LIMIT", "compact peak overflow"))?)?;
     let work_budget = AllocationBudget { max_bytes: budget.max_bytes - resident, ..budget };
-    let (supports, locals, dual) = map.planar_supports(&basis.current)?;
+    let (supports, locals, dual) = if full_mixed { map.planar_barycentric_supports(&basis.current)? } else { map.planar_supports(&basis.current)? };
     let remaining = wall.checked_sub(start.elapsed()).ok_or_else(|| error("DEADLINE", "compact planar assembly"))?;
-    let mut gram = super::planar_operator::gram(&supports, dual.len(), basis.current.len(), 8, epsilon, work_budget, remaining)?;
+    let sparse: Vec<_> = supports.iter().map(|s| super::planar_operator::SparseSupport {
+        prism:s.prism.clone(),
+        charge_density:if layered_c.is_some() {vec![]} else {s.charge_density.iter().enumerate().filter_map(|(i,&v)| (v!=0.).then_some((i,v))).collect()},
+        current_density:s.current_density.iter().enumerate().filter_map(|(i,&v)| (v!=[0.;3]).then_some((i,v))).collect(),
+    }).collect();
+    let mut gram = super::planar_operator::gram_sparse(&sparse, if layered_c.is_some() {0} else {dual.len()}, basis.current.len(), 8, epsilon, work_budget, remaining)?;
+    drop(sparse);
     let nc = basis.current.len();
     let mut mixed_change = 0_f64; let mut self_change = 0_f64;
     for (t, local) in locals.iter().enumerate() {
-        let q = supports.len() + t;
-        for (i, support) in supports.iter().enumerate() {
+        let q = local.charge_index;
+        for support in &supports {
             check_time(start, wall)?;
+            if layered_c.is_some() && nc == 0 {continue;}
+            let planar_charge = if layered_c.is_some() {vec![]} else {vec![support.charge_density.iter().copied().find(|&v|v!=0.).ok_or_else(|| error("HYBRID_CHARGE", "missing support charge"))?]};
+            let local_charge = if layered_c.is_some() {vec![]} else {vec![local.charge_density]};
             let block = super::planar_mixed::cross(&support.prism, local.tetra,
-                super::planar_mixed::Densities { charge: &[1. / support.prism.volume_m3], current: &support.current_density },
-                super::planar_mixed::Densities { charge: &[1. / local.volume], current: &local.currents },
+                super::planar_mixed::Densities { charge: &planar_charge, current: &support.current_density },
+                super::planar_mixed::Densities { charge: &local_charge, current: &local.currents },
                 epsilon, 8, work_budget, wall.saturating_sub(start.elapsed()))?;
             mixed_change = mixed_change.max(block.relative_order_change);
-            gram.potential_per_farad[i][q] += block.potential_per_farad[0][0];
-            gram.potential_per_farad[q][i] += block.potential_per_farad[0][0];
+            if layered_c.is_none() {
+                let charge_index = support.charge_density.iter().position(|&v|v!=0.).ok_or_else(||error("HYBRID_CHARGE", "missing support charge"))?;
+                gram.potential_per_farad[charge_index][q] += block.potential_per_farad[0][0];
+                gram.potential_per_farad[q][charge_index] += block.potential_per_farad[0][0];
+            }
             for a in 0..nc { for b in 0..nc { gram.inductance_h[a][b] += block.inductance_h[a][b] + block.inductance_h[b][a]; }}
         }
         for (u, other) in locals[..=t].iter().enumerate() {
             check_time(start, wall)?;
+            if layered_c.is_some() && nc == 0 {continue;}
             let integral = if t == u {
                 let coarse = polyhedron::tetra_self_integral(local.tetra, 12)?;
                 let fine = polyhedron::tetra_self_integral(local.tetra, 16)?;
@@ -2436,9 +2454,11 @@ pub(super) fn compact_planar_model(
                 polyhedron::tetra_integral_adaptive(local.tetra, &PointPotential::tetrahedron(other.tetra)?.with_tighter_tetra_tolerance(1e-12)?, 16, 1e-10)?
             };
             check_time(start, wall)?;
-            let p = integral / (4. * std::f64::consts::PI * epsilon * local.volume * other.volume);
-            gram.potential_per_farad[q][supports.len()+u] += p;
-            if t != u { gram.potential_per_farad[supports.len()+u][q] += p; }
+            if layered_c.is_none() {
+                let p = integral * local.charge_density * other.charge_density / (4. * std::f64::consts::PI * epsilon);
+                gram.potential_per_farad[q][other.charge_index] += p;
+                if t != u { gram.potential_per_farad[other.charge_index][q] += p; }
+            }
             for a in 0..nc { for b in 0..nc {
                 let dot: f64 = (0..3).map(|k| local.currents[a][k]*other.currents[b][k]).sum();
                 let value = 1e-7 * integral * dot;
@@ -2579,6 +2599,15 @@ mod compact_planar_tests {
         assert!(response["parameters"][0][0][0]["real"].as_f64().unwrap().is_finite());
         assert!(response["parameters"][0][1][1]["real"].as_f64().unwrap().is_finite());
         assert!(make(&[[0,2]]).is_err());
+    }
+    #[test]
+    fn tetra_vertex_dual_retains_four_coordinates() {
+        let budget=AllocationBudget{max_nodes:32,max_tetrahedra:32,max_bytes:1_000_000};
+        let p:Vec<Vec<f64>>=(0..4).map(|i|(0..4).map(|j|if i==j {1.} else {0.}).collect()).collect();
+        let b:Vec<Vec<f64>>=(0..4).map(|i|(0..4).map(|j|if i==j {25./48.} else {23./144.}).collect()).collect();
+        for row in &b { assert!((row.iter().sum::<f64>()-1.).abs()<1e-14); }
+        let c=compact_capacitance(&p,&b,budget).unwrap();
+        compact_capacitance(&c,&p,budget).unwrap();
     }
     #[test]
     fn charge_inverse_preserves_dual_and_refuses_dependent_modes() {

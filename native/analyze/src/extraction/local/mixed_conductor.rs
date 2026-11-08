@@ -1061,7 +1061,7 @@ fn solve_checked_mesh_impl(
         result["ports"] = json!(request.ports);
         result["sourceMapping"] = json!(mesh.source_mapping);
         result["compactOperator"] = json!({"version":"compact-planar-v1", "ownership":"one physical owner per copper tetrahedron", "foilSupports":map.foils.len(), "localTetraSupports":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "potentialCoordinates":map.potential_count(), "currentCoordinates":map.current_count(), "dielectric":if layered {"spatial-layered-field"} else {"homogeneous-air"}, "accuracy":"unverified", "limits":"bounded dense charge matrix; no proximity or physical approximation acceptance"});
-        result["provenance"] = json!({"method":"compact mixed foil and local volume", "modelKind":"mixed", "sourceMapping":mesh.source_mapping, "barrelIds":mesh.barrel_ids, "electrodeAreasM2":mesh.electrode_areas_m2, "prisms":map.foils.len(), "nativeCopperTetrahedra":map.owners.len(), "volumeTetrahedra":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "maxCopperVolumeChange":0., "fullPotentialCount":map.full.potential_count(), "fullCurrentCount":map.full.current_count(), "retainedPotentials":model.potential_nodes.len(), "currentModes":model.current_dofs.len(), "plannedBytes":planned + charge_bytes + reserve + provenance + partition_bytes, "maxSeconds":wall.as_secs_f64(), "maxMemoryMiB":budget.max_bytes as f64 / 1048576., "spatialCoverage":"unverified", "bandCoverage":"unverified", "magneticQuadratureCoverage":"unverified", "driveConvention":"1 A RMS matched Norton basis columns", "compactOperator":evidence});
+        result["provenance"] = json!({"method":"compact mixed foil and local volume", "modelKind":"mixed", "sourceMapping":mesh.source_mapping, "barrelIds":mesh.barrel_ids, "electrodeAreasM2":mesh.electrode_areas_m2, "prisms":map.foils.len(), "nativeCopperTetrahedra":map.owners.len(), "volumeTetrahedra":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "maxCopperVolumeChange":0., "fullPotentialCount":map.full.potential_count(), "fullCurrentCount":map.full.current_count(), "retainedPotentials":model.potential_nodes.len(), "currentModes":model.current_dofs.len(), "plannedBytes":if layered {budget.max_bytes + reserve + provenance + partition_bytes} else {planned + reserve + provenance + partition_bytes}, "maxSeconds":wall.as_secs_f64(), "maxMemoryMiB":(budget.max_bytes + reserve + provenance + partition_bytes) as f64 / 1048576., "spatialCoverage":"unverified", "bandCoverage":"unverified", "magneticQuadratureCoverage":"unverified", "driveConvention":"1 A RMS matched Norton basis columns", "compactOperator":evidence});
         if !packages.is_empty() { result["provenance"]["attachments"] = json!(packages.iter().map(|p| json!({"id":p.id,"electrodes":p.electrodes})).collect::<Vec<_>>()); }
         result["quality"]["scope"] = json!("compact-discrete");
         result["quality"]["physicalError"] = json!("unverified");
@@ -1293,7 +1293,7 @@ mod uniform_section_seed_tests {
     }
 }
 
-pub(super) struct LocalSupport { pub tetra: [[f64; 3]; 4], pub volume: f64, pub currents: Vec<[f64;3]> }
+pub(super) struct LocalSupport { pub tetra: [[f64; 3]; 4], pub volume: f64, pub currents: Vec<[f64;3]>, pub charge_index: usize, pub charge_density: f64 }
 
 impl MixedMap<'_> {
     /// Build disjoint, constant-volume charge tests and current densities from
@@ -1341,7 +1341,7 @@ impl MixedMap<'_> {
                 let entry = self.current_map[3*t+axis].ok_or_else(|| error("HYBRID_INPUT", "local current mapping missing"))?;
                 for (i, mode) in modes.iter().enumerate() { currents[i][axis] = cell.density_per_amp_m2 * entry.weight * mode[entry.mode]; }
             }
-            locals.push(LocalSupport { tetra: tet.nodes.map(|i| self.mesh.mesh.nodes_m[i]), volume: tet.volume_m3, currents });
+            locals.push(LocalSupport { tetra: tet.nodes.map(|i| self.mesh.mesh.nodes_m[i]), volume: tet.volume_m3, currents, charge_index: self.foils.len()+locals.len(), charge_density: 1./tet.volume_m3 });
             dual.push(row);
         }
         Ok((supports, locals, dual))
@@ -1377,10 +1377,105 @@ mod compact_board_dispatch_test {
         assert_eq!(result["coverage"],"unverified");
         assert_eq!(result["samples"][0]["columns"].as_array().unwrap().len(),2);
         assert!(rejected.is_err());
+        let attachment: super::super::checked_packages::Attachment = serde_json::from_value(json!({"id":"bridge","electrodes":["a","b"],"model":{"id":"resistor","kind":"network","ports":["terminals"],"data":{"format":"coupled-rlc","referenceTopology":"infinity","potentialNodes":["positive","negative"],"currentDofs":["series"],"incidence":[[0,0,1.],[1,0,-1.]],"portIncidence":[[0,0,1.],[1,0,-1.]],"resistanceOhm":[[0,0,25.]],"inductanceH":[],"capacitanceF":[],"structuralGaugeModes":[[1.,1.]],"conservedPotentialModes":[],"portTerminals":[{"positive":{"node":"positive"},"negative":{"node":"negative"}}]},"validity":{"status":"conditional","domain":{"bandHz":[900.,1100.]}},"analyses":["networkParameters"]}})).unwrap();
+        let packages=super::super::checked_packages::validate(vec![attachment],&request,&[1000.]).unwrap();
+        let with_package=solve_checked_mesh_impl(&mesh,&request,CheckedGrid{frequencies_hz:&[1000.],reference_ohm:&[50.,50.],max_iterations:1},None,&packages,None,PartitionPolicy::Legacy,budget,Instant::now(),wall).unwrap();
+        for column in with_package["samples"][0]["columns"].as_array().unwrap() {
+            assert_eq!(column["packages"].as_array().unwrap().len(),1);
+            assert!(column["powerBalanceErrorW"].as_f64().unwrap() < 1e-8);
+        }
+        let mut dielectric=request.clone();
+        dielectric.stack.iter_mut().find(|layer| !layer.copper).unwrap().epsilon_r=Some(4.);
+        let layered=run(&dielectric).unwrap();
+        assert_eq!(layered["coverage"],"unverified");
+        assert_eq!(layered["operator"],"compact-planar-layered-prototype");
+        assert_eq!(layered["samples"][0]["columns"].as_array().unwrap().len(),2);
     }
 }
 impl MixedMap<'_> {
     pub(super) fn electric_node_trace(&self) -> Vec<TraceRow> {
         self.full.node_potential.iter().map(|(&node,&full)| TraceRow { node, weights: vec![(self.potential_map[full], 1.)] }).collect()
+    }
+}
+impl MixedMap<'_> {
+    pub(super) fn planar_barycentric_supports(&self, modes: &[Vec<f64>]) -> Result<(Vec<super::planar_operator::Support>, Vec<LocalSupport>, Vec<Vec<f64>>)> {
+        let (_, original_locals, _) = self.planar_supports(modes)?;
+        let local_count = original_locals.len();
+        let nxy = self.mesh.planar_nodes_mm.len();
+        let mut triangles = Vec::with_capacity(self.foils.len());
+        let mut masses = BTreeMap::<usize,f64>::new();
+        for foil in &self.foils {
+            let ids = self.mesh.planar_triangles[foil.planar_triangle];
+            let mut nodes = [usize::MAX;3];
+            for &t in &foil.tetrahedra { let tet=&self.mesh.mesh.copper_tetrahedra[t]; let cell=&self.full.cells[t];
+                for (&node,&p) in tet.nodes.iter().zip(&cell.potentials) { for k in 0..3 { if node % nxy == ids[k] { let m=self.potential_map[p]; if nodes[k]!=usize::MAX && nodes[k]!=m { return Err(error("HYBRID_CHARGE","inconsistent foil vertex ownership")); } nodes[k]=m; } } }
+            }
+            if nodes.contains(&usize::MAX) { return Err(error("HYBRID_CHARGE","missing foil vertex")); }
+            for &node in &nodes { *masses.entry(node).or_default() += foil.volume_m3/3.; }
+            triangles.push((ids,nodes));
+        }
+        let mut local_nodes=Vec::with_capacity(local_count);
+        for (t,owner) in self.owners.iter().enumerate() { if !matches!(owner,Owner::Volume) {continue;} let cell=&self.full.cells[t]; let nodes=cell.potentials.map(|p|self.potential_map[p]);
+            for &node in &nodes {*masses.entry(node).or_default() += self.mesh.mesh.copper_tetrahedra[t].volume_m3/4.;}
+            local_nodes.push(nodes);
+        }
+        let keys: Vec<_> = masses.keys().copied().collect();
+        let lookup: BTreeMap<_,_> = keys.iter().enumerate().map(|(i,&p)|(p,i)).collect();
+        let nq=keys.len(); let mut dual=vec![vec![0.;self.potential_count()];nq];
+        let mut supports=Vec::with_capacity(6*self.foils.len());
+        for (fi,foil) in self.foils.iter().enumerate() {
+            let (ids,nodes)=triangles[fi];
+            let xy=ids.map(|i| {let p=self.mesh.mesh.nodes_m[i];[p[0],p[1]]});
+            let center=[(xy[0][0]+xy[1][0]+xy[2][0])/3.,(xy[0][1]+xy[1][1]+xy[2][1])/3.];
+            let span=*self.mesh.layer_spans.get(&foil.layer).ok_or_else(||error("HYBRID_INPUT","foil layer span missing"))?;
+            let density=self.full.cells[foil.tetrahedra[0]].density_per_amp_m2*self.current_map[3*foil.tetrahedra[0]].ok_or_else(||error("HYBRID_INPUT","foil current mapping missing"))?.weight;
+            let current_density:Vec<_>=modes.iter().map(|mode|[density*mode[foil.first_current],density*mode[foil.first_current+1],0.]).collect();
+            if nodes[0]==nodes[1] && nodes[1]==nodes[2] {
+                let q=lookup[&nodes[0]]; let mass=masses[&nodes[0]];
+                dual[q][nodes[0]] += foil.volume_m3/mass;
+                let mut triangle=xy;
+                let cross=(triangle[1][0]-triangle[0][0])*(triangle[2][1]-triangle[0][1])-(triangle[1][1]-triangle[0][1])*(triangle[2][0]-triangle[0][0]);
+                if cross<0. {triangle.swap(1,2);}
+                let prism=super::prism::Prism::new(format!("foil-{fi}-coalesced"),triangle,span)?;
+                let mut charge_density=vec![0.;nq]; charge_density[q]=1./mass;
+                supports.push(super::planar_operator::Support {prism,charge_density,current_density});
+                continue;
+            }
+            for k in 0..3 {
+                let q=lookup[&nodes[k]]; let mass=masses[&nodes[k]];
+                for j in 0..3 { dual[q][nodes[j]] += foil.volume_m3/3./mass * if j==k {11./18.} else {7./36.}; }
+                for neighbor in [(k+1)%3,(k+2)%3] {
+                    let mid=[(xy[k][0]+xy[neighbor][0])/2.,(xy[k][1]+xy[neighbor][1])/2.];
+                    let mut triangle=[xy[k],mid,center];
+                    let cross=(triangle[1][0]-triangle[0][0])*(triangle[2][1]-triangle[0][1])-(triangle[1][1]-triangle[0][1])*(triangle[2][0]-triangle[0][0]);
+                    if cross<0. {triangle.swap(1,2);}
+                    let prism=super::prism::Prism::new(format!("foil-{fi}-vertex-{k}-edge-{neighbor}"),triangle,span)?;
+                    let mut charge_density=vec![0.;nq];charge_density[q]=1./mass;
+                    supports.push(super::planar_operator::Support {prism,charge_density,current_density:current_density.clone()});
+                }
+            }
+        }
+        let mut locals=Vec::with_capacity(24*local_count);
+        for (index, original) in original_locals.iter().enumerate() {
+            let nodes=local_nodes[index]; let points=original.tetra;
+            let centroid: [f64;3]=std::array::from_fn(|d|points.iter().map(|p|p[d]).sum::<f64>()/4.);
+            if nodes.iter().all(|&node|node==nodes[0]) {
+                let q=lookup[&nodes[0]]; let mass=masses[&nodes[0]];
+                dual[q][nodes[0]]+=original.volume/mass;
+                locals.push(LocalSupport { tetra:points, volume:original.volume, currents:original.currents.clone(), charge_index:q, charge_density:1./mass });
+                continue;
+            }
+            for k in 0..4 {
+                let q=lookup[&nodes[k]]; let mass=masses[&nodes[k]];
+                for j in 0..4 { dual[q][nodes[j]] += original.volume/4./mass * if j==k {25./48.} else {23./144.}; }
+                for a in 0..4 {if a==k {continue;} for b in 0..4 {if b==k || b==a {continue;}
+                    let midpoint=std::array::from_fn(|d|(points[k][d]+points[a][d])/2.);
+                    let face=std::array::from_fn(|d|(points[k][d]+points[a][d]+points[b][d])/3.);
+                    locals.push(LocalSupport { tetra:[points[k],midpoint,face,centroid], volume:original.volume/24., currents:original.currents.clone(), charge_index:q, charge_density:1./mass });
+                }}
+            }
+        }
+        for row in &dual { let total:f64=row.iter().sum(); if !total.is_finite() || (total-1.).abs()>1e-10 {return Err(error("HYBRID_CHARGE","barycentric dual does not preserve constants"));} }
+        Ok((supports,locals,dual))
     }
 }

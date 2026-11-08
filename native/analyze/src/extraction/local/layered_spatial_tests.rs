@@ -39,3 +39,12 @@ fn dielectric_boundary_cutting_a_cell_is_refused() {
     partial.holes_m = vec![vec![[0.0002,0.0002],[0.0004,0.0002],[0.0004,0.0004],[0.0002,0.0004]]];
     assert!(extract_traced_spatial(&input, &trace, &[partial], budget()).is_err());
 }
+
+#[test]
+fn spatial_route_enforces_count_budget_before_assembly() {
+    let (mut input, trace)=coupon();
+    input.metals = (0..17).map(|i| { let mut metal=input.metals[0].clone(); metal.source_id=format!("m{i}"); metal }).collect();
+    let mut limited=budget(); limited.max_local_terms=16;
+    let error=extract_traced_spatial(&input,&trace,&[],limited).err().expect("budget refusal");
+    assert!(format!("{error:?}").contains("FIELD_INPUT"));
+}

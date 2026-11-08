@@ -178,3 +178,29 @@ pub(super) fn input_from_board(board: &super::board_mesh::BoardMesh, request: &s
     let planes=vec![0;z.len()];
     Ok((Input { meshes:vec![PlaneInput::Exact { source_id:"board-overlay".into(),xy_m:xy,triangles:board.planar_triangles.clone() }], planes,z_m:z,xy_bounds_m:bounds,metals,dielectrics:dielectric,exterior:Exterior::InfinityBox },regions))
 }
+
+#[cfg(test)]
+mod board_adapter_tests {
+    use super::*;
+    use super::super::{board_mesh::{self, Electrode, Request}, mixed_conductor, AllocationBudget};
+    use std::time::Duration;
+    #[test]
+    fn prepared_fr4_via_board_builds_owned_spatial_trace() {
+        let board=crate::import_json(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-board.json")).board.unwrap();
+        let mut request:Request=serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-request-d1-m1.json")).unwrap();
+        request.cut_planes.clear(); request.allow_insulated_copper_cuts=false; request.domain_polygon_mm=None;
+        request.electrodes=["s0","s1","r0","r1"].into_iter().enumerate().map(|(i,name)|Electrode {name:name.into(),source_path:Some(format!("pads[{i}]")),source_paths:None,layer:if i==0 {"TOP"} else {"BOTTOM"}.into(),upper:i!=0}).collect();
+        request.ports=vec![["s0".into(),"r0".into()],["s1".into(),"r1".into()]];
+        let allocation=AllocationBudget {max_bytes:1<<30,max_nodes:200_000,max_tetrahedra:400_000};
+        let wall=Duration::from_secs(20);
+        let board_mesh=board_mesh::build(&board,&request,allocation,wall).unwrap();
+        let map=mixed_conductor::prepare(&board_mesh,&request.electrodes,10_000.,allocation,wall).unwrap();
+        let budget=Budget {max_nodes:200_000,max_local_terms:4_000_000,max_bytes:1<<30,max_wall:wall};
+        let (input,regions)=input_from_board(&board_mesh,&request,budget).unwrap();
+        assert!(!regions.is_empty());
+        assert!(regions.iter().any(|r|r.epsilon_r>1.));
+        let trace=trace(&input,&map,budget).unwrap();
+        assert!(!trace.nodes.is_empty());
+        assert_eq!(trace.potential_nodes.len(),map.potential_count());
+    }
+}

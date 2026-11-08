@@ -700,17 +700,17 @@ pub struct Solution {
 }
 
 pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
-    extract_impl(input, None, &[], budget)
+    extract_impl(input, None, &[], false, budget)
 }
 /// Same field solver with spatial potential coordinates. This internal path
 /// does not establish PCB accuracy or create a physical-terminal mapping.
 pub fn extract_traced(input: &Input, trace: &PotentialTrace, budget: Budget) -> Result<Solution> {
-    extract_impl(input, Some(trace), &[], budget)
+    extract_impl(input, Some(trace), &[], false, budget)
 }
 pub fn extract_traced_spatial(input: &Input, trace: &PotentialTrace, spatial: &[SpatialDielectric], budget: Budget) -> Result<Solution> {
-    extract_impl(input, Some(trace), spatial, budget)
+    extract_impl(input, Some(trace), spatial, true, budget)
 }
-fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[SpatialDielectric], budget: Budget) -> Result<Solution> {
+fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[SpatialDielectric], spatial_route: bool, budget: Budget) -> Result<Solution> {
     let guard = Guard {
         started: Instant::now(),
         budget,
@@ -723,14 +723,15 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
         || input.z_m.len() > budget.max_nodes
         || input.meshes.len() > budget.max_nodes
         || input.metals.is_empty()
-        || input.metals.len() > 16
+        || (!spatial_route && input.metals.len() > 16)
+        || (spatial_route && (input.metals.len() > budget.max_nodes || input.metals.len() > budget.max_local_terms))
         || input.z_m.iter().any(|v| !v.is_finite())
         || input.z_m.windows(2).any(|v| v[1] <= v[0])
         || input.planes.iter().any(|&m| m >= input.meshes.len())
     {
         return Err(error(
             "FIELD_INPUT",
-            "finite increasing planes and1..16 full conductors required",
+            "finite increasing planes and budgeted conductors required",
         ));
     }
     let source_ids = trace.map_or_else(
@@ -745,14 +746,24 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
     );
     let modes = source_ids.len();
     if modes == 0
-        || modes > 64
+        || (!spatial_route && modes > 64)
+        || (spatial_route && (modes > budget.max_nodes || modes > budget.max_local_terms))
         || source_ids.iter().any(|s| s.is_empty())
         || source_ids.iter().collect::<BTreeSet<_>>().len() != modes
     {
         return Err(error(
             "FIELD_TRACE",
-            "1..64 distinct named potential coordinates required",
+            "distinct named potential coordinates within budget required",
         ));
+    }
+    // The spatial route admits larger counts only after preflighting dense
+    // capacitance and pair/contact metadata against the request limits.
+    if spatial_route {
+        let matrix = mul(mul(modes, modes)?, 64)?;
+        let contacts = mul(mul(input.metals.len(), input.metals.len())?, 16)?;
+        let pair_work = mul(input.metals.len(), input.metals.len())?;
+        if pair_work > budget.max_local_terms { return Err(error("MESH_LIMIT", "metal pair work exceeds request cap")); }
+        g.memory(add(matrix, contacts)?)?;
     }
     let mut supplied = BTreeMap::new();
     let mut trace_bytes = 0;

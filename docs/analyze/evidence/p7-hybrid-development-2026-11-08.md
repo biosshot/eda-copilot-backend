@@ -24,6 +24,10 @@ Native test binaries were compiled with `cargo test --manifest-path native/analy
 | Arbitrary shared edge after Duffy decomposition | pass | 1.906 s | `1794120894151578800` |
 | Arbitrary edge versus tetra reference and reversed support order | pass; tetra relative difference 1.90125853e-8 | 3.563 s | `1794121131140798500` |
 | Imported air-board plus spatial FR4 solve, two drives and missing contact | pass | 0.250 s | `1794121121658698300` |
+| Imported air/component/FR4 control in full-mixed mode before coalescing | deadline refusal | 25.219 s | `1794121286461377400` |
+| Same full-mixed control after exact constant-support coalescing | pass | 0.375 s | `1794121433391781800` |
+| Four-coordinate tetra vertex dual rank | pass | 0.187 s | `1794121443984777000` |
+| Spatial dielectric energy, cut-cell and count-budget controls | three pass | 0.172 s | `1794121445581689300` |
 
 The tetra comparisons use constant density integrals on the same finite support; they are independent integration controls, not independent full-channel or broadband EM references. Initial invalid reference-tolerance test invocation (`1794119924965750500`) was corrected before the two successful reference comparisons; no production tolerance was relaxed.
 
