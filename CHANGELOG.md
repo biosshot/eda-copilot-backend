@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Refine elongated near-pair targets separately along and across their long direction, with the existing accuracy check and adaptive fallback.
+- Use spare local magnetic memory for additional worker cubature slots after reserving the exact coefficient cache.
+
 - Tighten compact magnetic Taylor tails with outward support boxes and retain exact lower-triangle coefficients when the local budget admits them.
 - Balance late basis corrections across two failing drives after the original KCL gate passes.
 

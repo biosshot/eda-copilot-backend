@@ -2538,6 +2538,30 @@ mod mixed_basis_tests {
                     let free=reaction.iter().zip(&dc.free_map).filter(|(_,f)|f.is_some()).map(|(v,_)|v.abs()).fold(0.,f64::max);
                     assert!(free<=RESIDUAL_LIMIT*scale.max(f64::MIN_POSITIVE));
                 }
+                if std::env::var_os("P7_VIA_PRISM_CENSUS").as_deref()==Some(std::ffi::OsStr::new("1")) {
+                    let local=map.local_current_supports().unwrap();
+                    let mut groups=std::collections::BTreeMap::<(usize,usize),Vec<usize>>::new();
+                    let mut index=0;
+                    for (t,owner) in board_mesh.mesh.copper_tetrahedra.iter().zip(&map.owners) {
+                        if matches!(owner,mixed_conductor::Owner::Volume) {groups.entry((t.slab,t.planar_triangle)).or_default().push(index);index+=1;}
+                    }
+                    assert_eq!(index,local.len());
+                    let triples:Vec<_>=groups.values().filter(|g|g.len()==3).collect();
+                    let partial=groups.len()-triples.len();
+                    let mut columns=Vec::new();
+                    for (column,q) in basis.current.iter().enumerate() {
+                        let mut equal=0usize;let mut all_zero=0usize;let mut max_relative=0_f64;
+                        for group in &triples {
+                            let values:Vec<[f64;3]>=group.iter().map(|&j|std::array::from_fn(|k|local[j].densities.iter().fold(Sum::default(),|s,(i,d)|s.add(Sum::from(d[k]).mul(q[*i]))).value())).collect();
+                            if values[0]==values[1] && values[1]==values[2] {equal+=1;}
+                            if values.iter().flatten().all(|v|*v==0.) {all_zero+=1;}
+                            let scale=values.iter().flatten().map(|v|v.abs()).fold(0_f64,f64::max);
+                            if scale>0. {for value in &values[1..] {for k in 0..3 {max_relative=max_relative.max((value[k]-values[0][k]).abs()/scale);}}}
+                        }
+                        columns.push(serde_json::json!({"column":column,"exactEqualTriples":equal,"allZeroTriples":all_zero,"maxRelativeDelta":max_relative}));
+                    }
+                    eprintln!("P7_VIA_PRISM_CENSUS {}",serde_json::json!({"completeTriples":triples.len(),"partialGroups":partial,"localTetra":local.len(),"columns":columns}));
+                }
                 if std::env::var_os("P7_VIA_COVER_CONTROL").as_deref()==Some(std::ffi::OsStr::new("1")) {
                     use super::super::volume_integral_magnetic::hierarchical_magnetic::{Interval,action_goal,kvl_cell};
                     let local=map.local_current_supports().unwrap();

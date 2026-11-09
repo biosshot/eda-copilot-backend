@@ -161,7 +161,7 @@ impl SlowCapture {
 #[serde(rename_all="camelCase")]
 struct AxialFallbackSample { i:usize, j:usize, order:usize, reason:usize, target_bits:[[u64;3];4], source_bits:[[u64;3];4], coarse:Option<f64>, fine:Option<f64>, change:Option<f64>, limit:Option<f64> }
 #[derive(Default)]
-struct ParallelCounts { counts: [u64; 3], seconds: [f64; 3], geometry_hits:u64, geometry_builds:u64, lazy_direct_rules:u64, lazy_direct_points:u64, axial_accepted:u64, axial_fallback:u64, axial_outer_retries:u64, axial_outer_retry_accepted:u64, axial_max_relative:f64, orders:[u64;3], axial_reasons:[u64;4], samples:[Option<AxialFallbackSample>;4], single_sided_accepted: u64, single_sided_refused: u64 }
+struct ParallelCounts { counts: [u64; 3], seconds: [f64; 3], geometry_hits:u64, geometry_builds:u64, lazy_direct_rules:u64, lazy_direct_points:u64, axial_accepted:u64, axial_fallback:u64, axial_outer_retries:u64, axial_outer_retry_accepted:u64, axial_max_relative:f64, orders:[u64;3], axial_reasons:[u64;4], samples:[Option<AxialFallbackSample>;4], single_sided_accepted: u64, single_sided_refused: u64, elongated_target_accepted: u64 }
 struct ParallelProgress { windows: u64, pairs: u64, wall: f64, last: Instant, failed:bool, seen:u8 }
 struct ParallelState {
     pool: rayon::ThreadPool,
@@ -175,6 +175,7 @@ impl ParallelState {
         let mut counts = [0u64; 3]; let mut seconds = [0f64; 3]; let mut accepted=0; let mut fallback=0; let mut retries=0; let mut retry_accepted=0; let mut max_relative=0f64; let mut orders=[0u64;3];let mut geometry_hits=0;let mut geometry_builds=0;let mut lazy_rules=0;let mut lazy_points=0; let mut reasons=[0u64;4];
         let mut single_sided_accepted = 0;
         let mut single_sided_refused = 0;
+        let mut elongated_target_accepted = 0;
         for worker in &self.workers {
             let worker = worker.lock().unwrap_or_else(|e| e.into_inner());
             let c = worker.parallel_counts.as_ref().unwrap().borrow();
@@ -184,6 +185,7 @@ impl ParallelState {
             retries+=c.axial_outer_retries;retry_accepted+=c.axial_outer_retry_accepted;
             single_sided_accepted += c.single_sided_accepted;
             single_sided_refused += c.single_sided_refused;
+            elongated_target_accepted += c.elongated_target_accepted;
             for k in 0..4 { reasons[k]+=c.axial_reasons[k]; if p.seen & (1<<k)==0 { if let Some(sample)=c.samples[k] { let _=writeln!(std::io::stderr().lock(),"P7_MAGNETIC_AXIAL_FALLBACK {}",serde_json::json!({"category":(["unsupported","inner_q_cap","inner_range_allowance","outer_convergence"][k]),"sample":sample})); p.seen|=1<<k; } } }
         }
         let _=writeln!(std::io::stderr().lock(),"P7_MAGNETIC_PARALLEL_PROGRESS {}", serde_json::json!({
@@ -194,6 +196,7 @@ impl ParallelState {
             "lazyDirectRuleBuilds":lazy_rules,"lazyDirectPointsBuilt":lazy_points,
             "axialOuterRetries":retries,"axialOuterRetryAccepted":retry_accepted,
             "singleSidedAccepted":single_sided_accepted,"singleSidedRefused":single_sided_refused,
+            "elongatedTargetAccepted":elongated_target_accepted,
             "axialAccepted":accepted,"axialFallbacks":fallback,"axialFallbackUnsupported":reasons[0],"axialFallbackInnerQCap":reasons[1],"axialFallbackRangeAllowance":reasons[2],"axialFallbackOuterConvergence":reasons[3],"axialMaxSeriesRoundoffEstimate":max_relative,"selectedOrder4":orders[0],"selectedOrder6":orders[1],"selectedOrder8":orders[2],
             "countsIncludeFailed":true,"partial":true,"final":final_record,"failed":p.failed || failed
         }));
@@ -683,6 +686,15 @@ impl BoundedPairs {
             if let Some((value, _)) = super::polyhedron::TetraCubature::try_axial_elongated(
                 self.tetra[i], self.tetra[j], &mut || check_deadline(self.start, self.wall),
             )? {
+                *kind = 1;
+                return Ok(value);
+            }
+            if let Some(value) = super::polyhedron::try_elongated_target_integral(
+                self.tetra[i], &cells[si].source, &mut || check_deadline(self.start, self.wall),
+            )? {
+                if let Some(counts) = &self.parallel_counts {
+                    counts.borrow_mut().elongated_target_accepted += 1;
+                }
                 *kind = 1;
                 return Ok(value);
             }
@@ -1488,9 +1500,9 @@ impl CompactLocalHierarchy {
         if workers>1 { pair_bytes -= (slots-2)*STREAMED_PAIR_SLOT_BYTES; slots=2; }
         // The workers share immutable geometry by Arc. Account worker caches,
         // stacks, metadata, and the bounded ordered-result window up front.
-        let worker_slots=2;
+        let mut worker_slots=2;
         let elongated_scratch = if axial { super::polyhedron::ELONGATED_AXIAL_SCRATCH_BYTES } else { 0 };
-        let parallel_bytes=if workers>1 { BoundedPairs::parallel_bytes_for_slots(workers,axial,worker_slots)?.checked_add(16384 + workers * elongated_scratch).ok_or_else(||error("MEMORY_LIMIT","local parallel plan overflow"))? } else { 0 };
+        let mut parallel_bytes=if workers>1 { BoundedPairs::parallel_bytes_for_slots(workers,axial,worker_slots)?.checked_add(16384 + workers * elongated_scratch).ok_or_else(||error("MEMORY_LIMIT","local parallel plan overflow"))? } else { 0 };
         let axial_bytes=if axial {slots.checked_mul(AXIAL_CELL_EXTRA_BYTES).and_then(|v|v.checked_add(64*1024+super::polyhedron::ELONGATED_AXIAL_SCRATCH_BYTES)).ok_or_else(||error("MEMORY_LIMIT","local axial plan overflow"))?} else {0};
         let base = pair_bytes.checked_add(scalar_bytes).and_then(|v|v.checked_add(space_bytes)).and_then(|v|v.checked_add(parallel_bytes)).and_then(|v|v.checked_add(axial_bytes)).and_then(|v|v.checked_add(2*1024*1024)).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy base overflow"))?;
         let mut tree = hierarchical_magnetic::Operator::new(&tetra, 12, 1, 0.2, base, budget, start, wall)?;
@@ -1503,6 +1515,21 @@ impl CompactLocalHierarchy {
             if with_cache<=budget.max_bytes && tree.enable_compact_jet_cache().is_ok() {
                 planned_bytes=with_cache;
             }
+        }
+        if workers > 1 {
+            let spare = budget.max_bytes - planned_bytes;
+            // Keep space for the exact coefficient table whenever it fits.
+            // Additional cubature slots only use the remaining allowance.
+            let table = BoundedPairs::lower_pair_count(n)
+                .filter(|&count| count > scalar_slots)
+                .and_then(|count| count.checked_mul(std::mem::size_of::<f64>()))
+                .filter(|&bytes| bytes <= spare)
+                .unwrap_or(0);
+            let bytes_per_slot = workers * (STREAMED_PAIR_SLOT_BYTES + if axial { AXIAL_CELL_EXTRA_BYTES } else { 0 });
+            let extra = ((spare - table) / bytes_per_slot).min(14);
+            worker_slots += extra;
+            parallel_bytes += extra * bytes_per_slot;
+            planned_bytes += extra * bytes_per_slot;
         }
         let mut pair = BoundedPairs::new_with_scalar(tetra, 12, slots, scalar_slots, start, wall)?;
         pair.axial=axial;
@@ -1878,7 +1905,7 @@ mod compact_reuse_tests {
         assert!(h.planned_bytes<=budget.max_bytes);
         let workers=&h.pair.pool.as_ref().unwrap().workers;
         assert_eq!(workers.len(),4);
-        assert!(workers.iter().all(|w|w.lock().unwrap().slots==2));
+        assert!(workers.iter().all(|w| (3..=16).contains(&w.lock().unwrap().slots)));
     }
     #[test]
     fn exact_pairs_reuse_across_tighter_goals_without_changing_bounds() {

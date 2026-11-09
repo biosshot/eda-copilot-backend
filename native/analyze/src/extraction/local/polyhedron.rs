@@ -867,6 +867,94 @@ pub(super) fn tetra_integral_checked(target: [[f64; 3]; 4], source: &PointPotent
     }
 }
 
+/// Refine an elongated target independently along its longitudinal and
+/// transverse coordinates. The source remains analytic at every sample;
+/// a cancellation refusal returns to the ordinary adaptive path.
+pub(super) fn try_elongated_target_integral(
+    target: [[f64; 3]; 4],
+    source: &PointPotential,
+    check: &mut dyn FnMut() -> Result<()>,
+) -> Result<Option<f64>> {
+    const ANALYTIC_TOLERANCE: f64 = 1e-11;
+    let Some(source_cell) = source.tetra else { return Ok(None) };
+    let (first, last) = (0..4).flat_map(|i| (i+1..4).map(move |j| (i,j)))
+        .max_by(|&(i,j), &(k,l)| {
+            norm(sub(target[i], target[j])).total_cmp(&norm(sub(target[k], target[l])))
+        }).unwrap();
+    let axis = sub(target[last], target[first]);
+    let length = norm(axis);
+    if !length.is_finite() || length <= 0. { return Ok(None); }
+    let mut vertices = target.map(|p| sub(p, target[first]));
+    vertices.sort_by(|&a, &b| dot(a, axis).total_cmp(&dot(b, axis)));
+    let split = (1..4).max_by(|&i, &j| {
+        dot(sub(vertices[i], vertices[i-1]), axis)
+            .total_cmp(&dot(sub(vertices[j], vertices[j-1]), axis))
+    }).unwrap();
+    for group in [&vertices[..split], &vertices[split..]] {
+        if group.iter().any(|&a| group.iter().any(|&b| norm(sub(a,b)) > 0.2 * length)) {
+            return Ok(None);
+        }
+    }
+    let gap: [f64; 3] = std::array::from_fn(|k| {
+        let [a,b] = [target,source_cell].map(|cell| {
+            cell.iter().fold([f64::INFINITY, f64::NEG_INFINITY], |bounds,p| {
+                [bounds[0].min(p[k]), bounds[1].max(p[k])]
+            })
+        });
+        (a[0] - b[1]).max(b[0] - a[1]).max(0.)
+    });
+    if norm(gap) < 0.02 * length { return Ok(None); }
+    if split == 1 { vertices.reverse(); }
+    let paired = split == 2;
+    let origin = target[first];
+    let volume = super::mesh::tetra_coefficients(target)?.0;
+    let evaluate = |long, transverse, check: &mut dyn FnMut() -> Result<()>| -> Result<Option<f64>> {
+        let axial = super::prism::cached_rule(long)?;
+        let cross = super::prism::cached_rule(transverse)?;
+        let mut total = super::accurate::Sum::default();
+        for (&u, &wu) in axial.nodes.iter().zip(&axial.weights) {
+            for (&v, &wv) in cross.nodes.iter().zip(&cross.weights) {
+                for (&w, &ww) in cross.nodes.iter().zip(&cross.weights) {
+                    check()?;
+                    let (lambda, jacobian) = if paired {
+                        ([(1.-u)*(1.-v), (1.-u)*v, u*(1.-w), u*w], u*(1.-u))
+                    } else {
+                        ([(1.-u)*(1.-v)*(1.-w), (1.-u)*v, (1.-u)*(1.-v)*w, u],
+                            (1.-u).powi(2)*(1.-v))
+                    };
+                    let point = std::array::from_fn(|k| {
+                        origin[k] + (0..4).map(|j| lambda[j]*vertices[j][k]).sum::<f64>()
+                    });
+                    let Some(value) = source.analytic_source(point, ANALYTIC_TOLERANCE)?.0
+                    else { return Ok(None) };
+                    total = total.add(super::accurate::Sum::from(value)
+                        .mul(6.*volume*wu*wv*ww*jacobian));
+                }
+            }
+        }
+        let value = total.value();
+        Ok((value.is_finite() && value > 0.).then_some(value))
+    };
+    let Some(mut previous) = evaluate(8, 4, check)? else { return Ok(None) };
+    for long in [12, 16, 20, 24] {
+        let Some(axial) = evaluate(long, 4, check)? else { return Ok(None) };
+        let longitudinal_change = (axial - previous).abs();
+        if longitudinal_change <= 4e-11 * axial {
+            let Some(fine) = evaluate(long, 6, check)? else { return Ok(None) };
+            let transverse_change = (fine - axial).abs();
+            let analytic_allowance = 1.01 * ANALYTIC_TOLERANCE * (previous + 2.*axial + 2.*fine);
+            if longitudinal_change + transverse_change + analytic_allowance + 1024.*f64::EPSILON*fine
+                <= 1e-10 * fine
+            {
+                return Ok(Some(fine));
+            }
+            return Ok(None);
+        }
+        previous = axial;
+    }
+    Ok(None)
+}
+
 /// A strictly separated target can be integrated against the analytic source
 /// potential with one Duffy rule. The two possible orientations share the
 /// same physical integral, but may have very different convergence ratios.
@@ -1275,6 +1363,43 @@ fn tetra_far_integral(target: [[f64; 3]; 4], source: &PointPotential, maximum: u
 #[cfg(test)]
 mod far_pair_tests {
     use super::*;
+    #[test]
+    fn elongated_target_preserves_both_positive_maps() {
+        let source = [[0.,0.0012,0.],[0.0002,0.0012,0.],[0.,0.0014,0.],[0.,0.0012,0.0002]];
+        let potential = PointPotential::tetrahedron(source).unwrap();
+        let reference_source = TetraCubature::new(source, 12).unwrap();
+        for target in [
+            [[0.,0.,0.],[0.,0.00004,0.],[0.,0.,0.00006],[0.001,0.,0.]],
+            [[0.,0.,0.],[0.,0.00004,0.],[0.001,0.,0.],[0.001,0.,0.00006]],
+        ] {
+            let value = try_elongated_target_integral(target, &potential, &mut || Ok(())).unwrap().unwrap();
+            let reference = TetraCubature::new(target, 12).unwrap().direct_integral(&reference_source).unwrap();
+            assert!((value - reference).abs() <= 1e-10 * reference);
+            let overlapping = PointPotential::tetrahedron(target).unwrap();
+            assert!(try_elongated_target_integral(target, &overlapping, &mut || Ok(())).unwrap().is_none());
+        }
+    }
+    #[test]
+    fn elongated_target_checks_deadline_on_captured_via_pair() {
+        let source = [[4572897038918376007,4562727559053517815,0],[4572753355786830259,4562777529589257502,0],[4572766359332894844,4562971649329214029,0],[4572766359332894844,4562971649329214029,4532020583610935537]].map(|p| p.map(f64::from_bits));
+        let target = [[4572601868304570689,4559525519473932565,4551879656527788476],[4559042181320182932,4559964518457897712,4551879656527788476],[4559042181320182932,4559042181309187816,4551879656527788476],[4559042181320182932,4559042181309187816,4552248591409262667]].map(|p| p.map(f64::from_bits));
+        let potential = PointPotential::tetrahedron(source).unwrap();
+        let stopped = try_elongated_target_integral(target, &potential, &mut || {
+            Err(error("DEADLINE", "captured elongated pair cancellation"))
+        }).unwrap_err();
+        assert!(stopped.starts_with("LOCAL_DEADLINE:"));
+        let start = std::time::Instant::now();
+        let mut check = || {
+            if start.elapsed() < std::time::Duration::from_secs(20) { Ok(()) }
+            else { Err(error("DEADLINE", "captured elongated pair control")) }
+        };
+        // Cancellation guards may decline this trial. If admitted, compare
+        // with the original isotropic rule, including its guarded source.
+        if let Some(value) = try_elongated_target_integral(target, &potential, &mut check).unwrap() {
+            let reference = tetra_integral_checked(target, &potential, 28, &mut check).unwrap();
+            assert!((value - reference).abs() <= 1e-10 * reference);
+        }
+    }
     #[test]
     fn single_sided_bound_covers_captured_axial_fallback_pair() {
         let source = [[4572935245847929595,4559503350031976833,4532020583610935537],[4572926530036436084,4559791039860724540,4532020583610935537],[4572926530036436084,4559791039860724540,4551879656527788476],[4572920834325686036,4559503350031976833,4551879656527788476]].map(|p| p.map(f64::from_bits));
