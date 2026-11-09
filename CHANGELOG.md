@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Try a single-sided tetrahedron integral with a bounded expansion tail when an analytic source evaluation can meet the existing tolerance.
+
 - Localize automatic hybrid via meshes with arrangement masks that preserve the copper and contact sets. Refresh the exact-response cache identity.
 
 - Reuse checked tetrahedron coefficients for small compact magnetic actions when the lower triangle of pair coefficients fits the admitted cache.

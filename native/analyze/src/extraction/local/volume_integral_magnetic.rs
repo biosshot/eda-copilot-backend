@@ -161,7 +161,7 @@ impl SlowCapture {
 #[serde(rename_all="camelCase")]
 struct AxialFallbackSample { i:usize, j:usize, order:usize, reason:usize, target_bits:[[u64;3];4], source_bits:[[u64;3];4], coarse:Option<f64>, fine:Option<f64>, change:Option<f64>, limit:Option<f64> }
 #[derive(Default)]
-struct ParallelCounts { counts: [u64; 3], seconds: [f64; 3], geometry_hits:u64, geometry_builds:u64, lazy_direct_rules:u64, lazy_direct_points:u64, axial_accepted:u64, axial_fallback:u64, axial_outer_retries:u64, axial_outer_retry_accepted:u64, axial_max_relative:f64, orders:[u64;3], axial_reasons:[u64;4], samples:[Option<AxialFallbackSample>;4] }
+struct ParallelCounts { counts: [u64; 3], seconds: [f64; 3], geometry_hits:u64, geometry_builds:u64, lazy_direct_rules:u64, lazy_direct_points:u64, axial_accepted:u64, axial_fallback:u64, axial_outer_retries:u64, axial_outer_retry_accepted:u64, axial_max_relative:f64, orders:[u64;3], axial_reasons:[u64;4], samples:[Option<AxialFallbackSample>;4], single_sided_accepted: u64, single_sided_refused: u64 }
 struct ParallelProgress { windows: u64, pairs: u64, wall: f64, last: Instant, failed:bool, seen:u8 }
 struct ParallelState {
     pool: rayon::ThreadPool,
@@ -173,6 +173,8 @@ impl ParallelState {
         use std::io::Write;
         let mut p = self.progress.borrow_mut();
         let mut counts = [0u64; 3]; let mut seconds = [0f64; 3]; let mut accepted=0; let mut fallback=0; let mut retries=0; let mut retry_accepted=0; let mut max_relative=0f64; let mut orders=[0u64;3];let mut geometry_hits=0;let mut geometry_builds=0;let mut lazy_rules=0;let mut lazy_points=0; let mut reasons=[0u64;4];
+        let mut single_sided_accepted = 0;
+        let mut single_sided_refused = 0;
         for worker in &self.workers {
             let worker = worker.lock().unwrap_or_else(|e| e.into_inner());
             let c = worker.parallel_counts.as_ref().unwrap().borrow();
@@ -180,6 +182,8 @@ impl ParallelState {
             geometry_hits+=c.geometry_hits;geometry_builds+=c.geometry_builds;
             lazy_rules+=c.lazy_direct_rules;lazy_points+=c.lazy_direct_points;
             retries+=c.axial_outer_retries;retry_accepted+=c.axial_outer_retry_accepted;
+            single_sided_accepted += c.single_sided_accepted;
+            single_sided_refused += c.single_sided_refused;
             for k in 0..4 { reasons[k]+=c.axial_reasons[k]; if p.seen & (1<<k)==0 { if let Some(sample)=c.samples[k] { let _=writeln!(std::io::stderr().lock(),"P7_MAGNETIC_AXIAL_FALLBACK {}",serde_json::json!({"category":(["unsupported","inner_q_cap","inner_range_allowance","outer_convergence"][k]),"sample":sample})); p.seen|=1<<k; } } }
         }
         let _=writeln!(std::io::stderr().lock(),"P7_MAGNETIC_PARALLEL_PROGRESS {}", serde_json::json!({
@@ -189,6 +193,7 @@ impl ParallelState {
             "geometryCacheHits":geometry_hits,"geometryCacheBuilds":geometry_builds,
             "lazyDirectRuleBuilds":lazy_rules,"lazyDirectPointsBuilt":lazy_points,
             "axialOuterRetries":retries,"axialOuterRetryAccepted":retry_accepted,
+            "singleSidedAccepted":single_sided_accepted,"singleSidedRefused":single_sided_refused,
             "axialAccepted":accepted,"axialFallbacks":fallback,"axialFallbackUnsupported":reasons[0],"axialFallbackInnerQCap":reasons[1],"axialFallbackRangeAllowance":reasons[2],"axialFallbackOuterConvergence":reasons[3],"axialMaxSeriesRoundoffEstimate":max_relative,"selectedOrder4":orders[0],"selectedOrder6":orders[1],"selectedOrder8":orders[2],
             "countsIncludeFailed":true,"partial":true,"final":final_record,"failed":p.failed || failed
         }));
@@ -567,6 +572,21 @@ impl BoundedPairs {
         }
         result
     }
+    fn bounded_single_sided(&self, a: &PointPotential, b: &PointPotential) -> Result<Option<f64>> {
+        let result = super::polyhedron::try_bounded_tetra_pair(a, b, &mut || {
+            check_deadline(self.start, self.wall)
+        })?;
+        if let Some(counts) = &self.parallel_counts {
+            let mut counts = counts.borrow_mut();
+            if result.is_some() {
+                counts.single_sided_accepted += 1;
+            } else {
+                counts.single_sided_refused += 1;
+            }
+        }
+        Ok(result.map(|(value, _)| value))
+    }
+
     fn pair_inner(&self, i: usize, j: usize, kind: &mut usize) -> Result<f64> {
         check_deadline(self.start, self.wall)?;
         if i == j {
@@ -619,6 +639,11 @@ impl BoundedPairs {
                         coarse:detail.coarse,fine:detail.fine,change:detail.coarse.zip(detail.fine).map(|(a,b)|(a-b).abs()),limit:detail.fine.map(|v|1e-10*v) }); }
                 }
             }
+            if self.checked_self && self.axial && k > 0 {
+                if let Some(value) = self.bounded_single_sided(&cells[ti].source, &cells[si].source)? {
+                    return Ok(value);
+                }
+            }
             if self.axial {
                 for (cell_index,tetra_index) in [(ti,i),(si,j)] {
                     check_deadline(self.start,self.wall)?;
@@ -630,6 +655,10 @@ impl BoundedPairs {
             return cells[ti].cubatures[k].direct_integral(&cells[si].cubatures[k]);
         }
         if self.checked_self && self.axial {
+            if let Some(value) = self.bounded_single_sided(&cells[ti].source, &cells[si].source)? {
+                *kind = 1;
+                return Ok(value);
+            }
             if let Some((value, _)) = super::polyhedron::TetraCubature::try_axial_elongated(
                 self.tetra[i], self.tetra[j], &mut || check_deadline(self.start, self.wall),
             )? {

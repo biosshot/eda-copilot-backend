@@ -213,6 +213,20 @@ impl PointPotential {
     }
     fn at_diagnostic_checked(&self, point: [f64; 3], check: &mut dyn FnMut() -> Result<()>) -> Result<PotentialEvaluation> {
         check()?;
+        let tolerance = if self.tetra.is_some() { self.tetra_tolerance } else { 1e-7 };
+        let (value, cancellation_ratio) = self.analytic_source(point, tolerance)?;
+        match value {
+            Some(value_m2) => Ok(PotentialEvaluation {
+                value_m2,
+                cancellation_ratio,
+                source_order: 0,
+                source_relative_change: 0.,
+            }),
+            None => self.positive_source(point, cancellation_ratio, check),
+        }
+    }
+
+    fn analytic_source(&self, point: [f64; 3], tolerance: f64) -> Result<(Option<f64>, f64)> {
         if point.iter().any(|x| !x.is_finite()) {
             return Err(error("POINT_INPUT", "nonfinite evaluation point"));
         }
@@ -248,7 +262,7 @@ impl PointPotential {
                 + rho2 / (rb + (t + edge.length).abs())
                 + (t.abs() + (t + edge.length).abs() - edge.length).max(0.);
             if denominator <= 0. || !denominator.is_finite() {
-                return self.positive_source(point, f64::INFINITY, check);
+                return Ok((None, f64::INFINITY));
             }
             let logarithm = (2. * edge.length / denominator).ln_1p();
             let term = quadratic * logarithm;
@@ -274,20 +288,10 @@ impl PointPotential {
         }
         value *= 0.5;
         let cancellation_ratio = magnitude * 0.5 / value.abs();
-        let tolerance = if self.tetra.is_some() {
-            self.tetra_tolerance
-        } else {
-            1e-7
-        };
         if value.is_finite() && value > 0. && cancellation_ratio * 64. * f64::EPSILON <= tolerance {
-            Ok(PotentialEvaluation {
-                value_m2: value,
-                cancellation_ratio,
-                source_order: 0,
-                source_relative_change: 0.,
-            })
+            Ok((Some(value), cancellation_ratio))
         } else {
-            self.positive_source(point, cancellation_ratio, check)
+            Ok((None, cancellation_ratio))
         }
     }
 
@@ -863,6 +867,105 @@ pub(super) fn tetra_integral_checked(target: [[f64; 3]; 4], source: &PointPotent
     }
 }
 
+/// A strictly separated target can be integrated against the analytic source
+/// potential with one Duffy rule. The two possible orientations share the
+/// same physical integral, but may have very different convergence ratios.
+pub(super) fn try_bounded_tetra_pair(
+    a: &PointPotential,
+    b: &PointPotential,
+    check: &mut dyn FnMut() -> Result<()>,
+) -> Result<Option<(f64, f64)>> {
+    use super::volume_integral_magnetic::hierarchical_magnetic::Interval;
+    const TOLERANCE: f64 = 1e-10;
+    const ANALYTIC_TOLERANCE: f64 = 1e-11;
+    let (Some(ta), Some(tb)) = (a.tetra, b.tetra) else { return Ok(None) };
+    let point = Interval::point;
+    let analytic = point(ANALYTIC_TOLERANCE).div(point(1.).sub(point(ANALYTIC_TOLERANCE)));
+    let combined = |quadrature: Interval| quadrature.add(point(1.).add(quadrature).mul(analytic));
+    let distance = |x: [f64; 3], y: [f64; 3]| {
+        let squared = (0..3).fold(point(0.), |sum, k| {
+            let d = point(x[k]).sub(point(y[k]));
+            sum.add(d.mul(d))
+        });
+        Interval {
+            lo: squared.lo.max(0.).sqrt().next_down().max(0.),
+            hi: squared.hi.sqrt().next_up(),
+        }
+    };
+    let plan = |target: [[f64; 3]; 4], source: [[f64; 3]; 4]| {
+        let center = std::array::from_fn(|k| target.iter().map(|p| p[k] * 0.25).sum::<f64>());
+        let radius = target.iter().map(|&p| distance(center, p).hi).fold(0., f64::max);
+        let nearest = std::array::from_fn(|k| {
+            let min = source.iter().map(|p| p[k]).fold(f64::INFINITY, f64::min);
+            let max = source.iter().map(|p| p[k]).fold(f64::NEG_INFINITY, f64::max);
+            center[k].clamp(min, max)
+        });
+        let minimum = distance(center, nearest).lo;
+        let maximum = source.iter().map(|&p| distance(center, p).hi).fold(0., f64::max);
+        if !minimum.is_finite() || !maximum.is_finite() || minimum <= radius {
+            return None;
+        }
+        let q = point(radius).div(point(minimum));
+        let one_minus_q = point(1.).sub(q);
+        let worst = point(maximum).add(point(radius));
+        let mass_factor = worst.div(point(minimum).sub(point(radius)));
+        let rounding = point(1024. * f64::EPSILON)
+            .mul(worst.div(point(minimum)))
+            .div(one_minus_q.mul(one_minus_q));
+        // Multiplication by the Duffy Jacobian raises the degree in each
+        // coordinate by at most two. An n-point rule exactly integrates
+        // every Cartesian polynomial through degree 2n-3. The two omitted
+        // tails (integral and positive cubature) are bounded by the same
+        // geometric series since |P_l(cos(theta))| <= 1.
+        let mut power = (0..6).fold(point(1.), |p, _| p.mul(q));
+        for order in 4..=12 {
+            let tail = point(2.).mul(worst).div(point(minimum)).mul(power).div(one_minus_q);
+            let estimate = tail.add(rounding);
+            if combined(estimate).hi <= TOLERANCE && mass_factor.hi.is_finite() {
+                return Some((order, estimate, mass_factor));
+            }
+            power = power.mul(q).mul(q);
+        }
+        None
+    };
+    let mut directions = [(ta, b, plan(ta, tb)), (tb, a, plan(tb, ta))];
+    directions.sort_by_key(|(_, _, p)| p.map_or(usize::MAX, |p| p.0));
+    for (target, source, choice) in directions {
+        let Some((order, estimate, mass_factor)) = choice else { continue };
+        check()?;
+        let volume = super::mesh::tetra_coefficients(target)?.0;
+        let rule = super::prism::cached_rule(order)?;
+        let mut mass = super::accurate::Sum::default();
+        let mut total = super::accurate::Sum::default();
+        let mut rejected = false;
+        tetra_integrate(target, volume, rule, |p, w| {
+            if rejected { return Ok(()); }
+            check()?;
+            if w <= 0. || !w.is_finite() {
+                rejected = true;
+                return Ok(());
+            }
+            match source.analytic_source(p, ANALYTIC_TOLERANCE)?.0 {
+                Some(value) => {
+                    mass = mass.add(super::accurate::Sum::from(w));
+                    total = total.add(super::accurate::Sum::from(value).mul(w));
+                }
+                None => rejected = true,
+            }
+            Ok(())
+        })?;
+        if rejected { continue; }
+        let mass_error = point(mass.value()).div(point(volume)).sub(point(1.));
+        let quadrature = estimate.add(mass_factor.mul(point(mass_error.lo.abs().max(mass_error.hi.abs()))));
+        let bound = combined(quadrature).hi;
+        let value = total.value();
+        if value.is_finite() && value > 0. && bound <= TOLERANCE {
+            return Ok(Some((value, bound)));
+        }
+    }
+    Ok(None)
+}
+
 struct TetraFarMoments {
     center: [f64; 3],
     radius: f64,
@@ -1169,6 +1272,25 @@ fn tetra_far_integral(target: [[f64; 3]; 4], source: &PointPotential, maximum: u
 #[cfg(test)]
 mod far_pair_tests {
     use super::*;
+    #[test]
+    fn single_sided_bound_covers_captured_axial_fallback_pair() {
+        let source = [[4572935245847929595,4559503350031976833,4532020583610935537],[4572926530036436084,4559791039860724540,4532020583610935537],[4572926530036436084,4559791039860724540,4551879656527788476],[4572920834325686036,4559503350031976833,4551879656527788476]].map(|p| p.map(f64::from_bits));
+        let target = [[4572868604980746036,4559195490899368157,4551879656527788476],[4572881395324634048,4558903069184891363,4551879656527788476],[4572875310644465804,4559042181320182932,4551879656527788476],[4572875310644465804,4559042181320182932,4552248591409262667]].map(|p| p.map(f64::from_bits));
+        let a = PointPotential::tetrahedron(target).unwrap();
+        let b = PointPotential::tetrahedron(source).unwrap();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+        let mut check = || {
+            if std::time::Instant::now() < deadline { Ok(()) }
+            else { Err(error("DEADLINE", "bounded tetra pair control")) }
+        };
+        let (value, bound) = try_bounded_tetra_pair(&a, &b, &mut check).unwrap().unwrap();
+        let reference = TetraCubature::new(target, 16).unwrap()
+            .direct_integral(&TetraCubature::new(source, 16).unwrap()).unwrap();
+        let relative = (value - reference).abs() / reference;
+        eprintln!("single-sided value={value:e} direct={reference:e} relative={relative:e} estimate={bound:e}");
+        assert!(relative <= bound && bound <= 1e-10);
+        assert!(try_bounded_tetra_pair(&a, &a, &mut check).unwrap().is_none());
+    }
     #[test]
     fn checked_tetra_quadrature_propagates_cooperative_cancellation() {
         let cell=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.00001]];
