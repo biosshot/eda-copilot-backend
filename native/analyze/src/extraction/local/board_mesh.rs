@@ -175,48 +175,90 @@ pub struct BoardMesh {
     pub hybrid_mesh_masks:Vec<serde_json::Value>,
     certified_electrodes:BTreeMap<String,(Electrode,Vec<usize>)>,
 }
+/// Sutherland-Hodgman crop of a closed ring to an axis-aligned box (exact on the box:
+/// the cropped region equals the ring region intersected with the box).
+fn crop_ring(ring:&[geo::Coord<f64>],lo:[f64;2],hi:[f64;2])->Vec<geo::Coord<f64>> {
+    let mut pts:Vec<geo::Coord<f64>>=if ring.len()>1&&ring.first()==ring.last(){ring[..ring.len()-1].to_vec()}else{ring.to_vec()};
+    for side in 0..4 {
+        if pts.is_empty(){break;}
+        let (axis,bound,keep_ge)=match side{0=>(0,lo[0],true),1=>(0,hi[0],false),2=>(1,lo[1],true),_=>(1,hi[1],false)};
+        let val=|c:&geo::Coord<f64>|if axis==0{c.x}else{c.y};
+        let inside=|c:&geo::Coord<f64>|if keep_ge{val(c)>=bound}else{val(c)<=bound};
+        let mut out=Vec::with_capacity(pts.len()+4);
+        for i in 0..pts.len() {
+            let (a,b)=(pts[i],pts[(i+1)%pts.len()]);
+            let (ia,ib)=(inside(&a),inside(&b));
+            if ia{out.push(a);}
+            if ia!=ib {
+                let t=(bound-val(&a))/(val(&b)-val(&a));
+                let mut c=geo::Coord{x:a.x+t*(b.x-a.x),y:a.y+t*(b.y-a.y)};
+                if axis==0{c.x=bound}else{c.y=bound}
+                out.push(c);
+            }
+        }
+        pts=out;
+    }
+    if pts.len()<3{return vec![];}
+    pts.push(pts[0]);pts
+}
+fn crop_cut(local:&[&Polygon<f64>],a:&geo::Rect<f64>,pad:f64)->MultiPolygon<f64> {
+    let (lo,hi)=([a.min().x-pad,a.min().y-pad],[a.max().x+pad,a.max().y+pad]);
+    MultiPolygon(local.iter().filter_map(|&p|{
+        let b=p.bounding_rect()?;
+        if b.min().x>=lo[0]&&b.min().y>=lo[1]&&b.max().x<=hi[0]&&b.max().y<=hi[1]{return Some(p.clone());}
+        let ext=crop_ring(&p.exterior().0,lo,hi);
+        if ext.is_empty(){return None;}
+        let holes=p.interiors().iter().map(|r|crop_ring(&r.0,lo,hi)).filter(|r|!r.is_empty()).map(LineString::new).collect();
+        Some(Polygon::new(LineString::new(ext),holes))
+    }).collect())
+}
 struct Shape {poly:MultiPolygon<f64>,id:String,sigma:f64,span:[f64;2]}
-struct Atom {poly:Polygon<f64>,membership:Vec<bool>}
+/// One arrangement cell. `inside` lists, in increasing order, the cut indices that contain it
+/// (sparse, so cuts that do not touch a cell cost it nothing).
+struct Atom {poly:std::sync::Arc<Polygon<f64>>,inside:Vec<usize>,bbox:Option<geo::Rect<f64>>,verts:usize}
+impl Atom {
+    fn new(poly:Polygon<f64>,inside:Vec<usize>)->Self {let bbox=poly.bounding_rect();let verts=std::iter::once(poly.exterior()).chain(poly.interiors()).map(|r|r.0.len()).sum();Atom{poly:std::sync::Arc::new(poly),inside,bbox,verts}}
+    fn member(&self,cut:usize)->bool {self.inside.binary_search(&cut).is_ok()}
+}
+fn rects_disjoint(a:&geo::Rect<f64>,b:&geo::Rect<f64>)->bool {a.max().x<b.min().x||b.max().x<a.min().x||a.max().y<b.min().y||b.max().y<a.min().y}
 fn common_partition(roi:&MultiPolygon<f64>,cuts:&[MultiPolygon<f64>],budget:AllocationBudget,start:Instant,limit:Duration)->Result<Vec<Atom>> {
-    let mut atoms=roi.0.iter().cloned().map(|poly|Atom{poly,membership:vec![]}).collect::<Vec<_>>();
+    let mut atoms=roi.0.iter().cloned().map(|poly|Atom::new(poly,vec![])).collect::<Vec<_>>();
     for (cut_index,cut) in cuts.iter().enumerate() {
-        super::board_foil::phase_trace("partition-cut",start,serde_json::json!({"cut":cut_index,"of":cuts.len(),"atoms":atoms.len(),"cutPolys":cut.0.len()}));
-        let mut next=vec![];
         let cut_bboxes:Vec<Option<geo::Rect<f64>>>=cut.0.iter().map(|p|p.bounding_rect()).collect();
+        let Some(cut_box)=cut_bboxes.iter().flatten().copied().reduce(|a,b|geo::Rect::new(
+            geo::Coord{x:a.min().x.min(b.min().x),y:a.min().y.min(b.min().y)},geo::Coord{x:a.max().x.max(b.max().x),y:a.max().y.max(b.max().y)})) else {continue};
+        let mut next=Vec::with_capacity(atoms.len());
         // Boundary-segment index: an atom whose bbox meets no cut segment is
         // wholly inside or outside the cut, so no overlay or relate is needed.
         let seg_index=rstar::RTree::bulk_load(cut.0.iter().flat_map(|p|std::iter::once(p.exterior()).chain(p.interiors()))
             .flat_map(|r|r.0.windows(2).map(|w|rstar::primitives::Rectangle::from_corners([w[0].x,w[0].y],[w[1].x,w[1].y])).collect::<Vec<_>>()).collect::<Vec<_>>());
         let (mut fast,mut slow)=(0usize,0usize);
         let cut_vertices=cut.0.iter().map(|p|std::iter::once(p.exterior()).chain(p.interiors()).map(|r|r.0.len()).sum::<usize>()).sum::<usize>();
-        for atom in &atoms {
+        let total=atoms.len();
+        for atom in std::mem::take(&mut atoms) {
+            // Disjoint from every cut polygon: exactly outside, membership unchanged.
+            if atom.bbox.is_none_or(|a|rects_disjoint(&a,&cut_box)) {next.push(atom);continue;}
             check(start,limit)?;
-            let atom_vertices=std::iter::once(atom.poly.exterior()).chain(atom.poly.interiors()).map(|r|r.0.len()).sum::<usize>();
-            let vertices=atom_vertices+cut_vertices;
-            budget.check(vertices.checked_mul(4096).and_then(|v|v.checked_add((atoms.len()+next.len()).checked_mul(4096)?)).ok_or_else(||error("MEMORY_LIMIT","common arrangement plan overflow"))?)?;
-            if let Some(a)=atom.poly.bounding_rect() {
-                let pad=1e-6;
-                let env=rstar::AABB::from_corners([a.min().x-pad,a.min().y-pad],[a.max().x+pad,a.max().y+pad]);
-                if seg_index.locate_in_envelope_intersecting(&env).next().is_none() {
-                    // Interior point of a polygon is not available cheaply; every vertex lies
-                    // off the cut boundary, so any ring vertex classifies the whole atom.
-                    let v=atom.poly.exterior().0[0];
-                    let inside=cut.0.iter().any(|p|p.contains(&Point::new(v.x,v.y)));
-                    let mut membership=atom.membership.clone();membership.push(inside);
-                    next.push(Atom{poly:atom.poly.clone(),membership});
-                    if next.len()>budget.max_nodes {return Err(error("MEMORY_LIMIT","common arrangement polygon budget"));}
-                    fast+=1;continue;
-                }
+            budget.check((atom.verts+cut_vertices).checked_mul(4096).and_then(|v|v.checked_add((total+next.len()).checked_mul(4096)?)).ok_or_else(||error("MEMORY_LIMIT","common arrangement plan overflow"))?)?;
+            let a=atom.bbox.unwrap();
+            let env=rstar::AABB::from_corners([a.min().x-1e-6,a.min().y-1e-6],[a.max().x+1e-6,a.max().y+1e-6]);
+            if seg_index.locate_in_envelope_intersecting(&env).next().is_none() {
+                // Every ring vertex lies off the cut boundary, so one classifies the whole atom.
+                let v=atom.poly.exterior().0[0];
+                let inside=cut.0.iter().zip(&cut_bboxes).any(|(p,b)|b.is_some_and(|b|v.x>=b.min().x&&v.x<=b.max().x&&v.y>=b.min().y&&v.y<=b.max().y)&&p.contains(&Point::new(v.x,v.y)));
+                let mut atom=atom;if inside{atom.inside.push(cut_index);}
+                next.push(atom);
+                if next.len()>budget.max_nodes {return Err(error("MEMORY_LIMIT","common arrangement polygon budget"));}
+                fast+=1;continue;
             }
             slow+=1;
-            let cell=areas::one(atom.poly.clone());
+            let cell=areas::one((*atom.poly).clone());
             // Exact geometric no-ops must not repeatedly renode an accepted
             // boundary. Only cut polygons whose bbox overlaps (or touches) the
             // atom bbox can interact with it; the rest are exactly disjoint.
-            let local=match atom.poly.bounding_rect() {
-                Some(a)=>MultiPolygon(cut.0.iter().zip(&cut_bboxes).filter(|(_,b)|b.is_some_and(|b|!(a.max().x<b.min().x||b.max().x<a.min().x||a.max().y<b.min().y||b.max().y<a.min().y))).map(|(p,_)|p.clone()).collect()),
-                None=>MultiPolygon(vec![]),
-            };
+            // Large cut contours are cropped to the atom bbox first (exact within it).
+            let near:Vec<&Polygon<f64>>=cut.0.iter().zip(&cut_bboxes).filter(|(_,b)|b.is_some_and(|b|!rects_disjoint(&a,&b))).map(|(p,_)|p).collect();
+            let local=if near.iter().map(|p|p.exterior().0.len()).sum::<usize>()>256 {crop_cut(&near,&a,1e-6)} else {MultiPolygon(near.into_iter().cloned().collect())};
             let unchanged=if local.0.is_empty() {Some(false)} else {
                 let relation=local.relate(&cell);
                 if relation.is_covers() {Some(true)}
@@ -224,8 +266,8 @@ fn common_partition(roi:&MultiPolygon<f64>,cuts:&[MultiPolygon<f64>],budget:Allo
                 else {None}
             };
             if let Some(inside)=unchanged {
-                let mut membership=atom.membership.clone();membership.push(inside);
-                next.push(Atom{poly:atom.poly.clone(),membership});
+                let mut atom=atom;if inside{atom.inside.push(cut_index);}
+                next.push(atom);
                 if next.len()>budget.max_nodes {return Err(error("MEMORY_LIMIT","common arrangement polygon budget"));}
                 continue;
             }
@@ -234,12 +276,15 @@ fn common_partition(roi:&MultiPolygon<f64>,cuts:&[MultiPolygon<f64>],budget:Allo
                     // Native overlay has no positive-area cutoff. Every output
                     // polygon is retained, including disconnected/floating Cu.
                     if poly.unsigned_area()<=0. {return Err(error("BOARD_ARRANGEMENT","nonpositive native partition polygon"));}
-                    let mut membership=atom.membership.clone();membership.push(inside);next.push(Atom{poly,membership});
+                    let mut inside_cuts=atom.inside.clone();if inside{inside_cuts.push(cut_index);}
+                    next.push(Atom::new(poly,inside_cuts));
                     if next.len()>budget.max_nodes {return Err(error("MEMORY_LIMIT","common arrangement polygon budget"));}
                 }
             }
         }atoms=next;
-        super::board_foil::phase_trace("partition-cut-done",start,serde_json::json!({"cut":cut_index,"fast":fast,"slow":slow}));
+        if std::env::var_os("P7_PHASE_TRACE").is_some() && (cut_index<8||cut_index+1==cuts.len()) {
+            super::board_foil::phase_trace("partition-cut-done",start,serde_json::json!({"cut":cut_index,"of":cuts.len(),"atoms":atoms.len(),"fast":fast,"slow":slow}));
+        }
     }Ok(atoms)
 }
 fn polygon(p:&geometry::PolygonSnapshot)->Polygon<f64> {
@@ -331,8 +376,10 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     if r.cut_planes.keys().any(|name|!r.electrodes.iter().any(|e|&e.name==name)){return Err(error("BOARD_CUT","cut plane has no physical electrode"));}
     let options=GeometryOptions{max_deviation_mm:r.curve_deviation_mm,..Default::default()}; options.validate()?;
     let context=Context::for_board(board,options)?;
+    super::board_foil::phase_trace("mesh-context",start,serde_json::json!({}));
     let _scope=Context::install(Some(context.clone()));
     let geometry=geometry::prepare(board,options);
+    super::board_foil::phase_trace("mesh-prepared",start,serde_json::json!({}));
     check(start,max_wall)?;
     if geometry.outline.is_none() || geometry.findings.iter().any(|f|f.code!="net_islands") || !geometry.excluded.is_empty() || geometry.fills.iter().any(|f|f.status!="available") {
         return Err(error("BOARD_GEOMETRY","complete trustworthy copper, outline and native fills required"));
@@ -369,6 +416,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     let outline=areas::one(polygon(geometry.outline.as_ref().unwrap()));
     let mut substrate=clip_domain(&outline);
     if substrate.unsigned_area()<=0. {return Err(error("BOARD_ROI","ROI misses board"));}
+    super::board_foil::phase_trace("mesh-substrate",start,serde_json::json!({}));
     let mut z=0.;let mut spans=BTreeMap::new();let mut stack_spans=vec![];let mut copper_names=vec![];
     for layer in &r.stack {
         if !layer.thickness_m.is_finite() || layer.thickness_m<=0. || layer.thickness_m>0.1 {return Err(error("BOARD_PROFILE","positive finite stack thickness required"));}
@@ -382,6 +430,9 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     if copper_names!=board.layers.iter().map(|l|l.name.clone()).collect::<Vec<_>>() || !r.stack[0].copper || !r.stack.last().unwrap().copper || r.stack.windows(2).any(|a|a[0].copper&&a[1].copper) {return Err(error("BOARD_PROFILE","complete ordered alternating copper stack required"));}
     let mut shapes=vec![];let mut source_mapping=vec![];
     for region in &geometry.regions {
+        // A region whose bbox misses the ROI bbox cannot intersect the domain.
+        let rb=polygon(&region.polygon).bounding_rect();
+        if rb.is_none_or(|b|b.max().x<roi_bounds[0][0]||b.min().x>roi_bounds[1][0]||b.max().y<roi_bounds[0][1]||b.min().y>roi_bounds[1][1]) {continue;}
         let poly=clip_domain(&areas::one(polygon(&region.polygon)));
         if poly.unsigned_area()==0. {continue;}
         if !r.allow_insulated_copper_cuts&&areas::difference(&areas::one(polygon(&region.polygon)),&roi).unsigned_area()>0. {return Err(error("BOARD_CUT_POLICY","ROI cuts copper; explicit insulated-cut boundary policy required"));}
@@ -615,7 +666,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         .collect::<Vec<_>>();
     let atoms=common_partition(&roi,&cuts,budget,start,max_wall)?;
     super::board_foil::phase_trace("arrangement-done",start,serde_json::json!({"atoms":atoms.len()}));
-    let member_set=|index:usize|areas::union(atoms.iter().filter(|a|a.membership[index]).map(|a|a.poly.clone()));
+    let member_set=|index:usize|areas::union(atoms.iter().filter(|a|a.member(index)).map(|a|(*a.poly).clone()));
     substrate=member_set(0);bores=member_set(1);
     for (i,(_,poly)) in partial_bores.iter_mut().enumerate() {
         *poly=member_set(2+physical_count+r.electrodes.len()+i);
@@ -893,14 +944,14 @@ mod annulus_arrangement_tests {
         let budget=AllocationBudget{max_bytes:32*1024*1024,max_nodes:10000,max_tetrahedra:10000};
         let atoms=common_partition(&annulus,&[away,cover,bore.clone()],budget,Instant::now(),Duration::from_secs(10)).unwrap();
         assert_eq!(atoms.len(),1);
-        assert_eq!(atoms[0].membership,vec![false,true,false]);
-        assert_eq!(atoms[0].poly,annulus.0[0]);
-        let recovered=areas::union(atoms.into_iter().map(|a|a.poly));
+        assert_eq!((0..3).map(|i|atoms[0].member(i)).collect::<Vec<_>>(),vec![false,true,false]);
+        assert_eq!(*atoms[0].poly,annulus.0[0]);
+        let recovered=areas::union(atoms.into_iter().map(|a|(*a.poly).clone()));
         assert_eq!(recovered.0.len(),1);assert_eq!(recovered.0[0].interiors().len(),1);
         assert!((recovered.unsigned_area()-annulus.unsigned_area()).abs()<=1e-8*annulus.unsigned_area());
         // A cut's hole must not be mistaken for containing copper.
         let atoms=common_partition(&bore,&[annulus],budget,Instant::now(),Duration::from_secs(10)).unwrap();
-        assert!(atoms.iter().all(|a|!a.membership[0]));
+        assert!(atoms.iter().all(|a|!a.member(0)));
     }
     #[test]
     fn bbox_local_partition_matches_brute_force_membership() {
@@ -913,7 +964,7 @@ mod annulus_arrangement_tests {
         assert!(atoms.len()>3);
         for atom in &atoms {
             let p=atom.poly.interior_point().unwrap();
-            assert_eq!(atom.membership,vec![cut_a.contains(&p),cut_b.contains(&p)]);
+            assert_eq!((0..2).map(|i|atom.member(i)).collect::<Vec<_>>(),vec![cut_a.contains(&p),cut_b.contains(&p)]);
         }
         let total:f64=atoms.iter().map(|a|a.poly.unsigned_area()).sum();
         assert!((total-100.).abs()<1e-9);
