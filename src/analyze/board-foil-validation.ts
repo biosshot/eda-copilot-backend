@@ -285,11 +285,8 @@ export function validateBoardFoilReport(
  for(const [i,sample] of report.samples.entries())for(const column of sample.columns){
   validateReturnBoundary(column.returnBoundary, (problem.geometry as {returnBoundaryMm?:unknown})?.returnBoundaryMm);
   if(column.returnBoundary){
-   const portCurrent=Math.max(...report.parameters[i].map((row,port)=>{
-    const source=port===column.input?1:0;
-    const factor=0.5*Math.sqrt(referenceOhm[column.input]/referenceOhm[port]);
-    return Math.hypot(source-factor*(row[column.input].real+source),factor*row[column.input].imaginary);
-   }));
+   const reflection=report.parameters[i][column.input][column.input];
+   const portCurrent=0.5*Math.hypot(1-reflection.real,reflection.imaginary);
    if(Math.abs(portCurrent-column.returnBoundary.portCurrentA)>64*Number.EPSILON*Math.max(1,portCurrent))
     fail('return boundary normalization disagrees with physical port currents');
   }

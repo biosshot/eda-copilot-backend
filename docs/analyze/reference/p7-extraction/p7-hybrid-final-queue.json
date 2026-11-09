@@ -770,19 +770,23 @@
       "case": "Нет локальной опоры: поиск возврата по цепи",
       "sourceSection": "primary",
       "sourceLine": 102,
-      "implementationStatus": "unmapped",
+      "implementationStatus": "mapped",
       "acceptanceStatus": "open",
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
       "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
-      "developmentControls": [],
-      "implementationScope": "**Не поддерживается**",
-      "coverageGap": "Правило в плане §4.0; реализация не начата",
+      "developmentControls": [
+        "tests/analyze-board-foil-cache.test.ts",
+        "tests/analyze-board-channel-plan.test.ts",
+        "scripts/verify-p7-hybrid-coupled-smoke.ts"
+      ],
+      "implementationScope": "Guarded automatic return search implemented",
+      "coverageGap": "Independent physical acceptance remains open",
       "requiredObservables": [],
       "frequencyBandHz": null,
       "finalChecks": [],
-      "implementationNote": "Planner resolves declared terminal return islands and corridor geometry; no verified automatic return search for a missing local reference was identified."
+      "implementationNote": "Internal six-face conductive and displacement current guard; all requested drives and available frequency holdouts must pass a strict 1% gate with 1 pA floor. Up to eight expansions share deadline and memory budget; unresolved returns are refused."
     },
     {
       "id": "primary-continuation-103",

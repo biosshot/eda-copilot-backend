@@ -2424,7 +2424,7 @@ impl ReducedSpace {
                                 let vi=field_voltage(copper_im,shape.map(|s|s[1]));
                                 let displacement=field.boundary(&vr,&vi,bounds)?.map(|v|v*w);
                                 if displacement.iter().any(|v|!v.is_finite()||*v<0.) {return Err(error("RETURN_BOUNDARY","invalid displacement flux"));}
-                                let port=net_real.iter().zip(&net_imaginary).take(ports).map(|(&r,&i)|r.hypot(i)).fold(0_f64,f64::max);
+                                let port=net_real[input].hypot(net_imaginary[input]);
                                 let unresolved=conductive.iter().chain(&displacement).sum::<f64>();
                                 let relative=unresolved/port.max(1e-12);
                                 if !port.is_finite()||!unresolved.is_finite()||!relative.is_finite() {return Err(error("RETURN_BOUNDARY","nonfinite observation"));}

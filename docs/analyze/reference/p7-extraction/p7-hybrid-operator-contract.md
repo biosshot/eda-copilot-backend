@@ -24,9 +24,9 @@ For each frequency and matched Norton drive, the observed unresolved-current bou
 
 `F = sum_faces integral |J_complex dot n| dA + omega * sum_faces integral |D_complex dot n| dA`.
 
-`I = max_external_ports |I_net|`, `rho = F / max(I, 1e-12 A)`.
+`I = |I_net at the driven physical input port|`, `rho = F / max(I, 1e-12 A)`.
 
-Admission requires `I > 1e-12 A` and `rho < 0.01` for all requested columns and computed frequency-audit columns. The 1 pA floor is fixed before solving. Internal package currents do not enter the denominator. The consumer recomputes the sum, ratio and pass flag and checks the external-port normalization against S and the original references. Exceeding the threshold expands the domain. Budget exhaustion, invalid evidence or eight unresolved candidates produces a refusal with available iteration history.
+Admission requires `I > 1e-12 A` and `rho < 0.01` for all requested columns and computed frequency-audit columns. The 1 pA floor is fixed before solving. Internal package currents and larger currents at other ports do not enter the denominator. The consumer recomputes the sum, ratio and pass flag and checks the driven-port normalization against S and the original references. Exceeding the threshold expands the domain. Budget exhaustion, invalid evidence or eight unresolved candidates produces a refusal with available iteration history.
 
 `return_boundary::conductive` integrates physical P0 current density over clipped tetrahedron sections. `SpatialFieldAction::cut_displacement_flux` reconstructs its prepared prism field and integrates a conservative complex-normal-field magnitude bound over the internal cuts. It uses actual dielectric permittivity and accounts separately for zero-displacement copper coverage. Shared coplanar interfaces have one interior-side owner, and complete face coverage is required. The calculation uses a compensated physical-potential lift with one global gauge and retains inter-island voltage differences. It never substitutes free-row residuals or outer natural-boundary reactions for missing return flux.
 

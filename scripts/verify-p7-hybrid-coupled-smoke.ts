@@ -46,6 +46,8 @@ async function run(){
  assert.equal(solution.status,'complete');assert.equal(solution.coverage,'unverified');
  assert.equal(solution.provenance.operatorPolicy,'hybrid-planar-v3');
  assert.equal(solution.provenance.partitionPolicy,'automatic-hybrid-v1');
+ assert.equal(solution.returnSearch?.status,'passed');
+ assert.ok(solution.returnSearch.steps.length>0);
  assert.ok(solution.provenance.compactOperator.skinHints.added>0);
  assert.ok(solution.provenance.compactOperator.sectionHints.submitted>0);
  assert.ok(solution.provenance.compactOperator.sectionHints.addedCurrentModes>0);
@@ -53,6 +55,9 @@ async function run(){
  assert.ok(solution.samples.every((sample:any)=>sample.lossGrams?.copperWPerA2.length===2));
  assert.equal(solution.portObservations.spatialRecovery.status,'recovered-discrete');
  for(const [i,sample] of solution.samples.entries())for(const [j,column] of sample.columns.entries()){
+  assert.equal(column.returnBoundary?.passed,true);
+  assert.ok(column.returnBoundary.relative<.01);
+  assert.ok(column.returnBoundary.portCurrentA>column.returnBoundary.absoluteFloorA);
   assert.equal(column.spatialRecovery.status,'recovered-discrete');
   assert.ok(column.spatialRecovery.supports.length>0);
   assert.deepEqual(solution.portObservations.frequencies[i].drives[j].spatialRecoveryRef,{sampleIndex:i,columnIndex:j});
@@ -60,7 +65,7 @@ async function run(){
  if(process.env.P7_HYBRID_REGIME_AUDIT==='1')assert.equal(solution.modelRegimeAudit?.status,'pass');
  assert.equal(solution.frequencyAudit.batch.status,'checked');
  assert.ok(solution.frequencyAudit.adaptiveResponse.points.length>2);
- return {cache:solution.cache.status,key:solution.cache.key,frequenciesHz:solution.frequenciesHz,quality:solution.quality,skinHints:solution.provenance.compactOperator.skinHints,sectionHints:solution.provenance.compactOperator.sectionHints,lossGrams:solution.samples.map((sample:any)=>({frequencyHz:sample.frequencyHz,...sample.lossGrams})),modelRegimeAudit:solution.modelRegimeAudit};
+ return {cache:solution.cache.status,key:solution.cache.key,frequenciesHz:solution.frequenciesHz,quality:solution.quality,returnSearch:solution.returnSearch,skinHints:solution.provenance.compactOperator.skinHints,sectionHints:solution.provenance.compactOperator.sectionHints,lossGrams:solution.samples.map((sample:any)=>({frequencyHz:sample.frequencyHz,...sample.lossGrams})),modelRegimeAudit:solution.modelRegimeAudit};
 }
 if(process.env.P7_SMOKE_MODE==='restart'){
  const restart=await run();assert.equal(restart.cache,'disk');

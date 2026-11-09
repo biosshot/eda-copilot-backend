@@ -106,6 +106,27 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
   };
   const validateHybrid=(v:AnalysisBoardFoilCheckedReport)=>validateBoardFoilReport(v,hybridProblem,problem.request.budget);
   validateHybrid(hybrid());
+  const twoPortProblem:BoardFoilProblem={...hybridProblem,
+    geometry:{ports:[['a','b'],['c','d']],returnBoundaryMm:[[-1,-1,-1],[1,1,1]]},
+    expected:{...hybridProblem.expected,electrodePairs:[['a','b'],['c','d']]},
+    request:{...hybridProblem.request,referenceOhm:[50,50]}};
+  const coupled=hybrid();
+  coupled.ports=twoPortProblem.expected.electrodePairs;coupled.referenceOhm=[50,50];
+  Object.assign(coupled.provenance.electrodeAreasM2,{c:1e-8,d:1e-8});
+  coupled.parameters=coupled.frequenciesHz.map(()=>[[{real:.9,imaginary:0},{real:.3,imaginary:0}],[{real:.3,imaginary:0},{real:0,imaginary:0}]]);
+  for(const sample of coupled.samples){
+    const original=sample.columns[0];
+    sample.columns=[0,1].map(input=>({...structuredClone(original),input,copperLossW:input===0?1.25:11.375,
+      returnBoundary:{policy:'internal-guard-flux-v1',boundsMm:[[-1,-1,-1],[1,1,1]],conductiveA:[.00075,0,0,0,0,0],
+        displacementA:[0,0,0,0,0,0],portCurrentA:input===0?.05:.5,unresolvedA:.00075,
+        relative:input===0?.015:.0015,absoluteFloorA:1e-12,threshold:.01,passed:input!==0}}));
+  }
+  validateBoardFoilReport(coupled,twoPortProblem,problem.request.budget);
+  for(const sample of coupled.samples){
+    Object.assign(sample.columns[0].returnBoundary!,{portCurrentA:.15,relative:.005,passed:true});
+  }
+  assert.throws(()=>validateBoardFoilReport(coupled,twoPortProblem,problem.request.budget),/normalization disagrees/,
+    'larger induced output current must not turn failing input return into a pass');
   assert.throws(()=>validate(hybrid()),/CHANNEL_FOIL_EVIDENCE/);
   for(const change of [
     (v:AnalysisBoardFoilCheckedReport)=>{delete v.provenance.hybridAssembly;},

@@ -2427,9 +2427,18 @@
         "sourceSection": "primary",
         "case": "Нет локальной опоры: поиск возврата по цепи",
         "implementation": {
-          "status": "unmapped",
-          "code": null,
-          "shortControls": []
+          "status": "mapped",
+          "code": [
+            "src/analyze/auto-foil-response.ts",
+            "src/analyze/board-channel-plan.ts",
+            "native/analyze/src/extraction/local/return_boundary.rs",
+            "native/analyze/src/extraction/local/layered_capacitance.rs"
+          ],
+          "shortControls": [
+            "tests/analyze-board-foil-cache.test.ts",
+            "tests/analyze-board-channel-plan.test.ts",
+            "scripts/verify-p7-hybrid-coupled-smoke.ts"
+          ]
         },
         "acceptance": {
           "status": "open",
@@ -2437,10 +2446,10 @@
           "observables": [],
           "frequencyBandHz": null,
           "finalChecks": [],
-          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+          "unknownReason": "Independent reference bindings and acceptance remain open."
         },
-        "implementationScope": "**Не поддерживается**",
-        "coverageGap": "Правило в плане §4.0; реализация не начата",
+        "implementationScope": "Guarded automatic return search implemented",
+        "coverageGap": "Independent physical acceptance remains open",
         "sourceLine": 102
       },
       {
