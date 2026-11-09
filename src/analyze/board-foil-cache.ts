@@ -8,7 +8,7 @@ type Entry = { report: AnalysisBoardFoilCheckedReport; producerBudget: Budget };
 
 /** Bump whenever the shared planar/hybrid operator changes its numerical
  * meaning. Kept in the existing exact-grid identity so old snapshots miss. */
-export const HYBRID_PLANAR_OPERATOR_VERSION = 'hybrid-planar-v18';
+export const HYBRID_PLANAR_OPERATOR_VERSION = 'hybrid-planar-v19';
 
 function validBudget(budget: Budget) {
   return Number.isFinite(budget?.maxSeconds) && budget.maxSeconds > 0 && budget.maxSeconds <= 3600 &&

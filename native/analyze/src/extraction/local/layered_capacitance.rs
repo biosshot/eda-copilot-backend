@@ -840,11 +840,18 @@ impl SpatialFieldAction {
                 }
             }
         }
-        if bounds[0][2] <= s.z[0] || bounds[1][2] >= *s.z.last().unwrap() {
-            return Err(error(
-                "FIELD_CUT",
-                "observation box must be internal to field height",
-            ));
+        // A guard box taller than the field is measured at the field limit: nothing
+        // exists beyond it, so the requested z faces collapse to the outermost cells.
+        let (z_lo, z_hi) = (s.z[0], *s.z.last().unwrap());
+        let inset = 1e-3 * (s.z[1] - s.z[0]).min(z_hi - s.z[s.z.len() - 2]);
+        let mut bounds = bounds;
+        if bounds[0][2] <= z_lo || bounds[1][2] >= z_hi {
+            eprintln!("P7_FIELD_CUT_CLAMPED requested=[{},{}] field=[{z_lo},{z_hi}]", bounds[0][2], bounds[1][2]);
+            bounds[0][2] = bounds[0][2].max(z_lo + inset);
+            bounds[1][2] = bounds[1][2].min(z_hi - inset);
+        }
+        if bounds[0][2] >= bounds[1][2] {
+            return Err(error("FIELD_CUT", "observation box does not overlap the field height"));
         }
         // A second solve retains the first nodal vector; cut clipping uses bounded
         // scratch (at most ten vertices from clipping a convex six-vertex overlay).
