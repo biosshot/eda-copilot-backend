@@ -308,3 +308,12 @@ The captured orientation requests also reveal an applicability limit of this con
 - Fresh addon build from2ce9973 succeeds. Audited coupled smoke1794156532305939600 passes4.906s, sampled private443539456B, covering cold/warm/restart and same-model regime audit.
 - Unchanged production via1794156422031586000: LOCAL_DEADLINE,26.078s wall, private209674240B. Remote return1794156448319877900: LOCAL_DEADLINE,13.125s wall, private204369920B. Reference-swap1794156461665631900: now passes earlier electric geometry refusal but reaches magnetic LOCAL_DEADLINE,26.141s wall, private221081600B.
 - These are unresolved positive electrical controls. Readiness for full acceptance is NOT achieved. Main blocker remains dense expensive checked local tetra magnetic action; limits and physical gates remain unchanged. Full39/five-board campaign not run.
+
+### Local magnetic follow-up
+
+- Normal-range positive-ray evaluation preserves the captured via coefficient bits. The forward comparison took 2.39 s versus 3.58 s in the preceding release control.
+- Small direct action and elongated quadrature pass focused controls 1794202967442930800 and 1794202967833985500. The packed cache passes 1794204315509933400 and 1794204315959485900.
+- Canonical via masks reduce the reference-swap maximum local support extent from 4.760 mm to 0.181 mm in the geometry control with copper volume and contact areas preserved within 1e-8.
+- On the fresh mask addon, closed remote return clears the electrical checks. The open case in 1794204114215220800 reaches the deadline. The packed cache removes that timeout in 1794204739183089000, where open KVL remains 3.169e-6 and KCL 2.526e-11. The complete remote control remains open.
+- Via 1794204133837340000 reaches the 25 s native limit after 11,264 complete pairs. Reference swap 1794204160002503400 reaches the same limit after 48,896 complete pairs, versus no complete near window before localization. Neither is a successful response.
+- Single-sided quadrature control 1794204737409204700 passes on an actual axial fallback pair, including direct comparison and overlap refusal. End-to-end timing is pending.
