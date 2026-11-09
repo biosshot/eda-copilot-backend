@@ -149,7 +149,7 @@
   "physicalStatusPolicy": "preserve source manifest/case matrix statuses; this queue makes no acceptance claim",
   "commands": {
     "status": "partially-prepared",
-    "note": "Per-row developmentControls are direct script or test invocations from repository root. They are not acceptance commands; native controls and final reference-dependent invocations remain unresolved. Runs may be expensive and are not executed by queue preparation."
+    "note": "Per-row developmentControls are direct script, test, or focused Cargo invocations from repository root. They are not acceptance commands; final reference-dependent invocations remain unresolved. Runs may be expensive and are not executed by queue preparation."
   },
   "caseTasks": [
     {
@@ -334,15 +334,15 @@
       "developmentControls": [
         {
           "source": "native/analyze/src/extraction/local/mixed_conductor.rs#aligned_pad_orientation_tests::inner_signal_with_split_top_and_bottom_references_stays_disconnected",
-          "command": null,
+          "command": "cargo test --manifest-path native/analyze/Cargo.toml --lib inner_signal_with_split_top_and_bottom_references_stays_disconnected",
           "scope": "development control only; not final acceptance",
-          "status": "command-unresolved"
+          "status": "available"
         },
         {
           "source": "native/analyze/src/extraction/local/hybrid_five_island_test.rs",
-          "command": null,
+          "command": "cargo test --manifest-path native/analyze/Cargo.toml --lib split_top_bottom_references_carry_joint_ac_displacement",
           "scope": "development control only; not final acceptance",
-          "status": "command-unresolved"
+          "status": "available"
         }
       ],
       "implementationScope": "**Не поддерживается**",
@@ -623,15 +623,15 @@
       "developmentControls": [
         {
           "source": "native/analyze/src/extraction/local/mixed_conductor.rs#aligned_pad_orientation_tests::inner_signal_with_split_top_and_bottom_references_stays_disconnected",
-          "command": null,
+          "command": "cargo test --manifest-path native/analyze/Cargo.toml --lib inner_signal_with_split_top_and_bottom_references_stays_disconnected",
           "scope": "development control only; not final acceptance",
-          "status": "command-unresolved"
+          "status": "available"
         },
         {
           "source": "native/analyze/src/extraction/local/hybrid_five_island_test.rs",
-          "command": null,
+          "command": "cargo test --manifest-path native/analyze/Cargo.toml --lib split_top_bottom_references_carry_joint_ac_displacement",
           "scope": "development control only; not final acceptance",
-          "status": "command-unresolved"
+          "status": "available"
         }
       ],
       "implementationScope": "**Не поддерживается**",
@@ -654,9 +654,9 @@
       "developmentControls": [
         {
           "source": "native/analyze/tests/blind_buried_via.rs",
-          "command": null,
+          "command": "cargo test --manifest-path native/analyze/Cargo.toml --test blind_buried_via",
           "scope": "development control only; not final acceptance",
-          "status": "command-unresolved"
+          "status": "available"
         }
       ],
       "implementationScope": "**Моделируется геометрически**",
@@ -679,9 +679,9 @@
       "developmentControls": [
         {
           "source": "native/analyze/src/extraction/local/hybrid_connector_test.rs",
-          "command": null,
+          "command": "cargo test --manifest-path native/analyze/Cargo.toml --lib finite_wide_pad_to_narrow_track_two_drive_hybrid",
           "scope": "development control only; not final acceptance",
-          "status": "command-unresolved"
+          "status": "available"
         }
       ],
       "implementationScope": "**Не поддерживается**",
@@ -1074,9 +1074,9 @@
       "developmentControls": [
         {
           "source": "native/analyze/src/extraction/local/hybrid_section_model.rs#tests::disconnected_islands_carry_ac_displacement_current",
-          "command": null,
+          "command": "cargo test --manifest-path native/analyze/Cargo.toml --lib disconnected_islands_carry_ac_displacement_current",
           "scope": "development control only; not final acceptance",
-          "status": "command-unresolved"
+          "status": "available"
         }
       ],
       "implementationScope": "Возврат только ёмкостный",

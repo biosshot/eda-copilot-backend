@@ -1,5 +1,5 @@
 """Cheap structural validation for the P7 case-to-evidence crosswalk."""
-import json, pathlib, sys, hashlib
+import json, pathlib, sys, hashlib, re
 root=pathlib.Path(__file__).resolve().parents[1]
 manifest=json.loads((root/"tests/fixtures/analysis-p7-closure/manifest.json").read_text(encoding="utf-8"))
 trace=manifest.get("caseTraceability")
@@ -33,7 +33,15 @@ for row in rows:
     impl=row["implementation"]; acc=row["acceptance"]
     assert impl["status"] in {"unmapped","mapped"}
     assert isinstance(impl["shortControls"],list) and (impl["status"]!="mapped" or impl["code"])
-    for path in (impl.get("code") or [])+impl["shortControls"]: assert (root/path).is_file(), f"missing mapped file: {path}"
+    for reference in (impl.get("code") or [])+impl["shortControls"]:
+        path, separator, symbol = reference.partition("#")
+        mapped = root / path
+        assert mapped.is_file(), f"missing mapped file: {reference}"
+        if separator:
+            assert symbol and all(re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", part) for part in symbol.split("::")), f"invalid symbol: {reference}"
+            text = mapped.read_text(encoding="utf-8")
+            for part in symbol.split("::"):
+                assert re.search(r"\b(?:mod|fn)\s+" + re.escape(part) + r"\b", text), f"missing symbol {part}: {reference}"
     assert acc["status"] in {"open","accepted","partial","refused"}
     assert isinstance(acc["observables"],list) and isinstance(acc["finalChecks"],list)
     if acc["status"]=="accepted":
