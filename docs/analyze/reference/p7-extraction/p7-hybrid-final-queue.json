@@ -20,7 +20,9 @@
         "status": "missing",
         "manifestValue": null,
         "note": "closure manifest has null reference; resolve independently before final physical acceptance"
-      }
+      },
+      "candidateDiagnosticCommand": "python scripts/verify-p7-closure-supervised.py --board-id STM32G0_CAN_RS485 --memory-mib 4096",
+      "candidateDiagnosticScope": "Numerical diagnostic only; independent physical reference and acceptance remain missing. Set P7_SUPERVISOR_CACHE_DIR for warm/restart; use an empty isolated cache for cold."
     },
     {
       "id": "NanoScope",
@@ -38,7 +40,9 @@
         "status": "missing",
         "manifestValue": null,
         "note": "closure manifest has null reference; resolve independently before final physical acceptance"
-      }
+      },
+      "candidateDiagnosticCommand": "python scripts/verify-p7-closure-supervised.py --board-id NanoScope --memory-mib 4096",
+      "candidateDiagnosticScope": "Numerical diagnostic only; independent physical reference and acceptance remain missing. Set P7_SUPERVISOR_CACHE_DIR for warm/restart; use an empty isolated cache for cold."
     },
     {
       "id": "ThunderF722",
@@ -56,7 +60,9 @@
         "status": "missing",
         "manifestValue": null,
         "note": "closure manifest has null reference; resolve independently before final physical acceptance"
-      }
+      },
+      "candidateDiagnosticCommand": "python scripts/verify-p7-closure-supervised.py --board-id ThunderF722 --memory-mib 4096",
+      "candidateDiagnosticScope": "Numerical diagnostic only; independent physical reference and acceptance remain missing. Set P7_SUPERVISOR_CACHE_DIR for warm/restart; use an empty isolated cache for cold."
     },
     {
       "id": "TPS63060DSCR",
@@ -74,7 +80,9 @@
         "status": "missing",
         "manifestValue": null,
         "note": "closure manifest has null reference; resolve independently before final physical acceptance"
-      }
+      },
+      "candidateDiagnosticCommand": "python scripts/verify-p7-closure-supervised.py --board-id TPS63060DSCR --memory-mib 4096",
+      "candidateDiagnosticScope": "Numerical diagnostic only; independent physical reference and acceptance remain missing. Set P7_SUPERVISOR_CACHE_DIR for warm/restart; use an empty isolated cache for cold."
     },
     {
       "id": "BandAmpV5",
@@ -92,7 +100,9 @@
         "status": "missing",
         "manifestValue": null,
         "note": "closure manifest has null reference; resolve independently before final physical acceptance"
-      }
+      },
+      "candidateDiagnosticCommand": "python scripts/verify-p7-closure-supervised.py --board-id BandAmpV5 --memory-mib 4096",
+      "candidateDiagnosticScope": "Numerical diagnostic only; independent physical reference and acceptance remain missing. Set P7_SUPERVISOR_CACHE_DIR for warm/restart; use an empty isolated cache for cold."
     }
   ],
   "order": [
