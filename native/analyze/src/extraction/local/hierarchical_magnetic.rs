@@ -1089,7 +1089,7 @@ fn abs_lower(value: Interval) -> f64 {
         value.lo.abs().min(value.hi.abs())
     }
 }
-fn kvl_intervals(
+pub(crate) fn kvl_intervals(
     resistive: Interval,
     gradient: Interval,
     inductive: f64,

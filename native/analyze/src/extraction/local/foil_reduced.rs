@@ -199,15 +199,15 @@ fn native_global_sparse_bytes(m: usize) -> Result<usize> {
 fn native_work_modes(n: usize, m: usize, potential_modes: usize, current_modes: usize) -> Result<usize> {
     // Per four-term current column: Cell+coefficient storage; up to16 triplets
     // plus pinned faer0.24.4 argsort/row-index/CSC construction (four index
-    // slabs+one value slab conservatively bound csc/mod.rs1163,2373). The32
-    // real current-vector slots cover simultaneous old/new residuals, lift/
-    // gradient/metric candidates, and transient construction Vec capacities.
+    // slabs+one value slab conservatively bound csc/mod.rs1163,2373).
+    // The 36 real current-vector slots include two interval gradient rows
+    // alongside the lifted state, residuals and enrichment scratch.
     let cell = std::mem::size_of::<Cell>() + 4 * std::mem::size_of::<(usize, f64)>();
     let sparse = 16
         * (std::mem::size_of::<Triplet<usize, usize, f64>>()
             + 4 * std::mem::size_of::<usize>()
             + std::mem::size_of::<f64>());
-    let current = cell + sparse + 32 * std::mem::size_of::<f64>();
+    let current = cell + sparse + 36 * std::mem::size_of::<f64>();
     // Eight real full vectors per possible mode cover resident basis/action,
     // temporary resistive Gram images and Sum magnetic output+conversion.
     // n*1024 covers nodal maps, retained/component coordinates, RHS/lifts,
@@ -1287,6 +1287,64 @@ fn lift(basis: &[Vec<f64>], x: &[f64], dimension: usize) -> Vec<f64> {
         })
         .collect()
 }
+use super::volume_integral_magnetic::hierarchical_magnetic::Interval as KvlInterval;
+
+fn lifted_gradient(cells: &[Cell], basis: &Basis, coordinates: &[f64]) -> Vec<KvlInterval> {
+    // The voltage modes of each component sum to its constant lift by
+    // construction. Differentiate that lift analytically, as make_model does.
+    // Subtract the component reference before lifting small voltage drops.
+    let point = KvlInterval::point;
+    let relative: Vec<_> = basis.components.iter().flat_map(|modes| {
+        let (&reference, others) = modes.split_last().expect("nonempty component");
+        others.iter().filter_map(move |&i| {
+            (coordinates[i] != coordinates[reference])
+                .then(|| (i, point(coordinates[i]).sub(point(coordinates[reference]))))
+        })
+    }).collect();
+    cells.iter().map(|cell| {
+        let Some((&(anchor, _), terms)) = cell.terms.split_first() else {
+            return point(0.);
+        };
+        let mut gradient = point(0.);
+        for &(i, coefficient) in terms {
+            let mut difference = point(0.);
+            for &(mode, relative) in &relative {
+                let voltage = &basis.voltage[mode];
+                if voltage[i] != voltage[anchor] {
+                    difference = difference.add(point(voltage[i]).sub(point(voltage[anchor])).mul(relative));
+                }
+            }
+            gradient = gradient.add(difference.mul(point(coefficient)));
+        }
+        gradient
+    }).collect()
+}
+
+#[test]
+fn original_gradient_retains_sub_ulp_drop_at_common_mode_voltage() {
+    let drop = 2_f64.powi(-50);
+    let basis = Basis {
+        voltage: vec![vec![0., drop], vec![1., 1. - drop]],
+        current: vec![],
+        retained: vec![],
+        components: vec![vec![0, 1]],
+        dc_residual: 0.,
+    };
+    let cells = [Cell::new(vec![(0, -1.), (1, 1.)], 1.)];
+    let coordinates = [51., 50.];
+    let rounded = lift(&basis.voltage, &coordinates, 2);
+    assert_eq!(gradient(&cells, &rounded), [0.]);
+    let gradient = lifted_gradient(&cells, &basis, &coordinates)[0];
+    assert!(gradient.lo <= drop && gradient.hi >= drop);
+    assert!(gradient.radius(drop) < 1e-12 * drop);
+
+    let (numerator, denominator, _) =
+        super::volume_integral_magnetic::hierarchical_magnetic::kvl_intervals(
+            KvlInterval::point(drop), gradient, 0., 0., 0.,
+        ).unwrap();
+    assert!(numerator / denominator < RESIDUAL_LIMIT);
+}
+
 impl ReducedSpace {
     /// These coefficients are diagnostic. Only solve_checked evaluates the
     /// unreduced equations before returning a point.
@@ -1402,10 +1460,17 @@ impl ReducedSpace {
     ) -> Result<FullResidual> {
         let nv = self.basis.voltage.len();
         let nr = self.full_potentials;
-        let v = [
-            lift(&self.basis.voltage, &re[..nv], nr),
-            lift(&self.basis.voltage, &im[..nv], nr),
-        ];
+        let gradients = if self.native_allocation {
+            [
+                lifted_gradient(&self.cells, &self.basis, &re[..nv]),
+                lifted_gradient(&self.cells, &self.basis, &im[..nv]),
+            ]
+        } else {
+            [re, im].map(|x| {
+                gradient(&self.cells, &lift(&self.basis.voltage, &x[..nv], nr))
+                    .into_iter().map(KvlInterval::point).collect()
+            })
+        };
         let q = [
             lift(&self.basis.current, &re[nv..], self.cells.len()),
             lift(&self.basis.current, &im[nv..], self.cells.len()),
@@ -1427,11 +1492,9 @@ impl ReducedSpace {
             for phase in 0..2 {
                 for (j, cell) in self.cells.iter().enumerate() {
                     let (_, lower, _) =
-                        super::volume_integral_magnetic::hierarchical_magnetic::kvl_cell(
-                            cell.resistance,
-                            q[phase][j],
-                            &cell.terms,
-                            &v[phase],
+                        super::volume_integral_magnetic::hierarchical_magnetic::kvl_intervals(
+                            KvlInterval::point(cell.resistance).mul(KvlInterval::point(q[phase][j])),
+                            gradients[phase][j],
                             0.,
                             0.,
                             0.,
@@ -1498,8 +1561,8 @@ impl ReducedSpace {
             )
         };
         let d = q.each_ref().map(|x| divergence(&self.cells, x, nr));
-        let g = v.each_ref().map(|x| gradient(&self.cells, x));
-        if [&v, &q, &c, &l, &d, &g]
+        let g = gradients.each_ref().map(|row| row.iter().map(|v| v.mid()).collect::<Vec<_>>());
+        if [&q, &c, &l, &d, &g]
             .into_iter()
             .flatten()
             .flatten()
@@ -1536,11 +1599,9 @@ impl ReducedSpace {
                 kvl_rows[k][j] = a + b + z;
                 if let Some(bounds) = &magnetic_bounds {
                     let (numerator, denominator, uncertainty) =
-                        super::volume_integral_magnetic::hierarchical_magnetic::kvl_cell(
-                            cell.resistance,
-                            q[k][j],
-                            &cell.terms,
-                            &v[k],
+                        super::volume_integral_magnetic::hierarchical_magnetic::kvl_intervals(
+                            KvlInterval::point(cell.resistance).mul(KvlInterval::point(q[k][j])),
+                            gradients[k][j],
                             l[1 - k][j],
                             s * w,
                             bounds[1 - k][j],

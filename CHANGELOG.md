@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Preserve small voltage differences in the original KVL audit by evaluating the gradient from component-relative reduced coordinates.
+
 - Try a single-sided tetrahedron integral with a bounded expansion tail when an analytic source evaluation can meet the existing tolerance.
 
 - Localize automatic hybrid via meshes with arrangement masks that preserve the copper and contact sets. Refresh the exact-response cache identity.
