@@ -79,6 +79,7 @@ struct Basis {
     dc_residual: f64,
 }
 const RESIDUAL_LIMIT: f64 = 1e-8;
+const APPROXIMATE_RESIDUAL_LIMIT: f64 = 1e-3;
 fn loss_gram_reservation(ports:usize,modes:usize,packages:&[super::checked_packages::Validated],frequencies:usize)->Result<usize>{
     // A serde_json object owns a small B-tree leaf even for two fields; include
     // that allocation, raw complex entries, row vectors and package metadata.
@@ -156,6 +157,7 @@ pub struct ReducedSpace {
     pub dc_harmonic_residual: f64,
     pub enrichment: Option<Enrichment>,
     native_allocation: bool,
+    approximate_magnetic: bool,
 }
 
 fn sum(a: &[f64], b: &[f64]) -> f64 {
@@ -972,6 +974,7 @@ pub(super) fn solve_mixed_grid(
         max_electric_reciprocity,
         enrichment: None,
         native_allocation: true,
+        approximate_magnetic: false,
     };
     let retained_bytes = map_retained
         .checked_add(profile_bytes).and_then(|n|n.checked_add(magnetic.owned_bytes))
@@ -1155,6 +1158,7 @@ fn assemble_impl(
         dc_harmonic_residual,
         enrichment: None,
         native_allocation: false,
+        approximate_magnetic: false,
     };
     let checked = match (preparation, training_resources) {
         (Preparation::Harmonic, None) => None,
@@ -1761,8 +1765,9 @@ fn balanced_drive_correction_pairs_each_dominant_phase_with_its_kcl() {
 }
 
 impl FullResidual {
-    fn checked(&self) -> Result<Residual> {
-        if self.norm.kcl_relative > RESIDUAL_LIMIT || self.norm.kvl_relative > RESIDUAL_LIMIT {
+    fn checked(&self) -> Result<Residual> { self.checked_with(RESIDUAL_LIMIT) }
+    fn checked_with(&self, limit: f64) -> Result<Residual> {
+        if self.norm.kcl_relative > limit || self.norm.kvl_relative > limit {
             return Err(error(
                 "FOIL_REDUCTION_RESIDUAL",
                 &format!(
@@ -2154,6 +2159,7 @@ impl ReducedSpace {
         let ports = grid.references.len();
         let balance_drives = use_voltage_shape && ports > 1;
         let conductances: Vec<_> = grid.references.iter().map(|r| 1. / r).collect();
+        let residual_limit = if self.approximate_magnetic { APPROXIMATE_RESIDUAL_LIMIT } else { RESIDUAL_LIMIT };
         let mut history = Vec::<Value>::with_capacity(grid.max_iterations + 1);
         let outcome = (|| {
             for iteration in 0..=grid.max_iterations {
@@ -2328,7 +2334,7 @@ impl ReducedSpace {
                         {
                             other_drive = Some((input, residual));
                         }
-                        if score > RESIDUAL_LIMIT {
+                        if score > residual_limit {
                             continue;
                         }
                         let mut outgoing = Sum::default();
@@ -2509,7 +2515,7 @@ impl ReducedSpace {
                 let (frequency, input, worst) =
                     worst.ok_or_else(|| error("BOARD_FOIL_GRID", "empty checked grid"))?;
                 let other = other_drive.as_ref().filter(|(_, residual)| {
-                    max_kcl <= RESIDUAL_LIMIT && residual.norm.kvl_relative > RESIDUAL_LIMIT
+                    max_kcl <= residual_limit && residual.norm.kvl_relative > residual_limit
                 });
                 history.push(json!({"iteration":iteration,"frequencyHz":frequency,"input":input,
                     "potentialModes":self.basis.voltage.len(),"currentModes":self.basis.current.len(),
@@ -2518,19 +2524,22 @@ impl ReducedSpace {
                 if std::env::var_os("P7_MAGNETIC_PHASE_PROFILE").as_deref() == Some(std::ffi::OsStr::new("1")) {
                     eprintln!("P7_COMPACT_GRID_STEP {}", history.last().expect("recorded iteration"));
                 }
-                if worst.checked().is_ok() {
+                if worst.checked_with(residual_limit).is_ok() {
                     check_time(start, wall)?;
+                    let residual_tier={let m=max_kcl.max(max_kvl);if m<=RESIDUAL_LIMIT {"target"} else if m<=1e-6 {"noise"} else {"approximation"}};
                     return Ok(json!({
                         "parameters":parameters,"samples":samples,"enrichment":history,
                         "quality":{"maxKclRelative":max_kcl,"maxKvlRelative":max_kvl,
-                                   "maxFullKvlUncertaintyRelative":max_kvl_uncertainty,"maxColumnPowerBalanceErrorW":max_power},
+                                   "maxFullKvlUncertaintyRelative":max_kvl_uncertainty,"maxColumnPowerBalanceErrorW":max_power,
+                                   "residualPolicy":{"tier":residual_tier,
+                                                     "limit":residual_limit,"kvlUncertaintyAdvisory":self.approximate_magnetic}},
                     }));
                 }
-                if worst.kvl_uncertainty_relative > RESIDUAL_LIMIT {
+                if !self.approximate_magnetic && worst.kvl_uncertainty_relative > RESIDUAL_LIMIT {
                     return Err(error("HIERARCHICAL_MAGNETIC_UNCERTIFIED","fixed geometry/order far-field enclosure exceeds original full KVL gate; no physical response admitted"));
                 }
                 if iteration == grid.max_iterations {
-                    return Err(worst.checked().unwrap_err());
+                    return Err(worst.checked_with(residual_limit).unwrap_err());
                 }
                 drop(parameters);
                 drop(samples);
@@ -3993,7 +4002,7 @@ pub(super) fn solve_compact_adaptive(
     super::board_foil::phase_trace("magnetic-end",start,serde_json::json!({"actions":magnetic.action_count.get()}));
     eprintln!("P7_COMPACT_STAGE stage=magnetic-actions-end elapsed={:.6} actions={}",start.elapsed().as_secs_f64(),magnetic.action_count.get());
     let (model,max_electric_reciprocity)=make_model(&cells,n,&basis,names,&charges,&initial.actions,ports)?;
-    let mut space=ReducedSpace{model,cells,dc_harmonic_residual:basis.dc_residual,basis,charges,magnetic_actions:initial.actions,magnetic_basis_certificate:initial.certificate,ports:ports.to_vec(),full_potentials:n,max_frequency_hz:*grid.frequencies.last().ok_or_else(||error("HYBRID_INPUT","empty frequency grid"))?,planned_bytes:peak,max_magnetic_reciprocity:0.,max_magnetic_refinement:0.,max_electric_reciprocity,enrichment:None,native_allocation:true};
+    let mut space=ReducedSpace{model,cells,dc_harmonic_residual:basis.dc_residual,basis,charges,magnetic_actions:initial.actions,magnetic_basis_certificate:initial.certificate,ports:ports.to_vec(),full_potentials:n,max_frequency_hz:*grid.frequencies.last().ok_or_else(||error("HYBRID_INPUT","empty frequency grid"))?,planned_bytes:peak,max_magnetic_reciprocity:0.,max_magnetic_refinement:0.,max_electric_reciprocity,enrichment:None,native_allocation:true,approximate_magnetic:magnetic.hm.is_some()};
     let training_budget=AllocationBudget{max_bytes:share*2,..budget};
     eprintln!("P7_COMPACT_STAGE stage=training-start elapsed={:.6}",start.elapsed().as_secs_f64());
     let result=space.train_grid(&grid,names,&dc,field,&batch,training_budget,start,wall,true,packages,None,true,Some(map));
