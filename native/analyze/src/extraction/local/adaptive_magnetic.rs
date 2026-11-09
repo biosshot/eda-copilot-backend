@@ -64,6 +64,32 @@ pub(super) struct Geometry {
     internal_index: Vec<usize>,
     internal_count: usize,
 }
+
+impl Geometry {
+    fn leaf_volume(&self, node: usize) -> Interval {
+        let leaf = self.leaf_index[node];
+        let center = self.leaf.centers[leaf * self.leaf.rank];
+        let radius = self.leaf.radii[leaf * self.leaf.shells];
+        if radius == 0. {
+            Interval::point(center)
+        } else {
+            Interval { lo: down(center - radius), hi: up(center + radius) }
+        }
+    }
+}
+
+fn certified_upper_cube_root(volume: Interval) -> Option<Interval> {
+    let mut root = volume.hi.cbrt();
+    for _ in 0..16 {
+        let interval = Interval::point(root);
+        let cube = interval.mul(interval).mul(interval);
+        if cube.finite() && cube.lo >= volume.hi && root.is_finite() {
+            return Some(interval);
+        }
+        root = up(root);
+    }
+    None
+}
 fn fnv(values: impl IntoIterator<Item = u64>) -> String {
     let mut hash = 0xcbf29ce484222325u64;
     for v in values {
@@ -113,6 +139,63 @@ fn replay_near_window(pair:&BoundedPairs,space:&Space,q:&[f64],near:&mut [Interv
 }
 
 impl Operator {
+    /// Bound the nonnegative projection-radius action without evaluating its
+    /// pair coefficients. This compact caller uses unit density per cell.
+    pub(crate) fn bound_nonnegative_projection(
+        &self,
+        tetra: &[[[f64; 3]; 4]],
+        columns: &[Vec<f64>],
+        goals: &[f64],
+        weights: &[f64],
+    ) -> Result<Option<Vec<Vec<f64>>>> {
+        let n = tetra.len();
+        if self.leaf != 1 || n != self.permutation.len() || weights.len() != n || goals.len() != columns.len()
+            || weights.iter().any(|&v| !v.is_finite() || v <= 0.)
+            || goals.iter().any(|&v| !v.is_finite() || v <= 0.)
+            || columns.iter().any(|column| column.len() != 3*n || column.iter().any(|&v| !v.is_finite() || v < 0.))
+        {
+            return Err(error("HIERARCHICAL_MAGNETIC_GOAL", "invalid nonnegative projection envelope"));
+        }
+        let (geometry, _) = self.ensure_geometry(tetra)?;
+        let mut result = Vec::with_capacity(columns.len());
+        for (column, &goal) in columns.iter().zip(goals) {
+            let mut phi = [Interval::zero(); 3];
+            for (node, support) in self.nodes.iter().enumerate().filter(|(_, s)| s.children.is_none()) {
+                check_deadline(self.start, self.wall)?;
+                let cell = self.permutation[support.range[0]];
+                if column[3*cell..3*cell+3].iter().all(|&v| v == 0.) { continue; }
+                let Some(root) = certified_upper_cube_root(geometry.leaf_volume(node)) else {
+                    return Ok(None);
+                };
+                // The integral of 1/r over any set of volume V is at most
+                // that over the equal-volume ball centered at the query.
+                // Its exact coefficient is less than 3, and all source
+                // densities here are nonnegative.
+                for axis in 0..3 {
+                    let contribution = Interval::point(3.).mul(Interval::point(column[3*cell+axis]))
+                        .mul(root).mul(root);
+                    phi[axis] = phi[axis].add(contribution);
+                }
+            }
+            let mut bounds = vec![0.; 3*n];
+            for (node, support) in self.nodes.iter().enumerate().filter(|(_, s)| s.children.is_none()) {
+                check_deadline(self.start, self.wall)?;
+                let cell = self.permutation[support.range[0]];
+                let limit = if weights[cell] == 1. { goal } else {
+                    Interval::point(goal).div(Interval::point(weights[cell])).lo
+                };
+                let target = Interval::point(1e-7).mul(geometry.leaf_volume(node));
+                for axis in 0..3 {
+                    let bound = target.mul(phi[axis]);
+                    if !bound.finite() || limit <= 0. || bound.hi > limit { return Ok(None); }
+                    bounds[3*cell+axis] = bound.hi;
+                }
+            }
+            result.push(bounds);
+        }
+        Ok(Some(result))
+    }
+
     // Direct quotient generating function: reduction commutes with homogeneous
     // degree, so q_alpha=6V*H_alpha/(degree+3)! without Cartesian alpha! factors.
     pub(super) fn fast_quotient(&self, tetra: [[f64; 3]; 4], node: usize) -> Result<Vec<Interval>> {
@@ -511,9 +594,7 @@ impl<'a> Plan<'a> {
                 if near_bound { result.phi[node] = result.phi[left].add(result.phi[right]); }
             } else {
                 let i = tree.permutation[tree.nodes[node].range[0]];
-                let volume = geometry
-                    .leaf
-                    .read(geometry.leaf_index[node], &tree.harmonic)[0];
+                let volume = geometry.leaf_volume(node);
                 let mass = Interval::point(space.cells[i].density_per_amp_m2).mul(volume);
                 if !mass.finite() || mass.lo <= 0. {
                     return Err(error(
@@ -529,16 +610,9 @@ impl<'a> Plan<'a> {
                 // < 3*sigma*V^(2/3). Summing tetrahedron bounds remains valid
                 // for duplicate or overlapping tetrahedra and self interactions.
                 if near_bound {
-                let mut root = volume.hi.cbrt();
-                let mut certified = false;
-                for _ in 0..16 {
-                    let cube = Interval::point(root).mul(Interval::point(root)).mul(Interval::point(root));
-                    if cube.finite() && cube.lo >= volume.hi { certified = true; break; }
-                    root = up(root);
-                }
-                result.phi[node] = if certified && root.is_finite() {
+                result.phi[node] = if let Some(root) = certified_upper_cube_root(volume) {
                     Interval::point(3.).mul(Interval::point(space.cells[i].density_per_amp_m2))
-                        .mul(Interval::point(result.envelope[i])).mul(Interval::point(root)).mul(Interval::point(root))
+                        .mul(Interval::point(result.envelope[i])).mul(root).mul(root)
                 } else { Interval { lo: 0., hi: f64::INFINITY } };
                 }
                 if result.envelope[i] > 0. {
@@ -1193,6 +1267,32 @@ pub fn resistive_goals(
 mod classification_power_tests {
     use super::*;
     use crate::extraction::local::volume_current;
+
+    #[test]
+    fn nonnegative_projection_envelope_covers_self_cross_and_exact_zero() {
+        let start = Instant::now();
+        let wall = Duration::from_secs(20);
+        let first = [[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];
+        let geometry = vec![first, first.map(|p| [p[0]+0.003,p[1],p[2]])];
+        let budget = AllocationBudget { max_bytes: 64*1024*1024, max_nodes: 100, max_tetrahedra: 100 };
+        let tree = Operator::new(&geometry, 4, 1, 0.2, 0, budget, start, wall).unwrap();
+        let columns = [vec![0.,0.,1e-10,2e-10,0.,0.]];
+        let weights = [1.,2.];
+        let bounds = tree.bound_nonnegative_projection(&geometry, &columns, &[1.], &weights)
+            .unwrap().unwrap();
+        let pairs = BoundedPairs::new(geometry.clone(), 12, 4, start, wall).unwrap();
+        for i in 0..2 {
+            for axis in [0,2] {
+                let actual = (0..2).map(|j| {
+                    1e-7 * pairs.pair(i,j).unwrap() * columns[0][3*j+axis]
+                }).sum::<f64>();
+                assert!(actual > 0. && actual <= bounds[0][3*i+axis]);
+            }
+            assert_eq!(bounds[0][3*i+1].to_bits(), 0f64.to_bits());
+        }
+        assert!(tree.bound_nonnegative_projection(&geometry, &columns, &[1e-40], &weights)
+            .unwrap().is_none());
+    }
 
     #[test]
     fn orthogonal_thin_support_boxes_tighten_adaptive_taylor_tail() {

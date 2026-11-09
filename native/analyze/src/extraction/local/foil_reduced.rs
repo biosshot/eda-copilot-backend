@@ -3618,11 +3618,22 @@ impl CompactMixedMagnetic {
                 let (action,uncertainty,_)=tree.actions_weighted(&q,&local_goals,Some(&weights))?;
                 // The Newton scalar kernel is nonnegative, so its action on
                 // componentwise input radii encloses the projection error.
-                let (error_action,error_uncertainty,_)=tree.actions_weighted(&qr,&local_goals,Some(&weights))?;
+                let (error_action,error_uncertainty) = match tree.bound_projection_error(&qr, &local_goals, &weights)? {
+                    Some(bounds) => {
+                        if std::env::var_os("P7_MAGNETIC_PHASE_PROFILE").as_deref() == Some(std::ffi::OsStr::new("1")) {
+                            eprintln!("P7_COMPACT_PROJECTION_ENVELOPE columns={count} localSupports={}", self.local.len());
+                        }
+                        (None, bounds)
+                    }
+                    None => {
+                        let (action, bounds, _) = tree.actions_weighted(&qr, &local_goals, Some(&weights))?;
+                        (Some(action), bounds)
+                    }
+                };
                 let mut projected=vec![vec![Interval::point(0.);dim];count];
                 for c in 0..count {for (j,support) in self.local.iter().enumerate() {for &(i,d) in &support.densities {for k in 0..3 {
                     let at=3*j+k;
-                    let extra=compact_bound_sum(error_action[c][at].abs(),error_uncertainty[c][at]);
+                    let extra=compact_bound_sum(error_action.as_ref().map_or(0., |action| action[c][at].abs()),error_uncertainty[c][at]);
                     let radius=compact_bound_sum(uncertainty[c][at],extra);
                     let v=Interval::point(action[c][at]).add(Interval{lo:-radius,hi:radius});
                     projected[c][i]=projected[c][i].add(Interval::point(d[k]).mul(v));

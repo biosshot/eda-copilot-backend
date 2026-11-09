@@ -58,6 +58,7 @@ pub struct PointPotential {
     tetra_tolerance: f64,
     far_samples: std::sync::Arc<[std::sync::OnceLock<FarSamples>; 7]>,
     far_geometry: std::sync::Arc<std::sync::OnceLock<([f64; 3], f64)>>,
+    positive_geometry: Option<std::sync::Arc<std::sync::OnceLock<Result<PositiveTetraGeometry>>>>,
     vertices: Vec<[f64; 3]>,
     faces: Vec<Face>,
     edges: Vec<Edge>,
@@ -182,10 +183,18 @@ impl PointPotential {
             tetra_tolerance: 1e-10,
             far_samples: std::sync::Arc::new(std::array::from_fn(|_| std::sync::OnceLock::new())),
             far_geometry: std::sync::Arc::new(std::sync::OnceLock::new()),
+            positive_geometry: None,
             vertices,
             faces,
             edges: edges.into_values().collect(),
         })
+    }
+
+    pub(super) fn with_cached_positive_geometry(mut self) -> Self {
+        if self.tetra.is_some() {
+            self.positive_geometry = Some(std::sync::Arc::new(std::sync::OnceLock::new()));
+        }
+        self
     }
 
     /// Positive ∫ dV'/|r-r'| [m²]. Near-edge indeterminate F64 limits refuse;
@@ -423,6 +432,11 @@ impl PointPotential {
 
     fn positive_rule(&self, point: [f64; 3], order: usize, check: &mut dyn FnMut() -> Result<()>) -> Result<f64> {
         if let Some(tetra) = self.tetra {
+            if let Some(cache) = &self.positive_geometry {
+                check()?;
+                let geometry = cache.get_or_init(|| PositiveTetraGeometry::new(tetra));
+                return positive_tetra_potential_prepared(geometry.as_ref().map_err(Clone::clone)?, point, order, check);
+            }
             return positive_tetra_potential_checked(tetra, point, order, check);
         }
         check()?;
@@ -618,31 +632,57 @@ fn positive_tetra_potential_checked(
     tetra: [[f64; 3]; 4], point: [f64; 3], order: usize, check: &mut dyn FnMut() -> Result<()>,
 ) -> Result<f64> {
     check()?;
-    let (volume, _) = super::mesh::tetra_coefficients(tetra)?;
-    let (ia, ib) = (0..4)
-        .flat_map(|i| (i + 1..4).map(move |j| (i, j)))
-        .max_by(|&(i, j), &(k, l)| {
-            norm(sub(tetra[i], tetra[j])).total_cmp(&norm(sub(tetra[k], tetra[l])))
-        })
-        .unwrap();
-    let other: Vec<_> = (0..4).filter(|&i| i != ia && i != ib).collect();
-    let a = tetra[ia];
-    let edge = sub(tetra[ib], a);
-    let length = norm(edge);
-    let e = edge.map(|x| x / length);
-    let c = sub(tetra[other[0]], a);
-    let d = sub(tetra[other[1]], a);
-    let query = sub(point, a);
-    let v = cross(e, c);
-    let w = cross(e, d);
-    let q = cross(e, query);
-    let determinant = dot(e, cross(v, w));
-    if determinant == 0. || !determinant.is_finite() {
-        return Err(error(
-            "TETRA_SOURCE_RANGE",
-            "projected source simplex is unresolved; no volume removed",
-        ));
+    positive_tetra_potential_prepared(&PositiveTetraGeometry::new(tetra)?, point, order, check)
+}
+
+#[derive(Clone, Copy, Debug)]
+struct PositiveTetraGeometry {
+    volume: f64,
+    origin: [f64; 3],
+    length: f64,
+    direction: [f64; 3],
+    c: [f64; 3],
+    d: [f64; 3],
+    v: [f64; 3],
+    w: [f64; 3],
+    determinant: f64,
+}
+
+impl PositiveTetraGeometry {
+    fn new(tetra: [[f64; 3]; 4]) -> Result<Self> {
+        let (volume, _) = super::mesh::tetra_coefficients(tetra)?;
+        let (ia, ib) = (0..4)
+            .flat_map(|i| (i + 1..4).map(move |j| (i, j)))
+            .max_by(|&(i, j), &(k, l)| {
+                norm(sub(tetra[i], tetra[j])).total_cmp(&norm(sub(tetra[k], tetra[l])))
+            })
+            .unwrap();
+        let mut other = (0..4).filter(|&i| i != ia && i != ib);
+        let origin = tetra[ia];
+        let edge = sub(tetra[ib], origin);
+        let length = norm(edge);
+        let direction = edge.map(|x| x / length);
+        let c = sub(tetra[other.next().unwrap()], origin);
+        let d = sub(tetra[other.next().unwrap()], origin);
+        let v = cross(direction, c);
+        let w = cross(direction, d);
+        let determinant = dot(direction, cross(v, w));
+        if determinant == 0. || !determinant.is_finite() {
+            return Err(error(
+                "TETRA_SOURCE_RANGE",
+                "projected source simplex is unresolved; no volume removed",
+            ));
+        }
+        Ok(Self { volume, origin, length, direction, c, d, v, w, determinant })
     }
+}
+
+fn positive_tetra_potential_prepared(
+    geometry: &PositiveTetraGeometry, point: [f64; 3], order: usize, check: &mut dyn FnMut() -> Result<()>,
+) -> Result<f64> {
+    let PositiveTetraGeometry { volume, origin, length, direction: e, c, d, v, w, determinant } = *geometry;
+    let query = sub(point, origin);
+    let q = cross(e, query);
     let projected = [
         dot(e, cross(q, w)) / determinant,
         dot(e, cross(v, q)) / determinant,
@@ -1367,6 +1407,17 @@ fn tetra_far_integral(target: [[f64; 3]; 4], source: &PointPotential, maximum: u
 #[cfg(test)]
 mod far_pair_tests {
     use super::*;
+    #[test]
+    fn cached_positive_geometry_preserves_source_integral_bits() {
+        let tetra = [[0., 0., 0.], [0.001, 0., 0.], [0., 0.001, 0.], [0., 0., 1e-5]];
+        let source = PointPotential::tetrahedron(tetra).unwrap().with_cached_positive_geometry();
+        for point in [[0.0002, 0.0002, 0.000005], [0.002, 0.0002, 0.000005]] {
+            let expected = positive_tetra_potential(tetra, point, 15).unwrap();
+            let actual = source.positive_rule(point, 15, &mut || Ok(())).unwrap();
+            assert_eq!(actual.to_bits(), expected.to_bits());
+        }
+        assert!(source.positive_geometry.as_ref().unwrap().get().is_some());
+    }
     #[test]
     fn elongated_target_preserves_both_positive_maps() {
         let source = [[0.,0.0012,0.],[0.0002,0.0012,0.],[0.,0.0014,0.],[0.,0.0012,0.0002]];

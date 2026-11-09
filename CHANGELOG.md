@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Bound local magnetic projection rounding with a linear-time positive envelope when it meets the existing row goal. Retain the checked pair action when the envelope is too wide.
+- Cache fixed positive tetrahedron geometry within the admitted compact cubature slots.
+
 - Reuse immutable source spheres across tetrahedron potential evaluations.
 
 - Refine elongated near-pair targets separately along and across their long direction, with the existing accuracy check and adaptive fallback.

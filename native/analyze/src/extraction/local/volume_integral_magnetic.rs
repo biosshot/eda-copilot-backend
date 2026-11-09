@@ -92,6 +92,7 @@ impl PairQuadrature {
 // capacity padding. Two additional slots cover construction and near/self
 // graded integration scratch; no cache-owned reference escapes pair().
 const STREAMED_PAIR_SLOT_BYTES: usize = 192 * 1024;
+const COMPACT_POSITIVE_CACHE_BYTES: usize = 256;
 const STREAMED_PAIR_MAX_SLOTS: usize = 64;
 // Both original orders 6/8 can retain n, n+2 and a lazy n+4 line rule.
 const AXIAL_CELL_EXTRA_BYTES: usize = 40 * 1024;
@@ -493,7 +494,10 @@ impl BoundedPairs {
         }
         let tetra = self.tetra[index];
         if let Some(counts)=&self.parallel_counts {counts.borrow_mut().geometry_builds+=1;}
-        let source = PointPotential::tetrahedron(tetra)?;
+        let mut source = PointPotential::tetrahedron(tetra)?;
+        if self.compact_quadrature {
+            source = source.with_cached_positive_geometry();
+        }
         let mut cubatures = Vec::with_capacity(3);
         // separated_order selects only4,6,8; near/self keep maximum=self.order.
         for order in [4, 6, 8] {
@@ -1502,9 +1506,9 @@ impl CompactLocalHierarchy {
         // stacks, metadata, and the bounded ordered-result window up front.
         let mut worker_slots=2;
         let elongated_scratch = if axial { super::polyhedron::ELONGATED_AXIAL_SCRATCH_BYTES } else { 0 };
-        let mut parallel_bytes=if workers>1 { BoundedPairs::parallel_bytes_for_slots(workers,axial,worker_slots)?.checked_add(16384 + workers * elongated_scratch).ok_or_else(||error("MEMORY_LIMIT","local parallel plan overflow"))? } else { 0 };
+        let mut parallel_bytes=if workers>1 { BoundedPairs::parallel_bytes_for_slots(workers,axial,worker_slots)?.checked_add(16384 + workers * (elongated_scratch + worker_slots * COMPACT_POSITIVE_CACHE_BYTES)).ok_or_else(||error("MEMORY_LIMIT","local parallel plan overflow"))? } else { 0 };
         let axial_bytes=if axial {slots.checked_mul(AXIAL_CELL_EXTRA_BYTES).and_then(|v|v.checked_add(64*1024+super::polyhedron::ELONGATED_AXIAL_SCRATCH_BYTES)).ok_or_else(||error("MEMORY_LIMIT","local axial plan overflow"))?} else {0};
-        let base = pair_bytes.checked_add(scalar_bytes).and_then(|v|v.checked_add(space_bytes)).and_then(|v|v.checked_add(parallel_bytes)).and_then(|v|v.checked_add(axial_bytes)).and_then(|v|v.checked_add(2*1024*1024)).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy base overflow"))?;
+        let base = pair_bytes.checked_add(scalar_bytes).and_then(|v|v.checked_add(space_bytes)).and_then(|v|v.checked_add(parallel_bytes)).and_then(|v|v.checked_add(axial_bytes)).and_then(|v|v.checked_add(2*1024*1024+slots*COMPACT_POSITIVE_CACHE_BYTES)).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy base overflow"))?;
         let mut tree = hierarchical_magnetic::Operator::new(&tetra, 12, 1, 0.2, base, budget, start, wall)?;
         let mut planned_bytes = base.checked_add(tree.planned_bytes).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy plan overflow"))?;
         budget.check(planned_bytes)?;
@@ -1525,7 +1529,7 @@ impl CompactLocalHierarchy {
                 .and_then(|count| count.checked_mul(std::mem::size_of::<f64>()))
                 .filter(|&bytes| bytes <= spare)
                 .unwrap_or(0);
-            let bytes_per_slot = workers * (STREAMED_PAIR_SLOT_BYTES + if axial { AXIAL_CELL_EXTRA_BYTES } else { 0 });
+            let bytes_per_slot = workers * (STREAMED_PAIR_SLOT_BYTES + COMPACT_POSITIVE_CACHE_BYTES + if axial { AXIAL_CELL_EXTRA_BYTES } else { 0 });
             let extra = ((spare - table) / bytes_per_slot).min(14);
             worker_slots += extra;
             parallel_bytes += extra * bytes_per_slot;
@@ -1549,6 +1553,11 @@ impl CompactLocalHierarchy {
     }
     pub(super) fn actions(&self, columns: &[Vec<f64>], goals: &[f64]) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
         self.actions_weighted(columns, goals, None)
+    }
+    pub(super) fn bound_projection_error(
+        &self, columns: &[Vec<f64>], goals: &[f64], weights: &[f64],
+    ) -> Result<Option<Vec<Vec<f64>>>> {
+        self.tree.bound_nonnegative_projection(&self.pair.tetra, columns, goals, weights)
     }
     fn direct_cached_actions(
         &self,
