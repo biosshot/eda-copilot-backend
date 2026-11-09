@@ -169,6 +169,7 @@ pub struct BoardMesh {
     pub max_copper_area_change:f64,
     pub max_contact_area_change:f64,
     pub source_copper_restorations:Vec<serde_json::Value>,
+    pub hybrid_mesh_masks:Vec<serde_json::Value>,
     certified_electrodes:BTreeMap<String,(Electrode,Vec<usize>)>,
 }
 struct Shape {poly:MultiPolygon<f64>,id:String,sigma:f64,span:[f64;2]}
@@ -260,6 +261,13 @@ pub(super) struct CopperSkinBarrel {
 
 pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration,
     support:Option<(&[[f64;2]],&[[usize;3]])>,trace_lines:&[[[f64;2];2]],skin:Option<copper_skin_profile::Profile>)->Result<BoardMesh> {
+    build_profiled_impl(board,r,budget,max_wall,support,trace_lines,skin,false)
+}
+pub(super) fn build_profiled_hybrid(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration,skin:Option<copper_skin_profile::Profile>)->Result<BoardMesh> {
+    build_profiled_impl(board,r,budget,max_wall,None,&[],skin,true)
+}
+fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration,
+    support:Option<(&[[f64;2]],&[[usize;3]])>,trace_lines:&[[[f64;2];2]],skin:Option<copper_skin_profile::Profile>,hybrid_masks:bool)->Result<BoardMesh> {
     let start=Instant::now();
     if r.electric_max_edge_m.is_some_and(|v|!v.is_finite()||v<=0.||v>0.1){return Err(error("BOARD_PROFILE","positive finite electric refinement spacing required"));}
     if r.electric_air_margin_m.is_some_and(|v|!v.is_finite()||v<=0.){return Err(error("BOARD_PROFILE","positive finite electric air margin required"));}
@@ -532,8 +540,23 @@ pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max
     }
     let physical_count=physical_shapes.len();
     if arrangement_sets.len()!=physical_count+r.electrodes.len() {return Err(error("BOARD_ARRANGEMENT","material/contact cut ordering mismatch"));}
+    let mut masks=Vec::new(); let mut hybrid_mesh_masks=Vec::new();
+    if hybrid_masks {
+        for (i,id) in barrel_ids.iter().enumerate() {
+            check(start,max_wall)?;
+            let shape=&physical_shapes[geometry.layers.len()+i].0;
+            let b=shape.bounding_rect().ok_or_else(||error("BOARD_PROFILE","empty barrel mask"))?;
+            let width=b.width().max(b.height());
+            let margin=width.max(r.stack.iter().map(|l|l.thickness_m).sum::<f64>()*1e3);
+            let bounds=[[(b.min().x-margin).max(roi_bounds[0][0]),(b.min().y-margin).max(roi_bounds[0][1])],[(b.max().x+margin).min(roi_bounds[1][0]),(b.max().y+margin).min(roi_bounds[1][1])]];
+            if bounds.iter().flatten().any(|v|!v.is_finite()) {return Err(error("BOARD_PROFILE","nonfinite barrel mask"));}
+            budget.check(masks.len().checked_add(1).and_then(|v|v.checked_mul(4096)).ok_or_else(||error("MEMORY_LIMIT","barrel mask count overflow"))?)?;
+            masks.push(areas::one(rect(bounds))); hybrid_mesh_masks.push(serde_json::json!({"barrelId":id,"boundsMm":bounds,"scope":"mesh-only"}));
+        }
+    }
     let cuts=std::iter::once(substrate.clone()).chain(std::iter::once(bores.clone()))
         .chain(arrangement_sets).chain(partial_bores.iter_mut().map(|(_,poly)|std::mem::replace(poly,MultiPolygon(vec![]))))
+        .chain(masks)
         .collect::<Vec<_>>();
     let atoms=common_partition(&roi,&cuts,budget,start,max_wall)?;
     let member_set=|index:usize|areas::union(atoms.iter().filter(|a|a.membership[index]).map(|a|a.poly.clone()));
@@ -755,7 +778,7 @@ pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max
     let retained_bytes = geometry_vertices.checked_mul(32).ok_or_else(||error("MEMORY_LIMIT","field geometry overflow"))?;
     if mesh.planned_peak_bytes.checked_add(retained_bytes).is_none_or(|n|n>budget.max_bytes) { return Err(error("MEMORY_LIMIT","retained field geometry exceeds budget")); }
     let field_copper=physical_shapes.into_iter().map(|(p,span,_,barrel)|(p,span,barrel)).collect();
-    Ok(BoardMesh{field_substrate:substrate,field_bores:bores,field_partial_bores:partial_bores,field_copper,mesh,copper_skin_layers,copper_skin_barrels,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,certified_electrodes})
+    Ok(BoardMesh{field_substrate:substrate,field_bores:bores,field_partial_bores:partial_bores,field_copper,mesh,copper_skin_layers,copper_skin_barrels,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,hybrid_mesh_masks,certified_electrodes})
 }
 impl BoardMesh {
     /// End geometry preparation before a separately budgeted field phase.

@@ -795,15 +795,9 @@ pub fn solve_checked(
         // guard before paying for a larger profiled mesh.
         mixed_conductor::checked_reserve_policy(geometry, mixed_grid, skin, operator, request.partition_policy)?;
     }
-    let mesh = board_mesh::build_profiled(
-        board,
-        geometry,
-        budget,
-        remaining(started, wall)?,
-        None,
-        &[],
-        skin,
-    )?;
+    let mesh = if request.partition_policy==mixed_conductor::PartitionPolicy::AutomaticHybridV1 {
+        board_mesh::build_profiled_hybrid(board,geometry,budget,remaining(started,wall)?,skin)?
+    } else { board_mesh::build_profiled(board,geometry,budget,remaining(started,wall)?,None,&[],skin)? };
     let planar_stack = (3..=15).contains(&geometry.stack.len())
         && geometry.stack.len() % 2 == 1
         && geometry
@@ -811,7 +805,8 @@ pub fn solve_checked(
             .iter()
             .enumerate()
             .all(|(i, layer)| layer.copper == (i % 2 == 0));
-    let mixed = |mesh| {
+    let mixed = |mesh: board_mesh::BoardMesh| {
+        let masks=mesh.hybrid_mesh_masks.clone();
         let mut checked = mixed_conductor::solve_checked_mesh_policy(
             mesh,
             geometry,
@@ -826,6 +821,7 @@ pub fn solve_checked(
         )?;
         checked["provenance"]["maxSeconds"] = json!(admitted_seconds);
         checked["provenance"]["maxMemoryMiB"] = json!(admitted_memory);
+        checked["provenance"]["hybridMeshMasks"] = json!(masks);
         Ok(checked)
     };
     if skin.is_some()

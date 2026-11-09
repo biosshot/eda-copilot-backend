@@ -232,6 +232,22 @@ mod board_adapter_tests {
     use super::super::{board_mesh::{self, Electrode, Request}, mixed_conductor, AllocationBudget};
     use std::time::Duration;
     #[test]
+    fn hybrid_via_masks_limit_volume_support_without_changing_copper() {
+        let args:serde_json::Value=serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/reference-swap-native-args.json")).unwrap();
+        let board=crate::import_json(args[0].as_str().unwrap()).board.unwrap();
+        let request:Request=serde_json::from_value(args[1].clone()).unwrap();
+        let allocation=AllocationBudget{max_bytes:512*1024*1024,max_nodes:100_000,max_tetrahedra:200_000}; let wall=Duration::from_secs(20);
+        let profile=mixed_conductor::CheckedOperator::HybridPlanarV3.skin_profile(1e6,Some(1e6),request.max_vertical_step_m).unwrap().unwrap().with_thickness_screen([58e6]).unwrap();
+        let plain=board_mesh::build_profiled(&board,&request,allocation,wall,None,&[],Some(profile)).unwrap();
+        let masked=board_mesh::build_profiled_hybrid(&board,&request,allocation,wall,Some(profile)).unwrap();
+        assert_eq!(masked.hybrid_mesh_masks.len(),2);
+        assert_eq!(plain.barrel_ids,masked.barrel_ids); assert_eq!(plain.source_mapping,masked.source_mapping);
+        assert!((plain.mesh.copper_volume_m3-masked.mesh.copper_volume_m3).abs()<=1e-8*plain.mesh.copper_volume_m3);
+        for (name,area) in &plain.electrode_areas_m2 { assert!((masked.electrode_areas_m2[name]-area).abs()<=1e-8*area); }
+        let longest=|mesh:&board_mesh::BoardMesh| { let map=mixed_conductor::prepare(mesh,&request.electrodes,1e6,allocation,wall).unwrap(); map.local_current_supports().unwrap().iter().flat_map(|s| {let t=s.tetra;(0..4).flat_map(move |i|(0..i).map(move |j| (t[i][0]-t[j][0]).hypot(t[i][1]-t[j][1]))) }).fold(0_f64,f64::max) };
+        let before=longest(&plain); let after=longest(&masked); eprintln!("P7_MASK_SUPPORT before={before:e} after={after:e}"); assert!(after<before);
+    }
+    #[test]
     fn reference_swap_two_vias_preserves_owned_spatial_trace() {
         // Captured at the native call boundary before executing the solver.
         let args: serde_json::Value = serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/reference-swap-native-args.json")).unwrap();
