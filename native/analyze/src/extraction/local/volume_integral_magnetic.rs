@@ -276,6 +276,7 @@ struct BoundedPairs {
     parallel_counts: Option<std::cell::RefCell<ParallelCounts>>,
     axial: bool,
     checked_self: bool,
+    compact_quadrature: bool,
     checked_self_values: std::cell::RefCell<Vec<Option<f64>>>,
     self_max_change: std::cell::Cell<f64>,
     cells: std::cell::RefCell<Vec<PairCell>>,
@@ -355,6 +356,7 @@ impl BoundedPairs {
             parallel_counts: None,
             axial: false,
             checked_self: false,
+            compact_quadrature: false,
             checked_self_values: std::cell::RefCell::new(Vec::new()),
             self_max_change: std::cell::Cell::new(0.),
             cells: std::cell::RefCell::new(Vec::with_capacity(slots)),
@@ -390,7 +392,7 @@ impl BoundedPairs {
             let mut cells = Vec::new();
             cells.try_reserve_exact(slots).map_err(|_| error("MEMORY_LIMIT", "parallel cache allocation failed"))?;
             caches.push(std::sync::Mutex::new(BoundedPairs {
-                tetra:self.tetra.clone(), pool:None, axial:self.axial, checked_self:false, checked_self_values:std::cell::RefCell::new(Vec::new()), self_max_change:std::cell::Cell::new(0.), parallel_counts:Some(std::cell::RefCell::new(ParallelCounts::default())),
+                tetra:self.tetra.clone(), pool:None, axial:self.axial, checked_self:false, compact_quadrature:self.compact_quadrature, checked_self_values:std::cell::RefCell::new(Vec::new()), self_max_change:std::cell::Cell::new(0.), parallel_counts:Some(std::cell::RefCell::new(ParallelCounts::default())),
                 scalar:std::cell::RefCell::new(Vec::new()), trace:None, capture:None,
                 cells:std::cell::RefCell::new(cells), slots, tick:std::cell::Cell::new(0),
                 order:self.order, start:self.start, wall:self.wall,
@@ -639,7 +641,7 @@ impl BoundedPairs {
                         coarse:detail.coarse,fine:detail.fine,change:detail.coarse.zip(detail.fine).map(|(a,b)|(a-b).abs()),limit:detail.fine.map(|v|1e-10*v) }); }
                 }
             }
-            if self.checked_self && self.axial && k > 0 {
+            if self.compact_quadrature && self.axial && k > 0 {
                 if let Some(value) = self.bounded_single_sided(&cells[ti].source, &cells[si].source)? {
                     return Ok(value);
                 }
@@ -654,7 +656,7 @@ impl BoundedPairs {
             }
             return cells[ti].cubatures[k].direct_integral(&cells[si].cubatures[k]);
         }
-        if self.checked_self && self.axial {
+        if self.compact_quadrature && self.axial {
             if let Some(value) = self.bounded_single_sided(&cells[ti].source, &cells[si].source)? {
                 *kind = 1;
                 return Ok(value);
@@ -1464,6 +1466,7 @@ impl CompactLocalHierarchy {
         let mut pair = BoundedPairs::new_with_scalar(tetra, 12, slots, scalar_slots, start, wall)?;
         pair.axial=axial;
         pair.checked_self = true;
+        pair.compact_quadrature = true;
         *pair.checked_self_values.borrow_mut()=vec![None;n];
         if workers>1 { pair.configure_parallel_slots(workers,worker_slots)?; }
         eprintln!("P7_COMPACT_LOCAL_TT_PLAN workers={workers} axial={axial} serialSlots={slots} workerSlots={} axialBytes={axial_bytes} parallelBytes={parallel_bytes} plannedBytes={planned_bytes}",if workers>1 {worker_slots} else {0});
@@ -1732,6 +1735,11 @@ mod compact_reuse_tests {
         let plain=CompactLocalHierarchy::new_with_config(geometry.clone(),budget,start,wall,2,false).unwrap();
         let serial=CompactLocalHierarchy::new_with_config(geometry.clone(),budget,start,wall,1,true).unwrap();
         let parallel=CompactLocalHierarchy::new_with_config(geometry,budget,start,wall,2,true).unwrap();
+        for worker in &parallel.pair.pool.as_ref().unwrap().workers {
+            let worker = worker.lock().unwrap();
+            assert!(worker.compact_quadrature);
+            assert!(!worker.checked_self);
+        }
         assert!(parallel.planned_bytes>plain.planned_bytes);
         let r=plain.pair.pair_window(&[(1,0)]).unwrap()[0];
         let p=parallel.pair.pair_window(&[(1,0)]).unwrap()[0];
