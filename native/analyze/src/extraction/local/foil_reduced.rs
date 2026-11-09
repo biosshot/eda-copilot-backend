@@ -1320,6 +1320,19 @@ fn lifted_gradient(cells: &[Cell], basis: &Basis, coordinates: &[f64]) -> Vec<Kv
     }).collect()
 }
 
+fn split_voltage_coordinates(basis: &Basis, physical: &[f64], shape: &[f64]) -> Vec<Sum> {
+    let mut coordinates = vec![Sum::default(); basis.voltage.len()];
+    // The charge-coordinate solver retains each constant at the first
+    // physical index of its component, whose shape is exactly zero.
+    for component in &basis.components {
+        let anchor = *component.iter().min().expect("nonempty component");
+        for &mode in component {
+            coordinates[mode] = Sum::from(physical[anchor]).add(Sum::from(shape[mode]));
+        }
+    }
+    coordinates
+}
+
 #[test]
 fn original_gradient_retains_sub_ulp_drop_at_common_mode_voltage() {
     let drop = 2_f64.powi(-50);
@@ -1343,6 +1356,27 @@ fn original_gradient_retains_sub_ulp_drop_at_common_mode_voltage() {
             KvlInterval::point(drop), gradient, 0., 0., 0.,
         ).unwrap();
     assert!(numerator / denominator < RESIDUAL_LIMIT);
+}
+
+#[test]
+fn split_charge_state_retains_sub_ulp_mode_coordinate() {
+    let drop = 2_f64.powi(-50);
+    let basis = Basis {
+        voltage: vec![vec![1., 0.], vec![0., 1.]],
+        current: vec![],
+        retained: vec![0, 1],
+        components: vec![vec![0, 1]],
+        dc_residual: 0.,
+    };
+    let cells = [Cell::new(vec![(0, -1.), (1, 1.)], 1.)];
+    let physical = [50., 50. + drop];
+    let shape = [0., drop];
+    assert_eq!(physical, [50., 50.]);
+    let state = split_voltage_coordinates(&basis, &physical, &shape);
+    assert_eq!(state[1].sub(state[0]).value(), drop);
+    let gradient = lifted_gradient(&cells, &basis, &shape)[0];
+    assert!(gradient.lo <= drop && gradient.hi >= drop);
+    assert!(gradient.radius(drop) < 1e-12 * drop);
 }
 
 impl ReducedSpace {
@@ -1458,13 +1492,24 @@ impl ReducedSpace {
         drive_im: Option<&[f64]>,
         magnetic: Option<(&MagneticBatch<'_>, Instant, Duration)>,
     ) -> Result<FullResidual> {
+        self.full_residual_with_shape(w, re, im, drive, drive_im, magnetic, None)
+    }
+
+    fn full_residual_with_shape(
+        &self,
+        w: f64,
+        re: &[f64],
+        im: &[f64],
+        drive: &[f64],
+        drive_im: Option<&[f64]>,
+        magnetic: Option<(&MagneticBatch<'_>, Instant, Duration)>,
+        voltage_shape: Option<[&[f64]; 2]>,
+    ) -> Result<FullResidual> {
         let nv = self.basis.voltage.len();
         let nr = self.full_potentials;
         let gradients = if self.native_allocation {
-            [
-                lifted_gradient(&self.cells, &self.basis, &re[..nv]),
-                lifted_gradient(&self.cells, &self.basis, &im[..nv]),
-            ]
+            let shape = voltage_shape.unwrap_or([&re[..nv], &im[..nv]]);
+            shape.map(|v| lifted_gradient(&self.cells, &self.basis, v))
         } else {
             [re, im].map(|x| {
                 gradient(&self.cells, &lift(&self.basis.voltage, &x[..nv], nr))
@@ -1475,10 +1520,21 @@ impl ReducedSpace {
             lift(&self.basis.current, &re[nv..], self.cells.len()),
             lift(&self.basis.current, &im[nv..], self.cells.len()),
         ];
-        let c = [
-            lift(&self.charges, &re[..nv], nr),
-            lift(&self.charges, &im[..nv], nr),
-        ];
+        let c = if let Some(shape) = voltage_shape {
+            std::array::from_fn(|k| {
+                let coordinates = split_voltage_coordinates(&self.basis, [re, im][k], shape[k]);
+                (0..nr).map(|i| {
+                    self.charges.iter().zip(&coordinates).fold(Sum::default(), |sum, (column, &v)| {
+                        sum.add(v.mul(column[i]))
+                    }).value()
+                }).collect()
+            })
+        } else {
+            [
+                lift(&self.charges, &re[..nv], nr),
+                lift(&self.charges, &im[..nv], nr),
+            ]
+        };
         let (l, magnetic_bounds, magnetic_certificate) = if self.native_allocation {
             // Certify the original recovered current, not a reduced matrix's
             // own residual or a rounded lift of precomputed basis images.
@@ -2021,6 +2077,7 @@ impl ReducedSpace {
     ) -> Result<serde_json::Value> {
         use super::checked_packages;
         use serde_json::{json, Value};
+        let use_voltage_shape = spatial_map.is_some() && packages.is_empty();
         let initial_nv = self.basis.voltage.len();
         let ports = grid.references.len();
         let conductances: Vec<_> = grid.references.iter().map(|r| 1. / r).collect();
@@ -2040,11 +2097,22 @@ impl ReducedSpace {
                     let scratch=supports.checked_mul(2048).and_then(|v|v.checked_add(map.current_count().checked_mul(32)?)).ok_or_else(||error("MEMORY_LIMIT","spatial scratch overflow"))?;
                     output.checked_add(scratch).ok_or_else(||error("MEMORY_LIMIT","spatial reservation overflow"))?
                 } else {0};
+                // Split solve retains a transformed descriptor and two
+                // state representations during the original-state audit.
+                let shape_reserve = if use_voltage_shape {
+                    let modes = self.basis.voltage.len().checked_add(self.basis.current.len())
+                        .ok_or_else(|| error("MEMORY_LIMIT", "charge-coordinate mode count overflow"))?;
+                    modes.checked_mul(modes).and_then(|n| n.checked_mul(256))
+                        .and_then(|n| n.checked_add(modes.checked_mul(128)?))
+                        .ok_or_else(|| error("MEMORY_LIMIT", "charge-coordinate reserve overflow"))?
+                } else { 0 };
                 let available = budget
                     .max_bytes
                     .saturating_sub(field.planned_bytes())
                     .saturating_sub(dc.owned_bytes)
-                    .checked_sub(gram_reserve).and_then(|v|v.checked_sub(spatial_reserve)).ok_or_else(|| error("MEMORY_LIMIT", "loss Gram and spatial reservation exceeds budget"))?;
+                    .checked_sub(gram_reserve).and_then(|v|v.checked_sub(spatial_reserve))
+                    .and_then(|v|v.checked_sub(shape_reserve))
+                    .ok_or_else(|| error("MEMORY_LIMIT", "loss Gram, spatial or charge-coordinate reserve exceeds budget"))?;
                 let solve_budget = Budget {
                     max_memory_mi_b: Some((available as f64 / 1048576.).min(4096.)),
                     max_seconds: Some(wall.saturating_sub(start.elapsed()).as_secs_f64()),
@@ -2088,9 +2156,17 @@ impl ReducedSpace {
                         drive[input] = 1.;
                         let mut rhs = system.port_rhs(&drive);
                         rhs.resize(2 * n, 0.);
-                        let state = system.solve(w, rhs, &initial, &mut stats)?;
-                        let real = system.port_voltages(&state[..n], ports);
-                        let imaginary = system.port_voltages(&state[n..], ports);
+                        // A floating component can carry a port-scale constant
+                        // and sub-ULP resistive drops. Keep the solved shape
+                        // before the absolute voltage lift rounds those drops.
+                        let (state, voltage_shape) = if use_voltage_shape {
+                            let (state, shape) = system.solve_charge_coordinates_split(w, &rhs, &mut stats)?;
+                            (state, Some(shape))
+                        } else {
+                            (system.solve(w, rhs, &initial, &mut stats)?, None)
+                        };
+                        let mut real = system.port_voltages(&state[..n], ports);
+                        let mut imaginary = system.port_voltages(&state[n..], ports);
                         let mut net_real: Vec<_> = drive
                             .iter()
                             .zip(&real)
@@ -2104,6 +2180,21 @@ impl ReducedSpace {
                             .zip(&conductances)
                             .map(|(&voltage, &g)| -voltage * g)
                             .collect();
+                        if let Some(shape) = &voltage_shape {
+                            let re = split_voltage_coordinates(&self.basis, &state[..n], &shape[..n]);
+                            let im = split_voltage_coordinates(&self.basis, &state[n..], &shape[n..]);
+                            for (port, &[a, b]) in self.ports.iter().enumerate() {
+                                let a = self.basis.retained.binary_search(&a).expect("validated positive terminal");
+                                let b = self.basis.retained.binary_search(&b).expect("validated negative terminal");
+                                let conductance = conductances[port];
+                                let real_drop = re[a].sub(re[b]);
+                                let imaginary_drop = im[a].sub(im[b]);
+                                real[port] = real_drop.value();
+                                imaginary[port] = imaginary_drop.value();
+                                net_real[port] = Sum::from(drive[port]).sub(real_drop.mul(conductance)).value();
+                                net_imaginary[port] = -imaginary_drop.mul(conductance).value();
+                            }
+                        }
                         let (re, im) = state.split_at(n);
                         let recovered = recovery.as_ref().map(|r| r.copper_state(re, im));
                         let package_samples = recovery
@@ -2119,13 +2210,16 @@ impl ReducedSpace {
                         let (copper_re, copper_im) = recovered
                             .as_ref()
                             .map_or((re, im), |s| (s[0].as_slice(), s[1].as_slice()));
-                        let residual = self.full_residual(
+                        let nv = self.basis.voltage.len();
+                        let shape = voltage_shape.as_ref().map(|v| [&v[..nv], &v[n..n + nv]]);
+                        let residual = self.full_residual_with_shape(
                             w,
                             copper_re,
                             copper_im,
                             &net_real,
                             Some(&net_imaginary),
                             Some((magnetic, start, wall)),
+                            shape,
                         )?;
                         let norm = residual.norm;
                         let kvl_uncertainty_relative = residual.kvl_uncertainty_relative;
@@ -2302,6 +2396,9 @@ impl ReducedSpace {
                 history.push(json!({"iteration":iteration,"frequencyHz":frequency,"input":input,
                     "potentialModes":self.basis.voltage.len(),"currentModes":self.basis.current.len(),
                     "maxKclRelative":max_kcl,"maxKvlRelative":max_kvl}));
+                if std::env::var_os("P7_MAGNETIC_PHASE_PROFILE").as_deref() == Some(std::ffi::OsStr::new("1")) {
+                    eprintln!("P7_COMPACT_GRID_STEP {}", history.last().expect("recorded iteration"));
+                }
                 if worst.checked().is_ok() {
                     check_time(start, wall)?;
                     return Ok(json!({
