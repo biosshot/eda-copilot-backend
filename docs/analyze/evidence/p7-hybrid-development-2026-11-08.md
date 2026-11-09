@@ -317,3 +317,7 @@ The captured orientation requests also reveal an applicability limit of this con
 - On the fresh mask addon, closed remote return clears the electrical checks. The open case in 1794204114215220800 reaches the deadline. The packed cache removes that timeout in 1794204739183089000, where open KVL remains 3.169e-6 and KCL 2.526e-11. The complete remote control remains open.
 - Via 1794204133837340000 reaches the 25 s native limit after 11,264 complete pairs. Reference swap 1794204160002503400 reaches the same limit after 48,896 complete pairs, versus no complete near window before localization. Neither is a successful response.
 - Single-sided quadrature control 1794204737409204700 passes on an actual axial fallback pair, including direct comparison and overlap refusal. End-to-end timing is pending.
+
+- The original component-relative gradient control passes in 1794205156413253600. The fresh addon diagnostic 1794205454021017200 lowers open-return KVL to 5.231e-7.
+- Charge-coordinate shape and compact worker admission controls pass in 1794205801166928000 and 1794205801575022700. The intermediate addon diagnostic 1794206200458162400 reaches KVL 3.368e-8 and KCL 2.742e-11 at iteration 16. The 1e-8 gate still refuses. This diagnostic precedes the final consistent split port-voltage output check.
+- Worker dispatch is confirmed by 18,205 single-sided accepts in reference swap 1794206219395727300. It completes 84,608 pairs before the native deadline. The resource and physical gates still require a successful complete solve.
