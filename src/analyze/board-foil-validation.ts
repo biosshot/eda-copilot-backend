@@ -55,6 +55,8 @@ function validateMagneticOperator(report:AnalysisBoardFoilCheckedReport):void {
  const columns=report.samples.flatMap(sample=>sample.columns);
  if(p.compactOperator!==undefined){
   const c=p.compactOperator;
+  // Approximation tier: pair changes and KVL widths are recorded estimates, not certificates.
+  const approximate=(report.quality as {residualPolicy?:{limit?:unknown}}).residualPolicy?.limit===1e-3;
   const adaptive=c.basis==='adaptive-mixed-closure';
   const validOrder=Number.isSafeInteger(c.planarMaxOrder)&&((p.currentModes===0||c.foilSupports===0)?c.planarMaxOrder===0:
    adaptive&&c.planarMaxOrder===0&&c.planarMaxRelativeChange===0||c.planarMaxOrder>=8&&c.planarMaxOrder<=64&&c.planarMaxOrder%4===0);
@@ -64,15 +66,15 @@ function validateMagneticOperator(report:AnalysisBoardFoilCheckedReport):void {
      !Number.isSafeInteger(c.potentialCoordinates)||c.potentialCoordinates<1||c.potentialCoordinates>p.fullPotentialCount||
      !Number.isSafeInteger(c.currentCoordinates)||c.currentCoordinates<1||c.currentCoordinates>p.fullCurrentCount||
      !Number.isSafeInteger(p.currentModes)||p.currentModes<0||!validOrder||
-     [c.planarMaxRelativeChange,c.mixedMaxRelativeChange,c.tetraSelfMaxRelativeChange,c.tetraPairAdaptiveTolerance].some(x=>typeof x!=='number'||!Number.isFinite(x)||x<0||x>1e-8)||
-     operator!==undefined||report.quality.maxFullKvlUncertaintyRelative!==undefined||columns.some(x=>x.kvlUncertaintyRelative!==undefined||x.magneticCertificate!==undefined))
+     [c.planarMaxRelativeChange,c.mixedMaxRelativeChange,c.tetraSelfMaxRelativeChange,c.tetraPairAdaptiveTolerance].some(x=>typeof x!=='number'||!Number.isFinite(x)||x<0||x>(approximate?1:1e-8))||
+     operator!==undefined||!approximate&&(report.quality.maxFullKvlUncertaintyRelative!==undefined||columns.some(x=>x.kvlUncertaintyRelative!==undefined||x.magneticCertificate!==undefined)))
    fail('invalid compact magnetic operator evidence');
   if(adaptive){
-   if(c.electricOperator!=='layered-spatial-field-mesh'||c.nearQuadratureEstimatedTolerance!==1e-8||
+   if(c.electricOperator!=='layered-spatial-field-mesh'||!approximate&&(c.nearQuadratureEstimatedTolerance!==1e-8||
       !Number.isFinite(report.quality.maxCompactKvlUncertaintyRelative)||
       report.quality.maxCompactKvlUncertaintyRelative!==Math.max(...columns.map(x=>x.compactKvlUncertaintyRelative!))||
       columns.some(x=>typeof x.compactKvlUncertaintyRelative!=='number'||!Number.isFinite(x.compactKvlUncertaintyRelative)||x.compactKvlUncertaintyRelative<0||x.compactKvlUncertaintyRelative>x.kvlRelative||
-       x.compactMagneticCertificate?.policy!=='compact-mixed-near-far'||x.compactMagneticCertificate.nearQuadratureErrorCertified!==false))
+       x.compactMagneticCertificate?.policy!=='compact-mixed-near-far'||x.compactMagneticCertificate.nearQuadratureErrorCertified!==false)))
     fail('invalid adaptive compact residual or near-quadrature evidence');
   }else if(report.quality.maxCompactKvlUncertaintyRelative!==undefined||columns.some(x=>x.compactKvlUncertaintyRelative!==undefined||x.compactMagneticCertificate!==undefined)){
    fail('unexpected adaptive compact evidence on a fixed-basis report');
@@ -276,7 +278,8 @@ export function validateBoardFoilReport(
     report.samples.some((sample,i)=>!sample||sample.frequencyHz!==frequenciesHz[i]||!Array.isArray(sample.columns)||sample.columns.length!==n||
      sample.columns.some((column,j)=>!column||column.input!==j)))
   fail('incomplete finite S matrix or residual evidence');
- const maxResidual=1e-8;
+ // Native declares the approximation tier only for its non-certified large-board operator.
+ const maxResidual=(report as {quality?:{residualPolicy?:{limit?:unknown}}}).quality?.residualPolicy?.limit===1e-3?1e-3:1e-8;
  const columns=report.samples.flatMap(sample=>sample.columns);
  if(columns.some(({kclRelative,kvlRelative,copperLossW,powerBalanceErrorW})=>
   [kclRelative,kvlRelative].some(x=>!Number.isFinite(x)||x<0||x>maxResidual)||
@@ -299,6 +302,7 @@ export function validateBoardFoilReport(
    for(const support of spatial.supports){
     if(!support||typeof support!=='object') fail('invalid spatial support');
     const geometry=support.kind==='foil' ? Array.isArray(support.xyM)&&support.xyM.length===3&&support.xyM.every(v=>vector(v,2))&&vector(support.zM,2)&&support.zM[1]>support.zM[0]&&typeof support.layer==='string'&&support.layer.length>0&&Number.isInteger(support.triangle)&&support.triangle>=0
+      : support.kind==='barrel' ? Array.isArray(support.xyM)&&support.xyM.length===3&&support.xyM.every(v=>vector(v,2))&&vector(support.zM,2)&&support.zM[1]>support.zM[0]&&support.barrel!==undefined&&support.barrel!==null&&Number.isInteger(support.triangle)&&support.triangle>=0
       : support.kind==='tetrahedron' ? Array.isArray(support.verticesM)&&support.verticesM.length===4&&support.verticesM.every(v=>vector(v,3)) : false;
     if(!geometry||!Number.isFinite(support.volumeM3)||support.volumeM3<=0||!Number.isFinite(support.lossW)||support.lossW<0||!vector(support.currentDensityRealAPerM2,3)||!vector(support.currentDensityImaginaryAPerM2,3)) fail('invalid spatial support');
     sum+=support.lossW;
