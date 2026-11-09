@@ -680,10 +680,24 @@ fn positive_tetra_potential_checked(
         }
         let start = std::array::from_fn(|k| -query[k] + lambda[1] * c[k] + lambda[2] * d[k]);
         let t = dot(start, e);
-        let rho = norm(cross(e, start));
+        let perpendicular = cross(e, start);
+        let rho_squared = dot(perpendicular, perpendicular);
         let line_length = fraction * length;
         let end = t + line_length;
-        let ratio = line_length / (rho.hypot(t) + rho.hypot(end));
+        let rho = if rho_squared.is_normal() {
+            rho_squared.sqrt()
+        } else {
+            norm(perpendicular)
+        };
+        let distance = |axial: f64| {
+            let squared = rho_squared + axial * axial;
+            if rho_squared.is_normal() && squared.is_normal() {
+                squared.sqrt()
+            } else {
+                rho.hypot(axial)
+            }
+        };
+        let ratio = line_length / (distance(t) + distance(end));
         let value = if ratio <= 0.5 {
             2. * ratio.atanh()
         } else if rho > 0. {
