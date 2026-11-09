@@ -11,6 +11,7 @@ parser=argparse.ArgumentParser()
 parser.add_argument('--memory-mib',type=int,default=1536)
 parser.add_argument('--board-id', help='Run one final queue board as a diagnostic; physical accuracy remains unverified')
 args=parser.parse_args()
+if args.board_id and ('P7_SUPERVISOR_TEST_COMMAND' in os.environ or 'P7_CLOSURE_CONTROL' in os.environ):parser.error('--board-id cannot be combined with another runner selection')
 if not 256<=args.memory_mib<=65536:parser.error('--memory-mib must be in 256..65536')
 timeout=float(os.environ.get('P7_SUPERVISOR_TEST_TIMEOUT','310' if args.board_id else '145'))
 if not math.isfinite(timeout) or timeout<=0:parser.error('supervisor timeout must be finite and positive')
@@ -43,7 +44,7 @@ if resultpath.exists():
  try:validation=json.loads(resultpath.read_text());status=('diagnostic-complete' if args.board_id and validation.get('status')=='complete' else validation.get('status') if validation.get('status') in ['pass','unsupported','timeout','resource-failure','missing-evidence'] else 'validation-failure')
  except (ValueError,OSError):status='missing-evidence'
 if reason:status='timeout' if 'deadline' in reason else 'resource-failure'
-elif p.returncode!=0 and status=='pass':status='child-failure'
+elif p.returncode!=0 and status in ('pass','diagnostic-complete'):status='child-failure'
 elif p.returncode!=0 and status=='missing-evidence':status='child-failure'
 e=dict(exitCode=p.returncode,status=status,reason=reason,wallSeconds=time.monotonic()-start,peakTreeRssBytes=rss,peakTreePrivateBytes=private,peakConvention='20ms sampled lower bound',initialCommitHeadroomBytes=head,capBytes=cap,reserveBytes=reserve,threads=env.get('RAYON_NUM_THREADS','default'),cache=cache_mode,cachePath=str(cache_dir))
 (out/'supervision.json').write_text(json.dumps(e,indent=2));print(json.dumps(dict(folder=str(out),**e)))

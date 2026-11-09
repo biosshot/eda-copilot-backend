@@ -22,7 +22,7 @@
         "note": "closure manifest has null reference; resolve independently before final physical acceptance"
       },
       "candidateDiagnosticCommand": "python scripts/verify-p7-closure-supervised.py --board-id STM32G0_CAN_RS485 --memory-mib 4096",
-      "candidateDiagnosticScope": "Numerical diagnostic only; independent physical reference and acceptance remain missing. Set P7_SUPERVISOR_CACHE_DIR for warm/restart; use an empty isolated cache for cold."
+      "candidateDiagnosticScope": "Hybrid numerical diagnostic using the existing low-band benchmark DSL. Independent physical references, real RF and PDN multiport acceptance remain separate. P7_SUPERVISOR_CACHE_DIR permits cross-process restart reuse; same-process warm must be measured separately."
     },
     {
       "id": "NanoScope",
@@ -42,7 +42,7 @@
         "note": "closure manifest has null reference; resolve independently before final physical acceptance"
       },
       "candidateDiagnosticCommand": "python scripts/verify-p7-closure-supervised.py --board-id NanoScope --memory-mib 4096",
-      "candidateDiagnosticScope": "Numerical diagnostic only; independent physical reference and acceptance remain missing. Set P7_SUPERVISOR_CACHE_DIR for warm/restart; use an empty isolated cache for cold."
+      "candidateDiagnosticScope": "Hybrid numerical diagnostic using the existing low-band benchmark DSL. Independent physical references, real RF and PDN multiport acceptance remain separate. P7_SUPERVISOR_CACHE_DIR permits cross-process restart reuse; same-process warm must be measured separately."
     },
     {
       "id": "ThunderF722",
@@ -62,7 +62,7 @@
         "note": "closure manifest has null reference; resolve independently before final physical acceptance"
       },
       "candidateDiagnosticCommand": "python scripts/verify-p7-closure-supervised.py --board-id ThunderF722 --memory-mib 4096",
-      "candidateDiagnosticScope": "Numerical diagnostic only; independent physical reference and acceptance remain missing. Set P7_SUPERVISOR_CACHE_DIR for warm/restart; use an empty isolated cache for cold."
+      "candidateDiagnosticScope": "Hybrid numerical diagnostic using the existing low-band benchmark DSL. Independent physical references, real RF and PDN multiport acceptance remain separate. P7_SUPERVISOR_CACHE_DIR permits cross-process restart reuse; same-process warm must be measured separately."
     },
     {
       "id": "TPS63060DSCR",
@@ -82,7 +82,7 @@
         "note": "closure manifest has null reference; resolve independently before final physical acceptance"
       },
       "candidateDiagnosticCommand": "python scripts/verify-p7-closure-supervised.py --board-id TPS63060DSCR --memory-mib 4096",
-      "candidateDiagnosticScope": "Numerical diagnostic only; independent physical reference and acceptance remain missing. Set P7_SUPERVISOR_CACHE_DIR for warm/restart; use an empty isolated cache for cold."
+      "candidateDiagnosticScope": "Hybrid numerical diagnostic using the existing low-band benchmark DSL. Independent physical references, real RF and PDN multiport acceptance remain separate. P7_SUPERVISOR_CACHE_DIR permits cross-process restart reuse; same-process warm must be measured separately."
     },
     {
       "id": "BandAmpV5",
@@ -102,7 +102,7 @@
         "note": "closure manifest has null reference; resolve independently before final physical acceptance"
       },
       "candidateDiagnosticCommand": "python scripts/verify-p7-closure-supervised.py --board-id BandAmpV5 --memory-mib 4096",
-      "candidateDiagnosticScope": "Numerical diagnostic only; independent physical reference and acceptance remain missing. Set P7_SUPERVISOR_CACHE_DIR for warm/restart; use an empty isolated cache for cold."
+      "candidateDiagnosticScope": "Hybrid numerical diagnostic using the existing low-band benchmark DSL. Independent physical references, real RF and PDN multiport acceptance remain separate. P7_SUPERVISOR_CACHE_DIR permits cross-process restart reuse; same-process warm must be measured separately."
     }
   ],
   "order": [
@@ -344,13 +344,13 @@
       "developmentControls": [
         {
           "source": "native/analyze/src/extraction/local/mixed_conductor.rs#aligned_pad_orientation_tests::inner_signal_with_split_top_and_bottom_references_stays_disconnected",
-          "command": "cargo test --manifest-path native/analyze/Cargo.toml --lib inner_signal_with_split_top_and_bottom_references_stays_disconnected",
+          "command": "cargo test --release --manifest-path native/analyze/Cargo.toml --lib inner_signal_with_split_top_and_bottom_references_stays_disconnected",
           "scope": "development control only; not final acceptance",
           "status": "available"
         },
         {
           "source": "native/analyze/src/extraction/local/hybrid_five_island_test.rs",
-          "command": "cargo test --manifest-path native/analyze/Cargo.toml --lib split_top_bottom_references_carry_joint_ac_displacement",
+          "command": "cargo test --release --manifest-path native/analyze/Cargo.toml --lib split_top_bottom_references_carry_joint_ac_displacement",
           "scope": "development control only; not final acceptance",
           "status": "available"
         }
@@ -633,13 +633,13 @@
       "developmentControls": [
         {
           "source": "native/analyze/src/extraction/local/mixed_conductor.rs#aligned_pad_orientation_tests::inner_signal_with_split_top_and_bottom_references_stays_disconnected",
-          "command": "cargo test --manifest-path native/analyze/Cargo.toml --lib inner_signal_with_split_top_and_bottom_references_stays_disconnected",
+          "command": "cargo test --release --manifest-path native/analyze/Cargo.toml --lib inner_signal_with_split_top_and_bottom_references_stays_disconnected",
           "scope": "development control only; not final acceptance",
           "status": "available"
         },
         {
           "source": "native/analyze/src/extraction/local/hybrid_five_island_test.rs",
-          "command": "cargo test --manifest-path native/analyze/Cargo.toml --lib split_top_bottom_references_carry_joint_ac_displacement",
+          "command": "cargo test --release --manifest-path native/analyze/Cargo.toml --lib split_top_bottom_references_carry_joint_ac_displacement",
           "scope": "development control only; not final acceptance",
           "status": "available"
         }
@@ -664,7 +664,7 @@
       "developmentControls": [
         {
           "source": "native/analyze/tests/blind_buried_via.rs",
-          "command": "cargo test --manifest-path native/analyze/Cargo.toml --test blind_buried_via",
+          "command": "cargo test --release --manifest-path native/analyze/Cargo.toml --test blind_buried_via",
           "scope": "development control only; not final acceptance",
           "status": "available"
         }
@@ -689,7 +689,7 @@
       "developmentControls": [
         {
           "source": "native/analyze/src/extraction/local/hybrid_connector_test.rs",
-          "command": "cargo test --manifest-path native/analyze/Cargo.toml --lib finite_wide_pad_to_narrow_track_two_drive_hybrid",
+          "command": "cargo test --release --manifest-path native/analyze/Cargo.toml --lib finite_wide_pad_to_narrow_track_two_drive_hybrid",
           "scope": "development control only; not final acceptance",
           "status": "available"
         }
@@ -1084,7 +1084,7 @@
       "developmentControls": [
         {
           "source": "native/analyze/src/extraction/local/hybrid_section_model.rs#tests::disconnected_islands_carry_ac_displacement_current",
-          "command": "cargo test --manifest-path native/analyze/Cargo.toml --lib disconnected_islands_carry_ac_displacement_current",
+          "command": "cargo test --release --manifest-path native/analyze/Cargo.toml --lib disconnected_islands_carry_ac_displacement_current",
           "scope": "development control only; not final acceptance",
           "status": "available"
         }
