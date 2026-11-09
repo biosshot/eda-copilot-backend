@@ -58,6 +58,7 @@ pub(crate) fn source_plan(resource: &crate::electrical::frequency::Resource) -> 
     }
 }
 pub(crate) fn remaining_budget(budget: Option<&Budget>, reserved: usize) -> Result<Budget> {
+    if budget.is_some_and(Budget::uses_external_limits) { return Ok(Budget::externally_supervised()); }
     let memory = budget.and_then(|v| v.max_memory_mi_b).unwrap_or(256.);
     if !memory.is_finite() || memory <= 0. || memory > 4096. || reserved as f64 >= memory * 1048576.
     {

@@ -194,17 +194,13 @@ impl System {
             .saturating_mul(n)
             .saturating_mul(1280)
             .saturating_add(count.saturating_mul(128));
+        let external = budget.is_some_and(Budget::uses_external_limits);
         if nv == 0
-            || nv > 1024
-            || ni > 1536
-            || n > 2048
             || ports == 0
             || ports > 16
-            || count > 4_000_000
-            || !memory.is_finite()
-            || memory <= 0.
-            || memory > 4096.
-            || planned as f64 > memory * 1048576.
+            || (!external && (nv > 1024 || ni > 1536 || n > 2048 || count > 4_000_000
+                || !memory.is_finite() || memory <= 0. || memory > 4096.
+                || planned as f64 > memory * 1048576.))
         {
             return Err(fail(
                 "COUPLED_BUDGET",

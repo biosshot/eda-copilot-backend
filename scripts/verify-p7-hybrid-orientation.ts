@@ -7,11 +7,7 @@ import {segmentedCouponDsl} from '../tests/helpers/pcb-analysis-segmented-coupon
 
 const folder=process.env.P7_OUTPUT_DIR;
 assert.ok(folder&&process.env.PCB_ANALYSIS_CACHE_DIR,'supervised output and cache directories are required');
-const seconds=Math.min(25,Number(process.env.P7_VERIFY_SECONDS??25));
-const memoryMiB=Math.min(512,Number(process.env.P7_VERIFY_MEMORY_MIB??512));
-assert.ok(Number.isInteger(seconds)&&seconds>0&&Number.isInteger(memoryMiB)&&memoryMiB>0);
 mkdirSync(folder,{recursive:true});
-process.env.P7_VERIFY_SECONDS=String(seconds);process.env.P7_VERIFY_MEMORY_MIB=String(memoryMiB);process.env.P7_COMPACT_PLANAR='1';
 const base=JSON.parse(readFileSync('tests/fixtures/analysis-segmented-coupon.json','utf8'));
 base.outline=[{x:-1.5,y:-1},{x:1.5,y:-1},{x:1.5,y:1},{x:-1.5,y:1}];
 base.pads=base.pads.slice(0,4);
@@ -27,7 +23,7 @@ const rotate=(board:any,degrees:number)=>{
  for(const track of board.copper.fixed.tracks)track.points=track.points.map(point);
  return board;
 };
-const code=segmentedCouponDsl.replace('boardThicknessMm:.12','boardThicknessMm:.17').replaceAll('thicknessMm:.01','thicknessMm:.035').replace('startHz:1000,stopHz:10000,points:3','startHz:1000000,stopHz:1000000,points:1').replace('maxSeconds:300,maxMemoryMiB:2048',`maxSeconds:${seconds},maxMemoryMiB:${memoryMiB}`);
+const code=segmentedCouponDsl.replace('boardThicknessMm:.12','boardThicknessMm:.17').replaceAll('thicknessMm:.01','thicknessMm:.035').replace('startHz:1000,stopHz:10000,points:3','startHz:1000000,stopHz:1000000,points:1');
 const execute=createAnalysisExecutor();
 async function run(degrees:number){
  console.error(`P7_ORIENTATION stage=start degrees=${degrees}`);
@@ -54,7 +50,7 @@ for(const value of results.slice(1)){
  for(const [i,x] of value.s.entries())for(const [j,z] of x.entries())assert.ok(close(z,ref.s[i][j],1e-8),`S orientation sensitivity exceeds ${tolerance*100}% plus floor`);
  for(const [i,row] of value.loss.copperWPerA2.entries())for(const [j,z] of row.entries())assert.ok(close(z,ref.loss.copperWPerA2[i][j],1e-8),`complex loss-Gram sensitivity exceeds ${tolerance*100}% plus floor`);
 }
-writeFileSync(`${folder}/comparison.json`,JSON.stringify({status:'pass',scope:'rotated copper/contact coupon with automatic domain and mesh orientation sensitivity; finite dielectric domains may differ; physical accuracy unverified',limits:{maxSeconds:seconds,maxMemoryMiB:memoryMiB},results},null,2));
+writeFileSync(`${folder}/comparison.json`,JSON.stringify({status:'pass',scope:'rotated copper/contact coupon with automatic domain and mesh orientation sensitivity; finite dielectric domains may differ; physical accuracy unverified',results},null,2));
 }catch(error){
  writeFileSync(`${folder}/comparison.json`,JSON.stringify({status:'validation-failure',reason:String(error),scope:'automatic domain and mesh orientation development control; physical accuracy unverified',results},null,2));
  throw error;

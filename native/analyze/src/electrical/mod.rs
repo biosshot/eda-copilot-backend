@@ -18,8 +18,20 @@ type Result<T> = std::result::Result<T, String>;
 fn fail(code: &str, message: impl std::fmt::Display) -> String {
     format!("{code}: {message}")
 }
+/// Only trusted Rust callers can construct this budget (JSON has no infinities).
+impl Budget {
+    pub(crate) fn externally_supervised() -> Self {
+        Self { max_seconds: Some(f64::INFINITY), max_memory_mi_b: Some(f64::INFINITY) }
+    }
+
+    pub(crate) fn uses_external_limits(&self) -> bool {
+        self.max_seconds == Some(f64::INFINITY) && self.max_memory_mi_b == Some(f64::INFINITY)
+    }
+}
+
 /// A single monotonic deadline is passed through fitting, assembly and solving.
 pub(super) fn deadline(start: Instant, budget: Option<&Budget>, stage: &str) -> Result<()> {
+    if budget.is_some_and(Budget::uses_external_limits) { return Ok(()); }
     let seconds = budget.and_then(|b| b.max_seconds).unwrap_or(120.);
     if !seconds.is_finite() || seconds <= 0. {
         return Err(fail("NETWORK_BUDGET", "Invalid request deadline"));

@@ -10,11 +10,6 @@ import {segmentedCouponDsl} from '../tests/helpers/pcb-analysis-segmented-coupon
 // Bounded positive discrete-model control, not a physical accuracy acceptance.
 const folder=process.env.P7_OUTPUT_DIR;
 assert.ok(folder&&process.env.PCB_ANALYSIS_CACHE_DIR,'Use the process-tree supervisor with isolated cache');
-const seconds=Number(process.env.P7_VERIFY_SECONDS??12);
-const memory=Number(process.env.P7_VERIFY_MEMORY_MIB??512);
-assert.ok(Number.isInteger(seconds)&&seconds>0&&seconds<=12&&Number.isInteger(memory)&&memory>0&&memory<=512);
-process.env.P7_COMPACT_PLANAR='1';
-process.env.P7_VERIFY_SECONDS=String(seconds);process.env.P7_VERIFY_MEMORY_MIB=String(memory);
 const addon=createRequire(import.meta.url)('../native/node-addon/index.cjs') as typeof import('../native/node-addon/index.cjs');
 const original=addon.AnalysisElectricalSession.prototype.solveBoardFoilChecked;
 const geometryCalls:any[]=[];
@@ -36,8 +31,7 @@ base.copper.fixed.vias=[];base.copper.fixed.zones=[];
 const code=segmentedCouponDsl
  .replace('boardThicknessMm:.12','boardThicknessMm:.17')
  .replaceAll('thicknessMm:.01','thicknessMm:.035')
- .replace('startHz:1000,stopHz:10000,points:3','startHz:1000000,stopHz:1000000,points:1')
- .replace('maxSeconds:300,maxMemoryMiB:2048',`maxSeconds:${seconds},maxMemoryMiB:${memory}`);
+ .replace('startHz:1000,stopHz:10000,points:3','startHz:1000000,stopHz:1000000,points:1');
 const execute=createAnalysisExecutor();
 async function run(closed:boolean){
  const board=structuredClone(base);

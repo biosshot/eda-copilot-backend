@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { runAutoFoil } from '../auto-foil-response.ts';
-import { boardChannelApplicability, createBoardChannelExecutor } from '../board-channel-executor.ts';
+import { boardChannelApplicability, solveHybridBoardChannel } from '../hybrid-board-channel.ts';
 import { createProblemExecutor } from '../execute-problem.ts';
 import { p7FrequencyBoundariesHz, type FrequencyInterval } from '../p7-frequency-planning.ts';
 import { boardFoilResult } from './board-foil-result.ts';
@@ -10,7 +9,7 @@ import type { AnalysisTask, ExecutionResult } from './executor.ts';
 import { localChannelGroupRequest, type LocalExtractionPlan } from './local-request.ts';
 import { AnalysisDslError } from './schema.ts';
 import { sourceBandPlan } from './source-band.ts';
-import type { Binding, Diagnostic, NetworkResource, Validity } from './spec-doc.js';
+import type { Binding, Diagnostic } from './spec-doc.js';
 import { transientStimulus } from './transient-executor.ts';
 
 const method = 'Joint P7 board channel extraction';
@@ -66,23 +65,14 @@ function outsideApplicability([start, stop]: FrequencyInterval, [low, high]: Fre
 }
 
 const executeFoil = createProblemExecutor(true);
-const solveGroup = createBoardChannelExecutor(undefined, undefined, (foil, frequencies, budget, interval) => ({
-  foil, report: runAutoFoil(foil, frequencies, budget, interval, executeFoil),
-}));
+const solveGroup = solveHybridBoardChannel.bind(null, executeFoil);
 
 export function createGroupExecutor(solve = solveGroup) {
   return async (task: AnalysisTask<'si'>): Promise<ExecutionResult> => {
-    const started = performance.now();
     const { config } = task;
     const { sources, requestedIntervalHz } = sourceDemand(task);
     if (task.variantChanges.length || config.numerics) {
       throw new AnalysisDslError('LOCAL_INPUT', 'Joint extraction requires unchanged captured copper and supported default numerics');
-    }
-    const ceilingSeconds = Number(process.env.P7_VERIFY_SECONDS ?? 300);
-    const ceilingMiB = Number(process.env.P7_VERIFY_MEMORY_MIB ?? 2048);
-    if (!Number.isSafeInteger(ceilingSeconds) || ceilingSeconds <= 0 || ceilingSeconds > 3600 ||
-        !Number.isSafeInteger(ceilingMiB) || ceilingMiB < 256 || ceilingMiB > 65536) {
-      throw new AnalysisDslError('LOCAL_BUDGET', 'Invalid bounded developer verification limits');
     }
     let plan: LocalExtractionPlan | undefined;
     const geometry = localChannelGroupRequest(task, prepared => { plan = prepared; });
@@ -109,7 +99,7 @@ export function createGroupExecutor(solve = solveGroup) {
     const physicalPorts = terminalRequest.ports.map(({ name, positive, negative }) => ({
       name, positive: terminals.get(positive)!, negative: terminals.get(negative)!,
     }));
-    const applicabilityBandHz = boardChannelApplicability(terminalRequest, requestedIntervalHz[1]);
+    const applicabilityBandHz = boardChannelApplicability(terminalRequest);
     const seeds = extractionAxis(requestedIntervalHz, applicabilityBandHz,
       sources.flatMap(source => source.status === 'bounded-input' ? source.characteristicHz : []));
     const uncovered = outsideApplicability(requestedIntervalHz, applicabilityBandHz);
@@ -132,9 +122,7 @@ export function createGroupExecutor(solve = solveGroup) {
       diagnostics.push({ code: 'CHANNEL_GROUP_NO_APPLICABLE_AC', severity: 'warning', message: 'No requested AC frequency lies in the common board and component applicability.' });
       return { ...base, solution: json(extraction) };
     }
-    const maxSeconds = Math.min(config.budget?.maxSeconds ?? ceilingSeconds, ceilingSeconds) - (performance.now() - started) / 1000;
-    if (maxSeconds <= 0) throw new AnalysisDslError('LOCAL_BUDGET', 'Joint channel preparation exhausted the shared time budget', diagnostics);
-    const budget = { maxSeconds, maxMemoryMiB: Math.min(config.budget?.maxMemoryMiB ?? ceilingMiB, ceilingMiB) };
+    const budget = { maxSeconds: 300, maxMemoryMiB: 2048 };
     let solved: ReturnType<typeof solve>;
     try {
       solved = solve(task.board, geometry, terminalRequest, seeds, budget, requestedIntervalHz);
@@ -148,28 +136,9 @@ export function createGroupExecutor(solve = solveGroup) {
         throw new AnalysisDslError('CHANNEL_GROUP_MAPPING', 'Solved port names differ from the physical channel group', diagnostics);
       }
     };
-    if ('foil' in solved) {
-      const foil = boardFoilResult(task.contextId, solved.foil, solved.report, diagnostics);
-      checkPorts(foil.network?.ports);
-      return { ...base, method: foil.method, diagnostics: foil.diagnostics, assumptions: [...base.assumptions, ...foil.assumptions],
-        solution: json({ ...extraction, network: foil.network, evidence: foil.solution }) };
-    }
-
-    const { result, frequencyAudit, ...evidence } = solved;
-    const { assembledModel, ...response } = result;
-    const ports = result.ports?.map(port => port.name);
-    checkPorts(ports);
-    if (!assembledModel) throw new AnalysisDslError('CHANNEL_COMPOSITION', 'Joint physical assembled descriptor is missing', diagnostics);
-    const reason = frequencyAudit?.physicalCoverage.reason ?? 'Independent joint assembled-channel frequency coverage is unavailable';
-    diagnostics.push({ code: 'CHANNEL_PHYSICAL_FREQUENCY_UNVERIFIED', severity: 'warning', message: reason });
-    const validity: Validity = { status: 'conditional', reason, domain: json({
-      bandHz: solved.bandHz, bandHzScope: 'Solver applicability only', temporal, physicalCoverage: 'unverified',
-    }) };
-    const network: NetworkResource = {
-      id: base.id, kind: 'network', ports: ports!, analyses: ['networkParameters'],
-      source: 'Shared physical board-channel segmentation with original paired contacts',
-      validity, data: assembledModel as NetworkResource['data'],
-    };
-    return { ...base, solution: json({ ...extraction, network, frequencyAudit, evidence: { ...evidence, response } }) };
+    const foil = boardFoilResult(task.contextId, solved.foil, solved.report, diagnostics);
+    checkPorts(foil.network?.ports);
+    return { ...base, id: foil.id, method: foil.method, diagnostics: foil.diagnostics, assumptions: [...base.assumptions, ...foil.assumptions],
+      solution: json({ ...extraction, network: foil.network, evidence: foil.solution }) };
   };
 }

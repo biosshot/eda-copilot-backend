@@ -93,8 +93,10 @@ export function auditBoardFoilGrid(
   problem: BoardFoilProblem, baseline: BoardFoilReport, started: number,
   execute: (problem: BoardFoilProblem) => BoardFoilReport,
 ) {
+  const externalResources = problem.request.partitionPolicy === 'automatic-hybrid-v1';
   const limit = Math.min(problem.request.budget.maxSeconds, Number(process.env.P7_VERIFY_SECONDS ?? 300));
   const remainingBudget = () => {
+    if (externalResources) return problem.request.budget;
     const maxSeconds = limit - (performance.now() - started) / 1000;
     if (!Number.isFinite(maxSeconds) || maxSeconds <= 0) {
       throw new Error('CHANNEL_FOIL_DEADLINE: shared extraction and sensitivity budget exhausted');

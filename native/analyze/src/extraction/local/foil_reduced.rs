@@ -356,7 +356,7 @@ fn harmonic(
         }
     }
     let r = retained.len() + extra_modes;
-    if r > 1024 || r.checked_mul(2).is_none_or(|x| x > 2048) {
+    if wall != Duration::MAX && r > 1024 {
         return Err(error(
             "FOIL_REDUCTION",
             "retained trace exceeds P6 coordinate limits",
@@ -1469,6 +1469,7 @@ impl ReducedSpace {
         System::compile(&self.model, self.ports.len(), Some(&budget))
     }
     fn system_budget(&self, mut budget: Budget) -> Result<Budget> {
+        if budget.uses_external_limits() { return Ok(budget); }
         let requested = budget.max_memory_mi_b.unwrap_or(256.);
         let resident = if self.native_allocation {
             native_work_modes(
@@ -1907,9 +1908,13 @@ impl ReducedSpace {
                     .max_bytes
                     .saturating_sub(field.planned_bytes())
                     .saturating_sub(dc.owned_bytes);
-                let solve_budget = Budget {
-                    max_memory_mi_b: Some((available as f64 / 1048576.).min(4096.)),
-                    max_seconds: Some(wall.saturating_sub(start.elapsed()).as_secs_f64()),
+                let solve_budget = if wall == Duration::MAX {
+                    Budget::externally_supervised()
+                } else {
+                    Budget {
+                        max_memory_mi_b: Some((available as f64 / 1048576.).min(4096.)),
+                        max_seconds: Some(wall.saturating_sub(start.elapsed()).as_secs_f64()),
+                    }
                 };
                 let (_, state) =
                     self.solve_state(training.frequency_hz, &training.drive, solve_budget)?;
@@ -2186,9 +2191,13 @@ impl ReducedSpace {
                     .and_then(|v|v.checked_sub(shape_reserve))
                     .and_then(|v|v.checked_sub(balance_reserve))
                     .ok_or_else(|| error("MEMORY_LIMIT", "loss Gram, spatial or charge-coordinate reserve exceeds budget"))?;
-                let solve_budget = Budget {
-                    max_memory_mi_b: Some((available as f64 / 1048576.).min(4096.)),
-                    max_seconds: Some(wall.saturating_sub(start.elapsed()).as_secs_f64()),
+                let solve_budget = if wall == Duration::MAX {
+                    Budget::externally_supervised()
+                } else {
+                    Budget {
+                        max_memory_mi_b: Some((available as f64 / 1048576.).min(4096.)),
+                        max_seconds: Some(wall.saturating_sub(start.elapsed()).as_secs_f64()),
+                    }
                 };
                 let (mut system, n, recovery) = if packages.is_empty() {
                     (
@@ -3407,7 +3416,7 @@ impl CompactChargeAction {
         cache.insert(key,value);Ok(value)
     }
     fn exact_cross(&self,p:usize,t:usize)->Result<f64> {
-        self.cache_value((p,self.planar.len()+t),||Ok(super::planar_mixed::cross(&self.planar[p].prism,self.local[t].tetra,super::planar_mixed::Densities{charge:&[1.],current:&[]},super::planar_mixed::Densities{charge:&[1.],current:&[]},1./(4.*std::f64::consts::PI),8,AllocationBudget{max_bytes:2*1024*1024,..self.budget},self.wall.saturating_sub(self.start.elapsed()))?.potential_per_farad[0][0]))
+        self.cache_value((p,self.planar.len()+t),||Ok(super::planar_mixed::cross(&self.planar[p].prism,self.local[t].tetra,super::planar_mixed::Densities{charge:&[1.],current:&[]},super::planar_mixed::Densities{charge:&[1.],current:&[]},1./(4.*std::f64::consts::PI),8,self.budget,self.wall.saturating_sub(self.start.elapsed()))?.potential_per_farad[0][0]))
     }
     fn exact_local(&self,i:usize,j:usize)->Result<f64> {
         let a=i.min(j);let b=i.max(j);self.cache_value((self.planar.len()+a,self.planar.len()+b),|| {
@@ -3597,7 +3606,7 @@ impl CompactMixedMagnetic {
                 let (v,order,change)=super::planar_operator::pair_integral(&self.supports[a].prism,&self.supports[b].prism,8,self.start,self.wall)?;
                 self.planar_max_order.set(self.planar_max_order.get().max(order));self.planar_max_change.set(self.planar_max_change.get().max(change));Ok(v)
             } else if a<np {
-                let block=super::planar_mixed::cross(&self.supports[a].prism,self.local[b-np].tetra,super::planar_mixed::Densities{charge:&[1.],current:&[]},super::planar_mixed::Densities{charge:&[1.],current:&[]},1./(4.*std::f64::consts::PI),8,AllocationBudget{max_bytes:2*1024*1024,..self.budget},self.wall.saturating_sub(self.start.elapsed()))?;
+                let block=super::planar_mixed::cross(&self.supports[a].prism,self.local[b-np].tetra,super::planar_mixed::Densities{charge:&[1.],current:&[]},super::planar_mixed::Densities{charge:&[1.],current:&[]},1./(4.*std::f64::consts::PI),8,self.budget,self.wall.saturating_sub(self.start.elapsed()))?;
                 if block.used_tetra_fallback {self.mixed_fallback_count.set(self.mixed_fallback_count.get()+1);}else if let Some(change)=block.relative_order_change {self.mixed_max_change.set(self.mixed_max_change.get().max(change));}Ok(block.potential_per_farad[0][0])
             } else {
                 let (i,j)=(a-np,b-np);
@@ -3618,7 +3627,7 @@ impl CompactMixedMagnetic {
         if jobs.is_empty() {return Ok(());}
         use rayon::prelude::*;
         let pool=self.pl_pool.as_ref().ok_or_else(||error("HYBRID_INPUT","parallel PL pool missing"))?;
-        let supports=&self.supports;let local=&self.local;let np=supports.len();let budget=AllocationBudget{max_bytes:2*1024*1024,..self.budget};let start=self.start;let wall=self.wall;
+        let supports=&self.supports;let local=&self.local;let np=supports.len();let budget=self.budget;let start=self.start;let wall=self.wall;
         let results:Vec<_>=pool.install(||jobs.par_iter().map(|&(a,b)| {
             check_time(start,wall)?;
             super::planar_mixed::cross(&supports[a.min(b)].prism,local[a.max(b)-np].tetra,super::planar_mixed::Densities{charge:&[1.],current:&[]},super::planar_mixed::Densities{charge:&[1.],current:&[]},1./(4.*std::f64::consts::PI),8,budget,wall.saturating_sub(start.elapsed()))
@@ -3753,7 +3762,7 @@ pub(super) fn solve_compact_adaptive(
     let current_cap=seed_count.checked_add(growth).and_then(|v|v.checked_add(hint_cap)).and_then(|v|v.checked_add(profiles.len())).ok_or_else(||error("MEMORY_LIMIT","current mode count overflow"))?.min(ni);
     let hint_bytes=hint_cap.checked_mul(ni).and_then(|v|v.checked_mul(8)).and_then(|v|v.checked_add(hint_cap.checked_mul(std::mem::size_of::<Vec<f64>>())?)).ok_or_else(||error("MEMORY_LIMIT","skin hint buffer overflow"))?;
     let hinted_plan=if hint_cap>0 || !profiles.is_empty() {
-        if voltage_cap>1024 || current_cap>1024 || voltage_cap.checked_add(current_cap).is_none_or(|v|v>2048) {return Err(error("FOIL_REDUCTION","skin hint mode cap exceeds P6 coordinate limits"));}
+        if wall != Duration::MAX && (voltage_cap>1024 || current_cap>1024) {return Err(error("FOIL_REDUCTION","skin hint mode cap exceeds P6 coordinate limits"));}
         let plan=native_mode_sizes(n,ni,voltage_cap,current_cap,hint_bytes.checked_add(group_bytes).ok_or_else(||error("MEMORY_LIMIT","skin hint scratch overflow"))?)?;
         basis_budget.check(plan)?; Some(plan)
     } else {None};
@@ -3807,7 +3816,10 @@ pub(super) fn solve_compact_adaptive(
         let available=(share*2).checked_sub(field.planned_bytes()).and_then(|v|v.checked_sub(space.planned_bytes)).and_then(|v|v.checked_sub(dc.owned_bytes)).and_then(|v|v.checked_sub(report_bytes)).ok_or_else(||error("MEMORY_LIMIT","regime audit working set exceeds reservation"))?;
         let audit_budget=AllocationBudget{max_bytes:if packages.is_empty(){available}else{available/2},..budget};
         let joint_model=if packages.is_empty(){None}else{
-            let joint=super::checked_packages::compile(&space.model,packages,grid.references.len(),&Budget{max_memory_mi_b:Some(audit_budget.max_bytes as f64/1048576.),max_seconds:Some(wall.saturating_sub(start.elapsed()).as_secs_f64())})?;
+            let network_budget=if wall==Duration::MAX { Budget::externally_supervised() } else {
+                Budget{max_memory_mi_b:Some(audit_budget.max_bytes as f64/1048576.),max_seconds:Some(wall.saturating_sub(start.elapsed()).as_secs_f64())}
+            };
+            let joint=super::checked_packages::compile(&space.model,packages,grid.references.len(),&network_budget)?;
             Some(joint.model)
         };
         let upper=*grid.frequencies.last().ok_or_else(||error("HYBRID_INPUT","empty regime grid"))?;
@@ -3832,7 +3844,15 @@ pub(super) fn solve_compact_adaptive(
     }}}}
     result["quality"]["scope"]=serde_json::json!("compact-discrete");result["quality"]["physicalError"]=serde_json::json!("unverified");
     result["compactEvidence"]=serde_json::json!({"basis":"adaptive-mixed-closure","sectionHints":{"submitted":profiles.len(),"addedCurrentModes":added_profiles},"skinHints":{"eligibleGroups":eligible_groups,"submitted":submitted_hints,"added":added_hints,"upperHz":upper_hz,"coverage":"unverified"},"planarMaxOrder":magnetic.planar_max_order.get(),"planarMaxRelativeChange":magnetic.planar_max_change.get(),"mixedMaxRelativeChange":magnetic.mixed_max_change.get(),"mixedTetraFallbackCount":magnetic.mixed_fallback_count.get(),"mixedTetraFallbackTolerance":1e-10,"goalAdmittedNearPairs":magnetic.promoted_pairs.get(),"parallelPlWorkers":magnetic.pl_workers,"tetraSelfMaxRelativeChange":magnetic.self_max_change.get().max(magnetic.local_hierarchy.as_ref().map_or(0., |h|h.self_max_change())),"tetraPairAdaptiveTolerance":1e-10,"nearQuadratureEstimatedTolerance":1e-8,"originalVolumeActions":0,"scope":"compact-discrete","physicalAccuracy":"unverified","approximationError":"unverified"});
-    Ok((result,space.model,budget.max_bytes))
+    let planned_bytes = if wall == Duration::MAX {
+        space.planned_bytes.checked_add(field.planned_bytes())
+            .and_then(|bytes| bytes.checked_add(magnetic.mixed_plan.planned_bytes))
+            .and_then(|bytes| bytes.checked_add(dc.owned_bytes))
+            .ok_or_else(|| error("MEMORY_LIMIT", "hybrid planned byte count overflow"))?
+    } else {
+        budget.max_bytes
+    };
+    Ok((result,space.model,planned_bytes))
 }
 
 #[cfg(test)]

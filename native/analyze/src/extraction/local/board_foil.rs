@@ -47,6 +47,7 @@ pub struct Prepared {
 }
 
 fn remaining(start: Instant, limit: Duration) -> Result<Duration> {
+    if limit == Duration::MAX { return Ok(limit); }
     limit
         .checked_sub(start.elapsed())
         .filter(|d| !d.is_zero())
@@ -697,8 +698,9 @@ pub fn solve_checked(
     use serde_json::json;
     let port_count = geometry.ports.len();
     let axis = request.frequencies_hz;
-    let operator = request.operator_policy;
-    operator.validate_partition(request.partition_policy)?;
+    let operator = CheckedOperator::HybridPlanarV3;
+    let partition = mixed_conductor::PartitionPolicy::AutomaticHybridV1;
+    operator.validate_partition(partition)?;
     if !(1..=16).contains(&port_count)
         || axis.is_empty()
         || axis.len().saturating_mul(port_count) > MAX_CHECKED_COLUMNS
@@ -730,46 +732,10 @@ pub fn solve_checked(
             "total enrichment budget must be in 1..=16",
         ));
     }
-    let seconds = request
-        .budget
-        .max_seconds
-        .filter(|s| s.is_finite() && *s > 0. && *s <= 3600.)
-        .ok_or_else(|| {
-            error(
-                "BOARD_FOIL_BUDGET",
-                "finite positive maxSeconds <= 3600 required",
-            )
-        })?;
-    let memory = request
-        .budget
-        .max_memory_mi_b
-        .filter(|m| m.is_finite() && *m >= 1. && *m <= 65536.)
-        .ok_or_else(|| {
-            error(
-                "BOARD_FOIL_BUDGET",
-                "finite maxMemoryMiB in 1..=65536 required",
-            )
-        })?;
-    let seconds_cap =
-        super::board_prepare::verification_limit("P7_VERIFY_SECONDS", 300, 1, 3600)? as f64;
-    let memory_cap =
-        super::board_prepare::verification_limit("P7_VERIFY_MEMORY_MIB", 2048, 256, 65536)?;
-    let admitted_seconds = seconds.min(seconds_cap);
-    let admitted_memory = (memory.floor() as usize).min(memory_cap);
+    // External process supervision owns resource limits for production extraction.
     let packages = super::checked_packages::validate(request.attachments, geometry, &axis)?;
-    let reserve = axis.len() * port_count * (port_count * 256 + 512)
-        + 256 * 1024
-        + super::checked_packages::output_reserve(&packages, axis.len() * port_count);
-    if admitted_memory * 1024 * 1024 <= super::parallel::stack_reservation() + reserve {
-        return Err(error(
-            "MEMORY_LIMIT",
-            "checked foil output and native stacks exhaust budget",
-        ));
-    }
-    let mut budget = super::board_prepare::allocation_budget(admitted_memory);
-    budget.max_bytes -= reserve;
-    let wall = Duration::from_secs_f64(admitted_seconds);
-    remaining(started, wall)?;
+    let budget = super::AllocationBudget { max_bytes: usize::MAX, max_nodes: usize::MAX, max_tetrahedra: usize::MAX };
+    let wall = Duration::MAX;
     let maximum = *axis.last().unwrap();
     let mixed_grid = mixed_conductor::CheckedGrid {
         frequencies_hz: &axis,
@@ -782,143 +748,28 @@ pub fn solve_checked(
             "complete copper and original finite pads required",
         ));
     }
-    let mut skin = operator.skin_profile(
-        maximum,
-        request.profile_upper_hz,
-        geometry.max_vertical_step_m,
-    )?;
-    if request.partition_policy==mixed_conductor::PartitionPolicy::AutomaticHybridV1 {
-        skin=skin.map(|profile|profile.with_thickness_screen(geometry.stack.iter().filter(|layer|layer.copper).filter_map(|layer|layer.conductivity_s_m))).transpose()?;
-    }
+    let skin = if maximum > 10_000. || request.profile_upper_hz.is_some() {
+        operator.skin_profile(maximum, request.profile_upper_hz, geometry.max_vertical_step_m)?
+            .map(|profile| profile.with_thickness_screen(
+                geometry.stack.iter().filter(|layer| layer.copper).filter_map(|layer| layer.conductivity_s_m),
+            )).transpose()?
+    } else {
+        None
+    };
     if skin.is_some() {
         // Apply the existing physical pad/closed copper and electrical-size
         // guard before paying for a larger profiled mesh.
-        mixed_conductor::checked_reserve_policy(geometry, mixed_grid, skin, operator, request.partition_policy)?;
+        mixed_conductor::checked_reserve_policy(geometry, mixed_grid, skin, operator, partition)?;
     }
-    let mesh = if request.partition_policy==mixed_conductor::PartitionPolicy::AutomaticHybridV1 {
-        board_mesh::build_profiled_hybrid(board,geometry,budget,remaining(started,wall)?,skin)?
-    } else { board_mesh::build_profiled(board,geometry,budget,remaining(started,wall)?,None,&[],skin)? };
-    let planar_stack = (3..=15).contains(&geometry.stack.len())
-        && geometry.stack.len() % 2 == 1
-        && geometry
-            .stack
-            .iter()
-            .enumerate()
-            .all(|(i, layer)| layer.copper == (i % 2 == 0));
-    let mixed = |mesh: board_mesh::BoardMesh| {
-        let masks=mesh.hybrid_mesh_masks.clone();
-        let mut checked = mixed_conductor::solve_checked_mesh_policy(
-            mesh,
-            geometry,
-            mixed_grid,
-            skin,
-            &packages,
-            request.partition_policy,
-            operator,
-            budget,
-            started,
-            wall,
-        )?;
-        checked["provenance"]["maxSeconds"] = json!(admitted_seconds);
-        checked["provenance"]["maxMemoryMiB"] = json!(admitted_memory);
-        checked["provenance"]["hybridMeshMasks"] = json!(masks);
-        Ok(checked)
-    };
-    if skin.is_some()
-        || geometry.return_boundary_mm.is_some()
-        || request.partition_policy != mixed_conductor::PartitionPolicy::Legacy
-        || !packages.is_empty()
-        || !planar_stack
-        || !mesh.barrel_ids.is_empty()
-        || super::mixed_conductor::has_projected_pad_collision(&mesh, &geometry.electrodes)?
-    {
-        return mixed(mesh);
-    }
-    let prepared = prepare_geometry_from_mesh(mesh, geometry, &[], budget, started, wall, false)?;
-    if current_space::verify_local_thin_scope(&prepared.foils, maximum).is_err() {
-        let Geometry { mesh, .. } = prepared;
-        return mixed(mesh);
-    }
-    let Geometry {
-        mesh,
-        foils,
-        potential_nodes,
-        ports,
-        rows,
-        supports,
-        max_copper_volume_change,
-        ..
-    } = prepared;
-    // Source audit storage scales with captured provenance. Budget it from
-    // the actual names and row count before constructing the JSON response.
-    let provenance_bytes = mesh
-        .source_mapping
-        .iter()
-        .try_fold(0usize, |n, (id, path, net, layer)| {
-            n.checked_add(256)?.checked_add(
-                id.len()
-                    .checked_add(path.len())?
-                    .checked_add(net.as_ref().map_or(0, String::len))?
-                    .checked_add(layer.len())?
-                    .checked_mul(6)?,
-            )
-        })
-        .and_then(|n| {
-            geometry.electrodes.iter().try_fold(n, |sum, e| {
-                sum.checked_add(256)?
-                    .checked_add(e.name.len().checked_mul(24)?)
-            })
-        })
-        .ok_or_else(|| error("MEMORY_LIMIT", "checked foil provenance plan overflow"))?;
-    budget.max_bytes = budget
-        .max_bytes
-        .checked_sub(provenance_bytes)
-        .ok_or_else(|| error("MEMORY_LIMIT", "checked foil provenance exceeds budget"))?;
-    budget.check(mesh.mesh.retained_bytes()?)?;
-    let retained: Vec<_> = (0..geometry.electrodes.len()).collect();
-    let epsilon = geometry
-        .stack
-        .iter()
-        .filter_map(|l| l.epsilon_r)
-        .fold(1., f64::max);
-    let field = Field::new_conforming_trace(&mesh.mesh, potential_nodes.len(), rows, budget)?;
-    let (space, mut checked) = super::foil_reduced::solve_matched_grid(
-        &foils,
-        potential_nodes,
-        &retained,
-        &ports,
-        field,
-        epsilon,
-        budget,
-        started,
-        wall,
-        super::foil_reduced::MatchedGrid {
-            frequencies: &axis,
-            references: &refs,
-            max_iterations: iterations,
-        },
+    let mesh = board_mesh::build_profiled_hybrid(board, geometry, budget, remaining(started, wall)?, skin)?;
+    let masks = mesh.hybrid_mesh_masks.clone();
+    let mut checked = mixed_conductor::solve_checked_mesh_policy(
+        mesh, geometry, mixed_grid, skin, &packages, partition, operator, budget, started, wall,
     )?;
-    remaining(started, wall)?;
-    checked["status"] = json!("complete");
-    checked["representation"] = json!("S");
-    checked["coverage"] = json!("unverified");
-    checked["frequenciesHz"] = json!(axis);
-    checked["referenceOhm"] = json!(refs);
-    checked["ports"] = json!(geometry.ports);
-    checked["provenance"] = json!({
-        "method":"board-derived conforming foil, checked matched exact grid",
-        "modelKind":"foil","barrelIds":[],
-        "sourceMapping":mesh.source_mapping,"electrodeAreasM2":mesh.electrode_areas_m2,
-        "maxCopperVolumeChange":max_copper_volume_change,"prisms":supports.len(),
-        "retainedPotentials":space.diagnostic_model().potential_nodes.len(),
-        "currentModes":space.diagnostic_model().current_dofs.len(),
-        "plannedBytes":space.planned_bytes+reserve+provenance_bytes,
-        "maxSeconds":admitted_seconds,"maxMemoryMiB":admitted_memory,
-        "maxMagneticReciprocity":space.max_magnetic_reciprocity,
-        "maxMagneticRefinement":space.max_magnetic_refinement,
-        "maxElectricReciprocity":space.max_electric_reciprocity,
-        "spatialCoverage":"unverified","bandCoverage":"unverified",
-        "driveConvention":"1 A RMS matched Norton basis columns, checked only at listed frequencies",
-    });
+    if let Some(provenance) = checked["provenance"].as_object_mut() {
+        provenance.remove("maxSeconds");
+        provenance.remove("maxMemoryMiB");
+    }
+    checked["provenance"]["hybridMeshMasks"] = json!(masks);
     Ok(checked)
 }

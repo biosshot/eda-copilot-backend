@@ -1337,9 +1337,10 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
     let mut pair_ids = BTreeMap::new();
     let mut pairs = Vec::new();
     let max_cells = budget.max_local_terms / 36;
-    let cell_storage_bytes = mul(max_cells, std::mem::size_of::<Cell>())?;
+    let initial_cells = if budget.max_local_terms == usize::MAX { 0 } else { max_cells };
+    let mut cell_storage_bytes = mul(initial_cells, std::mem::size_of::<Cell>())?;
     g.memory(add(geometry_bytes, cell_storage_bytes)?)?;
-    let mut cells = Vec::with_capacity(max_cells);
+    let mut cells = Vec::with_capacity(initial_cells);
     let mut copper_cells: Vec<(usize, usize, usize)> = Vec::new();
     let mut active = vec![false; nodes];
     let mut terms = 0usize;
@@ -1395,6 +1396,12 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
             terms = add(terms, 36)?;
             if terms > budget.max_local_terms {
                 return Err(error("MESH_LIMIT", "local term count exceeds request cap"));
+            }
+            if cells.len() == cells.capacity() {
+                let capacity = mul(cells.capacity().max(4), 2)?.min(max_cells);
+                cell_storage_bytes = mul(capacity, std::mem::size_of::<Cell>())?;
+                g.memory(add(geometry_bytes, cell_storage_bytes)?)?;
+                cells.reserve_exact(capacity - cells.len());
             }
             g.memory(add(
                 geometry_bytes,

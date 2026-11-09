@@ -9,10 +9,6 @@ import {segmentedCouponDsl} from '../tests/helpers/pcb-analysis-segmented-coupon
 
 const folder=process.env.P7_OUTPUT_DIR!;
 assert.ok(folder&&process.env.PCB_ANALYSIS_CACHE_DIR);
-const limits={maxSeconds:Math.min(25,Number(process.env.P7_VERIFY_SECONDS??25)),maxMemoryMiB:Math.min(512,Number(process.env.P7_VERIFY_MEMORY_MIB??512))};
-assert.ok(Number.isInteger(limits.maxSeconds)&&limits.maxSeconds>0&&Number.isInteger(limits.maxMemoryMiB)&&limits.maxMemoryMiB>0,'Finite positive verification limits required');
-process.env.P7_VERIFY_SECONDS=String(limits.maxSeconds);process.env.P7_VERIFY_MEMORY_MIB=String(limits.maxMemoryMiB);
-process.env.P7_COMPACT_PLANAR='1';
 const addon=createRequire(import.meta.url)('../native/node-addon/index.cjs') as typeof import('../native/node-addon/index.cjs');
 const nativeSolve=addon.AnalysisElectricalSession.prototype.solveBoardFoilChecked;
 let nativeCalls=0;
@@ -32,8 +28,7 @@ board.copper.fixed.vias=[];board.copper.fixed.zones=[];
 const code=segmentedCouponDsl
  .replace('boardThicknessMm:.12','boardThicknessMm:.17')
  .replaceAll('thicknessMm:.01','thicknessMm:.035')
- .replace('startHz:1000,stopHz:10000,points:3','startHz:1000000,stopHz:1100000,points:2')
- .replace('maxSeconds:300,maxMemoryMiB:2048',`maxSeconds:${limits.maxSeconds},maxMemoryMiB:${limits.maxMemoryMiB}`);
+ .replace('startHz:1000,stopHz:10000,points:3','startHz:1000000,stopHz:1100000,points:2');
 const execute=createAnalysisExecutor();
 async function run(){
  let solution:any;
@@ -46,6 +41,9 @@ async function run(){
  assert.equal(solution.status,'complete');assert.equal(solution.coverage,'unverified');
  assert.equal(solution.provenance.operatorPolicy,'hybrid-planar-v3');
  assert.equal(solution.provenance.partitionPolicy,'automatic-hybrid-v1');
+ assert.equal(solution.provenance.maxSeconds,undefined);
+ assert.equal(solution.provenance.maxMemoryMiB,undefined);
+ assert.equal(solution.cache.resourcePolicy,'external');
  assert.equal(solution.returnSearch?.status,'passed');
  assert.ok(solution.returnSearch.steps.length>0);
  assert.ok(solution.provenance.compactOperator.skinHints.added>0);

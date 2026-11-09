@@ -7,6 +7,7 @@ use serde_json::{json, Value};
 use std::{collections::BTreeSet, time::{Duration, Instant}};
 
 fn remaining(start: Instant, wall: Duration, budget: AllocationBudget) -> Result<Budget> {
+    if wall == Duration::MAX { return Ok(Budget::externally_supervised()); }
     let seconds = wall.checked_sub(start.elapsed()).ok_or_else(|| error("DEADLINE", "regime audit deadline exceeded"))?.as_secs_f64();
     if seconds <= 0. { return Err(error("DEADLINE", "regime audit deadline exceeded")); }
     Ok(Budget { max_seconds: Some(seconds), max_memory_mi_b: Some(budget.max_bytes as f64 / 1048576.) })

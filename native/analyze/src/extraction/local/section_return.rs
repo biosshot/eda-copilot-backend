@@ -260,7 +260,7 @@ mod tests {
         })).collect();
         let conductors=[Conductor{id:"signal-a",conductivity_s_m:58e6},Conductor{id:"signal-b",conductivity_s_m:58e6},Conductor{id:"finite-return",conductivity_s_m:58e6}];
         let section=Mesh{nodes_m:&nodes,triangles:&triangles,conductors:&conductors,reference:2};
-        let (_,recovery)=section_transition::solve_with_recovery(&section,1000.,0,&section_transition::Budget{max_bytes:budget.max_bytes,deadline:Instant::now()+Duration::from_secs(10)},1024*1024).unwrap();
+        let (_,recovery)=section_transition::solve_with_recovery(&section,1000.,0,&section_transition::Budget{max_bytes:budget.max_bytes,deadline:Some(Instant::now()+Duration::from_secs(10))},1024*1024).unwrap();
         let material:Vec<_>=triangles.iter().map(|t|match t.conductor {Some(c)=>Material::Copper{source_ids:vec![conductors[c].id.into()]},None=>Material::Dielectric{label:"gap".into(),epsilon_r:1.}}).collect();
         let mut edges=vec![[0,1],[1,2],[21,22],[22,23]];
         for y in 0..7 {edges.extend([[3*y,3*y+3],[3*y+2,3*y+5]]);}
@@ -403,7 +403,7 @@ mod tests {
         })).collect();
         let conductors=[Conductor{id:"signal-a",conductivity_s_m:58e6},Conductor{id:"signal-b",conductivity_s_m:58e6},Conductor{id:"return-a",conductivity_s_m:58e6},Conductor{id:"return-b",conductivity_s_m:58e6}];
         let section=Mesh{nodes_m:&nodes,triangles:&triangles,conductors:&conductors,reference:3};
-        let (_,recovery)=section_transition::solve_with_recovery(&section,1000.,0,&section_transition::Budget{max_bytes:budget.max_bytes,deadline:Instant::now()+Duration::from_secs(10)},1024*1024).unwrap();
+        let (_,recovery)=section_transition::solve_with_recovery(&section,1000.,0,&section_transition::Budget{max_bytes:budget.max_bytes,deadline:Some(Instant::now()+Duration::from_secs(10))},1024*1024).unwrap();
         let uniform:Vec<_>=triangles.iter().map(|t|match t.conductor {Some(c)=>Material::Copper{source_ids:vec![conductors[c].id.into()]},None=>Material::Dielectric{label:"gap".into(),epsilon_r:1.}}).collect();
         let mut edges=vec![[0,1],[1,2],[27,28],[28,29]];for y in 0..9 {edges.extend([[3*y,3*y+3],[3*y+2,3*y+5]]);}
         let owners:BTreeMap<_,_>=conductors.iter().enumerate().map(|(i,c)|(c.id.to_string(),i)).collect();

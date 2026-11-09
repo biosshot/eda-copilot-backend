@@ -3,7 +3,7 @@ import type { ChannelLossGram } from './channel-loss.ts';
 import type { BoardChannelRequest } from './channel-components.ts';
 import { declaredNetworkBand } from './analysis-dsl/frequency-model.ts';
 import type { LegacyChannelContact } from './channel-terminals.ts';
-import {boardChannelBlockBandHz,boardChannelJointSkinBandHz,boardChannelHybridBandHz,createBoardChannelPlanner} from './board-channel-plan.ts';
+import {createBoardChannelPlanner} from './board-channel-plan.ts';
 import {solveSegmentedChannel} from './segmented-channel.ts';
 import {auditSegmentedResponse,type ChannelFrequencyReplay} from './segmented-frequency-audit.ts';
 import type {FrequencyInterval} from './p7-frequency-planning.ts';
@@ -41,15 +41,6 @@ export function channelResponseChange(a:any,b:any,includesComponentLoss=false){
   magnetic=0;for(let f=0;f<b.frequenciesHz.length;f++)for(let i=0;i<n;i++)for(let j=0;j<n;j++){const x=a.loadedEnergyGram[f]?.magneticJPerA2?.[i]?.[j],y=b.loadedEnergyGram[f]?.magneticJPerA2?.[i]?.[j];if(!Number.isFinite(x)||!Number.isFinite(y))throw new Error('CHANNEL_MAGNETIC_EVIDENCE: finite complete intrinsic energy Gram required');magnetic=Math.max(magnetic,Math.abs(x-y)/Math.max(5e-12,Math.abs(y)));}
  }
  return {maxRelativeChange:Math.max(wave,loss,copperLoss,delay,magnetic??0),magneticEnergyRelativeChange:magnetic,magneticEnergyAbsoluteFloorJ:5e-12,magneticEnergyConvention:'Native matched-reference mean intrinsic magnetic energy Gram for1A RMS Norton drives; references store no magnetic energy',waveRelativeChange:wave,copperLossRelativeChange:includesComponentLoss?(separated?copperLoss:undefined):loss,totalPassiveLossRelativeChange:includesComponentLoss?loss:undefined,groupDelayRelativeChange:delay,groupDelayAbsoluteFloorS:1e-12,waveAbsoluteAmplitudeFloor:.01,lossAbsoluteFloorW:1e-18,referenceOhm:50,driveConvention:'Unit/opposite1A Norton with50Ohm mathematical reference; incident power50/4*norm(d)^2',lossRecovery:includesComponentLoss?(separated?'Cu-only convergence uses native copper instance R loss; regional recovery remains unverified':'Passive power balance includes supplied package losses; Cu-only and regional convergence remain unverified'):'Passive power balance; only Cu R dissipates; no regional loss certificate'};
-}
-export function boardChannelApplicability(request: BoardChannelRequest, requestedUpperHz:number=boardChannelBlockBandHz[1]): FrequencyInterval {
- const bands=(request.components??[]).flatMap(component=>{
-  const band=declaredNetworkBand(component.model);
-  return band?[band]:[];
- });
- const band=process.env.P7_COMPACT_PLANAR==='1'?boardChannelHybridBandHz:requestedUpperHz>boardChannelBlockBandHz[1]?boardChannelJointSkinBandHz:boardChannelBlockBandHz;
- return [Math.max(band[0],...bands.map(component=>component[0])),
-  Math.min(band[1],...bands.map(component=>component[1]))];
 }
 type VerificationRun = {
  level: 1 | 2;

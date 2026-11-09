@@ -8,7 +8,7 @@ type Entry = { report: AnalysisBoardFoilCheckedReport; producerBudget: Budget };
 
 /** Bump whenever the shared planar/hybrid operator changes its numerical
  * meaning. Kept in the existing exact-grid identity so old snapshots miss. */
-export const HYBRID_PLANAR_OPERATOR_VERSION = 'hybrid-planar-v10';
+export const HYBRID_PLANAR_OPERATOR_VERSION = 'hybrid-planar-v11';
 
 function validBudget(budget: Budget) {
   return Number.isFinite(budget?.maxSeconds) && budget.maxSeconds > 0 && budget.maxSeconds <= 3600 &&
@@ -39,7 +39,8 @@ export function cachedBoardFoilReport(
   const upperHz = profileUpperHz ?? frequenciesHz.at(-1);
   const portCount = expected.electrodePairs.length;
   const referenceOhm = request.referenceOhm ?? expected.electrodePairs.map(() => 50);
-  if (!validBudget(request.budget)) throw new Error('BOARD_FOIL_BUDGET: finite positive time and 1..65536 MiB required');
+  const externalResources = partitionPolicy === 'automatic-hybrid-v1';
+  if (!externalResources && !validBudget(request.budget)) throw new Error('BOARD_FOIL_BUDGET: finite positive time and 1..65536 MiB required');
   if ((partitionPolicy !== undefined && partitionPolicy !== 'automatic-conductive-schur-v1' && partitionPolicy !== 'automatic-hybrid-v1') ||
       (operatorPolicy !== undefined && !profiled) ||
       (hybridProfile && partitionPolicy !== 'automatic-hybrid-v1') ||
@@ -51,8 +52,8 @@ export function cachedBoardFoilReport(
       !Number.isSafeInteger(maxIterations) || maxIterations < 1 || maxIterations > 16) {
     throw new Error(`BOARD_FOIL_GRID: bounded ordered 1..${limitHz / 1000} kHz exact grid, valid policy/profile and positive references required`);
   }
-  const deadlineSeconds = Math.min(request.budget.maxSeconds, verificationLimit('P7_VERIFY_SECONDS', 300, 1, 3600));
-  const maxMemoryMiB = Math.min(Math.floor(request.budget.maxMemoryMiB), verificationLimit('P7_VERIFY_MEMORY_MIB', 2048, 256, 65536));
+  const deadlineSeconds = externalResources ? request.budget.maxSeconds : Math.min(request.budget.maxSeconds, verificationLimit('P7_VERIFY_SECONDS', 300, 1, 3600));
+  const maxMemoryMiB = externalResources ? request.budget.maxMemoryMiB : Math.min(Math.floor(request.budget.maxMemoryMiB), verificationLimit('P7_VERIFY_MEMORY_MIB', 2048, 256, 65536));
   const magneticBatchColumns = verificationLimit('P7_MAGNETIC_BATCH_COLUMNS', 0, 0, 64);
   const sectionHints = process.env.P7_SECTION_HINTS === '1';
   const nearBound = process.env.P7_MAGNETIC_NEAR_BOUND === '1';
@@ -62,6 +63,7 @@ export function cachedBoardFoilReport(
   const compactFullMixed = process.env.P7_COMPACT_FULL_MIXED === '1';
   const axialTetPolicy = magneticAxialTetPolicy();
   const remaining = () => {
+    if (externalResources) return deadlineSeconds;
     const seconds = deadlineSeconds - (performance.now() - started) / 1000;
     if (seconds <= 0) throw new Error('CHANNEL_FOIL_DEADLINE: shared cache/solve budget exhausted');
     return seconds;
@@ -69,7 +71,7 @@ export function cachedBoardFoilReport(
   // Bound the encoded output before reading/parsing it and allow headroom for
   // UTF-16 strings, parsed copies and result transport. This is a size
   // admission rule, independent of the recorded native plan and process RSS.
-  const maxEncodedBytes = Math.floor(maxMemoryMiB * 1048576 / 16);
+  const maxEncodedBytes = externalResources ? Infinity : Math.floor(maxMemoryMiB * 1048576 / 16);
   remaining();
   const key = cache.key({
     core, producer: 'automatic-board-foil-or-mixed-exact-grid-v1',
@@ -99,13 +101,15 @@ export function cachedBoardFoilReport(
     return { report, producerBudget };
   }, value => {
     const entry = value as Entry | null;
-    if (!entry || !validBudget(entry.producerBudget)) throw new Error('CHANNEL_FOIL_CACHE: invalid original producer budget');
+    if (!entry || (!externalResources && !validBudget(entry.producerBudget))) throw new Error('CHANNEL_FOIL_CACHE: invalid original producer budget');
     validateBoardFoilReport(entry.report, problem, entry.producerBudget);
   }, maxEncodedBytes);
   remaining();
   return { ...cached.value.report, cache: {
-    ...cached.evidence, policy: 'exact-grid-result', producerBudget: cached.value.producerBudget,
+    ...cached.evidence, policy: 'exact-grid-result',
+    ...(externalResources ? { resourcePolicy: 'external' as const } : {
+      producerBudget: cached.value.producerBudget, replayBudget: { maxSeconds: deadlineSeconds, maxMemoryMiB },
+    }),
     elapsedSeconds: (performance.now() - started) / 1000,
-    replayBudget: { maxSeconds: deadlineSeconds, maxMemoryMiB },
   } };
 }

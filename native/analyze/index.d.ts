@@ -343,8 +343,8 @@ export interface AnalysisBoardFoilCheckedReport {
         retainedPotentials: number;
         currentModes: number;
         plannedBytes: number;
-        maxSeconds: number;
-        maxMemoryMiB: number;
+        maxSeconds?: number;
+        maxMemoryMiB?: number;
         spatialCoverage: 'unverified';
         bandCoverage: 'unverified';
         driveConvention: string;

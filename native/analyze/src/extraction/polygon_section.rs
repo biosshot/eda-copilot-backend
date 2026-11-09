@@ -642,7 +642,7 @@ pub(super) fn transition_mesh<'a>(
         conductors,
         budget: Budget {
             max_bytes,
-            deadline: start + Duration::from_secs_f64(limits.seconds),
+            deadline: Some(start + Duration::from_secs_f64(limits.seconds)),
         },
         retained_bytes,
         meshing_plan_bytes,
@@ -1625,7 +1625,7 @@ mod transition_handoff_tests {
             assert!(prepared.meshing_plan_bytes >= prepared.retained_bytes);
             assert_eq!(
                 prepared.budget.deadline,
-                start + std::time::Duration::from_secs(10)
+                Some(start + std::time::Duration::from_secs(10))
             );
         }
         request.conductors[1].contour.outer_m = rect(1.25, 0.25, 2.25, 1.25);

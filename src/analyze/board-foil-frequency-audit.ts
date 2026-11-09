@@ -68,7 +68,8 @@ export function auditBoardFoilFrequency(
   const n=problem.expected.electrodePairs.length;
   const maxFreshSamples=Math.min(8,Math.floor(64/n));
   const maxSeconds=Math.min(problem.request.budget.maxSeconds,Number(process.env.P7_VERIFY_SECONDS??300));
-  const deadlineMs=started+1000*maxSeconds;
+  const externalResources=problem.request.partitionPolicy==='automatic-hybrid-v1';
+  const deadlineMs=externalResources?undefined:started+1000*maxSeconds;
   const seeded=new Map(baseline.frequenciesHz.flatMap((f,i)=>
     requestedIntervalHz[0]<=f&&f<=requestedIntervalHz[1] ? [[f,observations(baseline,i)] as const] : []));
   const gates=Object.fromEntries(Object.keys(observations(baseline,0)).map(name=>[name,{
@@ -85,15 +86,15 @@ export function auditBoardFoilFrequency(
     evaluatePhysicalBatch(frequenciesHz) {
       batch={status:'refused',frequenciesHz};
       try{
-        const maxSeconds=(deadlineMs-performance.now())/1000;
-        if(maxSeconds<=0)throw new Error('CHANNEL_FOIL_DEADLINE: shared frequency audit budget exhausted');
+        const maxSeconds=deadlineMs===undefined?problem.request.budget.maxSeconds:(deadlineMs-performance.now())/1000;
+        if(deadlineMs!==undefined&&maxSeconds<=0)throw new Error('CHANNEL_FOIL_DEADLINE: shared frequency audit budget exhausted');
         const changed:BoardFoilProblem={...problem,request:{...problem.request,frequenciesHz,
           budget:{...problem.request.budget,maxSeconds}}};
         const report=execute(changed);
         validateBoardFoilReport(report,changed,report.cache?.producerBudget??changed.request.budget);
         if(physicalMeshIdentity(report)!==physicalMeshIdentity(baseline))
           throw new Error('CHANNEL_FOIL_FREQUENCY_MESH: supplemental solve changed the original physical mesh or ownership');
-        if(performance.now()>=deadlineMs)throw new Error('CHANNEL_FOIL_DEADLINE: batch exceeded shared frequency audit budget');
+        if(deadlineMs!==undefined&&performance.now()>=deadlineMs)throw new Error('CHANNEL_FOIL_DEADLINE: batch exceeded shared frequency audit budget');
         // Retain only the requested exact response payload, not whole reports or provenance trees.
         supplementalResponses.push(...frequenciesHz.map((frequencyHz,i)=>({frequencyHz,
           parameters:report.parameters[i],samples:report.samples[i],referenceOhm:report.referenceOhm})));

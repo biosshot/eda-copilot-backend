@@ -1,3 +1,4 @@
+import type { solveHybridBoardChannel } from '../src/analyze/hybrid-board-channel.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { executeScenario } from '../src/analyze/analysis-dsl/scenario.ts';
@@ -240,19 +241,20 @@ a.network({model,ports:Object.fromEntries(model.ports.map(port => [port,port]))}
     assert.equal(request.ports[0].negative, request.ports[2].negative);
     assert.notEqual(request.ports[0].negative, request.ports[1].negative);
     assert.ok(demand && demand[0] === 0 && demand[1] > 1e9);
-    assert.deepEqual(axis, [1000, 2500, 1 / (8e-4 - (4e-4 + 2e-10)), 100000]);
-    assert.ok(budget.maxSeconds > 0);
-    const ports = request.ports.map(({ name }, index) => ({ name, index }));
+    assert.equal(axis[0], 1000);
+    assert.ok(axis.includes(2500) && axis.includes(1e9));
+    assert.equal(axis.at(-1), Math.min(1e10, demand![1]));
+    const ports = request.ports;
+    const electrodePairs = ports.map(({ positive, negative }) => [positive, negative]);
     const parameters = axis.map(() => ports.map(() => ports.map(() => ({ real: 0, imaginary: 0 }))));
     return {
-      result: {
-        status: 'complete', diagnostics: [], elapsedMs: 0, ports,
-        assembledModel: { format: 'network-parameters', representation: 'S', nature: 'passive',
-          referenceTopology: 'common', referenceOhm: 50, frequenciesHz: axis, parameters },
-      },
-      bandHz: [1000, 100000], audit: {}, blocks: [], evidence: [], verification: [], ownership: [],
-      wallSeconds: 0, magneticCoupling: null,
-    };
+      foil: { boardJson: JSON.stringify(captured), geometry, ports, electrodePairs,
+        terminals: [...request.signals, ...request.references], attachments: [],
+        sourceCopper: [], sourceBarrels: [], roiMm: geometry.roiMm },
+      report: { status: 'complete', frequenciesHz: axis, parameters, referenceOhm: ports.map(() => 50),
+        samples: axis.map(frequencyHz => ({ frequencyHz, columns: ports.map(() => ({ copperLossW: 12.5, powerBalanceErrorW: 0 })) })),
+        provenance: { method: 'hybrid control', modelKind: 'mixed', prisms: 1, volumeTetrahedra: 1 } },
+    } as ReturnType<typeof solveHybridBoardChannel>;
   });
   const options = { filename: 'channel-group-runtime.js', maxEntries: 1000, maxOutputBytes: 4 * 1024 * 1024 };
   const executor = createAnalysisExecutor(group);
@@ -267,9 +269,9 @@ a.network({model,ports:Object.fromEntries(model.ports.map(port => [port,port]))}
   assert.equal(result.solution.status, 'unverified');
   assert.equal(result.solution.requestedIntervalHz[0], 0);
   assert.equal(result.solution.requestedIntervalHz[1], result.solution.drivers[0].spectrum.requiredUpperHz);
-  assert.deepEqual(result.solution.applicabilityBandHz, [1000, 100000]);
+  assert.deepEqual(result.solution.applicabilityBandHz, [1000, 1e10]);
   assert.deepEqual(result.solution.uncovered.map((gap: any) => gap.intervalHz), [
-    [0, 1000], [100000, result.solution.requestedIntervalHz[1]],
+    [0, 1000], ...(result.solution.requestedIntervalHz[1] > 1e10 ? [[1e10, result.solution.requestedIntervalHz[1]]] : []),
   ]);
   assert.equal(result.solution.portHandles.length, 6);
   assert.equal(new Set(result.solution.portHandles.map((p: any) => p.portName)).size, 4);

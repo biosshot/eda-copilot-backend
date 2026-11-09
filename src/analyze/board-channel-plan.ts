@@ -19,7 +19,7 @@ type Options = {
     autoFoilDeadlineMs?: number;
     onClosureStep?: (step:FoilClosureStep)=>void;
 };
-type ClosedJointOptions = Options & { closedJointDeadlineMs: number };
+type ClosedJointOptions = Options & { closedJointDeadlineMs: number; guardedReturn?: boolean };
 type SegmentedGeometryPlan = SegmentedChannel & { audit: any };
 type JointGeometryReason = "finite-return-closure" | "no-finite-return-corridor" | "no-finite-return-interface";
 type Face = {
@@ -131,6 +131,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
             }
             Object.defineProperty(result,'returnSearch',{enumerable:false,value:{initialMarginMm:margin,expand:(domainScale:number,deadline:number)=>{
                 if (!(domainScale>=1) || !Number.isFinite(domainScale)) throw new Error('CHANNEL_FOIL_DOMAIN: invalid return search scale');
+                if (domainScale===1 && searchMarginMm===margin) return result;
                 const expanded=closedJoint(deadline,margin*domainScale);
                 if (!expanded) throw new Error('CHANNEL_JOINT_CLOSURE: unable to expand return search domain');
                 return expanded;
@@ -138,7 +139,7 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
             return result;
         };
         if ('closedJointDeadlineMs' in options) {
-            const joint = closedJoint(options.closedJointDeadlineMs);
+            const joint = closedJoint(options.closedJointDeadlineMs, options.guardedReturn ? margin : undefined);
             if (!joint) throw new Error('CHANNEL_JOINT_CLOSURE: frequency demand requires a bounded closed physical copper candidate');
             return joint;
         }

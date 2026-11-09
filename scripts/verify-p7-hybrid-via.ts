@@ -7,16 +7,10 @@ import {segmentedCouponDslFor} from '../tests/helpers/pcb-analysis-segmented-cou
 
 const folder=process.env.P7_OUTPUT_DIR;
 assert.ok(folder&&process.env.PCB_ANALYSIS_CACHE_DIR,'external supervision and isolated cache required');
-process.env.P7_COMPACT_PLANAR='1';
-const seconds=Number(process.env.P7_VERIFY_SECONDS??25);
-assert.ok(Number.isSafeInteger(seconds)&&seconds>=1&&seconds<=600,'P7_VERIFY_SECONDS must be an integer in [1,600]');
-process.env.P7_VERIFY_SECONDS=String(seconds);
-process.env.P7_VERIFY_MEMORY_MIB='512';
 const boardPath='tests/fixtures/analysis-local-extraction/board-integration/via-contact-board.json';
 const board=JSON.parse(readFileSync(boardPath,'utf8'));
 const code=segmentedCouponDslFor('via')
- .replace('startHz:1000,stopHz:10000,points:3','startHz:1000000,stopHz:1000000,points:1')
- .replace('maxSeconds:300,maxMemoryMiB:2048',`maxSeconds:${seconds},maxMemoryMiB:512`);
+ .replace('startHz:1000,stopHz:10000,points:3','startHz:1000000,stopHz:1000000,points:1');
 const execute=createAnalysisExecutor();
 let solution:any;
 try{

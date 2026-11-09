@@ -336,10 +336,13 @@ export function validateBoardFoilReport(
     quality.maxColumnPowerBalanceErrorW!==Math.max(...columns.map(column=>column.powerBalanceErrorW)))
   fail('native foil quality maxima do not match the per-column evidence');
  const evidence=report.provenance;
+ const externalResources=request.partitionPolicy==='automatic-hybrid-v1';
+ const seconds=evidence?.maxSeconds??NaN;
+ const memory=evidence?.maxMemoryMiB??NaN;
  if(!evidence||!Array.isArray(evidence.sourceMapping)||!evidence.electrodeAreasM2||
-    !Number.isFinite(evidence.maxSeconds)||evidence.maxSeconds<=0||evidence.maxSeconds>producerBudget.maxSeconds||
-    !Number.isFinite(evidence.maxMemoryMiB)||evidence.maxMemoryMiB<1||evidence.maxMemoryMiB>producerBudget.maxMemoryMiB||
-    evidence.plannedBytes>evidence.maxMemoryMiB*1048576)
+    (!externalResources&&(!Number.isFinite(seconds)||seconds<=0||seconds>producerBudget.maxSeconds||
+     !Number.isFinite(memory)||memory<1||memory>producerBudget.maxMemoryMiB||
+     evidence.plannedBytes>memory*1048576)))
   fail('native producer limits or ownership evidence missing or inconsistent');
  validateSkinMesh(evidence,problem);
  validatePartition(report,problem);
@@ -366,7 +369,7 @@ export function validateBoardFoilReport(
  if(!same(expectedCopper,actual)||!validAttachments||!validModel||
     !Number.isSafeInteger(evidence.prisms)||evidence.prisms<0||
     !Array.isArray(evidence.barrelIds)||!same(expectedBarrels,[...evidence.barrelIds].sort())||
-    !Number.isFinite(evidence.plannedBytes)||evidence.plannedBytes<=0||evidence.plannedBytes>producerBudget.maxMemoryMiB*1048576||
+    !Number.isFinite(evidence.plannedBytes)||evidence.plannedBytes<=0||(!externalResources&&evidence.plannedBytes>producerBudget.maxMemoryMiB*1048576)||
     !Number.isFinite(evidence.maxCopperVolumeChange)||evidence.maxCopperVolumeChange<0||evidence.maxCopperVolumeChange>1e-8||
     evidence.spatialCoverage!=='unverified'||evidence.bandCoverage!=='unverified'||
     electrodeNames.size!==Object.keys(evidence.electrodeAreasM2).length||

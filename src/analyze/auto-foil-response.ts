@@ -5,7 +5,7 @@ import { validateBoardFoilReport } from './board-foil-validation.ts';
 import type { BoardFoilProblem, BoardFoilReport } from './types.ts';
 import { requestedFrequencyInterval, type FrequencyInterval } from './p7-frequency-planning.ts';
 import { declaredNetworkBand } from './analysis-dsl/frequency-model.ts';
-import { boardChannelBlockBandHz, boardChannelJointSkinBandHz, boardChannelHybridBandHz } from './board-channel-plan.ts';
+import { boardChannelBlockBandHz, boardChannelHybridBandHz } from './board-channel-plan.ts';
 import { summarizeReturnBoundary, RETURN_BOUNDARY_THRESHOLD, RETURN_CURRENT_FLOOR_A } from './return-boundary.ts';
 
 type ReturnSearchStep = ReturnType<typeof summarizeReturnBoundary> & {
@@ -24,16 +24,11 @@ export function runAutoFoil(
  plan:AutoFoilPlan, frequenciesHz:number[], budget:{maxSeconds:number;maxMemoryMiB:number},
  interval:FrequencyInterval|undefined, execute:(problem:BoardFoilProblem)=>BoardFoilReport,
 ): BoardFoilRunReport {
- const started=performance.now();
  const n=plan.ports.length;
- const hybrid=process.env.P7_COMPACT_PLANAR==='1';
  const requested=interval&&requestedFrequencyInterval({spectralBandHz:interval});
  const highestSampleHz=frequenciesHz.at(-1)??0;
  const demandUpperHz=Math.max(requested?.[1]??0,highestSampleHz);
- const extendedDemand=demandUpperHz>boardChannelBlockBandHz[1];
- const foilBandHz:FrequencyInterval=hybrid?boardChannelHybridBandHz:extendedDemand?boardChannelJointSkinBandHz:boardChannelBlockBandHz;
- if(!Number.isFinite(budget.maxSeconds)||budget.maxSeconds<=0)
-  throw new Error('CHANNEL_FOIL_DEADLINE: shared budget exhausted before the foil solve');
+ const foilBandHz:FrequencyInterval=boardChannelHybridBandHz;
  if(!n||n>16||!frequenciesHz.length||frequenciesHz.length*n>256||
     frequenciesHz.some(f=>!Number.isFinite(f)||f<foilBandHz[0]||f>foilBandHz[1])||
     frequenciesHz.some((f,i)=>i>0&&f<=frequenciesHz[i-1]))
@@ -52,21 +47,18 @@ export function runAutoFoil(
  const profileUpperHz=Math.min(demandUpperHz,high);
  const skin=profileUpperHz>boardChannelBlockBandHz[1];
  const referenceOhm=plan.ports.map(()=>50);
- const search=hybrid?plan.returnSearch:undefined;
- const deadline=started+budget.maxSeconds*1000;
+ const search=plan.returnSearch;
  const steps:ReturnSearchStep[]=[];
  for(let iteration=0;iteration<(search?8:1);iteration++) {
   const domainScale=2**iteration;
-  const candidate=search?search.expand(domainScale,deadline):plan;
+  const candidate=search?search.expand(domainScale,Infinity):plan;
   const attemptStarted=performance.now();
-  const remainingSeconds=search?(deadline-attemptStarted)/1000:budget.maxSeconds;
-  if(remainingSeconds<=0)throw new Error('CHANNEL_FOIL_DEADLINE: return search budget exhausted '+JSON.stringify(steps));
   const problem:BoardFoilProblem={kind:'board-foil-checked',boardJson:candidate.boardJson,geometry:candidate.geometry,
    expected:{electrodePairs:candidate.electrodePairs,sourceCopper:candidate.sourceCopper,sourceBarrels:candidate.sourceBarrels},
-   request:{frequenciesHz,referenceOhm,budget:{...budget,maxSeconds:remainingSeconds},
-    partitionPolicy:hybrid?'automatic-hybrid-v1':'automatic-conductive-schur-v1',
+   request:{frequenciesHz,referenceOhm,budget,
+    partitionPolicy:'automatic-hybrid-v1',
     ...(candidate.attachments.length&&{attachments:candidate.attachments}),
-    ...(skin&&{operatorPolicy:hybrid?'hybrid-planar-v3' as const:'skin-volume-v3' as const,profileUpperHz})}};
+    ...(skin&&{operatorPolicy:'hybrid-planar-v3' as const,profileUpperHz})}};
   const observations:ReturnType<typeof summarizeReturnBoundary>[]=[];
   let boundaryError:unknown;
   const checkedExecute=(input:BoardFoilProblem)=>{
@@ -96,7 +88,6 @@ export function runAutoFoil(
    if(!steps.at(-1)!.passed)continue;
   }
   const jointSensitivity=process.env.P7_AUTO_FOIL_AUDIT==='1'&&auditBoardFoilGrid(problem,report,attemptStarted,execute);
-  if(performance.now()>=deadline)throw new Error('CHANNEL_FOIL_DEADLINE: return search exceeded shared budget '+JSON.stringify(steps));
   const result:BoardFoilRunReport={...report,...(frequencyAudit&&{frequencyAudit}),...(jointSensitivity&&{jointSensitivity}),
    ...(search&&{returnSearch:{policy:'internal-guard-flux-v1' as const,status:'passed' as const,
     threshold:RETURN_BOUNDARY_THRESHOLD,absoluteFloorA:RETURN_CURRENT_FLOOR_A,steps}})};

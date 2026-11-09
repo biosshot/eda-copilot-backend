@@ -122,8 +122,8 @@ pub(super) fn solve(
     Ok(output)
 }
 
-fn check_deadline(deadline: Instant) -> Result<()> {
-    if Instant::now() >= deadline {
+fn check_deadline(deadline: Option<Instant>) -> Result<()> {
+    if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
         return Err(error(
             "SECTION_TRANSITION_DEADLINE",
             "shared exact-grid deadline exhausted",

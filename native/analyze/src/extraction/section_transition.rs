@@ -37,12 +37,12 @@ pub(super) struct Mesh<'a> {
 
 pub(super) struct Budget {
     pub max_bytes: usize,
-    pub deadline: Instant,
+    pub deadline: Option<Instant>,
 }
 
 impl Budget {
     fn check(&self) -> Result<()> {
-        if Instant::now() >= self.deadline {
+        if self.deadline.is_some_and(|deadline| Instant::now() >= deadline) {
             return Err(error(
                 "SECTION_TRANSITION_DEADLINE",
                 "shared deadline exhausted",
@@ -876,7 +876,7 @@ mod tests {
         };
         let budget = Budget {
             max_bytes: 32 * 1024 * 1024,
-            deadline: Instant::now() + Duration::from_secs(5),
+            deadline: Some(Instant::now() + Duration::from_secs(5)),
         };
         let dc = solve(&mesh, 0., 0, &budget).unwrap();
         let dc_exact = 2. / (sigma * width * t);
@@ -950,14 +950,14 @@ mod tests {
         let deadline = Instant::now() + Duration::from_secs(5);
         let dc_budget = Budget {
             max_bytes: 64 * 1024,
-            deadline,
+            deadline: Some(deadline),
         };
         let dc = solve(&mesh, 0., 0, &dc_budget).unwrap();
         assert!(dc.planned_bytes < 64 * 1024);
         assert!(solve(&mesh, 5000., 0, &dc_budget).is_err());
         let budget = Budget {
             max_bytes: 8 * 1024 * 1024,
-            deadline,
+            deadline: Some(deadline),
         };
         let (a, recovery) = solve_with_recovery(&mesh, 5000., 0, &budget, 64 * 1024).unwrap();
         let b = solve(&mesh, 5000., nodes.len() - 1, &budget).unwrap();
@@ -976,7 +976,7 @@ mod tests {
         );
         let tight = Budget {
             max_bytes: a.planned_bytes - 1,
-            deadline,
+            deadline: Some(deadline),
         };
         assert!(solve_with_recovery(&mesh, 5000., 0, &tight, 64 * 1024)
             .err()

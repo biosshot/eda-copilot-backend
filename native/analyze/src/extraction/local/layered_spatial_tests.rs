@@ -83,6 +83,14 @@ fn prepared_cut_flux_matches_parallel_plate_field_and_rejects_invalid_cuts() {
     let flux = action
         .cut_displacement_flux(&[0., 1.], &[0., 2.], bounds)
         .unwrap();
+    let externally_supervised = Budget {
+        max_nodes: usize::MAX,
+        max_local_terms: usize::MAX,
+        max_bytes: usize::MAX,
+        max_wall: Duration::MAX,
+    };
+    let unbounded = prepare_traced_spatial_action(&input, &trace, &[region()], externally_supervised).unwrap();
+    assert_eq!(unbounded.cut_displacement_flux(&[0., 1.], &[0., 2.], bounds).unwrap(), flux);
     let expected = EPS0 * 4. * 0.0006_f64.powi(2) * 5_f64.sqrt() / 0.0009;
     for &f in &flux[..4] {
         assert!(f < expected * 1e-10);

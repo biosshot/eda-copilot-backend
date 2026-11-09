@@ -8,6 +8,7 @@ import type { AnalysisBoardFoilCheckedReport, AnalysisBoardFoilCheckedRequest } 
 import { cachedBoardFoilReport, HYBRID_PLANAR_OPERATOR_VERSION } from '../src/analyze/board-foil-cache.ts';
 import { digest, LocalModelCache } from '../src/analyze/local-model-cache.ts';
 import { isAnalysisProblem, type BoardFoilProblem } from '../src/analyze/types.ts';
+import { auditBoardFoilFrequency } from '../src/analyze/board-foil-frequency-audit.ts';
 import { runAutoFoil } from '../src/analyze/auto-foil-response.ts';
 import { validateBoardFoilReport } from '../src/analyze/board-foil-validation.ts';
 import type { AutoFoilPlan } from '../src/analyze/auto-foil-plan.ts';
@@ -341,6 +342,13 @@ test('automatic partition policy reaches native preparation and exact cache with
     const cache=new LocalModelCache(dir);
     const plan={...problem.expected,boardJson:problem.boardJson,geometry:problem.geometry,
       ports:[{name:'original-port'}],attachments:[]} as unknown as AutoFoilPlan;
+    // Exercise historical Schur evidence directly, independent of production routing.
+    const runAutoFoil = (_plan:AutoFoilPlan, frequenciesHz:number[], budget:BoardFoilProblem['request']['budget'], interval:readonly [number,number]|undefined, execute:(input:BoardFoilProblem)=>AnalysisBoardFoilCheckedReport) => {
+      const input:BoardFoilProblem={...problem,request:{...problem.request,frequenciesHz,budget,partitionPolicy:'automatic-conductive-schur-v1'}};
+      const value=execute(input); validateBoardFoilReport(value,input,value.cache?.producerBudget??budget);
+      const frequencyAudit=interval&&auditBoardFoilFrequency(input,value,interval,[1000,100000],performance.now(),execute);
+      return {...value,frequencyAudit};
+    };
     let calls=0;
     const execute=(input:BoardFoilProblem)=>cachedBoardFoilReport(cache,'core-partition',input,request=>{
       calls++;
@@ -545,7 +553,7 @@ test('exact grid cache preserves immutable producer evidence through warm and pr
 });
 
 test('exact foil cache keys the physical request and bounds replay size', () => {
-  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v10');
+  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v11');
   const priorCompactPlanar = process.env.P7_COMPACT_PLANAR;
   const priorFullMixed = process.env.P7_COMPACT_FULL_MIXED;
   const dir = mkdtempSync(join(tmpdir(),'p7-foil-cache-'));

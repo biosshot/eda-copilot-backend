@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Route automatic board AC extraction and grouped SI through the compact planar and local-volume hybrid. Use external process supervision for time and memory, including via and reference-swap development runs. Keep physics, topology and convergence checks active.
+
 - Expand automatic hybrid return domains using six-face conductive and displacement current observations on an internal guard box. Check every requested drive and available frequency holdout against a strict 1% threshold, a 1 pA normalization floor, and a shared eight-expansion deadline/memory budget. Preserve prescribed contacts inside the observation box, retain complete newly encountered copper and barrels, and refuse unresolved returns.
 - Validate return-current evidence on cache replay, retain the actual expanded plan in DSL output, and invalidate the hybrid operator cache generation.
 

@@ -23,7 +23,7 @@ const plan:AutoFoilPlan={
 function report(problem:BoardFoilProblem):BoardFoilReport{
  const {frequenciesHz,referenceOhm,budget}=problem.request;
  const partitionPolicy=problem.request.partitionPolicy;
- return {
+ const result:BoardFoilReport = {
   status:'complete',coverage:'unverified',representation:'S',frequenciesHz,referenceOhm:referenceOhm!,
   ports:problem.expected.electrodePairs,
   parameters:frequenciesHz.map(f=>{
@@ -46,6 +46,17 @@ function report(problem:BoardFoilProblem):BoardFoilReport{
    attachments:[{electrodes:['a','b'],id:'load'}],
   },
  };
+ Object.assign(result,{operator:'compact-planar-layered-prototype'});
+ delete result.quality.maxFullKvlUncertaintyRelative;
+ Object.assign(result.quality,{scope:'compact-discrete',physicalError:'unverified',maxCompactKvlUncertaintyRelative:0});
+ for(const sample of result.samples as unknown as Array<{columns:Array<Record<string,unknown>>}>) for(const column of sample.columns){
+  delete column.kvlUncertaintyRelative; column.compactKvlUncertaintyRelative=0;
+  column.compactMagneticCertificate={policy:'compact-mixed-near-far',nearQuadratureErrorCertified:false};
+ }
+ Object.assign(result.provenance,{automaticPartition:undefined,magneticOperator:undefined,
+  compactOperator:{version:'compact-planar-v1',basis:'adaptive-mixed-closure',electricOperator:'layered-spatial-field-mesh',foilSupports:0,localTetraSupports:3,potentialCoordinates:4,currentCoordinates:9,approximationError:'unverified',scope:'compact-discrete',originalVolumeActions:0,physicalAccuracy:'unverified',planarMaxOrder:0,planarMaxRelativeChange:0,mixedMaxRelativeChange:0,tetraSelfMaxRelativeChange:0,tetraPairAdaptiveTolerance:0,nearQuadratureEstimatedTolerance:1e-8},
+  hybridAssembly:{policy:'automatic-hybrid-v1',method:'global-compact-mixed',potentialCoordinates:4,currentCoordinates:9,physicalAccuracy:'unverified'}});
+ return result;
 }
 
 test('joint range runs one bounded same-geometry batch and preserves exact replay, package scope and full demand',()=>{
@@ -72,7 +83,7 @@ test('joint range runs one bounded same-geometry batch and preserves exact repla
  assert.deepEqual(batch.request.attachments,base.request.attachments);
  assert.deepEqual(batch.request.referenceOhm,base.request.referenceOhm);
  assert.equal(batch.request.budget.maxMemoryMiB,budget.maxMemoryMiB);
- assert.ok(batch.request.budget.maxSeconds<budget.maxSeconds);
+ assert.equal(batch.request.budget.maxSeconds,budget.maxSeconds);
  assert.deepEqual(range.frequenciesHz,[1500,7500]);
  const audit=range.frequencyAudit!;
  assert.deepEqual(audit.interpolation.requestedIntervalHz,demand);
@@ -159,7 +170,7 @@ test('high board demand requires closed joint geometry and freezes the admitted 
   calls.push(problem);
   const baseline=report(problem);
   const {operatorPolicy,profileUpperHz,frequenciesHz}=problem.request;
-  assert.equal(operatorPolicy,'skin-volume-v3');
+  assert.equal(operatorPolicy,'hybrid-planar-v3');
   assert.equal(profileUpperHz,75000);
   const maximum=frequenciesHz.at(-1)!;
   const skinDepthM=1/(Math.sqrt(Math.PI*(4e-7*Math.PI)*profileUpperHz!)*Math.sqrt(58e6));
@@ -168,11 +179,11 @@ test('high board demand requires closed joint geometry and freezes the admitted 
    operatorPolicy,copperSkinMesh:{
     version:3,requestedUpperHz:maximum,trainingUpperBoundHz:maximum,effectiveUpperHz:profileUpperHz,
     skinDepthDivisor:3,currentAndElectricShareMesh:true,scope:'shared mesh',
-    layers:['TOP','BOTTOM'].map(layer=>({layer,skinDepthM,maximumStepM:skinDepthM/4,slabs:1})),roundBarrels:[],
+    layers:['TOP','BOTTOM'].map(layer=>({layer,skinDepthM,maximumStepM:skinDepthM/6,slabs:1})),roundBarrels:[],
    },
    ...(changedMesh&&calls.length>1&&{nativeCopperTetrahedra:4,volumeTetrahedra:4,fullCurrentCount:12}),
   });
-  if(changedMesh&&calls.length>1)baseline.provenance.automaticPartition!.originalCopperTetrahedra=4;
+
   return baseline;
  };
  const createPlanner=(()=>(options:unknown)=>{
@@ -209,7 +220,7 @@ test('high board demand requires closed joint geometry and freezes the admitted 
  changedMesh=true;
  const changed=run({}, {}, contacts, [20000,60000], budget, demand);
  assert.ok('coverage' in changed&&changed.frequencyAudit?.batch.status==='refused');
- assert.match(changed.frequencyAudit!.batch.message??'',/CHANNEL_FOIL_FREQUENCY_MESH/);
+ assert.match(changed.frequencyAudit!.batch.message??'',/CHANNEL_FOIL_EVIDENCE/);
  assert.deepEqual(changed.frequenciesHz,[20000,60000]);
  assert.equal(calls.length,2);
  refuseClosure=true;

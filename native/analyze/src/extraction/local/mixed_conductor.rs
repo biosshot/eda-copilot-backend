@@ -905,7 +905,7 @@ fn uniform_section_profiles(mesh:&BoardMesh,map:&MixedMap<'_>,ports:&[[usize;2]]
     use crate::extraction::section_transition::{self,Conductor,Triangle,Mesh};
     let nt=mesh.planar_triangles.len();let np=mesh.planar_nodes_mm.len();let nc=map.full.components.len();
     if nt==0||np==0||!(2..=17).contains(&nc)||ports.len()<2 {return Ok(None);}
-    check_time(start,wall)?;let seed_start=Instant::now();let seed_wall=wall.saturating_sub(start.elapsed())/8;
+    check_time(start,wall)?;let seed_start=Instant::now();let seed_wall=if wall == Duration::MAX { Duration::MAX } else { wall.saturating_sub(start.elapsed())/8 };
     let work_limit=budget.max_bytes/8;
     let source_bytes=mesh.mesh.copper_tetrahedra.iter().try_fold(0usize,|n,t|t.source_ids.iter().try_fold(n,|n,id|n.checked_add(id.len().checked_add(128)?)));
     let preflight=source_bytes.and_then(|bytes|map.full.potential_count().checked_mul(16).and_then(|n|n.checked_add(bytes))).and_then(|n|n.checked_add(map.full.cells.len().checked_mul(256)?)).and_then(|n|n.checked_add(np.checked_mul(128)?)).and_then(|n|n.checked_add(nt.checked_mul(128)?)).and_then(|n|n.checked_add(map.full.current_count().checked_mul(2*(nc-1))?.checked_mul(8)?));
@@ -940,7 +940,7 @@ fn uniform_section_profiles(mesh:&BoardMesh,map:&MixedMap<'_>,ports:&[[usize;2]]
     let triangles:Vec<_>=mesh.planar_triangles.iter().enumerate().map(|(i,&nodes)|Triangle{nodes,conductor:owner[0][i]}).collect();
     let section=Mesh{nodes_m:&nodes,triangles:&triangles,conductors:&conductors,reference};
     let remaining=wall.saturating_sub(start.elapsed());if remaining.is_zero(){return Err(error("DEADLINE","section producer deadline"));}
-    let deadline=seed_start.checked_add(seed_wall).ok_or_else(||error("DEADLINE","section producer deadline overflow"))?;
+    let deadline=if seed_wall == Duration::MAX { None } else { Some(seed_start.checked_add(seed_wall).ok_or_else(||error("DEADLINE","section producer deadline overflow"))?) };
     let transient=preflight.unwrap().checked_add(estimated.unwrap()).ok_or_else(||error("MEMORY_LIMIT","section producer plan overflow"))?;
     let work_budget=AllocationBudget{max_bytes:work_limit.saturating_sub(transient),..budget};
     let result=section_transition::solve_with_recovery(&section,frequency,0,&section_transition::Budget{max_bytes:work_budget.max_bytes,deadline},work_budget.max_bytes)
@@ -979,9 +979,9 @@ fn planar_section_profiles(
         }
     }
     let reference = component[ports[0][1]];
-    let deadline = Instant::now()
+    let deadline = if wall == Duration::MAX { None } else { Some(Instant::now()
         .checked_add(wall.saturating_sub(start.elapsed()) / 8)
-        .unwrap_or(start);
+        .unwrap_or(start)) };
     for axis in 0..2 {
         let transverse = 1 - axis;
         let mut breaks: Vec<_> = mesh.mesh.nodes_m[..mesh.planar_nodes_mm.len()]
@@ -997,7 +997,7 @@ fn planar_section_profiles(
         gaps.sort_by(|a, b| (b[1] - b[0]).total_cmp(&(a[1] - a[0])));
         for gap in gaps.into_iter().take(16) {
             check_time(start, wall)?;
-            if Instant::now() >= deadline {
+            if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
                 return Ok(None);
             }
             let cut = (gap[0] + gap[1]) * 0.5;
@@ -1394,7 +1394,7 @@ fn solve_checked_mesh_impl_policy(
         let field_available = budget.max_bytes.checked_sub(map.retained_bytes()?).and_then(|n|n.checked_sub(charge_bytes)).ok_or_else(|| error("MEMORY_LIMIT", "layered field resident budget exhausted"))?;
         // One product-space prism contributes up to 36 local terms while the
         // source physical budget counts its three tetrahedra.
-        let field_terms=budget.max_tetrahedra.checked_mul(12).ok_or_else(||error("MEMORY_LIMIT","field local-term budget overflow"))?;
+        let field_terms=budget.max_tetrahedra.saturating_mul(12);
         let prepared_field = if adaptive {
             let available=(budget.max_bytes/3).checked_sub(map.retained_bytes()?).ok_or_else(||error("MEMORY_LIMIT","adaptive field budget exhausted"))?;
             let field_budget=super::layered_capacitance::Budget {max_nodes:budget.max_nodes,max_local_terms:field_terms,max_bytes:available,max_wall:wall.saturating_sub(start.elapsed())};
@@ -1448,7 +1448,7 @@ fn solve_checked_mesh_impl_policy(
         result["ports"] = json!(request.ports);
         result["sourceMapping"] = json!(mesh.source_mapping);
         result["compactOperator"] = json!({"version":"compact-planar-v1", "ownership":"one physical owner per copper tetrahedron", "foilSupports":map.foils.len(), "localTetraSupports":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "potentialCoordinates":map.potential_count(), "currentCoordinates":map.current_count(), "dielectric":if layered || adaptive {"spatial-layered-field"} else {"homogeneous-air"}, "accuracy":"unverified", "limits":if adaptive {"sparse spatial-field and mixed basis limits; no proximity or physical approximation acceptance"} else {"bounded dense charge matrix; no proximity or physical approximation acceptance"}});
-        result["provenance"] = json!({"method":"compact mixed foil and local volume", "modelKind":"mixed", "sourceMapping":mesh.source_mapping, "barrelIds":mesh.barrel_ids, "electrodeAreasM2":mesh.electrode_areas_m2, "prisms":map.foils.len(), "nativeCopperTetrahedra":map.owners.len(), "volumeTetrahedra":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "maxCopperVolumeChange":0., "fullPotentialCount":map.full.potential_count(), "fullCurrentCount":map.full.current_count(), "retainedPotentials":model.potential_nodes.len(), "currentModes":model.current_dofs.len(), "plannedBytes":if layered {budget.max_bytes + reserve + provenance + partition_bytes} else {planned + reserve + provenance + partition_bytes}, "maxSeconds":wall.as_secs_f64(), "maxMemoryMiB":(budget.max_bytes + reserve + provenance + partition_bytes) as f64 / 1048576., "spatialCoverage":"unverified", "bandCoverage":"unverified", "magneticQuadratureCoverage":"unverified", "driveConvention":"1 A RMS matched Norton basis columns", "compactOperator":evidence});
+        result["provenance"] = json!({"method":"compact mixed foil and local volume", "modelKind":"mixed", "sourceMapping":mesh.source_mapping, "barrelIds":mesh.barrel_ids, "electrodeAreasM2":mesh.electrode_areas_m2, "prisms":map.foils.len(), "nativeCopperTetrahedra":map.owners.len(), "volumeTetrahedra":map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "maxCopperVolumeChange":0., "fullPotentialCount":map.full.potential_count(), "fullCurrentCount":map.full.current_count(), "retainedPotentials":model.potential_nodes.len(), "currentModes":model.current_dofs.len(), "plannedBytes":if layered && !adaptive {budget.max_bytes + reserve + provenance + partition_bytes} else {planned + reserve + provenance + partition_bytes}, "maxSeconds":wall.as_secs_f64(), "maxMemoryMiB":(budget.max_bytes + reserve + provenance + partition_bytes) as f64 / 1048576., "spatialCoverage":"unverified", "bandCoverage":"unverified", "magneticQuadratureCoverage":"unverified", "driveConvention":"1 A RMS matched Norton basis columns", "compactOperator":evidence});
         if !packages.is_empty() { result["provenance"]["attachments"] = json!(packages.iter().map(|p| json!({"id":p.id,"electrodes":p.electrodes})).collect::<Vec<_>>()); }
         if hybrid_requested {
             result["provenance"]["partitionPolicy"]=json!("automatic-hybrid-v1");

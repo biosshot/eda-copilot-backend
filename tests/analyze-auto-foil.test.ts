@@ -62,7 +62,7 @@ function checkedMock(problem:BoardFoilProblem, sourceMapping:AnalysisBoardFoilCh
   modelKind:'mixed' as const,nativeCopperTetrahedra:28,volumeTetrahedra:28,
   fullPotentialCount:4,fullCurrentCount:84,magneticQuadratureCoverage:'unverified' as const,
  }:{modelKind:'foil' as const,maxMagneticReciprocity:0,maxMagneticRefinement:0,maxElectricReciprocity:0};
- return {status:'complete',coverage:'unverified',representation:'S',frequenciesHz,referenceOhm:referenceOhm!,ports:g.ports,
+ const result:AnalysisBoardFoilCheckedReport = {status:'complete',coverage:'unverified',representation:'S',frequenciesHz,referenceOhm:referenceOhm!,ports:g.ports,
    parameters:frequenciesHz.map(()=>s),enrichment:[],
    samples:frequenciesHz.map(frequencyHz=>({frequencyHz,columns:[0,1].map(input=>({input,kclRelative:0,kvlRelative:0,...(mixed&&{kvlUncertaintyRelative:0}),copperLossW:8.875,powerBalanceErrorW:0}))})),
    quality:{maxKclRelative:0,maxKvlRelative:0,maxColumnPowerBalanceErrorW:0,...(mixed&&{maxFullKvlUncertaintyRelative:0})},
@@ -82,6 +82,20 @@ function checkedMock(problem:BoardFoilProblem, sourceMapping:AnalysisBoardFoilCh
     retainedPotentials:4,currentModes:6,plannedBytes:1024,maxSeconds:budget.maxSeconds,maxMemoryMiB:budget.maxMemoryMiB,
     spatialCoverage:'unverified',bandCoverage:'unverified',driveConvention:'1A RMS Norton'},
   };
+ if(problem.request.partitionPolicy==='automatic-hybrid-v1'){
+  result.operator='compact-planar-layered-prototype';
+  delete result.provenance.magneticOperator; delete result.quality.maxFullKvlUncertaintyRelative;
+  Object.assign(result.quality,{scope:'compact-discrete',physicalError:'unverified',maxCompactKvlUncertaintyRelative:0});
+  Object.assign(result.provenance,{partitionPolicy:'automatic-hybrid-v1',
+   compactOperator:{version:'compact-planar-v1',basis:'adaptive-mixed-closure',electricOperator:'layered-spatial-field-mesh',approximationError:'unverified',scope:'compact-discrete',originalVolumeActions:0,foilSupports:0,localTetraSupports:28,potentialCoordinates:4,currentCoordinates:84,planarMaxOrder:0,planarMaxRelativeChange:0,mixedMaxRelativeChange:1e-9,tetraSelfMaxRelativeChange:1e-9,tetraPairAdaptiveTolerance:1e-10,nearQuadratureEstimatedTolerance:1e-8,physicalAccuracy:'unverified'},
+   hybridAssembly:{policy:'automatic-hybrid-v1',method:'global-compact-mixed',potentialCoordinates:4,currentCoordinates:84,physicalAccuracy:'unverified'}});
+  for(const sample of result.samples)for(const column of sample.columns){
+   delete column.kvlUncertaintyRelative; column.compactKvlUncertaintyRelative=0;
+   column.compactMagneticCertificate={policy:'compact-mixed-near-far',nearQuadratureErrorCertified:false};
+   column.returnBoundary={policy:'internal-guard-flux-v1',boundsMm:(problem.geometry as any).returnBoundaryMm,conductiveA:[0,0,0,0,0,0],displacementA:[0,0,0,0,0,0],portCurrentA:.4,unresolvedA:0,relative:0,absoluteFloorA:1e-12,threshold:.01,passed:true};
+  }
+ }
+ return result;
 }
 
 test('finite lateral return triggers the joint foil producer and exact physical S replay',async()=>{
@@ -91,7 +105,7 @@ test('finite lateral return triggers the joint foil producer and exact physical 
  let producer:{boardSha256:string;geometrySha256:string}|undefined;
  const local=createLocalExecutor(((problem:BoardFoilProblem):AnalysisBoardFoilCheckedReport=>{
   assert.equal(problem.kind,'board-foil-checked');
-  assert.equal(problem.request.partitionPolicy,'automatic-conductive-schur-v1');
+  assert.equal(problem.request.partitionPolicy,'automatic-hybrid-v1');
   assert.ok(isAnalysisProblem(problem));
   foilCalls.push(problem);
   const g=problem.geometry as Geometry;
@@ -164,10 +178,8 @@ test('finite lateral return triggers the joint foil producer and exact physical 
  const temporal=await run(source+"await a.si().network(result.network).initial('steady').time({stopS:1e-3,sampleStepS:1e-4}).run();");
  assert.equal(temporal.error?.code,'NETWORK_PHYSICAL_SAMPLE_TOPOLOGY');
  const invalidEvidence:((report:AnalysisBoardFoilCheckedReport)=>void)[]=[
-  report=>{delete report.provenance.automaticPartition;},
-  report=>{report.provenance.automaticPartition!.originalCopperTetrahedra++;},
-  report=>{report.conductiveCorrection!.maxOriginalFreeResidualRelative=2e-8;},
-  report=>{report.conductiveCorrection!.ownerInteriorDofs=[0,0];},
+  report=>{delete report.provenance.hybridAssembly;},
+  report=>{report.provenance.hybridAssembly!.currentCoordinates++;},
   report=>{report.samples[0].columns[0].kclRelative=2e-8;},
   report=>{report.samples[0].columns[0].kvlRelative=2e-8;},
   report=>{report.samples[0].columns[0].powerBalanceErrorW=-1e-15;},

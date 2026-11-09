@@ -19,8 +19,8 @@ export type BoardFoilProblem = Readonly<{
     request: AnalysisBoardFoilCheckedRequest;
 }>;
 export type BoardFoilReport = AnalysisBoardFoilCheckedReport & {cache?: CacheEvidence & {
-    policy: 'exact-grid-result'; producerBudget: AnalysisBoardFoilCheckedRequest['budget'];
-    replayBudget: AnalysisBoardFoilCheckedRequest['budget']; elapsedSeconds: number;
+    policy: 'exact-grid-result'; resourcePolicy?: 'external'; producerBudget?: AnalysisBoardFoilCheckedRequest['budget'];
+    replayBudget?: AnalysisBoardFoilCheckedRequest['budget']; elapsedSeconds: number;
 }};
 export type AnalysisProblem = BoardFoilProblem | LocalDcExtractionProblem | Readonly<{kind:'board-section';boardJson:string;stack:unknown;slice:unknown}> | Readonly<{kind:'local-extraction';request:LocalExtractionRequest}> | Readonly<{ kind: 'import-board'; boardJson: string }>
     | Readonly<{kind:'geometry-validation';request:AnalysisValidationRequest}>
