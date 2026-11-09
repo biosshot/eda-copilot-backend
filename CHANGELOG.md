@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Tighten compact magnetic Taylor tails with outward support boxes and retain exact lower-triangle coefficients when the local budget admits them.
+- Balance late basis corrections across two failing drives after the original KCL gate passes.
+
 - Preserve small voltage differences in the original KVL audit by evaluating the gradient from component-relative reduced coordinates.
 
 - Try a single-sided tetrahedron integral with a bounded expansion tail when an analytic source evaluation can meet the existing tolerance.

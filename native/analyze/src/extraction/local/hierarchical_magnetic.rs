@@ -337,6 +337,7 @@ pub(super) struct Operator {
     shift_prefix: [Vec<usize>; 3],
     geometry_cache: std::cell::RefCell<Option<adaptive::Geometry>>,
     prepared_jets: std::cell::RefCell<Vec<JetSlot>>,
+    adaptive_box_half_extents: Vec<[f64; 3]>,
     adaptive_cover_cache_bytes: usize,
     pub planned_bytes: usize,
     pub exact_pairs: usize,
@@ -512,6 +513,7 @@ impl Operator {
             shift_prefix,
             geometry_cache: std::cell::RefCell::new(None),
             prepared_jets: std::cell::RefCell::new(Vec::new()),
+            adaptive_box_half_extents: Vec::new(),
             adaptive_cover_cache_bytes,
             planned_bytes: work.checked_add(adaptive_cover_cache_bytes.saturating_mul(2))
                 .ok_or_else(|| error("MEMORY_LIMIT", "adaptive cover cache plan overflow"))?,
@@ -650,6 +652,56 @@ impl Operator {
             .add(Interval::point(b.radius))
             .div(r);
         (r, q)
+    }
+
+    /// Admit optional support boxes before the first adaptive cover is built.
+    /// The moment centers, scales, and fixed-tree operator are unchanged.
+    pub(super) fn enable_compact_box_tail(
+        &mut self,
+        tetra: &[[[f64; 3]; 4]],
+        available_bytes: usize,
+    ) -> Result<usize> {
+        let bytes = self.nodes.len().checked_mul(std::mem::size_of::<[f64; 3]>())
+            .ok_or_else(|| error("MEMORY_LIMIT", "adaptive support box size overflow"))?;
+        if bytes > available_bytes || !self.adaptive_box_half_extents.is_empty() {
+            return Ok(0);
+        }
+        debug_assert_eq!(tetra.len(), self.permutation.len());
+        let mut extents = Vec::new();
+        if extents.try_reserve_exact(self.nodes.len()).is_err() {
+            return Ok(0);
+        }
+        for node in &self.nodes {
+            check_deadline(self.start, self.wall)?;
+            let mut half = [0f64; 3];
+            for &index in &self.permutation[node.range[0]..node.range[1]] {
+                for vertex in tetra[index] {
+                    for axis in 0..3 {
+                        let d = Interval::point(vertex[axis]).sub(Interval::point(node.center[axis]));
+                        half[axis] = half[axis].max(d.lo.abs().max(d.hi.abs()));
+                    }
+                }
+            }
+            extents.push(half);
+        }
+        self.adaptive_box_half_extents = extents;
+        Ok(bytes)
+    }
+
+    fn adaptive_separation(&self, a: usize, b: usize) -> (Interval, Interval) {
+        let (distance, spherical_q) = self.separation(a, b);
+        if self.adaptive_box_half_extents.is_empty() || distance.lo <= 0. {
+            return (distance, spherical_q);
+        }
+        let x = self.adaptive_box_half_extents[a];
+        let y = self.adaptive_box_half_extents[b];
+        // The displacement of two centered supports lies in their Minkowski
+        // difference box. Its diagonal bounds the norm of every displacement,
+        // just as the sum of their enclosing radii does.
+        let box_q = sum((0..3).map(|axis| Interval::point(x[axis]).add(Interval::point(y[axis])).pow(2)))
+            .sqrt().div(distance);
+        let q = if box_q.finite() && box_q.hi < spherical_q.hi { box_q } else { spherical_q };
+        (distance, q)
     }
     fn all_terminal_near(&self, a: usize, b: usize) -> bool {
         let a = &self.nodes[a];
@@ -958,11 +1010,11 @@ impl Operator {
         b: usize,
         p: usize,
     ) -> Result<(Vec<Interval>, Interval, Interval, Interval)> {
-        let (r, q) = self.separation(a, b);
+        let (r, q) = self.adaptive_separation(a, b);
         if !q.finite() || q.hi >= 1. || r.lo <= 0. {
             return Err(error(
                 "HIERARCHICAL_MAGNETIC_INTERVAL",
-                "strictly disjoint source balls required",
+                "strict Taylor displacement bound required",
             ));
         }
         let direction: [Interval; 3] = std::array::from_fn(|k| {

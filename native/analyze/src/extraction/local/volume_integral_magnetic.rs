@@ -277,6 +277,7 @@ struct BoundedPairs {
     axial: bool,
     checked_self: bool,
     compact_quadrature: bool,
+    dense_lower: std::cell::RefCell<Vec<f64>>,
     checked_self_values: std::cell::RefCell<Vec<Option<f64>>>,
     self_max_change: std::cell::Cell<f64>,
     cells: std::cell::RefCell<Vec<PairCell>>,
@@ -357,6 +358,7 @@ impl BoundedPairs {
             axial: false,
             checked_self: false,
             compact_quadrature: false,
+            dense_lower: std::cell::RefCell::new(Vec::new()),
             checked_self_values: std::cell::RefCell::new(Vec::new()),
             self_max_change: std::cell::Cell::new(0.),
             cells: std::cell::RefCell::new(Vec::with_capacity(slots)),
@@ -393,7 +395,7 @@ impl BoundedPairs {
             cells.try_reserve_exact(slots).map_err(|_| error("MEMORY_LIMIT", "parallel cache allocation failed"))?;
             caches.push(std::sync::Mutex::new(BoundedPairs {
                 tetra:self.tetra.clone(), pool:None, axial:self.axial, checked_self:false, compact_quadrature:self.compact_quadrature, checked_self_values:std::cell::RefCell::new(Vec::new()), self_max_change:std::cell::Cell::new(0.), parallel_counts:Some(std::cell::RefCell::new(ParallelCounts::default())),
-                scalar:std::cell::RefCell::new(Vec::new()), trace:None, capture:None,
+                scalar:std::cell::RefCell::new(Vec::new()), dense_lower:std::cell::RefCell::new(Vec::new()), trace:None, capture:None,
                 cells:std::cell::RefCell::new(cells), slots, tick:std::cell::Cell::new(0),
                 order:self.order, start:self.start, wall:self.wall,
             }));
@@ -534,11 +536,28 @@ impl BoundedPairs {
         Some((i.wrapping_mul(0x9e3779b1).wrapping_add(j.wrapping_mul(0x85ebca6b))) % capacity)
     }
     fn scalar_get(&self, i: usize, j: usize) -> Option<f64> {
+        if i >= j {
+            let lower = self.dense_lower.borrow();
+            if let Some(value) = Self::lower_pair_count(i).and_then(|offset| lower.get(offset + j)).copied() {
+                if let Some(trace) = &self.trace {
+                    if value.is_finite() { trace.borrow_mut().hits += 1; }
+                    else { trace.borrow_mut().misses += 1; }
+                }
+                return value.is_finite().then_some(value);
+            }
+        }
         let slot=self.scalar_slot(i,j,self.scalar.borrow().len());
         if let Some(k)=slot {if let Some(entry)=self.scalar.borrow()[k] {if entry.i==i && entry.j==j {if let Some(t)=&self.trace {t.borrow_mut().hits+=1;}return Some(entry.value);}} if let Some(t)=&self.trace {t.borrow_mut().misses+=1;}}
         None
     }
     fn scalar_put(&self, i: usize, j: usize, value: f64) {
+        if i >= j {
+            let mut lower = self.dense_lower.borrow_mut();
+            if let Some(slot) = Self::lower_pair_count(i).and_then(|offset| lower.get_mut(offset + j)) {
+                *slot = value;
+                return;
+            }
+        }
         let slot=self.scalar_slot(i,j,self.scalar.borrow().len());
         if let Some(k)=slot {let mut cache=self.scalar.borrow_mut();if cache[k].is_some() {if let Some(t)=&self.trace {t.borrow_mut().evictions+=1;}}cache[k]=Some(ScalarSlot{i,j,value});}
     }
@@ -1425,6 +1444,27 @@ impl CompactLocalHierarchy {
         };
         let mut operator = Self::new_with_config(tetra,budget,start,wall,workers,axial)?;
         operator.direct_small = true;
+        // Larger actions still traverse the hierarchy. Cache its exact
+        // ordered lower triangle only when the existing local budget admits
+        // the complete table. The tagged cache remains available for reverse
+        // queries and for models that cannot admit the table.
+        if let Some(count) = BoundedPairs::lower_pair_count(operator.space.cells.len()) {
+            if count > operator.pair.scalar.borrow().len() {
+                if let Some(bytes) = count.checked_mul(std::mem::size_of::<f64>())
+                    .and_then(|bytes| operator.planned_bytes.checked_add(bytes))
+                    .filter(|&bytes| bytes <= budget.max_bytes)
+                {
+                    check_deadline(start, wall)?;
+                    let mut table = Vec::new();
+                    if table.try_reserve_exact(count).is_ok() {
+                        table.resize(count, f64::NAN);
+                        *operator.pair.dense_lower.borrow_mut() = table;
+                        operator.planned_bytes = bytes;
+                        eprintln!("P7_COMPACT_LOCAL_TT_CACHE lowerEntries={count} plannedBytes={bytes}");
+                    }
+                }
+            }
+        }
         Ok(operator)
     }
     #[cfg(test)]
@@ -1456,6 +1496,7 @@ impl CompactLocalHierarchy {
         let mut tree = hierarchical_magnetic::Operator::new(&tetra, 12, 1, 0.2, base, budget, start, wall)?;
         let mut planned_bytes = base.checked_add(tree.planned_bytes).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy plan overflow"))?;
         budget.check(planned_bytes)?;
+        planned_bytes += tree.enable_compact_box_tail(&tetra, budget.max_bytes - planned_bytes)?;
         // Optional acceleration must never narrow the previously admitted
         // budget envelope: retain the original uncached action when full.
         if let Some(with_cache)=planned_bytes.checked_add(hierarchical_magnetic::COMPACT_JET_CACHE_BYTES) {
@@ -1653,6 +1694,11 @@ mod compact_reuse_tests {
         assert_eq!(pairs.scalar_get(0, 1), Some(100.));
         assert_eq!(pairs.scalar_get(0, 2), Some(101.));
         assert_eq!(pairs.scalar_get(1, 2), None);
+        *pairs.dense_lower.borrow_mut() = vec![f64::NAN; 10];
+        assert_eq!(pairs.scalar_get(2, 0), None);
+        pairs.scalar_put(2, 0, 200.);
+        assert_eq!(pairs.scalar_get(2, 0), Some(200.));
+        assert_eq!(pairs.scalar_get(0, 2), Some(101.));
     }
 
     #[test]

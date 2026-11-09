@@ -231,7 +231,7 @@ impl Operator {
             if matches!(decision, Decision::Near) {
                 if pair.a == pair.b { self_near += 1; }
                 else {
-                    let (r, q) = self.separation(pair.a, pair.b);
+                    let (r, q) = self.adaptive_separation(pair.a, pair.b);
                     if !q.finite() || q.hi >= 1. || r.lo <= 0. { shape_near += 1; }
                     else {
                         tail_near += 1;
@@ -641,7 +641,7 @@ impl<'a> Plan<'a> {
             Some((budget_a, budget_b))
         } else { None };
         if a == b { return None; }
-        let (r, q) = self.tree.separation(a, b);
+        let (r, q) = self.tree.adaptive_separation(a, b);
         if !q.finite() || q.hi >= 1. || r.lo <= 0. { return None; }
         let (budget_a, budget_b) = near_budgets.unwrap_or_else(budgets);
         let inverse_r = Interval::one().div(r);
@@ -686,7 +686,7 @@ impl<'a> Plan<'a> {
             Some((budget_a, budget_b))
         } else { None };
         if a == b { return None; }
-        let (r, q) = self.tree.separation(a, b);
+        let (r, q) = self.tree.adaptive_separation(a, b);
         if !q.finite() || q.hi >= 1. || r.lo <= 0. { return None; }
         let (budget_a, budget_b) = near_budgets.unwrap_or_else(budgets);
         let inverse_r = Interval::one().div(r);
@@ -1138,7 +1138,7 @@ impl<'a> Plan<'a> {
                 }
             }
         }
-        serde_json::json!({"coverSignature":self.cover_signature,"coverCacheEnabled":self.cover_cached,"coverCacheEntries":self.cover.len(),"coverCacheBytes":self.cover.capacity()*std::mem::size_of::<(Pair,Decision)>(),"envelopeSignature":self.envelope_signature,"modelRevision":1,"rhsColumns":goals.len(),"absoluteActionGoals":goals,"chosenOrderHistogram":self.counts.orders,"visitedNodePairs":self.counts.visited,"farClusterPairs":self.counts.far,"nearTiles":self.counts.near,"exactPairs":self.counts.exact,"zeroBlocks":self.counts.zero,"boundedOmittedBlocks":self.counts.negligible,"nearBoundEnabled":self.near_bound,"nearBoundPolicy":"summed-per-tetra-volume-v1","activeEnvelopeTerminals":self.active_terminals,"maximumMomentDegreeHistogram":mh,"maximumLocalDegreeHistogram":lh,"m2lScalarContractionsPerAction":self.counts.m2l,"shiftStencilApplicationsPerAction":shifts})
+        serde_json::json!({"coverSignature":self.cover_signature,"tailSeparationPolicy":if self.tree.adaptive_box_half_extents.is_empty() { "sphere-sum" } else { "sphere-or-support-box" },"coverCacheEnabled":self.cover_cached,"coverCacheEntries":self.cover.len(),"coverCacheBytes":self.cover.capacity()*std::mem::size_of::<(Pair,Decision)>(),"envelopeSignature":self.envelope_signature,"modelRevision":1,"rhsColumns":goals.len(),"absoluteActionGoals":goals,"chosenOrderHistogram":self.counts.orders,"visitedNodePairs":self.counts.visited,"farClusterPairs":self.counts.far,"nearTiles":self.counts.near,"exactPairs":self.counts.exact,"zeroBlocks":self.counts.zero,"boundedOmittedBlocks":self.counts.negligible,"nearBoundEnabled":self.near_bound,"nearBoundPolicy":"summed-per-tetra-volume-v1","activeEnvelopeTerminals":self.active_terminals,"maximumMomentDegreeHistogram":mh,"maximumLocalDegreeHistogram":lh,"m2lScalarContractionsPerAction":self.counts.m2l,"shiftStencilApplicationsPerAction":shifts})
     }
 }
 
@@ -1193,6 +1193,47 @@ pub fn resistive_goals(
 mod classification_power_tests {
     use super::*;
     use crate::extraction::local::volume_current;
+
+    #[test]
+    fn orthogonal_thin_support_boxes_tighten_adaptive_taylor_tail() {
+        let start = Instant::now();
+        let wall = Duration::from_secs(20);
+        let first = [[-0.001,0.,0.],[0.001,0.,0.],[-0.001,1e-5,0.],[-0.001,0.,1e-5]];
+        let second = first.map(|p| [p[1], p[0], p[2] + 0.0018]);
+        let geometry = vec![first, second];
+        let space = Space {
+            mesh_nodes: vec![],
+            node_potential: Default::default(),
+            cells: (0..2).map(|i| volume_current::Cell {
+                mesh_cell: i, potentials: [0,1,2,3], incidence: [[0.;3];4],
+                density_per_amp_m2: 1e6, resistance_ohm: 1.,
+            }).collect(),
+            components: vec![],
+            planned_bytes: 0,
+        };
+        let budget = AllocationBudget { max_bytes: 64 * 1024 * 1024, max_nodes: 100, max_tetrahedra: 100 };
+        let sphere = Operator::new(&geometry, 12, 1, 0.2, 0, budget, start, wall).unwrap();
+        let mut boxes = Operator::new(&geometry, 12, 1, 0.2, 0, budget, start, wall).unwrap();
+        assert_eq!(boxes.enable_compact_box_tail(&geometry, 0).unwrap(), 0);
+        assert_eq!(boxes.enable_compact_box_tail(&geometry, budget.max_bytes).unwrap(), 3 * 24);
+        assert!(sphere.separation(1, 2).1.hi > 1.);
+        assert!(boxes.adaptive_separation(1, 2).1.hi < 1.);
+        let pair = BoundedPairs::new(geometry.clone(), 12, 8, start, wall).unwrap();
+        let columns = [vec![1., -0.5, 0.25, 0.8, -0.4, 0.2]];
+        let goals = [1e-18];
+        let (shape, _) = sphere.ensure_geometry(&geometry).unwrap();
+        let baseline = Plan::new_with_policy(&sphere, &shape, &space, &columns, &goals, false).unwrap();
+        let tightened = Plan::new_with_policy(&boxes, &shape, &space, &columns, &goals, false).unwrap();
+        assert_eq!(baseline.counts.far, 0);
+        assert_eq!(tightened.counts.far, 1);
+        assert_eq!(tightened.counts.exact + 1, baseline.counts.exact);
+        let (reference, reference_bounds) = baseline.apply(&pair, &space, &columns[0], goals[0]).unwrap();
+        let (actual, bounds) = tightened.apply(&pair, &space, &columns[0], goals[0]).unwrap();
+        for i in 0..6 {
+            assert!((actual[i] - reference[i]).abs() <= bounds[i] + reference_bounds[i]);
+            assert!(bounds[i] <= goals[0]);
+        }
+    }
 
     #[test]
     fn profile_policy_accepts_only_enabled_switches() {
