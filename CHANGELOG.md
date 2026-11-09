@@ -4,7 +4,7 @@
 
 - Localize automatic hybrid via meshes with arrangement masks that preserve the copper and contact sets. Refresh the exact-response cache identity.
 
-- Reuse checked tetrahedron coefficients for small compact magnetic actions when the complete pair table fits the admitted cache.
+- Reuse checked tetrahedron coefficients for small compact magnetic actions when the lower triangle of pair coefficients fits the admitted cache.
 - Try independent longitudinal and transverse quadrature refinement for elongated tetrahedra in disjoint layers under `P7_MAGNETIC_AXIAL_TETS=1`.
 
 - Preserve matched conductor-interior potential coordinates with exact zero electric charge while retaining missing/unmatched trace rejection.

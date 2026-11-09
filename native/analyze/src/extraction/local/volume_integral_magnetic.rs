@@ -499,14 +499,32 @@ impl BoundedPairs {
         });
         Ok(())
     }
+    fn lower_pair_count(n: usize) -> Option<usize> {
+        n.checked_add(1)?.checked_mul(n).map(|count| count / 2)
+    }
     fn scalar_slot(&self, i:usize, j:usize, capacity:usize)->Option<usize> {
         if capacity==0 {return None;}
         let n=self.tetra.len();
         // If every ordered pair fits in already admitted storage, avoid
         // hash collisions and repeated exact quadrature. Larger domains keep
         // the bounded direct-mapped cache without allocating a dense matrix.
-        if n.checked_mul(n).is_some_and(|count|count<=capacity) {Some(i*n+j)}
-        else {Some((i.wrapping_mul(0x9e3779b1).wrapping_add(j.wrapping_mul(0x85ebca6b)))%capacity)}
+        if n.checked_mul(n).is_some_and(|count| count <= capacity) {
+            return Some(i * n + j);
+        }
+        if self.checked_self {
+            if let Some(lower) = Self::lower_pair_count(n).filter(|&count| count <= capacity) {
+                // The compact reciprocal action always asks for i >= j.
+                // Keep the opposite ordering distinct where storage permits.
+                return if i >= j {
+                    Self::lower_pair_count(i).map(|offset| offset + j)
+                } else {
+                    Self::lower_pair_count(j - 1)
+                        .and_then(|offset| lower.checked_add(offset + i))
+                        .filter(|&slot| slot < capacity)
+                };
+            }
+        }
+        Some((i.wrapping_mul(0x9e3779b1).wrapping_add(j.wrapping_mul(0x85ebca6b))) % capacity)
     }
     fn scalar_get(&self, i: usize, j: usize) -> Option<f64> {
         let slot=self.scalar_slot(i,j,self.scalar.borrow().len());
@@ -1540,7 +1558,7 @@ impl CompactLocalHierarchy {
             }
         }
         if self.direct_small
-            && n.checked_mul(n).is_some_and(|entries| entries <= self.pair.scalar.borrow().len())
+            && BoundedPairs::lower_pair_count(n).is_some_and(|entries| entries <= self.pair.scalar.borrow().len())
             && std::env::var_os("P7_MAGNETIC_BATCH_COLUMNS").is_none()
         {
             if let Some(weights) = weights {
@@ -1562,6 +1580,7 @@ mod compact_reuse_tests {
         let mut tree = CompactLocalHierarchy::new_with_config(
             geometry, budget, Instant::now(), Duration::from_secs(20), 1, false,
         ).unwrap();
+        tree.pair.scalar.borrow_mut().truncate(3);
         let columns = vec![vec![1., -0.5, 0.25, 0.3, 0., -0.2], vec![0.; 6]];
         let goals = [1e-18, 1e-18];
         let weights = [2., 3.];
@@ -1577,6 +1596,31 @@ mod compact_reuse_tests {
         }
         let warm = tree.actions_weighted(&columns, &goals, Some(&weights)).unwrap();
         assert_eq!(direct, warm);
+    }
+
+    #[test]
+    fn compact_lower_pair_cache_packs_all_reciprocal_pairs_without_aliasing_reverse() {
+        let tetra = [[0., 0., 0.], [0.001, 0., 0.], [0., 0.001, 0.], [0., 0., 0.001]];
+        let mut pairs = BoundedPairs::new_with_scalar(
+            vec![tetra; 4], 12, 2, 12, Instant::now(), Duration::from_secs(5),
+        ).unwrap();
+        pairs.checked_self = true;
+        for i in 0..4 {
+            for j in 0..=i {
+                pairs.scalar_put(i, j, (4 * i + j) as f64);
+            }
+        }
+        pairs.scalar_put(0, 1, 100.);
+        pairs.scalar_put(0, 2, 101.);
+        pairs.scalar_put(1, 2, 102.);
+        for i in 0..4 {
+            for j in 0..=i {
+                assert_eq!(pairs.scalar_get(i, j), Some((4 * i + j) as f64));
+            }
+        }
+        assert_eq!(pairs.scalar_get(0, 1), Some(100.));
+        assert_eq!(pairs.scalar_get(0, 2), Some(101.));
+        assert_eq!(pairs.scalar_get(1, 2), None);
     }
 
     #[test]
