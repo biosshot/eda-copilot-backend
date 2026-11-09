@@ -611,6 +611,14 @@ impl BoundedPairs {
             }
             return cells[ti].cubatures[k].direct_integral(&cells[si].cubatures[k]);
         }
+        if self.checked_self && self.axial {
+            if let Some((value, _)) = super::polyhedron::TetraCubature::try_axial_elongated(
+                self.tetra[i], self.tetra[j], &mut || check_deadline(self.start, self.wall),
+            )? {
+                *kind = 1;
+                return Ok(value);
+            }
+        }
         // For a severely flat source, analytic source evaluation can lose
         // precision and trigger expensive positive rules. Integrating over
         // that original cell instead leaves the reciprocal integral intact.
@@ -1351,6 +1359,7 @@ pub(super) struct CompactLocalHierarchy {
     tree: hierarchical_magnetic::Operator,
     space: Space,
     checked_self: std::cell::RefCell<Vec<bool>>,
+    direct_small: bool,
     pub(super) planned_bytes: usize,
 }
 impl CompactLocalHierarchy {
@@ -1365,7 +1374,9 @@ impl CompactLocalHierarchy {
             Err(std::env::VarError::NotPresent)=>false,
             _=>return Err(error("MAGNETIC_CONFIG","P7_MAGNETIC_AXIAL_TETS must be 0 or 1")),
         };
-        Self::new_with_config(tetra,budget,start,wall,workers,axial)
+        let mut operator = Self::new_with_config(tetra,budget,start,wall,workers,axial)?;
+        operator.direct_small = true;
+        Ok(operator)
     }
     #[cfg(test)]
     fn new_with_workers(tetra: Vec<[[f64;3];4]>, budget: AllocationBudget, start: Instant, wall: Duration, workers: usize) -> Result<Self> {
@@ -1389,8 +1400,9 @@ impl CompactLocalHierarchy {
         // The workers share immutable geometry by Arc. Account worker caches,
         // stacks, metadata, and the bounded ordered-result window up front.
         let worker_slots=2;
-        let parallel_bytes=if workers>1 { BoundedPairs::parallel_bytes_for_slots(workers,axial,worker_slots)?.checked_add(16384).ok_or_else(||error("MEMORY_LIMIT","local parallel plan overflow"))? } else { 0 };
-        let axial_bytes=if axial {slots.checked_mul(AXIAL_CELL_EXTRA_BYTES).and_then(|v|v.checked_add(64*1024)).ok_or_else(||error("MEMORY_LIMIT","local axial plan overflow"))?} else {0};
+        let elongated_scratch = if axial { super::polyhedron::ELONGATED_AXIAL_SCRATCH_BYTES } else { 0 };
+        let parallel_bytes=if workers>1 { BoundedPairs::parallel_bytes_for_slots(workers,axial,worker_slots)?.checked_add(16384 + workers * elongated_scratch).ok_or_else(||error("MEMORY_LIMIT","local parallel plan overflow"))? } else { 0 };
+        let axial_bytes=if axial {slots.checked_mul(AXIAL_CELL_EXTRA_BYTES).and_then(|v|v.checked_add(64*1024+super::polyhedron::ELONGATED_AXIAL_SCRATCH_BYTES)).ok_or_else(||error("MEMORY_LIMIT","local axial plan overflow"))?} else {0};
         let base = pair_bytes.checked_add(scalar_bytes).and_then(|v|v.checked_add(space_bytes)).and_then(|v|v.checked_add(parallel_bytes)).and_then(|v|v.checked_add(axial_bytes)).and_then(|v|v.checked_add(2*1024*1024)).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy base overflow"))?;
         let mut tree = hierarchical_magnetic::Operator::new(&tetra, 12, 1, 0.2, base, budget, start, wall)?;
         let mut planned_bytes = base.checked_add(tree.planned_bytes).ok_or_else(||error("MEMORY_LIMIT", "local hierarchy plan overflow"))?;
@@ -1410,7 +1422,7 @@ impl CompactLocalHierarchy {
         eprintln!("P7_COMPACT_LOCAL_TT_PLAN workers={workers} axial={axial} serialSlots={slots} workerSlots={} axialBytes={axial_bytes} parallelBytes={parallel_bytes} plannedBytes={planned_bytes}",if workers>1 {worker_slots} else {0});
         let cells = (0..n).map(|i| super::volume_current::Cell { mesh_cell:i, potentials:[0;4], incidence:[[0.;3];4], density_per_amp_m2:1., resistance_ohm:1. }).collect();
         let space = Space { mesh_nodes:vec![], node_potential:Default::default(), cells, components:vec![], planned_bytes:space_bytes };
-        Ok(Self { pair, tree, space, checked_self: std::cell::RefCell::new(vec![false;n]), planned_bytes })
+        Ok(Self { pair, tree, space, checked_self: std::cell::RefCell::new(vec![false;n]), direct_small: false, planned_bytes })
     }
     pub(super) fn self_max_change(&self) -> f64 { self.pair.self_max_change.get() }
     #[cfg(test)]
@@ -1419,6 +1431,102 @@ impl CompactLocalHierarchy {
     }
     pub(super) fn actions(&self, columns: &[Vec<f64>], goals: &[f64]) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
         self.actions_weighted(columns, goals, None)
+    }
+    fn direct_cached_actions(
+        &self,
+        columns: &[Vec<f64>],
+        goals: &[f64],
+        weights: &[f64],
+    ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
+        use hierarchical_magnetic::Interval;
+
+        let n = self.space.cells.len();
+        if weights.len() != n || weights.iter().any(|w| !w.is_finite() || *w <= 0.)
+            || columns.len() != goals.len()
+            || goals.iter().any(|g| !g.is_finite() || *g <= 0.)
+        {
+            return Err(error("HIERARCHICAL_MAGNETIC_GOAL", "positive finite weighted action goals required"));
+        }
+        // A single interval column and a fixed pair window fit the already
+        // admitted local workspace. Coefficients live in the existing cache.
+        let mut accumulators = vec![Interval::point(0.); 3 * n];
+        let mut window = Vec::with_capacity(128);
+        let mut actions = Vec::with_capacity(columns.len());
+        let mut bounds = Vec::with_capacity(columns.len());
+        for (column, &goal) in columns.iter().zip(goals) {
+            accumulators.fill(Interval::point(0.));
+            let mut reduce_window = |pairs: &[(usize, usize)]| -> Result<()> {
+                if pairs.is_empty() {
+                    return Ok(());
+                }
+                check_deadline(self.pair.start, self.pair.wall)?;
+                let mut cached = [0.; 128];
+                let all_cached = pairs.iter().zip(&mut cached).all(|(&(i, j), slot)| {
+                    self.pair.scalar_get(i, j).is_some_and(|value| {
+                        *slot = value;
+                        true
+                    })
+                });
+                let computed;
+                let values = if all_cached {
+                    &cached[..pairs.len()]
+                } else {
+                    computed = self.pair.pair_window(pairs)?;
+                    &computed
+                };
+                for (&(i, j), &value) in pairs.iter().zip(values) {
+                    // The compact space uses unit density. Apply the same
+                    // reciprocal scalar kernel in each Cartesian component.
+                    let coefficient = Interval::point(1e-7).mul(Interval::point(value));
+                    for axis in 0..3 {
+                        let a = 3 * i + axis;
+                        let b = 3 * j + axis;
+                        accumulators[a] = accumulators[a].add(coefficient.mul(Interval::point(column[b])));
+                        if i != j {
+                            accumulators[b] = accumulators[b].add(coefficient.mul(Interval::point(column[a])));
+                        }
+                    }
+                }
+                Ok(())
+            };
+            for i in 0..n {
+                let active_i = column[3 * i..3 * i + 3].iter().any(|v| *v != 0.);
+                for j in 0..=i {
+                    if active_i || column[3 * j..3 * j + 3].iter().any(|v| *v != 0.) {
+                        window.push((i, j));
+                        if window.len() == 128 {
+                            reduce_window(&window)?;
+                            window.clear();
+                        }
+                    }
+                }
+            }
+            reduce_window(&window)?;
+            window.clear();
+            let mut action = Vec::with_capacity(3 * n);
+            let mut uncertainty = Vec::with_capacity(3 * n);
+            for (row, &value) in accumulators.iter().enumerate() {
+                let mid = value.mid();
+                let bound = value.radius(mid);
+                let weight = weights[row / 3];
+                let leaf_goal = if weight == 1. {
+                    goal
+                } else {
+                    Interval::point(goal).div(Interval::point(weight)).lo
+                };
+                if !value.lo.is_finite() || !value.hi.is_finite() || value.lo > value.hi
+                    || !mid.is_finite() || !bound.is_finite() || leaf_goal <= 0. || bound > leaf_goal
+                {
+                    return Err(error("HIERARCHICAL_MAGNETIC_ACCURACY", "direct action enclosure exceeds requested absolute goal"));
+                }
+                action.push(mid);
+                uncertainty.push(bound);
+            }
+            check_deadline(self.pair.start, self.pair.wall)?;
+            actions.push(action);
+            bounds.push(uncertainty);
+        }
+        Ok((actions, bounds, serde_json::json!({"operator": "compact-direct-cached-tt"})))
     }
     pub(super) fn actions_weighted(&self, columns: &[Vec<f64>], goals: &[f64], weights: Option<&[f64]>) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
         let n=self.space.cells.len();
@@ -1431,6 +1539,14 @@ impl CompactLocalHierarchy {
                 self.checked_self.borrow_mut()[i]=true;
             }
         }
+        if self.direct_small
+            && n.checked_mul(n).is_some_and(|entries| entries <= self.pair.scalar.borrow().len())
+            && std::env::var_os("P7_MAGNETIC_BATCH_COLUMNS").is_none()
+        {
+            if let Some(weights) = weights {
+                return self.direct_cached_actions(columns, goals, weights);
+            }
+        }
         self.tree.batch_weighted(&self.pair, &self.space, columns, goals, weights)
     }
 }
@@ -1438,6 +1554,31 @@ impl CompactLocalHierarchy {
 #[cfg(test)]
 mod compact_reuse_tests {
     use super::*;
+    #[test]
+    fn small_direct_cached_action_matches_hierarchy_within_bounds() {
+        let tetra = [[0., 0., 0.], [0.001, 0., 0.], [0., 0.001, 0.], [0., 0., 0.001]];
+        let geometry = vec![tetra, tetra.map(|p| [p[0] + 0.01, p[1], p[2]])];
+        let budget = AllocationBudget { max_bytes: 128 * 1024 * 1024, max_nodes: 1000, max_tetrahedra: 1000 };
+        let mut tree = CompactLocalHierarchy::new_with_config(
+            geometry, budget, Instant::now(), Duration::from_secs(20), 1, false,
+        ).unwrap();
+        let columns = vec![vec![1., -0.5, 0.25, 0.3, 0., -0.2], vec![0.; 6]];
+        let goals = [1e-18, 1e-18];
+        let weights = [2., 3.];
+        let (reference, reference_bounds, _) = tree.actions_weighted(&columns, &goals, Some(&weights)).unwrap();
+        tree.direct_small = true;
+        let direct = tree.actions_weighted(&columns, &goals, Some(&weights)).unwrap();
+        assert_eq!(direct.2["operator"], "compact-direct-cached-tt");
+        for (c, goal) in goals.into_iter().enumerate() {
+            for row in 0..6 {
+                assert!((direct.0[c][row] - reference[c][row]).abs() <= direct.1[c][row] + reference_bounds[c][row]);
+                assert!(direct.1[c][row] <= goal / weights[row / 3]);
+            }
+        }
+        let warm = tree.actions_weighted(&columns, &goals, Some(&weights)).unwrap();
+        assert_eq!(direct, warm);
+    }
+
     #[test]
     fn weighted_local_actions_preserve_scalar_results_and_bounds() {
         let tetra=[[0.,0.,0.],[0.001,0.,0.],[0.,0.001,0.],[0.,0.,0.001]];

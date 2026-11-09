@@ -889,6 +889,68 @@ pub struct TetraCubature {
 
 #[derive(Clone, Copy)]
 struct AxialLine { origin: [f64; 3], center: [f64; 3], half: f64, weight: f64 }
+// At most two 40 x 8 rules are simultaneously live.
+pub(super) const ELONGATED_AXIAL_SCRATCH_BYTES: usize = 2 * 40 * 8 * std::mem::size_of::<AxialLine>();
+
+struct ElongatedAxialCell {
+    origin: [f64; 3],
+    offsets: [[f64; 3]; 3],
+    axial_vertex: usize,
+    height: f64,
+    volume: f64,
+    z: [f64; 2],
+}
+
+impl ElongatedAxialCell {
+    fn new(tetra: [[f64; 3]; 4]) -> Result<Option<Self>> {
+        let Some((i, j)) = (0..4).flat_map(|i| (i+1..4).map(move |j| (i,j)))
+            .find(|&(i,j)| tetra[i][..2] == tetra[j][..2] && tetra[i][2] != tetra[j][2])
+        else { return Ok(None) };
+        let mut triangle = [i; 3];
+        for (slot, vertex) in triangle[1..].iter_mut().zip((0..4).filter(|&k| k!=i && k!=j)) {
+            *slot = vertex;
+        }
+        let edges = std::array::from_fn::<_,3,_>(|k| {
+            let d = sub(tetra[triangle[(k+1)%3]], tetra[triangle[(k+2)%3]]);
+            d[0].hypot(d[1])
+        });
+        let apex = (0..3).min_by(|&a,&b| edges[a].total_cmp(&edges[b])).unwrap();
+        if edges[apex] <= 0. || edges.iter().copied().fold(0., f64::max) < 8. * edges[apex] {
+            return Ok(None);
+        }
+        triangle.rotate_left(apex);
+        let origin = tetra[i];
+        let height = tetra[j][2] - origin[2];
+        Ok(Some(Self {
+            origin, height,
+            offsets: triangle.map(|k| sub(tetra[k], origin)),
+            axial_vertex: triangle.iter().position(|&k| k == i).unwrap(),
+            volume: super::mesh::tetra_coefficients(tetra)?.0,
+            z: tetra.iter().fold([f64::INFINITY, f64::NEG_INFINITY], |z,p| [z[0].min(p[2]),z[1].max(p[2])]),
+        }))
+    }
+
+    fn rule(&self, long: usize, cross: usize, check: &mut dyn FnMut() -> Result<()>) -> Result<Vec<AxialLine>> {
+        let long_rule = super::prism::cached_rule(long)?;
+        let cross_rule = super::prism::cached_rule(cross)?;
+        let mut lines = Vec::new();
+        lines.try_reserve_exact(long * cross).map_err(|_| error("MEMORY_LIMIT", "elongated axial line allocation failed"))?;
+        for (&u,&wu) in long_rule.nodes.iter().zip(&long_rule.weights) {
+            check()?;
+            for (&v,&wv) in cross_rule.nodes.iter().zip(&cross_rule.weights) {
+                let lambda = [u, (1.-u)*(1.-v), (1.-u)*v];
+                let dz = lambda[self.axial_vertex] * self.height;
+                let mut center = std::array::from_fn(|k| dot(lambda, self.offsets.map(|p| p[k])));
+                center[2] += dz/2.;
+                lines.push(AxialLine {
+                    origin: self.origin, center, half: dz.abs()/2.,
+                    weight: 6.*self.volume*wu*wv*(1.-u)*lambda[self.axial_vertex],
+                });
+            }
+        }
+        Ok(lines)
+    }
+}
 
 pub(super) struct AxialDetail { pub value:Option<(f64,f64)>, pub reason:Option<usize>, pub coarse:Option<f64>, pub fine:Option<f64> }
 impl AxialDetail { fn fallback(reason:usize,coarse:Option<f64>,fine:Option<f64>)->Self { Self { value:None,reason:Some(reason),coarse,fine } } }
@@ -979,6 +1041,36 @@ impl TetraCubature {
         }}
         Ok(Some(lines))
     }
+
+    /// Candidate for long thin product-mesh cells whose transverse triangles
+    /// make isotropic outer rules unnecessarily expensive. The inner line
+    /// estimator and the existing relative outer threshold both still apply.
+    pub(super) fn try_axial_elongated(
+        a: [[f64; 3]; 4], b: [[f64; 3]; 4], check: &mut dyn FnMut() -> Result<()>,
+    ) -> Result<Option<(f64, f64)>> {
+        let Some(a) = ElongatedAxialCell::new(a)? else { return Ok(None) };
+        let Some(b) = ElongatedAxialCell::new(b)? else { return Ok(None) };
+        if a.z[1] >= b.z[0] && b.z[1] >= a.z[0] {
+            return Ok(None);
+        }
+        let evaluate = |long, cross, check: &mut dyn FnMut() -> Result<()>| -> Result<Option<(f64, f64)>> {
+            let left = a.rule(long, cross, check)?;
+            let right = b.rule(long, cross, check)?;
+            Ok(Self::axial_lines_integral_checked(&left, &right, check)?.ok())
+        };
+        let Some(mut coarse) = evaluate(32, 4, check)? else { return Ok(None) };
+        for (long, cross) in [(36, 4), (40, 6)] {
+            let Some(longitudinal) = evaluate(long, cross, check)? else { return Ok(None) };
+            let Some(fine) = evaluate(long, cross + 2, check)? else { return Ok(None) };
+            let estimate = (coarse.0 - longitudinal.0).abs() + (longitudinal.0 - fine.0).abs()
+                + coarse.1 + 2. * longitudinal.1 + 2. * fine.1 + 2048. * f64::EPSILON * fine.0;
+            if estimate <= 1e-10 * fine.0 {
+                return Ok(Some((fine.0, estimate)));
+            }
+            coarse = fine;
+        }
+        Ok(None)
+    }
     /// Experimental estimate; outer refinement and roundoff are not certified error bounds.
     pub fn try_axial_integral(&self, other: &Self) -> Result<Option<(f64,f64)>> {
         Ok(self.try_axial_detailed(other)?.value)
@@ -992,8 +1084,24 @@ impl TetraCubature {
     }
     fn axial_lines_integral(a: &[AxialLine], b: &[AxialLine]) -> std::result::Result<(f64,f64),usize> {
         if a.len()!=b.len() {return Err(2)}
+        Self::axial_lines_integral_checked(a, b, &mut || Ok(())).expect("no cancellation callback")
+    }
+    fn axial_lines_integral_checked(a: &[AxialLine], b: &[AxialLine], check: &mut dyn FnMut() -> Result<()>) -> Result<std::result::Result<(f64,f64),usize>> {
         let mut total=super::accurate::Sum::default(); let mut error_sum=0.;
-        for x in a { let mut row=0.; for y in b {
+        for x in a {
+            check()?;
+            match Self::axial_line_row(x,b,&mut error_sum) {
+                Ok(row) => total=total.add(super::accurate::Sum::from(x.weight*row)),
+                Err(reason) => return Ok(Err(reason)),
+            }
+        }
+        let value=total.value();
+        if !value.is_finite() || value<=0. || !error_sum.is_finite() {return Ok(Err(2))}
+        Ok(Ok((value,error_sum)))
+    }
+    fn axial_line_row(x: &AxialLine, b: &[AxialLine], error_sum: &mut f64) -> std::result::Result<f64,usize> {
+        let mut row=0.;
+        for y in b {
             let d: [f64;3]=std::array::from_fn(|i| super::accurate::Sum::from(x.origin[i]).sub(super::accurate::Sum::from(y.origin[i])).add(super::accurate::Sum::from(x.center[i])).sub(super::accurate::Sum::from(y.center[i])).value()); let r=norm(d); let q=(x.half+y.half)/r*(1.+16.*f64::EPSILON);
             if !r.is_finite() || r<=0. || !q.is_finite() {return Err(2)} if q>0.25 {return Err(1)}
             let aa=x.half/r; let bb=y.half/r; let z=d[2]/r;
@@ -1007,9 +1115,9 @@ impl TetraCubature {
             }
             let allowance=(tail+128.*f64::EPSILON*(degree+1) as f64*abs_sum)/r;
             let avg=sum/r; if !avg.is_finite() || avg<=0. || !allowance.is_finite() || allowance>1e-12*avg {return Err(2)}
-            row+=y.weight*avg; error_sum+=x.weight*y.weight*allowance;
-        } total=total.add(super::accurate::Sum::from(x.weight*row)); }
-        let value=total.value(); if !value.is_finite() || value<=0. || !error_sum.is_finite() {return Err(2)} Ok((value,error_sum))
+            row+=y.weight*avg; *error_sum+=x.weight*y.weight*allowance;
+        }
+        Ok(row)
     }
     pub fn separation_q(&self, other: &Self) -> f64 {
         (self.radius + other.radius) / norm(sub(self.center, other.center)) * (1. + 64. * f64::EPSILON)
@@ -1657,6 +1765,23 @@ pub(super) fn axial_retry_fixture()->([[f64;3];4],[[f64;3];4]) {
 
 #[cfg(test)]
 mod axial_outer_retry_tests {
+    #[test]
+    fn elongated_axial_refines_both_directions_on_reference_swap_pair() {
+        // Original IEEE coordinates captured from the reference-swap solver.
+        let target = [[4572864269056641902, 4559503350031976833, 4551879656527788476], [4559042181320182932, 4559964518468892828, 4551879656527788476], [4559042181320182932, 4559042181320182932, 4551879656527788476], [4559042181320182932, 4559042181320182932, 4552248591409262667]].map(|p| p.map(f64::from_bits));
+        let source = [[4572753355786830259, 4563792100513311527, 0], [4572748976913053165, 4563591897862713283, 0], [4559042181320182932, 4563822482218610233, 0], [4559042181320182932, 4563822482218610233, 4532020583610935537]].map(|p| p.map(f64::from_bits));
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+        let mut check = || {
+            if std::time::Instant::now() < deadline { Ok(()) }
+            else { Err(super::error("DEADLINE", "elongated axial pair control")) }
+        };
+        let (value, estimate) = super::TetraCubature::try_axial_elongated(target, source, &mut check).unwrap().unwrap();
+        let a = super::TetraCubature::axial_line_rule(target, 40).unwrap().unwrap();
+        let b = super::TetraCubature::axial_line_rule(source, 40).unwrap().unwrap();
+        let (reference, _) = super::TetraCubature::axial_lines_integral_checked(&a, &b, &mut check).unwrap().unwrap();
+        assert!((value - reference).abs() <= 1e-10 * reference);
+        assert!(estimate <= 1e-10 * value);
+    }
     use super::*;
     #[test] fn captured_outer_retry_and_limits() {
         let (a,b)=axial_retry_fixture();

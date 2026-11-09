@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Reuse checked tetrahedron coefficients for small compact magnetic actions when the complete pair table fits the admitted cache.
+- Try independent longitudinal and transverse quadrature refinement for elongated tetrahedra in disjoint layers under `P7_MAGNETIC_AXIAL_TETS=1`.
+
 - Preserve matched conductor-interior potential coordinates with exact zero electric charge while retaining missing/unmatched trace rejection.
 - Avoid scalar pair-cache collisions when all ordered local pairs fit existing admitted storage; memory limits remain unchanged.
 
