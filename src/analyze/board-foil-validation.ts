@@ -298,6 +298,13 @@ export function validateBoardFoilReport(
    if(!spatial||typeof spatial!=='object'||spatial.status!=="recovered-discrete"||spatial.physicalAccuracy!=="unverified"||spatial.driveConvention!=="1 A RMS matched Norton"||!Array.isArray(spatial.supports)||spatial.supports.length===0||!Number.isFinite(spatial.copperLossW)||spatial.copperLossW<0)
     fail('invalid discrete spatial recovery');
    const vector=(v:unknown,n:number):v is number[]=>Array.isArray(v)&&v.length===n&&v.every(x=>typeof x==='number'&&Number.isFinite(x));
+   const summary=spatial.summary===true;
+   if(summary){
+    const total=spatial.totalLossW,count=spatial.supportCount;
+    if(typeof total!=='number'||!Number.isFinite(total)||typeof count!=='number'||!Number.isInteger(count)||count<spatial.supports.length||spatial.supports.length>32||
+     Math.abs(total-spatial.copperLossW)>1e-18+1e-8*(total+spatial.copperLossW)||Math.abs(total-column.copperLossW)>1e-18+1e-8*(total+column.copperLossW))
+     fail('spatial summary loss disagrees with copper loss');
+   }
    let sum=0;
    for(const support of spatial.supports){
     if(!support||typeof support!=='object') fail('invalid spatial support');
@@ -307,7 +314,8 @@ export function validateBoardFoilReport(
     if(!geometry||!Number.isFinite(support.volumeM3)||support.volumeM3<=0||!Number.isFinite(support.lossW)||support.lossW<0||!vector(support.currentDensityRealAPerM2,3)||!vector(support.currentDensityImaginaryAPerM2,3)) fail('invalid spatial support');
     sum+=support.lossW;
    }
-   if(!Number.isFinite(sum)||Math.abs(sum-column.copperLossW)>1e-18+1e-8*(sum+column.copperLossW)||Math.abs(sum-spatial.copperLossW)>1e-18+1e-8*(sum+spatial.copperLossW)) fail('spatial losses disagree with copper loss');
+   if(summary){ if(!Number.isFinite(sum)||sum>spatial.copperLossW*(1+1e-8)+1e-18) fail('spatial summary supports exceed copper loss'); }
+   else if(!Number.isFinite(sum)||Math.abs(sum-column.copperLossW)>1e-18+1e-8*(sum+column.copperLossW)||Math.abs(sum-spatial.copperLossW)>1e-18+1e-8*(sum+spatial.copperLossW)) fail('spatial losses disagree with copper loss');
   }
   const packages=column.packages??[];
   if(!Array.isArray(packages)||packages.length!==attachments.length||packages.some((value,j)=>

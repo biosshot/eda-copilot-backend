@@ -553,7 +553,7 @@ test('exact grid cache preserves immutable producer evidence through warm and pr
 });
 
 test('exact foil cache keys the physical request and bounds replay size', () => {
-  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v11');
+  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v20');
   const priorCompactPlanar = process.env.P7_COMPACT_PLANAR;
   const priorFullMixed = process.env.P7_COMPACT_FULL_MIXED;
   const dir = mkdtempSync(join(tmpdir(),'p7-foil-cache-'));
