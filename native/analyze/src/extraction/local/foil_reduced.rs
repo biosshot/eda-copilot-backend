@@ -1690,6 +1690,11 @@ impl ReducedSpace {
                             s * w,
                             bounds[1 - k][j],
                         )?;
+                    // The non-certified operator has an estimated width only:
+                    // convergence uses the residual itself, the width is advisory.
+                    let (numerator, denominator) = if self.approximate_magnetic {
+                        (kvl_rows[k][j].abs(), a.abs() + b.abs() + z.abs())
+                    } else { (numerator, denominator) };
                     kvl = kvl.max(numerator);
                     kvl_scale = kvl_scale.max(denominator);
                     kvl_uncertainty = kvl_uncertainty.max(uncertainty);
@@ -2519,7 +2524,7 @@ impl ReducedSpace {
                 });
                 history.push(json!({"iteration":iteration,"frequencyHz":frequency,"input":input,
                     "potentialModes":self.basis.voltage.len(),"currentModes":self.basis.current.len(),
-                    "maxKclRelative":max_kcl,"maxKvlRelative":max_kvl,
+                    "maxKclRelative":max_kcl,"maxKvlRelative":max_kvl,"maxKvlUncertaintyRelative":max_kvl_uncertainty,
                     "balancedDriveInput":other.map(|(input, _)| *input)}));
                 if std::env::var_os("P7_MAGNETIC_PHASE_PROFILE").as_deref() == Some(std::ffi::OsStr::new("1")) {
                     eprintln!("P7_COMPACT_GRID_STEP {}", history.last().expect("recorded iteration"));
