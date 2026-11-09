@@ -3679,9 +3679,12 @@ impl CompactMixedMagnetic {
 }
 pub(super) fn solve_compact_adaptive(
     map:&super::mixed_conductor::MixedMap<'_>, names:&[String], ports:&[[usize;2]],
-    packages:&[super::checked_packages::Validated], grid:MatchedGrid<'_>, field:&super::layered_capacitance::SpatialFieldAction, budget:AllocationBudget, start:Instant, wall:Duration,
+    packages:&[super::checked_packages::Validated], grid:MatchedGrid<'_>, field:&super::layered_capacitance::SpatialFieldAction, budget:AllocationBudget, start:Instant, wall:Duration, profiles:Option<&[Vec<f64>]>,
 )->Result<(serde_json::Value,Model,usize)> {
     let n=map.potential_count();let ni=map.current_count();
+    let profiles=profiles.unwrap_or(&[]);
+    if profiles.len()>32 || profiles.iter().any(|p|p.len()!=ni || p.iter().any(|v|!v.is_finite())) {return Err(error("MIXED_FOIL_PROFILE","invalid compact current profiles"));}
+    let profile_bytes=profiles.len().checked_mul(ni).and_then(|n|n.checked_mul(8)).and_then(|n|n.checked_add(profiles.len().checked_mul(std::mem::size_of::<Vec<f64>>())?)).ok_or_else(||error("MEMORY_LIMIT","compact profile plan overflow"))?;
     let share=budget.max_bytes/3;
     let operator_budget=AllocationBudget{max_bytes:share,..budget};
     if field.planned_bytes()>share {return Err(error("MEMORY_LIMIT","adaptive layered field exceeds reserved share"));}
@@ -3690,7 +3693,7 @@ pub(super) fn solve_compact_adaptive(
     eprintln!("P7_COMPACT_STAGE stage=magnetic-prepare-end elapsed={:.6}",start.elapsed().as_secs_f64());
     let mut terms=vec![Vec::new();ni];for &(i,j,a) in &map.incidence {terms[j].push((i,a));}
     let cells:Vec<_>=terms.into_iter().zip(&map.resistance_ohm).map(|(t,&r)|Cell::new(t,r)).collect();
-    let basis_budget=AllocationBudget{max_bytes:share,..budget};
+    let basis_budget=AllocationBudget{max_bytes:share.checked_sub(profile_bytes).ok_or_else(||error("MEMORY_LIMIT","compact profiles exceed basis budget"))?,..budget};
     let upper_hz=grid.frequencies.last().copied().ok_or_else(||error("HYBRID_INPUT","empty frequency grid"))?;
     let stratified=map.foils.iter().any(|foil|map.mesh().layer_spans.get(&foil.layer).is_some_and(|span|*span!=foil.z_span_m));
     let group_bytes=if stratified {map.foils.len().checked_mul(512).ok_or_else(||error("MEMORY_LIMIT","skin group plan overflow"))?} else {0};
@@ -3704,9 +3707,9 @@ pub(super) fn solve_compact_adaptive(
     let hint_cap=if eligible_groups>0 {seed_count.checked_mul(4).ok_or_else(||error("MEMORY_LIMIT","skin hint count overflow"))?} else {0};
     let growth=grid.max_iterations.checked_mul(4).ok_or_else(||error("MEMORY_LIMIT","enrichment mode count overflow"))?;
     let voltage_cap=retained.len().checked_add(growth).ok_or_else(||error("MEMORY_LIMIT","potential mode count overflow"))?;
-    let current_cap=seed_count.checked_add(growth).and_then(|v|v.checked_add(hint_cap)).ok_or_else(||error("MEMORY_LIMIT","current mode count overflow"))?.min(ni);
+    let current_cap=seed_count.checked_add(growth).and_then(|v|v.checked_add(hint_cap)).and_then(|v|v.checked_add(profiles.len())).ok_or_else(||error("MEMORY_LIMIT","current mode count overflow"))?.min(ni);
     let hint_bytes=hint_cap.checked_mul(ni).and_then(|v|v.checked_mul(8)).and_then(|v|v.checked_add(hint_cap.checked_mul(std::mem::size_of::<Vec<f64>>())?)).ok_or_else(||error("MEMORY_LIMIT","skin hint buffer overflow"))?;
-    let hinted_plan=if hint_cap>0 {
+    let hinted_plan=if hint_cap>0 || !profiles.is_empty() {
         if voltage_cap>1024 || current_cap>1024 || voltage_cap.checked_add(current_cap).is_none_or(|v|v>2048) {return Err(error("FOIL_REDUCTION","skin hint mode cap exceeds P6 coordinate limits"));}
         let plan=native_mode_sizes(n,ni,voltage_cap,current_cap,hint_bytes.checked_add(group_bytes).ok_or_else(||error("MEMORY_LIMIT","skin hint scratch overflow"))?)?;
         basis_budget.check(plan)?; Some(plan)
@@ -3722,6 +3725,9 @@ pub(super) fn solve_compact_adaptive(
         for hint in hints {check_time(start,wall)?;append_current_mode(&cells,&mut basis.current,hint)?;}
     }
     let added_hints=basis.current.len()-before_hints;
+    let before_profiles=basis.current.len();
+    for profile in profiles {check_time(start,wall)?;append_current_mode(&cells,&mut basis.current,profile.clone())?;}
+    let added_profiles=basis.current.len()-before_profiles;
     eprintln!("P7_COMPACT_STAGE stage=charge-actions-start elapsed={:.6} modes={}",start.elapsed().as_secs_f64(),basis.voltage.len());
     let charges=basis.voltage.iter().map(|v|field.apply(v)).collect::<Result<Vec<_>>>()?;
     eprintln!("P7_COMPACT_STAGE stage=charge-actions-end elapsed={:.6} actions={}",start.elapsed().as_secs_f64(),field.action_count());
@@ -3782,7 +3788,7 @@ pub(super) fn solve_compact_adaptive(
         column["compactMagneticCertificate"]=certificate;
     }}}}
     result["quality"]["scope"]=serde_json::json!("compact-discrete");result["quality"]["physicalError"]=serde_json::json!("unverified");
-    result["compactEvidence"]=serde_json::json!({"basis":"adaptive-mixed-closure","skinHints":{"eligibleGroups":eligible_groups,"submitted":submitted_hints,"added":added_hints,"upperHz":upper_hz,"coverage":"unverified"},"planarMaxOrder":magnetic.planar_max_order.get(),"planarMaxRelativeChange":magnetic.planar_max_change.get(),"mixedMaxRelativeChange":magnetic.mixed_max_change.get(),"mixedTetraFallbackCount":magnetic.mixed_fallback_count.get(),"mixedTetraFallbackTolerance":1e-10,"goalAdmittedNearPairs":magnetic.promoted_pairs.get(),"parallelPlWorkers":magnetic.pl_workers,"tetraSelfMaxRelativeChange":magnetic.self_max_change.get().max(magnetic.local_hierarchy.as_ref().map_or(0., |h|h.self_max_change())),"tetraPairAdaptiveTolerance":1e-10,"nearQuadratureEstimatedTolerance":1e-8,"originalVolumeActions":0,"scope":"compact-discrete","physicalAccuracy":"unverified","approximationError":"unverified"});
+    result["compactEvidence"]=serde_json::json!({"basis":"adaptive-mixed-closure","sectionHints":{"submitted":profiles.len(),"addedCurrentModes":added_profiles},"skinHints":{"eligibleGroups":eligible_groups,"submitted":submitted_hints,"added":added_hints,"upperHz":upper_hz,"coverage":"unverified"},"planarMaxOrder":magnetic.planar_max_order.get(),"planarMaxRelativeChange":magnetic.planar_max_change.get(),"mixedMaxRelativeChange":magnetic.mixed_max_change.get(),"mixedTetraFallbackCount":magnetic.mixed_fallback_count.get(),"mixedTetraFallbackTolerance":1e-10,"goalAdmittedNearPairs":magnetic.promoted_pairs.get(),"parallelPlWorkers":magnetic.pl_workers,"tetraSelfMaxRelativeChange":magnetic.self_max_change.get().max(magnetic.local_hierarchy.as_ref().map_or(0., |h|h.self_max_change())),"tetraPairAdaptiveTolerance":1e-10,"nearQuadratureEstimatedTolerance":1e-8,"originalVolumeActions":0,"scope":"compact-discrete","physicalAccuracy":"unverified","approximationError":"unverified"});
     Ok((result,space.model,budget.max_bytes))
 }
 

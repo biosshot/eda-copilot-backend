@@ -653,6 +653,21 @@ impl MixedMap<'_> {
             .map(|e| e.map_or(0., |e| e.weight * mixed[e.mode]))
             .collect())
     }
+    // Least-squares restriction of a current vector, rather than the transpose
+    // used for dual operator actions. Each full coordinate has at most one owner.
+    fn restrict_current_profile(&self, full: &[f64]) -> Result<Vec<f64>> {
+        dimensions(full, self.full.current_count())?;
+        let mut numerator = vec![0.; self.current_count()];
+        let mut denominator = vec![0.; self.current_count()];
+        for (&entry, &value) in self.current_map.iter().zip(full) {
+            if let Some(e) = entry { numerator[e.mode] += e.weight * value; denominator[e.mode] += e.weight * e.weight; }
+        }
+        for (value, weight) in numerator.iter_mut().zip(denominator) {
+            if weight > 0. { *value /= weight; }
+            if !value.is_finite() { return Err(error("MIXED_FOIL_PROFILE", "invalid restricted current profile")); }
+        }
+        Ok(numerator)
+    }
     pub fn project_potential_action(&self, full: &[f64]) -> Result<Vec<f64>> {
         dimensions(full, self.full.potential_count())?;
         let mut mixed = vec![Sum::default(); self.potential_count()];
@@ -1170,8 +1185,13 @@ fn solve_checked_mesh_impl_policy(
             Some(field.energy_capacitance_f()?)
         } else { None };
         let model_budget = AllocationBudget { max_bytes: budget.max_bytes.checked_sub(charge_bytes).ok_or_else(|| error("MEMORY_LIMIT", "layered trace matrix exceeds budget"))?, ..budget };
+        let profiles = if hybrid_requested || (adaptive && std::env::var_os("P7_SECTION_HINTS").as_deref()==Some(std::ffi::OsStr::new("1"))) {
+            let available = (budget.max_bytes / 3).saturating_sub(map.retained_bytes()?);
+            uniform_section_profiles(mesh, &map, &ports, frequencies_hz[0], AllocationBudget { max_bytes: available, ..budget }, start, wall)?
+                .map(|profiles| profiles.iter().map(|p| map.restrict_current_profile(p)).collect::<Result<Vec<_>>>()).transpose()?
+        } else { None };
         let (model, mut evidence, planned, adaptive_result) = if adaptive {
-            let (mut result,model,planned)=foil_reduced::solve_compact_adaptive(&map,&mixed_names,&mixed_ports,packages,MatchedGrid{frequencies:frequencies_hz,references:reference_ohm,max_iterations},prepared_field.as_ref().ok_or_else(||error("HYBRID_INPUT","missing prepared field"))?,model_budget,start,wall)?;
+            let (mut result,model,planned)=foil_reduced::solve_compact_adaptive(&map,&mixed_names,&mixed_ports,packages,MatchedGrid{frequencies:frequencies_hz,references:reference_ohm,max_iterations},prepared_field.as_ref().ok_or_else(||error("HYBRID_INPUT","missing prepared field"))?,model_budget,start,wall,profiles.as_deref())?;
             let evidence=result["compactEvidence"].take();(model,evidence,planned,Some(result))
         } else {
             let (model,evidence,planned)=foil_reduced::compact_planar_model(&map,&mixed_names,&mixed_ports,super::super::EPS0,layered_c.as_deref(),model_budget,start,wall)?;
