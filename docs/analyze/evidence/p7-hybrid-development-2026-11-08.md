@@ -321,3 +321,9 @@ The captured orientation requests also reveal an applicability limit of this con
 - The original component-relative gradient control passes in 1794205156413253600. The fresh addon diagnostic 1794205454021017200 lowers open-return KVL to 5.231e-7.
 - Charge-coordinate shape and compact worker admission controls pass in 1794205801166928000 and 1794205801575022700. The intermediate addon diagnostic 1794206200458162400 reaches KVL 3.368e-8 and KCL 2.742e-11 at iteration 16. The 1e-8 gate still refuses. This diagnostic precedes the final consistent split port-voltage output check.
 - Worker dispatch is confirmed by 18,205 single-sided accepts in reference swap 1794206219395727300. It completes 84,608 pairs before the native deadline. The resource and physical gates still require a successful complete solve.
+
+### Remote-return control passes on the balanced addon
+
+- Fresh addon from the split state, balanced enrichment and tightened support geometry passes remote-return control 1794207040061964800 in 17.250 s for both cases. The closed remote branch has six recovered supports, nonzero current and 0.557880 mW loss. Power balance error is 3.708e-15 W. The open response completes at KVL 5.266e-9 and KCL 1.190e-12. Removing the bridge changes S by up to 0.999919.
+- Support-box regression 1794206815732967300 passes in release within 1.250 s. The same captured plan-only via geometry in 1794206827993348400 reduces exact pairs from 1,121,242 to 687,118. The debug build of the numerical regression had exceeded the external 5 s test deadline.
+- Actual via 1794207057562155700 and reference swap 1794207083618816300 reach the native 25 s deadline. Their completed pairs are 13,312 and 94,976 respectively. The latter still needs a stronger first-action algorithm. Full acceptance remains outside these runs.
