@@ -329,3 +329,9 @@ The captured orientation requests also reveal an applicability limit of this con
 - Actual via 1794207057562155700 and reference swap 1794207083618816300 reach the native 25 s deadline. Their completed pairs are 13,312 and 94,976 respectively. The latter still needs a stronger first-action algorithm. Full acceptance remains outside these runs.
 - Single-column plus bounded-near via diagnostic 1794207140877482800 reduces the active cover to 15,558 near pairs and completes 14,336 before the same deadline. This configuration remains diagnostic.
 - Latest addon smoke 1794207182605685600 passes cold/warm/restart and regime audit in 5.547 s.
+
+### Cubature and worker cache follow-up
+
+- Elongated target quadrature and worker memory controls pass in 1794207543439819400, 1794207544377790400 and 1794207544769572800. Prism census 1794207545314671800 finds zero exactly equal nonzero density triples among 430 complete groups in the active via column. Direct prism substitution is unsupported by this sample.
+- On addon 2a05066 the complete remote-return control 1794207888163406500 passes in 16.312 s. Via 1794207835498909600 and reference swap 1794207861810269000 complete 14,464 and 102,784 near pairs before native 25 s deadlines. Elongated target accepted 36 and 4,872 pairs respectively.
+- Via diagnostic 1794207937455031000 with the existing axial policy disabled completes 14,976 of 15,558 active pairs at the same native deadline. This is still an incomplete magnetic action.
