@@ -1240,7 +1240,10 @@ impl TetraCubature {
             let mut row = 0.;
             for (s, &ws) in other.points.iter().zip(&other.weights) {
                 let delta = sub(*p, *s);
-                let distance = norm(delta);
+                // Normal-range squared distances need no scaling. Keep
+                // the robust norm for underflow and overflow cases.
+                let squared = dot(delta, delta);
+                let distance = if squared.is_normal() { squared.sqrt() } else { norm(delta) };
                 if distance <= 0. || !distance.is_finite() {
                     return Err(error("TETRA_INTEGRAL_RANGE", "separated direct cubature intersects or overflows"));
                 }
