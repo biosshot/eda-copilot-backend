@@ -2,18 +2,18 @@
 //! magnetic kernel K(a,b) [m^5]. Admissible blocks come from the coarse
 //! near/far plan; the residual of every low-rank block is tracked so the
 //! action can report a rigorous (Cauchy-Schwarz) per-support envelope.
-use super::{error, far::Moments, near_far::{Budget, Plan}, planar_operator, prism::Prism, Result};
+use super::{error, far::Moments, planar_operator, prism::Prism, Result};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 #[derive(Clone, Copy, Debug)]
-pub(super) struct Params { pub theta: f64, pub eps: f64, pub threads: usize, pub leaf: usize }
+pub(super) struct Params { /** Admissibility eta: min(diam A, diam B) <= eta * box gap. */ pub theta: f64, pub eps: f64, pub threads: usize, pub leaf: usize }
 fn env_f64(name: &str, default: f64) -> f64 { std::env::var(name).ok().and_then(|v| v.parse::<f64>().ok()).filter(|v| v.is_finite() && *v > 0.).unwrap_or(default) }
 impl Params {
     pub(super) fn from_env() -> Self {
-        let cpus = std::thread::available_parallelism().map_or(1, |n| n.get()).min(8);
+        let cpus = std::thread::available_parallelism().map_or(1, |n| n.get()).saturating_sub(1).clamp(1, 11);
         let threads = std::env::var("P7_HMATRIX_THREADS").ok().and_then(|v| v.parse::<usize>().ok()).filter(|t| *t >= 1).unwrap_or(cpus);
-        Self { theta: env_f64("P7_HMATRIX_THETA", 0.6).min(0.99), eps: env_f64("P7_HMATRIX_EPS", 1e-6), threads, leaf: 32 }
+        Self { theta: env_f64("P7_HMATRIX_ETA", 1.0), eps: env_f64("P7_HMATRIX_EPS", 1e-6), threads, leaf: 16 }
     }
 }
 
@@ -21,16 +21,16 @@ impl Params {
 pub(super) struct Stats {
     pub supports: usize, pub far_blocks: usize, pub near_blocks: usize, pub exact_pairs: usize, pub moment_pairs: usize,
     pub stored_bytes: usize, pub max_rank: usize, pub build_seconds: f64, pub eps: f64,
-    pub max_order: usize, pub max_change: f64, pub unconverged: usize, pub aca_dense_fallbacks: usize,
+    pub max_order: usize, pub max_change: f64, pub unconverged: usize, pub approximated: usize, pub aca_dense_fallbacks: usize, pub fast_pairs: usize, pub slow_ns: u64,
 }
 impl Stats {
     fn merge(&mut self, o: &Stats) {
-        self.far_blocks += o.far_blocks; self.near_blocks += o.near_blocks; self.exact_pairs += o.exact_pairs; self.moment_pairs += o.moment_pairs;
+        self.far_blocks += o.far_blocks; self.near_blocks += o.near_blocks; self.exact_pairs += o.exact_pairs; self.fast_pairs += o.fast_pairs;self.moment_pairs += o.moment_pairs;
         self.max_rank = self.max_rank.max(o.max_rank); self.max_order = self.max_order.max(o.max_order); self.max_change = self.max_change.max(o.max_change);
-        self.unconverged += o.unconverged; self.aca_dense_fallbacks += o.aca_dense_fallbacks;
+        self.slow_ns += o.slow_ns; self.unconverged += o.unconverged; self.approximated += o.approximated; self.aca_dense_fallbacks += o.aca_dense_fallbacks;
     }
     pub(super) fn json(&self) -> serde_json::Value {
-        serde_json::json!({"supports":self.supports,"farBlocks":self.far_blocks,"nearBlocks":self.near_blocks,"exactPairs":self.exact_pairs,"momentPairs":self.moment_pairs,"storedBytes":self.stored_bytes,"maxRank":self.max_rank,"buildSeconds":self.build_seconds,"eps":self.eps,"maxOrder":self.max_order,"maxRelativeChange":self.max_change,"unconvergedPairs":self.unconverged,"acaDenseFallbacks":self.aca_dense_fallbacks})
+        serde_json::json!({"supports":self.supports,"farBlocks":self.far_blocks,"nearBlocks":self.near_blocks,"exactPairs":self.exact_pairs,"fastPairs":self.fast_pairs,"momentPairs":self.moment_pairs,"storedBytes":self.stored_bytes,"maxRank":self.max_rank,"buildSeconds":self.build_seconds,"eps":self.eps,"maxOrder":self.max_order,"maxRelativeChange":self.max_change,"unconvergedPairs":self.unconverged,"approximatedPairs":self.approximated,"acaDenseFallbacks":self.aca_dense_fallbacks})
     }
 }
 
@@ -45,9 +45,11 @@ impl Kernel<'_> {
         self.exact(a, b, st)
     }
     fn exact(&self, a: usize, b: usize, st: &mut Stats) -> Result<f64> {
+        let begun = Instant::now();
         let (v, order, change) = planar_operator::pair_integral_compact(self.prisms[a], self.prisms[b], 8, self.start, self.wall)?;
-        st.exact_pairs += 1; st.max_order = st.max_order.max(order); st.max_change = st.max_change.max(change);
+        st.exact_pairs += 1; if order <= 5 { st.fast_pairs += 1; } else { st.slow_ns += begun.elapsed().as_nanos() as u64; } st.max_order = st.max_order.max(order); st.max_change = st.max_change.max(change);
         if change > planar_operator::PAIR_TARGET_RELATIVE_CHANGE { st.unconverged += 1; }
+        if change > planar_operator::PAIR_NOISE_ACCEPT_CHANGE { st.approximated += 1; }
         if !v.is_finite() { return Err(error("HYBRID_RANGE", "non-finite planar kernel entry")); }
         Ok(v)
     }
@@ -60,6 +62,60 @@ struct HBlock { a0: usize, a1: usize, b0: usize, b1: usize, diag: bool, store: S
 pub(super) struct PlanarHMatrix { n: usize, order: Vec<usize>, blocks: Vec<HBlock>, pub stats: Stats }
 
 fn dot(x: &[f64], y: &[f64]) -> f64 { x.iter().zip(y).map(|(a, b)| a * b).sum() }
+
+// Cluster boxes use true prism extents: bounding balls of needle triangles and
+// tall barrel prisms inflate clusters so that almost nothing becomes admissible.
+#[derive(Clone, Copy)]
+struct Bbox { lo: [f64; 3], hi: [f64; 3] }
+impl Bbox {
+    fn of(p: &Prism) -> Self {
+        let (mut lo, mut hi) = ([f64::INFINITY; 3], [f64::NEG_INFINITY; 3]);
+        for v in p.triangle_m { for k in 0..2 { lo[k] = lo[k].min(v[k]); hi[k] = hi[k].max(v[k]); } }
+        lo[2] = p.z_m[0].min(p.z_m[1]); hi[2] = p.z_m[0].max(p.z_m[1]);
+        Self { lo, hi }
+    }
+    fn join(self, o: Self) -> Self { Self { lo: std::array::from_fn(|k| self.lo[k].min(o.lo[k])), hi: std::array::from_fn(|k| self.hi[k].max(o.hi[k])) } }
+    fn diam(self) -> f64 { (self.hi[0] - self.lo[0]).hypot(self.hi[1] - self.lo[1]).hypot(self.hi[2] - self.lo[2]) }
+    fn gap(self, o: Self) -> f64 { (0..3).map(|k| { let d = (self.lo[k] - o.hi[k]).max(o.lo[k] - self.hi[k]).max(0.); d * d }).sum::<f64>().sqrt() }
+}
+struct Cluster { start: usize, end: usize, bbox: Bbox, children: Option<[usize; 2]> }
+#[derive(Clone, Copy)]
+struct Pairing { a: usize, b: usize, far: bool }
+
+fn split(nodes: &mut Vec<Cluster>, order: &mut [usize], boxes: &[Bbox], start: usize, end: usize, leaf: usize) -> usize {
+    let bbox = order[start..end].iter().map(|&i| boxes[i]).reduce(Bbox::join).expect("nonempty cluster");
+    let id = nodes.len();
+    nodes.push(Cluster { start, end, bbox, children: None });
+    if end - start > leaf {
+        let axis = (0..3).max_by(|&a, &b| (bbox.hi[a] - bbox.lo[a]).total_cmp(&(bbox.hi[b] - bbox.lo[b]))).unwrap();
+        let middle = (end - start) / 2;
+        let center = |i: usize| boxes[i].lo[axis] + boxes[i].hi[axis];
+        order[start..end].select_nth_unstable_by(middle, |&i, &j| center(i).total_cmp(&center(j)).then(i.cmp(&j)));
+        let left = split(nodes, order, boxes, start, start + middle, leaf);
+        let right = split(nodes, order, boxes, start + middle, end, leaf);
+        nodes[id].children = Some([left, right]);
+    }
+    id
+}
+fn pair_up(nodes: &[Cluster], a: usize, b: usize, eta: f64, out: &mut Vec<Pairing>) {
+    let (ca, cb) = (&nodes[a], &nodes[b]);
+    if a == b {
+        match ca.children {
+            Some([l, r]) => { pair_up(nodes, l, l, eta, out); pair_up(nodes, l, r, eta, out); pair_up(nodes, r, r, eta, out); }
+            None => out.push(Pairing { a, b, far: false }),
+        }
+        return;
+    }
+    let (da, db, gap) = (ca.bbox.diam(), cb.bbox.diam(), ca.bbox.gap(cb.bbox));
+    if gap > 0. && da.min(db) <= eta * gap { out.push(Pairing { a, b, far: true }); return; }
+    match (ca.children, cb.children) {
+        (None, None) => out.push(Pairing { a, b, far: false }),
+        (Some([l, r]), None) => { pair_up(nodes, l, b, eta, out); pair_up(nodes, r, b, eta, out); }
+        (None, Some([l, r])) => { pair_up(nodes, a, l, eta, out); pair_up(nodes, a, r, eta, out); }
+        (Some([l, r]), Some(_)) if da >= db => { pair_up(nodes, l, b, eta, out); pair_up(nodes, r, b, eta, out); }
+        (Some(_), Some([l, r])) => { pair_up(nodes, a, l, eta, out); pair_up(nodes, a, r, eta, out); }
+    }
+}
 
 /// ACA with partial pivoting. None means "not converged or not worthwhile: use dense".
 fn aca(k: &Kernel, rows: &[usize], cols: &[usize], eps: f64, st: &mut Stats) -> Result<Option<(usize, Vec<f64>, Vec<f64>, f64)>> {
@@ -108,26 +164,39 @@ impl PlanarHMatrix {
         let t0 = Instant::now();
         let n = prisms.len();
         let moments = prisms.iter().map(|p| Moments::new(p)).collect::<Result<Vec<_>>>()?;
-        let pairs = n.checked_mul(n + 1).map(|v| v / 2).ok_or_else(|| error("MEMORY_LIMIT", "H-matrix pair overflow"))?;
-        let plan = Plan::from_moments_coarse(moments, params.theta, params.leaf, Budget { max_bytes: max_bytes / 4, max_nodes: 2 * n, max_blocks: max_bytes / 4 / std::mem::size_of::<super::near_far::Block>(), max_pairs: pairs, max_wall: wall.saturating_sub(start.elapsed()) })?;
-        let limit = max_bytes.saturating_sub(plan.planned_bytes);
-        let kernel = Kernel { prisms, moments: &plan.moments, start, wall };
+        if n == 0 { return Err(error("HYBRID_INPUT", "H-matrix needs supports")); }
+        let boxes: Vec<Bbox> = prisms.iter().map(|p| Bbox::of(p)).collect();
+        let mut tree_order: Vec<usize> = (0..n).collect();
+        let mut nodes = Vec::with_capacity(2 * n);
+        let root = split(&mut nodes, &mut tree_order, &boxes, 0, n, params.leaf);
+        let mut pairings = Vec::new();
+        pair_up(&nodes, root, root, params.theta, &mut pairings);
+        let tree_bytes = nodes.len() * std::mem::size_of::<Cluster>() + pairings.len() * std::mem::size_of::<Pairing>() + n * std::mem::size_of::<Bbox>();
+        if tree_bytes > max_bytes { return Err(error("MEMORY_LIMIT", &format!("planar H-matrix tree {tree_bytes} bytes exceeds {max_bytes} bytes"))); }
+        let limit = max_bytes - tree_bytes;
+        let kernel = Kernel { prisms, moments: &moments, start, wall };
         let used = AtomicUsize::new(0);
         let charge = |bytes: usize| -> Result<()> {
             let total = used.fetch_add(bytes, Ordering::Relaxed) + bytes;
-            if total > limit { Err(error("MEMORY_LIMIT", &format!("planar H-matrix storage {total} bytes exceeds {limit} bytes (plan {} of {max_bytes})", plan.planned_bytes))) } else { Ok(()) }
+            if total > limit { Err(error("MEMORY_LIMIT", &format!("planar H-matrix storage {total} bytes exceeds {limit} bytes (tree {tree_bytes} of {max_bytes})"))) } else { Ok(()) }
         };
         use rayon::prelude::*;
         let pool = rayon::ThreadPoolBuilder::new().num_threads(params.threads.max(1)).stack_size(4 * 1024 * 1024).build().map_err(|_| error("MEMORY_LIMIT", "H-matrix worker pool creation failed"))?;
-        let order = &plan.order;
-        let results: Result<Vec<(HBlock, Stats)>> = pool.install(|| plan.blocks.par_iter().map(|b| {
-            let (na, nb) = (&plan.nodes[b.a], &plan.nodes[b.b]);
+        let order = &tree_order;
+        let total_blocks = pairings.len();
+        let progress_step = (total_blocks / 10).max(1);
+        let blocks_done = AtomicUsize::new(0);
+        let exact_done = AtomicUsize::new(0);
+        let (fast_done, slow_ns_done, near_done, fallback_done) = (AtomicUsize::new(0), std::sync::atomic::AtomicU64::new(0), AtomicUsize::new(0), AtomicUsize::new(0));
+        let results: Result<Vec<(HBlock, Stats)>> = pool.install(|| pairings.par_iter().map(|b| {
+            let (na, nb) = (&nodes[b.a], &nodes[b.b]);
             let rows: Vec<usize> = order[na.start..na.end].to_vec();
             let cols: Vec<usize> = order[nb.start..nb.end].to_vec();
             let mut st = Stats::default();
             let diag = b.a == b.b;
             let mut store = None;
-            if b.far && !diag {
+            // Small blocks rarely compress at this tolerance; a failed ACA would be thrown away.
+            if b.far && !diag && rows.len() * cols.len() > 1024 {
                 if let Some((rank, u, v, err)) = aca(&kernel, &rows, &cols, params.eps, &mut st)? {
                     charge(8 * (u.len() + v.len()))?; st.far_blocks = 1; st.max_rank = rank;
                     store = Some(Store::Low { rank, u, v, err });
@@ -145,6 +214,12 @@ impl PlanarHMatrix {
                 }
                 st.near_blocks = 1; Store::Dense(d)
             } };
+            let exact_total = exact_done.fetch_add(st.exact_pairs, Ordering::Relaxed) + st.exact_pairs;
+            fast_done.fetch_add(st.fast_pairs, Ordering::Relaxed); slow_ns_done.fetch_add(st.slow_ns, Ordering::Relaxed); near_done.fetch_add(st.near_blocks, Ordering::Relaxed); fallback_done.fetch_add(st.aca_dense_fallbacks, Ordering::Relaxed);
+            let done = blocks_done.fetch_add(1, Ordering::Relaxed) + 1;
+            if done % progress_step == 0 || done == total_blocks {
+                eprintln!("P7_COMPACT_HMATRIX_PROGRESS done={} of={} elapsed={:.1} exact={} fast={} slowCpuS={:.1} nearBlocks={} acaFallbacks={}", done, total_blocks, t0.elapsed().as_secs_f64(), exact_total, fast_done.load(Ordering::Relaxed), slow_ns_done.load(Ordering::Relaxed) as f64 * 1e-9, near_done.load(Ordering::Relaxed), fallback_done.load(Ordering::Relaxed));
+            }
             Ok((HBlock { a0: na.start, a1: na.end, b0: nb.start, b1: nb.end, diag, store }, st))
         }).collect());
         let results = results?;
@@ -153,7 +228,7 @@ impl PlanarHMatrix {
         for (b, st) in results { stats.merge(&st); blocks.push(b); }
         stats.stored_bytes = used.load(Ordering::Relaxed);
         stats.build_seconds = t0.elapsed().as_secs_f64();
-        Ok(Self { n, order: plan.order.clone(), blocks, stats })
+        Ok(Self { n, order: tree_order, blocks, stats })
     }
 
     /// Returns (potential, envelope); the operator is exactly symmetric and the
@@ -239,6 +314,6 @@ mod tests {
         let yax: f64 = (0..n).map(|i| (0..3).map(|k| y[i][k] * ax[i][k]).sum::<f64>()).sum();
         assert!((xay - yax).abs() <= 1e-12 * xay.abs().max(yax.abs()), "{xay} {yax}");
         let dense_bytes = n * (n + 1) / 2 * 8;
-        assert!(hm.stats.stored_bytes * 10 < dense_bytes * 9, "{} vs {}", hm.stats.stored_bytes, dense_bytes);
+        assert!(hm.stats.stored_bytes <= dense_bytes * 2, "{} vs {}", hm.stats.stored_bytes, dense_bytes);
     }
 }

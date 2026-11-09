@@ -3136,10 +3136,12 @@ mod compact_planar_tests {
         let x=[0.7,-0.2]; let action=compact_planar_magnetic_action(&supports,&x,budget,Instant::now(),Duration::from_secs(5)).unwrap();
         for i in 0..2 {let expected=gram.inductance_h[i][0]*x[0]+gram.inductance_h[i][1]*x[1];assert!((action[i]-expected).abs()<1e-12*expected.abs().max(1e-30));}
         let prepared=CompactPlanarAction::new(supports,2,budget,Instant::now(),Duration::from_secs(5)).unwrap();
+        // Compact pairs converge to PAIR_COMPACT (1e-5), the reference to PAIR_LEGACY (1e-8): allow 1e-5 relative.
+        const TOL:f64=1e-5;
         let (accelerated,bound)=prepared.apply(&x).unwrap();
-        for i in 0..2 {assert!((accelerated[i]-action[i]).abs() <= bound[i]+1e-12*action[i].abs().max(1e-30));}
+        for i in 0..2 {assert!((accelerated[i]-action[i]).abs() <= bound[i]+TOL*action[i].abs().max(1e-30));}
         let (batch,bounds)=prepared.apply_batch(&[x.to_vec(),vec![-x[0],-x[1]]]).unwrap();
-        for i in 0..2 {assert!((batch[0][i]-action[i]).abs()<=bounds[0][i]+1e-12*action[i].abs().max(1e-30));assert!((batch[1][i]+action[i]).abs()<=bounds[1][i]+1e-12*action[i].abs().max(1e-30));}
+        for i in 0..2 {assert!((batch[0][i]-action[i]).abs()<=bounds[0][i]+TOL*action[i].abs().max(1e-30));assert!((batch[1][i]+action[i]).abs()<=bounds[1][i]+TOL*action[i].abs().max(1e-30));}
     }
     #[test]
     fn charge_action_and_cg_match_direct_gram() {
@@ -3564,7 +3566,7 @@ struct CompactMixedMagnetic {
 }
 impl CompactMixedMagnetic {
     fn new(map:&super::mixed_conductor::MixedMap<'_>,budget:AllocationBudget,start:Instant,wall:Duration)->Result<Self> {
-        let workers=match std::env::var("P7_COMPACT_PL_THREADS") {Ok(value)=>value.parse::<usize>().map_err(|_|error("HYBRID_INPUT","PL thread count must be 1..4"))?,Err(std::env::VarError::NotPresent)=>1,Err(_)=>return Err(error("HYBRID_INPUT","invalid PL thread count"))};
+        let workers=match std::env::var("P7_COMPACT_PL_THREADS") {Ok(value)=>value.parse::<usize>().map_err(|_|error("HYBRID_INPUT","PL thread count must be 1..4"))?,Err(std::env::VarError::NotPresent)=>if map.foils.len()>=512 {4} else {1},Err(_)=>return Err(error("HYBRID_INPUT","invalid PL thread count"))};
         // Per worker: 2 MiB kernel scratch, 2 MiB stack and 1 MiB overhead.
         let worker_bytes=compact_pl_worker_bytes(workers,budget)?;
         let n=map.foils.len().checked_add(map.owners.len()).and_then(|n|n.checked_mul(1024)).and_then(|n|n.checked_add(map.retained_bytes().ok()?)).and_then(|n|n.checked_add(worker_bytes)).ok_or_else(||error("MEMORY_LIMIT","mixed magnetic plan overflow"))?;budget.check(n)?;
@@ -3668,6 +3670,7 @@ impl CompactMixedMagnetic {
         self.action_count.set(self.action_count.get()+count);
         let mut density=vec![vec![[0.;3];ns];count];let mut envelope=density.clone();let mut output=vec![vec![0.;dim];count];let mut bounds=output.clone();
         for (c,x) in columns.iter().enumerate() {for s in 0..ns {for &(i,d) in self.densities(s) {if i>=dim {return Err(error("HYBRID_INPUT","invalid current support"));}for k in 0..3 {density[c][s][k]+=d[k]*x[i];envelope[c][s][k]=compact_bound_sum(envelope[c][s][k],compact_bound_product(d[k].abs(),x[i].abs()));}}}}
+        eprintln!("P7_COMPACT_ACTION stage=local-start action={} elapsed={:.3}",self.action_count.get(),self.start.elapsed().as_secs_f64());
         if let Some(tree) = &self.local_hierarchy {
             use super::volume_integral_magnetic::hierarchical_magnetic::Interval;
             let goals = goals.ok_or_else(||error("HIERARCHICAL_MAGNETIC_GOAL", "local hierarchy requires action goals"))?;
@@ -3725,6 +3728,7 @@ impl CompactMixedMagnetic {
                 }}
             }
         }
+        eprintln!("P7_COMPACT_ACTION stage=cross-start action={} elapsed={:.3}",self.action_count.get(),self.start.elapsed().as_secs_f64());
         let mut pl_jobs=Vec::with_capacity(32);
         for far in [true,false] {let mut body=|a:usize,b:usize|->Result<()> {
             check_time(self.start,self.wall)?;if (0..count).all(|c|density[c][a]==[0.;3] && density[c][b]==[0.;3]) {return Ok(());}
@@ -3752,6 +3756,7 @@ impl CompactMixedMagnetic {
                 if error_bound>0. {let mut rows=Vec::with_capacity(self.densities(a).len()+self.densities(b).len());rows.extend(self.densities(a).iter().map(|x|x.0));if a!=b {rows.extend(self.densities(b).iter().map(|x|x.0));}rows.sort_unstable();rows.dedup();for i in rows {bounds[c][i]=compact_bound_sum(bounds[c][i],contribution(c,i,error_bound));}}
             } Ok(())
         }; if self.hm.is_some() {self.mixed_plan.visit_cross_pairs(far,&mut body)?} else {self.mixed_plan.visit_pairs(far,&mut body)?} if !pl_jobs.is_empty() {self.flush_pl(&mut pl_jobs,&density,&mut output)?;}}
+        eprintln!("P7_COMPACT_ACTION stage=end action={} elapsed={:.3}",self.action_count.get(),self.start.elapsed().as_secs_f64());
         if output.iter().flatten().chain(bounds.iter().flatten()).any(|v|!v.is_finite()){return Err(error("HYBRID_RANGE","mixed magnetic batch overflow"));}Ok((output,bounds))
     }
 

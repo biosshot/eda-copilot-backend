@@ -680,6 +680,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         max_copper_area_change=max_copper_area_change.max(change);shape.0=canonical;
     }
     for(i,e)in r.electrodes.iter().enumerate(){electrode_polygons.insert(e.name.clone(),member_set(2+physical_count+i));}
+    super::board_foil::phase_trace("t-member-sets",start,serde_json::json!({}));
     // Keep an explicit stable numerical datum. Domain expansion changes the
     // physical air/ROI request but must not retranslate identical copper.
     if let Some(b)=r.return_boundary_mm { if b.iter().flatten().any(|v|!v.is_finite()) || (0..3).any(|k|b[0][k]>=b[1][k]) {return Err(error("RETURN_BOUNDARY","invalid guard bounds"));} }
@@ -716,10 +717,12 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     if let Some((nodes,triangles))=support{let mut edges=std::collections::BTreeSet::new();for t in triangles{for k in 0..3{let mut e=[t[k],t[(k+1)%3]];e.sort();edges.insert(e);}}for [a,b]in edges{segment(nodes[a],nodes[b])?;}}
     for [a,b] in trace_lines {segment(*a,*b)?;}
     drop(segment);
+    super::board_foil::phase_trace("t-constraints-inserted",start,serde_json::json!({}));
     let max_xy=budget.max_nodes.min(budget.max_bytes/4096);
     let refinement=cdt.refine(RefinementParameters::new().keep_constraint_edges().with_angle_limit(AngleLimit::from_deg(r.min_triangle_angle_deg.unwrap_or(30.))).with_max_allowed_area(r.max_triangle_area_m2*1e6).with_max_additional_vertices(max_xy.saturating_sub(cdt.num_vertices())));
     if !refinement.refinement_complete {return Err(error("MEMORY_LIMIT","board XY mesh refinement incomplete within budget"));}
     check(start,max_wall)?;
+    super::board_foil::phase_trace("t-cdt-refined",start,serde_json::json!({}));
     // Refine XY only inside retained native bore contours. The material there
     // still depends on z. Existing Cu/bore/contact constraints stay fixed.
     if let Some(rings)=r.bore_refinement_rings {
@@ -752,11 +755,15 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         }
         if distance==margin {break;}distance=(2.*distance).min(margin);
     }
+    super::board_foil::phase_trace("t-air-rings",start,serde_json::json!({}));
     let planar_nodes_mm:Vec<_>=cdt.vertices().map(|v|[v.position().x,v.position().y]).collect();
     let xy_m:Vec<_>=planar_nodes_mm.iter().map(|p|[(p[0]-origin_mm[0])*1e-3,(p[1]-origin_mm[1])*1e-3]).collect();
     let mut triangles=vec![];let mut centres=vec![];let mut overlaps=vec![];
     let overlaps_bbox=|a:geo::Rect<f64>,b:Option<geo::Rect<f64>>|b.is_none_or(|b|!(a.max().x<b.min().x||b.max().x<a.min().x||a.max().y<b.min().y||b.max().y<a.min().y));
     let shape_bboxes:Vec<_>=shapes.iter().map(|s|s.poly.bounding_rect()).collect();
+    let bbox_index=|boxes:&[Option<geo::Rect<f64>>]|(rstar::RTree::bulk_load(boxes.iter().enumerate().filter_map(|(i,b)|b.map(|b|rstar::primitives::GeomWithData::new(rstar::primitives::Rectangle::from_corners([b.min().x,b.min().y],[b.max().x,b.max().y]),i))).collect::<Vec<_>>()),boxes.iter().enumerate().filter(|(_,b)|b.is_none()).map(|(i,_)|i).collect::<Vec<_>>());
+    let candidates=|index:&(rstar::RTree<rstar::primitives::GeomWithData<rstar::primitives::Rectangle<[f64;2]>,usize>>,Vec<usize>),at:geo::Rect<f64>|{let mut v:Vec<usize>=index.0.locate_in_envelope_intersecting(&rstar::AABB::from_corners([at.min().x,at.min().y],[at.max().x,at.max().y])).map(|g|g.data).chain(index.1.iter().copied()).collect();v.sort_unstable();v};
+    let shape_index=bbox_index(&shape_bboxes);
     for face in cdt.inner_faces() {
         let v=face.vertices();let centre=Point::new(v.iter().map(|p|p.position().x).sum::<f64>()/3.,v.iter().map(|p|p.position().y).sum::<f64>()/3.);
         if field_domain.contains(&centre) {
@@ -765,12 +772,14 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
             // another quantizing Boolean on a tiny mesh face can erase its
             // positive overlap; robust DE-9IM keeps that source association.
             let tri_bbox=triangle.bounding_rect();
-            let sources=shapes.iter().enumerate().filter(|(i,_)|tri_bbox.is_none_or(|t|overlaps_bbox(t,shape_bboxes[*i]))).filter(|(_,s)|s.poly.relate(&triangle).get(CoordPos::Inside,CoordPos::Inside)==Dimensions::TwoDimensional).map(|(i,_)|i).collect::<Vec<_>>();
+            let cand:Vec<usize>=match tri_bbox{Some(t)=>candidates(&shape_index,t),None=>(0..shapes.len()).collect()};
+            let sources=cand.into_iter().filter(|&i|shapes[i].poly.relate(&triangle).get(CoordPos::Inside,CoordPos::Inside)==Dimensions::TwoDimensional).collect::<Vec<_>>();
             triangles.push(v.map(|v|v.fix().index()));centres.push(centre);overlaps.push(sources);
         }
     }
     let mut edges=BTreeMap::new();for t in &triangles {for k in 0..3 {let mut edge=[t[k],t[(k+1)%3]];edge.sort();*edges.entry(edge).or_insert(0usize)+=1;}}
     let boundary_edges=edges.into_iter().filter(|(_,n)|*n==1).map(|(e,_)|e).collect();
+    super::board_foil::phase_trace("t-tri-sources",start,serde_json::json!({}));
     let mut air_distances=vec![];let mut distance=r.interface_step_m.unwrap_or(r.max_vertical_step_m).min(r.max_vertical_step_m).min(r.air_margin_m);
     loop {air_distances.push(distance);if distance==r.air_margin_m {break;}distance=(2.*distance).min(r.air_margin_m);}
     let mut copper_skin_layers=Vec::new();
@@ -816,12 +825,14 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     let mut materials=vec![];let mut sigma_per_triangle=vec![];
     let physical_bboxes:Vec<_>=physical_shapes.iter().map(|s|s.0.bounding_rect()).collect();
     // Per-triangle (z-independent) ownership candidates, in physical_shapes order.
+    let physical_index=bbox_index(&physical_bboxes);
     let tri_own:Vec<(Vec<usize>,bool,bool,Vec<bool>)>=centres.iter().map(|p|{
         let at=geo::Rect::new(p.0,p.0);
-        let phys=physical_shapes.iter().enumerate().filter(|(i,_)|physical_bboxes[*i].is_some_and(|b|overlaps_bbox(at,Some(b)))).filter(|(_,s)|s.0.contains(p)).map(|(i,_)|i).collect();
+        let phys=candidates(&physical_index,at).into_iter().filter(|&i|physical_bboxes[i].is_some()).filter(|&i|physical_shapes[i].0.contains(p)).collect();
         (phys,substrate.contains(p),bores.contains(p),partial_bores.iter().map(|(_,poly)|poly.contains(p)).collect())
     }).collect();
     for slab in z_m.windows(2) {
+    super::board_foil::phase_trace("t-tri-own",start,serde_json::json!({}));
         let middle=(slab[0]+slab[1])/2.;let layer=r.stack.iter().zip(&stack_spans).find(|(_,s)|middle>s[0]&&middle<s[1]).map(|(l,_)|l);
         let active_bores=partial_bores.iter().enumerate().filter(|(_,(span,_))|span[0]<middle&&middle<span[1]).map(|(i,_)|i).collect::<Vec<_>>();
         let mut row=vec![];let mut sigma=vec![];
