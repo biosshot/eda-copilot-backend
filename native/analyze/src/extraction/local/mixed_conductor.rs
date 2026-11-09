@@ -1187,8 +1187,16 @@ fn solve_checked_mesh_impl_policy(
         let model_budget = AllocationBudget { max_bytes: budget.max_bytes.checked_sub(charge_bytes).ok_or_else(|| error("MEMORY_LIMIT", "layered trace matrix exceeds budget"))?, ..budget };
         let profiles = if hybrid_requested || (adaptive && std::env::var_os("P7_SECTION_HINTS").as_deref()==Some(std::ffi::OsStr::new("1"))) {
             let available = (budget.max_bytes / 3).saturating_sub(map.retained_bytes()?);
-            uniform_section_profiles(mesh, &map, &ports, frequencies_hz[0], AllocationBudget { max_bytes: available, ..budget }, start, wall)?
-                .map(|profiles| profiles.iter().map(|p| map.restrict_current_profile(p)).collect::<Result<Vec<_>>>()).transpose()?
+            // Reserve the conversion peak in addition to the producer's own
+            // bounded working set: up to 32 full and compact vectors and one
+            // compact denominator. Refuse the optional predictor if it does not fit.
+            let conversion = map.full.current_count().checked_add(map.current_count())
+                .and_then(|n|n.checked_mul(32)).and_then(|n|n.checked_add(map.current_count()))
+                .and_then(|n|n.checked_mul(8)).and_then(|n|n.checked_add(32 * std::mem::size_of::<Vec<f64>>()));
+            if let Some(producer_bytes) = conversion.and_then(|n|available.checked_sub(n)) {
+                uniform_section_profiles(mesh, &map, &ports, frequencies_hz[0], AllocationBudget { max_bytes: producer_bytes, ..budget }, start, wall)?
+                    .map(|profiles| profiles.into_iter().map(|p| map.restrict_current_profile(&p)).collect::<Result<Vec<_>>>()).transpose()?
+            } else { None }
         } else { None };
         let (model, mut evidence, planned, adaptive_result) = if adaptive {
             let (mut result,model,planned)=foil_reduced::solve_compact_adaptive(&map,&mixed_names,&mixed_ports,packages,MatchedGrid{frequencies:frequencies_hz,references:reference_ohm,max_iterations},prepared_field.as_ref().ok_or_else(||error("HYBRID_INPUT","missing prepared field"))?,model_budget,start,wall,profiles.as_deref())?;
@@ -1425,6 +1433,10 @@ mod profile_tests {
         let x: Vec<_> = (0..map.current_count()).map(|i| ((i%11) as f64-5.)/7.).collect();
         let y: Vec<_> = (0..map.full.current_count()).map(|i| ((i%13) as f64-6.)/9.).collect();
         let lifted = map.lift_currents(&x).unwrap();
+        let restricted = map.restrict_current_profile(&lifted).unwrap();
+        for (actual, expected) in restricted.iter().zip(&x) {
+            assert!((actual-expected).abs() <= 1e-10 * expected.abs().max(1.));
+        }
         let projected = map.project_current_action(&y).unwrap();
         let left: f64 = lifted.iter().zip(&y).map(|(a,b)| a*b).sum();
         let right: f64 = x.iter().zip(&projected).map(|(a,b)| a*b).sum();
