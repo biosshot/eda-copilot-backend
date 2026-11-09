@@ -57,6 +57,7 @@ pub struct PointPotential {
     tetra: Option<[[f64; 3]; 4]>,
     tetra_tolerance: f64,
     far_samples: std::sync::Arc<[std::sync::OnceLock<FarSamples>; 7]>,
+    far_geometry: std::sync::Arc<std::sync::OnceLock<([f64; 3], f64)>>,
     vertices: Vec<[f64; 3]>,
     faces: Vec<Face>,
     edges: Vec<Edge>,
@@ -180,6 +181,7 @@ impl PointPotential {
             tetra,
             tetra_tolerance: 1e-10,
             far_samples: std::sync::Arc::new(std::array::from_fn(|_| std::sync::OnceLock::new())),
+            far_geometry: std::sync::Arc::new(std::sync::OnceLock::new()),
             vertices,
             faces,
             edges: edges.into_values().collect(),
@@ -299,12 +301,15 @@ impl PointPotential {
         let Some(tetra) = self.tetra else {
             return Ok(None);
         };
-        let center = std::array::from_fn(|k| tetra.iter().map(|p| p[k]).sum::<f64>() / 4.);
-        let radius = tetra
-            .iter()
-            .map(|&v| norm(sub(v, center)))
-            .fold(0., f64::max)
-            * (1. + 16. * f64::EPSILON);
+        let &(center, radius) = self.far_geometry.get_or_init(|| {
+            let center = std::array::from_fn(|k| tetra.iter().map(|p| p[k]).sum::<f64>() / 4.);
+            let radius = tetra
+                .iter()
+                .map(|&v| norm(sub(v, center)))
+                .fold(0., f64::max)
+                * (1. + 16. * f64::EPSILON);
+            (center, radius)
+        });
         let r = sub(point, center);
         let distance = norm(r);
         let q = radius / distance * (1. + 32. * f64::EPSILON);
@@ -853,7 +858,6 @@ pub(super) fn tetra_integral_checked(target: [[f64; 3]; 4], source: &PointPotent
     let rule = super::prism::cached_rule(order)?;
     let mut result = 0.;
     tetra_integrate(target, volume, &rule, |p, w| {
-        check()?;
         result += w * source.at_diagnostic_checked(p,check)?.value_m2;
         Ok(())
     })?;

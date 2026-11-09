@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reuse immutable source spheres across tetrahedron potential evaluations.
+
 - Refine elongated near-pair targets separately along and across their long direction, with the existing accuracy check and adaptive fallback.
 - Use spare local magnetic memory for additional worker cubature slots after reserving the exact coefficient cache.
 
