@@ -1841,9 +1841,15 @@
         "sourceSection": "primary",
         "case": "Дорожка 45°",
         "implementation": {
-          "status": "unmapped",
-          "code": null,
-          "shortControls": []
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "scripts/verify-p7-hybrid-orientation.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-hybrid-orientation.ts"
+          ],
+          "coverageGap": "Partial: supervised 0/45/90 degree compact hybrid orientation control; latest cited orientation run timed out; no rotation sensitivity acceptance."
         },
         "acceptance": {
           "status": "open",
@@ -2314,8 +2320,12 @@
         "implementation": {
           "status": "mapped",
           "scope": "partial; hybrid ownership and topology only",
-          "code": ["native/analyze/src/extraction/local/mixed_conductor.rs"],
-          "shortControls": ["native/analyze/tests/blind_buried_via.rs"],
+          "code": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs"
+          ],
+          "shortControls": [
+            "native/analyze/tests/blind_buried_via.rs"
+          ],
           "coverageGap": "Hybrid barrel/foil ownership, physical span and contact isolation passed structural control 1794144648048884200; positive joint EM response and independent physical acceptance remain open."
         },
         "acceptance": {
@@ -2337,8 +2347,12 @@
         "implementation": {
           "status": "mapped",
           "scope": "partial; finite pad to narrow track hybrid electrical control at 1 MHz",
-          "code": ["native/analyze/src/extraction/local/mixed_conductor.rs"],
-          "shortControls": ["native/analyze/src/extraction/local/hybrid_connector_test.rs"],
+          "code": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs"
+          ],
+          "shortControls": [
+            "native/analyze/src/extraction/local/hybrid_connector_test.rs"
+          ],
           "coverageGap": "Two-drive positive response, KCL/KVL, copper/wave power and missing-contact refusal pass 1794147307231475200; independent physical connector reference and full connector geometry coverage remain open."
         },
         "acceptance": {
@@ -2360,8 +2374,14 @@
         "implementation": {
           "status": "mapped",
           "scope": "partial: explicit physical pair transform and complex modal loss recovery",
-          "code": ["src/analyze/board-foil-mixed-mode.ts", "src/analyze/board-foil-loss-grams.ts"],
-          "shortControls": ["tests/analyze-board-foil-mixed-mode.test.ts", "tests/analyze-board-foil-loss-grams.test.ts"]
+          "code": [
+            "src/analyze/board-foil-mixed-mode.ts",
+            "src/analyze/board-foil-loss-grams.ts"
+          ],
+          "shortControls": [
+            "tests/analyze-board-foil-mixed-mode.test.ts",
+            "tests/analyze-board-foil-loss-grams.test.ts"
+          ]
         },
         "acceptance": {
           "status": "open",
@@ -2380,9 +2400,15 @@
         "sourceSection": "primary",
         "case": "Смена опоры (reference swap)",
         "implementation": {
-          "status": "unmapped",
-          "code": null,
-          "shortControls": []
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "scripts/verify-p7-reference-swap.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-reference-swap.ts"
+          ],
+          "coverageGap": "Partial: supervised discrete-model reference-swap control; latest audit records LOCAL_DEADLINE; no physical acceptance."
         },
         "acceptance": {
           "status": "open",
@@ -2422,9 +2448,15 @@
         "sourceSection": "primary",
         "case": "GND/AGND/PGND с физическим соединением",
         "implementation": {
-          "status": "unmapped",
-          "code": null,
-          "shortControls": []
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/hybrid_five_island_test.rs"
+          ],
+          "shortControls": [
+            "native/analyze/src/extraction/local/hybrid_five_island_test.rs"
+          ],
+          "coverageGap": "Partial: generic disconnected reference islands and displacement current control; does not model named GND/AGND/PGND connections or verify their R/L."
         },
         "acceptance": {
           "status": "open",
@@ -2443,9 +2475,15 @@
         "sourceSection": "primary",
         "case": "Несколько переходов опоры (AGND→PGND→GND)",
         "implementation": {
-          "status": "unmapped",
-          "code": null,
-          "shortControls": []
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/hybrid_five_island_test.rs"
+          ],
+          "shortControls": [
+            "native/analyze/src/extraction/local/hybrid_five_island_test.rs"
+          ],
+          "coverageGap": "Partial: small five-island joint AC discrete-model control; not physical acceptance of arbitrary return chains."
         },
         "acceptance": {
           "status": "open",
@@ -2772,7 +2810,9 @@
           "code": [
             "native/analyze/src/extraction/local/hybrid_section_model.rs"
           ],
-          "shortControls": ["native/analyze/src/extraction/local/hybrid_section_model.rs#tests::disconnected_islands_carry_ac_displacement_current"],
+          "shortControls": [
+            "native/analyze/src/extraction/local/hybrid_section_model.rs#tests::disconnected_islands_carry_ac_displacement_current"
+          ],
           "coverageGap": "three-island discrete-model AC displacement and charge balance verified at 1/10 kHz; independent physical reference and automatic full-board split coverage remain open"
         },
         "acceptance": {

@@ -217,20 +217,28 @@
       "case": "Дорожка 45°",
       "sourceSection": "primary",
       "sourceLine": 80,
-      "implementationStatus": "unmapped",
+      "implementationStatus": "mapped",
       "acceptanceStatus": "open",
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
       "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
-      "developmentControls": [],
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-hybrid-orientation.ts",
+          "command": null,
+          "scope": "Partial: supervised 0/45/90 degree compact hybrid orientation control; latest cited orientation run timed out; no rotation sensitivity acceptance.",
+          "status": "requires-external-supervisor"
+        }
+      ],
       "implementationScope": "**Поддерживается (условно)**",
       "coverageGap": "spatial-delay 2.174198% принят при пороге 3% (2026-11-03)",
       "requiredObservables": [
         "spatial-delay"
       ],
       "frequencyBandHz": null,
-      "finalChecks": []
+      "finalChecks": [],
+      "implementationNote": "Partial: supervised 0/45/90 degree compact hybrid orientation control; latest cited orientation run timed out; no rotation sensitivity acceptance."
     },
     {
       "id": "primary-04",
@@ -736,18 +744,26 @@
       "case": "Смена опоры (reference swap)",
       "sourceSection": "primary",
       "sourceLine": 101,
-      "implementationStatus": "unmapped",
+      "implementationStatus": "mapped",
       "acceptanceStatus": "open",
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
       "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
-      "developmentControls": [],
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-reference-swap.ts",
+          "command": null,
+          "scope": "Partial: supervised discrete-model reference-swap control; latest audit records LOCAL_DEADLINE; no physical acceptance.",
+          "status": "requires-external-supervisor"
+        }
+      ],
       "implementationScope": "**Не поддерживается**",
       "coverageGap": "Геометрия и независимые координаты поддерживают раздельные острова. Переход с доказанным физическим путём возврата между слоями/плоскостями ещё не принят",
       "requiredObservables": [],
       "frequencyBandHz": null,
-      "finalChecks": []
+      "finalChecks": [],
+      "implementationNote": "Partial: supervised discrete-model reference-swap control; latest audit records LOCAL_DEADLINE; no physical acceptance."
     },
     {
       "id": "primary-continuation-102",
@@ -765,43 +781,60 @@
       "coverageGap": "Правило в плане §4.0; реализация не начата",
       "requiredObservables": [],
       "frequencyBandHz": null,
-      "finalChecks": []
+      "finalChecks": [],
+      "implementationNote": "Planner resolves declared terminal return islands and corridor geometry; no verified automatic return search for a missing local reference was identified."
     },
     {
       "id": "primary-continuation-103",
       "case": "GND/AGND/PGND с физическим соединением",
       "sourceSection": "primary",
       "sourceLine": 103,
-      "implementationStatus": "unmapped",
+      "implementationStatus": "mapped",
       "acceptanceStatus": "open",
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
       "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
-      "developmentControls": [],
+      "developmentControls": [
+        {
+          "source": "native/analyze/src/extraction/local/hybrid_five_island_test.rs",
+          "command": "cargo test --manifest-path native/analyze/Cargo.toml --lib split_top_bottom_references_carry_joint_ac_displacement",
+          "scope": "Partial: generic disconnected reference islands and displacement current control; does not model named GND/AGND/PGND connections or verify their R/L.",
+          "status": "available"
+        }
+      ],
       "implementationScope": "**Не поддерживается**",
       "coverageGap": "Разные острова и ориентированные контакты представимы. Автоматическое извлечение физического соединения и его R/L в этом сценарии требует проверки",
       "requiredObservables": [],
       "frequencyBandHz": null,
-      "finalChecks": []
+      "finalChecks": [],
+      "implementationNote": "Partial: generic disconnected reference islands and displacement current control; does not model named GND/AGND/PGND connections or verify their R/L."
     },
     {
       "id": "primary-continuation-104",
       "case": "Несколько переходов опоры (AGND→PGND→GND)",
       "sourceSection": "primary",
       "sourceLine": 104,
-      "implementationStatus": "unmapped",
+      "implementationStatus": "mapped",
       "acceptanceStatus": "open",
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
       "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
-      "developmentControls": [],
+      "developmentControls": [
+        {
+          "source": "native/analyze/src/extraction/local/hybrid_five_island_test.rs",
+          "command": "cargo test --manifest-path native/analyze/Cargo.toml --lib split_top_bottom_references_carry_joint_ac_displacement",
+          "scope": "Partial: small five-island joint AC discrete-model control; not physical acceptance of arbitrary return chains.",
+          "status": "available"
+        }
+      ],
       "implementationScope": "**Не поддерживается**",
       "coverageGap": "v1: до 8 переходов на канал; каждый — событие + физическое соединение; больше — отказ",
       "requiredObservables": [],
       "frequencyBandHz": null,
-      "finalChecks": []
+      "finalChecks": [],
+      "implementationNote": "Partial: small five-island joint AC discrete-model control; not physical acceptance of arbitrary return chains."
     },
     {
       "id": "supplemental-19",
