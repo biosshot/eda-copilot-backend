@@ -13,6 +13,7 @@ export const boardChannelJointSkinBandHz = [1e3, 1e5] as const;
 export const boardChannelHybridBandHz = [1e3, 1e10] as const;
 type Options = {
     domainScale?: number;
+    guardMarginMm?: number;
     magneticPatchLevel?: 1 | 2;
     boundaryFraction?: number;
     autoFoilDeadlineMs?: number;
@@ -99,12 +100,12 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
         const selected = g.regions.filter(r => signalRegions.has(r.id) || contactRegions.has(r.id));
         const height = base2.stack.reduce((s: number, l: any) => s + l.thicknessM * 1e3, 0);
         const margin = Math.max(0.05, 2 * height) * (options.domainScale ?? 1);
-        const closedJoint = (deadlineMs: number) => {
+        const closedJoint = (deadlineMs: number, searchMarginMm?: number): AutoFoilPlan | undefined => {
             // Compute this only for an actual joint candidate. The run frame is
             // fixed for the complete closure, including newly found islands.
             let direction:[number,number]|undefined;
             let directionReason='hybrid direction not requested';
-            if (process.env.P7_COMPACT_PLANAR==='1') {
+            if (searchMarginMm===undefined && process.env.P7_COMPACT_PLANAR==='1') {
                 if (performance.now()>=deadlineMs) throw new Error('CHANNEL_FOIL_DEADLINE: shared geometry closure deadline exhausted');
                 const runs=buildRouteGraph(board,g,signalRegions,margin).runs;
                 if (performance.now()>=deadlineMs) throw new Error('CHANNEL_FOIL_DEADLINE: shared geometry closure deadline exhausted');
@@ -114,12 +115,27 @@ export function createBoardChannelPlanner(board: any, base2: any, input: LegacyC
                     else directionReason='multiple non-collinear physical runs';
                 } else directionReason='no physical run direction';
             }
-            return autoFoilPlan({boardJson,geometry:foilGeometry,captured:g,terminals:[...terminals.values()].map(entry=>entry.contact),ports:externalPorts,
+            const result=autoFoilPlan({boardJson,geometry:foilGeometry,captured:g,terminals:[...terminals.values()].map(entry=>entry.contact),ports:externalPorts,
                 modePairs:legacy?undefined:input.modePairs,
                 components:componentPlans.map(({pins:[a,b],...model})=>({...model,pins:[a.contact,b.contact]})),
                 seedRegions:new Set([...signalRegions,...returnIds,...contactRegions,
                     ...componentPlans.flatMap(({pins})=>pins.flatMap(({island})=>island.region_ids))]),
-                marginMm:margin,deadlineMs,onClosureStep:options.onClosureStep,direction,directionReason});
+                marginMm:searchMarginMm??margin,guardMarginMm:searchMarginMm??options.guardMarginMm,deadlineMs,onClosureStep:options.onClosureStep,direction,directionReason});
+            if (!result) return;
+            if (searchMarginMm!==undefined) {
+                const box=result.observationRoiMm!;
+                const zTop=foilGeometry.stack.reduce((sum:number,layer:any)=>sum+layer.thicknessM*1000,0);
+                result.geometry.returnBoundaryMm=[[box[0][0],box[0][1],-searchMarginMm],[box[1][0],box[1][1],zTop+searchMarginMm]];
+                result.geometry.electricAirMarginM=Math.max(Number(foilGeometry.electricAirMarginM)||0,2*searchMarginMm/1000);
+                result.geometry.coordinateOriginMm=[(box[0][0]+box[1][0])/2,(box[0][1]+box[1][1])/2];
+            }
+            Object.defineProperty(result,'returnSearch',{enumerable:false,value:{initialMarginMm:margin,expand:(domainScale:number,deadline:number)=>{
+                if (!(domainScale>=1) || !Number.isFinite(domainScale)) throw new Error('CHANNEL_FOIL_DOMAIN: invalid return search scale');
+                const expanded=closedJoint(deadline,margin*domainScale);
+                if (!expanded) throw new Error('CHANNEL_JOINT_CLOSURE: unable to expand return search domain');
+                return expanded;
+            }}});
+            return result;
         };
         if ('closedJointDeadlineMs' in options) {
             const joint = closedJoint(options.closedJointDeadlineMs);

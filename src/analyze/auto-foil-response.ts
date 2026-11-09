@@ -6,10 +6,18 @@ import type { BoardFoilProblem, BoardFoilReport } from './types.ts';
 import { requestedFrequencyInterval, type FrequencyInterval } from './p7-frequency-planning.ts';
 import { declaredNetworkBand } from './analysis-dsl/frequency-model.ts';
 import { boardChannelBlockBandHz, boardChannelJointSkinBandHz, boardChannelHybridBandHz } from './board-channel-plan.ts';
+import { summarizeReturnBoundary, RETURN_BOUNDARY_THRESHOLD, RETURN_CURRENT_FLOOR_A } from './return-boundary.ts';
+
+type ReturnSearchStep = ReturnType<typeof summarizeReturnBoundary> & {
+ domainScale:number; observationBoundsMm:unknown; solvedRoiMm:AutoFoilPlan['roiMm'];
+};
 
 export type BoardFoilRunReport = BoardFoilReport & {
  jointSensitivity?: ReturnType<typeof auditBoardFoilGrid>;
  frequencyAudit?: ReturnType<typeof auditBoardFoilFrequency>;
+ returnSearch?: {policy:'internal-guard-flux-v1';status:'passed';threshold:number;absoluteFloorA:number;steps:ReturnSearchStep[]};
+ /** Non-enumerable caller context. It never enters serialized reports. */
+ resolvedPlan?:AutoFoilPlan;
 };
 
 export function runAutoFoil(
@@ -44,14 +52,56 @@ export function runAutoFoil(
  const profileUpperHz=Math.min(demandUpperHz,high);
  const skin=profileUpperHz>boardChannelBlockBandHz[1];
  const referenceOhm=plan.ports.map(()=>50);
- const problem: BoardFoilProblem = {kind:'board-foil-checked',boardJson:plan.boardJson,geometry:plan.geometry,
-  expected:{electrodePairs:plan.electrodePairs,sourceCopper:plan.sourceCopper,sourceBarrels:plan.sourceBarrels},
-  request:{frequenciesHz,referenceOhm,budget,partitionPolicy:hybrid?'automatic-hybrid-v1':'automatic-conductive-schur-v1',
-   ...(plan.attachments.length&&{attachments:plan.attachments}),
-   ...(skin&&{operatorPolicy:hybrid?'hybrid-planar-v3' as const:'skin-volume-v3' as const,profileUpperHz})}};
- const report=execute(problem);
- validateBoardFoilReport(report, problem, report.cache?.producerBudget ?? budget);
- const frequencyAudit=requested&&auditBoardFoilFrequency(problem,report,requested,[low,high],started,execute);
- const jointSensitivity=process.env.P7_AUTO_FOIL_AUDIT==='1'&&auditBoardFoilGrid(problem,report,started,execute);
- return frequencyAudit||jointSensitivity?{...report,...(frequencyAudit&&{frequencyAudit}),...(jointSensitivity&&{jointSensitivity})}:report;
+ const search=hybrid?plan.returnSearch:undefined;
+ const deadline=started+budget.maxSeconds*1000;
+ const steps:ReturnSearchStep[]=[];
+ for(let iteration=0;iteration<(search?8:1);iteration++) {
+  const domainScale=2**iteration;
+  const candidate=search?search.expand(domainScale,deadline):plan;
+  const attemptStarted=performance.now();
+  const remainingSeconds=search?(deadline-attemptStarted)/1000:budget.maxSeconds;
+  if(remainingSeconds<=0)throw new Error('CHANNEL_FOIL_DEADLINE: return search budget exhausted '+JSON.stringify(steps));
+  const problem:BoardFoilProblem={kind:'board-foil-checked',boardJson:candidate.boardJson,geometry:candidate.geometry,
+   expected:{electrodePairs:candidate.electrodePairs,sourceCopper:candidate.sourceCopper,sourceBarrels:candidate.sourceBarrels},
+   request:{frequenciesHz,referenceOhm,budget:{...budget,maxSeconds:remainingSeconds},
+    partitionPolicy:hybrid?'automatic-hybrid-v1':'automatic-conductive-schur-v1',
+    ...(candidate.attachments.length&&{attachments:candidate.attachments}),
+    ...(skin&&{operatorPolicy:hybrid?'hybrid-planar-v3' as const:'skin-volume-v3' as const,profileUpperHz})}};
+  const observations:ReturnType<typeof summarizeReturnBoundary>[]=[];
+  let boundaryError:unknown;
+  const checkedExecute=(input:BoardFoilProblem)=>{
+   const value=execute(input);
+   try {
+    validateBoardFoilReport(value,input,value.cache?.producerBudget??input.request.budget);
+    if(search)observations.push(summarizeReturnBoundary(value,input));
+   } catch(error) {
+    if(search)boundaryError=error;
+    throw error;
+   }
+   return value;
+  };
+  const report=checkedExecute(problem);
+  // A failing requested point already requires expansion. Holdouts are only
+  // useful after every requested drive satisfies the boundary-current gate.
+  const baselinePass=!search||observations.every(value=>value.passed);
+  const frequencyAudit=baselinePass&&requested&&auditBoardFoilFrequency(problem,report,requested,[low,high],attemptStarted,checkedExecute);
+  if(boundaryError)throw boundaryError;
+  if(search) {
+   steps.push({domainScale,observationBoundsMm:candidate.geometry.returnBoundaryMm,solvedRoiMm:candidate.roiMm,
+    passed:observations.every(value=>value.passed),
+    maximumRelative:Math.max(...observations.map(value=>value.maximumRelative)),
+    maximumUnresolvedA:Math.max(...observations.map(value=>value.maximumUnresolvedA)),
+    minimumPortCurrentA:Math.min(...observations.map(value=>value.minimumPortCurrentA)),
+    frequenciesHz:[...new Set(observations.flatMap(value=>value.frequenciesHz))].sort((a,b)=>a-b)});
+   if(!steps.at(-1)!.passed)continue;
+  }
+  const jointSensitivity=process.env.P7_AUTO_FOIL_AUDIT==='1'&&auditBoardFoilGrid(problem,report,attemptStarted,execute);
+  if(performance.now()>=deadline)throw new Error('CHANNEL_FOIL_DEADLINE: return search exceeded shared budget '+JSON.stringify(steps));
+  const result:BoardFoilRunReport={...report,...(frequencyAudit&&{frequencyAudit}),...(jointSensitivity&&{jointSensitivity}),
+   ...(search&&{returnSearch:{policy:'internal-guard-flux-v1' as const,status:'passed' as const,
+    threshold:RETURN_BOUNDARY_THRESHOLD,absoluteFloorA:RETURN_CURRENT_FLOOR_A,steps}})};
+  Object.defineProperty(result,'resolvedPlan',{enumerable:false,value:candidate});
+  return result;
+ }
+ throw new Error('CHANNEL_RETURN_UNRESOLVED: boundary current did not fall below 1% '+JSON.stringify(steps));
 }

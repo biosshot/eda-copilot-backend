@@ -154,6 +154,36 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
     runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>{
       assert.equal(input.request.partitionPolicy,'automatic-hybrid-v1');return hybrid();
     });
+    const expansions:number[]=[];
+    const searching={...plan,returnSearch:{initialMarginMm:1,expand:(scale:number)=>{
+      expansions.push(scale);
+      return {...plan,roiMm:[[-2*scale,-2*scale],[2*scale,2*scale]],
+        geometry:{...(plan.geometry as object),returnBoundaryMm:[[-scale,-scale,-scale],[scale,scale,scale]]}} as AutoFoilPlan;
+    }}};
+    const boundaryReport=(input:BoardFoilProblem,relative:number)=>{
+      const value=produceHybrid(input.request);
+      for(const sample of value.samples)for(const column of sample.columns){
+        column.returnBoundary={policy:'internal-guard-flux-v1',boundsMm:(input.geometry as any).returnBoundaryMm,
+          conductiveA:[relative*.25,0,0,0,0,0],displacementA:[0,0,relative*.25,0,0,0],
+          portCurrentA:.5,unresolvedA:relative*.5,relative,absoluteFloorA:1e-12,threshold:.01,passed:relative<.01};
+      }
+      return value;
+    };
+    const searched=runAutoFoil(searching,[1000,2000],problem.request.budget,undefined,input=>boundaryReport(input,expansions.length===1?.02:.005));
+    assert.deepEqual(expansions,[1,2]);
+    assert.equal(searched.returnSearch!.steps.length,2);
+    assert.equal(searched.returnSearch!.steps[1].passed,true);
+    assert.deepEqual(searched.resolvedPlan!.roiMm,[[-4,-4],[4,4]]);
+    assert.ok(!Object.keys(searched).includes('resolvedPlan'));
+    expansions.length=0;
+    assert.throws(()=>runAutoFoil(searching,[1000,2000],problem.request.budget,undefined,input=>boundaryReport(input,.01)),/CHANNEL_RETURN_UNRESOLVED/);
+    assert.equal(expansions.length,8,'the threshold is strictly below one percent and expansion is bounded');
+    assert.throws(()=>runAutoFoil(searching,[1000,2000],problem.request.budget,undefined,input=>{
+      const value=boundaryReport(input,.005);delete value.samples[0].columns[0].returnBoundary;return value;
+    }),/CHANNEL_RETURN_EVIDENCE/);
+    assert.throws(()=>runAutoFoil(searching,[1000,2000],problem.request.budget,undefined,input=>{
+      const value=boundaryReport(input,.005);value.samples[0].columns[0].returnBoundary!.portCurrentA=50;return value;
+    }),/CHANNEL_RETURN_EVIDENCE|CHANNEL_FOIL_EVIDENCE/);
     const rfProblem:BoardFoilProblem={...hybridProblem,geometry:{...hybridProblem.geometry,
       stack:['TOP','BOTTOM'].map(name=>({name,copper:true,conductivitySM:58e6})),barrelConductivitySM:58e6},
       request:{...hybridProblem.request,frequenciesHz:[1e6,2e6],operatorPolicy:'hybrid-planar-v3',profileUpperHz:1e8}};
@@ -494,7 +524,7 @@ test('exact grid cache preserves immutable producer evidence through warm and pr
 });
 
 test('exact foil cache keys the physical request and bounds replay size', () => {
-  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v9');
+  assert.equal(HYBRID_PLANAR_OPERATOR_VERSION, 'hybrid-planar-v10');
   const priorCompactPlanar = process.env.P7_COMPACT_PLANAR;
   const priorFullMixed = process.env.P7_COMPACT_FULL_MIXED;
   const dir = mkdtempSync(join(tmpdir(),'p7-foil-cache-'));

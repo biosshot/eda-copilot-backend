@@ -2,6 +2,7 @@ import type { AnalysisBoardFoilCheckedReport, AnalysisBoardFoilCheckedRequest, A
 import type { BoardFoilProblem } from './types.ts';
 import type { CoupledRlcData } from './analysis-dsl/spec-doc.js';
 import {validateBoardFoilLossGrams} from './board-foil-loss-grams.ts';
+import {validateReturnBoundary} from './return-boundary.ts';
 
 function fail(message:string):never {throw new Error('CHANNEL_FOIL_EVIDENCE: '+message);}
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
@@ -282,6 +283,16 @@ export function validateBoardFoilReport(
   [copperLossW,powerBalanceErrorW].some(x=>!Number.isFinite(x)||x<0)))
   fail('native foil residual or power evidence is outside its accepted limits');
  for(const [i,sample] of report.samples.entries())for(const column of sample.columns){
+  validateReturnBoundary(column.returnBoundary, (problem.geometry as {returnBoundaryMm?:unknown})?.returnBoundaryMm);
+  if(column.returnBoundary){
+   const portCurrent=Math.max(...report.parameters[i].map((row,port)=>{
+    const source=port===column.input?1:0;
+    const factor=0.5*Math.sqrt(referenceOhm[column.input]/referenceOhm[port]);
+    return Math.hypot(source-factor*(row[column.input].real+source),factor*row[column.input].imaginary);
+   }));
+   if(Math.abs(portCurrent-column.returnBoundary.portCurrentA)>64*Number.EPSILON*Math.max(1,portCurrent))
+    fail('return boundary normalization disagrees with physical port currents');
+  }
   const spatial=column.spatialRecovery;
   if(spatial!==undefined){
    if(!spatial||typeof spatial!=='object'||spatial.status!=="recovered-discrete"||spatial.physicalAccuracy!=="unverified"||spatial.driveConvention!=="1 A RMS matched Norton"||!Array.isArray(spatial.supports)||spatial.supports.length===0||!Number.isFinite(spatial.copperLossW)||spatial.copperLossW<0)

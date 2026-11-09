@@ -10,6 +10,7 @@ import {boardFoilMixedMode} from '../board-foil-mixed-mode.ts';
 export function boardFoilResult(
  contextId:string, plan:AutoFoilPlan, report:BoardFoilRunReport, diagnostics:Diagnostic[],
 ):ExecutionResult{
+ plan=report.resolvedPlan??plan;
  const terminals=new Map(plan.terminals.map(t=>[t.id,t]));
  const contact=(id:string)=>{const {sourcePath,layer}=terminals.get(id)!;return {sourcePath,layer};};
  const physicalPorts=plan.ports.map(({positive,negative})=>({positive:contact(positive),negative:contact(negative)}));

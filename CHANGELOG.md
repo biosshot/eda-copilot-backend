@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Expand automatic hybrid return domains using six-face conductive and displacement current observations on an internal guard box. Check every requested drive and available frequency holdout against a strict 1% threshold, a 1 pA normalization floor, and a shared eight-expansion deadline/memory budget. Preserve prescribed contacts inside the observation box, retain complete newly encountered copper and barrels, and refuse unresolved returns.
+- Validate return-current evidence on cache replay, retain the actual expanded plan in DSL output, and invalidate the hybrid operator cache generation.
+
 - Seed the adaptive compact hybrid current basis with optional sampled XY section profiles. The shared physical operators and residual checks remain authoritative.
 
 - Feed eligible section current profiles into the compact hybrid basis with a bounded projection workspace and a new exact-response cache generation. The sampled XY producer and compact restriction pass a two-track development control.

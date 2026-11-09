@@ -22,6 +22,10 @@ export interface AutoFoilPlan {
  sourceBarrels:BarrelSource[];
  attachments:NonNullable<AnalysisBoardFoilCheckedRequest["attachments"]>;
  roiMm:Bounds;
+ /** Internal, axis-aligned boundary for the adaptive return-current audit. */
+ observationRoiMm?:Bounds;
+ /** In-memory planner context; never part of the native request. */
+ returnSearch?:{initialMarginMm:number;expand:(domainScale:number,deadlineMs:number)=>AutoFoilPlan};
  domain:{policy:'oriented-run-v1'|'axis-aligned-fallback-v1';reason:string;polygonMm?:[number,number][]};
 }
 
@@ -35,6 +39,7 @@ type Options = {
  components:readonly PhysicalComponentRequest[];
  seedRegions:Set<string>;
  marginMm:number;
+ guardMarginMm?:number;
  deadlineMs:number;
  onClosureStep?:(step:FoilClosureStep)=>void;
  direction?:[number,number];
@@ -56,10 +61,13 @@ function expand(box:Bounds, distanceMm:number):Bounds {
 /** Close a bounded candidate over physical islands and complete intersecting
  * neighbours. Rectangle tests are conservative. Native source checks decide
  * actual admission and guard against every clipped conductor. */
-export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,modePairs,components,seedRegions,marginMm,deadlineMs,onClosureStep,direction,directionReason}:Options):AutoFoilPlan|undefined {
+export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,modePairs,components,seedRegions,marginMm,guardMarginMm,deadlineMs,onClosureStep,direction,directionReason}:Options):AutoFoilPlan|undefined {
  // A caller-supplied polygon is an explicit physical scope; do not silently
  // replace it with an automatic closure.
  if(geometry.domainPolygonMm!==undefined)return;
+ if(guardMarginMm!==undefined&&(!(guardMarginMm>0)||!Number.isFinite(guardMarginMm)))return;
+ // The observation window is axis-aligned; keep it inside the solved domain.
+ if(guardMarginMm!==undefined)direction=undefined;
  if(direction&&(!direction.every(Number.isFinite)||Math.abs(Math.hypot(...direction)-1)>1e-12))return;
  const stack=geometry.stack,copper=stack.filter(layer=>layer.copper);
  if(copper.length<2||copper.length>8||stack.length!==2*copper.length-1||stack.some((layer,i)=>layer.copper!==(i%2===0))||
@@ -93,6 +101,9 @@ export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,modePa
    hole.plated?(platingKnown?platingMm:0)+2*captured.boolean_error_bound_mm:0),
  }));
  const selected=new Set(seedRegions);
+ const seedBoxes=regions.filter(({region})=>selected.has(region.id)).map(({box})=>box);
+ if(!seedBoxes.length)return;
+ const observationRoiMm=guardMarginMm===undefined?undefined:expand(bounds(seedBoxes.flatMap(box=>[box[0],box[1]])),marginMm);
  const barrels=new Map<string,typeof holes[number]>();
  let iteration=0;
  onClosureStep?.({iteration,reason:'seed',selectedRegions:selected.size,selectedBarrels:0,addedRegionIds:[...selected],addedBarrelIds:[]});
@@ -103,7 +114,7 @@ export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,modePa
    throw new Error('CHANNEL_FOIL_DEADLINE: shared geometry closure deadline exhausted');
   const owned=regions.filter(({region})=>selected.has(region.id));
   if(!owned.length)return;
-  const roiMm=expand(bounds([...owned,...barrels.values()].flatMap(({box})=>box)),marginMm);
+  const roiMm=expand(bounds([...owned,...barrels.values()].flatMap(({box})=>box)),marginMm+(guardMarginMm??0));
   // A bore just outside the box may have a plating wall inside it. Close
   // against the entire conservative plating envelope before native meshing.
   const nearbyHoles=holes.filter(({hole,box})=>!barrels.has(hole.id)&&intersects(box,roiMm));
@@ -138,7 +149,7 @@ export function autoFoilPlan({boardJson,geometry,captured,terminals,ports,modePa
   const domain=direction?{policy:'oriented-run-v1' as const,reason:'unambiguous aligned physical runs',polygonMm}:
    {policy:'axis-aligned-fallback-v1' as const,reason:directionReason??'hybrid direction not requested'};
   onClosureStep?.({iteration,reason:'complete',roiMm:physicalRoi,selectedRegions:selected.size,selectedBarrels:barrels.size,addedRegionIds:[],addedBarrelIds:[]});
-  return {boardJson,ports,...(modePairs?.length&&{modePairs}),terminals,electrodePairs,sourceCopper,sourceBarrels,attachments,roiMm:physicalRoi,domain,
+  return {boardJson,ports,...(modePairs?.length&&{modePairs}),terminals,electrodePairs,sourceCopper,sourceBarrels,attachments,roiMm:physicalRoi,...(observationRoiMm&&{observationRoiMm}),domain,
    geometry:{...geometry,roiMm:physicalRoi,domainPolygonMm:direction?polygonMm:undefined,cutPlanes:{},allowInsulatedCopperCuts:false,electrodes,ports:electrodePairs}};
  }
 }

@@ -74,3 +74,73 @@ fn spatial_route_enforces_count_budget_before_assembly() {
     let error=extract_traced_spatial(&input,&trace,&[],limited).err().expect("budget refusal");
     assert!(format!("{error:?}").contains("FIELD_INPUT"));
 }
+
+#[test]
+fn prepared_cut_flux_matches_parallel_plate_field_and_rejects_invalid_cuts() {
+    let (input, trace) = coupon();
+    let action = prepare_traced_spatial_action(&input, &trace, &[region()], budget()).unwrap();
+    let bounds = [[0.0002, 0.0002, 0.0002], [0.0008, 0.0008, 0.0009]];
+    let flux = action
+        .cut_displacement_flux(&[0., 1.], &[0., 2.], bounds)
+        .unwrap();
+    let expected = EPS0 * 4. * 0.0006_f64.powi(2) * 5_f64.sqrt() / 0.0009;
+    for &f in &flux[..4] {
+        assert!(f < expected * 1e-10);
+    }
+    for &f in &flux[4..] {
+        assert!((f / expected - 1.).abs() < 1e-10, "{flux:?}");
+    }
+    let shifted = action
+        .cut_displacement_flux(&[7., 8.], &[-3., -1.], bounds)
+        .unwrap();
+    for i in 0..6 {
+        assert!((shifted[i] - flux[i]).abs() < expected * 1e-10);
+    }
+    assert_eq!(
+        action
+            .cut_displacement_flux(&[0., 0.], &[0., 0.], bounds)
+            .unwrap(),
+        [0.; 6]
+    );
+    assert!(action
+        .cut_displacement_flux(&[0., 1.], &[0., 0.], [[0., 0.0002, 0.0002], bounds[1]])
+        .is_err());
+    let copper_bounds = [[0.0002, 0.0002, 0.00005], bounds[1]];
+    let copper_flux = action
+        .cut_displacement_flux(&[0., 1.], &[0., 2.], copper_bounds)
+        .unwrap();
+    assert_eq!(copper_flux[4], 0.);
+    assert!((copper_flux[5] / expected - 1.).abs() < 1e-10);
+    let mut missing = prepare_traced_spatial_action(&input, &trace, &[region()], budget()).unwrap();
+    missing.solution.copper_cells.clear();
+    assert!(missing
+        .cut_displacement_flux(&[0., 1.], &[0., 0.], copper_bounds)
+        .is_err());
+    // Manufactured linear nodal field: real gradient (2,3,0), imaginary (4,0,0).
+    let mut real = Vec::new();
+    let mut imag = Vec::new();
+    for &plane in &action.solution.planes {
+        for p in &action.solution.meshes[plane].xy {
+            real.push(2. * p[0] + 3. * p[1]);
+            imag.push(4. * p[0]);
+        }
+    }
+    let xy_flux = action.cut_nodal_flux(&real, &imag, bounds).unwrap();
+    let vertical_area = 0.0006 * 0.0007;
+    let x_expected = EPS0 * 4. * vertical_area * 20_f64.sqrt();
+    let y_expected = EPS0 * 4. * vertical_area * 3.;
+    for &v in &xy_flux[..2] {
+        assert!((v / x_expected - 1.).abs() < 1e-10, "{xy_flux:?}");
+    }
+    for &v in &xy_flux[2..4] {
+        assert!((v / y_expected - 1.).abs() < 1e-10, "{xy_flux:?}");
+    }
+    for &v in &xy_flux[4..] {
+        assert!(v < x_expected * 1e-10);
+    }
+    let mut limited = prepare_traced_spatial_action(&input, &trace, &[region()], budget()).unwrap();
+    limited.solution.budget.max_bytes = limited.solution.plan.planned_simultaneous_bytes;
+    assert!(limited
+        .cut_displacement_flux(&[0., 1.], &[0., 0.], bounds)
+        .is_err());
+}

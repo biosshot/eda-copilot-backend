@@ -21,6 +21,8 @@ pub struct Layer {
 #[serde(deny_unknown_fields,rename_all="camelCase")]
 pub struct Request {
     pub roi_mm:[[f64;2];2],
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    pub return_boundary_mm:Option<[[f64;3];2]>,
     /// Numerical local-coordinate datum, independent of domain expansion.
     #[serde(default,skip_serializing_if="Option::is_none")]
     pub coordinate_origin_mm:Option<[f64;2]>,
@@ -147,6 +149,7 @@ fn face_intervals(poly:&MultiPolygon<f64>,edges:&[[[f64;2];2]],origin:[f64;2],no
     for span in spans {if let Some(last)=union.last_mut(){if span[0]<=last[1]{last[1]=last[1].max(span[1]);continue;}}union.push(span);}union
 }
 pub struct BoardMesh {
+    pub(super) return_boundary_mm:Option<[[f64;3];2]>,
     pub(super) copper_skin_layers:Vec<CopperSkinLayer>,
     pub(super) copper_skin_barrels:Vec<CopperSkinBarrel>,
     pub mesh:LayeredMesh,
@@ -575,6 +578,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     for(i,e)in r.electrodes.iter().enumerate(){electrode_polygons.insert(e.name.clone(),member_set(2+physical_count+i));}
     // Keep an explicit stable numerical datum. Domain expansion changes the
     // physical air/ROI request but must not retranslate identical copper.
+    if let Some(b)=r.return_boundary_mm { if b.iter().flatten().any(|v|!v.is_finite()) || (0..3).any(|k|b[0][k]>=b[1][k]) {return Err(error("RETURN_BOUNDARY","invalid guard bounds"));} }
     let origin_mm=r.coordinate_origin_mm.unwrap_or(r.roi_mm[0]);
     let mut cdt=ConstrainedDelaunayTriangulation::<Point2<f64>>::new();
     // Every ring, including all overlapping source boundaries, constrains the
@@ -733,7 +737,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     let planar_triangles=triangles.clone();
     let mesh=mesh::extrude(&LayeredInput{xy_m,triangles,boundary_edges,z_m,materials},budget)?;
     let conductivity_s_m=mesh.copper_tetrahedra.iter().map(|t|sigma_per_triangle[t.slab][t.planar_triangle]).collect();
-    let mut certified_electrodes=BTreeMap::new();let mut electrode_areas_m2=BTreeMap::new();let mut max_contact_area_change:f64=0.;
+    let mut certified_electrodes:BTreeMap<String,(Electrode,Vec<usize>)>=BTreeMap::new();let mut electrode_areas_m2=BTreeMap::new();let mut max_contact_area_change:f64=0.;
     for e in &r.electrodes {
         let poly=&electrode_polygons[&e.name];let z=spans[&e.layer][if e.upper {1}else{0}];
         let cut=r.cut_planes.get(&e.name);
@@ -778,7 +782,10 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     let retained_bytes = geometry_vertices.checked_mul(32).ok_or_else(||error("MEMORY_LIMIT","field geometry overflow"))?;
     if mesh.planned_peak_bytes.checked_add(retained_bytes).is_none_or(|n|n>budget.max_bytes) { return Err(error("MEMORY_LIMIT","retained field geometry exceeds budget")); }
     let field_copper=physical_shapes.into_iter().map(|(p,span,_,barrel)|(p,span,barrel)).collect();
-    Ok(BoardMesh{field_substrate:substrate,field_bores:bores,field_partial_bores:partial_bores,field_copper,mesh,copper_skin_layers,copper_skin_barrels,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,hybrid_mesh_masks,certified_electrodes})
+    if let Some(b)=r.return_boundary_mm {
+        for (_,nodes) in certified_electrodes.values() { for &n in nodes { let p=mesh.nodes_m[n]; let world=[origin_mm[0]+1000.*p[0],origin_mm[1]+1000.*p[1],1000.*p[2]]; if (0..3).any(|k|world[k]<=b[0][k] || world[k]>=b[1][k]) {return Err(error("RETURN_BOUNDARY","electrode support must lie strictly inside guard"));} } }
+    }
+    Ok(BoardMesh{return_boundary_mm:r.return_boundary_mm,field_substrate:substrate,field_bores:bores,field_partial_bores:partial_bores,field_copper,mesh,copper_skin_layers,copper_skin_barrels,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,hybrid_mesh_masks,certified_electrodes})
 }
 impl BoardMesh {
     /// End geometry preparation before a separately budgeted field phase.

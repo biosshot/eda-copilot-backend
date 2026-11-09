@@ -697,6 +697,7 @@ pub struct Solution {
     materials: Vec<Dielectric>,
     pairs: Vec<Vec<Block>>,
     cells: Vec<Cell>,
+    copper_cells: Vec<(usize, usize, usize)>,
     matrix: Csc,
     started: Instant,
     budget: Budget,
@@ -727,6 +728,237 @@ impl SpatialFieldAction {
     pub fn max_epsilon_r(&self) -> f64 { self.solution.max_epsilon_r() }
     pub fn action_count(&self) -> usize { self.calls.load(std::sync::atomic::Ordering::Relaxed) }
     pub fn apply(&self, voltage: &[f64]) -> Result<Vec<f64>> {
+        Ok(self.solve_field(voltage)?.1)
+    }
+    /// Conservative complex displacement flux magnitude per internal box face (C).
+    /// Face order is x-, x+, y-, y+, z-, z+. Multiply by omega for amperes.
+    pub fn cut_displacement_flux(
+        &self,
+        real: &[f64],
+        imag: &[f64],
+        bounds: [[f64; 3]; 2],
+    ) -> Result<[f64; 6]> {
+        let s = &self.solution;
+        if (0..3).any(|a| {
+            !bounds[0][a].is_finite() || !bounds[1][a].is_finite() || bounds[0][a] >= bounds[1][a]
+        }) {
+            return Err(error(
+                "FIELD_CUT",
+                "finite ordered observation bounds required",
+            ));
+        }
+        for mesh in &s.meshes {
+            for axis in 0..2 {
+                let lo = mesh
+                    .xy
+                    .iter()
+                    .map(|p| p[axis])
+                    .fold(f64::INFINITY, f64::min);
+                let hi = mesh
+                    .xy
+                    .iter()
+                    .map(|p| p[axis])
+                    .fold(f64::NEG_INFINITY, f64::max);
+                if bounds[0][axis] <= lo || bounds[1][axis] >= hi {
+                    return Err(error(
+                        "FIELD_CUT",
+                        "observation box must be internal to every field plane",
+                    ));
+                }
+            }
+        }
+        if bounds[0][2] <= s.z[0] || bounds[1][2] >= *s.z.last().unwrap() {
+            return Err(error(
+                "FIELD_CUT",
+                "observation box must be internal to field height",
+            ));
+        }
+        // A second solve retains the first nodal vector; cut clipping uses bounded
+        // scratch (at most ten vertices from clipping a convex six-vertex overlay).
+        let extra = add(mul(s.plan.nodes, 2 * std::mem::size_of::<f64>())?, 4096)?;
+        Guard {
+            started: s.started,
+            budget: s.budget,
+        }
+        .memory(add(s.plan.planned_simultaneous_bytes, extra)?)?;
+        let (pr, _) = self.solve_field(real)?;
+        let (pi, _) = self.solve_field(imag)?;
+        self.cut_nodal_flux(&pr, &pi, bounds)
+    }
+
+    fn cut_nodal_flux(&self, pr: &[f64], pi: &[f64], bounds: [[f64; 3]; 2]) -> Result<[f64; 6]> {
+        let s = &self.solution;
+        let mut flux = [0.; 6];
+        let mut coverage = [0.; 6];
+        for (ci, cell) in s.cells.iter().enumerate() {
+            if ci % 256 == 0 {
+                Guard {
+                    started: s.started,
+                    budget: s.budget,
+                }
+                .time()?;
+            }
+            let slab = cell.slab;
+            let z0 = s.z[slab];
+            let z1 = s.z[slab + 1];
+            let h = z1 - z0;
+            let block = &s.pairs[cell.pair][cell.block];
+            let lower = &s.meshes[s.planes[slab]].triangles[block.a];
+            let upper = &s.meshes[s.planes[slab + 1]].triangles[block.b];
+            let points: Vec<[f64; 2]> = block
+                .polygon
+                .exterior()
+                .0
+                .iter()
+                .map(|p| [p.x, p.y])
+                .collect();
+            for face in 0..4 {
+                let axis = face / 2;
+                let side = face % 2;
+                let other = 1 - axis;
+                if !cut_owned(&points, axis, bounds[side][axis], side) {
+                    continue;
+                }
+                let Some(length) = cut_segment_length(
+                    &points,
+                    axis,
+                    bounds[side][axis],
+                    bounds[0][other],
+                    bounds[1][other],
+                ) else {
+                    continue;
+                };
+                let gradient = |phi: &[f64], t: &Triangle, offset: usize| -> f64 {
+                    (0..3)
+                        .map(|i| phi[cell.nodes[offset + i]] * t.gradients[i][axis])
+                        .sum()
+                };
+                let r0 = gradient(&pr, lower, 0);
+                let r1 = gradient(&pr, upper, 3);
+                let i0 = gradient(&pi, lower, 0);
+                let i1 = gradient(&pi, upper, 3);
+                for material in &s.materials {
+                    let lo = z0.max(material.z0_m).max(bounds[0][2]);
+                    let hi = z1.min(material.z1_m).min(bounds[1][2]);
+                    if hi <= lo {
+                        continue;
+                    }
+                    let magnitude = |z: f64| {
+                        let t = (z - z0) / h;
+                        ((r0 * (1. - t) + r1 * t).powi(2) + (i0 * (1. - t) + i1 * t).powi(2)).sqrt()
+                    };
+                    let area = length * (hi - lo);
+                    coverage[face] += area;
+                    flux[face] += EPS0
+                        * cell.epsilon_override.unwrap_or(material.epsilon_r)
+                        * area
+                        * magnitude(lo).max(magnitude(hi));
+                }
+            }
+            for side in 0..2 {
+                let z = bounds[side][2];
+                if !cut_z_owned(z, z0, z1, side) {
+                    continue;
+                }
+                let Some(material) = s
+                    .materials
+                    .iter()
+                    .find(|m| cut_z_owned(z, m.z0_m, m.z1_m, side))
+                else {
+                    continue;
+                };
+                {
+                    let verts = clip_cut_polygon(&points, bounds);
+                    let mag = |p: [f64; 2]| {
+                        let val = |phi: &[f64], t: &Triangle, off: usize| -> f64 {
+                            t.values(p)
+                                .iter()
+                                .enumerate()
+                                .map(|(i, w)| w * phi[cell.nodes[off + i]])
+                                .sum()
+                        };
+                        ((val(&pr, upper, 3) - val(&pr, lower, 0)).powi(2)
+                            + (val(&pi, upper, 3) - val(&pi, lower, 0)).powi(2))
+                        .sqrt()
+                            / h
+                    };
+                    for k in 1..verts.len().saturating_sub(1) {
+                        let tri = [verts[0], verts[k], verts[k + 1]];
+                        let area = cross(sub(tri[1], tri[0]), sub(tri[2], tri[0])).abs() / 2.;
+                        coverage[4 + side] += area;
+                        // Convex norm lies below the barycentric interpolation of vertex norms.
+                        flux[4 + side] += EPS0
+                            * cell.epsilon_override.unwrap_or(material.epsilon_r)
+                            * area
+                            * tri.iter().map(|&p| mag(p)).sum::<f64>()
+                            / 3.;
+                    }
+                }
+            }
+        }
+        // Excluded overlay cells are certified copper, not missing dielectric.
+        // Their displacement contribution is zero, but they cover the face.
+        for (index, &(slab, pair, block)) in s.copper_cells.iter().enumerate() {
+            if index % 256 == 0 {
+                Guard {
+                    started: s.started,
+                    budget: s.budget,
+                }
+                .time()?;
+            }
+            let z0 = s.z[slab];
+            let z1 = s.z[slab + 1];
+            let points: Vec<[f64; 2]> = s.pairs[pair][block]
+                .polygon
+                .exterior()
+                .0
+                .iter()
+                .map(|p| [p.x, p.y])
+                .collect();
+            for face in 0..4 {
+                let axis = face / 2;
+                let side = face % 2;
+                let other = 1 - axis;
+                if !cut_owned(&points, axis, bounds[side][axis], side) {
+                    continue;
+                }
+                if let Some(length) = cut_segment_length(
+                    &points,
+                    axis,
+                    bounds[side][axis],
+                    bounds[0][other],
+                    bounds[1][other],
+                ) {
+                    coverage[face] +=
+                        length * (z1.min(bounds[1][2]) - z0.max(bounds[0][2])).max(0.);
+                }
+            }
+            for side in 0..2 {
+                if cut_z_owned(bounds[side][2], z0, z1, side) {
+                    let verts = clip_cut_polygon(&points, bounds);
+                    for k in 1..verts.len().saturating_sub(1) {
+                        coverage[4 + side] +=
+                            cross(sub(verts[k], verts[0]), sub(verts[k + 1], verts[0])).abs() / 2.;
+                    }
+                }
+            }
+        }
+        let expected = [
+            (bounds[1][1] - bounds[0][1]) * (bounds[1][2] - bounds[0][2]),
+            (bounds[1][1] - bounds[0][1]) * (bounds[1][2] - bounds[0][2]),
+            (bounds[1][0] - bounds[0][0]) * (bounds[1][2] - bounds[0][2]),
+            (bounds[1][0] - bounds[0][0]) * (bounds[1][2] - bounds[0][2]),
+            (bounds[1][0] - bounds[0][0]) * (bounds[1][1] - bounds[0][1]),
+            (bounds[1][0] - bounds[0][0]) * (bounds[1][1] - bounds[0][1]),
+        ];
+        if flux.iter().any(|x| !x.is_finite())
+            || (0..6).any(|i| (coverage[i] - expected[i]).abs() > expected[i] * 1e-8)
+        {
+            return Err(error("FIELD_CUT", "observation face lacks field coverage"));
+        }
+        Ok(flux)
+    }
+    fn solve_field(&self, voltage: &[f64]) -> Result<(Vec<f64>, Vec<f64>)> {
         let s=&self.solution;
         let g=Guard { started:s.started, budget:s.budget }; g.time()?;
         if voltage.len()!=s.source_ids.len() || voltage.iter().any(|v|!v.is_finite()) {
@@ -736,7 +968,7 @@ impl SpatialFieldAction {
         let f=s.prepared.as_ref().ok_or_else(||error("FIELD_MATRIX","missing prepared field factor"))?;
         let nodes=s.matrix.ptr.len()-1;
         let mut phi=vec![0.;nodes];
-        if voltage.iter().all(|&v|v==0.) { return Ok(vec![0.;voltage.len()]); }
+        if voltage.iter().all(|&v|v==0.) { return Ok((phi, vec![0.;voltage.len()])); }
         for i in 0..nodes { for &(j,w) in &s.trace_weights[i] { phi[i]+=w*voltage[j]; } }
         let mut rhs=Mat::<f64>::zeros(f.free,1);
         for col in 0..nodes {
@@ -763,8 +995,92 @@ impl SpatialFieldAction {
         if phi.iter().chain(&charge).chain(&reaction).any(|v|!v.is_finite()) {
             return Err(error("FIELD_RANGE","nonfinite prepared field action"));
         }
-        g.time()?; Ok(charge)
+        g.time()?; Ok((phi, charge))
     }
+}
+
+// Select the cell on the inside of a box face at shared interfaces.
+fn cut_owned(points: &[[f64; 2]], axis: usize, cut: f64, side: usize) -> bool {
+    if side == 0 {
+        points.iter().any(|p| p[axis] > cut)
+    } else {
+        points.iter().any(|p| p[axis] < cut)
+    }
+}
+fn cut_z_owned(z: f64, lo: f64, hi: f64, side: usize) -> bool {
+    if side == 0 {
+        z >= lo && z < hi
+    } else {
+        z > lo && z <= hi
+    }
+}
+
+// Sutherland-Hodgman clipping of the convex triangle overlay. The open
+// polygon starts with at most six vertices and gains at most one per plane.
+fn clip_cut_polygon(points: &[[f64; 2]], bounds: [[f64; 3]; 2]) -> Vec<[f64; 2]> {
+    let mut vertices = points[..points.len().saturating_sub(1)].to_vec();
+    for axis in 0..2 {
+        for side in 0..2 {
+            let mut next = Vec::with_capacity(10);
+            if vertices.is_empty() {
+                return next;
+            }
+            let inside = |p: [f64; 2]| {
+                if side == 0 {
+                    p[axis] >= bounds[side][axis]
+                } else {
+                    p[axis] <= bounds[side][axis]
+                }
+            };
+            let mut a = *vertices.last().unwrap();
+            for &b in &vertices {
+                if inside(a) != inside(b) {
+                    let t = (bounds[side][axis] - a[axis]) / (b[axis] - a[axis]);
+                    next.push([a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])]);
+                }
+                if inside(b) {
+                    next.push(b);
+                }
+                a = b;
+            }
+            vertices = next;
+        }
+    }
+    vertices
+}
+
+// Intersection length of a convex overlay polygon with an axis-aligned cut.
+fn cut_segment_length(
+    polygon: &[[f64; 2]],
+    axis: usize,
+    cut: f64,
+    min: f64,
+    max: f64,
+) -> Option<f64> {
+    let mut lo = f64::INFINITY;
+    let mut hi = f64::NEG_INFINITY;
+    for edge in polygon.windows(2) {
+        let a = edge[0];
+        let b = edge[1];
+        let da = a[axis] - cut;
+        let db = b[axis] - cut;
+        if da == 0. {
+            lo = lo.min(a[1 - axis]);
+            hi = hi.max(a[1 - axis]);
+        }
+        if db == 0. {
+            lo = lo.min(b[1 - axis]);
+            hi = hi.max(b[1 - axis]);
+        }
+        if (da < 0. && db > 0.) || (da > 0. && db < 0.) {
+            let t = da / (da - db);
+            let x = a[1 - axis] + t * (b[1 - axis] - a[1 - axis]);
+            lo = lo.min(x);
+            hi = hi.max(x);
+        }
+    }
+    let length = hi.min(max) - lo.max(min);
+    (length > 0.).then_some(length)
 }
 
 pub fn extract(input: &Input, budget: Budget) -> Result<Solution> {
@@ -1024,6 +1340,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
     let cell_storage_bytes = mul(max_cells, std::mem::size_of::<Cell>())?;
     g.memory(add(geometry_bytes, cell_storage_bytes)?)?;
     let mut cells = Vec::with_capacity(max_cells);
+    let mut copper_cells: Vec<(usize, usize, usize)> = Vec::new();
     let mut active = vec![false; nodes];
     let mut terms = 0usize;
     for slab in 0..input.z_m.len() - 1 {
@@ -1035,7 +1352,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
         } else {
             let id = pairs.len();
             let bytes = add(
-                geometry_bytes,
+                add(geometry_bytes, mul(copper_cells.capacity(), std::mem::size_of::<(usize, usize, usize)>())?)?,
                 mul(pairs.iter().map(|p: &Vec<Block>| p.len()).sum(), 1024)?,
             )?;
             pairs.push(overlaps(&meshes[ma], &meshes[mb], ma == mb, g, bytes)?);
@@ -1065,6 +1382,14 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
                 }
             }}
             if excluded {
+                if copper_cells.len() == copper_cells.capacity() {
+                    let capacity = copper_cells.capacity().max(4).checked_mul(2).ok_or_else(|| error("MEMORY_LIMIT", "copper cell capacity overflow"))?;
+                    let copper_bytes = mul(capacity, std::mem::size_of::<(usize, usize, usize)>())?;
+                    let pair_bytes = mul(pairs.iter().map(|p| p.len()).sum(), 1024)?;
+                    g.memory(add(add(geometry_bytes, pair_bytes)?, add(cell_storage_bytes, copper_bytes)?)?)?;
+                    copper_cells.reserve_exact(capacity - copper_cells.len());
+                }
+                copper_cells.push((slab, pair, index));
                 continue;
             }
             terms = add(terms, 36)?;
@@ -1073,7 +1398,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
             }
             g.memory(add(
                 geometry_bytes,
-                add(mul(terms, 16)?, cell_storage_bytes)?,
+                add(add(mul(terms, 16)?, cell_storage_bytes)?, mul(copper_cells.capacity(), std::mem::size_of::<(usize, usize, usize)>())?)?,
             )?)?;
             let a = &meshes[ma].triangles[b.a];
             let c = &meshes[mb].triangles[b.b];
@@ -1195,7 +1520,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
     )?;
     let base_bytes = add(
         geometry_bytes,
-        add(pair_bytes, add(cell_storage_bytes, recovery_bytes)?)?,
+        add(pair_bytes, add(add(cell_storage_bytes, mul(copper_cells.capacity(), std::mem::size_of::<(usize, usize, usize)>())?)?, recovery_bytes)?)?,
     )?;
     // Simultaneous COO+worst CSC and RHS/output before allocation, not dense fill.
     let assembly_bytes = add(
@@ -1318,7 +1643,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
         let plan=Plan {nodes,free_nodes:free,local_terms:terms,full_nnz:matrix.values.len(),free_nnz:fv.len(),factor_bytes,scratch_bytes,planned_simultaneous_bytes:plan_bytes,elapsed_seconds:g.started.elapsed().as_secs_f64()};
         return Ok(Solution {
             capacitance_f:vec![],source_ids,mesh_source_ids:meshes.iter().map(|m|m.source_id.clone()).collect(),plan,
-            basis_potentials_v:vec![],meshes,planes:input.planes.clone(),z:input.z_m.clone(),materials,pairs,cells,matrix,
+            basis_potentials_v:vec![],meshes,planes:input.planes.clone(),z:input.z_m.clone(),materials,pairs,cells,copper_cells,matrix,
             started:g.started,budget,metals:input.metals.clone(),known,contact_owners,trace_weights,far,
             insulated:input.exterior==Exterior::InsulatedAnalyticCoupon,active,
             prepared:Some(PreparedFactor {symbolic,values:factor,mapping,free}),
@@ -1396,6 +1721,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
         materials,
         pairs,
         cells,
+        copper_cells,
         matrix,
         started: g.started,
         budget,
@@ -1738,3 +2064,29 @@ mod spatial_material_tests {
 #[cfg(test)]
 #[path = "layered_spatial_tests.rs"]
 mod layered_spatial_tests;
+#[cfg(test)]
+mod cut_flux_tests {
+    use super::{cut_owned, cut_segment_length, cut_z_owned};
+    #[test]
+    fn clips_cut_segments_to_face() {
+        let square = [[0., 0.], [2., 0.], [2., 2.], [0., 2.], [0., 0.]];
+        assert_eq!(cut_segment_length(&square, 0, 1., 0.5, 1.5), Some(1.));
+        assert_eq!(cut_segment_length(&square, 1, 3., 0., 2.), None);
+        assert_eq!(cut_segment_length(&square, 0, 0., 0., 2.), Some(2.));
+        assert_eq!(cut_segment_length(&square, 0, 1., 3., 4.), None);
+    }
+    #[test]
+    fn shared_faces_have_one_interior_owner() {
+        let left = [[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0., 0.]];
+        let right = [[1., 0.], [2., 0.], [2., 1.], [1., 1.], [1., 0.]];
+        assert!(!cut_owned(&left, 0, 1., 0));
+        assert!(cut_owned(&right, 0, 1., 0));
+        assert!(cut_owned(&left, 0, 1., 1));
+        assert!(!cut_owned(&right, 0, 1., 1));
+        assert!(!cut_z_owned(1., 0., 1., 0));
+        assert!(cut_z_owned(1., 1., 2., 0));
+        assert!(cut_z_owned(1., 0., 1., 1));
+        assert!(!cut_z_owned(1., 1., 2., 1));
+    }
+
+}

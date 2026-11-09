@@ -52,6 +52,7 @@ impl Cell {
 trait FoilField {
     fn apply(&self, v:&[f64]) -> Result<Vec<f64>>;
     fn planned_bytes(&self) -> usize;
+    fn boundary(&self,_r:&[f64],_i:&[f64],_b:[[f64;3];2])->Result<[f64;6]> {Err(error("RETURN_BOUNDARY","field action does not support guard observation"))}
 }
 impl FoilField for Field<'_> {
     fn apply(&self,v:&[f64])->Result<Vec<f64>> { Field::apply(self,v) }
@@ -60,6 +61,7 @@ impl FoilField for Field<'_> {
 impl FoilField for super::layered_capacitance::SpatialFieldAction {
     fn apply(&self,v:&[f64])->Result<Vec<f64>> {super::layered_capacitance::SpatialFieldAction::apply(self,v)}
     fn planned_bytes(&self)->usize {super::layered_capacitance::SpatialFieldAction::planned_bytes(self)}
+    fn boundary(&self,r:&[f64],i:&[f64],b:[[f64;3];2])->Result<[f64;6]> {self.cut_displacement_flux(r,i,b)}
 }
 struct CompactField<'a> { action:&'a CompactChargeAction, diagonal:Vec<f64>, bytes:usize }
 impl FoilField for CompactField<'_> {
@@ -981,6 +983,7 @@ pub(super) fn solve_mixed_grid(
             .ok_or_else(|| error("MEMORY_LIMIT", "mixed retained plan exceeds budget"))?,
         ..budget
     };
+    if map.mesh().return_boundary_mm.is_some() {return Err(error("RETURN_BOUNDARY","guard observation requires compact mixed field"));}
     let mut checked = space.train_grid(
         &grid,
         names,
@@ -1286,6 +1289,26 @@ fn lift(basis: &[Vec<f64>], x: &[f64], dimension: usize) -> Vec<f64> {
                 .value()
         })
         .collect()
+}
+// Lift all physical potentials in compensated arithmetic before removing one
+// global gauge. Enrichment modes need not form a partition of unity.
+fn lift_field_voltage(basis: &[Vec<f64>], coords: &[Sum], dimension: usize) -> Vec<f64> {
+    let at = |i: usize| {
+        basis.iter().zip(coords).fold(Sum::default(), |sum, (b, &v)| {
+            sum.add(v.mul(b[i]))
+        })
+    };
+    let anchor = at(0);
+    (0..dimension).map(|i| at(i).sub(anchor).value()).collect()
+}
+
+#[test]
+fn field_voltage_gauge_preserves_enrichment_mode() {
+    let basis = vec![vec![1., 1., 1.], vec![0., 1., 2.]];
+    let values = lift_field_voltage(&basis, &[Sum::from(100.), Sum::from(3.)], 3);
+    assert_eq!(values, vec![0., 3., 6.]);
+    let shifted = lift_field_voltage(&basis, &[Sum::from(200.), Sum::from(3.)], 3);
+    assert_eq!(values, shifted);
 }
 use super::volume_integral_magnetic::hierarchical_magnetic::Interval as KvlInterval;
 
@@ -2139,7 +2162,7 @@ impl ReducedSpace {
                 let spatial_reserve = if let Some(map) = spatial_map {
                     let supports = map.foils.len().checked_add(map.owners.iter().filter(|o|matches!(o,super::mixed_conductor::Owner::Volume)).count()).ok_or_else(||error("MEMORY_LIMIT","spatial support count overflow"))?;
                     let output=supports.checked_mul(4096).and_then(|v|v.checked_mul(ports)).and_then(|v|v.checked_mul(grid.frequencies.len())).ok_or_else(||error("MEMORY_LIMIT","spatial report overflow"))?;
-                    let scratch=supports.checked_mul(2048).and_then(|v|v.checked_add(map.current_count().checked_mul(32)?)).ok_or_else(||error("MEMORY_LIMIT","spatial scratch overflow"))?;
+                    let scratch=supports.checked_mul(2048).and_then(|v|v.checked_add(map.current_count().checked_mul(32)?)).and_then(|v|v.checked_add(if map.mesh().return_boundary_mm.is_some() {self.full_potentials.checked_mul(64)?} else {0})).ok_or_else(||error("MEMORY_LIMIT","spatial scratch overflow"))?;
                     output.checked_add(scratch).ok_or_else(||error("MEMORY_LIMIT","spatial reservation overflow"))?
                 } else {0};
                 // Split solve retains a transformed descriptor and two
@@ -2387,6 +2410,26 @@ impl ReducedSpace {
                             let re=lift(&self.basis.current,&copper_re[nv..],self.cells.len());
                             let im=lift(&self.basis.current,&copper_im[nv..],self.cells.len());
                             column["spatialRecovery"] = super::spatial_recovery::recover(map,&re,&im,copper,AllocationBudget{max_bytes:spatial_reserve,..budget},start,wall)?;
+                            if let Some(bounds_mm)=map.mesh().return_boundary_mm {
+                                let origin=map.mesh().origin_mm;
+                                let bounds=bounds_mm.map(|p|[(p[0]-origin[0])*1e-3,(p[1]-origin[1])*1e-3,p[2]*1e-3]);
+                                let conductive=super::return_boundary::conductive(map,&re,&im,bounds,start,wall)?;
+                                // A single global gauge preserves inter-component voltage while
+                                // retaining sub-ULP shape before the physical lift is rounded.
+                                let field_voltage=|state:&[f64], shape:Option<&[f64]>| {
+                                    let coords:Vec<Sum>=if let Some(shape)=shape {split_voltage_coordinates(&self.basis,state,shape)} else {state[..nv].iter().copied().map(Sum::from).collect()};
+                                    lift_field_voltage(&self.basis.voltage,&coords,self.full_potentials)
+                                };
+                                let vr=field_voltage(copper_re,shape.map(|s|s[0]));
+                                let vi=field_voltage(copper_im,shape.map(|s|s[1]));
+                                let displacement=field.boundary(&vr,&vi,bounds)?.map(|v|v*w);
+                                if displacement.iter().any(|v|!v.is_finite()||*v<0.) {return Err(error("RETURN_BOUNDARY","invalid displacement flux"));}
+                                let port=net_real.iter().zip(&net_imaginary).take(ports).map(|(&r,&i)|r.hypot(i)).fold(0_f64,f64::max);
+                                let unresolved=conductive.iter().chain(&displacement).sum::<f64>();
+                                let relative=unresolved/port.max(1e-12);
+                                if !port.is_finite()||!unresolved.is_finite()||!relative.is_finite() {return Err(error("RETURN_BOUNDARY","nonfinite observation"));}
+                                column["returnBoundary"]=json!({"policy":"internal-guard-flux-v1","boundsMm":bounds_mm,"conductiveA":conductive,"displacementA":displacement,"portCurrentA":port,"unresolvedA":unresolved,"relative":relative,"absoluteFloorA":1e-12,"threshold":0.01,"passed":port>1e-12&&relative<0.01});
+                            }
                         }
                         if loss_grams {
                             let nv = self.basis.voltage.len();

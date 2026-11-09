@@ -825,6 +825,7 @@ pub fn solve_checked(
         Ok(checked)
     };
     if skin.is_some()
+        || geometry.return_boundary_mm.is_some()
         || request.partition_policy != mixed_conductor::PartitionPolicy::Legacy
         || !packages.is_empty()
         || !planar_stack

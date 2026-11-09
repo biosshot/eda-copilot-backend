@@ -62,6 +62,27 @@ test('channel refinement reuses one captured board and preserves independent pla
   let contacts:any;const base=localRequest(task as any,p=>contacts=p.contacts);
   const plan=createBoardChannelPlanner(board,base,contacts);
   const initial=plan();
+  const guarded=plan({closedJointDeadlineMs:performance.now()+10000,guardMarginMm:0.5});
+  const wider=plan({closedJointDeadlineMs:performance.now()+10000,guardMarginMm:0.5,domainScale:2});
+  assert.ok(guarded.returnSearch);
+  const search1=guarded.returnSearch!.expand(1,performance.now()+10000);
+  const search2=guarded.returnSearch!.expand(2,performance.now()+10000);
+  assert.deepEqual(search1.geometry.coordinateOriginMm,search2.geometry.coordinateOriginMm);
+  assert.equal(JSON.stringify(guarded).includes('returnSearch'),false);
+  const boundary=search1.geometry.returnBoundaryMm as number[][];
+  assert.deepEqual(boundary[0].slice(0,2),search1.observationRoiMm![0]);
+  assert.deepEqual(boundary[1].slice(0,2),search1.observationRoiMm![1]);
+  assert.ok(boundary[0][2]<0 && boundary[1][2]>0);
+  assert.ok(Number(search1.geometry.electricAirMarginM)>=2*guarded.returnSearch!.initialMarginMm/1000);
+  assert.ok(guarded.observationRoiMm);
+  for(let axis=0;axis<2;axis++){
+   assert.ok(guarded.roiMm[0][axis]<=guarded.observationRoiMm![0][axis]-0.5+1e-9);
+   assert.ok(guarded.roiMm[1][axis]>=guarded.observationRoiMm![1][axis]+0.5-1e-9);
+   assert.ok(wider.observationRoiMm![0][axis]<=guarded.observationRoiMm![0][axis]);
+   assert.ok(wider.observationRoiMm![1][axis]>=guarded.observationRoiMm![1][axis]);
+  }
+  assert.ok(guarded.sourceCopper.every(r=>wider.sourceCopper.some(w=>w.regionId===r.regionId)));
+  assert.ok(guarded.sourceBarrels.every(r=>wider.sourceBarrels.some(w=>w.barrelId===r.barrelId)));
   assert.deepEqual(plan({domainScale:2,magneticPatchLevel:2}),boardChannelPlan(board,base,contacts,{domainScale:2,magneticPatchLevel:2}));
   const coarse=plan({magneticPatchLevel:1}),fine=plan({magneticPatchLevel:2}),expanded=plan({domainScale:2,magneticPatchLevel:1});
   assert.ok(coarse.blocks.filter((b:any)=>b.kind==='local').every((b:any)=>b.geometry.maxTriangleAreaM2===5e-8));

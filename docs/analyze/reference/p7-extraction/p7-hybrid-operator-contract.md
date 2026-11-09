@@ -14,6 +14,24 @@ One disjoint physical copper support has exactly one owner (planar, local volume
 
 The automatic compact path now accepts section-derived current predictors in its existing physical current coordinates. `mixed_conductor::uniform_section_profiles` supplies conforming axial profiles, and `planar_section_profiles` samples a bounded XY cross-section on physical foil supports. Least-squares restriction maps the initial profiles to compact coordinates. `solve_compact_adaptive` orthogonalizes them in the physical resistive metric and uses the same common electric/magnetic actions and original-coordinate residual enrichment as other currents. Sampling defines a candidate span only. It does not certify longitudinal homogeneity or transfer an independent section impedance, loss matrix or ground stamp. This path has no separately owned section copper and requires no extra section–planar field block.
 
+## Adaptive return-domain observation
+
+`board-channel-plan` supplies an in-memory expansion callback for automatic scopes. `runAutoFoil` doubles the search margin through scales 1, 2, 4, 8, 16, 32, 64 and 128, sharing the original wall and memory limits. Each candidate closes over complete intersecting copper islands, all layers, plated barrels and declared component contacts. Authored domain polygons retain their explicit scope.
+
+`geometry.returnBoundaryMm` defines a six-face XYZ observation box, with world XY coordinates and stack-origin Z in mm. The solved field extends beyond every face. All physical electrode nodes, including package contacts, must lie strictly inside the box. Prescribed terminal injections therefore never intersect the observed boundary. The returned DSL plan uses the actual expanded domain and retained sources.
+
+For each frequency and matched Norton drive, the observed unresolved-current bound is
+
+`F = sum_faces integral |J_complex dot n| dA + omega * sum_faces integral |D_complex dot n| dA`.
+
+`I = max_external_ports |I_net|`, `rho = F / max(I, 1e-12 A)`.
+
+Admission requires `I > 1e-12 A` and `rho < 0.01` for all requested columns and computed frequency-audit columns. The 1 pA floor is fixed before solving. Internal package currents do not enter the denominator. The consumer recomputes the sum, ratio and pass flag and checks the external-port normalization against S and the original references. Exceeding the threshold expands the domain. Budget exhaustion, invalid evidence or eight unresolved candidates produces a refusal with available iteration history.
+
+`return_boundary::conductive` integrates physical P0 current density over clipped tetrahedron sections. `SpatialFieldAction::cut_displacement_flux` reconstructs its prepared prism field and integrates a conservative complex-normal-field magnitude bound over the internal cuts. It uses actual dielectric permittivity and accounts separately for zero-displacement copper coverage. Shared coplanar interfaces have one interior-side owner, and complete face coverage is required. The calculation uses a compensated physical-potential lift with one global gauge and retains inter-island voltage differences. It never substitutes free-row residuals or outer natural-boundary reactions for missing return flux.
+
+The evidence policy is `internal-guard-flux-v1`. This certifies the numerical guard-current criterion in the computed domain. Independent field discretization, exterior-domain sensitivity and physical accuracy retain their existing unverified status until acceptance.
+
 ## Applicability and checks
 
 The initial constant-through-thickness basis is experimental. For conductivity σ, permeability μ, frequency f, δ = 1/sqrt(π f μ σ); at DC δ is infinite. Require t/δ <= 0.2 for this initial approximation, otherwise enrich thickness/current modes or escalate to local volume; this conservative screening is not an accuracy proof. Nearby conductors, edges, gaps and strong field gradients require independent proximity/refinement evidence even when this test passes. Homogeneous ε is required by the initial Coulomb kernel; layered dielectric must use a validated layered Green operator or refuse. Geometric ownership, coincident supports, invalid material, non-finite values and budget/deadline violations refuse.
