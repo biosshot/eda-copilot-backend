@@ -723,7 +723,41 @@ impl BoundedPairs {
         }
         super::polyhedron::tetra_integral_adaptive_checked(self.tetra[i], &cells[si].source, self.order, 1e-10, &mut || check_deadline(self.start,self.wall))
     }
+    /// Fast non-certified pair (i >= j): returns (value, relative change, approximated).
+    /// Separated pairs use the same direct cubature as `pair_inner`; near and touching
+    /// pairs use the general singular integrator at orders 8/12/16 with target 1e-5
+    /// (PAIR_COMPACT semantics: accepted at the cap when the change is <= 0.5).
+    fn pair_fast(&self, i: usize, j: usize) -> Result<(f64, f64, bool)> {
+        check_deadline(self.start, self.wall)?;
+        if i == j {
+            let (value, change) = checked_local_self(self.tetra[i], self.start, self.wall)?;
+            return Ok((value, change, false));
+        }
+        let mut cells = self.cells.borrow_mut();
+        self.ensure(&mut cells, i, None)?;
+        self.ensure(&mut cells, j, Some(i))?;
+        let ti = cells.iter().position(|cell| cell.index == i).unwrap();
+        let si = cells.iter().position(|cell| cell.index == j).unwrap();
+        let q = cells[ti].cubatures[0].separation_q(&cells[si].cubatures[0]);
+        if let Some(k) = separated_order(q, self.order).and_then(|o| [4, 6, 8].iter().position(|&c| c == o)) {
+            return Ok((cells[ti].cubatures[k].direct_integral(&cells[si].cubatures[k])?, 0., false));
+        }
+        let (target, source) = if prefer_reciprocal_source(self.tetra[i], self.tetra[j]) { (self.tetra[j], &cells[ti].source) } else { (self.tetra[i], &cells[si].source) };
+        let mut check = || check_deadline(self.start, self.wall);
+        let mut previous = super::polyhedron::tetra_integral_checked(target, source, 8, &mut check)?;
+        let mut change = f64::INFINITY;
+        for order in [12, 16] {
+            let value = super::polyhedron::tetra_integral_checked(target, source, order, &mut check)?;
+            change = (value - previous).abs() / value;
+            previous = value;
+            if change <= 1e-5 { return Ok((value, change, false)); }
+        }
+        if change <= 0.5 { Ok((previous, change, true)) }
+        else { Err(error("HYBRID_UNRESOLVED", &format!("fast tetra pair ({i},{j}) unresolved at order 16; last change {change:e}"))) }
+    }
 }
+/// Cache slots per fast-fill worker (each pins one target and cycles sources).
+const FAST_SLOTS: usize = 16;
 
 fn geometry(mesh: &LayeredMesh) -> Vec<[[f64; 3]; 4]> {
     mesh.copper_tetrahedra
@@ -1452,6 +1486,10 @@ pub(super) struct CompactLocalHierarchy {
     space: Space,
     checked_self: std::cell::RefCell<Vec<bool>>,
     direct_small: bool,
+    fast: bool,
+    fast_threads: usize,
+    fast_table: std::cell::RefCell<Vec<f64>>,
+    fast_info: std::cell::RefCell<Option<serde_json::Value>>,
     pub(super) planned_bytes: usize,
 }
 impl CompactLocalHierarchy {
@@ -1554,9 +1592,118 @@ impl CompactLocalHierarchy {
         eprintln!("P7_COMPACT_LOCAL_TT_PLAN workers={workers} axial={axial} serialSlots={slots} workerSlots={} axialBytes={axial_bytes} parallelBytes={parallel_bytes} plannedBytes={planned_bytes}",if workers>1 {worker_slots} else {0});
         let cells = (0..n).map(|i| super::volume_current::Cell { mesh_cell:i, potentials:[0;4], incidence:[[0.;3];4], density_per_amp_m2:1., resistance_ohm:1. }).collect();
         let space = Space { mesh_nodes:vec![], node_potential:Default::default(), cells, components:vec![], planned_bytes:space_bytes };
-        Ok(Self { pair, tree, space, checked_self: std::cell::RefCell::new(vec![false;n]), direct_small: false, planned_bytes })
+        Ok(Self { pair, tree, space, checked_self: std::cell::RefCell::new(vec![false;n]), direct_small: false, fast: false, fast_threads: 1, fast_table: std::cell::RefCell::new(Vec::new()), fast_info: std::cell::RefCell::new(None), planned_bytes })
     }
     pub(super) fn self_max_change(&self) -> f64 { self.pair.self_max_change.get() }
+    /// Switch to the dense non-certified fast table (large problems only; see the
+    /// planar H-matrix gate). Returns false and keeps the certified path when the
+    /// table plus worker caches do not fit `max_bytes` or `P7_LOCAL_FAST=0`.
+    pub(super) fn enable_fast(&mut self, max_bytes: usize) -> bool {
+        if std::env::var("P7_LOCAL_FAST").as_deref() == Ok("0") { return false; }
+        let n = self.space.cells.len();
+        let Some(table) = BoundedPairs::lower_pair_count(n).and_then(|c| c.checked_mul(std::mem::size_of::<f64>())).filter(|&b| b <= MAX_DENSE_LOWER_BYTES) else { return false; };
+        let released = self.pair.dense_lower.borrow().len() * std::mem::size_of::<f64>();
+        let Some(base) = self.planned_bytes.saturating_sub(released).checked_add(table) else { return false; };
+        let per_thread = (FAST_SLOTS + 2) * STREAMED_PAIR_SLOT_BYTES;
+        let Some(avail) = max_bytes.checked_sub(base) else { return false; };
+        let threads = super::planar_hmatrix::Params::from_env().threads.min(n).min(avail / per_thread);
+        if threads == 0 { return false; }
+        *self.pair.dense_lower.borrow_mut() = Vec::new();
+        self.planned_bytes = base + threads * per_thread;
+        self.fast = true;
+        self.fast_threads = threads;
+        true
+    }
+    pub(super) fn fast_evidence(&self) -> Option<serde_json::Value> { self.fast_info.borrow().clone() }
+    fn fast_fill(&self) -> Result<()> {
+        use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering::Relaxed};
+        if !self.fast_table.borrow().is_empty() { return Ok(()); }
+        let n = self.space.cells.len();
+        let count = BoundedPairs::lower_pair_count(n).ok_or_else(|| error("MEMORY_LIMIT", "fast table size overflow"))?;
+        let started = Instant::now();
+        let mut table: Vec<f64> = Vec::new();
+        table.try_reserve_exact(count).map_err(|_| error("MEMORY_LIMIT", "fast table allocation failed"))?;
+        table.resize(count, 0.);
+        let rows: Vec<std::sync::Mutex<&mut [f64]>> = {
+            let mut rows = Vec::with_capacity(n);
+            let mut rest = table.as_mut_slice();
+            for i in 0..n { let (row, tail) = rest.split_at_mut(i + 1); rows.push(std::sync::Mutex::new(row)); rest = tail; }
+            rows
+        };
+        let next = AtomicUsize::new(0);
+        let abort = AtomicBool::new(false);
+        let failure: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+        let tetra: &Vec<[[f64; 3]; 4]> = &self.pair.tetra;
+        let (start, wall) = (self.pair.start, self.pair.wall);
+        // (pairs, approximated, max pair change, max self change)
+        let totals: Vec<(usize, usize, f64, f64)> = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..self.fast_threads.max(1)).map(|_| scope.spawn(|| {
+                let (mut pairs, mut approx, mut max_change, mut self_change) = (0usize, 0usize, 0f64, 0f64);
+                let mut run = || -> Result<()> {
+                    let worker = BoundedPairs::new(tetra.clone(), 12, FAST_SLOTS, start, wall)?;
+                    loop {
+                        if abort.load(Relaxed) { return Ok(()); }
+                        let k = next.fetch_add(1, Relaxed);
+                        if k >= n { return Ok(()); }
+                        let i = n - 1 - k;
+                        let mut row = rows[i].lock().map_err(|_| error("MAGNETIC_CONFIG", "fast row poisoned"))?;
+                        for j in 0..=i {
+                            let (value, change, approximated) = worker.pair_fast(i, j)?;
+                            row[j] = value; pairs += 1;
+                            if i == j { self_change = self_change.max(change); }
+                            else { max_change = max_change.max(change); if approximated { approx += 1; } }
+                        }
+                    }
+                };
+                if let Err(e) = run() { abort.store(true, Relaxed); failure.lock().unwrap().get_or_insert(e); }
+                (pairs, approx, max_change, self_change)
+            })).collect();
+            handles.into_iter().map(|h| h.join().unwrap_or_else(|_| { abort.store(true, Relaxed); failure.lock().unwrap().get_or_insert(error("MAGNETIC_CONFIG", "fast fill worker panicked")); (0, 0, 0., 0.) })).collect()
+        });
+        drop(rows);
+        if let Some(e) = failure.into_inner().unwrap() { return Err(e); }
+        let pairs: usize = totals.iter().map(|t| t.0).sum();
+        let approximated: usize = totals.iter().map(|t| t.1).sum();
+        let max_change = totals.iter().fold(0f64, |m, t| m.max(t.2));
+        let self_change = totals.iter().fold(0f64, |m, t| m.max(t.3));
+        self.pair.self_max_change.set(self.pair.self_max_change.get().max(self_change));
+        let info = serde_json::json!({"operator":"compact-fast-dense-tt","pairs":pairs,"approximatedPairs":approximated,"maxChange":max_change,"selfMaxChange":self_change,"fillSeconds":started.elapsed().as_secs_f64(),"threads":self.fast_threads});
+        eprintln!("P7_COMPACT_LOCAL_FAST {info}");
+        *self.fast_info.borrow_mut() = Some(info);
+        *self.fast_table.borrow_mut() = table;
+        Ok(())
+    }
+    /// Dense symmetric matvec (K * 1e-7 per Cartesian axis); bounds are an estimate
+    /// of 1e-5 relative table error, not a certificate.
+    fn fast_actions(&self, columns: &[Vec<f64>]) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
+        self.fast_fill()?;
+        let n = self.space.cells.len();
+        let table = self.fast_table.borrow();
+        let mut actions = Vec::with_capacity(columns.len());
+        let mut bounds = Vec::with_capacity(columns.len());
+        for column in columns {
+            check_deadline(self.pair.start, self.pair.wall)?;
+            let mut y = vec![0.; 3 * n];
+            let mut magnitude = vec![0.; 3 * n];
+            for i in 0..n {
+                let row = &table[i * (i + 1) / 2..][..=i];
+                for (j, &k) in row.iter().enumerate() {
+                    for axis in 0..3 {
+                        let (a, b) = (3 * i + axis, 3 * j + axis);
+                        let t = k * column[b];
+                        y[a] += t; magnitude[a] += t.abs();
+                        if i != j { let t = k * column[a]; y[b] += t; magnitude[b] += t.abs(); }
+                    }
+                }
+            }
+            for v in &mut y { *v *= 1e-7; }
+            for v in &mut magnitude { *v *= 1e-7 * 1e-5; }
+            if y.iter().chain(&magnitude).any(|v| !v.is_finite()) { return Err(error("HYBRID_RANGE", "fast local action overflow")); }
+            actions.push(y); bounds.push(magnitude);
+        }
+        let evidence = self.fast_info.borrow().clone().unwrap_or(serde_json::Value::Null);
+        Ok((actions, bounds, evidence))
+    }
     #[cfg(test)]
     pub(super) fn cover_control(&self, columns:&[Vec<f64>], goals:&[f64], weights:&[f64]) -> Result<serde_json::Value> {
         self.tree.cover_control_weighted(&self.pair.tetra,&self.space,columns,goals,Some(weights))
@@ -1567,6 +1714,11 @@ impl CompactLocalHierarchy {
     pub(super) fn bound_projection_error(
         &self, columns: &[Vec<f64>], goals: &[f64], weights: &[f64],
     ) -> Result<Option<Vec<Vec<f64>>>> {
+        if self.fast {
+            // Kernel is nonnegative: the action on radii is itself the bound (plus table estimate).
+            let (action, bound, _) = self.fast_actions(columns)?;
+            return Ok(Some(action.iter().zip(&bound).map(|(a, b)| a.iter().zip(b).map(|(a, b)| a.abs() + b).collect()).collect()));
+        }
         self.tree.bound_nonnegative_projection(&self.pair.tetra, columns, goals, weights)
     }
     fn direct_cached_actions(
@@ -1670,6 +1822,7 @@ impl CompactLocalHierarchy {
         if columns.iter().any(|q|q.len()!=3*n || q.iter().any(|v|!v.is_finite())) {
             return Err(error("HYBRID_INPUT", "invalid local hierarchy column"));
         }
+        if self.fast { return self.fast_actions(columns); }
         for i in 0..n {
             if columns.iter().any(|q|q[3*i..3*i+3].iter().any(|v|*v!=0.)) && !self.checked_self.borrow()[i] {
                 self.pair.pair(i,i)?;
@@ -1715,6 +1868,36 @@ mod compact_reuse_tests {
         }
         let warm = tree.actions_weighted(&columns, &goals, Some(&weights)).unwrap();
         assert_eq!(direct, warm);
+    }
+
+    #[test]
+    fn fast_dense_action_matches_certified_action() {
+        let a = [[0., 0., 0.], [0.001, 0., 0.], [0., 0.001, 0.], [0., 0., 0.001]];
+        let shared_face = [[0., 0., 0.], [0.001, 0., 0.], [0., 0.001, 0.], [0., 0., -0.001]];
+        let shared_vertex = a.map(|p| [p[0] + 0.001, p[1], p[2]]);
+        let near = a.map(|p| [p[0] + 0.0021, p[1] + 0.0004, p[2]]);
+        let far = a.map(|p| [p[0] + 0.02, p[1], p[2]]);
+        let geometry = vec![a, shared_face, shared_vertex, near, far];
+        let n = geometry.len();
+        let budget = AllocationBudget { max_bytes: 256 * 1024 * 1024, max_nodes: 1000, max_tetrahedra: 1000 };
+        let certified = CompactLocalHierarchy::new_with_config(geometry.clone(), budget, Instant::now(), Duration::from_secs(60), 1, false).unwrap();
+        let mut fast = CompactLocalHierarchy::new_with_config(geometry, budget, Instant::now(), Duration::from_secs(60), 1, false).unwrap();
+        assert!(fast.enable_fast(budget.max_bytes));
+        let columns: Vec<Vec<f64>> = (0..2).map(|c| (0..3 * n).map(|k| ((k * 7 + c * 3) % 11) as f64 * 0.1 - 0.4).collect()).collect();
+        let goals = [1e-34, 1e-34];
+        let weights = vec![1.; n];
+        let (reference, _, _) = certified.actions_weighted(&columns, &goals, Some(&weights)).unwrap();
+        let (action, bounds, info) = fast.actions_weighted(&columns, &goals, Some(&weights)).unwrap();
+        assert_eq!(info["operator"], "compact-fast-dense-tt");
+        assert_eq!(info["pairs"], n * (n + 1) / 2);
+        for c in 0..2 {
+            let norm = reference[c].iter().map(|v| v * v).sum::<f64>().sqrt();
+            let diff = reference[c].iter().zip(&action[c]).map(|(r, f)| (r - f) * (r - f)).sum::<f64>().sqrt();
+            assert!(diff <= 1e-4 * norm, "relative error {:e}", diff / norm);
+            assert!(bounds[c].iter().all(|b| b.is_finite() && *b >= 0.));
+        }
+        let projection = fast.bound_projection_error(&columns, &goals, &weights).unwrap().unwrap();
+        assert!(projection.iter().flatten().all(|b| b.is_finite() && *b >= 0.));
     }
 
     #[test]
