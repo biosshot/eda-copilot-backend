@@ -87,6 +87,7 @@ pub struct Plan {
     leaf: usize,
     theta: f64,
     included_prefix: usize,
+    block_cap: usize,
 }
 impl Plan {
     pub fn new(prisms: &[Prism], theta: f64, leaf: usize, budget: Budget) -> Result<Self> {
@@ -108,6 +109,9 @@ impl Plan {
     pub fn from_moments(moments: Vec<Moments>, theta:f64, leaf:usize, budget:Budget)->Result<Self> {
         Self::from_moments_policy(moments,theta,leaf,budget,true,Instant::now(),None)
     }
+    pub fn from_moments_coarse(moments: Vec<Moments>, theta:f64, leaf:usize, budget:Budget)->Result<Self> {
+        Self::from_moments_policy(moments,theta,leaf,budget,false,Instant::now(),None)
+    }
     /// Cover all pairs with at least one support in the prefix. The suffix
     /// self-domain is owned by a separate operator and is never visited.
     pub fn from_moments_excluding_suffix_pairs(moments: Vec<Moments>, prefix: usize, theta:f64, leaf:usize, budget:Budget)->Result<Self> {
@@ -115,6 +119,15 @@ impl Plan {
         Self::from_moments_policy(moments,theta,leaf,budget,true,Instant::now(),Some(prefix))
     }
     fn from_moments_policy(moments:Vec<Moments>,theta:f64,leaf:usize,budget:Budget,individual:bool,started:Instant,prefix:Option<usize>)->Result<Self> {
+        Self::from_moments_full(moments,theta,leaf,budget,individual,started,prefix,false)
+    }
+    /// Like the prefix-excluding plan, but individual near-pair promotion is
+    /// limited to prefix-suffix pairs (prefix-prefix pairs are owned elsewhere).
+    pub fn from_moments_cross_only(moments: Vec<Moments>, prefix: usize, theta:f64, leaf:usize, budget:Budget)->Result<Self> {
+        if prefix > moments.len() { return Err(error("NEAR_FAR_INPUT", "prefix exceeds support count")); }
+        Self::from_moments_full(moments,theta,leaf,budget,true,Instant::now(),Some(prefix),true)
+    }
+    fn from_moments_full(moments:Vec<Moments>,theta:f64,leaf:usize,budget:Budget,individual:bool,started:Instant,prefix:Option<usize>,cross_only:bool)->Result<Self> {
         clock(started,budget)?;
         if moments.is_empty() || !(theta>0. && theta<1.) || !(1..=64).contains(&leaf) || moments.iter().any(|m|m.center_m.iter().any(|x|!x.is_finite()) || !m.radius_m.is_finite() || m.radius_m<=0. || !m.volume_m3.is_finite() || m.volume_m3<=0.) {
             return Err(error("NEAR_FAR_INPUT","nonempty finite moments, 0<theta<1 and leaf1..64 required"));
@@ -135,7 +148,7 @@ impl Plan {
             product(n, std::mem::size_of::<Moments>() + 8 + 8192)?,
             checked(
                 product(node_cap, std::mem::size_of::<Node>())?,
-                product(block_cap, std::mem::size_of::<Block>())?,
+                0,
             )?,
         )?)?;
         memory(bytes, budget)?;
@@ -143,7 +156,8 @@ impl Plan {
             moments,
             order: (0..n).collect(),
             nodes: Vec::with_capacity(node_cap),
-            blocks: Vec::with_capacity(block_cap),
+            blocks: Vec::with_capacity(block_cap.min(1024)),
+            block_cap,
             near_pairs: 0,
             far_pairs: 0,
             planned_bytes: bytes,
@@ -161,7 +175,7 @@ impl Plan {
         if individual {
             let mut mask=std::mem::take(&mut p.promoted);
             let mut count=0;
-            p.visit_pairs(false,|i,j| {
+            let promote=|i:usize,j:usize|->Result<()> {
                 clock(started,budget)?;
                 if i!=j {
                     let a=&p.moments[i];let b=&p.moments[j];
@@ -175,7 +189,8 @@ impl Plan {
                     }
                 }
                 Ok(())
-            })?;
+            };
+            if cross_only {p.visit_cross_pairs(false,promote)?} else {p.visit_pairs(false,promote)?}
             p.promoted=mask;p.promoted_pairs=count;p.near_pairs-=count;p.far_pairs+=count;
         }
         if checked(p.near_pairs, p.far_pairs)? != total {
@@ -184,6 +199,8 @@ impl Plan {
                 "pair partition lost or duplicated geometry",
             ));
         }
+        p.planned_bytes=checked(p.planned_bytes,product(p.blocks.capacity(),std::mem::size_of::<Block>())?)?;
+        memory(p.planned_bytes,budget)?;
         p.construction_seconds = started.elapsed().as_secs_f64();
         Ok(p)
     }
@@ -243,11 +260,16 @@ impl Plan {
         Ok(id)
     }
     fn push(&mut self, a: usize, b: usize, far: bool, q: f64) -> Result<()> {
-        if self.blocks.len() >= self.blocks.capacity() {
+        if self.blocks.len() >= self.block_cap {
             return Err(error(
                 "MESH_LIMIT",
                 "bounded interaction block capacity exhausted",
             ));
+        }
+        if self.blocks.len()==self.blocks.capacity() && self.blocks.len()>=1024 {
+            // Amortized: growth doubles, so check the real storage on each doubling.
+            let real=checked(self.planned_bytes,product(self.blocks.capacity()*2,std::mem::size_of::<Block>())?)?;
+            memory(real,self.budget)?;
         }
         let na = self.nodes[a].end - self.nodes[a].start;
         let nb = self.nodes[b].end - self.nodes[b].start;
@@ -321,6 +343,31 @@ impl Plan {
                 for j in first..b.end {
                     let (ii,jj)=(self.order[i],self.order[j]);
                     if ii >= self.included_prefix && jj >= self.included_prefix { continue; }
+                    let k=self.pair_index(ii,jj);
+                    let promoted=!self.promoted.is_empty() && (self.promoted[k/64]>>(k%64))&1!=0;
+                    if (block.far || promoted)!=far {continue;}
+                    f(ii,jj)?;
+                }
+            }
+        }
+        Ok(())
+    }
+    /// Visit only pairs with one prefix and one suffix support.
+    pub fn visit_cross_pairs(&self, far: bool, mut f: impl FnMut(usize, usize) -> Result<()>) -> Result<()> {
+        let ip=self.included_prefix;
+        for block in &self.blocks {
+            if block.far && !far {continue;}
+            if !block.far && far && self.promoted_pairs==0 {continue;}
+            let a = &self.nodes[block.a];
+            let b = &self.nodes[block.b];
+            let (pa,pb)=(a.prefix_count,b.prefix_count);
+            let (sa,sb)=((a.end-a.start)-pa,(b.end-b.start)-pb);
+            if (pa==0||sb==0)&&(pb==0||sa==0) {continue;}
+            for i in a.start..a.end {
+                let first = if block.a == block.b { i } else { b.start };
+                for j in first..b.end {
+                    let (ii,jj)=(self.order[i],self.order[j]);
+                    if (ii<ip)==(jj<ip) { continue; }
                     let k=self.pair_index(ii,jj);
                     let promoted=!self.promoted.is_empty() && (self.promoted[k/64]>>(k%64))&1!=0;
                     if (block.far || promoted)!=far {continue;}

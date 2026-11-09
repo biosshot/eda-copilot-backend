@@ -264,64 +264,72 @@ fn vertex_integral(a:&Prism,b:&Prism,order:usize,start:Instant,limit:Duration)->
     Ok(Some(value))
 }
 
+fn unresolved(kind:&str,a:&Prism,b:&Prism)->String {
+    let shape=|p:&Prism|{let t=p.triangle_m;let twice=((t[1][0]-t[0][0])*(t[2][1]-t[0][1])-(t[1][1]-t[0][1])*(t[2][0]-t[0][0])).abs();let longest=(0..3).map(|i|(t[i][0]-t[(i+1)%3][0]).hypot(t[i][1]-t[(i+1)%3][1])).fold(0.,f64::max);format!("{{id={} tri={:?} z={:?} thickness={:e} altitude={:e}}}",p.source_id,t,p.z_m,p.z_m[1]-p.z_m[0],twice/longest)};
+    format!("{kind} quadrature did not converge by order 64; a={} b={}",shape(a),shape(b))
+}
+/// Pair convergence policy: `target` is the relative change between successive
+/// orders that ends the loop; at the order limit a last change <= `noise_accept`
+/// is accepted (finest value, reported through the returned change), larger is refused.
+#[derive(Clone, Copy)]
+pub(super) struct PairTolerance { pub target: f64, pub noise_accept: f64 }
+/// Legacy tight policy (references, tests, dense Gram): no noise acceptance.
+pub(super) const PAIR_LEGACY: PairTolerance = PairTolerance { target: 1e-8, noise_accept: 0. };
+/// Target relative change between successive orders for the compact hybrid path.
+pub(super) const PAIR_TARGET_RELATIVE_CHANGE: f64 = 1e-6;
+/// Largest last change accepted as quadrature noise at the order limit (compact path).
+pub(super) const PAIR_NOISE_ACCEPT_CHANGE: f64 = 2e-3;
+pub(super) const PAIR_COMPACT: PairTolerance = PairTolerance { target: PAIR_TARGET_RELATIVE_CHANGE, noise_accept: PAIR_NOISE_ACCEPT_CHANGE };
+
+fn converge(kind:&str,a:&Prism,b:&Prism,order:usize,tol:PairTolerance,mut eval:impl FnMut(usize)->Result<Option<f64>>)->Result<Option<(f64,usize,f64)>> {
+    let Some(mut previous)=eval(order)? else {return Ok(None);};
+    let mut n=order; let mut relative=f64::INFINITY;
+    while n<64 {
+        n+=4; let next=eval(n)?.ok_or_else(||error("PLANAR_RANGE","pair classification changed"))?;
+        relative=(next-previous).abs()/next.abs();
+        if relative<=tol.target { return Ok(Some((next,n,relative))); }
+        previous=next;
+    }
+    if relative<=tol.noise_accept { return Ok(Some((previous,n,relative))); }
+    Err(error("PLANAR_UNRESOLVED",&format!("{}; last relative change {:e} exceeds noise bound {:e}",unresolved(kind,a,b),relative,tol.noise_accept)))
+}
 pub(super) fn pair_integral(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Duration) -> Result<(f64,usize,f64)> {
+    pair_integral_with(a,b,order,start,limit,PAIR_LEGACY)
+}
+pub(super) fn pair_integral_compact(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Duration) -> Result<(f64,usize,f64)> {
+    pair_integral_with(a,b,order,start,limit,PAIR_COMPACT)
+}
+pub(super) fn pair_integral_with(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Duration, tol: PairTolerance) -> Result<(f64,usize,f64)> {
     let canonical=|mut t:[[f64;2];3]|{t.sort_by(|a,b|a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));t};
+    // Evaluate (i,j) and (j,i) in one canonical order so both give identical values.
+    let key=|p:&Prism|{let t=canonical(p.triangle_m);[t[0][0],t[0][1],t[1][0],t[1][1],t[2][0],t[2][1],p.z_m[0],p.z_m[1]]};
+    let (ka,kb)=(key(a),key(b));
+    let swap=ka.iter().zip(&kb).map(|(x,y)|x.total_cmp(y)).find(|o|o.is_ne()).is_some_and(|o|o.is_gt());
+    let (a,b)=if swap {(b,a)} else {(a,b)};
     if canonical(a.triangle_m)==canonical(b.triangle_m) {
-        let mut prev=aligned_integral(a,b,order,start,limit)?; let mut n=order;
-        while n<64 {
-            n+=4; let next=aligned_integral(a,b,n,start,limit)?;
-            let relative=(next-prev).abs()/next.abs();
-            if relative<=1e-8 { return Ok((next,n,relative)); }
-            prev=next;
-        }
-        return Err(error("PLANAR_UNRESOLVED", "self quadrature did not converge by order 64"));
+        return converge("self",a,b,order,tol,|n|Ok(Some(aligned_integral(a,b,n,start,limit)?)))?.ok_or_else(||error("PLANAR_RANGE","self classification"));
     }
-    if let Some(mut previous)=rectangle_pair(a,b,order,start,limit)? {
-        let mut n=order;
-        while n<64 {
-            n+=4; let next=rectangle_pair(a,b,n,start,limit)?.ok_or_else(||error("PLANAR_RANGE","rectangle classification changed"))?;
-            let relative=(next-previous).abs()/next.abs();
-            if relative<=1e-8 { return Ok((next,n,relative)); }
-            previous=next;
-        }
-        return Err(error("PLANAR_UNRESOLVED","rectangle cross quadrature did not converge by order 64"));
-    }
-    if let Some(mut previous)=edge_integral(a,b,order,start,limit)? {
-        let mut n=order;
-        while n<64 {
-            n+=4; let next=edge_integral(a,b,n,start,limit)?.ok_or_else(||error("PLANAR_RANGE","edge classification changed"))?;
-            let relative=(next-previous).abs()/next.abs();
-            if relative<=1e-8 { return Ok((next,n,relative)); }
-            previous=next;
-        }
-        return Err(error("PLANAR_UNRESOLVED","shared edge Duffy quadrature did not converge"));
-    }
-    if let Some(mut previous)=vertex_integral(a,b,order,start,limit)? {
-        let mut n=order;
-        while n<64 {
-            n+=4;let next=vertex_integral(a,b,n,start,limit)?.ok_or_else(||error("PLANAR_RANGE","vertex classification changed"))?;
-            let relative=(next-previous).abs()/next.abs();
-            if relative<=1e-8 {return Ok((next,n,relative));}
-            previous=next;
-        }
-        return Err(error("PLANAR_UNRESOLVED","shared vertex Duffy quadrature did not converge"));
-    }
+    if let Some(r)=converge("rectangle cross",a,b,order,tol,|n|rectangle_pair(a,b,n,start,limit))? { return Ok(r); }
+    if let Some(r)=converge("shared edge Duffy",a,b,order,tol,|n|edge_integral(a,b,n,start,limit))? { return Ok(r); }
+    if let Some(r)=converge("shared vertex Duffy",a,b,order,tol,|n|vertex_integral(a,b,n,start,limit))? { return Ok(r); }
+    let mut last_change=f64::INFINITY;
     for axial in [true, false] {
         let evaluate = |n| -> Result<f64> { let q=GaussRule::new(n)?; if axial { axial_magnetic::constant_pair_guarded(a,b,&q,start,limit) } else { prism::volume_integral_guarded(a,b,&q,start,limit) } };
         let mut previous = match evaluate(order) { Ok(x) => x, Err(_) if axial && start.elapsed() < limit => continue, Err(e) => return Err(e) };
-        let mut n=order;
+        let mut n=order; let mut relative=f64::INFINITY; let mut aborted=false;
         while n<64 {
             if start.elapsed() >= limit { return Err(error("DEADLINE", "planar Gram deadline exceeded")); }
             n+=4;
-            let next = match evaluate(n) { Ok(x)=>x, Err(_) if axial && start.elapsed() < limit => break, Err(e)=>return Err(e) };
+            let next = match evaluate(n) { Ok(x)=>x, Err(_) if axial && start.elapsed() < limit => {aborted=true; break}, Err(e)=>return Err(e) };
             if start.elapsed() >= limit { return Err(error("DEADLINE", "planar Gram deadline exceeded")); }
-            let relative=(previous-next).abs()/next.abs();
+            relative=(previous-next).abs()/next.abs();
             if !next.is_finite() || next<=0. || !relative.is_finite() { return Err(error("PLANAR_RANGE", "invalid prism integral")); }
-            if relative <= 1e-8 { return Ok((next,n,relative)); }
+            if relative <= tol.target { return Ok((next,n,relative)); }
             previous=next;
         }
+        if !aborted { last_change=relative; if relative<=tol.noise_accept { return Ok((previous,n,relative)); } }
     }
-    Err(error("PLANAR_UNRESOLVED", "prism quadrature did not converge by order 64"))
+    Err(error("PLANAR_UNRESOLVED", &format!("prism quadrature did not converge by order 64; last relative change {last_change:e} exceeds noise bound {:e}",tol.noise_accept)))
 }
 
 // Convex separating-axis test; equality means boundary contact, not overlap.
@@ -543,7 +551,6 @@ mod tests {
         let (x,_,e)=pair_integral(&a,&b,8,Instant::now(),Duration::from_secs(30)).unwrap();
         assert!(x>0. && e<=1e-8);
     }
-
     #[test]
     fn arbitrary_edge_orders_diagnostic() {
         let a=Prism::new("a".into(),[[0.,0.],[1.,0.],[0.2,0.8]],[0.,0.035]).unwrap();

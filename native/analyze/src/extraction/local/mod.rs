@@ -93,6 +93,7 @@ mod line_pair;
 
 mod island_response;
 mod planar_operator;
+mod planar_hmatrix;
 mod planar_layered;
 mod hybrid_applicability;
 mod planar_mixed;

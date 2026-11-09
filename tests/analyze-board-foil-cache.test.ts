@@ -172,9 +172,22 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
     assert.throws(()=>cachedBoardFoilReport(cache,'hybrid',hybridProblem,produceHybrid),/LOCAL_BUDGET/);
     delete process.env.P7_MAGNETIC_NEAR_THREADS;
     assert.notEqual(cachedBoardFoilReport(cache,'hybrid',schurProblem,r=>mock(r)).cache?.key,cached.cache?.key);
-    const plan={...problem.expected,boardJson:problem.boardJson,geometry:problem.geometry,ports:[{name:'port'}],attachments:[]} as unknown as AutoFoilPlan;
+    const rfProblem:BoardFoilProblem={...hybridProblem,geometry:{...hybridProblem.geometry,
+      stack:['TOP','BOTTOM'].map(name=>({name,copper:true,conductivitySM:58e6})),barrelConductivitySM:58e6},
+      request:{...hybridProblem.request,frequenciesHz:[1e6,2e6],operatorPolicy:'hybrid-planar-v3',profileUpperHz:1e8}};
+    const rfReport=(request:AnalysisBoardFoilCheckedRequest)=>{
+      const value=produceHybrid(request),upper=request.profileUpperHz??request.frequenciesHz.at(-1)!;
+      value.frequenciesHz=request.frequenciesHz;
+      value.samples.forEach((sample,i)=>{sample.frequencyHz=request.frequenciesHz[i];});
+      value.provenance.operatorPolicy='hybrid-planar-v3';
+      const depth=1/Math.sqrt(Math.PI*upper*(4e-7*Math.PI)*58e6);
+      value.provenance.copperSkinMesh={version:3,requestedUpperHz:request.frequenciesHz.at(-1)!,trainingUpperBoundHz:request.frequenciesHz.at(-1)!,effectiveUpperHz:upper,skinDepthDivisor:3,currentAndElectricShareMesh:true,scope:'Implementation mesh screening only',
+        layers:['TOP','BOTTOM'].map(layer=>({layer,skinDepthM:depth,maximumStepM:depth/6,slabs:6})),roundBarrels:[{id:'barrel-0',skinDepthM:depth,maximumRadialStepM:depth/4,shells:4}]};
+      return value;
+    };
+    const plan={...problem.expected,boardJson:problem.boardJson,geometry:rfProblem.geometry,ports:[{name:'port'}],attachments:[]} as unknown as AutoFoilPlan;
     runAutoFoil(plan,[1000,2000],problem.request.budget,undefined,input=>{
-      assert.equal(input.request.partitionPolicy,'automatic-hybrid-v1');return hybrid();
+      assert.equal(input.request.partitionPolicy,'automatic-hybrid-v1');return rfReport(input.request);
     });
     const expansions:number[]=[];
     const searching={...plan,returnSearch:{initialMarginMm:1,expand:(scale:number)=>{
@@ -183,7 +196,7 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
         geometry:{...(plan.geometry as object),returnBoundaryMm:[[-scale,-scale,-scale],[scale,scale,scale]]}} as AutoFoilPlan;
     }}};
     const boundaryReport=(input:BoardFoilProblem,relative:number)=>{
-      const value=produceHybrid(input.request);
+      const value=rfReport(input.request);
       for(const sample of value.samples)for(const column of sample.columns){
         column.returnBoundary={policy:'internal-guard-flux-v1',boundsMm:(input.geometry as any).returnBoundaryMm,
           conductiveA:[relative*.25,0,0,0,0,0],displacementA:[0,0,relative*.25,0,0,0],
@@ -206,19 +219,6 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
     assert.throws(()=>runAutoFoil(searching,[1000,2000],problem.request.budget,undefined,input=>{
       const value=boundaryReport(input,.005);value.samples[0].columns[0].returnBoundary!.portCurrentA=50;return value;
     }),/CHANNEL_RETURN_EVIDENCE|CHANNEL_FOIL_EVIDENCE/);
-    const rfProblem:BoardFoilProblem={...hybridProblem,geometry:{...hybridProblem.geometry,
-      stack:['TOP','BOTTOM'].map(name=>({name,copper:true,conductivitySM:58e6})),barrelConductivitySM:58e6},
-      request:{...hybridProblem.request,frequenciesHz:[1e6,2e6],operatorPolicy:'hybrid-planar-v3',profileUpperHz:1e8}};
-    const rfReport=(request:AnalysisBoardFoilCheckedRequest)=>{
-      const value=produceHybrid(request),upper=request.profileUpperHz??request.frequenciesHz.at(-1)!;
-      value.frequenciesHz=request.frequenciesHz;
-      value.samples.forEach((sample,i)=>{sample.frequencyHz=request.frequenciesHz[i];});
-      value.provenance.operatorPolicy='hybrid-planar-v3';
-      const depth=1/Math.sqrt(Math.PI*upper*(4e-7*Math.PI)*58e6);
-      value.provenance.copperSkinMesh={version:3,requestedUpperHz:request.frequenciesHz.at(-1)!,trainingUpperBoundHz:request.frequenciesHz.at(-1)!,effectiveUpperHz:upper,skinDepthDivisor:3,currentAndElectricShareMesh:true,scope:'Implementation mesh screening only',
-        layers:['TOP','BOTTOM'].map(layer=>({layer,skinDepthM:depth,maximumStepM:depth/6,slabs:6})),roundBarrels:[{id:'barrel-0',skinDepthM:depth,maximumRadialStepM:depth/4,shells:4}]};
-      return value;
-    };
     const rf=cachedBoardFoilReport(cache,'hybrid',rfProblem,rfReport);
     runAutoFoil({...plan,geometry:rfProblem.geometry} as AutoFoilPlan,[1e6,2e6],problem.request.budget,undefined,input=>{
       assert.equal(input.request.operatorPolicy,'hybrid-planar-v3');

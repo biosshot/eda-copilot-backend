@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Model plated barrels in the automatic hybrid as thin-wall axial prisms, including plated slots, with `P7_BARREL_MODEL=volume` for comparison. Infer missing contact layers from the board, accept copper area changes within grid rounding, admit thin mesh columns as foil when skin depth allows, drop recorded mesh slivers, and cap the dense magnetic pair table at 1 GiB. Speed up the board arrangement with bounding-box prefilters and add `P7_PHASE_TRACE=1`. Real-board time and memory targets are not met yet.
+- Apply planar-to-planar magnetic coupling in the compact hybrid through a parallel ACA H-matrix for 512 or more supports (`P7_PLANAR_HMATRIX=0` restores pair visits), stop reserving near/far block storage by pair count, and repair noise-level invalid copper rings when area and topology stay within grid rounding. Not yet measured on real boards.
+
 - Route automatic board AC extraction and grouped SI through the compact planar and local-volume hybrid. Use external process supervision for time and memory, including via and reference-swap development runs. Keep physics, topology and convergence checks active.
 
 - Expand automatic hybrid return domains using six-face conductive and displacement current observations on an internal guard box. Check every requested drive and available frequency holdout against a strict 1% threshold, a 1 pA normalization floor, and a shared eight-expansion deadline/memory budget. Preserve prescribed contacts inside the observation box, retain complete newly encountered copper and barrels, and refuse unresolved returns.

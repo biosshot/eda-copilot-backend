@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createBoardChannelExecutor } from '../src/analyze/board-channel-executor.ts';
 import { boardChannelPlan } from '../src/analyze/board-channel-plan.ts';
 import { executeScenario } from '../src/analyze/analysis-dsl/scenario.ts';
-import { localRequest } from '../src/analyze/analysis-dsl/local-request.ts';
+import { localRequest, inferContactLayer } from '../src/analyze/analysis-dsl/local-request.ts';
 import { capturedBoardGeometry } from '../src/analyze/geometry-snapshot.ts';
 import { segmentedCoupon, segmentedCouponDsl } from './helpers/pcb-analysis-segmented-coupon.ts';
 
@@ -43,4 +43,19 @@ test('automatic extraction retains separate remote reference islands when a sign
   });
   assert.equal(output.status, 'complete', JSON.stringify(output.error));
   assert.equal(calls, 1);
+});
+
+test('contact layer inference uses the single pad layer, then component side, and keeps explicit or unresolved cases strict', () => {
+  const board: any = {
+    pads: [
+      { id: 'a', component: 'U5', number: '7', layers: ['TOP'] },
+      { id: 'b', component: 'U5', number: '5', layers: ['TOP', 'BOTTOM'] },
+      { id: 'c', component: 'J1', number: '1', layers: ['TOP', 'BOTTOM'] },
+    ],
+    components: [{ designator: 'U5', side: 'bottom' }, { designator: 'J1', side: 'top' }],
+  };
+  assert.equal(inferContactLayer(board, { kind: 'pad', designator: 'U5', number: '7' })?.layer, 'TOP');
+  assert.equal(inferContactLayer(board, { kind: 'pad', designator: 'U5', number: '5' })?.layer, 'BOTTOM');
+  assert.equal(inferContactLayer(board, { kind: 'padId', id: 'c' })?.layer, 'TOP');
+  assert.equal(inferContactLayer(board, { kind: 'pad', designator: 'U9', number: '1' }), undefined);
 });

@@ -5,7 +5,7 @@ import { validateBoardFoilReport } from './board-foil-validation.ts';
 import type { BoardFoilProblem, BoardFoilReport } from './types.ts';
 import { requestedFrequencyInterval, type FrequencyInterval } from './p7-frequency-planning.ts';
 import { declaredNetworkBand } from './analysis-dsl/frequency-model.ts';
-import { boardChannelBlockBandHz, boardChannelHybridBandHz } from './board-channel-plan.ts';
+import { boardChannelHybridBandHz } from './board-channel-plan.ts';
 import { summarizeReturnBoundary, RETURN_BOUNDARY_THRESHOLD, RETURN_CURRENT_FLOOR_A } from './return-boundary.ts';
 
 type ReturnSearchStep = ReturnType<typeof summarizeReturnBoundary> & {
@@ -45,7 +45,6 @@ export function runAutoFoil(
  // Geometry and exact frequency batches share one mesh profile derived from
  // admitted demand, including points that may only be evaluated in the audit.
  const profileUpperHz=Math.min(demandUpperHz,high);
- const skin=profileUpperHz>boardChannelBlockBandHz[1];
  const referenceOhm=plan.ports.map(()=>50);
  const search=plan.returnSearch;
  const steps:ReturnSearchStep[]=[];
@@ -58,7 +57,7 @@ export function runAutoFoil(
    request:{frequenciesHz,referenceOhm,budget,
     partitionPolicy:'automatic-hybrid-v1',
     ...(candidate.attachments.length&&{attachments:candidate.attachments}),
-    ...(skin&&{operatorPolicy:'hybrid-planar-v3' as const,profileUpperHz})}};
+    operatorPolicy:'hybrid-planar-v3' as const,profileUpperHz}};
   const observations:ReturnType<typeof summarizeReturnBoundary>[]=[];
   let boundaryError:unknown;
   const checkedExecute=(input:BoardFoilProblem)=>{
@@ -85,6 +84,7 @@ export function runAutoFoil(
     maximumUnresolvedA:Math.max(...observations.map(value=>value.maximumUnresolvedA)),
     minimumPortCurrentA:Math.min(...observations.map(value=>value.minimumPortCurrentA)),
     frequenciesHz:[...new Set(observations.flatMap(value=>value.frequenciesHz))].sort((a,b)=>a-b)});
+   if(process.env.P7_PHASE_TRACE==='1')console.error('P7_PHASE '+JSON.stringify({phase:'return-expansion',domainScale,elapsedS:(performance.now()-attemptStarted)/1000,fluxGatePassed:steps.at(-1)!.passed}));
    if(!steps.at(-1)!.passed)continue;
   }
   const jointSensitivity=process.env.P7_AUTO_FOIL_AUDIT==='1'&&auditBoardFoilGrid(problem,report,attemptStarted,execute);

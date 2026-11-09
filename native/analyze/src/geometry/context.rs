@@ -24,6 +24,8 @@ impl Context {
         Self::install(value)
     }
     pub fn error_bound(&self) -> f64 {16. * 2_f64.sqrt() * self.adapter.inv_scale}
+    /// Arrangement grid step in mm (the adapter's `inv_scale` is 1/scale).
+    pub fn grid_step_mm(&self) -> f64 {self.adapter.inv_scale}
     pub fn metadata(&self) -> ([f64;2],f64,f64) {(self.adapter.offset,self.adapter.inv_scale,self.error_bound())}
     /// Apply exactly the same lattice mapping as this context's overlay input.
     pub(crate) fn canonical_point(&self, point: [f64;2]) -> [f64;2] {

@@ -689,6 +689,12 @@ pub struct CheckedRequest {
 
 /// The checked automatic endpoint deliberately returns only the exact-grid
 /// response and evidence. Its shared reduced model is never a public resource.
+pub(super) fn phase_trace(phase: &str, start: Instant, sizes: serde_json::Value) {
+    if std::env::var_os("P7_PHASE_TRACE").as_deref() == Some(std::ffi::OsStr::new("1")) {
+        eprintln!("P7_PHASE {}", serde_json::json!({"phase": phase, "elapsedS": start.elapsed().as_secs_f64(), "sizes": sizes}));
+    }
+}
+
 pub fn solve_checked(
     board: &Board,
     geometry: &board_mesh::Request,
@@ -761,11 +767,14 @@ pub fn solve_checked(
         // guard before paying for a larger profiled mesh.
         mixed_conductor::checked_reserve_policy(geometry, mixed_grid, skin, operator, partition)?;
     }
+    phase_trace("geometry-prepared", started, serde_json::json!({"ports": port_count, "frequencies": axis.len()}));
     let mesh = board_mesh::build_profiled_hybrid(board, geometry, budget, remaining(started, wall)?, skin)?;
+    phase_trace("mesh-built", started, json!({"nodes": mesh.mesh.nodes_m.len(), "tetrahedra": mesh.mesh.copper_tetrahedra.len(), "planarTriangles": mesh.planar_triangles.len(), "barrels": mesh.barrel_ids.len()}));
     let masks = mesh.hybrid_mesh_masks.clone();
     let mut checked = mixed_conductor::solve_checked_mesh_policy(
         mesh, geometry, mixed_grid, skin, &packages, partition, operator, budget, started, wall,
     )?;
+    phase_trace("final-residual-done", started, json!({}));
     if let Some(provenance) = checked["provenance"].as_object_mut() {
         provenance.remove("maxSeconds");
         provenance.remove("maxMemoryMiB");

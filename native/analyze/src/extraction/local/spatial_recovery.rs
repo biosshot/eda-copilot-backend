@@ -17,7 +17,7 @@ fn power(a:[f64;3],b:[f64;3],volume:f64,sigma:f64)->Result<f64> {
 /// Currents use the 1 A RMS matched-Norton response convention.
 pub(super) fn recover(map:&MixedMap<'_>, re:&[f64], im:&[f64], expected_loss:f64, budget:AllocationBudget, start:Instant, wall:Duration)->Result<serde_json::Value> {
     if re.len()!=map.current_count() || im.len()!=map.current_count() || re.iter().chain(im).any(|v|!v.is_finite()) || !expected_loss.is_finite() || expected_loss<0. {return Err(error("SPATIAL_RECOVERY","invalid mixed current or expected loss"));}
-    let n=map.foils.len().checked_add(map.owners.iter().filter(|o|matches!(o,Owner::Volume)).count()).ok_or_else(||error("MEMORY_LIMIT","spatial count overflow"))?;
+    let n=map.foils.len().checked_add(map.barrels.len()).and_then(|v|v.checked_add(map.owners.iter().filter(|o|matches!(o,Owner::Volume)).count())).ok_or_else(||error("MEMORY_LIMIT","spatial count overflow"))?;
     let bytes=n.checked_mul(6144).and_then(|v|v.checked_add(map.current_count().checked_mul(32)?)).ok_or_else(||error("MEMORY_LIMIT","spatial output overflow"))?; budget.check(bytes)?;
     let planar=map.planar_current_supports()?; let local=map.local_current_supports()?;
     if planar.len()!=map.foils.len() || local.len()!=map.owners.iter().filter(|o|matches!(o,Owner::Volume)).count() {return Err(error("SPATIAL_RECOVERY","support ownership count mismatch"));}
@@ -30,6 +30,14 @@ pub(super) fn recover(map:&MixedMap<'_>, re:&[f64], im:&[f64], expected_loss:f64
         if !sigma.is_finite() || sigma<=0. || foil.tetrahedra.iter().any(|&i|map.mesh().conductivity_s_m[i]!=sigma) {return Err(error("SPATIAL_RECOVERY","nonuniform foil conductivity"));}
         let p=power(a,b,foil.volume_m3,sigma)?; loss+=p;
         supports.push(serde_json::json!({"kind":"foil","layer":foil.layer,"triangle":foil.planar_triangle,"zM":foil.z_span_m,"xyM":support.prism.triangle_m,"volumeM3":foil.volume_m3,"currentDensityRealAPerM2":a,"currentDensityImaginaryAPerM2":b,"lossW":p}));
+    }
+    let barrel=map.barrel_current_supports()?;
+    for (prism,support) in map.barrels.iter().zip(&barrel) {
+        if start.elapsed()>=wall {return Err(error("DEADLINE","spatial recovery"));}
+        let (a,b)=density(&support.current_density,re,im)?;
+        let sigma=map.mesh().conductivity_s_m[prism.tetrahedra[0]];
+        let p=power(a,b,prism.volume_m3,sigma)?; loss+=p;
+        supports.push(serde_json::json!({"kind":"barrel","barrel":prism.barrel_id,"triangle":prism.planar_triangle,"zM":prism.z_span_m,"xyM":support.prism.triangle_m,"volumeM3":prism.volume_m3,"currentDensityRealAPerM2":a,"currentDensityImaginaryAPerM2":b,"lossW":p}));
     }
     let mut cursor=0;
     for (i,owner) in map.owners.iter().enumerate() {

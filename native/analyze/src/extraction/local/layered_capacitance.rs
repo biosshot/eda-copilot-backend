@@ -194,6 +194,79 @@ fn input_bytes(input: &Input) -> Result<usize> {
 fn polygon(p: &[[f64; 2]]) -> Polygon<f64> {
     Polygon::new(LineString::from(p.to_vec()), vec![])
 }
+/// Grid step of the mm-scaled board input (2^-25 mm), in metres.
+const METAL_RING_GRID_M: f64 = 1e-3 / 33_554_432.0;
+// Removes consecutive duplicates and noise-scale spikes (triangles whose area is
+// at most `tol` times their perimeter). Only vertices are dropped, never added.
+fn clean_metal_ring(ring: &[[f64; 2]], tol: f64) -> Vec<[f64; 2]> {
+    let dist = |a: [f64; 2], b: [f64; 2]| (a[0] - b[0]).hypot(a[1] - b[1]);
+    let mut pts: Vec<[f64; 2]> = Vec::with_capacity(ring.len());
+    for &p in ring {
+        if pts.last().map_or(true, |&q| dist(q, p) > tol) {
+            pts.push(p);
+        }
+    }
+    while pts.len() > 1 && dist(pts[0], pts[pts.len() - 1]) <= tol {
+        pts.pop();
+    }
+    while pts.len() > 3 {
+        let n = pts.len();
+        let removable = |i: usize| {
+            let (a, b, c) = (pts[(i + n - 1) % n], pts[i], pts[(i + 1) % n]);
+            let twice_area = ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])).abs();
+            0.5 * twice_area <= tol * (dist(a, b) + dist(b, c) + dist(c, a))
+        };
+        match (0..n).find(|&i| removable(i)) {
+            Some(i) => {
+                pts.remove(i);
+            }
+            None => break,
+        }
+    }
+    pts
+}
+// Repairs only a validity failure of one admitted copper footprint. The result must
+// keep one component, the same hole count, and area drift within 16*h*P (h = grid step,
+// P = total ring perimeter). Anything else is refused with the reason, area and vertex count.
+fn repair_metal_polygon(outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) -> std::result::Result<Polygon<f64>, String> {
+    let h = METAL_RING_GRID_M;
+    let ring_len = |r: &[[f64; 2]]| -> f64 {
+        (0..r.len())
+            .map(|i| {
+                let (a, b) = (r[i], r[(i + 1) % r.len()]);
+                (a[0] - b[0]).hypot(a[1] - b[1])
+            })
+            .sum()
+    };
+    let perimeter: f64 = ring_len(outer) + holes.iter().map(|r| ring_len(r)).sum::<f64>();
+    let vertices = outer.len() + holes.iter().map(Vec::len).sum::<usize>();
+    let original = Polygon::new(LineString::from(outer.to_vec()), holes.iter().cloned().map(LineString::from).collect());
+    let area = original.unsigned_area();
+    let fail = |why: String| format!("invalid polygon: repair refused ({why}; area {area:e} m2, {vertices} vertices)");
+    let outer_c = clean_metal_ring(outer, h);
+    let holes_c: Vec<Vec<[f64; 2]>> = holes.iter().map(|r| clean_metal_ring(r, h)).collect();
+    if outer_c.len() < 3 || holes_c.iter().any(|r| r.len() < 3) {
+        return Err(fail("ring degenerate after duplicate and spike removal".into()));
+    }
+    let cleaned = Polygon::new(LineString::from(outer_c), holes_c.into_iter().map(LineString::from).collect());
+    let mut parts = if cleaned.is_valid() { vec![cleaned] } else { crate::geometry::areas::union([cleaned]).0 };
+    if parts.len() != 1 {
+        return Err(fail(format!("{} components after self-union, expected 1", parts.len())));
+    }
+    let p = parts.swap_remove(0);
+    if p.interiors().len() != holes.len() {
+        return Err(fail(format!("{} holes after repair, expected {}", p.interiors().len(), holes.len())));
+    }
+    if !p.is_valid() {
+        return Err(fail("still invalid after self-union".into()));
+    }
+    let drift = (p.unsigned_area() - area).abs();
+    let limit = 16.0 * h * perimeter;
+    if !(drift <= limit) {
+        return Err(fail(format!("area change {drift:e} m2 exceeds limit {limit:e} m2")));
+    }
+    Ok(p)
+}
 fn cross(a: [f64; 2], b: [f64; 2]) -> f64 {
     a[0] * b[1] - a[1] * b[0]
 }
@@ -1238,33 +1311,54 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
         meshes.push(prepare(m, bounds, g)?);
     }
     let mut ids = BTreeSet::new();
-    let metal_polygons: Vec<_> = input.metals.iter().map(|m|
+    let mut metal_polygons: Vec<_> = input.metals.iter().map(|m|
         Polygon::new(LineString::from(m.polygon_m.clone()),
             m.holes_m.iter().cloned().map(LineString::from).collect())).collect();
     let mut finite_contacts=BTreeSet::new();
     for (i, m) in input.metals.iter().enumerate() {
-        if m.source_id.is_empty()
-            || !ids.insert(&m.source_id)
-            || !m.z0_m.is_finite()
-            || !m.z1_m.is_finite()
-            || m.z1_m <= m.z0_m
-            || !input.z_m.contains(&m.z0_m)
-            || !input.z_m.contains(&m.z1_m)
-            || m.polygon_m.len() < 3
-            || m.holes_m.iter().any(|ring| ring.len() < 3)
-            || std::iter::once(&m.polygon_m).chain(&m.holes_m).flatten().flatten().any(|x| !x.is_finite())
-            || std::iter::once(&m.polygon_m).chain(&m.holes_m).flatten().any(|p| {
-                p[0] < bounds[0][0]
-                    || p[0] > bounds[1][0]
-                    || p[1] < bounds[0][1]
-                    || p[1] > bounds[1][1]
-            })
-            || metal_polygons[i].unsigned_area() <= 0.
-            || !metal_polygons[i].is_valid()
-        {
+        // Same checks, same short-circuit order; the first failing reason is reported.
+        let reason: Option<String> = if m.source_id.is_empty() {
+            Some("empty source id".into())
+        } else if !ids.insert(&m.source_id) {
+            Some("duplicate source id".into())
+        } else if !m.z0_m.is_finite() || !m.z1_m.is_finite() {
+            Some("nonfinite z0 or z1".into())
+        } else if m.z1_m <= m.z0_m {
+            Some("z1 not above z0".into())
+        } else if !input.z_m.contains(&m.z0_m) {
+            Some("z0 not in z grid".into())
+        } else if !input.z_m.contains(&m.z1_m) {
+            Some("z1 not in z grid".into())
+        } else if m.polygon_m.len() < 3 {
+            Some("short outer ring".into())
+        } else if m.holes_m.iter().any(|ring| ring.len() < 3) {
+            Some("short hole ring".into())
+        } else if std::iter::once(&m.polygon_m).chain(&m.holes_m).flatten().flatten().any(|x| !x.is_finite()) {
+            Some("nonfinite vertex".into())
+        } else if std::iter::once(&m.polygon_m).chain(&m.holes_m).flatten().any(|p| {
+            p[0] < bounds[0][0] || p[0] > bounds[1][0] || p[1] < bounds[0][1] || p[1] > bounds[1][1]
+        }) {
+            Some("vertex outside xy bounds".into())
+        } else if metal_polygons[i].unsigned_area() <= 0. {
+            Some("nonpositive area".into())
+        } else if !metal_polygons[i].is_valid() {
+            match repair_metal_polygon(&m.polygon_m, &m.holes_m) {
+                Ok(p) => {
+                    metal_polygons[i] = p;
+                    None
+                }
+                Err(e) => Some(e),
+            }
+        } else {
+            None
+        };
+        if let Some(reason) = reason {
             return Err(error(
                 "COPPER_INPUT",
-                "finite source-ID polygon and exact foil-face planes required; vias unsupported",
+                &format!(
+                    "metal index {i} source_id {:?} z0 {} z1 {}: {reason}; finite source-ID polygon and exact foil-face planes required; vias unsupported",
+                    m.source_id, m.z0_m, m.z1_m
+                ),
             ));
         }
         for j in 0..i {
@@ -1994,6 +2088,20 @@ impl Solution {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn metal_ring_noise_repair_accepts_spike_and_refuses_bow_tie() {
+        // Collinear spike (0.007 back to 0.005) and a repeated corner, 1 cm square.
+        let noisy = [[0., 0.], [0.007, 0.], [0.005, 0.], [0.01, 0.], [0.01, 0.01], [0.01, 0.01], [0., 0.01]];
+        assert!(!polygon(&noisy).is_valid());
+        let repaired = repair_metal_polygon(&noisy, &[]).unwrap();
+        assert!(repaired.is_valid());
+        assert!((repaired.unsigned_area() / 1e-4 - 1.).abs() < 1e-12);
+        assert_eq!(repaired.exterior().0.len(), 5);
+        // Truly self-crossing bow-tie: the union keeps the lobe area, far beyond grid noise, so it is refused.
+        let bow_tie = [[0., 0.], [0.01, 0.01], [0.01, 0.], [0., 0.01]];
+        let err = repair_metal_polygon(&bow_tie, &[]).unwrap_err();
+        assert!(err.contains("repair refused") && err.contains("area change"), "{err}");
+    }
     #[test]
     fn independent_affine_constant_and_asymmetric_epsilon_overlap_patch() {
         let a = Triangle {

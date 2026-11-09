@@ -130,6 +130,7 @@ pub(super) fn conductive(
     }
     let planar = map.planar_current_supports()?;
     let local = map.local_current_supports()?;
+    let barrel = map.barrel_current_supports()?;
     let mut out = [0.; 6];
     let mut cursor = 0;
     for (i, owner) in map.owners.iter().enumerate() {
@@ -144,6 +145,14 @@ pub(super) fn conductive(
                     density(&planar[*f].current_density, re, im)?,
                 )
             }
+            Owner::Barrel(b) => {
+                let cell = &map.mesh().mesh.copper_tetrahedra[i];
+                (
+                    cell.nodes.map(|n| map.mesh().mesh.nodes_m[n]),
+                    density(&barrel[*b].current_density, re, im)?,
+                )
+            }
+            Owner::Dropped => continue,
             Owner::Volume => {
                 let s = &local[cursor];
                 cursor += 1;

@@ -119,6 +119,49 @@ pub(super) fn skin_profile_evidence(
 pub enum Owner {
     Foil(usize),
     Volume,
+    /// Thin-wall vertical prism segment of a plated barrel (axial current only).
+    Barrel(usize),
+    /// Noise-level sliver column (policy: noise); no current mode, no support.
+    Dropped,
+}
+/// Copper ownership of plated barrel columns. `ThinWall` is the default of the
+/// automatic hybrid; `P7_BARREL_MODEL=volume` restores the tetrahedral path.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BarrelModel {
+    Volume,
+    ThinWall,
+}
+impl BarrelModel {
+    pub fn hybrid_default() -> Self {
+        match std::env::var("P7_BARREL_MODEL") {
+            Ok(v) if v.trim().eq_ignore_ascii_case("volume") => Self::Volume,
+            _ => Self::ThinWall,
+        }
+    }
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Volume => "volume",
+            Self::ThinWall => "thin-wall-axial-prism-v1",
+        }
+    }
+}
+/// One annulus triangle between two adjacent copper-layer potentials: a single
+/// uniform axial current mode over its full z span.
+#[derive(Debug)]
+pub struct BarrelPrism {
+    pub barrel_id: String,
+    pub planar_triangle: usize,
+    pub z_span_m: [f64; 2],
+    pub tetrahedra: Vec<usize>,
+    pub mode: usize,
+    pub volume_m3: f64,
+    pub area_m2: f64,
+}
+struct BarrelSegment {
+    barrel: usize,
+    triangle: usize,
+    span: [f64; 2],
+    cells: Vec<usize>,
 }
 #[derive(Debug)]
 pub struct FoilPrism {
@@ -141,6 +184,20 @@ pub struct MixedMap<'a> {
     /// Exactly one owner in original copper tetrahedron order.
     pub owners: Vec<Owner>,
     pub foils: Vec<FoilPrism>,
+    pub barrels: Vec<BarrelPrism>,
+    pub barrel_model: BarrelModel,
+    /// Distinct plated barrels represented by prisms, and annulus columns that
+    /// could not be (kept as volume tetrahedra).
+    pub barrel_count: usize,
+    pub barrel_fallback_columns: usize,
+    /// Pad-copper mesh slivers that carry an annulus source id but are not wall.
+    pub barrel_sliver_columns: usize,
+    /// Foil columns admitted by the skin-depth rule although thickness > altitude/4.
+    pub foil_aspect_relaxed_columns: usize,
+    /// Noise columns without current mode, and their copper volume.
+    pub sliver_columns_dropped: usize,
+    pub dropped_volume_m3: f64,
+    pub dropped_volume_fraction: f64,
     pub electrodes: Vec<usize>,
     pub potential_components: Vec<Vec<usize>>,
     pub incidence: Vec<(usize, usize, f64)>,
@@ -157,6 +214,7 @@ struct Candidate {
     cells: Vec<usize>,
     volume: f64,
     foil_density: Option<f64>,
+    dropped: bool,
 }
 
 fn root(parent: &[usize], mut i: usize) -> usize {
@@ -213,12 +271,171 @@ pub(super) fn has_projected_pad_collision(
     Ok(!projected_pad_collisions(planar_count, electrodes, &nodes).is_empty())
 }
 
+/// Distance from `p` to the closest segment of the closed rings, in the input unit.
+fn ring_distance(p: [f64; 2], rings: &[Vec<[f64; 2]>]) -> f64 {
+    let mut best = f64::INFINITY;
+    for ring in rings {
+        for w in ring.windows(2) {
+            let (a, b) = (w[0], w[1]);
+            let d = [b[0] - a[0], b[1] - a[1]];
+            let len2 = d[0] * d[0] + d[1] * d[1];
+            let t = if len2 > 0. {
+                (((p[0] - a[0]) * d[0] + (p[1] - a[1]) * d[1]) / len2).clamp(0., 1.)
+            } else {
+                0.
+            };
+            best = best.min((p[0] - a[0] - t * d[0]).hypot(p[1] - a[1] - t * d[1]));
+        }
+    }
+    best
+}
+
+/// Split every annulus column of every plated barrel into prisms between the
+/// potentials of adjacent copper layers. The first segment starts at the outer
+/// face of the first copper layer; each further segment starts at the lower face
+/// of the next interior copper layer; the last ends at the outer face of the
+/// last layer. Segments therefore tile the column exactly (copper volume and
+/// single ownership are preserved). Columns that do not satisfy the regular
+/// extrusion contract are returned as `fallback` and stay volumetric.
+fn plan_barrel_segments(
+    mesh: &BoardMesh,
+    layers: &[(&String, &[f64; 2])],
+    barrel_cell: &[bool],
+    barrel_of: &dyn Fn(usize) -> Option<usize>,
+    start: Instant,
+    wall: Duration,
+) -> Result<(Vec<BarrelSegment>, usize, usize, Vec<usize>)> {
+    let tets = &mesh.mesh.copper_tetrahedra;
+    let first_barrel_shape = mesh.field_copper.len().saturating_sub(mesh.barrel_ids.len());
+    let mut columns = BTreeMap::<usize, Vec<usize>>::new();
+    for (i, tet) in tets.iter().enumerate() {
+        if barrel_cell[i] {
+            columns.entry(tet.planar_triangle).or_default().push(i);
+        }
+    }
+    let mut segments = Vec::new();
+    let mut fallback = 0usize;
+    let mut slivers = 0usize;
+    let mut sliver_cells = Vec::new();
+    'column: for (triangle, mut cells) in columns {
+        check_time(start, wall)?;
+        cells.sort_by_key(|&i| tets[i].slab);
+        let mut barrel = None;
+        for &i in &cells {
+            let b = barrel_of(i);
+            if b.is_none() || barrel.is_some_and(|x| Some(x) != b) {
+                fallback += 1;
+                continue 'column;
+            }
+            barrel = b;
+        }
+        let ids = mesh.planar_triangles[triangle];
+        let [a, b, c] = ids.map(|i| mesh.mesh.nodes_m[i]);
+        let twice = ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])).abs();
+        let z = |i: usize| {
+            let zs = tets[i].nodes.map(|j| mesh.mesh.nodes_m[j][2]);
+            (
+                zs.into_iter().fold(f64::INFINITY, f64::min),
+                zs.into_iter().fold(f64::NEG_INFINITY, f64::max),
+            )
+        };
+        let sigma = mesh.conductivity_s_m[cells[0]];
+        // Regular extrusion: three tetrahedra per slab, contiguous slabs.
+        let mut slabs: Vec<(usize, f64, f64, Vec<usize>)> = Vec::new();
+        for &i in &cells {
+            let (lo, hi) = z(i);
+            match slabs.last_mut() {
+                Some(s) if s.0 == tets[i].slab && s.1 == lo && s.2 == hi => s.3.push(i),
+                _ => slabs.push((tets[i].slab, lo, hi, vec![i])),
+            }
+        }
+        let (zmin, zmax) = (slabs[0].1, slabs[slabs.len() - 1].2);
+        let tol = 1e-9 * (zmax - zmin);
+        // Only columns that run through the whole physical barrel span are barrel
+        // wall. A mesh sliver sharing a source id with the annulus only inside one
+        // pad layer is pad copper and keeps the ordinary (volume) ownership.
+        match mesh.field_copper.get(first_barrel_shape + barrel.unwrap()) {
+            Some((_, span, true)) => {
+                if (span[0] - zmin).abs() > tol || (span[1] - zmax).abs() > tol {
+                    slivers += 1;
+                    sliver_cells.extend_from_slice(&cells);
+                    continue;
+                }
+            }
+            _ => {
+                fallback += 1;
+                continue;
+            }
+        }
+        if !(twice.is_finite() && twice > 0. && zmax > zmin)
+            || cells.iter().any(|&i| mesh.conductivity_s_m[i] != sigma)
+            || slabs.iter().any(|s| s.3.len() != 3)
+            || slabs.windows(2).any(|w| (w[0].2 - w[1].1).abs() > tol)
+        {
+            fallback += 1;
+            continue;
+        }
+        let volume = cells
+            .iter()
+            .fold(Sum::default(), |sum, &i| sum.add(Sum::from(tets[i].volume_m3)))
+            .value();
+        let expected = 0.5 * twice * (zmax - zmin);
+        if (volume - expected).abs() > 1e-8 * expected {
+            fallback += 1;
+            continue;
+        }
+        // Boundaries at lower faces of interior copper layers.
+        let mut bounds = vec![zmin];
+        for (_, span) in layers {
+            if span[0] > zmin + tol && span[1] < zmax - tol {
+                bounds.push(span[0]);
+            }
+        }
+        bounds.push(zmax);
+        bounds.sort_by(f64::total_cmp);
+        bounds.dedup_by(|a, b| (*a - *b).abs() <= tol);
+        // Every boundary must be an existing z plane of this column.
+        if bounds[1..bounds.len() - 1]
+            .iter()
+            .any(|&zb| !slabs.iter().any(|s| (s.1 - zb).abs() <= tol))
+        {
+            fallback += 1;
+            continue;
+        }
+        for w in bounds.windows(2) {
+            let seg: Vec<usize> = slabs
+                .iter()
+                .filter(|s| s.1 >= w[0] - tol && s.2 <= w[1] + tol)
+                .flat_map(|s| s.3.iter().copied())
+                .collect();
+            segments.push(BarrelSegment {
+                barrel: barrel.unwrap(),
+                triangle,
+                span: [w[0], w[1]],
+                cells: seg,
+            });
+        }
+    }
+    Ok((segments, fallback, slivers, sliver_cells))
+}
+
 pub fn prepare<'a>(
     mesh: &'a BoardMesh,
     electrodes: &[Electrode],
     max_frequency_hz: f64,
     budget: AllocationBudget,
     wall: Duration,
+) -> Result<MixedMap<'a>> {
+    prepare_model(mesh, electrodes, max_frequency_hz, budget, wall, BarrelModel::Volume)
+}
+
+pub fn prepare_model<'a>(
+    mesh: &'a BoardMesh,
+    electrodes: &[Electrode],
+    max_frequency_hz: f64,
+    budget: AllocationBudget,
+    wall: Duration,
+    barrel_model: BarrelModel,
 ) -> Result<MixedMap<'a>> {
     let start = Instant::now();
     if !max_frequency_hz.is_finite() || !(0. ..=MIXED_PREPARE_MAX_HZ).contains(&max_frequency_hz) {
@@ -276,14 +493,120 @@ pub fn prepare<'a>(
     let mut groups = vec![None; nt];
     let mut barrel_cell = vec![false; nt];
     for (i, tet) in mesh.mesh.copper_tetrahedra.iter().enumerate() {
-        check_time(start, wall)?;
-        let z = tet.nodes.map(|j| mesh.mesh.nodes_m[j][2]);
-        let lo = z.into_iter().fold(f64::INFINITY, f64::min);
-        let hi = z.into_iter().fold(f64::NEG_INFINITY, f64::max);
         barrel_cell[i] = tet
             .source_ids
             .iter()
             .any(|id| barrels.contains(id.as_str()));
+    }
+    let barrel_index: BTreeMap<&str, usize> = mesh
+        .barrel_ids
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (s.as_str(), i))
+        .collect();
+    let barrel_of = |i: usize| -> Option<usize> {
+        let mut found = None;
+        for id in &mesh.mesh.copper_tetrahedra[i].source_ids {
+            if let Some(&b) = barrel_index.get(id.as_str()) {
+                if found.is_some_and(|x| x != b) {
+                    return None;
+                }
+                found = Some(b);
+            }
+        }
+        found
+    };
+    let (mut barrel_segments, mut barrel_fallback_columns, barrel_sliver_columns, sliver_list) = if barrel_model == BarrelModel::ThinWall {
+        plan_barrel_segments(mesh, &layers, &barrel_cell, &barrel_of, start, wall)?
+    } else {
+        (Vec::new(), 0, 0, Vec::new())
+    };
+    let v3 = barrel_model == BarrelModel::ThinWall;
+    let mut sliver_cell = vec![false; nt];
+    for &i in &sliver_list {
+        sliver_cell[i] = true;
+    }
+    // Radial collapse of the thin wall: every ring vertex of a column is merged
+    // (per copper layer) with the outermost vertex reached along increasing
+    // distance from the bore. Different azimuthal vertices are never merged.
+    let mut radial_rep = BTreeMap::<usize, usize>::new();
+    if !barrel_segments.is_empty() {
+        let nl = mesh.field_copper.len().saturating_sub(mesh.barrel_ids.len());
+        let mut failed = BTreeSet::new();
+        let mut by_barrel = BTreeMap::<usize, BTreeSet<usize>>::new();
+        for s in &barrel_segments {
+            by_barrel.entry(s.barrel).or_default().insert(s.triangle);
+        }
+        for (b, triangles) in by_barrel {
+            check_time(start, wall)?;
+            let rings: Vec<Vec<[f64; 2]>> = match mesh.field_copper.get(nl + b) {
+                Some((poly, _, true)) => poly
+                    .0
+                    .iter()
+                    .flat_map(|p| p.interiors())
+                    .map(|r| r.0.iter().map(|c| [c.x, c.y]).collect())
+                    .collect(),
+                _ => Vec::new(),
+            };
+            if rings.is_empty() {
+                failed.insert(b);
+                continue;
+            }
+            let mut neighbors = BTreeMap::<usize, BTreeSet<usize>>::new();
+            for &t in &triangles {
+                let ids = mesh.planar_triangles[t];
+                for k in 0..3 {
+                    neighbors.entry(ids[k]).or_default().insert(ids[(k + 1) % 3]);
+                    neighbors.entry(ids[(k + 1) % 3]).or_default().insert(ids[k]);
+                }
+            }
+            let distance: BTreeMap<usize, f64> = neighbors
+                .keys()
+                .map(|&v| (v, ring_distance(mesh.planar_nodes_mm[v], &rings)))
+                .collect();
+            let mut next = BTreeMap::<usize, usize>::new();
+            for (&v, around) in &neighbors {
+                let mut best: Option<(f64, usize)> = None;
+                for &w in around {
+                    let length = (mesh.planar_nodes_mm[v][0] - mesh.planar_nodes_mm[w][0])
+                        .hypot(mesh.planar_nodes_mm[v][1] - mesh.planar_nodes_mm[w][1]);
+                    let slope = (distance[&w] - distance[&v]) / length;
+                    if slope > 0.1 && best.is_none_or(|(s, _)| slope > s) {
+                        best = Some((slope, w));
+                    }
+                }
+                if let Some((_, w)) = best {
+                    next.insert(v, w);
+                }
+            }
+            for &v in neighbors.keys() {
+                let mut at = v;
+                while let Some(&w) = next.get(&at) {
+                    at = w;
+                }
+                radial_rep.insert(v, at);
+            }
+        }
+        if !failed.is_empty() {
+            let (keep, drop): (Vec<_>, Vec<_>) = barrel_segments.into_iter().partition(|s| !failed.contains(&s.barrel));
+            barrel_fallback_columns += drop.iter().map(|s| s.triangle).collect::<BTreeSet<_>>().len();
+            barrel_segments = keep;
+        }
+    }
+    let mut barrel_prism_cell = vec![false; nt];
+    for s in &barrel_segments {
+        for &c in &s.cells {
+            barrel_prism_cell[c] = true;
+        }
+    }
+    for (i, tet) in mesh.mesh.copper_tetrahedra.iter().enumerate() {
+        check_time(start, wall)?;
+        let z = tet.nodes.map(|j| mesh.mesh.nodes_m[j][2]);
+        let lo = z.into_iter().fold(f64::INFINITY, f64::min);
+        let hi = z.into_iter().fold(f64::NEG_INFINITY, f64::max);
+        if barrel_prism_cell[i] {
+            continue;
+        }
         let Some(layer) = layers
             .iter()
             .position(|(_, span)| lo >= span[0] && hi <= span[1])
@@ -301,12 +624,16 @@ pub fn prepare<'a>(
                 cells: Vec::new(),
                 volume: 0.,
                 foil_density: None,
+                dropped: false,
             });
             next
         });
         groups[i] = Some(group);
         candidates[group].cells.push(i);
     }
+    let mut relaxed_columns = 0usize;
+    let mut dropped_columns = 0usize;
+    let mut dropped_volume = Sum::default();
     for group in &mut candidates {
         let thickness = group.span[1] - group.span[0];
         let triangle = mesh.planar_triangles[group.triangle];
@@ -336,29 +663,62 @@ pub fn prepare<'a>(
         let delta = (1.
             / (std::f64::consts::PI * max_frequency_hz * super::super::MU0 * conductivity))
             .sqrt();
+        let altitude = twice / longest;
+        let aspect_ok = thickness <= altitude / 4.;
+        // V3: skin depth, not mesh triangle shape, decides planarity (policy: approximation).
+        let relaxed_ok = v3 && altitude >= thickness / 200.;
+        let uniform = group
+            .cells
+            .iter()
+            .all(|&i| (!barrel_cell[i] || (v3 && sliver_cell[i])) && mesh.conductivity_s_m[i] == conductivity);
         if !has_contested_pad_column
             && expected.is_finite()
             && expected > 0.
             && (volume - expected).abs() <= 1e-8 * expected
-            && thickness <= twice / longest / 4.
+            && (aspect_ok || relaxed_ok)
             && delta >= 3. * thickness
-            && group
-                .cells
-                .iter()
-                .all(|&i| !barrel_cell[i] && mesh.conductivity_s_m[i] == conductivity)
+            && uniform
         {
             let density = 1. / (thickness * (twice / 2.).sqrt());
             if density.is_finite() && density > 0. {
                 group.foil_density = Some(density);
+                relaxed_columns += usize::from(!aspect_ok);
             }
         }
+        // Policy: noise. Columns below thickness/200 and annulus-source slivers that
+        // are not foil carry no current mode; nodes stay merged with neighbours.
+        if v3
+            && group.foil_density.is_none()
+            && !has_contested_pad_column
+            && (altitude < thickness / 200. || group.cells.iter().all(|&i| sliver_cell[i]))
+        {
+            group.dropped = true;
+            dropped_columns += 1;
+            dropped_volume = dropped_volume.add(Sum::from(volume));
+        }
+    }
+    let dropped_volume = dropped_volume.value();
+    let copper_volume = mesh
+        .mesh
+        .copper_tetrahedra
+        .iter()
+        .fold(Sum::default(), |sum, t| sum.add(Sum::from(t.volume_m3)))
+        .value();
+    let dropped_fraction = if copper_volume > 0. { dropped_volume / copper_volume } else { 0. };
+    if !(dropped_fraction <= 1e-6) {
+        return Err(error(
+            "MIXED_FOIL_NOISE",
+            &format!(
+                "dropped sliver copper volume {dropped_volume:e} m3 in {dropped_columns} columns exceeds 1e-6 of copper volume {copper_volume:e} m3"
+            ),
+        ));
     }
     // One complete prism on the other side of each real conductor face next
     // to mandatory volume stays volumetric. This is a starting partition,
     // not a field-decay bound. No XY overlap alone creates a connection.
     let mandatory: Vec<_> = groups
         .iter()
-        .map(|g| g.is_none_or(|j| candidates[j].foil_density.is_none()))
+        .map(|g| g.is_none_or(|j| candidates[j].foil_density.is_none() && !candidates[j].dropped))
         .collect();
     let mut halo = BTreeSet::new();
     let mut faces = BTreeMap::<[usize; 3], (usize, bool)>::new();
@@ -376,6 +736,10 @@ pub fn prepare<'a>(
                     return Err(error("MIXED_FOIL_GEOMETRY", "nonmanifold copper face"));
                 }
                 *shared = true;
+                // A thin-wall barrel prism never forces its neighbours to volume.
+                if barrel_prism_cell[i] || barrel_prism_cell[*j] {
+                    continue;
+                }
                 if mandatory[i] && !mandatory[*j] {
                     halo.insert(groups[*j].unwrap());
                 }
@@ -397,6 +761,21 @@ pub fn prepare<'a>(
     let mut foils = Vec::new();
     let mut nc = 0;
     for candidate in candidates {
+        if candidate.dropped {
+            // Noise column: no mode, but its through-thickness nodes stay merged.
+            let mut columns = BTreeMap::new();
+            for &i in &candidate.cells {
+                owners[i] = Owner::Dropped;
+                for (&node, &dof) in mesh.mesh.copper_tetrahedra[i].nodes.iter().zip(&full.cells[i].potentials) {
+                    if let Some(&previous) = columns.get(&(node % nxy)) {
+                        merge(&mut parent, previous, dof);
+                    } else {
+                        columns.insert(node % nxy, dof);
+                    }
+                }
+            }
+            continue;
+        }
         let Some(density) = candidate.foil_density else {
             continue;
         };
@@ -438,6 +817,66 @@ pub fn prepare<'a>(
         });
         nc += 2;
     }
+    // Thin-wall barrel prisms: one uniform axial current mode per prism.
+    // Ring vertices merge per copper layer (and radially onto the outer ring
+    // vertex); dielectric-plane nodes join the nearest copper layer.
+    let mut barrels_out = Vec::<BarrelPrism>::with_capacity(barrel_segments.len());
+    let mut ring_groups = BTreeMap::<(usize, usize), usize>::new();
+    let mut barrel_ids_used = BTreeSet::new();
+    let layer_of = |z: f64| -> usize {
+        let mut best = (f64::INFINITY, 0usize);
+        for (k, (_, span)) in layers.iter().enumerate() {
+            let d = (span[0] - z).max(z - span[1]).max(0.);
+            if d < best.0 {
+                best = (d, k);
+            }
+        }
+        best.1
+    };
+    for segment in barrel_segments {
+        check_time(start, wall)?;
+        let ids = mesh.planar_triangles[segment.triangle];
+        let [a, b, c] = ids.map(|i| mesh.mesh.nodes_m[i]);
+        let area = 0.5 * ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])).abs();
+        let density = 1. / area;
+        let mut volume = Sum::default();
+        for &i in &segment.cells {
+            let tet = &mesh.mesh.copper_tetrahedra[i];
+            let cell = &full.cells[i];
+            owners[i] = Owner::Barrel(barrels_out.len());
+            let weight = density / cell.density_per_amp_m2;
+            if !weight.is_finite() || weight <= 0. {
+                return Err(error(
+                    "MIXED_FOIL_RANGE",
+                    "invalid physical current normalization",
+                ));
+            }
+            current_map[3 * i + 2] = Some(CurrentEntry { mode: nc, weight });
+            volume = volume.add(Sum::from(tet.volume_m3));
+            for (&node, &dof) in tet.nodes.iter().zip(&cell.potentials) {
+                let planar = node % nxy;
+                let rep = radial_rep.get(&planar).copied().unwrap_or(planar);
+                let key = (rep, layer_of(mesh.mesh.nodes_m[node][2]));
+                if let Some(&previous) = ring_groups.get(&key) {
+                    merge(&mut parent, previous, dof);
+                } else {
+                    ring_groups.insert(key, dof);
+                }
+            }
+        }
+        barrel_ids_used.insert(segment.barrel);
+        barrels_out.push(BarrelPrism {
+            barrel_id: mesh.barrel_ids[segment.barrel].clone(),
+            planar_triangle: segment.triangle,
+            z_span_m: segment.span,
+            tetrahedra: segment.cells,
+            mode: nc,
+            volume_m3: volume.value(),
+            area_m2: area,
+        });
+        nc += 1;
+    }
+    drop(ring_groups);
     for (i, owner) in owners.iter().enumerate() {
         if *owner == Owner::Volume {
             for k in 0..3 {
@@ -449,6 +888,49 @@ pub fn prepare<'a>(
             nc += 3;
         }
     }
+    if dropped_columns > 0 {
+        // A noise column can hold hanging nodes (a polygon vertex on a neighbour's
+        // edge). Collapse each onto the nearest node of the same cell that is
+        // carried by a current mode, so connectivity and KCL stay exact.
+        let mut attached = vec![false; nv];
+        for (i, cell) in full.cells.iter().enumerate() {
+            if owners[i] != Owner::Dropped {
+                for &p in &cell.potentials {
+                    attached[root(&parent, p)] = true;
+                }
+            }
+        }
+        for _ in 0..4 {
+            let mut changed = false;
+            for (i, cell) in full.cells.iter().enumerate() {
+                if owners[i] != Owner::Dropped {
+                    continue;
+                }
+                let nodes = &mesh.mesh.copper_tetrahedra[i].nodes;
+                for k in 0..4 {
+                    if attached[root(&parent, cell.potentials[k])] {
+                        continue;
+                    }
+                    let d = |m: usize| {
+                        let (a, b) = (mesh.mesh.nodes_m[nodes[k]], mesh.mesh.nodes_m[nodes[m]]);
+                        (a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)
+                    };
+                    let near = (0..4)
+                        .filter(|&m| attached[root(&parent, cell.potentials[m])])
+                        .min_by(|&x, &y| d(x).total_cmp(&d(y)));
+                    if let Some(m) = near {
+                        merge(&mut parent, cell.potentials[m], cell.potentials[k]);
+                        let r = root(&parent, cell.potentials[m]);
+                        attached[r] = true;
+                        changed = true;
+                    }
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+    }
     let mut ids = BTreeMap::new();
     let potential_map: Vec<_> = (0..nv)
         .map(|i| {
@@ -456,6 +938,28 @@ pub fn prepare<'a>(
             *ids.entry(root(&parent, i)).or_insert(next)
         })
         .collect();
+    if dropped_columns > 0 {
+        // Dropping must not disconnect any conductor: current-carrying cells alone
+        // must still join every mapped potential of each galvanic component.
+        let mut conn: Vec<usize> = (0..ids.len()).collect();
+        for (i, cell) in full.cells.iter().enumerate() {
+            if owners[i] != Owner::Dropped {
+                let first = potential_map[cell.potentials[0]];
+                for &p in &cell.potentials[1..] {
+                    merge(&mut conn, first, potential_map[p]);
+                }
+            }
+        }
+        for component in &full.components {
+            let first = root(&conn, potential_map[component[0]]);
+            if component.iter().any(|&p| root(&conn, potential_map[p]) != first) {
+                return Err(error(
+                    "MIXED_FOIL_CONTACT",
+                    "dropped sliver columns would disconnect a conductor",
+                ));
+            }
+        }
+    }
     let mut known_components = BTreeSet::new();
     let mut potential_components = Vec::new();
     for component in &full.components {
@@ -530,6 +1034,15 @@ pub fn prepare<'a>(
         full,
         owners,
         foils,
+        barrel_count: barrel_ids_used.len(),
+        barrels: barrels_out,
+        barrel_model,
+        barrel_fallback_columns,
+        barrel_sliver_columns,
+        foil_aspect_relaxed_columns: relaxed_columns,
+        sliver_columns_dropped: dropped_columns,
+        dropped_volume_m3: dropped_volume,
+        dropped_volume_fraction: dropped_fraction,
         electrodes,
         potential_components,
         incidence,
@@ -626,6 +1139,8 @@ impl MixedMap<'_> {
         add(self.owners.capacity(),std::mem::size_of::<Owner>())?;
         add(self.foils.capacity(),std::mem::size_of::<FoilPrism>())?;
         for foil in &self.foils {add(foil.layer.capacity(),1)?;add(foil.tetrahedra.capacity(),std::mem::size_of::<usize>())?;}
+        add(self.barrels.capacity(),std::mem::size_of::<BarrelPrism>())?;
+        for prism in &self.barrels {add(prism.barrel_id.capacity(),1)?;add(prism.tetrahedra.capacity(),std::mem::size_of::<usize>())?;}
         for values in [&self.electrodes,&self.potential_map,&self.full_electrodes] {add(values.capacity(),std::mem::size_of::<usize>())?;}
         add(self.potential_components.capacity(),std::mem::size_of::<Vec<usize>>())?;
         for component in &self.potential_components {add(component.capacity(),std::mem::size_of::<usize>())?;}
@@ -633,6 +1148,10 @@ impl MixedMap<'_> {
         add(self.resistance_ohm.capacity(),std::mem::size_of::<f64>())?;
         add(self.current_map.capacity(),std::mem::size_of::<Option<CurrentEntry>>())?;
         Ok(bytes)
+    }
+    /// Mixed potential coordinate of a copper mesh node, if the node is copper.
+    pub(super) fn mixed_potential(&self, node: usize) -> Option<usize> {
+        self.full.node_potential.get(&node).map(|&full| self.potential_map[full])
     }
     pub fn potential_count(&self) -> usize {
         self.potential_components.iter().map(Vec::len).sum()
@@ -1270,12 +1789,18 @@ fn solve_checked_mesh_impl_policy(
         .checked_sub(provenance)
         .ok_or_else(|| error("MEMORY_LIMIT", "mixed provenance exceeds budget"))?;
 
-    let map = prepare(
+    let barrel_model = if operator == CheckedOperator::HybridPlanarV3 && partition_policy == PartitionPolicy::AutomaticHybridV1 {
+        BarrelModel::hybrid_default()
+    } else {
+        BarrelModel::Volume
+    };
+    let map = prepare_model(
         mesh,
         &request.electrodes,
         effective_upper,
         budget,
         wall.saturating_sub(start.elapsed()),
+        barrel_model,
     )?;
     let (automatic_partition, automatic_evidence) =
         if partition_policy == PartitionPolicy::AutomaticConductiveSchurV1 {
@@ -1387,6 +1912,18 @@ fn solve_checked_mesh_impl_policy(
                 return Err(error("HYBRID_FREQUENCY", "foil thickness requires frequency enrichment or local volume"));
             }
         }
+        // Thin-wall barrel applicability: one radial cell needs delta >= 3 t at the
+        // band top. Above that the model is still admitted, with an explicit warning.
+        let barrel_skin = if map.barrels.is_empty() {
+            None
+        } else {
+            let sigma = request.barrel_conductivity_s_m.ok_or_else(|| error("BOARD_PADSTACK", "barrel conductivity is missing"))?;
+            let wall_m = request.finished_hole_plating_m.ok_or_else(|| error("BOARD_PADSTACK", "finished-hole plating thickness is missing"))?;
+            let delta = 1. / (std::f64::consts::PI * effective_upper * super::super::MU0 * sigma).sqrt();
+            Some(json!({"approximation": delta < 3. * wall_m, "skinDepthM": delta, "wallThicknessM": wall_m, "bandTopHz": effective_upper,
+                "criterion": "skin depth >= 3 * wall thickness for a single radial cell",
+                "warning": if delta < 3. * wall_m {json!("barrel wall treated as one radial cell with uniform axial current above the skin criterion; skin and proximity redistribution inside the wall is not resolved")} else {serde_json::Value::Null}}))
+        };
         let mixed_names: Vec<_> = (0..map.potential_count()).map(|i| format!("mixed-potential-{i}")).collect();
         let mixed_ports: Vec<_> = ports.iter().map(|p| [map.potential_map[p[0]], map.potential_map[p[1]]]).collect();
         let adaptive = hybrid_requested || std::env::var_os("P7_COMPACT_FULL_MIXED").as_deref() == Some(std::ffi::OsStr::new("1"));
@@ -1429,6 +1966,7 @@ fn solve_checked_mesh_impl_policy(
                     .map(|profiles| profiles.into_iter().map(|p| map.restrict_current_profile(&p)).collect::<Result<Vec<_>>>()).transpose()?
             } else { None }
         } else { None };
+        super::board_foil::phase_trace("field-prepared", start, json!({"adaptive": adaptive, "tetrahedra": map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count(), "barrelPrisms": map.barrels.len(), "barrelModel": map.barrel_model.name()}));
         let (model, mut evidence, planned, adaptive_result) = if adaptive {
             let (mut result,model,planned)=foil_reduced::solve_compact_adaptive(&map,&mixed_names,&mixed_ports,packages,MatchedGrid{frequencies:frequencies_hz,references:reference_ohm,max_iterations},prepared_field.as_ref().ok_or_else(||error("HYBRID_INPUT","missing prepared field"))?,model_budget,start,wall,profiles.as_deref())?;
             let evidence=result["compactEvidence"].take();(model,evidence,planned,Some(result))
@@ -1440,6 +1978,11 @@ fn solve_checked_mesh_impl_policy(
         evidence["version"] = json!("compact-planar-v1");
         evidence["foilSupports"] = json!(map.foils.len());
         evidence["localTetraSupports"] = json!(map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count());
+        evidence["barrelModel"] = json!(map.barrel_model.name());
+        evidence["barrelEvidence"] = json!({"model": map.barrel_model.name(), "barrels": map.barrel_count, "barrelPrisms": map.barrels.len(), "barrelFallbackColumns": map.barrel_fallback_columns, "barrelSliverColumns": map.barrel_sliver_columns, "foilAspectRelaxedColumns": map.foil_aspect_relaxed_columns, "sliverColumnsDropped": map.sliver_columns_dropped, "droppedVolumeM3": map.dropped_volume_m3, "droppedVolumeFraction": map.dropped_volume_fraction, "remainingTetrahedra": map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count()});
+        if let Some(skin) = &barrel_skin {
+            evidence["barrelSkinApproximation"] = skin.clone();
+        }
         evidence["potentialCoordinates"] = json!(map.potential_count());
         evidence["currentCoordinates"] = json!(map.current_count());
         let mut result = if let Some(result)=adaptive_result {result} else {foil_reduced::compact_planar_response(&model, frequencies_hz, reference_ohm, packages, budget, start, wall)?};
@@ -1453,6 +1996,8 @@ fn solve_checked_mesh_impl_policy(
         if hybrid_requested {
             result["provenance"]["partitionPolicy"]=json!("automatic-hybrid-v1");
             result["provenance"]["hybridAssembly"]=json!({"policy":"automatic-hybrid-v1","method":"global-compact-mixed","potentialCoordinates":map.potential_count(),"currentCoordinates":map.current_count(),"physicalAccuracy":"unverified"});
+            result["provenance"]["barrelModel"]=json!(map.barrel_model.name());
+            result["provenance"]["barrelPrisms"]=json!(map.barrels.len());
         }
         if skin.is_some() {
             result["provenance"]["operatorPolicy"]=json!(operator.policy_name());
@@ -1881,6 +2426,7 @@ impl MixedMap<'_> {
     /// Build disjoint, constant-volume charge tests and current densities from
     /// the physical foil ownership. Local volume needs a separate cross kernel.
     pub(super) fn planar_supports(&self, modes: &[Vec<f64>]) -> Result<(Vec<super::planar_operator::Support>, Vec<LocalSupport>, Vec<Vec<f64>>)> {
+        self.reject_barrel_prisms("homogeneous planar charge model")?;
         if self.foils.is_empty() || modes.iter().any(|m| m.len() != self.current_count() || m.iter().any(|x| !x.is_finite())) {
             return Err(error("HYBRID_INPUT", "invalid compact current basis"));
         }
@@ -1991,6 +2537,7 @@ impl MixedMap<'_> {
 }
 impl MixedMap<'_> {
     pub(super) fn planar_barycentric_supports(&self, modes: &[Vec<f64>]) -> Result<(Vec<super::planar_operator::Support>, Vec<LocalSupport>, Vec<Vec<f64>>)> {
+        self.reject_barrel_prisms("barycentric planar charge model")?;
         let (_, original_locals, _) = self.planar_supports(modes)?;
         let local_count = original_locals.len();
         let nxy = self.mesh.planar_nodes_mm.len();
@@ -2116,6 +2663,26 @@ impl MixedMap<'_> {
         Ok(out)
     }
 }
+impl MixedMap<'_> {
+    /// z-directed uniform current density of each thin-wall barrel prism
+    /// (one mode per prism), in the order of `self.barrels`.
+    pub(super) fn barrel_current_supports(&self) -> Result<Vec<super::planar_operator::SparseSupport>> {
+        let mut out=Vec::with_capacity(self.barrels.len());
+        for (i,prism) in self.barrels.iter().enumerate() {
+            let ids=self.mesh.planar_triangles[prism.planar_triangle];
+            let mut xy=ids.map(|id|{let p=self.mesh.mesh.nodes_m[id];[p[0],p[1]]});
+            let cross=(xy[1][0]-xy[0][0])*(xy[2][1]-xy[0][1])-(xy[1][1]-xy[0][1])*(xy[2][0]-xy[0][0]); if cross<0. {xy.swap(1,2);}
+            let shape=super::prism::Prism::new(format!("barrel-current-{i}"),xy,prism.z_span_m)?;
+            let first=prism.tetrahedra[0];
+            let density=self.full.cells[first].density_per_amp_m2*self.current_map[3*first+2].ok_or_else(||error("HYBRID_INPUT","barrel current mapping missing"))?.weight;
+            out.push(super::planar_operator::SparseSupport {prism:shape,charge_density:vec![],current_density:vec![(prism.mode,[0.,0.,density])]});
+        }
+        Ok(out)
+    }
+    fn reject_barrel_prisms(&self, what: &str) -> Result<()> {
+        if self.barrels.is_empty() { Ok(()) } else { Err(error("HYBRID_INPUT", &format!("{what} does not support thin-wall barrel prisms"))) }
+    }
+}
 pub(super) struct LocalCurrentSupport { pub tetra:[[f64;3];4], pub densities:Vec<(usize,[f64;3])> }
 impl MixedMap<'_> {
     pub(super) fn local_current_supports(&self) -> Result<Vec<LocalCurrentSupport>> {
@@ -2133,6 +2700,7 @@ impl MixedMap<'_> {
 
 impl MixedMap<'_> {
     pub(super) fn planar_sparse_charge_supports(&self, modes: &[Vec<f64>]) -> Result<(Vec<super::planar_operator::SparseSupport>, Vec<LocalSupport>, Vec<Vec<(usize,f64)>>)> {
+        self.reject_barrel_prisms("sparse planar charge model")?;
         let original_locals = self.local_current_supports()?.into_iter().map(|s| LocalSupport { tetra:s.tetra, volume: { let a=s.tetra[0]; let b=s.tetra[1]; let c=s.tetra[2]; let d=s.tetra[3]; let u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]]; let v=[c[0]-a[0],c[1]-a[1],c[2]-a[2]]; let w=[d[0]-a[0],d[1]-a[1],d[2]-a[2]]; (u[0]*(v[1]*w[2]-v[2]*w[1])-u[1]*(v[0]*w[2]-v[2]*w[0])+u[2]*(v[0]*w[1]-v[1]*w[0])).abs()/6. }, currents:vec![],charge_index:0,charge_density:0. }).collect::<Vec<_>>();
         let local_count = original_locals.len();
         let nxy = self.mesh.planar_nodes_mm.len();
@@ -2337,3 +2905,7 @@ mod hybrid_connector_test;
 #[cfg(test)]
 #[path = "hybrid_ground_chain_test.rs"]
 mod hybrid_ground_chain_test;
+
+#[cfg(test)]
+#[path = "hybrid_barrel_test.rs"]
+pub(super) mod hybrid_barrel_test;

@@ -6,6 +6,16 @@ import {capturedBoardGeometry} from '../geometry-snapshot.ts';
 import type {AnalysisTask} from './executor.ts';import type * as T from './spec-doc.js';import {object} from './descriptions.ts';import {AnalysisDslError} from './schema.ts';import {dcMaterial} from './profile-adapter.ts';
 const decimalScale=(v:number,power:number)=>{const [m,e='0']=String(v).split('e');return Number(m+'e'+(Number(e)+power));};
 const fail=(s:string):never=>{throw new AnalysisDslError('LOCAL_INPUT',s);};
+/** Infers a missing contact layer from the single captured pad a selector resolves to: one pad layer, else the component side when it is a pad layer. */
+export function inferContactLayer(b:any,selector:any):{layer:string;pad:any}|undefined{
+ if(!selector||Array.isArray(selector)||selector.kind==='viaId')return undefined;
+ const pads=b.pads.filter((p:any)=>selector.kind==='padId'?p.id===selector.id:selector.kind==='pad'&&p.component===selector.designator&&p.number===selector.number);
+ if(pads.length!==1)return undefined;
+ const pad=pads[0],layers:string[]=pad.layers??[];
+ if(layers.length===1)return {layer:layers[0],pad};
+ const side=b.components?.find((c:any)=>c.designator===pad.component)?.side?.toUpperCase();
+ return side&&layers.includes(side)?{layer:side,pad}:undefined;
+}
 export type LocalExtractionPlan = ReturnType<typeof channelPlan> & {
  terminalRequest?: BoardChannelRequest;
  dcComponents?: PhysicalDcComponentRequest[];
@@ -108,7 +118,7 @@ function prepareLocalRequest(task:AnalysisTask<'impedance'|'si'>,targets:readonl
  };
  const planningContacts:{sourcePath:string;layer:string}[]=[];const electrodes:any[]=[],pairs:string[][]=endpoints.map(()=>[]),seen=new Map<string,string>();
  // Signal contacts first, then returns, preserving the original STM32 ordering.
- for(const role of ['positive','negative'] as const)for(let p=0;p<endpoints.length;p++){const e=endpoints[p],layer=e[role+'Layer']??e.layer;if(!layer)fail('Contact layer required');const sourcePath=source(e[role]),key=sourcePath+':'+layer;planningContacts.push({sourcePath,layer});
+ for(const role of ['positive','negative'] as const)for(let p=0;p<endpoints.length;p++){const e=endpoints[p],layer=e[role+'Layer']??e.layer??inferContactLayer(b,e[role])?.layer;if(!layer)fail('Contact layer required');const sourcePath=source(e[role]),key=sourcePath+':'+layer;planningContacts.push({sourcePath,layer});
  let name=seen.get(key);if(!name){name=(role==='positive'?'signal':'return')+'-'+layer;if(electrodes.some(x=>x.name===name))name+='-'+p;seen.set(key,name);const index=stack.findIndex(l=>l.copper&&l.name===layer);if(index<0)fail('Contact layer absent in stack');const copperIndices=stack.flatMap((l,i)=>l.copper?[i]:[]);// Physical terminal convention is stable across channel direction: bottom uses its exterior upper face; top/interior use the first Cu face in stack order.
  electrodes.push({name,sourcePath,layer,upper:index===copperIndices.at(-1)});}pairs[p][role==='positive'?0:1]=name;}
  let geometryPairs=pairs;

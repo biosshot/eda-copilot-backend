@@ -1438,6 +1438,8 @@ impl CompactLocalPairs {
 /// physical Cartesian current densities (three values per tetrahedron).
 /// The existing hierarchy supplies reciprocal interval bounds; self terms
 /// retain the checked local self convergence gate.
+/// Upper bound for the dense lower-triangular pair table, independent of the budget.
+const MAX_DENSE_LOWER_BYTES: usize = 1 << 30;
 pub(super) struct CompactLocalHierarchy {
     pair: BoundedPairs,
     tree: hierarchical_magnetic::Operator,
@@ -1467,6 +1469,7 @@ impl CompactLocalHierarchy {
         if let Some(count) = BoundedPairs::lower_pair_count(operator.space.cells.len()) {
             if count > operator.pair.scalar.borrow().len() {
                 if let Some(bytes) = count.checked_mul(std::mem::size_of::<f64>())
+                    .filter(|&bytes| bytes <= MAX_DENSE_LOWER_BYTES)
                     .and_then(|bytes| operator.planned_bytes.checked_add(bytes))
                     .filter(|&bytes| bytes <= budget.max_bytes)
                 {
@@ -1527,6 +1530,7 @@ impl CompactLocalHierarchy {
             let table = BoundedPairs::lower_pair_count(n)
                 .filter(|&count| count > scalar_slots)
                 .and_then(|count| count.checked_mul(std::mem::size_of::<f64>()))
+                .filter(|&bytes| bytes <= MAX_DENSE_LOWER_BYTES)
                 .filter(|&bytes| bytes <= spare)
                 .unwrap_or(0);
             let bytes_per_slot = workers * (STREAMED_PAIR_SLOT_BYTES + COMPACT_POSITIVE_CACHE_BYTES + if axial { AXIAL_CELL_EXTRA_BYTES } else { 0 });

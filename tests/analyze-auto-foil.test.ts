@@ -89,6 +89,14 @@ function checkedMock(problem:BoardFoilProblem, sourceMapping:AnalysisBoardFoilCh
   Object.assign(result.provenance,{partitionPolicy:'automatic-hybrid-v1',
    compactOperator:{version:'compact-planar-v1',basis:'adaptive-mixed-closure',electricOperator:'layered-spatial-field-mesh',approximationError:'unverified',scope:'compact-discrete',originalVolumeActions:0,foilSupports:0,localTetraSupports:28,potentialCoordinates:4,currentCoordinates:84,planarMaxOrder:0,planarMaxRelativeChange:0,mixedMaxRelativeChange:1e-9,tetraSelfMaxRelativeChange:1e-9,tetraPairAdaptiveTolerance:1e-10,nearQuadratureEstimatedTolerance:1e-8,physicalAccuracy:'unverified'},
    hybridAssembly:{policy:'automatic-hybrid-v1',method:'global-compact-mixed',potentialCoordinates:4,currentCoordinates:84,physicalAccuracy:'unverified'}});
+  if(problem.request.operatorPolicy==='hybrid-planar-v3'){
+   const upper=problem.request.profileUpperHz??frequenciesHz.at(-1)!,top=frequenciesHz.at(-1)!;
+   const stack=((problem.geometry as {stack?:{name:string;copper:boolean;conductivitySM?:number}[]}).stack??[]).filter(l=>l.copper);
+   const depth=(c:number)=>1/Math.sqrt(Math.PI*upper*(4e-7*Math.PI)*c);
+   Object.assign(result.provenance,{operatorPolicy:'hybrid-planar-v3',copperSkinMesh:{version:3,requestedUpperHz:top,trainingUpperBoundHz:top,effectiveUpperHz:upper,skinDepthDivisor:3,currentAndElectricShareMesh:true,scope:'Implementation mesh screening only',
+    layers:stack.map(l=>({layer:l.name,skinDepthM:depth(l.conductivitySM!),maximumStepM:depth(l.conductivitySM!)/6,slabs:6})),
+    roundBarrels:barrelIds.map(id=>({id,skinDepthM:depth((problem.geometry as {barrelConductivitySM:number}).barrelConductivitySM),maximumRadialStepM:depth((problem.geometry as {barrelConductivitySM:number}).barrelConductivitySM)/4,shells:4}))}});
+  }
   for(const sample of result.samples)for(const column of sample.columns){
    delete column.kvlUncertaintyRelative; column.compactKvlUncertaintyRelative=0;
    column.compactMagneticCertificate={policy:'compact-mixed-near-far',nearQuadratureErrorCertified:false};
