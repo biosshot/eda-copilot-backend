@@ -148,8 +148,8 @@
   },
   "physicalStatusPolicy": "preserve source manifest/case matrix statuses; this queue makes no acceptance claim",
   "commands": {
-    "status": "unresolved",
-    "note": "No verified single final campaign invocation; select existing scripts/verify-p7-* per crosswalk task; do not invent command lines."
+    "status": "partially-prepared",
+    "note": "Per-row developmentControls are direct script or test invocations from repository root. They are not acceptance commands; native controls and final reference-dependent invocations remain unresolved. Runs may be expensive and are not executed by queue preparation."
   },
   "caseTasks": [
     {
@@ -162,7 +162,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-closure-stripline.ts",
+          "command": "node --import tsx scripts/verify-p7-closure-stripline.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Поддерживается (условно)**",
+      "coverageGap": "Однородный участок → 2D-сечение; straight/bend приняты в низкой полосе. D1 continuous ещё открыт, переносить на любые длины нельзя",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-02",
@@ -174,7 +187,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-closure-baseline.ts",
+          "command": "node --import tsx scripts/verify-p7-closure-baseline.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Поддерживается (условно)**",
+      "coverageGap": "Принят как coupon; не гарантия для произвольной геометрии",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-03",
@@ -186,7 +212,15 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [],
+      "implementationScope": "**Поддерживается (условно)**",
+      "coverageGap": "spatial-delay 2.174198% принят при пороге 3% (2026-11-03)",
+      "requiredObservables": [
+        "spatial-delay"
+      ],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-04",
@@ -198,7 +232,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-closure-stripline.ts",
+          "command": "node --import tsx scripts/verify-p7-closure-stripline.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Поддерживается** только для явного coupled-сечения",
+      "coverageGap": "Явное coupled-сечение принято в своей полосе. Автоматический N-port planner и joint four-port differential runtime реализованы, автоматическая пара по плате требует независимой EM-проверки",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-05",
@@ -210,7 +257,25 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-joint-section.ts",
+          "command": "node --import tsx scripts/verify-p7-joint-section.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Моделируется / проверяется**",
+      "coverageGap": "Bounded joint event удерживает разрыв и обходы и различает острова. После исправления выбора resume D1 вернул domain 4 с внутренней сходимостью в 1–10 кГц. В исторической проверке domain 1 → 2 был FAIL. Matched full joint и hybrid завершены. Four-port/open сравнения 1.25208%/1.45596%. Strict loaded replay после правки прошёл на обновлённом joint state. Joint spatial loaded-reactance отказал, приёмка открыта",
+      "requiredObservables": [],
+      "frequencyBandHz": {
+        "sourceText": [
+          "10 кГц"
+        ],
+        "status": "as-stated-in-matrix; not independently bound"
+      },
+      "finalChecks": []
     },
     {
       "id": "primary-06",
@@ -222,7 +287,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-closure-stripline.ts",
+          "command": "node --import tsx scripts/verify-p7-closure-stripline.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Поддерживается**",
+      "coverageGap": "`a.line({kind:\"stripline\"})`; две плоскости сводятся к общему reference",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-07",
@@ -234,7 +312,13 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [],
+      "implementationScope": "**Unverified**",
+      "coverageGap": "Базис сохраняет отдельные координаты плоскостей. Нужен подтверждённый маршрут на реальной плате с фактическими связями между плоскостями",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-08",
@@ -246,7 +330,26 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "native/analyze/src/extraction/local/mixed_conductor.rs#aligned_pad_orientation_tests::inner_signal_with_split_top_and_bottom_references_stays_disconnected",
+          "command": null,
+          "scope": "development control only; not final acceptance",
+          "status": "command-unresolved"
+        },
+        {
+          "source": "native/analyze/src/extraction/local/hybrid_five_island_test.rs",
+          "command": null,
+          "scope": "development control only; not final acceptance",
+          "status": "command-unresolved"
+        }
+      ],
+      "implementationScope": "**Не поддерживается**",
+      "coverageGap": "Раздельные координаты и bounded split-return реализованы. Совместный сценарий двух плоскостей с разрывами требует своего контроля",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-09",
@@ -258,7 +361,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "tests/analyze-auto-foil.test.ts",
+          "command": "node --import tsx --test tests/analyze-auto-foil.test.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Моделируется геометрически**",
+      "coverageGap": "Реальные barrel/pads внутри окна считаются; универсального fence-экстрактора и приёмки нет",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-10",
@@ -270,7 +386,22 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-auto-foil.ts",
+          "command": "node --import tsx scripts/verify-p7-auto-foil.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Поддерживается (условно)**",
+      "coverageGap": "spatial-delay 2.763860% принят при пороге 3% (2026-11-03)",
+      "requiredObservables": [
+        "spatial-delay"
+      ],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-11",
@@ -282,7 +413,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "tests/analysis-dsl.test.ts",
+          "command": "node --import tsx --test tests/analysis-dsl.test.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Моделируется / проверяется**",
+      "coverageGap": "Via corridor реализован, приёмки канала нет",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-12",
@@ -294,7 +438,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-joint-section.ts",
+          "command": "node --import tsx scripts/verify-p7-joint-section.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Моделируется геометрически**",
+      "coverageGap": "Трёхпортовая ветвь проходит геометрический контроль. Электрическая приёмка всех ветвей и нагрузок открыта",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-13",
@@ -306,7 +463,25 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-wide-return-domains.ts",
+          "command": "node --import tsx scripts/verify-p7-wide-return-domains.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Unverified**",
+      "coverageGap": "Remote physical bypass прошёл геометрическую проверку. Внутренний sparse foil-модуль с потоковым LQ и обогащением прошёл полную невязку малого двухслойного купона на 10 кГц; этот путь не использует прежний dense cap 64. Автоматический planar foil и смешанный foil/volume runtime реализованы для допустимых входов. Многослойный STM32 и пространственная точность открыты. Историческая нижняя оценка fine electric enclosing ROI — 28 513 МиБ; новая редукция не подтверждает устранение этого field-бюджета. [Оператор и ограничения](../../evidence/p7-foil-reduction-2026-11-04.md)",
+      "requiredObservables": [],
+      "frequencyBandHz": {
+        "sourceText": [
+          "10 кГц"
+        ],
+        "status": "as-stated-in-matrix; not independently bound"
+      },
+      "finalChecks": []
     },
     {
       "id": "primary-14",
@@ -318,7 +493,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "tests/analyze-board-channel-return-selection.test.ts",
+          "command": "node --import tsx --test tests/analyze-board-channel-return-selection.test.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Unverified**",
+      "coverageGap": "При разрешимых исходных физических контактах отсутствие локального return-коридора выбирает общую область с независимыми островами. Геометрический контроль прошёл; численная точность ёмкостного/удалённого возврата ещё не принята",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-15",
@@ -330,7 +518,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-shared-return-prototype.ts",
+          "command": "node --import tsx scripts/verify-p7-shared-return-prototype.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Unverified**",
+      "coverageGap": "Независимые координаты, явные conductor-end mappings и mixed-polarity contacts реализованы. Нужна общая проверка физических соединений и восстановления токов",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-16",
@@ -342,7 +543,22 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-wide-return-domains.ts",
+          "command": "node --import tsx scripts/verify-p7-wide-return-domains.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Проверяется**",
+      "coverageGap": "Приняты только совместные коэффициенты C1; реальный канал не принят",
+      "requiredObservables": [
+        "C1"
+      ],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-17",
@@ -354,7 +570,13 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [],
+      "implementationScope": "**Моделируется геометрически**",
+      "coverageGap": "Внутри окна (~стек + запас) — вся медь всех слоёв; вне окна в оператор не входит",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-18",
@@ -366,55 +588,138 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-source-band.ts",
+          "command": "node --import tsx scripts/verify-p7-source-band.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Поддерживается** в узкой полосе",
+      "coverageGap": "500 МГц–1 ГГц, quasi-TEM, только сечение; полный RF-канал и ground-via — нет",
+      "requiredObservables": [],
+      "frequencyBandHz": {
+        "sourceText": [
+          "500 МГц",
+          "1 ГГц"
+        ],
+        "status": "as-stated-in-matrix; not independently bound"
+      },
+      "finalChecks": []
     },
     {
       "id": "primary-continuation-97",
       "case": "Разрывы опоры сверху и снизу одновременно",
       "sourceSection": "primary",
       "sourceLine": 97,
-      "implementationStatus": "unmapped",
+      "implementationStatus": "mapped",
       "acceptanceStatus": "open",
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "native/analyze/src/extraction/local/mixed_conductor.rs#aligned_pad_orientation_tests::inner_signal_with_split_top_and_bottom_references_stays_disconnected",
+          "command": null,
+          "scope": "development control only; not final acceptance",
+          "status": "command-unresolved"
+        },
+        {
+          "source": "native/analyze/src/extraction/local/hybrid_five_island_test.rs",
+          "command": null,
+          "scope": "development control only; not final acceptance",
+          "status": "command-unresolved"
+        }
+      ],
+      "implementationScope": "**Не поддерживается**",
+      "coverageGap": "Требуемый кейс: нужна модель двух опор и их физических соединений",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-continuation-98",
       "case": "Blind/buried via",
       "sourceSection": "primary",
       "sourceLine": 98,
-      "implementationStatus": "unmapped",
+      "implementationStatus": "mapped",
       "acceptanceStatus": "open",
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "native/analyze/tests/blind_buried_via.rs",
+          "command": null,
+          "scope": "development control only; not final acceptance",
+          "status": "command-unresolved"
+        }
+      ],
+      "implementationScope": "**Моделируется геометрически**",
+      "coverageGap": "Span прошёл три геометрических теста и шесть отдельных DC случаев. Полная EM-проверка signal/return, antipad и stub открыта. Coax skin-transition проверяется отдельно",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-continuation-99",
       "case": "Разъём/пад (connector/pad transition)",
       "sourceSection": "primary",
       "sourceLine": 99,
-      "implementationStatus": "unmapped",
+      "implementationStatus": "mapped",
       "acceptanceStatus": "open",
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "native/analyze/src/extraction/local/hybrid_connector_test.rs",
+          "command": null,
+          "scope": "development control only; not final acceptance",
+          "status": "command-unresolved"
+        }
+      ],
+      "implementationScope": "**Не поддерживается**",
+      "coverageGap": "Переход дорожки в пад/разъём; отдельный класс не реализован",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-continuation-100",
       "case": "Дифференциальная пара",
       "sourceSection": "primary",
       "sourceLine": 100,
-      "implementationStatus": "unmapped",
+      "implementationStatus": "mapped",
       "acceptanceStatus": "open",
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "tests/analyze-board-foil-mixed-mode.test.ts",
+          "command": "node --import tsx --test tests/analyze-board-foil-mixed-mode.test.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        },
+        {
+          "source": "tests/analyze-board-foil-loss-grams.test.ts",
+          "command": "node --import tsx --test tests/analyze-board-foil-loss-grams.test.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "**Частично**",
+      "coverageGap": "Явное coupled-сечение принято. Layered differential подключён к joint four-port leg-to-return S50. Физическая приёмка автоматической пары и смены опоры открыта",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-continuation-101",
@@ -426,7 +731,13 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [],
+      "implementationScope": "**Не поддерживается**",
+      "coverageGap": "Геометрия и независимые координаты поддерживают раздельные острова. Переход с доказанным физическим путём возврата между слоями/плоскостями ещё не принят",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-continuation-102",
@@ -438,7 +749,13 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [],
+      "implementationScope": "**Не поддерживается**",
+      "coverageGap": "Правило в плане §4.0; реализация не начата",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-continuation-103",
@@ -450,7 +767,13 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [],
+      "implementationScope": "**Не поддерживается**",
+      "coverageGap": "Разные острова и ориентированные контакты представимы. Автоматическое извлечение физического соединения и его R/L в этом сценарии требует проверки",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "primary-continuation-104",
@@ -462,7 +785,13 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [],
+      "implementationScope": "**Не поддерживается**",
+      "coverageGap": "v1: до 8 переходов на канал; каждый — событие + физическое соединение; больше — отказ",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "supplemental-19",
@@ -474,7 +803,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-shared-return-prototype.ts",
+          "command": "node --import tsx scripts/verify-p7-shared-return-prototype.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "Bounded joint geometry и manufactured EQS control реализованы. Общий автоматический путь не принят",
+      "coverageGap": "AC multiport, ток смещения/баланс заряда, физические C, отдельная проверка DC-разрыва",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "supplemental-20",
@@ -486,7 +828,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "tests/analysis-dsl.test.ts",
+          "command": "node --import tsx --test tests/analysis-dsl.test.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "Явные R/C/L attachments, captured pins и DSL/planner реализованы. Поиск поддерживает до восьми рёбер и промежуточные острова",
+      "coverageGap": "Извлечённые контакты + заданная модель компонента, общая полоса и отсутствие weld",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "supplemental-21",
@@ -498,7 +853,25 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-real-reference.ts",
+          "command": "node --import tsx scripts/verify-p7-real-reference.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "Есть условные finite-ROI 1–100 кГц результаты. Отдельный DC endpoint сохраняет матрицу физических электродов и независимые острова; явные R/DCR и открытый C проверены на ограниченном купоне. Полный PDN-путь не принят",
+      "coverageGap": "Полный обязательный сценарий, многопортовая композиция/наблюдения, взаимные связи, DC/AC overlap и recovery; [границы DC-пакета](../../evidence/p7-dc-endpoint-2026-11-04.md)",
+      "requiredObservables": [],
+      "frequencyBandHz": {
+        "sourceText": [
+          "100 кГц"
+        ],
+        "status": "as-stated-in-matrix; not independently bound"
+      },
+      "finalChecks": []
     },
     {
       "id": "supplemental-22",
@@ -510,7 +883,23 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-joint-section.ts",
+          "command": "node --import tsx scripts/verify-p7-joint-section.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "Реализованы N-port планирование и joint preparation списка каналов, пройдены геометрические контроли",
+      "coverageGap": "Подтвердить независимые mutual/crosstalk и токи всех ветвей в общей полосе",
+      "requiredObservables": [
+        "токи",
+        "mutual/crosstalk"
+      ],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "supplemental-23",
@@ -522,7 +911,13 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [],
+      "implementationScope": "Полное покрытие не подтверждено",
+      "coverageGap": "Манифест представительных комбинаций; несколько опор не сводятся к одной без проверки",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "supplemental-24",
@@ -534,7 +929,25 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "tests/analyze-board-foil-cache.test.ts",
+          "command": "node --import tsx --test tests/analyze-board-foil-cache.test.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "Event 5 подтвердил intrinsic local 1–10 кГц на свежем кэше с независимым replay и 12 интервалами. Segmented W6 и owner loss интегрированы и проверены TS тестами. Физическая общая и широкая полосы открыты",
+      "coverageGap": "Все требуемые интервалы §1.1/§F плана, новые holdouts, явные непокрытые интервалы",
+      "requiredObservables": [],
+      "frequencyBandHz": {
+        "sourceText": [
+          "10 кГц"
+        ],
+        "status": "as-stated-in-matrix; not independently bound"
+      },
+      "finalChecks": []
     },
     {
       "id": "supplemental-25",
@@ -546,7 +959,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "tests/analyze-board-foil-cache.test.ts",
+          "command": "node --import tsx --test tests/analyze-board-foil-cache.test.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "Манифест перечисляет все 42 случая, часть подготовительных артефактов привязана. Полная матрица численных проверок открыта",
+      "coverageGap": "Перенос/поворот, ID/порядок терминалов, CAD-разбиение меди, gauge и сдвиг разрезов",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "return-topology-26",
@@ -558,7 +984,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "scripts/verify-p7-joint-section.ts",
+          "command": "node --import tsx scripts/verify-p7-joint-section.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "Возврат меняет путь, но не net",
+      "coverageGap": "Моделируется / проверяется",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "return-topology-27",
@@ -570,7 +1009,13 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [],
+      "implementationScope": "Возврат идёт через точку соединения (звезда, перемычка, via)",
+      "coverageGap": "Не поддерживается",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "return-topology-28",
@@ -582,7 +1027,13 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [],
+      "implementationScope": "Несколько смен опоры подряд",
+      "coverageGap": "Не поддерживается",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "return-topology-29",
@@ -594,7 +1045,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "tests/analysis-dsl.test.ts",
+          "command": "node --import tsx --test tests/analysis-dsl.test.ts",
+          "scope": "development control only; not final acceptance",
+          "status": "available"
+        }
+      ],
+      "implementationScope": "Возврат переходит на другую плоскость",
+      "coverageGap": "Моделируется / проверяется",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "return-topology-30",
@@ -606,7 +1070,20 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [
+        {
+          "source": "native/analyze/src/extraction/local/hybrid_section_model.rs#tests::disconnected_islands_carry_ac_displacement_current",
+          "command": null,
+          "scope": "development control only; not final acceptance",
+          "status": "command-unresolved"
+        }
+      ],
+      "implementationScope": "Возврат только ёмкостный",
+      "coverageGap": "Не поддерживается",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     },
     {
       "id": "return-topology-31",
@@ -618,7 +1095,13 @@
       "referenceStatus": "missing",
       "command": null,
       "commandStatus": "unresolved",
-      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution."
+      "blocker": "No case-specific final invocation/reference binding in manifest; identify independent reference inputs, observables, frequency band, and required sensitivity runs before execution.",
+      "developmentControls": [],
+      "implementationScope": "Проводящий путь не найден; проверить ёмкостный/смешанный AC-путь",
+      "coverageGap": "Не поддерживается",
+      "requiredObservables": [],
+      "frequencyBandHz": null,
+      "finalChecks": []
     }
   ],
   "orchestration": {
