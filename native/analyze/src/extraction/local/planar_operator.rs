@@ -411,6 +411,40 @@ fn piece_pair_fast(a:&Piece,b:&Piece,tol:PairTolerance,allow_fine:bool)->Option<
     // 100x target and report change/100 as the fine-value error estimate (observed error below that).
     (change<=100.*tol.target).then_some((fine,5,change/100.))
 }
+/// Tensor-Gauss ladder for a ball-separated prism-tetra pair: 1/r integral (m=2 vs 3 within
+/// 30x target, else m=5 within 100x). Returns (value, relative error estimate) or None.
+pub(super) fn prism_tet_gauss(p:&Prism,t:[[f64;3];4])->Option<(f64,f64)> {
+    let a=Piece::of(p); let (ca,ra)=piece_ball(&a);
+    let cb:[f64;3]=std::array::from_fn(|k|(t[0][k]+t[1][k]+t[2][k]+t[3][k])/4.);
+    let rb=t.iter().map(|v|((v[0]-cb[0]).powi(2)+(v[1]-cb[1]).powi(2)+(v[2]-cb[2]).powi(2)).sqrt()).fold(0.,f64::max);
+    let d=((ca[0]-cb[0]).powi(2)+(ca[1]-cb[1]).powi(2)+(ca[2]-cb[2]).powi(2)).sqrt();
+    if !(d>0.) || !d.is_finite() || (ra+rb)/d>=0.9 {return None;}
+    let gap=d-ra-rb;
+    let tz=t.iter().map(|v|v[2]).fold(f64::NEG_INFINITY,f64::max)-t.iter().map(|v|v[2]).fold(f64::INFINITY,f64::min);
+    let hz=(a.z[1]-a.z[0]).max(tz);
+    let nz=((2.+(2.*hz/gap).ceil()).clamp(2.,8.)) as usize;
+    let volume=super::mesh::tetra_coefficients(t).ok()?.0;
+    let mut pa=[[0.;4];FAST_MAX_POINTS];
+    let mut eval=|m:usize,nz:usize|->Option<f64> {
+        let na=prism_points(&a,m,nz,&mut pa); if na==0 {return None;}
+        let rule=prism::cached_rule(m).ok()?;
+        let mut pb:Vec<[f64;4]>=Vec::with_capacity(m*m*m);
+        super::polyhedron::tetra_integrate(t,volume,rule,|p,w|{pb.push([p[0],p[1],p[2],w]);Ok(())}).ok()?;
+        let mut s=0.;
+        for p in &pa[..na] {
+            let mut inner=0.;
+            for q in &pb { inner+=q[3]/((p[0]-q[0]).powi(2)+(p[1]-q[1]).powi(2)+(p[2]-q[2]).powi(2)).sqrt(); }
+            s+=p[3]*inner;
+        }
+        (s.is_finite()&&s>0.).then_some(s)
+    };
+    let low=eval(2,nz)?; let coarse=eval(3,nz)?;
+    let early=(coarse-low).abs()/coarse.abs();
+    if early<=30.*PAIR_TARGET_RELATIVE_CHANGE {return Some((coarse,early/30.));}
+    let fine=eval(5,nz+1)?;
+    let change=(fine-coarse).abs()/fine.abs();
+    (change<=100.*PAIR_TARGET_RELATIVE_CHANGE).then_some((fine,change/100.))
+}
 pub(super) fn pair_integral_with(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Duration, tol: PairTolerance) -> Result<(f64,usize,f64)> {
     let canonical=|mut t:[[f64;2];3]|{t.sort_by(|a,b|a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));t};
     // Evaluate (i,j) and (j,i) in one canonical order so both give identical values.

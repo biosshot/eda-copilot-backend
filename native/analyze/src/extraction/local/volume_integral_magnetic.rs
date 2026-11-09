@@ -742,6 +742,10 @@ impl BoundedPairs {
         if let Some(k) = separated_order(q, self.order).and_then(|o| [4, 6, 8].iter().position(|&c| c == o)) {
             return Ok((cells[ti].cubatures[k].direct_integral(&cells[si].cubatures[k])?, 0., false));
         }
+        // Non-touching, ball-separated pairs: cheap tensor Gauss ladder (touching pairs have q >= 1).
+        if q < 0.9 {
+            if let Some((value, change)) = tet_gauss_ladder(self.tetra[i], self.tetra[j]) { return Ok((value, change, false)); }
+        }
         let (target, source) = if prefer_reciprocal_source(self.tetra[i], self.tetra[j]) { (self.tetra[j], &cells[ti].source) } else { (self.tetra[i], &cells[si].source) };
         let mut check = || check_deadline(self.start, self.wall);
         let mut previous = super::polyhedron::tetra_integral_checked(target, source, 8, &mut check)?;
@@ -758,6 +762,17 @@ impl BoundedPairs {
 }
 /// Cache slots per fast-fill worker (each pins one target and cycles sources).
 const FAST_SLOTS: usize = 16;
+/// Direct 1/r tensor Gauss ladder for ball-separated tetrahedra (m=2 vs 3 within 30x1e-5,
+/// else m=5 vs 3 within 100x1e-5). Returns (value, error estimate as relative change).
+pub(super) fn tet_gauss_ladder(a: [[f64;3];4], b: [[f64;3];4]) -> Option<(f64, f64)> {
+    let eval = |m: usize| -> Option<f64> { TetraCubature::new(a, m).ok()?.direct_integral(&TetraCubature::new(b, m).ok()?).ok() };
+    let low = eval(2)?; let coarse = eval(3)?;
+    let early = (coarse - low).abs() / coarse.abs();
+    if early <= 30. * 1e-5 { return Some((coarse, early / 30.)); }
+    let fine = eval(5)?;
+    let change = (fine - coarse).abs() / fine.abs();
+    (change <= 100. * 1e-5).then_some((fine, change / 100.))
+}
 
 fn geometry(mesh: &LayeredMesh) -> Vec<[[f64; 3]; 4]> {
     mesh.copper_tetrahedra
@@ -1614,6 +1629,7 @@ impl CompactLocalHierarchy {
         self.fast_threads = threads;
         true
     }
+    pub(super) fn is_fast(&self) -> bool { self.fast }
     pub(super) fn fast_evidence(&self) -> Option<serde_json::Value> { self.fast_info.borrow().clone() }
     fn fast_fill(&self) -> Result<()> {
         use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering::Relaxed};
