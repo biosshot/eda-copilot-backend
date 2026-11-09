@@ -727,11 +727,11 @@ impl BoundedPairs {
     /// Separated pairs use the same direct cubature as `pair_inner`; near and touching
     /// pairs use the general singular integrator at orders 8/12/16 with target 1e-5
     /// (PAIR_COMPACT semantics: accepted at the cap when the change is <= 0.5).
-    fn pair_fast(&self, i: usize, j: usize) -> Result<(f64, f64, bool)> {
+    fn pair_fast(&self, i: usize, j: usize) -> Result<(f64, f64, bool, u8, f64)> {
         check_deadline(self.start, self.wall)?;
         if i == j {
             let (value, change) = checked_local_self(self.tetra[i], self.start, self.wall)?;
-            return Ok((value, change, false));
+            return Ok((value, change, false, 0, 0.));
         }
         let mut cells = self.cells.borrow_mut();
         self.ensure(&mut cells, i, None)?;
@@ -740,32 +740,111 @@ impl BoundedPairs {
         let si = cells.iter().position(|cell| cell.index == j).unwrap();
         let q = cells[ti].cubatures[0].separation_q(&cells[si].cubatures[0]);
         if let Some(k) = separated_order(q, self.order).and_then(|o| [4, 6, 8].iter().position(|&c| c == o)) {
-            return Ok((cells[ti].cubatures[k].direct_integral(&cells[si].cubatures[k])?, 0., false));
+            return Ok((cells[ti].cubatures[k].direct_integral(&cells[si].cubatures[k])?, 0., false, 1, 0.));
         }
         // Non-touching, ball-separated pairs: cheap tensor Gauss ladder (touching pairs have q >= 1).
-        if q < 0.9 {
-            if let Some((value, change)) = tet_gauss_ladder(self.tetra[i], self.tetra[j]) { return Ok((value, change, false)); }
-        }
-        let (target, source) = if prefer_reciprocal_source(self.tetra[i], self.tetra[j]) { (self.tetra[j], &cells[ti].source) } else { (self.tetra[i], &cells[si].source) };
-        let mut check = || check_deadline(self.start, self.wall);
-        let mut previous = super::polyhedron::tetra_integral_checked(target, source, 8, &mut check)?;
-        let mut change = f64::INFINITY;
-        for order in [12, 16] {
-            let value = super::polyhedron::tetra_integral_checked(target, source, order, &mut check)?;
-            change = (value - previous).abs() / value;
-            previous = value;
-            if change <= 1e-5 { return Ok((value, change, false)); }
-        }
-        if change <= 0.5 { Ok((previous, change, true)) }
-        else { Err(error("HYBRID_UNRESOLVED", &format!("fast tetra pair ({i},{j}) unresolved at order 16; last change {change:e}"))) }
+        drop(cells);
+        tet_near_fast(self.tetra[i], self.tetra[j], true, &mut || check_deadline(self.start, self.wall))
     }
+}
+pub(super) fn tet_ball(t: [[f64;3];4]) -> ([f64;3], f64) {
+    let c: [f64;3] = std::array::from_fn(|k| (t[0][k] + t[1][k] + t[2][k] + t[3][k]) / 4.);
+    let r = t.iter().map(|v| ((v[0]-c[0]).powi(2) + (v[1]-c[1]).powi(2) + (v[2]-c[2]).powi(2)).sqrt()).fold(0., f64::max);
+    (c, r)
+}
+/// Exact bisection of a tetrahedron along its longest edge.
+pub(super) fn tet_halves(t: [[f64;3];4]) -> [[[f64;3];4];2] {
+    let mut best = (0., 0, 1);
+    for p in 0..4 { for q in p + 1..4 {
+        let l: f64 = (0..3).map(|k| (t[p][k] - t[q][k]).powi(2)).sum();
+        if l > best.0 { best = (l, p, q); }
+    }}
+    let mid: [f64;3] = std::array::from_fn(|k| 0.5 * (t[best.1][k] + t[best.2][k]));
+    let mut a = t; a[best.2] = mid;
+    let mut b = t; b[best.1] = mid;
+    [a, b]
+}
+/// Non-touching pair: bisect the larger tetrahedron until the Gauss ladder accepts every leaf pair.
+fn tet_split_pair(a: [[f64;3];4], b: [[f64;3];4], budget: &mut usize) -> Option<f64> {
+    let ((ca, ra), (cb, rb)) = (tet_ball(a), tet_ball(b));
+    let d = ((ca[0]-cb[0]).powi(2) + (ca[1]-cb[1]).powi(2) + (ca[2]-cb[2]).powi(2)).sqrt();
+    if d > 0. && (ra + rb) / d < 0.9 {
+        if let Some((v, _)) = tet_gauss_ladder(a, b) { return Some(v); }
+    }
+    if *budget == 0 { return None; }
+    *budget -= 1;
+    if ra >= rb { let [l, r] = tet_halves(a); Some(tet_split_pair(l, b, budget)? + tet_split_pair(r, b, budget)?) }
+    else { let [l, r] = tet_halves(b); Some(tet_split_pair(a, l, budget)? + tet_split_pair(a, r, budget)?) }
+}
+/// Pair whose bounding balls overlap (ball separation already failed). Returns
+/// (value, change, approximated, path, wasted seconds); path 2 split-Gauss, 3 touching, 4 near singular.
+pub(super) fn tet_near_fast(a: [[f64;3];4], b: [[f64;3];4], try_split: bool, check: &mut dyn FnMut() -> Result<()>) -> Result<(f64, f64, bool, u8, f64)> {
+    let touching = a.iter().any(|p| b.contains(p));
+    let mut wasted = 0.;
+    if !touching && try_split {
+        let t = Instant::now();
+        let mut budget = 256;
+        if let Some(v) = tet_split_pair(a, b, &mut budget) { NEAR_STATS[0].fetch_add(1, std::sync::atomic::Ordering::Relaxed); NEAR_STATS[1].fetch_add(t.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed); return Ok((v, 1e-4, false, 2, 0.)); }
+        wasted = t.elapsed().as_secs_f64();
+        NEAR_STATS[2].fetch_add(1, std::sync::atomic::Ordering::Relaxed); NEAR_STATS[3].fetch_add(t.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed);
+    }
+    let path = if touching { 3 } else { 4 };
+    let sing_t = Instant::now();
+    // The analytic potential is cheaper and more robust on the better-shaped tetrahedron.
+    let (target, source_tetra) = if prefer_reciprocal_source(a, b) { (b, a) } else { (a, b) };
+    let source = PointPotential::tetrahedron(source_tetra)?.with_cached_positive_geometry();
+    // Ladder 6 -> 8 -> 12 -> 16: accept the order-8 value when it differs from order 6 by <= 2e-3.
+    let mut previous = super::polyhedron::tetra_integral_checked(target, &source, 5, check)?;
+    let mut change = f64::INFINITY;
+    for order in [7, 10, 14, 16] {
+        let value = super::polyhedron::tetra_integral_checked(target, &source, order, check)?;
+        change = (value - previous).abs() / value;
+        previous = value;
+        if change <= 1e-5 { NEAR_STATS[4].fetch_add(1, std::sync::atomic::Ordering::Relaxed); NEAR_STATS[5].fetch_add(sing_t.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed); return Ok((value, change, false, path, wasted)); }
+        // Compact-policy noise level: stop at order 12.
+        if change <= PAIR_NOISE_ACCEPT_CHANGE { NEAR_STATS[4].fetch_add(1, std::sync::atomic::Ordering::Relaxed); NEAR_STATS[5].fetch_add(sing_t.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed); return Ok((value, change, true, path, wasted)); }
+    }
+    if change <= 0.5 { Ok((previous, change, true, path, wasted)) }
+    else { Err(error("HYBRID_UNRESOLVED", &format!("fast tetra pair unresolved at order 16; last change {change:e}"))) }
+}
+const PAIR_NOISE_ACCEPT_CHANGE: f64 = 2e-3;
+/// Diagnostic counters: split ok count/ns, split failed count/ns, singular count/ns.
+pub(super) static NEAR_STATS: [std::sync::atomic::AtomicU64; 6] = [const { std::sync::atomic::AtomicU64::new(0) }; 6];
+/// Any tetra pair: ball-separated pairs use the direct cubature, the rest `tet_near_fast`.
+pub(super) fn tet_near_fast_any(a: [[f64;3];4], b: [[f64;3];4], check: &mut dyn FnMut() -> Result<()>) -> Result<(f64, f64, bool, u8, f64)> {
+    let ((ca, ra), (cb, rb)) = (tet_ball(a), tet_ball(b));
+    let d = ((ca[0]-cb[0]).powi(2) + (ca[1]-cb[1]).powi(2) + (ca[2]-cb[2]).powi(2)).sqrt();
+    if d > 0. {
+        if let Some(order) = separated_order((ra + rb) / d * (1. + 64. * f64::EPSILON), 12) {
+            return Ok((TetraCubature::new(a, order)?.direct_integral(&TetraCubature::new(b, order)?)?, 0., false, 1, 0.));
+        }
+    }
+    tet_near_fast(a, b, false, check)
 }
 /// Cache slots per fast-fill worker (each pins one target and cycles sources).
 const FAST_SLOTS: usize = 16;
 /// Direct 1/r tensor Gauss ladder for ball-separated tetrahedra (m=2 vs 3 within 30x1e-5,
 /// else m=5 vs 3 within 100x1e-5). Returns (value, error estimate as relative change).
 pub(super) fn tet_gauss_ladder(a: [[f64;3];4], b: [[f64;3];4]) -> Option<(f64, f64)> {
-    let eval = |m: usize| -> Option<f64> { TetraCubature::new(a, m).ok()?.direct_integral(&TetraCubature::new(b, m).ok()?).ok() };
+    // Allocation-free tensor rules on the stack.
+    let (va, vb) = (super::mesh::tetra_coefficients(a).ok()?.0, super::mesh::tetra_coefficients(b).ok()?.0);
+    let (mut pa, mut pb) = ([[0.; 4]; 125], [[0.; 4]; 125]);
+    let mut eval = |m: usize| -> Option<f64> {
+        let rule = super::prism::cached_rule(m).ok()?;
+        let mut fill = |t: [[f64;3];4], v: f64, out: &mut [[f64;4];125]| -> Option<usize> {
+            let mut n = 0;
+            super::polyhedron::tetra_integrate(t, v, rule, |p, w| { out[n] = [p[0], p[1], p[2], w]; n += 1; Ok(()) }).ok()?;
+            Some(n)
+        };
+        let (na, nb) = (fill(a, va, &mut pa)?, fill(b, vb, &mut pb)?);
+        let mut s = 0.;
+        for p in &pa[..na] {
+            let mut inner = 0.;
+            for q in &pb[..nb] { inner += q[3] / ((p[0]-q[0]).powi(2) + (p[1]-q[1]).powi(2) + (p[2]-q[2]).powi(2)).sqrt(); }
+            s += p[3] * inner;
+        }
+        (s.is_finite() && s > 0.).then_some(s)
+    };
     let low = eval(2)?; let coarse = eval(3)?;
     let early = (coarse - low).abs() / coarse.abs();
     if early <= 30. * 1e-5 { return Some((coarse, early / 30.)); }
@@ -1664,7 +1743,7 @@ impl CompactLocalHierarchy {
                         let i = n - 1 - k;
                         let mut row = rows[i].lock().map_err(|_| error("MAGNETIC_CONFIG", "fast row poisoned"))?;
                         for j in 0..=i {
-                            let (value, change, approximated) = worker.pair_fast(i, j)?;
+                            let (value, change, approximated, _, _) = worker.pair_fast(i, j)?;
                             row[j] = value; pairs += 1;
                             if i == j { self_change = self_change.max(change); }
                             else { max_change = max_change.max(change); if approximated { approx += 1; } }
@@ -2196,6 +2275,107 @@ mod captured_skinny_pair_orientation {
             assert!((alternative-value).abs()<=1e-10*value.abs(),"independent parametrization disagreed");
         } else {
             assert_eq!(optimized.to_bits(),forward.to_bits(),"unconverged candidate must use original orientation");
+        }
+    }
+}
+
+/// Diagnostic loader for the `P7_DUMP_GEOMETRY` file (prisms and tetrahedra of a real board).
+#[cfg(test)]
+pub(super) fn load_geometry_dump() -> (Vec<([[f64;2];3],[f64;2])>, Vec<[[f64;3];4]>) {
+    let path = std::env::var("P7_BENCH_GEOMETRY").unwrap_or_else(|_| "../../debugging/p7-v1-stage2/tps-geometry.json".into());
+    let v: serde_json::Value = serde_json::from_slice(&std::fs::read(&path).expect("geometry dump")).unwrap();
+    let prisms = v["prisms"].as_array().unwrap().iter().map(|p| (serde_json::from_value(p["tri"].clone()).unwrap(), serde_json::from_value(p["z"].clone()).unwrap())).collect();
+    (prisms, serde_json::from_value(v["tets"].clone()).unwrap())
+}
+#[cfg(test)]
+pub(super) fn bench_percentile(values: &mut Vec<f64>, p: f64) -> f64 {
+    if values.is_empty() { return 0.; }
+    values.sort_by(|a, b| a.total_cmp(b));
+    values[((values.len() as f64 - 1.) * p).round() as usize]
+}
+
+#[cfg(test)]
+mod fill_bench {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
+    struct Rec { i: usize, j: usize, path: u8, secs: f64, value: f64, wasted: f64 }
+    const NAMES: [&str; 6] = ["self", "separated", "gauss", "singular-touching", "singular-near", "error"];
+    #[test]
+    #[ignore]
+    fn bench_tt_fill() {
+        let (_, tets) = load_geometry_dump();
+        let n = tets.len();
+        let stride: usize = std::env::var("P7_BENCH_STRIDE").ok().and_then(|v| v.parse().ok()).unwrap_or(1);
+        let threads = super::super::planar_hmatrix::Params::from_env().threads;
+        let (start, wall) = (Instant::now(), Duration::from_secs(7200));
+        let next = AtomicUsize::new(0);
+        let all: Vec<Vec<Rec>> = std::thread::scope(|scope| {
+            let hs: Vec<_> = (0..threads).map(|_| scope.spawn(|| {
+                let worker = BoundedPairs::new(tets.clone(), 12, FAST_SLOTS, start, wall).unwrap();
+                let mut recs = Vec::new();
+                loop {
+                    let k = next.fetch_add(1, Relaxed); if k >= n { break; }
+                    let i = n - 1 - k;
+                    for j in 0..=i {
+                        if (i * 7919 + j) % stride != 0 { continue; }
+                        let t = Instant::now();
+                        let r = worker.pair_fast(i, j);
+                        let secs = t.elapsed().as_secs_f64();
+                        recs.push(match r { Ok((value, _, _, path, wasted)) => Rec { i, j, path, secs, value, wasted }, Err(_) => Rec { i, j, path: 5, secs, value: f64::NAN, wasted: 0. } });
+                    }
+                }
+                recs
+            })).collect();
+            hs.into_iter().map(|h| h.join().unwrap()).collect()
+        });
+        let wall_s = start.elapsed().as_secs_f64();
+        let recs: Vec<&Rec> = all.iter().flatten().collect();
+        println!("TT bench: n={n} stride={stride} threads={threads} pairs={} wall={wall_s:.1}s", recs.len());
+        for (p, name) in NAMES.iter().enumerate() {
+            let sel: Vec<_> = recs.iter().filter(|r| r.path as usize == p).collect();
+            let sum: f64 = sel.iter().map(|r| r.secs).sum();
+            let max = sel.iter().map(|r| r.secs).fold(0., f64::max);
+            let wasted: f64 = sel.iter().map(|r| r.wasted).sum();
+            println!("  {name:18} count={:8} cpuSeconds={sum:10.2} maxSeconds={max:8.3} gaussWasted={wasted:8.2}", sel.len());
+        }
+        let mut order: Vec<&&Rec> = recs.iter().collect();
+        order.sort_by(|a, b| b.secs.total_cmp(&a.secs));
+        for r in order.iter().take(12) {
+            println!("  slow pair ({},{}) {:.3}s path={} qualityI={:e} qualityJ={:e}", r.i, r.j, r.secs, NAMES[r.path as usize], tetra_shape_quality(tets[r.i]).unwrap_or(0.), tetra_shape_quality(tets[r.j]).unwrap_or(0.));
+        }
+        let mut hist = std::collections::BTreeMap::<i32, (usize, f64)>::new();
+        for r in &recs { if r.path >= 3 { let q = tetra_shape_quality(tets[r.i]).unwrap_or(1e-12).min(tetra_shape_quality(tets[r.j]).unwrap_or(1e-12)); let e = hist.entry(q.log10().floor() as i32).or_default(); e.0 += 1; e.1 += r.secs; } }
+        for (d, (c, s)) in hist { println!("  singular pairs with worst quality 1e{d}: count={c} cpu={s:.2}s"); }
+        let per_class: usize = std::env::var("P7_BENCH_SAMPLES").ok().and_then(|v| v.parse().ok()).unwrap_or(200);
+        for p in 1..=4usize {
+            let sel: Vec<&&Rec> = recs.iter().filter(|r| r.path as usize == p && r.i != r.j).collect();
+            if sel.is_empty() { continue; }
+            let step = (sel.len() / per_class).max(1);
+            let sample: Vec<&&&Rec> = sel.iter().step_by(step).take(per_class).collect();
+            let nxt = AtomicUsize::new(0);
+            let t0 = Instant::now();
+            let budget_s: f64 = std::env::var("P7_BENCH_REF_SECS").ok().and_then(|v| v.parse().ok()).unwrap_or(120.);
+            let errs: Vec<Vec<f64>> = std::thread::scope(|scope| {
+                let hs: Vec<_> = (0..threads).map(|_| scope.spawn(|| {
+                    let mut reference = BoundedPairs::new(tets.clone(), 12, 64, start, wall).unwrap();
+                    reference.checked_self = true; reference.compact_quadrature = true;
+                    *reference.checked_self_values.borrow_mut() = vec![None; n];
+                    let mut out = Vec::new();
+                    loop {
+                        if t0.elapsed().as_secs_f64() > budget_s { break; }
+                        let k = nxt.fetch_add(1, Relaxed); if k >= sample.len() { break; }
+                        let r = sample[k];
+                        let truth = reference.pair(r.i, r.j).unwrap();
+                        out.push((r.value - truth).abs() / truth);
+                    }
+                    out
+                })).collect();
+                hs.into_iter().map(|h| h.join().unwrap()).collect()
+            });
+            let mut e: Vec<f64> = errs.into_iter().flatten().collect();
+            let max = e.iter().cloned().fold(0., f64::max);
+            let p99 = bench_percentile(&mut e, 0.99);
+            println!("  accuracy {:18} samples={:4} max={max:.3e} p99={p99:.3e}", NAMES[p], e.len());
         }
     }
 }

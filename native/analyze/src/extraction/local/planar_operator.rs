@@ -413,8 +413,20 @@ fn piece_pair_fast(a:&Piece,b:&Piece,tol:PairTolerance,allow_fine:bool)->Option<
 }
 /// Tensor-Gauss ladder for a ball-separated prism-tetra pair: 1/r integral (m=2 vs 3 within
 /// 30x target, else m=5 within 100x). Returns (value, relative error estimate) or None.
-pub(super) fn prism_tet_gauss(p:&Prism,t:[[f64;3];4])->Option<(f64,f64)> {
-    let a=Piece::of(p); let (ca,ra)=piece_ball(&a);
+pub(super) fn prism_tet_gauss(p:&Prism,t:[[f64;3];4])->Option<(f64,f64)> { piece_tet_gauss(&Piece::of(p),t) }
+/// Non-touching prism-tet pair: bisect the larger of prism piece / tetra until the Gauss ladder
+/// accepts each leaf pair (as `split_pair_fast` does for prisms). None if the budget runs out.
+pub(super) fn prism_tet_split(p:&Prism,t:[[f64;3];4],budget:&mut usize)->Option<f64> { piece_tet_split(&Piece::of(p),t,budget) }
+fn piece_tet_split(a:&Piece,t:[[f64;3];4],budget:&mut usize)->Option<f64> {
+    if let Some((v,_))=piece_tet_gauss(a,t) {return Some(v);}
+    if *budget==0 {return None;}
+    *budget-=1;
+    let (_,ra)=piece_ball(a); let (_,rb)=super::volume_integral_magnetic::tet_ball(t);
+    if ra>=rb { let (_,side)=a.longest(); let [l,r]=a.halves(side); Some(piece_tet_split(&l,t,budget)?+piece_tet_split(&r,t,budget)?) }
+    else { let [l,r]=super::volume_integral_magnetic::tet_halves(t); Some(piece_tet_split(a,l,budget)?+piece_tet_split(a,r,budget)?) }
+}
+fn piece_tet_gauss(a:&Piece,t:[[f64;3];4])->Option<(f64,f64)> {
+    let (ca,ra)=piece_ball(a);
     let cb:[f64;3]=std::array::from_fn(|k|(t[0][k]+t[1][k]+t[2][k]+t[3][k])/4.);
     let rb=t.iter().map(|v|((v[0]-cb[0]).powi(2)+(v[1]-cb[1]).powi(2)+(v[2]-cb[2]).powi(2)).sqrt()).fold(0.,f64::max);
     let d=((ca[0]-cb[0]).powi(2)+(ca[1]-cb[1]).powi(2)+(ca[2]-cb[2]).powi(2)).sqrt();
@@ -426,7 +438,7 @@ pub(super) fn prism_tet_gauss(p:&Prism,t:[[f64;3];4])->Option<(f64,f64)> {
     let volume=super::mesh::tetra_coefficients(t).ok()?.0;
     let mut pa=[[0.;4];FAST_MAX_POINTS];
     let mut eval=|m:usize,nz:usize|->Option<f64> {
-        let na=prism_points(&a,m,nz,&mut pa); if na==0 {return None;}
+        let na=prism_points(a,m,nz,&mut pa); if na==0 {return None;}
         let rule=prism::cached_rule(m).ok()?;
         let mut pb:Vec<[f64;4]>=Vec::with_capacity(m*m*m);
         super::polyhedron::tetra_integrate(t,volume,rule,|p,w|{pb.push([p[0],p[1],p[2],w]);Ok(())}).ok()?;

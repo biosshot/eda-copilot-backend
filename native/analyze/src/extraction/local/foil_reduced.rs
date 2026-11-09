@@ -3583,6 +3583,32 @@ fn compact_pl_worker_bytes(workers:usize,budget:AllocationBudget)->Result<usize>
     budget.check(bytes)?;Ok(bytes)
 }
 
+pub(super) struct CrossEntry { pub value:f64, pub path:u8, pub change:f64, pub approximated:bool, pub wasted:f64 }
+/// One prism x tetra table entry. path: 0 moments, 1 Gauss ladder, 2 slow touching, 3 slow near.
+pub(super) fn cross_fast_entry(prism:&super::prism::Prism,tetra:[[f64;3];4],ma:&super::far::Moments,mb:&super::far::Moments,budget:AllocationBudget,start:Instant,wall:Duration)->Result<CrossEntry> {
+    if let Ok(p)=ma.pair(mb) {if p.radius_ratio<=0.4 {return Ok(CrossEntry{value:p.integral_m5,path:0,change:0.,approximated:false,wasted:0.});}}
+    let t=Instant::now();
+    if let Some((v,change))=super::planar_operator::prism_tet_gauss(prism,tetra) {return Ok(CrossEntry{value:v,path:1,change,approximated:false,wasted:0.});}
+    let wasted=t.elapsed().as_secs_f64();
+    if !{ let [pa,pb,pc]=prism.triangle_m; tetra.iter().any(|v|[[pa[0],pa[1]],[pb[0],pb[1]],[pc[0],pc[1]]].contains(&[v[0],v[1]])&&(v[2]==prism.z_m[0]||v[2]==prism.z_m[1])) } {
+        let t=Instant::now();let mut budget=256;
+        if let Some(v)=super::planar_operator::prism_tet_split(prism,tetra,&mut budget) {return Ok(CrossEntry{value:v,path:1,change:1e-4,approximated:false,wasted:0.});}
+        let _=t;
+    }
+    // Partition the prism into three tetrahedra (as the exact path does) and use the fast tet-tet ladder.
+    let [pa,pb,pc]=prism.triangle_m;let [lo,hi]=prism.z_m;
+    let (a0,b0,c0)=([pa[0],pa[1],lo],[pb[0],pb[1],lo],[pc[0],pc[1],lo]);
+    let (a1,b1,c1)=([pa[0],pa[1],hi],[pb[0],pb[1],hi],[pc[0],pc[1],hi]);
+    let mut check=||check_time(start,wall);
+    let (mut total,mut change,mut approximated)=(0.,0f64,false);
+    for part in [[a0,b0,c0,c1],[a0,b0,b1,c1],[a0,a1,b1,c1]] {
+        let (v,ch,approx,_,_)=super::volume_integral_magnetic::tet_near_fast_any(part,tetra,&mut check)?;
+        total+=v;change=change.max(ch);approximated|=approx&&ch>1e-5;
+    }
+    let _=budget;
+    let touching=tetra.iter().any(|v|{let [a,b,c]=prism.triangle_m;let d=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);let l1=((b[1]-c[1])*(v[0]-c[0])+(c[0]-b[0])*(v[1]-c[1]))/d;let l2=((c[1]-a[1])*(v[0]-c[0])+(a[0]-c[0])*(v[1]-c[1]))/d;let e=1e-9;l1>=-e&&l2>=-e&&l1+l2<=1.+e&&v[2]>=prism.z_m[0]-1e-12&&v[2]<=prism.z_m[1]+1e-12});
+    Ok(CrossEntry{value:total,path:if touching {2} else {3},change,approximated,wasted})
+}
 /// Dense prism x tetra table (fast mode): filled once, replaces the cross-pair loop.
 #[derive(Default)]
 struct CrossFast { enabled:bool, table:std::cell::RefCell<Vec<f64>>, info:std::cell::RefCell<Option<serde_json::Value>> }
@@ -3621,6 +3647,13 @@ impl CompactMixedMagnetic {
         let mut supports=map.planar_current_supports()?;
         supports.extend(map.barrel_current_supports()?);
         let local=map.local_current_supports()?;
+        if let Some(path)=std::env::var_os("P7_DUMP_GEOMETRY") {
+            // Diagnostic: plain JSON of prisms and tetrahedra for the offline fill bench.
+            let dump=serde_json::json!({"prisms":supports.iter().map(|s|serde_json::json!({"tri":s.prism.triangle_m,"z":s.prism.z_m})).collect::<Vec<_>>(),"tets":local.iter().map(|l|l.tetra).collect::<Vec<_>>()});
+            std::fs::write(&path,serde_json::to_vec(&dump).map_err(|e|error("DUMP",&e.to_string()))?).map_err(|e|error("DUMP",&e.to_string()))?;
+            eprintln!("P7_DUMP_GEOMETRY prisms={} tets={}",supports.len(),local.len());
+            if std::env::var("P7_DUMP_EXIT").as_deref()==Ok("1") {std::process::exit(0);}
+        }
         let remaining=budget.max_bytes-n;
         // This cache owns only PP/PL pairs; TT has its own hierarchy/cache.
         // Reserve no slots for impossible suffix pairs and reuse that capacity
@@ -3694,11 +3727,10 @@ impl CompactMixedMagnetic {
                     let mut row=rows[k].lock().map_err(|_|error("MAGNETIC_CONFIG","cross row poisoned"))?;
                     for a in 0..np {
                         check_time(start,wall)?;
-                        if let Ok(p)=moments[a].pair(&moments[np+k]) {if p.radius_ratio<=0.2 {row[a]=p.integral_m5;t.0+=1;continue;}}
-                        if let Some((v,change))=super::planar_operator::prism_tet_gauss(&supports[a].prism,local[k].tetra) {row[a]=v;t.1+=1;t.4=t.4.max(change);continue;}
-                        let block=super::planar_mixed::cross(&supports[a].prism,local[k].tetra,super::planar_mixed::Densities{charge:&[1.],current:&[]},super::planar_mixed::Densities{charge:&[1.],current:&[]},1./(4.*std::f64::consts::PI),8,budget,wall.saturating_sub(start.elapsed()))?;
-                        row[a]=block.potential_per_farad[0][0];t.2+=1;
-                        if let Some(change)=block.relative_order_change {t.4=t.4.max(change);if change>1e-5 {t.3+=1;}}
+                        let e=cross_fast_entry(&supports[a].prism,local[k].tetra,&moments[a],&moments[np+k],budget,start,wall)?;
+                        row[a]=e.value;
+                        match e.path {0=>t.0+=1,1=>t.1+=1,_=>t.2+=1}
+                        t.4=t.4.max(e.change);if e.approximated {t.3+=1;}
                     }
                 }};
                 if let Err(e)=run() {abort.store(true,Relaxed);failure.lock().unwrap().get_or_insert(e);}
@@ -4040,5 +4072,92 @@ mod weighted_local_goal_tests {
         }
         assert!(weights[0]>weights[1]*1e12);
         assert!(local_target_weights(&local,2).is_err());
+    }
+}
+
+#[cfg(test)]
+mod cross_fill_bench {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
+    const NAMES: [&str; 5] = ["moments", "gauss", "slow-touching", "slow-near", "error"];
+    #[test]
+    #[ignore]
+    fn bench_cross_fill() {
+        let (pr, tets) = super::super::volume_integral_magnetic::load_geometry_dump();
+        let prisms: Vec<_> = pr.iter().map(|(t, z)| super::super::prism::Prism::new("p".into(), *t, *z).unwrap()).collect();
+        let pm: Vec<_> = prisms.iter().map(|p| super::super::far::Moments::new(p).unwrap()).collect();
+        let tm: Vec<_> = tets.iter().map(|t| super::super::far::Moments::tetrahedron(*t).unwrap()).collect();
+        let (np, nt) = (prisms.len(), tets.len());
+        let stride: usize = std::env::var("P7_BENCH_STRIDE").ok().and_then(|v| v.parse().ok()).unwrap_or(1);
+        let threads = super::super::planar_hmatrix::Params::from_env().threads;
+        let budget = AllocationBudget { max_nodes: 1 << 20, max_tetrahedra: 1 << 20, max_bytes: 1 << 32 };
+        let (start, wall) = (Instant::now(), Duration::from_secs(7200));
+        let next = AtomicUsize::new(0);
+        // (a, k, path, secs, value, wasted)
+        let all: Vec<Vec<(usize, usize, u8, f64, f64, f64)>> = std::thread::scope(|scope| {
+            let hs: Vec<_> = (0..threads).map(|_| scope.spawn(|| {
+                let mut recs = Vec::new();
+                loop {
+                    let k = next.fetch_add(1, Relaxed); if k >= nt { break; }
+                    for a in 0..np {
+                        if (a * 7919 + k) % stride != 0 { continue; }
+                        let t = Instant::now();
+                        match cross_fast_entry(&prisms[a], tets[k], &pm[a], &tm[k], budget, start, wall) {
+                            Ok(e) => recs.push((a, k, e.path, t.elapsed().as_secs_f64(), e.value, e.wasted)),
+                            Err(_) => recs.push((a, k, 4, t.elapsed().as_secs_f64(), f64::NAN, 0.)),
+                        }
+                    }
+                }
+                recs
+            })).collect();
+            hs.into_iter().map(|h| h.join().unwrap()).collect()
+        });
+        let recs: Vec<_> = all.into_iter().flatten().collect();
+        println!("cross bench: prisms={np} tets={nt} stride={stride} threads={threads} pairs={} wall={:.1}s", recs.len(), start.elapsed().as_secs_f64());
+        let ns: Vec<u64> = super::super::volume_integral_magnetic::NEAR_STATS.iter().map(|a| a.load(Relaxed)).collect();
+        println!("  near stats splitOk={} splitOkMs={} splitFail={} splitFailMs={} sing={} singMs={}", ns[0], ns[1]/1000000, ns[2], ns[3]/1000000, ns[4], ns[5]/1000000);
+        for (p, name) in NAMES.iter().enumerate() {
+            let sel: Vec<_> = recs.iter().filter(|r| r.2 as usize == p).collect();
+            let sum: f64 = sel.iter().map(|r| r.3).sum();
+            let max = sel.iter().map(|r| r.3).fold(0., f64::max);
+            let wasted: f64 = sel.iter().map(|r| r.5).sum();
+            println!("  {name:14} count={:8} cpuSeconds={sum:10.2} maxSeconds={max:8.3} gaussWasted={wasted:8.2}", sel.len());
+        }
+        let mut order: Vec<_> = recs.iter().collect();
+        order.sort_by(|a, b| b.3.total_cmp(&a.3));
+        for r in order.iter().take(10) {
+            let (p, t) = (&prisms[r.0], tets[r.1]);
+            println!("  slow ({},{}) {:.3}s path={} prism tri={:?} z={:?} tet={:?}", r.0, r.1, r.3, NAMES[r.2 as usize], p.triangle_m, p.z_m, t);
+        }
+        let per_class: usize = std::env::var("P7_BENCH_SAMPLES").ok().and_then(|v| v.parse().ok()).unwrap_or(200);
+        for p in 0..4usize {
+            let sel: Vec<_> = recs.iter().filter(|r| r.2 as usize == p).collect();
+            if sel.is_empty() { continue; }
+            let step = (sel.len() / per_class).max(1);
+            let sample: Vec<_> = sel.iter().step_by(step).take(per_class).collect();
+            let nxt = AtomicUsize::new(0);
+            let t0 = Instant::now();
+            let budget_s: f64 = std::env::var("P7_BENCH_REF_SECS").ok().and_then(|v| v.parse().ok()).unwrap_or(120.);
+            let errs: Vec<Vec<f64>> = std::thread::scope(|scope| {
+                let hs: Vec<_> = (0..threads).map(|_| scope.spawn(|| {
+                    let mut out = Vec::new();
+                    loop {
+                        if t0.elapsed().as_secs_f64() > budget_s { break; }
+                        let k = nxt.fetch_add(1, Relaxed); if k >= sample.len() { break; }
+                        let r = sample[k];
+                        let d = super::super::planar_mixed::Densities { charge: &[1.], current: &[] };
+                        let d2 = super::super::planar_mixed::Densities { charge: &[1.], current: &[] };
+                        let truth = super::super::planar_mixed::cross(&prisms[r.0], tets[r.1], d, d2, 1. / (4. * std::f64::consts::PI), 16, budget, Duration::from_secs(600)).unwrap().potential_per_farad[0][0];
+                        out.push((r.4 - truth).abs() / truth);
+                    }
+                    out
+                })).collect();
+                hs.into_iter().map(|h| h.join().unwrap()).collect()
+            });
+            let mut e: Vec<f64> = errs.into_iter().flatten().collect();
+            let max = e.iter().cloned().fold(0., f64::max);
+            let p99 = super::super::volume_integral_magnetic::bench_percentile(&mut e, 0.99);
+            println!("  accuracy {:14} samples={:4} max={max:.3e} p99={p99:.3e}", NAMES[p], e.len());
+        }
     }
 }
