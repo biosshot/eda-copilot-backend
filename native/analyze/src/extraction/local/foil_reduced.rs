@@ -1711,6 +1711,31 @@ struct FullResidual {
     kvl_uncertainty_relative: f64,
     magnetic_certificate: Option<serde_json::Value>,
 }
+fn dominant_kvl_phase(residual: &FullResidual) -> (&[f64], &[f64]) {
+    let peak = residual.kvl.each_ref().map(|row| row.iter().map(|v| v.abs()).fold(0., f64::max));
+    let phase = usize::from(peak[1] > peak[0]);
+    (&residual.kcl[phase], &residual.kvl[phase])
+}
+
+#[test]
+fn balanced_drive_correction_pairs_each_dominant_phase_with_its_kcl() {
+    let a = FullResidual {
+        norm: Residual { kcl_relative: 0., kvl_relative: 1e-6 },
+        kcl: [vec![1.], vec![2.]],
+        kvl: [vec![-4., 0.], vec![3., 3.]],
+        kvl_uncertainty_relative: 0.,
+        magnetic_certificate: None,
+    };
+    assert_eq!(dominant_kvl_phase(&a), (&[1.][..], &[-4., 0.][..]));
+    let b = FullResidual {
+        kcl: [vec![5.], vec![6.]],
+        kvl: [vec![1., 2.], vec![0., -3.]],
+        ..a
+    };
+    assert_eq!(dominant_kvl_phase(&b), (&[6.][..], &[0., -3.][..]));
+
+}
+
 impl FullResidual {
     fn checked(&self) -> Result<Residual> {
         if self.norm.kcl_relative > RESIDUAL_LIMIT || self.norm.kvl_relative > RESIDUAL_LIMIT {
@@ -1918,6 +1943,25 @@ impl ReducedSpace {
         wall: Duration,
         pair_gradient: bool,
     ) -> Result<()> {
+        self.grow_phases(
+            [(&full.kcl[0], &full.kvl[0]), (&full.kcl[1], &full.kvl[1])],
+            full.norm, initial_nv, names, dc, field, magnetic, start, wall, pair_gradient,
+        )
+    }
+
+    fn grow_phases(
+        &mut self,
+        phases: [(&[f64], &[f64]); 2],
+        residual: Residual,
+        initial_nv: usize,
+        names: &[String],
+        dc: &DcCorrection,
+        field: &dyn FoilField,
+        magnetic: &MagneticBatch<'_>,
+        start: Instant,
+        wall: Duration,
+        pair_gradient: bool,
+    ) -> Result<()> {
         let ni = self.basis.current.len();
         let nv = self.basis.voltage.len();
         if nv == self.full_potentials && ni == self.cells.len() {
@@ -1927,7 +1971,7 @@ impl ReducedSpace {
             ));
         }
 
-        for (kcl, kvl) in full.kcl.iter().zip(&full.kvl) {
+        for (kcl, kvl) in phases {
             check_time(start, wall)?;
             // A delta_i = -r_KCL on free nodes. The zero trace Dirichlet
             // correction supplies a voltage bubble, while -R^-1 r_KVL
@@ -1983,7 +2027,7 @@ impl ReducedSpace {
                 "FOIL_ENRICHMENT",
                 &format!(
                     "no independent correction; unreduced KCL={:e}, KVL={:e}; coverage unverified",
-                    full.norm.kcl_relative, full.norm.kvl_relative
+                    residual.kcl_relative, residual.kvl_relative
                 ),
             ));
         }
@@ -2080,6 +2124,7 @@ impl ReducedSpace {
         let use_voltage_shape = spatial_map.is_some() && packages.is_empty();
         let initial_nv = self.basis.voltage.len();
         let ports = grid.references.len();
+        let balance_drives = use_voltage_shape && ports > 1;
         let conductances: Vec<_> = grid.references.iter().map(|r| 1. / r).collect();
         let mut history = Vec::<Value>::with_capacity(grid.max_iterations + 1);
         let outcome = (|| {
@@ -2106,12 +2151,17 @@ impl ReducedSpace {
                         .and_then(|n| n.checked_add(modes.checked_mul(128)?))
                         .ok_or_else(|| error("MEMORY_LIMIT", "charge-coordinate reserve overflow"))?
                 } else { 0 };
+                let balance_reserve = if balance_drives {
+                    self.full_potentials.checked_add(self.cells.len()).and_then(|n| n.checked_mul(16))
+                        .ok_or_else(|| error("MEMORY_LIMIT", "second drive residual reserve overflow"))?
+                } else { 0 };
                 let available = budget
                     .max_bytes
                     .saturating_sub(field.planned_bytes())
                     .saturating_sub(dc.owned_bytes)
                     .checked_sub(gram_reserve).and_then(|v|v.checked_sub(spatial_reserve))
                     .and_then(|v|v.checked_sub(shape_reserve))
+                    .and_then(|v|v.checked_sub(balance_reserve))
                     .ok_or_else(|| error("MEMORY_LIMIT", "loss Gram, spatial or charge-coordinate reserve exceeds budget"))?;
                 let solve_budget = Budget {
                     max_memory_mi_b: Some((available as f64 / 1048576.).min(4096.)),
@@ -2138,6 +2188,7 @@ impl ReducedSpace {
                 let initial = vec![0.; n];
                 let mut stats = Counters::default();
                 let mut worst: Option<(f64, usize, FullResidual)> = None;
+                let mut other_drive: Option<(usize, FullResidual)> = None;
                 let mut parameters = Vec::with_capacity(grid.frequencies.len());
                 let mut samples = Vec::with_capacity(grid.frequencies.len());
                 let (mut max_kcl, mut max_kvl, mut max_power) = (0_f64, 0_f64, 0_f64);
@@ -2231,7 +2282,18 @@ impl ReducedSpace {
                         if worst.as_ref().is_none_or(|(_, _, old)| {
                             score > old.norm.kcl_relative.max(old.norm.kvl_relative)
                         }) {
-                            worst = Some((frequency, input, residual));
+                            let previous = worst.replace((frequency, input, residual));
+                            if balance_drives {
+                                if let Some((_, previous_input, previous_residual)) = previous {
+                                    if previous_input != input {
+                                        other_drive = Some((previous_input, previous_residual));
+                                    }
+                                }
+                            }
+                        } else if balance_drives && worst.as_ref().is_some_and(|(_, old_input, _)| input != *old_input)
+                            && other_drive.as_ref().is_none_or(|(_, old)| score > old.norm.kcl_relative.max(old.norm.kvl_relative))
+                        {
+                            other_drive = Some((input, residual));
                         }
                         if score > RESIDUAL_LIMIT {
                             continue;
@@ -2393,9 +2455,13 @@ impl ReducedSpace {
                 drop(system);
                 let (frequency, input, worst) =
                     worst.ok_or_else(|| error("BOARD_FOIL_GRID", "empty checked grid"))?;
+                let other = other_drive.as_ref().filter(|(_, residual)| {
+                    max_kcl <= RESIDUAL_LIMIT && residual.norm.kvl_relative > RESIDUAL_LIMIT
+                });
                 history.push(json!({"iteration":iteration,"frequencyHz":frequency,"input":input,
                     "potentialModes":self.basis.voltage.len(),"currentModes":self.basis.current.len(),
-                    "maxKclRelative":max_kcl,"maxKvlRelative":max_kvl}));
+                    "maxKclRelative":max_kcl,"maxKvlRelative":max_kvl,
+                    "balancedDriveInput":other.map(|(input, _)| *input)}));
                 if std::env::var_os("P7_MAGNETIC_PHASE_PROFILE").as_deref() == Some(std::ffi::OsStr::new("1")) {
                     eprintln!("P7_COMPACT_GRID_STEP {}", history.last().expect("recorded iteration"));
                 }
@@ -2415,17 +2481,18 @@ impl ReducedSpace {
                 }
                 drop(parameters);
                 drop(samples);
-                self.grow(
-                    &worst,
-                    initial_nv,
-                    names,
-                    dc,
-                    field,
-                    magnetic,
-                    start,
-                    wall,
-                    pair_gradient,
-                )?;
+                if let Some((_, other)) = other {
+                    // Once charge continuity is admitted, spread the two
+                    // phase corrections over independently failing drives.
+                    // Keep the gradient companion of each correction and
+                    // the existing four-current/two-voltage growth cap.
+                    self.grow_phases(
+                        [dominant_kvl_phase(&worst), dominant_kvl_phase(other)],
+                        worst.norm, initial_nv, names, dc, field, magnetic, start, wall, pair_gradient,
+                    )?;
+                } else {
+                    self.grow(&worst, initial_nv, names, dc, field, magnetic, start, wall, pair_gradient)?;
+                }
             }
             unreachable!("bounded matched grid reaches a final residual")
         })();
