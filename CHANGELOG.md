@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Feed eligible section current profiles into the compact hybrid basis with a bounded projection workspace and a new exact-response cache generation. General planar-run section integration is tracked separately until its development control passes.
+- Allow via and reference-swap development runners to honor an explicit integer `P7_VERIFY_SECONDS` up to 600 seconds, with the existing 25-second default and 512 MiB native memory limit. The external supervisor has its own wall limit.
+- Bind existing P7 development controls in the final queue and validate source symbol fragments. Independent acceptance references and final commands retain their separate readiness status.
+
 - Bound local magnetic projection rounding with a linear-time positive envelope when it meets the existing row goal. Retain the checked pair action when the envelope is too wide.
 - Cache fixed positive tetrahedron geometry within the admitted compact cubature slots.
 

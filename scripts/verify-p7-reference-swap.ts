@@ -10,7 +10,8 @@ import {segmentedCouponDslFor} from '../tests/helpers/pcb-analysis-segmented-cou
 // One discrete-model reference swap; this is not physical accuracy acceptance.
 const folder=process.env.P7_OUTPUT_DIR;
 assert.ok(folder&&process.env.PCB_ANALYSIS_CACHE_DIR,'External supervision and isolated cache required');
-const seconds=25,memory=512;
+const seconds=Number(process.env.P7_VERIFY_SECONDS??25),memory=512;
+assert.ok(Number.isSafeInteger(seconds)&&seconds>=1&&seconds<=600,'P7_VERIFY_SECONDS must be an integer in [1,600]');
 process.env.P7_COMPACT_PLANAR='1';
 process.env.P7_VERIFY_SECONDS=String(seconds);process.env.P7_VERIFY_MEMORY_MIB=String(memory);
 const addon=createRequire(import.meta.url)('../native/node-addon/index.cjs') as typeof import('../native/node-addon/index.cjs');
@@ -33,7 +34,7 @@ const returnVia={id:'return-via',net:'RETURN',at:{x:5,y:-.6},diameterMm:.3,drill
 const code=segmentedCouponDslFor('via')
  .replace("negative:pad('J1','2'),positiveLayer:'BOTTOM',negativeLayer:'BOTTOM'","negative:pad('J1','2'),positiveLayer:'BOTTOM',negativeLayer:'TOP'")
  .replace('startHz:1000,stopHz:10000,points:3','startHz:1000000,stopHz:1000000,points:1')
- .replace('maxSeconds:300,maxMemoryMiB:2048','maxSeconds:25,maxMemoryMiB:512');
+ .replace('maxSeconds:300,maxMemoryMiB:2048',`maxSeconds:${seconds},maxMemoryMiB:512`);
 assert.match(code,/positiveLayer:'BOTTOM',negativeLayer:'TOP'/,'output physical reference must change layers');
 const execute=createAnalysisExecutor();
 async function run(intact:boolean){

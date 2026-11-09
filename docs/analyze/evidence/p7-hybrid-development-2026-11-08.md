@@ -341,3 +341,16 @@ The captured orientation requests also reveal an applicability limit of this con
 - The experimental accumulated row budget was removed after reference-swap 1794209623427210000 processed 87,936 pairs by the native deadline, below the previous 102,784. Its two-pass plan reduced exact pairs in the captured via plan (687,118 to 638,878) while increasing far contractions (410M to 755M).
 - Via diagnostic 1794209597081951500 completed all 15,558 nominal pairs in 23.606 s. The following projection-rounding action attempted a 415,948-pair cover and reached the original 25 s deadline. This isolates a distinct cost after nominal quadrature.
 - The positive projection envelope, bitwise cached source geometry and worker admission pass in 1794210016763779200, 1794210017235945900 and 1794210017639841500. Fresh addon 7f36559 passes complete remote return in 1794210284904609000 (17.312 s, 90 envelope uses, open KVL 5.266e-9). Actual via 1794210232191074600 and reference swap 1794210258505742900 still time out during the nominal action after 14,336 and 85,120 completed pairs. No cold runtime closure is established for either via scenario.
+
+### Explicit longer via diagnostics
+
+The via and reference-swap runners now accept `P7_VERIFY_SECONDS` as an integer from 1 to 600, defaulting to 25. They use that value in both the DSL request and the native verification limit. Native memory remains 512 MiB. A future supervised via diagnostic with 60 seconds internally can be invoked from the backend root in PowerShell:
+
+```powershell
+$env:P7_VERIFY_SECONDS = '60'
+$env:P7_SUPERVISOR_TEST_TIMEOUT = '70'
+$env:P7_SUPERVISOR_TEST_COMMAND = '["node","--import","tsx","scripts/verify-p7-hybrid-via.ts"]'
+python scripts/verify-p7-closure-supervised.py --memory-mib 1536
+```
+
+For reference swap, select `scripts/verify-p7-reference-swap.ts`. It runs intact and open cases, so a 60-second per-solve diagnostic needs an explicitly chosen outer budget covering both, for example 130 seconds. These commands are prepared for a subsequent user-authorized diagnostic. No longer-timeout measurement was produced by this preparation, and completion time remains unknown. The 600-second ceiling is a diagnostic allowance, with no automatic retry or extension.
