@@ -949,6 +949,234 @@ fn uniform_section_profiles(mesh:&BoardMesh,map:&MixedMap<'_>,ports:&[[usize;2]]
     Ok(Some(profiles))
 }
 
+/// Optional sampled XY section currents. These are predictor coordinates;
+/// the common physical operator and residual checks determine the solution.
+fn planar_section_profiles(
+    mesh: &BoardMesh,
+    map: &MixedMap<'_>,
+    ports: &[[usize; 2]],
+    frequency: f64,
+    budget: AllocationBudget,
+    start: Instant,
+    wall: Duration,
+) -> Result<Option<Vec<Vec<f64>>>> {
+    use crate::extraction::section_transition::{self, Conductor, Mesh, Triangle};
+    if ports.is_empty() || map.foils.is_empty() || map.foils.len() > 5000 {
+        return Ok(None);
+    }
+    let estimate = map
+        .full
+        .current_count()
+        .checked_mul(256)
+        .and_then(|x| x.checked_add(map.foils.len().checked_mul(1024)?));
+    if estimate.is_none_or(|x| x > budget.max_bytes / 4) {
+        return Ok(None);
+    }
+    let mut component = vec![usize::MAX; map.full.potential_count()];
+    for (c, nodes) in map.full.components.iter().enumerate() {
+        for &n in nodes {
+            component[n] = c;
+        }
+    }
+    let reference = component[ports[0][1]];
+    let deadline = Instant::now()
+        .checked_add(wall.saturating_sub(start.elapsed()) / 8)
+        .unwrap_or(start);
+    for axis in 0..2 {
+        let transverse = 1 - axis;
+        let mut breaks: Vec<_> = mesh.mesh.nodes_m[..mesh.planar_nodes_mm.len()]
+            .iter()
+            .map(|p| p[axis])
+            .collect();
+        breaks.sort_by(f64::total_cmp);
+        breaks.dedup();
+        let mut gaps: Vec<_> = breaks
+            .windows(2)
+            .filter_map(|w| ((w[1] - w[0]) > 1e-12).then_some([w[0], w[1]]))
+            .collect();
+        gaps.sort_by(|a, b| (b[1] - b[0]).total_cmp(&(a[1] - a[0])));
+        for gap in gaps.into_iter().take(16) {
+            check_time(start, wall)?;
+            if Instant::now() >= deadline {
+                return Ok(None);
+            }
+            let cut = (gap[0] + gap[1]) * 0.5;
+            let mut intervals = Vec::new();
+            for foil in &map.foils {
+                let points = mesh.planar_triangles[foil.planar_triangle]
+                    .map(|i| [mesh.mesh.nodes_m[i][axis], mesh.mesh.nodes_m[i][transverse]]);
+                let mut hits = Vec::new();
+                for k in 0..3 {
+                    let a = points[k];
+                    let b = points[(k + 1) % 3];
+                    if (a[0] < cut && b[0] > cut) || (b[0] < cut && a[0] > cut) {
+                        hits.push(a[1] + (b[1] - a[1]) * (cut - a[0]) / (b[0] - a[0]));
+                    }
+                }
+                if hits.len() != 2 {
+                    continue;
+                }
+                hits.sort_by(f64::total_cmp);
+                let cell = &map.full.cells[foil.tetrahedra[0]];
+                let c = component[cell.potentials[0]];
+                if c == usize::MAX || cell.potentials.iter().any(|&p| component[p] != c) {
+                    return Ok(None);
+                }
+                intervals.push((
+                    [hits[0], hits[1]],
+                    foil.z_span_m,
+                    c,
+                    mesh.conductivity_s_m[foil.tetrahedra[0]],
+                ));
+            }
+            let mut owners: Vec<_> = intervals.iter().map(|v| v.2).collect();
+            owners.sort();
+            owners.dedup();
+            if !(2..=17).contains(&owners.len()) || !owners.contains(&reference) {
+                continue;
+            }
+            let mut xs: Vec<_> = intervals.iter().flat_map(|v| v.0).collect();
+            let mut zs: Vec<_> = intervals.iter().flat_map(|v| v.1).collect();
+            xs.sort_by(f64::total_cmp);
+            xs.dedup_by(|a,b| (*a-*b).abs() <= 64.*f64::EPSILON*a.abs().max(b.abs()).max(1e-12));
+            zs.sort_by(f64::total_cmp);
+            zs.dedup_by(|a,b| (*a-*b).abs() <= 64.*f64::EPSILON*a.abs().max(b.abs()).max(1e-12));
+            if xs.len() > 64 || zs.len() > 64 || xs.len() < 2 || zs.len() < 2 {
+                continue;
+            }
+            let dx = (xs[xs.len() - 1] - xs[0]).max(1e-6);
+            let dz = (zs[zs.len() - 1] - zs[0]).max(1e-6);
+            xs.insert(0, xs[0] - dx);
+            xs.push(xs[xs.len() - 1] + dx);
+            zs.insert(0, zs[0] - dz);
+            zs.push(zs[zs.len() - 1] + dz);
+            let mut sigmas = vec![None; owners.len()];
+            let mut nodes = Vec::new();
+            for &z in &zs {
+                for &x in &xs {
+                    nodes.push([x, z]);
+                }
+            }
+            let mut triangles = Vec::new();
+            for j in 0..zs.len() - 1 {
+                for i in 0..xs.len() - 1 {
+                    let x = (xs[i] + xs[i + 1]) * 0.5;
+                    let z = (zs[j] + zs[j + 1]) * 0.5;
+                    let mut owner = None;
+                    for &(u, v, c, sigma) in &intervals {
+                        if x > u[0] && x < u[1] && z > v[0] && z < v[1] {
+                            let k = owners.binary_search(&c).unwrap();
+                            if owner.is_some_and(|o| o != k)
+                                || sigmas[k].is_some_and(|s| s != sigma)
+                            {
+                                return Ok(None);
+                            }
+                            owner = Some(k);
+                            sigmas[k] = Some(sigma);
+                        }
+                    }
+                    let a = j * xs.len() + i;
+                    let b = a + 1;
+                    let c = a + xs.len();
+                    let d = c + 1;
+                    triangles.push(Triangle {
+                        nodes: [a, b, d],
+                        conductor: owner,
+                    });
+                    triangles.push(Triangle {
+                        nodes: [a, d, c],
+                        conductor: owner,
+                    });
+                }
+            }
+            if sigmas.iter().any(Option::is_none) {
+                continue;
+            }
+            let ids: Vec<_> = owners.iter().map(|x| format!("component-{x}")).collect();
+            let conductors: Vec<_> = ids
+                .iter()
+                .enumerate()
+                .map(|(i, id)| Conductor {
+                    id,
+                    conductivity_s_m: sigmas[i].unwrap(),
+                })
+                .collect();
+            let section = Mesh {
+                nodes_m: &nodes,
+                triangles: &triangles,
+                conductors: &conductors,
+                reference: owners.binary_search(&reference).unwrap(),
+            };
+            let work = budget.max_bytes / 4 - estimate.unwrap();
+            let recovery = match section_transition::solve_with_recovery(
+                &section,
+                frequency,
+                0,
+                &section_transition::Budget {
+                    max_bytes: work,
+                    deadline,
+                },
+                work,
+            ) {
+                Ok((_, r)) => r,
+                Err(_) => continue,
+            };
+            let mut out = vec![vec![0.; map.full.current_count()]; 2 * (owners.len() - 1)];
+            for foil in &map.foils {
+                let tri = mesh.planar_triangles[foil.planar_triangle];
+                let along = tri.iter().map(|&i| mesh.mesh.nodes_m[i][axis]).sum::<f64>() / 3.;
+                if along <= gap[0] || along >= gap[1] {
+                    continue;
+                }
+                let x = tri
+                    .iter()
+                    .map(|&i| mesh.mesh.nodes_m[i][transverse])
+                    .sum::<f64>()
+                    / 3.;
+                let z = (foil.z_span_m[0] + foil.z_span_m[1]) * 0.5;
+                let Some(i) = xs.windows(2).position(|v| x >= v[0] && x <= v[1]) else {
+                    continue;
+                };
+                let Some(j) = zs.windows(2).position(|v| z >= v[0] && z <= v[1]) else {
+                    continue;
+                };
+                let fx = (x - xs[i]) / (xs[i + 1] - xs[i]);
+                let fz = (z - zs[j]) / (zs[j + 1] - zs[j]);
+                let ti = 2 * (j * (xs.len() - 1) + i) + usize::from(fz > fx);
+                let Some(row) = recovery.triangles.iter().find(|r| r.triangle_index == ti) else {
+                    continue;
+                };
+                let c = component[map.full.cells[foil.tetrahedra[0]].potentials[0]];
+                if owners[row.conductor] != c {
+                    continue;
+                }
+                let weights = if fz <= fx {
+                    [1. - fx, fx - fz, fz]
+                } else {
+                    [1. - fz, fx, fz - fx]
+                };
+                for &cell in &foil.tetrahedra {
+                    for p in 0..owners.len() - 1 {
+                        let density = map.full.cells[cell].density_per_amp_m2;
+                        out[2 * p][3 * cell + axis] = (0..3)
+                            .map(|k| weights[k] * row.jz_a_per_m2[p][k].real)
+                            .sum::<f64>()
+                            / density;
+                        out[2 * p + 1][3 * cell + axis] = (0..3)
+                            .map(|k| weights[k] * row.jz_a_per_m2[p][k].imaginary)
+                            .sum::<f64>()
+                            / density;
+                    }
+                }
+            }
+            if out.iter().any(|v| v.iter().any(|x| *x != 0.)) {
+                return Ok(Some(out));
+            }
+        }
+    }
+    Ok(None)
+}
+
 fn solve_checked_mesh_impl(
     mesh:&BoardMesh,request:&board_mesh::Request,grid:CheckedGrid<'_>,skin:Option<copper_skin_profile::Profile>,
     packages:&[super::checked_packages::Validated],partition_request:Option<(&[usize],usize)>,partition_policy:PartitionPolicy,
@@ -1185,8 +1413,8 @@ fn solve_checked_mesh_impl_policy(
             Some(field.energy_capacitance_f()?)
         } else { None };
         let model_budget = AllocationBudget { max_bytes: budget.max_bytes.checked_sub(charge_bytes).ok_or_else(|| error("MEMORY_LIMIT", "layered trace matrix exceeds budget"))?, ..budget };
-        let profiles = if hybrid_requested || (adaptive && std::env::var_os("P7_SECTION_HINTS").as_deref()==Some(std::ffi::OsStr::new("1"))) {
-            let available = (budget.max_bytes / 3).saturating_sub(map.retained_bytes()?);
+        let profiles = if adaptive && (hybrid_requested || std::env::var_os("P7_SECTION_HINTS").as_deref()==Some(std::ffi::OsStr::new("1"))) {
+            let available = (model_budget.max_bytes / 3).saturating_sub(map.retained_bytes()?);
             // Reserve the conversion peak in addition to the producer's own
             // bounded working set: up to 32 full and compact vectors and one
             // compact denominator. Refuse the optional predictor if it does not fit.
@@ -1194,7 +1422,10 @@ fn solve_checked_mesh_impl_policy(
                 .and_then(|n|n.checked_mul(32)).and_then(|n|n.checked_add(map.current_count()))
                 .and_then(|n|n.checked_mul(8)).and_then(|n|n.checked_add(32 * std::mem::size_of::<Vec<f64>>()));
             if let Some(producer_bytes) = conversion.and_then(|n|available.checked_sub(n)) {
-                uniform_section_profiles(mesh, &map, &ports, frequencies_hz[0], AllocationBudget { max_bytes: producer_bytes, ..budget }, start, wall)?
+                let producer_budget=AllocationBudget { max_bytes: producer_bytes, ..budget };
+                let profiles=uniform_section_profiles(mesh, &map, &ports, frequencies_hz[0], producer_budget, start, wall)?;
+                let profiles=if profiles.is_some(){profiles}else{planar_section_profiles(mesh,&map,&ports,frequencies_hz[0],producer_budget,start,wall)?};
+                profiles
                     .map(|profiles| profiles.into_iter().map(|p| map.restrict_current_profile(&p)).collect::<Result<Vec<_>>>()).transpose()?
             } else { None }
         } else { None };
@@ -1556,6 +1787,58 @@ mod profile_tests {
 #[cfg(test)]
 mod uniform_section_seed_tests {
     use super::*;
+    #[test]
+    fn xy_section_predictor_uses_physical_foil_supports() {
+        use serde_json::{json, Value};
+        let mut value: Value = serde_json::from_str(include_str!(
+            "../../../../../tests/fixtures/analysis-segmented-coupon.json"
+        ))
+        .unwrap();
+        value["outline"] = json!([{"x":-1.,"y":-1.},{"x":1.,"y":-1.},{"x":1.,"y":1.},{"x":-1.,"y":1.}]);
+        value["copper"]["fixed"]["tracks"] = json!([{"id":"signal-run","net":"SIGNAL","layer":"TOP","widthMm":0.2,"points":[{"x":-0.6,"y":-0.4},{"x":0.6,"y":-0.4}]},{"id":"return-run","net":"RETURN","layer":"TOP","widthMm":0.2,"points":[{"x":-0.6,"y":0.4},{"x":0.6,"y":0.4}]}]);
+        value["copper"]["fixed"]["zones"] = json!([]);
+        value["pads"].as_array_mut().unwrap().truncate(2);
+        value["pads"][1]["net"] = json!("RETURN");
+        for (i, p) in value["pads"].as_array_mut().unwrap().iter_mut().enumerate() {
+            p["at"] = json!({"x":-0.6,"y":if i==0 {-0.4}else{0.4}});
+            p["shape"] = json!({"kind":"rect","widthMm":0.2,"heightMm":0.2});
+        }
+        let board = crate::import_json(&value.to_string()).board.unwrap();
+        let request:board_mesh::Request=serde_json::from_value(json!({"roiMm":[[-1.,-1.],[1.,1.]],"stack":[{"name":"TOP","thicknessM":0.000005,"copper":true,"epsilonR":null,"conductivitySM":58000000.},{"name":"dielectric","thicknessM":0.0001,"copper":false,"epsilonR":4.,"conductivitySM":null},{"name":"BOTTOM","thicknessM":0.000005,"copper":true,"epsilonR":null,"conductivitySM":58000000.}],"airMarginM":0.0002,"maxTriangleAreaM2":0.000002,"maxVerticalStepM":0.0001,"airEdgeDivisions":1,"minTriangleAngleDeg":0.,"curveDeviationMm":0.001,"acceptUnknownFillFreshness":true,"allowInsulatedCopperCuts":false,"electrodes":[{"name":"a","sourcePath":"pads[0]","layer":"TOP","upper":false},{"name":"b","sourcePath":"pads[1]","layer":"TOP","upper":false}],"ports":[["a","b"]]})).unwrap();
+        let budget = AllocationBudget {
+            max_bytes: 128 * 1024 * 1024,
+            max_nodes: 10000,
+            max_tetrahedra: 10000,
+        };
+        let wall = Duration::from_secs(30);
+        let mesh = board_mesh::build(&board, &request, budget, wall).unwrap();
+        let map = prepare(&mesh, &request.electrodes, 1000000., budget, wall).unwrap();
+        let ports = [[map.full_electrodes[0], map.full_electrodes[1]]];
+        let profiles =
+            planar_section_profiles(&mesh, &map, &ports, 1000000., budget, Instant::now(), wall)
+                .unwrap()
+                .expect("XY section predictor");
+        let compact: Vec<_> = profiles
+            .iter()
+            .map(|p| map.restrict_current_profile(p).unwrap())
+            .collect();
+        assert!(compact.iter().flatten().any(|v| *v != 0.));
+        assert!(planar_section_profiles(
+            &mesh,
+            &map,
+            &ports,
+            1000000.,
+            AllocationBudget {
+                max_bytes: 1,
+                ..budget
+            },
+            Instant::now(),
+            wall
+        )
+        .unwrap()
+        .is_none());
+    }
+
     #[test]
     fn board_mesh_two_axial_pads_produces_real_section_profiles() {
         use serde_json::{json,Value};

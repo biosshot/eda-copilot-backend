@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seed the adaptive compact hybrid current basis with optional sampled XY section profiles. The shared physical operators and residual checks remain authoritative.
+
 - Feed eligible section current profiles into the compact hybrid basis with a bounded projection workspace and a new exact-response cache generation. General planar-run section integration is tracked separately until its development control passes.
 - Allow via and reference-swap development runners to honor an explicit integer `P7_VERIFY_SECONDS` up to 600 seconds, with the existing 25-second default and 512 MiB native memory limit. The external supervisor has its own wall limit.
 - Bind existing P7 development controls in the final queue and validate source symbol fragments. Independent acceptance references and final commands retain their separate readiness status.
