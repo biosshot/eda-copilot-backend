@@ -265,19 +265,18 @@ fn common_partition(roi:&MultiPolygon<f64>,cuts:&[MultiPolygon<f64>],budget:Allo
             // Large cut contours are cropped to the atom bbox first (exact within it).
             let near:Vec<&Polygon<f64>>=cut.0.iter().zip(&cut_bboxes).filter(|(_,b)|b.is_some_and(|b|!rects_disjoint(&a,&b))).map(|(p,_)|p).collect();
             let local=if near.iter().map(|p|p.exterior().0.len()).sum::<usize>()>256 {crop_cut(&near,&a,1e-6)} else {MultiPolygon(near.into_iter().cloned().collect())};
-            let unchanged=if local.0.is_empty() {Some(false)} else {
-                let relation=local.relate(&cell);
-                if relation.is_covers() {Some(true)}
-                else if relation.get(CoordPos::Inside,CoordPos::Inside)==Dimensions::Empty {Some(false)}
-                else {None}
-            };
+            // geo's `relate` misreported whole cells (NanoScope set3 lost 0.104 mm2: a fully covered
+            // cell classed as outside), so decide the no-op cases from the exact overlay areas instead.
+            let inter=if local.0.is_empty() {MultiPolygon(vec![])} else {areas::intersection(&cell,&local)};
+            let (cell_area,inter_area)=(atom.poly.unsigned_area(),inter.unsigned_area());
+            let unchanged=if inter_area<=1e-12*cell_area {Some(false)} else if cell_area-inter_area<=1e-12*cell_area {Some(true)} else {None};
             if let Some(inside)=unchanged {
                 let mut atom=atom;if inside{atom.inside.push(cut_index);}
                 next.push(atom);
                 if next.len()>budget.max_nodes {return Err(error("MEMORY_LIMIT","common arrangement polygon budget"));}
                 continue;
             }
-            for (set,inside) in [(areas::intersection(&cell,&local),true),(areas::difference(&cell,&local),false)] {
+            for (set,inside) in [(inter,true),(areas::difference(&cell,&local),false)] {
                 for poly in set.0 {
                     // Native overlay has no positive-area cutoff. Every output
                     // polygon is retained, including disconnected/floating Cu.
@@ -779,7 +778,14 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         let holes=|p:&MultiPolygon<f64>|p.0.iter().map(|p|p.interiors().len()).sum::<usize>();
         let (now_c,now_h)=noise_pieces(&canonical,grid_step_mm);
         let (src_c,src_h)=&original_filtered[i];
-        let matched=match_components_spatial(&canonical,&shape.0,grid_step_mm,original_area).and_then(|c|match_sorted_pieces(&now_h,src_h,grid_step_mm,original_area).map(|h|(c,h)));
+        let matched=match_components_spatial(&canonical,&shape.0,grid_step_mm,original_area).and_then(|c|match_sorted_pieces(&now_h,src_h,grid_step_mm,original_area).or_else(|e|{
+            // A pinch point of the source ring that rounding opened by <= 4h joins a hole to the
+            // outside. Close the rebuilt union by +-2h (check only) and match the holes again.
+            use geo::Buffer;let delta=2.*grid_step_mm;
+            let closed=canonical.buffer(delta).buffer(-delta);
+            let (_,closed_h)=noise_pieces(&closed,grid_step_mm);
+            match_sorted_pieces(&closed_h,src_h,grid_step_mm,original_area).map(|(n,a)|{eprintln!("P7_ARRANGEMENT_NOISE set={i} holes reopened by sub-4h cracks, closed by +-{delta:e}: {e}");(n,a)}).map_err(|e2|format!("{e}; after closing +-{delta:e}: {e2}"))
+        }).map(|h|(c,h)));
         let raw=format!("components raw={}/{original_components} filtered={}/{}, holes raw={}/{original_holes} filtered={}/{}",canonical.0.len(),now_c.len(),src_c.len(),holes(&canonical),now_h.len(),src_h.len());
         if !area_change_ok((area-original_area).abs(),original_area,grid_step_mm,original_perimeter) {
             let describe=|m:&MultiPolygon<f64>|{let mut v=m.0.iter().map(|p|(p.unsigned_area(),p.bounding_rect())).collect::<Vec<_>>();v.sort_by(|a,b|b.0.total_cmp(&a.0));v.iter().take(5).map(|(a,b)|format!("area={a:e} bbox={:?}",b.map(|b|[[b.min().x,b.min().y],[b.max().x,b.max().y]]))).collect::<Vec<_>>().join("; ")};
@@ -823,7 +829,31 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         }
         copper_skin_profile::visit_radial_constraints(&canonical,pieces,&mut segment)?;
     }
-    for poly in atoms.iter().map(|a|&a.poly){for ring in std::iter::once(poly.exterior()).chain(poly.interiors()){for line in ring.lines(){segment([line.start.x,line.start.y],[line.end.x,line.end.y])?;}}}
+    // Atoms from different overlays are not mutually noded: a vertex of one atom can lie within
+    // rounding distance of a long edge of its neighbour (T-junction). spade's constraint insertion
+    // asserts on such near-collinear overlaps (NanoScope, ThunderF722), so split every edge at the
+    // atom vertices lying within 2h of it and constrain the pieces between existing vertices.
+    let tol=2.*grid_step_mm;
+    let mut unique=std::collections::HashSet::new();
+    let vertex_tree=rstar::RTree::bulk_load(atoms.iter().flat_map(|a|std::iter::once(a.poly.exterior()).chain(a.poly.interiors())).flat_map(|r|r.0.iter()).filter(|c|unique.insert((c.x.to_bits(),c.y.to_bits()))).map(|c|[c.x,c.y]).collect::<Vec<_>>());
+    for poly in atoms.iter().map(|a|&a.poly){for ring in std::iter::once(poly.exterior()).chain(poly.interiors()){for line in ring.lines(){
+        let (a,c)=([line.start.x,line.start.y],[line.end.x,line.end.y]);
+        let (dx,dy)=(c[0]-a[0],c[1]-a[1]);let len2=dx*dx+dy*dy;
+        let mut cuts:Vec<(f64,[f64;2])>=vec![];
+        if len2>tol*tol {
+            let env=rstar::AABB::from_corners([a[0].min(c[0])-tol,a[1].min(c[1])-tol],[a[0].max(c[0])+tol,a[1].max(c[1])+tol]);
+            for q in vertex_tree.locate_in_envelope(&env) {
+                if *q==a||*q==c {continue;}
+                let t=((q[0]-a[0])*dx+(q[1]-a[1])*dy)/len2;
+                if t<=0.||t>=1. {continue;}
+                let d=((q[0]-a[0])*dy-(q[1]-a[1])*dx).abs()/len2.sqrt();
+                if d<=tol {cuts.push((t,*q));}
+            }
+            cuts.sort_by(|x,y|x.0.total_cmp(&y.0));
+        }
+        let mut from=a;for (_,q) in cuts {segment(from,q)?;from=q;}
+        segment(from,c)?;
+    }}}
     if let Some((nodes,triangles))=support{let mut edges=std::collections::BTreeSet::new();for t in triangles{for k in 0..3{let mut e=[t[k],t[(k+1)%3]];e.sort();edges.insert(e);}}for [a,b]in edges{segment(nodes[a],nodes[b])?;}}
     for [a,b] in trace_lines {segment(*a,*b)?;}
     drop(segment);
@@ -883,7 +913,11 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
             // positive overlap; robust DE-9IM keeps that source association.
             let tri_bbox=triangle.bounding_rect();
             let cand:Vec<usize>=match tri_bbox{Some(t)=>candidates(&shape_index,t),None=>(0..shapes.len()).collect()};
-            let sources=cand.into_iter().filter(|&i|shapes[i].poly.relate(&triangle).get(CoordPos::Inside,CoordPos::Inside)==Dimensions::TwoDimensional).collect::<Vec<_>>();
+            let mut sources=cand.iter().copied().filter(|&i|shapes[i].poly.relate(&triangle).get(CoordPos::Inside,CoordPos::Inside)==Dimensions::TwoDimensional).collect::<Vec<_>>();
+            // DE-9IM on large multi-hole source polygons can miss a face wholly inside the shape
+            // (STM32G0 face9201). The face centre lying inside the source polygon is the same
+            // positive-area provenance, so use it only when relate found no owner.
+            if sources.is_empty() {sources=cand.iter().copied().filter(|&i|shapes[i].poly.contains(&centre)).collect();}
             triangles.push(v.map(|v|v.fix().index()));centres.push(centre);overlaps.push(sources);
         }
     }
@@ -952,6 +986,14 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
             let own=&tri_own[ti];let physical:Vec<_>=own.0.iter().map(|&i|&physical_shapes[i]).filter(|(_,span,_,_)|middle>span[0]&&middle<span[1]).collect();
             let copper=!physical.is_empty();
             let owners:Vec<_>=if copper {overlaps[ti].iter().map(|&i|&shapes[i]).filter(|s|middle>s.span[0]&&middle<s.span[1]).collect()}else{vec![]};
+            // A face centre in a sub-4h rounding sliver of the canonical union (outside every source
+            // polygon by less than the grid noise) is attributed to the source polygon it borders.
+            let near_owner:Vec<_>=if copper&&owners.is_empty() {
+                use geo::{Distance,Euclidean};let d=4.*grid_step_mm;
+                let at=geo::Rect::new(geo::Coord{x:p.x()-d,y:p.y()-d},geo::Coord{x:p.x()+d,y:p.y()+d});
+                candidates(&shape_index,at).into_iter().map(|i|&shapes[i]).filter(|s|middle>s.span[0]&&middle<s.span[1]&&Euclidean.distance(&s.poly,p)<=d).collect()
+            } else {vec![]};
+            let owners=if owners.is_empty() {near_owner} else {owners};
             if copper&&owners.is_empty() {return Err(error("BOARD_OWNERSHIP",&format!("canonical copper face{ti} at {p:?}, z={middle:e} has no positive-area source attribution; no copper removed")));}
             if !copper {
                 let dielectric=layer.filter(|l|!l.copper&&own.1&&!own.2
