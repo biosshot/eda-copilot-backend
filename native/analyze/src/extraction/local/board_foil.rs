@@ -771,6 +771,7 @@ pub fn solve_checked(
     let mesh = board_mesh::build_profiled_hybrid(board, geometry, budget, remaining(started, wall)?, skin)?;
     phase_trace("mesh-built", started, json!({"nodes": mesh.mesh.nodes_m.len(), "tetrahedra": mesh.mesh.copper_tetrahedra.len(), "planarTriangles": mesh.planar_triangles.len(), "barrels": mesh.barrel_ids.len()}));
     let masks = mesh.hybrid_mesh_masks.clone();
+    let coarsening = mesh.mesh_coarsening.clone();
     let mut checked = mixed_conductor::solve_checked_mesh_policy(
         mesh, geometry, mixed_grid, skin, &packages, partition, operator, budget, started, wall,
     )?;
@@ -780,5 +781,6 @@ pub fn solve_checked(
         provenance.remove("maxMemoryMiB");
     }
     checked["provenance"]["hybridMeshMasks"] = json!(masks);
+    if let Some(c) = coarsening { checked["provenance"]["meshCoarsening"] = c; }
     Ok(checked)
 }

@@ -1,6 +1,6 @@
 //! Board-owned, shared-overlay-grid material arrangement for volume extraction.
 //! Every intersecting source is retained, including floating neighbouring copper.
-use super::{copper_skin_profile,error,mesh::{self,LayeredInput,LayeredMesh,Material},AllocationBudget,Result};
+use super::{copper_skin_profile,error,mesh_coarsen,mesh::{self,LayeredInput,LayeredMesh,Material},AllocationBudget,Result};
 use crate::{geometry::{self,areas,context::Context,GeometryOptions,PreparationReport},model::Board};
 use geo::{algorithm::{coordinate_position::CoordPos,dimensions::Dimensions},Area,BoundingRect,Contains,Intersects,LineString,MultiPolygon,Point,Polygon,Relate};
 use spade::{AngleLimit,ConstrainedDelaunayTriangulation,Point2,RefinementParameters,Triangulation};
@@ -173,12 +173,14 @@ pub struct BoardMesh {
     pub max_contact_area_change:f64,
     pub source_copper_restorations:Vec<serde_json::Value>,
     pub hybrid_mesh_masks:Vec<serde_json::Value>,
+    /// Far-field mesh coarsening parameters (approximation tier); None when off or not applicable.
+    pub mesh_coarsening:Option<serde_json::Value>,
     certified_electrodes:BTreeMap<String,(Electrode,Vec<usize>)>,
 }
 /// Sutherland-Hodgman crop of a closed ring to an axis-aligned box (exact on the box:
 /// the cropped region equals the ring region intersected with the box).
 /// Boundary segment oriented so the area interior lies on its left.
-struct Seg {a:[f64;2],b:[f64;2]}
+pub(super) struct Seg {pub(super) a:[f64;2],pub(super) b:[f64;2]}
 impl rstar::RTreeObject for Seg {
     type Envelope=rstar::AABB<[f64;2]>;
     fn envelope(&self)->Self::Envelope {rstar::AABB::from_corners(self.a,self.b)}
@@ -193,8 +195,8 @@ fn seg_project(a:[f64;2],b:[f64;2],p:[f64;2])->(f64,f64) {
     let (cx,cy)=(a[0]+t*dx,a[1]+t*dy);
     (t,(p[0]-cx).powi(2)+(p[1]-cy).powi(2))
 }
-type SegTree=rstar::RTree<Seg>;
-fn build_seg_tree(m:&MultiPolygon<f64>)->SegTree {
+pub(super) type SegTree=rstar::RTree<Seg>;
+pub(super) fn build_seg_tree(m:&MultiPolygon<f64>)->SegTree {
     use super::planar_trace::{ring_loops,signed_area};
     let mut segs=vec![];
     for p in &m.0 {
@@ -220,7 +222,7 @@ fn build_seg_tree(m:&MultiPolygon<f64>)->SegTree {
 }
 /// Point-in-area from the nearest boundary segment (O(log n)); a nearest point at a segment end is
 /// ambiguous, so those fall back to an even-odd ray count.
-fn point_in_segments(tree:&SegTree,x:f64,y:f64)->bool {
+pub(super) fn point_in_segments(tree:&SegTree,x:f64,y:f64)->bool {
     let Some(g)=tree.nearest_neighbor(&[x,y]) else {return false};
     let (t,_)=seg_project(g.a,g.b,[x,y]);
     if t>1e-9&&t<1.-1e-9 {
@@ -941,8 +943,57 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     drop(segment);
     super::board_foil::phase_trace("t-constraints-inserted",start,serde_json::json!({}));
     let max_xy=budget.max_nodes.min(budget.max_bytes/4096);
-    let refinement=cdt.refine(RefinementParameters::new().keep_constraint_edges().with_angle_limit(AngleLimit::from_deg(r.min_triangle_angle_deg.unwrap_or(30.))).with_max_allowed_area(r.max_triangle_area_m2*1e6).with_max_additional_vertices(max_xy.saturating_sub(cdt.num_vertices())));
-    if !refinement.refinement_complete {return Err(error("MEMORY_LIMIT","board XY mesh refinement incomplete within budget"));}
+    // Approximation tier: relax the interior refinement far from the channel (see mesh_coarsen).
+    let a0_mm2=r.max_triangle_area_m2*1e6;
+    let mut mesh_coarsening=None;
+    let coarse_field=if mesh_coarsen::disabled() {None} else {
+        let electrode_keys:std::collections::HashSet<(&str,&str)>=r.electrodes.iter().flat_map(|e|e.source_path.iter().chain(e.source_paths.iter().flatten()).map(move|p|(p.as_str(),e.layer.as_str()))).collect();
+        let net_of:std::collections::HashMap<&str,&str>=source_mapping.iter().filter_map(|m|m.2.as_deref().map(|n|(m.0.as_str(),n))).collect();
+        let channel_nets:std::collections::BTreeSet<&str>=source_mapping.iter().filter(|m|electrode_keys.contains(&(m.1.as_str(),m.3.as_str()))).filter_map(|m|m.2.as_deref()).collect();
+        let mut net_area=BTreeMap::<&str,f64>::new();
+        for sh in &shapes {if let Some(n)=net_of.get(sh.id.as_str()).filter(|n|channel_nets.contains(*n)) {*net_area.entry(*n).or_default()+=sh.poly.unsigned_area();}}
+        // With several channel nets the largest copper (the reference plane) is not support:
+        // its return current spreads under the signal copper, which is support.
+        let plane=if channel_nets.len()>1 {net_area.iter().max_by(|a,b|a.1.total_cmp(b.1)).map(|(n,_)|*n)} else {None};
+        let wanted=|n:Option<&str>|n.is_some_and(|n|channel_nets.contains(n)&&Some(n)!=plane);
+        let mut support:Vec<MultiPolygon<f64>>=electrode_polygons.values().cloned().collect();
+        support.extend(shapes.iter().filter(|sh|wanted(net_of.get(sh.id.as_str()).copied())).map(|sh|sh.poly.clone()));
+        for hole in &geometry.holes {
+            let Some(sh)=shapes.iter().find(|sh|sh.id==hole.id&&barrel_ids.contains(&sh.id)) else {continue};
+            let net=board.vias.iter().find(|v|v.source.path==hole.source.path).and_then(|v|v.net)
+                .or_else(||board.pads.iter().find(|p|p.source.path==hole.source.path).and_then(|p|p.net))
+                .and_then(|i|board.nets.get(i));
+            if wanted(net.map(|n|n.as_str())) {support.push(sh.poly.clone());}
+        }
+        let diagonal=(roi_bounds[1][0]-roi_bounds[0][0]).hypot(roi_bounds[1][1]-roi_bounds[0][1]);
+        let field=mesh_coarsen::SizeField::new(&support,a0_mm2.sqrt(),diagonal);
+        if field.is_none() {
+            let h0=a0_mm2.sqrt();
+            mesh_coarsening=Some(serde_json::json!({"kind":"distance-graded-planar-mesh","tier":"approximation","active":false,"h0Mm":h0,"hMaxMm":mesh_coarsen::SizeField::h_max_for(h0,diagonal),"d0Mm":null,
+                "reason":"coarsest size below 1.5 h0 (board diagonal / 50 or 32 h0) or no channel support; mesh unchanged"}));
+        }
+        field
+    };
+    let refine_area=|area:f64,vertices:usize|RefinementParameters::new().keep_constraint_edges().with_angle_limit(AngleLimit::from_deg(r.min_triangle_angle_deg.unwrap_or(30.))).with_max_allowed_area(area).with_max_additional_vertices(max_xy.saturating_sub(vertices));
+    if let Some(field)=&coarse_field {
+        let baseline=std::env::var_os("P7_MESH_COARSEN_BASELINE").map(|_|{let mut c=cdt.clone();c.refine(refine_area(a0_mm2,c.num_vertices()));c.num_vertices()});
+        let area_far=field.area_limit(a0_mm2,field.h_max);
+        let refinement=cdt.refine(refine_area(area_far,cdt.num_vertices()));
+        if !refinement.refinement_complete {return Err(error("MEMORY_LIMIT","board XY mesh refinement incomplete within budget"));}
+        let graded=mesh_coarsen::grade(&mut cdt,field,a0_mm2,max_xy,||check(start,max_wall))?;
+        if r.min_triangle_angle_deg.is_none_or(|a|a>0.) {
+            // Repair any angle violation left by the graded insertion without refining below the far size.
+            let repair=cdt.refine(refine_area(area_far,cdt.num_vertices()));
+            if !repair.refinement_complete {return Err(error("MEMORY_LIMIT","board XY mesh refinement incomplete within budget"));}
+        }
+        mesh_coarsening=Some(serde_json::json!({"kind":"distance-graded-planar-mesh","tier":"approximation","active":true,"h0Mm":field.h0,"hMaxMm":field.h_max,"d0Mm":field.d0,"growthPerStep":mesh_coarsen::GROWTH_PER_STEP,
+            "support":"port electrode contacts, copper of the channel nets (largest net excluded when several), their barrels","geometry":"copper outlines, bores and contacts unchanged; only interior refinement coarsened",
+            "unverified":"coarsened far-field mesh accuracy is not independently verified; air/dielectric fill shares the extrusion planes and is coarsened only in XY",
+            "gradedVertices":graded,"planarVertices":cdt.num_vertices(),"planarVerticesUniform":baseline}));
+    }else{
+        let refinement=cdt.refine(refine_area(a0_mm2,cdt.num_vertices()));
+        if !refinement.refinement_complete {return Err(error("MEMORY_LIMIT","board XY mesh refinement incomplete within budget"));}
+    }
     check(start,max_wall)?;
     super::board_foil::phase_trace("t-cdt-refined",start,serde_json::json!({}));
     // Refine XY only inside retained native bore contours. The material there
@@ -1065,6 +1116,10 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     let count=triangles.len().checked_mul(z_m.len()-1).and_then(|v|v.checked_mul(3)).ok_or_else(||error("MEMORY_LIMIT","board tetra count overflow"))?;
     budget.check(count.checked_mul(2048).ok_or_else(||error("MEMORY_LIMIT","board tetra memory overflow"))?)?;
     if count>budget.max_tetrahedra || xy_m.len().checked_mul(z_m.len()).is_none_or(|n|n>budget.max_nodes) {return Err(error("MEMORY_LIMIT",&format!("board extrusion nodes={} (cap{}), tetrahedra={count} (cap{}) exceed explicit count budget",xy_m.len().saturating_mul(z_m.len()),budget.max_nodes,budget.max_tetrahedra)));}
+    if let Some(c)=&mut mesh_coarsening {
+        let nodes=xy_m.len()*z_m.len();c["nodes"]=serde_json::json!(nodes);
+        eprintln!("P7_MESH_COARSEN {}",serde_json::json!({"h0":c["h0Mm"],"hMax":c["hMaxMm"],"d0":c["d0Mm"],"nodesBefore":c["planarVerticesUniform"].as_u64().map(|v|v as usize*z_m.len()),"nodes":nodes,"planarVertices":xy_m.len()}));
+    }
     let mut materials=vec![];let mut sigma_per_triangle=vec![];
     let physical_bboxes:Vec<_>=physical_shapes.iter().map(|s|s.0.bounding_rect()).collect();
     // Per-triangle (z-independent) ownership candidates, in physical_shapes order.
@@ -1187,7 +1242,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     if let Some(b)=r.return_boundary_mm {
         for (_,nodes) in certified_electrodes.values() { for &n in nodes { let p=mesh.nodes_m[n]; let world=[origin_mm[0]+1000.*p[0],origin_mm[1]+1000.*p[1],1000.*p[2]]; if (0..3).any(|k|world[k]<=b[0][k] || world[k]>=b[1][k]) {return Err(error("RETURN_BOUNDARY","electrode support must lie strictly inside guard"));} } }
     }
-    Ok(BoardMesh{return_boundary_mm:r.return_boundary_mm,field_substrate:substrate,field_bores:bores,field_partial_bores:partial_bores,field_copper,mesh,copper_skin_layers,copper_skin_barrels,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,hybrid_mesh_masks,certified_electrodes})
+    Ok(BoardMesh{return_boundary_mm:r.return_boundary_mm,field_substrate:substrate,field_bores:bores,field_partial_bores:partial_bores,field_copper,mesh,copper_skin_layers,copper_skin_barrels,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,hybrid_mesh_masks,mesh_coarsening,certified_electrodes})
 }
 impl BoardMesh {
     /// End geometry preparation before a separately budgeted field phase.
