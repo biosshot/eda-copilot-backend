@@ -1,6 +1,6 @@
 //! Board-owned, shared-overlay-grid material arrangement for volume extraction.
 //! Every intersecting source is retained, including floating neighbouring copper.
-use super::{copper_skin_profile,error,mesh_coarsen,mesh::{self,LayeredInput,LayeredMesh,Material},AllocationBudget,Result};
+use super::{copper_normalize,copper_skin_profile,error,mesh_coarsen,mesh::{self,LayeredInput,LayeredMesh,Material},AllocationBudget,Result};
 use crate::{geometry::{self,areas,context::Context,GeometryOptions,PreparationReport},model::Board};
 use geo::{algorithm::{coordinate_position::CoordPos,dimensions::Dimensions},Area,BoundingRect,Contains,Intersects,LineString,MultiPolygon,Point,Polygon,Relate};
 use spade::{AngleLimit,ConstrainedDelaunayTriangulation,Point2,RefinementParameters,Triangulation};
@@ -177,6 +177,8 @@ pub struct BoardMesh {
     pub mesh_coarsening:Option<serde_json::Value>,
     /// Channel-neighbourhood ROI fallback evidence (approximation tier); None when not triggered.
     pub roi_fallback:Option<serde_json::Value>,
+    /// Canonical copper normalisation evidence (noise tier): shapes changed, max relative area change, holes merged, parts split.
+    pub copper_normalization:Option<serde_json::Value>,
     certified_electrodes:BTreeMap<String,(Electrode,Vec<usize>)>,
 }
 /// Sutherland-Hodgman crop of a closed ring to an axis-aligned box (exact on the box:
@@ -826,6 +828,18 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
             physical_shapes[i].0=copper.clone();arrangement_sets[i]=copper;
         }
     }
+    // Canonical copper normalisation (noise tier), once, on the cropped set before the arrangement:
+    // i_overlay NonZero renoding per shape and splitting of pinched shells. The arrangement, ownership
+    // and field-input checks below compare against this set (see copper_normalize).
+    let mut copper_norm=copper_normalize::Stats::default();
+    for i in 0..physical_shapes.len() {
+        check(start,max_wall)?;
+        let changed_before=copper_norm.shapes_changed;
+        let normalised=copper_normalize::normalize_set(&physical_shapes[i].0,&format!("physical:{i}"),&mut copper_norm)?;
+        if copper_norm.shapes_changed>changed_before {arrangement_sets[i]=normalised.clone();physical_shapes[i].0=normalised;}
+    }
+    eprintln!("P7_COPPER_NORMALIZATION input {}",copper_norm.evidence());
+    super::board_foil::phase_trace("mesh-copper-normalized",start,copper_norm.evidence());
     // Approximation tier: simplify far copper rings (never within d0 of the channel support).
     let mut outline_simplification=None;
     if let Some(field)=&coarse_field {
@@ -932,8 +946,12 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
             return Err(error("BOARD_ARRANGEMENT",&format!("physical copper set{i} changed area: relative area={change:e}, {raw}")));}
         let ((xc,sc_area,merged),(xh,sh_area))=matched.map_err(|e|error("BOARD_ARRANGEMENT",&format!("physical copper set{i} changed topology: relative area={change:e}, {raw}; {e}")))?;
         if xc>0||xh>0||canonical.0.len()!=original_components||holes(&canonical)!=original_holes {eprintln!("P7_ARRANGEMENT_NOISE set={i} touchingMerged={merged} extraComponents={xc} extraHoles={xh} surplusAreaRelative={:e} ({raw})",(sc_area+sh_area)/original_area);}
-        max_copper_area_change=max_copper_area_change.max(change);shape.0=canonical;
+        max_copper_area_change=max_copper_area_change.max(change);
+        // The arrangement can leave zero-width walls between holes that the later SI scaling would overlap: normalise its output once more so every downstream stage reads the canonical set.
+        shape.0=copper_normalize::normalize_set(&canonical,&format!("physical:{i}"),&mut copper_norm)?;
     }
+    let copper_normalization=Some(copper_norm.evidence());
+    eprintln!("P7_COPPER_NORMALIZATION after arrangement {}",copper_norm.evidence());
     for(i,e)in r.electrodes.iter().enumerate(){electrode_polygons.insert(e.name.clone(),member_set(2+physical_count+i));}
     super::board_foil::phase_trace("t-member-sets",start,serde_json::json!({}));
     // Keep an explicit stable numerical datum. Domain expansion changes the
@@ -1296,7 +1314,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     if let Some(b)=r.return_boundary_mm {
         for (_,nodes) in certified_electrodes.values() { for &n in nodes { let p=mesh.nodes_m[n]; let world=[origin_mm[0]+1000.*p[0],origin_mm[1]+1000.*p[1],1000.*p[2]]; if (0..3).any(|k|world[k]<=b[0][k] || world[k]>=b[1][k]) {return Err(error("RETURN_BOUNDARY","electrode support must lie strictly inside guard"));} } }
     }
-    Ok(BoardMesh{return_boundary_mm:r.return_boundary_mm,field_substrate:substrate,field_bores:bores,field_partial_bores:partial_bores,field_copper,mesh,copper_skin_layers,copper_skin_barrels,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,hybrid_mesh_masks,mesh_coarsening,roi_fallback,certified_electrodes})
+    Ok(BoardMesh{return_boundary_mm:r.return_boundary_mm,field_substrate:substrate,field_bores:bores,field_partial_bores:partial_bores,field_copper,mesh,copper_skin_layers,copper_skin_barrels,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,hybrid_mesh_masks,mesh_coarsening,roi_fallback,copper_normalization,certified_electrodes})
 }
 impl BoardMesh {
     /// End geometry preparation before a separately budgeted field phase.

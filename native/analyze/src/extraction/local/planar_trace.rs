@@ -76,7 +76,7 @@ pub(super) fn signed_area(r: &[geo::Coord<f64>]) -> f64 {
 /// A pour whose ring touches itself at vertices is the area filled under the winding rule:
 /// same-orientation loops are shells, opposite-orientation loops are voids. The loops are returned as
 /// simple polygons whose areas add up to the original; anything else is refused with coordinates.
-fn split_self_touching(poly: &Polygon<f64>) -> std::result::Result<Vec<Polygon<f64>>, String> { split_self_touching_depth(poly, 0) }
+pub(super) fn split_self_touching(poly: &Polygon<f64>) -> std::result::Result<Vec<Polygon<f64>>, String> { split_self_touching_depth(poly, 0) }
 fn split_self_touching_depth(poly: &Polygon<f64>, depth: usize) -> std::result::Result<Vec<Polygon<f64>>, String> {
     use geo::{Area, Contains, InteriorPoint, algorithm::Validation};
     if poly.is_valid() { return Ok(vec![poly.clone()]); }
@@ -133,6 +133,63 @@ fn split_self_touching_depth(poly: &Polygon<f64>, depth: usize) -> std::result::
     Ok(out)
 }
 
+/// Canonical copper polygons of one slab, as (millimetre polygon, SI polygon relative to `origin_mm`).
+/// The slab union is already canonical (see copper_normalize); `split_self_touching` stays as a guard
+/// that returns it unchanged when valid. A polygon the mm to SI scaling makes invalid is normalised
+/// in SI and its parts are converted back, so the two lists stay one-to-one and every consumer sees
+/// valid input whose hole and part counts are the canonical ones.
+fn canonical_slab(union: &geo::MultiPolygon<f64>, origin_mm: [f64; 2], first_index: usize) -> Result<Vec<(Polygon<f64>, Polygon<f64>)>> {
+    use geo::algorithm::Validation;
+    let to_si = |r: &LineString<f64>| LineString::new(r.0.iter().map(|p| geo::Coord { x: (p.x - origin_mm[0]) * 1e-3, y: (p.y - origin_mm[1]) * 1e-3 }).collect());
+    let to_mm = |r: &LineString<f64>| LineString::new(r.0.iter().map(|p| geo::Coord { x: p.x * 1e3 + origin_mm[0], y: p.y * 1e3 + origin_mm[1] }).collect());
+    let mut out = Vec::with_capacity(union.0.len());
+    let mut stats = super::copper_normalize::Stats::default();
+    for (n, poly) in union.0.iter().enumerate() {
+        // The slab union is rebuilt here from the field copper (layer copper plus barrels), so it can
+        // create fresh hole contacts: it goes through the same canonical normalisation.
+        let parts = super::copper_normalize::normalize_polygon(poly, &format!("physical:{}", first_index + n), &mut stats)?;
+        if parts.len() != 1 || !poly.is_valid() { eprintln!("P7_COPPER_RING_SPLIT shape=physical:{} loops={}", first_index + out.len(), parts.len()); }
+        for part in parts {
+            let si = Polygon::new(to_si(part.exterior()), part.interiors().iter().map(&to_si).collect());
+            if si.is_valid() { out.push((part, si)); continue; }
+            let before = (si.interiors().len(), 1usize);
+            let split = split_self_touching(&si).map_err(|e| error("COPPER_RING", &format!("physical copper polygon invalid after conversion to metres and cannot be normalised: {e}")))?;
+            eprintln!("P7_COPPER_SI_NORMALIZED shape=physical:{} holes {}->{} parts {}->{} reason {:?}", first_index + out.len(), before.0, split.iter().map(|p| p.interiors().len()).sum::<usize>(), before.1, split.len(), si.check_validation().err().map(|e| e.to_string().chars().take(300).collect::<String>()));
+            // The SI polygon is the canonical metal. Its millimetre twin is the original polygon clipped to it, so it
+            // never grows over a neighbouring grid-width sliver (ownership reads the millimetre polygons).
+            for s in split {
+                let back = Polygon::new(to_mm(s.exterior()), s.interiors().iter().map(&to_mm).collect());
+                let clipped = crate::geometry::areas::intersection(&crate::geometry::areas::one(part.clone()), &crate::geometry::areas::one(back.clone()));
+                let mm = if clipped.0.len() == 1 { clipped.0.into_iter().next().unwrap() } else { back };
+                out.push((mm, s));
+            }
+        }
+    }
+    if stats.shapes_changed > 0 { eprintln!("P7_COPPER_NORMALIZATION slab {}", stats.evidence()); }
+    Ok(out)
+}
+
+/// Owner of a point that lies in several same-layer copper polygons: the one polygon whose interior contains it
+/// (shared boundary of touching copper), or, when several do, the one that dwarfs the rest by more than 1e6 in
+/// area (the others are numerical slivers of the canonical union, noise tier). Anything else stays ambiguous.
+fn resolve_shared_owner(polys: &[Polygon<f64>], found: &[usize], p: &Point<f64>) -> Option<usize> {
+    use geo::{Area, Contains};
+    let inner: Vec<usize> = found.iter().copied().filter(|&i| polys[i].contains(p)).collect();
+    match inner.len() {
+        1 => Some(inner[0]),
+        n if n > 1 => {
+            let areas: Vec<f64> = inner.iter().map(|&i| polys[i].unsigned_area()).collect();
+            let (k, &big) = areas.iter().enumerate().max_by(|a, b| a.1.total_cmp(b.1))?;
+            let rest: f64 = areas.iter().sum::<f64>() - big;
+            if rest <= big * 1e-6 {
+                eprintln!("P7_COPPER_OWNER_NOISE point=({:.9},{:.9}) mm owner=physical:{} slivers={:?} sliverAreaMm2={:e} ownerAreaMm2={:e}", p.x(), p.y(), inner[k], inner.iter().filter(|&&i| i != inner[k]).collect::<Vec<_>>(), rest, big);
+                Some(inner[k])
+            } else { None }
+        }
+        _ => None,
+    }
+}
+
 fn key(p: [f64; 3]) -> [u64; 3] { p.map(|v| if v == 0.0 { 0 } else { v.to_bits() }) }
 
 /// Exact field nodes only: no nearest-node interpolation or net-name welding.
@@ -174,7 +231,7 @@ pub(super) fn trace(input: &Input, map: &MixedMap<'_>, budget: Budget) -> Result
         let required = reserve.checked_add(vertices.checked_mul(1024).ok_or_else(||error("MEMORY_LIMIT", "trace union overflow"))?).and_then(|v|v.checked_add(polygon_vertices.checked_mul(64)?)).ok_or_else(||error("MEMORY_LIMIT", "trace union overflow"))?;
         if required > budget.max_bytes { return Err(error("MEMORY_LIMIT", "trace union exceeds budget")); }
         let union = crate::geometry::areas::union(active.flat_map(|(set,_,_)| set.0.iter().cloned()));
-        original_polygons.extend(union.0);
+        original_polygons.extend(canonical_slab(&union, map.mesh().origin_mm, original_polygons.len())?.into_iter().map(|(mm, _)| mm));
     }
     if original_polygons.len() != input.metals.len() { return Err(error("PLANAR_TRACE", "slab ownership geometry mismatch")); }
     // Establish ownership from physical copper tetrahedra, never coordinate alone.
@@ -192,6 +249,7 @@ pub(super) fn trace(input: &Input, map: &MixedMap<'_>, budget: Budget) -> Result
         let xy = triangle.map(|i| map.mesh().planar_nodes_mm[i]);
         let probe_mm = Point::new(xy.iter().map(|p|p[0]).sum::<f64>()/3.,xy.iter().map(|p|p[1]).sum::<f64>()/3.);
         let matches: Vec<_> = input.metals.iter().zip(&original_polygons).enumerate().filter(|(_, (metal,poly))| slab[0] == metal.z0_m && slab[1] == metal.z1_m && poly.intersects(&probe_mm)).map(|(i,_)|i).collect();
+        let matches = if matches.len() > 1 { resolve_shared_owner(&original_polygons, &matches, &probe_mm).map_or(matches, |o| vec![o]) } else { matches };
         if matches.len() != 1 {
             let board = map.mesh();
             let xy = triangle.map(|i| board.planar_nodes_mm[i]);
@@ -294,7 +352,7 @@ mod tests {
 
 /// Build a conforming layered field request from the already prepared native grid.
 /// Distinct overlapping copper solids are refused until ownership is partitioned.
-pub(super) struct OriginalGeometry { polygons: Vec<Polygon<f64>>, bytes: usize }
+pub(super) struct OriginalGeometry { polygons: Vec<Polygon<f64>>, si_polygons: Vec<Polygon<f64>>, bytes: usize }
 pub(super) fn input_from_board(board: &super::board_mesh::BoardMesh, request: &super::board_mesh::Request, budget: Budget) -> Result<(Input, Vec<super::layered_capacitance::SpatialDielectric>, OriginalGeometry)> {
     use super::layered_capacitance::{Metal, Dielectric, Exterior, SpatialDielectric};
     use geo::{Area, Relate};
@@ -308,7 +366,7 @@ pub(super) fn input_from_board(board: &super::board_mesh::BoardMesh, request: &s
     let z: Vec<_>=board.mesh.nodes_m.chunks_exact(n).map(|p|p[0][2]).collect();
     let bounds=[[xy.iter().map(|p|p[0]).fold(f64::INFINITY,f64::min),xy.iter().map(|p|p[1]).fold(f64::INFINITY,f64::min)], [xy.iter().map(|p|p[0]).fold(f64::NEG_INFINITY,f64::max),xy.iter().map(|p|p[1]).fold(f64::NEG_INFINITY,f64::max)]];
     let convert = |ring: &geo::LineString<f64>| ring.0.iter().map(|p|[(p.x-board.origin_mm[0])*1e-3,(p.y-board.origin_mm[1])*1e-3]).collect::<Vec<_>>();
-    let mut metals=Vec::new(); let mut originals=Vec::new(); let mut original_bytes=0usize;
+    let mut metals=Vec::new(); let mut originals=Vec::new(); let mut si_originals=Vec::new(); let mut original_bytes=0usize;
     let mut output_bytes=planned;
     // Partition at existing z planes, unioning overlapping foil/barrel supports
     // in each slab. This matches the original single-owner copper mesh.
@@ -325,21 +383,16 @@ pub(super) fn input_from_board(board: &super::board_mesh::BoardMesh, request: &s
         original_bytes=original_bytes.checked_add(union_bytes).ok_or_else(||error("MEMORY_LIMIT","original geometry overflow"))?;
         output_bytes=output_bytes.checked_add(union_bytes).ok_or_else(||error("MEMORY_LIMIT","original geometry overflow"))?;
         if output_bytes>budget.max_bytes {return Err(error("MEMORY_LIMIT","original geometry exceeds budget"));}
-        let mut split_union = Vec::with_capacity(union.0.len());
-        for poly in &union.0 {
-            let parts = split_self_touching(poly).map_err(|e| error("COPPER_RING", &format!("physical copper polygon is a self-touching ring that cannot be split: {e}")))?;
-            if parts.len() != 1 || !geo::algorithm::Validation::is_valid(poly) { eprintln!("P7_COPPER_RING_SPLIT shape=physical:{} loops={}", metals.len() + split_union.len(), parts.len()); }
-            split_union.extend(parts);
-        }
-        let union = geo::MultiPolygon(split_union);
-        for poly in &union.0 {
+        let canonical = canonical_slab(&union, board.origin_mm, metals.len())?;
+        for (_, poly) in &canonical {
             let vertices=std::iter::once(poly.exterior()).chain(poly.interiors()).try_fold(0usize,|n,r|n.checked_add(r.0.len())).ok_or_else(||error("MEMORY_LIMIT", "metal polygon overflow"))?;
             output_bytes=output_bytes.checked_add(vertices.checked_mul(32).ok_or_else(||error("MEMORY_LIMIT", "metal polygon overflow"))?).and_then(|v|v.checked_add(256)).ok_or_else(||error("MEMORY_LIMIT", "metal polygon overflow"))?;
             if output_bytes>budget.max_bytes { return Err(error("MEMORY_LIMIT", "metal polygons exceed budget")); }
             if metals.len() >= budget.max_local_terms { return Err(error("MESH_LIMIT", "field metal count")); }
-            metals.push(Metal { source_id:format!("physical:{}",metals.len()),polygon_m:convert(poly.exterior()),holes_m:poly.interiors().iter().map(&convert).collect(),z0_m:slab[0],z1_m:slab[1] });
+            let ring = |r: &geo::LineString<f64>| r.0.iter().map(|p| [p.x, p.y]).collect::<Vec<_>>();
+            metals.push(Metal { source_id:format!("physical:{}",metals.len()),polygon_m:ring(poly.exterior()),holes_m:poly.interiors().iter().map(ring).collect(),z0_m:slab[0],z1_m:slab[1] });
         }
-        originals.extend(union.0);
+        for (mm, si) in canonical { originals.push(mm); si_originals.push(si); }
     }
     let dielectric=vec![Dielectric { source_id:"explicit-air-domain".into(),z0_m:z[0],z1_m:*z.last().unwrap(),epsilon_r:1. }];
     let mut regions=Vec::new(); let mut base=0.;
@@ -356,7 +409,7 @@ pub(super) fn input_from_board(board: &super::board_mesh::BoardMesh, request: &s
         base=end;
     }
     let planes=vec![0;z.len()];
-    Ok((Input { meshes:vec![PlaneInput::Exact { source_id:"board-overlay".into(),xy_m:xy,triangles:board.planar_triangles.clone() }], planes,z_m:z,xy_bounds_m:bounds,metals,dielectrics:dielectric,exterior:Exterior::InfinityBox },regions,OriginalGeometry{polygons:originals,bytes:original_bytes}))
+    Ok((Input { meshes:vec![PlaneInput::Exact { source_id:"board-overlay".into(),xy_m:xy,triangles:board.planar_triangles.clone() }], planes,z_m:z,xy_bounds_m:bounds,metals,dielectrics:dielectric,exterior:Exterior::InfinityBox },regions,OriginalGeometry{polygons:originals,si_polygons:si_originals,bytes:original_bytes}))
 }
 
 #[cfg(test)]
@@ -487,8 +540,10 @@ pub(super) fn certified_trace<'a>(input: &'a Input, original: &OriginalGeometry,
     let retained_union=original.bytes;
     if bytes.checked_add(retained_union).is_none_or(|v|v>budget.max_bytes) {return Err(error("MEMORY_LIMIT","certificate retained geometry exceeds budget"));}
     if original.polygons.len()!=input.metals.len(){return Err(error("PLANAR_TRACE","certificate metal count mismatch"));}
-    for (i,(metal,poly)) in input.metals.iter().zip(&original.polygons).enumerate() {
-        let convert=|r:&LineString<f64>| r.0.iter().map(|p|[(p.x-board.origin_mm[0])*1e-3,(p.y-board.origin_mm[1])*1e-3]).collect::<Vec<_>>();
+    if original.si_polygons.len()!=input.metals.len(){return Err(error("PLANAR_TRACE","certificate metal count mismatch"));}
+    // The canonical SI polygon is the metal itself (a polygon the mm to SI scaling invalidated was normalised there).
+    for (i,(metal,poly)) in input.metals.iter().zip(&original.si_polygons).enumerate() {
+        let convert=|r:&LineString<f64>| r.0.iter().map(|p|[p.x,p.y]).collect::<Vec<_>>();
         if metal.source_id!=format!("physical:{i}") || metal.polygon_m!=convert(poly.exterior()) || metal.holes_m!=poly.interiors().iter().map(convert).collect::<Vec<_>>() {return Err(error("PLANAR_TRACE","certificate metal geometry mismatch"));}
     }
     let mut copper=vec![None;count]; let mut epsilon=vec![0.;count]; let mut seen=vec![0u8;count]; let mut node_owners=vec![Vec::<usize>::new();mesh.nodes_m.len()];
@@ -505,6 +560,7 @@ pub(super) fn certified_trace<'a>(input: &'a Input, original: &OriginalGeometry,
         let idx=tet.slab*nt+tet.planar_triangle; let tri=triangles[tet.planar_triangle].map(|i|board.planar_nodes_mm[i]);
         let p=Point::new(tri.iter().map(|p|p[0]).sum::<f64>()/3.,tri.iter().map(|p|p[1]).sum::<f64>()/3.);
         let mut found:Vec<_>=input.metals.iter().zip(&original.polygons).enumerate().filter(|(_, (m,poly))|m.z0_m==input.z_m[tet.slab]&&m.z1_m==input.z_m[tet.slab+1]&&poly.intersects(&p)).map(|(i,_)|i).collect();
+        if found.len() > 1 { if let Some(o) = resolve_shared_owner(&original.polygons, &found, &p) { found = vec![o]; } }
         if found.is_empty() {
             // Union noise (rounding, renoding): as in the board ownership, a centre within 1e-2 mm of copper of this
             // layer belongs to the nearest one if it is clearly nearest (4x closer than the next); otherwise refuse.
@@ -512,6 +568,20 @@ pub(super) fn certified_trace<'a>(input: &'a Input, original: &OriginalGeometry,
             let mut near:Vec<(f64,usize)>=input.metals.iter().zip(&original.polygons).enumerate().filter(|(_,(m,_))|m.z0_m==input.z_m[tet.slab]&&m.z1_m==input.z_m[tet.slab+1]).map(|(i,(_,poly))|(Euclidean.distance(poly,&p),i)).filter(|(d,_)|*d<=1e-2).collect();
             near.sort_by(|a,b|a.0.total_cmp(&b.0));
             if near.first().is_some_and(|f|near.get(1).is_none_or(|n|4.*f.0<=n.0)) {found=vec![near[0].1];owner_noise+=1;owner_noise_max=owner_noise_max.max(near[0].0);}
+            else {
+                // Several copper polygons all within rounding distance (1e-6 mm) of the centre: it sits on a hairline between
+                // a large pour and numerical slivers of the canonical union. The pour dwarfing the rest by more than 1e6 in area owns it.
+                use geo::Area;
+                let close:Vec<usize>=near.iter().filter(|x|x.0<=1e-6).map(|x|x.1).collect();
+                if close.len()>1 {
+                    let areas:Vec<f64>=close.iter().map(|&i|original.polygons[i].unsigned_area()).collect();
+                    let (k,&big)=areas.iter().enumerate().max_by(|a,b|a.1.total_cmp(b.1)).unwrap();
+                    if areas.iter().sum::<f64>()-big<=big*1e-6 {
+                        eprintln!("P7_COPPER_OWNER_NOISE point=({:.9},{:.9}) mm owner=physical:{} hairlineCandidates={:?} maxDistanceMm={:e}",p.x(),p.y(),close[k],close,near.iter().map(|x|x.0).fold(0.,f64::max));
+                        found=vec![close[k]];owner_noise+=1;owner_noise_max=owner_noise_max.max(near.iter().map(|x|x.0).fold(0.,f64::max));
+                    }
+                }
+            }
         }
         if found.len()!=1 || copper[idx].is_some_and(|v|v!=found[0]) {
             use geo::{Distance,Euclidean,BoundingRect};
