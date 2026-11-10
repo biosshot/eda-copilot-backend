@@ -1396,7 +1396,16 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
                 && relation.get(CoordPos::Inside, CoordPos::Inside)
                     == Dimensions::TwoDimensional
             {
-                return Err(error("COPPER_OVERLAP", "ambiguous conductor ownership"));
+                let ov=crate::geometry::areas::intersection(&crate::geometry::areas::one(metal_polygons[i].clone()),&crate::geometry::areas::one(metal_polygons[j].clone())).unsigned_area();
+                let (ai,aj)=(metal_polygons[i].unsigned_area(),metal_polygons[j].unsigned_area());
+                // Noise tier: boundary rounding (overlap <= 1e-6 of both areas) or a numerical sliver of the canonical union (area <= 1e-6 of the other polygon) that the mm to metre scaling
+                // pushed into its large neighbour. Its tetrahedra are owned by the neighbour (P7_COPPER_OWNER_NOISE); the overlap is rounding.
+                if ov<=ai.max(aj)*1e-6 && (ai.min(aj)<=ai.max(aj)*1e-6 || ov<=ai.min(aj)*1e-6) {
+                    eprintln!("P7_COPPER_OVERLAP_NOISE metal {i} {:?} (area {ai:e} m2) and metal {j} {:?} (area {aj:e} m2) intersection {ov:e} m2 (sliver of the canonical union or boundary rounding; noise tier)",m.source_id,input.metals[j].source_id);
+                    continue;
+                }
+                let bb=|p:&Polygon<f64>| p.bounding_rect().map(|b|[[b.min().x,b.min().y],[b.max().x,b.max().y]]);
+                return Err(error("COPPER_OVERLAP", &format!("ambiguous conductor ownership: metal {i} {:?} (area {:e} m2, holes {}, bbox {:?}) and metal {j} {:?} (area {:e} m2, holes {}, bbox {:?}) overlap in z {}..{} with intersection area {:e} m2",m.source_id,metal_polygons[i].unsigned_area(),metal_polygons[i].interiors().len(),bb(&metal_polygons[i]),input.metals[j].source_id,metal_polygons[j].unsigned_area(),metal_polygons[j].interiors().len(),bb(&metal_polygons[j]),m.z0_m.max(input.metals[j].z0_m),m.z1_m.min(input.metals[j].z1_m),ov)));
             }
             if overlap_z>0. && relation.get(CoordPos::OnBoundary,CoordPos::OnBoundary)==Dimensions::OneDimensional
                 || overlap_z==0. && relation.get(CoordPos::Inside,CoordPos::Inside)==Dimensions::TwoDimensional {

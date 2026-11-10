@@ -1769,35 +1769,98 @@ impl CompactLocalHierarchy {
         Ok(())
     }
     /// Dense symmetric matvec (K * 1e-7 per Cartesian axis); bounds are an estimate
-    /// of 1e-5 relative table error, not a certificate.
+    /// of 1e-5 relative table error, not a certificate. All columns share one parallel
+    /// pass over the table (sums are reordered, so results agree with the serial
+    /// `fast_actions_reference` to rounding).
     fn fast_actions(&self, columns: &[Vec<f64>]) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
+        self.fast_actions_with(columns, 2_000_000)
+    }
+    fn fast_actions_with(&self, columns: &[Vec<f64>], entries_per_worker: usize) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, serde_json::Value)> {
         self.fast_fill()?;
         let n = self.space.cells.len();
         let table = self.fast_table.borrow();
+        let table: &[f64] = &table;
+        const GROUP: usize = 8;
+        const ROWS: usize = 64;
         let mut actions = Vec::with_capacity(columns.len());
         let mut bounds = Vec::with_capacity(columns.len());
-        for column in columns {
+        for group in columns.chunks(GROUP) {
             check_deadline(self.pair.start, self.pair.wall)?;
-            let mut y = vec![0.; 3 * n];
-            let mut magnitude = vec![0.; 3 * n];
-            for i in 0..n {
-                let row = &table[i * (i + 1) / 2..][..=i];
-                for (j, &k) in row.iter().enumerate() {
-                    for axis in 0..3 {
-                        let (a, b) = (3 * i + axis, 3 * j + axis);
-                        let t = k * column[b];
-                        y[a] += t; magnitude[a] += t.abs();
-                        if i != j { let t = k * column[a]; y[b] += t; magnitude[b] += t.abs(); }
+            let nc = group.len();
+            let workers = super::planar_hmatrix::workers_for(self.fast_threads, n * (n + 1) / 2, entries_per_worker).min(n.div_ceil(ROWS)).max(1);
+            // Chunks of rows are handed out from the long end first so the tail is short.
+            let chunks = n.div_ceil(ROWS);
+            let parts: Vec<(Vec<f64>, Vec<f64>)> = super::planar_hmatrix::run_workers(workers, |w, workers| {
+                    let (mut y, mut m) = (vec![0.; nc * 3 * n], vec![0.; nc * 3 * n]);
+                    for k in (w..chunks).step_by(workers) {
+                        let hi = n - k * ROWS;
+                        let lo = hi.saturating_sub(ROWS);
+                        for i in lo..hi {
+                            let row = &table[i * (i + 1) / 2..][..=i];
+                            for (c, column) in group.iter().enumerate() {
+                                let (yc, mc) = (&mut y[c * 3 * n..(c + 1) * 3 * n], &mut m[c * 3 * n..(c + 1) * 3 * n]);
+                                let xi = [column[3 * i], column[3 * i + 1], column[3 * i + 2]];
+                                let (mut ay, mut am) = ([0.; 3], [0.; 3]);
+                                for (j, &kv) in row[..i].iter().enumerate() {
+                                    for axis in 0..3 {
+                                        let t = kv * column[3 * j + axis];
+                                        ay[axis] += t; am[axis] += t.abs();
+                                        let u = kv * xi[axis];
+                                        yc[3 * j + axis] += u; mc[3 * j + axis] += u.abs();
+                                    }
+                                }
+                                let kv = row[i];
+                                for axis in 0..3 {
+                                    let t = kv * xi[axis];
+                                    ay[axis] += t; am[axis] += t.abs();
+                                    yc[3 * i + axis] += ay[axis]; mc[3 * i + axis] += am[axis];
+                                }
+                            }
+                        }
                     }
-                }
+                    (y, m)
+            });
+            let mut parts = parts.into_iter();
+            let (mut y, mut m) = parts.next().expect("at least one worker");
+            for (yb, mb) in parts {
+                for (p, q) in y.iter_mut().zip(&yb) { *p += q; }
+                for (p, q) in m.iter_mut().zip(&mb) { *p += q; }
             }
-            for v in &mut y { *v *= 1e-7; }
-            for v in &mut magnitude { *v *= 1e-7 * 1e-5; }
-            if y.iter().chain(&magnitude).any(|v| !v.is_finite()) { return Err(error("HYBRID_RANGE", "fast local action overflow")); }
-            actions.push(y); bounds.push(magnitude);
+            check_deadline(self.pair.start, self.pair.wall)?;
+            for c in 0..nc {
+                let mut yc = y[c * 3 * n..(c + 1) * 3 * n].to_vec();
+                let mut mc = m[c * 3 * n..(c + 1) * 3 * n].to_vec();
+                for v in &mut yc { *v *= 1e-7; }
+                for v in &mut mc { *v *= 1e-7 * 1e-5; }
+                if yc.iter().chain(&mc).any(|v| !v.is_finite()) { return Err(error("HYBRID_RANGE", "fast local action overflow")); }
+                actions.push(yc); bounds.push(mc);
+            }
         }
         let evidence = self.fast_info.borrow().clone().unwrap_or(serde_json::Value::Null);
         Ok((actions, bounds, evidence))
+    }
+    /// Serial single-column reference of `fast_actions` (kept for the batched-vs-single test).
+    #[cfg(test)]
+    fn fast_actions_reference(&self, column: &[f64]) -> Result<(Vec<f64>, Vec<f64>)> {
+        self.fast_fill()?;
+        let n = self.space.cells.len();
+        let table = self.fast_table.borrow();
+        let mut y = vec![0.; 3 * n];
+        let mut magnitude = vec![0.; 3 * n];
+        for i in 0..n {
+            let row = &table[i * (i + 1) / 2..][..=i];
+            for (j, &k) in row.iter().enumerate() {
+                for axis in 0..3 {
+                    let (a, b) = (3 * i + axis, 3 * j + axis);
+                    let t = k * column[b];
+                    y[a] += t; magnitude[a] += t.abs();
+                    if i != j { let t = k * column[a]; y[b] += t; magnitude[b] += t.abs(); }
+                }
+            }
+        }
+        for v in &mut y { *v *= 1e-7; }
+        for v in &mut magnitude { *v *= 1e-7 * 1e-5; }
+        Ok((y, magnitude))
     }
     #[cfg(test)]
     pub(super) fn cover_control(&self, columns:&[Vec<f64>], goals:&[f64], weights:&[f64]) -> Result<serde_json::Value> {
@@ -1993,6 +2056,31 @@ mod compact_reuse_tests {
         }
         let projection = fast.bound_projection_error(&columns, &goals, &weights).unwrap().unwrap();
         assert!(projection.iter().flatten().all(|b| b.is_finite() && *b >= 0.));
+    }
+
+    #[test]
+    fn batched_parallel_fast_action_matches_single_column_reference() {
+        // 150 tetrahedra on a lattice: several row chunks, several threads, more than one column group.
+        let base = [[0., 0., 0.], [0.001, 0., 0.], [0., 0.001, 0.], [0., 0., 0.001]];
+        let geometry: Vec<[[f64; 3]; 4]> = (0..150).map(|k| {
+            let (x, y, z) = ((k % 6) as f64 * 0.0013, ((k / 6) % 5) as f64 * 0.0017, (k / 30) as f64 * 0.0021);
+            base.map(|p| [p[0] + x, p[1] + y, p[2] + z])
+        }).collect();
+        let n = geometry.len();
+        let budget = AllocationBudget { max_bytes: 512 * 1024 * 1024, max_nodes: 1000, max_tetrahedra: 1000 };
+        let mut fast = CompactLocalHierarchy::new_with_config(geometry, budget, Instant::now(), Duration::from_secs(120), 1, false).unwrap();
+        assert!(fast.enable_fast(budget.max_bytes));
+        let columns: Vec<Vec<f64>> = (0..11).map(|c| (0..3 * n).map(|k| (((k * 13 + c * 5) % 17) as f64 - 8.) * 0.05).collect()).collect();
+        let (batched, batched_bounds, _) = fast.fast_actions_with(&columns, 1000).unwrap();
+        for (c, column) in columns.iter().enumerate() {
+            let (single, single_bounds) = fast.fast_actions_reference(column).unwrap();
+            let scale = single.iter().fold(0f64, |m, v| m.max(v.abs())).max(1e-300);
+            let bound_scale = single_bounds.iter().fold(0f64, |m, v| m.max(v.abs())).max(1e-300);
+            for i in 0..3 * n {
+                assert!((batched[c][i] - single[i]).abs() <= 1e-12 * scale, "column {c} row {i}");
+                assert!((batched_bounds[c][i] - single_bounds[i]).abs() <= 1e-12 * bound_scale, "bound column {c} row {i}");
+            }
+        }
     }
 
     #[test]

@@ -20,6 +20,7 @@ pub mod board_mesh;
 mod mesh_coarsen;
 mod roi_fallback;
 mod roi_electrical;
+mod copper_normalize;
 mod copper_skin_profile;
 pub mod board_prepare;
 pub mod board_response;

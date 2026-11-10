@@ -789,6 +789,7 @@ pub fn solve_checked(
     let masks = mesh.hybrid_mesh_masks.clone();
     let coarsening = mesh.mesh_coarsening.clone();
     let roi_fallback = mesh.roi_fallback.clone();
+    let copper_normalization = mesh.copper_normalization.clone();
     let mut checked = mixed_conductor::solve_checked_mesh_policy(
         mesh, geometry, mixed_grid, skin, &packages, partition, operator, budget, started, wall,
     )?;
@@ -801,5 +802,6 @@ pub fn solve_checked(
     if let Some(c) = coarsening { checked["provenance"]["meshCoarsening"] = c; }
     if let Some(c) = roi_fallback { checked["provenance"]["roiFallback"] = c; }
     if let Some(s) = &shrunk { checked["provenance"]["electricalRoi"] = s.evidence.clone(); }
+    if let Some(c) = copper_normalization { checked["provenance"]["copperNormalization"] = c; }
     Ok(checked)
 }

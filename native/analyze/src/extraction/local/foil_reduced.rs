@@ -32,6 +32,14 @@ use std::{
 #[path = "partitioned_conduction.rs"]
 mod partitioned_conduction;
 
+/// Cumulative wall-clock nanoseconds per enrichment phase (diagnostic; printed per iteration).
+const PROF_NAMES: [&str; 11] = ["compile", "solve", "residual", "magAction", "actLocal", "actHm", "actCross", "recovery", "grow", "charge", "makeModel"];
+static PROF: [std::sync::atomic::AtomicU64; 11] = [const { std::sync::atomic::AtomicU64::new(0) }; 11];
+fn prof_add(slot: usize, since: Instant) { PROF[slot].fetch_add(since.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed); }
+fn prof_line() -> String {
+    PROF_NAMES.iter().zip(&PROF).map(|(n, v)| format!("{n}={:.2}", v.load(std::sync::atomic::Ordering::Relaxed) as f64 * 1e-9)).collect::<Vec<_>>().join(" ")
+}
+
 #[derive(Clone)]
 struct Cell {
     /// Sparse incidence for one Cartesian current coordinate.
@@ -2115,7 +2123,7 @@ impl ReducedSpace {
                     bubble,
                     &self.basis.voltage[initial_nv..],
                     &self.charges[initial_nv..],
-                    |v| field.apply(v),
+                    |v| { let t = Instant::now(); let r = field.apply(v); prof_add(9, t); r },
                     false,
                 )? {
                     if pair_gradient {
@@ -2132,7 +2140,9 @@ impl ReducedSpace {
                     for (x, b) in self.basis.voltage[anchor].iter_mut().zip(&v) {
                         *x -= b;
                     }
+                    let charge_started = Instant::now();
                     self.charges[anchor] = field.apply(&self.basis.voltage[anchor])?;
+                    prof_add(9, charge_started);
                     self.basis.components[0].push(self.basis.voltage.len());
                     self.basis.voltage.push(v);
                     self.charges.push(c);
@@ -2150,10 +2160,14 @@ impl ReducedSpace {
             ));
         }
         if self.basis.current.len() > ni {
-            let common = if self.native_allocation {
-                &self.basis.current[..]
-            } else {
+            // The compact (approximate) operator acts per column with column-derived goals, so the
+            // actions of modes already in the basis are kept instead of being recomputed each pass.
+            let incremental = !self.native_allocation
+                || (self.approximate_magnetic && self.magnetic_actions.len() == ni);
+            let common = if incremental {
                 &self.basis.current[ni..]
+            } else {
+                &self.basis.current[..]
             };
             let added = magnetic(common, None, start, wall)?;
             self.max_magnetic_reciprocity = self.max_magnetic_reciprocity.max(added.reciprocity);
@@ -2165,7 +2179,7 @@ impl ReducedSpace {
                     .and_then(|v| v["modelRevision"].as_u64())
                     .unwrap_or(0)
                     + 1;
-                self.magnetic_actions = added.actions;
+                if incremental { self.magnetic_actions.extend(added.actions); } else { self.magnetic_actions = added.actions; }
                 self.magnetic_basis_certificate = added.certificate;
                 if let Some(certificate) = &mut self.magnetic_basis_certificate {
                     certificate["modelRevision"] = serde_json::json!(revision);
@@ -2174,6 +2188,7 @@ impl ReducedSpace {
                 self.magnetic_actions.extend(added.actions);
             }
         }
+        let model_started = Instant::now();
         let (model, reciprocity) = make_model(
             &self.cells,
             self.full_potentials,
@@ -2183,6 +2198,7 @@ impl ReducedSpace {
             &self.magnetic_actions,
             &self.ports,
         )?;
+        prof_add(10, model_started);
         self.model = model;
         self.max_electric_reciprocity = reciprocity;
         Ok(())
@@ -2291,6 +2307,8 @@ impl ReducedSpace {
                         max_seconds: Some(wall.saturating_sub(start.elapsed()).as_secs_f64()),
                     }
                 };
+                let iter_started = Instant::now();
+                let compile_started = Instant::now();
                 let (mut system, n, recovery) = if packages.is_empty() {
                     (
                         self.compile_system(solve_budget)?,
@@ -2306,6 +2324,7 @@ impl ReducedSpace {
                     )?;
                     (joint.system, joint.size, Some(joint.recovery))
                 };
+                prof_add(0, compile_started);
                 for (p, &g) in conductances.iter().enumerate() {
                     system.add_port_admittance(p, g, 0.)?;
                 }
@@ -2334,12 +2353,14 @@ impl ReducedSpace {
                         // A floating component can carry a port-scale constant
                         // and sub-ULP resistive drops. Keep the solved shape
                         // before the absolute voltage lift rounds those drops.
+                        let solve_started = Instant::now();
                         let (state, voltage_shape) = if use_voltage_shape {
                             let (state, shape) = system.solve_charge_coordinates_split(w, &rhs, &mut stats)?;
                             (state, Some(shape))
                         } else {
                             (system.solve(w, rhs, &initial, &mut stats)?, None)
                         };
+                        prof_add(1, solve_started);
                         let mut real = system.port_voltages(&state[..n], ports);
                         let mut imaginary = system.port_voltages(&state[n..], ports);
                         let mut net_real: Vec<_> = drive
@@ -2387,6 +2408,7 @@ impl ReducedSpace {
                             .map_or((re, im), |s| (s[0].as_slice(), s[1].as_slice()));
                         let nv = self.basis.voltage.len();
                         let shape = voltage_shape.as_ref().map(|v| [&v[..nv], &v[n..n + nv]]);
+                        let residual_started = Instant::now();
                         let residual = self.full_residual_with_shape(
                             w,
                             copper_re,
@@ -2396,6 +2418,7 @@ impl ReducedSpace {
                             Some((magnetic, start, wall)),
                             shape,
                         )?;
+                        prof_add(2, residual_started);
                         let norm = residual.norm;
                         let kvl_uncertainty_relative = residual.kvl_uncertainty_relative;
                         let magnetic_certificate = residual.magnetic_certificate.clone();
@@ -2506,6 +2529,7 @@ impl ReducedSpace {
                                 wall,
                             )?;
                         }
+                        let recovery_started = Instant::now();
                         if let Some(map) = spatial_map {
                             let nv=self.basis.voltage.len();
                             let re=lift(&self.basis.current,&copper_re[nv..],self.cells.len());
@@ -2532,6 +2556,7 @@ impl ReducedSpace {
                                 column["returnBoundary"]=json!({"policy":"internal-guard-flux-v1","boundsMm":bounds_mm,"conductiveA":conductive,"displacementA":displacement,"portCurrentA":port,"unresolvedA":unresolved,"relative":relative,"absoluteFloorA":1e-12,"threshold":0.01,"passed":port>1e-12&&relative<0.01});
                             }
                         }
+                        prof_add(7, recovery_started);
                         if loss_grams {
                             let nv = self.basis.voltage.len();
                             gram_copper.push(copper_re[nv..].iter().zip(&copper_im[nv..]).map(|(&r,&i)| [r,i]).collect());
@@ -2609,6 +2634,7 @@ impl ReducedSpace {
                 if std::env::var_os("P7_MAGNETIC_PHASE_PROFILE").as_deref() == Some(std::ffi::OsStr::new("1")) {
                     eprintln!("P7_COMPACT_GRID_STEP {}", history.last().expect("recorded iteration"));
                 }
+                eprintln!("P7_COMPACT_ITER iteration={iteration} checkSeconds={:.2} elapsed={:.1} cumulative: {}", iter_started.elapsed().as_secs_f64(), start.elapsed().as_secs_f64(), prof_line());
                 if worst.checked_with(residual_limit).is_ok() {
                     check_time(start, wall)?;
                     let residual_tier={let m=max_kcl.max(max_kvl);if m<=RESIDUAL_LIMIT {"target"} else if m<=1e-6 {"noise"} else {"approximation"}};
@@ -2628,6 +2654,7 @@ impl ReducedSpace {
                 }
                 drop(parameters);
                 drop(samples);
+                let grow_started = Instant::now();
                 if let Some((_, other)) = other {
                     // Once charge continuity is admitted, spread the two
                     // phase corrections over independently failing drives.
@@ -2640,6 +2667,7 @@ impl ReducedSpace {
                 } else {
                     self.grow(&worst, initial_nv, names, dc, field, magnetic, start, wall, pair_gradient)?;
                 }
+                prof_add(8, grow_started);
             }
             unreachable!("bounded matched grid reaches a final residual")
         })();
@@ -3706,6 +3734,67 @@ pub(super) fn cross_fast_entry(prism:&super::prism::Prism,tetra:[[f64;3];4],ma:&
 /// Dense prism x tetra table (fast mode): filled once, replaces the cross-pair loop.
 #[derive(Default)]
 struct CrossFast { enabled:bool, table:std::cell::RefCell<Vec<f64>>, info:std::cell::RefCell<Option<serde_json::Value>> }
+/// One parallel pass over the dense prism x tetra table `K[t*np+a]` for a group of columns.
+/// Returns the prism-side accumulators `[column][6][np]` (potential x,y,z then |K|-weighted envelope x,y,z:
+/// sum_t K[t,a] d_t) and the tetra-side rows `(t, [column][6])` (sum_a K[t,a] d_a), sorted by t.
+/// `da/ea` are prism densities/envelopes, `dt/et` tetra ones, split by component. None when `alive`
+/// turned false (deadline) or a worker died.
+fn cross_dense_pass(table:&[f64],np:usize,nt:usize,threads:usize,da:&[[Vec<f64>;3]],ea:&[[Vec<f64>;3]],dt:&[[Vec<f64>;3]],et:&[[Vec<f64>;3]],alive:&(dyn Fn()->bool+Sync))->Option<(Vec<f64>,Vec<(usize,Vec<f64>)>)> {
+    use std::sync::atomic::{AtomicBool,Ordering::Relaxed};
+    // The table is walked in column tiles of prisms: the densities and accumulators of a tile stay in cache
+    // while every tetra row streams through, so the pass reads the table once instead of re-streaming the
+    // whole prism-side vectors for every row. Tiles are disjoint in the prism-side result.
+    const TILE:usize=1024;
+    let nc=da.len();
+    let tiles=np.div_ceil(TILE);
+    let abort=AtomicBool::new(false);
+    // Per tile: (tile index, prism-side [column][6][width], tetra-side partial [t][column][6]).
+    let parts:Vec<Vec<(usize,Vec<f64>,Vec<f64>)>>=super::planar_hmatrix::run_workers(threads,|w,workers| {
+        let mut out=Vec::new();
+        for tile in (w..tiles).step_by(workers) {
+            if abort.load(Relaxed) || !alive() {abort.store(true,Relaxed);break;}
+            let (a0,a1)=(tile*TILE,((tile+1)*TILE).min(np));let width=a1-a0;
+            let mut pa=vec![0.;nc*6*width];let mut q=vec![0.;nt*nc*6];
+            for t in 0..nt {
+                let row=&table[t*np+a0..t*np+a1];
+                for c in 0..nc {
+                    let pc=&mut pa[c*6*width..(c+1)*6*width];
+                    let (p0,rest)=pc.split_at_mut(width);let (p1,rest)=rest.split_at_mut(width);let (p2,rest)=rest.split_at_mut(width);
+                    let (b0v,rest)=rest.split_at_mut(width);let (b1v,b2v)=rest.split_at_mut(width);
+                    let (x,y,z)=(dt[c][0][t],dt[c][1][t],dt[c][2][t]);let (ex,ey,ez)=(et[c][0][t],et[c][1][t],et[c][2][t]);
+                    let (d0,d1,d2)=(&da[c][0][a0..a1],&da[c][1][a0..a1],&da[c][2][a0..a1]);
+                    let (e0,e1,e2)=(&ea[c][0][a0..a1],&ea[c][1][a0..a1],&ea[c][2][a0..a1]);
+                    let (mut q0,mut q1,mut q2,mut r0,mut r1,mut r2)=(0.,0.,0.,0.,0.,0.);
+                    for a in 0..width {
+                        let v=row[a];let m=v.abs();
+                        q0+=v*d0[a];q1+=v*d1[a];q2+=v*d2[a];
+                        r0+=m*e0[a];r1+=m*e1[a];r2+=m*e2[a];
+                        p0[a]+=v*x;p1[a]+=v*y;p2[a]+=v*z;
+                        b0v[a]+=m*ex;b1v[a]+=m*ey;b2v[a]+=m*ez;
+                    }
+                    q[(t*nc+c)*6..(t*nc+c)*6+6].copy_from_slice(&[q0,q1,q2,r0,r1,r2]);
+                }
+            }
+            out.push((tile,pa,q));
+        }
+        out
+    });
+    if abort.load(Relaxed) {return None;}
+    let mut tiles_out:Vec<(usize,Vec<f64>,Vec<f64>)>=parts.into_iter().flatten().collect();
+    if tiles_out.len()!=tiles {return None;}
+    tiles_out.sort_unstable_by_key(|t|t.0);
+    let mut pa=vec![0.;nc*6*np];
+    let mut rows:Vec<(usize,Vec<f64>)>=(0..nt).map(|t|(t,vec![0.;nc*6])).collect();
+    for (tile,tpa,tq) in &tiles_out {
+        let (a0,width)=(tile*TILE,(np-tile*TILE).min(TILE));
+        for c in 0..nc {for k in 0..6 {
+            pa[(c*6+k)*np+a0..(c*6+k)*np+a0+width].copy_from_slice(&tpa[(c*6+k)*width..(c*6+k+1)*width]);
+        }}
+        for (t,row) in rows.iter_mut() {for (x,y) in row.iter_mut().zip(&tq[*t*nc*6..(*t+1)*nc*6]) {*x+=y;}}
+    }
+    Some((pa,rows))
+}
+static CROSS_PROF:[std::sync::atomic::AtomicU64;4]=[const{std::sync::atomic::AtomicU64::new(0)};4];
 struct CompactMixedMagnetic {
     supports:Vec<super::planar_operator::SparseSupport>,
     dimensions:usize,
@@ -3766,7 +3855,9 @@ impl CompactMixedMagnetic {
         let hm=if supports.len()>=512 && std::env::var("P7_PLANAR_HMATRIX").as_deref()!=Ok("0") {
             let refs:Vec<&super::prism::Prism>=supports.iter().map(|s|&s.prism).collect();
             let h=super::planar_hmatrix::PlanarHMatrix::build(&refs,mixed_budget/2,super::planar_hmatrix::Params::from_env(),start,wall)?;
-            eprintln!("P7_COMPACT_HMATRIX {}",h.stats.json());Some(h)
+            eprintln!("P7_COMPACT_HMATRIX {}",h.stats.json());
+            if super::planar_operator::prof_on() {eprintln!("P7_PAIR_PROFILE {}",super::planar_operator::prof_json());}
+            Some(h)
         } else {None};
         let mixed_budget=if hm.is_some() {mixed_budget-mixed_budget/2} else {mixed_budget};
         let local_hierarchy=if local.is_empty(){None}else{let mut h=super::volume_integral_magnetic::CompactLocalHierarchy::new(local.iter().map(|s|s.tetra).collect(),AllocationBudget{max_bytes:local_budget,..budget},start,wall)?;if hm.is_some()&&supports.len()>=512{eprintln!("P7_COMPACT_LOCAL_FAST enabled={}",h.enable_fast(local_budget));}Some(h)};
@@ -3815,19 +3906,23 @@ impl CompactMixedMagnetic {
         let totals:Vec<(usize,usize,usize,usize,f64)>=std::thread::scope(|scope| {
             let handles:Vec<_>=(0..threads).map(|_|scope.spawn(|| {
                 let mut t=(0usize,0usize,0usize,0usize,0f64);
+                let prof=super::planar_operator::prof_on();let mut loc=[0u64;4];
                 let mut run=||->Result<()> { loop {
                     if abort.load(Relaxed) {return Ok(());}
                     let k=next.fetch_add(1,Relaxed);if k>=nt {return Ok(());}
                     let mut row=rows[k].lock().map_err(|_|error("MAGNETIC_CONFIG","cross row poisoned"))?;
                     for a in 0..np {
                         check_time(start,wall)?;
+                        let t0=if prof {Some(Instant::now())} else {None};
                         let e=cross_fast_entry(&supports[a].prism,local[k].tetra,&moments[a],&moments[np+k],budget,start,wall)?;
+                        if let Some(t0)=t0 {loc[(e.path as usize).min(3)]+=t0.elapsed().as_nanos() as u64;}
                         row[a]=e.value;
                         match e.path {0=>t.0+=1,1=>t.1+=1,_=>t.2+=1}
                         t.4=t.4.max(e.change);if e.approximated {t.3+=1;}
                     }
                 }};
                 if let Err(e)=run() {abort.store(true,Relaxed);failure.lock().unwrap().get_or_insert(e);}
+                for (slot,v) in loc.iter().enumerate() {CROSS_PROF[slot].fetch_add(*v,Relaxed);}
                 t
             })).collect();
             handles.into_iter().map(|h|h.join().unwrap_or_else(|_|{abort.store(true,Relaxed);failure.lock().unwrap().get_or_insert(error("MAGNETIC_CONFIG","cross fill worker panicked"));(0,0,0,0,0.)})).collect()
@@ -3835,35 +3930,54 @@ impl CompactMixedMagnetic {
         drop(rows);
         if let Some(e)=failure.into_inner().unwrap() {return Err(e);}
         let sum=|f:fn(&(usize,usize,usize,usize,f64))->usize|totals.iter().map(f).sum::<usize>();
-        let info=serde_json::json!({"operator":"compact-fast-dense-cross","pairs":np*nt,"momentPairs":sum(|t|t.0),"gaussPairs":sum(|t|t.1),"slowPairs":sum(|t|t.2),"approximatedPairs":sum(|t|t.3),"maxChange":totals.iter().fold(0f64,|m,t|m.max(t.4)),"fillSeconds":started.elapsed().as_secs_f64(),"storedBytes":np*nt*8,"threads":threads});
+        let info=serde_json::json!({"operator":"compact-fast-dense-cross","pairs":np*nt,"momentPairs":sum(|t|t.0),"gaussPairs":sum(|t|t.1),"slowPairs":sum(|t|t.2),"approximatedPairs":sum(|t|t.3),"maxChange":totals.iter().fold(0f64,|m,t|m.max(t.4)),"fillSeconds":started.elapsed().as_secs_f64(),"storedBytes":np*nt*8,"threads":threads,"profileCpuSeconds":if super::planar_operator::prof_on() {serde_json::json!({"moments":CROSS_PROF[0].load(Relaxed) as f64*1e-9,"gauss":CROSS_PROF[1].load(Relaxed) as f64*1e-9,"slowTouching":CROSS_PROF[2].load(Relaxed) as f64*1e-9,"slowNear":CROSS_PROF[3].load(Relaxed) as f64*1e-9})} else {serde_json::Value::Null}});
         eprintln!("P7_COMPACT_CROSS_FAST {info}");
         *self.cross.info.borrow_mut()=Some(info);
         *self.cross.table.borrow_mut()=table;
         Ok(())
     }
     /// Rectangular prefix(prisms) x suffix(tets) action from the dense table; bounds are a flat 1e-5 estimate.
+    /// One parallel pass over the table serves a group of columns (see `cross_dense_pass`); the
+    /// prism-side and tetra-side potentials are then scattered through the supports.
     fn cross_fast_apply(&self,density:&[Vec<[f64;3]>],output:&mut [Vec<f64>],bounds:&mut [Vec<f64>],envelope:&[Vec<[f64;3]>])->Result<()> {
         self.cross_fast_fill()?;
-        let np=self.supports.len();let table=self.cross.table.borrow();
+        let (np,nt)=(self.supports.len(),self.local.len());let table=self.cross.table.borrow();
         if table.is_empty() {return Ok(());}
-        for c in 0..output.len() { for t in 0..self.local.len() {
-            check_time(self.start,self.wall)?;
-            let b=np+t;let dt=density[c][b];let row=&table[t*np..(t+1)*np];
-            for a in 0..np {
-                let v=row[a];let da=density[c][a];
-                if da==[0.;3] && dt==[0.;3] {continue;}
-                for &(i,d) in &self.supports[a].current_density {
-                    output[c][i]+=1e-7*v*(0..3).map(|k|d[k]*dt[k]).sum::<f64>();
-                    let mut e=0.;for k in 0..3 {e=compact_bound_sum(e,compact_bound_product(d[k].abs(),envelope[c][b][k]));}
-                    bounds[c][i]=compact_bound_sum(bounds[c][i],compact_bound_product(compact_bound_product(1e-7,1e-5*v.abs()),e));
+        let threads=super::planar_hmatrix::workers_for(super::planar_hmatrix::Params::from_env().threads.min(nt),np*nt,1_000_000);
+        const GROUP:usize=8;
+        let (start,wall)=(self.start,self.wall);
+        let soa=|v:&[[f64;3]]|->[Vec<f64>;3] {[0,1,2].map(|k|v.iter().map(|x|x[k]).collect())};
+        let columns:Vec<usize>=(0..output.len()).collect();
+        for group in columns.chunks(GROUP) {
+            check_time(start,wall)?;
+            let nc=group.len();
+            let da:Vec<[Vec<f64>;3]>=group.iter().map(|&c|soa(&density[c][..np])).collect();
+            let ea:Vec<[Vec<f64>;3]>=group.iter().map(|&c|soa(&envelope[c][..np])).collect();
+            let dt:Vec<[Vec<f64>;3]>=group.iter().map(|&c|soa(&density[c][np..])).collect();
+            let et:Vec<[Vec<f64>;3]>=group.iter().map(|&c|soa(&envelope[c][np..])).collect();
+            let (pa,tetra_rows)=cross_dense_pass(&table,np,nt,threads,&da,&ea,&dt,&et,&|| check_time(start,wall).is_ok())
+                .ok_or_else(||check_time(start,wall).err().unwrap_or_else(||error("MAGNETIC_CONFIG","cross apply worker failed")))?;
+            check_time(start,wall)?;
+            for (k,&c) in group.iter().enumerate() {
+                let scatter=|d:&[(usize,[f64;3])],pot:[f64;3],mag:[f64;3],output:&mut [f64],bounds:&mut [f64]| {
+                    for &(i,d) in d {
+                        output[i]+=1e-7*(0..3).map(|k|d[k]*pot[k]).sum::<f64>();
+                        let mut e=0.;for k in 0..3 {e=compact_bound_sum(e,compact_bound_product(d[k].abs(),mag[k]));}
+                        bounds[i]=compact_bound_sum(bounds[i],compact_bound_product(compact_bound_product(1e-7,1e-5),e));
+                    }
+                };
+                let base=k*6*np;
+                for a in 0..np {
+                    let pot=[pa[base+a],pa[base+np+a],pa[base+2*np+a]];let mag=[pa[base+3*np+a],pa[base+4*np+a],pa[base+5*np+a]];
+                    scatter(&self.supports[a].current_density,pot,mag,&mut output[c][..],&mut bounds[c][..]);
                 }
-                for &(i,d) in &self.local[t].densities {
-                    output[c][i]+=1e-7*v*(0..3).map(|k|d[k]*da[k]).sum::<f64>();
-                    let mut e=0.;for k in 0..3 {e=compact_bound_sum(e,compact_bound_product(d[k].abs(),envelope[c][a][k]));}
-                    bounds[c][i]=compact_bound_sum(bounds[c][i],compact_bound_product(compact_bound_product(1e-7,1e-5*v.abs()),e));
+                for (t,q) in &tetra_rows {
+                    let q=&q[k*6..k*6+6];
+                    scatter(&self.local[*t].densities,[q[0],q[1],q[2]],[q[3],q[4],q[5]],&mut output[c][..],&mut bounds[c][..]);
                 }
             }
-        }}
+            let _=nc;
+        }
         Ok(())
     }
     fn near_pair(&self,a:usize,b:usize)->Result<f64> {
@@ -3919,6 +4033,7 @@ impl CompactMixedMagnetic {
         let mut density=vec![vec![[0.;3];ns];count];let mut envelope=density.clone();let mut output=vec![vec![0.;dim];count];let mut bounds=output.clone();
         for (c,x) in columns.iter().enumerate() {for s in 0..ns {for &(i,d) in self.densities(s) {if i>=dim {return Err(error("HYBRID_INPUT","invalid current support"));}for k in 0..3 {density[c][s][k]+=d[k]*x[i];envelope[c][s][k]=compact_bound_sum(envelope[c][s][k],compact_bound_product(d[k].abs(),x[i].abs()));}}}}
         eprintln!("P7_COMPACT_ACTION stage=local-start action={} elapsed={:.3}",self.action_count.get(),self.start.elapsed().as_secs_f64());
+        let local_started=Instant::now();
         if let Some(tree) = &self.local_hierarchy {
             use super::volume_integral_magnetic::hierarchical_magnetic::Interval;
             let goals = goals.ok_or_else(||error("HIERARCHICAL_MAGNETIC_GOAL", "local hierarchy requires action goals"))?;
@@ -3966,17 +4081,22 @@ impl CompactMixedMagnetic {
                 }}
             }
         }
+        prof_add(4,local_started);
+        let hm_started=Instant::now();
         if let Some(hm)=&self.hm {
             let np=self.supports.len();
-            for c in 0..count {
-                let (pot,env)=hm.apply(&density[c][..np]);
+            let rhos:Vec<&[[f64;3]]>=(0..count).map(|c|&density[c][..np]).collect();
+            let applied=hm.apply_many(&rhos,super::planar_hmatrix::Params::from_env().threads);
+            for (c,(pot,env)) in applied.iter().enumerate() {
                 for a in 0..np {for &(i,d) in &self.supports[a].current_density {
                     output[c][i]+=1e-7*(0..3).map(|k|d[k]*pot[a][k]).sum::<f64>();
                     for k in 0..3 {bounds[c][i]=compact_bound_sum(bounds[c][i],compact_bound_product(1e-7,compact_bound_product(d[k].abs(),env[a][k])));}
                 }}
             }
         }
+        prof_add(5,hm_started);
         eprintln!("P7_COMPACT_ACTION stage=cross-start action={} elapsed={:.3}",self.action_count.get(),self.start.elapsed().as_secs_f64());
+        let cross_started=Instant::now();
         let mut pl_jobs=Vec::with_capacity(32);
         if self.cross.enabled {self.cross_fast_apply(&density,&mut output,&mut bounds,&envelope)?;} else {for far in [true,false] {let mut body=|a:usize,b:usize|->Result<()> {
             check_time(self.start,self.wall)?;if (0..count).all(|c|density[c][a]==[0.;3] && density[c][b]==[0.;3]) {return Ok(());}
@@ -4004,6 +4124,7 @@ impl CompactMixedMagnetic {
                 if error_bound>0. {let mut rows=Vec::with_capacity(self.densities(a).len()+self.densities(b).len());rows.extend(self.densities(a).iter().map(|x|x.0));if a!=b {rows.extend(self.densities(b).iter().map(|x|x.0));}rows.sort_unstable();rows.dedup();for i in rows {bounds[c][i]=compact_bound_sum(bounds[c][i],contribution(c,i,error_bound));}}
             } Ok(())
         }; if self.hm.is_some() {self.mixed_plan.visit_cross_pairs(far,&mut body)?} else {self.mixed_plan.visit_pairs(far,&mut body)?} if !pl_jobs.is_empty() {self.flush_pl(&mut pl_jobs,&density,&mut output)?;}}}
+        prof_add(6,cross_started);
         eprintln!("P7_COMPACT_ACTION stage=end action={} elapsed={:.3}",self.action_count.get(),self.start.elapsed().as_secs_f64());
         if output.iter().flatten().chain(bounds.iter().flatten()).any(|v|!v.is_finite()){return Err(error("HYBRID_RANGE","mixed magnetic batch overflow"));}Ok((output,bounds))
     }
@@ -4078,7 +4199,10 @@ pub(super) fn solve_compact_adaptive(
                 super::volume_integral_magnetic::hierarchical_magnetic::action_goal(scale,angular_max)
             }).collect::<Result<Vec<_>>>()?; &derived
         };
+        let action_started=Instant::now();
         let (actions,bounds)=magnetic.apply_batch(q,Some(goals))?;
+        prof_add(3,action_started);
+        eprintln!("P7_COMPACT_ACTION_CALL columns={} seconds={:.2} elapsed={:.1}",q.len(),action_started.elapsed().as_secs_f64(),start.elapsed().as_secs_f64());
         Ok(Magnetic{actions,error_bounds:Some(bounds),certificate:Some(serde_json::json!({"policy":"compact-mixed-near-far","nearQuadratureErrorCertified":false})),reciprocity:0.,refinement:0.})
     };
     super::board_foil::phase_trace("magnetic-start",start,serde_json::json!({"currentModes":basis.current.len()}));
@@ -4253,5 +4377,37 @@ mod cross_fill_bench {
             let p99 = super::super::volume_integral_magnetic::bench_percentile(&mut e, 0.99);
             println!("  accuracy {:14} samples={:4} max={max:.3e} p99={p99:.3e}", NAMES[p], e.len());
         }
+    }
+}
+
+#[cfg(test)]
+mod cross_dense_pass_tests {
+    use super::*;
+    #[test]
+    fn batched_parallel_pass_matches_per_column_loops() {
+        let (np,nt,nc)=(37usize,19usize,3usize);
+        let value=|i:usize,j:usize|((i*31+j*17)%23) as f64*0.37-4.1;
+        let table:Vec<f64>=(0..nt*np).map(|k|value(k/np,k%np)).collect();
+        let split=|n:usize,c:usize,salt:usize|->[Vec<f64>;3] {[0,1,2].map(|k|(0..n).map(|i|((i*7+c*5+k*3+salt)%11) as f64*0.21-1.).collect())};
+        let da:Vec<_>=(0..nc).map(|c|split(np,c,1)).collect();let ea:Vec<_>=(0..nc).map(|c|split(np,c,2).map(|v|v.into_iter().map(f64::abs).collect())).collect();
+        let dt:Vec<_>=(0..nc).map(|c|split(nt,c,3)).collect();let et:Vec<_>=(0..nc).map(|c|split(nt,c,4).map(|v|v.into_iter().map(f64::abs).collect())).collect();
+        let (pa,rows)=cross_dense_pass(&table,np,nt,4,&da,&ea,&dt,&et,&|| true).unwrap();
+        assert_eq!(rows.len(),nt);
+        // Single-column reference: plain nested loops, columns one at a time.
+        for c in 0..nc {
+            for a in 0..np { for k in 0..3 {
+                let pot:f64=(0..nt).map(|t|table[t*np+a]*dt[c][k][t]).sum();
+                let mag:f64=(0..nt).map(|t|table[t*np+a].abs()*et[c][k][t]).sum();
+                assert!((pa[c*6*np+k*np+a]-pot).abs()<=1e-12*(1.+pot.abs()));
+                assert!((pa[c*6*np+(3+k)*np+a]-mag).abs()<=1e-12*(1.+mag.abs()));
+            }}
+            for (t,q) in &rows { for k in 0..3 {
+                let pot:f64=(0..np).map(|a|table[t*np+a]*da[c][k][a]).sum();
+                let mag:f64=(0..np).map(|a|table[t*np+a].abs()*ea[c][k][a]).sum();
+                assert!((q[c*6+k]-pot).abs()<=1e-12*(1.+pot.abs()));
+                assert!((q[c*6+3+k]-mag).abs()<=1e-12*(1.+mag.abs()));
+            }}
+        }
+        assert!(cross_dense_pass(&table,np,nt,2,&da,&ea,&dt,&et,&|| false).is_none());
     }
 }
