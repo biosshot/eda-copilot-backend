@@ -21,16 +21,16 @@ impl Params {
 pub(super) struct Stats {
     pub supports: usize, pub far_blocks: usize, pub near_blocks: usize, pub exact_pairs: usize, pub moment_pairs: usize,
     pub stored_bytes: usize, pub max_rank: usize, pub build_seconds: f64, pub eps: f64,
-    pub max_order: usize, pub max_change: f64, pub unconverged: usize, pub approximated: usize, pub aca_dense_fallbacks: usize, pub fast_pairs: usize, pub slow_ns: u64,
+    pub max_order: usize, pub max_change: f64, pub unconverged: usize, pub approximated: usize, pub aca_dense_fallbacks: usize, pub fast_pairs: usize, pub slow_ns: u64, pub cpu_ns: u64,
 }
 impl Stats {
     fn merge(&mut self, o: &Stats) {
         self.far_blocks += o.far_blocks; self.near_blocks += o.near_blocks; self.exact_pairs += o.exact_pairs; self.fast_pairs += o.fast_pairs;self.moment_pairs += o.moment_pairs;
         self.max_rank = self.max_rank.max(o.max_rank); self.max_order = self.max_order.max(o.max_order); self.max_change = self.max_change.max(o.max_change);
-        self.slow_ns += o.slow_ns; self.unconverged += o.unconverged; self.approximated += o.approximated; self.aca_dense_fallbacks += o.aca_dense_fallbacks;
+        self.slow_ns += o.slow_ns; self.cpu_ns += o.cpu_ns; self.unconverged += o.unconverged; self.approximated += o.approximated; self.aca_dense_fallbacks += o.aca_dense_fallbacks;
     }
     pub(super) fn json(&self) -> serde_json::Value {
-        serde_json::json!({"supports":self.supports,"farBlocks":self.far_blocks,"nearBlocks":self.near_blocks,"exactPairs":self.exact_pairs,"fastPairs":self.fast_pairs,"momentPairs":self.moment_pairs,"storedBytes":self.stored_bytes,"maxRank":self.max_rank,"buildSeconds":self.build_seconds,"eps":self.eps,"maxOrder":self.max_order,"maxRelativeChange":self.max_change,"unconvergedPairs":self.unconverged,"approximatedPairs":self.approximated,"acaDenseFallbacks":self.aca_dense_fallbacks})
+        serde_json::json!({"supports":self.supports,"farBlocks":self.far_blocks,"nearBlocks":self.near_blocks,"exactPairs":self.exact_pairs,"fastPairs":self.fast_pairs,"momentPairs":self.moment_pairs,"storedBytes":self.stored_bytes,"maxRank":self.max_rank,"buildSeconds":self.build_seconds,"eps":self.eps,"maxOrder":self.max_order,"maxRelativeChange":self.max_change,"unconvergedPairs":self.unconverged,"approximatedPairs":self.approximated,"acaDenseFallbacks":self.aca_dense_fallbacks,"cpuSeconds":self.cpu_ns as f64*1e-9})
     }
 }
 
@@ -60,6 +60,21 @@ enum Store { Dense(Vec<f64>), Low { rank: usize, u: Vec<f64>, v: Vec<f64>, err: 
 struct HBlock { a0: usize, a1: usize, b0: usize, b1: usize, diag: bool, store: Store }
 
 pub(super) struct PlanarHMatrix { n: usize, order: Vec<usize>, blocks: Vec<HBlock>, pub stats: Stats }
+
+/// Workers worth starting for `entries` table entries per pass: a fork-join costs a scheduler
+/// round trip per thread (tens of milliseconds on a loaded machine), so small tables stay inline.
+pub(super) fn workers_for(threads: usize, entries: usize, entries_per_worker: usize) -> usize { threads.max(1).min(entries / entries_per_worker.max(1)).max(1) }
+/// Runs `f(worker, workers)` on `workers` scoped threads and collects the results in worker order; a single
+/// worker runs inline. Callers stripe their work by worker index (not a shared counter), so each worker's
+/// accumulation order, and hence the summed result, is the same on every run.
+pub(super) fn run_workers<T: Send>(workers: usize, f: impl Fn(usize, usize) -> T + Sync) -> Vec<T> {
+    if workers <= 1 { return vec![f(0, 1)]; }
+    std::thread::scope(|scope| {
+        let f = &f;
+        let handles: Vec<_> = (0..workers).map(|w| scope.spawn(move || f(w, workers))).collect();
+        handles.into_iter().map(|h| h.join().expect("worker thread")).collect()
+    })
+}
 
 fn dot(x: &[f64], y: &[f64]) -> f64 { x.iter().zip(y).map(|(a, b)| a * b).sum() }
 
@@ -188,11 +203,30 @@ impl PlanarHMatrix {
         let blocks_done = AtomicUsize::new(0);
         let exact_done = AtomicUsize::new(0);
         let (fast_done, slow_ns_done, near_done, fallback_done) = (AtomicUsize::new(0), std::sync::atomic::AtomicU64::new(0), AtomicUsize::new(0), AtomicUsize::new(0));
-        let results: Result<Vec<(HBlock, Stats)>> = pool.install(|| pairings.par_iter().map(|b| {
+        // Expensive blocks first, one block per scheduling unit: a few slow near blocks
+        // otherwise end up in one chunk and run single-threaded at the tail. The block order
+        // of the result (and hence the summation order of `apply`) is unchanged.
+        let cost = |b: &Pairing| -> f64 {
+            let (na, nb) = (&nodes[b.a], &nodes[b.b]);
+            let (m, k) = ((na.end - na.start) as f64, (nb.end - nb.start) as f64);
+            let c = |bb: &Bbox| [0, 1, 2].map(|i| 0.5 * (bb.lo[i] + bb.hi[i]));
+            let (ca, cb) = (c(&na.bbox), c(&nb.bbox));
+            let dist = ((ca[0] - cb[0]).powi(2) + (ca[1] - cb[1]).powi(2) + (ca[2] - cb[2]).powi(2)).sqrt().max(1e-30);
+            // Entries are cheap moment pairs when the bounding spheres are well separated, exact otherwise.
+            let per_entry = if b.a != b.b && 0.5 * (na.bbox.diam() + nb.bbox.diam()) / dist <= 0.2 { 1. } else { 20. };
+            let size = if b.a == b.b { m * (m + 1.) / 2. } else { m * k };
+            if b.far && b.a != b.b { per_entry * size.min(128. * (m + k)) + 0.1 * size } else { per_entry * size }
+        };
+        let mut schedule: Vec<usize> = (0..pairings.len()).collect();
+        let costs: Vec<f64> = pairings.iter().map(cost).collect();
+        schedule.sort_by(|&x, &y| costs[y].total_cmp(&costs[x]).then(x.cmp(&y)));
+        let scheduled: Result<Vec<(usize, HBlock, Stats)>> = pool.install(|| schedule.par_iter().with_max_len(1).map(|&index| {
+            let b = &pairings[index];
             let (na, nb) = (&nodes[b.a], &nodes[b.b]);
             let rows: Vec<usize> = order[na.start..na.end].to_vec();
             let cols: Vec<usize> = order[nb.start..nb.end].to_vec();
             let mut st = Stats::default();
+            let block_started = Instant::now();
             let diag = b.a == b.b;
             let mut store = None;
             // Small blocks rarely compress at this tolerance; a failed ACA would be thrown away.
@@ -214,15 +248,18 @@ impl PlanarHMatrix {
                 }
                 st.near_blocks = 1; Store::Dense(d)
             } };
+            st.cpu_ns = block_started.elapsed().as_nanos() as u64;
             let exact_total = exact_done.fetch_add(st.exact_pairs, Ordering::Relaxed) + st.exact_pairs;
             fast_done.fetch_add(st.fast_pairs, Ordering::Relaxed); slow_ns_done.fetch_add(st.slow_ns, Ordering::Relaxed); near_done.fetch_add(st.near_blocks, Ordering::Relaxed); fallback_done.fetch_add(st.aca_dense_fallbacks, Ordering::Relaxed);
             let done = blocks_done.fetch_add(1, Ordering::Relaxed) + 1;
             if done % progress_step == 0 || done == total_blocks {
                 eprintln!("P7_COMPACT_HMATRIX_PROGRESS done={} of={} elapsed={:.1} exact={} fast={} slowCpuS={:.1} nearBlocks={} acaFallbacks={}", done, total_blocks, t0.elapsed().as_secs_f64(), exact_total, fast_done.load(Ordering::Relaxed), slow_ns_done.load(Ordering::Relaxed) as f64 * 1e-9, near_done.load(Ordering::Relaxed), fallback_done.load(Ordering::Relaxed));
             }
-            Ok((HBlock { a0: na.start, a1: na.end, b0: nb.start, b1: nb.end, diag, store }, st))
+            Ok((index, HBlock { a0: na.start, a1: na.end, b0: nb.start, b1: nb.end, diag, store }, st))
         }).collect());
-        let results = results?;
+        let mut results: Vec<Option<(HBlock, Stats)>> = (0..pairings.len()).map(|_| None).collect();
+        for (index, block, st) in scheduled? { results[index] = Some((block, st)); }
+        let results: Vec<(HBlock, Stats)> = results.into_iter().map(|r| r.expect("every scheduled block is built")).collect();
         let mut stats = Stats { supports: n, eps: params.eps, ..Default::default() };
         let mut blocks = Vec::with_capacity(results.len());
         for (b, st) in results { stats.merge(&st); blocks.push(b); }
@@ -234,6 +271,78 @@ impl PlanarHMatrix {
     /// Returns (potential, envelope); the operator is exactly symmetric and the
     /// envelope per support/component is sum of block residual estimates times
     /// the 2-norm of the other block's input (Cauchy-Schwarz).
+    /// All columns in one pass over the stored blocks, parallel over blocks with
+    /// per-thread accumulators (sums are reordered, so results agree with `apply`
+    /// to rounding). Columns are processed in groups to bound the accumulator size.
+    pub(super) fn apply_many(&self, rho: &[&[[f64; 3]]], threads: usize) -> Vec<(Vec<[f64; 3]>, Vec<[f64; 3]>)> {
+        self.apply_many_workers(rho, workers_for(threads, self.stats.stored_bytes / 8, 2_000_000))
+    }
+    pub(super) fn apply_many_workers(&self, rho: &[&[[f64; 3]]], workers: usize) -> Vec<(Vec<[f64; 3]>, Vec<[f64; 3]>)> {
+        const GROUP: usize = 8;
+        const CHUNK: usize = 8;
+        let n = self.n;
+        let mut out = Vec::with_capacity(rho.len());
+        for group in rho.chunks(GROUP) {
+            let nc = group.len();
+            let xs: Vec<Vec<[f64; 3]>> = group.iter().map(|r| { assert_eq!(r.len(), n); self.order.iter().map(|&s| r[s]).collect() }).collect();
+            let workers = workers.min(self.blocks.len().div_ceil(CHUNK)).max(1);
+            let parts: Vec<(Vec<[f64; 3]>, Vec<[f64; 3]>)> = run_workers(workers, |w, workers| {
+                let (mut y, mut e) = (vec![[0f64; 3]; n * nc], vec![[0f64; 3]; n * nc]);
+                for k in (w * CHUNK..self.blocks.len()).step_by(workers * CHUNK) {
+                    for b in &self.blocks[k..(k + CHUNK).min(self.blocks.len())] { self.block_apply(b, &xs, n, &mut y, &mut e); }
+                }
+                (y, e)
+            });
+            let mut parts = parts.into_iter();
+            let (mut y, mut e) = parts.next().expect("at least one worker");
+            for (yb, eb) in parts {
+                for (p, q) in y.iter_mut().zip(&yb) { for k in 0..3 { p[k] += q[k]; } }
+                for (p, q) in e.iter_mut().zip(&eb) { for k in 0..3 { p[k] += q[k]; } }
+            }
+            for c in 0..nc {
+                let (mut py, mut pe) = (vec![[0f64; 3]; n], vec![[0f64; 3]; n]);
+                for (p, &s) in self.order.iter().enumerate() { py[s] = y[c * n + p]; pe[s] = e[c * n + p]; }
+                out.push((py, pe));
+            }
+        }
+        out
+    }
+    fn block_apply(&self, b: &HBlock, xs: &[Vec<[f64; 3]>], n: usize, y: &mut [[f64; 3]], e: &mut [[f64; 3]]) {
+        let (m, nn) = (b.a1 - b.a0, b.b1 - b.b0);
+        for (c, x) in xs.iter().enumerate() {
+            let (y, e) = (&mut y[c * n..(c + 1) * n], &mut e[c * n..(c + 1) * n]);
+            match &b.store {
+                Store::Dense(d) if b.diag => {
+                    let mut at = 0;
+                    for i in 0..m { for j in i..m {
+                        let a = d[at]; at += 1;
+                        for k in 0..3 { y[b.a0 + i][k] += a * x[b.a0 + j][k]; if j != i { y[b.a0 + j][k] += a * x[b.a0 + i][k]; } }
+                    } }
+                }
+                Store::Dense(d) => for i in 0..m { for j in 0..nn {
+                    let a = d[i * nn + j];
+                    for k in 0..3 { y[b.a0 + i][k] += a * x[b.b0 + j][k]; y[b.b0 + j][k] += a * x[b.a0 + i][k]; }
+                } },
+                Store::Low { rank, u, v, err } => {
+                    for l in 0..*rank {
+                        let (ul, vl) = (&u[l * m..(l + 1) * m], &v[l * nn..(l + 1) * nn]);
+                        let (mut t, mut s) = ([0f64; 3], [0f64; 3]);
+                        for j in 0..nn { for k in 0..3 { t[k] += vl[j] * x[b.b0 + j][k]; } }
+                        for i in 0..m { for k in 0..3 { s[k] += ul[i] * x[b.a0 + i][k]; } }
+                        for i in 0..m { for k in 0..3 { y[b.a0 + i][k] += ul[i] * t[k]; } }
+                        for j in 0..nn { for k in 0..3 { y[b.b0 + j][k] += vl[j] * s[k]; } }
+                    }
+                    if *err > 0. {
+                        let norm = |r: std::ops::Range<usize>| { let mut s = [0f64; 3]; for p in r { for k in 0..3 { s[k] += x[p][k] * x[p][k]; } } s.map(f64::sqrt) };
+                        let (xa, xb) = (norm(b.a0..b.a1), norm(b.b0..b.b1));
+                        for i in b.a0..b.a1 { for k in 0..3 { e[i][k] += err * xb[k]; } }
+                        for j in b.b0..b.b1 { for k in 0..3 { e[j][k] += err * xa[k]; } }
+                    }
+                }
+            }
+        }
+    }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(super) fn apply(&self, rho: &[[f64; 3]]) -> (Vec<[f64; 3]>, Vec<[f64; 3]>) {
         assert_eq!(rho.len(), self.n);
         let x: Vec<[f64; 3]> = self.order.iter().map(|&s| rho[s]).collect();
@@ -313,6 +422,18 @@ mod tests {
         let xay: f64 = (0..n).map(|i| (0..3).map(|k| x[i][k] * ay[i][k]).sum::<f64>()).sum();
         let yax: f64 = (0..n).map(|i| (0..3).map(|k| y[i][k] * ax[i][k]).sum::<f64>()).sum();
         assert!((xay - yax).abs() <= 1e-12 * xay.abs().max(yax.abs()), "{xay} {yax}");
+        // Batched parallel action agrees with the serial single-column action to rounding.
+        let (z, w) = (rho(2.73), rho(0.58));
+        let batch = hm.apply_many_workers(&[&x, &y, &z, &w], 3);
+        for (column, input) in [&x, &y, &z, &w].into_iter().enumerate() {
+            let (single, single_env) = hm.apply(input);
+            let scale = single.iter().flatten().fold(0f64, |m, v| m.max(v.abs()));
+            let env_scale = single_env.iter().flatten().fold(0f64, |m, v| m.max(v.abs())).max(1e-300);
+            for i in 0..n { for k in 0..3 {
+                assert!((batch[column].0[i][k] - single[i][k]).abs() <= 1e-12 * scale, "column {column} support {i}");
+                assert!((batch[column].1[i][k] - single_env[i][k]).abs() <= 1e-12 * env_scale, "envelope column {column} support {i}");
+            } }
+        }
         let dense_bytes = n * (n + 1) / 2 * 8;
         assert!(hm.stats.stored_bytes <= dense_bytes * 2, "{} vs {}", hm.stats.stored_bytes, dense_bytes);
     }
