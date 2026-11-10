@@ -457,7 +457,57 @@ fn piece_tet_gauss(a:&Piece,t:[[f64;3];4])->Option<(f64,f64)> {
     let change=(fine-coarse).abs()/fine.abs();
     (change<=100.*PAIR_TARGET_RELATIVE_CHANGE).then_some((fine,change/100.))
 }
+static THIN_SPLIT_PAIRS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+/// Number of prism pairs that needed thin-triangle subdivision (evidence counter).
+pub(super) fn thin_split_pairs() -> usize { THIN_SPLIT_PAIRS.load(std::sync::atomic::Ordering::Relaxed) }
+const THIN_SPLIT_MAX_DEPTH: usize = 12;
+fn longest_edge_halves(p: &Prism) -> [Prism; 2] {
+    let t = p.triangle_m;
+    let len = |i: usize| (t[(i + 1) % 3][0] - t[i][0]).hypot(t[(i + 1) % 3][1] - t[i][1]);
+    let e = (0..3).max_by(|&x, &y| len(x).total_cmp(&len(y))).unwrap();
+    let (pi, pj, pk) = (t[e], t[(e + 1) % 3], t[(e + 2) % 3]);
+    let m = [(pi[0] + pj[0]) / 2., (pi[1] + pj[1]) / 2.];
+    let half = |tri| Prism { source_id: p.source_id.clone(), triangle_m: tri, z_m: p.z_m, volume_m3: p.volume_m3 / 2. };
+    [half([pi, m, pk]), half([m, pj, pk])]
+}
+fn diameter(p: &Prism) -> f64 {
+    let t = p.triangle_m;
+    (0..3).map(|i| (t[(i + 1) % 3][0] - t[i][0]).hypot(t[(i + 1) % 3][1] - t[i][1])).fold(0., f64::max)
+}
+/// Constant-density prism pair integrals are additive over any partition of either prism.
+/// The larger piece is bisected on its longest edge until each sub-pair converges on the normal
+/// ladder; beyond the depth limit the pair is refused.
+fn split_thin_pair(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Duration, tol: PairTolerance, depth: usize) -> Result<(f64,usize,f64)> {
+    if start.elapsed() >= limit { return Err(error("DEADLINE", "planar Gram deadline exceeded")); }
+    if depth >= THIN_SPLIT_MAX_DEPTH {
+        return Err(error("PLANAR_UNRESOLVED", &format!("prism quadrature did not converge after thin-triangle subdivision to depth {THIN_SPLIT_MAX_DEPTH}")));
+    }
+    let halves = if diameter(a) >= diameter(b) { let [l, r] = longest_edge_halves(a); [(l, b.clone()), (r, b.clone())] } else { let [l, r] = longest_edge_halves(b); [(a.clone(), l), (a.clone(), r)] };
+    let (mut sum, mut max_order, mut max_rel) = (0., 0usize, 0f64);
+    for (x, y) in &halves {
+        let (v, n, r) = match pair_integral_inner(x, y, order, start, limit, tol) {
+            Ok(v) => v,
+            Err(e) if retriable_pair_error(&e) => split_thin_pair(x, y, order, start, limit, tol, depth + 1)?,
+            Err(e) => return Err(e),
+        };
+        sum += v; max_order = max_order.max(n); max_rel = max_rel.max(r);
+    }
+    Ok((sum, max_order, max_rel))
+}
+fn retriable_pair_error(e: &str) -> bool {
+    e.contains("PLANAR_UNRESOLVED") || e.contains("QUADRATURE_RANGE")
+}
 pub(super) fn pair_integral_with(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Duration, tol: PairTolerance) -> Result<(f64,usize,f64)> {
+    match pair_integral_inner(a, b, order, start, limit, tol) {
+        Err(e) if retriable_pair_error(&e) => {
+            let n = THIN_SPLIT_PAIRS.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+            if n.is_power_of_two() { eprintln!("P7_THIN_PAIR_SPLIT pairs={n} (prism pair integral subdivided: {e})"); }
+            split_thin_pair(a, b, order, start, limit, tol, 0)
+        }
+        other => other,
+    }
+}
+fn pair_integral_inner(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Duration, tol: PairTolerance) -> Result<(f64,usize,f64)> {
     let canonical=|mut t:[[f64;2];3]|{t.sort_by(|a,b|a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));t};
     // Evaluate (i,j) and (j,i) in one canonical order so both give identical values.
     let key=|p:&Prism|{let t=canonical(p.triangle_m);[t[0][0],t[0][1],t[1][0],t[1][1],t[2][0],t[2][1],p.z_m[0],p.z_m[1]]};
@@ -520,6 +570,22 @@ fn triangle_interior_overlap(a: [[f64; 2]; 3], b: [[f64; 2]; 3]) -> bool {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn thin_sliver_pair_matches_uniformly_subdivided_reference() {
+        let (l, h, t) = (0.03_f64, 1.5e-5_f64, 35e-6_f64);
+        let sliver = Prism::new("s".into(), [[0., 0.], [l, 0.], [l, h]], [0., t]).unwrap();
+        let (cx, cy, r) = (l / 2., 0.05 * l, 1e-4);
+        let target = Prism::new("t".into(), [[cx, cy], [cx + r, cy], [cx, cy + r]], [0., t]).unwrap();
+        // Reference: 2^8 pieces of the sliver, each pair on the plain ladder at a high start order.
+        let mut pieces = vec![sliver.clone()];
+        for _ in 0..8 { pieces = pieces.iter().flat_map(|p| longest_edge_halves(p)).collect(); }
+        let (start, limit) = (Instant::now(), Duration::from_secs(120));
+        let reference: f64 = pieces.iter().map(|p| pair_integral_inner(&target, p, 8, start, limit, PAIR_LEGACY).unwrap().0).sum();
+        let split = split_thin_pair(&target, &sliver, 8, start, limit, PAIR_LEGACY, 0).unwrap().0;
+        assert!((split - reference).abs() <= 1e-6 * reference, "split {split:e} reference {reference:e}");
+        let direct = pair_integral_with(&target, &sliver, 8, start, limit, PAIR_LEGACY).unwrap().0;
+        assert!((direct - reference).abs() <= 1e-6 * reference, "direct {direct:e} reference {reference:e}");
+    }
     use super::*;
     #[test]
     fn triangle_overlap_distinguishes_contact_and_interior() {
