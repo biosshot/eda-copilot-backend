@@ -772,6 +772,7 @@ pub fn solve_checked(
     phase_trace("mesh-built", started, json!({"nodes": mesh.mesh.nodes_m.len(), "tetrahedra": mesh.mesh.copper_tetrahedra.len(), "planarTriangles": mesh.planar_triangles.len(), "barrels": mesh.barrel_ids.len()}));
     let masks = mesh.hybrid_mesh_masks.clone();
     let coarsening = mesh.mesh_coarsening.clone();
+    let roi_fallback = mesh.roi_fallback.clone();
     let mut checked = mixed_conductor::solve_checked_mesh_policy(
         mesh, geometry, mixed_grid, skin, &packages, partition, operator, budget, started, wall,
     )?;
@@ -782,5 +783,6 @@ pub fn solve_checked(
     }
     checked["provenance"]["hybridMeshMasks"] = json!(masks);
     if let Some(c) = coarsening { checked["provenance"]["meshCoarsening"] = c; }
+    if let Some(c) = roi_fallback { checked["provenance"]["roiFallback"] = c; }
     Ok(checked)
 }

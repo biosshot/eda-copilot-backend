@@ -18,6 +18,7 @@ mod compact_cg;
 pub mod conservative_current;
 pub mod board_mesh;
 mod mesh_coarsen;
+mod roi_fallback;
 mod copper_skin_profile;
 pub mod board_prepare;
 pub mod board_response;

@@ -175,6 +175,8 @@ pub struct BoardMesh {
     pub hybrid_mesh_masks:Vec<serde_json::Value>,
     /// Far-field mesh coarsening parameters (approximation tier); None when off or not applicable.
     pub mesh_coarsening:Option<serde_json::Value>,
+    /// Channel-neighbourhood ROI fallback evidence (approximation tier); None when not triggered.
+    pub roi_fallback:Option<serde_json::Value>,
     certified_electrodes:BTreeMap<String,(Electrode,Vec<usize>)>,
 }
 /// Sutherland-Hodgman crop of a closed ring to an axis-aligned box (exact on the box:
@@ -365,7 +367,7 @@ fn common_partition(roi:&MultiPolygon<f64>,cuts:&[MultiPolygon<f64>],budget:Allo
         }
     }Ok(atoms)
 }
-fn polygon(p:&geometry::PolygonSnapshot)->Polygon<f64> {
+pub(super) fn polygon(p:&geometry::PolygonSnapshot)->Polygon<f64> {
     Polygon::new(LineString::from(p.outer.clone()),p.holes.iter().map(|r|LineString::from(r.clone())).collect())
 }
 fn rect(b:[[f64;2];2])->Polygon<f64> {Polygon::new(LineString::from(vec![b[0],[b[1][0],b[0][1]],b[1],[b[0][0],b[1][1]]]),vec![])}
@@ -557,6 +559,9 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         return Err(error("BOARD_GEOMETRY","complete trustworthy copper, outline and native fills required"));
     }
     if !r.accept_unknown_fill_freshness&&geometry.fills.iter().any(|f|f.freshness.as_deref()!=Some("current")) {return Err(error("BOARD_FILL_POLICY","CAD fill freshness is not confirmed; an explicit captured-snapshot policy is required"));}
+    // Approximation tier: when the whole ROI would exceed the memory budget, mesh only the channel neighbourhood.
+    let fallback_plan=super::roi_fallback::plan(r,&geometry,budget)?;
+    let (r,roi_fallback)=match &fallback_plan {Some(p)=>(&p.request,Some(p.evidence.clone())),None=>(r,None)};
     // The clipping contour itself must use the already accepted board overlay
     // grid, just like the clipped result. Mixing the raw ROI coordinates with
     // their overlay image creates artificial sub-nanometre air strips.
@@ -972,18 +977,19 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     // Vertices closer than 4h are arrangement rounding noise of one point (two atoms that should
     // share a node). Snap each cluster to its first vertex; otherwise the CDT has sliver faces of
     // width ~1e-7 mm and aspect up to 1e8. The displacement is below the overlay grid error bound.
+    let snap_radius=std::env::var("P7_MESH_SNAP_MM").ok().and_then(|v|v.parse::<f64>().ok()).filter(|v|v.is_finite()&&*v>=0.).unwrap_or(2.*tol);
     let mut canon=std::collections::HashMap::<(u64,u64),[f64;2]>::new();
     let mut rep_tree=rstar::RTree::<[f64;2]>::new();
     let mut snapped=0usize;
     for c in atoms.iter().flat_map(|a|std::iter::once(a.poly.exterior()).chain(a.poly.interiors())).flat_map(|r|r.0.iter()) {
         if !unique.insert((c.x.to_bits(),c.y.to_bits())) {continue;}
         let p=[c.x,c.y];
-        let hit=rep_tree.locate_within_distance(p,(2.*tol)*(2.*tol)).min_by(|a,b|((a[0]-p[0]).powi(2)+(a[1]-p[1]).powi(2)).total_cmp(&((b[0]-p[0]).powi(2)+(b[1]-p[1]).powi(2)))).copied();
+        let hit=rep_tree.locate_within_distance(p,snap_radius*snap_radius).min_by(|a,b|((a[0]-p[0]).powi(2)+(a[1]-p[1]).powi(2)).total_cmp(&((b[0]-p[0]).powi(2)+(b[1]-p[1]).powi(2)))).copied();
         match hit {Some(q)=>{canon.insert((c.x.to_bits(),c.y.to_bits()),q);snapped+=1;},None=>{rep_tree.insert(p);canon.insert((c.x.to_bits(),c.y.to_bits()),p);}}
     }
     let snap=|p:[f64;2]|canon.get(&(p[0].to_bits(),p[1].to_bits())).copied().unwrap_or(p);
     let vertex_tree=rep_tree;
-    super::board_foil::phase_trace("t-vertex-snap",start,serde_json::json!({"snapped":snapped,"radiusMm":2.*tol}));
+    super::board_foil::phase_trace("t-vertex-snap",start,serde_json::json!({"snapped":snapped,"radiusMm":snap_radius}));
     for poly in atoms.iter().map(|a|&a.poly){for ring in std::iter::once(poly.exterior()).chain(poly.interiors()){for line in ring.lines(){
         let (a,c)=(snap([line.start.x,line.start.y]),snap([line.end.x,line.end.y]));
         if a==c {continue;}
@@ -1290,7 +1296,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     if let Some(b)=r.return_boundary_mm {
         for (_,nodes) in certified_electrodes.values() { for &n in nodes { let p=mesh.nodes_m[n]; let world=[origin_mm[0]+1000.*p[0],origin_mm[1]+1000.*p[1],1000.*p[2]]; if (0..3).any(|k|world[k]<=b[0][k] || world[k]>=b[1][k]) {return Err(error("RETURN_BOUNDARY","electrode support must lie strictly inside guard"));} } }
     }
-    Ok(BoardMesh{return_boundary_mm:r.return_boundary_mm,field_substrate:substrate,field_bores:bores,field_partial_bores:partial_bores,field_copper,mesh,copper_skin_layers,copper_skin_barrels,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,hybrid_mesh_masks,mesh_coarsening,certified_electrodes})
+    Ok(BoardMesh{return_boundary_mm:r.return_boundary_mm,field_substrate:substrate,field_bores:bores,field_partial_bores:partial_bores,field_copper,mesh,copper_skin_layers,copper_skin_barrels,planar_nodes_mm,planar_triangles,conductivity_s_m,geometry,origin_mm,source_mapping,barrel_ids,elapsed_seconds:start.elapsed().as_secs_f64(),layer_spans:spans,electrode_areas_m2,arrangement_atoms:atoms.len(),max_copper_area_change,max_contact_area_change,source_copper_restorations,hybrid_mesh_masks,mesh_coarsening,roi_fallback,certified_electrodes})
 }
 impl BoardMesh {
     /// End geometry preparation before a separately budgeted field phase.
