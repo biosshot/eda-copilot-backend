@@ -211,7 +211,8 @@ pub(super) fn corridor_polygon(lines:&[Vec<[f64;2]>],boxes:&[[[f64;2];2]],keep:&
     Some(geo::Polygon::new(set.0[0].exterior().clone(),vec![]))
 }
 
-pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget)->Result<Option<Plan>> {
+/// `forced` = (mode, margin mm) rebuilds with exactly that rung, skipping the budget test (recalibration).
+pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,forced:Option<(&str,f64)>)->Result<Option<Plan>> {
     if std::env::var("P7_ROI_FALLBACK").as_deref()==Ok("0")||!r.cut_planes.is_empty() {return Ok(None);}
     let roi0=r.roi_mm;
     if let Some(p)=&r.domain_polygon_mm {
@@ -220,6 +221,7 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget)->Res
     }
     let budget_bytes=std::env::var("P7_ROI_BUDGET_MIB").ok().and_then(|v|v.parse::<f64>().ok()).map(|m|m*1048576.)
         .unwrap_or(if budget.max_bytes<usize::MAX/2 {budget.max_bytes as f64} else {6.*1073741824.});
+    let fit_bytes=if forced.is_some() {f64::INFINITY} else {budget_bytes};
     let (planar0,nodes0,bytes0)=estimate(g,r,&roi0);
     // Small meshes never need the fallback (the fixed overhead term must not refuse unit-scale fixtures).
     if bytes0<=budget_bytes||nodes0<100_000 {return Ok(None);}
@@ -247,8 +249,9 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget)->Res
         eprintln!("P7_ROI_SUPPORT {}",serde_json::json!({"supportRegions":support.len(),"supportBboxMm":bbox,"roiMm":roi0,"channelNets":nets,"biggestSupportRegions":big,"ports":ports}));
     }
     let force=std::env::var("P7_ROI_FORCE_CORRIDOR").as_deref()==Ok("1");
+    let mut tried:Vec<[f64;2]>=vec![];
     let mut chosen:Option<(f64,[[f64;2];2],(usize,usize,f64),Option<Corridor>)>=None;let mut last=(0usize,0usize,0.);
-    for m in MARGIN_LADDER_MM.iter().copied().filter(|_|!force) {
+    for m in MARGIN_LADDER_MM.iter().copied().filter(|m|!force&&forced.is_none_or(|(md,v)|md=="bbox"&&(m*scale-v).abs()<1e-6)) {
         let m=m*scale;
         let mut roi=[[(bbox[0][0]-m).max(roi0[0][0]),(bbox[0][1]-m).max(roi0[0][1])],[(bbox[1][0]+m).min(roi0[1][0]),(bbox[1][1]+m).min(roi0[1][1])]];
         // A via barrel must lie wholly inside the ROI: grow the box around any barrel it would cut.
@@ -265,13 +268,16 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget)->Res
             if !grown {break;}
         }
         let e=estimate(g,r,&roi);last=(e.0,e.1,e.2);
-        if e.2<=budget_bytes {chosen=Some((m,roi,e,None));break;}
+        if e.2<=fit_bytes {chosen=Some((m,roi,e,None));break;}
+        tried.push([m,e.2]);
     }
     let gib=|b:f64|b/1073741824.;
     let bbox_last=last;
     let mut corridor_last=None;
     if chosen.is_none()&&std::env::var("P7_ROI_CORRIDOR").as_deref()!=Ok("0") {
-        let (found,l)=corridor_plan(g,r,&electrode_regions,&roi0,scale,budget_bytes);
+        tried.clear();
+        let (found,l,t)=corridor_plan(g,r,&electrode_regions,&roi0,scale,fit_bytes,forced.filter(|f|f.0=="corridor").map(|f|f.1));
+        tried=t;
         corridor_last=l;
         if let Some(c)=found {chosen=Some((c.margin_mm,c.bbox,c.estimate,Some(c)));}
     }
@@ -317,7 +323,7 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget)->Res
         "copperCutArea":cut_all,"channelNetCopperCut":cut_channel,"signalNetCopperCut":cut_signal,"areaUnit":"mm2","roiMmBefore":roi0,"roiMmAfter":roi,
         "pathLengthM":corridor.as_ref().map(|c|c.path_length_mm*1e-3),"corridorAreaM2":corridor.as_ref().map(|c|c.polygon.unsigned_area()*1e-6),
         "corridorUnconnectedPortPairs":corridor.as_ref().map(|c|c.unconnected),
-        "bboxLadderLastEstimateBytes":bbox_last.2,
+        "bboxLadderLastEstimateBytes":bbox_last.2,"largerRungsBytes":tried,
         "estimatedNodesBefore":nodes0,"estimatedPlanarVerticesBefore":planar0,"estimatedNodes":nodes,"estimatedPlanarVertices":planar,
         "referenceNet":reference,"channelNets":channel_nets,"warning":warning});
     eprintln!("P7_ROI_FALLBACK {evidence}");
@@ -327,7 +333,7 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget)->Res
 struct Corridor {margin_mm:f64,bbox:[[f64;2];2],polygon:geo::Polygon<f64>,estimate:(usize,usize,f64),path_length_mm:f64,unconnected:usize}
 
 /// Corridor ladder. Returns the first margin that fits, and the (margin mm, nodes, bytes) of the last attempt.
-fn corridor_plan(g:&PreparationReport,r:&Request,electrode_regions:&[usize],roi0:&[[f64;2];2],scale:f64,budget_bytes:f64)->(Option<Corridor>,Option<(f64,usize,f64)>) {
+fn corridor_plan(g:&PreparationReport,r:&Request,electrode_regions:&[usize],roi0:&[[f64;2];2],scale:f64,budget_bytes:f64,forced:Option<f64>)->(Option<Corridor>,Option<(f64,usize,f64)>,Vec<[f64;2]>) {
     let layer_ix:BTreeMap<&str,usize>=g.layers.iter().enumerate().map(|(i,l)|(l.layer.as_str(),i)).collect();
     let mut ports:Vec<Port>=vec![];
     for e in &r.electrodes {
@@ -358,8 +364,10 @@ fn corridor_plan(g:&PreparationReport,r:&Request,electrode_regions:&[usize],roi0
         if pts.is_empty() {return None;}
         Some([[pts.iter().map(|p|p[0]).fold(f64::INFINITY,f64::min)-0.2,pts.iter().map(|p|p[1]).fold(f64::INFINITY,f64::min)-0.2],[pts.iter().map(|p|p[0]).fold(f64::NEG_INFINITY,f64::max)+0.2,pts.iter().map(|p|p[1]).fold(f64::NEG_INFINITY,f64::max)+0.2]])}).collect();
     let mut last=None;
+    let mut tried=vec![];
     for m in CORRIDOR_LADDER_MM {
         let m=m*scale;
+        if forced.is_some_and(|f|(m-f).abs()>1e-6) {continue;}
         // A via barrel must lie wholly inside the corridor: add its box for every barrel the corridor would cut.
         let mut keep:Vec<[[f64;2];2]>=vec![];
         let mut poly=None;
@@ -383,9 +391,26 @@ fn corridor_plan(g:&PreparationReport,r:&Request,electrode_regions:&[usize],roi0
         let bbox=[[b.min().x,b.min().y],[b.max().x,b.max().y]];
         let e=estimate_in(g,r,&bbox,Some(&p));last=Some((m,e.1,e.2));
         eprintln!("P7_ROI_CORRIDOR_TRY margin_mm={m} area_mm2={:.1} bbox={bbox:?} planar={} nodes={} z={} bytes={:.0}",p.unsigned_area(),e.0,e.1,z_planes(r),e.2);
-        if e.2<=budget_bytes {return (Some(Corridor{margin_mm:m,bbox,polygon:p,estimate:e,path_length_mm:length,unconnected}),last);}
+        if e.2<=budget_bytes {return (Some(Corridor{margin_mm:m,bbox,polygon:p,estimate:e,path_length_mm:length,unconnected}),last,tried);}
+        tried.push([m,e.2]);
     }
-    (None,last)
+    (None,last,tried)
+}
+
+const SAFETY:f64=1.1;
+/// After the first build: (forced rung, estimateCorrection evidence) when a larger rung fits the corrected estimate.
+pub(super) fn recalibrate(ev:&serde_json::Value,built_nodes:usize,build_seconds:f64,budget:AllocationBudget)->Option<((String,f64),serde_json::Value)> {
+    if std::env::var("P7_ROI_RECALIBRATE").as_deref()==Ok("0")||build_seconds>120. {return None;}
+    let est=ev["estimatedNodes"].as_f64()?;let first=ev["marginMm"].as_f64()?;let mode=ev["mode"].as_str()?;
+    let ratio=built_nodes as f64/est;
+    let budget_bytes=ev["budgetBytes"].as_f64().unwrap_or(budget.max_bytes as f64);
+    // Rungs tried before the chosen one are larger; the first that fits the corrected estimate wins.
+    let pick=ev["largerRungsBytes"].as_array()?.iter().filter_map(|v|Some((v[0].as_f64()?,v[1].as_f64()?))).find(|(_,b)|BASE_BYTES+(b-BASE_BYTES)*ratio*SAFETY<=budget_bytes)?;
+    Some(((mode.to_string(),pick.0),serde_json::json!({"ratio":ratio,"firstMargin":first,"finalMargin":pick.0,"rebuilt":true,"builtNodesFirst":built_nodes,"estimatedNodesFirst":est})))
+}
+pub(super) fn not_rebuilt(ev:&serde_json::Value,built_nodes:usize)->serde_json::Value {
+    let est=ev["estimatedNodes"].as_f64().unwrap_or(0.);
+    serde_json::json!({"ratio":if est>0. {built_nodes as f64/est} else {f64::NAN},"firstMargin":ev["marginMm"],"finalMargin":ev["marginMm"],"rebuilt":false})
 }
 
 #[cfg(test)]

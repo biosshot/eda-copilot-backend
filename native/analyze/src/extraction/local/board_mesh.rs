@@ -536,6 +536,22 @@ pub(super) fn build_profiled_hybrid(board:&Board,r:&Request,budget:AllocationBud
 }
 fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration,
     support:Option<(&[[f64;2]],&[[usize;3]])>,trace_lines:&[[[f64;2];2]],skin:Option<copper_skin_profile::Profile>,hybrid_masks:bool)->Result<BoardMesh> {
+    let mut mesh=build_profiled_once(board,r,budget,max_wall,support,trace_lines,skin.clone(),hybrid_masks,None)?;
+    // One-step recalibration of the ROI fallback margin against the built node count.
+    if let Some(f)=mesh.roi_fallback.clone() {
+        if let Some((forced,ev))=super::roi_fallback::recalibrate(&f,mesh.mesh.nodes_m.len(),mesh.elapsed_seconds,budget) {
+            let first=f.clone();drop(mesh);
+            mesh=match build_profiled_once(board,r,budget,max_wall,support,trace_lines,skin.clone(),hybrid_masks,Some(forced.clone())) {
+                Ok(mut m)=>{if let Some(e)=m.roi_fallback.as_mut() {e["estimateCorrection"]=ev;}m}
+                Err(_)=>{let mut m=build_profiled_once(board,r,budget,max_wall,support,trace_lines,skin,hybrid_masks,Some((first["mode"].as_str().unwrap_or("bbox").to_string(),first["marginMm"].as_f64().unwrap_or(0.))))?;
+                    if let Some(e)=m.roi_fallback.as_mut() {e["estimateCorrection"]=serde_json::json!({"rebuilt":false,"note":"rebuild failed; first margin kept"});}m}
+            };
+        } else if let Some(e)=mesh.roi_fallback.as_mut() {e["estimateCorrection"]=super::roi_fallback::not_rebuilt(&f,mesh.mesh.nodes_m.len());}
+    }
+    Ok(mesh)
+}
+fn build_profiled_once(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration,
+    support:Option<(&[[f64;2]],&[[usize;3]])>,trace_lines:&[[[f64;2];2]],skin:Option<copper_skin_profile::Profile>,hybrid_masks:bool,forced:Option<(String,f64)>)->Result<BoardMesh> {
     let start=Instant::now();
     if r.electric_max_edge_m.is_some_and(|v|!v.is_finite()||v<=0.||v>0.1){return Err(error("BOARD_PROFILE","positive finite electric refinement spacing required"));}
     if r.electric_air_margin_m.is_some_and(|v|!v.is_finite()||v<=0.){return Err(error("BOARD_PROFILE","positive finite electric air margin required"));}
@@ -560,7 +576,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     }
     if !r.accept_unknown_fill_freshness&&geometry.fills.iter().any(|f|f.freshness.as_deref()!=Some("current")) {return Err(error("BOARD_FILL_POLICY","CAD fill freshness is not confirmed; an explicit captured-snapshot policy is required"));}
     // Approximation tier: when the whole ROI would exceed the memory budget, mesh only the channel neighbourhood.
-    let fallback_plan=super::roi_fallback::plan(r,&geometry,budget)?;
+    let fallback_plan=super::roi_fallback::plan(r,&geometry,budget,forced.as_ref().map(|(m,v)|(m.as_str(),*v)))?;
     let (r,roi_fallback)=match &fallback_plan {Some(p)=>(&p.request,Some(p.evidence.clone())),None=>(r,None)};
     // The clipping contour itself must use the already accepted board overlay
     // grid, just like the clipped result. Mixing the raw ROI coordinates with
