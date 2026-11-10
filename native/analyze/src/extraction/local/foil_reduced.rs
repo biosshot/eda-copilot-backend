@@ -357,6 +357,14 @@ fn harmonic(
             retained.insert(island[0]);
         }
     }
+    // Exact null directions of the free-node Laplacian (see weak_free_nodes): the cells see only a combination
+    // of the potentials of such nodes, so the potential of the second node is a pure gauge. It is held at zero
+    // in every harmonic mode and gets no mode of its own; the island constant still reaches it through the
+    // anchor mode. This changes no cell current.
+    let gauge: BTreeSet<usize> = weak_free_nodes(cells, n, &retained).into_iter().collect();
+    if !gauge.is_empty() {
+        eprintln!("P7_GAUGE_NODES_PINNED count={} nodes={:?} rule=exact-null-direction", gauge.len(), gauge.iter().take(16).collect::<Vec<_>>());
+    }
     let r = retained.len() + extra_modes;
     if wall != Duration::MAX && r > 1024 {
         return Err(error(
@@ -374,7 +382,8 @@ fn harmonic(
         eprintln!("P7_MIXED_MEMORY_STAGE stage=harmonic-admission potentials={n} currents={} retained={} reservedModes={extra_modes} modeCap={r} baseBytes={base} plannedBytes={plan} budgetBytes={}", cells.len(), retained.len(), budget.max_bytes);
     }
     budget.check(plan).map_err(|failure|format!("{failure}; stage=harmonic-admission potentials={n} currents={} modeCap={r} plannedBytes={plan} budgetBytes={}",cells.len(),budget.max_bytes))?;
-    let (peak, dc) = correction(cells, n, &retained, plan, budget, start, wall, None)?;
+    let fixed: BTreeSet<usize> = retained.union(&gauge).copied().collect();
+    let (peak, dc) = correction(cells, n, &fixed, plan, budget, start, wall, None)?;
     let retained: Vec<_> = retained.into_iter().collect();
     let mut voltage = vec![vec![0.; n]; retained.len()];
     let mut current = Vec::new();
@@ -474,6 +483,66 @@ fn complete_harmonic_current(
     Err(error("FOIL_REDUCTION", &format!("harmonic free residual failed after bounded refinement; history={history:?}")))
 }
 
+/// Free nodes with an exact null direction in the free-node Laplacian. Two free nodes a and b whose matrix rows
+/// are equal or exactly opposite (same columns, equal or negated values) give A(e_a -+ e_b) = 0: the cells see
+/// only a combination of their potentials. The second node of each such pair keeps its own coordinate, like a
+/// floating island, instead of an invented gauge. The structure found is reported by the caller.
+fn weak_free_nodes(cells: &[Cell], n: usize, retained: &BTreeSet<usize>) -> Vec<usize> {
+    let mut rows: Vec<BTreeMap<usize, f64>> = vec![BTreeMap::new(); n];
+    for c in cells {
+        for &(a, av) in &c.terms {
+            if retained.contains(&a) { continue; }
+            for &(b, bv) in &c.terms {
+                if !retained.contains(&b) { *rows[a].entry(b).or_insert(0.) += av * bv / c.resistance; }
+            }
+        }
+    }
+    let mut seen: BTreeMap<Vec<usize>, Vec<usize>> = BTreeMap::new();
+    let mut pinned = Vec::new();
+    for node in 0..n {
+        if retained.contains(&node) || rows[node].is_empty() { continue; }
+        let key: Vec<usize> = rows[node].keys().copied().collect();
+        let scale = rows[node].values().fold(0f64, |m, v| m.max(v.abs()));
+        let matches = |other: usize, sign: f64| rows[other].values().zip(rows[node].values()).all(|(x, y)| (x - sign * y).abs() <= 1e-9 * scale);
+        let group = seen.entry(key).or_default();
+        if group.iter().any(|&o| matches(o, 1.) || matches(o, -1.)) { pinned.push(node); } else { group.push(node); }
+    }
+    pinned
+}
+
+/// Component structure of the free-node Laplacian: connected components of the cell graph, how many
+/// hold no retained node (a floating component without a gauge) and how many nodes no cell touches.
+fn laplacian_structure_diagnostic(cells: &[Cell], n: usize, retained: &BTreeSet<usize>) {
+    let mut parents: Vec<_> = (0..n).collect();
+    let mut diag = vec![0f64; n];
+    let (mut min_r, mut max_r, mut bad_r) = (f64::INFINITY, 0f64, 0usize);
+    for c in cells {
+        if !(c.resistance > 0. && c.resistance.is_finite()) { bad_r += 1; }
+        min_r = min_r.min(c.resistance);
+        max_r = max_r.max(c.resistance);
+        let scale = c.terms.iter().fold(0f64, |m, t| m.max(t.1.abs()));
+        let active: Vec<_> = c.terms.iter().filter(|t| t.1.abs() > 1e-9 * scale).collect();
+        for &&(node, v) in &active { diag[node] += v * v / c.resistance; }
+        if let Some(&&(first, _)) = active.first() {
+            for &&(node, _) in &active {
+                let (a, b) = (root(&parents, first), root(&parents, node));
+                parents[b] = a;
+            }
+        }
+    }
+    let mut components = BTreeMap::<usize, (usize, usize)>::new();
+    for i in 0..n {
+        let e = components.entry(root(&parents, i)).or_default();
+        e.0 += 1;
+        e.1 += retained.contains(&i) as usize;
+    }
+    let floating: Vec<_> = components.values().filter(|c| c.1 == 0).map(|c| c.0).collect();
+    let max_diag = diag.iter().cloned().fold(0f64, f64::max);
+    let weak: Vec<_> = (0..n).filter(|i| !retained.contains(i) && diag[*i] <= 1e-12 * max_diag).collect();
+    eprintln!("P7_LAPLACIAN_STRUCTURE nodes={n} retained={} components={} componentSizes={:?} floatingComponents={} floatingSizes={:?} weakFreeNodes={} weakSample={:?} maxDiag={max_diag:e} cells={} nonpositiveResistance={bad_r} resistanceRange=[{min_r:e},{max_r:e}]",
+        retained.len(), components.len(), components.values().map(|c| (c.0, c.1)).collect::<Vec<_>>(), floating.len(), &floating[..floating.len().min(16)], weak.len(), &weak[..weak.len().min(8)], cells.len());
+}
+
 fn correction(
     cells: &[Cell],
     n: usize,
@@ -519,6 +588,9 @@ fn correction(
             },
         ));
     }
+    if next > 0 && std::env::var_os("P7_LAPLACIAN_DIAG").is_some() {
+        laplacian_structure_diagnostic(cells, n, retained);
+    }
     let factor = if next > 0 {
         let mut terms = Vec::with_capacity(cells.len() * 16);
         for c in cells {
@@ -535,6 +607,14 @@ fn correction(
         }
         let matrix = SparseColMat::<usize, f64>::try_new_from_triplets(next, next, &terms)
             .map_err(|e| error("FOIL_REDUCTION", &e.to_string()))?;
+        if let Some(path) = std::env::var_os("P7_LAPLACIAN_DUMP") {
+            // Development aid: free-node upper triplets and the free-to-full node map for offline spectrum checks.
+            let mut text = String::new();
+            for t in &terms { text.push_str(&format!("{} {} {:e}\n", t.row, t.col, t.val)); }
+            let _ = std::fs::write(&path, text);
+            let map: String = free_map.iter().enumerate().filter_map(|(i, f)| f.map(|j| format!("{j} {i}\n"))).collect();
+            let _ = std::fs::write(std::path::Path::new(&path).with_extension("map"), map);
+        }
         drop(terms);
         Some(sparse_potential::factor(&matrix, plan, budget, &[])?)
     } else {

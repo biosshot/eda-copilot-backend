@@ -963,7 +963,16 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         let mut canonical=Vec::with_capacity(vertices.len());
         for (inner,outer) in vertices {
             let a=arrangement_context.canonical_point(inner); let b=arrangement_context.canonical_point(outer);
-            if !on_boundary(a)||!on_boundary(b) {return Err(error("BOARD_PROFILE","canonical barrel spoke endpoint absent from its source boundary"));}
+            for p in [a,b] {
+                if on_boundary(p) {continue;}
+                // Tier by distance: grid rounding (<=4h) is noise; farther is a real topology loss.
+                let gap=barrel.0.0.iter().flat_map(|poly|std::iter::once(poly.exterior()).chain(poly.interiors())).flat_map(|ring|ring.lines()).map(|l|{
+                    let (s,e)=(l.start,l.end);let (dx,dy)=(e.x-s.x,e.y-s.y);let len2=dx*dx+dy*dy;
+                    let u=if len2>0.{(((p[0]-s.x)*dx+(p[1]-s.y)*dy)/len2).clamp(0.,1.)}else{0.};
+                    (p[0]-s.x-u*dx).hypot(p[1]-s.y-u*dy)}).fold(f64::INFINITY,f64::min);
+                if !(gap<=4.*grid_step_mm) {return Err(error("BOARD_PROFILE",&format!("canonical barrel spoke endpoint absent from its source boundary by {gap:e} mm (noise limit {:e} mm)",4.*grid_step_mm)));}
+                eprintln!("P7_BARREL_SPOKE_NOISE gapMm={gap:e} limitMm={:e} tier=noise",4.*grid_step_mm);
+            }
             canonical.push((a,b));
         }
         copper_skin_profile::visit_radial_constraints(&canonical,pieces,&mut segment)?;
