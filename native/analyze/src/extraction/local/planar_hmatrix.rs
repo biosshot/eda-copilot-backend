@@ -40,6 +40,7 @@ impl Kernel<'_> {
         let (ma, mb) = (&self.moments[a], &self.moments[b]);
         let dist = (ma.center_m[0] - mb.center_m[0]).hypot(ma.center_m[1] - mb.center_m[1]).hypot(ma.center_m[2] - mb.center_m[2]);
         if a != b && (ma.radius_m + mb.radius_m) / dist <= 0.2 {
+            let _g = planar_operator::ProfGuard::new(0);
             if let Ok(p) = ma.pair(mb) { st.moment_pairs += 1; return Ok(p.integral_m5); }
         }
         self.exact(a, b, st)
@@ -231,11 +232,15 @@ impl PlanarHMatrix {
             let mut store = None;
             // Small blocks rarely compress at this tolerance; a failed ACA would be thrown away.
             if b.far && !diag && rows.len() * cols.len() > 1024 {
-                if let Some((rank, u, v, err)) = aca(&kernel, &rows, &cols, params.eps, &mut st)? {
+                let aca_started = Instant::now();
+                let aca_result = aca(&kernel, &rows, &cols, params.eps, &mut st)?;
+                if planar_operator::prof_on() { planar_operator::prof_add(9, aca_started); if aca_result.is_none() { planar_operator::prof_add(10, aca_started); } }
+                if let Some((rank, u, v, err)) = aca_result {
                     charge(8 * (u.len() + v.len()))?; st.far_blocks = 1; st.max_rank = rank;
                     store = Some(Store::Low { rank, u, v, err });
                 } else { st.aca_dense_fallbacks = 1; }
             }
+            let dense_guard = if store.is_none() { Some(planar_operator::ProfGuard::new(11)) } else { None };
             let store = match store { Some(s) => s, None => {
                 let m = rows.len();
                 let mut d = Vec::new();
@@ -248,6 +253,7 @@ impl PlanarHMatrix {
                 }
                 st.near_blocks = 1; Store::Dense(d)
             } };
+            drop(dense_guard);
             st.cpu_ns = block_started.elapsed().as_nanos() as u64;
             let exact_total = exact_done.fetch_add(st.exact_pairs, Ordering::Relaxed) + st.exact_pairs;
             fast_done.fetch_add(st.fast_pairs, Ordering::Relaxed); slow_ns_done.fetch_add(st.slow_ns, Ordering::Relaxed); near_done.fetch_add(st.near_blocks, Ordering::Relaxed); fallback_done.fetch_add(st.aca_dense_fallbacks, Ordering::Relaxed);

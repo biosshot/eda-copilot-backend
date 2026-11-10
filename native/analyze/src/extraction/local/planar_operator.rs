@@ -272,9 +272,9 @@ fn unresolved(kind:&str,a:&Prism,b:&Prism)->String {
 /// orders that ends the loop; at the order limit a last change <= `noise_accept`
 /// is accepted (finest value, reported through the returned change), larger is refused.
 #[derive(Clone, Copy)]
-pub(super) struct PairTolerance { pub target: f64, pub noise_accept: f64, pub max_order: usize, pub approximate_above_noise: f64 }
+pub(super) struct PairTolerance { pub target: f64, pub noise_accept: f64, pub max_order: usize, pub approximate_above_noise: f64, /** Successive-order change that already ends the ladder (>= target). */ pub early: f64 }
 /// Legacy tight policy (references, tests, dense Gram): no noise acceptance.
-pub(super) const PAIR_LEGACY: PairTolerance = PairTolerance { target: 1e-8, noise_accept: 0., max_order: 64, approximate_above_noise: 0. };
+pub(super) const PAIR_LEGACY: PairTolerance = PairTolerance { target: 1e-8, noise_accept: 0., max_order: 64, approximate_above_noise: 0., early: 1e-8 };
 /// Target relative change between successive orders for the compact hybrid path.
 pub(super) const PAIR_TARGET_RELATIVE_CHANGE: f64 = 1e-5;
 /// Largest last change accepted as quadrature noise at the order limit (compact path).
@@ -282,7 +282,10 @@ pub(super) const PAIR_NOISE_ACCEPT_CHANGE: f64 = 2e-3;
 /// Compact path stops at order 16: Duffy cost grows like n^5 and needle triangles
 /// never reach the target. A last change up to `approximate_above_noise` is an
 /// approximation reported through the returned change; larger stays a refusal.
-pub(super) const PAIR_COMPACT: PairTolerance = PairTolerance { target: PAIR_TARGET_RELATIVE_CHANGE, noise_accept: PAIR_NOISE_ACCEPT_CHANGE, max_order: 16, approximate_above_noise: 0.5 };
+pub(super) const PAIR_COMPACT: PairTolerance = PairTolerance { target: PAIR_TARGET_RELATIVE_CHANGE, noise_accept: PAIR_NOISE_ACCEPT_CHANGE, max_order: 16, approximate_above_noise: 0.5, early: PAIR_EARLY_RELATIVE_CHANGE };
+/// Compact-path ladder stop: a successive-order change this small (below the 2e-3 noise tier) ends the Duffy/Gauss
+/// ladder instead of paying for the next order; the finer value is returned with its change as the error estimate.
+pub(super) const PAIR_EARLY_RELATIVE_CHANGE: f64 = 5e-4;
 
 fn converge(kind:&str,a:&Prism,b:&Prism,order:usize,tol:PairTolerance,mut eval:impl FnMut(usize)->Result<Option<f64>>)->Result<Option<(f64,usize,f64)>> {
     let Some(mut previous)=eval(order)? else {return Ok(None);};
@@ -290,7 +293,7 @@ fn converge(kind:&str,a:&Prism,b:&Prism,order:usize,tol:PairTolerance,mut eval:i
     while n<tol.max_order {
         n+=4; let next=eval(n)?.ok_or_else(||error("PLANAR_RANGE","pair classification changed"))?;
         relative=(next-previous).abs()/next.abs();
-        if relative<=tol.target { return Ok(Some((next,n,relative))); }
+        if relative<=tol.target.max(tol.early) { return Ok(Some((next,n,relative))); }
         previous=next;
     }
     if relative<=tol.noise_accept.max(tol.approximate_above_noise) { return Ok(Some((previous,n,relative))); }
@@ -299,18 +302,31 @@ fn converge(kind:&str,a:&Prism,b:&Prism,order:usize,tol:PairTolerance,mut eval:i
 pub(super) fn pair_integral(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Duration) -> Result<(f64,usize,f64)> {
     pair_integral_with(a,b,order,start,limit,PAIR_LEGACY)
 }
+/// Optional per-class call counts and wall nanoseconds of pair integrals (`P7_PAIR_PROFILE=1`).
+pub(super) const PROF_NAMES: [&str; 14] = ["moment", "separatedFast", "splitFast", "general", "self", "rectangle", "sharedEdge", "sharedVertex", "axialVolume", "acaTotal", "acaFallbackWasted", "nearDense", "unused12", "unused13"];
+static PROF: [std::sync::atomic::AtomicU64; 28] = [const { std::sync::atomic::AtomicU64::new(0) }; 28];
+pub(super) fn prof_on() -> bool { static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new(); *ON.get_or_init(|| std::env::var("P7_PAIR_PROFILE").as_deref() == Ok("1")) }
+pub(super) fn prof_add(slot: usize, since: Instant) { PROF[2 * slot].fetch_add(since.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed); PROF[2 * slot + 1].fetch_add(1, std::sync::atomic::Ordering::Relaxed); }
+pub(super) struct ProfGuard(usize, Option<Instant>);
+impl ProfGuard { pub(super) fn new(slot: usize) -> Self { Self(slot, if prof_on() { Some(Instant::now()) } else { None }) } }
+impl Drop for ProfGuard { fn drop(&mut self) { if let Some(t) = self.1 { PROF[2 * self.0].fetch_add(t.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed); PROF[2 * self.0 + 1].fetch_add(1, std::sync::atomic::Ordering::Relaxed); } } }
+pub(super) fn prof_json() -> serde_json::Value {
+    serde_json::Value::Object(PROF_NAMES.iter().enumerate().map(|(i, n)| ((*n).to_string(), serde_json::json!({"cpuSeconds": PROF[2 * i].load(std::sync::atomic::Ordering::Relaxed) as f64 * 1e-9, "calls": PROF[2 * i + 1].load(std::sync::atomic::Ordering::Relaxed)}))).collect())
+}
 pub(super) fn pair_integral_compact(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Duration) -> Result<(f64,usize,f64)> {
     let canonical=|mut t:[[f64;2];3]|{t.sort_by(|a,b|a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));t};
     let key=|p:&Prism|{let t=canonical(p.triangle_m);[t[0][0],t[0][1],t[1][0],t[1][1],t[2][0],t[2][1],p.z_m[0],p.z_m[1]]};
     let (ka,kb)=(key(a),key(b));
     let swap=ka.iter().zip(&kb).map(|(x,y)|x.total_cmp(y)).find(|o|o.is_ne()).is_some_and(|o|o.is_gt());
     let (ca,cb)=if swap {(b,a)} else {(a,b)};
-    if let Some(r)=separated_pair_fast(ca,cb,PAIR_COMPACT) { return Ok(r); }
+    { let _g=ProfGuard::new(1); if let Some(r)=separated_pair_fast(ca,cb,PAIR_COMPACT) { return Ok(r); } }
     let (pa,pb)=(Piece::of(ca),Piece::of(cb));
     if !pa.touches(&pb) {
+        let _g=ProfGuard::new(2);
         let mut budget=SPLIT_PAIR_BUDGET;
         if let Some((value,error))=split_pair_fast(&pa,&pb,PAIR_COMPACT,&mut budget) { return Ok((value,5,error/value)); }
     }
+    let _g=ProfGuard::new(3);
     pair_integral_with(a,b,order,start,limit,PAIR_COMPACT)
 }
 /// A prism or a part of one; needle triangles are bisected without allocation.
@@ -355,6 +371,11 @@ fn piece_ball(p:&Piece)->([f64;3],f64) {
 #[cfg(test)]
 fn prism_ball(p:&Prism)->([f64;3],f64) { piece_ball(&Piece::of(p)) }
 const FAST_MAX_POINTS:usize=25*9;
+/// Tensor ladder acceptance, in units of the pair target: m=3 is accepted when it differs from m=2 by at most
+/// `EARLY_ACCEPT_FACTOR` targets (2e-3 = the compact noise tier), m=5 when it differs from m=3 by at most
+/// `FINE_ACCEPT_FACTOR` targets. The reported error estimate keeps its 1/30 and 1/100 scaling.
+const EARLY_ACCEPT_FACTOR:f64=200.;
+const FINE_ACCEPT_FACTOR:f64=200.;
 /// Tensor-rule points (x,y,z,weight) with weights summing to the piece volume.
 fn prism_points(p:&Piece,m:usize,nz:usize,out:&mut [[f64;4];FAST_MAX_POINTS])->usize {
     let (Ok(rt),Ok(rz))=(prism::cached_rule(m),prism::cached_rule(nz)) else {return 0;};
@@ -402,14 +423,14 @@ fn piece_pair_fast(a:&Piece,b:&Piece,tol:PairTolerance,allow_fine:bool)->Option<
     // Cheapest pair first: most near-leaf pairs settle at m=3 (a few microseconds).
     let low=eval(2,nz)?; let coarse=eval(3,nz)?;
     let early=(coarse-low).abs()/coarse.abs();
-    if early<=30.*tol.target {return Some((coarse,3,early/30.));}
+    if early<=EARLY_ACCEPT_FACTOR*tol.target {return Some((coarse,3,early/30.));}
     if !allow_fine {return None;}
     let fine=eval(5,nz+1)?;
     let change=(fine-coarse).abs()/fine.abs();
     // The coarse-fine difference measures the coarse rule's error; the fine rule
     // converges superlinearly (observed error ~1e-10 at change ~1e-5), so accept up to
     // 100x target and report change/100 as the fine-value error estimate (observed error below that).
-    (change<=100.*tol.target).then_some((fine,5,change/100.))
+    (change<=FINE_ACCEPT_FACTOR*tol.target).then_some((fine,5,change/100.))
 }
 /// Tensor-Gauss ladder for a ball-separated prism-tetra pair: 1/r integral (m=2 vs 3 within
 /// 30x target, else m=5 within 100x). Returns (value, relative error estimate) or None.
@@ -452,10 +473,10 @@ fn piece_tet_gauss(a:&Piece,t:[[f64;3];4])->Option<(f64,f64)> {
     };
     let low=eval(2,nz)?; let coarse=eval(3,nz)?;
     let early=(coarse-low).abs()/coarse.abs();
-    if early<=30.*PAIR_TARGET_RELATIVE_CHANGE {return Some((coarse,early/30.));}
+    if early<=EARLY_ACCEPT_FACTOR*PAIR_TARGET_RELATIVE_CHANGE {return Some((coarse,early/30.));}
     let fine=eval(5,nz+1)?;
     let change=(fine-coarse).abs()/fine.abs();
-    (change<=100.*PAIR_TARGET_RELATIVE_CHANGE).then_some((fine,change/100.))
+    (change<=FINE_ACCEPT_FACTOR*PAIR_TARGET_RELATIVE_CHANGE).then_some((fine,change/100.))
 }
 static THIN_SPLIT_PAIRS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 /// Number of prism pairs that needed thin-triangle subdivision (evidence counter).
@@ -515,11 +536,13 @@ fn pair_integral_inner(a: &Prism, b: &Prism, order: usize, start: Instant, limit
     let swap=ka.iter().zip(&kb).map(|(x,y)|x.total_cmp(y)).find(|o|o.is_ne()).is_some_and(|o|o.is_gt());
     let (a,b)=if swap {(b,a)} else {(a,b)};
     if canonical(a.triangle_m)==canonical(b.triangle_m) {
+        let _g=ProfGuard::new(4);
         return converge("self",a,b,order,tol,|n|Ok(Some(aligned_integral(a,b,n,start,limit)?)))?.ok_or_else(||error("PLANAR_RANGE","self classification"));
     }
-    if let Some(r)=converge("rectangle cross",a,b,order,tol,|n|rectangle_pair(a,b,n,start,limit))? { return Ok(r); }
-    if let Some(r)=converge("shared edge Duffy",a,b,order,tol,|n|edge_integral(a,b,n,start,limit))? { return Ok(r); }
-    if let Some(r)=converge("shared vertex Duffy",a,b,order,tol,|n|vertex_integral(a,b,n,start,limit))? { return Ok(r); }
+    { let _g=ProfGuard::new(5); if let Some(r)=converge("rectangle cross",a,b,order,tol,|n|rectangle_pair(a,b,n,start,limit))? { return Ok(r); } }
+    { let _g=ProfGuard::new(6); if let Some(r)=converge("shared edge Duffy",a,b,order,tol,|n|edge_integral(a,b,n,start,limit))? { return Ok(r); } }
+    { let _g=ProfGuard::new(7); if let Some(r)=converge("shared vertex Duffy",a,b,order,tol,|n|vertex_integral(a,b,n,start,limit))? { return Ok(r); } }
+    let _g=ProfGuard::new(8);
     let mut last_change=f64::INFINITY;
     'paths: for axial in [true, false] {
         let evaluate = |n| -> Result<f64> { let q=prism::cached_rule(n)?; if axial { axial_magnetic::constant_pair_guarded(a,b,q,start,limit) } else { prism::volume_integral_guarded(a,b,q,start,limit) } };
@@ -545,7 +568,7 @@ fn pair_integral_inner(a: &Prism, b: &Prism, order: usize, start: Instant, limit
             if start.elapsed() >= limit { return Err(error("DEADLINE", "planar Gram deadline exceeded")); }
             relative=(previous-next).abs()/next.abs();
             if !next.is_finite() || next<=0. || !relative.is_finite() { return Err(error("PLANAR_RANGE", "invalid prism integral")); }
-            if relative <= tol.target { return Ok((next,n,relative)); }
+            if relative <= tol.target.max(tol.early) { return Ok((next,n,relative)); }
             previous=next;
         }
         if !aborted { last_change=relative; if relative<=tol.noise_accept.max(tol.approximate_above_noise) { return Ok((previous,n,relative)); } }

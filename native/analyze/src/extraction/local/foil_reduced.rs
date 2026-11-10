@@ -3714,6 +3714,7 @@ fn cross_dense_pass(table:&[f64],np:usize,nt:usize,threads:usize,da:&[[Vec<f64>;
     }
     Some((pa,rows))
 }
+static CROSS_PROF:[std::sync::atomic::AtomicU64;4]=[const{std::sync::atomic::AtomicU64::new(0)};4];
 struct CompactMixedMagnetic {
     supports:Vec<super::planar_operator::SparseSupport>,
     dimensions:usize,
@@ -3774,7 +3775,9 @@ impl CompactMixedMagnetic {
         let hm=if supports.len()>=512 && std::env::var("P7_PLANAR_HMATRIX").as_deref()!=Ok("0") {
             let refs:Vec<&super::prism::Prism>=supports.iter().map(|s|&s.prism).collect();
             let h=super::planar_hmatrix::PlanarHMatrix::build(&refs,mixed_budget/2,super::planar_hmatrix::Params::from_env(),start,wall)?;
-            eprintln!("P7_COMPACT_HMATRIX {}",h.stats.json());Some(h)
+            eprintln!("P7_COMPACT_HMATRIX {}",h.stats.json());
+            if super::planar_operator::prof_on() {eprintln!("P7_PAIR_PROFILE {}",super::planar_operator::prof_json());}
+            Some(h)
         } else {None};
         let mixed_budget=if hm.is_some() {mixed_budget-mixed_budget/2} else {mixed_budget};
         let local_hierarchy=if local.is_empty(){None}else{let mut h=super::volume_integral_magnetic::CompactLocalHierarchy::new(local.iter().map(|s|s.tetra).collect(),AllocationBudget{max_bytes:local_budget,..budget},start,wall)?;if hm.is_some()&&supports.len()>=512{eprintln!("P7_COMPACT_LOCAL_FAST enabled={}",h.enable_fast(local_budget));}Some(h)};
@@ -3823,19 +3826,23 @@ impl CompactMixedMagnetic {
         let totals:Vec<(usize,usize,usize,usize,f64)>=std::thread::scope(|scope| {
             let handles:Vec<_>=(0..threads).map(|_|scope.spawn(|| {
                 let mut t=(0usize,0usize,0usize,0usize,0f64);
+                let prof=super::planar_operator::prof_on();let mut loc=[0u64;4];
                 let mut run=||->Result<()> { loop {
                     if abort.load(Relaxed) {return Ok(());}
                     let k=next.fetch_add(1,Relaxed);if k>=nt {return Ok(());}
                     let mut row=rows[k].lock().map_err(|_|error("MAGNETIC_CONFIG","cross row poisoned"))?;
                     for a in 0..np {
                         check_time(start,wall)?;
+                        let t0=if prof {Some(Instant::now())} else {None};
                         let e=cross_fast_entry(&supports[a].prism,local[k].tetra,&moments[a],&moments[np+k],budget,start,wall)?;
+                        if let Some(t0)=t0 {loc[(e.path as usize).min(3)]+=t0.elapsed().as_nanos() as u64;}
                         row[a]=e.value;
                         match e.path {0=>t.0+=1,1=>t.1+=1,_=>t.2+=1}
                         t.4=t.4.max(e.change);if e.approximated {t.3+=1;}
                     }
                 }};
                 if let Err(e)=run() {abort.store(true,Relaxed);failure.lock().unwrap().get_or_insert(e);}
+                for (slot,v) in loc.iter().enumerate() {CROSS_PROF[slot].fetch_add(*v,Relaxed);}
                 t
             })).collect();
             handles.into_iter().map(|h|h.join().unwrap_or_else(|_|{abort.store(true,Relaxed);failure.lock().unwrap().get_or_insert(error("MAGNETIC_CONFIG","cross fill worker panicked"));(0,0,0,0,0.)})).collect()
@@ -3843,7 +3850,7 @@ impl CompactMixedMagnetic {
         drop(rows);
         if let Some(e)=failure.into_inner().unwrap() {return Err(e);}
         let sum=|f:fn(&(usize,usize,usize,usize,f64))->usize|totals.iter().map(f).sum::<usize>();
-        let info=serde_json::json!({"operator":"compact-fast-dense-cross","pairs":np*nt,"momentPairs":sum(|t|t.0),"gaussPairs":sum(|t|t.1),"slowPairs":sum(|t|t.2),"approximatedPairs":sum(|t|t.3),"maxChange":totals.iter().fold(0f64,|m,t|m.max(t.4)),"fillSeconds":started.elapsed().as_secs_f64(),"storedBytes":np*nt*8,"threads":threads});
+        let info=serde_json::json!({"operator":"compact-fast-dense-cross","pairs":np*nt,"momentPairs":sum(|t|t.0),"gaussPairs":sum(|t|t.1),"slowPairs":sum(|t|t.2),"approximatedPairs":sum(|t|t.3),"maxChange":totals.iter().fold(0f64,|m,t|m.max(t.4)),"fillSeconds":started.elapsed().as_secs_f64(),"storedBytes":np*nt*8,"threads":threads,"profileCpuSeconds":if super::planar_operator::prof_on() {serde_json::json!({"moments":CROSS_PROF[0].load(Relaxed) as f64*1e-9,"gauss":CROSS_PROF[1].load(Relaxed) as f64*1e-9,"slowTouching":CROSS_PROF[2].load(Relaxed) as f64*1e-9,"slowNear":CROSS_PROF[3].load(Relaxed) as f64*1e-9})} else {serde_json::Value::Null}});
         eprintln!("P7_COMPACT_CROSS_FAST {info}");
         *self.cross.info.borrow_mut()=Some(info);
         *self.cross.table.borrow_mut()=table;
