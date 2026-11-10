@@ -301,7 +301,7 @@ pub(super) fn input_from_board(board: &super::board_mesh::BoardMesh, request: &s
         let mut split_union = Vec::with_capacity(union.0.len());
         for poly in &union.0 {
             let parts = split_self_touching(poly).map_err(|e| error("COPPER_RING", &format!("physical copper polygon is a self-touching ring that cannot be split: {e}")))?;
-            if parts.len() != 1 { eprintln!("P7_COPPER_RING_SPLIT shape=physical:{} loops={}", metals.len() + split_union.len(), parts.len()); }
+            if parts.len() != 1 || !geo::algorithm::Validation::is_valid(poly) { eprintln!("P7_COPPER_RING_SPLIT shape=physical:{} loops={}", metals.len() + split_union.len(), parts.len()); }
             split_union.extend(parts);
         }
         let union = geo::MultiPolygon(split_union);

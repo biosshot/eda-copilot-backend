@@ -471,12 +471,23 @@ pub(super) fn pair_integral_with(a: &Prism, b: &Prism, order: usize, start: Inst
     if let Some(r)=converge("shared edge Duffy",a,b,order,tol,|n|edge_integral(a,b,n,start,limit))? { return Ok(r); }
     if let Some(r)=converge("shared vertex Duffy",a,b,order,tol,|n|vertex_integral(a,b,n,start,limit))? { return Ok(r); }
     let mut last_change=f64::INFINITY;
-    for axial in [true, false] {
+    'paths: for axial in [true, false] {
         let evaluate = |n| -> Result<f64> { let q=prism::cached_rule(n)?; if axial { axial_magnetic::constant_pair_guarded(a,b,q,start,limit) } else { prism::volume_integral_guarded(a,b,q,start,limit) } };
-        let mut previous = match evaluate(order) { Ok(x) => x, Err(_) if axial && start.elapsed() < limit => continue, Err(e) => return Err(e) };
-        let mut n=order; let mut relative=f64::INFINITY; let mut aborted=false;
         // Volume path cost grows like n^6; it is only the fallback for the axial rule.
         let cap=if axial {tol.max_order} else {tol.max_order.min(16)};
+        let mut n=order;
+        // A nonpositive potential from a long thin source triangle means the starting Gauss order is
+        // too low for that pair, not that the integral is invalid: raise the order and keep the
+        // convergence test below unchanged.
+        let mut previous = loop {
+            match evaluate(n) {
+                Ok(x) => break x,
+                Err(_) if axial && start.elapsed() < limit => continue 'paths,
+                Err(e) if !axial && format!("{e:?}").contains("QUADRATURE_RANGE") && n + 4 <= cap && start.elapsed() < limit => { n += 4; }
+                Err(e) => return Err(e),
+            }
+        };
+        let mut relative=f64::INFINITY; let mut aborted=false;
         while n<cap {
             if start.elapsed() >= limit { return Err(error("DEADLINE", "planar Gram deadline exceeded")); }
             n+=4;

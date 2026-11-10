@@ -148,9 +148,11 @@ pub fn point_potential(source: &Prism, point: [f64; 3], rule: &GaussRule) -> Res
     if total.is_finite() && total > 0. {
         Ok(total)
     } else {
+        let [a, b, c] = source.triangle_m;
+        let twice_area = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
         Err(error(
             "QUADRATURE_RANGE",
-            "nonpositive/nonfinite prism potential; no clipping applied",
+            &format!("nonpositive/nonfinite prism potential {total:e}; no clipping applied (source triangle {:?}, twice signed area {twice_area:e} m2, z {:?}, point {point:?})", source.triangle_m, source.z_m),
         ))
     }
 }
