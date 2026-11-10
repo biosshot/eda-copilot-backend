@@ -962,18 +962,27 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         let on_boundary=|p:[f64;2]| barrel.0.0.iter().any(|poly|std::iter::once(poly.exterior()).chain(poly.interiors()).any(|ring|ring.lines().any(|line|line.intersects(&Point::from(p)))));
         let mut canonical=Vec::with_capacity(vertices.len());
         for (inner,outer) in vertices {
-            let a=arrangement_context.canonical_point(inner); let b=arrangement_context.canonical_point(outer);
-            for p in [a,b] {
-                if on_boundary(p) {continue;}
-                // Tier by distance: grid rounding (<=4h) is noise; farther is a real topology loss.
-                let gap=barrel.0.0.iter().flat_map(|poly|std::iter::once(poly.exterior()).chain(poly.interiors())).flat_map(|ring|ring.lines()).map(|l|{
-                    let (s,e)=(l.start,l.end);let (dx,dy)=(e.x-s.x,e.y-s.y);let len2=dx*dx+dy*dy;
+            let mut ends=[arrangement_context.canonical_point(inner),arrangement_context.canonical_point(outer)];
+            for p in ends.iter_mut() {
+                if on_boundary(*p) {continue;}
+                // Tier by distance: grid rounding (<=4h) is noise; farther is a real topology loss. A noise-level
+                // endpoint snaps to the nearest boundary vertex (else the nearest boundary point), so it does not
+                // become a second vertex a few 1e-8 mm from the ring vertex (zero-area planar triangles).
+                let (mut vertex,mut edge)=((f64::INFINITY,*p),(f64::INFINITY,*p));
+                for line in barrel.0.0.iter().flat_map(|poly|std::iter::once(poly.exterior()).chain(poly.interiors())).flat_map(|ring|ring.lines()) {
+                    let (s,e)=(line.start,line.end);let (dx,dy)=(e.x-s.x,e.y-s.y);let len2=dx*dx+dy*dy;
                     let u=if len2>0.{(((p[0]-s.x)*dx+(p[1]-s.y)*dy)/len2).clamp(0.,1.)}else{0.};
-                    (p[0]-s.x-u*dx).hypot(p[1]-s.y-u*dy)}).fold(f64::INFINITY,f64::min);
-                if !(gap<=4.*grid_step_mm) {return Err(error("BOARD_PROFILE",&format!("canonical barrel spoke endpoint absent from its source boundary by {gap:e} mm (noise limit {:e} mm)",4.*grid_step_mm)));}
-                eprintln!("P7_BARREL_SPOKE_NOISE gapMm={gap:e} limitMm={:e} tier=noise",4.*grid_step_mm);
+                    let q=[s.x+u*dx,s.y+u*dy];let d=(p[0]-q[0]).hypot(p[1]-q[1]);
+                    if d<edge.0 {edge=(d,q);}
+                    let dv=(p[0]-s.x).hypot(p[1]-s.y);
+                    if dv<vertex.0 {vertex=(dv,[s.x,s.y]);}
+                }
+                let limit=4.*grid_step_mm;
+                if !(edge.0<=limit) {return Err(error("BOARD_PROFILE",&format!("canonical barrel spoke endpoint absent from its source boundary by {:e} mm (noise limit {limit:e} mm)",edge.0)));}
+                eprintln!("P7_BARREL_SPOKE_NOISE gapMm={:e} limitMm={limit:e} tier=noise",edge.0);
+                *p=if vertex.0<=limit {vertex.1} else {edge.1};
             }
-            canonical.push((a,b));
+            canonical.push((ends[0],ends[1]));
         }
         copper_skin_profile::visit_radial_constraints(&canonical,pieces,&mut segment)?;
     }

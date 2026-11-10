@@ -157,7 +157,7 @@ def inspect(record):
     record['errorCode'] = code or ('exit %s' % record.get('exitCode') if record['status'] == 'fail' else None)
     if record['status'] == 'pass':
         record['tier'] = ('planned (no solve)' if detail.get('status') == 'planned' else ('model' if detail else 'control passed')
-                          if detail.get('status') in (None, 'model') else 'refusal (tier 3)')
+                          if detail.get('status') in (None, 'model', 'complete') else 'refusal (tier 3)')
         if 'approx' in text.lower() and record['tier'] == 'model': record['tier'] = 'model+approximation'
     elif record['status'] in ('timeout', 'resource-failure'): record['tier'] = 'budget (no answer; not a physical refusal)'
     else:

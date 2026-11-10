@@ -296,7 +296,7 @@ pub fn extrude(input: &LayeredInput, budget: AllocationBudget) -> Result<Layered
         if !area.is_finite() || area <= 0. {
             return Err(error(
                 "MESH_INPUT",
-                "zero/nonfinite planar triangle; no dropping applied",
+                &format!("zero/nonfinite planar triangle; no dropping applied; vertices(m)={a:?} {b:?} {c:?} area={area:e}"),
             ));
         }
         for j in 0..3 {
