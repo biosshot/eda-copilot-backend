@@ -724,11 +724,12 @@ fn prepare_model_inner<'a>(
         .fold(Sum::default(), |sum, t| sum.add(Sum::from(t.volume_m3)))
         .value();
     let dropped_fraction = if copper_volume > 0. { dropped_volume / copper_volume } else { 0. };
-    if !(dropped_fraction <= 1e-6) {
+    // Three tiers: <=1e-6 noise, <=1e-3 approximation (recorded as quality.sliverPolicy), above that refused.
+    if !(dropped_fraction <= 1e-3) {
         return Err(error(
             "MIXED_FOIL_NOISE",
             &format!(
-                "dropped sliver copper volume {dropped_volume:e} m3 in {dropped_columns} columns exceeds 1e-6 of copper volume {copper_volume:e} m3"
+                "dropped sliver copper volume {dropped_volume:e} m3 in {dropped_columns} columns exceeds 1e-3 of copper volume {copper_volume:e} m3"
             ),
         ));
     }
@@ -2080,6 +2081,12 @@ fn solve_checked_mesh_impl_policy(
         if skin.is_some() {
             result["provenance"]["operatorPolicy"]=json!(operator.policy_name());
             result["provenance"]["copperSkinMesh"]=skin_profile_evidence(mesh,requested_upper,effective_upper);
+        }
+        {
+            let f=map.dropped_volume_fraction;
+            let tier=if f<=1e-6 {"noise"} else {"approximation"};
+            result["quality"]["sliverPolicy"]=json!({"tier":tier,"droppedVolumeRelative":f,"columns":map.sliver_columns_dropped,"noiseLimit":1e-6,"approximationLimit":1e-3,
+                "warning":if tier=="approximation" {json!("Sliver copper columns carry no current mode; their volume exceeds the 1e-6 noise level. Unverified approximation.")} else {serde_json::Value::Null}});
         }
         result["quality"]["scope"] = json!("compact-discrete");
         result["quality"]["physicalError"] = json!("unverified");
