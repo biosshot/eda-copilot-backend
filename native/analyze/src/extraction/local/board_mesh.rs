@@ -762,6 +762,37 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     // otherwise create sub-grid cells between equivalent prepared contours.
     super::board_foil::phase_trace("mesh-electrodes",start,serde_json::json!({}));
     let original_contact_areas:BTreeMap<_,_>=electrode_polygons.iter().map(|(name,p)|(name.clone(),p.unsigned_area())).collect();
+    // Approximation tier: relax the interior refinement far from the channel (see mesh_coarsen).
+    let a0_mm2=r.max_triangle_area_m2*1e6;
+    let mut mesh_coarsening=None;
+    let coarse_field=if mesh_coarsen::disabled() {None} else {
+        let electrode_keys:std::collections::HashSet<(&str,&str)>=r.electrodes.iter().flat_map(|e|e.source_path.iter().chain(e.source_paths.iter().flatten()).map(move|p|(p.as_str(),e.layer.as_str()))).collect();
+        let net_of:std::collections::HashMap<&str,&str>=source_mapping.iter().filter_map(|m|m.2.as_deref().map(|n|(m.0.as_str(),n))).collect();
+        let channel_nets:std::collections::BTreeSet<&str>=source_mapping.iter().filter(|m|electrode_keys.contains(&(m.1.as_str(),m.3.as_str()))).filter_map(|m|m.2.as_deref()).collect();
+        let mut net_area=BTreeMap::<&str,f64>::new();
+        for sh in &shapes {if let Some(n)=net_of.get(sh.id.as_str()).filter(|n|channel_nets.contains(*n)) {*net_area.entry(*n).or_default()+=sh.poly.unsigned_area();}}
+        // With several channel nets the largest copper (the reference plane) is not support:
+        // its return current spreads under the signal copper, which is support.
+        let plane=if channel_nets.len()>1 {net_area.iter().max_by(|a,b|a.1.total_cmp(b.1)).map(|(n,_)|*n)} else {None};
+        let wanted=|n:Option<&str>|n.is_some_and(|n|channel_nets.contains(n)&&Some(n)!=plane);
+        let mut support:Vec<MultiPolygon<f64>>=electrode_polygons.values().cloned().collect();
+        support.extend(shapes.iter().filter(|sh|wanted(net_of.get(sh.id.as_str()).copied())).map(|sh|sh.poly.clone()));
+        for hole in &geometry.holes {
+            let Some(sh)=shapes.iter().find(|sh|sh.id==hole.id&&barrel_ids.contains(&sh.id)) else {continue};
+            let net=board.vias.iter().find(|v|v.source.path==hole.source.path).and_then(|v|v.net)
+                .or_else(||board.pads.iter().find(|p|p.source.path==hole.source.path).and_then(|p|p.net))
+                .and_then(|i|board.nets.get(i));
+            if wanted(net.map(|n|n.as_str())) {support.push(sh.poly.clone());}
+        }
+        let diagonal=(roi_bounds[1][0]-roi_bounds[0][0]).hypot(roi_bounds[1][1]-roi_bounds[0][1]);
+        let field=mesh_coarsen::SizeField::new(&support,a0_mm2.sqrt(),diagonal);
+        if field.is_none() {
+            let h0=a0_mm2.sqrt();
+            mesh_coarsening=Some(serde_json::json!({"kind":"distance-graded-planar-mesh","tier":"approximation","active":false,"h0Mm":h0,"hMaxMm":mesh_coarsen::SizeField::h_max_for(h0,diagonal),"d0Mm":null,
+                "reason":"coarsest size below 1.5 h0 (board diagonal / 50 or 32 h0) or no channel support; mesh unchanged"}));
+        }
+        field
+    };
     let arrangement_context={
         // The final shared arrangement uses the same checked kernel range for
         // rectangular and polygonal domains. Neither inherits the coarser
@@ -790,6 +821,25 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
             physical_shapes[i].0=copper.clone();arrangement_sets[i]=copper;
         }
     }
+    // Approximation tier: simplify far copper rings (never within d0 of the channel support).
+    let mut outline_simplification=None;
+    if let Some(field)=&coarse_field {
+        if std::env::var("P7_MESH_SIMPLIFY").as_deref()!=Ok("0") {
+            let layers_n=geometry.layers.len();
+            let keep=mesh_coarsen::Keepouts::new(std::iter::once(&bores).chain(partial_bores.iter().map(|(_,p)|p)).chain(physical_shapes[layers_n..].iter().map(|s|&s.0)));
+            let total_area:f64=physical_shapes[..layers_n].iter().map(|s|s.0.unsigned_area()).sum();
+            let mut budget=1e-4*total_area;let mut st=mesh_coarsen::SimplifyStats::default();
+            for i in 0..layers_n {
+                check(start,max_wall)?;
+                let simplified=mesh_coarsen::simplify_set(&physical_shapes[i].0,field,&keep,&mut budget,&mut st);
+                physical_shapes[i].0=simplified.clone();arrangement_sets[i]=simplified;
+            }
+            super::board_foil::phase_trace("mesh-simplified",start,serde_json::json!({"verticesBefore":st.vertices_before,"verticesAfter":st.vertices_after}));
+            outline_simplification=Some(st);
+        }
+    }
+    let owner_slack=if outline_simplification.as_ref().is_some_and(|st|st.rings_simplified>0) {coarse_field.as_ref().map_or(1e-2,|f|(f.h_max/4.*1.5).max(1e-2))} else {1e-2};
+    let unowned_limit=if owner_slack>1e-2 {1e-4} else {1e-6};
     let original_physical_stats=physical_shapes.iter().map(|s|(s.0.unsigned_area(),s.0.0.len(),s.0.0.iter().map(|p|p.interiors().len()).sum::<usize>(),perimeter_mm(&s.0))).collect::<Vec<_>>();
     let grid_step_mm=arrangement_context.grid_step_mm();
     let original_filtered=physical_shapes.iter().map(|s|noise_pieces(&s.0,grid_step_mm)).collect::<Vec<_>>();
@@ -919,9 +969,24 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     // atom vertices lying within 2h of it and constrain the pieces between existing vertices.
     let tol=2.*grid_step_mm;
     let mut unique=std::collections::HashSet::new();
-    let vertex_tree=rstar::RTree::bulk_load(atoms.iter().flat_map(|a|std::iter::once(a.poly.exterior()).chain(a.poly.interiors())).flat_map(|r|r.0.iter()).filter(|c|unique.insert((c.x.to_bits(),c.y.to_bits()))).map(|c|[c.x,c.y]).collect::<Vec<_>>());
+    // Vertices closer than 4h are arrangement rounding noise of one point (two atoms that should
+    // share a node). Snap each cluster to its first vertex; otherwise the CDT has sliver faces of
+    // width ~1e-7 mm and aspect up to 1e8. The displacement is below the overlay grid error bound.
+    let mut canon=std::collections::HashMap::<(u64,u64),[f64;2]>::new();
+    let mut rep_tree=rstar::RTree::<[f64;2]>::new();
+    let mut snapped=0usize;
+    for c in atoms.iter().flat_map(|a|std::iter::once(a.poly.exterior()).chain(a.poly.interiors())).flat_map(|r|r.0.iter()) {
+        if !unique.insert((c.x.to_bits(),c.y.to_bits())) {continue;}
+        let p=[c.x,c.y];
+        let hit=rep_tree.locate_within_distance(p,(2.*tol)*(2.*tol)).min_by(|a,b|((a[0]-p[0]).powi(2)+(a[1]-p[1]).powi(2)).total_cmp(&((b[0]-p[0]).powi(2)+(b[1]-p[1]).powi(2)))).copied();
+        match hit {Some(q)=>{canon.insert((c.x.to_bits(),c.y.to_bits()),q);snapped+=1;},None=>{rep_tree.insert(p);canon.insert((c.x.to_bits(),c.y.to_bits()),p);}}
+    }
+    let snap=|p:[f64;2]|canon.get(&(p[0].to_bits(),p[1].to_bits())).copied().unwrap_or(p);
+    let vertex_tree=rep_tree;
+    super::board_foil::phase_trace("t-vertex-snap",start,serde_json::json!({"snapped":snapped,"radiusMm":2.*tol}));
     for poly in atoms.iter().map(|a|&a.poly){for ring in std::iter::once(poly.exterior()).chain(poly.interiors()){for line in ring.lines(){
-        let (a,c)=([line.start.x,line.start.y],[line.end.x,line.end.y]);
+        let (a,c)=(snap([line.start.x,line.start.y]),snap([line.end.x,line.end.y]));
+        if a==c {continue;}
         let (dx,dy)=(c[0]-a[0],c[1]-a[1]);let len2=dx*dx+dy*dy;
         let mut cuts:Vec<(f64,[f64;2])>=vec![];
         if len2>tol*tol {
@@ -943,37 +1008,6 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     drop(segment);
     super::board_foil::phase_trace("t-constraints-inserted",start,serde_json::json!({}));
     let max_xy=budget.max_nodes.min(budget.max_bytes/4096);
-    // Approximation tier: relax the interior refinement far from the channel (see mesh_coarsen).
-    let a0_mm2=r.max_triangle_area_m2*1e6;
-    let mut mesh_coarsening=None;
-    let coarse_field=if mesh_coarsen::disabled() {None} else {
-        let electrode_keys:std::collections::HashSet<(&str,&str)>=r.electrodes.iter().flat_map(|e|e.source_path.iter().chain(e.source_paths.iter().flatten()).map(move|p|(p.as_str(),e.layer.as_str()))).collect();
-        let net_of:std::collections::HashMap<&str,&str>=source_mapping.iter().filter_map(|m|m.2.as_deref().map(|n|(m.0.as_str(),n))).collect();
-        let channel_nets:std::collections::BTreeSet<&str>=source_mapping.iter().filter(|m|electrode_keys.contains(&(m.1.as_str(),m.3.as_str()))).filter_map(|m|m.2.as_deref()).collect();
-        let mut net_area=BTreeMap::<&str,f64>::new();
-        for sh in &shapes {if let Some(n)=net_of.get(sh.id.as_str()).filter(|n|channel_nets.contains(*n)) {*net_area.entry(*n).or_default()+=sh.poly.unsigned_area();}}
-        // With several channel nets the largest copper (the reference plane) is not support:
-        // its return current spreads under the signal copper, which is support.
-        let plane=if channel_nets.len()>1 {net_area.iter().max_by(|a,b|a.1.total_cmp(b.1)).map(|(n,_)|*n)} else {None};
-        let wanted=|n:Option<&str>|n.is_some_and(|n|channel_nets.contains(n)&&Some(n)!=plane);
-        let mut support:Vec<MultiPolygon<f64>>=electrode_polygons.values().cloned().collect();
-        support.extend(shapes.iter().filter(|sh|wanted(net_of.get(sh.id.as_str()).copied())).map(|sh|sh.poly.clone()));
-        for hole in &geometry.holes {
-            let Some(sh)=shapes.iter().find(|sh|sh.id==hole.id&&barrel_ids.contains(&sh.id)) else {continue};
-            let net=board.vias.iter().find(|v|v.source.path==hole.source.path).and_then(|v|v.net)
-                .or_else(||board.pads.iter().find(|p|p.source.path==hole.source.path).and_then(|p|p.net))
-                .and_then(|i|board.nets.get(i));
-            if wanted(net.map(|n|n.as_str())) {support.push(sh.poly.clone());}
-        }
-        let diagonal=(roi_bounds[1][0]-roi_bounds[0][0]).hypot(roi_bounds[1][1]-roi_bounds[0][1]);
-        let field=mesh_coarsen::SizeField::new(&support,a0_mm2.sqrt(),diagonal);
-        if field.is_none() {
-            let h0=a0_mm2.sqrt();
-            mesh_coarsening=Some(serde_json::json!({"kind":"distance-graded-planar-mesh","tier":"approximation","active":false,"h0Mm":h0,"hMaxMm":mesh_coarsen::SizeField::h_max_for(h0,diagonal),"d0Mm":null,
-                "reason":"coarsest size below 1.5 h0 (board diagonal / 50 or 32 h0) or no channel support; mesh unchanged"}));
-        }
-        field
-    };
     let refine_area=|area:f64,vertices:usize|RefinementParameters::new().keep_constraint_edges().with_angle_limit(AngleLimit::from_deg(r.min_triangle_angle_deg.unwrap_or(30.))).with_max_allowed_area(area).with_max_additional_vertices(max_xy.saturating_sub(vertices));
     if let Some(field)=&coarse_field {
         let baseline=std::env::var_os("P7_MESH_COARSEN_BASELINE").map(|_|{let mut c=cdt.clone();c.refine(refine_area(a0_mm2,c.num_vertices()));c.num_vertices()});
@@ -987,9 +1021,9 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
             if !repair.refinement_complete {return Err(error("MEMORY_LIMIT","board XY mesh refinement incomplete within budget"));}
         }
         mesh_coarsening=Some(serde_json::json!({"kind":"distance-graded-planar-mesh","tier":"approximation","active":true,"h0Mm":field.h0,"hMaxMm":field.h_max,"d0Mm":field.d0,"growthPerStep":mesh_coarsen::GROWTH_PER_STEP,
-            "support":"port electrode contacts, copper of the channel nets (largest net excluded when several), their barrels","geometry":"copper outlines, bores and contacts unchanged; only interior refinement coarsened",
+            "support":"port electrode contacts, copper of the channel nets (largest net excluded when several), their barrels","geometry":"copper rings farther than d0 from the support are simplified (topology-preserving Visvalingam-Whyatt, tolerance up to hMax/4); channel copper within d0, contacts and bores unchanged",
             "unverified":"coarsened far-field mesh accuracy is not independently verified; air/dielectric fill shares the extrusion planes and is coarsened only in XY",
-            "gradedVertices":graded,"planarVertices":cdt.num_vertices(),"planarVerticesUniform":baseline}));
+            "gradedVertices":graded,"outline":outline_simplification,"planarVertices":cdt.num_vertices(),"planarVerticesUniform":baseline}));
     }else{
         let refinement=cdt.refine(refine_area(a0_mm2,cdt.num_vertices()));
         if !refinement.refinement_complete {return Err(error("MEMORY_LIMIT","board XY mesh refinement incomplete within budget"));}
@@ -1029,6 +1063,20 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         if distance==margin {break;}distance=(2.*distance).min(margin);
     }
     super::board_foil::phase_trace("t-air-rings",start,serde_json::json!({}));
+    // Minimum-angle refinement (Chew/Ruppert): long constrained edges are split by collinear Steiner points.
+    {
+        let min_area=mesh_coarsen::quality_min_area();
+        let (aspect_before,angle_before,worst_before,fixable_before)=mesh_coarsen::quality(&cdt,min_area);
+        let n0=cdt.num_vertices();let mut complete=true;
+        if !mesh_coarsen::quality_disabled() {
+            let cap=mesh_coarsen::quality_cap(n0).min(max_xy.saturating_sub(n0));
+            complete=mesh_coarsen::improve(&mut cdt,mesh_coarsen::quality_angle(),min_area,cap);
+        }
+        let (aspect_after,angle_after,worst_after,fixable_after)=mesh_coarsen::quality(&cdt,min_area);
+        let q=serde_json::json!({"targetMinAngleDeg":if mesh_coarsen::quality_disabled(){0.}else{mesh_coarsen::quality_angle()},"minFaceAreaMm2":min_area,"maxAspectBefore":aspect_before,"maxAspectAboveMinAreaBefore":fixable_before,"maxAspectAboveMinAreaAfter":fixable_after,"maxAspectAfter":aspect_after,"minAngleBeforeDeg":angle_before,"minAngleAfterDeg":angle_after,"steinerVertices":cdt.num_vertices()-n0,"worstFaceBeforeMm":worst_before,"worstFaceAfterMm":worst_after,"complete":complete,"note":"collinear Steiner points on constrained edges; outlines unchanged"});
+        eprintln!("P7_MESH_QUALITY {q}");
+        mesh_coarsening.get_or_insert_with(||serde_json::json!({"kind":"distance-graded-planar-mesh","tier":"approximation","active":false}))["quality"]=q;
+    }
     let planar_nodes_mm:Vec<_>=cdt.vertices().map(|v|[v.position().x,v.position().y]).collect();
     let xy_m:Vec<_>=planar_nodes_mm.iter().map(|p|[(p[0]-origin_mm[0])*1e-3,(p[1]-origin_mm[1])*1e-3]).collect();
     let mut triangles=vec![];let mut centres=vec![];let mut overlaps=vec![];
@@ -1151,7 +1199,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
             // arrangement check bounded the excess copper at |dA| <= h*P; the attributed face area is
             // re-bounded below at 1e-6 of the copper area, so this cannot hide a real gain.
             let near_owner:Vec<_>=if copper&&owners.is_empty() {
-                use rstar::PointDistance;let d=1e-2;
+                use rstar::PointDistance;let d=owner_slack;
                 let at=geo::Rect::new(geo::Coord{x:p.x()-d,y:p.y()-d},geo::Coord{x:p.x()+d,y:p.y()+d});
                 let best=candidates(&shape_index,at).into_iter().filter(|&i|middle>shapes[i].span[0]&&middle<shapes[i].span[1])
                     .filter_map(|i|segment_trees[i].nearest_neighbor(&[p.x(),p.y()]).map(|g|(g.distance_2(&[p.x(),p.y()]),i)))
@@ -1185,7 +1233,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         let unowned:f64=unowned_faces.iter().map(|&ti|tri_area(&triangles[ti])).sum();
         let copper_area:f64=physical_shapes.iter().map(|s|s.0.unsigned_area()).sum();
         eprintln!("P7_ARRANGEMENT_NOISE unowned copper faces={} attributed to nearest source, area {unowned:e} mm2 ({:e} of copper)",unowned_faces.len(),unowned/copper_area);
-        if !(unowned<=1e-6*copper_area) {return Err(error("BOARD_OWNERSHIP",&format!("{} canonical copper faces (area {unowned:e} mm2) lie outside every source polygon: more than 1e-6 of copper area {copper_area:e} mm2",unowned_faces.len())));}
+        if !(unowned<=unowned_limit*copper_area) {return Err(error("BOARD_OWNERSHIP",&format!("{} canonical copper faces (area {unowned:e} mm2) lie outside every source polygon: more than 1e-6 of copper area {copper_area:e} mm2",unowned_faces.len())));}
     }
     let mesh=mesh::extrude(&LayeredInput{xy_m,triangles,boundary_edges,z_m,materials},budget)?;
     let conductivity_s_m=mesh.copper_tetrahedra.iter().map(|t|sigma_per_triangle[t.slab][t.planar_triangle]).collect();
