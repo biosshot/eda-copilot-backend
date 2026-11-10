@@ -977,7 +977,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     // Vertices closer than 4h are arrangement rounding noise of one point (two atoms that should
     // share a node). Snap each cluster to its first vertex; otherwise the CDT has sliver faces of
     // width ~1e-7 mm and aspect up to 1e8. The displacement is below the overlay grid error bound.
-    let snap_radius=std::env::var("P7_MESH_SNAP_MM").ok().and_then(|v|v.parse::<f64>().ok()).filter(|v|v.is_finite()&&*v>=0.).unwrap_or(2.*tol);
+    let snap_radius=std::env::var("P7_MESH_SNAP_MM").ok().and_then(|v|v.parse::<f64>().ok()).filter(|v|v.is_finite()&&*v>=0.).unwrap_or(2.*tol); let snap_radius=if atoms.iter().map(|a|a.poly.exterior().0.len()).sum::<usize>()<2000 {0.} else {snap_radius};
     let mut canon=std::collections::HashMap::<(u64,u64),[f64;2]>::new();
     let mut rep_tree=rstar::RTree::<[f64;2]>::new();
     let mut snapped=0usize;
@@ -1074,7 +1074,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         let min_area=mesh_coarsen::quality_min_area();
         let (aspect_before,angle_before,worst_before,fixable_before)=mesh_coarsen::quality(&cdt,min_area);
         let n0=cdt.num_vertices();let mut complete=true;
-        if !mesh_coarsen::quality_disabled() {
+        if !mesh_coarsen::quality_disabled()&&n0>=2000 {
             let cap=mesh_coarsen::quality_cap(n0).min(max_xy.saturating_sub(n0));
             complete=mesh_coarsen::improve(&mut cdt,mesh_coarsen::quality_angle(),min_area,cap);
         }

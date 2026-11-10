@@ -48,7 +48,8 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget)->Res
     let budget_bytes=std::env::var("P7_ROI_BUDGET_MIB").ok().and_then(|v|v.parse::<f64>().ok()).map(|m|m*1048576.)
         .unwrap_or(if budget.max_bytes<usize::MAX/2 {budget.max_bytes as f64} else {6.*1073741824.});
     let (planar0,nodes0,bytes0)=estimate(g,r,&roi0);
-    if bytes0<=budget_bytes {return Ok(None);}
+    // Small meshes never need the fallback (the fixed overhead term must not refuse unit-scale fixtures).
+    if bytes0<=budget_bytes||nodes0<100_000 {return Ok(None);}
     // Support: electrode source regions and the copper of the non-reference channel nets.
     let keys:BTreeSet<(String,&str)>=r.electrodes.iter().flat_map(|e|e.canonical_paths().unwrap_or_default().into_iter().map(move|p|(p,e.layer.as_str()))).collect();
     let electrode_regions:Vec<usize>=g.regions.iter().enumerate().filter(|(_,x)|keys.contains(&(x.source.path.clone(),x.layer.as_str()))).map(|(i,_)|i).collect();

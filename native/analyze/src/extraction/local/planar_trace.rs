@@ -76,7 +76,8 @@ pub(super) fn signed_area(r: &[geo::Coord<f64>]) -> f64 {
 /// A pour whose ring touches itself at vertices is the area filled under the winding rule:
 /// same-orientation loops are shells, opposite-orientation loops are voids. The loops are returned as
 /// simple polygons whose areas add up to the original; anything else is refused with coordinates.
-fn split_self_touching(poly: &Polygon<f64>) -> std::result::Result<Vec<Polygon<f64>>, String> {
+fn split_self_touching(poly: &Polygon<f64>) -> std::result::Result<Vec<Polygon<f64>>, String> { split_self_touching_depth(poly, 0) }
+fn split_self_touching_depth(poly: &Polygon<f64>, depth: usize) -> std::result::Result<Vec<Polygon<f64>>, String> {
     use geo::{Area, Contains, InteriorPoint, algorithm::Validation};
     if poly.is_valid() { return Ok(vec![poly.clone()]); }
     let b = geo::BoundingRect::bounding_rect(poly).map(|b| format!("bbox [{:.6},{:.6}]..[{:.6},{:.6}] mm", b.min().x, b.min().y, b.max().x, b.max().y)).unwrap_or_default();
@@ -102,6 +103,36 @@ fn split_self_touching(poly: &Polygon<f64>) -> std::result::Result<Vec<Polygon<f
     let area: f64 = out.iter().map(|p| p.unsigned_area()).sum();
     let original = poly.unsigned_area();
     if (area - original).abs() > 1e-6 * original { return Err(format!("winding fill area {area:e} differs from ring area {original:e} by more than 1e-6, {b}")); }
+    // A polygon that is still invalid (overlapping holes, pinched or crossing exterior after a ROI crop) is
+    // normalised once: the shell is renoded by an i_overlay NonZero simplification, the holes are merged by a
+    // union, and the polygon is rebuilt as shell minus holes. The area must stay within 1e-6 relative.
+    let mut normalised: Vec<Polygon<f64>> = Vec::with_capacity(out.len());
+    for p in out {
+        if p.is_valid() { normalised.push(p); continue; }
+        use i_overlay::{core::fill_rule::FillRule, float::simplify::SimplifyShape};
+        use geo::Orient;
+        let shell_ring: Vec<[f64; 2]> = p.exterior().0[..p.exterior().0.len() - 1].iter().map(|c| [c.x, c.y]).collect();
+        let shells: Vec<Polygon<f64>> = vec![shell_ring].simplify_shape(FillRule::NonZero).into_iter().filter_map(|shape| {
+            let mut contours = shape.into_iter().map(|c| { let mut v: Vec<geo::Coord<f64>> = c.into_iter().map(|q| geo::Coord { x: q[0], y: q[1] }).collect(); if let Some(f) = v.first().copied() { v.push(f); } LineString::new(v) });
+            contours.next().map(|ext| Polygon::new(ext, vec![]))
+        }).collect();
+        let holes = crate::geometry::areas::union(p.interiors().iter().map(|r| Polygon::new(r.clone(), vec![]).orient(geo::orient::Direction::Default)));
+        let rebuilt = crate::geometry::areas::difference(&geo::MultiPolygon(shells), &holes);
+        let expected = Polygon::new(p.exterior().clone(), vec![]).unsigned_area() - crate::geometry::areas::intersection(&crate::geometry::areas::one(Polygon::new(p.exterior().clone(), vec![])), &holes).unsigned_area();
+        let got: f64 = rebuilt.0.iter().map(|q| q.unsigned_area()).sum();
+        if (got - expected).abs() > 1e-6 * expected.abs() {
+            return Err(format!("normalised area {got:e} differs from {expected:e} by more than 1e-6, {b}"));
+        }
+        if let Some(path) = std::env::var_os("P7_COPPER_RING_DUMP") {
+            let dump: Vec<Vec<[f64; 2]>> = std::iter::once(p.exterior()).chain(p.interiors()).map(|r| r.0.iter().map(|c| [c.x, c.y]).collect()).collect();
+            let _ = std::fs::write(path, serde_json::to_string(&dump).unwrap_or_default());
+        }
+        // The overlay merges a hole touching the shell into a pinched shell ring: split those pinches again.
+        for q in rebuilt.0 {
+            if q.is_valid() || depth >= 2 { normalised.push(q); } else { normalised.extend(split_self_touching_depth(&q, depth + 1)?); }
+        }
+    }
+    let out = normalised;
     if let Some(bad) = out.iter().find(|p| !p.is_valid()) { return Err(format!("loop still invalid after splitting: {:?}, {b}", bad.check_validation().err())); }
     Ok(out)
 }
