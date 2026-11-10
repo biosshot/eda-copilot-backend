@@ -203,13 +203,19 @@ fn crop_ring(ring:&[geo::Coord<f64>],lo:[f64;2],hi:[f64;2])->Vec<geo::Coord<f64>
 }
 fn crop_cut(local:&[&Polygon<f64>],a:&geo::Rect<f64>,pad:f64)->MultiPolygon<f64> {
     let (lo,hi)=([a.min().x-pad,a.min().y-pad],[a.max().x+pad,a.max().y+pad]);
-    MultiPolygon(local.iter().filter_map(|&p|{
-        let b=p.bounding_rect()?;
-        if b.min().x>=lo[0]&&b.min().y>=lo[1]&&b.max().x<=hi[0]&&b.max().y<=hi[1]{return Some(p.clone());}
+    MultiPolygon(local.iter().flat_map(|&p|{
+        let Some(b)=p.bounding_rect() else {return vec![]};
+        if b.min().x>=lo[0]&&b.min().y>=lo[1]&&b.max().x<=hi[0]&&b.max().y<=hi[1]{return vec![p.clone()];}
         let ext=crop_ring(&p.exterior().0,lo,hi);
-        if ext.is_empty(){return None;}
-        let holes=p.interiors().iter().map(|r|crop_ring(&r.0,lo,hi)).filter(|r|!r.is_empty()).map(LineString::new).collect();
-        Some(Polygon::new(LineString::new(ext),holes))
+        if ext.is_empty(){return vec![];}
+        // Clipped rings carry zero-width bridges along the box edge, and a clipped hole can share
+        // edges with the clipped shell. Such a Polygon(shell,holes) is invalid and the overlay may read
+        // it as solid (STM32G0 set1 gained ~1.3 mm2). Resolve shell minus holes by overlay on the
+        // small clipped rings only.
+        let shell=areas::one(Polygon::new(LineString::new(ext),vec![]));
+        let holes=p.interiors().iter().map(|r|crop_ring(&r.0,lo,hi)).filter(|r|!r.is_empty()).map(|r|Polygon::new(LineString::new(r),vec![])).collect::<Vec<_>>();
+        if holes.is_empty() {return shell.0;}
+        areas::difference(&shell,&areas::union(holes)).0
     }).collect())
 }
 struct Shape {poly:MultiPolygon<f64>,id:String,sigma:f64,span:[f64;2]}
@@ -330,6 +336,79 @@ fn noise_filtered_topology(shape:&MultiPolygon<f64>,grid_step_mm:f64)->((usize,u
         for h in p.interiors() {if ring_is_noise(h,grid_step_mm){dropped_holes+=1}else{holes+=1}}
     }
     (raw,(components,holes),dropped_holes)
+}
+/// Real (non-noise) components and holes as (area, perimeter), each sorted by descending area.
+fn noise_pieces(shape:&MultiPolygon<f64>,grid_step_mm:f64)->(Vec<(f64,f64)>,Vec<(f64,f64)>) {
+    let (mut comps,mut holes)=(vec![],vec![]);
+    let piece=|r:&geo::LineString<f64>|(Polygon::new(r.clone(),vec![]).unsigned_area(),ring_perimeter_mm(r));
+    for p in &shape.0 {
+        if ring_is_noise(p.exterior(),grid_step_mm) {continue;}
+        comps.push((p.unsigned_area(),piece(p.exterior()).1));
+        for h in p.interiors() {if !ring_is_noise(h,grid_step_mm){holes.push(piece(h));}}
+    }
+    for v in [&mut comps,&mut holes] {v.sort_by(|x,y|y.0.total_cmp(&x.0));}
+    (comps,holes)
+}
+/// Sorted-area matching: the N largest pieces must agree pairwise within 16h(Pa+Pb)+1e-9A, and the
+/// surplus on the longer side must total <= 1e-6 of the set area. Ok((extra count, surplus area)).
+fn match_sorted_pieces(now:&[(f64,f64)],src:&[(f64,f64)],grid_step_mm:f64,set_area:f64)->std::result::Result<(usize,f64),String> {
+    let n=now.len().min(src.len());
+    for k in 0..n {
+        let (a,pa)=now[k];let (b,pb)=src[k];
+        if (a-b).abs()>16.*grid_step_mm*(pa+pb)+1e-9*a.max(b) {let w=|v:&[(f64,f64)]|v[k.saturating_sub(3)..(k+4).min(v.len())].iter().map(|(a,p)|format!("{a:.6e}/{p:.3e}")).collect::<Vec<_>>().join(" ");
+            return Err(format!("piece {k} area {a:e}/{b:e} (perimeter {pa:e}/{pb:e}) differs: split or merged; rebuilt window [{}] source window [{}]; count {}/{}",w(now),w(src),now.len(),src.len()));}
+    }
+    let longer=if now.len()>=src.len(){now}else{src};
+    let surplus=&longer[n..];let total:f64=surplus.iter().map(|p|p.0).sum();
+    if total>1e-6*set_area {
+        let top=surplus.iter().take(5).map(|(a,p)|format!("(area={a:e},perimeter={p:e},width={:e})",2.*a/p)).collect::<Vec<_>>().join(",");
+        return Err(format!("surplus {} pieces total {total:e} > 1e-6*{set_area:e}; largest {top}",surplus.len()));
+    }
+    Ok((surplus.len(),total))
+}
+/// Spatial component match: every rebuilt real component is assigned to the real source component
+/// that contains one of its interior points. Per source component the pieces must conserve area
+/// within 16h(P_src+P_dom)+1e-9A with one dominant piece; all non-dominant (or unassigned) pieces,
+/// i.e. cracks that detach a sliver, total <= 1e-6 of the set area. A source component without a
+/// rebuilt piece (merge) or a split into large parts is refused. Ok((extra pieces, surplus area)).
+fn real_polys(m:&MultiPolygon<f64>,h:f64)->Vec<&Polygon<f64>> {m.0.iter().filter(|p|!ring_is_noise(p.exterior(),h)).collect()}
+fn match_components_spatial(now:&MultiPolygon<f64>,src:&MultiPolygon<f64>,grid_step_mm:f64,set_area:f64)->std::result::Result<(usize,f64,usize),String> {
+    use geo::{InteriorPoint,Distance,Euclidean};
+    let (rn,rs)=(real_polys(now,grid_step_mm),real_polys(src,grid_step_mm));
+    let boxes=rs.iter().map(|p|p.bounding_rect()).collect::<Vec<_>>();
+    let mut groups:Vec<Vec<&Polygon<f64>>>=vec![vec![];rs.len()];let mut merged=0usize;let mut unassigned:Vec<(f64,f64)>=vec![];
+    for p in &rn {
+        let piece=(p.unsigned_area(),ring_perimeter_mm(p.exterior()));
+        let hit=p.interior_point().and_then(|pt|(0..rs.len()).find(|&j|boxes[j].is_some_and(|b|pt.x()>=b.min().x&&pt.x()<=b.max().x&&pt.y()>=b.min().y&&pt.y()<=b.max().y)&&rs[j].contains(&pt)));
+        match hit {Some(j)=>groups[j].push(*p),None=>unassigned.push(piece)}
+    }
+    let mut surplus:Vec<(f64,f64)>=unassigned;
+    for (j,g) in groups.iter_mut().enumerate() {
+        let (a_src,p_src)=(rs[j].unsigned_area(),ring_perimeter_mm(rs[j].exterior()));
+        if g.is_empty() {return Err(format!("source component {j} (area {a_src:e}) has no rebuilt piece: merged or lost"));}
+        // Pieces closer than 4h (touching at a point or separated by a sub-grid crack) are one
+        // conductor of the source; cluster them and keep only truly separate clusters as surplus.
+        let n=g.len();let mut parent:Vec<usize>=(0..n).collect();
+        fn find(p:&mut Vec<usize>,x:usize)->usize{let mut r=x;while p[r]!=r{r=p[r];}let mut c=x;while p[c]!=r{let nx=p[c];p[c]=r;c=nx;}r}
+        for x in 0..n {for y in x+1..n {
+            let (bx,by)=(g[x].bounding_rect(),g[y].bounding_rect());let d=4.*grid_step_mm;
+            if let (Some(bx),Some(by))=(bx,by) {if bx.max().x+d<by.min().x||by.max().x+d<bx.min().x||bx.max().y+d<by.min().y||by.max().y+d<bx.min().y {continue;}}
+            if Euclidean.distance(g[x],g[y])<=d {let (rx,ry)=(find(&mut parent,x),find(&mut parent,y));if rx!=ry{parent[rx]=ry;merged+=1;}}
+        }}
+        let mut clusters:BTreeMap<usize,(f64,f64)>=BTreeMap::new();
+        for x in 0..n {let r=find(&mut parent,x);let e=clusters.entry(r).or_insert((0.,0.));e.0+=g[x].unsigned_area();e.1+=ring_perimeter_mm(g[x].exterior());}
+        let mut areas_sorted:Vec<(f64,f64)>=clusters.into_values().collect();areas_sorted.sort_by(|x,y|y.0.total_cmp(&x.0));
+        let total:f64=areas_sorted.iter().map(|c|c.0).sum();
+        if (total-a_src).abs()>16.*grid_step_mm*(2.*p_src)+1e-9*a_src {return Err(format!("source component {j} area {a_src:e} vs rebuilt pieces {total:e}"));}
+        surplus.extend(areas_sorted.into_iter().skip(1));
+    }
+    surplus.sort_by(|x,y|y.0.total_cmp(&x.0));
+    let total:f64=surplus.iter().map(|p|p.0).sum();
+    if total>1e-6*set_area {
+        let top=surplus.iter().take(5).map(|(a,p)|format!("(area={a:e},ref_perimeter={p:e})")).collect::<Vec<_>>().join(",");
+        return Err(format!("surplus {} pieces total {total:e} > 1e-6*{set_area:e}; largest {top}",surplus.len()));
+    }
+    Ok((surplus.len(),total,merged))
 }
 /// Relative 1e-8 bound, or the arrangement grid's rounding noise: |dA| <= step * perimeter.
 fn area_change_ok(abs_change:f64,original:f64,grid_step_mm:f64,perimeter_mm:f64)->bool {
@@ -641,7 +720,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     }
     let original_physical_stats=physical_shapes.iter().map(|s|(s.0.unsigned_area(),s.0.0.len(),s.0.0.iter().map(|p|p.interiors().len()).sum::<usize>(),perimeter_mm(&s.0))).collect::<Vec<_>>();
     let grid_step_mm=arrangement_context.grid_step_mm();
-    let original_filtered=physical_shapes.iter().map(|s|noise_filtered_topology(&s.0,grid_step_mm)).collect::<Vec<_>>();
+    let original_filtered=physical_shapes.iter().map(|s|noise_pieces(&s.0,grid_step_mm)).collect::<Vec<_>>();
     let mut source_copper_restorations=vec![];
     for e in &r.electrodes {
         let layer=geometry.layers.iter().position(|l|l.layer==e.layer).ok_or("contact layer absent")?;
@@ -698,10 +777,16 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         let canonical=member_set(i+2);let (original_area,original_components,original_holes,original_perimeter)=original_physical_stats[i];let area=canonical.unsigned_area();
         let change=if original_area==0. {if area==0.{0.}else{f64::INFINITY}}else{(area-original_area).abs()/original_area};
         let holes=|p:&MultiPolygon<f64>|p.0.iter().map(|p|p.interiors().len()).sum::<usize>();
-        let (raw_now,(fc,fh),_)=noise_filtered_topology(&canonical,grid_step_mm);
-        let (raw_src,(sc,sh),_)=original_filtered[i];
-        if !area_change_ok((area-original_area).abs(),original_area,grid_step_mm,original_perimeter)||fc!=sc||fh!=sh {return Err(error("BOARD_ARRANGEMENT",&format!("physical copper set{i} changed area/topology: relative area={change:e}, components raw={}/{} filtered={fc}/{sc}, holes raw={}/{} filtered={fh}/{sh}; grid-noise rings (area<=16hP or width<=4h) only are ignored",raw_now.0,raw_src.0,raw_now.1,raw_src.1)));}
-        if raw_now.0!=original_components||holes(&canonical)!=original_holes {eprintln!("P7_ARRANGEMENT_NOISE set={i} dropped=0 holes={} components={}",raw_now.1.abs_diff(fh).max(raw_src.1.abs_diff(sh)),raw_now.0.abs_diff(fc).max(raw_src.0.abs_diff(sc)));}
+        let (now_c,now_h)=noise_pieces(&canonical,grid_step_mm);
+        let (src_c,src_h)=&original_filtered[i];
+        let matched=match_components_spatial(&canonical,&shape.0,grid_step_mm,original_area).and_then(|c|match_sorted_pieces(&now_h,src_h,grid_step_mm,original_area).map(|h|(c,h)));
+        let raw=format!("components raw={}/{original_components} filtered={}/{}, holes raw={}/{original_holes} filtered={}/{}",canonical.0.len(),now_c.len(),src_c.len(),holes(&canonical),now_h.len(),src_h.len());
+        if !area_change_ok((area-original_area).abs(),original_area,grid_step_mm,original_perimeter) {
+            let describe=|m:&MultiPolygon<f64>|{let mut v=m.0.iter().map(|p|(p.unsigned_area(),p.bounding_rect())).collect::<Vec<_>>();v.sort_by(|a,b|b.0.total_cmp(&a.0));v.iter().take(5).map(|(a,b)|format!("area={a:e} bbox={:?}",b.map(|b|[[b.min().x,b.min().y],[b.max().x,b.max().y]]))).collect::<Vec<_>>().join("; ")};
+            eprintln!("P7_ARRANGEMENT_DIFF set={i} lost_from_source=[{}] gained_vs_source=[{}]",describe(&areas::difference(&shape.0,&canonical)),describe(&areas::difference(&canonical,&shape.0)));
+            return Err(error("BOARD_ARRANGEMENT",&format!("physical copper set{i} changed area: relative area={change:e}, {raw}")));}
+        let ((xc,sc_area,merged),(xh,sh_area))=matched.map_err(|e|error("BOARD_ARRANGEMENT",&format!("physical copper set{i} changed topology: relative area={change:e}, {raw}; {e}")))?;
+        if xc>0||xh>0||canonical.0.len()!=original_components||holes(&canonical)!=original_holes {eprintln!("P7_ARRANGEMENT_NOISE set={i} touchingMerged={merged} extraComponents={xc} extraHoles={xh} surplusAreaRelative={:e} ({raw})",(sc_area+sh_area)/original_area);}
         max_copper_area_change=max_copper_area_change.max(change);shape.0=canonical;
     }
     for(i,e)in r.electrodes.iter().enumerate(){electrode_polygons.insert(e.name.clone(),member_set(2+physical_count+i));}
@@ -962,6 +1047,20 @@ mod annulus_arrangement_tests {
         let noisy=MultiPolygon(vec![Polygon::new(sq(0.,0.,1.),vec![sq(0.5,0.5,1e-5)]),Polygon::new(sq(2.,2.,1e-5),vec![])]);
         assert_eq!(noise_filtered_topology(&noisy,h).1,noise_filtered_topology(&plain,h).1);
         assert_eq!(noise_filtered_topology(&noisy,h).0,(2,1));
+        let (nc,nh)=noise_pieces(&noisy,h);let (pc,ph)=noise_pieces(&plain,h);
+        assert!(match_components_spatial(&noisy,&plain,h,1.).is_ok()&&match_sorted_pieces(&nh,&ph,h,1.).is_ok());let _=(nc,pc.clone());
+        let rect=|x0:f64,x1:f64|Polygon::new(LineString::from(vec![[x0,0.],[x1,0.],[x1,1.],[x0,1.],[x0,0.]]),vec![]);
+        let touching=MultiPolygon(vec![rect(0.,0.5),rect(0.5,1.)]);
+        assert!(match_components_spatial(&touching,&plain,h,1.).is_ok());
+        let split=MultiPolygon(vec![rect(0.,0.45),rect(0.55,1.)]);
+        assert!(match_components_spatial(&split,&plain,h,1.).is_err());
+        let merged=MultiPolygon(vec![Polygon::new(sq(0.,0.,1.),vec![])]);
+        let two=MultiPolygon(vec![rect(0.,0.5),rect(0.6,1.1)]);
+        assert!(match_components_spatial(&merged,&two,h,1.).is_err());
+        let big_extra=MultiPolygon(vec![Polygon::new(sq(0.,0.,1.),vec![]),Polygon::new(sq(2.,2.,0.01),vec![])]);
+        assert!(match_components_spatial(&big_extra,&plain,h,1.).is_err());
+        let neck=MultiPolygon(vec![Polygon::new(sq(0.,0.,1.),vec![]),Polygon::new(sq(2.,2.,1e-5),vec![])]);
+        assert!(match_components_spatial(&neck,&plain,h,1.).is_ok());
         let real=MultiPolygon(vec![Polygon::new(sq(0.,0.,1.),vec![sq(0.4,0.4,0.1)])]);
         assert_ne!(noise_filtered_topology(&real,h).1,noise_filtered_topology(&plain,h).1);
     }
