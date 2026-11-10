@@ -1,5 +1,5 @@
 import type { AutoFoilPlan } from './auto-foil-plan.ts';
-import { auditBoardFoilFrequency } from './board-foil-frequency-audit.ts';
+import { auditBoardFoilFrequency, plannedFrequencyAuditAxis, subsetBoardFoilReport } from './board-foil-frequency-audit.ts';
 import { auditBoardFoilGrid } from './board-foil-sensitivity.ts';
 import { validateBoardFoilReport } from './board-foil-validation.ts';
 import type { BoardFoilProblem, BoardFoilReport } from './types.ts';
@@ -60,8 +60,32 @@ export function runAutoFoil(
     operatorPolicy:'hybrid-planar-v3' as const,profileUpperHz}};
   const observations:ReturnType<typeof summarizeReturnBoundary>[]=[];
   let boundaryError:unknown;
+  // The audit's producer batch is known before the baseline is observed, so the
+  // mesh/operator is built once for baseline plus audit frequencies and both
+  // consumers read their own subset. Any failure falls back to separate solves.
+  const solved=new Map<string,BoardFoilReport>();
+  const gridKey=(f:readonly number[])=>f.join(',');
+  if(requested&&process.env.P7_AUDIT_SEPARATE_SOLVE!=='1') {
+   const axis=plannedFrequencyAuditAxis(frequenciesHz,n,requested,[low,high]);
+   const union=[...new Set([...frequenciesHz,...axis])].sort((a,b)=>a-b);
+   if(axis.length&&union.length*n<=256) {
+    const unionProblem:BoardFoilProblem={...problem,request:{...problem.request,frequenciesHz:union}};
+    // A failing joint solve is a real failure of the same operator and is not retried.
+    const unionReport=execute(unionProblem);
+    validateBoardFoilReport(unionReport,unionProblem,unionReport.cache?.producerBudget??unionProblem.request.budget);
+    try {
+     for(const grid of [frequenciesHz,axis]) {
+      const subset=subsetBoardFoilReport(unionReport,grid);
+      validateBoardFoilReport(subset,{...problem,request:{...problem.request,frequenciesHz:grid}},subset.cache?.producerBudget??problem.request.budget);
+      solved.set(gridKey(grid),subset);
+     }
+    } catch {
+     solved.clear();
+    }
+   }
+  }
   const checkedExecute=(input:BoardFoilProblem)=>{
-   const value=execute(input);
+   const value=solved.get(gridKey(input.request.frequenciesHz))??execute(input);
    try {
     validateBoardFoilReport(value,input,value.cache?.producerBudget??input.request.budget);
     if(search)observations.push(summarizeReturnBoundary(value,input));

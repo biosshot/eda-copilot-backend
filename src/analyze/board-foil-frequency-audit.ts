@@ -61,6 +61,57 @@ function physicalMeshIdentity(report: BoardFoilReport) {
   });
 }
 
+/** The audit's single producer batch is fixed by the seeded grid before any
+ * response is observed. Replays the scheduler with placeholder observables to
+ * learn that axis so it can be solved together with the baseline grid. */
+export function plannedFrequencyAuditAxis(
+  frequenciesHz: readonly number[], portCount: number, requestedIntervalHz: FrequencyInterval,
+  applicabilityBandHz: FrequencyInterval,
+): number[] {
+  const maxFreshSamples=Math.min(8,Math.floor(64/portCount));
+  const seeded=new Map(frequenciesHz.flatMap(f=>
+    requestedIntervalHz[0]<=f&&f<=requestedIntervalHz[1] ? [[f,{x:[0,0] as const}] as const] : []));
+  let axis:number[]=[];
+  try{
+    auditFrequencyCoverage({
+      demand:{spectralBandHz:requestedIntervalHz},supportedIntervalsHz:[applicabilityBandHz],
+      transitionFrequenciesHz:[...seeded.keys()],initialSamples:seeded,
+      policy:{maxSamples:seeded.size+maxFreshSamples,maxStepHz:p7LowBandAuditPolicy.maxStepHz,
+        gates:{x:{absoluteFloor:p7LowBandAuditPolicy.waveFloor,relativeTolerance:p7LowBandAuditPolicy.relativeTolerance}},
+        modelVersion:'joint-foil-checked-frequency-audit-v1'},
+      evaluatePhysicalBatch(batch){axis=[...batch];throw new Error('planned');},
+    });
+  }catch{}
+  return axis;
+}
+
+/** Restrict an exact multi-frequency report to a subset of its grid. */
+export function subsetBoardFoilReport(report: BoardFoilReport, frequenciesHz: readonly number[]): BoardFoilReport {
+  const index=frequenciesHz.map(f=>report.frequenciesHz.indexOf(f));
+  if(index.some(i=>i<0))throw new Error('CHANNEL_FOIL_SUBSET: frequency missing from solved grid');
+  const samples=index.map(i=>report.samples[i]);
+  const columns=samples.flatMap(s=>s.columns);
+  const max=(values:number[])=>Math.max(...values);
+  const quality={...report.quality,
+    maxKclRelative:max(columns.map(c=>c.kclRelative)),maxKvlRelative:max(columns.map(c=>c.kvlRelative)),
+    maxColumnPowerBalanceErrorW:max(columns.map(c=>c.powerBalanceErrorW)),
+    ...(report.quality.maxCompactKvlUncertaintyRelative!==undefined&&{
+      maxCompactKvlUncertaintyRelative:max(columns.map(c=>c.compactKvlUncertaintyRelative!))}),
+    ...(report.quality.maxFullKvlUncertaintyRelative!==undefined&&{
+      maxFullKvlUncertaintyRelative:max(columns.map(c=>(c as {kvlUncertaintyRelative?:number}).kvlUncertaintyRelative!))})};
+  const magnetic=report.provenance.magneticOperator;
+  const skin=report.provenance.copperSkinMesh;
+  // Mesh and effective upper bound are frequency independent; the requested/training
+  // bound is relabelled for the subset (the shared basis was trained to the union maximum).
+  const provenance={...report.provenance,
+    ...(magnetic&&quality.maxFullKvlUncertaintyRelative!==undefined&&{
+      magneticOperator:{...magnetic,maxFullKvlUncertaintyRelative:quality.maxFullKvlUncertaintyRelative}}),
+    ...(skin&&{copperSkinMesh:{...skin,requestedUpperHz:frequenciesHz.at(-1)!,trainingUpperBoundHz:frequenciesHz.at(-1)!}})};
+  const wanted=new Set(frequenciesHz);
+  return {...report,frequenciesHz:[...frequenciesHz],parameters:index.map(i=>report.parameters[i]),samples,
+    enrichment:report.enrichment.filter(e=>wanted.has(e.frequencyHz)),quality,provenance};
+}
+
 export function auditBoardFoilFrequency(
   problem: BoardFoilProblem, baseline: BoardFoilReport, requestedIntervalHz: FrequencyInterval,
   applicabilityBandHz: FrequencyInterval, started: number, execute: Execute,

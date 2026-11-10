@@ -310,6 +310,27 @@ fn slot_half_axis(drill:&crate::model::Drill,pad_rotation_deg:f64)->[f64;2] {
 fn perimeter_mm(shape:&MultiPolygon<f64>)->f64 {
     shape.0.iter().flat_map(|p|std::iter::once(p.exterior()).chain(p.interiors())).flat_map(|r|r.lines()).map(|e|(e.end.x-e.start.x).hypot(e.end.y-e.start.y)).sum()
 }
+fn ring_perimeter_mm(ring:&geo::LineString<f64>)->f64 {
+    ring.lines().map(|e|(e.end.x-e.start.x).hypot(e.end.y-e.start.y)).sum()
+}
+/// A ring is grid rounding noise when its area is within k*h*P (P its own perimeter,
+/// k=16 as in `repair_metal_polygon`) or it is a crack of width 2A/P <= 4h.
+fn ring_is_noise(ring:&geo::LineString<f64>,grid_step_mm:f64)->bool {
+    let p=ring_perimeter_mm(ring);let a=Polygon::new(ring.clone(),vec![]).unsigned_area();
+    a<=16.*grid_step_mm*p||2.*a<=4.*grid_step_mm*p
+}
+/// (components, holes) after removing grid-noise components and holes. Pure counting:
+/// the geometry itself is never modified. Returns (raw, filtered).
+fn noise_filtered_topology(shape:&MultiPolygon<f64>,grid_step_mm:f64)->((usize,usize),(usize,usize),usize) {
+    let raw=(shape.0.len(),shape.0.iter().map(|p|p.interiors().len()).sum::<usize>());
+    let (mut components,mut holes,mut dropped_holes)=(0usize,0usize,0usize);
+    for p in &shape.0 {
+        if ring_is_noise(p.exterior(),grid_step_mm) {dropped_holes+=p.interiors().len();continue;}
+        components+=1;
+        for h in p.interiors() {if ring_is_noise(h,grid_step_mm){dropped_holes+=1}else{holes+=1}}
+    }
+    (raw,(components,holes),dropped_holes)
+}
 /// Relative 1e-8 bound, or the arrangement grid's rounding noise: |dA| <= step * perimeter.
 fn area_change_ok(abs_change:f64,original:f64,grid_step_mm:f64,perimeter_mm:f64)->bool {
     abs_change<=1e-8*original||abs_change<=grid_step_mm*perimeter_mm
@@ -620,6 +641,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     }
     let original_physical_stats=physical_shapes.iter().map(|s|(s.0.unsigned_area(),s.0.0.len(),s.0.0.iter().map(|p|p.interiors().len()).sum::<usize>(),perimeter_mm(&s.0))).collect::<Vec<_>>();
     let grid_step_mm=arrangement_context.grid_step_mm();
+    let original_filtered=physical_shapes.iter().map(|s|noise_filtered_topology(&s.0,grid_step_mm)).collect::<Vec<_>>();
     let mut source_copper_restorations=vec![];
     for e in &r.electrodes {
         let layer=geometry.layers.iter().position(|l|l.layer==e.layer).ok_or("contact layer absent")?;
@@ -676,7 +698,10 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         let canonical=member_set(i+2);let (original_area,original_components,original_holes,original_perimeter)=original_physical_stats[i];let area=canonical.unsigned_area();
         let change=if original_area==0. {if area==0.{0.}else{f64::INFINITY}}else{(area-original_area).abs()/original_area};
         let holes=|p:&MultiPolygon<f64>|p.0.iter().map(|p|p.interiors().len()).sum::<usize>();
-        if !area_change_ok((area-original_area).abs(),original_area,grid_step_mm,original_perimeter)||canonical.0.len()!=original_components||holes(&canonical)!=original_holes {return Err(error("BOARD_ARRANGEMENT",&format!("physical copper set{i} changed area/topology: relative area={change:e}, components={}/{}, holes={}/{}; no filtering permitted",canonical.0.len(),original_components,holes(&canonical),original_holes)));}
+        let (raw_now,(fc,fh),_)=noise_filtered_topology(&canonical,grid_step_mm);
+        let (raw_src,(sc,sh),_)=original_filtered[i];
+        if !area_change_ok((area-original_area).abs(),original_area,grid_step_mm,original_perimeter)||fc!=sc||fh!=sh {return Err(error("BOARD_ARRANGEMENT",&format!("physical copper set{i} changed area/topology: relative area={change:e}, components raw={}/{} filtered={fc}/{sc}, holes raw={}/{} filtered={fh}/{sh}; grid-noise rings (area<=16hP or width<=4h) only are ignored",raw_now.0,raw_src.0,raw_now.1,raw_src.1)));}
+        if raw_now.0!=original_components||holes(&canonical)!=original_holes {eprintln!("P7_ARRANGEMENT_NOISE set={i} dropped=0 holes={} components={}",raw_now.1.abs_diff(fh).max(raw_src.1.abs_diff(sh)),raw_now.0.abs_diff(fc).max(raw_src.0.abs_diff(sc)));}
         max_copper_area_change=max_copper_area_change.max(change);shape.0=canonical;
     }
     for(i,e)in r.electrodes.iter().enumerate(){electrode_polygons.insert(e.name.clone(),member_set(2+physical_count+i));}
@@ -929,6 +954,17 @@ impl BoardMesh {
 #[cfg(test)]
 mod annulus_arrangement_tests {
     use super::*;
+    #[test]
+    fn grid_noise_rings_are_ignored_but_real_holes_change_topology() {
+        let h=1e-6;
+        let sq=|x:f64,y:f64,s:f64|LineString::from(vec![[x,y],[x+s,y],[x+s,y+s],[x,y+s],[x,y]]);
+        let plain=MultiPolygon(vec![Polygon::new(sq(0.,0.,1.),vec![])]);
+        let noisy=MultiPolygon(vec![Polygon::new(sq(0.,0.,1.),vec![sq(0.5,0.5,1e-5)]),Polygon::new(sq(2.,2.,1e-5),vec![])]);
+        assert_eq!(noise_filtered_topology(&noisy,h).1,noise_filtered_topology(&plain,h).1);
+        assert_eq!(noise_filtered_topology(&noisy,h).0,(2,1));
+        let real=MultiPolygon(vec![Polygon::new(sq(0.,0.,1.),vec![sq(0.4,0.4,0.1)])]);
+        assert_ne!(noise_filtered_topology(&real,h).1,noise_filtered_topology(&plain,h).1);
+    }
     #[test]
     fn broad_arrangement_retains_actual_offset_annulus_through_exact_noop_cuts() {
         let mut board=crate::import_json(include_str!(

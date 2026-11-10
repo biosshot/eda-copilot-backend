@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Solve the automatic-foil baseline grid and the frequency-audit batch in one native call (the audit axis is fixed by the seeded grid), so mesh and operator are built once; both consumers read validated subsets. `P7_AUDIT_SEPARATE_SOLVE=1` restores the separate audit solve.
 - Model plated barrels in the automatic hybrid as thin-wall axial prisms, including plated slots, with `P7_BARREL_MODEL=volume` for comparison. Infer missing contact layers from the board, accept copper area changes within grid rounding, admit thin mesh columns as foil when skin depth allows, drop recorded mesh slivers, and cap the dense magnetic pair table at 1 GiB. Speed up the board arrangement with bounding-box prefilters and add `P7_PHASE_TRACE=1`. Real-board time and memory targets are not met yet.
 - Apply planar-to-planar magnetic coupling in the compact hybrid through a parallel ACA H-matrix for 512 or more supports (`P7_PLANAR_HMATRIX=0` restores pair visits), stop reserving near/far block storage by pair count, and repair noise-level invalid copper rings when area and topology stay within grid rounding. Add fast tensor quadrature with needle bisection, a compact pair target of 1e-5 with an order cap and recorded approximations, and a copper partition that scales on large pours. TPS63060DSCR now builds the planar operator in 93 s at 430 MiB peak; the first magnetic action still exceeds the time limit in the local tetrahedra hierarchy.
 

@@ -203,13 +203,10 @@ test('high board demand requires closed joint geometry and freezes the admitted 
  const result=run({}, {}, contacts, [20000,60000], budget, demand);
  assert.ok('coverage' in result&&result.frequencyAudit?.batch.status==='checked');
  assert.equal(closedCalls,1);
- assert.equal(calls.length,2);
- const [base,batch]=calls;
- assert.equal(base.request.profileUpperHz,batch.request.profileUpperHz);
- assert.deepEqual(base.request.frequenciesHz,[20000,60000]);
- assert.ok(batch.request.frequenciesHz.length<=8);
- assert.deepEqual(batch.geometry,base.geometry);
- assert.deepEqual(batch.expected,base.expected);
+ assert.equal(calls.length,1);
+ const [base]=calls;
+ assert.deepEqual(base.request.frequenciesHz.filter(f=>f===20000||f===60000),[20000,60000]);
+ assert.ok(base.request.frequenciesHz.length<=2+8);
  assert.deepEqual(result.frequencyAudit?.applicabilityBandHz,[1500,75000]);
  assert.deepEqual(result.frequencyAudit?.interpolation.requestedIntervalHz,demand);
  assert.ok(result.frequencyAudit?.interpolation.unverified.some(gap=>gap.intervalHz[0]===0));
@@ -218,11 +215,14 @@ test('high board demand requires closed joint geometry and freezes the admitted 
 
  calls.length=0;
  changedMesh=true;
+ // The mesh-identity guard only applies to separately solved supplemental batches.
+ process.env.P7_AUDIT_SEPARATE_SOLVE='1';
  const changed=run({}, {}, contacts, [20000,60000], budget, demand);
  assert.ok('coverage' in changed&&changed.frequencyAudit?.batch.status==='refused');
  assert.match(changed.frequencyAudit!.batch.message??'',/CHANNEL_FOIL_EVIDENCE/);
  assert.deepEqual(changed.frequenciesHz,[20000,60000]);
  assert.equal(calls.length,2);
+ delete process.env.P7_AUDIT_SEPARATE_SOLVE;
  refuseClosure=true;
  assert.throws(()=>run({}, {}, contacts, [20000,60000], budget, demand),/CHANNEL_JOINT_CLOSURE/);
  assert.equal(calls.length,2);
