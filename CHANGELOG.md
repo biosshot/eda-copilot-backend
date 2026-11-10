@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Cheaper compact planar pair integrals: the tensor Gauss ladder accepts m=3 or m=5 at a successive change up to 2e-3 (the existing noise tier; reported error estimate unchanged), and the shared-edge/vertex and axial ladders stop at a 5e-4 change. `P7_PAIR_PROFILE=1` prints CPU seconds per pair class (`P7_PAIR_PROFILE`) and per cross-fill path. TPS63060DSCR: H-matrix build 98 s to 44-49 s (loaded machine, same profile), S-parameters within 4.4e-7 of the previous build. The `unconvergedPairs` counter now also counts pairs accepted between 1e-5 and 2e-3.
+- Cheaper compact planar pair integrals: the tensor Gauss ladder accepts m=3 at a change up to 4e-4 (was 3e-4) and the shared-edge/vertex and axial ladders stop at a 5e-4 successive change. `P7_PAIR_PROFILE=1` prints CPU seconds per pair class (`P7_PAIR_PROFILE`) and per cross-fill path. The `unconvergedPairs` counter now also counts pairs accepted between 1e-5 and 5e-4.
 
 - Speed up the compact hybrid enrichment. Magnetic actions now share one parallel pass per column group over the planar H-matrix, the dense local tetrahedron table and the dense prism x tetrahedron table (the cross action aggregates per support instead of per pair), keep the actions of basis modes already computed instead of recomputing the whole basis each iteration, and stay inline for small tables. The H-matrix build schedules blocks by estimated cost with one block per work unit. Prints `P7_COMPACT_ITER` / `P7_COMPACT_ACTION_CALL` per-phase timers and `cpuSeconds` in `P7_COMPACT_HMATRIX`. TPS63060DSCR: training 527 s to 29 s; S-parameters agree to 6e-12 relative (residual diagnostics near their noise floor change by up to 1e-4 relative).
 

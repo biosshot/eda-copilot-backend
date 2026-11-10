@@ -372,10 +372,10 @@ fn piece_ball(p:&Piece)->([f64;3],f64) {
 fn prism_ball(p:&Prism)->([f64;3],f64) { piece_ball(&Piece::of(p)) }
 const FAST_MAX_POINTS:usize=25*9;
 /// Tensor ladder acceptance, in units of the pair target: m=3 is accepted when it differs from m=2 by at most
-/// `EARLY_ACCEPT_FACTOR` targets (2e-3 = the compact noise tier), m=5 when it differs from m=3 by at most
-/// `FINE_ACCEPT_FACTOR` targets. The reported error estimate keeps its 1/30 and 1/100 scaling.
-const EARLY_ACCEPT_FACTOR:f64=200.;
-const FINE_ACCEPT_FACTOR:f64=200.;
+/// `EARLY_ACCEPT_FACTOR` targets (40; 60 and above breaks the 5e-5 accuracy pin of `separated_pair_fast_matches_general`),
+/// m=5 when it differs from m=3 by at most `FINE_ACCEPT_FACTOR` targets. Error estimates keep their 1/30 and 1/100 scaling.
+const EARLY_ACCEPT_FACTOR:f64=40.;
+const FINE_ACCEPT_FACTOR:f64=100.;
 /// Tensor-rule points (x,y,z,weight) with weights summing to the piece volume.
 fn prism_points(p:&Piece,m:usize,nz:usize,out:&mut [[f64;4];FAST_MAX_POINTS])->usize {
     let (Ok(rt),Ok(rz))=(prism::cached_rule(m),prism::cached_rule(nz)) else {return 0;};
