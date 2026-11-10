@@ -2,7 +2,7 @@
 //! measures the diagonal of the requested ROI, which for an automatic channel is the whole board even when the
 //! channel is a few millimetres long. When the screen fails on the full ROI, the domain shrinks to the channel
 //! neighbourhood: the bounding box of the port electrodes and the copper of the non-reference channel nets
-//! (the same support as `roi_fallback`, which is memory driven and not reused here) plus the largest margin from
+//! (the support of `roi_fallback::channel_support`; the memory-driven shrink there composes with this one: it runs later on the already smaller request) plus the largest margin from
 //! a ladder for which the screen passes. Copper is cut at the new boundary: far return paths and far coupling are
 //! not modelled. Approximation tier with a warning; the screen itself stays a real refusal when no margin fits.
 //! `P7_ROI_ELECTRICAL=0` disables the shrink.
@@ -10,7 +10,6 @@ use super::board_mesh::{polygon,Request};
 use super::{error,Result};
 use crate::{geometry::{self,areas,context::Context,GeometryOptions},model::Board};
 use geo::{Area,BoundingRect};
-use std::collections::{BTreeMap,BTreeSet};
 
 const MARGIN_LADDER_MM:[f64;8]=[20.,10.,5.,3.,2.,1.,0.5,0.2];
 
@@ -37,20 +36,7 @@ pub(super) fn shrink(board:&Board,r:&Request,original_error:&str,fits:impl Fn(&R
     let context=Context::for_board(board,options)?;
     let _scope=Context::install(Some(context));
     let g=geometry::prepare(board,options);
-    let keys:BTreeSet<(String,&str)>=r.electrodes.iter().flat_map(|e|e.canonical_paths().unwrap_or_default().into_iter().map(move|p|(p,e.layer.as_str()))).collect();
-    let electrode_regions:Vec<usize>=g.regions.iter().enumerate().filter(|(_,x)|keys.contains(&(x.source.path.clone(),x.layer.as_str()))).map(|(i,_)|i).collect();
-    let channel_nets:BTreeSet<&str>=electrode_regions.iter().filter_map(|&i|g.regions[i].source.net.as_deref()).collect();
-    let mut net_area=BTreeMap::<&str,f64>::new();
-    for x in &g.regions {if let Some(n)=x.source.net.as_deref().filter(|n|channel_nets.contains(n)) {*net_area.entry(n).or_default()+=polygon(&x.polygon).unsigned_area();}}
-    let reference=if channel_nets.len()>1 {net_area.iter().max_by(|a,b|a.1.total_cmp(b.1)).map(|(n,_)|*n)} else {None};
-    let support:Vec<usize>=g.regions.iter().enumerate().filter(|(i,x)|electrode_regions.contains(i)||x.source.net.as_deref().is_some_and(|n|channel_nets.contains(n)&&Some(n)!=reference)).map(|(i,_)|i).collect();
-    let mut bbox=[[f64::INFINITY;2],[f64::NEG_INFINITY;2]];
-    for &i in &support {
-        if let Some(b)=polygon(&g.regions[i].polygon).bounding_rect() {
-            for k in 0..2 {bbox[0][k]=bbox[0][k].min(if k==0{b.min().x}else{b.min().y});bbox[1][k]=bbox[1][k].max(if k==0{b.max().x}else{b.max().y});}
-        }
-    }
-    if electrode_regions.is_empty()||bbox[0][0]>bbox[1][0] {return Ok(None);}
+    let Some(super::roi_fallback::Support{electrode_regions,channel_nets,reference,bbox,..})=super::roi_fallback::channel_support(r,&g) else {return Ok(None);};
     let mut chosen=None;
     for m in MARGIN_LADDER_MM {
         let mut roi=[[(bbox[0][0]-m).max(roi0[0][0]),(bbox[0][1]-m).max(roi0[0][1])],[(bbox[1][0]+m).min(roi0[1][0]),(bbox[1][1]+m).min(roi0[1][1])]];

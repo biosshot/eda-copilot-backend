@@ -578,7 +578,7 @@ fn build_profiled_once(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     }
     if !r.accept_unknown_fill_freshness&&geometry.fills.iter().any(|f|f.freshness.as_deref()!=Some("current")) {return Err(error("BOARD_FILL_POLICY","CAD fill freshness is not confirmed; an explicit captured-snapshot policy is required"));}
     // Approximation tier: when the whole ROI would exceed the memory budget, mesh only the channel neighbourhood.
-    let fallback_plan=super::roi_fallback::plan(r,&geometry,budget,forced.as_ref().map(|(m,v)|(m.as_str(),*v)))?;
+    let fallback_plan=super::roi_fallback::plan(r,&geometry,budget,forced.as_ref().map(|(m,v)|(m.as_str(),*v)),skin)?;
     let (r,roi_fallback)=match &fallback_plan {Some(p)=>(&p.request,Some(p.evidence.clone())),None=>(r,None)};
     // The clipping contour itself must use the already accepted board overlay
     // grid, just like the clipped result. Mixing the raw ROI coordinates with
