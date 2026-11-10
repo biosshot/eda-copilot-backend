@@ -195,16 +195,24 @@ fn seg_project(a:[f64;2],b:[f64;2],p:[f64;2])->(f64,f64) {
 }
 type SegTree=rstar::RTree<Seg>;
 fn build_seg_tree(m:&MultiPolygon<f64>)->SegTree {
+    use super::planar_trace::{ring_loops,signed_area};
     let mut segs=vec![];
     for p in &m.0 {
         for (k,ring) in std::iter::once(p.exterior()).chain(p.interiors()).enumerate() {
-            let area2:f64=ring.lines().map(|l|l.start.x*l.end.y-l.end.x*l.start.y).sum();
-            let ccw=area2>0.;
-            // shell: interior left when CCW; hole: interior (the polygon) lies outside the ring, left when CW.
-            let flip=if k==0 {!ccw} else {ccw};
-            for l in ring.lines() {
-                let (a,b)=([l.start.x,l.start.y],[l.end.x,l.end.y]);
-                segs.push(if flip {Seg{a:b,b:a}} else {Seg{a,b}});
+            let pts=&ring.0[..ring.0.len().saturating_sub(1)];
+            let net=signed_area(pts).signum();
+            // A pinched (self-touching) ring is several simple loops; orient each by its own sign:
+            // loops of the ring's net orientation are shells (holes for k>0), the others are the reverse.
+            for lp in ring_loops(ring) {
+                let sigma=signed_area(&lp).signum();
+                if sigma==0. {continue;}
+                let shell_like=if k==0 {sigma==net} else {sigma!=net};
+                let flip=(sigma>0.)!=shell_like;
+                for i in 0..lp.len() {
+                    let (a,b)=(lp[i],lp[(i+1)%lp.len()]);
+                    let (a,b)=([a.x,a.y],[b.x,b.y]);
+                    segs.push(if flip {Seg{a:b,b:a}} else {Seg{a,b}});
+                }
             }
         }
     }
@@ -1099,7 +1107,7 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
             if copper&&owners.is_empty() {
                 use rstar::PointDistance;
                 let near:Vec<String>=(0..shapes.len()).filter(|&k|middle>shapes[k].span[0]&&middle<shapes[k].span[1]).filter_map(|k|segment_trees[k].nearest_neighbor(&[p.x(),p.y()]).map(|g|(g.distance_2(&[p.x(),p.y()]).sqrt(),k))).fold(vec![],|mut v,(d,k)|{v.push((d,k));v.sort_by(|a,b|a.0.total_cmp(&b.0));v.truncate(2);v}).iter().map(|(d,k)|format!("{}:{d:e}mm inside={}",shapes[*k].id,point_in_segments(&segment_trees[*k],p.x(),p.y()))).collect();
-                return Err(error("BOARD_OWNERSHIP",&format!("canonical copper face{ti} at {p:?}, z={middle:e} has no positive-area source attribution (nearest same-span sources {near:?}, grid step {grid_step_mm:e}; physical owners {:?}); no copper removed",own.0.iter().map(|&k|(k,physical_shapes[k].1,physical_shapes[k].3)).collect::<Vec<_>>())));
+                return Err(error("BOARD_OWNERSHIP",&format!("canonical copper face{ti} at {p:?}, z={middle:e} has no positive-area source attribution (nearest same-span sources {near:?}, grid step {grid_step_mm:e}; physical owners {:?}; layer source copper contains point: {:?}; regions of that layer containing point: {}); no copper removed",own.0.iter().map(|&k|(k,physical_shapes[k].1,physical_shapes[k].3)).collect::<Vec<_>>(),own.0.iter().map(|&k|geometry.layers.get(k).map(|l|l.copper.iter().any(|c|polygon(c).contains(p)))).collect::<Vec<_>>(),geometry.regions.iter().filter(|g|spans.get(&g.layer).is_some_and(|sp|middle>sp[0]&&middle<sp[1])&&polygon(&g.polygon).contains(p)).count())));
             }
             if !copper {
                 let dielectric=layer.filter(|l|!l.copper&&own.1&&!own.2
@@ -1201,6 +1209,15 @@ mod annulus_arrangement_tests {
         let tree=build_seg_tree(&m);
         for (x,y) in [(1.,1.),(5.,5.),(9.5,0.5),(15.,5.),(20.5,0.5),(-1.,3.),(3.9,5.),(4.1,5.),(10.5,5.)] {
             assert_eq!(point_in_segments(&tree,x,y),m.contains(&Point::new(x,y)),"({x},{y})");
+        }
+    }
+    #[test]
+    fn nearest_segment_point_test_handles_pinched_rings() {
+        // Two squares joined at the single vertex (1,1) by one ring, each loop with its own orientation.
+        let ring=LineString::from(vec![[0.,0.],[1.,0.],[1.,1.],[2.,1.],[2.,2.],[1.,2.],[1.,1.],[0.,1.],[0.,0.]]);
+        let tree=build_seg_tree(&MultiPolygon(vec![Polygon::new(ring,vec![])]));
+        for (x,y,expect) in [(0.5,0.5,true),(1.5,1.5,true),(0.5,1.5,false),(1.5,0.5,false),(3.,3.,false)] {
+            assert_eq!(point_in_segments(&tree,x,y),expect,"({x},{y})");
         }
     }
     #[test]

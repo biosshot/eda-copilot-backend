@@ -7,6 +7,105 @@ use rstar::{RTree, RTreeObject, AABB};
 struct FaceIndex { index: usize, bounds: AABB<[f64;3]> }
 impl RTreeObject for FaceIndex { type Envelope=AABB<[f64;3]>; fn envelope(&self)->Self::Envelope { self.bounds } }
 
+
+/// Nodes a closed ring at its own crossings and T-touches (vertex on another edge), so that the
+/// shared points are identical vertices and `ring_loops` can split the ring there.
+fn node_ring(ring: &LineString<f64>) -> LineString<f64> {
+    use rstar::primitives::{GeomWithData, Rectangle};
+    let pts: Vec<geo::Coord<f64>> = if ring.0.len() > 1 && ring.0.first() == ring.0.last() { ring.0[..ring.0.len() - 1].to_vec() } else { ring.0.clone() };
+    let n = pts.len();
+    if n < 4 { return ring.clone(); }
+    let seg = |i: usize| (pts[i], pts[(i + 1) % n]);
+    let tree = RTree::bulk_load((0..n).map(|i| { let (a, b) = seg(i); GeomWithData::new(Rectangle::from_corners([a.x, a.y], [b.x, b.y]), i) }).collect::<Vec<_>>());
+    let orient = |p: geo::Coord<f64>, q: geo::Coord<f64>, r: geo::Coord<f64>| (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+    let on = |a: geo::Coord<f64>, b: geo::Coord<f64>, c: geo::Coord<f64>| c.x >= a.x.min(b.x) && c.x <= a.x.max(b.x) && c.y >= a.y.min(b.y) && c.y <= a.y.max(b.y);
+    let mut cuts: Vec<Vec<(f64, geo::Coord<f64>)>> = vec![vec![]; n];
+    let param = |a: geo::Coord<f64>, b: geo::Coord<f64>, p: geo::Coord<f64>| { let (dx, dy) = (b.x - a.x, b.y - a.y); ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy) };
+    for i in 0..n {
+        let (a, b) = seg(i);
+        for g in tree.locate_in_envelope_intersecting(&rstar::AABB::from_corners([a.x.min(b.x), a.y.min(b.y)], [a.x.max(b.x), a.y.max(b.y)])) {
+            let j = g.data;
+            if j <= i || j == (i + 1) % n || i == (j + 1) % n { continue; }
+            let (c, d) = seg(j);
+            let (d1, d2, d3, d4) = (orient(a, b, c), orient(a, b, d), orient(c, d, a), orient(c, d, b));
+            if d1 * d2 < 0. && d3 * d4 < 0. {
+                let t = d3 / (d3 - d4);
+                let p = geo::Coord { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) };
+                cuts[i].push((param(a, b, p), p));
+                cuts[j].push((param(c, d, p), p));
+            } else {
+                if d1 == 0. && on(a, b, c) { cuts[i].push((param(a, b, c), c)); }
+                if d2 == 0. && on(a, b, d) { cuts[i].push((param(a, b, d), d)); }
+                if d3 == 0. && on(c, d, a) { cuts[j].push((param(c, d, a), a)); }
+                if d4 == 0. && on(c, d, b) { cuts[j].push((param(c, d, b), b)); }
+            }
+        }
+    }
+    let mut out = Vec::with_capacity(n + 8);
+    for i in 0..n {
+        out.push(pts[i]);
+        let c = &mut cuts[i];
+        c.sort_by(|x, y| x.0.total_cmp(&y.0));
+        for (t, p) in c.iter() { if *t > 0. && *t < 1. && out.last() != Some(p) && *p != pts[(i + 1) % n] { out.push(*p); } }
+    }
+    out.push(out[0]);
+    LineString::new(out)
+}
+/// Splits a closed ring that visits the same vertex more than once into simple loops.
+pub(super) fn ring_loops(ring: &LineString<f64>) -> Vec<Vec<geo::Coord<f64>>> {
+    let pts: Vec<_> = if ring.0.len() > 1 && ring.0.first() == ring.0.last() { ring.0[..ring.0.len() - 1].to_vec() } else { ring.0.clone() };
+    let k = |c: &geo::Coord<f64>| (c.x.to_bits(), c.y.to_bits());
+    let (mut stack, mut at, mut loops) = (Vec::<geo::Coord<f64>>::new(), BTreeMap::<(u64, u64), usize>::new(), Vec::new());
+    for c in pts {
+        if let Some(&pos) = at.get(&k(&c)) {
+            let lp: Vec<_> = stack.drain(pos..).collect();
+            for q in &lp[1..] { at.remove(&k(q)); }
+            stack.push(c);
+            if lp.len() >= 3 { loops.push(lp); }
+        } else {
+            at.insert(k(&c), stack.len());
+            stack.push(c);
+        }
+    }
+    if stack.len() >= 3 { loops.push(stack); }
+    loops
+}
+pub(super) fn signed_area(r: &[geo::Coord<f64>]) -> f64 {
+    (0..r.len()).map(|i| { let (a, b) = (r[i], r[(i + 1) % r.len()]); a.x * b.y - b.x * a.y }).sum::<f64>() / 2.
+}
+/// A pour whose ring touches itself at vertices is the area filled under the winding rule:
+/// same-orientation loops are shells, opposite-orientation loops are voids. The loops are returned as
+/// simple polygons whose areas add up to the original; anything else is refused with coordinates.
+fn split_self_touching(poly: &Polygon<f64>) -> std::result::Result<Vec<Polygon<f64>>, String> {
+    use geo::{Area, Contains, InteriorPoint, algorithm::Validation};
+    if poly.is_valid() { return Ok(vec![poly.clone()]); }
+    let b = geo::BoundingRect::bounding_rect(poly).map(|b| format!("bbox [{:.6},{:.6}]..[{:.6},{:.6}] mm", b.min().x, b.min().y, b.max().x, b.max().y)).unwrap_or_default();
+    let loops = ring_loops(&node_ring(poly.exterior()));
+    let outer_sign = signed_area(&poly.exterior().0[..poly.exterior().0.len().saturating_sub(1)]).signum();
+    let (mut shells, mut voids) = (Vec::new(), Vec::new());
+    for l in loops {
+        let a = signed_area(&l);
+        if a == 0. { continue; }
+        let ring = LineString::new({ let mut v = l; v.push(v[0]); v });
+        if a.signum() == outer_sign { shells.push(Polygon::new(ring, vec![])); } else { voids.push(ring); }
+    }
+    let mut holes: Vec<LineString<f64>> = voids;
+    for r in poly.interiors() { for l in ring_loops(&node_ring(r)) { let mut v = l; v.push(v[0]); holes.push(LineString::new(v)); } }
+    let mut owned: Vec<Vec<LineString<f64>>> = vec![vec![]; shells.len()];
+    for h in holes {
+        let hp = Polygon::new(h.clone(), vec![]);
+        let Some(pt) = hp.interior_point() else { continue };
+        let owner = (0..shells.len()).filter(|&i| shells[i].contains(&pt)).min_by(|&x, &y| shells[x].unsigned_area().total_cmp(&shells[y].unsigned_area()));
+        match owner { Some(i) => owned[i].push(h), None => return Err(format!("ring loop outside every shell, {b}")) }
+    }
+    let out: Vec<Polygon<f64>> = shells.into_iter().zip(owned).map(|(s, h)| Polygon::new(s.exterior().clone(), h)).collect();
+    let area: f64 = out.iter().map(|p| p.unsigned_area()).sum();
+    let original = poly.unsigned_area();
+    if (area - original).abs() > 1e-6 * original { return Err(format!("winding fill area {area:e} differs from ring area {original:e} by more than 1e-6, {b}")); }
+    if let Some(bad) = out.iter().find(|p| !p.is_valid()) { return Err(format!("loop still invalid after splitting: {:?}, {b}", bad.check_validation().err())); }
+    Ok(out)
+}
+
 fn key(p: [f64; 3]) -> [u64; 3] { p.map(|v| if v == 0.0 { 0 } else { v.to_bits() }) }
 
 /// Exact field nodes only: no nearest-node interpolation or net-name welding.
@@ -199,6 +298,13 @@ pub(super) fn input_from_board(board: &super::board_mesh::BoardMesh, request: &s
         original_bytes=original_bytes.checked_add(union_bytes).ok_or_else(||error("MEMORY_LIMIT","original geometry overflow"))?;
         output_bytes=output_bytes.checked_add(union_bytes).ok_or_else(||error("MEMORY_LIMIT","original geometry overflow"))?;
         if output_bytes>budget.max_bytes {return Err(error("MEMORY_LIMIT","original geometry exceeds budget"));}
+        let mut split_union = Vec::with_capacity(union.0.len());
+        for poly in &union.0 {
+            let parts = split_self_touching(poly).map_err(|e| error("COPPER_RING", &format!("physical copper polygon is a self-touching ring that cannot be split: {e}")))?;
+            if parts.len() != 1 { eprintln!("P7_COPPER_RING_SPLIT shape=physical:{} loops={}", metals.len() + split_union.len(), parts.len()); }
+            split_union.extend(parts);
+        }
+        let union = geo::MultiPolygon(split_union);
         for poly in &union.0 {
             let vertices=std::iter::once(poly.exterior()).chain(poly.interiors()).try_fold(0usize,|n,r|n.checked_add(r.0.len())).ok_or_else(||error("MEMORY_LIMIT", "metal polygon overflow"))?;
             output_bytes=output_bytes.checked_add(vertices.checked_mul(32).ok_or_else(||error("MEMORY_LIMIT", "metal polygon overflow"))?).and_then(|v|v.checked_add(256)).ok_or_else(||error("MEMORY_LIMIT", "metal polygon overflow"))?;
@@ -408,5 +514,34 @@ mod certified_contact_tests {
         assert!(certified_contacts(&cells,2,2).is_empty());
         let cells=[Some(0),None,Some(1),None];
         assert!(certified_contacts(&cells,2,2).contains(&(0,1)));
+    }
+}
+
+#[cfg(test)]
+mod ring_split_tests {
+    use super::*;
+    use geo::Area;
+    #[test]
+    fn pinched_ring_splits_into_valid_loops_with_equal_area() {
+        let ring = LineString::from(vec![[0., 0.], [1., 0.], [1., 1.], [2., 1.], [2., 2.], [1., 2.], [1., 1.], [0., 1.], [0., 0.]]);
+        let parts = split_self_touching(&Polygon::new(ring, vec![])).unwrap();
+        assert_eq!(parts.len(), 2);
+        assert!((parts.iter().map(|p| p.unsigned_area()).sum::<f64>() - 2.).abs() < 1e-12);
+        let square = Polygon::new(LineString::from(vec![[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0., 0.]]), vec![]);
+        assert_eq!(split_self_touching(&square).unwrap().len(), 1);
+    }
+}
+
+#[cfg(test)]
+mod ring_node_tests {
+    use super::*;
+    use geo::Area;
+    #[test]
+    fn t_touch_and_crossing_rings_are_noded_then_split() {
+        // The notch tip (2,0) touches the interior of the bottom edge: a T-touch, not a shared vertex.
+        let t = LineString::from(vec![[0., 0.], [4., 0.], [4., 3.], [3., 3.], [2., 0.], [1., 3.], [0., 3.], [0., 0.]]);
+        let parts = split_self_touching(&Polygon::new(t, vec![])).unwrap();
+        assert_eq!(parts.len(), 2);
+        assert!((parts.iter().map(|p| p.unsigned_area()).sum::<f64>() - 9.).abs() < 1e-9);
     }
 }

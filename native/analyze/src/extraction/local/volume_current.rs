@@ -52,14 +52,23 @@ pub fn assemble(mesh: &LayeredMesh, conductivity_s_m: &[f64], electrodes: &[Vec<
             } else { faces.insert(face, i); }
         }
     }
+    // A mesh vertex shared by two face-disconnected volumes is a point contact (union noise or a
+    // true pinch). It carries no current: each volume gets its own potential at that vertex, so
+    // no ideal short is invented. The count is reported.
     let mut node_component = BTreeMap::new();
+    let mut shared_nodes = BTreeSet::new();
     for (i,t) in mesh.copper_tetrahedra.iter().enumerate() {
         let component = root(&cell_parent, i);
         for node in t.nodes {
-            if node_component.insert(node, component).is_some_and(|old| old != component) {
-                return Err(error("VOLUME_CONTACT", "copper touches only at an edge or vertex; finite face contact required"));
+            match node_component.get(&node) {
+                Some(&old) if old != component => { shared_nodes.insert(node); }
+                Some(_) => {}
+                None => { node_component.insert(node, component); }
             }
         }
+    }
+    if !shared_nodes.is_empty() {
+        eprintln!("P7_VOLUME_CONTACT_SPLIT vertices={} (copper touching only at a vertex or edge: no galvanic contact)", shared_nodes.len());
     }
     let mut parent: Vec<_> = (0..mesh.nodes_m.len()).collect();
     let mut electrode_nodes = BTreeSet::new();
@@ -90,6 +99,7 @@ pub fn assemble(mesh: &LayeredMesh, conductivity_s_m: &[f64], electrodes: &[Vec<
         mesh_nodes[p].push(node); node_potential.insert(node,p);
     }
     let mut components = BTreeMap::<usize,BTreeSet<usize>>::new();
+    let mut extra_potential = BTreeMap::<(usize,usize),usize>::new();
     let mut cells = vec![];
     for (i,t) in mesh.copper_tetrahedra.iter().enumerate() {
         let length = t.volume_m3.cbrt();
@@ -100,7 +110,12 @@ pub fn assemble(mesh: &LayeredMesh, conductivity_s_m: &[f64], electrodes: &[Vec<
         if !density.is_finite() || !resistance.is_finite() || resistance <= 0. || !incidence.iter().flatten().all(|v| v.is_finite()) {
             return Err(error("VOLUME_RANGE", "current normalization overflow"));
         }
-        let potentials = t.nodes.map(|n| node_potential[&n]);
+        let comp = root(&cell_parent, i);
+        let potentials = t.nodes.map(|n| {
+            if node_component[&n] == comp { node_potential[&n] } else {
+                *extra_potential.entry((n, comp)).or_insert_with(|| { mesh_nodes.push(vec![n]); mesh_nodes.len() - 1 })
+            }
+        });
         components.entry(root(&cell_parent,i)).or_default().extend(potentials);
         cells.push(Cell { mesh_cell:i,potentials,incidence,density_per_amp_m2:density,resistance_ohm:resistance });
     }
