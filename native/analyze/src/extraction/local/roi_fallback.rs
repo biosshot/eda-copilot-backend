@@ -241,6 +241,7 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,force
         .unwrap_or(if budget.max_bytes<usize::MAX/2 {budget.max_bytes as f64} else {6.*1073741824.});
     let fit_bytes=if forced.is_some() {f64::INFINITY} else {budget_bytes};
     let (planar0,nodes0,bytes0)=estimate(g,r,&roi0,skin);
+    if skin.is_some() {eprintln!("P7_ROI_ESTIMATE planar={planar0} nodes={nodes0} bytes={bytes0:.0} budgetBytes={budget_bytes:.0} z={}",z_planes(r,skin));}
     // Small meshes never need the fallback (the fixed overhead term must not refuse unit-scale fixtures).
     if bytes0<=budget_bytes||nodes0<100_000 {return Ok(None);}
     // Support: electrode source regions and the copper of the non-reference channel nets.
