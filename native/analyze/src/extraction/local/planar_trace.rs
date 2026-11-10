@@ -123,10 +123,6 @@ fn split_self_touching_depth(poly: &Polygon<f64>, depth: usize) -> std::result::
         if (got - expected).abs() > 1e-6 * expected.abs() {
             return Err(format!("normalised area {got:e} differs from {expected:e} by more than 1e-6, {b}"));
         }
-        if let Some(path) = std::env::var_os("P7_COPPER_RING_DUMP") {
-            let dump: Vec<Vec<[f64; 2]>> = std::iter::once(p.exterior()).chain(p.interiors()).map(|r| r.0.iter().map(|c| [c.x, c.y]).collect()).collect();
-            let _ = std::fs::write(path, serde_json::to_string(&dump).unwrap_or_default());
-        }
         // The overlay merges a hole touching the shell into a pinched shell ring: split those pinches again.
         for q in rebuilt.0 {
             if q.is_valid() || depth >= 2 { normalised.push(q); } else { normalised.extend(split_self_touching_depth(&q, depth + 1)?); }
@@ -502,16 +498,30 @@ pub(super) fn certified_trace<'a>(input: &'a Input, original: &OriginalGeometry,
         for (i,mut expected) in [[a0,b0,c0,c1],[a0,b0,b1,c1],[a0,a1,b1,c1]].into_iter().enumerate() {expected.sort();if actual==expected{return Ok(1<<i);}}
         Err(error("PLANAR_TRACE","certificate tetra connectivity mismatch"))
     };
+    let mut owner_noise=0usize;let mut owner_noise_max=0_f64;
     for tet in &mesh.copper_tetrahedra {
         if start.elapsed()>=budget.max_wall{return Err(error("DEADLINE","certificate copper"));}
         if tet.slab>=slabs || tet.planar_triangle>=nt {return Err(error("PLANAR_TRACE","certificate copper index"));}
         let idx=tet.slab*nt+tet.planar_triangle; let tri=triangles[tet.planar_triangle].map(|i|board.planar_nodes_mm[i]);
         let p=Point::new(tri.iter().map(|p|p[0]).sum::<f64>()/3.,tri.iter().map(|p|p[1]).sum::<f64>()/3.);
-        let found:Vec<_>=input.metals.iter().zip(&original.polygons).enumerate().filter(|(_, (m,poly))|m.z0_m==input.z_m[tet.slab]&&m.z1_m==input.z_m[tet.slab+1]&&poly.intersects(&p)).map(|(i,_)|i).collect();
-        if found.len()!=1 || copper[idx].is_some_and(|v|v!=found[0]) {return Err(error("PLANAR_TRACE","certificate ambiguous copper owner"));}
+        let mut found:Vec<_>=input.metals.iter().zip(&original.polygons).enumerate().filter(|(_, (m,poly))|m.z0_m==input.z_m[tet.slab]&&m.z1_m==input.z_m[tet.slab+1]&&poly.intersects(&p)).map(|(i,_)|i).collect();
+        if found.is_empty() {
+            // Union noise (rounding, renoding): as in the board ownership, a centre within 1e-2 mm of copper of this
+            // layer belongs to the nearest one if it is clearly nearest (4x closer than the next); otherwise refuse.
+            use geo::{Distance,Euclidean};
+            let mut near:Vec<(f64,usize)>=input.metals.iter().zip(&original.polygons).enumerate().filter(|(_,(m,_))|m.z0_m==input.z_m[tet.slab]&&m.z1_m==input.z_m[tet.slab+1]).map(|(i,(_,poly))|(Euclidean.distance(poly,&p),i)).filter(|(d,_)|*d<=1e-2).collect();
+            near.sort_by(|a,b|a.0.total_cmp(&b.0));
+            if near.first().is_some_and(|f|near.get(1).is_none_or(|n|4.*f.0<=n.0)) {found=vec![near[0].1];owner_noise+=1;owner_noise_max=owner_noise_max.max(near[0].0);}
+        }
+        if found.len()!=1 || copper[idx].is_some_and(|v|v!=found[0]) {
+            use geo::{Distance,Euclidean,BoundingRect};
+            let near:Vec<String>=input.metals.iter().zip(&original.polygons).enumerate().filter(|(_,(m,_))|m.z0_m==input.z_m[tet.slab]&&m.z1_m==input.z_m[tet.slab+1]).map(|(i,(_,poly))|(Euclidean.distance(poly,&p),i)).fold(vec![],|mut v:Vec<(f64,usize)>,x|{v.push(x);v.sort_by(|a,b|a.0.total_cmp(&b.0));v.truncate(3);v}).iter().map(|(d,i)|format!("physical:{i} {d:e}mm bbox {:?}",original.polygons[*i].bounding_rect().map(|b|[[b.min().x,b.min().y],[b.max().x,b.max().y]]))).collect();
+            return Err(error("PLANAR_TRACE",&format!("certificate ambiguous copper owner: triangle centre ({:.9},{:.9}) mm, slab {}, owners {:?}, previous owner {:?}; nearest same-layer copper {:?}",p.x(),p.y(),tet.slab,found,copper[idx],near)));
+        }
         let bit=tetra_bit(tet.slab,tet.planar_triangle,tet.nodes)?; if seen[idx]&bit!=0{return Err(error("PLANAR_TRACE","duplicate copper tetra"));} copper[idx]=Some(found[0]); seen[idx]|=bit;
         for &node in &tet.nodes { let owners=node_owners.get_mut(node).ok_or_else(||error("PLANAR_TRACE","certificate node index"))?; if !owners.contains(&found[0]) {owners.push(found[0]);} }
     }
+    if owner_noise>0 {eprintln!("P7_PLANAR_TRACE_OWNER_NOISE tetrahedra={owner_noise} assigned to the clearly nearest copper, max distance {owner_noise_max:e} mm (union rounding; noise tier)");}
     for tet in &mesh.tetrahedra {
         if start.elapsed()>=budget.max_wall{return Err(error("DEADLINE","certificate dielectric"));}
         if tet.slab>=slabs || tet.planar_triangle>=nt || !tet.epsilon_r.is_finite() || tet.epsilon_r<=0. {return Err(error("PLANAR_TRACE","certificate dielectric index or material"));}
