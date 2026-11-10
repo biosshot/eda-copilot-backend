@@ -177,6 +177,69 @@ pub struct BoardMesh {
 }
 /// Sutherland-Hodgman crop of a closed ring to an axis-aligned box (exact on the box:
 /// the cropped region equals the ring region intersected with the box).
+/// Boundary segment oriented so the area interior lies on its left.
+struct Seg {a:[f64;2],b:[f64;2]}
+impl rstar::RTreeObject for Seg {
+    type Envelope=rstar::AABB<[f64;2]>;
+    fn envelope(&self)->Self::Envelope {rstar::AABB::from_corners(self.a,self.b)}
+}
+impl rstar::PointDistance for Seg {
+    fn distance_2(&self,p:&[f64;2])->f64 {let (_,d2)=seg_project(self.a,self.b,*p);d2}
+}
+/// Parameter of the closest point on a-b and the squared distance to it.
+fn seg_project(a:[f64;2],b:[f64;2],p:[f64;2])->(f64,f64) {
+    let (dx,dy)=(b[0]-a[0],b[1]-a[1]);let l2=dx*dx+dy*dy;
+    let t=if l2>0. {(((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l2).clamp(0.,1.)} else {0.};
+    let (cx,cy)=(a[0]+t*dx,a[1]+t*dy);
+    (t,(p[0]-cx).powi(2)+(p[1]-cy).powi(2))
+}
+type SegTree=rstar::RTree<Seg>;
+fn build_seg_tree(m:&MultiPolygon<f64>)->SegTree {
+    let mut segs=vec![];
+    for p in &m.0 {
+        for (k,ring) in std::iter::once(p.exterior()).chain(p.interiors()).enumerate() {
+            let area2:f64=ring.lines().map(|l|l.start.x*l.end.y-l.end.x*l.start.y).sum();
+            let ccw=area2>0.;
+            // shell: interior left when CCW; hole: interior (the polygon) lies outside the ring, left when CW.
+            let flip=if k==0 {!ccw} else {ccw};
+            for l in ring.lines() {
+                let (a,b)=([l.start.x,l.start.y],[l.end.x,l.end.y]);
+                segs.push(if flip {Seg{a:b,b:a}} else {Seg{a,b}});
+            }
+        }
+    }
+    rstar::RTree::bulk_load(segs)
+}
+/// Point-in-area from the nearest boundary segment (O(log n)); a nearest point at a segment end is
+/// ambiguous, so those fall back to an even-odd ray count.
+fn point_in_segments(tree:&SegTree,x:f64,y:f64)->bool {
+    let Some(g)=tree.nearest_neighbor(&[x,y]) else {return false};
+    let (t,_)=seg_project(g.a,g.b,[x,y]);
+    if t>1e-9&&t<1.-1e-9 {
+        return (g.b[0]-g.a[0])*(y-g.a[1])-(g.b[1]-g.a[1])*(x-g.a[0])>0.;
+    }
+    let mut inside=false;
+    for g in tree.locate_in_envelope_intersecting(&rstar::AABB::from_corners([x,y],[f64::MAX,y])) {
+        let (a,b)=(g.a,g.b);
+        if (a[1]>y)!=(b[1]>y) {
+            let xi=a[0]+(y-a[1])*(b[0]-a[0])/(b[1]-a[1]);
+            if xi>x {inside=!inside;}
+        }
+    }
+    inside
+}
+/// Closed segment/triangle intersection (endpoint inside, or crossing/touching any triangle edge).
+fn segment_meets_triangle(a:[f64;2],b:[f64;2],t:&[[f64;2];3])->bool {
+    let orient=|p:[f64;2],q:[f64;2],r:[f64;2]|(q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]);
+    let in_tri=|p:[f64;2]|{let d=[orient(t[0],t[1],p),orient(t[1],t[2],p),orient(t[2],t[0],p)];d.iter().all(|&v|v>=0.)||d.iter().all(|&v|v<=0.)};
+    if in_tri(a)||in_tri(b) {return true;}
+    let on=|p:[f64;2],q:[f64;2],r:[f64;2]|r[0]>=p[0].min(q[0])&&r[0]<=p[0].max(q[0])&&r[1]>=p[1].min(q[1])&&r[1]<=p[1].max(q[1]);
+    (0..3).any(|k|{
+        let (c,d)=(t[k],t[(k+1)%3]);
+        let (o1,o2,o3,o4)=(orient(a,b,c),orient(a,b,d),orient(c,d,a),orient(c,d,b));
+        (o1*o2<0.&&o3*o4<0.)||(o1==0.&&on(a,b,c))||(o2==0.&&on(a,b,d))||(o3==0.&&on(c,d,a))||(o4==0.&&on(c,d,b))
+    })
+}
 fn crop_ring(ring:&[geo::Coord<f64>],lo:[f64;2],hi:[f64;2])->Vec<geo::Coord<f64>> {
     let mut pts:Vec<geo::Coord<f64>>=if ring.len()>1&&ring.first()==ring.last(){ring[..ring.len()-1].to_vec()}else{ring.to_vec()};
     for side in 0..4 {
@@ -392,7 +455,7 @@ fn match_components_spatial(now:&MultiPolygon<f64>,src:&MultiPolygon<f64>,grid_s
         for x in 0..n {for y in x+1..n {
             let (bx,by)=(g[x].bounding_rect(),g[y].bounding_rect());let d=4.*grid_step_mm;
             if let (Some(bx),Some(by))=(bx,by) {if bx.max().x+d<by.min().x||by.max().x+d<bx.min().x||bx.max().y+d<by.min().y||by.max().y+d<bx.min().y {continue;}}
-            if Euclidean.distance(g[x],g[y])<=d {let (rx,ry)=(find(&mut parent,x),find(&mut parent,y));if rx!=ry{parent[rx]=ry;merged+=1;}}
+            if Euclidean.distance(g[x].exterior(),g[y].exterior())<=d {let (rx,ry)=(find(&mut parent,x),find(&mut parent,y));if rx!=ry{parent[rx]=ry;merged+=1;}}
         }}
         let mut clusters:BTreeMap<usize,(f64,f64)>=BTreeMap::new();
         for x in 0..n {let r=find(&mut parent,x);let e=clusters.entry(r).or_insert((0.,0.));e.0+=g[x].unsigned_area();e.1+=ring_perimeter_mm(g[x].exterior());}
@@ -776,16 +839,27 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         let canonical=member_set(i+2);let (original_area,original_components,original_holes,original_perimeter)=original_physical_stats[i];let area=canonical.unsigned_area();
         let change=if original_area==0. {if area==0.{0.}else{f64::INFINITY}}else{(area-original_area).abs()/original_area};
         let holes=|p:&MultiPolygon<f64>|p.0.iter().map(|p|p.interiors().len()).sum::<usize>();
+        super::board_foil::phase_trace(&format!("t-set{i}-union"),start,serde_json::json!({}));
         let (now_c,now_h)=noise_pieces(&canonical,grid_step_mm);
         let (src_c,src_h)=&original_filtered[i];
         let matched=match_components_spatial(&canonical,&shape.0,grid_step_mm,original_area).and_then(|c|match_sorted_pieces(&now_h,src_h,grid_step_mm,original_area).or_else(|e|{
             // A pinch point of the source ring that rounding opened by <= 4h joins a hole to the
             // outside. Close the rebuilt union by +-2h (check only) and match the holes again.
+            // Only the filled outer shells need closing: a sub-4h crack or pinch between shells turns a
+            // hole into part of the outside, and closing the union of the filled shells turns it back
+            // into a hole. The holes of each component are kept as they are, so the huge multi-hole
+            // union is never buffered.
             use geo::Buffer;let delta=2.*grid_step_mm;
-            let closed=canonical.buffer(delta).buffer(-delta);
-            let (_,closed_h)=noise_pieces(&closed,grid_step_mm);
+            let mut closed_h:Vec<(f64,f64)>=vec![];
+            let real:Vec<&Polygon<f64>>=canonical.0.iter().filter(|p|!ring_is_noise(p.exterior(),grid_step_mm)).collect();
+            let filled=areas::union(real.iter().map(|p|Polygon::new(p.exterior().clone(),vec![])));
+            let closed=filled.buffer(delta).buffer(-delta);
+            for q in &closed.0 {for ring in q.interiors() {if !ring_is_noise(ring,grid_step_mm) {closed_h.push((Polygon::new(ring.clone(),vec![]).unsigned_area(),ring_perimeter_mm(ring)));}}}
+            for poly in &real {for ring in poly.interiors() {if !ring_is_noise(ring,grid_step_mm) {closed_h.push((Polygon::new(ring.clone(),vec![]).unsigned_area(),ring_perimeter_mm(ring)));}}}
+            closed_h.sort_by(|x,y|y.0.total_cmp(&x.0));
             match_sorted_pieces(&closed_h,src_h,grid_step_mm,original_area).map(|(n,a)|{eprintln!("P7_ARRANGEMENT_NOISE set={i} holes reopened by sub-4h cracks, closed by +-{delta:e}: {e}");(n,a)}).map_err(|e2|format!("{e}; after closing +-{delta:e}: {e2}"))
         }).map(|h|(c,h)));
+        super::board_foil::phase_trace(&format!("t-set{i}-matched"),start,serde_json::json!({}));
         let raw=format!("components raw={}/{original_components} filtered={}/{}, holes raw={}/{original_holes} filtered={}/{}",canonical.0.len(),now_c.len(),src_c.len(),holes(&canonical),now_h.len(),src_h.len());
         if !area_change_ok((area-original_area).abs(),original_area,grid_step_mm,original_perimeter) {
             let describe=|m:&MultiPolygon<f64>|{let mut v=m.0.iter().map(|p|(p.unsigned_area(),p.bounding_rect())).collect::<Vec<_>>();v.sort_by(|a,b|b.0.total_cmp(&a.0));v.iter().take(5).map(|(a,b)|format!("area={a:e} bbox={:?}",b.map(|b|[[b.min().x,b.min().y],[b.max().x,b.max().y]]))).collect::<Vec<_>>().join("; ")};
@@ -904,22 +978,39 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     let bbox_index=|boxes:&[Option<geo::Rect<f64>>]|(rstar::RTree::bulk_load(boxes.iter().enumerate().filter_map(|(i,b)|b.map(|b|rstar::primitives::GeomWithData::new(rstar::primitives::Rectangle::from_corners([b.min().x,b.min().y],[b.max().x,b.max().y]),i))).collect::<Vec<_>>()),boxes.iter().enumerate().filter(|(_,b)|b.is_none()).map(|(i,_)|i).collect::<Vec<_>>());
     let candidates=|index:&(rstar::RTree<rstar::primitives::GeomWithData<rstar::primitives::Rectangle<[f64;2]>,usize>>,Vec<usize>),at:geo::Rect<f64>|{let mut v:Vec<usize>=index.0.locate_in_envelope_intersecting(&rstar::AABB::from_corners([at.min().x,at.min().y],[at.max().x,at.max().y])).map(|g|g.data).chain(index.1.iter().copied()).collect();v.sort_unstable();v};
     let shape_index=bbox_index(&shape_bboxes);
-    for face in cdt.inner_faces() {
-        let v=face.vertices();let centre=Point::new(v.iter().map(|p|p.position().x).sum::<f64>()/3.,v.iter().map(|p|p.position().y).sum::<f64>()/3.);
-        if field_domain.contains(&centre) {
-            let triangle=areas::one(Polygon::new(LineString::from(v.map(|v|[v.position().x,v.position().y]).to_vec()),vec![]));
-            // Provenance is a predicate on the actual F64 arrangement. Running
-            // another quantizing Boolean on a tiny mesh face can erase its
-            // positive overlap; robust DE-9IM keeps that source association.
-            let tri_bbox=triangle.bounding_rect();
-            let cand:Vec<usize>=match tri_bbox{Some(t)=>candidates(&shape_index,t),None=>(0..shapes.len()).collect()};
-            let mut sources=cand.iter().copied().filter(|&i|shapes[i].poly.relate(&triangle).get(CoordPos::Inside,CoordPos::Inside)==Dimensions::TwoDimensional).collect::<Vec<_>>();
-            // DE-9IM on large multi-hole source polygons can miss a face wholly inside the shape
-            // (STM32G0 face9201). The face centre lying inside the source polygon is the same
-            // positive-area provenance, so use it only when relate found no owner.
-            if sources.is_empty() {sources=cand.iter().copied().filter(|&i|shapes[i].poly.contains(&centre)).collect();}
-            triangles.push(v.map(|v|v.fix().index()));centres.push(centre);overlaps.push(sources);
-        }
+    // Per-shape boundary segment index: a face whose centre is outside a shape and whose bbox meets
+    // no boundary segment of it cannot overlap it, and a centre inside it overlaps by definition;
+    // DE-9IM runs only for the ambiguous faces next to a boundary.
+    use rayon::prelude::*;
+    let segment_trees:Vec<SegTree>=shapes.par_iter().map(|sh|build_seg_tree(&sh.poly)).collect();
+    super::board_foil::phase_trace("t-segment-trees",start,serde_json::json!({}));
+    let faces:Vec<([usize;3],[[f64;2];3])>=cdt.inner_faces().map(|f|{let v=f.vertices();(v.map(|v|v.fix().index()),v.map(|v|[v.position().x,v.position().y]))}).collect();
+    let face_results:Vec<Option<(Point<f64>,Vec<usize>)>>=faces.par_iter().map(|(_,pos)|{
+        let centre=Point::new((pos[0][0]+pos[1][0]+pos[2][0])/3.,(pos[0][1]+pos[1][1]+pos[2][1])/3.);
+        if !field_domain.contains(&centre) {return None;}
+        let triangle=areas::one(Polygon::new(LineString::from(pos.to_vec()),vec![]));
+        let tri_bbox=triangle.bounding_rect();
+        let cand:Vec<usize>=match tri_bbox{Some(t)=>candidates(&shape_index,t),None=>(0..shapes.len()).collect()};
+        let env=tri_bbox.map(|t|rstar::AABB::from_corners([t.min().x,t.min().y],[t.max().x,t.max().y]));
+        let sources=cand.into_iter().filter(|&i|{
+            if point_in_segments(&segment_trees[i],centre.x(),centre.y()) {return true;}
+            // Ambiguous only when a boundary segment of this shape touches the face itself;
+            // otherwise the face is wholly outside (its centre is not inside).
+            let touched=env.is_none_or(|e|segment_trees[i].locate_in_envelope_intersecting(&e).any(|g|segment_meets_triangle(g.a,g.b,pos)));
+            if !touched {return false;}
+            // DE-9IM against a many-vertex polygon costs O(vertices) per face and dominated the
+            // stage on boards with large pours; for those, interior sample points decide (a
+            // sub-1/6-face sliver of a large pour is not attributed, its owner is the pour at the centre).
+            if segment_trees[i].size()>200 {
+                return (1..6usize).any(|u|(1..6-u).any(|v|{let w=6-u-v;let (fu,fv,fw)=(u as f64/6.,v as f64/6.,w as f64/6.);
+                    point_in_segments(&segment_trees[i],fu*pos[0][0]+fv*pos[1][0]+fw*pos[2][0],fu*pos[0][1]+fv*pos[1][1]+fw*pos[2][1])}));
+            }
+            shapes[i].poly.relate(&triangle).get(CoordPos::Inside,CoordPos::Inside)==Dimensions::TwoDimensional
+        }).collect::<Vec<_>>();
+        Some((centre,sources))
+    }).collect();
+    for ((idx,_),res) in faces.into_iter().zip(face_results) {
+        if let Some((centre,sources))=res {triangles.push(idx);centres.push(centre);overlaps.push(sources);}
     }
     let mut edges=BTreeMap::new();for t in &triangles {for k in 0..3 {let mut edge=[t[k],t[(k+1)%3]];edge.sort();*edges.entry(edge).or_insert(0usize)+=1;}}
     let boundary_edges=edges.into_iter().filter(|(_,n)|*n==1).map(|(e,_)|e).collect();
@@ -970,11 +1061,17 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     let physical_bboxes:Vec<_>=physical_shapes.iter().map(|s|s.0.bounding_rect()).collect();
     // Per-triangle (z-independent) ownership candidates, in physical_shapes order.
     let physical_index=bbox_index(&physical_bboxes);
-    let tri_own:Vec<(Vec<usize>,bool,bool,Vec<bool>)>=centres.iter().map(|p|{
+    // O(log n) point-in-area through boundary segment trees; geo's `contains` is O(vertices) per
+    // triangle and dominated this stage on boards with large multi-hole pours.
+    let physical_trees:Vec<SegTree>=physical_shapes.par_iter().map(|s|build_seg_tree(&s.0)).collect();
+    let (substrate_tree,bores_tree)=(build_seg_tree(&substrate),build_seg_tree(&bores));
+    let partial_trees:Vec<SegTree>=partial_bores.iter().map(|(_,poly)|build_seg_tree(poly)).collect();
+    let tri_own:Vec<(Vec<usize>,bool,bool,Vec<bool>)>=centres.par_iter().map(|p|{
         let at=geo::Rect::new(p.0,p.0);
-        let phys=candidates(&physical_index,at).into_iter().filter(|&i|physical_bboxes[i].is_some()).filter(|&i|physical_shapes[i].0.contains(p)).collect();
-        (phys,substrate.contains(p),bores.contains(p),partial_bores.iter().map(|(_,poly)|poly.contains(p)).collect())
+        let phys=candidates(&physical_index,at).into_iter().filter(|&i|physical_bboxes[i].is_some()).filter(|&i|point_in_segments(&physical_trees[i],p.x(),p.y())).collect();
+        (phys,point_in_segments(&substrate_tree,p.x(),p.y()),point_in_segments(&bores_tree,p.x(),p.y()),partial_trees.iter().map(|t|point_in_segments(t,p.x(),p.y())).collect())
     }).collect();
+    let mut unowned_faces=std::collections::BTreeSet::<usize>::new();
     for slab in z_m.windows(2) {
     super::board_foil::phase_trace("t-tri-own",start,serde_json::json!({}));
         let middle=(slab[0]+slab[1])/2.;let layer=r.stack.iter().zip(&stack_spans).find(|(_,s)|middle>s[0]&&middle<s[1]).map(|(l,_)|l);
@@ -986,15 +1083,24 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
             let own=&tri_own[ti];let physical:Vec<_>=own.0.iter().map(|&i|&physical_shapes[i]).filter(|(_,span,_,_)|middle>span[0]&&middle<span[1]).collect();
             let copper=!physical.is_empty();
             let owners:Vec<_>=if copper {overlaps[ti].iter().map(|&i|&shapes[i]).filter(|s|middle>s.span[0]&&middle<s.span[1]).collect()}else{vec![]};
-            // A face centre in a sub-4h rounding sliver of the canonical union (outside every source
-            // polygon by less than the grid noise) is attributed to the source polygon it borders.
+            // A face centre in a rounding sliver of the canonical union (outside every source polygon of
+            // this layer by far less than a feature) is attributed to the nearest source polygon. The
+            // arrangement check bounded the excess copper at |dA| <= h*P; the attributed face area is
+            // re-bounded below at 1e-6 of the copper area, so this cannot hide a real gain.
             let near_owner:Vec<_>=if copper&&owners.is_empty() {
-                use geo::{Distance,Euclidean};let d=4.*grid_step_mm;
+                use rstar::PointDistance;let d=1e-2;
                 let at=geo::Rect::new(geo::Coord{x:p.x()-d,y:p.y()-d},geo::Coord{x:p.x()+d,y:p.y()+d});
-                candidates(&shape_index,at).into_iter().map(|i|&shapes[i]).filter(|s|middle>s.span[0]&&middle<s.span[1]&&Euclidean.distance(&s.poly,p)<=d).collect()
+                let best=candidates(&shape_index,at).into_iter().filter(|&i|middle>shapes[i].span[0]&&middle<shapes[i].span[1])
+                    .filter_map(|i|segment_trees[i].nearest_neighbor(&[p.x(),p.y()]).map(|g|(g.distance_2(&[p.x(),p.y()]),i)))
+                    .filter(|(d2,_)|*d2<=d*d).min_by(|a,b|a.0.total_cmp(&b.0));
+                if let Some((_,i))=best {unowned_faces.insert(ti);vec![&shapes[i]]} else {vec![]}
             } else {vec![]};
             let owners=if owners.is_empty() {near_owner} else {owners};
-            if copper&&owners.is_empty() {return Err(error("BOARD_OWNERSHIP",&format!("canonical copper face{ti} at {p:?}, z={middle:e} has no positive-area source attribution; no copper removed")));}
+            if copper&&owners.is_empty() {
+                use rstar::PointDistance;
+                let near:Vec<String>=(0..shapes.len()).filter(|&k|middle>shapes[k].span[0]&&middle<shapes[k].span[1]).filter_map(|k|segment_trees[k].nearest_neighbor(&[p.x(),p.y()]).map(|g|(g.distance_2(&[p.x(),p.y()]).sqrt(),k))).fold(vec![],|mut v,(d,k)|{v.push((d,k));v.sort_by(|a,b|a.0.total_cmp(&b.0));v.truncate(2);v}).iter().map(|(d,k)|format!("{}:{d:e}mm inside={}",shapes[*k].id,point_in_segments(&segment_trees[*k],p.x(),p.y()))).collect();
+                return Err(error("BOARD_OWNERSHIP",&format!("canonical copper face{ti} at {p:?}, z={middle:e} has no positive-area source attribution (nearest same-span sources {near:?}, grid step {grid_step_mm:e}; physical owners {:?}); no copper removed",own.0.iter().map(|&k|(k,physical_shapes[k].1,physical_shapes[k].3)).collect::<Vec<_>>())));
+            }
             if !copper {
                 let dielectric=layer.filter(|l|!l.copper&&own.1&&!own.2
                     &&!active_bores.iter().any(|&i|own.3[i]));
@@ -1011,6 +1117,13 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
         materials.push(row);sigma_per_triangle.push(sigma);
     }
     let planar_triangles=triangles.clone();
+    if !unowned_faces.is_empty() {
+        let tri_area=|t:&[usize;3]|{let [a,b,c]=t.map(|i|planar_nodes_mm[i]);0.5*((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])).abs()};
+        let unowned:f64=unowned_faces.iter().map(|&ti|tri_area(&triangles[ti])).sum();
+        let copper_area:f64=physical_shapes.iter().map(|s|s.0.unsigned_area()).sum();
+        eprintln!("P7_ARRANGEMENT_NOISE unowned copper faces={} attributed to nearest source, area {unowned:e} mm2 ({:e} of copper)",unowned_faces.len(),unowned/copper_area);
+        if !(unowned<=1e-6*copper_area) {return Err(error("BOARD_OWNERSHIP",&format!("{} canonical copper faces (area {unowned:e} mm2) lie outside every source polygon: more than 1e-6 of copper area {copper_area:e} mm2",unowned_faces.len())));}
+    }
     let mesh=mesh::extrude(&LayeredInput{xy_m,triangles,boundary_edges,z_m,materials},budget)?;
     let conductivity_s_m=mesh.copper_tetrahedra.iter().map(|t|sigma_per_triangle[t.slab][t.planar_triangle]).collect();
     let mut certified_electrodes:BTreeMap<String,(Electrode,Vec<usize>)>=BTreeMap::new();let mut electrode_areas_m2=BTreeMap::new();let mut max_contact_area_change:f64=0.;
@@ -1081,6 +1194,15 @@ impl BoardMesh {
 #[cfg(test)]
 mod annulus_arrangement_tests {
     use super::*;
+    #[test]
+    fn nearest_segment_point_test_matches_polygon_contains() {
+        let sq=|x:f64,y:f64,s:f64|LineString::from(vec![[x,y],[x+s,y],[x+s,y+s],[x,y+s],[x,y]]);
+        let m=MultiPolygon(vec![Polygon::new(sq(0.,0.,10.),vec![sq(4.,4.,2.)]),Polygon::new(sq(20.,0.,1.),vec![])]);
+        let tree=build_seg_tree(&m);
+        for (x,y) in [(1.,1.),(5.,5.),(9.5,0.5),(15.,5.),(20.5,0.5),(-1.,3.),(3.9,5.),(4.1,5.),(10.5,5.)] {
+            assert_eq!(point_in_segments(&tree,x,y),m.contains(&Point::new(x,y)),"({x},{y})");
+        }
+    }
     #[test]
     fn grid_noise_rings_are_ignored_but_real_holes_change_topology() {
         let h=1e-6;

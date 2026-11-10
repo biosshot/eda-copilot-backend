@@ -437,6 +437,25 @@ pub fn prepare_model<'a>(
     wall: Duration,
     barrel_model: BarrelModel,
 ) -> Result<MixedMap<'a>> {
+    // Dropping noise sliver columns is the default. Only when that would disconnect a conductor
+    // are the sole-link slivers kept as ordinary volume (they are numerically poor tetrahedra).
+    match prepare_model_inner(mesh, electrodes, max_frequency_hz, budget, wall, barrel_model, false) {
+        Err(e) if format!("{e:?}").contains("dropped sliver columns would disconnect") => {
+            prepare_model_inner(mesh, electrodes, max_frequency_hz, budget, wall, barrel_model, true)
+        }
+        other => other,
+    }
+}
+
+fn prepare_model_inner<'a>(
+    mesh: &'a BoardMesh,
+    electrodes: &[Electrode],
+    max_frequency_hz: f64,
+    budget: AllocationBudget,
+    wall: Duration,
+    barrel_model: BarrelModel,
+    keep_sole_link_slivers: bool,
+) -> Result<MixedMap<'a>> {
     let start = Instant::now();
     if !max_frequency_hz.is_finite() || !(0. ..=MIXED_PREPARE_MAX_HZ).contains(&max_frequency_hz) {
         return Err(error(
@@ -697,7 +716,7 @@ pub fn prepare_model<'a>(
             dropped_volume = dropped_volume.add(Sum::from(volume));
         }
     }
-    let dropped_volume = dropped_volume.value();
+    let mut dropped_volume = dropped_volume.value();
     let copper_volume = mesh
         .mesh
         .copper_tetrahedra
@@ -712,6 +731,65 @@ pub fn prepare_model<'a>(
                 "dropped sliver copper volume {dropped_volume:e} m3 in {dropped_columns} columns exceeds 1e-6 of copper volume {copper_volume:e} m3"
             ),
         ));
+    }
+    // A sliver column that is the only galvanic link inside a conductor (union noise: two copper
+    // pieces joined across a sub-grid neck) must not be dropped. Keep the minimal set of such columns
+    // as ordinary volume; the physical connectivity check below stays unchanged.
+    if keep_sole_link_slivers && dropped_columns > 0 {
+        let mut comp_of = vec![usize::MAX; nv];
+        for (c, component) in full.components.iter().enumerate() {
+            for &p in component {
+                comp_of[p] = c;
+            }
+        }
+        let mut uf: Vec<usize> = (0..nv).collect();
+        for (i, cell) in full.cells.iter().enumerate() {
+            if !groups[i].is_some_and(|j| candidates[j].dropped) {
+                for &p in &cell.potentials[1..] {
+                    merge(&mut uf, cell.potentials[0], p);
+                }
+            }
+        }
+        // Foil and dropped columns share their through-thickness nodes (merged later in `parent`),
+        // so those nodes are already connected and must not make a sliver look necessary.
+        for candidate in candidates.iter().filter(|c| c.dropped || c.foil_density.is_some()) {
+            let mut columns = BTreeMap::new();
+            for &i in &candidate.cells {
+                for (&node, &dof) in mesh.mesh.copper_tetrahedra[i].nodes.iter().zip(&full.cells[i].potentials) {
+                    if let Some(&previous) = columns.get(&(node % nxy)) {
+                        merge(&mut uf, previous, dof);
+                    } else {
+                        columns.insert(node % nxy, dof);
+                    }
+                }
+            }
+        }
+        let mut kept = 0usize;
+        for group in candidates.iter_mut().filter(|g| g.dropped) {
+            let mut needed = false;
+            for &i in &group.cells {
+                let ps = &full.cells[i].potentials;
+                if ps.iter().any(|&p| comp_of[p] == comp_of[ps[0]] && root(&uf, p) != root(&uf, ps[0])) {
+                    needed = true;
+                    break;
+                }
+            }
+            if needed {
+                for &i in &group.cells {
+                    let ps = &full.cells[i].potentials;
+                    for &p in &ps[1..] {
+                        merge(&mut uf, ps[0], p);
+                    }
+                }
+                group.dropped = false;
+                dropped_columns -= 1;
+                dropped_volume = dropped_volume - group.volume;
+                kept += 1;
+            }
+        }
+        if kept > 0 {
+            eprintln!("P7_MIXED_SLIVER_KEPT columns={kept} (sole galvanic links, kept as volume)");
+        }
     }
     // One complete prism on the other side of each real conductor face next
     // to mandatory volume stays volumetric. This is a starting partition,

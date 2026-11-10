@@ -253,12 +253,32 @@ fn repair_metal_polygon(outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) -> std::res
     if parts.len() != 1 {
         return Err(fail(format!("{} components after self-union, expected 1", parts.len())));
     }
-    let p = parts.swap_remove(0);
+    let mut p = parts.swap_remove(0);
+    let mut closing_note = String::new();
+    // A ring that touches itself at a point (a pinch left by grid rounding) is still invalid after the
+    // self-union. Close it by +-2h: the pinch becomes a 4h-wide neck, which the hole-count and
+    // 16hP area-drift checks below keep honest (a pinch that bounds a region creates a new hole and is refused).
+    if !p.is_valid() {
+        use geo::Buffer;
+        let closed = p.buffer(2.0 * h).buffer(-2.0 * h);
+        if closed.0.len() == 1 {
+            let c = closed.0.into_iter().next().unwrap();
+            match c.check_validation() {
+                Ok(()) => {
+                    eprintln!("P7_METAL_RING_CLOSED pinch closed by +-{:e} m ({vertices} vertices)", 2.0 * h);
+                    p = c;
+                }
+                Err(why) => closing_note = format!("; closing +-2h still invalid: {why}"),
+            }
+        } else {
+            closing_note = format!("; closing +-2h gives {} components", closed.0.len());
+        }
+    }
     if p.interiors().len() != holes.len() {
         return Err(fail(format!("{} holes after repair, expected {}", p.interiors().len(), holes.len())));
     }
-    if !p.is_valid() {
-        return Err(fail("still invalid after self-union".into()));
+    if let Err(why) = p.check_validation() {
+        return Err(fail(format!("still invalid after self-union: {why}{closing_note}")));
     }
     let drift = (p.unsigned_area() - area).abs();
     let limit = 16.0 * h * perimeter;
