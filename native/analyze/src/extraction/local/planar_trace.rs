@@ -149,41 +149,74 @@ fn split_self_touching_depth(poly: &Polygon<f64>, depth: usize) -> std::result::
 /// valid input whose hole and part counts are the canonical ones.
 fn canonical_slab(union: &geo::MultiPolygon<f64>, origin_mm: [f64; 2], first_index: usize, prefix: &str, noise_extent_mm: f64) -> Result<Vec<(Polygon<f64>, Polygon<f64>)>> {
     use geo::algorithm::Validation;
+    use rayon::prelude::*;
     let to_si = |r: &LineString<f64>| LineString::new(r.0.iter().map(|p| geo::Coord { x: (p.x - origin_mm[0]) * 1e-3, y: (p.y - origin_mm[1]) * 1e-3 }).collect());
     let to_mm = |r: &LineString<f64>| LineString::new(r.0.iter().map(|p| geo::Coord { x: p.x * 1e3 + origin_mm[0], y: p.y * 1e3 + origin_mm[1] }).collect());
-    let mut out = Vec::with_capacity(union.0.len());
-    let mut stats = super::copper_normalize::Stats { noise_extent_mm, ..Default::default() };
-    for (n, poly) in union.0.iter().enumerate() {
+    type Piece = Vec<(Polygon<f64>, Polygon<f64>)>;
+    // Every union polygon is independent: normalisation, metre-scale check, split and clipping run per polygon in parallel.
+    let process = |n: usize, poly: &Polygon<f64>| -> Result<(Piece, super::copper_normalize::Stats, [f64; 4])> {
+        let mut stats = super::copper_normalize::Stats { noise_extent_mm, ..Default::default() };
+        let mut out: Piece = Vec::new();
+        let (mut t_norm, mut t_si, mut t_split, mut t_clip) = (0f64, 0f64, 0f64, 0f64);
         // The slab union is rebuilt here from the field copper (layer copper plus barrels), so it can
         // create fresh hole contacts: it goes through the same canonical normalisation.
+        let t_n = std::time::Instant::now();
         let parts = super::copper_normalize::normalize_polygon(poly, &format!("{prefix}:{}", first_index + n), &mut stats)?;
-        if parts.len() != 1 || !poly.is_valid() { eprintln!("P7_COPPER_RING_SPLIT shape={prefix}:{} loops={}", first_index + out.len(), parts.len()); }
+        t_norm += t_n.elapsed().as_secs_f64();
+        if parts.len() != 1 { eprintln!("P7_COPPER_RING_SPLIT shape={prefix}:{} loops={}", first_index + n, parts.len()); }
         for part in parts {
+            let t_v = std::time::Instant::now();
             let si = Polygon::new(to_si(part.exterior()), part.interiors().iter().map(&to_si).collect());
-            if si.is_valid() { out.push((part, si)); continue; }
+            let si_ok = si.is_valid();
+            t_si += t_v.elapsed().as_secs_f64();
+            if si_ok { out.push((part, si)); continue; }
             let before = (si.interiors().len(), 1usize);
-            let split = match split_self_touching(&si) {
+            let t_s = std::time::Instant::now();
+            let split_res = split_self_touching(&si);
+            t_split += t_s.elapsed().as_secs_f64();
+            let split = match split_res {
                 Ok(v) => v,
                 Err(e) => {
-                    // A feature that only the metre scaling invalidated and that cannot be split is dropped as noise when the dropped total stays within 1e-6 of the slab area (checked below).
+                    // A feature that only the metre scaling invalidated and that cannot be split is dropped as noise when the dropped total stays within 1e-6 of the slab area (checked by the caller).
                     use geo::Area;
                     let area_mm2 = part.unsigned_area();
-                    eprintln!("P7_COPPER_NOISE_DROP shape={prefix}:{} area {area_mm2:e} mm2 after metre scaling: {e}", first_index + out.len());
+                    eprintln!("P7_COPPER_NOISE_DROP shape={prefix}:{} area {area_mm2:e} mm2 after metre scaling: {e}", first_index + n);
                     stats.parts_dropped += 1; stats.dropped_area += area_mm2; stats.shapes_changed += 1;
                     continue;
                 }
             };
-            eprintln!("P7_COPPER_SI_NORMALIZED shape={prefix}:{} holes {}->{} parts {}->{} reason {:?}", first_index + out.len(), before.0, split.iter().map(|p| p.interiors().len()).sum::<usize>(), before.1, split.len(), si.check_validation().err().map(|e| e.to_string().chars().take(300).collect::<String>()));
+            eprintln!("P7_COPPER_SI_NORMALIZED shape={prefix}:{} holes {}->{} parts {}->{} reason {:?}", first_index + n, before.0, split.iter().map(|p| p.interiors().len()).sum::<usize>(), before.1, split.len(), si.check_validation().err().map(|e| e.to_string().chars().take(300).collect::<String>()));
             // The SI polygon is the canonical metal. Its millimetre twin is the original polygon clipped to it, so it
-            // never grows over a neighbouring grid-width sliver (ownership reads the millimetre polygons).
-            for s in split {
+            // never grows over a neighbouring grid-width sliver (ownership reads the millimetre polygons). Clipped piece by
+            // piece against the holes whose bounding box meets the piece (a rectangle stands for the exterior, which the split never moves).
+            let t_k = std::time::Instant::now();
+            let hole_boxes: Vec<Option<geo::Rect<f64>>> = part.interiors().iter().map(|h| geo::BoundingRect::bounding_rect(h)).collect();
+            let twins: Piece = split.into_par_iter().map(|s| {
                 let back = Polygon::new(to_mm(s.exterior()), s.interiors().iter().map(&to_mm).collect());
-                let clipped = crate::geometry::areas::intersection(&crate::geometry::areas::one(part.clone()), &crate::geometry::areas::one(back.clone()));
+                let Some(bb) = geo::BoundingRect::bounding_rect(&back) else { return (back, s) };
+                let (pad, lo, hi) = (1e-6, bb.min(), bb.max());
+                let near: Vec<LineString<f64>> = part.interiors().iter().zip(&hole_boxes).filter(|(_, b)| b.is_some_and(|b| b.min().x <= hi.x + pad && b.max().x >= lo.x - pad && b.min().y <= hi.y + pad && b.max().y >= lo.y - pad)).map(|(h, _)| h.clone()).collect();
+                let rect = LineString::from(vec![[lo.x - 1., lo.y - 1.], [hi.x + 1., lo.y - 1.], [hi.x + 1., hi.y + 1.], [lo.x - 1., hi.y + 1.], [lo.x - 1., lo.y - 1.]]);
+                let clipped = crate::geometry::areas::intersection(&crate::geometry::areas::one(Polygon::new(rect, near)), &crate::geometry::areas::one(back.clone()));
                 let mm = if clipped.0.len() == 1 { clipped.0.into_iter().next().unwrap() } else { back };
-                out.push((mm, s));
-            }
+                (mm, s)
+            }).collect();
+            t_clip += t_k.elapsed().as_secs_f64();
+            out.extend(twins);
         }
+        Ok((out, stats, [t_norm, t_si, t_split, t_clip]))
+    };
+    let results: Vec<_> = union.0.par_iter().enumerate().map(|(n, poly)| process(n, poly)).collect();
+    let mut out = Vec::with_capacity(union.0.len());
+    let mut stats = super::copper_normalize::Stats { noise_extent_mm, ..Default::default() };
+    let mut t = [0f64; 4];
+    for r in results {
+        let (piece, st, tt) = r?;
+        out.extend(piece);
+        stats.merge(&st);
+        for k in 0..4 { t[k] += tt[k]; }
     }
+    eprintln!("P7_INPUT_TIMER canonical-detail (summed over polygons, parallel) normalize {:.3}s si-valid {:.3}s split {:.3}s clip {:.3}s polys={}", t[0], t[1], t[2], t[3], union.0.len());
     if stats.dropped_area > 0. {
         use geo::Area;
         let total = union.unsigned_area();
@@ -404,13 +437,17 @@ pub(super) fn input_from_board(board: &super::board_mesh::BoardMesh, request: &s
         let vertices=active.clone().flat_map(|(set,_,_)|set.0.iter()).flat_map(|p|std::iter::once(p.exterior()).chain(p.interiors())).try_fold(0usize,|n,r|n.checked_add(r.0.len())).ok_or_else(||error("MEMORY_LIMIT", "copper polygon size overflow"))?;
         let needed=output_bytes.checked_add(vertices.checked_mul(1024).ok_or_else(||error("MEMORY_LIMIT", "union size overflow"))?).ok_or_else(||error("MEMORY_LIMIT", "union size overflow"))?;
         if needed>budget.max_bytes { return Err(error("MEMORY_LIMIT", "copper union exceeds budget")); }
+        let t_u=std::time::Instant::now();
         let union=crate::geometry::areas::union(active.flat_map(|(set,_,_)|set.0.iter().cloned()));
+        eprintln!("P7_INPUT_TIMER slab-union {:.3}s polys={} verts={}",t_u.elapsed().as_secs_f64(),union.0.len(),vertices);
         let union_vertices=union.0.iter().flat_map(|p|std::iter::once(p.exterior()).chain(p.interiors())).try_fold(0usize,|v,r|v.checked_add(r.0.capacity())).ok_or_else(||error("MEMORY_LIMIT","original geometry overflow"))?;
         let union_bytes=union_vertices.checked_mul(64).and_then(|v|v.checked_add(union.0.len().checked_mul(256)?)).ok_or_else(||error("MEMORY_LIMIT","original geometry overflow"))?;
         original_bytes=original_bytes.checked_add(union_bytes).ok_or_else(||error("MEMORY_LIMIT","original geometry overflow"))?;
         output_bytes=output_bytes.checked_add(union_bytes).ok_or_else(||error("MEMORY_LIMIT","original geometry overflow"))?;
         if output_bytes>budget.max_bytes {return Err(error("MEMORY_LIMIT","original geometry exceeds budget"));}
+        let t_c=std::time::Instant::now();
         let canonical = canonical_slab(&union, board.origin_mm, metals.len(), "physical", 4. * (request.max_triangle_area_m2 * 1e6).sqrt())?;
+        eprintln!("P7_INPUT_TIMER slab-canonical {:.3}s parts={}",t_c.elapsed().as_secs_f64(),canonical.len());
         for (_, poly) in &canonical {
             let vertices=std::iter::once(poly.exterior()).chain(poly.interiors()).try_fold(0usize,|n,r|n.checked_add(r.0.len())).ok_or_else(||error("MEMORY_LIMIT", "metal polygon overflow"))?;
             output_bytes=output_bytes.checked_add(vertices.checked_mul(32).ok_or_else(||error("MEMORY_LIMIT", "metal polygon overflow"))?).and_then(|v|v.checked_add(256)).ok_or_else(||error("MEMORY_LIMIT", "metal polygon overflow"))?;
@@ -424,6 +461,7 @@ pub(super) fn input_from_board(board: &super::board_mesh::BoardMesh, request: &s
     eprintln!("P7_INPUT_TIMER copper-slabs {:.3}s metals={}",t_input.elapsed().as_secs_f64(),metals.len());
     let dielectric=vec![Dielectric { source_id:"explicit-air-domain".into(),z0_m:z[0],z1_m:*z.last().unwrap(),epsilon_r:1. }];
     let mut regions=Vec::new(); let mut base=0.;
+    let mut domain_cache: Option<(geo::MultiPolygon<f64>, Vec<(Polygon<f64>, Polygon<f64>)>)> = None;
     for layer in &request.stack {
         let end=base+layer.thickness_m;
         if !layer.copper {
@@ -432,7 +470,9 @@ pub(super) fn input_from_board(board: &super::board_mesh::BoardMesh, request: &s
             for (span,bore) in &board.field_partial_bores { if span[0]<end && span[1]>base { if span[0]>base || span[1]<end { return Err(error("PLANAR_TRACE", "bore crosses dielectric interval boundary")); } domain=crate::geometry::areas::difference(&domain,bore); } }
             eprintln!("P7_INPUT_TIMER dielectric-difference {:.3}s polys={} holes={}",t_layer.elapsed().as_secs_f64(),domain.0.len(),domain.0.iter().map(|p|p.interiors().len()).sum::<usize>());
             // Dielectric footprints go through the same canonical normalisation as copper (area bound 1e-6, noise tier).
-            for (_, poly) in canonical_slab(&domain, board.origin_mm, regions.len(), "dielectric", 4. * (request.max_triangle_area_m2 * 1e6).sqrt())? { let vertices=std::iter::once(poly.exterior()).chain(poly.interiors()).try_fold(0usize,|n,r|n.checked_add(r.0.len())).ok_or_else(||error("MEMORY_LIMIT", "dielectric polygon overflow"))?;
+            // Dielectric layers that share the same footprint (every layer without a partial bore) are normalised once.
+            let canonical_domain = match &domain_cache { Some((d, c)) if *d == domain => c.clone(), _ => { let c = canonical_slab(&domain, board.origin_mm, regions.len(), "dielectric", 4. * (request.max_triangle_area_m2 * 1e6).sqrt())?; domain_cache = Some((domain.clone(), c.clone())); c } };
+            for (_, poly) in canonical_domain { let vertices=std::iter::once(poly.exterior()).chain(poly.interiors()).try_fold(0usize,|n,r|n.checked_add(r.0.len())).ok_or_else(||error("MEMORY_LIMIT", "dielectric polygon overflow"))?;
                 output_bytes=output_bytes.checked_add(vertices.checked_mul(32).ok_or_else(||error("MEMORY_LIMIT", "dielectric polygon overflow"))?).and_then(|v|v.checked_add(256)).ok_or_else(||error("MEMORY_LIMIT", "dielectric polygon overflow"))?;
                 if output_bytes>budget.max_bytes { return Err(error("MEMORY_LIMIT", "dielectric polygons exceed budget")); }
                 let ring=|r:&geo::LineString<f64>| r.0.iter().map(|p|[p.x,p.y]).collect::<Vec<_>>();

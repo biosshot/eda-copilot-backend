@@ -413,6 +413,40 @@ pub(super) fn not_rebuilt(ev:&serde_json::Value,built_nodes:usize)->serde_json::
     serde_json::json!({"ratio":if est>0. {built_nodes as f64/est} else {f64::NAN},"firstMargin":ev["marginMm"],"finalMargin":ev["marginMm"],"rebuilt":false})
 }
 
+
+// ---- Honest post-build estimate ---------------------------------------------------------------------
+/// Peak private memory of a whole run versus the counts of the built mesh (GiB). Calibration points, from
+/// debugging/p7-v1-stage2 (peaks are lower bounds when the run was stopped early):
+/// NanoScope 198540 nodes / 317205 tets / 6081 prisms -> >= 8.78 (resource-failure in the magnetic stage),
+/// BandAmpV5 60492 / 113787 / 7730 -> >= 10.24 (resource-failure), STM32G0_CAN_RS485 154092 / 198780 / 6966 -> >= 3.77 (timeout),
+/// TPS63060DSCR 54336 / 77412 / 2499 -> 0.6 to 1.0 (diagnostic-complete or timeout). The model is the larger of a tet
+/// term and a barrel-term (barrel copper tetrahedra, about 7 per thin-wall prism: NanoScope 42843 tets for 6081 prisms, ThunderF722 23199 for 3485),
+/// plus a fixed base; it stays at or above the observed peak for NanoScope (10.4 vs >= 8.78) and ThunderF722 (5.8 vs 5.18 at the charge stage).
+pub(super) const HONEST_BASE_GIB:f64=0.5;
+pub(super) const HONEST_GIB_PER_TET:f64=2.8e-5;
+pub(super) const HONEST_GIB_PER_BARREL_TET:f64=2.3e-4;
+pub(super) fn honest_estimate(nodes:usize,tets:usize,planar_triangles:usize,barrel_tets:usize)->(f64,serde_json::Value) {
+    let tet_term=HONEST_GIB_PER_TET*tets as f64;
+    let barrel_term=HONEST_GIB_PER_BARREL_TET*barrel_tets as f64;
+    let gib=HONEST_BASE_GIB+tet_term.max(barrel_term);
+    (gib*1073741824.,serde_json::json!({"model":"base + max(gibPerTet*tets, gibPerBarrelTet*barrelTets)","baseGiB":HONEST_BASE_GIB,"gibPerTet":HONEST_GIB_PER_TET,"gibPerBarrelTet":HONEST_GIB_PER_BARREL_TET,
+        "nodes":nodes,"copperTetrahedra":tets,"planarTriangles":planar_triangles,"barrelTetrahedra":barrel_tets,"tetTermGiB":tet_term,"barrelTermGiB":barrel_term,"estimateGiB":gib,
+        "calibration":[{"board":"NanoScope","nodes":198540,"tets":317205,"prisms":6081,"observedPeakGiB":8.78,"note":"lower bound, stopped by the memory cap"},
+            {"board":"BandAmpV5","nodes":60492,"tets":113787,"prisms":7730,"observedPeakGiB":10.24,"note":"lower bound, stopped by the memory cap"},
+            {"board":"STM32G0_CAN_RS485","nodes":154092,"tets":198780,"prisms":6966,"observedPeakGiB":3.77,"note":"timeout, lower bound"},
+            {"board":"TPS63060DSCR","nodes":54336,"tets":77412,"prisms":2499,"observedPeakGiB":1.04,"note":"timeout, lower bound"}]}))
+}
+/// The next smaller rung below the current ROI (bbox margins, then corridor radii; margins in mm as in the evidence).
+pub(super) fn next_smaller(r:&Request,mode:&str,margin_mm:f64)->Option<(String,f64)> {
+    let stack_mm=r.stack.iter().map(|l|l.thickness_m).sum::<f64>()*1e3;
+    let scale=(stack_mm/1.6).max(1.);
+    let seq:Vec<(&str,f64)>=MARGIN_LADDER_MM.iter().map(|m|("bbox",m*scale)).chain(CORRIDOR_LADDER_MM.iter().map(|m|("corridor",m*scale))).collect();
+    let pos=seq.iter().position(|(md,m)|*md==mode&&(m-margin_mm).abs()<1e-6)?;
+    // From the smallest bbox rung the corridor starts at the 3 mm radius (larger radii cover more than the bbox).
+    let next=if mode=="bbox"&&pos+1==MARGIN_LADDER_MM.len() {seq.iter().position(|(md,m)|*md=="corridor"&&(m-3.*scale).abs()<1e-6)?} else {pos+1};
+    seq.get(next).map(|(md,m)|(md.to_string(),*m))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

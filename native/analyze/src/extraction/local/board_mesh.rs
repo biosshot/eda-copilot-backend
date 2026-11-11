@@ -550,6 +550,30 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
             };
         } else if let Some(e)=mesh.roi_fallback.as_mut() {e["estimateCorrection"]=super::roi_fallback::not_rebuilt(&f,mesh.mesh.nodes_m.len());}
     }
+    // Honest post-build estimate from the real counts: step the ROI ladder down while it exceeds the budget (at most 3 rebuilds).
+    if let Some(f)=mesh.roi_fallback.clone() {
+        let budget_bytes=f["budgetBytes"].as_f64().unwrap_or(budget.max_bytes as f64).min(budget.max_bytes as f64);
+        let mut steps=Vec::new();
+        let mut last_model=serde_json::Value::Null;
+        for _ in 0..3 {
+            let barrel_set:std::collections::HashSet<&str>=mesh.barrel_ids.iter().map(String::as_str).collect();
+            let barrel_tets=mesh.mesh.copper_tetrahedra.iter().filter(|t|t.source_ids.iter().any(|s|barrel_set.contains(s.as_str()))).count();
+            let (est,model)=super::roi_fallback::honest_estimate(mesh.mesh.nodes_m.len(),mesh.mesh.copper_tetrahedra.len(),mesh.planar_triangles.len(),barrel_tets);
+            eprintln!("P7_ROI_HONEST_ESTIMATE {} budgetBytes={budget_bytes}",model);
+            last_model=model.clone();
+            if est<=budget_bytes {steps.push(serde_json::json!({"fits":true,"estimateBytes":est,"model":model}));break;}
+            let cur=mesh.roi_fallback.clone().unwrap_or(serde_json::Value::Null);
+            let (Some(md),Some(mg))=(cur["mode"].as_str(),cur["marginMm"].as_f64()) else {break};
+            let Some(next)=super::roi_fallback::next_smaller(r,md,mg) else {steps.push(serde_json::json!({"fits":false,"estimateBytes":est,"note":"no smaller rung","model":model}));break};
+            steps.push(serde_json::json!({"fits":false,"estimateBytes":est,"from":[md,mg],"to":[next.0.clone(),next.1],"model":model}));
+            let prev_cert=cur.clone();
+            match build_profiled_once(board,r,budget,max_wall,support,trace_lines,skin.clone(),hybrid_masks,Some(next)) {
+                Ok(m)=>{mesh=m;}
+                Err(e)=>{steps.push(serde_json::json!({"rebuilt":false,"error":e.to_string(),"keptRung":prev_cert["marginMm"]}));break}
+            }
+        }
+        if let Some(e)=mesh.roi_fallback.as_mut() {e["honestEstimate"]=serde_json::json!({"budgetBytes":budget_bytes,"steps":steps,"finalModel":last_model});}
+    }
     Ok(mesh)
 }
 fn build_profiled_once(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration,

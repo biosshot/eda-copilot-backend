@@ -233,8 +233,49 @@ impl PointPotential {
                 source_order: 0,
                 source_relative_change: 0.,
             }),
-            None => self.positive_source(point, cancellation_ratio, check),
+            None => match self.positive_source(point, cancellation_ratio, check) {
+                Ok(v) => Ok(v),
+                // A source tetrahedron whose positive rule does not converge (field point within rounding of a thin tetra) is split
+                // into 8 sub-tetrahedra, up to 3 levels; the potential is additive. Evidence is printed; the original refusal stands if the split fails.
+                Err(e) if self.tetra.is_some() && e.to_string().contains("POLYHEDRON_SOURCE_QUADRATURE") => match self.eval_split(point, check, 0) {
+                    Ok(v) => {
+                        static COUNT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+                        let n = COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        if n < 3 || n.is_power_of_two() { eprintln!("P7_POLYHEDRON_SOURCE_SPLIT count={} point={point:?} tetra={:?} (positive rule did not converge; 8-way subdivision used)", n + 1, self.tetra); }
+                        Ok(v)
+                    }
+                    Err(_) => Err(e),
+                },
+                Err(e) => Err(e),
+            },
         }
+    }
+    fn eval_split(&self, point: [f64; 3], check: &mut dyn FnMut() -> Result<()>, depth: usize) -> Result<PotentialEvaluation> {
+        let t = self.tetra.ok_or_else(|| error("POLYHEDRON_SOURCE_QUADRATURE", "split needs a tetrahedron"))?;
+        if depth >= 3 { return Err(error("POLYHEDRON_SOURCE_QUADRATURE", "source split depth exhausted")); }
+        let m = |a: usize, b: usize| [(t[a][0] + t[b][0]) / 2., (t[a][1] + t[b][1]) / 2., (t[a][2] + t[b][2]) / 2.];
+        let (m01, m02, m03, m12, m13, m23) = (m(0, 1), m(0, 2), m(0, 3), m(1, 2), m(1, 3), m(2, 3));
+        let subs = [
+            [t[0], m01, m02, m03], [t[1], m01, m12, m13], [t[2], m02, m12, m23], [t[3], m03, m13, m23],
+            [m01, m23, m02, m03], [m01, m23, m03, m13], [m01, m23, m13, m12], [m01, m23, m12, m02],
+        ];
+        let mut total = PotentialEvaluation { value_m2: 0., cancellation_ratio: 0., source_order: 0, source_relative_change: 0. };
+        for sub in subs {
+            check()?;
+            let mut s = Self::tetrahedron(sub)?;
+            s.tetra_tolerance = self.tetra_tolerance;
+            let (value, ratio) = s.analytic_source(point, s.tetra_tolerance)?;
+            let ev = match value {
+                Some(v) => PotentialEvaluation { value_m2: v, cancellation_ratio: ratio, source_order: 0, source_relative_change: 0. },
+                None => match s.positive_source(point, ratio, check) { Ok(e) => e, Err(_) => s.eval_split(point, check, depth + 1)? },
+            };
+            total.value_m2 += ev.value_m2;
+            total.cancellation_ratio = total.cancellation_ratio.max(ev.cancellation_ratio);
+            total.source_order = total.source_order.max(ev.source_order);
+            total.source_relative_change = total.source_relative_change.max(ev.source_relative_change);
+        }
+        if !total.value_m2.is_finite() || total.value_m2 <= 0. { return Err(error("POLYHEDRON_SOURCE_QUADRATURE", "split source potential not positive finite")); }
+        Ok(total)
     }
 
     fn analytic_source(&self, point: [f64; 3], tolerance: f64) -> Result<(Option<f64>, f64)> {

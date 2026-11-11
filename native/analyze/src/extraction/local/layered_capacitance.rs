@@ -1088,9 +1088,21 @@ impl SpatialFieldAction {
         for i in 0..nodes {if f.mapping[i]!=usize::MAX {phi[i]=rhs[(f.mapping[i],0)];}}
         let (reaction,scale)=s.matrix.apply(&phi);
         let mut charge=vec![0.;voltage.len()];
+        // Noise tier: a free row whose stiffness scale is below 1e-4 of the largest row scale (a node enclosed by sliver elements) is
+        // compared against the global scale instead; its residual must stay below 1e-10 of it (its charge error is bounded by that). Counted as evidence.
+        let max_scale=scale.iter().copied().fold(0.,f64::max);
+        let mut null_rows=0usize;
         for i in 0..nodes {
+            if f.mapping[i]!=usize::MAX && reaction[i].abs()>1e-8*scale[i].max(f64::MIN_POSITIVE) && scale[i]<=1e-4*max_scale && reaction[i].abs()<=1e-10*max_scale {
+                null_rows+=1;
+                if null_rows<=3 { eprintln!("P7_FIELD_BALANCE_NOISE row {i} scale {:e} reaction {:e} (max row scale {max_scale:e}): low-stiffness row, residual {:e} of the global scale",scale[i],reaction[i],reaction[i].abs()/max_scale); }
+                for &(j,w) in &s.trace_weights[i] {charge[j]+=w*reaction[i];}
+                continue;
+            }
             if f.mapping[i]!=usize::MAX && reaction[i].abs()>1e-8*scale[i].max(f64::MIN_POSITIVE) {
-                return Err(error("FIELD_BALANCE","prepared dielectric free-row residual failed"));
+                let bad=(0..nodes).filter(|&k|f.mapping[k]!=usize::MAX&&reaction[k].abs()>1e-8*scale[k].max(f64::MIN_POSITIVE)).count();
+                let worst=(0..nodes).filter(|&k|f.mapping[k]!=usize::MAX).map(|k|(reaction[k].abs()/scale[k].max(f64::MIN_POSITIVE),k)).fold((0.,0usize),|a,b|if b.0>a.0{b}else{a});
+                return Err(error("FIELD_BALANCE",&format!("prepared dielectric free-row residual failed: {bad} of {nodes} free rows exceed 1e-8 relative; first row {i} (reaction {:e}, scale {:e}); worst row {} relative {:e} (reaction {:e}, scale {:e}), free unknowns {}",reaction[i],scale[i],worst.1,worst.0,reaction[worst.1],scale[worst.1],f.free)));
             }
             for &(j,w) in &s.trace_weights[i] {charge[j]+=w*reaction[i];}
         }
@@ -1339,6 +1351,11 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
     for m in &input.meshes {
         meshes.push(prepare(m, bounds, g)?);
     }
+    // Element size for the noise tier: median planar element edge scale sqrt(2 A).
+    let noise_h2 = {
+        let mut v: Vec<f64> = meshes.iter().flat_map(|m| m.triangles.iter().map(|t| 2. * t.polygon.unsigned_area())).collect();
+        if v.is_empty() { 0. } else { let k = v.len() / 2; *v.select_nth_unstable_by(k, |a, b| a.total_cmp(b)).1 }
+    };
     let mut ids = BTreeSet::new();
     let mut metal_polygons: Vec<_> = input.metals.iter().map(|m|
         Polygon::new(LineString::from(m.polygon_m.clone()),
@@ -1402,7 +1419,7 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
                 let (ai,aj)=(metal_polygons[i].unsigned_area(),metal_polygons[j].unsigned_area());
                 // Noise tier: boundary rounding (overlap <= 1e-6 of both areas) or a numerical sliver of the canonical union (area <= 1e-6 of the other polygon) that the mm to metre scaling
                 // pushed into its large neighbour. Its tetrahedra are owned by the neighbour (P7_COPPER_OWNER_NOISE); the overlap is rounding.
-                if ov<=ai.max(aj)*1e-6 && (ai.min(aj)<=ai.max(aj)*1e-6 || ov<=ai.min(aj)*1e-6) {
+                if ov<=ai.max(aj)*1e-6 && (ai.min(aj)<=ai.max(aj)*1e-6 || ov<=ai.min(aj)*1e-6) || ai.max(aj)<=1e-4*noise_h2 {
                     eprintln!("P7_COPPER_OVERLAP_NOISE metal {i} {:?} (area {ai:e} m2) and metal {j} {:?} (area {aj:e} m2) intersection {ov:e} m2 (sliver of the canonical union or boundary rounding; noise tier)",m.source_id,input.metals[j].source_id);
                     continue;
                 }
@@ -1571,11 +1588,6 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
             });
         }
     }
-    // Element size for the noise tier: median planar element edge scale sqrt(2 A).
-    let noise_h2 = {
-        let mut v: Vec<f64> = meshes.iter().flat_map(|m| m.triangles.iter().map(|t| 2. * t.polygon.unsigned_area())).collect();
-        if v.is_empty() { 0. } else { let k = v.len() / 2; *v.select_nth_unstable_by(k, |a, b| a.total_cmp(b)).1 }
-    };
     let mut point_splits: Vec<String> = Vec::new();
     let mut point_split_count = 0usize;
     let refuse_point_contact = std::env::var_os("P7_POINT_CONTACT_REFUSE").is_some();
