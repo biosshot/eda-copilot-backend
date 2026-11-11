@@ -747,7 +747,8 @@ pub fn solve_checked(
     let mixed_grid = mixed_conductor::CheckedGrid {
         frequencies_hz: &axis,
         reference_ohm: &refs,
-        max_iterations: iterations,
+        // Continuation: the last 8 iterations run only while the residual keeps falling (see `enrichment_continues`).
+        max_iterations: iterations + if iterations == 16 && std::env::var("P7_ENRICHMENT_CONTINUATION").as_deref() != Ok("0") { super::foil_reduced::CONTINUATION_EXTRA } else { 0 },
     };
     if !geometry.cut_planes.is_empty() || geometry.allow_insulated_copper_cuts {
         return Err(error(

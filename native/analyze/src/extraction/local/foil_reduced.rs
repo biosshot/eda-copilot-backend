@@ -754,6 +754,15 @@ pub(super) fn reciprocity_tier(err: f64, gate: f64, strict: bool) -> Reciprocity
 pub(super) fn reciprocity_tier_of(max_err: f64) -> &'static str {
     reciprocity_tier(max_err, 1e-9, false).name()
 }
+/// Extra enrichment iterations granted past the requested 16 (`max_iterations` = 16 + this) while the residual falls.
+pub(super) const CONTINUATION_EXTRA: usize = 8;
+/// Continuation rule: up to the requested cap (`max - CONTINUATION_EXTRA` when the grid carries the extension) the loop
+/// always continues; beyond it only while the worst KVL fell at least 2x over the last 4 iterations.
+fn enrichment_continues(iteration: usize, max_iterations: usize, history: &[serde_json::Value]) -> bool {
+    if max_iterations <= 16 || iteration < 16 { return true; }
+    let kvl = |i: usize| history.get(i).and_then(|h| h["maxKvlRelative"].as_f64());
+    match (kvl(iteration), kvl(iteration - 4)) { (Some(now), Some(before)) => now * 2. <= before, _ => false }
+}
 fn congruence(
     basis: &[Vec<f64>],
     action: &[Vec<f64>],
@@ -2676,7 +2685,7 @@ impl ReducedSpace {
                 if !self.approximate_magnetic && worst.kvl_uncertainty_relative > RESIDUAL_LIMIT {
                     return Err(error("HIERARCHICAL_MAGNETIC_UNCERTIFIED","fixed geometry/order far-field enclosure exceeds original full KVL gate; no physical response admitted"));
                 }
-                if iteration == grid.max_iterations {
+                if iteration == grid.max_iterations || !enrichment_continues(iteration, grid.max_iterations, &history) {
                     return Err(worst.checked_with(residual_limit).unwrap_err());
                 }
                 drop(parameters);
@@ -4479,5 +4488,21 @@ mod reciprocity_tier_tests {
         assert!((c01 - (1. + 2e-7)).abs() < 1e-12);
         let wide = vec![vec![1., 1.], vec![1.01, 1.]];
         assert!(congruence(&basis, &wide, 1e-9, "C").is_err());
+    }
+}
+
+#[cfg(test)]
+mod continuation_tests {
+    use super::*;
+    #[test]
+    fn continuation_requires_a_2x_fall_over_four_iterations_past_the_requested_cap() {
+        let h=|v:&[f64]|v.iter().map(|k|serde_json::json!({"maxKvlRelative":k})).collect::<Vec<_>>();
+        let falling=h(&[1.,1.,1.,1.,1.,1.,1.,1.,0.5,0.3,0.25,0.1,0.05,0.04,0.02,0.009,0.0058]);
+        assert!(enrichment_continues(16,24,&falling));
+        let flat=h(&[1.;17]);
+        assert!(!enrichment_continues(16,24,&flat));
+        assert!(enrichment_continues(8,16,&flat));
+        assert!(enrichment_continues(8,24,&flat));
+        assert!(enrichment_continues(16,16,&flat));
     }
 }
