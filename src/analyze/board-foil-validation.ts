@@ -6,6 +6,17 @@ import {validateReturnBoundary} from './return-boundary.ts';
 
 function fail(message:string):never {throw new Error('CHANNEL_FOIL_EVIDENCE: '+message);}
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
+/** A solve on an ROI/corridor-shrunken domain (native `roiFallback` / `electricalRoi`, always approximation tier) only
+ * meshes the copper and barrels inside that domain: the reported sets must be subsets of the planned ones, with a
+ * declared approximation tier and `roiMmAfter`. Without that evidence the sets must match exactly. */
+export function shrunkDomainEvidence(provenance:unknown):boolean {
+ const p=provenance as {roiFallback?:{tier?:unknown;roiMmAfter?:unknown},electricalRoi?:{tier?:unknown;roiMmAfter?:unknown}}|undefined;
+ const e=p?.roiFallback??p?.electricalRoi;
+ if(!e)return false;
+ if(e.tier!=='approximation'||!Array.isArray(e.roiMmAfter))fail('shrunken-domain evidence must declare the approximation tier and its ROI');
+ return true;
+}
+const matchSets=(expected:string[],actual:string[],shrunk:boolean)=>shrunk?actual.every(x=>expected.includes(x))&&new Set(actual).size===actual.length:same(expected,actual);
 const positive=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value)&&value>0;
 
 function validateMagneticCover(cover:Omit<AnalysisMagneticCertificate,'policy'>|undefined,rhs:number,originals:number,minimumColumns=1):void {
@@ -240,6 +251,7 @@ function validateSkinMesh(provenance:AnalysisBoardFoilCheckedReport['provenance'
  };
  const layers=Array.isArray(geometry.stack)?geometry.stack.filter(layer=>layer?.copper===true):[];
  const barrels=expected.sourceBarrels.map(barrel=>barrel.barrelId).sort();
+ const shrunk=shrunkDomainEvidence(provenance);
  const validSpacing=(skinDepthM:number,stepM:number,pieces:number,conductivity:unknown,divisor=3)=>{
   if(!positive(skinDepthM)||!positive(stepM)||!Number.isSafeInteger(pieces)||pieces<1||!positive(conductivity))return false;
   const depth=1/(Math.sqrt(Math.PI*(4e-7*Math.PI)*mesh.effectiveUpperHz)*Math.sqrt(conductivity));
@@ -248,10 +260,11 @@ function validateSkinMesh(provenance:AnalysisBoardFoilCheckedReport['provenance'
  if(!layers.length||!Array.isArray(mesh.layers)||mesh.layers.length!==layers.length||
     mesh.layers.some((row,i)=>!row||row.layer!==layers[i].name||
      !validSpacing(row.skinDepthM,row.maximumStepM,row.slabs,layers[i].conductivitySM,request.operatorPolicy==='hybrid-planar-v3'?5:3))||
-    !Array.isArray(mesh.roundBarrels)||mesh.roundBarrels.length!==barrels.length||
+    !Array.isArray(mesh.roundBarrels)||
+    (shrunk?false:mesh.roundBarrels.length!==barrels.length)||
     mesh.roundBarrels.some(row=>!row||typeof row.id!=='string'||
      !validSpacing(row.skinDepthM,row.maximumRadialStepM,row.shells,geometry.barrelConductivitySM))||
-    !same(mesh.roundBarrels.map(row=>row.id).sort(),barrels))
+    !matchSets(barrels,mesh.roundBarrels.map(row=>row.id).sort(),shrunk))
   fail('copper skin mesh rows or physical spacing do not match the candidate geometry');
 }
 
@@ -364,6 +377,7 @@ export function validateBoardFoilReport(
  validateRegimeAudit(report);
  const expectedCopper=expected.sourceCopper.map(r=>JSON.stringify([r.regionId,r.sourcePath,r.layer])).sort();
  const actual=evidence.sourceMapping.map(([id,path,,layer])=>JSON.stringify([id,path,layer])).sort();
+ const shrunkDomain=shrunkDomainEvidence(evidence);
  const expectedBarrels=expected.sourceBarrels.map(barrel=>barrel.barrelId).sort();
  const validModel=evidence.modelKind==='foil'
   ? !expectedBarrels.length&&!attachments.length&&evidence.prisms>=1
@@ -379,9 +393,9 @@ export function validateBoardFoilReport(
  const reportedAttachments=evidence.attachments??[];
  const validAttachments=Array.isArray(reportedAttachments)&&reportedAttachments.length===attachments.length&&
   attachments.every(({id,electrodes},i)=>reportedAttachments[i]?.id===id&&same(reportedAttachments[i].electrodes,electrodes));
- if(!same(expectedCopper,actual)||!validAttachments||!validModel||
+ if(!matchSets(expectedCopper,actual,shrunkDomain)||!validAttachments||!validModel||
     !Number.isSafeInteger(evidence.prisms)||evidence.prisms<0||
-    !Array.isArray(evidence.barrelIds)||!same(expectedBarrels,[...evidence.barrelIds].sort())||
+    !Array.isArray(evidence.barrelIds)||!matchSets(expectedBarrels,[...evidence.barrelIds].sort(),shrunkDomain)||
     !Number.isFinite(evidence.plannedBytes)||evidence.plannedBytes<=0||(!externalResources&&evidence.plannedBytes>producerBudget.maxMemoryMiB*1048576)||
     !Number.isFinite(evidence.maxCopperVolumeChange)||evidence.maxCopperVolumeChange<0||evidence.maxCopperVolumeChange>1e-8||
     evidence.spatialCoverage!=='unverified'||evidence.bandCoverage!=='unverified'||
