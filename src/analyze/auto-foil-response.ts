@@ -109,7 +109,14 @@ export function runAutoFoil(
     minimumPortCurrentA:Math.min(...observations.map(value=>value.minimumPortCurrentA)),
     frequenciesHz:[...new Set(observations.flatMap(value=>value.frequenciesHz))].sort((a,b)=>a-b)});
    if(process.env.P7_PHASE_TRACE==='1')console.error('P7_PHASE '+JSON.stringify({phase:'return-expansion',domainScale,elapsedS:(performance.now()-attemptStarted)/1000,fluxGatePassed:steps.at(-1)!.passed}));
-   if(!steps.at(-1)!.passed)continue;
+   if(!steps.at(-1)!.passed) {
+    // A budget-shrunken solve (ROI/corridor fallback) lands on the same shrunken mesh at every larger domain scale,
+    // so another expansion would repeat the identical solve: refuse now, with the evidence.
+    const prov=report.provenance as {roiFallback?:unknown;electricalRoi?:unknown}|undefined;
+    if(prov?.roiFallback||prov?.electricalRoi)
+     throw new Error('CHANNEL_RETURN_UNRESOLVED: boundary current above 1% on a budget-shrunken domain; larger domain scales resolve to the same shrunken mesh (not retried) '+JSON.stringify(steps));
+    continue;
+   }
   }
   const jointSensitivity=process.env.P7_AUTO_FOIL_AUDIT==='1'&&auditBoardFoilGrid(problem,report,attemptStarted,execute);
   const result:BoardFoilRunReport={...report,...(frequencyAudit&&{frequencyAudit}),...(jointSensitivity&&{jointSensitivity}),
