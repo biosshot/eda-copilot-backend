@@ -235,10 +235,14 @@ fn request_memory_bytes()->Option<f64> { REQUEST_MEMORY.with(|c|c.get()) }
 /// The request memory limit (`budget.maxMemoryMiB`) for the ROI memory fit of the calling thread, restored on drop.
 /// The checked endpoint keeps its unbounded allocation budget (an external supervisor owns hard limits); only the
 /// ROI size decision reads this limit. `P7_ROI_BUDGET_MIB` still overrides it.
+const DSL_DEFAULT_MEMORY_MIB:f64=2048.;
 pub(super) struct RequestMemory(Option<f64>);
 impl RequestMemory {
     pub(super) fn set(mib:Option<f64>)->Self {
-        let bytes=mib.filter(|m|m.is_finite()&&*m>0.).map(|m|m*1048576.);
+        // 2048 MiB is the DSL default budget, not a deliberate limit, and the pre-build estimate is pessimistic
+        // (BandAmpV5: 3.5 GB estimated, 1.6 GiB measured), so only a request that tightens it below the default
+        // moves the ROI fit; otherwise the native 6 GiB default stays (boards that completed keep their full ROI).
+        let bytes=mib.filter(|m|m.is_finite()&&*m>0.&&*m<DSL_DEFAULT_MEMORY_MIB).map(|m|m*1048576.);
         Self(REQUEST_MEMORY.with(|c|c.replace(bytes)))
     }
 }
