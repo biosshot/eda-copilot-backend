@@ -339,8 +339,16 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,force
     if let Some(c)=&corridor {
         let mut pts:Vec<[f64;2]>=c.polygon.exterior().coords().map(|q|[q.x,q.y]).collect();
         if pts.first()==pts.last() {pts.pop();}
+        // The guard box of the return-current audit must stay strictly inside the shrunken field domain.
+        if let Some(b)=&mut nr.return_boundary_mm {
+            let (lo,hi)=(pts.iter().fold([f64::INFINITY;2],|a,q|[a[0].min(q[0]),a[1].min(q[1])]),pts.iter().fold([f64::NEG_INFINITY;2],|a,q|[a[0].max(q[0]),a[1].max(q[1])]));
+            for k in 0..2 {b[0][k]=b[0][k].max(lo[k].max(roi[0][k])+1e-6);b[1][k]=b[1][k].min(hi[k].min(roi[1][k])-1e-6);}
+        }
         nr.domain_polygon_mm=Some(pts);
-    } else if nr.domain_polygon_mm.is_some() {nr.domain_polygon_mm=Some(vec![roi[0],[roi[1][0],roi[0][1]],roi[1],[roi[0][0],roi[1][1]]]);}
+    } else {
+        if let Some(b)=&mut nr.return_boundary_mm {for k in 0..2 {b[0][k]=b[0][k].max(roi[0][k]+1e-6);b[1][k]=b[1][k].min(roi[1][k]-1e-6);}}
+        if nr.domain_polygon_mm.is_some() {nr.domain_polygon_mm=Some(vec![roi[0],[roi[1][0],roi[0][1]],roi[1],[roi[0][0],roi[1][1]]]);}
+    }
     let warning=if corridor.is_some() {"The mesh covers only a corridor along the current copper path between the port electrodes: all copper outside it is cut, including far parts of the signal net itself and of the reference plane, and the cut pieces have open boundaries. Lost physics: far return paths, far coupling, and stubs/branches of the signal net. Unverified approximation."}
         else {"The mesh covers only the channel neighbourhood: copper beyond the ROI is cut and its channel-net pieces have open boundaries, so far return paths and far coupling are not modelled. Unverified approximation."};
     let evidence=serde_json::json!({"tier":"approximation","mode":if corridor.is_some() {"corridor"} else {"bbox"},"marginM":margin*1e-3,"marginMm":margin,"estimateBytes":bytes,"budgetBytes":budget_bytes,

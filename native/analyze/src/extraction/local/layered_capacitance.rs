@@ -857,7 +857,7 @@ impl SpatialFieldAction {
                 if bounds[0][axis] <= lo || bounds[1][axis] >= hi {
                     return Err(error(
                         "FIELD_CUT",
-                        "observation box must be internal to every field plane",
+                        &format!("observation box must be internal to every field plane; axis={axis} bounds=[{:e},{:e}] plane=[{lo:e},{hi:e}]", bounds[0][axis], bounds[1][axis]),
                     ));
                 }
             }

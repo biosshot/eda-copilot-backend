@@ -779,7 +779,7 @@ fn tet_split_pair(a: [[f64;3];4], b: [[f64;3];4], budget: &mut usize) -> Option<
 /// Pair whose bounding balls overlap (ball separation already failed). Returns
 /// (value, change, approximated, path, wasted seconds); path 2 split-Gauss, 3 touching, 4 near singular.
 pub(super) fn tet_near_fast(a: [[f64;3];4], b: [[f64;3];4], try_split: bool, check: &mut dyn FnMut() -> Result<()>) -> Result<(f64, f64, bool, u8, f64)> {
-    tet_near_fast_tol(a, b, try_split, 1e-10, check)
+    tet_near_fast_tol(a, b, try_split, cross_tet_tolerance(), check)
 }
 /// Point-potential tolerance of the cross-fill near path (`P7_CROSS_TET_TOL`, default 1e-6; `1e-10` or `legacy`
 /// restores the strict path). The entry only needs ~1e-3, and the ladder below accepts at 2e-3 successive change.

@@ -4,6 +4,14 @@ import type { BoardFoilProblem, BoardFoilReport } from './types.ts';
 export const RETURN_BOUNDARY_THRESHOLD = 0.01;
 export const RETURN_CURRENT_FLOOR_A = 1e-12;
 
+/** The solver clamps the requested guard box strictly inside a shrunken (ROI/corridor) field domain; the audited box
+ * is then a sub-box of the requested one. Anything outside the request, or unordered, is invalid. */
+function boundsWithin(actual: unknown, requested: number[][]): boolean {
+  if (!Array.isArray(actual) || actual.length !== 2 || actual.some(r => !Array.isArray(r) || r.length !== 3 || r.some(v => !Number.isFinite(v)))) return false;
+  const a = actual as number[][];
+  return [0, 1, 2].every(k => a[0][k] < a[1][k] && a[0][k] >= requested[0][k] && a[1][k] <= requested[1][k]);
+}
+
 /** Check independently recomputable fields before trusting native/cache evidence. */
 export function validateReturnBoundary(value: AnalysisReturnBoundary | undefined, bounds: unknown): void {
   const fail = (): never => { throw new Error('CHANNEL_RETURN_EVIDENCE: invalid internal boundary-current evidence'); };
@@ -15,7 +23,7 @@ export function validateReturnBoundary(value: AnalysisReturnBoundary | undefined
     !Array.isArray(row) || row.length !== 3 || row.some(v => !Number.isFinite(v))) ||
     bounds[0].some((v: number, axis: number) => v >= bounds[1][axis])) fail();
   if (!value || value.policy !== 'internal-guard-flux-v1' ||
-    JSON.stringify(value.boundsMm) !== JSON.stringify(bounds) ||
+    !boundsWithin(value.boundsMm, bounds as number[][]) ||
     value.absoluteFloorA !== RETURN_CURRENT_FLOOR_A || value.threshold !== RETURN_BOUNDARY_THRESHOLD ||
     ![value.conductiveA, value.displacementA].every(face => Array.isArray(face) && face.length === 6 &&
       face.every(current => Number.isFinite(current) && current >= 0)) ||

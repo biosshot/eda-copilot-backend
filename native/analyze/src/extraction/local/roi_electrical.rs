@@ -56,8 +56,8 @@ pub(super) fn shrink(board:&Board,r:&Request,original_error:&str,fits:impl Fn(&R
         let mut solve=r.clone();
         solve.roi_mm=roi;
         if solve.domain_polygon_mm.is_some() {solve.domain_polygon_mm=Some(vec![roi[0],[roi[1][0],roi[0][1]],roi[1],[roi[0][0],roi[1][1]]]);}
-        // Keep the guard box of the return-current audit inside the smaller domain.
-        if let Some(b)=&mut solve.return_boundary_mm {for k in 0..2 {b[0][k]=b[0][k].max(roi[0][k]);b[1][k]=b[1][k].min(roi[1][k]);}}
+        // Keep the guard box of the return-current audit strictly inside the smaller domain (a box on the domain edge is not an internal cut).
+        if let Some(b)=&mut solve.return_boundary_mm {for k in 0..2 {b[0][k]=b[0][k].max(roi[0][k]+GUARD_INSET_MM);b[1][k]=b[1][k].min(roi[1][k]-GUARD_INSET_MM);}}
         if fits(&solve) {chosen=Some((m,roi,solve));break;}
     }
     let Some((margin,roi,solve))=chosen else {return Ok(None);};
@@ -88,3 +88,6 @@ pub(super) fn shrink(board:&Board,r:&Request,original_error:&str,fits:impl Fn(&R
     eprintln!("P7_ROI_ELECTRICAL {evidence}");
     Ok(Some(Shrunk{mesh,solve,evidence}))
 }
+
+/// 1 nm inset of the clamped guard box from the ROI/field-plane edge (the field cut requires a strictly internal box).
+const GUARD_INSET_MM: f64 = 1e-6;
