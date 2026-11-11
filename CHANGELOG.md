@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- P7 v1 closed 2026-11-11 in its narrowed definition: three of five closure boards complete (90–232 s, up to 4.0 GiB), NanoScope and ThunderF722 are recorded refusals, stage-5 band validated to 100 kHz; open items moved to P7-R (`docs/analyze/plans/p7-v1-closure-plan.md` section 5).
+
 - Return-current search: when the failing solve ran on a budget-shrunken (ROI/corridor fallback) domain, refuse at once with `CHANNEL_RETURN_UNRESOLVED` instead of re-solving at larger domain scales that resolve to the identical shrunken mesh (NanoScope: 3 identical 600 s solves hit the 1800 s cap; now refuses at 661 s with the 5.9% guard-flux evidence).
 - Foil evidence validation on an ROI/corridor-shrunken domain (`provenance.roiFallback` / `electricalRoi`, approximation tier) accepts the meshed copper and barrels as a subset of the planned ones instead of requiring exact equality; without that evidence the sets must still match exactly. Final five-board measurement recorded in `docs/analyze/evidence/p7-v1-stages-2-4-2026-11-09.md` (three boards complete; NanoScope times out in a cross fill; ThunderF722 `NETWORK_SINGULAR`).
 - Same-structure tetra pair near path (`tet_near_fast`) now uses the relaxed 1e-6 source tolerance (`P7_CROSS_TET_TOL`, `legacy` restores 1e-10), removing `LOCAL_POLYHEDRON_SOURCE_QUADRATURE` on NanoScope and ThunderF722; the pair ladder already accepts at 2e-3, so the entry stays in the approximation tier.
