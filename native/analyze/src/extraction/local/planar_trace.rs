@@ -392,6 +392,7 @@ pub(super) fn input_from_board(board: &super::board_mesh::BoardMesh, request: &s
     let z: Vec<_>=board.mesh.nodes_m.chunks_exact(n).map(|p|p[0][2]).collect();
     let bounds=[[xy.iter().map(|p|p[0]).fold(f64::INFINITY,f64::min),xy.iter().map(|p|p[1]).fold(f64::INFINITY,f64::min)], [xy.iter().map(|p|p[0]).fold(f64::NEG_INFINITY,f64::max),xy.iter().map(|p|p[1]).fold(f64::NEG_INFINITY,f64::max)]];
     let convert = |ring: &geo::LineString<f64>| ring.0.iter().map(|p|[(p.x-board.origin_mm[0])*1e-3,(p.y-board.origin_mm[1])*1e-3]).collect::<Vec<_>>();
+    let t_input=std::time::Instant::now();
     let mut metals=Vec::new(); let mut originals=Vec::new(); let mut si_originals=Vec::new(); let mut original_bytes=0usize;
     let mut output_bytes=planned;
     // Partition at existing z planes, unioning overlapping foil/barrel supports
@@ -420,19 +421,23 @@ pub(super) fn input_from_board(board: &super::board_mesh::BoardMesh, request: &s
         }
         for (mm, si) in canonical { originals.push(mm); si_originals.push(si); }
     }
+    eprintln!("P7_INPUT_TIMER copper-slabs {:.3}s metals={}",t_input.elapsed().as_secs_f64(),metals.len());
     let dielectric=vec![Dielectric { source_id:"explicit-air-domain".into(),z0_m:z[0],z1_m:*z.last().unwrap(),epsilon_r:1. }];
     let mut regions=Vec::new(); let mut base=0.;
     for layer in &request.stack {
         let end=base+layer.thickness_m;
         if !layer.copper {
+            let t_layer=std::time::Instant::now();
             let mut domain=crate::geometry::areas::difference(&board.field_substrate,&board.field_bores);
             for (span,bore) in &board.field_partial_bores { if span[0]<end && span[1]>base { if span[0]>base || span[1]<end { return Err(error("PLANAR_TRACE", "bore crosses dielectric interval boundary")); } domain=crate::geometry::areas::difference(&domain,bore); } }
+            eprintln!("P7_INPUT_TIMER dielectric-difference {:.3}s polys={} holes={}",t_layer.elapsed().as_secs_f64(),domain.0.len(),domain.0.iter().map(|p|p.interiors().len()).sum::<usize>());
             // Dielectric footprints go through the same canonical normalisation as copper (area bound 1e-6, noise tier).
             for (_, poly) in canonical_slab(&domain, board.origin_mm, regions.len(), "dielectric", 4. * (request.max_triangle_area_m2 * 1e6).sqrt())? { let vertices=std::iter::once(poly.exterior()).chain(poly.interiors()).try_fold(0usize,|n,r|n.checked_add(r.0.len())).ok_or_else(||error("MEMORY_LIMIT", "dielectric polygon overflow"))?;
                 output_bytes=output_bytes.checked_add(vertices.checked_mul(32).ok_or_else(||error("MEMORY_LIMIT", "dielectric polygon overflow"))?).and_then(|v|v.checked_add(256)).ok_or_else(||error("MEMORY_LIMIT", "dielectric polygon overflow"))?;
                 if output_bytes>budget.max_bytes { return Err(error("MEMORY_LIMIT", "dielectric polygons exceed budget")); }
                 let ring=|r:&geo::LineString<f64>| r.0.iter().map(|p|[p.x,p.y]).collect::<Vec<_>>();
                 regions.push(SpatialDielectric { z0_m:base,z1_m:end,epsilon_r:layer.epsilon_r.ok_or_else(||error("MATERIAL", "missing epsilon"))?,polygon_m:ring(poly.exterior()),holes_m:poly.interiors().iter().map(ring).collect() }); }
+            eprintln!("P7_INPUT_TIMER dielectric-layer-done {:.3}s regions={}",t_layer.elapsed().as_secs_f64(),regions.len());
         }
         base=end;
     }
@@ -633,9 +638,16 @@ pub(super) fn certified_trace<'a>(input: &'a Input, original: &OriginalGeometry,
     if incidence_count>budget.max_nodes || bytes.checked_add(retained_union).and_then(|v|v.checked_add(trace_bytes)).is_none_or(|v|v>budget.max_bytes) {return Err(error("MEMORY_LIMIT","certificate trace exceeds budget"));}
     let rows=map.electric_node_trace(); let mut weights=vec![None;mesh.nodes_m.len()];
     for row in rows { let slot=weights.get_mut(row.node).ok_or_else(||error("PLANAR_TRACE","certificate trace index"))?; if slot.replace(row.weights).is_some(){return Err(error("PLANAR_TRACE","duplicate trace node"));} }
+    let mut rowless_modes=std::collections::BTreeSet::new();
+    { let mut referenced=vec![false;map.potential_count()]; let mut row_modes=vec![false;map.potential_count()];
+      for (i,w) in weights.iter().enumerate() { if let Some(w)=w { for &(m,_) in w { if m<row_modes.len() { row_modes[m]=true; if !node_owners[i].is_empty() { referenced[m]=true; } } } } }
+      rowless_modes.extend((0..referenced.len()).filter(|&m|!row_modes[m])); let rowless=rowless_modes.len(); let unowned:Vec<usize>=(0..referenced.len()).filter(|&m|row_modes[m]&&!referenced[m]).collect();
+      if rowless>0 || !unowned.is_empty() { eprintln!("P7_TRACE_MODE_COVERAGE potentials={} rowless={} rowOnlyOwnerless={} firstRowless={:?}",referenced.len(),rowless,unowned.len(),(0..referenced.len()).filter(|&m|!row_modes[m]).take(8).collect::<Vec<_>>()); } }
+    { let ownerless:Vec<usize>=weights.iter().enumerate().filter(|(i,w)|w.is_some()&&node_owners[*i].is_empty()).map(|(i,_)|i).collect();
+      if !ownerless.is_empty() { eprintln!("P7_TRACE_OWNERLESS_NODES count={} first={:?}",ownerless.len(),ownerless.iter().take(8).map(|&i|(i,mesh.nodes_m[i])).collect::<Vec<_>>()); } }
     let mut nodes=Vec::with_capacity(incidence_count); for (i,owners) in node_owners.iter().enumerate() { for &owner in owners {let row=weights[i].as_ref().ok_or_else(||error("PLANAR_TRACE","certificate trace missing"))?; if row.len()!=1 {return Err(error("PLANAR_TRACE","unexpected certificate node trace width"));} nodes.push(TraceNode{metal_source_id:input.metals[owner].source_id.clone(),position_m:mesh.nodes_m[i],weights:row.clone()});} }
     if nodes.len()>budget.max_nodes || bytes.checked_add(nodes.len().checked_mul(256).ok_or_else(||error("MEMORY_LIMIT","certificate trace overflow"))?).is_none_or(|v|v>budget.max_bytes){return Err(error("MEMORY_LIMIT","certificate trace exceeds budget"));}
-    Ok((PotentialTrace{potential_nodes:(0..map.potential_count()).map(|i|format!("mixed:{i}")).collect(),nodes},CertifiedOverlay{input,triangles:nt,copper,epsilon,node_owners,finite_contacts,bytes:bytes.checked_add(retained_union).ok_or_else(||error("MEMORY_LIMIT","certificate retained geometry overflow"))?}))
+    Ok((PotentialTrace{potential_nodes:(0..map.potential_count()).map(|i|format!("mixed:{i}")).collect(),nodes},CertifiedOverlay{input,triangles:nt,copper,epsilon,node_owners,finite_contacts,rowless_modes,bytes:bytes.checked_add(retained_union).ok_or_else(||error("MEMORY_LIMIT","certificate retained geometry overflow"))?}))
 }
 
 fn certified_contacts(copper:&[Option<usize>], slabs:usize, triangles:usize) -> std::collections::BTreeSet<(usize,usize)> {

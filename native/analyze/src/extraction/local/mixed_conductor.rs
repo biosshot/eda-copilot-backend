@@ -2016,7 +2016,9 @@ fn solve_checked_mesh_impl_policy(
             let field_budget=super::layered_capacitance::Budget {max_nodes:budget.max_nodes,max_local_terms:field_terms,max_bytes:available,max_wall:wall.saturating_sub(start.elapsed())};
             eprintln!("P7_COMPACT_STAGE stage=spatial-field-start elapsed={:.6}",start.elapsed().as_secs_f64());
             let (input,spatial,original)=super::planar_trace::input_from_board(mesh,request,field_budget)?;
+            eprintln!("P7_COMPACT_STAGE stage=spatial-input-end elapsed={:.6}",start.elapsed().as_secs_f64());
             let (trace,certified)=super::planar_trace::certified_trace(&input,&original,&map,super::layered_capacitance::Budget{max_wall:wall.saturating_sub(start.elapsed()),..field_budget})?;
+            eprintln!("P7_COMPACT_STAGE stage=spatial-certified-end elapsed={:.6}",start.elapsed().as_secs_f64());
             let field=super::layered_capacitance::prepare_certified_action(&input,&trace,&spatial,&certified,super::layered_capacitance::Budget{max_wall:wall.saturating_sub(start.elapsed()),..field_budget})?;
             eprintln!("P7_COMPACT_STAGE stage=spatial-field-end elapsed={:.6} plannedBytes={}",start.elapsed().as_secs_f64(),field.planned_bytes());
             Some(field)

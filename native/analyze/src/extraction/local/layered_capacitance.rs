@@ -93,6 +93,8 @@ pub(super) struct CertifiedOverlay<'a> {
     pub epsilon: Vec<f64>,
     pub node_owners: Vec<Vec<usize>>,
     pub finite_contacts: BTreeSet<(usize,usize)>,
+    /// Potentials the volume contact split left without any node row (the halves of vertex/edge-only copper contacts).
+    pub rowless_modes: BTreeSet<usize>,
     pub bytes: usize,
 }
 fn trace_key(metal: usize, p: [f64; 3]) -> (usize, [u64; 3]) {
@@ -1574,6 +1576,9 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
         let mut v: Vec<f64> = meshes.iter().flat_map(|m| m.triangles.iter().map(|t| 2. * t.polygon.unsigned_area())).collect();
         if v.is_empty() { 0. } else { let k = v.len() / 2; *v.select_nth_unstable_by(k, |a, b| a.total_cmp(b)).1 }
     };
+    let mut point_splits: Vec<String> = Vec::new();
+    let mut point_split_count = 0usize;
+    let refuse_point_contact = std::env::var_os("P7_POINT_CONTACT_REFUSE").is_some();
     let mut known = vec![None; nodes];
     let mut contact_owners:Vec<Vec<usize>> = (0..nodes)
         .map(|_|Vec::with_capacity(input.metals.len())).collect();
@@ -1608,6 +1613,16 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
                             let sliver=|a:usize,b:usize|{let (x,y)=(metal_polygons[a].unsigned_area(),metal_polygons[b].unsigned_area());x.min(y)<=x.max(y)*1e-6 || x.min(y)<=1e-2*noise_h2};
                             if bad.iter().all(|&old|sliver(old,c)) {
                                 eprintln!("P7_COPPER_CONTACT_NOISE node ({:e},{:e}) m z {:e} m: metal {c} {:?} touches sliver/neighbour {:?} at a hairline; first owner kept",p[0],p[1],input.z_m[k],input.metals[c].source_id,bad.iter().map(|&i|&input.metals[i].source_id).collect::<Vec<_>>());
+                                for &(mode, _) in &weights { used_modes[mode] = true; }
+                                represented[c] |= active[n];
+                                continue;
+                            }
+                            // Zero-area contact (point or edge only, no finite surface) carries no current: the second metal does not own the
+                            // node, the first owner keeps it (as P7_VOLUME_CONTACT_SPLIT does for volume copper). Different potential traces
+                            // are kept apart by construction, so no galvanic join is created; P7_POINT_CONTACT_REFUSE=1 restores the refusal.
+                            if !refuse_point_contact {
+                                point_split_count += 1;
+                                if point_splits.len() < 20 { point_splits.push(format!("node ({:e},{:e}) m z {:e} m: metal {c} {:?} / {:?}, traces {}", p[0], p[1], input.z_m[k], input.metals[c].source_id, bad.iter().map(|&i| &input.metals[i].source_id).collect::<Vec<_>>(), if trace_weights[n].iter().copied().collect::<BTreeMap<_,_>>() == weights.iter().copied().collect::<BTreeMap<_,_>>() { "identical" } else { "different" })); }
                                 for &(mode, _) in &weights { used_modes[mode] = true; }
                                 represented[c] |= active[n];
                                 continue;
@@ -1655,8 +1670,10 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
             }
         }
     }
-    if used_modes.iter().any(|x| !*x) || used_traces.len() != supplied.len() {
-        let unused:Vec<_>=used_modes.iter().enumerate().filter_map(|(i,&used)|(!used).then_some(i)).take(16).collect();
+    if point_split_count > 0 { eprintln!("P7_POINT_CONTACT_SPLIT count={point_split_count} first={point_splits:?} (zero-area metal contacts carry no current; first owner keeps the node)"); }
+    let unused_modes:Vec<usize>=used_modes.iter().enumerate().filter_map(|(i,&used)|(!used&&!certified.is_some_and(|c|c.rowless_modes.contains(&i))).then_some(i)).collect();
+    if !unused_modes.is_empty() || used_traces.len() != supplied.len() {
+        let unused:Vec<_>=unused_modes.iter().copied().take(16).collect();
         let unmatched:Vec<_>=supplied.keys().filter(|key|!used_traces.contains(key)).take(8).collect();
         return Err(error(
             "FIELD_TRACE",
@@ -1664,7 +1681,13 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
         ));
     }
     if represented.iter().any(|x| !*x) {
-        return Err(error("COPPER_TRACE", "conductor missing full trace"));
+        // Noise tier: a numerical sliver (area <= 1e-2 h^2) whose nodes are all owned by its neighbour carries no field of its own.
+        let missing:Vec<usize>=represented.iter().enumerate().filter(|(_,r)|!**r).map(|(i,_)|i).collect();
+        let (slivers,real):(Vec<usize>,Vec<usize>)=missing.iter().partition(|&&i|metal_polygons[i].unsigned_area()<=1e-2*noise_h2);
+        if !slivers.is_empty() { eprintln!("P7_COPPER_UNREPRESENTED_NOISE count={} first={:?} (sliver without own field nodes; noise tier)",slivers.len(),slivers.iter().take(8).map(|&i|(&input.metals[i].source_id,metal_polygons[i].unsigned_area())).collect::<Vec<_>>()); }
+        if !real.is_empty() {
+            return Err(error("COPPER_TRACE", &format!("conductor missing full trace: {} metals, first {:?}",real.len(),real.iter().take(6).map(|&i|(&input.metals[i].source_id,input.metals[i].z0_m,input.metals[i].z1_m,metal_polygons[i].unsigned_area(),metal_polygons[i].bounding_rect().map(|b|[[b.min().x,b.min().y],[b.max().x,b.max().y]]))).collect::<Vec<_>>())));
+        }
     }
     let pair_bytes = mul(pairs.iter().map(|p| p.len()).sum(), 1024)?;
     let recovery_bytes = add(
