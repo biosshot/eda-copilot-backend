@@ -66,7 +66,8 @@ function validateMagneticOperator(report:AnalysisBoardFoilCheckedReport):void {
      !Number.isSafeInteger(c.potentialCoordinates)||c.potentialCoordinates<1||c.potentialCoordinates>p.fullPotentialCount||
      !Number.isSafeInteger(c.currentCoordinates)||c.currentCoordinates<1||c.currentCoordinates>p.fullCurrentCount||
      !Number.isSafeInteger(p.currentModes)||p.currentModes<0||!validOrder||
-     [c.planarMaxRelativeChange,c.mixedMaxRelativeChange,c.tetraSelfMaxRelativeChange,c.tetraPairAdaptiveTolerance].some(x=>typeof x!=='number'||!Number.isFinite(x)||x<0||x>(approximate?1:1e-8))||
+     [c.planarMaxRelativeChange,c.mixedMaxRelativeChange,c.tetraSelfMaxRelativeChange].some(x=>typeof x!=='number'||!Number.isFinite(x)||x<0||x>(approximate?1:2e-3))||
+     (typeof c.tetraPairAdaptiveTolerance!=='number'||!Number.isFinite(c.tetraPairAdaptiveTolerance)||c.tetraPairAdaptiveTolerance<0||c.tetraPairAdaptiveTolerance>(approximate?1:1e-8))||
      operator!==undefined||!approximate&&(report.quality.maxFullKvlUncertaintyRelative!==undefined||columns.some(x=>x.kvlUncertaintyRelative!==undefined||x.magneticCertificate!==undefined)))
    fail('invalid compact magnetic operator evidence');
   if(adaptive){

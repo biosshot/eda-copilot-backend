@@ -842,23 +842,21 @@ impl SpatialFieldAction {
                 "finite ordered observation bounds required",
             ));
         }
+        // A guard box wider than a field plane (the ROI fallback cut the copper and the plane to the channel
+        // neighbourhood) is measured at the plane limit, like the z faces below: nothing exists beyond it.
+        let mut bounds = bounds;
         for mesh in &s.meshes {
             for axis in 0..2 {
-                let lo = mesh
-                    .xy
-                    .iter()
-                    .map(|p| p[axis])
-                    .fold(f64::INFINITY, f64::min);
-                let hi = mesh
-                    .xy
-                    .iter()
-                    .map(|p| p[axis])
-                    .fold(f64::NEG_INFINITY, f64::max);
+                let lo = mesh.xy.iter().map(|p| p[axis]).fold(f64::INFINITY, f64::min);
+                let hi = mesh.xy.iter().map(|p| p[axis]).fold(f64::NEG_INFINITY, f64::max);
                 if bounds[0][axis] <= lo || bounds[1][axis] >= hi {
-                    return Err(error(
-                        "FIELD_CUT",
-                        &format!("observation box must be internal to every field plane; axis={axis} bounds=[{:e},{:e}] plane=[{lo:e},{hi:e}]", bounds[0][axis], bounds[1][axis]),
-                    ));
+                    eprintln!("P7_FIELD_CUT_CLAMPED axis={axis} requested=[{:e},{:e}] field=[{lo:e},{hi:e}]", bounds[0][axis], bounds[1][axis]);
+                    let inset = 1e-6 * (hi - lo);
+                    bounds[0][axis] = bounds[0][axis].max(lo + inset);
+                    bounds[1][axis] = bounds[1][axis].min(hi - inset);
+                    if bounds[0][axis] >= bounds[1][axis] {
+                        return Err(error("FIELD_CUT", &format!("observation box does not overlap field plane; axis {axis} box [{:e}, {:e}] m, field plane [{lo:e}, {hi:e}] m", bounds[0][axis], bounds[1][axis])));
+                    }
                 }
             }
         }
@@ -866,7 +864,6 @@ impl SpatialFieldAction {
         // exists beyond it, so the requested z faces collapse to the outermost cells.
         let (z_lo, z_hi) = (s.z[0], *s.z.last().unwrap());
         let inset = 1e-3 * (s.z[1] - s.z[0]).min(z_hi - s.z[s.z.len() - 2]);
-        let mut bounds = bounds;
         if bounds[0][2] <= z_lo || bounds[1][2] >= z_hi {
             eprintln!("P7_FIELD_CUT_CLAMPED requested=[{},{}] field=[{z_lo},{z_hi}]", bounds[0][2], bounds[1][2]);
             bounds[0][2] = bounds[0][2].max(z_lo + inset);

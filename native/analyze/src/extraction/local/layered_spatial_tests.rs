@@ -110,8 +110,12 @@ fn prepared_cut_flux_matches_parallel_plate_field_and_rejects_invalid_cuts() {
             .unwrap(),
         [0.; 6]
     );
+    // A box touching or wider than the field plane is measured at the plane limit; one entirely outside it is refused.
     assert!(action
         .cut_displacement_flux(&[0., 1.], &[0., 0.], [[0., 0.0002, 0.0002], bounds[1]])
+        .is_ok());
+    assert!(action
+        .cut_displacement_flux(&[0., 1.], &[0., 0.], [[1., 1., 0.0002], [2., 2., bounds[1][2]]])
         .is_err());
     let copper_bounds = [[0.0002, 0.0002, 0.00005], bounds[1]];
     let copper_flux = action
