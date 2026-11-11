@@ -97,7 +97,10 @@ fn split_self_touching_depth(poly: &Polygon<f64>, depth: usize) -> std::result::
         let hp = Polygon::new(h.clone(), vec![]);
         let Some(pt) = hp.interior_point() else { continue };
         let owner = (0..shells.len()).filter(|&i| shells[i].contains(&pt)).min_by(|&x, &y| shells[x].unsigned_area().total_cmp(&shells[y].unsigned_area()));
-        match owner { Some(i) => owned[i].push(h), None => return Err(format!("ring loop outside every shell, {b}")) }
+        match owner { Some(i) => owned[i].push(h),
+            // A void smaller than 1e-6 of the largest shell that touches or leaves the shell is rounding noise: dropped (the area check below bounds the total change).
+            None if hp.unsigned_area() <= 1e-6 * shells.iter().map(|x| x.unsigned_area()).fold(0., f64::max) => { eprintln!("P7_COPPER_VOID_DROP loop area {:e} mm2 outside every shell, {b}", hp.unsigned_area()); }
+            None => return Err(format!("ring loop outside every shell (loop area {:e}, {} shells with areas {:?}, exterior signed area {:e}, {} original holes), {b}", hp.unsigned_area(), shells.len(), shells.iter().map(|x| x.unsigned_area()).collect::<Vec<_>>(), signed_area(&poly.exterior().0[..poly.exterior().0.len().saturating_sub(1)]), poly.interiors().len())) }
     }
     let out: Vec<Polygon<f64>> = shells.into_iter().zip(owned).map(|(s, h)| Polygon::new(s.exterior().clone(), h)).collect();
     let area: f64 = out.iter().map(|p| p.unsigned_area()).sum();
@@ -124,9 +127,15 @@ fn split_self_touching_depth(poly: &Polygon<f64>, depth: usize) -> std::result::
             return Err(format!("normalised area {got:e} differs from {expected:e} by more than 1e-6, {b}"));
         }
         // The overlay merges a hole touching the shell into a pinched shell ring: split those pinches again.
+        let mut dropped = 0.;
         for q in rebuilt.0 {
-            if q.is_valid() || depth >= 2 { normalised.push(q); } else { normalised.extend(split_self_touching_depth(&q, depth + 1)?); }
+            if q.is_valid() || depth >= 2 { normalised.push(q); continue; }
+            // An invalid micro-piece of the overlay output (below 1e-6 of the polygon) is rounding noise: dropped, the total is bounded below.
+            let qa = q.unsigned_area();
+            if qa <= 1e-6 * expected.abs() { dropped += qa; eprintln!("P7_COPPER_PIECE_DROP area {qa:e} mm2 of {expected:e}, {b}"); continue; }
+            normalised.extend(split_self_touching_depth(&q, depth + 1)?);
         }
+        if dropped > 1e-6 * expected.abs() { return Err(format!("dropped overlay pieces total {dropped:e} exceed 1e-6 of {expected:e}, {b}")); }
     }
     let out = normalised;
     if let Some(bad) = out.iter().find(|p| !p.is_valid()) { return Err(format!("loop still invalid after splitting: {:?}, {b}", bad.check_validation().err())); }
@@ -138,23 +147,33 @@ fn split_self_touching_depth(poly: &Polygon<f64>, depth: usize) -> std::result::
 /// that returns it unchanged when valid. A polygon the mm to SI scaling makes invalid is normalised
 /// in SI and its parts are converted back, so the two lists stay one-to-one and every consumer sees
 /// valid input whose hole and part counts are the canonical ones.
-fn canonical_slab(union: &geo::MultiPolygon<f64>, origin_mm: [f64; 2], first_index: usize) -> Result<Vec<(Polygon<f64>, Polygon<f64>)>> {
+fn canonical_slab(union: &geo::MultiPolygon<f64>, origin_mm: [f64; 2], first_index: usize, prefix: &str, noise_extent_mm: f64) -> Result<Vec<(Polygon<f64>, Polygon<f64>)>> {
     use geo::algorithm::Validation;
     let to_si = |r: &LineString<f64>| LineString::new(r.0.iter().map(|p| geo::Coord { x: (p.x - origin_mm[0]) * 1e-3, y: (p.y - origin_mm[1]) * 1e-3 }).collect());
     let to_mm = |r: &LineString<f64>| LineString::new(r.0.iter().map(|p| geo::Coord { x: p.x * 1e3 + origin_mm[0], y: p.y * 1e3 + origin_mm[1] }).collect());
     let mut out = Vec::with_capacity(union.0.len());
-    let mut stats = super::copper_normalize::Stats::default();
+    let mut stats = super::copper_normalize::Stats { noise_extent_mm, ..Default::default() };
     for (n, poly) in union.0.iter().enumerate() {
         // The slab union is rebuilt here from the field copper (layer copper plus barrels), so it can
         // create fresh hole contacts: it goes through the same canonical normalisation.
-        let parts = super::copper_normalize::normalize_polygon(poly, &format!("physical:{}", first_index + n), &mut stats)?;
-        if parts.len() != 1 || !poly.is_valid() { eprintln!("P7_COPPER_RING_SPLIT shape=physical:{} loops={}", first_index + out.len(), parts.len()); }
+        let parts = super::copper_normalize::normalize_polygon(poly, &format!("{prefix}:{}", first_index + n), &mut stats)?;
+        if parts.len() != 1 || !poly.is_valid() { eprintln!("P7_COPPER_RING_SPLIT shape={prefix}:{} loops={}", first_index + out.len(), parts.len()); }
         for part in parts {
             let si = Polygon::new(to_si(part.exterior()), part.interiors().iter().map(&to_si).collect());
             if si.is_valid() { out.push((part, si)); continue; }
             let before = (si.interiors().len(), 1usize);
-            let split = split_self_touching(&si).map_err(|e| error("COPPER_RING", &format!("physical copper polygon invalid after conversion to metres and cannot be normalised: {e}")))?;
-            eprintln!("P7_COPPER_SI_NORMALIZED shape=physical:{} holes {}->{} parts {}->{} reason {:?}", first_index + out.len(), before.0, split.iter().map(|p| p.interiors().len()).sum::<usize>(), before.1, split.len(), si.check_validation().err().map(|e| e.to_string().chars().take(300).collect::<String>()));
+            let split = match split_self_touching(&si) {
+                Ok(v) => v,
+                Err(e) => {
+                    // A feature that only the metre scaling invalidated and that cannot be split is dropped as noise when the dropped total stays within 1e-6 of the slab area (checked below).
+                    use geo::Area;
+                    let area_mm2 = part.unsigned_area();
+                    eprintln!("P7_COPPER_NOISE_DROP shape={prefix}:{} area {area_mm2:e} mm2 after metre scaling: {e}", first_index + out.len());
+                    stats.parts_dropped += 1; stats.dropped_area += area_mm2; stats.shapes_changed += 1;
+                    continue;
+                }
+            };
+            eprintln!("P7_COPPER_SI_NORMALIZED shape={prefix}:{} holes {}->{} parts {}->{} reason {:?}", first_index + out.len(), before.0, split.iter().map(|p| p.interiors().len()).sum::<usize>(), before.1, split.len(), si.check_validation().err().map(|e| e.to_string().chars().take(300).collect::<String>()));
             // The SI polygon is the canonical metal. Its millimetre twin is the original polygon clipped to it, so it
             // never grows over a neighbouring grid-width sliver (ownership reads the millimetre polygons).
             for s in split {
@@ -163,6 +182,13 @@ fn canonical_slab(union: &geo::MultiPolygon<f64>, origin_mm: [f64; 2], first_ind
                 let mm = if clipped.0.len() == 1 { clipped.0.into_iter().next().unwrap() } else { back };
                 out.push((mm, s));
             }
+        }
+    }
+    if stats.dropped_area > 0. {
+        use geo::Area;
+        let total = union.unsigned_area();
+        if stats.dropped_area > super::copper_normalize::AREA_TOLERANCE * total {
+            return Err(error("COPPER_RING", &format!("physical copper polygons dropped as noise after metre scaling total {:e} mm2, above {:e} relative of the slab area {:e} mm2", stats.dropped_area, super::copper_normalize::AREA_TOLERANCE, total)));
         }
     }
     if stats.shapes_changed > 0 { eprintln!("P7_COPPER_NORMALIZATION slab {}", stats.evidence()); }
@@ -231,7 +257,7 @@ pub(super) fn trace(input: &Input, map: &MixedMap<'_>, budget: Budget) -> Result
         let required = reserve.checked_add(vertices.checked_mul(1024).ok_or_else(||error("MEMORY_LIMIT", "trace union overflow"))?).and_then(|v|v.checked_add(polygon_vertices.checked_mul(64)?)).ok_or_else(||error("MEMORY_LIMIT", "trace union overflow"))?;
         if required > budget.max_bytes { return Err(error("MEMORY_LIMIT", "trace union exceeds budget")); }
         let union = crate::geometry::areas::union(active.flat_map(|(set,_,_)| set.0.iter().cloned()));
-        original_polygons.extend(canonical_slab(&union, map.mesh().origin_mm, original_polygons.len())?.into_iter().map(|(mm, _)| mm));
+        original_polygons.extend(canonical_slab(&union, map.mesh().origin_mm, original_polygons.len(), "physical", 0.)?.into_iter().map(|(mm, _)| mm));
     }
     if original_polygons.len() != input.metals.len() { return Err(error("PLANAR_TRACE", "slab ownership geometry mismatch")); }
     // Establish ownership from physical copper tetrahedra, never coordinate alone.
@@ -383,7 +409,7 @@ pub(super) fn input_from_board(board: &super::board_mesh::BoardMesh, request: &s
         original_bytes=original_bytes.checked_add(union_bytes).ok_or_else(||error("MEMORY_LIMIT","original geometry overflow"))?;
         output_bytes=output_bytes.checked_add(union_bytes).ok_or_else(||error("MEMORY_LIMIT","original geometry overflow"))?;
         if output_bytes>budget.max_bytes {return Err(error("MEMORY_LIMIT","original geometry exceeds budget"));}
-        let canonical = canonical_slab(&union, board.origin_mm, metals.len())?;
+        let canonical = canonical_slab(&union, board.origin_mm, metals.len(), "physical", 4. * (request.max_triangle_area_m2 * 1e6).sqrt())?;
         for (_, poly) in &canonical {
             let vertices=std::iter::once(poly.exterior()).chain(poly.interiors()).try_fold(0usize,|n,r|n.checked_add(r.0.len())).ok_or_else(||error("MEMORY_LIMIT", "metal polygon overflow"))?;
             output_bytes=output_bytes.checked_add(vertices.checked_mul(32).ok_or_else(||error("MEMORY_LIMIT", "metal polygon overflow"))?).and_then(|v|v.checked_add(256)).ok_or_else(||error("MEMORY_LIMIT", "metal polygon overflow"))?;
@@ -401,10 +427,12 @@ pub(super) fn input_from_board(board: &super::board_mesh::BoardMesh, request: &s
         if !layer.copper {
             let mut domain=crate::geometry::areas::difference(&board.field_substrate,&board.field_bores);
             for (span,bore) in &board.field_partial_bores { if span[0]<end && span[1]>base { if span[0]>base || span[1]<end { return Err(error("PLANAR_TRACE", "bore crosses dielectric interval boundary")); } domain=crate::geometry::areas::difference(&domain,bore); } }
-            for poly in &domain.0 { let vertices=std::iter::once(poly.exterior()).chain(poly.interiors()).try_fold(0usize,|n,r|n.checked_add(r.0.len())).ok_or_else(||error("MEMORY_LIMIT", "dielectric polygon overflow"))?;
+            // Dielectric footprints go through the same canonical normalisation as copper (area bound 1e-6, noise tier).
+            for (_, poly) in canonical_slab(&domain, board.origin_mm, regions.len(), "dielectric", 4. * (request.max_triangle_area_m2 * 1e6).sqrt())? { let vertices=std::iter::once(poly.exterior()).chain(poly.interiors()).try_fold(0usize,|n,r|n.checked_add(r.0.len())).ok_or_else(||error("MEMORY_LIMIT", "dielectric polygon overflow"))?;
                 output_bytes=output_bytes.checked_add(vertices.checked_mul(32).ok_or_else(||error("MEMORY_LIMIT", "dielectric polygon overflow"))?).and_then(|v|v.checked_add(256)).ok_or_else(||error("MEMORY_LIMIT", "dielectric polygon overflow"))?;
                 if output_bytes>budget.max_bytes { return Err(error("MEMORY_LIMIT", "dielectric polygons exceed budget")); }
-                regions.push(SpatialDielectric { z0_m:base,z1_m:end,epsilon_r:layer.epsilon_r.ok_or_else(||error("MATERIAL", "missing epsilon"))?,polygon_m:convert(poly.exterior()),holes_m:poly.interiors().iter().map(&convert).collect() }); }
+                let ring=|r:&geo::LineString<f64>| r.0.iter().map(|p|[p.x,p.y]).collect::<Vec<_>>();
+                regions.push(SpatialDielectric { z0_m:base,z1_m:end,epsilon_r:layer.epsilon_r.ok_or_else(||error("MATERIAL", "missing epsilon"))?,polygon_m:ring(poly.exterior()),holes_m:poly.interiors().iter().map(ring).collect() }); }
         }
         base=end;
     }

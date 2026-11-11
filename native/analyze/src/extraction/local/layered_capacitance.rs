@@ -1569,6 +1569,11 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
             });
         }
     }
+    // Element size for the noise tier: median planar element edge scale sqrt(2 A).
+    let noise_h2 = {
+        let mut v: Vec<f64> = meshes.iter().flat_map(|m| m.triangles.iter().map(|t| 2. * t.polygon.unsigned_area())).collect();
+        if v.is_empty() { 0. } else { let k = v.len() / 2; *v.select_nth_unstable_by(k, |a, b| a.total_cmp(b)).1 }
+    };
     let mut known = vec![None; nodes];
     let mut contact_owners:Vec<Vec<usize>> = (0..nodes)
         .map(|_|Vec::with_capacity(input.metals.len())).collect();
@@ -1597,7 +1602,18 @@ fn extract_impl(input: &Input, trace: Option<&PotentialTrace>, spatial: &[Spatia
                     };
                     if known[n].is_some() {
                         if contact_owners[n].iter().any(|&old| !finite_contacts.contains(&(old,c))) {
-                            return Err(error("COPPER_TRACE", "point/edge-only metal contact has no finite surface area"));
+                            let bad:Vec<_>=contact_owners[n].iter().copied().filter(|&old|!finite_contacts.contains(&(old,c))).collect();
+                            // Noise tier: the node touches a numerical sliver of the canonical union (area <= 1e-6 of the other polygon or <= 1e-2 h^2) and its large
+                            // neighbour at a hairline. The first owner keeps the node; the sliver's trace is accounted as used.
+                            let sliver=|a:usize,b:usize|{let (x,y)=(metal_polygons[a].unsigned_area(),metal_polygons[b].unsigned_area());x.min(y)<=x.max(y)*1e-6 || x.min(y)<=1e-2*noise_h2};
+                            if bad.iter().all(|&old|sliver(old,c)) {
+                                eprintln!("P7_COPPER_CONTACT_NOISE node ({:e},{:e}) m z {:e} m: metal {c} {:?} touches sliver/neighbour {:?} at a hairline; first owner kept",p[0],p[1],input.z_m[k],input.metals[c].source_id,bad.iter().map(|&i|&input.metals[i].source_id).collect::<Vec<_>>());
+                                for &(mode, _) in &weights { used_modes[mode] = true; }
+                                represented[c] |= active[n];
+                                continue;
+                            }
+                            let info=|i:usize| format!("metal {i} {:?} z {}..{} area {:e} m2",input.metals[i].source_id,input.metals[i].z0_m,input.metals[i].z1_m,metal_polygons[i].unsigned_area());
+                            return Err(error("COPPER_TRACE", &format!("point/edge-only metal contact has no finite surface area: node ({:e},{:e}) m at z {:e} m is shared by {} and {} (noise element h^2 {:e} m2)",p[0],p[1],input.z_m[k],info(c),bad.iter().map(|&i|info(i)).collect::<Vec<_>>().join(", "),noise_h2)));
                         }
                         let existing:BTreeMap<_,_> = trace_weights[n].iter().copied().collect();
                         let incoming:BTreeMap<_,_> = weights.iter().copied().collect();
