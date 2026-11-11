@@ -847,7 +847,7 @@ fn build_profiled_once(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     // Canonical copper normalisation (noise tier), once, on the cropped set before the arrangement:
     // i_overlay NonZero renoding per shape and splitting of pinched shells. The arrangement, ownership
     // and field-input checks below compare against this set (see copper_normalize).
-    let mut copper_norm=copper_normalize::Stats::default();
+    let mut copper_norm=copper_normalize::Stats{noise_extent_mm:4.*a0_mm2.sqrt(),..Default::default()};
     for i in 0..physical_shapes.len() {
         check(start,max_wall)?;
         let changed_before=copper_norm.shapes_changed;

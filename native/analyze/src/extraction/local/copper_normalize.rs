@@ -20,6 +20,10 @@ pub(super) struct Stats {
     pub parts_after: usize,
     pub holes_merged: usize,
     pub parts_split: usize,
+    /// Shapes whose bbox extent is at most this many mm (4h) and that cannot be normalised are dropped as noise; 0 disables.
+    pub noise_extent_mm: f64,
+    pub parts_dropped: usize,
+    pub dropped_area: f64,
 }
 impl Stats {
     pub fn evidence(&self) -> serde_json::Value {
@@ -29,6 +33,7 @@ impl Stats {
             "holesMerged": self.holes_merged, "partsSplit": self.parts_split,
             "holesBefore": self.holes_before, "holesAfter": self.holes_after,
             "partsBefore": self.parts_before, "partsAfter": self.parts_after,
+            "partsDropped": self.parts_dropped, "droppedArea": self.dropped_area, "noiseExtentMm": self.noise_extent_mm,
         })
     }
 }
@@ -45,7 +50,22 @@ pub(super) fn normalize_polygon(poly: &Polygon<f64>, label: &str, stats: &mut St
     let unchanged = |stats: &mut Stats| -> Result<Vec<Polygon<f64>>> { stats.holes_after += holes; stats.parts_after += 1; Ok(vec![poly.clone()]) };
     let before = poly.unsigned_area();
     let parts = if poly.is_valid() { return unchanged(stats); } else {
-        split_self_touching(poly).map_err(|e| error("COPPER_NORMALIZATION", &format!("shape {label} {}: {e}", bbox(poly))))?
+        match split_self_touching(poly) {
+            Ok(p) => p,
+            Err(e) => {
+                // A feature no larger than 4h cannot be resolved by the mesh: drop it as noise (bounded per set in `normalize_set`).
+                let extent = poly.bounding_rect().map(|b| (b.max().x - b.min().x).max(b.max().y - b.min().y)).unwrap_or(f64::INFINITY);
+                if stats.noise_extent_mm > 0. && extent <= stats.noise_extent_mm {
+                    eprintln!("P7_COPPER_NOISE_DROP shape={label} {} extent {extent:e} mm <= {:e} mm area {before:e}: {e}", bbox(poly), stats.noise_extent_mm);
+                    stats.shapes_changed += 1;
+                    stats.parts_dropped += 1;
+                    stats.dropped_area += before;
+                    stats.holes_merged += holes;
+                    return Ok(vec![]);
+                }
+                return Err(error("COPPER_NORMALIZATION", &format!("shape {label} {}: {e}", bbox(poly))));
+            }
+        }
     };
     let after: f64 = parts.iter().map(|p| p.unsigned_area()).sum();
     let relative = if before > 0. { (after - before).abs() / before } else if after == 0. { 0. } else { f64::INFINITY };
@@ -63,8 +83,16 @@ pub(super) fn normalize_polygon(poly: &Polygon<f64>, label: &str, stats: &mut St
 }
 pub(super) fn normalize_set(set: &MultiPolygon<f64>, label: &str, stats: &mut Stats) -> Result<MultiPolygon<f64>> {
     let mut out = Vec::with_capacity(set.0.len());
+    let dropped_before = stats.dropped_area;
     for (i, p) in set.0.iter().enumerate() {
         out.extend(normalize_polygon(p, &format!("{label}.{i}"), stats)?);
+    }
+    let dropped = stats.dropped_area - dropped_before;
+    if dropped > 0. {
+        let total = set.unsigned_area();
+        if dropped > AREA_TOLERANCE * total {
+            return Err(error("COPPER_NORMALIZATION", &format!("set {label}: dropped noise features total {dropped:e} exceed {AREA_TOLERANCE:e} relative of {total:e}")));
+        }
     }
     Ok(MultiPolygon(out))
 }
