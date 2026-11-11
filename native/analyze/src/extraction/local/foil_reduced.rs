@@ -736,12 +736,31 @@ fn magnetic(
         refinement,
     })
 }
+/// Three-tier decision for a projected-reciprocity asymmetry (relative to the largest diagonal): up to `gate` (1e-9)
+/// the entry is kept exactly, up to 1e-6 it is noise and symmetrized, up to 1e-3 it is an approximation and
+/// symmetrized, above that it is refused. `P7_RECIPROCITY_POLICY=strict` keeps the single `gate` refusal.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub(super) enum ReciprocityTier { Exact, Noise, Approximation, Refused }
+impl ReciprocityTier {
+    pub(super) fn name(self) -> &'static str { match self { Self::Exact => "exact", Self::Noise => "noise", Self::Approximation => "approximation", Self::Refused => "refused" } }
+}
+pub(super) fn reciprocity_tier(err: f64, gate: f64, strict: bool) -> ReciprocityTier {
+    if err <= gate { ReciprocityTier::Exact }
+    else if strict { ReciprocityTier::Refused }
+    else if err <= 1e-6 { ReciprocityTier::Noise }
+    else if err <= 1e-3 { ReciprocityTier::Approximation }
+    else { ReciprocityTier::Refused }
+}
+pub(super) fn reciprocity_tier_of(max_err: f64) -> &'static str {
+    reciprocity_tier(max_err, 1e-9, false).name()
+}
 fn congruence(
     basis: &[Vec<f64>],
     action: &[Vec<f64>],
     gate: f64,
     label: &str,
 ) -> Result<(Vec<(usize, usize, f64)>, f64)> {
+    let strict = std::env::var("P7_RECIPROCITY_POLICY").as_deref() == Ok("strict");
     let scale = (0..basis.len())
         .map(|i| sum(&basis[i], &action[i]).abs())
         .fold(0., f64::max);
@@ -752,13 +771,16 @@ fn congruence(
             let a = sum(&basis[i], &action[j]);
             let b = sum(&basis[j], &action[i]);
             let err = (a - b).abs() / scale.max(f64::MIN_POSITIVE);
-            if !a.is_finite() || !b.is_finite() || err > gate {
+            let tier = reciprocity_tier(err, gate, strict);
+            if !a.is_finite() || !b.is_finite() || tier == ReciprocityTier::Refused {
                 return Err(error(
                     "FOIL_REDUCTION",
                     &format!("{label} projected reciprocity {err:e}"),
                 ));
             }
             error_max = error_max.max(err);
+            // Exact pairs keep their bits; noise and approximation pairs are symmetrized.
+            let a = if tier == ReciprocityTier::Exact { a } else { 0.5 * (a + b) };
             if a != 0. {
                 entries.push((i, j, a));
                 if i != j {
@@ -766,6 +788,9 @@ fn congruence(
                 }
             }
         }
+    }
+    if error_max > gate {
+        eprintln!("P7_RECIPROCITY_TIER label={label} maxRelative={error_max:e} tier={} symmetrized=true", reciprocity_tier(error_max, gate, strict).name());
     }
     Ok((entries, error_max))
 }
@@ -2643,7 +2668,9 @@ impl ReducedSpace {
                         "quality":{"maxKclRelative":max_kcl,"maxKvlRelative":max_kvl,
                                    "maxFullKvlUncertaintyRelative":max_kvl_uncertainty,"maxColumnPowerBalanceErrorW":max_power,
                                    "residualPolicy":{"tier":residual_tier,
-                                                     "limit":residual_limit,"kvlUncertaintyAdvisory":self.approximate_magnetic}},
+                                                     "limit":residual_limit,"kvlUncertaintyAdvisory":self.approximate_magnetic},
+                                   "reciprocityPolicy":{"tier":reciprocity_tier_of(self.max_electric_reciprocity),"maxElectricRelative":self.max_electric_reciprocity,
+                                                        "gates":[1e-9,1e-6,1e-3],"action":"above 1e-9 the projected matrix is symmetrized"}},
                     }));
                 }
                 if !self.approximate_magnetic && worst.kvl_uncertainty_relative > RESIDUAL_LIMIT {
@@ -4429,3 +4456,28 @@ mod cross_dense_pass_tests {
 #[cfg(test)]
 #[path = "cross_touching_test.rs"]
 mod cross_touching_test;
+
+#[cfg(test)]
+mod reciprocity_tier_tests {
+    use super::*;
+    #[test]
+    fn tiers_follow_the_three_gates_and_symmetrize() {
+        assert_eq!(reciprocity_tier(1e-10, 1e-9, false), ReciprocityTier::Exact);
+        assert_eq!(reciprocity_tier(3.6e-7, 1e-9, false), ReciprocityTier::Noise);
+        assert_eq!(reciprocity_tier(5e-5, 1e-9, false), ReciprocityTier::Approximation);
+        assert_eq!(reciprocity_tier(2e-3, 1e-9, false), ReciprocityTier::Refused);
+        assert_eq!(reciprocity_tier(3.6e-7, 1e-9, true), ReciprocityTier::Refused);
+        assert_eq!(reciprocity_tier_of(4e-5), "approximation");
+        // One asymmetric pair: C01 = 1.0, C10 = 1.0 + 4e-7 -> noise tier, entries equal to the mean.
+        let basis = vec![vec![1., 0.], vec![0., 1.]];
+        let action = vec![vec![1., 1.], vec![1. + 4e-7, 1.]];
+        let (entries, err) = congruence(&basis, &action, 1e-9, "C").unwrap();
+        assert!((err - 4e-7).abs() < 1e-12);
+        let c01 = entries.iter().find(|e| e.0 == 0 && e.1 == 1).unwrap().2;
+        let c10 = entries.iter().find(|e| e.0 == 1 && e.1 == 0).unwrap().2;
+        assert_eq!(c01, c10);
+        assert!((c01 - (1. + 2e-7)).abs() < 1e-12);
+        let wide = vec![vec![1., 1.], vec![1.01, 1.]];
+        assert!(congruence(&basis, &wide, 1e-9, "C").is_err());
+    }
+}
