@@ -704,6 +704,7 @@ pub fn solve_checked(
     use serde_json::json;
     let port_count = geometry.ports.len();
     let axis = request.frequencies_hz;
+    let _request_memory = super::roi_fallback::RequestMemory::set(request.budget.max_memory_mi_b);
     let operator = CheckedOperator::HybridPlanarV3;
     let partition = mixed_conductor::PartitionPolicy::AutomaticHybridV1;
     operator.validate_partition(partition)?;

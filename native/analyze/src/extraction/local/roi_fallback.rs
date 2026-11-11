@@ -230,6 +230,19 @@ pub(super) fn channel_support<'a>(r:&Request,g:&'a PreparationReport)->Option<Su
     Some(Support{electrode_regions,channel_nets,net_area,reference,support,bbox})
 }
 
+thread_local!{static REQUEST_MEMORY:std::cell::Cell<Option<f64>>=const{std::cell::Cell::new(None)};}
+fn request_memory_bytes()->Option<f64> { REQUEST_MEMORY.with(|c|c.get()) }
+/// The request memory limit (`budget.maxMemoryMiB`) for the ROI memory fit of the calling thread, restored on drop.
+/// The checked endpoint keeps its unbounded allocation budget (an external supervisor owns hard limits); only the
+/// ROI size decision reads this limit. `P7_ROI_BUDGET_MIB` still overrides it.
+pub(super) struct RequestMemory(Option<f64>);
+impl RequestMemory {
+    pub(super) fn set(mib:Option<f64>)->Self {
+        let bytes=mib.filter(|m|m.is_finite()&&*m>0.).map(|m|m*1048576.);
+        Self(REQUEST_MEMORY.with(|c|c.replace(bytes)))
+    }
+}
+impl Drop for RequestMemory { fn drop(&mut self) { REQUEST_MEMORY.with(|c|c.set(self.0)); } }
 pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,forced:Option<(&str,f64)>,skin:Option<copper_skin_profile::Profile>)->Result<Option<Plan>> {
     if std::env::var("P7_ROI_FALLBACK").as_deref()==Ok("0")||!r.cut_planes.is_empty() {return Ok(None);}
     let roi0=r.roi_mm;
@@ -238,6 +251,7 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,force
         if !axis {return Ok(None);}
     }
     let budget_bytes=std::env::var("P7_ROI_BUDGET_MIB").ok().and_then(|v|v.parse::<f64>().ok()).map(|m|m*1048576.)
+        .or_else(request_memory_bytes)
         .unwrap_or(if budget.max_bytes<usize::MAX/2 {budget.max_bytes as f64} else {6.*1073741824.});
     let fit_bytes=if forced.is_some() {f64::INFINITY} else {budget_bytes};
     let (planar0,nodes0,bytes0)=estimate(g,r,&roi0,skin);

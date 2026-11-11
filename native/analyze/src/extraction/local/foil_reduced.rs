@@ -3712,7 +3712,7 @@ pub(super) fn cross_fast_entry(prism:&super::prism::Prism,tetra:[[f64;3];4],ma:&
     let t=Instant::now();
     if let Some((v,change))=super::planar_operator::prism_tet_gauss(prism,tetra) {return Ok(CrossEntry{value:v,path:1,change,approximated:false,wasted:0.});}
     let wasted=t.elapsed().as_secs_f64();
-    if !{ let [pa,pb,pc]=prism.triangle_m; tetra.iter().any(|v|[[pa[0],pa[1]],[pb[0],pb[1]],[pc[0],pc[1]]].contains(&[v[0],v[1]])&&(v[2]==prism.z_m[0]||v[2]==prism.z_m[1])) } {
+    if !{ let [pa,pb,pc]=prism.triangle_m; tetra.iter().any(|v|[[pa[0],pa[1]],[pb[0],pb[1]],[pc[0],pc[1]]].contains(&[v[0],v[1]])&&(v[2]==prism.z_m[0]||v[2]==prism.z_m[1])) } && !super::planar_operator::prism_tet_in_contact(prism,tetra) {
         let t=Instant::now();let mut budget=256;
         if let Some(v)=super::planar_operator::prism_tet_split(prism,tetra,&mut budget) {return Ok(CrossEntry{value:v,path:1,change:1e-4,approximated:false,wasted:0.});}
         let _=t;
@@ -3795,6 +3795,7 @@ fn cross_dense_pass(table:&[f64],np:usize,nt:usize,threads:usize,da:&[[Vec<f64>;
     Some((pa,rows))
 }
 static CROSS_PROF:[std::sync::atomic::AtomicU64;4]=[const{std::sync::atomic::AtomicU64::new(0)};4];
+static CROSS_COUNT:[std::sync::atomic::AtomicU64;4]=[const{std::sync::atomic::AtomicU64::new(0)};4];
 struct CompactMixedMagnetic {
     supports:Vec<super::planar_operator::SparseSupport>,
     dimensions:usize,
@@ -3910,6 +3911,7 @@ impl CompactMixedMagnetic {
                 let mut run=||->Result<()> { loop {
                     if abort.load(Relaxed) {return Ok(());}
                     let k=next.fetch_add(1,Relaxed);if k>=nt {return Ok(());}
+                    if k%(nt/10).max(1)==0 {eprintln!("P7_COMPACT_CROSS_PROGRESS row={k} of={nt} elapsed={:.1} pathCounts={:?} pathCpuS={:?}",started.elapsed().as_secs_f64(),std::array::from_fn::<u64,4,_>(|i|CROSS_COUNT[i].load(Relaxed)),std::array::from_fn::<f64,4,_>(|i|CROSS_PROF[i].load(Relaxed) as f64*1e-9));}
                     let mut row=rows[k].lock().map_err(|_|error("MAGNETIC_CONFIG","cross row poisoned"))?;
                     for a in 0..np {
                         check_time(start,wall)?;
@@ -3917,8 +3919,10 @@ impl CompactMixedMagnetic {
                         let e=cross_fast_entry(&supports[a].prism,local[k].tetra,&moments[a],&moments[np+k],budget,start,wall)?;
                         if let Some(t0)=t0 {loc[(e.path as usize).min(3)]+=t0.elapsed().as_nanos() as u64;}
                         row[a]=e.value;
+                        if prof {CROSS_COUNT[(e.path as usize).min(3)].fetch_add(1,Relaxed);}
                         match e.path {0=>t.0+=1,1=>t.1+=1,_=>t.2+=1}
                         t.4=t.4.max(e.change);if e.approximated {t.3+=1;}
+                        if prof && a%1024==1023 {for (slot,v) in loc.iter_mut().enumerate() {CROSS_PROF[slot].fetch_add(*v,Relaxed);*v=0;}}
                     }
                 }};
                 if let Err(e)=run() {abort.store(true,Relaxed);failure.lock().unwrap().get_or_insert(e);}
