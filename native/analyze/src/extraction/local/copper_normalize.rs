@@ -26,6 +26,11 @@ pub(super) struct Stats {
     pub dropped_area: f64,
 }
 impl Stats {
+    pub fn merge(&mut self, o: &Stats) {
+        self.shapes += o.shapes; self.shapes_changed += o.shapes_changed; self.max_area_relative = self.max_area_relative.max(o.max_area_relative);
+        self.holes_before += o.holes_before; self.holes_after += o.holes_after; self.parts_before += o.parts_before; self.parts_after += o.parts_after;
+        self.holes_merged += o.holes_merged; self.parts_split += o.parts_split; self.parts_dropped += o.parts_dropped; self.dropped_area += o.dropped_area;
+    }
     pub fn evidence(&self) -> serde_json::Value {
         serde_json::json!({
             "tier": "noise", "areaUnit": "relative", "areaToleranceRelative": AREA_TOLERANCE,
