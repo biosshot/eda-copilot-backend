@@ -9,7 +9,7 @@
 //! `P7_ROI_FALLBACK=0` disables the fallback, `P7_ROI_CORRIDOR=0` only the corridor step,
 //! `P7_ROI_FORCE_CORRIDOR=1` skips the bbox ladder (diagnostics).
 use super::board_mesh::{polygon,Request};
-use super::{error,AllocationBudget,Result};
+use super::{copper_skin_profile,error,AllocationBudget,Result};
 use crate::geometry::{areas,PreparationReport};
 use geo::{Area,BoundingRect,Contains,Intersects};
 use std::cmp::Reverse;
@@ -24,28 +24,30 @@ const CORRIDOR_LADDER_MM:[f64;6]=[20.,10.,5.,3.,2.,1.5];
 
 pub(super) struct Plan {pub request:Request,pub evidence:serde_json::Value}
 
-fn z_planes(r:&Request)->usize {
+/// With a skin profile every copper slab is split to a third of the skin depth (and the profile's current/field steps), so the plane count grows with frequency.
+fn z_planes(r:&Request,skin:Option<copper_skin_profile::Profile>)->usize {
     let air=r.air_margin_m;let mut d=r.interface_step_m.unwrap_or(r.max_vertical_step_m).min(r.max_vertical_step_m).min(air);
     let mut air_n=1;while d<air {d=(2.*d).min(air);air_n+=1;}
     let mut z=2*air_n+1;
     for l in &r.stack {
-        z+=(l.thickness_m/r.max_vertical_step_m).ceil().max(1.) as usize;
+        let skin_pieces=skin.and_then(|p|p.pieces(l.thickness_m,l.conductivity_s_m.filter(|_|l.copper),r.max_vertical_step_m));
+        z+=skin_pieces.unwrap_or_else(||(l.thickness_m/r.max_vertical_step_m).ceil().max(1.) as usize);
         if let (false,Some(step)) = (l.copper,r.interface_step_m) {let mut dd=step;while dd<l.thickness_m/2. {z+=2;dd*=r.interface_growth.unwrap_or(2.);}}
     }
     z
 }
 fn in_rect(p:[f64;2],b:&[[f64;2];2])->bool {p[0]>=b[0][0]&&p[0]<=b[1][0]&&p[1]>=b[0][1]&&p[1]<=b[1][1]}
 /// (planar vertices, nodes, bytes) for meshing `roi`.
-fn estimate(g:&PreparationReport,r:&Request,roi:&[[f64;2];2])->(usize,usize,f64) {estimate_in(g,r,roi,None)}
+fn estimate(g:&PreparationReport,r:&Request,roi:&[[f64;2];2],skin:Option<copper_skin_profile::Profile>)->(usize,usize,f64) {estimate_in(g,r,roi,None,skin)}
 /// Same, for a corridor polygon whose bounding box is `roi`.
-fn estimate_in(g:&PreparationReport,r:&Request,roi:&[[f64;2];2],poly:Option<&geo::Polygon<f64>>)->(usize,usize,f64) {
+fn estimate_in(g:&PreparationReport,r:&Request,roi:&[[f64;2];2],poly:Option<&geo::Polygon<f64>>,skin:Option<copper_skin_profile::Profile>)->(usize,usize,f64) {
     let inside=|q:[f64;2]|in_rect(q,roi)&&poly.is_none_or(|p|p.contains(&geo::Point::new(q[0],q[1])));
     let mut v=0usize;
     for l in &g.layers {for p in &l.copper {for ring in std::iter::once(&p.outer).chain(p.holes.iter()) {v+=ring.iter().filter(|q|inside(**q)).count();}}}
     for h in &g.holes {for p in &h.polygons {for ring in std::iter::once(&p.outer).chain(p.holes.iter()) {v+=2*ring.iter().filter(|q|inside(**q)).count();}}}
     let area=poly.map_or((roi[1][0]-roi[0][0])*(roi[1][1]-roi[0][1]),|p|p.unsigned_area());
     let planar=(1.3*v as f64+area/(2.*r.max_triangle_area_m2*1e6)) as usize;
-    let nodes=planar.saturating_mul(z_planes(r));
+    let nodes=planar.saturating_mul(z_planes(r,skin));
     (planar,nodes,BASE_BYTES+BYTES_PER_NODE*nodes as f64)
 }
 
@@ -212,20 +214,9 @@ pub(super) fn corridor_polygon(lines:&[Vec<[f64;2]>],boxes:&[[[f64;2];2]],keep:&
 }
 
 /// `forced` = (mode, margin mm) rebuilds with exactly that rung, skipping the budget test (recalibration).
-pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,forced:Option<(&str,f64)>)->Result<Option<Plan>> {
-    if std::env::var("P7_ROI_FALLBACK").as_deref()==Ok("0")||!r.cut_planes.is_empty() {return Ok(None);}
-    let roi0=r.roi_mm;
-    if let Some(p)=&r.domain_polygon_mm {
-        let axis=p.len()==4&&p.iter().all(|q|(q[0]==roi0[0][0]||q[0]==roi0[1][0])&&(q[1]==roi0[0][1]||q[1]==roi0[1][1]));
-        if !axis {return Ok(None);}
-    }
-    let budget_bytes=std::env::var("P7_ROI_BUDGET_MIB").ok().and_then(|v|v.parse::<f64>().ok()).map(|m|m*1048576.)
-        .unwrap_or(if budget.max_bytes<usize::MAX/2 {budget.max_bytes as f64} else {6.*1073741824.});
-    let fit_bytes=if forced.is_some() {f64::INFINITY} else {budget_bytes};
-    let (planar0,nodes0,bytes0)=estimate(g,r,&roi0);
-    // Small meshes never need the fallback (the fixed overhead term must not refuse unit-scale fixtures).
-    if bytes0<=budget_bytes||nodes0<100_000 {return Ok(None);}
-    // Support: electrode source regions and the copper of the non-reference channel nets.
+/// Channel support: electrode regions, the copper of the non-reference channel nets and its bounding box (shared with roi_electrical).
+pub(super) struct Support<'a> {pub electrode_regions:Vec<usize>,pub channel_nets:BTreeSet<&'a str>,pub net_area:BTreeMap<&'a str,f64>,pub reference:Option<&'a str>,pub support:Vec<usize>,pub bbox:[[f64;2];2]}
+pub(super) fn channel_support<'a>(r:&Request,g:&'a PreparationReport)->Option<Support<'a>> {
     let keys:BTreeSet<(String,&str)>=r.electrodes.iter().flat_map(|e|e.canonical_paths().unwrap_or_default().into_iter().map(move|p|(p,e.layer.as_str()))).collect();
     let electrode_regions:Vec<usize>=g.regions.iter().enumerate().filter(|(_,x)|keys.contains(&(x.source.path.clone(),x.layer.as_str()))).map(|(i,_)|i).collect();
     let channel_nets:BTreeSet<&str>=electrode_regions.iter().filter_map(|&i|g.regions[i].source.net.as_deref()).collect();
@@ -235,7 +226,40 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,force
     let support:Vec<usize>=g.regions.iter().enumerate().filter(|(i,x)|electrode_regions.contains(i)||x.source.net.as_deref().is_some_and(|n|channel_nets.contains(n)&&Some(n)!=reference)).map(|(i,_)|i).collect();
     let mut bbox=[[f64::INFINITY;2],[f64::NEG_INFINITY;2]];
     for &i in &support {if let Some(b)=polygon(&g.regions[i].polygon).bounding_rect() {for k in 0..2 {bbox[0][k]=bbox[0][k].min(if k==0{b.min().x}else{b.min().y});bbox[1][k]=bbox[1][k].max(if k==0{b.max().x}else{b.max().y});}}}
-    if electrode_regions.is_empty()||bbox[0][0]>bbox[1][0] {return Ok(None);}
+    if electrode_regions.is_empty()||bbox[0][0]>bbox[1][0] {return None;}
+    Some(Support{electrode_regions,channel_nets,net_area,reference,support,bbox})
+}
+
+thread_local!{static REQUEST_MEMORY:std::cell::Cell<Option<f64>>=const{std::cell::Cell::new(None)};}
+fn request_memory_bytes()->Option<f64> { REQUEST_MEMORY.with(|c|c.get()) }
+/// The request memory limit (`budget.maxMemoryMiB`) for the ROI memory fit of the calling thread, restored on drop.
+/// The checked endpoint keeps its unbounded allocation budget (an external supervisor owns hard limits); only the
+/// ROI size decision reads this limit. `P7_ROI_BUDGET_MIB` still overrides it.
+pub(super) struct RequestMemory(Option<f64>);
+impl RequestMemory {
+    pub(super) fn set(mib:Option<f64>)->Self {
+        let bytes=mib.filter(|m|m.is_finite()&&*m>0.).map(|m|m*1048576.);
+        Self(REQUEST_MEMORY.with(|c|c.replace(bytes)))
+    }
+}
+impl Drop for RequestMemory { fn drop(&mut self) { REQUEST_MEMORY.with(|c|c.set(self.0)); } }
+pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,forced:Option<(&str,f64)>,skin:Option<copper_skin_profile::Profile>)->Result<Option<Plan>> {
+    if std::env::var("P7_ROI_FALLBACK").as_deref()==Ok("0")||!r.cut_planes.is_empty() {return Ok(None);}
+    let roi0=r.roi_mm;
+    if let Some(p)=&r.domain_polygon_mm {
+        let axis=p.len()==4&&p.iter().all(|q|(q[0]==roi0[0][0]||q[0]==roi0[1][0])&&(q[1]==roi0[0][1]||q[1]==roi0[1][1]));
+        if !axis {return Ok(None);}
+    }
+    let budget_bytes=std::env::var("P7_ROI_BUDGET_MIB").ok().and_then(|v|v.parse::<f64>().ok()).map(|m|m*1048576.)
+        .or_else(request_memory_bytes)
+        .unwrap_or(if budget.max_bytes<usize::MAX/2 {budget.max_bytes as f64} else {6.*1073741824.});
+    let fit_bytes=if forced.is_some() {f64::INFINITY} else {budget_bytes};
+    let (planar0,nodes0,bytes0)=estimate(g,r,&roi0,skin);
+    if skin.is_some() {eprintln!("P7_ROI_ESTIMATE planar={planar0} nodes={nodes0} bytes={bytes0:.0} budgetBytes={budget_bytes:.0} z={}",z_planes(r,skin));}
+    // Small meshes never need the fallback (the fixed overhead term must not refuse unit-scale fixtures).
+    if bytes0<=budget_bytes||nodes0<100_000 {return Ok(None);}
+    // Support: electrode source regions and the copper of the non-reference channel nets.
+    let Some(Support{electrode_regions,channel_nets,net_area,reference,support,bbox})=channel_support(r,g) else {return Ok(None);};
     let stack_mm=r.stack.iter().map(|l|l.thickness_m).sum::<f64>()*1e3;
     let scale=(stack_mm/1.6).max(1.);
     {   // What makes the support large: per channel net and the biggest support regions.
@@ -267,7 +291,7 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,force
             }
             if !grown {break;}
         }
-        let e=estimate(g,r,&roi);last=(e.0,e.1,e.2);
+        let e=estimate(g,r,&roi,skin);last=(e.0,e.1,e.2);
         if e.2<=fit_bytes {chosen=Some((m,roi,e,None));break;}
         tried.push([m,e.2]);
     }
@@ -276,7 +300,7 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,force
     let mut corridor_last=None;
     if chosen.is_none()&&std::env::var("P7_ROI_CORRIDOR").as_deref()!=Ok("0") {
         tried.clear();
-        let (found,l,t)=corridor_plan(g,r,&electrode_regions,&roi0,scale,fit_bytes,forced.filter(|f|f.0=="corridor").map(|f|f.1));
+        let (found,l,t)=corridor_plan(g,r,&electrode_regions,&roi0,scale,fit_bytes,forced.filter(|f|f.0=="corridor").map(|f|f.1),skin);
         tried=t;
         corridor_last=l;
         if let Some(c)=found {chosen=Some((c.margin_mm,c.bbox,c.estimate,Some(c)));}
@@ -333,7 +357,7 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,force
 struct Corridor {margin_mm:f64,bbox:[[f64;2];2],polygon:geo::Polygon<f64>,estimate:(usize,usize,f64),path_length_mm:f64,unconnected:usize}
 
 /// Corridor ladder. Returns the first margin that fits, and the (margin mm, nodes, bytes) of the last attempt.
-fn corridor_plan(g:&PreparationReport,r:&Request,electrode_regions:&[usize],roi0:&[[f64;2];2],scale:f64,budget_bytes:f64,forced:Option<f64>)->(Option<Corridor>,Option<(f64,usize,f64)>,Vec<[f64;2]>) {
+fn corridor_plan(g:&PreparationReport,r:&Request,electrode_regions:&[usize],roi0:&[[f64;2];2],scale:f64,budget_bytes:f64,forced:Option<f64>,skin:Option<copper_skin_profile::Profile>)->(Option<Corridor>,Option<(f64,usize,f64)>,Vec<[f64;2]>) {
     let layer_ix:BTreeMap<&str,usize>=g.layers.iter().enumerate().map(|(i,l)|(l.layer.as_str(),i)).collect();
     let mut ports:Vec<Port>=vec![];
     for e in &r.electrodes {
@@ -389,8 +413,8 @@ fn corridor_plan(g:&PreparationReport,r:&Request,electrode_regions:&[usize],roi0
         }
         let Some(b)=p.bounding_rect() else {continue};
         let bbox=[[b.min().x,b.min().y],[b.max().x,b.max().y]];
-        let e=estimate_in(g,r,&bbox,Some(&p));last=Some((m,e.1,e.2));
-        eprintln!("P7_ROI_CORRIDOR_TRY margin_mm={m} area_mm2={:.1} bbox={bbox:?} planar={} nodes={} z={} bytes={:.0}",p.unsigned_area(),e.0,e.1,z_planes(r),e.2);
+        let e=estimate_in(g,r,&bbox,Some(&p),skin);last=Some((m,e.1,e.2));
+        eprintln!("P7_ROI_CORRIDOR_TRY margin_mm={m} area_mm2={:.1} bbox={bbox:?} planar={} nodes={} z={} bytes={:.0}",p.unsigned_area(),e.0,e.1,z_planes(r,skin),e.2);
         if e.2<=budget_bytes {return (Some(Corridor{margin_mm:m,bbox,polygon:p,estimate:e,path_length_mm:length,unconnected}),last,tried);}
         tried.push([m,e.2]);
     }

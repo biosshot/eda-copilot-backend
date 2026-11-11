@@ -779,6 +779,15 @@ fn tet_split_pair(a: [[f64;3];4], b: [[f64;3];4], budget: &mut usize) -> Option<
 /// Pair whose bounding balls overlap (ball separation already failed). Returns
 /// (value, change, approximated, path, wasted seconds); path 2 split-Gauss, 3 touching, 4 near singular.
 pub(super) fn tet_near_fast(a: [[f64;3];4], b: [[f64;3];4], try_split: bool, check: &mut dyn FnMut() -> Result<()>) -> Result<(f64, f64, bool, u8, f64)> {
+    tet_near_fast_tol(a, b, try_split, 1e-10, check)
+}
+/// Point-potential tolerance of the cross-fill near path (`P7_CROSS_TET_TOL`, default 1e-6; `1e-10` or `legacy`
+/// restores the strict path). The entry only needs ~1e-3, and the ladder below accepts at 2e-3 successive change.
+pub(super) fn cross_tet_tolerance() -> f64 {
+    static TOL: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
+    *TOL.get_or_init(|| match std::env::var("P7_CROSS_TET_TOL").ok().as_deref() { Some("legacy") => 1e-10, Some(v) => v.parse::<f64>().ok().filter(|t| t.is_finite() && *t >= 1e-10 && *t <= 1e-5).unwrap_or(1e-6), None => 1e-6 })
+}
+pub(super) fn tet_near_fast_tol(a: [[f64;3];4], b: [[f64;3];4], try_split: bool, source_tolerance: f64, check: &mut dyn FnMut() -> Result<()>) -> Result<(f64, f64, bool, u8, f64)> {
     let touching = a.iter().any(|p| b.contains(p));
     let mut wasted = 0.;
     if !touching && try_split {
@@ -792,7 +801,7 @@ pub(super) fn tet_near_fast(a: [[f64;3];4], b: [[f64;3];4], try_split: bool, che
     let sing_t = Instant::now();
     // The analytic potential is cheaper and more robust on the better-shaped tetrahedron.
     let (target, source_tetra) = if prefer_reciprocal_source(a, b) { (b, a) } else { (a, b) };
-    let source = PointPotential::tetrahedron(source_tetra)?.with_cached_positive_geometry();
+    let source = PointPotential::tetrahedron(source_tetra)?.with_relaxed_tetra_tolerance(source_tolerance).with_cached_positive_geometry();
     // Ladder 6 -> 8 -> 12 -> 16: accept the order-8 value when it differs from order 6 by <= 2e-3.
     let mut previous = super::polyhedron::tetra_integral_checked(target, &source, 5, check)?;
     let mut change = f64::INFINITY;
@@ -819,7 +828,7 @@ pub(super) fn tet_near_fast_any(a: [[f64;3];4], b: [[f64;3];4], check: &mut dyn 
             return Ok((TetraCubature::new(a, order)?.direct_integral(&TetraCubature::new(b, order)?)?, 0., false, 1, 0.));
         }
     }
-    tet_near_fast(a, b, false, check)
+    tet_near_fast_tol(a, b, false, cross_tet_tolerance(), check)
 }
 /// Cache slots per fast-fill worker (each pins one target and cycles sources).
 const FAST_SLOTS: usize = 16;

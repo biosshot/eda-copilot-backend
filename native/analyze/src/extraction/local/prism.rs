@@ -115,12 +115,15 @@ pub(super) fn radial(k: f64) -> f64 {
     0.5 * (k.asinh() + k / (1_f64.hypot(k) + k.abs()))
 }
 
+/// Count of noise-level negative prism potentials clamped to zero (evidence).
+static NOISE_CLAMPS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 /// ∫_source dV'/|point-r'| [m²]. Signed triangle fans preserve outside points.
 pub fn point_potential(source: &Prism, point: [f64; 3], rule: &GaussRule) -> Result<f64> {
     if !point.iter().all(|x| x.is_finite()) {
         return Err(error("POINT_INPUT", "nonfinite evaluation point"));
     }
     let mut total = 0.;
+    let mut absolute = 0.;
     for edge in 0..3 {
         let a = source.triangle_m[edge];
         let b = source.triangle_m[(edge + 1) % 3];
@@ -144,9 +147,16 @@ pub fn point_potential(source: &Prism, point: [f64; 3], rule: &GaussRule) -> Res
                     - radial((source.z_m[0] - point[2]) / distance));
         }
         total += cross * value;
+        absolute += (cross * value).abs();
     }
     if total.is_finite() && total > 0. {
         Ok(total)
+    } else if total.is_finite() && total <= 0. && -total <= 1e-12 * absolute {
+        // Noise tier: a negative total below the rounding of the summed fan terms (1e-12 of their absolute
+        // sum) belongs to a vanishing source (thin sliver); its potential is zero within rounding.
+        let n = NOISE_CLAMPS.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+        if n.is_power_of_two() { eprintln!("P7_PRISM_POTENTIAL_NOISE clamps={n} total={total:e} absoluteTerms={absolute:e} tier=noise"); }
+        Ok(0.)
     } else {
         let [a, b, c] = source.triangle_m;
         let twice_area = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);

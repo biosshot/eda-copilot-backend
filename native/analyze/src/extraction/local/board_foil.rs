@@ -704,6 +704,7 @@ pub fn solve_checked(
     use serde_json::json;
     let port_count = geometry.ports.len();
     let axis = request.frequencies_hz;
+    let _request_memory = super::roi_fallback::RequestMemory::set(request.budget.max_memory_mi_b);
     let operator = CheckedOperator::HybridPlanarV3;
     let partition = mixed_conductor::PartitionPolicy::AutomaticHybridV1;
     operator.validate_partition(partition)?;
@@ -746,7 +747,8 @@ pub fn solve_checked(
     let mixed_grid = mixed_conductor::CheckedGrid {
         frequencies_hz: &axis,
         reference_ohm: &refs,
-        max_iterations: iterations,
+        // Continuation: the last 8 iterations run only while the residual keeps falling (see `enrichment_continues`).
+        max_iterations: iterations + if iterations == 16 && std::env::var("P7_ENRICHMENT_CONTINUATION").as_deref() != Ok("0") { super::foil_reduced::CONTINUATION_EXTRA } else { 0 },
     };
     if !geometry.cut_planes.is_empty() || geometry.allow_insulated_copper_cuts {
         return Err(error(
@@ -762,13 +764,29 @@ pub fn solve_checked(
     } else {
         None
     };
+    let mut shrunk = None;
     if skin.is_some() {
         // Apply the existing physical pad/closed copper and electrical-size
-        // guard before paying for a larger profiled mesh.
-        mixed_conductor::checked_reserve_policy(geometry, mixed_grid, skin, operator, partition)?;
+        // guard before paying for a larger profiled mesh. A failed electrical-size
+        // screen on the full ROI shrinks the domain to the channel neighbourhood
+        // (approximation tier); the screen stays a refusal when no neighbourhood fits.
+        if let Err(screen) = mixed_conductor::checked_reserve_policy(geometry, mixed_grid, skin, operator, partition) {
+            if !screen.contains("MIXED_FOIL_BAND") { return Err(screen); }
+            let fits = |candidate: &board_mesh::Request| {
+                mixed_conductor::checked_reserve_policy(candidate, mixed_grid, skin, operator, partition).is_ok()
+            };
+            match super::roi_electrical::shrink(board, geometry, &screen, fits)? {
+                Some(s) => shrunk = Some(s),
+                None => return Err(screen),
+            }
+        }
     }
+    let (mesh_geometry, geometry) = match &shrunk {
+        Some(s) => (&s.mesh, &s.solve),
+        None => (geometry, geometry),
+    };
     phase_trace("geometry-prepared", started, serde_json::json!({"ports": port_count, "frequencies": axis.len()}));
-    let mesh = board_mesh::build_profiled_hybrid(board, geometry, budget, remaining(started, wall)?, skin)?;
+    let mesh = board_mesh::build_profiled_hybrid(board, mesh_geometry, budget, remaining(started, wall)?, skin)?;
     phase_trace("mesh-built", started, json!({"nodes": mesh.mesh.nodes_m.len(), "tetrahedra": mesh.mesh.copper_tetrahedra.len(), "planarTriangles": mesh.planar_triangles.len(), "barrels": mesh.barrel_ids.len()}));
     let masks = mesh.hybrid_mesh_masks.clone();
     let coarsening = mesh.mesh_coarsening.clone();
@@ -785,6 +803,7 @@ pub fn solve_checked(
     checked["provenance"]["hybridMeshMasks"] = json!(masks);
     if let Some(c) = coarsening { checked["provenance"]["meshCoarsening"] = c; }
     if let Some(c) = roi_fallback { checked["provenance"]["roiFallback"] = c; }
+    if let Some(s) = &shrunk { checked["provenance"]["electricalRoi"] = s.evidence.clone(); }
     if let Some(c) = copper_normalization { checked["provenance"]["copperNormalization"] = c; }
     Ok(checked)
 }

@@ -365,6 +365,14 @@ fn harmonic(
             retained.insert(island[0]);
         }
     }
+    // Exact null directions of the free-node Laplacian (see weak_free_nodes): the cells see only a combination
+    // of the potentials of such nodes, so the potential of the second node is a pure gauge. It is held at zero
+    // in every harmonic mode and gets no mode of its own; the island constant still reaches it through the
+    // anchor mode. This changes no cell current.
+    let gauge: BTreeSet<usize> = weak_free_nodes(cells, n, &retained).into_iter().collect();
+    if !gauge.is_empty() {
+        eprintln!("P7_GAUGE_NODES_PINNED count={} nodes={:?} rule=exact-null-direction", gauge.len(), gauge.iter().take(16).collect::<Vec<_>>());
+    }
     let r = retained.len() + extra_modes;
     if wall != Duration::MAX && r > 1024 {
         return Err(error(
@@ -382,7 +390,8 @@ fn harmonic(
         eprintln!("P7_MIXED_MEMORY_STAGE stage=harmonic-admission potentials={n} currents={} retained={} reservedModes={extra_modes} modeCap={r} baseBytes={base} plannedBytes={plan} budgetBytes={}", cells.len(), retained.len(), budget.max_bytes);
     }
     budget.check(plan).map_err(|failure|format!("{failure}; stage=harmonic-admission potentials={n} currents={} modeCap={r} plannedBytes={plan} budgetBytes={}",cells.len(),budget.max_bytes))?;
-    let (peak, dc) = correction(cells, n, &retained, plan, budget, start, wall, None)?;
+    let fixed: BTreeSet<usize> = retained.union(&gauge).copied().collect();
+    let (peak, dc) = correction(cells, n, &fixed, plan, budget, start, wall, None)?;
     let retained: Vec<_> = retained.into_iter().collect();
     let mut voltage = vec![vec![0.; n]; retained.len()];
     let mut current = Vec::new();
@@ -482,6 +491,66 @@ fn complete_harmonic_current(
     Err(error("FOIL_REDUCTION", &format!("harmonic free residual failed after bounded refinement; history={history:?}")))
 }
 
+/// Free nodes with an exact null direction in the free-node Laplacian. Two free nodes a and b whose matrix rows
+/// are equal or exactly opposite (same columns, equal or negated values) give A(e_a -+ e_b) = 0: the cells see
+/// only a combination of their potentials. The second node of each such pair keeps its own coordinate, like a
+/// floating island, instead of an invented gauge. The structure found is reported by the caller.
+fn weak_free_nodes(cells: &[Cell], n: usize, retained: &BTreeSet<usize>) -> Vec<usize> {
+    let mut rows: Vec<BTreeMap<usize, f64>> = vec![BTreeMap::new(); n];
+    for c in cells {
+        for &(a, av) in &c.terms {
+            if retained.contains(&a) { continue; }
+            for &(b, bv) in &c.terms {
+                if !retained.contains(&b) { *rows[a].entry(b).or_insert(0.) += av * bv / c.resistance; }
+            }
+        }
+    }
+    let mut seen: BTreeMap<Vec<usize>, Vec<usize>> = BTreeMap::new();
+    let mut pinned = Vec::new();
+    for node in 0..n {
+        if retained.contains(&node) || rows[node].is_empty() { continue; }
+        let key: Vec<usize> = rows[node].keys().copied().collect();
+        let scale = rows[node].values().fold(0f64, |m, v| m.max(v.abs()));
+        let matches = |other: usize, sign: f64| rows[other].values().zip(rows[node].values()).all(|(x, y)| (x - sign * y).abs() <= 1e-9 * scale);
+        let group = seen.entry(key).or_default();
+        if group.iter().any(|&o| matches(o, 1.) || matches(o, -1.)) { pinned.push(node); } else { group.push(node); }
+    }
+    pinned
+}
+
+/// Component structure of the free-node Laplacian: connected components of the cell graph, how many
+/// hold no retained node (a floating component without a gauge) and how many nodes no cell touches.
+fn laplacian_structure_diagnostic(cells: &[Cell], n: usize, retained: &BTreeSet<usize>) {
+    let mut parents: Vec<_> = (0..n).collect();
+    let mut diag = vec![0f64; n];
+    let (mut min_r, mut max_r, mut bad_r) = (f64::INFINITY, 0f64, 0usize);
+    for c in cells {
+        if !(c.resistance > 0. && c.resistance.is_finite()) { bad_r += 1; }
+        min_r = min_r.min(c.resistance);
+        max_r = max_r.max(c.resistance);
+        let scale = c.terms.iter().fold(0f64, |m, t| m.max(t.1.abs()));
+        let active: Vec<_> = c.terms.iter().filter(|t| t.1.abs() > 1e-9 * scale).collect();
+        for &&(node, v) in &active { diag[node] += v * v / c.resistance; }
+        if let Some(&&(first, _)) = active.first() {
+            for &&(node, _) in &active {
+                let (a, b) = (root(&parents, first), root(&parents, node));
+                parents[b] = a;
+            }
+        }
+    }
+    let mut components = BTreeMap::<usize, (usize, usize)>::new();
+    for i in 0..n {
+        let e = components.entry(root(&parents, i)).or_default();
+        e.0 += 1;
+        e.1 += retained.contains(&i) as usize;
+    }
+    let floating: Vec<_> = components.values().filter(|c| c.1 == 0).map(|c| c.0).collect();
+    let max_diag = diag.iter().cloned().fold(0f64, f64::max);
+    let weak: Vec<_> = (0..n).filter(|i| !retained.contains(i) && diag[*i] <= 1e-12 * max_diag).collect();
+    eprintln!("P7_LAPLACIAN_STRUCTURE nodes={n} retained={} components={} componentSizes={:?} floatingComponents={} floatingSizes={:?} weakFreeNodes={} weakSample={:?} maxDiag={max_diag:e} cells={} nonpositiveResistance={bad_r} resistanceRange=[{min_r:e},{max_r:e}]",
+        retained.len(), components.len(), components.values().map(|c| (c.0, c.1)).collect::<Vec<_>>(), floating.len(), &floating[..floating.len().min(16)], weak.len(), &weak[..weak.len().min(8)], cells.len());
+}
+
 fn correction(
     cells: &[Cell],
     n: usize,
@@ -527,6 +596,9 @@ fn correction(
             },
         ));
     }
+    if next > 0 && std::env::var_os("P7_LAPLACIAN_DIAG").is_some() {
+        laplacian_structure_diagnostic(cells, n, retained);
+    }
     let factor = if next > 0 {
         let mut terms = Vec::with_capacity(cells.len() * 16);
         for c in cells {
@@ -543,6 +615,14 @@ fn correction(
         }
         let matrix = SparseColMat::<usize, f64>::try_new_from_triplets(next, next, &terms)
             .map_err(|e| error("FOIL_REDUCTION", &e.to_string()))?;
+        if let Some(path) = std::env::var_os("P7_LAPLACIAN_DUMP") {
+            // Development aid: free-node upper triplets and the free-to-full node map for offline spectrum checks.
+            let mut text = String::new();
+            for t in &terms { text.push_str(&format!("{} {} {:e}\n", t.row, t.col, t.val)); }
+            let _ = std::fs::write(&path, text);
+            let map: String = free_map.iter().enumerate().filter_map(|(i, f)| f.map(|j| format!("{j} {i}\n"))).collect();
+            let _ = std::fs::write(std::path::Path::new(&path).with_extension("map"), map);
+        }
         drop(terms);
         Some(sparse_potential::factor(&matrix, plan, budget, &[])?)
     } else {
@@ -656,12 +736,40 @@ fn magnetic(
         refinement,
     })
 }
+/// Three-tier decision for a projected-reciprocity asymmetry (relative to the largest diagonal): up to `gate` (1e-9)
+/// the entry is kept exactly, up to 1e-6 it is noise and symmetrized, up to 1e-3 it is an approximation and
+/// symmetrized, above that it is refused. `P7_RECIPROCITY_POLICY=strict` keeps the single `gate` refusal.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub(super) enum ReciprocityTier { Exact, Noise, Approximation, Refused }
+impl ReciprocityTier {
+    pub(super) fn name(self) -> &'static str { match self { Self::Exact => "exact", Self::Noise => "noise", Self::Approximation => "approximation", Self::Refused => "refused" } }
+}
+pub(super) fn reciprocity_tier(err: f64, gate: f64, strict: bool) -> ReciprocityTier {
+    if err <= gate { ReciprocityTier::Exact }
+    else if strict { ReciprocityTier::Refused }
+    else if err <= 1e-6 { ReciprocityTier::Noise }
+    else if err <= 1e-3 { ReciprocityTier::Approximation }
+    else { ReciprocityTier::Refused }
+}
+pub(super) fn reciprocity_tier_of(max_err: f64) -> &'static str {
+    reciprocity_tier(max_err, 1e-9, false).name()
+}
+/// Extra enrichment iterations granted past the requested 16 (`max_iterations` = 16 + this) while the residual falls.
+pub(super) const CONTINUATION_EXTRA: usize = 8;
+/// Continuation rule: up to the requested cap (`max - CONTINUATION_EXTRA` when the grid carries the extension) the loop
+/// always continues; beyond it only while the worst KVL fell at least 2x over the last 4 iterations.
+fn enrichment_continues(iteration: usize, max_iterations: usize, history: &[serde_json::Value]) -> bool {
+    if max_iterations <= 16 || iteration < 16 { return true; }
+    let kvl = |i: usize| history.get(i).and_then(|h| h["maxKvlRelative"].as_f64());
+    match (kvl(iteration), kvl(iteration - 4)) { (Some(now), Some(before)) => now * 2. <= before, _ => false }
+}
 fn congruence(
     basis: &[Vec<f64>],
     action: &[Vec<f64>],
     gate: f64,
     label: &str,
 ) -> Result<(Vec<(usize, usize, f64)>, f64)> {
+    let strict = std::env::var("P7_RECIPROCITY_POLICY").as_deref() == Ok("strict");
     let scale = (0..basis.len())
         .map(|i| sum(&basis[i], &action[i]).abs())
         .fold(0., f64::max);
@@ -672,13 +780,16 @@ fn congruence(
             let a = sum(&basis[i], &action[j]);
             let b = sum(&basis[j], &action[i]);
             let err = (a - b).abs() / scale.max(f64::MIN_POSITIVE);
-            if !a.is_finite() || !b.is_finite() || err > gate {
+            let tier = reciprocity_tier(err, gate, strict);
+            if !a.is_finite() || !b.is_finite() || tier == ReciprocityTier::Refused {
                 return Err(error(
                     "FOIL_REDUCTION",
                     &format!("{label} projected reciprocity {err:e}"),
                 ));
             }
             error_max = error_max.max(err);
+            // Exact pairs keep their bits; noise and approximation pairs are symmetrized.
+            let a = if tier == ReciprocityTier::Exact { a } else { 0.5 * (a + b) };
             if a != 0. {
                 entries.push((i, j, a));
                 if i != j {
@@ -686,6 +797,9 @@ fn congruence(
                 }
             }
         }
+    }
+    if error_max > gate {
+        eprintln!("P7_RECIPROCITY_TIER label={label} maxRelative={error_max:e} tier={} symmetrized=true", reciprocity_tier(error_max, gate, strict).name());
     }
     Ok((entries, error_max))
 }
@@ -2563,13 +2677,15 @@ impl ReducedSpace {
                         "quality":{"maxKclRelative":max_kcl,"maxKvlRelative":max_kvl,
                                    "maxFullKvlUncertaintyRelative":max_kvl_uncertainty,"maxColumnPowerBalanceErrorW":max_power,
                                    "residualPolicy":{"tier":residual_tier,
-                                                     "limit":residual_limit,"kvlUncertaintyAdvisory":self.approximate_magnetic}},
+                                                     "limit":residual_limit,"kvlUncertaintyAdvisory":self.approximate_magnetic},
+                                   "reciprocityPolicy":{"tier":reciprocity_tier_of(self.max_electric_reciprocity),"maxElectricRelative":self.max_electric_reciprocity,
+                                                        "gates":[1e-9,1e-6,1e-3],"action":"above 1e-9 the projected matrix is symmetrized"}},
                     }));
                 }
                 if !self.approximate_magnetic && worst.kvl_uncertainty_relative > RESIDUAL_LIMIT {
                     return Err(error("HIERARCHICAL_MAGNETIC_UNCERTIFIED","fixed geometry/order far-field enclosure exceeds original full KVL gate; no physical response admitted"));
                 }
-                if iteration == grid.max_iterations {
+                if iteration == grid.max_iterations || !enrichment_continues(iteration, grid.max_iterations, &history) {
                     return Err(worst.checked_with(residual_limit).unwrap_err());
                 }
                 drop(parameters);
@@ -3632,7 +3748,7 @@ pub(super) fn cross_fast_entry(prism:&super::prism::Prism,tetra:[[f64;3];4],ma:&
     let t=Instant::now();
     if let Some((v,change))=super::planar_operator::prism_tet_gauss(prism,tetra) {return Ok(CrossEntry{value:v,path:1,change,approximated:false,wasted:0.});}
     let wasted=t.elapsed().as_secs_f64();
-    if !{ let [pa,pb,pc]=prism.triangle_m; tetra.iter().any(|v|[[pa[0],pa[1]],[pb[0],pb[1]],[pc[0],pc[1]]].contains(&[v[0],v[1]])&&(v[2]==prism.z_m[0]||v[2]==prism.z_m[1])) } {
+    if !{ let [pa,pb,pc]=prism.triangle_m; tetra.iter().any(|v|[[pa[0],pa[1]],[pb[0],pb[1]],[pc[0],pc[1]]].contains(&[v[0],v[1]])&&(v[2]==prism.z_m[0]||v[2]==prism.z_m[1])) } && !super::planar_operator::prism_tet_in_contact(prism,tetra) {
         let t=Instant::now();let mut budget=256;
         if let Some(v)=super::planar_operator::prism_tet_split(prism,tetra,&mut budget) {return Ok(CrossEntry{value:v,path:1,change:1e-4,approximated:false,wasted:0.});}
         let _=t;
@@ -3649,6 +3765,16 @@ pub(super) fn cross_fast_entry(prism:&super::prism::Prism,tetra:[[f64;3];4],ma:&
     }
     let _=budget;
     let touching=tetra.iter().any(|v|{let [a,b,c]=prism.triangle_m;let d=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);let l1=((b[1]-c[1])*(v[0]-c[0])+(c[0]-b[0])*(v[1]-c[1]))/d;let l2=((c[1]-a[1])*(v[0]-c[0])+(a[0]-c[0])*(v[1]-c[1]))/d;let e=1e-9;l1>=-e&&l2>=-e&&l1+l2<=1.+e&&v[2]>=prism.z_m[0]-1e-12&&v[2]<=prism.z_m[1]+1e-12});
+    if let Ok(path)=std::env::var("P7_CROSS_DUMP") {
+        static N:std::sync::atomic::AtomicUsize=std::sync::atomic::AtomicUsize::new(0);
+        let n=N.fetch_add(1,std::sync::atomic::Ordering::Relaxed);
+        if n%20==0 && n<30000 {
+            use std::io::Write;
+            if let Ok(mut f)=std::fs::OpenOptions::new().create(true).append(true).open(path) {
+                let _=writeln!(f,"{}",serde_json::json!({"triangle":prism.triangle_m,"z":prism.z_m,"tetra":tetra,"value":total,"change":change,"seconds":t.elapsed().as_secs_f64(),"touching":touching}));
+            }
+        }
+    }
     Ok(CrossEntry{value:total,path:if touching {2} else {3},change,approximated,wasted})
 }
 /// Dense prism x tetra table (fast mode): filled once, replaces the cross-pair loop.
@@ -3715,6 +3841,7 @@ fn cross_dense_pass(table:&[f64],np:usize,nt:usize,threads:usize,da:&[[Vec<f64>;
     Some((pa,rows))
 }
 static CROSS_PROF:[std::sync::atomic::AtomicU64;4]=[const{std::sync::atomic::AtomicU64::new(0)};4];
+static CROSS_COUNT:[std::sync::atomic::AtomicU64;4]=[const{std::sync::atomic::AtomicU64::new(0)};4];
 struct CompactMixedMagnetic {
     supports:Vec<super::planar_operator::SparseSupport>,
     dimensions:usize,
@@ -3830,6 +3957,7 @@ impl CompactMixedMagnetic {
                 let mut run=||->Result<()> { loop {
                     if abort.load(Relaxed) {return Ok(());}
                     let k=next.fetch_add(1,Relaxed);if k>=nt {return Ok(());}
+                    if k%(nt/10).max(1)==0 {eprintln!("P7_COMPACT_CROSS_PROGRESS row={k} of={nt} elapsed={:.1} pathCounts={:?} pathCpuS={:?}",started.elapsed().as_secs_f64(),std::array::from_fn::<u64,4,_>(|i|CROSS_COUNT[i].load(Relaxed)),std::array::from_fn::<f64,4,_>(|i|CROSS_PROF[i].load(Relaxed) as f64*1e-9));}
                     let mut row=rows[k].lock().map_err(|_|error("MAGNETIC_CONFIG","cross row poisoned"))?;
                     for a in 0..np {
                         check_time(start,wall)?;
@@ -3837,8 +3965,10 @@ impl CompactMixedMagnetic {
                         let e=cross_fast_entry(&supports[a].prism,local[k].tetra,&moments[a],&moments[np+k],budget,start,wall)?;
                         if let Some(t0)=t0 {loc[(e.path as usize).min(3)]+=t0.elapsed().as_nanos() as u64;}
                         row[a]=e.value;
+                        if prof {CROSS_COUNT[(e.path as usize).min(3)].fetch_add(1,Relaxed);}
                         match e.path {0=>t.0+=1,1=>t.1+=1,_=>t.2+=1}
                         t.4=t.4.max(e.change);if e.approximated {t.3+=1;}
+                        if prof && a%1024==1023 {for (slot,v) in loc.iter_mut().enumerate() {CROSS_PROF[slot].fetch_add(*v,Relaxed);*v=0;}}
                     }
                 }};
                 if let Err(e)=run() {abort.store(true,Relaxed);failure.lock().unwrap().get_or_insert(e);}
@@ -4329,5 +4459,50 @@ mod cross_dense_pass_tests {
             }}
         }
         assert!(cross_dense_pass(&table,np,nt,2,&da,&ea,&dt,&et,&|| false).is_none());
+    }
+}
+
+#[cfg(test)]
+#[path = "cross_touching_test.rs"]
+mod cross_touching_test;
+
+#[cfg(test)]
+mod reciprocity_tier_tests {
+    use super::*;
+    #[test]
+    fn tiers_follow_the_three_gates_and_symmetrize() {
+        assert_eq!(reciprocity_tier(1e-10, 1e-9, false), ReciprocityTier::Exact);
+        assert_eq!(reciprocity_tier(3.6e-7, 1e-9, false), ReciprocityTier::Noise);
+        assert_eq!(reciprocity_tier(5e-5, 1e-9, false), ReciprocityTier::Approximation);
+        assert_eq!(reciprocity_tier(2e-3, 1e-9, false), ReciprocityTier::Refused);
+        assert_eq!(reciprocity_tier(3.6e-7, 1e-9, true), ReciprocityTier::Refused);
+        assert_eq!(reciprocity_tier_of(4e-5), "approximation");
+        // One asymmetric pair: C01 = 1.0, C10 = 1.0 + 4e-7 -> noise tier, entries equal to the mean.
+        let basis = vec![vec![1., 0.], vec![0., 1.]];
+        let action = vec![vec![1., 1.], vec![1. + 4e-7, 1.]];
+        let (entries, err) = congruence(&basis, &action, 1e-9, "C").unwrap();
+        assert!((err - 4e-7).abs() < 1e-12);
+        let c01 = entries.iter().find(|e| e.0 == 0 && e.1 == 1).unwrap().2;
+        let c10 = entries.iter().find(|e| e.0 == 1 && e.1 == 0).unwrap().2;
+        assert_eq!(c01, c10);
+        assert!((c01 - (1. + 2e-7)).abs() < 1e-12);
+        let wide = vec![vec![1., 1.], vec![1.01, 1.]];
+        assert!(congruence(&basis, &wide, 1e-9, "C").is_err());
+    }
+}
+
+#[cfg(test)]
+mod continuation_tests {
+    use super::*;
+    #[test]
+    fn continuation_requires_a_2x_fall_over_four_iterations_past_the_requested_cap() {
+        let h=|v:&[f64]|v.iter().map(|k|serde_json::json!({"maxKvlRelative":k})).collect::<Vec<_>>();
+        let falling=h(&[1.,1.,1.,1.,1.,1.,1.,1.,0.5,0.3,0.25,0.1,0.05,0.04,0.02,0.009,0.0058]);
+        assert!(enrichment_continues(16,24,&falling));
+        let flat=h(&[1.;17]);
+        assert!(!enrichment_continues(16,24,&flat));
+        assert!(enrichment_continues(8,16,&flat));
+        assert!(enrichment_continues(8,24,&flat));
+        assert!(enrichment_continues(16,16,&flat));
     }
 }

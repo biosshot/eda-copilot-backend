@@ -1397,7 +1397,7 @@ pub(super) fn checked_reserve_policy(request:&board_mesh::Request,grid:CheckedGr
         || reference_ohm
             .iter()
             .any(|r| !r.is_finite() || *r <= 0. || !(1. / r).is_finite())
-        || !(1..=16).contains(&max_iterations)
+        || !(1..=16 + foil_reduced::CONTINUATION_EXTRA).contains(&max_iterations)
     {
         return Err(error(
             "MIXED_FOIL_GRID",
@@ -1437,9 +1437,11 @@ pub(super) fn checked_reserve_policy(request:&board_mesh::Request,grid:CheckedGr
     let size =
         2. * std::f64::consts::PI * maximum / 299792458. * dx.hypot(dy).hypot(dz) * epsilon.sqrt();
     if !size.is_finite() || size > 0.1 {
+        let diagonal = dx.hypot(dy).hypot(dz);
+        let fmax = 0.1 * 299792458. / (2. * std::f64::consts::PI * diagonal * epsilon.sqrt());
         return Err(error(
             "MIXED_FOIL_BAND",
-            "quasistatic electrical-size screen failed",
+            &format!("quasistatic electrical-size screen failed: size {size:.3} > 0.1 at {maximum:.4e} Hz for a region of diagonal {:.2} mm; maximum valid frequency for this region {fmax:.4e} Hz", diagonal * 1e3),
         ));
     }
 

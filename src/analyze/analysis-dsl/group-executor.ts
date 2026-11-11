@@ -122,7 +122,7 @@ export function createGroupExecutor(solve = solveGroup) {
       diagnostics.push({ code: 'CHANNEL_GROUP_NO_APPLICABLE_AC', severity: 'warning', message: 'No requested AC frequency lies in the common board and component applicability.' });
       return { ...base, solution: json(extraction) };
     }
-    const budget = { maxSeconds: 300, maxMemoryMiB: 2048 };
+    const budget = { maxSeconds: config.budget?.maxSeconds ?? 300, maxMemoryMiB: config.budget?.maxMemoryMiB ?? 2048 };
     let solved: ReturnType<typeof solve>;
     try {
       solved = solve(task.board, geometry, terminalRequest, seeds, budget, requestedIntervalHz);

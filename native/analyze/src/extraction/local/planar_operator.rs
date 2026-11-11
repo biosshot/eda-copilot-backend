@@ -303,7 +303,7 @@ pub(super) fn pair_integral(a: &Prism, b: &Prism, order: usize, start: Instant, 
     pair_integral_with(a,b,order,start,limit,PAIR_LEGACY)
 }
 /// Optional per-class call counts and wall nanoseconds of pair integrals (`P7_PAIR_PROFILE=1`).
-pub(super) const PROF_NAMES: [&str; 14] = ["moment", "separatedFast", "splitFast", "general", "self", "rectangle", "sharedEdge", "sharedVertex", "axialVolume", "acaTotal", "acaFallbackWasted", "nearDense", "unused12", "unused13"];
+pub(super) const PROF_NAMES: [&str; 14] = ["moment", "separatedFast", "splitFast", "general", "self", "rectangle", "sharedEdge", "sharedVertex", "axialVolume", "acaTotal", "acaFallbackWasted", "nearDense", "splitFastFailed", "splitLeaves"];
 static PROF: [std::sync::atomic::AtomicU64; 28] = [const { std::sync::atomic::AtomicU64::new(0) }; 28];
 pub(super) fn prof_on() -> bool { static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new(); *ON.get_or_init(|| std::env::var("P7_PAIR_PROFILE").as_deref() == Ok("1")) }
 pub(super) fn prof_add(slot: usize, since: Instant) { PROF[2 * slot].fetch_add(since.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed); PROF[2 * slot + 1].fetch_add(1, std::sync::atomic::Ordering::Relaxed); }
@@ -321,10 +321,15 @@ pub(super) fn pair_integral_compact(a: &Prism, b: &Prism, order: usize, start: I
     let (ca,cb)=if swap {(b,a)} else {(a,b)};
     { let _g=ProfGuard::new(1); if let Some(r)=separated_pair_fast(ca,cb,PAIR_COMPACT) { return Ok(r); } }
     let (pa,pb)=(Piece::of(ca),Piece::of(cb));
-    if !pa.touches(&pb) {
+    if !pa.in_contact(&pb) {
         let _g=ProfGuard::new(2);
         let mut budget=SPLIT_PAIR_BUDGET;
-        if let Some((value,error))=split_pair_fast(&pa,&pb,PAIR_COMPACT,&mut budget) { return Ok((value,5,error/value)); }
+        let began=if prof_on() {Some(Instant::now())} else {None};
+        if let Some((value,error))=split_pair_fast(&pa,&pb,PAIR_COMPACT,&mut budget) {
+            if prof_on() { PROF[2*13].fetch_add(1,std::sync::atomic::Ordering::Relaxed); PROF[2*13+1].fetch_add((SPLIT_PAIR_BUDGET-budget) as u64,std::sync::atomic::Ordering::Relaxed); }
+            return Ok((value,5,error/value));
+        }
+        if let Some(t)=began { prof_add(12,t); }
     }
     let _g=ProfGuard::new(3);
     pair_integral_with(a,b,order,start,limit,PAIR_COMPACT)
@@ -335,6 +340,22 @@ struct Piece { t:[[f64;2];3], z:[f64;2] }
 impl Piece {
     fn of(p:&Prism)->Self { Self{t:p.triangle_m,z:p.z_m} }
     fn touches(&self,o:&Self)->bool { self.z[0]<=o.z[1] && o.z[0]<=self.z[1] && self.t.iter().any(|v|o.t.contains(v)) }
+    /// Contact in the rounding sense: the vertical extents meet and the triangles are within 1e-6 of their
+    /// diameter in the plane (equal vertices, a vertex on an edge, or vertices that differ only by mesh noise).
+    /// Bisection never separates such pieces, so the split path would only burn its whole budget.
+    fn in_contact(&self,o:&Self)->bool {
+        if !(self.z[0]<=o.z[1] && o.z[0]<=self.z[1]) { return false; }
+        if self.touches(o) { return true; }
+        let tol=1e-6*self.diameter_xy().max(o.diameter_xy());
+        let near=|p:[f64;2],q:&[[f64;2];3]|(0..3).any(|k|{
+            let (a,b)=(q[k],q[(k+1)%3]);let e=[b[0]-a[0],b[1]-a[1]];let w=[p[0]-a[0],p[1]-a[1]];
+            let l2=e[0]*e[0]+e[1]*e[1];
+            let u=if l2>0. {((w[0]*e[0]+w[1]*e[1])/l2).clamp(0.,1.)} else {0.};
+            (w[0]-u*e[0]).hypot(w[1]-u*e[1])<=tol
+        });
+        self.t.iter().any(|&v|near(v,&o.t)) || o.t.iter().any(|&v|near(v,&self.t))
+    }
+    fn diameter_xy(&self)->f64 { (0..3).map(|i|(self.t[(i+1)%3][0]-self.t[i][0]).hypot(self.t[(i+1)%3][1]-self.t[i][1])).fold(0.,f64::max) }
     fn longest(&self)->(f64,usize) {
         let mut best=(self.z[1]-self.z[0],3);
         for k in 0..3 { let (p,q)=(self.t[k],self.t[(k+1)%3]); let e=(p[0]-q[0]).hypot(p[1]-q[1]); if e>best.0 {best=(e,k);} }
@@ -346,6 +367,45 @@ impl Piece {
         let mid=[0.5*(p[0]+q[0]),0.5*(p[1]+q[1])];
         [Self{t:[p,mid,r],z:self.z},Self{t:[mid,q,r],z:self.z}]
     }
+}
+/// A prism and a tetrahedron are in contact in the rounding sense when their vertical extents meet and the
+/// triangle meets the tetrahedron's plan-view hull (convex separating-axis test with a 1e-6 relative tolerance).
+/// Conservative: it may flag a pair that is separated in 3D, never one that bisection could separate by contact.
+pub(super) fn prism_tet_in_contact(p:&Prism,t:[[f64;3];4])->bool {
+    let (zlo,zhi)=t.iter().fold((f64::INFINITY,f64::NEG_INFINITY),|(l,h),v|(l.min(v[2]),h.max(v[2])));
+    let scale=diameter(p).max(zhi-zlo).max(p.z_m[1]-p.z_m[0]);
+    let tol=1e-6*scale;
+    if zlo>p.z_m[1]+tol || p.z_m[0]>zhi+tol { return false; }
+    let tri=p.triangle_m.to_vec();
+    let pts:Vec<[f64;2]>=t.iter().map(|v|[v[0],v[1]]).collect();
+    // Convex hull (monotone chain), counter-clockwise.
+    let mut s=pts.clone(); s.sort_by(|a,b|a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));
+    let cross=|o:[f64;2],a:[f64;2],b:[f64;2]|(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+    let mut hull:Vec<[f64;2]>=Vec::new();
+    for pass in 0..2 {
+        let start=hull.len();
+        let iter:Vec<[f64;2]>=if pass==0 {s.clone()} else {s.iter().rev().copied().collect()};
+        for q in iter {
+            while hull.len()>=start+2 && cross(hull[hull.len()-2],hull[hull.len()-1],q)<=0. { hull.pop(); }
+            hull.push(q);
+        }
+        hull.pop();
+    }
+    if hull.len()<3 { return true; }
+    let mut ccw=tri.clone();
+    if cross(ccw[0],ccw[1],ccw[2])<0. { ccw.swap(1,2); }
+    for poly in [&hull,&ccw] {
+        for k in 0..poly.len() {
+            let (a,b)=(poly[k],poly[(k+1)%poly.len()]);
+            let e=[b[0]-a[0],b[1]-a[1]];let len=e[0].hypot(e[1]);
+            if len==0. { continue; }
+            let n=[e[1]/len,-e[0]/len]; // outward normal for counter-clockwise polygons
+            let gap=|q:&[[f64;2]]|q.iter().map(|v|(v[0]-a[0])*n[0]+(v[1]-a[1])*n[1]).fold(f64::INFINITY,f64::min);
+            let other:&[[f64;2]]=if std::ptr::eq(poly,&hull) {&ccw} else {&hull};
+            if gap(other)>tol { return false; }
+        }
+    }
+    true
 }
 /// Bisections allowed per pair before falling back to the general integrator.
 const SPLIT_PAIR_BUDGET:usize=128;
@@ -518,9 +578,30 @@ fn split_thin_pair(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Du
 fn retriable_pair_error(e: &str) -> bool {
     e.contains("PLANAR_UNRESOLVED") || e.contains("QUADRATURE_RANGE")
 }
+static SLIVER_NOISE_PAIRS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+/// Number of pairs with a rounding-level sliver prism that were evaluated as a point mass (noise tier).
+pub(super) fn sliver_noise_pairs() -> usize { SLIVER_NOISE_PAIRS.load(std::sync::atomic::Ordering::Relaxed) }
+/// Triangle whose area is at rounding level (<= 1e-12) of its squared diameter: its volume is a noise-level
+/// fraction of any neighbour's, and bisecting the pair only repeats the same rounding noise at every depth.
+fn is_rounding_sliver(p: &Prism) -> bool { let d = diameter(p); p.volume_m3 / (p.z_m[1] - p.z_m[0]) <= 1e-12 * d * d }
+/// Point-mass value of a rounding-level sliver against the other prism: volume times the exact point potential
+/// of the other prism at the sliver centroid. None when the point cannot be evaluated (caller subdivides).
+fn sliver_noise_pair(a: &Prism, b: &Prism) -> Option<(f64,usize,f64)> {
+    let (s, o) = match (is_rounding_sliver(a), is_rounding_sliver(b)) { (true, false) => (a, b), (false, true) => (b, a), (true, true) => (a, b), (false, false) => return None };
+    let t = s.triangle_m;
+    let c = [(t[0][0] + t[1][0] + t[2][0]) / 3., (t[0][1] + t[1][1] + t[2][1]) / 3., 0.5 * (s.z_m[0] + s.z_m[1])];
+    let rule = prism::cached_rule(8).ok()?;
+    let potential = prism::point_potential(o, c, &rule).ok()?;
+    let value = s.volume_m3 * potential;
+    if !value.is_finite() || value < 0. { return None; }
+    let n = SLIVER_NOISE_PAIRS.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+    if n.is_power_of_two() { eprintln!("P7_SLIVER_PAIR_NOISE pairs={n} sliverVolumeM3={:e} value={value:e} tier=noise", s.volume_m3); }
+    Some((value, 0, 0.))
+}
 pub(super) fn pair_integral_with(a: &Prism, b: &Prism, order: usize, start: Instant, limit: Duration, tol: PairTolerance) -> Result<(f64,usize,f64)> {
     match pair_integral_inner(a, b, order, start, limit, tol) {
         Err(e) if retriable_pair_error(&e) => {
+            if let Some(noise) = sliver_noise_pair(a, b) { return Ok(noise); }
             let n = THIN_SPLIT_PAIRS.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
             if n.is_power_of_two() { eprintln!("P7_THIN_PAIR_SPLIT pairs={n} (prism pair integral subdivided: {e})"); }
             split_thin_pair(a, b, order, start, limit, tol, 0)
@@ -610,6 +691,20 @@ mod tests {
         assert!((direct - reference).abs() <= 1e-6 * reference, "direct {direct:e} reference {reference:e}");
     }
     use super::*;
+    #[test]
+    fn rounding_sliver_pair_is_a_point_mass_and_tet_contact_is_conservative() {
+        let big=Prism::new("b".into(),[[0.,0.],[1e-3,0.],[0.,1e-3]],[0.,17e-6]).unwrap();
+        let sliver=Prism::new("s".into(),[[2e-3,0.],[2e-3+1.5e-5,0.],[2e-3+7e-6,1e-25]],[0.,17e-6]).unwrap();
+        assert!(is_rounding_sliver(&sliver)&&!is_rounding_sliver(&big));
+        let (v,_,c)=sliver_noise_pair(&big,&sliver).unwrap();
+        assert!(v>0.&&c==0.);
+        let t=[[0.,0.,0.],[1e-3,0.,0.],[0.,1e-3,0.],[0.,0.,17e-6]];
+        assert!(prism_tet_in_contact(&big,t));
+        let far=[[5e-3,0.,0.],[6e-3,0.,0.],[5e-3,1e-3,0.],[5e-3,0.,17e-6]];
+        assert!(!prism_tet_in_contact(&big,far));
+        let above=[[0.,0.,1e-3],[1e-3,0.,1e-3],[0.,1e-3,1e-3],[0.,0.,2e-3]];
+        assert!(!prism_tet_in_contact(&big,above));
+    }
     #[test]
     fn triangle_overlap_distinguishes_contact_and_interior() {
         let a = [[0.,0.],[1.,0.],[0.,1.]];
