@@ -203,6 +203,15 @@ impl PointPotential {
         self.at_diagnostic(point).map(|v| v.value_m2)
     }
 
+    /// Loosen the source/roundoff budget (up to 1e-5) for pair ladders that only need ~1e-3 of the entry: points whose
+    /// analytic summation cancels by less than tolerance/(64 eps) stay analytic, and the positive-rule fallback
+    /// stops at the looser refinement estimate. Only for tetra sources; production defaults are unchanged.
+    pub(super) fn with_relaxed_tetra_tolerance(mut self, tolerance: f64) -> Self {
+        if self.tetra.is_some() && tolerance.is_finite() && tolerance > self.tetra_tolerance && tolerance <= 1e-5 {
+            self.tetra_tolerance = tolerance;
+        }
+        self
+    }
     /// Tighten the internal source/roundoff budget for an independent reference.
     /// Existing production defaults and all target/reciprocity guards remain.
     pub fn with_tighter_tetra_tolerance(mut self, tolerance: f64) -> Result<Self> {

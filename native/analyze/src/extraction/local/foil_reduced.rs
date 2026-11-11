@@ -3729,6 +3729,16 @@ pub(super) fn cross_fast_entry(prism:&super::prism::Prism,tetra:[[f64;3];4],ma:&
     }
     let _=budget;
     let touching=tetra.iter().any(|v|{let [a,b,c]=prism.triangle_m;let d=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);let l1=((b[1]-c[1])*(v[0]-c[0])+(c[0]-b[0])*(v[1]-c[1]))/d;let l2=((c[1]-a[1])*(v[0]-c[0])+(a[0]-c[0])*(v[1]-c[1]))/d;let e=1e-9;l1>=-e&&l2>=-e&&l1+l2<=1.+e&&v[2]>=prism.z_m[0]-1e-12&&v[2]<=prism.z_m[1]+1e-12});
+    if let Ok(path)=std::env::var("P7_CROSS_DUMP") {
+        static N:std::sync::atomic::AtomicUsize=std::sync::atomic::AtomicUsize::new(0);
+        let n=N.fetch_add(1,std::sync::atomic::Ordering::Relaxed);
+        if n%20==0 && n<30000 {
+            use std::io::Write;
+            if let Ok(mut f)=std::fs::OpenOptions::new().create(true).append(true).open(path) {
+                let _=writeln!(f,"{}",serde_json::json!({"triangle":prism.triangle_m,"z":prism.z_m,"tetra":tetra,"value":total,"change":change,"seconds":t.elapsed().as_secs_f64(),"touching":touching}));
+            }
+        }
+    }
     Ok(CrossEntry{value:total,path:if touching {2} else {3},change,approximated,wasted})
 }
 /// Dense prism x tetra table (fast mode): filled once, replaces the cross-pair loop.
@@ -4415,3 +4425,7 @@ mod cross_dense_pass_tests {
         assert!(cross_dense_pass(&table,np,nt,2,&da,&ea,&dt,&et,&|| false).is_none());
     }
 }
+
+#[cfg(test)]
+#[path = "cross_touching_test.rs"]
+mod cross_touching_test;
