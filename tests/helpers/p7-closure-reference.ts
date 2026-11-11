@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
-export function verifyHash(path:string,expected:string){if(createHash('sha256').update(readFileSync(path)).digest('hex')!==expected)throw Error('HASH_MISMATCH '+path);}
+/** A Windows autocrlf checkout changes line endings; a recorded hash matches the raw bytes or the LF-folded text. */
+export function verifyHash(path:string,expected:string){const raw=readFileSync(path),sha=(b:Buffer)=>createHash('sha256').update(b).digest('hex');if(sha(raw)!==expected&&sha(Buffer.from(raw.toString('latin1').replace(/\r\n/g,'\n'),'latin1'))!==expected)throw Error('HASH_MISMATCH '+path);}
 export function compareValue(actual:number,reference:number,floor:number,tolerance=.08){if(!Number.isFinite(actual)||!Number.isFinite(reference)||floor<=0)throw Error('INVALID_VALUE');const error=Math.abs(actual-reference)/Math.max(Math.abs(reference),floor);return {actual,reference,error,status:error<=tolerance?'pass':'fail'};}
 export function validateControl(v:any,axis:number[],ports:string[]){
  if(v.status!=='complete')throw Error('SOLVER_NOT_COMPLETE '+JSON.stringify(v.diagnostics));
