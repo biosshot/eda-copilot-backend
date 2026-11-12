@@ -12,18 +12,33 @@ type ReturnSearchStep = ReturnType<typeof summarizeReturnBoundary> & {
  domainScale:number; observationBoundsMm:unknown; solvedRoiMm:AutoFoilPlan['roiMm'];
 };
 
+export type TruncatedDomainPolicy={tier:'truncated';unresolvedReturnFraction:number;limit:number;roiMode:string;marginMm:number|null;gate:number};
 export type BoardFoilRunReport = BoardFoilReport & {
+ /** Present only on a truncated-domain model (budget-shrunken domain, return current not resolved to the 1% gate). */
+ quality:BoardFoilReport['quality']&{domainPolicy?:TruncatedDomainPolicy};
  jointSensitivity?: ReturnType<typeof auditBoardFoilGrid>;
  frequencyAudit?: ReturnType<typeof auditBoardFoilFrequency>;
- returnSearch?: {policy:'internal-guard-flux-v1';status:'passed';threshold:number;absoluteFloorA:number;steps:ReturnSearchStep[]};
+ returnSearch?: {policy:'internal-guard-flux-v1';status:'passed'|'truncated';threshold:number;absoluteFloorA:number;steps:ReturnSearchStep[]};
  /** Non-enumerable caller context. It never enters serialized reports. */
  resolvedPlan?:AutoFoilPlan;
 };
 
+export const DEFAULT_MAX_UNRESOLVED_RETURN=0.10;
+
+/** Return-gate decision. A full-domain solve keeps the 1% gate (expand while it fails). A budget-shrunken domain cannot
+ * be enlarged, so it is flagged "truncated" up to `limit` of unresolved return current and refused above it. */
+export function returnGateDecision(passed:boolean,maximumRelative:number,shrunk:boolean,limit:number):'passed'|'expand'|'truncated'|'refuse' {
+ if(passed)return 'passed';
+ if(!shrunk)return 'expand';
+ return maximumRelative<=limit?'truncated':'refuse';
+}
+
 export function runAutoFoil(
- plan:AutoFoilPlan, frequenciesHz:number[], budget:{maxSeconds:number;maxMemoryMiB:number},
+ plan:AutoFoilPlan, frequenciesHz:number[], budgetIn:{maxSeconds:number;maxMemoryMiB:number;maxUnresolvedReturn?:number},
  interval:FrequencyInterval|undefined, execute:(problem:BoardFoilProblem)=>BoardFoilReport,
 ): BoardFoilRunReport {
+ const {maxUnresolvedReturn=DEFAULT_MAX_UNRESOLVED_RETURN,...budget}=budgetIn;
+ if(!(maxUnresolvedReturn>0&&maxUnresolvedReturn<=1))throw new Error('CHANNEL_FOIL_GRID: budget.maxUnresolvedReturn must lie in (0,1]');
  const n=plan.ports.length;
  const requested=interval&&requestedFrequencyInterval({spectralBandHz:interval});
  const highestSampleHz=frequenciesHz.at(-1)??0;
@@ -48,6 +63,7 @@ export function runAutoFoil(
  const referenceOhm=plan.ports.map(()=>50);
  const search=plan.returnSearch;
  const steps:ReturnSearchStep[]=[];
+ let truncated:TruncatedDomainPolicy|undefined;
  for(let iteration=0;iteration<(search?8:1);iteration++) {
   const domainScale=2**iteration;
   const candidate=search?search.expand(domainScale,Infinity):plan;
@@ -109,18 +125,21 @@ export function runAutoFoil(
     minimumPortCurrentA:Math.min(...observations.map(value=>value.minimumPortCurrentA)),
     frequenciesHz:[...new Set(observations.flatMap(value=>value.frequenciesHz))].sort((a,b)=>a-b)});
    if(process.env.P7_PHASE_TRACE==='1')console.error('P7_PHASE '+JSON.stringify({phase:'return-expansion',domainScale,elapsedS:(performance.now()-attemptStarted)/1000,fluxGatePassed:steps.at(-1)!.passed}));
-   if(!steps.at(-1)!.passed) {
-    // A budget-shrunken solve (ROI/corridor fallback) lands on the same shrunken mesh at every larger domain scale,
-    // so another expansion would repeat the identical solve: refuse now, with the evidence.
-    const prov=report.provenance as {roiFallback?:unknown;electricalRoi?:unknown}|undefined;
-    if(prov?.roiFallback||prov?.electricalRoi)
-     throw new Error('CHANNEL_RETURN_UNRESOLVED: boundary current above 1% on a budget-shrunken domain; larger domain scales resolve to the same shrunken mesh (not retried) '+JSON.stringify(steps));
-    continue;
-   }
+   const last=steps.at(-1)!;
+   const prov=report.provenance as {roiFallback?:{mode?:string;marginMm?:number};electricalRoi?:{marginMm?:number}}|undefined;
+   const shrunk=!!(prov?.roiFallback||prov?.electricalRoi);
+   // A budget-shrunken solve lands on the same shrunken mesh at every larger domain scale, so another expansion would
+   // repeat the identical solve.
+   const decision=returnGateDecision(last.passed,last.maximumRelative,shrunk,maxUnresolvedReturn);
+   if(decision==='refuse')
+    throw new Error('CHANNEL_RETURN_UNRESOLVED: boundary current '+last.maximumRelative+' above the truncated-domain limit '+maxUnresolvedReturn+' on a budget-shrunken domain; larger domain scales resolve to the same shrunken mesh (not retried) '+JSON.stringify(steps));
+   if(decision==='expand')continue;
+   if(decision==='truncated')truncated={tier:'truncated' as const,unresolvedReturnFraction:last.maximumRelative,limit:maxUnresolvedReturn,
+    roiMode:prov?.roiFallback?.mode??'electrical-size',marginMm:prov?.roiFallback?.marginMm??prov?.electricalRoi?.marginMm??null,gate:RETURN_BOUNDARY_THRESHOLD};
   }
   const jointSensitivity=process.env.P7_AUTO_FOIL_AUDIT==='1'&&auditBoardFoilGrid(problem,report,attemptStarted,execute);
-  const result:BoardFoilRunReport={...report,...(frequencyAudit&&{frequencyAudit}),...(jointSensitivity&&{jointSensitivity}),
-   ...(search&&{returnSearch:{policy:'internal-guard-flux-v1' as const,status:'passed' as const,
+  const result:BoardFoilRunReport={...report,...(truncated&&{quality:{...report.quality,domainPolicy:truncated}}),...(frequencyAudit&&{frequencyAudit}),...(jointSensitivity&&{jointSensitivity}),
+   ...(search&&{returnSearch:{policy:'internal-guard-flux-v1' as const,status:(truncated?'truncated':'passed') as 'passed'|'truncated',
     threshold:RETURN_BOUNDARY_THRESHOLD,absoluteFloorA:RETURN_CURRENT_FLOOR_A,steps}})};
   Object.defineProperty(result,'resolvedPlan',{enumerable:false,value:candidate});
   return result;

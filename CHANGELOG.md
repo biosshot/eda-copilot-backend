@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Truncated-domain tier for the return-current gate: on a budget-shrunken (ROI/corridor) domain a failed 1% guard-flux gate no longer refuses when the unresolved return fraction is at most `budget.maxUnresolvedReturn` (default 0.10); the model is returned with `quality.domainPolicy.tier='truncated'`, the unresolved fraction and `returnSearch.status='truncated'`, and is not admissible for acceptance. Above the limit the `CHANNEL_RETURN_UNRESOLVED` refusal stays. Full-domain solves keep expanding as before. NanoScope (2 mm corridor) now completes with a truncated model, unresolved return 5.9% (`debugging/p7-r/q1/NanoScope`, 1618 s capped to 4 cores, 4.7 GB private peak).
 - P7 v1 closed 2026-11-11 in its narrowed definition: three of five closure boards complete (90–232 s, up to 4.0 GiB), NanoScope and ThunderF722 are recorded refusals, stage-5 band validated to 100 kHz; open items moved to P7-R (`docs/analyze/plans/p7-v1-closure-plan.md` section 5).
 
 - Return-current search: when the failing solve ran on a budget-shrunken (ROI/corridor fallback) domain, refuse at once with `CHANNEL_RETURN_UNRESOLVED` instead of re-solving at larger domain scales that resolve to the identical shrunken mesh (NanoScope: 3 identical 600 s solves hit the 1800 s cap; now refuses at 661 s with the 5.9% guard-flux evidence).
