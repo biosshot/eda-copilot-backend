@@ -291,6 +291,36 @@ fn hybrid_via_without_mesh_slivers_solves_with_thin_wall_barrel() {
     hybrid_via_solve(Some(0.25));
 }
 
+/// Diagnostic only (no convergence assertion): compact adaptive foil solve of the
+/// sliver-free via at 100 kHz and 1 MHz; the support count is far below 512, so the
+/// magnetic action is exact (no H-matrix / fast local table).
+#[test]
+#[ignore = "diagnostic: prints per-iteration KVL/KCL/uncertainty at 100 kHz and 1 MHz"]
+fn diag_compact_kvl_100k_vs_1m() {
+    std::env::set_var("P7_MAGNETIC_PHASE_PROFILE", "1");
+    let (_, mut request) = production_via_fixture();
+    // DIAG_AREA_SCALE=k divides the triangle area target so the support count can cross the 512 H-matrix gate.
+    if let Ok(k) = std::env::var("DIAG_AREA_SCALE") { request.max_triangle_area_m2 /= k.parse::<f64>().unwrap(); }
+    let mut board_json: serde_json::Value = serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-board.json")).unwrap();
+    board_json["copper"]["fixed"]["vias"][0]["drillMm"] = serde_json::json!(0.25);
+    let board = crate::import_json(&board_json.to_string()).board.unwrap();
+    let wall = Duration::from_secs(120);
+    for hz in [1e5, 1e6] {
+        let profile = Some(CheckedOperator::HybridPlanarV3.skin_profile(hz, Some(hz), request.max_vertical_step_m).unwrap().unwrap().with_thickness_screen([58e6]).unwrap());
+        let started = Instant::now();
+        let mesh = board_mesh::build_profiled_hybrid(&board, &request, BUDGET, wall, profile).unwrap();
+        let grid = CheckedGrid { frequencies_hz: &[hz], reference_ohm: &[50., 50.], max_iterations: 16 };
+        let result = solve_checked_mesh_impl_policy(&mesh, &request, grid, profile, &[], None, PartitionPolicy::AutomaticHybridV1, CheckedOperator::HybridPlanarV3, BUDGET, started, wall);
+        match result {
+            Ok(r) => {
+                let c = &r["provenance"]["compactOperator"];
+                eprintln!("DIAG_COMPACT hz={hz:e} OK seconds={:.1} foilSupports={} localTetra={} currentModes={} quality={} history={}", started.elapsed().as_secs_f64(), c["foilSupports"], c["localTetraSupports"], r["provenance"]["currentModes"], r["quality"], c["enrichment"]);
+            }
+            Err(e) => eprintln!("DIAG_COMPACT hz={hz:e} REFUSED seconds={:.1} error={e:?}", started.elapsed().as_secs_f64()),
+        }
+    }
+}
+
 #[test]
 fn plated_slot_barrel_is_owned_by_thin_wall_prisms() {
     let (_, request) = production_via_fixture();

@@ -3899,7 +3899,10 @@ impl CompactMixedMagnetic {
         let local_budget=remaining/8+(initial_cache_bytes-cache_bytes);
         let mixed_budget=remaining-cache_bytes-batch_limit-local_budget;
         // The planar H-matrix is carved out of the mixed-plan share (no budget increase).
-        let hm=if supports.len()>=512 && std::env::var("P7_PLANAR_HMATRIX").as_deref()!=Ok("0") {
+        // P7_PLANAR_HMATRIX=force lowers the 512-support gate to 2 so small cases can compare H-matrix and exact actions.
+        let hm_env=std::env::var("P7_PLANAR_HMATRIX");
+        let hm_gate=if hm_env.as_deref()==Ok("force") {2} else {512};
+        let hm=if supports.len()>=hm_gate && hm_env.as_deref()!=Ok("0") {
             let refs:Vec<&super::prism::Prism>=supports.iter().map(|s|&s.prism).collect();
             let h=super::planar_hmatrix::PlanarHMatrix::build(&refs,mixed_budget/2,super::planar_hmatrix::Params::from_env(),start,wall)?;
             eprintln!("P7_COMPACT_HMATRIX {}",h.stats.json());
