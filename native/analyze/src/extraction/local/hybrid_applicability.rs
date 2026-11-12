@@ -25,7 +25,7 @@ pub(super) fn screen(frequency_hz: f64, thickness_m: f64, conductivity_s_m: f64,
     if !depth.is_finite() || depth <= 0.0 || !ratio.is_finite() {
         return Err("skin-depth calculation outside representable range");
     }
-    Ok(Screening { skin_depth_m: depth, thickness_over_skin_depth: ratio, thickness_passes: ratio <= 0.2, volume_target_step_m: depth / 3.0 })
+    Ok(Screening { skin_depth_m: depth, thickness_over_skin_depth: ratio, thickness_passes: ratio <= 0.2 || (super::copper_skin_profile::foil_sheet_enabled() && ratio <= 1.0),volume_target_step_m: depth / 3.0 })
 }
 
 /// A passing thickness screen still requires independent proximity and refinement evidence.

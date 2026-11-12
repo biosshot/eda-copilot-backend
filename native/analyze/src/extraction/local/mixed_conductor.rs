@@ -695,7 +695,8 @@ fn prepare_model_inner<'a>(
             && expected > 0.
             && (volume - expected).abs() <= 1e-8 * expected
             && (aspect_ok || relaxed_ok)
-            && delta >= 3. * thickness
+            && (delta >= 3. * thickness
+                || (copper_skin_profile::foil_sheet_enabled() && thickness <= delta))
             && uniform
         {
             let density = 1. / (thickness * (twice / 2.).sqrt());
@@ -1985,6 +1986,7 @@ fn solve_checked_mesh_impl_policy(
             return Err(error("HYBRID_UNSUPPORTED", "compact planar partition coupling is not implemented"));
         }
         let layered = request.stack.iter().filter(|layer| !layer.copper).any(|layer| layer.epsilon_r != Some(1.));
+        let mut foil_sheet_x = 0f64;
         for foil in &map.foils {
             let span = foil.z_span_m;
             let sigma = mesh.conductivity_s_m[foil.tetrahedra[0]];
@@ -1992,7 +1994,13 @@ fn solve_checked_mesh_impl_policy(
             if matches!(screen.action(), super::hybrid_applicability::Action::EnrichOrEscalate) {
                 return Err(error("HYBRID_FREQUENCY", "foil thickness requires frequency enrichment or local volume"));
             }
+            // Passing above 0.2 is only possible under P7_FOIL_SHEET=1 (t/delta <= 1).
+            if screen.thickness_over_skin_depth > 0.2 { foil_sheet_x = foil_sheet_x.max(screen.thickness_over_skin_depth); }
         }
+        let foil_sheet = (foil_sheet_x > 0.).then(|| json!({"approximation": true, "maxThicknessOverSkin": foil_sheet_x,
+            "estimatedResistanceError": copper_skin_profile::foil_sheet_error(foil_sheet_x), "bandTopHz": effective_upper,
+            "criterion": "P7_FOIL_SHEET=1: one foil sheet per copper layer for thickness/skin depth <= 1",
+            "warning": "through-thickness current redistribution is not resolved; uniform-sheet resistance error estimated as Re(kt coth kt) - 1"}));
         // Thin-wall barrel applicability: one radial cell needs delta >= 3 t at the
         // band top. Above that the model is still admitted, with an explicit warning.
         let barrel_skin = if map.barrels.is_empty() {
@@ -2065,6 +2073,9 @@ fn solve_checked_mesh_impl_policy(
         evidence["barrelEvidence"] = json!({"model": map.barrel_model.name(), "barrels": map.barrel_count, "barrelPrisms": map.barrels.len(), "barrelFallbackColumns": map.barrel_fallback_columns, "barrelSliverColumns": map.barrel_sliver_columns, "foilAspectRelaxedColumns": map.foil_aspect_relaxed_columns, "sliverColumnsDropped": map.sliver_columns_dropped, "droppedVolumeM3": map.dropped_volume_m3, "droppedVolumeFraction": map.dropped_volume_fraction, "remainingTetrahedra": map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count()});
         if let Some(skin) = &barrel_skin {
             evidence["barrelSkinApproximation"] = skin.clone();
+        }
+        if let Some(sheet) = &foil_sheet {
+            evidence["foilSheet"] = sheet.clone();
         }
         evidence["potentialCoordinates"] = json!(map.potential_count());
         evidence["currentCoordinates"] = json!(map.current_count());

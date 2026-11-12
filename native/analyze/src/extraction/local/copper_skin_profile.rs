@@ -3,6 +3,39 @@ use std::f64::consts::PI;
 const MU0: f64 = 4e-7 * PI;
 pub const VERSION: u32 = 3;
 
+/// `P7_FOIL_SHEET=1` (read once): a copper layer with t/delta <= 1 stays one foil sheet.
+pub(super) fn foil_sheet_enabled() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("P7_FOIL_SHEET").as_deref() == Some(std::ffi::OsStr::new("1")))
+}
+
+/// t/delta at `upper_hz` of nonmagnetic copper; None for invalid input.
+pub(super) fn thickness_over_skin(thickness_m: f64, sigma_s_m: f64, upper_hz: f64) -> Option<f64> {
+    let x = thickness_m * (PI * MU0 * upper_hz * sigma_s_m).sqrt();
+    (x.is_finite() && x > 0.).then_some(x)
+}
+
+/// Switch set and t/delta <= 1: the layer is admitted as one sheet (approximation tier).
+pub(super) fn foil_sheet_admits(thickness_m: f64, sigma_s_m: f64, upper_hz: f64) -> bool {
+    foil_sheet_enabled() && thickness_over_skin(thickness_m, sigma_s_m, upper_hz).is_some_and(|x| x <= 1.)
+}
+
+/// r(x) = Re(kt coth kt), kt = (1+j)x, x = t/delta: resistance of a foil with
+/// field on one side relative to its DC value.
+pub(super) fn foil_resistance_ratio(x: f64) -> f64 {
+    if x < 0.5 {
+        // Re series: 1 + 4x^4/45 - 16x^8/4725 (next term ~1e-7 below x = 0.5).
+        let x4 = x.powi(4);
+        return 1. + 4. * x4 / 45. - 16. * x4 * x4 / 4725.;
+    }
+    if x > 300. { return x; }
+    // coth(a + ja) = (sinh 2a - j sin 2a) / (cosh 2a - cos 2a)
+    x * ((2. * x).sinh() + (2. * x).sin()) / ((2. * x).cosh() - (2. * x).cos())
+}
+
+/// Relative resistance error of replacing the foil by a uniform sheet.
+pub(super) fn foil_sheet_error(x: f64) -> f64 { foil_resistance_ratio(x) - 1. }
+
 #[derive(Clone, Copy)]
 pub(super) struct Profile {
     pub upper_hz: f64,
@@ -61,8 +94,11 @@ impl Profile {
             if !skin_step.is_finite() || skin_step <= 0. {
                 return None;
             }
-            // Current and field share Cu planes; never weaken an authored step.
-            step = step.min(skin_step).min(self.current_step_m).min(self.field_step_m);
+            // P7_FOIL_SHEET=1 and t/delta <= 1: one foil sheet, authored step only.
+            if !foil_sheet_admits(thickness_m, sigma, self.upper_hz) {
+                // Current and field share Cu planes; never weaken an authored step.
+                step = step.min(skin_step).min(self.current_step_m).min(self.field_step_m);
+            }
         }
         let pieces = (thickness_m / step).ceil();
         (1. ..usize::MAX as f64)
@@ -377,5 +413,15 @@ mod tests {
             radial_constraint_room(0, plan.constraint_work, 100, 64 * 4096).unwrap(),
             48
         );
+    }
+
+    #[test]
+    fn foil_sheet_resistance_error_estimate() {
+        assert!((foil_sheet_error(0.53) - 0.007).abs() < 1e-3);
+        assert!((foil_sheet_error(1.) - 0.09).abs() < 0.01);
+        assert!(foil_sheet_error(0.05) < 1e-6 && foil_sheet_error(0.05) >= 0.);
+        // Series and closed form agree across the switch point.
+        assert!((foil_resistance_ratio(0.4999999) - foil_resistance_ratio(0.5000001)).abs() < 1e-6);
+        assert!(foil_resistance_ratio(10.) > 9.9);
     }
 }

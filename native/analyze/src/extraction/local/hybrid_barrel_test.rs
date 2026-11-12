@@ -301,6 +301,8 @@ fn diag_compact_kvl_100k_vs_1m() {
     let (_, mut request) = production_via_fixture();
     // DIAG_AREA_SCALE=k divides the triangle area target so the support count can cross the 512 H-matrix gate.
     if let Ok(k) = std::env::var("DIAG_AREA_SCALE") { request.max_triangle_area_m2 /= k.parse::<f64>().unwrap(); }
+    // DIAG_THICKNESS_M=t overrides every copper layer thickness (exercises P7_FOIL_SHEET at 18-35 um).
+    if let Ok(t) = std::env::var("DIAG_THICKNESS_M") { for l in request.stack.iter_mut().filter(|l| l.copper) { l.thickness_m = t.parse().unwrap(); } }
     let mut board_json: serde_json::Value = serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-board.json")).unwrap();
     board_json["copper"]["fixed"]["vias"][0]["drillMm"] = serde_json::json!(0.25);
     let board = crate::import_json(&board_json.to_string()).board.unwrap();
@@ -314,7 +316,7 @@ fn diag_compact_kvl_100k_vs_1m() {
         match result {
             Ok(r) => {
                 let c = &r["provenance"]["compactOperator"];
-                eprintln!("DIAG_COMPACT hz={hz:e} OK seconds={:.1} foilSupports={} localTetra={} currentModes={} quality={} history={}", started.elapsed().as_secs_f64(), c["foilSupports"], c["localTetraSupports"], r["provenance"]["currentModes"], r["quality"], c["enrichment"]);
+                eprintln!("DIAG_COMPACT hz={hz:e} OK seconds={:.1} foilSupports={} foilSheet={} localTetra={} currentModes={} quality={} history={}", started.elapsed().as_secs_f64(), c["foilSupports"], c["foilSheet"], c["localTetraSupports"], r["provenance"]["currentModes"], r["quality"], c["enrichment"]);
             }
             Err(e) => eprintln!("DIAG_COMPACT hz={hz:e} REFUSED seconds={:.1} error={e:?}", started.elapsed().as_secs_f64()),
         }

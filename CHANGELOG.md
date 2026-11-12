@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `P7_FOIL_SHEET=1` (developer switch, default off): a copper layer with thickness/skin depth <= 1 at the profile upper frequency stays one foil sheet (no delta/3 or delta/5 thickness slabs), admitted at the approximation tier with `foilSheet {approximation, maxThicknessOverSkin, estimatedResistanceError = Re(kt coth kt) - 1}` in the compact-operator evidence; above t/delta = 1 behaviour is unchanged.
 - 1 MHz diagnosis: ignored test `diag_compact_kvl_100k_vs_1m` (via coupon) converges at 1 MHz to KVL 1e-9, also with `P7_PLANAR_HMATRIX=force` (new developer value that lowers the 512-support H-matrix gate to 2; default unchanged). On band-step 1 MHz the H-matrix reports 2.57 M unconverged near pairs with maximum pair change 0.44 between thin skin slabs; findings in `docs/analyze/plans/p7-r-band-plan.md` §1.1.
 
 - Truncated-domain tier for the return-current gate: on a budget-shrunken (ROI/corridor) domain a failed 1% guard-flux gate no longer refuses when the unresolved return fraction is at most `budget.maxUnresolvedReturn` (default 0.10); the model is returned with `quality.domainPolicy.tier='truncated'`, the unresolved fraction and `returnSearch.status='truncated'`, and is not admissible for acceptance. Above the limit the `CHANNEL_RETURN_UNRESOLVED` refusal stays. Full-domain solves keep expanding as before. NanoScope (2 mm corridor) now completes with a truncated model, unresolved return 5.9% (`debugging/p7-r/q1/NanoScope`, 1618 s capped to 4 cores, 4.7 GB private peak).
