@@ -15,16 +15,14 @@ export async function resolveComponentFootprint(
     footprints?: Readonly<Record<string, FootprintSpec>>,
     edaEdition: EdaEdition = 'easyeda',
 ) {
-    const provided = providedComponentFootprint(component, footprints);
-    if (provided) return provided;
-
     const footprintUuid = validEasyEdaUuid(component.footprint_uuid) ? component.footprint_uuid : null;
     const partUuid = validPartUuid(component.part_uuid) ? component.part_uuid : null;
 
     if (footprintUuid) {
         const cacheKey = `${edaEdition}:footprint:${footprintUuid}`;
         const cached = cache.get(cacheKey);
-        if (cached) return cached;
+        if (cached) return (await cached) ?? (partUuid ? await resolveFootprintByPartUuid(component, partUuid, cache, edaEdition) : null)
+            ?? providedComponentFootprint(component, footprints);
 
         const promise = resolveEasyEdaFootprintByUuid(footprintUuid, undefined, edaEdition)
             .catch((error) => {
@@ -32,10 +30,12 @@ export async function resolveComponentFootprint(
                 return partUuid ? resolveFootprintByPartUuid(component, partUuid, cache, edaEdition) : null;
             });
         cache.set(cacheKey, promise);
-        return promise;
+        return (await promise) ?? (partUuid ? await resolveFootprintByPartUuid(component, partUuid, cache, edaEdition) : null)
+            ?? providedComponentFootprint(component, footprints);
     }
 
-    return partUuid ? resolveFootprintByPartUuid(component, partUuid, cache, edaEdition) : null;
+    return (partUuid ? await resolveFootprintByPartUuid(component, partUuid, cache, edaEdition) : null)
+        ?? providedComponentFootprint(component, footprints);
 }
 
 export async function requireResolvedComponentFootprint(

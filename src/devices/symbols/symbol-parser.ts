@@ -220,6 +220,19 @@ export const getSymbol = memoize(async function getSymbol(partUuid: PartUuid, pa
     }
 });
 
+export function createSymbolResolver(symbols?: Readonly<Record<string, SymbolData>>, edaEdition?: EdaEdition): typeof getSymbol {
+    return async (partUuid, partId) => {
+        const catalog = await getSymbol(partUuid, partId, edaEdition);
+        if (catalog) return catalog;
+        const symbol = symbols?.[getPartUuidKey(partUuid)] ?? symbols?.[typeof partUuid === 'string' ? partUuid : partUuid.uuid];
+        if (!symbol) return null;
+        const { center, width, height } = symbol;
+        return { dataStr: '', rect: [-center.x, center.y - height, width - center.x, center.y],
+            pins: symbol.pins.map(pin => ({ ...pin, x: pin.x - center.x, y: center.y - pin.y })),
+            partIds: [symbol.pins[0]?.part ?? '1'] };
+    };
+}
+
 function checkPinNumbers(designator: string, componentPins: CircuitWithoutBlocks['components'][0]['pins'], symbolPins: SymbolPin[]) {
     const availableNumbers = new Set(symbolPins.map(pin => String(pin.num)));
     for (const componentPin of componentPins) {
@@ -246,8 +259,7 @@ export const circuitToSymbols = async (sch: { components: CircuitWithoutBlocks['
         const sym = await loadSymbol(component.part_uuid, partId);
 
         if (!sym) {
-            logger.error(component, "Fail get symbol partUuid");
-            continue;
+            throw new Error(`Missing symbol for ${component.designator}: ${getPartUuidKey(component.part_uuid)}`);
         }
 
         checkPinNumbers(component.designator, component.pins, sym.pins);

@@ -3,10 +3,10 @@ import { CircuitModStruct, ExplainCircuitStruct, type CircuitMod, type ExplainCi
 import { makeAutoPlacement } from './circuit-layout/index.ts';
 import { shortSymbolsMap } from './circuit-layout/short-symbol.ts';
 import { hasConnection } from './circuit-layout/signals.ts';
-import { getSymbol } from './devices/symbols/symbol-parser.ts';
+import { createSymbolResolver } from './devices/symbols/symbol-parser.ts';
 import { rotatePointClockwise } from './utils/math.ts';
 import { recalculateRootBlock } from './utils/circuit-merge.ts';
-import type { SymbolPin } from './types/symbol.ts';
+import type { SymbolData, SymbolPin } from './types/symbol.ts';
 import type { EdaApiOptions } from './devices/eda-api.ts';
 import masterLogger from './logger.ts';
 import { getPartUuid, isMissingPartUuid } from './types/lcsc.ts';
@@ -15,6 +15,7 @@ import { canonicalEasyEdaPartUuid, getEasyEdaDevice } from './devices/easy-eda.t
 const logger = masterLogger.child({ TAG: 'extract-circuit' });
 const inputSchema = z.object({
   circuit: CircuitModStruct(),
+  symbols: z.record(z.string(), z.custom<SymbolData>()).optional(),
   inputCircuit: ExplainCircuitStruct().optional(),
   assemblyOptions: z.object({ otherPageSignals: z.array(z.string()).optional() }).optional(),
 });
@@ -38,10 +39,16 @@ export async function extractCircuit(input: ExtractCircuitInput, options: EdaApi
   const data = inputSchema.parse(input);
   const missing = data.circuit.add_components.filter(c => isMissingPartUuid(c.part_uuid));
   if (missing.length) throw new Error('All add_components must have part_uuid: ' + missing.map(c => c.designator).join(', '));
+  const loadSymbol = createSymbolResolver(data.symbols, options.edaEdition);
   data.circuit.add_components = await Promise.all(data.circuit.add_components.map(async component => {
     if (!component.part_uuid || typeof component.part_uuid === 'string' || component.part_uuid.libraryUuid !== 'user') return component;
-    const device = await getEasyEdaDevice(component.part_uuid, options.edaEdition);
-    return { ...component, part_uuid: canonicalEasyEdaPartUuid(device, component.part_uuid) };
+    try {
+      const device = await getEasyEdaDevice(component.part_uuid, options.edaEdition);
+      return { ...component, part_uuid: canonicalEasyEdaPartUuid(device, component.part_uuid) };
+    } catch (error) {
+      if (!data.symbols?.[component.part_uuid.uuid]) throw error;
+      return component;
+    }
   }));
   const state: CircuitState = {
     circuit: data.circuit,
@@ -81,8 +88,8 @@ export async function extractCircuit(input: ExtractCircuitInput, options: EdaApi
                 return symbolPins.map((spin) => ({ ...spin, signal_name: component.pins.find(cpin => cpin.pin_number == spin.num)?.signal_name ?? crypto.randomUUID().slice(0, 8) }));
             }
 
-            const oldSymbol = await getSymbol(schComponent.part_uuid, undefined, options.edaEdition);
-            const newSymbol = await getSymbol(component.part_uuid, undefined, options.edaEdition);
+            const oldSymbol = await loadSymbol(schComponent.part_uuid);
+            const newSymbol = await loadSymbol(component.part_uuid);
 
             if (!oldSymbol || !newSymbol) {
                 logger.warn({ designator }, 'not found symbol')
@@ -289,6 +296,7 @@ export async function extractCircuit(input: ExtractCircuitInput, options: EdaApi
 
         const result: CircuitAssembly = await makeAutoPlacement(circuit, undefined, {}, {
             edaEdition: options.edaEdition,
+            symbols: data.symbols,
             splitMultiPartComponent: true,
             layoutRefinement: true,
             externalSignals: [...new Set([...externalSignals, ...otherPageSignals])],
