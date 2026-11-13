@@ -6,16 +6,29 @@ import { hasConnection } from './circuit-layout/signals.ts';
 import { createSymbolResolver } from './devices/symbols/symbol-parser.ts';
 import { rotatePointClockwise } from './utils/math.ts';
 import { recalculateRootBlock } from './utils/circuit-merge.ts';
-import type { SymbolData, SymbolPin } from './types/symbol.ts';
+import type { SymbolPin } from './types/symbol.ts';
 import type { EdaApiOptions } from './devices/eda-api.ts';
 import masterLogger from './logger.ts';
 import { getPartUuid, isMissingPartUuid } from './types/lcsc.ts';
 import { canonicalEasyEdaPartUuid, getEasyEdaDevice } from './devices/easy-eda.ts';
 
 const logger = masterLogger.child({ TAG: 'extract-circuit' });
+const pointSchema = z.object({ x: z.number().finite(), y: z.number().finite() });
+const symbolSchema = z.object({
+  width: z.number().finite().positive(),
+  height: z.number().finite().positive(),
+  center: pointSchema,
+  padding: z.number().finite().optional(),
+  pins: z.array(z.object({
+    num: z.union([z.string(), z.number().finite()]),
+    name: z.string(), x: z.number().finite(), y: z.number().finite(),
+    signal_name: z.string(), part: z.string(),
+    port_style: z.enum(['in', 'out', 'bi']).optional(),
+  })),
+});
 const inputSchema = z.object({
   circuit: CircuitModStruct(),
-  symbols: z.record(z.string(), z.custom<SymbolData>()).optional(),
+  symbols: z.record(z.string(), symbolSchema).optional(),
   inputCircuit: ExplainCircuitStruct().optional(),
   assemblyOptions: z.object({ otherPageSignals: z.array(z.string()).optional() }).optional(),
 });

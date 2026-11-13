@@ -39,3 +39,19 @@ test('catalogue wins, local geometry fills misses, and inputs remain unchanged',
     await assert.rejects(requireResolvedComponentFootprint({ ...component, part_uuid: unknownId }), /Missing real footprint/);
   } finally { globalThis.fetch = original; fixture.restore(); }
 });
+
+test('extraction rejects malformed local symbol geometry before network access', async () => {
+  const badSymbols = [
+    { ...symbol, width: 0 }, { ...symbol, height: Infinity },
+    { ...symbol, center: { x: NaN, y: 0 } },
+    { ...symbol, pins: [{ ...symbol.pins[0], x: Infinity }] },
+    { ...symbol, pins: [{ ...symbol.pins[0], name: 123 }] }, null,
+  ];
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error('unexpected network access'); };
+  try {
+    for (const bad of badSymbols) {
+      await assert.rejects(extractCircuit({ ...schematicInput, symbols: { [localId]: bad } } as never), /symbols/);
+    }
+  } finally { globalThis.fetch = original; }
+});
