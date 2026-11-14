@@ -94,7 +94,7 @@ export function auditBoardFoilGrid(
   execute: (problem: BoardFoilProblem) => BoardFoilReport,
 ) {
   const externalResources = problem.request.partitionPolicy === 'automatic-hybrid-v1';
-  const limit = Math.min(problem.request.budget.maxSeconds, Number(process.env.P7_VERIFY_SECONDS ?? 300));
+  const limit = process.env.P7_VERIFY_SECONDS === undefined ? problem.request.budget.maxSeconds : Math.min(problem.request.budget.maxSeconds, Number(process.env.P7_VERIFY_SECONDS));
   const remainingBudget = () => {
     if (externalResources) return problem.request.budget;
     const maxSeconds = limit - (performance.now() - started) / 1000;

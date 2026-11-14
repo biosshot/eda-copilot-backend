@@ -251,10 +251,10 @@ fn check_time(start: Instant, wall: Duration) -> Result<()> {
     Ok(())
 }
 
-/// P7_HIGHBAND_CUTS=1 (developer switch, default off): planner-declared cut-plane
+/// P7_HIGHBAND_CUTS (developer switch, default on since 2026-11-14, `0` = off): planner-declared cut-plane
 /// electrodes are admitted in the hybrid-planar-v3 path as equipotential faces.
 pub(super) fn highband_cuts_enabled() -> bool {
-    std::env::var("P7_HIGHBAND_CUTS").as_deref() == Ok("1")
+    super::super::p7_default_on("P7_HIGHBAND_CUTS")
 }
 
 /// P7_BAND_SCREEN=<kD> (developer switch, default off, approximation): replaces the 0.1 factor of the quasistatic
@@ -676,7 +676,7 @@ fn prepare_model_inner<'a>(
     let mut barrel_noise_cells = Vec::<usize>::new();
     let mut barrel_noise_columns_count = 0usize;
     let mut barrel_noise_volume = Sum::default();
-    if !keep_sole_link_slivers && env_flag("P7_BARREL_NOISE") && !barrel_segments.is_empty() {
+    if !keep_sole_link_slivers && super::super::p7_default_on("P7_BARREL_NOISE") && !barrel_segments.is_empty() {
         let noise = barrel_noise_columns(&barrel_segments, &triangle_area);
         barrel_noise_columns_count = noise.len();
         let (dropped, kept): (Vec<_>, Vec<_>) = std::mem::take(&mut barrel_segments)
@@ -2225,6 +2225,7 @@ fn solve_checked_mesh_impl_policy(
         // source physical budget counts its three tetrahedra.
         let field_terms=budget.max_tetrahedra.saturating_mul(12);
         let mut field_refinement: Option<serde_json::Value> = None;
+        let mut field_refinement_skipped: Option<serde_json::Value> = None;
         let prepared_field = if adaptive {
             let available=(budget.max_bytes/3).checked_sub(map.retained_bytes()?).ok_or_else(||error("MEMORY_LIMIT","adaptive field budget exhausted"))?;
             let field_budget=super::layered_capacitance::Budget {max_nodes:budget.max_nodes,max_local_terms:field_terms,max_bytes:available,max_wall:wall.saturating_sub(start.elapsed())};
@@ -2234,13 +2235,23 @@ fn solve_checked_mesh_impl_policy(
             let (trace,certified)=super::planar_trace::certified_trace(&input,&original,&map,super::layered_capacitance::Budget{max_wall:wall.saturating_sub(start.elapsed()),..field_budget})?;
             eprintln!("P7_COMPACT_STAGE stage=spatial-certified-end elapsed={:.6}",start.elapsed().as_secs_f64());
             let field_budget_now=super::layered_capacitance::Budget{max_wall:wall.saturating_sub(start.elapsed()),..field_budget};
-            // P7_FIELD_REFINE=1 (default off): field-only XY refinement, potentials stay on the current-mesh nodes.
-            let field=if super::field_xy_refine::enabled() {
-                let refined=super::field_xy_refine::refine(&input,trace,certified,&map,field_budget_now)?;
+            // P7_FIELD_REFINE (default automatic since 2026-11-14, `0` = off): field-only XY refinement, potentials stay on the current-mesh nodes;
+            // automatic mode skips it (coarse field mesh) when the refined field node count would exceed P7_FIELD_REFINE_MAX_NODES.
+            let (refine_mode,auto_cap)=match super::field_xy_refine::mode(){super::field_xy_refine::Mode::Off=>(false,None),super::field_xy_refine::Mode::Forced=>(true,None),super::field_xy_refine::Mode::Auto(cap)=>(true,Some(cap))};
+            let (outcome,trace,certified)=if refine_mode {
+                match super::field_xy_refine::refine_capped(&input,trace,certified,&map,field_budget_now,auto_cap)? {
+                    super::field_xy_refine::Outcome::Refined(r)=>(Some(r),None,None),
+                    super::field_xy_refine::Outcome::Skipped{trace,cert,field_nodes,cap}=>{
+                        field_refinement_skipped=Some(serde_json::json!({"fieldNodes":field_nodes,"cap":cap}));
+                        (None,Some(trace),Some(cert))
+                    }
+                }
+            } else {(None,Some(trace),Some(certified))};
+            let field=if let Some(refined)=outcome {
                 field_refinement=Some(refined.record.clone());
                 let overlay=super::layered_capacitance::CertifiedOverlay{input:&refined.input,triangles:refined.triangles,copper:refined.copper,epsilon:refined.epsilon,node_owners:refined.node_owners,finite_contacts:refined.finite_contacts,rowless_modes:refined.rowless_modes,bytes:refined.bytes};
                 super::layered_capacitance::prepare_certified_action(&refined.input,&refined.trace,&spatial,&overlay,super::layered_capacitance::Budget{max_wall:wall.saturating_sub(start.elapsed()),..field_budget})?
-            } else {super::layered_capacitance::prepare_certified_action(&input,&trace,&spatial,&certified,field_budget_now)?};
+            } else {super::layered_capacitance::prepare_certified_action(&input,&trace.expect("coarse trace kept"),&spatial,&certified.expect("coarse certificate kept"),field_budget_now)?};
             eprintln!("P7_COMPACT_STAGE stage=spatial-field-end elapsed={:.6} plannedBytes={}",start.elapsed().as_secs_f64(),field.planned_bytes());
             Some(field)
         } else {None};
@@ -2287,6 +2298,9 @@ fn solve_checked_mesh_impl_policy(
         }
         if let Some(record) = &field_refinement {
             evidence["fieldRefinement"] = record.clone();
+        }
+        if let Some(record) = &field_refinement_skipped {
+            evidence["fieldRefinementSkipped"] = record.clone();
         }
         if let Some(sheet) = &foil_sheet {
             evidence["foilSheet"] = sheet.clone();

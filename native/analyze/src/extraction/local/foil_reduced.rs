@@ -2096,13 +2096,13 @@ fn metric_mode(
     Ok(Some((candidate, image)))
 }
 
-/// `P7_ENRICH_INDUCTIVE` (developer switch, default off): `1` replaces `drop = kvl / R` by the GMRES solve of
+/// `P7_ENRICH_INDUCTIVE` (developer switch, default 5 since 2026-11-14, `0` = off): `1` replaces `drop = kvl / R` by the GMRES solve of
 /// `(R + j*omega*L) d = r` for the real/imaginary residual pair of the worst drive; `2` also does it for the
 /// balanced-drive pair (two drives, dominant phase each). Step 1.1 measurement: `2` is worse than `1` at 3 MHz.
 fn inductive_mode() -> u8 {
-    match std::env::var("P7_ENRICH_INDUCTIVE").as_deref() { Ok("1") => 1, Ok("2") => 2, Ok("3") => 3, Ok("4") => 4, Ok("5") => 5, _ => 0 }
+    super::super::p7_default_mode("P7_ENRICH_INDUCTIVE", 5, 5)
 }
-/// `P7_ENRICH_GMRES_MAX` (1..=512, default 30): action cap of the inductive GMRES solve.
+/// `P7_ENRICH_GMRES_MAX` (1..=512, default 120 since 2026-11-14; `0` restores the earlier 30): action cap of the inductive GMRES solve.
 /// Gauss-Jordan inverse with partial pivoting of a dense row-major `n x n` matrix.
 fn invert_dense(mut a: Vec<f64>, n: usize) -> Option<Vec<f64>> {
     let mut inv = vec![0.; n * n];
@@ -2123,7 +2123,7 @@ fn invert_dense(mut a: Vec<f64>, n: usize) -> Option<Vec<f64>> {
     Some(inv)
 }
 fn inductive_max_actions() -> usize {
-    std::env::var("P7_ENRICH_GMRES_MAX").ok().and_then(|v| v.parse::<usize>().ok()).filter(|v| (1..=512).contains(v)).unwrap_or(30)
+    match std::env::var("P7_ENRICH_GMRES_MAX").ok().and_then(|v| v.parse::<usize>().ok()) { Some(0) => 30, Some(v) if v <= 512 => v, _ => if cfg!(test) { 30 } else { 120 } }
 }
 const INDUCTIVE_REDUCTION: f64 = 1e-2;
 /// `P7_ENRICH_PROBE=1` (developer diagnostic, default off, no behaviour change): one `P7_ENRICH_PROBE` line per

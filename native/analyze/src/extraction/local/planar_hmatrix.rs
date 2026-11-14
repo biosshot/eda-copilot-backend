@@ -239,7 +239,7 @@ fn aca(k: &Kernel, rows: &[usize], cols: &[usize], eps: f64, st: &mut Stats) -> 
 }
 
 impl PlanarHMatrix {
-    /// Builds the H-matrix, or loads it from the opt-in disk cache (`P7_HMATRIX_CACHE=1`).
+    /// Builds the H-matrix, or loads it from the disk cache (default on, `P7_HMATRIX_CACHE=0` disables).
     pub(super) fn build(prisms: &[&Prism], max_bytes: usize, params: Params, start: Instant, wall: Duration) -> Result<Self> {
         // The probe needs a real build (a cache hit evaluates no pairs).
         let dir = if probe_on() { None } else { disk_cache::directory() };
@@ -559,20 +559,20 @@ mod tests {
     }
 }
 
-/// Opt-in persistent copy of the built H-matrix (`P7_HMATRIX_CACHE=1`, directory `P7_HMATRIX_CACHE_DIR`
+/// Opt-in persistent copy of the built H-matrix (on by default since 2026-11-14 when a cache directory is known, `P7_HMATRIX_CACHE=0` disables; directory `P7_HMATRIX_CACHE_DIR`
 /// or `$PCB_ANALYSIS_CACHE_DIR/hmatrix`). The key hashes every prism coordinate, the build parameters and the
 /// kernel-relevant `P7_*` environment; `KERNEL_VERSION` must be bumped when the pair kernel changes.
 mod disk_cache {
     use super::*;
     use std::path::{Path, PathBuf};
-    const KERNEL_VERSION: &str = "hm-cache-1";
+    const KERNEL_VERSION: &str = "hm-cache-2";
     const MAGIC: &[u8; 8] = b"P7HMAT01";
     /// Variables that never change kernel values.
     const NEUTRAL: &[&str] = &["P7_ENRICH", "P7_OUTPUT", "P7_TREE", "P7_SMOKE", "P7_SUPERVISED", "P7_HMATRIX_THREADS", "P7_HMATRIX_CACHE",
         "P7_MAGNETIC_PHASE", "P7_COMPACT_PL_THREADS", "P7_MAGNETIC_NEAR_THREADS", "P7_PAIR_PROFILE", "P7_DUMP", "P7_FOIL_SHEET"];
 
     pub(super) fn directory() -> Option<PathBuf> {
-        if std::env::var("P7_HMATRIX_CACHE").as_deref() != Ok("1") { return None; }
+        if !crate::extraction::p7_default_on("P7_HMATRIX_CACHE") { return None; }
         let dir = std::env::var_os("P7_HMATRIX_CACHE_DIR").map(PathBuf::from)
             .or_else(|| std::env::var_os("PCB_ANALYSIS_CACHE_DIR").map(|d| PathBuf::from(d).join("hmatrix")))?;
         std::fs::create_dir_all(&dir).ok()?;
@@ -590,6 +590,7 @@ mod disk_cache {
         h.bytes(KERNEL_VERSION.as_bytes());
         h.bytes(&(prisms.len() as u64).to_le_bytes());
         for p in prisms { for t in &p.triangle_m { h.f64s(t); } h.f64s(&p.z_m); }
+        h.bytes(&[super::planar_operator::escalate_on() as u8]); // effective value: P7_PAIR_ESCALATE is on by default and changes pair values
         h.f64s(&[params.theta, params.eps]); h.bytes(&(params.leaf as u64).to_le_bytes());
         let mut vars: Vec<(String, String)> = std::env::vars().filter(|(k, _)| k.starts_with("P7_") && !NEUTRAL.iter().any(|n| k.starts_with(n))).collect();
         vars.sort();

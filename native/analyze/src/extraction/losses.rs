@@ -14,12 +14,12 @@ pub(super) struct Configuration {
     pub area_m2: Vec<f64>,
 }
 
-/// `P7_SECTION_FOIL` (read once): 1 replaces the thick-conductor surface impedance `(1+j)/(sigma delta)` by the finite-layer
+/// `P7_SECTION_FOIL` (read once; default on since 2026-11-14, `0` = off): 1 replaces the thick-conductor surface impedance `(1+j)/(sigma delta)` by the finite-layer
 /// `Zs = (kappa/sigma) coth(kappa s)`, `kappa = (1+j)/delta`, and lifts the `delta <= thickness/10` refusal.
 /// Approximation tier, physical accuracy unverified. Unset or any other value: behaviour is unchanged.
 pub(super) fn section_foil() -> bool {
     static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    *ON.get_or_init(|| std::env::var("P7_SECTION_FOIL").as_deref() == Ok("1"))
+    *ON.get_or_init(|| super::p7_default_on("P7_SECTION_FOIL"))
 }
 /// Conductor-loss limit `R/(omega L_ext)` of `SECTION_WEAK_LOSS`: 0.05; 0.3 with `P7_SECTION_FOIL=1` (approximation tier).
 pub(super) fn section_conductor_loss_limit() -> f64 { if section_foil() { 0.3 } else { 0.05 } }

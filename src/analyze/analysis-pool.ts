@@ -17,7 +17,7 @@ type Job = {
     timer?: ReturnType<typeof setTimeout>; abort: () => void; settled: boolean; started: boolean; slot?: Slot;
 };
 type Slot = { pool: Pool; job?: Job; stopping?: Promise<void> };
-const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
+const DEFAULT_TIMEOUT_MS = 45 * 60 * 1000; // above the 1800 s default solve budget plus planning/cache/reply reserve
 
 function envInt(name: string, fallback: number, min: number, max: number) {
     if (!env[name]?.trim()) return fallback;

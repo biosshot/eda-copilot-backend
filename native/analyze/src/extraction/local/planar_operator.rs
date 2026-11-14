@@ -342,13 +342,13 @@ pub(super) fn pair_integral_compact(a: &Prism, b: &Prism, order: usize, start: I
     }
     Ok(result)
 }
-/// `P7_PAIR_ESCALATE=1` (developer switch, default off): a compact pair whose last relative change after order 16
+/// `P7_PAIR_ESCALATE` (developer switch, default on since 2026-11-14, `0` = off): a compact pair whose last relative change after order 16
 /// exceeds the 2e-3 noise tier continues the same order ladder up to order 64; other pairs are untouched.
 const PAIR_ESCALATE_MAX_ORDER: usize = 64;
 static ESCALATE_PAIRS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 static ESCALATE_IMPROVED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 static ESCALATE_NANOS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-fn escalate_on() -> bool { static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new(); *ON.get_or_init(|| std::env::var("P7_PAIR_ESCALATE").as_deref() == Ok("1")) }
+pub(super) fn escalate_on() -> bool { static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new(); *ON.get_or_init(|| super::super::p7_default_on("P7_PAIR_ESCALATE")) }
 /// One stderr line per operator build when the switch is on: escalated pairs and the added thread time (CPU seconds summed over workers).
 pub(super) fn escalate_report() {
     if !escalate_on() { return; }

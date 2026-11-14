@@ -4,6 +4,8 @@ import {createRequire} from 'node:module';
 import {readFileSync} from 'node:fs';
 import {runAnalysisDsl} from '../src/analyze/run-analysis-dsl.ts';
 import {sectionResults} from './helpers/pcb-analysis-cross-section-audit.ts';
+// These expectations are for the thick-conductor section model, the earlier default; P7_SECTION_FOIL is on by default since 2026-11-14.
+process.env.P7_SECTION_FOIL??='0';
 const addon=createRequire(import.meta.url)('../native/node-addon/index.cjs');
 const copper={conductivitySM:5.8e7,state:'smooth fixed-temperature copper hypothesis'};
 const line={kind:'microstrip',widthMm:.3,copperThicknessMm:.035,dielectricHeightMm:.18,lengthMm:20,material:{relativePermittivity:4.2,lossTangent:.015,state:'constant dielectric hypothesis within band'},conductors:{signal:copper,referencePlanes:{bottom:{thicknessMm:.035,material:copper}}}};

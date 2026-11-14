@@ -3,12 +3,12 @@ use std::f64::consts::PI;
 const MU0: f64 = 4e-7 * PI;
 pub const VERSION: u32 = 3;
 
-/// `P7_FOIL_SHEET` (read once): 1 keeps a copper layer with t/delta <= 1 as one foil sheet; 2 keeps one sheet at
+/// `P7_FOIL_SHEET` (read once; default 4 since 2026-11-14, `0` = off): 1 keeps a copper layer with t/delta <= 1 as one foil sheet; 2 keeps one sheet at
 /// any t/delta and multiplies the sheet resistance by `foil_resistance_ratio(t/delta)` at the band upper frequency
 /// (approximation: one multiplier per band, field on one side of the foil).
 fn foil_sheet_mode() -> u8 {
     static MODE: std::sync::OnceLock<u8> = std::sync::OnceLock::new();
-    *MODE.get_or_init(|| match std::env::var("P7_FOIL_SHEET").as_deref() { Ok("1") => 1, Ok("2") => 2, Ok("3") => 3, Ok("4") => 4, _ => 0 })
+    *MODE.get_or_init(|| super::super::p7_default_mode("P7_FOIL_SHEET", 4, 4))
 }
 pub(super) fn foil_sheet_enabled() -> bool { foil_sheet_mode() >= 1 }
 pub(super) fn foil_sheet_scales_resistance() -> bool { foil_sheet_mode() >= 2 }
@@ -23,12 +23,12 @@ pub(super) fn foil_sheet_multiplier(x: f64) -> f64 {
     foil_resistance_ratio(if foil_sheet_two_sided() { x / 2. } else { x })
 }
 
-/// `P7_BARREL_SHEET` (read once): 1 keeps a plated via wall at one radial layer at any skin depth and records
+/// `P7_BARREL_SHEET` (read once; default 2 since 2026-11-14, `0` = off): 1 keeps a plated via wall at one radial layer at any skin depth and records
 /// the estimated resistance error; 2 also scales the wall resistance by `foil_resistance_ratio(t/delta)`
 /// at the band upper frequency (one multiplier per band; the spatial power recovery applies the same factor).
 fn barrel_sheet_mode() -> u8 {
     static MODE: std::sync::OnceLock<u8> = std::sync::OnceLock::new();
-    *MODE.get_or_init(|| match std::env::var("P7_BARREL_SHEET").as_deref() { Ok("1") => 1, Ok("2") => 2, _ => 0 })
+    *MODE.get_or_init(|| super::super::p7_default_mode("P7_BARREL_SHEET", 2, 2))
 }
 pub(super) fn barrel_sheet_enabled() -> bool { barrel_sheet_mode() >= 1 }
 pub(super) fn barrel_sheet_scales_resistance() -> bool { barrel_sheet_mode() == 2 }

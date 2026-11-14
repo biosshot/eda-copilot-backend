@@ -8,7 +8,7 @@ let workerModelCache:LocalModelCache|undefined;
 
 function validateChannelMagneticCache(value:any,physical:any,budget:any){
  const memory=budget?.maxMemoryMiB??1024,seconds=budget?.maxSeconds??300;
- if(!Number.isFinite(seconds)||seconds<=0||!Number.isFinite(memory)||memory<=0||memory>4096)throw new Error('CHANNEL_MAGNETIC_BUDGET: finite positive bounded budgets required');
+ if(!Number.isFinite(seconds)||seconds<=0||!Number.isFinite(memory)||memory<=0||memory>65536)throw new Error('CHANNEL_MAGNETIC_BUDGET: finite positive bounded budgets required');
  if(value?.status!=='complete'||value.quadratureOrder!==(physical.order??12)||!Number.isFinite(value.plannedBytes)||value.plannedBytes<0||value.plannedBytes>memory*1048576||!Array.isArray(value.couplings)||!Array.isArray(value.selfMatrices))throw new Error('CHANNEL_MAGNETIC_CACHE: complete admitted result required');
  const blocks=physical.blocks,couplings=value.couplings,self=value.selfMatrices;
  if(couplings.length!==blocks.length*(blocks.length-1)/2||self.length!==blocks.filter((b:any)=>b.directSelf).length)throw new Error('CHANNEL_MAGNETIC_CACHE: block coverage changed');
@@ -56,7 +56,7 @@ export function createProblemExecutor(retainDcForScenario = false) {
       finally{if(!retainDcForScenario){electrical.clear();electrical=undefined;}}
     }
     else if(problem.kind==='local-extraction'){
-      electrical ??= new addon.AnalysisElectricalSession();try{const r=problem.request;const requestStart=performance.now();const remaining=()=>{const seconds=(r.remainingSeconds??300)-(performance.now()-requestStart)/1000;if(!Number.isFinite(seconds)||seconds<=0||seconds>Number(process.env.P7_VERIFY_SECONDS??300))throw new Error('LOCAL_DEADLINE: shared planning/cache/prepare/solve deadline');return seconds;};
+      electrical ??= new addon.AnalysisElectricalSession();try{const r=problem.request;const requestStart=performance.now();const remaining=()=>{const seconds=(r.remainingSeconds??1800)-(performance.now()-requestStart)/1000;if(!Number.isFinite(seconds)||seconds<=0||(process.env.P7_VERIFY_SECONDS!==undefined&&seconds>Number(process.env.P7_VERIFY_SECONDS)))throw new Error('LOCAL_DEADLINE: shared planning/cache/prepare/solve deadline');return seconds;};
       if(r.bandHz[0]!==1000||r.bandHz[1]!==100000||r.frequenciesHz.some(f=>f<r.bandHz[0]||f>r.bandHz[1]))throw new Error('LOCAL_BAND: unsupported band; explicit validation/rebuild required');
       const core=checkedCoreIdentity();
       const key=localExtractionKey(localCache,core,r);

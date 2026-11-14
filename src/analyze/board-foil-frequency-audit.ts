@@ -118,7 +118,7 @@ export function auditBoardFoilFrequency(
 ) {
   const n=problem.expected.electrodePairs.length;
   const maxFreshSamples=Math.min(8,Math.floor(64/n));
-  const maxSeconds=Math.min(problem.request.budget.maxSeconds,Number(process.env.P7_VERIFY_SECONDS??300));
+  const maxSeconds=process.env.P7_VERIFY_SECONDS===undefined?problem.request.budget.maxSeconds:Math.min(problem.request.budget.maxSeconds,Number(process.env.P7_VERIFY_SECONDS));
   const externalResources=problem.request.partitionPolicy==='automatic-hybrid-v1';
   const deadlineMs=externalResources?undefined:started+1000*maxSeconds;
   const seeded=new Map(baseline.frequenciesHz.flatMap((f,i)=>

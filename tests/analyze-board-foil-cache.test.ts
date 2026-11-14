@@ -763,9 +763,15 @@ test('explicit high-memory board foil budget reaches producer without raising de
    assert.equal(r.budget.maxMemoryMiB,16384);throw stop;
   }),e=>e===stop);
   delete process.env.P7_VERIFY_MEMORY_MIB;
+  // Without P7_VERIFY_MEMORY_MIB the request budget applies as given (no silent cut to 2048); a set variable still cuts.
   assert.throws(()=>cachedBoardFoilReport(cache,'default-budget',input,r=>{
+   assert.equal(r.budget.maxMemoryMiB,16384);throw stop;
+  }),e=>e===stop);
+  process.env.P7_VERIFY_MEMORY_MIB='2048';
+  assert.throws(()=>cachedBoardFoilReport(cache,'cut-budget',input,r=>{
    assert.equal(r.budget.maxMemoryMiB,2048);throw stop;
   }),e=>e===stop);
+  delete process.env.P7_VERIFY_MEMORY_MIB;
   for(const value of [NaN,Infinity,0,65537]){
    input.request.budget.maxMemoryMiB=value;
    assert.throws(()=>cachedBoardFoilReport(cache,'bad-budget',input,()=>assert.fail('producer')),/BOARD_FOIL_BUDGET/);

@@ -7,8 +7,9 @@ import type * as T from './spec-doc.js';
 import {createProblemExecutor} from '../execute-problem.ts';
 import {requestedFrequencyInterval} from '../p7-frequency-planning.ts';
 import {AnalysisDslError} from './schema.ts';
+import {withBudgetHint} from './budget-hint.ts';
 /** Defaults apply only when the request carries no `.budget()`. */
-const defaultBudget={maxSeconds:300,maxMemoryMiB:2048};
+const defaultBudget={maxSeconds:1800,maxMemoryMiB:4096};
 /** Existing channel/port/scope target carries physical inputs, never a circuit.
  * No diagnostic process, new builder, SavedScenario wrapper or net inference. */
 export function isLocalTarget(task:AnalysisTask){const c=task.config as T.Configurations['impedance'];return task.kind==='impedance'&&c.method==='layered'&&(c.target?.kind==='channel'||c.target?.kind==='differential');}
@@ -26,5 +27,5 @@ export function createLocalExecutor(execute=createProblemExecutor(true)){return 
  try {
   const solved=solveHybridBoardChannel(execute,task.board,geometry,extractionPlan.terminalRequest??extractionPlan.contacts,frequencies,{maxSeconds:c.budget?.maxSeconds??defaultBudget.maxSeconds,maxMemoryMiB:c.budget?.maxMemoryMiB??defaultBudget.maxMemoryMiB},[startHz,stopHz]);
   return boardFoilResult(task.contextId,solved.foil,solved.report,warningDiagnostics());
- } catch(error) { if(error instanceof AnalysisDslError)throw error;const message=error instanceof Error?error.message:String(error);throw new AnalysisDslError(message.match(/^([A-Z][A-Z0-9_]+):/)?.[1]??'CHANNEL_REJECTED',message,warningDiagnostics()); }
+ } catch(error) { if(error instanceof AnalysisDslError)throw error;const message=error instanceof Error?error.message:String(error);{const code=message.match(/^([A-Z][A-Z0-9_]+):/)?.[1]??'CHANNEL_REJECTED';throw new AnalysisDslError(code,withBudgetHint(code,message,{maxSeconds:c.budget?.maxSeconds??defaultBudget.maxSeconds,maxMemoryMiB:c.budget?.maxMemoryMiB??defaultBudget.maxMemoryMiB}),warningDiagnostics());} }
 };}

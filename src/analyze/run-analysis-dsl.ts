@@ -24,7 +24,7 @@ export function analysisDslDocumentation(): string { return readFileSync(backend
 export async function runAnalysisDsl(input: RunAnalysisDslInput, options: RunAnalysisDslOptions = {}): Promise<AnalysisDslOutput> {
   if (!object(input) || typeof input.code !== 'string' || !input.code.trim() || Object.keys(input).some(k => !['code', 'board', 'profiles', 'models'].includes(k))) throw new AnalysisDslError('INVALID_REQUEST', 'Expected {code, board?, profiles?, models?}');
   if (!options || typeof options !== 'object' || Object.keys(options).some(k => !['signal', 'timeoutMs', 'filename', 'maxEntries', 'maxOutputBytes'].includes(k))) throw new AnalysisDslError('INVALID_REQUEST', 'Unknown scenario option');
-  const timeout = options.timeoutMs ?? 120_000, maxEntries = options.maxEntries ?? 1000, maxOutputBytes = options.maxOutputBytes ?? 4 * 1024 * 1024;
+  const timeout = options.timeoutMs ?? 2_700_000, maxEntries = options.maxEntries ?? 1000, maxOutputBytes = options.maxOutputBytes ?? 4 * 1024 * 1024;
   if (!Number.isFinite(timeout) || timeout <= 0 || !Number.isSafeInteger(maxEntries) || maxEntries < 1 || maxEntries > 100_000 || !Number.isSafeInteger(maxOutputBytes) || maxOutputBytes < 4096 || maxOutputBytes > 128 * 1024 * 1024 || options.filename !== undefined && (typeof options.filename !== 'string' || !options.filename.trim() || Buffer.byteLength(options.filename) > 512 || /[\x00-\x1f]/.test(options.filename)) || options.signal !== undefined && !(options.signal instanceof AbortSignal)) throw new AnalysisDslError('INVALID_REQUEST', 'Invalid scenario limits, filename or signal');
   const filename = options.filename ?? 'analysis-dsl.js';
   const reports: Report[] = [];

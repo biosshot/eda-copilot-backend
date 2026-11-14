@@ -11,7 +11,17 @@ use std::collections::{BTreeMap, HashMap, VecDeque};
 
 pub(super) const RULE: &str = "triangles that have a copper sidewall edge (copper owner differs across an edge in some slab) are refined to depth L, one depth less per ring of edge neighbours; a triangle of depth d gets a 2^d barycentric lattice, edges shared with a deeper neighbour follow the deeper count; original edges are constrained, z planes unchanged";
 const MAX_DEPTH: usize = 4;
-pub(super) fn enabled() -> bool { std::env::var("P7_FIELD_REFINE").as_deref() == Ok("1") }
+/// `P7_FIELD_REFINE`: unset = automatic (refine, but skip when the refined field node count would exceed
+/// `P7_FIELD_REFINE_MAX_NODES`, default 400000); `1` = always refine, no node-count limit; anything else = off.
+pub(super) enum Mode { Off, Forced, Auto(usize) }
+pub(super) fn mode() -> Mode {
+    match std::env::var("P7_FIELD_REFINE").as_deref() {
+        Err(_) if cfg!(test) => Mode::Off, // unset in the test build keeps the earlier behaviour (see `p7_default_on`)
+        Err(_) => Mode::Auto(std::env::var("P7_FIELD_REFINE_MAX_NODES").ok().and_then(|v| v.parse::<usize>().ok()).unwrap_or(400_000)),
+        Ok("1") => Mode::Forced,
+        Ok(_) => Mode::Off,
+    }
+}
 fn levels() -> usize { std::env::var("P7_FIELD_REFINE_LEVELS").ok().and_then(|v| v.parse::<usize>().ok()).map_or(3, |v| v.clamp(1, MAX_DEPTH)) }
 /// `P7_FIELD_REFINE_COUNT_ONLY=1`: report the refined field node count and refuse before the solve.
 fn count_only() -> bool { std::env::var("P7_FIELD_REFINE_COUNT_ONLY").as_deref() == Ok("1") }
@@ -31,8 +41,14 @@ pub(super) struct Refined {
     pub record: serde_json::Value,
 }
 
+/// Automatic mode only: the refinement was not done because the refined field node count exceeds the limit; the coarse trace and certificate are handed back.
+pub(super) enum Outcome<'a> { Refined(Box<Refined>), Skipped { trace: PotentialTrace, cert: CertifiedOverlay<'a>, field_nodes: usize, cap: usize } }
+
 pub(super) fn refine(input: &Input, trace: PotentialTrace, cert: CertifiedOverlay<'_>, map: &MixedMap<'_>, budget: Budget) -> Result<Refined> {
-    drop(trace);
+    match refine_capped(input, trace, cert, map, budget, None)? { Outcome::Refined(r) => Ok(*r), Outcome::Skipped { .. } => Err(error("FIELD_REFINE", "unexpected skip without a node limit")) }
+}
+
+pub(super) fn refine_capped<'a>(input: &Input, trace: PotentialTrace, cert: CertifiedOverlay<'a>, map: &MixedMap<'_>, budget: Budget, auto_cap: Option<usize>) -> Result<Outcome<'a>> {
     let started = std::time::Instant::now();
     let fail = |m: &str| error("FIELD_REFINE", m);
     let (xy, tri) = match input.meshes.as_slice() { [PlaneInput::Exact { xy_m, triangles, .. }] => (xy_m, triangles), _ => return Err(fail("one exact coarse mesh required")) };
@@ -71,8 +87,14 @@ pub(super) fn refine(input: &Input, trace: PotentialTrace, cert: CertifiedOverla
         for e in edge_tris.keys() { xy_count += (1usize << edge_depth(e)) - 1; }
         for &d in &depth { let m = 1usize << d; xy_count += (m - 1) * m.saturating_sub(2) / 2; }
         eprintln!("P7_FIELD_REFINE_STATS levels={level} depthCounts={depth_counts:?} xyNodes={xy_count} fieldNodes={}", xy_count * nz);
+        // Automatic mode also skips where the explicit request node cap (`budget.max_nodes`) would refuse the refined mesh.
+        if let Some(cap) = auto_cap.map(|cap| cap.min(budget.max_nodes)).filter(|&cap| !count_only() && xy_count * nz > cap) {
+            eprintln!("P7_FIELD_REFINE_SKIPPED fieldNodes={} cap={cap} (set P7_FIELD_REFINE=1 to refine anyway, P7_FIELD_REFINE_MAX_NODES to change the limit)", xy_count * nz);
+            return Ok(Outcome::Skipped { trace, cert, field_nodes: xy_count * nz, cap });
+        }
         if count_only() { return Err(error("FIELD_REFINE_COUNT_ONLY", &format!("count only: xyNodes {n}->{xy_count}, fieldNodes {}->{} (planes {nz}), sidewall={sidewall} refined={refined_triangles} depthCounts={depth_counts:?}", n * nz, xy_count * nz))); }
     }
+    drop(trace);
     let mut pts: Vec<[f64; 2]> = xy.clone();
     let mut support: Vec<[(usize, f64); 3]> = (0..n).map(|i| [(i, 1.), (i, 0.), (i, 0.)]).collect();
     let mut chains: BTreeMap<[usize; 2], Vec<usize>> = BTreeMap::new();
@@ -172,5 +194,5 @@ pub(super) fn refine(input: &Input, trace: PotentialTrace, cert: CertifiedOverla
         "sidewallTriangles": sidewall, "refinedTriangles": refined_triangles, "capped": capped, "rule": RULE, "status": "approximation",
         "statusNote": "field mesh refined in XY only near copper sidewalls; potentials stay on the original current-mesh nodes and refined copper nodes interpolate from them; field accuracy is not verified against a reference"});
     eprintln!("P7_FIELD_REFINE levels={level} xyNodes {n}->{nf} fieldNodes {}->{} triangles {nt}->{ntf} sidewall={sidewall} refined={refined_triangles} capped={capped} elapsed={:.3}s", n * nz, nf * nz, started.elapsed().as_secs_f64());
-    Ok(Refined { input: fine_input, trace: PotentialTrace { potential_nodes: (0..map.potential_count()).map(|i| format!("mixed:{i}")).collect(), nodes }, triangles: ntf, copper, epsilon, node_owners: owners, finite_contacts: cert.finite_contacts, rowless_modes: cert.rowless_modes, bytes, record })
+    Ok(Outcome::Refined(Box::new(Refined { input: fine_input, trace: PotentialTrace { potential_nodes: (0..map.potential_count()).map(|i| format!("mixed:{i}")).collect(), nodes }, triangles: ntf, copper, epsilon, node_owners: owners, finite_contacts: cert.finite_contacts, rowless_modes: cert.rowless_modes, bytes, record })))
 }

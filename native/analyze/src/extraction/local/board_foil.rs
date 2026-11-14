@@ -788,10 +788,14 @@ pub fn solve_checked(
         None => (geometry, geometry),
     };
     phase_trace("geometry-prepared", started, serde_json::json!({"ports": port_count, "frequencies": axis.len()}));
-    // P7_FIELD_INTERFACE_STEP=1 (default off): same interface step rule as the low band
+    // P7_FIELD_INTERFACE_STEP (default on since 2026-11-14, `0` = off): same interface step rule as the low band
     // (`board_prepare`: min(given or 25 um, 25 um), growth given or 2); null becomes 25 um.
+    // Automatic mode (variable unset): if the stepped mesh/field fails with MESH_LIMIT or MEMORY_LIMIT, the build is repeated without the step
+    // and `provenance.fieldInterfaceStepSkipped {reason}` is written. Explicit `=1` keeps the refusal, `=0` turns the step off.
+    let step_on = super::super::p7_default_on("P7_FIELD_INTERFACE_STEP");
+    let step_auto = step_on && std::env::var("P7_FIELD_INTERFACE_STEP").is_err();
     let stepped;
-    let mesh_geometry = if std::env::var("P7_FIELD_INTERFACE_STEP").as_deref() == Ok("1") {
+    let step_geometry = if step_on {
         let mut g = mesh_geometry.clone();
         g.interface_step_m = Some(g.interface_step_m.unwrap_or(0.000025).min(0.000025));
         g.interface_growth = Some(g.interface_growth.unwrap_or(2.));
@@ -800,6 +804,7 @@ pub fn solve_checked(
     } else {
         mesh_geometry
     };
+    let run = |mesh_geometry: &board_mesh::Request| -> Result<serde_json::Value> {
     let mesh = board_mesh::build_profiled_hybrid(board, mesh_geometry, budget, remaining(started, wall)?, skin)?;
     phase_trace("mesh-built", started, json!({"nodes": mesh.mesh.nodes_m.len(), "tetrahedra": mesh.mesh.copper_tetrahedra.len(), "planarTriangles": mesh.planar_triangles.len(), "barrels": mesh.barrel_ids.len()}));
     let masks = mesh.hybrid_mesh_masks.clone();
@@ -830,4 +835,18 @@ pub fn solve_checked(
     if let Some(c) = cut_port_record { checked["provenance"]["cutPorts"] = c; }
     if let Some(c) = band_screen_record { checked["provenance"]["bandScreen"] = c; }
     Ok(checked)
+    };
+    if step_auto {
+        match run(step_geometry) {
+            Err(e) if e.contains("MESH_LIMIT") || e.contains("MEMORY_LIMIT") => {
+                eprintln!("P7_FIELD_INTERFACE_STEP_SKIPPED reason={e} (set P7_FIELD_INTERFACE_STEP=1 to keep the refusal)");
+                let mut v = run(mesh_geometry)?;
+                v["provenance"]["fieldInterfaceStepSkipped"] = json!({"reason": e});
+                Ok(v)
+            }
+            other => other,
+        }
+    } else {
+        run(step_geometry)
+    }
 }

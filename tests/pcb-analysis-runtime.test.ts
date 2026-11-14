@@ -78,7 +78,7 @@ test('environment configuration never creates unlimited workers/queue and suppor
     try {
         for (const value of ['Infinity', 'NaN', '-1', '1.5', '99999999999999999999', 'bad']) {
             keys.forEach(key => { process.env[key] = value; });
-            assert.deepEqual(analysisPoolConfig(), { maxWorkers: 1, maxQueueSize: 4, timeoutMs: 1_800_000, terminateTimeoutMs: 1_000 });
+            assert.deepEqual(analysisPoolConfig(), { maxWorkers: 1, maxQueueSize: 4, timeoutMs: 2_700_000, terminateTimeoutMs: 1_000 });
         }
         process.env.PCB_ANALYZE_WORKERS = '1'; process.env.PCB_ANALYZE_WORKER_QUEUE_SIZE = '0';
         assert.equal(analysisPoolConfig().maxQueueSize, 0);

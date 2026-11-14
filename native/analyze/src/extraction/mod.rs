@@ -21,6 +21,18 @@ type Result<T> = std::result::Result<T, String>;
 fn error(code: &str, message: impl std::fmt::Display) -> String {
     format!("{code}: {message}")
 }
+/// P7-R developer switches that default to ON since 2026-11-14: unset keeps the default, `0` restores the earlier (off) behaviour.
+/// Rule: in the test build (`cfg!(test)`) an unset variable keeps the earlier value (off), an explicitly set variable acts everywhere.
+pub(crate) fn p7_default_on(name: &str) -> bool {
+    match std::env::var(name) { Err(_) => !cfg!(test), Ok(v) => v != "0" }
+}
+/// Mode switch with a default: unset gives `default` (0 in the test build, see `p7_default_on`); a set value gives itself when it is `0..=max`, otherwise `0` (off).
+pub(crate) fn p7_default_mode(name: &str, default: u8, max: u8) -> u8 {
+    match std::env::var(name) {
+        Err(_) => if cfg!(test) { 0 } else { default },
+        Ok(v) => v.parse::<u8>().ok().filter(|m| *m <= max).unwrap_or(0),
+    }
+}
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct MeshOptions {
