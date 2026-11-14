@@ -154,6 +154,8 @@ pub struct ReducedSpace {
     basis: Basis,
     charges: Vec<Vec<f64>>,
     magnetic_actions: Vec<Vec<f64>>,
+    /// Resistive actions and Gram of `basis.current`, filled lazily by `append_current_mode`.
+    resistive: ModeCache,
     magnetic_basis_certificate: Option<serde_json::Value>,
     ports: Vec<[usize; 2]>,
     full_potentials: usize,
@@ -166,7 +168,13 @@ pub struct ReducedSpace {
     pub enrichment: Option<Enrichment>,
     native_allocation: bool,
     approximate_magnetic: bool,
+    /// `P7_ENRICH_INDUCTIVE=3`: self inductance of each current cell (empty: use R^-1 as preconditioner).
+    l_diag: Vec<f64>,
+    /// `P7_ENRICH_INDUCTIVE=4`: dense inductance blocks of the planar H-matrix leaves in the current-cell space.
+    l_blocks: Vec<LBlock>,
 }
+/// Cell modes of one H-matrix leaf and their inductance matrix (row-major, `modes.len()` square, henry).
+struct LBlock { modes: Vec<usize>, l: Vec<f64> }
 
 fn sum(a: &[f64], b: &[f64]) -> f64 {
     a.iter()
@@ -758,6 +766,16 @@ pub(super) fn reciprocity_tier_of(max_err: f64) -> &'static str {
 pub(super) const CONTINUATION_EXTRA: usize = 8;
 /// Continuation rule: up to the requested cap (`max - CONTINUATION_EXTRA` when the grid carries the extension) the loop
 /// always continues; beyond it only while the worst KVL fell at least 2x over the last 4 iterations.
+/// `P7_ENRICH_MAX` (1..=256): enrichment iteration limit for the compact adaptive solver. Unset keeps the default.
+fn enrich_max_override() -> Result<Option<usize>> {
+    match std::env::var("P7_ENRICH_MAX") {
+        Err(_) => Ok(None),
+        Ok(text) => match text.trim().parse::<usize>() {
+            Ok(limit) if (1..=256).contains(&limit) => Ok(Some(limit)),
+            _ => Err(error("HYBRID_INPUT", "P7_ENRICH_MAX must be an integer in 1..=256")),
+        },
+    }
+}
 fn enrichment_continues(iteration: usize, max_iterations: usize, history: &[serde_json::Value]) -> bool {
     if max_iterations <= 16 || iteration < 16 { return true; }
     let kvl = |i: usize| history.get(i).and_then(|h| h["maxKvlRelative"].as_f64());
@@ -1035,7 +1053,8 @@ pub(super) fn solve_mixed_grid(
     // Hints live in original physical current coordinates. Admit them only
     // after the full DC reset, using the same R metric as residual enrichment.
     let before_profiles=basis.current.len();
-    for profile in profiles {check_time(start,wall)?;append_current_mode(&cells,&mut basis.current,profile.clone())?;}
+    let mut resistive_actions=ModeCache::default();
+    for profile in profiles {check_time(start,wall)?;append_current_mode(&cells,&mut basis.current,&mut resistive_actions,profile.clone())?;}
     let added_profiles=basis.current.len()-before_profiles;
     let charges = basis
         .voltage
@@ -1081,6 +1100,7 @@ pub(super) fn solve_mixed_grid(
         basis,
         charges,
         magnetic_actions: actions,
+        resistive: resistive_actions,
         magnetic_basis_certificate: basis_certificate,
         ports: ports.to_vec(),
         full_potentials: n,
@@ -1097,6 +1117,8 @@ pub(super) fn solve_mixed_grid(
         enrichment: None,
         native_allocation: true,
         approximate_magnetic: false,
+        l_diag: Vec::new(),
+        l_blocks: Vec::new(),
     };
     let retained_bytes = map_retained
         .checked_add(profile_bytes).and_then(|n|n.checked_add(magnetic.owned_bytes))
@@ -1269,6 +1291,7 @@ fn assemble_impl(
         basis,
         charges,
         magnetic_actions,
+        resistive: ModeCache::default(),
         magnetic_basis_certificate: None,
         ports: ports.to_vec(),
         full_potentials: n,
@@ -1281,6 +1304,8 @@ fn assemble_impl(
         enrichment: None,
         native_allocation: false,
         approximate_magnetic: false,
+        l_diag: Vec::new(),
+        l_blocks: Vec::new(),
     };
     let checked = match (preparation, training_resources) {
         (Preparation::Harmonic, None) => None,
@@ -1786,6 +1811,7 @@ impl ReducedSpace {
         ];
         let (mut kcl, mut kcl_scale, mut kvl, mut kvl_scale) = (0_f64, 0_f64, 0_f64, 0_f64);
         let mut kvl_uncertainty = 0f64;
+        let mut worst_kvl: Option<WorstKvl> = None;
         let mut kcl_rows = [vec![0.; nr], vec![0.; nr]];
         let mut kvl_rows = [vec![0.; self.cells.len()], vec![0.; self.cells.len()]];
         for k in 0..2 {
@@ -1817,10 +1843,16 @@ impl ReducedSpace {
                     let (numerator, denominator) = if self.approximate_magnetic {
                         (kvl_rows[k][j].abs(), a.abs() + b.abs() + z.abs())
                     } else { (numerator, denominator) };
+                    if numerator > kvl || worst_kvl.is_none() {
+                        worst_kvl = Some(WorstKvl { phase: k, cell: j, value: numerator, rq: a, gradient: b, wl: z, resistance: cell.resistance });
+                    }
                     kvl = kvl.max(numerator);
                     kvl_scale = kvl_scale.max(denominator);
                     kvl_uncertainty = kvl_uncertainty.max(uncertainty);
                 } else {
+                    if kvl_rows[k][j].abs() > kvl || worst_kvl.is_none() {
+                        worst_kvl = Some(WorstKvl { phase: k, cell: j, value: kvl_rows[k][j].abs(), rq: a, gradient: b, wl: z, resistance: cell.resistance });
+                    }
                     kvl = kvl.max(kvl_rows[k][j].abs());
                     kvl_scale = kvl_scale.max(a.abs() + b.abs() + z.abs());
                 }
@@ -1855,20 +1887,43 @@ impl ReducedSpace {
             kvl: kvl_rows,
             kvl_uncertainty_relative,
             magnetic_certificate,
+            worst_kvl,
         })
     }
 }
 
+/// Row of the largest KVL numerator (P7_COMPACT_GRID_STEP `worstKvlRow`).
+#[derive(Clone, Copy)]
+struct WorstKvl { phase: usize, cell: usize, value: f64, rq: f64, gradient: f64, wl: f64, resistance: f64 }
+fn worst_kvl_json(row: &WorstKvl, frequency: f64, input: usize, map: Option<&super::mixed_conductor::MixedMap<'_>>) -> serde_json::Value {
+    // Mixed current modes are numbered foils (2 each), barrels (1 each), volume (3 each).
+    let owner = map.map(|m| {
+        if let Some((i, f)) = m.foils.iter().enumerate().find(|(_, f)| (f.first_current..f.first_current + 2).contains(&row.cell)) {
+            serde_json::json!({"type":"sheet","index":i,"layer":f.layer,"planarTriangle":f.planar_triangle,"axis":row.cell - f.first_current})
+        } else if let Some((i, b)) = m.barrels.iter().enumerate().find(|(_, b)| b.mode == row.cell) {
+            serde_json::json!({"type":"barrel","index":i,"barrelId":b.barrel_id})
+        } else {
+            serde_json::json!({"type":"volume"})
+        }
+    });
+    serde_json::json!({"cell":row.cell,"phase":row.phase,"frequencyHz":frequency,"input":input,"residual":row.value,
+        "resistanceTerm":row.rq,"gradientTerm":row.gradient,"omegaLTerm":row.wl,"cellResistanceOhm":row.resistance,"owner":owner})
+}
+
 struct FullResidual {
     norm: Residual,
+    worst_kvl: Option<WorstKvl>,
     kcl: [Vec<f64>; 2],
     kvl: [Vec<f64>; 2],
     kvl_uncertainty_relative: f64,
     magnetic_certificate: Option<serde_json::Value>,
 }
-fn dominant_kvl_phase(residual: &FullResidual) -> (&[f64], &[f64]) {
+fn dominant_phase(residual: &FullResidual) -> usize {
     let peak = residual.kvl.each_ref().map(|row| row.iter().map(|v| v.abs()).fold(0., f64::max));
-    let phase = usize::from(peak[1] > peak[0]);
+    usize::from(peak[1] > peak[0])
+}
+fn dominant_kvl_phase(residual: &FullResidual) -> (&[f64], &[f64]) {
+    let phase = dominant_phase(residual);
     (&residual.kcl[phase], &residual.kvl[phase])
 }
 
@@ -1880,6 +1935,7 @@ fn balanced_drive_correction_pairs_each_dominant_phase_with_its_kcl() {
         kvl: [vec![-4., 0.], vec![3., 3.]],
         kvl_uncertainty_relative: 0.,
         magnetic_certificate: None,
+        worst_kvl: None,
     };
     assert_eq!(dominant_kvl_phase(&a), (&[1.][..], &[-4., 0.][..]));
     let b = FullResidual {
@@ -1907,21 +1963,48 @@ impl FullResidual {
     }
 }
 
+/// Resistive actions of the current modes and their Gram matrix, kept next to `basis.current` so that appending a
+/// vector costs one action and one row of dot products instead of recomputing every mode's action and the whole Gram.
+/// `gram[b][a]` (a <= b) is `sum(basis[a], actions[b])`, the exact value `metric_mode` would recompute.
+#[derive(Default)]
+struct ModeCache {
+    actions: Vec<Vec<f64>>,
+    gram: Vec<Vec<f64>>,
+}
+
+impl ModeCache {
+    fn push(&mut self, basis: &[Vec<f64>], action: Vec<f64>) {
+        let k = self.actions.len();
+        self.actions.push(action);
+        let row = (0..=k).map(|a| sum(&basis[a], &self.actions[k])).collect();
+        self.gram.push(row);
+    }
+}
+
 fn append_current_mode(
     cells: &[Cell],
     basis: &mut Vec<Vec<f64>>,
+    cache: &mut ModeCache,
     candidate: Vec<f64>,
 ) -> Result<()> {
     if basis.len() < cells.len() {
-        let actions: Vec<_> = basis.iter().map(|q| resistive_action(cells, q)).collect();
-        if let Some((q, _)) = metric_mode(
+        // Modes added elsewhere (harmonic seeds) are filled in once here.
+        cache.actions.truncate(basis.len());
+        cache.gram.truncate(basis.len());
+        while cache.actions.len() < basis.len() {
+            let action = resistive_action(cells, &basis[cache.actions.len()]);
+            cache.push(basis, action);
+        }
+        if let Some((q, image)) = metric_mode(
             candidate,
             basis,
-            &actions,
+            &cache.actions,
+            Some(&cache.gram),
             |q| Ok(resistive_action(cells, q)),
             true,
         )? {
             basis.push(q);
+            cache.push(basis, image);
         }
     }
     Ok(())
@@ -1937,6 +2020,7 @@ fn metric_mode(
     mut candidate: Vec<f64>,
     basis: &[Vec<f64>],
     actions: &[Vec<f64>],
+    gram_cache: Option<&[Vec<f64>]>,
     apply: impl Fn(&[f64]) -> Result<Vec<f64>>,
     unit_metric: bool,
 ) -> Result<Option<(Vec<f64>, Vec<f64>)>> {
@@ -1959,7 +2043,8 @@ fn metric_mode(
         let scales: Vec<_> = basis
             .iter()
             .zip(actions)
-            .map(|(v, a)| sum(v, a).sqrt())
+            .enumerate()
+            .map(|(i, (v, a))| gram_cache.map_or_else(|| sum(v, a), |g| g[i][i]).sqrt())
             .collect();
         if scales.iter().any(|s| !s.is_finite() || *s <= 0.) {
             return Err(error(
@@ -1969,7 +2054,7 @@ fn metric_mode(
         }
         let gram = Mat::from_fn(basis.len(), basis.len(), |i, j| {
             let (a, b) = (i.min(j), i.max(j));
-            sum(&basis[a], &actions[b]) / scales[a] / scales[b]
+            gram_cache.map_or_else(|| sum(&basis[a], &actions[b]), |g| g[b][a]) / scales[a] / scales[b]
         });
         let factor = gram.llt(Side::Lower).map_err(|_| {
             error(
@@ -2009,6 +2094,134 @@ fn metric_mode(
     }
     let image = apply(&candidate)?;
     Ok(Some((candidate, image)))
+}
+
+/// `P7_ENRICH_INDUCTIVE` (developer switch, default off): `1` replaces `drop = kvl / R` by the GMRES solve of
+/// `(R + j*omega*L) d = r` for the real/imaginary residual pair of the worst drive; `2` also does it for the
+/// balanced-drive pair (two drives, dominant phase each). Step 1.1 measurement: `2` is worse than `1` at 3 MHz.
+fn inductive_mode() -> u8 {
+    match std::env::var("P7_ENRICH_INDUCTIVE").as_deref() { Ok("1") => 1, Ok("2") => 2, Ok("3") => 3, Ok("4") => 4, Ok("5") => 5, _ => 0 }
+}
+/// `P7_ENRICH_GMRES_MAX` (1..=512, default 30): action cap of the inductive GMRES solve.
+/// Gauss-Jordan inverse with partial pivoting of a dense row-major `n x n` matrix.
+fn invert_dense(mut a: Vec<f64>, n: usize) -> Option<Vec<f64>> {
+    let mut inv = vec![0.; n * n];
+    for i in 0..n { inv[i * n + i] = 1.; }
+    for col in 0..n {
+        let pivot = (col..n).max_by(|&x, &y| a[x * n + col].abs().total_cmp(&a[y * n + col].abs()))?;
+        let d = a[pivot * n + col];
+        if !(d.abs() > 0.) || !d.is_finite() { return None; }
+        if pivot != col { for c in 0..n { a.swap(pivot * n + c, col * n + c); inv.swap(pivot * n + c, col * n + c); } }
+        for c in 0..n { a[col * n + c] /= d; inv[col * n + c] /= d; }
+        for row in 0..n {
+            if row == col { continue; }
+            let f = a[row * n + col];
+            if f == 0. { continue; }
+            for c in 0..n { a[row * n + c] -= f * a[col * n + c]; inv[row * n + c] -= f * inv[col * n + c]; }
+        }
+    }
+    Some(inv)
+}
+fn inductive_max_actions() -> usize {
+    std::env::var("P7_ENRICH_GMRES_MAX").ok().and_then(|v| v.parse::<usize>().ok()).filter(|v| (1..=512).contains(v)).unwrap_or(30)
+}
+const INDUCTIVE_REDUCTION: f64 = 1e-2;
+/// `P7_ENRICH_PROBE=1` (developer diagnostic, default off, no behaviour change): one `P7_ENRICH_PROBE` line per
+/// inductive solve with the true residuals of the GMRES solution and of the final candidate (two extra magnetic calls).
+fn enrich_probe() -> bool {
+    std::env::var("P7_ENRICH_PROBE").as_deref() == Ok("1")
+}
+/// Right-preconditioned GMRES without restart: solves `A x = b` with `x = M y`, `M = diag(precond)`. Stops when the
+/// true residual falls to `target * |b|` or after `max_actions` applications of `A`.
+/// Returns (x, actions used, final residual / initial residual, residual / initial residual after each action).
+fn gmres(
+    b: &[f64],
+    precond: &dyn Fn(&[f64]) -> Vec<f64>,
+    target: f64,
+    max_actions: usize,
+    mut apply: impl FnMut(&[f64]) -> Result<Vec<f64>>,
+) -> Result<(Vec<f64>, usize, f64, Vec<f64>)> {
+    let dot = |a: &[f64], c: &[f64]| a.iter().zip(c).map(|(x, y)| x * y).sum::<f64>();
+    let beta = dot(b, b).sqrt();
+    if !beta.is_finite() { return Err(error("FOIL_ENRICHMENT", "nonfinite inductive residual")); }
+    if beta == 0. { return Ok((vec![0.; b.len()], 0, 0., Vec::new())); }
+    let mut basis = vec![b.iter().map(|v| v / beta).collect::<Vec<f64>>()];
+    let mut h: Vec<Vec<f64>> = Vec::new();
+    let (mut cs, mut sn) = (Vec::<f64>::new(), Vec::<f64>::new());
+    let mut g = vec![beta];
+    let mut actions = 0;
+    let mut history = Vec::new();
+    for j in 0..max_actions {
+        let z = precond(&basis[j]);
+        let mut w = apply(&z)?;
+        actions += 1;
+        if w.iter().any(|v| !v.is_finite()) { return Err(error("FOIL_ENRICHMENT", "nonfinite inductive action")); }
+        let mut col = vec![0.; j + 2];
+        for i in 0..=j {
+            col[i] = dot(&w, &basis[i]);
+            for (x, v) in w.iter_mut().zip(&basis[i]) { *x -= col[i] * v; }
+        }
+        col[j + 1] = dot(&w, &w).sqrt();
+        for i in 0..j {
+            let t = cs[i] * col[i] + sn[i] * col[i + 1];
+            col[i + 1] = -sn[i] * col[i] + cs[i] * col[i + 1];
+            col[i] = t;
+        }
+        let d = col[j].hypot(col[j + 1]);
+        let (c, s) = if d == 0. { (1., 0.) } else { (col[j] / d, col[j + 1] / d) };
+        cs.push(c);
+        sn.push(s);
+        let next_norm = col[j + 1];
+        let breakdown = next_norm <= 1e-14 * beta;
+        col[j] = d;
+        col[j + 1] = 0.;
+        g.push(-s * g[j]);
+        g[j] *= c;
+        h.push(col);
+        history.push(g[j + 1].abs() / beta);
+        if g[j + 1].abs() <= target * beta || breakdown { break; }
+        basis.push(w.iter().map(|v| v / next_norm).collect());
+    }
+    let k = actions;
+    let mut y = vec![0.; k];
+    for i in (0..k).rev() {
+        let mut t = g[i];
+        for l in i + 1..k { t -= h[l][i] * y[l]; }
+        y[i] = t / h[i][i];
+    }
+    let mut x = vec![0.; b.len()];
+    for (i, yi) in y.iter().enumerate() {
+        for (xv, v) in x.iter_mut().zip(&basis[i]) { *xv += yi * v; }
+    }
+    let x = precond(&x);
+    if x.iter().any(|v| !v.is_finite()) { return Err(error("FOIL_ENRICHMENT", "nonfinite inductive solution")); }
+    Ok((x, k, g[k].abs() / beta, history))
+}
+#[cfg(test)]
+mod gmres_tests {
+    use super::*;
+    #[test]
+    fn solves_complex_symmetric_block_system() {
+        let r = [1., 2., 3.];
+        let l = [[1., 0.5, 0.2], [0.5, 1., 0.3], [0.2, 0.3, 1.]];
+        let w = 10.;
+        let apply = |z: &[f64]| -> Result<Vec<f64>> {
+            let mut out = vec![0.; 6];
+            for i in 0..3 {
+                let (mut lr, mut li) = (0., 0.);
+                for j in 0..3 { lr += l[i][j] * z[j]; li += l[i][j] * z[3 + j]; }
+                out[i] = r[i] * z[i] - w * li;
+                out[3 + i] = r[i] * z[3 + i] + w * lr;
+            }
+            Ok(out)
+        };
+        let b = [1., -2., 0.5, 0.3, 0.1, -0.7];
+        let m = [1., 0.5, 1. / 3., 1., 0.5, 1. / 3.];
+        let (x, actions, reduction, _) = gmres(&b, &|v: &[f64]| v.iter().zip(&m).map(|(a, c)| a * c).collect(), 1e-10, 6, apply).unwrap();
+        let back = apply(&x).unwrap();
+        let err = back.iter().zip(&b).map(|(a, c)| (a - c).abs()).fold(0., f64::max);
+        assert!(err < 1e-8 && actions <= 6 && reduction < 1e-9, "err {err} actions {actions} reduction {reduction}");
+    }
 }
 
 impl ReducedSpace {
@@ -2082,7 +2295,7 @@ impl ReducedSpace {
                     return full.checked().map(|_| ());
                 }
                 self.grow(
-                    &full, initial_nv, names, dc, field, magnetic, start, wall, false,
+                    &full, initial_nv, names, dc, field, magnetic, start, wall, false, 0.,
                 )?;
             }
             unreachable!("bounded enrichment always returns at its final residual")
@@ -2102,13 +2315,234 @@ impl ReducedSpace {
         start: Instant,
         wall: Duration,
         pair_gradient: bool,
+        omega: f64,
     ) -> Result<()> {
         self.grow_phases(
             [(&full.kcl[0], &full.kvl[0]), (&full.kcl[1], &full.kvl[1])],
             full.norm, initial_nv, names, dc, field, magnetic, start, wall, pair_gradient,
+            (omega > 0.).then(|| (omega, [(full, 0), (full, 1)])),
         )
     }
 
+    /// Right preconditioner of the inductive GMRES (modes 3-5): `R^-1`, the cell-diagonal `(R_j + j*omega*L_jj)^-1`
+    /// (3) or, with the H-matrix leaf blocks, `(R + j*omega*L_leaf)^-1` (4, 5), on the (re, im) pair vector.
+    fn inductive_precond(&self, omega: f64) -> impl Fn(&[f64]) -> Vec<f64> + '_ {
+        let n = self.cells.len();
+        let cells = &self.cells;
+        let l_diag = &self.l_diag;
+        let block = inductive_mode() >= 3 && l_diag.len() == n;
+        // Mode 4: modes of an H-matrix leaf use the inverse of the dense block R + j*omega*L_leaf (2m x 2m real form).
+        let mut covered = vec![false; n];
+        let mut inverses: Vec<Vec<f64>> = Vec::new();
+        let mut used_blocks: Vec<&LBlock> = Vec::new();
+        if block && inductive_mode() >= 4 {
+            for b in &self.l_blocks {
+                let m = b.modes.len();
+                let mut a = vec![0.; 4 * m * m];
+                for p in 0..m {
+                    for q in 0..m {
+                        let wl = omega * b.l[p * m + q];
+                        a[p * 2 * m + q] = if p == q { cells[b.modes[p]].resistance } else { 0. };
+                        a[(m + p) * 2 * m + m + q] = a[p * 2 * m + q];
+                        a[p * 2 * m + m + q] = -wl;
+                        a[(m + p) * 2 * m + q] = wl;
+                    }
+                }
+                if let Some(inv) = invert_dense(a, 2 * m) {
+                    for &j in &b.modes { covered[j] = true; }
+                    inverses.push(inv);
+                    used_blocks.push(b);
+                }
+            }
+        }
+        // Mode 3: block-diagonal (R_j + j*omega*L_jj)^-1 acting on the (re, im) pair of each cell as a 2x2 block.
+        let precond = move |v: &[f64]| -> Vec<f64> {
+            let mut out = vec![0.; 2 * n];
+            for (b, inv) in used_blocks.iter().zip(&inverses) {
+                let m = b.modes.len();
+                let u: Vec<f64> = b.modes.iter().map(|&j| v[j]).chain(b.modes.iter().map(|&j| v[n + j])).collect();
+                for row in 0..2 * m {
+                    let s: f64 = (0..2 * m).map(|c| inv[row * 2 * m + c] * u[c]).sum();
+                    if row < m { out[b.modes[row]] = s; } else { out[n + b.modes[row - m]] = s; }
+                }
+            }
+            for j in 0..n {
+                if covered[j] { continue; }
+                let r = cells[j].resistance;
+                if block {
+                    let wl = omega * l_diag[j];
+                    let det = r * r + wl * wl;
+                    out[j] = (r * v[j] + wl * v[n + j]) / det;
+                    out[n + j] = (-wl * v[j] + r * v[n + j]) / det;
+                } else {
+                    out[j] = v[j] / r;
+                    out[n + j] = v[n + j] / r;
+                }
+            }
+            out
+        };
+        precond
+    }
+    /// `P7_ENRICH_INDUCTIVE=1`: approximately solve `(R + j*omega*L) d = r` (r = real/imaginary KVL residual of
+    /// one drive) by right-preconditioned GMRES (preconditioner `R^-1`) on the magnetic action.
+    fn inductive_drops(
+        &self,
+        kvl_re: &[f64],
+        kvl_im: &[f64],
+        omega: f64,
+        magnetic: &MagneticBatch<'_>,
+        start: Instant,
+        wall: Duration,
+    ) -> Result<([Vec<f64>; 2], f64)> {
+        let n = self.cells.len();
+        let started = Instant::now();
+        let rhs: Vec<f64> = kvl_re.iter().chain(kvl_im).copied().collect();
+        let cells = &self.cells;
+        let precond = self.inductive_precond(omega);
+        let (x, actions, reduction, history) = gmres(&rhs, &precond, INDUCTIVE_REDUCTION, inductive_max_actions(), |z| {
+            check_time(start, wall)?;
+            let result = magnetic(&[z[..n].to_vec(), z[n..].to_vec()], None, start, wall)?;
+            if result.actions.len() != 2 || result.actions.iter().any(|a| a.len() != n) {
+                return Err(error("FOIL_ENRICHMENT", "inductive enrichment needs two complete magnetic actions"));
+            }
+            let mut out = vec![0.; 2 * n];
+            for j in 0..n {
+                let r = cells[j].resistance;
+                out[j] = r * z[j] - omega * result.actions[1][j];
+                out[n + j] = r * z[n + j] + omega * result.actions[0][j];
+            }
+            Ok(out)
+        })?;
+        let at = |k: usize| history.get(k - 1).map_or(String::from("-"), |r| format!("{:e}", if *r > 0. { 1. / r } else { f64::INFINITY }));
+        eprintln!("P7_ENRICH_INDUCTIVE currentModes={} omega={omega:e} actions={actions} residualDrop={:e} drop30={} drop60={} drop90={} drop120={} seconds={:.2}",
+            self.basis.current.len(), if reduction > 0. { 1. / reduction } else { f64::INFINITY }, at(30), at(60), at(90), at(120), started.elapsed().as_secs_f64());
+        Ok(([x[..n].to_vec(), x[n..].to_vec()], reduction))
+    }
+    /// `P7_ENRICH_PROBE=1`: `Z * (z_re + j z_im)` with `Z = R + j*omega*L` (one magnetic call, two actions).
+    fn probe_apply_z(
+        &self,
+        omega: f64,
+        z_re: &[f64],
+        z_im: &[f64],
+        magnetic: &MagneticBatch<'_>,
+        start: Instant,
+        wall: Duration,
+    ) -> Result<[Vec<f64>; 2]> {
+        let n = self.cells.len();
+        let result = magnetic(&[z_re.to_vec(), z_im.to_vec()], None, start, wall)?;
+        if result.actions.len() != 2 || result.actions.iter().any(|a| a.len() != n) {
+            return Err(error("FOIL_ENRICHMENT", "enrichment probe needs two complete magnetic actions"));
+        }
+        let mut re = vec![0.; n];
+        let mut im = vec![0.; n];
+        for j in 0..n {
+            let r = self.cells[j].resistance;
+            re[j] = r * z_re[j] - omega * result.actions[1][j];
+            im[j] = r * z_im[j] + omega * result.actions[0][j];
+        }
+        Ok([re, im])
+    }
+    /// `P7_ENRICH_INDUCTIVE=5`: GMRES in the space of KCL-respecting currents. `P x = x - G(dc(div x))` projects out
+    /// the gradient part (`G = conductive`, `dc` the Cholesky DC solve), `i_p = -G(dc(kcl))` fixes the KCL of the
+    /// phase, and the unknown `w` (both phases) solves `P R^-1 Z P w = -P R^-1 (r + Z i_p)`; right preconditioner
+    /// `P (Z_block^-1 R .)`. Returns per phase the candidate current `i_p + P w` and the potential mode
+    /// `psi = -dc(div(R^-1 (r + Z i)))`, plus the GMRES residual drop. Cost: one magnetic call for `Z i_p`, one per
+    /// GMRES action, one for the final `Z i`; two DC solves per phase and projection.
+    fn projected_candidates(
+        &self,
+        dc: &DcCorrection,
+        kcl: [&[f64]; 2],
+        kvl: [&[f64]; 2],
+        omega: f64,
+        magnetic: &MagneticBatch<'_>,
+        start: Instant,
+        wall: Duration,
+    ) -> Result<([Vec<f64>; 2], [Vec<f64>; 2], f64)> {
+        let n = self.cells.len();
+        let nv = self.full_potentials;
+        let cells = &self.cells;
+        let started = Instant::now();
+        let project = |v: &[f64]| -> Result<Vec<f64>> {
+            let g = conductive(cells, &dc.solve(cells, &divergence(cells, v, nv))?);
+            Ok(v.iter().zip(&g).map(|(a, b)| a - b).collect())
+        };
+        let rinv = |v: &[f64]| -> Vec<f64> { v.iter().zip(cells).map(|(a, c)| a / c.resistance).collect() };
+        let mut ip: Vec<Vec<f64>> = Vec::new();
+        for p in 0..2 {
+            let rhs: Vec<f64> = kcl[p].iter().map(|v| -v).collect();
+            ip.push(conductive(cells, &dc.solve(cells, &rhs)?));
+        }
+        let zip = self.probe_apply_z(omega, &ip[0], &ip[1], magnetic, start, wall)?;
+        let mut b = Vec::with_capacity(2 * n);
+        for p in 0..2 {
+            let t: Vec<f64> = kvl[p].iter().zip(&zip[p]).map(|(r, z)| r + z).collect();
+            b.extend(project(&rinv(&t))?.into_iter().map(|v| -v));
+        }
+        let base = self.inductive_precond(omega);
+        let inner_error: std::cell::RefCell<Option<String>> = std::cell::RefCell::new(None);
+        let precond = |y: &[f64]| -> Vec<f64> {
+            let u: Vec<f64> = y.iter().enumerate().map(|(k, v)| v * cells[k % n].resistance).collect();
+            let m = base(&u);
+            let mut out = Vec::with_capacity(2 * n);
+            for half in [&m[..n], &m[n..]] {
+                match project(half) {
+                    Ok(v) => out.extend(v),
+                    Err(e) => { *inner_error.borrow_mut() = Some(e.to_string()); out.extend(vec![0.; n]); }
+                }
+            }
+            out
+        };
+        let gmres_started = Instant::now();
+        let solved = gmres(&b, &precond, INDUCTIVE_REDUCTION, inductive_max_actions(), |y| {
+            check_time(start, wall)?;
+            let z = self.probe_apply_z(omega, &y[..n], &y[n..], magnetic, start, wall)?;
+            let mut out = Vec::with_capacity(2 * n);
+            for part in &z {
+                out.extend(project(&rinv(part))?);
+            }
+            Ok(out)
+        });
+        let (w, actions, reduction, history) = solved?;
+        if let Some(e) = inner_error.into_inner() { return Err(error("FOIL_ENRICHMENT", &e)); }
+        let gmres_seconds = gmres_started.elapsed().as_secs_f64();
+        let delta: Vec<Vec<f64>> = (0..2).map(|p| (0..n).map(|j| ip[p][j] + w[p * n + j]).collect()).collect();
+        let zd = self.probe_apply_z(omega, &delta[0], &delta[1], magnetic, start, wall)?;
+        let mut psi = Vec::new();
+        let mut projected = Vec::new(); // P R^-1 (r + Z i), both phases
+        let mut total = Vec::new(); // r + Z i
+        for p in 0..2 {
+            let t: Vec<f64> = kvl[p].iter().zip(&zd[p]).map(|(r, z)| r + z).collect();
+            let s = rinv(&t);
+            psi.push(dc.solve(cells, &divergence(cells, &s, nv))?.into_iter().map(|v| -v).collect::<Vec<f64>>());
+            projected.push(project(&s)?);
+            total.push(t);
+        }
+        let at = |k: usize| history.get(k - 1).map_or(String::from("-"), |r| format!("{:e}", if *r > 0. { 1. / r } else { f64::INFINITY }));
+        eprintln!("P7_ENRICH_INDUCTIVE5 currentModes={} omega={omega:e} actions={actions} residualDrop={:e} drop30={} drop60={} drop90={} drop120={} gmresSeconds={gmres_seconds:.2} secondsPerAction={:.3} totalSeconds={:.2}",
+            self.basis.current.len(), if reduction > 0. { 1. / reduction } else { f64::INFINITY }, at(30), at(60), at(90), at(120),
+            gmres_seconds / actions.max(1) as f64, started.elapsed().as_secs_f64());
+        if enrich_probe() {
+            let norms = |a: &[f64], c: &[f64]| -> (f64, f64) {
+                let two = a.iter().chain(c).map(|v| v * v).sum::<f64>().sqrt();
+                let max = a.iter().zip(c).map(|(p, q)| p.hypot(*q)).fold(0., f64::max);
+                (two, max)
+            };
+            // Projected-space ratio against the GMRES right-hand side (comparable with `claimed`).
+            let b0 = norms(&b[..n], &b[n..]);
+            let c = norms(&projected[0], &projected[1]);
+            // Physical KVL ratio |R P R^-1 (r + Z i)| / |r| (voltage form, as the earlier probe).
+            let phys: Vec<Vec<f64>> = (0..2).map(|p| projected[p].iter().zip(cells).map(|(v, c)| v * c.resistance).collect()).collect();
+            let r0 = norms(kvl[0], kvl[1]);
+            let ph = norms(&phys[0], &phys[1]);
+            // Raw (unprojected) ratio |r + Z i| / |r| without any potential mode.
+            let raw = norms(&total[0], &total[1]);
+            eprintln!(
+                "P7_ENRICH_PROBE currentModes={} omega={omega:e} claimed={:e} cand2={:e} candMax={:e} phys2={:e} physMax={:e} raw2={:e} rawMax={:e}",
+                self.basis.current.len(), reduction, c.0 / b0.0, c.1 / b0.1, ph.0 / r0.0, ph.1 / r0.1, raw.0 / r0.0, raw.1 / r0.1
+            );
+        }
+        Ok(([delta[0].clone(), delta[1].clone()], [psi[0].clone(), psi[1].clone()], reduction))
+    }
     fn grow_phases(
         &mut self,
         phases: [(&[f64], &[f64]); 2],
@@ -2121,6 +2555,7 @@ impl ReducedSpace {
         start: Instant,
         wall: Duration,
         pair_gradient: bool,
+        inductive: Option<(f64, [(&FullResidual, usize); 2])>,
     ) -> Result<()> {
         let ni = self.basis.current.len();
         let nv = self.basis.voltage.len();
@@ -2131,32 +2566,69 @@ impl ReducedSpace {
             ));
         }
 
-        for (kcl, kvl) in phases {
+        // Each phase is (drive residual, phase index); the drop solves (R + j*omega*L) d = r for that drive.
+        // `P7_ENRICH_PROBE=1`: (omega, claimed reduction, x pair, r re, r im) of the single-drive solve.
+        let mut probe_state: Option<(f64, f64, [Vec<f64>; 2], Vec<f64>, Vec<f64>)> = None;
+        let mut probe_gradients: Vec<Vec<f64>> = Vec::new();
+        // Mode 5: per phase (potential mode, candidate current) of the projected solve (single-drive case only).
+        let mut projected: Option<[(Vec<f64>, Vec<f64>); 2]> = None;
+        let inductive = match inductive {
+            Some((omega, drives)) if inductive_mode() == 5 && std::ptr::eq(drives[0].0, drives[1].0) && drives[0].1 == 0 && drives[1].1 == 1 => {
+                let f = drives[0].0;
+                let (cand, psi, _) = self.projected_candidates(dc, [&f.kcl[0], &f.kcl[1]], [&f.kvl[0], &f.kvl[1]], omega, magnetic, start, wall)?;
+                let [c0, c1] = cand;
+                let [p0, p1] = psi;
+                projected = Some([(p0, c0), (p1, c1)]);
+                None
+            }
+            Some((omega, drives)) if inductive_mode() > 0 => {
+                let (first, claimed) = self.inductive_drops(&drives[0].0.kvl[0], &drives[0].0.kvl[1], omega, magnetic, start, wall)?;
+                let same_drive = std::ptr::eq(drives[0].0, drives[1].0);
+                let second = if same_drive {
+                    first.clone()
+                } else {
+                    self.inductive_drops(&drives[1].0.kvl[0], &drives[1].0.kvl[1], omega, magnetic, start, wall)?.0
+                };
+                if same_drive && enrich_probe() && drives[0].1 == 0 && drives[1].1 == 1 {
+                    probe_state = Some((omega, claimed, first.clone(), drives[0].0.kvl[0].to_vec(), drives[0].0.kvl[1].to_vec()));
+                }
+                Some([first[drives[0].1].clone(), second[drives[1].1].clone()])
+            }
+            _ => None,
+        };
+        for (phase, (kcl, kvl)) in phases.into_iter().enumerate() {
             check_time(start, wall)?;
             // A delta_i = -r_KCL on free nodes. The zero trace Dirichlet
             // correction supplies a voltage bubble, while -R^-1 r_KVL
             // retains the divergence-free induced current contribution.
-            let drop: Vec<_> = kvl
-                .iter()
-                .zip(&self.cells)
-                .map(|(&v, c)| v / c.resistance)
-                .collect();
+            let (bubble, candidate) = if let Some(p) = &projected {
+                p[phase].clone()
+            } else {
+            let drop: Vec<_> = if let Some(d) = &inductive {
+                d[phase].clone()
+            } else {
+                kvl.iter().zip(&self.cells).map(|(&v, c)| v / c.resistance).collect()
+            };
             let rhs: Vec<_> = divergence(&self.cells, &drop, self.full_potentials)
                 .into_iter()
                 .zip(kcl)
                 .map(|(a, b)| a - b)
                 .collect();
             let bubble = dc.solve(&self.cells, &rhs)?;
+            if probe_state.is_some() { probe_gradients.push(conductive(&self.cells, &bubble)); }
             let candidate: Vec<_> = conductive(&self.cells, &bubble)
                 .into_iter()
                 .zip(drop)
                 .map(|(a, b)| a - b)
                 .collect();
+            (bubble, candidate)
+            };
             if self.basis.voltage.len() < self.full_potentials {
                 if let Some((v, c)) = metric_mode(
                     bubble,
                     &self.basis.voltage[initial_nv..],
                     &self.charges[initial_nv..],
+                    None,
                     |v| { let t = Instant::now(); let r = field.apply(v); prof_add(9, t); r },
                     false,
                 )? {
@@ -2165,7 +2637,7 @@ impl ReducedSpace {
                         // shape in the current space. The residual current
                         // may mostly be a divergence-free inductive loop.
                         let gradient = conductive(&self.cells, &v);
-                        append_current_mode(&self.cells, &mut self.basis.current, gradient)?;
+                        append_current_mode(&self.cells, &mut self.basis.current, &mut self.resistive, gradient)?;
                     }
                     // Preserve the original constant lift by adding and
                     // subtracting the same zero-contact shape. The anchor
@@ -2182,7 +2654,42 @@ impl ReducedSpace {
                     self.charges.push(c);
                 }
             }
-            append_current_mode(&self.cells, &mut self.basis.current, candidate)?;
+            append_current_mode(&self.cells, &mut self.basis.current, &mut self.resistive, candidate)?;
+        }
+        if let (Some((omega, claimed, x, r_re, r_im)), Some(d)) = (&probe_state, &inductive) {
+            if probe_gradients.len() == 2 {
+                let n = self.cells.len();
+                let norms = |a: &[f64], b: &[f64]| -> (f64, f64) {
+                    let two = a.iter().chain(b).map(|v| v * v).sum::<f64>().sqrt();
+                    let max = a.iter().zip(b).map(|(p, q)| p.hypot(*q)).fold(0., f64::max);
+                    (two, max)
+                };
+                let (r2, r_max) = norms(r_re, r_im);
+                let ratio = |v: (f64, f64)| (v.0 / r2, v.1 / r_max);
+                let zx = self.probe_apply_z(*omega, &x[0], &x[1], magnetic, start, wall)?;
+                let t = ratio(norms(
+                    &r_re.iter().zip(&zx[0]).map(|(a, b)| a - b).collect::<Vec<_>>(),
+                    &r_im.iter().zip(&zx[1]).map(|(a, b)| a - b).collect::<Vec<_>>(),
+                ));
+                // Candidate correction is -(x_c), x_c = d - G(bubble); G = R^-1 grad(bubble), so the potential mode
+                // cancels the resistive part R*G of the candidate current: r_cand = r - Z*x_c - R*G.
+                let xc: Vec<Vec<f64>> = (0..2).map(|p| (0..n).map(|j| d[p][j] - probe_gradients[p][j]).collect()).collect();
+                let zc = self.probe_apply_z(*omega, &xc[0], &xc[1], magnetic, start, wall)?;
+                let cand = |with_gradient: bool| -> (f64, f64) {
+                    let part = |p: usize, r: &[f64]| -> Vec<f64> {
+                        (0..n).map(|j| {
+                            let g = if with_gradient { self.cells[j].resistance * probe_gradients[p][j] } else { 0. };
+                            r[j] - zc[p][j] - g
+                        }).collect()
+                    };
+                    ratio(norms(&part(0, r_re), &part(1, r_im)))
+                };
+                let (c, c_plain) = (cand(true), cand(false));
+                eprintln!(
+                    "P7_ENRICH_PROBE currentModes={ni} omega={omega:e} claimed={:e} true2={:e} trueMax={:e} cand2={:e} candMax={:e} cand2NoPotential={:e} candMaxNoPotential={:e}",
+                    claimed, t.0, t.1, c.0, c.1, c_plain.0, c_plain.1
+                );
+            }
         }
         if self.basis.voltage.len() == nv && self.basis.current.len() == ni {
             return Err(error(
@@ -2370,6 +2877,7 @@ impl ReducedSpace {
                 let mut samples = Vec::with_capacity(grid.frequencies.len());
                 let (mut max_kcl, mut max_kvl, mut max_power) = (0_f64, 0_f64, 0_f64);
                 let mut max_kvl_uncertainty = 0f64;
+                let mut worst_row: Option<(WorstKvl, f64, usize)> = None;
                 for &frequency in grid.frequencies {
                     let w = 2. * std::f64::consts::PI * frequency;
                     let mut matrix = vec![vec![Value::Null; ports]; ports];
@@ -2459,6 +2967,11 @@ impl ReducedSpace {
                         max_kcl = max_kcl.max(norm.kcl_relative);
                         max_kvl = max_kvl.max(norm.kvl_relative);
                         max_kvl_uncertainty = max_kvl_uncertainty.max(kvl_uncertainty_relative);
+                        if let Some(row) = residual.worst_kvl {
+                            if worst_row.as_ref().is_none_or(|(old, _, _)| row.value > old.value) {
+                                worst_row = Some((row, frequency, input));
+                            }
+                        }
                         let score = norm.kcl_relative.max(norm.kvl_relative);
                         if worst.as_ref().is_none_or(|(_, _, old)| {
                             score > old.norm.kcl_relative.max(old.norm.kvl_relative)
@@ -2664,7 +3177,8 @@ impl ReducedSpace {
                 history.push(json!({"iteration":iteration,"frequencyHz":frequency,"input":input,
                     "potentialModes":self.basis.voltage.len(),"currentModes":self.basis.current.len(),
                     "maxKclRelative":max_kcl,"maxKvlRelative":max_kvl,"maxKvlUncertaintyRelative":max_kvl_uncertainty,
-                    "balancedDriveInput":other.map(|(input, _)| *input)}));
+                    "balancedDriveInput":other.map(|(input, _)| *input),
+                    "worstKvlRow":worst_row.as_ref().map(|(row, f, i)| worst_kvl_json(row, *f, *i, spatial_map))}));
                 if std::env::var_os("P7_MAGNETIC_PHASE_PROFILE").as_deref() == Some(std::ffi::OsStr::new("1")) {
                     eprintln!("P7_COMPACT_GRID_STEP {}", history.last().expect("recorded iteration"));
                 }
@@ -2699,9 +3213,10 @@ impl ReducedSpace {
                     self.grow_phases(
                         [dominant_kvl_phase(&worst), dominant_kvl_phase(other)],
                         worst.norm, initial_nv, names, dc, field, magnetic, start, wall, pair_gradient,
+                        (inductive_mode() == 2).then(|| (2. * std::f64::consts::PI * frequency, [(&worst, dominant_phase(&worst)), (other, dominant_phase(other))])),
                     )?;
                 } else {
-                    self.grow(&worst, initial_nv, names, dc, field, magnetic, start, wall, pair_gradient)?;
+                    self.grow(&worst, initial_nv, names, dc, field, magnetic, start, wall, pair_gradient, 2. * std::f64::consts::PI * frequency)?;
                 }
                 prof_add(8, grow_started);
             }
@@ -2879,10 +3394,11 @@ mod mixed_basis_tests {
         ];
         let mut basis = Vec::new();
         // A physical current with zero incidence can carry magnetic energy.
-        append_current_mode(&cells, &mut basis, vec![1., 0.]).unwrap();
+        let mut actions = ModeCache::default();
+        append_current_mode(&cells, &mut basis, &mut actions, vec![1., 0.]).unwrap();
         let bubble = [0., 0., 0.25];
         let gradient = conductive(&cells, &bubble);
-        append_current_mode(&cells, &mut basis, gradient.clone()).unwrap();
+        append_current_mode(&cells, &mut basis, &mut actions, gradient.clone()).unwrap();
         assert_eq!(basis.len(), 2);
         let weights: Vec<_> = basis
             .iter()
@@ -4033,6 +4549,59 @@ impl CompactMixedMagnetic {
         }
         Ok(())
     }
+    /// Self inductance of every current cell: sum over the supports carrying the cell of 1e-7*|d|^2*I_ss, with I_ss the
+    /// support's own kernel integral (prism: `pair_integral_compact(s,s)`, tetrahedron: `tetra_self_integral`).
+    fn self_inductance_diagonal(&self)->Result<Vec<f64>> {
+        use rayon::prelude::*;
+        let np=self.supports.len();
+        let (start,wall)=(self.start,self.wall);
+        let (supports,local)=(&self.supports,&self.local);
+        let values:Vec<Result<f64>>=(0..np+self.local.len()).into_par_iter().map(|s|{
+            check_time(start,wall)?;
+            if s<np {Ok(super::planar_operator::pair_integral_compact(&supports[s].prism,&supports[s].prism,8,start,wall)?.0)}
+            else {polyhedron::tetra_self_integral(local[s-np].tetra,16)}
+        }).collect();
+        let mut out=vec![0.;self.dimensions];
+        for (s,v) in values.into_iter().enumerate() {
+            let v=v?;
+            if !v.is_finite() {return Err(error("HYBRID_RANGE","non-finite self inductance integral"));}
+            for &(i,d) in self.densities(s) {out[i]+=1e-7*v*(d[0]*d[0]+d[1]*d[1]+d[2]*d[2]);}
+        }
+        Ok(out)
+    }
+    /// Inductance matrices of the dense diagonal leaves of the planar H-matrix in the space of current cells:
+    /// `L[p][q] = 1e-7 * sum_{s,t in leaf} (d_sp . d_tq) K(s,t)`; each cell belongs to the first leaf that carries it.
+    fn inductance_blocks(&self)->Vec<LBlock> {
+        let Some(hm)=&self.hm else {return Vec::new();};
+        let mut taken=vec![false;self.dimensions];
+        let mut out=Vec::new();
+        for (ids,packed) in hm.diagonal_blocks() {
+            let m=ids.len();
+            if packed.len()!=m*(m+1)/2 {continue;}
+            let mut modes:Vec<usize>=Vec::new();
+            for &s in ids {for &(i,_) in &self.supports[s].current_density {if !taken[i] && !modes.contains(&i) {modes.push(i);}}}
+            if modes.is_empty() {continue;}
+            let at=|i:usize|modes.iter().position(|&x|x==i);
+            let k=modes.len();
+            let mut l=vec![0.;k*k];
+            let mut idx=0;
+            for a in 0..m {for b in a..m {
+                let v=packed[idx];idx+=1;
+                for &(p,dp) in &self.supports[ids[a]].current_density {
+                    let Some(pp)=at(p) else {continue;};
+                    for &(q,dq) in &self.supports[ids[b]].current_density {
+                        let Some(qq)=at(q) else {continue;};
+                        let dot=1e-7*v*(dp[0]*dq[0]+dp[1]*dq[1]+dp[2]*dq[2]);
+                        l[pp*k+qq]+=dot;
+                        if a!=b {l[qq*k+pp]+=dot;}
+                    }
+                }
+            }}
+            for &i in &modes {taken[i]=true;}
+            out.push(LBlock{modes,l});
+        }
+        out
+    }
     fn near_pair(&self,a:usize,b:usize)->Result<f64> {
         let (a,b)=(a.min(b),a.max(b));let np=self.supports.len();
         self.cached((a,b),|| {
@@ -4185,9 +4754,12 @@ impl CompactMixedMagnetic {
 }
 pub(super) fn solve_compact_adaptive(
     map:&super::mixed_conductor::MixedMap<'_>, names:&[String], ports:&[[usize;2]],
-    packages:&[super::checked_packages::Validated], grid:MatchedGrid<'_>, field:&super::layered_capacitance::SpatialFieldAction, budget:AllocationBudget, start:Instant, wall:Duration, profiles:Option<&[Vec<f64>]>,
+    packages:&[super::checked_packages::Validated], mut grid:MatchedGrid<'_>, field:&super::layered_capacitance::SpatialFieldAction, budget:AllocationBudget, start:Instant, wall:Duration, profiles:Option<&[Vec<f64>]>,
 )->Result<(serde_json::Value,Model,usize)> {
     let n=map.potential_count();let ni=map.current_count();
+    // P7_ENRICH_MAX=<n>: enrichment iteration limit instead of the requested 16 (+8 continuation). The vector caps below
+    // (`growth`, `voltage_cap`, `current_cap`) and the training loop all read `grid.max_iterations`, so they follow it.
+    if let Some(limit)=enrich_max_override()? {grid.max_iterations=limit;eprintln!("P7_ENRICH_MAX limit={limit}");}
     let profiles=profiles.unwrap_or(&[]);
     if profiles.len()>32 || profiles.iter().any(|p|p.len()!=ni || p.iter().any(|v|!v.is_finite())) {return Err(error("MIXED_FOIL_PROFILE","invalid compact current profiles"));}
     let profile_bytes=profiles.len().checked_mul(ni).and_then(|n|n.checked_mul(8)).and_then(|n|n.checked_add(profiles.len().checked_mul(std::mem::size_of::<Vec<f64>>())?)).ok_or_else(||error("MEMORY_LIMIT","compact profile plan overflow"))?;
@@ -4197,6 +4769,8 @@ pub(super) fn solve_compact_adaptive(
     eprintln!("P7_COMPACT_STAGE stage=magnetic-prepare-start elapsed={:.6}",start.elapsed().as_secs_f64());
     let magnetic=CompactMixedMagnetic::new(map,operator_budget,start,wall)?;
     eprintln!("P7_COMPACT_STAGE stage=magnetic-prepare-end elapsed={:.6}",start.elapsed().as_secs_f64());
+    let l_blocks=if inductive_mode()>=4 {let t=Instant::now();let b=magnetic.inductance_blocks();eprintln!("P7_ENRICH_LBLOCKS blocks={} modes={} maxBlockModes={} seconds={:.2}",b.len(),b.iter().map(|x|x.modes.len()).sum::<usize>(),b.iter().map(|x|x.modes.len()).max().unwrap_or(0),t.elapsed().as_secs_f64());b} else {Vec::new()};
+    let l_diag=if inductive_mode()>=3 {let t=Instant::now();let d=magnetic.self_inductance_diagonal()?;eprintln!("P7_ENRICH_LDIAG cells={} min={:e} max={:e} seconds={:.2}",d.len(),d.iter().cloned().fold(f64::INFINITY,f64::min),d.iter().cloned().fold(0.,f64::max),t.elapsed().as_secs_f64());d} else {Vec::new()};
     let mut terms=vec![Vec::new();ni];for &(i,j,a) in &map.incidence {terms[j].push((i,a));}
     let cells:Vec<_>=terms.into_iter().zip(&map.resistance_ohm).map(|(t,&r)|Cell::new(t,r)).collect();
     let basis_budget=AllocationBudget{max_bytes:share.checked_sub(profile_bytes).ok_or_else(||error("MEMORY_LIMIT","compact profiles exceed basis budget"))?,..budget};
@@ -4222,17 +4796,18 @@ pub(super) fn solve_compact_adaptive(
     } else {None};
     let (mut basis,harmonic_peak,dc)=harmonic(&cells,n,&map.electrodes.iter().copied().collect(),Some(&map.potential_components),basis_budget,0,start,wall,growth,true)?;
     let peak=hinted_plan.map_or(harmonic_peak,|plan|plan.max(harmonic_peak));
+    let mut resistive_actions=ModeCache::default();
     let before_hints=basis.current.len();let mut submitted_hints=0;
     if hint_cap>0 {
         if basis.current.len()>seed_count {return Err(error("HYBRID_INPUT","skin seed count exceeds admitted bound"));}
         let hints=map.skin_current_hints(&basis.current,upper_hz,AllocationBudget{max_bytes:hint_bytes.checked_add(group_bytes).ok_or_else(||error("MEMORY_LIMIT","skin hint budget overflow"))?,..basis_budget},start,wall)?;
         if hints.len()>hint_cap {return Err(error("HYBRID_INPUT","skin hints exceed admitted bound"));}
         submitted_hints=hints.len();
-        for hint in hints {check_time(start,wall)?;append_current_mode(&cells,&mut basis.current,hint)?;}
+        for hint in hints {check_time(start,wall)?;append_current_mode(&cells,&mut basis.current,&mut resistive_actions,hint)?;}
     }
     let added_hints=basis.current.len()-before_hints;
     let before_profiles=basis.current.len();
-    for profile in profiles {check_time(start,wall)?;append_current_mode(&cells,&mut basis.current,profile.clone())?;}
+    for profile in profiles {check_time(start,wall)?;append_current_mode(&cells,&mut basis.current,&mut resistive_actions,profile.clone())?;}
     let added_profiles=basis.current.len()-before_profiles;
     eprintln!("P7_COMPACT_STAGE stage=charge-actions-start elapsed={:.6} modes={}",start.elapsed().as_secs_f64(),basis.voltage.len());
     let charges=basis.voltage.iter().map(|v|field.apply(v)).collect::<Result<Vec<_>>>()?;
@@ -4264,11 +4839,12 @@ pub(super) fn solve_compact_adaptive(
     super::board_foil::phase_trace("magnetic-end",start,serde_json::json!({"actions":magnetic.action_count.get()}));
     eprintln!("P7_COMPACT_STAGE stage=magnetic-actions-end elapsed={:.6} actions={}",start.elapsed().as_secs_f64(),magnetic.action_count.get());
     let (model,max_electric_reciprocity)=make_model(&cells,n,&basis,names,&charges,&initial.actions,ports)?;
-    let mut space=ReducedSpace{model,cells,dc_harmonic_residual:basis.dc_residual,basis,charges,magnetic_actions:initial.actions,magnetic_basis_certificate:initial.certificate,ports:ports.to_vec(),full_potentials:n,max_frequency_hz:*grid.frequencies.last().ok_or_else(||error("HYBRID_INPUT","empty frequency grid"))?,planned_bytes:peak,max_magnetic_reciprocity:0.,max_magnetic_refinement:0.,max_electric_reciprocity,enrichment:None,native_allocation:true,approximate_magnetic:magnetic.hm.is_some()};
+    let mut space=ReducedSpace{model,cells,dc_harmonic_residual:basis.dc_residual,basis,charges,magnetic_actions:initial.actions,resistive:resistive_actions,magnetic_basis_certificate:initial.certificate,ports:ports.to_vec(),full_potentials:n,max_frequency_hz:*grid.frequencies.last().ok_or_else(||error("HYBRID_INPUT","empty frequency grid"))?,planned_bytes:peak,max_magnetic_reciprocity:0.,max_magnetic_refinement:0.,max_electric_reciprocity,enrichment:None,native_allocation:true,approximate_magnetic:magnetic.hm.is_some(),l_diag,l_blocks};
     let training_budget=AllocationBudget{max_bytes:share*2,..budget};
     eprintln!("P7_COMPACT_STAGE stage=training-start elapsed={:.6}",start.elapsed().as_secs_f64());
     let result=space.train_grid(&grid,names,&dc,field,&batch,training_budget,start,wall,true,packages,None,true,Some(map));
     eprintln!("P7_COMPACT_STAGE stage=training-end elapsed={:.6} chargeActions={} magneticActions={}",start.elapsed().as_secs_f64(),field.action_count(),magnetic.action_count.get());
+    super::planar_operator::escalate_report();
     let mut result=result?;
     if std::env::var_os("P7_HYBRID_REGIME_AUDIT").as_deref()==Some(std::ffi::OsStr::new("1")) {
         let report_bytes=loss_gram_reservation(grid.references.len(),0,packages,grid.frequencies.len())?;

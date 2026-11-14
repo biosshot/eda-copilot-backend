@@ -111,6 +111,18 @@ pub(super) fn skin_profile_evidence(
         "effectiveUpperHz": effective_upper_hz, "skinDepthDivisor": 3,
         "currentAndElectricShareMesh": true,
         "layers": mesh.copper_skin_layers, "roundBarrels": mesh.copper_skin_barrels,
+        "barrelSheet": copper_skin_profile::barrel_sheet_enabled().then(|| serde_json::json!({
+            "approximation": true,
+            "criterion": "P7_BARREL_SHEET: one radial layer per via wall at any skin depth",
+            "resistanceScaled": copper_skin_profile::barrel_sheet_scales_resistance(),
+            "multiplierTag": copper_skin_profile::barrel_sheet_scales_resistance().then_some("approximation, one multiplier per band; one-sided-field approximation"),
+            "status": "approximation",
+            "statusNote": copper_skin_profile::barrel_sheet_scales_resistance().then_some("R завышено до 16% на двух купонах при 40 МГц, эталон не проверен (оценка для плоских полулистов; стенка via против эталона не сверялась)"),
+            "resistanceMultiplierMax": copper_skin_profile::barrel_sheet_scales_resistance().then(|| copper_skin_profile::foil_resistance_ratio(mesh.copper_skin_barrels.iter().map(|b| b.maximum_radial_step_m * b.shells as f64 / b.skin_depth_m).fold(0., f64::max))),
+            "estimatedResistanceError": copper_skin_profile::foil_sheet_error(mesh.copper_skin_barrels.iter().map(|b| b.maximum_radial_step_m * b.shells as f64 / b.skin_depth_m).fold(0., f64::max)),
+            "warning": "wall radial step exceeds delta/3 when delta < 3t; current redistribution through the wall thickness is not resolved",
+            "maxThicknessOverSkin": mesh.copper_skin_barrels.iter().map(|b| b.maximum_radial_step_m * b.shells as f64 / b.skin_depth_m).fold(0., f64::max),
+        })),
         "scope": "Planar copper thickness and round barrel radial resolution screen; lateral, proximity, domain and band accuracy unverified",
     })
 }
@@ -202,6 +214,10 @@ pub struct MixedMap<'a> {
     pub potential_components: Vec<Vec<usize>>,
     pub incidence: Vec<(usize, usize, f64)>,
     pub resistance_ohm: Vec<f64>,
+    /// Resistance multiplier applied to each foil / barrel prism (1 unless `P7_FOIL_SHEET=2` / `P7_BARREL_SHEET=2`);
+    /// the spatial power recovery applies the same factor.
+    pub foil_resistance_scale: Vec<f64>,
+    pub barrel_resistance_scale: Vec<f64>,
     potential_map: Vec<usize>,
     full_electrodes: Vec<usize>,
     current_map: Vec<Option<CurrentEntry>>,
@@ -233,6 +249,49 @@ fn check_time(start: Instant, wall: Duration) -> Result<()> {
         return Err(error("DEADLINE", "mixed conductor ownership"));
     }
     Ok(())
+}
+
+/// P7_HIGHBAND_CUTS=1 (developer switch, default off): planner-declared cut-plane
+/// electrodes are admitted in the hybrid-planar-v3 path as equipotential faces.
+pub(super) fn highband_cuts_enabled() -> bool {
+    std::env::var("P7_HIGHBAND_CUTS").as_deref() == Ok("1")
+}
+
+/// P7_BAND_SCREEN=<kD> (developer switch, default off, approximation): replaces the 0.1 factor of the quasistatic
+/// electrical-size screen, only together with P7_HIGHBAND_CUTS=1. Valid only for 0 < kD <= 0.5.
+pub(super) fn band_screen_kd() -> Result<Option<f64>> {
+    band_kd_from(std::env::var("P7_BAND_SCREEN").ok().as_deref(), highband_cuts_enabled())
+}
+
+fn band_kd_from(text: Option<&str>, cuts: bool) -> Result<Option<f64>> {
+    let Some(text) = text else { return Ok(None) };
+    if !cuts { return Ok(None) }
+    match text.trim().parse::<f64>() {
+        Ok(k) if k.is_finite() && k > 0. && k <= 0.5 => Ok(Some(k)),
+        _ => Err(error("BOARD_FOIL_SCOPE", &format!("P7_BAND_SCREEN must be a number with 0 < kD <= 0.5, got {text:?}"))),
+    }
+}
+
+/// Electrical-size terms of the screen: (diagonal D in metres, maximum relative permittivity).
+fn screen_terms(request: &board_mesh::Request) -> (f64, f64) {
+    let dx = 1e-3 * (request.roi_mm[1][0] - request.roi_mm[0][0]);
+    let dy = 1e-3 * (request.roi_mm[1][1] - request.roi_mm[0][1]);
+    let dz: f64 = request.stack.iter().map(|l| l.thickness_m).sum();
+    let epsilon = request.stack.iter().filter_map(|l| l.epsilon_r).fold(1., f64::max);
+    (dx.hypot(dy).hypot(dz), epsilon)
+}
+
+/// `provenance.bandScreen` record, written only when P7_BAND_SCREEN is active.
+pub(super) fn band_screen_record(request: &board_mesh::Request, frequencies_hz: &[f64], skin: Option<copper_skin_profile::Profile>) -> Result<Option<serde_json::Value>> {
+    let Some(kd) = band_screen_kd()? else { return Ok(None) };
+    let maximum = skin.map_or(*frequencies_hz.last().unwrap(), |profile| profile.upper_hz);
+    let (diagonal, epsilon) = screen_terms(request);
+    let c = 299792458.;
+    let threshold = kd * c / (2. * std::f64::consts::PI * diagonal * epsilon.sqrt());
+    let size = 2. * std::f64::consts::PI * maximum / c * diagonal * epsilon.sqrt();
+    Ok(Some(serde_json::json!({"kD": kd, "thresholdHz": threshold, "sizeM": diagonal, "epsilonR": epsilon, "maximumHz": maximum, "electricalSize": size,
+        "status": "approximation",
+        "statusNote": "порог квазистатики kD вместо 0,1 (только с разрезами): излучение и запаздывание в области не проверены, эталона нет"})))
 }
 
 fn projected_pad_collisions<'a>(
@@ -419,6 +478,70 @@ fn plan_barrel_segments(
     Ok((segments, fallback, slivers, sliver_cells))
 }
 
+/// A wall column whose area share of its barrel is below this carries a negligible part of
+/// the barrel conductance (columns of one barrel share the same axial length and sigma).
+const BARREL_NOISE_SHARE: f64 = 1e-6;
+
+fn env_flag(name: &str) -> bool {
+    std::env::var(name).is_ok_and(|v| v.trim() == "1")
+}
+
+/// Columns (distinct annulus triangles) of each barrel whose conductance share is below
+/// `BARREL_NOISE_SHARE`. Returned as `(barrel, triangle)` pairs. `area` is the planar
+/// triangle area of a column.
+fn barrel_noise_columns(
+    segments: &[BarrelSegment],
+    area: &dyn Fn(usize) -> f64,
+) -> BTreeSet<(usize, usize)> {
+    let mut by_barrel = BTreeMap::<usize, BTreeMap<usize, f64>>::new();
+    for s in segments {
+        by_barrel.entry(s.barrel).or_default().insert(s.triangle, area(s.triangle));
+    }
+    let mut noise = BTreeSet::new();
+    for (&barrel, columns) in &by_barrel {
+        let total: f64 = columns.values().sum();
+        for (&triangle, &a) in columns {
+            if !(a >= BARREL_NOISE_SHARE * total) {
+                noise.insert((barrel, triangle));
+            }
+        }
+    }
+    noise
+}
+
+/// Diagnostic only (`P7_BARREL_PROBE=1`): per barrel column count, min/median triangle area,
+/// axial length and the number of columns below the noise share.
+fn barrel_probe(mesh: &BoardMesh, segments: &[BarrelSegment], area: &dyn Fn(usize) -> f64) {
+    let mut by_barrel = BTreeMap::<usize, (BTreeMap<usize, f64>, f64, f64)>::new();
+    for s in segments {
+        let e = by_barrel.entry(s.barrel).or_insert((BTreeMap::new(), f64::INFINITY, f64::NEG_INFINITY));
+        e.0.insert(s.triangle, area(s.triangle));
+        e.1 = e.1.min(s.span[0]);
+        e.2 = e.2.max(s.span[1]);
+    }
+    let (mut barrels, mut columns, mut slivers) = (0usize, 0usize, 0usize);
+    let mut sliver_barrels = 0usize;
+    let mut global_min = f64::INFINITY;
+    for (&b, (cols, z0, z1)) in &by_barrel {
+        let mut areas: Vec<f64> = cols.values().copied().collect();
+        areas.sort_by(f64::total_cmp);
+        let total: f64 = areas.iter().sum();
+        let n_sliver = areas.iter().filter(|&&a| !(a >= BARREL_NOISE_SHARE * total)).count();
+        barrels += 1;
+        columns += areas.len();
+        slivers += n_sliver;
+        sliver_barrels += usize::from(n_sliver > 0);
+        global_min = global_min.min(areas[0]);
+        eprintln!(
+            "P7_BARREL_PROBE barrel={} id={} columns={} min_area_m2={:e} median_area_m2={:e} total_area_m2={:e} length_m={:e} slivers={}",
+            b, mesh.barrel_ids[b], areas.len(), areas[0], areas[areas.len() / 2], total, z1 - z0, n_sliver
+        );
+    }
+    eprintln!(
+        "P7_BARREL_PROBE_SUMMARY barrels={barrels} columns={columns} sliver_columns={slivers} barrels_with_slivers={sliver_barrels} min_area_m2={global_min:e} share_limit={BARREL_NOISE_SHARE:e}"
+    );
+}
+
 pub fn prepare<'a>(
     mesh: &'a BoardMesh,
     electrodes: &[Electrode],
@@ -540,6 +663,36 @@ fn prepare_model_inner<'a>(
     } else {
         (Vec::new(), 0, 0, Vec::new())
     };
+    // P7_BARREL_NOISE=1: wall columns with a negligible conductance share get no current mode
+    // (owner Dropped, accounted with the sliver columns). Off in the sole-link retry, which
+    // keeps every column when dropping would disconnect a conductor.
+    let triangle_area = |t: usize| {
+        let [a, b, c] = mesh.planar_triangles[t].map(|i| mesh.mesh.nodes_m[i]);
+        0.5 * ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])).abs()
+    };
+    if env_flag("P7_BARREL_PROBE") {
+        barrel_probe(mesh, &barrel_segments, &triangle_area);
+    }
+    let mut barrel_noise_cells = Vec::<usize>::new();
+    let mut barrel_noise_columns_count = 0usize;
+    let mut barrel_noise_volume = Sum::default();
+    if !keep_sole_link_slivers && env_flag("P7_BARREL_NOISE") && !barrel_segments.is_empty() {
+        let noise = barrel_noise_columns(&barrel_segments, &triangle_area);
+        barrel_noise_columns_count = noise.len();
+        let (dropped, kept): (Vec<_>, Vec<_>) = std::mem::take(&mut barrel_segments)
+            .into_iter()
+            .partition(|s| noise.contains(&(s.barrel, s.triangle)));
+        barrel_segments = kept;
+        for s in dropped {
+            for &i in &s.cells {
+                barrel_noise_volume = barrel_noise_volume.add(Sum::from(mesh.mesh.copper_tetrahedra[i].volume_m3));
+            }
+            barrel_noise_cells.extend(s.cells);
+        }
+        if env_flag("P7_BARREL_PROBE") {
+            eprintln!("P7_BARREL_NOISE dropped_columns={barrel_noise_columns_count} cells={}", barrel_noise_cells.len());
+        }
+    }
     let v3 = barrel_model == BarrelModel::ThinWall;
     let mut sliver_cell = vec![false; nt];
     for &i in &sliver_list {
@@ -618,6 +771,9 @@ fn prepare_model_inner<'a>(
             barrel_prism_cell[c] = true;
         }
     }
+    for &c in &barrel_noise_cells {
+        barrel_prism_cell[c] = true;
+    }
     for (i, tet) in mesh.mesh.copper_tetrahedra.iter().enumerate() {
         check_time(start, wall)?;
         let z = tet.nodes.map(|j| mesh.mesh.nodes_m[j][2]);
@@ -651,8 +807,8 @@ fn prepare_model_inner<'a>(
         candidates[group].cells.push(i);
     }
     let mut relaxed_columns = 0usize;
-    let mut dropped_columns = 0usize;
-    let mut dropped_volume = Sum::default();
+    let mut dropped_columns = barrel_noise_columns_count;
+    let mut dropped_volume = barrel_noise_volume;
     for group in &mut candidates {
         let thickness = group.span[1] - group.span[0];
         let triangle = mesh.planar_triangles[group.triangle];
@@ -696,7 +852,7 @@ fn prepare_model_inner<'a>(
             && (volume - expected).abs() <= 1e-8 * expected
             && (aspect_ok || relaxed_ok)
             && (delta >= 3. * thickness
-                || (copper_skin_profile::foil_sheet_enabled() && thickness <= delta))
+                || (copper_skin_profile::foil_sheet_enabled() && (thickness <= delta || copper_skin_profile::foil_sheet_scales_resistance())))
             && uniform
         {
             let density = 1. / (thickness * (twice / 2.).sqrt());
@@ -836,6 +992,9 @@ fn prepare_model_inner<'a>(
         candidates[j].foil_density = None;
     }
     let mut owners = vec![Owner::Volume; nt];
+    for &i in &barrel_noise_cells {
+        owners[i] = Owner::Dropped;
+    }
     let mut current_map = vec![None; full.current_count()];
     let mut parent: Vec<_> = (0..nv).collect();
     let mut foils = Vec::new();
@@ -1066,13 +1225,45 @@ fn prepare_model_inner<'a>(
     let mut resistance = vec![Sum::default(); nc];
     let mut projected = BTreeMap::<(usize, usize), Sum>::new();
     let mut col_scale = vec![0.; nc];
+    // P7_BARREL_SHEET=2: the wall resistance is scaled by Re(kt coth kt) for t/delta of the wall at the
+    // profile upper frequency (approximation, one value for the band). 1 only keeps one radial layer.
+    let barrel_ratio: BTreeMap<&str, f64> = if copper_skin_profile::barrel_sheet_scales_resistance() {
+        mesh.copper_skin_barrels
+            .iter()
+            .map(|b| {
+                let x = b.maximum_radial_step_m * b.shells as f64 / b.skin_depth_m;
+                (b.id.as_str(), copper_skin_profile::foil_resistance_ratio(x))
+            })
+            .collect()
+    } else {
+        BTreeMap::new()
+    };
+    // P7_FOIL_SHEET=2: the same Re(kt coth kt) multiplier for each sheet at the band upper frequency.
+    let foil_resistance_scale: Vec<f64> = foils.iter().map(|f: &FoilPrism| {
+        if !copper_skin_profile::foil_sheet_scales_resistance() { return 1.; }
+        let sigma = mesh.conductivity_s_m[f.tetrahedra[0]];
+        // P7_FOIL_SHEET=4: only layers with t/delta > 1 are split into two half-sheets; t/delta <= 1 stays as =1 (no multiplier).
+        if copper_skin_profile::foil_sheet_half_sheets() {
+            let layer_t = mesh.layer_spans.get(&f.layer).map_or(0., |s| s[1] - s[0]);
+            if !copper_skin_profile::thickness_over_skin(layer_t, sigma, max_frequency_hz).is_some_and(|x| x > 1.) { return 1.; }
+        }
+        copper_skin_profile::thickness_over_skin(f.z_span_m[1] - f.z_span_m[0], sigma, max_frequency_hz)
+            .map_or(1., copper_skin_profile::foil_sheet_multiplier)
+    }).collect();
+    let barrel_resistance_scale: Vec<f64> = barrels_out.iter()
+        .map(|b| barrel_ratio.get(b.barrel_id.as_str()).copied().unwrap_or(1.)).collect();
     for (i, cell) in full.cells.iter().enumerate() {
+        let scale = match owners[i] {
+            Owner::Barrel(p) => barrel_resistance_scale[p],
+            Owner::Foil(p) => foil_resistance_scale[p],
+            _ => 1.,
+        };
         for k in 0..3 {
             let Some(entry) = current_map[3 * i + k] else {
                 continue;
             };
             resistance[entry.mode] = resistance[entry.mode].add(
-                Sum::from(cell.resistance_ohm)
+                Sum::from(cell.resistance_ohm * scale)
                     .mul(entry.weight)
                     .mul(entry.weight),
             );
@@ -1127,6 +1318,8 @@ fn prepare_model_inner<'a>(
         potential_components,
         incidence,
         resistance_ohm,
+        foil_resistance_scale,
+        barrel_resistance_scale,
         potential_map,
         full_electrodes,
         current_map,
@@ -1408,13 +1601,17 @@ pub(super) fn checked_reserve_policy(request:&board_mesh::Request,grid:CheckedGr
             ),
         ));
     }
-    if !request.cut_planes.is_empty() || request.allow_insulated_copper_cuts {
+    let cut_ports = highband_cuts_enabled() && !request.cut_planes.is_empty();
+    if !cut_ports && (!request.cut_planes.is_empty() || request.allow_insulated_copper_cuts) {
         return Err(error(
             "MIXED_FOIL_CONTACT",
             "closed physical copper and original finite pad faces required",
         ));
     }
     for electrode in &request.electrodes {
+        if cut_ports && request.cut_planes.contains_key(&electrode.name) {
+            continue;
+        }
         if electrode
             .canonical_paths()?
             .iter()
@@ -1427,22 +1624,15 @@ pub(super) fn checked_reserve_policy(request:&board_mesh::Request,grid:CheckedGr
         }
     }
     let maximum = skin.map_or(*frequencies_hz.last().unwrap(), |profile| profile.upper_hz);
-    let dx = 1e-3 * (request.roi_mm[1][0] - request.roi_mm[0][0]);
-    let dy = 1e-3 * (request.roi_mm[1][1] - request.roi_mm[0][1]);
-    let dz: f64 = request.stack.iter().map(|l| l.thickness_m).sum();
-    let epsilon = request
-        .stack
-        .iter()
-        .filter_map(|l| l.epsilon_r)
-        .fold(1., f64::max);
-    let size =
-        2. * std::f64::consts::PI * maximum / 299792458. * dx.hypot(dy).hypot(dz) * epsilon.sqrt();
-    if !size.is_finite() || size > 0.1 {
-        let diagonal = dx.hypot(dy).hypot(dz);
-        let fmax = 0.1 * 299792458. / (2. * std::f64::consts::PI * diagonal * epsilon.sqrt());
+    let (diagonal, epsilon) = screen_terms(request);
+    let size = 2. * std::f64::consts::PI * maximum / 299792458. * diagonal * epsilon.sqrt();
+    let band_kd = band_screen_kd()?;
+    let limit = band_kd.unwrap_or(0.1);
+    if !size.is_finite() || size > limit {
+        let fmax = limit * 299792458. / (2. * std::f64::consts::PI * diagonal * epsilon.sqrt());
         return Err(error(
             "MIXED_FOIL_BAND",
-            &format!("quasistatic electrical-size screen failed: size {size:.3} > 0.1 at {maximum:.4e} Hz for a region of diagonal {:.2} mm; maximum valid frequency for this region {fmax:.4e} Hz", diagonal * 1e3),
+            &format!("quasistatic electrical-size screen failed: size {size:.3} > {limit} at {maximum:.4e} Hz for a region of diagonal {:.2} mm; maximum valid frequency for this region {fmax:.4e} Hz", diagonal * 1e3),
         ));
     }
 
@@ -1991,7 +2181,7 @@ fn solve_checked_mesh_impl_policy(
             let span = foil.z_span_m;
             let sigma = mesh.conductivity_s_m[foil.tetrahedra[0]];
             let screen = super::hybrid_applicability::screen(effective_upper, span[1]-span[0], sigma, super::super::MU0).map_err(|reason| error("HYBRID_FREQUENCY", reason))?;
-            if matches!(screen.action(), super::hybrid_applicability::Action::EnrichOrEscalate) {
+            if matches!(screen.action(), super::hybrid_applicability::Action::EnrichOrEscalate) && !copper_skin_profile::foil_sheet_scales_resistance() {
                 return Err(error("HYBRID_FREQUENCY", "foil thickness requires frequency enrichment or local volume"));
             }
             // Passing above 0.2 is only possible under P7_FOIL_SHEET=1 (t/delta <= 1).
@@ -1999,8 +2189,21 @@ fn solve_checked_mesh_impl_policy(
         }
         let foil_sheet = (foil_sheet_x > 0.).then(|| json!({"approximation": true, "maxThicknessOverSkin": foil_sheet_x,
             "estimatedResistanceError": copper_skin_profile::foil_sheet_error(foil_sheet_x), "bandTopHz": effective_upper,
-            "criterion": "P7_FOIL_SHEET=1: one foil sheet per copper layer for thickness/skin depth <= 1",
-            "warning": "through-thickness current redistribution is not resolved; uniform-sheet resistance error estimated as Re(kt coth kt) - 1"}));
+            "criterion": if copper_skin_profile::foil_sheet_half_sheets() {"P7_FOIL_SHEET=4: two half-sheets (2 layers through thickness) per copper layer with thickness/skin depth > 1, one sheet otherwise; each half resistance scaled by Re(kt coth kt) at (t/2)/delta"} else if copper_skin_profile::foil_sheet_scales_resistance() {"P7_FOIL_SHEET=2: one foil sheet per copper layer at any thickness/skin depth, resistance scaled by Re(kt coth kt)"} else {"P7_FOIL_SHEET=1: one foil sheet per copper layer for thickness/skin depth <= 1"},
+            "warning": "through-thickness current redistribution is not resolved; uniform-sheet resistance error estimated as Re(kt coth kt) - 1",
+            "resistanceScaled": copper_skin_profile::foil_sheet_scales_resistance(),
+            "multiplierOneSidedRatioX": copper_skin_profile::foil_resistance_ratio(foil_sheet_x),
+            "multiplierTwoSidedRatioHalfX": copper_skin_profile::foil_resistance_ratio(foil_sheet_x / 2.),
+            "twoSidedField": copper_skin_profile::foil_sheet_two_sided(),
+            "resistanceMultiplierMax": map.foil_resistance_scale.iter().copied().fold(1., f64::max),
+            "resistanceMultiplierMin": map.foil_resistance_scale.iter().copied().fold(f64::INFINITY, f64::min),
+            "barrelResistanceMultiplierMax": map.barrel_resistance_scale.iter().copied().fold(1., f64::max),
+            "halfSheets": copper_skin_profile::foil_sheet_half_sheets(),
+            "status": "approximation",
+            "statusNote": if copper_skin_profile::foil_sheet_half_sheets() {json!("R завышено до 16% на двух купонах при 40 МГц, эталон не проверен")} else {serde_json::Value::Null},
+            "halfSheetLayers": if copper_skin_profile::foil_sheet_half_sheets() {json!(2)} else {serde_json::Value::Null},
+            "multiplierTag": if copper_skin_profile::foil_sheet_half_sheets() {json!("approximation, two half-sheets per copper layer with t/delta > 1 (2 layers through thickness), each half resistance multiplied by Re(kt coth kt) at (t/2)/delta of the band top (one multiplier per band); layers with t/delta <= 1 stay one sheet, multiplier 1")} else if copper_skin_profile::foil_sheet_scales_resistance() {json!("approximation, one multiplier per band (Re(kt coth kt) at the band top applied at every frequency of the grid)")} else {serde_json::Value::Null},
+            "fieldApproximation": if copper_skin_profile::foil_sheet_half_sheets() {json!("approximation, two half-sheets: the solver finds the current split between the halves; the multiplier is exact for equal currents and the single-sided limit is underestimated (about -8% at t/delta 3.35)")} else if copper_skin_profile::foil_sheet_scales_resistance() {json!(if copper_skin_profile::foil_sheet_two_sided() {"two-sided field: multiplier ratio(x/2); approximation, field assumed on both faces of the foil"} else {"one-sided field: the multiplier assumes the field acts on one face of the foil; for a plane between two signal layers this is an approximation"})} else {serde_json::Value::Null}}));
         // Thin-wall barrel applicability: one radial cell needs delta >= 3 t at the
         // band top. Above that the model is still admitted, with an explicit warning.
         let barrel_skin = if map.barrels.is_empty() {
@@ -2021,6 +2224,7 @@ fn solve_checked_mesh_impl_policy(
         // One product-space prism contributes up to 36 local terms while the
         // source physical budget counts its three tetrahedra.
         let field_terms=budget.max_tetrahedra.saturating_mul(12);
+        let mut field_refinement: Option<serde_json::Value> = None;
         let prepared_field = if adaptive {
             let available=(budget.max_bytes/3).checked_sub(map.retained_bytes()?).ok_or_else(||error("MEMORY_LIMIT","adaptive field budget exhausted"))?;
             let field_budget=super::layered_capacitance::Budget {max_nodes:budget.max_nodes,max_local_terms:field_terms,max_bytes:available,max_wall:wall.saturating_sub(start.elapsed())};
@@ -2029,7 +2233,14 @@ fn solve_checked_mesh_impl_policy(
             eprintln!("P7_COMPACT_STAGE stage=spatial-input-end elapsed={:.6}",start.elapsed().as_secs_f64());
             let (trace,certified)=super::planar_trace::certified_trace(&input,&original,&map,super::layered_capacitance::Budget{max_wall:wall.saturating_sub(start.elapsed()),..field_budget})?;
             eprintln!("P7_COMPACT_STAGE stage=spatial-certified-end elapsed={:.6}",start.elapsed().as_secs_f64());
-            let field=super::layered_capacitance::prepare_certified_action(&input,&trace,&spatial,&certified,super::layered_capacitance::Budget{max_wall:wall.saturating_sub(start.elapsed()),..field_budget})?;
+            let field_budget_now=super::layered_capacitance::Budget{max_wall:wall.saturating_sub(start.elapsed()),..field_budget};
+            // P7_FIELD_REFINE=1 (default off): field-only XY refinement, potentials stay on the current-mesh nodes.
+            let field=if super::field_xy_refine::enabled() {
+                let refined=super::field_xy_refine::refine(&input,trace,certified,&map,field_budget_now)?;
+                field_refinement=Some(refined.record.clone());
+                let overlay=super::layered_capacitance::CertifiedOverlay{input:&refined.input,triangles:refined.triangles,copper:refined.copper,epsilon:refined.epsilon,node_owners:refined.node_owners,finite_contacts:refined.finite_contacts,rowless_modes:refined.rowless_modes,bytes:refined.bytes};
+                super::layered_capacitance::prepare_certified_action(&refined.input,&refined.trace,&spatial,&overlay,super::layered_capacitance::Budget{max_wall:wall.saturating_sub(start.elapsed()),..field_budget})?
+            } else {super::layered_capacitance::prepare_certified_action(&input,&trace,&spatial,&certified,field_budget_now)?};
             eprintln!("P7_COMPACT_STAGE stage=spatial-field-end elapsed={:.6} plannedBytes={}",start.elapsed().as_secs_f64(),field.planned_bytes());
             Some(field)
         } else {None};
@@ -2073,6 +2284,9 @@ fn solve_checked_mesh_impl_policy(
         evidence["barrelEvidence"] = json!({"model": map.barrel_model.name(), "barrels": map.barrel_count, "barrelPrisms": map.barrels.len(), "barrelFallbackColumns": map.barrel_fallback_columns, "barrelSliverColumns": map.barrel_sliver_columns, "foilAspectRelaxedColumns": map.foil_aspect_relaxed_columns, "sliverColumnsDropped": map.sliver_columns_dropped, "droppedVolumeM3": map.dropped_volume_m3, "droppedVolumeFraction": map.dropped_volume_fraction, "remainingTetrahedra": map.owners.iter().filter(|o| matches!(o, Owner::Volume)).count()});
         if let Some(skin) = &barrel_skin {
             evidence["barrelSkinApproximation"] = skin.clone();
+        }
+        if let Some(record) = &field_refinement {
+            evidence["fieldRefinement"] = record.clone();
         }
         if let Some(sheet) = &foil_sheet {
             evidence["foilSheet"] = sheet.clone();
@@ -2908,6 +3122,10 @@ mod hybrid_rf_policy_tests {
         assert!(checked_reserve_policy(&request,grid,Some(profile),hybrid,PartitionPolicy::AutomaticHybridV1).is_ok());
         let mut large=request.clone();large.roi_mm=[[0.,0.],[100.,100.]];
         assert!(checked_reserve_policy(&large,grid,Some(profile),hybrid,PartitionPolicy::AutomaticHybridV1).unwrap_err().contains("MIXED_FOIL_BAND"));
+        assert_eq!(band_kd_from(None,true).unwrap(),None);
+        assert_eq!(band_kd_from(Some("0.3"),false).unwrap(),None);
+        assert_eq!(band_kd_from(Some("0.5"),true).unwrap(),Some(0.5));
+        for bad in ["0","-0.1","0.51","1","abc","nan",""] { assert!(band_kd_from(Some(bad),true).unwrap_err().contains("BOARD_FOIL_SCOPE"),"{bad}"); }
         let mut missing=request.clone();missing.electrodes[0].source_path=Some("copper.fixed.tracks[0]".into());
         assert!(checked_reserve_policy(&missing,grid,Some(profile),hybrid,PartitionPolicy::AutomaticHybridV1).unwrap_err().contains("MIXED_FOIL_CONTACT"));
     }
@@ -2999,6 +3217,27 @@ mod aligned_pad_orientation_tests {
 }
 
 #[cfg(test)]
+mod barrel_noise_test {
+    use super::*;
+    #[test]
+    fn needle_wall_column_is_flagged_by_conductance_share_per_barrel() {
+        let seg = |barrel, triangle| BarrelSegment { barrel, triangle, span: [0., 1e-3], cells: vec![] };
+        // Barrel 0: 20 normal columns (1e-9 m2) and one needle (1e-16 m2). Barrel 1: one column only.
+        let mut segments: Vec<_> = (0..21).map(|t| seg(0, t)).collect();
+        segments.push(seg(1, 100));
+        // Two segments over the same column must count the column once.
+        segments.push(seg(0, 20));
+        let area = |t: usize| if t == 20 { 1e-16 } else { 1e-9 };
+        let noise = barrel_noise_columns(&segments, &area);
+        assert_eq!(noise, BTreeSet::from([(0, 20)]));
+        // A lone column is never noise even if tiny.
+        assert!(barrel_noise_columns(&[seg(1, 100)], &|_| 1e-20).is_empty());
+        // Uniform columns: nothing flagged.
+        assert!(barrel_noise_columns(&segments[..20], &|_| 1e-9).is_empty());
+    }
+}
+
+#[cfg(test)]
 #[path = "hybrid_connector_test.rs"]
 mod hybrid_connector_test;
 
@@ -3009,3 +3248,7 @@ mod hybrid_ground_chain_test;
 #[cfg(test)]
 #[path = "hybrid_barrel_test.rs"]
 pub(super) mod hybrid_barrel_test;
+
+#[cfg(test)]
+#[path = "microstrip_reference_test.rs"]
+mod microstrip_reference_test;

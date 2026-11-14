@@ -523,10 +523,10 @@ pub(super) struct CopperSkinLayer {
 #[derive(Debug,serde::Serialize)]
 #[serde(rename_all="camelCase")]
 pub(super) struct CopperSkinBarrel {
-    id:String,
-    skin_depth_m:f64,
-    maximum_radial_step_m:f64,
-    shells:usize,
+    pub(super) id:String,
+    pub(super) skin_depth_m:f64,
+    pub(super) maximum_radial_step_m:f64,
+    pub(super) shells:usize,
 }
 
 pub(super) fn build_profiled(board:&Board,r:&Request,budget:AllocationBudget,max_wall:Duration,
@@ -1089,6 +1089,9 @@ fn build_profiled_once(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
     for [a,b] in trace_lines {segment(*a,*b)?;}
     drop(segment);
     super::board_foil::phase_trace("t-constraints-inserted",start,serde_json::json!({}));
+    // P7_MESH_MERGE: vertices present now are copper/bore/contact contour vertices; later ones are Steiner or free.
+    let merge_level=mesh_coarsen::merge_level();
+    let merge_protected=(merge_level>0).then(||mesh_coarsen::position_keys(&cdt));
     let max_xy=budget.max_nodes.min(budget.max_bytes/4096);
     let refine_area=|area:f64,vertices:usize|RefinementParameters::new().keep_constraint_edges().with_angle_limit(AngleLimit::from_deg(r.min_triangle_angle_deg.unwrap_or(30.))).with_max_allowed_area(area).with_max_additional_vertices(max_xy.saturating_sub(vertices));
     if let Some(field)=&coarse_field {
@@ -1154,8 +1157,18 @@ fn build_profiled_once(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
             let cap=mesh_coarsen::quality_cap(n0).min(max_xy.saturating_sub(n0));
             complete=mesh_coarsen::improve(&mut cdt,mesh_coarsen::quality_angle(),min_area,cap);
         }
+        let merge=match &merge_protected {
+            Some(protected)=>{
+                let angle=std::env::var("P7_MESH_MERGE_ANGLE").ok().and_then(|v|v.parse::<f64>().ok()).filter(|v|v.is_finite()&&*v>0.).unwrap_or(1.);
+                let tol=std::env::var("P7_MESH_MERGE_TOL_MM").ok().and_then(|v|v.parse::<f64>().ok()).filter(|v|v.is_finite()&&*v>0.).unwrap_or(1e-6);
+                let st=mesh_coarsen::merge_slivers(&mut cdt,protected,angle,merge_level,tol,16)?;
+                eprintln!("P7_MESH_MERGE {}",serde_json::to_string(&st).unwrap_or_default());
+                serde_json::to_value(&st).ok()
+            }
+            None=>None,
+        };
         let (aspect_after,angle_after,worst_after,fixable_after)=mesh_coarsen::quality(&cdt,min_area);
-        let q=serde_json::json!({"targetMinAngleDeg":if mesh_coarsen::quality_disabled(){0.}else{mesh_coarsen::quality_angle()},"minFaceAreaMm2":min_area,"maxAspectBefore":aspect_before,"maxAspectAboveMinAreaBefore":fixable_before,"maxAspectAboveMinAreaAfter":fixable_after,"maxAspectAfter":aspect_after,"minAngleBeforeDeg":angle_before,"minAngleAfterDeg":angle_after,"steinerVertices":cdt.num_vertices()-n0,"worstFaceBeforeMm":worst_before,"worstFaceAfterMm":worst_after,"complete":complete,"note":"collinear Steiner points on constrained edges; outlines unchanged"});
+        let q=serde_json::json!({"targetMinAngleDeg":if mesh_coarsen::quality_disabled(){0.}else{mesh_coarsen::quality_angle()},"minFaceAreaMm2":min_area,"maxAspectBefore":aspect_before,"maxAspectAboveMinAreaBefore":fixable_before,"maxAspectAboveMinAreaAfter":fixable_after,"maxAspectAfter":aspect_after,"minAngleBeforeDeg":angle_before,"minAngleAfterDeg":angle_after,"steinerVertices":cdt.num_vertices().saturating_sub(n0),"worstFaceBeforeMm":worst_before,"worstFaceAfterMm":worst_after,"complete":complete,"note":"collinear Steiner points on constrained edges; outlines unchanged","merge":merge});
         eprintln!("P7_MESH_QUALITY {q}");
         mesh_coarsening.get_or_insert_with(||serde_json::json!({"kind":"distance-graded-planar-mesh","tier":"approximation","active":false}))["quality"]=q;
     }

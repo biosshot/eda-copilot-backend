@@ -20,18 +20,80 @@ impl Params {
 #[derive(Clone, Debug, Default)]
 pub(super) struct Stats {
     pub supports: usize, pub far_blocks: usize, pub near_blocks: usize, pub exact_pairs: usize, pub moment_pairs: usize,
-    pub stored_bytes: usize, pub max_rank: usize, pub build_seconds: f64, pub eps: f64,
-    pub max_order: usize, pub max_change: f64, pub unconverged: usize, pub approximated: usize, pub aca_dense_fallbacks: usize, pub fast_pairs: usize, pub slow_ns: u64, pub cpu_ns: u64,
+    pub stored_bytes: usize, pub dense_bytes: usize, pub low_rank_bytes: usize, pub cache: &'static str, pub max_rank: usize, pub build_seconds: f64, pub eps: f64,
+    pub threads: usize, pub max_order: usize, pub max_change: f64, pub unconverged: usize, pub approximated: usize, pub aca_dense_fallbacks: usize, pub fast_pairs: usize, pub slow_ns: u64, pub cpu_ns: u64,
+    /** Diagnostic only (`P7_HMATRIX_PAIR_PROBE=1`): exact pair entries by contact class and aspect ratio. */
+    pub probe: Option<Box<PairProbe>>,
 }
 impl Stats {
     fn merge(&mut self, o: &Stats) {
         self.far_blocks += o.far_blocks; self.near_blocks += o.near_blocks; self.exact_pairs += o.exact_pairs; self.fast_pairs += o.fast_pairs;self.moment_pairs += o.moment_pairs;
         self.max_rank = self.max_rank.max(o.max_rank); self.max_order = self.max_order.max(o.max_order); self.max_change = self.max_change.max(o.max_change);
         self.slow_ns += o.slow_ns; self.cpu_ns += o.cpu_ns; self.unconverged += o.unconverged; self.approximated += o.approximated; self.aca_dense_fallbacks += o.aca_dense_fallbacks;
+        if let Some(p) = &o.probe { self.probe.get_or_insert_with(Default::default).merge(p); }
     }
     pub(super) fn json(&self) -> serde_json::Value {
-        serde_json::json!({"supports":self.supports,"farBlocks":self.far_blocks,"nearBlocks":self.near_blocks,"exactPairs":self.exact_pairs,"fastPairs":self.fast_pairs,"momentPairs":self.moment_pairs,"storedBytes":self.stored_bytes,"maxRank":self.max_rank,"buildSeconds":self.build_seconds,"eps":self.eps,"maxOrder":self.max_order,"maxRelativeChange":self.max_change,"unconvergedPairs":self.unconverged,"approximatedPairs":self.approximated,"acaDenseFallbacks":self.aca_dense_fallbacks,"cpuSeconds":self.cpu_ns as f64*1e-9})
+        let mut j = serde_json::json!({"supports":self.supports,"farBlocks":self.far_blocks,"nearBlocks":self.near_blocks,"exactPairs":self.exact_pairs,"fastPairs":self.fast_pairs,"momentPairs":self.moment_pairs,"storedBytes":self.stored_bytes,"denseBytes":self.dense_bytes,"lowRankBytes":self.low_rank_bytes,"hmatrixCache":self.cache,"threads":self.threads,"maxRank":self.max_rank,"buildSeconds":self.build_seconds,"eps":self.eps,"maxOrder":self.max_order,"maxRelativeChange":self.max_change,"unconvergedPairs":self.unconverged,"approximatedPairs":self.approximated,"acaDenseFallbacks":self.aca_dense_fallbacks,"cpuSeconds":self.cpu_ns as f64*1e-9});
+        if let Some(p) = &self.probe { j["pairProbe"] = p.json(); }
+        j
     }
+}
+
+/// `P7_HMATRIX_PAIR_PROBE=1`: classify every exact pair entry (diagnostic only, values unchanged; bypasses the disk cache).
+fn probe_on() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var("P7_HMATRIX_PAIR_PROBE").as_deref() == Ok("1"))
+}
+const PROBE_CLASSES: [&str; 7] = ["same-footprint", "shared-edge", "shared-vertex", "touching-other", "gap<0.5d", "gap<2d", "gap>=2d"];
+const PROBE_ASPECTS: [&str; 4] = ["<10", "10-100", "100-1000", ">=1000"];
+#[derive(Clone, Copy, Debug, Default)]
+struct ProbeCell { n: u64, n_unc: u64, n_noise: u64, sum: f64, sum_unc: f64, err: f64, err_unc: f64, max_change: f64 }
+#[derive(Clone, Debug, Default)]
+pub(super) struct PairProbe { cells: [[ProbeCell; 4]; 7] }
+impl PairProbe {
+    fn add(&mut self, class: usize, aspect: usize, v: f64, change: f64) {
+        let c = &mut self.cells[class][aspect];
+        let (m, e) = (v.abs(), v.abs() * change);
+        c.n += 1; c.sum += m; c.err += e; c.max_change = c.max_change.max(change);
+        if change > planar_operator::PAIR_NOISE_ACCEPT_CHANGE { c.n_noise += 1; }
+        if change > planar_operator::PAIR_TARGET_RELATIVE_CHANGE { c.n_unc += 1; c.sum_unc += m; c.err_unc += e; }
+    }
+    fn merge(&mut self, o: &PairProbe) {
+        for (x, y) in self.cells.iter_mut().flatten().zip(o.cells.iter().flatten()) {
+            x.n += y.n; x.n_unc += y.n_unc; x.n_noise += y.n_noise; x.sum += y.sum; x.sum_unc += y.sum_unc; x.err += y.err; x.err_unc += y.err_unc; x.max_change = x.max_change.max(y.max_change);
+        }
+    }
+    fn json(&self) -> serde_json::Value {
+        let mut rows = Vec::new();
+        for (ci, row) in self.cells.iter().enumerate() { for (ai, c) in row.iter().enumerate() {
+            if c.n == 0 { continue; }
+            rows.push(serde_json::json!({"class":PROBE_CLASSES[ci],"aspect":PROBE_ASPECTS[ai],"n":c.n,"unconverged":c.n_unc,"aboveNoise":c.n_noise,"sumAbs":c.sum,"sumAbsUnconverged":c.sum_unc,"errAbs":c.err,"errAbsUnconverged":c.err_unc,"maxChange":c.max_change}));
+        } }
+        serde_json::json!({"note":"counts exact() entries (ACA samples included, a pair may repeat); sums are |pair integral| in m^5 and |integral|*relative change","rows":rows})
+    }
+}
+/// Contact class (3-D: shared xy vertices only count when the z intervals touch) and aspect bucket of a pair.
+fn probe_class(a: &Prism, b: &Prism) -> (usize, usize) {
+    const TOL: f64 = 1e-9;
+    let (ba, bb) = (Bbox::of(a), Bbox::of(b));
+    let z_gap = (a.z_m[0].min(a.z_m[1]).max(b.z_m[0].min(b.z_m[1])) - a.z_m[0].max(a.z_m[1]).min(b.z_m[0].max(b.z_m[1]))).max(0.);
+    let shared = a.triangle_m.iter().filter(|p| b.triangle_m.iter().any(|q| (p[0] - q[0]).abs() <= TOL && (p[1] - q[1]).abs() <= TOL)).count();
+    let gap = ba.gap(bb);
+    let dmin = ba.diam().min(bb.diam()).max(1e-30);
+    let class = if z_gap <= TOL && shared >= 3 { 0 } else if z_gap <= TOL && shared == 2 { 1 } else if z_gap <= TOL && shared == 1 { 2 }
+        else if gap <= TOL { 3 }
+        else if gap < 0.5 * dmin { 4 } else if gap < 2. * dmin { 5 } else { 6 };
+    let aspect = |p: &Prism| {
+        let t = &p.triangle_m;
+        let e = [(t[1][0] - t[0][0]).hypot(t[1][1] - t[0][1]), (t[2][0] - t[1][0]).hypot(t[2][1] - t[1][1]), (t[0][0] - t[2][0]).hypot(t[0][1] - t[2][1])];
+        let lmax = e[0].max(e[1]).max(e[2]);
+        let area = 0.5 * ((t[1][0] - t[0][0]) * (t[2][1] - t[0][1]) - (t[2][0] - t[0][0]) * (t[1][1] - t[0][1])).abs();
+        let alt = if lmax > 0. { 2. * area / lmax } else { 0. };
+        let h = (p.z_m[1] - p.z_m[0]).abs();
+        lmax.max(h) / alt.min(h).max(1e-30)
+    };
+    let r = aspect(a).max(aspect(b));
+    (class, if r < 10. { 0 } else if r < 100. { 1 } else if r < 1000. { 2 } else { 3 })
 }
 
 pub(super) struct Kernel<'a> { pub prisms: &'a [&'a Prism], pub moments: &'a [Moments], pub start: Instant, pub wall: Duration }
@@ -51,6 +113,7 @@ impl Kernel<'_> {
         st.exact_pairs += 1; if order <= 5 { st.fast_pairs += 1; } else { st.slow_ns += begun.elapsed().as_nanos() as u64; } st.max_order = st.max_order.max(order); st.max_change = st.max_change.max(change);
         if change > planar_operator::PAIR_TARGET_RELATIVE_CHANGE { st.unconverged += 1; }
         if change > planar_operator::PAIR_NOISE_ACCEPT_CHANGE { st.approximated += 1; }
+        if probe_on() { let (class, aspect) = probe_class(self.prisms[a], self.prisms[b]); st.probe.get_or_insert_with(Default::default).add(class, aspect, v, change); }
         if !v.is_finite() { return Err(error("HYBRID_RANGE", "non-finite planar kernel entry")); }
         Ok(v)
     }
@@ -176,7 +239,30 @@ fn aca(k: &Kernel, rows: &[usize], cols: &[usize], eps: f64, st: &mut Stats) -> 
 }
 
 impl PlanarHMatrix {
+    /// Builds the H-matrix, or loads it from the opt-in disk cache (`P7_HMATRIX_CACHE=1`).
     pub(super) fn build(prisms: &[&Prism], max_bytes: usize, params: Params, start: Instant, wall: Duration) -> Result<Self> {
+        // The probe needs a real build (a cache hit evaluates no pairs).
+        let dir = if probe_on() { None } else { disk_cache::directory() };
+        let Some(dir) = dir else { return Self::build_uncached(prisms, max_bytes, params, start, wall); };
+        let t0 = Instant::now();
+        let key = disk_cache::key(prisms, &params);
+        let path = dir.join(format!("hm-{key:032x}.bin"));
+        if let Some(mut hm) = disk_cache::load(&path, prisms.len()) {
+            if hm.stats.stored_bytes <= max_bytes {
+                hm.stats.cache = "hit"; hm.stats.threads = params.threads; hm.stats.build_seconds = t0.elapsed().as_secs_f64();
+                eprintln!("P7_COMPACT_HMATRIX_CACHE hit path={} loadSeconds={:.2}", path.display(), hm.stats.build_seconds);
+                return Ok(hm);
+            }
+        }
+        let mut hm = Self::build_uncached(prisms, max_bytes, params, start, wall)?;
+        hm.stats.cache = "miss";
+        match disk_cache::save(&dir, &path, &hm) {
+            Ok(bytes) => eprintln!("P7_COMPACT_HMATRIX_CACHE saved path={} bytes={}", path.display(), bytes),
+            Err(e) => eprintln!("P7_COMPACT_HMATRIX_CACHE save failed: {e}"),
+        }
+        Ok(hm)
+    }
+    fn build_uncached(prisms: &[&Prism], max_bytes: usize, params: Params, start: Instant, wall: Duration) -> Result<Self> {
         let t0 = Instant::now();
         let n = prisms.len();
         let moments = prisms.iter().map(|p| Moments::new(p)).collect::<Result<Vec<_>>>()?;
@@ -270,6 +356,8 @@ impl PlanarHMatrix {
         let mut blocks = Vec::with_capacity(results.len());
         for (b, st) in results { stats.merge(&st); blocks.push(b); }
         stats.stored_bytes = used.load(Ordering::Relaxed);
+        stats.threads = params.threads;
+        for b in &blocks { match &b.store { Store::Dense(d) => stats.dense_bytes += 8 * d.len(), Store::Low { u, v, .. } => stats.low_rank_bytes += 8 * (u.len() + v.len()) } }
         stats.build_seconds = t0.elapsed().as_secs_f64();
         Ok(Self { n, order: tree_order, blocks, stats })
     }
@@ -347,6 +435,11 @@ impl PlanarHMatrix {
                 }
             }
         }
+    }
+    /// Read-only view of the dense diagonal leaf blocks: (support ids of the leaf in tree order, packed upper triangle
+    /// `K(i,j)`, `j >= i`, row by row). Used by the block preconditioner of the compact enrichment.
+    pub(super) fn diagonal_blocks(&self) -> Vec<(&[usize], &[f64])> {
+        self.blocks.iter().filter(|b| b.diag).filter_map(|b| match &b.store { Store::Dense(d) => Some((&self.order[b.a0..b.a1], d.as_slice())), _ => None }).collect()
     }
     #[cfg_attr(not(test), allow(dead_code))]
     pub(super) fn apply(&self, rho: &[[f64; 3]]) -> (Vec<[f64; 3]>, Vec<[f64; 3]>) {
@@ -442,5 +535,121 @@ mod tests {
         }
         let dense_bytes = n * (n + 1) / 2 * 8;
         assert!(hm.stats.stored_bytes <= dense_bytes * 2, "{} vs {}", hm.stats.stored_bytes, dense_bytes);
+        assert_eq!(hm.stats.dense_bytes + hm.stats.low_rank_bytes, hm.stats.stored_bytes, "{:?}", hm.stats);
+        assert!(hm.stats.low_rank_bytes > 0 && hm.stats.dense_bytes > 0);
+        // Disk cache round trip: identical bytes of every action, truncated or foreign files are rejected.
+        let dir = std::env::temp_dir().join(format!("p7-hm-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("hm.bin");
+        let params = Params { theta: 0.6, eps: 1e-6, threads: 4, leaf: 32 };
+        disk_cache::save(&dir, &path, &hm).unwrap();
+        let loaded = disk_cache::load(&path, n).expect("round trip");
+        assert_eq!(loaded.apply(&x).0, hm.apply(&x).0);
+        assert_eq!(loaded.apply(&x).1, hm.apply(&x).1);
+        assert_eq!((loaded.stats.dense_bytes, loaded.stats.low_rank_bytes, loaded.stats.stored_bytes), (hm.stats.dense_bytes, hm.stats.low_rank_bytes, hm.stats.stored_bytes));
+        assert!(disk_cache::load(&path, n + 1).is_none());
+        let bytes = std::fs::read(&path).unwrap();
+        std::fs::write(&path, &bytes[..bytes.len() - 5]).unwrap();
+        assert!(disk_cache::load(&path, n).is_none());
+        let mut moved: Vec<Prism> = grid(); moved[0] = Prism::new("m".into(), [[0., 0.], [0.6e-3, 0.], [0., 0.5e-3]], [0., 35e-6]).unwrap();
+        let moved_refs: Vec<&Prism> = moved.iter().collect();
+        assert_ne!(disk_cache::key(&refs, &params), disk_cache::key(&moved_refs, &params));
+        assert_eq!(disk_cache::key(&refs, &params), disk_cache::key(&refs, &params));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+/// Opt-in persistent copy of the built H-matrix (`P7_HMATRIX_CACHE=1`, directory `P7_HMATRIX_CACHE_DIR`
+/// or `$PCB_ANALYSIS_CACHE_DIR/hmatrix`). The key hashes every prism coordinate, the build parameters and the
+/// kernel-relevant `P7_*` environment; `KERNEL_VERSION` must be bumped when the pair kernel changes.
+mod disk_cache {
+    use super::*;
+    use std::path::{Path, PathBuf};
+    const KERNEL_VERSION: &str = "hm-cache-1";
+    const MAGIC: &[u8; 8] = b"P7HMAT01";
+    /// Variables that never change kernel values.
+    const NEUTRAL: &[&str] = &["P7_ENRICH", "P7_OUTPUT", "P7_TREE", "P7_SMOKE", "P7_SUPERVISED", "P7_HMATRIX_THREADS", "P7_HMATRIX_CACHE",
+        "P7_MAGNETIC_PHASE", "P7_COMPACT_PL_THREADS", "P7_MAGNETIC_NEAR_THREADS", "P7_PAIR_PROFILE", "P7_DUMP", "P7_FOIL_SHEET"];
+
+    pub(super) fn directory() -> Option<PathBuf> {
+        if std::env::var("P7_HMATRIX_CACHE").as_deref() != Ok("1") { return None; }
+        let dir = std::env::var_os("P7_HMATRIX_CACHE_DIR").map(PathBuf::from)
+            .or_else(|| std::env::var_os("PCB_ANALYSIS_CACHE_DIR").map(|d| PathBuf::from(d).join("hmatrix")))?;
+        std::fs::create_dir_all(&dir).ok()?;
+        Some(dir)
+    }
+    /// Two independent FNV-1a lanes (128 bits); not cryptographic, the cache is local and trusted.
+    struct Hash([u64; 2]);
+    impl Hash {
+        fn new() -> Self { Hash([0xcbf29ce484222325, 0x84222325cbf29ce4]) }
+        fn bytes(&mut self, b: &[u8]) { for &x in b { self.0[0] = (self.0[0] ^ x as u64).wrapping_mul(0x100000001b3); self.0[1] = (self.0[1] ^ (x as u64 ^ 0x5a)).wrapping_mul(0x100000001b3).rotate_left(7); } }
+        fn f64s(&mut self, v: &[f64]) { for x in v { self.bytes(&x.to_bits().to_le_bytes()); } }
+    }
+    pub(super) fn key(prisms: &[&Prism], params: &Params) -> u128 {
+        let mut h = Hash::new();
+        h.bytes(KERNEL_VERSION.as_bytes());
+        h.bytes(&(prisms.len() as u64).to_le_bytes());
+        for p in prisms { for t in &p.triangle_m { h.f64s(t); } h.f64s(&p.z_m); }
+        h.f64s(&[params.theta, params.eps]); h.bytes(&(params.leaf as u64).to_le_bytes());
+        let mut vars: Vec<(String, String)> = std::env::vars().filter(|(k, _)| k.starts_with("P7_") && !NEUTRAL.iter().any(|n| k.starts_with(n))).collect();
+        vars.sort();
+        for (k, v) in vars { h.bytes(k.as_bytes()); h.bytes(&[0]); h.bytes(v.as_bytes()); h.bytes(&[1]); }
+        ((h.0[0] as u128) << 64) | h.0[1] as u128
+    }
+    fn put_u64(o: &mut Vec<u8>, v: usize) { o.extend_from_slice(&(v as u64).to_le_bytes()); }
+    fn put_f64s(o: &mut Vec<u8>, v: &[f64]) { put_u64(o, v.len()); for x in v { o.extend_from_slice(&x.to_le_bytes()); } }
+    pub(super) fn save(dir: &Path, path: &Path, hm: &PlanarHMatrix) -> std::io::Result<usize> {
+        let mut o = Vec::with_capacity(hm.stats.stored_bytes + (1 << 20));
+        o.extend_from_slice(MAGIC); put_u64(&mut o, hm.n);
+        put_u64(&mut o, hm.order.len()); for &x in &hm.order { put_u64(&mut o, x); }
+        let s = &hm.stats;
+        for v in [s.supports, s.far_blocks, s.near_blocks, s.exact_pairs, s.moment_pairs, s.stored_bytes, s.dense_bytes, s.low_rank_bytes, s.max_rank, s.max_order, s.unconverged, s.approximated, s.aca_dense_fallbacks, s.fast_pairs] { put_u64(&mut o, v); }
+        o.extend_from_slice(&s.slow_ns.to_le_bytes()); o.extend_from_slice(&s.cpu_ns.to_le_bytes());
+        for v in [s.build_seconds, s.eps, s.max_change] { o.extend_from_slice(&v.to_le_bytes()); }
+        put_u64(&mut o, hm.blocks.len());
+        for b in &hm.blocks {
+            for v in [b.a0, b.a1, b.b0, b.b1, usize::from(b.diag)] { put_u64(&mut o, v); }
+            match &b.store {
+                Store::Dense(d) => { o.push(0); put_f64s(&mut o, d); }
+                Store::Low { rank, u, v, err } => { o.push(1); put_u64(&mut o, *rank); o.extend_from_slice(&err.to_le_bytes()); put_f64s(&mut o, u); put_f64s(&mut o, v); }
+            }
+        }
+        let tmp = dir.join(format!("{}.{}.tmp", path.file_name().and_then(|n| n.to_str()).unwrap_or("hm"), std::process::id()));
+        std::fs::write(&tmp, &o)?; std::fs::rename(&tmp, path)?;
+        Ok(o.len())
+    }
+    struct Cur<'a>(&'a [u8], usize);
+    impl Cur<'_> {
+        fn take(&mut self, n: usize) -> Option<&[u8]> { let e = self.1.checked_add(n)?; let r = self.0.get(self.1..e)?; self.1 = e; Some(r) }
+        fn u(&mut self) -> Option<usize> { Some(u64::from_le_bytes(self.take(8)?.try_into().ok()?) as usize) }
+        fn f(&mut self) -> Option<f64> { Some(f64::from_le_bytes(self.take(8)?.try_into().ok()?)) }
+        fn f64s(&mut self) -> Option<Vec<f64>> { let n = self.u()?; let b = self.take(n.checked_mul(8)?)?; Some(b.chunks_exact(8).map(|c| f64::from_le_bytes(c.try_into().unwrap())).collect()) }
+    }
+    /// `None` on any mismatch or corruption: the caller rebuilds.
+    pub(super) fn load(path: &Path, n: usize) -> Option<PlanarHMatrix> {
+        let data = std::fs::read(path).ok()?;
+        let mut c = Cur(&data, 0);
+        if c.take(8)? != MAGIC || c.u()? != n { return None; }
+        let m = c.u()?; if m != n { return None; }
+        let mut order = Vec::with_capacity(n); let mut seen = vec![false; n];
+        for _ in 0..n { let x = c.u()?; if x >= n || std::mem::replace(&mut seen[x], true) { return None; } order.push(x); }
+        let mut f = [0usize; 14]; for v in f.iter_mut() { *v = c.u()?; }
+        let (slow_ns, cpu_ns) = (c.u()? as u64, c.u()? as u64);
+        let (build_seconds, eps, max_change) = (c.f()?, c.f()?, c.f()?);
+        let stats = Stats { supports: f[0], far_blocks: f[1], near_blocks: f[2], exact_pairs: f[3], moment_pairs: f[4], stored_bytes: f[5], dense_bytes: f[6], low_rank_bytes: f[7], max_rank: f[8], max_order: f[9], unconverged: f[10], approximated: f[11], aca_dense_fallbacks: f[12], fast_pairs: f[13], slow_ns, cpu_ns, build_seconds, eps, max_change, ..Default::default() };
+        let count = c.u()?; let mut blocks = Vec::with_capacity(count.min(1 << 20));
+        for _ in 0..count {
+            let (a0, a1, b0, b1, diag) = (c.u()?, c.u()?, c.u()?, c.u()?, c.u()? != 0);
+            if a0 > a1 || b0 > b1 || a1 > n || b1 > n { return None; }
+            let (rows, cols) = (a1 - a0, b1 - b0);
+            let store = match c.take(1)?[0] {
+                0 => { let d = c.f64s()?; if d.len() != if diag { rows * (rows + 1) / 2 } else { rows * cols } { return None; } Store::Dense(d) }
+                1 => { let rank = c.u()?; let err = c.f()?; let (u, v) = (c.f64s()?, c.f64s()?); if u.len() != rank * rows || v.len() != rank * cols { return None; } Store::Low { rank, u, v, err } }
+                _ => return None,
+            };
+            blocks.push(HBlock { a0, a1, b0, b1, diag, store });
+        }
+        if c.1 != data.len() { return None; }
+        Some(PlanarHMatrix { n, order, blocks, stats })
     }
 }

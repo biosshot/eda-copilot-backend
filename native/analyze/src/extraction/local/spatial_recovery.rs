@@ -35,21 +35,21 @@ pub(super) fn recover(map:&MixedMap<'_>, re:&[f64], im:&[f64], expected_loss:f64
             let at=top.partition_point(|t|t.0>=p); top.insert(at,(p,value())); top.truncate(SUMMARY_TOP_SUPPORTS);
         }
     };
-    for (foil,support) in map.foils.iter().zip(&planar) {
+    for (fi,(foil,support)) in map.foils.iter().zip(&planar).enumerate() {
         if start.elapsed()>=wall {return Err(error("DEADLINE","spatial recovery"));}
         let (a,b)=density(&support.current_density,re,im)?;
         let Some(&first)=foil.tetrahedra.first() else {return Err(error("SPATIAL_RECOVERY","empty foil support"));};
         let sigma=map.mesh().conductivity_s_m[first];
         if !sigma.is_finite() || sigma<=0. || foil.tetrahedra.iter().any(|&i|map.mesh().conductivity_s_m[i]!=sigma) {return Err(error("SPATIAL_RECOVERY","nonuniform foil conductivity"));}
-        let p=power(a,b,foil.volume_m3,sigma)?; loss+=p;
+        let p=power(a,b,foil.volume_m3,sigma/map.foil_resistance_scale[fi])?; loss+=p; // same per-band multiplier as the model R
         keep(&mut supports,0,p,&||serde_json::json!({"kind":"foil","layer":foil.layer,"triangle":foil.planar_triangle,"zM":foil.z_span_m,"xyM":support.prism.triangle_m,"volumeM3":foil.volume_m3,"currentDensityRealAPerM2":a,"currentDensityImaginaryAPerM2":b,"lossW":p}));
     }
     let barrel=map.barrel_current_supports()?;
-    for (prism,support) in map.barrels.iter().zip(&barrel) {
+    for (bi,(prism,support)) in map.barrels.iter().zip(&barrel).enumerate() {
         if start.elapsed()>=wall {return Err(error("DEADLINE","spatial recovery"));}
         let (a,b)=density(&support.current_density,re,im)?;
         let sigma=map.mesh().conductivity_s_m[prism.tetrahedra[0]];
-        let p=power(a,b,prism.volume_m3,sigma)?; loss+=p;
+        let p=power(a,b,prism.volume_m3,sigma/map.barrel_resistance_scale[bi])?; loss+=p;
         keep(&mut supports,1,p,&||serde_json::json!({"kind":"barrel","barrel":prism.barrel_id,"triangle":prism.planar_triangle,"zM":prism.z_span_m,"xyM":support.prism.triangle_m,"volumeM3":prism.volume_m3,"currentDensityRealAPerM2":a,"currentDensityImaginaryAPerM2":b,"lossW":p}));
     }
     let mut cursor=0;

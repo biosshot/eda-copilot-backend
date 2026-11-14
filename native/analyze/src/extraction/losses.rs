@@ -8,6 +8,38 @@ pub(super) struct Configuration {
     pub conductivity: Option<Vec<f64>>,
     pub minimum_skin_dimensions_m: Vec<f64>,
     pub tangents: Vec<f64>,
+    /// Physical copper thickness per conductor surface, signals first (used only with `P7_SECTION_FOIL=1`).
+    pub thickness_m: Vec<f64>,
+    /// Signal conductor cross-section area (bounding box), 0 for reference planes (used only with `P7_SECTION_FOIL=1`).
+    pub area_m2: Vec<f64>,
+}
+
+/// `P7_SECTION_FOIL` (read once): 1 replaces the thick-conductor surface impedance `(1+j)/(sigma delta)` by the finite-layer
+/// `Zs = (kappa/sigma) coth(kappa s)`, `kappa = (1+j)/delta`, and lifts the `delta <= thickness/10` refusal.
+/// Approximation tier, physical accuracy unverified. Unset or any other value: behaviour is unchanged.
+pub(super) fn section_foil() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var("P7_SECTION_FOIL").as_deref() == Ok("1"))
+}
+/// Conductor-loss limit `R/(omega L_ext)` of `SECTION_WEAK_LOSS`: 0.05; 0.3 with `P7_SECTION_FOIL=1` (approximation tier).
+pub(super) fn section_conductor_loss_limit() -> f64 { if section_foil() { 0.3 } else { 0.05 } }
+/// Effective sheet thickness: reference surface `t`; signal surface `A_k gram_kk` clamped to `[t/2, t]`.
+pub(super) fn foil_sheet(is_signal: bool, area_m2: f64, gram_kk: f64, thickness_m: f64) -> f64 {
+    if is_signal { (area_m2 * gram_kk).clamp(thickness_m / 2., thickness_m) } else { thickness_m }
+}
+/// `(Re Zs, Im Zs)` of a conducting layer of thickness `s` driven from one face, `Zs = (kappa/sigma) coth(kappa s)`.
+pub(super) fn foil_surface_impedance(sigma: f64, w: f64, s: f64) -> (f64, f64) {
+    let delta = (2. / (w * MU0 * sigma)).sqrt();
+    let u = s / delta;
+    // coth((1+j)u) = (sinh 2u - j sin 2u) / (cosh 2u - cos 2u); denominator written as 2(sinh^2 u + sin^2 u).
+    let (cr, ci) = if u > 150. {
+        (1., 0.)
+    } else {
+        let d = 2. * (u.sinh().powi(2) + u.sin().powi(2));
+        ((2. * u).sinh() / d, -(2. * u).sin() / d)
+    };
+    // (1+j)(cr + j ci) = (cr - ci) + j (cr + ci)
+    ((cr - ci) / (sigma * delta), (cr + ci) / (sigma * delta))
 }
 impl Configuration {
     pub fn parse(v: &Value, g: &Geometry) -> Result<Option<Self>> {
@@ -36,6 +68,8 @@ impl Configuration {
                     conductivity: None,
                     minimum_skin_dimensions_m: vec![],
                     tangents,
+                    thickness_m: vec![],
+                    area_m2: vec![],
                 })
             } else {
                 None
@@ -92,6 +126,8 @@ impl Configuration {
         let mut conductivity = vec![signal; g.conductors.len()];
         let mut dimensions =
             vec![(b[2] - b[0]).min(b[3] - b[1]).min(g.feature()); g.conductors.len()];
+        let mut thickness: Vec<f64> = g.conductors.iter().map(|c| c.bounds_m[3] - c.bounds_m[1]).collect();
+        let mut area: Vec<f64> = g.conductors.iter().map(|c| (c.bounds_m[2] - c.bounds_m[0]) * (c.bounds_m[3] - c.bounds_m[1])).collect();
         for side in expected {
             let plane = &r[side];
             if plane.as_object().is_none_or(|o| {
@@ -106,11 +142,15 @@ impl Configuration {
                 * 1e-3;
             conductivity.push(sigma(&plane["material"])?);
             dimensions.push(t.min(g.feature()));
+            thickness.push(t);
+            area.push(0.);
         }
         Ok(Some(Self {
             conductivity: Some(conductivity),
             minimum_skin_dimensions_m: dimensions,
             tangents,
+            thickness_m: thickness,
+            area_m2: area,
         }))
     }
     pub fn screen(&self, frequencies: &[f64]) -> Result<()> {
@@ -127,7 +167,7 @@ impl Configuration {
                     if !delta.is_finite() || delta <= 0. {
                         return Err(error("SECTION_SKIN_DEPTH",format!("frequency {f} Hz surface {i}: delta {delta} m is not representable as a finite positive skin depth (numeric overflow/underflow)")));
                     }
-                    if delta > self.minimum_skin_dimensions_m[i] / 10. {
+                    if !section_foil() && delta > self.minimum_skin_dimensions_m[i] / 10. {
                         return Err(error("SECTION_SKIN_DEPTH",format!("frequency {f} Hz surface {i}: delta {delta} m exceeds dimension/10={} m",self.minimum_skin_dimensions_m[i]/10.)));
                     }
                 }
@@ -146,7 +186,11 @@ pub struct Surface {
     pub current_a_per_m_per_a: Vec<Vec<f64>>,
     pub integrated_current_a_per_a: Vec<f64>,
     pub gram_per_m: Vec<Vec<f64>>,
+    /// Conductor cross-section area; filled only with `P7_SECTION_FOIL=1` on the polygon path (0 = not stored).
+    #[serde(default, skip_serializing_if = "area_unset")]
+    pub area_m2: f64,
 }
+fn area_unset(a: &f64) -> bool { *a == 0. }
 #[derive(Serialize,Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Region {
@@ -296,14 +340,26 @@ pub(super) fn samples(
     let mut previous: Vec<Option<Z>> = vec![None; n];
     for f in frequencies {
         let w = 2. * std::f64::consts::PI * f;
-        let r: Vec<Vec<f64>> = bc
-            .iter()
-            .map(|v| v.iter().map(|x| x * (w * MU0 / 2.).sqrt()).collect())
-            .collect();
-        let internal: Vec<Vec<f64>> = r
-            .iter()
-            .map(|v| v.iter().map(|x| x / w).collect())
-            .collect();
+        // P7_SECTION_FOIL=1: per-surface finite-layer impedance; `foil[k] = (Re Zs, Im Zs)`.
+        let foil: Option<Vec<(f64, f64)>> = match (&c.conductivity, section_foil()) {
+            (Some(sigmas), true) => Some(
+                integrals.surfaces.iter().enumerate().map(|(k, s)| {
+                    foil_surface_impedance(sigmas[k], w, foil_sheet(k < n, c.area_m2[k], if k < n { s.gram_per_m[k][k] } else { 0. }, c.thickness_m[k]))
+                }).collect(),
+            ),
+            _ => None,
+        };
+        let r: Vec<Vec<f64>> = match &foil {
+            Some(z) => weighted(integrals.surfaces.iter().enumerate().map(|(k, s)| (z[k].0, s.gram_per_m.clone())), n),
+            None => bc
+                .iter()
+                .map(|v| v.iter().map(|x| x * (w * MU0 / 2.).sqrt()).collect())
+                .collect(),
+        };
+        let internal: Vec<Vec<f64>> = match &foil {
+            Some(z) => weighted(integrals.surfaces.iter().enumerate().map(|(k, s)| (z[k].1 / w, s.gram_per_m.clone())), n),
+            None => r.iter().map(|v| v.iter().map(|x| x / w).collect()).collect(),
+        };
         let total: Vec<Vec<f64>> = external
             .iter()
             .zip(&internal)
@@ -314,6 +370,7 @@ pub(super) fn samples(
             .map(|v| v.iter().map(|x| x * w).collect())
             .collect();
         let mut modes = vec![];
+        let mut worst_rg = 0.0_f64;
         for k in 0..n {
             let rm = modal(&r, k);
             let lm = modal(&total, k);
@@ -322,8 +379,9 @@ pub(super) fn samples(
             let cm = modal(&capacitance, k);
             let rg = rm / (w * le);
             let gg = gm / (w * cm);
-            if !rg.is_finite() || !gg.is_finite() || rg < 0. || gg < 0. || rg > 0.05 || gg > 0.05 {
-                return Err(error("SECTION_WEAK_LOSS",format!("frequency {f} Hz mode {k}: R/(omega Lexternal)={rg}, G/(omega C)={gg}; limit 0.05")));
+            worst_rg = worst_rg.max(rg);
+            if !rg.is_finite() || !gg.is_finite() || rg < 0. || gg < 0. || rg > section_conductor_loss_limit() || gg > 0.05 {
+                return Err(error("SECTION_WEAK_LOSS",format!("frequency {f} Hz mode {k}: R/(omega Lexternal)={rg}, G/(omega C)={gg};limit {} (G/(omega C) 0.05)",section_conductor_loss_limit())));
             }
             for a in [&r, &g] {
                 if n == 2
@@ -356,10 +414,12 @@ pub(super) fn samples(
                 ));
             }
             previous[k] = Some(gamma);
-            modes.push(json!({"name":if n==1{"single"}else if k==0{"even"}else{"odd"},"resistanceOhmPerM":rm,"externalInductanceHPerM":le,"internalInductanceHPerM":rm/w,"inductanceHPerM":lm,"conductanceSPerM":gm,"capacitanceFPerM":cm,"alphaNpPerM":gamma.r,"betaRadPerM":gamma.i,"characteristicImpedanceOhm":zc.value(),"phaseDelayS":length.map(|l|gamma.i*l/w),"phaseDelaySPerM":gamma.i/w,"conductorAlphaFirstOrderNpPerM":rm/2.*(cm/le).sqrt(),"dielectricAlphaFirstOrderNpPerM":gm/2.*(le/cm).sqrt(),"guards":{"resistanceToExternalReactance":rg,"conductanceToSusceptance":gg,"telegrapherIdentityRelativeError":identity}}));
+            modes.push(json!({"name":if n==1{"single"}else if k==0{"even"}else{"odd"},"resistanceOhmPerM":rm,"externalInductanceHPerM":le,"internalInductanceHPerM":if foil.is_some(){modal(&internal,k)}else{rm/w},"inductanceHPerM":lm,"conductanceSPerM":gm,"capacitanceFPerM":cm,"alphaNpPerM":gamma.r,"betaRadPerM":gamma.i,"characteristicImpedanceOhm":zc.value(),"phaseDelayS":length.map(|l|gamma.i*l/w),"phaseDelaySPerM":gamma.i/w,"conductorAlphaFirstOrderNpPerM":rm/2.*(cm/le).sqrt(),"dielectricAlphaFirstOrderNpPerM":gm/2.*(le/cm).sqrt(),"guards":{"resistanceToExternalReactance":rg,"conductanceToSusceptance":gg,"telegrapherIdentityRelativeError":identity}}));
         }
-        let surfaces:Vec<_>=integrals.surfaces.iter().enumerate().map(|(i,s)|{let sigma=c.conductivity.as_ref().map(|v|v[i]);let rs=sigma.map_or(0.,|s|(w*MU0/(2.*s)).sqrt());json!({"id":s.id,"conductivitySM":sigma,"skinDepthM":sigma.map(|s|(2./(w*MU0*s)).sqrt()),"minimumSkinDimensionM":c.minimum_skin_dimensions_m.get(i),"resistanceOhmPerM":s.gram_per_m.iter().map(|v|v.iter().map(|x|x*rs).collect::<Vec<_>>()).collect::<Vec<_>>()})}).collect();
-        samples.push(json!({"frequencyHz":f,"resistanceOhmPerM":r,"externalInductanceHPerM":external,"internalInductanceHPerM":internal,"totalInductanceHPerM":total,"conductanceSPerM":g,"capacitanceFPerM":capacitance,"modes":modes,"surfaceContributions":surfaces,"regionContributions":integrals.regions.iter().enumerate().map(|(i,r)|json!({"id":r.id,"lossTangent":c.tangents[i],"capacitanceFPerM":r.capacitance_f_per_m,"conductanceSPerM":r.capacitance_f_per_m.iter().map(|v|v.iter().map(|x|x*w*c.tangents[i]).collect::<Vec<_>>()).collect::<Vec<_>>()})).collect::<Vec<_>>()}));
+        let surfaces:Vec<_>=integrals.surfaces.iter().enumerate().map(|(i,s)|{let sigma=c.conductivity.as_ref().map(|v|v[i]);let rs=foil.as_ref().map_or_else(||sigma.map_or(0.,|s|(w*MU0/(2.*s)).sqrt()),|z|z[i].0);json!({"id":s.id,"conductivitySM":sigma,"skinDepthM":sigma.map(|s|(2./(w*MU0*s)).sqrt()),"minimumSkinDimensionM":c.minimum_skin_dimensions_m.get(i),"resistanceOhmPerM":s.gram_per_m.iter().map(|v|v.iter().map(|x|x*rs).collect::<Vec<_>>()).collect::<Vec<_>>()})}).collect();
+        let mut sample=json!({"frequencyHz":f,"resistanceOhmPerM":r,"externalInductanceHPerM":external,"internalInductanceHPerM":internal,"totalInductanceHPerM":total,"conductanceSPerM":g,"capacitanceFPerM":capacitance,"modes":modes,"surfaceContributions":surfaces,"regionContributions":integrals.regions.iter().enumerate().map(|(i,r)|json!({"id":r.id,"lossTangent":c.tangents[i],"capacitanceFPerM":r.capacitance_f_per_m,"conductanceSPerM":r.capacitance_f_per_m.iter().map(|v|v.iter().map(|x|x*w*c.tangents[i]).collect::<Vec<_>>()).collect::<Vec<_>>()})).collect::<Vec<_>>()});
+        if section_foil() && worst_rg > 0.05 { sample["approximation"] = json!("приближение"); sample["resistanceOverOmegaL"] = json!(worst_rg); }
+        samples.push(sample);
     }
     Ok(samples)
 }
@@ -524,6 +584,7 @@ pub(super) fn surface_grams_projected(nodes:&[[f64;2]],reactions:&[Vec<f64>],inv
             current_a_per_m_per_a: currents,
             integrated_current_a_per_a: integrated,
             gram_per_m: gram,
+            area_m2: 0.,
         });
     }
     for q in totals {
@@ -537,11 +598,30 @@ pub(super) fn surface_grams_projected(nodes:&[[f64;2]],reactions:&[Vec<f64>],inv
 mod tests {
     use super::*;
     #[test]
+    fn foil_surface_impedance_limits() {
+        let sigma = 5.8e7;
+        let w = std::f64::consts::TAU * 1e9;
+        let rs = (w * MU0 / (2. * sigma)).sqrt();
+        // Thick layer: Zs -> (1+j)/(sigma delta), Re = Im = Rs.
+        let (re, im) = foil_surface_impedance(sigma, w, 1e-3);
+        assert!((re / rs - 1.).abs() < 1e-12 && (im / rs - 1.).abs() < 1e-12);
+        // Thin layer: Zs -> 1/(sigma s), Re = R_dc sheet, Im -> 0.
+        let s = 1e-8;
+        let (re, im) = foil_surface_impedance(sigma, w, s);
+        assert!((re * sigma * s - 1.).abs() < 1e-4 && im < 1e-3 * re);
+        // Clamp: signal sheet stays in [t/2, t]; reference sheet is t.
+        assert_eq!(foil_sheet(true, 1., 1e9, 35e-6), 35e-6);
+        assert_eq!(foil_sheet(true, 1., 1e-9, 35e-6), 17.5e-6);
+        assert_eq!(foil_sheet(false, 1., 1., 35e-6), 35e-6);
+    }
+    #[test]
     fn skin_depth_numeric_range_reason_is_distinct_from_dimension_limit() {
         let config = Configuration {
             conductivity: Some(vec![f64::MAX]),
             minimum_skin_dimensions_m: vec![0.000035],
             tangents: vec![0.],
+            thickness_m: vec![0.000035],
+            area_m2: vec![0.],
         };
         let numeric = config.screen(&[1e9]).unwrap_err();
         assert!(
@@ -612,6 +692,8 @@ mod tests {
             conductivity: Some(vec![5.8e7; 2]),
             minimum_skin_dimensions_m: vec![0.000035; 2],
             tangents: vec![0.015],
+            thickness_m: vec![0.000035; 2],
+            area_m2: vec![0.; 2],
         };
         let sample = &samples(&p, &integral, &c, &[1e9], Some(0.02)).unwrap()[0];
         for (key, reference) in [
@@ -644,6 +726,8 @@ mod tests {
             conductivity: None,
             minimum_skin_dimensions_m: vec![],
             tangents: vec![0.015, 0.035],
+            thickness_m: vec![],
+            area_m2: vec![],
         };
         let out = samples(&p, &integral, &c, &[1e9], None).unwrap();
         let g = out[0]["conductanceSPerM"][0][0].as_f64().unwrap();

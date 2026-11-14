@@ -298,7 +298,7 @@ export interface AnalysisBoardFoilCheckedReport {
     };
     provenance: {
         method: string;
-        compactOperator?: { version: 'compact-planar-v1'; basis: 'full-mixed' | 'dc-harmonic-only' | 'adaptive-mixed-closure'; nearQuadratureEstimatedTolerance?: number; electricOperator: 'homogeneous-charge-gram' | 'layered-spatial-field-mesh'; approximationError: 'unverified'; scope: 'compact-discrete'; originalVolumeActions: 0; foilSupports: number; localTetraSupports: number; potentialCoordinates: number; currentCoordinates: number; planarMaxOrder: number; planarMaxRelativeChange: number; mixedMaxRelativeChange: number; tetraSelfMaxRelativeChange: number; tetraPairAdaptiveTolerance: number; physicalAccuracy: 'unverified' };
+        compactOperator?: { version: 'compact-planar-v1'; basis: 'full-mixed' | 'dc-harmonic-only' | 'adaptive-mixed-closure'; nearQuadratureEstimatedTolerance?: number; electricOperator: 'homogeneous-charge-gram' | 'layered-spatial-field-mesh'; approximationError: 'unverified'; scope: 'compact-discrete'; originalVolumeActions: 0; foilSupports: number; localTetraSupports: number; potentialCoordinates: number; currentCoordinates: number; planarMaxOrder: number; planarMaxRelativeChange: number; mixedMaxRelativeChange: number; tetraSelfMaxRelativeChange: number; tetraPairAdaptiveTolerance: number; physicalAccuracy: 'unverified'; foilSheet?: { approximation: true; maxThicknessOverSkin: number; estimatedResistanceError: number; bandTopHz: number; criterion: string; warning: string; resistanceScaled?: boolean; halfSheets?: boolean; halfSheetLayers?: number | null; resistanceMultiplierMax?: number; resistanceMultiplierMin?: number; multiplierTag?: string | null; status?: 'approximation'; statusNote?: string | null } };
         magneticOperator?: {
             scope: string; maxFullKvlUncertaintyRelative: number;
         } & (
@@ -314,6 +314,10 @@ export interface AnalysisBoardFoilCheckedReport {
                 plannedBytes: number; treeSignature: string; geometrySignature: string;
                 basisCover: AnalysisMagneticBasisCover }
         );
+        /** P7_HIGHBAND_CUTS=1 only: cut-plane port electrodes admitted in hybrid-planar-v3 (approximation, unverified). */
+        cutPorts?: { count: number; names: string[]; areasM2: Record<string, number>; model: 'equipotential-face'; status: 'approximation'; statusNote: string; facePotentialSpread: null };
+        /** P7_BAND_SCREEN=<kD> with P7_HIGHBAND_CUTS=1 only: the quasistatic size screen used kD (0 < kD <= 0.5) instead of 0.1 (approximation, unverified). */
+        bandScreen?: { kD: number; thresholdHz: number; sizeM: number; epsilonR: number; maximumHz: number; electricalSize: number; status: 'approximation'; statusNote: string };
         partitionPolicy?: 'automatic-conductive-schur-v1' | 'automatic-hybrid-v1';
         hybridAssembly?: { policy: 'automatic-hybrid-v1'; method: 'global-compact-mixed'; potentialCoordinates: number; currentCoordinates: number; physicalAccuracy: 'unverified' };
         automaticPartition?: {
@@ -332,6 +336,7 @@ export interface AnalysisBoardFoilCheckedReport {
             currentAndElectricShareMesh: true;
             layers: { layer: string; skinDepthM: number; maximumStepM: number; slabs: number }[];
             roundBarrels: { id: string; skinDepthM: number; maximumRadialStepM: number; shells: number }[];
+            barrelSheet?: { approximation: true; criterion: string; warning: string; resistanceScaled: boolean; maxThicknessOverSkin: number; estimatedResistanceError: number; resistanceMultiplierMax?: number | null; multiplierTag?: string | null; status?: 'approximation'; statusNote?: string | null };
             scope: string;
         };
         barrelIds: string[];

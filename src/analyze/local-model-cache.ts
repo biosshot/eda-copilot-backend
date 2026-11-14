@@ -21,13 +21,24 @@ function digestFile(path:string){
 export function magneticPrecision(){const value=process.env.P7_MAGNETIC_PRECISION??'f64';if(!['f64'].includes(value))throw new Error('LOCAL_SPATIAL_INPUT: unsupported P7_MAGNETIC_PRECISION');return value;}
 export function magneticAxialTetPolicy(){const value=process.env.P7_MAGNETIC_AXIAL_TETS??'0';if(!['0','1'].includes(value))throw new Error('LOCAL_SPATIAL_INPUT: unsupported P7_MAGNETIC_AXIAL_TETS');return value==='1'?'axial-tetra-estimated-v1' as const:undefined;}
 export function localCoreIdentity(){const require=createRequire(import.meta.url);const {nativeFilename}=require(backendResource('native','node-addon','platform.cjs'));const binary=digestFile(backendResource('native','node-addon',nativeFilename()));const profile=process.env.P7_MAGNETIC_PROFILE??'baseline';if(!['baseline','compact-v1'].includes(profile))throw new Error('LOCAL_SPATIAL_INPUT: unsupported P7_MAGNETIC_PROFILE');const axial=magneticAxialTetPolicy();return digest(canonical({binary,magneticProfile:profile,magneticPrecision:magneticPrecision(),...(axial&&{nearQuadraturePolicy:axial})}));}
+/** Result-changing developer switches (native extractor and validator). Any set value enters every cache key, so a result
+ * produced under one setting is never replayed under another; with none set the key is unchanged. Not listed on purpose:
+ * traces/dumps/probes/audits (P7_*_TRACE, P7_PHASE_TRACE, P7_MAGNETIC_PHASE_PROFILE, P7_MAGNETIC_SLOW_PAIR_PATH, P7_PAIR_PROFILE,
+ * P7_HMATRIX_PAIR_PROBE, P7_ENRICH_PROBE, P7_LAPLACIAN_*, P7_CROSS_DUMP, P7_DUMP_*, P7_VIA_PRISM_CENSUS, P7_VIA_COVER_CONTROL,
+ * P7_MESH_COARSEN_BASELINE, P7_SECTION_FOIL_TRACE, P7_AUTO_FOIL_AUDIT, P7_BLOCK_LIFECYCLE, P7_CACHE_DEBUG), thread counts and
+ * cache/memory/time resources (P7_HMATRIX_THREADS, P7_HMATRIX_CACHE*, P7_MAGNETIC_*_CACHE_MIB, P7_VERIFY_*), test/bench inputs
+ * (P7_BENCH_*, P7_SAVED_PROBLEM, P7_TEST_*, P7_PAIR_OUTPUT, P7_CROSS_SAMPLES, P7_BARREL_TEST_WALL_SECONDS). Switches already keyed
+ * by name elsewhere (P7_MAGNETIC_PROFILE/PRECISION/AXIAL_TETS/BATCH_COLUMNS/NEAR_BOUND/NEAR_THREADS, P7_COMPACT_*, P7_SECTION_HINTS,
+ * P7_HYBRID_REGIME_AUDIT) are not repeated. */
+export const RESULT_SWITCHES=['P7_BAND_SCREEN','P7_BARREL_MODEL','P7_BARREL_SHEET','P7_CROSS_TET_TOL','P7_ENRICHMENT_CONTINUATION','P7_ENRICH_GMRES_MAX','P7_ENRICH_INDUCTIVE','P7_ENRICH_MAX','P7_FIELD_INTERFACE_STEP','P7_FIELD_REFINE','P7_FIELD_REFINE_COUNT_ONLY','P7_FIELD_REFINE_LEVELS','P7_FIELD_REFINE_MAX_XY','P7_FOIL_SHEET','P7_HIGHBAND_CUTS','P7_LOCAL_FAST','P7_MESH_COARSEN','P7_MESH_MERGE','P7_MESH_MERGE_ANGLE','P7_MESH_MERGE_TOL_MM','P7_MESH_QUALITY_ANGLE','P7_MESH_SIMPLIFY','P7_MESH_SNAP_MM','P7_PAIR_ESCALATE','P7_PLANAR_HMATRIX','P7_POINT_CONTACT_REFUSE','P7_RECIPROCITY_POLICY','P7_ROI_BUDGET_MIB','P7_ROI_CORRIDOR','P7_ROI_ELECTRICAL','P7_ROI_FALLBACK','P7_ROI_FORCE_CORRIDOR','P7_ROI_RECALIBRATE','P7_SECTION_FOIL'] as const;
+export function resultSwitches():Record<string,string>|undefined{const found:Record<string,string>={};for(const name of RESULT_SWITCHES){const value=process.env[name];if(value!==undefined)found[name]=value;}return Object.keys(found).length?found:undefined;}
 export interface CacheEvidence {status:'cold'|'memory'|'disk';key:string;schema:1;assembly:number;training:number;restoreSeconds:number;writeFailed:boolean}
 /** Reduced models, recovery and checked outputs only. Native FEM factors never cross this boundary.
  * Each producer validates restored coefficients or response evidence before reuse. */
 export class LocalModelCache {
  private entries=new Map<string,{text:string;bytes:number}>();private bytes=0;
  constructor(readonly dir=process.env.PCB_ANALYSIS_CACHE_DIR??join(homedir(),'.cache','eda-copilot','local-v1'),readonly maxMemoryBytes=64*1024*1024,readonly maxDiskBytes=256*1024*1024,readonly maxEntryBytes=24*1024*1024,readonly maxEntries=8){try{for(const name of readdirSync(dir)){if(!/^[a-f0-9]{64}\.json\.[0-9]+\.[a-f0-9-]+\.tmp$/.test(name))continue;const path=join(dir,name);try{if(Date.now()-statSync(path).mtimeMs>60000)unlinkSync(path);}catch{}}}catch{}}
- key(identity:unknown){return digest(canonical({schema:1,method:'direct-sparse-FEM-F64-electric-v1',identity}));}
+ key(identity:unknown){const switches=resultSwitches();return digest(canonical({schema:1,method:'direct-sparse-FEM-F64-electric-v1',identity,...(switches&&{resultSwitches:switches})}));}
  clear(){this.entries.clear();this.bytes=0;}
  private path(key:string){if(!/^[a-f0-9]{64}$/.test(key))throw new Error('Invalid extraction key');return join(this.dir,key+'.json');}
  private remember(key:string,text:string){const size=Buffer.byteLength(text);const old=this.entries.get(key);if(old){this.bytes-=old.bytes;this.entries.delete(key);}if(size>this.maxMemoryBytes||size>this.maxEntryBytes||this.maxEntries<1)return;

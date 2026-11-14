@@ -719,8 +719,15 @@ fn loss_coefficients(
         .chain(r.conductors.iter().filter(|c| c.role == "reference"))
         .map(|c| c.id.clone())
         .collect::<Vec<_>>();
-    let (surfaces, current_error) =
+    let (mut surfaces, current_error) =
         super::losses::surface_grams_projected(nodes, &vacuum.reaction, &inverse, edges, &ids,Some(super::local::AllocationBudget{max_bytes:r.max_memory_mib.checked_mul(1024*1024).and_then(|v|v.checked_sub(r.max_nodes*2048)).ok_or_else(||error("SECTION_MEMORY_LIMIT","surface projection remaining budget"))?,max_nodes:r.max_nodes,max_tetrahedra:2*r.max_nodes}))?;
+    if super::losses::section_foil() {
+        // P7_SECTION_FOIL=1: signal cross-section areas (reference surfaces keep 0) for the finite-layer sheet thickness.
+        for (surface, id) in surfaces.iter_mut().zip(&ids).take(n) {
+            let metal = r.conductors.iter().find(|c| &c.id == id).ok_or_else(|| error("SECTION_LOSS_INPUT", "signal conductor for surface not found"))?;
+            surface.area_m2 = metal.contour.polygon()?.unsigned_area();
+        }
+    }
     let mut regional = vec![vec![vec![0.; n]; n]; r.dielectrics.len()];
     for (k, t) in triangles.iter().enumerate() {
         let [a, b, c] = t.map(|i| nodes[i]);
@@ -776,7 +783,8 @@ pub(super) fn loss_samples(loss:&LossInput,p:&serde_json::Value,surfaces:&[super
         let mut skin = vec![];
         for (i, &sigma) in loss.conductivity_s_m.iter().enumerate() {
             let delta = (2. / (w * super::MU0 * sigma)).sqrt();
-            if !delta.is_finite() || delta <= 0. || delta > loss.minimum_skin_dimensions_m[i] / 10.
+            let foil = super::losses::section_foil();
+            if !delta.is_finite() || delta <= 0. || !foil && delta > loss.minimum_skin_dimensions_m[i] / 10.
             {
                 return Err(error(
                     "SECTION_SKIN_DEPTH",
@@ -788,6 +796,30 @@ pub(super) fn loss_samples(loss:&LossInput,p:&serde_json::Value,surfaces:&[super
             }
             skin.push(delta);
         }
+        // P7_SECTION_FOIL=1: per-surface finite-layer impedance (Re Zs, Im Zs); sheet thickness from area and thickness.
+        let foil: Option<Vec<(f64, f64)>> = if super::losses::section_foil() {
+            let mut z = vec![];
+            for (k, s) in surfaces.iter().enumerate() {
+                if k < n && s.area_m2 <= 0. {
+                    return Err(error("SECTION_LOSS_INPUT", "P7_SECTION_FOIL=1 needs stored signal conductor areas (recompute the section)"));
+                }
+                let gram = if k < n { s.gram_per_m[k][k] } else { 0. };
+                z.push(super::losses::foil_surface_impedance(
+                    loss.conductivity_s_m[k], w,
+                    super::losses::foil_sheet(k < n, s.area_m2, gram, loss.minimum_skin_dimensions_m[k]),
+                ));
+            }
+            Some(z)
+        } else { None };
+        if let (Some(z), true) = (&foil, std::env::var_os("P7_SECTION_FOIL_TRACE").is_some()) {
+            // Diagnostic only: the sheet thickness actually used per surface.
+            let rows = surfaces.iter().enumerate().map(|(k, s)| serde_json::json!({
+                "id": ids[k], "areaM2": s.area_m2, "gramKk": if k < n { s.gram_per_m[k][k] } else { 0. },
+                "thicknessM": loss.minimum_skin_dimensions_m[k], "reZs": z[k].0, "imZs": z[k].1,
+                "reZsOverRs": z[k].0 / (w * super::MU0 / (2. * loss.conductivity_s_m[k])).sqrt(),
+            })).collect::<Vec<_>>();
+            eprintln!("P7_SECTION_FOIL_TRACE f={f} {}", serde_json::Value::Array(rows));
+        }
         let resistance = (0..n)
             .map(|i| {
                 (0..n)
@@ -795,9 +827,10 @@ pub(super) fn loss_samples(loss:&LossInput,p:&serde_json::Value,surfaces:&[super
                         surfaces
                             .iter()
                             .enumerate()
-                            .map(|(k, s)| {
-                                s.gram_per_m[i][j]
-                                    * (w * super::MU0 / (2. * loss.conductivity_s_m[k])).sqrt()
+                            .map(|(k, s)| match &foil {
+                                Some(z) => s.gram_per_m[i][j] * z[k].0,
+                                None => s.gram_per_m[i][j]
+                                    * (w * super::MU0 / (2. * loss.conductivity_s_m[k])).sqrt(),
                             })
                             .sum::<f64>()
                     })
@@ -818,7 +851,14 @@ pub(super) fn loss_samples(loss:&LossInput,p:&serde_json::Value,surfaces:&[super
             })
             .collect::<Vec<_>>();
         let internal = (0..n)
-            .map(|i| (0..n).map(|j| resistance[i][j] / w).collect::<Vec<_>>())
+            .map(|i| {
+                (0..n)
+                    .map(|j| match &foil {
+                        Some(z) => surfaces.iter().enumerate().map(|(k, s)| s.gram_per_m[i][j] * z[k].1 / w).sum::<f64>(),
+                        None => resistance[i][j] / w,
+                    })
+                    .collect::<Vec<_>>()
+            })
             .collect::<Vec<_>>();
         let total = (0..n)
             .map(|i| {
@@ -836,11 +876,14 @@ pub(super) fn loss_samples(loss:&LossInput,p:&serde_json::Value,surfaces:&[super
             .collect::<Vec<_>>();
         let conductor_bound = energy_bound(&resistance, &external)? / w;
         let dielectric_bound = energy_bound(&conductance, &capacitance)? / w;
-        if conductor_bound > 0.05 || dielectric_bound > 0.05 {
-            return Err(error("SECTION_WEAK_LOSS",format!("full matrix perturbation bounds {conductor_bound:e}/{dielectric_bound:e} exceed0.05")));
+        let conductor_limit = super::losses::section_conductor_loss_limit();
+        if conductor_bound > conductor_limit || dielectric_bound > 0.05 {
+            return Err(error("SECTION_WEAK_LOSS",format!("full matrix perturbation bounds {conductor_bound:e}/{dielectric_bound:e} exceed {conductor_limit}/0.05")));
         }
         let modes = lossy_modes(&resistance, &total, &conductance, &capacitance, w)?;
-        samples.push(serde_json::json!({"frequencyHz":f,"modes":modes,"conductorPerturbationBound":conductor_bound,"dielectricPerturbationBound":dielectric_bound,"capacitanceFPerM":capacitance,"resistanceOhmPerM":resistance,"internalInductanceHPerM":internal,"totalInductanceHPerM":total,"conductanceSPerM":conductance,"skinDepthM":skin}));
+        let mut sample=serde_json::json!({"frequencyHz":f,"modes":modes,"conductorPerturbationBound":conductor_bound,"dielectricPerturbationBound":dielectric_bound,"capacitanceFPerM":capacitance,"resistanceOhmPerM":resistance,"internalInductanceHPerM":internal,"totalInductanceHPerM":total,"conductanceSPerM":conductance,"skinDepthM":skin});
+        if super::losses::section_foil() && conductor_bound > 0.05 { sample["approximation"] = serde_json::json!("приближение"); sample["resistanceOverOmegaL"] = serde_json::json!(conductor_bound); }
+        samples.push(sample);
     }
  Ok(samples)
 }
@@ -1633,5 +1676,65 @@ mod transition_handoff_tests {
             .err()
             .unwrap()
             .contains("SECTION_GEOMETRY"));
+    }
+}
+
+/// Stage 4.1.2 diagnostic (ignored): coupon A section at one frequency with a chosen target cell area; prints R and L.
+#[cfg(test)]
+mod stage412_grid_diag {
+    #[test]
+    #[ignore]
+    fn diag_coupon_a_section_grid() {
+        let hz: f64 = std::env::var("SECTION_HZ").ok().map_or(1.1e8, |v| v.parse().unwrap());
+        let area: f64 = std::env::var("SECTION_AREA_M2").ok().map_or(2e-9, |v| v.parse().unwrap());
+        let length_mm = 5.;
+        let mut board_json: serde_json::Value = serde_json::from_str(include_str!("../../../../tests/fixtures/analysis-segmented-coupon.json")).unwrap();
+        board_json["outline"][1]["x"] = serde_json::json!(length_mm + 0.3);
+        board_json["outline"][2]["x"] = serde_json::json!(length_mm + 0.3);
+        board_json["components"][1]["at"]["x"] = serde_json::json!(length_mm);
+        for pad in board_json["pads"].as_array_mut().unwrap() { if pad["component"] == "J1" { pad["at"]["x"] = serde_json::json!(length_mm); } }
+        for track in board_json["copper"]["fixed"]["tracks"].as_array_mut().unwrap() { track["points"][1]["x"] = serde_json::json!(length_mm); }
+        let half_y = 0.8;
+        let board = crate::import_json(&board_json.to_string()).board.unwrap();
+        let stack: crate::extraction::local::board_mesh::Request = serde_json::from_value(serde_json::json!({
+            "roiMm": [[-0.5, -half_y], [length_mm + 0.5, half_y]],
+            "stack": [
+                {"name": "TOP", "copper": true, "thicknessM": 35e-6, "conductivitySM": 58000000, "epsilonR": null},
+                {"name": "substrate", "copper": false, "thicknessM": 0.0002, "conductivitySM": null, "epsilonR": 4},
+                {"name": "BOTTOM", "copper": true, "thicknessM": 35e-6, "conductivitySM": 58000000, "epsilonR": null}],
+            "airMarginM": 0.002, "maxTriangleAreaM2": 1e-6, "maxVerticalStepM": 0.002, "curveDeviationMm": 0.001,
+            "electrodes": [], "ports": [], "acceptUnknownFillFreshness": true, "allowInsulatedCopperCuts": false,
+            "minTriangleAngleDeg": 0, "airEdgeDivisions": 1,
+            "domainPolygonMm": [[-0.5, -half_y], [length_mm + 0.5, -half_y], [length_mm + 0.5, half_y], [-0.5, half_y]], "cutPlanes": {}
+        })).unwrap();
+        let geometry = crate::geometry::prepare(&board, crate::geometry::GeometryOptions::default());
+        let reference_region = geometry.regions.iter()
+            .filter(|r| r.layer == "BOTTOM" && r.source.net.as_deref() == Some("RETURN"))
+            .max_by(|a, b| a.area_mm2.total_cmp(&b.area_mm2)).expect("return copper region");
+        let slice = crate::extraction::board_section::Slice {
+            at_mm: [length_mm / 2., 0.], transverse_unit: [0., 1.], half_width_mm: half_y + 0.2, air_margin_mm: 2.,
+            reference_layer: "BOTTOM".into(), reference_source_path: reference_region.source.path.clone(), reference_x_mm: 0.,
+        };
+        let extracted = crate::extraction::board_section::slice(&geometry, &stack.stack, &slice).unwrap();
+        let mut section: super::Request = serde_json::from_value(extracted["geometry"].clone()).unwrap();
+        section.max_triangle_area_m2 = area;
+        let n = section.conductors.len();
+        let plain = super::solve(&section).unwrap();
+        let ext_plain = plain["parameters"]["inductanceHPerM"][0][0].as_f64().unwrap();
+        section.loss = Some(super::LossInput {
+            frequencies_hz: vec![hz], conductivity_s_m: vec![58e6; n], minimum_skin_dimensions_m: vec![35e-6; n],
+            dielectric_loss_tangents: section.dielectrics.iter().map(|_| 0.).collect(), band_hz: [hz, hz],
+        });
+        match super::solve(&section) {
+            Ok(l) => {
+                let s = &l["frequencyDependent"]["samples"][0];
+                let r = s["resistanceOhmPerM"][0][0].as_f64().unwrap();
+                let lt = s["totalInductanceHPerM"][0][0].as_f64().unwrap();
+                let li = s["internalInductanceHPerM"][0][0].as_f64().unwrap();
+                eprintln!("SECTION_GRID {}", serde_json::json!({"hz": hz, "areaM2": area, "nodes": l["nodesM"].as_array().map(|a| a.len()), "triangles": l["triangles"].as_array().map(|a| a.len()),
+                    "externalPlainHPerM": ext_plain, "externalLossyHPerM": lt - li, "totalHPerM": lt, "internalHPerM": li, "ROhmPerM": r, "tag": s["approximation"], "rOverWL": s["resistanceOverOmegaL"]}));
+            }
+            Err(e) => eprintln!("SECTION_GRID refused {e:?}"),
+        }
     }
 }

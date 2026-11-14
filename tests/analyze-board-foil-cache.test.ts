@@ -6,11 +6,11 @@ import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import type { AnalysisBoardFoilCheckedReport, AnalysisBoardFoilCheckedRequest } from '../native/analyze/index.js';
 import { cachedBoardFoilReport, HYBRID_PLANAR_OPERATOR_VERSION } from '../src/analyze/board-foil-cache.ts';
-import { digest, LocalModelCache } from '../src/analyze/local-model-cache.ts';
+import { digest, LocalModelCache, RESULT_SWITCHES, resultSwitches } from '../src/analyze/local-model-cache.ts';
 import { isAnalysisProblem, type BoardFoilProblem } from '../src/analyze/types.ts';
 import { auditBoardFoilFrequency } from '../src/analyze/board-foil-frequency-audit.ts';
 import { runAutoFoil } from '../src/analyze/auto-foil-response.ts';
-import { validateBoardFoilReport } from '../src/analyze/board-foil-validation.ts';
+import { foilResistanceRatio, validateBoardFoilReport } from '../src/analyze/board-foil-validation.ts';
 import type { AutoFoilPlan } from '../src/analyze/auto-foil-plan.ts';
 
 const problem: BoardFoilProblem = {
@@ -82,6 +82,20 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
     return value;
   };
   validate(adaptive());
+  // Field-only XY refinement record (P7_FIELD_REFINE=1): accepted only when present and consistent; a report without it is unchanged.
+  {
+    const refined=(patch:Record<string,unknown>={})=>{
+      const value=adaptive();
+      (value.provenance.compactOperator as any).fieldRefinement={levels:2,depthCounts:[6,6,6],fieldNodes:30*8,coarseFieldNodes:12*8,xyNodes:30,coarseXyNodes:12,planes:8,triangles:50,coarseTriangles:18,sidewallTriangles:10,refinedTriangles:12,capped:false,
+        rule:'sidewall triangles refined',status:'approximation',statusNote:'field mesh refined in XY only; not verified',...patch};
+      return value;
+    };
+    validate(refined());
+    for(const patch of [{fieldNodes:30*8+1},{status:'verified'},{statusNote:''},{levels:0},{levels:5},{depthCounts:[6,6,6,0]},{depthCounts:[7,6,6]},{depthCounts:[5,6,7]},{depthCounts:[18,0,0]},{xyNodes:10,fieldNodes:80},{planes:1},{coarseFieldNodes:1},{refinedTriangles:19},{rule:''},{capped:'no'},{refinedTriangles:0}])
+      assert.throws(()=>validate(refined(patch)),/CHANNEL_FOIL_EVIDENCE/,JSON.stringify(patch));
+    const homogeneous=compact();(homogeneous.provenance.compactOperator as any).fieldRefinement=(refined().provenance.compactOperator as any).fieldRefinement;
+    assert.throws(()=>validate(homogeneous),/CHANNEL_FOIL_EVIDENCE/);
+  }
   const controlled=adaptive();
   const timeQuality={relativeResidual:0,maximumLocalErrorRatio:.1,energyBalanceJ:0,energyNormalizationJ:1,maximumAcceptedStepS:.02/256};
   controlled.modelRegimeAudit={status:'pass',scope:'discrete-model-only',physicalCoverage:'unverified',probeHz:50,
@@ -231,6 +245,81 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
     assert.throws(()=>cachedBoardFoilReport(cache,'hybrid',{...rfProblem,request:{...rfProblem.request,profileUpperHz:1e10+1}},rfReport),/BOARD_FOIL_GRID/);
     const undersampled=rfReport(rfProblem.request);undersampled.provenance.copperSkinMesh!.layers[0].maximumStepM*=2;
     assert.throws(()=>validateBoardFoilReport(undersampled,rfProblem,rfProblem.request.budget),/CHANNEL_FOIL_EVIDENCE/);
+    // One-sheet copper layers (P7_FOIL_SHEET=1): admitted only at validator-computed t/delta <= 1 with the extractor's record.
+    {
+      const upper=rfProblem.request.profileUpperHz!,depth=1/Math.sqrt(Math.PI*upper*(4e-7*Math.PI)*58e6);
+      const sheetCase=(x:number,record:boolean,declaredX=x)=>{
+        const t=x*depth;
+        const problemX:BoardFoilProblem={...rfProblem,geometry:{...rfProblem.geometry,stack:['TOP','BOTTOM'].map(name=>({name,copper:true,conductivitySM:58e6,thicknessM:t}))}};
+        const report=rfReport(problemX.request);
+        for(const row of report.provenance.copperSkinMesh!.layers){row.slabs=1;row.maximumStepM=t;}
+        if(record)(report.provenance.compactOperator as any).foilSheet={approximation:true,maxThicknessOverSkin:declaredX,
+          estimatedResistanceError:foilResistanceRatio(declaredX)-1,bandTopHz:upper,criterion:'P7_FOIL_SHEET=1',warning:'w'};
+        return {report,problemX};
+      };
+      const half=sheetCase(.5,true);
+      validateBoardFoilReport(half.report,half.problemX,half.problemX.request.budget);
+      assert.ok(Math.abs(foilResistanceRatio(.53)-1-.007)<.002,'0.7% at t/delta = 0.53');
+      assert.ok(Math.abs(foilResistanceRatio(1)-1-.09)<.01,'9% at t/delta = 1');
+      const edge=sheetCase(1,true);validateBoardFoilReport(edge.report,edge.problemX,edge.problemX.request.budget);
+      const thick=sheetCase(1.2,true);assert.throws(()=>validateBoardFoilReport(thick.report,thick.problemX,thick.problemX.request.budget),/CHANNEL_FOIL_EVIDENCE/);
+      const bare=sheetCase(.5,false);assert.throws(()=>validateBoardFoilReport(bare.report,bare.problemX,bare.problemX.request.budget),/CHANNEL_FOIL_EVIDENCE/);
+      const lie=sheetCase(.5,true);(lie.report.provenance.compactOperator as any).foilSheet.estimatedResistanceError=0;
+      assert.throws(()=>validateBoardFoilReport(lie.report,lie.problemX,lie.problemX.request.budget),/CHANNEL_FOIL_EVIDENCE/);
+      const understated=sheetCase(1.2,true,.5);assert.throws(()=>validateBoardFoilReport(understated.report,understated.problemX,understated.problemX.request.budget),/CHANNEL_FOIL_EVIDENCE/);
+      const twoPieces=sheetCase(.5,true);twoPieces.report.provenance.copperSkinMesh!.layers[0].slabs=2;
+      assert.throws(()=>validateBoardFoilReport(twoPieces.report,twoPieces.problemX,twoPieces.problemX.request.budget),/CHANNEL_FOIL_EVIDENCE/);
+      // Barrel rows keep the delta/3 rule even with a sheet record.
+      const barrel=sheetCase(.5,true);barrel.report.provenance.copperSkinMesh!.roundBarrels[0].maximumRadialStepM=depth;
+      assert.throws(()=>validateBoardFoilReport(barrel.report,barrel.problemX,barrel.problemX.request.budget),/CHANNEL_FOIL_EVIDENCE/);
+      // One-layer via wall (P7_BARREL_SHEET=1): admitted only with the `barrelSheet` record, one shell and validator t/delta <= 1.
+      const wallCase=(x:number,record:boolean,shells=1)=>{
+        const t=x*depth;
+        const problemX:BoardFoilProblem={...rfProblem,geometry:{...rfProblem.geometry,finishedHolePlatingM:t}};
+        const report=rfReport(problemX.request);
+        Object.assign(report.provenance.copperSkinMesh!.roundBarrels[0],{maximumRadialStepM:t/shells,shells});
+        if(record)(report.provenance.copperSkinMesh as any).barrelSheet={approximation:true,criterion:'P7_BARREL_SHEET',warning:'w',resistanceScaled:false,maxThicknessOverSkin:x,estimatedResistanceError:foilResistanceRatio(x)-1};
+        return {report,problemX};
+      };
+      const wallHalf=wallCase(.5,true);validateBoardFoilReport(wallHalf.report,wallHalf.problemX,wallHalf.problemX.request.budget);
+      const wallThick=wallCase(1.2,true);assert.throws(()=>validateBoardFoilReport(wallThick.report,wallThick.problemX,wallThick.problemX.request.budget),/CHANNEL_FOIL_EVIDENCE/);
+      const wallBare=wallCase(.5,false);assert.throws(()=>validateBoardFoilReport(wallBare.report,wallBare.problemX,wallBare.problemX.request.budget),/CHANNEL_FOIL_EVIDENCE/);
+      const wallTwo=wallCase(.5,true,2);wallTwo.report.provenance.copperSkinMesh!.roundBarrels[0].maximumRadialStepM=.5*depth;
+      assert.throws(()=>validateBoardFoilReport(wallTwo.report,wallTwo.problemX,wallTwo.problemX.request.budget),/CHANNEL_FOIL_EVIDENCE/);
+      // Two half-sheets at t/delta > 1 (P7_FOIL_SHEET=4, approximation): only with `halfSheets`, `halfSheetLayers: 2`, the declared
+      // multiplier ratio((t/2)/delta) and the approximation text; a wrong multiplier, three layers or a missing record refuse.
+      const note='R завышено до 16% на двух купонах при 40 МГц, эталон не проверен';
+      const halfCase=(x:number,patch:Record<string,unknown>={},record=true,slabs=2)=>{
+        const t=x*depth;
+        const problemX:BoardFoilProblem={...rfProblem,geometry:{...rfProblem.geometry,stack:['TOP','BOTTOM'].map(name=>({name,copper:true,conductivitySM:58e6,thicknessM:t}))}};
+        const report=rfReport(problemX.request);
+        for(const row of report.provenance.copperSkinMesh!.layers){row.slabs=slabs;row.maximumStepM=t/slabs;}
+        if(record)(report.provenance.compactOperator as any).foilSheet={approximation:true,maxThicknessOverSkin:x/2,estimatedResistanceError:foilResistanceRatio(x/2)-1,
+          bandTopHz:upper,criterion:'P7_FOIL_SHEET=4',warning:'w',halfSheets:true,halfSheetLayers:2,resistanceMultiplierMax:foilResistanceRatio(x/2),
+          status:'approximation',statusNote:note,...patch};
+        return {report,problemX};
+      };
+      const refuses=(c:{report:AnalysisBoardFoilCheckedReport;problemX:BoardFoilProblem})=>assert.throws(()=>validateBoardFoilReport(c.report,c.problemX,c.problemX.request.budget),/CHANNEL_FOIL_EVIDENCE/);
+      const halfOk=halfCase(3.35);validateBoardFoilReport(halfOk.report,halfOk.problemX,halfOk.problemX.request.budget);
+      refuses(halfCase(3.35,{},false));
+      refuses(halfCase(3.35,{resistanceMultiplierMax:foilResistanceRatio(3.35)}));
+      refuses(halfCase(3.35,{halfSheets:false}));
+      refuses(halfCase(3.35,{halfSheetLayers:3}));
+      refuses(halfCase(3.35,{statusNote:'approximation'}));
+      refuses(halfCase(3.35,{status:'verified'}));
+      refuses(halfCase(3.35,{},true,3));
+      // Two-layer wall: one wall layer above t/delta = 1 needs `resistanceScaled` (P7_BARREL_SHEET=2), the multiplier ratio(t/delta) and the text.
+      const wallScaled=(x:number,patch:Record<string,unknown>={})=>{
+        const c=wallCase(x,true);
+        Object.assign((c.report.provenance.copperSkinMesh as any).barrelSheet,{resistanceScaled:true,resistanceMultiplierMax:foilResistanceRatio(x),status:'approximation',statusNote:note,...patch});
+        return c;
+      };
+      const wallOk=wallScaled(3.35);validateBoardFoilReport(wallOk.report,wallOk.problemX,wallOk.problemX.request.budget);
+      refuses(wallScaled(3.35,{resistanceScaled:false}));
+      refuses(wallScaled(3.35,{resistanceMultiplierMax:foilResistanceRatio(3.35/2)}));
+      refuses(wallScaled(3.35,{statusNote:null}));
+      refuses(wallCase(3.35,true));
+    }
   } finally {if(previous===undefined)delete process.env.P7_COMPACT_PLANAR;else process.env.P7_COMPACT_PLANAR=previous;if(previousWorkers===undefined)delete process.env.P7_COMPACT_PL_THREADS;else process.env.P7_COMPACT_PL_THREADS=previousWorkers;if(previousNearWorkers===undefined)delete process.env.P7_MAGNETIC_NEAR_THREADS;else process.env.P7_MAGNETIC_NEAR_THREADS=previousNearWorkers;rmSync(dir,{recursive:true,force:true});}
   for(const change of [
     (v:AnalysisBoardFoilCheckedReport)=>{v.provenance.compactOperator!.nearQuadratureEstimatedTolerance=1e-7;},
@@ -706,4 +795,66 @@ test('spatial recovery validates geometry, drive and loss before publication', (
   (v:any)=>{v.samples[0].columns[0].spatialRecovery.supports[0].currentDensityRealAPerM2=null},
   (v:any)=>{v.samples[0].columns[0].spatialRecovery.supports[0].lossW=1},
  ]) {const bad=good();mutate(bad);assert.throws(()=>validate(bad),/CHANNEL_FOIL_EVIDENCE/);}
+});
+
+test('cut-plane port record is accepted only when present and consistent with the planned cut electrodes', () => {
+ const cutProblem:BoardFoilProblem={...problem,geometry:{ports:[['a','b']],cutPlanes:{a:{originMm:[0.5,0],normalXY:[-1,0]}}}};
+ const record=()=>({count:1,names:['a'],areasM2:{a:1e-8},model:'equipotential-face' as const,status:'approximation' as const,statusNote:'cut face taken equipotential, unverified',facePotentialSpread:null});
+ const good=()=>{const v=mock(cutProblem.request,cutProblem);v.provenance.cutPorts=record();return v;};
+ const validate=(v:AnalysisBoardFoilCheckedReport)=>validateBoardFoilReport(v,cutProblem,cutProblem.request.budget);
+ validate(good());
+ // planned cut electrodes without a record, or a record without planned cut electrodes, are refused
+ assert.throws(()=>validate(mock(cutProblem.request,cutProblem)),/cutPorts record/);
+ assert.throws(()=>validateBoardFoilReport(good(),problem,problem.request.budget),/inconsistent with the planned cut electrodes/);
+ for(const mutate of [
+  (v:any)=>{v.provenance.cutPorts.count=2},
+  (v:any)=>{v.provenance.cutPorts.names=['b']},
+  (v:any)=>{v.provenance.cutPorts.areasM2.a=0},
+  (v:any)=>{v.provenance.cutPorts.areasM2.a=2e-8},
+  (v:any)=>{v.provenance.cutPorts.status='accepted'},
+  (v:any)=>{v.provenance.cutPorts.model='open-face'},
+  (v:any)=>{v.provenance.cutPorts.statusNote=''},
+ ]) {const bad=good();mutate(bad);assert.throws(()=>validate(bad),/CHANNEL_FOIL_EVIDENCE/);}
+});
+
+test('band-screen record is accepted only when present and consistent with the size screen', () => {
+ const c=299792458,kD=0.3,D=0.012,eps=4.5,maximumHz=2000;
+ const record=()=>({kD,thresholdHz:kD*c/(2*Math.PI*D*Math.sqrt(eps)),sizeM:D,epsilonR:eps,maximumHz,electricalSize:2*Math.PI*maximumHz/c*D*Math.sqrt(eps),status:'approximation' as const,statusNote:'screen kD, unverified'});
+ const good=()=>{const v=mock(problem.request);v.provenance.bandScreen=record();return v;};
+ const validate=(v:AnalysisBoardFoilCheckedReport)=>validateBoardFoilReport(v,problem,problem.request.budget);
+ validate(good());
+ validate(mock(problem.request));
+ for(const mutate of [
+  (v:any)=>{v.provenance.bandScreen.kD=0.6;v.provenance.bandScreen.thresholdHz*=2},
+  (v:any)=>{v.provenance.bandScreen.kD=0},
+  (v:any)=>{v.provenance.bandScreen.thresholdHz*=1.1},
+  (v:any)=>{v.provenance.bandScreen.maximumHz=1000},
+  (v:any)=>{v.provenance.bandScreen.electricalSize=0.5},
+  (v:any)=>{v.provenance.bandScreen.status='accepted'},
+  (v:any)=>{v.provenance.bandScreen.statusNote=''},
+ ]) {const bad=good();mutate(bad);assert.throws(()=>validate(bad),/CHANNEL_FOIL_EVIDENCE/);}
+});
+
+test('result-changing P7 switches isolate every cache key and leave the unset key unchanged', () => {
+  const saved:Record<string,string|undefined>={};for(const name of RESULT_SWITCHES){saved[name]=process.env[name];delete process.env[name];}
+  const dir=mkdtempSync(join(tmpdir(),'p7-switch-key-'));
+  try {
+    const cache=new LocalModelCache(dir),identity={core:'c',board:'b'};
+    assert.equal(resultSwitches(),undefined);
+    // Byte-identical to the pre-switch key construction when nothing is set.
+    const unset=cache.key(identity);
+    assert.equal(unset,digest('{"identity":{"board":"b","core":"c"},"method":"direct-sparse-FEM-F64-electric-v1","schema":1}'));
+    for(const name of RESULT_SWITCHES){
+      process.env[name]='1';const one=cache.key(identity);
+      process.env[name]='2';const two=cache.key(identity);
+      delete process.env[name];
+      assert.notEqual(one,unset,name);assert.notEqual(two,one,name);assert.equal(cache.key(identity),unset,name);
+    }
+    for(const diagnostic of ['P7_MAGNETIC_TRACE','P7_PHASE_TRACE','P7_HMATRIX_THREADS','P7_VERIFY_SECONDS','P7_ENRICH_PROBE']){
+      process.env[diagnostic]='1';assert.equal(cache.key(identity),unset,diagnostic);delete process.env[diagnostic];
+    }
+  } finally {
+    for(const name of RESULT_SWITCHES){if(saved[name]===undefined)delete process.env[name];else process.env[name]=saved[name];}
+    rmSync(dir,{recursive:true,force:true});
+  }
 });

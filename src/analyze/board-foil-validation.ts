@@ -81,6 +81,9 @@ function validateMagneticOperator(report:AnalysisBoardFoilCheckedReport):void {
      (typeof c.tetraPairAdaptiveTolerance!=='number'||!Number.isFinite(c.tetraPairAdaptiveTolerance)||c.tetraPairAdaptiveTolerance<0||c.tetraPairAdaptiveTolerance>(approximate?1:1e-8))||
      operator!==undefined||!approximate&&(report.quality.maxFullKvlUncertaintyRelative!==undefined||columns.some(x=>x.kvlUncertaintyRelative!==undefined||x.magneticCertificate!==undefined)))
    fail('invalid compact magnetic operator evidence');
+  // Field-only XY refinement (P7_FIELD_REFINE=1, approximation): the clause is active only when the extractor's `fieldRefinement` record is present.
+  if((c as {fieldRefinement?:unknown}).fieldRefinement!==undefined&&(c.electricOperator!=='layered-spatial-field-mesh'||!validFieldRefinement((c as {fieldRefinement?:unknown}).fieldRefinement)))
+   fail('invalid field refinement record');
   if(adaptive){
    if(c.electricOperator!=='layered-spatial-field-mesh'||!approximate&&(c.nearQuadratureEstimatedTolerance!==1e-8||
       !Number.isFinite(report.quality.maxCompactKvlUncertaintyRelative)||
@@ -227,6 +230,43 @@ function validateRegimeAudit(report:AnalysisBoardFoilCheckedReport):void {
  }
 }
 
+/** Re(kt coth kt), kt=(1+j)x, x=t/delta: resistance of a foil with the field on one side relative to DC. */
+export function foilResistanceRatio(x:number):number {
+ if(x<0.5){const x4=x**4;return 1+4*x4/45-16*x4*x4/4725;}
+ if(x>300)return x;
+ return x*(Math.sinh(2*x)+Math.sin(2*x))/(Math.cosh(2*x)-Math.cos(2*x));
+}
+/** The declared one-sheet record must match the validator's own t/delta and Re(kt coth kt) - 1 recomputation. */
+function validFoilSheetRecord(sheet:{approximation?:unknown;maxThicknessOverSkin?:unknown;estimatedResistanceError?:unknown}|undefined,maxX:number):boolean {
+ if(!sheet||sheet.approximation!==true||typeof sheet.maxThicknessOverSkin!=='number'||typeof sheet.estimatedResistanceError!=='number')return false;
+ const close=(a:number,b:number,tol:number)=>Number.isFinite(a)&&Math.abs(a-b)<=tol*Math.max(1,Math.abs(b));
+ return close(sheet.maxThicknessOverSkin,maxX,1e-6)&&close(sheet.estimatedResistanceError,foilResistanceRatio(maxX)-1,1e-6);
+}
+
+/** Field-only XY refinement record: internally consistent counts, depth 1..4, approximation status and note. */
+function validFieldRefinement(record:unknown):boolean {
+ if(typeof record!=='object'||record===null)return false;
+ const r=record as Record<string,unknown>;
+ const int=(v:unknown,min:number):v is number=>typeof v==='number'&&Number.isSafeInteger(v)&&v>=min;
+ if(!int(r.levels,1)||r.levels>4||!int(r.planes,2)||!int(r.coarseXyNodes,3)||!int(r.xyNodes,3)||!int(r.coarseTriangles,1)||!int(r.triangles,1)||!int(r.refinedTriangles,0)||!int(r.sidewallTriangles,0))return false;
+ if(r.xyNodes<r.coarseXyNodes||r.triangles<r.coarseTriangles||r.refinedTriangles>r.coarseTriangles||r.sidewallTriangles>r.coarseTriangles)return false;
+ const counts=r.depthCounts;
+ if(!Array.isArray(counts)||counts.length!==r.levels+1||counts.some(c=>!int(c,0))||(counts as number[]).reduce((a,b)=>a+b,0)!==r.coarseTriangles||
+    (counts as number[]).slice(1).reduce((a,b)=>a+b,0)!==r.refinedTriangles)return false;
+ if(r.fieldNodes!==r.xyNodes*r.planes||r.coarseFieldNodes!==r.coarseXyNodes*r.planes)return false;
+ if((r.refinedTriangles>0)!==(r.xyNodes>r.coarseXyNodes)||(r.refinedTriangles>0)!==(r.triangles>r.coarseTriangles))return false;
+ return typeof r.capped==='boolean'&&typeof r.rule==='string'&&r.rule.length>0&&r.status==='approximation'&&typeof r.statusNote==='string'&&r.statusNote.length>0;
+}
+
+const APPROXIMATION_NOTE='R завышено до 16% на двух купонах при 40 МГц, эталон не проверен';
+/** Two-half-sheet (planar, P7_FOIL_SHEET=4) and one-wall-layer (via, P7_BARREL_SHEET=2) records at t/delta > 1: the declared multiplier
+ * must equal the validator's own recomputation, and the record must carry the approximation status and text. */
+function validScaledSheetRecord(record:{resistanceMultiplierMax?:unknown;status?:unknown;statusNote?:unknown}|undefined,multiplier:number):boolean {
+ if(!record||record.status!=='approximation'||typeof record.statusNote!=='string'||!record.statusNote.includes(APPROXIMATION_NOTE))return false;
+ const declared=record.resistanceMultiplierMax;
+ return typeof declared==='number'&&Number.isFinite(declared)&&Math.abs(declared-multiplier)<=1e-6*Math.max(1,Math.abs(multiplier));
+}
+
 function validateSkinMesh(provenance:AnalysisBoardFoilCheckedReport['provenance'],problem:BoardFoilProblem):void {
  const {request,expected}=problem;
  const mesh=provenance.copperSkinMesh;
@@ -248,6 +288,7 @@ function validateSkinMesh(provenance:AnalysisBoardFoilCheckedReport['provenance'
  const geometry=problem.geometry as {
   stack?: {name:string;copper:boolean;conductivitySM?:number}[];
   barrelConductivitySM?:number;
+  finishedHolePlatingM?:number;
  };
  const layers=Array.isArray(geometry.stack)?geometry.stack.filter(layer=>layer?.copper===true):[];
  const barrels=expected.sourceBarrels.map(barrel=>barrel.barrelId).sort();
@@ -257,17 +298,84 @@ function validateSkinMesh(provenance:AnalysisBoardFoilCheckedReport['provenance'
   const depth=1/(Math.sqrt(Math.PI*(4e-7*Math.PI)*mesh.effectiveUpperHz)*Math.sqrt(conductivity));
   return positive(depth)&&Math.abs(skinDepthM/depth-1)<=1e-8&&stepM<=skinDepthM/divisor*(1+1e-8);
  };
+ // One-sheet copper layer (P7_FOIL_SHEET=1, approximation): admitted only with the extractor's `foilSheet` record,
+ // one piece through the thickness and a validator-computed t/delta <= 1. Via barrels keep the delta/3 rule.
+ const sheet=(provenance.compactOperator as {foilSheet?:{approximation?:unknown;maxThicknessOverSkin?:unknown;estimatedResistanceError?:unknown;halfSheets?:unknown;halfSheetLayers?:unknown;resistanceMultiplierMax?:unknown;status?:unknown;statusNote?:unknown}}|undefined)?.foilSheet;
+ const sheetX:number[]=[];
+ // Two half-sheets (P7_FOIL_SHEET=4, approximation): a layer with t/delta > 1 and exactly two slabs of t/2 is admitted only with the
+ // record's `halfSheets` and `halfSheetLayers: 2`; the multiplier ratio((t/2)/delta) is checked after the rows (see below). The extractor
+ // measures each half slab, so the record's maxThicknessOverSkin is the largest of the one-sheet x and the half-slab x = t/delta/2.
+ const halfX:number[]=[];
+ const sheetLayer=(row:{skinDepthM:number;maximumStepM:number;slabs:number},layer:{thicknessM?:number;conductivitySM?:number})=>{
+  if(request.operatorPolicy!=='hybrid-planar-v3'||!sheet||(row.slabs!==1&&row.slabs!==2)||!positive(layer.thicknessM)||!positive(layer.conductivitySM)||!positive(row.skinDepthM)||!positive(row.maximumStepM))return false;
+  const depth=1/(Math.sqrt(Math.PI*(4e-7*Math.PI)*mesh.effectiveUpperHz)*Math.sqrt(layer.conductivitySM));
+  const x=layer.thicknessM/depth;
+  if(row.slabs===2){
+   if(sheet.halfSheets!==true||sheet.halfSheetLayers!==2||!positive(depth)||Math.abs(row.skinDepthM/depth-1)>1e-8||
+      Math.abs(row.maximumStepM/(layer.thicknessM/2)-1)>1e-6||!(x>1*(1+1e-8)))return false;
+   halfX.push(x);return true;
+  }
+  if(!positive(depth)||Math.abs(row.skinDepthM/depth-1)>1e-8||Math.abs(row.maximumStepM/layer.thicknessM-1)>1e-6||!(x<=1*(1+1e-8)))return false;
+  sheetX.push(x);return true;
+ };
+ // One-layer via wall (P7_BARREL_SHEET=1, approximation): same conditions as the planar sheet, with the wall thickness
+ // taken from the geometry plating. Without the extractor's `barrelSheet` record the delta/3 rule applies.
+ const barrelSheet=(mesh as {barrelSheet?:{approximation?:unknown;maxThicknessOverSkin?:unknown;estimatedResistanceError?:unknown;resistanceScaled?:unknown;resistanceMultiplierMax?:unknown;status?:unknown;statusNote?:unknown}}).barrelSheet;
+ const barrelX:number[]=[];
+ const barrelRow=(row:{skinDepthM:number;maximumRadialStepM:number;shells:number})=>{
+  const wallM=geometry.finishedHolePlatingM,sigma=geometry.barrelConductivitySM;
+  if(request.operatorPolicy!=='hybrid-planar-v3'||!barrelSheet||row.shells!==1||!positive(wallM)||!positive(sigma)||!positive(row.skinDepthM)||!positive(row.maximumRadialStepM))return false;
+  const depth=1/(Math.sqrt(Math.PI*(4e-7*Math.PI)*mesh.effectiveUpperHz)*Math.sqrt(sigma));
+  const x=wallM/depth;
+  if(!positive(depth)||Math.abs(row.skinDepthM/depth-1)>1e-8||Math.abs(row.maximumRadialStepM/wallM-1)>1e-4)return false;
+  barrelX.push(x);return true;
+ };
  if(!layers.length||!Array.isArray(mesh.layers)||mesh.layers.length!==layers.length||
     mesh.layers.some((row,i)=>!row||row.layer!==layers[i].name||
-     !validSpacing(row.skinDepthM,row.maximumStepM,row.slabs,layers[i].conductivitySM,request.operatorPolicy==='hybrid-planar-v3'?5:3))||
+     !(validSpacing(row.skinDepthM,row.maximumStepM,row.slabs,layers[i].conductivitySM,request.operatorPolicy==='hybrid-planar-v3'?5:3)||
+       (request.operatorPolicy==='hybrid-planar-v3'&&sheetLayer(row,layers[i]))))||
+    ((sheetX.length>0||halfX.length>0)&&(!validFoilSheetRecord(sheet,Math.max(...sheetX,...halfX.map(x=>x/2)))))||
+    (halfX.length>0&&!validScaledSheetRecord(sheet,foilResistanceRatio(Math.max(...halfX)/2)))||
     !Array.isArray(mesh.roundBarrels)||
     (shrunk?false:mesh.roundBarrels.length!==barrels.length)||
     mesh.roundBarrels.some(row=>!row||typeof row.id!=='string'||
-     !validSpacing(row.skinDepthM,row.maximumRadialStepM,row.shells,geometry.barrelConductivitySM))||
+     !(validSpacing(row.skinDepthM,row.maximumRadialStepM,row.shells,geometry.barrelConductivitySM)||barrelRow(row)))||
+    (barrelX.length>0&&!validFoilSheetRecord(barrelSheet,Math.max(...barrelX)))||
+    // Wall layer above t/delta = 1 (P7_BARREL_SHEET=2, approximation): the wall resistance must carry the declared multiplier ratio(t/delta).
+    (barrelX.length>0&&Math.max(...barrelX)>1*(1+1e-8)&&!(barrelSheet?.resistanceScaled===true&&validScaledSheetRecord(barrelSheet,foilResistanceRatio(Math.max(...barrelX)))))||
     !matchSets(barrels,mesh.roundBarrels.map(row=>row.id).sort(),shrunk))
   fail('copper skin mesh rows or physical spacing do not match the candidate geometry');
 }
 
+/** Cut-plane port record (native `provenance.cutPorts`, only written under P7_HIGHBAND_CUTS=1). Active only when the
+ * record is present; a record without planned cut planes, or planned cut planes without a record, is refused. */
+function validateCutPorts(evidence:{cutPorts?:unknown;electrodeAreasM2?:Record<string,number>},geometry:unknown):boolean {
+ const planned=Object.keys((geometry as {cutPlanes?:Record<string,unknown>}|undefined)?.cutPlanes??{}).sort();
+ const record=evidence.cutPorts as {count?:unknown;names?:unknown;areasM2?:Record<string,number>;model?:unknown;status?:unknown;statusNote?:unknown}|undefined;
+ if(record===undefined){
+  if(planned.length)fail('cut-plane electrodes are planned but the native report carries no cutPorts record');
+  return false;
+ }
+ const names=Array.isArray(record.names)?[...record.names as string[]].sort():[];
+ if(!planned.length||record.model!=='equipotential-face'||record.status!=='approximation'||
+    typeof record.statusNote!=='string'||!record.statusNote.length||record.count!==planned.length||!same(names,planned)||
+    !record.areasM2||planned.some(name=>!positive(record.areasM2![name])||record.areasM2![name]!==evidence.electrodeAreasM2?.[name]))
+  fail('cut-plane port record is inconsistent with the planned cut electrodes');
+ return true;
+}
+/** Band-screen record (native `provenance.bandScreen`, only written under P7_BAND_SCREEN with P7_HIGHBAND_CUTS=1). Additive:
+ * active only when the record is present; it must be self-consistent and cover the requested band. */
+function validateBandScreen(evidence:{bandScreen?:unknown},frequenciesHz:readonly number[]):void {
+ const r=evidence.bandScreen as {kD?:number;thresholdHz?:number;sizeM?:number;epsilonR?:number;maximumHz?:number;electricalSize?:number;status?:unknown;statusNote?:unknown}|undefined;
+ if(r===undefined)return;
+ const c=299792458;
+ const ok=positive(r.kD)&&r.kD!<=0.5&&positive(r.thresholdHz)&&positive(r.sizeM)&&positive(r.epsilonR)&&r.epsilonR!>=1&&positive(r.maximumHz)&&positive(r.electricalSize)&&
+  r.status==='approximation'&&typeof r.statusNote==='string'&&r.statusNote.length>0&&
+  Math.abs(r.thresholdHz!*2*Math.PI*r.sizeM!*Math.sqrt(r.epsilonR!)/c/r.kD!-1)<=1e-9&&
+  Math.abs(r.electricalSize!*r.thresholdHz!/(r.kD!*r.maximumHz!)-1)<=1e-9&&
+  r.electricalSize!<=r.kD!*(1+1e-12)&&r.maximumHz!>=Math.max(...frequenciesHz)*(1-1e-12);
+ if(!ok)fail('band-screen record is inconsistent with the quasistatic size screen');
+}
 export function validateBoardFoilReport(
  report: AnalysisBoardFoilCheckedReport, problem: BoardFoilProblem,
  producerBudget: AnalysisBoardFoilCheckedRequest['budget'],
@@ -377,7 +485,10 @@ export function validateBoardFoilReport(
  validateRegimeAudit(report);
  const expectedCopper=expected.sourceCopper.map(r=>JSON.stringify([r.regionId,r.sourcePath,r.layer])).sort();
  const actual=evidence.sourceMapping.map(([id,path,,layer])=>JSON.stringify([id,path,layer])).sort();
- const shrunkDomain=shrunkDomainEvidence(evidence);
+ // A block ROI ending on a cut plane meshes only the copper inside it, like a shrunken domain: the subset rule applies, but only with a valid cut-port record.
+ const cutPorts=validateCutPorts(evidence as never,problem.geometry);
+ validateBandScreen(evidence as never,frequenciesHz);
+ const shrunkDomain=shrunkDomainEvidence(evidence)||cutPorts;
  const expectedBarrels=expected.sourceBarrels.map(barrel=>barrel.barrelId).sort();
  const validModel=evidence.modelKind==='foil'
   ? !expectedBarrels.length&&!attachments.length&&evidence.prisms>=1

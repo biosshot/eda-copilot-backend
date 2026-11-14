@@ -750,12 +750,14 @@ pub fn solve_checked(
         // Continuation: the last 8 iterations run only while the residual keeps falling (see `enrichment_continues`).
         max_iterations: iterations + if iterations == 16 && std::env::var("P7_ENRICHMENT_CONTINUATION").as_deref() != Ok("0") { super::foil_reduced::CONTINUATION_EXTRA } else { 0 },
     };
-    if !geometry.cut_planes.is_empty() || geometry.allow_insulated_copper_cuts {
+    let cut_ports = mixed_conductor::highband_cuts_enabled() && !geometry.cut_planes.is_empty();
+    if !cut_ports && (!geometry.cut_planes.is_empty() || geometry.allow_insulated_copper_cuts) {
         return Err(error(
             "BOARD_FOIL_SCOPE",
             "complete copper and original finite pads required",
         ));
     }
+    mixed_conductor::band_screen_kd()?; // P7_BAND_SCREEN: refuse an invalid value before any work
     let skin = if maximum > 10_000. || request.profile_upper_hz.is_some() {
         operator.skin_profile(maximum, request.profile_upper_hz, geometry.max_vertical_step_m)?
             .map(|profile| profile.with_thickness_screen(
@@ -786,12 +788,32 @@ pub fn solve_checked(
         None => (geometry, geometry),
     };
     phase_trace("geometry-prepared", started, serde_json::json!({"ports": port_count, "frequencies": axis.len()}));
+    // P7_FIELD_INTERFACE_STEP=1 (default off): same interface step rule as the low band
+    // (`board_prepare`: min(given or 25 um, 25 um), growth given or 2); null becomes 25 um.
+    let stepped;
+    let mesh_geometry = if std::env::var("P7_FIELD_INTERFACE_STEP").as_deref() == Ok("1") {
+        let mut g = mesh_geometry.clone();
+        g.interface_step_m = Some(g.interface_step_m.unwrap_or(0.000025).min(0.000025));
+        g.interface_growth = Some(g.interface_growth.unwrap_or(2.));
+        stepped = g;
+        &stepped
+    } else {
+        mesh_geometry
+    };
     let mesh = board_mesh::build_profiled_hybrid(board, mesh_geometry, budget, remaining(started, wall)?, skin)?;
     phase_trace("mesh-built", started, json!({"nodes": mesh.mesh.nodes_m.len(), "tetrahedra": mesh.mesh.copper_tetrahedra.len(), "planarTriangles": mesh.planar_triangles.len(), "barrels": mesh.barrel_ids.len()}));
     let masks = mesh.hybrid_mesh_masks.clone();
     let coarsening = mesh.mesh_coarsening.clone();
     let roi_fallback = mesh.roi_fallback.clone();
     let copper_normalization = mesh.copper_normalization.clone();
+    let cut_port_record = cut_ports.then(|| {
+        let names: Vec<_> = geometry.cut_planes.keys().cloned().collect();
+        let areas: serde_json::Map<String, serde_json::Value> = names.iter().map(|n| (n.clone(), json!(mesh.electrode_areas_m2.get(n).copied().unwrap_or(0.)))).collect();
+        json!({"count": names.len(), "names": names, "areasM2": areas, "model": "equipotential-face", "status": "approximation",
+            "statusNote": "порт на плоскости разреза: грань принята эквипотенциальной (как в низкой полосе), ток через грань вне скин-слоя и разброс потенциала по грани не проверены, эталона нет",
+            "facePotentialSpread": null})
+    });
+    let band_screen_record = mixed_conductor::band_screen_record(geometry, &axis, skin)?;
     let mut checked = mixed_conductor::solve_checked_mesh_policy(
         mesh, geometry, mixed_grid, skin, &packages, partition, operator, budget, started, wall,
     )?;
@@ -805,5 +827,7 @@ pub fn solve_checked(
     if let Some(c) = roi_fallback { checked["provenance"]["roiFallback"] = c; }
     if let Some(s) = &shrunk { checked["provenance"]["electricalRoi"] = s.evidence.clone(); }
     if let Some(c) = copper_normalization { checked["provenance"]["copperNormalization"] = c; }
+    if let Some(c) = cut_port_record { checked["provenance"]["cutPorts"] = c; }
+    if let Some(c) = band_screen_record { checked["provenance"]["bandScreen"] = c; }
     Ok(checked)
 }

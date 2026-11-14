@@ -535,6 +535,38 @@ mod board_adapter_tests {
         assert!(super::super::layered_capacitance::prepare_certified_action(&input,&unmatched,&regions,&certified,budget).is_err());
     }
     #[test]
+    fn field_xy_refinement_is_nested_and_keeps_potentials_on_original_nodes() {
+        // Field-only XY refinement (P7_FIELD_REFINE): the refined mesh contains the original one, so the reduced field energy can only drop.
+        let args: serde_json::Value = serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/reference-swap-native-args.json")).unwrap();
+        let board = crate::import_json(args[0].as_str().unwrap()).board.unwrap();
+        let request: Request = serde_json::from_value(args[1].clone()).unwrap();
+        let allocation = AllocationBudget { max_bytes:512*1024*1024, max_nodes:100_000, max_tetrahedra:200_000 };
+        let wall = Duration::from_secs(60);
+        let profile = mixed_conductor::CheckedOperator::HybridPlanarV3.skin_profile(1e6,Some(1e6),request.max_vertical_step_m).unwrap().unwrap().with_thickness_screen([58e6]).unwrap();
+        let board_mesh = board_mesh::build_profiled(&board,&request,allocation,wall,None,&[],Some(profile)).unwrap();
+        let map = mixed_conductor::prepare(&board_mesh,&request.electrodes,1e6,allocation,wall).unwrap();
+        let budget = Budget { max_nodes:400_000, max_local_terms:12_000_000, max_bytes:512*1024*1024, max_wall:wall };
+        let (input,regions,original) = input_from_board(&board_mesh,&request,budget).unwrap();
+        let (trace,certified) = certified_trace(&input,&original,&map,budget).unwrap();
+        let coarse = super::super::layered_capacitance::prepare_certified_action(&input,&trace,&regions,&certified,budget).unwrap();
+        let refined = super::super::field_xy_refine::refine(&input,trace,certified,&map,budget).unwrap();
+        assert!(refined.record["xyNodes"].as_u64() > refined.record["coarseXyNodes"].as_u64());
+        assert_eq!(refined.record["status"],"approximation");
+        let overlay = super::super::layered_capacitance::CertifiedOverlay { input:&refined.input,triangles:refined.triangles,copper:refined.copper,epsilon:refined.epsilon,node_owners:refined.node_owners,finite_contacts:refined.finite_contacts,rowless_modes:refined.rowless_modes,bytes:refined.bytes };
+        let fine = super::super::layered_capacitance::prepare_certified_action(&refined.input,&refined.trace,&regions,&overlay,budget).unwrap();
+        let count = map.potential_count();
+        let mut compared = 0;
+        for seed in 0..4usize {
+            let v: Vec<f64> = (0..count).map(|i| if (i * 7 + seed * 3) % 5 < 2 { 1. } else { 0. }).collect();
+            let energy = |a: &super::super::layered_capacitance::SpatialFieldAction| a.apply(&v).unwrap().iter().zip(&v).map(|(q,x)| q*x).sum::<f64>();
+            let (c, f) = (energy(&coarse), energy(&fine));
+            eprintln!("P7_FIELD_REFINE_TEST seed={seed} coarse={c:e} fine={f:e}");
+            assert!(f <= c * (1. + 1e-9), "refined energy {f:e} exceeds coarse {c:e}");
+            if c > 0. { compared += 1; }
+        }
+        assert!(compared > 0);
+    }
+    #[test]
     fn production_profiled_via_field_trace_covers_mixed_coordinates() {
         let board=crate::import_json(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-board.json")).board.unwrap();
         // Exact geometry request captured from automatic-hybrid DSL before native execution.

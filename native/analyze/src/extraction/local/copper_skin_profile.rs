@@ -3,11 +3,35 @@ use std::f64::consts::PI;
 const MU0: f64 = 4e-7 * PI;
 pub const VERSION: u32 = 3;
 
-/// `P7_FOIL_SHEET=1` (read once): a copper layer with t/delta <= 1 stays one foil sheet.
-pub(super) fn foil_sheet_enabled() -> bool {
-    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    *ON.get_or_init(|| std::env::var_os("P7_FOIL_SHEET").as_deref() == Some(std::ffi::OsStr::new("1")))
+/// `P7_FOIL_SHEET` (read once): 1 keeps a copper layer with t/delta <= 1 as one foil sheet; 2 keeps one sheet at
+/// any t/delta and multiplies the sheet resistance by `foil_resistance_ratio(t/delta)` at the band upper frequency
+/// (approximation: one multiplier per band, field on one side of the foil).
+fn foil_sheet_mode() -> u8 {
+    static MODE: std::sync::OnceLock<u8> = std::sync::OnceLock::new();
+    *MODE.get_or_init(|| match std::env::var("P7_FOIL_SHEET").as_deref() { Ok("1") => 1, Ok("2") => 2, Ok("3") => 3, Ok("4") => 4, _ => 0 })
 }
+pub(super) fn foil_sheet_enabled() -> bool { foil_sheet_mode() >= 1 }
+pub(super) fn foil_sheet_scales_resistance() -> bool { foil_sheet_mode() >= 2 }
+/// `P7_FOIL_SHEET=3`: two-sided-field reading, multiplier `foil_resistance_ratio(x/2)` instead of `(x)`.
+pub(super) fn foil_sheet_two_sided() -> bool { foil_sheet_mode() == 3 }
+/// `P7_FOIL_SHEET=4`: t/delta > 1 gives exactly two layers through the thickness (two half-sheets), each half's resistance
+/// multiplied by `foil_resistance_ratio((t/2)/delta)` at the band top; t/delta <= 1 behaves as `=1`.
+pub(super) fn foil_sheet_half_sheets() -> bool { foil_sheet_mode() == 4 }
+/// Sheet resistance multiplier for t/delta `x` under the active mode (1 when off).
+pub(super) fn foil_sheet_multiplier(x: f64) -> f64 {
+    if !foil_sheet_scales_resistance() { return 1.; }
+    foil_resistance_ratio(if foil_sheet_two_sided() { x / 2. } else { x })
+}
+
+/// `P7_BARREL_SHEET` (read once): 1 keeps a plated via wall at one radial layer at any skin depth and records
+/// the estimated resistance error; 2 also scales the wall resistance by `foil_resistance_ratio(t/delta)`
+/// at the band upper frequency (one multiplier per band; the spatial power recovery applies the same factor).
+fn barrel_sheet_mode() -> u8 {
+    static MODE: std::sync::OnceLock<u8> = std::sync::OnceLock::new();
+    *MODE.get_or_init(|| match std::env::var("P7_BARREL_SHEET").as_deref() { Ok("1") => 1, Ok("2") => 2, _ => 0 })
+}
+pub(super) fn barrel_sheet_enabled() -> bool { barrel_sheet_mode() >= 1 }
+pub(super) fn barrel_sheet_scales_resistance() -> bool { barrel_sheet_mode() == 2 }
 
 /// t/delta at `upper_hz` of nonmagnetic copper; None for invalid input.
 pub(super) fn thickness_over_skin(thickness_m: f64, sigma_s_m: f64, upper_hz: f64) -> Option<f64> {
@@ -15,9 +39,10 @@ pub(super) fn thickness_over_skin(thickness_m: f64, sigma_s_m: f64, upper_hz: f6
     (x.is_finite() && x > 0.).then_some(x)
 }
 
-/// Switch set and t/delta <= 1: the layer is admitted as one sheet (approximation tier).
+/// Switch set and t/delta <= 1 (any t/delta under `P7_FOIL_SHEET=2`): the layer is admitted as one sheet (approximation tier).
 pub(super) fn foil_sheet_admits(thickness_m: f64, sigma_s_m: f64, upper_hz: f64) -> bool {
-    foil_sheet_enabled() && thickness_over_skin(thickness_m, sigma_s_m, upper_hz).is_some_and(|x| x <= 1.)
+    foil_sheet_enabled()
+        && thickness_over_skin(thickness_m, sigma_s_m, upper_hz).is_some_and(|x| x <= 1. || (foil_sheet_scales_resistance() && !foil_sheet_half_sheets()))
 }
 
 /// r(x) = Re(kt coth kt), kt = (1+j)x, x = t/delta: resistance of a foil with
@@ -93,6 +118,10 @@ impl Profile {
             let skin_step = self.skin_depth_m(sigma) / 3.;
             if !skin_step.is_finite() || skin_step <= 0. {
                 return None;
+            }
+            // P7_FOIL_SHEET=4 and t/delta > 1: exactly two layers through the thickness (existing layered path).
+            if foil_sheet_half_sheets() && thickness_over_skin(thickness_m, sigma, self.upper_hz).is_some_and(|x| x > 1.) {
+                return Some(2);
             }
             // P7_FOIL_SHEET=1 and t/delta <= 1: one foil sheet, authored step only.
             if !foil_sheet_admits(thickness_m, sigma, self.upper_hz) {
@@ -190,7 +219,7 @@ pub(super) fn radial_plan(
     contour_vertices: usize,
 ) -> Option<RadialPlan> {
     let target_m = profile.skin_depth_m(conductivity_s_m) / 3.;
-    let pieces = (thickness_m / target_m).ceil();
+    let pieces = if barrel_sheet_enabled() { 1. } else { (thickness_m / target_m).ceil() };
     if contour_vertices < 3 || !(1. ..usize::MAX as f64).contains(&pieces) {
         return None;
     }

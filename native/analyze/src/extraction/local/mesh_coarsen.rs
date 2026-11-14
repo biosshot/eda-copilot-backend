@@ -252,6 +252,111 @@ pub(super) fn quality_cap(n0:usize)->usize {(knob("P7_MESH_QUALITY_CAP",(n0/5).c
 pub(super) fn quality_min_area()->f64 {knob("P7_MESH_QUALITY_MIN_AREA",1e-4)}
 pub(super) fn quality_disabled()->bool {std::env::var("P7_MESH_QUALITY_ANGLE").as_deref()==Ok("0")}
 
+/// `P7_MESH_MERGE`: 0 (default, off), 1 removes needle triangles (minimum angle below `P7_MESH_MERGE_ANGLE`,
+/// default 1 degree) by removing a free or collinear Steiner vertex of the triangle; copper contour vertices stay.
+/// 2 additionally removes a contour vertex of a needle triangle that lies within `P7_MESH_MERGE_TOL_MM`
+/// (default 1e-6 mm, the hairline noise tier) of the chord of its two constraint neighbours (moves a contour by at most that).
+pub(super) fn merge_level()->u8 {match std::env::var("P7_MESH_MERGE").as_deref() {Ok("1")=>1,Ok("2")=>2,_=>0}}
+pub(super) type Cdt=ConstrainedDelaunayTriangulation<Point2<f64>>;
+pub(super) fn position_key(p:[f64;2])->[u64;2] {[p[0].to_bits(),p[1].to_bits()]}
+pub(super) fn position_keys(cdt:&Cdt)->std::collections::HashSet<[u64;2]> {cdt.vertices().map(|v|position_key([v.position().x,v.position().y])).collect()}
+
+#[derive(Default,Clone,Debug,serde::Serialize)]
+#[serde(rename_all="camelCase")]
+pub(super) struct MergeStats {
+    pub level:u8,
+    pub angle_deg:f64,
+    pub passes:usize,
+    pub slivers_before:usize,
+    pub slivers_after:usize,
+    pub removed_free:usize,
+    pub removed_steiner:usize,
+    pub removed_contour_noise:usize,
+    /// Needle triangles left because every vertex is a copper-contour vertex (or not removable under the level).
+    pub slivers_unremovable:usize,
+    pub max_unremovable_height_mm:f64,
+    pub max_contour_shift_mm:f64,
+}
+fn face_min_angle(p:&[[f64;2];3])->f64 {
+    let l2=[0,1,2].map(|k|{let (a,b)=(p[k],p[(k+1)%3]);(b[0]-a[0]).powi(2)+(b[1]-a[1]).powi(2)});
+    let area2=((p[1][0]-p[0][0])*(p[2][1]-p[0][1])-(p[1][1]-p[0][1])*(p[2][0]-p[0][0])).abs();
+    let mut s=l2;s.sort_by(f64::total_cmp);
+    let sine=area2/(s[1]*s[2]).sqrt();
+    if sine.is_finite() {sine.min(1.).asin().to_degrees()} else {0.}
+}
+fn vertex_angle(p:&[[f64;2];3],k:usize)->f64 {
+    let (a,b,c)=(p[k],p[(k+1)%3],p[(k+2)%3]);
+    let (u,v)=([b[0]-a[0],b[1]-a[1]],[c[0]-a[0],c[1]-a[1]]);
+    (u[0]*v[1]-u[1]*v[0]).abs().atan2(u[0]*v[0]+u[1]*v[1])
+}
+fn chord_distance(q:[f64;2],a:[f64;2],c:[f64;2])->Option<f64> {
+    let (d,e)=([c[0]-a[0],c[1]-a[1]],[q[0]-a[0],q[1]-a[1]]);
+    let len2=d[0]*d[0]+d[1]*d[1];
+    if !(len2>0.) {return None;}
+    let t=(e[0]*d[0]+e[1]*d[1])/len2;
+    if !(0.0..=1.0).contains(&t) {return None;}
+    Some((d[0]*e[1]-d[1]*e[0]).abs()/len2.sqrt())
+}
+/// Constraint neighbours when the vertex at `at` may be removed without moving a copper contour
+/// (or, at level 2, by more than `tol_mm`); `Some(vec![])` for a free vertex.
+fn removable_at(cdt:&Cdt,at:[f64;2],protected:&std::collections::HashSet<[u64;2]>,level:u8,tol_mm:f64)->Option<(Vec<[f64;2]>,f64,bool)> {
+    let spade::PositionInTriangulation::OnVertex(h)=cdt.locate(Point2::new(at[0],at[1])) else {return None};
+    let v=cdt.vertex(h);
+    let cons:Vec<[f64;2]>=v.out_edges().filter(|e|e.is_constraint_edge()).map(|e|{let p=e.to().position();[p.x,p.y]}).collect();
+    let is_protected=protected.contains(&position_key(at));
+    match cons.len() {
+        0 if !is_protected => Some((cons,0.,false)),
+        2 => {
+            let dist=chord_distance(at,cons[0],cons[1])?;
+            if !is_protected&&dist<=1e-9 {Some((cons,dist,false))}
+            else if level>=2&&dist<=tol_mm {Some((cons,dist,true))}
+            else {None}
+        }
+        _ => None,
+    }
+}
+/// Remove needle triangles (minimum angle below `angle_deg`) by removing one removable vertex of each; a removed
+/// vertex of a constraint chain re-adds the chord between its two neighbours (contour unchanged within the tolerance).
+pub(super) fn merge_slivers(cdt:&mut Cdt,protected:&std::collections::HashSet<[u64;2]>,angle_deg:f64,level:u8,tol_mm:f64,max_passes:usize)->super::Result<MergeStats> {
+    let mut st=MergeStats{level,angle_deg,..Default::default()};
+    let sliver_faces=|cdt:&Cdt|->Vec<[[f64;2];3]> {cdt.inner_faces().map(|f|f.vertices().map(|v|[v.position().x,v.position().y])).filter(|p|face_min_angle(p)<angle_deg).collect()};
+    st.slivers_before=sliver_faces(cdt).len();
+    for pass in 0..max_passes {
+        let mut targets:Vec<[f64;2]>=vec![];let mut seen=std::collections::HashSet::new();
+        for p in sliver_faces(cdt) {
+            let mut order=[0usize,1,2];order.sort_by(|&a,&b|vertex_angle(&p,b).total_cmp(&vertex_angle(&p,a)));
+            for k in order {
+                if removable_at(cdt,p[k],protected,level,tol_mm).is_some() {if seen.insert(position_key(p[k])) {targets.push(p[k]);}break;}
+            }
+        }
+        if targets.is_empty() {break;}
+        st.passes=pass+1;
+        for at in targets {
+            // Earlier removals of this pass may have changed this vertex; decide again.
+            let Some((cons,dist,contour))=removable_at(cdt,at,protected,level,tol_mm) else {continue};
+            let spade::PositionInTriangulation::OnVertex(h)=cdt.locate(Point2::new(at[0],at[1])) else {continue};
+            cdt.remove(h);
+            if cons.is_empty() {st.removed_free+=1;continue;}
+            let find=|cdt:&Cdt,p:[f64;2]|match cdt.locate(Point2::new(p[0],p[1])) {spade::PositionInTriangulation::OnVertex(h)=>Some(h),_=>None};
+            let (Some(a),Some(c))=(find(cdt,cons[0]),find(cdt,cons[1])) else {return Err(super::error("BOARD_MESH","mesh merge lost a constraint endpoint"));};
+            if !cdt.can_add_constraint(a,c) {return Err(super::error("BOARD_MESH","mesh merge could not restore a copper contour edge"));}
+            cdt.add_constraint(a,c);
+            if contour {st.removed_contour_noise+=1;st.max_contour_shift_mm=st.max_contour_shift_mm.max(dist);} else {st.removed_steiner+=1;}
+        }
+    }
+    for p in sliver_faces(cdt) {
+        st.slivers_after+=1;
+        if (0..3).all(|k|removable_at(cdt,p[k],protected,level,tol_mm).is_none()) {
+            st.slivers_unremovable+=1;
+            let l2=[0,1,2].map(|k|{let (a,b)=(p[k],p[(k+1)%3]);(b[0]-a[0]).powi(2)+(b[1]-a[1]).powi(2)});
+            let area2=((p[1][0]-p[0][0])*(p[2][1]-p[0][1])-(p[1][1]-p[0][1])*(p[2][0]-p[0][0])).abs();
+            let longest=l2.iter().copied().fold(0.,f64::max).sqrt();
+            if longest>0. {st.max_unremovable_height_mm=st.max_unremovable_height_mm.max(area2/longest);}
+        }
+    }
+    Ok(st)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -288,5 +393,52 @@ mod tests {
             let h=p.iter().map(|q|field.size(q[0],q[1])).fold(f64::INFINITY,f64::min);
             assert!(area<=field.area_limit(a0,h)*(1.+1e-9),"face area {area} h {h}");
         }
+    }
+    fn square_with_steiner()->(Cdt,std::collections::HashSet<[u64;2]>) {
+        let mut cdt=Cdt::new();
+        let ring=[[0.,0.],[10.,0.],[10.,10.],[0.,10.]];
+        let ids:Vec<_>=ring.iter().map(|p|cdt.insert(Point2::new(p[0],p[1])).unwrap()).collect();
+        for k in 0..4 {cdt.add_constraint(ids[k],ids[(k+1)%4]);}
+        let protected=position_keys(&cdt);
+        (cdt,protected)
+    }
+    fn min_angle(cdt:&Cdt)->f64 {cdt.inner_faces().map(|f|face_min_angle(&f.vertices().map(|v|[v.position().x,v.position().y]))).fold(180.,f64::min)}
+    #[test]
+    fn merge_removes_free_needle_vertex_and_keeps_contour() {
+        let (mut cdt,protected)=square_with_steiner();
+        cdt.insert(Point2::new(5.,1e-7)).unwrap();cdt.insert(Point2::new(5.,5.)).unwrap();
+        assert!(min_angle(&cdt)<1e-3);
+        let st=merge_slivers(&mut cdt,&protected,1.,1,1e-6,8).unwrap();
+        assert!(min_angle(&cdt)>1.,"{st:?} {}",min_angle(&cdt));
+        assert_eq!((st.removed_free,st.slivers_after,cdt.num_constraints()),(1,0,4));
+    }
+    #[test]
+    fn merge_removes_collinear_steiner_and_restores_the_edge() {
+        let (mut cdt,mut protected)=square_with_steiner();
+        // An inherent vertex 1e-7 above the bottom edge and a Steiner vertex splitting that edge below it.
+        cdt.insert(Point2::new(5.,1e-7)).unwrap();protected.insert(position_key([5.,1e-7]));
+        cdt.insert(Point2::new(5.,5.)).unwrap();
+        cdt.insert(Point2::new(5.,0.)).unwrap();
+        assert_eq!(cdt.num_constraints(),5);
+        let st=merge_slivers(&mut cdt,&protected,1.,1,1e-6,8).unwrap();
+        assert_eq!((st.removed_steiner,st.removed_free,cdt.num_constraints()),(1,0,4),"{st:?}");
+        let bottom:f64=cdt.undirected_edges().filter(|e|e.is_constraint_edge()).map(|e|{let [a,b]=e.positions();if a.y==0.&&b.y==0. {(a.x-b.x).abs()} else {0.}}).sum();
+        assert!((bottom-10.).abs()<1e-12,"{bottom}");
+    }
+    #[test]
+    fn merge_keeps_copper_contour_vertex_unless_level_two() {
+        let (mut cdt,mut protected)=square_with_steiner();
+        // A contour polyline A-X-C with X 1e-7 off the chord A-C, which is itself a constraint: an unavoidable needle.
+        let a=cdt.insert(Point2::new(4.,3.)).unwrap();let c=cdt.insert(Point2::new(6.,3.)).unwrap();
+        let x=cdt.insert(Point2::new(5.,3.+1e-7)).unwrap();
+        cdt.add_constraint(a,x);cdt.add_constraint(x,c);cdt.add_constraint(a,c);
+        protected.extend([position_key([4.,3.]),position_key([6.,3.]),position_key([5.,3.+1e-7])]);
+        let constraints=cdt.num_constraints();
+        let st=merge_slivers(&mut cdt,&protected,1.,1,1e-6,8).unwrap();
+        assert!(st.slivers_unremovable>0&&min_angle(&cdt)<1.&&st.removed_contour_noise==0,"{st:?}");
+        assert!(st.max_unremovable_height_mm<1e-6);
+        let st2=merge_slivers(&mut cdt,&protected,1.,2,1e-6,8).unwrap();
+        assert_eq!(st2.removed_contour_noise,1,"{st2:?}");
+        assert!(min_angle(&cdt)>1.&&st2.max_contour_shift_mm<=1e-6&&cdt.num_constraints()<constraints);
     }
 }

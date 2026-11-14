@@ -332,7 +332,30 @@ pub(super) fn pair_integral_compact(a: &Prism, b: &Prism, order: usize, start: I
         if let Some(t)=began { prof_add(12,t); }
     }
     let _g=ProfGuard::new(3);
-    pair_integral_with(a,b,order,start,limit,PAIR_COMPACT)
+    let result=pair_integral_with(a,b,order,start,limit,PAIR_COMPACT)?;
+    if escalate_on() && result.1>=PAIR_COMPACT.max_order && result.2>PAIR_NOISE_ACCEPT_CHANGE {
+        let began=Instant::now();
+        let escalated=pair_integral_with(a,b,order,start,limit,PairTolerance{max_order:PAIR_ESCALATE_MAX_ORDER,..PAIR_COMPACT});
+        ESCALATE_NANOS.fetch_add(began.elapsed().as_nanos() as u64,std::sync::atomic::Ordering::Relaxed);
+        ESCALATE_PAIRS.fetch_add(1,std::sync::atomic::Ordering::Relaxed);
+        if let Ok(e)=escalated { if e.2<result.2 { ESCALATE_IMPROVED.fetch_add(1,std::sync::atomic::Ordering::Relaxed); return Ok(e); } }
+    }
+    Ok(result)
+}
+/// `P7_PAIR_ESCALATE=1` (developer switch, default off): a compact pair whose last relative change after order 16
+/// exceeds the 2e-3 noise tier continues the same order ladder up to order 64; other pairs are untouched.
+const PAIR_ESCALATE_MAX_ORDER: usize = 64;
+static ESCALATE_PAIRS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static ESCALATE_IMPROVED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static ESCALATE_NANOS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+fn escalate_on() -> bool { static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new(); *ON.get_or_init(|| std::env::var("P7_PAIR_ESCALATE").as_deref() == Ok("1")) }
+/// One stderr line per operator build when the switch is on: escalated pairs and the added thread time (CPU seconds summed over workers).
+pub(super) fn escalate_report() {
+    if !escalate_on() { return; }
+    let n = ESCALATE_PAIRS.swap(0, std::sync::atomic::Ordering::Relaxed);
+    let improved = ESCALATE_IMPROVED.swap(0, std::sync::atomic::Ordering::Relaxed);
+    let nanos = ESCALATE_NANOS.swap(0, std::sync::atomic::Ordering::Relaxed);
+    eprintln!("P7_PAIR_ESCALATE escalatedPairs={n} improvedPairs={improved} addedCpuSeconds={:.2} maxOrder={PAIR_ESCALATE_MAX_ORDER}", nanos as f64 * 1e-9);
 }
 /// A prism or a part of one; needle triangles are bisected without allocation.
 #[derive(Clone,Copy)]
