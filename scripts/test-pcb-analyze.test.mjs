@@ -29,6 +29,7 @@ test('data-only fixtures list successfully, missing named analyses fail without 
   assert.throws(() => runPcbAnalyze(['Board'], f.root), /--name/);
   assert.throws(() => runPcbAnalyze(['Board', '--name', '../dc'], f.root), /--name/);
   assert.throws(() => runPcbAnalyze(['../Board', '--name', 'dc'], f.root), /Unknown/);
+  for(const value of ['0','999','1200001','NaN','1500.5'])assert.throws(()=>runPcbAnalyze(['--list','--timeout-ms',value],f.root),/timeout-ms/);
 });
 
 test('named scripts select independently and repeated runs retain separate logs and output', t => {
@@ -37,7 +38,7 @@ test('named scripts select independently and repeated runs retain separate logs 
     + 'writeFileSync(join(process.env.PCB_ANALYZE_RUN_DIR,"result.json"),JSON.stringify({name:process.env.PCB_ANALYZE_NAME,fixture:process.env.PCB_ANALYZE_FIXTURE_DIR})); console.log("ran "+process.env.PCB_ANALYZE_NAME);';
   writeFileSync(join(f.board, 'dc.ts'), script);
   writeFileSync(join(f.board, 'emi.ts'), script);
-  for (const name of ['dc', 'emi', 'dc.ts']) assert.equal(runPcbAnalyze(['Board', '--name', name], f.root), 0);
+  for (const name of ['dc', 'emi', 'dc.ts']) assert.equal(runPcbAnalyze(['Board', '--name', name,'--timeout-ms','1200000'], f.root), 0);
   const runs = readdirSync(f.runs);
   assert.equal(runs.length, 3);
   assert.equal(runs.filter(name => name.includes('-dc-')).length, 2);
@@ -45,6 +46,7 @@ test('named scripts select independently and repeated runs retain separate logs 
   for (const name of runs) {
     const output = join(f.runs, name), manifest = JSON.parse(readFileSync(join(output, 'run.json'), 'utf8'));
     assert.equal(manifest.status, 'completed');
+    assert.equal(manifest.timeoutMs,1200000);
     assert.equal(manifest.scriptSha256.length, 64);
     assert.equal(JSON.parse(readFileSync(join(output, 'result.json'), 'utf8')).fixture, f.board);
     assert.match(readFileSync(join(output, 'run.log'), 'utf8'), new RegExp('ran ' + manifest.name));

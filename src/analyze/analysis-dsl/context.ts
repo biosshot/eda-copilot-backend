@@ -105,14 +105,22 @@ export function createAnalysisApi(input: DslInput, limits: Limits, changed: (upd
       Object.defineProperties(builder, {
         prepare: { value: async () => preparation() },
         run: { value: async () => {
+          const thermalConfig=kind==='thermal'?config as T.Configurations['thermal']:undefined;
+          const deadlineAtMs=thermalConfig?.mesh?.refinement?performance.now()+1000*(thermalConfig.budget?.maxSeconds??120):undefined;
+          const checkDeadline=()=>{if(deadlineAtMs!==undefined&&performance.now()>deadlineAtMs)throw new S.AnalysisDslError('THERMAL_DEADLINE','Total thermal refinement run deadline exceeded');};
           const p = preparation();
+          checkDeadline();
           if (!p.structurallyValid) throw new S.AnalysisDslError('INVALID_CONFIGURATION', 'Analysis configuration is incomplete or inconsistent', p.diagnostics);
           const profile = kind === 'dc' ? conductionProfile(config.stackup as T.StackupDescription | undefined, config.materials as T.Materials | undefined, config.temperatureC as number | undefined) : undefined;
-          const task: AnalysisTask<K> = freeze({ kind, contextId: id, ...(b ? { board: b, boardIdentity: identity } : {}), config: json(config) as T.Configurations[K], descriptors: [...descriptions.values()].map(json), variantChanges: json(state.changes) as T.Json[], resolvedLoads: p.components, ...(profile ? { conductionProfile: profile } : {}) });
+          const completedSolutions = kind==='thermal'&&config.losses ? store.report.calculations.flatMap(c=>object(c)&&c.kind==='dc'&&c.phase==='completed'&&object(c.result)&&c.result.status==='complete'&&object(c.result.solution)?[c.result.solution as T.Json]:[]) : undefined;
+          const task: AnalysisTask<K> = freeze({ kind, contextId: id, ...(b ? { board: b, boardIdentity: identity } : {}), config: json(config) as T.Configurations[K], descriptors: [...descriptions.values()].map(json), variantChanges: json(state.changes) as T.Json[], resolvedLoads: p.components, ...(profile ? { conductionProfile: profile } : {}), ...(completedSolutions?{completedSolutions}:{}),...(deadlineAtMs===undefined?{}:{deadlineAtMs}) });
           try {
+            checkDeadline();
             const payload = await executor(task);
+            checkDeadline();
             const result = resultFor(task, payload, validate, model => api.network({ model, ports: Object.fromEntries((model.ports ?? []).map(p => [p, p])) }), id => descriptions.get(id));
-            store.add('calculations', { kind, phase: 'completed', result: json(result) });
+            checkDeadline();
+            store.add('calculations', { kind, phase: 'completed', result: deadlineAtMs===undefined?json(result):result },deadlineAtMs);
             return result;
           } catch (error) {
             store.add('diagnostics', { code: error instanceof S.AnalysisDslError ? error.code : 'EXECUTOR_FAILED', severity: 'error', message: error instanceof Error ? error.message : String(error) });
@@ -156,6 +164,8 @@ export function createAnalysisApi(input: DslInput, limits: Limits, changed: (upd
           unique(parsed.nodes.map(n => n.id), 'thermal model nodes');
           const ids = new Set(parsed.nodes.map(n => n.id));
           if (parsed.links.some(l => !ids.has(l.from) || !ids.has(l.to))) S.invalid('Unknown thermal model node');
+          if (parsed.contacts?.some(c => !ids.has(c.node))) S.invalid('Unknown thermal contact node');
+          if (parsed.contacts) validate(parsed.contacts);
         }
         return freeze(parsed);
       }) as T.AnalysisContext["model"],

@@ -9,6 +9,7 @@ import { freeze, json, unavailable, value } from './data.ts';
 import { createDcExecutor } from './dc-executor.ts';
 import { dcObservedVoltage } from './dc-observation.ts';
 import {createElectricalExecutor,circuitObservedVoltage} from './electrical-executor.ts';
+import {createThermalExecutor,thermalObservedData} from './thermal-executor.ts';
 import { object } from './descriptions.ts';
 
 /** Small analysis dispatch boundary. No transport/session, no callbacks, no
@@ -19,6 +20,12 @@ export interface AnalysisTask<K extends AnalysisKind = AnalysisKind> {
   variantChanges: readonly Json[];
   conductionProfile?: AnalysisPhysicalProfile;
   resolvedLoads?: readonly Json[];
+  /** Internal references to already accepted bounded report solutions, only for
+   * same-context transfer; never a second published mesh/cache. */
+  completedSolutions?: readonly Json[];
+  /** Optional absolute monotonic deadline for the complete opt-in thermal run,
+   * including adapter and public-result construction; never a per-pass reset. */
+  deadlineAtMs?: number;
 }
 /** Internal serializable result envelope; accessors are created on JS side.
  * Test executors inject this envelope explicitly; production never fabricates it. */
@@ -37,7 +44,9 @@ export function createAnalysisExecutor(): AnalysisExecutor {
   const crossSection = createCrossSectionExecutor();
   const dc = createDcExecutor();
   const electrical=createElectricalExecutor();
+  const thermal=createThermalExecutor();
   return async task => {
+    if (task.kind==='thermal') return thermal(task as AnalysisTask<'thermal'>);
     if (task.kind==='impedance') return crossSection(task as AnalysisTask<'impedance'>);
     if (task.kind==='networkParameters') return frequency(task as AnalysisTask<'networkParameters'>);
     if ((task.kind==='dc'||task.kind==='pi')&&'circuit'in task.config&&task.config.circuit) return electrical(task as AnalysisTask<'dc'|'pi'>);
@@ -65,7 +74,7 @@ export function resultFor<K extends AnalysisKind>(task: AnalysisTask<K>, payload
     if (argument !== undefined) validate(argument);
     const suffix = argument && typeof argument === 'object' && 'id' in argument ? `:${argument.id}` : argument === undefined ? '' : `:${JSON.stringify(json(argument))}`;
     const descriptor=argument&&typeof argument==='object'&&'id'in argument?describe?.(String(argument.id))??task.descriptors.find(d=>object(d)&&d.id===argument.id):undefined;
-    const d = safe.metrics[name + suffix] ?? (name==='voltage'&&'circuit'in task.config&&task.config.circuit?circuitObservedVoltage(task,descriptor,safe.metrics):task.kind==='dc'&&name==='voltage'?dcObservedVoltage(task.board,descriptor,safe.metrics):undefined);
+    const d = safe.metrics[name + suffix] ?? (task.kind==='thermal'?thermalObservedData(task as AnalysisTask<'thermal'>,name,argument,safe):name==='voltage'&&'circuit'in task.config&&task.config.circuit?circuitObservedVoltage(task,descriptor,safe.metrics):task.kind==='dc'&&name==='voltage'?dcObservedVoltage(task.board,descriptor,safe.metrics):undefined);
     return d ? value({ ...d, contextId: task.contextId }) : unavailable(unit, `Result metric '${name + suffix}' is unavailable`, task.contextId);
   };
   for (const [name, unit] of Object.entries(properties[task.kind])) result[name] = metric(name, unit);

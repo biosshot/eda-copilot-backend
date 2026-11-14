@@ -113,6 +113,15 @@ export interface AnalysisDcReport {
 /** Internal addon object, disposed with its owning worker/scenario. */
 export declare class AnalysisDcSession { constructor(); solve(request: AnalysisDcRequest): AnalysisDcReport; clear(): void }
 
+/** Explicit CPU/F64 thermal network transport, owned by the existing scenario worker. */
+export interface AnalysisThermalCooling {resistanceKPerW?:number;table?:{deltaTemperatureK:number;heatFlowW:number}[];scale?:unknown}
+export interface AnalysisThermalNetwork {nodes:{id:string;boundary?:'environment';heatCapacityJPerK?:number}[];links:{id:string;from:string;to:string;cooling:AnalysisThermalCooling}[];sources:{node:string;powerW:unknown}[]}
+export interface AnalysisThermalRequest {contextId:string;network:AnalysisThermalNetwork;mode:'steady'|'time';ambientC:unknown;initialC?:unknown;initial?:unknown;time?:{stopS:number;sampleStepS:number};atS?:number;numerics?:AnalysisElectricalRequest['numerics'];budget?:AnalysisElectricalRequest['budget'];board?:unknown}
+export interface AnalysisThermalPreconditionerPlanning {nonzeros:number;fill:number;bytes:number;cacheSlots:number;analysisBytes:number;contributionBytes:number;symbolicIndexBytes:number;numericFactorBytes:number;workspaceBytes:number;solveBufferBytes:number}
+export interface AnalysisThermalMemoryPlan {requestBytes:number;physicalSystemBytes:number;transportReportReserveBytes:number;preconditionerAllowanceBytes:number;preconditionerPeakBytes:number;totalPlannedPeakBytes:number;refinementWorkspaceBytes?:number;scope:string}
+export interface AnalysisThermalReport {status:'complete'|'rejected';method?:string;diagnostics:{code:string;message:string;severity:'error'|'warning'|'info'}[];axis?:number[];temperaturesC?:Record<string,number[]>;heatFlowW?:Record<string,number[]>;inputPowerW?:number[];outputPowerW?:number[];storedEnergyJ?:number[];inputEnergyJ?:number[];outputEnergyJ?:number[];energyBalance?:number[];quality?:Record<string,number>;counters?:{acceptedSteps:number;rejectedSteps:number;attempts:number;linearIterations:number;preconditionerBuilds:number;preconditionerFallbacks:number;preconditionerPlannedBytes:number;preconditionerInputPairs:number;preconditionerBarrelPairs:number;preconditionerPlanning:AnalysisThermalPreconditionerPlanning};memoryPlan?:AnalysisThermalMemoryPlan;finalState?:unknown;elapsedMs:number;resources?:{peakRssBytes:number;metric:string};spatial?:unknown;refinement?:{converged:boolean;finalRole:string;reason:string;history:unknown[];[key:string]:unknown};coordinateFrame?:{originC:number;nodeOrder:string;temperaturesK:number[][];scope:string}}
+export declare function solveAnalysisThermal(request:AnalysisThermalRequest):AnalysisThermalReport;
+
 /** Explicit network DTOs. One owning scenario/process; CPU/F64, no PCB extraction. */
 export interface AnalysisElectricalCircuit {
   nodes: string[]; reference: string; ports: {id:string;positive:string;negative:string}[];

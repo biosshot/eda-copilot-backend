@@ -1,0 +1,7 @@
+{
+  "outline":[{"x":0,"y":0},{"x":10,"y":0},{"x":10,"y":10},{"x":0,"y":10}],
+  "cutouts":[],"layers":[{"name":"TOP","index":0,"side":"top"},{"name":"BOTTOM","index":1,"side":"bottom"}],
+  "nets":[{"name":"A"}],"components":[],"pads":[],"holes":[],"keepouts":[],
+  "rules":{"default":{"clearanceMm":0.2,"edgeClearanceMm":0.3,"minTrackWidthMm":0.1,"preferredTrackWidthMm":0.2,"via":{"minDiameterMm":0.5,"preferredDiameterMm":0.6,"minDrillMm":0.2,"preferredDrillMm":0.3}},"nets":[]},
+  "copper":{"fixed":{"tracks":[{"id":"top-strip","net":"A","layer":"TOP","widthMm":0.5,"points":[{"x":2,"y":5},{"x":8,"y":5}]},{"id":"bottom-strip","net":"A","layer":"BOTTOM","widthMm":0.5,"points":[{"x":5,"y":2},{"x":5,"y":8}]}],"vias":[{"id":"coupon-via","net":"A","at":{"x":5,"y":5},"diameterMm":0.6,"drillMm":0.3,"fromLayer":"TOP","toLayer":"BOTTOM","type":"through"}],"zones":[]},"editable":{"tracks":[],"vias":[],"zones":[]}}
+}

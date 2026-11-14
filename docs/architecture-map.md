@@ -33,3 +33,10 @@ builder to `native/analyze/src/extraction/{geometry,field,propagation}.rs` throu
 covers dielectric, C/C0/external L feed modal distributed propagation once per
 section; resulting NetworkResource uses the unchanged P6b composition engine.
 See [P7a semantics](experimental/analyze/line-cross-sections-semantics.md).
+
+Thermal dispatch: `analysis-dsl/thermal-executor.ts` and `thermal-board.ts` adapt
+the existing thermal builder to `native/analyze/src/thermal/{solve,board,mesh,precondition}.rs`.
+`thermal-loss-transfer.ts` resolves source-bound DC arrays in the same context
+without copying published DC meshes. Native code owns compact RC / layered P1
+physics, PCG/Newton, event-aware adaptive time and energy ledgers; the existing
+scenario worker owns cancellation. See [thermal semantics](experimental/analyze/thermal-semantics.md).

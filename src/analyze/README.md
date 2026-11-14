@@ -13,7 +13,7 @@ installed `dist/analysis-spec-doc.d.ts`). It does not transpile TypeScript.
 are explicit host data with no built-in project models or environmental defaults.
 Builders snapshot sections, replace repeated sections and call the small internal
 `executor.ts` boundary only after structural preparation. Constant linear PCB DC
-and explicit circuit DC/Z(f)/transient are implemented; other physical analyses remain unavailable. Import/geometry/conduction
+and explicit circuit DC/Z(f)/transient are implemented. Thermal supports explicit RC networks and layered P1 board FEM with authored material/background/contact/cooling physics; see [thermal semantics](../../docs/experimental/analyze/thermal-semantics.md) and [verification](../../docs/experimental/analyze/thermal-verification.md) for scope/acceptance. Other physical analyses remain unavailable. Import/geometry/conduction
 preparations are not substitutes for a user geometry/DRC analysis.
 
 Each scenario owns one disposable workerpool process using the existing process

@@ -1,0 +1,14 @@
+{
+  "contextId":"bounded-SPD-reuse-coupon","mode":"time","ambientC":{"kind":"step","from":25,"to":30,"atS":20,"riseS":0},"initialC":"ambient",
+  "time":{"stopS":60,"sampleStepS":60},"numerics":{"relativeTolerance":0.0001,"absoluteTolerance":0.00001},"budget":{"maxSeconds":30,"maxMemoryMiB":128},
+  "network":{"nodes":[{"id":"junction","heatCapacityJPerK":0.2},{"id":"case","heatCapacityJPerK":0.8}],"links":[{"id":"jc","from":"junction","to":"case","cooling":{"resistanceKPerW":3}}],"sources":[{"node":"junction","powerW":{"kind":"step","from":0,"to":0.8,"atS":5,"riseS":0}}]},
+  "board":{"boardIdentity":"authored-10mm-three-slice-Cu-strip-FR4-finite-via-coupon","snapshot":true,"maxEdgeMm":2,"maxNodes":5000,
+    "layers":[
+      {"kind":"copper","name":"TOP","thicknessMm":0.035,"material":{"thermalConductivityWPerMK":390,"densityKgM3":8960,"specificHeatJPerKgK":385,"source":"Authored controller-like copper hypothesis, unmeasured coupon","state":"constant isotropic"},"background":{"thermalConductivityWPerMK":0.3,"densityKgM3":1850,"specificHeatJPerKgK":1100,"source":"Authored controller-like resin hypothesis","state":"constant isotropic"}},
+      {"kind":"dielectric","name":"core","thicknessMm":1.53,"material":{"thermalConductivityWPerMK":0.3,"densityKgM3":1850,"specificHeatJPerKgK":1100,"source":"Authored controller-like resin hypothesis","state":"constant isotropic"}},
+      {"kind":"copper","name":"BOTTOM","thicknessMm":0.035,"material":{"thermalConductivityWPerMK":390,"densityKgM3":8960,"specificHeatJPerKgK":385,"source":"Authored controller-like copper hypothesis, unmeasured coupon","state":"constant isotropic"},"background":{"thermalConductivityWPerMK":0.3,"densityKgM3":1850,"specificHeatJPerKgK":1100,"source":"Authored controller-like resin hypothesis","state":"constant isotropic"}}
+    ],
+    "heat":[],"contacts":[{"id":"case-region","node":"case","target":{"kind":"region","layers":["TOP"],"polygon":{"outer":[{"x":4.5,"y":4.5},{"x":5.5,"y":4.5},{"x":5.5,"y":5.5},{"x":4.5,"y":5.5}]}},"resistanceKPerW":8}],
+    "surfaceCooling":{"resistanceKPerW":35},"barrel":{"thicknessMm":0.025,"diameterConvention":"finished_hole","material":{"thermalConductivityWPerMK":390,"densityKgM3":8960,"specificHeatJPerKgK":385,"source":"Authored finite copper barrel hypothesis","state":"constant isotropic"}}
+  }
+}

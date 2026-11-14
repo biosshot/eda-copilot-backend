@@ -1,6 +1,6 @@
 /** Analysis DSL, variant B. Executable source is JavaScript with top-level await.
  * Reference this file for IDE globals. Production supports board/conductor DC and explicit circuit DC/Z(f)/transient;
- * explicit S/Z/Y multiports and bounded Touchstone; other analyses reject with ANALYZER_NOT_IMPLEMENTED after prepare.
+ * explicit S/Z/Y multiports, bounded Touchstone, thermal RC/layered P1 FEM; other analyses reject with ANALYZER_NOT_IMPLEMENTED after prepare.
  * Descriptions, validation, reports and explicit-value sweep are implemented.
  * Coordinates: millimetres, absolute board Y down; no implicit material defaults.
  * This document imports only the package's public, existing board transport.
@@ -93,10 +93,10 @@ export type LocalModel =
   | { kind: 'inductor'; inductanceH: number; seriesResistanceOhm?: number; ideal?: boolean }
   | { kind: 'linear-driver'; lowV: number; highV: number; outputResistanceOhm: number }
   | { kind: 'rc-input'; capacitanceF: number; resistanceOhm?: number }
-  | { kind: 'thermal-network' | 'thermal-path'; nodes: readonly ThermalNode[]; links: readonly ThermalLink[] }
+  | { kind: 'thermal-network' | 'thermal-path'; nodes: readonly ThermalNode[]; links: readonly ThermalLink[]; contacts?: readonly { node: string; target: Selector; resistanceKPerW: number }[] }
   | { kind: 'heatsink'; heatCapacityJPerK: number }
   | { kind: 'thermal-interface'; resistanceKPerW: number }
-  | ({ kind: 'cooling' } & ({ resistanceKPerW: number; table?: never } | { resistanceKPerW?: never; table: readonly { deltaTemperatureK: number; heatFlowW: number }[] }));
+  | ({ kind: 'cooling'; scale?: Waveform } & ({ resistanceKPerW: number; table?: never } | { resistanceKPerW?: never; table: readonly { deltaTemperatureK: number; heatFlowW: number }[] }));
 export interface ComponentDescription {
   designator: string; kind: 'ic' | 'resistor' | 'capacitor' | 'inductor' | 'device';
   model?: Model; pins?: Readonly<Record<string, string | readonly string[]>>;
@@ -114,7 +114,7 @@ export type StackupInput = Omit<RoutingStackup, 'layers'> & {
   /** Explicit scenario barrel physics, never added to RoutingBoardV2. */
   platingMaterial?: string; diameterConvention?: 'finished_hole' | 'before_plating';
   layers: readonly (
-    | { kind: 'copper'; name: string; thicknessMm?: number; thicknessOz?: number; material?: string }
+    | { kind: 'copper'; name: string; thicknessMm?: number; thicknessOz?: number; material?: string; backgroundMaterial?: string }
     | { kind: 'dielectric'; name: string; thicknessMm: number; material?: string; relativePermittivity?: number; lossTangent?: number }
   )[];
 };
@@ -143,7 +143,8 @@ export interface ComponentLoad {
 export type Load = PortLoad | ComponentLoad;
 export interface LoadDefaults { rail: Extract<Selector, { kind: 'net' }>; defaultCurrentA: number; return?: Extract<Selector, { kind: 'net' }>; overrides: Readonly<Record<string, { currentA: number }>> }
 export interface ThermalNode { id: string; boundary?: 'environment'; heatCapacityJPerK?: number }
-export interface ThermalLink { from: string; to: string; resistanceKPerW?: number; model?: Model }
+/** Heat flow is positive from->to; default observation ID is `from->to`. */
+export interface ThermalLink { id?: string; from: string; to: string; resistanceKPerW?: number; model?: Model }
 export interface ThermalNetworkInput { nodes: readonly ThermalNode[]; links: readonly ThermalLink[]; sources: readonly { node: string; powerW: number | Waveform }[] }
 export type CircuitElement =
   | { id: string; kind: 'resistor'; nodes: readonly [string, string]; resistanceOhm: number; referenceC?: number; temperatureCoefficientPerK?: number }
@@ -170,17 +171,25 @@ export type LineInput = { widthMm: number; copperThicknessMm: number; lengthMm?:
   | { kind: 'stripline'; topDielectricHeightMm: number; bottomDielectricHeightMm: number; topMaterial: Material; bottomMaterial: Material }
   | { kind: 'coupled-stripline'; topDielectricHeightMm: number; bottomDielectricHeightMm: number; topMaterial: Material; bottomMaterial: Material; gapMm: number }
 );
+/** Board surfaces: characteristic for total exposed top+bottom area, apportioned
+ * by area; K/W is not an areal resistance. No inferred side convection. */
 export interface Cooling { boardSurfaces?: Model; heatsinks?: readonly { target: Selector; thermalNode: string; model: Model; interface: Model; cooling: Model }[] }
 export type Heat = readonly { target: Selector; node: string; powerW: number | Waveform }[] | { category: 'ic' | 'device' | 'resistor'; defaultPowerW: number; overrides: Readonly<Record<string, { powerW: number }>> };
 /** Circuit time: relative local step-doubling tolerance (default 1e-6);
  * absoluteTolerance multiplies 1 V for voltage / 1 A for current (default 1e-9);
  * maxIterations bounds attempted internal steps (default 200000, max 1000000).
+ * Thermal time uses relative temperature-rise/local-change tolerance 1e-6 and
+ * absolute 1e-7 degC; the same attempted-step bound applies.
  * Circuit DC/AC custom numerics explicitly reject. */
 export interface Numerics { relativeTolerance?: number; absoluteTolerance?: number; maxIterations?: number }
 export interface CommonOptions { name?: string; numerics?: Numerics; budget?: { maxSeconds?: number; maxMemoryMiB?: number } }
 export interface PhysicalOptions { components?: readonly ComponentDescription[]; stackup?: StackupDescription; materials?: Materials }
 export interface ElectricalOptions extends PhysicalOptions { sources?: readonly Source[]; loads?: readonly Load[] | LoadDefaults; temperatureC?: number; circuit?: Circuit }
-export interface ThermalOptions extends PhysicalOptions { network?: ThermalNetwork; heat?: Heat; losses?: DataValue; cooling?: Cooling; environment?: Environment; initialC?: number | 'ambient'; initial?: 'steady' | FinalState; domain?: 'steady' | 'time'; atS?: number; time?: Time }
+/** Independent CPU/F64 RC or layered P1 FEM. Board geometry/materials and
+ * finite contacts are explicit. maxEdgeMm is nominal grid spacing, locally
+ * refined at selected contacts; convergence must be demonstrated. Losses accept
+ * a complete authoritative DC lossMap in the same board/context only. */
+export interface ThermalOptions extends PhysicalOptions { network?: ThermalNetwork; heat?: Heat; losses?: DataValue; cooling?: Cooling; environment?: Environment; initialC?: number | 'ambient'; initial?: 'steady' | FinalState; domain?: 'steady' | 'time'; atS?: number; time?: Time; mesh?: {maxEdgeMm?:number;/** Default50000; up to100000 ordinary, explicit140000 with opt-in refinement. Bounds unpruned replicated mesh; memory/link admission remain separate. */maxNodes?:number;/** Optional bounded1..6 midpoint passes and one independent nested control under the ONE run budget. Publishes final control field and scalar history. Failed gate makes numerically valid fields conditional, never claims absolute accuracy. */refinement?:{maxPasses:number;relativeTolerance:number;validationMaxEdgeMm:number};/** Curve deviation mm, default .001, range .000001.. .01. Never changed automatically at the node cap. */geometryDeviationMm?:number}; inputPolicy?: {cadFill:'strict'|'snapshot'} }
 export type Rule = { kind: 'connectivity' } | { kind: 'clearance' | 'edge-clearance'; minMm: number }
   | { kind: 'length'; channel: Channel; maxMm: number } | { kind: 'skew'; channels: readonly Channel[]; maxMm: number }
   | { kind: 'reference-continuity'; channel: Channel } | { kind: 'return-transition'; channel: Channel; maxDistanceMm: number };
@@ -250,6 +259,8 @@ export interface DcResult extends ResultBase {
  * sampleStepS controls output only; sampled extrema can miss internal peaks. */
 export interface PiResult extends DcResult { impedance(port: Port): DataValue; transfer(path: { from: Port; to: Port }): DataValue; resonances: DataValue; finalState: FinalState }
 export interface ThermalResult extends ResultBase {
+  /** Complete final numerical arrays; optional refinement scalar history and common-origin coordinates. Sampled convergence is not absolute accuracy. */
+  readonly solution?: Json;
   temperature(node: string | { target: Selector; node: string }): DataValue;
   heatFlow(link: string): DataValue; temperatureMap: DataValue; finalState: FinalState; energyBalance: DataValue;
 }

@@ -146,6 +146,28 @@ The launcher passes three environment variables to each analysis:
 Analysis scripts read saved fixture inputs and write their results under
 `PCB_ANALYZE_RUN_DIR`. `debugging/` is ignored by Git. Inputs stay in the test bank;
 new runs do not overwrite earlier runs or become expected reference results.
+The default launcher timeout stays600000 ms. Explicit `--timeout-ms` accepts
+1000..1200000 ms and records the chosen outer limit in `run.json`; the controller
+thermal policy uses `--timeout-ms 1200000` for its separate bounded report.
+
+TPS63060DSCR and BandAmpV5 keep the original `thermal.js`4/2 mm studies, including
+their failed spatial gates. `--name thermal-spatial` runs the explicitly authored
+ordinary1/.5 mm steady pair. `--name thermal-refinement` runs one separate
+explicit graded refinement study with independent nested.5 mm control, preserving
+the same physics/curve tolerance and one total120 s /384 MiB budget. These steady
+reports make no transient acceptance claim. Full arrays, implementation/source
+hashes, audit, SVG/PNG and the exact DSL are saved even when acceptance fails;
+see the current thermal verification before interpreting a completed solve.
+
+The separate `thermal-final-time` / `thermal-final-time-refined` studies use the
+same authored physics and spatial policy, independently checked at every output
+and event time. Their explicit study budget is600s shared across all adaptive
+passes,384MiB/50k nodes, unchanged native numeric/128MiB output caps. Invoke with
+`--timeout-ms 900000` to leave the launcher enough time to save a native refusal.
+The900s outer scenario limit does not reset/extend the600s physical request.
+Both preserve15s observations and5/20/30s events; the tighter time tolerances do
+not change output spacing. Only the retained full-field audits determine whether
+spatial/time acceptance passes; completing a request is insufficient.
 
 `import.ts` delegates to `tests/helpers/pcb-analysis-import.ts`. The helper reads
 the saved `<fixture>.json`, calls [the analysis runtime](../../src/analyze/README.md),

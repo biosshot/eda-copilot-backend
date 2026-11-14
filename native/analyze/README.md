@@ -189,3 +189,11 @@ reject. Field reports retain mesh/phi/E, quality, independent mesh/domain
 convergence and exact-frequency matrices. Large reports require an explicit
 bounded report budget. Real-board examples are conditional geometry/stackup
 hypotheses, not measured/extracted complete PCB channels.
+
+Independent thermal CPU/F64 code lives in `src/thermal/`, behind the existing
+shared addon `solveAnalysisThermal`. Compact RC dynamics and layered P1 PCB FEM
+use explicit capacities/materials/contacts, harmonic interlayer transfer and
+prescribed cooling. Matrix-free PCG/Newton and adaptive backward Euler preserve
+an auditable energy ledger. See [thermal semantics](../../docs/experimental/analyze/thermal-semantics.md)
+and [verification](../../docs/experimental/analyze/thermal-verification.md) for supported geometry, coefficient approximation and acceptance;
+no CFD, implicit package defaults or electrical feedback.

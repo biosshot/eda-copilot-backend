@@ -6,5 +6,6 @@ pub mod extraction;
 pub mod geometry;
 pub mod input;
 pub mod model;
+pub mod thermal;
 
 pub use input::{import_board, import_json, Diagnostic, ImportReport, Severity};

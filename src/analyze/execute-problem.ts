@@ -10,7 +10,8 @@ export function createProblemExecutor(retainDcForScenario = false) {
   return <P extends AnalysisProblem>(problem: P): AnalysisResult<P> => {
     const addon = createRequire(import.meta.url)(backendResource('native', 'node-addon', 'index.cjs')) as typeof import('../../native/node-addon/index.cjs');
     let result: AnalysisResult;
-    if (problem.kind === 'cross-section') {
+    if (problem.kind === 'thermal') result=addon.solveAnalysisThermal(problem.request);
+    else if (problem.kind === 'cross-section') {
       electrical ??= new addon.AnalysisElectricalSession();
       try {result=electrical.solveCrossSection(problem.request);}
       finally {if(!retainDcForScenario){electrical.clear();electrical=undefined;}}

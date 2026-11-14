@@ -1,7 +1,7 @@
 import type { AnalysisImportReport, AnalysisGeometryReport, AnalysisGeometryOptions } from '../../native/analyze/index.js';
 import type { AnalysisConductionOptions, AnalysisConductionReport } from '../../native/analyze/index.js';
 import type { AnalysisDcRequest, AnalysisDcReport } from '../../native/analyze/index.js';
-import type { AnalysisElectricalRequest, AnalysisElectricalReport, AnalysisFrequencyRequest, AnalysisFrequencyReport, AnalysisCrossSectionRequest, AnalysisCrossSectionReport } from '../../native/analyze/index.js';
+import type { AnalysisElectricalRequest, AnalysisElectricalReport, AnalysisFrequencyRequest, AnalysisFrequencyReport, AnalysisCrossSectionRequest, AnalysisCrossSectionReport, AnalysisThermalRequest, AnalysisThermalReport } from '../../native/analyze/index.js';
 
 export type { AnalysisImportReport, AnalysisGeometryReport, AnalysisGeometryOptions };
 export type { AnalysisConductionOptions, AnalysisConductionReport };
@@ -10,9 +10,10 @@ export type AnalysisProblem = Readonly<{ kind: 'import-board'; boardJson: string
     | Readonly<{ kind: 'prepare-conduction'; boardJson: string } & AnalysisConductionOptions>
     | Readonly<{ kind: 'dc'; request: AnalysisDcRequest }>
     | Readonly<{ kind: 'electrical-network'; request: AnalysisElectricalRequest }>
+    | Readonly<{ kind: 'thermal'; request:AnalysisThermalRequest }>
     | Readonly<{ kind: 'cross-section'; request:AnalysisCrossSectionRequest }>
     | Readonly<{ kind: 'frequency-network'; request: AnalysisFrequencyRequest }>;
-export type AnalysisResult<P extends AnalysisProblem = AnalysisProblem> = P extends {kind:'cross-section'} ? AnalysisCrossSectionReport : P extends {kind:'frequency-network'} ? AnalysisFrequencyReport : P extends {kind:'electrical-network'} ? AnalysisElectricalReport : P extends { kind: 'dc' } ? AnalysisDcReport : P extends { kind: 'import-board' } ? AnalysisImportReport : P extends { kind: 'prepare-conduction' } ? AnalysisConductionReport : AnalysisGeometryReport;
+export type AnalysisResult<P extends AnalysisProblem = AnalysisProblem> = P extends {kind:'thermal'} ? AnalysisThermalReport : P extends {kind:'cross-section'} ? AnalysisCrossSectionReport : P extends {kind:'frequency-network'} ? AnalysisFrequencyReport : P extends {kind:'electrical-network'} ? AnalysisElectricalReport : P extends { kind: 'dc' } ? AnalysisDcReport : P extends { kind: 'import-board' } ? AnalysisImportReport : P extends { kind: 'prepare-conduction' } ? AnalysisConductionReport : AnalysisGeometryReport;
 export type AnalysisProgress = {
     jobId: string;
     phase: 'queued' | 'started' | 'completed' | 'failed' | 'cancelled';
@@ -32,6 +33,7 @@ export class AnalysisExecutionError extends Error {
 
 // Validate both the parent boundary and the worker boundary before native calls.
 export function isAnalysisProblem(value: unknown): value is AnalysisProblem {
+    if (record(value) && value.kind === 'thermal') return keys(value,['kind','request']) && record(value.request) && typeof value.request.contextId==='string' && ['steady','time'].includes(String(value.request.mode)) && record(value.request.network) && finiteJson(value.request);
     if (record(value) && value.kind === 'cross-section') return keys(value,['kind','request']) && record(value.request) && record(value.request.line) && Array.isArray(value.request.frequencies) && finiteJson(value.request);
     if (record(value) && value.kind === 'frequency-network') return keys(value,['kind','request']) && record(value.request) && Array.isArray(value.request.instances) && Array.isArray(value.request.frequencies) && finiteJson(value.request);
     if (record(value) && value.kind === 'electrical-network') return keys(value,['kind','request']) && record(value.request) && typeof value.request.contextId==='string' && ['dc','frequency','time'].includes(String(value.request.mode)) && record(value.request.circuit) && finiteJson(value.request);

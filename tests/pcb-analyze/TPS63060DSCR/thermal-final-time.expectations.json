@@ -1,0 +1,23 @@
+{
+  "fixture": "TPS63060DSCR",
+  "component": "U1",
+  "powerW": 1.5,
+  "cases": [
+    "time"
+  ],
+  "timeS": [
+    0,
+    5,
+    15,
+    20,
+    30,
+    45,
+    60
+  ],
+  "conditional": true,
+  "heatsink": false,
+  "maxSpatialRelativeChange": 0.02,
+  "maxTemporalRelativeChange": 0.001,
+  "mode": "single-case",
+  "refinementWitnesses": true
+}

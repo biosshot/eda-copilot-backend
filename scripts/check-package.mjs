@@ -59,6 +59,7 @@ const analysisFixtures = ['NanoScope', 'NanoSpec', 'ESPower', 'BandAmpV5', 'USB_
 writeFileSync(join(consumer, 'analysis-fixtures.json'), JSON.stringify(analysisFixtures));
 copyFileSync(join(backend,'tests/fixtures/analysis-dc-coupon.json'),join(consumer,'dc-fixture.json'));
 copyFileSync(join(backend,'tests/fixtures/analysis-electrical.js'),join(consumer,'rlc-fixture.js'));
+copyFileSync(join(backend,'tests/fixtures/analysis-thermal.js'),join(consumer,'thermal-fixture.js'));
 copyFileSync(join(backend,'tests/fixtures/analysis-frequency/resources.json'),join(consumer,'frequency-resources.json'));
 copyFileSync(join(backend,'tests/fixtures/analysis-frequency/network.js'),join(consumer,'frequency-fixture.js'));
 const geometryCoupon = JSON.parse(analysisFixtures[0].json);
@@ -93,6 +94,15 @@ assert.equal(rlcDsl.status,'complete',JSON.stringify(rlcDsl.error));
 assert.deepEqual(rlcDsl.reports[0].calculations.filter(c=>c.phase==='completed').map(c=>c.result.solution.mode),['dc','frequency','time','time']);
 assert.deepEqual(rlcDsl.reports[0].checks.map(c=>c.status),['pass','pass']);
 assert.equal(rlcDsl.reports[0].plots.length,5);
+assert.equal(typeof native.solveAnalysisThermal,'function');
+const thermalDsl=await runAnalysisDsl({code:readFileSync('thermal-fixture.js','utf8')},{maxOutputBytes:8*1024*1024});
+assert.equal(thermalDsl.status,'complete',JSON.stringify(thermalDsl.error));
+assert.deepEqual(thermalDsl.reports[0].checks.map(c=>c.status),['pass','pass','fail','pass']);
+const thermalRuns=thermalDsl.reports[0].calculations.filter(c=>c.phase==='completed');
+assert.equal(thermalRuns.length,3);assert.ok(Math.abs(thermalRuns[0].result.solution.temperaturesC.junction[0]-55)<1e-8);
+assert.equal(thermalRuns[1].result.solution.axis.length,201);assert.equal(thermalRuns[2].result.solution.axis[0],100);
+assert.ok(thermalRuns.every(c=>c.result.solution.quality.normalizedEnergyBalance<=1e-6));
+assert.equal(thermalDsl.reports[0].plots.at(-1).data.validity.status,'unavailable');
 const dcBoard=JSON.parse(readFileSync('dc-fixture.json','utf8'));
 const frequency=await runAnalysisDsl({code:readFileSync('frequency-fixture.js','utf8'),models:JSON.parse(readFileSync('frequency-resources.json','utf8'))},{maxOutputBytes:16*1024*1024});
 assert.equal(frequency.status,'complete',JSON.stringify(frequency.error));
@@ -152,7 +162,7 @@ try {
   const failed = await makePcbLayout({ ...pcbInput, code: 'nonexistent();' });
   assert.match(failed.content, /nonexistent/);
 } finally { transport.restore(); await disposeBackend(); }
-console.log('Installed backend: component search, schematic, native PCB worker, eight analysis workers and assets passed.');
+console.log('Installed backend: component search, schematic, native PCB worker, analysis workers, thermal DSL and assets passed.');
 `);
 process.stdout.write(run([join(consumer, 'smoke.mjs')], consumer, cleanEnv));
 console.log('Checking the installed archive with GPU disabled and with both GPU drivers unavailable...');
