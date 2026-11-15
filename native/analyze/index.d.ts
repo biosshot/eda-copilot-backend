@@ -234,6 +234,8 @@ export interface AnalysisBoardFoilCheckedRequest {
     profileUpperHz?: number;
     referenceOhm?: number[];
     budget: { maxSeconds: number; maxMemoryMiB: number };
+    /** Apply `budget` as a real memory ceiling and wall limit in the hybrid path (default: unlimited, as before). */
+    enforceBudget?: boolean;
     maxIterations?: number;
     attachments?: { id: string; electrodes: [string, string]; model: AnalysisFrequencyResource }[];
 }

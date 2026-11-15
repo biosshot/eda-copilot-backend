@@ -34,10 +34,10 @@ export function returnGateDecision(passed:boolean,maximumRelative:number,shrunk:
 }
 
 export function runAutoFoil(
- plan:AutoFoilPlan, frequenciesHz:number[], budgetIn:{maxSeconds:number;maxMemoryMiB:number;maxUnresolvedReturn?:number},
+ plan:AutoFoilPlan, frequenciesHz:number[], budgetIn:{maxSeconds:number;maxMemoryMiB:number;maxUnresolvedReturn?:number;enforceBudget?:boolean},
  interval:FrequencyInterval|undefined, execute:(problem:BoardFoilProblem)=>BoardFoilReport,
 ): BoardFoilRunReport {
- const {maxUnresolvedReturn=DEFAULT_MAX_UNRESOLVED_RETURN,...budget}=budgetIn;
+ const {maxUnresolvedReturn=DEFAULT_MAX_UNRESOLVED_RETURN,enforceBudget,...budget}=budgetIn;
  if(!(maxUnresolvedReturn>0&&maxUnresolvedReturn<=1))throw new Error('CHANNEL_FOIL_GRID: budget.maxUnresolvedReturn must lie in (0,1]');
  const n=plan.ports.length;
  const requested=interval&&requestedFrequencyInterval({spectralBandHz:interval});
@@ -70,7 +70,7 @@ export function runAutoFoil(
   const attemptStarted=performance.now();
   const problem:BoardFoilProblem={kind:'board-foil-checked',boardJson:candidate.boardJson,geometry:candidate.geometry,
    expected:{electrodePairs:candidate.electrodePairs,sourceCopper:candidate.sourceCopper,sourceBarrels:candidate.sourceBarrels},
-   request:{frequenciesHz,referenceOhm,budget,
+   request:{frequenciesHz,referenceOhm,budget,...(enforceBudget&&{enforceBudget}),
     partitionPolicy:'automatic-hybrid-v1',
     ...(candidate.attachments.length&&{attachments:candidate.attachments}),
     operatorPolicy:'hybrid-planar-v3' as const,profileUpperHz}};

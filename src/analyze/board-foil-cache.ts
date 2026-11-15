@@ -77,6 +77,7 @@ export function cachedBoardFoilReport(
     core, producer: 'automatic-board-foil-or-mixed-exact-grid-v1',
     hybridPlanarOperatorVersion: HYBRID_PLANAR_OPERATOR_VERSION,
     ...(process.env.P7_HYBRID_REGIME_AUDIT==='1'&&{regimeControlPolicy:'discrete-dc-ac-time-v1'}),
+    ...(request.enforceBudget&&{enforcedBudget:{maxSeconds:request.budget.maxSeconds,maxMemoryMiB}}),
     compactPlanarPolicy: compactPlanar ? 'compact-v1' : 'default-v1',
     ...((compactPlanar || partitionPolicy==='automatic-hybrid-v1') && { compactWorkers, localNearWorkers }),
     ...(compactPlanar && { compactBasisPolicy: compactFullMixed ? 'adaptive-mixed-closure-v1' : 'dc-harmonic-only' }),

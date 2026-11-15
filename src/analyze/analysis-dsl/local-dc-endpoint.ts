@@ -13,10 +13,12 @@ import type { Diagnostic, Validity } from './spec-doc.js';
 /** Exact DC of a bounded copper mesh. The selected drive is a probe, not a
  * schematic operating point or an independent excitation of floating ports. */
 export function localDcEndpoint(
- task: AnalysisTask<'impedance'>, geometry: ReturnType<typeof localRequest>,
+ task: AnalysisTask<'impedance'|'pi'>, geometry: ReturnType<typeof localRequest>,
  diagnostics: Diagnostic[], remainingSeconds: number,
  solve: (problem: LocalDcExtractionProblem) => AnalysisLocalDcReport,
  components: readonly PhysicalDcComponentRequest[] = [],
+ /** N-port callers (P8 `pi()`) name the ordered physical ports; no channel loop probe is selected for them. */
+ portNames?: readonly string[],
 ): ExecutionResult {
  if(!Number.isFinite(remainingSeconds)||remainingSeconds<=0)
   throw new AnalysisDslError('LOCAL_DC_DEADLINE','Shared DC planning deadline exhausted',diagnostics);
@@ -60,8 +62,11 @@ export function localDcEndpoint(
    throw new AnalysisDslError('LOCAL_DC_PORTS','Package pins lack confirmed copper islands: '+component.designator,diagnostics);
   return [[a,b] as const];
  });
- const labels=task.config.target?.kind==='differential'?
-  ['positive-input','positive-output','negative-input','negative-output']:['input','output'];
+ const target='target' in task.config?task.config.target:undefined;
+ if(portNames&&portNames.length!==geometry.ports.length)
+  throw new AnalysisDslError('LOCAL_DC_PORTS','Port names do not match the physical ports',diagnostics);
+ const labels=portNames??(target?.kind==='differential'?
+  ['positive-input','positive-output','negative-input','negative-output']:['input','output']);
  const ports=geometry.ports.map(([positive,negative],i)=>({name:labels[i],positive,negative}));
  const sameLoadedComponent=(a:string,b:string)=>{
   const source=electrodeIsland.get(a),target=electrodeIsland.get(b);
@@ -73,7 +78,7 @@ export function localDcEndpoint(
   if(sameLoadedComponent(from.positive,to.positive)&&sameLoadedComponent(from.negative,to.negative))return -1;
   return sameLoadedComponent(from.positive,to.negative)&&sameLoadedComponent(from.negative,to.positive)?1:0;
  });
- const loop=relativeSigns.findIndex(sign=>sign!==0);
+ const loop=portNames?-1:relativeSigns.findIndex(sign=>sign!==0);
  const drive=loop<0?undefined:nativePorts.map((_,i)=>i===loop?1:i===loop+1?relativeSigns[loop]:0);
  let report: AnalysisLocalDcReport;
  try{

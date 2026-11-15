@@ -677,6 +677,10 @@ pub struct CheckedRequest {
     pub frequencies_hz: Vec<f64>,
     pub reference_ohm: Option<Vec<f64>>,
     pub budget: crate::electrical::Budget,
+    /// P8: apply `budget` as a real memory ceiling and wall limit. Off (default) keeps the unlimited
+    /// hybrid path of every earlier caller; the DSL `pi()` executor sets it.
+    #[serde(default)]
+    pub enforce_budget: bool,
     pub max_iterations: Option<usize>,
     #[serde(default)]
     pub operator_policy: CheckedOperator,
@@ -685,6 +689,22 @@ pub struct CheckedRequest {
     pub partition_policy: mixed_conductor::PartitionPolicy,
     #[serde(default)]
     pub attachments: Vec<super::checked_packages::Attachment>,
+}
+
+/// Limits of the checked hybrid path: unlimited unless the request asks for the budget to be enforced.
+fn enforced_limits(enforce: bool, budget: &crate::electrical::Budget) -> Result<(super::AllocationBudget, Duration)> {
+    let mut limits = super::AllocationBudget { max_bytes: usize::MAX, max_nodes: usize::MAX, max_tetrahedra: usize::MAX };
+    let mut wall = Duration::MAX;
+    if !enforce { return Ok((limits, wall)); }
+    match budget.max_memory_mi_b {
+        Some(m) if m.is_finite() && m >= 1. => limits.max_bytes = (m * 1_048_576.).min(usize::MAX as f64 / 2.) as usize,
+        _ => return Err(error("BOARD_FOIL_GRID", "enforced budget requires a finite maxMemoryMiB >= 1")),
+    }
+    match budget.max_seconds {
+        Some(t) if t.is_finite() && t > 0. => wall = Duration::try_from_secs_f64(t).unwrap_or(Duration::MAX),
+        _ => return Err(error("BOARD_FOIL_GRID", "enforced budget requires a finite positive maxSeconds")),
+    }
+    Ok((limits, wall))
 }
 
 /// The checked automatic endpoint deliberately returns only the exact-grid
@@ -741,8 +761,7 @@ pub fn solve_checked(
     }
     // External process supervision owns resource limits for production extraction.
     let packages = super::checked_packages::validate(request.attachments, geometry, &axis)?;
-    let budget = super::AllocationBudget { max_bytes: usize::MAX, max_nodes: usize::MAX, max_tetrahedra: usize::MAX };
-    let wall = Duration::MAX;
+    let (budget, wall) = enforced_limits(request.enforce_budget, &request.budget)?;
     let maximum = *axis.last().unwrap();
     let mixed_grid = mixed_conductor::CheckedGrid {
         frequencies_hz: &axis,
@@ -848,5 +867,26 @@ pub fn solve_checked(
         }
     } else {
         run(step_geometry)
+    }
+}
+
+#[cfg(test)]
+mod enforced_limits_tests {
+    use super::*;
+    use crate::electrical::Budget;
+    #[test]
+    fn unenforced_budget_stays_unlimited() {
+        let (b, wall) = enforced_limits(false, &Budget { max_seconds: Some(1.), max_memory_mi_b: Some(1.) }).unwrap();
+        assert_eq!((b.max_bytes, b.max_nodes, b.max_tetrahedra, wall), (usize::MAX, usize::MAX, usize::MAX, Duration::MAX));
+    }
+    #[test]
+    fn enforced_budget_becomes_real_limits_and_rejects_missing_values() {
+        let (b, wall) = enforced_limits(true, &Budget { max_seconds: Some(2.5), max_memory_mi_b: Some(64.) }).unwrap();
+        assert_eq!((b.max_bytes, wall), (64 << 20, Duration::from_millis(2500)));
+        assert!(b.check((64 << 20) + 1).is_err() && b.check(64 << 20).is_ok());
+        for bad in [Budget { max_seconds: None, max_memory_mi_b: Some(64.) }, Budget { max_seconds: Some(1.), max_memory_mi_b: None },
+                    Budget { max_seconds: Some(0.), max_memory_mi_b: Some(64.) }, Budget { max_seconds: Some(1.), max_memory_mi_b: Some(0.5) }] {
+            assert!(enforced_limits(true, &bad).is_err());
+        }
     }
 }

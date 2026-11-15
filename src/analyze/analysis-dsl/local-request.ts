@@ -52,7 +52,7 @@ export function localChannelGroupRequest(task:AnalysisTask<'si'>,onPlan:PlanSink
  return prepareLocalRequest(task,targets,'group',onPlan);
 }
 
-function prepareLocalRequest(task:AnalysisTask<'impedance'|'si'>,targets:readonly BoardTarget[],mode:'legacy'|'differential'|'group',onPlan?:PlanSink,dcEndpoint=false){
+export function prepareLocalRequest(task:AnalysisTask<'impedance'|'si'|'pi'>,targets:readonly BoardTarget[],mode:'legacy'|'differential'|'group',onPlan?:PlanSink,dcEndpoint=false){
  const c=task.config,b=task.board??fail('Captured board required');
  const descriptions=new Map(task.descriptors.filter((d):d is Record<string,T.Json>=>object(d)).map(d=>[String(d.id),d]));
  const input=(h:unknown):any=>{if(!object(h))return fail('Missing handle');const d=descriptions.get(String(h.id));if(!d||!object(d.input))return fail('Unknown physical descriptor');return d.input;};

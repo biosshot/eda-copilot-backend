@@ -43,6 +43,7 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
   if (kind === 'pi') {
     if (boardOr(['circuit'])) required(['sources', 'loads']);
     required(['domain']);
+    if (config.frequencyHz === 0 && config.circuit) issue('INVALID_CONFIGURATION', 'frequencyHz(0) is the board PI DC point; explicit circuits use positive frequencies');
     if (config.domain === 'time') { required(['time', 'initial']); if (config.frequency !== undefined || config.frequencyHz !== undefined) issue('CONFLICTING_MODES', 'Time PI cannot use frequency'); }
     if (config.domain === 'frequency') { frequencyRequired(); if (config.time !== undefined || config.initial !== undefined) issue('CONFLICTING_MODES', 'Frequency PI cannot use time/initial'); }
   }
@@ -206,7 +207,7 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
   issue('PHYSICAL_REQUIREMENTS_UNVERIFIED', 'Structure validation does not establish physical readiness; extraction/model applicability is not evaluated', undefined, 'warning');
   const boardGroup = kind === 'si' && !!state.board && Array.isArray(config.channels) && config.channels.length > 0 &&
     config.channels.every(channel => object(channel) && (channel.kind === 'channel' || channel.kind === 'differential'));
-  const available=boardGroup||kind==='impedance'&&config.method==='layered'&&object(config.target)&&['channel','differential'].includes(String(config.target.kind))||kind==='geometry'||kind==='dc'||kind==='pi'&&!!config.circuit||kind==='networkParameters'||kind==='si'&&object(config.network)&&['network','connect'].includes(String(config.network.kind))||kind==='impedance'&&config.method==='cross-section'&&object(config.target)&&config.target.kind==='line';
+  const available=boardGroup||kind==='impedance'&&config.method==='layered'&&object(config.target)&&['channel','differential'].includes(String(config.target.kind))||kind==='geometry'||kind==='dc'||kind==='pi'&&(!!config.circuit||!!state.board)||kind==='networkParameters'||kind==='si'&&object(config.network)&&['network','connect'].includes(String(config.network.kind))||kind==='impedance'&&config.method==='cross-section'&&object(config.target)&&config.target.kind==='line';
   if (boardGroup) assumptions.push('Joint P7 extraction uses authored sources and time for input spectral demand. Board waveforms and timing remain unavailable.');
   else if(kind==='si'&&available)assumptions.push('Explicit supplied passive temporal model only: supported relaxation/authored resonant Y/full RLC or real-K delay class; not board channels, arbitrary sampled RF, eye or timing. Numerical/model applicability is checked by run().');
   if (!available) issue('ANALYZER_NOT_IMPLEMENTED', `No production ${kind} executor for this model`, undefined, 'warning');

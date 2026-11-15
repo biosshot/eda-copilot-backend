@@ -18,7 +18,7 @@
 | `analysis({ board })` | да | **да** | Снимок платы неизменяем |
 | `geometry()` | да | **да** | connectivity / clearance / edge-clearance |
 | `dc()` | да | **да** | плата, `circuit`, одиночный `conductor` |
-| `pi()` | да | **частично** | только с явным `circuit`; авто-PDN из платы нет |
+| `pi()` | да | **частично** | с явным `circuit`; на плате (без `circuit`) только DC-точка `frequencyHz(0)`: порты из pad-пар, N-портовый DC (P8 этап 2, `unverified`); AC-ось и время — `PI_NOT_IMPLEMENTED_STAGE` до этапов 3-4 |
 | `networkParameters()` | да | **да** | сеть/connect/line; exact physical-port samples — только отдельный replay исходных точек и опор, без соединения |
 | `si()` | да | **частично** | `.network()` — поддержанный temporal subset; `.channels([...])` — совместное P7-извлечение по спектральному запросу drivers/time, с явными пробелами и без waveform/timing |
 | `tdr()` | да | **нет** | — |

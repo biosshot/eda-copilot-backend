@@ -13,6 +13,7 @@ import { createDcExecutor } from './dc-executor.ts';
 import { dcObservedVoltage } from './dc-observation.ts';
 import {createElectricalExecutor,circuitObservedVoltage,circuitObservedTransfer} from './electrical-executor.ts';
 import { object } from './descriptions.ts';
+import {createPiBoardExecutor} from './pi-board-executor.ts';
 import {createTransientExecutor,transientObservedVoltage} from './transient-executor.ts';
 
 /** Small analysis dispatch boundary. No transport/session, no callbacks, no
@@ -45,6 +46,7 @@ export function createAnalysisExecutor(group = createGroupExecutor()): AnalysisE
   const dc = createDcExecutor();
   const electrical=createElectricalExecutor();
   const transient=createTransientExecutor();
+  const piBoard=createPiBoardExecutor();
   return async task => {
     if(isLocalTarget(task))return local(task as AnalysisTask<'impedance'>);
     if (task.kind==='geometry') return geometry(task as AnalysisTask<'geometry'>);
@@ -55,6 +57,7 @@ export function createAnalysisExecutor(group = createGroupExecutor()): AnalysisE
       return si.config.channels ? group(si) : transient(si);
     }
     if ((task.kind==='dc'||task.kind==='pi')&&'circuit'in task.config&&task.config.circuit) return electrical(task as AnalysisTask<'dc'|'pi'>);
+    if (task.kind==='pi') return piBoard(task as AnalysisTask<'pi'>);
     if (task.kind === 'dc') return dc(task as AnalysisTask<'dc'>);
     throw new AnalysisDslError('ANALYZER_NOT_IMPLEMENTED', `Analysis executor '${task.kind}' is not implemented`, [{ code: 'ANALYZER_NOT_IMPLEMENTED', severity: 'error', message: `No production ${task.kind} solver is installed` }]);
   };
