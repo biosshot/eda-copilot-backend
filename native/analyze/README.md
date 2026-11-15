@@ -200,3 +200,11 @@ outside fragments only through an optional internal preparation observer. Normal
 preparation reports are unchanged. Incomplete coverage never proves no violations;
 opens/channel rules need unavailable intent/topology. See the geometry-validation
 semantics/verification documents under `docs/experimental/analyze`.
+
+Independent thermal CPU/F64 code lives in `src/thermal/`, behind the existing
+shared addon `solveAnalysisThermal`. Compact RC dynamics and layered P1 PCB FEM
+use explicit capacities/materials/contacts, harmonic interlayer transfer and
+prescribed cooling. Matrix-free PCG/Newton and adaptive backward Euler preserve
+an auditable energy ledger. See [thermal semantics](../../docs/experimental/analyze/thermal-semantics.md)
+and [verification](../../docs/experimental/analyze/thermal-verification.md) for supported geometry, coefficient approximation and acceptance;
+no CFD, implicit package defaults or electrical feedback.

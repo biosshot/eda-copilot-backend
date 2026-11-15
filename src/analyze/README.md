@@ -17,6 +17,9 @@ and explicit circuit DC/Z(f)/transient are implemented. `geometry()` validates
 connectivity/clearance/edge-clearance with source witnesses and explicit coverage.
 Import/geometry/conduction preparations remain separate internal operations.
 
+and explicit circuit DC/Z(f)/transient are implemented. Thermal supports explicit RC networks and layered P1 board FEM with authored material/background/contact/cooling physics; see [thermal semantics](../../docs/experimental/analyze/thermal-semantics.md) and [verification](../../docs/experimental/analyze/thermal-verification.md) for scope/acceptance. Other physical analyses remain unavailable. Import/geometry/conduction
+preparations are not substitutes for a user geometry/DRC analysis.
+
 Each scenario owns one disposable workerpool process using the existing process
 fork options. A parent monotonic deadline includes startup and stops loops before
 or after `await`; abort kills only that scenario, with exit awaited before return.

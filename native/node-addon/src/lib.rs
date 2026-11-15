@@ -261,6 +261,14 @@ pub fn prepare_analysis_conduction(json: String, options: Option<Value>) -> Resu
         .map_err(|e| napi::Error::from_reason(e.to_string()))
 }
 
+/// Independent thermal network solver. Lifetime/cancellation belongs to scenario worker.
+#[napi]
+pub fn solve_analysis_thermal(request: Value) -> Result<Value> {
+    let request=serde_json::from_value::<pcb_analyze::thermal::Request>(request)
+        .map_err(|e| napi::Error::from_reason(format!("Invalid thermal request: {e}")))?;
+    Ok(pcb_analyze::thermal::run(request))
+}
+
 /// Scenario-owned preparation and sparse factorization. No GPU or process-global cache.
 #[napi]
 pub struct AnalysisDcSession { inner: pcb_analyze::dc::Session }

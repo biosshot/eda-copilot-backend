@@ -12,6 +12,7 @@ import { freeze, json, unavailable, value } from './data.ts';
 import { createDcExecutor } from './dc-executor.ts';
 import { dcObservedVoltage } from './dc-observation.ts';
 import {createElectricalExecutor,circuitObservedVoltage,circuitObservedTransfer} from './electrical-executor.ts';
+import {createThermalExecutor,thermalObservedData} from './thermal-executor.ts';
 import { object } from './descriptions.ts';
 import {createPiBoardExecutor} from './pi-board-executor.ts';
 import {createTransientExecutor,transientObservedVoltage} from './transient-executor.ts';
@@ -25,6 +26,12 @@ export interface AnalysisTask<K extends AnalysisKind = AnalysisKind> {
   conductionProfile?: AnalysisPhysicalProfile;
   resolvedLoads?: readonly Json[];
   electricalModels?: Json;
+  /** Internal references to already accepted bounded report solutions, only for
+   * same-context transfer; never a second published mesh/cache. */
+  completedSolutions?: readonly Json[];
+  /** Optional absolute monotonic deadline for the complete opt-in thermal run,
+   * including adapter and public-result construction; never a per-pass reset. */
+  deadlineAtMs?: number;
 }
 /** Internal serializable result envelope; accessors are created on JS side.
  * Test executors inject this envelope explicitly; production never fabricates it. */
@@ -47,7 +54,9 @@ export function createAnalysisExecutor(group = createGroupExecutor()): AnalysisE
   const electrical=createElectricalExecutor();
   const transient=createTransientExecutor();
   const piBoard=createPiBoardExecutor();
+  const thermal=createThermalExecutor();
   return async task => {
+    if (task.kind==='thermal') return thermal(task as AnalysisTask<'thermal'>);
     if(isLocalTarget(task))return local(task as AnalysisTask<'impedance'>);
     if (task.kind==='geometry') return geometry(task as AnalysisTask<'geometry'>);
     if (task.kind==='impedance') return crossSection(task as AnalysisTask<'impedance'>);
@@ -82,7 +91,7 @@ export function resultFor<K extends AnalysisKind>(task: AnalysisTask<K>, payload
     if (argument !== undefined) validate(argument);
     const suffix = argument && typeof argument === 'object' && 'id' in argument ? `:${argument.id}` : argument === undefined ? '' : `:${JSON.stringify(json(argument))}`;
     const descriptor=argument&&typeof argument==='object'&&'id'in argument?describe?.(String(argument.id))??task.descriptors.find(d=>object(d)&&d.id===argument.id):undefined;
-    const d = safe.metrics[name + suffix] ?? (name==='transfer'&&'circuit'in task.config&&task.config.circuit?circuitObservedTransfer(task,argument,safe.metrics,describe):name==='voltage'&&'circuit'in task.config&&task.config.circuit?circuitObservedVoltage(task,descriptor,safe.metrics):task.kind==='dc'&&name==='voltage'?dcObservedVoltage(task.board,descriptor,safe.metrics):name==='transfer'&&task.kind==='pi'&&object(argument)&&object(argument.from)&&object(argument.to)?safe.metrics[`pi-transfer:${String(argument.from.id)}:${String(argument.to.id)}`]:undefined);
+    const d = safe.metrics[name + suffix] ?? (task.kind==='thermal'?thermalObservedData(task as AnalysisTask<'thermal'>,name,argument,safe):name==='transfer'&&'circuit'in task.config&&task.config.circuit?circuitObservedTransfer(task,argument,safe.metrics,describe):name==='voltage'&&'circuit'in task.config&&task.config.circuit?circuitObservedVoltage(task,descriptor,safe.metrics):task.kind==='dc'&&name==='voltage'?dcObservedVoltage(task.board,descriptor,safe.metrics):name==='transfer'&&task.kind==='pi'&&object(argument)&&object(argument.from)&&object(argument.to)?safe.metrics[`pi-transfer:${String(argument.from.id)}:${String(argument.to.id)}`]:undefined);
     const transient=task.kind==='si'&&name==='voltage'?transientObservedVoltage(task,descriptor,safe.metrics):undefined;
     if(task.kind==='si'&&name==='differentialVoltage'&&object(argument)&&object(argument.positive)&&object(argument.negative)){
       const get=(p:Record<string,unknown>)=>transientObservedVoltage(task,describe?.(String(p.id))??task.descriptors.find(d=>object(d)&&d.id===p.id),safe.metrics);

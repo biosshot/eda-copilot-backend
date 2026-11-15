@@ -49,7 +49,8 @@ export function createProblemExecutor(retainDcForScenario = false) {
     }
     const addon = loadAddon();
     let result: AnalysisResult;
-    if(problem.kind==='board-section'){electrical ??=new addon.AnalysisElectricalSession();result=electrical.sliceBoardSection(problem.boardJson,problem.stack,problem.slice);}
+    if(problem.kind==='thermal') result=addon.solveAnalysisThermal(problem.request);
+    else if(problem.kind==='board-section'){electrical ??=new addon.AnalysisElectricalSession();result=electrical.sliceBoardSection(problem.boardJson,problem.stack,problem.slice);}
     else if(problem.kind==='local-dc-extraction'){
       electrical ??= new addon.AnalysisElectricalSession();
       try { result=electrical.solveLocalDc(problem.boardJson,problem.request,problem.remainingSeconds); }

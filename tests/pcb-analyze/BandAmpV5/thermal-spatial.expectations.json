@@ -1,0 +1,17 @@
+{
+  "fixture": "BandAmpV5",
+  "component": "U1",
+  "powerW": 3.0,
+  "cases": [
+    "steady-coarse",
+    "steady-fine"
+  ],
+  "timeS": [
+    60
+  ],
+  "conditional": true,
+  "heatsink": true,
+  "maxSpatialRelativeChange": 0.02,
+  "maxTemporalRelativeChange": 0.001,
+  "mode": "steady-pair"
+}

@@ -12,7 +12,9 @@ const hash = file => createHash('sha256').update(readFileSync(file, 'utf8').repl
 // analysis file and a distinct output directory for every invocation.
 export function runPcbAnalyze(args, backend = backendRoot) {
   const { values, positionals } = parseArgs({ args, allowPositionals: true,
-    options: { list: { type: 'boolean' }, all: { type: 'boolean' }, name: { type: 'string' } } });
+    options: { list: { type: 'boolean' }, all: { type: 'boolean' }, name: { type: 'string' }, 'timeout-ms': {type:'string'} } });
+  const timeoutMs=Number(values['timeout-ms']??600000);
+  if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1000||timeoutMs>1200000)throw Error('--timeout-ms must be an integer in 1000..1200000');
   const directory = join(backend, 'tests', 'pcb-analyze');
   const cases = readdirSync(directory, { withFileTypes: true }).filter(entry => entry.isDirectory()
     && existsSync(join(directory, entry.name, 'fixture.json'))).map(entry => entry.name).sort();
@@ -43,7 +45,7 @@ export function runPcbAnalyze(args, backend = backendRoot) {
     const startedAt = new Date().toISOString();
     const output = mkdtempSync(join(runs, `${startedAt.replace(/[:.]/g, '-')}-${name}-`));
     const manifestFile = join(output, 'run.json');
-    const manifest = { fixture, name, startedAt, status: 'running',
+    const manifest = { fixture, name, startedAt, status: 'running', timeoutMs,
       script: `${name}.ts`, scriptSha256: hash(script), fixtureSha256: hash(join(fixtureDir, 'fixture.json')) };
     writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + '\n');
     console.log(`Running ${fixture}/${name}.ts\nOutput: ${output}`);
@@ -52,7 +54,7 @@ export function runPcbAnalyze(args, backend = backendRoot) {
     try {
       result = spawnSync(process.execPath, ['--import', 'tsx', script], { cwd: backend,
         env: { ...process.env, PCB_ANALYZE_FIXTURE_DIR: fixtureDir, PCB_ANALYZE_RUN_DIR: output, PCB_ANALYZE_NAME: name },
-        stdio: ['ignore', log, log], windowsHide: true, timeout: 600_000 });
+        stdio: ['ignore', log, log], windowsHide: true, timeout: timeoutMs });
     } finally { closeSync(log); }
     const ok = !result.error && result.status === 0;
     writeFileSync(manifestFile, JSON.stringify({ ...manifest, finishedAt: new Date().toISOString(),

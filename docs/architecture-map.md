@@ -38,3 +38,12 @@ integrate each physical surface and each dielectric region once per field mesh,
 then reuse those integrals across frequency. Complex passive modal propagation
 produces the existing NetworkResource; no additional runtime/addon/network kind.
 See [loss conventions and pending acceptance](analyze/reference/p7-extraction/line-losses-semantics.md).
+
+See [P7a semantics](experimental/analyze/line-cross-sections-semantics.md).
+
+Thermal dispatch: `analysis-dsl/thermal-executor.ts` and `thermal-board.ts` adapt
+the existing thermal builder to `native/analyze/src/thermal/{solve,board,mesh,precondition}.rs`.
+`thermal-loss-transfer.ts` resolves source-bound DC arrays in the same context
+without copying published DC meshes. Native code owns compact RC / layered P1
+physics, PCG/Newton, event-aware adaptive time and energy ledgers; the existing
+scenario worker owns cancellation. See [thermal semantics](experimental/analyze/thermal-semantics.md).

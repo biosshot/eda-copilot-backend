@@ -15,3 +15,4 @@ spade = { version = "=2.15.1", default-features = false, features = ["std"] }
 faer = { version = "=0.24.4", default-features = false, features = ["std", "sparse-linalg", "rayon"] }
 rustfft = { version = "=6.4.1", default-features = false }
 rayon = "=1.11.0"
+sha2 = "=0.10.9"
