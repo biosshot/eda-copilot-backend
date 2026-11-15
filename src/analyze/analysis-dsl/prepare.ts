@@ -49,7 +49,7 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
   }
   const checkThermal = (c: Record<string, unknown>, path = '', standalone?: boolean) => {
     required(['environment'], c, path);
-    exclusive(['initialC', 'initial'], c, true);
+    exclusive(['initialC', 'initial'], c, c.domain !== 'steady');
     if (c.domain === 'steady') { if (c.time !== undefined) issue('CONFLICTING_MODES', 'Steady thermal cannot use time'); }
     else if (path === '') required(['time'], c, path);
     if (!standalone && c.heat === undefined && c.losses === undefined) issue('MISSING_FIELD', `Need ${path}heat/losses or explicit heat:[]`);

@@ -12,6 +12,15 @@
 
 Перед кодом подготовить `thermal-semantics.md`: поля поддержанных thermal моделей, источник каждого свойства, геометрия/сетка, нормировки, схема интегрирования, ограничения и независимые эталоны. Сообщить родителю краткую схему и найденные блокеры. Не останавливаться после документа без причины; продолжить реализацию в рамках задания.
 
+Согласованные уточнения существующего DSL: необязательный `ThermalLink.id`,
+`thermal.mesh({maxEdgeMm,maxNodes,geometryDeviationMm})`, `inputPolicy({cadFill})`,
+`backgroundMaterial` у analysis-only copper StackupInput, явные конечные
+`contacts` локальной thermal модели и безразмерный неотрицательный `cooling.scale`
+как Waveform. Spatial engine — layered P1 FEM с ограничениями по контурам меди;
+независимая FV используется только в reference tests. Board-surfaces cooling задаёт
+полное сопротивление/характеристику обеих наружных поверхностей с распределением
+по площади. Геометрический `geometryDeviationMm` имеет default 0.001 mm и границы 0.000001..0.01 mm, как DC; только явно заданное значение меняет допуск. При cap нет автоматического укрупнения и не удаляются copper objects/holes. Отчёт сохраняет заданный допуск и фактические границы аппроксимации подготовленной геометрии. Для controller обязательны раздельные gates кривых .01/.005 при фиксированной сетке и последовательного spatial refinement при .005, оба ≤2% на принятой последней паре, плюс conservation и отказ при неоднозначности. Стартовая пара 4/2 mm сохраняется с честным fail; при недостаточном разрешении проверяются 1 mm и, если позволяют явные ресурсы, .5 mm. Подробная семантика и границы — в [thermal-semantics.md](thermal-semantics.md).
+
 ## Границы
 
 Использовать действующие factories/builders: thermalNetwork, a.model с thermal-path/thermal-network/heatsink/thermal-interface/cooling, components/heat/losses/cooling/environment/initial/time. Сначала изучить `spec-doc.d.ts`, schema и существующие примеры: не изобретать конкурирующий DSL. Необходимые минимальные уточнения неполной семантики согласовать с родителем и записать явно до реализации. Не создавать новые публичные analyses.
@@ -56,6 +65,44 @@ a.check({ name: 'Temperature limit', actual: t.temperature('junction').max(), ma
 Проверить пример по реальному текущему API factories до публикации runnable fixture. Тепловая постоянная этого примера — 20 s, установившаяся температура — 55 °C; это аналитический тест, не оценка реального MOSFET. Board-примеры должны содержать непосредственно DSL и явные профили/модели, helper только запускает/рисует/проверяет результат.
 
 ## Проверки и приёмка
+
+Уточнение mesh admission: default `maxNodes:50000` сохраняется; явный spatial
+предел разрешён до 100000 при прежних независимых memory/link budgets. Controller
+первоначально задавал 60000, а для 1 mm явно 100000: исходная fine mesh содержит 53226 непрореженных layer vertices,
+47796 физических узлов, 35246 planar triangles; измеренный OS RSS может быть выше
+allocation plan и публикуется отдельно. Contact refinement использует точную pad
+union + halo h, h=min(maxEdge/8, minimum authored primitive pad width/2), с width/h
+и counts в отчёте. Для polygon/неоднозначной ширины не угадывать размер по площади;
+публиковать ограничение и проверять полное физическое поле при refinement. Это
+геометрическое разрешение источника, не адаптивное укрупнение при cap. Обязательный controller curve .01/.005 и порог <=2% для последней пары mesh refinement сохраняются; исходный fail 4/2 публикуется вместе с location/error audit.
+
+Отдельный измерительный probe 0.5 mm разрешён с явно заданными 768 MiB,
+maxNodes110000, ceiling500000 spatial links и 4 млн numeric output values;
+публичные DSL/default limits не изменяются до принятия результатов. Полный
+предварительный план — 106476 replicated nodes / 35492 planar / 8064 новых
+contact samples. Требуются actual plan, OS RSS, время и распределение ошибок
+full-field/junction относительно 1 mm; дальнейшие лимиты автоматически не растут.
+Raw результаты/история отказов сохраняются в evidence; пользовательский direct
+DSL report обязан содержать принятые сравнения и честно описывать грубые отказы.
+
+Позднейшие независимые spatial probes разрешены только `cfg(test)`: explicit
+140000 nodes / 600000 links / 1024 MiB / 240 s. Fresh CDT сохранял vertices,
+но местами укрупнил normal support; его field fail остаётся mesh-sensitivity
+evidence. Nested probe сохраняет все candidate triangle edges, добавляет
+независимый global .5 coverage, проверяет parent containment/area и все 93
+ранее пропущенные области. Получено sampled field change 1.6042%, Tj .09374%,
+original nodal residual9.563e-9 при плане851721583 bytes; observed private bytes
+1200996352 выше1GiB. Это принятая evidence сеточной сходимости, не абсолютная
+точность и не завершённая production policy. После этого родитель отклонил
+публичный replay по parent hashes/numeric edge IDs и разрешил минимальный opt-in
+`mesh.refinement:{maxPasses,relativeTolerance,validationMaxEdgeMm}`. Подробный
+[утверждённый контракт](thermal-mesh-production-proposal.md): bounded1..6 passes,
+обязательный nested global control, один общий deadline/memory/output budget,
+финальная полная карта control и только scalar history промежуточных шагов.
+Controller может явно задать140k/600k/1024MiB и общий900s, внешний1200000ms;
+defaults прежние. Реализация/малые regression/admission предшествуют большому
+controller run. Повторно проверяются все output times и обязательные power /
+ambient/cooling events; steady convergence не сертифицирует transient.
 
 T1: one/two-node analytical RC, заданная ambient step, finite power pulse, steady limit, energy balance, нелинейная cooling table в известном диапазоне, отсутствующая граница/нулевая C/невалидная таблица, continuation, budgets/cancel/recovery. Сравнение с аналитикой ≤0.1% по температурному приращению при достаточном шаге; отдельно абсолютный допуск около нуля. Temporal refinement должен подтверждать заданный допуск, не только визуальную похожесть.
 

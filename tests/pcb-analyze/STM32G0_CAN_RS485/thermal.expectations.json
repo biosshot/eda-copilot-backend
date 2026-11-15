@@ -1,0 +1,13 @@
+{
+  "fixture": "STM32G0_CAN_RS485",
+  "component": "U3",
+  "powerW": 0.8,
+  "cases": ["steady"],
+  "mode": "single-case",
+  "timeS": [60],
+  "conditional": true,
+  "heatsink": false,
+  "maxSpatialRelativeChange": 0.02,
+  "maxTemporalRelativeChange": 0.001,
+  "maxCurveRelativeChange": 0.02
+}

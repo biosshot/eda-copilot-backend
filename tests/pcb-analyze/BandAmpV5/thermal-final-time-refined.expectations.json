@@ -1,0 +1,23 @@
+{
+  "fixture": "BandAmpV5",
+  "component": "U1",
+  "powerW": 3,
+  "cases": [
+    "time-refined"
+  ],
+  "timeS": [
+    0,
+    5,
+    15,
+    20,
+    30,
+    45,
+    60
+  ],
+  "conditional": true,
+  "heatsink": true,
+  "maxSpatialRelativeChange": 0.02,
+  "maxTemporalRelativeChange": 0.001,
+  "mode": "single-case",
+  "refinementWitnesses": true
+}

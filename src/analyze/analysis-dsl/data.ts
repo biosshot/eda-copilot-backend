@@ -88,9 +88,12 @@ export class ReportStore {
     if (budget.bytes + size > limits.maxOutputBytes) throw new AnalysisDslError('OUTPUT_LIMIT', 'Scenario report context byte limit exceeded');
     budget.bytes += size;
   }
-  add(section: ReportSection, record: unknown) {
+  add(section: ReportSection, record: unknown, deadlineAtMs?:number) {
+    const checkDeadline=()=>{if(deadlineAtMs!==undefined&&performance.now()>deadlineAtMs)throw new AnalysisDslError('THERMAL_DEADLINE','Total thermal refinement deadline exceeded before committing the public report');};
+    checkDeadline();
     const safe = section === 'descriptors' || section === 'calculations' ? reportReferences(json(record)) : json(record);
     const size = Buffer.byteLength(JSON.stringify(safe)) + 1;
+    checkDeadline();
     if (this.budget.entries >= this.limits.maxEntries || this.budget.bytes + size > this.limits.maxOutputBytes) throw new AnalysisDslError('OUTPUT_LIMIT', 'Analysis report entry/byte limit exceeded');
     this.budget.entries++; this.budget.bytes += size;
     (this.report[section] as Json[]).push(safe);

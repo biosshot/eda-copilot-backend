@@ -1,0 +1,14 @@
+const a=analysis();
+const network=a.thermalNetwork({nodes:[{id:'junction',heatCapacityJPerK:2},{id:'ambient',boundary:'environment'}],links:[{id:'ja',from:'junction',to:'ambient',resistanceKPerW:10}],sources:[{node:'junction',powerW:3}]});
+const base=a.thermal().network(network).environment({name:'analytic room',ambientC:25});
+const steady=await base.domain('steady').run();
+const time=await base.domain('time').initialC('ambient').time({stopS:100,sampleStepS:.5}).run();
+const continued=await base.domain('time').initial(time.finalState).time({stopS:120,sampleStepS:.5}).run();
+a.plot({title:'Analytic RC junction',data:time.temperature('junction')});
+a.plot({title:'Heat flow to ambient',data:time.heatFlow('ja')});
+a.plot({title:'Discrete energy balance',data:time.energyBalance});
+a.check({name:'Steady independent analytic',actual:steady.temperature('junction'),target:55,tolerance:1e-8,unit:'degC'});
+a.check({name:'Time independent exponential',actual:time.temperature('junction').at({timeS:100}),target:25+30*(1-Math.exp(-5)),tolerance:.03,unit:'degC'});
+a.check({name:'Expected failed strict threshold',actual:time.temperature('junction').max(),max:40,unit:'degC'});
+a.check({name:'Continues after failed check',actual:continued.temperature('junction').at({timeS:120}),min:54,unit:'degC'});
+a.plot({title:'Network has no fabricated temperature map',data:time.temperatureMap});
