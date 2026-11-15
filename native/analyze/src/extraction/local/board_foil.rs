@@ -706,8 +706,11 @@ fn enforced_limits(enforce: bool, budget: &crate::electrical::Budget) -> Result<
     let mut limits = super::AllocationBudget { max_bytes: usize::MAX, max_nodes: usize::MAX, max_tetrahedra: usize::MAX };
     let mut wall = Duration::MAX;
     if !enforce { return Ok((limits, wall)); }
+    // Memory stays under external supervision (P7-R decision): the internal hybrid partitions split the
+    // allocation budget pessimistically (planar H-matrix gets mixed_budget/2), so a request ceiling refused
+    // boards that fit. Only the wall limit is enforced here; the memory value is still validated.
     match budget.max_memory_mi_b {
-        Some(m) if m.is_finite() && m >= 1. => limits.max_bytes = (m * 1_048_576.).min(usize::MAX as f64 / 2.) as usize,
+        Some(m) if m.is_finite() && m >= 1. => {}
         _ => return Err(error("BOARD_FOIL_GRID", "enforced budget requires a finite maxMemoryMiB >= 1")),
     }
     match budget.max_seconds {
@@ -893,8 +896,8 @@ mod enforced_limits_tests {
     #[test]
     fn enforced_budget_becomes_real_limits_and_rejects_missing_values() {
         let (b, wall) = enforced_limits(true, &Budget { max_seconds: Some(2.5), max_memory_mi_b: Some(64.) }).unwrap();
-        assert_eq!((b.max_bytes, wall), (64 << 20, Duration::from_millis(2500)));
-        assert!(b.check((64 << 20) + 1).is_err() && b.check(64 << 20).is_ok());
+        // Memory stays externally supervised; only the wall limit is enforced.
+        assert_eq!((b.max_bytes, wall), (usize::MAX, Duration::from_millis(2500)));
         for bad in [Budget { max_seconds: None, max_memory_mi_b: Some(64.) }, Budget { max_seconds: Some(1.), max_memory_mi_b: None },
                     Budget { max_seconds: Some(0.), max_memory_mi_b: Some(64.) }, Budget { max_seconds: Some(1.), max_memory_mi_b: Some(0.5) }] {
             assert!(enforced_limits(true, &bad).is_err());

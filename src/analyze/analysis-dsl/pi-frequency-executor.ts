@@ -136,8 +136,9 @@ export function runPiFrequency(task:AnalysisTask<'pi'>,assembly:PiBoardAssembly,
    quality:report.quality,domain:{roiFallback:provenance.roiFallback??null,electricalRoi:provenance.electricalRoi??null}});
  }
  // Junction mismatch between neighbouring band models.
- const junctions=frequencyPlan.junctionsHz.map(frequencyHz=>{
+ const junctions=frequencyPlan.junctionsHz.flatMap(frequencyHz=>{
   const [lower,upper]=[...models].filter(([band])=>band.boundsHz[1]===frequencyHz||band.boundsHz[0]===frequencyHz).map(([,r])=>r);
+  if(!lower||!upper)return [];// a neighbouring band was refused: no junction to compare
   const both=[lower,upper].map(r=>reducedModelWaves(execute,r,names,[frequencyHz],remaining())[0]);
   const zs=both.map(s=>compose(s,frequencyHz));
   const d=assembly.ports.map((_,i)=>zs[0][i][i]&&zs[1][i][i]?Math.hypot(zs[0][i][i]!.re-zs[1][i][i]!.re,zs[0][i][i]!.im-zs[1][i][i]!.im)/Math.max(Math.hypot(zs[0][i][i]!.re,zs[0][i][i]!.im),Number.MIN_VALUE):null);
